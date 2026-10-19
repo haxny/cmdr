@@ -695,5 +695,70 @@ async fn a_server_side_copy_names_its_own_phase_in_the_probe() {
     task.await.unwrap().unwrap();
 }
 
+/// The server copied the file, performed the landing rename, and the drop
+/// swallowed its reply: once the share is back, the landing is settled like a
+/// streamed one's, and the file lands ONCE, with no second copy and no
+/// stream.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_server_side_copy_whose_landing_reply_was_lost_lands_once() {
+    use crate::outage_slot::OutagePolicy;
+    use crate::transfer::outage_volume_test_support::{OutageVolume, RenameDrop};
+    const CADENCE: &[Duration] = &[Duration::from_millis(10)];
+
+    let engine = TestOperations::new();
+    let inner = Arc::new(InMemoryVolume::new("nas"));
+    inner
+        .create_file(Path::new("/holiday.mov"), b"a whole lot of bytes")
+        .await
+        .unwrap();
+    let nas = OutageVolume::wrap(Arc::clone(&inner), "server-copy-landing-lost");
+    nas.copy_on_the_server();
+    nas.drop_at_rename_onto(Path::new("/holiday copy.mov"), RenameDrop::AfterTheServerPerformsIt);
+    let volume: Arc<dyn Volume> = Arc::clone(&nas) as Arc<dyn Volume>;
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::ZERO)
+            .with_outage_policy(OutagePolicy {
+                budget: Duration::from_secs(30),
+                cadence: CADENCE,
+                poll_every: Duration::from_millis(5),
+                attempt_timeout: Duration::from_secs(1),
+            }),
+    );
+    let watched = Arc::clone(&state);
+    let share = Arc::clone(&nas);
+    tokio::spawn(async move {
+        cmdr_fs::testing::wait_until_async(Duration::from_secs(10), "the copy to wait for the share", || {
+            watched.outage.waiting_for().is_some()
+        })
+        .await;
+        share.become_reachable();
+    });
+
+    let bytes = pipe(&volume, &volume, &state, "/holiday.mov", "/holiday copy.mov")
+        .await
+        .expect("a landing the server performed is the copy's own file");
+
+    assert_eq!(bytes, 20);
+    assert!(nas.reconnect_attempts() > 0, "the share dropped at the landing");
+    assert_eq!(nas.server_copies(), 1, "the server copied it once");
+    assert_eq!(nas.writes(), 0, "and nothing streamed it");
+    let names: Vec<String> = inner
+        .list_directory(Path::new("/"), None)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|entry| entry.name)
+        .collect();
+    assert!(
+        !names.iter().any(|name| name.contains(".cmdr-tmp-")),
+        "no temp left: {names:?}"
+    );
+    assert_eq!(
+        inner.get_metadata(Path::new("/holiday copy.mov")).await.unwrap().size,
+        Some(20)
+    );
+}
+
 /// A `ListingProgress` import keeps the forwarding macro's signatures nameable.
 const _: Option<ListingProgress> = None;

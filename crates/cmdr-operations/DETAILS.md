@@ -150,8 +150,9 @@ The full top-level inventory is here:
   `Volume::clear_blockers` after its plain removal is refused, never by a volume's own `delete`, which is also F8's).
   That recheck shares `verify_snapshot` + `SkipReason` with the operation-log history engine — ❌ never a batch or a
   fork of either, so one reversal can't quietly grow a laxer rule than the other; only the `Drop` net is unconditional.
-  The persisted leftover ledger is six files: `in_flight_records.rs` (what a record IS: its kind, its path space, and
+  The persisted leftover ledger is seven files: `in_flight_records.rs` (what a record IS: its kind, its path space, and
   what that kind needs), `in_flight_temps.rs` (the log and the store, and what an operation records),
+  `in_flight_landing.rs` (a staged temp turning into a landing before its way is cleared, and back),
   `in_flight_claim.rs` (the engine's one claim: the only code that opens, replays, and truncates a ledger file),
   `in_flight_log_writer.rs` (the thread that writes the log, so no record is file I/O on an async worker),
   `in_flight_sweep.rs` (what a launch and a returning drive DO with one), and `in_flight_sweep_surface.rs` (the four
@@ -2740,7 +2741,11 @@ would make its fate depend on whether the drive was plugged in at launch.
   (finishing the landing), or a ` (recovered)` name beside whatever holds it; any other size stays where it is. The kind
   change writes the landing BEFORE it retires the temp record (`in_flight_temps::hold_for_landing`), so a crash between
   leaves both, and the sweep settles that path by the landing (`without_superseded_temps`); the other order would leave
-  a moment where only the record the sweep deletes is on disk.
+  a moment where only the record the sweep deletes is on disk. ❗ The hold answers whether the landing's line really
+  reached the log (`OnDisk`: the writer reports each confirmed line back, `in_flight_log_writer.rs::append_then`), and a
+  ledger that keeps a log but lost the line (its writer gone, the write refused, no path space to state it in) answers
+  `NotOnDisk`, so the landing refuses to clear the way (`transfer/DETAILS.md` § "File writes are staged"). A ledger no
+  claim set out to keep on disk (a test's engine) answers `NotKept`, and the landing goes ahead in memory.
 - **An aside** (`.cmdr-temp-*`) holds bytes that were ALREADY the user's, renamed out of the way so a replacement could
   take their name. It goes back to its own name when that name is free; it is removed ONLY when the replacement is
   provably complete, which for `FileAside` means a regular file of exactly the recorded size; in every other case its

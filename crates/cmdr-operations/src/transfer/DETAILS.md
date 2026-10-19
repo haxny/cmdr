@@ -59,8 +59,8 @@ included, § "One-pass sequential extract"). Only the layout facts that none of 
   `volume_outage_tests.rs` beside it and `outage_volume_test_support.rs`'s `OutageVolume` as the double: a volume whose
   session a test drops and restores, like the SMB share in `#398`. The operation-side slot it fills lives one level up,
   in `../outage_slot.rs`, so the activity classifier can read it without reaching into this layer.
-  `interrupted_landing.rs` settles a landing rename, or a single-shot write, whose reply the drop swallowed (§ "A
-  landing the drop cut off").
+  `interrupted_landing.rs` holds the proofs a landing or a single-shot write the drop cut off is settled by, and
+  `staged_write_landing.rs::CutOffLanding` the landing's settle itself (§ "A landing the drop cut off").
 - **`transfer_probe_ends.rs` is what the probe asks the two volumes**, another `#[path]` child: `TransferEnds` (the
   source and destination, held only for their connections' liveness and the source's received-byte count) and
   `InboundWindow` (the receive rate across the last few ticks, pure and tested on its own).
@@ -1094,11 +1094,12 @@ after the commit, at the original's name, as for any staged write (`volume/lande
 `volume/swap_landing_tests.rs`, and at all five write sites by `volume/safe_replace_grid_tests.rs`.
 
 ❗ **The moment a swap's delete goes through, the operation stops being rollbackable**
-(`LandingLedger::original_replaced` notes it on the journal, `NotRollbackableReason::Overwrote`): the file an undo would
-restore is gone, whatever the rename does next. A delete that can't be confirmed counts too. That's the ONE moment for a
-failure path at every site; a landed overwrite's journal row also says `overwrote`, recorded by the site from its
-`Replaces` (`CreatedPaths::record_overwrite` in the merge leaf and the extract, after the file landed), and a write that
-failed before the delete left the original in place, so the op stays rollbackable. Pinned by the grid's failure cells.
+(`staged_write_landing.rs::Landing::original_replaced` notes it on the journal, `NotRollbackableReason::Overwrote`): the
+file an undo would restore is gone, whatever the rename does next. A delete that can't be confirmed counts too. That's
+the ONE moment for a failure path at every site; a landed overwrite's journal row also says `overwrote`, recorded by the
+site from its `Replaces` (`CreatedPaths::record_overwrite` in the merge leaf and the extract, after the file landed),
+and a write that failed before the delete left the original in place, so the op stays rollbackable. Pinned by the grid's
+failure cells.
 
 ❗ **Before the landing clears a name, its temp is recorded as a landing.** From that delete on, the temp may be the
 destination's only copy, so `land` re-records it as `ItemKind::Landing { destination, expected_size }`, at the byte
@@ -1106,10 +1107,18 @@ count the write confirmed (`StagedWrite::commit` takes it, so no stat measures t
 on disk before the delete goes out, then the `Temp` record retires and the path leaves `state.in_flight_temps`
 (`in_flight_temps::hold_for_landing`). That order means a crash at any moment leaves a record the sweep finishes the
 landing from, ❌ never one it deletes (the rule: `crates/cmdr-operations/DETAILS.md` § "What the sweep does with each
-kind"). The landing record retires when the rename lands it, when the rescue below gives it a real name, or when the
-refused delete left the name taken (the temp is a spare copy then: it's discarded, or turned back into a temp if the
-discard fails). A landing that can't tell whether the delete went through, a rescue that couldn't rename either, and a
-landing cut off mid-way leave it recorded, held for the volume's next arrival. Pinned by
+kind"). ❗ **When the record can't be confirmed on disk, the way is NOT cleared** (fail closed): the writer is gone, the
+log refused the line, or the operation names no path space for it (`in_flight_temps::OnDisk`, `NotOnDisk`). The landing
+then fails as a refusal with nothing cleared, the original in place and the temp taken away: a crash after a delete with
+no record would leave the only copy on a temp the next transfer into that folder reaps on sight (it wears the source's
+dates). A ledger that keeps nothing on disk by design (one no claim opened, as a test's engine) has nothing to confirm
+against and lands as before. Pinned by
+`staged_write.rs::tests::{a_swap_whose_landing_record_has_no_writer_leaves_the_original_in_place, a_swap_whose_landing_record_the_log_refused_leaves_the_original_in_place, a_swap_with_no_path_space_for_its_landing_record_leaves_the_original_in_place}`.
+The landing record retires when the rename lands it, when the rescue below gives it a real name, or when the refused
+delete left the name taken (the temp is a spare copy then: it's discarded, or turned back into a temp if the discard
+fails). A landing that can't tell whether the delete went through, a rescue that couldn't rename either, and a landing
+cut off mid-way (a dropped task, a wait that ended without the share) leave it recorded, held for the volume's next
+arrival. Pinned by
 `staged_write.rs::{a_claimed_name_landing_is_on_disk_as_a_landing_before_it_clears_the_way, a_landing_cut_off_after_clearing_the_way_is_finished_by_the_next_launch}`.
 
 ❗ **A cleared way plus a refused second rename strands committed data**, and the landing gets it out of temp space on
@@ -1157,16 +1166,19 @@ source still holds the new bytes, and the temp is a complete copy of ours nobody
 user's folder as a visible `.cmdr-tmp-*` until the hourly reap. `recovered_name.rs::discard_unplaced_temp` deletes it
 (best effort: a delete that fails too is logged and left to the sweeps) in every such exit of `staged_write::land`: a
 rename refused for any reason but `AlreadyExists`, a clash on an `ExpectedFree` name, and a refused delete of a claimed
-name or of a swap's original. ❗ Not a first rename that failed on the TRANSPORT (`transport_fault`): the server may
-have performed it, so the temp stays registered for the settle after the outage wait (§ "A landing the drop cut off"),
-and the abandoned-write cleanup takes it if nothing settles it. ❗ A refused delete is checked with one stat before
-anything else (`what_a_refused_delete_left`), because over a network the server can act and the answer still be lost:
-the name still taken means discard, the name empty after all means the way IS clear and the landing goes on (discarding
-there would leave neither file), and a stat that can't answer leaves the temp alone. ❌ Never discard once the way was
-cleared: from then on the temp may be the only copy at the destination, and it is rescued instead. Short of the
-empty-after-all case, the copy fails with the typed refusal. Pinned by `volume/swap_landing_tests.rs` (the three delete
-answers, and both drivers end to end), `staged_write.rs::tests`, `volume/copy_landing_race_tests.rs` (no temp left on
-either driver), and on a live server by
+name or of a swap's original. ❗ **Classify before acting**: none of these rules runs for a step that failed on the
+TRANSPORT (`transport_fault`), the first rename, a clearing delete, or the rename after it alike. The server may have
+performed it, so the landing is cut off right there (`staged_write::LandingError::CutOff`) and settled after the outage
+wait (§ "A landing the drop cut off"); a stat, a discard, or a rescue then would run on whatever session answers next, a
+sibling's fresh one on a stale error, and act on a guess. The refusal rules run only for a refusal, or once the wait
+gave up (`CutOffLanding::give_up`), and a temp nothing settled with nothing cleared goes with the abandoned-write
+cleanup. ❗ A refused delete is checked with one stat before anything else (`what_a_refused_delete_left`), because over
+a network the server can act and the answer still be lost: the name still taken means discard, the name empty after all
+means the way IS clear and the landing goes on (discarding there would leave neither file), and a stat that can't answer
+leaves the temp alone. ❌ Never discard once the way was cleared: from then on the temp may be the only copy at the
+destination, and it is rescued instead. Short of the empty-after-all case, the copy fails with the typed refusal. Pinned
+by `volume/swap_landing_tests.rs` (the three delete answers, and both drivers end to end), `staged_write.rs::tests`,
+`volume/copy_landing_race_tests.rs` (no temp left on either driver), and on a live server by
 `operations_host/backend_suites/webdav_refusal_test.rs::webdav_integration_a_refused_replace_keeps_the_users_file`.
 
 **Finding the litter.** A staged temp is listed in `state.in_flight_temps` for exactly as long as it is a removable copy
@@ -1793,7 +1805,8 @@ reintroduce it in a new costume — the cap is pinned by call count, not by hope
 
 **Scope: streaming writes only.** `volume/sequential_extract.rs` (a compressed tar / solid 7z source) has its own write
 site and deliberately gets NO retry. Its source is a one-pass decoder sitting at a fixed position, so a per-file restart
-would mean re-decoding the whole archive prefix — the very O(n²) the sequential path exists to avoid. The local-FS
+would mean re-decoding the whole archive prefix — the very O(n²) the sequential path exists to avoid. Its landing does
+wait out an outage (§ "Where it's asked, and why only there"), since settling a landing streams nothing. The local-FS
 engine (`chunked_copy.rs`) is likewise untouched: a local write that fails with a transport errno is either a dying disk
 or a network mount the volume layer should be handling, and neither is improved by retrying inside the sync chunk loop.
 
@@ -1878,15 +1891,19 @@ again:
   source, write, land), and a failed step hands its `Fault` to ONE decision, `FileRun::on_fault`, which waits with that
   step's own `StartedOn` snapshot and resumes at the step's checkpoint. The open resumes by opening again (nothing
   staged yet); the write by clearing the failed attempt's temp AFTER the wait, when the delete can reach the share, then
-  running the file again; the landing rename, only when it failed with nothing cleared (`new_data_at: None`), by letting
-  `interrupted_landing.rs` settle whether the rename happened (§ "A landing the drop cut off" below): if it did, the
-  file is done; if not, the temp is a spare copy, so it's taken away and the file runs again. ❌ Never after a landing
-  that cleared the way: then the temp is the only copy, and `land` already moved it somewhere safe. ❌ Nor for a swap
-  (`StageOverOriginal`): the settle knows only a rename-first landing, and after a `delete(orig)` that went through
-  unanswered it would discard the destination's only copy, so a swap's landing failure ends the file. A new step gets
-  the wait by becoming a `Fault` variant, ❌ never with a `wait_after_failure` call of its own. The landed flags stay a
+  running the file again; a landing step the transport cut off (`LandingError::CutOff`: a first rename, a swap's or a
+  claimed name's clearing delete, the rename after it) by settling it first, on the next pass's first checkpoint
+  (`resume_landing`, § "A landing the drop cut off" below): what landed counts as done, a whole temp lands without the
+  file streaming again, and only what nothing proves runs the file again. A wait that ends without the share gives the
+  landing up under the refusal rules (`CutOffLanding::give_up`: nothing cleared leaves the temp to the abandoned-write
+  cleanup; a cleared way rescues the bytes or keeps them recorded as a landing), a cancel included, which is reported as
+  the cancel it is. The server-side copy's landing (`server_side_copy.rs`) takes the same wait. A new step gets the wait
+  by becoming a `Fault` variant, ❌ never with a `wait_after_failure` call of its own. The landed flags stay a
   best-effort tail after the landing, outside the runner: a flag a drop cut off reads as `Refused`, the same as a
   server's refusal, so it's a counted, reported metadata loss, ❌ never a wait.
+- `volume/sequential_extract.rs::land_member`, the one-pass extract's landing: the same wait and settle, outside the
+  runner because a one-pass decode can't stream a member again. So whatever would run the file again fails the member
+  instead, and with no source to compare against, a cleared-way landing whose temp is gone ❌ never counts as landed.
 - `through_outages` around each merge level's prepare (a create whose second run answers `AlreadyExists` and reads as
   "there", plus two listings) and around every driver's top-level destination probe (a read). ❗ Only a call that's safe
   to run twice goes through it.
@@ -1898,27 +1915,44 @@ again:
 **Not covered, deliberately.** The pre-flight SCAN of a big tree (its own walker, its own failure path), the post-loop
 folder dates and source sweep, delete and trash, and the local engines. Each would fail on an outage as it always did.
 
-**A landing the drop cut off (`interrupted_landing.rs`).** A rename whose reply never arrives may have happened or not:
-the drop can come before the server saw it, or after it performed it. Run again blind, the second case re-copies the
-file and its landing meets OUR file at a name the caller believed free, which `land` rightly refuses as an unresolved
-clash: a copy that waited out the outage then failed with `DestinationExists` over its own file. Not rare: the live-SMB
-cell (`operations_host/backend_suites/smb_outage_test.rs`) hit it whenever the cut fell inside a landing of the
-concurrent window. So once the share is back the landing is settled first, and counts as DONE only on proof, all three
-of:
+**A landing the drop cut off (`interrupted_landing.rs`, `staged_write_landing.rs::CutOffLanding`).** A rename or a
+delete whose reply never arrives may have happened or not: the drop can come before the server saw it, or after it
+performed it. Run again blind, a rename that happened re-copies the file and its landing meets OUR file at a name the
+caller believed free, which `land` rightly refuses as an unresolved clash: a copy that waited out the outage then failed
+with `DestinationExists` over its own file. Not rare: the live-SMB cell
+(`operations_host/backend_suites/smb_outage_test.rs`) hit it whenever the cut fell inside a landing of the concurrent
+window. And for a swap it's worse: after a `delete(orig)` that went through, the temp is the destination's ONLY copy. So
+the landing stops at the step the transport cut off, and once the share is back it is settled from what the destination
+shows (`CutOffLanding::resume`):
 
-- the temp is still in the operation's in-flight set, so no discard of ours took it (a discard releases it). That's why
-  `staged_write.rs::land` never discards after a first rename that failed on the transport: on a late error the delete
-  would reach a sibling's fresh session, find the landed temp gone, release it, and the re-run would meet our own file
-  as `DestinationExists`. A temp it leaves registered that nothing settles (the wait gave up, or had nothing to wait
-  for) goes with the operation's abandoned-write cleanup;
-- the temp is gone from the destination, and the only move ever asked of that `.cmdr-tmp-<uuid>` was ours;
-- the final name holds a file of exactly the size we wrote, so nothing replaced it while the share was away.
+- **The temp is there and whole** (exactly the size the write confirmed): it lands from where the cut left off, ❌ never
+  streamed again. A first rename lands again from the top. After a clearing delete whose answer was lost, the name says
+  what happened: empty means the delete went through and the rename alone finishes it; taken means it never reached the
+  server, and the way is cleared again. After a delete that went through, ❗ the rename alone, `rename(force = false)`,
+  ❌ never another delete: a file someone put at the name during the outage makes it refuse, and the new bytes are
+  rescued and reported, their file untouched.
+- **The temp is gone**: the landing counts as DONE only on proof, all three of: nothing of ours discarded it (the
+  landing notes every discard it asks for, which is why `land` never discards after a transport fault: on a late error
+  the delete would reach a sibling's fresh session, find the landed temp gone, and the re-run would meet our own file as
+  `DestinationExists`); the temp is gone from the destination, and the only move ever asked of that `.cmdr-tmp-<uuid>`
+  was ours; and the name holds what we wrote: a file of exactly our size after a rename-first landing, which cleared
+  nothing, and ❗ exactly the SOURCE's bytes, compared in full (`holds_the_source`), once the way may have been cleared,
+  since a swap whose temp someone removed leaves the user's OLD file at the name, maybe at the same size. With no source
+  to compare against (the one-pass extract), that case ❌ never counts as landed.
+- **Anything else** (a temp that isn't whole, a name that doesn't prove it) runs the file again, and a name someone else
+  took meets the ordinary late-clash refusal (`DestinationExists`, their file untouched).
 
-Anything less clears the temp and runs the file again, as before: a temp still there means the rename never happened,
-and a name someone else took meets the ordinary late-clash refusal (`DestinationExists`, their file untouched). ❌ Don't
-loosen it to "something is at the name": a file claimed by mistake enters the rollback ledger as ours, and an undo
-deletes it. No mtime check: whether a backend keeps the source's mtime, and at what precision, varies, and the temp's
-fate already proves whose file it is.
+A step of the settle that meets the transport again cuts the landing off again (bounded by `MAX_OUTAGES_PER_ITEM`); one
+that meets a refusal settles by the refusal rules. A Cancel, a give-up, or a drop that ends the wait AFTER the way may
+have been cleared leaves the temp recorded as a landing, rescued when the share answers and kept for the next sweep that
+reaches it when it doesn't (`Landing`'s `Drop` hands a dropped one to the volume's next arrival), ❌ never cleaned as a
+partial. ❌ Don't loosen any proof to "something is at the name": a file claimed by mistake enters the rollback ledger
+as ours, and an undo deletes it. No mtime check: whether a backend keeps the source's mtime, and at what precision,
+varies, and the temp's fate already proves whose file it is. Pinned at all five safe-replace sites by
+`volume/swap_outage_tests.rs` (a drop before the delete, after it, at the rename after it on either side, the temp
+removed with the old bytes at the same size, a stale error on the delete, a give-up, and a cancel whose landing the
+arrival sweep finishes), plus a claimed name's stale clearing delete there, and a server-side copy's landing in
+`volume/strategy_server_side_copy_tests.rs`.
 
 **A single-shot write the drop cut off.** A write with no temp (`WriteMode::CreateNew` at the final name: SMB's compound
 CREATE+WRITE+FLUSH+CLOSE, which on a fresh connection carries any file up to 512 KiB and on a measured fast link up to

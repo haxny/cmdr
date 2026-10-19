@@ -1,18 +1,18 @@
 //! The steps of [`stream_pipe_file`](super::stream_pipe_file)'s runner, in
-//! pass order: settle a create the transport may have completed, open the
-//! source, write, land. Each hands its outcome back to the runner; a step that
-//! fails returns a [`Fault`] for [`FileRun::on_fault`], ❌ never a wait of its
-//! own.
+//! pass order: settle a create the transport may have completed, finish a
+//! landing the transport cut off, open the source, write, land. Each hands its
+//! outcome back to the runner; a step that fails returns a [`Fault`] for
+//! [`FileRun::on_fault`], ❌ never a wait of its own.
 
 use std::sync::Arc;
 
-use super::{Fault, FileRun, Stop, auto_yield_tuning};
+use super::{Fault, FileRun, LandingToResume, Stop, auto_yield_tuning};
 use crate::metadata_losses;
 use crate::transfer::checkpoint_stream::CheckpointStream;
 use crate::transfer::interrupted_landing::{create_went_unanswered, settle_unanswered_create};
 use crate::transfer::recovered_name::FinalizeFailure;
 use crate::transfer::retry;
-use crate::transfer::staged_write::{StagedWrite, WriteStaging, resolve_staging};
+use crate::transfer::staged_write::{LandingError, LandingSource, Resumed, StagedWrite, WriteStaging, resolve_staging};
 use crate::transfer::transfer_probe::{TaskPhase, arm_current_task_stall_abort, set_task_bytes, set_task_phase};
 use crate::transfer::volume::source_reads::{self, SourceReads};
 use crate::transfer::volume::transfer_error::{AtPath, PathedVolumeError, hard_abort_error};
@@ -286,7 +286,7 @@ impl FileRun<'_> {
     /// ❌ Not raced against tier 2: a task wedged here is ended by the driver's
     /// drain deadline rather than by an abort mid-rename.
     pub(super) async fn land(&mut self, written: Written) -> Result<u64, Stop> {
-        let (state, dest_volume, dest_path) = (self.state, self.dest_volume, self.dest_path);
+        let (dest_volume, dest_path) = (self.dest_volume, self.dest_path);
         let Written {
             staged,
             written,
@@ -295,21 +295,13 @@ impl FileRun<'_> {
         } = written;
         let bytes = written.bytes;
         let lost = lost.union(written.refused());
-        let landing_from = staged.target().to_path_buf();
         let started_on = StartedOn::now(&[self.source_volume, dest_volume]);
         match staged.commit(dest_volume, bytes).await {
-            Ok(()) => {
-                // Landed, so a ` (N)` placeholder at the name is filled, not ours
-                // to take back (`naming.rs::take_back_unfilled_reservations`).
-                state.claimed_names.release_placeholder(dest_path);
-                state.metadata_losses.note_file(lost);
-                landed_flags::put_on(dest_volume, dest_path, &after_landing, state).await;
-                Ok(bytes)
-            }
-            Err(FinalizeFailure {
+            Ok(()) => Ok(self.landed(bytes, lost, &after_landing).await),
+            Err(LandingError::Failed(FinalizeFailure {
                 error: VolumeError::NotSupported,
                 ..
-            }) if matches!(
+            })) if matches!(
                 self.staging,
                 WriteStaging::Stage | WriteStaging::StageInFreshFolder | WriteStaging::StageOntoClaimedName
             ) =>
@@ -323,32 +315,75 @@ impl FileRun<'_> {
                 self.writing_at_the_final_name = true;
                 Err(Stop::RunAgain)
             }
-            // The landing failed with nothing cleared: the outage wait and the
-            // settle decide (`on_fault`). ❌ Never with `new_data_at` set: then
-            // the temp was the only copy, and `land` has already moved it
-            // somewhere safe. ❌ Nor for a swap: the settle knows only a
-            // rename-first landing, and after a `delete(orig)` that went through
-            // unanswered it would discard the destination's only copy. A swap's
-            // landing failure ends the file.
-            Err(failure)
-                if failure.new_data_at.is_none() && !matches!(self.staging, WriteStaging::StageOverOriginal) =>
-            {
-                Err(Stop::Faulted(Box::new(Fault::Land {
-                    failure,
-                    started_on,
-                    landing_from,
-                    bytes,
-                    lost,
-                })))
-            }
+            // A step the transport cut off, a swap's clearing delete included:
+            // the outage wait and the settle decide (`on_fault`), ❌ never a
+            // guess made on whatever session answers next.
+            Err(LandingError::CutOff(cut_off)) => Err(Stop::Faulted(Box::new(Fault::Land {
+                cut_off,
+                started_on,
+                bytes,
+                lost,
+                after_landing,
+            }))),
             // The write SUCCEEDED and the landing didn't. When the landing had
             // cleared the way, the temp holds the only complete copy of the new
             // bytes: `land` got them out of temp space, and `new_data_at` says
             // where they are. A swap that couldn't clear the way (or can't tell)
             // reaches here too. Either way `land` has settled what the temp is
             // in the ledgers. Surface the failure.
-            Err(failure) => Err(Stop::Over(PathedVolumeError::from_landing(failure, dest_path))),
+            Err(LandingError::Failed(failure)) => Err(Stop::Over(PathedVolumeError::from_landing(failure, dest_path))),
         }
+    }
+
+    /// The checkpoint after an outage that cut a landing off: settles what the
+    /// cut-off step did and lands what's left, ❌ without streaming the file
+    /// again while its temp is whole (`staged_write::CutOffLanding::resume`).
+    /// `Some` once the file is at its name; `None` runs the file again.
+    pub(super) async fn resume_landing(&mut self) -> Result<Option<u64>, Stop> {
+        let Some(LandingToResume {
+            cut_off,
+            bytes,
+            lost,
+            after_landing,
+        }) = self.landing_to_resume.take()
+        else {
+            return Ok(None);
+        };
+        set_task_phase(TaskPhase::Finalizing);
+        let started_on = StartedOn::now(&[self.source_volume, self.dest_volume]);
+        let source = LandingSource {
+            volume: self.source_volume,
+            path: self.source_path,
+        };
+        match cut_off.resume(self.dest_volume, Some(source)).await {
+            Resumed::Landed => Ok(Some(self.landed(bytes, lost, &after_landing).await)),
+            Resumed::RunAgain(error) => {
+                log::info!(
+                    target: "copy",
+                    "stream_pipe_file: nothing proves {} landed before the drop ({error}); running it again",
+                    cmdr_fs::log_private::LogPrivate::file_path(self.dest_path),
+                );
+                Ok(None)
+            }
+            Resumed::Failed(failure) => Err(Stop::Over(PathedVolumeError::from_landing(failure, self.dest_path))),
+            Resumed::CutOff(cut_off) => Err(Stop::Faulted(Box::new(Fault::Land {
+                cut_off,
+                started_on,
+                bytes,
+                lost,
+                after_landing,
+            }))),
+        }
+    }
+
+    /// The file has its final name: what every landing that got there owes it.
+    pub(super) async fn landed(&self, bytes: u64, lost: MetadataClasses, after_landing: &CarriedMetadata) -> u64 {
+        // Landed, so a ` (N)` placeholder at the name is filled, not ours to
+        // take back (`naming.rs::take_back_unfilled_reservations`).
+        self.state.claimed_names.release_placeholder(self.dest_path);
+        self.state.metadata_losses.note_file(lost);
+        landed_flags::put_on(self.dest_volume, self.dest_path, after_landing, self.state).await;
+        bytes
     }
 }
 

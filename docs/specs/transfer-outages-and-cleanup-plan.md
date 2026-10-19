@@ -442,6 +442,10 @@ temp-to-original translation alive.)
   calls it before the finalize, `sequential_extract.rs` only after the finalize succeeds, so after a failed finalize
   their journals may disagree on rollbackable. With one landing path, pick the one correct moment (the original is gone
   the moment `delete(orig)` succeeds, so that's when the op stops being rollbackable) and pin it at all five sites.
+- **Pass the size into the landing** (from 5b as built, `6d903ca03`): `hold_for_landing` takes `expected_size` from one
+  stat of the temp, because 5b couldn't change `commit`'s signature without editing `stream_pipe_steps.rs`. With one
+  landing path, hand `commit` the byte count the write already confirmed and drop the stat (a temp that can't be
+  measured keeps the way uncleared today; keep that rule for any path still without a count).
 
 **Test plan**: the milestone-4 grid stays green unchanged, except its known-bug cell, which flips: a concurrent task
 dropped between `delete(orig)` and the rename leaves the temp on disk, recorded as `Landing` in the persisted ledger and
@@ -487,6 +491,15 @@ destination, so discarding it and re-streaming would be wasteful at best.
   skips it (5b).
 - MTP's `rename(force=true)` duplicates: the swap stays delete-then-rename, ❌ never force.
 - Whole-publish (`Replaces::InPlace`) is untouched; a cross-type Overwrite (aside) is untouched.
+- ❗ **Fail closed when the `Landing` record can't be confirmed on disk** (lead's review of milestone 6,
+  `staged_write_landing.rs::land_in_the_cleared_way`): today `hold_for_landing` → `in_flight_temps::track_in` returns
+  the record even when the ledger barrier never confirmed the write (the writer is gone), and a `home` of `None`
+  persists nothing, yet the clearing `delete` still goes out. Make the hold report whether the record is durably on
+  disk, and when it isn't, don't clear the way: fail the landing as a refusal with nothing cleared (the original
+  survives, the temp is discarded or kept as a temp). Red cells: a writer gone before the hold, and a `None` home, each
+  leave the original intact. Check how the local engine's `track_in` callers rely on the same barrier and say in the
+  report whether they need the same treatment (fix only the transfer path here; file an issue for the rest if it
+  applies).
 - ❗ **The server-side copy's landing gets the same wait** (found while executing milestone 3): `server_side_copy.rs`
   calls `staged.commit(...)?` with no outage wait or settle, so a late error at its landing still fails that file (since
   milestone 3 the temp goes with the abandoned-write cleanup instead of an immediate discard). Route it through the same
@@ -646,6 +659,10 @@ reconnect (by then the session that held it is gone), without a launch. The left
   reconnect. No error classification is needed for this: any non-transport refusal gets the one retry.
 - A Rollback with the destination out stays as it is: the reversal rechecks each entry, can't verify, and leaves and
   reports it. ❌ It doesn't join the background pass or the ledger (its ledgers aren't persisted records).
+- **A size-mismatched `Landing` needs its own notice** (from 5b as built): the sweep leaves it alone (`LeftAlone`, a
+  warn) but raises no notice, because `announce_leftovers_kept`'s only wording is about an unfinished MOVE's hidden
+  folder. Give it a fitting typed notice (FE copy: a draft for David). Also, `LeftAlone` retires the record, so the
+  name+age reap could later take that temp: keep such a temp recorded (or rescue it to a ` (recovered)` name) instead.
 
 **Test plan**: red in `cleanup_tests.rs`: a cancel while the destination is out emits `write-cancelled` without waiting
 (assert it arrives before any reconnect attempt returns, with a hung reconnect), then the background pass removes the

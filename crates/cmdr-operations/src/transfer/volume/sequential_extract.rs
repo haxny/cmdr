@@ -22,8 +22,9 @@ use std::sync::{Arc, Mutex};
 
 use super::super::super::state::WriteOperationState;
 use super::super::super::transfer_tree::NodeId;
-use super::super::staged_write::StagedWrite;
+use super::super::staged_write::{LandingError, Resumed, StagedWrite};
 use super::super::transfer_driver::SourceProgress;
+use super::super::volume_outage::{self, OutageEnd, OutageFailure, StartedOn, lost_connection, wait_after_failure};
 use super::folder_metadata::{FolderMetadata, SourceFolderDates};
 use super::merge::copy_directory_streaming;
 use super::merge_ctx::{CreatedPaths, MergeCtx};
@@ -189,10 +190,7 @@ pub(super) async fn extract_sequential_subtree(
                 return Err(source_reads.label(e, &file.source_path, &planned.dest_path));
             }
         };
-        staged
-            .commit(dest_volume, written.bytes)
-            .await
-            .map_err(|f| PathedVolumeError::from_landing(f, &planned.dest_path))?;
+        land_member(state, dest_volume, staged, written.bytes, &planned.dest_path).await?;
         // Landed, so the ` (N)` placeholder the plan pass reserved here is filled.
         // Every one this pass never reaches (a failure, a cancel between members)
         // stays on the op's ledger for the post-loop to take back
@@ -220,4 +218,47 @@ pub(super) async fn extract_sequential_subtree(
     folders.stamp(source_volume, dest_volume, state).await;
 
     Ok(total_bytes)
+}
+
+/// Gives one member's written temp its name, riding out an outage the landing
+/// meets the way `stream_pipe_file` does: a step the transport cut off waits
+/// for the destination, then settles what it did and lands what's left
+/// (`staged_write::CutOffLanding`).
+///
+/// ❗ A one-pass decode can't run the member again, so whatever would run the
+/// file again fails it here instead, and with no source to compare a gone temp
+/// against, a cleared-way landing whose temp is gone ❌ never counts as landed.
+async fn land_member(
+    state: &Arc<WriteOperationState>,
+    dest_volume: &Arc<dyn Volume>,
+    staged: StagedWrite,
+    bytes: u64,
+    dest_path: &Path,
+) -> Result<(), PathedVolumeError> {
+    let volumes = [dest_volume];
+    let mut started_on = StartedOn::now(&volumes);
+    let mut cut_off = match staged.commit(dest_volume, bytes).await {
+        Ok(()) => return Ok(()),
+        Err(LandingError::Failed(failure)) => return Err(PathedVolumeError::from_landing(failure, dest_path)),
+        Err(LandingError::CutOff(cut_off)) => cut_off,
+    };
+    let mut outages = 0;
+    loop {
+        let ended = wait_after_failure(state, cut_off.error(), &volumes, &started_on, &mut outages).await;
+        if ended != OutageEnd::Back {
+            let lost = lost_connection(ended, cut_off.error(), &volumes);
+            return match cut_off.give_up(dest_volume).await {
+                Ok(()) => Ok(()),
+                Err(_) if ended == OutageEnd::Cancelled => Err(volume_outage::cancelled()).at_destination(dest_path),
+                Err(failure) => Err(PathedVolumeError::from_landing(failure, dest_path).with_lost_connection(lost)),
+            };
+        }
+        started_on = StartedOn::now(&volumes);
+        match cut_off.resume(dest_volume, None).await {
+            Resumed::Landed => return Ok(()),
+            Resumed::RunAgain(error) => return Err(error).at_destination(dest_path),
+            Resumed::Failed(failure) => return Err(PathedVolumeError::from_landing(failure, dest_path)),
+            Resumed::CutOff(again) => cut_off = again,
+        }
+    }
 }

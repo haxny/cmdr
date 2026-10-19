@@ -91,7 +91,8 @@ pub(crate) async fn displace_destination(
         super::super::super::mount_boundary::refuse_a_volume_mount_inside(&**volume, original, state).await?;
     }
     let aside = StagingTemp::mint_aside(original, uuid::Uuid::new_v4(), state.liveness_token());
-    // On disk before the rename below puts the original here (`track_in`).
+    // On disk before the rename below puts the original here (`track_in`). The
+    // rename goes ahead whether or not the line made it.
     let record = match state.dest_volume_id() {
         Some(volume_id) => Some(
             in_flight_temps::track_in(
@@ -102,7 +103,8 @@ pub(crate) async fn displace_destination(
                 },
                 aside.path(),
             )
-            .await,
+            .await
+            .0,
         ),
         None => None,
     };

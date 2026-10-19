@@ -294,13 +294,21 @@ impl StagedWrite {
     ///
     /// `size` is the byte count the write confirmed. A landing that clears the
     /// way records the temp at that size (`ItemKind::Landing::expected_size`),
-    /// which is how a later sweep tells a whole temp from a short one.
+    /// which is how a later sweep tells a whole temp from a short one, and how
+    /// a cut-off landing's settle tells a temp it can land without streaming
+    /// the file again.
     ///
-    /// `Err(VolumeError::NotSupported)` means this destination can't rename (or
-    /// delete), so it can't stage at all; the caller may fall back to writing at
-    /// the final name, and `land` has already taken the temp away. No production
-    /// backend takes that branch.
-    pub(crate) async fn commit(mut self, dest_volume: &Arc<dyn Volume>, size: u64) -> Result<(), FinalizeFailure> {
+    /// ❗ A step that fails on the transport cuts the landing off
+    /// ([`LandingError::CutOff`]) rather than acting on a guess: the caller
+    /// waits for the destination and then resumes or gives up
+    /// ([`CutOffLanding`]). A caller with no wait to offer takes
+    /// [`commit_without_a_wait`](Self::commit_without_a_wait).
+    ///
+    /// `Failed` with `VolumeError::NotSupported` means this destination can't
+    /// rename (or delete), so it can't stage at all; the caller may fall back to
+    /// writing at the final name, and `land` has already taken the temp away. No
+    /// production backend takes that branch.
+    pub(crate) async fn commit(mut self, dest_volume: &Arc<dyn Volume>, size: u64) -> Result<(), LandingError> {
         let Some(temp) = self.temp.take() else {
             // Nothing to land: an unstaged or single-shot write already sits at
             // its final name.
@@ -309,8 +317,26 @@ impl StagedWrite {
         // Landing is a device round trip of its own; a dump has to be able to
         // name it rather than showing a task still "streaming" at EOF.
         set_task_phase(TaskPhase::Finalizing);
-        let ledger = LandingLedger::new(&self.state, temp.path());
-        land(dest_volume, temp.path(), &self.final_path, self.landing, size, &ledger).await
+        land(
+            dest_volume,
+            Landing::new(&self.state, temp, &self.final_path, self.landing, size),
+        )
+        .await
+    }
+
+    /// [`commit`](Self::commit) for a caller with no outage wait to offer: a
+    /// landing the transport cut off gives up at once, under the refusal rules
+    /// (`CutOffLanding::give_up`).
+    pub(crate) async fn commit_without_a_wait(
+        self,
+        dest_volume: &Arc<dyn Volume>,
+        size: u64,
+    ) -> Result<(), FinalizeFailure> {
+        match self.commit(dest_volume, size).await {
+            Ok(()) => Ok(()),
+            Err(LandingError::Failed(failure)) => Err(failure),
+            Err(LandingError::CutOff(cut_off)) => cut_off.give_up(dest_volume).await,
+        }
     }
 
     /// Atomically replaces the final name with a completed generated file.
@@ -626,7 +652,19 @@ pub(super) fn resolve_staging(requested: WriteStaging, lands_whole: bool) -> Wri
 
 #[path = "staged_write_landing.rs"]
 mod landing;
-use landing::{LandingLedger, land};
+pub(crate) use landing::{CutOffLanding, LandingError, LandingSource, Resumed};
+use landing::{Landing, land};
+
+#[cfg(test)]
+impl LandingError {
+    /// The failure of a landing a cell expects to END, never to be cut off.
+    pub(crate) fn ended(self) -> FinalizeFailure {
+        match self {
+            Self::Failed(failure) => failure,
+            Self::CutOff(cut_off) => panic!("the landing was cut off on the transport: {}", cut_off.error()),
+        }
+    }
+}
 
 #[cfg(test)]
 #[path = "staged_write_tests.rs"]

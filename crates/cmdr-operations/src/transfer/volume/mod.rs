@@ -139,6 +139,11 @@ mod swap_landing_tests;
 #[cfg(test)]
 mod safe_replace_grid_tests;
 
+/// The same Overwrite at the same five sites, with the share dropping inside
+/// the swap: the landing waits, settles, and finishes or keeps the new bytes.
+#[cfg(test)]
+mod swap_outage_tests;
+
 /// What each engine does when the destination won't say whether a name is taken.
 #[cfg(test)]
 mod dest_precheck_failure_tests;

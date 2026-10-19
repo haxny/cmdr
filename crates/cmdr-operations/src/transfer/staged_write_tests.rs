@@ -23,7 +23,8 @@ fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
 
 /// `land`, for a cell about the landing alone: on a state of its own whose
 /// ledger records nothing on disk, at the size the temp holds (what the write
-/// would have confirmed).
+/// would have confirmed), with no outage wait (a cut-off landing gives up at
+/// once, as `StagedWrite::commit_without_a_wait` does).
 async fn land_unrecorded(
     dest: &Arc<dyn Volume>,
     temp: &Path,
@@ -38,7 +39,12 @@ async fn land_unrecorded(
         .ok()
         .and_then(|entry| entry.size)
         .unwrap_or(0);
-    land(dest, temp, final_path, landing, size, &LandingLedger::new(&state, temp)).await
+    let temp = StagingTemp::adopt(temp.to_path_buf(), state.liveness_token());
+    match land(dest, Landing::new(&state, temp, final_path, landing, size)).await {
+        Ok(()) => Ok(()),
+        Err(LandingError::Failed(failure)) => Err(failure),
+        Err(LandingError::CutOff(cut_off)) => cut_off.give_up(dest).await,
+    }
 }
 
 /// A staged write must never hand the writer the final name, and the temp it
@@ -512,7 +518,7 @@ async fn a_refused_landing_takes_its_temp_away_and_stops_tracking_it() {
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
 
-    let outcome = staged.commit(&dest, 3).await;
+    let outcome = staged.commit(&dest, 3).await.map_err(LandingError::ended);
 
     assert!(
         matches!(
@@ -799,4 +805,91 @@ async fn a_landing_cut_off_after_clearing_the_way_is_finished_by_the_next_launch
     );
     assert!(!fixture.inner.exists(&fixture.temp).await);
     drop(fixture.engine);
+}
+
+/// The user's original at `/notes.txt` and a complete write over it, staged on
+/// `state`, landing on a plain in-memory destination.
+async fn swap_over(state: &Arc<WriteOperationState>) -> (Arc<InMemoryVolume>, Arc<dyn Volume>, StagedWrite) {
+    let inner = Arc::new(InMemoryVolume::new("dest"));
+    inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
+    let staged = StagedWrite::begin_unannounced(state, Path::new("/notes.txt"), WriteStaging::StageOverOriginal);
+    inner.create_file(staged.target(), b"THE NEW BYTES").await.unwrap();
+    let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
+    (inner, dest, staged)
+}
+
+/// Asserts a swap refused before it cleared anything: the original is whole at
+/// its name, and nothing is recorded as a landing.
+async fn assert_refused_with_the_original_in_place(
+    inner: &InMemoryVolume,
+    ledger: &Ledger,
+    landed: Result<(), FinalizeFailure>,
+) {
+    let failure = landed.expect_err("❗ a landing record that never reached the disk must not clear the way");
+    assert_eq!(failure.new_data_at, None, "nothing was cleared, so nothing was rescued");
+    assert_eq!(size_of(inner, "/notes.txt").await, Some(3), "the original survives");
+    assert_eq!(
+        ledger.recorded_landings(),
+        Vec::<PathBuf>::new(),
+        "and no landing is left recorded"
+    );
+}
+
+/// ❗ The ledger's writer is gone (it panicked, or the log was closed), so the
+/// landing record can't reach the disk. A crash after the delete would leave
+/// the only copy of the new bytes on a temp no record protects, so the swap
+/// refuses with nothing cleared.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_swap_whose_landing_record_has_no_writer_leaves_the_original_in_place() {
+    let dir = cmdr_fs::testing::TestDir::new("staged-write-landing-no-writer");
+    let data_dir = dir.join("data");
+    std::fs::create_dir_all(&data_dir).unwrap();
+    let ledger = Ledger::recording_in(&data_dir);
+    let engine = TestOperations::new();
+    let state = state_recording_into(&engine, &ledger);
+    let (inner, dest, staged) = swap_over(&state).await;
+    ledger.clone().die();
+
+    let landed = staged.commit(&dest, 13).await.map_err(LandingError::ended);
+
+    assert_refused_with_the_original_in_place(&inner, &ledger, landed).await;
+}
+
+/// The same refusal when the log is there but won't take the line (a full or
+/// read-only data disk): only a record the log wrote counts.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_swap_whose_landing_record_the_log_refused_leaves_the_original_in_place() {
+    let dir = cmdr_fs::testing::TestDir::new("staged-write-landing-log-refused");
+    let data_dir = dir.join("data");
+    std::fs::create_dir_all(&data_dir).unwrap();
+    let ledger = Ledger::recording_into_a_log_that_refuses_writes(&data_dir);
+    let engine = TestOperations::new();
+    let state = state_recording_into(&engine, &ledger);
+    let (inner, dest, staged) = swap_over(&state).await;
+
+    let landed = staged.commit(&dest, 13).await.map_err(LandingError::ended);
+
+    assert_refused_with_the_original_in_place(&inner, &ledger, landed).await;
+}
+
+/// An operation that never named its destination volume has no path space to
+/// record the landing in. On a ledger that keeps a log, that's a record that
+/// can't reach the disk, so the swap refuses with nothing cleared.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_swap_with_no_path_space_for_its_landing_record_leaves_the_original_in_place() {
+    let dir = cmdr_fs::testing::TestDir::new("staged-write-landing-no-home");
+    let data_dir = dir.join("data");
+    std::fs::create_dir_all(&data_dir).unwrap();
+    let ledger = Ledger::recording_in(&data_dir);
+    let engine = TestOperations::new();
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_in_flight_ledger(ledger.clone()),
+    );
+    let (inner, dest, staged) = swap_over(&state).await;
+
+    let landed = staged.commit(&dest, 13).await.map_err(LandingError::ended);
+
+    assert_refused_with_the_original_in_place(&inner, &ledger, landed).await;
 }

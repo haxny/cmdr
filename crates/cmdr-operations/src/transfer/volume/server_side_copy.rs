@@ -12,16 +12,19 @@ use std::time::Instant;
 use super::super::super::host::Announced;
 use super::super::super::state::WriteOperationState;
 use super::super::recovered_name::FinalizeFailure;
-use super::super::staged_write::{StagedWrite, WriteStaging, resolve_staging};
+use super::super::staged_write::{CutOffLanding, LandingError, StagedWrite, WriteStaging, resolve_staging};
 use super::super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
+use super::super::volume_outage::StartedOn;
 use super::transfer_error::hard_abort_error;
 use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeError};
 
 /// Asks the destination to copy the file on the server, from itself or from a
 /// sibling place it can copy across (`Volume::copy_on_server`).
 ///
-/// `Ok(None)` means "do it the ordinary way", and that is the answer for
-/// everything except a clean success, a genuine cancel, and a refused name:
+/// [`ServerSideCopy::Streams`] means "do it the ordinary way", and that is the
+/// answer for everything except a clean success, a landing the transport cut
+/// off (the copy is done; only its name is unsettled), a genuine cancel, and a
+/// refused name:
 ///
 /// - **A pair that can't copy on the server at all**
 ///   (`Volume::may_copy_on_server_from`), answered before anything is staged.
@@ -66,10 +69,10 @@ pub(super) async fn try_server_side_copy(
     state: &Arc<WriteOperationState>,
     on_file_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
     staging: WriteStaging,
-) -> Result<Option<u64>, FinalizeFailure> {
+) -> Result<ServerSideCopy, FinalizeFailure> {
     let dest_path = announced_dest.path();
     if !dest_volume.may_copy_on_server_from(source_volume.as_ref()) {
-        return Ok(None);
+        return Ok(ServerSideCopy::Streams);
     }
     // Before the stage, so a dump of a task stuck anywhere in here names this
     // step and never reads as `streaming 0/0`.
@@ -120,8 +123,16 @@ pub(super) async fn try_server_side_copy(
 
     match outcome {
         Ok(bytes) => {
-            staged.commit(dest_volume, bytes).await?;
-            Ok(Some(bytes))
+            let started_on = StartedOn::now(&[source_volume, dest_volume]);
+            match staged.commit(dest_volume, bytes).await {
+                Ok(()) => Ok(ServerSideCopy::Landed(bytes)),
+                Err(LandingError::Failed(failure)) => Err(failure),
+                Err(LandingError::CutOff(cut_off)) => Ok(ServerSideCopy::LandingCutOff {
+                    cut_off,
+                    started_on,
+                    bytes,
+                }),
+            }
         }
         // ❌ A cancel is never retried more slowly. The intent is consulted as
         // well as the variant, so a backend that labels its own stop something
@@ -144,9 +155,25 @@ pub(super) async fn try_server_side_copy(
                 dest_path.display(),
                 started.elapsed(),
             );
-            Ok(None)
+            Ok(ServerSideCopy::Streams)
         }
     }
+}
+
+/// How a server-side copy attempt came out, short of a failure.
+pub(super) enum ServerSideCopy {
+    /// The server copied the file and it has its final name.
+    Landed(u64),
+    /// Do it the ordinary way: stream it.
+    Streams,
+    /// The server copied all `bytes` and the landing was cut off on the
+    /// transport: `stream_pipe_file`'s landing wait settles it, as it settles a
+    /// streamed file's.
+    LandingCutOff {
+        cut_off: Box<CutOffLanding>,
+        started_on: StartedOn,
+        bytes: u64,
+    },
 }
 
 /// The engine's half of a server-side copy's progress hook: bytes go to the

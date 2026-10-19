@@ -22,6 +22,13 @@
 //! while the rename is in flight, so the rename fails with the old session's
 //! error and the volume already reads live on the next generation.
 //!
+//! A swap's landing is armed by PATH rather than by count, since a concurrent
+//! window's siblings rename and delete in no fixed order: the drop around the
+//! next delete of a path or rename onto it, on either side, and the late error
+//! of a delete. It can also copy inside itself on the server
+//! (`Volume::copy_within`), and it counts where every write went, so a cell can
+//! tell a landing resumed from its temp from a file streamed again.
+//!
 //! Wraps an `InMemoryVolume` (rather than owning one) so a test can read the
 //! destination back through the same handle after the copy.
 
@@ -61,6 +68,8 @@ pub(crate) struct OutageVolume {
     /// Drop the session at the start of this (0-based) read-stream open.
     drop_at_open: Mutex<Option<usize>>,
     writes: AtomicUsize,
+    /// Where each write went, in order.
+    written: Mutex<Vec<PathBuf>>,
     /// Drop the session at the start of this (0-based) write.
     drop_at_write: Mutex<Option<usize>>,
     /// Drop the session right after this (0-based) write completed.
@@ -76,6 +85,16 @@ pub(crate) struct OutageVolume {
     /// Drop the session around this (0-based) rename and have someone else
     /// reconnect it before the rename's error arrives.
     stale_error_at_rename: Mutex<Option<(usize, RenameDrop)>>,
+    /// Drop the session around the next rename onto this path, once.
+    drop_at_rename_onto: Mutex<Option<(PathBuf, RenameDrop)>>,
+    /// Drop the session around the next delete of this path, once.
+    drop_at_delete_of: Mutex<Option<(PathBuf, RenameDrop)>>,
+    /// The next delete of this path answers a dropped session's error after
+    /// someone else reconnected it, once.
+    stale_error_at_delete_of: Mutex<Option<(PathBuf, RenameDrop)>>,
+    /// Copy inside itself on the server (`Volume::copy_within`), counting each.
+    copies_on_server: AtomicBool,
+    server_copies: AtomicUsize,
     /// Which session is up: bumped each time a reconnect brings it back.
     generation: AtomicU64,
     /// Which backend it stands in for: an SMB share unless a test says
@@ -116,6 +135,7 @@ impl OutageVolume {
             opens: AtomicUsize::new(0),
             drop_at_open: Mutex::new(None),
             writes: AtomicUsize::new(0),
+            written: Mutex::new(Vec::new()),
             drop_at_write: Mutex::new(None),
             drop_after_write: Mutex::new(None),
             drop_cuts_the_stamp: AtomicBool::new(false),
@@ -123,6 +143,11 @@ impl OutageVolume {
             renames: AtomicUsize::new(0),
             drop_at_rename: Mutex::new(None),
             stale_error_at_rename: Mutex::new(None),
+            drop_at_rename_onto: Mutex::new(None),
+            drop_at_delete_of: Mutex::new(None),
+            stale_error_at_delete_of: Mutex::new(None),
+            copies_on_server: AtomicBool::new(false),
+            server_copies: AtomicUsize::new(0),
             generation: AtomicU64::new(0),
             backend: Mutex::new(BackendKind::Smb),
         })
@@ -214,6 +239,53 @@ impl OutageVolume {
         *self.stale_error_at_rename.lock_ignore_poison() = Some((n, side));
     }
 
+    /// The session drops (and the server goes away) around the next rename
+    /// onto `to`, on the given side of it: a swap's rename after its delete,
+    /// whichever rename number that is in a concurrent window.
+    pub(crate) fn drop_at_rename_onto(&self, to: &Path, side: RenameDrop) {
+        *self.drop_at_rename_onto.lock_ignore_poison() = Some((to.to_path_buf(), side));
+    }
+
+    /// The session drops (and the server goes away) around the next delete of
+    /// `path`, on the given side of it: before the server sees it, or after it
+    /// deleted the file and before its reply arrived.
+    pub(crate) fn drop_at_delete_of(&self, path: &Path, side: RenameDrop) {
+        *self.drop_at_delete_of.lock_ignore_poison() = Some((path.to_path_buf(), side));
+    }
+
+    /// The next delete of `path` answers the error of a session that dropped
+    /// under it (on the given side), arriving only after someone else had
+    /// already reconnected: the volume reads live on the next generation.
+    pub(crate) fn stale_error_at_delete_of(&self, path: &Path, side: RenameDrop) {
+        *self.stale_error_at_delete_of.lock_ignore_poison() = Some((path.to_path_buf(), side));
+    }
+
+    /// Copies inside itself on the server from now on, the way SFTP's
+    /// `copy-data` does.
+    pub(crate) fn copy_on_the_server(&self) {
+        self.copies_on_server.store(true, Ordering::SeqCst);
+    }
+
+    /// How many copies the server made for us.
+    pub(crate) fn server_copies(&self) -> usize {
+        self.server_copies.load(Ordering::SeqCst)
+    }
+
+    /// How many writes reached the volume: a file streamed again shows here.
+    pub(crate) fn writes(&self) -> usize {
+        self.writes.load(Ordering::SeqCst)
+    }
+
+    /// How many writes went to `final_path` or to a staged temp of it.
+    pub(crate) fn writes_for(&self, final_path: &Path) -> usize {
+        let temp_prefix = format!("{}.cmdr-tmp-", final_path.display());
+        self.written
+            .lock_ignore_poison()
+            .iter()
+            .filter(|target| *target == final_path || target.to_string_lossy().starts_with(&temp_prefix))
+            .count()
+    }
+
     pub(crate) fn reconnect_attempts(&self) -> usize {
         self.reconnect_attempts.load(Ordering::SeqCst)
     }
@@ -241,6 +313,47 @@ impl OutageVolume {
         } else {
             Err(VolumeError::DeviceDisconnected("the session is down".to_owned()))
         }
+    }
+
+    /// Runs `call` (a delete or a rename) under whichever path-armed drop it
+    /// meets, each firing once: the plain drop on its side, or the late error
+    /// that arrives after someone else reconnected.
+    async fn under_path_drops<'a>(
+        &'a self,
+        path: &Path,
+        drop: &Mutex<Option<(PathBuf, RenameDrop)>>,
+        stale: Option<&Mutex<Option<(PathBuf, RenameDrop)>>>,
+        call: impl Fn() -> Fut<'a, Result<(), VolumeError>>,
+    ) -> Result<(), VolumeError> {
+        match armed_for(drop, path) {
+            Some(RenameDrop::BeforeTheServerSeesIt) => self.go_away(),
+            Some(RenameDrop::AfterTheServerPerformsIt) => {
+                self.gate()?;
+                call().await?;
+                self.go_away();
+            }
+            None => {}
+        }
+        if let Some(side) = stale.and_then(|stale| armed_for(stale, path)) {
+            self.gate()?;
+            if side == RenameDrop::AfterTheServerPerformsIt {
+                call().await?;
+            }
+            self.go_away();
+            self.reconnected_elsewhere();
+            return Err(VolumeError::DeviceDisconnected("the session is down".to_owned()));
+        }
+        self.gate()?;
+        call().await
+    }
+}
+
+/// Takes the arm in `slot` when it names `path`.
+fn armed_for(slot: &Mutex<Option<(PathBuf, RenameDrop)>>, path: &Path) -> Option<RenameDrop> {
+    let mut armed = slot.lock_ignore_poison();
+    match &*armed {
+        Some((at, _)) if at == path => armed.take().map(|(_, side)| side),
+        _ => None,
     }
 }
 
@@ -346,8 +459,13 @@ impl Volume for OutageVolume {
     }
     fn delete<'a>(&'a self, path: &'a Path) -> Fut<'a, Result<(), VolumeError>> {
         Box::pin(async move {
-            self.gate()?;
-            self.inner.delete(path).await
+            self.under_path_drops(
+                path,
+                &self.drop_at_delete_of,
+                Some(&self.stale_error_at_delete_of),
+                || self.inner.delete(path),
+            )
+            .await
         })
     }
     fn rename<'a>(&'a self, from: &'a Path, to: &'a Path, force: bool) -> Fut<'a, Result<(), VolumeError>> {
@@ -375,8 +493,36 @@ impl Volume for OutageVolume {
                 self.reconnected_elsewhere();
                 return Err(VolumeError::DeviceDisconnected("the session is down".to_owned()));
             }
+            self.under_path_drops(to, &self.drop_at_rename_onto, None, || {
+                self.inner.rename(from, to, force)
+            })
+            .await
+        })
+    }
+    fn supports_copy_within(&self) -> bool {
+        self.copies_on_server.load(Ordering::SeqCst)
+    }
+    fn copy_within<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        on_progress: &'a (dyn Fn(u64, u64) -> std::ops::ControlFlow<()> + Sync),
+    ) -> Fut<'a, Result<u64, VolumeError>> {
+        Box::pin(async move {
             self.gate()?;
-            self.inner.rename(from, to, force).await
+            self.server_copies.fetch_add(1, Ordering::SeqCst);
+            let stream = self.inner.open_read_stream(from).await?;
+            let size = stream.total_size().known().expect("stored files have a known length");
+            self.inner
+                .write_from_stream(
+                    to,
+                    WriteMode::CreateOrReplace,
+                    StreamLength::Known(size),
+                    stream,
+                    &|progress| on_progress(progress.bytes_written, size),
+                )
+                .await
+                .map(|written| written.bytes)
         })
     }
     fn get_space_info<'a>(&'a self) -> Fut<'a, Result<SpaceInfo, VolumeError>> {
@@ -434,6 +580,7 @@ impl Volume for OutageVolume {
     ) -> Fut<'a, Result<StreamWritten, VolumeError>> {
         Box::pin(async move {
             let n = self.writes.fetch_add(1, Ordering::SeqCst);
+            self.written.lock_ignore_poison().push(dest.to_path_buf());
             if *self.drop_at_write.lock_ignore_poison() == Some(n) {
                 self.go_away();
             }

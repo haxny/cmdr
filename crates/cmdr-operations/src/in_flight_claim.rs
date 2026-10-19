@@ -73,6 +73,9 @@ impl Ledger {
     pub(super) fn init_and_sweep(&self, data_dir: &Path, host: &Arc<EngineHost>) -> SweepHandle {
         let path = data_dir.join(STORE_FILENAME);
         let recorded = read_recorded(&path);
+        // Before the open: a log that won't open is a ledger that couldn't
+        // keep its records, ❌ never one that didn't mean to.
+        self.store().keeps_a_log = true;
 
         // Truncating as we open is what retires the records we're about to act
         // on: sweeping twice would be harmless, but a log that only ever grew

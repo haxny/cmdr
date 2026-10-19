@@ -619,12 +619,15 @@ async fn publish_stage(
     size: u64,
 ) -> Result<(), EditError> {
     if !replace_existing {
-        stage.commit(dest_volume, size).await.map_err(|failure| {
-            EditError::Op(super::super::transfer::volume::map_finalize_failure(
-                archive_path,
-                failure,
-            ))
-        })?;
+        stage
+            .commit_without_a_wait(dest_volume, size)
+            .await
+            .map_err(|failure| {
+                EditError::Op(super::super::transfer::volume::map_finalize_failure(
+                    archive_path,
+                    failure,
+                ))
+            })?;
     } else if dest_volume.supports_atomic_replace_rename() {
         stage
             .commit_atomic_replace(dest_volume)

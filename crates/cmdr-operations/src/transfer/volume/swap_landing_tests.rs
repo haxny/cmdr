@@ -79,7 +79,7 @@ async fn swap_over_the_original(
     let staged = StagedWrite::begin(&state, &**dest, original, WriteStaging::StageOverOriginal);
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
-    (temp, staged.commit(dest, 3).await)
+    (temp, staged.commit_without_a_wait(dest, 3).await)
 }
 
 /// What `path` holds right now, or `None` if it isn't there.

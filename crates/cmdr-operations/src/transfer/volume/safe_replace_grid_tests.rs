@@ -442,14 +442,14 @@ async fn read_all(volume: &dyn Volume, path: &Path) -> Option<Vec<u8>> {
 /// A `.tar.gz` on disk with an `ArchiveVolume` over it (a compressed tar is
 /// sequential, so it takes the one-pass extract). Members land in the order
 /// given.
-struct TarGzFixture {
+pub(super) struct TarGzFixture {
     /// Held for its `Drop`: it owns the directory `path` lives in.
     _dir: TestDir,
     path: PathBuf,
 }
 
 impl TarGzFixture {
-    fn new(files: &[(&str, &[u8])]) -> Self {
+    pub(super) fn new(files: &[(&str, &[u8])]) -> Self {
         let mut builder = ::tar::Builder::new(Vec::new());
         for (name, data) in files {
             let mut header = ::tar::Header::new_ustar();
@@ -469,7 +469,7 @@ impl TarGzFixture {
         Self { _dir: dir, path }
     }
 
-    fn volume(&self) -> Arc<dyn Volume> {
+    pub(super) fn volume(&self) -> Arc<dyn Volume> {
         let parent: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("parent").with_local_fs_access());
         Arc::new(ArchiveVolume::new(
             parent,
@@ -479,7 +479,12 @@ impl TarGzFixture {
         ))
     }
 
-    fn inner(&self, rel: &str) -> PathBuf {
+    /// Where the `.tar.gz` is: the archive volume's root, for the oracle.
+    pub(super) fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub(super) fn inner(&self, rel: &str) -> PathBuf {
         self.path.join(rel)
     }
 }

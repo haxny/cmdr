@@ -32,8 +32,43 @@ impl Ledger {
             .open(data_dir.join(STORE_FILENAME))
             .expect("open a test in-flight temp ledger");
         log.set_len(0).expect("start the test ledger empty");
-        ledger.store().log = Some(LogWriter::spawn(log).expect("start the test ledger's writer"));
+        let mut store = ledger.store();
+        store.keeps_a_log = true;
+        store.log = Some(LogWriter::spawn(log).expect("start the test ledger's writer"));
+        drop(store);
         ledger
+    }
+
+    /// [`recording_in`](Self::recording_in), over a log the writer can't write
+    /// to (opened read-only), the way a full or read-only data disk refuses.
+    pub(crate) fn recording_into_a_log_that_refuses_writes(data_dir: &Path) -> Self {
+        let path = data_dir.join(STORE_FILENAME);
+        File::create(&path).expect("create a test in-flight temp ledger");
+        let ledger = Self::new();
+        let log = File::open(&path).expect("open it read-only");
+        let mut store = ledger.store();
+        store.keeps_a_log = true;
+        store.log = Some(LogWriter::spawn(log).expect("start the test ledger's writer"));
+        drop(store);
+        ledger
+    }
+
+    /// The paths this ledger records as landings right now.
+    pub(crate) fn recorded_landings(&self) -> Vec<std::path::PathBuf> {
+        self.store()
+            .recorded
+            .iter()
+            .filter(|record| {
+                matches!(
+                    record,
+                    Record::Tracked(super::TrackedItem {
+                        kind: super::ItemKind::Landing { .. },
+                        ..
+                    })
+                )
+            })
+            .map(|record| record.path().to_path_buf())
+            .collect()
     }
 
     /// Parks this ledger's writer thread until the returned sender is dropped,

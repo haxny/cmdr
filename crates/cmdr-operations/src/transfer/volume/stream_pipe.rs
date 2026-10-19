@@ -8,25 +8,23 @@
 //! fault decision ([`FileRun::on_fault`]), `stream_pipe_steps.rs` the steps.
 
 use std::ops::ControlFlow;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::super::host::Announced;
 use super::super::super::state::WriteOperationState;
-use super::super::interrupted_landing::{InterruptedLanding, settle_interrupted_landing};
-use super::super::recovered_name::FinalizeFailure;
 use super::super::retry;
-use super::super::staged_write::{StagedWrite, WriteStaging};
+use super::super::staged_write::{CutOffLanding, StagedWrite, WriteStaging};
 use super::super::transfer_probe::{TaskPhase, note_task_retry, set_task_phase};
 use super::super::volume_outage::{
     self, LostConnection, OutageEnd, OutageFailure, StartedOn, lost_connection, wait_after_failure,
 };
 use super::preflight::SourceFileFacts;
-use super::server_side_copy::try_server_side_copy;
+use super::server_side_copy::{ServerSideCopy, try_server_side_copy};
 use super::source_reads::SourceReads;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
-use cmdr_fs::metadata::MetadataClasses;
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{Volume, VolumeError};
 
 #[path = "stream_pipe_steps.rs"]
@@ -120,9 +118,10 @@ fn auto_yield_tuning() -> (Duration, u64, Duration) {
 /// file→file Overwrite replaces (`WriteStaging::StageOverOriginal`).
 ///
 /// A step runner: each pass walks the file's checkpoints in order (settle a
-/// create the transport may have completed, open the source, write, land), and
-/// a step that fails hands its [`Fault`] to ONE decision, [`FileRun::on_fault`],
-/// which classifies it, waits out an outage with the step's own generation
+/// create the transport may have completed, finish a landing the transport cut
+/// off, open the source, write, land), and a step that fails hands its
+/// [`Fault`] to ONE decision, [`FileRun::on_fault`], which classifies it,
+/// waits out an outage with the step's own generation
 /// snapshot, and says whether the file runs again or is over. The landed flags
 /// (`landed_flags.rs`) are a best-effort tail of the landing, outside the
 /// runner: a flag a drop cut off is a counted, reported metadata loss.
@@ -150,8 +149,9 @@ pub(super) async fn stream_pipe_file(
 
     // The server can copy for itself: the bytes never leave it. A pure
     // optimization, so anything short of a clean success falls through to the
-    // streaming runner below rather than failing the file.
-    if let Some(bytes) = try_server_side_copy(
+    // streaming runner below rather than failing the file, and a landing the
+    // transport cut off takes the runner's landing wait like a streamed one.
+    let mut fault = match try_server_side_copy(
         source_volume,
         source_path,
         dest_volume,
@@ -163,10 +163,24 @@ pub(super) async fn stream_pipe_file(
     .await
     .map_err(|f| PathedVolumeError::from_landing(f, dest_path))?
     {
-        // Landed, so a ` (N)` placeholder at the name is filled, not ours to take back.
-        state.claimed_names.release_placeholder(dest_path);
-        return Ok(bytes);
-    }
+        ServerSideCopy::Landed(bytes) => {
+            // Landed, so a ` (N)` placeholder at the name is filled, not ours to take back.
+            state.claimed_names.release_placeholder(dest_path);
+            return Ok(bytes);
+        }
+        ServerSideCopy::Streams => None,
+        ServerSideCopy::LandingCutOff {
+            cut_off,
+            started_on,
+            bytes,
+        } => Some(Fault::Land {
+            cut_off,
+            started_on,
+            bytes,
+            lost: MetadataClasses::NONE,
+            after_landing: CarriedMetadata::default(),
+        }),
+    };
 
     let mut run = FileRun {
         source_volume,
@@ -182,15 +196,19 @@ pub(super) async fn stream_pipe_file(
         attempt: 1,
         outages: 0,
         unanswered_create: None,
+        landing_to_resume: None,
     };
     loop {
-        let fault = match run.checkpoints().await {
-            Ok(bytes) => return Ok(bytes),
-            Err(Stop::RunAgain) => continue,
-            Err(Stop::Over(error)) => return Err(error),
-            Err(Stop::Faulted(fault)) => fault,
+        let failed = match fault.take() {
+            Some(fault) => fault,
+            None => match run.checkpoints().await {
+                Ok(bytes) => return Ok(bytes),
+                Err(Stop::RunAgain) => continue,
+                Err(Stop::Over(error)) => return Err(error),
+                Err(Stop::Faulted(fault)) => *fault,
+            },
         };
-        if let ControlFlow::Break(result) = run.on_fault(*fault).await {
+        if let ControlFlow::Break(result) = run.on_fault(failed).await {
             return result;
         }
     }
@@ -241,6 +259,18 @@ struct FileRun<'a> {
     /// pass settles that before opening the source again
     /// (`interrupted_landing.rs`).
     unanswered_create: Option<(u64, MetadataClasses)>,
+    /// Set when a landing the transport cut off waited out its outage: the next
+    /// pass settles and finishes it before anything streams again
+    /// (`staged_write::CutOffLanding::resume`).
+    landing_to_resume: Option<LandingToResume>,
+}
+
+/// A cut-off landing, with what its file's landed tail still needs.
+struct LandingToResume {
+    cut_off: Box<CutOffLanding>,
+    bytes: u64,
+    lost: MetadataClasses,
+    after_landing: CarriedMetadata,
 }
 
 /// Why a pass over the checkpoints stopped short of a landed file.
@@ -268,15 +298,16 @@ enum Fault {
         staged: StagedWrite,
         source_reads: SourceReads,
     },
-    /// The landing rename, with NOTHING cleared (`new_data_at: None`). A resume
-    /// settles whether the rename happened before deciding to run the file
-    /// again.
+    /// A landing step the transport cut off (a rename, or a swap's clearing
+    /// delete), which the server may or may not have performed. A resume
+    /// settles what it did and lands what's left, streaming the file again only
+    /// when nothing proves it landed and no whole temp is left to land.
     Land {
-        failure: FinalizeFailure,
+        cut_off: Box<CutOffLanding>,
         started_on: StartedOn,
-        landing_from: PathBuf,
         bytes: u64,
         lost: MetadataClasses,
+        after_landing: CarriedMetadata,
     },
 }
 
@@ -284,7 +315,7 @@ impl Fault {
     fn error(&self) -> &VolumeError {
         match self {
             Self::OpenSource { error, .. } | Self::Write { error, .. } => error,
-            Self::Land { failure, .. } => &failure.error,
+            Self::Land { cut_off, .. } => cut_off.error(),
         }
     }
 
@@ -302,6 +333,9 @@ impl FileRun<'_> {
     /// count.
     async fn checkpoints(&mut self) -> Result<u64, Stop> {
         if let Some(bytes) = self.settle_unanswered_create().await {
+            return Ok(bytes);
+        }
+        if let Some(bytes) = self.resume_landing().await? {
             return Ok(bytes);
         }
         let opened = self.open_source().await?;
@@ -369,51 +403,47 @@ impl FileRun<'_> {
                     self.write_failed(error, staged, source_reads, connection_lost).await
                 }
             },
-            // The landing failed with NOTHING cleared because the destination
-            // went away under it (or answered with a session someone else had
-            // already replaced): the rename may never have reached the server,
-            // or the server performed it and the drop swallowed the reply. Once
-            // the share is back, settle which (`interrupted_landing.rs`): our
-            // file whole at its name counts as landed; anything else takes the
-            // temp away and runs the file again. On a transport fault `land`
-            // left the temp registered for exactly this, so a wait that gives up
-            // leaves it to the operation's abandoned-write cleanup.
+            // A landing step the transport cut off: the destination went away
+            // under it (or answered with a session someone else had already
+            // replaced), and the server may or may not have performed it. Once
+            // the share is back, the next pass settles what it did and lands
+            // what's left (`resume_landing`). A wait that ends without the share
+            // meets the refusal rules (`CutOffLanding::give_up`): nothing
+            // cleared leaves the temp to the abandoned-write cleanup, and a
+            // cleared way rescues the new bytes or leaves them recorded as a
+            // landing for the next sweep that reaches the share, ❌ never
+            // cleaned. A cancel takes the same give-up, and is reported as the
+            // cancel it is.
             Fault::Land {
-                failure,
-                landing_from,
+                cut_off,
                 bytes,
                 lost,
+                after_landing,
                 ..
             } => match ended {
                 OutageEnd::Back => {
-                    set_task_phase(TaskPhase::Finalizing);
-                    let settled =
-                        settle_interrupted_landing(self.state, self.dest_volume, &landing_from, self.dest_path, bytes)
-                            .await;
-                    if settled == InterruptedLanding::Landed {
-                        log::info!(
-                            target: "copy",
-                            "stream_pipe_file: {} landed before the drop swallowed the reply; counting it done",
-                            self.dest_path.display(),
-                        );
-                        self.state.claimed_names.release_placeholder(self.dest_path);
-                        self.state.metadata_losses.note_file(lost);
-                        return ControlFlow::Break(Ok(bytes));
-                    }
-                    log::info!(
-                        target: "copy",
-                        "stream_pipe_file: landing {} again now that its volume is back",
-                        self.dest_path.display(),
-                    );
+                    self.landing_to_resume = Some(LandingToResume {
+                        cut_off,
+                        bytes,
+                        lost,
+                        after_landing,
+                    });
                     self.attempt = 1;
                     ControlFlow::Continue(())
                 }
-                OutageEnd::Cancelled => {
-                    ControlFlow::Break(Err(volume_outage::cancelled()).at_destination(self.dest_path))
+                OutageEnd::Cancelled | OutageEnd::GaveUp { .. } | OutageEnd::NotWaitable => {
+                    set_task_phase(TaskPhase::Finalizing);
+                    match cut_off.give_up(self.dest_volume).await {
+                        Ok(()) => ControlFlow::Break(Ok(self.landed(bytes, lost, &after_landing).await)),
+                        Err(_) if ended == OutageEnd::Cancelled => {
+                            ControlFlow::Break(Err(volume_outage::cancelled()).at_destination(self.dest_path))
+                        }
+                        Err(failure) => {
+                            ControlFlow::Break(Err(PathedVolumeError::from_landing(failure, self.dest_path)
+                                .with_lost_connection(connection_lost)))
+                        }
+                    }
                 }
-                OutageEnd::GaveUp { .. } | OutageEnd::NotWaitable => ControlFlow::Break(Err(
-                    PathedVolumeError::from_landing(failure, self.dest_path).with_lost_connection(connection_lost),
-                )),
             },
         }
     }

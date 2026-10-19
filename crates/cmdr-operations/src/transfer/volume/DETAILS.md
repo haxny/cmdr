@@ -992,10 +992,14 @@ staged".
   the same four outcomes (lands, write fails, delete refused, rename refused after the delete), and when each stops
   being rollbackable, in `safe_replace_grid_tests.rs`, whose
   `a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land` pins the dropped task.
-- **A swap's landing failure ends the file, outage or not.** `stream_pipe_file`'s outage settle
-  (`../interrupted_landing.rs`) knows only a rename-first landing, and after a `delete(orig)` that went through
-  unanswered it would discard the destination's only copy, so a swap never takes it (`../DETAILS.md` § "Waiting out a
-  volume that went away").
+- **A swap rides out an outage, and settles before it acts.** A transport fault on `delete(orig)` or on the rename after
+  it cuts the landing off: no refused-delete stat, no discard, no rescue on whatever session answers next. Once the
+  share is back, the swap is settled from what the destination shows: a whole temp lands without the file streaming
+  again (the rename alone once `orig` is gone, ❌ never another delete), and a gone temp counts as landed only when
+  `orig` holds exactly the source's bytes. A wait that ends without the share keeps the new bytes recorded as a landing
+  for the next sweep that reaches it. All five sites get it: `stream_pipe_file`'s runner for four (and the server-side
+  copy's landing), `sequential_extract.rs::land_member` for the extract, which can't stream a member again. The rules
+  and their proofs: `../DETAILS.md` § "A landing the drop cut off". Pinned at every site by `swap_outage_tests.rs`.
 - **A cross-type Overwrite renames the destination ASIDE and holds it until the operation ends.** A type swap can't
   stage the new side the way file→file does: a folder replacing a file appears the moment its walk starts and fills in
   leaf by leaf over the rest of the operation, and any leaf can fail or be cancelled. Deleting the destination first

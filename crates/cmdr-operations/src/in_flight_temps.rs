@@ -255,6 +255,11 @@ struct Store {
     /// `None` until a claim opens it ([`Ledger::init_and_sweep`]), which keeps unit
     /// tests from touching disk unless they ask to.
     log: Option<LogWriter>,
+    /// Whether a claim set out to keep this ledger on disk, whether or not its
+    /// log opened. A record that must be on disk before its caller acts can
+    /// only be confirmed by a ledger that keeps one; one that never set out to
+    /// (a test's engine) has nothing to confirm against ([`OnDisk::NotKept`]).
+    keeps_a_log: bool,
     /// Bytes queued since the last truncation, tracked here so the compaction
     /// check costs no syscall.
     logged_bytes: u64,
@@ -309,61 +314,21 @@ pub(super) fn retire_temp(state: &WriteOperationState, home: Option<RecordHome>,
     }
 }
 
-/// The temp [`track_temp`] recorded holds complete bytes, and the way to
-/// `destination` is about to be cleared: from here it may be the destination's
-/// only copy. Re-records it as an [`ItemKind::Landing`], written before this
-/// resolves, THEN retires its `Temp` record and drops it from the operation's
-/// in-memory ledger, so no in-operation sweep may delete it.
-///
-/// ❗ That order is the guarantee. A crash between the two lines leaves both,
-/// and the sweep settles a path recorded under both by the landing
-/// (`in_flight_sweep.rs::without_superseded_temps`); the other order has a
-/// moment where only the `Temp` record, which the sweep deletes, is on disk.
-///
-/// Hands back the landing's record for the caller to settle
-/// ([`retire`] once it lands or is rescued, [`keep_for_arrival`] while the
-/// destination can't say). `None` for a `home` of `None`, which persists
-/// nothing.
-pub(super) async fn hold_for_landing(
-    state: &WriteOperationState,
-    home: Option<RecordHome>,
-    temp: &Path,
-    destination: &Path,
-    expected_size: u64,
-) -> Option<TrackedRecord> {
-    let Some(home) = home else {
-        state.in_flight_temps.lock_ignore_poison().retain(|p| p != temp);
-        return None;
-    };
-    let temp_record = tracked_record(&home, ItemKind::Temp, temp);
-    let landing = track_in(
-        state,
-        home,
-        ItemKind::Landing {
-            destination: destination.to_path_buf(),
-            expected_size,
-        },
-        temp,
-    )
-    .await;
-    state.in_flight_temps.lock_ignore_poison().retain(|p| p != temp);
-    Ledger::of(state).retire_record(&temp_record);
-    Some(landing)
-}
-
-/// The undo of [`hold_for_landing`], for a landing that cleared nothing and
-/// couldn't take its temp away: the temp is a removable copy of ours again, so
-/// it's tracked as one (in memory too) BEFORE the landing record retires.
-pub(super) fn back_to_temp(
-    state: &WriteOperationState,
-    home: Option<RecordHome>,
-    temp: &Path,
-    landing: Option<TrackedRecord>,
-) {
-    track_temp(state, home, temp);
-    if let Some(landing) = landing {
-        Ledger::of(state).retire_record(&landing.record);
-    }
+/// Whether a record that must be on disk before its caller acts made it there
+/// ([`track`], [`track_in`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum OnDisk {
+    /// The log has the line: in the page cache, which a crash or a kill can't
+    /// take.
+    Written,
+    /// This ledger keeps nothing on disk, by design: no claim set out to open
+    /// a log for it (an engine the host didn't install, as a test's is). There's
+    /// nothing to confirm against, and no later launch would read it.
+    NotKept,
+    /// The ledger keeps a log and this line isn't in it: the log never opened,
+    /// its writer is gone, the write failed, or the record can't be written (a
+    /// path that isn't UTF-8).
+    Missing,
 }
 
 /// Whether this operation's persisted ledger records `path` on `volume_id`,
@@ -399,12 +364,6 @@ pub(super) fn register(state: &WriteOperationState, temp: &Path, home: Option<Te
     let mut store = Ledger::of(state).store();
     store.recorded.insert(record.clone());
     append(&mut store, record.add_op(), &record);
-}
-
-/// Whether this operation still tracks `temp` as its own removable partial:
-/// registered, and not yet released by a landing, a discard, or a sweep.
-pub(super) fn is_registered(state: &WriteOperationState, temp: &Path) -> bool {
-    state.in_flight_temps.lock_ignore_poison().iter().any(|p| p == temp)
 }
 
 /// Retires a [`register`]ed temp, in the `-` line shape earlier builds wrote.
@@ -450,17 +409,20 @@ fn record_for(temp: &Path, home: Option<TempHome<'_>>) -> Option<Record> {
 /// queues: it holds incoming bytes, so a lost record costs a leftover, never
 /// data. Blocks on the ledger's writer for that, so call it from blocking code
 /// (every caller is the sync local engine); the async engine has
-/// [`track_in`].
+/// [`track_in`]. Its callers act whether or not the line made it; the one that
+/// must not, a landing about to clear the way, asks [`hold_for_landing`].
 pub(super) fn track(state: &WriteOperationState, kind: ItemKind, absolute: &Path) -> TrackedRecord {
-    let tracked = record(state, home_for(state, absolute), kind, absolute);
-    if !tracked.is_temp() {
-        let (done, reached) = std::sync::mpsc::sync_channel(1);
-        if Ledger::of(state).written_barrier(move || {
-            let _ = done.send(());
-        }) {
-            // An Err means the writer is gone, and there is nothing left to wait for.
-            let _ = reached.recv();
-        }
+    let home = home_for(state, absolute);
+    if matches!(kind, ItemKind::Temp) {
+        return record(state, home, kind, absolute);
+    }
+    let (done, reached) = std::sync::mpsc::sync_channel(1);
+    let (tracked, answered) = record_confirmed(state, home, kind, absolute, move |written| {
+        let _ = done.send(written);
+    });
+    if answered.is_none() {
+        // An Err means the writer is gone, and there is nothing left to wait for.
+        let _ = reached.recv();
     }
     tracked
 }
@@ -469,29 +431,75 @@ pub(super) fn track(state: &WriteOperationState, kind: ItemKind, absolute: &Path
 /// the operation's sides, and awaited rather than blocked on.
 ///
 /// For the cross-volume engine, whose paths are already in the destination
-/// volume's own namespace ([`RecordHome::volume_space`]). Same promise: anything
-/// but a temp is written before this resolves.
+/// volume's own namespace ([`RecordHome::volume_space`]). Every kind handed
+/// here waits until the writer has tried its line (the engine records a temp
+/// with [`track_temp`]), and the answer says whether it's on disk.
 pub(super) async fn track_in(
     state: &WriteOperationState,
     home: RecordHome,
     kind: ItemKind,
     path: &Path,
-) -> TrackedRecord {
-    let tracked = record(state, home, kind, path);
-    if !tracked.is_temp() {
-        let (done, reached) = tokio::sync::oneshot::channel();
-        if Ledger::of(state).written_barrier(move || {
-            let _ = done.send(());
-        }) {
-            // An Err means the writer is gone, and there is nothing left to wait for.
-            let _ = reached.await;
-        }
-    }
+) -> (TrackedRecord, OnDisk) {
+    let (done, reached) = tokio::sync::oneshot::channel();
+    let (tracked, answered) = record_confirmed(state, home, kind, path, move |written| {
+        let _ = done.send(written);
+    });
+    let on_disk = match answered {
+        Some(on_disk) => on_disk,
+        // An Err means the writer is gone with the line still queued.
+        None => match reached.await {
+            Ok(true) => OnDisk::Written,
+            Ok(false) | Err(_) => OnDisk::Missing,
+        },
+    };
+    (tracked, on_disk)
+}
+
+/// Records `kind` at `absolute` in both ledgers, its line queued and not
+/// waited for: a temp's.
+fn record(state: &WriteOperationState, home: RecordHome, kind: ItemKind, absolute: &Path) -> TrackedRecord {
+    let (tracked, mut store) = insert(state, home, kind, absolute);
+    append(&mut store, tracked.record.add_op(), &tracked.record);
+    drop(store);
     tracked
 }
 
-/// [`track`] and [`track_in`]'s shared body.
-fn record(state: &WriteOperationState, home: RecordHome, kind: ItemKind, absolute: &Path) -> TrackedRecord {
+/// [`record`], with the writer telling `written` whether the line reached the
+/// log. Answers at once instead (`Some`) when there's no line to wait for, and
+/// `written` never runs.
+fn record_confirmed(
+    state: &WriteOperationState,
+    home: RecordHome,
+    kind: ItemKind,
+    absolute: &Path,
+    written: impl FnOnce(bool) + Send + 'static,
+) -> (TrackedRecord, Option<OnDisk>) {
+    let (tracked, mut store) = insert(state, home, kind, absolute);
+    let answered = match (&store.log, encode_line(tracked.record.add_op(), &tracked.record)) {
+        (None, _) if !store.keeps_a_log => Some(OnDisk::NotKept),
+        (None, _) | (Some(_), None) => Some(OnDisk::Missing),
+        (Some(log), Some(line)) => {
+            let length = line.len() as u64;
+            if log.append_then(line, written) {
+                store.logged_bytes += length;
+                None
+            } else {
+                Some(OnDisk::Missing)
+            }
+        }
+    };
+    drop(store);
+    (tracked, answered)
+}
+
+/// [`record`] and [`record_confirmed`]'s shared body: the in-memory halves,
+/// with the store still held for the line.
+fn insert<'a>(
+    state: &'a WriteOperationState,
+    home: RecordHome,
+    kind: ItemKind,
+    absolute: &Path,
+) -> (TrackedRecord, MutexGuard<'a, Store>) {
     let is_temp = matches!(kind, ItemKind::Temp);
     let record = tracked_record(&home, kind, absolute);
 
@@ -500,12 +508,11 @@ fn record(state: &WriteOperationState, home: RecordHome, kind: ItemKind, absolut
     }
     let mut store = Ledger::of(state).store();
     store.recorded.insert(record.clone());
-    append(&mut store, record.add_op(), &record);
-
-    TrackedRecord {
+    let tracked = TrackedRecord {
         record,
         absolute: absolute.to_path_buf(),
-    }
+    };
+    (tracked, store)
 }
 
 /// The record `kind` at `absolute` gets in `home`, every path in it stated the
@@ -600,16 +607,8 @@ impl SweepHandle {
 }
 
 impl Ledger {
-    /// Drops a record the sweep is done with, on disk too.
     /// Waits, at most [`FLUSH_WAIT`], for everything queued so far to reach the
     /// log file. The wait happens with the store released.
-    /// Runs `then` once every record queued so far is written (no `fsync`: a
-    /// process crash can't take what's in the page cache). `false` when there's no log to wait for (none opened yet, or its
-    /// writer is gone), and `then` never runs.
-    fn written_barrier(&self, then: impl FnOnce() + Send + 'static) -> bool {
-        self.store().log.as_ref().is_some_and(|log| log.barrier(then))
-    }
-
     fn flush_log(&self) {
         let (done, reached) = std::sync::mpsc::sync_channel(1);
         let queued = self.store().log.as_ref().is_some_and(|log| {
@@ -626,6 +625,7 @@ impl Ledger {
         }
     }
 
+    /// Drops a record the sweep is done with, on disk too.
     fn retire_record(&self, record: &Record) {
         let mut store = self.store();
         store.recorded.remove(record);
@@ -728,6 +728,10 @@ fn compact_if_large(store: &mut Store) {
 
 #[path = "in_flight_log_writer.rs"]
 mod log_writer;
+
+#[path = "in_flight_landing.rs"]
+mod landing;
+pub(super) use landing::{NotOnDisk, back_to_temp, hold_for_landing};
 
 #[path = "in_flight_records.rs"]
 mod records;

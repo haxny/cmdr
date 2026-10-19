@@ -654,7 +654,8 @@ async fn the_stale_temp_reap_skips_what_the_ledger_records_however_old_it_looks(
         Path::new("/landing.mov"),
         5,
     )
-    .await;
+    .await
+    .expect("a ledger that keeps nothing on disk holds the landing in memory");
     let dest: Arc<dyn Volume> = Arc::clone(&volume) as Arc<dyn Volume>;
 
     let listing = reap_stale_transfer_temps(&state, &dest, Path::new("/"))

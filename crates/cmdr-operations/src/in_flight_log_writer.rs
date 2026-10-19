@@ -21,8 +21,11 @@
 //! **Every other kind waits** (`in_flight_temps::track` / `track_in`): an
 //! aside or a staging folder can hold the user's only copy, and its caller
 //! records it BEFORE the rename that puts the original there. So `track` queues
-//! a barrier and returns only once the record is written: in the page cache,
-//! which a process crash or a kill can't take. That's exactly the inline
+//! its line with a confirmation ([`LogWriter::append_then`]) and returns only
+//! once the writer has tried it: written means in the page cache, which a
+//! process crash or a kill can't take. The answer says whether it was, so a
+//! caller that must not act on an unrecorded copy (a landing about to clear the
+//! way) refuses instead. That's exactly the inline
 //! write it replaced, and deliberately no `fsync`: one per aside would make a
 //! 10,000-file overwrite pay 10,000 of them.
 //! The directory scan never touches an aside (it matches `.cmdr-tmp-` only), so
@@ -40,8 +43,12 @@ use std::thread::JoinHandle;
 
 /// What the writer thread is asked to do, in order.
 enum Op {
-    /// Append one line.
-    Append(Vec<u8>),
+    /// Append one line, and tell `written` (when there is one) whether it
+    /// reached the kernel.
+    Append {
+        line: Vec<u8>,
+        written: Option<Box<dyn FnOnce(bool) + Send>>,
+    },
     /// Truncate the log and write these lines instead: compaction.
     Rewrite(Vec<u8>),
     /// Run `then` once everything queued before it has reached the kernel.
@@ -75,7 +82,21 @@ impl LogWriter {
 
     /// Queues one line. Best-effort, like every write to this log.
     pub(super) fn append(&self, line: Vec<u8>) {
-        self.send(Op::Append(line));
+        self.send(Op::Append { line, written: None });
+    }
+
+    /// Queues one line, and has the writer run `then` once it tried it: `true`
+    /// when the line reached the kernel, `false` when the write failed. Answers
+    /// `false` when the writer is gone, and `then` never runs.
+    pub(super) fn append_then(&self, line: Vec<u8>, then: impl FnOnce(bool) + Send + 'static) -> bool {
+        self.queue.as_ref().is_some_and(|queue| {
+            queue
+                .send(Op::Append {
+                    line,
+                    written: Some(Box::new(then)),
+                })
+                .is_ok()
+        })
     }
 
     /// Queues a rewrite of the whole log to `contents`.
@@ -118,9 +139,16 @@ impl Drop for LogWriter {
 fn write_all_queued(mut log: File, ops: &mpsc::Receiver<Op>) {
     for op in ops {
         match op {
-            Op::Append(line) => {
-                if let Err(e) = log.write_all(&line) {
-                    log::debug!(target: "copy", "couldn't record an in-flight leftover: {e}");
+            Op::Append { line, written } => {
+                let reached = match log.write_all(&line) {
+                    Ok(()) => true,
+                    Err(e) => {
+                        log::debug!(target: "copy", "couldn't record an in-flight leftover: {e}");
+                        false
+                    }
+                };
+                if let Some(written) = written {
+                    written(reached);
                 }
             }
             // The handle is in append mode, so after the truncate the writes go

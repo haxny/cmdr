@@ -535,10 +535,10 @@ async fn a_landing_the_drop_swallowed_counts_as_landed() {
     );
 }
 
-/// The landing rename never reached the server: the temp is still there, so the
-/// file runs again and lands.
+/// The landing rename never reached the server: the temp is still there and
+/// whole, so once the share is back it lands.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_landing_the_drop_stopped_runs_the_file_again() {
+async fn a_landing_the_drop_stopped_lands_once_the_share_is_back() {
     let engine = TestOperations::new();
     let (inner, outcome) = copy_through_a_drop_at_landing(
         &engine,
