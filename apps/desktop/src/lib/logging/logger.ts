@@ -67,6 +67,8 @@ export const debugCategories: readonly string[] = [
 // Track if verbose logging is enabled for reconfiguration
 let verboseLoggingEnabled = false
 let loggerInitialized = false
+/** Lines `whenLoggerReady` holds until `initLogger` configures LogTape. */
+const heldUntilReady: (() => void)[] = []
 
 /**
  * Read the verbose logging setting directly from the store file.
@@ -177,6 +179,7 @@ export async function initLogger(): Promise<void> {
   await applyLoggerConfig(verboseLoggingEnabled, false)
   loggerInitialized = true
   startBridge()
+  for (const emit of heldUntilReady.splice(0)) emit()
 
   if (isDev) {
     const log = getLogTapeLogger(['app', 'logger'])
@@ -189,6 +192,19 @@ export async function initLogger(): Promise<void> {
       }
     }
   }
+}
+
+/**
+ * Runs `emit` once `initLogger` has configured LogTape: right away if it has, else when it does.
+ *
+ * LogTape drops anything logged before `configure`, and `initLogger` runs from the root
+ * layout's `onMount`, which comes after a child's first render. A crash in that first render
+ * would otherwise leave no line at all. Only for lines that matter that early; ordinary logging
+ * doesn't need it.
+ */
+export function whenLoggerReady(emit: () => void): void {
+  if (loggerInitialized) emit()
+  else heldUntilReady.push(emit)
 }
 
 /**

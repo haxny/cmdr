@@ -25,6 +25,22 @@ tailed (`{ tail: true }`): it starts at the end and follows new lines live. A mi
 toast; a rejected IPC/window call produces a retry toast and a diagnostic log. Path selection lives in
 `apps/desktop/src-tauri/src/logging/DETAILS.md`.
 
+## Crashes SvelteKit catches
+
+A component that throws while rendering (or a `load` that throws) never reaches the `window` `error` listener: SvelteKit
+catches it and swaps the window for its error page. A v0.54.0 user on Catalina got exactly that, a bare "500 / Internal
+Error" and a log with no trace of why. So:
+
+- `apps/desktop/src/hooks.client.ts` implements `handleError`. For an `unknown` or `app` throw it calls `logPageCrash`
+  (`Page crashed in {routeId}: {detail}\n{stack}`, error level, so an opted-in auto-send ships it) and returns
+  `{ detail }`. A `framework` error (a route that doesn't exist) isn't a crash and isn't logged.
+- `apps/desktop/src/routes/+error.svelte` shows `page.error.detail` and offers a report (`pageCrash` incident) plus
+  Reload. Only the root layout sits above it, so in the main window it hosts the report dialog and toasts itself.
+- **`whenLoggerReady` holds early lines.** LogTape drops anything logged before `configure`, and `initLogger` runs in
+  the root layout's `onMount`, which comes after a child's first render. A first-render crash is exactly that early, so
+  `logPageCrash` and both `window` listeners emit through `whenLoggerReady`, which queues until `initLogger` has
+  configured LogTape, then drains. `logger-ready.test.ts` pins it.
+
 ## Decisions
 
 - **LogTape on the frontend**: it gives the `getAppLogger()` API, hierarchical categories, and per-feature debug toggles

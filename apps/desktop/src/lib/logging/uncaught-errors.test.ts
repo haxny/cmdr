@@ -11,9 +11,12 @@ const h = vi.hoisted(() => ({ error: vi.fn() }))
 
 vi.mock('./logger', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: h.error }),
+  whenLoggerReady: (emit: () => void) => {
+    emit()
+  },
 }))
 
-import { registerUncaughtErrorLogging } from './uncaught-errors'
+import { logPageCrash, registerUncaughtErrorLogging } from './uncaught-errors'
 
 // The module registers once per process, so register here and let every case
 // dispatch into the same listeners — which also proves the idempotence guard
@@ -93,6 +96,22 @@ describe('uncaught error logging', () => {
 
     expect(h.error).toHaveBeenCalledTimes(1)
     expect(event.defaultPrevented).toBe(false)
+  })
+
+  it('logs a page crash SvelteKit caught, and hands back its message for the error page', () => {
+    // SvelteKit catches a render throw itself and shows its error page, so the window
+    // listeners never see it. `hooks.client.ts` routes it here instead.
+    const boom = new TypeError('undefined is not an object')
+    boom.stack = 'render@app.js:1:42'
+
+    const detail = logPageCrash({ error: boom, routeId: '/(main)' })
+
+    expect(detail).toBe('TypeError: undefined is not an object')
+    const [template, ctx] = h.error.mock.calls[0] as [string, { routeId: string; detail: string; stack: string }]
+    expect(template).toBe('Page crashed in {routeId}: {detail}\n{stack}')
+    expect(ctx.routeId).toBe('/(main)')
+    expect(ctx.detail).toBe('TypeError: undefined is not an object')
+    expect(ctx.stack).toBe('render@app.js:1:42')
   })
 
   it('registers only once, so an HMR re-import cannot double-log', () => {

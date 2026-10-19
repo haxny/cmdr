@@ -14,7 +14,7 @@
  * `error+` — so these land in the log file and in error-report bundles.
  */
 
-import { getAppLogger } from './logger'
+import { getAppLogger, whenLoggerReady } from './logger'
 
 const log = getAppLogger('uncaught')
 
@@ -69,13 +69,42 @@ export function registerUncaughtErrorLogging(): void {
     const { filename, lineno, colno } = event
     const source = filename ? `${filename}:${String(lineno)}:${String(colno)}` : 'unknown'
     const { detail, stack } = thrown !== null ? describe(thrown) : { detail: event.message, stack: '' }
-    if (stack) log.error('Uncaught error at {source}: {detail}\n{stack}', { source, detail, stack })
-    else log.error('Uncaught error at {source}: {detail}', { source, detail })
+    whenLoggerReady(() => {
+      if (stack) log.error('Uncaught error at {source}: {detail}\n{stack}', { source, detail, stack })
+      else log.error('Uncaught error at {source}: {detail}', { source, detail })
+    })
   })
 
   window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
     const { detail, stack } = describe(event.reason)
-    if (stack) log.error('Unhandled promise rejection: {detail}\n{stack}', { detail, stack })
-    else log.error('Unhandled promise rejection: {detail}', { detail })
+    whenLoggerReady(() => {
+      if (stack) log.error('Unhandled promise rejection: {detail}\n{stack}', { detail, stack })
+      else log.error('Unhandled promise rejection: {detail}', { detail })
+    })
   })
+}
+
+/** What SvelteKit's `handleError` hands over about a throw it caught. */
+export interface CaughtPageError {
+  error: unknown
+  /** The route that was rendering, or `null` when none matched. */
+  routeId: string | null
+}
+
+/**
+ * Logs a throw SvelteKit caught (a component that threw while rendering, or a `load`), and
+ * returns its `Name: message` for the error page to show.
+ *
+ * SvelteKit catches these itself and swaps the window for its error page, so the `window`
+ * listeners above never see one: without this the person got a bare "500" and the log got
+ * nothing. Called from `hooks.client.ts`.
+ */
+export function logPageCrash({ error, routeId }: CaughtPageError): string {
+  const { detail, stack } = describe(error)
+  const route = routeId ?? 'no route'
+  whenLoggerReady(() => {
+    if (stack) log.error('Page crashed in {routeId}: {detail}\n{stack}', { routeId: route, detail, stack })
+    else log.error('Page crashed in {routeId}: {detail}', { routeId: route, detail })
+  })
+  return detail
 }
