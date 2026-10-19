@@ -385,7 +385,7 @@ impl StagedWrite {
                     if dest_volume.delete(temp.path()).await.is_ok() {
                         self.retire_temp(temp.path());
                     }
-                    return Err(error.into());
+                    return Err(error.into_write_error());
                 }
             };
         match dest_volume.rename(temp.path(), &self.final_path, false).await {

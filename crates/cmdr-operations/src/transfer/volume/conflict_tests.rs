@@ -138,7 +138,9 @@ async fn a_source_whose_type_cannot_be_established_never_clears_the_destination_
         dest.exists(Path::new("/album")).await,
         "the destination folder must survive"
     );
-    let err = WriteOperationError::from(result.expect_err("the item must fail rather than resolve on a guess"));
+    let err = result
+        .expect_err("the item must fail rather than resolve on a guess")
+        .into_write_error();
     assert!(
         matches!(&err, WriteOperationError::IoError { path, .. } if path == "/album"),
         "the failure must name the source whose stat failed; got {err:?}"
@@ -189,7 +191,9 @@ async fn a_destination_whose_type_cannot_be_established_is_left_alone() {
         dest.exists(Path::new("/notes.txt")).await,
         "an unanswerable destination stat must never authorize deleting it"
     );
-    let err = WriteOperationError::from(result.expect_err("the item must fail rather than resolve on a guess"));
+    let err = result
+        .expect_err("the item must fail rather than resolve on a guess")
+        .into_write_error();
     assert!(
         matches!(&err, WriteOperationError::IoError { path, .. } if path == "/notes.txt"),
         "the failure must name the destination whose stat failed; got {err:?}"
@@ -383,7 +387,7 @@ async fn a_share_that_stays_gone_as_the_destination_is_probed_says_it_lost_the_c
     .await
     .expect_err("a share that never comes back fails the clash");
 
-    let error = WriteOperationError::from(failure);
+    let error = failure.into_write_error();
     assert!(
         matches!(
             &error,

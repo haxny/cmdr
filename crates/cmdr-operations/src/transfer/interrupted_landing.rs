@@ -64,18 +64,20 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use super::staged_write::StagedWrite;
 use cmdr_fs::metadata::CarriedMetadata;
 use cmdr_fs::volume::{StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode};
 
-/// Whether this attempt's write was a create at the FINAL name (a single-shot
-/// `CreateNew`) that failed on the transport, so the server may have completed
-/// it anyway: the next attempt must [`settle_unanswered_create`] first.
-pub(super) fn create_went_unanswered(staged: &StagedWrite, result: &Result<StreamWritten, VolumeError>) -> bool {
-    matches!(
-        staged.write_mode(),
-        WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder
-    ) && matches!(result, Err(e) if e.transport_fault().is_some())
+/// Whether this attempt's write, made in `write_mode` (`StagedWrite::write_mode`),
+/// was a create at the FINAL name (a single-shot `CreateNew`) that failed on the
+/// transport, so the server may have completed it anyway: the next attempt must
+/// [`settle_unanswered_create`] first.
+///
+/// Takes the mode, ❌ not the `StagedWrite`: the landing in
+/// `staged_write_landing.rs` calls into this module, so naming the type here
+/// would weld the two into a module cycle.
+pub(super) fn create_went_unanswered(write_mode: WriteMode, result: &Result<StreamWritten, VolumeError>) -> bool {
+    matches!(write_mode, WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder)
+        && matches!(result, Err(e) if e.transport_fault().is_some())
 }
 
 /// What a write puts on its file beyond the bytes, as the destination's own

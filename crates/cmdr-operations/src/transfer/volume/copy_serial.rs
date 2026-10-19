@@ -250,7 +250,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                         source_is_directory_hint,
                     )
                     .await;
-                    let resolved = resolved?;
+                    let resolved = resolved.map_err(|e| e.into_write_error())?;
                     Ok(match resolved {
                         None => {
                             log::debug!(

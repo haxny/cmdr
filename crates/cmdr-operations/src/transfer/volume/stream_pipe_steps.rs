@@ -247,7 +247,7 @@ impl FileRun<'_> {
                     .map_err(Stop::Over);
             }
         };
-        if create_went_unanswered(&staged, &write_result) {
+        if create_went_unanswered(staged.write_mode(), &write_result) {
             self.unanswered_create = Some((size, lost));
         }
         match write_result {

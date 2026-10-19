@@ -350,7 +350,7 @@ async fn resolve_child(
     )
     .await;
 
-    match resolved? {
+    match resolved.map_err(|e| e.into_write_error())? {
         None => Ok((MergeChildResolution::Skip, None)),
         Some(ResolvedConflict {
             write_path,
@@ -432,7 +432,9 @@ async fn apply_child_decision(
         // same way.
         let displaced = match aside {
             Some(aside) => Some(aside),
-            None => displace_destination(ctx.state, ctx.volume, &write_path, false).await?,
+            None => displace_destination(ctx.state, ctx.volume, &write_path, false)
+                .await
+                .map_err(|e| e.into_write_error())?,
         };
         if displaced.is_some() {
             ctx.overwrote.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -453,7 +455,9 @@ async fn apply_child_decision(
         // replacing rename is a separate call, and a backend that refuses it
         // after a delete leaves the user with neither copy.
         Some(orig) => {
-            let displaced = displace_destination(ctx.state, ctx.volume, &orig, false).await?;
+            let displaced = displace_destination(ctx.state, ctx.volume, &orig, false)
+                .await
+                .map_err(|e| e.into_write_error())?;
             // A file→file safe-replace: mark the op as having overwritten (not
             // rollbackable).
             if displaced.is_some() {

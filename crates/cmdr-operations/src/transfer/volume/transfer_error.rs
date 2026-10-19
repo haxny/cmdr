@@ -176,15 +176,6 @@ impl From<PathedVolumeError> for WriteFailure {
     }
 }
 
-/// For a caller that speaks `WriteOperationError` (a driver's resolve
-/// closure, the rename merge), so a pathed failure reaches it mapped the one
-/// way, with its side and what an outage wait learned.
-impl From<PathedVolumeError> for WriteOperationError {
-    fn from(e: PathedVolumeError) -> Self {
-        WriteFailure::from(e).error
-    }
-}
-
 /// Keeps the path and side through an outage wait, so a walk's listing that
 /// waited out a dropped share still names the side that failed.
 impl OutageFailure for PathedVolumeError {
@@ -255,6 +246,18 @@ impl PathedVolumeError {
             lost_connection: None,
             refusal: Some(Box::new(refusal)),
         }
+    }
+
+    /// For a caller that speaks `WriteOperationError` (a driver's resolve
+    /// closure, the rename merge), so a pathed failure reaches it mapped the
+    /// one way, with its side and what an outage wait learned.
+    ///
+    /// ❗ A method, ❌ not `From<PathedVolumeError> for WriteOperationError`:
+    /// a `From` for a type defined in `types::errors` prints as
+    /// `types::errors → volume::transfer_error` (trap 3 of the section named
+    /// above), which welds the `types` floor to most of the crate.
+    pub(crate) fn into_write_error(self) -> WriteOperationError {
+        WriteFailure::from(self).error
     }
 }
 

@@ -1905,8 +1905,10 @@ under a deep clash still reads as `ServerConnectionLost`, the same as one at the
 the walker lost the type (pinned by
 `copy_outage_tests.rs::a_deep_clash_that_outlasts_its_outage_says_it_lost_the_connection` and
 `conflict_tests.rs::a_share_that_stays_gone_as_the_destination_is_probed_says_it_lost_the_connection`). A caller that
-speaks `WriteOperationError` (a driver's resolve closure, the rename merge) maps it with `?` through
-`From<PathedVolumeError> for WriteOperationError`, the same one mapping `WriteFailure` does.
+speaks `WriteOperationError` (a driver's resolve closure, the rename merge) maps it through
+`PathedVolumeError::into_write_error`, the same one mapping `WriteFailure` does. A method, ❌ not a `From` impl: a
+`From<PathedVolumeError> for WriteOperationError` prints as `types::errors → volume::transfer_error` and welds the
+`types` floor to most of the crate (`scripts/check/checks/DETAILS.md` § "Rust module cycles", trap 3).
 
 **A `FinalizeFailure` becomes a pathed one through `PathedVolumeError::from_landing`, which is inherent to
 `PathedVolumeError` rather than a method on `FinalizeFailure`.** It is always the destination's, and it keeps the
