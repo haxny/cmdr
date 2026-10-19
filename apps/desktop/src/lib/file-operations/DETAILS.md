@@ -50,6 +50,8 @@ Umbrella-level files:
   asks when some of its sources left while it waited (§ "Sources that left while an operation queued").
 - `locked-sources.svelte.ts` + `LockedSourcesPrompt.svelte` + `LockedSourcesDialog.svelte`: the question a move asks,
   before any byte moves, when some of what it moves is Locked (§ "Locked items in a move").
+- `parked-question.svelte.ts`: what both of those hosts build on: one question per operation, one on screen at a time,
+  held while the window is busy, an answer that never landed leaving it up, and the reconcile against live rows.
 - `RollbackConfirmDialog.svelte` + `reversal-wording.ts`: the question every Rollback goes through, the typed variant
   that decides what it says, and the same variant's catalog keys for the running bar (§ below).
 - `mutation-error.ts` + `mutation-error-messages.ts`: the rename / New Folder / New File refusal path (§ below).

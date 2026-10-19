@@ -21,16 +21,17 @@
  * - **The operation ends some other way** (Cancel in the queue window, the app
  *   tearing it down): the question goes, once the operation has been SEEN live.
  *
+ * The queue, the wait, and the reconcile are `parked-question.svelte.ts`'s,
+ * shared with the Locked-items host.
+ *
  * Unlike the conflict host it pauses nothing: the asking operation is the only
  * one parked, and the rest of the queue has no reason to wait for this answer.
  */
 
-import type { UnlistenFn } from '@tauri-apps/api/event'
 import {
   cancelOperation,
   continueWithoutGoneSources,
   onWriteSourcesGone,
-  type OperationSnapshot,
   type WriteSourcesGoneEvent,
 } from '#lib/tauri-commands/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
@@ -38,78 +39,40 @@ import { formatInteger } from '#lib/intl/number-format.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { addToast } from '#lib/ui/toast/index.js'
 import { isAnySoftDialogOpenBesides } from '#lib/ui/open-dialogs.svelte.js'
-import { createWhenDialogsClear } from '#lib/file-explorer/pane/when-dialogs-clear.svelte.js'
-import { getMainWindowOperationRows } from './queue/main-window-operations.svelte'
-import { isTerminalStatus, type OperationRow } from './queue/operations-store.svelte'
+import type { OperationRow } from './queue/operations-store.svelte'
+import { createParkedQuestionHost, type ParkedQuestionPrompt } from './parked-question.svelte'
 
 const log = getAppLogger('sources-gone')
 
-/** A question waiting for an answer. */
-interface Entry {
-  event: WriteSourcesGoneEvent
-  /** True once the operation has been seen live in a snapshot. Until then its
-   *  absence from the rows means "hasn't arrived yet", not "gone". */
-  confirmedLive: boolean
-}
-
 /** What the prompt renders. */
-export interface SourcesGonePrompt {
-  operationId: string
-  event: WriteSourcesGoneEvent
-  /** The operation's row, for naming which transfer is asking. `null` only in
-   *  the sliver before its snapshot lands. */
-  snapshot: OperationSnapshot | null
-}
+export type SourcesGonePrompt = ParkedQuestionPrompt<WriteSourcesGoneEvent>
 
-/** Unanswered questions, oldest first. */
-let entries = $state<Entry[]>([])
-/** The operation whose question is on screen, or `null`. */
-let shownId = $state<string | null>(null)
-/** An answer is in flight; the buttons disable. */
-let answering = $state(false)
-/** A question is already waiting for the window to free up. */
-let offerPending = false
-
-let unlisten: UnlistenFn | null = null
-let stopEffects: (() => void) | null = null
-
-/** Busy while any OTHER dialog is on screen. This prompt's own previous
- *  question is no reason to hold the next: `shownId` already keeps it to one at
- *  a time, and the answer takes the old one down before the next goes up. */
-const whenDialogsClear = createWhenDialogsClear(() => isAnySoftDialogOpenBesides('sources-gone'))
+const host = createParkedQuestionHost<WriteSourcesGoneEvent>({
+  log,
+  label: 'sources-gone',
+  // Busy while any OTHER dialog is on screen. This prompt's own previous
+  // question is no reason to hold the next: the host already keeps it to one at
+  // a time, and the answer takes the old one down before the next goes up.
+  isBusy: () => isAnySoftDialogOpenBesides('sources-gone'),
+  onHeld: (event) => {
+    log.info('A queued {type} is waiting to ask about its sources; asking once the open dialog closes', {
+      type: event.operationType,
+    })
+    addToast(tString('fileOperations.sourcesGone.heldToast', { type: event.operationType }), {
+      level: 'info',
+      timeoutMs: 10000,
+    })
+  },
+})
 
 /** The question on screen, or `null`. Reactive. */
 export function getSourcesGonePrompt(): SourcesGonePrompt | null {
-  if (shownId === null) return null
-  const entry = entries.find((e) => e.event.operationId === shownId)
-  if (!entry) return null
-  const snapshot = getMainWindowOperationRows().find((r) => r.snapshot.operationId === shownId)?.snapshot ?? null
-  return { operationId: shownId, event: entry.event, snapshot }
+  return host.prompt()
 }
 
 /** An answer is in flight. Reactive. */
 export function isAnsweringSourcesGone(): boolean {
-  return answering
-}
-
-/** Shows the oldest waiting question once the window is free. */
-function offerNext(): void {
-  if (shownId !== null || offerPending || entries.length === 0) return
-  offerPending = true
-  const askedNow = whenDialogsClear.run(() => {
-    offerPending = false
-    shownId = entries[0]?.event.operationId ?? null
-  })
-  if (!askedNow) {
-    const operationType = entries[0].event.operationType
-    log.info('A queued {type} is waiting to ask about its sources; asking once the open dialog closes', {
-      type: operationType,
-    })
-    addToast(tString('fileOperations.sourcesGone.heldToast', { type: operationType }), {
-      level: 'info',
-      timeoutMs: 10000,
-    })
-  }
+  return host.isAnswering()
 }
 
 function handleSourcesGone(event: WriteSourcesGoneEvent): void {
@@ -133,51 +96,20 @@ function handleSourcesGone(event: WriteSourcesGoneEvent): void {
     gone: event.goneCount,
     total: event.totalCount,
   })
-  // One question per operation: a repeat replaces it rather than asking twice.
-  const others = entries.filter((e) => e.event.operationId !== event.operationId)
-  entries = [...others, { event, confirmedLive: false }]
-  offerNext()
-}
-
-/** Takes `operationId`'s question down and moves on to the next one. */
-function drop(operationId: string): void {
-  entries = entries.filter((e) => e.event.operationId !== operationId)
-  if (shownId === operationId) shownId = null
-  offerNext()
-}
-
-/** Runs one answer. A call that never landed leaves the question up: the
- *  operation is still waiting for it. */
-async function answer(how: string, send: (operationId: string) => Promise<unknown>): Promise<void> {
-  const operationId = shownId
-  if (operationId === null || answering) return
-  answering = true
-  try {
-    const outcome = await send(operationId)
-    log.info('Sources-gone question for op={operationId} answered with {how}: {outcome}', {
-      operationId,
-      how,
-      outcome: String(outcome),
-    })
-    drop(operationId)
-  } catch (error) {
-    log.warn('Could not {how} op={operationId}; the question stays up: {error}', { how, operationId, error })
-  } finally {
-    answering = false
-  }
+  host.ask(event)
 }
 
 /** "Move the rest" (or copy, delete, …): carries the operation on with the
  *  sources still there. Any outcome takes the question down: `not_asking` and
  *  `unknown_operation` mean the operation moved on without us. */
 export async function continueSourcesGonePrompt(): Promise<void> {
-  await answer('continue', continueWithoutGoneSources)
+  await host.answer('continue', continueWithoutGoneSources)
 }
 
 /** Ends the operation through the ordinary cancel, which also drops its parked
  *  question on the backend. */
 export async function cancelSourcesGonePrompt(): Promise<void> {
-  await answer('cancel', cancelOperation)
+  await host.answer('cancel', cancelOperation)
 }
 
 /**
@@ -185,48 +117,15 @@ export async function cancelSourcesGonePrompt(): Promise<void> {
  * callable straight from a test; the effect only decides when it runs.
  */
 export function reconcileSourcesGonePrompts(rows: OperationRow[]): void {
-  if (entries.length === 0) return
-  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- transient local for one pass; nothing renders from it
-  const live = new Set(rows.filter((r) => !isTerminalStatus(r.snapshot.status)).map((r) => r.snapshot.operationId))
-  const gone: string[] = []
-  let confirmed = false
-  const next: Entry[] = []
-  for (const entry of entries) {
-    const id = entry.event.operationId
-    if (live.has(id) && !entry.confirmedLive) {
-      confirmed = true
-      next.push({ ...entry, confirmedLive: true })
-      continue
-    }
-    if (!live.has(id) && entry.confirmedLive) gone.push(id)
-    next.push(entry)
-  }
-  if (confirmed) entries = next
-  for (const id of gone) {
-    log.info('Dropping the sources-gone question for {operationId}: the operation is gone', { operationId: id })
-    drop(id)
-  }
+  host.reconcile(rows)
 }
 
 /** Starts listening. Idempotent; call {@link stopSourcesGoneHost} on teardown. */
 export async function startSourcesGoneHost(): Promise<void> {
-  if (unlisten ?? stopEffects) return
-  stopEffects = $effect.root(() => {
-    $effect(() => {
-      reconcileSourcesGonePrompts(getMainWindowOperationRows())
-    })
-  })
-  unlisten = await onWriteSourcesGone(handleSourcesGone)
+  await host.start(onWriteSourcesGone, handleSourcesGone)
 }
 
 /** Drops the listener, the effect, and every question. */
 export function stopSourcesGoneHost(): void {
-  unlisten?.()
-  unlisten = null
-  stopEffects?.()
-  stopEffects = null
-  entries = []
-  shownId = null
-  answering = false
-  offerPending = false
+  host.stop()
 }

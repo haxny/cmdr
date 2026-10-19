@@ -465,7 +465,7 @@ fn settle(scan: LockedScan, answer: Option<LockedSourcesAnswer>) -> LockedPlan {
 /// [`cmdr_fs::metadata::removal_lock`], plus a test's stand-in for `schg`, which
 /// a non-root test can't set.
 fn classify(path: &Path) -> RemovalLock {
-    #[cfg(test)]
+    #[cfg(all(test, target_os = "macos"))]
     if test_seam::is_system_locked(path) {
         return RemovalLock::SystemLocked;
     }
@@ -475,7 +475,7 @@ fn classify(path: &Path) -> RemovalLock {
 /// Lets a test call an item system-locked. A static because the volume engine
 /// classifies on a blocking-pool thread; each test names paths under its own
 /// temp folder, so parallel tests never see each other's.
-#[cfg(test)]
+#[cfg(all(test, target_os = "macos"))]
 pub(crate) mod test_seam {
     use std::path::{Path, PathBuf};
     use std::sync::Mutex;
