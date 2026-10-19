@@ -159,6 +159,13 @@ jobs:
           restore-keys: |
             fuzz-corpus-
 
+      # `cmdr-fs` links `libacl` through `exacl` on Linux, so every target that pulls it
+      # in fails to link without the dev package.
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libacl1-dev
+
       - name: Build check tool
         run: go build -o check .
         working-directory: ./scripts/check
