@@ -27,9 +27,8 @@ overlaps, and decisions: `DETAILS.md`.
   text. `DETAILS.md` § "External-text fields".
 - **The path branches over-match on purpose; `split_trailing_noise` finds the real end.** ❌ Never anchor continuation
   words to `[A-Z0-9]` (that shipped ` at 01.13.03 PM-2.jpeg`), ❌ never use `has_extension_like_suffix` for its forward
-  scan, ❌ never let a token before the last separator end the path (`12. Summer trip/…` shipped its name), ❌ never
-  end it at a bracket its own segment opened (`[§ 12 AB]` shipped the rest of a folder name). `DETAILS.md` § "Finding
-  the end of a path".
+  scan, ❌ never let a token before the last separator end the path (`12. Summer trip/…` shipped its name). `DETAILS.md`
+  § "Finding the end of a path".
 - **Tokens key on a domain plus the normalized name** (escapes undone, NFC, Cmdr temp suffix split off). Typed inputs
   never trust token-looking syntax.
 - **`redact_with` resumes at `match.start() + consumed`, ❌ never `replace_all`.** A handed-back tail must face the

@@ -1,7 +1,6 @@
 //! Where a path found in prose really ends. The path branches over-match on purpose (spaces are legal in
 //! labels and filenames), and this gives the trailing prose back. `DETAILS.md` § "Finding the end of a path".
 
-use super::fields::starts_with_field_key;
 use super::names::ends_with_unicode_escape;
 use super::paths::{ends_filename, ends_sentence, has_extension_like_suffix};
 
@@ -22,24 +21,24 @@ use super::paths::{ends_filename, ends_sentence, has_extension_like_suffix};
 ///   formats with. macOS forbids `:` in a filename, so this can't cut a real name short.
 /// - everything after the first token that ENDS the path: one carrying a letter-led
 ///   extension (`report.pdf`, `PM-2.jpeg`) or ending a sentence (`naspi-1)`, `state.`). Only a
-///   token past the last separator qualifies, a bare number or initial with a dot (`12.`,
-///   `J.`) opens a name instead of ending a sentence, and a bracket closing a pair its own
-///   segment opened (`[§ 12 AB]`, `(final)`) is part of the name. A `key=` word ends it before
-///   that word.
-/// - trailing sentence-ending punctuation (`.`, `,`, `;`, `!`, `?`, and an unpaired `)`, `]`, `}`)
+///   token past the last separator qualifies, and a bare number or initial with a dot (`12.`,
+///   `J.`) opens a name instead of ending a sentence.
+/// - trailing sentence-ending punctuation (`.`, `,`, `;`, `!`, `?`, `)`, `]`, `}`)
 /// - trailing `:<digits>` groups (line/column markers like `:42:5`)
-/// - with `trim_prose_run`, a trailing RUN of space-separated words that are lowercase-initial
-///   AND carry no extension (` failed to open`). The run never eats into the first segment after
-///   the last `/`, which is what keeps `/Volumes/naspi and then it failed` down to `naspi`. It
+/// - a trailing RUN of space-separated words that are lowercase-initial AND carry no
+///   extension (` failed to open`). The run never eats into the first segment after the
+///   last `/`, which is what keeps `/Volumes/naspi and then it failed` down to `naspi`. It
 ///   never runs when the path reaches the seam, closing brackets in between included: the
 ///   seam already said where it ends.
-///
-/// Callers pass `trim_prose_run: false` when something else already marks the end: a keyed
-/// field's value is a path by declaration, and so is a path filling its quotes. There a
-/// lowercase last word (`Medical records`) is part of the name: trimming it split one folder
-/// into a token plus a bare word, and gave the same folder a different token than its quoted
-/// spelling on the next line.
-pub(super) fn split_trailing_noise(s: &str, trim_prose_run: bool) -> (&str, &str) {
+pub(super) fn split_trailing_noise(s: &str) -> (&str, &str) {
+    split_trailing_noise_with(s, true)
+}
+
+/// [`split_trailing_noise`], optionally without its last rule (the lowercase prose run). A keyed
+/// field's value is a path by declaration, so a lowercase last word there (`Medical records`)
+/// is part of the name: trimming it split one folder into a token plus a bare word, and gave
+/// the same folder a different token than its quoted spelling on the next line.
+pub(super) fn split_trailing_noise_with(s: &str, trim_prose_run: bool) -> (&str, &str) {
     let bytes = s.as_bytes();
     let mut end = bytes.len();
 
@@ -68,19 +67,9 @@ pub(super) fn split_trailing_noise(s: &str, trim_prose_run: bool) -> (&str, &str
         for token in s[..end].split(' ') {
             let token_end = offset + token.len();
             let can_end = last_separator.is_none_or(|sep| token_end > sep);
-            // A `key=` word (`(source_is_dir=true,`) is the next field, so the path ended
-            // before it. Without this, a name's own `(final)` no longer ending the path would
-            // carry it into the field list.
-            if can_end && offset > 0 && starts_with_field_key(token.trim_start_matches(['(', '[', '{'])) {
-                end = offset - 1;
-                break;
-            }
             if can_end
                 && !token.is_empty()
-                && (ends_filename(token)
-                    || (ends_sentence(token)
-                        && !opens_a_name(token, separator)
-                        && !closes_a_pair(s, token_end, separator)))
+                && (ends_filename(token) || (ends_sentence(token) && !opens_a_name(token, separator)))
             {
                 end = token_end;
                 break;
@@ -157,17 +146,12 @@ pub(super) fn split_trailing_noise(s: &str, trim_prose_run: bool) -> (&str, &str
 }
 
 /// Step `end` back over closing punctuation (`.` `,` `;` `!` `?` `)` `]` `}`), one at a time.
-/// The `}` closing a `\u{301}` escape stays: it's the middle of a `{:?}`-printed name, and so
-/// does a bracket that closes a pair its own segment opened (`Report (final)`, `Case [A 1]`).
+/// The `}` closing a `\u{301}` escape stays: it's the middle of a `{:?}`-printed name.
 fn trim_closing_punctuation(s: &str, mut end: usize) -> usize {
     let bytes = s.as_bytes();
-    let separator = separator_of(s);
     while end > 0 {
         let b = bytes[end - 1];
         if b == b'}' && ends_with_unicode_escape(&s[..end]) {
-            break;
-        }
-        if closes_a_pair(s, end, separator) {
             break;
         }
         if matches!(b, b'.' | b',' | b';' | b'!' | b'?' | b')' | b']' | b'}') {
@@ -177,21 +161,6 @@ fn trim_closing_punctuation(s: &str, mut end: usize) -> usize {
         }
     }
     end
-}
-
-/// Whether `s[..end]` ends in a closing bracket that its own segment opened: `[§ 12 AB]` and
-/// `(final)` are part of a folder's name, while the `)` of `(pane sent to /Volumes/x/y)` was
-/// opened before the path began. Reading the first as a sentence end shipped the rest of the
-/// name after the `]` (ERR-8MEX6).
-fn closes_a_pair(s: &str, end: usize, separator: char) -> bool {
-    let (open, close) = match s.as_bytes().get(end.wrapping_sub(1)) {
-        Some(b')') => ('(', ')'),
-        Some(b']') => ('[', ']'),
-        Some(b'}') => ('{', '}'),
-        _ => return false,
-    };
-    let segment = &s[s[..end].rfind(separator).map_or(0, |i| i + 1)..end];
-    segment.matches(open).count() >= segment.matches(close).count()
 }
 
 /// The character a path's segments are separated by: `\` for a Windows home (`C:\Users\…`) or

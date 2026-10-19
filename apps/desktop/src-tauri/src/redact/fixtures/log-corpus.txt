@@ -172,7 +172,3 @@
 23:41:00.000 WARN  move  source sweep: couldn't remove /Volumes/naspi/Photos/12. Summer trip/beach.jpg: NotFound
 23:41:00.001 INFO  scan_preview  scan preview 7 started: /Users/ada/Pictures/3. Invoices 2024 on volume root
 23:41:00.002 ERROR FE:transferProgress  Move error: Path: /Users/ada/Pictures/12. Summer trip/beach.jpg; Error type: io_error
-13:54:07.046 DEBUG smb2::client::times  tree: set times on 192.168.1.20\Team Share\Case 12 [§ 3 AB] Final\notes\draft v2.md
-13:54:02.911 INFO  stall_probe::listing  listing_done path=/Volumes/Team Share/1234-56.789 Acme Widget Co [§ 12 AB] 45X6_2020 QWERTY entries=241 total_ms=264
-13:54:06.475 DEBUG FE:transferDialog  Initial path resolution: destinationPath="/Volumes/Team Share/Case 12 [Ref 3] final draft", currentVolumeId=root
-13:54:06.723 DEBUG copy_concurrent_source  conflict detected at /Volumes/Team Share/Plans/Report (final) (source_is_dir=true, dest_is_dir=true)

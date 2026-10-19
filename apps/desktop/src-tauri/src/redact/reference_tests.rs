@@ -241,51 +241,6 @@ fn unc_scheme_less_and_malformed_but_recognizable_references_are_safe() {
     }
 }
 
-/// `smb2` names a file on a DFS share `host\share\path`, with no leading `\\`, and logged that
-/// bare in prose (`tree: set times on …`). Only the address was redacted; the share and every
-/// folder and file name shipped (ERR-8MEX6). Two separators at least, so `DOMAIN\user` and a
-/// lone `a\b` stay prose.
-#[test]
-fn a_unc_path_without_its_leading_backslashes_is_redacted_whole() {
-    let cases = [
-        (
-            r"DEBUG smb2::client::times  tree: set times on 192.168.1.20\Team Share\Case 12 [§ 3 AB] Final\notes\draft v2.md",
-            r"DEBUG smb2::client::times  tree: set times on <ipv4-private>\<share>\<dir>\<dir>\<file>.md",
-        ),
-        (
-            r"tree: set times on nas01\public\Acme Plans\summary.pdf",
-            r"tree: set times on <host>\<share>\<dir>\<file>.pdf",
-        ),
-        (
-            r"tree: set times on nas.local\public\Acme Plans: access denied",
-            r"tree: set times on <host>.local\<share>\<dir>: access denied",
-        ),
-        (r"login as WORKGROUP\alice", r"login as WORKGROUP\alice"),
-        // A `{:?}`-escaped stack trace: its indent ends each `\n` segment, so no path forms.
-        (
-            r#"stack="Error: boom\n    at load (app.js:1:2)\n    at run""#,
-            r#"stack="Error: boom\n    at load (app.js:1:2)\n    at run""#,
-        ),
-    ];
-    for (input, expected) in cases {
-        assert_eq!(report_shape(input), expected, "input: {input:?}");
-    }
-    assert_eq!(
-        r(r"set times on 10.0.0.8\Finance\2026\budget.xlsx"),
-        r"set times on <ipv4-private>\<share>\<dir>\<file>.xlsx"
-    );
-    let context = context();
-    let once = context.redact_line(cases[0].0);
-    assert_eq!(context.redact_line(&once), once, "not idempotent");
-    let full = context.redact_line(r"\\192.168.1.20\Team Share\Case\a.md");
-    let bare = context.redact_line(r"192.168.1.20\Team Share\Case\a.md");
-    assert_eq!(
-        full.trim_start_matches('\\'),
-        bare,
-        "one share, one token, with or without `\\\\`"
-    );
-}
-
 #[test]
 fn report_context_correlates_remote_entities_across_spellings_and_separates_domains() {
     let context = context();
