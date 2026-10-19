@@ -30,9 +30,9 @@ Builds a privacy-redacted zip of recent logs plus a manifest and ships it to `PO
   disk; bundle assembly transforms them with that report's context.
 - **Breadcrumbs accept only `BreadcrumbEvent`.** Add a reviewed enum variant and typed fields for new diagnostic facts;
   never restore free-form messages, maps, or JSON. Unknown IPC fields fail closed, and command events retain only ids
-  from the frontend's authoritative `COMMAND_IDS` tuple (compiled into Rust by `build.rs`).
-- **`User` notes ship verbatim; `Auto` notes go through the report's redaction.** The auto note's first message is a
-  `detail=` field, so the report pass redacts and caps it.
+  from the frontend's authoritative `COMMAND_IDS` tuple.
+- **`User` notes ship verbatim; `Auto` notes go through the report's redaction.** The auto note quotes the first message
+  as a `detail=` field with its log markers kept (`LoggedText`), so the report pass hashes, redacts, and caps it.
 - **One dialog session, one id.** The preview mints it, the send passes it back via `BundleRequest.id`. Skip it and
   the user holds an id no report was filed under. The same ID also rebuilds the same report-scoped redaction context.
 - **Don't gate sending on `cfg!(debug_assertions)`.** Debug builds DO send (`buildMode` tags them `[DEV]`); only `CI`
@@ -43,7 +43,7 @@ Builds a privacy-redacted zip of recent logs plus a manifest and ships it to `PO
   `server_request::send`; the send commands and Flow B's `take_window_to_send` also ask `check_policy` first, so no
   bundle gets built for nothing. `save_error_report_to_disk` (every build) stays allowed.
 - **The auto-dispatcher does NOT flush on shutdown, and that's load-bearing**: the panic courier opens a window for
-  EVERY panic, so a flush would double-report every fatal one. No queue, no persistence.
+  EVERY panic, so a flush would double-report every fatal one.
 - ❌ **Never move the crash-file stamp out of `flush`'s `Ok` arm**: earlier stamps a delivery that didn't happen.
   `crash_reporter/CLAUDE.md`.
 

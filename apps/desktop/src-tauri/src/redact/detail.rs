@@ -169,8 +169,10 @@ pub(super) fn redact_detail_field(
     // tokens alone.
     let text = redact_any_absolute_path(&text, context);
     let mut redacted = String::with_capacity(text.len());
+    // The line's spans go down too: a detail nested in this one (a `log_error!` message quoted
+    // into Flow B's note) fills its own placeholders before its `{:?}` would escape them.
     for line in text.split_inclusive('\n') {
-        redacted.push_str(&scan(line, context, &Spans::NONE));
+        redacted.push_str(&scan(line, context, spans));
     }
     for identity in echoed {
         redacted = replace_whole_word(&redacted, &identity.raw, &identity.token);

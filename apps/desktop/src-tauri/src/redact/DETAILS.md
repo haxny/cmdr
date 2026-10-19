@@ -373,7 +373,8 @@ around them. So it has one mechanism, used at every such site:
   scrubs whole-word repeats of every identity the SAME line logs under a key (`host=`, `server=`, `share=`, `user=`,
   the IDs, a quoted `path=` leaf) or as a path's leaf, reusing that field's token. It caps the result at `REPORT_DETAIL_MAX_CHARS` (200)
   with a trailing `…` and re-escapes with `{:?}`, so the closing quote stays exact. Idempotent: a capped value sits at
-  the limit.
+  the limit. A detail nested in one (Flow B's note quotes a `log_error!` message that has its own `detail=`) gets the
+  line's spans too, so it puts their tokens in before its own `{:?}` would escape the placeholders.
 - **Identity-keyed JSON pairs inside the value are tokenized first** (`"server":"…"`, `"share"`, `"username"`, `"path"`,
   `"name"`, …): the frontend's `describeForLog` renders an object, and a typed error's payload, as compact JSON, and
   its keys say what each value is, in a

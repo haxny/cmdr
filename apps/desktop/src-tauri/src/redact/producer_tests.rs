@@ -4,7 +4,7 @@
 //! `markers_tests.rs` pins.
 
 use super::markers_tests::{HEAD, assert_ships_none, context, hashes, quoted, r, shape, span};
-use cmdr_fs::log_detail::{LOCAL_DETAIL_MAX_BYTES, LogDetail};
+use cmdr_fs::log_detail::{LOCAL_DETAIL_MAX_BYTES, LogDetail, LoggedText};
 use cmdr_fs::log_private::{CLOSER, LogKind, LogPrivate, RESERVED};
 
 const FILE: &str = "/Users/me/Pictures/Summer (Lake House) 2026/IMG 0001.jpg";
@@ -114,4 +114,22 @@ fn a_hostile_name_echoed_in_plain_external_text_is_claimed_whole() {
     let stderr = format!("open /Volumes/Backup/Secret Dir/evil{CLOSER}rest/child.pdf: EACCES");
     let line = format!("{HEAD}copy failed detail={:?}", LogDetail(&stderr));
     assert_ships_none(&line, &["Secret", "evil", "rest", "child"]);
+}
+
+/// A `log_error!` message that carries a marked `detail=` field, quoted again as the Flow B note's
+/// own `detail=`: the inner field's span sits two depths down inside a field inside a field, and
+/// still ships as the token the log line gives it, never as escaped placeholder text.
+#[test]
+fn a_span_in_a_detail_inside_a_detail_ships_its_token() {
+    let stderr = format!("open({FILE}): Permission denied");
+    let message = format!(
+        "couldn't copy: detail={:?}; tail",
+        LogDetail(&stderr).marking(&[LogPrivate::file_path(FILE)]),
+    );
+    let note = format!("auto-send: first: copy detail={:?}", LoggedText(&message));
+    assert_ships_none(&note, &["Lake", "House", "IMG", "0001"]);
+    let line = format!("{HEAD}{message}");
+    let (in_note, on_line) = (context().redact_line(&note), context().redact_line(&line));
+    assert_eq!(hashes(&in_note), hashes(&on_line), "{in_note}\n{on_line}");
+    assert_eq!(hashes(&in_note).len(), 2, "{in_note}");
 }

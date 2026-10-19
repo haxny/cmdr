@@ -4,7 +4,7 @@
 //! through [`on_error_logged`]. The first error in a window starts a 60 s ± 10 s debounce
 //! timer; subsequent errors within the window only bump a counter (the first call's
 //! category and message are captured for the automatic note). When the timer fires, [`flush`] builds
-//! a 1 MB-tail bundle and uploads it via the same pipeline Phase 4 uses, records what it sent
+//! a 1 MB-tail bundle and uploads it via the same pipeline Flow A uses, records what it sent
 //! in [`super::auto_sent`], then emits an `error-report-auto-sent` Tauri event so the frontend
 //! can show a confirmation toast. The stash comes first: the toast offers to show the report
 //! and add a note to it, and both read what the flush left behind.
@@ -347,13 +347,17 @@ async fn take_window_to_send() -> Option<DebounceState> {
 /// message as a `detail=` field. `build_bundle` runs automatic notes through the report's
 /// redaction context, which redacts and caps that field (`redact/DETAILS.md` § "External-text
 /// fields"), so the note never ships more than the report's own logs do.
+///
+/// The message is our own `log_error!` text, so it's quoted with its log markers KEPT
+/// (`LoggedText`, never `LogDetail`, which would replace them as foreign): each marked value goes
+/// one depth down and hashes to the same token as on the log line.
 fn automatic_note(state: &DebounceState) -> String {
     let count = state.error_count;
     let plural = if count == 1 { "" } else { "s" };
     format!(
         "auto-send: {count} error{plural} within 60s, first: {} detail={:?}",
         state.first_category,
-        cmdr_fs::log_detail::LogDetail(&state.first_message)
+        cmdr_fs::log_detail::LoggedText(&state.first_message)
     )
 }
 

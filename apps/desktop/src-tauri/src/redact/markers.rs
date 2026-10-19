@@ -38,7 +38,7 @@ pub(super) struct Spans {
 }
 
 impl Spans {
-    /// No spans: what an unmarked line and the external-text scan inside a field run with.
+    /// No spans: what an unmarked line runs with.
     pub(super) const NONE: Spans = Spans {
         line: String::new(),
         replacements: Vec::new(),

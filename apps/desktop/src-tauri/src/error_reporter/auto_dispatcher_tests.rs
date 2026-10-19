@@ -110,6 +110,60 @@ fn automatic_note_carries_the_first_category_and_a_report_redacted_message() {
     reset_for_test();
 }
 
+/// A `log_error!` message marked at its sites (a leaf, an identity, and a `LogDetail` echoing the
+/// leaf) keeps its marks in the note, one depth down, so each value ships as the same token the
+/// log line's does. A raw marker an unmarked `{}` site let through stays a stray: it fails closed.
+#[test]
+fn automatic_note_keeps_the_messages_marks_one_depth_down() {
+    use cmdr_fs::log_detail::LogDetail;
+    use cmdr_fs::log_private::{CLOSER, LogPrivate};
+    const FILE: &str = "/Users/me/Pictures/Summer (Lake House) 2026/IMG 0001.jpg";
+
+    let _guard = lock_and_reset();
+    set_enabled(true);
+
+    let stderr = format!("open({FILE}): Permission denied");
+    let message = format!(
+        "couldn't copy {} to share={:?}: detail={:?}; unmarked /Volumes/Backup/evil{CLOSER}rest/child.pdf",
+        LogPrivate::file_path(FILE),
+        LogPrivate::volume("Family Photos"),
+        LogDetail(&stderr).marking(&[LogPrivate::file_path(FILE)]),
+    );
+    record_error_for_test("cmdr_lib::copy", &message);
+
+    let note = note_for_test().expect("state should be active");
+    let redaction = crate::redact::RedactionContext::for_test([0x42; 32], "ERR-NOTE3");
+    let shipped = prepare_user_note(&note, BundleKind::Auto, &redaction).expect("non-empty note");
+    let logged = redaction
+        .redact_line(&format!("2026-10-19T10:00:00.000+02:00 ERROR ·copy  {message}"))
+        .into_owned();
+    for private in [
+        "Lake", "House", "IMG", "0001", "Family", "Photos", "evil", "rest", "child",
+    ] {
+        assert!(!shipped.contains(private), "{private:?} survived: {shipped}");
+        assert!(!logged.contains(private), "{private:?} survived: {logged}");
+    }
+
+    let tokens = |text: &str, kind: &str| -> Vec<String> {
+        regex::Regex::new(&format!("<{kind}:[0-9a-f]{{12}}>"))
+            .expect("valid token regex")
+            .find_iter(text)
+            .map(|m| m.as_str().to_string())
+            .collect()
+    };
+    let (note_files, line_files) = (tokens(&shipped, "file"), tokens(&logged, "file"));
+    assert!(!note_files.is_empty(), "{shipped}");
+    assert!(note_files.iter().all(|t| *t == line_files[0]), "{shipped}\n{logged}");
+    assert_eq!(
+        tokens(&shipped, "volume"),
+        tokens(&logged, "volume"),
+        "{shipped}\n{logged}"
+    );
+    assert_eq!(tokens(&shipped, "volume").len(), 1, "{shipped}");
+
+    reset_for_test();
+}
+
 #[test]
 fn automatic_note_caps_a_long_first_message_in_the_report() {
     let _guard = lock_and_reset();
