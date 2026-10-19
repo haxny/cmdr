@@ -145,7 +145,8 @@ kind (`path`, `file_path`, `dir_path`, `name`, `file_name`, `dir_name`, `volume`
 key and format spec; use the neutral kind when the site doesn't know which. Foreign text goes in a `LogDetail`, with
 `.marking(&[…])` naming the values the caller handed over. Error-level sites use `log_error!`. A `LogPrivate` is log
 text only: never turn one into a `String`. How it works: § "Marked values" below and `crates/cmdr-fs/DETAILS.md` §
-"Marked log values".
+"Marked log values". The `log-private-values` check holds every log macro to it on a per-file ratchet; a value that only
+looks like the user's (a setting's name) opts out with `// allowed-log-private: <reason>`.
 
 ### Enable debug for specific modules
 

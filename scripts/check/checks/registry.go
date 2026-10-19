@@ -340,6 +340,17 @@ var AllChecks = []CheckDefinition{
 		Run:         RunLockPoison,
 	},
 	{
+		ID:          "desktop-rust-log-private-values",
+		Nickname:    "log-private-values",
+		DisplayName: "log-private-values",
+		App:         AppDesktop,
+		Tech:        "🦀 Rust",
+		DependsOn:   nil,
+		IsFast:      true,
+		Inputs:      inputs(rustScanInputs(KindApp, KindTool), runnerDataInputs("log-private-values-allowlist.json")),
+		Run:         RunLogPrivateValues,
+	},
+	{
 		ID:          "desktop-rust-mtp-dropping-timeout",
 		Nickname:    "mtp-dropping-timeout",
 		DisplayName: "mtp-dropping-timeout",

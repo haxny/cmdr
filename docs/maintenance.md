@@ -53,10 +53,10 @@ automate it, and survives `oxfmt` (which collapses whitespace in regular markdow
 - **Cut back allowlists (the non-automated rest)**: Most allowlist staleness is now caught automatically — the
   file-length check shrink-wraps its own allowlist on local runs; svelte-tests removes dead coverage-allowlist entries
   and warns on satisfied ones; a11y-coverage fails on dead/redundant entries; the comment scanners (`bare-poll`,
-  `lock-poison`, `error-string-match`, `btn-restyle`, `workflows-rustup`) fail on orphaned opt-out comments; knip treats
-  unused ignores as errors; stylelint reports needless disables; cargo-deny denies unused allowed licenses. What's left
-  for the manual pass: Clippy `#[allow]` attributes, ESLint disable comments outside the type-aware lane, and judging
-  the "coverage satisfied" warnings. Frequency: quarterly.
+  `lock-poison`, `log-private-values`, `error-string-match`, `btn-restyle`, `workflows-rustup`) fail on orphaned opt-out
+  comments; knip treats unused ignores as errors; stylelint reports needless disables; cargo-deny denies unused allowed
+  licenses. What's left for the manual pass: Clippy `#[allow]` attributes, ESLint disable comments outside the
+  type-aware lane, and judging the "coverage satisfied" warnings. Frequency: quarterly.
 - **Dead code sweep**: Hunt for un-wired features, stale `#[allow(dead_code)]`, unused exports, tautological tests,
   mock-only tests. Frequency: quarterly.
 - **AI-smell / inelegance review**: Ask a fresh agent (different from any that wrote the code) to review the codebase

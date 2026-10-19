@@ -521,7 +521,8 @@ both sides read (`LogKind`, `CLOSER`, `RESERVED`, and `markers`, the lexer).
   control char, or an NFD accent escaped in the raw file (`Cafe\u{301}`). The terminal and Help > View debug log decode
   each span back. A value marked inside `LogDetail` is escaped once more there (`\\\"`).
 - **❌ A marked string is never data.** No `From`/`to_string` helper, `#[must_use]`; `ToString` comes free with
-  `Display`, so review is what catches a `.to_string()` or `format!` of one.
+  `Display`, so the `log-private-values` check catches a `.to_string()` or `format!` of one outside a log macro, and
+  ratchets the unmarked values inside them (`scripts/check/checks/DETAILS.md` § "The log-private-values ratchet").
 - **`LogDetail`** quotes foreign text and replaces every reserved char in it with U+FFFD: an OS message echoing a
   hostile name would otherwise quote a raw closer into a depth-1 one, the depth its own spans sit at. Its 1 KiB cap
   stays.

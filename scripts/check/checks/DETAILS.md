@@ -17,7 +17,7 @@ recipe for adding one is § "Adding a new check". Only the layout rules live her
   analyzers); `inputs.go` holds the shared `Inputs` path sets.
 - **An allowlist is a sibling JSON named `<check>-allowlist.json`**, and it's NEVER hand-edited: the owning check
   shrink-wraps it on local runs, so you run the check and commit its rewrite (§ "Allowlist consent"). The shared
-  staleness policy, and why it lives inside each check rather than a meta-check, is § "Allowlist shrink-wrap". Twelve
+  staleness policy, and why it lives inside each check rather than a meta-check, is § "Allowlist shrink-wrap". Fifteen
   exist today; `a11y-coverage-allowlist.json` and `ui-primitive-coverage-allowlist.json` are the two with no § of their
   own (both are exempt-with-reason lists whose checks FAIL on a dead or redundant entry rather than auto-removing it).
   `macos-availability-selectors.json` is a sibling JSON that isn't an allowlist: it's the SDK's own answer, cached so
@@ -36,10 +36,13 @@ recipe for adding one is § "Adding a new check". Only the layout rules live her
   vocabulary both contention mechanisms share, and the reader that turns the per-test log back into one test's record.
   `e2e-stale-selector-parse.go` is the TypeScript lexer and CSS selector parser behind
   `desktop-svelte-e2e-stale-selector`, kept apart so the check file holds only its wiring, vocabulary, and scan.
-  `tracked-files.go` is the shared "what does git know about, and how do you read one" vocabulary (`repoFiles`,
-  `gitTrackedFiles`, `readTrackedFile`) that every whole-tree scanner enumerates and reads through. `corpus.go` is the
-  run's one read of the tree and `literal-gate.go` the cheap pre-check in front of a per-line regex, both shared by the
-  source scanners (§ "The shared source corpus"). None appears in `AllChecks`.
+  `rust-source.go` is the Rust lexing the multi-line scanners share (`discarded-outcome`, `log-private-values`): a
+  masked copy of a file with every comment and literal body blanked, its string literals, and its test-gated regions (an
+  out-of-line `#[cfg(test)] mod tests;` gates nothing in this file, so it yields no region). `tracked-files.go` is the
+  shared "what does git know about, and how do you read one" vocabulary (`repoFiles`, `gitTrackedFiles`,
+  `readTrackedFile`) that every whole-tree scanner enumerates and reads through. `corpus.go` is the run's one read of
+  the tree and `literal-gate.go` the cheap pre-check in front of a per-line regex, both shared by the source scanners
+  (§ "The shared source corpus"). None appears in `AllChecks`.
 - **`changelog-commit-links.go` resolves every commit hash in `CHANGELOG.md` through ONE `git cat-file --batch-check`
   process**, not a process per reference. The recognition rule is § "CHANGELOG commit refs" below.
 
@@ -999,10 +1002,10 @@ Policy by staleness class:
 - **Numeric slack** (file-length, the website bundle-size baseline): auto-ratcheted; the entries carry no reason text,
   so the rewrite loses nothing. `invariant-density` and the two jscpd lanes ratchet the same way but carry no buffer —
   their numbers only move when somebody writes a rule or duplicates a block, so there's no drift to absorb.
-- **Orphaned opt-out comments** (`allowed-bare-poll` / `allowed-lock-poison` / `allowed-error-string-match` /
-  `allowed-dropping-timeout` / `allowed-btn-restyle` / `allowed-rustup-add`): the scanners track which directives
-  excused a violation and fail on the unused rest. Prose that merely mentions a directive (a comment line not starting
-  with it) is not a site. Source-code comments are never auto-edited.
+- **Orphaned opt-out comments** (`allowed-bare-poll` / `allowed-lock-poison` / `allowed-log-private` /
+  `allowed-error-string-match` / `allowed-dropping-timeout` / `allowed-btn-restyle` / `allowed-rustup-add`): the
+  scanners track which directives excused a violation and fail on the unused rest. Prose that merely mentions a
+  directive (a comment line not starting with it) is not a site. Source-code comments are never auto-edited.
 
 External tools enforce the same principle natively: knip (`treatConfigHintsAsErrors` in `knip.json`), stylelint
 (`reportNeedlessDisables` in `.stylelintrc.mjs`), cargo-deny (`unused-allowed-license = "deny"` in `deny.toml`), and the
@@ -2019,22 +2022,23 @@ Checks by app and tech:
   sqlite-open-direct (every SQLite connection opens through `crate::sqlite_util`, so the process-wide shared page cache
   is always installed before SQLite initializes), error-string-match, lock-poison (two lanes: an error-level one for an
   acquisition that records no poison-handling choice, and a warn-only one for a failure that's silently discarded, on a
-  per-file ratchet), test-sleep (flags a fixed `thread::sleep` / `tokio::time::sleep` in test code, where a
-  condition-based `wait_until` belongs; opt out a genuine sleep-is-the-subject site with
-  `// allowed-test-sleep: <reason>`), fixed-temp-dir (flags a test fixture built on `std::env::temp_dir()`, where every
-  process on the machine shares the path and two suite runs delete each other's live fixtures; the sanctioned fixture is
-  `crate::test_support::TestDir`, and a site where the temp root is load bearing opts out with
-  `// allowed-fixed-temp-dir: <reason>`), no-hand-rolled-fixture (bans a struct literal of `CachedScanResult` /
-  `SourceHint` / `VolumePreflight` / `WrittenFile` in test code, so a fixture can only be one of the shapes a named
-  constructor actually builds; it ships with ZERO findings on purpose and is a regression fence rather than a finder —
-  the shapes are already clean, and the point is that the next test author can't undo that by copy-pasting an old
-  literal), derive-default-justified (every `#[derive(..., Default, ...)]` under `file_system/`, `cmdr-fs`,
-  `cmdr-local`, `cmdr-operations`, and the IPC twins of `cmdr-fs` file types listed in `deriveDefaultTrees` carries a
-  `// DEFAULT-OK: <why>` line, because a zero value on a fact-carrying type isn't "no information", it's a claim about
-  the disk that nobody made; it and probe-unwrap fail when a governed member scans no file, `minScannedPerGovernedRoot`,
-  so a tree moving out from under them reads red), probe-unwrap-justified (flags `\.is_directory(…).await.unwrap_or(…)`
-  in production `file_system/`, `cmdr-local`, and `cmdr-operations` code, where a probe that COULDN'T answer gets
-  collapsed into a confident "no" and picks the branch that deletes; opt out with
+  per-file ratchet), log-private-values (an unmarked path, name, or identity in a log macro, on a per-file ratchet, and
+  a marked value made into a `String`; § "The log-private-values ratchet"), test-sleep (flags a fixed `thread::sleep` /
+  `tokio::time::sleep` in test code, where a condition-based `wait_until` belongs; opt out a genuine
+  sleep-is-the-subject site with `// allowed-test-sleep: <reason>`), fixed-temp-dir (flags a test fixture built on
+  `std::env::temp_dir()`, where every process on the machine shares the path and two suite runs delete each other's live
+  fixtures; the sanctioned fixture is `crate::test_support::TestDir`, and a site where the temp root is load bearing
+  opts out with `// allowed-fixed-temp-dir: <reason>`), no-hand-rolled-fixture (bans a struct literal of
+  `CachedScanResult` / `SourceHint` / `VolumePreflight` / `WrittenFile` in test code, so a fixture can only be one of
+  the shapes a named constructor actually builds; it ships with ZERO findings on purpose and is a regression fence
+  rather than a finder — the shapes are already clean, and the point is that the next test author can't undo that by
+  copy-pasting an old literal), derive-default-justified (every `#[derive(..., Default, ...)]` under `file_system/`,
+  `cmdr-fs`, `cmdr-local`, `cmdr-operations`, and the IPC twins of `cmdr-fs` file types listed in `deriveDefaultTrees`
+  carries a `// DEFAULT-OK: <why>` line, because a zero value on a fact-carrying type isn't "no information", it's a
+  claim about the disk that nobody made; it and probe-unwrap fail when a governed member scans no file,
+  `minScannedPerGovernedRoot`, so a tree moving out from under them reads red), probe-unwrap-justified (flags
+  `\.is_directory(…).await.unwrap_or(…)` in production `file_system/`, `cmdr-local`, and `cmdr-operations` code, where a
+  probe that COULDN'T answer gets collapsed into a confident "no" and picks the branch that deletes; opt out with
   `// allowed-probe-unwrap: <why the guess is truthful>`), discarded-outcome (a function that returns NOTHING while
   dropping a typed answer from the free function it delegates to; three of these shipped before it existed, and each
   ended as an IPC command or MCP tool inventing a success. `Result` and `Option` returns are deliberately out of scope:
@@ -2470,6 +2474,49 @@ parser can't resolve is left alone rather than guessed at.
 `file:line` key moves the moment anything above the site changes, while a count only moves when somebody writes or
 removes a swallow. No slack buffer, for the same reason. Shrink-wrap ratchets an entry down to the current count and
 drops a file that reaches zero, so the number only goes down; raising one needs David's OK (§ "Allowlist consent").
+
+### The log-private-values ratchet
+
+**Decision**: `log-private-values`, a fast-lane Go scanner over every first-party member (app and tool kinds; the
+vendored `fsevent-stream` fork is out by kind), holds every log macro to the marker convention
+(`crates/cmdr-fs/DETAILS.md` § "Marked log values"). **Why**: an error report can only hash a value exactly when the
+site marked it; an unmarked one falls to the regex redactor's guess at where a name ends, which is the leak class behind
+#491. The check is the migration's progress bar and the fence that keeps a converted or new site exact.
+
+What it reads: every `trace!` / `debug!` / `info!` / `warn!` / `error!` / `log!` / `log_error!` invocation, bare or
+path-qualified, with any delimiter, parsed over `rust-source.go`'s masked copy so a `(` or `,` inside a string, a char
+literal, or a comment can't move an argument boundary. Its format string is the first argument that is a bare string
+literal (after `target: …` or a level); a macro with none (a `macro_rules!` forwarding `$($arg)*`) is skipped. Inside
+one, an argument is ONE unmarked value when it isn't built through a wrapper (`LogPrivate`, `LogDetail`, `LoggedText`,
+`LogError`) and:
+
+- it calls `.display()` or `.to_string_lossy()`, or
+- an identifier in it reads as a path or identity (`readsAsIdentity`): its last word, after a representation suffix like
+  `_str` or `_lower`, is a stem (`path`, `dir`, `file`, `name`, `folder`, `root`, `dest`/`dst`, `source`/`src`, `share`,
+  `volume`, `label`, `host`, `server`, `user`, `parent`) or a compound (`filename`, `mount_point`). Not a tally
+  (`files`, `dirs`, `total_dirs`, `num_paths`), a flag (`is_dir`, `source_is_dir`), an id (`volume_id`), a type, a path
+  segment, a macro, or a free function's own name. Fields and method names count (`entry.name`, `entry.path()`), and a
+  chain ending in a scalar accessor (`.len()`, `.exists()`, `.extension()`, `.elapsed()`) prints a fact about the value,
+  so it doesn't.
+
+An inline capture (`{path:?}`) counts the same way by name, unless it names a `name = …` argument (judged through the
+argument) or a constant (`{STATE_FILE_PATH}`). A `format!` nested in an argument is judged as its own invocation, once.
+In-file `#[cfg(test)]` / `#[test]` items and dedicated test files are skipped. Errors logged as `{e}` are out of scope:
+they render their paths through `Display`, which the `LogError` wrapper takes on.
+
+**Decision**: the unmarked values ratchet per file, in `log-private-values-allowlist.json`
+(`{"count": N, "reason": "…"}`; a reasonless entry fails), and a file over its count FAILS rather than warns. **Why**: a
+per-file count doesn't move when code above a site does (the same reasoning as the lock-poison swallow lane), and a warn
+would let a new unmarked site in, which is the one thing the ratchet exists to stop. It was seeded from `HEAD` by the
+check's own scan (908 values in 278 files) and only shrinks; raising a number or adding a file needs David's OK (§
+"Allowlist consent"). A value that only looks like the user's (a setting's name, a thread's name, a fixed path of our
+own) opts out with `// allowed-log-private: <reason>` on its line or the line above, and an unused directive fails as an
+orphan.
+
+**Decision**: outside log macros, a `LogPrivate` / `LogDetail` / `LogError` inside `format!`, or a
+`LogPrivate::…(…).to_string()`, fails outright (same opt-out). **Why**: a marked string is log text, never a path, a
+stored value, or UI copy, and `ToString` comes free with `Display`, so no type-level rule can stop it. `LoggedText` in a
+`format!` passes: it re-quotes text Cmdr already logged (the Flow B auto note), whose markers are its own.
 
 **Decision**: `mtp-dropping-timeout` check to keep wall-clock timeouts and task aborts away from mtp-rs calls. **Why**:
 A PTP transaction is command → data → response over one bulk pipe, so dropping its future mid-data-phase leaves the

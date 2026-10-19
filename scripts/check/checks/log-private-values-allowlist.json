@@ -1,0 +1,1117 @@
+{
+  "$comment": "Accepted count of unmarked user values inside log macros per file (a `.display()`, a `.to_string_lossy()`, or an argument or inline capture named like a path or identity), seeded from the state when the check was introduced. A strict ratchet: local runs lower an entry to the current count and drop a file that reaches zero, and raising one or adding a file needs David's OK (scripts/check/checks/DETAILS.md § Allowlist consent). The fix for a file over its number is to wrap the value in `cmdr_fs::log_private::LogPrivate` (or mark foreign text with `LogDetail(text).marking(&[…])`), or to opt out a value that is not the user's with `// allowed-log-private: <reason>`; never to bump the number.",
+  "files": {
+    "apps/desktop/src-tauri/src/accent_color_linux.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/agent/chat/runtime/turn.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/agent/chat/session.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/agent/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/agent/suggested_ops/bridge/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/agent/tools/read/inspect/archive.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/agent/tools/view.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/ai/client.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/ai/extract.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/ai/install.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/ai/process.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/ai/suggestions.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/ai/translate.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/commands/child_window_state.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/commands/error_reporter.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/commands/favorites.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/commands/file_system/listing.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/commands/media_index/policy.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/commands/menu.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/commands/quick_look.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/commands/window_ordering.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/data_wipe/execute.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/dock/menu/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/downloads/watcher.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/drag_image_detection.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/error_reporter/bundle_builder.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/favorites/store.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/cloud_actions.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/framework_pool.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/git/arming.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/google_drive/mirror_db.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/mod.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/terminal.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/text_editor_macos.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/volume/drive_release/release.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/volume/drive_release/resume.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/volume/eject/disk_flight.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/volume/eject/mod.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/volume/eject/unmount_tool.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/volume/manager.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/volume/mod.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/volume/mount_registration.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_system/watcher.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_viewer/materialize.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_viewer/open_with_extract.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_viewer/origin.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_viewer/session.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/file_viewer/volume_source.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/icons/disk_cache.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/icons/macos_workspace.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/instance_lock.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/linux_icons.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/logging/mod.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/managed_policy/override_watch.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/managed_policy/source.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/mcp/port_file.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/mcp/server.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/menu/macos_appkit.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/menu/open_with.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/mtp/volume_wiring.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/multi_rename/names_file.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/native_drag/fulfillment.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/native_drag/promises.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/discovery_cache.rs": {
+      "count": 13,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/keychain.rs": {
+      "count": 8,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/manual_servers.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/manual_servers_reachability.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/mdns_discovery.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/mod.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/mount.rs": {
+      "count": 10,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/mount_linux.rs": {
+      "count": 9,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/os_mount_notice.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/share_access.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_client.rs": {
+      "count": 6,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_connect_directly.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_connect_failure.rs": {
+      "count": 8,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_pane_upgrade.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_saved_shares.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_server_address.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_sign_in_diagnostics.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_smbclient.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_smbutil.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/network/smb_upgrade.rs": {
+      "count": 12,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/open_mock.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/operations_host/events.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/recents/persistence.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/restricted_paths/mod.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/reveal/delivery.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/s3_costs/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/s3_costs/price_source.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/search/query.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/secrets/encrypted_file.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/secrets/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/secrets/plain_file.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/security_advisories/mod.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/server_move_smb.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/services_menu/responder.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/state_recovery/mod.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/state_recovery/plugin_stores.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/system_strings.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/updater/advisories.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/updater/installer.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/updater/mod.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/usage/ledger.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/volumes/lifecycle.rs": {
+      "count": 15,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/volumes/unmount_approver/callbacks.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "apps/desktop/src-tauri/src/volumes_linux/watcher.rs": {
+      "count": 16,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-adb/src/server.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-adb/src/volume/writes.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-archive/src/apple_double.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-archive/src/mutation/mutator.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-archive/src/read/index.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-archive/src/watch/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-fs/src/metadata/blockers.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-fs/src/metadata/carried.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-fs/src/metadata/flags.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-fs/src/metadata/mod.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-fs/src/metadata/staged.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-fs/src/testing/disk_images/mod.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-git/src/watcher.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/drive_index_relocation.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/handle/builder.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/lifecycle/cover/bootstrap.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/lifecycle/cover/ground.rs": {
+      "count": 6,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/lifecycle/cover/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/lifecycle/manager.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/lifecycle/phases/mod.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/lifecycle/phases/stitch.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/lifecycle/state/relocation.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/network_scanner/cover_scan.rs": {
+      "count": 6,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/network_scanner/full_scan.rs": {
+      "count": 6,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/network_scanner/mod.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/network_scanner/reconcile_scan.rs": {
+      "count": 8,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/read/coverage.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/read/enrichment.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/reconcile/local_reconcile.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/reconcile/local_reconcile/latency_probe.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/reconcile/reconciler/dir_read.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/reconcile/reconciler/events.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/reconcile/reconciler/rescan/mod.rs": {
+      "count": 9,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/reconcile/reconciler/subtree.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/reconcile/verifier.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/resources/retention.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/scanner/exclusions.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/scanner/insert_visitor.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/store/connection.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/store/paths.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/transports/smb/watch.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/watch/branches.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/watch/churn_monitor.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/watch/event_loop/live.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/watch/event_loop/rename_detect.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/watch/event_loop/verification.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/watch/watcher.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/writer/aggregation.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/writer/delta.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/indexing/writer/entries.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/ann/cache.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/ann/mod.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/ann/rebuild.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/backend/vision/mod.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/network/enrich.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/read/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/scheduler/pool.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/scheduler/purge.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/store/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/vector/cache.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/writer/ann_pending.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/media_index/writer/mod.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-index/src/volume_files.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-listing/src/foreign_path.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-listing/src/operations.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-listing/src/refresh.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-listing/src/stall.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-listing/src/streaming.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-local/src/linux_mounts.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-local/src/local_posix.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-local/src/local_posix/streams.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-local/src/mutation.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-local/src/reading.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-mtp/src/connection/bulk_ops.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-mtp/src/connection/directory_ops.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-mtp/src/connection/event_loop.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-mtp/src/connection/file_ops.rs": {
+      "count": 15,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-mtp/src/connection/mod.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-mtp/src/connection/mutation_ops.rs": {
+      "count": 15,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-mtp/src/connection/resolve.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-mtp/src/volume/scan.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-mtp/src/volume/volume_impl.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-operation-log/src/handle.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
+    },
+    "crates/cmdr-operations/src/archive_edit/copy_into.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/archive_edit/remote.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/cancellable.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/conflict.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/conflict_preflight.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/create.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/delete/trash.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/durability.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/free_space.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/in_flight_claim.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/in_flight_sweep.rs": {
+      "count": 14,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/in_flight_sweep_surface.rs": {
+      "count": 11,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/in_flight_temps.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/local_start.rs": {
+      "count": 6,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/look_alike.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/overwrite.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/rename.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/rename/bulk/by_move.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/rename/validity.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/reversal.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/scan_cache_previews.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/scan_dry_run.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/scan_preview/volume.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/scan_walker.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/source_binding.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/chunked_copy.rs": {
+      "count": 6,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/copy/dest_chain.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/copy/folder_metadata.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/copy/mod.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/copy/scanned_dirs.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/copy/single_item.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/copy_strategy.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/linux_copy.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/macos_copy.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/move_op/cross_fs.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/move_op/mod.rs": {
+      "count": 8,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/recovered_name.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/staged_write.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/staged_write_landing.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/transfer_driver/async_driver.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/cleanup.rs": {
+      "count": 15,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/conflict.rs": {
+      "count": 8,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/copy.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/copy_concurrent_source.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/copy_serial.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/displaced_destination.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/extract_quarantine.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/folder_metadata.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/landed_flags.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/move.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/move_cross.rs": {
+      "count": 7,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/move_same.rs": {
+      "count": 6,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/naming.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/server_side_copy.rs": {
+      "count": 6,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/source_sweep.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/stream_pipe.rs": {
+      "count": 8,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume/stream_pipe_steps.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer/volume_outage.rs": {
+      "count": 6,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-operations/src/transfer_tree/build.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-s3/src/profile.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-s3/src/transport/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-s3/src/volume/errors.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-s3/src/volume/upload_ledger.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-sftp/src/errors.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-sftp/src/transport.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-sftp/src/volume/mod.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-sftp/src/volume/mutation.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-sftp/src/volume/volume_impl.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/connection.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/attributes.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/copy.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/mod.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/mutation.rs": {
+      "count": 11,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/query.rs": {
+      "count": 9,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/random_reader.rs": {
+      "count": 4,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/read_stream.rs": {
+      "count": 8,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/reconnect.rs": {
+      "count": 8,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/scan.rs": {
+      "count": 5,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/scan_pool.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/session.rs": {
+      "count": 8,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/spelling.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/stamping.rs": {
+      "count": 1,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/testing.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/volume_impl.rs": {
+      "count": 13,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/watcher.rs": {
+      "count": 14,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-smb/src/volume/write_stream.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-webdav/src/errors.rs": {
+      "count": 3,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    },
+    "crates/cmdr-webdav/src/volume/volume_impl.rs": {
+      "count": 2,
+      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
+    }
+  }
+}
