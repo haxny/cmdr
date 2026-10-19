@@ -14,7 +14,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { isRawKey, loadCatalog, visibleLiterals } from './i18n-catalog-lib.ts'
+import { isRawKey, isSearchKeywordsKey, loadCatalog, visibleLiterals } from './i18n-catalog-lib.ts'
 
 const es = loadCatalog('es').messages
 const la = loadCatalog('es-419').messages
@@ -40,6 +40,7 @@ const SPAIN_ONLY: readonly { term: string; pattern: RegExp; except?: readonly st
     except: [
       'commands.viewerToggleWordWrap.label',
       'menu.viewer.wordWrap',
+      'settings.viewer.wordWrap.keywords',
       'settings.viewer.wordWrap.label',
       'viewer.statusBar.badge.wrap',
       'viewer.statusBar.hint.wrap',
@@ -74,7 +75,9 @@ describe('es-419 forks every Spain-only form in es', () => {
       for (const [key, value] of Object.entries(es)) {
         if (except.includes(key) || !pattern.test(visibleTextOf(key, value))) continue
         if (!(key in la)) unforked.push(key)
-        else if (pattern.test(visibleTextOf(key, la[key]))) leftover.push(key)
+        // A search-keyword fork keeps the Spain form as a synonym beside the Latin American one: it's never
+        // shown, and a reader who types either word should land on the row.
+        else if (!isSearchKeywordsKey(key) && pattern.test(visibleTextOf(key, la[key]))) leftover.push(key)
       }
       expect(unforked, `es keys using "${term.split(' → ')[0]}" that es-419 doesn't fork`).toEqual([])
       expect(leftover, `es-419 forks still using "${term.split(' → ')[0]}"`).toEqual([])

@@ -426,5 +426,65 @@
   "settings.dataWipe.partialMessage": "No se pudieron eliminar algunas cosas. Para terminar, elimínalas tú:",
   "@settings.dataWipe.partialMessage": {
     "sourceHash": "a65b37f"
+  },
+  "settings.appearance.useAppIconsForDocuments.keywords": "icono, iconos, ícono, íconos, documento, archivo, app, aplicación, colorido, colores",
+  "@settings.appearance.useAppIconsForDocuments.keywords": {
+    "sourceHash": "d312600"
+  },
+  "settings.fileOperations.skipConfirmation.keywords": "confirmar, confirmación, diálogo, preguntar, copiar, mover, papelera, basurero, eliminar, borrar, omitir, saltar, clics",
+  "@settings.fileOperations.skipConfirmation.keywords": {
+    "sourceHash": "9e8c5fc"
+  },
+  "settings.mediaIndex.showFileStatusIcons.keywords": "imagen, foto, insignia, insignias, icono, ícono, superposición, indicador, estado, indexado",
+  "@settings.mediaIndex.showFileStatusIcons.keywords": {
+    "sourceHash": "714ab25"
+  },
+  "settings.fileExplorer.git.showStatusColumn.keywords": "estado, columna, modificado, sin seguimiento, ignorado, añadido, agregado, eliminado",
+  "@settings.fileExplorer.git.showStatusColumn.keywords": {
+    "sourceHash": "6e2acd2"
+  },
+  "settings.updates.crashReports.keywords": "fallo, fallos, cierre inesperado, informe, reporte, informe de fallos, reporte de fallos, privacidad, telemetría, bug, error",
+  "@settings.updates.crashReports.keywords": {
+    "sourceHash": "1780258"
+  },
+  "settings.updates.errorReports.keywords": "error, informe, reporte, informe de error, reporte de error, automático, enviar, privacidad, telemetría, bug, registro, fragmento, diagnóstico",
+  "@settings.updates.errorReports.keywords": {
+    "sourceHash": "3295903"
+  },
+  "settings.updates.attachEmailToReports.keywords": "correo, correo electrónico, email, informe, reporte, fallo, error, contacto, adjuntar, responder, respuesta, beta",
+  "@settings.updates.attachEmailToReports.keywords": {
+    "sourceHash": "eb81875"
+  },
+  "settings.fileExplorer.typeToJump.resetDelay.keywords": "escribir, saltar, reiniciar, retardo, demora, aproximada, buscar, navegación, pulsación, tecla presionada, teclas, búfer",
+  "@settings.fileExplorer.typeToJump.resetDelay.keywords": {
+    "sourceHash": "e62670f"
+  },
+  "settings.fileExplorer.typeToJump.mode.keywords": "escribir, saltar, filtrar, filtro, filtro rápido, búsqueda rápida, acotar, reducir, pulsación, tecla presionada, teclas",
+  "@settings.fileExplorer.typeToJump.mode.keywords": {
+    "sourceHash": "fd877c2"
+  },
+  "settings.advanced.maxLogStorageMb.keywords": "registro, registros, log, almacenamiento, disco, límite, rotación, error, informe, reporte, privacidad",
+  "@settings.advanced.maxLogStorageMb.keywords": {
+    "sourceHash": "5a8027b"
+  },
+  "settings.behavior.revealHandler.keywords": "mostrar en el Finder, buscar en el Finder, revelar, gestor de archivos por omisión, gestor de archivos predeterminado, administrador de archivos, administrador de archivos predeterminado, navegador, descargas",
+  "@settings.behavior.revealHandler.keywords": {
+    "sourceHash": "c4b0510"
+  },
+  "settings.advanced.resetAll.keywords": "restablecer, valores por omisión, valores predeterminados, predeterminados, restaurar, valores de fábrica",
+  "@settings.advanced.resetAll.keywords": {
+    "sourceHash": "f82d258"
+  },
+  "settings.shortcuts.resetAll.keywords": "restablecer, atajos, atajos de teclado, teclado, valores por omisión, valores predeterminados, predeterminados, restaurar",
+  "@settings.shortcuts.resetAll.keywords": {
+    "sourceHash": "8a8f4b7"
+  },
+  "settings.license.manageKey.keywords": "licencia, clave, clave de licencia, gestionar, administrar, administración, activar, activación, cambiar",
+  "@settings.license.manageKey.keywords": {
+    "sourceHash": "11274e9"
+  },
+  "settings.license.enterKey.keywords": "licencia, clave, clave de licencia, introducir, ingresar, activar, activación, canjear",
+  "@settings.license.enterKey.keywords": {
+    "sourceHash": "b539db7"
   }
 }
