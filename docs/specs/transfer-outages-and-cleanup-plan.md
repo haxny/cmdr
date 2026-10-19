@@ -608,6 +608,32 @@ Docker SMB where one source read fails mid-copy leaves no `.cmdr-tmp-*` on the s
 **DONE**: `copy_concurrent.rs`'s "drop remaining in-flight tasks" comment and behavior are gone; `transfer/DETAILS.md` §
 "Known gap" rewritten to the current state.
 
+**Status: done.** As built (for the milestones after it):
+
+- The token is `WriteOperationState::stop_work` (sync reading `work_stopped()`, which also reads the intent so a stop is
+  seen in the instant before its token fires); the drain starts at `stop_work_after_failure()`.
+- **Pause, decided differently from the landmine above**: the drain WAKES a paused, parked task (the pause flag stays
+  set), so it stops through `on_progress` and its backend cleans up, instead of sitting on the gate until the deadline
+  drops it with its handle open. Nothing resumes; a stopping task never parks (`stop_or_park_*`, `park_while_paused`).
+- The drain also drops a sibling's pending Stop-mode prompt (`conflict_slot.abandon()`), as a cancel does.
+- A Rollback clicked during the drain ended with `write-cancelled` AND `write-error` (a second terminal event, also
+  reachable before through a real error landing after a Rollback click); the post-loop now drops the failure after the
+  rollback's `write-cancelled`.
+- A failed task's own partial (a claimed name) stays in `in_flight_partials`; `ConcurrentOutcome::last_dest_path` is
+  gone, so every drained failure's partial reaches the cleanup, not just the last one's.
+- The deadline's report is `OperationErrorReport::FailureDrainAbandoned` beside the cancel's `WindDownAbandoned`.
+- Audit, stop-work (`stop_work` / `work_stopped`): `retry::should_retry` and `wait_before_retry`,
+  `volume_outage::wait_after_failure`'s gate, `wait_for_volume`'s loop and sleep arm, `attempt_once`'s arm,
+  `LeafProgress::on_chunk`, `CheckpointStream` (pause park, both foreground-yield arms, polling tick removed),
+  `stop_or_park_*` / `is_stopping_or_paused` (so `UploadPark`, the merge and sequential-extract walkers, the server-side
+  copy's park, and the serial async driver's boundary), the concurrent driver's spawn loop and await arm,
+  `strategy::copy_single_path`'s entry check, `rename_merge_directory`'s entry check, `conflict.rs`'s dispatch check,
+  `server_side_copy`'s cancel arm (a draining copy never falls back to streaming), `stream_pipe::write_failed`'s
+  transport-to-cancel arm, `preflight`'s post-scan check, volume `folder_metadata::stamp`, and the watchdog's stand-down
+  (`transfer_probe`). Which-reason (intent, unchanged): `copy.rs`'s post-loop, `transfer_probe::render_dump` (shows
+  `running(draining-after-failure)`), the serial async driver's final intent check. Untouched (local engines, no
+  window): `copy/single_item.rs`, `copy/folder_metadata.rs`, `copy_strategy.rs`, `move_op/`.
+
 ### 9. Cleanup waits for the server, and what's left is swept on reconnect (S–M)
 
 **Scope** (per the lead's decision: ❗ a user's Cancel never waits on a dropped share; the same holds for a failed op,
