@@ -89,23 +89,15 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
   /**
    * Get the path and filename of the file under the cursor in the focused pane.
    *
-   * For the search-results virtual pane the underlying entries carry their own absolute
-   * `path`, and `currentPath` is the opaque `search-results://<id>` URL — concatenating
-   * the two would produce `search-results://sr-1/test.md`, which downstream commands
-   * (`showInFinder`, `openInEditor`, `copyToClipboard`) can't act on. Round-2 P8 / P9.
-   * We prefer the pane-reported path under the cursor when present and fall back to the
-   * legacy `${currentPath}/${filename}` form for regular panes.
+   * ❗ Re-reads the row (`refreshCursorEntry()`), ❌ never the displayed cursor entry:
+   * that one refetches a beat after a cursor move, so arrow-down then F4 would act on
+   * the row the cursor just left. The entry's own `path` is the answer on every pane,
+   * including search results, whose `currentPath` is an opaque `search-results://` URL.
    */
-  function getFileAndPathUnderCursor(): { path: string; filename: string } | null {
-    const paneRef = access.getPaneRef(access.getFocusedPane())
-    const filename = paneRef?.getFilenameUnderCursor()
-    if (!filename || filename === '..') return null
-    const cursorPath = paneRef?.getPathUnderCursor()
-    if (cursorPath) {
-      return { path: cursorPath, filename }
-    }
-    const currentPath = access.getPanePath(access.getFocusedPane())
-    return { path: `${currentPath}/${filename}`, filename }
+  async function getFileAndPathUnderCursor(): Promise<{ path: string; filename: string } | null> {
+    const entry = await access.getPaneRef(access.getFocusedPane())?.refreshCursorEntry()
+    if (!entry || entry.name === '..') return null
+    return { path: entry.path, filename: entry.name }
   }
 
   /**
@@ -120,11 +112,11 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
    * does — so the pane path read here is always a real filesystem path, never the
    * opaque `search-results://<id>` URL.
    */
-  function getPathToCopyUnderCursor(): string | null {
-    const entryUnderCursor = getFileAndPathUnderCursor()
-    if (entryUnderCursor) return entryUnderCursor.path
+  async function getPathToCopyUnderCursor(): Promise<string | null> {
     const focusedPane = access.getFocusedPane()
-    if (access.getPaneRef(focusedPane)?.getFilenameUnderCursor() !== '..') return null
+    const entry = await access.getPaneRef(focusedPane)?.refreshCursorEntry()
+    if (!entry) return null
+    if (entry.name !== '..') return entry.path
     return access.getPanePath(focusedPane) || null
   }
 

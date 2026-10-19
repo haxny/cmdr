@@ -48,13 +48,13 @@ type EntryUnderCursor = { path: string; filename: string }
  * `getFileAndPathUnderCursor()`). Returns `fn`'s result so awaiting arms can
  * propagate completion (and rejections) to the dispatch promise.
  */
-function withEntryUnderCursor(
+async function withEntryUnderCursor(
   { explorerRef }: CommandHandlerContext,
   fn: (entry: EntryUnderCursor) => void | Promise<void>,
-): void | Promise<void> {
-  const entryUnderCursor = explorerRef?.getFileAndPathUnderCursor()
+): Promise<void> {
+  const entryUnderCursor = await explorerRef?.getFileAndPathUnderCursor()
   if (entryUnderCursor) {
-    return fn(entryUnderCursor)
+    await fn(entryUnderCursor)
   }
 }
 
@@ -268,7 +268,7 @@ export const fileHandlers = {
       async () => {
         // Not `withEntryUnderCursor`: on the `..` row this copies the pane's OWN
         // directory, where every other under-cursor arm treats `..` as "no entry".
-        const path = hctx.explorerRef?.getPathToCopyUnderCursor()
+        const path = await hctx.explorerRef?.getPathToCopyUnderCursor()
         if (path) {
           await copyPathAndAnnounce(path)
         }
@@ -302,7 +302,7 @@ export const fileHandlers = {
       detached(trackEvent('quick_look_used', { outcome: 'closed' }))
       return
     }
-    const entryUnderCursor = explorerRef?.getFileAndPathUnderCursor()
+    const entryUnderCursor = await explorerRef?.getFileAndPathUnderCursor()
     if (!entryUnderCursor) {
       detached(trackEvent('quick_look_used', { outcome: 'noTarget' }))
       return

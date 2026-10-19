@@ -898,8 +898,8 @@ search-results-pane guard, copy-current-dir-path, Quick Look's volume gate). Any
 write surfaces retire in a later phase, so the downloads helpers (`go-to-latest.ts`) stay fully on `explorerRef` for now
 (their `getFocusedPane()` read only feeds the navigation write).
 
-**Cross-pane drag.** `DualPaneExplorer.getFileAndPathUnderCursor()` prefers `FilePane.getPathUnderCursor()` over
-`${currentPath}/${filename}` so snapshot-pane drags carry real filesystem paths, not `search-results://sr-N/<name>`.
+**Cross-pane drag.** `DualPaneExplorer.getFileAndPathUnderCursor()` answers the cursor entry's own `path`, ❌ never
+`${currentPath}/${filename}`, so snapshot-pane drags carry real filesystem paths, not `search-results://sr-N/<name>`.
 
 **Copy-path is the one arm that accepts `..`.** `pane-commands.ts::getPathToCopyUnderCursor()` returns the cursor
 entry's path, or the pane's OWN directory when the cursor sits on the synthetic `..` row: copying a path from `..` in
@@ -924,13 +924,23 @@ existing getter), because it chooses between the folder under the cursor and the
 pure and live in `#lib/open-terminal/terminal-target.ts`; this is only the read.
 
 **A command that ACTS on the cursor row calls `refreshCursorEntry()`, ❌ never the plain `getCursorEntry()`.** The
-displayed entry is fed by an `$effect` firing one `get_file_at` per cursor move, so for a round trip after a move it
-still holds the row the cursor just left. Displaying a stale row for a few milliseconds is fine; acting on one is not,
-and the gap widens on a slow mount. Arrow-down then ⌥⌘T is an ordinary keyboard sequence, and it opened the previous
-row's folder until `getCursorRowForTerminal()` was made async over the re-read. `getCursorEntry()` stays as it was for
-the display and mirror readers, which want the cheap cached answer. The E2E spec
+displayed entry is fed by an `$effect` firing one `get_file_at` per cursor move or row change, so for a round trip after
+either it still holds the old row. Displaying a stale row for a few milliseconds is fine; acting on one is not, and the
+gap widens on a slow mount. Arrow-down then ⌥⌘T is an ordinary keyboard sequence, and it opened the previous row's
+folder until `getCursorRowForTerminal()` was made async over the re-read. All three cursor getters
+(`getFileAndPathUnderCursor`, `getPathToCopyUnderCursor`, `getCursorRowForTerminal`) re-read, so every
+`withEntryUnderCursor` arm (F4, Show in Finder, Quick Look, Get Info, copy filename, the cloud pair) does too.
+`refreshCursorEntry()` skips the IPC on a snapshot pane, whose mirror is synchronous. `getCursorEntry()` stays as it was
+for the display and mirror readers, which want the cheap cached answer. The E2E spec
 (`test/e2e-playwright/open-terminal-here.spec.ts`) is what catches a regression here: it drives a real cursor move, and
 no unit test can reach the race.
+
+**The displayed entry follows the rows, not only the cursor index.** The feed's effect also tracks the pane's
+`cacheGeneration` (`getRowRevision`), which every cold row-space swap bumps: quick filter, sort, hidden files, a new
+listing. A swap often leaves the cursor INDEX alone while a different file lands under it (`backups` at row 1, then
+`cla` filters it out and `CLAUDE.md` takes row 1), and tracking the index alone left the footer, Quick Look follow, and
+MCP on the vanished row. Watcher diffs bump `softRefreshTick` instead and refetch the entry explicitly in
+`listing-diff-sync.svelte.ts`.
 
 **Self-drag identity (drop builds from app state, not the pasteboard).** `drag-drop-controller.svelte.ts::handleDrop`
 consumes the self-drag identity recorded at drag start (`drag/drag-drop.ts::recordSelfDragIdentity`) instead of

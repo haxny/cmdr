@@ -105,14 +105,20 @@ export interface ExplorerAPI {
    * `navigation/root-folder.ts`.
    */
   goToRoot: (pane?: 'left' | 'right') => Promise<void>
-  getFileAndPathUnderCursor: () => { path: string; filename: string } | null
+  /**
+   * The file the focused pane's cursor sits on, or null on `..` or an empty pane.
+   * Async because it RE-READS the row: the displayed cursor entry is one IPC behind
+   * a cursor move or a row change, and a command that acts on the row can't be.
+   */
+  getFileAndPathUnderCursor: () => Promise<{ path: string; filename: string } | null>
   /**
    * The path the "copy path" command copies: the cursor entry's path, or the pane's
    * own directory when the cursor sits on `..`. Null when no row is under the cursor.
    * Separate from `getFileAndPathUnderCursor` on purpose: every other under-cursor arm
-   * (open, rename, Get Info, …) must keep treating `..` as "no entry".
+   * (open, rename, Get Info, …) must keep treating `..` as "no entry". Re-reads the
+   * row, like `getFileAndPathUnderCursor`.
    */
-  getPathToCopyUnderCursor: () => string | null
+  getPathToCopyUnderCursor: () => Promise<string | null>
   /**
    * The focused pane's SELECTION as paths, for copy-path / copy-filename. Reads the
    * selected indices synchronously at call time and resolves them against the

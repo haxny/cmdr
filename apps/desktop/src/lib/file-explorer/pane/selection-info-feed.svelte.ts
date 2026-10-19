@@ -36,6 +36,12 @@ export interface SelectionInfoFeedDeps {
   getLoading: () => boolean
   getTotalCount: () => number
   getCursorIndex: () => number
+  /**
+   * Reactive; changes whenever the pane's rows are swapped or reshuffled (quick
+   * filter, sort, hidden files, diffs, a new listing). A row change can leave the
+   * cursor index alone while a different file lands under it.
+   */
+  getRowRevision: () => number
   /** Whether the synthetic `..` row occupies index 0 (shifts backend indices by one). */
   getHasParent: () => boolean
   /** `currentPath` with `~` expanded, or null before the home dir resolves. */
@@ -160,11 +166,13 @@ export function createSelectionInfoFeed(deps: SelectionInfoFeedDeps): SelectionI
   const debouncedFetchEntry = createDebounce(() => void fetchEntry(), CURSOR_FETCH_DEBOUNCE_MS)
   const throttledFetchStats = createThrottle(() => void fetchStats(), STATS_THROTTLE_MS)
 
-  // Re-fetch the entry under the cursor when the cursor moves. Also sync to MCP so
-  // `cmdr://state` reflects keyboard nav (arrows, Insert, PageUp/Down, Home/End,
-  // click-to-position), not only listing changes and visible-range scrolls.
+  // Re-fetch the entry under the cursor when the cursor moves or the rows change
+  // under it. Also sync to MCP so `cmdr://state` reflects keyboard nav (arrows,
+  // Insert, PageUp/Down, Home/End, click-to-position), not only listing changes and
+  // visible-range scrolls.
   $effect(() => {
     void deps.getCursorIndex() // Track
+    void deps.getRowRevision() // Track
     if (deps.getListingId() && !deps.getLoading()) {
       debouncedFetchEntry.call()
       deps.syncMcp()

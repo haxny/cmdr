@@ -301,7 +301,7 @@ segments. Don't invert this (label in the volume slot, empty path).
 
 Context-menu wiring on the snapshot pane:
 
-- `DualPaneExplorer.getFileAndPathUnderCursor()` prefers the pane-reported `getPathUnderCursor()` over a
+- `DualPaneExplorer.getFileAndPathUnderCursor()` answers the cursor entry's own `path`, never a
   `${currentPath}/${filename}` concatenation. Otherwise `file.showInFinder` / `file.copyPath` / `file.edit` on a
   snapshot pane would build a `search-results://sr-N/<name>` path that downstream IPCs can't act on.
 - `SearchResultsView.svelte::onContextMenu` hands the Rust menu builder the path's basename, not the adapted entry's

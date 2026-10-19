@@ -838,7 +838,8 @@
      */
     // noinspection JSUnusedGlobalSymbols -- used by DualPaneExplorer.getCursorRowForTerminal
     export async function refreshCursorEntry(): Promise<FileEntry | null> {
-        await selectionInfo.fetchEntry()
+        // A snapshot pane mirrors its row synchronously, so its entry is never behind.
+        if (!isSearchResultsView) await selectionInfo.fetchEntry()
         return selectionInfo.entry
     }
 
@@ -1048,7 +1049,7 @@
      * A snapshot pane has no listing to re-read and mirrors its rows synchronously.
      */
     export async function selectSameKind(): Promise<void> {
-        const cursorEntry = isSearchResultsView ? selectionInfo.entry : await refreshCursorEntry()
+        const cursorEntry = await refreshCursorEntry()
         const target = sameKindTargetFor(cursorEntry)
         if (!target) return
         const entries = await getEntriesSnapshot()
@@ -1077,7 +1078,7 @@
             await networkMountViewRef?.openContextMenuAtCursor()
             return
         }
-        const cursorEntry = isSearchResultsView ? selectionInfo.entry : await refreshCursorEntry()
+        const cursorEntry = await refreshCursorEntry()
         if (!cursorEntry) return
         await handleContextMenu(cursorEntry, cursorRowAnchor(paneEl ?? null))
     }
@@ -1870,6 +1871,7 @@
         getLoading: () => loading,
         getTotalCount: () => totalCount,
         getCursorIndex: () => cursorIndex,
+        getRowRevision: () => cacheGeneration,
         getHasParent: () => hasParent,
         getCanonicalPath: () => canonicalPath,
         getIncludeHidden: () => includeHidden,

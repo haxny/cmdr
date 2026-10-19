@@ -103,6 +103,7 @@ describe('createSelectionInfoFeed', () => {
     const isSearchResultsView = $state(opts.isSearchResultsView ?? false)
     let searchSnapshot = $state<SearchSnapshot | undefined>(opts.searchSnapshot)
     let selectedIndices = $state<number[]>(opts.selectedIndices ?? [])
+    let rowRevision = $state(0)
     const syncMcp = vi.fn()
     const onCursorRow = vi.fn()
     let feed!: SelectionInfoFeed
@@ -112,6 +113,7 @@ describe('createSelectionInfoFeed', () => {
         getLoading: () => loading,
         getTotalCount: () => totalCount,
         getCursorIndex: () => cursorIndex,
+        getRowRevision: () => rowRevision,
         getHasParent: () => hasParent,
         getCanonicalPath: () => canonicalPath,
         getIncludeHidden: () => true,
@@ -134,6 +136,10 @@ describe('createSelectionInfoFeed', () => {
       },
       setListingId: (v: string) => {
         listingId = v
+        flushSync()
+      },
+      bumpRowRevision: () => {
+        rowRevision++
         flushSync()
       },
       setSelectedIndices: (v: number[]) => {
@@ -295,6 +301,20 @@ describe('createSelectionInfoFeed', () => {
       await vi.advanceTimersByTimeAsync(20)
       expect(ipc.getFileAt).toHaveBeenCalledTimes(1)
       expect(ipc.getFileAt).toHaveBeenCalledWith('listing-1', 2, true)
+    })
+
+    // Regression: a quick filter put CLAUDE.md on the row `backups` had held, the
+    // cursor index never changed, and F4 opened `backups`.
+    it('refetches when the rows change under an unmoved cursor', async () => {
+      const created = create({ hasParent: true, cursorIndex: 1 })
+      ipc.getFileAt.mockResolvedValue(fileEntry('backups', true))
+      await vi.advanceTimersByTimeAsync(20)
+      expect(created.feed.entry?.name).toBe('backups')
+
+      ipc.getFileAt.mockResolvedValue(fileEntry('CLAUDE.md'))
+      created.bumpRowRevision()
+      await vi.advanceTimersByTimeAsync(20)
+      expect(created.feed.entry?.name).toBe('CLAUDE.md')
     })
 
     it('stays quiet while the pane has no listing', async () => {

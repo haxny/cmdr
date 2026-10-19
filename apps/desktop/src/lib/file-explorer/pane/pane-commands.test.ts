@@ -48,6 +48,8 @@ function buildPaneRef(
     volumeId: string
     filenameUnderCursor: string | undefined
     pathUnderCursor: string | undefined
+    /** What a fresh re-read finds under the cursor; defaults to the cached name and path. */
+    freshEntry: { name: string; path: string } | null
     selectedIndices: number[]
     allSelected: boolean
     rowStateReady: boolean
@@ -64,6 +66,12 @@ function buildPaneRef(
     getVolumeId: () => overrides.volumeId ?? 'root',
     getFilenameUnderCursor: () => ('filenameUnderCursor' in overrides ? overrides.filenameUnderCursor : 'file.txt'),
     getPathUnderCursor: () => overrides.pathUnderCursor,
+    refreshCursorEntry: () => {
+      if ('freshEntry' in overrides) return Promise.resolve(overrides.freshEntry)
+      const name = 'filenameUnderCursor' in overrides ? overrides.filenameUnderCursor : 'file.txt'
+      if (name === undefined) return Promise.resolve(null)
+      return Promise.resolve({ name, path: overrides.pathUnderCursor ?? `/listing/${name}`, isDirectory: false })
+    },
     getSelectedIndices: () => overrides.selectedIndices ?? [],
     isAllSelected: () => overrides.allSelected ?? false,
     isRowStateReady: () => overrides.rowStateReady ?? true,
@@ -282,45 +290,60 @@ describe('handleMcpSelect modes', () => {
   })
 })
 
-describe('getFileAndPathUnderCursor path preference', () => {
-  it('prefers the pane-reported path under cursor (snapshot pane)', () => {
-    const ref = buildPaneRef({
-      filenameUnderCursor: 'test.md',
-      pathUnderCursor: '/real/dir/test.md',
-    })
+describe('getFileAndPathUnderCursor', () => {
+  it("answers the entry's own path (a snapshot pane's rows carry real paths)", async () => {
+    const ref = buildPaneRef({ filenameUnderCursor: 'test.md', pathUnderCursor: '/real/dir/test.md' })
     const cmds = create(buildAccess({ paneRefs: { left: ref }, paths: { left: 'search-results://sr-1' } }))
-    expect(cmds.getFileAndPathUnderCursor()).toEqual({ path: '/real/dir/test.md', filename: 'test.md' })
+    expect(await cmds.getFileAndPathUnderCursor()).toEqual({ path: '/real/dir/test.md', filename: 'test.md' })
   })
 
-  it('falls back to ${currentPath}/${filename} when no pane path is reported', () => {
-    const ref = buildPaneRef({ filenameUnderCursor: 'doc.txt', pathUnderCursor: undefined })
-    const cmds = create(buildAccess({ paneRefs: { left: ref }, paths: { left: '/Users/x/dir' } }))
-    expect(cmds.getFileAndPathUnderCursor()).toEqual({ path: '/Users/x/dir/doc.txt', filename: 'doc.txt' })
+  // Regression: a quick filter put CLAUDE.md on the row `backups` had held, and
+  // F4 acted on the cached `backups`.
+  it('acts on a fresh read of the cursor row, never the cached one', async () => {
+    const ref = buildPaneRef({
+      filenameUnderCursor: 'backups',
+      pathUnderCursor: '/Users/x/.claude/backups',
+      freshEntry: { name: 'CLAUDE.md', path: '/Users/x/.claude/CLAUDE.md' },
+    })
+    const cmds = create(buildAccess({ paneRefs: { left: ref } }))
+    expect(await cmds.getFileAndPathUnderCursor()).toEqual({
+      path: '/Users/x/.claude/CLAUDE.md',
+      filename: 'CLAUDE.md',
+    })
   })
 
-  it('returns null for the .. parent entry and when nothing is under the cursor', () => {
+  it('returns null for the .. parent entry and when nothing is under the cursor', async () => {
     const parentRef = buildPaneRef({ filenameUnderCursor: '..' })
-    expect(create(buildAccess({ paneRefs: { left: parentRef } })).getFileAndPathUnderCursor()).toBeNull()
+    expect(await create(buildAccess({ paneRefs: { left: parentRef } })).getFileAndPathUnderCursor()).toBeNull()
 
     const emptyRef = buildPaneRef({ filenameUnderCursor: undefined })
-    expect(create(buildAccess({ paneRefs: { left: emptyRef } })).getFileAndPathUnderCursor()).toBeNull()
+    expect(await create(buildAccess({ paneRefs: { left: emptyRef } })).getFileAndPathUnderCursor()).toBeNull()
   })
 })
 
 describe('getPathToCopyUnderCursor', () => {
-  it('returns the cursor entry path for a regular row', () => {
-    const ref = buildPaneRef({ filenameUnderCursor: 'doc.txt', pathUnderCursor: undefined })
+  it('returns the cursor entry path for a regular row', async () => {
+    const ref = buildPaneRef({ filenameUnderCursor: 'doc.txt', pathUnderCursor: '/Users/x/dir/doc.txt' })
     const cmds = create(buildAccess({ paneRefs: { left: ref }, paths: { left: '/Users/x/dir' } }))
-    expect(cmds.getPathToCopyUnderCursor()).toBe('/Users/x/dir/doc.txt')
+    expect(await cmds.getPathToCopyUnderCursor()).toBe('/Users/x/dir/doc.txt')
   })
 
-  it("returns the pane's own directory when the cursor sits on ..", () => {
+  it('copies a fresh read of the cursor row, never the cached one', async () => {
+    const ref = buildPaneRef({
+      filenameUnderCursor: 'backups',
+      pathUnderCursor: '/Users/x/backups',
+      freshEntry: { name: 'notes.md', path: '/Users/x/notes.md' },
+    })
+    expect(await create(buildAccess({ paneRefs: { left: ref } })).getPathToCopyUnderCursor()).toBe('/Users/x/notes.md')
+  })
+
+  it("returns the pane's own directory when the cursor sits on ..", async () => {
     const ref = buildPaneRef({ filenameUnderCursor: '..' })
     const cmds = create(buildAccess({ paneRefs: { left: ref }, paths: { left: '/Users/x/Downloads' } }))
-    expect(cmds.getPathToCopyUnderCursor()).toBe('/Users/x/Downloads')
+    expect(await cmds.getPathToCopyUnderCursor()).toBe('/Users/x/Downloads')
   })
 
-  it('reads the FOCUSED pane, not always the left one', () => {
+  it('reads the FOCUSED pane, not always the left one', async () => {
     const cmds = create(
       buildAccess({
         focusedPane: 'right',
@@ -328,12 +351,12 @@ describe('getPathToCopyUnderCursor', () => {
         paths: { right: '/Volumes/naspi/papers' },
       }),
     )
-    expect(cmds.getPathToCopyUnderCursor()).toBe('/Volumes/naspi/papers')
+    expect(await cmds.getPathToCopyUnderCursor()).toBe('/Volumes/naspi/papers')
   })
 
-  it('returns null when no row is under the cursor', () => {
+  it('returns null when no row is under the cursor', async () => {
     const ref = buildPaneRef({ filenameUnderCursor: undefined })
-    expect(create(buildAccess({ paneRefs: { left: ref } })).getPathToCopyUnderCursor()).toBeNull()
+    expect(await create(buildAccess({ paneRefs: { left: ref } })).getPathToCopyUnderCursor()).toBeNull()
   })
 })
 

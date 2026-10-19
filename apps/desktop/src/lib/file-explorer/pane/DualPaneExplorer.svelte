@@ -988,11 +988,11 @@
         return goToRootFolder(deps, pane ?? focusedPane)
     }
 
-    export function getFileAndPathUnderCursor(): { path: string; filename: string } | null {
+    export function getFileAndPathUnderCursor(): Promise<{ path: string; filename: string } | null> {
         return paneCommands.getFileAndPathUnderCursor()
     }
 
-    export function getPathToCopyUnderCursor(): string | null {
+    export function getPathToCopyUnderCursor(): Promise<string | null> {
         return paneCommands.getPathToCopyUnderCursor()
     }
 
