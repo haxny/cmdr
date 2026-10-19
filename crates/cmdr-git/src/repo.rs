@@ -12,7 +12,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, OnceLock, RwLock};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::mapped_file_faults;
@@ -214,6 +214,41 @@ fn without_filter_drivers(repo: gix::ThreadSafeRepository) -> Result<gix::Thread
     Ok(local.into_sync())
 }
 
+/// The largest single allocation a repository's own object data may cause: twice the largest
+/// blob Cmdr reads (`tree::MAX_BLOB_BYTES`), which leaves room for a delta's base.
+///
+/// A size field decoded from a page that went away reads as whatever the zeros make of it, and
+/// without a cap a corrupt one sizes an allocation.
+const OBJECT_ALLOC_LIMIT: u64 = 2 * crate::tree::MAX_BLOB_BYTES;
+
+/// How every repository is opened: gix's defaults, plus [`OBJECT_ALLOC_LIMIT`] for a repo the
+/// user owns. ❌ Only `full`: a repo opened with reduced trust already gets gix's own 16 MiB
+/// cap, and an explicit limit would raise it.
+fn open_options() -> gix::sec::trust::Mapping<gix::open::Options> {
+    let mut trust = gix::sec::trust::Mapping::<gix::open::Options>::default();
+    trust.full = trust
+        .full
+        .config_overrides([format!("gitoxide.objects.allocLimit={OBJECT_ALLOC_LIMIT}")]);
+    trust
+}
+
+/// Whether `path` is on the disk the system or the user's home lives on, which can't go away
+/// under a mapping while Cmdr runs. Anything else (a USB drive, an SD card, a network share, a
+/// second internal volume) counts as one that can, which only costs reading packed-refs into
+/// memory.
+fn is_on_the_startup_disk(path: &Path) -> bool {
+    use std::os::unix::fs::MetadataExt as _;
+    static STARTUP_DEVICES: OnceLock<Vec<u64>> = OnceLock::new();
+    let startup = STARTUP_DEVICES.get_or_init(|| {
+        [Some(PathBuf::from("/")), std::env::home_dir()]
+            .into_iter()
+            .flatten()
+            .filter_map(|dir| std::fs::metadata(dir).ok().map(|meta| meta.dev()))
+            .collect()
+    });
+    std::fs::metadata(path).is_ok_and(|meta| startup.contains(&meta.dev()))
+}
+
 fn map_discover_err(err: gix::Error) -> FriendlyGitError {
     // The upward search found no repository (or only an untrusted one): its own
     // typed enum. A `.git` that turned out not to be a real repo is classified
@@ -314,7 +349,14 @@ impl RepoCache {
             return Ok((handle, root));
         }
 
-        let repo = without_filter_drivers(gix::ThreadSafeRepository::discover(path).map_err(map_discover_err)?)?;
+        let opened = gix::ThreadSafeRepository::discover_opts(path, Default::default(), open_options())
+            .map_err(map_discover_err)?;
+        let mut repo = without_filter_drivers(opened)?;
+        if !is_on_the_startup_disk(repo.refs.common_dir_resolved()) {
+            // ❗ gix maps a packed-refs file over 32 KiB, and this one sits on a disk that
+            // can go away under the mapping; a few hundred KiB in memory is the cheaper risk.
+            repo.refs.set_packed_buffer_mmap_threshold(u64::MAX);
+        }
         // `ThreadSafeRepository` only exposes `work_dir()` (no `workdir`).
         // Suppress the deprecation warning here – gix kept work_dir on the
         // ThreadSafe wrapper while only the Repository alias got a replacement.

@@ -170,6 +170,42 @@ fn repo_info_recomputes_after_commit() {
     cleanup(&dir);
 }
 
+/// What `refs`' packed-refs mmap threshold is set to. gix exposes only the setter, which answers
+/// the previous value, so it's read through a clone.
+pub(crate) fn packed_refs_mmap_threshold(handle: &crate::repo::RepoHandle) -> u64 {
+    handle.refs.clone().set_packed_buffer_mmap_threshold(0)
+}
+
+#[test]
+fn a_repo_on_the_startup_disk_keeps_mapping_a_big_packed_refs() {
+    let dir = temp("startup_disk_mmap");
+    init_repo_with_commit(&dir);
+    let (handle, _) = discover_repo(&dir).unwrap();
+    assert_eq!(
+        packed_refs_mmap_threshold(&handle),
+        32 * 1024,
+        "gix's own threshold: the startup disk can't go away under a mapping"
+    );
+    cleanup(&dir);
+}
+
+#[test]
+fn every_repo_caps_one_allocation_its_object_data_can_cause() {
+    let dir = temp("alloc_limit");
+    init_repo_with_commit(&dir);
+    let (handle, _) = discover_repo(&dir).unwrap();
+    let limit = handle
+        .to_thread_local()
+        .config_snapshot()
+        .integer("gitoxide.objects.allocLimit");
+    assert_eq!(
+        limit,
+        Some(2 * crate::tree::MAX_BLOB_BYTES as i64),
+        "a size field read from a zeroed page must not size an allocation"
+    );
+    cleanup(&dir);
+}
+
 #[test]
 fn a_recovered_mapped_page_anywhere_empties_the_repo_cache_at_the_next_lookup() {
     let dir = temp("fault_forgets");

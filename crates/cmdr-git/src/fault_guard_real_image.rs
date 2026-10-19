@@ -78,3 +78,21 @@ fn reading_a_packed_blob_after_its_disk_was_force_detached_answers_volume_gone()
     );
     assert_eq!(cache.len(), 0, "the recovery emptied the cache");
 }
+
+#[test]
+#[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
+fn a_repo_off_the_startup_disk_reads_its_packed_refs_into_memory() {
+    let session = DiskImageSession::acquire();
+    let image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach the image");
+    let dir = image.volumes()[0].mount_point.join("repo");
+    std::fs::create_dir(&dir).expect("make the repo dir");
+    Fixture::init(dir.clone()).commit_file("README.md", b"hello\n", "initial");
+
+    let (handle, _) = RepoCache::new().discover(&dir).expect("open the repo on the image");
+
+    assert_eq!(
+        crate::repo_tests::packed_refs_mmap_threshold(&handle),
+        u64::MAX,
+        "a packed-refs mapping on a disk that can go away is one more page to fault on"
+    );
+}

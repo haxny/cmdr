@@ -354,7 +354,9 @@ is keyed by `(ObjectId, dir path)`, and `status`'s snapshot is keyed by `(canoni
 content- or mtime-addressed, so a second portal sharing one can only get an answer that was correct for that key, and
 `list_status` stays callable with a repo handle alone — no portal, no host. The `RepoCache` is the opposite: it owns a
 RESOURCE with a lifecycle (an open `gix` repository, evicted when the last subscriber leaves), so a static one would
-mean a test's evictions reaching the app's handles and back.
+mean a test's evictions reaching the app's handles and back. One more static is no memo of an answer at all:
+`repo::is_on_the_startup_disk`'s device list, read once, is a fact about the machine (§ "A disk that goes away
+mid-read").
 
 ## A repo's own commands never run
 
@@ -398,6 +400,17 @@ then stay pending). The watcher's recompute and the chip's handshake go through 
   `detach -force`s the image, and reads the blob: the process lives, the watch tripped, and the read answers
   `VolumeGone`. Without the recovery handler it dies of SIGBUS; without the watch it answers `CorruptRepo` (Darwin
   27.0.0 arm64, 2026-10-19, `pnpm check disk-images`).
+
+**Two things `RepoCache::discover` sets on every open, so fewer pages can fault at all:**
+
+- **Packed-refs off the startup disk is read, ❌ never mapped.** gix maps a `packed-refs` over 32 KiB, and its one knob
+  (`set_packed_buffer_mmap_threshold(u64::MAX)`) turns that into a read. `is_on_the_startup_disk` compares the common
+  dir's device with `/`'s and the home directory's; anything else counts as a disk that can go away, a second internal
+  volume included, which costs only memory. The startup devices are read once into a static: a fact about the machine,
+  not state.
+- **One allocation from a repo's object data is capped** at `OBJECT_ALLOC_LIMIT` (twice `tree::MAX_BLOB_BYTES`), via
+  `gitoxide.objects.allocLimit` on the FULL-trust open options only: a size field decoded from zeros mustn't size an
+  allocation, and a reduced-trust repo already gets gix's own 16 MiB cap, which an explicit limit would raise.
 
 ## A miss is not a damaged repo
 
