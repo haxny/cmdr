@@ -2436,8 +2436,7 @@
     "exceptions": {
       "settings.dataWipe.doneMessage": "remove the app = delete the app bundle from the Mac (eliminar), not a list edit",
       "settings.dataWipe.partialMessage": "remove these = delete leftover files and Keychain items by hand (elimínalas tú), not a list edit",
-      "main.cliCommand.takenByOther": "remove it = delete another program’s file from /usr/local/bin by hand (elimínalo), not a list edit",
-      "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "removes each original = Cmdr deletes the moved file’s source (elimina, as rollbackAlreadyLandedTooltip says), not a list edit"
+      "main.cliCommand.takenByOther": "remove it = delete another program’s file from /usr/local/bin by hand (elimínalo), not a list edit"
     },
     "avoid": [
       {

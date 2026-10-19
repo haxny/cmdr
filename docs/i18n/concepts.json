@@ -322,6 +322,7 @@
     "match": ["=back", "back to"],
     "note": "A standalone back button in a list you drill into differs from the paired previous/next of a wizard or the Go menu in many locales.",
     "notMatch": [
+      "left to go back to",
       "tied back",
       "comes back",
       "come back",
@@ -1456,7 +1457,7 @@
     "distinct": ["back", "previous-next"],
     "en": "Go back",
     "match": ["go back", "go forward", "forward"],
-    "notMatch": ["go back far", "window forward"],
+    "notMatch": ["go back far", "window forward", "left to go back to"],
     "sense": "Navigating backward or forward in a pane's history."
   },
   "go-to-path": {
@@ -2651,6 +2652,8 @@
       "removing the original*",
       "remove the original",
       "removing the rest of the originals",
+      "removes each original",
+      "removes these from the archive",
       "can't remove because",
       "try removing the folder",
       "remove all such limits",
@@ -3537,7 +3540,7 @@
     "en": "Undo",
     "match": ["undo", "undone", "undoing", "can't be undone"],
     "note": "Three different actions share the English word; many locales need three words.",
-    "notMatch": ["undo the move"],
+    "notMatch": ["undo the move", "nothing to undo here"],
     "sense": "Reversing the last action (text undo, putting trashed files back, reverting an AI rename run)."
   },
   "unexpected": {

@@ -3298,7 +3298,7 @@
     "sources": "Linux term udev kept, regels translated"
   },
   "undo": {
-    "accept": ["ongedaan", "Herstel", "Zet terug", "terug te zetten", "terugdraaien", "terug te draaien"],
+    "accept": ["ongedaan", "Herstel", "Zet terug", "terug te zetten", "terugdraaien"],
     "avoid": [
       {
         "form": "Herstel (outside the Edit menu and its command twin)",

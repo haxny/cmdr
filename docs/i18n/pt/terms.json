@@ -2358,10 +2358,7 @@
     "accept": ["remov"],
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR",
-    "note": "Remover takes an entry out of a list; files are apagados.",
-    "exceptions": {
-      "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "removes each original = the Cmdr deletes the moved file’s source (apaga, as rollbackAlreadyLandedTooltip says), not a list edit"
-    }
+    "note": "Remover takes an entry out of a list; files are apagados."
   },
   "rename": {
     "chosen": "Renomear",

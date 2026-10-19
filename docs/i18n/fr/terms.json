@@ -2574,8 +2574,6 @@
     "decision": "Revue qualité : renommages proposés et lignes d'outil",
     "exceptions": {
       "errors.git.orphanedWorktree.suggestion": "English-sense: removing a git worktree deletes it.",
-      "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "English-sense: Cmdr deletes the moved files from the archive, so supprime.",
-      "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "English-sense: Cmdr deletes each moved file’s original, so supprime (as rollbackAlreadyLandedTooltip says).",
       "settings.dataWipe.doneMessage": "English-sense: removing the app means trashing it, a deletion, so supprimer.",
       "settings.dataWipe.partialMessage": "English-sense: the user deletes the leftover files and keychain items, so supprimez-les."
     },
