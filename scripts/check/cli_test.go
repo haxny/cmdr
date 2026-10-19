@@ -143,6 +143,20 @@ func TestSummarizeRun(t *testing.T) {
 	}
 }
 
+// A named run also runs the repo-wide doc and size lanes, so a bare "10 checks
+// OK" for `pnpm check svelte-check` left the reader unsure their check ran at all.
+func TestNamedRunNoteSaysWhatRan(t *testing.T) {
+	if got := namedRunNote(nil, 74); got != "" {
+		t.Errorf("an unnamed run adds no note, got %q", got)
+	}
+	if got, want := namedRunNote([]string{"svelte-check"}, 10), "svelte-check plus 9 repo-wide doc and size lanes"; got != want {
+		t.Errorf("namedRunNote = %q, want %q", got, want)
+	}
+	if got, want := namedRunNote([]string{"clippy", "index-isolation"}, 2), "clippy, index-isolation"; got != want {
+		t.Errorf("with nothing extra, namedRunNote = %q, want %q", got, want)
+	}
+}
+
 func TestParseFlags_UnknownPositional(t *testing.T) {
 	_, err := parseFlags([]string{"bogus-check"})
 	if err == nil {

@@ -117,7 +117,9 @@ only ever sees the final captured stdout (the live "Waiting for:" status line is
 `📦 pnpm` and `🔍 Running N checks` headers and collapses every silent pass (clean OK results and cache hits) into one
 summary line: `✅ 41 checks OK, 1 warn (4.4s)`. What still streams verbatim, because the agent must act on it: warns,
 failures, skips (a skip didn't verify anything), and passes that changed files (a formatter rewriting the tree, flagged
-by `MadeChanges`). The warn/skip counts ride into the summary so a collapsed warn is never silently lost.
+by `MadeChanges`). The warn/skip counts ride into the summary so a collapsed warn is never silently lost. A run of NAMED
+checks also lists them (`namedRunNote`): `✅ 12 checks OK [go-vet, staticcheck plus 10 repo-wide doc and size lanes]`,
+since the doc lanes a scoped run adds (§ "Scoped runs") otherwise leave the reader unsure their check ran.
 
 `-v` / `--verbose` opts back into the per-check lines, and `--ci` implies it: log volume is free in a job log, and a
 collapsed run is far harder to debug after the fact.

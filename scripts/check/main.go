@@ -179,7 +179,16 @@ func main() {
 		defer fixtures.Stop()
 	}
 
-	runChecks(ctx, checksToRun, plan, flags.failFast, flags.noLog, flags.quiet)
+	runChecks(ctx, checksToRun, plan, flags.failFast, flags.noLog, flags.quiet, namedOnly(flags))
+}
+
+// namedOnly is the checks a run asked for by name, or nil when it also used an
+// app or tech selector, whose lanes the summary can't sum up as one list.
+func namedOnly(flags *cliFlags) []string {
+	if len(flags.appNames) > 0 || flags.rustOnly || flags.svelteOnly || flags.goOnly {
+		return nil
+	}
+	return flags.checkNames
 }
 
 // planSelectedChecks runs cache planning over the lane-filtered set and exits
@@ -450,7 +459,9 @@ func applySelector(flags *cliFlags, name string) bool {
 
 // runChecks executes the cache-miss checks, replays cache hits, records this
 // run's passes into the cache, and prints the summary.
-func runChecks(ctx *checks.CheckContext, checksToRun []checks.CheckDefinition, plan *cachePlan, failFast, noLog, quiet bool) {
+// `named` is the checks the caller asked for by name (empty for any other
+// selection), which the quiet summary spells out.
+func runChecks(ctx *checks.CheckContext, checksToRun []checks.CheckDefinition, plan *cachePlan, failFast, noLog, quiet bool, named []string) {
 	if !quiet {
 		total := len(checksToRun) + len(plan.cached)
 		if len(plan.cached) > 0 {
@@ -493,7 +504,7 @@ func runChecks(ctx *checks.CheckContext, checksToRun []checks.CheckDefinition, p
 		printTornTargetNotice(runner.RunStates(), ctx.RootDir)
 		os.Exit(1)
 	}
-	printSuccess(quiet, runner, totalDuration)
+	printSuccess(quiet, runner, totalDuration, named)
 	// Last line of the run, on purpose: the summary is where a reader stops, and a
 	// rewrite of a committed file is the one thing a green summary hides.
 	printAutoFixNotice(dirtyBefore, gitDirtyFiles(ctx.RootDir))
@@ -502,7 +513,7 @@ func runChecks(ctx *checks.CheckContext, checksToRun []checks.CheckDefinition, p
 // printSuccess prints the all-passed summary. In quiet mode the passing checks
 // (already collapsed during the run) become a single count line; warns and skips
 // that rode alongside the pass are tallied so nothing silently disappears.
-func printSuccess(quiet bool, runner *Runner, d time.Duration) {
+func printSuccess(quiet bool, runner *Runner, d time.Duration, named []string) {
 	if !quiet {
 		fmt.Println()
 		fmt.Printf("%s⏱️  Total runtime: %s%s\n", colorYellow, formatDuration(d), colorReset)
@@ -523,7 +534,25 @@ func printSuccess(quiet bool, runner *Runner, d time.Duration) {
 	if skipped > 0 {
 		fmt.Printf(", %d skipped", skipped)
 	}
+	if note := namedRunNote(named, ok+warn+skipped); note != "" {
+		fmt.Printf(" %s[%s]%s", colorDim, note, colorReset)
+	}
 	fmt.Printf(" %s(%s)%s\n", colorDim, formatDuration(d), colorReset)
+}
+
+// namedRunNote says what a run of NAMED checks covered, since `scopedRunLanes`
+// adds the repo-wide doc and size lanes to it: without it, `pnpm check
+// svelte-check` reports "10 checks OK" and the reader can't tell their check ran.
+// Empty for a run nobody named checks for.
+func namedRunNote(named []string, total int) string {
+	if len(named) == 0 {
+		return ""
+	}
+	list := strings.Join(named, ", ")
+	if extra := total - len(named); extra > 0 {
+		return fmt.Sprintf("%s plus %d repo-wide doc and size %s", list, extra, checks.Pluralize(extra, "lane", "lanes"))
+	}
+	return list
 }
 
 // summarizeRun tallies the run's outcomes for the quiet summary line. Cache hits
