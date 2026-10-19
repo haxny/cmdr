@@ -438,6 +438,10 @@ temp-to-original translation alive.)
   unanswered it would discard the destination's only copy. In this milestone a swap's failure skips that arm (terminal,
   as today); milestone 6b gives it the swap settle.
 - The ` (recovered)` name and `new_data_at` reporting stay exactly as `finalize_safe_replace` does them today.
+- **One moment for `record_overwrite()`** (found by the characterization grid, `safe_replace_grid_tests.rs`): `merge.rs`
+  calls it before the finalize, `sequential_extract.rs` only after the finalize succeeds, so after a failed finalize
+  their journals may disagree on rollbackable. With one landing path, pick the one correct moment (the original is gone
+  the moment `delete(orig)` succeeds, so that's when the op stops being rollbackable) and pin it at all five sites.
 
 **Test plan**: the milestone-4 grid stays green unchanged, except its known-bug cell, which flips: a concurrent task
 dropped between `delete(orig)` and the rename leaves the temp on disk, recorded as `Landing` in the persisted ledger and
