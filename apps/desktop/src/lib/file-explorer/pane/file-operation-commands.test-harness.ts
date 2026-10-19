@@ -60,13 +60,17 @@ export function buildPaneRef(
     startRename: () => void
     cancelRename: () => void
     isRenaming: () => boolean
+    isRowStateReady: () => boolean
+    whenRowStateReady: (timeoutMs: number) => Promise<boolean>
+    getViewGeneration: () => number
   }> = {},
 ): FilePaneAPI {
   const stub = {
     getListingId: () => ('listingId' in overrides ? overrides.listingId : 'listing-1'),
     getLastSequence: () => 0,
-    getViewGeneration: () => 0,
-    isRowStateReady: () => true,
+    getViewGeneration: overrides.getViewGeneration ?? (() => 0),
+    isRowStateReady: overrides.isRowStateReady ?? (() => true),
+    whenRowStateReady: overrides.whenRowStateReady ?? (() => Promise.resolve(true)),
     getVolumeId: () => overrides.volumeId ?? 'root',
     hasParentEntry: () => overrides.hasParent ?? false,
     getSelectedIndices: () => overrides.selectedIndices ?? [],

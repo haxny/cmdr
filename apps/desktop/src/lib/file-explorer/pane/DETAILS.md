@@ -1891,6 +1891,15 @@ is worded per mode and promises no more than that.
   turn. Retry unsettled revisions using `COMPARE_RETRY_DELAY_MS` / `COMPARE_ATTEMPTS`, then warn. A local view
   generation drops answers overtaken by reconfiguration, including hidden off/on ABA; per-pane request tokens make the
   latest comparison mode win. A `gone` listing stays quiet; `timedOut` / `internal` toast.
+- **F5 / F6 / ⌥F5 wait for settled rows; they never drop the press.** `transfer-dialog-opener.ts` reads a selection only
+  once the rows are ready (`whenRowStateReady`, event-driven: row-state answers waiters from its own transitions, and
+  `FilePane`'s `$effect` calls `recheck` when loading, the listing, an operation snapshot, a pending rename cursor, or
+  hidden visibility changes). A view generation that moves during the build means a rebuild over the same listing. All
+  of it fits one `ROW_SETTLE_BUDGET_MS` (3 s). A budget run out, a selection that vanished, or a different listing ends
+  in `announceRowsStillSettling` (`operation-start-gate.ts`): an info toast, plus a failed round-trip for MCP. A press
+  on a selection never falls through to the cursor row. The silent return this replaced was the top Linux E2E flake (12
+  of 17 retry-rescued flakes in 109 CI runs, #557). Duplicate, Multi-rename, and the selected-paths read still return
+  quietly on unsettled rows.
 - **Async continuations are not row installations.** Operation name and pending rename lookups hold async-work leases,
   capture listing/generation/revision/work tokens, and validate the backend revision before writing. Compare selections,
   clearing an operation snapshot, reconfiguration, and disposal invalidate old work. Pending rename still allows the

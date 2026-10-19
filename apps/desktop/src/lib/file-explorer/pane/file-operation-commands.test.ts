@@ -541,6 +541,79 @@ describe('openTransferDialog', () => {
   })
 })
 
+// F5 / F6 pressed while the pane's rows are still settling (a listing reload, a resort, a
+// watcher diff) used to return silently: the key did nothing. It was the top Linux E2E flake
+// (12 of 17 retry-rescued flakes in 109 CI runs, #557), and for a user it's a dead key.
+describe('openTransferDialog while the source rows settle', () => {
+  it('opens the dialog once the selected rows settle, rather than dropping the press', async () => {
+    buildFromSelectionSpy.mockResolvedValue({ operationType: 'copy' })
+    let ready = false
+    let settle: (value: boolean) => void = () => {}
+    const paneRef = buildPaneRef({
+      listingId: 'lst-1',
+      selectedIndices: [3, 4],
+      isRowStateReady: () => ready,
+      whenRowStateReady: () =>
+        new Promise<boolean>((resolve) => {
+          settle = (value) => {
+            ready = value
+            resolve(value)
+          }
+        }),
+    })
+    const access = buildAccess({ focusedPane: 'left', paneRefs: { left: paneRef }, volumes: [volume()] })
+    const dialogs = buildDialogs()
+
+    const opening = create(access, dialogs).openTransferDialog('copy')
+    await Promise.resolve()
+    expect(dialogs.showTransfer).not.toHaveBeenCalled()
+
+    settle(true)
+    await opening
+
+    expect(buildFromSelectionSpy).toHaveBeenCalledTimes(1)
+    expect(dialogs.showTransfer).toHaveBeenCalledTimes(1)
+  })
+
+  it('says so with a toast when the rows never settle in time, never a silent no-op', async () => {
+    const paneRef = buildPaneRef({
+      listingId: 'lst-1',
+      selectedIndices: [3, 4],
+      isRowStateReady: () => false,
+      whenRowStateReady: () => Promise.resolve(false),
+    })
+    const access = buildAccess({ focusedPane: 'left', paneRefs: { left: paneRef }, volumes: [volume()] })
+    const dialogs = buildDialogs()
+
+    await create(access, dialogs).openTransferDialog('copy')
+
+    expect(dialogs.showTransfer).not.toHaveBeenCalled()
+    expect(buildFromSelectionSpy).not.toHaveBeenCalled()
+    expect(spies.addToast).toHaveBeenCalledWith(
+      'The list here is still updating, so nothing started. Try again in a moment.',
+      { level: 'info' },
+    )
+  })
+
+  it('rebuilds from the new rows when they move while the dialog is being prepared', async () => {
+    buildFromSelectionSpy.mockResolvedValue({ operationType: 'copy' })
+    // The view generation moves once between reading the selection and showing the dialog.
+    const generations = [0, 1]
+    const paneRef = buildPaneRef({
+      listingId: 'lst-1',
+      selectedIndices: [3, 4],
+      getViewGeneration: () => generations.shift() ?? 1,
+    })
+    const access = buildAccess({ focusedPane: 'left', paneRefs: { left: paneRef }, volumes: [volume()] })
+    const dialogs = buildDialogs()
+
+    await create(access, dialogs).openTransferDialog('copy')
+
+    expect(buildFromSelectionSpy).toHaveBeenCalledTimes(2)
+    expect(dialogs.showTransfer).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('openCopyDialog / openMoveDialog', () => {
   it('openCopyDialog delegates with copy semantics', async () => {
     buildFromCursorSpy.mockImplementation((...args: unknown[]) =>

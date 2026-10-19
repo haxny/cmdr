@@ -18,14 +18,8 @@ import { getInitialFolderName } from '#lib/file-operations/mkdir/new-folder-oper
 import { getInitialFileName } from '#lib/file-operations/mkfile/new-file-operations.js'
 import type { CloudOnlineOnlyExtent, DeleteSourceItem } from '#lib/file-operations/delete/delete-dialog-utils.js'
 import type { TrashRouting } from '#lib/ipc/bindings.js'
-import {
-  type TransferContext,
-  buildTransferPropsFromSelection,
-  buildTransferPropsFromCursor,
-  buildTransferPropsFromSnapshot,
-  getCommonParentPath,
-  getDestinationVolumeInfo,
-} from './transfer-operations'
+import { getCommonParentPath, getDestinationVolumeInfo } from './transfer-operations'
+import { createTransferDialogOpener } from './transfer-dialog-opener'
 import { capabilitiesFor, capabilitiesForPane } from './volume-capabilities'
 import { pathCrossesArchiveBoundary } from './archive-paths'
 import { paneOffersTrash } from './trash-availability'
@@ -35,8 +29,7 @@ import { duplicateInPlace } from './duplicate-command'
 import { openRenameAsMove } from './rename-as-move'
 import type { RenameAsMoveRequest } from './rename-flow.svelte'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
-import type { DuplicateFollowUp } from './duplicate-rename'
-import type { FilePaneAPI, OpenDeleteDialogArgs, OpenTransferDialogArgs, StartRenameOptions } from './types'
+import type { OpenDeleteDialogArgs, OpenTransferDialogArgs, StartRenameOptions } from './types'
 import type { TransferOperationType } from '../types'
 import type { createDialogState } from './dialog-state.svelte'
 import type { PaneAccess } from './pane-access'
@@ -98,6 +91,8 @@ type DialogState = ReturnType<typeof createDialogState>
  * through the explorer's dialog state.
  */
 export function createFileOperationCommands(access: PaneAccess, dialogs: DialogState) {
+  const { openUnifiedTransferDialog } = createTransferDialogOpener(access, dialogs)
+
   /**
    * The read-only refusal alert for a write action on the focused pane, or `null`
    * when the pane accepts writes. A zip archive is WRITABLE (the pane's `volumeId`
@@ -346,148 +341,6 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
     // Pass the pane's DRIVE volume id (an archive pane keeps its parent drive's
     // id) so a file inside a remote-hosted zip previews through that volume.
     void openFileViewer(file.path, paneRef?.getVolumeId() ?? 'root')
-  }
-
-  /** Builds a TransferContext from pane state. */
-  function buildTransferContext(pane: 'left' | 'right'): TransferContext {
-    const other = access.otherPane(pane)
-    return {
-      showHiddenFiles: access.getShowHiddenFiles(),
-      sourcePath: access.getPanePath(pane),
-      destPath: access.getPanePath(other),
-      sourceVolumeId: access.getPaneVolumeId(pane),
-      destVolumeId: access.getPaneVolumeId(other),
-    }
-  }
-
-  /**
-   * Builds transfer dialog props for a search-results source pane.
-   * The snapshot view has no backend listing, so the listing-id-driven
-   * builders don't apply; we read the snapshot directly and feed
-   * absolute paths into `buildTransferPropsFromSnapshot`. Returns `null`
-   * when there's no snapshot or nothing under the cursor / selection —
-   * `resolveSnapshotEntries` answers both with an empty list.
-   *
-   * `canBeSource: true` per the `search-results` capability row: source-side
-   * operations always run against the real underlying files. The volume they run
-   * against is the one the search covered, which the snapshot carries
-   * (`SearchSnapshot.volumeId`), so a phone unplugged under the pane still names
-   * the phone rather than falling back to the boot drive. After a move completes,
-   * `dialog-state::handleTransferComplete` already purges moved paths from every
-   * snapshot via `removeEntryFromAllSnapshots`.
-   */
-  function buildSnapshotTransferProps(
-    operationType: TransferOperationType,
-    sourcePaneRef: FilePaneAPI | undefined,
-    pane: 'left' | 'right',
-  ) {
-    const snapshotId = snapshotIdFromPanePath(sourcePaneRef?.getCurrentPath() ?? '')
-    if (snapshotId === null) return null
-
-    const selectedIndices = sourcePaneRef?.getSelectedIndices() ?? []
-    const cursorIndex = sourcePaneRef?.getCursorIndex() ?? 0
-    const entries = resolveSnapshotEntries(snapshotId, selectedIndices, cursorIndex)
-    if (entries.length === 0) return null
-    const snapshot = getSnapshot(snapshotId)
-    if (!snapshot) return null
-
-    const sourcePaths = entries.map((entry) => entry.path)
-    const isDirectoryFlags = entries.map((entry) => entry.isDirectory)
-
-    const other = access.otherPane(pane)
-    return buildTransferPropsFromSnapshot(
-      operationType,
-      sourcePaths,
-      isDirectoryFlags,
-      pane === 'left',
-      access.getPanePath(other),
-      access.getPaneVolumeId(other),
-      snapshot.volumeId,
-    )
-  }
-
-  function transferSourceIsCurrent(source: {
-    ref: FilePaneAPI
-    pane: 'left' | 'right'
-    listingId: string
-    generation: number
-  }): boolean {
-    return (
-      access.getPaneRef(source.pane) === source.ref &&
-      source.ref.getListingId() === source.listingId &&
-      source.ref.getViewGeneration() === source.generation
-    )
-  }
-
-  /** Opens the unified transfer dialog for all volume types (local, MTP, search-results, etc.). */
-  async function openUnifiedTransferDialog(
-    operationType: TransferOperationType,
-    sourcePaneRef: FilePaneAPI | undefined,
-    pane: 'left' | 'right',
-    autoConfirm?: boolean,
-    onConflict?: string,
-    mcpRequestId?: string,
-    initiator?: Initiator,
-  ) {
-    // Snapshot source pane: no backend listing exists, so the listing-id-driven
-    // builders don't apply — build from the snapshot's selected (or cursor)
-    // entries. Routed off the kind's `hasBackendListing` capability, not a
-    // `volumeId === 'search-results'` string compare. Among kinds that reach
-    // this transfer opener, search-results is the only `!hasBackendListing` one
-    // (a network pane can't be a transfer source — `canBeSource: false`).
-    // F5/F6 is a person at the keyboard directing this transfer, so a single-item
-    // duplicate ends in the rename editor. An auto-confirmed one is MCP: an agent's
-    // copy has no business pulling focus into a text field in front of whoever is
-    // watching, so it takes the same route every other trigger does.
-    const duplicateFollowUp: DuplicateFollowUp = autoConfirm ? 'nothing' : 'openRenameEditor'
-
-    if (!capabilitiesFor(access.getPaneVolumeId(pane)).hasBackendListing) {
-      const snapshotProps = buildSnapshotTransferProps(operationType, sourcePaneRef, pane)
-      if (snapshotProps) {
-        if (autoConfirm) {
-          snapshotProps.autoConfirm = true
-          snapshotProps.autoConfirmOnConflict = onConflict
-          snapshotProps.mcpRequestId = mcpRequestId
-        }
-        snapshotProps.initiator = initiator
-        dialogs.showTransfer({ ...snapshotProps, duplicateFollowUp })
-      }
-      return
-    }
-
-    const listingId = sourcePaneRef?.getListingId()
-    if (!listingId || !sourcePaneRef) return
-
-    const hasParent = sourcePaneRef.hasParentEntry()
-    const selectedIndices = sourcePaneRef.getSelectedIndices()
-    const hasSelection = selectedIndices.length > 0
-
-    const context = buildTransferContext(pane)
-    const isLeft = pane === 'left'
-    if (hasSelection && !sourcePaneRef.isRowStateReady()) return
-    const viewGeneration = sourcePaneRef.getViewGeneration()
-
-    const props = hasSelection
-      ? await buildTransferPropsFromSelection(
-          operationType,
-          listingId,
-          selectedIndices,
-          hasParent,
-          isLeft,
-          context,
-          sourcePaneRef.getLastSequence(),
-        )
-      : await buildTransferPropsFromCursor(operationType, listingId, sourcePaneRef, hasParent, isLeft, context)
-
-    if (props && transferSourceIsCurrent({ ref: sourcePaneRef, pane, listingId, generation: viewGeneration })) {
-      if (autoConfirm) {
-        props.autoConfirm = true
-        props.autoConfirmOnConflict = onConflict
-        props.mcpRequestId = mcpRequestId
-      }
-      props.initiator = initiator
-      dialogs.showTransfer({ ...props, duplicateFollowUp })
-    }
   }
 
   /** Opens the transfer dialog with the current selection info. */

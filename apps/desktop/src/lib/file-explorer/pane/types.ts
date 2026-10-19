@@ -212,6 +212,8 @@ export interface FilePaneAPI {
   getLastSequence(): number
   getViewGeneration(): number
   isRowStateReady(): boolean
+  /** Resolves `true` once the rows are settled, `false` after `timeoutMs` (`PaneRowState.whenReady`). */
+  whenRowStateReady(timeoutMs: number): Promise<boolean>
   getRowState(): PaneRowState
   /** Installs count, cursor, and selection synchronously; row-state owns the revision. */
   applyRowResult(result: ResortResult): () => void

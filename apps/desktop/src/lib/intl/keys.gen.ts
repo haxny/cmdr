@@ -2077,6 +2077,7 @@ export type MessageKey =
   | 'fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip'
   | 'fileOperations.transferProgress.rollbackUnavailableOtherTooltip'
   | 'fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip'
+  | 'fileOperations.transferProgress.rowsStillSettlingToast'
   | 'fileOperations.transferProgress.scanTitleCompress'
   | 'fileOperations.transferProgress.scanTitleCopy'
   | 'fileOperations.transferProgress.scanTitleDelete'

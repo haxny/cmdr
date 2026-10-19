@@ -292,6 +292,16 @@
     const rowState = createPaneRowState({ getListingId: () => listingId, getLoading: () => loading,
         getOperationActive: () => operationSelectedNames !== null || renameFlow.pendingCursorName !== null,
         getIncludeHidden: () => includeHidden, onReconfigure: () => { renameFlow.pendingCursorName = null } })
+    // The outside conditions `rowState.isReady` reads live here as `$state`, so a change to any
+    // of them may settle the rows: tell row-state, which answers whoever waits (`whenReady`).
+    $effect(() => {
+        void loading
+        void listingId
+        void operationSelectedNames
+        void renameFlow.pendingCursorName
+        void includeHidden
+        rowState.recheck()
+    })
 
     // Read the reset delay live so moving the Settings slider affects the next keystroke.
     const jump = createTypeToJumpController({
@@ -1007,6 +1017,7 @@
     }
     export function getViewGeneration(): number { return rowState.getGeneration() }
     export function isRowStateReady(): boolean { return rowState.isReady() }
+    export function whenRowStateReady(timeoutMs: number): Promise<boolean> { return rowState.whenReady(timeoutMs) }
     export function getRowState() { return rowState }
     export function applyRowResult(result: ResortResult): () => void {
         totalCount = result.totalCount

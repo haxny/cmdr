@@ -28,6 +28,30 @@ export function createPaneRowState(deps: {
   let queue = Promise.resolve()
   const buffered = new Map<number, DirectoryDiffBatch>()
   let applyBatch: (batch: DirectoryDiffBatch) => undefined | (() => void) = () => {}
+  /** Callers of `whenReady` still waiting, each answered once with `true` (settled) or `false`. */
+  const readyWaiters = new Set<(ready: boolean) => void>()
+
+  function isReady(): boolean {
+    return (
+      initialized &&
+      !disposed &&
+      !deps.getLoading() &&
+      pendingViews === 0 &&
+      asyncWork === 0 &&
+      deps.getListingId() !== '' &&
+      !deps.getOperationActive() &&
+      buffered.size === 0 &&
+      (appliedHidden === undefined || !deps.getIncludeHidden || appliedHidden === deps.getIncludeHidden())
+    )
+  }
+
+  /** Answers every `whenReady` waiter once the rows are settled, or `false` once the pane is gone. */
+  function notifyReadiness(): void {
+    if (readyWaiters.size === 0) return
+    if (!disposed && !isReady()) return
+    const answer = !disposed
+    for (const answerWaiter of [...readyWaiters]) answerWaiter(answer)
+  }
 
   function drain(): void {
     if (!initialized || disposed || deps.getLoading()) return
@@ -42,6 +66,7 @@ export function createPaneRowState(deps: {
     }
     // Preserve each coordinate transformation without fetching the UI once per file.
     if (typeof effects === 'function') effects()
+    notifyReadiness()
   }
 
   function capture(): RowStateToken {
@@ -67,16 +92,28 @@ export function createPaneRowState(deps: {
   return {
     getSequence: () => sequence,
     getGeneration: () => generation,
-    isReady: () =>
-      initialized &&
-      !disposed &&
-      !deps.getLoading() &&
-      pendingViews === 0 &&
-      asyncWork === 0 &&
-      deps.getListingId() !== '' &&
-      !deps.getOperationActive() &&
-      buffered.size === 0 &&
-      (appliedHidden === undefined || !deps.getIncludeHidden || appliedHidden === deps.getIncludeHidden()),
+    isReady,
+    /**
+     * Resolves `true` the moment the rows are settled (at once if they already are), or
+     * `false` after `timeoutMs` or once the pane is disposed. Event-driven: every transition
+     * that can settle the rows calls `notifyReadiness`, and the pane calls `recheck` when one
+     * of the outside conditions `isReady` reads (loading, an operation's snapshot) changes.
+     */
+    whenReady(timeoutMs: number): Promise<boolean> {
+      if (isReady()) return Promise.resolve(true)
+      if (disposed || timeoutMs <= 0) return Promise.resolve(false)
+      return new Promise<boolean>((resolve) => {
+        const answer = (ready: boolean) => {
+          readyWaiters.delete(answer)
+          clearTimeout(timer)
+          resolve(ready)
+        }
+        const timer = setTimeout(() => answer(false), timeoutMs)
+        readyWaiters.add(answer)
+      })
+    },
+    /** An outside condition `isReady` reads may have changed; answer any waiter it settles. */
+    recheck: notifyReadiness,
     capture,
     matches,
     invalidateWork: () => {
@@ -89,6 +126,7 @@ export function createPaneRowState(deps: {
         if (!ended) {
           ended = true
           asyncWork--
+          notifyReadiness()
         }
       }
     },
@@ -108,6 +146,7 @@ export function createPaneRowState(deps: {
     initialize() {
       initialized = true
       if (pendingViews === 0) drain()
+      notifyReadiness()
     },
     setBatchApplier(applier: (batch: DirectoryDiffBatch) => undefined | (() => void)) {
       applyBatch = applier
@@ -157,6 +196,7 @@ export function createPaneRowState(deps: {
         .finally(() => {
           pendingViews--
           if (pendingViews === 0) drain()
+          notifyReadiness()
         })
       queue = run.then(
         () => {},
@@ -169,6 +209,7 @@ export function createPaneRowState(deps: {
       generation++
       workGeneration++
       buffered.clear()
+      notifyReadiness()
     },
   }
 }

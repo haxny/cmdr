@@ -65,6 +65,25 @@ export function announceOperationBlocked(blockedBy: SoftDialogId, mcpRequestId: 
 }
 
 /**
+ * Says a transfer isn't starting because the source pane's rows didn't settle in time
+ * (a reload or resort still landing, or an operation still running from that pane), so
+ * the selection can't be read safely. Same two audiences as `announceOperationBlocked`:
+ * a toast for the person who pressed F5, a failed round-trip for an MCP agent. Nothing
+ * is in the way that the agent could close, so there's no `blockedBy`.
+ */
+export function announceRowsStillSettling(mcpRequestId: string | undefined): void {
+  log.info("Not starting a transfer: the source pane's rows didn't settle in time")
+  addToast(tString('fileOperations.transferProgress.rowsStillSettlingToast'), { level: 'info' })
+  if (mcpRequestId) {
+    void emit('mcp-response', {
+      requestId: mcpRequestId,
+      ok: false,
+      error: 'The source pane is still updating, so nothing started. Try again in a moment.',
+    })
+  }
+}
+
+/**
  * The entry-point gate: refuses and announces when a dialog is on screen, and
  * returns whether the caller should stop.
  *
