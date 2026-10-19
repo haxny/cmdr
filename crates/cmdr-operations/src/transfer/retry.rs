@@ -57,78 +57,6 @@ const BACKOFF_FACTOR: u32 = 4;
 /// it exists so raising the cap can never turn the backoff into a long park.
 const MAX_BACKOFF: Duration = Duration::from_secs(2);
 
-/// Is this failure a transport blip worth another try, or a decision to report?
-///
-/// Matched exhaustively on purpose: a new [`VolumeError`] variant should not
-/// inherit a retry policy by falling into a wildcard. Classification is by TYPE
-/// (and, for the one `IoError` case, by errno), never by message text.
-pub(super) fn is_retryable(err: &VolumeError) -> bool {
-    match err {
-        // The M2 typed errors. `smb2`'s send deadline (`SendTimeout`), its
-        // response deadline (`Timeout`), and credit starvation all classify as
-        // `ErrorKind::TimedOut` and land here. Every one of them means "this
-        // connection is dead but the socket doesn't know it yet", which is
-        // exactly the case a fresh attempt on a rebuilt session rescues.
-        VolumeError::ConnectionTimeout(_) => true,
-        // SMB `ConnectionLost` / `SessionExpired`: the backend has its own
-        // reconnect path, so the next attempt runs on a new session. On MTP the
-        // device really is gone and every attempt fails immediately — a bounded
-        // 1.25 s of extra waiting, and no data at risk.
-        VolumeError::DeviceDisconnected(_) => true,
-        // The variant's own doc says retrying in a few seconds works: the MTP
-        // session died and a reopen is already running in the background.
-        VolumeError::DeviceSessionReset(_) => true,
-        // The destination folder's cached handle was re-keyed and the backend has
-        // already refreshed it, so the next attempt uses the fresh one.
-        VolumeError::StaleDestinationHandle(_) => true,
-        // A write onto an OS-mounted network share (`/Volumes/naspi`) surfaces the
-        // transport failure as an errno rather than a typed backend error. The
-        // allowlist is the same one `error_classification.rs` maps to
-        // `ConnectionInterrupted`, so the two agree on what "the link blipped"
-        // means.
-        VolumeError::IoError {
-            raw_os_error: Some(code),
-            ..
-        } => is_transient_errno(*code),
-
-        // Everything below is a decision or a fact about the data, not a blip.
-        // Re-running the write would fail the same way and only delay the report.
-        VolumeError::Cancelled(_) // the user asked us to stop; ❌ never retry
-        | VolumeError::NotFound(_)
-        | VolumeError::PermissionDenied { .. }
-        | VolumeError::AlreadyExists(_)
-        | VolumeError::NotSupported
-        | VolumeError::NotConnected(_) // nothing is dialing it; only opening it connects
-        | VolumeError::ReadOnly(_)
-        | VolumeError::StorageFull { .. }
-        | VolumeError::IsADirectory(_)
-        | VolumeError::NotADirectory(_) // a file is in the way; it stays there until someone moves it
-        | VolumeError::InvalidName(_) // the destination can't hold this name; a rename is the only fix
-        | VolumeError::DeletePending(_)
-        | VolumeError::ColdStorage(_) // archived until someone restores it; asking again changes nothing
-        | VolumeError::SourceChanged(_) // a new version is there; whether to copy it is the user's call
-        | VolumeError::AmbiguousName(_) // two stored names fit; asking again asks the same question
-        | VolumeError::SignatureInvalid(_) // a refused reply: asking again invites the same answer
-        | VolumeError::IoError { raw_os_error: None, .. }
-        | VolumeError::NeedsPassword { .. }
-        | VolumeError::FriendlyGit(_) => false,
-    }
-}
-
-/// The errnos that mean "the link went away", not "the write was refused".
-#[cfg(unix)]
-fn is_transient_errno(code: i32) -> bool {
-    matches!(
-        code,
-        libc::ENOTCONN | libc::ENETDOWN | libc::ENETUNREACH | libc::EHOSTUNREACH | libc::ETIMEDOUT | libc::ECONNRESET
-    )
-}
-
-#[cfg(not(unix))]
-fn is_transient_errno(_code: i32) -> bool {
-    false
-}
-
 /// How long to wait after `failed_attempt` (1-based) before running the file
 /// again. 250 ms, then 1 s.
 pub(super) fn backoff_after(failed_attempt: u32) -> Duration {
@@ -139,9 +67,11 @@ pub(super) fn backoff_after(failed_attempt: u32) -> Duration {
 /// Should the file run again after `failed_attempt` (1-based) hit `err`?
 ///
 /// Three independent gates, and a cancel beats all of them: a cancelled operation
-/// never starts another attempt, however retryable the error looked.
+/// never starts another attempt, however retryable the error looked. Only a
+/// [`VolumeError::transport_fault`] is worth another try: a refusal or a fact
+/// about the data fails the same way again and only delays the report.
 pub(super) fn should_retry(err: &VolumeError, failed_attempt: u32, state: &Arc<WriteOperationState>) -> bool {
-    !state.intent().is_cancelled() && failed_attempt < MAX_ATTEMPTS && is_retryable(err)
+    !state.intent().is_cancelled() && failed_attempt < MAX_ATTEMPTS && err.transport_fault().is_some()
 }
 
 /// Waits out the backoff for `failed_attempt`, returning `false` the moment the
@@ -165,62 +95,22 @@ mod tests {
     use super::*;
     use crate::testing::TestOperations;
 
-    /// The transport blips a retry exists for. Each one means "this connection is
-    /// dead but the write itself was never refused".
+    /// Only a transport fault earns another attempt (which errors are one:
+    /// `cmdr-fs` `transport_fault_test.rs`). A refusal fails the same way again.
     #[test]
-    fn transport_blips_are_retryable() {
-        assert!(is_retryable(&VolumeError::ConnectionTimeout("send timed out".into())));
-        assert!(is_retryable(&VolumeError::DeviceDisconnected("session lost".into())));
-        assert!(is_retryable(&VolumeError::DeviceSessionReset("ptp reset".into())));
-        assert!(is_retryable(&VolumeError::StaleDestinationHandle("/Documents".into())));
-        assert!(is_retryable(&VolumeError::IoError {
-            message: "network is down".into(),
-            raw_os_error: Some(libc::ENETDOWN),
-        }));
-    }
-
-    /// A cancel is the user's decision, and re-running the write would fight it.
-    /// This is the single most important negative in the whole policy.
-    #[test]
-    fn a_cancel_is_never_retryable() {
-        assert!(!is_retryable(&VolumeError::Cancelled(
-            "Operation cancelled by user".into()
-        )));
-    }
-
-    /// Refusals and facts about the data: running the write again fails the same
-    /// way and only delays the report the user needs.
-    #[test]
-    fn refusals_and_data_facts_are_not_retryable() {
-        assert!(!is_retryable(&VolumeError::PermissionDenied {
+    fn a_refusal_schedules_no_further_attempt() {
+        let engine = TestOperations::new();
+        let guard = engine.register("retry-refusal");
+        let refused = VolumeError::PermissionDenied {
             path: "/x".into(),
-            raw_os_error: None
-        }));
-        assert!(!is_retryable(&VolumeError::NotFound("/x".into())));
-        assert!(!is_retryable(&VolumeError::AlreadyExists("/x".into())));
-        assert!(!is_retryable(&VolumeError::ReadOnly("/x".into())));
-        assert!(!is_retryable(&VolumeError::StorageFull {
-            message: "disk full".into()
-        }));
-        assert!(!is_retryable(&VolumeError::NotSupported));
-        assert!(!is_retryable(&VolumeError::IsADirectory("/x".into())));
-        assert!(!is_retryable(&VolumeError::NotADirectory("/x".into())));
-        assert!(!is_retryable(&VolumeError::DeletePending("/x".into())));
-        assert!(!is_retryable(&VolumeError::SignatureInvalid("refused".into())));
-        assert!(!is_retryable(&VolumeError::ColdStorage("/x".into())));
-        assert!(!is_retryable(&VolumeError::SourceChanged("/x".into())));
-        assert!(!is_retryable(&VolumeError::NeedsPassword { wrong_attempt: true }));
-        // An IoError with no errno carries nothing to classify on, so it is a
-        // report, not a blip.
-        assert!(!is_retryable(&VolumeError::IoError {
-            message: "something".into(),
             raw_os_error: None,
-        }));
-        // A refusal that DOES carry an errno still isn't transport.
-        assert!(!is_retryable(&VolumeError::IoError {
-            message: "permission".into(),
-            raw_os_error: Some(libc::EACCES),
-        }));
+        };
+        assert!(!should_retry(&refused, 1, guard.state()));
+        assert!(!should_retry(
+            &VolumeError::Cancelled("Operation cancelled by user".into()),
+            1,
+            guard.state()
+        ));
     }
 
     /// The whole point of the cap: a retry loop must terminate. Attempt 3 of 3 is

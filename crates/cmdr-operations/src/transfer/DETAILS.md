@@ -1582,8 +1582,9 @@ the SMB side.
 upload streams chunks inside ONE `SendObject` PTP transaction, so parking mid-write would PIN the device session (the
 opposite of the read side, where a bounded window holds nothing between chunks). So MTP must NEVER opt into the
 destination flag, and it doesn't (default `false`). SMB writes are discrete SMB2 WRITE chunks with NO oplock or lease
-requested (`create_file_writer` → `OplockLevel::None`, no durable context; `crates/cmdr-smb/src/volume/write_stream.rs`), so
-a brief park between them is safe. Only `SmbVolume` overrides `supports_foreground_yield_as_destination() → true`.
+requested (`create_file_writer` → `OplockLevel::None`, no durable context;
+`crates/cmdr-smb/src/volume/write_stream.rs`), so a brief park between them is safe. Only `SmbVolume` overrides
+`supports_foreground_yield_as_destination() → true`.
 
 **Decision/Why the destination park is HARD-CAPPED (data-safety bound, load-bearing).** The source arm takes
 `wait_until_foreground_idle` unbounded, because a read holds nothing scarce between windows. An upload can't: it holds
@@ -1719,17 +1720,23 @@ on. Leaving it would make the next attempt depend on how each backend treats a w
 (`LocalPosixVolume` truncates, `InMemoryVolume` refuses with `AlreadyExists`, MTP can make a duplicate object). A
 `SingleShot` write is still left entirely to its backend.
 
-**What is retryable, and why by type.** An exhaustive `VolumeError` match (`retry::is_retryable`), so a new variant
-can't inherit a retry by falling into a wildcard — adding one forces the decision. Retryable: `ConnectionTimeout` (where
-`smb2`'s `SendTimeout`, response `Timeout`, and `CreditStarvation` all land, via `ErrorKind::TimedOut`),
-`DeviceDisconnected` (a session-owning backend can rebuild its session in place, but ❗ NOT inside 1.25 s: once SMB
-marks a session `Disconnected` every call fails at once, and nothing in this loop reconnects it. Only a sub-second blip,
-where the session never read `Disconnected`, is rescued here; a longer outage is the next section's. On MTP the device
-really is gone and each attempt fails immediately, costing a bounded 1.25 s), `DeviceSessionReset` (its own doc says
-retrying works), `StaleDestinationHandle`, and an `IoError` carrying one of the errnos `error_classification.rs` already
-maps to `ConnectionInterrupted` — the case where a write onto an OS-mounted share reports the blip as an errno rather
-than a typed backend error. ❌ Everything else is a decision or a fact about the data: re-running the write fails the
-same way and only delays the report.
+**What is retryable, and why by type.** Exactly a transport fault: `VolumeError::transport_fault`
+(`crates/cmdr-fs/src/volume/transport_fault.rs`), the ONE classifier the retry, the outage wait below, the
+unanswered-create settle (`interrupted_landing::create_went_unanswered`), and the local engine's
+`error_classification.rs` all ask, so none keeps its own list. An exhaustive match, so a new variant can't inherit a
+retry by falling into a wildcard — adding one forces the decision; its `TransportFault` names the kind (timeout,
+connection lost, session reset, stale handle, transport errno). Retryable: `ConnectionTimeout` (where `smb2`'s
+`SendTimeout`, response `Timeout`, and `CreditStarvation` all land, via `ErrorKind::TimedOut`), `DeviceDisconnected` (a
+session-owning backend can rebuild its session in place, but ❗ NOT inside 1.25 s: once SMB marks a session
+`Disconnected` every call fails at once, and nothing in this loop reconnects it. Only a sub-second blip, where the
+session never read `Disconnected`, is rescued here; a longer outage is the next section's. On MTP the device really is
+gone and each attempt fails immediately, costing a bounded 1.25 s), `DeviceSessionReset` (its own doc says retrying
+works), `StaleDestinationHandle`, and an `IoError` whose errno `cmdr_fs::volume::is_transport_errno` accepts (EPIPE,
+ECONNRESET, ECONNABORTED, ENOTCONN, ETIMEDOUT, ENETDOWN, ENETUNREACH, EHOSTUNREACH, decided by `io::ErrorKind`) — the
+case where a write onto an OS-mounted share reports the blip as an errno rather than a typed backend error; the local
+engine maps the same set to `ConnectionInterrupted`. `Cancelled` and `NotConnected` (nothing is dialing it) are never
+faults. ❌ Everything else is a decision or a fact about the data: re-running the write fails the same way and only
+delays the report.
 
 **❌ A cancel is never retryable, and outranks a retryable error.** `should_retry` checks `is_cancelled` first, the
 backoff is a `select!` against `state.backend_cancel` (not a `sleep`), and a cancel that lands while an attempt is
@@ -1751,7 +1758,7 @@ or a network mount the volume layer should be handling, and neither is improved 
 
 ### Waiting out a volume that went away (`volume_outage.rs`)
 
-**Decision**: when a transport failure (`retry::is_retryable`) meets a volume whose session reads
+**Decision**: when a transport failure (`VolumeError::transport_fault`) meets a volume whose session reads
 `ConnectionState::Disconnected`, the transfer WAITS for the volume instead of spending its attempts in a second: it
 reconnects the volume itself on a growing cadence (at once, then 2, 4, 8, 15, and every 30 s), for up to
 `OUTAGE_WAIT_BUDGET` (15 minutes, `outage_slot.rs`), then runs the work again with a fresh set of attempts. A volume
@@ -2136,9 +2143,9 @@ two count different things. Credits are connection-wide flow control over write 
 across everything sharing the session, while `transfer_concurrency` counts concurrent FILES for one `source → dest`
 pair. So there is no file-level number a credit budget could produce, and the choice between the two was never a choice.
 Credit starvation is already answered where it lands: it surfaces as `ErrorKind::TimedOut`, which
-`retry.rs::is_retryable` treats as a retryable `ConnectionTimeout` alongside the two smb2 deadlines. Credits stay a
-diagnostic: `SmbVolume::session_credits` for the soak suite (a leak bleeds it down between iterations), and `CreditInfo`
-in the SMB diagnostics dashboard.
+`VolumeError::transport_fault` treats as a retryable `ConnectionTimeout` alongside the two smb2 deadlines. Credits stay
+a diagnostic: `SmbVolume::session_credits` for the soak suite (a leak bleeds it down between iterations), and
+`CreditInfo` in the SMB diagnostics dashboard.
 
 **Decision**: the window was NOT the throughput story; the per-file destination pre-check was, and it is now skipped for
 a destination directory the operation created and answered from one listing for a merge (see "Answering the pre-check

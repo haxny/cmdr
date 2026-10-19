@@ -38,7 +38,9 @@ pub(super) fn classify_io_error(e: &std::io::Error, path: String) -> WriteOperat
             libc::ENAMETOOLONG => return WriteOperationError::NameTooLong { path },
             // The refused write measured nothing, so it's the sizeless variant.
             libc::ENOSPC | libc::EDQUOT => return WriteOperationError::DestinationFull { path },
-            libc::ENOTCONN | libc::ENETDOWN | libc::ENETUNREACH | libc::EHOSTUNREACH | libc::ETIMEDOUT => {
+            // The one transport errno set, shared with the transfer engine's
+            // retry and outage wait, so both agree on what "the link dropped" is.
+            code if cmdr_fs::volume::is_transport_errno(code) => {
                 return WriteOperationError::ConnectionInterrupted { path };
             }
             // Both are a drive that isn't there any more: `ENODEV` from a mount
@@ -180,6 +182,33 @@ mod tests {
             );
             assert!(
                 matches!(&err, WriteOperationError::DestinationFull { path } if path == "/Volumes/Stick/a"),
+                "errno {errno}: got {err:?}"
+            );
+        }
+    }
+
+    /// Every errno the transfer engine waits out as a dropped link reads as one
+    /// here too: the two used to keep separate lists, and this one lacked
+    /// `ECONNRESET` (plus `EPIPE` and `ECONNABORTED`, which neither had).
+    #[cfg(unix)]
+    #[test]
+    fn a_dropped_link_is_an_interrupted_connection() {
+        for errno in [
+            libc::ECONNRESET,
+            libc::EPIPE,
+            libc::ECONNABORTED,
+            libc::ENOTCONN,
+            libc::ENETDOWN,
+            libc::ENETUNREACH,
+            libc::EHOSTUNREACH,
+            libc::ETIMEDOUT,
+        ] {
+            let err = classify_io_error(
+                &std::io::Error::from_raw_os_error(errno),
+                "/Volumes/naspi/a".to_string(),
+            );
+            assert!(
+                matches!(&err, WriteOperationError::ConnectionInterrupted { path } if path == "/Volumes/naspi/a"),
                 "errno {errno}: got {err:?}"
             );
         }

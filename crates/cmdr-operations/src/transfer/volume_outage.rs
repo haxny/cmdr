@@ -44,9 +44,9 @@
 //!   tasks give up together, and a job queued behind one that gave up doesn't
 //!   start a second fifteen-minute wait for the same outage. A job CREATED after
 //!   the give-up (a Retry, a new copy) is a fresh question and gets a fresh wait.
-//! - **Retries nothing it shouldn't.** Only a failure [`retry::is_retryable`]
-//!   calls transport ever triggers a wait, so a refusal or a cancel is reported
-//!   as it always was.
+//! - **Retries nothing it shouldn't.** Only a failure that is a
+//!   [`VolumeError::transport_fault`] ever triggers a wait, so a refusal or a
+//!   cancel is reported as it always was.
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -59,7 +59,6 @@ use tokio::time::Instant;
 use super::super::event_sinks::OperationEventSink;
 use super::super::state::WriteOperationState;
 use super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
-use super::retry;
 use super::transfer_probe::{TaskPhase, current_task_phase, set_task_phase};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{ConnectionState, LaneKey, Volume, VolumeError};
@@ -180,7 +179,7 @@ impl OutageFailure for VolumeError {
 }
 
 /// After `error`, waits for whichever of `volumes` went away, when that's what
-/// `error` was: a transport failure ([`retry::is_retryable`]), with this item's
+/// `error` was: a [`VolumeError::transport_fault`], with this item's
 /// outage budget ([`MAX_OUTAGES_PER_ITEM`], counted in `outages`) not spent and
 /// no cancel in. [`OutageEnd::NotWaitable`] for every other failure, which the
 /// caller reports as it always did.
@@ -190,7 +189,7 @@ pub(crate) async fn wait_after_failure(
     volumes: &[&Arc<dyn Volume>],
     outages: &mut u32,
 ) -> OutageEnd {
-    if *outages >= MAX_OUTAGES_PER_ITEM || !retry::is_retryable(error) || state.intent().is_cancelled() {
+    if *outages >= MAX_OUTAGES_PER_ITEM || error.transport_fault().is_none() || state.intent().is_cancelled() {
         return OutageEnd::NotWaitable;
     }
     let ended = wait_while_out(state, volumes, None).await;

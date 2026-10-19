@@ -48,7 +48,7 @@ use super::super::faulty_volume::forward_volume_methods;
 /// A source volume whose read stream fails for ONE named path, so a single
 /// source (or a single child inside a directory source) fails while its
 /// siblings copy normally. `IoError` with no errno is deliberately not
-/// retryable (`retry.rs::is_retryable`), so the failure lands on the first
+/// retryable (`VolumeError::transport_fault`), so the failure lands on the first
 /// attempt.
 struct FailReadForPathVolume {
     inner: Arc<InMemoryVolume>,

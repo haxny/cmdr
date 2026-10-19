@@ -24,7 +24,7 @@ use super::super::faulty_volume::forward_volume_methods;
 
 /// A source whose read stream refuses for ONE path, so a single merge child
 /// fails while its siblings copy. `IoError` with no errno isn't retryable
-/// (`retry.rs::is_retryable`), so the leaf gives up on the first attempt.
+/// (`VolumeError::transport_fault`), so the leaf gives up on the first attempt.
 struct FailReadForPath {
     inner: Arc<InMemoryVolume>,
     fail_for: PathBuf,

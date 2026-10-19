@@ -169,8 +169,9 @@ pub(super) async fn stream_pipe_file(
     // (`failed_write_leaves_ours_at`).
     let mut writing_at_the_final_name = false;
     // Which attempt at THIS file we're on, 1-based. A transport blip
-    // (`retry::is_retryable`) runs the file again from its first byte on a fresh
-    // source stream and a fresh staging temp, up to `retry::MAX_ATTEMPTS`; see
+    // (`VolumeError::transport_fault`) runs the file again from its first byte
+    // on a fresh source stream and a fresh staging temp, up to
+    // `retry::MAX_ATTEMPTS`; see
     // `retry.rs` for the policy and why it lives here rather than any layer above.
     // Restarting the whole file is what keeps the retry honest: nothing partial
     // survives an attempt, so no byte is written twice and no ledger records a
@@ -421,7 +422,7 @@ pub(super) async fn stream_pipe_file(
             // report it as one: the post-loop keys `write-cancelled` off a
             // `Cancelled`-shaped error, and a transport error in its place would
             // log the user's own click as a failed transfer.
-            Err(e) if retry::is_retryable(&e) && state.intent().is_cancelled() => {
+            Err(e) if e.transport_fault().is_some() && state.intent().is_cancelled() => {
                 staged.abandon(dest_volume).await;
                 remove_unstaged_partial(writing_at_the_final_name, dest_volume, dest_path).await;
                 return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()))

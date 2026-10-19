@@ -126,7 +126,7 @@ pub(super) fn create_went_unanswered(staged: &StagedWrite, result: &Result<Strea
     matches!(
         staged.write_mode(),
         WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder
-    ) && matches!(result, Err(e) if super::retry::is_retryable(e))
+    ) && matches!(result, Err(e) if e.transport_fault().is_some())
 }
 
 /// What a write puts on its file beyond the bytes, as the destination's own
