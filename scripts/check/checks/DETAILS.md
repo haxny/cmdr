@@ -1493,8 +1493,8 @@ for reading its output:
   opens, two PRAGMA reads — no threads, no sleeps, no waits) timing out at 8 s is a machine symptom by construction.
   Same shape, measured 2026-07-31: `sqlite_util::tests::cached_pages_come_from_the_shared_slab` timed out at 8 s in the
   container across three consecutive runs while taking 0.07 s natively.
-- **A "too-slow" or "real" verdict from the re-run is not a load excuse.** Those keep the lane red on purpose; reach for
-  a control run (the same lane, alone, on a commit before the change) rather than re-running until it's green.
+- **A "too-slow", "raced", or "real" verdict from the re-run is not a load excuse.** Those keep the lane red on purpose;
+  reach for a control run (the same lane, alone, on a commit before the change) rather than re-running until it's green.
 - **`pkill -f check.sh` does NOT stop a run.** The runner is a compiled Go binary under the `go-build` cache parented by
   `go run .`, and killing the wrapper orphans the whole tree of Playwright, Docker, and cargo children, which then keep
   competing with whatever you start next. Kill `go-build.*/check` and `go run \. --include-slow`, then confirm with `ps`

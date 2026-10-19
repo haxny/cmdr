@@ -515,6 +515,10 @@ failing tests, alone, and lets the outcome speak:
 - **Fails alone, passes with headroom, machine still busy** → inconclusive. Starvation and slowness can't be told apart,
   so neither is claimed; re-run on a quiet machine to settle it.
 - **Fails alone even with headroom** → a genuine failure. Always red, whatever the load.
+- **An assertion or panic (no deadline in it) that passes on either re-run** → raced. The stages above ask about a
+  DEADLINE (nextest's cap, or the test's own `wait_until`), and load can't make an assertion false, only change who wins
+  a race. Always red: find the race in the test or the code (#504; `copy_counts_write_footprint_for_hardlinks` hid as
+  contention nine times this way).
 
 Only the first and third soften the result, and only to a **warn**, never a pass. Load is never the gate: the isolated
 re-run is. Load enters at exactly one point, demoting the "needed headroom" verdict to inconclusive, because that is the

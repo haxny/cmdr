@@ -42,6 +42,10 @@ const (
 	VerdictInconclusive ContentionVerdict = "inconclusive"
 	// VerdictReal: failed even alone with headroom.
 	VerdictReal ContentionVerdict = "real"
+	// VerdictRaced: an assertion or panic (no deadline in it) that a re-run passed.
+	// Load can't make an assertion false, only change who wins a race, so this is a
+	// defect in the test or the code, ❌ never contention (#504).
+	VerdictRaced ContentionVerdict = "raced"
 )
 
 // BusyLoadPerCore is where a machine is considered too busy for the "needed headroom"

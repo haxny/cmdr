@@ -376,3 +376,62 @@ func TestSummaryReportsInconclusiveDistinctly(t *testing.T) {
 		t.Errorf("summary should say why it's inconclusive:\n%s", summary)
 	}
 }
+
+func assertionFailure(name string) RustFailure {
+	return RustFailure{Binary: "cmdr_lib", Name: name, Class: ClassOther}
+}
+
+// An assertion that failed in the suite and passes alone wasn't starved: nothing about
+// load makes `assert_eq!` false unless the test or the code races (#504, the way
+// `copy_counts_write_footprint_for_hardlinks` hid as "contention" nine times).
+func TestAnAssertionThatPassesAloneRacedRatherThanStarved(t *testing.T) {
+	f := &fakeRun{outputs: map[string]string{}}
+	results := ClassifyContention([]RustFailure{assertionFailure("a::b")}, f.run, quiet)
+
+	if len(results) != 1 || results[0].Verdict != VerdictRaced {
+		t.Fatalf("want one %q verdict, got %+v", VerdictRaced, results)
+	}
+}
+
+// Headroom can't explain an assertion either, so one that fails at the same deadline
+// and passes with more time still raced: two samples, two answers.
+func TestAnAssertionThatPassesOnlyWithHeadroomStillRaced(t *testing.T) {
+	f := &fakeRun{outputs: map[string]string{ContentionProbeProfile: failureOutput("a::b")}}
+	results := ClassifyContention([]RustFailure{assertionFailure("a::b")}, f.run, busy)
+
+	if len(results) != 1 || results[0].Verdict != VerdictRaced {
+		t.Fatalf("want one %q verdict, got %+v", VerdictRaced, results)
+	}
+}
+
+// A test's own `wait_until` running out IS starvation-shaped: the wait is a deadline,
+// and a starved suite blows it. It stays contention when it passes alone.
+func TestAnInTestDeadlineThatPassesAloneIsStillContention(t *testing.T) {
+	f := &fakeRun{outputs: map[string]string{}}
+	failure := RustFailure{Binary: "cmdr_lib", Name: "a::b", Class: ClassInTestDeadline, Detail: "the copy"}
+	results := ClassifyContention([]RustFailure{failure}, f.run, quiet)
+
+	if len(results) != 1 || results[0].Verdict != VerdictContention {
+		t.Fatalf("want one %q verdict, got %+v", VerdictContention, results)
+	}
+}
+
+// A race keeps the run red, and the summary names it as one.
+func TestARacedAssertionKeepsTheRunRedAndSaysWhy(t *testing.T) {
+	f := &fakeRun{outputs: map[string]string{}}
+	trimmed := "        FAIL [   0.090s] (1/1) cmdr_lib raced::one\n" +
+		"thread 'raced::one' panicked at src/foo.rs:42:\nassertion `left == right` failed\n"
+	_, err := resolveRustFailure("rust tests failed", f.run, quiet, trimmed)
+
+	if err == nil {
+		t.Fatal("a raced assertion must keep the lane red")
+	}
+	for _, want := range []string{"raced::one", "race"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error missing %q:\n%s", want, err.Error())
+		}
+	}
+	if WarnOnly([]ContentionVerdict{VerdictContention, VerdictRaced}) {
+		t.Error("WarnOnly must not soften a run with a raced test in it")
+	}
+}

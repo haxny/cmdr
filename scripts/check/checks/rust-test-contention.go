@@ -103,7 +103,7 @@ func ClassifyContention(failures []RustFailure, run ContentionRunner, load LoadS
 	}
 	stillFailing := failedNames(probeOut)
 	if len(stillFailing) == 0 {
-		return results // everything passed alone at the unchanged deadline
+		return markRaced(results) // everything passed alone at the unchanged deadline
 	}
 
 	// Sample load around the escalation run: that verdict is the only one whose meaning
@@ -122,7 +122,21 @@ func ClassifyContention(failures []RustFailure, run ContentionRunner, load LoadS
 	if err != nil {
 		return markNames(results, index, stillFailing, VerdictReal)
 	}
-	return markNames(results, index, failedNames(retryOut), VerdictReal)
+	return markRaced(markNames(results, index, failedNames(retryOut), VerdictReal))
+}
+
+// markRaced turns every assertion failure (`ClassOther`) that a re-run passed into
+// `raced`. The two stages ask "was it starved?" and "was it slow?", and both questions
+// are about a DEADLINE: a cap kill or a `wait_until` that ran out. An assertion has no
+// deadline to starve, so a pass on any re-run means the same test gave two answers,
+// which is a race in the test or the code (#504). ❌ Not contention, and not too-slow.
+func markRaced(results []ContentionResult) []ContentionResult {
+	for i := range results {
+		if results[i].Class == ClassOther && results[i].Verdict != VerdictReal {
+			results[i].Verdict = VerdictRaced
+		}
+	}
+	return results
 }
 
 func markAll(results []ContentionResult, v ContentionVerdict) []ContentionResult {
@@ -166,11 +180,13 @@ func RustVerdicts(results []ContentionResult) []ContentionVerdict {
 
 // ContentionSummary renders the verdicts for a human or agent reading the check output.
 func ContentionSummary(results []ContentionResult, loadAvg float64) string {
-	var contention, tooSlow, inconclusive, real []string
+	var contention, raced, tooSlow, inconclusive, real []string
 	for _, r := range results {
 		switch r.Verdict {
 		case VerdictContention:
 			contention = append(contention, r.Name)
+		case VerdictRaced:
+			raced = append(raced, r.Name)
 		case VerdictTooSlow:
 			tooSlow = append(tooSlow, r.Name)
 		case VerdictInconclusive:
@@ -194,6 +210,8 @@ func ContentionSummary(results []ContentionResult, loadAvg float64) string {
 	}
 	section(fmt.Sprintf("%d passed alone at the same deadline, so the suite was starving %s: contention, not a defect",
 		len(contention), Pluralize(len(contention), "it", "them")), contention)
+	section("Failed an assertion in the suite and passed alone: load can't make an assertion false, so this is a race in the test or the code. Find the race; ❌ don't widen a deadline",
+		raced)
 	section("Needed extra headroom even alone on a quiet machine, so this is real slowness: tweak the test or give it an explicit per-test override",
 		tooSlow)
 	section("Needed extra headroom, but the machine was still busy during the re-run, so starvation and real slowness can't be told apart. Re-run on a quiet machine to settle it",
