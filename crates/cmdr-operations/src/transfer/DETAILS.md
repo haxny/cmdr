@@ -1815,9 +1815,11 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
   The shortcut spends one of the item's `MAX_OUTAGES_PER_ITEM`, so a flapping link stays bounded, and ❌ never touches
   the lane's outage record (another waiter may be in a newer outage on it). The snapshot over-approximates on purpose: a
   call that snapshotted while the volume was down, then ran on a sibling's fresh session and failed for real, gets one
-  re-run it didn't need; that's safe (only re-runnable work reaches these waits) and bounded. SMB answers the generation
-  from the counter its error funnels guard on (`crates/cmdr-smb/DETAILS.md` § "Which session a loss is about"), so the
-  same late error also never moves the fresh session's state.
+  re-run it didn't need; that's safe (only re-runnable work reaches these waits) and bounded. Every connecting backend
+  answers the generation from the counter its own loss funnel guards on, so the same late error also never moves the
+  fresh session's state: SMB (`crates/cmdr-smb/DETAILS.md` § "Which session a loss is about"), and SFTP, WebDAV, S3, and
+  ADB through the shared `cmdr_fs::volume::ConnectionCell` (`crates/cmdr-fs/DETAILS.md` § "Three questions a remote
+  volume gets asked"; ADB, with no session, counts the times a reconnect brought the device back).
 
 **Where it's asked, and why only there.** Only where a transfer meets the share, and only for calls that are safe to run
 again:
