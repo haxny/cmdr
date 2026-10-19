@@ -471,13 +471,6 @@ export function mayBeAPermissionGrantAway(reason: TrashRefusalKind): boolean {
 }
 
 /**
- * A refused trash, worded from the reason the OS gave rather than from its sentence.
- *
- * ❗ It never says "try again" for a permission-shaped refusal. Retrying cannot change
- * one, and a real report came back describing exactly that advice, under a folded
- * "Technical details" that held the only useful part.
- */
-/**
  * The sentence naming how many items the OS turned down, and why.
  *
  * Two surfaces share it: the error dialog for a batch where NOTHING went, and
@@ -489,6 +482,13 @@ export function trashRefusedCountSentence(reason: TrashRefusalKind, itemCount: n
   return w(`trashRefused.message.${reason}`, { count: formatInteger(itemCount) })
 }
 
+/**
+ * A refused trash, worded from the reason the OS gave rather than from its sentence.
+ *
+ * ❗ It never says "try again" for a permission-shaped refusal. Retrying cannot change
+ * one, and a real report came back describing exactly that advice, under a folded
+ * "Technical details" that held the only useful part.
+ */
 function trashRefusedMessage(error: Extract<WriteOperationError, { type: 'trash_refused' }>): FriendlyErrorMessage {
   const suggestion = w(`trashRefused.suggestion.${error.reason}`)
   // ❗ `onlineOnly` overrides the reason. An evicted cloud file refuses as 513
