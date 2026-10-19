@@ -28,17 +28,11 @@ use super::zip_times;
 /// (see [`open_read`]).
 const GP_FLAG_ENCRYPTED: u16 = 1 << 0;
 
-/// A zip entry's read handle: the rc-zip [`Entry`] (drives the plaintext decode)
-/// plus its zero-based position in the central directory.
-///
-/// The ordinal addresses the `zip` crate's `by_index_decrypt` for the decrypt
-/// path. rc-zip and the `zip` crate both parse the SAME central directory in the
-/// SAME physical order, so the ordinal aligns across the two crates — pinned by
-/// `archive_test::zip_crate_ordinals_align_with_rc_zip`. Decrypting by ordinal
-/// (not by name) also sidesteps any cross-crate filename-decoding drift.
+/// A zip entry's read handle: the rc-zip [`Entry`], which drives the plaintext
+/// decode and carries the local header offset the decrypt path pairs it by (see
+/// [`run_decrypt_producer`]).
 pub(super) struct ZipHandle {
     entry: Entry,
-    ordinal: usize,
 }
 
 /// Whether the entry is encrypted: general-purpose flag bit 0, or the AE-x
@@ -115,7 +109,7 @@ fn parse_in<Tz: chrono::TimeZone>(
                 xattrs: Vec::new(),
                 sidecar_bytes: None,
             };
-            (raw, ZipHandle { entry, ordinal })
+            (raw, ZipHandle { entry })
         })
         .collect())
 }
@@ -171,8 +165,8 @@ fn parse_central_directory(source: &dyn ArchiveByteSource) -> Result<Vec<Entry>,
 /// encrypted entry — legacy PKWARE ZipCrypto (what macOS Archive Utility / `zip -e`
 /// produce) OR WinZip AES (AE-1/AE-2, `7z -mem=AES256` / recent WinZip) — needs the
 /// `zip` crate's decrypt path: with no `password`, returns [`ArchiveError::Encrypted`]
-/// (the "needs a password" signal); with one, decrypts by central-directory ordinal
-/// (see [`run_decrypt_producer`]). Both encryption kinds share this path — the `zip`
+/// (the "needs a password" signal); with one, decrypts the entry at the same local
+/// header offset (see [`run_decrypt_producer`]). Both encryption kinds share this path — the `zip`
 /// crate picks the cipher from the entry's own metadata. A wrong password is caught
 /// deterministically at open for AES (its 2-byte verifier) and probabilistically for
 /// ZipCrypto (a 1/256 slip caught late at the end-of-stream CRC).
@@ -186,10 +180,10 @@ pub(super) fn open_read(
         let Some(password) = password else {
             return Err(ArchiveError::Encrypted);
         };
-        let ordinal = handle.ordinal;
+        let header_offset = handle.entry.header_offset;
         let password = password.to_vec();
         return Ok(ArchiveEntryReader::spawn_with(total_size, move |tx| {
-            run_decrypt_producer(source, ordinal, &password, &tx);
+            run_decrypt_producer(source, header_offset, &password, &tx);
         }));
     }
     let entry = handle.entry.clone();
@@ -255,27 +249,48 @@ fn run_producer(source: Arc<dyn ArchiveByteSource>, entry: Entry, tx: ChunkTx) {
 }
 
 /// The decrypt producer for an encrypted entry (ZipCrypto or WinZip AES): opens
-/// the entry at central-directory `ordinal` through the `zip` crate over a fresh
-/// [`SourceReader`] and streams the decrypted, decompressed bytes. Runs on a
-/// `spawn_blocking` thread.
+/// the entry whose local header starts at `header_offset` through the `zip` crate
+/// over a fresh [`SourceReader`] and streams the decrypted, decompressed bytes.
+/// Runs on a `spawn_blocking` thread.
 ///
 /// The `zip` crate re-parses the central directory itself and picks the cipher
-/// from the entry's metadata; `ordinal` is the same index rc-zip assigned
-/// (identical CD order — see [`ZipHandle`]). A wrong AES password fails at
-/// `by_index_decrypt` (its 2-byte verifier) and maps via [`map_zip_err`]. A wrong
-/// ZipCrypto password may slip its 1-byte open check (~1/256) and surface late as
-/// an end-of-stream CRC mismatch, handled in [`pump_decrypt`].
-fn run_decrypt_producer(source: Arc<dyn ArchiveByteSource>, ordinal: usize, password: &[u8], tx: &ChunkTx) {
+/// from the entry's metadata. A wrong AES password fails at `by_index_decrypt`
+/// (its 2-byte verifier) and maps via [`map_zip_err`]. A wrong ZipCrypto password
+/// may slip its 1-byte open check (~1/256) and surface late as an end-of-stream
+/// CRC mismatch, handled in [`pump_decrypt`].
+fn run_decrypt_producer(source: Arc<dyn ArchiveByteSource>, header_offset: u64, password: &[u8], tx: &ChunkTx) {
     let reader = SourceReader::new(source);
     let mut archive = match ZipArchive::new(reader) {
         Ok(archive) => archive,
         Err(err) => return tx.send_err(map_zip_err(err)),
     };
-    let mut file = match archive.by_index_decrypt(ordinal, password) {
+    let Some(index) = zip_crate_index_at(&archive, header_offset) else {
+        return tx.send_err(ArchiveError::Unsupported(
+            "an encrypted entry the decrypting library can't tell apart from a same-named one".to_string(),
+        ));
+    };
+    let mut file = match archive.by_index_decrypt(index, password) {
         Ok(file) => file,
         Err(err) => return tx.send_err(map_zip_err(err)),
     };
     pump_decrypt(&mut file, tx);
+}
+
+/// The `zip` crate's index for the entry whose local header starts at
+/// `header_offset`, or `None` when it has none.
+///
+/// Its central-directory ordinal won't do: the `zip` crate keys entries by raw
+/// name and folds a duplicate into the earlier one's slot, so every index after
+/// a duplicate is one short of rc-zip's. The header offset is what both crates
+/// agree on. `None` means the `zip` crate dropped the entry in such a fold, and
+/// decrypting a neighbor in its place would hand back the wrong bytes under a
+/// passing CRC.
+fn zip_crate_index_at<R: Read + std::io::Seek>(archive: &ZipArchive<R>, header_offset: u64) -> Option<usize> {
+    (0..archive.len()).find(|&index| {
+        archive
+            .by_index_data(index)
+            .is_ok_and(|entry| entry.header_start() == header_offset)
+    })
 }
 
 /// Pumps a decrypted entry stream into the chunk sink in bounded blocks (peak

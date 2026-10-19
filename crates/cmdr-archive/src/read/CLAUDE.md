@@ -37,10 +37,10 @@ the `Volume` trait, capability flags, and any write path.
 - **Compressed tar and 7z are SEQUENTIAL-access**; plain `.tar` and zip are random. `ArchiveFormat::is_sequential`
   declares the class (the volume layer surfaces it via `Volume::extraction_is_sequential`).
 - **Encryption: browsing usually works; extraction decrypts with a per-archive password.** Zip (ZipCrypto and WinZip
-  AES) decrypts through the `zip` crate's `by_index_decrypt` by CENTRAL-DIRECTORY ORDINAL (rc-zip can't decrypt; the
-  ordinals align, pinned). No password ⇒ `Encrypted`; wrong ⇒ `WrongPassword`, typed, never string-matched. A
-  HEADER-encrypted 7z needs the password to even BROWSE. Detection per cipher: DETAILS § "Decryption (zip)", and
-  `../../DETAILS.md` § "Password-protected archives".
+  AES) decrypts through the `zip` crate's `by_index_decrypt`, paired by LOCAL HEADER OFFSET (rc-zip can't decrypt; ❌
+  never by ordinal, which a duplicate name shifts). No password ⇒ `Encrypted`; wrong ⇒ `WrongPassword`, typed, never
+  string-matched. A HEADER-encrypted 7z needs the password to even BROWSE. Detection per cipher: DETAILS § "Decryption
+  (zip)", and `../../DETAILS.md` § "Password-protected archives".
 - **`ArchiveNode::mode` is what the archive RECORDED, `None` when it recorded nothing** (zip external attributes, the
   tar header, 7z's `0x8000` unix extension). ❌ Never a plausible `0o644`: the copy engine puts it on what an extract
   writes. Low nine bits only — setuid/setgid/sticky are dropped at the parser.

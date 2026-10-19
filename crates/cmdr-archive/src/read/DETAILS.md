@@ -207,17 +207,19 @@ method. Browsing an encrypted archive always works (names live in the central di
 
 rc-zip parses the index but does NOT decrypt, so an encrypted entry's bytes are read through the `zip` crate (zip2)
 instead — `zip.rs`'s `run_decrypt_producer` opens a `ZipArchive` over the same `SourceReader` and calls
-`by_index_decrypt(ordinal, password)`. Two crates, one archive: rc-zip stays the index/tree authority, the `zip` crate
-is the per-entry decrypt engine. (7z decryption is threaded through `sevenz-rust2` instead — see below.)
+`by_index_decrypt` on the entry at the same local header offset. Two crates, one archive: rc-zip stays the index/tree
+authority, the `zip` crate is the per-entry decrypt engine. (7z decryption is threaded through `sevenz-rust2` instead —
+see below.)
 
-- **Decrypt by ORDINAL, not name.** `ZipHandle` stores each entry's zero-based central-directory position (assigned in
-  `zip::parse` via `enumerate`). rc-zip and the `zip` crate both parse the SAME central directory in the SAME physical
-  order, so the ordinal addresses the identical entry in `by_index_decrypt`. This sidesteps cross-crate
-  filename-decoding drift (a name that decodes differently in each crate would miss). **This alignment is load-bearing —
-  pinned by `archive_test::zip_crate_ordinals_align_with_rc_zip`** (a mixed archive, distinct per-entry content,
-  decrypt-by-ordinal must yield each entry's own bytes) for ZipCrypto and by
-  `winzip_aes_mixed_archive_decrypts_each_by_ordinal` for AES. It holds; if it ever breaks, fall back to
-  `by_name_decrypt` with the RAW name bytes.
+- **Decrypt by LOCAL HEADER OFFSET, never by ordinal or name.** `run_decrypt_producer` finds the `zip`-crate index whose
+  `header_start()` equals rc-zip's `header_offset` (`zip_crate_index_at`, a metadata scan with no I/O). Gotcha: the
+  ordinals do NOT align. The `zip` crate keys entries by raw name in an `IndexMap` and folds a duplicate into the
+  earlier one's slot (the later twin's data wins, matching the tree's "later duplicate wins"), so every index after a
+  duplicate is one short of rc-zip's. Decrypting by ordinal then opened the NEXT entry, which passed its own CRC and
+  landed under the wrong name (#526). A name would miss on cross-crate decoding drift. An offset the `zip` crate lacks
+  is refused as `Unsupported`, never answered with a neighbor. Pinned by
+  `archive_test::zip_crate_ordinals_align_with_rc_zip` (distinct per-entry content, an early duplicate name) for
+  ZipCrypto and `winzip_aes_mixed_archive_decrypts_each_entry_as_itself` for AES.
 - **Both zip encryption kinds decrypt through this one path.** Legacy PKWARE ZipCrypto (macOS Archive Utility /
   `zip -e`) and WinZip AES (the `Method::Aex` marker; `7z -mem=AES256`, recent WinZip) share `by_index_decrypt` — the
   `zip` crate picks the cipher from the entry's own metadata. `aes-crypto` is enabled; `aes 0.9.1` (stable) unifies with

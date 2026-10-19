@@ -173,11 +173,18 @@ async fn zipcrypto_no_password_is_the_encrypted_signal() {
 /// interleaves encrypted entries at several ordinals with plain ones, each with
 /// DISTINCT content — so a misaligned ordinal decrypts the WRONG entry's bytes and
 /// is caught by a content mismatch.
+///
+/// An early duplicate name (`dup.txt` twice, which Python's `zipfile` writes with
+/// only a warning) makes the `zip` crate fold both into one slot, shifting every
+/// later index by one, so the decrypt path pairs entries by header offset. The
+/// tree shows the later twin, the one the `zip` crate keeps too.
 #[tokio::test]
 async fn zip_crate_ordinals_align_with_rc_zip() {
     let entries = [
         plain_entry("a-plain.txt", "alpha"),
+        encrypted_entry("dup.txt", "earlier-twin-body"),
         encrypted_entry("b-secret.txt", "bravo-secret-body"),
+        encrypted_entry("dup.txt", "later-twin-body"),
         plain_entry("c-plain.txt", "charlie"),
         encrypted_entry("d-secret.txt", "delta-secret-body"),
         encrypted_entry("e-secret.txt", "echo-secret-body"),
@@ -185,7 +192,8 @@ async fn zip_crate_ordinals_align_with_rc_zip() {
     let zip = build_zipcrypto_zip(&entries, "pw");
     let index = parse(&zip).unwrap();
     let src = bytes_source(zip);
-    for entry in &entries {
+    // The earlier twin is shadowed in the tree, so there's no path to open it by.
+    for entry in entries.iter().filter(|entry| entry.content != b"earlier-twin-body") {
         let password = entry.encrypted.then_some("pw");
         let mut reader = index.open_read(&entry.name, Arc::clone(&src), password).unwrap();
         let (data, _) = read_all(&mut reader).await.unwrap();
@@ -283,7 +291,7 @@ async fn winzip_aes_no_password_is_the_encrypted_signal() {
 /// catches it. Also confirms plain entries in an AES-bearing archive read with no
 /// password.
 #[tokio::test]
-async fn winzip_aes_mixed_archive_decrypts_each_by_ordinal() {
+async fn winzip_aes_mixed_archive_decrypts_each_entry_as_itself() {
     let entries = [
         plain_entry("a-plain.txt", "alpha"),
         encrypted_entry("b-secret.txt", "bravo-secret-body"),
