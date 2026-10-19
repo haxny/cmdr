@@ -18,6 +18,7 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::{ExtendedMetadata, FileEntry, get_group_name, get_owner_name, is_hidden_by_name};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::ListingProgress;
 use cmdr_fs::volume::host::listings::ListingHost;
 
@@ -226,7 +227,7 @@ fn list_directory_core_impl(
     let total_time = overall_start.elapsed();
     log::debug!(
         "list_directory_core: path={}, entries={}, read_dir={}ms, total={}ms",
-        path.display(),
+        LogPrivate::dir_path(path),
         entries.len(),
         read_dir_time.as_millis(),
         total_time.as_millis()
@@ -256,7 +257,7 @@ fn list_directory_core_impl(
         };
         log::debug!(
             "list_directory_core: 0 entries at {} ({metadata_status}). Could be genuinely empty, permission/TCC restricted (Full Disk Access?), or a cloud-sync placeholder.",
-            path.display(),
+            LogPrivate::dir_path(path),
         );
     }
     benchmark::log_event("list_directory_core END");

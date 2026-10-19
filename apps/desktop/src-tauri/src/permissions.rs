@@ -36,6 +36,7 @@
 //! edge cases (a machine where none of `fda_probe_dirs` exist, or a future OS
 //! change).
 
+use cmdr_fs::log_private::LogPrivate;
 use std::ffi::CString;
 use std::fs::File;
 use std::io::{ErrorKind, Read};
@@ -243,35 +244,37 @@ pub fn check_full_disk_access() -> bool {
     for path in fda_probe_files() {
         match try_read_byte(&path) {
             Ok(()) => {
-                log::debug!(target: "fda_probe", "FDA probe: read OK on {:?} → FDA granted", path);
+                log::debug!(target: "fda_probe", "FDA probe: read OK on {:?} → FDA granted", LogPrivate::file_path(&path));
                 return true;
             }
             Err(e) if e.kind() == ErrorKind::PermissionDenied => {
-                log::debug!(target: "fda_probe", "FDA probe: PermissionDenied on {:?} via read() → FDA NOT granted; firing extra triggers", path);
+                log::debug!(target: "fda_probe", "FDA probe: PermissionDenied on {:?} via read() → FDA NOT granted; firing extra triggers", LogPrivate::file_path(&path));
                 // Best-effort extra triggers. We don't care about results,
                 // only that tccd hears about us through different syscall
                 // paths. Each one is independently logged so we can see in
                 // the TCC log which one (if any) finally registers the bundle.
                 match try_mmap_byte(&path) {
                     Ok(()) => {
-                        log::debug!(target: "fda_probe", "FDA probe extra: mmap OK on {:?} (FDA actually granted? unexpected)", path)
+                        log::debug!(target: "fda_probe", "FDA probe extra: mmap OK on {:?} (FDA actually granted? unexpected)", LogPrivate::file_path(&path))
                     }
                     Err(e) => {
-                        log::debug!(target: "fda_probe", "FDA probe extra: mmap on {:?} → {} ({:?})", path, e, e.kind())
+                        log::debug!(target: "fda_probe", "FDA probe extra: mmap on {:?} → {} ({:?})", LogPrivate::file_path(&path), e, e.kind())
                     }
                 }
                 match try_nsdata_read(&path) {
                     Ok(()) => {
-                        log::debug!(target: "fda_probe", "FDA probe extra: NSData OK on {:?} (FDA actually granted? unexpected)", path)
+                        log::debug!(target: "fda_probe", "FDA probe extra: NSData OK on {:?} (FDA actually granted? unexpected)", LogPrivate::file_path(&path))
                     }
                     Err(e) => {
-                        log::debug!(target: "fda_probe", "FDA probe extra: NSData on {:?} → {} ({:?})", path, e, e.kind())
+                        log::debug!(target: "fda_probe", "FDA probe extra: NSData on {:?} → {} ({:?})", LogPrivate::file_path(&path), e, e.kind())
                     }
                 }
                 match try_read_dir_parent(&path) {
-                    Ok(()) => log::debug!(target: "fda_probe", "FDA probe extra: read_dir(parent of {:?}) OK", path),
+                    Ok(()) => {
+                        log::debug!(target: "fda_probe", "FDA probe extra: read_dir(parent of {:?}) OK", LogPrivate::file_path(&path))
+                    }
                     Err(e) => {
-                        log::debug!(target: "fda_probe", "FDA probe extra: read_dir(parent of {:?}) → {} ({:?})", path, e, e.kind())
+                        log::debug!(target: "fda_probe", "FDA probe extra: read_dir(parent of {:?}) → {} ({:?})", LogPrivate::file_path(&path), e, e.kind())
                     }
                 }
                 // macOS 13+/Tahoe: a raw open() on a protected DIRECTORY is the
@@ -281,17 +284,17 @@ pub fn check_full_disk_access() -> bool {
                 for dir in fda_probe_dirs() {
                     match try_open_path(&dir) {
                         Ok(()) => {
-                            log::debug!(target: "fda_probe", "FDA probe extra: open dir {:?} OK (FDA actually granted? unexpected)", dir)
+                            log::debug!(target: "fda_probe", "FDA probe extra: open dir {:?} OK (FDA actually granted? unexpected)", LogPrivate::dir_path(&dir))
                         }
                         Err(e) => {
-                            log::debug!(target: "fda_probe", "FDA probe extra: open dir {:?} → {} ({:?})", dir, e, e.kind())
+                            log::debug!(target: "fda_probe", "FDA probe extra: open dir {:?} → {} ({:?})", LogPrivate::dir_path(&dir), e, e.kind())
                         }
                     }
                 }
                 return false;
             }
             Err(e) => {
-                log::debug!(target: "fda_probe", "FDA probe: skipping {:?}: {} ({:?})", path, e, e.kind());
+                log::debug!(target: "fda_probe", "FDA probe: skipping {:?}: {} ({:?})", LogPrivate::file_path(&path), e, e.kind());
                 continue;
             }
         }

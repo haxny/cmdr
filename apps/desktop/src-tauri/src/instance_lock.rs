@@ -14,6 +14,8 @@
 //! acquisition fails. Nothing branches on it, and unreadable or garbage content is treated as
 //! "unknown holder".
 
+use cmdr_fs::log_private::LogPrivate;
+use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::{Seek as _, SeekFrom, Write as _};
 use std::path::{Path, PathBuf};
@@ -97,13 +99,17 @@ fn holder_description(holder_pid: Option<u32>) -> String {
     }
 }
 
-/// Pure core: the operator-facing log line for a refused acquisition.
-fn busy_log_message(data_dir: &Path, holder_pid: Option<u32>) -> String {
-    format!(
-        "Another Cmdr instance ({}) already owns the data dir {}. Two processes on one data dir corrupt the index, so this one is stopping.",
-        holder_description(holder_pid),
-        data_dir.display()
-    )
+/// Pure core: the operator-facing log line for a refused acquisition, its data dir marked for the
+/// error report. Log text only: it goes straight into `log_error!`.
+fn busy_log_message(data_dir: &Path, holder_pid: Option<u32>) -> impl fmt::Display + '_ {
+    fmt::from_fn(move |f| {
+        write!(
+            f,
+            "Another Cmdr instance ({}) already owns the data dir {}. Two processes on one data dir corrupt the index, so this one is stopping.",
+            holder_description(holder_pid),
+            LogPrivate::dir_path(data_dir)
+        )
+    })
 }
 
 /// Best-effort: stamp our pid into the lock file for diagnostics.
@@ -181,7 +187,7 @@ pub fn claim_data_dir_or_exit(data_dir: &Path) {
             if HELD_LOCK.set(file).is_err() {
                 log::warn!(target: "instance_lock", "Instance lock claimed twice; keeping the first handle.");
             }
-            log::debug!(target: "instance_lock", "Instance lock held for {}", data_dir.display());
+            log::debug!(target: "instance_lock", "Instance lock held for {}", LogPrivate::dir_path(data_dir));
         }
         Err(AcquireError::Busy { holder_pid }) => {
             crate::log_error!(target: "instance_lock", "{}", busy_log_message(data_dir, holder_pid));
@@ -197,7 +203,7 @@ pub fn claim_data_dir_or_exit(data_dir: &Path) {
             log::warn!(
                 target: "instance_lock",
                 "Couldn't take the instance lock in {}: {e}. Continuing without it; don't run a second Cmdr on this data dir.",
-                data_dir.display()
+                LogPrivate::dir_path(data_dir)
             );
         }
     }
@@ -340,10 +346,28 @@ mod tests {
 
     #[test]
     fn busy_log_message_names_the_dir_and_the_holder() {
+        let message = format!("{}", busy_log_message(Path::new("/tmp/cmdr-data"), Some(42)));
         assert_eq!(
-            busy_log_message(Path::new("/tmp/cmdr-data"), Some(42)),
+            crate::redact::display_line(&message),
             "Another Cmdr instance (process 42) already owns the data dir /tmp/cmdr-data. \
              Two processes on one data dir corrupt the index, so this one is stopping."
+        );
+    }
+
+    /// The bundle form of the line: the dir goes as one marked value, and the prose after it
+    /// stays, which the regex alone couldn't tell apart from a name with spaces.
+    #[test]
+    fn busy_log_message_ships_the_dir_as_one_token() {
+        let data_dir = Path::new("/Users/me/Summer (Lake House) 2026/Cmdr data");
+        let line = format!(
+            "2026-10-19T10:00:00.000+02:00 ERROR ·instance_lock  {}",
+            busy_log_message(data_dir, None)
+        );
+        assert_eq!(
+            crate::redact::redact_line(&line),
+            "2026-10-19T10:00:00.000+02:00 ERROR ·instance_lock  Another Cmdr instance (an unknown process) \
+             already owns the data dir $HOME/<dir>/<dir>. Two processes on one data dir corrupt the index, so \
+             this one is stopping."
         );
     }
 }

@@ -116,6 +116,43 @@ fn a_hostile_name_echoed_in_plain_external_text_is_claimed_whole() {
     assert_ships_none(&line, &["Secret", "evil", "rest", "child"]);
 }
 
+/// A real log site, as a report ships it: `list_directory_core`'s two lines for an empty folder
+/// whose name holds a paren, the shape the greedy fallback can only guess at. The folder goes as
+/// one token and every word after it stays. The numbers vary per machine, so they're patterns.
+#[test]
+fn the_listing_lines_ship_their_dir_as_one_token_and_keep_the_rest() {
+    let root = crate::test_support::TestDir::new("listing-golden");
+    let dir = root.join("Summer (Lake House) 2026");
+    std::fs::create_dir(&dir).expect("create the empty folder");
+    let host = cmdr_fs::volume::host::VolumeHost::detached();
+    let (listed, logs) =
+        crate::test_support::capture_logs(|| cmdr_local::reading::list_directory_core(&dir, host.listings()));
+    assert!(listed.expect("list the empty folder").is_empty());
+
+    let token = regex::escape(&r(&LogPrivate::dir_path(&dir).to_string()));
+    let goldens = [
+        format!(r"^list_directory_core: path={token}, entries=0, read_dir=\d+ms, total=\d+ms$"),
+        format!(
+            r"^list_directory_core: 0 entries at {token} \(kind=dir, perms=0o\d+, size=\d+\)\. Could be genuinely empty, permission/TCC restricted \(Full Disk Access\?\), or a cloud-sync placeholder\.$"
+        ),
+    ];
+    let lines: Vec<_> = logs
+        .iter()
+        .filter(|log| log.message.starts_with("list_directory_core:"))
+        .map(|log| log.file_line())
+        .collect();
+    assert_eq!(lines.len(), goldens.len(), "{lines:#?}");
+    for (line, golden) in lines.iter().zip(goldens) {
+        assert_ships_none(line, &["Lake", "House", "Summer"]);
+        let shipped = r(line);
+        let message = &shipped[super::markers::message_start(&shipped)..];
+        assert!(
+            regex::Regex::new(&golden).expect("valid golden").is_match(message),
+            "{message}\n{golden}"
+        );
+    }
+}
+
 /// A `log_error!` message that carries a marked `detail=` field, quoted again as the Flow B note's
 /// own `detail=`: the inner field's span sits two depths down inside a field inside a field, and
 /// still ships as the token the log line gives it, never as escaped placeholder text.

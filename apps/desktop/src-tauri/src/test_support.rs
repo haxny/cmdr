@@ -75,6 +75,74 @@ pub(crate) fn isolate_secrets() -> TestDir {
     dir
 }
 
+/// One log record [`capture_logs`] saw.
+pub(crate) struct CapturedLog {
+    pub(crate) level: log::Level,
+    pub(crate) target: String,
+    pub(crate) message: String,
+}
+
+impl CapturedLog {
+    /// The record as the log FILE writes one of ours (`logging/dispatch.rs`), at a fixed stamp:
+    /// what a report's span pass and regex read, for a golden of a real log site.
+    pub(crate) fn file_line(&self) -> String {
+        let target = self.target.strip_prefix("cmdr_lib::").unwrap_or(&self.target);
+        format!(
+            "2026-10-19T10:00:00.000+02:00 {:<5} ·{target}  {}",
+            self.level, self.message
+        )
+    }
+}
+
+/// Runs `f` and returns what it returned plus every log record THIS thread wrote meanwhile, at
+/// every level, so a test can pin a real log site's line.
+///
+/// It installs a process-wide logger on first use. That's safe because nextest runs each test in
+/// its own process, the app's fern tree is never installed in a unit test, and records from other
+/// threads go nowhere.
+pub(crate) fn capture_logs<R>(f: impl FnOnce() -> R) -> (R, Vec<CapturedLog>) {
+    use std::cell::RefCell;
+
+    thread_local! {
+        static CAPTURED: RefCell<Option<Vec<CapturedLog>>> = const { RefCell::new(None) };
+    }
+    struct ThreadCapture;
+    impl log::Log for ThreadCapture {
+        fn enabled(&self, _: &log::Metadata<'_>) -> bool {
+            CAPTURED.with(|captured| captured.borrow().is_some())
+        }
+        fn log(&self, record: &log::Record<'_>) {
+            CAPTURED.with(|captured| {
+                if let Some(records) = captured.borrow_mut().as_mut() {
+                    records.push(CapturedLog {
+                        level: record.level(),
+                        target: record.target().to_string(),
+                        message: record.args().to_string(),
+                    });
+                }
+            });
+        }
+        fn flush(&self) {}
+    }
+    static INSTALLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    let installed = *INSTALLED.get_or_init(|| {
+        let ok = log::set_logger(&ThreadCapture).is_ok();
+        log::set_max_level(log::LevelFilter::Trace);
+        ok
+    });
+    assert!(
+        installed,
+        "another logger owns this test process; capture_logs can't see its records"
+    );
+
+    CAPTURED.with(|captured| *captured.borrow_mut() = Some(Vec::new()));
+    let result = f();
+    let records = CAPTURED
+        .with(|captured| captured.borrow_mut().take())
+        .unwrap_or_default();
+    (result, records)
+}
+
 /// A volume that answers correctly, but only after a delay: on every metadata read
 /// ([`new`](Self::new)), or on the rename alone ([`renaming_slowly`](Self::renaming_slowly)).
 ///

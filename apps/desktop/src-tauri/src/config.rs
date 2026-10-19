@@ -2,6 +2,7 @@
 //!
 //! These can be extracted to environment variables or a config file in the future.
 
+use cmdr_fs::log_private::LogPrivate;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, Runtime};
@@ -143,9 +144,9 @@ fn os_default_cache_dir() -> Option<PathBuf> {
 pub fn log_app_data_dir<R: Runtime>(app: &AppHandle<R>) {
     if let Ok(dir) = resolved_app_data_dir(app) {
         if std::env::var("CMDR_DATA_DIR").is_ok() {
-            log::info!("Using CMDR_DATA_DIR: {}", dir.display());
+            log::info!("Using CMDR_DATA_DIR: {}", LogPrivate::dir_path(&dir));
         } else {
-            log::debug!("Using default app data dir: {}", dir.display());
+            log::debug!("Using default app data dir: {}", LogPrivate::dir_path(&dir));
         }
     }
 }
@@ -183,7 +184,7 @@ pub fn durable_write_json(path: &Path, tmp: &Path, content: &str) -> std::io::Re
             Err(e) => log::debug!(
                 target: "write_durability",
                 "durable_write_json: parent dir fsync skipped for {}: {e}",
-                parent.display()
+                LogPrivate::dir_path(parent)
             ),
         }
     }
