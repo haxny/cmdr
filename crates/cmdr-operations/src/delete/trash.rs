@@ -572,6 +572,7 @@ pub(crate) fn trash_files_with_progress(
         refused,
         metadata_left_behind: None,
         durability_unconfirmed: None,
+        locked_kept: None,
     });
 
     // Log partial failures

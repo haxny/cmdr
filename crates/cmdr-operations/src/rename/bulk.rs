@@ -258,6 +258,7 @@ impl crate::Operations {
                         refused: None,
                         metadata_left_behind: None,
                         durability_unconfirmed: None,
+                        locked_kept: None,
                     });
                     super::super::journal::finalize_op(state_for_task.scope(), OpKind::Rename, ExecutionStatus::Done);
                 }

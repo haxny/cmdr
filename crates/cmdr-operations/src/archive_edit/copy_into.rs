@@ -189,7 +189,15 @@ impl MaterializedSources {
         let mut left = LeftInSource::default();
         let nothing_skipped = HashSet::new();
         for (path, carried) in &self.carried {
-            match sweep_carried_source(&self.source_volume, path, carried, &nothing_skipped).await {
+            match sweep_carried_source(
+                &self.source_volume,
+                path,
+                carried,
+                &nothing_skipped,
+                &crate::locked_sources::LockedPlan::none(),
+            )
+            .await
+            {
                 Ok(kept) => left.note(
                     path,
                     matches!(carried, CarriedSource::Folder(_)),

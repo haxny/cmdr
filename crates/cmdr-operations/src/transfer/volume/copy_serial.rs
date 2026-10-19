@@ -434,6 +434,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             operation: Arc::clone(probe),
                             source_row,
                         }),
+                        locked: None,
                     };
 
                     let staging = super::strategy::staging_for(&replaces, landing);

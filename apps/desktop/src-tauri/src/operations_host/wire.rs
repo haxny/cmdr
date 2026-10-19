@@ -38,6 +38,7 @@ wire_event!(WriteConflict(engine::WriteConflictEvent) = "write-conflict");
 wire_event!(WriteConflictResolved(engine::WriteConflictResolvedEvent) = "write-conflict-resolved");
 wire_event!(WriteSourceItemDone(engine::WriteSourceItemDoneEvent) = "write-source-item-done");
 wire_event!(WriteSourcesGone(engine::WriteSourcesGoneEvent) = "write-sources-gone");
+wire_event!(WriteLockedSources(engine::WriteLockedSourcesEvent) = "write-locked-sources");
 wire_event!(ScanProgress(engine::ScanProgressEvent) = "scan-progress");
 wire_event!(ScanConflict(engine::ConflictInfo) = "scan-conflict");
 wire_event!(DryRunComplete(engine::DryRunResult) = "dry-run-complete");

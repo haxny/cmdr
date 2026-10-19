@@ -83,6 +83,73 @@ fn clear_on_macos(path: &Path) -> Unblock {
     }
 }
 
+/// What stands between an item and a rename or an unlink of it, as a move that
+/// needs one sees it. Read by [`removal_lock`], before anything is cleared.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RemovalLock {
+    /// Nothing does.
+    Free,
+    /// The user's own protection: `uchg`/`uappnd` (Finder's Locked), or an ACL
+    /// entry denying `delete` (or `delete_child`, which refuses taking anything
+    /// out of a folder). [`clear_blockers`] lifts it.
+    Locked,
+    /// `schg`/`sappnd`: only root can clear them, so no consent can move it.
+    SystemLocked,
+}
+
+/// Whether `path` itself (never a symlink's target) wears a [`RemovalLock`].
+/// System flags win over the user's lock: an item wearing both can't move
+/// either way. A deny entry that only reaches the item's future children
+/// (`only_inherit`) doesn't count, and neither does an ACL that can't be read:
+/// the move then meets the refusal where it would have anyway. Always
+/// [`RemovalLock::Free`] off macOS (module docs).
+pub fn removal_lock(path: &Path) -> RemovalLock {
+    #[cfg(target_os = "macos")]
+    {
+        let Ok(raw) = super::flags::read_raw(path) else {
+            return RemovalLock::Free;
+        };
+        lock_of(raw, || {
+            exacl::getfacl(path, exacl::AclOption::SYMLINK_ACL)
+                .map(|entries| entries.iter().any(denies_removal))
+                .unwrap_or(false)
+        })
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = path;
+        RemovalLock::Free
+    }
+}
+
+/// [`removal_lock`]'s verdict from a raw `st_flags` word, asking `acl_denies`
+/// only when the flags alone don't decide it (it's a syscall).
+#[cfg(target_os = "macos")]
+pub(super) fn lock_of(raw: u32, acl_denies: impl FnOnce() -> bool) -> RemovalLock {
+    use super::UserFlags;
+    if raw & (libc::SF_IMMUTABLE | libc::SF_APPEND) != 0 {
+        RemovalLock::SystemLocked
+    } else if !UserFlags::from_bsd(raw)
+        .intersection(UserFlags::RENAME_BLOCKERS)
+        .is_empty()
+        || acl_denies()
+    {
+        RemovalLock::Locked
+    } else {
+        RemovalLock::Free
+    }
+}
+
+/// Whether one ACL entry refuses removing the item it's on, or anything out of
+/// it. Any principal counts: telling whether `everyone` or a group reaches this
+/// process would cost more than the rare extra question.
+#[cfg(target_os = "macos")]
+fn denies_removal(entry: &exacl::AclEntry) -> bool {
+    !entry.allow
+        && !entry.flags.contains(exacl::Flag::ONLY_INHERIT)
+        && entry.perms.intersects(exacl::Perm::DELETE | exacl::Perm::DELETE_CHILD)
+}
+
 /// What [`open_parent_folder`] did to the folder holding an item.
 #[derive(Debug)]
 pub enum ParentOpening {

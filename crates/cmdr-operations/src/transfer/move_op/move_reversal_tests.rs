@@ -177,6 +177,7 @@ fn a_rollback_after_a_merge_recreates_the_source_folders_and_brings_the_children
         &mut move_tx,
         &mut files_skipped,
         &mut None,
+        &LockedPlan::none(),
     )
     .expect("the merge itself succeeds");
 

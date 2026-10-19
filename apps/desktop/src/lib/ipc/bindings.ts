@@ -922,6 +922,14 @@ export const commands = {
   continueWithoutGoneSources: (operationId: string) =>
     __TAURI_INVOKE<SourcesGoneAnswerOutcome>('continue_without_gone_sources', { operationId }),
   /**
+   *  Answers a move that asked, through `write-locked-sources`, whether to unlock
+   *  its Locked items: Move anyway or Skip them. Cancelling instead is the ordinary
+   *  `cancel_operation`. The outcome says whether this answer is the one that
+   *  reached it.
+   */
+  answerLockedSources: (operationId: string, answer: LockedSourcesAnswer) =>
+    __TAURI_INVOKE<LockedSourcesAnswerOutcome>('answer_locked_sources', { operationId, answer }),
+  /**
    *  Returns the thin operation registry snapshot (membership + lifecycle
    *  status) for the queue window. Live per-row progress comes from the separate
    *  `write-progress` stream; this snapshot stays thin.
@@ -5353,6 +5361,7 @@ export const events = {
   writeConflict: makeEvent<WriteConflictEvent>('write-conflict'),
   writeConflictResolved: makeEvent<WriteConflictResolvedEvent>('write-conflict-resolved'),
   writeError: makeEvent<WriteErrorEvent>('write-error'),
+  writeLockedSources: makeEvent<WriteLockedSourcesEvent>('write-locked-sources'),
   writeProgress: makeEvent<WriteProgressEvent>('write-progress'),
   writeSettled: makeEvent<WriteSettledEvent>('write-settled'),
   writeSourceItemDone: makeEvent<WriteSourceItemDoneEvent>('write-source-item-done'),
@@ -10853,12 +10862,49 @@ export type LocationInfo = {
   mountAccount: string | null
 }
 
+/**
+ *  The Locked items a move left where they were, for one calm line beside its
+ *  completion. `None` on [`WriteCompleteEvent::locked_kept`] means it left none.
+ *  Typed, never a sentence: the FE words it.
+ */
+export type LockedKept = {
+  // Locked items the person chose to skip.
+  skipped: number
+  // Items the system locked (`schg`), which no answer can move.
+  systemLocked: number
+}
+
 // One setting the organization manages.
 export type LockedSetting = {
   // The settings-registry id, like `analytics.enabled`.
   id: string
   lock: SettingLock
 }
+
+// The person's answer to a [`WriteLockedSourcesEvent`].
+export type LockedSourcesAnswer =
+  /**
+   *  Unlock each Locked item right before the move takes it, and lock it again
+   *  where it lands, so it ends up Locked at its new place.
+   */
+  | 'move_anyway'
+  // Leave the Locked items where they are, and move the rest.
+  | 'skip'
+
+/**
+ *  What the backend did with an answer to "these items are Locked, move them
+ *  anyway?". Produced by `locked_sources::answer_locked_sources`.
+ */
+export type LockedSourcesAnswerOutcome =
+  // The move was waiting on this question and carries on with the answer.
+  | 'answered'
+  /**
+   *  The operation is live but isn't asking: somebody answered first, or a
+   *  cancel took the question away.
+   */
+  | 'not_asking'
+  // Nothing is registered under this operation id.
+  | 'unknown_operation'
 
 /**
  *  A setting value the policy pins. Typed rather than `serde_json::Value`, which can't cross IPC
@@ -18796,6 +18842,12 @@ export type WriteCompleteEvent = {
    *  `MoveNotConfirmed` instead. See [`DurabilityUnconfirmed`].
    */
   durabilityUnconfirmed?: DurabilityUnconfirmed | null
+  /**
+   *  The Locked items a move left in place: skipped on the person's answer, or
+   *  locked by the system. `None`, the ordinary case, means it left none, and
+   *  the FE says nothing. See [`LockedKept`].
+   */
+  lockedKept?: LockedKept | null
 }
 
 // Conflict event payload (emitted when Stop mode encounters a conflict).
@@ -18906,6 +18958,29 @@ export type WriteErrorEvent = {
    *  refusal that happened before any work started.
    */
   progressAtStop: ProgressAtStop | null
+}
+
+/**
+ *  A move found Locked items among what it's about to move, and asks before any
+ *  byte moves whether to unlock them for it.
+ *
+ *  Locked is Finder's Locked (`uchg`/`uappnd`) or an ACL denying `delete`: both
+ *  refuse the rename or the delete a move needs. The move parks until
+ *  `answer_locked_sources` says [`LockedSourcesAnswer`], or a cancel ends it.
+ *  Items the SYSTEM locked (`schg`) are never asked about: no answer could move
+ *  them, so they're skipped and counted in [`LockedKept`]. `locked_sources.rs`,
+ *  and `DETAILS.md` § "Moving Locked items".
+ */
+export type WriteLockedSourcesEvent = {
+  operationId: string
+  operationType: WriteOperationType
+  // How many Locked items the move found, at any depth.
+  lockedCount: number
+  /**
+   *  The first few Locked items' paths, in the order the move found them, so a
+   *  prompt can name them. Capped: `locked_count` is the honest total.
+   */
+  lockedSample: string[]
 }
 
 // Configuration for write operations.

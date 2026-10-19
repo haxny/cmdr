@@ -182,7 +182,7 @@ fn folder_sets(dir: &Path, meta: &fs::Metadata) -> (CarriedMetadata, LandedMetad
 /// `FileInfo::dest_path`: the path relative to its top-level source's parent,
 /// joined onto `destination`. `None` when the dir isn't under any source
 /// (can't happen for paths produced by the scan walker over these sources).
-pub(super) fn dir_dest_path(dir: &Path, sources: &[PathBuf], destination: &Path) -> Option<PathBuf> {
+pub(in crate::transfer) fn dir_dest_path(dir: &Path, sources: &[PathBuf], destination: &Path) -> Option<PathBuf> {
     sources.iter().find_map(|source| {
         if !dir.starts_with(source) {
             return None;

@@ -13,8 +13,8 @@ use super::wire;
 use cmdr_operations::{
     ArmedConflict, ConflictInfo, DryRunResult, OperationEventSink, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
     ScanPreviewErrorEvent, ScanPreviewEventSink, ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent,
-    WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteLockedSourcesEvent, WriteProgressEvent,
+    WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 
 /// Tauri-backed event sink: calls `app.emit()` for each event.
@@ -65,6 +65,9 @@ impl OperationEventSink for TauriEventSink {
     }
     fn emit_sources_gone(&self, event: WriteSourcesGoneEvent) {
         let _ = wire::WriteSourcesGone(event).emit(&self.app);
+    }
+    fn emit_locked_sources(&self, event: WriteLockedSourcesEvent) {
+        let _ = wire::WriteLockedSources(event).emit(&self.app);
     }
     fn emit_scan_progress(&self, event: ScanProgressEvent) {
         let _ = wire::ScanProgress(event).emit(&self.app);

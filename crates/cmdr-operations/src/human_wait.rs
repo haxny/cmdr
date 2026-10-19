@@ -45,6 +45,10 @@ pub enum HumanWaitSource {
     /// charging those minutes to the throughput would read as a transfer that
     /// crawls for the first seconds after the share returns.
     VolumeOutage,
+    /// A move is asking whether to unlock its Locked items (`super::locked_sources`).
+    /// It asks after the scan has reported progress and before any byte moves,
+    /// so the minutes the question sits open belong to nobody's throughput.
+    LockedQuestion,
 }
 
 impl HumanWaitSource {
@@ -53,6 +57,7 @@ impl HumanWaitSource {
             Self::Pause => 0,
             Self::Conflict => 1,
             Self::VolumeOutage => 2,
+            Self::LockedQuestion => 3,
         }
     }
 }
@@ -60,7 +65,7 @@ impl HumanWaitSource {
 #[derive(Debug)]
 struct ClockState {
     /// Which sources are waiting right now, indexed by [`HumanWaitSource::index`].
-    waiting: [bool; 3],
+    waiting: [bool; 4],
     /// When the current union interval opened, or `None` while nobody waits.
     since: Option<Instant>,
     /// Every closed interval, added up.
@@ -77,7 +82,7 @@ impl HumanWaitClock {
     pub fn new() -> Self {
         Self {
             inner: Mutex::new(ClockState {
-                waiting: [false; 3],
+                waiting: [false; 4],
                 since: None,
                 total: Duration::ZERO,
             }),

@@ -169,7 +169,10 @@ macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
   rename to another parent (`EACCES`).
 - **`clear_blockers` is the probe's second half.** It clears `uchg`/`uappnd` (flags first, for the same ACL reason) and
   strips the ACL, never through a symlink (`lstat`, `lchflags`, `AclOption::SYMLINK_ACL`), and hands back what it
-  cleared so a landing can put it back. `SF_*` flags answer `Refused`: only root can clear them.
+  cleared so a landing can put it back. `SF_*` flags answer `Refused`: only root can clear them. `removal_lock` is the
+  look before either: whether an item wears the user's lock (`uchg`/`uappnd`, or a deny entry for `delete` /
+  `delete_child` that isn't `only_inherit`), the system's (`SF_*`), or neither. A move asks it of what it will take
+  away, so it can ask the person before any byte moves (`crates/cmdr-operations/DETAILS.md` § "Moving Locked items").
 - **The `remove_*_clearing_blockers` helpers clear only after a refusal.** One removal, then on `PermissionDenied` one
   clear and one retry, then `open_parent_folder` and one more, so an ordinary item costs exactly its removal. Opening
   the folder covers a child of a copied folder that wears Locked, `deny delete_child`, or `0500`: it clears and adds
@@ -187,8 +190,9 @@ macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
   contents, or a file's `after_landing` flags) and reports per class, defaulting to `NotApplicable`
   (`MetadataReport::none_applicable`; `holds_none` tells a caller to stop asking). `Volume::clear_blockers(path)` is
   `clear_blockers` through the trait (local disk's flags and ACL, SMB's Read-only), default `NothingToClear`; only a
-  reversal calls it, on an item it verified as its own, never a volume's own `delete` (that's also F8's). The contract,
-  per backend: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
+  reversal calls it, on an item it verified as its own, never a volume's own `delete` (that's also F8's). A move the
+  person told to unlock its Locked items calls `clear_blockers` itself, on the local path, never through either. The
+  contract, per backend: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
 - **`MetadataCaps` is each backend's claim** (`Volume::metadata_caps`, a predicate like the rest): what a file written
   there keeps, what its streams report, what `apply_metadata` keeps, and `staged_flags`: the user flags a file's write
   keeps on the staged temp itself (SMB's Hidden), because they refuse no rename.

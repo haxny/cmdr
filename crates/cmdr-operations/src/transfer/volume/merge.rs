@@ -631,6 +631,18 @@ async fn merge_level<'a>(
         // walk recurses through it (a backend whose listing follows links).
         let child_row = tree_level.child(&entry.name, merges_as_a_directory(entry), entry.size.unwrap_or(0));
 
+        // A Locked child the person said to leave (or the system locked) stays
+        // out whole, recorded like a deep Skip so a move's sweep keeps it.
+        if merge
+            .and_then(|ctx| ctx.locked)
+            .is_some_and(|locked| locked.skips(&child_source))
+        {
+            let skipped_bytes = if entry.is_directory { 0 } else { entry.size.unwrap_or(0) };
+            created.record_skip(child_source.clone(), skipped_bytes);
+            progress.skip_leaf(skipped_bytes, child_row);
+            continue;
+        }
+
         if entry.is_directory {
             // Dir-vs-dir (and dir-into-nothing) always recurses to merge — no
             // resolver call for the folder itself. A dir landing on a same-named

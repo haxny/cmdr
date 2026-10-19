@@ -827,3 +827,22 @@ fn the_extract_sink_forwards_the_sources_gone_prompt() {
 
     assert_eq!(*inner.sources_gone.lock_ignore_poison(), vec![event]);
 }
+
+/// Its twin for the Locked-items question, for the same reason.
+#[test]
+fn the_extract_sink_forwards_the_locked_items_prompt() {
+    use crate::types::WriteLockedSourcesEvent;
+
+    let inner = Arc::new(CollectorEventSink::new());
+    let sink = super::move_out::SuppressTerminalsSink::over(Arc::clone(&inner) as Arc<dyn OperationEventSink>);
+    let event = WriteLockedSourcesEvent {
+        operation_id: "move-out-locked".to_string(),
+        operation_type: WriteOperationType::Move,
+        locked_count: 1,
+        locked_sample: vec!["/a.zip/locked.txt".to_string()],
+    };
+
+    sink.emit_locked_sources(event.clone());
+
+    assert_eq!(*inner.locked_sources.lock_ignore_poison(), vec![event]);
+}

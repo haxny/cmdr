@@ -91,6 +91,8 @@ mod overwrite;
 // The engine half of "paste clipboard content as a file"; its only caller is macOS.
 #[cfg(target_os = "macos")]
 mod create_numbered;
+mod locked_sources;
+mod locked_sources_slot;
 mod queued_sources;
 mod rename;
 mod reversal;
@@ -184,13 +186,13 @@ pub use routing::resolve_dest_path;
 // The wire vocabulary: payloads, configs, and typed outcomes.
 pub use types::{
     ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, LifecycleStatus,
-    MoveLeftoversKeptEvent, OperationStatus, ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent,
-    ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanPreviewPurpose, ScanPreviewRefusal,
-    ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent, SourceItemOutcome, SourcesGoneAnswerOutcome,
-    TransferActivity, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationError, WriteOperationPhase,
-    WriteOperationStartResult, WriteOperationType, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
-    WriteSourcesGoneEvent,
+    LockedSourcesAnswer, LockedSourcesAnswerOutcome, MoveLeftoversKeptEvent, OperationStatus, ReadOnlySide,
+    RetryOutcome, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent,
+    ScanPreviewPurpose, ScanPreviewRefusal, ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent,
+    SourceItemOutcome, SourcesGoneAnswerOutcome, TransferActivity, VolumeCopyConfig, WriteCancelledEvent,
+    WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteLockedSourcesEvent,
+    WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationStartResult, WriteOperationType,
+    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 
 // What the app-side test cells reach beyond the list above.

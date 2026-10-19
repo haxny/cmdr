@@ -43,7 +43,7 @@ is refused and logged. With no data dir the engine runs the ledger unpersisted a
 `TauriEventSink` (`OperationEventSink`) and `TauriScanPreviewSink` (`ScanPreviewEventSink`) turn each event into its
 Tauri event. Every IPC command that starts an operation or a preview builds one and injects it. Engine and agent
 wrappers sit in front of it (archive move-out's `SuppressTerminalsSink` withholds the inner extract's terminals; the
-agent's `ProposalReportingSink` adds a write and forwards everything, the defaulted `emit_sources_gone` included), so a
+agent's `ProposalReportingSink` adds a write and forwards everything, the defaulted `emit_sources_gone` and `emit_locked_sources` included), so a
 side effect added here reaches the person only through what each wrapper forwards.
 
 The four terminal emits carry app side effects in a pinned order (`terminal_effects.rs`, pinned by

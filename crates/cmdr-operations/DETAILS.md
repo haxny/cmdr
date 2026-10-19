@@ -222,13 +222,15 @@ The full top-level inventory is here:
   sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on its sources when
   admitted, parking on `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering, so the three
   stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty batch's
-  terminal shape is `WriteCompleteEvent::all_skipped` in `types`. Fixtures: `testing/` (an engine a test owns, and what
-  test cells outside the engine reach beyond its public list) and `test_support.rs` (the placeholder conflict, the
-  park-window wait, and the queued-operation fixture). Every backend's cells through this pipeline live app-side, in
-  `operations_host/backend_suites/`, because they need the app around the engine
-  (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is the Criterion
-  bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state on an engine
-  the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` § `criterion`).
+  terminal shape is `WriteCompleteEvent::all_skipped` in `types`. `locked_sources.rs` is a move's question about Locked
+  items and the plan its answer makes, parking on `locked_sources_slot.rs` the same way (§ "Moving Locked items").
+  Fixtures: `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public list) and
+  `test_support.rs` (the placeholder conflict, the park-window wait, and the queued-operation fixture). Every backend's
+  cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app around the
+  engine (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is the
+  Criterion bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state on
+  an engine the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` §
+  `criterion`).
 
 What the mechanisms DO is in the sections below: the registry, lanes, and `run_instant` in § "Operation manager"; the
 zip-edit driver in § "Archive edits"; cancellation, pause, Stop-mode conflicts, safe overwrite, scan-preview caching,
@@ -1189,12 +1191,12 @@ the optional seams), what each seam's contract is, and where Cmdr answers it: `s
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 82 root promises, 56 `Operations` methods, one public module (`host`), and
+`index-crate-isolation` holds this crate to 85 root promises, 58 `Operations` methods, one public module (`host`), and
 25 public items inside it (`scripts/check/checks/index-crate-isolation-ceilings.go`). The numbers are exactly what the
 crate exposes, measured with no headroom, so an addition has to be argued for. Everything counted exists for a named
 caller.
 
-Root promises (82), by who needs them:
+Root promises (85), by who needs them:
 
 - **The handle** (3): `Operations`, `OperationsBuilder` (from `Operations::builder`), and `AlreadyClaimed` (a second
   `claim_ledger`'s refusal).
@@ -1217,13 +1219,15 @@ Root promises (82), by who needs them:
 - **Engine-free helpers the IPC edge asks** (6): `trash_routing_for_selection` and its `TrashRoutingAnswer` (F8's
   trash-or-delete question), `trash_dir_for_path`, `held_in_another_spelling` (`destination_exists`'s look-alike half),
   `same_local_file` (rename's case-only check), and `resolve_dest_path` (anchoring a volume-relative destination).
-- **The wire vocabulary** (37): the payloads, configs, and typed outcomes from `types` that cross IPC unchanged
+- **The wire vocabulary** (40): the payloads, configs, and typed outcomes from `types` that cross IPC unchanged
   (`WriteOperationConfig`, `VolumeCopyConfig`, `WriteOperationError`, the `Write*Event` and `ScanPreview*Event`
-  payloads, `ConflictResolution`, `LifecycleStatus`, `OperationStatus`, …). `ipc.rs` registers them; `bindings.ts` is
-  generated from them, so none can go private without the frontend losing a type.
+  payloads, `ConflictResolution`, `LifecycleStatus`, `OperationStatus`, …). The Locked-items question added three (its
+  event, `LockedSourcesAnswer`, and `LockedSourcesAnswerOutcome`), the same shape as the sources-gone question's.
+  `ipc.rs` registers them; `bindings.ts` is generated from them, so none can go private without the frontend losing a
+  type.
 - **`host`** (1): the public module below.
 
-`Operations` methods (56), grouped by caller below. The two `testing`-gated ones (`render_live_transfer_dump` and
+`Operations` methods (58), grouped by caller below. The two `testing`-gated ones (`render_live_transfer_dump` and
 `route_archive_copy_into`) count apart. Each IPC command, MCP tool, and quit step is a one-line pass-through, so the
 verbs read one-to-one:
 
@@ -1243,7 +1247,9 @@ verbs read one-to-one:
   `operations_need_volume`, `cancel_operation`, `cancel_operations`, `cancel_write_operation`, `pause_operation`,
   `resume_operation`, `pause_all`, `resume_all`, `move_queued_operation`, `place_queued_operation`,
   `retry_failed_operation`, `dismiss_failed_operation`, `dismiss_all_failed_operations`, `resolve_write_conflict`,
-  `pending_write_conflict`, `continue_without_gone_sources`, `pending_sources_gone`, and `transfer_tree_view`.
+  `pending_write_conflict`, `continue_without_gone_sources`, `pending_sources_gone`, `answer_locked_sources`,
+  `pending_locked_sources` (the two parked questions, each an answer plus a read for a surface that arrives late), and
+  `transfer_tree_view`.
 - **Busy volumes and the sink adapter**: `busy_volume_ids` (Eject's guard), `register_external_volume_op` /
   `release_external_volume_op` (drag-out's busy volume, macOS), and `retain_failure` (the app's sink adapter keeps a
   failed op on the queue).
@@ -1273,7 +1279,7 @@ the host's test surface, never a promise to a shipped build.
 - **`write-complete`**: Operation finished successfully. A cross-volume copy or move also carries `metadata_left_behind`
   when the destination couldn't keep something a source item had (`metadata_losses.rs`), and a local copy carries
   `durability_unconfirmed` when its closing flush couldn't confirm the files are on the disk (`src/transfer/DETAILS.md`
-  § "Durability").
+  § "Durability"). A move that left Locked items in place carries `locked_kept` (§ "Moving Locked items").
 - **`write-cancelled`**: Operation cancelled. Carries `rollback: CancelRollback` — the three-state outcome
   (`notRolledBack` / `rolledBack` / `partiallyRolledBack`), how many items the reversal undid, and what it left behind
   grouped by `SkipReason`.
@@ -1286,6 +1292,8 @@ the host's test surface, never a promise to a shipped build.
   `string[]`. See [Busy-volumes set](#busy-volumes-set).
 - **`operations-changed`**: The operation registry's membership or lifecycle status changed. Thin snapshot
   (`{ operations: OperationSnapshot[] }`), NOT 200 ms progress. See [Operation manager](#operation-manager).
+- **`write-locked-sources`**: A move found Locked items in what it moves and waits for an answer before any byte moves.
+  See [Moving Locked items](#moving-locked-items).
 - **`write-source-item-done`**: A top-level source item is finished with, and how (for gradual deselection). Every
   transfer engine reports it, the volume ones included. See [Per-source outcomes](#per-source-outcomes).
 - **`dry-run-complete`**: `config.dry_run == true` (returns `DryRunResult`)
@@ -2151,6 +2159,55 @@ job still had plans for those files.
 
 Pinned by `queued_sources_tests.rs`. The frontend half: `apps/desktop/src/lib/file-operations/DETAILS.md` § "Sources
 that left while an operation queued".
+
+## Moving Locked items
+
+`locked_sources.rs` (#408). A move has to rename or delete the user's ORIGINAL, and Finder's Locked (`uchg`/`uappnd`) or
+an ACL entry denying `delete` / `delete_child` refuses both (`EPERM` / `EACCES`). A copy only reads the original, so it
+never asks. Before this, a same-drive move of a Locked file failed outright, and a cross-drive one copied everything and
+then stopped in Phase 4 with every original kept: the files in both places and an error.
+
+- **Asked once, before any byte moves.** Each engine classifies what it will take away
+  (`cmdr_fs::metadata:: removal_lock`): same-drive, the sources plus, for a folder that MERGES, each child the merge
+  renames on its own (`LockedScan::of_renames`; a folder that lands by one rename carries its contents untouched, so
+  nothing inside it is asked about); cross-drive, every scanned item (`of_paths` over the scan result, a cached
+  preview's included); cross-volume, a local walk of the source trees on the engine's blocking pool
+  (`plan_locked_on_volume`), since the copy's walk lists through the `Volume` and carries no flags. Only a source with a
+  `Volume::local_path` can wear Locked; any other plans nothing. Cost: an `lstat` plus one ACL read per item, beside a
+  copy that already reads every file's ACL.
+- **Some Locked: it asks.** `write-locked-sources` (the honest `locked_count`, the first few paths), the move parked on
+  `state.locked_sources` (`locked_sources_slot.rs`) with the `LockedQuestion` human-wait clock open and announced like a
+  conflict. `answer_locked_sources` resumes it with `MoveAnyway` or `Skip`; cancel is the ordinary cancel path, which
+  abandons the slot, and the move emits `write-cancelled` with nothing processed. Local engines block their thread on
+  the answer, the volume engine `.await`s it.
+- **Move anyway** becomes a `LockedPlan` that unlocks each item right before the act that needs it, and only then:
+  same-drive, before its `rename`, locked again where it landed (`Unlocked::landed_at`); cross-drive and cross-volume,
+  right before the sweep deletes the original (a Locked folder before its children leave it, locked again if it stays).
+  The copy already landed Locked, so nothing goes back on at the destination. An `Unlocked` that is dropped (the act
+  failed, a `?` on the way) puts the blockers back where the item still is.
+- **Skip** keeps each Locked item where it is with everything under it: same-drive like a conflict Skip, cross-drive by
+  pre-seeding the copy's `skipped_subtrees` (and leaving those folders out of staging and the sweep), cross-volume by
+  the driver's pre-skip set for a top-level item and `MergeCtx::locked` for one deeper down. `files_skipped` counts the
+  skipped files, and `WriteCompleteEvent::locked_kept` counts the Locked items left in place.
+- **System-locked** (`schg`/`sappnd`): only root can clear them, so no answer could move them. Never asked about, always
+  skipped, counted in `locked_kept.system_locked`.
+- ❌ **Clearing never happens inside `LocalPosixVolume::delete` / `rename`** or anywhere without a plan built from an
+  answer: F8 and F2 run through those and must never silently unlock a user's file.
+- **Accepted gap**: a same-drive move clears, renames, then re-locks. A crash between the clear and the re-lock leaves
+  the item unlocked at whichever path it's at, the same gap a copy's landing accepts (`crates/cmdr-fs/DETAILS.md` §
+  "`metadata`: what a copy keeps, and when it goes on").
+- **Not covered**: a cancel-with-rollback of a same-drive move renames a re-Locked item back and is refused, so it stays
+  at the destination and the reversal reports it (nothing lost). A move INTO a zip (`archive_edit/copy_into.rs`) sweeps
+  with an empty plan, so a Locked original stays and the move reports it. A `0500` folder still refuses its children's
+  removal on a cross-drive move after its lock is lifted: a mode, which no Locked answer covers.
+- **Observable and answerable by an agent**: `cmdr://state` renders the parked question as `pendingLockedSources`, and
+  the `queue` tool's `move_locked` / `skip_locked` answer it.
+- `OperationEventSink::emit_locked_sources` defaults to a no-op; ❗ a sink that WRAPS another must forward it, or nobody
+  is asked and the move waits until cancelled.
+
+Pinned by `locked_sources_tests.rs`, the move cells in `src/transfer/metadata_matrix_tests.rs`, and
+`src/transfer/volume/move_locked_tests.rs`. The frontend half: `apps/desktop/src/lib/file-operations/DETAILS.md` §
+"Locked items in a move".
 
 ## Per-source outcomes
 

@@ -22,8 +22,8 @@ use crate::agent::types::OpStatus;
 use crate::ignore_poison::IgnorePoison;
 use cmdr_operations::{
     ArmedConflict, ConflictInfo, DryRunResult, OperationEventSink, ScanProgressEvent, SourceItemOutcome,
-    WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent,
-    WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteLockedSourcesEvent,
+    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 
 /// Wraps the sink an approved group executes through, recording each source outcome and the
@@ -159,6 +159,9 @@ impl OperationEventSink for ProposalReportingSink {
     }
     fn emit_sources_gone(&self, event: WriteSourcesGoneEvent) {
         self.inner.emit_sources_gone(event);
+    }
+    fn emit_locked_sources(&self, event: WriteLockedSourcesEvent) {
+        self.inner.emit_locked_sources(event);
     }
     fn emit_scan_progress(&self, event: ScanProgressEvent) {
         self.inner.emit_scan_progress(event);

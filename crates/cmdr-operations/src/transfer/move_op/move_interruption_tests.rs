@@ -250,6 +250,7 @@ fn a_paused_folder_merge_stops_renaming_its_children() {
             &mut MoveTransaction::new(),
             &mut skipped,
             &mut None,
+            &LockedPlan::none(),
         )
     });
 

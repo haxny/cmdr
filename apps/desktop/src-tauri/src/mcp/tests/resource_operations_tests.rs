@@ -5,7 +5,7 @@ use crate::mcp::resources::operations::{OperationRow, build_operations_yaml};
 use cmdr_operations::testing::{SourcesGoneNext, TransferWaitReason};
 use cmdr_operations::{
     ConflictId, LifecycleStatus, OperationSnapshot, OperationStatus, TransferActivity, WriteConflictEvent,
-    WriteOperationError, WriteOperationPhase, WriteOperationType, WriteSourcesGoneEvent,
+    WriteLockedSourcesEvent, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteSourcesGoneEvent,
 };
 
 fn clash(conflict_id: u64, destination_size: Option<u64>) -> WriteConflictEvent {
@@ -100,6 +100,7 @@ fn running_op_shows_status_progress_speed_and_eta() {
         pending_conflict: None,
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     let yaml = build_operations_yaml(&rows, 14_000);
     assert!(yaml.contains("- operationId: op-1"), "yaml: {yaml}");
@@ -131,6 +132,7 @@ fn operation_summaries_and_current_file_render_verbatim() {
             pending_conflict: None,
             tree: None,
             pending_sources_gone: None,
+            pending_locked_sources: None,
         }],
         10_500,
     );
@@ -160,6 +162,7 @@ fn paused_op_keeps_its_progress_but_reports_paused() {
         pending_conflict: None,
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
     assert!(yaml.contains("- operationId: op-2"), "yaml: {yaml}");
@@ -176,6 +179,7 @@ fn queued_op_has_status_but_no_progress_fields() {
         pending_conflict: None,
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
     assert!(yaml.contains("- operationId: op-3"), "yaml: {yaml}");
@@ -197,6 +201,7 @@ fn a_running_paused_queued_mix_renders_every_row() {
             pending_conflict: None,
             tree: None,
             pending_sources_gone: None,
+            pending_locked_sources: None,
         },
         OperationRow {
             snapshot: snapshot("op-pause", LifecycleStatus::Paused),
@@ -204,6 +209,7 @@ fn a_running_paused_queued_mix_renders_every_row() {
             pending_conflict: None,
             tree: None,
             pending_sources_gone: None,
+            pending_locked_sources: None,
         },
         OperationRow {
             snapshot: snapshot("op-queue", LifecycleStatus::Queued),
@@ -211,6 +217,7 @@ fn a_running_paused_queued_mix_renders_every_row() {
             pending_conflict: None,
             tree: None,
             pending_sources_gone: None,
+            pending_locked_sources: None,
         },
     ];
     let yaml = build_operations_yaml(&rows, 12_000);
@@ -235,6 +242,7 @@ fn an_operation_parked_on_a_clash_says_which_clash_and_how_to_answer_it() {
         pending_conflict: Some(clash(3, Some(4_096))),
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
     assert!(yaml.contains("pendingConflict:"), "yaml: {yaml}");
@@ -262,6 +270,7 @@ fn a_look_alike_clash_says_the_names_only_look_the_same() {
         pending_conflict: Some(conflict),
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
     assert!(yaml.contains("destinationIsLookAlike: true"), "yaml: {yaml}");
@@ -277,6 +286,7 @@ fn a_size_the_backend_could_not_read_says_unknown_rather_than_zero() {
         pending_conflict: Some(clash(1, None)),
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
     assert!(yaml.contains("destinationSize: unknown"), "yaml: {yaml}");
@@ -301,6 +311,7 @@ fn a_queued_operation_asking_about_sources_that_left_says_how_many_and_how_to_an
             gone_sample: vec!["/src/cd1/01.mp3".to_string()],
             next: SourcesGoneNext::AwaitingAnswer,
         }),
+        pending_locked_sources: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
     assert!(yaml.contains("pendingSourcesGone:"), "yaml: {yaml}");
@@ -309,6 +320,33 @@ fn a_queued_operation_asking_about_sources_that_left_says_how_many_and_how_to_an
     assert!(yaml.contains("\"/src/cd1/01.mp3\""), "yaml: {yaml}");
     assert!(yaml.contains("answerWith: queue"), "yaml: {yaml}");
     assert!(yaml.contains("continue_without_gone"), "yaml: {yaml}");
+}
+
+#[test]
+fn a_move_asking_about_locked_items_says_how_many_and_how_to_answer() {
+    // Parked before any byte moves, so the row reads `running` with nothing
+    // moving: the block is how an agent learns it waits on a question.
+    let rows = vec![OperationRow {
+        snapshot: snapshot("op-1", LifecycleStatus::Running),
+        progress: None,
+        pending_conflict: None,
+        tree: None,
+        pending_sources_gone: None,
+        pending_locked_sources: Some(WriteLockedSourcesEvent {
+            operation_id: "op-1".to_string(),
+            operation_type: WriteOperationType::Move,
+            locked_count: 3,
+            locked_sample: vec!["/src/contract.pdf".to_string()],
+        }),
+    }];
+    let yaml = build_operations_yaml(&rows, 12_000);
+    assert!(yaml.contains("pendingLockedSources:"), "yaml: {yaml}");
+    assert!(yaml.contains("lockedCount: 3"), "yaml: {yaml}");
+    assert!(yaml.contains("\"/src/contract.pdf\""), "yaml: {yaml}");
+    assert!(
+        yaml.contains("move_locked") && yaml.contains("skip_locked"),
+        "yaml: {yaml}"
+    );
 }
 
 #[test]
@@ -326,6 +364,7 @@ fn a_retained_failure_says_why_it_stopped() {
         pending_conflict: None,
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
     assert!(yaml.contains("status: failed"), "yaml: {yaml}");
@@ -340,6 +379,7 @@ fn a_live_operation_carries_no_error_line() {
         pending_conflict: None,
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     assert!(!build_operations_yaml(&rows, 12_000).contains("error:"));
 }
@@ -352,6 +392,7 @@ fn an_operation_that_is_not_asking_anything_carries_no_conflict_block() {
         pending_conflict: None,
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     assert!(!build_operations_yaml(&rows, 12_000).contains("pendingConflict"));
 }
@@ -372,6 +413,7 @@ fn stalled_row(waiting_on: TransferWaitReason, still_for_seconds: u32, in_flight
         pending_conflict: None,
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }]
 }
 
@@ -449,6 +491,7 @@ fn a_backend_that_cannot_classify_its_wait_says_nothing_rather_than_moving() {
         pending_conflict: None,
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     assert!(!build_operations_yaml(&rows, 12_000).contains("waitingOn"));
 }
@@ -465,6 +508,7 @@ fn scanning_op_has_no_bogus_numbers() {
         pending_conflict: None,
         tree: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
     }];
     let yaml = build_operations_yaml(&rows, 10_500);
     assert!(yaml.contains("progress: scanning"), "yaml: {yaml}");

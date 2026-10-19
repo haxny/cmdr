@@ -185,6 +185,7 @@ pub(super) fn emit_archive_terminal(
             refused: None,
             metadata_left_behind: None,
             durability_unconfirmed: None,
+            locked_kept: None,
         }),
         Err(EditError::Cancelled) => events.emit_cancelled(WriteCancelledEvent {
             operation_id: op_id.to_string(),

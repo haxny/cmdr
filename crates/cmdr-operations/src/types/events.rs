@@ -158,6 +158,11 @@ pub struct WriteCompleteEvent {
     /// `MoveNotConfirmed` instead. See [`DurabilityUnconfirmed`].
     #[serde(default)]
     pub durability_unconfirmed: Option<DurabilityUnconfirmed>,
+    /// The Locked items a move left in place: skipped on the person's answer, or
+    /// locked by the system. `None`, the ordinary case, means it left none, and
+    /// the FE says nothing. See [`LockedKept`].
+    #[serde(default)]
+    pub locked_kept: Option<LockedKept>,
 }
 
 impl WriteCompleteEvent {
@@ -176,6 +181,7 @@ impl WriteCompleteEvent {
             refused: None,
             metadata_left_behind: None,
             durability_unconfirmed: None,
+            locked_kept: None,
         }
     }
 }
@@ -374,6 +380,54 @@ pub struct WriteSourcesGoneEvent {
     /// name them. Capped: `gone_count` is the honest total.
     pub gone_sample: Vec<String>,
     pub next: SourcesGoneNext,
+}
+
+/// A move found Locked items among what it's about to move, and asks before any
+/// byte moves whether to unlock them for it.
+///
+/// Locked is Finder's Locked (`uchg`/`uappnd`) or an ACL denying `delete`: both
+/// refuse the rename or the delete a move needs. The move parks until
+/// `answer_locked_sources` says [`LockedSourcesAnswer`], or a cancel ends it.
+/// Items the SYSTEM locked (`schg`) are never asked about: no answer could move
+/// them, so they're skipped and counted in [`LockedKept`]. `locked_sources.rs`,
+/// and `DETAILS.md` § "Moving Locked items".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+#[allow(
+    missing_docs,
+    reason = "a wire type: every `///` here reaches `bindings.ts` as JSDoc, so its fields and variants stay as they ship"
+)]
+pub struct WriteLockedSourcesEvent {
+    pub operation_id: String,
+    pub operation_type: WriteOperationType,
+    /// How many Locked items the move found, at any depth.
+    pub locked_count: usize,
+    /// The first few Locked items' paths, in the order the move found them, so a
+    /// prompt can name them. Capped: `locked_count` is the honest total.
+    pub locked_sample: Vec<String>,
+}
+
+/// The person's answer to a [`WriteLockedSourcesEvent`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum LockedSourcesAnswer {
+    /// Unlock each Locked item right before the move takes it, and lock it again
+    /// where it lands, so it ends up Locked at its new place.
+    MoveAnyway,
+    /// Leave the Locked items where they are, and move the rest.
+    Skip,
+}
+
+/// The Locked items a move left where they were, for one calm line beside its
+/// completion. `None` on [`WriteCompleteEvent::locked_kept`] means it left none.
+/// Typed, never a sentence: the FE words it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct LockedKept {
+    /// Locked items the person chose to skip.
+    pub skipped: u32,
+    /// Items the system locked (`schg`), which no answer can move.
+    pub system_locked: u32,
 }
 
 /// What a queued operation does about sources that left while it waited.

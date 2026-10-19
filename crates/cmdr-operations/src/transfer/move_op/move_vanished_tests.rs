@@ -169,9 +169,17 @@ fn a_sweep_stops_when_the_source_drive_left_rather_than_reading_it_as_done() {
     let state = state_between(&engine, &src, &dir.join("dst"));
     let _hook = test_hook::pull(&src);
 
-    let stopped = delete_sources_after_move(&*events, "op-sweep-vanished", &state, &sources, 1, &sweep)
-        .err()
-        .expect("the sweep stops");
+    let stopped = delete_sources_after_move(
+        &*events,
+        "op-sweep-vanished",
+        &state,
+        &sources,
+        1,
+        &sweep,
+        &LockedPlan::none(),
+    )
+    .err()
+    .expect("the sweep stops");
 
     assert!(
         matches!(stopped.error, WriteOperationError::DeviceDisconnected { .. }),
@@ -198,5 +206,14 @@ fn a_missing_source_on_a_mounted_drive_is_still_counted_done() {
     let state = state_between(&engine, &src, &dir.join("dst"));
     let _hook = test_hook::answer_each(vec![(src.clone(), Some(true))]);
 
-    delete_sources_after_move(&*events, "op-sweep-mounted", &state, &sources, 1, &sweep).expect("the sweep finishes");
+    delete_sources_after_move(
+        &*events,
+        "op-sweep-mounted",
+        &state,
+        &sources,
+        1,
+        &sweep,
+        &LockedPlan::none(),
+    )
+    .expect("the sweep finishes");
 }

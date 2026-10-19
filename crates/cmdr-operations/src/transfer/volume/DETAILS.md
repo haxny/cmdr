@@ -1436,8 +1436,8 @@ backend docs, and the code comments that cite an invariant by number point here.
 their own path (`chunked_copy.rs`, copyfile/clonefile, `cmdr_fs::metadata`); their folders are below. The invariants,
 what each pair keeps, and the decisions behind both close this section. Measured evidence:
 `docs/notes/transfer-metadata-experiments-2026-10-11.md`. Open: xattrs over direct SMB
-([#405](https://github.com/vdavid/cmdr/issues/405)) and moving a Locked item
-([#408](https://github.com/vdavid/cmdr/issues/408)).
+([#405](https://github.com/vdavid/cmdr/issues/405)). Moving a Locked item asks first and unlocks only with consent:
+`crates/cmdr-operations/DETAILS.md` § "Moving Locked items".
 
 - **Source half**: `VolumeReadStream::modified_at` (REQUIRED, so a new backend can't skip mtime by omission) and
   `VolumeReadStream::metadata(wanted)` (default empty: creation date, mode, user flags, xattrs, as a
@@ -1691,9 +1691,10 @@ it yet.
 - **Local, a Finder-mounted SMB share (chunked through `smbfs`)**: birth, mtime, Hidden, Locked, tags, comments,
   quarantine, and `user.*` xattrs (as `._` sidecars on a share without `vfs_fruit`); a resource fork is lost; mode not
   applicable (`noowners`).
-- **Same-filesystem move**: one `rename`, which keeps everything; a Locked item fails (#408). **Cross-filesystem local
-  move**: the chunked row, made permanent; a Locked or `deny delete` original stays behind beside its landed copy
-  (#408).
+- **Same-filesystem move**: one `rename`, which keeps everything; a Locked item moves on the person's Move anyway,
+  unlocked for the rename and locked again where it lands. **Cross-filesystem local move**: the chunked row, made
+  permanent; a Locked or `deny delete` original is unlocked right before Phase 4 deletes it, on the same consent
+  (`crates/cmdr-operations/DETAILS.md` § "Moving Locked items").
 - **Local ↔ direct SMB, and SMB → SMB**: mtime, birth, Hidden, and Locked, on files and folders; xattrs lost (#405);
   mode and ACL not applicable.
 - **Local ↔ SFTP**: mtime and the file mode (folded); birth not applicable (SFTP v3); a folder's mode not carried (§

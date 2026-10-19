@@ -109,6 +109,7 @@ impl WriteOperationRegistry {
                 // Drop the conflict resolution sender to unblock any waiting receiver
                 state.conflict_slot.abandon();
                 state.sources_gone.abandon();
+                state.locked_sources.abandon();
                 // Wake a paused, parked op so teardown's cancel is observed.
                 state.pause_gate.wake();
             }

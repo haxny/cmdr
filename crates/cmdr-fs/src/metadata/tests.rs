@@ -84,6 +84,52 @@ mod macos {
         );
     }
 
+    #[test]
+    fn removal_lock_names_the_users_lock_and_nothing_else() {
+        let fixture = MetadataFixture::new("metadata_removal_lock");
+        let locked = fixture.locked_file("locked.txt");
+        let acl = fixture.deny_delete_file("acl.txt");
+        let hidden = fixture.rich_file("hidden.txt");
+        let folder = fixture.join("folder");
+        std::fs::create_dir(&folder).expect("mkdir");
+        crate::testing::metadata_fixture::add_acl_entry(&folder, "everyone deny delete_child");
+        let inheriting = fixture.join("inheriting");
+        std::fs::create_dir(&inheriting).expect("mkdir");
+        crate::testing::metadata_fixture::add_acl_entry(&inheriting, "everyone deny delete,only_inherit,file_inherit");
+        let link = fixture.join("link");
+        std::os::unix::fs::symlink(&locked, &link).expect("symlink");
+
+        assert_eq!(removal_lock(&locked), RemovalLock::Locked);
+        assert_eq!(removal_lock(&acl), RemovalLock::Locked);
+        assert_eq!(
+            removal_lock(&folder),
+            RemovalLock::Locked,
+            "`delete_child` keeps its children in"
+        );
+        assert_eq!(removal_lock(&hidden), RemovalLock::Free, "Hidden refuses nothing");
+        assert_eq!(
+            removal_lock(&inheriting),
+            RemovalLock::Free,
+            "an inherit-only entry is for its children"
+        );
+        assert_eq!(removal_lock(&link), RemovalLock::Free, "the link itself is free");
+        assert_eq!(removal_lock(&fixture.join("missing")), RemovalLock::Free);
+    }
+
+    /// A non-root test can't set `schg`, so the system arm is read off the word.
+    #[test]
+    fn a_system_flag_outranks_the_users_lock() {
+        let never = || panic!("the flags decide it");
+        assert_eq!(
+            blockers::lock_of(libc::SF_IMMUTABLE | libc::UF_IMMUTABLE, never),
+            RemovalLock::SystemLocked
+        );
+        assert_eq!(blockers::lock_of(libc::SF_APPEND, never), RemovalLock::SystemLocked);
+        assert_eq!(blockers::lock_of(libc::UF_APPEND, never), RemovalLock::Locked);
+        assert_eq!(blockers::lock_of(libc::UF_HIDDEN, || false), RemovalLock::Free);
+        assert_eq!(blockers::lock_of(0, || true), RemovalLock::Locked);
+    }
+
     /// The link is what's being removed; the user's Locked target stays Locked.
     #[test]
     fn clear_blockers_never_reaches_through_a_symlink() {

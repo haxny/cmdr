@@ -327,6 +327,20 @@ pub enum ConflictResolutionOutcome {
     UnknownOperation,
 }
 
+/// What the backend did with an answer to "these items are Locked, move them
+/// anyway?". Produced by `locked_sources::answer_locked_sources`.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum LockedSourcesAnswerOutcome {
+    /// The move was waiting on this question and carries on with the answer.
+    Answered,
+    /// The operation is live but isn't asking: somebody answered first, or a
+    /// cancel took the question away.
+    NotAsking,
+    /// Nothing is registered under this operation id.
+    UnknownOperation,
+}
+
 /// What the backend did with "carry on without the sources that left".
 /// Produced by `queued_sources::continue_without_gone_sources`.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]

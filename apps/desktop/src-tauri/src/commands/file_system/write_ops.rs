@@ -6,12 +6,12 @@ use crate::operations_host::{
     refuse_scan_preview_not_installed, wire,
 };
 use cmdr_operations::{
-    ConflictId, ConflictResolution, ConflictResolutionOutcome, MUTATION_REPLY_DEADLINE, MutationError, MutationReply,
-    MutationSettled, OperationEventSink, OperationSnapshot, Operations, PauseAllOutcome, PauseOutcome,
-    QueueMoveDirection, QueueMoveOutcome, ReadOnlySide, RetryOutcome, ScanPreviewPurpose, ScanPreviewRefusal,
-    ScanPreviewStartResult, ScanPreviewTotals, SourcesGoneAnswerOutcome, TransferTreeView, TransferTreeViewError,
-    TransferTreeViewRequest, TrashRoutingAnswer, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
-    WriteProgressEvent, reply_within, trash_routing_for_selection,
+    ConflictId, ConflictResolution, ConflictResolutionOutcome, LockedSourcesAnswer, LockedSourcesAnswerOutcome,
+    MUTATION_REPLY_DEADLINE, MutationError, MutationReply, MutationSettled, OperationEventSink, OperationSnapshot,
+    Operations, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome, ReadOnlySide, RetryOutcome,
+    ScanPreviewPurpose, ScanPreviewRefusal, ScanPreviewStartResult, ScanPreviewTotals, SourcesGoneAnswerOutcome,
+    TransferTreeView, TransferTreeViewError, TransferTreeViewRequest, TrashRoutingAnswer, WriteOperationConfig,
+    WriteOperationError, WriteOperationStartResult, WriteProgressEvent, reply_within, trash_routing_for_selection,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -468,6 +468,18 @@ pub fn resolve_write_conflict(
 pub fn continue_without_gone_sources(operation_id: String) -> SourcesGoneAnswerOutcome {
     operations().map_or(SourcesGoneAnswerOutcome::UnknownOperation, |engine| {
         engine.continue_without_gone_sources(&operation_id)
+    })
+}
+
+/// Answers a move that asked, through `write-locked-sources`, whether to unlock
+/// its Locked items: Move anyway or Skip them. Cancelling instead is the ordinary
+/// `cancel_operation`. The outcome says whether this answer is the one that
+/// reached it.
+#[tauri::command]
+#[specta::specta]
+pub fn answer_locked_sources(operation_id: String, answer: LockedSourcesAnswer) -> LockedSourcesAnswerOutcome {
+    operations().map_or(LockedSourcesAnswerOutcome::UnknownOperation, |engine| {
+        engine.answer_locked_sources(&operation_id, answer)
     })
 }
 

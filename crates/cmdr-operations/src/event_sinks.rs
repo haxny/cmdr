@@ -15,7 +15,8 @@ pub use super::host::{OperationEventSink, ScanPreviewEventSink};
 #[cfg(any(test, feature = "testing"))]
 use super::types::{
     ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    WriteConflictResolvedEvent, WriteLockedSourcesEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteSourcesGoneEvent,
 };
 #[cfg(test)]
 use super::types::{
@@ -177,6 +178,23 @@ pub struct CollectorEventSink {
     pub settled: std::sync::Mutex<Vec<WriteSettledEvent>>,
     pub source_items_done: std::sync::Mutex<Vec<WriteSourceItemDoneEvent>>,
     pub sources_gone: std::sync::Mutex<Vec<WriteSourcesGoneEvent>>,
+    pub locked_sources: std::sync::Mutex<Vec<WriteLockedSourcesEvent>>,
+    /// Answers a Locked-items question from inside its emit, the way a surface
+    /// may: the slot is armed before the question goes out. `None` leaves the
+    /// move parked until something else answers or cancels it.
+    locked_responder: std::sync::Mutex<Option<LockedResponder>>,
+}
+
+/// What [`CollectorEventSink::answer_locked_with`] runs on each Locked-items question.
+#[cfg(any(test, feature = "testing"))]
+type LockedResponder = Box<dyn Fn(&WriteLockedSourcesEvent) + Send>;
+
+#[cfg(any(test, feature = "testing"))]
+impl CollectorEventSink {
+    /// Answers every Locked-items question this sink hears with `respond`.
+    pub fn answer_locked_with(&self, respond: impl Fn(&WriteLockedSourcesEvent) + Send + 'static) {
+        *self.locked_responder.lock_ignore_poison() = Some(Box::new(respond));
+    }
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -200,6 +218,8 @@ impl CollectorEventSink {
             settled: std::sync::Mutex::new(Vec::new()),
             source_items_done: std::sync::Mutex::new(Vec::new()),
             sources_gone: std::sync::Mutex::new(Vec::new()),
+            locked_sources: std::sync::Mutex::new(Vec::new()),
+            locked_responder: std::sync::Mutex::new(None),
         }
     }
 }
@@ -229,6 +249,12 @@ impl OperationEventSink for CollectorEventSink {
     }
     fn emit_sources_gone(&self, event: WriteSourcesGoneEvent) {
         self.sources_gone.lock_ignore_poison().push(event);
+    }
+    fn emit_locked_sources(&self, event: WriteLockedSourcesEvent) {
+        self.locked_sources.lock_ignore_poison().push(event.clone());
+        if let Some(respond) = self.locked_responder.lock_ignore_poison().as_ref() {
+            respond(&event);
+        }
     }
     fn emit_scan_progress(&self, event: ScanProgressEvent) {
         self.scan_progress.lock_ignore_poison().push(event);

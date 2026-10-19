@@ -92,6 +92,7 @@ fn yaml_for(tree: TransferTreeView) -> String {
         progress: None,
         pending_conflict: None,
         pending_sources_gone: None,
+        pending_locked_sources: None,
         tree: Some(tree),
     }];
     build_operations_yaml(&rows, 12_000)

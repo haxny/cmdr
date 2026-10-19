@@ -41,7 +41,7 @@ mod rollback;
 mod scanned_dirs;
 mod single_item;
 
-pub(super) use folder_metadata::apply_created_dirs_metadata;
+pub(super) use folder_metadata::{apply_created_dirs_metadata, dir_dest_path};
 use rollback::rollback_with_progress;
 pub(super) use scanned_dirs::create_scanned_dirs_at_destination;
 pub(super) use single_item::{JournalDestUnder, copy_single_item};
@@ -695,6 +695,7 @@ pub(crate) fn copy_files_with_progress_inner(
                 refused: None,
                 metadata_left_behind: None,
                 durability_unconfirmed,
+                locked_kept: None,
             });
             Ok(())
         }

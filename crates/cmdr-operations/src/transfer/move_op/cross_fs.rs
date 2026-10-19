@@ -21,7 +21,8 @@ use std::sync::Arc;
 use cmdr_fs::metadata::{LandedMetadata, apply_landed};
 
 use super::super::copy::{
-    JournalDestUnder, apply_created_dirs_metadata, copy_single_item, create_scanned_dirs_at_destination,
+    JournalDestUnder, apply_created_dirs_metadata, apply_dir_remap, copy_single_item,
+    create_scanned_dirs_at_destination, dir_dest_path,
 };
 use super::MoveTransaction;
 use super::merge_move_directory;
@@ -36,6 +37,7 @@ use crate::event_sinks::OperationEventSink;
 use crate::in_flight_temps::{self, ItemKind};
 use crate::journal;
 use crate::ledger::CopyTransaction;
+use crate::locked_sources::{LockedPlan, LockedScan, plan_locked_local};
 use crate::scan::scan_sources;
 use crate::scan_source_tracker::SourceItemTracker;
 use crate::state::WriteOperationState;
@@ -109,6 +111,22 @@ pub(super) fn move_with_staging(
     // known limit. (Same-FS moves rename in place and never reach here.)
     validate_file_sizes_for_filesystem(destination, &scan_result.files)?;
 
+    // Asked before the first byte is staged: Phase 4 has to delete every
+    // original, and Locked ones refuse, so the person decides now whether to
+    // unlock them for it (`locked_sources.rs`). Nothing else would stop a move
+    // that copied everything and then couldn't remove the originals.
+    let Some(locked) = plan_locked_local(
+        events,
+        operation_id,
+        WriteOperationType::Move,
+        state,
+        LockedScan::of_paths(scanned_items(sources, &scan_result)),
+    ) else {
+        return Err(WriteOperationError::Cancelled {
+            message: "Operation cancelled by user".to_string(),
+        });
+    };
+
     // Create staging directory
     fs::create_dir(&staging_dir).map_err(|e| WriteOperationError::IoError {
         path: staging_dir.display().to_string(),
@@ -131,7 +149,15 @@ pub(super) fn move_with_staging(
     let mut created_dirs: HashSet<PathBuf> = HashSet::new();
     let mut dir_remap =
         super::super::named_destination::initial_remap(sources, &staging_dir, config.destination_name.as_deref())?;
-    let mut skipped_subtrees: HashSet<PathBuf> = HashSet::new();
+    // A Locked item the person said to leave stays out of the copy whole, the
+    // way a folder→file Skip keeps a subtree out (`copy_single_item`).
+    let mut skipped_subtrees: HashSet<PathBuf> = locked
+        .skipped()
+        .filter_map(|skipped| dir_dest_path(skipped, sources, &staging_dir))
+        .map(|staged| apply_dir_remap(&staged, &dir_remap))
+        .collect();
+    // Those files, which the walk below counts as done like any other.
+    let mut locked_skipped_files = 0usize;
     // Durability bookkeeping. The Phase-2 copy records each file's STAGING dest
     // in `transaction.created_files` (and in `already_synced` when the strategy
     // already synced its data) and each directory it makes in
@@ -259,6 +285,9 @@ pub(super) fn move_with_staging(
                 });
             } else {
                 skipped_source_paths.insert(file_info.path.clone());
+                if locked.skips_under(&file_info.path) {
+                    locked_skipped_files += 1;
+                }
             }
 
             if let Some(finished) = tracker.record(file_info, verdict) {
@@ -294,8 +323,20 @@ pub(super) fn move_with_staging(
     // and Phase 4's source delete then DESTROYED it — gone from the source
     // without ever arriving at the destination. Staging it here lets it ride
     // the normal rename + cleanup machinery.
+    // The folders to stage: every scanned one, less what a Locked skip keeps out.
+    let staged_dirs: std::borrow::Cow<'_, [PathBuf]> = if locked.skips_any() {
+        scan_result
+            .dirs
+            .iter()
+            .filter(|dir| !locked.skips_under(dir))
+            .cloned()
+            .collect::<Vec<_>>()
+            .into()
+    } else {
+        std::borrow::Cow::Borrowed(&scan_result.dirs)
+    };
     if let Err(e) = create_scanned_dirs_at_destination(
-        &scan_result.dirs,
+        &staged_dirs,
         sources,
         &staging_dir,
         state,
@@ -316,7 +357,7 @@ pub(super) fn move_with_staging(
     // What would refuse that rename (a mode without owner write, the ACL, the
     // flags) joins the deferred set, keyed by staged path like the files'.
     apply_created_dirs_metadata(
-        &scan_result.dirs,
+        &staged_dirs,
         sources,
         &staging_dir,
         state,
@@ -356,6 +397,12 @@ pub(super) fn move_with_staging(
             let staged_path = staging_dir.join(leaf);
             let final_path = destination.join(leaf);
 
+            // Kept out of the copy on a Locked skip: nothing was staged to land.
+            if locked.skips(source) {
+                skipped_source_paths.insert(source.clone());
+                continue;
+            }
+
             // When both staged and final are real directories, merge
             // recursively. No MoveTransaction needed here: staging cleanup
             // handles rollback. A staged symlink is still a symlink, so it stays
@@ -378,6 +425,8 @@ pub(super) fn move_with_staging(
                     &mut staging_move_tx,
                     &mut files_skipped,
                     &mut Some(&mut staged_skips),
+                    // The staged tree is this move's own: nothing in it is Locked.
+                    &LockedPlan::none(),
                 )?;
                 for staged_skip in &staged_skips {
                     if let Ok(rel) = staged_skip.strip_prefix(&staged_path) {
@@ -631,7 +680,9 @@ pub(super) fn move_with_staging(
 
     // Phase 4: Delete source files (only after the destination is durable on
     // disk), removing exactly what this move landed. A Skip in either phase
-    // takes its original out of the ledger, so the sweep never reaches it.
+    // takes its original out of the ledger, so the sweep never reaches it, and
+    // a Locked item kept out of the copy keeps everything under it.
+    skipped_source_paths.extend(locked.skipped().map(Path::to_path_buf));
     let sweep = SourceSweep::plan(
         sources,
         landed_files
@@ -645,7 +696,7 @@ pub(super) fn move_with_staging(
         &scan_result,
         skipped_source_paths,
     );
-    let delete_result = delete_sources_after_move(events, operation_id, state, sources, files_done, &sweep);
+    let delete_result = delete_sources_after_move(events, operation_id, state, sources, files_done, &sweep, &locked);
 
     // Phase 5: Remove the staging directory, on EVERY path out of Phase 4. Phase
     // 3 renamed the staged tree away, so this is an empty shell whichever way
@@ -690,8 +741,8 @@ pub(super) fn move_with_staging(
     events.emit_complete(WriteCompleteEvent {
         operation_id: operation_id.to_string(),
         operation_type: WriteOperationType::Move,
-        files_processed: files_done + already_in_place,
-        files_skipped,
+        files_processed: files_done + already_in_place - locked_skipped_files,
+        files_skipped: files_skipped + locked_skipped_files,
         bytes_processed: bytes_done,
         appeared_during_move: leftovers.appeared_during_move(),
         // The STAGING phase's verdict, which is where a conflict is resolved.
@@ -701,7 +752,21 @@ pub(super) fn move_with_staging(
         refused: None,
         metadata_left_behind: None,
         durability_unconfirmed: None,
+        locked_kept: locked.kept(),
     });
 
     Ok(())
+}
+
+/// Every item a cross-FS move's Phase 4 may delete, each once: the sources,
+/// then the scanned folders and files under them.
+fn scanned_items<'a>(sources: &'a [PathBuf], scan_result: &'a crate::state::ScanResult) -> Vec<&'a Path> {
+    let mut seen: HashSet<&Path> = HashSet::new();
+    sources
+        .iter()
+        .chain(scan_result.dirs.iter())
+        .chain(scan_result.files.iter().map(|file| &file.path))
+        .map(PathBuf::as_path)
+        .filter(|path| seen.insert(path))
+        .collect()
 }

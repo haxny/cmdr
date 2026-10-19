@@ -464,9 +464,15 @@ async fn stamp_then_sweep_spares_a_link_target(source: Arc<dyn Volume>, root: &P
 
     let album = Path::new("src/album");
     let carried = super::source_sweep::stamp_source(&source, album).await.expect("stamp");
-    let left = super::source_sweep::sweep_carried_source(&source, album, &carried, &Default::default())
-        .await
-        .expect("sweep");
+    let left = super::source_sweep::sweep_carried_source(
+        &source,
+        album,
+        &carried,
+        &Default::default(),
+        &crate::locked_sources::LockedPlan::none(),
+    )
+    .await
+    .expect("sweep");
 
     assert_eq!(read(root, "outside/target/inside.txt"), b"OUTSIDE THE SELECTION");
     assert!(!exists(root, "src/album/plain.txt"), "the carried file went");

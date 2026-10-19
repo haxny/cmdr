@@ -22,6 +22,7 @@ use super::super::error_classification::IoResultExt;
 use super::super::event_sinks::OperationEventSink;
 use super::super::host::Announced;
 use super::super::ledger::{WrittenFile, WrittenIdentity};
+use super::super::locked_sources::LockedPlan;
 use super::super::overwrite::{rename_no_replace, safe_overwrite_dir};
 use super::super::reversal::{Recheck, ReversalTally, recheck_local};
 use super::super::scan_dry_run::handle_dry_run;
@@ -494,6 +495,13 @@ pub(crate) fn move_files_with_progress_inner(
 /// `None`: it operates on the original tree directly and a skipped child simply
 /// leaves the source dir non-empty, so the `remove_dir` below won't fire.
 ///
+/// `locked` is the same-FS move's answer about Locked items: a skipped child
+/// stays like a conflict Skip, and one the person agreed to unlock is unlocked
+/// right before its rename and locked again where it lands. A Locked
+/// `source_dir` is unlocked for its children to leave it, and locked again if it
+/// stays. The cross-FS caller passes [`LockedPlan::none`]: its staged tree is
+/// Cmdr's own.
+///
 /// Note: This duplicates the recursive-merge-with-conflict-resolution pattern from `copy.rs`.
 /// The two look similar in structure but differ in every detail (copy has progress tracking,
 /// symlink handling, byte counting, transaction recording, strategy selection). A shared
@@ -510,7 +518,10 @@ fn merge_move_directory(
     move_tx: &mut MoveTransaction,
     files_skipped: &mut usize,
     skipped_paths: &mut Option<&mut HashSet<PathBuf>>,
+    locked: &LockedPlan,
 ) -> Result<(), WriteOperationError> {
+    // Back on (by `Drop`) unless the folder empties and goes.
+    let unlocked_dir = locked.unlock(source_dir);
     let entries = fs::read_dir(source_dir).with_path(source_dir)?;
 
     for entry in entries {
@@ -529,6 +540,15 @@ fn merge_move_directory(
             return Err(WriteOperationError::Cancelled {
                 message: "Operation cancelled by user".to_string(),
             });
+        }
+
+        // Locked and staying: like a conflict Skip, it keeps its folder too.
+        if locked.skips(&source_child) {
+            if let Some(set) = skipped_paths.as_deref_mut() {
+                set.insert(source_child.clone());
+            }
+            *files_skipped += 1;
+            continue;
         }
 
         // Snapshot the child before the rename carries it across. The rename
@@ -553,6 +573,7 @@ fn merge_move_directory(
                 move_tx,
                 files_skipped,
                 skipped_paths,
+                locked,
             )?;
         } else if path_exists_or_is_symlink(&dest_child) {
             // File conflict (or type mismatch)
@@ -571,7 +592,9 @@ fn merge_move_directory(
                     // halves of the rename; no-ops outside ~/Downloads.
                     state.scope().host().announce(&source_child);
                     let landing = state.scope().host().announce(&resolved.path);
+                    let unlocked = locked.unlock(&source_child);
                     move_resolved_into_place(state, &source_child, &dest_child, landing, child_stat.as_ref(), move_tx)?;
+                    unlocked.landed_at(&resolved.path);
                 }
                 None => {
                     // Skip: source file stays in place. Record it so a cross-FS
@@ -587,7 +610,9 @@ fn merge_move_directory(
             // No conflict, just rename
             state.scope().host().announce(&source_child);
             let landing = state.scope().host().announce(&dest_child);
+            let unlocked = locked.unlock(&source_child);
             rename_onto_free_name(&source_child, landing).with_path(&source_child)?;
+            unlocked.landed_at(&dest_child);
             move_tx.record(source_child, WrittenFile::local_stat(dest_child, child_stat.as_ref()));
         }
     }
@@ -602,6 +627,7 @@ fn merge_move_directory(
         && fs::remove_dir(source_dir).is_ok()
     {
         move_tx.record_removed_source_dir(source_dir.to_path_buf());
+        unlocked_dir.gone();
     }
 
     Ok(())

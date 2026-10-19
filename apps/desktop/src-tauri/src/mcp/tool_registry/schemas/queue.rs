@@ -8,12 +8,12 @@ pub fn queue_schema() -> Value {
         "properties": {
             "action": {
                 "type": "string",
-                "enum": ["pause", "resume", "cancel", "continue_without_gone", "pause_all", "resume_all"],
-                "description": "pause | resume | cancel | continue_without_gone | pause_all | resume_all. pause acts on a running operation; a queued one isn't touching a device yet, so pausing it is refused rather than silently ignored. continue_without_gone answers an operation's pendingSourcesGone question by carrying on with the sources still there (cancel is the other answer)."
+                "enum": ["pause", "resume", "cancel", "continue_without_gone", "move_locked", "skip_locked", "pause_all", "resume_all"],
+                "description": "pause | resume | cancel | continue_without_gone | move_locked | skip_locked | pause_all | resume_all. pause acts on a running operation; a queued one isn't touching a device yet, so pausing it is refused rather than silently ignored. continue_without_gone answers an operation's pendingSourcesGone question by carrying on with the sources still there (cancel is the other answer). move_locked and skip_locked answer a move's pendingLockedSources question: unlock the user's Locked items for the move (they end up Locked where they land), or leave them where they are and move the rest (cancel is the third answer)."
             },
             "operationId": {
                 "type": "string",
-                "description": "Operation to act on (required for pause / resume / cancel / continue_without_gone unless operationIds is given). See cmdr://state operations."
+                "description": "Operation to act on (required for pause / resume / cancel / continue_without_gone / move_locked / skip_locked unless operationIds is given). See cmdr://state operations."
             },
             "operationIds": {
                 "type": "array",

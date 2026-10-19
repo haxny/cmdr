@@ -48,6 +48,7 @@ fn a_merged_move_records_every_child_it_renamed() {
         &mut move_tx,
         &mut files_skipped,
         &mut None,
+        &LockedPlan::none(),
     )
     .expect("the merge should land");
 

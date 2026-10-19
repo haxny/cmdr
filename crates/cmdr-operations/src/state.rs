@@ -13,6 +13,7 @@ use tokio_util::sync::CancellationToken;
 use super::eta::{EtaEstimator, EtaSample, ReversalBar};
 use super::host::OperationEventSink;
 use super::human_wait::HumanWaitClock;
+use super::locked_sources_slot::LockedSourcesSlot;
 use super::outage_slot::{OutagePolicy, OutageSlot};
 use super::scope::OpScope;
 use super::sources_gone_slot::SourcesGoneSlot;
@@ -85,6 +86,10 @@ pub struct WriteOperationState {
     /// armed by `queued_sources.rs`, answered by `continue_without_gone_sources`,
     /// and abandoned by a cancel exactly like [`conflict_slot`](Self::conflict_slot).
     pub(super) sources_gone: SourcesGoneSlot,
+    /// The question a move asks when some of what it moves is Locked: armed by
+    /// `locked_sources.rs`, answered by `answer_locked_sources`, and abandoned by
+    /// a cancel like [`sources_gone`](Self::sources_gone).
+    pub(super) locked_sources: LockedSourcesSlot,
     /// Set by the manager when this operation's registration couldn't admit it,
     /// so it sat `Queued` behind another operation's lanes. Only an operation
     /// that waited checks its sources on admission: one admitted at once runs
@@ -295,6 +300,7 @@ impl WriteOperationState {
             conflict_slot: ConflictSlot::new(Arc::clone(&human_wait)),
             conflict_dispatch_lock: tokio::sync::Mutex::new(()),
             sources_gone: SourcesGoneSlot::default(),
+            locked_sources: LockedSourcesSlot::new(Arc::clone(&human_wait)),
             waited_in_queue: AtomicBool::new(false),
             estimator: std::sync::Mutex::new(EtaEstimator::new()),
             skipped_files: AtomicUsize::new(0),

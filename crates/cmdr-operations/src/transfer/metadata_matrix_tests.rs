@@ -3,10 +3,9 @@
 //! `volume/DETAILS.md` § "Copies keep the source's metadata".
 //!
 //! A keep cell asserts the class lands. A cell still pinning a bug or a loss
-//! asserts today's outcome and names the issue that would flip it (the Locked
-//! moves: <https://github.com/vdavid/cmdr/issues/408>). Every cell that flipped
-//! was first written against the target and seen red for the documented
-//! reason.
+//! asserts today's outcome and names what would flip it. Every cell that flipped
+//! was first written against the target and seen red for the documented reason
+//! (the Locked moves: <https://github.com/vdavid/cmdr/issues/408>).
 //!
 //! The fixture is `cmdr_fs::testing::metadata_fixture` (macOS). Elsewhere: the
 //! extract cell in `volume/copy_extract_out_tests.rs`, the APFS → HFS+ cell in
@@ -27,6 +26,7 @@ mod macos {
 
     use crate::event_sinks::CollectorEventSink;
     use crate::host::Announced;
+    use crate::locked_sources::test_seam::pretend_system_locked;
     use crate::overwrite::PostLanding;
     use crate::state::WriteOperationState;
     use crate::testing::TestOperations;
@@ -34,8 +34,14 @@ mod macos {
     use crate::transfer::copy_strategy::{
         LocalCopyStrategy, StrategyCopyOutcome, copy_file_using, select_local_copy_strategy,
     };
-    use crate::transfer::move_op::test_support::{run_cross_fs_move, run_same_fs_move};
-    use crate::types::{ConflictResolution, WriteOperationConfig, WriteOperationError};
+    use crate::transfer::move_op::test_support::{
+        make_state, run_cross_fs_move, run_cross_fs_move_answering, run_cross_fs_move_with, run_same_fs_move,
+        run_same_fs_move_answering,
+    };
+    use crate::types::{
+        ConflictResolution, LockedKept, LockedSourcesAnswer, WriteOperationConfig, WriteOperationError,
+    };
+    use cmdr_fs::ignore_poison::IgnorePoison;
 
     fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
         Arc::new(engine.new_operation_state(Duration::from_millis(50)))
@@ -509,80 +515,89 @@ mod macos {
         found
     }
 
+    /// The names directly in `dir`, sorted.
+    fn names_in(dir: &Path) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(dir)
+            .expect("list")
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+
     /// The staged copies land unlocked and ACL-free INSIDE the staging tree, and
     /// take their Locked flag and ACL only once Phase 3 has renamed them into
-    /// place. Phase 4 then can't delete either original (`uchg` refuses with
-    /// `EPERM`, `deny delete` with `EACCES`), so the move stops there with every
-    /// original kept: nothing is lost, both copies exist.
+    /// place. The move asked first, and on Move anyway Phase 4 unlocks each
+    /// original right before deleting it, so neither refuses.
     #[test]
     fn a_cross_fs_move_of_a_folder_holding_a_locked_and_a_deny_delete_file_lands_both() {
         let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_move_folder");
         let folder = fixture.join("album");
         std::fs::create_dir(&folder).expect("create the folder");
-        let locked = fixture.locked_file("album/locked.txt");
-        let acl = fixture.deny_delete_file("album/acl.txt");
+        fixture.locked_file("album/locked.txt");
+        fixture.deny_delete_file("album/acl.txt");
         let dst = dst_dir(&fixture);
 
-        let result = run_cross_fs_move(
+        let events = run_cross_fs_move(
             &engine,
             std::slice::from_ref(&folder),
             &dst,
             ConflictResolution::Stop,
             "op-matrix-move-folder",
-        );
+        )
+        .expect("the move completes");
 
         let landed = dst.join("album");
         assert_eq!(flags(&landed.join("locked.txt")) & LOCKED_FLAG, LOCKED_FLAG);
         assert_eq!(birth_secs(&landed.join("locked.txt")), BIRTH_SECS);
         assert!(has_acl(&landed.join("acl.txt")), "the landed file wears the ACL");
-        assert!(
-            matches!(result, Err(WriteOperationError::PermissionDenied { .. })),
-            "Phase 4 can't remove a Locked or `deny delete` original: {:?}",
-            result.err()
-        );
-        assert!(locked.exists() && acl.exists(), "both originals stay");
-        let names: Vec<String> = std::fs::read_dir(&dst)
-            .expect("list dst")
-            .flatten()
-            .map(|e| e.file_name().to_string_lossy().into_owned())
-            .collect();
-        assert_eq!(names, vec!["album".to_string()], "the staging folder is gone");
+        assert!(!folder.exists(), "every original is gone, the folder too");
+        assert_eq!(names_in(&dst), vec!["album".to_string()], "the staging folder is gone");
+        let asked = events.locked_sources.lock_ignore_poison().clone();
+        assert_eq!(asked.len(), 1, "asked once for the whole move");
+        assert_eq!(asked[0].locked_count, 2);
     }
 
-    /// The staged copy lands unlocked inside the staging tree and takes `uchg`
-    /// after Phase 3. Phase 4's delete of the Locked original is refused
-    /// (`EPERM`), so the move stops with the original kept.
+    /// Asked before the first byte is staged; on Move anyway the copy lands
+    /// Locked and Phase 4 unlocks the original right before deleting it.
     #[test]
-    fn a_cross_fs_move_of_a_locked_file_lands_locked_and_keeps_the_original() {
+    fn a_cross_fs_move_of_a_locked_file_lands_locked_once_the_person_says_move_anyway() {
         let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_move_locked");
         let source = fixture.locked_file("locked.txt");
         let dst = dst_dir(&fixture);
+        let state = make_state(&engine, 200);
+        let events = Arc::new(CollectorEventSink::new());
+        let at_the_question = Arc::new(std::sync::Mutex::new(None));
+        {
+            let (state, dst, seen) = (Arc::clone(&state), dst.clone(), Arc::clone(&at_the_question));
+            events.answer_locked_with(move |_| {
+                *seen.lock_ignore_poison() = Some(names_in(&dst));
+                state.locked_sources.answer(LockedSourcesAnswer::MoveAnyway);
+            });
+        }
 
-        let result = run_cross_fs_move(
-            &engine,
+        run_cross_fs_move_with(
+            &state,
+            events,
             std::slice::from_ref(&source),
             &dst,
             ConflictResolution::Stop,
             "op-matrix-move-locked",
-        );
+        )
+        .expect("the move completes");
 
         let landed = dst.join("locked.txt");
         assert_eq!(flags(&landed) & LOCKED_FLAG, LOCKED_FLAG, "the landed file is Locked");
         assert_eq!(birth_secs(&landed), BIRTH_SECS);
-        assert!(
-            matches!(
-                result,
-                Err(WriteOperationError::PermissionDenied {
-                    errno: Some(libc::EPERM),
-                    ..
-                })
-            ),
-            "{:?}",
-            result.err()
+        assert!(!source.exists(), "the original is gone");
+        assert_eq!(
+            *at_the_question.lock_ignore_poison(),
+            Some(Vec::<String>::new()),
+            "asked before anything reached the destination"
         );
-        assert!(source.exists(), "the Locked original stays");
     }
 
     /// Phase 3 fails (the destination refuses new files, so the staged files
@@ -668,8 +683,10 @@ mod macos {
     }
 
     /// A `0500` folder can't be renamed to another parent and a Locked one can't
-    /// be filled, so both go on after Phase 3. Phase 4 then can't empty the
-    /// Locked original, and the move stops there with it kept.
+    /// be filled, so both go on after Phase 3. On Move anyway Phase 4 unlocks
+    /// the original folder, but its MODE still refuses taking its children out
+    /// (a permission no Locked answer covers), so the move stops there with the
+    /// original kept and Locked again.
     #[test]
     fn a_cross_fs_move_of_a_locked_read_only_folder_lands_it_locked_and_full() {
         let engine = TestOperations::new();
@@ -696,12 +713,94 @@ mod macos {
             result.err()
         );
         assert!(source.join("a.txt").exists(), "the original stays");
-        let names: Vec<String> = std::fs::read_dir(&dst)
-            .expect("list dst")
-            .flatten()
-            .map(|e| e.file_name().to_string_lossy().into_owned())
-            .collect();
-        assert_eq!(names, vec!["vault".to_string()], "the staging folder is gone");
+        assert_eq!(flags(&source) & LOCKED_FLAG, LOCKED_FLAG, "and is Locked again");
+        assert_eq!(names_in(&dst), vec!["vault".to_string()], "the staging folder is gone");
+    }
+
+    /// On Skip the Locked file stays out of the copy whole: it never reaches the
+    /// destination, keeps its folder in the source, and the completion counts
+    /// it. Everything else in the folder moves.
+    #[test]
+    fn a_cross_fs_move_skipping_a_locked_file_moves_the_rest_of_its_folder() {
+        let engine = TestOperations::new();
+        let fixture = MetadataFixture::new("matrix_move_folder_skip");
+        let folder = fixture.join("album");
+        std::fs::create_dir(&folder).expect("create the folder");
+        let locked = fixture.locked_file("album/locked.txt");
+        std::fs::write(folder.join("plain.txt"), b"plain").expect("write");
+        let dst = dst_dir(&fixture);
+
+        let events = run_cross_fs_move_answering(
+            &make_state(&engine, 200),
+            std::slice::from_ref(&folder),
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-move-folder-skip",
+            LockedSourcesAnswer::Skip,
+        )
+        .expect("the move completes");
+
+        assert!(dst.join("album/plain.txt").is_file());
+        assert!(
+            !dst.join("album/locked.txt").exists(),
+            "the Locked file stayed out of the copy"
+        );
+        assert!(!folder.join("plain.txt").exists(), "the rest moved");
+        assert_eq!(
+            flags(&locked) & LOCKED_FLAG,
+            LOCKED_FLAG,
+            "the original stays, still Locked"
+        );
+        let complete = events.complete.lock_ignore_poison().clone();
+        assert_eq!(complete.len(), 1);
+        assert_eq!(complete[0].files_skipped, 1);
+        assert_eq!(complete[0].files_processed, 1);
+        assert_eq!(
+            complete[0].locked_kept,
+            Some(LockedKept {
+                skipped: 1,
+                system_locked: 0
+            })
+        );
+        assert_eq!(names_in(&dst), vec!["album".to_string()], "the staging folder is gone");
+    }
+
+    /// A system-locked item can't be unlocked by any answer, so the move never
+    /// asks about it: it stays out, the rest moves, and the completion counts it.
+    #[test]
+    fn a_cross_fs_move_leaves_a_system_locked_file_without_asking() {
+        let engine = TestOperations::new();
+        let fixture = MetadataFixture::new("matrix_move_system_locked");
+        let pinned = fixture.join("pinned.txt");
+        std::fs::write(&pinned, b"pinned").expect("write");
+        pretend_system_locked(&pinned);
+        let plain = fixture.join("plain.txt");
+        std::fs::write(&plain, b"plain").expect("write");
+        let dst = dst_dir(&fixture);
+
+        let events = run_cross_fs_move_with(
+            &make_state(&engine, 200),
+            Arc::new(CollectorEventSink::new()),
+            &[pinned.clone(), plain.clone()],
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-move-system-locked",
+        )
+        .expect("the move completes without an answer");
+
+        assert!(
+            events.locked_sources.lock_ignore_poison().is_empty(),
+            "nobody was asked"
+        );
+        assert!(pinned.exists() && !dst.join("pinned.txt").exists());
+        assert!(dst.join("plain.txt").is_file() && !plain.exists());
+        assert_eq!(
+            events.complete.lock_ignore_poison()[0].locked_kept,
+            Some(LockedKept {
+                skipped: 0,
+                system_locked: 1
+            })
+        );
     }
 
     /// A move merging into the user's folder renames the staged children into
@@ -760,37 +859,186 @@ mod macos {
         assert!(source.join("inner/b.txt").exists(), "the original stays");
     }
 
-    /// `rename(2)` refuses a Locked item (`EPERM`). Moving one needs the user's
-    /// consent to unlock it, a product decision tracked in
-    /// <https://github.com/vdavid/cmdr/issues/408>, which flips this pin.
+    /// `rename(2)` refuses a Locked item (`EPERM`), so the move asks first, and
+    /// on Move anyway unlocks it, renames it, and locks it again where it landed.
     #[test]
-    fn a_same_fs_move_of_a_locked_file_is_refused_today() {
+    fn a_same_fs_move_of_a_locked_file_lands_locked_once_the_person_says_move_anyway() {
         let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_same_fs_locked");
         let source = fixture.locked_file("locked.txt");
         let dst = dst_dir(&fixture);
 
-        let result = run_same_fs_move(
+        let events = run_same_fs_move(
             &engine,
             std::slice::from_ref(&source),
             &dst,
             ConflictResolution::Stop,
             "op-matrix-same-fs-locked",
+        )
+        .expect("the move completes");
+
+        let landed = dst.join("locked.txt");
+        assert!(!source.exists(), "the original moved");
+        assert_eq!(
+            flags(&landed) & LOCKED_FLAG,
+            LOCKED_FLAG,
+            "and is Locked where it landed"
         );
+        assert_eq!(birth_secs(&landed), BIRTH_SECS);
+        let asked = events.locked_sources.lock_ignore_poison().clone();
+        assert_eq!(asked.len(), 1);
+        assert_eq!(asked[0].locked_count, 1);
+        assert_eq!(asked[0].locked_sample, vec![source.display().to_string()]);
+    }
+
+    /// A `deny delete` ACL refuses the rename too (`EACCES`); Move anyway carries
+    /// the ACL to where the item lands.
+    #[test]
+    fn a_same_fs_move_of_a_deny_delete_file_lands_with_its_acl() {
+        let engine = TestOperations::new();
+        let fixture = MetadataFixture::new("matrix_same_fs_acl");
+        let source = fixture.deny_delete_file("acl.txt");
+        let dst = dst_dir(&fixture);
+
+        run_same_fs_move(
+            &engine,
+            std::slice::from_ref(&source),
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-same-fs-acl",
+        )
+        .expect("the move completes");
+
+        assert!(!source.exists());
+        assert!(has_acl(&dst.join("acl.txt")), "the landed file wears the ACL");
+    }
+
+    /// Merging into the user's folder renames each child on its own, so a Locked
+    /// child is asked about and, on Move anyway, lands Locked inside it.
+    #[test]
+    fn a_same_fs_merge_moves_a_locked_child_into_the_users_folder() {
+        let engine = TestOperations::new();
+        let fixture = MetadataFixture::new("matrix_same_fs_merge_locked");
+        let folder = fixture.join("album");
+        std::fs::create_dir(&folder).expect("create the folder");
+        fixture.locked_file("album/locked.txt");
+        let dst = dst_dir(&fixture);
+        std::fs::create_dir(dst.join("album")).expect("create the user's folder");
+
+        let events = run_same_fs_move(
+            &engine,
+            std::slice::from_ref(&folder),
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-same-fs-merge-locked",
+        )
+        .expect("the move completes");
+
+        assert_eq!(flags(&dst.join("album/locked.txt")) & LOCKED_FLAG, LOCKED_FLAG);
+        assert!(!folder.exists(), "the emptied source folder went");
+        assert_eq!(events.locked_sources.lock_ignore_poison()[0].locked_count, 1);
+    }
+
+    /// A folder that lands by one rename takes its Locked contents along
+    /// untouched, so nothing inside it is asked about.
+    #[test]
+    fn a_same_fs_move_of_a_folder_holding_a_locked_file_asks_nothing() {
+        let engine = TestOperations::new();
+        let fixture = MetadataFixture::new("matrix_same_fs_folder_locked_inside");
+        let folder = fixture.join("album");
+        std::fs::create_dir(&folder).expect("create the folder");
+        fixture.locked_file("album/locked.txt");
+        let dst = dst_dir(&fixture);
+
+        let events = run_same_fs_move_answering(
+            &engine,
+            std::slice::from_ref(&folder),
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-same-fs-folder-locked-inside",
+            LockedSourcesAnswer::Skip,
+        )
+        .expect("the move completes");
 
         assert!(
-            matches!(
-                result,
-                Err(WriteOperationError::PermissionDenied {
-                    errno: Some(libc::EPERM),
-                    ..
-                })
-            ),
-            "{:?}",
-            result.err()
+            events.locked_sources.lock_ignore_poison().is_empty(),
+            "nobody was asked"
         );
-        assert!(source.exists(), "the source stays");
+        assert_eq!(flags(&dst.join("album/locked.txt")) & LOCKED_FLAG, LOCKED_FLAG);
+        assert!(!folder.exists());
+    }
+
+    /// On Skip the Locked file stays exactly where it is, Locked, and the rest
+    /// moves; the completion counts it as skipped.
+    #[test]
+    fn a_same_fs_move_skipping_a_locked_file_moves_the_rest() {
+        let engine = TestOperations::new();
+        let fixture = MetadataFixture::new("matrix_same_fs_skip");
+        let locked = fixture.locked_file("locked.txt");
+        let plain = fixture.join("plain.txt");
+        std::fs::write(&plain, b"plain").expect("write");
+        let dst = dst_dir(&fixture);
+
+        let events = run_same_fs_move_answering(
+            &engine,
+            &[locked.clone(), plain.clone()],
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-same-fs-skip",
+            LockedSourcesAnswer::Skip,
+        )
+        .expect("the move completes");
+
+        assert_eq!(
+            flags(&locked) & LOCKED_FLAG,
+            LOCKED_FLAG,
+            "the Locked file stays, still Locked"
+        );
         assert!(!dst.join("locked.txt").exists());
+        assert!(dst.join("plain.txt").is_file() && !plain.exists(), "the rest moved");
+        let complete = events.complete.lock_ignore_poison().clone();
+        assert_eq!(complete[0].files_processed, 1);
+        assert_eq!(complete[0].files_skipped, 1);
+        assert_eq!(
+            complete[0].locked_kept,
+            Some(LockedKept {
+                skipped: 1,
+                system_locked: 0
+            })
+        );
+    }
+
+    /// No answer can move a system-locked item, so nobody is asked: it stays.
+    #[test]
+    fn a_same_fs_move_leaves_a_system_locked_file_without_asking() {
+        let engine = TestOperations::new();
+        let fixture = MetadataFixture::new("matrix_same_fs_system_locked");
+        let pinned = fixture.join("pinned.txt");
+        std::fs::write(&pinned, b"pinned").expect("write");
+        pretend_system_locked(&pinned);
+        let dst = dst_dir(&fixture);
+
+        let events = run_same_fs_move(
+            &engine,
+            std::slice::from_ref(&pinned),
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-same-fs-system-locked",
+        )
+        .expect("the move completes");
+
+        assert!(
+            events.locked_sources.lock_ignore_poison().is_empty(),
+            "nobody was asked"
+        );
+        assert!(pinned.exists() && !dst.join("pinned.txt").exists());
+        assert_eq!(
+            events.complete.lock_ignore_poison()[0].locked_kept,
+            Some(LockedKept {
+                skipped: 0,
+                system_locked: 1
+            })
+        );
     }
 }
 

@@ -61,6 +61,8 @@ impl Operations {
         state.conflict_slot.abandon();
         // ...and the sources-gone question, which a queued operation can be parked on.
         state.sources_gone.abandon();
+        // ...and a move asking about its Locked items.
+        state.locked_sources.abandon();
         // Cancellation wins over pause: wake a paused, parked op so it observes
         // the non-Running intent and bails. Leaves the paused flag set (the op
         // is going away regardless).

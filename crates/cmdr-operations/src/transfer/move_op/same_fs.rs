@@ -21,6 +21,7 @@ use crate::conflict::{ApplyToAll, IncomingItem, resolve_conflict};
 use crate::durability::flush_touched_directories;
 use crate::error_classification::IoResultExt;
 use crate::event_sinks::OperationEventSink;
+use crate::locked_sources::{LockedScan, plan_locked_local};
 use crate::state::{OperationIntent, WriteOperationState};
 use crate::transfer_tree::{TreeLanding, TreeOrder, from_sources};
 use crate::types::{
@@ -51,6 +52,19 @@ pub(super) fn move_with_rename(
     let mut top_level_skipped = TopLevelSkipped { files: 0, folders: 0 };
     let mut apply_to_all_resolution = ApplyToAll::default();
     let mut move_tx = MoveTransaction::new();
+    // Asked before the first rename: what `rename(2)` would refuse, and whether
+    // the person wants it unlocked for the move (`locked_sources.rs`).
+    let Some(locked) = plan_locked_local(
+        events,
+        operation_id,
+        WriteOperationType::Move,
+        state,
+        LockedScan::of_renames(sources, destination, config.destination_name.as_deref()),
+    ) else {
+        return Err(WriteOperationError::Cancelled {
+            message: "Operation cancelled by user".to_string(),
+        });
+    };
     // A same-FS move is journaled and reversed at TOP-LEVEL granularity (one
     // rename-back takes a whole subtree), so its status counts ITEMS, not leaves.
     // There's no scan to seed it from and the renames are instant, so the totals
@@ -97,6 +111,25 @@ pub(super) fn move_with_rename(
                 .map(Path::new)
                 .unwrap_or_else(|| Path::new(file_name));
             let dest_path = destination.join(leaf);
+
+            // Locked, and the person said to leave it (or the system locked it):
+            // it stays exactly where it is, the way a Skip on a clash leaves it.
+            if locked.skips(source) {
+                tree.skip_whole(tree.source(source));
+                files_skipped += 1;
+                if is_real_directory(source) {
+                    top_level_skipped.folders += 1;
+                } else {
+                    top_level_skipped.files += 1;
+                }
+                events.emit_source_item_done(WriteSourceItemDoneEvent {
+                    operation_id: operation_id.to_string(),
+                    source_path: source.display().to_string(),
+                    source_removed: false,
+                    outcome: SourceItemOutcome::Skipped,
+                });
+                continue;
+            }
 
             // Snapshot the source (kind + mtime) BEFORE the rename for the
             // journal's top-level `rollback_unit` row; `item_overwrote` records
@@ -146,6 +179,7 @@ pub(super) fn move_with_rename(
                     &mut move_tx,
                     &mut files_skipped,
                     &mut None,
+                    &locked,
                 )?;
                 // The one row this item journals names the PRE-EXISTING
                 // destination folder, which also holds files this operation never
@@ -182,6 +216,7 @@ pub(super) fn move_with_rename(
                         // file; a rename-aside (different name) did not.
                         item_overwrote = resolved.path == dest_path;
                         landed_path = resolved.path.clone();
+                        let unlocked = locked.unlock(source);
                         move_resolved_into_place(
                             state,
                             source,
@@ -190,6 +225,7 @@ pub(super) fn move_with_rename(
                             source_meta.as_ref(),
                             &mut move_tx,
                         )?;
+                        unlocked.landed_at(&landed_path);
                     }
                     None => {
                         // Skip this file
@@ -207,10 +243,12 @@ pub(super) fn move_with_rename(
                 // No conflict, so just rename
                 state.scope().host().announce(source);
                 let landing = state.scope().host().announce(&dest_path);
+                let unlocked = locked.unlock(source);
                 // A locked source is the one refusal `rename(2)`'s errno can't side on its own.
                 rename_onto_free_name(source, landing)
                     .with_path(source)
                     .map_err(|e| e.sided_by_locked_source(source))?;
+                unlocked.landed_at(&dest_path);
                 move_tx.record(
                     source.clone(),
                     WrittenFile::local_stat(dest_path.clone(), source_meta.as_ref()),
@@ -358,6 +396,7 @@ pub(super) fn move_with_rename(
         refused: None,
         metadata_left_behind: None,
         durability_unconfirmed: None,
+        locked_kept: locked.kept(),
     });
 
     Ok(())

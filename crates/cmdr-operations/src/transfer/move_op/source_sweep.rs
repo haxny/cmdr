@@ -29,6 +29,7 @@ use std::time::{Instant, SystemTime};
 use crate::error_classification::IoResultExt;
 use crate::event_sinks::OperationEventSink;
 use crate::ledger::{NodeId, WrittenIdentity};
+use crate::locked_sources::LockedPlan;
 use crate::state::ScanResult;
 use crate::state::WriteOperationState;
 use crate::transfer_sides::{MoveSourceCounts, TransferSide};
@@ -122,7 +123,15 @@ impl SourceSweep {
         // `ScanResult.dirs` comes out of the walker in discovery order, and a
         // seeded preview can carry any order at all, so the sweep sorts rather
         // than trusting one.
-        let mut scanned_dirs = scan_result.dirs.clone();
+        //
+        // A folder at or under a Skip stays out: it holds what the Skip kept,
+        // and an EMPTY one would otherwise go though it never landed.
+        let mut scanned_dirs: Vec<PathBuf> = scan_result
+            .dirs
+            .iter()
+            .filter(|dir| skipped.is_empty() || !dir.ancestors().any(|ancestor| skipped.contains(ancestor)))
+            .cloned()
+            .collect();
         scanned_dirs.sort_by_key(|dir| std::cmp::Reverse(dir.components().count()));
 
         let mut per_source: Vec<SweptSource> = sources
@@ -258,6 +267,7 @@ pub(super) fn delete_sources_after_move(
     sources: &[PathBuf],
     files_done: usize,
     sweep: &SourceSweep,
+    locked: &LockedPlan,
 ) -> Result<LeftInSource, SweepStopped> {
     let drive = SourceDrive {
         side: state.sides.as_ref().map(|sides| &sides.source),
@@ -334,7 +344,7 @@ pub(super) fn delete_sources_after_move(
             return Err(stop(error, originals_removed, sources_total));
         }
         if source_present {
-            let changed = match remove_landed(&sweep.per_source[index], &drive) {
+            let changed = match remove_landed(&sweep.per_source[index], &drive, locked) {
                 Ok(changed) => changed,
                 Err(error) => return Err(stop(error, originals_removed, sources_total)),
             };
@@ -386,17 +396,39 @@ pub(super) fn delete_sources_after_move(
 /// were fixed when the copy phase ended. Answers how many originals it kept
 /// because they changed after their copy started; each one keeps its
 /// directories alive through their `ENOTEMPTY`.
-fn remove_landed(swept: &SweptSource, drive: &SourceDrive<'_>) -> Result<u32, WriteOperationError> {
+///
+/// What the person agreed to unlock (`locked`) is unlocked right before it goes:
+/// a Locked folder first, so its children can leave it (and locked again if it
+/// stays), a Locked file right before its unlink. Its copy already landed
+/// Locked, so nothing goes back on at the destination.
+fn remove_landed(
+    swept: &SweptSource,
+    drive: &SourceDrive<'_>,
+    locked: &LockedPlan,
+) -> Result<u32, WriteOperationError> {
+    let opened: Vec<_> = swept
+        .scanned_dirs
+        .iter()
+        .filter(|dir| locked.unlocks(dir))
+        .map(|dir| (dir, locked.unlock(dir)))
+        .collect();
     let mut changed = 0;
     for original in &swept.landed_files {
         if changed_since_copy(original)? {
             changed += 1;
             continue;
         }
+        let unlocked = locked.unlock(&original.path);
         remove_landed_file(&original.path, drive)?;
+        unlocked.gone();
     }
     for dir in &swept.scanned_dirs {
         remove_swept_dir(dir, drive)?;
+    }
+    for (dir, unlocked) in opened {
+        if fs::symlink_metadata(dir).is_err() {
+            unlocked.gone();
+        }
     }
     Ok(changed)
 }

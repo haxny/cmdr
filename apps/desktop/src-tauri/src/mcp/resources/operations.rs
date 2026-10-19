@@ -24,10 +24,11 @@
 //! / running / paused / failed, `waitingOn` separates the ways a RUNNING row can
 //! be stopped (destination, source, an unanswered clash, or the wedge shape that
 //! explains itself with nothing), and `pendingConflict` carries the `conflictId`
-//! an answer needs. `pendingSourcesGone` is the other question a running row can
-//! be parked on: a queued operation whose sources left while it waited. No
-//! `write-progress` subscription required: the wait rides
-//! `OperationStatus` and is classified at read time.
+//! an answer needs. `pendingSourcesGone` and `pendingLockedSources` are the other
+//! questions a running row can be parked on: a queued operation whose sources left
+//! while it waited, and a move asking before any byte moves whether to unlock the
+//! user's Locked items. No `write-progress` subscription required: the wait
+//! rides `OperationStatus` and is classified at read time.
 //!
 //! **Where the work is.** A transfer's row also names the folders it's in and
 //! the files in flight (`activeFolders:`), read off the live transfer tree's
@@ -37,7 +38,8 @@ use crate::pluralize::pluralize;
 use crate::search::query::format_size;
 use cmdr_operations::{
     LifecycleStatus, OperationSnapshot, OperationStatus, TransferActivity, TransferTreeRow, TransferTreeView,
-    TransferTreeViewRequest, TreeRowKind, TreeRowState, WriteConflictEvent, WriteSourcesGoneEvent,
+    TransferTreeViewRequest, TreeRowKind, TreeRowState, WriteConflictEvent, WriteLockedSourcesEvent,
+    WriteSourcesGoneEvent,
 };
 
 /// One row of the `operations:` section: the registry's membership / status /
@@ -49,6 +51,8 @@ pub(crate) struct OperationRow {
     pub pending_conflict: Option<WriteConflictEvent>,
     /// The sources-gone question a queued operation is parked on, if any.
     pub pending_sources_gone: Option<WriteSourcesGoneEvent>,
+    /// The Locked-items question a move is parked on, if any.
+    pub pending_locked_sources: Option<WriteLockedSourcesEvent>,
     /// The live transfer tree, following the work: absent for an operation
     /// that builds none or isn't underway.
     pub tree: Option<TransferTreeView>,
@@ -69,6 +73,7 @@ pub(crate) fn snapshot_operations() -> Vec<OperationRow> {
             let progress = engine.get_operation_status(&snapshot.operation_id);
             let pending_conflict = engine.pending_write_conflict(&snapshot.operation_id);
             let pending_sources_gone = engine.pending_sources_gone(&snapshot.operation_id);
+            let pending_locked_sources = engine.pending_locked_sources(&snapshot.operation_id);
             // Only while it runs or is paused: a queued or failed op has no tree to
             // show, and asking would take a lock for nothing.
             let tree = progress
@@ -84,6 +89,7 @@ pub(crate) fn snapshot_operations() -> Vec<OperationRow> {
                 progress,
                 pending_conflict,
                 pending_sources_gone,
+                pending_locked_sources,
                 tree,
             }
         })
@@ -171,6 +177,9 @@ pub(crate) fn build_operations_yaml(rows: &[OperationRow], now_ms: u64) -> Strin
         }
         if let Some(question) = &row.pending_sources_gone {
             yaml.push_str(&pending_sources_gone_yaml(question));
+        }
+        if let Some(question) = &row.pending_locked_sources {
+            yaml.push_str(&pending_locked_sources_yaml(question));
         }
     }
     yaml
@@ -274,6 +283,22 @@ fn pending_sources_gone_yaml(question: &WriteSourcesGoneEvent) -> String {
         yaml.push_str(&format!("        - {path:?}\n"));
     }
     yaml.push_str("      answerWith: queue (action continue_without_gone to carry on with the rest, or cancel)\n");
+    yaml
+}
+
+/// The `pendingLockedSources:` block: a move found the user's Locked items among
+/// what it moves and waits, before any byte moves, for someone to say whether to
+/// unlock them for it. Paths verbatim, like `pendingSourcesGone`.
+fn pending_locked_sources_yaml(question: &WriteLockedSourcesEvent) -> String {
+    let mut yaml = String::from("    pendingLockedSources:\n");
+    yaml.push_str(&format!("      lockedCount: {}\n", question.locked_count));
+    yaml.push_str("      locked:\n");
+    for path in &question.locked_sample {
+        yaml.push_str(&format!("        - {path:?}\n"));
+    }
+    yaml.push_str(
+        "      answerWith: queue (action move_locked to unlock them for the move, skip_locked to leave them, or cancel)\n",
+    );
     yaml
 }
 

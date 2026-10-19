@@ -22,6 +22,7 @@ use std::time::Instant;
 use super::super::super::conflict::ApplyToAll;
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::journal;
+use super::super::super::locked_sources::plan_locked_on_volume;
 use super::super::super::state::WriteOperationState;
 use super::super::super::transfer_tree::{TreeLanding, TreeOrder};
 use super::super::super::types::{
@@ -141,6 +142,16 @@ pub async fn move_volumes_with_progress(
     let source_paths = ordered_sources.as_slice();
     let source_hints: Arc<HashMap<PathBuf, SourceHint>> = Arc::new(preflight.source_hints);
 
+    // Asked before the first byte moves: the sweep deletes each original once
+    // its copy lands, and a Locked one refuses, so the person decides now
+    // whether to unlock them for it (`locked_sources.rs`).
+    let Some(locked) = plan_locked_on_volume(&*events, operation_id, state, &source_volume, source_paths).await else {
+        return Err(WriteFailure::synthetic(WriteOperationError::Cancelled {
+            message: "Operation cancelled by user".to_string(),
+        }));
+    };
+    let locked = Arc::new(locked);
+
     // The operation-log journal target (real source + dest volume ids), set by the
     // `move_between_volumes` deferred. `None` in tests / the both-local shortcut,
     // where the per-leaf record point below no-ops.
@@ -149,12 +160,15 @@ pub async fn move_volumes_with_progress(
     // Bulk-skip is **file-only** (a top-level directory matching a pre-known
     // conflict means only SOME of its children collide — dropping the whole
     // subtree would lose non-conflicting files).
-    let pre_skip_paths = build_pre_skip_set(
+    let mut pre_skip_paths = build_pre_skip_set(
         source_paths,
         config.conflict_resolution,
         &config.pre_known_conflicts,
         &known_directory_paths,
     );
+    // A Locked top-level item the person said to leave goes the same way. One
+    // deeper down stays out of its folder's walk (`MergeCtx::locked`).
+    pre_skip_paths.extend(source_paths.iter().filter(|source| locked.skips(source)).cloned());
     let mut bulk_skip_files = 0usize;
     let mut bulk_skip_bytes = 0u64;
     for path in &pre_skip_paths {
@@ -399,8 +413,10 @@ pub async fn move_volumes_with_progress(
             let op_probe = Arc::clone(&op_probe);
             let source_index = Arc::new(AtomicUsize::new(0));
             let displaced = Arc::clone(&displaced);
+            let locked = Arc::clone(&locked);
             move |ctx: TransferContext<'_>| -> TransferFut<'_> {
                 let displaced = Arc::clone(&displaced);
+                let locked = Arc::clone(&locked);
                 let op_probe = Arc::clone(&op_probe);
                 let source_index = Arc::clone(&source_index);
                 let source_volume = Arc::clone(&source_volume);
@@ -496,6 +512,7 @@ pub async fn move_volumes_with_progress(
                             operation: Arc::clone(&op_probe),
                             source_row,
                         }),
+                        locked: Some(&locked),
                     };
                     // This driver streams the source ITSELF, so from here until
                     // the next iteration nothing else could be stuck: the phase
@@ -640,7 +657,7 @@ pub async fn move_volumes_with_progress(
                         super::source_sweep::CarriedSource::File(stamp_before)
                     };
                     let delete_result =
-                        super::source_sweep::sweep_carried_source(&source_volume, &source_path, &carried, &skipped)
+                        super::source_sweep::sweep_carried_source(&source_volume, &source_path, &carried, &skipped, &locked)
                             .await
                             .map(|kept| {
                                 left_in_source.lock_ignore_poison().note(
@@ -773,6 +790,7 @@ pub async fn move_volumes_with_progress(
                 refused: None,
                 metadata_left_behind: state.metadata_losses.left_behind(operation_id),
                 durability_unconfirmed: None,
+                locked_kept: locked.kept(),
             });
             Ok(())
         }
@@ -832,6 +850,10 @@ mod cancel_tests;
 #[cfg(test)]
 #[path = "move_failure_tests.rs"]
 mod failure_tests;
+/// A move off a local source holding Locked items (#408).
+#[cfg(all(test, target_os = "macos"))]
+#[path = "move_locked_tests.rs"]
+mod locked_tests;
 #[cfg(test)]
 #[path = "move_merge_tests.rs"]
 mod merge_tests;

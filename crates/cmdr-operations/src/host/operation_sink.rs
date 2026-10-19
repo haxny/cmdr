@@ -3,7 +3,8 @@
 use super::super::conflict_slot::ArmedConflict;
 use super::super::types::{
     ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
-    WriteErrorEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    WriteErrorEvent, WriteLockedSourcesEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteSourcesGoneEvent,
 };
 
 /// Abstraction for emitting write operation events.
@@ -36,6 +37,10 @@ pub trait OperationEventSink: Send + Sync {
     /// sinks needn't spell it out; ❗ a sink that WRAPS another must forward it,
     /// or the person is never asked and the operation waits forever.
     fn emit_sources_gone(&self, _event: WriteSourcesGoneEvent) {}
+    /// A move found Locked items in what it moves and asks before any byte moves
+    /// (`locked_sources.rs`). Default no-op like [`emit_sources_gone`](Self::emit_sources_gone),
+    /// and ❗ for the same reason a sink that WRAPS another must forward it.
+    fn emit_locked_sources(&self, _event: WriteLockedSourcesEvent) {}
     /// Per-iteration progress during dry-run scanning (separate from `write-progress`).
     fn emit_scan_progress(&self, event: ScanProgressEvent);
     /// One `ConflictInfo` per conflicting file during dry-run scanning.

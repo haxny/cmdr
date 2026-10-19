@@ -83,6 +83,7 @@ fn complete_event(operation_id: &str, operation_type: WriteOperationType) -> Wri
         refused: None,
         metadata_left_behind: None,
         durability_unconfirmed: None,
+        locked_kept: None,
     }
 }
 

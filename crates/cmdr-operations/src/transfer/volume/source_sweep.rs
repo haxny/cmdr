@@ -26,6 +26,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use super::super::super::locked_sources::{LockedPlan, Unlocked};
 use super::transfer_error::{AtPath, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
@@ -95,6 +96,12 @@ pub(crate) struct FolderLeftovers {
 /// Removes a moved source folder from the ledger its copy walk kept, sparing
 /// `skipped` (the merge's Skips) and whatever appeared or changed.
 ///
+/// What the person agreed to unlock (`locked`, the move's answer about Locked
+/// items) is unlocked right before it goes: a folder before anything leaves it
+/// (locked again if it stays), a file right before its delete. Its copy already
+/// landed Locked, so nothing goes back on at the destination. Only a local
+/// source has anything to unlock; every other plan is empty.
+///
 /// A child that refuses to go keeps its folder alive, and the FIRST such failure
 /// comes out with the child's own path: the leaf is the diagnosis, the folder's
 /// `ENOTEMPTY` would only be its symptom. The sweep keeps going past a failure,
@@ -104,9 +111,10 @@ async fn sweep_moved_folder(
     folder: &Path,
     ledger: &SourceLedger,
     skipped: &HashSet<PathBuf>,
+    locked: &LockedPlan,
 ) -> Result<FolderLeftovers, PathedVolumeError> {
     let mut left = FolderLeftovers::default();
-    sweep_level(volume, folder, ledger, skipped, &mut left).await?;
+    sweep_level(volume, folder, ledger, skipped, locked, &mut left).await?;
     Ok(left)
 }
 
@@ -117,8 +125,11 @@ async fn sweep_level(
     dir: &Path,
     ledger: &SourceLedger,
     skipped: &HashSet<PathBuf>,
+    locked: &LockedPlan,
     left: &mut FolderLeftovers,
 ) -> Result<bool, PathedVolumeError> {
+    // Back on (by `Drop`) unless the folder empties and goes.
+    let opened = locked.unlock(dir);
     // As the copy walk listed it: a sidecar it left behind travels with its
     // owner, which the kernel removes with the owner.
     let entries = match volume.list_directory_as_source(dir).await {
@@ -141,7 +152,7 @@ async fn sweep_level(
             match kind_of(volume, entry, &path).await {
                 Err(e) => Err(e),
                 Ok(EntryKind::Directory) if ledger.walked_dirs.contains(&path) => {
-                    Box::pin(sweep_level(volume, &path, ledger, skipped, left)).await
+                    Box::pin(sweep_level(volume, &path, ledger, skipped, locked, left)).await
                 }
                 // A link the move carried goes as the link, ❌ never through it:
                 // on a backend whose listing follows links the walk copied what
@@ -171,8 +182,12 @@ async fn sweep_level(
         };
         note_outcome(outcome, &mut remains, &mut first_failure);
     }
+    let unlocked: Vec<Unlocked> = doomed.iter().map(|path| locked.unlock(path)).collect();
     let results = volume.delete_files(&doomed).await;
-    for (path, result) in doomed.iter().zip(results) {
+    for ((path, result), unlocked) in doomed.iter().zip(results).zip(unlocked) {
+        if result.is_ok() {
+            unlocked.gone();
+        }
         note_outcome(result.at_source(path).map(|()| false), &mut remains, &mut first_failure);
     }
 
@@ -185,7 +200,10 @@ async fn sweep_level(
     match volume.delete(dir).await {
         // A folder that only existed through what was in it (an object
         // store's prefix with no marker) went with its last file.
-        Ok(()) | Err(VolumeError::NotFound(_)) => Ok(false),
+        Ok(()) | Err(VolumeError::NotFound(_)) => {
+            opened.gone();
+            Ok(false)
+        }
         Err(e) => Err(e).at_source(dir),
     }
 }
@@ -254,13 +272,14 @@ pub(crate) async fn stamp_source(volume: &Arc<dyn Volume>, source: &Path) -> Res
 }
 
 /// Removes one moved top-level source from what the move carried, sparing
-/// `skipped` (a merge's Skips) and whatever appeared or changed since. Answers
-/// what stayed.
+/// `skipped` (a merge's Skips) and whatever appeared or changed since, and
+/// unlocking what `locked` says the person agreed to. Answers what stayed.
 pub(crate) async fn sweep_carried_source(
     volume: &Arc<dyn Volume>,
     source: &Path,
     carried: &CarriedSource,
     skipped: &HashSet<PathBuf>,
+    locked: &LockedPlan,
 ) -> Result<FolderLeftovers, PathedVolumeError> {
     match carried {
         CarriedSource::Folder(ledger) => match volume.entry_kind(source).await {
@@ -269,12 +288,14 @@ pub(crate) async fn sweep_carried_source(
                 volume.delete(source).await.at_source(source)?;
                 Ok(FolderLeftovers::default())
             }
-            Ok(_) | Err(VolumeError::NotFound(_)) => sweep_moved_folder(volume, source, ledger, skipped).await,
+            Ok(_) | Err(VolumeError::NotFound(_)) => sweep_moved_folder(volume, source, ledger, skipped, locked).await,
             Err(e) => Err(e).at_source(source),
         },
         CarriedSource::File(before) => {
             if file_is_unchanged(volume, source, *before).await? {
+                let unlocked = locked.unlock(source);
                 volume.delete(source).await.at_source(source)?;
+                unlocked.gone();
                 Ok(FolderLeftovers::default())
             } else {
                 Ok(FolderLeftovers {

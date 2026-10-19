@@ -850,23 +850,25 @@
       "name": "indexing"
     },
     {
-      "description": "Control the operation queue: pause / resume / cancel one operationId, or pause_all / resume_all. cancel also takes operationIds (array) for several; rollback: true deletes already-copied files (single op). continue_without_gone answers a pendingSourcesGone question. See cmdr://state operations for ids.",
+      "description": "Control the operation queue: pause / resume / cancel one operationId, or pause_all / resume_all. cancel also takes operationIds (array) for several; rollback: true deletes already-copied files (single op). continue_without_gone answers a pendingSourcesGone question; move_locked / skip_locked answer a pendingLockedSources one. See cmdr://state operations for ids.",
       "inputSchema": {
         "properties": {
           "action": {
-            "description": "pause | resume | cancel | continue_without_gone | pause_all | resume_all. pause acts on a running operation; a queued one isn't touching a device yet, so pausing it is refused rather than silently ignored. continue_without_gone answers an operation's pendingSourcesGone question by carrying on with the sources still there (cancel is the other answer).",
+            "description": "pause | resume | cancel | continue_without_gone | move_locked | skip_locked | pause_all | resume_all. pause acts on a running operation; a queued one isn't touching a device yet, so pausing it is refused rather than silently ignored. continue_without_gone answers an operation's pendingSourcesGone question by carrying on with the sources still there (cancel is the other answer). move_locked and skip_locked answer a move's pendingLockedSources question: unlock the user's Locked items for the move (they end up Locked where they land), or leave them where they are and move the rest (cancel is the third answer).",
             "enum": [
               "pause",
               "resume",
               "cancel",
               "continue_without_gone",
+              "move_locked",
+              "skip_locked",
               "pause_all",
               "resume_all"
             ],
             "type": "string"
           },
           "operationId": {
-            "description": "Operation to act on (required for pause / resume / cancel / continue_without_gone unless operationIds is given). See cmdr://state operations.",
+            "description": "Operation to act on (required for pause / resume / cancel / continue_without_gone / move_locked / skip_locked unless operationIds is given). See cmdr://state operations.",
             "type": "string"
           },
           "operationIds": {

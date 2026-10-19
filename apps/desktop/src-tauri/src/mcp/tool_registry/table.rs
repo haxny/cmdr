@@ -275,7 +275,8 @@ mcp_tools! {
         desc: "Control the operation queue: pause / resume / cancel one operationId, or \
                pause_all / resume_all. cancel also takes operationIds (array) for several; \
                rollback: true deletes already-copied files (single op). continue_without_gone \
-               answers a pendingSourcesGone question. See cmdr://state operations for ids.",
+               answers a pendingSourcesGone question; move_locked / skip_locked answer a \
+               pendingLockedSources one. See cmdr://state operations for ids.",
         schema: schemas::queue_schema(),
         consumers: &[Consumer::AiClient],
         access: Access::Write,

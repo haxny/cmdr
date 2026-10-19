@@ -16,7 +16,8 @@ use serde_json::{Value, json};
 use super::{ToolError, ToolResult};
 use crate::pluralize::pluralize;
 use cmdr_operations::{
-    LifecycleStatus, OperationSnapshot, Operations, PauseAllOutcome, PauseOutcome, SourcesGoneAnswerOutcome,
+    LifecycleStatus, LockedSourcesAnswer, LockedSourcesAnswerOutcome, OperationSnapshot, Operations, PauseAllOutcome,
+    PauseOutcome, SourcesGoneAnswerOutcome,
 };
 
 /// The app's engine, or `None` before `install`, where every answer is what an
@@ -65,8 +66,24 @@ pub async fn execute_queue(params: &Value) -> ToolResult {
                 }),
             )
         }
+        "move_locked" | "skip_locked" => {
+            let id = require_operation_id(params)?;
+            require_operation_exists(&id)?;
+            let answer = if action == "move_locked" {
+                LockedSourcesAnswer::MoveAnyway
+            } else {
+                LockedSourcesAnswer::Skip
+            };
+            locked_reply(
+                &id,
+                answer,
+                engine().map_or(LockedSourcesAnswerOutcome::UnknownOperation, |ops| {
+                    ops.answer_locked_sources(&id, answer)
+                }),
+            )
+        }
         other => Err(ToolError::invalid_params(format!(
-            "action must be 'pause', 'resume', 'cancel', 'continue_without_gone', 'pause_all', or 'resume_all' (got '{other}')"
+            "action must be 'pause', 'resume', 'cancel', 'continue_without_gone', 'move_locked', 'skip_locked', 'pause_all', or 'resume_all' (got '{other}')"
         ))),
     }
 }
@@ -210,6 +227,26 @@ fn continue_reply(operation_id: &str, outcome: SourcesGoneAnswerOutcome) -> Tool
             "Operation {operation_id} isn't asking about sources that left, so there's nothing to carry on: someone answered first, or it never asked. See pendingSourcesGone in cmdr://state operations."
         ))),
         SourcesGoneAnswerOutcome::UnknownOperation => Err(ToolError::invalid_params(format!(
+            "Unknown operationId '{operation_id}': it settled before the answer arrived. See cmdr://state operations."
+        ))),
+    }
+}
+
+/// The agent-facing answer to "these items are Locked: move them anyway, or skip
+/// them?". Only the answer that reached the operation earns an `OK`.
+fn locked_reply(operation_id: &str, answer: LockedSourcesAnswer, outcome: LockedSourcesAnswerOutcome) -> ToolResult {
+    match outcome {
+        LockedSourcesAnswerOutcome::Answered => Ok(json!(match answer {
+            LockedSourcesAnswer::MoveAnyway => format!(
+                "OK: Operation {operation_id} is moving its Locked items too, unlocking each for the move and locking it again where it lands."
+            ),
+            LockedSourcesAnswer::Skip =>
+                format!("OK: Operation {operation_id} is leaving its Locked items where they are and moving the rest."),
+        })),
+        LockedSourcesAnswerOutcome::NotAsking => Err(ToolError::invalid_params(format!(
+            "Operation {operation_id} isn't asking about Locked items, so there's nothing to answer: someone answered first, or it never asked. See pendingLockedSources in cmdr://state operations."
+        ))),
+        LockedSourcesAnswerOutcome::UnknownOperation => Err(ToolError::invalid_params(format!(
             "Unknown operationId '{operation_id}': it settled before the answer arrived. See cmdr://state operations."
         ))),
     }
@@ -359,6 +396,20 @@ mod tests {
         }))
         .await;
         assert!(result.is_err(), "nothing was asked, so nothing carried on: {result:?}");
+    }
+
+    /// The Locked-items answers are refused the same way when nothing asked.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn answering_locked_items_nobody_asked_about_is_refused() {
+        let fixture = QueuedOperationFixture::park_on(app_engine(), "mcp-queue-locked");
+        for action in ["move_locked", "skip_locked"] {
+            let result = execute_queue(&json!({
+                "action": action,
+                "operationId": fixture.queued_id(),
+            }))
+            .await;
+            assert!(result.is_err(), "{action}: nothing was asked: {result:?}");
+        }
     }
 
     #[test]

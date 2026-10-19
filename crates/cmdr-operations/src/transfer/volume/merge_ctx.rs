@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 use super::super::super::conflict::ApplyToAll;
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::ledger::WrittenFile;
+use super::super::super::locked_sources::LockedPlan;
 use super::super::super::state::WriteOperationState;
 use super::super::super::types::VolumeCopyConfig;
 use super::super::transfer_probe::{OperationProbe, TaskRow};
@@ -127,6 +128,10 @@ pub(super) struct MergeCtx<'a> {
     /// `TaskProbe` field assumes — one row, one write attempt — true once a
     /// subtree streams several files at once.
     pub probe: Option<MergeProbe>,
+    /// A MOVE's answer about Locked items: a child it skips stays out of the
+    /// copy whole, like a conflict Skip, and the sweep keeps it. `None` on a
+    /// copy, which never touches an original (`locked_sources.rs`).
+    pub locked: Option<&'a LockedPlan>,
 }
 
 /// The in-flight table as a merge walk sees it: the operation's probe, plus the

@@ -213,6 +213,7 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, Box
         window: window.clone(),
         displaced: &displaced,
         probe: merge_probe,
+        locked: None,
     };
     // A top-level FILE source IS a leaf, so it takes its slot from the same
     // op-wide window a directory's children take theirs from. Otherwise a batch

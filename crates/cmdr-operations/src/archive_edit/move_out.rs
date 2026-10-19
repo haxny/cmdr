@@ -241,6 +241,7 @@ impl crate::Operations {
                             refused: None,
                             metadata_left_behind: state.metadata_losses.left_behind(&op_id),
                             durability_unconfirmed: None,
+                            locked_kept: None,
                         }),
                         Some(err) => {
                             events.emit_error(WriteErrorEvent::new(op_id.clone(), WriteOperationType::Move, err))
@@ -298,6 +299,7 @@ impl crate::Operations {
                             refused: None,
                             metadata_left_behind: state.metadata_losses.left_behind(&op_id),
                             durability_unconfirmed: None,
+                            locked_kept: None,
                         }),
                         // The durable prefix moved out, but a later source failed to
                         // extract — surface the failure. A retry moves the rest (it
@@ -386,6 +388,9 @@ impl OperationEventSink for SuppressTerminalsSink {
     }
     fn emit_sources_gone(&self, event: super::super::types::WriteSourcesGoneEvent) {
         self.inner.emit_sources_gone(event);
+    }
+    fn emit_locked_sources(&self, event: super::super::types::WriteLockedSourcesEvent) {
+        self.inner.emit_locked_sources(event);
     }
     fn emit_scan_progress(&self, event: super::super::types::ScanProgressEvent) {
         self.inner.emit_scan_progress(event);
