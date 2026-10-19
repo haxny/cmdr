@@ -1,4 +1,8 @@
 {
+  "settings.theme.mode.keywords": "theme, dark, light, mode, appearance, color, colour",
+  "@settings.theme.mode.keywords": {
+    "sourceHash": "8a95116"
+  },
   "settings.appearance.appColor.label": "App colour",
   "@settings.appearance.appColor.label": {
     "sourceHash": "b1107c8"
@@ -11,6 +15,10 @@
   "@settings.appearance.appColor.opt.system": {
     "sourceHash": "5a7bc86"
   },
+  "settings.appearance.appColor.keywords": "color, colour, accent, theme, gold, system, brand",
+  "@settings.appearance.appColor.keywords": {
+    "sourceHash": "dd5ef83"
+  },
   "settings.appearance.sizeColors.label": "Size colours",
   "@settings.appearance.sizeColors.label": {
     "sourceHash": "7598e9a"
@@ -18,6 +26,10 @@
   "settings.appearance.sizeColors.description": "Colour file sizes in the file list by tier. Rainbow uses green/yellow/orange/red/purple. App uses shades of the app colour.",
   "@settings.appearance.sizeColors.description": {
     "sourceHash": "ecb064a"
+  },
+  "settings.appearance.sizeColors.keywords": "size, color, colour, tier, rainbow, app color, app colour, accent, shades, highlight",
+  "@settings.appearance.sizeColors.keywords": {
+    "sourceHash": "f1249f0"
   },
   "settings.appearance.dateColors.label": "Date colours",
   "@settings.appearance.dateColors.label": {
@@ -27,17 +39,45 @@
   "@settings.appearance.dateColors.description": {
     "sourceHash": "382ce25"
   },
+  "settings.appearance.dateColors.keywords": "date, color, colour, age, modified, wilting, app color, app colour, accent, fade, fresh, old",
+  "@settings.appearance.dateColors.keywords": {
+    "sourceHash": "65cbe5d"
+  },
+  "settings.appearance.tintLocal.keywords": "tint, pane, color, colour, volume, local, background, highlight",
+  "@settings.appearance.tintLocal.keywords": {
+    "sourceHash": "955fcd6"
+  },
+  "settings.appearance.tintSmb.keywords": "tint, pane, color, colour, volume, server, network, background, highlight",
+  "@settings.appearance.tintSmb.keywords": {
+    "sourceHash": "880947f"
+  },
+  "settings.appearance.tintMtp.keywords": "tint, pane, color, colour, volume, phone, device, camera, background, highlight",
+  "@settings.appearance.tintMtp.keywords": {
+    "sourceHash": "332d7b6"
+  },
   "settings.appearance.useAppIconsForDocuments.description": "Show the app’s icon for documents instead of generic file type icons. More colourful but slightly slower.",
   "@settings.appearance.useAppIconsForDocuments.description": {
     "sourceHash": "9651182"
+  },
+  "settings.appearance.useAppIconsForDocuments.keywords": "icon, document, file, app, colorful, colourful",
+  "@settings.appearance.useAppIconsForDocuments.keywords": {
+    "sourceHash": "b039472"
   },
   "settings.listing.showTags.description": "Show coloured dots next to names for files and folders that carry macOS Finder tags.",
   "@settings.listing.showTags.description": {
     "sourceHash": "005f3b0"
   },
+  "settings.listing.showTags.keywords": "tag, tags, label, labels, color, colour, colours, dot, dots",
+  "@settings.listing.showTags.keywords": {
+    "sourceHash": "70fc801"
+  },
   "settings.behavior.fileSystemWatching.lowDiskSpaceThresholdPercent.description": "Warn when free space drops below this per cent of your startup disk.",
   "@settings.behavior.fileSystemWatching.lowDiskSpaceThresholdPercent.description": {
     "sourceHash": "9ed41b8"
+  },
+  "settings.behavior.fileSystemWatching.lowDiskSpaceThresholdPercent.keywords": "disk, space, threshold, percent, per cent, low, free, warning",
+  "@settings.behavior.fileSystemWatching.lowDiskSpaceThresholdPercent.keywords": {
+    "sourceHash": "7a0df93"
   },
   "settings.behavior.switcherFavoritesExpanded.label": "Favourites open in the volume switcher",
   "@settings.behavior.switcherFavoritesExpanded.label": {
@@ -51,9 +91,17 @@
   "@settings.advanced.virtualizationBufferRows.label": {
     "sourceHash": "07b7869"
   },
+  "settings.advanced.virtualizationBufferRows.keywords": "virtualization, virtualisation, buffer, row, render",
+  "@settings.advanced.virtualizationBufferRows.keywords": {
+    "sourceHash": "2342517"
+  },
   "settings.advanced.virtualizationBufferColumns.label": "Virtualisation buffer (columns)",
   "@settings.advanced.virtualizationBufferColumns.label": {
     "sourceHash": "a9e8dba"
+  },
+  "settings.advanced.virtualizationBufferColumns.keywords": "virtualization, virtualisation, buffer, column, brief",
+  "@settings.advanced.virtualizationBufferColumns.keywords": {
+    "sourceHash": "f4c112b"
   },
   "settings.section.colorsAndFormats": "Colours and formats",
   "@settings.section.colorsAndFormats": {
@@ -119,6 +167,10 @@
   "@settings.fileOperations.skipConfirmation.description": {
     "sourceHash": "086379d"
   },
+  "settings.fileOperations.skipConfirmation.keywords": "confirm, confirmation, dialog, ask, copy, move, trash, bin, delete, skip, clicks",
+  "@settings.fileOperations.skipConfirmation.keywords": {
+    "sourceHash": "9f61258"
+  },
   "settings.dataWipe.goes.license": "The licence on this Mac. To activate it again, enter the licence key from your purchase email.",
   "@settings.dataWipe.goes.license": {
     "sourceHash": "90b5b06"
@@ -130,5 +182,17 @@
   "settings.dataWipe.doneMessage": "Everything Cmdr kept on this Mac is gone. To remove the app as well, move it to the Bin after Cmdr quits.",
   "@settings.dataWipe.doneMessage": {
     "sourceHash": "a0d09dc"
+  },
+  "settings.license.manageKey.keywords": "license, licence, key, manage, activate, activation, change",
+  "@settings.license.manageKey.keywords": {
+    "sourceHash": "3e2241e"
+  },
+  "settings.license.enterKey.keywords": "license, licence, key, enter, activate, activation, redeem",
+  "@settings.license.enterKey.keywords": {
+    "sourceHash": "ebb9475"
+  },
+  "settings.license.getLicense.keywords": "license, licence, buy, purchase, pricing, commercial, personal, upgrade",
+  "@settings.license.getLicense.keywords": {
+    "sourceHash": "5454f6d"
   }
 }

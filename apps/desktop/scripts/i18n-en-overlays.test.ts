@@ -32,6 +32,7 @@ import { describe, expect, it } from 'vitest'
 import {
   loadCatalog,
   isRawKey,
+  isSearchKeywordsKey,
   listLocales,
   parseMessage,
   resolveLocaleSource,
@@ -267,6 +268,9 @@ describe('the forked vocabulary is whole, not half-applied', () => {
       ['en-AU', au],
     ] as const) {
       for (const [key, value] of Object.entries(cat.messages)) {
+        // A search-keyword fork keeps the American form as a synonym beside the local one: it's never shown,
+        // and a reader who types either spelling should land on the row.
+        if (isSearchKeywordsKey(key)) continue
         const visible = visibleTextOf(key, value)
         for (const { term, pattern, locales } of FORKED_TERMS) {
           if (!locales.includes(tag)) continue
@@ -355,6 +359,11 @@ describe('every overlay value stays renderable where base en is', () => {
 })
 
 describe('the rulings the catalogs are supposed to encode', () => {
+  // The rulings govern COPY. Search-keyword lists are never shown and keep the American form as a synonym beside the
+  // local one (lowercase, like every keyword), so they're out of scope here.
+  const copyOf = (messages: Record<string, string>): [string, string][] =>
+    Object.entries(messages).filter(([k]) => !isSearchKeywordsKey(k))
+
   it('calls the destination the Bin, capitalised, in both', () => {
     for (const [tag, cat] of [
       ['en-GB', gb],
@@ -362,7 +371,7 @@ describe('the rulings the catalogs are supposed to encode', () => {
     ] as const) {
       expect(cat.messages['fileOperations.delete.trashSwitch'], tag).toBe('Move to Bin')
       expect(cat.messages['errors.mutation.trashRefused'], tag).toBe('macOS wouldn’t move this to the Bin.')
-      const lowercased = Object.entries(cat.messages).filter(([, v]) => / bin\b/.test(v))
+      const lowercased = copyOf(cat.messages).filter(([, v]) => / bin\b/.test(v))
       // "bin" survives only as the verb ("Counting items to bin...", "and bin old file", "copy, move, and bin").
       expect(lowercased.map(([k]) => k).sort(), tag).toEqual([
         'fileExplorer.renameConflict.overwriteTrash',
@@ -389,7 +398,7 @@ describe('the rulings the catalogs are supposed to encode', () => {
       ['en-GB', gb],
       ['en-AU', au],
     ] as const) {
-      const leftovers = Object.entries(cat.messages).filter(([, v]) => /trash/i.test(v))
+      const leftovers = copyOf(cat.messages).filter(([, v]) => /trash/i.test(v))
       expect(leftovers.map(([k]) => k).sort(), tag).toEqual([...icuSelectorOnly].sort())
       for (const [key, value] of leftovers) {
         // The only occurrence is the selector itself, never prose.
@@ -407,7 +416,7 @@ describe('the rulings the catalogs are supposed to encode', () => {
     ] as const) {
       expect(cat.messages['licensing.dialog.labelKey'], tag).toBe('Licence key')
       expect(cat.messages['menu.app.licenseEnter'], tag).toBe('Enter licence key…')
-      const nouns = Object.entries(cat.messages).filter(([, v]) => /\blicens(e|es)\b/i.test(v))
+      const nouns = copyOf(cat.messages).filter(([, v]) => /\blicens(e|es)\b/i.test(v))
       expect(
         nouns.map(([k]) => k),
         tag,
