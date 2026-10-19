@@ -137,3 +137,39 @@ async fn a_lied_about_type_is_what_the_stat_reports() {
         "while the children are still really there — the lie is the metadata, not the store"
     );
 }
+
+/// A fault armed at a path counts only the calls there: calls elsewhere neither
+/// fail nor move its counter, so "the first delete of `/dir/b.txt`" means that
+/// file whichever order a concurrent driver reaches its files in. A rename is
+/// matched by where it lands.
+#[tokio::test]
+async fn a_fault_armed_at_a_path_counts_only_the_calls_there() {
+    let inner = seeded().await;
+    let faulty = FaultyVolume::wrapping(Arc::clone(&inner))
+        .failing_call_at(FaultyOp::Delete, "/dir/b.txt", 1, io("delete refused"))
+        .arc();
+
+    faulty
+        .delete(Path::new("/dir/a.txt"))
+        .await
+        .expect("a delete elsewhere forwards");
+    assert!(!faulty.fault_fired(FaultyOp::Delete), "and doesn't count");
+    assert!(faulty.delete(Path::new("/dir/b.txt")).await.is_err());
+    assert!(faulty.fault_fired(FaultyOp::Delete));
+    assert!(
+        inner.exists(Path::new("/dir/b.txt")).await,
+        "the refused delete never ran"
+    );
+
+    let renaming = FaultyVolume::wrapping(Arc::clone(&inner))
+        .failing_call_at(FaultyOp::Rename, "/dir/c.txt", 1, io("rename refused"))
+        .arc();
+    assert!(
+        renaming
+            .rename(Path::new("/dir/b.txt"), Path::new("/dir/c.txt"), false)
+            .await
+            .is_err(),
+        "matched by the rename's destination"
+    );
+    assert!(renaming.fault_fired(FaultyOp::Rename));
+}

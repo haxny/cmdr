@@ -31,7 +31,7 @@ use cmdr_fs::volume::{
 };
 use std::collections::HashMap;
 use std::future::Future;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex as StdMutex};
 use tokio_util::sync::CancellationToken;
@@ -318,6 +318,10 @@ struct ArmedFault {
     /// first write fails" rather than counting from zero and getting it wrong.
     nth: usize,
     error: VolumeError,
+    /// Only calls at this path count (and fail); `None` counts every call. A
+    /// `rename` is matched by its destination (`to`), a `write_from_stream` by
+    /// the path it writes.
+    at: Option<PathBuf>,
 }
 
 /// Any volume, plus a fault you armed on one of its operations.
@@ -346,7 +350,24 @@ impl<V: Volume + 'static> FaultyVolume<V> {
     /// operation; arming the same operation twice replaces the first.
     pub fn failing_call(mut self, op: FaultyOp, nth: usize, error: VolumeError) -> Self {
         assert!(nth >= 1, "failing_call: `nth` is 1-based, so 0 arms nothing");
-        self.faults.insert(op, ArmedFault { nth, error });
+        self.faults.insert(op, ArmedFault { nth, error, at: None });
+        self
+    }
+
+    /// Like [`failing_call`](Self::failing_call), counting only the calls at
+    /// `at`: the Nth call to `op` AT THAT PATH fails. For a driver that runs
+    /// several files at once, where "the first delete" names whichever task got
+    /// there first and only the path names the file the cell is about.
+    pub fn failing_call_at(mut self, op: FaultyOp, at: impl Into<PathBuf>, nth: usize, error: VolumeError) -> Self {
+        assert!(nth >= 1, "failing_call_at: `nth` is 1-based, so 0 arms nothing");
+        self.faults.insert(
+            op,
+            ArmedFault {
+                nth,
+                error,
+                at: Some(at.into()),
+            },
+        );
         self
     }
 
@@ -375,8 +396,8 @@ impl<V: Volume + 'static> FaultyVolume<V> {
 
     /// Hands back the inner volume's opened stream, broken on its first read
     /// when this open is the one [`FaultyOp::ReadStream`] is armed on.
-    fn breaking_its_first_read<'a>(&'a self, opened: OpeningStream<'a>) -> OpeningStream<'a> {
-        let fault = self.fault_for(FaultyOp::ReadStream);
+    fn breaking_its_first_read<'a>(&'a self, path: &Path, opened: OpeningStream<'a>) -> OpeningStream<'a> {
+        let fault = self.fault_for(FaultyOp::ReadStream, path);
         Box::pin(async move {
             let inner = opened.await?;
             Ok(match fault {
@@ -389,9 +410,13 @@ impl<V: Volume + 'static> FaultyVolume<V> {
         })
     }
 
-    /// Counts this call to `op` and returns the error if it's the armed one.
-    fn fault_for(&self, op: FaultyOp) -> Option<VolumeError> {
+    /// Counts this call to `op` at `path` and returns the error if it's the
+    /// armed one. A fault armed at another path neither counts nor fires here.
+    fn fault_for(&self, op: FaultyOp, path: &Path) -> Option<VolumeError> {
         let armed = self.faults.get(&op)?;
+        if armed.at.as_deref().is_some_and(|at| at != path) {
+            return None;
+        }
         let mut calls = self.calls.lock_ignore_poison();
         let seen = calls.entry(op).or_insert(0);
         *seen += 1;
@@ -432,7 +457,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         path: &'a Path,
         on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::ListDirectory) {
+        match self.fault_for(FaultyOp::ListDirectory, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.list_directory(path, on_progress),
         }
@@ -444,7 +469,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
         cancel: Option<&'a CancellationToken>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::ListDirectory) {
+        match self.fault_for(FaultyOp::ListDirectory, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.list_directory_with_cancel(path, on_progress, cancel),
         }
@@ -455,7 +480,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         path: &'a Path,
         cancel: Option<&'a CancellationToken>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::ListDirectory) {
+        match self.fault_for(FaultyOp::ListDirectory, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.list_directory_for_scan(path, cancel),
         }
@@ -465,7 +490,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::GetMetadata) {
+        match self.fault_for(FaultyOp::GetMetadata, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.get_metadata(path),
         }
@@ -475,7 +500,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::IsDirectory) {
+        match self.fault_for(FaultyOp::IsDirectory, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.is_directory(path),
         }
@@ -485,7 +510,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::CreateDirectory) {
+        match self.fault_for(FaultyOp::CreateDirectory, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.create_directory(path),
         }
@@ -495,7 +520,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<DirectoryCreation, VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::CreateDirectory) {
+        match self.fault_for(FaultyOp::CreateDirectory, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.create_directory_all(path),
         }
@@ -506,14 +531,14 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         path: &'a Path,
         content: &'a [u8],
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::CreateFile) {
+        match self.fault_for(FaultyOp::CreateFile, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.create_file(path, content),
         }
     }
 
     fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::Delete) {
+        match self.fault_for(FaultyOp::Delete, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.delete(path),
         }
@@ -524,7 +549,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         path: &'a Path,
         cancel: Option<&'a CancellationToken>,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::Delete) {
+        match self.fault_for(FaultyOp::Delete, path) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.delete_with_cancel(path, cancel),
         }
@@ -536,7 +561,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         to: &'a Path,
         force: bool,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::Rename) {
+        match self.fault_for(FaultyOp::Rename, to) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.rename(from, to, force),
         }
@@ -546,9 +571,9 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::OpenReadStream) {
+        match self.fault_for(FaultyOp::OpenReadStream, path) {
             Some(e) => Box::pin(async move { Err(e) }),
-            None => self.breaking_its_first_read(self.inner.open_read_stream(path)),
+            None => self.breaking_its_first_read(path, self.inner.open_read_stream(path)),
         }
     }
 
@@ -557,9 +582,9 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         path: &'a Path,
         size_hint: Option<u64>,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::OpenReadStream) {
+        match self.fault_for(FaultyOp::OpenReadStream, path) {
             Some(e) => Box::pin(async move { Err(e) }),
-            None => self.breaking_its_first_read(self.inner.open_read_stream_with_hint(path, size_hint)),
+            None => self.breaking_its_first_read(path, self.inner.open_read_stream_with_hint(path, size_hint)),
         }
     }
 
@@ -571,7 +596,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
     ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::WriteFromStream) {
+        match self.fault_for(FaultyOp::WriteFromStream, dest) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.write_from_stream(dest, mode, length, stream, on_progress),
         }
