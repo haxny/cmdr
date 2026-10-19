@@ -8,9 +8,9 @@ use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
 use url::Url;
 
-use super::{ConnectionState, WebdavVolume, WebdavVolumeInner};
+use super::{WebdavVolume, WebdavVolumeInner};
 use crate::params::WebdavConnectionParams;
-use cmdr_fs::volume::liveness::Timings;
+use cmdr_fs::volume::http_session::HttpSession;
 
 pub(super) fn make_test_volume(root: &str) -> WebdavVolume {
     make_test_volume_with(root, VolumeHost::detached())
@@ -29,16 +29,9 @@ pub(super) fn make_test_volume_with(root: &str, host: VolumeHost) -> WebdavVolum
             &params.remote_root,
         ),
         inner: Arc::new_cyclic(|me| WebdavVolumeInner {
+            session: HttpSession::new(me, "webdav-test", &host, None, true),
             volume_id: "webdav-test".to_string(),
             params: std::sync::RwLock::new(params),
-            client: tokio::sync::RwLock::new(None),
-            connection: cmdr_fs::volume::ConnectionReporter::new("webdav-test", &host, ConnectionState::Connected),
-            me: me.clone(),
-            reconnect_lock: tokio::sync::Mutex::new(()),
-            unmounted: AtomicBool::new(false),
-            auto_reconnect: AtomicBool::new(true),
-            auth_attempt_spent: AtomicBool::new(false),
-            silence: std::sync::RwLock::new(Timings::PRODUCTION),
             keeps_dates: AtomicBool::new(false),
             upload_chunk: AtomicU64::new(crate::chunking::CHUNK_SIZE),
             host,

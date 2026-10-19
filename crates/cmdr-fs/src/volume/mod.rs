@@ -2069,6 +2069,7 @@ mod connection_cell;
 mod connection_reporter;
 mod entry_kind;
 mod error;
+pub mod http_session;
 mod ids;
 mod in_memory;
 pub mod listing_progress;

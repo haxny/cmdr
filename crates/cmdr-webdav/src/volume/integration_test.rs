@@ -521,8 +521,8 @@ async fn a_source_that_ends_early_never_reaches_the_users_filename() {
     // answers, and reading it that way would take the whole volume offline over
     // one stale size.
     assert_eq!(
-        volume.inner.connection.state(),
-        super::ConnectionState::Connected,
+        volume.inner.session.connection().state(),
+        cmdr_fs::volume::http_session::HttpConnectionState::Connected,
         "one wrong `size` must not flip the volume offline"
     );
     assert!(!volume.exists(&path).await, "the destination was never written");

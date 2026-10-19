@@ -369,38 +369,15 @@ Folder Operations": the `X-OC-CTime` request header and the `nc:creation_time` p
 
 ## The reconnect model
 
-`state.rs` keeps `Connected | Disconnected | NeedsCredentials` in a `cmdr_fs::volume::ConnectionReporter`, which reports
-transitions only, and nothing for a retired volume. `reconnect.rs`: `note_lost_session` acts once on the `Connected → Disconnected`
-edge, drops the client, and, if "reconnect automatically" is on, runs a 2/5/15/30/60/120 s backoff loop that re-reads
-the store and re-probes. A refusal latches `auth_attempt_spent`, moves to `NeedsCredentials`, and stops.
+The lifecycle is `cmdr_fs::volume::http_session`, shared with `cmdr-s3`: `crates/cmdr-fs/DETAILS.md` § "The HTTP
+backends' connection lifecycle" has the mechanism and its reasoning (the drop on the first `DeviceDisconnected`, the
+backoff, the one unattended try, and why a failing request loses only the client it went out on). `reconnect.rs` brings
+what is this backend's own: the PROPFIND probe, and its refusals mapped (`AuthenticationRejected` and
+`AuthMethodUnsupported` spend the unattended try; `NeedsCredentials` asks a person without spending it).
 `attempt_reconnect` probes now; `reconnect_with_credentials(SignIn)` requires the volume's own username (another account
-is another volume: `NotSupported`), probes with the typed password, and ❗ only once that connected files the secret as
-its Remember box says (`secret_store::keep_signed_in_secret`: on saves, off only refreshes). Writing before the probe
-let a typo replace the secret that worked (#530). `UnattendedReconnect` is `SwitchOff`, `NoStoredSecret`, or `Possible`.
-`sign_in_prompt` is always `SignInShape::Password`, so the sheet renders one field under a read-only username.
-
-`note_lost_session` takes the dead client out and cancels its `lost` token, so every other operation still waiting on it
-answers `DeviceDisconnected` at once rather than at its own budget; the pool goes with the client, so no request is ever
-handed one of its connections again. ❗ **An installed client counts as live only while the state says `Connected`**:
-the drop may still be on its way (a spawned task, when the lock was busy) when the frontend's reconnect fires on the
-event, so `rebuild` treats a client installed under any other state as the dead one and dials. The other half: a fresh
-client is installed and marked `Connected` under ONE write guard, and `drop_dead_client` takes only under a
-non-`Connected` state, so the late task can never take the fresh one. The same pair as `crates/cmdr-sftp/DETAILS.md` §
-"Coming back".
-
-❗ **A failing request loses only the client it went out on.** HTTP holds no session, but this backend holds a CLIENT
-(its pool and cookie jar), and every installed one gets the next generation, packed with the state in one atomic
-(`cmdr_fs::volume::ConnectionReporter`; `rebuild` calls its `install` under the install's guard, and an attended sign-in
-that replaces a live client counts too). `noting` reads the generation with the client, before the call runs, and
-`note_lost_session` flips only while it's still installed (`ConnectionReporter::lose`, a CAS): a late
-`DeviceDisconnected` from a replaced client can't drop the fresh one and cut every request waiting on it. The read can
-only be older than the client `work` takes a moment later, which at worst leaves a real loss for the next call to
-notice. `Volume::connection_generation` answers the same counter, so a transfer whose request failed on the old client
-sees the volume live on a newer one and runs it again (`cmdr-operations`'s `transfer/volume_outage.rs`). Only an install
-moves it: ❌ not a loss, ❌ not a reconnect that found the client live or didn't take. A reconnect's own outcome
-(`report`) moves the state with a plain `set`, in the same poll as the failed attempt's return, before any next install
-could finish a probe. Pinned by `reconnect_test.rs` (`a_late_loss_from_a_replaced_client_*`,
-`only_an_installed_client_moves_the_generation`, and the Docker cell `the_switch_off_leaves_a_reachable_server_alone`).
+is another volume: `NotSupported`), then signs in through the shared lifecycle, which files the secret only once it
+connected (crates/cmdr-fs/DETAILS.md § "The HTTP backends' connection lifecycle", #530). `UnattendedReconnect` is `SwitchOff`, `NoStoredSecret`, or `Possible`. `sign_in_prompt` is always
+`SignInShape::Password`, so the sheet renders one field under a read-only username.
 
 ## Bounded bodies
 

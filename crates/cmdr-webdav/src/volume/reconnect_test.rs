@@ -335,8 +335,14 @@ async fn a_late_loss_from_a_replaced_client_leaves_the_new_one_connected() {
         .noting(async {
             // While the call is out, a sibling's failure marks the old client
             // lost and a reconnect installs a new one.
-            assert!(volume.inner.connection.lose(volume.inner.connection.generation()));
-            volume.inner.connection.install();
+            assert!(
+                volume
+                    .inner
+                    .session
+                    .connection()
+                    .lose(volume.inner.session.connection().generation())
+            );
+            volume.inner.session.connection().install();
             Err(VolumeError::DeviceDisconnected("old client".to_string()))
         })
         .await;
@@ -370,13 +376,13 @@ async fn only_an_installed_client_moves_the_generation() {
         .connection_generation()
         .expect("a WebDAV volume reports its generation");
 
-    volume.inner.connection.lose(first);
+    volume.inner.session.connection().lose(first);
     assert!(
         volume.attempt_reconnect().await.is_err(),
         "nothing is stored to probe with"
     );
     assert_eq!(volume.connection_generation(), Some(first));
 
-    volume.inner.connection.install();
+    volume.inner.session.connection().install();
     assert_eq!(volume.connection_generation(), Some(first + 1));
 }

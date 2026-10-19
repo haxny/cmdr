@@ -602,7 +602,7 @@ impl S3VolumeInner {
 
     /// Starts the sweep in the background, so a connect never waits on it.
     pub(super) fn spawn_upload_sweep(&self) {
-        let handle = self.self_handle();
+        let handle = self.session.self_handle();
         self.host.runtime().spawn(async move {
             if let Some(inner) = handle.live() {
                 inner.sweep_unfinished_uploads().await;
@@ -625,7 +625,7 @@ impl S3VolumeInner {
         if leftovers.is_empty() && puts.is_empty() {
             return 0;
         }
-        let Some(client) = self.client.read().await.clone() else {
+        let Some(client) = self.session.installed_client().await else {
             return 0;
         };
         self.settle_unsettled_puts(&client, &puts).await;

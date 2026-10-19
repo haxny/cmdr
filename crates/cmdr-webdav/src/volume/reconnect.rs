@@ -1,328 +1,92 @@
-//! Coming back after a request finds the server gone.
-//!
-//! HTTP holds no session, so "disconnected" means the last wire-touching
-//! request failed with a transport error. The first operation that sees one
-//! calls [`WebdavVolume::note_lost_session`], which flips the state once,
-//! drops the client, and starts the backoff loop below.
-//!
-//! **Two independent switches decide what may happen, in this order.**
-//!
-//! 1. **"Reconnect automatically"**, the user's per-server switch. Off means
-//!    ❌ no unattended probe, ever, whatever is stored.
-//! 2. **The store.** A probe needs the secret; nothing stored means nothing
-//!    to try, and the frontend learns that through `UnattendedReconnect`.
-//!
-//! ❌ **Never loop on an authentication attempt.** Repeated refusals lock
-//! accounts. One unattended try, latched by `auth_attempt_spent`; only a human
-//! clears it. ❗ **A typed secret dies with the client it built.** The store is
-//! only ever REFRESHED, never seeded.
+//! What this backend brings to the shared HTTP lifecycle
+//! (`cmdr_fs::volume::http_session`, whose header has the rules): the client,
+//! the PROPFIND probe and what its refusals mean, and where the secret is
+//! filed.
 
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-use std::time::Duration;
 
-use cmdr_fs::ignore_poison::RwLockIgnorePoison;
-use cmdr_fs::volume::host::credentials::StoredCredentials;
-use cmdr_fs::volume::secret_store::{self, SignIn, SignedIn};
-use cmdr_fs::volume::{SelfHandle, VolumeError};
-use log::{debug, info, warn};
+use cmdr_fs::volume::host::VolumeHost;
+use cmdr_fs::volume::http_session::{CredentialKey, DialRefusal, HttpBackend, HttpSession, SessionClient};
+use cmdr_fs::volume::liveness::Liveness;
+use cmdr_fs::volume::secret_store::{SignIn, SignedIn};
+use cmdr_fs::volume::{Retirement, Retires, VolumeError};
 use tokio_util::sync::CancellationToken;
 
-use super::state::ConnectionState;
-use super::{UnattendedReconnect, WebdavVolume, WebdavVolumeInner, build_and_probe};
+use super::{WebdavVolumeInner, build_and_probe};
 use crate::errors::WebdavConnectError;
 use crate::transport::WebdavClient;
-use cmdr_fs::volume::liveness;
 
-/// Bounded and growing: a handful of tries over a few minutes, then it stops
-/// rather than hammering a server that is genuinely down.
-const RECONNECT_BACKOFF: [Duration; 6] = [
-    Duration::from_secs(2),
-    Duration::from_secs(5),
-    Duration::from_secs(15),
-    Duration::from_secs(30),
-    Duration::from_secs(60),
-    Duration::from_secs(120),
-];
+impl SessionClient for WebdavClient {
+    fn liveness(&self) -> &Arc<Liveness> {
+        WebdavClient::liveness(self)
+    }
 
-/// Why an attempt didn't leave a live client, in the terms the loop acts on.
-#[derive(Debug)]
-enum Stalled {
-    /// The user's switch is off. ❗ Its own arm: the credentials may be fine.
-    AutoReconnectOff,
-    /// Only a human moves this forward.
-    NeedsUser,
-    /// The network or the server. Worth trying again.
-    Transient(VolumeError),
+    fn ping(&self) -> impl Future<Output = bool> + Send {
+        WebdavClient::ping(self)
+    }
 }
 
-impl WebdavVolume {
-    /// Notices, once, that the server behind this volume is gone. ❗ Acts only
-    /// on the `Connected` → `Disconnected` edge, and only for the client the
-    /// failing call RAN on (`ran_on`, read before the call started): a call
-    /// that started on a client a reconnect has since replaced must not drop
-    /// the fresh one and cut every request waiting on it.
-    pub(super) fn note_lost_session(&self, error: &VolumeError, ran_on: u64) {
-        if !matches!(error, VolumeError::DeviceDisconnected(_)) {
-            return;
+impl Retires for WebdavVolumeInner {
+    fn retirement(&self) -> &Retirement {
+        self.session.connection().retirement()
+    }
+}
+
+impl HttpBackend for WebdavVolumeInner {
+    type Client = WebdavClient;
+
+    const BACKEND: &'static str = "webdav";
+
+    fn session(&self) -> &HttpSession<Self> {
+        &self.session
+    }
+
+    fn host(&self) -> &VolumeHost {
+        &self.host
+    }
+
+    fn credential_key(&self) -> CredentialKey {
+        let params = self.params();
+        CredentialKey {
+            service: params.credential_service(),
+            scope: params.username,
         }
-        if !self.inner.connection.lose(ran_on) {
-            return;
+    }
+
+    async fn dial(&self, secret: &str) -> Result<WebdavClient, DialRefusal> {
+        match build_and_probe(&self.params(), secret, &CancellationToken::new()).await {
+            Ok((client, keeps_dates)) => {
+                self.keeps_dates.store(keeps_dates, Ordering::Relaxed);
+                Ok(client)
+            }
+            Err(WebdavConnectError::AuthenticationRejected | WebdavConnectError::AuthMethodUnsupported) => {
+                Err(DialRefusal::Rejected)
+            }
+            Err(WebdavConnectError::NeedsCredentials) => Err(DialRefusal::NeedsUser),
+            Err(WebdavConnectError::Cancelled) => {
+                Err(DialRefusal::Transient(VolumeError::Cancelled(self.volume_id.clone())))
+            }
+            Err(WebdavConnectError::TimedOut) => Err(DialRefusal::Transient(VolumeError::ConnectionTimeout(
+                self.volume_id.clone(),
+            ))),
+            Err(WebdavConnectError::Unreachable(what) | WebdavConnectError::Transport(what)) => {
+                Err(DialRefusal::Transient(VolumeError::DeviceDisconnected(what)))
+            }
+            Err(WebdavConnectError::CertificateUntrusted | WebdavConnectError::NotAWebdavServer) => Err(
+                DialRefusal::Transient(VolumeError::DeviceDisconnected(self.volume_id.clone())),
+            ),
         }
-        let inner = Arc::clone(&self.inner);
-        let handle = inner.self_handle();
-        let auto_reconnect = inner.auto_reconnect.load(Ordering::Relaxed);
-        // ❗ Dropped HERE when nothing holds the lock, so an `attempt_reconnect`
-        // the frontend fires on the event it just got doesn't find the dead
-        // client still installed and answer "fine" without probing. (`rebuild`
-        // treats one found under a non-`Connected` state as dead anyway.)
-        let dropped = match inner.client.try_write() {
-            Ok(mut client) => {
-                inner.drop_dead_client(&mut client);
-                true
-            }
-            Err(_) => false,
-        };
-        inner.host.runtime().spawn(async move {
-            if !dropped {
-                inner.drop_dead_client(&mut *inner.client.write().await);
-            }
-            drop(inner);
-            if auto_reconnect {
-                run_reconnect_loop(handle).await;
-            }
-        });
     }
 }
 
 impl WebdavVolumeInner {
-    /// Takes the installed client out as dead, and cuts every operation still
-    /// waiting on it. ❗ Only under a non-`Connected` state: a late task must
-    /// never take the fresh client a reconnect just installed, which `rebuild`
-    /// marks `Connected` under the same write guard.
-    fn drop_dead_client(&self, client: &mut Option<Arc<WebdavClient>>) {
-        if self.connection.state() == ConnectionState::Connected {
-            return;
-        }
-        if let Some(dead) = client.take() {
-            dead.liveness().declare_lost();
-        }
-    }
-
-    /// Starts the silence watch over `client`'s waiting operations
-    /// (`cmdr_fs::volume::liveness`). ❗ Holds the client weakly: the watch must not keep
-    /// a dropped client's connection pool alive.
-    pub(super) fn watch_over(&self, client: &Arc<WebdavClient>) {
-        let timings = *self.silence.read_ignore_poison();
-        let liveness = Arc::clone(client.liveness());
-        let client = Arc::downgrade(client);
-        self.host
-            .runtime()
-            .spawn(liveness::watch(liveness, timings, "webdav", move || {
-                let client = client.upgrade();
-                async move {
-                    match client {
-                        Some(client) => client.ping().await,
-                        None => false,
-                    }
-                }
-            }));
-    }
-    /// Probes now, on the unattended terms. Single-flight.
-    pub(super) async fn do_attempt_reconnect(&self) -> Result<(), VolumeError> {
-        self.rebuild(None).await.map_err(|stalled| self.report(stalled))
-    }
-
-    /// The attended variant. `username` must be the account this volume IS:
+    /// The attended reconnect. `username` must be the account this volume IS:
     /// another account is another volume, so it answers `NotSupported`.
-    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<SignedIn, VolumeError> {
+    pub(super) async fn reconnect_as(&self, sign_in: SignIn) -> Result<SignedIn, VolumeError> {
         if sign_in.username != self.params().username {
             return Err(VolumeError::NotSupported);
         }
-        self.auth_attempt_spent.store(false, Ordering::Relaxed);
-        self.rebuild(Some(sign_in.secret.clone()))
-            .await
-            .map_err(|stalled| self.report(stalled))?;
-        // ❗ Written only once the typed secret WORKED (#530): a typo written
-        // before the dial replaced the one that did. An attended rebuild always
-        // dials, so `Ok` here means this secret was accepted.
-        let kept = self.keep_signed_in_secret(&sign_in).await;
-        Ok(SignedIn::after(&sign_in, kept))
+        self.reconnect_with_sign_in(sign_in).await
     }
-
-    /// One rebuild attempt, under the single-flight lock. `offered` is a secret
-    /// a human just typed, which is what marks the attempt ATTENDED.
-    async fn rebuild(&self, offered: Option<String>) -> Result<(), Stalled> {
-        let attended = offered.is_some();
-        let gone = || Stalled::Transient(VolumeError::DeviceDisconnected(self.volume_id.clone()));
-        if self.unmounted.load(Ordering::Relaxed) {
-            return Err(gone());
-        }
-        let _guard = self.reconnect_lock.lock().await;
-        if self.unmounted.load(Ordering::Relaxed) {
-            return Err(gone());
-        }
-        if !attended {
-            let mut installed = self.client.write().await;
-            if installed.is_some() {
-                // ❗ Live only while the state says so. Under any other state
-                // it's the dead client whose drop is still on its way
-                // (`note_lost_session` spawns it), and answering "fine" for it
-                // would report a server that's still gone as back.
-                if self.connection.state() == ConnectionState::Connected {
-                    return Ok(());
-                }
-                self.drop_dead_client(&mut installed);
-            }
-        }
-        if !attended {
-            if !self.auto_reconnect.load(Ordering::Relaxed) {
-                return Err(Stalled::AutoReconnectOff);
-            }
-            if self.auth_attempt_spent.load(Ordering::Relaxed) {
-                return Err(Stalled::NeedsUser);
-            }
-        }
-        let secret = match offered {
-            Some(secret) => secret,
-            None => match self.stored_secret().await {
-                Some(stored) => stored.secret,
-                None => return Err(Stalled::NeedsUser),
-            },
-        };
-        match build_and_probe(&self.params(), &secret, &CancellationToken::new()).await {
-            Ok((client, keeps_dates)) => {
-                self.keeps_dates.store(keeps_dates, Ordering::Relaxed);
-                if self.unmounted.load(Ordering::Relaxed) {
-                    return Err(gone());
-                }
-                // ❗ Installed, given the next generation, and marked
-                // `Connected` under ONE guard, so a late `drop_dead_client` can
-                // never take it for the dead one, and no call reads the new
-                // client under the old generation.
-                let mut installed = self.client.write().await;
-                *installed = Some(Arc::new(client));
-                self.auth_attempt_spent.store(false, Ordering::Relaxed);
-                self.connection.install();
-                drop(installed);
-                info!(target: "volume", "webdav volume '{}' is back", self.volume_id);
-                Ok(())
-            }
-            Err(WebdavConnectError::AuthenticationRejected | WebdavConnectError::AuthMethodUnsupported) => {
-                self.auth_attempt_spent.store(true, Ordering::Relaxed);
-                Err(Stalled::NeedsUser)
-            }
-            Err(WebdavConnectError::NeedsCredentials) => Err(Stalled::NeedsUser),
-            Err(WebdavConnectError::Cancelled) => {
-                Err(Stalled::Transient(VolumeError::Cancelled(self.volume_id.clone())))
-            }
-            Err(WebdavConnectError::TimedOut) => Err(Stalled::Transient(VolumeError::ConnectionTimeout(
-                self.volume_id.clone(),
-            ))),
-            Err(WebdavConnectError::Unreachable(what) | WebdavConnectError::Transport(what)) => {
-                Err(Stalled::Transient(VolumeError::DeviceDisconnected(what)))
-            }
-            Err(WebdavConnectError::CertificateUntrusted | WebdavConnectError::NotAWebdavServer) => Err(
-                Stalled::Transient(VolumeError::DeviceDisconnected(self.volume_id.clone())),
-            ),
-        }
-    }
-
-    /// Starts the backoff loop for a volume that is down. ❗ Only from
-    /// `Disconnected`: `NeedsCredentials` is a state a person moves forward.
-    pub(super) fn start_reconnect_loop_if_down(&self) {
-        if self.connection.state() != ConnectionState::Disconnected || self.unmounted.load(Ordering::Relaxed) {
-            return;
-        }
-        let handle = self.self_handle();
-        self.host.runtime().spawn(run_reconnect_loop(handle));
-    }
-
-    /// Whether an unattended reconnect can happen as this volume stands.
-    pub(super) async fn unattended_reconnect(&self) -> UnattendedReconnect {
-        if !self.auto_reconnect.load(Ordering::Relaxed) {
-            return UnattendedReconnect::SwitchOff;
-        }
-        if self.stored_secret().await.is_some() {
-            UnattendedReconnect::Possible
-        } else {
-            UnattendedReconnect::NoStoredSecret
-        }
-    }
-
-    /// The store's entry for this account. ❗ On a blocking task: the store may
-    /// put a Keychain prompt in front of this.
-    async fn stored_secret(&self) -> Option<StoredCredentials> {
-        let params = self.params();
-        secret_store::stored_secret(&self.host, &params.credential_service(), &params.username).await
-    }
-
-    /// Reports the stall and turns it into the trait's vocabulary.
-    fn report(&self, stalled: Stalled) -> VolumeError {
-        match stalled {
-            Stalled::AutoReconnectOff => {
-                self.connection.emit_if_changed(ConnectionState::Disconnected);
-                VolumeError::NotSupported
-            }
-            Stalled::NeedsUser => {
-                self.connection.emit_if_changed(ConnectionState::NeedsCredentials);
-                VolumeError::PermissionDenied {
-                    path: self.volume_id.clone(),
-                    raw_os_error: None,
-                }
-            }
-            Stalled::Transient(error) => {
-                self.connection.emit_if_changed(ConnectionState::Disconnected);
-                error
-            }
-        }
-    }
-
-    /// Files the secret a sign-in connected with, the way its Remember box asks
-    /// (`secret_store::keep_signed_in_secret`): on saves it, off only refreshes
-    /// an entry still there.
-    async fn keep_signed_in_secret(&self, sign_in: &SignIn) -> bool {
-        let took = secret_store::keep_signed_in_secret(&self.host, &self.params().credential_service(), sign_in).await;
-        if !took {
-            warn!(
-                target: "volume",
-                "webdav volume '{}': the secret store didn't take the new secret; this connection still came up",
-                self.volume_id
-            );
-        }
-        took
-    }
-}
-
-/// The backend's own reconnect cadence. ❗ The handle is re-asked every
-/// iteration: an ejected or superseded volume stops answering.
-async fn run_reconnect_loop(handle: SelfHandle<WebdavVolumeInner>) {
-    for (attempt, delay) in RECONNECT_BACKOFF.iter().enumerate() {
-        tokio::time::sleep(*delay).await;
-        let Some(inner) = handle.live().filter(|inner| !inner.unmounted.load(Ordering::Relaxed)) else {
-            return;
-        };
-        if inner.connection.state() == ConnectionState::Connected {
-            return;
-        }
-        let volume_id = inner.volume_id.clone();
-        match inner.rebuild(None).await {
-            Ok(()) => return,
-            Err(stalled) => {
-                let stop = !matches!(stalled, Stalled::Transient(_));
-                inner.report(stalled);
-                if stop {
-                    info!(target: "volume", "webdav volume '{volume_id}' needs a person or is switched off; stopping the backoff");
-                    return;
-                }
-                debug!(
-                    target: "volume",
-                    "webdav volume '{volume_id}': reconnect {}/{} didn't take",
-                    attempt + 1,
-                    RECONNECT_BACKOFF.len()
-                );
-            }
-        }
-    }
-    info!(target: "volume", "webdav reconnect gave up after {} attempts", RECONNECT_BACKOFF.len());
 }

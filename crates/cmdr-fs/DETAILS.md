@@ -36,16 +36,16 @@ the next section.
   `scan_stop.rs` + `scan_recorder.rs` (the one seam a copy scan touches per entry: counts, Cancel, Pause, and the
   transfer tree's recorder); `scan_walk.rs`, `mkdir_all.rs`, `patching.rs`, and `secret_store.rs` (the bodies a
   stat-and-listing backend gets for free); `listing_progress.rs` (`report_while`: a long listing's running count sampled
-  on a timer from the async side that owns `on_progress`, which can't ride into the blocking reader); `liveness.rs` (the
-  HTTP backends' silence watch, which tells a server gone silent from one that's only slow:
-  `crates/cmdr-webdav/DETAILS.md` § "Silent or slow") and `tls.rs` (their connect probes' TLS-refusal test, by the typed
-  `io::ErrorKind`); `app_paths.rs` (whether an app path sits under a volume root, segment-wise, and rebasing it onto a
-  moved root); `remote_paths.rs` (a server tree's `<scheme>://user@host:port` app spelling, and the ONE translation);
-  `friendly_error/` (typed, word-free classification); `usb_speed.rs` (❗ its doc comment reaches `bindings.ts`);
-  `in_memory.rs` (the store and its knobs; `in_memory/volume_impl.rs` is its `impl Volume`); `conformance.rs` (+
-  `conformance/directory_creation.rs`, the three `create_directory_all` promises, and
-  `conformance/modification_date.rs`, the two date ones); and `host/` (what a backend needs from the app, as named
-  traits; read `src/volume/host/CLAUDE.md` before writing a backend).
+  on a timer from the async side that owns `on_progress`, which can't ride into the blocking reader); `http_session.rs`
+  (the HTTP backends' shared connection lifecycle, § "The HTTP backends' connection lifecycle"); `liveness.rs` (their
+  silence watch, which tells a server gone silent from one that's only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent
+  or slow") and `tls.rs` (their connect probes' TLS-refusal test, by the typed `io::ErrorKind`); `app_paths.rs` (whether
+  an app path sits under a volume root, segment-wise, and rebasing it onto a moved root); `remote_paths.rs` (a server
+  tree's `<scheme>://user@host:port` app spelling, and the ONE translation); `friendly_error/` (typed, word-free
+  classification); `usb_speed.rs` (❗ its doc comment reaches `bindings.ts`); `in_memory.rs` (the store and its knobs;
+  `in_memory/volume_impl.rs` is its `impl Volume`); `conformance.rs` (+ `conformance/directory_creation.rs`, the three
+  `create_directory_all` promises, and `conformance/modification_date.rs`, the two date ones); and `host/` (what a
+  backend needs from the app, as named traits; read `src/volume/host/CLAUDE.md` before writing a backend).
 - `entry.rs` + `icons/`: `FileEntry` and the classifiers behind `get_icon_id`.
 - `sqlite_util.rs`: the ONE process-wide page-cache slab, the connection factories every store opens through, and the
   one way a database file is deleted. `src/sqlite_util/thread_conn_cache.rs` is the per-thread read-connection cache and
@@ -938,6 +938,49 @@ modules under `volume/` carry the arithmetic, each behind a trait the backend im
 SMB and MTP keep their own cache-aware batch scans (their watchers back the `authoritative_listing` shortcut) and borrow
 only the pure halves, `conflicts_against` and `fold_batch`, so every backend hands a conflict dialog the same shape and
 folds a batch the same way.
+
+## The HTTP backends' connection lifecycle (`http_session`)
+
+`cmdr-webdav` and `cmdr-s3` hold one HTTP client per volume and share everything about losing and rebuilding it:
+`src/volume/http_session.rs` (the state enum, `UnattendedReconnect`, the `HttpBackend` trait with `noting`,
+`note_lost_session`, and the reconnect entry points as provided methods, and the `HttpSession` state) plus
+`src/volume/http_session/reconnect.rs` (the single-flight `rebuild`, `report`, the silence watch's spawn, the store
+reads, and the 2/5/15/30/60/120 s backoff loop). A backend implements `HttpBackend` with only what differs: its client
+(`SessionClient`: the `Liveness` it feeds and a `ping`), its probe and the map from its refusals (`dial` →
+`DialRefusal::{Rejected, NeedsUser, Transient}`), where its secret is filed (`credential_key`), and, for S3, the upload
+sweep a rebuilt client starts (`client_installed`). The account check of an attended sign-in stays backend-side
+(`reconnect_as`), because only the backend knows what names its account.
+
+- **The first `DeviceDisconnected` acts once.** `noting` hands every error to `note_lost_session`, which flips
+  `Connected → Disconnected` through `ConnectionReporter::lose`, takes the dead client out, cancels its `lost` token (so
+  every other operation still waiting on it answers `DeviceDisconnected` at once rather than at its own budget), and
+  starts the backoff when "reconnect automatically" is on. The pool goes with the client, so no request is ever handed
+  one of its connections again.
+- ❗ **An installed client counts as live only while the state says `Connected`.** The drop may still be on its way (a
+  spawned task, when the lock was busy) when the frontend's reconnect fires on the event, so `rebuild` treats a client
+  installed under any other state as the dead one and dials. The other half: a fresh client is installed and marked
+  `Connected` under ONE write guard, and `drop_dead_client` takes only under a non-`Connected` state, so the late task
+  can never take the fresh one. The same pair as `crates/cmdr-sftp/DETAILS.md` § "Coming back".
+- ❗ **A failing request loses only the client it went out on.** HTTP holds no session, but the backend holds a CLIENT
+  (its pool, and WebDAV's cookie jar), and every installed one gets the next generation (`ConnectionReporter::install`
+  under the install's guard; an attended sign-in that replaces a live client counts too). `noting` reads the generation
+  with the client, before the call runs, and `note_lost_session` flips only while it's still installed: a late
+  `DeviceDisconnected` from a replaced client can't drop the fresh one and cut every request waiting on it. The read can
+  only be older than the client `work` takes a moment later, which at worst leaves a real loss for the next call to
+  notice. `Volume::connection_generation` answers the same counter, so a transfer whose request failed on the old client
+  sees the volume live on a newer one and runs it again (`cmdr-operations`'s `transfer/volume_outage.rs`). Only an
+  install moves it: ❌ not a loss, ❌ not a reconnect that found the client live or didn't take. A reconnect's own
+  outcome (`report`) moves the state with a plain `set`, in the same poll as the failed attempt's return, before any
+  next install could finish a probe.
+- **Two switches, in order, and one unattended try.** "Reconnect automatically" off means no unattended probe at all
+  (`NotSupported` + `Disconnected`); an empty store means nothing to try (`NeedsCredentials`). A `Rejected` dial latches
+  `auth_attempt_spent` and moves to `NeedsCredentials`, which only a person clears. An attended sign-in
+  (`reconnect_with_sign_in`) dials first and files the secret only once it connected, as its Remember box says
+  (`secret_store::keep_signed_in_secret`, #530).
+
+Pinned by both backends' suites, which drive this module through a real client: `reconnect_test.rs`
+(`a_late_loss_from_a_replaced_client_*`, `only_an_installed_client_moves_the_generation`, the switch and store cells),
+`connection_drop_test.rs`, and WebDAV's `slow_server_test.rs` (the silence watch end to end).
 
 ## `testing::disk_images`: a real removable volume, through one guarded runner
 

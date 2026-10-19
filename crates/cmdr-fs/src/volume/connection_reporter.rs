@@ -45,6 +45,11 @@ impl<S: CellState + Into<VolumeConnection>> ConnectionReporter<S> {
         }
     }
 
+    /// The id this reporter's news is filed under.
+    pub fn volume_id(&self) -> &str {
+        &self.volume_id
+    }
+
     /// Where the connection stands right now.
     pub fn state(&self) -> S {
         self.cell.state()

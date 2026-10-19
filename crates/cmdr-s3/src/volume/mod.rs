@@ -10,17 +10,17 @@
 //! `CLAUDE.md` has the must-knows, `DETAILS.md` the decisions.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use cmdr_fs::entry::FileEntry;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
-use cmdr_fs::volume::liveness::Timings;
+use cmdr_fs::volume::http_session::{HttpBackend, HttpSession};
 use cmdr_fs::volume::remote_paths::RemoteRoot;
-use cmdr_fs::volume::{ConnectionReporter, VolumeError};
 use tokio_util::sync::CancellationToken;
 
 use crate::multipart::MIN_PART_SIZE;
@@ -42,7 +42,6 @@ mod reconnect;
 mod scan;
 mod server_copy;
 mod share_link;
-mod state;
 mod streams;
 mod upload;
 mod upload_body;
@@ -50,7 +49,7 @@ mod upload_ledger;
 mod volume_impl;
 mod writes;
 
-pub use state::ConnectionState;
+pub use cmdr_fs::volume::http_session::UnattendedReconnect;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
@@ -58,22 +57,6 @@ pub mod testing;
 /// This backend's settings namespace, for everything it reads through
 /// [`VolumeHost::settings`].
 const BACKEND: BackendName = "s3";
-
-/// Whether an unattended reconnect can actually happen as a volume stands.
-///
-/// ❗ The backend's answer to "the switch is on but nothing comes back", so ❌ no
-/// frontend has to derive it. One rung: this backend redials out of the secret
-/// store or not at all.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum UnattendedReconnect {
-    /// The switch is on and the store holds a secret.
-    Possible,
-    /// The user's "reconnect automatically" switch is off.
-    SwitchOff,
-    /// The switch is on but nothing is remembered, so there is nothing to
-    /// redial with.
-    NoStoredSecret,
-}
 
 /// One place on an S3 account: a bucket, or the account root.
 pub struct S3Volume {
@@ -94,29 +77,10 @@ struct S3VolumeInner {
     /// `cmdr-webdav`'s (an edit may move what a redial asks for); read through
     /// `params()`, a snapshot.
     params: std::sync::RwLock<S3ConnectionParams>,
-    /// The live client. `None` once a request found the server gone, at which
-    /// point every operation fails fast rather than each one timing out.
-    client: tokio::sync::RwLock<Option<Arc<S3Client>>>,
-    /// Where the connection stands, packed with the installed session's
-    /// generation, and the retirement flag that silences its reports
-    /// (`cmdr_fs::volume::ConnectionReporter`).
-    connection: ConnectionReporter<ConnectionState>,
-    /// This state's own weak reference, for background work. Set by
-    /// `Arc::new_cyclic`.
-    me: Weak<S3VolumeInner>,
-    /// Single-flight around a client rebuild.
-    reconnect_lock: tokio::sync::Mutex<()>,
-    /// Set by `on_unmount`. A reconnect in flight bails rather than installing
-    /// a client into a volume the app has forgotten.
-    unmounted: AtomicBool,
-    /// The user's per-server "reconnect automatically" switch, live.
-    auto_reconnect: AtomicBool,
-    /// Whether the one unattended authentication attempt has been spent
-    /// (`reconnect.rs`). ❌ Never a loop.
-    auth_attempt_spent: AtomicBool,
-    /// How long silence may last before the server counts as gone. A field so
-    /// a cell can shorten it.
-    silence: std::sync::RwLock<Timings>,
+    /// The client, the connection it reports, and the switches that gate a
+    /// rebuild: the HTTP lifecycle this backend shares with `cmdr-webdav`
+    /// (`cmdr_fs::volume::http_session`).
+    session: HttpSession<S3VolumeInner>,
     /// Everything this backend asks the app around it.
     host: VolumeHost,
     /// The multipart uploads this account started and hasn't settled
@@ -156,10 +120,7 @@ impl S3Volume {
     /// ❗ Switching it ON while the volume sits `Disconnected` starts the
     /// backoff loop then and there.
     pub fn set_auto_reconnect(&self, on: bool) {
-        let was = self.inner.auto_reconnect.swap(on, Ordering::Relaxed);
-        if on && !was {
-            self.inner.start_reconnect_loop_if_down();
-        }
+        self.inner.set_auto_reconnect(on);
     }
 
     /// Whether an unattended reconnect can actually happen as this volume
@@ -192,28 +153,21 @@ impl S3Volume {
     /// Drops the live client. There is no session to close: dropping IS the
     /// shutdown, and the connection pool goes with it.
     pub async fn disconnect(&self) {
-        self.inner.unmounted.store(true, Ordering::Relaxed);
-        self.inner.connection.mark_gone_silently();
-        self.inner.client.write().await.take();
+        self.inner.session.disconnect().await;
     }
 
     /// The live client, cloned out from under a short read guard. ❗ Clone and
     /// release: holding the guard across a request would serialize every other
     /// request behind it.
     async fn clone_client(&self) -> Result<Arc<S3Client>, VolumeError> {
-        self.inner
-            .client
-            .read()
-            .await
-            .clone()
-            .ok_or_else(|| VolumeError::DeviceDisconnected(self.inner.volume_id.clone()))
+        self.inner.session.client().await
     }
 
     /// Drops the live client the way a server going away would, ❗ WITHOUT
     /// starting the backoff loop, so a cell drives the recovery itself.
     #[cfg(any(test, feature = "testing"))]
     pub async fn simulate_session_loss(&self) {
-        self.inner.client.write().await.take();
+        self.inner.session.simulate_loss().await;
     }
 
     /// The smallest part a multipart upload cuts.
@@ -248,7 +202,7 @@ impl S3Volume {
     /// production (`ProviderProfile::trust_conditional_writes`).
     #[cfg(any(test, feature = "testing"))]
     pub async fn trust_conditional_writes(&self) {
-        if let Some(client) = self.inner.client.read().await.as_ref() {
+        if let Some(client) = self.inner.session.installed_client().await {
             client.profile().trust_conditional_writes();
         }
     }
@@ -257,7 +211,7 @@ impl S3Volume {
     /// Spaces' does, for a cell proving a cross-bucket copy streams instead.
     #[cfg(any(test, feature = "testing"))]
     pub async fn forbid_cross_bucket_copy(&self) {
-        if let Some(client) = self.inner.client.read().await.as_ref() {
+        if let Some(client) = self.inner.session.installed_client().await {
             client.profile().forbid_cross_bucket_copy();
         }
     }
@@ -266,7 +220,7 @@ impl S3Volume {
     /// cell measuring throughput.
     #[cfg(any(test, feature = "testing"))]
     pub async fn set_concurrency(&self, copy: usize, upload: usize) {
-        if let Some(client) = self.inner.client.read().await.as_ref() {
+        if let Some(client) = self.inner.session.installed_client().await {
             client.profile().set_concurrency(copy, upload);
         }
     }
@@ -363,16 +317,9 @@ impl S3Volume {
             name: name.to_string(),
             root,
             inner: Arc::new_cyclic(|me| S3VolumeInner {
+                session: HttpSession::new(me, volume_id, &host, Some(client), auto_reconnect),
                 volume_id: volume_id.to_string(),
                 params: std::sync::RwLock::new(params),
-                client: tokio::sync::RwLock::new(Some(Arc::new(client))),
-                connection: ConnectionReporter::new(volume_id, &host, ConnectionState::Connected),
-                me: me.clone(),
-                reconnect_lock: tokio::sync::Mutex::new(()),
-                unmounted: AtomicBool::new(false),
-                auto_reconnect: AtomicBool::new(auto_reconnect),
-                auth_attempt_spent: AtomicBool::new(false),
-                silence: std::sync::RwLock::new(Timings::PRODUCTION),
                 host,
                 ledger,
                 written: std::sync::Mutex::new(HashMap::new()),
@@ -415,6 +362,8 @@ mod integration_test;
 #[cfg(test)]
 mod late_cancel_test;
 #[cfg(test)]
+mod lifecycle_test;
+#[cfg(test)]
 mod live_connect_test;
 #[cfg(test)]
 mod live_copy_pin_test;
@@ -446,8 +395,6 @@ mod reconnect_test;
 mod refused_name_test;
 #[cfg(test)]
 mod share_link_test;
-#[cfg(test)]
-mod state_test;
 #[cfg(test)]
 mod test_support;
 #[cfg(test)]

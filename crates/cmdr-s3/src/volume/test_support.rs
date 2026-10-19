@@ -2,14 +2,13 @@
 //! translation and the state machine without a server.
 
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::liveness::Timings;
+use cmdr_fs::volume::http_session::HttpSession;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
 use url::Url;
 
-use super::{ConnectionState, S3Volume, S3VolumeInner};
+use super::{S3Volume, S3VolumeInner};
 use crate::params::{S3ConnectionParams, S3Provider};
 
 /// The prefix the test volume mints, spelled out so a cell reads as the app
@@ -35,16 +34,9 @@ pub(super) fn make_test_volume_with(bucket: Option<&str>, host: VolumeHost) -> S
             std::path::Path::new(&params.remote_root()),
         ),
         inner: Arc::new_cyclic(|me| S3VolumeInner {
+            session: HttpSession::new(me, "s3-test", &host, None, true),
             volume_id: "s3-test".to_string(),
             params: std::sync::RwLock::new(params),
-            client: tokio::sync::RwLock::new(None),
-            connection: cmdr_fs::volume::ConnectionReporter::new("s3-test", &host, ConnectionState::Connected),
-            me: me.clone(),
-            reconnect_lock: tokio::sync::Mutex::new(()),
-            unmounted: AtomicBool::new(false),
-            auto_reconnect: AtomicBool::new(true),
-            auth_attempt_spent: AtomicBool::new(false),
-            silence: std::sync::RwLock::new(Timings::PRODUCTION),
             ledger: super::upload_ledger::UploadLedger::at(host.state_dir("s3")),
             host,
             written: std::sync::Mutex::new(std::collections::HashMap::new()),

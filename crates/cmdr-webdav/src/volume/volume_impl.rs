@@ -5,12 +5,12 @@
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataCaps, MetadataClasses, MetadataReport};
+use cmdr_fs::volume::http_session::HttpBackend;
 use cmdr_fs::volume::patching;
 use cmdr_fs::volume::scan_walk;
 use cmdr_fs::volume::{
@@ -45,52 +45,15 @@ impl WebdavVolume {
 }
 
 impl WebdavVolume {
-    /// Runs `work`, noticing on the way out if the answer says the server is
-    /// gone. ❗ Every delegator below that can reach the wire wraps itself in
-    /// this: with no watcher, the operations ARE the detector (`reconnect.rs`).
-    ///
-    /// It also counts `work` as waiting on the server, which is what the
-    /// silence watch looks after (`cmdr_fs::volume::liveness`), and cuts it with
-    /// `DeviceDisconnected` the moment the client is found gone, by the watch
-    /// or by another operation: a silent server closes nothing, so nothing
-    /// else would ever end the wait.
+    /// Runs `work` through the shared lifecycle's `noting`, which watches the
+    /// answer for a server that is gone. ❗ Every delegator below that can reach
+    /// the wire wraps itself in this: with no watcher, the operations ARE the
+    /// detector (`cmdr_fs::volume::http_session`).
     pub(super) async fn noting<T>(
         &self,
         work: impl Future<Output = Result<T, VolumeError>> + Send,
     ) -> Result<T, VolumeError> {
-        // ❗ The generation is read with the client, BEFORE `work` runs, so a
-        // failure is pinned to the client the call started on: one a reconnect
-        // replaced meanwhile is old news and moves nothing. `work` takes its own
-        // client a moment later, so the read can only be older than the one it
-        // used, which at worst leaves a real loss for the next call to notice,
-        // never a healthy client marked lost.
-        let (client, ran_on) = {
-            let installed = self.inner.client.read().await;
-            (installed.clone(), self.inner.connection.generation())
-        };
-        let outcome = match client {
-            // No client: the work answers `DeviceDisconnected` on its own, at once.
-            None => work.await,
-            Some(client) => {
-                let liveness = Arc::clone(client.liveness());
-                let waiting = liveness.begin();
-                if waiting.needs_a_watch() {
-                    self.inner.watch_over(&client);
-                }
-                drop(client);
-                let outcome = tokio::select! {
-                    biased;
-                    outcome = work => outcome,
-                    () = liveness.lost().cancelled() => Err(VolumeError::DeviceDisconnected(self.inner.volume_id.clone())),
-                };
-                drop(waiting);
-                outcome
-            }
-        };
-        if let Err(error) = &outcome {
-            self.note_lost_session(error, ran_on);
-        }
-        outcome
+        self.inner.noting(work).await
     }
 }
 
@@ -413,43 +376,32 @@ impl Volume for WebdavVolume {
     // ── Lifecycle ────────────────────────────────────────────────────
 
     fn retirement(&self) -> Option<&Retirement> {
-        Some(self.inner.connection.retirement())
+        Some(self.inner.session.connection().retirement())
     }
 
     /// Retires this instance ❗ without touching the live client: whoever still
     /// holds an `Arc` keeps using it. What retires is what belongs to the ID.
     fn on_superseded(&self) {
-        self.inner.connection.retirement().retire();
+        self.inner.session.connection().retirement().retire();
     }
 
     /// The volume is leaving the registry. ❌ No connection event: the frontend
     /// learns through `volumes-changed`.
     fn on_unmount(&self) {
-        self.inner.unmounted.store(true, Ordering::Relaxed);
-        self.inner.connection.mark_gone_silently();
-        let inner = Arc::clone(&self.inner);
-        inner.host.runtime().clone().spawn(async move {
-            inner.client.write().await.take();
-        });
+        self.inner.unmount();
     }
 
     /// Where this connection stands, for the switcher dot and the pane's connect
     /// views. HTTP has no session, so `Direct` means the last request that
     /// reached the wire came back.
     fn connection_state(&self) -> Option<cmdr_fs::volume::ConnectionState> {
-        use crate::volume::ConnectionState;
-        use cmdr_fs::volume::ConnectionState as Published;
-        Some(match self.inner.connection.state() {
-            ConnectionState::Connected => Published::Direct,
-            ConnectionState::Disconnected => Published::Disconnected,
-            ConnectionState::NeedsCredentials => Published::NeedsSignIn,
-        })
+        Some(self.inner.session.connection().state().into())
     }
 
     /// The installed client's generation, bumped only when a reconnect installs
     /// a rebuilt client (`reconnect.rs`).
     fn connection_generation(&self) -> Option<u64> {
-        Some(self.inner.connection.generation())
+        Some(self.inner.session.connection().generation())
     }
 
     fn backend_kind(&self) -> cmdr_fs::volume::BackendKind {
@@ -462,14 +414,14 @@ impl Volume for WebdavVolume {
     }
 
     fn attempt_reconnect<'a>(&'a self) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        Box::pin(self.inner.do_attempt_reconnect())
+        Box::pin(self.inner.attempt_reconnect())
     }
 
     fn reconnect_with_credentials<'a>(
         &'a self,
         sign_in: cmdr_fs::volume::secret_store::SignIn,
     ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::secret_store::SignedIn, VolumeError>> + Send + 'a>> {
-        Box::pin(self.inner.do_reconnect_with_credentials(sign_in))
+        Box::pin(self.inner.reconnect_as(sign_in))
     }
 
     // ── What this backend is, in capability terms ────────────────────

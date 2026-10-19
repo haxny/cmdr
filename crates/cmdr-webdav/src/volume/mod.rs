@@ -12,14 +12,17 @@
 //! `CLAUDE.md` has the must-knows, `DETAILS.md` the decisions.
 
 use std::path::Path;
+use std::sync::Arc;
+#[cfg(any(test, feature = "testing"))]
+use std::sync::Weak;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Weak};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
+use cmdr_fs::volume::http_session::{HttpBackend, HttpSession};
 use cmdr_fs::volume::remote_paths::RemoteRoot;
-use cmdr_fs::volume::{ConnectionReporter, VolumeError};
 use reqwest::{RequestBuilder, Response};
 use tokio_util::sync::CancellationToken;
 
@@ -27,7 +30,6 @@ use crate::chunking::CHUNK_SIZE;
 use crate::errors::{Attempted, WebdavConnectError, map_status, map_transport_error};
 use crate::params::WebdavConnectionParams;
 use crate::transport::WebdavClient;
-use cmdr_fs::volume::liveness::Timings;
 
 mod chunked_upload;
 mod copy;
@@ -37,12 +39,11 @@ mod paths;
 mod query;
 mod reconnect;
 mod scan;
-mod state;
 mod streams;
 mod volume_impl;
 mod writes;
 
-pub use state::ConnectionState;
+pub use cmdr_fs::volume::http_session::UnattendedReconnect;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
@@ -50,24 +51,6 @@ pub mod testing;
 /// This backend's settings namespace, for everything it reads through
 /// [`VolumeHost::settings`].
 const BACKEND: BackendName = "webdav";
-
-/// Whether an unattended reconnect can actually happen as a volume stands.
-///
-/// ❗ The backend's answer to "the switch is on but nothing comes back", so ❌
-/// no frontend has to derive it from a `has_credentials` call. One rung only:
-/// this backend redials out of the secret store or not at all.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum UnattendedReconnect {
-    /// The switch is on and the store holds a secret: a dropped connection
-    /// comes back on its own (one attempt; a refusal stops it).
-    Possible,
-    /// The user's "reconnect automatically" switch is off. Nothing redials,
-    /// however full the store.
-    SwitchOff,
-    /// The switch is on but nothing is remembered, so there is nothing to
-    /// redial with. Only the user moves this forward.
-    NoStoredSecret,
-}
 
 /// A volume backed by a WebDAV server.
 pub struct WebdavVolume {
@@ -91,31 +74,10 @@ struct WebdavVolumeInner {
     /// asks for (`WebdavVolume::set_redial_root`); the identity never moves.
     /// Read it through `params()`, a snapshot.
     params: std::sync::RwLock<WebdavConnectionParams>,
-    /// The live client. `None` once a request found the server gone, at which
-    /// point every operation fails fast rather than each one timing out.
-    client: tokio::sync::RwLock<Option<Arc<WebdavClient>>>,
-    /// Where the connection stands, packed with the installed session's
-    /// generation, and the retirement flag that silences its reports
-    /// (`cmdr_fs::volume::ConnectionReporter`).
-    connection: ConnectionReporter<ConnectionState>,
-    /// This state's own weak reference, for the background work that outlives
-    /// the call that started it. Set by `Arc::new_cyclic`.
-    me: Weak<WebdavVolumeInner>,
-    /// Single-flight around a client rebuild.
-    reconnect_lock: tokio::sync::Mutex<()>,
-    /// Set by `on_unmount`. A reconnect in flight bails rather than installing
-    /// a client into a volume the app has forgotten.
-    unmounted: AtomicBool,
-    /// Whether the user's per-server "reconnect automatically" switch is on.
-    /// Live rather than read from `params`, so flipping it needs no remount.
-    auto_reconnect: AtomicBool,
-    /// Whether the one unattended authentication attempt has been spent
-    /// (`reconnect.rs`). ❌ Never a loop: repeated refusals lock accounts.
-    auth_attempt_spent: AtomicBool,
-    /// How long silence may last before the server counts as gone
-    /// (`cmdr_fs::volume::liveness`). A field rather than the constant so a cell can
-    /// shorten it and still run in real time.
-    silence: std::sync::RwLock<Timings>,
+    /// The client, the connection it reports, and the switches that gate a
+    /// rebuild: the HTTP lifecycle this backend shares with `cmdr-s3`
+    /// (`cmdr_fs::volume::http_session`).
+    session: HttpSession<WebdavVolumeInner>,
     /// Whether the server keeps creation dates and a folder's dates (a
     /// Nextcloud), as its last connect probe said (`transport.rs`'s `PROBE_BODY`).
     /// Read by `metadata_caps`, which can't wait on the client's lock.
@@ -176,10 +138,7 @@ impl WebdavVolume {
     /// ❗ Switching it ON while the volume sits `Disconnected` starts the
     /// backoff loop then and there.
     pub fn set_auto_reconnect(&self, on: bool) {
-        let was = self.inner.auto_reconnect.swap(on, Ordering::Relaxed);
-        if on && !was {
-            self.inner.start_reconnect_loop_if_down();
-        }
+        self.inner.set_auto_reconnect(on);
     }
 
     /// Whether an unattended reconnect can actually happen as this volume
@@ -193,12 +152,7 @@ impl WebdavVolume {
     /// release: holding the guard across a request would serialize every
     /// other request behind it.
     pub(super) async fn clone_client(&self) -> Result<Arc<WebdavClient>, VolumeError> {
-        self.inner
-            .client
-            .read()
-            .await
-            .clone()
-            .ok_or_else(|| VolumeError::DeviceDisconnected(self.inner.volume_id.clone()))
+        self.inner.session.client().await
     }
 
     /// Sends one request and judges the answer in the `Volume` vocabulary:
@@ -225,9 +179,7 @@ impl WebdavVolume {
     /// Drops the live client. There is no session to close: dropping IS the
     /// shutdown, and the connection pool goes with it.
     pub async fn disconnect(&self) {
-        self.inner.unmounted.store(true, Ordering::Relaxed);
-        self.inner.connection.mark_gone_silently();
-        self.inner.client.write().await.take();
+        self.inner.session.disconnect().await;
     }
 
     /// Drops the live client the way a server going away would, ❗ WITHOUT
@@ -235,14 +187,14 @@ impl WebdavVolume {
     /// state stays `Connected` until an operation notices.
     #[cfg(any(test, feature = "testing"))]
     pub async fn simulate_session_loss(&self) {
-        self.inner.client.write().await.take();
+        self.inner.session.simulate_loss().await;
     }
 
     /// Shortens the silence ladder, for a cell that runs it in real time. Takes
     /// effect from the next watch started.
     #[cfg(test)]
-    pub(super) fn set_silence_timings(&self, timings: Timings) {
-        *self.inner.silence.write_ignore_poison() = timings;
+    pub(super) fn set_silence_timings(&self, timings: cmdr_fs::volume::liveness::Timings) {
+        self.inner.session.set_silence_timings(timings);
     }
 
     /// The chunk a big upload to a Nextcloud is cut into.
@@ -273,7 +225,7 @@ impl WebdavVolume {
     /// a new allocation. `None` while there is no client.
     #[cfg(any(test, feature = "testing"))]
     pub async fn client_witness(&self) -> Option<Weak<dyn std::any::Any + Send + Sync>> {
-        let client: Arc<dyn std::any::Any + Send + Sync> = self.inner.client.read().await.clone()?;
+        let client: Arc<dyn std::any::Any + Send + Sync> = self.inner.session.installed_client().await?;
         Some(Arc::downgrade(&client))
     }
 }
@@ -357,16 +309,9 @@ impl WebdavVolume {
             name: name.to_string(),
             root,
             inner: Arc::new_cyclic(|me| WebdavVolumeInner {
+                session: HttpSession::new(me, volume_id, &host, Some(client), auto_reconnect),
                 volume_id: volume_id.to_string(),
                 params: std::sync::RwLock::new(params),
-                client: tokio::sync::RwLock::new(Some(Arc::new(client))),
-                connection: ConnectionReporter::new(volume_id, &host, ConnectionState::Connected),
-                me: me.clone(),
-                reconnect_lock: tokio::sync::Mutex::new(()),
-                unmounted: AtomicBool::new(false),
-                auto_reconnect: AtomicBool::new(auto_reconnect),
-                auth_attempt_spent: AtomicBool::new(false),
-                silence: std::sync::RwLock::new(Timings::PRODUCTION),
                 keeps_dates: AtomicBool::new(keeps_dates),
                 upload_chunk: AtomicU64::new(CHUNK_SIZE),
                 host,
@@ -384,6 +329,8 @@ mod conformance_test;
 mod connection_drop_test;
 #[cfg(test)]
 mod integration_test;
+#[cfg(test)]
+mod lifecycle_test;
 // ❗ Its own module because its own LANE selects it by this module path:
 // `desktop-rust-webdav-nextcloud` runs `test(volume::nextcloud_test::)` and the
 // shared fixture lane subtracts the same atom, so a rename here has to move

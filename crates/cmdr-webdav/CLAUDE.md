@@ -12,8 +12,8 @@ The WebDAV backend: a `Volume` over one `reqwest` client with one account's cred
 - `transport.rs`: `WebdavClient`, PROPFIND, connect probe. `propfind.rs`: `multistatus` parsing. `urls.rs`: remote paths
   as percent-encoded URLs. `chunking.rs`: Nextcloud's chunked-upload URLs and plan.
 - `volume/`: `mod.rs` (the volume, `connect_webdav_volume`, `send`), `paths.rs`, `query.rs`, `streams.rs` (GET),
-  `writes.rs` (the PUT), `chunked_upload.rs`, `mutation.rs`, `copy.rs`, `scan.rs`, `state.rs` + `reconnect.rs`,
-  `volume_impl.rs`, `testing.rs` (fixtures, `testing` feature).
+  `writes.rs` (the PUT), `chunked_upload.rs`, `mutation.rs`, `copy.rs`, `scan.rs`, `reconnect.rs` (`http_session`
+  hooks), `volume_impl.rs`, `testing.rs` (fixtures, `testing` feature).
 
 ## Must-knows
 
