@@ -19,7 +19,8 @@ dispatch, and the `cmdr://state` builder); the independently-evolving builders s
 - **The user's paths and names render verbatim; raw diagnostic text is redacted.** A read-only agent is trusted and
   must name the user's files to serve them, so panes, `volumes:` `mountPath`, `favorites:`, and every `operations:`
   field stay as-is. `recentErrors` and `cmdr://logs` go through unsalted `crate::redact::redact_line` (bare tokens, ❌
-  never a `RedactionContext`); `logs` `filter` matches the RAW line. Why: `DETAILS.md` § "What renders verbatim".
+  never a `RedactionContext`); `logs` `filter` matches the REDACTED line, ❌ never the raw one (a raw match lets a
+  caller probe for a path by line count). Why: `DETAILS.md` § "What renders verbatim".
 - **Builders are pure over an injected snapshot** (`snapshot_volumes`, `snapshot_indexing`, and friends, with `now_*`
   passed in), so formatting is unit-tested off fixtures without a live app. Keep new builders on that seam.
 - **A missing store reads as empty or unknown, ❌ never an error and ❌ never a `0`.** An absent index, an unscored

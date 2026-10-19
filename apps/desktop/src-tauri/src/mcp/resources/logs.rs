@@ -13,7 +13,8 @@ pub struct LogOptions {
     /// recognizable timestamp prefix are kept (better to surface noise than to
     /// silently drop a panic line that didn't fit the usual prefix).
     pub since_iso: Option<String>,
-    /// Case-sensitive substring filter.
+    /// Case-sensitive substring filter, matched against the REDACTED line (what the caller gets
+    /// back), so a raw path or name matches nothing.
     pub filter: Option<String>,
     /// Max lines to return. Defaults to 100, clamped to 1000.
     pub limit: usize,
@@ -83,8 +84,10 @@ pub fn read_log_tail(opts: &LogOptions) -> Result<String, String> {
 ///
 /// **Redaction is mandatory.** A loopback caller without filesystem read shouldn't be able
 /// to exfiltrate home paths, remote references, emails, or device names through `cmdr://logs`.
-/// Unsalted `redact_line` runs the report policy with bare tokens. Pure (no I/O), so it's
-/// unit-testable.
+/// Unsalted `redact_line` runs the report policy with bare tokens. ❗ The filter reads the
+/// redacted line too: matching the raw one would let a caller probe whether a path is in the log
+/// by watching the line count. So the walk goes newest-first and stops at `limit` matches rather
+/// than redacting the whole window. Pure (no I/O), so it's unit-testable.
 pub fn select_log_lines(text: &str, skip_partial_first: bool, opts: &LogOptions) -> String {
     let mut lines: Vec<&str> = if skip_partial_first {
         text.lines().skip(1).collect()
@@ -95,17 +98,19 @@ pub fn select_log_lines(text: &str, skip_partial_first: bool, opts: &LogOptions)
     if let Some(since) = opts.since_iso.as_deref() {
         lines.retain(|line| line_timestamp_passes_since(line, since));
     }
-    if let Some(filter) = opts.filter.as_deref() {
-        lines.retain(|line| line.contains(filter));
-    }
 
-    let take = opts.limit.min(lines.len());
-    let start = lines.len() - take;
-    let redacted: Vec<String> = lines[start..]
-        .iter()
-        .map(|line| crate::redact::redact_line(line).into_owned())
-        .collect();
-    redacted.join("\n")
+    let mut picked: Vec<String> = Vec::with_capacity(opts.limit.min(lines.len()));
+    for line in lines.iter().rev() {
+        if picked.len() == opts.limit {
+            break;
+        }
+        let redacted = crate::redact::redact_line(line);
+        if opts.filter.as_deref().is_none_or(|filter| redacted.contains(filter)) {
+            picked.push(redacted.into_owned());
+        }
+    }
+    picked.reverse();
+    picked.join("\n")
 }
 
 /// Returns true when `line`'s leading ISO-8601 timestamp is strictly greater

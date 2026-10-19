@@ -101,7 +101,8 @@ pub fn get_all_resources() -> Vec<Resource> {
             name: "Recent logs".to_string(),
             description:
                 "Tail of the live cmdr.log file. Query: `?since=<unix-ms-or-iso>&filter=<substring>&limit=<n>`. \
-                          `limit` defaults to 100, cap 1000. `filter` is a case-sensitive substring match. \
+                          `limit` defaults to 100, cap 1000. `filter` is a case-sensitive substring match against \
+                          the redacted lines, so a raw path or name matches nothing. \
                           `since` drops lines whose timestamp is <= the given moment. Lines come back oldest-first, \
                           one per line, in the same format the on-disk log uses."
                     .to_string(),

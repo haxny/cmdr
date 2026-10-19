@@ -52,6 +52,33 @@ fn select_log_lines_redact_remote_references_and_ids_with_bare_tokens() {
     );
 }
 
+/// The filter reads what the caller gets back, never the raw line: otherwise a caller could probe
+/// whether a path appears in the log by watching the line count.
+#[test]
+fn select_log_lines_filters_the_redacted_text() {
+    let raw = "2026-05-31T08:30:01.000+02:00 INFO listing /Users/dorka/SecretProject/budget.pdf\n\
+               2026-05-31T08:30:02.000+02:00 INFO listing /Users/dorka/Documents/plan.pdf\n\
+               2026-05-31T08:30:03.000+02:00 INFO listing /Users/dorka/Documents/other.pdf\n\
+               2026-05-31T08:30:04.000+02:00 INFO listed 3 entries";
+    let filtered = |filter: &str, limit: usize| {
+        let opts = LogOptions {
+            since_iso: None,
+            filter: Some(filter.to_string()),
+            limit,
+        };
+        select_log_lines(raw, false, &opts)
+    };
+
+    assert_eq!(filtered("SecretProject", 100), "", "a raw name matches nothing");
+    assert_eq!(filtered("/Users/dorka", 100), "");
+    // A filter on the redacted text works, and the limit keeps the newest matches.
+    assert_eq!(
+        filtered("$HOME/Documents", 1),
+        "2026-05-31T08:30:03.000+02:00 INFO listing $HOME/Documents/<file>.pdf"
+    );
+    assert_eq!(filtered("$HOME/", 100).lines().count(), 3);
+}
+
 #[test]
 fn parse_log_options_defaults_and_clamping() {
     let opts = parse_log_options(None);
