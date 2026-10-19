@@ -316,7 +316,9 @@ other modules reach `smb_test_support` from there: `listing_host/tests/smb_pane_
 - **A dropped network, end to end** (`smb_outage_test.rs`): a folder copy through `outage_proxy_test_support.rs`'s
   `OutageProxy` (a TCP proxy of the test's own between the share and the fixture) pauses part-way, the proxy cuts every
   connection and refuses new ones, the copy resumes into the outage and must WAIT (named, not failed), then the proxy
-  restores and every file must land byte-exact with no `.cmdr-tmp-*` left. ❌ Never stage an outage by stopping a
+  restores and every file must land byte-exact with no `.cmdr-tmp-*` left. A sibling cell cuts mid-file, cancels while
+  the share is out, and pins that `write-cancelled` arrives at once naming the temp `removedWhenBack`, and that the
+  background cleanup removes it once the share reconnects. ❌ Never stage an outage by stopping a
   fixture container: the stacks are leased machine-wide, so that fails every other worktree's running suite.
 - **The stress test's hung-run diagnostic gates on the log TARGET** (`MutexCaptureLogger::enabled` in
   `smb_stress_test.rs`): `cmdr_smb::*` for the `client-mutex:` records and `smb2::*` for `recv:`. Without that gate the
