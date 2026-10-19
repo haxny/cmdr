@@ -24,7 +24,7 @@ fn field_value(line: &str, key: &str) -> String {
 fn report_mode_redacts_identities_inside_detail_and_keeps_the_rest() {
     let line = format!(
         "smbclient share listing stopped: host=\"nas.local\", share=\"Client Plans\", code=Some(1), nt_status=STATUS_ACCESS_DENIED, detail={:?}",
-        "tree connect failed for \"Client Plans\" at /Users/alice/Client Plans/budget.xlsx on 10.0.0.7 (alice@example.com)"
+        "tree connect failed for \"Client Plans\" at /Users/alice/Client Plans/budget.xlsx; on 10.0.0.7 (alice@example.com)"
     );
     let redacted = context().redact_line(&line).into_owned();
 
@@ -116,7 +116,7 @@ fn detail_tokens_correlate_with_the_rest_of_the_report() {
 
 #[test]
 fn unsalted_mode_redacts_and_caps_like_a_report() {
-    let text = format!("/Users/alice/secret.txt {}", "q".repeat(300));
+    let text = format!("/Users/alice/secret.txt: {}", "q".repeat(300));
     let line = format!("x detail={text:?}");
     let redacted = redact_line(&line).into_owned();
     assert!(!redacted.contains("alice"), "{redacted}");

@@ -572,7 +572,7 @@ fn delivery_keeps_a_redacted_capped_panic_message_and_thread_name() {
     report.diag_id.clear();
     report.build_mode = Some("PRIVATE-BUILD-MODE".to_string());
     report.panic_message = Some(format!(
-        "called `Result::unwrap()` on an `Err` value: Os {{ code: 2 }} at /Users/alice/Secret/payload.txt {}",
+        "called `Result::unwrap()` on an `Err` value: Os {{ code: 2 }} at /Users/alice/Secret/payload.txt: {}",
         "x".repeat(PANIC_MESSAGE_MAX_CHARS * 2)
     ));
     report.thread_name = Some("smb-watcher /Volumes/Private Share".to_string());

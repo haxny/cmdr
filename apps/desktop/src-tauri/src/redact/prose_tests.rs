@@ -31,16 +31,17 @@ fn an_absolute_path_under_any_prefix_is_redacted() {
             "skipping too-small image '/mnt/<dir>/<dir>/<file>.pdf' (12x12)",
         ),
         (
-            "Upload failed for /DCIM/Camera/IMG_0042.HEIC on the phone: busy",
-            "Upload failed for /<dir>/<dir>/<file>.HEIC on the phone: busy",
+            "Upload failed for /DCIM/Camera/IMG_0042.HEIC, on the phone: busy",
+            "Upload failed for /<dir>/<dir>/<file>.HEIC, on the phone: busy",
         ),
         (
             "Installing update into bundle: /Applications/Cmdr.app",
             "Installing update into bundle: /Applications/<file>.app",
         ),
+        // A `(`-led word belongs to the name: `(Full)` could be the end of `Secret Corp (Full)`.
         (
             "Phases: covering /Library/Secret Corp (Full)",
-            "Phases: covering /Library/<dir> (Full)",
+            "Phases: covering /Library/<dir>",
         ),
     ];
     for (input, expected) in cases {

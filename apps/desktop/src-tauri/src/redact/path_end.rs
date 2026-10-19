@@ -1,164 +1,119 @@
 //! Where a path found in prose really ends. The path branches over-match on purpose (spaces are legal in
-//! labels and filenames), and this gives the trailing prose back. `DETAILS.md` § "Finding the end of a path".
+//! labels and filenames), and this gives back only what a hard delimiter proves isn't path. `DETAILS.md` §
+//! "Finding the end of a path".
 
+use super::fields::starts_with_field_key;
 use super::names::ends_with_unicode_escape;
-use super::paths::{ends_filename, ends_sentence, has_extension_like_suffix};
 
 /// Split a greedy path capture into (path, trailing_noise). The regex matches spaces inside
 /// paths so both multi-word labels (`/Volumes/My Backup Drive/...`) and multi-word filenames
-/// (`Invoice for Acme Corp.pdf`) land whole; that also sweeps up trailing English text like
-/// `... .png now` or `... .rs:42:5`. We pull back the tail here before the rewriter runs,
-/// then re-emit the tail verbatim in the dispatch output.
+/// (`Invoice for Acme Corp.pdf`) land whole; it also sweeps up whatever prose follows the path.
 ///
-/// ❗ **This is the only thing standing between a filename and an uploaded bundle.** The
-/// regex deliberately over-matches, so a boundary rule that gives back too much doesn't
-/// merely lose prose, it publishes the part of the name it handed back. Both directions have
-/// bitten: an over-eager capture once truncated 98 reports at `/Volumes/<volume>`, and an
-/// over-cautious one shipped ` at 01.13.03 PM-2.jpeg` verbatim.
+/// ❗ **Greedy on purpose: the path runs to the next HARD delimiter.** Nothing local tells a
+/// name's own words from the prose after it, and every rule that tried (a sentence-ending
+/// `)`, a lowercase word, a dotted word) shipped part of a name: `Summer (Lake House) 2026`
+/// lost ` 2026` at the `)`. So prose after a path is redacted with it, and only these end it:
+/// - the `{path}: {message}` seam, anywhere. macOS forbids `:` in a filename.
+/// - a later word that starts a new reference (`… and https://…`, or the `smb:` the regex
+///   stopped at before `//`), so the scanner gets to claim that reference.
+/// - `, `, `; `, or ` key=` after the LAST separator. Before it, a deeper segment proves the
+///   path goes on (`Smith, John/x.pdf`), and cutting there would ship the rest.
+/// - the ` -` of a ` -> ` arrow (the regex stops at `>`).
 ///
-/// Trimmed, in order:
-/// - everything from the first `": "`, the `{path}: {message}` seam nearly every caller
-///   formats with. macOS forbids `:` in a filename, so this can't cut a real name short.
-/// - everything after the first token that ENDS the path: one carrying a letter-led
-///   extension (`report.pdf`, `PM-2.jpeg`) or ending a sentence (`naspi-1)`, `state.`). Only a
-///   token past the last separator qualifies, and a bare number or initial with a dot (`12.`,
-///   `J.`) opens a name instead of ending a sentence.
-/// - trailing sentence-ending punctuation (`.`, `,`, `;`, `!`, `?`, `)`, `]`, `}`)
-/// - trailing `:<digits>` groups (line/column markers like `:42:5`)
-/// - a trailing RUN of space-separated words that are lowercase-initial AND carry no
-///   extension (` failed to open`). The run never eats into the first segment after the
-///   last `/`, which is what keeps `/Volumes/naspi and then it failed` down to `naspi`. It
-///   never runs when the path reaches the seam, closing brackets in between included: the
-///   seam already said where it ends.
+/// Then only characters that carry no name go back: `:<digits>` line markers, and trailing
+/// `.` `,` `;` `!` `?` or an UNBALANCED closing bracket (`(under /x/y): …`). `(` and `)` never
+/// end a path.
 pub(super) fn split_trailing_noise(s: &str) -> (&str, &str) {
-    split_trailing_noise_with(s, true)
-}
+    let mut end = s.find(": ").unwrap_or(s.len());
+    end = new_reference_start(s, end);
 
-/// [`split_trailing_noise`], optionally without its last rule (the lowercase prose run). A keyed
-/// field's value is a path by declaration, so a lowercase last word there (`Medical records`)
-/// is part of the name: trimming it split one folder into a token plus a bare word, and gave
-/// the same folder a different token than its quoted spelling on the next line.
-pub(super) fn split_trailing_noise_with(s: &str, trim_prose_run: bool) -> (&str, &str) {
-    let bytes = s.as_bytes();
-    let mut end = bytes.len();
-
-    // The `{path}: {message}` seam. Everything from it belongs to the message.
-    let seam = s.find(": ");
-    if let Some(seam) = seam {
-        end = seam;
+    let floor = s[..end].rfind(separator_of(s)).map_or(0, |i| i + 1);
+    if let Some(at) = first_delimiter(&s[floor..end]) {
+        end = floor + at;
     }
 
-    // Left to right: the first token that ends a filename or ends a sentence is the last
-    // thing that can belong to the path. Scanning forwards is what separates
-    // `report.pdf for alice@example.com` (cut after `report.pdf`) from
-    // `Screenshot 2026-09-04 at 01.13.03 PM-2.jpeg` (no letter-led extension until the very
-    // end, so the whole name stays). A backwards scan can't tell those apart: the email's
-    // `.com` looks exactly like a filename extension from the right.
-    //
-    // Nothing before the last separator can end the path: a deeper segment after a token
-    // proves the path goes on, whatever punctuation the token ends with. That keeps
-    // `12. Summer trip/beach.jpg` and `Dr. Dre/track.mp3` whole. A match never holds ` /` (a
-    // space before a slash ends it), so a later separator belongs to the same path, unless
-    // its word starts a new reference (`and https://…`).
-    {
-        let separator = separator_of(s);
-        let last_separator = s[..same_path_end(s, end)].rfind(separator);
-        let mut offset = 0usize;
-        for token in s[..end].split(' ') {
-            let token_end = offset + token.len();
-            let can_end = last_separator.is_none_or(|sep| token_end > sep);
-            if can_end
-                && !token.is_empty()
-                && (ends_filename(token) || (ends_sentence(token) && !opens_a_name(token, separator)))
-            {
-                end = token_end;
-                break;
-            }
-            offset = token_end + 1; // step over the space
-        }
+    end = trim_line_markers(s, end);
+    if s[..end].ends_with(" -") {
+        end -= 2;
     }
-
-    // First: trim sentence-ending punctuation, one at a time.
     end = trim_closing_punctuation(s, end);
 
-    // Repeatedly strip `:<digits>` suffixes (e.g. `:42`, `:42:5`).
+    // Every cut above lands next to an ASCII byte, so `end` is a char boundary.
+    (&s[..end], &s[end..])
+}
+
+/// Where the first `, `, `; `, or ` key=` in `tail` sits, if any.
+fn first_delimiter(tail: &str) -> Option<usize> {
+    let punctuation = [", ", "; "].iter().filter_map(|d| tail.find(d)).min();
+    let field = tail
+        .match_indices(' ')
+        .find(|(i, _)| starts_with_field_key(&tail[i + 1..]))
+        .map(|(i, _)| i);
+    punctuation.into_iter().chain(field).min()
+}
+
+/// The start of the first word after the first that opens a new reference, minus its space:
+/// one containing `://` (`https://u:p@a.com and https://x:y@b.com`), or a trailing `scheme:`
+/// the match stopped at because `//` followed (`/Volumes/d/f.txt and smb://host/…`). Handing it
+/// back is what lets the scanner claim the reference; swallowed, its tail had no pattern left.
+fn new_reference_start(s: &str, end: usize) -> usize {
+    let mut offset = 0usize;
+    for (i, word) in s[..end].split(' ').enumerate() {
+        let word_end = offset + word.len();
+        let trailing_scheme = word_end == s.len() && is_scheme_colon(word);
+        if i > 0 && (word.contains("://") || trailing_scheme) {
+            return offset - 1;
+        }
+        offset = word_end + 1;
+    }
+    end
+}
+
+/// `smb:`, `https:`: a URL scheme and its colon.
+fn is_scheme_colon(word: &str) -> bool {
+    word.strip_suffix(':').is_some_and(|scheme| {
+        scheme.starts_with(|c: char| c.is_ascii_alphabetic())
+            && scheme
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+    })
+}
+
+/// Step `end` back over `:<digits>` groups (`:42`, `:42:5`, a source location).
+fn trim_line_markers(s: &str, mut end: usize) -> usize {
+    let bytes = s.as_bytes();
     loop {
         let mut i = end;
-        // consume digits from the right
         while i > 0 && bytes[i - 1].is_ascii_digit() {
             i -= 1;
         }
         if i < end && i > 0 && bytes[i - 1] == b':' {
             end = i - 1;
         } else {
-            break;
+            return end;
         }
     }
-
-    // Trim a RUN of trailing lowercase, extension-less words (a sentence continuation).
-    //
-    // Not when the path runs right up to the seam: then the seam already marks its end, and
-    // a lowercase last word is part of a name (`/Volumes/x/summer trip: failed`). Trimming it
-    // there shipped `trip` verbatim.
-    //
-    // The floor is the first word after the last `/`: that word is a real path segment
-    // however lowercase it looks, so `/Volumes/naspi and then it failed` keeps `naspi`.
-    // An extension ends the run on the spot, because a word carrying one is part of the
-    // filename, not prose — that is what holds `my secret notes.txt` together.
-    // Closing brackets in between don't hide the seam: `(under …/Summer trip): disk full` still
-    // runs up to it, and trimming there shipped `trip`.
-    let reaches_seam = seam.is_some_and(|seam| s[end..seam].bytes().all(|b| matches!(b, b')' | b']' | b'}')));
-    if trim_prose_run && !reaches_seam {
-        let floor = s[..end].rfind(separator_of(s)).map_or(0, |i| i + 1);
-        loop {
-            let mut i = end;
-            while i > floor && bytes[i - 1] != b' ' {
-                i -= 1;
-            }
-            // `i` is the start of the last word; require a space before it, and stay
-            // above the floor so we never eat the segment itself.
-            if i <= floor || i == end || bytes[i - 1] != b' ' {
-                break;
-            }
-            let word = &s[i..end];
-            let starts_lower = word.chars().next().is_some_and(|c| c.is_ascii_lowercase());
-            if !starts_lower || has_extension_like_suffix(word) || looks_like_name_fragment(word) {
-                break;
-            }
-            end = i - 1;
-            while end > floor && bytes[end - 1] == b' ' {
-                end -= 1;
-            }
-        }
-    }
-
-    // A lone trailing `-` is the start of a `{from} -> {to}` arrow (the regex stops at `>`).
-    // After the prose run, so the `-` has already stopped it from eating the name's last word.
-    if s[..end].ends_with(" -") {
-        end -= 2;
-    }
-
-    // Finally, strip a trailing `.` or `,` that was exposed by the above steps.
-    end = trim_closing_punctuation(s, end);
-
-    // SAFETY: we only advance `end` on ASCII byte boundaries.
-    (&s[..end], &s[end..])
 }
 
-/// Step `end` back over closing punctuation (`.` `,` `;` `!` `?` `)` `]` `}`), one at a time.
-/// The `}` closing a `\u{301}` escape stays: it's the middle of a `{:?}`-printed name.
+/// Step `end` back over trailing sentence punctuation (`.` `,` `;` `!` `?`) and closing
+/// brackets the path didn't open, one at a time. None of them carries a name. A balanced `)`
+/// stays (`Summer (Lake House)`), and so does the `}` closing a `\u{301}` escape.
 fn trim_closing_punctuation(s: &str, mut end: usize) -> usize {
     let bytes = s.as_bytes();
     while end > 0 {
-        let b = bytes[end - 1];
-        if b == b'}' && ends_with_unicode_escape(&s[..end]) {
+        let path = &s[..end];
+        let unbalanced = |open: char, close: char| path.matches(close).count() > path.matches(open).count();
+        let trim = match bytes[end - 1] {
+            b'.' | b',' | b';' | b'!' | b'?' => true,
+            b')' => unbalanced('(', ')'),
+            b']' => unbalanced('[', ']'),
+            b'}' => !ends_with_unicode_escape(path) && unbalanced('{', '}'),
+            _ => false,
+        };
+        if !trim {
             break;
         }
-        if matches!(b, b'.' | b',' | b';' | b'!' | b'?' | b')' | b']' | b'}') {
-            end -= 1;
-        } else {
-            break;
-        }
+        end -= 1;
     }
     end
 }
@@ -174,38 +129,4 @@ fn separator_of(s: &str) -> char {
     } else {
         '/'
     }
-}
-
-/// Where the separators that can belong to this path stop: before the first later word that
-/// starts a new reference (`https://u:p@a.com and https://x:y@b.com`).
-fn same_path_end(s: &str, end: usize) -> usize {
-    let mut offset = 0usize;
-    for (i, word) in s[..end].split(' ').enumerate() {
-        if i > 0 && word.contains("://") {
-            return offset;
-        }
-        offset += word.len() + 1;
-    }
-    end
-}
-
-/// A word that ends in a dot but opens a name rather than closing a sentence: a bare number
-/// (`12.` of `12. Summer trip`, `1.` of `Chapter 1. Intro`) or a lone initial (`J.` of
-/// `J. Smith`). A path rarely ends a sentence on one of those, and when it does, the cost is a
-/// word of prose redacted; cutting there ships the rest of the folder's name.
-fn opens_a_name(token: &str, separator: char) -> bool {
-    let word = token.rsplit(separator).next().unwrap_or(token);
-    let Some(stem) = word.strip_suffix('.') else {
-        return false;
-    };
-    let all_digits = !stem.is_empty() && stem.bytes().all(|b| b.is_ascii_digit());
-    let initial = stem.len() == 1 && stem.bytes().all(|b| b.is_ascii_uppercase());
-    all_digits || initial
-}
-
-/// A word prose doesn't produce: an inner dot (`me\u{301}retek.jpg.cmdr-tmp-…`, whose
-/// extension is too odd for [`has_extension_like_suffix`]) or a `{:?}` escape. Such a word
-/// is the tail of a filename, and trimming it as prose ships it verbatim.
-fn looks_like_name_fragment(word: &str) -> bool {
-    word.contains('\\') || word.find('.').is_some_and(|i| i > 0 && i + 1 < word.len())
 }

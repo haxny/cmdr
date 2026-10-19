@@ -3,9 +3,9 @@
 10:36:16.815 INFO  config  Using CMDR_DATA_DIR: $HOME/Library/Application Support/<dir>
 10:51:24.236 INFO  config  Using CMDR_DATA_DIR: $HOME/Library/Application Support/<dir>
 12:14:26.047 INFO  file_system  Reading $HOME/Documents/<file>.pdf
-12:17:42.577 INFO  file_system  Wrote $HOME/Downloads/<file>.dmg successfully
+12:17:42.577 INFO  file_system  Wrote $HOME/Downloads/<dir>
 12:19:37.842 INFO  file_system  Failed to read $HOME/Desktop/<file>.png
-12:21:59.797 INFO  file_system  Path $HOME/<dir>/<file>.md modified
+12:21:59.797 INFO  file_system  Path $HOME/<dir>/<dir>
 12:23:53.563 INFO  file_system  Symlink target: $HOME/<dir>/<dir>/<file>.json
 12:26:25.511 INFO  file_system  Indexed $HOME/Pictures/<dir>/<dir>/<file>.jpg
 12:28:11.850 INFO  file_system  Stored at $HOME/Documents/<file>.docx
@@ -61,7 +61,7 @@
 17:00:03.002 INFO  net  fetched https://<user>@<host>/
 17:00:03.003 INFO  net  fetched https://<user>:<credential>@<host>/<dir>
 17:00:03.004 INFO  net  pushed ssh://<user>@<host>/<dir>/<dir>
-17:00:04.000 INFO  net  Two: https://<user>:<credential>@<host> and https://<user>:<credential>@<host>
+17:00:04.000 INFO  net  Two: https://<user>:<credential>@<host> https://<user>:<credential>@<host>
 18:00:00.000 INFO  build  error at /tmp/<dir>/src/<file>.rs:42:5
 18:00:00.001 INFO  build  cache at /tmp/<file>.txt
 18:00:00.002 INFO  build  ipc at /private/<dir>/<dir>
@@ -70,7 +70,7 @@
 19:00:00.000 INFO  win  Wrote $HOME\Desktop\<file>.txt
 19:00:00.001 INFO  win  Wrote $HOME\Documents\<file>.docx
 19:00:00.002 INFO  win  Wrote $HOME\<dir>\<dir>\<file>.json
-19:00:00.003 INFO  win  Wrote $HOME\Music\<file>.mp3 found
+19:00:00.003 INFO  win  Wrote $HOME\Music\<dir>
 19:00:00.004 INFO  win  Wrote $HOME\<dir>\<file>.exe
 19:00:00.005 INFO  win  Profile path $HOME
 20:00:00.000 INFO  indexing  Replay: deduplicated 7779 raw events to 6333 unique (19% reduction)
@@ -97,32 +97,32 @@
 21:00:00.006 INFO  redact_test  called `Option::unwrap()` on a `None` value
 21:00:00.007 INFO  redact_test  module path cmdr_lib::redact::tests
 21:00:00.008 INFO  redact_test  version 1.2.3
-22:00:00.000 INFO  combo  Two paths: $HOME/Documents/<file>.txt and $HOME/Downloads/<file>.zip done
-22:00:00.001 INFO  combo  Mixed: /Volumes/<volume>/<file>.txt and smb://<host>.local/<share>/<file>.txt
+22:00:00.000 INFO  combo  Two paths: $HOME/Documents/<dir> $HOME/Downloads/<dir>
+22:00:00.001 INFO  combo  Mixed: /Volumes/<volume>/<dir> smb://<host>.local/<share>/<file>.txt
 22:00:00.002 INFO  combo  Email contact <email> and ip <ipv4-private>
-22:00:00.003 INFO  combo  Mount mounted at /Volumes/<volume>/<dir>/<file>.gz now
+22:00:00.003 INFO  combo  Mount mounted at /Volumes/<volume>/<dir>/<dir>
 22:00:00.004 INFO  combo  <host>.local has ip <ipv4-private>
 22:00:00.005 INFO  combo  Two: <host>.local and <host>.local
-22:00:00.006 INFO  combo  user info https://<user>:<credential>@<host> and email <email>
-22:00:00.007 INFO  combo  Reading $HOME/Documents/<file>.pdf for <email>
+22:00:00.006 INFO  combo  user info https://<user>:<credential>@<host>
+22:00:00.007 INFO  combo  Reading $HOME/Documents/<file>.com
 23:00:00.000 INFO  panic  panicked at 'index out of bounds: the len is 5 but the index is 7', $HOME/Documents/<file>.rs:10:5
 23:00:00.001 INFO  panic  thread 'main' panicked at $HOME/<dir>/<dir>/<file>.rs:1:1
 23:00:00.002 INFO  panic  panicked at $HOME\Desktop\<file>.exe
 23:00:00.003 INFO  panic  no path here, just text
 23:00:00.004 INFO  panic  panicked at /tmp/<dir>/src/<file>.rs:99:9
-23:00:00.005 INFO  smb  smb://<user>@<host>/<share> connection
-23:00:00.006 INFO  smb  smb://<host> just host
-23:00:00.007 INFO  smb  smb://<host>/<share> just share
+23:00:00.005 INFO  smb  smb://<user>@<host>/<share>
+23:00:00.006 INFO  smb  smb://<host>
+23:00:00.007 INFO  smb  smb://<host>/<share>
 23:00:00.008 INFO  paths  Username only path $HOME ok
 23:00:00.009 INFO  paths  Linux user only $HOME done
-23:00:00.010 INFO  paths  Volume only /Volumes/<volume> mounted
+23:00:00.010 INFO  paths  Volume only /Volumes/<volume>
 23:00:00.011 INFO  paths  Win user only $HOME hello
 23:00:00.012 INFO  paths  Path with spaces $HOME/<dir>/<file>.txt
 23:00:00.013 INFO  paths  Path with spaces /Volumes/<volume>/<dir>/<file>.jpg
 23:00:00.014 INFO  paths  Path $HOME/Movies/<file>.mp4
 23:00:00.015 INFO  paths  Path $HOME/Public/<file>.zip
 23:00:00.016 INFO  paths  Trailing slash $HOME/Documents/
-23:00:00.017 INFO  e2e  Listing dir $HOME/src/<dir> finished
+23:00:00.017 INFO  e2e  Listing dir $HOME/src/<dir>
 23:00:00.018 INFO  e2e  Listing dir $HOME/Library/<dir>/<dir>
 23:00:00.019 INFO  e2e  Listing dir $HOME/AppData/<dir>
 23:00:00.020 INFO  mtp::device  Connected to <mtp-owner>'s Pixel 8 Pro
@@ -131,10 +131,10 @@
 23:00:00.023 INFO  mtp::device  Found <mtp-owner>'s iPad Pro
 23:00:00.024 INFO  mtp::device  <mtp-owner>'s OnePlus 12 ready
 23:00:00.025 INFO  mtp::device  bare model name Pixel 8 Pro is generic, keep as-is
-23:00:00.026 INFO  commands::network  Upgrading volume smb-2 to SmbVolume: server=<host>.local, share=media, user=Some("<user>")
+23:00:00.026 INFO  commands::network  Upgrading volume smb-2 to SmbVolume: server=<host>.local, share=<share>, user=Some("<user>")
 23:00:00.027 INFO  commands::network  Found Keychain credentials for user=<user>
 23:00:00.028 INFO  network::smb_connection  try_list_shares_authenticated: addr=<ipv4-private>:445, user=<user>
-23:00:00.029 INFO  commands::network  Upgrading volume smb-3 to SmbVolume: server=<host>.local, share=public, user=None
+23:00:00.029 INFO  commands::network  Upgrading volume smb-3 to SmbVolume: server=<host>.local, share=<share>, user=None
 23:00:00.030 INFO  network::smb_connection  SmbCredentials { username: "<user>", share: "media" } with max_users=12
 00:00:00.000 INFO  empty
 00:00:00.001 INFO  punct  Path: $HOME/Documents/<file>.pdf, then more text
@@ -144,19 +144,19 @@
 00:00:00.005 INFO  punct  '$HOME/Documents/<file>.pdf'
 00:00:00.006 INFO  punct  Email: <email>, found
 00:00:00.007 INFO  punct  IP: <ipv4-private>, found
-00:00:00.008 INFO  long  Long line with $HOME/Documents/<file>.pdf and /Volumes/<volume>/<file>.txt and <host>.local and <ipv4-private> and <email> all together
+00:00:00.008 INFO  long  Long line with $HOME/Documents/<dir> /Volumes/<volume>/<dir>
 00:00:00.009 INFO  long  Multiple emails: <email>, <email>, <email> found
 00:00:00.010 INFO  long  Multiple ips: <ipv4-public>, <ipv4-public>, <ipv4-public> found
 00:00:00.011 INFO  long  Multiple hosts: <host>.local, <host>.local, <host>.local found
-00:00:00.012 INFO  long  Multiple unc: \\<host>\<share>\<file>.txt and \\<host>\<share>\<file>.txt found
-00:00:00.013 INFO  long  Mixed PII: $HOME/Documents/<file>.pdf for <email> via <ipv4-private> to <host>.local
+00:00:00.012 INFO  long  Multiple unc: \\<host>\<share>\<dir> \\<host>\<share>\<dir>
+00:00:00.013 INFO  long  Mixed PII: $HOME/Documents/<file>.local
 00:00:00.014 INFO  long  Quoted path "$HOME/Documents/<file>.pdf" with surrounding quotes
 00:00:00.015 INFO  long  Backtick path `$HOME/Documents/<file>.pdf` with surrounding ticks
 00:00:00.016 INFO  done  finished
-23:33:22.817 DEBUG cmdr_smb::volume::query  SmbVolume::get_metadata: share=media, input="/Volumes/<volume>/<dir>/<dir>/<dir>/<file>.jpg", smb_path="<dir>/<dir>/<dir>/<file>.jpg"
-23:33:22.822 DEBUG cmdr_smb::volume::streams  SmbVolume::write_from_stream: share=media, path="<dir>/<dir>/<dir>/<file>.jpg.cmdr-tmp-66381a4a-7bff-45c7-95fd-d8bd43289c5f", size=3887758
-23:33:23.131 DEBUG cmdr_smb::volume::query  SmbVolume::get_metadata: share=media, input="/Volumes/<volume>/<dir>/<dir>/<dir>/<file>.jpg.cmdr-tmp-66381a4a-7bff-45c7-95fd-d8bd43289c5f", smb_path="<dir>/<dir>/<dir>/<file>.jpg.cmdr-tmp-66381a4a-7bff-45c7-95fd-d8bd43289c5f"
-23:33:23.135 DEBUG cmdr_smb::volume::mutation  SmbVolume::rename: share=media, from="<dir>/<dir>/<dir>/<file>.jpg.cmdr-tmp-66381a4a", to="<dir>/<dir>/<dir>/<file>.jpg", force=false
+23:33:22.817 DEBUG cmdr_smb::volume::query  SmbVolume::get_metadata: share=<share>, input="/Volumes/<volume>/<dir>/<dir>/<dir>/<file>.jpg", smb_path="<dir>/<dir>/<dir>/<file>.jpg"
+23:33:22.822 DEBUG cmdr_smb::volume::streams  SmbVolume::write_from_stream: share=<share>, path="<dir>/<dir>/<dir>/<file>.jpg.cmdr-tmp-66381a4a-7bff-45c7-95fd-d8bd43289c5f", size=3887758
+23:33:23.131 DEBUG cmdr_smb::volume::query  SmbVolume::get_metadata: share=<share>, input="/Volumes/<volume>/<dir>/<dir>/<dir>/<file>.jpg.cmdr-tmp-66381a4a-7bff-45c7-95fd-d8bd43289c5f", smb_path="<dir>/<dir>/<dir>/<file>.jpg.cmdr-tmp-66381a4a-7bff-45c7-95fd-d8bd43289c5f"
+23:33:23.135 DEBUG cmdr_smb::volume::mutation  SmbVolume::rename: share=<share>, from="<dir>/<dir>/<dir>/<file>.jpg.cmdr-tmp-66381a4a", to="<dir>/<dir>/<dir>/<file>.jpg", force=false
 23:33:23.149 DEBUG smb2::client::tree  tree: renamed from=<dir>\<dir>\<dir>\<file>.jpg.cmdr-tmp-66381a4a to=<dir>\<dir>\<dir>\<file>.jpg
 23:33:52.870 DEBUG smb2::client::tree  tree: deleted file=<dir>\<dir>\<dir>\<file>.jpg
 23:24:40.121 DEBUG smb2::client::tree  tree: created directory=<dir>\<dir>\<dir>
@@ -170,5 +170,12 @@
 23:40:00.004 WARN  indexing::cover  Cover: can't walk /<dir>/<dir>/<dir>/<file>.pdf: permission denied
 23:40:00.005 WARN  trash  op 01a0 (Trash) failed: $HOME/Desktop/<file>.jpeg: the Trash refused it: “<file>.jpeg”
 23:41:00.000 WARN  move  source sweep: couldn't remove /Volumes/<volume>/<dir>/<dir>/<file>.jpg: NotFound
-23:41:00.001 INFO  scan_preview  scan preview 7 started: $HOME/Pictures/<dir> on volume root
+23:41:00.001 INFO  scan_preview  scan preview 7 started: $HOME/Pictures/<dir>
 23:41:00.002 ERROR FE:transferProgress  Move error: Path: $HOME/Pictures/<dir>/<file>.jpg; Error type: io_error
+23:42:00.000 DEBUG list_directory  list_directory_core: path=$HOME/Pictures/<dir>/<dir>/<dir>, entries=5
+23:42:00.001 INFO  copy  copying $HOME/Pictures/<dir>/<dir>/<dir> -> /Volumes/<volume>/<dir>/<dir>/<dir>
+23:42:00.002 ERROR FE:transferProgress  Copy error: detail="Path: /Volumes/<volume>/<dir>/<dir>/<dir>/<dir>/<dir>/.DS_Store; Error type: io_error"
+23:42:00.003 WARN  mdns_sd::service_daemon  resolve failed for name: "<host>._companion-link._tcp.local."
+23:42:00.004 INFO  copy  copy_between_volumes: source_volume=<volume>, dest_volume=<volume>, 2 sources
+23:42:00.005 INFO  smb2::client::tree  tree: connected share=<share>, tree_id=7
+23:42:00.006 DEBUG indexing::verifier  Verifier: scanned new dir path="$HOME/Pictures/<dir>" (5 entries, 0ms)

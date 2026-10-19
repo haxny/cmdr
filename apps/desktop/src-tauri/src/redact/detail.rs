@@ -4,13 +4,12 @@
 //! capped at [`REPORT_DETAIL_MAX_CHARS`]. `DETAILS.md` § "External-text fields".
 
 use super::context::TokenDomain;
-use super::fields::identity_field_token;
-use super::fields::{is_redacted_segment, redact_typed_path};
+use super::fields::{end_of_bare_value, identity_field_token, is_redacted_segment, redact_typed_path};
 use super::names::unescape_debug;
 use super::paths::{has_extension_like_suffix, redact_leaf};
 use super::{
     REPORT_DETAIL_MAX_CHARS, RedactionContext, dispatch, identity_token, redact_with, redactor_regex,
-    split_trailing_noise, split_trailing_noise_with, whole_len,
+    split_trailing_noise, whole_len,
 };
 use regex::{Captures, Regex};
 use std::borrow::Cow;
@@ -49,6 +48,11 @@ pub(super) fn echoed_identities(line: &str, context: Option<&RedactionContext>) 
             let key = caps.name("if_key").map_or("", |m| m.as_str());
             let value = quoted_value(caps.name("if_value").map_or("", |m| m.as_str()));
             let raw = unescape_debug(value).into_owned();
+            let token = identity_field_token(key, &raw, context);
+            (raw, token)
+        } else if caps.name("label_field").is_some() {
+            let key = caps.name("lf_key").map_or("", |m| m.as_str());
+            let raw = end_of_bare_value(caps.name("lf_value").map_or("", |m| m.as_str())).to_string();
             let token = identity_field_token(key, &raw, context);
             (raw, token)
         } else if caps.name("account").is_some() {
@@ -144,8 +148,8 @@ pub(super) fn redact_detail_field(
     let text = unescape_debug(quoted_value(raw));
 
     let text = redact_json_identity_pairs(&text, context);
-    // Absolute paths first: the line scanner's own `abs_path` branch trims a lowercase prose
-    // run off a path's end, which in untrusted text would leave `records` of `Medical records`.
+    // Absolute paths under any prefix first, as typed values; the scan below leaves their
+    // tokens alone.
     let text = redact_any_absolute_path(&text, context);
     let mut redacted = String::with_capacity(text.len());
     for line in text.split_inclusive('\n') {
@@ -192,15 +196,16 @@ fn redact_json_identity_pairs(text: &str, context: Option<&RedactionContext>) ->
 /// paths under any prefix (`/srv/data/…`, `/mnt/…`), and the scanner only knows the local mount
 /// and home prefixes. Only inside external text, where prose is untrusted anyway; a path the
 /// scanner already rewrote keeps its tokens (`redact_typed_path` preserves them), which keeps
-/// this idempotent. The end ignores the lowercase prose-run rule, so a trailing word goes with
-/// the path rather than out of the report bare.
+/// this idempotent. A word may start with `(` (`…/Summer (Lake House) Trip/…`, a folder the
+/// frontend flattened into `Path: …; Error type: …`); only the first segment can't, so
+/// `(see /x/y)` doesn't start a path at its paren.
 fn redact_any_absolute_path(text: &str, context: Option<&RedactionContext>) -> String {
     static RE: OnceLock<Regex> = OnceLock::new();
     let re = RE.get_or_init(|| {
         Regex::new(
             r#"(?x)
             (?P<lead> ^ | [\s"'(=:,\[] )
-            (?P<path> / [^/\s"'<>|`()]+ (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`(][^/\s"'<>|`]* )* )+ )
+            (?P<path> / [^/\s"'<>|`()]+ (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )* )+ )
             "#,
         )
         .expect("valid absolute-path regex")
@@ -211,7 +216,7 @@ fn redact_any_absolute_path(text: &str, context: Option<&RedactionContext>) -> S
         let (Some(lead), Some(path)) = (caps.name("lead"), caps.name("path")) else {
             break;
         };
-        let (path_text, _) = split_trailing_noise_with(path.as_str(), false);
+        let (path_text, _) = split_trailing_noise(path.as_str());
         if path_text.is_empty() {
             out.push_str(&text[pos..=path.start()]);
             pos = path.start() + 1;

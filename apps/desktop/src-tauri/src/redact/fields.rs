@@ -6,12 +6,12 @@ use super::context::TokenDomain;
 use super::identity_token;
 use super::names::{split_cmdr_suffix, unescape_debug};
 use super::paths::{
-    dir_token, has_extension_like_suffix, keeps_parent_name, redact_leaf, redact_media, redact_unix_home,
-    redact_unix_system, redact_volumes, redact_windows_home,
+    dir_token, has_extension_like_suffix, home_role_len, keeps_parent_name, redact_leaf, redact_media,
+    redact_unix_home, redact_unix_system, redact_volumes, redact_windows_home,
 };
 use super::references::{redact_host, redact_remote_unc, redact_remote_url, redact_scheme_less};
 use super::whole_len;
-use super::{redactor_regex, split_trailing_noise_with};
+use super::{redactor_regex, split_trailing_noise};
 use regex::Captures;
 
 /// Path-branch groups: a value one of these claims from its first byte is an absolute path
@@ -83,9 +83,9 @@ pub(super) fn redact_path_field(caps: &Captures<'_>, context: Option<&RedactionC
         return (format!("{head}{redacted}{quote}"), whole_len(caps));
     }
     if claimed_by_path_branch(value) {
-        // The key says this is a path, so it ends where the path grammar ends, lowercase last
-        // word included, and gets the same tokens as its quoted spelling.
-        let (path, _) = split_trailing_noise_with(value, false);
+        // The key says this is a path, so it ends where the path grammar ends and gets the same
+        // tokens as its quoted spelling.
+        let (path, _) = split_trailing_noise(value);
         let path = super::references::trim_reference_end(path);
         if !path.is_empty() {
             let redacted = redact_typed_path(path, context, true);
@@ -182,13 +182,26 @@ pub(super) fn redact_identity_field(caps: &Captures<'_>, context: Option<&Redact
     (format!("{key}={prefix}{token}{suffix}"), whole_len(caps))
 }
 
+/// Rewrite a bare volume or share label (`share=Family Photos, tree_id=7`). The value ends
+/// where any bare field value ends ([`end_of_bare_value`]); a label has no path grammar to
+/// tell its own words from what follows, so ending late only redacts more.
+pub(super) fn redact_label_field(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String, usize) {
+    let key = caps.name("lf_key").map_or("", |m| m.as_str());
+    let value = end_of_bare_value(caps.name("lf_value").map_or("", |m| m.as_str()));
+    let consumed = key.len() + 1 + value.len();
+    if value.is_empty() || value == "None" {
+        return (format!("{key}={value}"), consumed);
+    }
+    (format!("{key}={}", identity_field_token(key, value, context)), consumed)
+}
+
 /// The token one identity-field key gives its (unescaped) value.
 pub(super) fn identity_field_token(key: &str, value: &str, context: Option<&RedactionContext>) -> String {
     match key {
         "host" | "server" => redact_host(value, context),
         "share" => identity_token("share", TokenDomain::Volume, value, context),
         "volumeId" => identity_token("volume-id", TokenDomain::VolumeId, value, context),
-        "volumeName" => identity_token("volume", TokenDomain::Volume, value, context),
+        "volumeName" | "source_volume" | "dest_volume" => identity_token("volume", TokenDomain::Volume, value, context),
         "serverId" => identity_token("server-id", TokenDomain::ServerId, value, context),
         "deviceId" => identity_token("device-id", TokenDomain::DeviceId, value, context),
         _ => value.to_string(),
@@ -260,12 +273,19 @@ pub(super) fn redact_relative_path(
     let Some(leaf_idx) = segments.iter().rposition(|s| !s.is_empty()) else {
         return value.to_string();
     };
+    // A home role this scanner already proved (`$HOME/Pictures/…`) stays on a second pass.
+    let home_role_end = if preserve_redacted_segments && segments[0] == "$HOME" {
+        1 + home_role_len(&segments[1..])
+    } else {
+        0
+    };
     let mut out = String::with_capacity(value.len());
     for (i, seg) in segments.iter().enumerate() {
         if i > 0 {
             out.push(sep);
         }
         let keep = seg.is_empty()
+            || i < home_role_end
             || (preserve_redacted_segments && is_redacted_segment(seg))
             || (absolute && i == 1 && SYSTEM_ROOTS.contains(seg));
         if keep {

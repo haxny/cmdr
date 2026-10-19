@@ -22,6 +22,9 @@ Depth and rationale. `CLAUDE.md` holds the must-knows and the pattern table.
 | `manual_server_id` | `manual-<address-derived name>-<port>` | `manual-<server-id>-<port>` |
 | `email` | `local@domain.tld` | `<email>` |
 | `account` | `user=`/`username:` fields | `user=<user>`, `None` untouched |
+| `identity_field` | quoted `host=`, `server=`, `share=`, `volumeName=`, `source_volume=`, `dest_volume=`, the ID keys | the value tokenized in its identity's domain |
+| `label_field` | bare `share=`, `source_volume=`, `dest_volume=` (`share=Family Photos, …`) | `share=<share:T>`, value ends like any bare field value |
+| `quoted_bonjour` | a quoted instance, any name (`"Alex's MacBook Pro (2)._companion-link._tcp.local."`) | `"<host:T>._companion-link._tcp.local."` |
 | `bonjour_instance` | `Name._smb._tcp.local.` (DNS-SD instance) | `<host:T>._smb._tcp.local.`, T shared with `server="name"` |
 | `bonjour_service` | `_smb._tcp.local.` (a public service type) | kept verbatim |
 | `mdns` | `<label>.local`, every label (`nas.home.local`) | `<host>.local` |
@@ -34,6 +37,11 @@ Depth and rationale. `CLAUDE.md` holds the must-knows and the pattern table.
 `mtp_owner` needs a known model word (`iPhone | iPad | Pixel | Galaxy | OnePlus | …`) right after the `'s `, which is
 what keeps contractions and module paths out of it. `SAFE_PARENT_DIR_NAMES` is the parent-dir allowlist: `Documents`,
 `Downloads`, `Desktop`, `Library`, `src`, `Pictures`, `Movies`, `Music`, `Public`, `AppData`, `Application Support`.
+
+`OS_JUNK_NAMES` (`paths.rs`) is a second allowlist, for whole segments at any depth: `.DS_Store`, `Thumbs.db`,
+`desktop.ini`, `.localized`, `Icon\r`, `.Spotlight-V100`, `.Trashes`, `.fseventsd`. The OS or a sync tool writes them,
+they carry no one's data, and a walk that tripped on one is a triage clue. Exact match only (raw or `{:?}`-escaped):
+`My.DS_Store.bak` is a name.
 
 ## Pattern overlaps
 
@@ -132,8 +140,10 @@ match, accepted as an over-redaction (rare phrasing without an article between `
 An SMB login has three parts in our logs, and they don't carry the same weight. The **account name** is a real
 identifier, as personal as the email pattern, and it appeared verbatim in three places (`commands/network.rs` twice,
 `crates/cmdr-smb/src/connection.rs` once), so `account` collapses it to `<user>`. A share inside an SMB URL or UNC path
-is a recognized identity and gets a report-local `<share>` token. A bare `share=` field still ships because the generic
-field has no typed provenance yet. A bare NetBIOS name (`server=NASPOLYA`) is likewise a known remaining gap.
+is a recognized identity and gets a report-local `<share>` token, and so does a `share=` field, quoted or bare (`smb2`
+prints `tree: connected share=Family Photos, …`). The bare volume labels `copy_between_volumes` prints
+(`source_volume=`, `dest_volume=`) get the same treatment in the volume domain, so a share and the volume it mounts as
+correlate. A bare NetBIOS name (`server=NASPOLYA`) is a known remaining gap.
 
 `None` passes through because it isn't a name, and the difference between "no username in the mount info" and "a
 username we then looked up in the Keychain" is exactly what a triager reads these lines for. That's why this can't be a
@@ -142,45 +152,46 @@ blanket `user=\S+` rewrite.
 ## Finding the end of a path
 
 A space can be inside a path (`/Volumes/My Backup Drive`), inside a filename (`Invoice for Acme Corp.pdf`), or the gap
-between a path and the prose after it. Nothing local to the character tells the three apart, so the regex takes the
-greedy option and `split_trailing_noise` hands back what wasn't path. Both directions of getting that wrong have shipped:
+between a path and the prose after it. Nothing local to the character tells the three apart, so the regex over-matches
+and `split_trailing_noise` decides where the path ends.
 
-- **Too cautious** and the leftover is a filename fragment that goes out in a bundle. Anchoring continuation words to
-  `[A-Z0-9]` stopped `Screenshot 2026-09-04 at 01.13.03 PM-2.jpeg` at ` at`, so every multi-word filename leaked its
-  tail. `Invoice for Acme Corp.pdf` is the same shape with something to lose.
-- **Too greedy** and the line loses its message. A label group that swallowed following lowercase words truncated 98
-  uploaded reports at `/Volumes/<volume>`, taking the volume ID and the resolution with it.
+**Decision: greedy, to the next hard delimiter.** Every rule that tried to read the end off a word's shape shipped part
+of a name, so the boundary no longer guesses. The history is the reason, so it stays here:
 
-The boundary rules, in order, each earning its place against one of those:
+- Anchoring continuation words to `[A-Z0-9]` stopped `Screenshot 2026-09-04 at 01.13.03 PM-2.jpeg` at ` at`, so every
+  multi-word filename leaked its tail.
+- A dotted word ended a sentence: `12. Summer trip/beach.jpg` shipped ` Summer trip/beach.jpg` (ERR-UK5NH).
+- A `)` ended a sentence: `Summer (Lake House) 2026, entries=5` shipped ` 2026` (#491).
+- A letter-led extension ended a filename, so `Summer.Trip 2026 photos` would ship ` 2026 photos`, and a trailing
+  lowercase run was prose, so `/Volumes/x/summer trip: failed` once shipped `trip`.
 
-1. **The `": "` seam.** Nearly every caller formats `{path}: {message}`. macOS forbids `:` in a filename, so cutting
-   there can't shorten a real name; on Linux a `: ` inside one is vanishingly rare.
-2. **Forward scan to the first token that ends the path**: one carrying a letter-led extension (`report.pdf`), or one
-   ending a sentence (`naspi-1)`, `state.`). Forward, not backward, is the load-bearing part:
-   `report.pdf for alice@example.com` has to cut after `report.pdf`, and from the right the email's `.com` is
-   indistinguishable from a real extension. Two limits keep it from cutting inside a name:
-   - **Nothing before the last separator ends the path.** A deeper segment after a token proves the path goes on, so
-     `12. Summer trip/beach.jpg`, `Dr. Dre/track.mp3`, and `Report (final) v2/x.pdf` stay whole. Cutting at the `12.`
-     shipped ` Summer trip/beach.jpg` (ERR-UK5NH). This is free: a match never holds ` /` (the space before a slash
-     ends it), so a later separator belongs to the same path, unless its word starts a new reference (`… and
-     https://…`), where the search for the last separator stops. The separator is `\` for a Windows home or UNC
-     path, `/` otherwise (there a `\` is a `{:?}` escape).
-   - **A bare number or a lone capital with a dot (`12.`, `J.`) opens a name**, so the leaf `12. Summer Trip on
-     volume root` keeps its words. A sentence ending on one costs a word of prose, never a leak.
-3. **`ends_filename` demands a LETTER-led extension**, unlike the looser `has_extension_like_suffix` used for the
-   `<dir>`/`<file>` decision. `01.13.03` in a timestamp otherwise reads as an extension and halves the name. A digit-led
-   real extension (`.7z`) just doesn't end the scan, which costs a word of prose, never a leak.
-4. **Backward trim of closing punctuation** (`.` included, so `…/state. Then` keeps its period as prose), then of a
-   **lowercase extension-less run**, floored at the first segment after the last separator. After the run, a lone
-   trailing ` -` goes back too: it's the start of a `{from} -> {to}` arrow (the regex stops at `>`), and it already
-   stopped the run from eating the name's last word. That floor is
-   what leaves `/Volumes/naspi and then it failed` as `naspi` rather than nothing. It is skipped when the path runs
-   right up to the seam, since the seam already marked the end: `/Volumes/x/summer trip: failed` used to ship `trip`.
-   Closing brackets in between still count as reaching it (`(under …/Summer trip): disk full`, the `move` line). A
-   word with an inner dot or a `{:?}` escape (`me\u{301}retek.jpg.cmdr-tmp-…`) also stops it: prose has neither, and
-   trimming one shipped the tail of a temp name.
-5. **A `\u{…}` escape is part of a name.** Its closing `}` neither ends a sentence nor gets trimmed as punctuation, so
-   `cafe\u{301} menu.pdf` stays whole.
+What ends a prose path now, and nothing else:
+
+1. **The `": "` seam, anywhere.** Nearly every caller formats `{path}: {message}`. macOS forbids `:` in a filename, so
+   cutting there can't shorten a real name; on Linux a `: ` inside one is vanishingly rare.
+2. **A word that starts a new reference**: one containing `://` (`https://u:p@a.com and https://x:y@b.com`), or a
+   trailing `scheme:` the match stopped at before `//` (`/Volumes/d/f.txt and smb://host/…`). Handed back, the scanner
+   claims the reference (§ "Why the scan resumes mid-match").
+3. **`, `, `; `, or ` key=` after the last separator.** Before it, a deeper segment proves the path goes on
+   (`Smith, John/x.pdf`, `Dr. Dre, Snoop (live)/track.mp3`), and cutting there would ship the rest: nothing claims
+   `John/x.pdf` (no `\B/` anchor). A match never holds ` /` (the space before a slash ends it), so every later
+   separator belongs to the same path. The separator is `\` for a Windows home or UNC path, `/` otherwise (there a `\`
+   is a `{:?}` escape).
+4. **The ` -` of a `{from} -> {to}` arrow** (the regex stops at `>`).
+
+After the cut, only characters with no name in them go back: `:<digits>` source locations, trailing `.` `,` `;` `!`
+`?`, and a closing bracket the path didn't open (`(under …/Summer trip): disk full`, the `move` line). A balanced `)`
+stays (`Summer (Lake House)`), and so does the `}` of a `\u{301}` escape. `(` and `)` never end a path.
+
+**The cost, accepted until producers mark their values (#491):** prose after an unkeyed path goes with it, extension
+and file kind included. `/Users/jo/Documents/notes.md failed to open` reads `$HOME/Documents/<dir>`, an extension in the
+swallowed prose becomes the leaf's (`x.pdf for alice@example.com` reads `<file>.com`), and
+`VolumeManager::report_identity_conflict`'s line loses its volume ID up to the `; ` (the 98 truncated reports this
+section used to warn about). Pinned by `prose_after_an_unkeyed_path_goes_with_it`. A keyed field (`path={:?}`) keeps
+everything after it; that's the fix for a line whose prose matters.
+
+The same boundary serves every caller: the prose branches, an unquoted absolute `path_field` value, the leaf echo
+scrub, and the absolute-path walk inside external text.
 
 ### Why the scan resumes mid-match
 
@@ -200,8 +211,9 @@ Rust log sites interpolate paths in prose far more often than as keyed fields: a
   lookbehind; `\B` before the slash (no word char in front) is what keeps `MB/s`, `and/or`, `3/4`, and `$HOME/…` out,
   and the two-segment minimum keeps a lone `/` or `/foo` prose. It ends like every prose path (`split_trailing_noise`)
   and walks the segments with `redact_relative_path`, so a system root stays and an over-match like an unknown-scheme
-  URL's path is tokenized rather than shipped. Inside external text `redact_any_absolute_path` runs BEFORE the line
-  scanner, because there a lowercase last word (`Medical records`) belongs to the path.
+  URL's path is tokenized rather than shipped. A word after the first segment may start with `(` (`/srv/A/Summer (Some
+  Words) Name/…`); the first segment can't, so `(see /x/y)` doesn't start a path at its paren. Inside external text
+  `redact_any_absolute_path` runs BEFORE the line scanner, as a typed path.
 - **The leaf echo scrub** (`detail.rs::scrub_leaf_echoes`). macOS repeats a file's name in its own error text (`the
   Trash refused it: “Screenshot ….jpeg”`). `redact_with` collects the leaf of every local or absolute path on the line,
   with the token the path's own rewrite gave it (`echoed_identities`), and replaces whole-word repeats in the prose
@@ -245,8 +257,9 @@ fixed set of keys (see the regex) with either a `{:?}`-quoted value or a bare on
   `end_of_bare_value` cuts at the first `: ` seam, `, `, or ` key=`, then drops an unbalanced `)`. A comma-space inside
   a bare name ends it early and leaks the rest; `{:?}` values can't hit that, which is why our own sites use it.
 - **An unquoted absolute value** that a path branch claims from its first byte is redacted as a typed path ending where
-  `split_trailing_noise_with(value, false)` says, which is every rule except the lowercase prose run (the key already
-  says it's a path, so `…/Medical records` stays one leaf and matches its quoted spelling's token).
+  `split_trailing_noise` says (`…/Medical records` stays one leaf and matches its quoted spelling's token).
+- **A home role survives a second pass**: `path=$HOME/Pictures/<dir>, …` keeps `Pictures` (`home_role_len`), which is
+  what keeps report redaction idempotent.
 - **`{:?}`-printed structs** use `key: "…"` (`PermissionDenied { path: "…" }`); a quoted value after `: ` is the same
   complete typed value. `path: ` before anything else is prose and gets rescanned. Anything else is walked here by `redact_relative_path`:
   same leaf and allowlist rules, the first segment of an absolute value kept if it's a system root (`/private`,
@@ -286,8 +299,9 @@ around them. So it has one mechanism, used at every such site:
   spelling the line's own keyed fields may not share. `error`, `err`, `result`, and `detail` placeholders all render
   as `detail=` fields (`log-bridge.ts`).
 - **Absolute paths under any prefix are tokenized inside the value** (`/srv/data/…`, `/mnt/…`), BEFORE the ordinary
-  scan, with no lowercase prose-run trim: the text is untrusted, so a trailing lowercase word goes with the path.
-  Already-rewritten segments keep their tokens, which keeps it idempotent.
+  scan, as typed paths. A later word may start with `(` (`Path: …/Summer (Lake House) Trip/…; Error type: …`, a typed
+  error the frontend flattened); the first segment can't. Already-rewritten segments keep their tokens, which keeps it
+  idempotent.
 - **The echo scrub reads the whole line** (collected once per line, lazily, in `redact_with`), so a key after the field
   still counts. External-text fields never feed it: prose can't teach it a name. Values under three chars are skipped
   (too likely to be part of a word), and matches glued to a letter or digit are left alone.
@@ -310,9 +324,3 @@ Tokens are for spotting repeated normalized names, so identity sees through prin
 `{:?}` escapes and NFC-normalizes before hashing. Cmdr's `.cmdr-tmp-` / `.cmdr-temp-` / `.cmdr-staging-` suffix is split
 off first (`split_cmdr_suffix`): the name part correlates with the final file and the suffix ships as-is, since its UUID
 says nothing about anyone. A path token denotes a normalized segment name, not proof that two complete paths are equal.
-
-## Known gap: a lowercase last word before prose
-
-`/Volumes/x/summer trip failed to open` still reads `trip failed to open` as prose, because nothing local tells a
-folder's lowercase word from the sentence after it. The seam rule covers the common `{path}: {message}` shape; logging
-the path as a quoted field covers the rest.

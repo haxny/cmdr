@@ -47,12 +47,12 @@ fn unix_home_paths() {
         ("/home/bob/.ssh/id_rsa", "$HOME/<dir>/<dir>"),
         ("/Users/veszelovszki/SecretProject/notes.md", "$HOME/<dir>/<file>.md"),
         (
-            "Error reading /Users/foo/Desktop/screenshot.png now",
-            "Error reading $HOME/Desktop/<file>.png now",
+            "Error reading /Users/foo/Desktop/screenshot.png: retrying",
+            "Error reading $HOME/Desktop/<file>.png: retrying",
         ),
         (
-            "two paths: /Users/a/Documents/x.txt and /Users/b/Downloads/y.zip done",
-            "two paths: $HOME/Documents/<file>.txt and $HOME/Downloads/<file>.zip done",
+            "two paths: /Users/a/Documents/x.txt, /Users/b/Downloads/y.zip; done",
+            "two paths: $HOME/Documents/<file>.txt, $HOME/Downloads/<file>.zip; done",
         ),
         ("/Users/john", "$HOME"),
         (
@@ -80,8 +80,8 @@ fn windows_home_paths() {
             r"$HOME\<dir>\<dir>\<file>.json",
         ),
         (
-            r"file at C:\Users\carol\Music\song.mp3 found",
-            r"file at $HOME\Music\<file>.mp3 found",
+            r"file at C:\Users\carol\Music\song.mp3, found",
+            r"file at $HOME\Music\<file>.mp3, found",
         ),
         (r"C:\Users\dave\SecretFolder\thing.exe", r"$HOME\<dir>\<file>.exe"),
         (r"C:\Users\eve", r"$HOME"),
@@ -106,9 +106,9 @@ fn volumes_paths() {
         ),
         ("/Volumes/Untitled", "/Volumes/<volume>"),
         (
-            "mounted at /Volumes/External SSD/work/project.tar.gz now",
+            "mounted at /Volumes/External SSD/work/project.tar.gz; now",
             // .gz keeps as ext (3 alnum chars)
-            "mounted at /Volumes/<volume>/<dir>/<file>.gz now",
+            "mounted at /Volumes/<volume>/<dir>/<file>.gz; now",
         ),
         ("/Volumes/Time Machine Backups/foo.bak", "/Volumes/<volume>/<file>.bak"),
     ];
@@ -128,8 +128,8 @@ fn media_paths() {
         ("/media/cdrom", "/media/<volume>"),
         ("/media/My Stick/data.bin", "/media/<volume>/<file>.bin"),
         (
-            "mounted /media/sdcard/dcim/photo.jpg ok",
-            "mounted /media/<volume>/<dir>/<file>.jpg ok",
+            "mounted /media/sdcard/dcim/photo.jpg, ok",
+            "mounted /media/<volume>/<dir>/<file>.jpg, ok",
         ),
         // Non-role allowlisted parents survive anywhere.
         ("/media/usb1/src/main.rs", "/media/<volume>/src/<file>.rs"),
@@ -139,37 +139,76 @@ fn media_paths() {
     }
 }
 
-/// A volume label may contain spaces, but prose after the path must survive.
+/// Prose after an unkeyed path goes with it, up to the next hard delimiter: nothing local
+/// tells a label's or a name's own words from the sentence after it, and guessing shipped names.
 ///
-/// Real incident: `VolumeManager::report_identity_conflict` logs the two roots and then keeps
-/// talking. The label group swallowed every following lowercase word, so 98 uploaded error
-/// reports arrived truncated at the second `/Volumes/<volume>`, losing the volume ID and the
-/// resolution, the two fields triage actually needs.
+/// This is the known cost, pinned so it stays deliberate: `VolumeManager::report_identity_conflict`
+/// logs two roots and keeps talking, so its line loses the volume ID up to the `; `. Logging
+/// the paths as keyed fields is what gives it back.
 #[test]
-fn mount_label_stops_at_lowercase_prose() {
+fn prose_after_an_unkeyed_path_goes_with_it() {
     let cases = [
         (
             "Two different mount roots (/Volumes/naspi and /Volumes/naspi-1) claim volume ID \
              smb-192-168-1-111-445-naspi; the earlier root stays recorded, so the two share \
              per-volume state. Expected only for a cloned volume or a doubly-mounted filesystem.",
-            "Two different mount roots (/Volumes/<volume> and /Volumes/<volume>) claim volume ID \
-             smb-192-168-1-111-445-naspi; the earlier root stays recorded, so the two share \
-             per-volume state. Expected only for a cloned volume or a doubly-mounted filesystem.",
+            "Two different mount roots (/Volumes/<volume> /Volumes/<volume>; the earlier root stays \
+             recorded, so the two share per-volume state. Expected only for a cloned volume or a \
+             doubly-mounted filesystem.",
         ),
-        // A single trailing lowercase word was already handled; a run of them was not.
         (
             "/Volumes/Untitled is not the volume we wanted here",
-            "/Volumes/<volume> is not the volume we wanted here",
+            "/Volumes/<volume>",
         ),
         (
             "/media/usb0 could not be read because the device went away.",
-            "/media/<volume> could not be read because the device went away.",
+            "/media/<volume>.",
         ),
-        // Multi-word labels still match: the continuation words are capitalized.
-        ("/Volumes/My Backup Drive is full", "/Volumes/<volume> is full"),
+        ("/Volumes/My Backup Drive is full", "/Volumes/<volume>"),
+        (
+            "Wrote /Users/ada/Documents/state. Then we moved on",
+            "Wrote $HOME/Documents/<dir>",
+        ),
+        // The leaf's extension goes with it: `report.pdf. Next up` is one name to the redactor.
+        (
+            "Saved to /Volumes/naspi/Photos/report.pdf. Next up",
+            "Saved to /Volumes/<volume>/<dir>/<dir>",
+        ),
+        ("/Users/jo/Documents/notes.md failed to open", "$HOME/Documents/<dir>"),
+        // A hard delimiter ends it: the seam, `, `, `; `, a ` key=` field, and an arrow.
+        (
+            "/Volumes/naspi/report.pdf: next up, then more",
+            "/Volumes/<volume>/<file>.pdf: next up, then more",
+        ),
+        ("/Volumes/naspi/a b, then more", "/Volumes/<volume>/<dir>, then more"),
+        ("/Volumes/naspi/a b; then more", "/Volumes/<volume>/<dir>; then more"),
+        ("/Volumes/naspi/a b entries=3", "/Volumes/<volume>/<dir> entries=3"),
+        (
+            "/Volumes/naspi/a b -> /Volumes/x/c d",
+            "/Volumes/<volume>/<dir> -> /Volumes/<volume>/<dir>",
+        ),
+        // Only characters with no name in them go back: sentence punctuation, an unbalanced
+        // closing bracket, a source location.
+        ("(see /Volumes/naspi/a b.)", "(see /Volumes/<volume>/<dir>.)"),
+        ("at /srv/app/src/main.rs:42:5", "at /<dir>/<dir>/src/<file>.rs:42:5"),
     ];
     for (input, expected) in cases {
         assert_eq!(r(input), expected, "input: {input:?}");
+    }
+}
+
+/// A delimiter before the last separator doesn't end the path: the deeper segment proves the
+/// path goes on, and cutting there would ship everything after it (no `\B/` anchor claims
+/// `John/x.pdf`).
+#[test]
+fn a_delimiter_inside_a_folder_name_never_ends_the_path() {
+    for (input, private) in [
+        ("Reading /Users/ada/Smith, John/x.pdf now", "John"),
+        ("Reading /srv/a/Plans; Q3/x.pdf now", "Q3"),
+        ("Reading /srv/a/Plans mode=draft/x.pdf now", "draft"),
+    ] {
+        let out = r(input);
+        assert!(!out.contains(private), "{private:?} shipped: {out}");
     }
 }
 
@@ -197,11 +236,8 @@ fn multi_word_filenames_are_redacted_whole() {
         ("/Users/jo/Docs/my secret notes.txt", "$HOME/<dir>/<file>.txt"),
         // The shape with real exposure in it.
         ("/Users/jo/Work/Invoice for Acme Corp.pdf", "$HOME/<dir>/<file>.pdf"),
-        // Prose after an extension still survives: the trailing run has no extension to hold it.
-        (
-            "/Users/jo/Documents/notes.md failed to open",
-            "$HOME/Documents/<file>.md failed to open",
-        ),
+        // A dotted word mid-name doesn't end it either.
+        ("/Users/jo/Work/Summer.Trip 2026 photos", "$HOME/<dir>/<dir>"),
         // A digit-led "extension" inside a timestamp must NOT end the name early. This is
         // the exact shape that leaked: cutting at `01.13.03` ships ` PM-2.jpeg`.
         (
@@ -237,17 +273,17 @@ fn a_numbered_folder_is_redacted_whole() {
             "Cover: can't walk /<dir>/<dir>/<dir>/<file>.jpg: permission denied",
         ),
         (
-            "Reading /tmp/stage/12. Summer trip/beach.jpg failed",
-            "Reading /tmp/<dir>/<dir>/<file>.jpg failed",
+            "Reading /tmp/stage/12. Summer trip/beach.jpg: failed",
+            "Reading /tmp/<dir>/<dir>/<file>.jpg: failed",
         ),
         (
-            "Opening smb://192.168.1.20/photos/12. Summer trip/beach.jpg failed",
-            "Opening smb://<ipv4-private>/<share>/<dir>/<file>.jpg failed",
+            "Opening smb://192.168.1.20/photos/12. Summer trip/beach.jpg: failed",
+            "Opening smb://<ipv4-private>/<share>/<dir>/<file>.jpg: failed",
         ),
         // Backslash-separated: a Windows home, and an `smb2` share-relative field.
         (
-            r"Wrote C:\Users\Bob\Pictures\12. Summer trip\beach.jpg failed",
-            r"Wrote $HOME\Pictures\<dir>\<file>.jpg failed",
+            r"Wrote C:\Users\Bob\Pictures\12. Summer trip\beach.jpg: failed",
+            r"Wrote $HOME\Pictures\<dir>\<file>.jpg: failed",
         ),
         (
             r"tree: deleted file=trips\12. Summer trip\beach.jpg",
@@ -255,14 +291,15 @@ fn a_numbered_folder_is_redacted_whole() {
         ),
         (
             r#"SmbVolume::delete: share=media, path="trips/12. Summer trip/beach.jpg""#,
-            r#"SmbVolume::delete: share=media, path="<dir>/<dir>/<file>.jpg""#,
+            r#"SmbVolume::delete: share=<share>, path="<dir>/<dir>/<file>.jpg""#,
         ),
-        // The `move` line's three paths, two of them leaf folders before ` ->` and `)`.
+        // The `move` line's three paths, two of them leaf folders before ` ->` and `)`. The
+        // first one's ` (under` goes with it: the regex can't continue into ` /Users`.
         (
             "move_between_volumes: copy phase failed for /Users/ada/Pictures/12. Summer trip/beach.jpg \
              (under /Users/ada/Pictures/12. Summer trip -> /Volumes/naspi/Photos/12. Summer Trip): disk full",
-            "move_between_volumes: copy phase failed for $HOME/Pictures/<dir>/<file>.jpg \
-             (under $HOME/Pictures/<dir> -> /Volumes/<volume>/<dir>/<dir>): disk full",
+            "move_between_volumes: copy phase failed for $HOME/Pictures/<dir>/<dir> \
+             $HOME/Pictures/<dir> -> /Volumes/<volume>/<dir>/<dir>): disk full",
         ),
         // As the leaf, followed by a seam, a comma, a quote, `;`, and the end of the line.
         (
@@ -285,10 +322,10 @@ fn a_numbered_folder_is_redacted_whole() {
             "Copied /Users/ada/Pictures/12. Summer Trip",
             "Copied $HOME/Pictures/<dir>",
         ),
-        // The `scan_preview` label: the source, then ` on volume <id>`.
+        // The `scan_preview` label: the source, then ` on volume <id>`, which goes with it.
         (
             "scan preview 3 started: /Users/ada/Pictures/12. Summer Trip on volume root",
-            "scan preview 3 started: $HOME/Pictures/<dir> on volume root",
+            "scan preview 3 started: $HOME/Pictures/<dir>",
         ),
         // Neighbors: a number mid-name, a digit-led dot, and several numbered segments.
         (
@@ -311,45 +348,23 @@ fn a_numbered_folder_is_redacted_whole() {
     }
 }
 
-/// Closing brackets between a path and the `: ` seam don't hide the seam: the path still runs
-/// up to it, so a lowercase last word stays part of the name. The `move` line's
-/// `(under {src} -> {dest}): {error}` shipped `trip` of `Summer trip` that way.
+/// Closing brackets between a path and the `: ` seam go back, and the leaf before them stays
+/// whole. The `move` line's `(under {src} -> {dest}): {error}` once shipped `trip` of
+/// `Summer trip` there.
 #[test]
 fn closing_brackets_before_the_seam_keep_a_lowercase_leaf() {
     let cases = [
         (
-            "move_between_volumes: copy phase failed for /Users/ada/Pictures/Summer trip/a.jpg \
-             (under /Users/ada/Pictures/Summer trip -> /Volumes/naspi/Photos/Summer trip): disk full",
-            "move_between_volumes: copy phase failed for $HOME/Pictures/<dir>/<file>.jpg \
-             (under $HOME/Pictures/<dir> -> /Volumes/<volume>/<dir>/<dir>): disk full",
+            "move: (under /Users/ada/Pictures/Summer trip -> /Volumes/naspi/Photos/Summer trip): disk full",
+            "move: (under $HOME/Pictures/<dir> -> /Volumes/<volume>/<dir>/<dir>): disk full",
         ),
         (
             "Skipped [/srv/data/summer trip]: busy",
             "Skipped [/<dir>/<dir>/<dir>]: busy",
         ),
-        // Without the seam, the lowercase run is still prose.
-        (
-            "(/Volumes/naspi and then it failed) again",
-            "(/Volumes/<volume> and then it failed) again",
-        ),
-    ];
-    for (input, expected) in cases {
-        assert_eq!(r(input), expected, "input: {input:?}");
-    }
-}
-
-/// A sentence that really ends at the path still gives its prose back.
-#[test]
-fn sentence_end_after_a_path_stays_prose() {
-    let cases = [
-        (
-            "Wrote /Users/ada/Documents/state. Then we moved on",
-            "Wrote $HOME/Documents/<dir>. Then we moved on",
-        ),
-        (
-            "Saved to /Volumes/naspi/Photos/report.pdf. Next up",
-            "Saved to /Volumes/<volume>/<dir>/<file>.pdf. Next up",
-        ),
+        // A bracket the path didn't open, and only that, goes back at the end of the line too.
+        ("(/Volumes/naspi/summer trip)", "(/Volumes/<volume>/<dir>)"),
+        ("/Volumes/naspi/Summer (Lake House)", "/Volumes/<volume>/<dir>"),
     ];
     for (input, expected) in cases {
         assert_eq!(r(input), expected, "input: {input:?}");
@@ -389,18 +404,18 @@ fn share_relative_paths_in_fields() {
         // `cmdr-smb`'s Debug-quoted shape.
         (
             r#"SmbVolume::delete: share=media, path="trips/2023/summer trip/kapu méretek.jpg""#,
-            r#"SmbVolume::delete: share=media, path="<dir>/<dir>/<dir>/<file>.jpg""#,
+            r#"SmbVolume::delete: share=<share>, path="<dir>/<dir>/<dir>/<file>.jpg""#,
         ),
         (
             r#"SmbVolume::rename: share=media, from="trips/a b.jpg.cmdr-tmp-66381a4a-7bff", to="trips/a b.jpg", force=false"#,
             // Cmdr's own temp suffix carries no PII and survives, so the temp and the final
             // name visibly belong together.
-            r#"SmbVolume::rename: share=media, from="<dir>/<file>.jpg.cmdr-tmp-66381a4a-7bff", to="<dir>/<file>.jpg", force=false"#,
+            r#"SmbVolume::rename: share=<share>, from="<dir>/<file>.jpg.cmdr-tmp-66381a4a-7bff", to="<dir>/<file>.jpg", force=false"#,
         ),
         // Both fields on one line: the absolute one goes to the `/Volumes/` branch.
         (
             r#"SmbVolume::get_metadata: share=media, input="/Volumes/media/trips/x y.jpg", smb_path="trips/x y.jpg""#,
-            r#"SmbVolume::get_metadata: share=media, input="/Volumes/<volume>/<dir>/<file>.jpg", smb_path="<dir>/<file>.jpg""#,
+            r#"SmbVolume::get_metadata: share=<share>, input="/Volumes/<volume>/<dir>/<file>.jpg", smb_path="<dir>/<file>.jpg""#,
         ),
         // `smb2`'s unquoted, backslash-separated shapes. The value ends at the next field.
         (
@@ -422,7 +437,7 @@ fn share_relative_paths_in_fields() {
         // The `{path}: {message}` seam and a closing paren end an unquoted value too.
         (
             "SmbVolume::download(share=media, path=trips/a b.jpg): cancelled after 5 bytes",
-            "SmbVolume::download(share=media, path=<dir>/<file>.jpg): cancelled after 5 bytes",
+            "SmbVolume::download(share=<share>, path=<dir>/<file>.jpg): cancelled after 5 bytes",
         ),
         // A bare name, and a volume-relative path with a leading slash.
         (
@@ -437,11 +452,11 @@ fn share_relative_paths_in_fields() {
         // proves nothing off `$HOME`.
         (
             r#"write_from_stream: share=media, path="src/report.pdf", size=12"#,
-            r#"write_from_stream: share=media, path="src/<file>.pdf", size=12"#,
+            r#"write_from_stream: share=<share>, path="src/<file>.pdf", size=12"#,
         ),
         (
             r#"write_from_stream: share=media, path="Documents/report.pdf", size=12"#,
-            r#"write_from_stream: share=media, path="<dir>/<file>.pdf", size=12"#,
+            r#"write_from_stream: share=<share>, path="<dir>/<file>.pdf", size=12"#,
         ),
     ];
     for (input, expected) in cases {
@@ -699,8 +714,8 @@ fn smb_uris() {
             "smb://<host>.local/<share>/<dir>/<file>.zip",
         ),
         (
-            "Connecting to smb://homer/movies/film.mkv now",
-            "Connecting to smb://<host>/<share>/<file>.mkv now",
+            "Connecting to smb://homer/movies/film.mkv, now",
+            "Connecting to smb://<host>/<share>/<file>.mkv, now",
         ),
         ("smb://homer", "smb://<host>"),
         ("smb://homer/share", "smb://<host>/<share>"),
@@ -721,8 +736,8 @@ fn unc_paths() {
         (r"\\server\share", r"\\<host>\<share>"),
         (r"\\server", r"\\<host>"),
         (
-            r"opening \\fileserver\team\report.pdf failed",
-            r"opening \\<host>\<share>\<file>.pdf failed",
+            r"opening \\fileserver\team\report.pdf: failed",
+            r"opening \\<host>\<share>\<file>.pdf: failed",
         ),
         (
             r"\\10.0.0.5\backup\daily\snapshot.tar",
@@ -805,13 +820,14 @@ fn url_userinfo() {
         ("ftp://anon@files.example.com/pub", "ftp://<user>@<host>/<dir>"),
         ("https://user@host.example.com/", "https://<user>@<host>/"),
         (
-            "fetched https://bob:hunter2@api.example.com/v1 ok",
-            "fetched https://<user>:<credential>@<host>/<dir> ok",
+            "fetched https://bob:hunter2@api.example.com/v1, ok",
+            "fetched https://<user>:<credential>@<host>/<dir>, ok",
         ),
         ("ssh://git@github.com/foo/bar", "ssh://<user>@<host>/<dir>/<dir>"),
         (
             "https://u:p@a.com and https://x:y@b.com",
-            "https://<user>:<credential>@<host> and https://<user>:<credential>@<host>",
+            // The word between goes with the first reference; the second is claimed whole.
+            "https://<user>:<credential>@<host> https://<user>:<credential>@<host>",
         ),
     ];
     for (input, expected) in cases {
@@ -924,7 +940,7 @@ fn account_names() {
     let cases = [
         (
             "Upgrading volume smb-1 to SmbVolume: server=nas, share=media, user=Some(\"david\")",
-            "Upgrading volume smb-1 to SmbVolume: server=nas, share=media, user=Some(\"<user>\")",
+            "Upgrading volume smb-1 to SmbVolume: server=nas, share=<share>, user=Some(\"<user>\")",
         ),
         (
             "Found Keychain credentials for user=david",

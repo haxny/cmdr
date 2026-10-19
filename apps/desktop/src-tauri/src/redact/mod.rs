@@ -37,6 +37,8 @@ use std::borrow::Cow;
 use std::sync::OnceLock;
 
 #[cfg(test)]
+mod bundle_leak_tests;
+#[cfg(test)]
 mod consistency_tests;
 mod context;
 mod detail;
@@ -256,9 +258,10 @@ fn redactor_regex() -> &'static Regex {
             # `/Applications/…`. Hundreds of sites log `path.display()` in prose, so no prefix
             # list can keep up. `\B` stands in for the missing lookbehind: the slash must not
             # follow a word character, which keeps `MB/s`, `and/or`, `3/4`, and `$HOME/…` out.
-            # Two segments at least, so a lone `/` or `/foo` stays prose.
+            # Two segments at least, so a lone `/` or `/foo` stays prose. A later word may start
+            # with `(` (`…/Summer (Lake House) Trip/…`); only the first segment can't.
             | (?P<abs_path>       \B / [^/\s"'<>|`()]+
-                                  (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`(][^/\s"'<>|`]* )* )+
+                                  (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )* )+
             )
             | (?P<remote_url>     (?i: sftp | ssh | webdav | s3 | http | https | smb ) ://
                                   [^\s"'<>|`]+ (?: \x20 [^\s"'<>|`]+ )*
@@ -312,13 +315,22 @@ fn redactor_regex() -> &'static Regex {
             # with non-private meanings and must not become broad word matching.
             | (?P<identity_field>
                 \b (?P<if_key>
-                    host | server | share | volumeId | volumeName | serverId | deviceId
+                    host | server | share | volumeId | volumeName | source_volume | dest_volume
+                  | serverId | deviceId
                 )
                 =
                 (?P<if_value>
                     Some\( " (?: [^"\\\n] | \\ . )* " \)
                   | " (?: [^"\\\n] | \\ . )* "
                 )
+            )
+            # The same labels printed bare (`smb2`'s `tree: connected share=Family Photos, …`,
+            # `copy_between_volumes`' `source_volume=Macintosh HD`). A label has no path grammar,
+            # so the value runs to where any bare field value ends (`end_of_bare_value`).
+            | (?P<label_field>
+                \b (?P<lf_key> share | source_volume | dest_volume )
+                =
+                (?P<lf_value> [^\s"'<>|`\[\](){},;] [^"|`\n]* )
             )
             # Current IDs from `cmdr-fs::volume::ids`: a known scheme and an exact
             # lowercase 16-hex digest. Bound the optional slug to the funnel's 24
@@ -363,6 +375,14 @@ fn redactor_regex() -> &'static Regex {
             # DNS-SD: a Bonjour service instance (`Naspolya._smb._tcp.local.`, whose first label
             # is the user's own device name) and a bare service type (`_smb._tcp.local.`, public).
             # Both before `mdns`, whose labels can't start with `_` and would split the name off.
+            # A quoted instance is claimed from its opening quote, whatever the device name
+            # holds (`"Alex's MacBook Pro (2)._companion-link._tcp.local."`, an `mdns_sd` WARN).
+            | (?P<quoted_bonjour>
+                " (?P<qb_instance>
+                    (?P<qb_name> (?: [^"\\\n] | \\ . )+? )
+                    \. _[A-Za-z0-9-]+ \. _(?: tcp | udp ) \. local \b \.?
+                )
+            )
             | (?P<bonjour_instance>
                 [\p{L}\p{N}][\p{L}\p{N}_-]* \. _[A-Za-z0-9-]+ \. _(?: tcp | udp ) \. local \b \.?
             )
@@ -483,6 +503,9 @@ fn dispatch(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String,
     if caps.name("identity_field").is_some() {
         return redact_identity_field(caps, context);
     }
+    if caps.name("label_field").is_some() {
+        return redact_label_field(caps, context);
+    }
     if let Some(m) = caps.name("derived_id") {
         return (redact_derived_id(m.as_str(), context), whole_len(caps));
     }
@@ -503,6 +526,17 @@ fn dispatch(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String,
             ),
             whole_len(caps),
         );
+    }
+    if let Some(m) = caps.name("qb_instance") {
+        // A second pass meets its own `<host:…>` here; it stays, which keeps this idempotent.
+        if caps
+            .name("qb_name")
+            .is_some_and(|name| is_redacted_segment(name.as_str()))
+        {
+            return (caps[0].to_string(), whole_len(caps));
+        }
+        let instance = unescape_debug(m.as_str());
+        return (format!("\"{}", redact_host(&instance, context)), whole_len(caps));
     }
     if let Some(m) = caps.name("bonjour_instance") {
         return (redact_host(m.as_str(), context), whole_len(caps));

@@ -4,7 +4,7 @@
 use super::RedactionContext;
 use super::SAFE_PARENT_DIR_NAMES;
 use super::context::TokenDomain;
-use super::names::{ends_with_unicode_escape, split_cmdr_suffix};
+use super::names::{split_cmdr_suffix, unescape_debug};
 
 pub(super) fn redact_unix_home(path: &str, context: Option<&RedactionContext>) -> String {
     // path like `/Users/<user>/...` or `/home/<user>/...`
@@ -195,6 +195,9 @@ fn redact_leaf_in_domain(seg: &str, is_file: bool, context: Option<&RedactionCon
     if seg.is_empty() {
         return String::new();
     }
+    if is_os_junk_name(seg) {
+        return seg.to_string();
+    }
     // `photo.jpg.cmdr-tmp-3f2a…` is `photo.jpg` on its way in: redact the name the temp will
     // become (so both hash alike) and keep Cmdr's own suffix.
     let (name, temp_suffix) = split_cmdr_suffix(seg);
@@ -219,6 +222,9 @@ fn redact_leaf_in_domain(seg: &str, is_file: bool, context: Option<&RedactionCon
 }
 
 pub(super) fn dir_token(seg: &str, context: Option<&RedactionContext>) -> String {
+    if is_os_junk_name(seg) {
+        return seg.to_string();
+    }
     token_for("dir", seg, context, TokenDomain::Path)
 }
 
@@ -233,36 +239,38 @@ pub(super) fn is_safe_parent_dir(name: &str) -> bool {
     SAFE_PARENT_DIR_NAMES.contains(&name)
 }
 
+/// Files the OS or a sync tool keeps in folders for itself. They carry no one's data, and a
+/// walk that tripped on one says so, so they ship verbatim. Exact segment matches only:
+/// `My.DS_Store.backup` is a name.
+const OS_JUNK_NAMES: &[&str] = &[
+    ".DS_Store",
+    "Thumbs.db",
+    "desktop.ini",
+    ".localized",
+    "Icon\r",
+    ".Spotlight-V100",
+    ".Trashes",
+    ".fseventsd",
+];
+
+/// Whether `seg` is one of [`OS_JUNK_NAMES`], spelled raw or `{:?}`-escaped (`Icon\r`).
+pub(super) fn is_os_junk_name(seg: &str) -> bool {
+    OS_JUNK_NAMES.contains(&seg) || (seg.contains('\\') && OS_JUNK_NAMES.contains(&&*unescape_debug(seg)))
+}
+
+/// How many of `segments` (the ones after `$HOME`) a home role spans: two for
+/// `Library/Application Support`, one for `Downloads`, zero when none starts there.
+pub(super) fn home_role_len(segments: &[&str]) -> usize {
+    HOME_ROLE_DIRS
+        .iter()
+        .map(|role| role.split('/').collect::<Vec<_>>())
+        .find(|role| segments.starts_with(role))
+        .map_or(0, |role| role.len())
+}
+
 /// True if `seg` looks like a filename with an extension (e.g., `foo.pdf`).
 /// False for `Documents`, `.ssh`, `config`, `v0.13.0` (leading digits in ext is fine but
 /// we require the dot to be in a reasonable position).
-/// Whether this space-separated token looks like the END of a filename: an extension whose
-/// first character is a LETTER.
-///
-/// Stricter than [`has_extension_like_suffix`] on purpose, and the extra letter is doing
-/// real work: `01.13.03` in a screenshot timestamp has an "extension" of `03`, so the looser
-/// test would cut the name in half and ship ` PM-2.jpeg` verbatim. The cost is that a
-/// digit-led extension (`.7z`, `.3gp`) doesn't end the scan, which only means the path may
-/// keep a word or two of prose — an over-redaction, never a leak.
-pub(super) fn ends_filename(token: &str) -> bool {
-    let Some(dot) = token.rfind('.') else { return false };
-    let ext = &token[dot + 1..];
-    dot > 0
-        && !ext.is_empty()
-        && ext.len() <= 8
-        && ext.chars().all(|c| c.is_ascii_alphanumeric())
-        && ext.starts_with(|c: char| c.is_ascii_alphabetic())
-}
-
-/// Whether this token ends a sentence, and with it the path. `/Volumes/naspi-1) claim …`
-/// is the shape: the label ends at the `)`, and everything after is prose.
-pub(super) fn ends_sentence(token: &str) -> bool {
-    matches!(
-        token.as_bytes().last(),
-        Some(b')' | b';' | b',' | b'.' | b'!' | b'?' | b']' | b'}')
-    ) && !ends_with_unicode_escape(token)
-}
-
 pub(super) fn has_extension_like_suffix(seg: &str) -> bool {
     conservative_extension(seg).is_some()
 }

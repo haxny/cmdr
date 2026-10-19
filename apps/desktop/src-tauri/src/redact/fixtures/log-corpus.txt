@@ -172,3 +172,10 @@
 23:41:00.000 WARN  move  source sweep: couldn't remove /Volumes/naspi/Photos/12. Summer trip/beach.jpg: NotFound
 23:41:00.001 INFO  scan_preview  scan preview 7 started: /Users/ada/Pictures/3. Invoices 2024 on volume root
 23:41:00.002 ERROR FE:transferProgress  Move error: Path: /Users/ada/Pictures/12. Summer trip/beach.jpg; Error type: io_error
+23:42:00.000 DEBUG list_directory  list_directory_core: path=/Users/ada/Pictures/Astro/2026/Summer (Lake House) 2026, entries=5
+23:42:00.001 INFO  copy  copying /Users/ada/Pictures/A/B/Summer (Lake House) 2026 -> /Volumes/Backup/A/B/Summer (Lake House) 2026
+23:42:00.002 ERROR FE:transferProgress  Copy error: detail="Path: /Volumes/Backup/A/B/Summer (Lake House) Trip/2026-08-24/Sub/.DS_Store; Error type: io_error"
+23:42:00.003 WARN  mdns_sd::service_daemon  resolve failed for name: "Alex's MacBook Pro (2)._companion-link._tcp.local."
+23:42:00.004 INFO  copy  copy_between_volumes: source_volume=Macintosh HD, dest_volume=Family Photos, 2 sources
+23:42:00.005 INFO  smb2::client::tree  tree: connected share=Family Photos, tree_id=7
+23:42:00.006 DEBUG indexing::verifier  Verifier: scanned new dir path="/Users/ada/Pictures/Lake House" (5 entries, 0ms)

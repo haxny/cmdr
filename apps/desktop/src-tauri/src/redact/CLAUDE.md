@@ -25,10 +25,10 @@ overlaps, and decisions: `DETAILS.md`.
   next to its machine code (`code=`, `nt_status=`, `sftp_status=`). Local logs keep it whole; a report redacts it, scrubs
   the line's own keyed identities from it, and caps it at 200 chars. ❌ Never redact at the log site, never drop the
   text. `DETAILS.md` § "External-text fields".
-- **The path branches over-match on purpose; `split_trailing_noise` finds the real end.** ❌ Never anchor continuation
-  words to `[A-Z0-9]` (that shipped ` at 01.13.03 PM-2.jpeg`), ❌ never use `has_extension_like_suffix` for its forward
-  scan, ❌ never let a token before the last separator end the path (`12. Summer trip/…` shipped its name). `DETAILS.md`
-  § "Finding the end of a path".
+- **A prose path runs to the next hard delimiter** (`split_trailing_noise`): the `: ` seam, a new reference, ` -> `,
+  and `, ` / `; ` / ` key=` after the last separator. Prose after it goes with it. ❌ Never end a path on a word's shape
+  (a `)`, a dot, a lowercase run): each such rule shipped part of a name (`Summer (Lake House) 2026` lost ` 2026`).
+  `DETAILS.md` § "Finding the end of a path".
 - **Tokens key on a domain plus the normalized name** (escapes undone, NFC, Cmdr temp suffix split off). Typed inputs
   never trust token-looking syntax.
 - **`redact_with` resumes at `match.start() + consumed`, ❌ never `replace_all`.** A handed-back tail must face the
@@ -41,6 +41,8 @@ overlaps, and decisions: `DETAILS.md`.
   “Screenshot ….jpeg”` goes because the same line logs the file's path. A name with no path or key on its line still
   ships, so key it (`file={name:?}`). Pinned by `a_path_leaf_repeated_bare_on_its_line_is_scrubbed`.
 - **Any absolute path is a path** (`abs_path`, `\B/` plus two segments), whatever its prefix; a lone `/foo` stays prose.
+- **OS junk names ship verbatim** (`.DS_Store`, `Thumbs.db`, `.Trashes`, …; `paths.rs::OS_JUNK_NAMES`), exact segment
+  match only.
 - **Dispatch order mirrors regex alternation order.** Complete URLs before generic userinfo, derived IDs before IPs.
 
 ## Files
@@ -48,4 +50,4 @@ overlaps, and decisions: `DETAILS.md`.
 `mod.rs` (API, regex, dispatch), `context.rs` (report key, token domains), `paths.rs`, `references.rs` (remote
 references, derived IDs), `fields.rs` (keyed fields), `detail.rs` (external-text fields), `path_end.rs` (where a
 prose path ends), `names.rs` (printing normalization); tests in `tests.rs`, `reference_tests.rs`, `detail_tests.rs`, `prose_tests.rs`,
-`consistency_tests.rs`, golden corpus in `fixtures/`.
+`consistency_tests.rs`, `bundle_leak_tests.rs` (shapes that shipped in real bundles), golden corpus in `fixtures/`.
