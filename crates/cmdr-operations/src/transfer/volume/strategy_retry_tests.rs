@@ -242,7 +242,11 @@ async fn a_retried_safe_replace_replaces_the_original_once_its_bytes_are_whole()
         .expect("the retried safe-replace lands");
 
     assert_eq!(bytes, PAYLOAD.len() as u64);
-    assert_eq!(flaky.write_calls(), 2, "one failed attempt, then one that got every byte down");
+    assert_eq!(
+        flaky.write_calls(),
+        2,
+        "one failed attempt, then one that got every byte down"
+    );
     assert_eq!(flaky.read("/a.txt").await.as_deref(), Some(PAYLOAD));
     assert_eq!(
         flaky.names().await,

@@ -161,7 +161,11 @@ async fn a_swap_lands_delete_first_and_never_renames_with_force() {
             },
         ],
     );
-    assert_eq!(size_of(&inner, "/notes.txt").await, Some(3), "the new bytes replaced the original");
+    assert_eq!(
+        size_of(&inner, "/notes.txt").await,
+        Some(3),
+        "the new bytes replaced the original"
+    );
     assert!(!inner.exists(&temp).await);
     assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
 }
@@ -220,7 +224,10 @@ fn only_a_single_shot_write_onto_a_name_expected_free_must_create_new() {
         WriteMode::CreateOrReplace,
         "a claimed name holds the caller's own placeholder, which the write must replace"
     );
-    assert_eq!(mode_for(WriteStaging::StageOverOriginal, true), WriteMode::CreateOrReplace);
+    assert_eq!(
+        mode_for(WriteStaging::StageOverOriginal, true),
+        WriteMode::CreateOrReplace
+    );
     for requested in [
         WriteStaging::Stage,
         WriteStaging::StageOntoClaimedName,
