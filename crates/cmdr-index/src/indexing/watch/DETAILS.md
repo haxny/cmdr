@@ -164,6 +164,12 @@ the resume bumps `current_epoch`: the rows stay covered and trusted (Decision 5)
 rather than current. ❌ Never on the walk path — a bump right after a walk would mark rows stale that were written a
 second ago.
 
+**A watch that starts from now records where now is** (`manager/branch_watch.rs`, `UpdateLastEventId` before the stream
+starts). A session whose stream never delivers an event otherwise stores no position, and the next start can't replay:
+covered ground is never re-walked, so a change in that gap is lost for good. It bit a drive renamed before its first
+index completed, whose restart resumed the phases and never found a file written between the two watches (#550,
+`lifecycle/phases/tests/relaunch.rs::a_quiet_session_still_leaves_the_next_one_a_point_to_replay_from`).
+
 **Two switches, one gate** (`master::branch_watch_allowed`): the master switch and the sticky per-drive `user_disabled`
 veto. NOT the `user_enabled` opt-in — that means "the user turned this drive on for background indexing", which is
 exactly what someone searching an unindexed drive did not do. A vetoed drive gets no watcher, so its walked ground stays

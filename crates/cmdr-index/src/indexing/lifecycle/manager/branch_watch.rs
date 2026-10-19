@@ -97,7 +97,16 @@ impl BranchWatchStart {
         // whenever the app last ran. A gap too wide to be worth replaying takes the
         // same exit a cold start does: watch from now, and let the epoch bump say
         // the rows are stale rather than current.
-        let since_event_id = replayable_event_id(&self.db_path, &self.volume_root);
+        let ReplayPoint { since_event_id, now } = replay_point(&self.db_path, &self.volume_root);
+        if since_event_id == 0 && now > 0 {
+            // Watching from now, so record where now is: the next start replays from
+            // here even if this stream never delivers an event (and so never stores
+            // one). Without it a quiet session leaves no replay point, and a change
+            // landing between this watch and the next one (a drive renamed while it
+            // indexes, say) is lost for good, because covered ground is never
+            // re-walked (#550). Queued ahead of anything the stream's loop stores.
+            let _ = self.writer.send(WriteMessage::UpdateLastEventId(now));
+        }
         if self.resuming && since_event_id == 0 {
             // Nothing to replay, so this session can't know what happened to the
             // covered ground while the app was off. The rows stay trusted (Decision
@@ -287,26 +296,38 @@ impl IndexManager {
     }
 }
 
-/// The event id a (re)started watcher may replay from: the stored one, unless the
-/// journal has moved so far past it that replaying costs more than it's worth. `0`
-/// means "from now".
+/// Where a (re)started watcher replays from, and where the journal is now.
+struct ReplayPoint {
+    /// The stored event id, unless the journal has moved so far past it that
+    /// replaying costs more than it's worth. `0` means "from now".
+    since_event_id: u64,
+    /// The journal's current event id; `0` where there's no journal to replay.
+    now: u64,
+}
+
+/// Read the stored replay point against the journal's current id.
 ///
 /// Same threshold the cold-start replay uses, for the same reason, and the same
 /// consolation: nothing is lost that the index claimed to know, because a gap this
 /// wide leaves the covered rows stale-but-trusted (Decision 5) rather than
 /// wrong-and-confident.
-fn replayable_event_id(db_path: &Path, volume_root: &Path) -> u64 {
+fn replay_point(db_path: &Path, volume_root: &Path) -> ReplayPoint {
     if !watcher::supports_event_replay() {
-        return 0;
+        return ReplayPoint {
+            since_event_id: 0,
+            now: 0,
+        };
     }
     let stored = IndexStore::open_read_connection(db_path)
         .ok()
         .and_then(|conn| IndexStore::get_meta(&conn, "last_event_id").ok().flatten())
         .and_then(|id| id.parse::<u64>().ok())
         .unwrap_or(0);
-    let current = watcher::current_event_id(volume_root);
-    if stored == 0 || (current > 0 && current > stored + JOURNAL_GAP_THRESHOLD) {
-        return 0;
-    }
-    stored
+    let now = watcher::current_event_id(volume_root);
+    let since_event_id = if stored == 0 || (now > 0 && now > stored + JOURNAL_GAP_THRESHOLD) {
+        0
+    } else {
+        stored
+    };
+    ReplayPoint { since_event_id, now }
 }

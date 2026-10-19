@@ -306,11 +306,15 @@ fn a_relaunch_with_no_replayable_journal_bumps_the_epoch() {
     let before = drive.current_epoch();
     let rows = drive.entry_count();
 
+    drive.stop();
     {
         let conn = IndexStore::open_write_connection(&drive.db_path()).expect("write connection");
         IndexStore::delete_meta(&conn, "scan_completed_at").expect("clear the completion marker");
+        // No point in the journal to replay from, which is what a journal that has
+        // run far past the stored one reads as too.
+        IndexStore::delete_meta(&conn, "last_event_id").expect("clear the replay point");
     }
-    drive.restart();
+    drive.start();
     drive.wait_for_the_machine();
 
     assert!(
@@ -320,5 +324,47 @@ fn a_relaunch_with_no_replayable_journal_bumps_the_epoch() {
     assert!(
         drive.entry_count() >= rows,
         "and it says it by bumping the epoch, ❌ never by throwing the rows away"
+    );
+}
+
+/// The other side of that property: a session whose watch saw NOTHING still leaves
+/// the next one a point to replay from, the event id its stream started at.
+///
+/// ⚠️ Without it, a quiet session (no event ever delivered, so nothing to store)
+/// hands the next start no replay point, and a change made while nothing watched
+/// is lost for good: covered ground is never re-walked (Decision 5). That is how a
+/// drive renamed before its first index completed lost what arrived in the gap
+/// between the two watches (#550).
+#[test]
+fn a_quiet_session_still_leaves_the_next_one_a_point_to_replay_from() {
+    let drive = Drive::new(
+        "phased-quiet-replay-point",
+        |root| {
+            std::fs::create_dir_all(root.join("covered")).expect("dirs");
+        },
+        &[],
+    );
+    drive.start();
+    drive.wait_for_the_machine();
+    drive.stop();
+
+    let stored = drive
+        .meta("last_event_id")
+        .and_then(|id| id.parse::<u64>().ok())
+        .unwrap_or(0);
+    assert!(
+        stored > 0,
+        "❌ a watch that started from now records where now was, or the next start can't replay the gap"
+    );
+
+    drive.forget_the_completion_marker();
+    let before = drive.current_epoch();
+    drive.start();
+    drive.wait_for_the_machine();
+
+    assert_eq!(
+        drive.current_epoch(),
+        before,
+        "a resume that CAN replay the gap keeps the rows current, ❌ never marks them stale for nothing"
     );
 }
