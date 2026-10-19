@@ -299,9 +299,12 @@ impl<'a> ConcurrentDriver<'a> {
     /// for the mutex waited on itself, past the person's answer and past Cancel
     /// (ERR-8MEX6, pinned by `merge_dispatch_mutex_tests.rs`).
     ///
-    /// A task that lands meanwhile is recorded on the spot. The first failure
-    /// stops the draining, since the batch is over, and `run` acts on it once
-    /// this source's preparation returns.
+    /// A task that lands meanwhile is recorded on the spot, and `run` acts on a
+    /// failure once this source's preparation returns. ❌ Don't stop draining at
+    /// the first failure: the batch is over, but a merge holding the mutex still
+    /// has to read the person's answer and let go, and a driver that stopped
+    /// polling it waited on itself all the same. Every later outcome records
+    /// like the first (`Settlements::record_failure` keeps the first error).
     ///
     /// No cancel arm, on purpose: a resolver dropped mid-answer can leave a
     /// reserved name or a destination set aside that nothing settles. A cancel
@@ -322,7 +325,7 @@ impl<'a> ConcurrentDriver<'a> {
         let ctx: &ConcurrentCopy<'a> = ctx;
         let mut prepare = std::pin::pin!(ctx.prepare_source(source_index, source_path));
         loop {
-            let draining = !in_flight.is_empty() && settled.copy_error.is_none();
+            let draining = !in_flight.is_empty();
             tokio::select! {
                 biased;
                 prepared = &mut prepare => return prepared,
@@ -616,9 +619,16 @@ impl Settlements {
             );
         }
 
-        // Remove from in-flight partials; this one's own partial cleanup (if
-        // any) the post-loop logic will do.
-        ctx.forget_in_flight_partial(&failed_dest);
+        // A LATER failure, from a task that settled while the driver kept
+        // draining after the first: its half-written partial stays in
+        // `in_flight_partials`, which the post-loop cleans exactly like
+        // `last_dest_path`, so the first failure's partial keeps that one slot.
+        let partial_stays_in_flight = !source_is_dir && cleanup_temp && self.last_dest_path.is_some();
+        // Otherwise remove it from in-flight partials; this one's own partial
+        // cleanup (if any) the post-loop logic will do.
+        if !partial_stays_in_flight {
+            ctx.forget_in_flight_partial(&failed_dest);
+        }
         if source_is_dir {
             // DIRECTORY source interrupted mid-stream. Record the per-file
             // partials and newly-created subdirs the op wrote, NOT the dir root
@@ -647,7 +657,7 @@ impl Settlements {
             }
             ctx.copied_paths.lock_ignore_poison().extend(created_files);
             ctx.created_dirs.lock_ignore_poison().extend(task_created_dirs);
-        } else if cleanup_temp {
+        } else if cleanup_temp && !partial_stays_in_flight {
             // FILE source stream failure: `failed_dest` is the single
             // half-written partial. Clean it.
             //
@@ -661,7 +671,10 @@ impl Settlements {
         }
         // `PathedVolumeError`'s conversion owns the branch: the side it carries
         // picks the wording, and `new_data_at` says where the user's new file is.
-        self.copy_error = Some(WriteFailure::from(reported));
+        // The first failure is the one that stopped the operation.
+        if self.copy_error.is_none() {
+            self.copy_error = Some(WriteFailure::from(reported));
+        }
     }
 
     /// The task for `source` came back, and its own result carries its ledger.

@@ -37,16 +37,25 @@ async fn read_all(vol: &Arc<dyn Volume>, path: &str) -> Vec<u8> {
     out
 }
 
-/// A two-wide source whose one `held` file can't be read until `release` says
-/// so. That ordering is what makes the driver queue on the dispatch mutex
-/// BEHIND a deep merge's prompt rather than ahead of it: the merge walker
-/// reaches its clash while the held file still occupies the window's other
-/// slot, and only once the prompt is up does that slot free and the driver
-/// move on to prepare the next source.
+/// A source whose `held` files can't be read until their `release` says so.
+/// That ordering is what makes the driver queue on the dispatch mutex BEHIND a
+/// deep merge's prompt rather than ahead of it: the merge walker reaches its
+/// clash while the held files still fill the window's other slots, and only
+/// once the prompt is up does a slot free and the driver move on to prepare the
+/// next source. `width` is the window.
 struct HeldReadSource {
     inner: Arc<InMemoryVolume>,
-    held: PathBuf,
+    width: usize,
+    held: Vec<HeldRead>,
+}
+
+/// One file [`HeldReadSource`] holds back.
+struct HeldRead {
+    path: PathBuf,
     release: Arc<dyn Fn() -> bool + Send + Sync>,
+    /// Once released, the read fails instead of streaming. An `IoError` with no
+    /// errno isn't retryable, so the task fails on its first attempt.
+    then_fail: bool,
 }
 
 impl Volume for HeldReadSource {
@@ -61,7 +70,7 @@ impl Volume for HeldReadSource {
     }
 
     fn max_concurrent_ops(&self) -> usize {
-        2
+        self.width
     }
 
     fn open_read_stream<'a>(
@@ -69,12 +78,18 @@ impl Volume for HeldReadSource {
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
-            if path == self.held {
-                let release = Arc::clone(&self.release);
+            if let Some(held) = self.held.iter().find(|held| held.path == path) {
+                let release = Arc::clone(&held.release);
                 cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the held read's release", move || {
                     release()
                 })
                 .await;
+                if held.then_fail {
+                    return Err(VolumeError::IoError {
+                        message: "simulated source read failure".to_string(),
+                        raw_os_error: None,
+                    });
+                }
             }
             self.inner.open_read_stream(path).await
         })
@@ -86,6 +101,24 @@ impl Volume for HeldReadSource {
 /// clashes at the top level. Hands back the source and the destination;
 /// `deep_prompt_sources` is the selection, in order.
 async fn deep_prompt_then_top_level_clash(state: &Arc<WriteOperationState>) -> (Arc<dyn Volume>, Arc<dyn Volume>) {
+    let (inner, dest) = deep_prompt_fixture().await;
+    let prompted = Arc::clone(state);
+    let source: Arc<dyn Volume> = Arc::new(HeldReadSource {
+        inner,
+        width: 2,
+        held: vec![HeldRead {
+            path: PathBuf::from("/sib.bin"),
+            // The deep prompt is up, so the walker holds the dispatch mutex.
+            release: Arc::new(move || prompted.conflict_slot.is_awaiting()),
+            then_fail: false,
+        }],
+    });
+    (source, dest)
+}
+
+/// The volumes behind [`deep_prompt_then_top_level_clash`], before any source
+/// holds anything back.
+async fn deep_prompt_fixture() -> (Arc<InMemoryVolume>, Arc<dyn Volume>) {
     let inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
 
@@ -103,15 +136,7 @@ async fn deep_prompt_then_top_level_clash(state: &Arc<WriteOperationState>) -> (
         .unwrap();
     dest.create_file(Path::new("/album/keep.txt"), b"KEEP").await.unwrap();
     dest.create_file(Path::new("/top.txt"), b"DEST-top").await.unwrap();
-
-    let prompted = Arc::clone(state);
-    let source: Arc<dyn Volume> = Arc::new(HeldReadSource {
-        inner,
-        held: PathBuf::from("/sib.bin"),
-        // The deep prompt is up, so the walker holds the dispatch mutex.
-        release: Arc::new(move || prompted.conflict_slot.is_awaiting()),
-    });
-    (source, dest)
+    (inner, dest)
 }
 
 fn deep_prompt_sources() -> Vec<PathBuf> {
@@ -467,6 +492,95 @@ async fn cancel_frees_a_driver_queued_behind_a_deep_prompt() {
     let result = driven.expect("the copy hung after Cancel (dispatch-mutex self-deadlock)");
     assert!(result.is_err(), "a cancelled copy returns Err, got {result:?}");
     // Nothing the person was asked about changed.
+    assert_eq!(read_all(&dest, "/album/clash.txt").await, b"DEST-deep");
+    assert_eq!(read_all(&dest, "/album/keep.txt").await, b"KEEP");
+    assert_eq!(read_all(&dest, "/top.txt").await, b"DEST-top");
+}
+
+/// The same queue, with a task FAILING while the driver waits in it.
+///
+/// A failure ends the batch, but the merge holding the mutex still has to be
+/// polled to read the person's answer and let go: a driver that stopped
+/// draining at the first failure was back to waiting on itself (ERR-8MEX6's
+/// shape, one step later). `/fail.bin` fails only once `/sib.bin` has landed,
+/// which is the moment the driver moves on to `/top.txt` and queues.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_task_failing_while_the_driver_is_queued_behind_a_deep_prompt_still_frees_it() {
+    let engine = TestOperations::new();
+    let state = make_state(&engine);
+    let events = Arc::new(CollectorEventSink::new());
+    let (inner, dest) = deep_prompt_fixture().await;
+    inner.create_file(Path::new("/fail.bin"), b"FAIL").await.unwrap();
+    let prompted = Arc::clone(&state);
+    let sib_landed = Arc::clone(&events);
+    let source: Arc<dyn Volume> = Arc::new(HeldReadSource {
+        inner,
+        // `/album`, `/fail.bin`, and `/sib.bin` fill it; `/top.txt` waits.
+        width: 3,
+        held: vec![
+            HeldRead {
+                path: PathBuf::from("/sib.bin"),
+                release: Arc::new(move || prompted.conflict_slot.is_awaiting()),
+                then_fail: false,
+            },
+            HeldRead {
+                path: PathBuf::from("/fail.bin"),
+                release: Arc::new(move || {
+                    sib_landed
+                        .source_items_done
+                        .lock_ignore_poison()
+                        .iter()
+                        .any(|done| done.source_path == "/sib.bin")
+                }),
+                then_fail: true,
+            },
+        ],
+    });
+
+    let responder = tokio::spawn({
+        let events = Arc::clone(&events);
+        let state = Arc::clone(&state);
+        async move {
+            let clash = await_prompted_clash(&events).await;
+            until_the_driver_queues_behind_the_deep_prompt(&events).await;
+            let _ = state.conflict_slot.answer(
+                clash,
+                ConflictResolutionResponse {
+                    resolution: ConflictResolution::Skip,
+                    apply_to_all: true,
+                },
+            );
+        }
+    });
+
+    let config = VolumeCopyConfig {
+        conflict_resolution: ConflictResolution::Stop,
+        progress_interval_ms: 0,
+        ..VolumeCopyConfig::default()
+    };
+    let mut sources = deep_prompt_sources();
+    sources.push(PathBuf::from("/fail.bin"));
+    let driven = tokio::time::timeout(
+        Duration::from_secs(5),
+        copy_volumes_with_progress(
+            events.clone(),
+            "op-failure-behind-deep-prompt",
+            &state,
+            Arc::clone(&source),
+            &sources,
+            Arc::clone(&dest),
+            Path::new("/"),
+            &config,
+        ),
+    )
+    .await;
+    responder.await.unwrap();
+
+    let result = driven.expect("the copy hung after a task failed behind a deep prompt (dispatch-mutex self-deadlock)");
+    assert!(
+        result.is_err(),
+        "the failed source ends the copy with an error, got {result:?}"
+    );
     assert_eq!(read_all(&dest, "/album/clash.txt").await, b"DEST-deep");
     assert_eq!(read_all(&dest, "/album/keep.txt").await, b"KEEP");
     assert_eq!(read_all(&dest, "/top.txt").await, b"DEST-top");
