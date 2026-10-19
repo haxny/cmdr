@@ -46,6 +46,7 @@ async fn dir_overwrite_must_merge_not_replace_even_with_recursive_delete() {
         &dest_recursive,
         Path::new("/photos"),
         true,
+        DestinationType::AskAgain,
         &Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0))),
     )
     .await
@@ -398,6 +399,73 @@ async fn a_share_that_stays_gone_as_the_destination_is_probed_says_it_lost_the_c
     );
 }
 
+/// A destination that counts the stats it's asked (`get_metadata`, which
+/// `entry_kind` is built on).
+struct StatCounting {
+    inner: Arc<InMemoryVolume>,
+    stats: std::sync::atomic::AtomicUsize,
+}
+
+impl Volume for StatCounting {
+    super::super::forward_volume_methods!(inner =>
+        name, root, list_directory, exists, is_directory, create_file, delete, rename,
+    );
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>> {
+        self.stats.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.inner.get_metadata(path)
+    }
+}
+
+/// A blanket file Overwrite asks what the destination is ONCE: on a share each
+/// stat is a round trip, paid per clash.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_blanket_file_overwrite_asks_the_destination_type_once() {
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0)));
+    let source = Arc::new(InMemoryVolume::new("source"));
+    source.create_file(Path::new("/notes.txt"), b"new").await.unwrap();
+    let source_dyn: Arc<dyn Volume> = source.clone();
+    let inner = Arc::new(InMemoryVolume::new("dest"));
+    inner.create_file(Path::new("/notes.txt"), b"old").await.unwrap();
+    let dest = Arc::new(StatCounting {
+        inner,
+        stats: std::sync::atomic::AtomicUsize::new(0),
+    });
+    let dest_dyn: Arc<dyn Volume> = dest.clone();
+    let config = VolumeCopyConfig {
+        conflict_resolution: ConflictResolution::Overwrite,
+        ..VolumeCopyConfig::default()
+    };
+    let mut apply_to_all = ApplyToAll::default();
+
+    let resolved = resolve_volume_conflict(
+        &source_dyn,
+        Path::new("/notes.txt"),
+        &dest_dyn,
+        Path::new("/notes.txt"),
+        &config,
+        &CollectorEventSink::new(),
+        "op-one-stat",
+        &state,
+        &mut apply_to_all,
+        Some(3),
+        Some(3),
+        Some(false),
+    )
+    .await
+    .expect("resolves")
+    .expect("Overwrite resolves to a write path");
+
+    assert_eq!(resolved.replaces, Replaces::Swap);
+    assert_eq!(dest.stats.load(std::sync::atomic::Ordering::SeqCst), 1);
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn file_overwrite_keeps_the_original_and_writes_at_its_name() {
     let engine = TestOperations::new();
@@ -416,6 +484,7 @@ async fn file_overwrite_keeps_the_original_and_writes_at_its_name() {
         &dest_dyn,
         Path::new("/notes.txt"),
         false,
+        DestinationType::AskAgain,
         &Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0))),
     )
     .await
@@ -458,6 +527,7 @@ async fn file_overwrite_on_a_whole_publishing_destination_writes_in_place() {
         &dest_dyn,
         Path::new("/notes.txt"),
         false,
+        DestinationType::AskAgain,
         &Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0))),
     )
     .await

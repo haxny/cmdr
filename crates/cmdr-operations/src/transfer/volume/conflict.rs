@@ -224,8 +224,15 @@ pub(super) async fn resolve_volume_conflict(
                     dest_size_hint,
                 )
                 .await;
-                return apply_volume_conflict_resolution(effective, dest_volume, dest_path, source_is_directory, state)
-                    .await;
+                return apply_volume_conflict_resolution(
+                    effective,
+                    dest_volume,
+                    dest_path,
+                    source_is_directory,
+                    DestinationType::AskAgain,
+                    state,
+                )
+                .await;
             }
 
             // Need to prompt user - gather metadata for the conflict event.
@@ -359,8 +366,15 @@ pub(super) async fn resolve_volume_conflict(
                         dest_size,
                     )
                     .await;
-                    apply_volume_conflict_resolution(effective, dest_volume, dest_path, source_is_directory, state)
-                        .await
+                    apply_volume_conflict_resolution(
+                        effective,
+                        dest_volume,
+                        dest_path,
+                        source_is_directory,
+                        DestinationType::AskAgain,
+                        state,
+                    )
+                    .await
                 }
                 // Sender dropped = operation cancelled
                 Err(_) => Err(cancelled_at(dest_path)),
@@ -374,6 +388,9 @@ pub(super) async fn resolve_volume_conflict(
                 dest_volume,
                 dest_path,
                 source_is_directory,
+                DestinationType::JustAsked {
+                    is_directory: destination_is_directory,
+                },
                 state,
             )
             .await
@@ -384,6 +401,9 @@ pub(super) async fn resolve_volume_conflict(
                 dest_volume,
                 dest_path,
                 source_is_directory,
+                DestinationType::JustAsked {
+                    is_directory: destination_is_directory,
+                },
                 state,
             )
             .await
@@ -399,7 +419,17 @@ pub(super) async fn resolve_volume_conflict(
                 dest_size_hint,
             )
             .await;
-            apply_volume_conflict_resolution(effective, dest_volume, dest_path, source_is_directory, state).await
+            apply_volume_conflict_resolution(
+                effective,
+                dest_volume,
+                dest_path,
+                source_is_directory,
+                DestinationType::JustAsked {
+                    is_directory: destination_is_directory,
+                },
+                state,
+            )
+            .await
         }
     }
 }
@@ -532,6 +562,17 @@ fn cancelled_at(dest_path: &Path) -> PathedVolumeError {
     )
 }
 
+/// What the resolver knows of the destination's type as it applies an answer.
+#[derive(Debug, Clone, Copy)]
+enum DestinationType {
+    /// Asked just before, with nothing waited on since: the answer stands, and
+    /// asking again would cost a share one more round trip per clash.
+    JustAsked { is_directory: bool },
+    /// Asked before a wait (a person's answer, a queued prompt ahead of this
+    /// one), long enough for the destination to have changed: ask again.
+    AskAgain,
+}
+
 /// Applies a specific conflict resolution for volume copy.
 /// Returns `None` for Skip, or `Some(ResolvedConflict)` describing where to
 /// write, whether a post-write safe-replace finalize is needed, and what was set
@@ -541,6 +582,7 @@ async fn apply_volume_conflict_resolution(
     dest_volume: &Arc<dyn Volume>,
     dest_path: &Path,
     source_is_directory: bool,
+    destination_type: DestinationType,
     // The operation's state: its ledger of names already handed out (the
     // `Rename` arm), and the in-flight ledger an aside is recorded in (the
     // cross-type Overwrite arm).
@@ -592,7 +634,10 @@ async fn apply_volume_conflict_resolution(
             // behavior. See `dir_overwrite_must_merge_not_replace_even_with_recursive_delete`
             // in the test module; it pins this with a wrapper Volume that violates
             // the contract.
-            let dest_is_dir = resolve_dest_is_directory(state, dest_volume, dest_path).await?;
+            let dest_is_dir = match destination_type {
+                DestinationType::JustAsked { is_directory } => is_directory,
+                DestinationType::AskAgain => resolve_dest_is_directory(state, dest_volume, dest_path).await?,
+            };
 
             if !dest_is_dir && !source_is_directory {
                 // file→file: in place where the destination publishes whole,

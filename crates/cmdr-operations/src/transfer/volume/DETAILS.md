@@ -321,14 +321,17 @@ of those sites was decided one at a time on one question: **can a wrong `false` 
   then discards as a tree). The old comment claimed the opposite of what the code did ("we'd rather over-prompt than
   route an unknown clash into the destructive file→folder latch"); `false` is precisely what routes it there. An
   unanswerable stat now fails the item.
-- **`conflict.rs`'s destination probes (two of them, in the resolver and in `apply_volume_conflict_resolution`) —
-  PROPAGATE, via `resolve_dest_is_directory`.** A guessed `false` reaches the same arm's replace-the-destination branch.
-  The helper keeps ONE exception, and it's load-bearing: `VolumeError::NotFound` means the destination raced away
-  between detection and resolution, which is an ANSWER (nothing to protect), so it resolves as "not a directory" and the
-  write proceeds. Failing there would break a write that would simply have succeeded. A transport fault isn't an answer
-  either way: the probe waits out the outage (`through_outages`) and asks again. It asks `Volume::entry_kind`, so a LINK
-  at the destination is a leaf too: a merge into one lands the files in its target (`../DETAILS.md` § "Symlinks are
-  opaque to a move").
+- **`conflict.rs`'s destination probes (the resolver's, and `apply_volume_conflict_resolution`'s re-ask after a wait) —
+  PROPAGATE, via `resolve_dest_is_directory`.** A blanket policy applies the resolver's answer as it stands
+  (`DestinationType::JustAsked`, one stat per clash, pinned by
+  `conflict_tests.rs::a_blanket_file_overwrite_asks_the_destination_type_once`); an answer that came after a wait on a
+  person, or on a queued prompt, asks again (`AskAgain`), since the destination had time to change. A guessed `false`
+  reaches the same arm's replace-the-destination branch. The helper keeps ONE exception, and it's load-bearing:
+  `VolumeError::NotFound` means the destination raced away between detection and resolution, which is an ANSWER (nothing
+  to protect), so it resolves as "not a directory" and the write proceeds. Failing there would break a write that would
+  simply have succeeded. A transport fault isn't an answer either way: the probe waits out the outage
+  (`through_outages`) and asks again. It asks `Volume::entry_kind`, so a LINK at the destination is a leaf too: a merge
+  into one lands the files in its target (`../DETAILS.md` § "Symlinks are opaque to a move").
 - **`rename_merge.rs`'s `write_path` dir check — PROPAGATES.** A guessed `false` falls through to `exists()` and then
   `ctx.volume.delete(&write_path)`, aimed at a destination directory. Its input is now guarded upstream by the resolver,
   so this is the transient-fault residue plus defense in depth on the last destructive branch of the family. It asks
