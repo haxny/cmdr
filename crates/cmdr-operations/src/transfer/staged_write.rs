@@ -436,13 +436,17 @@ impl StagedWrite {
         let Some(temp) = self.temp.take() else {
             return;
         };
-        self.retire_temp(temp.path());
-        if let Err(e) = dest_volume.delete(temp.path()).await {
-            log::debug!(
+        // Retired only once it's gone: a destination that turned the delete
+        // down (a share that's out, a handle still open) leaves it listed, so
+        // the stop's cleanup takes it later, or the ledger does on the share's
+        // next reconnect. Retired first, it would be forgotten on the share.
+        match dest_volume.delete(temp.path()).await {
+            Ok(()) | Err(VolumeError::NotFound(_)) => self.retire_temp(temp.path()),
+            Err(e) => log::debug!(
                 target: "copy",
-                "staged write: couldn't remove the partial {} after a failed write: {e}",
+                "staged write: couldn't remove the partial {} after a failed write, leaving it listed: {e}",
                 temp.path().display()
-            );
+            ),
         }
     }
 

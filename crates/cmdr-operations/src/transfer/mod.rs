@@ -16,6 +16,7 @@ pub(super) mod copy_strategy;
 pub(super) mod dest_name_index;
 mod interrupted_landing;
 pub(super) mod left_in_source;
+pub(super) mod leftover_cleanup;
 #[cfg(target_os = "linux")]
 pub(super) mod linux_copy;
 #[cfg(target_os = "macos")]

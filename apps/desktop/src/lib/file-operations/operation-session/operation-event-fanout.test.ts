@@ -76,7 +76,7 @@ function cancelled(id: string): WriteCancelledEvent {
       outcome: 'notRolledBack',
       reversed: 0,
       skips: [],
-      stagedLeftovers: null,
+      stagedLeftovers: [],
       originalsStillInPlace: null,
       recovered: [],
     },

@@ -1862,20 +1862,58 @@
     }
   },
 
-  "fileOperations.cancelRollback.stagedLeftover.named": "Couldn’t remove {name}, an unfinished copy left at the destination. It’s safe to delete, and Cmdr clears it on a later transfer there.",
+  "fileOperations.cancelRollback.stagedLeftover.named": "Couldn’t remove {name}, an unfinished copy left at the destination. It’s safe to delete, and Cmdr tries again the next time it connects there.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
-    "description": "Last line of the toast after a cancelled copy or move, when Cmdr’s own half-written working file is still sitting at the destination and the drive wouldn’t let Cmdr take it away. This version is used when there is exactly ONE, so the line names it. What {name} holds is a scratch name Cmdr invented, like holiday.jpg.cmdr-tmp-4d1f9c, and naming it is the point: it is what the user would look for at the destination. This is NOT one of the deliberate choices the fileOperations.cancelRollback.reason.* lines describe: those are Cmdr protecting the user’s files, this is Cmdr’s own leftover that it couldn’t clear yet, so it reads as a straight account rather than as care. The second sentence is what the user can act on, and it carries two claims that must both stay true. (a) Deleting it by hand loses nothing, because the file it was copying is still whole at the source. (b) Cmdr’s own cleanup only runs at the start of a transfer into that same folder AND only touches leftovers over an hour old, so somebody who cancels and retries right away will still see it. Say \"a later transfer\", never \"the next one\": promising the next transfer is exactly the kind of over-claim this line exists to stop. Stay conversational and never use the words \"error\" or \"failed\". Sentence case; the apostrophe is doubled for ICU and renders as one.",
+    "description": "Last line of the toast after a cancelled copy or move, when Cmdr’s own half-written working file is still sitting at the destination because the drive or server answered and wouldn’t let Cmdr take it away (usually a file a stopped write still holds open). This version is used when there is exactly ONE, so the line names it. What {name} holds is a scratch name Cmdr invented, like holiday.jpg.cmdr-tmp-4d1f9c, and naming it is the point: it is what the user would look for at the destination. This is NOT one of the deliberate choices the fileOperations.cancelRollback.reason.* lines describe: those are Cmdr protecting the user’s files, this is Cmdr’s own leftover that it couldn’t clear yet, so it reads as a straight account rather than as care. The second sentence carries two claims that must both stay true. (a) Deleting it by hand loses nothing, because the file it was copying is still whole at the source. (b) Cmdr asks once more a few seconds later on its own, and after that the next time it connects to that drive or server (a reconnect, or the next launch), so say \"the next time it connects\", never a time. Stay conversational and never use the words \"error\" or \"failed\". Sentence case.",
     "placeholders": {
       "name": "the leftover’s own name at the destination, e.g. holiday.jpg.cmdr-tmp-4d1f9c. Uncontrolled text of any length, in any script, so keep the sentence readable whatever lands here, and never translate it."
     }
   },
 
-  "fileOperations.cancelRollback.stagedLeftover.counted": "Couldn’t remove {countText} unfinished {count, plural, one {copy} other {copies}} left at the destination. They’re safe to delete, and Cmdr clears them on a later transfer there.",
+  "fileOperations.cancelRollback.stagedLeftover.counted": "Couldn’t remove {countText} unfinished {count, plural, one {copy} other {copies}} left at the destination. They’re safe to delete, and Cmdr tries again the next time it connects there.",
   "@fileOperations.cancelRollback.stagedLeftover.counted": {
-    "description": "The same line as fileOperations.cancelRollback.stagedLeftover.named, used when two or more of Cmdr’s half-written working files stayed at the destination, so it counts them instead of naming one. They can sit in different folders under the destination, which is why the line says \"there\" rather than naming a folder. Keep both claims of the named version, and the same restraint: \"a later transfer\", never \"the next one\", because Cmdr’s cleanup spares anything under an hour old. Stay conversational and never use the words \"error\" or \"failed\". Sentence case; the apostrophe is doubled for ICU and renders as one.",
+    "description": "The same line as fileOperations.cancelRollback.stagedLeftover.named, used when two or more of Cmdr’s half-written working files stayed at the destination, so it counts them instead of naming one. Keep both claims of the named version. Stay conversational and never use the words \"error\" or \"failed\". Sentence case.",
     "placeholders": {
-      "countText": "how many unfinished copies stayed behind, already formatted for display (e.g. 1,234). Always two or more",
+      "countText": "how many stayed behind, already formatted for display (e.g. 1,234). Always two or more",
       "count": "the same number (drives the singular/plural form of the noun)"
+    }
+  },
+
+  "fileOperations.cancelRollback.stagedLeftover.waiting.named": "{name}, an unfinished copy, stays on {volumeName} for now. Cmdr removes it as soon as {volumeName} is back.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.named": {
+    "description": "Last line of the toast after a cancelled (or stopped) copy or move to a server whose connection had dropped, when Cmdr’s own half-written working file is still sitting there because the server wasn’t reachable to delete it. Cmdr keeps trying in the background and removes it once the server is back, without the person doing anything. This version is used when there is exactly ONE, so the line names it. What {name} holds is a scratch name Cmdr invented, like holiday.jpg.cmdr-tmp-4d1f9c: what the user would see on the server. Calm and matter-of-fact: nothing of theirs is at risk (the file it was copying is still whole at the source), and the line must not ask them to do anything. Stay conversational and never use the words \"error\" or \"failed\". Sentence case.",
+    "placeholders": {
+      "name": "the leftover’s own name at the destination, e.g. holiday.jpg.cmdr-tmp-4d1f9c. Uncontrolled text of any length, in any script, so keep the sentence readable whatever lands here, and never translate it.",
+      "volumeName": "the destination drive or server as it names itself, e.g. Naspolya. Uncontrolled text, never translate it."
+    }
+  },
+
+  "fileOperations.cancelRollback.stagedLeftover.waiting.counted": "{countText} unfinished {count, plural, one {copy stays} other {copies stay}} on {volumeName} for now. Cmdr removes them as soon as {volumeName} is back.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.counted": {
+    "description": "The same line as fileOperations.cancelRollback.stagedLeftover.waiting.named, used when two or more of Cmdr’s half-written working files are waiting for the server to come back, so it counts them instead of naming one. Stay conversational and never use the words \"error\" or \"failed\". Sentence case.",
+    "placeholders": {
+      "countText": "how many stayed behind, already formatted for display (e.g. 1,234). Always two or more",
+      "count": "the same number (drives the singular/plural form of the noun)",
+      "volumeName": "the destination drive or server as it names itself, e.g. Naspolya. Uncontrolled text, never translate it."
+    }
+  },
+
+  "fileOperations.cancelRollback.stagedLeftover.landing.named": "{name} is complete on {volumeName} under a temporary name, and gets its own name the next time Cmdr connects to {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.named": {
+    "description": "Last line of the toast after a cancelled (or stopped) copy or move, when one file had ALREADY fully arrived at the destination and was taking its final name at the moment things stopped, and the drive or server couldn’t finish that step. The file is the person’s data, possibly the only copy there, so ❗ never word it as junk, a leftover, or something to delete. Cmdr finishes giving it its name on its own the next time it connects to that drive or server. {name} is the file’s real name, like holiday.jpg (not a scratch name). Reassuring and matter-of-fact. Stay conversational and never use the words \"error\" or \"failed\". Sentence case.",
+    "placeholders": {
+      "name": "the file’s own name, e.g. holiday.jpg. Uncontrolled text of any length, in any script, so keep the sentence readable whatever lands here, and never translate it.",
+      "volumeName": "the destination drive or server as it names itself, e.g. Naspolya. Uncontrolled text, never translate it."
+    }
+  },
+
+  "fileOperations.cancelRollback.stagedLeftover.landing.counted": "{countText} complete {count, plural, one {file waits} other {files wait}} on {volumeName} under temporary names. Each gets its own name the next time Cmdr connects to {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.counted": {
+    "description": "The same line as fileOperations.cancelRollback.stagedLeftover.landing.named, used when two or more complete files are waiting for their final names, so it counts them instead of naming one. Same rule: these are the person’s files, ❌ never worded as junk to remove. Stay conversational and never use the words \"error\" or \"failed\". Sentence case.",
+    "placeholders": {
+      "countText": "how many complete files are waiting, already formatted for display (e.g. 1,234). Always two or more",
+      "count": "the same number (drives the singular/plural form of the noun)",
+      "volumeName": "the destination drive or server as it names itself, e.g. Naspolya. Uncontrolled text, never translate it."
     }
   },
 

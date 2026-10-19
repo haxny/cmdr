@@ -502,6 +502,27 @@ async fn abandon_removes_the_partial() {
     assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
 }
 
+/// ❗ An abandon whose delete the destination turns down (a share that's out, a
+/// handle still open) keeps the temp LISTED, so the stop's cleanup takes it
+/// later, or the ledger does on the share's next reconnect. Retired first, it
+/// would sit on the share with nothing knowing it's ours.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_abandon_the_destination_refuses_keeps_the_temp_listed() {
+    let engine = TestOperations::new();
+    let state = state(&engine);
+    let inner = Arc::new(InMemoryVolume::new("dest").with_delete_failing());
+    let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
+
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::Stage);
+    let temp = staged.target().to_path_buf();
+    inner.create_file(&temp, b"half").await.unwrap();
+
+    staged.abandon(&dest).await;
+
+    assert!(inner.exists(&temp).await, "the fixture refuses the delete");
+    assert_eq!(*state.in_flight_temps.lock_ignore_poison(), vec![temp]);
+}
+
 /// A landing refused over a name nobody resolved takes its temp away AND
 /// stops tracking it, so nothing is left in the user's folder and nothing
 /// is left for a sweep to chase.

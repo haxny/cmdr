@@ -100,6 +100,36 @@ impl OutagePolicy {
     }
 }
 
+/// How long a stopped operation's cleanup gives its destination
+/// (`transfer/leftover_cleanup.rs`). ❗ None of it delays the terminal event: the
+/// inline deletes are capped by [`inline_budget`](Self::inline_budget), and the
+/// rest happens in the background after the operation has ended.
+#[derive(Debug, Clone, Copy)]
+pub struct CleanupPolicy {
+    /// The most the inline deletes may take in all, on a destination that
+    /// reads live but may be dying under them. What's left when it runs out
+    /// goes to the background pass.
+    pub inline_budget: Duration,
+    /// How long the background pass waits for a destination that's out, after
+    /// its one reconnect attempt, before it hands what's left to the ledger's
+    /// reconnect sweep.
+    pub wait: Duration,
+    /// How long the background pass waits before it asks a destination that
+    /// REFUSED a delete once more: long enough for a dropped write's handle
+    /// close to reach the server.
+    pub retry_after: Duration,
+}
+
+impl Default for CleanupPolicy {
+    fn default() -> Self {
+        Self {
+            inline_budget: Duration::from_secs(5),
+            wait: Duration::from_secs(20),
+            retry_after: Duration::from_secs(3),
+        }
+    }
+}
+
 // DEFAULT-OK: no waiters and a first id of 0 is exactly an operation that has
 // waited for nothing yet; it claims nothing about any volume.
 #[derive(Debug, Default)]

@@ -448,7 +448,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
             rollback: event.rollback.outcome,
             left: event.rollback.skips.reduce((total, group) => total + group.count, 0),
             recovered: event.rollback.recovered.length,
-            staged: event.rollback.stagedLeftovers?.count ?? 0,
+            staged: event.rollback.stagedLeftovers.reduce((total, group) => total + group.count, 0),
           },
         )
         // Said here rather than by the parent: the reversal's report rides the

@@ -125,6 +125,17 @@ impl Operations {
     /// `crate::quit` is that caller, and ❌ nothing a person clicked ever is.
     pub fn abort_all_write_operations(&self) {
         self.registry().abort_all();
+        // A stopped transfer's cleanup pass outlives its registration, so it
+        // hears the quit here rather than through its own `backend_abort`.
+        self.stores().leftover_cleanups().stop();
+    }
+
+    /// Waits until every background cleanup pass a stopped transfer on this
+    /// engine started has finished (`transfer/leftover_cleanup.rs`), so a test
+    /// can assert on what the passes removed.
+    #[cfg(any(test, feature = "testing"))]
+    pub async fn leftover_cleanups_settled(&self) {
+        self.stores().leftover_cleanups().settled().await;
     }
 
     /// Sets the pause flag on the live state for `operation_id`, if present.

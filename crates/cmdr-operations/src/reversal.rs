@@ -321,7 +321,7 @@ impl ReversalTally {
             // The abandoned-write sweep runs OUTSIDE the ledger walk, so its
             // leftovers are attached by the caller that ran it
             // (`CancelRollback::with_staged_leftovers`).
-            staged_leftovers: None,
+            staged_leftovers: Vec::new(),
             // Only a cross-FS move's source sweep has originals to account for,
             // and it has no ledger to walk — it never reaches this tally.
             originals_still_in_place: None,

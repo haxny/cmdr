@@ -1196,7 +1196,7 @@ pub async fn copy_volumes_with_progress(
             files_processed: files_done,
             rollback: reversal
                 .into_cancel_rollback()
-                .with_staged_leftovers(&staged_leftovers)
+                .with_staged_leftovers(staged_leftovers)
                 .with_recovered(recovered),
         });
         // The rollback is how this operation ended, and `write-cancelled` said
@@ -1252,7 +1252,7 @@ pub async fn copy_volumes_with_progress(
                 // report — but leftovers are still news, and this is the only
                 // event that carries them.
                 rollback: CancelRollback::none()
-                    .with_staged_leftovers(&staged_leftovers)
+                    .with_staged_leftovers(staged_leftovers)
                     .with_recovered(recovered),
             });
         }

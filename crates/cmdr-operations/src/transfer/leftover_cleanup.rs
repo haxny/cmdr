@@ -1,0 +1,228 @@
+//! What a stopped transfer's cleanup can't remove at once, removed in the
+//! background, and what even that can't remove, handed to the ledger's
+//! reconnect sweep.
+//!
+//! **A Cancel never waits on a dropped share, and neither does a failure.**
+//! `volume/cleanup.rs::clean_abandoned_staged_writes` deletes inline only what a
+//! LIVE destination takes, within [`CleanupPolicy::inline_budget`]; the terminal
+//! event goes out the moment that's done. A temp the destination couldn't take
+//! (it was out, a delete met a transport fault, or it refused) comes here: ONE
+//! pass per stopped operation, spawned on the engine's runtime, holding no lane,
+//! so the next queued job on that share starts as usual.
+//!
+//! The pass, in order:
+//!
+//! 1. **A destination that's out gets one reconnect attempt**, the operation's
+//!    own and the only dial anywhere in this cleanup, then a short wait
+//!    ([`CleanupPolicy::wait`]) for someone else's reconnect (a pane's backoff).
+//!    An outage the operation already gave up on (the lane's fifteen-minute wait
+//!    ran out, `volume_outage.rs`) gets the attempt as its one look, and no wait.
+//! 2. **A temp the destination refused is asked once more**, a few seconds later
+//!    ([`CleanupPolicy::retry_after`]): a write the drain's deadline dropped
+//!    closes its handle a moment after the drop when no credit was on hand. One
+//!    refused for good (smb2#24's handle, held until the session ends) gets its
+//!    answer on the next reconnect, when that session is gone.
+//! 3. **What's still there goes to the ledger's pending set, ONCE, after the pass
+//!    is done** (`in_flight_temps::keep_temp_for_arrival`), so this pass and the
+//!    arrival sweep never act on one record at the same time. The sweep runs on
+//!    the volume's next arrival or in-place reconnect, and never dials.
+//!
+//! ❗ **Tier 2 and the quit end it where it is** (`state.backend_abort`, and
+//! [`LeftoverCleanups::stop`], which the quit deadline fires for passes whose
+//! operation already unregistered). The records stay registered and on disk for
+//! the startup sweep: nothing goes back through the connection after tier 2.
+//!
+//! ❌ Only removable temps reach this pass: what `state.in_flight_temps` still
+//! listed. A landing (a complete file whose way may have been cleared) is
+//! recorded as one and handed to the arrival sweep under its own kind, whose rule
+//! finishes the landing; it's ❌ never deleted from here.
+
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use tokio::time::Instant;
+use tokio_util::sync::CancellationToken;
+use tokio_util::task::TaskTracker;
+
+use super::super::in_flight_temps;
+use super::super::state::WriteOperationState;
+use super::staged_write::dest_home;
+use cmdr_fs::log_private::LogPrivate;
+use cmdr_fs::volume::{ConnectionState, Volume, VolumeError};
+
+/// Every background cleanup pass one engine runs, and the switch the quit
+/// deadline throws on all of them.
+pub(crate) struct LeftoverCleanups {
+    /// Fired by the quit deadline (`Operations::abort_all_write_operations`):
+    /// a pass whose operation already left the registry can't hear its own
+    /// `backend_abort`.
+    quit: CancellationToken,
+    /// The passes still running, so a test can wait for them to settle.
+    passes: TaskTracker,
+}
+
+impl LeftoverCleanups {
+    pub(crate) fn new() -> Self {
+        Self {
+            quit: CancellationToken::new(),
+            passes: TaskTracker::new(),
+        }
+    }
+
+    /// The app is quitting: every pass stops where it is and leaves its records
+    /// for the startup sweep, and none starts from here on.
+    pub(crate) fn stop(&self) {
+        self.quit.cancel();
+    }
+
+    /// Waits until every pass spawned so far has finished.
+    #[cfg(any(test, feature = "testing"))]
+    pub(crate) async fn settled(&self) {
+        self.passes.close();
+        self.passes.wait().await;
+        self.passes.reopen();
+    }
+}
+
+/// The temps the inline cleanup couldn't take, by why.
+// DEFAULT-OK: an empty hand-off is exactly a cleanup that took everything.
+#[derive(Debug, Default)]
+pub(crate) struct LeftBehind {
+    /// The destination was out, or a delete met a transport fault.
+    pub(crate) out: Vec<PathBuf>,
+    /// The destination answered and refused.
+    pub(crate) refused: Vec<PathBuf>,
+}
+
+impl LeftBehind {
+    fn is_empty(&self) -> bool {
+        self.out.is_empty() && self.refused.is_empty()
+    }
+
+    fn len(&self) -> usize {
+        self.out.len() + self.refused.len()
+    }
+}
+
+/// Hands `left` to a background pass on `volume` and returns at once. See the
+/// module docs.
+pub(crate) fn finish_in_background(volume: &Arc<dyn Volume>, state: &Arc<WriteOperationState>, left: LeftBehind) {
+    if left.is_empty() {
+        return;
+    }
+    let cleanups = state.scope().stores().leftover_cleanups();
+    let quit = cleanups.quit.clone();
+    let volume = Arc::clone(volume);
+    let pass_state = Arc::clone(state);
+    cleanups
+        .passes
+        .spawn_on(run(volume, pass_state, left, quit), &state.scope().host().runtime());
+}
+
+async fn run(volume: Arc<dyn Volume>, state: Arc<WriteOperationState>, left: LeftBehind, quit: CancellationToken) {
+    let count = left.len();
+    let remaining = tokio::select! {
+        biased;
+        () = state.backend_abort.cancelled() => None,
+        () = quit.cancelled() => None,
+        remaining = take_away(&volume, &state, left) => Some(remaining),
+    };
+    let Some(remaining) = remaining else {
+        log::info!(
+            target: "copy",
+            "leftover cleanup: the app is shutting down, leaving {count} staged partial(s) on {} to the startup sweep",
+            LogPrivate::volume(volume.name()),
+        );
+        return;
+    };
+    if remaining.is_empty() {
+        log::info!(
+            target: "copy",
+            "leftover cleanup: removed the {count} staged partial(s) a stop left on {}",
+            LogPrivate::volume(volume.name()),
+        );
+        return;
+    }
+    log::info!(
+        target: "copy",
+        "leftover cleanup: {} of {count} staged partial(s) stay on {} until it next arrives or reconnects",
+        remaining.len(),
+        LogPrivate::volume(volume.name()),
+    );
+    for temp in &remaining {
+        in_flight_temps::keep_temp_for_arrival(&state, dest_home(&state), temp);
+    }
+}
+
+/// Deletes what it can of `left`, and answers what's still there.
+async fn take_away(volume: &Arc<dyn Volume>, state: &Arc<WriteOperationState>, left: LeftBehind) -> Vec<PathBuf> {
+    if !left.out.is_empty() || !reads_live(volume) {
+        bring_back(volume, state).await;
+    }
+    if !left.refused.is_empty() {
+        tokio::time::sleep(state.cleanup_policy.retry_after).await;
+    }
+    let mut remaining = Vec::new();
+    for temp in left.out.into_iter().chain(left.refused) {
+        if !reads_live(volume) {
+            remaining.push(temp);
+            continue;
+        }
+        match tokio::time::timeout(state.outage_policy.attempt_timeout, volume.delete(&temp)).await {
+            Ok(Ok(()) | Err(VolumeError::NotFound(_))) => {
+                in_flight_temps::retire_temp(state, dest_home(state), &temp);
+            }
+            Ok(Err(error)) => {
+                log::debug!(
+                    target: "copy",
+                    "leftover cleanup: {} is still refused ({error})",
+                    LogPrivate::file_path(&temp),
+                );
+                remaining.push(temp);
+            }
+            Err(_elapsed) => remaining.push(temp),
+        }
+    }
+    remaining
+}
+
+/// Whether `volume` takes calls right now: a live session, or no session to
+/// lose at all.
+fn reads_live(volume: &Arc<dyn Volume>) -> bool {
+    volume.connection_state().is_none_or(ConnectionState::is_live)
+}
+
+/// One reconnect attempt for a destination that's out, then a short wait for
+/// someone else's, unless the operation already gave this outage up.
+async fn bring_back(volume: &Arc<dyn Volume>, state: &Arc<WriteOperationState>) {
+    let policy = state.cleanup_policy;
+    let deadline = Instant::now() + policy.wait;
+    if volume.connection_state() != Some(ConnectionState::Disconnected) {
+        // Live, no session at all, or waiting on a person (a sign-in, a host
+        // key): nothing a dial or the clock fixes.
+        return;
+    }
+    let attempt_timeout = state.outage_policy.attempt_timeout.min(policy.wait);
+    match tokio::time::timeout(attempt_timeout, volume.attempt_reconnect()).await {
+        Ok(Ok(())) => return,
+        Ok(Err(error)) => log::debug!(target: "copy", "leftover cleanup: the reconnect attempt failed: {error}"),
+        Err(_elapsed) => log::debug!(target: "copy", "leftover cleanup: the reconnect attempt didn't return"),
+    }
+    let outages = state.scope().stores().outages();
+    if outages.gave_up_on(&volume.lane_key(), state.born, state.outage_policy.budget) {
+        // The operation already waited this outage out: one look, ❌ no
+        // second wait.
+        return;
+    }
+    while !reads_live(volume) && volume.connection_state() == Some(ConnectionState::Disconnected) {
+        let now = Instant::now();
+        if now >= deadline {
+            return;
+        }
+        tokio::time::sleep_until(deadline.min(now + state.outage_policy.poll_every)).await;
+    }
+}
+
+#[cfg(test)]
+#[path = "leftover_cleanup_tests.rs"]
+mod tests;

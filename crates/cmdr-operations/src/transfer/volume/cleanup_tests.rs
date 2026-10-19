@@ -10,13 +10,74 @@
 
 use super::*;
 use crate::event_sinks::CollectorEventSink;
+use crate::in_flight_temps::{self, Ledger, RecordHome};
 use crate::ledger::WrittenIdentity;
+use crate::outage_slot::{CleanupPolicy, OutagePolicy};
 use crate::testing::TestOperations;
-use crate::types::{CancelRollback, CancelRollbackOutcome};
+use crate::transfer::outage_volume_test_support::OutageVolume;
+use crate::types::{CancelRollback, CancelRollbackOutcome, StagedLeftoverFate, StagedLeftovers};
+use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::InMemoryVolume;
 
+/// A stop's background cleanup at a test's pace: a dial that gives up fast, and
+/// a wait long enough for a cell to bring the share back inside it.
+const QUICK_CLEANUP: CleanupPolicy = CleanupPolicy {
+    inline_budget: Duration::from_secs(5),
+    wait: Duration::from_secs(10),
+    retry_after: Duration::from_millis(20),
+};
+const QUICK_OUTAGE: OutagePolicy = OutagePolicy {
+    budget: Duration::from_secs(30),
+    cadence: &[Duration::from_millis(10)],
+    poll_every: Duration::from_millis(5),
+    attempt_timeout: Duration::from_millis(200),
+};
+const WAIT: Duration = Duration::from_secs(5);
+
 fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
-    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
+    Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_cleanup_policy(QUICK_CLEANUP),
+    )
+}
+
+/// A stopped operation writing to `volume_id`, recording into `ledger`, whose
+/// stop has `temp` left in flight: what a task the drain's deadline dropped
+/// mid-write leaves.
+fn stopped_with_a_temp_on(
+    engine: &TestOperations,
+    ledger: &Ledger,
+    volume_id: &str,
+    temp: &Path,
+) -> Arc<WriteOperationState> {
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_journal_volumes("cleanup-test-source".to_string(), volume_id.to_string())
+            .with_in_flight_ledger(ledger.clone())
+            .with_outage_policy(QUICK_OUTAGE)
+            .with_cleanup_policy(QUICK_CLEANUP),
+    );
+    in_flight_temps::track_temp(&state, Some(RecordHome::volume_space(volume_id)), temp);
+    state
+}
+
+/// A NAS behind an [`OutageVolume`], named the way the leftover line names it.
+fn nas(lane: &str) -> (Arc<InMemoryVolume>, Arc<OutageVolume>, Arc<dyn Volume>) {
+    let inner = Arc::new(InMemoryVolume::new("Naspolya"));
+    let nas = OutageVolume::wrap(Arc::clone(&inner), lane);
+    let volume: Arc<dyn Volume> = Arc::clone(&nas) as Arc<dyn Volume>;
+    (inner, nas, volume)
+}
+
+fn leftover(fate: StagedLeftoverFate, example_name: &str, volume_name: &str) -> StagedLeftovers {
+    StagedLeftovers {
+        fate,
+        count: 1,
+        example_name: example_name.to_string(),
+        volume_name: volume_name.to_string(),
+    }
 }
 
 /// Runs a rollback over the given ledger of complete volume files, and reports
@@ -515,14 +576,13 @@ async fn remove_tree_missing_path_is_ok() {
 }
 
 /// A staged partial the destination refuses to remove **comes back from the
-/// sweep**, so the summary the user reads can account for it.
+/// sweep**, typed as refused, so the summary the user reads can account for it.
 ///
 /// This is the honesty half of the abandoned-write path. A dropped write task
-/// leaves its SMB2 handle open, the server answers the delete with a sharing
+/// can leave its SMB2 handle open, the server answers the delete with a sharing
 /// violation for as long as that session lives, and a user who chose Rollback
 /// was being told the destination was clear while gigabytes of scratch sat on
-/// their NAS. Retrying can't help — the handle outlives the operation — so
-/// reporting it is the whole remedy.
+/// their NAS.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_staged_partial_the_destination_keeps_comes_back_from_the_sweep() {
     let engine = TestOperations::new();
@@ -532,21 +592,24 @@ async fn a_staged_partial_the_destination_keeps_comes_back_from_the_sweep() {
     let temp = PathBuf::from("/album/holiday.jpg.cmdr-tmp-4d1f9c");
     state.in_flight_temps.lock_ignore_poison().push(temp.clone());
 
-    let unremoved = clean_abandoned_staged_writes(&volume, &state).await;
+    let leftovers = clean_abandoned_staged_writes(&volume, &state).await;
 
     assert_eq!(
-        unremoved,
-        vec![temp],
-        "a temp the destination wouldn't take back has to reach the caller, not only the log"
+        leftovers,
+        vec![leftover(
+            StagedLeftoverFate::Refused,
+            "holiday.jpg.cmdr-tmp-4d1f9c",
+            "Dest"
+        )],
+        "a temp the destination wouldn't take back has to reach the caller, named by what it's called there, \
+         which is what the user would look for"
     );
-    let leftovers = CancelRollback::none()
-        .with_staged_leftovers(&unremoved)
-        .staged_leftovers
-        .expect("a leftover the sweep reported must reach the summary");
-    assert_eq!(leftovers.count, 1);
     assert_eq!(
-        leftovers.example_name, "holiday.jpg.cmdr-tmp-4d1f9c",
-        "named by what it is called at the destination, which is what the user would look for"
+        CancelRollback::none()
+            .with_staged_leftovers(leftovers.clone())
+            .staged_leftovers,
+        leftovers,
+        "and the summary carries it"
     );
 }
 
@@ -568,15 +631,173 @@ async fn a_sweep_that_cleared_the_destination_reports_no_leftovers() {
         PathBuf::from("/album/already-landed.jpg.cmdr-tmp-77aa10"),
     ]);
 
-    let unremoved = clean_abandoned_staged_writes(&volume, &state).await;
+    let leftovers = clean_abandoned_staged_writes(&volume, &state).await;
 
-    assert!(unremoved.is_empty(), "nothing was left, so there is nothing to report");
+    assert!(leftovers.is_empty(), "nothing was left, so there is nothing to report");
     assert!(!vol.exists(&present).await, "the staged partial itself still goes");
+}
+
+/// ❗ **A stop never waits on a share that's out** (the lead's decision: a
+/// Cancel is reported the moment it happens, and a failure takes the same
+/// shape). The cleanup returns at once, while the background pass's one dial is
+/// still hanging, and says the temp goes once the share is back; then it does.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_stop_with_the_destination_out_reports_at_once_and_the_temp_goes_once_the_share_is_back() {
+    let engine = TestOperations::new();
+    let ledger = Ledger::for_test();
+    let (inner, nas, volume) = nas("cleanup-test-out-at-stop");
+    let temp = PathBuf::from("/holiday.jpg.cmdr-tmp-5d2e");
+    inner.create_file(&temp, b"half a photo").await.unwrap();
+    let state = stopped_with_a_temp_on(&engine, &ledger, "cleanup-test-nas-out", &temp);
+    nas.go_away();
+    nas.hang_reconnects();
+
+    let leftovers = tokio::time::timeout(Duration::from_secs(2), clean_abandoned_staged_writes(&volume, &state))
+        .await
+        .expect("the stop's cleanup never waits on a share that's out");
+
+    assert_eq!(
+        leftovers,
+        vec![leftover(
+            StagedLeftoverFate::RemovedWhenBack,
+            "holiday.jpg.cmdr-tmp-5d2e",
+            "Naspolya"
+        )]
+    );
+    wait_until_async(WAIT, "the background pass to dial the share", || {
+        nas.reconnect_attempts() >= 1
+    })
+    .await;
+    assert!(inner.exists(&temp).await, "nothing is deleted while the share is out");
+
+    nas.reconnected_elsewhere();
+    engine.leftover_cleanups_settled().await;
+
     assert!(
-        CancelRollback::none()
-            .with_staged_leftovers(&unremoved)
-            .staged_leftovers
-            .is_none()
+        !inner.exists(&temp).await,
+        "the pass removes the temp once the share is back"
+    );
+    assert!(!ledger.live_paths().contains(&temp), "and retires its record");
+}
+
+/// A temp the destination keeps refusing (smb2#24's handle, held until the
+/// session ends) is asked once more by the background pass, and then waits in
+/// the ledger's pending set for that volume's next arrival or reconnect, by
+/// which time the session that held it is gone.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_temp_the_destination_still_refuses_waits_in_the_ledger_for_its_next_reconnect() {
+    let engine = TestOperations::new();
+    let ledger = Ledger::for_test();
+    let vol = Arc::new(InMemoryVolume::new("Naspolya").with_delete_failing());
+    let temp = PathBuf::from("/holiday.jpg.cmdr-tmp-6e3f");
+    vol.create_file(&temp, b"half a photo").await.unwrap();
+    let volume: Arc<dyn Volume> = vol.clone();
+    let state = stopped_with_a_temp_on(&engine, &ledger, "cleanup-test-nas-refuses", &temp);
+
+    let leftovers = clean_abandoned_staged_writes(&volume, &state).await;
+    engine.leftover_cleanups_settled().await;
+
+    assert_eq!(
+        leftovers,
+        vec![leftover(
+            StagedLeftoverFate::Refused,
+            "holiday.jpg.cmdr-tmp-6e3f",
+            "Naspolya"
+        )]
+    );
+    assert!(vol.exists(&temp).await, "a refused temp stays where it is");
+    assert_eq!(
+        ledger.pending_paths(),
+        vec![temp],
+        "and waits in the ledger for the volume's next arrival or reconnect"
+    );
+}
+
+/// A refusal that clears a moment later (a dropped write's CLOSE going out late,
+/// with no credit on hand) is taken by the background pass's one retry.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_temp_refused_once_goes_on_the_background_retry() {
+    use super::super::faulty_volume::{FaultyOp, FaultyVolume};
+
+    let engine = TestOperations::new();
+    let ledger = Ledger::for_test();
+    let inner = Arc::new(InMemoryVolume::new("Naspolya"));
+    let temp = PathBuf::from("/holiday.jpg.cmdr-tmp-7f40");
+    inner.create_file(&temp, b"half a photo").await.unwrap();
+    let faulty = FaultyVolume::wrapping(Arc::clone(&inner))
+        .failing_call(
+            FaultyOp::Delete,
+            1,
+            VolumeError::IoError {
+                message: "sharing violation".to_string(),
+                raw_os_error: None,
+            },
+        )
+        .arc();
+    let volume: Arc<dyn Volume> = Arc::clone(&faulty) as Arc<dyn Volume>;
+    let state = stopped_with_a_temp_on(&engine, &ledger, "cleanup-test-nas-refuses-once", &temp);
+
+    let leftovers = clean_abandoned_staged_writes(&volume, &state).await;
+    engine.leftover_cleanups_settled().await;
+
+    assert!(faulty.fault_fired(FaultyOp::Delete), "the first delete was refused");
+    assert_eq!(leftovers.len(), 1, "reported as refused at the stop: {leftovers:?}");
+    assert!(!inner.exists(&temp).await, "and gone after the retry");
+    assert!(!ledger.live_paths().contains(&temp), "its record retired");
+}
+
+/// ❗ Tier 2 (the quit deadline) ends the background pass where it is: nothing
+/// goes back through the connection, and the record stays registered and on
+/// disk for the startup sweep, ❌ not handed to the reconnect sweep.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn tier_two_during_the_background_pass_leaves_the_record_for_the_startup_sweep() {
+    let engine = TestOperations::new();
+    let ledger = Ledger::for_test();
+    let (inner, nas, volume) = nas("cleanup-test-tier-two");
+    let temp = PathBuf::from("/holiday.jpg.cmdr-tmp-8a51");
+    inner.create_file(&temp, b"half a photo").await.unwrap();
+    let state = stopped_with_a_temp_on(&engine, &ledger, "cleanup-test-nas-tier-two", &temp);
+    nas.go_away();
+    nas.hang_reconnects();
+
+    clean_abandoned_staged_writes(&volume, &state).await;
+    wait_until_async(WAIT, "the background pass to dial the share", || {
+        nas.reconnect_attempts() >= 1
+    })
+    .await;
+    engine.abort_all_write_operations();
+    engine.leftover_cleanups_settled().await;
+
+    assert!(inner.exists(&temp).await, "nothing is deleted after tier 2");
+    assert!(
+        ledger.live_paths().contains(&temp),
+        "the record stays for the startup sweep"
+    );
+    assert!(
+        ledger.pending_paths().is_empty(),
+        "and isn't handed to the reconnect sweep"
+    );
+}
+
+/// A landing a stop left recorded (a complete file whose way may have been
+/// cleared) is named by the file it's on its way to, as one that gets its name
+/// once the share is back: ❌ never as scratch to remove.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_kept_landing_is_reported_as_a_file_that_lands_once_the_share_is_back() {
+    let engine = TestOperations::new();
+    let (_inner, nas, volume) = nas("cleanup-test-kept-landing");
+    nas.go_away();
+    let state = make_state(&engine);
+    state
+        .kept_landings
+        .lock_ignore_poison()
+        .push(PathBuf::from("/album/holiday.jpg"));
+
+    let leftovers = clean_abandoned_staged_writes(&volume, &state).await;
+
+    assert_eq!(
+        leftovers,
+        vec![leftover(StagedLeftoverFate::LandsWhenBack, "holiday.jpg", "Naspolya")]
     );
 }
 

@@ -280,6 +280,9 @@ pub(crate) struct EngineStores {
     /// Every live transfer's in-flight table, for its stall watchdog and the
     /// activity each progress event carries.
     probes: Arc<transfer::transfer_probe::Probes>,
+    /// The background passes finishing what stopped transfers couldn't clean
+    /// up at once, and the quit's switch for them.
+    leftover_cleanups: transfer::leftover_cleanup::LeftoverCleanups,
 }
 
 impl EngineStores {
@@ -290,7 +293,13 @@ impl EngineStores {
             ledger_claimed: std::sync::atomic::AtomicBool::new(false),
             outages: Arc::new(transfer::volume_outage::Outages::new()),
             probes: Arc::new(transfer::transfer_probe::Probes::new()),
+            leftover_cleanups: transfer::leftover_cleanup::LeftoverCleanups::new(),
         }
+    }
+
+    /// The background cleanup passes of stopped transfers.
+    pub(crate) fn leftover_cleanups(&self) -> &transfer::leftover_cleanup::LeftoverCleanups {
+        &self.leftover_cleanups
     }
 
     /// Every live transfer's probe, shared, since a registration's guard holds

@@ -35,7 +35,7 @@ Copy and move across backends (Local, MTP, SMB, archive). File map: `DETAILS.md`
 - **Every file copy asks `may_copy_on_server_from`, then `copy_on_server`**: the BACKEND picks, ❌ never by path, ❌
   nothing stages before a yes. All but a cancel or a taken name falls back to streaming.
 - **A same-volume move whose `rename_work` says copy takes the copy-then-delete engine**, ❌ never `rename`.
-- **A staged temp the destination won't release is REPORTED** (`CancelRollback::staged_leftovers`), ❌ not just logged.
+- **A stop's cleanup ❌ never waits on the share** (`../leftover_cleanup.rs`); leftovers are REPORTED by fate.
 - **Only `cleanup.rs::remove_tree` recurses** (its `TreeRemoval` names who authorized it); cleanup and rollback list
   before deleting.
 - **An unknown "is this a directory?" is ❌ never guessed**: a missing `source_hints` entry is UNKNOWN;

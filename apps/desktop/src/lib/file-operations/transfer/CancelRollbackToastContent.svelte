@@ -44,9 +44,13 @@
         </ul>
     {/if}
     <!-- Under the reasons, not among them: those are files Cmdr chose to keep,
-         this is Cmdr's own scratch it couldn't take away. -->
-    {#if readout.staged !== null}
-        <span class="staged">{readout.staged}</span>
+         these are Cmdr's own unfinished writes it couldn't take away yet. -->
+    {#if readout.staged.length > 0}
+        <ul class="staged">
+            {#each readout.staged as line (line)}
+                <li>{line}</li>
+            {/each}
+        </ul>
     {/if}
 </div>
 
@@ -74,7 +78,8 @@
     }
 
     .reasons,
-    .recovered {
+    .recovered,
+    .staged {
         display: flex;
         flex-direction: column;
         gap: var(--spacing-xs);

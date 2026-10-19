@@ -16,6 +16,7 @@ use super::super::recovered_name::{
     what_a_refused_delete_left,
 };
 use super::{LandingName, dest_home};
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -130,10 +131,15 @@ impl Landing {
     }
 
     /// The temp may be the destination's only copy and the landing couldn't
-    /// finish: the record stays, for the sweep that next reaches the volume.
+    /// finish: the record stays, for the sweep that next reaches the volume,
+    /// and the operation's stop names the file it's on its way to.
     fn keep_landing(&mut self) {
         if let Recorded::Landing(Some(record)) = std::mem::replace(&mut self.recorded, Recorded::Settled) {
             in_flight_temps::keep_for_arrival(&self.state, record);
+            self.state
+                .kept_landings
+                .lock_ignore_poison()
+                .push(self.final_path.clone());
         }
     }
 

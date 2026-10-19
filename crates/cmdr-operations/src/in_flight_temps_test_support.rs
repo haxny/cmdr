@@ -114,6 +114,16 @@ impl Ledger {
         super::read_recorded(&data_dir.join(STORE_FILENAME))
     }
 
+    /// The paths waiting for their volume's next arrival or reconnect.
+    pub(crate) fn pending_paths(&self) -> Vec<std::path::PathBuf> {
+        self.store()
+            .pending
+            .iter()
+            .map(Record::path)
+            .map(Path::to_path_buf)
+            .collect()
+    }
+
     /// The set this ledger currently believes is on disk.
     pub(crate) fn live_paths(&self) -> Vec<std::path::PathBuf> {
         self.store()

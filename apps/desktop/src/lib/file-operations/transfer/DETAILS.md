@@ -1020,11 +1020,14 @@ as reversed, so it never arrives as a skip — and so does `vanished`, which onl
 operation reports. Both stay in the map so a NEW `SkipReason` is a compile error here rather than a count silently
 dropped off the list.
 
-**Cmdr's OWN leftover gets its own line, outside the reason list.** `rollback.stagedLeftovers` is the `.cmdr-tmp-*`
-scratch a cancelled transfer's sweep asked the destination to remove and didn't get, because an abandoned write task
-still holds the handle (BE doc: `crates/cmdr-operations/src/transfer/DETAILS.md` § "Naming what a cancel left behind").
-Three rules the readout enforces, and they exist because the defect being fixed was a toast that said the reversal was
-clean while gigabytes sat on the user's NAS:
+**Cmdr's OWN leftovers get their own lines, outside the reason list.** `rollback.stagedLeftovers` is one group per fate
+of the `.cmdr-tmp-*` writes a stopped transfer's cleanup couldn't take off the destination at once (BE doc:
+`crates/cmdr-operations/src/transfer/DETAILS.md` § "Naming what a cancel left behind"), one line each, worded by fate
+(`STAGED_KEYS`): `refused` (the destination answered no; Cmdr tries again the next time it connects), `removedWhenBack`
+(the server was out; Cmdr removes them once it's back), and `landsWhenBack` (a COMPLETE file waiting for its name, named
+by that name, and ❌ never worded as something to remove or delete: it's the user's data). Three rules the readout
+enforces, and they exist because the defect being fixed was a toast that said the reversal was clean while gigabytes sat
+on the user's NAS:
 
 - **A leftover always speaks**, including through both silences above. `notRolledBack` carrying one raises a toast with
   no headline at all, which is how a plain Stop and a cross-volume move's cancel get to report theirs.
@@ -1036,9 +1039,11 @@ clean while gigabytes sat on the user's NAS:
   is Cmdr protecting the user's files; this is Cmdr's own working file, and borrowing that framing would read as a
   choice nobody made.
 
-The copy says it is safe to delete and that Cmdr clears it on **a later** transfer there. ❌ Never "the next one": the
-backstop sweep spares anything under an hour old, so a person who cancels and retries straight away meets their own
-leftover. Over-promising there would re-create the exact defect this line was added to remove.
+The refused line says it is safe to delete and that Cmdr tries again **the next time it connects** to that drive or
+server: the background pass retries once, then the ledger's reconnect sweep (or the next launch) does. ❌ Never promise
+a time or "the next transfer": the transfer-start reap spares anything recorded or under an hour old, so a person who
+cancels and retries straight away meets their own leftover. Over-promising there would re-create the exact defect this
+line was added to remove.
 
 **The confirmation ends where its siblings do.** `fileOperations.rollbackConfirm.body` carries the same "Cmdr skips
 anything it isn't sure about, so a few may stay behind" clause as its three `bodyUndo*` siblings, because the recheck

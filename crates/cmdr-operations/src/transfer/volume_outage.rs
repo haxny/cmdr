@@ -643,6 +643,18 @@ impl Outages {
         }
     }
 
+    /// Whether the lane's outage was already waited out and given up on, as
+    /// [`join`](Self::join) judges it for an operation born at `born`: a
+    /// stopped operation's cleanup then gets one look and no second wait
+    /// (`leftover_cleanup.rs`).
+    pub(crate) fn gave_up_on(&self, lane: &LaneKey, born: std::time::Instant, budget: Duration) -> bool {
+        self.records
+            .lock_ignore_poison()
+            .get(lane)
+            .and_then(|outage| outage.gave_up_at)
+            .is_some_and(|gave_up_at| born <= gave_up_at && gave_up_at.elapsed() < budget)
+    }
+
     /// The volume is back: the outage is over for everyone.
     fn back(&self, lane: &LaneKey) {
         self.records.lock_ignore_poison().remove(lane);

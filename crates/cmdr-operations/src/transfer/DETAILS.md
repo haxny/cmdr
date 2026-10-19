@@ -61,6 +61,8 @@ included, § "One-pass sequential extract"). Only the layout facts that none of 
   in `../outage_slot.rs`, so the activity classifier can read it without reaching into this layer.
   `interrupted_landing.rs` holds the proofs a landing or a single-shot write the drop cut off is settled by, and
   `staged_write_landing.rs::CutOffLanding` the landing's settle itself (§ "A landing the drop cut off").
+  `leftover_cleanup.rs` is the background pass that finishes a stopped transfer's cleanup (§ "File writes are staged"),
+  one level above `volume/` because its engine store (`LeftoverCleanups`, in `EngineStores`) is the crate root's.
 - **`transfer_probe_ends.rs` is what the probe asks the two volumes**, another `#[path]` child: `TransferEnds` (the
   source and destination, held only for their connections' liveness and the source's received-byte count) and
   `InboundWindow` (the receive rate across the last few ticks, pure and tested on its own).
@@ -245,17 +247,19 @@ is the only groundwork laid for it, so ❌ don't lay more speculatively.
 `CancelRollback` reports four kinds of leftover, and they are separate fields on purpose.
 
 `skips` is per-reason `SkipBreakdown` groups: ledger entries a reversal walked to and DECIDED to leave, named by the
-file the user is looking at. `staged_leftovers` is a `StagedLeftovers { count, example_name }` for the `.cmdr-tmp-*`
-scratch the abandoned-write sweep asked the destination to remove and didn't get (§ "Staged writes"). Three reasons they
-don't merge:
+file the user is looking at. `staged_leftovers` is one `StagedLeftovers { fate, count, example_name, volume_name }`
+group per `StagedLeftoverFate` for the `.cmdr-tmp-*` writes the stop's cleanup couldn't take off the destination at once
+(§ "File writes are staged"): refused, waiting for the server, or a complete landing waiting for its name. Three reasons
+they don't merge:
 
 - **Nothing chose to keep a staged leftover.** Every `SkipReason` is a decision (drift, unprovable, occupied, non-empty)
   except `Failed`, and even `Failed` is a ledger item that may come back on a retry from history. A staged leftover is
-  Cmdr's own working file for a write that never finished, kept by a handle the operation no longer controls — an open
-  gap on purpose, and ❌ not one a retry can close: § "Staged writes" has the measurement and the two fixes that would.
+  Cmdr's own working file for a write that never finished, which the destination refused or couldn't be reached to
+  remove, and the background pass and the ledger's reconnect sweep take it later (§ "File writes are staged").
 - **It has no user-facing name.** `SkipBreakdown::example_name` is documented as "the name the file carries right now,
   which is the one the user is looking at". A `photo.jpg.cmdr-tmp-<uuid>` is a name Cmdr invented, which is why the
-  toast words it differently and says it is safe to delete.
+  toast words it differently and says it is safe to delete. A landing's group names the file's own final name instead,
+  and the toast words it as the user's file.
 - **The counts have a job.** `reversed + skipped` is what the reversal's progress bar drains over (`reversal::drained`),
   and a staged temp is not a ledger entry any reversal walks. Folding it in would make the bar report progress across
   items nothing processes.
@@ -265,7 +269,7 @@ walk every entry. ❌ Don't force it to `PartiallyRolledBack` — the frontend r
 `skips` as "the user stopped it partway", and that inference is what tells the two apart. Instead, the READOUT
 (`src/lib/file-operations/transfer/cancel-rollback-toast.ts`) never lets a leftover render as a clean success: it drops
 the completeness wording (`someDeleted`, never `doneDeleting`) and the `success` level whenever `staged_leftovers` is
-present, and it prints the line OUTSIDE the reason list, which sits under "Cmdr skips anything it isn't sure about".
+non-empty, and it prints its lines OUTSIDE the reason list, which sits under "Cmdr skips anything it isn't sure about".
 
 The three volume emit sites all attach it — the copy's Rollback branch, the copy's plain-Stop branch, and the
 cross-volume move's cancel — so a leftover speaks even where there is no reversal at all to report.
@@ -1190,9 +1194,11 @@ to the abandoned-write and startup sweeps, which is safe because the name was ne
 the only complete copy at the destination is never in the set, and is recorded as a landing, which no sweep deletes. The
 NAME-based sweep (`volume/cleanup.rs::reap_stale_transfer_temps`) spares every path the ledger records, landings
 included. A task that STOPS (a cancel, or a sibling's failure: § "Cancel and rollback reach a parked driver") takes its
-own temp with it, through its backend's abort and `StagedWrite::abandon`. Whatever is still listed when the driver's
-loop ends belongs to a task the drain's deadline DROPPED mid-write, so `volume::cleanup::clean_abandoned_staged_writes`
-removes those, deep-merge children and swaps included.
+own temp with it, through its backend's abort and `StagedWrite::abandon`, which retires the temp only once its delete
+went through: a delete the destination turned down (a share that's out) leaves it listed, so it isn't forgotten on the
+share. Whatever is still listed when the driver's loop ends belongs to a task the drain's deadline DROPPED mid-write, or
+to such an abandon, so `volume::cleanup::clean_abandoned_staged_writes` takes those, deep-merge children and swaps
+included. Pinned by `staged_write_tests.rs::an_abandon_the_destination_refuses_keeps_the_temp_listed`.
 
 ❗ **No driver-side partial list names a staged write's temp**, a swap's included: `failed_write_leaves_ours_at` answers
 `false` for `Stage` and `StageOverOriginal`, because the name the drivers hold is the user's (a free name, or the
@@ -1201,15 +1207,39 @@ rename leaves the temp on disk, recorded as a landing and in no partial list, fo
 (the failure still names whichever sibling ended the op). Pinned by
 `volume/safe_replace_grid_tests.rs::a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land`.
 
-**What that sweep can't remove, it REPORTS.** A dropped write task whose handle stays open (§ "Known gap" below) makes
-an SMB2 server answer the delete with a sharing violation for as long as that session lives (measured: refused
-continuously to t+191 s on a real share, then deleted instantly from a fresh session). Retrying is provably useless from
-inside the operation, so `clean_abandoned_staged_writes` returns the paths it couldn't take, and both volume drivers
-hang them on the `write-cancelled` event as `CancelRollback::staged_leftovers`. That is the whole remedy this layer
-owns: without it a user who chose Rollback was told the destination was clear while 519 MB across four files (2.2 GB in
-another run) sat on their NAS. ❌ Don't fold them into `CancelRollback::skips` — a skip is a LEDGER item a reversal
-walked to and chose to leave, and `reversed + skipped` is what the reversal's bar drains over. See § "Naming what a
-cancel left behind".
+**What that sweep can't remove now waits for the server, in the background, and is swept on reconnect**
+(`leftover_cleanup.rs`). ❗ A Cancel never waits on a dropped share, and a failure takes the same shape (the lead's
+decision in `docs/specs/transfer-outages-and-cleanup-plan.md`): `clean_abandoned_staged_writes` deletes inline only what
+a LIVE destination takes, within `CleanupPolicy::inline_budget` (5 s in all), and the terminal event goes out the moment
+it returns. A temp it couldn't take (the destination read out, a delete met a `transport_fault`, or it refused) goes to
+ONE background pass per stopped operation, on the engine's runtime, holding no lane:
+
+1. A destination that's out gets one reconnect attempt (the operation's own, the only dial in the whole cleanup), then a
+   short wait for someone else's (`CleanupPolicy::wait`, 20 s). An outage the operation already gave up on
+   (`Outages::gave_up_on`) gets the attempt as its one look, ❌ no second wait.
+2. A refused temp is asked once more, a few seconds later (`retry_after`, 3 s): a write the drain's deadline dropped
+   with no credit on hand sends its CLOSE a moment late.
+3. What's still there goes to the ledger's pending set ONCE, after the pass is done
+   (`in_flight_temps::keep_temp_for_arrival`), so the pass and the arrival sweep never act on one record together. The
+   sweep runs on the volume's next arrival or in-place reconnect (§ "Which path space a recorded partial lives in"),
+   never dials, and by then the session that held a handle open is gone.
+
+Tier 2 (`backend_abort`) and the quit (`LeftoverCleanups::stop`, fired by `abort_all_write_operations` for a pass whose
+operation already unregistered) end the pass where it is, the records registered and on disk for the startup sweep. Only
+removable temps reach it: a landing a stop left recorded (`state.kept_landings`) is ❌ never deleted, and its sweep rule
+finishes it.
+
+**And it REPORTS, by fate.** Both volume drivers hang the result on `write-cancelled` as
+`CancelRollback::staged_leftovers`, one `StagedLeftovers` group per `StagedLeftoverFate`: `Refused` (the destination
+answered no), `RemovedWhenBack` (it was out), and `LandsWhenBack` (a complete file on its way to its name, named by that
+name and ❌ never worded as junk). Without the report a user who chose Rollback was told the destination was clear while
+519 MB across four files (2.2 GB in another run) sat on their NAS. ❌ Don't fold them into `CancelRollback::skips` — a
+skip is a LEDGER item a reversal walked to and chose to leave, and `reversed + skipped` is what the reversal's bar
+drains over. A failed op's `write-error` carries no leftovers; its pass still runs. Pinned by `volume/cleanup_tests.rs`
+(out at the stop, refused for good, refused once, tier 2, a kept landing), `leftover_cleanup_tests.rs` (the one look),
+and end to end by
+`volume/copy_outage_tests.rs::a_cancel_while_the_share_is_out_reports_at_once_and_cleans_up_once_it_is_back`. See §
+"Naming what a cancel left behind".
 
 **Known gap, deliberately open: the abandoned SMB handle.** A refused sweep is about the handle itself, and only a task
 the drain's deadline DROPPED leaves one: a cancel and a failure both let every task stop on its own first, so its writer
@@ -1224,10 +1254,10 @@ closed temp, and the sweep's delete right after works. Two shapes still leak a h
   reads and writes, `copy`): its future dropped between CREATE and CLOSE sends no `CLOSE`, and the server holds the file
   open for the rest of the session ([smb2#24](https://github.com/vdavid/smb2/issues/24)).
 
-❌ **Retry with backoff within the session cannot fix the second** — that's what the t+191 s measurement above settles,
-and a delete from a FRESH session succeeded instantly on the same file. The consequence is survivable rather than
-permanent: the startup orphan sweep is volume-aware (§ "Which path space a recorded partial lives in"), so a refused
-temp is removed on a later launch, and the leftover toast is what tells the user in the meantime.
+❌ **Retry with backoff within the session cannot fix the second** (measured: refused continuously to t+191 s on a real
+share, then deleted instantly from a fresh session). The consequence is survivable rather than permanent: the background
+pass's one retry handles the first shape, and the second waits in the ledger for the share's next reconnect or the next
+launch, when the session that held it is gone; the leftover toast is what tells the user in the meantime.
 
 Recording goes through `cmdr_operations::in_flight_temps` (`track_temp` for a staged write's temp), which keeps the
 operation's in-memory list AND a persisted log in the app data dir once the engine claims it. Local copies record there
@@ -1263,8 +1293,8 @@ local op's temps are recorded and retired synchronously and anything left is a t
   (its `DestNameIndex`), the move path discards it.
 
   ⚠️ **The age gate means this is not "the next transfer clears it".** A person who cancels and retries straight away
-  meets their own leftover: it is minutes old, so the gate spares it. That's why the leftover toast says "a later
-  transfer" and offers deleting it by hand, and why the `@key` descriptions forbid promising the next one.
+  meets their own leftover: it is minutes old, and recorded, so the reap spares it. The ledger's reconnect sweep is what
+  clears a stop's leftovers, which is why the leftover toast promises "the next time it connects", never a transfer.
 
 **Cost**: one extra rename per staged file. On SMB that is one round trip, which roughly doubles the wire cost of a file
 that would otherwise take the compound CREATE+WRITE+FLUSH+CLOSE fast path — the exemption below is what keeps a

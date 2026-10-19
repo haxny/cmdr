@@ -520,39 +520,68 @@ pub enum CancelRollbackOutcome {
     PartiallyRolledBack,
 }
 
-/// The staged `.cmdr-tmp-*` writes a cancel's sweep asked the destination to
-/// remove and didn't get.
+/// One group of Cmdr's own unfinished `.cmdr-tmp-*` writes that a stop's
+/// cleanup couldn't take off the destination at once, all with one fate.
 ///
 /// **Deliberately not a [`SkipBreakdown`].** A skip is a LEDGER item the
 /// reversal walked to and chose to leave alone, named by the file the user is
 /// looking at; these are Cmdr's own scratch files for writes that never
-/// finished, they carry no user-facing name, and nothing chose to keep them —
-/// the destination refused (`transfer/volume/cleanup.rs`). Folding them into
-/// `skips` would also fold them into `reversed + skipped`, which is what the
-/// reversal's progress bar drains over, so the bar would report progress across
-/// items no reversal ever walks.
+/// finished, and nothing chose to keep them (`transfer/volume/cleanup.rs`).
+/// Folding them into `skips` would also fold them into `reversed + skipped`,
+/// which is what the reversal's progress bar drains over, so the bar would
+/// report progress across items no reversal ever walks.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct StagedLeftovers {
-    /// Every one the sweep couldn't remove, not a sample.
+    /// What becomes of them, which is what the line says.
+    pub fate: StagedLeftoverFate,
+    /// Every one with this fate, not a sample.
     pub count: u32,
-    /// The on-disk leaf name of the FIRST one, so a report can name it when it's
-    /// the only one. That name is the temp's own (`photo.jpg.cmdr-tmp-<uuid>`),
-    /// which is what the user would be looking for at the destination.
+    /// The leaf name of the FIRST one, so a report can name it when it's the
+    /// only one: what the user would look for at the destination. A removable
+    /// temp's own scratch name (`photo.jpg.cmdr-tmp-<uuid>`); for a
+    /// [`StagedLeftoverFate::LandsWhenBack`], the name the file is on its way
+    /// to (`photo.jpg`).
     pub example_name: String,
+    /// The destination's name as it names itself, so the line can say where
+    /// "back" is.
+    pub volume_name: String,
+}
+
+/// What becomes of a [`StagedLeftovers`] group.
+///
+/// ❗ Typed, so the readout words each one without reading a path or a message:
+/// a removable scratch file and a COMPLETE file waiting for its name are
+/// different news, and only the second is the user's data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum StagedLeftoverFate {
+    /// The destination answered and refused the delete (an abandoned write's
+    /// handle can hold the file open for as long as its session lives). Cmdr
+    /// tries once more a few seconds later, then the next time it connects to
+    /// the destination.
+    Refused,
+    /// The destination was out. Cmdr removes them as soon as it's back.
+    RemovedWhenBack,
+    /// Complete files on their way to their names when the operation stopped,
+    /// after the way there may already have been cleared: possibly the only
+    /// copy at the destination, ❌ never junk. Each gets its name the next time
+    /// Cmdr connects to the destination.
+    LandsWhenBack,
 }
 
 impl StagedLeftovers {
-    /// Fold the paths a sweep couldn't remove into the shape a report reads.
-    /// `None` when it removed everything, which is the ordinary ending.
-    pub fn of(unremoved: &[PathBuf]) -> Option<Self> {
-        let first = unremoved.first()?;
+    /// One group of `paths` with `fate`, on `volume_name`. `None` for no paths.
+    pub fn of(fate: StagedLeftoverFate, paths: &[PathBuf], volume_name: &str) -> Option<Self> {
+        let first = paths.first()?;
         Some(Self {
-            count: unremoved.len() as u32,
+            fate,
+            count: paths.len() as u32,
             example_name: first
                 .file_name()
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_default(),
+            volume_name: volume_name.to_owned(),
         })
     }
 }
@@ -560,7 +589,7 @@ impl StagedLeftovers {
 /// The originals a cross-filesystem move still had in their old place when it
 /// was stopped, once the whole copy was already at the destination.
 ///
-/// **Independent of `outcome`, the same way [`StagedLeftovers`] is.** No
+/// **Independent of `outcome`, the same way `staged_leftovers` is.** No
 /// reversal ran here and none can: the bytes are across a filesystem boundary,
 /// so carrying them home would be a second full transfer the user never asked
 /// for. `NotRolledBack` says that truthfully and says all it can. What it can't
@@ -598,14 +627,15 @@ pub struct CancelRollback {
     pub reversed: u32,
     /// One group per reason, with the complete count and one example file name.
     pub skips: Vec<SkipBreakdown>,
-    /// The staged partials the abandoned writes left that the sweep couldn't
-    /// take away. `None` in the ordinary case, where it took them all.
+    /// Cmdr's own unfinished writes the cleanup couldn't take off the
+    /// destination at once, one group per fate. Empty in the ordinary case,
+    /// where it took them all.
     ///
     /// Independent of `outcome`: the ledger really can be reversed to the last
     /// entry while gigabytes of scratch sit at the destination, and `outcome`
     /// answers only for the ledger. It's the READOUT's job never to call that
     /// combination clean (`src/lib/file-operations/transfer/cancel-rollback-toast.ts`).
-    pub staged_leftovers: Option<StagedLeftovers>,
+    pub staged_leftovers: Vec<StagedLeftovers>,
     /// The originals a landed cross-FS move was still clearing when it stopped.
     /// `None` everywhere else, which is every other operation Cmdr can cancel.
     ///
@@ -627,7 +657,7 @@ impl CancelRollback {
             outcome: CancelRollbackOutcome::NotRolledBack,
             reversed: 0,
             skips: Vec::new(),
-            staged_leftovers: None,
+            staged_leftovers: Vec::new(),
             originals_still_in_place: None,
             recovered: Vec::new(),
         }
@@ -641,11 +671,11 @@ impl CancelRollback {
         self
     }
 
-    /// Name the staged partials the cancel's sweep couldn't remove, so the
-    /// summary the user reads accounts for them.
+    /// Name what the stop's cleanup couldn't take off the destination at once,
+    /// so the summary the user reads accounts for it.
     #[must_use]
-    pub fn with_staged_leftovers(mut self, unremoved: &[PathBuf]) -> Self {
-        self.staged_leftovers = StagedLeftovers::of(unremoved);
+    pub fn with_staged_leftovers(mut self, leftovers: Vec<StagedLeftovers>) -> Self {
+        self.staged_leftovers = leftovers;
         self
     }
 

@@ -13,7 +13,7 @@ use super::eta::{EtaEstimator, EtaSample, ReversalBar};
 use super::host::OperationEventSink;
 use super::human_wait::HumanWaitClock;
 use super::locked_sources_slot::LockedSourcesSlot;
-use super::outage_slot::{OutagePolicy, OutageSlot};
+use super::outage_slot::{CleanupPolicy, OutagePolicy, OutageSlot};
 use super::scope::OpScope;
 use super::sources_gone_slot::SourcesGoneSlot;
 use super::types::{
@@ -135,6 +135,9 @@ pub struct WriteOperationState {
     /// app; a test shrinks it through
     /// `with_outage_policy` (test builds only).
     pub(crate) outage_policy: OutagePolicy,
+    /// How long its cleanup gives the destination once it stops
+    /// (`transfer/leftover_cleanup.rs`); like `outage_policy`, test-shrinkable.
+    pub(crate) cleanup_policy: CleanupPolicy,
     /// When this operation was created. An operation queued before a volume's
     /// outage gave up doesn't start a fresh fifteen-minute wait for the same
     /// outage when it's admitted (`transfer/volume_outage.rs` § the lane's
@@ -233,22 +236,22 @@ pub struct WriteOperationState {
     ///
     /// Every cross-volume file write stages on a temp sibling and lands it only
     /// after its last byte (`transfer/staged_write.rs`). An entry is added before
-    /// the first byte and removed the instant the write SUCCEEDS — after that the
-    /// temp holds committed data, and a failed landing must leave it on disk, so
-    /// a temp that is no longer listed here must never be swept. What remains
-    /// after the driver's loop is exactly the set of half-written partials whose
-    /// tasks were dropped mid-flight (a cancel that abandoned a wedged task);
-    /// `transfer::volume::cleanup::clean_abandoned_staged_writes` removes them.
-    ///
-    /// Local-FS copies stage too (`overwrite::stage_and_land_file`) and register
-    /// here, but they add and remove entries synchronously, so anything they
-    /// leave belongs to a thread that never came back. No local driver runs
-    /// `clean_abandoned_staged_writes`; the startup sweep is their answer.
+    /// the first byte and removed once the temp landed, is gone, or may hold
+    /// committed data (a landing about to clear the way), so a temp no longer
+    /// listed here is never swept. What remains after the driver's loop is a
+    /// task the drain's deadline dropped mid-write, or an abandon whose delete
+    /// the destination refused; `volume::cleanup::clean_abandoned_staged_writes`
+    /// takes those. Local copies register here synchronously, and only the
+    /// startup sweep answers for what they leave.
     ///
     /// ❌ Don't push or retain here directly: go through
     /// [`super::in_flight_temps`], which also keeps the persisted half that
     /// outlives the process.
     pub in_flight_temps: std::sync::Mutex<Vec<PathBuf>>,
+    /// Final names of landings left recorded for the destination's next arrival
+    /// (`Landing::keep_landing`): complete files, ❌ never removable, that the
+    /// stop's summary names.
+    pub(crate) kept_landings: std::sync::Mutex<Vec<PathBuf>>,
     /// A test's own persisted ledger, which the in-flight temps above are also
     /// recorded in (`with_in_flight_ledger`, test builds only). `None`, always so
     /// in the app, means the engine's, through the scope; `in_flight_temps`
@@ -324,12 +327,14 @@ impl WriteOperationState {
             pause_gate: PauseGate::new(Arc::clone(&human_wait)),
             outage: Arc::new(OutageSlot::new(Arc::clone(&human_wait))),
             outage_policy: OutagePolicy::default(),
+            cleanup_policy: CleanupPolicy::default(),
             born: Instant::now(),
             human_wait,
             journal_volumes: None,
             sides: None,
             target_names: super::target_names::TargetNames::default(),
             in_flight_temps: std::sync::Mutex::new(Vec::new()),
+            kept_landings: std::sync::Mutex::new(Vec::new()),
             in_flight_ledger: None,
             last_progress: std::sync::Mutex::new(None),
             liveness: std::sync::Mutex::new(Some(Arc::new(()))),
@@ -501,6 +506,13 @@ impl WriteOperationState {
     #[cfg(any(test, feature = "testing"))]
     pub fn with_outage_policy(mut self, policy: OutagePolicy) -> Self {
         self.outage_policy = policy;
+        self
+    }
+
+    /// Shrinks the cleanup's patience, so a test drives it in milliseconds.
+    #[cfg(any(test, feature = "testing"))]
+    pub fn with_cleanup_policy(mut self, policy: CleanupPolicy) -> Self {
+        self.cleanup_policy = policy;
         self
     }
 

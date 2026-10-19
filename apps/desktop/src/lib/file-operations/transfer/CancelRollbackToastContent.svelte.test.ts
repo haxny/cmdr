@@ -36,7 +36,7 @@ describe('CancelRollbackToastContent', () => {
       leftBehind: null,
       reasons: [],
       recovered: [],
-      staged: null,
+      staged: [],
       level: 'success',
     })
     expect(target.querySelector('.headline')?.textContent.trim()).toBe('Removed the 3 items Cmdr had written.')
@@ -53,7 +53,7 @@ describe('CancelRollbackToastContent', () => {
         'Left 3 folders alone: they have something in them now.',
       ],
       recovered: [],
-      staged: null,
+      staged: [],
       level: 'info',
     })
     expect(lines()).toEqual([
@@ -68,7 +68,7 @@ describe('CancelRollbackToastContent', () => {
       leftBehind: "Cmdr skips anything it isn't sure about, so these stayed where they are:",
       reasons: ['Left notes.md alone: it changed after Cmdr put it there.'],
       recovered: [],
-      staged: null,
+      staged: [],
       level: 'info',
     })
     const rendered = target.textContent
@@ -82,7 +82,7 @@ describe('CancelRollbackToastContent', () => {
       leftBehind: "Cmdr skips anything it isn't sure about, so these stayed where they are:",
       reasons: ['Left 2 items alone: they changed after Cmdr put them there.'],
       recovered: [],
-      staged: null,
+      staged: [],
       level: 'info',
     })
     expect(target.querySelector('.headline')).toBeNull()
@@ -100,12 +100,13 @@ describe('CancelRollbackToastContent', () => {
       leftBehind: null,
       reasons: [],
       recovered: [],
-      staged:
+      staged: [
         "Couldn't remove holiday.jpg.cmdr-tmp-4d1f9c, an unfinished copy left at the destination. " +
-        "It's safe to delete, and Cmdr clears it on a later transfer there.",
+          "It's safe to delete, and Cmdr tries again the next time it connects there.",
+      ],
       level: 'warn',
     })
-    expect(target.querySelector('ul')).toBeNull()
+    expect(target.querySelector('.reasons')).toBeNull()
     expect(target.querySelector('.staged')?.textContent).toContain('holiday.jpg.cmdr-tmp-4d1f9c')
     const rendered = target.textContent
     expect(rendered.indexOf("Couldn't remove")).toBeGreaterThan(rendered.indexOf('Removed 4 items'))
@@ -117,7 +118,7 @@ describe('CancelRollbackToastContent', () => {
       leftBehind: null,
       reasons: [],
       recovered: ['Cmdr kept the original from /old/path at /old/path (recovered).'],
-      staged: null,
+      staged: [],
       level: 'info',
     })
     expect(target.querySelectorAll('.recovered li')).toHaveLength(1)

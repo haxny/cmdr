@@ -562,6 +562,21 @@ pub(super) fn keep_for_arrival(state: &WriteOperationState, record: TrackedRecor
     ledger.ensure_arrival_listener(state.scope().host_arc());
 }
 
+/// [`keep_for_arrival`] for a temp [`track_temp`] recorded in `home`, whose
+/// record its writer no longer holds: a stopped operation's cleanup couldn't
+/// remove it (`transfer/leftover_cleanup.rs`). `home: None` was never
+/// persisted, so there's nothing to hold; the hour-gated reap is its backstop.
+pub(super) fn keep_temp_for_arrival(state: &WriteOperationState, home: Option<RecordHome>, temp: &Path) {
+    let Some(home) = home else {
+        return;
+    };
+    let record = TrackedRecord {
+        record: tracked_record(&home, ItemKind::Temp, temp),
+        absolute: temp.to_path_buf(),
+    };
+    keep_for_arrival(state, record);
+}
+
 /// The background sweep a ledger claim started, and the only way to learn
 /// that it has finished.
 ///

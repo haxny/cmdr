@@ -433,6 +433,82 @@ async fn a_cancel_during_the_wait_cancels_the_copy() {
     );
 }
 
+/// ❗ A Cancel never waits on a dropped share (the lead's decision 1). The share
+/// drops around a landing rename, so a whole temp of ours sits there while the
+/// copy waits; the person cancels, and `write-cancelled` goes out at once, with
+/// the share still out and the cleanup's one dial hanging. It says the temp
+/// goes once the share is back, and once it is, it does.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cancel_while_the_share_is_out_reports_at_once_and_cleans_up_once_it_is_back() {
+    use crate::types::StagedLeftoverFate;
+
+    let engine = TestOperations::new();
+    let source = source_with(4).await;
+    let (inner, nas, dest) = nas("outage-copy-cancel-cleanup");
+    nas.drop_at_rename(1, RenameDrop::BeforeTheServerSeesIt);
+    nas.hang_reconnects();
+    let state = outage_state(&engine, Duration::from_secs(60));
+    let op = engine.register_state("outage-copy-cancel-cleanup", Arc::clone(&state));
+    let watched = Arc::clone(&state);
+    let op_id = op.id().to_owned();
+    let canceller = (*engine).clone();
+    tokio::spawn(async move {
+        wait_until_async(WAIT, "the copy to wait for the share", || {
+            watched.outage.waiting_for().is_some()
+        })
+        .await;
+        canceller.cancel_write_operation(&op_id, false);
+    });
+    let events = Arc::new(CollectorEventSink::new());
+
+    let failure = tokio::time::timeout(
+        Duration::from_secs(5),
+        copy_volumes_with_progress(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            op.id(),
+            &state,
+            source,
+            &[PathBuf::from("/batch")],
+            dest,
+            Path::new("/"),
+            &config(),
+        ),
+    )
+    .await
+    .expect("the cancel is reported while the share is still out")
+    .expect_err("a cancelled copy doesn't finish");
+
+    assert!(matches!(failure.error, WriteOperationError::Cancelled { .. }));
+    let cancelled = events.cancelled.lock_ignore_poison().clone();
+    let leftovers = &cancelled
+        .first()
+        .expect("one write-cancelled")
+        .rollback
+        .staged_leftovers;
+    assert_eq!(
+        leftovers.iter().map(|group| group.fate).collect::<Vec<_>>(),
+        vec![StagedLeftoverFate::RemovedWhenBack],
+        "the temp goes once the share is back: {leftovers:?}"
+    );
+    assert!(
+        names_in_batch(&inner)
+            .await
+            .iter()
+            .any(|name| name.contains(".cmdr-tmp-")),
+        "the fixture leaves a temp while the share is out"
+    );
+
+    nas.answer_reconnects();
+    nas.reconnected_elsewhere();
+    engine.leftover_cleanups_settled().await;
+
+    let names = names_in_batch(&inner).await;
+    assert!(
+        !names.iter().any(|name| name.contains(".cmdr-tmp-")),
+        "no temp is left once the share is back: {names:?}"
+    );
+}
+
 /// A copy that STARTS with its destination gone (a Retry while the NAS is still
 /// down, a job admitted mid-outage) waits for it before its first step, rather
 /// than failing on it at once.

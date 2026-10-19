@@ -19,12 +19,17 @@ use super::super::super::in_flight_temps;
 use super::super::super::ledger::{WrittenFile, WrittenIdentity};
 use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, recheck_volume};
 use super::super::super::state::{WindDown, WriteOperationState};
-use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use super::super::super::types::{
+    StagedLeftoverFate, StagedLeftovers, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
+};
 use super::super::super::unblocked_removal::{NodeKind, RemovalRefused, delete_clearing_blockers};
+use super::super::leftover_cleanup::{LeftBehind, finish_in_background};
+use super::super::staged_write::dest_home;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
+use cmdr_fs::log_private::LogPrivate;
+use cmdr_fs::volume::{ConnectionState, EntryKind, Volume, VolumeError};
 use cmdr_operation_log::rollback::ItemResult;
 use cmdr_operation_log::types::SkipReason;
 use tokio::runtime::Handle;
@@ -269,24 +274,32 @@ pub(super) async fn clean_partial_writes(volume: &Arc<dyn Volume>, partials: &[P
     }
 }
 
-/// Removes the staged `.cmdr-tmp-*` partials this operation was still writing
-/// when its tasks were abandoned.
+/// Removes the staged `.cmdr-tmp-*` partials this operation's stopped tasks
+/// couldn't take with them, as far as a LIVE destination takes them right now,
+/// and answers what's left for the stop's summary.
 ///
-/// The driver drops in-flight copy tasks on cancel and on the first failure, so
-/// their futures never reach their own cleanup. What they left behind is exactly
-/// what `state.in_flight_temps` still lists: a landing about to clear the way
-/// re-records its temp as an `ItemKind::Landing` and takes it out of this set
-/// first, so a temp that may hold committed data is never in it and is never
-/// touched here.
+/// A task that stops on its own deletes its temp (`StagedWrite::abandon`, or
+/// its backend's tier-1 cleanup). What `state.in_flight_temps` still lists is
+/// what those couldn't: a task the drain's deadline dropped mid-write, or an
+/// abandon whose delete the destination turned down. A landing about to clear
+/// the way re-records its temp as an `ItemKind::Landing` and takes it out of
+/// this set first, so a temp that may hold committed data is never in it and is
+/// never touched here; a landing the stop left recorded comes back as
+/// [`StagedLeftoverFate::LandsWhenBack`], named by the file it's on its way to.
 ///
-/// A temp whose task is wedged with an open handle refuses to delete — an
-/// abandoned SMB2 write keeps its handle, and the server answers the delete with
-/// a sharing violation until that session ends. **Those come back to the caller**
-/// rather than living only in a WARN: a user who chose Rollback asked for the
-/// destination to be cleared, and multi-gigabyte scratch files staying behind is
-/// news they have to be told (`types::events::StagedLeftovers`). Retrying here
-/// can't help — the handle belongs to a session that outlives this operation —
-/// so the honest report is the whole remedy this function owns.
+/// ❗ **Never waits on a share that's out**, so the terminal event goes out the
+/// moment this returns (`transfer/DETAILS.md` § "File writes are staged"):
+///
+/// - A destination that reads out takes no inline delete at all.
+/// - The inline deletes are capped, in all, by the cleanup policy's
+///   `inline_budget`, for a destination that reads live and dies under them.
+/// - A temp it couldn't take goes to the background pass
+///   (`transfer/leftover_cleanup.rs`): one reconnect attempt and a short wait
+///   for one that was out, one retry for one that refused, then the ledger's
+///   reconnect sweep for what's still there. The summary names each kind
+///   ([`StagedLeftoverFate::RemovedWhenBack`], [`StagedLeftoverFate::Refused`]):
+///   a user who chose Rollback asked for the destination to be cleared, and
+///   multi-gigabyte scratch staying behind is news they have to be told.
 ///
 /// **Skipped entirely once tier 2 has fired** (`state.backend_abort`). Every
 /// delete here is a round trip through the destination, and the reason the abort
@@ -299,7 +312,8 @@ pub(super) async fn clean_partial_writes(volume: &Arc<dyn Volume>, partials: &[P
 pub(super) async fn clean_abandoned_staged_writes(
     volume: &Arc<dyn Volume>,
     state: &Arc<WriteOperationState>,
-) -> Vec<PathBuf> {
+) -> Vec<StagedLeftovers> {
+    let landings: Vec<PathBuf> = std::mem::take(&mut *state.kept_landings.lock_ignore_poison());
     if state.backend_abort.is_cancelled() {
         log::info!(
             target: "copy",
@@ -308,31 +322,63 @@ pub(super) async fn clean_abandoned_staged_writes(
         return Vec::new();
     }
     let temps: Vec<PathBuf> = std::mem::take(&mut *state.in_flight_temps.lock_ignore_poison());
+    let left = remove_what_a_live_destination_takes(volume, state, temps).await;
+    let leftovers = [
+        (StagedLeftoverFate::Refused, &left.refused),
+        (StagedLeftoverFate::RemovedWhenBack, &left.out),
+        (StagedLeftoverFate::LandsWhenBack, &landings),
+    ]
+    .into_iter()
+    .filter_map(|(fate, paths)| StagedLeftovers::of(fate, paths, volume.name()))
+    .collect();
+    finish_in_background(volume, state, left);
+    leftovers
+}
+
+/// The inline half of [`clean_abandoned_staged_writes`]: deletes what the
+/// destination takes now, within the policy's budget, and sorts the rest by
+/// why it stayed.
+async fn remove_what_a_live_destination_takes(
+    volume: &Arc<dyn Volume>,
+    state: &Arc<WriteOperationState>,
+    temps: Vec<PathBuf>,
+) -> LeftBehind {
+    let mut left = LeftBehind::default();
     if temps.is_empty() {
-        return Vec::new();
+        return left;
     }
     log::info!(
         target: "copy",
-        "clean_abandoned_staged_writes: removing {} staged partial(s) left by abandoned tasks",
+        "clean_abandoned_staged_writes: removing {} staged partial(s) the stopped tasks left",
         temps.len()
     );
-    let mut unremoved = Vec::new();
+    let deadline = tokio::time::Instant::now() + state.cleanup_policy.inline_budget;
     for temp in temps {
-        // Via `delete_written_file`, so a temp that's already gone counts as
-        // removed — the end state this sweep wants already holds, and reporting
-        // it as a leftover would send the user hunting for a file that isn't
-        // there.
-        if let Err(e) = delete_written_file(volume, &temp).await {
-            log::warn!(
-                target: "copy",
-                "clean_abandoned_staged_writes: couldn't remove {}: {:?}",
-                e.path.display(),
-                e.error
-            );
-            unremoved.push(temp);
+        if !volume.connection_state().is_none_or(ConnectionState::is_live) {
+            left.out.push(temp);
+            continue;
+        }
+        match tokio::time::timeout_at(deadline, volume.delete(&temp)).await {
+            // Already gone counts as removed: the end state this wants already
+            // holds, and reporting it would send the user hunting for a file
+            // that isn't there.
+            Ok(Ok(()) | Err(VolumeError::NotFound(_))) => {
+                in_flight_temps::retire_temp(state, dest_home(state), &temp);
+            }
+            Ok(Err(error)) if error.transport_fault().is_some() => left.out.push(temp),
+            Ok(Err(error)) => {
+                log::warn!(
+                    target: "copy",
+                    "clean_abandoned_staged_writes: {} was refused ({error:?}); trying again in the background",
+                    LogPrivate::file_path(&temp),
+                );
+                left.refused.push(temp);
+            }
+            // The budget ran out on a destination that may be dying under us.
+            Err(_elapsed) => left.out.push(temp),
         }
     }
-    unremoved
+    left
 }
 
 /// Reaps `.cmdr-tmp-*` leftovers a crash or force-quit left in the destination

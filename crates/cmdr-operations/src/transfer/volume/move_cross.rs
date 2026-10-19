@@ -780,7 +780,7 @@ pub async fn move_volumes_with_progress(
                 // A cross-volume move has no reversal to report, but a staged
                 // partial or renamed original is still news.
                 rollback: CancelRollback::none()
-                    .with_staged_leftovers(&staged_leftovers)
+                    .with_staged_leftovers(staged_leftovers)
                     .with_recovered(recovered),
             });
             Err(WriteFailure::synthetic(WriteOperationError::Cancelled {

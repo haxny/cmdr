@@ -76,7 +76,7 @@ pub use super::manager::OperationSummaryText;
 // The scan preview's log label, which the app's report redactor must clean
 // (`operations_host/log_redaction_tests.rs`).
 pub use super::delete::delete_volume_files_for_test;
-pub use super::outage_slot::OutagePolicy;
+pub use super::outage_slot::{CleanupPolicy, OutagePolicy};
 pub use super::scan_watchdog::ScanTarget;
 
 /// Seeds `engine`'s previews with an entry that fails the coherence canary, for a

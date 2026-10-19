@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { readCancelRollback } from './cancel-rollback-toast'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
-import type { CancelRollback, SkipBreakdown, SkipReason } from '#lib/ipc/bindings.js'
+import type { CancelRollback, SkipBreakdown, SkipReason, StagedLeftovers } from '#lib/ipc/bindings.js'
 
 // The readout resolves its wording through `t()` (catalog + ICU), which reads the
 // active locale. Pin en-US so these are golden assertions on the shipped English.
@@ -21,7 +21,7 @@ function rollback(partial: Partial<CancelRollback>): CancelRollback {
     outcome: 'notRolledBack',
     reversed: 0,
     skips: [],
-    stagedLeftovers: null,
+    stagedLeftovers: [],
     originalsStillInPlace: null,
     recovered: [],
     ...partial,
@@ -53,7 +53,7 @@ describe('readCancelRollback', () => {
         leftBehind: null,
         reasons: [],
         recovered: [],
-        staged: null,
+        staged: [],
         level: 'success',
       })
     })
@@ -91,7 +91,7 @@ describe('readCancelRollback', () => {
         leftBehind: null,
         reasons: [],
         recovered: [],
-        staged: null,
+        staged: [],
         level: 'info',
       })
     })
@@ -117,7 +117,7 @@ describe('readCancelRollback', () => {
         leftBehind: 'Cmdr skips anything it isn’t sure about, so these stayed where they are:',
         reasons: ['Left invoice-2026.pdf alone: it changed after Cmdr put it there.'],
         recovered: [],
-        staged: null,
+        staged: [],
         level: 'info',
       })
     })
@@ -224,7 +224,7 @@ describe('readCancelRollback', () => {
         leftBehind: null,
         reasons: [],
         recovered: [],
-        staged: null,
+        staged: [],
         level: 'info',
       })
     })
@@ -256,7 +256,13 @@ describe('readCancelRollback', () => {
     // delete for as long as that session lives, and the ledger reversal itself
     // can still be perfect. The readout is the only thing standing between that
     // and a user being told their NAS is clear while gigabytes sit on it.
-    const staged = { count: 1, exampleName: 'holiday.jpg.cmdr-tmp-4d1f9c' }
+    const refused = (count: number): StagedLeftovers => ({
+      fate: 'refused',
+      count,
+      exampleName: 'holiday.jpg.cmdr-tmp-4d1f9c',
+      volumeName: 'Naspolya',
+    })
+    const staged = [refused(1)]
 
     it('never lets a perfect ledger reversal read as a clean success', () => {
       const readout = readCancelRollback(
@@ -270,20 +276,18 @@ describe('readCancelRollback', () => {
         leftBehind: null,
         reasons: [],
         recovered: [],
-        staged:
+        staged: [
           'Couldn’t remove holiday.jpg.cmdr-tmp-4d1f9c, an unfinished copy left at the destination. ' +
-          'It’s safe to delete, and Cmdr clears it on a later transfer there.',
+            'It’s safe to delete, and Cmdr tries again the next time it connects there.',
+        ],
         level: 'warn',
       })
     })
 
     it('keeps the clean wording and the success colour when the sweep got everything', () => {
-      const readout = readCancelRollback(
-        rollback({ outcome: 'rolledBack', reversed: 4, stagedLeftovers: null }),
-        'copy',
-      )
+      const readout = readCancelRollback(rollback({ outcome: 'rolledBack', reversed: 4, stagedLeftovers: [] }), 'copy')
       expect(readout?.headline).toBe('Removed all 4 items Cmdr had written.')
-      expect(readout?.staged).toBeNull()
+      expect(readout?.staged).toEqual([])
       expect(readout?.level).toBe('success')
     })
 
@@ -292,7 +296,7 @@ describe('readCancelRollback', () => {
       // report, and the leftover is still the user's to know about.
       const readout = readCancelRollback(rollback({ stagedLeftovers: staged }), 'move')
       expect(readout?.headline).toBeNull()
-      expect(readout?.staged).toContain('holiday.jpg.cmdr-tmp-4d1f9c')
+      expect(readout?.staged[0]).toContain('holiday.jpg.cmdr-tmp-4d1f9c')
       expect(readout?.level).toBe('warn')
     })
 
@@ -301,14 +305,63 @@ describe('readCancelRollback', () => {
         rollback({
           outcome: 'rolledBack',
           reversed: 0,
-          stagedLeftovers: { count: 1240, exampleName: 'holiday.jpg.cmdr-tmp-4d1f9c' },
+          stagedLeftovers: [refused(1240)],
         }),
         'copy',
       )
-      expect(readout?.staged).toBe(
+      expect(readout?.staged).toEqual([
         'Couldn’t remove 1,240 unfinished copies left at the destination. ' +
-          'They’re safe to delete, and Cmdr clears them on a later transfer there.',
+          'They’re safe to delete, and Cmdr tries again the next time it connects there.',
+      ])
+    })
+
+    it('says scratch on a server that was out goes once the server is back', () => {
+      const readout = readCancelRollback(
+        rollback({
+          stagedLeftovers: [
+            { fate: 'removedWhenBack', count: 1, exampleName: 'holiday.jpg.cmdr-tmp-4d1f9c', volumeName: 'Naspolya' },
+          ],
+        }),
+        'copy',
       )
+      expect(readout?.staged).toEqual([
+        'holiday.jpg.cmdr-tmp-4d1f9c, an unfinished copy, stays on Naspolya for now. ' +
+          'Cmdr removes it as soon as Naspolya is back.',
+      ])
+    })
+
+    it('words a complete file waiting for its name as the user’s file, never as scratch', () => {
+      const readout = readCancelRollback(
+        rollback({
+          stagedLeftovers: [{ fate: 'landsWhenBack', count: 1, exampleName: 'holiday.jpg', volumeName: 'Naspolya' }],
+        }),
+        'copy',
+      )
+      expect(readout?.staged).toEqual([
+        'holiday.jpg is complete on Naspolya under a temporary name, ' +
+          'and gets its own name the next time Cmdr connects to Naspolya.',
+      ])
+      expect(readout?.staged[0]).not.toMatch(/remove|delete|unfinished/i)
+    })
+
+    it('gives each fate its own line, in the order the backend grouped them', () => {
+      const readout = readCancelRollback(
+        rollback({
+          stagedLeftovers: [
+            refused(1),
+            { fate: 'removedWhenBack', count: 3, exampleName: 'a.mov.cmdr-tmp-1', volumeName: 'Naspolya' },
+            { fate: 'landsWhenBack', count: 2, exampleName: 'b.mov', volumeName: 'Naspolya' },
+          ],
+        }),
+        'copy',
+      )
+      expect(readout?.staged).toEqual([
+        'Couldn’t remove holiday.jpg.cmdr-tmp-4d1f9c, an unfinished copy left at the destination. ' +
+          'It’s safe to delete, and Cmdr tries again the next time it connects there.',
+        '3 unfinished copies stay on Naspolya for now. Cmdr removes them as soon as Naspolya is back.',
+        '2 complete files wait on Naspolya under temporary names. ' +
+          'Each gets its own name the next time Cmdr connects to Naspolya.',
+      ])
     })
 
     it('rides alongside the reasons rather than among them', () => {
@@ -326,7 +379,7 @@ describe('readCancelRollback', () => {
       )
       expect(readout?.reasons).toHaveLength(1)
       expect(readout?.reasons[0]).not.toContain('cmdr-tmp')
-      expect(readout?.staged).toContain('cmdr-tmp')
+      expect(readout?.staged[0]).toContain('cmdr-tmp')
       expect(readout?.level).toBe('warn')
     })
   })
@@ -350,7 +403,7 @@ describe('readCancelRollback', () => {
         leftBehind: null,
         reasons: [],
         recovered: ['Cmdr kept the original from /Volumes/Photos/Scans at /Volumes/Photos/Scans (recovered).'],
-        staged: null,
+        staged: [],
         level: 'info',
       })
     })
@@ -387,7 +440,7 @@ describe('readCancelRollback', () => {
         leftBehind: null,
         reasons: [],
         recovered: [],
-        staged: null,
+        staged: [],
         level: 'info',
       })
     })
@@ -430,12 +483,14 @@ describe('readCancelRollback', () => {
       const readout = readCancelRollback(
         rollback({
           originalsStillInPlace: landed,
-          stagedLeftovers: { count: 1, exampleName: 'holiday.jpg.cmdr-tmp-4d1f9c' },
+          stagedLeftovers: [
+            { fate: 'refused', count: 1, exampleName: 'holiday.jpg.cmdr-tmp-4d1f9c', volumeName: 'Naspolya' },
+          ],
         }),
         'move',
       )
       expect(readout?.headline).toContain('200 originals')
-      expect(readout?.staged).toContain('cmdr-tmp')
+      expect(readout?.staged[0]).toContain('cmdr-tmp')
       expect(readout?.level).toBe('warn')
     })
 

@@ -170,7 +170,7 @@
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     },
     "crates/cmdr-operations/src/transfer/volume/cleanup.rs": {
-      "count": 15,
+      "count": 14,
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     },
     "crates/cmdr-operations/src/transfer/volume/conflict.rs": {

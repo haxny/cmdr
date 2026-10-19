@@ -24,6 +24,7 @@ import type {
   RecoveredOriginal,
   SkipBreakdown,
   SkipReason,
+  StagedLeftoverFate,
   StagedLeftovers,
   WriteOperationType,
 } from '#lib/ipc/bindings.js'
@@ -40,9 +41,10 @@ export interface CancelRollbackReadout {
   reasons: string[]
   /** One line per original that had to keep a recovered sibling name. */
   recovered: string[]
-  /** Cmdr's own half-written working files that stayed at the destination.
-   *  `null` whenever the sweep cleared them, which is the ordinary ending. */
-  staged: string | null
+  /** One line per fate of Cmdr's own unfinished writes that stayed at the
+   *  destination. Empty whenever the cleanup cleared them, which is the
+   *  ordinary ending. */
+  staged: string[]
   level: NonErrorToastLevel
 }
 
@@ -125,21 +127,46 @@ function levelFor(skips: SkipBreakdown[]): NonErrorToastLevel {
 }
 
 /**
- * The line about Cmdr's OWN scratch that stayed at the destination.
+ * Per fate of Cmdr's own unfinished writes, the line that NAMES the one it
+ * applies to and the line that COUNTS several, for the same reason as
+ * `REASON_KEYS`. A `Record`, so a new fate is a compile error here rather than
+ * a silently dropped line.
+ */
+const STAGED_KEYS: Record<StagedLeftoverFate, { named: MessageKey; counted: MessageKey }> = {
+  refused: {
+    named: 'fileOperations.cancelRollback.stagedLeftover.named',
+    counted: 'fileOperations.cancelRollback.stagedLeftover.counted',
+  },
+  removedWhenBack: {
+    named: 'fileOperations.cancelRollback.stagedLeftover.waiting.named',
+    counted: 'fileOperations.cancelRollback.stagedLeftover.waiting.counted',
+  },
+  landsWhenBack: {
+    named: 'fileOperations.cancelRollback.stagedLeftover.landing.named',
+    counted: 'fileOperations.cancelRollback.stagedLeftover.landing.counted',
+  },
+}
+
+/**
+ * The line about one fate of Cmdr's OWN unfinished writes at the destination.
  *
  * Deliberately outside `reasons`: those lines sit under "Cmdr skips anything it
- * isn't sure about", and nothing chose to keep these: the destination turned
- * the delete down while an abandoned write still held the file open. Naming it
- * when there is one is the same call the reason lines make: that name is what
- * the user would go looking for at the destination.
+ * isn't sure about", and nothing chose to keep these. The fate decides the
+ * words: scratch the destination refused, scratch waiting for a server to come
+ * back, or a COMPLETE file waiting for its name, which is the user's data and
+ * ❌ never worded as something to remove. Naming it when there is one is the
+ * same call the reason lines make: that name is what the user would go looking
+ * for at the destination.
  */
 function stagedLine(staged: StagedLeftovers): string {
+  const keys = STAGED_KEYS[staged.fate]
   if (staged.count === 1) {
-    return tString('fileOperations.cancelRollback.stagedLeftover.named', { name: staged.exampleName })
+    return tString(keys.named, { name: staged.exampleName, volumeName: staged.volumeName })
   }
-  return tString('fileOperations.cancelRollback.stagedLeftover.counted', {
+  return tString(keys.counted, {
     countText: formatNumber(staged.count),
     count: staged.count,
+    volumeName: staged.volumeName,
   })
 }
 
@@ -234,11 +261,11 @@ function stoppedHeadline(operationType: WriteOperationType, reversed: number): s
  */
 function readNothingReversed(
   originalsStillInPlace: CancelRollback['originalsStillInPlace'],
-  staged: string | null,
+  staged: string[],
   recovered: string[],
 ): CancelRollbackReadout | null {
   const landed = originalsStillInPlace === null ? null : landedMoveHeadline(originalsStillInPlace.count)
-  if (landed === null && staged === null && recovered.length === 0) return null
+  if (landed === null && staged.length === 0 && recovered.length === 0) return null
   return {
     headline: landed,
     leftBehind: null,
@@ -248,24 +275,24 @@ function readNothingReversed(
     // Nothing went wrong on the landed-move path: the files are whole at the
     // destination and the line only says so. Cmdr's own scratch outliving the
     // sweep is the one thing here worth a colour.
-    level: staged === null ? 'info' : 'warn',
+    level: staged.length === 0 ? 'info' : 'warn',
   }
 }
 
 function readCompletedReversal(
   operationType: WriteOperationType,
   reversed: number,
-  staged: string | null,
+  staged: string[],
   recovered: string[],
 ): CancelRollbackReadout | null {
-  if (reversed === 0 && staged === null && recovered.length === 0) return null
-  if (staged === null && recovered.length === 0) {
+  if (reversed === 0 && staged.length === 0 && recovered.length === 0) return null
+  if (staged.length === 0 && recovered.length === 0) {
     return {
       headline: cleanHeadline(operationType, reversed),
       leftBehind: null,
       reasons: [],
       recovered: [],
-      staged: null,
+      staged: [],
       level: 'success',
     }
   }
@@ -275,7 +302,7 @@ function readCompletedReversal(
     reasons: [],
     recovered,
     staged,
-    level: staged === null ? 'info' : 'warn',
+    level: staged.length === 0 ? 'info' : 'warn',
   }
 }
 
@@ -284,7 +311,7 @@ export function readCancelRollback(
   operationType: WriteOperationType,
 ): CancelRollbackReadout | null {
   const { outcome, reversed, skips, stagedLeftovers, originalsStillInPlace } = rollback
-  const staged = stagedLeftovers === null ? null : stagedLine(stagedLeftovers)
+  const staged = stagedLeftovers.map(stagedLine)
   const recovered = rollback.recovered.map(recoveredLine)
   if (outcome === 'notRolledBack') return readNothingReversed(originalsStillInPlace, staged, recovered)
   if (outcome === 'rolledBack') return readCompletedReversal(operationType, reversed, staged, recovered)
@@ -297,7 +324,7 @@ export function readCancelRollback(
       reasons: [],
       recovered,
       staged,
-      level: staged === null ? 'info' : 'warn',
+      level: staged.length === 0 ? 'info' : 'warn',
     }
   }
   return {
@@ -306,7 +333,7 @@ export function readCancelRollback(
     reasons,
     recovered,
     staged,
-    level: staged === null ? levelFor(skips) : 'warn',
+    level: staged.length === 0 ? levelFor(skips) : 'warn',
   }
 }
 
