@@ -155,7 +155,7 @@ pub fn force_scan(volume_id: &str) -> Result<RescanOutcome, String> {
     // here ran the local guarded walker over a network mount — walking nothing and
     // falsely marking the index complete — so a NAS "Rescan now" indexed zero
     // entries.
-    let detached = off_the_registry(volume_id, |mgr| {
+    let detached = off_the_registry(volume_id, "a manual rescan (force_scan)", |mgr| {
         cover::remember_rescan(volume_id);
         match mgr.force_rescan("manual start") {
             Ok(()) | Err(ScanStartError::AlreadyScanning) => {
@@ -201,7 +201,11 @@ pub fn force_scan(volume_id: &str) -> Result<RescanOutcome, String> {
 /// registry lock for the blocking start, and the machine is stood up on the far
 /// side of the restore.
 pub(in crate::indexing::lifecycle) fn resume_the_phases(volume_id: &str) -> PhaseResume {
-    match off_the_registry(volume_id, IndexManager::cover_again) {
+    match off_the_registry(
+        volume_id,
+        "a completion retry (resume_the_phases)",
+        IndexManager::cover_again,
+    ) {
         // A volume that isn't running has no machine to resume; whatever the
         // retry was waiting for is gone.
         Err(e) => {
@@ -413,15 +417,30 @@ fn hand_the_manager_back(volume_id: &str, mgr: Box<IndexManager>, start_phases: 
 ///
 /// ⚠️ **The window can't strand the volume**, and ❌ that isn't up to `work`: the
 /// [`DetachedManager`] guard ends it on every path out, panic included.
+///
+/// `why` names the caller in the two INFO lines that bracket the window. They're
+/// what makes a `work` that never returns readable from an INFO log: an "out"
+/// with no "back" names who is stuck, and for what.
 pub(in crate::indexing::lifecycle) fn off_the_registry<T>(
     volume_id: &str,
+    why: &str,
     work: impl FnOnce(&mut IndexManager) -> T,
 ) -> Result<Handover<T>, String> {
     let mut held = DetachedManager::take(volume_id)?;
+    log::info!("Index manager for '{volume_id}' is out of the registry for {why}");
+    let started = std::time::Instant::now();
     let result = work(held.manager());
-    Ok(match held.hand_back() {
-        Handover::Restored(()) => Handover::Restored(result),
-        Handover::TornDownWhileAway(()) => Handover::TornDownWhileAway(result),
+    let handover = held.hand_back();
+    let away_ms = started.elapsed().as_millis();
+    Ok(match handover {
+        Handover::Restored(()) => {
+            log::info!("Index manager for '{volume_id}' is back after {away_ms} ms ({why})");
+            Handover::Restored(result)
+        }
+        Handover::TornDownWhileAway(()) => {
+            log::info!("Index manager for '{volume_id}' went to its teardown after {away_ms} ms ({why})");
+            Handover::TornDownWhileAway(result)
+        }
     })
 }
 

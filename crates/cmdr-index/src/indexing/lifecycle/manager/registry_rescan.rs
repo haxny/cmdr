@@ -23,7 +23,8 @@ use crate::indexing::watch::event_loop::LiveLoopEnd;
 /// now fired through the manager's own `Arc`). Mirrors `state::force_scan`'s
 /// extract-drop-run-reinsert flow.
 pub(in crate::indexing) async fn perform_registry_rescan(volume_id: &str, trigger: &str) {
-    let handover = state::off_the_registry(volume_id, |mgr| {
+    let why = format!("a registry rescan ({trigger})");
+    let handover = state::off_the_registry(volume_id, &why, |mgr| {
         // Retire the current watcher and live loop (the fresh scan starts its own).
         // Off the lock with the rest: stopping a watcher joins its run-loop thread.
         if let Some(mut watcher) = mgr.retire_the_watcher() {

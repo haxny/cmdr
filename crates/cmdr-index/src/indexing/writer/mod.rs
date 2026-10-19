@@ -472,6 +472,54 @@ pub enum WriteMessage {
     Shutdown,
 }
 
+impl WriteMessage {
+    /// The variant's name, for a log line. No `Debug`: that would print a whole
+    /// `InsertEntriesV2` batch.
+    fn kind(&self) -> &'static str {
+        match self {
+            WriteMessage::InsertEntriesV2(_) => "InsertEntriesV2",
+            WriteMessage::UpsertEntryV2 { .. } => "UpsertEntryV2",
+            WriteMessage::MoveEntryV2 { .. } => "MoveEntryV2",
+            WriteMessage::DeleteEntryById(_) => "DeleteEntryById",
+            WriteMessage::DeleteSubtreeById(_) => "DeleteSubtreeById",
+            WriteMessage::DeleteDescendantsById(_) => "DeleteDescendantsById",
+            WriteMessage::PropagateDeltaById { .. } => "PropagateDeltaById",
+            WriteMessage::PropagateMinSubtreeEpoch(_) => "PropagateMinSubtreeEpoch",
+            WriteMessage::ComputeAllAggregates { .. } => "ComputeAllAggregates",
+            WriteMessage::ComputePartialAggregates { .. } => "ComputePartialAggregates",
+            WriteMessage::ComputeSubtreeAggregates { .. } => "ComputeSubtreeAggregates",
+            WriteMessage::UpdateLastEventId(_) => "UpdateLastEventId",
+            WriteMessage::UpdateMeta { .. } => "UpdateMeta",
+            WriteMessage::DeleteMeta(_) => "DeleteMeta",
+            WriteMessage::MarkDirsListed { .. } => "MarkDirsListed",
+            WriteMessage::MarkDirsUnreadable { .. } => "MarkDirsUnreadable",
+            WriteMessage::ClearAbandonedIfDue => "ClearAbandonedIfDue",
+            WriteMessage::ClearAbandonedIfArmed => "ClearAbandonedIfArmed",
+            WriteMessage::BumpCurrentEpoch => "BumpCurrentEpoch",
+            #[cfg(test)]
+            WriteMessage::GetEntryCount(_) => "GetEntryCount",
+            WriteMessage::Flush(_) => "Flush",
+            WriteMessage::TruncateData => "TruncateData",
+            WriteMessage::SetDeltaPropagation(_) => "SetDeltaPropagation",
+            WriteMessage::BeginTransaction => "BeginTransaction",
+            WriteMessage::CommitTransaction => "CommitTransaction",
+            WriteMessage::BackfillMissingDirStats => "BackfillMissingDirStats",
+            WriteMessage::ArmLedgerHealLatch => "ArmLedgerHealLatch",
+            WriteMessage::MarkLedgerUnpaid => "MarkLedgerUnpaid",
+            WriteMessage::PayLedgerIfUnpaid => "PayLedgerIfUnpaid",
+            WriteMessage::IncrementalVacuum => "IncrementalVacuum",
+            WriteMessage::WalCheckpoint => "WalCheckpoint",
+            WriteMessage::EmitDirUpdated(_) => "EmitDirUpdated",
+            WriteMessage::Shutdown => "Shutdown",
+        }
+    }
+}
+
+/// How long one message may hold the writer before it's worth a warning. Generous on
+/// purpose: a full aggregate over a big drive legitimately takes seconds, while a
+/// handler stuck in a loop holds everything queued behind it and the open batch's lock.
+const SLOW_MESSAGE: Duration = Duration::from_secs(10);
+
 // ── IndexWriter handle ───────────────────────────────────────────────
 
 /// Handle for sending messages to the writer thread.
@@ -1209,6 +1257,7 @@ fn writer_loop(
             batch.note_message();
         }
 
+        let kind = msg.kind();
         let proc_start = Instant::now();
         // macOS: drain autoreleased ObjC objects each iteration.
         #[cfg(target_os = "macos")]
@@ -1251,8 +1300,17 @@ fn writer_loop(
             &rollups,
             &failure_signal,
         );
-        probe.time_in_processing += proc_start.elapsed();
+        let took = proc_start.elapsed();
+        probe.time_in_processing += took;
         probe.messages_processed += 1;
+        // Only a message that ENDS gets this line; one that never does is named by the
+        // scan start stuck waiting on its flush (`lifecycle/state/scan_control.rs`).
+        if took >= SLOW_MESSAGE {
+            log::warn!(
+                "Writer: one {kind} held '{volume_id}' for {:.1} s; everything queued behind it waited",
+                took.as_secs_f64()
+            );
+        }
         // The busy handler has no "you got the lock" callback, so a contention
         // episode is closed here, once the message that contended is done. One
         // summary line per episode instead of one per retry.

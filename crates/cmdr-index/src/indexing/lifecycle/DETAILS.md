@@ -683,6 +683,13 @@ last word. ❌ Never call `IndexManager::ensure_branch_watch` (plan, start, and 
 `phases/tests/lock_discipline.rs`, which parks the fake stream start at a gate (`watch/watcher/fake_journal.rs`) and
 asks `get_status` meanwhile.
 
+**Every detach window is bracketed at INFO.** `off_the_registry` takes a `why` (`force_scan`, `resume_the_phases`, or a
+registry rescan with its trigger) and logs "out of the registry for …" on the way out, then "back after N ms" or "went
+to its teardown after N ms". An "out" with no "back" is a `work` that never returned, which is otherwise silent at INFO:
+a teardown meeting it only says it "lands as its scan start hands the manager back". The usual cause is a scan start
+blocked in `flush_blocking` on a writer that stopped answering (`../writer/DETAILS.md` § "Delta propagation and the
+search-generation coupling").
+
 **A manual rescan routes by the TYPED volume kind.** `state::force_scan(vid)` calls `mgr.force_rescan(...)`, NOT
 `mgr.start_scan(...)`. `force_rescan` dispatches on `rescan_scanner_for_kind(self.kind)`: a trait-scanned kind (SMB/MTP)
 runs `start_volume_scan` (the trait walk from the share/storage root), a local-scanner kind runs `start_scan`. Pre-fix,

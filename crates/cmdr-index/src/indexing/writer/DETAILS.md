@@ -754,6 +754,12 @@ wait to a thread-local probe: `send` tries a non-blocking enqueue FIRST (only a 
 measure) and the message comes back on `Full` so nothing is lost. The reconcile side arms the probe and reports the span
 (see `../reconcile/DETAILS.md`). Thread-local because each producer walks on its own thread.
 
+**The writer's own side: one WARN per slow message.** A message that holds the writer `SLOW_MESSAGE` (10 s) or longer
+logs its variant name (`WriteMessage::kind`) and how long it took, off the `Instant` the processing probe already takes.
+Only a message that ENDS can say this, so a handler looping forever stays silent here; the lifecycle's detach lines name
+that case from the waiting side (`../lifecycle/DETAILS.md` § "Every detach window is bracketed at INFO"). A full
+aggregate over a very large drive can legitimately trip it.
+
 Cover walks report the same split, for the same reason. `walk_frontier` arms the probe at its start and its summary line
 carries both numbers (`Cover: … in 5.8s (5.8s of it waiting on the writer)`). Without them the line reads as a slow
 walk, which is how a wait that was entirely the queue went unexplained for a while
