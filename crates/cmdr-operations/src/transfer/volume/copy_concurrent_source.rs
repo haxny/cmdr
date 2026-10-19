@@ -28,7 +28,7 @@ use super::landing::{DestFolder, Landing, NewName, where_it_lands};
 use super::merge_ctx::MergeProbe;
 use super::preflight::SourceFileFacts;
 use super::strategy::{LandingName, Replaces, failed_write_leaves_ours_at, resolve_source_is_directory, staging_for};
-use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
+use super::transfer_error::{AtPath, PathRole, PathedVolumeError, WriteFailure, map_volume_error};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{ChildName, VolumeError};
 
@@ -102,13 +102,7 @@ impl ConcurrentCopy<'_> {
         let (landing_path, existing_dest) = self
             .existing_dest_entry(source_index, source_path, &dest_item_path)
             .await
-            .map_err(|e| {
-                WriteFailure::synthetic(map_volume_error(
-                    &dest_item_path.display().to_string(),
-                    PathRole::Destination,
-                    e,
-                ))
-            })?
+            .map_err(WriteFailure::from)?
             .into_parts();
         // The entry that's THERE, in its own spelling, or the new name spelled
         // for the destination.
@@ -271,7 +265,7 @@ impl ConcurrentCopy<'_> {
         source_index: usize,
         source_path: &Path,
         dest_item_path: &Path,
-    ) -> Result<Landing, VolumeError> {
+    ) -> Result<Landing, PathedVolumeError> {
         let folder = if self.dest_dir_is_ours {
             DestFolder::CreatedByUs
         } else {
@@ -293,7 +287,7 @@ impl ConcurrentCopy<'_> {
                     entry: Box::new(entry),
                 }),
                 Err(VolumeError::NotFound(_)) => Ok(Landing::Free(dest_item_path.to_path_buf())),
-                Err(e) => Err(e),
+                Err(e) => Err(e).at_destination(dest_item_path),
             };
         };
         // Record the pre-check BEFORE awaiting it. In the 2026-07-31 incident
@@ -315,11 +309,16 @@ impl ConcurrentCopy<'_> {
                 ),
             );
         }
-        let name = ChildName::new(name)?;
+        let name = ChildName::new(name)
+            .map_err(VolumeError::from)
+            .at_destination(dest_item_path)?;
         // A share that drops under the probe is waited for, and the probe asks
-        // again: it only reads (`../volume_outage.rs`).
-        through_outages(self.state, &[&self.dest_volume], || {
+        // again: it only reads (`../volume_outage.rs`). Pathed, so a share that
+        // stays gone is worded as the lost connection it is.
+        through_outages(self.state, &[&self.dest_volume], || async move {
             where_it_lands(&self.dest_volume, dest_dir, name, folder, NewName::Respell)
+                .await
+                .at_destination(dest_item_path)
         })
         .await
     }

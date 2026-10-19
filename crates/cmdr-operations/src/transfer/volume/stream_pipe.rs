@@ -19,11 +19,13 @@ use super::super::recovered_name::FinalizeFailure;
 use super::super::retry;
 use super::super::staged_write::{StagedWrite, WriteStaging};
 use super::super::transfer_probe::{TaskPhase, note_task_retry, set_task_phase};
-use super::super::volume_outage::{self, OutageEnd, StartedOn, wait_after_failure};
+use super::super::volume_outage::{
+    self, LostConnection, OutageEnd, OutageFailure, StartedOn, lost_connection, wait_after_failure,
+};
 use super::preflight::SourceFileFacts;
 use super::server_side_copy::try_server_side_copy;
 use super::source_reads::SourceReads;
-use super::transfer_error::{AtPath, PathedVolumeError};
+use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::metadata::MetadataClasses;
 use cmdr_fs::volume::{Volume, VolumeError};
 
@@ -312,16 +314,20 @@ impl FileRun<'_> {
     /// The ONE decision for a step that failed: wait out the outage when that's
     /// what the failure was (`volume_outage::wait_after_failure`, judged
     /// against the generations the step's call started on), then resume at the
-    /// step's checkpoint or end the file. `Continue` runs the file again.
+    /// step's checkpoint or end the file. `Continue` runs the file again. A
+    /// file that ends on a server whose connection is gone carries that
+    /// (`volume_outage::lost_connection`), so the person hears the cause.
     async fn on_fault(&mut self, fault: Fault) -> ControlFlow<Result<u64, PathedVolumeError>> {
+        let volumes = [self.source_volume, self.dest_volume];
         let ended = wait_after_failure(
             self.state,
             fault.error(),
-            &[self.source_volume, self.dest_volume],
+            &volumes,
             fault.started_on(),
             &mut self.outages,
         )
         .await;
+        let connection_lost = lost_connection(ended, fault.error(), &volumes);
         match fault {
             // A source share that's gone (a download from a NAS that dropped):
             // once it's back, open the file again. Nothing is staged yet, so
@@ -332,8 +338,9 @@ impl FileRun<'_> {
                     ControlFlow::Continue(())
                 }
                 OutageEnd::Cancelled => ControlFlow::Break(Err(volume_outage::cancelled()).at_source(self.source_path)),
-                OutageEnd::GaveUp | OutageEnd::NotWaitable => {
-                    ControlFlow::Break(Err(error).at_source(self.source_path))
+                OutageEnd::GaveUp { .. } | OutageEnd::NotWaitable => {
+                    ControlFlow::Break(Err(PathedVolumeError::new(PathRole::Source, self.source_path, error)
+                        .with_lost_connection(connection_lost)))
                 }
             },
             // A volume that went away entirely (the share dropped off the
@@ -360,8 +367,8 @@ impl FileRun<'_> {
                     self.attempt = 1;
                     ControlFlow::Continue(())
                 }
-                OutageEnd::Cancelled | OutageEnd::GaveUp | OutageEnd::NotWaitable => {
-                    self.write_failed(error, staged, source_reads).await
+                OutageEnd::Cancelled | OutageEnd::GaveUp { .. } | OutageEnd::NotWaitable => {
+                    self.write_failed(error, staged, source_reads, connection_lost).await
                 }
             },
             // The landing failed with NOTHING cleared because the destination
@@ -406,21 +413,23 @@ impl FileRun<'_> {
                 OutageEnd::Cancelled => {
                     ControlFlow::Break(Err(volume_outage::cancelled()).at_destination(self.dest_path))
                 }
-                OutageEnd::GaveUp | OutageEnd::NotWaitable => {
-                    ControlFlow::Break(Err(PathedVolumeError::from_landing(failure, self.dest_path)))
-                }
+                OutageEnd::GaveUp { .. } | OutageEnd::NotWaitable => ControlFlow::Break(Err(
+                    PathedVolumeError::from_landing(failure, self.dest_path).with_lost_connection(connection_lost),
+                )),
             },
         }
     }
 
     /// A write that failed with no outage to wait out (or one the wait gave up
     /// on): a blip runs the file again after its backoff, a cancel is reported
-    /// as one, anything else ends the file.
+    /// as one, anything else ends the file, carrying the server connection
+    /// that ended it (`lost`) when that's what did.
     async fn write_failed(
         &mut self,
         error: VolumeError,
         staged: StagedWrite,
         source_reads: SourceReads,
+        lost: Option<LostConnection>,
     ) -> ControlFlow<Result<u64, PathedVolumeError>> {
         let (dest_volume, dest_path, attempt) = (self.dest_volume, self.dest_path, self.attempt);
         if retry::should_retry(&error, attempt, self.state) {
@@ -471,7 +480,9 @@ impl FileRun<'_> {
                 dest_path.display(),
             );
         }
-        ControlFlow::Break(Err(source_reads.label(error, self.source_path, dest_path)))
+        ControlFlow::Break(Err(source_reads
+            .label(error, self.source_path, dest_path)
+            .with_lost_connection(lost)))
     }
 }
 

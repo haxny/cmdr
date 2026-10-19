@@ -246,16 +246,20 @@ async fn a_late_error_from_a_replaced_session_is_run_again_and_every_file_lands(
     assert!(leftovers.is_empty(), "no staged partial survives: {leftovers:?}");
 }
 
-/// The share never comes back: after the budget, the copy fails exactly as it
-/// did before it knew how to wait, with what landed still there.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_copy_gives_up_like_before_when_the_share_stays_gone() {
+/// Copies a folder to a share that drops as its second file starts and never
+/// comes back (after `arm` set it up), and hands back what the `write-error`
+/// event carries, built the way the operation builds it.
+async fn copy_that_the_share_stops(
+    lane: &str,
+    arm: impl FnOnce(&OutageVolume),
+) -> (Arc<InMemoryVolume>, Arc<OutageVolume>, WriteOperationError) {
     let engine = TestOperations::new();
     let source = source_with(4).await;
-    let (inner, nas, dest) = nas("outage-copy-gone");
+    let (inner, nas, dest) = nas(lane);
+    arm(&nas);
     nas.drop_at_write(1);
     let state = outage_state(&engine, Duration::from_millis(300));
-    let op = engine.register_state("outage-copy-gone", Arc::clone(&state));
+    let op = engine.register_state(lane, Arc::clone(&state));
 
     let failure = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
@@ -269,11 +273,24 @@ async fn a_copy_gives_up_like_before_when_the_share_stays_gone() {
     )
     .await
     .expect_err("a share that never comes back still fails the copy");
+    let event = write_error_event_from(&state, op.id().to_owned(), WriteOperationType::Copy, failure);
+    (inner, nas, event.error)
+}
+
+/// The share never comes back: after the budget, the copy stops with what
+/// landed still there, and the person reads the real cause: "Lost the
+/// connection to Naspolya", with how long Cmdr waited, the file only as context.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_copy_that_outlasts_its_outage_says_it_lost_the_connection() {
+    let (inner, nas, error) = copy_that_the_share_stops("outage-copy-gone", |_| {}).await;
 
     assert!(
-        matches!(failure.error, WriteOperationError::DeviceDisconnected { .. }),
-        "the same failure as before the wait existed: {:?}",
-        failure.error
+        matches!(
+            &error,
+            WriteOperationError::ServerConnectionLost { path, volume_name, gave_up_after_secs: Some(_) }
+                if path.starts_with("/batch/f") && volume_name == "Naspolya"
+        ),
+        "the connection is the cause, named with the wait: {error:?}"
     );
     assert!(nas.reconnect_attempts() > 1, "after really trying");
     // Nothing of the user's is touched by giving up: the destination folder
@@ -290,6 +307,42 @@ async fn a_copy_gives_up_like_before_when_the_share_stays_gone() {
             .all(|entry| entry.size == Some("file 0".len() as u64)),
         "every file under a real name is whole: {listing:?}"
     );
+}
+
+/// A share that wants a sign-in can't be waited for: the copy says the
+/// connection dropped, with no wait to tell.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_share_that_needs_a_sign_in_says_the_connection_dropped() {
+    let (_inner, nas, error) = copy_that_the_share_stops("outage-copy-sign-in", |nas| nas.require_sign_in()).await;
+
+    assert!(
+        matches!(
+            &error,
+            WriteOperationError::ServerConnectionLost { volume_name, gave_up_after_secs: None, .. }
+                if volume_name == "Naspolya"
+        ),
+        "the connection is the cause, with no wait: {error:?}"
+    );
+    assert_eq!(
+        nas.connection_state(),
+        Some(cmdr_fs::volume::ConnectionState::NeedsSignIn)
+    );
+}
+
+/// A phone over ADB that stays gone is a device that left, ❌ never a server
+/// to check on: it keeps the device wording.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_phone_that_stays_gone_keeps_its_device_wording() {
+    let (_inner, nas, error) = copy_that_the_share_stops("outage-copy-phone", |nas| {
+        nas.serve_as(cmdr_fs::volume::BackendKind::Adb);
+    })
+    .await;
+
+    assert!(
+        matches!(error, WriteOperationError::DeviceDisconnected { .. }),
+        "a device keeps its own words: {error:?}"
+    );
+    assert!(nas.reconnect_attempts() > 1, "it waited for the phone like for a share");
 }
 
 /// Cancel during the wait ends the copy at once, as a cancel.

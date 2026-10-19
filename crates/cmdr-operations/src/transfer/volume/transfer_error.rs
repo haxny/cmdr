@@ -14,7 +14,7 @@ use super::super::super::types::{
     PermissionSide, ReadOnlySide, WriteErrorEvent, WriteOperationError, WriteOperationType,
 };
 use super::super::recovered_name::FinalizeFailure;
-use super::super::volume_outage::{self, OutageFailure};
+use super::super::volume_outage::{self, LostConnection, OutageFailure};
 use cmdr_fs::volume::VolumeError;
 
 /// Which side of a transfer a failing path belongs to.
@@ -115,6 +115,12 @@ pub(crate) struct PathedVolumeError {
     /// is told (`WriteOperationError::NewDataKeptAt`), so it travels with the
     /// error rather than being reconstructed anywhere.
     pub new_data_at: Option<PathBuf>,
+    /// Set only by an outage wait that ENDED the item's work on a server whose
+    /// connection is gone (`volume_outage::lost_connection`): the connection is
+    /// the cause the user needs (`WriteOperationError::ServerConnectionLost`),
+    /// and only the wait knows it. Boxed: it's rare, and every transfer
+    /// `Result` carries this type by value.
+    pub lost_connection: Option<Box<LostConnection>>,
 }
 
 /// Maps with the side the failure carries. Both directions have cost a user a
@@ -122,16 +128,31 @@ pub(crate) struct PathedVolumeError {
 /// (cmdr-reports#17), and a share refusing a nested folder read as the user's
 /// local source being locked (cmdr-reports#62). `new_data_at` turns it into
 /// `NewDataKeptAt` instead: the user needs to be told where their new file
-/// ended up rather than which errno the rename answered.
+/// ended up rather than which errno the rename answered. `lost_connection`
+/// turns it into `ServerConnectionLost`: the server's connection is the cause,
+/// and the errno says nothing a person can act on. Where the new file is
+/// outranks both.
 impl From<PathedVolumeError> for WriteFailure {
     fn from(e: PathedVolumeError) -> Self {
-        let error = match e.new_data_at {
-            Some(kept_at) => WriteOperationError::NewDataKeptAt {
-                path: e.path.display().to_string(),
+        let path = e.path.display().to_string();
+        let error = match (e.new_data_at, e.lost_connection) {
+            (Some(kept_at), _) => WriteOperationError::NewDataKeptAt {
+                path,
                 kept_at: kept_at.display().to_string(),
                 message: e.error.to_string(),
             },
-            None => map_volume_error(&e.path.display().to_string(), e.role, e.error),
+            (None, Some(lost)) => {
+                let LostConnection {
+                    volume_name,
+                    gave_up_after,
+                } = *lost;
+                WriteOperationError::ServerConnectionLost {
+                    path,
+                    volume_name,
+                    gave_up_after_secs: gave_up_after.map(|waited| waited.as_secs()),
+                }
+            }
+            (None, None) => map_volume_error(&path, e.role, e.error),
         };
         Self { error }
     }
@@ -146,6 +167,11 @@ impl OutageFailure for PathedVolumeError {
 
     fn into_cancelled(mut self) -> Self {
         self.error = volume_outage::cancelled();
+        self
+    }
+
+    fn with_lost_connection(mut self, lost: Option<LostConnection>) -> Self {
+        self.lost_connection = lost.map(Box::new);
         self
     }
 }
@@ -167,6 +193,7 @@ impl PathedVolumeError {
             role,
             error,
             new_data_at: None,
+            lost_connection: None,
         }
     }
 
@@ -180,6 +207,7 @@ impl PathedVolumeError {
             role: PathRole::Destination,
             error: failure.error,
             new_data_at: failure.new_data_at,
+            lost_connection: None,
         }
     }
 

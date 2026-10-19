@@ -72,7 +72,10 @@ async fn a_volume_that_stays_gone_is_given_up_on_at_the_budget() {
     let started = std::time::Instant::now();
     let ended = wait_while_out(op.state(), &[&volume], None).await;
 
-    assert_eq!(ended, OutageEnd::GaveUp);
+    let OutageEnd::GaveUp { waited } = ended else {
+        panic!("a volume that stays gone is given up on, got {ended:?}");
+    };
+    assert!(waited >= QUICK.budget, "it says how long it waited: {waited:?}");
     assert!(
         started.elapsed() >= QUICK.budget,
         "it waited the whole budget (took {:?})",
@@ -209,15 +212,17 @@ async fn the_one_look_after_a_give_up_is_bounded_too() {
     let first = engine.register_state("outage-hung-look-first", quick_state(&engine));
     let (nas, volume) = nas("outage-hung-look-lane");
     nas.go_away();
-    assert_eq!(wait_while_out(first.state(), &[&volume], None).await, OutageEnd::GaveUp);
+    assert!(matches!(
+        wait_while_out(first.state(), &[&volume], None).await,
+        OutageEnd::GaveUp { .. }
+    ));
 
     nas.hang_reconnects();
     let started = std::time::Instant::now();
     let ended = tokio::time::timeout(WAIT, wait_while_out(queued.state(), &[&volume], None)).await;
 
-    assert_eq!(
-        ended,
-        Ok(OutageEnd::GaveUp),
+    assert!(
+        matches!(ended, Ok(OutageEnd::GaveUp { .. })),
         "the hung look is abandoned, and the job gives up"
     );
     assert!(
@@ -347,14 +352,17 @@ async fn a_job_queued_before_a_give_up_does_not_wait_again() {
     let (nas, volume) = nas("outage-queued-lane");
     nas.go_away();
 
-    assert_eq!(wait_while_out(first.state(), &[&volume], None).await, OutageEnd::GaveUp);
+    assert!(matches!(
+        wait_while_out(first.state(), &[&volume], None).await,
+        OutageEnd::GaveUp { .. }
+    ));
 
     let attempts_before = nas.reconnect_attempts();
     let started = std::time::Instant::now();
-    assert_eq!(
+    assert!(matches!(
         wait_while_out(queued.state(), &[&volume], None).await,
-        OutageEnd::GaveUp
-    );
+        OutageEnd::GaveUp { .. }
+    ));
     assert!(
         started.elapsed() < QUICK.budget,
         "the queued job gives up at once (took {:?})",
@@ -375,11 +383,17 @@ async fn a_job_created_after_a_give_up_waits_afresh() {
     let first = engine.register_state("outage-before-retry", quick_state(&engine));
     let (nas, volume) = nas("outage-retry-lane");
     nas.go_away();
-    assert_eq!(wait_while_out(first.state(), &[&volume], None).await, OutageEnd::GaveUp);
+    assert!(matches!(
+        wait_while_out(first.state(), &[&volume], None).await,
+        OutageEnd::GaveUp { .. }
+    ));
 
     let retry = engine.register_state("outage-retry", quick_state(&engine));
     let started = std::time::Instant::now();
-    assert_eq!(wait_while_out(retry.state(), &[&volume], None).await, OutageEnd::GaveUp);
+    assert!(matches!(
+        wait_while_out(retry.state(), &[&volume], None).await,
+        OutageEnd::GaveUp { .. }
+    ));
     assert!(
         started.elapsed() >= QUICK.budget,
         "the retry waited a whole budget of its own (took {:?})",
@@ -404,13 +418,19 @@ async fn waiters_on_one_volume_share_its_deadline() {
     tokio::time::sleep(QUICK.budget / 2).await;
 
     let started = std::time::Instant::now();
-    assert_eq!(wait_while_out(op.state(), &[&volume], None).await, OutageEnd::GaveUp);
+    assert!(matches!(
+        wait_while_out(op.state(), &[&volume], None).await,
+        OutageEnd::GaveUp { .. }
+    ));
     assert!(
         started.elapsed() < QUICK.budget * 3 / 4,
         "the late waiter ends at the shared deadline, not a budget after it joined (took {:?})",
         started.elapsed()
     );
-    assert_eq!(early.await.expect("the first waiter ran"), OutageEnd::GaveUp);
+    assert!(matches!(
+        early.await.expect("the first waiter ran"),
+        OutageEnd::GaveUp { .. }
+    ));
 }
 
 /// A reconnect somebody else made (a pane's own backoff) ends the wait too.
@@ -601,4 +621,124 @@ async fn through_outages_stops_after_its_outage_cap() {
         MAX_OUTAGES_PER_ITEM + 1,
         "a flapping link is ridden out a bounded number of times"
     );
+}
+
+// ============================================================================
+// What a wait that ended the work learned: `lost_connection`
+// ============================================================================
+
+const FIFTEEN_MINUTES: Duration = Duration::from_secs(15 * 60);
+
+/// The give-up the person reads as "Lost the connection to Naspolya": the
+/// server's own name, and how long the work waited for it.
+#[test]
+fn a_server_given_up_on_is_named_with_how_long_the_work_waited() {
+    let (nas, volume) = nas("lost-gave-up");
+    nas.go_away();
+
+    let lost = lost_connection(
+        OutageEnd::GaveUp {
+            waited: FIFTEEN_MINUTES,
+        },
+        &lost_session(),
+        &[&volume],
+    );
+
+    assert_eq!(
+        lost,
+        Some(LostConnection {
+            volume_name: "Naspolya".to_owned(),
+            gave_up_after: Some(FIFTEEN_MINUTES),
+        })
+    );
+}
+
+/// A wait that didn't happen (a sign-in only a person can give, or a file that
+/// already rode out its outages) still names the server, with no wait to tell.
+#[test]
+fn a_server_the_work_could_not_wait_for_is_named_without_a_wait() {
+    let (nas, volume) = nas("lost-not-waitable");
+    nas.go_away();
+
+    let lost = lost_connection(OutageEnd::NotWaitable, &lost_session(), &[&volume]);
+
+    assert_eq!(
+        lost,
+        Some(LostConnection {
+            volume_name: "Naspolya".to_owned(),
+            gave_up_after: None,
+        })
+    );
+}
+
+/// The volume that's out is the one named, whichever end of the transfer it
+/// is: a download from a NAS that dropped names the NAS.
+#[test]
+fn the_server_that_is_out_is_the_one_named() {
+    let (_live_nas, live) = nas("lost-pick-live");
+    let other = OutageVolume::wrap(Arc::new(InMemoryVolume::new("Backup box")), "lost-pick-out");
+    other.go_away();
+    let out: Arc<dyn Volume> = Arc::clone(&other) as Arc<dyn Volume>;
+
+    let lost = lost_connection(OutageEnd::NotWaitable, &lost_session(), &[&live, &out]);
+
+    assert_eq!(lost.map(|lost| lost.volume_name), Some("Backup box".to_owned()));
+}
+
+/// A phone over ADB holds a session too, but it's a device: unplugged, it keeps
+/// the device wording, ❌ never "check that the server is on".
+#[test]
+fn a_phone_over_adb_is_not_a_server() {
+    let (phone, volume) = nas("lost-adb");
+    phone.serve_as(cmdr_fs::volume::BackendKind::Adb);
+    phone.go_away();
+
+    let lost = lost_connection(
+        OutageEnd::GaveUp {
+            waited: FIFTEEN_MINUTES,
+        },
+        &lost_session(),
+        &[&volume],
+    );
+
+    assert_eq!(lost, None);
+}
+
+/// No session at all (a local disk, MTP): nothing to have lost a connection to.
+#[test]
+fn a_volume_without_a_session_keeps_its_own_error() {
+    let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Untitled"));
+
+    assert_eq!(
+        lost_connection(OutageEnd::NotWaitable, &lost_session(), &[&volume]),
+        None
+    );
+}
+
+/// A server that reads live proves no lost connection: the error was about
+/// something else and keeps its own words.
+#[test]
+fn a_live_server_keeps_the_error_its_own() {
+    let (_nas, volume) = nas("lost-live");
+
+    assert_eq!(
+        lost_connection(OutageEnd::NotWaitable, &lost_session(), &[&volume]),
+        None
+    );
+}
+
+/// A refusal, and a wait that didn't end the work, are never a lost connection,
+/// even with the server out.
+#[test]
+fn only_a_transport_fault_that_ended_the_work_is_a_lost_connection() {
+    let (nas, volume) = nas("lost-not-a-fault");
+    nas.go_away();
+    let refused = VolumeError::PermissionDenied {
+        path: "/x".into(),
+        raw_os_error: None,
+    };
+
+    assert_eq!(lost_connection(OutageEnd::NotWaitable, &refused, &[&volume]), None);
+    assert_eq!(lost_connection(OutageEnd::Cancelled, &lost_session(), &[&volume]), None);
+    assert_eq!(lost_connection(OutageEnd::Back, &lost_session(), &[&volume]), None);
 }

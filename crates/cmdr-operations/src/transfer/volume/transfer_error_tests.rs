@@ -349,3 +349,62 @@ fn a_reply_refused_for_its_signature_stops_with_its_own_reason() {
         "got {err:?}"
     );
 }
+
+/// A share's lost session, as the file it was on reports it.
+fn lost_at(path: &str) -> PathedVolumeError {
+    PathedVolumeError::new(
+        PathRole::Destination,
+        Path::new(path),
+        VolumeError::DeviceDisconnected("session lost".to_string()),
+    )
+}
+
+/// The outage wait gave up on the share: the person reads the connection as the
+/// cause, with the server's name and how long Cmdr waited, and the file only as
+/// context.
+#[test]
+fn a_server_connection_the_wait_gave_up_on_is_named_as_the_cause() {
+    let failure = WriteFailure::from(
+        lost_at("/smb/share/photos/a.jpg").with_lost_connection(Some(LostConnection {
+            volume_name: "Naspolya".to_string(),
+            gave_up_after: Some(std::time::Duration::from_secs(900)),
+        })),
+    );
+
+    assert!(
+        matches!(
+            &failure.error,
+            WriteOperationError::ServerConnectionLost { path, volume_name, gave_up_after_secs: Some(900) }
+                if path == "/smb/share/photos/a.jpg" && volume_name == "Naspolya"
+        ),
+        "got {:?}",
+        failure.error
+    );
+}
+
+/// No verdict (a phone, a local drive, or a server the wait couldn't speak
+/// for): the error keeps its own wording, exactly as before.
+#[test]
+fn a_disconnect_with_no_lost_connection_keeps_its_device_wording() {
+    let failure = WriteFailure::from(lost_at("/mtp/phone/DCIM/a.jpg").with_lost_connection(None));
+
+    assert!(
+        matches!(&failure.error, WriteOperationError::DeviceDisconnected { path, side: None } if path == "/mtp/phone/DCIM/a.jpg"),
+        "got {:?}",
+        failure.error
+    );
+}
+
+/// Where the user's only complete copy is outranks why the work stopped.
+#[test]
+fn where_the_new_data_is_outranks_a_lost_connection() {
+    let mut error = lost_at("/smb/share/a.jpg").with_lost_connection(Some(LostConnection {
+        volume_name: "Naspolya".to_string(),
+        gave_up_after: None,
+    }));
+    error.new_data_at = Some(PathBuf::from("/smb/share/a (recovered).jpg"));
+
+    assert!(
+        matches!(&WriteFailure::from(error).error, WriteOperationError::NewDataKeptAt { kept_at, .. } if kept_at == "/smb/share/a (recovered).jpg"),
+    );
+}

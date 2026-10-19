@@ -587,7 +587,7 @@ pub(super) async fn wait_for_gone_volumes(
     };
     match wait_while_out(state, volumes, Some(&announce)).await {
         OutageEnd::Cancelled => Err(cancelled_failure(events, operation_id, operation_type)),
-        OutageEnd::Back | OutageEnd::GaveUp | OutageEnd::NotWaitable => Ok(()),
+        OutageEnd::Back | OutageEnd::GaveUp { .. } | OutageEnd::NotWaitable => Ok(()),
     }
 }
 

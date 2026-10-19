@@ -29,9 +29,9 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataReport};
 use cmdr_fs::volume::{
-    BatchScanResult, ConnectionState, CopyScanResult, DirectoryCreation, InMemoryVolume, LaneKey, ListingProgress,
-    ScanBoundary, ScanConflict, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume,
-    VolumeError, VolumeReadStream, WriteMode,
+    BackendKind, BatchScanResult, ConnectionState, CopyScanResult, DirectoryCreation, InMemoryVolume, LaneKey,
+    ListingProgress, ScanBoundary, ScanConflict, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress,
+    StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -78,6 +78,9 @@ pub(crate) struct OutageVolume {
     stale_error_at_rename: Mutex<Option<(usize, RenameDrop)>>,
     /// Which session is up: bumped each time a reconnect brings it back.
     generation: AtomicU64,
+    /// Which backend it stands in for: an SMB share unless a test says
+    /// otherwise ([`serve_as`](Self::serve_as)).
+    backend: Mutex<BackendKind>,
 }
 
 /// Counts itself into its counter when dropped: held across an await that never
@@ -121,7 +124,14 @@ impl OutageVolume {
             drop_at_rename: Mutex::new(None),
             stale_error_at_rename: Mutex::new(None),
             generation: AtomicU64::new(0),
+            backend: Mutex::new(BackendKind::Smb),
         })
+    }
+
+    /// Stands in for `kind` instead of an SMB share: a phone over ADB holds a
+    /// session the same way, and is still a device rather than a server.
+    pub(crate) fn serve_as(&self, kind: BackendKind) {
+        *self.backend.lock_ignore_poison() = kind;
     }
 
     /// The session drops and the server becomes unreachable.
@@ -255,6 +265,9 @@ impl Volume for OutageVolume {
     }
     fn connection_generation(&self) -> Option<u64> {
         Some(self.generation())
+    }
+    fn backend_kind(&self) -> BackendKind {
+        *self.backend.lock_ignore_poison()
     }
     fn connection_state(&self) -> Option<ConnectionState> {
         Some(

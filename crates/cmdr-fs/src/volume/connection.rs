@@ -234,6 +234,20 @@ impl BackendKind {
             Self::Local | Self::Smb | Self::Mtp | Self::Adb | Self::Archive | Self::GitPortal => false,
         }
     }
+
+    /// Whether this backend talks to a SERVER over the network, so a session it
+    /// loses is a lost connection to that server, ❌ never a device that left: a
+    /// phone over ADB holds a session too, and "check that the server is on" is
+    /// the wrong advice for one that was unplugged.
+    ///
+    /// Exhaustive on purpose: a new backend doesn't compile until it answers.
+    #[must_use]
+    pub fn is_server(self) -> bool {
+        match self {
+            Self::Smb | Self::Sftp | Self::Webdav | Self::S3 => true,
+            Self::Local | Self::Mtp | Self::Adb | Self::Archive | Self::GitPortal => false,
+        }
+    }
 }
 
 /// What a "Sign in" affordance on a volume asks a person for: the FORM the sheet

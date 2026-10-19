@@ -837,9 +837,9 @@ atomic-exclusive"). The case it defends is a file appearing between conflict res
 
 **On error the temp goes.** A failed write, a failed aside, or a failed landing removes the temp and deregisters it: the
 bytes there are a partial, or at most a complete copy whose source is still on disk (the item reports failed, so no
-source is ever deleted). This differs from the async cross-volume `StagedWrite::commit`, which re-records the temp as
-a landing before it clears a name, because a landing that fails there can leave the only complete copy of the new bytes
-(§ "File writes are staged"). Locally the landing is one synchronous syscall, so that window doesn't exist.
+source is ever deleted). This differs from the async cross-volume `StagedWrite::commit`, which re-records the temp as a
+landing before it clears a name, because a landing that fails there can leave the only complete copy of the new bytes (§
+"File writes are staged"). Locally the landing is one synchronous syscall, so that window doesn't exist.
 
 **What each arm puts on the temp.** Every arm but the clone goes through `cmdr_fs::metadata::apply_staged` on the temp's
 open fd: xattrs, then the exact mode, then birth, mtime, and atime in ONE call, so APFS and HFS+ can't drag birth down
@@ -1049,8 +1049,8 @@ all; see `../delete/CLAUDE.md`.
 **Decision**: a cross-volume file write streams into a `.cmdr-tmp-<uuid>` sibling and is renamed onto its final name
 only after its last byte, whether or not a conflict made it a safe-replace, unless the write is structurally incapable
 of leaving a partial there (`volume/DETAILS.md` § "The single-shot exemption"). `staged_write.rs` owns it (its landing,
-`land` and the ledger hand-off, in `staged_write_landing.rs`);
-`stream_pipe_file` and the sequential extractor are the two write sites.
+`land` and the ledger hand-off, in `staged_write_landing.rs`); `stream_pipe_file` and the sequential extractor are the
+two write sites.
 
 **Why**: the conflict layer only staged a file→file Overwrite. A NEW file has no conflict, so it streamed straight to
 the destination path — and a transfer killed mid-stream left a truncated file wearing the user's real filename, which is
@@ -1083,9 +1083,9 @@ usually isn't, and a speculative delete would burn one extra round trip per file
 covers.
 
 ❗ **Before the landing clears a name, its temp is recorded as a landing.** From that delete on, the temp may be the
-destination's only copy, so `land` measures it (one stat, on this path only; a temp it can't measure is not cleared
-for) and re-records it as `ItemKind::Landing { destination, expected_size }` through the non-temp barrier: on disk
-before the delete goes out, then the `Temp` record retires and the path leaves `state.in_flight_temps`
+destination's only copy, so `land` measures it (one stat, on this path only; a temp it can't measure is not cleared for)
+and re-records it as `ItemKind::Landing { destination, expected_size }` through the non-temp barrier: on disk before the
+delete goes out, then the `Temp` record retires and the path leaves `state.in_flight_temps`
 (`in_flight_temps::hold_for_landing`). That order means a crash at any moment leaves a record the sweep finishes the
 landing from, ❌ never one it deletes (the rule: `crates/cmdr-operations/DETAILS.md` § "What the sweep does with each
 kind"). The landing record retires when the rename lands it, when the rescue below gives it a real name, or when the
@@ -1096,13 +1096,13 @@ landing cut off mid-way leave it recorded, held for the volume's next arrival. P
 
 ❗ **A cleared way plus a refused second rename strands committed data**, and the landing gets it out of temp space on
 the spot. The bytes are complete by then, the destination name is now EMPTY, and the temp wears a `.cmdr-tmp-*` name,
-which a real name keeps out of every sweep's reach for good, recorded or not. `recovered_name.rs::rescue_out_of_temp_space` renames
-it to `<name> (recovered)<.ext>` and the failure carries that path as `FinalizeFailure::new_data_at`, exactly as
-`finalize::finalize_safe_replace` does; `stream_pipe_file` and `sequential_extract` label it with the DESTINATION
-(`at_source_or_rescued_dest`), since a rescued file is one the user can't find on their own. `recovered_name.rs` sits at
-`transfer/` level because both landings reach it. A failure whose `delete` didn't succeed rescues nothing and reports
-nothing: the destination still holds whatever was in the way (§ "A landing that fails with nothing cleared takes its
-temp away" below). Pinned by
+which a real name keeps out of every sweep's reach for good, recorded or not.
+`recovered_name.rs::rescue_out_of_temp_space` renames it to `<name> (recovered)<.ext>` and the failure carries that path
+as `FinalizeFailure::new_data_at`, exactly as `finalize::finalize_safe_replace` does; `stream_pipe_file` and
+`sequential_extract` label it with the DESTINATION (`at_source_or_rescued_dest`), since a rescued file is one the user
+can't find on their own. `recovered_name.rs` sits at `transfer/` level because both landings reach it. A failure whose
+`delete` didn't succeed rescues nothing and reports nothing: the destination still holds whatever was in the way (§ "A
+landing that fails with nothing cleared takes its temp away" below). Pinned by
 `staged_write.rs::a_landing_that_cleared_the_way_and_then_could_not_rename_rescues_the_new_bytes`.
 
 ❗ **And only for a name the CALLER claimed** (`LandingName`). `AlreadyExists` says something is in the way; only the
@@ -1159,10 +1159,10 @@ leaves the temp to the abandoned-write and startup sweeps, which is safe because
 that may hold the only complete copy at the destination is never in the set, and is recorded as a landing, which no
 sweep deletes. The NAME-based sweep (`volume/cleanup.rs::reap_stale_transfer_temps`) spares every path the ledger
 records, but `finalize_safe_replace`'s temp has no record, so it renames such a temp to a ` (recovered)` name on the
-spot (`volume/DETAILS.md` § "The post-write temp is committed data"). Whatever is still
-listed when the driver's loop ends belongs to a task that was DROPPED mid-write — the concurrent driver drops the rest
-of its window on cancel and on the first failure — so `volume::cleanup::clean_abandoned_staged_writes` removes those,
-and the deep-merge children that were never tracked at all are now covered too.
+spot (`volume/DETAILS.md` § "The post-write temp is committed data"). Whatever is still listed when the driver's loop
+ends belongs to a task that was DROPPED mid-write — the concurrent driver drops the rest of its window on cancel and on
+the first failure — so `volume::cleanup::clean_abandoned_staged_writes` removes those, and the deep-merge children that
+were never tracked at all are now covered too.
 
 **What that sweep can't remove, it REPORTS.** A dropped write task whose handle stays open (§ "Known gap" below) makes
 an SMB2 server answer the delete with a sharing violation for as long as that session lives (measured: refused
@@ -1216,7 +1216,8 @@ local op's temps are recorded and retired synchronously and anything left is a t
   even a destination-side foreground park is capped at a second — and an entry with no reported mtime is spared. ❗ The
   ledger skip is what protects this instance's own complete temps: the write stamps the SOURCE's dates on the temp
   (`stamping.rs`), so one that finished streaming (on its way to land, or a landing that may hold the only copy) reads
-  as old at once. Pinned by `volume/cleanup_tests.rs::the_stale_temp_reap_skips_what_the_ledger_records_however_old_it_looks`. It mirrors
+  as old at once. Pinned by
+  `volume/cleanup_tests.rs::the_stale_temp_reap_skips_what_the_ledger_records_however_old_it_looks`. It mirrors
   `archive_edit::remote::reap_remote_temps`. This is the backstop for anything the log missed (a power loss, a non-UTF-8
   path); a leftover deeper inside a copied subtree waits for a transfer into that directory, and there is no global
   filesystem sweep and there shouldn't be. ⚠️ It runs on both transfer verbs because a destination folder a person only
@@ -1249,9 +1250,8 @@ Both engines write KINDED records; the plain `+` line is only what an earlier bu
 swept. The cross-volume `staged_write.rs` records its temps (and their landings) volume-space homed, naming the volume
 from `WriteOperationState::dest_volume_id()` (the destination half of `journal_volumes`). The local `overwrite.rs` and
 `move_op/cross_fs.rs` take their home from `in_flight_temps::home_for` — the operation's typed destination side
-(`transfer_sides.rs`), ❌ never a prefix match against the mount table. The three
-homes and why the local-mount / volume-namespace split can't be derived: `crates/cmdr-operations/DETAILS.md` § "What the
-sweep does with each kind".
+(`transfer_sides.rs`), ❌ never a prefix match against the mount table. The three homes and why the local-mount /
+volume-namespace split can't be derived: `crates/cmdr-operations/DETAILS.md` § "What the sweep does with each kind".
 
 **A path on a removable drive is NOT local-homed**, even though it's an ordinary local path. A drive can be unplugged at
 the next launch, and a record resolved against its mount point then reads as already gone, so the ledger forgets the
@@ -1837,6 +1837,17 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
   fresh session's state: SMB (`crates/cmdr-smb/DETAILS.md` § "Which session a loss is about"), and SFTP, WebDAV, S3, and
   ADB through the shared `cmdr_fs::volume::ConnectionCell` (`crates/cmdr-fs/DETAILS.md` § "Three questions a remote
   volume gets asked"; ADB, with no session, counts the times a reconnect brought the device back).
+- **A wait that ends the work says it was the connection.** When the wait gives up (`OutageEnd::GaveUp { waited }`, the
+  lane outage's length, fixed by the first waiter to give up so every task reports one wait) or has nothing to wait for
+  (`NotWaitable`: a sign-in, or the item's outages spent), `volume_outage::lost_connection` reads what it saw: a
+  transport fault while a SERVER volume (`BackendKind::is_server`: SMB, SFTP, WebDAV, S3) reads not live. The runner and
+  `through_outages` attach that to the `PathedVolumeError` (`lost_connection`), and its mapping words it
+  `WriteOperationError::ServerConnectionLost { volume_name, gave_up_after_secs }`, the file as context only. ❌ Never
+  from a path or a message. A phone over ADB, MTP, and a local drive keep `DeviceDisconnected` (a device that left is
+  not a server to check on), and a server that reads LIVE keeps the error's own words: nothing proves its connection is
+  gone. The verdict names the volume it finds out, so a download from a dropped NAS names the NAS. A failure that only
+  carries a bare `VolumeError` through the wait keeps its old wording; every transfer call site that waits carries a
+  `PathedVolumeError`.
 
 **Where it's asked, and why only there.** Only where a transfer meets the share, and only for calls that are safe to run
 again:

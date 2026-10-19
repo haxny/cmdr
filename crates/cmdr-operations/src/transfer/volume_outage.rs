@@ -62,6 +62,9 @@
 //!   sibling's fresh session and failed for real, gets one re-run it didn't
 //!   need, which is safe (only re-runnable work reaches these waits) and
 //!   bounded.
+//! - **Says it was the connection.** A wait that ends the work on a server
+//!   whose session is gone hands back what it saw ([`lost_connection`]), so the
+//!   person reads "Lost the connection to {server}" rather than a device error.
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -84,8 +87,14 @@ pub(crate) enum OutageEnd {
     /// Every volume that was out is back: run the work again.
     Back,
     /// The budget ran out with the volume still gone. The caller fails the way
-    /// it would have without waiting.
-    GaveUp,
+    /// it would have without waiting, and tells the person how long it waited
+    /// ([`lost_connection`]).
+    GaveUp {
+        /// How long the lane's outage had lasted when it was given up on:
+        /// every waiter on it shares one record, so this is how long the work
+        /// waited, whoever started the wait.
+        waited: Duration,
+    },
     /// The person cancelled while the operation waited.
     Cancelled,
     /// Nothing to wait for: no listed volume is out in a way it can come back
@@ -218,19 +227,73 @@ where
         match wait_after_failure(state, error.volume_error(), volumes, &started_on, &mut outages).await {
             OutageEnd::Back => {}
             OutageEnd::Cancelled => return Err(error.into_cancelled()),
-            OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(error),
+            ended @ (OutageEnd::GaveUp { .. } | OutageEnd::NotWaitable) => {
+                let lost = lost_connection(ended, error.volume_error(), volumes);
+                return Err(error.with_lost_connection(lost));
+            }
         }
     }
 }
 
 /// What [`through_outages`] needs of a call's error: the `VolumeError` to judge
-/// the outage by, and the same failure recast as the cancel that ended a wait.
-/// A bare `VolumeError`, or one that also carries where it happened
-/// (`volume::transfer_error::PathedVolumeError`), which keeps that through the
-/// wait.
+/// the outage by, the same failure recast as the cancel that ended a wait, and
+/// a place for what the wait learned. A bare `VolumeError`, or one that also
+/// carries where it happened (`volume::transfer_error::PathedVolumeError`),
+/// which keeps that through the wait and words a lost server connection as one.
 pub(crate) trait OutageFailure {
     fn volume_error(&self) -> &VolumeError;
     fn into_cancelled(self) -> Self;
+    /// The same failure, carrying the connection that ended the work. A failure
+    /// with nowhere to keep it (a bare `VolumeError`) stays what it was.
+    fn with_lost_connection(self, _lost: Option<LostConnection>) -> Self
+    where
+        Self: Sized,
+    {
+        self
+    }
+}
+
+/// The server connection an item's work ended on, as the outage wait saw it:
+/// the fact behind "Lost the connection to {server}"
+/// (`WriteOperationError::ServerConnectionLost`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct LostConnection {
+    /// The server's volume, named as the volume names itself.
+    pub(crate) volume_name: String,
+    /// How long the work waited for it before it stopped. `None` when it didn't
+    /// wait this time: a sign-in only a person can give, or an item that had
+    /// already ridden out its [`MAX_OUTAGES_PER_ITEM`].
+    pub(crate) gave_up_after: Option<Duration>,
+}
+
+/// What a wait that ENDED an item's work learned about its connection, for the
+/// error the person reads: `Some` only for a transport fault while a server
+/// volume's session reads not live (`Disconnected`, or a sign-in it needs).
+///
+/// ❗ Typed facts only, ❌ never a path or a message: the backend says it's a
+/// server ([`BackendKind::is_server`](cmdr_fs::volume::BackendKind::is_server)),
+/// so a phone over ADB keeps its device wording and a local disk or MTP (no
+/// session) keeps whatever its error says. A server that reads LIVE proves no
+/// lost connection either: the error was about something else, and keeps its
+/// own words.
+pub(crate) fn lost_connection(
+    ended: OutageEnd,
+    error: &VolumeError,
+    volumes: &[&Arc<dyn Volume>],
+) -> Option<LostConnection> {
+    let gave_up_after = match ended {
+        OutageEnd::GaveUp { waited } => Some(waited),
+        OutageEnd::NotWaitable => None,
+        OutageEnd::Back | OutageEnd::Cancelled => return None,
+    };
+    error.transport_fault()?;
+    let server = volumes.iter().find(|volume| {
+        volume.backend_kind().is_server() && volume.connection_state().is_some_and(|state| !state.is_live())
+    })?;
+    Some(LostConnection {
+        volume_name: server.name().to_owned(),
+        gave_up_after,
+    })
 }
 
 impl OutageFailure for VolumeError {
@@ -285,7 +348,7 @@ async fn wait_for_volume(
     let outages = state.scope().stores().outages();
     let (mut deadline, _membership) = match Outages::join(outages, &lane, state.born, policy.budget) {
         Joined::Waiting { deadline, membership } => (deadline, membership),
-        Joined::AlreadyGaveUp => {
+        Joined::AlreadyGaveUp { waited } => {
             // This outage was waited out already, by work queued before it gave
             // up. One look before agreeing: the volume may be back by now, and
             // with no pane on it, nothing else would have noticed.
@@ -299,7 +362,7 @@ async fn wait_for_volume(
                     OutageEnd::Back
                 }
                 Attempt::Cancelled => OutageEnd::Cancelled,
-                Attempt::Failed | Attempt::Hopeless => OutageEnd::GaveUp,
+                Attempt::Failed | Attempt::Hopeless => OutageEnd::GaveUp { waited },
             };
         }
     };
@@ -341,13 +404,13 @@ async fn wait_for_volume(
         }
         let now = Instant::now();
         if now >= deadline {
-            outages.gave_up(&lane);
+            let waited = outages.gave_up(&lane);
             log::warn!(
                 target: "copy",
                 "volume outage: volumeName={name:?} didn't come back within {:?}; giving up",
                 now.saturating_duration_since(started),
             );
-            return OutageEnd::GaveUp;
+            return OutageEnd::GaveUp { waited };
         }
         if now >= next_attempt {
             match attempt_once(state, volume, Some(deadline)).await {
@@ -502,12 +565,15 @@ struct Outage {
     id: u64,
     started: Instant,
     gave_up_at: Option<std::time::Instant>,
+    /// How long the outage had lasted when it was given up on, kept with the
+    /// give-up so a job queued behind it can say how long Cmdr waited.
+    waited: Duration,
     waiters: usize,
 }
 
 enum Joined {
     Waiting { deadline: Instant, membership: Membership },
-    AlreadyGaveUp,
+    AlreadyGaveUp { waited: Duration },
 }
 
 impl Outages {
@@ -549,7 +615,7 @@ impl Outages {
                     };
                 }
                 Some(gave_up_at) if born <= gave_up_at && gave_up_at.elapsed() < budget => {
-                    return Joined::AlreadyGaveUp;
+                    return Joined::AlreadyGaveUp { waited: outage.waited };
                 }
                 Some(_) => {}
             }
@@ -561,6 +627,7 @@ impl Outages {
                 id,
                 started: now,
                 gave_up_at: None,
+                waited: Duration::ZERO,
                 waiters: 1,
             },
         );
@@ -580,11 +647,19 @@ impl Outages {
     }
 
     /// The outage outlasted its budget. Kept, so the jobs queued behind the one
-    /// that waited don't each wait again (see [`join`](Self::join)).
-    fn gave_up(&self, lane: &LaneKey) {
-        if let Some(outage) = self.records.lock_ignore_poison().get_mut(lane) {
-            outage.gave_up_at.get_or_insert_with(std::time::Instant::now);
+    /// that waited don't each wait again (see [`join`](Self::join)). Answers how
+    /// long it had lasted: the first waiter to give up fixes it, so every
+    /// waiter on the lane reports the same wait.
+    fn gave_up(&self, lane: &LaneKey) -> Duration {
+        let mut records = self.records.lock_ignore_poison();
+        let Some(outage) = records.get_mut(lane) else {
+            return Duration::ZERO;
+        };
+        if outage.gave_up_at.is_none() {
+            outage.gave_up_at = Some(std::time::Instant::now());
+            outage.waited = outage.started.elapsed();
         }
+        outage.waited
     }
 
     fn leave(&self, membership: &Membership) {

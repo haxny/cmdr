@@ -26,7 +26,7 @@ use super::super::dest_name_index::{DestLookup, DestNameIndex};
 use super::super::transfer_driver::{FetchFut, NameAtDest};
 use super::super::transfer_probe::{DriverPhase, OperationProbe};
 use super::super::volume_outage::through_outages;
-use super::transfer_error::{PathRole, map_volume_error};
+use super::transfer_error::{AtPath, WriteFailure};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ChildName, Volume, VolumeError};
 
@@ -128,9 +128,12 @@ async fn name_at_destination(
     dest: &Path,
     new_name: NewName,
 ) -> Result<NameAtDest, WriteOperationError> {
-    let refused = |e| map_volume_error(&dest.display().to_string(), PathRole::Destination, e);
-    let landing = through_outages(state, &[dest_volume], || probe_one_name(dest_volume, dest, new_name)).await;
-    match landing.map_err(refused)? {
+    // Pathed, so a share that stays gone is worded as the lost connection it is.
+    let landing = through_outages(state, &[dest_volume], || async move {
+        probe_one_name(dest_volume, dest, new_name).await.at_destination(dest)
+    })
+    .await;
+    match landing.map_err(|e| WriteFailure::from(e).error)? {
         Landing::Free(path) => Ok(NameAtDest::Free(path)),
         Landing::Taken { path, entry } => Ok(NameAtDest::Taken {
             path,

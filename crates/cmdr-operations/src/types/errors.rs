@@ -387,6 +387,24 @@ pub enum WriteOperationError {
     ConnectionInterrupted {
         path: String,
     },
+    /// The connection to a SERVER (SMB, SFTP, WebDAV, S3) ended the operation:
+    /// Cmdr waited for it to come back and gave up, or couldn't wait at all.
+    /// The connection is the cause; `path` (the file it was on) is context only.
+    ///
+    /// ❗ Only the outage wait's verdict builds it (`volume_outage::lost_connection`,
+    /// from typed facts: a transport fault, a session that reads not live, a
+    /// backend that's a server), ❌ never a path or a message. A phone (MTP, ADB)
+    /// or a local drive keeps `DeviceDisconnected`: unplugged is a device, not a
+    /// server.
+    ServerConnectionLost {
+        path: String,
+        /// The server's volume, named as it was when the operation stopped.
+        volume_name: String,
+        /// How long Cmdr waited for it before stopping, in whole seconds. `None`
+        /// when it didn't wait this time (a sign-in only a person can give, or
+        /// a file that had already ridden out its share of outages).
+        gave_up_after_secs: Option<u64>,
+    },
     /// A server's reply on a signed session carried a bad or missing signature, so Cmdr refused
     /// it and stopped (`VolumeError::SignatureInvalid`, SMB-only today). Its own variant so the
     /// stopped state can say so: it's a possible sign of tampering between the Mac and the
@@ -559,6 +577,7 @@ macro_rules! item_path_of {
             | WriteOperationError::PermissionDenied { path, .. }
             | WriteOperationError::DestinationFull { path }
             | WriteOperationError::ConnectionInterrupted { path }
+            | WriteOperationError::ServerConnectionLost { path, .. }
             | WriteOperationError::ReplySignatureRefused { path, .. }
             | WriteOperationError::FileLocked { path }
             | WriteOperationError::MoveNotConfirmed { path, .. }
