@@ -1353,6 +1353,34 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.serverConnectionLost.title": "Verbinding met {volumeName} verbroken",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr heeft {duration} gewacht tot {volumeName} terug was en is toen gestopt. Cmdr was {fileName} aan het kopiëren.",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr heeft {duration} gewacht tot {volumeName} terug was en is toen gestopt. Cmdr was {fileName} aan het verplaatsen.",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "De verbinding met {volumeName} werd verbroken terwijl Cmdr {fileName} aan het kopiëren was.",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "De verbinding met {volumeName} werd verbroken terwijl Cmdr {fileName} aan het verplaatsen was.",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "Controleer of de server aanstaat en je netwerk werkt, en probeer het dan opnieuw. Volledig gekopieerde bestanden staan al op hun plek.",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "Controleer of de server aanstaat en je netwerk werkt, en probeer het dan opnieuw. Volledig verplaatste bestanden staan al op hun plek.",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
   "errors.write.replySignatureRefused.title": "Antwoord van de server geweigerd",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

@@ -1352,6 +1352,34 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.serverConnectionLost.title": "与 {volumeName} 的连接已断开",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr 等待 {volumeName} 恢复连接等了 {duration}，然后就停止了。当时正在拷贝 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr 等待 {volumeName} 恢复连接等了 {duration}，然后就停止了。当时正在移动 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "Cmdr 拷贝 {fileName} 时，与 {volumeName} 的连接断开了。",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "Cmdr 移动 {fileName} 时，与 {volumeName} 的连接断开了。",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "检查一下服务器是否开着、网络是否正常，然后再试一次。拷贝完成的文件已经在那里了。",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "检查一下服务器是否开着、网络是否正常，然后再试一次。移动完成的文件已经在那里了。",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
   "errors.write.replySignatureRefused.title": "已拒绝服务器的回复",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

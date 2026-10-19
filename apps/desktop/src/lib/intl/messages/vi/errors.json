@@ -1353,6 +1353,34 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.serverConnectionLost.title": "Đã mất kết nối tới {volumeName}",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr đã chờ {volumeName} kết nối lại trong {duration} rồi dừng. Lúc đó Cmdr đang sao chép {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr đã chờ {volumeName} kết nối lại trong {duration} rồi dừng. Lúc đó Cmdr đang di chuyển {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "Đã mất kết nối tới {volumeName} trong lúc Cmdr đang sao chép {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "Đã mất kết nối tới {volumeName} trong lúc Cmdr đang di chuyển {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "Hãy kiểm tra xem máy chủ có đang bật và mạng của bạn có hoạt động không, rồi thử lại. Những tệp đã sao chép xong đã nằm sẵn ở đó.",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "Hãy kiểm tra xem máy chủ có đang bật và mạng của bạn có hoạt động không, rồi thử lại. Những tệp đã di chuyển xong đã nằm sẵn ở đó.",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
   "errors.write.replySignatureRefused.title": "Đã từ chối phản hồi của máy chủ",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

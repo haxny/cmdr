@@ -1938,7 +1938,7 @@
     "sources": "macOS AppKit (« Le volume « %@ » n'a pas pu être monté. »)"
   },
   "move": {
-    "accept": ["déplace", "déplacé", "déplaçant"],
+    "accept": ["déplace", "déplacé", "déplaçant", "déplaçait"],
     "chosen": "Déplacer",
     "confidence": "high",
     "exceptions": {

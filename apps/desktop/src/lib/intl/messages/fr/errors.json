@@ -1353,6 +1353,34 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.serverConnectionLost.title": "Connexion à {volumeName} perdue",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr a attendu le retour de {volumeName} pendant {duration}, puis s’est arrêté. Cmdr copiait alors {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr a attendu le retour de {volumeName} pendant {duration}, puis s’est arrêté. Cmdr déplaçait alors {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "La connexion à {volumeName} s’est interrompue pendant que Cmdr copiait {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "La connexion à {volumeName} s’est interrompue pendant que Cmdr déplaçait {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "Vérifiez que le serveur est allumé et que votre réseau fonctionne, puis réessayez. Les fichiers entièrement copiés sont déjà à destination.",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "Vérifiez que le serveur est allumé et que votre réseau fonctionne, puis réessayez. Les fichiers entièrement déplacés sont déjà à destination.",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
   "errors.write.replySignatureRefused.title": "Réponse du serveur refusée",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

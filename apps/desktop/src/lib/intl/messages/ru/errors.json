@@ -1353,6 +1353,34 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.serverConnectionLost.title": "Соединение с сервером {volumeName} прервано",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr ждал в течение {duration}, пока сервер {volumeName} снова появится в сети, а затем остановил копирование. В это время копировался файл {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr ждал в течение {duration}, пока сервер {volumeName} снова появится в сети, а затем остановил перемещение. В это время перемещался файл {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "Соединение с сервером {volumeName} прервалось, пока Cmdr копировал файл {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "Соединение с сервером {volumeName} прервалось, пока Cmdr перемещал файл {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "Проверьте, что сервер включен и сеть работает, и попробуйте еще раз. Полностью скопированные файлы уже на месте.",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "Проверьте, что сервер включен и сеть работает, и попробуйте еще раз. Полностью перемещенные файлы уже на месте.",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
   "errors.write.replySignatureRefused.title": "Ответ сервера отклонен",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

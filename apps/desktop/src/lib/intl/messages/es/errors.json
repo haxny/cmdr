@@ -1353,6 +1353,34 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.serverConnectionLost.title": "Se ha perdido la conexión con {volumeName}",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr ha esperado {duration} a que {volumeName} volviera y luego ha detenido la copia. Estaba copiando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr ha esperado {duration} a que {volumeName} volviera y luego ha detenido el movimiento. Estaba moviendo {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "Se ha cortado la conexión con {volumeName} mientras Cmdr copiaba {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "Se ha cortado la conexión con {volumeName} mientras Cmdr movía {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "Comprueba que el servidor esté encendido y que tu red funcione, y vuelve a intentarlo. Los archivos que se han terminado de copiar ya están ahí.",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "Comprueba que el servidor esté encendido y que tu red funcione, y vuelve a intentarlo. Los archivos que se han terminado de mover ya están ahí.",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
   "errors.write.replySignatureRefused.title": "Respuesta del servidor rechazada",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

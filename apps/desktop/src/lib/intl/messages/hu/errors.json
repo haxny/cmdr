@@ -1353,6 +1353,34 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.serverConnectionLost.title": "Megszakadt a kapcsolat ezzel a szerverrel: {volumeName}",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "A Cmdr arra várt, hogy {volumeName} újra elérhető legyen, de {duration} után leállt. Épp ezt a fájlt másolta: {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "A Cmdr arra várt, hogy {volumeName} újra elérhető legyen, de {duration} után leállt. Épp ezt a fájlt helyezte át: {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "Megszakadt a kapcsolat ezzel a szerverrel: {volumeName}. A Cmdr épp ezt a fájlt másolta: {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "Megszakadt a kapcsolat ezzel a szerverrel: {volumeName}. A Cmdr épp ezt a fájlt helyezte át: {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "Ellenőrizd, hogy be van-e kapcsolva a szerver, és működik-e a hálózatod, majd próbáld újra. A már átmásolt fájlok a célhelyen vannak.",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "Ellenőrizd, hogy be van-e kapcsolva a szerver, és működik-e a hálózatod, majd próbáld újra. A már áthelyezett fájlok a célhelyen vannak.",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
   "errors.write.replySignatureRefused.title": "Elutasított szerverválasz",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

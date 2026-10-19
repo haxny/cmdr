@@ -1353,6 +1353,34 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.serverConnectionLost.title": "與 {volumeName} 的連線中斷",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr 等 {volumeName} 恢復連線等了 {duration}，然後就停下來了。當時正在複製 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr 等 {volumeName} 恢復連線等了 {duration}，然後就停下來了。當時正在移動 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "Cmdr 複製 {fileName} 時，與 {volumeName} 的連線中斷了。",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "Cmdr 移動 {fileName} 時，與 {volumeName} 的連線中斷了。",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "檢查一下伺服器有沒有開著、網路是否正常，然後再試一次。複製完成的檔案已經在那裡了。",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "檢查一下伺服器有沒有開著、網路是否正常，然後再試一次。移動完成的檔案已經在那裡了。",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
   "errors.write.replySignatureRefused.title": "已拒絕伺服器的回覆",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

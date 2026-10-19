@@ -1353,6 +1353,34 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.serverConnectionLost.title": "Conexão com {volumeName} perdida",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "O Cmdr esperou {duration} pela volta de {volumeName} e depois parou. O Cmdr estava copiando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "O Cmdr esperou {duration} pela volta de {volumeName} e depois parou. O Cmdr estava movendo {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "A conexão com {volumeName} foi perdida enquanto o Cmdr copiava {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "A conexão com {volumeName} foi perdida enquanto o Cmdr movia {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "Confira se o servidor está ligado e se a sua rede está funcionando, depois tente de novo. Os arquivos que terminaram de ser copiados já estão lá.",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "Confira se o servidor está ligado e se a sua rede está funcionando, depois tente de novo. Os arquivos que terminaram de ser movidos já estão lá.",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
   "errors.write.replySignatureRefused.title": "Resposta do servidor recusada",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"
