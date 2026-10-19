@@ -609,6 +609,27 @@ single requests for 0.3–6 s, and a bundle reader looking for why a folder took
 `entries=` on the same line tells a huge folder from a held request. On SMB the held call also gets its own rolled-up
 line (`cmdr-smb`'s `slow_calls`).
 
+## Tests arm no OS stream
+
+`start_watching` splits into bookkeeping (the `WATCHER_MANAGER` entry, its coverage from `coverage_for_watched_path`,
+the reconcile, `stop_watching`) and `arm_stream`, the OS half. A test build arms `WatchStream::Scripted` there: the
+manager entry and coverage are real, there's no stream, and its drop is free. A test that blocks on a real delivery
+opts its listing in with `watch_for_real(listing_id)` first, and `has_os_stream` says which one a watch got.
+
+Decision/Why: the choice is per listing id because `WATCHER_MANAGER` and the test binary's engine (which arms through
+the watch observer) are process-wide, and plain `cargo test` runs every test in one process, so a global switch would
+turn real delivery off for the real cell too. An injectable manager couldn't reach arms that go through the shared
+engine, and choosing by path root would be magic by location. Test builds default to scripted, so a new test that only
+asserts arming can't add `fseventsd` load by accident: a stream start took 4–10 s on a busy host and teardown up to
+660 ms, the arming tests logged 8 s timeouts by the dozen, and every live stream starved the real-delivery cells too.
+Same split as the git portal (`crates/cmdr-git/DETAILS.md` § "The watcher splits into bookkeeping and a backend") and
+the downloads watcher (`apps/desktop/src-tauri/src/downloads/DETAILS.md` § "Testing").
+
+**One real cell**: `watcher_test::entries_that_went_with_a_replaced_watch_root_leave_the_listing`, since what FSEvents
+reports for a replaced root is the OS's to answer. ❌ Don't add a second for a property of our batch handling: build the
+`DebouncedEvent`s and call `handle_directory_change_incremental`, as `rewrite_a_dotfile_beside_a_visible_file` does.
+The E2E arm latch (`set_test_arm_hold`) runs in the app, so it always gets the real stream.
+
 ## Watcher path rebasing
 
 On macOS, FSEvents reports canonical paths (`/private/tmp/…`) while the listing cache holds the user-navigated form

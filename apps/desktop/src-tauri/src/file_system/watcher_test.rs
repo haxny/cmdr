@@ -257,10 +257,14 @@ async fn test_handle_directory_change_detects_new_entries() {
 ///
 /// The listing cache IS what the pane serves, so asserting on it is the user-visible
 /// symptom, not an internal call count.
+///
+/// The listing watcher's one real-stream cell (`watch_for_real`): what FSEvents reports for a
+/// replaced root is the operating system's to answer, so a scripted batch could only
+/// assert our guess at it.
 #[cfg(target_os = "macos")]
 #[test]
 fn entries_that_went_with_a_replaced_watch_root_leave_the_listing() {
-    use crate::file_system::watcher::start_watching;
+    use crate::file_system::watcher::{has_os_stream, start_watching, watch_for_real};
     use crate::test_support::{TestDir, wait_until};
     use cmdr_fs::testing::unique_test_id;
     use cmdr_listing::testing::TestListing;
@@ -284,7 +288,9 @@ fn entries_that_went_with_a_replaced_watch_root_leave_the_listing() {
             list_directory_core(&watched, &crate::listing_host::backends::AppListings).expect("the fresh dir lists"),
         )
         .insert(crate::listing_host::listings(), "watch-root-replaced");
+    watch_for_real(listing.id());
     start_watching(listing.id(), &watched).expect("start_watching should succeed on a real dir");
+    assert!(has_os_stream(listing.id()), "this cell needs a real FSEvents stream");
 
     // Arming an FSEvents stream is asynchronous, so prove the watch is delivering
     // before the replacement. Without this, a miss could just mean "too early".
@@ -397,8 +403,6 @@ fn a_detached_arm_that_lost_the_race_leaves_no_watch_behind() {
 ///
 /// The directory's mtime is pushed into the past first, so the re-read here is earned by
 /// the mtime MOVING, not by the "modified too recently to trust" rule.
-///
-/// Named `a_detached_arm_` so it shares the arming tests' 20 s nextest cap.
 #[cfg(target_os = "macos")]
 #[test]
 fn a_detached_arm_rereads_a_change_that_landed_while_it_was_in_flight() {
@@ -440,6 +444,34 @@ fn a_detached_arm_rereads_a_change_that_landed_while_it_was_in_flight() {
     );
 
     stop_watching(listing.id());
+}
+
+/// A test build arms the bookkeeping and nothing else: a test that asserts a watch is
+/// armed, disarmed, or reconciled must not wait on the host-wide `fseventsd`, whose
+/// stream start took 4–10 s under a busy `rust-tests` run. Only a listing that opted in
+/// with `watch_for_real` gets an OS stream.
+#[test]
+fn an_arm_in_a_test_build_opens_no_os_stream() {
+    use crate::file_system::watcher::{has_os_stream, start_watching, stop_watching};
+    use crate::test_support::TestDir;
+    use cmdr_fs::testing::unique_test_id;
+    use cmdr_fs::volume::WatchCoverage;
+
+    let scratch = TestDir::new("scripted-arm");
+    let listing_id = unique_test_id("scripted-arm");
+
+    start_watching(&listing_id, &scratch).expect("arming a real dir succeeds");
+
+    assert_eq!(
+        crate::file_system::watcher::coverage_for_listings(std::slice::from_ref(&listing_id)),
+        WatchCoverage::EveryWriter,
+        "the scripted watch still records its coverage, decided by the same statfs"
+    );
+    assert!(
+        !has_os_stream(&listing_id),
+        "a test-build arm must not open an OS stream"
+    );
+    stop_watching(&listing_id);
 }
 
 /// The reconcile's decision, one rule per case. `opened_at` is a fixed instant, so the

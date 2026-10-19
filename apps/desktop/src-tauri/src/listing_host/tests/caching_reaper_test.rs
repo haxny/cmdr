@@ -16,7 +16,7 @@ fn is_watched(id: &str) -> bool {
 
 #[test]
 fn reaper_evicts_stale_listing_and_its_watcher_together() {
-    // A real directory so `start_watching` can attach an FSEvents watcher.
+    // A real directory, since `start_watching` refuses a path the OS would.
     let dir = tempfile::tempdir().unwrap();
     let listing = TestListing::new()
         .path(dir.path())

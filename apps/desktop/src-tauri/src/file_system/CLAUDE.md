@@ -20,18 +20,20 @@ Sync status, volume management, and file watching. The engines are crates: listi
   folder icons), and encode a **binary** plist.
 - **Never call macOS frameworks from rayon or any constrained-stack pool**: FileProvider XPC blows the 2 MB stack and
   can block forever. Use pooled, hard-capped 8 MB OS threads (`framework_pool.rs`). § "Threading".
-- **Watcher rules.** Each has its own section in `DETAILS.md`; read them before touching `watcher.rs`:
+- **Watcher rules** (each has a `DETAILS.md` section; read them before touching `watcher.rs`):
   - ❌ Never `tokio::spawn` from a watcher OS thread (no reactor: it panics). Use `tauri::async_runtime::spawn`.
   - The watcher is the engine's first `ListingObserver` and keeps only the OS half: changes go to
     `Listings::observe_children`, full re-reads to `Listings::refresh`.
-  - Arm listing watches with `start_watching_detached`, ❌ never `start_watching` (inline was p90 653 ms of dead time).
-    A late arm misses earlier changes, so `arm_missed_a_change` (mtime) gates a re-read, ❌ never an unconditional one.
+  - Arm listing watches with `start_watching_detached`, ❌ never `start_watching` (p90 653 ms inline). A late arm
+    misses earlier changes, so `arm_missed_a_change` (mtime) gates a re-read, ❌ never an unconditional one.
   - Rebase event paths (`rebase_event_path`), or firmlinks (`/tmp`, `/var`, `/etc`) plus a symlinked watch root drop
     every event.
   - A created, removed, or renamed watch ROOT forces a full re-read; ❌ don't add `Modify(Metadata(_))`, since every
     child change bumps the dir's mtime.
-  - A row that jumped its sorted position is one `DiffChangeType::Move`, never a remove plus an add: the pane rides the
-    cursor and selection along by identity. § "Reordered rows".
+  - Test builds arm no OS stream; a test needing real delivery calls `watch_for_real` first. § "Tests arm no OS
+    stream".
+  - A re-sorted row is one `DiffChangeType::Move`, ❌ never a remove plus an add (cursor and selection ride along by
+    identity). § "Reordered rows".
 - **A watch on an OS-mounted network share is `WatchCoverage::ThisMachineOnly`, never `EveryWriter`** (FSEvents on
   `smbfs` sees this machine's writes only). ❌ Don't refuse to arm it over that; what it must not do is let a delete
   walker or copy scan skip a read. `volume/DETAILS.md` § "Trait capability model".

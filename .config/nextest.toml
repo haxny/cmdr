@@ -345,6 +345,11 @@ slow-timeout = { period = "30s", terminate-after = 1 }
 # starved — with nextest as the hang backstop. Don't read it as a runtime:
 # measured 0.9 s on an idle machine; it only elapses if the watcher stops
 # delivering entirely.
+#
+# It's the listing watcher's ONE real-stream cell (`watch_for_real`); every other
+# listing-watch test arms without an OS stream. ❌ Don't add a second: a behavior on a
+# batch goes through `handle_directory_change_incremental` with hand-built events.
+# `file_system/DETAILS.md` § "Tests arm no OS stream".
 # allowed-unmatched-nextest-filter: macos-only, the replaced-watch-root case is FSEvents-specific
 filter = 'test(file_system::watcher_test::entries_that_went_with_a_replaced_watch_root_leave_the_listing)'
 test-group = 'real-notify'
@@ -409,10 +414,9 @@ filter = '''
 slow-timeout = { period = "20s", terminate-after = 1 }
 
 [[profile.default.overrides]]
-# Tests that ARM a real OS watch (or real drive/disk I/O behind one) without
-# blocking on a specific delivery: the reaper dropping a watcher with its listing,
-# an LRU eviction releasing one, the coverage answer flipping with the watcher
-# lifecycle. There's no event to
+# Tests that ARM a real OS watch without blocking on a specific delivery: today
+# the archive LRU eviction releasing its content watch (`cmdr-archive`'s watch has
+# no scripted backend yet). There's no event to
 # wait for, so they need neither retries nor the group — ❌ don't add them to
 # `real-notify`, which is for delivery-blocking tests and would serialize a pile of
 # fast ones for nothing. What they DO need is headroom over the global 8 s cap,
@@ -423,25 +427,11 @@ slow-timeout = { period = "20s", terminate-after = 1 }
 # release benchmark in another worktree (host load ~30). Every one passed when the
 # check runner re-ran it alone at the SAME deadline, which is the contention
 # signature rather than a defect, and each takes well under a second when idle.
-filter = '''
-    test(listing_host::tests::caching_reaper_test::)
-  + test(listing_host::tests::archive_watch_integration_test::)
-  + test(listing_host::tests::local_posix_host_test::test_listing_watch_coverage_flips_with_watcher_lifecycle)
-'''
-slow-timeout = { period = "20s", terminate-after = 1 }
-
-[[profile.default.overrides]]
-# The same arming-only 20 s cap for the macOS-only arming tests, in their own block so
-# the opt-out below excuses only them: on the shared block above it would also hide a
-# rotted Linux-compiled atom from the Linux lane.
 #
-# The `lifecycle_order_test` pair and the `a_detached_arm_` pair joined on 2026-10-13:
-# the detached-arm pair logged 86 timeouts each at exactly 8.0 s (passing runs up to
-# 7.8–8.0 s), the lifecycle pair timed out 16 of 25 runs, and every timeout passed when
-# the check runner re-ran it alone. Their only slow step is the FSEvents stream start
-# and its teardown join, both `fseventsd` round trips.
-# allowed-unmatched-nextest-filter: macos-only, the `lifecycle_order_test` and `a_detached_arm_` tests are `#[cfg(target_os = "macos")]` (the engine's own lifecycle-order tests in `cmdr-listing` run no FSEvents stream)
-filter = 'test(listing_host::tests::lifecycle_order_test::) + test(file_system::watcher_test::a_detached_arm_)'
+# ❌ Don't add a LISTING-watcher test here. A test build arms that watcher with no OS
+# stream (`file_system/DETAILS.md` § "Tests arm no OS stream"), so its arming tests
+# (the reaper, coverage, lifecycle order, detached arm) run in ~0.03 s and need no cap.
+filter = 'test(listing_host::tests::archive_watch_integration_test::lru_eviction_releases_the_archive_and_its_watch)'
 slow-timeout = { period = "20s", terminate-after = 1 }
 
 [[profile.default.overrides]]

@@ -6,6 +6,8 @@
 //! full re-read (`Listings::refresh`), the fallback for over 500 events, unknown
 //! event kinds, or a watch root that changed identity.
 
+#[cfg(test)]
+use crate::ignore_poison::IgnorePoison;
 use crate::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::entry::FileEntry;
 use notify_debouncer_full::{
@@ -61,11 +63,26 @@ pub struct DirectoryDeletedEvent {
     pub path: String,
 }
 
+/// What keeps a watch delivering: the OS stream, which disarms when dropped.
+enum WatchStream {
+    Notify(
+        #[allow(dead_code, reason = "Debouncer must be held to keep watching")] Debouncer<RecommendedWatcher, NoCache>,
+    ),
+    /// A test build's watch: the bookkeeping without an OS stream, so a test that only
+    /// asserts arming, disarming, or coverage never waits on `fseventsd`. Its drop is
+    /// free, so `stop_watching`'s lock-free teardown holds trivially.
+    #[cfg(test)]
+    Scripted,
+}
+
 /// State for a watched directory.
 /// NOTE: No `entries` field - we use the unified the listing cache instead.
 pub(crate) struct WatchedDirectory {
-    #[allow(dead_code, reason = "Debouncer must be held to keep watching")]
-    debouncer: Debouncer<RecommendedWatcher, NoCache>,
+    #[allow(
+        dead_code,
+        reason = "held to keep the stream alive; read only by the test-build `has_os_stream`"
+    )]
+    stream: WatchStream,
     /// What this particular watch observes, decided once when it was armed.
     ///
     /// Resolved here rather than in `Volume::listing_watch_coverage` because the
@@ -121,8 +138,66 @@ pub fn app_handle_present() -> bool {
 /// Note: Initial entries are read from the listing cache when needed.
 pub fn start_watching(listing_id: &str, path: &Path) -> Result<(), String> {
     log::debug!("start_watching: listing_id={}, path={}", listing_id, path.display());
-    let listing_id_owned = listing_id.to_string();
-    let listing_for_closure = listing_id_owned.clone();
+    let stream = arm_stream(listing_id, path)?;
+
+    // Store in manager (no entries - we use the listing cache)
+    let coverage = coverage_for_watched_path(path);
+    let mut manager = WATCHER_MANAGER.write().map_err(|_| "Failed to acquire watcher lock")?;
+
+    manager
+        .watches
+        .insert(listing_id.to_string(), WatchedDirectory { stream, coverage });
+
+    Ok(())
+}
+
+/// The OS half of an arm. A test build arms [`WatchStream::Scripted`] unless the
+/// listing opted in with [`watch_for_real`]; it still refuses a path the OS would.
+fn arm_stream(listing_id: &str, path: &Path) -> Result<WatchStream, String> {
+    #[cfg(test)]
+    if !REAL_STREAMS.lock_ignore_poison().contains(listing_id) {
+        return if path.exists() {
+            Ok(WatchStream::Scripted)
+        } else {
+            Err(format!("Failed to watch path: {} doesn't exist", path.display()))
+        };
+    }
+    arm_notify_stream(listing_id, path).map(WatchStream::Notify)
+}
+
+/// Listing ids whose watch arms a real OS stream in a test build.
+#[cfg(test)]
+static REAL_STREAMS: LazyLock<std::sync::Mutex<HashSet<String>>> =
+    LazyLock::new(|| std::sync::Mutex::new(HashSet::new()));
+
+/// Makes `listing_id`'s watch arm a real OS stream in this test build. Only for a test
+/// that blocks on the OS delivering an event; keyed by listing id, not a global switch,
+/// so it holds under plain `cargo test`, where every test shares one process.
+#[cfg(test)]
+#[cfg_attr(
+    not(target_os = "macos"),
+    allow(dead_code, reason = "its one caller, the replaced-root cell, is FSEvents-only")
+)]
+pub(crate) fn watch_for_real(listing_id: &str) {
+    REAL_STREAMS.lock_ignore_poison().insert(listing_id.to_string());
+}
+
+/// Whether `listing_id`'s watch holds an OS stream.
+#[cfg(test)]
+pub(crate) fn has_os_stream(listing_id: &str) -> bool {
+    matches!(
+        WATCHER_MANAGER
+            .read_ignore_poison()
+            .watches
+            .get(listing_id)
+            .map(|w| &w.stream),
+        Some(WatchStream::Notify(_))
+    )
+}
+
+/// A debounced `notify` stream on `path`, handing each batch to the listing.
+fn arm_notify_stream(listing_id: &str, path: &Path) -> Result<Debouncer<RecommendedWatcher, NoCache>, String> {
+    let listing_for_closure = listing_id.to_string();
 
     // Create the debouncer with a callback that handles changes
     let debounce_duration = Duration::from_millis(get_debounce_ms());
@@ -162,16 +237,7 @@ pub fn start_watching(listing_id: &str, path: &Path) -> Result<(), String> {
     debouncer
         .watch(path, RecursiveMode::NonRecursive)
         .map_err(|e| format!("Failed to watch path: {}", e))?;
-
-    // Store in manager (no entries - we use the listing cache)
-    let coverage = coverage_for_watched_path(path);
-    let mut manager = WATCHER_MANAGER.write().map_err(|_| "Failed to acquire watcher lock")?;
-
-    manager
-        .watches
-        .insert(listing_id_owned, WatchedDirectory { debouncer, coverage });
-
-    Ok(())
+    Ok(debouncer)
 }
 
 /// What an FSEvents watch on `path` can actually see.
