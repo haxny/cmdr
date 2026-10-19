@@ -408,7 +408,7 @@ async fn resolve(
     events: &CollectorEventSink,
 ) -> Option<PathBuf> {
     let state = make_state(engine);
-    let mut apply_to_all = ApplyToAll::default();
+    let apply_to_all = std::sync::Mutex::new(ApplyToAll::default());
     let config = VolumeCopyConfig {
         conflict_resolution: policy,
         progress_interval_ms: 0,
@@ -423,7 +423,7 @@ async fn resolve(
         events,
         "op-resolve",
         &state,
-        &mut apply_to_all,
+        &apply_to_all,
         None,
         None,
         Some(false),

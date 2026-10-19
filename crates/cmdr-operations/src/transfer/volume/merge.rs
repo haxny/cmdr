@@ -50,7 +50,6 @@ use super::strategy::{LandingName, WriteStaging, staging_for};
 use super::stream_pipe::stream_pipe_file;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{ChildName, DirectoryCreation, Volume, VolumeError};
 
 /// What one leaf file's copy reports back to the walker.
@@ -834,11 +833,9 @@ enum MergeChildDecision {
 }
 
 /// Dispatches one clashing merge child through the volume conflict resolver,
-/// reusing the op-wide apply-to-all latch so a "…all" choice from any level (top
-/// or deep) applies here. Mirrors the serial top-level path's latch handling:
-/// copy the latch out of the shared cell, run the async resolver on the stack
-/// local, store it back. The `conflict_dispatch_lock` inside the resolver — not
-/// this cell — is what serializes the human across concurrent merges.
+/// handing it the op-wide apply-to-all latch so a "…all" choice from any level
+/// (top or deep) applies here. The `conflict_dispatch_lock` inside the resolver
+/// — not this cell — is what serializes the human across concurrent merges.
 async fn resolve_merge_child(
     ctx: &MergeCtx<'_>,
     source_volume: &Arc<dyn Volume>,
@@ -863,7 +860,6 @@ async fn resolve_merge_child(
     let dest_size_hint = if dest_hit.is_directory { None } else { dest_hit.size };
     let _ = ctx.source_hints; // hints are keyed by top-level source path; deep children never match
 
-    let mut latched = *ctx.apply_to_all.lock_ignore_poison();
     let resolved = resolve_volume_conflict(
         source_volume,
         child_source,
@@ -873,13 +869,12 @@ async fn resolve_merge_child(
         ctx.events,
         ctx.operation_id,
         ctx.state,
-        &mut latched,
+        ctx.apply_to_all,
         source_size_hint,
         dest_size_hint,
         source_is_directory_hint,
     )
     .await;
-    *ctx.apply_to_all.lock_ignore_poison() = latched;
 
     match resolved {
         Ok(None) => Ok(MergeChildDecision::Skip),

@@ -70,6 +70,10 @@ pub struct WriteOperationState {
     /// holding this lock, so the prompts queue. The lock is NEVER held across the
     /// subsequent file write: we serialize the human, not the I/O.
     ///
+    /// ❗ A waiter that owns the futures it might queue behind must keep polling
+    /// them while it waits, or it waits on itself: the concurrent copy driver
+    /// does (`transfer/volume/DETAILS.md` § conflict-dispatch mutex).
+    ///
     /// Lives here next to the conflict slot because they guard the same
     /// concern. A `tokio::sync::Mutex` (not std) so a task can `.await` the user's
     /// response — actually the response wait happens on the oneshot; the dispatch

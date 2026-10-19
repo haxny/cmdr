@@ -864,7 +864,24 @@ prior "…all" answer collapses this queued prompt) → emit + await → store l
 NEVER held across the subsequent file write — serialize the human, not the I/O. The concurrent spawn loop's top-level
 dispatch and every deep merge acquire the SAME lock. Known acceptable residual: a prompt already emitted before another
 task latched "…all" isn't retroactively resolved — a rare extra prompt, never a data risk. Pinned by
-`merge_dispatch_mutex_tests.rs` (concurrent-two-deep-clashes, top-level-vs-deep race, cancel-while-queued no-hang).
+`merge_dispatch_mutex_tests.rs` (concurrent-two-deep-clashes, top-level-vs-deep race, cancel-while-queued no-hang, and
+the two driver-behind-a-deep-prompt cells below).
+
+Two rules keep that queue from wedging or re-asking:
+
+- **Whoever waits on the mutex keeps polling what it owns.** A deep merge is a future in the concurrent driver's window,
+  so it moves only when the driver polls it. The driver prepares each source (pre-check and top-level resolver) through
+  `copy_concurrent.rs::prepare_while_draining`, which keeps draining the window meanwhile. A driver that awaited
+  `prepare_source` bare queued behind a merge's prompt and waited on itself: the person's answer landed in the slot, the
+  merge never woke to read it, and Cancel had nothing to wake either (ERR-8MEX6, 21 minutes with no I/O). The draining
+  has no cancel arm on purpose: dropping a resolver mid-answer can strand a reserved name or a set-aside destination,
+  and a cancel ends preparation anyway (it abandons the prompt, and a resolver checks the intent once it holds the
+  mutex). So a top-level prompt holds back its own source and every later one, while the sources already in flight run
+  on, exactly as they do during a deep prompt.
+- **The resolver takes the op-wide latch CELL, ❌ never a copy.** It reads the cell up front, re-reads it under the
+  mutex, and records the answer into it the moment it lands. Callers used to copy the latch out, run the resolver on the
+  copy, and store it back: a prompt queued behind another task's "Skip all" re-checked a stale copy and asked again, and
+  its store-back could overwrite the newer answer.
 
 **The merge invariant.** A merge never deletes or overwrites a dest file the source doesn't shadow — under every file
 policy, on every backend, including cancel and rollback mid-merge. Pinned by

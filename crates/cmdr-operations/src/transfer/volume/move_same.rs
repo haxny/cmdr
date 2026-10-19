@@ -557,7 +557,6 @@ pub async fn move_within_same_volume_with_progress(
                     // it as the type clash it is.
                     let source_is_directory_hint =
                         Some(source_merges_as_a_directory(&volume, &source_path_owned, source_hint).await?);
-                    let mut latched = *apply_to_all.lock_ignore_poison();
                     // Same volume on both sides; pass `&volume` twice.
                     let resolved = resolve_volume_conflict(
                         &volume,
@@ -568,13 +567,12 @@ pub async fn move_within_same_volume_with_progress(
                         &*events,
                         &operation_id,
                         &state,
-                        &mut latched,
+                        &apply_to_all,
                         source_size_hint,
                         dest_size_hint,
                         source_is_directory_hint,
                     )
                     .await;
-                    *apply_to_all.lock_ignore_poison() = latched;
                     let resolved = resolved?;
                     Ok(match resolved {
                         None => {

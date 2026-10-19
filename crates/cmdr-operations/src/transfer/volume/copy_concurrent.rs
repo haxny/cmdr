@@ -13,9 +13,10 @@
 //! - **This one** owns the window and the state that changes as it turns:
 //!   `ConcurrentDriver::run` fills, waits, records.
 //! - **`copy_concurrent_source.rs`** gets one source ready to spawn, including
-//!   conflict resolution — which runs synchronously HERE, on the driver, so the
-//!   whole batch blocks on a single Stop prompt instead of racing per-task
-//!   prompts.
+//!   conflict resolution — which runs HERE, on the driver, before the task
+//!   exists, so a Stop prompt holds back the source it asks about and every one
+//!   after it instead of racing per-task prompts. The window keeps draining
+//!   meanwhile (`ConcurrentDriver::prepare_while_draining`).
 //! - **`copy_concurrent_task.rs`** streams one source end to end.
 //!
 //! `copy_volumes_with_progress` owns everything around all three: the phases
@@ -49,7 +50,7 @@ use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::{LeafProgressLedger, emit_source_outcome};
 use super::super::transfer_probe::OperationProbe;
 use super::copy::drain_deadline as drain_deadline_for;
-use super::copy_concurrent_task::{CopyTaskFailure, CopyTaskSuccess, run_copy_task};
+use super::copy_concurrent_task::{CopyTask, CopyTaskFailure, CopyTaskSuccess, run_copy_task};
 use super::displaced_destination::DisplacedLedger;
 use super::merge_ctx::CreatedPaths;
 use super::preflight::SourceHint;
@@ -163,12 +164,27 @@ struct ConcurrentDriver<'a> {
     /// Whether that window is the hard-abort tier's short one rather than the
     /// cooperative cancel's. Latched, so the abort re-arms the deadline once.
     drain_shortened: bool,
+    settled: Settlements,
+}
+
+/// What the window's settled tasks left for the caller, and which are still
+/// out.
+///
+/// Kept apart from the rest of the driver so a task that lands while a source
+/// is being prepared is recorded on the spot: preparing borrows `ctx` for as
+/// long as it waits, and recording needs only that same `ctx`, read-only,
+/// beside this.
+// DEFAULT-OK: the empty value is the truth before the first task settles: no
+// failure, no partial, nothing in flight.
+#[derive(Default)]
+struct Settlements {
     /// Handed back to the caller's post-loop; see `ConcurrentOutcome`.
     last_dest_path: Option<PathBuf>,
     copy_error: Option<WriteFailure>,
     /// A handle on every in-flight task's own rollback ledger, dropped when the
-    /// task settles. What's left at [`Self::finish`] belongs to tasks the driver
-    /// abandoned, whose futures (and the hand-over in them) never ran to the end.
+    /// task settles. What's left at [`ConcurrentDriver::finish`] belongs to
+    /// tasks the driver abandoned, whose futures (and the hand-over in them)
+    /// never ran to the end.
     unsettled: Vec<UnsettledSource>,
 }
 
@@ -205,9 +221,7 @@ impl<'a> ConcurrentDriver<'a> {
             in_flight: FuturesUnordered::new(),
             drain_deadline: None,
             drain_shortened: false,
-            last_dest_path: None,
-            copy_error: None,
-            unsettled: Vec::new(),
+            settled: Settlements::default(),
         }
     }
 
@@ -225,16 +239,18 @@ impl<'a> ConcurrentDriver<'a> {
                 self.record_resolver_failure(failure);
                 break;
             }
-            if self.in_flight.is_empty() {
+            // A task failed while a source was being prepared, and was
+            // recorded then.
+            if self.settled.copy_error.is_some() || self.in_flight.is_empty() {
                 break;
             }
             match self.await_next().await {
                 AwaitStep::Rearmed => continue,
                 AwaitStep::Finished => break,
                 AwaitStep::Settled(settled) => match *settled {
-                    Ok(success) => self.record_success(success),
+                    Ok(success) => self.settled.record_success(&self.ctx, success),
                     Err(failure) => {
-                        self.record_failure(failure);
+                        self.settled.record_failure(&self.ctx, failure);
                         // Drop remaining in-flight tasks; their streams close, temp
                         // files get cleaned up by the per-backend write abort +
                         // delete path. Partial cleanup is the caller's post-loop.
@@ -248,20 +264,20 @@ impl<'a> ConcurrentDriver<'a> {
     /// Keep preparing and pushing sources until either they run out or the
     /// window is full.
     ///
-    /// Preparing a source is where conflict resolution happens, synchronously,
-    /// on this driver — so while a person is answering a Stop prompt the window
-    /// is neither filled further nor drained, and nothing is streaming into a
-    /// folder they are still being asked about.
+    /// Preparing a source is where conflict resolution happens, on this driver,
+    /// before the task exists — so while a person is answering a Stop prompt
+    /// neither the source they're asked about nor any after it moves, and
+    /// nothing streams into a destination they're still being asked about.
     async fn spawn_ready_tasks(&mut self) -> Result<(), WriteFailure> {
         while self.in_flight.len() < self.ctx.concurrency {
-            if self.ctx.state.intent().is_cancelled() {
+            if self.ctx.state.intent().is_cancelled() || self.settled.copy_error.is_some() {
                 break;
             }
             let Some((source_index, source_path)) = self.sources.next() else {
                 break;
             };
-            if let Some(task) = self.ctx.prepare_source(source_index, source_path).await? {
-                self.unsettled.push(UnsettledSource {
+            if let Some(task) = self.prepare_while_draining(source_index, source_path).await? {
+                self.settled.unsettled.push(UnsettledSource {
                     source_path: task.source_path.clone(),
                     dest_path: task.dest_path.clone(),
                     source_is_dir: task.source_is_dir,
@@ -271,6 +287,51 @@ impl<'a> ConcurrentDriver<'a> {
             }
         }
         Ok(())
+    }
+
+    /// Prepares one source while the window keeps turning.
+    ///
+    /// Preparing can wait a long time: on the person answering this source's
+    /// clash, or on the conflict-dispatch mutex while another task's prompt is
+    /// up. The window keeps draining through both, and that's load-bearing. The
+    /// tasks are futures this driver polls, so a merge holding the mutex only
+    /// moves when the driver polls it: a driver that stopped draining to wait
+    /// for the mutex waited on itself, past the person's answer and past Cancel
+    /// (ERR-8MEX6, pinned by `merge_dispatch_mutex_tests.rs`).
+    ///
+    /// A task that lands meanwhile is recorded on the spot. The first failure
+    /// stops the draining, since the batch is over, and `run` acts on it once
+    /// this source's preparation returns.
+    ///
+    /// No cancel arm, on purpose: a resolver dropped mid-answer can leave a
+    /// reserved name or a destination set aside that nothing settles. A cancel
+    /// ends preparation by itself instead: it abandons the prompt the resolver
+    /// is waiting on, and a resolver that gets the mutex checks the intent
+    /// before it asks anything.
+    async fn prepare_while_draining(
+        &mut self,
+        source_index: usize,
+        source_path: &Path,
+    ) -> Result<Option<CopyTask>, WriteFailure> {
+        let Self {
+            ctx,
+            in_flight,
+            settled,
+            ..
+        } = self;
+        let ctx: &ConcurrentCopy<'a> = ctx;
+        let mut prepare = std::pin::pin!(ctx.prepare_source(source_index, source_path));
+        loop {
+            let draining = !in_flight.is_empty() && settled.copy_error.is_none();
+            tokio::select! {
+                biased;
+                prepared = &mut prepare => return prepared,
+                Some(landed) = in_flight.next(), if draining => match landed {
+                    Ok(success) => settled.record_success(ctx, success),
+                    Err(failure) => settled.record_failure(ctx, *failure),
+                },
+            }
+        }
     }
 
     /// Wait for the next task, for the user's cancel, or for the wind-down
@@ -362,9 +423,72 @@ impl<'a> ConcurrentDriver<'a> {
         }
     }
 
+    /// Conflict resolution failed while preparing a source, which is not one
+    /// task's failure but the whole batch's. Recorded the same way so the
+    /// post-loop can't tell them apart, and ❌ never overwriting a failure a task
+    /// already reported: the first one is the one that stopped the operation.
+    fn record_resolver_failure(&mut self, failure: WriteFailure) {
+        log::warn!(
+            target: "copy",
+            "copy_volumes_with_progress: op={} couldn't resolve a conflict; winding down {} in-flight task(s): {:?}",
+            self.ctx.operation_id,
+            self.in_flight.len(),
+            failure.error,
+        );
+        if self.settled.copy_error.is_none() {
+            self.settled.copy_error = Some(failure);
+        }
+    }
+
+    /// Hand the post-loop what it needs, after letting go of whatever is left in
+    /// the window.
+    fn finish(self) -> ConcurrentOutcome {
+        // Drain whatever's left on cancel/error. On success, `in_flight` is
+        // already empty. On abort, drop cancels the remaining futures (F10).
+        if let Some(probe) = self.ctx.op_probe.as_ref() {
+            probe.set_driver_phase(
+                super::super::transfer_probe::DriverPhase::PostLoop,
+                "draining in-flight",
+            );
+        }
+        drop(self.in_flight);
+
+        // A DIRECTORY source dropped mid-walk already landed some of its
+        // children, and they're only in its own ledger. Hand them over exactly as
+        // `record_failure` does for one that came back, or a Rollback can't see
+        // them and a reversal from history has no row for them. A FILE source's
+        // ledger is empty; its partial rides `in_flight_partials`.
+        for abandoned in self.settled.unsettled.into_iter().filter(|u| u.source_is_dir) {
+            let files = std::mem::take(&mut *abandoned.created.files.lock_ignore_poison());
+            let dirs = std::mem::take(&mut *abandoned.created.dirs.lock_ignore_poison());
+            if let Some((src_vol, dst_vol)) = self.ctx.journal_volumes.as_ref() {
+                journal::record_volume_transfer_source(
+                    self.ctx.state.scope(),
+                    src_vol,
+                    &abandoned.source_path,
+                    dst_vol,
+                    &abandoned.dest_path,
+                    true,
+                    &files,
+                    None,
+                    abandoned.created.any_overwrote(),
+                );
+            }
+            self.ctx.copied_paths.lock_ignore_poison().extend(files);
+            self.ctx.created_dirs.lock_ignore_poison().extend(dirs);
+        }
+
+        ConcurrentOutcome {
+            last_dest_path: self.settled.last_dest_path,
+            copy_error: self.settled.copy_error,
+        }
+    }
+}
+
+impl Settlements {
     /// One source landed: fold its tallies in, drop its in-flight partial,
     /// journal it, record what it wrote for rollback, and emit the milestone.
-    fn record_success(&mut self, success: CopyTaskSuccess) {
+    fn record_success(&mut self, ctx: &ConcurrentCopy<'_>, success: CopyTaskSuccess) {
         let CopyTaskSuccess {
             partial_path,
             recorded_path,
@@ -378,7 +502,6 @@ impl<'a> ConcurrentDriver<'a> {
             skipped_bytes: task_skipped_bytes,
         } = success;
         self.settle(&done_source);
-        let ctx = &self.ctx;
         // A folder whose every file was declined landed nothing: a skip, the
         // way the local engine reports one. A copy leaves its source in place.
         let verdict = if source_is_dir && task_skipped_count > 0 && created_files.is_empty() {
@@ -470,7 +593,7 @@ impl<'a> ConcurrentDriver<'a> {
     /// One source failed: drop its in-flight partial, thread its rollback ledger
     /// out, and decide whether what it left behind is a partial to clean or
     /// committed data to keep.
-    fn record_failure(&mut self, failure: CopyTaskFailure) {
+    fn record_failure(&mut self, ctx: &ConcurrentCopy<'_>, failure: CopyTaskFailure) {
         let CopyTaskFailure {
             failed_path: failed_dest,
             failure: reported,
@@ -482,7 +605,6 @@ impl<'a> ConcurrentDriver<'a> {
             created_dirs: task_created_dirs,
         } = failure;
         self.settle(&done_source);
-        let ctx = &self.ctx;
         // A cancel decided nothing about the source, so it gets no verdict.
         if !matches!(reported.error, VolumeError::Cancelled(_)) {
             emit_source_outcome(
@@ -542,70 +664,9 @@ impl<'a> ConcurrentDriver<'a> {
         self.copy_error = Some(WriteFailure::from(reported));
     }
 
-    /// Conflict resolution failed while preparing a source, which is not one
-    /// task's failure but the whole batch's. Recorded the same way so the
-    /// post-loop can't tell them apart, and ❌ never overwriting a failure a task
-    /// already reported: the first one is the one that stopped the operation.
-    fn record_resolver_failure(&mut self, failure: WriteFailure) {
-        log::warn!(
-            target: "copy",
-            "copy_volumes_with_progress: op={} couldn't resolve a conflict; winding down {} in-flight task(s): {:?}",
-            self.ctx.operation_id,
-            self.in_flight.len(),
-            failure.error,
-        );
-        if self.copy_error.is_none() {
-            self.copy_error = Some(failure);
-        }
-    }
-
     /// The task for `source` came back, and its own result carries its ledger.
     fn settle(&mut self, source: &Path) {
         self.unsettled.retain(|u| u.source_path != source);
-    }
-
-    /// Hand the post-loop what it needs, after letting go of whatever is left in
-    /// the window.
-    fn finish(self) -> ConcurrentOutcome {
-        // Drain whatever's left on cancel/error. On success, `in_flight` is
-        // already empty. On abort, drop cancels the remaining futures (F10).
-        if let Some(probe) = self.ctx.op_probe.as_ref() {
-            probe.set_driver_phase(
-                super::super::transfer_probe::DriverPhase::PostLoop,
-                "draining in-flight",
-            );
-        }
-        drop(self.in_flight);
-
-        // A DIRECTORY source dropped mid-walk already landed some of its
-        // children, and they're only in its own ledger. Hand them over exactly as
-        // `record_failure` does for one that came back, or a Rollback can't see
-        // them and a reversal from history has no row for them. A FILE source's
-        // ledger is empty; its partial rides `in_flight_partials`.
-        for abandoned in self.unsettled.into_iter().filter(|u| u.source_is_dir) {
-            let files = std::mem::take(&mut *abandoned.created.files.lock_ignore_poison());
-            let dirs = std::mem::take(&mut *abandoned.created.dirs.lock_ignore_poison());
-            if let Some((src_vol, dst_vol)) = self.ctx.journal_volumes.as_ref() {
-                journal::record_volume_transfer_source(
-                    self.ctx.state.scope(),
-                    src_vol,
-                    &abandoned.source_path,
-                    dst_vol,
-                    &abandoned.dest_path,
-                    true,
-                    &files,
-                    None,
-                    abandoned.created.any_overwrote(),
-                );
-            }
-            self.ctx.copied_paths.lock_ignore_poison().extend(files);
-            self.ctx.created_dirs.lock_ignore_poison().extend(dirs);
-        }
-
-        ConcurrentOutcome {
-            last_dest_path: self.last_dest_path,
-            copy_error: self.copy_error,
-        }
     }
 }
 

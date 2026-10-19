@@ -172,8 +172,10 @@ pub(crate) enum DriverPhase {
     /// [`Self::AwaitingTasks`] there is no window to drain: the wedge can only
     /// be in the rows below, and a reader should go straight to them.
     TransferringSource = 4,
-    /// Parked on a PERSON, with nothing else running until they answer.
-    /// Unbounded by design, so a dump naming it has explained the whole stall.
+    /// Parked on a PERSON: this source's prompt, or another task's it queues
+    /// behind on the dispatch mutex. No new source starts until they answer,
+    /// though the tasks already in flight run on. Unbounded by design, so a
+    /// dump naming it has explained why nothing new is starting.
     ResolvingConflict = 5,
 }
 

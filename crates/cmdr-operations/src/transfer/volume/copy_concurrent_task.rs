@@ -8,11 +8,11 @@
 //! failure is the most data-loss-sensitive line in this directory: read them
 //! before touching the arms that build them.
 //!
-//! Conflict resolution is NOT here. It runs synchronously on the driver before a
-//! task is built (`copy_concurrent_source.rs`), so the whole batch blocks on one
-//! Stop prompt instead of copying into a folder the user is still being asked
-//! about. Pinned by
-//! `copy_concurrent_tests.rs::a_top_level_conflict_prompt_holds_the_whole_batch_still`.
+//! Conflict resolution is NOT here. It runs on the driver before a task is built
+//! (`copy_concurrent_source.rs`), so a Stop prompt holds back its source and
+//! every later one instead of copying into a destination the user is still
+//! being asked about. Pinned by
+//! `copy_concurrent_tests.rs::a_top_level_conflict_prompt_holds_back_its_source_and_every_later_one`.
 
 use std::collections::HashMap;
 use std::path::PathBuf;

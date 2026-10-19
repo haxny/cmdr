@@ -69,7 +69,6 @@ use super::displaced_destination::{DisplacedDestination, displace_destination};
 use super::strategy::Replaces;
 use super::transfer_error::{PathRole, map_volume_error};
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{ChildName, EntryKind, Volume, VolumeError};
 
 /// Context threaded through the recursive rename-merge so each level can resolve
@@ -334,7 +333,6 @@ async fn resolve_child(
     let source_is_directory_hint = Some(merges_as_a_directory(entry));
     let source_size_hint = if merges_as_a_directory(entry) { None } else { entry.size };
 
-    let mut latched = *ctx.apply_to_all.lock_ignore_poison();
     let resolved = resolve_volume_conflict(
         ctx.volume,
         child_source,
@@ -344,13 +342,12 @@ async fn resolve_child(
         ctx.events,
         ctx.operation_id,
         ctx.state,
-        &mut latched,
+        ctx.apply_to_all,
         source_size_hint,
         None, // dest size hint: the resolver stats only on the Stop path
         source_is_directory_hint,
     )
     .await;
-    *ctx.apply_to_all.lock_ignore_poison() = latched;
 
     match resolved? {
         None => Ok((MergeChildResolution::Skip, None)),

@@ -38,6 +38,7 @@ use super::displaced_destination::{DisplacedDestination, displace_destination};
 use super::item_identity::is_the_same_item;
 use super::naming::find_unique_volume_name;
 use super::transfer_error::{PathRole, map_volume_error};
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
 /// Outcome of resolving a volume conflict.
@@ -85,7 +86,13 @@ pub(super) async fn resolve_volume_conflict(
     events: &dyn OperationEventSink,
     operation_id: &str,
     state: &Arc<WriteOperationState>,
-    apply_to_all_resolution: &mut ApplyToAll,
+    // The OPERATION's latch, ❌ never a copy of it: a prompt queued on the
+    // dispatch mutex re-reads it once its turn comes, so another task's "…all"
+    // answer collapses it, and records into it the moment its own answer lands.
+    // A caller that copied it out and stored it back saw a stale latch at the
+    // re-check (an extra prompt after "Skip all") and could overwrite a newer
+    // answer with its old copy.
+    apply_to_all: &std::sync::Mutex<ApplyToAll>,
     // Size hints for the conflict dialog. `Some` skips a `scan_for_copy` call
     // on that side. The copy path already has both: source size in
     // `source_hints` (from the cached preview scan), dest size in `dest_meta`
@@ -173,7 +180,7 @@ pub(super) async fn resolve_volume_conflict(
     // item — the config's, or a same-kind "* all" reaching across types — never
     // replaces a folder with a file or a file with a folder; a plain Overwrite
     // answered for this very shape does. `resolution_for_clash` holds the why.
-    let latched = apply_to_all_effective(apply_to_all_resolution, kind);
+    let latched = apply_to_all_effective(&apply_to_all.lock_ignore_poison(), kind);
     let resolution = resolution_for_clash(latched, config.conflict_resolution, kind, &dest_path.display());
 
     match resolution {
@@ -204,7 +211,8 @@ pub(super) async fn resolve_volume_conflict(
             // mutex, the task ahead of it may have answered with an "…all" choice
             // that resolves this clash too. If so, apply that resolution without
             // prompting — the queued prompt silently collapses.
-            if let Some(saved) = apply_to_all_effective(apply_to_all_resolution, kind) {
+            let latched_meanwhile = apply_to_all_effective(&apply_to_all.lock_ignore_poison(), kind);
+            if let Some(saved) = latched_meanwhile {
                 // A carry stops exactly where it would have on the up-front
                 // lookup: honoured across types when it was answered for this
                 // shape, refused when it is a same-kind policy reaching over.
@@ -336,7 +344,7 @@ pub(super) async fn resolve_volume_conflict(
                     // option, so a later file→folder "* all" choice won't be considered
                     // "first" if a regular clash happened earlier in this op.
                     apply_to_all_record(
-                        apply_to_all_resolution,
+                        &mut apply_to_all.lock_ignore_poison(),
                         kind,
                         response.resolution,
                         response.apply_to_all,

@@ -41,7 +41,7 @@ async fn resolve_file_over_folder(
         conflict_resolution: policy,
         ..VolumeCopyConfig::default()
     };
-    let mut apply_to_all = ApplyToAll::default();
+    let apply_to_all = std::sync::Mutex::new(ApplyToAll::default());
 
     let resolved = resolve_volume_conflict(
         &source_dyn,
@@ -52,7 +52,7 @@ async fn resolve_file_over_folder(
         &events,
         "op-blanket-cross-type",
         &state,
-        &mut apply_to_all,
+        &apply_to_all,
         // A source far bigger and newer than any directory entry, so every
         // conditional comparison that treats the folder as a file says
         // "overwrite".
@@ -117,7 +117,7 @@ async fn a_blanket_overwrite_never_deletes_a_file_a_folder_landed_on() {
             conflict_resolution: policy,
             ..VolumeCopyConfig::default()
         };
-        let mut apply_to_all = ApplyToAll::default();
+        let apply_to_all = std::sync::Mutex::new(ApplyToAll::default());
 
         let resolved = resolve_volume_conflict(
             &source_dyn,
@@ -128,7 +128,7 @@ async fn a_blanket_overwrite_never_deletes_a_file_a_folder_landed_on() {
             &events,
             "op-blanket-folder-over-file",
             &state,
-            &mut apply_to_all,
+            &apply_to_all,
             None,
             None,
             Some(true),
@@ -164,7 +164,7 @@ fn file_over_folder_volumes() -> (Arc<InMemoryVolume>, Arc<InMemoryVolume>) {
 async fn resolve_file_over_folder_with_latch(
     engine: &TestOperations,
     op: &str,
-    mut apply_to_all: ApplyToAll,
+    apply_to_all: ApplyToAll,
     configured: ConflictResolution,
 ) -> (Option<ResolvedConflict>, Arc<InMemoryVolume>) {
     let (source, dest) = file_over_folder_volumes();
@@ -192,7 +192,7 @@ async fn resolve_file_over_folder_with_latch(
         &events,
         op,
         &state,
-        &mut apply_to_all,
+        &std::sync::Mutex::new(apply_to_all),
         None,
         None,
         Some(false),

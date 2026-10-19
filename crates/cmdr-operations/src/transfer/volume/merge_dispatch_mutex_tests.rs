@@ -11,14 +11,18 @@
 //! `volume/copy_tests/` (`super::tests`). Per-file conflict resolution inside a
 //! merge is `volume/merge_tests.rs`.
 
-use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};
+use super::super::super::conflict_responder_test_support::{
+    ConflictResponderSink, await_prompted_clash, file_conflict_count,
+};
+use super::super::faulty_volume::forward_volume_methods;
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::event_sinks::CollectorEventSink;
+use crate::state::ConflictResolutionResponse;
 use crate::testing::TestOperations;
 
 use crate::types::ConflictResolution;
-use cmdr_fs::volume::Volume;
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeReadStream};
 
 // ============================================================================
 // Helpers
@@ -31,6 +35,109 @@ async fn read_all(vol: &Arc<dyn Volume>, path: &str) -> Vec<u8> {
         out.extend_from_slice(&chunk);
     }
     out
+}
+
+/// A two-wide source whose one `held` file can't be read until `release` says
+/// so. That ordering is what makes the driver queue on the dispatch mutex
+/// BEHIND a deep merge's prompt rather than ahead of it: the merge walker
+/// reaches its clash while the held file still occupies the window's other
+/// slot, and only once the prompt is up does that slot free and the driver
+/// move on to prepare the next source.
+struct HeldReadSource {
+    inner: Arc<InMemoryVolume>,
+    held: PathBuf,
+    release: Arc<dyn Fn() -> bool + Send + Sync>,
+}
+
+impl Volume for HeldReadSource {
+    forward_volume_methods!(inner =>
+        name, root, list_directory, get_metadata, exists, is_directory, create_file, create_directory,
+        create_directory_all, delete, rename, get_space_info, supports_streaming, supports_export,
+        operations_are_local, scan_for_copy, supports_unknown_length_writes, write_from_stream,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn max_concurrent_ops(&self) -> usize {
+        2
+    }
+
+    fn open_read_stream<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            if path == self.held {
+                let release = Arc::clone(&self.release);
+                cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the held read's release", move || {
+                    release()
+                })
+                .await;
+            }
+            self.inner.open_read_stream(path).await
+        })
+    }
+}
+
+/// The ERR-8MEX6 shape, on a two-wide window: `/album` merges into an existing
+/// folder and clashes on a child, `/sib.bin` copies fresh, and `/top.txt`
+/// clashes at the top level. Hands back the source and the destination;
+/// `deep_prompt_sources` is the selection, in order.
+async fn deep_prompt_then_top_level_clash(state: &Arc<WriteOperationState>) -> (Arc<dyn Volume>, Arc<dyn Volume>) {
+    let inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
+    let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
+
+    inner.create_directory(Path::new("/album")).await.unwrap();
+    inner
+        .create_file(Path::new("/album/clash.txt"), b"SRC-deep")
+        .await
+        .unwrap();
+    inner.create_file(Path::new("/sib.bin"), b"SIB").await.unwrap();
+    inner.create_file(Path::new("/top.txt"), b"SRC-top").await.unwrap();
+
+    dest.create_directory(Path::new("/album")).await.unwrap();
+    dest.create_file(Path::new("/album/clash.txt"), b"DEST-deep")
+        .await
+        .unwrap();
+    dest.create_file(Path::new("/album/keep.txt"), b"KEEP").await.unwrap();
+    dest.create_file(Path::new("/top.txt"), b"DEST-top").await.unwrap();
+
+    let prompted = Arc::clone(state);
+    let source: Arc<dyn Volume> = Arc::new(HeldReadSource {
+        inner,
+        held: PathBuf::from("/sib.bin"),
+        // The deep prompt is up, so the walker holds the dispatch mutex.
+        release: Arc::new(move || prompted.conflict_slot.is_awaiting()),
+    });
+    (source, dest)
+}
+
+fn deep_prompt_sources() -> Vec<PathBuf> {
+    vec![
+        PathBuf::from("/album"),
+        PathBuf::from("/sib.bin"),
+        PathBuf::from("/top.txt"),
+    ]
+}
+
+/// Waits until `/sib.bin` has landed, which frees the window's slot and sends
+/// the driver on to `/top.txt`, then gives it a beat to queue on the dispatch
+/// mutex behind the deep prompt.
+async fn until_the_driver_queues_behind_the_deep_prompt(events: &CollectorEventSink) {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "/sib.bin to land", || {
+        events
+            .source_items_done
+            .lock_ignore_poison()
+            .iter()
+            .any(|done| done.source_path == "/sib.bin")
+    })
+    .await;
+    // allowed-test-sleep: "the driver is queued on the dispatch mutex" has no
+    // observable signal; the pre-check and the latch lookup ahead of it take
+    // microseconds on in-memory volumes, so this is generous.
+    tokio::time::sleep(Duration::from_millis(150)).await;
 }
 
 // ============================================================================
@@ -248,4 +355,119 @@ async fn cancel_while_queued_unblocks_both_no_hang() {
     // no-hang completion is the assertion that matters.
     let result = driven.unwrap();
     assert!(result.is_err(), "cancelled op should return Err, got {result:?}");
+}
+
+/// The driver queued behind a DEEP prompt, and the person answers it.
+///
+/// Regression anchor for ERR-8MEX6 (2026-10): a folder merge asked about a
+/// child, the driver moved on to a top-level clash and waited for the dispatch
+/// mutex the merge held, and the person answered "Skip all". The answer landed,
+/// but the merge only ever moved when the driver polled its window, and the
+/// driver was waiting on the merge: no I/O for 21 minutes, and Cancel couldn't
+/// end it either. The prompts in the older tests here are answered inside
+/// `emit_conflict`, so a merge never parked holding the mutex and the
+/// interleaving never formed.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn answering_a_deep_prompt_frees_a_driver_queued_behind_it() {
+    let engine = TestOperations::new();
+    let state = make_state(&engine);
+    let (source, dest) = deep_prompt_then_top_level_clash(&state).await;
+    let events = Arc::new(CollectorEventSink::new());
+
+    let responder = tokio::spawn({
+        let events = Arc::clone(&events);
+        let state = Arc::clone(&state);
+        async move {
+            let clash = await_prompted_clash(&events).await;
+            until_the_driver_queues_behind_the_deep_prompt(&events).await;
+            let _ = state.conflict_slot.answer(
+                clash,
+                ConflictResolutionResponse {
+                    resolution: ConflictResolution::Skip,
+                    apply_to_all: true,
+                },
+            );
+        }
+    });
+
+    let config = VolumeCopyConfig {
+        conflict_resolution: ConflictResolution::Stop,
+        progress_interval_ms: 0,
+        ..VolumeCopyConfig::default()
+    };
+    let driven = tokio::time::timeout(
+        Duration::from_secs(5),
+        copy_volumes_with_progress(
+            events.clone(),
+            "op-deep-prompt-then-top-level",
+            &state,
+            Arc::clone(&source),
+            &deep_prompt_sources(),
+            Arc::clone(&dest),
+            Path::new("/"),
+            &config,
+        ),
+    )
+    .await;
+    responder.await.unwrap();
+
+    let result = driven.expect("the copy hung after the deep prompt was answered (dispatch-mutex self-deadlock)");
+    assert!(result.is_ok(), "expected Ok, got {result:?}");
+    // "Skip all" answered the deep clash and, through the latch, the queued
+    // top-level one: one prompt, both destinations untouched.
+    assert_eq!(file_conflict_count(&events), 1);
+    assert_eq!(read_all(&dest, "/album/clash.txt").await, b"DEST-deep");
+    assert_eq!(read_all(&dest, "/album/keep.txt").await, b"KEEP");
+    assert_eq!(read_all(&dest, "/top.txt").await, b"DEST-top");
+    assert_eq!(read_all(&dest, "/sib.bin").await, b"SIB");
+}
+
+/// The same queue, but the person presses Cancel instead of answering: the
+/// operation must settle promptly rather than wait on a merge nobody polls.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn cancel_frees_a_driver_queued_behind_a_deep_prompt() {
+    let engine = TestOperations::new();
+    let state = make_state(&engine);
+    let (source, dest) = deep_prompt_then_top_level_clash(&state).await;
+    let events = Arc::new(CollectorEventSink::new());
+    let op = engine.register_state("cancel-behind-deep-prompt", Arc::clone(&state));
+    let op_id = op.id().to_string();
+
+    let canceller = tokio::spawn({
+        let events = Arc::clone(&events);
+        let op_id = op_id.clone();
+        async move {
+            await_prompted_clash(&events).await;
+            until_the_driver_queues_behind_the_deep_prompt(&events).await;
+            engine.cancel_write_operation(&op_id, false);
+        }
+    });
+
+    let config = VolumeCopyConfig {
+        conflict_resolution: ConflictResolution::Stop,
+        progress_interval_ms: 0,
+        ..VolumeCopyConfig::default()
+    };
+    let driven = tokio::time::timeout(
+        Duration::from_secs(5),
+        copy_volumes_with_progress(
+            events.clone(),
+            &op_id,
+            &state,
+            Arc::clone(&source),
+            &deep_prompt_sources(),
+            Arc::clone(&dest),
+            Path::new("/"),
+            &config,
+        ),
+    )
+    .await;
+    canceller.await.unwrap();
+
+    let result = driven.expect("the copy hung after Cancel (dispatch-mutex self-deadlock)");
+    assert!(result.is_err(), "a cancelled copy returns Err, got {result:?}");
+    // Nothing the person was asked about changed.
+    assert_eq!(read_all(&dest, "/album/clash.txt").await, b"DEST-deep");
+    assert_eq!(read_all(&dest, "/album/keep.txt").await, b"KEEP");
+    assert_eq!(read_all(&dest, "/top.txt").await, b"DEST-top");
 }

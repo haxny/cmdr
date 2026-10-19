@@ -110,7 +110,7 @@ async fn a_source_whose_type_cannot_be_established_never_clears_the_destination_
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
     };
-    let mut apply_to_all = ApplyToAll::default();
+    let apply_to_all = std::sync::Mutex::new(ApplyToAll::default());
 
     let result = resolve_volume_conflict(
         &source_dyn,
@@ -121,7 +121,7 @@ async fn a_source_whose_type_cannot_be_established_never_clears_the_destination_
         &events,
         "op-stat-fail-source",
         &state,
-        &mut apply_to_all,
+        &apply_to_all,
         None,
         None,
         // No preflight hint: this is the branch that has to decide without one.
@@ -166,7 +166,7 @@ async fn a_destination_whose_type_cannot_be_established_is_left_alone() {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
     };
-    let mut apply_to_all = ApplyToAll::default();
+    let apply_to_all = std::sync::Mutex::new(ApplyToAll::default());
 
     let result = resolve_volume_conflict(
         &source_dyn,
@@ -177,7 +177,7 @@ async fn a_destination_whose_type_cannot_be_established_is_left_alone() {
         &events,
         "op-stat-fail-dest",
         &state,
-        &mut apply_to_all,
+        &apply_to_all,
         None,
         None,
         Some(false),
@@ -215,7 +215,7 @@ async fn a_destination_that_raced_away_still_resolves_as_a_plain_write() {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
     };
-    let mut apply_to_all = ApplyToAll::default();
+    let apply_to_all = std::sync::Mutex::new(ApplyToAll::default());
 
     let resolved = resolve_volume_conflict(
         &source_dyn,
@@ -226,7 +226,7 @@ async fn a_destination_that_raced_away_still_resolves_as_a_plain_write() {
         &events,
         "op-dest-gone",
         &state,
-        &mut apply_to_all,
+        &apply_to_all,
         None,
         None,
         Some(false),

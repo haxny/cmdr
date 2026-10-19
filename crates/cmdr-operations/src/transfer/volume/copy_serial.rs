@@ -235,13 +235,6 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             &initial_dest_owned.display().to_string(),
                         );
                     }
-                    // Take the apply-to-all latch into a stack local for
-                    // the `&mut`-bounded resolver, then store it back.
-                    // The serial driver guarantees single-threaded
-                    // sequencing; the Mutex just keeps the closure
-                    // `Fn`-shaped. `ApplyToAll` is `Copy`, so this is a
-                    // value swap, not an option-take.
-                    let mut latched = *apply_to_all.lock_ignore_poison();
                     let resolved = resolve_volume_conflict(
                         &source_volume,
                         &source_path_owned,
@@ -251,13 +244,12 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                         &*events,
                         &operation_id,
                         &state,
-                        &mut latched,
+                        &apply_to_all,
                         source_size_hint,
                         dest_size_hint,
                         source_is_directory_hint,
                     )
                     .await;
-                    *apply_to_all.lock_ignore_poison() = latched;
                     let resolved = resolved?;
                     Ok(match resolved {
                         None => {

@@ -1,12 +1,14 @@
 //! Getting one top-level source ready to spawn: is it a directory, where does
 //! it land, and is something already sitting at that name?
 //!
-//! All of it runs SYNCHRONOUSLY on the driver, before the task exists. That is
-//! the contract the concurrent path is built on: one Stop prompt blocks the
-//! whole batch instead of several tasks racing prompts into one oneshot slot,
-//! and nothing streams into a folder the user is still being asked about. The
-//! driver itself is `copy_concurrent.rs`; what it spawns is
-//! `copy_concurrent_task.rs`.
+//! All of it runs on the driver, before the task exists. That is the contract
+//! the concurrent path is built on: a Stop prompt holds back its source and
+//! every one after it instead of several tasks racing prompts into one oneshot
+//! slot, and nothing streams into a destination the user is still being asked
+//! about. The window keeps draining meanwhile
+//! (`copy_concurrent.rs::ConcurrentDriver::prepare_while_draining`), which a
+//! deep merge's prompt needs. The driver itself is `copy_concurrent.rs`; what it
+//! spawns is `copy_concurrent_task.rs`.
 //!
 //! These are methods on `ConcurrentCopy` rather than free functions because the
 //! borrowed context already holds every input they need — the volumes, the
@@ -40,11 +42,11 @@ impl ConcurrentCopy<'_> {
     /// accounted it, or conflict resolution said Skip. `Err` means resolution
     /// itself failed, which ends the operation.
     ///
-    /// Everything here runs SYNCHRONOUSLY on the driver, before the task exists.
-    /// That is the contract: one Stop prompt blocks the whole batch instead of
-    /// several tasks racing prompts into one oneshot slot, and nothing streams
-    /// into a folder the user is still being asked about. ❌ Don't move any of
-    /// it into `run_copy_task`.
+    /// Everything here runs on the driver, before the task exists. That is the
+    /// contract: a Stop prompt holds back this source and every one after it
+    /// instead of several tasks racing prompts into one oneshot slot, and
+    /// nothing streams into a destination the user is still being asked about.
+    /// ❌ Don't move any of it into `run_copy_task`.
     pub(super) async fn prepare_source(
         &self,
         source_index: usize,
@@ -325,14 +327,15 @@ impl ConcurrentCopy<'_> {
 
     /// Runs the conflict resolver for one top-level clash, on the driver.
     ///
-    /// Copies the op-wide latch out, runs the resolver on the stack local,
-    /// stores it back — mirroring the serial path. The resolver's
-    /// `conflict_dispatch_lock` (acquired inside) is what serializes the human
-    /// against in-flight deep merges spawned by earlier iterations; that same
-    /// lock is why a top-level prompt and a deep prompt can't race the one
-    /// oneshot slot. The known acceptable residual: an already-emitted prompt
-    /// isn't retroactively resolved by another task's "…all" latch — a rare
-    /// extra prompt, never data loss.
+    /// The resolver's `conflict_dispatch_lock` (acquired inside) queues this
+    /// prompt behind any deep merge's, so the two can't race the one oneshot
+    /// slot, and its turn re-reads the op-wide latch so an "…all" answered
+    /// meanwhile collapses it. ❗ The merge holding that lock moves only when
+    /// the driver polls it, so the driver awaits this through
+    /// `ConcurrentDriver::prepare_while_draining`, ❌ never bare. The known
+    /// acceptable residual: an already-emitted prompt isn't retroactively
+    /// resolved by another task's "…all" latch — a rare extra prompt, never
+    /// data loss.
     async fn resolve_conflict_on_the_driver(
         &self,
         source_path: &Path,
@@ -341,8 +344,8 @@ impl ConcurrentCopy<'_> {
         dest_size_hint: Option<u64>,
         source_is_dir: bool,
     ) -> Result<Option<ResolvedConflict>, WriteFailure> {
-        // Parked on a PERSON, with the whole batch behind it: the driver
-        // neither fills nor drains the window while a prompt is up, so a dump
+        // Parked on a PERSON, this prompt's or the one it queues behind: the
+        // window drains but fills no further until they answer, so a dump
         // taken now has to say so rather than leave the pre-check's phase
         // standing.
         if let Some(probe) = self.op_probe.as_ref() {
@@ -351,7 +354,6 @@ impl ConcurrentCopy<'_> {
                 &dest_item_path.display().to_string(),
             );
         }
-        let mut latched = *self.apply_to_all_cell.lock_ignore_poison();
         let resolved = resolve_volume_conflict(
             &self.source_volume,
             source_path,
@@ -361,14 +363,13 @@ impl ConcurrentCopy<'_> {
             &*self.events,
             self.operation_id,
             self.state,
-            &mut latched,
+            &self.apply_to_all_cell,
             source_size_hint,
             dest_size_hint,
             Some(source_is_dir),
         )
         .await
         .map_err(WriteFailure::synthetic);
-        *self.apply_to_all_cell.lock_ignore_poison() = latched;
         // An aside a cross-type Overwrite made is the OPERATION's to settle, not
         // the task's: the driver can abandon a task at its cancel deadline.
         resolved.map(|resolved| {

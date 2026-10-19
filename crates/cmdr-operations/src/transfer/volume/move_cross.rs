@@ -313,7 +313,6 @@ pub async fn move_volumes_with_progress(
                     // `Some` only when the preflight produced a hint, so the
                     // resolver keeps its trait-call fallback for the no-hint case.
                     let source_is_directory_hint = source_hint.map(|h| h.is_directory);
-                    let mut latched = *apply_to_all.lock_ignore_poison();
                     let resolved = resolve_volume_conflict(
                         &source_volume,
                         &source_path_owned,
@@ -323,13 +322,12 @@ pub async fn move_volumes_with_progress(
                         &*events,
                         &operation_id,
                         &state,
-                        &mut latched,
+                        &apply_to_all,
                         source_size_hint,
                         dest_size_hint,
                         source_is_directory_hint,
                     )
                     .await;
-                    *apply_to_all.lock_ignore_poison() = latched;
                     let resolved = resolved?;
                     Ok(match resolved {
                         None => {

@@ -321,29 +321,31 @@ async fn test_concurrent_copy_cancellation_mid_batch() {
     assert!(total < 20, "expected fewer than 20 files at dest, got {}", total);
 }
 
-/// While the driver is parked on a top-level Stop prompt, NOTHING in the batch
-/// is moving: the source before the clash was pushed into the window but never
-/// polled, and the source after it hasn't even been prepared.
+/// While the driver is parked on a top-level Stop prompt, the source it asks
+/// about and every source after it stay put, while the source already in the
+/// window runs to the end.
 ///
-/// That's the point of resolving a conflict synchronously on the driver, before
-/// the task is pushed, and of never draining the window while a prompt is
-/// outstanding. The dispatch mutex would still serialize the prompts if
-/// resolution moved into the tasks, and the "…all" latch would still collapse
-/// the queued ones — so prompt COUNTS can't tell those designs apart. What
-/// changes is what the rest of the batch does while a person is deciding: here
-/// it waits; the alternative copies other sources into a folder the user is
-/// still being asked about.
+/// That's the point of resolving a conflict on the driver, before the task is
+/// pushed. The dispatch mutex would still serialize the prompts if resolution
+/// moved into the tasks, and the "…all" latch would still collapse the queued
+/// ones — so prompt COUNTS can't tell those designs apart. What changes is what
+/// the rest of the batch does while a person is deciding: here it waits its
+/// turn; the alternative copies later sources, and the prompts arrive out of
+/// order. The window keeps draining (`ConcurrentDriver::prepare_while_draining`)
+/// because a deep merge's prompt needs it: a driver that stopped polling its
+/// window while queued behind one waited on itself (ERR-8MEX6).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn a_top_level_conflict_prompt_holds_the_whole_batch_still() {
+async fn a_top_level_conflict_prompt_holds_back_its_source_and_every_later_one() {
     let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
-    // One source before the clash (pushed into the window, and must stay
-    // unpolled) and one after it (must not even be prepared).
-    source.create_file(Path::new("/first.bin"), b"ONE").await.unwrap();
-    source.create_file(Path::new("/clash.txt"), b"SRC").await.unwrap();
-    source.create_file(Path::new("/later.bin"), b"TWO").await.unwrap();
-    dest.create_file(Path::new("/clash.txt"), b"DEST").await.unwrap();
+    // One source before the clash (already in the window, so it finishes) and
+    // one after it (must not even be prepared). The prefixes keep that order:
+    // the driver starts sources in tree order, which sorts by name.
+    source.create_file(Path::new("/a-first.bin"), b"ONE").await.unwrap();
+    source.create_file(Path::new("/b-clash.txt"), b"SRC").await.unwrap();
+    source.create_file(Path::new("/c-later.bin"), b"TWO").await.unwrap();
+    dest.create_file(Path::new("/b-clash.txt"), b"DEST").await.unwrap();
 
     let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
@@ -357,9 +359,9 @@ async fn a_top_level_conflict_prompt_holds_the_whole_batch_still() {
     // working while the prompt is outstanding — which is exactly what must not
     // happen. Everything it borrows is moved in.
     let sources = vec![
-        PathBuf::from("/first.bin"),
-        PathBuf::from("/clash.txt"),
-        PathBuf::from("/later.bin"),
+        PathBuf::from("/a-first.bin"),
+        PathBuf::from("/b-clash.txt"),
+        PathBuf::from("/c-later.bin"),
     ];
     let copy = tokio::spawn({
         let events = Arc::clone(&events);
@@ -382,20 +384,34 @@ async fn a_top_level_conflict_prompt_holds_the_whole_batch_still() {
     });
 
     let clash = await_prompted_clash(&events).await;
+    cmdr_fs::testing::wait_until_async(
+        Duration::from_secs(5),
+        "the source already in the window to land",
+        || {
+            events
+                .source_items_done
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|done| done.source_path == "/a-first.bin")
+        },
+    )
+    .await;
     // A negative assertion needs a window to be worth anything: give the driver
     // real time to do the thing it must not do. A batch of three-byte files
     // copies in microseconds, so this is generous.
     // allowed-test-sleep: negative assertion over a window — the claim is that
-    // NOTHING moves while the prompt is up, which needs elapsed time, not a
-    // condition to poll for.
+    // nothing after the clash moves while the prompt is up, which needs
+    // elapsed time, not a condition to poll for.
     tokio::time::sleep(Duration::from_millis(150)).await;
     assert!(
-        !dest.exists(Path::new("/first.bin")).await,
-        "a source already in the window must not stream while the user is still being asked"
-    );
-    assert!(
-        !dest.exists(Path::new("/later.bin")).await,
+        !dest.exists(Path::new("/c-later.bin")).await,
         "a source after the clash must not be copied while the user is still being asked"
+    );
+    assert_eq!(
+        dest.get_metadata(Path::new("/b-clash.txt")).await.unwrap().size,
+        Some(4),
+        "the destination the user is being asked about must stay untouched"
     );
     let _ = state.conflict_slot.answer(
         clash,
@@ -408,6 +424,6 @@ async fn a_top_level_conflict_prompt_holds_the_whole_batch_still() {
 
     assert!(result.is_ok(), "expected Ok, got {result:?}");
     // And once the answer lands, the batch runs to completion normally.
-    assert!(dest.exists(Path::new("/first.bin")).await);
-    assert!(dest.exists(Path::new("/later.bin")).await);
+    assert!(dest.exists(Path::new("/a-first.bin")).await);
+    assert!(dest.exists(Path::new("/c-later.bin")).await);
 }
