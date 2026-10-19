@@ -157,6 +157,11 @@ func (c *sourceCorpus) WalkDir(root string, fn fs.WalkDirFunc) error {
 }
 
 func (c *sourceCorpus) walkDir(path string, d fs.DirEntry, fn fs.WalkDirFunc) error {
+	// `fs.FileInfoToDirEntry` answers nil only for a nil FileInfo, which a
+	// successful Lstat never gives; report it like any unreadable entry.
+	if d == nil {
+		return fn(path, nil, fs.ErrInvalid)
+	}
 	if err := fn(path, d, nil); err != nil || !d.IsDir() {
 		if err == filepath.SkipDir && d.IsDir() {
 			err = nil

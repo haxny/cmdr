@@ -87,6 +87,9 @@ func requiredLiteral(expr string) string {
 }
 
 func longestRequiredLiteral(re *syntax.Regexp) string {
+	if re == nil {
+		return ""
+	}
 	switch re.Op {
 	case syntax.OpLiteral:
 		if re.Flags&syntax.FoldCase != 0 {
