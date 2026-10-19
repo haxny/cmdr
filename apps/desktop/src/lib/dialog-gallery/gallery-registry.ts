@@ -246,6 +246,7 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       { id: 'file_locked', label: 'File locked' },
       { id: 'trash_not_supported', label: 'Trash not supported' },
       { id: 'connection_interrupted', label: 'Connection interrupted' },
+      { id: 'server_connection_lost', label: 'Lost the connection to a server' },
       { id: 'read_error', label: 'Read error' },
       { id: 'write_error', label: 'Write error' },
       { id: 'name_too_long', label: 'Name too long' },

@@ -1960,6 +1960,34 @@
     "description": "Recovery suggestion when a network connection dropped mid-operation. Plain text.",
     "screenshot": "transfer-error-connection_interrupted.png"
   },
+  "errors.write.serverConnectionLost.title": "Lost the connection to {volumeName}",
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr waited {duration} for {volumeName} to come back, then stopped. It was copying {fileName}.",
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr waited {duration} for {volumeName} to come back, then stopped. It was moving {fileName}.",
+  "errors.write.serverConnectionLost.message.dropped.copy": "The connection to {volumeName} dropped while Cmdr was copying {fileName}.",
+  "errors.write.serverConnectionLost.message.dropped.move": "The connection to {volumeName} dropped while Cmdr was moving {fileName}.",
+  "errors.write.serverConnectionLost.suggestion.copy": "Check that the server is on and your network is up, then try again. Files that finished copying are already there.",
+  "errors.write.serverConnectionLost.suggestion.move": "Check that the server is on and your network is up, then try again. Files that finished moving are already there.",
+  "@errors.write.serverConnectionLost.title": {
+    "description": "Title of the copy/move error dialog when the connection to a network server (a NAS or file server reached over SMB, SFTP, WebDAV, or S3) ended the operation. Short. Plain text. The literal {volumeName} is a do-not-translate placeholder, replaced at runtime with the server's name as the sidebar shows it."
+  },
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "description": "Body of the copy error dialog when Cmdr waited a while for a dropped network server to come back, then stopped the copy. Plain text. The literals {duration} (an already-formatted length of time, like \"15m\"), {volumeName} (the server's name), and {fileName} (the file the copy was on when it stopped) are do-not-translate placeholders. The connection is the cause; the file is only context."
+  },
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "description": "Body of the move error dialog when Cmdr waited a while for a dropped network server to come back, then stopped the move. Plain text. The literals {duration} (an already-formatted length of time, like \"15m\"), {volumeName} (the server's name), and {fileName} (the file the move was on when it stopped) are do-not-translate placeholders. The connection is the cause; the file is only context."
+  },
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "description": "Body of the copy error dialog when the connection to a network server dropped and Cmdr couldn't wait for it this time (the server needs a sign-in, or the connection kept dropping). Plain text. The literals {volumeName} (the server's name) and {fileName} (the file the copy was on) are do-not-translate placeholders."
+  },
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "description": "Body of the move error dialog when the connection to a network server dropped and Cmdr couldn't wait for it this time (the server needs a sign-in, or the connection kept dropping). Plain text. The literals {volumeName} (the server's name) and {fileName} (the file the move was on) are do-not-translate placeholders."
+  },
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "description": "What to do after a copy stopped because a network server's connection was lost: check the server and the network, then try again. The second sentence reassures that the files the copy already finished are at the destination. Plain text."
+  },
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "description": "What to do after a move stopped because a network server's connection was lost: check the server and the network, then try again. The second sentence reassures that the files the move already finished are at the destination. Plain text."
+  },
   "errors.write.replySignatureRefused.title": "Server reply refused",
   "errors.write.replySignatureRefused.message": "The server’s reply wasn’t signed, so Cmdr stopped.",
   "errors.write.replySignatureRefused.suggestion": "A flaky network device can cause this, and so can someone tampering with traffic between you and the server. Reconnect, and if it happens again, check your network.",

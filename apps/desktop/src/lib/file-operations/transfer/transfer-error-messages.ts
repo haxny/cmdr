@@ -24,6 +24,8 @@ import type {
 import type { TrashRefusalKind } from '#lib/ipc/bindings.js'
 import { fdaIsMissing } from '#lib/onboarding/fda-status.svelte.js'
 import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
+import { w, type FriendlyErrorMessage } from './transfer-error-catalog'
+import { volumeGoneMessage } from './transfer-error-volume-gone'
 import { formatInteger } from '#lib/intl/number-format.js'
 import { isMacOS } from '#lib/shortcuts/key-capture.js'
 import { getEffectiveShortcuts, toDisplayShortcut } from '#lib/shortcuts/index.js'
@@ -31,16 +33,6 @@ import { colorizeSize } from '#lib/file-explorer/selection/selection-info-utils.
 import { escapeHtml } from '#lib/tooltip/tooltip.js'
 import { formatByteSizeTiered } from '#lib/units/index.js'
 import { archiveEditMessage } from './archive-edit-error-messages.js'
-import { w } from './write-error-catalog.js'
-
-export interface FriendlyErrorMessage {
-  /** Short title for the error */
-  title: string
-  /** Main explanation of what happened */
-  message: string
-  /** Suggestion for what the user can do */
-  suggestion: string
-}
 
 /** Simple error messages that only depend on the operation, not on error-specific fields. */
 const simpleMessageFactories: Partial<
@@ -186,6 +178,9 @@ export interface ErrorDisplayMeta {
 const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta> = {
   cancelled: { category: 'transient', retryHint: true },
   connection_interrupted: { category: 'transient', retryHint: true },
+  // Retry: once the server is back, the same transfer picks up where the files
+  // that already landed leave off. It needs the person to check the server first.
+  server_connection_lost: { category: 'needs_action', retryHint: true },
   delete_pending: { category: 'transient', retryHint: true },
   // No Retry: the file stays archived until someone restores it, which Cmdr
   // can't do yet, so the identical request can only meet it again.
@@ -459,48 +454,6 @@ function sourceNotRemovedMessage(
 }
 
 /**
- * The sentence for a drive that left in the middle of a transfer.
- *
- * Three facts, in the order a worried person needs them: which drive went, how
- * far the transfer got, and where their files are now. The backend names the
- * side (it captured both volumes when the transfer started, because a volume
- * that vanishes can't be looked up afterwards), so ❌ nothing here guesses one
- * from a path.
- *
- * Falls back to the volume-agnostic sentence for a backend session that dropped
- * with no typed side (MTP, SMB), and for a transfer that stopped before the
- * counts existed: a sentence reading "copied 0 of 0 files" would be worse than
- * one that doesn't count at all.
- */
-function deviceDisconnectedMessage(
-  error: Extract<WriteOperationError, { type: 'device_disconnected' }>,
-  operationType: TransferOperationType,
-  progress: ProgressAtStop | null,
-): FriendlyErrorMessage {
-  const title = w('deviceDisconnected.title')
-  const suggestion = w('deviceDisconnected.suggestion')
-  const side = error.side
-  const counted = progress !== null && progress.filesTotal > 0
-  // A move that stops keeps every original, so its destination sentence reports
-  // no partial progress: there isn't any to report.
-  const needsCounts = !(side?.role === 'destination' && operationType === 'move')
-  const sidedOperation = operationType === 'copy' || operationType === 'move'
-  if (side && sidedOperation && (counted || !needsCounts)) {
-    return {
-      title,
-      message: w(`deviceDisconnected.sided.${side.role}.${operationType}`, {
-        volumeName: escapeHtml(side.volumeName),
-        counterpart: escapeHtml(side.counterpartName),
-        done: formatInteger(progress?.filesDone ?? 0),
-        total: formatInteger(progress?.filesTotal ?? 0),
-      }),
-      suggestion,
-    }
-  }
-  return { title, message: w(`deviceDisconnected.message.${operationType}`), suggestion }
-}
-
-/**
  * Whether a missing Full Disk Access grant is a plausible explanation for a refusal,
  * and so whether a surface may offer that as the next step.
  *
@@ -706,11 +659,12 @@ export function getUserFriendlyMessage(
   const perOperation = operationWordedMessage(error, operationType)
   if (perOperation) return perOperation
 
+  const gone = volumeGoneMessage(error, operationType, progressAtStop)
+  if (gone) return gone
+
   switch (error.type) {
     case 'permission_denied':
       return permissionDeniedMessage(error, operationType)
-    case 'device_disconnected':
-      return deviceDisconnectedMessage(error, operationType, progressAtStop)
     // The move kept every original, which is the whole message. Named when the
     // destination volume had a name to capture.
     case 'move_not_confirmed':
@@ -763,6 +717,8 @@ export function getUserFriendlyMessage(
       }
   }
 }
+
+export type { FriendlyErrorMessage } from './transfer-error-catalog'
 
 // The dialog's other half, re-exported so callers keep one import for everything the dialog renders.
 export { getTechnicalDetails } from './transfer-error-details'

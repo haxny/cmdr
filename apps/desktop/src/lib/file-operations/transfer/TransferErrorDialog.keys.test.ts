@@ -88,6 +88,16 @@ describe('TransferErrorDialog keys', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
+  it('retries a lost server connection on R, for once the server is back', () => {
+    const target = render(
+      { type: 'server_connection_lost', path: '/nas/a.jpg', volumeName: 'Naspolya', gaveUpAfterSecs: 900 },
+      { retry: true },
+    )
+    arm()
+    press(target, letter(ERROR_KEYS.retry))
+    expect(onRetry).toHaveBeenCalledTimes(1)
+  })
+
   it('copies anyway on A after a space shortfall', () => {
     const target = render(shortfall, { copyAnyway: true })
     arm()

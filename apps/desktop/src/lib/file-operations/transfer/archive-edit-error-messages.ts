@@ -5,8 +5,7 @@
  */
 import type { WriteOperationError } from '#lib/file-explorer/types.js'
 import { escapeHtml } from '#lib/tooltip/tooltip.js'
-import type { FriendlyErrorMessage } from './transfer-error-messages.js'
-import { w } from './write-error-catalog.js'
+import { w, type FriendlyErrorMessage } from './transfer-error-catalog.js'
 
 /** The message for a refused zip edit, or `null` for any other error. */
 export function archiveEditMessage(error: WriteOperationError): FriendlyErrorMessage | null {

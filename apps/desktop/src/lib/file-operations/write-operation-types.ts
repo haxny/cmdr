@@ -230,6 +230,12 @@ export type WriteOperationError =
   | { type: 'file_locked'; path: string }
   | { type: 'trash_not_supported'; path: string }
   | { type: 'connection_interrupted'; path: string }
+  // The connection to a SERVER (SMB, SFTP, WebDAV, S3) ended the operation, as the
+  // backend's outage wait saw it: the connection is the cause, `path` (the file it was
+  // on) only context. `gaveUpAfterSecs` is how long Cmdr waited, `null` when it didn't
+  // wait this time (a sign-in needed, or a link that kept dropping). A phone or a
+  // local drive never gets this one: it stays `device_disconnected`.
+  | { type: 'server_connection_lost'; path: string; volumeName: string; gaveUpAfterSecs: number | null }
   // A server reply on a signed session carried a bad or missing signature, so Cmdr refused
   // it and stopped. `message` is the backend's diagnostic, for the technical details only.
   | { type: 'reply_signature_refused'; path: string; message: string }

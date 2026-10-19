@@ -316,8 +316,9 @@ destinations".
    - Renders entirely from the typed `WriteOperationError` (`WriteErrorEvent` carries no prose): title, message, and
      suggestion via `getUserFriendlyMessage` / `FallbackErrorContent`; category + retry classification via
      `getErrorDisplayMeta` (both in `transfer-error-messages.ts`, which hands a refused zip edit to
-     `archive-edit-error-messages.ts`; the raw `errors.write.*` lookup is `write-error-catalog.ts`; the details block in
-     `transfer-error-details.ts`). All words live on the FE.
+     `archive-edit-error-messages.ts`; the details block in `transfer-error-details.ts`, the two volume-went-away
+     sentences in `transfer-error-volume-gone.ts`, the shared raw `errors.write.*` lookup in `transfer-error-catalog.ts`).
+     All words live on the FE.
    - Container colors and icon vary by category: error-bg + CircleAlert (`serious`), warning-bg + TriangleAlert
      (`transient`), neutral secondary-bg + Info (`needs_action`).
    - "Retry" button shows when `category === 'transient'` or the variant's `retryHint` is true, AND there's something to
@@ -856,6 +857,17 @@ backend session that dropped with no typed side (MTP, SMB). The move-to-the-driv
 a move that stops keeps every original, so there is no partial state to report. `move_not_confirmed` is its neighbour:
 the move's closing flush couldn't prove the copies were on disk, so every original stayed put, and the copy says exactly
 that.
+
+## What it says when a server's connection was lost
+
+`server_connection_lost` is the backend's outage verdict (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Waiting
+out a volume that went away"): a transfer to or from a server (SMB, SFTP, WebDAV, S3) waited for it and gave up, or
+couldn't wait at all. The connection is the cause, so the title names the server ("Lost the connection to {volumeName}")
+and the file is context, by its last path segment (the full path is in the technical details). `gaveUpAfterSecs` picks
+the sentence: a number words the wait through `formatDuration`, `null` (a sign-in needed, or a link that kept dropping)
+says the connection dropped. The verb comes from the operation type, never the error; only copy and move reach it today.
+Retry stays on, for once the server is back. ❌ Nothing here infers "server" from a path: a phone or a local drive never
+gets this variant and keeps `device_disconnected`.
 
 ## Copy anyway
 

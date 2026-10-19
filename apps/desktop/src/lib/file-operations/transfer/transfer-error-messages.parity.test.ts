@@ -21,7 +21,7 @@ import { getUserFriendlyMessage } from './transfer-error-messages'
 import type { FriendlyErrorMessage } from './transfer-error-messages'
 import type { WriteOperationError, TransferOperationType } from '#lib/file-explorer/types.js'
 import { colorizeSize } from '#lib/file-explorer/selection/selection-info-utils.js'
-import { formatByteSizeTiered } from '#lib/units/index.js'
+import { formatByteSizeTiered, formatDuration, seconds } from '#lib/units/index.js'
 
 // The insufficient_space message interpolates colorized, formatted sizes. Those
 // helpers are NOT part of the migrated copy (only the template moved), so derive
@@ -36,6 +36,10 @@ const FAT_MAX = 4294967295
 const BIG_FILE = 5368709120
 const fatMaxSize = colorizeSize(formatByteSizeTiered(FAT_MAX))
 const bigFileSize = colorizeSize(formatByteSizeTiered(BIG_FILE))
+
+// server_connection_lost interpolates the wait, formatted by the one duration
+// formatter: derived like the sizes above, since only the template is copy.
+const fifteenMinutes = formatDuration(seconds(900))
 
 // `trash_not_supported` interpolates the live `file.deletePermanently` binding.
 // Pin it so the suggestion is deterministic across platforms.
@@ -556,6 +560,53 @@ const cases: Case[] = [
       message: `This needs up to ${requiredSize}, and the destination has ${availableSize} free.`,
       suggestion:
         'Files already at the destination may mean the copy needs less space. If the destination fills up, Cmdr stops and tells you. To be safe, free up some space or choose a different location.',
+    },
+  },
+  {
+    // The connection to a server ended the copy after the outage wait gave up: the
+    // connection heads the title, the file is context by name only.
+    name: 'server_connection_lost (copy, gave up)',
+    error: { type: 'server_connection_lost', path: '/nas/photos/a.jpg', volumeName: 'Naspolya', gaveUpAfterSecs: 900 },
+    op: 'copy',
+    expected: {
+      title: 'Lost the connection to Naspolya',
+      message: `Cmdr waited ${fifteenMinutes} for Naspolya to come back, then stopped. It was copying a.jpg.`,
+      suggestion:
+        'Check that the server is on and your network is up, then try again. Files that finished copying are already there.',
+    },
+  },
+  {
+    name: 'server_connection_lost (move, gave up)',
+    error: { type: 'server_connection_lost', path: '/nas/photos/a.jpg', volumeName: 'Naspolya', gaveUpAfterSecs: 900 },
+    op: 'move',
+    expected: {
+      title: 'Lost the connection to Naspolya',
+      message: `Cmdr waited ${fifteenMinutes} for Naspolya to come back, then stopped. It was moving a.jpg.`,
+      suggestion:
+        'Check that the server is on and your network is up, then try again. Files that finished moving are already there.',
+    },
+  },
+  {
+    // No wait this time: the server wants a sign-in, or the link kept dropping.
+    name: 'server_connection_lost (copy, dropped)',
+    error: { type: 'server_connection_lost', path: '/nas/photos/a.jpg', volumeName: 'Naspolya', gaveUpAfterSecs: null },
+    op: 'copy',
+    expected: {
+      title: 'Lost the connection to Naspolya',
+      message: 'The connection to Naspolya dropped while Cmdr was copying a.jpg.',
+      suggestion:
+        'Check that the server is on and your network is up, then try again. Files that finished copying are already there.',
+    },
+  },
+  {
+    name: 'server_connection_lost (move, dropped)',
+    error: { type: 'server_connection_lost', path: '/nas/photos/a.jpg', volumeName: 'Naspolya', gaveUpAfterSecs: null },
+    op: 'move',
+    expected: {
+      title: 'Lost the connection to Naspolya',
+      message: 'The connection to Naspolya dropped while Cmdr was moving a.jpg.',
+      suggestion:
+        'Check that the server is on and your network is up, then try again. Files that finished moving are already there.',
     },
   },
   {

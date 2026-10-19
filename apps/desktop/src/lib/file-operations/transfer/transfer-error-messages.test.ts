@@ -3,6 +3,7 @@ import { getUserFriendlyMessage, getTechnicalDetails, getErrorDisplayMeta } from
 import type { DisconnectedSide, WriteOperationError } from '#lib/file-explorer/types.js'
 import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
 import { formatInteger } from '#lib/intl/number-format.js'
+import { formatDuration, seconds } from '#lib/units/index.js'
 
 // Mock navigator to control isMacOS() behavior
 const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')
@@ -246,6 +247,57 @@ describe('getUserFriendlyMessage', () => {
         const result = getUserFriendlyMessage(error, 'copy', progress)
 
         expect(result.message).toBe('The device was disconnected during the copy.')
+      })
+    })
+
+    // A server's connection ended the transfer. The connection is the cause, so it
+    // heads the title; the file is only context, by name.
+    describe('a server whose connection was lost', () => {
+      const gaveUp: WriteOperationError = {
+        type: 'server_connection_lost',
+        path: '/Volumes/naspi/photos/DSC09241.arw',
+        volumeName: 'Naspolya',
+        gaveUpAfterSecs: 900,
+      }
+
+      it('names the server as the cause, how long Cmdr waited, and the file it was on', () => {
+        const result = getUserFriendlyMessage(gaveUp, 'copy')
+
+        expect(result.title).toBe('Lost the connection to Naspolya')
+        expect(result.message).toContain(`waited ${formatDuration(seconds(900))} for Naspolya`)
+        expect(result.message).toContain('copying DSC09241.arw')
+        expect(result.message).not.toContain('/Volumes/naspi')
+      })
+
+      it('follows the operation’s verb', () => {
+        expect(getUserFriendlyMessage(gaveUp, 'move').message).toContain('moving DSC09241.arw')
+        expect(getUserFriendlyMessage(gaveUp, 'move').suggestion).toContain('finished moving')
+      })
+
+      it('says the connection dropped when Cmdr could not wait for it', () => {
+        const result = getUserFriendlyMessage({ ...gaveUp, gaveUpAfterSecs: null }, 'copy')
+
+        expect(result.message).toBe('The connection to Naspolya dropped while Cmdr was copying DSC09241.arw.')
+      })
+
+      it('escapes the names it interpolates', () => {
+        const result = getUserFriendlyMessage({ ...gaveUp, volumeName: '<b>NAS</b>', path: '/x/<i>.txt' }, 'copy')
+
+        expect(result.title).not.toContain('<b>')
+        expect(result.message).not.toContain('<i>')
+      })
+
+      it('offers a Retry, for once the server is back', () => {
+        expect(getErrorDisplayMeta(gaveUp)).toEqual({ category: 'needs_action', retryHint: true })
+      })
+
+      it('lists the server and the wait in the technical details', () => {
+        const details = getTechnicalDetails(gaveUp)
+
+        expect(details).toContain('Path: /Volumes/naspi/photos/DSC09241.arw')
+        expect(details).toContain('Server: Naspolya')
+        expect(details).toContain('Waited: 900 s')
+        expect(getTechnicalDetails({ ...gaveUp, gaveUpAfterSecs: null })).toContain('Waited: no')
       })
     })
 
@@ -881,6 +933,11 @@ describe('getErrorDisplayMeta', () => {
       retryHint: true,
     },
     { error: { type: 'connection_interrupted', path: '/p' }, category: 'transient', retryHint: true },
+    {
+      error: { type: 'server_connection_lost', path: '/p', volumeName: 'NAS', gaveUpAfterSecs: 900 },
+      category: 'needs_action',
+      retryHint: true,
+    },
     {
       error: { type: 'insufficient_space', required: 1, available: 0, volumeName: null },
       category: 'needs_action',

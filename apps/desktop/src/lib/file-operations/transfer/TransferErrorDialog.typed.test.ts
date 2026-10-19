@@ -109,6 +109,21 @@ describe('TransferErrorDialog: typed-error rendering', () => {
     expect(buttons).not.toContain('Retry')
   })
 
+  // The connection to a server ended the copy: the dialog leads with the server, words
+  // the wait, and offers a Retry for once it's back.
+  it('renders a lost server connection with the server as the cause, and a Retry', async () => {
+    const target = mountDialog({
+      error: { type: 'server_connection_lost', path: '/nas/a.jpg', volumeName: 'Naspolya', gaveUpAfterSecs: null },
+      operationType: 'copy',
+      onRetry: () => {},
+    })
+    await tick()
+    expect(target.textContent).toContain('Lost the connection to Naspolya')
+    expect(target.textContent).toContain('The connection to Naspolya dropped while Cmdr was copying a.jpg.')
+    expect(target.querySelector('.error-icon')?.className).toContain('icon-info')
+    expect(Array.from(target.querySelectorAll('button')).map(buttonLabel)).toContain('Retry')
+  })
+
   describe('a space shortfall (#351)', () => {
     const shortfall: WriteOperationError = {
       type: 'insufficient_space',

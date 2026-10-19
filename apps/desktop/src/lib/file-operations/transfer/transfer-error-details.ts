@@ -116,8 +116,8 @@ function variantDetailLines(error: WriteOperationError): string[] {
 }
 
 /**
- * The details for the two variants a vanished drive raises, or `null` for
- * everything else.
+ * The details for the variants a volume that went away raises (a vanished drive,
+ * a server whose connection was lost), or `null` for everything else.
  *
  * The drive's identity is the thing worth having here: the volume list has
  * already dropped it, so this block is the only place its name and id survive a
@@ -130,6 +130,15 @@ function driveDetailLines(error: WriteOperationError): string[] | null {
     return error.side
       ? [`Path: ${error.path}`, `Volume: ${error.side.volumeName} (${error.side.volumeId})`, `Side: ${error.side.role}`]
       : [`Path: ${error.path}`]
+  }
+  // The server's name and the wait, which the prose words but a report needs as
+  // plain facts.
+  if (error.type === 'server_connection_lost') {
+    return [
+      `Path: ${error.path}`,
+      `Server: ${error.volumeName}`,
+      `Waited: ${error.gaveUpAfterSecs === null ? 'no' : `${String(error.gaveUpAfterSecs)} s`}`,
+    ]
   }
   if (error.type === 'move_not_confirmed') {
     const lines = [`Path: ${error.path}`]
