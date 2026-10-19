@@ -15,7 +15,7 @@ for one shard isn't worth it.
 
 ```
 e2e-linux.sh
-├─ Build Tauri binary in Docker (--features playwright-e2e,virtual-mtp,smb-e2e)
+├─ Build Tauri binary in Docker (--profile e2e --features playwright-e2e,virtual-mtp,smb-e2e)
 ├─ start_fixture_stacks (e2e-linux-fixtures.sh, sourced)
 │   ├─ Lease + probe SMB (smb-consumer-guest, -auth, -50shares, -unicode)
 │   └─ Lease + probe SFTP and WebDAV in `e2e` mode (sftp-fixture-openssh, webdav-fixture-apache)
@@ -119,6 +119,13 @@ cache".
 `DESKTOP_SVELTEKIT_VOLUME` each override the name. An override is taken verbatim: no suffix, no label, no reaping. CI
 sets the first two to host bind-mount paths (`/tmp/cmdr-docker-cache/...`) so `actions/cache` can persist them (it can't
 cache Docker named volumes), and a CI runner has one checkout anyway.
+
+### The `e2e` cargo profile
+
+The binary builds with `--profile e2e` (root `Cargo.toml`): `release` without thin LTO, with `debug-assertions` and
+`overflow-checks` pinned to release's values. It lands at `/target/<triple>/e2e/Cmdr`. Thin LTO costs ~35% of a clean
+release build (`docs/notes/index-extraction-baseline.md` § Build times) on the job that gates every land, and buys
+nothing for a Linux binary we never ship. CI build times before and after: #557.
 
 ## SMB E2E networking
 

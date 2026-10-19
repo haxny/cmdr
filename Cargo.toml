@@ -49,6 +49,17 @@ tauri-plugin-store = { path = "vendor/tauri-plugin-store" }
 [profile.release]
 lto = "thin"
 
+# The Linux Docker E2E build (`apps/desktop/scripts/e2e-linux.sh`), and nothing else. It's
+# `release` minus thin LTO, whose build cost (+35% on a clean build, measured above) lands on
+# the CI job that gates every land, where it buys nothing: that binary is a test target we
+# never ship (we ship macOS). `debug-assertions` and `overflow-checks` stay pinned to release's
+# values, so the app under test behaves the way a release build does. #557.
+[profile.e2e]
+inherits = "release"
+lto = false
+debug-assertions = false
+overflow-checks = false
+
 # Debug builds carry line tables instead of full DWARF. Panics, `backtrace`, and every log line still
 # resolve to file and line; what's gone is inspecting variables in a debugger, which isn't how we work.
 #

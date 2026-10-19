@@ -425,7 +425,10 @@ docker run --rm \
         # CMDR_E2E_BUILD=1 bakes in the dialog gallery (the `__CMDR_E2E_BUILD__`
         # Vite define) that `dialog-inset.spec.ts` drives; without it that spec skips
         # and this lane silently stops covering dialog layout.
-        CMDR_E2E_BUILD=1 pnpm tauri build --ci --target "$LINUX_TARGET" --no-bundle --config "{\"build\":{\"frontendDist\":\"../.svelte-kit/linux-build\"}}" -- --features playwright-e2e,virtual-mtp,smb-e2e
+        # --profile e2e: release without thin LTO, which cut minutes off the build that
+        # gates every land. See the profile comment in the root Cargo.toml. The binary
+        # lands under /target/<triple>/e2e/, read back below.
+        CMDR_E2E_BUILD=1 pnpm tauri build --ci --target "$LINUX_TARGET" --no-bundle --config "{\"build\":{\"frontendDist\":\"../.svelte-kit/linux-build\"}}" -- --profile e2e --features playwright-e2e,virtual-mtp,smb-e2e
 
         # Write the target triple so the host script can find the binary
         echo "$LINUX_TARGET" > /target/.linux-target
@@ -448,7 +451,7 @@ fi
 
 # The binary path inside the container (target volume is mounted at /target)
 # The binary is named "Cmdr" (capital C) not "cmdr"
-DOCKER_TAURI_BINARY="/target/$LINUX_TARGET/release/Cmdr"
+DOCKER_TAURI_BINARY="/target/$LINUX_TARGET/e2e/Cmdr"
 
 # SMB, SFTP, and WebDAV, leased and probed; sets FIXTURE_DOCKER_ARGS and
 # FIXTURE_ENV_ARGS for the `docker run`s below (e2e-linux-fixtures.sh).
