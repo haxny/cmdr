@@ -221,10 +221,10 @@ impl crate::Operations {
 
         let operation_id = cmdr_operation_log::new_operation_id();
         log::info!(
-            "copy_between_volumes: operation_id={}, source_volume={}, dest_volume={}, {} sources, dest={}",
+            "copy_between_volumes: operation_id={}, source_volume_id={}, dest_volume_id={}, {} sources, dest={}",
             operation_id,
-            source_volume.name(),
-            dest_volume.name(),
+            source_volume_id,
+            dest_volume_id,
             source_paths.len(),
             dest_path.display()
         );

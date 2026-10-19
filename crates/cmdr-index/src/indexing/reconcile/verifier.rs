@@ -70,6 +70,14 @@ fn release_in_flight_slot(state: &Mutex<VerifierState>, dir_path: &str) {
     state.recent.push((dir_path.to_string(), Instant::now()));
 }
 
+/// One `[samples: …]` entry of the diff log line: `-` stale, `+` new, `~` modified, then the
+/// name under a `file=` / `dir=` key, `{:?}`-quoted. A bare name is invisible to the error
+/// report's redactor, which only knows it's a name by its key.
+fn diff_sample(sign: char, name: &str, is_dir: bool) -> String {
+    let key = if is_dir { "dir" } else { "file" };
+    format!("{sign}{key}={name:?}")
+}
+
 // ── Public API ───────────────────────────────────────────────────────
 
 /// Attempt to verify a directory against the index. Checks dedup/debounce,
@@ -363,7 +371,7 @@ async fn verify_and_correct(
             }
             stale_count += 1;
             if samples.len() < 5 {
-                samples.push(format!("-{}", db_entry.name));
+                samples.push(diff_sample('-', &db_entry.name, db_entry.is_directory));
             }
         }
     }
@@ -401,12 +409,12 @@ async fn verify_and_correct(
                     let new_dir = format!("{}/{}", parent_prefix, disk_entry.name);
                     new_dir_paths.push(new_dir);
                     if samples.len() < 5 {
-                        samples.push(format!("+/{}", disk_entry.name));
+                        samples.push(diff_sample('+', &disk_entry.name, true));
                     }
                 } else {
                     new_file_count += 1;
                     if samples.len() < 5 {
-                        samples.push(format!("+{}", disk_entry.name));
+                        samples.push(diff_sample('+', &disk_entry.name, false));
                     }
                 }
             }
@@ -439,7 +447,7 @@ async fn verify_and_correct(
                         new_file_count += 1;
                     }
                     if samples.len() < 5 {
-                        samples.push(format!("~{}", disk_entry.name));
+                        samples.push(diff_sample('~', &disk_entry.name, disk_entry.is_dir));
                     }
                     continue;
                 }
@@ -466,7 +474,7 @@ async fn verify_and_correct(
                         });
                         modified_count += 1;
                         if samples.len() < 5 {
-                            samples.push(format!("~{}", disk_entry.name));
+                            samples.push(diff_sample('~', &disk_entry.name, disk_entry.is_dir));
                         }
                     }
                 }
@@ -481,7 +489,7 @@ async fn verify_and_correct(
 
     let total_diffs = stale_count + new_file_count + new_dir_paths.len() as u64 + modified_count;
     log::info!(
-        "Verifier: {} diffs in `{}` ({} stale, {} new files, {} new dir, {} modified) [samples: {}]",
+        "Verifier: {} diffs in path={:?} ({} stale, {} new files, {} new dir, {} modified) [samples: {}]",
         total_diffs,
         normalized,
         stale_count,
