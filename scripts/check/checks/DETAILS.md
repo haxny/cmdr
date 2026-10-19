@@ -1757,7 +1757,9 @@ ahead of its cells.
 `desktop-rust-disk-images` (nickname `disk-images`, `desktop-rust-disk-images.go`) runs the `#[ignore]`d tests that
 attach real synthetic APFS and HFS+ images through `cmdr_fs::testing::disk_images` (`crates/cmdr-fs/DETAILS.md` §
 "`testing::disk_images`"): the harness's own `real_images` tests, the eject pins, the index's presence and vanish pins,
-the transfer's real-detach pins, the delete's nested-mount pins, and the unmount approver's pins.
+the transfer's real-detach pins, the delete's nested-mount pins, and the unmount approver's pins. One cell attaches no
+image: the index's real-journal rename pin (`cold_drive_tests::moves::real_journal`), here because this is the opt-in
+macOS lane for real-OS pins and a real `fseventsd` replay is too slow under load for the default one.
 
 - **How to run it**: `pnpm check disk-images`, or any `pnpm check --include-slow` on a Mac. It's `IsSlow` because every
   test attaches and detaches disk images, which no default run should do. 11 tests took 48 s (macOS 26.6.2, 2026-09-14);

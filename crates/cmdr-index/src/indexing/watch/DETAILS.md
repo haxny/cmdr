@@ -20,13 +20,14 @@ post-replay verification COST-BOUNDING (the two teeth) in `../reconcile/DETAILS.
   - **Gotcha/Why**: every stream start AND every `current_event_id` is a round trip to `fseventsd`, one daemon for the
     whole machine. With other processes' disk churn pegging it at 100% CPU, each took 0.7–3.7 s (verified on macOS 27,
     `sample` + timing logs, 2026-10-07, issue #374), which timed the phase-machine tests out at full parallelism. Treat
-    both as blocking I/O. A test that never waits on a delivery puts its root on the cfg(test)
-    `watcher/fake_journal.rs`; one that asserts on delivery keeps the real stream and the `real-notify` nextest group.
-    On the fake by default: the phases `Drive`, the cover `ColdDrive`, and `event_stream_tests.rs`. Real, and
-    self-healing (redo the change on a fresh name until it lands, since a just-armed stream DROPS a change outright):
-    `ColdDrive::watched_for_real`, used only by the four cold-drive tests that prove a delivery. ⚠️ Don't mix the two
-    across one drive's life: a fake id stored as `last_event_id` and handed to a real restart watches from a moment that
-    never existed and delivers nothing (`cold_drive_tests/moves.rs`).
+    both as blocking I/O. A test puts its root on the cfg(test) `watcher/fake_journal.rs`, a SCRIPTED journal: a change
+    the test records with `record_created_file` reaches every fake watcher under it at once, and a watcher started with
+    an older `since_when` replays it and then a `HistoryDone`, as FSEvents does. On it by default: the phases `Drive`,
+    the cover `ColdDrive`, and `event_stream_tests.rs`. Real, and self-healing (redo the change on a fresh name until it
+    lands, since a just-armed stream DROPS a change outright): `ColdDrive::watched_for_real`, kept for the cells that
+    pin an OS fact (`../lifecycle/cover/DETAILS.md` § "What the cold-drive cells pin about FSEvents"). ⚠️ Don't mix the
+    two across one drive's life: a fake id stored as `last_event_id` and handed to a real restart watches from a moment
+    that never existed and delivers nothing.
 - **branches.rs (+branches/tests.rs)** — `WatchScope`, `BranchWatch`, and the admission rule a live loop reads events by
   (below).
 - **event_loop.rs** — holds only what more than one loop uses: `merge_fs_events` (deduplication with flag priority),

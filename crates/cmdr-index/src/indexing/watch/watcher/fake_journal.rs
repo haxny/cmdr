@@ -1,5 +1,6 @@
-//! Tests that drive a whole volume through the handle, and never wait on a
-//! delivery, put its root on a fake journal: no stream, and synthetic event IDs.
+//! Tests that drive a whole volume through the handle put its root on a fake
+//! journal: no stream, synthetic event IDs, and a SCRIPTED journal of the changes
+//! the test says it made.
 //!
 //! ⚠️ **Why it exists**: every real stream start and every
 //! [`current_event_id`](super::current_event_id) is a round trip to `fseventsd`,
@@ -8,10 +9,19 @@
 //! each) blew the 8 s cap at full parallelism while each took 0.13 s alone
 //! (verified on macOS 27, `sample` + timing logs, 2026-10-07, issue #374). No lock
 //! or group in the test runner helps: the contention is with every process on the
-//! machine.
+//! machine. A cell waiting on a real REPLAY had it worse: 30 s wasn't always
+//! enough (#418).
 //!
-//! ❌ Not for a test that asserts on what a watcher DELIVERS: that one needs the
-//! real stream (`.config/nextest.toml`'s `real-notify` group).
+//! **The scripted journal.** A test that writes a file and calls [`record_created_file`]
+//! gets what FSEvents would give it: every running fake watcher whose root holds
+//! the path hears it at once, and a watcher started later with a `since_when` below
+//! its id replays it, then a `HistoryDone`. That's enough to drive the index's own
+//! replay, restart, and move logic deterministically. What it can't prove is the
+//! OS half (that FSEvents really replays a path from an old id): the cells pinning
+//! that run on the real journal (`lifecycle/cover/DETAILS.md` § "What the cold-drive
+//! cells pin about FSEvents").
+//!
+//! ❌ An unrecorded change is invisible here, as a dropped event would be.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -21,7 +31,7 @@ use std::time::Duration;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use tokio::sync::mpsc;
 
-use super::{DriveWatcher, FsChangeEvent};
+use super::{DriveWatcher, FsChangeEvent, FsEventFlags};
 
 /// Scoped by root, so a real-stream test sharing the process under plain
 /// `cargo test` keeps its real journal.
@@ -48,9 +58,14 @@ pub(super) fn next_event_id() -> u64 {
 /// `stop`, so the loop reading the other end waits the way it waits on a quiet
 /// drive, ❌ never reads a closed channel as a watcher that died.
 ///
-/// Parks first while a [`StreamGate`] holds `root`, the way a real start waits on
-/// a busy `fseventsd`.
-pub(super) fn watcher(root: &Path, event_sender: mpsc::UnboundedSender<FsChangeEvent>) -> DriveWatcher {
+/// With a `since_when`, it first replays the recorded changes under `root` newer
+/// than that id, then a `HistoryDone`, as a real stream does. Parks first while a
+/// [`StreamGate`] holds `root`, the way a real start waits on a busy `fseventsd`.
+pub(super) fn watcher(
+    root: &Path,
+    since_when: u64,
+    event_sender: mpsc::UnboundedSender<FsChangeEvent>,
+) -> DriveWatcher {
     let gate = GATES
         .lock_ignore_poison()
         .iter()
@@ -59,17 +74,104 @@ pub(super) fn watcher(root: &Path, event_sender: mpsc::UnboundedSender<FsChangeE
     if let Some(gate) = gate {
         gate.park();
     }
+    let running = Arc::new(AtomicBool::new(true));
+    let last_event_id = Arc::new(AtomicU64::new(0));
+    // The journal delivers into a channel of the watcher's own, and only its task
+    // holds the loop's sender, so `stop` closes the loop's channel the moment it
+    // aborts the task, as a real watcher's does.
+    let (journal_tx, mut journal_rx) = mpsc::unbounded_channel::<FsChangeEvent>();
+    {
+        // Replay and joining the live list happen under ONE lock, so a change
+        // recorded meanwhile arrives exactly once, and after the `HistoryDone`.
+        let mut journal = JOURNAL.lock_ignore_poison();
+        if since_when != 0 {
+            for event in journal
+                .recorded
+                .iter()
+                .filter(|event| event.event_id > since_when && Path::new(&event.path).starts_with(root))
+            {
+                let _ = journal_tx.send(event.clone());
+                last_event_id.store(event.event_id, Ordering::Relaxed);
+            }
+            let _ = journal_tx.send(FsChangeEvent {
+                path: root.to_string_lossy().into_owned(),
+                event_id: next_event_id(),
+                flags: FsEventFlags {
+                    history_done: true,
+                    ..FsEventFlags::default()
+                },
+            });
+        }
+        journal.listening.push(Listener {
+            root: root.to_path_buf(),
+            sender: journal_tx,
+            running: Arc::clone(&running),
+            last_event_id: Arc::clone(&last_event_id),
+        });
+    }
     let forward_task = crate::indexing::host::runtime::spawn(async move {
-        let _held = event_sender;
+        while let Some(event) = journal_rx.recv().await {
+            let _ = event_sender.send(event);
+        }
+        // The journal holds its end for good, so this is never reached; the
+        // sender stays held until `stop` aborts the task.
         std::future::pending::<()>().await;
     });
     DriveWatcher {
-        running: Arc::new(AtomicBool::new(true)),
-        last_event_id: Arc::new(AtomicU64::new(0)),
+        running,
+        last_event_id,
         overflow: Arc::new(AtomicBool::new(false)),
         handler: None,
         forward_task: Some(forward_task),
     }
+}
+
+/// Every change a test recorded, and the fake watchers listening for the next one.
+static JOURNAL: Mutex<Journal> = Mutex::new(Journal {
+    recorded: Vec::new(),
+    listening: Vec::new(),
+});
+
+struct Journal {
+    /// Oldest first, which is id order.
+    recorded: Vec<FsChangeEvent>,
+    listening: Vec<Listener>,
+}
+
+/// A running fake watcher, as the journal delivers to it.
+struct Listener {
+    root: PathBuf,
+    sender: mpsc::UnboundedSender<FsChangeEvent>,
+    /// The watcher's own flag: `stop` clears it, and the journal stops delivering.
+    running: Arc<AtomicBool>,
+    last_event_id: Arc<AtomicU64>,
+}
+
+/// Say that the test just created the file at `path`: every fake watcher whose
+/// root holds it hears it now, and a later start replays it from an older id.
+pub(crate) fn record_created_file(path: &Path) {
+    let event = FsChangeEvent {
+        path: path.to_string_lossy().into_owned(),
+        event_id: next_event_id(),
+        flags: FsEventFlags {
+            item_created: true,
+            item_is_file: true,
+            ..FsEventFlags::default()
+        },
+    };
+    let mut journal = JOURNAL.lock_ignore_poison();
+    journal
+        .listening
+        .retain(|listener| listener.running.load(Ordering::Relaxed) && !listener.sender.is_closed());
+    for listener in journal
+        .listening
+        .iter()
+        .filter(|listener| path.starts_with(&listener.root))
+    {
+        let _ = listener.sender.send(event.clone());
+        listener.last_event_id.store(event.event_id, Ordering::Relaxed);
+    }
+    journal.recorded.push(event);
 }
 
 pub(crate) struct Guard(PathBuf);

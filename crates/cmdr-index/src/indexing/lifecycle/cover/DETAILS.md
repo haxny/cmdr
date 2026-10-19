@@ -279,3 +279,21 @@ pays for a whole fixture it doesn't use.
 `test_support.rs` holds what more than one of them needs: `drain`, the temp-tree `Fixture` (in
 `test_support/fixture.rs`, shared by `tests.rs` and `repair_tests.rs`), and the `Share` harness plus the instrumented
 `Volume` doubles `network_tests.rs` runs on. A fixture only one file uses stays in that file.
+
+### What the cold-drive cells pin about FSEvents
+
+A `ColdDrive` is on the SCRIPTED journal by default (`../../watch/watcher/fake_journal.rs`): a change reaches it because
+the test recorded it, delivered live or replayed from a stored id, so the default lane pins the index's own logic and
+never waits on `fseventsd`. Two OS facts that logic rests on are pinned on the REAL journal instead, one cell each:
+
+- **A live stream on a walked branch delivers.** `cold_drive_tests/branches.rs`'s
+  `a_change_inside_a_walked_branch_reaches_the_index_...`, the one real-delivery cell in the default lane (`real-notify`
+  group, self-healing).
+- **A stream started at a RENAMED directory with the id stored at the old path replays what changed under the new one.**
+  That's what lets a renamed drive's restart catch up through the journal instead of a walk. Pinned by
+  `cold_drive_tests/moves.rs`'s
+  `real_journal::fsevents_replays_a_renamed_drives_journal_from_the_id_stored_at_the_old_path`, `#[ignore]`d and run in
+  the opt-in macOS disk-image lane (verified on macOS 27.0.1, that cell, 1.2 s at load 8, 2026-10-19). It was a
+  default-lane cell until a busy `fseventsd` pushed the replay past its 30 s wait 19 times in 2026-10 (#418).
+
+❌ Don't move either back to the scripted journal: it can only replay what a test tells it, so it would assert the fake.

@@ -200,6 +200,18 @@ filter = 'test(volumes::rename_real_image::)'
 test-group = 'disk-image'
 slow-timeout = { period = "30s", terminate-after = 1 }
 
+[[profile.default.overrides]]
+# The real-journal rename pin (`cmdr-index`'s `cold_drive_tests::moves::real_journal`,
+# macOS-only, `#[ignore]`d): no image, but it runs in the disk-image lane because
+# that's the opt-in macOS lane for real-OS pins. It waits on a REAL `fseventsd`
+# replay (60 s budget) and a real delivery (60 s), after a 20 s first index; a busy
+# daemon took the replay past 30 s in 2026-10 (#418). 150 s keeps those budgets the
+# authority. Measured 1.2 s at load 8 (macOS 27.0.1, 2026-10-19).
+# allowed-unmatched-nextest-filter: macos-only, the FSEvents journal has no Linux counterpart
+filter = 'test(cold_drive_tests::moves::real_journal::)'
+test-group = 'disk-image'
+slow-timeout = { period = "150s", terminate-after = 1 }
+
 # SMB stress tests serialize on the shared server (see `smb-stress` group above).
 # The concurrent-streaming one additionally wraps its copy in a 120 s internal
 # `tokio::time::timeout` whose expiry dumps the last 30 `client-mutex:`/`recv:`
@@ -376,22 +388,16 @@ test-group = 'real-notify'
 slow-timeout = { period = "40s", terminate-after = 1 }
 
 [[profile.default.overrides]]
-# The cold-drive tests that block on a REAL FSEvents delivery, so they run on the
-# real journal (`ColdDrive::watched_for_real`); every other cold-drive test is on
-# the fake one (`watch/watcher/fake_journal.rs`) and needs no override.
-# `a_change_inside_a_walked_branch_...` proves `ensure_branch_watch` starts a
-# watcher that actually delivers; the three `moves::` tests prove the index is live
-# at a renamed drive's new mount point by a file landing through the watcher. All
-# four are SELF-HEALING (`until_the_watcher_delivers` redoes the change on a fresh
-# name, defeating the arming window and a dropped event), so no retries. 70 s puts
-# the cap over the worst in-test budgets (20 s first index + 30 s restart catch-up
-# + 15 s delivery, for the rename test) so their panics name the stage that starved.
-filter = '''
-    test(indexing::lifecycle::cover::cold_drive_tests::branches::a_change_inside_a_walked_branch)
-  + test(a_drive_renamed_while_it_indexes_keeps_indexing_at_its_new_mount_point)
-  + test(a_rename_inside_a_drain_window_moves_the_start_that_window_carries)
-  + test(a_rename_while_a_scan_starts_restarts_the_drive_at_the_handback)
-'''
+# The cold-drive cell that blocks on a REAL FSEvents delivery, so it runs on the
+# real journal (`ColdDrive::watched_for_real`): `a_change_inside_a_walked_branch_...`
+# proves `ensure_branch_watch` starts a watcher that actually delivers. Every other
+# cold-drive test is on the scripted journal (`watch/watcher/fake_journal.rs`) and
+# needs no override; ❌ don't add a second real cell to the default lane (the
+# `moves::` ones failed at their 30 s replay wait 19 times in 2026-10, #418). It's
+# SELF-HEALING (`until_the_watcher_delivers` redoes the change on a fresh name,
+# defeating the arming window and a dropped event), so no retries. 70 s puts the cap
+# over its in-test budgets so its panic names the stage that starved.
+filter = 'test(indexing::lifecycle::cover::cold_drive_tests::branches::a_change_inside_a_walked_branch)'
 test-group = 'real-notify'
 slow-timeout = { period = "70s", terminate-after = 1 }
 

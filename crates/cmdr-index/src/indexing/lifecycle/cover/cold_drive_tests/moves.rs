@@ -1,31 +1,30 @@
 //! Renaming a drive while it indexes. The mount point moves while the drive
 //! stays mounted, and the index has to keep up with it there: listings, live
 //! changes, and every row it already holds.
+//!
+//! These run on the SCRIPTED journal (`watch/watcher/fake_journal.rs`): a change
+//! reaches the index because the test records it, replayed from the drive's stored
+//! event id or delivered live, so what they pin is the index's own move, restart,
+//! and replay logic, in milliseconds. That FSEvents really replays a renamed path
+//! from the old id is the OS's half, pinned on the real journal by
+//! [`real_journal`], which runs in the opt-in macOS lane.
 
 use std::path::PathBuf;
 
-use super::toggles::{an_indexed_drive, indexed, turn_on};
+use super::toggles::{an_indexed_drive, turn_on};
 use super::*;
 use crate::indexing::lifecycle::state;
 
 /// The file every drive here starts with (`toggles::an_indexed_drive`).
 const PROOF: &str = "scope/found.txt";
 
-/// An indexed drive on the REAL FSEvents journal, for the tests that prove the
-/// index is live at the new mount point by a change the OS has to deliver.
-///
-/// ⚠️ Real from the start, ❌ not only at the new root: a fake journal's synthetic
-/// event ids would be stored as the drive's `last_event_id` and then handed to the
-/// real stream the move restarts, which watches from a point in time that never
-/// existed and delivers nothing.
-fn indexed_for_real(volume_id: &'static str) -> ColdDrive {
-    indexed(ColdDrive::watched_for_real(volume_id))
-}
-
 /// Moves a drive's tree back where its `TempDir` will look for it, on any exit.
 struct PutBack {
     from: PathBuf,
     to: PathBuf,
+    /// The scripted journal over the new root, for as long as the drive lives there.
+    #[cfg(target_os = "macos")]
+    _journal: Option<crate::indexing::watch::watcher::fake_journal::Guard>,
 }
 
 impl Drop for PutBack {
@@ -35,7 +34,8 @@ impl Drop for PutBack {
 }
 
 /// Rename the drive's mount point to a sibling, and have the host report it there,
-/// the way the app's registry does once macOS says the volume was renamed.
+/// the way the app's registry does once macOS says the volume was renamed. A drive
+/// on the scripted journal keeps it at the new root.
 fn rename_the_drive(drive: &ColdDrive) -> (PathBuf, PutBack) {
     let old_root = drive.tree.path().to_path_buf();
     let mut name = old_root.file_name().expect("a named tree").to_os_string();
@@ -53,8 +53,39 @@ fn rename_the_drive(drive: &ColdDrive) -> (PathBuf, PutBack) {
     let put_back = PutBack {
         from: new_root.clone(),
         to: old_root,
+        #[cfg(target_os = "macos")]
+        _journal: drive
+            ._journal
+            .as_ref()
+            .map(|_| crate::indexing::watch::watcher::fake_journal::fake_for(&new_root)),
     };
     (new_root, put_back)
+}
+
+/// Create a file, and tell the scripted journal so, which is what makes it a
+/// change the index can hear about. Off macOS the watcher is the real inotify one
+/// and needs no telling.
+fn create_a_file(drive: &ColdDrive, path: &Path) {
+    std::fs::write(path, "w").expect("a change for the watcher to deliver");
+    #[cfg(target_os = "macos")]
+    if !on_a_real_watcher(drive) {
+        crate::indexing::watch::watcher::fake_journal::record_created_file(path);
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = drive;
+}
+
+/// Whether the drive's changes reach it through a real OS watcher: the real
+/// FSEvents journal on macOS ([`real_journal`]), and inotify everywhere else,
+/// which has no shared daemon to starve on.
+fn on_a_real_watcher(drive: &ColdDrive) -> bool {
+    #[cfg(target_os = "macos")]
+    return drive._journal.is_none();
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = drive;
+        true
+    }
 }
 
 /// Whether the drive's index holds a row for `relative`. Rows are mount-relative,
@@ -69,33 +100,42 @@ fn holds(drive: &ColdDrive, relative: &str) -> bool {
         .is_some()
 }
 
+/// How long a change gets to reach the index. A scripted delivery (and inotify's,
+/// off macOS) lands in milliseconds; this only bounds how long a broken path takes
+/// to say so, under the 8 s nextest cap.
+const LANDS_WITHIN: std::time::Duration = std::time::Duration::from_secs(5);
+
 /// **The headline case.** A drive renamed while it indexes keeps indexing at its
 /// new mount point. A file that arrived while nothing listened at either path is
-/// found by the listing the restart walks, a file created afterwards lands through
-/// the watcher, and nothing the index held before the rename goes missing.
+/// found by the restart's replay, a file created afterwards lands through the
+/// watcher, and nothing the index held before the rename goes missing.
 #[test]
 fn a_drive_renamed_while_it_indexes_keeps_indexing_at_its_new_mount_point() {
-    let drive = indexed_for_real("cover-move-renamed-drive-test");
-    let (new_root, _put_back) = rename_the_drive(&drive);
-    std::fs::write(new_root.join("scope/in-the-gap.txt"), "y").expect("write while nothing listens");
+    let drive = an_indexed_drive("cover-move-renamed-drive-test");
+    the_drive_keeps_indexing_at_its_new_mount_point(&drive, LANDS_WITHIN);
+}
+
+/// The headline case's body, for the scripted journal above and the real one in
+/// [`real_journal`]. `patience` is how long each change gets to land.
+fn the_drive_keeps_indexing_at_its_new_mount_point(drive: &ColdDrive, patience: std::time::Duration) {
+    let (new_root, _put_back) = rename_the_drive(drive);
+    create_a_file(drive, &new_root.join("scope/in-the-gap.txt"));
 
     let followed = drive.index.follow_volume_move(drive.volume_id);
-    assert!(holds(&drive, PROOF), "following the move deletes nothing it held");
+    assert!(holds(drive, PROOF), "following the move deletes nothing it held");
 
-    // 30 s, and no redo possible: the gap file has to predate the move. A completed
-    // drive's restart catches up through the JOURNAL when it can, so this rides a
-    // real `fseventsd` replay, which took over 20 s about one run in 20 on a loaded
-    // host (2026-10-07).
+    // No redo possible: the gap file has to predate the move. A completed drive's
+    // restart catches up through the JOURNAL from the id it stored at the old root.
     cmdr_fs::testing::wait_until(
-        std::time::Duration::from_secs(30),
-        "the listing at the new mount point to find what arrived in the gap",
-        || holds(&drive, "scope/in-the-gap.txt"),
+        patience,
+        "the restart at the new mount point to replay what arrived in the gap",
+        || holds(drive, "scope/in-the-gap.txt"),
     );
-    assert_live_at(&drive, &new_root, "arrived");
+    assert_live_at(drive, &new_root, "arrived", patience);
 
     assert!(followed, "the index says it followed the drive");
     assert!(
-        holds(&drive, PROOF),
+        holds(drive, PROOF),
         "and what it held before the rename is all still there"
     );
     assert!(state::is_active(drive.volume_id), "and the drive is still indexing");
@@ -103,8 +143,17 @@ fn a_drive_renamed_while_it_indexes_keeps_indexing_at_its_new_mount_point() {
 
 /// Wait for a file created at `root` to land through the watcher: the proof the
 /// index is live there, rather than an `Ok` from the call that put it there.
-fn assert_live_at(drive: &ColdDrive, root: &Path, stem: &str) {
-    until_the_watcher_delivers(&root.join("scope"), stem, std::time::Duration::from_secs(15), |name| {
+fn assert_live_at(drive: &ColdDrive, root: &Path, stem: &str, patience: std::time::Duration) {
+    if on_a_real_watcher(drive) {
+        // A real watcher can drop a change in its arming window, so it's redone.
+        until_the_watcher_delivers(&root.join("scope"), stem, patience, |name| {
+            holds(drive, &format!("scope/{name}"))
+        });
+        return;
+    }
+    let name = format!("{stem}.txt");
+    create_a_file(drive, &root.join("scope").join(&name));
+    cmdr_fs::testing::wait_until(patience, "a change at the new mount point to land", || {
         holds(drive, &format!("scope/{name}"))
     });
 }
@@ -128,7 +177,7 @@ fn a_drive_turned_off_before_its_rename_stays_off() {
 /// the drive comes back at its new root, where the old one no longer exists.
 #[test]
 fn a_rename_inside_a_drain_window_moves_the_start_that_window_carries() {
-    let drive = indexed_for_real("cover-move-inside-the-drain-test");
+    let drive = an_indexed_drive("cover-move-inside-the-drain-test");
     let mut new_root = None;
     let mut put_back = None;
 
@@ -146,7 +195,7 @@ fn a_rename_inside_a_drain_window_moves_the_start_that_window_carries() {
 
     let new_root = new_root.expect("the drive was renamed");
     assert!(state::is_active(drive.volume_id), "the toggle's start ran");
-    assert_live_at(&drive, &new_root, "after-the-drain");
+    assert_live_at(&drive, &new_root, "after-the-drain", LANDS_WITHIN);
     drop(put_back);
 }
 
@@ -155,7 +204,7 @@ fn a_rename_inside_a_drain_window_moves_the_start_that_window_carries() {
 /// root, so the handback drains it and the restart brings it up at the new one.
 #[test]
 fn a_rename_while_a_scan_starts_restarts_the_drive_at_the_handback() {
-    let drive = indexed_for_real("cover-move-while-detached-test");
+    let drive = an_indexed_drive("cover-move-while-detached-test");
     let mut new_root = None;
     let mut put_back = None;
 
@@ -170,7 +219,28 @@ fn a_rename_while_a_scan_starts_restarts_the_drive_at_the_handback() {
     });
 
     let new_root = new_root.expect("the drive was renamed");
-    assert_live_at(&drive, &new_root, "after-the-handback");
+    assert_live_at(&drive, &new_root, "after-the-handback", LANDS_WITHIN);
     assert!(state::is_active(drive.volume_id), "and the drive is indexing");
     drop(put_back);
+}
+
+/// The OS half of the headline case, on the REAL FSEvents journal: a stream
+/// started at a renamed directory with the id stored at the old path replays what
+/// changed under the new one. Everything above takes that on trust.
+///
+/// `#[ignore]`d: it waits on a real `fseventsd` replay, which took over 20 s about
+/// one run in 20 on a loaded host (2026-10-07) and over 30 s in a cluster of runs
+/// on 2026-10-19. It runs in the opt-in macOS disk-image lane
+/// (`pnpm check disk-images`, or `--include-slow` on a Mac).
+#[cfg(target_os = "macos")]
+mod real_journal {
+    use super::super::toggles::indexed;
+    use super::*;
+
+    #[test]
+    #[ignore = "real fseventsd replay; runs in the opt-in macOS disk-image lane"]
+    fn fsevents_replays_a_renamed_drives_journal_from_the_id_stored_at_the_old_path() {
+        let drive = indexed(ColdDrive::watched_for_real("cover-move-real-journal-test"));
+        the_drive_keeps_indexing_at_its_new_mount_point(&drive, std::time::Duration::from_secs(60));
+    }
 }
