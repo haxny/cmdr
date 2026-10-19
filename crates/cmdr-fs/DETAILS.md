@@ -73,11 +73,12 @@ the next section.
   buckets, the SMB spelling resolve, and cursor placement; beside it `normalize_for_comparison`, the local filesystem's
   own key, which the drive index stores and the write engine matches sources under), `log_rollup`, `log_detail`
   (`LogDetail`: external OS/server/CLI text as one Debug-quoted, 1 KiB-capped log field that the app's report pass
-  redacts; see `apps/desktop/src-tauri/src/redact/DETAILS.md`), `tcc_paths`, `ignore_poison`, `pluralize`, `tilde`
-  (`expand_tilde`, for a path a person typed on THIS machine), `byte_size` (`format_size`, the IEC byte count log lines
-  and model-facing answers read), `thread_qos`, `thread_cpu`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a
-  keep-alive pool of `Utility`-QoS threads, so background work that comes in streams, like index walks, reuses threads
-  instead of creating one per job).
+  redacts; see `apps/desktop/src-tauri/src/redact/DETAILS.md`), `log_private` (the ONE marker table, `LogKind` with its
+  opener char plus the closer and the reserved range, that log producers and the app's span pass share; § "Marked spans"
+  in the same redact doc), `tcc_paths`, `ignore_poison`, `pluralize`, `tilde` (`expand_tilde`, for a path a person typed
+  on THIS machine), `byte_size` (`format_size`, the IEC byte count log lines and model-facing answers read),
+  `thread_qos`, `thread_cpu`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a keep-alive pool of `Utility`-QoS
+  threads, so background work that comes in streams, like index walks, reuses threads instead of creating one per job).
 - `mapped_file_faults/`: the SIGBUS recovery that turns a read of a mapped file whose disk went away into zeros, and the
   generation a reader checks to distrust what it read meanwhile. § "Mapped-file faults".
 - `testing/`: behind the `testing` feature. `TestDir`, the two waits, and `unique_test_id` (a pid-and-counter key for a

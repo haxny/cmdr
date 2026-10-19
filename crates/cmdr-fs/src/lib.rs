@@ -34,6 +34,7 @@ pub mod git_meta;
 pub mod icons;
 pub mod ignore_poison;
 pub mod log_detail;
+pub mod log_private;
 pub mod log_rollup;
 pub mod mapped_file_faults;
 pub mod metadata;
