@@ -4,7 +4,8 @@
 //! give it: a copy that fails mid-merge and "cleans up" the merged folder, a
 //! move whose sweep runs on a wrong belief about what landed, a delete that acts
 //! on a different set of paths than it previewed, an unanswerable type probe
-//! read as a licence to clear a folder, and a download stopped mid-file.
+//! read as a licence to clear a folder, a download stopped mid-file, and a
+//! failed upload whose siblings leave their staging files behind.
 //!
 //! `safety_grid_tests.rs` covers the same axes against in-memory doubles, and
 //! says why these stay against a live server: a real one publishes bytes at the
@@ -22,7 +23,9 @@ use std::time::Duration;
 
 use cmdr_fs::volume::{Volume, VolumeError};
 
-use super::network_gated_source_test_support::{CANCEL_PAYLOAD_BYTES, gated_reads, gated_upload};
+use super::network_gated_source_test_support::{
+    CANCEL_PAYLOAD_BYTES, gated_files_failing_at, gated_reads, gated_upload,
+};
 use super::network_semantics_test_support::{local_volume, names_in, seed, try_read};
 use super::network_transfer_test_support::{
     assert_no_staging_litter, budget, clean_deep, self_describing_bytes, sha256, start_copy,
@@ -536,6 +539,76 @@ pub(super) async fn a_name_taken_mid_upload_is_never_replaced(
     // once (the source still holds those bytes), so nothing of ours waits in
     // the folder for the hourly stale-temp reap.
     assert_no_staging_litter(remote.as_ref(), &dir, "a copy whose name was taken mid-upload").await;
+
+    clean_deep(remote.as_ref(), &dir).await;
+}
+
+/// One file of a multi-file upload fails while its siblings are mid-body, and
+/// the server is left with no `.cmdr-tmp-*` and no half-written file at a real
+/// name: each sibling stops at its next chunk and the backend takes its own
+/// staging sibling away, the way a Cancel's would, and the copy still ends as
+/// the failure (#490).
+///
+/// The failing file's read waits on a cue of the cell's, so "the siblings were
+/// mid-body when it failed" is arranged rather than raced.
+pub(super) async fn a_failed_upload_takes_every_staging_sibling_away(remote: Arc<dyn Volume>, dir: PathBuf) {
+    // Three sources, the fewest the concurrent driver takes, all in its window
+    // at once (the source reads several files at a time).
+    const SIBLINGS: [&str; 2] = ["a.bin", "b.bin"];
+    let mut files = vec![("/drain/fail.bin".to_owned(), self_describing_bytes(4_096, "fail"))];
+    files.extend(SIBLINGS.iter().map(|name| {
+        (
+            format!("/drain/{name}"),
+            self_describing_bytes(CANCEL_PAYLOAD_BYTES, name),
+        )
+    }));
+    let sources: Vec<PathBuf> = files.iter().map(|(path, _)| PathBuf::from(path)).collect();
+    let (source, cue) = gated_files_failing_at(files, "/drain/fail.bin").await;
+
+    let running = start_copy(
+        "failed-upload-drain",
+        Arc::clone(&source.volume),
+        sources,
+        Arc::clone(&remote),
+        dir.clone(),
+        VolumeCopyConfig::default(),
+    )
+    .await;
+
+    // Chunks on the wire to the siblings' staging files before anything fails.
+    source.gate.add_permits(2 * SIBLINGS.len());
+    crate::test_support::wait_until_async(
+        budget(Duration::from_secs(6)),
+        "the siblings' uploads to get under way",
+        || source.handed_out.load(std::sync::atomic::Ordering::SeqCst) >= 2 * SIBLINGS.len() as u64,
+    )
+    .await;
+    cue.add_permits(1);
+    // allowed-test-sleep: the failure has to reach the driver before the siblings get their next chunk, and a running copy publishes no "draining" signal to wait on.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    source.gate.add_permits(10_000);
+    running.settle().await;
+
+    let errors: Vec<String> = running
+        .events
+        .errors
+        .lock_ignore_poison()
+        .iter()
+        .map(|e| format!("{:?}", e.error))
+        .collect();
+    assert_eq!(errors.len(), 1, "the copy ends as its one failure: {errors:?}");
+    assert!(
+        running.events.cancelled.lock_ignore_poison().is_empty(),
+        "❗ a failure never reads as a cancel"
+    );
+    let names = names_in(remote.as_ref(), &dir).await;
+    for name in SIBLINGS {
+        assert!(
+            !names.iter().any(|n| n == name),
+            "a sibling the failure stopped never wears its real name; the server holds {names:?}"
+        );
+    }
+    assert_no_staging_litter(remote.as_ref(), &dir, "an upload one of whose files failed").await;
 
     clean_deep(remote.as_ref(), &dir).await;
 }

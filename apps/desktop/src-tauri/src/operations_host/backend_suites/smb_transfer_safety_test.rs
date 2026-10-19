@@ -2,7 +2,8 @@
 //! Docker SMB containers): a failed merge that must not sweep the user's share,
 //! a failed move that must lose no byte, a delete bound to its preview, a
 //! recursive delete that takes exactly the selection, an unanswerable source
-//! probe, and a download stopped mid-file.
+//! probe, a download stopped mid-file, and an upload one of whose files fails
+//! while the others are mid-body.
 //!
 //! The scenarios are backend-blind and live in `network_safety_test_support.rs`,
 //! shared with the SFTP suite (`sftp_transfer_safety_test.rs`), so a claim can't
@@ -17,7 +18,8 @@ use super::network_safety_test_support::{
     a_delete_of_a_non_empty_folder_takes_exactly_the_selection,
     a_delete_with_a_local_shaped_preview_removes_only_the_requested_tree,
     a_failed_folder_copy_onto_a_users_folder_keeps_their_files, a_failed_folder_move_onto_a_users_folder_loses_no_byte,
-    a_name_taken_mid_upload_is_never_replaced, an_unknown_source_type_never_clears_a_server_folder,
+    a_failed_upload_takes_every_staging_sibling_away, a_name_taken_mid_upload_is_never_replaced,
+    an_unknown_source_type_never_clears_a_server_folder,
 };
 use super::smb_test_support::fixture;
 use cmdr_operations::ConflictResolution;
@@ -86,4 +88,13 @@ async fn smb_integration_unknown_source_type_never_clears_a_share_folder() {
 async fn smb_integration_a_cancelled_download_leaves_nothing_behind() {
     let (remote, dir) = fixture().await;
     a_cancelled_download_leaves_nothing_behind(remote, dir).await;
+}
+
+/// The failure drain on a real share: each sibling's SMB writer aborts and
+/// deletes its own staging file, so the share holds no `.cmdr-tmp-*`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_failed_upload_takes_every_staging_sibling_away() {
+    let (remote, dir) = fixture().await;
+    a_failed_upload_takes_every_staging_sibling_away(remote, dir).await;
 }

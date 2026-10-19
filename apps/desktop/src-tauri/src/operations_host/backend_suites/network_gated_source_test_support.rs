@@ -80,6 +80,44 @@ struct GatedUploadSource {
     files: HashMap<PathBuf, Arc<Vec<u8>>>,
     gate: Arc<tokio::sync::Semaphore>,
     handed_out: Arc<AtomicU64>,
+    /// The one file whose read fails, once its cue gets a permit. A source
+    /// with one reads several files at once (`max_concurrent_ops`), so a copy
+    /// runs its concurrent driver, the one that has siblings to stop; the
+    /// others answer the trait's one-at-a-time default.
+    failing: Option<(PathBuf, Arc<tokio::sync::Semaphore>)>,
+}
+
+/// The stream of the file whose read fails on cue: nothing until the cue, then
+/// a refusal (an `IoError` with no errno, which no retry or outage wait takes).
+struct FailsOnCue {
+    len: u64,
+    cue: Arc<tokio::sync::Semaphore>,
+}
+
+impl VolumeReadStream for FailsOnCue {
+    fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
+        Box::pin(async move {
+            if let Ok(permit) = self.cue.acquire().await {
+                permit.forget();
+            }
+            Some(Err(VolumeError::IoError {
+                message: "Injected read failure".into(),
+                raw_os_error: None,
+            }))
+        })
+    }
+
+    fn total_size(&self) -> cmdr_fs::volume::StreamLength {
+        cmdr_fs::volume::StreamLength::Known(self.len)
+    }
+
+    fn bytes_read(&self) -> u64 {
+        0
+    }
+
+    fn modified_at(&self) -> Option<std::time::SystemTime> {
+        None
+    }
 }
 
 impl Volume for GatedUploadSource {
@@ -97,6 +135,9 @@ impl Volume for GatedUploadSource {
     }
     fn supports_streaming(&self) -> bool {
         true
+    }
+    fn max_concurrent_ops(&self) -> usize {
+        if self.failing.is_some() { 8 } else { 1 }
     }
     fn list_directory<'a>(
         &'a self,
@@ -133,14 +174,25 @@ impl Volume for GatedUploadSource {
         let bytes = self.files.get(path).map(Arc::clone);
         let gate = Arc::clone(&self.gate);
         let handed_out = Arc::clone(&self.handed_out);
+        let cue = self
+            .failing
+            .as_ref()
+            .filter(|(failing, _)| failing == path)
+            .map(|(_, cue)| Arc::clone(cue));
         Box::pin(async move {
             let bytes = bytes.ok_or_else(|| VolumeError::NotFound(path.display().to_string()))?;
-            let stream: Box<dyn VolumeReadStream> = Box::new(GatedChunks {
-                bytes,
-                emitted: 0,
-                gate,
-                handed_out,
-            });
+            let stream: Box<dyn VolumeReadStream> = match cue {
+                Some(cue) => Box::new(FailsOnCue {
+                    len: bytes.len() as u64,
+                    cue,
+                }),
+                None => Box::new(GatedChunks {
+                    bytes,
+                    emitted: 0,
+                    gate,
+                    handed_out,
+                }),
+            };
             Ok(stream)
         })
     }
@@ -167,6 +219,25 @@ pub(super) async fn gated_upload(bytes: Vec<u8>) -> GatedUpload {
 /// their folders made, every one drawing on the same gate, so a cell can let
 /// some files land whole and hold one mid-body.
 pub(super) async fn gated_files(files: Vec<(String, Vec<u8>)>) -> GatedUpload {
+    gated_files_failing(files, None).await
+}
+
+/// [`gated_files`] where reading `failing` fails once the returned cue gets a
+/// permit, so a cell can hold one file's failure until its siblings are
+/// mid-body.
+pub(super) async fn gated_files_failing_at(
+    files: Vec<(String, Vec<u8>)>,
+    failing: &str,
+) -> (GatedUpload, Arc<tokio::sync::Semaphore>) {
+    let cue = Arc::new(tokio::sync::Semaphore::new(0));
+    let upload = gated_files_failing(files, Some((PathBuf::from(failing), Arc::clone(&cue)))).await;
+    (upload, cue)
+}
+
+async fn gated_files_failing(
+    files: Vec<(String, Vec<u8>)>,
+    failing: Option<(PathBuf, Arc<tokio::sync::Semaphore>)>,
+) -> GatedUpload {
     let inner = InMemoryVolume::new("Gated");
     let mut served = HashMap::new();
     for (path, bytes) in files {
@@ -191,6 +262,7 @@ pub(super) async fn gated_files(files: Vec<(String, Vec<u8>)>) -> GatedUpload {
             files: served,
             gate: Arc::clone(&gate),
             handed_out: Arc::clone(&handed_out),
+            failing,
         }),
         gate,
         handed_out,
