@@ -851,15 +851,15 @@
   "@errors.git.gitDirPermissionDenied.suggestion": {
     "sourceHash": "b091738"
   },
-  "errors.git.volumeGone.title": "The drive with this repo went away",
+  "errors.git.volumeGone.title": "De schijf met deze repo is weg",
   "@errors.git.volumeGone.title": {
     "sourceHash": "cf5deff"
   },
-  "errors.git.volumeGone.message": "Cmdr was reading this repo when its drive disconnected. It stopped there, so you won’t see anything half-read.",
+  "errors.git.volumeGone.message": "Cmdr was deze repo aan het lezen toen de schijf werd losgekoppeld. Cmdr is daar gestopt, dus je krijgt niets te zien dat maar half gelezen is.",
   "@errors.git.volumeGone.message": {
     "sourceHash": "10914cd"
   },
-  "errors.git.volumeGone.suggestion": "Reconnect the drive, then open the folder again.",
+  "errors.git.volumeGone.suggestion": "Verbind de schijf opnieuw en open de map daarna nog een keer.",
   "@errors.git.volumeGone.suggestion": {
     "sourceHash": "44f27e8"
   },

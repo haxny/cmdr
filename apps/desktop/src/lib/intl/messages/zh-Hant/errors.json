@@ -851,15 +851,15 @@
   "@errors.git.gitDirPermissionDenied.suggestion": {
     "sourceHash": "b091738"
   },
-  "errors.git.volumeGone.title": "The drive with this repo went away",
+  "errors.git.volumeGone.title": "這個存放庫所在的磁碟機不見了",
   "@errors.git.volumeGone.title": {
     "sourceHash": "cf5deff"
   },
-  "errors.git.volumeGone.message": "Cmdr was reading this repo when its drive disconnected. It stopped there, so you won’t see anything half-read.",
+  "errors.git.volumeGone.message": "Cmdr 讀取這個存放庫時，存放庫所在的磁碟機斷線了。Cmdr 讀到那裡就停下來了，所以你不會看到只讀了一半的內容。",
   "@errors.git.volumeGone.message": {
     "sourceHash": "10914cd"
   },
-  "errors.git.volumeGone.suggestion": "Reconnect the drive, then open the folder again.",
+  "errors.git.volumeGone.suggestion": "重新連接磁碟機，然後重新開啟這個資料夾。",
   "@errors.git.volumeGone.suggestion": {
     "sourceHash": "44f27e8"
   },

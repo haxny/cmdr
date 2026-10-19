@@ -851,15 +851,15 @@
   "@errors.git.gitDirPermissionDenied.suggestion": {
     "sourceHash": "b091738"
   },
-  "errors.git.volumeGone.title": "The drive with this repo went away",
+  "errors.git.volumeGone.title": "Ổ đĩa chứa repo này đã biến mất",
   "@errors.git.volumeGone.title": {
     "sourceHash": "cf5deff"
   },
-  "errors.git.volumeGone.message": "Cmdr was reading this repo when its drive disconnected. It stopped there, so you won’t see anything half-read.",
+  "errors.git.volumeGone.message": "Cmdr đang đọc repo này thì ổ đĩa bị ngắt kết nối. Cmdr đã dừng ở đó, nên bạn sẽ không thấy nội dung nào đọc dở.",
   "@errors.git.volumeGone.message": {
     "sourceHash": "10914cd"
   },
-  "errors.git.volumeGone.suggestion": "Reconnect the drive, then open the folder again.",
+  "errors.git.volumeGone.suggestion": "Hãy kết nối lại ổ đĩa, rồi mở lại thư mục.",
   "@errors.git.volumeGone.suggestion": {
     "sourceHash": "44f27e8"
   },
