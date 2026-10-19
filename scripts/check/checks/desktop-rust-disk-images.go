@@ -46,6 +46,8 @@ var diskImageLaneTestAtoms = []string{
 	// for the default lane (`crates/cmdr-index/src/indexing/lifecycle/cover/DETAILS.md`
 	// § "What the cold-drive cells pin about FSEvents").
 	"cold_drive_tests::moves::real_journal::",
+	"mapped_file_faults::real_image::",
+	"fault_guard_real_image::",
 }
 
 // diskImageHandRunTestAtoms are the `disk-image` group's modules this lane

@@ -35,6 +35,7 @@ use std::time::Duration;
 use cmdr_fs::volume::listing_progress::report_while;
 use cmdr_fs::volume::scan_walk::{self, ScanSource, Walking};
 
+use crate::fault_guard::FaultWatch;
 use crate::path::{self, Cat, VirtualGitPath};
 use crate::portal::GitPortal;
 use crate::repo::RepoHandle;
@@ -93,12 +94,25 @@ impl GitPortalVolume {
     /// Runs `work` on the app's runtime rather than the caller's thread: every
     /// `gix` call below is blocking, and a listing of a big repo would otherwise
     /// stall an async worker.
+    ///
+    /// Whatever `work` answers is refused as `VolumeGone` when a mapped page went
+    /// away while it ran (`fault_guard.rs`).
     fn blocking<T, F>(&self, work: F) -> Pin<Box<dyn Future<Output = Result<T, VolumeError>> + Send>>
     where
         T: Send + 'static,
         F: FnOnce() -> Result<T, VolumeError> + Send + 'static,
     {
-        let task = self.portal.host().runtime().spawn_blocking(work);
+        let dot_git = self.dot_git.clone();
+        let guarded = move || {
+            let watch = FaultWatch::start();
+            let answer = work();
+            let worktree_root = dot_git.parent().unwrap_or(&dot_git);
+            match watch.refusal(worktree_root) {
+                Some(refused) => Err(VolumeError::FriendlyGit(refused)),
+                None => answer,
+            }
+        };
+        let task = self.portal.host().runtime().spawn_blocking(guarded);
         Box::pin(async move {
             task.await
                 .expect("the git portal's blocking closure doesn't panic and the task is uncancelable")

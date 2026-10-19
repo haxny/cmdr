@@ -65,6 +65,7 @@ use cmdr_fs::volume::git_error::FriendlyGitError;
 use cmdr_fs::volume::{VolumeError, VolumeReadStream};
 
 mod column_meta;
+mod fault_guard;
 mod log;
 mod path;
 mod portal;
@@ -93,6 +94,8 @@ mod bench;
 mod category_tests;
 #[cfg(test)]
 mod column_meta_tests;
+#[cfg(all(test, target_os = "macos"))]
+mod fault_guard_real_image;
 #[cfg(test)]
 mod repo_tests;
 #[cfg(test)]

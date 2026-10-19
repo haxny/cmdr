@@ -8836,6 +8836,12 @@ export type FriendlyGitErrorKind =
   | 'missingObject'
   // We can read the worktree but the OS denied the `.git` directory itself.
   | 'gitDirPermissionDenied'
+  /**
+   *  The disk under the repo went away while it was being read: a page of a
+   *  mapped pack file came back as zeros (`mapped_file_faults`), so the
+   *  answer was thrown away rather than shown half-read.
+   */
+  | 'volumeGone'
 
 export type FrontendLogEntry = {
   level: LogLevel

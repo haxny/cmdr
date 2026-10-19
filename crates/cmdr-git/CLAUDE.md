@@ -12,7 +12,7 @@ chip, and the read-only `Volume` that turns `.git/branches/`, `tags/`, `commits/
   `portal_route`).
 - `repo.rs` (discovery, `RepoInfo`, `RepoCache`), `status.rs` (the cached status walk), `watcher.rs` (the refcounted
   per-repo registry, plus the backend that arms it: `notify` in production, scripted under `testing`), `state_sink.rs`
-  (where it reports).
+  (where it reports), `fault_guard.rs` (refuses what was read while a disk went away).
 - `virtual_listing.rs`, `log.rs`, `stash.rs`, `worktrees.rs`, `submodules.rs`, `tree.rs`, `snapshot_dates.rs`: one
   category each, plus the tree walks. `column_meta.rs` and `read_blob.rs`: the Size/Modified numbers and the blob
   stream. `test_fixtures.rs`: repos to assert against, behind `testing`.
@@ -30,18 +30,18 @@ chip, and the read-only `Volume` that turns `.git/branches/`, `tags/`, `commits/
 - **A path that isn't in a snapshot is `NotFound`, ❌ never `CorruptRepo`.** Lookups that can find nothing answer
   `Lookup<T>`, and `found_or_not_found` folds a `None` into `VolumeError::NotFound` carrying the caller's path.
 - **The `.git/` landing listing is the HOST's, through `GitPortal::category_rows`.** ❌ Never serve those six rows from
-  a `Volume`: the moment a copy scan or a delete walker sees a row with no inode behind it, a repo delete stops half-way
-  with `.git/` still on disk.
+  a `Volume`: a copy scan or delete walker seeing a row with no inode stops a repo delete half-way.
 - **A repo's own commands never run**: its `filter.<driver>` sections are stripped on open. ❌ Never call gix's
   `Repository::is_dirty` or open a repo around the cache. `DETAILS.md` § "A repo's own commands never run".
 - **Every `gix` call runs on `VolumeHost::runtime().spawn_blocking`**, ❌ never on the caller's async worker.
+- **A read a mapped-page recovery straddled answers `VolumeGone`.** A new entry point reading through `gix` takes a
+  `FaultWatch`, and ❌ no memo stores what one refused. `DETAILS.md` § "A disk that goes away mid-read".
 - **Anything a CONSUMER's test needs takes `any(test, feature = "testing")`, ❌ never `cfg(test)`**, which is off when
   the app compiles this crate as a dependency. `cfg(test)` alone is for doors only this crate's own cells open
   (`snapshot_dates::clear_cache`).
 - **The `.git` watcher is ONE recursive gitdir watch (a linked worktree's is the common dir, for the shared refs), ❌
-  never per path or on `HEAD`/`index`, and drops READs.** Each extra path restarts the macOS FSEvents stream, git's
-  lockfile rename kills an inotify FILE watch, and a passed-on `IN_OPEN` makes each recompute trigger the next.
-  `DETAILS.md` § "Watcher path set".
+  never per path or on `HEAD`/`index`, and drops READs.** Each of those broke it once: `DETAILS.md` § "Watcher path
+  set".
 - **A subscription cell builds `GitPortal::with_scripted_watcher`, ❌ never `new`.** Arming a real FSEvents stream on a
   repo's gitdir is most of what a subscribe costs; `fire_watcher` stands in for the OS.
 - **`missing_docs` is denied.** Every `pub` item says what a caller must know, and specta copies these into

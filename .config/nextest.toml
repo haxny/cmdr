@@ -212,6 +212,17 @@ filter = 'test(cold_drive_tests::moves::real_journal::)'
 test-group = 'disk-image'
 slow-timeout = { period = "150s", terminate-after = 1 }
 
+[[profile.default.overrides]]
+# The mapped-file fault recovery on real APFS/HFS+ images (`cmdr-fs`'s
+# `mapped_file_faults::real_image` and `cmdr-git`'s `fault_guard_real_image`, macOS-only,
+# `#[ignore]`d): a file or a repo's pack is mapped, the image is `detach -force`d under it, and
+# the read that follows must come back as zeros (and, for the repo, as `VolumeGone`) instead of
+# killing the process. Same group and 30 s cap as the harness tests above.
+# allowed-unmatched-nextest-filter: macos-only, hdiutil has no Linux counterpart
+filter = 'test(mapped_file_faults::real_image::) | test(fault_guard_real_image::)'
+test-group = 'disk-image'
+slow-timeout = { period = "30s", terminate-after = 1 }
+
 # SMB stress tests serialize on the shared server (see `smb-stress` group above).
 # The concurrent-streaming one additionally wraps its copy in a 120 s internal
 # `tokio::time::timeout` whose expiry dumps the last 30 `client-mutex:`/`recv:`

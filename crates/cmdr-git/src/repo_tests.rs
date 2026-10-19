@@ -11,7 +11,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::repo::repo_info;
+use crate::repo::{RepoCache, repo_info};
 use crate::test_fixtures::{Fixture, cleanup, discover_repo, git_cli, temp_dir};
 use cmdr_fs::volume::git_error::FriendlyGitErrorKind;
 
@@ -167,5 +167,23 @@ fn repo_info_recomputes_after_commit() {
     f.commit_file("README.md", b"second\n", "second");
     let after = repo_info(&handle, &root).unwrap();
     assert!(!after.is_dirty);
+    cleanup(&dir);
+}
+
+#[test]
+fn a_recovered_mapped_page_anywhere_empties_the_repo_cache_at_the_next_lookup() {
+    let dir = temp("fault_forgets");
+    init_repo_with_commit(&dir);
+    let cache = RepoCache::new();
+    let (first, _) = cache.discover(&dir).expect("open the repo");
+
+    cmdr_fs::mapped_file_faults::simulate_recovery();
+    let (second, _) = cache.discover(&dir).expect("reopen the repo");
+
+    assert!(
+        !std::sync::Arc::ptr_eq(&first, &second),
+        "a handle opened before a disk went away may hold a dead mapping, so it's never handed out again"
+    );
+    assert_eq!(cache.len(), 1, "the reopened handle is cached as usual");
     cleanup(&dir);
 }

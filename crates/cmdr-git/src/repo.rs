@@ -11,11 +11,16 @@
 //! [`GitPortal`]: crate::portal::GitPortal
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::mapped_file_faults;
 use serde::{Deserialize, Serialize};
 
 use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
+
+use crate::fault_guard::FaultWatch;
 
 /// Snapshot of mutable repo state for the breadcrumb chip.
 ///
@@ -52,7 +57,15 @@ pub struct RepoInfo {
 pub type RepoHandle = Arc<gix::ThreadSafeRepository>;
 
 /// Computes branch / detached / dirty / ahead-behind for a discovered repo.
+///
+/// Answers `VolumeGone` when the repo's disk went away while it was read
+/// (`fault_guard.rs`).
 pub fn repo_info(handle: &RepoHandle, repo_root: &Path) -> Result<RepoInfo, FriendlyGitError> {
+    let watch = FaultWatch::start();
+    watch.vouch(repo_root, read_repo_info(handle, repo_root))
+}
+
+fn read_repo_info(handle: &RepoHandle, repo_root: &Path) -> Result<RepoInfo, FriendlyGitError> {
     let repo = handle.to_thread_local();
 
     let head = repo.head().map_err(|e| FriendlyGitError::corrupt(repo_root, &e))?;
@@ -278,12 +291,17 @@ pub(crate) fn count_commits_between(repo: &gix::Repository, tip: gix::ObjectId, 
 /// own without reaching a global.
 pub struct RepoCache {
     inner: RwLock<std::collections::HashMap<PathBuf, RepoHandle>>,
+    /// The mapped-file recovery generation the cached handles were opened under.
+    /// When it moved, a disk went away under SOME mapping, and every handle may
+    /// be holding a dead one, so the whole cache is dropped.
+    opened_at_fault_generation: AtomicU64,
 }
 
 impl RepoCache {
     pub fn new() -> Self {
         Self {
             inner: RwLock::new(std::collections::HashMap::new()),
+            opened_at_fault_generation: AtomicU64::new(mapped_file_faults::generation()),
         }
     }
 
@@ -291,6 +309,7 @@ impl RepoCache {
     /// canonical worktree root. Bare repos are refused: without a working tree
     /// there's nothing for the file manager to anchor on.
     pub fn discover(&self, path: &Path) -> Result<(RepoHandle, PathBuf), FriendlyGitError> {
+        self.forget_all_after_a_fault();
         if let Some((handle, root)) = self.lookup_for_path(path) {
             return Ok((handle, root));
         }
@@ -346,5 +365,27 @@ impl RepoCache {
         if let Ok(mut inner) = self.inner.write() {
             inner.remove(root);
         }
+    }
+
+    /// Drops every cached handle once a mapped page anywhere was recovered since
+    /// they were opened.
+    ///
+    /// Address-free, like the rest of the recovery (`fault_guard.rs`): nothing
+    /// says WHICH repo's disk went away, and a handle whose pack mapping is dead
+    /// would fault on every later read. Reopening a healthy repo costs ~10 ms,
+    /// and a recovery happens only when a disk vanishes.
+    fn forget_all_after_a_fault(&self) {
+        let now = mapped_file_faults::generation();
+        if self.opened_at_fault_generation.swap(now, Ordering::SeqCst) == now {
+            return;
+        }
+        self.inner.write_ignore_poison().clear();
+    }
+
+    /// How many repositories have an open handle. For the cells that prove a
+    /// fault empties the cache.
+    #[cfg(test)]
+    pub(crate) fn len(&self) -> usize {
+        self.inner.read_ignore_poison().len()
     }
 }

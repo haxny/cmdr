@@ -137,6 +137,7 @@ const GIT_KINDS: FriendlyGitErrorKind[] = [
   'shallowBoundary',
   'missingObject',
   'gitDirPermissionDenied',
+  'volumeGone',
 ]
 
 const PROVIDERS: Provider[] = [

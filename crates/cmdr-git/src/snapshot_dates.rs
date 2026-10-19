@@ -144,7 +144,13 @@ pub fn decode_per_file_dates(
         return Ok(hit);
     }
 
+    let watch = crate::fault_guard::FaultWatch::start();
     let computed = compute_dates(handle, commit_id, &normalized)?;
+    // ❗ Dates read while a mapped page went away may be zeros, and a memo keyed by
+    // content would serve them for good. The caller's own watch refuses the listing.
+    if watch.tripped() {
+        return Ok(computed);
+    }
     if let Ok(mut c) = cache().lock() {
         c.insert(key, computed.clone());
     }

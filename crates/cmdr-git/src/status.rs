@@ -22,6 +22,7 @@ use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
+use crate::fault_guard::FaultWatch;
 use crate::repo::RepoHandle;
 use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
@@ -137,8 +138,10 @@ pub fn list_status(repo: &RepoHandle, dir_in_worktree: &Path) -> Result<Vec<Entr
         return Ok(slice_entries(&cached.entries, &work_dir, dir_in_worktree));
     }
 
-    // Cache miss or stale: run a full-repo walk.
-    let entries = run_full_repo_status(repo)?;
+    // Cache miss or stale: run a full-repo walk. A walk a mapped page went away
+    // under is never cached: its entries may come from zeros.
+    let watch = FaultWatch::start();
+    let entries = watch.vouch(&canonical_root, run_full_repo_status(repo))?;
     let sliced = slice_entries(&entries, &work_dir, dir_in_worktree);
 
     if let Ok(mut guard) = status_cache().write() {
@@ -466,6 +469,25 @@ mod cache_tests {
 
         invalidate_status_cache(&root);
         assert!(!status_cache().read().unwrap().contains_key(&canonical));
+    }
+
+    #[test]
+    fn a_read_refused_after_a_recovery_drops_the_repos_cached_status() {
+        let dir = temp_repo("fault_refusal");
+        let (handle, root) = discover_repo(&dir).unwrap();
+        invalidate_status_cache(&root);
+        let _ = list_status(&handle, &dir).unwrap();
+        let canonical = root.canonicalize().unwrap_or_else(|_| root.clone());
+        assert!(status_cache().read().unwrap().contains_key(&canonical));
+
+        let watch = FaultWatch::start();
+        cmdr_fs::mapped_file_faults::simulate_recovery();
+        assert!(watch.refusal(&root).is_some());
+
+        assert!(
+            !status_cache().read().unwrap().contains_key(&canonical),
+            "a snapshot of a repo whose disk went away is never served again"
+        );
     }
 
     #[test]

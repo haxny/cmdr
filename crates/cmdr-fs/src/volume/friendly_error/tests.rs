@@ -720,6 +720,11 @@ fn git_category_assignments_match_intent() {
         git_category(FriendlyGitErrorKind::GitDirPermissionDenied),
         ErrorCategory::NeedsAction
     );
+    assert_eq!(
+        git_category(FriendlyGitErrorKind::VolumeGone),
+        ErrorCategory::NeedsAction,
+        "reconnecting the drive is the fix"
+    );
 }
 
 #[test]

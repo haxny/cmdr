@@ -1759,7 +1759,8 @@ The opt-in lane for real-macOS-OS pins, named for what most of them need. `deskt
 `disk-images`, `desktop-rust-disk-images.go`) runs the `#[ignore]`d tests that attach real synthetic APFS and HFS+
 images through `cmdr_fs::testing::disk_images` (`crates/cmdr-fs/DETAILS.md` § "`testing::disk_images`"): the harness's
 own `real_images` tests, the eject pins, the index's presence and vanish pins, the transfer's real-detach pins, the
-delete's nested-mount pins, and the unmount approver's pins. One cell attaches no image: the index's real-journal rename
+delete's nested-mount pins, the unmount approver's pins, and the mapped-file fault recovery's (a file and a
+repo's pack read after a forced detach). One cell attaches no image: the index's real-journal rename
 pin (`cold_drive_tests::moves::real_journal`), here because a real `fseventsd` replay is too slow under load for the
 default lane.
 

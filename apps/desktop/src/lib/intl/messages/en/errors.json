@@ -1284,6 +1284,24 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
+  "errors.git.volumeGone.title": "The drive with this repo went away",
+  "errors.git.volumeGone.message": "Cmdr was reading this repo when its drive disconnected. It stopped there, so you won’t see anything half-read.",
+  "errors.git.volumeGone.suggestion": "Reconnect the drive, then open the folder again.",
+  "@errors.git.volumeGone.title": {
+    "description": "Title of the git error panel when the disk holding a git repo (a USB drive, an SD card, a network share) disconnected while Cmdr was reading the repo. Plain text. \"repo\" is short for a git repository.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.git.volumeGone.message": {
+    "description": "Body of the git error panel when the repo's drive disconnected mid-read. Markdown. Cmdr threw away what it had read so far, since part of it came from a drive that was no longer there. \"Cmdr\" is the app's name; do NOT translate.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.git.volumeGone.suggestion": {
+    "description": "Recovery suggestion when the repo's drive disconnected mid-read. Markdown. \"Reconnect\" means plugging the drive back in or reconnecting the network share.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "errors.provider.dropbox.displayName": "Dropbox",
   "errors.provider.dropbox.appName": "Dropbox",
   "errors.provider.googleDrive.displayName": "Google Drive",

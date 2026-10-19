@@ -371,6 +371,34 @@ so browsing such a repo would run its commands. Cmdr only reads, so a filter buy
 - ❌ Never call gix's `Repository::is_dirty` (it asks submodules "as configured") or open a repo around the cache.
   `status_never_runs_a_repos_filter_driver` pins both paths.
 
+## A disk that goes away mid-read
+
+`gix` memory-maps pack files, their indexes, and the commit-graph, and has no switch to read them instead (GitHub #488).
+When the disk under an open repo goes away (a pulled USB cable, a forced eject, a network volume dropping), the next
+read of a non-resident page raises SIGBUS. The app's handler maps zeros over that page instead of crashing
+(`crates/cmdr-fs/DETAILS.md` § "Mapped-file faults: a dead page reads as zeros"), and `gix` carries on decoding zeros:
+without more, the user would read "This repo looks damaged" (`CorruptRepo`) about a healthy repo on a drive that left.
+
+**`fault_guard.rs` refuses the answer.** A `FaultWatch` reads the recovery's generation before an operation and again
+after; one that moved means some page read in between may have been zeros, so the operation answers
+`FriendlyGitErrorKind::VolumeGone` (the host words it as "the drive with this repo went away") and drops the repo's
+cached status. The watches sit at every entry point a host reaches: `repo_info`, `list_status`'s walk, every
+`GitPortalVolume` call (its `blocking` wrapper), `GitPortal::category_rows`, and `commit_rows_with_counts` (whose rows
+then stay pending). The watcher's recompute and the chip's handshake go through `repo_info`.
+
+- **No memo stores what a watch refused.** The status cache and the snapshot-dates memo are content- or mtime-keyed and
+  would otherwise serve zeros for good, so both skip the insert when the walk under them tripped.
+- **`RepoCache` forgets every handle once the generation moved** (`forget_all_after_a_fault`, at the next `discover`): a
+  handle with a dead pack mapping would fault on every later read, and nothing says which repo's disk went. Reopening a
+  healthy repo costs ~10 ms, once per vanished disk.
+- **Address-free on purpose, with one cost.** The fault lands on whatever thread read the page, often one `gix` spawned
+  (the status walk's), so nothing thread-local sees it, and nothing maps an address back to a repo. So an operation on a
+  healthy repo that ran while ANOTHER repo's disk went away is refused once too, and its next call answers normally.
+- **Evidence**: `fault_guard_real_image.rs` builds a repo with an 8 MiB packed blob on an HFS+ image, maps the pack,
+  `detach -force`s the image, and reads the blob: the process lives, the watch tripped, and the read answers
+  `VolumeGone`. Without the recovery handler it dies of SIGBUS; without the watch it answers `CorruptRepo` (Darwin
+  27.0.0 arm64, 2026-10-19, `pnpm check disk-images`).
+
 ## A miss is not a damaged repo
 
 Every portal lookup that can legitimately find nothing answers `Lookup<T>` (`Result<Option<T>, FriendlyGitError>`, in

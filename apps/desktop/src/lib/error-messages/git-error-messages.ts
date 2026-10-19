@@ -32,6 +32,7 @@ export type FriendlyGitErrorKind =
   | 'shallowBoundary'
   | 'missingObject'
   | 'gitDirPermissionDenied'
+  | 'volumeGone'
 
 /** Maps a git-error kind to its user-facing message (catalog copy). */
 export function getGitErrorMessage(kind: FriendlyGitErrorKind): FriendlyErrorMessage {

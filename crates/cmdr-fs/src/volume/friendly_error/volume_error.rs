@@ -30,7 +30,9 @@ pub(super) fn git_category(kind: FriendlyGitErrorKind) -> ErrorCategory {
         | FriendlyGitErrorKind::BareRepo
         | FriendlyGitErrorKind::BlobTooLarge
         | FriendlyGitErrorKind::ShallowBoundary
-        | FriendlyGitErrorKind::GitDirPermissionDenied => ErrorCategory::NeedsAction,
+        | FriendlyGitErrorKind::GitDirPermissionDenied
+        // Reconnecting the drive is the fix.
+        | FriendlyGitErrorKind::VolumeGone => ErrorCategory::NeedsAction,
         // Goes away on its own once the other git command completes.
         FriendlyGitErrorKind::IndexLocked => ErrorCategory::Transient,
         // On-disk damage: serious, retry won't help.

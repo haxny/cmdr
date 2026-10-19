@@ -16,6 +16,7 @@ use std::sync::Arc;
 use cmdr_fs::volume::git_error::FriendlyGitError;
 use cmdr_fs::volume::host::VolumeHost;
 
+use crate::fault_guard::FaultWatch;
 use crate::path::{self, Cat, VirtualGitPath};
 use crate::repo::{RepoCache, RepoHandle, RepoInfo};
 use crate::state_sink::GitStateSink;
@@ -99,6 +100,8 @@ impl GitPortal {
     /// **Blocking**: one tree diff per row (~230 µs each). Run it on the host's
     /// blocking pool.
     pub fn commit_rows_with_counts(&self, paths: &[PathBuf]) -> Vec<FileEntry> {
+        // Counts read while a mapped page went away may be zeros: the rows stay pending.
+        let watch = FaultWatch::start();
         let mut by_repo: Vec<(RepoHandle, PathBuf, Vec<PathBuf>)> = Vec::new();
         for path in paths {
             let Some((VirtualGitPath::Ref(Cat::Commits, _), handle, root)) = path::classify_in(&self.repos, path)
@@ -110,10 +113,11 @@ impl GitPortal {
                 None => by_repo.push((handle, root, vec![path.clone()])),
             }
         }
-        by_repo
+        let rows: Vec<FileEntry> = by_repo
             .into_iter()
             .flat_map(|(handle, root, group)| crate::log::commit_rows_with_counts(&handle, &root, &group))
-            .collect()
+            .collect();
+        if watch.tripped() { Vec::new() } else { rows }
     }
 
     /// The six category rows for the repo whose worktree root is `worktree_root`,
@@ -129,6 +133,7 @@ impl GitPortal {
     /// reached through a symlink (`/var` → `/private/var` on macOS) would
     /// otherwise cache the child listing under a spelling the watcher can't find.
     pub fn category_rows(&self, worktree_root: &Path) -> Vec<FileEntry> {
+        let watch = FaultWatch::start();
         let Ok((handle, canonical_root)) = self.discover(worktree_root) else {
             return Vec::new();
         };
@@ -136,7 +141,9 @@ impl GitPortal {
         if listed_root != canonical_root {
             return Vec::new();
         }
-        virtual_listing::list_categories(&handle, &canonical_root)
+        let rows = virtual_listing::list_categories(&handle, &canonical_root);
+        // Counts and dates read while a mapped page went away may be zeros.
+        if watch.tripped() { Vec::new() } else { rows }
     }
 
     /// Adds a subscriber for the repository at `repo_root`, starting its `.git/*`

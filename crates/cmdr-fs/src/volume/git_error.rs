@@ -54,6 +54,10 @@ pub enum FriendlyGitErrorKind {
     MissingObject,
     /// We can read the worktree but the OS denied the `.git` directory itself.
     GitDirPermissionDenied,
+    /// The disk under the repo went away while it was being read: a page of a
+    /// mapped pack file came back as zeros (`mapped_file_faults`), so the
+    /// answer was thrown away rather than shown half-read.
+    VolumeGone,
 }
 
 impl FriendlyGitErrorKind {
@@ -71,6 +75,7 @@ impl FriendlyGitErrorKind {
             FriendlyGitErrorKind::ShallowBoundary => "ShallowBoundary",
             FriendlyGitErrorKind::MissingObject => "MissingObject",
             FriendlyGitErrorKind::GitDirPermissionDenied => "GitDirPermissionDenied",
+            FriendlyGitErrorKind::VolumeGone => "VolumeGone",
         }
     }
 }
