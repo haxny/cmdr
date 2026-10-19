@@ -104,7 +104,7 @@ that's `get_metadata`, which lists the node's whole PARENT to stat one child, pe
 
 **Decision / why this shape rather than an opt-in `delete_tree` trait capability.** Naming a capability wouldn't have
 caught the bug that motivated this: MTP never claimed recursion, it just did it. And a backend-native tree delete
-serves zero callers — every genuine tree delete in the app walks caller-side (`delete/walker.rs` phase 2,
+serves zero callers — every genuine tree delete in the app walks caller-side (`delete/volume_walker.rs` phase 2,
 `transfer/volume/cleanup.rs::delete_preserving_inner`) precisely because it needs per-child error attribution and a
 `preserve` set, neither of which a device-side recursive delete can offer. What catches the class is the shared
 conformance assertion every backend's suite runs (`cmdr_fs::volume::conformance`).

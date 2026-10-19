@@ -269,6 +269,14 @@ pub enum WriteOperationError {
         first: String,
         second: String,
     },
+    /// A delete reached a folder another drive, disk image, or server is
+    /// mounted on, inside the selection or as the selection itself. Refused
+    /// before anything is deleted, as Finder does: walking into the mount would
+    /// empty that volume, often a NAS other people use. `mount_point` is where
+    /// it's mounted, so the message can say which one to eject.
+    MountedVolumeInside {
+        mount_point: String,
+    },
     /// A fresh ZIP would hold an entry the archive reader quarantines: a name
     /// that climbs out of the archive (a macOS `..\notes.txt` reads as
     /// `../notes.txt`), nests too deep, or turns into nothing. Refused from the

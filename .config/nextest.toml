@@ -167,6 +167,15 @@ test-group = 'disk-image'
 slow-timeout = { period = "60s", terminate-after = 1 }
 
 [[profile.default.overrides]]
+# The delete's nested-mount pins on a real APFS image (`cmdr-operations`'s `delete::real_image`,
+# macOS-only, `#[ignore]`d): the image is remounted inside a test folder, and a delete of that
+# folder must refuse before anything goes. Same group and 30 s cap as the harness tests above.
+# allowed-unmatched-nextest-filter: macos-only, hdiutil and diskutil have no Linux counterpart
+filter = 'test(delete::real_image::)'
+test-group = 'disk-image'
+slow-timeout = { period = "30s", terminate-after = 1 }
+
+[[profile.default.overrides]]
 # The unmount approver's pins on real APFS/HFS+ images (`volumes::unmount_approver::real_image`,
 # macOS-only, `#[ignore]`d): a real DiskArbitration approval session answers real `diskutil`
 # unmounts of the test's own image.

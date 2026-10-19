@@ -72,6 +72,9 @@ pub(super) enum Call<'a> {
     },
     /// `diskutil mount -mountOptions nobrowse`.
     MountNobrowse { node: &'a str },
+    /// `diskutil mount -mountOptions nobrowse -mountPoint <dir>`: a mount inside an
+    /// ordinary folder, the shape `/Volumes` never has.
+    MountNobrowseAt { node: &'a str, mount_point: &'a Path },
     /// `diskutil unmount` of a node.
     Unmount { node: &'a str },
     /// `diskutil unmountDisk` of a whole disk: every volume on it, one request per volume.
@@ -94,9 +97,10 @@ impl Call<'_> {
             Call::Detach { whole, .. } => Some(Target::Node(whole)),
             Call::AddApfsVolume { container, .. } => Some(Target::Node(container)),
             Call::PartitionTwoJhfs { whole, .. } => Some(Target::Node(whole)),
-            Call::MountNobrowse { node } | Call::Unmount { node } | Call::RenameVolume { node, .. } => {
-                Some(Target::Node(node))
-            }
+            Call::MountNobrowse { node }
+            | Call::MountNobrowseAt { node, .. }
+            | Call::Unmount { node }
+            | Call::RenameVolume { node, .. } => Some(Target::Node(node)),
             Call::UnmountDisk { whole } => Some(Target::Node(whole)),
             Call::Eject { mount_point } | Call::RawUmount { mount_point } => Some(Target::MountPoint(mount_point)),
         }
@@ -169,6 +173,12 @@ impl Call<'_> {
                 ]),
             ),
             Call::MountNobrowse { node } => ("diskutil", owned(&["mount", "-mountOptions", "nobrowse", node])),
+            Call::MountNobrowseAt { node, mount_point } => {
+                let mut args = owned(&["mount", "-mountOptions", "nobrowse", "-mountPoint"]);
+                args.push(mount_point.to_string_lossy().into_owned());
+                args.push(node.to_string());
+                ("diskutil", args)
+            }
             Call::Unmount { node } => ("diskutil", owned(&["unmount", node])),
             Call::UnmountDisk { whole } => ("diskutil", owned(&["unmountDisk", whole])),
             Call::RenameVolume { node, name } => ("diskutil", owned(&["renameVolume", node, name])),

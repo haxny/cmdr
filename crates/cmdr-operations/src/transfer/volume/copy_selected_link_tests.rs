@@ -40,6 +40,7 @@ fn publish_local_preview(engine: &TestOperations, preview_id: &str, sources: &[P
         on_io_error: &|_, e| e.to_string(),
         on_cancelled: &|| "Cancelled".to_string(),
         on_symlink_loop: &|path| format!("Symlink loop detected: {}", path.display()),
+        on_mount_boundary: None,
         on_progress: &|_, _, _, _, _| {},
         on_file: None,
         online_only: None,

@@ -244,6 +244,9 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   // No Retry: the same selection can only be refused again. The way out is
   // picking one of the two, or transferring them one at a time.
   duplicate_source_names: { category: 'needs_action', retryHint: false },
+  // No Retry: the drive is still mounted there, so the same delete refuses
+  // again. The way out is ejecting it, which the suggestion says.
+  mounted_volume_inside: { category: 'needs_action', retryHint: false },
   // No Retry: the same name is refused again. The way out is renaming the file
   // or leaving it out of the selection.
   archive_entry_name_refused: { category: 'needs_action', retryHint: false },
@@ -620,6 +623,14 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
         title: w('sourceInColdStorage.title'),
         message: w('sourceInColdStorage.message', { path: escapeHtml(error.path) }),
         suggestion: w('sourceInColdStorage.suggestion'),
+      }
+    // A delete that would have walked into a mounted drive: named, because the
+    // mount can sit deep inside the selection, and it's what to eject.
+    case 'mounted_volume_inside':
+      return {
+        title: w('mountedVolumeInside.title'),
+        message: w('mountedVolumeInside.message', { mountPoint: escapeHtml(error.mountPoint) }),
+        suggestion: w('mountedVolumeInside.suggestion'),
       }
     // A server-side copy whose source was replaced mid-copy: named, and it says
     // the source stays, because a move would otherwise look like it lost it.

@@ -22,7 +22,7 @@ use super::super::scan_preview::count_selected_links_as_links;
 use super::super::state::{CachedScanResult, WriteOperationState};
 use super::super::testing::TestOperations;
 use super::super::types::WriteOperationConfig;
-use super::walker::delete_volume_files_with_progress_inner;
+use super::volume_walker::delete_volume_files_with_progress_inner;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, EntryKind, ListingProgress, ScanBoundary, Volume, VolumeError, WatchCoverage,

@@ -19,7 +19,7 @@ use std::time::Duration;
 use super::super::event_sinks::CollectorEventSink;
 use super::super::testing::TestOperations;
 use super::super::types::{WriteOperationConfig, WriteOperationPhase};
-use super::walker::delete_volume_files_with_progress_inner;
+use super::volume_walker::delete_volume_files_with_progress_inner;
 use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;

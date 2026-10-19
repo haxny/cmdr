@@ -11,9 +11,11 @@
 pub(crate) mod cloud_trash;
 pub(crate) mod trash;
 mod volume_start;
+mod volume_walker;
 mod walker;
 
-pub(crate) use walker::{delete_files_with_progress_inner, delete_volume_files_with_progress_inner};
+pub(crate) use volume_walker::delete_volume_files_with_progress_inner;
+pub(crate) use walker::delete_files_with_progress_inner;
 
 /// The volume delete driver, reachable from the SMB integration suite, which
 /// sits outside `cmdr-operations` and drives the real walker rather than the
@@ -46,6 +48,10 @@ mod delete_volume_reuse_tests;
 mod hardlink_progress_tests;
 #[cfg(test)]
 mod preview_binding_tests;
+// The nested-mount pins (macOS, `#[ignore]`d, run by `pnpm check disk-images`). The
+// `macos` gate is load-bearing: the harness is macOS-only.
+#[cfg(all(test, target_os = "macos"))]
+mod real_image;
 #[cfg(test)]
 mod trash_pause_tests;
 #[cfg(test)]

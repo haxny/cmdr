@@ -53,7 +53,8 @@ Backend counterpart: `crates/cmdr-operations/src/delete/CLAUDE.md`.
 
 ## Backend touchpoints
 
-`delete/trash.rs`, `delete/walker.rs`, `delete/cloud_trash.rs` (routing). `WriteOperationType::Trash` is its own
-event-payload variant; the MCP `delete` tool opens this dialog (`delete-confirmation`).
+`delete/trash.rs`, `delete/walker.rs` + `delete/volume_walker.rs`, `delete/cloud_trash.rs` (routing).
+`WriteOperationType::Trash` is its own event-payload variant; the MCP `delete` tool opens this dialog
+(`delete-confirmation`).
 
 Depth: `DETAILS.md`.

@@ -26,18 +26,19 @@
 //!   only there.
 
 mod facts;
+mod file_holder;
 mod runner;
 
 #[cfg(test)]
 mod real_images;
 
 pub use facts::Refusal;
+pub use file_holder::FileHolder;
 pub use runner::{CreateFs, CreateLayout, Finished};
 
 use std::fs::File;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::ThreadId;
@@ -593,6 +594,24 @@ impl DiskImage {
         self.volume(index)
     }
 
+    /// Moves volume `index`'s mount into `dir`, an empty folder the test owns:
+    /// `diskutil unmount`, then `diskutil mount -mountPoint`, once its node is proven
+    /// this image's. A drive mounted inside an ordinary folder, which a `/Volumes`
+    /// mount never is. The detach on drop unmounts it from there like anywhere else,
+    /// so `dir` must outlive this image.
+    pub fn remount_volume_at(&mut self, index: usize, dir: &Path) -> Result<&MountedVolume, HarnessError> {
+        let node = self.volume(index)?.node.clone();
+        self.run(Call::Unmount { node: &node })?;
+        self.run(Call::MountNobrowseAt {
+            node: &node,
+            mount_point: dir,
+        })?;
+        let names: Vec<String> = self.volumes.iter().map(|volume| volume.name.clone()).collect();
+        let names: Vec<&str> = names.iter().map(String::as_str).collect();
+        self.volumes = self.mounted_volumes(&names)?;
+        self.volume(index)
+    }
+
     /// `hdiutil detach -force` of the whole image, once it's proven ours and not
     /// nested. A detached image answers [`Refusal::ImageNotAttached`].
     pub fn force_detach(&self) -> Result<(), HarnessError> {
@@ -757,39 +776,5 @@ impl Drop for DiskImage {
                 );
             }
         }
-    }
-}
-
-/// A child process holding a file open, so the volume under it can't unmount. It
-/// descends from the test process: identify it by [`Self::pid`], never by kind.
-#[derive(Debug)]
-pub struct FileHolder {
-    child: Child,
-}
-
-impl FileHolder {
-    /// Starts `/bin/sleep` with `path` open as its stdin.
-    pub fn hold(path: &Path) -> io::Result<Self> {
-        let file = File::open(path)?;
-        let child = Command::new("/bin/sleep")
-            .arg("600")
-            .stdin(Stdio::from(file))
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()?;
-        Ok(Self { child })
-    }
-
-    /// The holder's PID.
-    pub fn pid(&self) -> u32 {
-        self.child.id()
-    }
-}
-
-impl Drop for FileHolder {
-    fn drop(&mut self) {
-        // allowed-discarded-outcome: a holder that already exited has nothing left to kill
-        let _ = self.child.kill();
-        let _ = self.child.wait();
     }
 }

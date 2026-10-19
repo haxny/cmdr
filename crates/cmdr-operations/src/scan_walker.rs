@@ -70,6 +70,11 @@ pub(super) struct WalkContext<'a, E> {
     pub(super) on_io_error: &'a dyn Fn(&Path, std::io::Error) -> E,
     pub(super) on_cancelled: &'a dyn Fn() -> E,
     pub(super) on_symlink_loop: &'a dyn Fn(&Path) -> E,
+    /// `Some` stops the walk at a directory another filesystem is mounted on
+    /// (`mount_boundary::is_mount_boundary`), failing with this error for that
+    /// mount point. A delete's walks set it, its preview's included: a delete
+    /// that walked into a mount would empty that volume. Copies leave it `None`.
+    pub(super) on_mount_boundary: Option<&'a dyn Fn(&Path) -> E>,
     pub(super) on_progress: &'a dyn Fn(usize, usize, u64, Option<String>, Option<String>),
     /// Parks the walk while the owning operation is paused, called at every
     /// boundary the cancel check uses. The scan is the minutes-long part of a
@@ -273,6 +278,11 @@ pub(super) fn walk_dir_recursive<E>(
     } else if metadata.is_dir() {
         if is_symlink_loop(path, visited) {
             return Err((ctx.on_symlink_loop)(path));
+        }
+        if let Some(on_mount_boundary) = ctx.on_mount_boundary
+            && super::mount_boundary::is_mount_boundary(path, device)
+        {
+            return Err(on_mount_boundary(path));
         }
 
         if let Ok(canonical) = path.canonicalize() {

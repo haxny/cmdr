@@ -275,9 +275,10 @@ Each point is where the op already stats the item, so journaling is near-zero ma
   destination's empty skeleton standing. `copy/mod.rs` routes all its terminal arms through one
   `commit_journaling_created_dirs`, so the next arm added can't forget; `volume/copy.rs` journals once post-loop, before
   it branches on the terminal state.
-- **delete** — per-leaf at `delete/walker.rs`, one row per file, deliberately (a 1M-file delete journals ~1M rows on the
-  order of tens-to-~150 MB — leaf search is the requirement, and retention (§ "Retention") manages the cost, NOT a row
-  cap). Delete is never rollbackable, so these rows exist purely for "when did I delete `dog.jpg`".
+- **delete** — per-leaf at `delete/walker.rs` and `delete/volume_walker.rs`, one row per file, deliberately (a 1M-file
+  delete journals ~1M rows on the order of tens-to-~150 MB — leaf search is the requirement, and retention (§
+  "Retention") manages the cost, NOT a row cap). Delete is never rollbackable, so these rows exist purely for "when did
+  I delete `dog.jpg`".
 - **same-FS move + trash** — the **top-level** `rollback_unit` row (one rename-back / one restore reverses the whole
   subtree) at `transfer/move_op/` / `delete/trash.rs`. A move records where the item LANDED (a conflict can send it
   aside to a fresh `name (N)`), for the unit row and the search-leaf rebase alike; recording the name that was taken

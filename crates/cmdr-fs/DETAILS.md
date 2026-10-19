@@ -888,13 +888,14 @@ would drift apart.
   rather than waiting on itself forever.
 - **The runner (`runner.rs`).** The closed `Call` enum IS the verb list: `hdiutil create`, `attach -plist -nobrowse`,
   `info -plist`, `detach` and `detach -force`; `diskutil info -plist`, `apfs addVolume … -nomount`,
-  `partitionDisk … JHFS+ … R`, `mount -mountOptions nobrowse`, `unmount`, `unmountDisk`, `renameVolume`, and `eject`;
-  plus `/sbin/umount`. `unmount` and `unmountDisk` are what a DiskArbitration approval test drives, since both go
-  through DA. `/sbin/umount` is the opposite case and the one verb that isn't a disk tool: it goes straight to the
-  kernel, so DA asks nobody and a session hears about it only afterwards, which is how a vanished drive is driven
-  without pulling a real cable. It's ownership-checked like every other change. A verb gets added with its first caller.
-  Every call is SIGKILLed past 30 s and reaped. Output goes to anonymous temp files rather than pipes, so a large plist
-  can't stall the tool and a helper holding a pipe can't block a read past the kill.
+  `partitionDisk … JHFS+ … R`, `mount -mountOptions nobrowse` (optionally `-mountPoint <dir>`, a mount inside a test's
+  own folder), `unmount`, `unmountDisk`, `renameVolume`, and `eject`; plus `/sbin/umount`. `unmount` and `unmountDisk`
+  are what a DiskArbitration approval test drives, since both go through DA. `/sbin/umount` is the opposite case and the
+  one verb that isn't a disk tool: it goes straight to the kernel, so DA asks nobody and a session hears about it only
+  afterwards, which is how a vanished drive is driven without pulling a real cable. It's ownership-checked like every
+  other change. A verb gets added with its first caller. Every call is SIGKILLed past 30 s and reaped. Output goes to
+  anonymous temp files rather than pipes, so a large plist can't stall the tool and a helper holding a pipe can't block
+  a read past the kill.
 - **Ownership before every change (`facts.rs`).** A call that changes a disk runs only after `diskutil info -plist`
   walks its target to the physical whole disk (a partition's `ParentWholeDisk`; for an APFS volume or container, through
   `APFSPhysicalStores` to the store's parent) and `hdiutil info -plist` lists BOTH the node and that whole disk under

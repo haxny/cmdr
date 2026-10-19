@@ -19,7 +19,7 @@ use super::super::host::testing::PaneListings;
 use super::super::state::{CachedScanResult, OperationIntent, WriteOperationState};
 use super::super::testing::TestOperations;
 use super::super::types::{CancelRollbackOutcome, WriteOperationConfig, WriteOperationError};
-use super::walker::delete_volume_files_with_progress_inner;
+use super::volume_walker::delete_volume_files_with_progress_inner;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{BatchScanResult, CopyScanResult, InMemoryVolume, Volume, VolumeError, WatchCoverage};
 use cmdr_listing::testing::{TestListing, TestListingGuard};

@@ -251,6 +251,11 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       path: 's3://AKIAIOSFODNN7EXAMPLE@s3.eu-west-1.amazonaws.com:443/family-photos/2019/holiday-raw.tar',
     },
   },
+  // A permanent delete of a project folder holding a mounted NAS share.
+  mounted_volume_inside: {
+    operationType: 'delete',
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
+  },
   // A move within an S3 account whose source another app replaced mid-copy.
   source_changed: {
     operationType: 'move',

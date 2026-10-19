@@ -141,7 +141,8 @@ The full top-level inventory is here:
   says an operation acts on, § "What a row says it acts on"), `operation_intent.rs` (`OperationIntent`, `PauseGate`),
   `human_wait.rs` (how long a person, or a volume that left, has kept the operation waiting), `metadata_losses.rs`
   (per-class counts of the metadata a destination couldn't keep, for the completion's note:
-  `src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata"), `archive_edit/` (the zip-edit driver).
+  `src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata"), `mount_boundary.rs` (where a delete's walk
+  stops: `src/delete/DETAILS.md` § "A mount is a wall"), `archive_edit/` (the zip-edit driver).
 - The in-flight ledgers and what reverses them: `ledger.rs` (`CopyTransaction` and `WrittenFile`, the vocabulary of what
   an operation currently has at the destination, plus the `Drop` panic net) and `reversal.rs` (the policy over it: the
   recheck before each destructive act, and `ReversalTally`), plus `unblocked_removal.rs` (the one removal every reversal
@@ -1665,20 +1666,20 @@ mid-`Copying`).
   `PauseGate`'s `*_until` helpers instead and names its own predicate.
 - **Gate placement: exactly where the loop already observes cancel, and only there** ([The park](#the-park) has the
   reasoning). Every serial loop that can spend real time asks: both transfer drivers' per-source loop tops
-  (`transfer_driver/{sync,async}_driver.rs`), both delete walkers' delete-phase file and dir loops (`delete/walker.rs`),
-  trash's per-item loop (`delete/trash.rs`), all of `move_op/`'s per-item loops (`src/transfer/DETAILS.md` § "Pause in
-  the local move engine"), the copy's scanned-dirs pass (`transfer/copy/scanned_dirs.rs`), the two cross-volume merge
-  walks and the sequential extractor's member loop (`src/transfer/volume/DETAILS.md` § "Pause in the volume walks"), the
-  archive mutator through `MutationHooks::wait_if_paused`, and every SCAN boundary that already observes cancel. The
-  cross-volume streaming copy path ALSO parks BETWEEN CHUNKS via the `CheckpointStream` wrapper in
-  `transfer/volume/stream_pipe.rs` (the sync per-chunk `on_progress` callback can't `.await`, so the async stream
-  decorator owns mid-file parking + a `yield_now`), so a paused single large file (e.g. MTP→local) stops mid-stream
-  holding only its `.cmdr-tmp-<uuid>`. Two paths still pause only at a file boundary, both for the same reason — no
-  stream to park between chunks and nothing freed by parking: the local-FS sync chunk loop (`chunked_copy.rs`, which
-  receives the cancel atom, not the `PauseGate`) and a server-side copy made in one call, such as SFTP's `copy_within`
-  (`transfer/volume/server_side_copy.rs`'s `try_server_side_copy`); one made in pieces (S3's parts) parks between them,
-  at `ServerCopyProgress::checkpoint`. Full rationale + scope: `src/transfer/DETAILS.md` § "Pause reaches between
-  chunks".
+  (`transfer_driver/{sync,async}_driver.rs`), both delete walkers' delete-phase file and dir loops (`delete/walker.rs`,
+  `delete/volume_walker.rs`), trash's per-item loop (`delete/trash.rs`), all of `move_op/`'s per-item loops
+  (`src/transfer/DETAILS.md` § "Pause in the local move engine"), the copy's scanned-dirs pass
+  (`transfer/copy/scanned_dirs.rs`), the two cross-volume merge walks and the sequential extractor's member loop
+  (`src/transfer/volume/DETAILS.md` § "Pause in the volume walks"), the archive mutator through
+  `MutationHooks::wait_if_paused`, and every SCAN boundary that already observes cancel. The cross-volume streaming copy
+  path ALSO parks BETWEEN CHUNKS via the `CheckpointStream` wrapper in `transfer/volume/stream_pipe.rs` (the sync
+  per-chunk `on_progress` callback can't `.await`, so the async stream decorator owns mid-file parking + a `yield_now`),
+  so a paused single large file (e.g. MTP→local) stops mid-stream holding only its `.cmdr-tmp-<uuid>`. Two paths still
+  pause only at a file boundary, both for the same reason — no stream to park between chunks and nothing freed by
+  parking: the local-FS sync chunk loop (`chunked_copy.rs`, which receives the cancel atom, not the `PauseGate`) and a
+  server-side copy made in one call, such as SFTP's `copy_within` (`transfer/volume/server_side_copy.rs`'s
+  `try_server_side_copy`); one made in pieces (S3's parts) parks between them, at `ServerCopyProgress::checkpoint`. Full
+  rationale + scope: `src/transfer/DETAILS.md` § "Pause reaches between chunks".
 - **Cancellation always wins over pause.** `cancel_write_operation` / `cancel_all_write_operations` flip the intent AND
   call `pause_gate.wake()`, so a paused, parked op unblocks, observes the non-`Running` intent, and bails through the
   existing keep-partials path (keeping already-copied files, deleting only the last partial). Without that wake a paused
@@ -2368,9 +2369,10 @@ Pinned by `delete/hardlink_progress_tests.rs`, `delete/volume_hardlink_progress_
 `dirs_done`, `expected_files_total`, `expected_bytes_total`). **Why**: 20+ emit sites construct `WriteProgressEvent`
 literals for active-phase events. Adding four optional fields to the struct would force every site to spell out their
 defaults, pure mechanical noise. The `new(...)` constructor takes the eight core counter fields and defaults the scan
-meta (`None` / `0`); the scan emit sites in `scan.rs`, `scan_preview.rs`, and `delete/walker.rs::scan_volume_recursive`
-opt in via `.with_scan_meta(current_dir, dirs_done, expected)`. Future scan-related fields go through the same builder.
-If a real refactor of the 20 literals to `new(...)` ever happens, the builder pattern still composes cleanly on top.
+meta (`None` / `0`); the scan emit sites in `scan.rs`, `scan_preview.rs`, and
+`delete/volume_walker.rs::scan_volume_recursive` opt in via `.with_scan_meta(current_dir, dirs_done, expected)`. Future
+scan-related fields go through the same builder. If a real refactor of the 20 literals to `new(...)` ever happens, the
+builder pattern still composes cleanly on top.
 
 **Decision**: All write operations go through `OperationEventSink` instead of `tauri::AppHandle`, and the sink is
 constructed **only at the IPC edge** (`commands/file_system/write_ops.rs` + `commands/file_system/volume_copy.rs`), then

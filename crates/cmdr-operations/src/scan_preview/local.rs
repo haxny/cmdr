@@ -150,6 +150,9 @@ pub(crate) fn run_scan_preview(
             seen: &online_only_seen,
         };
         let sidecars = cmdr_fs::apple_double::SidecarRule::new();
+        let refuse_mounted_volume = |path: &Path| WriteOperationError::MountedVolumeInside {
+            mount_point: path.display().to_string(),
+        };
         let ctx = WalkContext {
             sidecars: &sidecars,
             progress_interval: state.progress_interval,
@@ -164,6 +167,10 @@ pub(crate) fn run_scan_preview(
             on_symlink_loop: &|path| WriteOperationError::SymlinkLoop {
                 path: path.display().to_string(),
             },
+            // A delete's preview stops where its delete would: the delete reuses
+            // this walk's file list, so a list that crossed a mount would be
+            // deleted as is.
+            on_mount_boundary: (purpose == ScanPreviewPurpose::Delete).then_some(&refuse_mounted_volume),
             on_progress: &|files_found, dirs_found, bytes_found, current_path, current_dir| {
                 // Proof the walk is alive, fed before the emits so a slow sink
                 // can't read as a wedged volume.

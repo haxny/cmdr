@@ -73,6 +73,9 @@ function variantDetailLines(error: WriteOperationError): string[] {
   if (error.type === 'destination_inside_source') {
     return [`Source: ${error.source}`, `Destination: ${error.destination}`]
   }
+  if (error.type === 'mounted_volume_inside') {
+    return [`Mount point: ${error.mountPoint}`]
+  }
   if (error.type === 'duplicate_source_names') {
     return [`Name: ${error.name}`, `First: ${error.first}`, `Second: ${error.second}`]
   }

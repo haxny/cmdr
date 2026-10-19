@@ -82,6 +82,7 @@ mod look_alike;
 mod look_alike_instant_tests;
 mod manager;
 mod metadata_losses;
+mod mount_boundary;
 mod mutation_error;
 mod mutation_reply;
 mod operation_intent;

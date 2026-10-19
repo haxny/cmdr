@@ -35,6 +35,30 @@ describes the delete, but the walker's own answer is what protects the target. P
 (nested link, link-following backend, pane-listed parent, cold preview, preview count). Regression anchor: #505 (a
 nested `data -> ~/Photos` link on an external drive took `~/Photos`).
 
+## A mount is a wall
+
+A permanent delete of a folder with a drive, disk image, or share mounted somewhere inside it (or of a mount point
+itself, picked in `/Volumes` from a boot-disk pane) refuses the whole delete with `MountedVolumeInside { mount_point }`,
+before anything is deleted. Finder refuses the same delete; `rm -rf` doesn't, and that's what the walkers did: they
+emptied the mounted volume, and the busy mount point's `remove_dir` then failed silently. Decision/Why: refusing names
+the mount and changes nothing, where skipping the subtree and reporting it as left behind would be a delete that quietly
+did less than asked.
+
+- **The test** (`mount_boundary::is_mount_boundary`): a directory whose device differs from its parent's, confirmed by
+  the OS mount table (`transfer_sides::root_is_listed`, on the path with links resolved). The device check keeps an
+  ordinary directory at one parent `stat`; the table rules out a macOS firmlink, which crosses volumes with no mount. A
+  table that can't be read counts as a mount. A Linux bind mount of the same filesystem keeps its device and isn't
+  caught.
+- **Where it's asked**: the shared local walk (`scan_walker.rs`, `WalkContext::on_mount_boundary`) for a delete's own
+  scan AND for a delete-purpose preview, since the local walker deletes a cached preview's file list as is; and the
+  volume walker for a backend with a `local_path` (a `LocalPosixVolume` folder), on the blocking pool. A remote
+  backend's mounts are its server's business.
+- **Copies don't stop at a mount**: the context field is `None` for every non-delete walk.
+
+Pinned on a real APFS image mounted inside a test folder (`real_image.rs`, the disk-image lane): the boot-disk walker
+for the folder and for the mount point, the delete preview (caches nothing), and the volume walker. Regression anchor:
+#507.
+
 ## The volume delete's own lifecycle
 
 `volume_start.rs::start_volume_delete` registers the op with the manager and hands it a deferred async start;

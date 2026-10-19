@@ -38,6 +38,7 @@ fn plain_walk_context<'a>() -> WalkContext<'a, String> {
         on_io_error: &|_, e| e.to_string(),
         on_cancelled: &|| "Cancelled".to_string(),
         on_symlink_loop: &|path| format!("Symlink loop detected: {}", path.display()),
+        on_mount_boundary: None,
         on_progress: &|_, _, _, _, _| {},
         on_file: None,
         online_only: None,
@@ -207,6 +208,7 @@ fn run_walker_with_sources(sources: &[PathBuf]) -> WalkOutcome {
         on_io_error: &|p, e| format!("io: {} {}", p.display(), e),
         on_cancelled: &|| "cancelled".to_string(),
         on_symlink_loop: &|p| format!("loop: {}", p.display()),
+        on_mount_boundary: None,
         on_progress: &|_, _, _, cur_file, cur_dir| {
             captured.borrow_mut().push((cur_file, cur_dir));
         },

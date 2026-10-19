@@ -8,9 +8,9 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
 
 ## Files
 
-- **`walker.rs`**: local and volume delete, both taking `&dyn OperationEventSink`; `../local_start.rs` routes by
-  `volume_id`. The volume walker asks `Listings::authoritative_listing` before every `list_directory`, so a subtree open
-  in another pane is cache-fed; files batch per `Volume::delete_batch_size`. DETAILS § "Volume-delete internals".
+- **`walker.rs`** (local) and **`volume_walker.rs`** (any `Volume`), both taking `&dyn OperationEventSink`;
+  `../local_start.rs` routes by `volume_id`. The volume walker asks `Listings::authoritative_listing` before every
+  `list_directory` and batches files per `Volume::delete_batch_size`. DETAILS § "Volume-delete internals".
 - **`trash.rs`**: `move_to_trash_sync()` (macOS `trashItemAtURL`; Linux `trash` crate; reused by
   `trash_single_journaled`), `trash_files_with_progress()` (batch, per-item progress, cancel), and
   `trash_dir_for_path()` (❌ keep its ancestor walk, DETAILS § Where a trash is). Refusals are a typed `MutationError`,
@@ -32,6 +32,8 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
   `take_cached_scan_result`; ❌ never skip it.
 - **A symlink is a LEAF to the volume walker**: descend only an `EntryKind::Directory` (`EntryKind::of`,
   `Volume::entry_kind`), ❌ never `is_directory` or a preview's word (both follow links). DETAILS § "A link is a leaf".
+- **A delete reaching a mount point refuses WHOLE, up front** (`MountedVolumeInside`), in both walkers and the delete
+  preview. DETAILS § "A mount is a wall".
 - **❌ Never resolve a top-level source's type with `.unwrap_or(false)`.** Hand the `Option` to `scan_volume_recursive`,
   which propagates a failed probe: a guessed "file" books zero bytes for a whole tree.
 - **Trash has no scan phase**: `trashItemAtURL` is atomic per top-level item, so progress tracks items. A PARTLY refused
@@ -48,8 +50,7 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
   flattened sentence leaves the dialog only "try again"), reporting `strongest_refusal`, ❌ not the most common one.
 - **Delete and trash don't `fsync`, and ❌ never a global `sync(2)`** (it stalled every other app; `clippy.toml`
   disallows `libc::sync`).
-- **A recursive scan that bails with `Err(Cancelled)` must NOT emit `write-cancelled`; its top-level caller does**, via
-  `emit_cancelled_if_aborted`. `scan_volume_recursive` checks cancel per level, so emitting at the bail site fires the
-  terminal event once per stacked frame. Pinned by `delete_cancel_during_scan_emits_write_cancelled`.
+- **A recursive scan that bails with `Err(Cancelled)` must NOT emit `write-cancelled`; its top-level caller does**
+  (`emit_cancelled_if_aborted`), or it fires once per stacked frame.
 
 Depth: `DETAILS.md`.

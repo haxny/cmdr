@@ -340,8 +340,8 @@ of those sites was decided one at a time on one question: **can a wrong `false` 
   through it renames the target's children out).
 - **`crates/cmdr-operations/src/rename.rs`'s probe — LEFT ALONE, with a comment saying why.** It feeds the journal
   snapshot's entry type only. A wrong value mislabels an undo entry and reaches no destructive branch.
-- **`delete/walker.rs`'s no-preview probe** is the same family and is decided in `../../delete/DETAILS.md` § "What each
-  branch does with a missing or wrong fact".
+- **`delete/volume_walker.rs`'s no-preview probe** is the same family and is decided in `../../delete/DETAILS.md` §
+  "What each branch does with a missing or wrong fact".
 - **The two dest-inside-source guards — LEFT ALONE, deliberately.** `copy.rs` and `move_same.rs` each spell the probe
   `matches!(volume.is_directory(source).await, Ok(true))`, so an unanswerable stat means the guard doesn't fire. That's
   the safe direction here: the guard refuses a runaway (§ "Dest-inside-source guard on the same volume"), it deletes

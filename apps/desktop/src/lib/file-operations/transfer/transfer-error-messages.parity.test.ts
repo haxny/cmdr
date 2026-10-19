@@ -625,6 +625,20 @@ const cases: Case[] = [
   },
 
   {
+    // A delete that would have walked into a mounted drive: names the mount,
+    // which can sit deep inside the selection, and says nothing was deleted.
+    name: 'mounted_volume_inside',
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
+    expected: {
+      title: 'Another drive is mounted here',
+      message:
+        'A drive or server is mounted at /Users/david/projects/backup/nas, so this delete would erase everything on it too. Cmdr stopped before deleting anything.',
+      suggestion:
+        'Eject that drive, then delete again. To clear the drive itself, open it and delete what’s on it there.',
+    },
+  },
+
+  {
     // A server-side copy saw its source replaced mid-copy and saved nothing:
     // named, and the source is said to be where it was, since a move kept it.
     name: 'source_changed',

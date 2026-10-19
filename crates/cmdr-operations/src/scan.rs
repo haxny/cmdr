@@ -295,6 +295,9 @@ fn scan_sources_internal(
     // resolve and no watchdog (that bounds a PREVIEW, not an operation's scan).
     let pause = super::scan_bridge::ScanPause::for_operation(Arc::clone(state));
     let sidecars = cmdr_fs::apple_double::SidecarRule::new();
+    let refuse_mounted_volume = |path: &Path| WriteOperationError::MountedVolumeInside {
+        mount_point: path.display().to_string(),
+    };
     let ctx = WalkContext {
         sidecars: &sidecars,
         progress_interval,
@@ -310,6 +313,7 @@ fn scan_sources_internal(
         on_symlink_loop: &|path| WriteOperationError::SymlinkLoop {
             path: path.display().to_string(),
         },
+        on_mount_boundary: (operation_type == WriteOperationType::Delete).then_some(&refuse_mounted_volume),
         on_progress: &|files_done, dirs_done, bytes_done, current_file, current_dir| {
             log::debug!(
                 "scan: emitting write-progress op={} phase=scanning files_found={} dirs_found={} bytes_found={}",
