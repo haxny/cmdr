@@ -39,10 +39,9 @@ nested `data -> ~/Photos` link on an external drive took `~/Photos`).
 
 A permanent delete of a folder with a drive, disk image, or share mounted somewhere inside it (or of a mount point
 itself, picked in `/Volumes` from a boot-disk pane) refuses the whole delete with `MountedVolumeInside { mount_point }`,
-before anything is deleted. Finder refuses the same delete; `rm -rf` doesn't, and that's what the walkers did: they
-emptied the mounted volume, and the busy mount point's `remove_dir` then failed silently. Decision/Why: refusing names
-the mount and changes nothing, where skipping the subtree and reporting it as left behind would be a delete that quietly
-did less than asked.
+before anything is deleted, as Finder does. A walk into the mount would empty that volume, and the busy mount point's
+`remove_dir` would then fail silently. Decision/Why: refusing names the mount and changes nothing, where skipping the
+subtree and reporting it as left behind would be a delete that quietly did less than asked.
 
 - **The test** (`mount_boundary::is_mount_boundary`): a directory whose device differs from its parent's, confirmed by
   the OS mount table (`transfer_sides::root_is_listed`, on the path with links resolved). The device check keeps an
