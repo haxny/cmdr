@@ -20,7 +20,9 @@ use serde::Serialize;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::ignore_poison::IgnorePoison;
 
-use super::content_kind::{CLASSIFY_HEAD_LEN, MARKDOWN_RENDER_CAP_BYTES, ViewerContentKind, is_renderable_markdown};
+use super::content_kind::{
+    CLASSIFY_HEAD_LEN, MARKDOWN_RENDER_CAP_BYTES, ViewerContentKind, is_markdown_extension, is_renderable_markdown,
+};
 use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, decode_line, detect_from_head};
 use super::markdown_images::{ImageTarget, RemoteImage, VolumeImage, resolve_image_src};
 use super::markdown_render::{ImageMarker, render_markdown};
@@ -117,10 +119,14 @@ impl MarkdownDocument {
     }
 }
 
-/// Whether the file `opened` from `requested` opens in the rendered Markdown view.
+/// Whether the file `opened` from `requested` opens in the rendered Markdown view. Reads
+/// the head only for a file with a Markdown name: every open passes through here.
 pub(super) fn is_markdown(requested: &Path, opened: &OpenedFile) -> bool {
-    let head = read_head(opened.source.as_ref(), opened.total_bytes, CLASSIFY_HEAD_LEN).unwrap_or_default();
     let ext = requested.extension().and_then(|e| e.to_str());
+    if !is_markdown_extension(ext) {
+        return false;
+    }
+    let head = read_head(opened.source.as_ref(), opened.total_bytes, CLASSIFY_HEAD_LEN).unwrap_or_default();
     is_renderable_markdown(&head, ext, opened.total_bytes)
 }
 

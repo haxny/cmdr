@@ -37,6 +37,12 @@ pub const MARKDOWN_RENDER_CAP_BYTES: u64 = 10 * 1024 * 1024;
 /// The extensions a Markdown file goes by, compared case-insensitively.
 const MARKDOWN_EXTENSIONS: [&str; 5] = ["md", "markdown", "mdown", "mkd", "mkdn"];
 
+/// Whether a file goes by a Markdown name, the half of [`is_renderable_markdown`] that
+/// needs no bytes: a caller checks it before reading a head.
+pub fn is_markdown_extension(ext: Option<&str>) -> bool {
+    ext.is_some_and(|ext| MARKDOWN_EXTENSIONS.iter().any(|md| ext.eq_ignore_ascii_case(md)))
+}
+
 /// Whether a file opens in the rendered Markdown view. Pure: no I/O.
 ///
 /// Unlike images, this is extension-driven (Markdown has no magic), and locality
@@ -45,8 +51,7 @@ const MARKDOWN_EXTENSIONS: [&str; 5] = ["md", "markdown", "mdown", "mkd", "mkdn"
 /// out: a known media signature wins (a PNG named `.md` is an image), a binary-looking
 /// head stays text, and so does anything past [`MARKDOWN_RENDER_CAP_BYTES`].
 pub fn is_renderable_markdown(head: &[u8], ext: Option<&str>, size: u64) -> bool {
-    let named_markdown = ext.is_some_and(|ext| MARKDOWN_EXTENSIONS.iter().any(|md| ext.eq_ignore_ascii_case(md)));
-    named_markdown
+    is_markdown_extension(ext)
         && size <= MARKDOWN_RENDER_CAP_BYTES
         && classify_by_magic(head).is_none()
         && !looks_binary(head, super::encoding::detect_from_head(head))

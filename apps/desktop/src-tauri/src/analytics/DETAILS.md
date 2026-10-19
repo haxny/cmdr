@@ -243,7 +243,7 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
   sits past the no-op guard, so removing an id that isn't there doesn't inflate the count. The `action` is a required
   parameter rather than an inferred one, so a fifth favorites mutation can't be added without deciding what it reports.
 - `viewer_opened` (backend, `file_viewer/analytics.rs`, from `session::open_session_inner`): `content` (`text` /
-  `image` / `pdf`, or `unknown` on a failure), `size_bucket` (`<1MB` / `1-10MB` / `10-100MB` / `100MB-1GB` / `1GB+`,
+  `image` / `pdf` / `markdown`, or `unknown` on a failure), `size_bucket` (`<1MB` / `1-10MB` / `10-100MB` / `100MB-1GB` / `1GB+`,
   stepping where the viewer's own backends step), `outcome` (`opened` / `failed`), `failure` (the `ViewerError`
   variant's token, or `none`), `from_archive` and `forced_text` bools. ❌ NEVER a file name, an extension, or a byte
   count: an extension list fingerprints a person's work in a population of a few hundred installs. Every open passes
