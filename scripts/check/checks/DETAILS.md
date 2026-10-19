@@ -265,6 +265,12 @@ match must contain, derived from the pattern's own syntax tree, so it can't drif
 fail the gate and never reach the engine. `error-string-match` ran 12 regexes on every line of 1,700 files; gated, it
 went from 1.6 s to 0.07 s. `TestEveryScannerGateHasALiteral` fails on a wrapped pattern with nothing to gate on.
 
+**Whole-lane effect** (`/usr/bin/time pnpm check --fast --ci --fresh`, before/after runs alternated twice on the M1 Max
+agent box under a load average of ~90, 2026-10-19): 11.1–11.4 s wall, 28–31 s user, 14.3–14.6 s sys before; 6.0–7.4 s
+wall, 22 s user, 10.6–10.7 s sys after. The slowest fast lanes are now `stylelint` and the Node-backed i18n lanes, no
+longer the Go scanners (`error-string-match` was 8.3 s under that load). Most of the remaining sys time is
+`cargo-machete` and the Node lanes.
+
 **Gotcha: it's a snapshot.** A scanner that must see what an auto-fixer wrote earlier in the same run (one that
 `DependsOn` a formatter) has to read from disk. No in-process scanner does today; the formatter dependents are all
 external tools (ESLint, stylelint, `go vet`).
