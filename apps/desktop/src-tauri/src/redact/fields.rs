@@ -5,6 +5,7 @@ use super::RedactionContext;
 use super::context::TokenDomain;
 use super::identity_token;
 use super::names::{split_cmdr_suffix, unescape_debug};
+use super::path_end::starts_with_field_key;
 use super::paths::{
     dir_token, has_extension_like_suffix, keeps_parent_name, redact_leaf, redact_media, redact_unix_home,
     redact_unix_system, redact_volumes, redact_windows_home,
@@ -222,15 +223,6 @@ pub(super) fn end_of_bare_value(raw: &str) -> &str {
         value = &value[..value.len() - 1];
     }
     value.trim_end()
-}
-
-/// `ident=` at the start of `s`.
-pub(super) fn starts_with_field_key(s: &str) -> bool {
-    let ident_len = s
-        .char_indices()
-        .take_while(|&(i, c)| c == '_' || c.is_ascii_alphabetic() || (i > 0 && c.is_ascii_digit()))
-        .count();
-    ident_len > 0 && s[ident_len..].starts_with('=')
 }
 
 /// Whether a path branch matches `value` from its very first byte.

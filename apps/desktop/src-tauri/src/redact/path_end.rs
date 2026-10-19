@@ -1,7 +1,6 @@
 //! Where a path found in prose really ends. The path branches over-match on purpose (spaces are legal in
 //! labels and filenames), and this gives the trailing prose back. `DETAILS.md` § "Finding the end of a path".
 
-use super::fields::starts_with_field_key;
 use super::names::ends_with_unicode_escape;
 use super::paths::{ends_filename, ends_sentence, has_extension_like_suffix};
 
@@ -218,6 +217,16 @@ fn same_path_end(s: &str, end: usize) -> usize {
         offset += word.len() + 1;
     }
     end
+}
+
+/// `ident=` at the start of `s`: the next `key=value` field, which ends a prose path before it and
+/// an unquoted field value (`fields::end_of_bare_value`) at it.
+pub(super) fn starts_with_field_key(s: &str) -> bool {
+    let ident_len = s
+        .char_indices()
+        .take_while(|&(i, c)| c == '_' || c.is_ascii_alphabetic() || (i > 0 && c.is_ascii_digit()))
+        .count();
+    ident_len > 0 && s[ident_len..].starts_with('=')
 }
 
 /// A word that ends in a dot but opens a name rather than closing a sentence: a bare number
