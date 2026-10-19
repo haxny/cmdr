@@ -1,7 +1,7 @@
 # cmdr-webdav
 
 The WebDAV backend: a `Volume` over one `reqwest` client with one account's credentials. Same shape as
-`crates/cmdr-sftp`, leaner: no host keys, no auth ladder, no extensions probe. Fixtures:
+`crates/cmdr-sftp`, minus host keys, the auth ladder, and the extensions probe. Fixtures:
 `apps/desktop/test/webdav-servers/start.sh`.
 
 ## Module map
@@ -31,7 +31,7 @@ The WebDAV backend: a `Volume` over one `reqwest` client with one account's cred
 - ❌ **One unattended auth attempt, never a loop.** A 401 on the re-probe moves to `NeedsCredentials` and stops.
 - ❗ **A cookie jar AND Basic on every request**: sessionless, Nextcloud hashes the password per request (~150 ms vs
   ~20). `DETAILS.md` § "Session cookies".
-- ❗ **Redirects are off**: a followed MOVE or COPY would resend `Destination` somewhere the user never named.
+- ❗ **Redirects are off**: a followed MOVE or COPY would resend `Destination` elsewhere.
 - ❗ **The engine owns staging**: `CreateOrReplace` is one plain PUT onto its temp; ❌ don't stage it again. Only
   `CreateNew` stages here (MOVE `Overwrite: F`). `DETAILS.md` § "Write staging".
 - ❗ **PUT sends `Content-Length` from `size`.** ❌ A byte count that disagrees fails the write and removes its target:
@@ -45,8 +45,8 @@ The WebDAV backend: a `Volume` over one `reqwest` client with one account's cred
   non-standard properties; `DETAILS.md` § "What a real server answers" sets the bar for a third.
 - ❗ **Dates beyond the mtime only where the connect probe saw `nc:creation_time`**; ❌ never a PROPPATCH of dates on
   `mod_dav`, which keeps them as dead properties. `DETAILS.md` § "Dates".
-- ❗ **DELETE is recursive by protocol; the trait's is not.** `delete` refuses a non-empty collection with `ENOTEMPTY`
-  after a `Depth: 1` PROPFIND.
+- ❗ **DELETE and a forced MOVE are recursive; the trait's verbs aren't.** Both refuse a held collection, ❌ never by
+  `If` ETag (`DETAILS.md` § "A folder's DELETE").
 - ❌ Never `root_anchored`, never a stat per child in a scan, never `authoritative_listing` (coverage is `None`).
 - Digest-only servers are a typed `AuthMethodUnsupported`, by the `WWW-Authenticate` scheme token.
 

@@ -67,6 +67,30 @@ async fn a_forceless_rename_refuses_an_existing_destination() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
+async fn a_forced_rename_keeps_a_non_empty_folder() {
+    // ❗ `MOVE` with `Overwrite: T` deletes a destination collection, tree and
+    // all, before it moves anything (RFC 4918 § 9.9.3).
+    let (volume, dir) = stock_server_with_scratch().await;
+    let source = dir.join("source.txt");
+    let source_dir = dir.join("source-dir");
+    let album = dir.join("album");
+    volume.create_file(&source, b"source").await.expect(FIXTURE);
+    volume.create_directory(&source_dir).await.expect(FIXTURE);
+    volume.create_directory(&album).await.expect(FIXTURE);
+    volume
+        .create_file(&album.join("source.txt"), b"the user's photo")
+        .await
+        .expect(FIXTURE);
+
+    for from in [&source, &source_dir] {
+        conformance::assert_forced_rename_keeps_a_non_empty_dir(&volume, from, &album).await;
+    }
+
+    clean(&volume, &dir).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
 async fn create_file_refuses_to_clobber() {
     // `PUT` overwrites by default; the refusal has to come from `If-None-Match: *`
     // or a probe, so this is the cell that notices either going missing.

@@ -641,6 +641,14 @@ pub trait Volume: Send + Sync {
     /// When `force` is true, proceeds even if the destination exists (POSIX rename
     /// silently overwrites).
     ///
+    /// **`force == true` still never takes a folder that holds something**: it
+    /// refuses (typically `ENOTEMPTY`), as the local kernel does. The user
+    /// confirmed replacing one entry, never a tree, and the verbs a backend
+    /// reaches for don't refuse by themselves: WebDAV's `MOVE` with
+    /// `Overwrite: T` deletes the whole destination tree, and `mv -f` moves the
+    /// source INTO the folder. Enforced by
+    /// `conformance::assert_forced_rename_keeps_a_non_empty_dir`.
+    ///
     /// **`force == false` is a strict contract**, and it's the only thing standing
     /// between a move and the file it would replace: every caller that hasn't yet
     /// asked the user passes `false` and reads the refusal as "stop, there's

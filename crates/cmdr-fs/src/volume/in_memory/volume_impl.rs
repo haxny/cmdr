@@ -334,13 +334,7 @@ impl Volume for InMemoryVolume {
             // sweep relies on the same shape. A test double that deleted a
             // non-empty directory would orphan the children in the map and let
             // every such regression pass silently.
-            let is_dir = entries.get(&normalized).is_some_and(|e| e.metadata.is_directory);
-            if is_dir && entries.keys().any(|k| k.parent() == Some(normalized.as_path())) {
-                return Err(VolumeError::IoError {
-                    message: "Directory not empty".into(),
-                    raw_os_error: Some(66), // ENOTEMPTY on macOS
-                });
-            }
+            Self::refuse_if_held(&entries, &normalized)?;
 
             entries
                 .remove(&normalized)
@@ -411,6 +405,10 @@ impl Volume for InMemoryVolume {
 
             if !force && from_normalized != to_normalized && entries.contains_key(&to_normalized) {
                 return Err(VolumeError::AlreadyExists(to_normalized.display().to_string()));
+            }
+            // Even forced, never a folder that holds something (`Volume::rename`).
+            if from_normalized != to_normalized {
+                Self::refuse_if_held(&entries, &to_normalized)?;
             }
             if self.rename_to_failing.read_ignore_poison().contains(&to_normalized) {
                 return Err(VolumeError::IoError {

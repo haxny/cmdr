@@ -69,6 +69,12 @@ anyway isn't cosmetic: `moveToTrash` is refused on a volume serving its own I/O 
 so a volume list refreshing mid-dialog can't move the primary button under the user's hand. Enter is destructive by
 design here: overwriting is the answer the dialog exists to take, reversibly where the volume allows it.
 
+**A folder holding the name is never deleted for good from here.** The validity check's `conflict.isDirectory` words the
+dialog for a folder, hides sizes (a folder's listing says 0), drops "Overwrite and delete", and, with no trash, sends
+Enter back to editing (`continue`). The trash still takes the whole folder, recoverably. The backends back this up: a
+confirmed replace of a folder that holds something is refused everywhere (`Volume::rename`), since WebDAV's forced
+`MOVE` deletes the whole tree and ADB's `mv -f` buries the item inside it unless the backend refuses first.
+
 ## Permission check on activation (`checkRenamePermission(path, volumeId)`)
 
 Verifies: parent dir writable (Unix `access(W_OK)`), file not immutable (`UF_IMMUTABLE`), file not SIP-protected

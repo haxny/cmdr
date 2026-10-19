@@ -184,6 +184,12 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
   refuse on a hit. Neither can be atomic on this protocol: `SEND` truncates unconditionally and `mv -n` exits 0 whether
   it moved or not (verified on Android 14 `toybox 0.8.9`, 2026-09-01). The window is one round trip on a device only
   this host writes to, and `conformance_test.rs` holds the refusal itself.
+- **A forced rename onto a folder `rmdir`s it first**, so only an EMPTY one gives way (`Volume::rename`), and the source
+  lands AS it. A bare `mv -f` onto a folder moves the source INTO it, replacing a same-named file inside, and `mv -T`
+  only exists from toybox 0.8.3 (Android 11; read from toybox's `cp.c` per release tag, 2026-10-20). A link to a folder
+  never gives way (its `rmdir` fails). The window between the `rmdir` and the `mv` would bury the source in a folder
+  recreated in between: misplaced, never lost. The fake shell's `mv` moves into a folder the same way, so a regression
+  shows in `conformance_test.rs`.
 - **Liveness**: operations are the detector (there is no keepalive), so every wire-touching delegator classifies a
   `DeviceGone` into `VolumeError::DeviceDisconnected` and emits the transition once (`state.rs`). `track-devices`
   additionally retires the volume when its serial leaves the list, which is the push channel MTP never had.

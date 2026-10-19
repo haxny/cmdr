@@ -42,7 +42,8 @@ export const extensionChangeFixtures: Record<string, ExtensionChangeFixture | un
  * Both directions are here because the dialog is a COMPARISON: it tints whichever
  * side is newer and whichever is larger, so a single state leaves half the
  * treatment unreviewed. The third state is the volume with no Trash, where the
- * footer loses its primary button and Enter lands on the red one.
+ * footer loses its primary button and Enter lands on the red one. The folder
+ * states lose the red one: a folder is never deleted for good from here.
  */
 export const renameConflictFixtures: Record<string, RenameConflictFixture | undefined> = {
   'newer-and-larger': {
@@ -50,11 +51,13 @@ export const renameConflictFixtures: Record<string, RenameConflictFixture | unde
       name: '2026-07-14_stockholm-archipelago-sunrise-session_DSC09241_final.arw',
       size: 118_293_504,
       modifiedAt: hoursAgo(3),
+      isDirectory: false,
     },
     existingFile: {
       name: '2026-07-14_stockholm-archipelago-sunrise-session_DSC09241_final.arw',
       size: 41_238_912,
       modifiedAt: daysAgo(214),
+      isDirectory: false,
     },
     supportsTrash: true,
   },
@@ -63,11 +66,13 @@ export const renameConflictFixtures: Record<string, RenameConflictFixture | unde
       name: 'notes.md',
       size: 2_048,
       modifiedAt: daysAgo(430),
+      isDirectory: false,
     },
     existingFile: {
       name: 'notes.md',
       size: 184_320,
       modifiedAt: hoursAgo(1),
+      isDirectory: false,
     },
     supportsTrash: true,
   },
@@ -76,11 +81,44 @@ export const renameConflictFixtures: Record<string, RenameConflictFixture | unde
       name: 'MIG008 Odberateľ.2026-03-31.swm.full.01.xml',
       size: 1_204_224,
       modifiedAt: hoursAgo(2),
+      isDirectory: false,
     },
     existingFile: {
       name: 'MIG008 Odberateľ.2026-03-31.swm.full.01.xml',
       size: 1_198_080,
       modifiedAt: daysAgo(31),
+      isDirectory: false,
+    },
+    supportsTrash: false,
+  },
+  // A folder holds the name: no size to compare, and never a permanent delete.
+  folder: {
+    renamedFile: {
+      name: 'Holiday photos',
+      size: 4_096_000,
+      modifiedAt: hoursAgo(5),
+      isDirectory: false,
+    },
+    existingFile: {
+      name: 'Holiday photos',
+      size: 0,
+      modifiedAt: daysAgo(12),
+      isDirectory: true,
+    },
+    supportsTrash: true,
+  },
+  'folder-no-trash': {
+    renamedFile: {
+      name: 'Holiday photos',
+      size: 4_096_000,
+      modifiedAt: hoursAgo(5),
+      isDirectory: false,
+    },
+    existingFile: {
+      name: 'Holiday photos',
+      size: 0,
+      modifiedAt: daysAgo(12),
+      isDirectory: true,
     },
     supportsTrash: false,
   },

@@ -12,6 +12,8 @@ export interface ConflictFileInfo {
   size: number
   /** Unix timestamp in seconds, or null/undefined if unavailable. Group A wire-format: IPC sends `null`. */
   modifiedAt: number | null | undefined
+  /** A folder: replacing it would take everything inside, so the dialog asks differently. */
+  isDirectory: boolean
 }
 
 export type RenameConflictResolution = 'overwrite-trash' | 'overwrite-delete' | 'cancel' | 'continue'

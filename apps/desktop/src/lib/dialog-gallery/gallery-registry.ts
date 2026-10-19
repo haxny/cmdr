@@ -306,11 +306,13 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
     label: 'Rename conflict',
     hostWindow: 'main',
     status: 'ready',
-    note: 'The dialog is a comparison: it highlights whichever side is newer and whichever is larger, so both directions are here. On a volume with no Trash the primary button is gone and Enter overwrites for good.',
+    note: 'The dialog is a comparison: it highlights whichever side is newer and whichever is larger, so both directions are here. On a volume with no Trash the primary button is gone and Enter overwrites for good. A folder holding the name is never deleted for good: without a Trash, Enter goes back to editing.',
     states: [
       { id: 'newer-and-larger', label: 'Yours is newer and larger' },
       { id: 'older-and-smaller', label: 'Yours is older and smaller' },
       { id: 'no-trash', label: 'No Trash on this volume' },
+      { id: 'folder', label: 'A folder holds the name' },
+      { id: 'folder-no-trash', label: 'A folder holds the name, no Trash' },
     ],
   },
   {

@@ -737,6 +737,20 @@ impl InMemoryVolume {
         }
     }
 
+    /// `ENOTEMPTY` (macOS's 66) when `path` is a folder that holds something:
+    /// the refusal `Volume::delete` and a forced `Volume::rename` both owe, and
+    /// real data-safety logic leans on.
+    fn refuse_if_held(entries: &HashMap<PathBuf, InMemoryEntry>, path: &Path) -> Result<(), VolumeError> {
+        let is_dir = entries.get(path).is_some_and(|e| e.metadata.is_directory);
+        if is_dir && entries.keys().any(|k| k.parent() == Some(path)) {
+            return Err(VolumeError::IoError {
+                message: "Directory not empty".into(),
+                raw_os_error: Some(66),
+            });
+        }
+        Ok(())
+    }
+
     /// Gets current timestamp as seconds since Unix epoch.
     fn now_secs() -> u64 {
         std::time::SystemTime::now()

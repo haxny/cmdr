@@ -243,6 +243,24 @@ async fn rename_honors_the_shared_no_clobber_contract() {
     .await;
 }
 
+/// A confirmed replace never takes a folder that holds something, from a file
+/// or from a folder.
+#[tokio::test]
+async fn forced_rename_honors_the_shared_non_empty_folder_contract() {
+    let volume = InMemoryVolume::new("Test");
+    volume.create_file(Path::new("/source.txt"), b"source").await.unwrap();
+    volume.create_directory(Path::new("/source-dir")).await.unwrap();
+    volume.create_directory(Path::new("/album")).await.unwrap();
+    volume
+        .create_file(Path::new("/album/source.txt"), b"the user's photo")
+        .await
+        .unwrap();
+
+    for from in ["/source.txt", "/source-dir"] {
+        conformance::assert_forced_rename_keeps_a_non_empty_dir(&volume, Path::new(from), Path::new("/album")).await;
+    }
+}
+
 #[tokio::test]
 async fn create_file_honors_the_shared_no_clobber_contract() {
     let volume = InMemoryVolume::new("Test");

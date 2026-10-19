@@ -121,8 +121,8 @@ describe('RenameConflictDialog trash gate', () => {
     mount(RenameConflictDialog, {
       target,
       props: {
-        renamedFile: { name: 'report.md', size: 2048, modifiedAt: undefined },
-        existingFile: { name: 'report.md', size: 1024, modifiedAt: undefined },
+        renamedFile: { name: 'report.md', size: 2048, modifiedAt: undefined, isDirectory: false },
+        existingFile: { name: 'report.md', size: 1024, modifiedAt: undefined, isDirectory: false },
         supportsTrash,
         onResolve: (resolution: RenameConflictResolution) => resolutions.push(resolution),
       },
@@ -169,6 +169,69 @@ describe('RenameConflictDialog trash gate', () => {
 })
 
 /**
+ * A name a FOLDER holds is a different question: replacing it takes everything inside.
+ * Every backend refuses a confirmed replace of a folder that holds something
+ * (`Volume::rename`), so the permanent overwrite is never offered for one, and Enter
+ * never means it. The trash, where there is one, takes the whole folder recoverably.
+ */
+describe('RenameConflictDialog for a folder', () => {
+  const mounted: HTMLElement[] = []
+
+  afterEach(() => {
+    for (const target of mounted.splice(0)) target.remove()
+  })
+
+  async function mountDialog(supportsTrash: boolean) {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mounted.push(target)
+    const resolutions: RenameConflictResolution[] = []
+    mount(RenameConflictDialog, {
+      target,
+      props: {
+        renamedFile: { name: 'report.md', size: 2048, modifiedAt: undefined, isDirectory: false },
+        existingFile: { name: 'report.md', size: 0, modifiedAt: undefined, isDirectory: true },
+        supportsTrash,
+        onResolve: (resolution: RenameConflictResolution) => resolutions.push(resolution),
+      },
+    })
+    await tick()
+    return { target, resolutions }
+  }
+
+  const labelsIn = (target: HTMLElement) => [...target.querySelectorAll('button')].map((b) => b.textContent.trim())
+
+  function pressEnter(target: HTMLElement) {
+    target
+      .querySelector('[role="alertdialog"]')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+  }
+
+  it('says it is a folder, not a file', async () => {
+    const { target } = await mountDialog(false)
+
+    expect(target.textContent).toContain('A folder with this name already exists')
+    expect(target.textContent).not.toContain('A file with this name already exists')
+  })
+
+  it('never offers to delete the folder, and Enter goes back to editing the name', async () => {
+    const { target, resolutions } = await mountDialog(false)
+
+    expect(labelsIn(target).some((label) => label.startsWith('Overwrite and delete'))).toBe(false)
+    pressEnter(target)
+    expect(resolutions).toEqual(['continue'])
+  })
+
+  it('offers the trash for the whole folder where there is one', async () => {
+    const { target, resolutions } = await mountDialog(true)
+
+    expect(labelsIn(target)).toContain('Overwrite and trash old folder')
+    pressEnter(target)
+    expect(resolutions).toEqual(['overwrite-trash'])
+  })
+})
+
+/**
  * Every button sits in `ModalDialog`'s footer, which keeps a row on one line in every
  * language by widening the panel: the ways out on the left, the overwrites on the right
  * with Enter's last. A row hand-built in the body has no such floor.
@@ -188,8 +251,8 @@ describe('RenameConflictDialog footer', () => {
     mount(RenameConflictDialog, {
       target,
       props: {
-        renamedFile: { name: 'report.md', size: 2048, modifiedAt: undefined },
-        existingFile: { name: 'report.md', size: 1024, modifiedAt: undefined },
+        renamedFile: { name: 'report.md', size: 2048, modifiedAt: undefined, isDirectory: false },
+        existingFile: { name: 'report.md', size: 1024, modifiedAt: undefined, isDirectory: false },
         supportsTrash,
         onResolve: (resolution: RenameConflictResolution) => resolutions.push(resolution),
       },

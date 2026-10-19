@@ -81,6 +81,32 @@ async fn rename_honors_the_shared_no_clobber_contract() {
     .await;
 }
 
+/// The shared forced-rename assertion. LocalPosix earns it from the kernel:
+/// `rename(2)` answers `EISDIR` for a file onto a folder and `ENOTEMPTY` for a
+/// folder onto one that holds something.
+#[tokio::test]
+async fn forced_rename_honors_the_shared_non_empty_folder_contract() {
+    let test_dir = TestDir::new("forced_rename_non_empty_folder_conformance_test");
+    let volume = LocalPosixVolume::local_folder("Test", &*test_dir, VolumeHost::detached());
+
+    volume.create_file(Path::new("source.txt"), b"source").await.unwrap();
+    volume.create_directory(Path::new("source-dir")).await.unwrap();
+    volume.create_directory(Path::new("album")).await.unwrap();
+    volume
+        .create_file(Path::new("album/source.txt"), b"the user's photo")
+        .await
+        .unwrap();
+
+    for from in ["source.txt", "source-dir"] {
+        cmdr_fs::volume::conformance::assert_forced_rename_keeps_a_non_empty_dir(
+            &volume,
+            Path::new(from),
+            Path::new("album"),
+        )
+        .await;
+    }
+}
+
 /// The shared `Volume::create_file` no-clobber assertion. LocalPosix earns it
 /// with `OpenOptions::create_new(true)`; a plain `std::fs::write` one refactor
 /// away would truncate instead, with the New File command still reporting

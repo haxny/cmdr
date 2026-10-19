@@ -26,8 +26,17 @@
 
     const { renamedFile, existingFile, supportsTrash, onResolve }: Props = $props()
 
-    /** What Enter means here: overwrite, reversibly where the volume allows it. */
-    const enterResolution = $derived<RenameConflictResolution>(supportsTrash ? 'overwrite-trash' : 'overwrite-delete')
+    /**
+     * A folder holds the name. ❗ No permanent overwrite then: replacing it would take
+     * everything inside, and every backend refuses a confirmed replace of a folder that
+     * holds something anyway (`Volume::rename`). The trash takes it whole, recoverably.
+     */
+    const existingIsFolder = $derived(existingFile.isDirectory)
+
+    /** What Enter means here: overwrite, reversibly where the volume allows it, and never a folder for good. */
+    const enterResolution = $derived<RenameConflictResolution>(
+        supportsTrash ? 'overwrite-trash' : existingIsFolder ? 'continue' : 'overwrite-delete',
+    )
 
     // Group A wire-format: IPC may send `null` for modifiedAt; accept both null and undefined.
     const renamedIsNewer = $derived(
@@ -35,7 +44,10 @@
             existingFile.modifiedAt != null &&
             renamedFile.modifiedAt > existingFile.modifiedAt,
     )
-    const renamedIsLarger = $derived(renamedFile.size > existingFile.size)
+    // A folder's size is no size at all (its listing says 0), so sizes only compare between two files.
+    const sizesCompare = $derived(!renamedFile.isDirectory && !existingFile.isDirectory)
+    const renamedIsLarger = $derived(sizesCompare && renamedFile.size > existingFile.size)
+    const existingIsLarger = $derived(sizesCompare && existingFile.size > renamedFile.size)
 
     function handleKeydown(event: KeyboardEvent) {
         if (event.key === 'Enter') {
@@ -56,7 +68,9 @@
     }}
     containerStyle="min-width: 440px; max-width: 520px"
 >
-    {#snippet title()}{tString('fileExplorer.renameConflict.title')}{/snippet}
+    {#snippet title()}{tString(
+            existingIsFolder ? 'fileExplorer.renameConflict.titleFolder' : 'fileExplorer.renameConflict.title',
+        )}{/snippet}
 
     <p id="rename-conflict-description" class="description">
         {tString('fileExplorer.renameConflict.description', { name: existingFile.name })}
@@ -66,10 +80,12 @@
         <div class="file-card">
             <div class="file-card-header">{tString('fileExplorer.renameConflict.yours', { name: renamedFile.name })}</div>
             <div class="file-card-body">
-                <div class="file-meta">
-                    <span class="meta-label">{tString('fileExplorer.renameConflict.size')}</span>
-                    <span class="meta-value" class:newer={renamedIsLarger}>{formatByteSize(renamedFile.size)}</span>
-                </div>
+                {#if !renamedFile.isDirectory}
+                    <div class="file-meta">
+                        <span class="meta-label">{tString('fileExplorer.renameConflict.size')}</span>
+                        <span class="meta-value" class:newer={renamedIsLarger}>{formatByteSize(renamedFile.size)}</span>
+                    </div>
+                {/if}
                 <div class="file-meta">
                     <span class="meta-label">{tString('fileExplorer.renameConflict.modified')}</span>
                     <span class="meta-value" class:newer={renamedIsNewer}>
@@ -81,12 +97,12 @@
         <div class="file-card">
             <div class="file-card-header">{tString('fileExplorer.renameConflict.existing', { name: existingFile.name })}</div>
             <div class="file-card-body">
-                <div class="file-meta">
-                    <span class="meta-label">{tString('fileExplorer.renameConflict.size')}</span>
-                    <span class="meta-value" class:newer={!renamedIsLarger && renamedFile.size !== existingFile.size}
-                        >{formatByteSize(existingFile.size)}</span
-                    >
-                </div>
+                {#if !existingFile.isDirectory}
+                    <div class="file-meta">
+                        <span class="meta-label">{tString('fileExplorer.renameConflict.size')}</span>
+                        <span class="meta-value" class:newer={existingIsLarger}>{formatByteSize(existingFile.size)}</span>
+                    </div>
+                {/if}
                 <div class="file-meta">
                     <span class="meta-label">{tString('fileExplorer.renameConflict.modified')}</span>
                     <span
@@ -114,7 +130,7 @@
                 }}>{tString('fileExplorer.renameConflict.cancel')}</Button
             >
             <Button
-                variant="secondary"
+                variant={enterResolution === 'continue' ? 'primary' : 'secondary'}
                 onclick={() => {
                     onResolve('continue')
                 }}>{tString('fileExplorer.renameConflict.continueRenaming')}</Button
@@ -123,18 +139,25 @@
     {/snippet}
 
     {#snippet footer()}
-        <Button
-            variant="danger"
-            onclick={() => {
-                onResolve('overwrite-delete')
-            }}>{tString('fileExplorer.renameConflict.overwriteDelete')}</Button
-        >
+        {#if !existingIsFolder}
+            <Button
+                variant="danger"
+                onclick={() => {
+                    onResolve('overwrite-delete')
+                }}>{tString('fileExplorer.renameConflict.overwriteDelete')}</Button
+            >
+        {/if}
         {#if supportsTrash}
             <Button
                 variant="primary"
                 onclick={() => {
                     onResolve('overwrite-trash')
-                }}>{tString('fileExplorer.renameConflict.overwriteTrash')}</Button
+                }}
+                >{tString(
+                    existingIsFolder
+                        ? 'fileExplorer.renameConflict.overwriteTrashFolder'
+                        : 'fileExplorer.renameConflict.overwriteTrash',
+                )}</Button
             >
         {/if}
     {/snippet}

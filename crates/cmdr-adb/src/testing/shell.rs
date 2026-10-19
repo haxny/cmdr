@@ -170,7 +170,17 @@ pub fn run_fake_shell(tree: &Mutex<FakeTree>, argv: &[String]) -> (u8, String, S
             let [from, to] = args[..] else {
                 return (1, String::new(), "mv: need two arguments\n".to_string());
             };
-            match tree.rename(from, to) {
+            // Like toybox without `-T`: a DEST that is (or leads to) a directory
+            // is where the source goes, under its own name, replacing a
+            // same-named file inside.
+            let into = tree.canonical(to).ok().filter(|dir| {
+                !flags.iter().any(|f| f.contains('T')) && matches!(tree.get(dir), Some(FakeNode::Dir { .. }))
+            });
+            let to = match (into, from.rsplit('/').next()) {
+                (Some(dir), Some(name)) => format!("{}/{name}", dir.trim_end_matches('/')),
+                _ => to.to_string(),
+            };
+            match tree.rename(from, &to) {
                 Ok(()) => (0, String::new(), String::new()),
                 Err(e) => (
                     1,

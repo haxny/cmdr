@@ -49,6 +49,55 @@ async fn a_forceless_rename_refuses_an_existing_destination() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_forced_rename_keeps_a_non_empty_folder() {
+    // `mv -f` onto a folder moves the source INTO it, replacing a same-named
+    // file inside, so the refusal is the destination probe's.
+    let mut tree = seeded_tree();
+    tree.add_dir("/sdcard/source-dir")
+        .add_file("/sdcard/album/source.txt", b"the user's photo");
+    let server = FakeAdbServer::start(tree).await;
+    let (volume, _) = connect_fake(&server, FIXTURE_SERIAL).await;
+    for from in ["/sdcard/source.txt", "/sdcard/source-dir"] {
+        conformance::assert_forced_rename_keeps_a_non_empty_dir(
+            volume.as_ref(),
+            &fixture_path(from),
+            &fixture_path("/sdcard/album"),
+        )
+        .await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_forced_rename_replaces_an_empty_folder_under_its_name() {
+    // An empty folder is what a confirmed replace may take, and the source has
+    // to land AS it, ❌ never inside it the way a bare `mv -f` puts it.
+    let mut tree = seeded_tree();
+    tree.add_dir("/sdcard/empty");
+    let server = FakeAdbServer::start(tree).await;
+    let (volume, _) = connect_fake(&server, FIXTURE_SERIAL).await;
+
+    volume
+        .rename(
+            &fixture_path("/sdcard/source.txt"),
+            &fixture_path("/sdcard/empty"),
+            true,
+        )
+        .await
+        .expect("an empty folder gives way to a confirmed replace");
+
+    let landed = volume
+        .get_metadata(&fixture_path("/sdcard/empty"))
+        .await
+        .expect("the source answers at the folder's name");
+    assert!(
+        !landed.is_directory,
+        "the file took the name, so it's no folder any more"
+    );
+    assert_eq!(landed.size, Some(b"source".len() as u64));
+    assert!(!volume.exists(&fixture_path("/sdcard/source.txt")).await);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn create_file_refuses_to_clobber() {
     // `SEND` truncates unconditionally, so the refusal is the pre-flight
     // stat's here too.

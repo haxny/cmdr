@@ -637,6 +637,11 @@ everywhere, which is the point.
   `ReplaceIfExists == false`, an MTP `exists` probe, a map lookup). No shared mechanism to trust, only a shared promise.
   MTP's is the one that can't be atomic, and that's a property of the protocol rather than of the code:
   `crates/cmdr-mtp/DETAILS.md` § "The no-clobber rename is check-then-act".
+- `assert_forced_rename_keeps_a_non_empty_dir` — `force` is the user replacing ONE entry, never a tree, and the verbs a
+  backend reaches for don't refuse by themselves: WebDAV's `MOVE` with `Overwrite: T` deletes the destination tree
+  first, and `mv -f` onto a folder moves the source INTO it. Run by local, in-memory, WebDAV, and ADB. SMB and SFTP
+  refuse by construction (their forced paths clear only an EMPTY folder) but don't run it yet; MTP fails it (a forced
+  rename onto a taken name leaves two same-named siblings, which the protocol allows).
 - `assert_create_file_refuses_to_clobber` — the New File command renders the refusal as "that name is taken", so a
   clobbering backend silently empties a file and reports success.
 - `assert_delete_files_removes_exactly_what_it_names` — a move's source sweep hands a whole folder level to

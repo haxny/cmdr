@@ -140,34 +140,50 @@ impl AdbVolume {
         // goes as the link it is (`rm -f`). Followed, `rmdir` refuses the link and
         // the target's contents come back as `ENOTEMPTY`.
         match self.entry_kind_impl(path).await? {
-            EntryKind::Directory => {
-                if let Err(e) = self.shell_verb(&["rmdir", &device], &device).await {
-                    // The one refusal the contract names: something is still
-                    // inside. Asked of the sync service, not of stderr.
-                    let held = self.list_directory_impl(path, None, None).await.map(|e| !e.is_empty());
-                    if matches!(held, Ok(true)) {
-                        return Err(volume_error_from_errno(ENOTEMPTY_DEVICE, &device));
-                    }
-                    return Err(e);
-                }
-            }
+            EntryKind::Directory => self.remove_empty_directory(path, &device).await?,
             EntryKind::File | EntryKind::Symlink => self.shell_verb(&["rm", "-f", &device], &device).await?,
         }
         self.notify_deleted(path).await;
         Ok(())
     }
 
+    /// One `rmdir`, refused with `ENOTEMPTY` when something is still inside.
+    async fn remove_empty_directory(&self, path: &Path, device: &str) -> Result<(), VolumeError> {
+        if let Err(e) = self.shell_verb(&["rmdir", device], device).await {
+            // The one refusal the contract names: something is still inside.
+            // Asked of the sync service, not of stderr.
+            let held = self.list_directory_impl(path, None, None).await.map(|e| !e.is_empty());
+            if matches!(held, Ok(true)) {
+                return Err(volume_error_from_errno(ENOTEMPTY_DEVICE, device));
+            }
+            return Err(e);
+        }
+        Ok(())
+    }
+
     /// Moves an entry, clearing the destination only when the caller said it
     /// may (`writes.rs` § "The two accepted TOCTOU windows" for `force = false`).
+    ///
+    /// ❗ A forced rename onto a folder clears it with `rmdir` first, so only an
+    /// EMPTY one gives way (`Volume::rename`). A bare `mv -f` onto a folder moves
+    /// the source INTO it, replacing a same-named file inside, and `mv -T`
+    /// needs toybox 0.8.3 (Android 11). A link to a folder never clears: its
+    /// `rmdir` fails, and it reads as held when its target holds anything.
     pub(super) async fn rename_impl(&self, from: &Path, to: &Path, force: bool) -> Result<(), VolumeError> {
         let device_from = self.to_device_path(from)?;
         let device_to = self.to_device_path(to)?;
         debug!("AdbVolume::rename: {device_from} → {device_to}, force={force}");
-        if !force && self.probe(&device_to).await != WhatIsThere::Nothing {
+        let found = self.probe(&device_to).await;
+        if !force && found != WhatIsThere::Nothing {
             return Err(VolumeError::AlreadyExists(device_to));
         }
         if self.probe(&device_from).await == WhatIsThere::Nothing {
             return Err(volume_error_from_errno(ENOENT, &device_from));
+        }
+        // ❌ Never clear a destination that's the source re-cased: `/sdcard` is
+        // case-insensitive, so that `rmdir` would take the source itself.
+        if found == WhatIsThere::Directory && !device_from.eq_ignore_ascii_case(&device_to) {
+            self.remove_empty_directory(to, &device_to).await?;
         }
         self.shell_verb(&["mv", "-f", &device_from, &device_to], &device_to)
             .await?;

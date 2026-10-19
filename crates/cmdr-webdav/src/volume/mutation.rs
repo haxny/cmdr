@@ -20,6 +20,7 @@ use reqwest::header::IF_NONE_MATCH;
 
 use super::WebdavVolume;
 use crate::errors::{Attempted, map_status, map_transport_error};
+use crate::propfind::PropfindEntry;
 use crate::transport::{Depth, MUTATION_BUDGET, ProppatchOutcome, WebdavClient, method};
 
 /// `ENOTEMPTY`, which POSIX numbers differently per platform. The number is
@@ -122,19 +123,7 @@ impl WebdavVolume {
         let remote = self.to_remote_path(path)?;
         let client = self.clone_client().await?;
         let listing = self.propfind(&client, &remote, false, Depth::One).await?;
-        // ❗ Judged by COUNT, ❌ never by which entry comes first: RFC 4918
-        // promises no order, and a child read as "the resource" would send a
-        // recursive DELETE at a folder with things in it. A `Depth: 1` on a
-        // file or an empty collection answers exactly one response.
-        if listing.len() > 1 {
-            return Err(VolumeError::IoError {
-                message: format!(
-                    "{remote} still holds {}",
-                    pluralize_with((listing.len() - 1) as u64, "entry", "entries")
-                ),
-                raw_os_error: Some(ENOTEMPTY),
-            });
-        }
+        refuse_if_held(&listing, &remote)?;
         let is_collection = listing.first().is_some_and(|p| p.is_collection);
         let request = client
             .request(Method::DELETE, client.url_for(&remote, is_collection))
@@ -146,11 +135,23 @@ impl WebdavVolume {
 
     /// One MOVE. `Overwrite: F` unless forced, so the server refuses an
     /// occupied destination atomically (412 → `AlreadyExists`).
+    ///
+    /// ❗ A forced MOVE deletes a destination collection, tree and all, before
+    /// it moves anything (RFC 4918 § 9.9.3), so one that holds something is
+    /// refused with `ENOTEMPTY` first (`Volume::rename`). Judged like `delete`'s,
+    /// with the same window: a child landing between the two requests goes too.
     pub(super) async fn rename_impl(&self, from: &Path, to: &Path, force: bool) -> Result<(), VolumeError> {
         let remote_from = self.to_remote_path(from)?;
         let remote_to = self.to_remote_path(to)?;
         let client = self.clone_client().await?;
         let is_collection = self.stat(&client, &remote_from).await?.is_collection;
+        if force && remote_from != remote_to {
+            match self.propfind(&client, &remote_to, false, Depth::One).await {
+                Ok(listing) => refuse_if_held(&listing, &remote_to)?,
+                Err(VolumeError::NotFound(_)) => {}
+                Err(e) => return Err(e),
+            }
+        }
         debug!("WebdavVolume::rename: {remote_from} -> {remote_to} (force={force})");
         let request = client
             .request(method("MOVE"), client.url_for(&remote_from, is_collection))
@@ -166,6 +167,26 @@ impl WebdavVolume {
         patch_renamed(self, from, to).await;
         Ok(())
     }
+}
+
+/// `ENOTEMPTY` when a `Depth: 1` listing of `remote` shows anything under it,
+/// for the two verbs the protocol makes recursive (DELETE, a forced MOVE).
+///
+/// ❗ Judged by COUNT, ❌ never by which entry comes first: RFC 4918 promises no
+/// order, and a child read as "the resource" would send a recursive verb at a
+/// folder with things in it. A `Depth: 1` on a file or an empty collection
+/// answers exactly one response.
+fn refuse_if_held(listing: &[PropfindEntry], remote: &str) -> Result<(), VolumeError> {
+    if listing.len() <= 1 {
+        return Ok(());
+    }
+    Err(VolumeError::IoError {
+        message: format!(
+            "{remote} still holds {}",
+            pluralize_with((listing.len() - 1) as u64, "entry", "entries")
+        ),
+        raw_os_error: Some(ENOTEMPTY),
+    })
 }
 
 /// What the shared `mkdir -p` walk needs from this backend: MKCOL, and this

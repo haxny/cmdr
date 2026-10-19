@@ -2373,11 +2373,13 @@
             name: rename.target?.originalName ?? '',
             size: selectionInfo.entry?.size ?? 0,
             modifiedAt: selectionInfo.entry?.modifiedAt,
+            isDirectory: rename.target?.isDirectory ?? false,
         }}
         existingFile={{
             name: renameFlow.conflictDialogState.validity.conflict.name,
             size: renameFlow.conflictDialogState.validity.conflict.size,
             modifiedAt: renameFlow.conflictDialogState.validity.conflict.modified ?? undefined,
+            isDirectory: renameFlow.conflictDialogState.validity.conflict.isDirectory,
         }}
         supportsTrash={renameFlow.conflictDialogState.supportsTrash}
         onResolve={handleConflictResolve}

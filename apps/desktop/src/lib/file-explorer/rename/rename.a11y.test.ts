@@ -220,8 +220,8 @@ describe('RenameConflictDialog a11y', () => {
     mount(RenameConflictDialog, {
       target,
       props: {
-        renamedFile: { name: 'report.md', size: 2048, modifiedAt: 1710000000000 },
-        existingFile: { name: 'report.md', size: 1024, modifiedAt: 1700000000000 },
+        renamedFile: { name: 'report.md', size: 2048, modifiedAt: 1710000000000, isDirectory: false },
+        existingFile: { name: 'report.md', size: 1024, modifiedAt: 1700000000000, isDirectory: false },
         supportsTrash: true,
         onResolve: () => {},
       },
@@ -236,8 +236,8 @@ describe('RenameConflictDialog a11y', () => {
     mount(RenameConflictDialog, {
       target,
       props: {
-        renamedFile: { name: 'draft.txt', size: 5000, modifiedAt: 1700000000000 },
-        existingFile: { name: 'draft.txt', size: 5200, modifiedAt: 1710000000000 },
+        renamedFile: { name: 'draft.txt', size: 5000, modifiedAt: 1700000000000, isDirectory: false },
+        existingFile: { name: 'draft.txt', size: 5200, modifiedAt: 1710000000000, isDirectory: false },
         supportsTrash: true,
         onResolve: () => {},
       },

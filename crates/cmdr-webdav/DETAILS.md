@@ -453,6 +453,27 @@ reconnect can't undo an unpin; it defaults to FALSE, and `getKnownWebdavServers`
 one place that default is spelled. `getWebdavUnattendedReconnect(volumeId)`, and the backend-neutral
 `reconnectSmbVolume` / `reconnectSmbVolumeWithCredentials` / `getVolumeSignInState`.
 
+## A folder's DELETE
+
+`DELETE` on a collection is recursive (RFC 4918 § 9.6.1), and so is a forced `MOVE` onto one (§ 9.9.3, the destination
+is deleted first). The trait's verbs are one node (`Volume::delete`) and never a held folder (`Volume::rename`), so both
+refuse with `ENOTEMPTY` when a `Depth: 1` PROPFIND counts anything under the target (`mutation.rs::refuse_if_held`).
+
+The window: a child landing between the PROPFIND and the verb (one round trip, 20–150 ms on Nextcloud) goes with the
+folder, and the call reports success. Neither protocol guard closes it on the fixture servers:
+
+- **An `If` ETag precondition**: `mod_dav` gives a collection no `getetag` at all, and sabre/dav (Nextcloud) answers 412
+  to ANY etag condition on a collection, its current one included, though the etag itself does change when a child lands
+  (sabre validates etags on files only). So `If: (["<etag>"])` would fail every folder delete on Nextcloud.
+- **A depth-infinity `LOCK`**: `mod_dav` enforces it (a foreign `PUT` into the folder is refused), but Nextcloud grants
+  the lock and still takes the foreign `PUT` (201), then deletes it with the folder.
+
+(verified on httpd 2.4.69 `webdav-fixture-apache` and Nextcloud 35.0.0 `webdav-fixture-nextcloud`, by hand with `curl`,
+2026-10-20.) What would close it is moving the folder aside first (`MOVE` to a staging name, `Overwrite: F`), counting
+it there, and deleting or moving it back; a writer aiming at the old path then gets a 409 instead of losing a file. It
+costs a request per folder and has open questions (Nextcloud share mount points, the trash showing the staging name), so
+it waits on a decision: GitHub issue #521.
+
 ## Which side a test lives on
 
 This crate: the parser, the path translation, the status table, the state machine and the silence ladder (no server),

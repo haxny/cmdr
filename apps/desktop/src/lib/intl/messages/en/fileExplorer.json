@@ -2079,6 +2079,10 @@
     "description": "Title of the dialog shown when renaming a file to a name that already exists in the folder.",
     "screenshot": "rename-conflict-newer-and-larger.png"
   },
+  "fileExplorer.renameConflict.titleFolder": "A folder with this name already exists",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "description": "Title of the rename-conflict dialog when the name the user typed is already taken by a FOLDER (rather than a file) in the same folder."
+  },
   "fileExplorer.renameConflict.description": "“{name}” already exists in this folder. What would you like to do?",
   "@fileExplorer.renameConflict.description": {
     "description": "Body of the rename-conflict dialog, naming the existing file and asking how to proceed. {name} is the existing file’s name, shown in quotes.",
@@ -2117,6 +2121,10 @@
   "@fileExplorer.renameConflict.overwriteTrash": {
     "description": "Primary button in the rename-conflict dialog: replace the existing file, moving the old one to the trash (recoverable).",
     "screenshot": "rename-conflict-newer-and-larger.png"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Overwrite and trash old folder",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "description": "Primary button in the rename-conflict dialog when a FOLDER holds the name: replace that folder, moving it and everything inside it to the trash (recoverable)."
   },
   "fileExplorer.renameConflict.overwriteDelete": "Overwrite and delete old file",
   "@fileExplorer.renameConflict.overwriteDelete": {
