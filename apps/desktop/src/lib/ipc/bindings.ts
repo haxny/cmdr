@@ -8246,6 +8246,8 @@ export type ErrorReportEntry =
   | 'connectionFailure'
   // A "taking long?" link on a slowness notice.
   | 'slowOperation'
+  // The screen a window shows when its page threw while rendering.
+  | 'pageCrash'
 
 /**
  *  Why a Flow A send or an amend didn't land, for the dialog to word from the catalog.

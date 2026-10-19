@@ -306,6 +306,31 @@
     }
   },
 
+  "errorReporter.prefill.pageCrash": "This Cmdr window stopped working.",
+  "@errorReporter.prefill.pageCrash": {
+    "description": "First line of the note pre-filled into the Send error report dialog when the person reports from the screen a Cmdr window shows after its content stopped working (the window went blank apart from that screen). The person can edit or delete it before sending, and it reaches the team as part of the report. \"Cmdr\" is the product name (do not translate). Avoid the words \"error\" and \"failed\"."
+  },
+
+  "errorReporter.pageCrash.title": "Something went wrong in this window",
+  "@errorReporter.pageCrash.title": {
+    "description": "Heading of the screen a Cmdr window shows when its content stopped working and couldn't be drawn. It replaces the whole window. Calm and plain; avoid the words \"error\" and \"failed\"."
+  },
+
+  "errorReporter.pageCrash.body": "Cmdr ran into a problem it didn’t expect. Reloading usually helps. If it keeps happening, sending a report helps get it fixed.",
+  "@errorReporter.pageCrash.body": {
+    "description": "Explanation under the heading of the screen a Cmdr window shows when its content stopped working. Below it are two buttons: Reload (redraws the window) and Send error report. Reassuring and matter-of-fact. \"Cmdr\" is the product name (do not translate). Avoid the words \"error\" and \"failed\"."
+  },
+
+  "errorReporter.pageCrash.detailsLabel": "Technical details",
+  "@errorReporter.pageCrash.detailsLabel": {
+    "description": "Label above a box of technical text (the program's own message, in English) on the screen a Cmdr window shows when its content stopped working. The person can copy the text to share it."
+  },
+
+  "errorReporter.pageCrash.reload": "Reload",
+  "@errorReporter.pageCrash.reload": {
+    "description": "Button on the screen a Cmdr window shows when its content stopped working. It redraws the window from scratch. A button label, so keep it short."
+  },
+
   "errorReporter.prefill.reference": "Reference: {code}",
   "@errorReporter.prefill.reference": {
     "description": "Last line of the note pre-filled into the Send error report dialog when it opens from a specific problem. It names the KIND of problem in a short technical code the team searches for, such as copy/insufficient_space or listing/networkDown: a problem code, not a case or ticket ID (the report’s own ID is shown elsewhere in the dialog). The person can edit or delete it before sending. Translate only the word before the colon.",

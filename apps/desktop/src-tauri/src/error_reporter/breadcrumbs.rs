@@ -92,6 +92,8 @@ pub enum ErrorReportEntry {
     ConnectionFailure,
     /// A "taking long?" link on a slowness notice.
     SlowOperation,
+    /// The screen a window shows when its page threw while rendering.
+    PageCrash,
 }
 
 /// Which operation a slowness breadcrumb is about. Mirrors the frontend's

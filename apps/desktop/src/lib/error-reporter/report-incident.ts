@@ -65,6 +65,9 @@ export type ReportIncident =
   | { kind: 'connectionFailed'; reason: UpgradeFailure; text: string }
   /** An offered update that didn't carry Cmdr's signature, so nothing was installed (`#lib/security-notices`). */
   | { kind: 'updateNotGenuine'; version: string; check: SignatureCheck }
+  /** A window whose page threw while rendering (`routes/+error.svelte`). `detail` is the throw's
+   *  `Name: message`, or null when it carried none. */
+  | { kind: 'pageCrash'; detail: string | null }
   | SlowIncident
 
 // `SlowOperation` is the breadcrumb's own copy of `WriteOperationType`; this fails to
@@ -90,6 +93,8 @@ export function reportEntryFor(incident: ReportIncident): ErrorReportEntry {
       return 'updateFailure'
     case 'slow':
       return 'slowOperation'
+    case 'pageCrash':
+      return 'pageCrash'
   }
 }
 
@@ -170,6 +175,10 @@ export function reportNoteFor(incident: ReportIncident, now: number = Date.now()
         ]
       case 'slow':
         return slowNote(incident, now)
+      case 'pageCrash':
+        return [tString('errorReporter.prefill.pageCrash'), incident.detail, reference('page/crash')].filter(
+          (line) => line !== null,
+        )
     }
   })()
   return lines.join('\n')

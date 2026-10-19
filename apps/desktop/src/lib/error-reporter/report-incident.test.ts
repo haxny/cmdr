@@ -18,6 +18,7 @@ describe('reportEntryFor', () => {
       [{ kind: 'connectionFailed', reason: 'unreachable', text: 't' }, 'connectionFailure'],
       [{ kind: 'updateNotGenuine', version: '0.53.0', check: 'minisign' }, 'updateFailure'],
       [{ kind: 'slow', operation: 'copy', since: NOW, waitingOn: null }, 'slowOperation'],
+      [{ kind: 'pageCrash', detail: 'TypeError: x' }, 'pageCrash'],
     ]
     for (const [incident, from] of cases) expect(reportEntryFor(incident)).toBe(from)
   })
@@ -27,6 +28,18 @@ describe('reportNoteFor', () => {
   it('names an update that wasn’t genuine by its version and which signature didn’t hold (#457)', () => {
     expect(reportNoteFor({ kind: 'updateNotGenuine', version: '0.53.0', check: 'code_signature' })).toBe(
       'An update offered as version 0.53.0 didn’t carry Cmdr’s signature, so Cmdr didn’t install it.\nReference: update/not_genuine/code_signature',
+    )
+  })
+
+  it('says a window stopped working, quotes what was thrown, and tags it page/crash', () => {
+    expect(reportNoteFor({ kind: 'pageCrash', detail: 'TypeError: undefined is not an object' })).toBe(
+      'This Cmdr window stopped working.\nTypeError: undefined is not an object\nReference: page/crash',
+    )
+  })
+
+  it('leaves the thrown line out of a page crash that carried none', () => {
+    expect(reportNoteFor({ kind: 'pageCrash', detail: null })).toBe(
+      'This Cmdr window stopped working.\nReference: page/crash',
     )
   })
 
