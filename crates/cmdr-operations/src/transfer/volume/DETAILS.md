@@ -127,9 +127,10 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
 - **`operations_host/backend_suites/copy_bench.rs` is `#[ignore]`d** and needs a QNAP NAS plus `SMB2_TEST_NAS_PASSWORD`,
   so it never runs in CI.
 - **Four test-support files, split by what they fake.** `faulty_volume_test_support.rs` holds `FaultyVolume` (wrap any
-  volume, arm the Nth call to a named operation to fail) plus `forward_volume_methods!`, the macro every `Volume` double
-  in this directory builds its boilerplate from — a new double lists the methods it forwards and hand-writes only what
-  it lies about. `strategy_test_support.rs` holds the doubles whose lie is behavioral (`RecursiveDeleteVolume`,
+  volume, arm the Nth call to a named operation to fail, or with `failing_call_at` the Nth call AT ONE PATH, which is
+  how a concurrent cell names its file) plus `forward_volume_methods!`, the macro every `Volume` double in this
+  directory builds its boilerplate from — a new double lists the methods it forwards and hand-writes only what it lies
+  about. `strategy_test_support.rs` holds the doubles whose lie is behavioral (`RecursiveDeleteVolume`,
   `UndeletableSource`, `FlakyDest`, the yield/pause sources); `strategy_dest_yield_test_support.rs` holds the two upload
   destinations the destination-yield suite drives (`ForegroundBusyDest`, whose share signal a test scripts through a
   `BusyVolumes`, and `PanicIfProbedDest`, which fails loudly if a non-opting target is ever probed);
@@ -986,7 +987,13 @@ partial-cleanup sweep removes the temp; on a failure INSIDE it the original may 
   move** has no dest partial-cleanup at all. Pinned by `finalize_recovery_tests.rs` (the rescue, the reap that can no
   longer reach it, the taken-name series, and both give-up shapes),
   `copy_crashsafe_tests.rs::{cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure, cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failure}`,
-  and `move_failure_tests.rs::cross_volume_move_preserves_new_data_on_finalize_failure`.
+  and `move_failure_tests.rs::cross_volume_move_preserves_new_data_on_finalize_failure`; all five landing sites answer
+  the same four outcomes (lands, write fails, delete refused, rename refused after the delete) in
+  `safe_replace_grid_tests.rs`. ❗ **Known gap**: the concurrent task's temp stays in `in_flight_partials` until
+  `record_success`, so a task DROPPED inside the finalize (the driver breaking on a sibling's failure) after
+  `delete(orig)` went through has its temp deleted by the post-loop's `clean_partial_writes`, and the destination holds
+  neither file (the source still does). Pinned as it behaves by
+  `safe_replace_grid_tests.rs::a_concurrent_task_dropped_mid_swap_has_its_temp_cleaned_as_a_partial`; the fix flips it.
 - **A cross-type Overwrite renames the destination ASIDE and holds it until the operation ends.** A type swap can't
   stage the new side the way file→file does: a folder replacing a file appears the moment its walk starts and fills in
   leaf by leaf over the rest of the operation, and any leaf can fail or be cancelled. Deleting the destination first

@@ -134,6 +134,11 @@ mod rename_merge_test_support;
 #[cfg(test)]
 mod finalize_recovery_tests;
 
+/// A file→file Overwrite at each of the five sites a safe-replace lands, across
+/// success and each refusal.
+#[cfg(test)]
+mod safe_replace_grid_tests;
+
 /// What each engine does when the destination won't say whether a name is taken.
 #[cfg(test)]
 mod dest_precheck_failure_tests;
