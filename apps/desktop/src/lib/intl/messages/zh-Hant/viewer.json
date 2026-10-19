@@ -184,6 +184,59 @@
   "@viewer.kind.text": {
     "sourceHash": "71988c4"
   },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b",
+    "sameAsSourceJustification": "Format name \"Markdown\", kept Latin like its sibling `viewer.kind.pdf`: it names a specific text format with no Traditional Chinese rendering (Microsoft zh-Hant and Taiwanese developer tools write `Markdown` verbatim), and the `@key` description says not to translate it."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "以排版檢視",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "正在載入文件",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "抱歉，我們沒辦法排版這份文件。你還是可以用文字的方式閱讀。",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "來自網站的影像已隱藏。載入這些影像會讓那些網站看到你的 IP 位址。",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "載入遠端影像",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "af4b47d"
+  },
+  "viewer.markdown.image.remote": "來自網站的影像",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "影像未顯示",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "找不到影像",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "找不到這個連結指向的檔案。",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "這個連結指向資料夾，所以這裡沒有東西可以顯示。",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "檢視器不會開啟指向絕對路徑或其他磁碟機的連結。",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "4e23d4d"
+  },
+  "viewer.markdown.link.unreadable": "無法開啟這個連結指向的檔案。",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "2d9c765"
+  },
   "viewer.toolbar.encoding.placeholder": "編碼",
   "@viewer.toolbar.encoding.placeholder": {
     "sourceHash": "4d25a47"

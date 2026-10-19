@@ -1949,6 +1949,12 @@
     "forms": "status Chưa hoàn tất được; an unfinished move → một lần di chuyển chưa hoàn tất; didn't finish looking → chưa tìm xong",
     "sources": "macOS Finder (thao tác chưa hoàn tất)"
   },
+  "not-found": {
+    "chosen": "không tìm thấy",
+    "confidence": "high",
+    "forms": "status label → Không tìm thấy <noun> (Không tìm thấy tệp, Không tìm thấy hình ảnh); in a sentence with a subject → Cmdr không tìm thấy …",
+    "sources": "macOS Finder + AppKit (Không tìm thấy), catalog (settings.adb.status.notFound, errors.write.sourceNotFound.title)"
+  },
   "note": {
     "accept": ["lời nhắn", "ghi-chu"],
     "chosen": "ghi chú",

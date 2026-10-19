@@ -185,6 +185,59 @@
   "@viewer.kind.text": {
     "sourceHash": "71988c4"
   },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b",
+    "sameAsSourceJustification": "'Markdown' is a text format's name; the @key description says not to translate it, like 'PDF' (viewer.kind.pdf)."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "Ver con formato",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "Cargando el documento",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "Lo sentimos, no hemos podido dar formato a este documento. Aún puedes leerlo como texto.",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "Las imágenes de la web están ocultas. Si las cargas, esos sitios web podrán ver tu dirección IP.",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "Cargar imágenes remotas",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "af4b47d"
+  },
+  "viewer.markdown.image.remote": "Imagen de la web",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "Imagen sin mostrar",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "Imagen no encontrada",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "No hemos podido encontrar el archivo al que apunta este enlace.",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "Este enlace apunta a una carpeta, así que aquí no hay nada que mostrar.",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "El visor no sigue enlaces a rutas absolutas ni a otras unidades.",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "4e23d4d"
+  },
+  "viewer.markdown.link.unreadable": "No hemos podido abrir el archivo al que apunta este enlace.",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "2d9c765"
+  },
   "viewer.toolbar.encoding.placeholder": "Codificación",
   "@viewer.toolbar.encoding.placeholder": {
     "sourceHash": "4d25a47"

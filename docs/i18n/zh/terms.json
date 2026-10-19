@@ -1311,6 +1311,10 @@
   "format": {
     "chosen": "格式",
     "confidence": "high",
+    "exceptions": {
+      "viewer.markdown.error": "Formatting a Markdown document for display is laying it out, 排版; 格式化 is what a disk gets erased by, a scary misreading here.",
+      "viewer.toolbar.viewMode.viewFormatted": "The laid-out Markdown view is 排版样式, beside its siblings 以文本查看 / 以图像查看; 格式化 reads as disk formatting."
+    },
     "forms": "formatted as FAT32 → 采用 FAT32 格式; FAT32 / exFAT stay Latin",
     "sources": "macOS Finder PE4.5"
   },
@@ -2087,6 +2091,13 @@
     },
     "forms": "status 无法完成; the failure notice 无法完成…操作 (disyllabic verbs compound, verb phrases take 的); counted {countText} 项操作无法完成",
     "sources": "catalog"
+  },
+  "not-found": {
+    "accept": ["未找到"],
+    "chosen": "找不到",
+    "confidence": "high",
+    "forms": "titles, labels, and sentences 找不到 X (找不到路径, 找不到这个文件, 找不到图像); a bare status word with no object 未找到 (settings.adb.status.notFound, commandPalette.noResults)",
+    "sources": "macOS Finder zh-CN (…因为找不到它, 找不到当前的时间机器备份磁盘; bare 未找到 only as a standalone status); catalog count: 找不到 in every errors.* title"
   },
   "note": {
     "accept": ["笔记", "留言", "记下"],

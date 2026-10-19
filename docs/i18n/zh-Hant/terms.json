@@ -1472,6 +1472,10 @@
   "format": {
     "chosen": "格式",
     "confidence": "high",
+    "exceptions": {
+      "viewer.markdown.error": "Format as a VERB (render a Markdown document) → 排版: 格式化 in Taiwan means formatting a disk, and Cmdr ships disk formatting.",
+      "viewer.toolbar.viewMode.viewFormatted": "Same verb sense as viewer.markdown.error: the rendered view → 以排版檢視, matching its siblings 以文字檢視 / 以影像檢視."
+    },
     "forms": "an archive's compression format → 壓縮格式; FAT32 format → FAT32 格式; date and time format → 日期和時間格式",
     "sources": "macOS Finder zh-TW (Format 格式, Compression format to use 要使用的壓縮格式), AppKit (「%2$@」格式的檔案); catalog"
   },

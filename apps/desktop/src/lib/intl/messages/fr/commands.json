@@ -592,6 +592,14 @@
   "@commands.viewerToggleImageZoom.label": {
     "sourceHash": "1bd79eb"
   },
+  "commands.viewerGoBack.label": "Revenir au document précédent",
+  "@commands.viewerGoBack.label": {
+    "sourceHash": "a76f589"
+  },
+  "commands.viewerGoForward.label": "Avancer au document suivant",
+  "@commands.viewerGoForward.label": {
+    "sourceHash": "a07317a"
+  },
   "commands.multiRenameOpenPresets.label": "Ouvrir le menu des présélections",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"

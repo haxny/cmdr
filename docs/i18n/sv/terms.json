@@ -285,6 +285,9 @@
   "back": {
     "chosen": "tillbaka",
     "confidence": "high",
+    "exceptions": {
+      "commands.viewerGoBack.label": "History navigation (the go-back concept, Gå bakåt), paired with commands.viewerGoForward.label Gå framåt like commands.navBack.label / navForward."
+    },
     "forms": "button Tillbaka; Tillbaka till chatten, Tillbaka till värdlistan",
     "sources": "macOS"
   },
@@ -1989,6 +1992,13 @@
     "forms": "status and headline Gick inte att slutföra (clipped); body Det gick inte att …",
     "sources": "macOS Finder (Det gick inte att slutföra synkroniseringen)"
   },
+  "not-found": {
+    "accept": ["kunde inte hitta", "gick inte att hitta"],
+    "chosen": "hittades inte",
+    "confidence": "high",
+    "forms": "status label Hittades inte, Sökvägen hittades inte, Bilden hittades inte; with a subject Vi kunde inte hitta …; body Det gick inte att hitta …",
+    "sources": "macOS AppKit FindPanel (Hittades inte), AppKitErrors (kunde inte hittas); catalog (settings.adb.status.notFound)"
+  },
   "note": {
     "accept": ["anteckning"],
     "chosen": "notering",
@@ -2447,6 +2457,9 @@
     "accept": ["på servern"],
     "chosen": "fjärr",
     "confidence": "tentative",
+    "exceptions": {
+      "viewer.markdown.remoteImages.load": "English sense: pictures hosted on websites, not a server the user connected; bilder från webben matches the bar's own notice and viewer.markdown.image.remote (Bild från webben)."
+    },
     "forms": "Fjärrserver in explanations; the field label Remote folder → Mapp på servern (no fjärrmapp)",
     "sources": "macOS (fjärrinloggning); catalog"
   },

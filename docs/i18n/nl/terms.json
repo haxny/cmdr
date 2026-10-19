@@ -6,6 +6,7 @@
     "sources": "macOS Finder (\"About Finder\" → \"Over Finder\")"
   },
   "absolute-path": {
+    "accept": ["absolute paden"],
     "chosen": "absoluut pad",
     "confidence": "high",
     "exceptions": {
@@ -1247,7 +1248,7 @@
     "sources": "GNOME Nautilus (Associatie vergeten; Weet u zeker dat u '%s' wilt vergeten?), Total Commander (Deze schijven na afsluiten vergeten), catalog (menu.network.forgetServer, settings.servers.trustedHostKeys.forget)"
   },
   "format": {
-    "accept": ["geformatteerd", "structuur", "notatie", "notaties", "opmaak"],
+    "accept": ["geformatteerd", "structuur", "notatie", "notaties", "opmaak", "opmaken"],
     "chosen": "formaat",
     "confidence": "high",
     "forms": "a drive's format → geformatteerd als FAT32/exFAT; an archive's compression format → (archief)structuur; generic each format → elk formaat; display formats (Colors and formats) → notaties; FAT32 / exFAT / MS-DOS (FAT) verbatim",
@@ -2043,6 +2044,12 @@
     },
     "forms": "status Niet voltooid; headline X niet voltooid (Kopiëren niet voltooid, …); count headline {countText} bewerking is / bewerkingen zijn niet voltooid",
     "sources": "macOS (kon niet worden voltooid)"
+  },
+  "not-found": {
+    "chosen": "niet gevonden",
+    "confidence": "high",
+    "forms": "label: <noun> niet gevonden (Afbeelding niet gevonden, Pad niet gevonden); sentence: Kon … niet vinden / We konden … niet vinden",
+    "sources": "macOS (Niet gevonden; Het bestand '%@' is niet gevonden.); catalog (settings.adb.status.notFound, Pad niet gevonden)"
   },
   "note": {
     "accept": ["notities", "bericht"],

@@ -186,6 +186,59 @@
   "@viewer.kind.text": {
     "sourceHash": "71988c4"
   },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b",
+    "sameAsSourceJustification": "'Markdown' is the name of a text format, kept verbatim per the @key description, like 'PDF' beside it."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "Afficher la mise en forme",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "Chargement du document",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "Désolé, nous n’avons pas pu mettre en forme ce document. Vous pouvez quand même le lire comme texte.",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "Les images provenant du Web sont masquées. Les charger permet à ces sites de voir votre adresse IP.",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "Charger les images distantes",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "af4b47d"
+  },
+  "viewer.markdown.image.remote": "Image du Web",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "Image non affichée",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "Image introuvable",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "Nous n’avons pas trouvé le fichier vers lequel pointe ce lien.",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "Ce lien pointe vers un dossier, il n’y a donc rien à afficher ici.",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "La visionneuse ne suit pas les liens vers des chemins absolus ou vers d’autres disques.",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "4e23d4d"
+  },
+  "viewer.markdown.link.unreadable": "Nous n’avons pas pu ouvrir le fichier vers lequel pointe ce lien.",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "2d9c765"
+  },
   "viewer.toolbar.encoding.placeholder": "Encodage",
   "@viewer.toolbar.encoding.placeholder": {
     "sourceHash": "4d25a47"

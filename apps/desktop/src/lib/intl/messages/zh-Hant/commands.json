@@ -592,6 +592,14 @@
   "@commands.viewerToggleImageZoom.label": {
     "sourceHash": "1bd79eb"
   },
+  "commands.viewerGoBack.label": "返回上一份文件",
+  "@commands.viewerGoBack.label": {
+    "sourceHash": "a76f589"
+  },
+  "commands.viewerGoForward.label": "往前到下一份文件",
+  "@commands.viewerGoForward.label": {
+    "sourceHash": "a07317a"
+  },
   "commands.multiRenameOpenPresets.label": "開啟預設組選單",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"

@@ -3865,11 +3865,18 @@
     }
   },
   "load": {
-    "accept": ["geladen", "Laden", "lade", "lädt"],
+    "accept": ["geladen", "Laden", "lade", "lädt", "lädst"],
     "chosen": "laden",
     "confidence": "high",
     "forms": "Load a preset → Voreinstellung laden; Load more → Mehr laden; Loading … → Wird geladen …",
     "sources": "Double Commander de (Load Preset 1 → Voreinstellung 1 laden); catalog (askCmdr.sessions.loadMore, operationLog.dialog.loadMore, queryUi.results.loadingIndex)"
+  },
+  "not-found": {
+    "accept": ["finden", "gefunden"],
+    "chosen": "nicht gefunden",
+    "confidence": "high",
+    "forms": "a label → „Bild nicht gefunden“, „Datei nicht gefunden“; a sentence → „Wir konnten … nicht finden.“",
+    "sources": "macOS Finder de (Das Objekt kann nicht gefunden werden.; Der Ordner „^0“ kann nicht gefunden werden.); catalog (settings.adb.status.notFound, errors.write.sourceNotFound.title)"
   },
   "problem": {
     "accept": ["Probleme", "Problemen", "Problems"],

@@ -592,6 +592,14 @@
   "@commands.viewerToggleImageZoom.label": {
     "sourceHash": "1bd79eb"
   },
+  "commands.viewerGoBack.label": "Zurück zum vorherigen Dokument",
+  "@commands.viewerGoBack.label": {
+    "sourceHash": "a76f589"
+  },
+  "commands.viewerGoForward.label": "Vorwärts zum nächsten Dokument",
+  "@commands.viewerGoForward.label": {
+    "sourceHash": "a07317a"
+  },
   "commands.multiRenameOpenPresets.label": "Menü „Voreinstellungen“ öffnen",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"

@@ -1306,6 +1306,7 @@
     "distinct": ["file-system"],
     "en": "format",
     "match": ["format", "formats", "formatted"],
+    "notMatch": ["view formatted", "format this document"],
     "note": "Several senses: a drive's format, an archive's compression method, and a date or number display format; many locales split them.",
     "sense": "A disk's file-system format (formatted as exFAT), an archive's compression format, or a display format (dates, sizes)."
   },
@@ -1523,7 +1524,8 @@
       "hidden from the ui",
       "simply hidden",
       "these folders are hidden",
-      "hidden path segments"
+      "hidden path segments",
+      "images from the web are hidden"
     ],
     "sense": "A file or folder macOS doesn't show by default (dotfiles, the hidden flag)."
   },

@@ -187,6 +187,59 @@
     "sourceHash": "71988c4",
     "sameAsSourceJustification": "text is 'Text' in Swedish (Swedish cognate; glossary notes 'Text' is the shared form). The content-kind label is identical, matching viewer.toolbar.viewMode.text."
   },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b",
+    "sameAsSourceJustification": "'Markdown' is a text-format name; kept verbatim in every locale, like viewer.kind.pdf."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "Visa formaterat",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "Läser in dokumentet",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "Tyvärr, vi kunde inte visa det här dokumentet formaterat. Du kan fortfarande läsa det som text.",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "Bilder från webben är dolda. Om du läser in dem får webbplatserna se din IP-adress.",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "Läs in bilder från webben",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "af4b47d"
+  },
+  "viewer.markdown.image.remote": "Bild från webben",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "Bilden visas inte",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "Bilden hittades inte",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "Vi kunde inte hitta filen som den här länken pekar på.",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "Den här länken pekar på en mapp, så det finns inget att visa här.",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "Förhandsvisningen följer inte länkar till absoluta sökvägar eller andra enheter.",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "4e23d4d"
+  },
+  "viewer.markdown.link.unreadable": "Vi kunde inte öppna filen som den här länken pekar på.",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "2d9c765"
+  },
   "viewer.toolbar.encoding.placeholder": "Teckenkodning",
   "@viewer.toolbar.encoding.placeholder": {
     "sourceHash": "4d25a47"

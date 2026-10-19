@@ -186,6 +186,59 @@
   "@viewer.kind.text": {
     "sourceHash": "71988c4"
   },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b",
+    "sameAsSourceJustification": "'Markdown' is the name of a text format, kept verbatim like its sibling 'PDF' (the @key description says not to translate it)."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "Toon met opmaak",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "Document laden",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "Sorry, we konden dit document niet opmaken. Je kunt het nog wel als tekst lezen.",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "Afbeeldingen van het web zijn verborgen. Als je ze laadt, kunnen die sites je IP-adres zien.",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "Laad externe afbeeldingen",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "af4b47d"
+  },
+  "viewer.markdown.image.remote": "Afbeelding van het web",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "Afbeelding niet getoond",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "Afbeelding niet gevonden",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "We konden het bestand waar deze link naar wijst niet vinden.",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "Deze link wijst naar een map, dus hier valt niets te tonen.",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "Het weergavevenster volgt geen links naar absolute paden of andere schijven.",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "4e23d4d"
+  },
+  "viewer.markdown.link.unreadable": "We konden het bestand waar deze link naar wijst niet openen.",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "2d9c765"
+  },
   "viewer.toolbar.encoding.placeholder": "Codering",
   "@viewer.toolbar.encoding.placeholder": {
     "sourceHash": "4d25a47"

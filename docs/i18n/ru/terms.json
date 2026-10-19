@@ -3942,7 +3942,10 @@
     "forms": "remote server → удаленный сервер; remote host → удаленный хост",
     "confidence": "high",
     "sources": "MS remote → «удаленный»; macOS live KIND_FORMATTER Remote → «Удаленный»",
-    "note": "«удален» also spells «deleted»; keep it as an adjective before a server or host so it never reads as removed."
+    "note": "«удален» also spells «deleted»; keep it as an adjective before a server or host so it never reads as removed.",
+    "exceptions": {
+      "viewer.markdown.remoteImages.load": "«удаленные изображения» reads as «deleted images»; the button says «изображения из интернета», matching its notice and `viewer.markdown.image.remote`."
+    }
   },
   "removable": {
     "chosen": "съемный",

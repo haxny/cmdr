@@ -187,6 +187,59 @@
     "sourceHash": "71988c4",
     "sameAsSourceJustification": "'Text' is a real German word, same spelling (macOS/MS DE use 'Text' for plain text). Matches viewer.toolbar.viewMode.text."
   },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b",
+    "sameAsSourceJustification": "'Markdown' is a text-format name; kept verbatim (per @key), like viewer.kind.pdf."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "Formatiert anzeigen",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "Dokument wird geladen",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "Wir konnten dieses Dokument leider nicht formatieren. Du kannst es aber als Text lesen.",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "Bilder aus dem Internet sind ausgeblendet. Wenn du sie lädst, sehen die betreffenden Websites deine IP-Adresse.",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "Entfernte Bilder laden",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "af4b47d"
+  },
+  "viewer.markdown.image.remote": "Bild aus dem Internet",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "Bild nicht angezeigt",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "Bild nicht gefunden",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "Wir konnten die Datei, auf die dieser Link verweist, nicht finden.",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "Dieser Link verweist auf einen Ordner, daher gibt es hier nichts anzuzeigen.",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "Die Vorschau folgt keinen Links zu absoluten Pfaden oder anderen Laufwerken.",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "4e23d4d"
+  },
+  "viewer.markdown.link.unreadable": "Wir konnten die Datei, auf die dieser Link verweist, nicht öffnen.",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "2d9c765"
+  },
   "viewer.toolbar.encoding.placeholder": "Codierung",
   "@viewer.toolbar.encoding.placeholder": {
     "sourceHash": "4d25a47"

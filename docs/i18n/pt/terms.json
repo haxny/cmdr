@@ -1859,6 +1859,13 @@
     "sources": "macOS Finder pt-BR (NE113, PW38 Não foi possível concluir a operação…)",
     "decision": "Queue chip, dismiss, and failure notices"
   },
+  "not-found": {
+    "chosen": "não encontrado",
+    "accept": ["encontr"],
+    "forms": "the participle agrees with its noun: Imagem não encontrada, Caminho não encontrado; a sentence about Cmdr's lookup says Não foi possível encontrar …",
+    "confidence": "high",
+    "sources": "shipped pt catalog (settings.adb.status.notFound Não encontrado, Caminho não encontrado ×2, errors.write.sourceNotFound.title Não foi possível encontrar o arquivo); Total Commander and Double Commander pt-BR (Arquivo não encontrado!, Pasta %s não encontrada!, Drive não encontrado)"
+  },
   "note": {
     "chosen": "nota",
     "accept": ["mensage"],

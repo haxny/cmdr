@@ -186,6 +186,59 @@
   "@viewer.kind.text": {
     "sourceHash": "71988c4"
   },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b",
+    "sameAsSourceJustification": "Markdown — название текстового формата; описание ключа просит не переводить его, как и «PDF» рядом."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "Показать с форматированием",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "Загрузка документа",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "Извините, не удалось показать этот документ с форматированием. Но его по-прежнему можно прочитать как текст.",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "Изображения из интернета скрыты. Если их загрузить, эти сайты увидят ваш IP-адрес.",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "Загрузить изображения из интернета",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "af4b47d"
+  },
+  "viewer.markdown.image.remote": "Изображение из интернета",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "Изображение не показано",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "Изображение не найдено",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "Не удалось найти файл, на который указывает эта ссылка.",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "Эта ссылка указывает на папку, поэтому здесь нечего показать.",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "Окно просмотра не переходит по ссылкам на абсолютные пути и другие диски.",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "4e23d4d"
+  },
+  "viewer.markdown.link.unreadable": "Не удалось открыть файл, на который указывает эта ссылка.",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "2d9c765"
+  },
   "viewer.toolbar.encoding.placeholder": "Кодировка",
   "@viewer.toolbar.encoding.placeholder": {
     "sourceHash": "4d25a47"

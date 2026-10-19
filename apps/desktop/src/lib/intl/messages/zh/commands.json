@@ -592,6 +592,14 @@
   "@commands.viewerToggleImageZoom.label": {
     "sourceHash": "1bd79eb"
   },
+  "commands.viewerGoBack.label": "返回上一个文稿",
+  "@commands.viewerGoBack.label": {
+    "sourceHash": "a76f589"
+  },
+  "commands.viewerGoForward.label": "前进到下一个文稿",
+  "@commands.viewerGoForward.label": {
+    "sourceHash": "a07317a"
+  },
   "commands.multiRenameOpenPresets.label": "打开预置菜单",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"

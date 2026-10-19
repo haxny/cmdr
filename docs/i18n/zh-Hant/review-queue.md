@@ -68,3 +68,8 @@ worth keeping).
   read as a countdown timer; `數字會遞減` is the fallback. **`只取日期中的「日」`** (`.datePart`) and **`以…為例：`**
   (`.forFile`, `.forSampleDate`, `.forFirstFiles`, where `以最前面的三個檔案` dodges a `以前` misreading): composed for
   the placeholder tooltips.
+- **`來自網站的影像`** (`viewer.markdown.image.remote`, `.remoteImages.notice`): "from the web" became "from websites"
+  to dodge `網路` (ruled as the network, used for the LAN elsewhere) and to pair with `那些網站`. **`往前到下一份文件`**
+  (`commands.viewerGoForward.label`): keeps the `往前` ruling but reads a bit stiff; `前往下一份文件` is the fallback.
+  **`以排版檢視`** / **`排版`** (`viewer.toolbar.viewMode.viewFormatted`, `viewer.markdown.error`): "formatted" as
+  rendered, dodging the disk sense of `格式化`.

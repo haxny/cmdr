@@ -594,6 +594,14 @@
   "@commands.viewerToggleImageZoom.label": {
     "sourceHash": "1bd79eb"
   },
+  "commands.viewerGoBack.label": "Ga terug naar het vorige document",
+  "@commands.viewerGoBack.label": {
+    "sourceHash": "a76f589"
+  },
+  "commands.viewerGoForward.label": "Ga vooruit naar het volgende document",
+  "@commands.viewerGoForward.label": {
+    "sourceHash": "a07317a"
+  },
   "commands.multiRenameOpenPresets.label": "Open voorinstellingenmenu",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"

@@ -185,6 +185,59 @@
   "@viewer.kind.text": {
     "sourceHash": "71988c4"
   },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b",
+    "sameAsSourceJustification": "Format name 'Markdown'; kept verbatim (a file-format name, and the @key description says not to translate it)."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "Xem bản có định dạng",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "Đang tải tài liệu",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "Rất tiếc, Cmdr không thể định dạng tài liệu này. Bạn vẫn có thể đọc nó dưới dạng văn bản.",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "Hình ảnh từ web đang được ẩn. Nếu tải, các trang web đó sẽ thấy địa chỉ IP của bạn.",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "Tải hình ảnh từ xa",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "af4b47d"
+  },
+  "viewer.markdown.image.remote": "Hình ảnh từ web",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "Hình ảnh không được hiển thị",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "Không tìm thấy hình ảnh",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "Cmdr không tìm thấy tệp mà liên kết này trỏ tới.",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "Liên kết này trỏ tới một thư mục, nên không có gì để hiển thị ở đây.",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "Trình xem không mở các liên kết tới đường dẫn tuyệt đối hoặc ổ đĩa khác.",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "4e23d4d"
+  },
+  "viewer.markdown.link.unreadable": "Cmdr không mở được tệp mà liên kết này trỏ tới.",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "2d9c765"
+  },
   "viewer.toolbar.encoding.placeholder": "Mã hóa ký tự",
   "@viewer.toolbar.encoding.placeholder": {
     "sourceHash": "4d25a47"

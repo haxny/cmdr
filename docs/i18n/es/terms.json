@@ -2016,6 +2016,13 @@
     "sources": "composed; no macOS source",
     "decision": "Las 23 claves del rediseño de la introducción"
   },
+  "not-found": {
+    "chosen": "no encontrado",
+    "accept": ["no encontrada", "no se encuentra", "no se ha encontrado", "encontrar"],
+    "forms": "a status label agrees with its noun (Ruta no encontrada, Imagen no encontrada, No encontrado); a sentence says No hemos podido encontrar / no se encuentra",
+    "confidence": "high",
+    "sources": "catalog (settings.adb.status.notFound No encontrado, Ruta no encontrada); Total Commander (Servidor no encontrado, Dirección IP no encontrada); macOS Finder (no se encuentra el ítem original)"
+  },
   "online-only": {
     "chosen": "solo en línea",
     "forms": "Parte de tu selección está solo en línea; leaving it available online only → lo deja disponible solo en línea; the file-icon badge → Solo en línea",
