@@ -215,6 +215,10 @@ Some notes here are load-bearing rather than historical. Those are grouped below
   class, and the leads that turned up nothing so nobody re-runs them. Keep it until its two open recommendations (a
   mount-kind answer for `LocalPosixVolume`, and measuring FSEvents on an `smbfs` mount) are settled.
 
+- `data-safety-hunt-2026-10/README.md`: the second data-safety hunt (#147), 13 slices outside the transfer engines, each
+  hunted and verified, ranked into 44 defects with one issue draft each, plus what each slice didn't read. Keep it until
+  the drafts are filed and its coverage gaps are either hunted or accepted.
+
 **Design research behind a roadmapped feature nobody has started:**
 
 - `totalcmd-plugin-analysis.md` — the only design artifact for "Add plugins". Covers all four Total Commander plugin
