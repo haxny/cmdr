@@ -805,6 +805,22 @@ pub trait Volume: Send + Sync {
         None
     }
 
+    /// Which session this volume is on: a counter its backend bumps each time
+    /// a reconnect SUCCESSFULLY installs a new session in place, and never
+    /// otherwise (❌ not on a reconnect that found the session already live, ❌
+    /// not on a state flip). `None` (the default) when the backend keeps no such
+    /// counter.
+    ///
+    /// Read beside [`connection_state`](Self::connection_state): a volume that
+    /// reads live on a NEWER generation than the one a failing call started on
+    /// was reconnected while that call ran, so the call's transport error was the
+    /// old session's and the work is worth running again
+    /// (`crates/cmdr-operations/src/transfer/volume_outage.rs`). A `None` keeps
+    /// such an error what it was.
+    fn connection_generation(&self) -> Option<u64> {
+        None
+    }
+
     /// Which backend serves this volume.
     ///
     /// For the few app decisions that are genuinely about the transport (which

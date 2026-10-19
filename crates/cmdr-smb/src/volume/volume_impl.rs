@@ -700,6 +700,13 @@ impl Volume for SmbVolume {
         })
     }
 
+    /// The installed main session's generation, the one counter the error
+    /// funnels already guard on (`state.rs::SessionCell`): bumped only by
+    /// `do_attempt_reconnect` installing a rebuilt session.
+    fn connection_generation(&self) -> Option<u64> {
+        Some(self.inner.state.generation().count())
+    }
+
     fn backend_kind(&self) -> cmdr_fs::volume::BackendKind {
         cmdr_fs::volume::BackendKind::Smb
     }

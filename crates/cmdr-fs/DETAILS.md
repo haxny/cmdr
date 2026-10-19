@@ -297,7 +297,9 @@ interchangeable:
 
 - **How live is the SESSION?** `ConnectionState`, via `Volume::connection_state()`. The switcher dot, the pane's connect
   views, and the reconnect manager read it. Every connecting backend answers; a local disk, an archive, and the git
-  portal answer `None`.
+  portal answer `None`. Its companion `Volume::connection_generation()` says WHICH session: a counter only a successful
+  in-place rebuild bumps (`None` by default; SMB answers it). A transfer reads "live on a newer generation than my call
+  started on" as proof its error was the old session's (`crates/cmdr-operations/src/transfer/volume_outage.rs`).
 - **WHICH BACKEND serves it?** `BackendKind`, via `Volume::backend_kind()`. ❗ The one an "is this SMB?" test must ask.
   A `connection_state().is_some()` used that way hands an SFTP volume to the SMB indexer, which is exactly what happened
   when one field answered both questions. Backend-side only: the frontend classifies a pane off `fsType` and category,

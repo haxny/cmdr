@@ -47,6 +47,11 @@ pub(super) struct SessionGeneration(u64);
 impl SessionGeneration {
     /// The session a volume is built with.
     pub(super) const FIRST: Self = Self(0);
+
+    /// The counter itself, as `Volume::connection_generation` reports it.
+    pub(super) fn count(self) -> u64 {
+        self.0
+    }
 }
 
 /// The share's connection state and the generation of its installed session, in
@@ -142,10 +147,11 @@ impl SessionCell {
         self.update(|_, generation| Some((ConnectionState::Disconnected, generation)));
     }
 
-    /// The installed session's generation, for the suites that stand in for an
-    /// operation on it. ❌ Production code reports the generation its lease
-    /// carried, never this.
-    #[cfg(test)]
+    /// The installed session's generation: what `Volume::connection_generation`
+    /// answers, so a transfer can tell a late error from a replaced session
+    /// (`crates/cmdr-operations/src/transfer/volume_outage.rs`). ❌ An error
+    /// funnel reports the generation its lease carried, never this: a fresh
+    /// read would let a replaced session's loss mark its successor.
     pub(super) fn generation(&self) -> SessionGeneration {
         self.load().1
     }

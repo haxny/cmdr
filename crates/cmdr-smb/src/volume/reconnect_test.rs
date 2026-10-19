@@ -483,3 +483,28 @@ async fn a_late_loss_from_a_replaced_session_leaves_the_new_one_direct() {
     vol.inner.note_smb_error(new, &smb2::Error::Disconnected);
     assert_eq!(vol.session_state(), ConnectionState::Disconnected);
 }
+
+/// `Volume::connection_generation` names the installed session: a reconnect that
+/// installs one moves it, and a reconnect that finds the session already live
+/// leaves it alone (the transfer layer reads a moved generation as "my call's
+/// error was the old session's", so a no-op that moved it would turn a real
+/// error into a needless re-run). The install itself needs a live server; its
+/// Docker twin is `session_integration_test.rs`'s
+/// `smb_integration_attempt_reconnect_rebuilds_session`.
+#[tokio::test]
+async fn the_reported_generation_moves_only_when_a_session_is_installed() {
+    let vol = make_test_volume_direct();
+    let first = Volume::connection_generation(&vol).expect("an SMB share reports its generation");
+
+    vol.inner.do_attempt_reconnect().await.expect("already Direct");
+    assert_eq!(
+        Volume::connection_generation(&vol),
+        Some(first),
+        "a reconnect that found the session live installed nothing"
+    );
+
+    // What `do_attempt_reconnect` does when it installs a rebuilt session.
+    let installed = vol.inner.state.advance();
+    vol.inner.transition_to_direct(installed);
+    assert_eq!(Volume::connection_generation(&vol), Some(first + 1));
+}

@@ -258,7 +258,10 @@ is about.
   `do_attempt_reconnect` bumps it (`advance`) in the same critical section that installs the rebuilt `MainSession`,
   which carries it. `clone_session` hands out a `SessionLease { tree, conn, generation }`, and every error goes through
   the funnel with the generation ITS call ran on (`handle_smb_result(op, path, generation, result)`), ❌ never a fresh
-  read of the current one, which would silently disable the guard.
+  read of the current one, which would silently disable the guard. The installed generation is also what
+  `Volume::connection_generation` reports (`SessionCell::generation`), so a transfer whose call failed on an older
+  session sees the share live on a newer one and runs the call again (`cmdr-operations`'s `transfer/volume_outage.rs`).
+  A reconnect that finds the session already `Direct` installs nothing and moves nothing.
 - **One guarded transition.** `transition_to_disconnected(ran_on)` is a CAS (`SessionCell::lose`) that flips only while
   `ran_on` is still installed, so a reconnect that installs between a check and the flip can't be overwritten.
   `transition_to_direct(generation)` is the same for the way up; `on_unmount` stores `Disconnected` whichever session is
@@ -271,7 +274,8 @@ is about.
   generation. Probes whose failure only means "no" (`exists`, the rename's directory and destination stats) report
   nothing to the funnel.
 - Pinned by `state_test.rs` (the cell, the predicate) and `reconnect_test.rs` (`a_late_loss_from_a_replaced_session_*`,
-  `a_send_failure_and_a_disconnect_*`), through both `handle_smb_result` and `note_smb_error`.
+  `a_send_failure_and_a_disconnect_*`, `the_reported_generation_moves_only_when_a_session_is_installed`), through both
+  `handle_smb_result` and `note_smb_error`.
 
 ### Backend-autonomous reconnect and index resume
 

@@ -66,12 +66,19 @@ async fn smb_integration_attempt_reconnect_rebuilds_session() {
         result
     );
 
-    // Reconnect should rebuild the session and flip back to Direct.
+    // Reconnect should rebuild the session and flip back to Direct, on the next
+    // generation (what a transfer reads to tell the old session's late errors).
+    let before = Volume::connection_generation(&vol).expect("SMB reports a generation");
     vol.inner
         .do_attempt_reconnect()
         .await
         .expect("attempt_reconnect should succeed against a live Docker SMB");
     assert_eq!(vol.session_state(), ConnectionState::Direct);
+    assert_eq!(
+        Volume::connection_generation(&vol),
+        Some(before + 1),
+        "a rebuilt session is a new generation"
+    );
 
     // And hot-path ops should work again.
     let entries = vol
@@ -131,10 +138,16 @@ async fn smb_integration_attempt_reconnect_noop_when_already_direct() {
     // (no extra round-trip to the server).
     let vol = make_docker_volume().await;
     assert_eq!(vol.session_state(), ConnectionState::Direct);
+    let before = Volume::connection_generation(&vol);
     let start = std::time::Instant::now();
     vol.inner.do_attempt_reconnect().await.unwrap();
     let elapsed = start.elapsed();
     assert_eq!(vol.session_state(), ConnectionState::Direct);
+    assert_eq!(
+        Volume::connection_generation(&vol),
+        before,
+        "a no-op reconnect installs nothing"
+    );
     // No-op should be effectively instant. Any real session build would
     // take tens of ms minimum even against localhost. Pad the bound for
     // CI noise.
