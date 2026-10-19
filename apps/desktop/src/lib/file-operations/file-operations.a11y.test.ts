@@ -78,6 +78,7 @@ import OperationConflictDialog from './OperationConflictDialog.svelte'
 import RollbackConfirmDialog from './RollbackConfirmDialog.svelte'
 import SourcesGoneDialog from './SourcesGoneDialog.svelte'
 import SourcesGonePrompt from './SourcesGonePrompt.svelte'
+import LockedSourcesDialog from './LockedSourcesDialog.svelte'
 import LockedSourcesPrompt from './LockedSourcesPrompt.svelte'
 import TransferProgressReadout from './TransferProgressReadout.svelte'
 import NewEntryNameField from './NewEntryNameField.svelte'
@@ -317,6 +318,40 @@ describe('LockedSourcesPrompt a11y', () => {
 
   it('has no a11y violations', async () => {
     const target = await mountDialog()
+    await expectNoA11yViolations(target)
+  })
+
+  it('has no a11y violations with the asking move named and more locked than it lists', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(LockedSourcesDialog, {
+      target,
+      props: {
+        event: {
+          operationId: 'op-1',
+          operationType: 'move',
+          lockedCount: 1_234,
+          lockedSample: ['/Docs/contract.pdf'],
+        },
+        snapshot: {
+          operationId: 'op-1',
+          operationType: 'move',
+          status: 'running',
+          source: 'Docs',
+          destination: 'Archive',
+          rollbackSupport: 'supported',
+          reverses: null,
+          error: null,
+          canRetry: false,
+          items: null,
+        },
+        answering: true,
+        onMoveAnyway: () => {},
+        onSkip: () => {},
+        onCancel: () => {},
+      },
+    })
+    await tick()
     await expectNoA11yViolations(target)
   })
 
