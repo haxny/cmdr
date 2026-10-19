@@ -419,6 +419,90 @@ async fn smb_integration_write_from_stream_source_error_deletes_partial() {
     ensure_clean(&vol, &dir).await;
 }
 
+/// A source whose declared length isn't what it yields: a local file still
+/// growing (a log, a download finishing) or one that shrank while it was read.
+struct MisdeclaredStream {
+    chunks: std::collections::VecDeque<Vec<u8>>,
+    declared: u64,
+    bytes_read: u64,
+}
+
+impl VolumeReadStream for MisdeclaredStream {
+    fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
+        Box::pin(async move {
+            let chunk = self.chunks.pop_front()?;
+            self.bytes_read += chunk.len() as u64;
+            Some(Ok(chunk))
+        })
+    }
+
+    fn total_size(&self) -> StreamLength {
+        StreamLength::Known(self.declared)
+    }
+
+    fn bytes_read(&self) -> u64 {
+        self.bytes_read
+    }
+
+    fn modified_at(&self) -> Option<std::time::SystemTime> {
+        None
+    }
+}
+
+/// #520: a small file promised as ONE compound frame at the user's real name
+/// must never fall through to the multi-round-trip streaming writer there,
+/// which a drop or a quit can leave truncated under that name. A source that
+/// outgrew the frame (or came up short) is refused before anything is
+/// created. Against `smb-consumer-maxreadsize`, whose 64 KiB `max_write` a
+/// growing source can outrun.
+#[tokio::test]
+#[ignore = "Requires docker-compose smb-consumer-maxreadsize (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_single_shot_source_that_breaks_its_length_creates_nothing() {
+    let port: u16 = std::env::var("SMB_CONSUMER_MAXREADSIZE_PORT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10494);
+    let vol = make_docker_volume_through(port, VolumeHost::detached()).await;
+    let max_write = vol.negotiated_max_write().await.expect("negotiated params");
+    let dir = test_dir_name();
+    ensure_clean(&vol, &dir).await;
+    vol.create_directory(Path::new(&dir)).await.unwrap();
+
+    let declared = 1_000u64;
+    assert!(
+        vol.write_is_single_shot(StreamLength::Known(declared)).await,
+        "precondition: the promised size goes out as one frame"
+    );
+    let grown = vec![vec![0x5Au8; 32 * 1024]; (max_write as usize / (32 * 1024)) + 2];
+    for (label, chunks) in [("grew", grown), ("shrank", vec![vec![0x5Au8; 400]])] {
+        let path = format!("{dir}/{label}.log");
+        let result = vol
+            .write_from_stream(
+                Path::new(&path),
+                WriteMode::CreateNew,
+                StreamLength::Known(declared),
+                Box::new(MisdeclaredStream {
+                    chunks: chunks.into(),
+                    declared,
+                    bytes_read: 0,
+                }),
+                &|_| std::ops::ControlFlow::Continue(()),
+            )
+            .await;
+
+        assert!(
+            matches!(result, Err(VolumeError::IoError { .. })),
+            "{label}: a source that broke its declared length fails the write; got {result:?}"
+        );
+        assert!(
+            !vol.exists(Path::new(&path)).await,
+            "{label}: nothing may be created at the real name"
+        );
+    }
+
+    ensure_clean(&vol, &dir).await;
+}
+
 #[tokio::test]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_write_progress_reports_confirmed_bytes_not_queued_ones() {

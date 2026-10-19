@@ -9,6 +9,7 @@ use super::mapping::{map_smb_error, user_flags_of};
 use super::session::update_state_on_smb_error;
 use super::stamping::{source_times, stamp_writer, stamped};
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, UserFlags};
+use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::volume::{
     ChannelReadStream, MutationEvent, StreamLength, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
@@ -113,6 +114,22 @@ pub(super) fn one_frame_write_limit(dest_is_scratch: bool, max_write: u64, quick
         quick_write_limit.min(max_write)
     } else {
         max_write
+    }
+}
+
+/// A source that yielded `got` bytes after declaring `StreamLength::Known(declared)`,
+/// refused the way the other backends' uploads refuse it. The copy engine holds
+/// its streams to the same promise before this sees them
+/// (`crates/cmdr-operations/src/transfer/volume/source_reads.rs`); this is the
+/// backend's own guard for every other caller.
+fn source_broke_its_length(smb_path: &str, got: u64, declared: u64) -> VolumeError {
+    VolumeError::IoError {
+        message: format!(
+            "{smb_path}: the source declared {} and yielded {}",
+            pluralize_grouped(declared, "byte"),
+            pluralize_grouped(got, "byte")
+        ),
+        raw_os_error: None,
     }
 }
 
@@ -534,6 +551,12 @@ impl SmbVolume {
                         // partial on the server. Just propagate.
                         let chunk = chunk_result?;
                         buffer.extend_from_slice(&chunk);
+                        // A source still growing (a log, a download finishing)
+                        // is refused the moment it outruns its promise, before
+                        // anything is opened and without buffering the rest.
+                        if buffer.len() as u64 > size {
+                            return Err(source_broke_its_length(&smb_path, buffer.len() as u64, size));
+                        }
                         // Fire progress per chunk AND honor cancellation, so
                         // the fast-path has the same cancel/progress contract
                         // as the streaming fallback below. Cancel here aborts
@@ -548,74 +571,67 @@ impl SmbVolume {
                             return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()));
                         }
                     }
-                    // The drained bytes, not the promised count, decide: a
-                    // source that yielded short still goes out as one frame.
-                    if fits_one_compound_write(limit, buffer.len() as u64) {
-                        debug!(
-                            "SmbVolume::write_from_stream: using compound fast-path ({} bytes)",
-                            buffer.len()
-                        );
-                        // `CreateNew` asks the server for `FileCreate`, so a name
-                        // someone else took while we drained is refused whole
-                        // (`STATUS_OBJECT_NAME_COLLISION` on the CREATE, nothing
-                        // opened, nothing written) and never replaced. That
-                        // refusal is a CREATE failure, so the cleanup below leaves
-                        // their file alone.
-                        let write_result = match mode {
-                            WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder => {
-                                tree.write_file_compound_exclusive(&mut conn, &smb_path, &buffer).await
-                            }
-                            WriteMode::CreateOrReplace => tree.write_file_compound(&mut conn, &smb_path, &buffer).await,
-                        };
-                        if dest_is_scratch && matches!(write_result, Err(smb2::Error::CreditStarvation { .. })) {
-                            // The window shrank after the limit was read, and
-                            // smb2 refused the frame before anything reached the
-                            // wire. A staging temp can take the bytes streamed
-                            // (the streaming writer below honors `mode` too); the
-                            // real name can't, so that one surfaces the error
-                            // below with nothing written, whichever `mode`.
-                            debug!(
-                                "SmbVolume::write_from_stream: the credit window can't fund one compound write; streaming the drained {} bytes instead",
-                                buffer.len()
-                            );
-                        } else {
-                            if create_succeeded_but_write_failed(&write_result) {
-                                // The server created (hence truncated) the file and
-                                // then refused the bytes: out of space, over quota,
-                                // a lost lease. What's left is a 0-byte file that
-                                // may be wearing the user's real filename, since
-                                // this write was allowed to skip staging. Take it
-                                // away. A CREATE failure needs no cleanup: nothing
-                                // was created, and any existing file at that name
-                                // is still untouched, so a delete there would be
-                                // data loss.
-                                delete_partial().await;
-                            }
-                            let written =
-                                self.handle_smb_result("write_from_stream(compound)", &smb_path, write_result)?;
-                            // The frame's CLOSE already stamped the server's own
-                            // dates, so these go by path, after it. Best effort,
-                            // like `stamp_writer`.
-                            if let Some(times) = times
-                                && let Err(e) = tree.set_times(&mut conn, &smb_path, times).await
-                            {
-                                warn!(
-                                    "SmbVolume::write_from_stream: path={smb_path:?} keeps the server's date, not the source's: {e}"
-                                );
-                                times_refused = true;
-                            }
-                            break 'write written;
-                        }
+                    // A source that came up short is refused too: `Known(size)`
+                    // promises exactly `size` bytes, and the frame below is
+                    // the file the user gets under that name (#520).
+                    if buffer.len() as u64 != size {
+                        return Err(source_broke_its_length(&smb_path, buffer.len() as u64, size));
                     }
-                    // The source yielded MORE than one frame can carry (it
-                    // reported a smaller size than it had), or the window
-                    // refused the frame for a staging temp. Feed the drained
-                    // buffer through the streaming writer on the same cloned
-                    // connection. No lock acquired; this is the rare path.
                     debug!(
-                        "SmbVolume::write_from_stream: {} drained bytes ({} expected) don't go out as one frame; falling back to streaming writer",
-                        buffer.len(),
-                        size
+                        "SmbVolume::write_from_stream: using compound fast-path ({} bytes)",
+                        buffer.len()
+                    );
+                    // `CreateNew` asks the server for `FileCreate`, so a name
+                    // someone else took while we drained is refused whole
+                    // (`STATUS_OBJECT_NAME_COLLISION` on the CREATE, nothing
+                    // opened, nothing written) and never replaced. That
+                    // refusal is a CREATE failure, so the cleanup below leaves
+                    // their file alone.
+                    let write_result = match mode {
+                        WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder => {
+                            tree.write_file_compound_exclusive(&mut conn, &smb_path, &buffer).await
+                        }
+                        WriteMode::CreateOrReplace => tree.write_file_compound(&mut conn, &smb_path, &buffer).await,
+                    };
+                    if !(dest_is_scratch && matches!(write_result, Err(smb2::Error::CreditStarvation { .. }))) {
+                        if create_succeeded_but_write_failed(&write_result) {
+                            // The server created (hence truncated) the file and
+                            // then refused the bytes: out of space, over quota,
+                            // a lost lease. What's left is a 0-byte file that
+                            // may be wearing the user's real filename, since
+                            // this write was allowed to skip staging. Take it
+                            // away. A CREATE failure needs no cleanup: nothing
+                            // was created, and any existing file at that name
+                            // is still untouched, so a delete there would be
+                            // data loss.
+                            delete_partial().await;
+                        }
+                        let written = self.handle_smb_result("write_from_stream(compound)", &smb_path, write_result)?;
+                        // The frame's CLOSE already stamped the server's own
+                        // dates, so these go by path, after it. Best effort,
+                        // like `stamp_writer`.
+                        if let Some(times) = times
+                            && let Err(e) = tree.set_times(&mut conn, &smb_path, times).await
+                        {
+                            warn!(
+                                "SmbVolume::write_from_stream: path={smb_path:?} keeps the server's date, not the source's: {e}"
+                            );
+                            times_refused = true;
+                        }
+                        break 'write written;
+                    }
+                    // The window shrank after the limit was read, and smb2
+                    // refused the frame before anything reached the wire. A
+                    // staging temp can take the bytes streamed (the streaming
+                    // writer below honors `mode` too); the real name can't, so
+                    // that one surfaced the error above with nothing written,
+                    // whichever `mode`. ❌ This is the ONLY way a drained
+                    // buffer reaches the streaming writer: a real name never
+                    // streams, or a drop mid-stream leaves a truncated file
+                    // wearing the user's filename.
+                    debug!(
+                        "SmbVolume::write_from_stream: the credit window can't fund one compound write; streaming the drained {} bytes to the staging temp instead",
+                        buffer.len()
                     );
                     let writer_result = open_file_writer(&tree, conn, &smb_path, mode).await;
                     let mut writer = self.handle_smb_result("write_from_stream(open)", &smb_path, writer_result)?;

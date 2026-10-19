@@ -337,7 +337,10 @@ pub(super) async fn stream_pipe_file(
                 // A SINGLE-SHOT write has no temp and needs none: the destination
                 // promised one indivisible frame, so dropping it leaves either the
                 // whole file or nothing, which is the same outcome the process
-                // dying produces.
+                // dying produces. That holds because the frame never turns into a
+                // stream at the real name: a source that broke its length fails
+                // before anything is created (`source_reads.rs`, and SMB's own
+                // drain check, #520).
                 return Err(hard_abort_error(dest_path)).at_destination(dest_path);
             }
         };

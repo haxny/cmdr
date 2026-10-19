@@ -754,6 +754,15 @@ the check and the send:
   promise could have covered, and a refused frame there fails the write with nothing at the name. ❌ Never let a refused
   frame to a non-scratch name fall back to streaming: that name only gets a frame because the transfer skipped staging
   on a single-shot promise.
+- **The drained buffer must be exactly the promised size, or nothing is opened** (`source_broke_its_length`). A source
+  still growing (a log, a recording, a download finishing) is refused the moment it outruns `Known(size)`, before any
+  CREATE and without buffering the rest; one that came up short is refused after the drain. Before this, a buffer that
+  outgrew one frame fell through to the multi-round-trip streaming writer AT THE REAL NAME, so a drop or a quit in those
+  round trips left a truncated file wearing the user's filename (#520). So the only drained buffer that ever streams is
+  a `.cmdr-tmp-*` temp's, after a `CreditStarvation`. The copy engine already holds its streams to their length
+  (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A source is held to its declared length"); this guard is
+  the backend's own, for every other caller. Pinned by
+  `smb_integration_a_single_shot_source_that_breaks_its_length_creates_nothing` against `smb-consumer-maxreadsize`.
 - Pinned by the `credit_cap_proxy.rs` cells in `wire_shape_integration_test.rs` (hinted read, staged write, refused
   final-name write in both `WriteMode`s, refused frame to a taken name, `CreateNew` temp streaming without clobbering,
   prefetch), which cap the guest fixture's window at 64 credits. smb2 pins the same against a real 64-credit Samba (its
