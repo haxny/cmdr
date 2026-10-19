@@ -183,8 +183,8 @@ const MAX_STEPS: u32 = MAX_REGIONS * 2;
 /// nonsense: tags above 255, region counts an order of magnitude short, and a
 /// fresh 9 MiB allocation nowhere in the map (verified on macOS 26.5, 2026-08-21).
 #[repr(C, packed(4))]
-struct VmRegionSubmapInfo64 {
-    protection: i32,
+pub(crate) struct VmRegionSubmapInfo64 {
+    pub(crate) protection: i32,
     max_protection: i32,
     inheritance: u32,
     offset: u64,
@@ -195,9 +195,9 @@ struct VmRegionSubmapInfo64 {
     pages_dirtied: u32,
     ref_count: u32,
     shadow_depth: u16,
-    external_pager: u8,
+    pub(crate) external_pager: u8,
     share_mode: u8,
-    is_submap: i32,
+    pub(crate) is_submap: i32,
     behavior: i32,
     object_id: u32,
     user_wired_count: u16,
@@ -210,7 +210,7 @@ unsafe extern "C" {
     /// Walk one entry of the task's VM map at or below `nesting_depth`, starting
     /// at `address`. Returns `KERN_INVALID_ADDRESS` past the last entry, which is
     /// what ends the walk.
-    fn mach_vm_region_recurse(
+    pub(crate) fn mach_vm_region_recurse(
         target_task: libc::mach_port_t,
         address: *mut u64,
         size: *mut u64,

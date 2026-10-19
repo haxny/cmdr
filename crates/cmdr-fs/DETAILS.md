@@ -73,6 +73,8 @@ the next section.
   and model-facing answers read), `thread_qos`, `thread_cpu`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a
   keep-alive pool of `Utility`-QoS threads, so background work that comes in streams, like index walks, reuses threads
   instead of creating one per job).
+- `mapped_file_faults/`: the SIGBUS recovery that turns a read of a mapped file whose disk went away into zeros, and the
+  generation a reader checks to distrust what it read meanwhile. § "Mapped-file faults".
 - `testing/`: behind the `testing` feature. `TestDir`, the two waits, and `unique_test_id` (a pid-and-counter key for a
   test-owned entry in a global map) in `mod.rs`; `tcp_proxy.rs` (`TcpProxy`, a loopback proxy a network backend's test
   puts in front of a shared Docker fixture to cut the connection, refused or silent, without touching a container other
@@ -132,6 +134,9 @@ through a local helper, a fully-qualified call inline in an expression, a `use` 
   them as well as the app's copy engines, so they can't live under `transfer/`.
 - **`benchmark`.** Pure `std` diagnostics behind an env var, called by the listing engine, the local reader, and the
   app's IPC commands alike, so the one timeline can't live on either side of the listing-crate boundary.
+- **`mapped_file_faults`.** The crash reporter's signal handler calls it, and `cmdr-git` reads its generation; a crate
+  below both is the only place one counter can be written by the first and read by the second. The real-image cell that
+  proves it sits here too, beside `disk_images`.
 - **`wait_until` / `wait_until_async`.** Behind the `testing` feature. The rest of the app's `test_support.rs` can't
   follow: `COUNTING_ALLOCATOR` is a `#[global_allocator]`, and a second one in any binary linking this crate is a hard
   compile error.
@@ -944,3 +949,47 @@ would drift apart.
 - **Tests.** The pure decisions and the runner are default-suite unit tests. `real_images` attaches each spec for real,
   `#[ignore]`d in the `disk-image` nextest group, and runs with every real-image pin built on the harness in the opt-in
   `pnpm check disk-images` lane (`scripts/check/checks/DETAILS.md` § "The disk-image lane").
+
+## Mapped-file faults: a dead page reads as zeros
+
+`gix` maps pack files (plus `.idx`, the multi-pack index, the commit-graph, and packed-refs over 32 KiB), and Apple's
+ImageIO, QuickLook, and PDFKit map what they read. When the disk under such a mapping goes away (a pulled cable, a
+forced eject, a network volume dropping), the next read of a page that isn't resident raises SIGBUS, which used to kill
+Cmdr (`CRASH-33865`: a status walk decoding a mapped pack half a second after a USB volume unmounted). `gix` has no way
+to switch mapping off (GitHub #488 lists what was checked).
+
+**What happens instead.** The crash reporter's handler calls `mapped_file_faults::recover` first. On a SIGBUS whose
+address sits in a read-only, non-executable, file-backed region outside every loaded image, it maps one page of
+anonymous zeros over the faulting page with `MAP_FIXED`, bumps `generation()`, and returns. The load re-executes and
+reads zeros; a decoder sees corrupt data and errors out through its own path. Everything else goes on to the crash
+report.
+
+- **Sound because nothing unwinds.** No `longjmp`, no skipped Rust frame: the faulting instruction runs again on valid
+  memory. A reader that must not trust zeros compares `generation()` before and after (`cmdr-git`'s `fault_guard.rs`);
+  the counter is process-wide because the fault lands on whatever thread read the page, often one the reader doesn't
+  own.
+- **❗ Never a page of a loaded image.** Zeros in a code page execute as garbage, which is worse than the crash, so it
+  must still crash and be reported. macOS fills a lock-free range table from `_dyld_register_func_for_add_image` at
+  `prepare()` (normal context: the crash reporter's `install`), covering our binary, every dylib, and the shared cache;
+  an image whose extent can't be read, or a table that runs out of its 4,096 slots, switches recovery off. The shared
+  region is also a submap, which `mach_vm_region_recurse` at depth 0 reports as such, and a submap is never recovered.
+  Linux has no add-image callback, so it calls a file an image when the same `(device, inode)` is also mapped
+  executable.
+- **Never a writable mapping**: a write into the anonymous page would look committed and never reach the file, which is
+  silent data loss (SQLite's `-shm` is mapped writable). Never an executable or anonymous page either.
+- **Async-signal-safe.** Atomic loads, one `mmap`, and on macOS one `mach_vm_region_recurse` (a Mach trap through the
+  thread's MIG reply port, as crash reporters do from their own handlers); on Linux `open` / `read` / `close` of
+  `/proc/self/maps` into stack buffers, a line cut at 256 bytes (the fields read sit in the first 100).
+- **Linux gate**: `si_code == BUS_ADRERR`, what a read past a mapping's backing store raises. macOS reports this fault
+  as SIGBUS with `si_code` 1, so it gates on the region alone.
+
+**Evidence** (Darwin 27.0.0 arm64, a C probe and then `real_image.rs`, 2026-10-19): an 8 MiB file on a RAM disk, mapped,
+then `diskutil unmount force`: `mach_vm_region_recurse` still answers with `external_pager` set, 511 pages were
+recovered and read as zeros, and the process lived. Without the handler the same read dies of signal 10. A plain
+`diskutil unmount` fails while the mapping is open, which is why the unmount approver lets go of repos first
+(`apps/desktop/src-tauri/src/volumes/DETAILS.md` § "The unmount approver").
+
+**Tests.** The verdict, the range table, and the maps parser are pure cells in `tests.rs` (every host); the macOS cells
+prove the table holds our own code and libSystem and that a plain file mapping qualifies. `real_image.rs` force-detaches
+an APFS image under a live mapping, in the `pnpm check disk-images` lane. A consumer's cell moves the generation with
+`simulate_recovery` (behind `testing`).

@@ -43,6 +43,10 @@ testing = ["dep:tempfile", "dep:plist", "tokio/net", "tokio/io-util"]
 mimalloc = ["dep:mimalloc", "dep:libmimalloc-sys"]
 
 [dependencies]
+# Every Unix this crate builds on: the mapped-file fault recovery (`mmap`,
+# `siginfo_t`, `/proc/self/maps` on Linux) runs on both, and on macOS also Mach
+# `task_info`, the malloc-zone walk, and `pthread_set_qos_class_self_np`.
+libc = "0.2"
 # The digest half of every volume ID (`volume::ids`). Cryptographic on purpose:
 # an ID is identity, and a volume name is user-controlled, so a *chosen*
 # collision (name a USB stick so it steals another volume's index and saved
@@ -122,11 +126,6 @@ mimalloc = { version = "0.1", optional = true }
 mimalloc = "0.1"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-# Mach `task_info`, the malloc-zone walk, and `pthread_set_qos_class_self_np`.
-# macOS-only on purpose: every `libc::` call in this crate is behind
-# `#[cfg(target_os = "macos")]`, so declaring it for all of unix would make it an
-# unused crate dependency on Linux. `cfg-gate` watches this block.
-libc = "0.2"
 # The raw mimalloc FFI, for `mi_process_info` (how many bytes mimalloc has
 # committed) and the heap census's page walk. mimalloc is not a registered macOS
 # malloc zone, so `malloc_zone_statistics` can't see a mimalloc heap at all;

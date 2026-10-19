@@ -6,10 +6,10 @@ reporter's Flow B. Everything else: `error_reporter/`.
 ## Module map
 
 - **`mod.rs`**: report type, privacy transform, hook, and file I/O. **`next_launch.rs`**: previous-session assembly.
-  **`pending_delivery.rs`**: authoritative pending-file send and dismissal. **`contain.rs`**: parser exemption.
+  **`pending_delivery.rs`**: pending-file send and dismissal. **`contain.rs`**: parser exemption.
   **`panic_courier.rs`** / **`survival.rs`**: survived-panic delivery and amendments. **`signal_handler.rs`** /
-  **`symbolicate.rs`** / **`os_crash_report.rs`** / **`objc_exception.rs`** (an uncaught exception's reason, which the
-  `.ips` lacks): native crash evidence. Tests are siblings.
+  **`symbolicate.rs`** / **`os_crash_report.rs`** / **`objc_exception.rs`** (an uncaught exception's
+  reason): native crash evidence. Tests are siblings.
 - IPC: `commands/crash_reporter.rs`. Frontend: `src/lib/crash-reporter/`.
 
 Both paths write `crash-report.json` in the app data dir: the hook with full stdlib, the handler async-signal-safe.
@@ -47,6 +47,7 @@ Both paths write `crash-report.json` in the app data dir: the hook with full std
 
 ## Gotchas
 
+- **The handler recovers a dead mapped page first**, so ❌ no `SA_RESETHAND`. DETAILS § A dead mapped page.
 - **ASLR-randomized addresses mean nothing without the `image_base` shipped with them.** Resolve it at `install()` into
   an atomic; ❌ never call dyld from the handler. DETAILS § Image base.
 - **What we lift from macOS's own crash report is an ALLOWLIST** (exception + the faulting thread's frames), so a

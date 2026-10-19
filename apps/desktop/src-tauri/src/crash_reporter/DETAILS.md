@@ -377,6 +377,20 @@ the gap:
 - `panic_message` was the honest field to reuse: it's "the message the process died with", already redacted, capped,
   stored, and shown in the crash email, so no wire, schema, or policy change was needed.
 
+## A dead mapped page is recovered before anything is recorded
+
+The SIGBUS / SIGSEGV / SIGABRT handler's first call is `cmdr_fs::mapped_file_faults::recover`: a read of a mapped file
+whose disk went away (a `gix` pack on a pulled USB drive, `CRASH-33865`) gets a page of zeros and the handler returns,
+so the load runs again and the app lives. What qualifies, why a page of a loaded image never does, and the evidence:
+`crates/cmdr-fs/DETAILS.md` § "Mapped-file faults: a dead page reads as zeros".
+
+- **❌ No `SA_RESETHAND`.** A recovered fault returns, and the NEXT dead page (an 8 MiB pack is hundreds of them) must
+  find the handler still installed. The crash path calls `restore_default_action` first instead, which is what
+  `SA_RESETHAND` did, so the re-raise (or the re-executed fault) still ends the process.
+- **`prepare()` runs in `install`**, normal context, because it registers dyld callbacks; the handler only reads atomics.
+- **The handlers go in even when the raw crash file won't open**: recovery doesn't need it. With no fd, the crash path
+  re-raises with the default action restored, which is what having no handler at all did.
+
 ## Signal-handler limits we accept
 
 - **The pre-opened fd goes stale if the data dir is deleted while the app runs.** Acceptable: it takes deliberate user

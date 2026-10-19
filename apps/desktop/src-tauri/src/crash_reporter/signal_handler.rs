@@ -1,5 +1,9 @@
 //! Async-signal-safe capture of a native crash (SIGSEGV / SIGBUS / SIGABRT).
 //!
+//! One SIGBUS isn't a crash: a read of a mapped file whose disk went away is recovered first
+//! (`cmdr_fs::mapped_file_faults`), and the handler returns. `DETAILS.md` § "A dead mapped page
+//! is recovered before anything is recorded".
+//!
 //! Unix only, and a world apart from the panic hook next door: a signal handler may call
 //! nothing that allocates, locks, or formats. So this side writes fixed-width binary
 //! records to an fd opened at [`install`] time, and `crate::crash_reporter` turns them into
@@ -72,36 +76,25 @@ pub fn current_image_base() -> u64 {
 
 pub fn install(raw_crash_path: &Path) {
     // Pre-open the fd for the raw crash file. O_WRONLY | O_CREAT | O_TRUNC
-    // will be applied at write time by truncating to 0 first.
-    let path_cstr = match std::ffi::CString::new(raw_crash_path.as_os_str().as_encoded_bytes()) {
-        Ok(c) => c,
-        Err(_) => {
-            log::warn!("Crash reporter: invalid raw crash path, signal handlers not installed");
-            return;
-        }
-    };
-
-    // SAFETY: `path_cstr` is a valid, NUL-terminated C string (built above and held
-    // alive across the call). `open` returns a fresh fd or a negative value on failure,
-    // which we check below before storing it.
-    let fd = unsafe {
-        libc::open(
-            path_cstr.as_ptr(),
-            libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
-            0o644,
-        )
-    };
-    if fd < 0 {
-        log::warn!("Crash reporter: couldn't open raw crash file, signal handlers not installed");
-        return;
+    // will be applied at write time by truncating to 0 first. Without one the
+    // handlers still go in: a fault on a mapped file whose disk went away is
+    // recovered either way, and only the crash record is lost.
+    match open_raw_crash_file(raw_crash_path) {
+        Some(fd) => RAW_FD.store(fd, Ordering::SeqCst),
+        None => log::warn!("Crash reporter: couldn't open the raw crash file, so a native crash won't be recorded"),
     }
-    RAW_FD.store(fd, Ordering::SeqCst);
 
     // Resolve the ASLR base now, while we're still in normal context. The handler
     // can then just load the atomic (signal-safe); the dyld call itself is not.
     IMAGE_BASE.store(current_image_base(), Ordering::SeqCst);
+    // The same reason: the image table the mapped-file recovery reads is filled
+    // from dyld's callbacks, which only normal context may register.
+    cmdr_fs::mapped_file_faults::prepare();
 
-    // Register signal handlers for SIGSEGV, SIGBUS, SIGABRT
+    // Register signal handlers for SIGSEGV, SIGBUS, SIGABRT.
+    //
+    // ❌ No `SA_RESETHAND`: a recovered SIGBUS returns, and the next dead page has to
+    // find this handler still in place. The crash path restores the default itself.
     for sig in [libc::SIGSEGV, libc::SIGBUS, libc::SIGABRT] {
         // SAFETY: `action` is zeroed before use, so every field starts in a valid state;
         // `sigemptyset` then empties `sa_mask`. `sa_sigaction` points at `signal_handler`,
@@ -110,21 +103,60 @@ pub fn install(raw_crash_path: &Path) {
         unsafe {
             let mut action: libc::sigaction = std::mem::zeroed();
             action.sa_sigaction = signal_handler as *const () as usize;
-            action.sa_flags = libc::SA_SIGINFO | libc::SA_RESETHAND;
+            action.sa_flags = libc::SA_SIGINFO;
             libc::sigemptyset(&mut action.sa_mask);
             libc::sigaction(sig, &action, std::ptr::null_mut());
         }
     }
 }
 
-/// Async-signal-safe signal handler. Only uses write() and _exit().
-extern "C" fn signal_handler(sig: libc::c_int, _info: *mut libc::siginfo_t, _ctx: *mut libc::c_void) {
+/// The raw crash file, opened for the handler to write, or `None`.
+fn open_raw_crash_file(raw_crash_path: &Path) -> Option<RawFd> {
+    let path_cstr = std::ffi::CString::new(raw_crash_path.as_os_str().as_encoded_bytes()).ok()?;
+    // SAFETY: `path_cstr` is a valid, NUL-terminated C string (built above and held
+    // alive across the call). `open` returns a fresh fd or a negative value on failure,
+    // which we check below.
+    let fd = unsafe {
+        libc::open(
+            path_cstr.as_ptr(),
+            libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+            0o644,
+        )
+    };
+    (fd >= 0).then_some(fd)
+}
+
+/// Puts `sig` back on its default action. `sigaction` is async-signal-safe.
+fn restore_default_action(sig: libc::c_int) {
+    // SAFETY: a zeroed `sigaction` is `SIG_DFL` with an empty mask and no flags, a valid
+    // value to install; the null `oldact` pointer is allowed.
+    unsafe {
+        let action: libc::sigaction = std::mem::zeroed();
+        libc::sigaction(sig, &action, std::ptr::null_mut());
+    }
+}
+
+/// Async-signal-safe signal handler. Only uses atomics, `write()`, and the calls
+/// `mapped_file_faults::recover` documents.
+extern "C" fn signal_handler(sig: libc::c_int, info: *mut libc::siginfo_t, _ctx: *mut libc::c_void) {
+    // A read of a mapped file whose disk went away isn't a crash: the page becomes
+    // zeros and the load runs again. It never takes a page of a loaded image, so a
+    // code-page fault still lands below.
+    // SAFETY: called from this signal handler with the kernel's own `siginfo_t`.
+    if unsafe { cmdr_fs::mapped_file_faults::recover(sig, info) } {
+        return;
+    }
+    // From here it's a crash. Restoring the default first is what `SA_RESETHAND`
+    // used to do, so the re-raise below (or a fault re-executing) ends the process.
+    restore_default_action(sig);
+
     let fd = RAW_FD.load(Ordering::SeqCst);
     if fd < 0 {
-        // SAFETY: `_exit` is async-signal-safe and never returns; no allocation or
-        // locking on this path. Reached only when no fd was opened, so there's nothing
-        // to write.
-        unsafe { libc::_exit(128 + sig) };
+        // No file to record into. The raise stays pending while the handler runs
+        // and kills the process on return, exactly as with no handler at all.
+        // SAFETY: `raise` is async-signal-safe; no allocation or locking on this path.
+        unsafe { libc::raise(sig) };
+        return;
     }
 
     // Seek to beginning and truncate.

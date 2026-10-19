@@ -35,6 +35,7 @@ pub mod icons;
 pub mod ignore_poison;
 pub mod log_detail;
 pub mod log_rollup;
+pub mod mapped_file_faults;
 pub mod metadata;
 pub mod name_fold;
 pub mod path_hash;
