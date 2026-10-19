@@ -45,10 +45,7 @@ use super::super::super::host::OperationErrorReport;
 use super::super::super::journal;
 use super::super::super::ledger::WrittenFile;
 use super::super::super::state::WriteOperationState;
-use super::super::super::types::{
-    SourceItemOutcome, VolumeCopyConfig, WriteOperationError, WriteOperationPhase, WriteOperationType,
-    WriteProgressEvent,
-};
+use super::super::super::types::{SourceItemOutcome, VolumeCopyConfig, WriteOperationError};
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::{LeafProgressLedger, emit_source_outcome};
 use super::super::transfer_probe::OperationProbe;
@@ -93,14 +90,11 @@ pub(super) struct ConcurrentCopy<'a> {
     pub(super) dest_index: &'a Option<DestNameIndex>,
     pub(super) pre_skip_paths: &'a HashSet<PathBuf>,
     pub(super) source_hints: &'a HashMap<PathBuf, SourceHint>,
-    pub(super) total_files: usize,
-    pub(super) total_bytes: u64,
     pub(super) progress_interval: Duration,
     /// Real (source, dest) volume ids for the operation-log journal. `None` for
     /// the both-local shortcut and in tests that install no journal.
     pub(super) journal_volumes: &'a Option<(String, String)>,
     pub(super) op_probe: &'a Option<Arc<OperationProbe>>,
-    pub(super) files_done_atomic: Arc<AtomicUsize>,
     pub(super) leaf_ledger: Arc<LeafProgressLedger>,
     pub(super) files_skipped_atomic: Arc<AtomicUsize>,
     pub(super) bytes_skipped_atomic: Arc<AtomicU64>,
@@ -641,35 +635,15 @@ impl Settlements {
                 .push(WrittenFile::volume(recorded_path, bytes));
         }
         // Per-file milestone emit. The task's `on_file_complete` bumped
-        // `files_done_atomic`; the FE's files-axis needs a Copying event that
+        // the ledger's `files_done`; the FE's files-axis needs a Copying event that
         // observes the bumped value, but no chunked emit fires after
         // `on_file_complete` (the file's transfer is over). Mirrors the serial
         // path's milestone in `transfer_driver.rs::drive_transfer_serial_async`.
+        // Through the ledger, ❌ never a hand-built event: the other tasks are
+        // still streaming, so only the ledger's ordered emit keeps this one from
+        // landing behind (or under) theirs.
         *ctx.last_progress_mutex.lock_ignore_poison() = Instant::now();
-        let current_files = ctx.files_done_atomic.load(Ordering::Relaxed);
-        let current_bytes = ctx.leaf_ledger.finished_bytes();
-        ctx.state.emit_progress_via_sink(
-            &*ctx.events,
-            WriteProgressEvent::new(
-                ctx.operation_id.to_string(),
-                WriteOperationType::Copy,
-                WriteOperationPhase::Copying,
-                file_name_done.clone(),
-                current_files,
-                ctx.total_files,
-                current_bytes,
-                ctx.total_bytes,
-            ),
-        );
-        ctx.state.scope().status().update(
-            ctx.operation_id,
-            WriteOperationPhase::Copying,
-            file_name_done,
-            current_files,
-            ctx.total_files,
-            current_bytes,
-            ctx.total_bytes,
-        );
+        ctx.leaf_ledger.emit(file_name_done, ctx.leaf_ledger.current());
     }
 
     /// One source failed: drop its in-flight partial, thread its rollback ledger

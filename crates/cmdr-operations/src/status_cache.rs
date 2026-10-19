@@ -179,8 +179,8 @@ impl StatusCache {
     /// can change), so it's panic-safe: unregister runs from the manager's
     /// `ManagedTaskGuard` / external-seam cleanup that fires even on unwind.
     ///
-    /// Compute, dedupe, and report run under the dedupe lock, the one engine
-    /// lock a seam is called under: the busy set is a state change and the
+    /// Compute, dedupe, and report run under the dedupe lock, one of the two
+    /// engine locks a seam is called under (`host/CLAUDE.md`): the busy set is a state change and the
     /// report is its announcement, so they have to be one step. Outside it, two
     /// racing updates could report an older set last, and the volume picker
     /// would offer Eject on a drive a transfer just started on (the backend's

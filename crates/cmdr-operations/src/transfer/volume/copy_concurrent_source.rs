@@ -18,7 +18,7 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 
-use super::super::super::types::{SourceItemOutcome, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use super::super::super::types::SourceItemOutcome;
 use super::super::transfer_driver::emit_source_outcome;
 use super::super::volume_outage::through_outages;
 use super::conflict::{ResolvedConflict, resolve_volume_conflict};
@@ -414,9 +414,10 @@ impl ConcurrentCopy<'_> {
             .get(source_path)
             .map(|h| if h.is_directory { 0 } else { h.size })
             .unwrap_or(0);
-        let new_files = self.files_done_atomic.fetch_add(1, Ordering::Relaxed) + 1;
-        self.leaf_ledger.credit_finished(hint_size);
-        let new_bytes = self.leaf_ledger.finished_bytes();
+        // Through the ledger, which bumps `files_done` too: the tasks already in
+        // the window report into it from other threads, and only its ordered
+        // emit keeps this tick from landing behind theirs.
+        let snapshot = self.leaf_ledger.credit_skipped_source(hint_size);
         self.files_skipped_atomic.fetch_add(1, Ordering::Relaxed);
         self.bytes_skipped_atomic.fetch_add(hint_size, Ordering::Relaxed);
 
@@ -424,27 +425,9 @@ impl ConcurrentCopy<'_> {
         if last.elapsed() >= self.progress_interval {
             *last = Instant::now();
             drop(last);
-            self.state.emit_progress_via_sink(
-                &*self.events,
-                WriteProgressEvent::new(
-                    self.operation_id.to_string(),
-                    WriteOperationType::Copy,
-                    WriteOperationPhase::Copying,
-                    source_path.file_name().map(|n| n.to_string_lossy().to_string()),
-                    new_files,
-                    self.total_files,
-                    new_bytes,
-                    self.total_bytes,
-                ),
-            );
-            self.state.scope().status().update(
-                self.operation_id,
-                WriteOperationPhase::Copying,
+            self.leaf_ledger.emit(
                 source_path.file_name().map(|n| n.to_string_lossy().to_string()),
-                new_files,
-                self.total_files,
-                new_bytes,
-                self.total_bytes,
+                snapshot,
             );
         }
     }

@@ -62,12 +62,24 @@ struct Totals {
     finished: u64,
     /// The sum of every in-flight leaf's high-water mark.
     in_flight: u64,
+    /// Numbers every [`Snapshot`] taken, so the emit can tell an older one
+    /// from a newer one however they race to the sink.
+    seq: u64,
 }
 
 impl Totals {
     fn reported(&self) -> u64 {
         self.finished + self.in_flight
     }
+}
+
+/// The two counters an event carries, read together under the ledger's lock,
+/// and which reading this was.
+#[derive(Clone, Copy)]
+pub(in crate::transfer) struct Snapshot {
+    seq: u64,
+    files_done: usize,
+    bytes_done: u64,
 }
 
 /// Operation-wide leaf accounting. See the module header for the split.
@@ -80,6 +92,10 @@ pub(in crate::transfer) struct LeafProgressLedger {
     operation_id: String,
     operation_type: WriteOperationType,
     totals: Mutex<Totals>,
+    /// The [`Snapshot::seq`] of the newest event sent. Held ACROSS the send,
+    /// so events reach the sink in the order their totals were taken; see
+    /// [`Self::emit`].
+    sent: Mutex<u64>,
     /// Operation-wide completed-leaf counter, shared with the drivers (which
     /// seed it with the bulk-skipped leaves and read it for their own events).
     files_done: Arc<AtomicUsize>,
@@ -116,8 +132,10 @@ impl LeafProgressLedger {
             totals: Mutex::new(Totals {
                 finished: 0,
                 in_flight: 0,
+                seq: 0,
             }),
             files_done,
+            sent: Mutex::new(0),
             total_files,
             total_bytes,
             progress_interval,
@@ -139,8 +157,10 @@ impl LeafProgressLedger {
             totals: Mutex::new(Totals {
                 finished: 0,
                 in_flight: 0,
+                seq: 0,
             }),
             files_done: Arc::new(AtomicUsize::new(0)),
+            sent: Mutex::new(0),
             total_files: 0,
             total_bytes: 0,
             progress_interval: Duration::ZERO,
@@ -205,10 +225,57 @@ impl LeafProgressLedger {
         self.totals.lock_ignore_poison().finished
     }
 
-    fn emit(&self, file_name: Option<String>, files_done: usize, bytes_done: u64) {
+    /// Reads both counters as one [`Snapshot`]. ❗ Callers hold the totals lock,
+    /// and bump `files_done` under it first, so a snapshot's two counters and
+    /// its number always agree.
+    fn snapshot(&self, totals: &mut Totals) -> Snapshot {
+        totals.seq += 1;
+        Snapshot {
+            seq: totals.seq,
+            files_done: self.files_done.load(Ordering::Relaxed),
+            bytes_done: totals.reported(),
+        }
+    }
+
+    /// The counters as they stand right now, for a driver's own milestone event.
+    pub(in crate::transfer) fn current(&self) -> Snapshot {
+        self.snapshot(&mut self.totals.lock_ignore_poison())
+    }
+
+    /// Credits a whole top-level source the conflict policy declined: its
+    /// bytes, and one file on the done axis.
+    pub(in crate::transfer) fn credit_skipped_source(&self, bytes: u64) -> Snapshot {
+        let mut totals = self.totals.lock_ignore_poison();
+        totals.finished += bytes;
+        self.files_done.fetch_add(1, Ordering::Relaxed);
+        self.snapshot(&mut totals)
+    }
+
+    /// Sends one progress event, ❌ never one OLDER than an event already sent.
+    ///
+    /// The copy tasks report from several threads at once, and each takes its
+    /// snapshot under the totals lock but sends after letting go of it, so an
+    /// older total could reach the sink after a newer one: the bars would step
+    /// back, the ETA estimator would read negative throughput, and the stall
+    /// watchdog (which reads the newest SENT event, `state.last_progress`) would
+    /// see bytes un-move. So the send runs under `sent`, and a snapshot that lost
+    /// the race is dropped: the newer one already carries everything it had.
+    /// Nothing is lost at the end, because the newest snapshot is never the one
+    /// dropped. Terminal events don't come through here.
+    ///
+    /// Holding a lock across a sink call is the ONE other exception to
+    /// `src/host/CLAUDE.md`'s rule, for the same reason as the busy set's: a
+    /// stale event must never land last. `sent` guards nothing else and is
+    /// taken nowhere else, so nothing can wait on it in a cycle.
+    pub(in crate::transfer) fn emit(&self, file_name: Option<String>, snapshot: Snapshot) {
         let Some(events) = self.events.as_ref() else {
             return;
         };
+        let mut sent = self.sent.lock_ignore_poison();
+        if snapshot.seq < *sent {
+            return;
+        }
+        *sent = snapshot.seq;
         emit_progress_and_status(
             &**events,
             &self.state,
@@ -216,9 +283,9 @@ impl LeafProgressLedger {
             self.operation_type,
             WriteOperationPhase::Copying,
             file_name,
-            files_done,
+            snapshot.files_done,
             self.total_files,
-            bytes_done,
+            snapshot.bytes_done,
             self.total_bytes,
         );
     }
@@ -279,19 +346,19 @@ impl SourceProgress {
     pub(in crate::transfer) fn skip_leaf(&self, leaf_bytes: u64, node: Option<NodeId>) {
         let ledger = &self.ledger;
         ledger.tree.skip_whole(node);
-        let reported = {
+        let snapshot = {
             let mut totals = ledger.totals.lock_ignore_poison();
             totals.finished += leaf_bytes;
-            totals.reported()
+            ledger.files_done.fetch_add(1, Ordering::Relaxed);
+            ledger.snapshot(&mut totals)
         };
-        let files_done = ledger.files_done.fetch_add(1, Ordering::Relaxed) + 1;
         ledger.state.note_skipped(1, leaf_bytes);
         // The bool says whether the throttle let this tick through, and a skip
         // has nothing to do about either answer: the counters are credited
         // above, and the completion event carries the final tally whatever the
         // throttle ate.
         // allowed-discarded-outcome: whether this tick was throttled changes nothing here.
-        try_emit_throttled(self, files_done, reported);
+        try_emit_throttled(self, snapshot);
     }
 }
 
@@ -328,7 +395,7 @@ impl LeafProgress {
         if ledger.state.intent().is_cancelled() {
             return ControlFlow::Break(());
         }
-        let reported = {
+        let snapshot = {
             let mut totals = ledger.totals.lock_ignore_poison();
             // Under the ledger's lock, so the sum and this leaf's share of it
             // always agree. Only this leaf's own task writes the mark.
@@ -338,12 +405,11 @@ impl LeafProgress {
                 high_water.store(file_bytes_done, Ordering::Relaxed);
                 totals.in_flight += file_bytes_done - previous;
             }
-            totals.reported()
+            ledger.snapshot(&mut totals)
         };
-        let files_done = ledger.files_done.load(Ordering::Relaxed);
         // Whether the throttle let this tick through changes nothing: the
         // counters are credited above either way.
-        try_emit_throttled(&self.source, files_done, reported);
+        try_emit_throttled(&self.source, snapshot);
         ControlFlow::Continue(())
     }
 
@@ -359,16 +425,16 @@ impl LeafProgress {
     /// without this a single large leaf would never cross `N/N`.
     pub(in crate::transfer) fn complete(self, leaf_bytes: u64) {
         let ledger = &self.source.ledger;
-        let reported = {
+        let snapshot = {
             let mut totals = ledger.totals.lock_ignore_poison();
             totals.in_flight -= self.withdraw_share();
             totals.finished += leaf_bytes;
-            totals.reported()
+            ledger.files_done.fetch_add(1, Ordering::Relaxed);
+            ledger.snapshot(&mut totals)
         };
-        let files_done = ledger.files_done.fetch_add(1, Ordering::Relaxed) + 1;
         self.row.complete();
         *self.source.last_emit.lock_ignore_poison() = Instant::now();
-        ledger.emit(self.source.file_name.clone(), files_done, reported);
+        ledger.emit(self.source.file_name.clone(), snapshot);
     }
 
     /// This leaf's contribution to the in-flight sum, claimed exactly once.
@@ -403,17 +469,17 @@ impl Drop for LeafProgress {
 /// call was suppressed by the throttle.
 ///
 /// Two callers racing on the gate can both succeed; over-emission is fine — the
-/// throttle protects the *floor* event rate, not a strict ceiling. The Mutex is
-/// released before the emit (which may take its own internal locks for the ETA
-/// estimator and status cache), so the gate never serializes downstream emits.
-fn try_emit_throttled(source: &SourceProgress, files_done: usize, bytes_done: u64) -> bool {
+/// throttle protects the *floor* event rate, not a strict ceiling. The gate's
+/// Mutex is released before the emit; the emit orders itself
+/// ([`LeafProgressLedger::emit`]).
+fn try_emit_throttled(source: &SourceProgress, snapshot: Snapshot) -> bool {
     let mut last = source.last_emit.lock_ignore_poison();
     if last.elapsed() < source.ledger.progress_interval {
         return false;
     }
     *last = Instant::now();
     drop(last);
-    source.ledger.emit(source.file_name.clone(), files_done, bytes_done);
+    source.ledger.emit(source.file_name.clone(), snapshot);
     true
 }
 

@@ -427,3 +427,54 @@ async fn a_top_level_conflict_prompt_holds_back_its_source_and_every_later_one()
     assert!(dest.exists(Path::new("/a-first.bin")).await);
     assert!(dest.exists(Path::new("/c-later.bin")).await);
 }
+
+/// Progress from several top-level tasks streaming in parallel never steps
+/// backwards, on either bar.
+///
+/// The tasks are spawned, so they report from different threads at once. Each
+/// total is worked out under the ledger's lock, but an event built from an older
+/// total could still reach the sink after a newer one, and the dialog's bars,
+/// its ETA, and the stall watchdog would all read the reversal as lost work.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn progress_from_parallel_tasks_never_steps_backwards() {
+    let engine = TestOperations::new();
+    let (source, dest) = make_volumes();
+    let paths: Vec<PathBuf> = (0..16).map(|i| PathBuf::from(format!("/par_{i:02}.bin"))).collect();
+    for (i, path) in paths.iter().enumerate() {
+        source.create_file(path, &vec![i as u8; 256 * 1024]).await.unwrap();
+    }
+
+    let events = Arc::new(CollectorEventSink::new());
+    let state = make_state(&engine);
+    let config = VolumeCopyConfig {
+        progress_interval_ms: 0,
+        ..VolumeCopyConfig::default()
+    };
+    copy_volumes_with_progress(
+        events.clone(),
+        "op-parallel-progress",
+        &state,
+        source,
+        &paths,
+        dest,
+        Path::new("/"),
+        &config,
+    )
+    .await
+    .expect("the batch copies");
+
+    let progress = events.progress.lock().unwrap();
+    let copying: Vec<(usize, u64)> = progress
+        .iter()
+        .filter(|p| p.phase == WriteOperationPhase::Copying)
+        .map(|p| (p.files_done, p.bytes_done))
+        .collect();
+    for pair in copying.windows(2) {
+        assert!(
+            pair[0].0 <= pair[1].0 && pair[0].1 <= pair[1].1,
+            "(files_done, bytes_done) stepped back from {:?} to {:?}",
+            pair[0],
+            pair[1]
+        );
+    }
+}

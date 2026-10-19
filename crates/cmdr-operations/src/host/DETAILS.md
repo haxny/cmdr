@@ -87,10 +87,12 @@ inside it names the app's accessor.
   `InstantMutationFact` of categories only), an error report, and the scan bridge's scanning-phase `write-progress` (one
   op's event, but the preview's worker that produces it holds no op's sink). Per-op events stay on `OperationEventSink`.
   Every method is required and returns at once, and is called with no engine lock held, with one exception: the busy set
-  reports under its dedupe lock, so a stale set can never land last (`host/events.rs`). **Decision: one seam for every
-  engine-wide fact**, as `cmdr-index` routes its own through one `EventSink`. The instant-op analytics go here too, not
-  through `VolumeHost::analytics()`: that seam's `&[(&str, &str)]` pairs are for backend counters, and the count bucket
-  and property types are app policy.
+  reports under its dedupe lock, so a stale set can never land last (`host/events.rs`). (The per-op sink has the one
+  other: a transfer's progress emits under its ledger's `sent` lock, for the same reason;
+  `transfer/transfer_driver/progress.rs::LeafProgressLedger::emit`.) **Decision: one seam for every engine-wide fact**,
+  as `cmdr-index` routes its own through one `EventSink`. The instant-op analytics go here too, not through
+  `VolumeHost::analytics()`: that seam's `&[(&str, &str)]` pairs are for backend counters, and the count bucket and
+  property types are app policy.
 - **Error reports are typed facts** (`host/error_report.rs`): the engine never calls `log_error!` (the app's macro, at
   its crate root), it names what happened as an `OperationErrorReport`, grouped by what it means for the person: an op
   failed, a displaced original is stranded under its aside name, a transfer is stuck on a silent backend, or a contained
