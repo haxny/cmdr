@@ -60,8 +60,8 @@ func TestGatedRegexpAgreesWithItsRegexp(t *testing.T) {
 			if gated.MatchString(line) != re.MatchString(line) {
 				t.Errorf("%q on %q: gated %v, regexp %v", expr, line, gated.MatchString(line), re.MatchString(line))
 			}
-			if (gated.FindStringSubmatch(line) == nil) != (re.FindStringSubmatch(line) == nil) {
-				t.Errorf("%q on %q: FindStringSubmatch disagrees", expr, line)
+			if (gated.FindAllStringSubmatch(line, -1) == nil) != (re.FindAllStringSubmatch(line, -1) == nil) {
+				t.Errorf("%q on %q: FindAllStringSubmatch disagrees", expr, line)
 			}
 		}
 	}

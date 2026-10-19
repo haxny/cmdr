@@ -41,13 +41,6 @@ func (g gatedRegexp) MatchString(s string) bool {
 	return g.passes(s) && g.re.MatchString(s)
 }
 
-func (g gatedRegexp) FindStringSubmatch(s string) []string {
-	if !g.passes(s) {
-		return nil
-	}
-	return g.re.FindStringSubmatch(s)
-}
-
 func (g gatedRegexp) FindAllStringSubmatch(s string, n int) [][]string {
 	if !g.passes(s) {
 		return nil
@@ -60,13 +53,6 @@ func (g gatedRegexp) FindStringIndex(s string) []int {
 		return nil
 	}
 	return g.re.FindStringIndex(s)
-}
-
-func (g gatedRegexp) FindAllStringIndex(s string, n int) [][]int {
-	if !g.passes(s) {
-		return nil
-	}
-	return g.re.FindAllStringIndex(s, n)
 }
 
 func (g gatedRegexp) FindAllStringSubmatchIndex(s string, n int) [][]int {
