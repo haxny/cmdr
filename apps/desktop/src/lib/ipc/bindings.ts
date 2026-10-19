@@ -19098,6 +19098,13 @@ export type WriteOperationError =
    *  the zip, `name` the shared entry name.
    */
   | { type: 'archive_duplicate_entry_name'; path: string; name: string }
+  /**
+   *  The edit would have to keep a password-protected entry of the zip, and
+   *  the rewrite can't copy one without losing its encrypted flag (the bytes
+   *  would read back as garbage). Refused before anything is written; deleting
+   *  the entry is fine. `path` is the zip, `name` the entry.
+   */
+  | { type: 'archive_encrypted_entry'; path: string; name: string }
   | { type: 'symlink_loop'; path: string }
   | { type: 'cancelled'; message: string }
   /**

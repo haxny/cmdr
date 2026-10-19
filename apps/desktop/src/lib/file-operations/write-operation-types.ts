@@ -211,6 +211,9 @@ export type WriteOperationError =
   // The zip being edited holds two entries under one name, and a rewrite would
   // drop the earlier one. Refused before anything is written.
   | { type: 'archive_duplicate_entry_name'; path: string; name: string }
+  // The edit would have to keep a password-protected entry, which the rewrite
+  // can't copy intact. Refused before anything is written.
+  | { type: 'archive_encrypted_entry'; path: string; name: string }
   | { type: 'symlink_loop'; path: string }
   | { type: 'cancelled'; message: string }
   // `side` is null for a backend session that dropped (MTP, SMB), which has no

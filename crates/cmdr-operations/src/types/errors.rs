@@ -305,6 +305,14 @@ pub enum WriteOperationError {
         path: String,
         name: String,
     },
+    /// The edit would have to keep a password-protected entry of the zip, and
+    /// the rewrite can't copy one without losing its encrypted flag (the bytes
+    /// would read back as garbage). Refused before anything is written; deleting
+    /// the entry is fine. `path` is the zip, `name` the entry.
+    ArchiveEncryptedEntry {
+        path: String,
+        name: String,
+    },
     SymlinkLoop {
         path: String,
     },

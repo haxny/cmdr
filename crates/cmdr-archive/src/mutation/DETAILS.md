@@ -101,9 +101,10 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   reconstructs an entry's options from `ZipFile::options()`, which does NOT carry the traditional-PKWARE encryption GP
   flag. So a retained encrypted entry would keep its ciphertext bytes but lose the "encrypted" header bit — semantically
   corrupt (a reader hands back ciphertext as plaintext). `apply` therefore returns `EncryptedEntryRetained` for any edit
-  that would KEEP an encrypted entry, leaving the original untouched. Deleting an encrypted entry is allowed (it isn't
-  retained). Editing encrypted archives is out of scope in v1. The plan's "raw_copy retains encrypted entries
-  byte-for-byte" claim is false against `zip` 8.6 (verified by `mutator_test.rs`); this refusal is the resolution.
+  that would KEEP an encrypted entry, leaving the original untouched (the host maps it to the typed
+  `WriteOperationError::ArchiveEncryptedEntry`). Deleting an encrypted entry is allowed (it isn't retained). Editing
+  encrypted archives is out of scope in v1. The plan's "raw_copy retains encrypted entries byte-for-byte" claim is false
+  against `zip` 8.6 (verified by `mutator_test.rs`); this refusal is the resolution.
 - **The rewrite keeps the archive's own shape, not just its entries** (#542, pinned by `mutator_archive_shape_test.rs`):
   - The archive comment, set raw from `src.comment()`. A fresh `ZipWriter` writes none.
   - Every byte ahead of the first local header (a self-extractor stub, or whatever a tool prepended): `plan.rs`'s

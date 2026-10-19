@@ -153,6 +153,14 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       name: 'Summer/beach.jpg',
     },
   },
+  archive_encrypted_entry: {
+    operationType: 'move',
+    error: {
+      type: 'archive_encrypted_entry',
+      path: '/Users/david/Downloads/tax-2025.zip',
+      name: 'receipts/march.pdf',
+    },
+  },
   symlink_loop: {
     operationType: 'copy',
     error: { type: 'symlink_loop', path: '/Users/david/dev/node_modules/.pnpm/self/node_modules/self' },

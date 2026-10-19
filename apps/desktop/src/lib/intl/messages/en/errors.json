@@ -2135,6 +2135,32 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
+  "errors.write.archiveEncryptedEntry.title": "This zip holds a password-protected item",
+  "@errors.write.archiveEncryptedEntry.title": {
+    "description": "Title of the error dialog when the user tries to change a zip (copy or move files into it, move some files out, rename, or create something inside it) and the change would have to keep a password-protected item of the zip. Cmdr can't rewrite such an item intact, so it refuses before changing anything. Deleting the protected item itself works. Plain text. This is a raw errors.* string (no ICU).",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.archiveEncryptedEntry.message": "{name} in {path} is password-protected, and Cmdr can’t keep a protected item intact while changing the zip. It left the zip as it was.",
+  "@errors.write.archiveEncryptedEntry.message": {
+    "description": "Body of that dialog. Plain text, raw errors.* string (no ICU): keep {name} and {path} spelled exactly, and reorder them freely.",
+    "placeholders": {
+      "name": {
+        "description": "The protected item, as a path inside the zip, for example receipts/march.pdf. Inserted verbatim. Do not translate or reformat it."
+      },
+      "path": {
+        "description": "The zip file's full path, for example /Users/david/Downloads/tax-2025.zip. Inserted verbatim. Do not translate or reformat it."
+      }
+    },
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.archiveEncryptedEntry.suggestion": "Copy out what you need instead, or change the zip in a tool that handles passwords.",
+  "@errors.write.archiveEncryptedEntry.suggestion": {
+    "description": "Recovery suggestion for that dialog. Copying files out of the zip still works; only changing the zip is refused. Plain text. This is a raw errors.* string (no ICU).",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "errors.write.invalidName.title": "Invalid file name",
   "errors.write.invalidName.message": "{path} has a name the destination can’t store.",
   "errors.write.invalidName.suggestion": "Rename it to something shorter and plainer, then try again. Some destinations refuse tabs or line breaks in a name, and some refuse reserved names like CON, NUL, or LPT1.",

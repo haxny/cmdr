@@ -255,6 +255,8 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   // No Retry: the zip still holds both entries. The way out is renaming one
   // in a tool that shows both.
   archive_duplicate_entry_name: { category: 'needs_action', retryHint: false },
+  // No Retry: the same edit keeps the same protected entry.
+  archive_encrypted_entry: { category: 'needs_action', retryHint: false },
   read_only_device: { category: 'needs_action', retryHint: false },
   // No Retry: the same folder refuses again. The way out is another destination.
   destination_not_writable: { category: 'needs_action', retryHint: false },
@@ -623,6 +625,16 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
           path: escapeHtml(error.path),
         }),
         suggestion: w('archiveDuplicateEntryName.suggestion'),
+      }
+    // Named, because the protected entry is rarely the one the user touched.
+    case 'archive_encrypted_entry':
+      return {
+        title: w('archiveEncryptedEntry.title'),
+        message: w('archiveEncryptedEntry.message', {
+          name: escapeHtml(error.name),
+          path: escapeHtml(error.path),
+        }),
+        suggestion: w('archiveEncryptedEntry.suggestion'),
       }
     case 'delete_pending':
       return {

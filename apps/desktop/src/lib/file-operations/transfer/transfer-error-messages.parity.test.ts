@@ -361,6 +361,17 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'archive_encrypted_entry (escapes HTML)',
+    error: { type: 'archive_encrypted_entry', path: '/tmp/a&b.zip', name: 'receipts/<march>.pdf' },
+    op: 'move',
+    expected: {
+      title: 'This zip holds a password-protected item',
+      message:
+        'receipts/&lt;march&gt;.pdf in /tmp/a&amp;b.zip is password-protected, and Cmdr can’t keep a protected item intact while changing the zip. It left the zip as it was.',
+      suggestion: 'Copy out what you need instead, or change the zip in a tool that handles passwords.',
+    },
+  },
+  {
     name: 'io_error (delete)',
     error: { type: 'io_error', path: '/p', message: 'm' },
     op: 'delete',
