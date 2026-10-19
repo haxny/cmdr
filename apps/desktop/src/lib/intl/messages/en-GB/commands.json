@@ -23,6 +23,10 @@
   "@commands.navForward.label": {
     "sourceHash": "8121136"
   },
+  "commands.viewerGoForward.label": "Go forwards to the next document",
+  "@commands.viewerGoForward.label": {
+    "sourceHash": "a07317a"
+  },
   "commands.fileGoToTrash.label": "Go to the Bin",
   "@commands.fileGoToTrash.label": {
     "sourceHash": "5332858"

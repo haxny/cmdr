@@ -68,8 +68,9 @@ const AU_DIVERGES_FROM_GB: readonly string[] = [
   'selection.action.deselect.label',
   'selection.action.deselect.tooltip',
   // `en-GB` forks the adverb to "go forwards"; `en-AU` keeps the American form, so
-  // this key is absent from `en-AU` entirely and inherits base `en`.
+  // these keys are absent from `en-AU` entirely and inherit base `en`.
   'commands.navForward.label',
+  'commands.viewerGoForward.label',
   // The online-only delete banner names deselecting as one of its two ways out, so
   // it carries the same Unselect/Deselect split as the menu items above. Only the
   // mixed-selection wording says it: the all-online-only one can't offer that

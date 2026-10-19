@@ -481,6 +481,8 @@ pub struct MenuState<R: Runtime> {
 }
 
 /// What the viewer in front can do with its document history: the Go menu's two verdicts.
+/// macOS only, like the `viewer_history` field that holds it.
+#[cfg(target_os = "macos")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ViewerHistoryAvailability {
     pub can_go_back: bool,
