@@ -36,6 +36,10 @@
 //! listed. A landing (a complete file whose way may have been cleared) is
 //! recorded as one and handed to the arrival sweep under its own kind, whose rule
 //! finishes the landing; it's ❌ never deleted from here.
+//!
+//! [`CleanupPolicy::inline_budget`]: crate::outage_slot::CleanupPolicy::inline_budget
+//! [`CleanupPolicy::wait`]: crate::outage_slot::CleanupPolicy::wait
+//! [`CleanupPolicy::retry_after`]: crate::outage_slot::CleanupPolicy::retry_after
 
 use std::path::PathBuf;
 use std::sync::Arc;
