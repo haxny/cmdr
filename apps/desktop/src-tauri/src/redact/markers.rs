@@ -9,25 +9,22 @@
 
 use super::RedactionContext;
 use super::context::TokenDomain;
-use super::detail::{EchoedIdentity, is_name_token};
+use super::echoes::EchoedIdentity;
 use super::fields::redact_typed_path;
 use super::identity_token;
 use super::names::unescape_debug;
 use super::path_end::split_trailing_noise;
 use super::paths::{Leaf, redact_leaf};
+use super::placeholders::{PLACEHOLDER_DIGITS, PLACEHOLDER_LEAD, placeholder, placeholder_digit};
 use super::references::redact_host;
-use cmdr_fs::log_private::{self, LogKind, MarkerRole, READER_SCRATCH, is_reserved};
+use super::tokens::is_name_token;
+use cmdr_fs::log_private::{self, LogKind, MarkerRole, is_reserved};
 use regex::Regex;
 use std::borrow::Cow;
 use std::sync::OnceLock;
 
 /// What a broken span (an opener with no closer, a closer with no opener) becomes.
 const BROKEN_KIND: &str = "redacted";
-
-/// Leads every placeholder; the index follows as [`PLACEHOLDER_DIGITS`].
-const PLACEHOLDER_LEAD: char = *READER_SCRATCH.end();
-/// The ten chars a placeholder writes its index in, `0` first.
-const PLACEHOLDER_DIGITS: char = *READER_SCRATCH.start();
 
 /// A line's spans: the line with a placeholder where each one was, and what replaces each.
 pub(super) struct Spans {
@@ -77,24 +74,6 @@ impl Spans {
     }
 }
 
-/// The regex for one placeholder, for the path branches that may start at one.
-pub(super) fn placeholder_pattern() -> String {
-    let last_digit = char::from_u32(PLACEHOLDER_DIGITS as u32 + 9).unwrap_or(PLACEHOLDER_DIGITS);
-    format!(
-        r"\x{{{:X}}}[\x{{{:X}}}-\x{{{:X}}}]+",
-        PLACEHOLDER_LEAD as u32, PLACEHOLDER_DIGITS as u32, last_digit as u32
-    )
-}
-
-/// Whether `value` is exactly one placeholder: a span the scan must leave for [`Spans::fill`].
-/// Only the span pass writes these; typed values and span values reach the walkers with every
-/// reserved char replaced ([`without_reserved`]), so nothing else can spell one.
-pub(super) fn is_placeholder(value: &str) -> bool {
-    value
-        .strip_prefix(PLACEHOLDER_LEAD)
-        .is_some_and(|digits| !digits.is_empty() && digits.chars().all(|c| placeholder_digit(c).is_some()))
-}
-
 /// `value` with every reserved char replaced by U+FFFD, so a value that held one (a hostile
 /// name) can never pass for a marker or a placeholder further on.
 pub(super) fn without_reserved(value: &str) -> Cow<'_, str> {
@@ -108,19 +87,6 @@ pub(super) fn without_reserved(value: &str) -> Cow<'_, str> {
     } else {
         Cow::Borrowed(value)
     }
-}
-
-fn placeholder(index: usize) -> String {
-    let mut out = String::from(PLACEHOLDER_LEAD);
-    for digit in index.to_string().bytes() {
-        out.push(char::from_u32(PLACEHOLDER_DIGITS as u32 + u32::from(digit - b'0')).unwrap_or(PLACEHOLDER_DIGITS));
-    }
-    out
-}
-
-fn placeholder_digit(c: char) -> Option<char> {
-    let offset = (c as u32).checked_sub(PLACEHOLDER_DIGITS as u32)?;
-    (offset < 10).then(|| char::from(b'0' + offset as u8))
 }
 
 /// Read the line's spans, or `None` for a line with no marker (nearly every line, at the cost of

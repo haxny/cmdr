@@ -44,6 +44,7 @@ mod context;
 mod detail;
 #[cfg(test)]
 mod detail_tests;
+mod echoes;
 #[cfg(test)]
 mod fe_bridge_tests;
 mod fields;
@@ -53,6 +54,7 @@ mod markers_tests;
 mod names;
 mod path_end;
 mod paths;
+mod placeholders;
 #[cfg(test)]
 mod producer_tests;
 #[cfg(test)]
@@ -62,19 +64,21 @@ mod reference_tests;
 mod references;
 #[cfg(test)]
 mod tests;
+mod tokens;
 
 pub use context::RedactionContext;
 use context::TokenDomain;
-use detail::{
-    EchoedIdentity, echoed_identities, quoted_value, redact_detail_field, scrub_leaf_echoes, sort_longest_first,
-};
+use detail::{echoed_identities, quoted_value, redact_detail_field, scrub_leaf_echoes};
+use echoes::{EchoedIdentity, sort_longest_first};
 use fields::*;
 pub(crate) use markers::display_line;
-use markers::{Spans, is_placeholder, without_reserved};
+use markers::{Spans, without_reserved};
 use names::*;
 use path_end::*;
 use paths::*;
+use placeholders::is_placeholder;
 use references::*;
+use tokens::is_redacted_segment;
 
 /// Report-mode cap for one external-text field (`detail=`, `stderr=`, `stdout=`), in chars
 /// of the redacted, unescaped value including the trailing `…`.
@@ -489,7 +493,7 @@ fn redactor_regex() -> &'static Regex {
                 \b
             )
             "#
-        .replace("PLACEHOLDER", &markers::placeholder_pattern());
+        .replace("PLACEHOLDER", &placeholders::placeholder_pattern());
         Regex::new(&pattern).expect("valid redactor regex")
     })
 }

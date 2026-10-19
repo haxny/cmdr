@@ -2,8 +2,8 @@
 //! labels and filenames), and this gives back only what a hard delimiter proves isn't path. `DETAILS.md` §
 //! "Finding the end of a path".
 
-use super::fields::{is_redacted_segment, starts_with_field_key};
 use super::names::ends_with_unicode_escape;
+use super::tokens::is_redacted_segment;
 
 /// Split a greedy path capture into (path, trailing_noise). The regex matches spaces inside
 /// paths so both multi-word labels (`/Volumes/My Backup Drive/...`) and multi-word filenames
@@ -58,6 +58,15 @@ fn first_delimiter(tail: &str) -> Option<usize> {
         .find(|(i, _)| starts_with_field_key(&tail[i + 1..]))
         .map(|(i, _)| i);
     punctuation.into_iter().chain(field).min()
+}
+
+/// `ident=` at the start of `s`.
+pub(super) fn starts_with_field_key(s: &str) -> bool {
+    let ident_len = s
+        .char_indices()
+        .take_while(|&(i, c)| c == '_' || c.is_ascii_alphabetic() || (i > 0 && c.is_ascii_digit()))
+        .count();
+    ident_len > 0 && s[ident_len..].starts_with('=')
 }
 
 /// Where a token word ends the path: after it when it leads a segment (`<dir:…> in 3ms`,

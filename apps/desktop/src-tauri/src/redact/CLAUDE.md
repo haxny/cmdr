@@ -45,7 +45,7 @@ values use `RedactionContext::redact_path` / `redact_name` / …, which fail clo
 
 ## Files
 
-`mod.rs` (API, regex, dispatch), `markers.rs` (the span pass, and `display_line` for the sinks that show a log),
+`mod.rs` (API, regex, dispatch), `markers.rs` (the span pass, and the sinks' `display_line`),
 `context.rs` (report key, token domains), `paths.rs`, `references.rs`, `fields.rs` (keyed fields), `detail.rs`
-(external text, echo scrub), `path_end.rs`, `names.rs`; tests in `*tests.rs` (`bundle_leak_tests.rs`: shapes that
+(external text, echo scrub), `path_end.rs`, `names.rs`, leaves `tokens.rs`, `placeholders.rs`, `echoes.rs`; tests in `*tests.rs` (`bundle_leak_tests.rs`: shapes that
 shipped in real bundles), golden corpus in `fixtures/`.

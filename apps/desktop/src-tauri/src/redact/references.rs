@@ -5,9 +5,9 @@
 
 use super::RedactionContext;
 use super::context::TokenDomain;
-use super::fields::is_redacted_segment;
 use super::identity_token;
 use super::paths::{Leaf, redact_leaf};
+use super::tokens::is_redacted_segment;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 /// `preserve_redacted_segments` keeps a component that's already a token: only for input the line scanner may

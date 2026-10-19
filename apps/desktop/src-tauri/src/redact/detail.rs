@@ -4,10 +4,12 @@
 //! capped at [`REPORT_DETAIL_MAX_CHARS`]. `DETAILS.md` § "External-text fields".
 
 use super::context::TokenDomain;
-use super::fields::{end_of_bare_value, identity_field_token, is_redacted_segment, redact_typed_path};
+use super::echoes::{EchoedIdentity, sort_longest_first};
+use super::fields::{end_of_bare_value, identity_field_token, redact_typed_path};
 use super::markers::Spans;
 use super::names::unescape_debug;
 use super::paths::{Leaf, has_extension_like_suffix, redact_leaf};
+use super::tokens::{is_name_token, is_redacted_segment};
 use super::{
     REPORT_DETAIL_MAX_CHARS, RedactionContext, dispatch, identity_token, redactor_regex, scan, split_trailing_noise,
     whole_len,
@@ -15,33 +17,6 @@ use super::{
 use regex::{Captures, Regex};
 use std::borrow::Cow;
 use std::sync::OnceLock;
-
-/// Shortest keyed value worth scrubbing from prose by its spelling. Shorter ones (`tv`, `pi`)
-/// are too likely to be part of an ordinary word.
-const MIN_ECHOED_IDENTITY_CHARS: usize = 3;
-
-/// A raw identity the line names, paired with the token it gets there.
-#[derive(Clone)]
-pub(super) struct EchoedIdentity {
-    raw: String,
-    token: String,
-    /// A path's last segment: the one kind of identity scrubbed from plain prose too
-    /// ([`scrub_leaf_echoes`]), since macOS repeats a file's name in its own error text.
-    is_leaf: bool,
-}
-
-impl EchoedIdentity {
-    /// An identity worth scrubbing by its spelling, or `None` for one that isn't: `None`, too
-    /// short to tell from part of a word, already a token, or holding a char a line can only
-    /// carry as a marker.
-    pub(super) fn new(raw: String, token: String, is_leaf: bool) -> Option<Self> {
-        let scrubbable = raw != "None"
-            && raw.chars().count() >= MIN_ECHOED_IDENTITY_CHARS
-            && !is_redacted_segment(&raw)
-            && !raw.chars().any(cmdr_fs::log_private::is_reserved);
-        scrubbable.then_some(Self { raw, token, is_leaf })
-    }
-}
 
 /// Path branches whose leaf is collected for the echo scrub: the local and absolute ones.
 const ECHO_PATH_BRANCHES: &[&str] = &["win_home", "unix_home", "unix_system", "volumes", "media", "abs_path"];
@@ -93,11 +68,6 @@ pub(super) fn echoed_identities(line: &str, context: Option<&RedactionContext>) 
     found
 }
 
-/// Longest first, so a share named `Plans` can't split `Client Plans` before it's seen.
-pub(super) fn sort_longest_first(identities: &mut [EchoedIdentity]) {
-    identities.sort_by_key(|identity| std::cmp::Reverse(identity.raw.len()));
-}
-
 /// The leaf of a prose path match, with the exact token the path's own rewrite gave it. A leaf
 /// the rewrite kept (`Documents`, a system root) or turned into something other than a name
 /// token (a bare `/Volumes/<label>`) isn't a name to scrub.
@@ -115,20 +85,15 @@ fn path_leaf_identity(
         .flatten()
 }
 
-/// Whether `token` names a file or a folder, the one kind of leaf worth scrubbing from prose.
-pub(super) fn is_name_token(token: &str) -> bool {
-    token.starts_with("<file") || token.starts_with("<dir")
-}
-
 /// Scrub whole-word repeats of the line's path leaves from a stretch of plain prose between
 /// matches: `the Trash refused it: “Screenshot ….jpeg”` after the same file's path. Stricter
 /// about glue than inside external text, since prose lines carry log targets: `media_index`
 /// and `indexing::writer` keep their words even when a folder is named `media` or `writer`.
 pub(super) fn scrub_leaf_echoes<'a>(prose: &'a str, echoed: &[EchoedIdentity]) -> Cow<'a, str> {
     let mut out = Cow::Borrowed(prose);
-    for identity in echoed.iter().filter(|identity| identity.is_leaf) {
-        if out.contains(identity.raw.as_str()) {
-            out = Cow::Owned(replace_word(&out, &identity.raw, &identity.token, is_prose_glue));
+    for identity in echoed.iter().filter(|identity| identity.is_leaf()) {
+        if out.contains(identity.raw()) {
+            out = Cow::Owned(replace_word(&out, identity.raw(), identity.token(), is_prose_glue));
         }
     }
     out
@@ -175,7 +140,7 @@ pub(super) fn redact_detail_field(
         redacted.push_str(&scan(line, context, spans));
     }
     for identity in echoed {
-        redacted = replace_whole_word(&redacted, &identity.raw, &identity.token);
+        redacted = replace_whole_word(&redacted, identity.raw(), identity.token());
     }
     // Span tokens go in before the cap, so it counts what ships.
     (

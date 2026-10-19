@@ -313,6 +313,15 @@ name.
    `fixtures/log-corpus.redacted.txt` to match. The `replacement_count_histogram` test flags a corpus missing your
    pattern.
 
+## The module layers
+
+The rewriters import downward only: `names.rs`, `context.rs`, and three leaves (`tokens.rs`: what a redacted value
+looks like, `is_redacted_segment` and `is_name_token`; `placeholders.rs`: the span pass's placeholders; `echoes.rs`:
+`EchoedIdentity`) at the bottom, then `path_end.rs`, `paths.rs`, `references.rs`, `fields.rs`, and the two passes on
+top (`markers.rs` and `detail.rs`, which reads `markers::Spans`). A helper every layer asks goes in a leaf, ❌ never in
+the rewriter that first needed it: `is_redacted_segment` in `fields.rs` and `is_placeholder` in `markers.rs` welded six
+modules into one cycle (`desktop-rust-module-cycles`, `scripts/check/checks/DETAILS.md` § "Rust module cycles").
+
 ## Regex and line-splitting notes
 
 - `redact_text` splits on `\n` and redacts each line independently. This keeps regex `\b` anchors predictable and lets

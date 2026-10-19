@@ -4,9 +4,9 @@
 use super::RedactionContext;
 use super::SAFE_PARENT_DIR_NAMES;
 use super::context::TokenDomain;
-use super::fields::is_redacted_segment;
-use super::markers::is_placeholder;
 use super::names::{split_cmdr_suffix, unescape_debug};
+use super::placeholders::is_placeholder;
+use super::tokens::is_redacted_segment;
 
 /// What a path walk makes of the path's last segment.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

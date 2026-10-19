@@ -4,12 +4,14 @@
 use super::RedactionContext;
 use super::context::TokenDomain;
 use super::identity_token;
-use super::names::{split_cmdr_suffix, unescape_debug};
+use super::names::unescape_debug;
+use super::path_end::starts_with_field_key;
 use super::paths::{
     Leaf, dir_token, home_role_len, keeps_parent_name, redact_leaf, redact_media, redact_unix_home, redact_unix_system,
     redact_volumes, redact_windows_home,
 };
 use super::references::{redact_host, redact_remote_unc, redact_remote_url, redact_scheme_less};
+use super::tokens::is_redacted_segment;
 use super::whole_len;
 use super::{redactor_regex, split_trailing_noise};
 use regex::Captures;
@@ -245,15 +247,6 @@ pub(super) fn end_of_bare_value(raw: &str) -> &str {
     value.trim_end()
 }
 
-/// `ident=` at the start of `s`.
-pub(super) fn starts_with_field_key(s: &str) -> bool {
-    let ident_len = s
-        .char_indices()
-        .take_while(|&(i, c)| c == '_' || c.is_ascii_alphabetic() || (i > 0 && c.is_ascii_digit()))
-        .count();
-    ident_len > 0 && s[ident_len..].starts_with('=')
-}
-
 /// Whether a path branch matches `value` from its very first byte.
 pub(super) fn claimed_by_path_branch(value: &str) -> bool {
     redactor_regex().captures(value).is_some_and(|caps| {
@@ -308,62 +301,4 @@ pub(super) fn redact_relative_path(
         }
     }
     out
-}
-
-/// The hash-free placeholders unsalted redaction writes (`<dir>`, `<file>.pdf`, …): every
-/// kind `identity_token` is called with, plus `<email>`.
-const BARE_PLACEHOLDERS: &[&str] = &[
-    "redacted",
-    "dir",
-    "file",
-    "volume",
-    "volume-id",
-    "host",
-    "share",
-    "user",
-    "credential",
-    "query",
-    "fragment",
-    "server-id",
-    "device-id",
-    "email",
-    "ipv4-loopback",
-    "ipv4-private",
-    "ipv4-link-local",
-    "ipv4-unspecified",
-    "ipv4-public",
-    "ipv6-loopback",
-    "ipv6-unspecified",
-    "ipv6-private",
-    "ipv6-link-local",
-    "ipv6-public",
-    "mtp-owner",
-];
-
-/// Whether a path segment is already redacted (`<dir>`, `<file:ab12cd>.pdf`, `$HOME`) or
-/// carries nothing to redact (`.`, `..`).
-pub(super) fn is_redacted_segment(seg: &str) -> bool {
-    if matches!(seg, "$HOME" | "~" | "." | "..") {
-        return true;
-    }
-    let (seg, _) = split_cmdr_suffix(seg);
-    let Some(rest) = seg.strip_prefix('<') else {
-        return false;
-    };
-    let Some(close) = rest.find('>') else { return false };
-    let (label, tail) = (&rest[..close], &rest[close + 1..]);
-    let (kind, hash) = label.split_once(':').unwrap_or((label, ""));
-    let kind_ok = !kind.is_empty() && kind.chars().all(|c| c.is_ascii_lowercase() || c == '-');
-    // A token carries its hash. Only the unsalted policy's bare placeholders go without one;
-    // a real folder named `<anna-kovacs>` is not a token and must not ship as one.
-    let hash_ok = if hash.is_empty() {
-        BARE_PLACEHOLDERS.contains(&kind)
-    } else {
-        (hash.len() == 6 || hash.len() == 12) && hash.chars().all(|c| c.is_ascii_hexdigit())
-    };
-    let tail_ok = tail.is_empty()
-        || tail
-            .strip_prefix('.')
-            .is_some_and(|ext| !ext.is_empty() && ext.len() <= 8 && ext.chars().all(|c| c.is_ascii_alphanumeric()));
-    kind_ok && hash_ok && tail_ok
 }
