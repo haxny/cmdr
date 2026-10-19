@@ -71,6 +71,16 @@ struct LeafRow {
 /// [`FileWindow`] it reserves from is shared by the whole operation. That split
 /// is the point: a walker can hold as many leaves as it likes in its own set,
 /// but it cannot start one without a slot from the single op-wide window.
+///
+/// ❗ The leaves are futures ONLY this walker polls, so a leaf moves only while
+/// the walker is awaiting the pool (`reserve`'s drain arm, `drain`). ❌ A leaf
+/// must never wait on anything its walker can hold or be waiting on (the
+/// conflict-dispatch mutex, a person's answer, a lock the walker takes): the
+/// walker would wait on itself and the copy would hang past Cancel. That's the
+/// shape of ERR-8MEX6, which the concurrent driver escaped by spawning its
+/// tasks (`copy_concurrent.rs`). Today a leaf only streams and lands one file
+/// (`copy_leaf`), and the dispatch mutex never spans a write. A leaf that has
+/// to wait on the walker's side needs spawned leaves first.
 struct LeafPool<'a> {
     window: FileWindow,
     /// The in-flight table and the row of the source this walk descends from,
