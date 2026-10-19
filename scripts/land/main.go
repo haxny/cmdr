@@ -45,6 +45,8 @@ const (
 	repo       = "vdavid/cmdr"
 	ciWorkflow = "ci.yml"
 	ciCheck    = "CI OK"
+	// Every PR this script opens is an agent's, and agent-made issues and PRs carry this label.
+	agentLabel = "claude-created"
 	pollEvery  = 30 * time.Second
 	// How long a CI run gets to show up after the push that starts it.
 	appearWithin = 5 * time.Minute
@@ -259,7 +261,7 @@ func ensurePR(r runner, branch string, commits []commit) (pullRequest, error) {
 	if pr, ok := openPR(prs); ok {
 		return pr, nil
 	}
-	url, err := r.gh("pr", "create", "-R", repo, "--base", "main", "--head", branch, "--title", prTitle(commits), "--body", prBody(commits))
+	url, err := r.gh("pr", "create", "-R", repo, "--base", "main", "--head", branch, "--title", prTitle(commits), "--body", prBody(commits), "--label", agentLabel)
 	if err != nil {
 		return pullRequest{}, err
 	}

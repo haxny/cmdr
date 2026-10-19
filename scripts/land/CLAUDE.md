@@ -13,6 +13,7 @@ only way commits reach `main`: nobody, admin included, lands a SHA without a gre
 
 - `pnpm land`: rebase onto `origin/main` if it moved, push, open or reuse the PR, wait for `CI OK`, land, sync local
   `main`, delete the remote branch, and print the worktree's teardown command.
+- Every PR it opens carries the `claude-created` label (`agentLabel`); a reused PR, like a contributor's, keeps its own.
 - `pnpm land -no-wait`: push and open the PR, then return. Run it after each green milestone and keep working.
 - `pnpm land -squash [-m MESSAGE]`: squash first (default message: every commit message, oldest first).
 - `pnpm land rulesets`: print what `-apply` would create or update on GitHub.
