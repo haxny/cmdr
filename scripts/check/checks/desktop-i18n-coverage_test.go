@@ -3,6 +3,7 @@ package checks
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -36,5 +37,27 @@ func TestNonEnLocaleCountCountsCatalogDirsOnly(t *testing.T) {
 func TestNonEnLocaleCountIsZeroWithoutACatalog(t *testing.T) {
 	if got := nonEnLocaleCount(t.TempDir()); got != 0 {
 		t.Errorf("nonEnLocaleCount on an empty root = %d, want 0", got)
+	}
+}
+
+// A coverage gap is what new English strings look like until the translator
+// agents run, so a LOCAL run only warns (the code commit can come first), while
+// CI, the gate in front of `main`, still fails it.
+func TestCoverageGapsWarnLocallyAndFailInCI(t *testing.T) {
+	const output = "de: 1 key(s) not translated"
+
+	local, err := coverageGapVerdict(false, 1, output)
+	if err != nil {
+		t.Fatalf("a local run must not fail on a coverage gap, got %v", err)
+	}
+	if local.Code != ResultWarning {
+		t.Fatalf("a local run warns on a coverage gap, got code %v", local.Code)
+	}
+	if !strings.Contains(local.Message, "translator") {
+		t.Fatalf("the local warning names the next step (the translator agents), got %q", local.Message)
+	}
+
+	if _, err := coverageGapVerdict(true, 1, output); err == nil {
+		t.Fatal("CI must fail on a coverage gap: it's the gate in front of main")
 	}
 }

@@ -16,14 +16,15 @@ import (
 // untranslated) is a gap. An OVERLAY (`en-GB` over `en`, `pt-PT` over `pt`)
 // inverts that: missing keys are the point, while a value identical to the
 // catalog it overrides, or a key neither that catalog nor `en` has, is dead
-// weight. An honest-coverage gate so a "100% translated" claim is trustworthy. It's an ERROR, not a warn:
+// weight. An honest-coverage gate so a "100% translated" claim is trustworthy. It's an ERROR in CI:
 // a translation feature is exactly the kind of headline a warn-only signal lets
-// slip past a release, so coverage gaps block the build. Deliberately-identical
+// slip past a release, so coverage gaps block every land. Locally it only warns
+// (`coverageGapVerdict`), so a code commit can come before its translations. Deliberately-identical
 // strings (brand names, units) opt out per-key via `@key.sameAsSourceJustification`.
 // See `apps/desktop/scripts/i18n-check-coverage.ts`.
 //
 // Exit-code contract (mirrored by `i18n-locale-check-lib.js`): 0 = clean / no
-// locales, 1 = at least one coverage gap (→ ERROR), 4 = only plural branches left
+// locales, 1 = at least one coverage gap (→ ERROR in CI, WARN locally), 4 = only plural branches left
 // in English beside a translated sibling (→ WARN, `englishBranches`), any other
 // code = a genuine script error (→ ERROR). The 12 non-`en` catalogs all pass today, so it stays
 // green until a locale regresses or a new key lands untranslated.
@@ -56,13 +57,30 @@ func RunDesktopI18nCoverage(ctx *CheckContext) (CheckResult, error) {
 		return CheckResult{}, fmt.Errorf("couldn't run the i18n coverage check\n%s", indentOutput(output))
 	}
 
-	gaps := countDriftLines(output)
-	return CheckResult{}, fmt.Errorf(
+	return coverageGapVerdict(ctx.CI, countDriftLines(output), output)
+}
+
+// coverageGapVerdict fails CI on a coverage gap and only warns locally. A gap is
+// what every new English string looks like until the translator agents have run
+// (`docs/guides/i18n-translation.md`), so failing it locally would force the code
+// and its translations into one commit; CI, the gate in front of `main`, still
+// refuses it, so no untranslated key ever lands.
+func coverageGapVerdict(ci bool, gaps int, output string) (CheckResult, error) {
+	summary := fmt.Sprintf(
 		"%d %s off their locale's coverage contract. Translate a missing or copied-through key, mark a "+
 			"deliberately-identical string (brand name, unit) with @key.sameAsSourceJustification, or delete an "+
-			"overlay key that's identical to what it overrides:\n%s",
-		gaps, Pluralize(gaps, "key", "keys"), indentOutput(output),
+			"overlay key that's identical to what it overrides",
+		gaps, Pluralize(gaps, "key", "keys"),
 	)
+	if ci {
+		return CheckResult{}, fmt.Errorf("%s:\n%s", summary, indentOutput(output))
+	}
+	msg := fmt.Sprintf(
+		"%s. Warn-only locally; CI fails it, so hand new strings to the translator agents "+
+			"(docs/guides/i18n-translation.md) before landing:\n%s",
+		summary, indentOutput(output),
+	)
+	return CheckResult{Code: ResultWarning, Message: msg, Total: -1, Issues: gaps, Changes: -1}, nil
 }
 
 // nonEnLocaleCount counts the non-`en` locale directories under `messages/` the

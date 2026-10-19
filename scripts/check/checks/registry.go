@@ -673,11 +673,11 @@ var AllChecks = []CheckDefinition{
 		DisplayName: "i18n-coverage",
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
-		// Error-level gate: a key missing from a locale (silent English fallback) or
+		// Error-level gate in CI: a key missing from a locale (silent English fallback) or
 		// byte-identical to English without a `@key.sameAsSourceJustification` is an
-		// untranslated string that would ship a half-translated locale. A translation
-		// feature is exactly the kind of headline a warn-only signal lets slip past a
-		// release, so coverage gaps block the build and run in CI.
+		// untranslated string that would ship a half-translated locale, so coverage gaps
+		// block every land. Locally a gap only warns, so new strings can be committed
+		// before the translator agents run (`coverageGapVerdict`).
 		DependsOn: nil,
 		IsFast:    true,
 		Inputs:    inputs([]string{"apps/desktop/src/lib/intl/messages/**", "apps/desktop/scripts/i18n-*.ts"}),
