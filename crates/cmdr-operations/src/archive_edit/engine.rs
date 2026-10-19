@@ -138,6 +138,7 @@ pub(super) fn to_write_error(archive_path: &Path, err: MutationError) -> WriteOp
             path,
             message: format!("the archive contains an encrypted entry ('{name}') and can't be edited"),
         },
+        MutationError::DuplicateEntryName { name } => WriteOperationError::ArchiveDuplicateEntryName { path, name },
         MutationError::ReadSource { inner_path, source } => WriteOperationError::ReadError {
             path: inner_path,
             message: source.to_string(),

@@ -2109,6 +2109,32 @@
     "description": "Recovery suggestion for that dialog. Plain text. This is a raw errors.* string (no ICU).",
     "screenshot": "transfer-error-archive_entry_names_collide.png"
   },
+  "errors.write.archiveDuplicateEntryName.title": "This zip holds two items with the same name",
+  "@errors.write.archiveDuplicateEntryName.title": {
+    "description": "Title of the error dialog when the user tries to change a zip (copy or move files into it, move files out, delete, rename, or create something inside it) that holds two entries under exactly the same name. Some zip tools write such zips. Cmdr refuses before changing anything. Plain text. This is a raw errors.* string (no ICU).",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.archiveDuplicateEntryName.message": "{path} holds two items named {name}. Cmdr shows only the later one, and changing the zip would lose the earlier one for good.",
+  "@errors.write.archiveDuplicateEntryName.message": {
+    "description": "Body of that dialog. Explains why Cmdr won't change the zip: its rewrite can keep only one of the two same-named items. Plain text, raw errors.* string (no ICU): keep {path} and {name} spelled exactly, and reorder them freely.",
+    "placeholders": {
+      "path": {
+        "description": "The zip file's full path, for example /Users/david/Downloads/photos.zip. Inserted verbatim. Do not translate or reformat it."
+      },
+      "name": {
+        "description": "The name both items share, as a path inside the zip, for example Summer/beach.jpg. Inserted verbatim. Do not translate or reformat it."
+      }
+    },
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.archiveDuplicateEntryName.suggestion": "Rename one of the two in another zip tool, then try again.",
+  "@errors.write.archiveDuplicateEntryName.suggestion": {
+    "description": "Recovery suggestion for that dialog. Plain text. This is a raw errors.* string (no ICU).",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "errors.write.invalidName.title": "Invalid file name",
   "errors.write.invalidName.message": "{path} has a name the destination can’t store.",
   "errors.write.invalidName.suggestion": "Rename it to something shorter and plainer, then try again. Some destinations refuse tabs or line breaks in a name, and some refuse reserved names like CON, NUL, or LPT1.",

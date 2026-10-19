@@ -217,7 +217,7 @@ fn shown_names_pair_up_with_the_writers_entries_behind_a_prefix() {
     bytes.extend(std::fs::read(&path).expect("read the fixture"));
     std::fs::write(&path, &bytes).expect("write the prefixed fixture");
 
-    let shown = crate::mutation::plan::shown_names(&path);
+    let shown: HashMap<u64, String> = crate::mutation::plan::shown_names(&path).into_iter().collect();
     let mut archive = ZipArchive::new(File::open(&path).expect("open the zip")).expect("the zip parses");
     let paired: Vec<Option<&str>> = (0..archive.len())
         .map(|i| {

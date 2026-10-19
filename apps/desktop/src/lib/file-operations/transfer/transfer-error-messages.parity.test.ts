@@ -350,6 +350,17 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'archive_duplicate_entry_name (escapes HTML)',
+    error: { type: 'archive_duplicate_entry_name', path: '/tmp/a&b.zip', name: 'Summer/<beach>.jpg' },
+    op: 'copy',
+    expected: {
+      title: 'This zip holds two items with the same name',
+      message:
+        '/tmp/a&amp;b.zip holds two items named Summer/&lt;beach&gt;.jpg. Cmdr shows only the later one, and changing the zip would lose the earlier one for good.',
+      suggestion: 'Rename one of the two in another zip tool, then try again.',
+    },
+  },
+  {
     name: 'io_error (delete)',
     error: { type: 'io_error', path: '/p', message: 'm' },
     op: 'delete',

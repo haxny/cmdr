@@ -145,6 +145,14 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       archivePath: 'Reports/a/b.txt',
     },
   },
+  archive_duplicate_entry_name: {
+    operationType: 'copy',
+    error: {
+      type: 'archive_duplicate_entry_name',
+      path: '/Users/david/Downloads/photos.zip',
+      name: 'Summer/beach.jpg',
+    },
+  },
   symlink_loop: {
     operationType: 'copy',
     error: { type: 'symlink_loop', path: '/Users/david/dev/node_modules/.pnpm/self/node_modules/self' },

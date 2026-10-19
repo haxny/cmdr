@@ -208,6 +208,9 @@ export type WriteOperationError =
   // Two fresh-zip entries read back as one path (`a\b.txt` beside `a/b.txt`),
   // so one would hide the other. Refused from the plan.
   | { type: 'archive_entry_names_collide'; entry: string; other: string; archivePath: string }
+  // The zip being edited holds two entries under one name, and a rewrite would
+  // drop the earlier one. Refused before anything is written.
+  | { type: 'archive_duplicate_entry_name'; path: string; name: string }
   | { type: 'symlink_loop'; path: string }
   | { type: 'cancelled'; message: string }
   // `side` is null for a backend session that dropped (MTP, SMB), which has no

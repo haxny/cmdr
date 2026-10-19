@@ -296,6 +296,15 @@ pub enum WriteOperationError {
         /// Where both would land inside the archive.
         archive_path: String,
     },
+    /// The zip being edited holds two entries under one name. The rewrite
+    /// copies through a library that keeps only the later one, so the earlier
+    /// copy would silently go (Cmdr's reader shows only the later one too, but
+    /// other tools show both). Refused before anything is written. `path` is
+    /// the zip, `name` the shared entry name.
+    ArchiveDuplicateEntryName {
+        path: String,
+        name: String,
+    },
     SymlinkLoop {
         path: String,
     },

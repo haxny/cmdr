@@ -114,15 +114,16 @@ fn parse_in<Tz: chrono::TimeZone>(
         .collect())
 }
 
-/// Each entry's name as the reader decodes it, keyed by its local header offset.
+/// Every central-directory entry's local header offset and name as the reader
+/// decodes it, in directory order, duplicate names included.
 ///
 /// The writer (the `zip` crate) decodes a name lacking the UTF-8 flag as CP437,
 /// where rc-zip detects Shift-JIS too, so the two can disagree on what an entry
 /// is called. The offset is what both agree on (`ZipFile::header_start`), unlike
 /// the ordinal, which the `zip` crate shifts when it collapses a duplicate name.
-pub(crate) fn shown_names_by_header_offset(
+pub(crate) fn shown_names_with_header_offsets(
     source: &dyn ArchiveByteSource,
-) -> Result<std::collections::HashMap<u64, String>, ArchiveError> {
+) -> Result<Vec<(u64, String)>, ArchiveError> {
     Ok(parse_central_directory(source)?
         .into_iter()
         .map(|entry| (entry.header_offset, entry.name))

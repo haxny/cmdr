@@ -2,7 +2,7 @@
 //! what name. Pure bookkeeping over the source archive's central directory; the
 //! temp+rename write that follows lives in [`super::mutator`].
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -24,8 +24,11 @@ pub(super) struct RetainedEntry {
 
 /// What an edit keeps of the original archive.
 pub(super) struct RetainedPlan {
+    /// How many bytes precede the zip data (a self-extractor stub), copied to
+    /// the start of the new archive verbatim. 0 for a plain zip.
+    pub(super) prefix_len: u64,
     pub(super) entries: Vec<RetainedEntry>,
-    /// The kept entries' compressed bytes, for the progress total.
+    /// The prefix and the kept entries' compressed bytes, for the progress total.
     pub(super) bytes: u64,
     /// Original items (sidecars aside) the edit drops or renames, for the
     /// user-facing affected-item tally (`entries_changed`), NOT the
@@ -50,11 +53,15 @@ pub(super) fn plan_retained(
     // every add drops a stale one at its name (§ `with_sidecar_deletes`).
     let deletes = with_sidecar_deletes(changeset);
     let renames = with_sidecar_renames(&changeset.renames);
-    let shown_names = shown_names(archive_path);
+    let shown = shown_names(archive_path);
+    refuse_a_folded_duplicate(src, &shown)?;
+    let shown_names: HashMap<u64, String> = shown.into_iter().collect();
 
+    let prefix_len = leading_bytes_len(src);
     let mut plan = RetainedPlan {
+        prefix_len,
         entries: Vec::new(),
-        bytes: 0,
+        bytes: prefix_len,
         deleted_count: 0,
         renamed_count: 0,
     };
@@ -92,17 +99,47 @@ pub(super) fn plan_retained(
     Ok(plan)
 }
 
-/// Each entry's name as Cmdr's reader shows it, by local header offset (see
-/// [`crate::read::shown_names_by_header_offset`]). Empty when the reader can't
-/// parse the archive, which [`planned_name`] covers.
-pub(super) fn shown_names(archive_path: &Path) -> HashMap<u64, String> {
+/// Every entry's local header offset and name as Cmdr's reader shows it (see
+/// [`crate::read::shown_names_with_header_offsets`]). Empty when the reader
+/// can't parse the archive, which [`planned_name`] covers.
+pub(super) fn shown_names(archive_path: &Path) -> Vec<(u64, String)> {
     let parsed = crate::read::LocalFileSource::open(archive_path)
         .map_err(crate::read::ArchiveError::from)
-        .and_then(|source| crate::read::shown_names_by_header_offset(&source));
+        .and_then(|source| crate::read::shown_names_with_header_offsets(&source));
     parsed.unwrap_or_else(|err| {
         log::warn!(target: "archive_mutator", "Couldn't read {}'s entry names the way the reader shows them, so the edit matches the zip crate's: {err}", archive_path.display());
-        HashMap::new()
+        Vec::new()
     })
+}
+
+/// Refuses an archive in which two entries share a name. The `zip` crate keeps
+/// one entry per raw name (the later one's data, in the earlier one's slot),
+/// and the rewrite copies through it, so the other copy would silently vanish.
+/// The reader lists every central-directory record, so it listing MORE entries
+/// than the `zip` crate holds is exactly that fold.
+fn refuse_a_folded_duplicate(src: &ZipArchive<File>, shown: &[(u64, String)]) -> Result<(), MutationError> {
+    if shown.len() <= src.len() {
+        return Ok(());
+    }
+    let mut seen = HashSet::new();
+    let name = shown
+        .iter()
+        .map(|(_, name)| name)
+        .find(|name| !seen.insert(*name))
+        .cloned()
+        .unwrap_or_default();
+    Err(MutationError::DuplicateEntryName { name })
+}
+
+/// How many bytes sit before the zip data: everything ahead of the first local
+/// header, or ahead of the central directory in an archive with no entries.
+/// A self-extractor's stub lives there, and so does whatever else a tool
+/// prepended; the rewrite keeps all of it.
+fn leading_bytes_len(src: &ZipArchive<File>) -> u64 {
+    (0..src.len())
+        .filter_map(|index| src.by_index_data(index).ok().map(|entry| entry.header_start()))
+        .min()
+        .unwrap_or_else(|| src.central_directory_start())
 }
 
 /// The name an edit matches `file` by: what the reader shows for it, the name

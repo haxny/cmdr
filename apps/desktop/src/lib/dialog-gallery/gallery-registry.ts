@@ -222,6 +222,7 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       { id: 'duplicate_source_names', label: 'Two sources share a name' },
       { id: 'archive_entry_name_refused', label: 'Name a zip can’t hold' },
       { id: 'archive_entry_names_collide', label: 'Two zip entries collide' },
+      { id: 'archive_duplicate_entry_name', label: 'Zip holds a name twice' },
       { id: 'symlink_loop', label: 'Symlink loop' },
       { id: 'cancelled', label: 'Cancelled' },
       { id: 'device_disconnected', label: 'Device disconnected' },

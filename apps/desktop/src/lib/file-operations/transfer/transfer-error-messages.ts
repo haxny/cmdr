@@ -252,6 +252,9 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   archive_entry_name_refused: { category: 'needs_action', retryHint: false },
   // No Retry, for the same reason: one of the two has to be renamed or left out.
   archive_entry_names_collide: { category: 'needs_action', retryHint: false },
+  // No Retry: the zip still holds both entries. The way out is renaming one
+  // in a tool that shows both.
+  archive_duplicate_entry_name: { category: 'needs_action', retryHint: false },
   read_only_device: { category: 'needs_action', retryHint: false },
   // No Retry: the same folder refuses again. The way out is another destination.
   destination_not_writable: { category: 'needs_action', retryHint: false },
@@ -609,6 +612,17 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
           archivePath: escapeHtml(error.archivePath),
         }),
         suggestion: w('archiveEntryNamesCollide.suggestion'),
+      }
+    // Both the zip and the shared name: the name alone doesn't say which zip,
+    // and Cmdr's own listing shows only one of the two.
+    case 'archive_duplicate_entry_name':
+      return {
+        title: w('archiveDuplicateEntryName.title'),
+        message: w('archiveDuplicateEntryName.message', {
+          name: escapeHtml(error.name),
+          path: escapeHtml(error.path),
+        }),
+        suggestion: w('archiveDuplicateEntryName.suggestion'),
       }
     case 'delete_pending':
       return {

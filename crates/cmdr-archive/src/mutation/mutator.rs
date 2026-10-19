@@ -163,6 +163,14 @@ pub enum MutationError {
         /// The entry's inner path, so the host can name it.
         name: String,
     },
+    /// Two entries share a name. The `zip` crate folds them into one (the later
+    /// one's data), so a rewrite would silently drop the earlier copy, which
+    /// the reader hides too but other tools may show. Refused before any temp
+    /// exists, the original untouched.
+    DuplicateEntryName {
+        /// The shared name, as the reader shows it.
+        name: String,
+    },
     /// An added entry's source bytes couldn't be read.
     ReadSource {
         /// Where the entry would have landed in the archive.
@@ -186,6 +194,12 @@ impl std::fmt::Display for MutationError {
                     "the archive can't be edited because it contains an encrypted entry ('{name}')"
                 )
             }
+            MutationError::DuplicateEntryName { name } => {
+                write!(
+                    f,
+                    "the archive can't be edited because two of its entries are named '{name}'"
+                )
+            }
             MutationError::ReadSource { inner_path, source } => {
                 write!(f, "couldn't read the source for '{inner_path}': {source}")
             }
@@ -203,6 +217,11 @@ impl std::error::Error for MutationError {}
 /// touched until the final atomic rename; any earlier failure or cancel removes
 /// the temp and returns with the original intact.
 pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHooks) -> Result<(), MutationError> {
+    // The file a symlinked archive points at, so the temp is minted beside it
+    // and the rename replaces IT: renaming over the link would swap the link
+    // for a regular file holding the edit and leave the real archive unedited.
+    let archive_path = &std::fs::canonicalize(archive_path).map_err(MutationError::OpenOriginal)?;
+
     // Reap any abandoned build from a prior crashed edit of THIS archive before
     // we start (there is no startup reaper). Our own temp uses a fresh uuid, so
     // this can't touch the build we're about to make. A leftover is always an
@@ -239,12 +258,27 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
     let staged = StagingTemp::mint(archive_path, None);
     let temp_path = staged.path().to_path_buf();
     hooks.note_pending(&temp_path);
-    let temp_file = File::create(&temp_path).map_err(MutationError::Io)?;
+    let mut temp_file = File::create(&temp_path).map_err(MutationError::Io)?;
     let mut guard = TempGuard {
         path: temp_path.clone(),
         armed: true,
     };
+
+    // Whatever precedes the zip data (a self-extractor stub) goes first,
+    // verbatim. The writer then starts at its end and records every offset
+    // from the start of the file, the shape `zip -A` gives a self-extractor.
+    if plan.prefix_len > 0 {
+        checkpoint(hooks)?;
+        copy_prefix(archive_path, plan.prefix_len, &mut temp_file)?;
+        progress.bytes_done += plan.prefix_len;
+        hooks.on_progress(progress);
+    }
     let mut writer = ZipWriter::new(temp_file);
+    // The archive comment, as stored. The source's came through the same
+    // `u16` length field, so it always fits.
+    writer
+        .set_raw_comment(Box::from(src.comment()))
+        .map_err(MutationError::Zip)?;
 
     // Retained entries, copied verbatim (no decompress/recompress). One the edit
     // doesn't rename keeps its name bytes and UTF-8 flag as stored; a renamed one
@@ -566,6 +600,19 @@ fn add_source_len(add: &AddEntry) -> u64 {
     }
 }
 
+/// Copies the first `len` bytes of the original archive into the temp.
+fn copy_prefix(archive_path: &Path, len: u64, temp: &mut File) -> Result<(), MutationError> {
+    let original = File::open(archive_path).map_err(MutationError::OpenOriginal)?;
+    let copied = io::copy(&mut original.take(len), temp).map_err(MutationError::Io)?;
+    if copied != len {
+        return Err(MutationError::Io(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "the archive ended before the data ahead of its first entry did",
+        )));
+    }
+    Ok(())
+}
+
 /// Removes any `foo.zip.cmdr-tmp-*` sibling of the archive (an abandoned build
 /// from a crashed edit). Best-effort — a failure here never blocks the edit.
 fn reap_sibling_temps(archive_path: &Path) {
@@ -658,3 +705,7 @@ mod mutator_apple_double_test;
 #[cfg(test)]
 #[path = "mutator_raw_names_test.rs"]
 mod mutator_raw_names_test;
+
+#[cfg(test)]
+#[path = "mutator_archive_shape_test.rs"]
+mod mutator_archive_shape_test;

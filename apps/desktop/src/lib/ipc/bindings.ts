@@ -19090,6 +19090,14 @@ export type WriteOperationError =
       // Where both would land inside the archive.
       archivePath: string
     }
+  /**
+   *  The zip being edited holds two entries under one name. The rewrite
+   *  copies through a library that keeps only the later one, so the earlier
+   *  copy would silently go (Cmdr's reader shows only the later one too, but
+   *  other tools show both). Refused before anything is written. `path` is
+   *  the zip, `name` the shared entry name.
+   */
+  | { type: 'archive_duplicate_entry_name'; path: string; name: string }
   | { type: 'symlink_loop'; path: string }
   | { type: 'cancelled'; message: string }
   /**

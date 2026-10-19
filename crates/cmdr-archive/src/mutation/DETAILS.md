@@ -104,6 +104,22 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   that would KEEP an encrypted entry, leaving the original untouched. Deleting an encrypted entry is allowed (it isn't
   retained). Editing encrypted archives is out of scope in v1. The plan's "raw_copy retains encrypted entries
   byte-for-byte" claim is false against `zip` 8.6 (verified by `mutator_test.rs`); this refusal is the resolution.
+- **The rewrite keeps the archive's own shape, not just its entries** (#542, pinned by `mutator_archive_shape_test.rs`):
+  - The archive comment, set raw from `src.comment()`. A fresh `ZipWriter` writes none.
+  - Every byte ahead of the first local header (a self-extractor stub, or whatever a tool prepended): `plan.rs`'s
+    `leading_bytes_len` measures it, `copy_prefix` writes it to the temp first, and the writer starts at its end. The
+    writer records offsets from the start of the FILE, so the result has absolute offsets, the shape `zip -A` gives a
+    self-extractor, which `unzip`, rc-zip, and the `zip` crate all read.
+  - A symlinked archive: `apply` canonicalizes the path first, so the temp is minted beside the real file and the rename
+    replaces it. Renaming over the link swapped the link for a regular file holding the edit, and left the real archive
+    unedited.
+- **Decision: refuse an archive with a duplicate entry name (`DuplicateEntryName`).** The `zip` crate keys entries by
+  raw name in an `IndexMap` and folds a duplicate into one slot (the later one's data), and the rewrite copies through
+  it, so the earlier copy would silently vanish. rc-zip lists every central-directory record, so `plan.rs`'s
+  `refuse_a_folded_duplicate` refuses when it lists more entries than the `zip` crate holds, before any temp exists.
+  Preserving both would need the `zip` crate's reader AND writer to stop keying by name, a structural patch (upstream
+  `zip-rs/zip2` #841 asks for the reader half), so refusal is the answer until upstream moves. The host maps it to
+  `WriteOperationError::ArchiveDuplicateEntryName`.
 - **Leftover policy — no startup reaper.** A leftover `foo.zip.cmdr-tmp-*` is always an ABANDONED build (the original is
   intact), so it's harmless. `apply` reaps siblings of the target at the START of the next edit of that archive (before
   building its own fresh-uuid temp), which is sufficient; a cancel/error removes its own temp immediately via an RAII
@@ -126,6 +142,7 @@ cancel-midway-leaves-the-original-intact-with-no-temp, a leftover temp reaped on
 delete keeps siblings' raw compressed bytes byte-identical), metadata (mode/mtime/xattr) survival,
 pause-parks-mid-add-then-completes-on-resume, and the encrypted-entry refusal. `mutator_raw_names_test.rs` pins the
 entry-name rules: a Shift-JIS name and an unflagged UTF-8 one keep their bytes and flags through an edit, and a delete
-or rename finds a Shift-JIS entry by its shown name.
+or rename finds a Shift-JIS entry by its shown name. `mutator_archive_shape_test.rs` pins the archive-level shape: the
+comment, a self-extractor prefix, a symlinked archive, and the duplicate-name refusal.
 `crates/cmdr-operations/src/archive_edit/routing_tests.rs::ensure_zip_writable_allows_zip_and_refuses_read_only_formats`
 pins the non-zip-refuses-typed matrix.
