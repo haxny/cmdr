@@ -487,12 +487,13 @@ shapes never reach that path: a leaf whose FUTURE is dropped (the driver's cance
 `LeafPool::submit` returning before the leaf is ever polled) runs no cleanup at all, and the plan-mode path
 (`sequential_extract.rs`) reserves every clashing name at plan time and streams in a later pass that can stop partway.
 So the namer also records each placeholder on the op (`ClaimedNames::hold_placeholder`, on `state.claimed_names`), every
-landed write releases it (`stream_pipe_file`'s two `Ok` returns, the sequential data pass's commit), and the copy and
-cross-volume move post-loops take back whatever is left, whatever the ending
-(`naming.rs::take_back_unfilled_reservations`, same empty-only rule). ❗ A write path that can land on a reserved name
-owes the release: an EMPTY source that landed looks exactly like the placeholder, and on a move it is the only copy. A
-same-volume move clears its own placeholder before renaming onto the name and releases it there; it runs no sweep.
-Pinned by `volume/merge_placeholder_tests.rs` (including `an_empty_file_that_lands_on_its_reservation_is_kept`) and
+landed write releases it (every landing in `stream_pipe_file`: the server-side copy, the runner's landing, and both
+settles; the sequential data pass's commit), and the copy and cross-volume move post-loops take back whatever is left,
+whatever the ending (`naming.rs::take_back_unfilled_reservations`, same empty-only rule). ❗ A write path that can land
+on a reserved name owes the release: an EMPTY source that landed looks exactly like the placeholder, and on a move it is
+the only copy. A same-volume move clears its own placeholder before renaming onto the name and releases it there; it
+runs no sweep. Pinned by `volume/merge_placeholder_tests.rs` (including
+`an_empty_file_that_lands_on_its_reservation_is_kept`) and
 `volume/strategy_sequential_tests.rs::a_failed_sequential_extract_takes_back_every_unfilled_reservation`.
 
 **Cross-type overwrites (file↔folder).** Reachable only from a plain Overwrite a person answered on a Stop prompt for
@@ -1824,12 +1825,17 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
 **Where it's asked, and why only there.** Only where a transfer meets the share, and only for calls that are safe to run
 again:
 
-- `stream_pipe_file`, three places: the source open (nothing staged yet), the write (the failed attempt's temp is
-  cleared AFTER the wait, when the delete can reach the share), and the landing rename when it failed with nothing
-  cleared (`new_data_at: None`). Once the share is back, `interrupted_landing.rs` settles whether the rename happened (§
-  "A landing the drop cut off" below): if it did, the file is done; if not, the temp is a spare copy, so it's taken away
-  and the file runs again. ❌ Never after a landing that cleared the way: then the temp is the only copy, and `land`
-  already moved it somewhere safe.
+- `stream_pipe_file`, a step runner: each pass walks the file's checkpoints (settle an unanswered create, open the
+  source, write, land), and a failed step hands its `Fault` to ONE decision, `FileRun::on_fault`, which waits with that
+  step's own `StartedOn` snapshot and resumes at the step's checkpoint. The open resumes by opening again (nothing
+  staged yet); the write by clearing the failed attempt's temp AFTER the wait, when the delete can reach the share, then
+  running the file again; the landing rename, only when it failed with nothing cleared (`new_data_at: None`), by letting
+  `interrupted_landing.rs` settle whether the rename happened (§ "A landing the drop cut off" below): if it did, the
+  file is done; if not, the temp is a spare copy, so it's taken away and the file runs again. ❌ Never after a landing
+  that cleared the way: then the temp is the only copy, and `land` already moved it somewhere safe. A new step gets the
+  wait by becoming a `Fault` variant, ❌ never with a `wait_after_failure` call of its own. The landed flags stay a
+  best-effort tail after the landing, outside the runner: a flag a drop cut off reads as `Refused`, the same as a
+  server's refusal, so it's a counted, reported metadata loss, ❌ never a wait.
 - `through_outages` around each merge level's prepare (a create whose second run answers `AlreadyExists` and reads as
   "there", plus two listings) and around every driver's top-level destination probe (a read). ❗ Only a call that's safe
   to run twice goes through it.

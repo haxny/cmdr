@@ -31,12 +31,14 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
 - **The engine is a dispatcher over two halves, with the file half as the leaf.** `strategy.rs` dispatches ONE source
   (`copy_single_path`, `resolve_source_is_directory`, `pull_path_to_local`); `stream_pipe.rs` moves one file's bytes
   (`stream_pipe_file`: staging, retry, outages, the auto-yield tuning, both cancel tiers) and calls neither half back.
-  The vocabulary both halves and both drivers speak (`FileWindow`, `MergeCtx`, `MergeProbe`, `CreatedPaths`) sits beside
-  them in `merge_ctx.rs`. `merge.rs` walks a tree (`copy_directory_streaming`, `resolve_merge_child`): a directory child
-  recurses there, a file child goes to `stream_pipe.rs`. `sequential_extract.rs` reuses the same walk in plan mode,
-  which is why the merge/conflict/rollback code is not reimplemented for one-pass archives. `folder_metadata.rs` holds
-  what the walk notes about the folders it created, stamped once the subtree landed, and `landed_flags.rs` the flags a
-  FILE waits to wear until its landing (both § "Copies keep the source's metadata").
+  It's a step runner: `stream_pipe.rs` holds the runner and its one fault decision, `stream_pipe_steps.rs` the steps
+  (settle an unanswered create, open, write, land). The vocabulary both halves and both drivers speak (`FileWindow`,
+  `MergeCtx`, `MergeProbe`, `CreatedPaths`) sits beside them in `merge_ctx.rs`. `merge.rs` walks a tree
+  (`copy_directory_streaming`, `resolve_merge_child`): a directory child recurses there, a file child goes to
+  `stream_pipe.rs`. `sequential_extract.rs` reuses the same walk in plan mode, which is why the merge/conflict/rollback
+  code is not reimplemented for one-pass archives. `folder_metadata.rs` holds what the walk notes about the folders it
+  created, stamped once the subtree landed, and `landed_flags.rs` the flags a FILE waits to wear until its landing (both
+  § "Copies keep the source's metadata").
 - **The move is three files, and the dependency runs ONE way.** `r#move` is the DISPATCHER and nothing else: it picks
   same-volume (`move_same`), both-local (`move_files_start`, one level up), or cross-volume (`move_cross`), then owns
   the managed-op lifecycle around whichever it picked. Both engines are leaves under it. ❗ Nothing in an engine may
@@ -1745,8 +1747,8 @@ The engine waits for a share that dropped off the network rather than failing on
 (`../DETAILS.md` § "Waiting out a volume that went away" owns the why and the guarantees). Where this directory asks:
 
 - **`stream_pipe.rs::stream_pipe_file`**: the source open, the write, and a landing rename that failed with nothing
-  cleared. After the wait, the file runs again from its first byte with a fresh set of attempts, its failed attempt's
-  temp cleared once the share can hear the delete.
+  cleared, all through the runner's one fault decision (`FileRun::on_fault`). After the wait, the file runs again from
+  its first byte with a fresh set of attempts, its failed attempt's temp cleared once the share can hear the delete.
 - **`merge.rs`'s level prepare** (the create, the destination listing, the source listing) and **every driver's
   top-level destination probe** (`landing.rs::name_at_destination` for the serial drivers,
   `copy_concurrent_source.rs::existing_dest_entry` for the window), each through `through_outages`, since each is safe
