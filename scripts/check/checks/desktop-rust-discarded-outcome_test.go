@@ -82,6 +82,26 @@ func TestDiscardedOutcome_CatchesTheShapesThatShipped(t *testing.T) {
 	}
 }
 
+// Two lexing shapes that used to hide real code from the scan: an out-of-line
+// test mod made the region tracker skip the NEXT braced item, and a `'"'` char
+// literal opened a string that masked the rest of the file.
+func TestDiscardedOutcome_LexingDoesNotHideTheCaller(t *testing.T) {
+	cases := map[string]string{
+		"an out-of-line test mod above it": "#[cfg(test)]\nmod tests;\n\n" +
+			"pub fn apply(id: &str) {\n    did_change(id);\n}\n" +
+			"pub fn did_change(id: &str) -> bool { true }\n",
+		"a quote char literal above it": "pub fn did_change(id: &str) -> bool { id.contains('\"') }\n" +
+			"pub fn apply(id: &str) {\n    did_change(id);\n}\n",
+	}
+	for name, body := range cases {
+		t.Run(name, func(t *testing.T) {
+			if _, err := runDiscardedOutcomeOn(t, map[string]string{"store.rs": body}); err == nil {
+				t.Fatal("expected the dropped `bool` in `apply` to be flagged, got success")
+			}
+		})
+	}
+}
+
 func TestDiscardedOutcome_ReportsCallerCalleeAndType(t *testing.T) {
 	_, err := runDiscardedOutcomeOn(t, map[string]string{
 		"api.rs": "pub fn set_paused(id: &str) -> PauseOutcome { flip(id) }\n" +

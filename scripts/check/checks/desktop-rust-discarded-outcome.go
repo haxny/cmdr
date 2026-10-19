@@ -230,108 +230,6 @@ func parseRustFile(path string) (*parsedRustFile, error) {
 	return file, nil
 }
 
-// maskRustNonCode replaces every comment and string/char literal with spaces,
-// keeping byte offsets and newlines intact. Everything downstream can then match
-// on real code without re-deriving "is this inside a comment".
-func maskRustNonCode(source string) string {
-	out := []byte(source)
-	for i := 0; i < len(out); i++ {
-		end := endOfMaskedRun(out, i)
-		if end <= i {
-			continue
-		}
-		blankRun(out, i, end)
-		i = end - 1
-	}
-	return string(out)
-}
-
-// endOfMaskedRun returns the exclusive end of the comment or literal starting at
-// `i`, or `i` when nothing starts there.
-func endOfMaskedRun(out []byte, i int) int {
-	switch {
-	case hasPairAt(out, i, '/', '/'):
-		if end := indexOfByteFrom(out, i, '\n'); end >= 0 {
-			return end
-		}
-		return len(out)
-	case hasPairAt(out, i, '/', '*'):
-		return endOfBlockComment(out, i)
-	case out[i] == '"':
-		return endOfStringLiteral(out, i)
-	}
-	return i
-}
-
-// blankRun replaces [from, to) with spaces, leaving newlines in place so byte
-// offsets and line numbers both survive.
-func blankRun(out []byte, from, to int) {
-	for i := from; i < to && i < len(out); i++ {
-		if out[i] != '\n' {
-			out[i] = ' '
-		}
-	}
-}
-
-func hasPairAt(out []byte, i int, first, second byte) bool {
-	return out[i] == first && i+1 < len(out) && out[i+1] == second
-}
-
-func indexOfByteFrom(out []byte, from int, b byte) int {
-	for i := from; i < len(out); i++ {
-		if out[i] == b {
-			return i
-		}
-	}
-	return -1
-}
-
-// endOfBlockComment handles Rust's NESTED `/* /* */ */`, which C-style scanning
-// would close one level early.
-func endOfBlockComment(out []byte, start int) int {
-	depth := 1
-	for i := start + 2; i < len(out); {
-		switch {
-		case hasPairAt(out, i, '/', '*'):
-			depth++
-			i += 2
-		case hasPairAt(out, i, '*', '/'):
-			depth--
-			i += 2
-			if depth == 0 {
-				return i
-			}
-		default:
-			i++
-		}
-	}
-	return len(out)
-}
-
-func endOfStringLiteral(out []byte, start int) int {
-	for i := start + 1; i < len(out); {
-		switch out[i] {
-		case '\\':
-			i += 2
-		case '"':
-			return i + 1
-		default:
-			i++
-		}
-	}
-	return len(out)
-}
-
-func lineStartOffsets(source string) []int {
-	starts := []int{0}
-	for i := 0; i < len(source); i++ {
-		if source[i] == '\n' {
-			starts = append(starts, i+1)
-		}
-	}
-	return starts
-}
-
 // lineOf maps a byte offset to a 1-based line number.
 func (f *parsedRustFile) lineOf(offset int) int {
 	lo, hi := 0, len(f.lineStarts)-1
@@ -344,43 +242,6 @@ func (f *parsedRustFile) lineOf(offset int) int {
 		}
 	}
 	return lo + 1
-}
-
-// findRustTestRegions returns the byte ranges of `#[cfg(test)]` items. Test code
-// discards values on purpose all the time, and a test that drops an outcome
-// misleads nobody.
-func findRustTestRegions(masked string) [][2]int {
-	var regions [][2]int
-	for _, marker := range []string{"#[cfg(test)]", "#[test]", "#[tokio::test"} {
-		search := 0
-		for {
-			idx := strings.Index(masked[search:], marker)
-			if idx < 0 {
-				break
-			}
-			start := search + idx
-			open := strings.IndexByte(masked[start:], '{')
-			if open < 0 {
-				break
-			}
-			end := matchBrace(masked, start+open)
-			if end < 0 {
-				break
-			}
-			regions = append(regions, [2]int{start, end})
-			search = start + len(marker)
-		}
-	}
-	return regions
-}
-
-func inRegions(regions [][2]int, offset int) bool {
-	for _, r := range regions {
-		if offset >= r[0] && offset <= r[1] {
-			return true
-		}
-	}
-	return false
 }
 
 // findRustFns parses every `fn` in the masked source into a declaration with its
@@ -497,23 +358,6 @@ func trimRustWhereClause(tail string) string {
 	}
 }
 
-func isRustIdentByte(b byte) bool {
-	return b == '_' || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
-}
-
-func lineForOffset(lineStarts []int, offset int) int {
-	lo, hi := 0, len(lineStarts)-1
-	for lo < hi {
-		mid := (lo + hi + 1) / 2
-		if lineStarts[mid] <= offset {
-			lo = mid
-		} else {
-			hi = mid - 1
-		}
-	}
-	return lo + 1
-}
-
 // indexOfBodyBrace finds the `{` that opens a function body, skipping over the
 // braces a `where` clause or a return type can contain (`-> impl Fn() {`, an
 // associated-type bound, a closure default). It stops at a `;`, which means the
@@ -534,29 +378,6 @@ func indexOfBodyBrace(masked string, from int) int {
 			}
 		case '{':
 			return i
-		}
-	}
-	return -1
-}
-
-func matchBrace(masked string, open int) int {
-	return matchDelim(masked, open, '{', '}')
-}
-
-func matchDelim(masked string, open int, openCh, closeCh byte) int {
-	if open >= len(masked) || masked[open] != openCh {
-		return -1
-	}
-	depth := 0
-	for i := open; i < len(masked); i++ {
-		switch masked[i] {
-		case openCh:
-			depth++
-		case closeCh:
-			depth--
-			if depth == 0 {
-				return i
-			}
 		}
 	}
 	return -1
