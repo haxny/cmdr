@@ -2,7 +2,7 @@
 # Lands this worktree's branch on `main` through CI: push, PR, wait for `CI OK`, fast-forward
 # `main`, sync local `main`. Safe to re-run at any stage. Docs: `scripts/land/CLAUDE.md`.
 #
-# Usage: pnpm land [-no-wait] [-squash [-m MESSAGE]] [-rebase]
+# Usage: pnpm land [-no-wait] [-squash [-m MESSAGE]]
 #        pnpm land rulesets [-apply]
 set -euo pipefail
 

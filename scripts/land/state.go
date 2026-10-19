@@ -2,6 +2,7 @@ package main
 
 import (
 	"cmp"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -19,6 +20,9 @@ type branchState struct {
 	landed bool
 	// based: origin/main is an ancestor of HEAD, so the branch fast-forwards onto it.
 	based bool
+	// hasMerges: the branch carries a merge commit (a contributor's PR record, a release
+	// merge-back), which a plain rebase would flatten.
+	hasMerges bool
 }
 
 type startStep int
@@ -29,15 +33,16 @@ const (
 	stepRefuseDirty
 	// stepFinish: nothing left to land, so only sync local `main` and tidy the remote branch.
 	stepFinish
-	// stepRebase: `origin/main` moved and `-rebase` asked to catch up.
+	// stepRebase: `origin/main` moved, so catch up before pushing.
 	stepRebase
-	// stepNeedsRebase: `origin/main` moved; say how to catch up and stop.
-	stepNeedsRebase
+	// stepRefuseMergeRebase: `origin/main` moved under a merge commit; say how to catch up by hand
+	// and stop.
+	stepRefuseMergeRebase
 	stepProceed
 )
 
 // nextStartStep decides from the local state what a run does first.
-func nextStartStep(s branchState, rebase bool) startStep {
+func nextStartStep(s branchState) startStep {
 	switch {
 	case s.branch == "" || s.branch == "main":
 		return stepRefuseBranch
@@ -45,13 +50,23 @@ func nextStartStep(s branchState, rebase bool) startStep {
 		return stepRefuseDirty
 	case s.landed:
 		return stepFinish
-	case !s.based && rebase:
-		return stepRebase
+	case !s.based && s.hasMerges:
+		return stepRefuseMergeRebase
 	case !s.based:
-		return stepNeedsRebase
+		return stepRebase
 	default:
 		return stepProceed
 	}
+}
+
+// teardownCommand is the command that removes the worktree at root, or "" when root isn't one of
+// the `.claude/worktrees/<slug>` worktrees (the main clone, where `release.sh` lands from).
+func teardownCommand(root string) string {
+	dir, slug := filepath.Split(filepath.Clean(root))
+	if filepath.Base(filepath.Clean(dir)) != "worktrees" || filepath.Base(filepath.Dir(filepath.Clean(dir))) != ".claude" {
+		return ""
+	}
+	return "~/.claude/scripts/remove-worktree.sh " + slug
 }
 
 // commit is one commit message, split the way `git log` gives it.

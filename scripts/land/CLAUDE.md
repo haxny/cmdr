@@ -11,10 +11,10 @@ only way commits reach `main`: nobody, admin included, lands a SHA without a gre
 
 ## Usage
 
-- `pnpm land`: push, open or reuse the PR, wait for `CI OK`, land, sync local `main`, delete the remote branch.
-- `pnpm land -no-wait`: push and open the PR, then return. Run it between milestones to offload CI.
+- `pnpm land`: rebase onto `origin/main` if it moved, push, open or reuse the PR, wait for `CI OK`, land, sync local
+  `main`, delete the remote branch, and print the worktree's teardown command.
+- `pnpm land -no-wait`: push and open the PR, then return. Run it after each green milestone and keep working.
 - `pnpm land -squash [-m MESSAGE]`: squash first (default message: every commit message, oldest first).
-- `pnpm land -rebase`: rebase onto `origin/main` first when it moved.
 - `pnpm land rulesets`: print what `-apply` would create or update on GitHub.
 
 ## Must-knows
@@ -22,8 +22,11 @@ only way commits reach `main`: nobody, admin included, lands a SHA without a gre
 - **It lands by pushing the green SHA: `git push origin <sha>:main`.** The admin bypasses the PR ruleset, the CI ruleset
   still demands `CI OK` on that exact SHA, SHAs stay identical, and GitHub marks the PR merged. Probe evidence:
   `DETAILS.md`.
-- **Re-run it at any stage.** A red CI prints the failed jobs and `gh run rerun <id> --failed`; "main moved" prints
-  `pnpm land -rebase`.
+- **Re-run it at any stage.** A red CI prints the failed jobs and `gh run rerun <id> --failed`. When `main` moves while
+  CI runs, it rebases and runs CI again, three runs at most (`DETAILS.md` § Decision: rebase by default, capped).
+- **It never rebases a branch carrying a merge commit** (a contributor's PR record, a release merge-back): it stops and
+  names the manual fix, since a plain rebase flattens the merge.
+- **A newer push cancels the PR's running CI** (`cancel-in-progress` in `ci.yml`), so a watcher follows the newest run.
 - **The landing push uses `--no-verify`.** CI passed on that exact SHA, and a pre-push hook that adds a commit would
   land something CI never saw.
 - **Only a lead agent lands.** CI takes 25–35 min, longer than a foreground tool call, so agents run `pnpm land` in the

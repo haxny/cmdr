@@ -33,8 +33,8 @@ GitHub closes the PR with the Merged badge when `land` puts it on `main`.
 
 - **Gotcha / Why:** the merge commit's diff against its first parent is empty, which reads like a mistake. That's what
   it's for: it carries only the ancestry. Don't "clean it up".
-- **Gotcha / Why:** a plain rebase flattens merges, so `pnpm land -rebase` and `-squash` drop it. If `main` moved, run
-  `git rebase --rebase-merges origin/main`, then `pnpm land`.
+- **Gotcha / Why:** a plain rebase flattens merges, so `pnpm land -squash` drops it, and `land` refuses to rebase a
+  branch with a merge commit. If `main` moved, run `git rebase --rebase-merges origin/main`, then `pnpm land`.
 
 We take these merge commits in an otherwise linear history on purpose: the Merged badge is part of what a contributor
 gets for the work, and a gray "Closed" reads as a rejection.

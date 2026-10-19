@@ -56,13 +56,25 @@ The pre-push hook may commit a formatting fix and stop that push; `pushBranch` t
 top. Untracked files don't count as dirty: they can't change what lands, and the main clone, where `release.sh` lands
 its release commit from, often has some.
 
-`scripts/release.sh` depends on this interface: `pnpm land -rebase` from the main clone, exit 0 only when the SHA is on
+`scripts/release.sh` depends on this interface: `pnpm land` from the main clone, exit 0 only when the SHA is on
 `origin/main`, local `main` synced by `fetch origin main:main`, and any CI run on the SHA counting. Change it with the
 release flow (`docs/guides/releasing.md`).
 
 `ciVerdict` takes the newest CI run on the SHA (a `gh run rerun` reopens it, so an in-flight re-run reads as pending,
 not red) and the newest `CI OK` check run. Only `success` is green: GitHub would accept a skipped check, which a
 finished run should never produce.
+
+## Decision: rebase by default, capped
+
+Decision: when `origin/main` moved, `land` rebases onto it before pushing, and when it moves while CI runs, it rebases
+and waits for CI again, up to `maxCIRuns` (3) runs. Why: CI runs on the rebased SHA anyway, so a textually clean rebase
+that breaks something still can't land, and the old "rerun with `-rebase`" step only cost an agent a round trip. The cap
+is there because each run takes 25–35 min: on a `main` busy enough to move under three runs in a row, an unbounded loop
+would spin for hours without saying so.
+
+Exception: a branch carrying a merge commit (a contributor's PR record, `docs/guides/handling-prs.md`; a release
+merge-back, `docs/guides/releasing.md`) is never rebased, since a plain rebase flattens the merge. `land` stops and
+names the manual fix instead.
 
 ## Open points
 

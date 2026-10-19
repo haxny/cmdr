@@ -190,12 +190,12 @@ fi
 
 if [[ "$(git branch --show-current)" == "$RELEASE_BRANCH" ]]; then
   # Push, PR, wait for `CI OK` on the release commit (25–35 min), then fast-forward `main` to it and
-  # sync local `main`. `-rebase`: if `main` moved meanwhile, land it on top; the gate below then
+  # sync local `main`. If `main` moved meanwhile, `land` rebases onto it; the gate below then
   # wants a full run on the rebased release commit itself. A red run stops here: re-run its failed
   # jobs (or fix the commit), then re-run this script.
   # What lands is this branch's tip, which may sit a pre-push formatting commit past the release
   # commit (`land` pushes that fix along); it's what gets tagged.
-  pnpm land -rebase
+  pnpm land
   LANDED=$(git rev-parse HEAD)
   git switch main
   if [[ "$(git rev-parse HEAD)" != "$LANDED" ]]; then

@@ -8,23 +8,22 @@ import (
 func TestNextStartStep(t *testing.T) {
 	ready := branchState{branch: "worktree-x", based: true}
 	cases := []struct {
-		name   string
-		state  branchState
-		rebase bool
-		want   startStep
+		name  string
+		state branchState
+		want  startStep
 	}{
-		{"ready to go", ready, false, stepProceed},
-		{"main itself", branchState{branch: "main", based: true}, false, stepRefuseBranch},
-		{"detached HEAD", branchState{branch: "", based: true}, false, stepRefuseBranch},
-		{"dirty tree", branchState{branch: "worktree-x", dirty: true, based: true}, false, stepRefuseDirty},
-		{"dirty beats landed", branchState{branch: "worktree-x", dirty: true, landed: true, based: true}, false, stepRefuseDirty},
-		{"already landed", branchState{branch: "worktree-x", landed: true, based: true}, false, stepFinish},
-		{"main moved", branchState{branch: "worktree-x"}, false, stepNeedsRebase},
-		{"main moved, rebase asked", branchState{branch: "worktree-x"}, true, stepRebase},
-		{"rebase asked but not needed", ready, true, stepProceed},
+		{"ready to go", ready, stepProceed},
+		{"main itself", branchState{branch: "main", based: true}, stepRefuseBranch},
+		{"detached HEAD", branchState{branch: "", based: true}, stepRefuseBranch},
+		{"dirty tree", branchState{branch: "worktree-x", dirty: true, based: true}, stepRefuseDirty},
+		{"dirty beats landed", branchState{branch: "worktree-x", dirty: true, landed: true, based: true}, stepRefuseDirty},
+		{"already landed", branchState{branch: "worktree-x", landed: true, based: true}, stepFinish},
+		{"main moved", branchState{branch: "worktree-x"}, stepRebase},
+		{"main moved under a merge commit", branchState{branch: "worktree-x", hasMerges: true}, stepRefuseMergeRebase},
+		{"a merge commit on a current branch", branchState{branch: "worktree-x", based: true, hasMerges: true}, stepProceed},
 	}
 	for _, c := range cases {
-		if got := nextStartStep(c.state, c.rebase); got != c.want {
+		if got := nextStartStep(c.state); got != c.want {
 			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
 		}
 	}
@@ -118,6 +117,20 @@ func TestOpenPR(t *testing.T) {
 	}
 	if _, ok := openPR(prs[:1]); ok {
 		t.Error("a closed PR isn't reused")
+	}
+}
+
+func TestTeardownCommand(t *testing.T) {
+	cases := []struct{ root, want string }{
+		{"/repo/.claude/worktrees/cursor-fix", "~/.claude/scripts/remove-worktree.sh cursor-fix"},
+		{"/repo/.claude/worktrees/cursor-fix/", "~/.claude/scripts/remove-worktree.sh cursor-fix"},
+		{"/repo", ""},
+		{"/elsewhere/cursor-fix", ""},
+	}
+	for _, c := range cases {
+		if got := teardownCommand(c.root); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.root, got, c.want)
+		}
 	}
 }
 

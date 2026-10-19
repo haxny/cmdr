@@ -293,11 +293,11 @@ check.
 6. **Advise the version** (patch: bug fixes, minor: new features, major: major launches), and give the user the
    `./scripts/release.sh x.x.x` command.
 7. **Offer to run the release script**, and wait for confirmation before running it. Run it as a background command:
-   after the bumps it commits on a `release/vX.Y.Z` branch and lands it with `pnpm land -rebase`, which waits for
-   `CI OK` on the release commit (25–35 min), then syncs `main`, re-checks the gate, and makes the signed tag. Re-run it
-   with the same version after any stop (a red or flaky CI run, a closed laptop): it resumes from the release branch or
-   from the landed commit. If `land` rebased onto a `main` that moved, the gate wants a full run on the release commit
-   itself and waits for it.
+   after the bumps it commits on a `release/vX.Y.Z` branch and lands it with `pnpm land`, which waits for `CI OK` on the
+   release commit (25–35 min), then syncs `main`, re-checks the gate, and makes the signed tag. Re-run it with the same
+   version after any stop (a red or flaky CI run, a closed laptop): it resumes from the release branch or from the
+   landed commit. If `land` rebased onto a `main` that moved, the gate wants a full run on the release commit itself and
+   waits for it.
 8. **Push the tag immediately** with `git push origin vX.Y.Z` IFF the release script completed cleanly. Else: stop and
    ask.
    - **`local` mode: start `./scripts/release-finish.sh X.Y.Z` right after the push**, as a background command. It waits
@@ -468,12 +468,12 @@ Steps:
    monitoring, step 12's checks, and step 13's evidence. Step 11's standalone `CI` run doesn't apply, since nothing went
    to `main`.
 7. **Merge the patch back into `main`** once it's published: in a fresh worktree off `main`,
-   `git merge --no-ff vX.Y.Z+1`, then `pnpm land` (never `-squash` or `-rebase`, which would flatten the merge; if
-   `main` moved, redo the merge on top of it). The merge is what puts the patch's `CHANGELOG.md` section on the website
-   and in the next release's history, makes its hashes reachable for `changelog-links`, and moves `main`'s version up to
-   the live one. Resolve conflicts in favor of the patch for the version files and the settings-defaults stamp, keep
-   both sides in `CHANGELOG.md`, and keep `main`'s copy of a cherry-picked fix. It's the one merge commit in `main`'s
-   history that a fast-forward can't replace, since the two branches have diverged.
+   `git merge --no-ff vX.Y.Z+1`, then `pnpm land` (never `-squash`, which would flatten the merge; if `main` moved,
+   `land` refuses to rebase a merge, so redo the merge on top of it). The merge is what puts the patch's `CHANGELOG.md`
+   section on the website and in the next release's history, makes its hashes reachable for `changelog-links`, and moves
+   `main`'s version up to the live one. Resolve conflicts in favor of the patch for the version files and the
+   settings-defaults stamp, keep both sides in `CHANGELOG.md`, and keep `main`'s copy of a cherry-picked fix. It's the
+   one merge commit in `main`'s history that a fast-forward can't replace, since the two branches have diverged.
 8. **Tear down the worktree**: `~/.claude/scripts/remove-worktree.sh security-vX.Y.Z+1`.
 
 The next regular release drafts its CHANGELOG from `vX.Y.Z+1..main` and doesn't list the fix again.

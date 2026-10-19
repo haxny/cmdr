@@ -3,8 +3,8 @@
 //
 // In order, it:
 //
-//  1. refuses a dirty tree, fetches, and requires the branch to sit on `origin/main` (`-rebase`
-//     rebases it for you);
+//  1. refuses a dirty tree, fetches, and rebases onto `origin/main` when it moved (a branch
+//     carrying a merge commit stops instead: a plain rebase would flatten it);
 //  2. with `-squash`, squashes the branch into one commit (`-m` for the message, else every
 //     commit message, oldest first);
 //  3. pushes the branch and opens its PR, or reuses the open one (the PR is plumbing: CI runs on
@@ -13,7 +13,11 @@
 //  5. lands with `git push origin <sha>:main`: the admin bypasses the PR ruleset while the CI
 //     ruleset still demands `CI OK` on that exact SHA, the SHAs stay the same, and GitHub marks
 //     the PR merged;
-//  6. fast-forwards local `main` (wherever it's checked out) and deletes the remote branch.
+//  6. fast-forwards local `main` (wherever it's checked out), deletes the remote branch, and
+//     prints the command that removes the worktree.
+//
+// When `origin/main` moves while CI runs, it rebases and waits for CI again, up to
+// `maxCIRuns` runs in all.
 //
 // Every run reads where the branch stands and picks up from there, so it's safe to re-run after a
 // flake re-run, a rebase, or a closed laptop.
@@ -23,7 +27,6 @@
 //	pnpm land                 push, wait for CI, land
 //	pnpm land -no-wait        push and open the PR, then return (offload CI between milestones)
 //	pnpm land -squash [-m M]  squash first
-//	pnpm land -rebase         rebase onto origin/main first when it moved
 //	pnpm land rulesets [-apply]
 //
 // Docs: `scripts/land/CLAUDE.md`.
@@ -45,13 +48,18 @@ const (
 	pollEvery  = 30 * time.Second
 	// How long a CI run gets to show up after the push that starts it.
 	appearWithin = 5 * time.Minute
+	// How many CI runs one land waits through while `origin/main` keeps moving under it. Each
+	// takes 25–35 min, so a busier `main` than this needs a person, not a fourth run.
+	maxCIRuns = 3
 )
+
+// errMainMoved: `origin/main` moved while CI ran, so the green SHA no longer fast-forwards it.
+var errMainMoved = errors.New("origin/main moved while CI ran")
 
 type config struct {
 	root    string
 	squash  bool
 	message string
-	rebase  bool
 	noWait  bool
 	timeout time.Duration
 }
@@ -60,11 +68,10 @@ func main() {
 	root := flag.String("root", "", "the worktree to land (scripts/land.sh sets it)")
 	squash := flag.Bool("squash", false, "squash the branch into one commit before pushing")
 	message := flag.String("m", "", "with -squash: the commit message (default: every commit message, oldest first)")
-	rebase := flag.Bool("rebase", false, "rebase onto origin/main first when it moved")
 	noWait := flag.Bool("no-wait", false, "push and open the PR, then return without waiting for CI or landing")
 	timeout := flag.Duration("timeout", 2*time.Hour, "how long to wait for CI")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage: pnpm land [-no-wait] [-squash [-m MESSAGE]] [-rebase] [-timeout 2h]")
+		fmt.Fprintln(os.Stderr, "Usage: pnpm land [-no-wait] [-squash [-m MESSAGE]] [-timeout 2h]")
 		fmt.Fprintln(os.Stderr, "       pnpm land rulesets [-apply]")
 		flag.PrintDefaults()
 	}
@@ -87,18 +94,33 @@ func main() {
 	if *message != "" && !*squash {
 		fail(errors.New("-m only works with -squash"))
 	}
-	cfg := config{root: *root, squash: *squash, message: *message, rebase: *rebase, noWait: *noWait, timeout: *timeout}
+	cfg := config{root: *root, squash: *squash, message: *message, noWait: *noWait, timeout: *timeout}
 	if err := land(r, cfg); err != nil {
 		fail(err)
 	}
 }
 
+// land runs one land, and another on top of a rebase each time `origin/main` moves while CI runs,
+// up to `maxCIRuns` CI runs in all.
 func land(r runner, cfg config) error {
+	for run := 1; ; run++ {
+		err := landOnce(r, cfg)
+		if !errors.Is(err, errMainMoved) {
+			return err
+		}
+		if run >= maxCIRuns {
+			return fmt.Errorf("origin/main moved during each of %d CI runs, so I stopped. Land again when it's quieter: pnpm land", maxCIRuns)
+		}
+		say("origin/main moved while CI ran, so rebasing and running CI again (run %d of %d).", run+1, maxCIRuns)
+	}
+}
+
+func landOnce(r runner, cfg config) error {
 	state, err := readState(r)
 	if err != nil {
 		return err
 	}
-	if proceed, err := start(r, state, cfg.rebase); !proceed {
+	if proceed, err := start(r, state); !proceed {
 		return err
 	}
 	commits, err := r.commits("origin/main..HEAD")
@@ -140,8 +162,8 @@ func land(r runner, cfg config) error {
 
 // start acts on the start step: it refuses, finishes an earlier land, or rebases. It reports
 // whether the land goes on.
-func start(r runner, state branchState, rebase bool) (bool, error) {
-	switch nextStartStep(state, rebase) {
+func start(r runner, state branchState) (bool, error) {
+	switch nextStartStep(state) {
 	case stepRefuseBranch:
 		return false, errors.New("check out a feature branch first: land takes a branch onto main, never main itself")
 	case stepRefuseDirty:
@@ -149,8 +171,8 @@ func start(r runner, state branchState, rebase bool) (bool, error) {
 	case stepFinish:
 		say("%s is already on origin/main.", state.branch)
 		return false, finish(r, state.branch)
-	case stepNeedsRebase:
-		return false, errors.New("origin/main moved ahead of this branch. Rebase and land again:\n  pnpm land -rebase")
+	case stepRefuseMergeRebase:
+		return false, errors.New("origin/main moved, and this branch carries a merge commit that a plain rebase would flatten. Catch up by hand, then land again:\n  git rebase --rebase-merges origin/main   (a contributor's PR record: docs/guides/handling-prs.md)\n  or redo the merge on top of main         (a release merge-back: docs/guides/releasing.md)")
 	case stepRebase:
 		say("Rebasing onto origin/main...")
 		if _, err := r.git("rebase", "origin/main"); err != nil {
@@ -176,11 +198,16 @@ func readState(r runner) (branchState, error) {
 	if err != nil {
 		return branchState{}, err
 	}
+	merges, err := r.git("rev-list", "--merges", "origin/main..HEAD")
+	if err != nil {
+		return branchState{}, err
+	}
 	return branchState{
-		branch: branch,
-		dirty:  status != "",
-		landed: r.isAncestor("HEAD", "origin/main"),
-		based:  r.isAncestor("origin/main", "HEAD"),
+		branch:    branch,
+		dirty:     status != "",
+		landed:    r.isAncestor("HEAD", "origin/main"),
+		based:     r.isAncestor("origin/main", "HEAD"),
+		hasMerges: merges != "",
 	}, nil
 }
 
@@ -308,7 +335,7 @@ func landOnMain(r runner, head string) error {
 		return nil
 	}
 	if _, fetchErr := r.git("fetch", "--quiet", "origin", "main"); fetchErr == nil && !r.isAncestor("origin/main", head) {
-		return errors.New("origin/main moved while CI ran. Rebase and land again (CI re-runs on the new SHA):\n  pnpm land -rebase")
+		return errMainMoved
 	}
 	return fmt.Errorf("origin refused the land:\n%w", err)
 }
@@ -334,7 +361,11 @@ func finish(r runner, branch string) error {
 	default:
 		say("Left origin/%s alone: it points at %s, which isn't what landed.", branch, remote[:12])
 	}
-	say("Done. This worktree's branch is on main now; remove the worktree when you're finished with it.")
+	if teardown := teardownCommand(r.dir); teardown != "" {
+		say("Done. This worktree's branch is on main now; remove the worktree when you're finished with it:\n  %s", teardown)
+	} else {
+		say("Done.")
+	}
 	return nil
 }
 
