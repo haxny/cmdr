@@ -294,25 +294,32 @@ fn a_finished_walk_releases_the_ground_it_held() {
 fn a_walk_cancelled_partway_reports_the_ground_it_covered() {
     let f = Fixture::new();
     let root = f.tree.path();
-    // Several roots, so cancelling between them is deterministic: the first is
-    // walked in full, then the token fires, then the loop stops at the second.
+    // Two roots, and the walk held at the door of the second: the first is walked
+    // in full, then the token fires, then the second stops before reading
+    // anything. ❌ Not "cancel once the first batch arrives": the walker runs ahead
+    // of its consumer, so by then it had sometimes finished both roots and had
+    // nothing left to stop.
     for name in ["one", "two"] {
         std::fs::create_dir_all(root.join(name).join("inner")).expect("dirs");
         std::fs::write(root.join(name).join("f.txt"), "xx").expect("file");
         f.seed_chain(&root.join(name));
     }
+    let second = f.path("two");
+    let park = crate::indexing::scanner::park::ParkHandle::arm(Path::new(&second), 0);
 
     let cancel = CancellationToken::new();
     let walk = start(
         f.context_for(&cancel, WalkFor::TheIndex),
-        vec![f.path("one"), f.path("two")],
+        vec![f.path("one"), second],
         CoverageDimension::Listing,
     );
-    // The first root's batch is in hand, so its walk is over; stop before the second.
-    let first = walk.next_batch().expect("the first root's entries");
+    assert!(
+        park.wait_until_parked(std::time::Duration::from_secs(5)),
+        "precondition: the walk reached the second root"
+    );
     cancel.cancel();
-    let (mut entries, outcome) = drain(walk);
-    entries.extend(first);
+    park.release();
+    let (entries, outcome) = drain(walk);
     f.writer.flush_blocking().expect("flush");
 
     assert!(outcome.cancelled, "it was stopped, and says so");
