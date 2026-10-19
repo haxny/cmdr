@@ -109,7 +109,7 @@ async fn smb_integration_the_compound_read_stops_at_one_download_chunk() {
     vol.create_directory(Path::new(&dir)).await.unwrap();
 
     let chunk = smb2::DOWNLOAD_CHUNK_SIZE as usize;
-    let (_tree, conn) = vol.clone_session().await.unwrap();
+    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
     assert_eq!(
         conn.quick_read_limit(),
         chunk as u64,
@@ -172,7 +172,7 @@ async fn smb_integration_a_measured_fast_link_compounds_a_multi_chunk_file() {
     drain(vol.open_read_stream(Path::new(&warm_up_path)).await.unwrap()).await;
 
     let size = 2 * 1024 * 1024;
-    let (_tree, conn) = vol.clone_session().await.unwrap();
+    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
     assert!(
         conn.quick_read_limit() >= size as u64,
         "loopback moves far more than 2 MiB in 250 ms, so the limit should have risen from one chunk, got {}",
@@ -427,7 +427,7 @@ async fn smb_integration_a_staged_write_over_the_quick_write_limit_streams() {
     vol.create_directory(Path::new(&dir)).await.unwrap();
     let data: Vec<u8> = (0..=252u8).cycle().take(1024 * 1024).collect();
     let size = data.len() as u64;
-    let (_tree, conn) = vol.clone_session().await.unwrap();
+    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
     assert!(
         size > conn.quick_write_limit() && size <= conn.compound_write_limit(),
         "1 MiB must fit one frame by credits and size, and still be over a cold connection's limit"
@@ -571,7 +571,7 @@ async fn credit_capped_volume(proxy: &credit_cap_proxy::CreditCapProxy) -> SmbVo
     // A few round trips, so the server has had a chance to decline growing the
     // window and smb2 knows its ceiling.
     let _ = vol.list_directory(Path::new(""), None).await;
-    let (_tree, conn) = vol.clone_session().await.unwrap();
+    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
     let ceiling = conn.credit_ceiling().expect("smb2 has seen the window stop growing");
     assert!(ceiling <= 64, "the proxy caps the window at 64, smb2 saw {ceiling}");
     vol
@@ -605,7 +605,7 @@ async fn smb_integration_a_hinted_read_the_credit_window_cant_fund_streams_inste
 
     // Warm the link, so the rate alone would say "one READ".
     drain(vol.open_read_stream(Path::new(&path)).await.unwrap()).await;
-    let (_tree, conn) = vol.clone_session().await.unwrap();
+    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
     assert!(
         conn.quick_read_limit() < data.len() as u64,
         "the credit ceiling must hold the limit under 5 MiB, got {}",

@@ -2,11 +2,12 @@
 //! and Hidden, in one `FILE_BASIC_INFORMATION`), and what it reports of that.
 
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataReport, UserFlags};
-use cmdr_fs::volume::StreamWritten;
+use cmdr_fs::volume::{StreamWritten, VolumeError};
 use log::warn;
 
 use super::SmbVolume;
 use super::mapping::attributes_of;
+use super::state::{SessionGeneration, ends_the_session};
 
 /// What a copy stamps on what it wrote, in one `FILE_BASIC_INFORMATION`: the
 /// source's `LastWriteTime` and `CreationTime`, and `HIDDEN` when the source is
@@ -39,21 +40,48 @@ pub(super) fn source_times(
     Some(times)
 }
 
-/// Stamps the source's date on a streaming writer's OWN handle, before
-/// `finish()`: the server rewrites the date when a writing handle closes, so a
-/// path stamp while this one is open would lose to that close. Best effort: a
-/// date that won't set leaves the server's, and the copy goes on. Returns
-/// whether the server took them.
-pub(super) async fn stamp_writer(
-    writer: &mut smb2::client::stream::FileWriter,
-    times: smb2::FileTimes,
-    smb_path: &str,
-) -> bool {
-    match writer.set_times(times).await {
-        Ok(()) => true,
-        Err(e) => {
-            warn!("SmbVolume::write_from_stream: path={smb_path:?} keeps the server's date, not the source's: {e}");
-            false
+impl SmbVolume {
+    /// Stamps the source's date on a streaming writer's OWN handle, before
+    /// `finish()`: the server rewrites the date when a writing handle closes, so
+    /// a path stamp while this one is open would lose to that close. What the
+    /// answer means: [`stamp_taken`](Self::stamp_taken).
+    pub(super) async fn stamp_writer(
+        &self,
+        writer: &mut smb2::client::stream::FileWriter,
+        times: smb2::FileTimes,
+        smb_path: &str,
+        ran_on: SessionGeneration,
+    ) -> Result<bool, VolumeError> {
+        let result = writer.set_times(times).await;
+        self.stamp_taken(smb_path, ran_on, result)
+    }
+
+    /// What a write makes of its date stamp's answer: `Ok(true)` the server
+    /// took it, `Ok(false)` it refused, so the file keeps the server's dates and
+    /// the copy goes on (best effort), and `Err` when the stamp met the session
+    /// ending ([`ends_the_session`]), through the error funnel.
+    ///
+    /// ❗ A write never reports `Ok` past its own last step seeing the
+    /// connection die: the transfer would land the file or start the next one on
+    /// a dead session, where its outage wait never looks. Failing after the
+    /// bytes landed is safe: a staged temp is cleared and the file runs again,
+    /// and a single-shot create settles by comparing bytes
+    /// (`settle_unanswered_create`).
+    pub(super) fn stamp_taken(
+        &self,
+        smb_path: &str,
+        ran_on: SessionGeneration,
+        result: Result<(), smb2::Error>,
+    ) -> Result<bool, VolumeError> {
+        match result {
+            Ok(()) => Ok(true),
+            Err(e) if ends_the_session(&e) => self
+                .handle_smb_result("write_from_stream(stamp)", smb_path, ran_on, Err(e))
+                .map(|()| true),
+            Err(e) => {
+                warn!("SmbVolume::write_from_stream: path={smb_path:?} keeps the server's date, not the source's: {e}");
+                Ok(false)
+            }
         }
     }
 }
@@ -79,3 +107,7 @@ pub(super) fn stamped(
     let report = MetadataReport::uniform(&stamped, modified, outcome);
     StreamWritten::with_report(bytes, &report, &stamped, modified)
 }
+
+#[cfg(test)]
+#[path = "stamping_test.rs"]
+mod stamping_test;

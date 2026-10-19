@@ -12,6 +12,8 @@
 use super::*;
 
 pub(super) use super::MountAnchor;
+pub(super) use super::session::SessionLease;
+pub(super) use super::state::SessionGeneration;
 pub(super) use super::testing::*;
 
 // The vocabulary the suites speak, re-exported so one glob covers it. It lives
@@ -71,7 +73,7 @@ fn make_test_volume_full(volume_id: &str, host: VolumeHost, share_root: &str, mo
             volume_id,
             params: Arc::new(tokio::sync::RwLock::new(params)),
             session: Arc::new(tokio::sync::Mutex::new(None)),
-            state: Arc::new(AtomicU8::new(ConnectionState::Disconnected as u8)),
+            state: SessionCell::new(ConnectionState::Disconnected, SessionGeneration::FIRST),
             watcher_cancel: std::sync::Mutex::new(None),
             reconnect_lock: Arc::new(tokio::sync::Mutex::new(())),
             unmounted: Arc::new(AtomicBool::new(false)),
@@ -92,7 +94,7 @@ fn make_test_volume_full(volume_id: &str, host: VolumeHost, share_root: &str, mo
 /// connected volume (the reconnect no-op, the watch-coverage claim).
 pub(super) fn make_test_volume_direct() -> SmbVolume {
     let vol = make_test_volume();
-    vol.inner.state.store(ConnectionState::Direct as u8, Ordering::Relaxed);
+    vol.inner.state.set_for_test(ConnectionState::Direct);
     vol
 }
 

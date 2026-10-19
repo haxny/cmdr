@@ -9,15 +9,16 @@ use super::{SmbVolume, SmbVolumeInner};
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::events::VolumeConnection;
 use cmdr_fs::volume::{Retirement, Retires, SelfHandle};
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Connection health states for an SmbVolume.
 ///
-/// Stored as `AtomicU8` for lock-free reads from any thread. The internal state
-/// machine is binary (`Direct ⇄ Disconnected`). The "OS mount" fallback the
-/// frontend shows lives at the outer `cmdr_fs::volume::ConnectionState` layer (see
-/// `enrich_from_volume_registry` in `volumes/smb.rs`) and never reaches
-/// this atomic on the smb2 hot path.
+/// Held in a [`SessionCell`], packed with the session's generation, for
+/// lock-free reads from any thread. The internal state machine is binary
+/// (`Direct ⇄ Disconnected`). The "OS mount" fallback the frontend shows lives at
+/// the outer `cmdr_fs::volume::ConnectionState` layer (see
+/// `enrich_from_volume_registry` in `volumes/smb.rs`) and never reaches this
+/// cell on the smb2 hot path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ConnectionState {
@@ -35,6 +36,143 @@ impl ConnectionState {
             _ => Self::Disconnected,
         }
     }
+}
+
+/// Which installed main session a call ran on. Every rebuild of the session
+/// installs the next one, so an error from a call on an older session can be
+/// told from the current session's own (`SessionCell::lose`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct SessionGeneration(u64);
+
+impl SessionGeneration {
+    /// The session a volume is built with.
+    pub(super) const FIRST: Self = Self(0);
+}
+
+/// The share's connection state and the generation of its installed session, in
+/// ONE atomic, so a transition can check which session it's about and act in the
+/// same step.
+///
+/// The work that outlives a call (the streaming-read producer, a held-open
+/// random reader) holds the share (`Arc<SmbVolumeInner>`) and reports a
+/// mid-stream loss through its error funnel.
+///
+/// ❗ The only way to `Disconnected` for a lost session is [`lose`](Self::lose),
+/// which acts only while the session the failing call ran on is still the
+/// installed one. A late error from a session a reconnect already replaced must
+/// never take the fresh one down: every sibling on it would take an outage it
+/// never had.
+pub(super) struct SessionCell(AtomicU64);
+
+impl SessionCell {
+    /// The low byte holds the state, the rest the generation.
+    const STATE_BITS: u32 = 8;
+
+    fn pack(state: ConnectionState, generation: SessionGeneration) -> u64 {
+        (generation.0 << Self::STATE_BITS) | state as u64
+    }
+
+    fn unpack(packed: u64) -> (ConnectionState, SessionGeneration) {
+        (
+            ConnectionState::from_u8(packed as u8),
+            SessionGeneration(packed >> Self::STATE_BITS),
+        )
+    }
+
+    pub(super) fn new(state: ConnectionState, generation: SessionGeneration) -> Self {
+        Self(AtomicU64::new(Self::pack(state, generation)))
+    }
+
+    fn load(&self) -> (ConnectionState, SessionGeneration) {
+        Self::unpack(self.0.load(Ordering::Acquire))
+    }
+
+    pub(super) fn state(&self) -> ConnectionState {
+        self.load().0
+    }
+
+    /// Moves to `next` from the current state and generation, atomically, and
+    /// reports the state it moved from. `None` leaves the cell as it is.
+    fn update(
+        &self,
+        next: impl Fn(ConnectionState, SessionGeneration) -> Option<(ConnectionState, SessionGeneration)>,
+    ) -> Option<ConnectionState> {
+        self.0
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |packed| {
+                let (state, generation) = Self::unpack(packed);
+                next(state, generation).map(|(state, generation)| Self::pack(state, generation))
+            })
+            .ok()
+            .map(|packed| Self::unpack(packed).0)
+    }
+
+    /// The session `ran_on` is lost: flips to `Disconnected` if it's still the
+    /// installed one and wasn't already marked lost. Whether this call flipped
+    /// it, so exactly one of the calls meeting the same dead session announces
+    /// it.
+    pub(super) fn lose(&self, ran_on: SessionGeneration) -> bool {
+        self.update(|state, generation| {
+            (generation == ran_on && state != ConnectionState::Disconnected)
+                .then_some((ConnectionState::Disconnected, generation))
+        })
+        .is_some()
+    }
+
+    /// The generation the session about to be installed gets. Runs in the same
+    /// critical section that installs it, so a call can never hold the new
+    /// session under the old generation. The state stays as it is (no call gets
+    /// a lease until [`restore`](Self::restore) says `Direct`).
+    pub(super) fn advance(&self) -> SessionGeneration {
+        let before = self.0.fetch_add(1 << Self::STATE_BITS, Ordering::AcqRel);
+        SessionGeneration(Self::unpack(before).1.0 + 1)
+    }
+
+    /// Session `generation` is up: flips to `Direct` if it's still the
+    /// installed one. Whether this call flipped it.
+    pub(super) fn restore(&self, generation: SessionGeneration) -> bool {
+        self.update(|state, current| {
+            (current == generation && state != ConnectionState::Direct).then_some((ConnectionState::Direct, current))
+        })
+        .is_some()
+    }
+
+    /// The volume is gone for good (`on_unmount`): `Disconnected` whatever
+    /// session is installed, since none of them will serve again.
+    pub(super) fn shut_down(&self) {
+        self.update(|_, generation| Some((ConnectionState::Disconnected, generation)));
+    }
+
+    /// The installed session's generation, for the suites that stand in for an
+    /// operation on it. ❌ Production code reports the generation its lease
+    /// carried, never this.
+    #[cfg(test)]
+    pub(super) fn generation(&self) -> SessionGeneration {
+        self.load().1
+    }
+
+    /// Puts the cell in `state` without a transition or an event, for the
+    /// suites that start from a connected volume.
+    #[cfg(test)]
+    pub(super) fn set_for_test(&self, state: ConnectionState) {
+        self.update(|_, generation| Some((state, generation)));
+    }
+}
+
+/// Whether `err` means the session that produced it can't serve again: THE
+/// session-loss predicate, for the main session's funnel
+/// ([`SmbVolumeInner::note_smb_error`]), the scan pool's members, and a write's
+/// date stamp alike.
+///
+/// By [`smb2::Error::kind`] alone. Since smb2 0.32.0 the request whose own send
+/// broke gets `SendFailed` (kind `ConnectionLost`) and `Io` on an established
+/// connection means a LOCAL failure, so ❌ no errno arm: an `EACCES` or `ENOSPC`
+/// must never end the session. A refused signature joins the lost connection: it
+/// taints the session, whichever call saw it.
+pub(super) fn ends_the_session(err: &smb2::Error) -> bool {
+    matches!(
+        err.kind(),
+        smb2::ErrorKind::ConnectionLost | smb2::ErrorKind::SessionExpired | smb2::ErrorKind::SignatureInvalid
+    )
 }
 
 /// Widens the internal state machine into the backend-facing enum every
@@ -82,7 +220,7 @@ impl SmbVolumeInner {
 
     /// Returns the current connection state.
     pub(super) fn connection_state(&self) -> ConnectionState {
-        ConnectionState::from_u8(self.state.load(Ordering::Relaxed))
+        self.state.state()
     }
 
     /// Whether this share has stopped owning its volume id: superseded by a newer
@@ -125,23 +263,39 @@ impl SmbVolumeInner {
         guard.as_ref().map(|s| s.client.diagnostics())
     }
 
-    /// Flips state to `Disconnected` and emits `volume-connection-changed` if the
-    /// previous state was something else (silent if we were already Disconnected,
-    /// to avoid event spam when several in-flight ops all see the same broken
-    /// session).
-    pub(super) fn transition_to_disconnected(&self) {
-        let prev = self.state.swap(ConnectionState::Disconnected as u8, Ordering::Relaxed);
-        if prev != ConnectionState::Disconnected as u8 {
+    /// THE funnel every smb2 error passes, whichever call saw it: tells the host
+    /// about a refused signature, and, when the error ends the session
+    /// ([`ends_the_session`]), marks session `ran_on` lost. Returns whether the
+    /// error ends the session, for the caller's log line.
+    ///
+    /// `ran_on` is the generation of the session the failing call RAN on (its
+    /// [`SessionLease`](super::session::SessionLease)), ❌ never a fresh read of
+    /// the current one, which would let a late error from a replaced session
+    /// take down its successor.
+    pub(super) fn note_smb_error(&self, ran_on: SessionGeneration, err: &smb2::Error) -> bool {
+        super::session::report_security_refusal(&self.host, &self.volume_id, err);
+        let ends = ends_the_session(err);
+        if ends {
+            self.transition_to_disconnected(ran_on);
+        }
+        ends
+    }
+
+    /// Marks session `ran_on` lost, and emits `volume-connection-changed` if
+    /// this call is the one that flipped it: silent when it was already
+    /// `Disconnected` (several in-flight ops all meet the same broken session)
+    /// and when a reconnect already installed a newer session.
+    pub(super) fn transition_to_disconnected(&self, ran_on: SessionGeneration) {
+        if self.state.lose(ran_on) {
             self.emit_state_change_for_id(ConnectionState::Disconnected.into());
         }
     }
 
-    /// Flips state to `Direct` and emits `volume-connection-changed` if the previous
-    /// state was something else. Called by `attempt_reconnect` after a successful
-    /// session rebuild.
-    pub(super) fn transition_to_direct(&self) {
-        let prev = self.state.swap(ConnectionState::Direct as u8, Ordering::Relaxed);
-        if prev != ConnectionState::Direct as u8 {
+    /// Flips state to `Direct` for the session `do_attempt_reconnect` just
+    /// installed as `generation`, and emits `volume-connection-changed` if this
+    /// call flipped it.
+    pub(super) fn transition_to_direct(&self, generation: SessionGeneration) {
+        if self.state.restore(generation) {
             self.emit_state_change_for_id(ConnectionState::Direct.into());
         }
     }

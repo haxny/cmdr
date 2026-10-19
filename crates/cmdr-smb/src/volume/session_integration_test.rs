@@ -29,7 +29,7 @@ async fn smb_integration_listing_watch_coverage_flips_with_connection() {
         "expected full coverage on a freshly-connected Docker volume"
     );
 
-    vol.inner.transition_to_disconnected();
+    vol.inner.transition_to_disconnected(vol.inner.state.generation());
     assert_eq!(
         vol.listing_watch_coverage(Path::new("/")),
         WatchCoverage::None,
@@ -55,7 +55,7 @@ async fn smb_integration_attempt_reconnect_rebuilds_session() {
     // We don't need to actually break the network; `attempt_reconnect`'s
     // job is to rebuild the session regardless of why state went down.
     *vol.inner.session.lock().await = None;
-    vol.inner.transition_to_disconnected();
+    vol.inner.transition_to_disconnected(vol.inner.state.generation());
     assert_eq!(vol.session_state(), ConnectionState::Disconnected);
 
     // Hot-path op should fail: clone_session refuses while Disconnected.
@@ -101,7 +101,7 @@ async fn smb_integration_reconnect_repoints_the_liveness_reading() {
     );
 
     *vol.inner.session.lock().await = None;
-    vol.inner.transition_to_disconnected();
+    vol.inner.transition_to_disconnected(vol.inner.state.generation());
     vol.inner
         .do_attempt_reconnect()
         .await
@@ -351,7 +351,7 @@ async fn smb_integration_superseded_volume_reconnects_without_reclaiming_the_id(
 
     // "The server hung up mid-copy": drop the session under the holder.
     *vol.inner.session.lock().await = None;
-    vol.inner.transition_to_disconnected();
+    vol.inner.transition_to_disconnected(vol.inner.state.generation());
 
     vol.inner
         .do_attempt_reconnect()
@@ -508,10 +508,14 @@ async fn smb_integration_a_session_swapped_mid_clone_is_handed_out_whole() {
         client_lock_tickets_issued() > tickets_before
     })
     .await;
-    *session_guard = Some(session::MainSession::new(new_client, new_tree));
+    *session_guard = Some(session::MainSession::new(
+        new_client,
+        new_tree,
+        vol.inner.state.advance(),
+    ));
     drop(session_guard);
 
-    let (tree, mut conn) = cloning.await.unwrap().expect("a session to clone");
+    let SessionLease { tree, mut conn, .. } = cloning.await.unwrap().expect("a session to clone");
     tree.stat(&mut conn, "")
         .await
         .expect("the tree and the connection belong to the same session");

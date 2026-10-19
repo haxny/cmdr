@@ -854,7 +854,7 @@ async fn smb_integration_get_metadata_waits_out_a_brief_delete_pending() {
     // Someone else holds it open (sharing delete, as SMB clients do), so the
     // delete only marks it.
     let smb_path = vol.to_smb_path(Path::new(&file_path)).unwrap();
-    let (tree, mut conn) = vol.clone_session().await.unwrap();
+    let SessionLease { tree, mut conn, .. } = vol.clone_session().await.unwrap();
     let (file_id, _) = tree.open_file(&mut conn, &smb_path).await.unwrap();
     vol.delete(Path::new(&file_path)).await.unwrap();
 
@@ -888,7 +888,7 @@ async fn smb_integration_get_metadata_reports_a_delete_pending_that_persists() {
     vol.create_file(Path::new(&file_path), b"photo").await.unwrap();
 
     let smb_path = vol.to_smb_path(Path::new(&file_path)).unwrap();
-    let (tree, mut conn) = vol.clone_session().await.unwrap();
+    let SessionLease { tree, mut conn, .. } = vol.clone_session().await.unwrap();
     let (file_id, _) = tree.open_file(&mut conn, &smb_path).await.unwrap();
     vol.delete(Path::new(&file_path)).await.unwrap();
 

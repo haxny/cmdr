@@ -173,7 +173,8 @@ connection that was still healthy (a redundant upgrade pass replaced the volume 
 - The **watcher** is cancelled. It runs on its own dedicated session (so cancelling it can't disturb a transfer), and
   two watchers on one id double-feed the listing cache and the index.
 - The **scan pool** opens no new connections (an already-open one drains with its scan).
-- **`volume-connection-changed` events** are suppressed (`emit_state_change_for_id`, `update_state_on_smb_error`). A
+- **`volume-connection-changed` events** are suppressed (`emit_state_change_for_id`, which the error funnel's
+  `transition_to_disconnected` goes through). A
   retired instance announcing a disconnect would tell the frontend a healthy volume just dropped.
 - The **index-resume hook** is skipped in `do_attempt_reconnect`; the successor ran it when it registered.
 

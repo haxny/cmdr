@@ -59,7 +59,7 @@ fn rerooting_addresses_the_new_mount_over_the_same_session() {
     // The same session, not a copy of it: a connection-state change on one
     // instance is visible through the other. That's what "no session churn"
     // means, and it's why a running copy survives a promotion.
-    vol.inner.transition_to_direct();
+    vol.inner.transition_to_direct(vol.inner.state.generation());
     assert_eq!(
         promoted_smb.session_state(),
         ConnectionState::Direct,

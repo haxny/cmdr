@@ -14,6 +14,7 @@
 //! state machine, just now backend-triggered on watcher death (not only on the
 //! next FE backoff tick / hot-path op).
 
+use super::state::SessionGeneration;
 use super::{MountAnchor, SmbVolumeInner};
 use cmdr_fs::archive_format::has_supported_archive_extension;
 use cmdr_fs::entry::FileEntry;
@@ -295,6 +296,10 @@ pub(super) struct WatchedVolume {
     /// per event batch, so a promotion to another mount root re-points the paths
     /// this watcher's notifications carry instead of feeding a mount that's gone.
     pub(super) mount_path: Arc<RwLock<PathBuf>>,
+    /// The main session this watcher was spawned for. Its death marks that
+    /// session lost, so a watcher outliving a reconnect never takes down the
+    /// session that replaced it.
+    pub(super) generation: SessionGeneration,
 }
 
 /// Exits on cancel (`cancel_rx`), on `next_events` error, or on a clean
@@ -314,6 +319,7 @@ pub(super) async fn run_smb_watcher(
         host,
         share,
         mount_path: active_mount_path,
+        generation,
     } = volume;
     // ── Main watcher loop ──────────────────────────────────────────
 
@@ -554,7 +560,7 @@ pub(super) async fn run_smb_watcher(
                 // which rebuilds the session, respawns this watcher, and resumes the
                 // drive index — so an enabled NAS index doesn't go dark until the
                 // user intervenes. Coalesces with any FE-driven reconnect.
-                super::spawn_watcher_death_reconnect(share.clone());
+                super::spawn_watcher_death_reconnect(share.clone(), generation);
                 return;
             }
         }

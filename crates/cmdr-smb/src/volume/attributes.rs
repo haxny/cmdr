@@ -10,6 +10,7 @@
 
 use super::SmbVolume;
 use super::mapping::{attributes_of, user_flags_of};
+use super::session::SessionLease;
 use cmdr_fs::metadata::{
     CarriedMetadata, ClassOutcome, LandedMetadata, MetadataClasses, MetadataReport, Unblock, UserFlags,
 };
@@ -23,9 +24,15 @@ impl SmbVolume {
     /// reads reports its own off the read's CREATE response instead.
     pub(super) async fn attributes_impl(&self, path: &Path) -> Result<smb2::FileAttributes, VolumeError> {
         let smb_path = self.to_smb_path(path)?;
-        let (tree, mut conn) = self.clone_session().await?;
+        let SessionLease {
+            tree,
+            mut conn,
+            generation,
+        } = self.clone_session().await?;
         let r = tree.stat(&mut conn, &smb_path).await;
-        Ok(self.handle_smb_result("attributes", &smb_path, r)?.attributes)
+        Ok(self
+            .handle_smb_result("attributes", &smb_path, generation, r)?
+            .attributes)
     }
 
     /// The creation and modification dates and Hidden and Locked, in the one

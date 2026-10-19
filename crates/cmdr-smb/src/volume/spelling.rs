@@ -15,6 +15,7 @@
 //! every other call on this backend means the exact bytes it's handed.
 
 use super::SmbVolume;
+use super::session::SessionLease;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::VolumeError;
 use log::debug;
@@ -268,7 +269,11 @@ impl SmbVolume {
         floor: usize,
         cancel: Option<&CancellationToken>,
     ) -> Result<Probe, VolumeError> {
-        let (tree, mut conn) = self.clone_session().await?;
+        let SessionLease {
+            tree,
+            mut conn,
+            generation,
+        } = self.clone_session().await?;
         let mut len = comps.len();
         while len > floor {
             check_cancel(cancel)?;
@@ -284,7 +289,7 @@ impl SmbVolume {
             }
             // Anything else isn't a spelling question (a dropped session, a
             // refusal), so it goes back as what it is.
-            self.handle_smb_result("find_stored_spelling", &prefix, result)?;
+            self.handle_smb_result("find_stored_spelling", &prefix, generation, result)?;
             // The deepest prefix opening means the component under it is the miss.
             return Ok(if len == comps.len() {
                 Probe::Opens
@@ -308,9 +313,13 @@ impl SmbVolume {
         {
             return Ok(entries.into_iter().map(|e| e.name).collect());
         }
-        let (tree, mut conn) = self.clone_session().await?;
+        let SessionLease {
+            tree,
+            mut conn,
+            generation,
+        } = self.clone_session().await?;
         let result = tree.list_directory(&mut conn, parent).await;
-        let entries = self.handle_smb_result("find_stored_spelling", parent, result)?;
+        let entries = self.handle_smb_result("find_stored_spelling", parent, generation, result)?;
         Ok(entries
             .into_iter()
             .map(|e| e.name)

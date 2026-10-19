@@ -208,8 +208,42 @@ fn map_smb_error_io() {
     let err = smb2::Error::Io(std::io::Error::new(std::io::ErrorKind::BrokenPipe, "pipe broke"));
     let ve = map_smb_error(err, "/Volumes/share/holiday.raw");
     // IO errors (callback errors, etc.) are not connection losses; they map to IoError.
-    // Real connection losses come through Error::Disconnected → ConnectionLost.
+    // Real connection losses come through `Disconnected` / `SendFailed` → ConnectionLost.
     assert!(matches!(ve, VolumeError::IoError { .. }));
+}
+
+/// A local I/O failure keeps its errno: it's what tells the UI what went wrong
+/// (here, a permission refusal), and `None` would hide it.
+#[test]
+fn a_local_io_failure_keeps_its_errno() {
+    const EACCES: i32 = 13;
+    let err = smb2::Error::Io(std::io::Error::from_raw_os_error(EACCES));
+    let ve = map_smb_error(err, "/Volumes/share/holiday.raw");
+    assert!(
+        matches!(
+            ve,
+            VolumeError::IoError {
+                raw_os_error: Some(EACCES),
+                ..
+            }
+        ),
+        "got: {ve:?}"
+    );
+}
+
+/// The request whose own send broke the connection (smb2 0.32.0's `SendFailed`)
+/// reads as a lost device, like every other waiter's `Disconnected`, so the
+/// transfer layer's outage wait and retry see it.
+#[test]
+fn a_failed_send_is_a_lost_connection() {
+    const EPIPE: i32 = 32;
+    let err = smb2::Error::SendFailed {
+        command: smb2::types::Command::Write,
+        source: std::io::Error::from_raw_os_error(EPIPE),
+    };
+    assert_eq!(err.kind(), smb2::ErrorKind::ConnectionLost);
+    let ve = map_smb_error(err, "/Volumes/share/holiday.raw");
+    assert!(matches!(ve, VolumeError::DeviceDisconnected(_)), "got: {ve:?}");
 }
 
 #[test]

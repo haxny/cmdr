@@ -5,6 +5,7 @@
 
 use super::SmbVolume;
 use super::mapping::{filetime_to_unix_secs, map_smb_error};
+use super::session::SessionLease;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::scan_walk::{conflicts_against, fold_batch};
 use cmdr_fs::volume::{BatchScanResult, CopyScanResult, ScanBoundary, ScanConflict, SourceItemInfo, VolumeError};
@@ -58,9 +59,13 @@ impl SmbVolume {
                 // Root is always a directory, scan its contents
             } else {
                 let info = {
-                    let (tree, mut conn) = self.clone_session().await?;
+                    let SessionLease {
+                        tree,
+                        mut conn,
+                        generation,
+                    } = self.clone_session().await?;
                     let r = tree.stat(&mut conn, smb_path).await;
-                    self.handle_smb_result("scan_for_copy(stat)", smb_path, r)?
+                    self.handle_smb_result("scan_for_copy(stat)", smb_path, generation, r)?
                 };
                 result.top_level_modified_at = filetime_to_unix_secs(info.modified);
                 result.top_level_created_at = filetime_to_unix_secs(info.created);
@@ -283,7 +288,11 @@ impl SmbVolume {
             use futures_util::StreamExt;
             use futures_util::stream::FuturesUnordered;
 
-            let (tree_arc, session_conn) = self.clone_session().await?;
+            let SessionLease {
+                tree: tree_arc,
+                conn: session_conn,
+                generation,
+            } = self.clone_session().await?;
 
             // Index tracks original position so results can be reassembled in input order.
             enum StatOutcome {
@@ -357,28 +366,17 @@ impl SmbVolume {
                         }
                     }
                     Err(e) => {
-                        // Mirror handle_smb_result for the state transition on
-                        // connection loss, then map and propagate.
+                        // Every stat ran on the lease's session, so the error
+                        // funnel judges it against that one.
                         let kind = e.kind();
-                        if matches!(kind, smb2::ErrorKind::ConnectionLost | smb2::ErrorKind::SessionExpired) {
-                            warn!(
-                                "SmbVolume::scan_for_copy_batch(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}, transitioning to Disconnected",
-                                self.inner.share_name,
-                                kind,
-                                e.status(),
-                                cmdr_fs::log_detail::LogDetail(&e.to_string())
-                            );
-                            self.inner.transition_to_disconnected();
-                        } else {
-                            warn!(
-                                "SmbVolume::scan_for_copy_batch(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}",
-                                self.inner.share_name,
-                                kind,
-                                e.status(),
-                                cmdr_fs::log_detail::LogDetail(&e.to_string())
-                            );
-                        }
-                        super::session::report_security_refusal(self.inner.host(), &self.inner.volume_id, &e);
+                        let ends = self.inner.note_smb_error(generation, &e);
+                        warn!(
+                            "SmbVolume::scan_for_copy_batch(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}, ends_the_session={ends}",
+                            self.inner.share_name,
+                            kind,
+                            e.status(),
+                            cmdr_fs::log_detail::LogDetail(&e.to_string())
+                        );
                         return Err(map_smb_error(e, &self.to_display_path(&smb_path)));
                     }
                 }

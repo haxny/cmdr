@@ -1150,26 +1150,32 @@ listed when the driver's loop ends belongs to a task that was DROPPED mid-write 
 of its window on cancel and on the first failure — so `volume::cleanup::clean_abandoned_staged_writes` removes those,
 and the deep-merge children that were never tracked at all are now covered too.
 
-**What that sweep can't remove, it REPORTS.** A dropped write task never closes its handle, and an SMB2 server answers
-the delete with a sharing violation for as long as that session lives (measured: refused continuously to t+191 s on a
-real share, then deleted instantly from a fresh session). Retrying is provably useless from inside the operation, so
-`clean_abandoned_staged_writes` returns the paths it couldn't take, and both volume drivers hang them on the
-`write-cancelled` event as `CancelRollback::staged_leftovers`. That is the whole remedy this layer owns: without it a
-user who chose Rollback was told the destination was clear while 519 MB across four files (2.2 GB in another run) sat on
-their NAS. ❌ Don't fold them into `CancelRollback::skips` — a skip is a LEDGER item a reversal walked to and chose to
-leave, and `reversed + skipped` is what the reversal's bar drains over. See § "Naming what a cancel left behind".
+**What that sweep can't remove, it REPORTS.** A dropped write task whose handle stays open (§ "Known gap" below) makes
+an SMB2 server answer the delete with a sharing violation for as long as that session lives (measured: refused
+continuously to t+191 s on a real share, then deleted instantly from a fresh session). Retrying is provably useless from
+inside the operation, so `clean_abandoned_staged_writes` returns the paths it couldn't take, and both volume drivers
+hang them on the `write-cancelled` event as `CancelRollback::staged_leftovers`. That is the whole remedy this layer
+owns: without it a user who chose Rollback was told the destination was clear while 519 MB across four files (2.2 GB in
+another run) sat on their NAS. ❌ Don't fold them into `CancelRollback::skips` — a skip is a LEDGER item a reversal
+walked to and chose to leave, and `reversed + skipped` is what the reversal's bar drains over. See § "Naming what a
+cancel left behind".
 
-**Known gap, deliberately open: the abandoned SMB handle.** The reason that sweep is refused is the handle itself. A
-copy task abandoned mid-write has its future dropped, so the SMB2 `CLOSE` for the destination file is never sent, and
-the server holds the file open for the rest of the session. So the leftover isn't a race the app lost, it's a handle the
-app still owns and can't reach. ❌ **Retry with backoff cannot fix it** — that's what the t+191 s measurement above
-settles, and a delete from a FRESH session succeeded instantly on the same file. Two shapes would: send the `CLOSE` on
-the abandon path, or re-establish the session before sweeping. The second is the safer one, because it needs no
-cooperation from a task that may be wedged — which is exactly why the first is unattractive: the abandon path is the one
-hardened after the 2026-07-31 incident, and a hang on cancel is worse for a person than a leftover file. So neither is
-wired, and the consequence is survivable rather than permanent: the startup orphan sweep is volume-aware (§ "Which path
-space a recorded partial lives in"), so a refused temp is removed on a later launch, and the leftover toast is what
-tells the user in the meantime.
+**Known gap, deliberately open: the abandoned SMB handle.** A refused sweep is about the handle itself. Since smb2
+0.32.0 a dropped handle (`FileWriter`, `FileReader`, `FileUpload`, `FileDownload`) queues its SMB2 `CLOSE`, with no
+flush, before the drop returns, so it reaches the server after that handle's in-flight requests and before anything sent
+next: a copy task dropped mid-stream leaves a closed temp, and the sweep's delete right after works. Two shapes still
+leak a handle the app owns and can't reach:
+
+- **A drop with no credit on hand**: its `CLOSE` goes out a moment later, so a delete sent at once can still meet the
+  open handle.
+- **An `async fn` that holds a handle only for the call** (`write_file_compound` for a small staged temp, the pipelined
+  reads and writes, `copy`): its future dropped between CREATE and CLOSE sends no `CLOSE`, and the server holds the file
+  open for the rest of the session ([smb2#24](https://github.com/vdavid/smb2/issues/24)).
+
+❌ **Retry with backoff within the session cannot fix the second** — that's what the t+191 s measurement above settles,
+and a delete from a FRESH session succeeded instantly on the same file. The consequence is survivable rather than
+permanent: the startup orphan sweep is volume-aware (§ "Which path space a recorded partial lives in"), so a refused
+temp is removed on a later launch, and the leftover toast is what tells the user in the meantime.
 
 Registration goes through `cmdr_operations::in_flight_temps`, which keeps the operation's in-memory list AND a persisted
 log in the app data dir once the engine claims it. Local copies register there too (`overwrite::stage_and_land_file`),
@@ -1843,7 +1849,8 @@ reported, never claimed. A settled create gets its stamp again: the source's dat
 write (staged flags only) go on by path through `Volume::apply_metadata` (idempotent), read off the settle's own source
 stream, and what's refused joins the loss note, ❌ never dropped silently. The SMB write fails its compound path with
 `DeviceDisconnected` when the stamp itself met the drop (`crates/cmdr-smb/DETAILS.md` § "Dates on copies"), so this is
-the path that puts its dates on. Pinned by `copy_outage_tests.rs::a_settled_single_shot_write_gets_the_date_its_stamp_lost`.
+the path that puts its dates on. Pinned by
+`copy_outage_tests.rs::a_settled_single_shot_write_gets_the_date_its_stamp_lost`.
 
 **Residual risk, accepted.** A byte-identical file someone else saved at the name during the outage is claimed as ours,
 so it enters the rollback ledger and an undo would remove it. Content-identical to the source and saved in the seconds

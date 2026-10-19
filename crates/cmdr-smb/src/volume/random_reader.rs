@@ -6,39 +6,48 @@ use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::sync::atomic::AtomicU8;
 
-use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::{Retirement, VolumeError, VolumeRandomReader};
+use cmdr_fs::volume::{VolumeError, VolumeRandomReader};
 use log::debug;
 use smb2::client::stream::FileReader;
 
-use super::SmbVolume;
 use super::mapping::map_smb_error;
-use super::session::update_state_on_smb_error;
+use super::session::SessionLease;
+use super::state::SessionGeneration;
+use super::{SmbVolume, SmbVolumeInner};
 
-/// A held-open SMB file. Carries what an error needs to update the share's
-/// connection state, like the streaming-download producer does, because it
-/// outlives the call that opened it and holds no `&SmbVolume`.
+/// A held-open SMB file. Carries the share and the session it was opened on, so
+/// an error reaches the share's error funnel like the streaming-download
+/// producer's does: it outlives the call that opened it and holds no
+/// `&SmbVolume`.
 pub(super) struct SmbRandomReader {
     reader: FileReader,
-    host: VolumeHost,
-    state: Arc<AtomicU8>,
-    retirement: Arc<Retirement>,
-    volume_id: String,
+    share: Arc<SmbVolumeInner>,
+    generation: SessionGeneration,
     /// The app-addressable path, the payload of a path-carrying `VolumeError`.
     display_path: String,
 }
 
 impl SmbRandomReader {
     fn map_error(&self, op: &str, e: smb2::Error) -> VolumeError {
-        update_state_on_smb_error(&self.host, &self.state, &self.retirement, &self.volume_id, &e);
-        debug!(
-            "SmbRandomReader::{op}(volume={:?}, path={:?}): {e}",
-            self.volume_id, self.display_path
-        );
-        map_smb_error(e, &self.display_path)
+        map_reader_error(&self.share, self.generation, op, &self.display_path, e)
     }
+}
+
+/// Reports `e` from session `generation` through the share's funnel and maps it.
+fn map_reader_error(
+    share: &SmbVolumeInner,
+    generation: SessionGeneration,
+    op: &str,
+    display_path: &str,
+    e: smb2::Error,
+) -> VolumeError {
+    share.note_smb_error(generation, &e);
+    debug!(
+        "SmbRandomReader::{op}(volume={:?}, path={display_path:?}): {e}",
+        share.volume_id
+    );
+    map_smb_error(e, display_path)
 }
 
 impl VolumeRandomReader for SmbRandomReader {
@@ -63,16 +72,14 @@ impl VolumeRandomReader for SmbRandomReader {
         Box::pin(async move {
             let Self {
                 reader,
-                host,
-                state,
-                retirement,
-                volume_id,
+                share,
+                generation,
                 display_path,
             } = *self;
-            reader.close().await.map_err(|e| {
-                update_state_on_smb_error(&host, &state, &retirement, &volume_id, &e);
-                map_smb_error(e, &display_path)
-            })
+            reader
+                .close()
+                .await
+                .map_err(|e| map_reader_error(&share, generation, "close", &display_path, e))
         })
     }
 }
@@ -89,10 +96,11 @@ impl SmbVolume {
             "SmbVolume::open_random_reader: share={:?}, path={:?}",
             self.inner.share_name, smb_path
         );
-        let (tree, conn) = self.clone_session().await?;
+        let SessionLease { tree, conn, generation } = self.clone_session().await?;
         let reader = self.handle_smb_result(
             "open_random_reader",
             &smb_path,
+            generation,
             tree.open_file_reader(conn, &smb_path).await,
         )?;
         if reader.info().is_directory {
@@ -102,10 +110,8 @@ impl SmbVolume {
         }
         Ok(Box::new(SmbRandomReader {
             reader,
-            host: self.inner.host().clone(),
-            state: Arc::clone(&self.inner.state),
-            retirement: Arc::clone(&self.inner.retirement),
-            volume_id: self.inner.volume_id.clone(),
+            share: Arc::clone(&self.inner),
+            generation,
             display_path: self.to_display_path(&smb_path),
         }))
     }

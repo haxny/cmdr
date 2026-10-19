@@ -6,38 +6,37 @@ the keychain, mounts, and every human-facing word stay in the app's `network/`.
 ## Module map
 
 - `src/volume/`: the backend — `mod.rs` (structs), `volume_impl.rs` (the whole `impl Volume`), and one module per
-  concern (`streams`, `session`/`reconnect`, `scan_pool`, `watcher/`, `testing` for the Docker fixtures, and so on).
-- `src/{types,errors,connection}.rs`: share-listing vocabulary, `smb2::Error` classification, the address builder.
-  Re-exported at the root (`cmdr_smb::`).
+  concern (`streams`, `session`/`reconnect`, `scan_pool`, `watcher/`, `testing`: Docker fixtures).
+- `src/{types,errors,connection}.rs`: share-listing vocabulary, `smb2::Error` classification, the address builder,
+  re-exported at the root.
 
 ## Backend must-knows
 
 - **Everything the backend asks the app goes through the `VolumeHost`** (seams:
   `crates/cmdr-fs/src/volume/host/CLAUDE.md`). Background work spawns onto `host.runtime()`.
-- **The watcher runs on a DEDICATED session** (stacked CHANGE_NOTIFY long-polls wedge Samba) **and never reconnects
-  itself**: on death it kicks the ONE reconnect path (`spawn_watcher_death_reconnect`). ❌ No second loop, no cancel on
-  pane close.
+- **The watcher runs on a DEDICATED session and never reconnects itself**: on death it kicks the ONE reconnect path
+  (`spawn_watcher_death_reconnect`). ❌ No second loop, no cancel on pane close.
 - **`SmbVolume` is a per-mount-root instance over a shared `Arc<SmbVolumeInner>`**; share-scoped background work reads
   `SmbVolumeInner::self_handle()`, ❌ never the volume id (the SUCCESSOR's after a swap).
 - **A replaced volume is SUPERSEDED, never unmounted**: `on_superseded` retires the id-scoped parts and leaves the
-  session alone for transfers still holding an `Arc` (tearing it down once killed a live NAS copy). ❌ A promotion calls
+  session alone for transfers still holding an `Arc` (a teardown once killed a live NAS copy). ❌ A promotion calls
   neither hook on the replaced instance (both act on the SHARED session).
-- **`paths_are_os_visible()` tracks the MOUNT, not the backend kind** (latched off by `note_root_mount_gone`). ❌ Never
-  hardcode `true`: smb2 browses on past a dead mount, so the drag it breaks fails silently.
+- **`paths_are_os_visible()` tracks the MOUNT, not the backend kind**. ❌ Never hardcode `true`: smb2 browses on past a
+  dead mount, so the drag it breaks fails silently.
 - **`write_from_stream` drives an OWNED `FileWriter` on a cloned `Connection`** (❌ never borrowed under the session
-  mutex: the QNAP deadlock); on error, `abort()` then delete the partial. Progress is server-confirmed.
+  mutex: the QNAP deadlock); on error, `abort()` then delete the partial.
 - **A copy's date stamps the writer's OWN handle before `finish()`**; ❌ never by path while it's open (its close
   re-stamps).
 - **Unknown-length writes always stream**, succeeding on `finish`'s confirmed count.
 - **A forced file rename is one atomic `ReplaceIfExists` swap**; ❌ never clear a destination that's the source
   re-cased.
-- **One-frame fast paths stop at smb2's quick limits**: a hinted read at `quick_read_limit()` (sized via
-  `read_file_compound_sized`), the write promise at `quick_write_limit()`. ❌ A refused one-frame write to a non-scratch
-  name never streams (`one_frame_write_limit`).
+- **One-frame fast paths stop at smb2's quick limits**: a hinted read at `quick_read_limit()`, the write promise at
+  `quick_write_limit()`. ❌ A refused one-frame write to a non-scratch name never streams (`one_frame_write_limit`).
 - **A streamed read ends at its last byte** (the CLOSE is already out): ❌ don't wait for `None` to drop `chunk_tx`.
 - **`scan_recursive` asks its `ScanBoundary` per entry, `dir()` BEFORE the listing** (`DETAILS.md` § "Scanning").
 - **Bulk work draws on the refcounted pool of extra sessions** (`scan_pool.rs`); a dead member retries on a sibling, ❌
   never moving the MAIN volume's connection state.
+- **An error funnels with its lease's generation**, ❌ never a fresh read (DETAILS § "Which session a loss is about").
 - **smb2 bounds every wait itself**: ❌ no timeout layer of ours.
 - **Path conversion matches whole COMPONENTS both ways** (`to_smb_path` / `to_display_path` join and strip
   `share_root`). ❌ Build a volume through `MountAnchor`, never a bare mount path: an anchored mount that loses its
@@ -55,4 +54,4 @@ the keychain, mounts, and every human-facing word stay in the app's `network/`.
 - ❌ Never gate behavior on `cfg(test)`; use `any(test, feature = "testing")`, or it flips silently in a consumer's
   build.
 
-Everything else (lifecycles, anchored mounts, credits, tests, decisions): `DETAILS.md`. Read it first.
+Lifecycles, anchored mounts, credits, tests, decisions: `DETAILS.md`. Read it first.

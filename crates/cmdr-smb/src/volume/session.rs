@@ -1,11 +1,10 @@
-//! Connection/session management: session cloning, connection checks, and the
-//! smb2 error-handling helpers (`handle_smb_result`,
-//! `update_state_on_smb_error`) plus session (re)build helpers.
+//! Connection/session management: session cloning (the [`SessionLease`]),
+//! connection checks, the smb2 error-handling helper (`handle_smb_result`), plus
+//! session (re)build helpers.
 
 use super::mapping::map_smb_error;
-use super::state::ConnectionState;
+use super::state::{ConnectionState, SessionGeneration};
 use super::{SmbConnectionParams, SmbVolume};
-use cmdr_fs::volume::Retirement;
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::credentials::StoredCredentials;
@@ -13,7 +12,7 @@ use log::{debug, warn};
 use smb2::client::tree::Tree;
 use smb2::{ClientConfig, SmbClient};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 pub(super) static CLIENT_LOCK_TICKET: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -27,15 +26,32 @@ pub(super) static CLIENT_LOCK_TICKET: std::sync::atomic::AtomicU64 = std::sync::
 pub(super) struct MainSession {
     pub(super) client: SmbClient,
     pub(super) tree: Arc<Tree>,
+    /// Which installed session this is, handed out with every lease on it.
+    pub(super) generation: SessionGeneration,
 }
 
 impl MainSession {
-    pub(super) fn new(client: SmbClient, tree: Tree) -> Self {
+    pub(super) fn new(client: SmbClient, tree: Tree, generation: SessionGeneration) -> Self {
         Self {
             client,
             tree: Arc::new(tree),
+            generation,
         }
     }
+}
+
+/// One clone of the main session for a call to drive with no lock held: the
+/// share's tree, a `Connection` clone, and which installed session both belong
+/// to.
+///
+/// ❗ An error from a call on these goes through the funnel with THIS
+/// `generation` (`handle_smb_result`, `SmbVolumeInner::note_smb_error`), ❌ never
+/// a fresh read of the current one: that's what keeps a late error from a
+/// session a reconnect already replaced from taking down its successor.
+pub(super) struct SessionLease {
+    pub(super) tree: Arc<Tree>,
+    pub(super) conn: smb2::client::Connection,
+    pub(super) generation: SessionGeneration,
 }
 
 impl SmbVolume {
@@ -52,12 +68,13 @@ impl SmbVolume {
 
     /// Briefly locks the session, clones its `Connection` (cheap `Arc::clone`;
     /// all clones multiplex frames over the same SMB session) and its
-    /// `Arc<Tree>`, and releases the lock. Both come from the same session.
+    /// `Arc<Tree>`, and releases the lock. Both come from the same session, and
+    /// the lease names its generation.
     ///
     /// Callers can then drive `Tree::download` / `Tree::read_file_compound_sized` /
     /// `Tree::write_file_compound` on the owned `Connection` without holding
     /// any lock, enabling multiple concurrent copies on a single `SmbVolume`.
-    pub(super) async fn clone_session(&self) -> Result<(Arc<Tree>, smb2::client::Connection), VolumeError> {
+    pub(super) async fn clone_session(&self) -> Result<SessionLease, VolumeError> {
         self.check_connection()?;
         let ticket = CLIENT_LOCK_TICKET.fetch_add(1, Ordering::Relaxed);
         let start = std::time::Instant::now();
@@ -70,7 +87,7 @@ impl SmbVolume {
             ticket,
             self.inner.share_name
         );
-        let (tree, conn) = {
+        let lease = {
             let mut guard = self.inner.session.lock().await;
             log::trace!(
                 "client-mutex: acquired ticket={} caller=clone_session share={:?} waited={:?}",
@@ -87,23 +104,27 @@ impl SmbVolume {
                 );
                 VolumeError::DeviceDisconnected("SMB session not available".to_string())
             })?;
-            let pair = (Arc::clone(&session.tree), session.client.connection_mut().clone());
+            let lease = SessionLease {
+                tree: Arc::clone(&session.tree),
+                conn: session.client.connection_mut().clone(),
+                generation: session.generation,
+            };
             log::trace!(
                 "client-mutex: released ticket={} caller=clone_session held_for={:?}",
                 ticket,
                 acquired_at.elapsed()
             );
-            pair
+            lease
         };
         // Refresh what the credit window can carry, while a `Connection` is in
         // hand: `Volume::max_concurrent_ops` is sync and can't reach one, and
         // this is the single place every read and write passes through. See
         // `REPRESENTATIVE_COPY_REQUEST_BYTES`.
         self.inner.credit_copy_capacity.store(
-            conn.credit_capacity_for(super::REPRESENTATIVE_COPY_REQUEST_BYTES),
+            lease.conn.credit_capacity_for(super::REPRESENTATIVE_COPY_REQUEST_BYTES),
             Ordering::Relaxed,
         );
-        Ok((tree, conn))
+        Ok(lease)
     }
 
     /// Maps an smb2 result, handling connection state transitions on error.
@@ -112,74 +133,64 @@ impl SmbVolume {
     /// PAYLOAD of the path-carrying `VolumeError` variants (as its display form),
     /// which is what the frontend renders as the file's name. The server's own
     /// NTSTATUS wording goes to the log line here, never into the payload.
+    ///
+    /// `ran_on` is the generation of the lease the call ran on (see
+    /// [`SessionLease`]); the session-state half is `SmbVolumeInner::note_smb_error`.
     pub(super) fn handle_smb_result<T>(
         &self,
         op_name: &str,
         smb_path: &str,
+        ran_on: SessionGeneration,
         result: Result<T, smb2::Error>,
     ) -> Result<T, VolumeError> {
-        match result {
-            Ok(val) => Ok(val),
-            Err(e) => {
-                let kind = e.kind();
-                report_security_refusal(self.inner.host(), &self.inner.volume_id, &e);
-
-                // On connection loss, transition to Disconnected
-                if matches!(kind, smb2::ErrorKind::ConnectionLost | smb2::ErrorKind::SessionExpired) {
-                    warn!(
-                        "SmbVolume::{}(share={:?}): source=backend, backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}; transitioning to Disconnected",
-                        op_name,
-                        self.inner.share_name,
-                        kind,
-                        e.status(),
-                        cmdr_fs::log_detail::LogDetail(&e.to_string())
-                    );
-                    self.inner.transition_to_disconnected();
-                } else if kind == smb2::ErrorKind::SignatureInvalid {
-                    // A refused reply leaves the signed session in a state nothing can vouch
-                    // for, so drop it like a lost connection: whatever runs next (the pane's
-                    // reconnect, the notice's Reconnect) builds a fresh, freshly signed session.
-                    warn!(
-                        "SmbVolume::{}(share={:?}): source=backend, backend=smb2, error_kind={:?}, detail={:?}; refused a reply for its signature, transitioning to Disconnected",
-                        op_name,
-                        self.inner.share_name,
-                        kind,
-                        cmdr_fs::log_detail::LogDetail(&e.to_string())
-                    );
-                    self.inner.transition_to_disconnected();
-                } else if matches!(
-                    kind,
-                    smb2::ErrorKind::NotFound | smb2::ErrorKind::IsADirectory | smb2::ErrorKind::AlreadyExists
-                ) {
-                    // Expected fall-through cases: the caller is using the typed
-                    // `VolumeError` variant as a signal, not an error:
-                    // - `NotFound` for existence checks (rename dest, conflict detection)
-                    // - `IsADirectory` for `delete()`'s "try delete_file first, fall back to delete_directory"
-                    //   fast-path
-                    // - `AlreadyExists` for `copy_directory_streaming`'s "create_directory is idempotent for merge"
-                    //   path
-                    debug!(
-                        "SmbVolume::{}(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}",
-                        op_name,
-                        self.inner.share_name,
-                        kind,
-                        e.status(),
-                        cmdr_fs::log_detail::LogDetail(&e.to_string())
-                    );
-                } else {
-                    warn!(
-                        "SmbVolume::{}(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}",
-                        op_name,
-                        self.inner.share_name,
-                        kind,
-                        e.status(),
-                        cmdr_fs::log_detail::LogDetail(&e.to_string())
-                    );
-                }
-
-                Err(map_smb_error(e, &self.to_display_path(smb_path)))
-            }
+        let e = match result {
+            Ok(val) => return Ok(val),
+            Err(e) => e,
+        };
+        let kind = e.kind();
+        if self.inner.note_smb_error(ran_on, &e) {
+            // A refused signature lands here too: it leaves the signed session in a
+            // state nothing can vouch for, so whatever runs next (the pane's
+            // reconnect, the notice's Reconnect) builds a fresh, freshly signed one.
+            warn!(
+                "SmbVolume::{}(share={:?}): source=backend, backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}; the session is lost",
+                op_name,
+                self.inner.share_name,
+                kind,
+                e.status(),
+                cmdr_fs::log_detail::LogDetail(&e.to_string())
+            );
+        } else if matches!(
+            kind,
+            smb2::ErrorKind::NotFound | smb2::ErrorKind::IsADirectory | smb2::ErrorKind::AlreadyExists
+        ) {
+            // Expected fall-through cases: the caller is using the typed
+            // `VolumeError` variant as a signal, not an error:
+            // - `NotFound` for existence checks (rename dest, conflict detection)
+            // - `IsADirectory` for `delete()`'s "try delete_file first, fall back to delete_directory"
+            //   fast-path
+            // - `AlreadyExists` for `copy_directory_streaming`'s "create_directory is idempotent for merge"
+            //   path
+            debug!(
+                "SmbVolume::{}(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}",
+                op_name,
+                self.inner.share_name,
+                kind,
+                e.status(),
+                cmdr_fs::log_detail::LogDetail(&e.to_string())
+            );
+        } else {
+            warn!(
+                "SmbVolume::{}(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}",
+                op_name,
+                self.inner.share_name,
+                kind,
+                e.status(),
+                cmdr_fs::log_detail::LogDetail(&e.to_string())
+            );
         }
+
+        Err(map_smb_error(e, &self.to_display_path(smb_path)))
     }
 }
 
@@ -293,15 +304,8 @@ pub(super) async fn refresh_remembered_credentials(
     matches!(written, Ok(Ok(())))
 }
 
-/// If an smb2 error indicates the session is dead, transition state to
-/// `Disconnected` and emit `volume-connection-changed`. Mirrors `handle_smb_result`
-/// for contexts without `&self` (the streaming-read producer task).
-///
-/// `retirement` is the share's flag: a retired share still tracks its own state
-/// for the holders reading through it, but must not announce a disconnect under a
-/// volume id somebody else now owns.
 /// Tells the host about a reply smb2 refused for its signature, for the app's security record.
-/// Every error funnel calls it (`handle_smb_result`, `update_state_on_smb_error`); the host
+/// The error funnel (`SmbVolumeInner::note_smb_error`) calls it for every smb2 error; the host
 /// coalesces repeats.
 pub(super) fn report_security_refusal(host: &VolumeHost, volume_id: &str, err: &smb2::Error) {
     if err.kind() == smb2::ErrorKind::SignatureInvalid {
@@ -309,25 +313,5 @@ pub(super) fn report_security_refusal(host: &VolumeHost, volume_id: &str, err: &
             volume_id,
             cmdr_fs::volume::host::events::SecurityRefusal::ReplySignatureInvalid,
         );
-    }
-}
-
-pub(super) fn update_state_on_smb_error(
-    host: &VolumeHost,
-    state: &AtomicU8,
-    retirement: &Retirement,
-    volume_id: &str,
-    err: &smb2::Error,
-) {
-    report_security_refusal(host, volume_id, err);
-    if matches!(
-        err.kind(),
-        smb2::ErrorKind::ConnectionLost | smb2::ErrorKind::SessionExpired
-    ) {
-        let prev = state.swap(ConnectionState::Disconnected as u8, Ordering::Relaxed);
-        if prev != ConnectionState::Disconnected as u8 && !retirement.is_retired() {
-            host.events()
-                .connection_changed(volume_id, ConnectionState::Disconnected.into());
-        }
     }
 }

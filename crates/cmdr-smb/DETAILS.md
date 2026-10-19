@@ -32,11 +32,12 @@ Here, because the answer is yes:
   0.31) counts as auth: it's how a Samba server set to `map to guest = bad user` answers a wrong password. A reply
   refused for its signature (`SignatureInvalid`) is ❌ not auth, and becomes `ShareListError::SignatureInvalid` /
   `VolumeError::SignatureInvalid`, never the `ProtocolError` that sends a listing down the CLI fallback.
-- Every error funnel (`handle_smb_result`, `update_state_on_smb_error`, and the scan paths that map directly) calls
-  `session::report_security_refusal`, which tells the host's `security_refusal` seam about a refused signature.
-  `handle_smb_result` also drops the main session on one, like a lost connection: nothing can vouch for a signed
-  session's state after a refused reply, so the next dial (the pane's reconnect, the notice's Reconnect) builds a fresh,
-  freshly signed one (#457).
+- Every smb2 error on the main session passes ONE funnel, `SmbVolumeInner::note_smb_error` (called by
+  `handle_smb_result`, the streaming-read producer, the random reader, and the copy scan's stat pipeline), which calls
+  `session::report_security_refusal` to tell the host's `security_refusal` seam about a refused signature. A refused
+  signature also drops the main session, like a lost connection (`state::ends_the_session`): nothing can vouch for a
+  signed session's state after a refused reply, so the next dial (the pane's reconnect, the notice's Reconnect) builds a
+  fresh, freshly signed one (#457).
 - A reconnect the saved credentials can't bring back emits `VolumeConnection::GuestSessionRefused` when the server
   answered the named login with a guest session, else `NeedsCredentials` (`reconnect::credentials_refusal_state`), so
   the pane names what Cmdr refused.
@@ -189,9 +190,9 @@ reports.
 
 ## SMB live-reconnect lifecycle
 
-When a hot-path op hits `ConnectionLost` / `SessionExpired`, `handle_smb_result` flips state to `Disconnected` and
-`transition_to_disconnected` emits `volume-connection-changed { volumeId, state: "disconnected" }`. The frontend
-reconnect manager listens for this event and runs a per-volume backoff cycle (timer-driven, calling the
+When a hot-path op hits an error that ends the session (§ "Which session a loss is about"), the funnel flips state to
+`Disconnected` and `transition_to_disconnected` emits `volume-connection-changed { volumeId, state: "disconnected" }`.
+The frontend reconnect manager listens for this event and runs a per-volume backoff cycle (timer-driven, calling the
 `reconnect_smb_volume(volumeId)` Tauri command on each tick).
 
 `SmbVolume::do_attempt_reconnect` is the single source of truth for re-establishing the session:
@@ -204,10 +205,11 @@ reconnect manager listens for this event and runs a per-volume backoff cycle (ti
 4. If that fails with an auth error, calls `refresh_credentials_from_store` (which re-reads through
    `host.credentials()`, share-level first then server-level) and retries once with the fresh creds. On success, the new
    credentials replace the cached ones via `params.write()`.
-5. On success: installs the new client + tree, restarts the watcher with `spawn_watcher` (the prior watcher is cancelled
-   via `stop_watcher` first), then `transition_to_direct` flips state and emits
+5. On success: installs the new client + tree under the next session generation (bumped in the same critical section, §
+   "Which session a loss is about"), restarts the watcher with `spawn_watcher` for that generation (the prior watcher is
+   cancelled via `stop_watcher` first), then `transition_to_direct` flips state and emits
    `volume-connection-changed { state: "connected" }`. Doing the state flip last means observers wake up to a
-   fully-installed session.
+   fully-installed session, and no call gets a lease on the new session before it.
 6. On failure: state stays `Disconnected`. The FE backoff cycle decides whether to retry. **Auth give-up is special**:
    when the failure is an auth error and the refreshed store creds also fail (or there are none), `do_attempt_reconnect`
    emits `volume-connection-changed { state: "needs_credentials" }` before returning Err. `NeedsCredentials` is a
@@ -240,21 +242,53 @@ Credentials are kept in memory for the lifetime of the `SmbVolume` (no security 
 process's address space for every smb2 call). Only re-pulled from the secret store on auth failure, in case the user
 updated them.
 
+### Which session a loss is about
+
+A late error from a connection a reconnect already replaced must never take the new session down: every sibling copy on
+it would then take an outage it never had (the `ERR-VEZUB` shape, #489). So the state machine knows WHICH session a loss
+is about.
+
+- **One predicate, `state::ends_the_session`**, by `smb2::Error::kind()` alone: `ConnectionLost`, `SessionExpired`,
+  `SignatureInvalid`. The main session's funnel, the scan pool's members (`is_pool_member_dead`), and a write's date
+  stamp (`stamping.rs::stamp_taken`) all ask it; ❌ no other `matches!` on those kinds outside `mapping.rs`. Since smb2
+  0.32.0 the request whose own send broke gets `SendFailed` (kind `ConnectionLost`; every other waiter still gets
+  `Disconnected`), and `Io` on an established connection means a LOCAL failure. So ❌ no errno arm: an `EACCES` or
+  `ENOSPC` must never end the session, and `map_smb_error` keeps a local `Io`'s errno in `IoError::raw_os_error`.
+- **A session generation.** `SessionCell` packs the state and the installed session's generation in one `AtomicU64`.
+  `do_attempt_reconnect` bumps it (`advance`) in the same critical section that installs the rebuilt `MainSession`,
+  which carries it. `clone_session` hands out a `SessionLease { tree, conn, generation }`, and every error goes through
+  the funnel with the generation ITS call ran on (`handle_smb_result(op, path, generation, result)`), ❌ never a fresh
+  read of the current one, which would silently disable the guard.
+- **One guarded transition.** `transition_to_disconnected(ran_on)` is a CAS (`SessionCell::lose`) that flips only while
+  `ran_on` is still installed, so a reconnect that installs between a check and the flip can't be overwritten.
+  `transition_to_direct(generation)` is the same for the way up; `on_unmount` stores `Disconnected` whichever session is
+  installed (`shut_down`: none will serve again).
+- **Per-site generation**: the streaming-read producer and the random reader hold the share (`Arc<SmbVolumeInner>`) and
+  their lease's generation; the watcher records the generation it was spawned for and its death marks only that one
+  (`spawn_watcher_death_reconnect(share, generation)`; a watcher outliving a reconnect marks nothing, and the loop finds
+  the share `Direct` and stops). The watcher doesn't classify its error by kind: any death of its dedicated session
+  counts as the link failing, as before. The scan pool's members never touch the main state, so they carry no
+  generation. Probes whose failure only means "no" (`exists`, the rename's directory and destination stats) report
+  nothing to the funnel.
+- Pinned by `state_test.rs` (the cell, the predicate) and `reconnect_test.rs` (`a_late_loss_from_a_replaced_session_*`,
+  `a_send_failure_and_a_disconnect_*`), through both `handle_smb_result` and `note_smb_error`.
+
 ### Backend-autonomous reconnect and index resume
 
 The FE reconnect manager only runs its backoff while a `FilePane` subscribes to the volume, so before this a background
 disconnect (no pane open, or a restart) left an enabled NAS index dark until the user manually re-enabled. Two backend
 hooks close that, both funneling through the ONE reconnect path (`do_attempt_reconnect`):
 
-- **`spawn_watcher_death_reconnect(share)`** (in `crates/cmdr-smb/src/volume/reconnect.rs`, kicked from the watcher's
-  fatal-error exit). The watcher runs on its own dedicated smb2 session; that session erroring proves the server
-  connection broke. A background disconnect may not have touched the MAIN session yet, so it can still read `Direct` —
-  meaning `do_attempt_reconnect` would no-op. So the kick FIRST marks the volume `Disconnected`, then drives
-  `do_attempt_reconnect` on a bounded, growing backoff (`WATCHER_DEATH_RECONNECT_BACKOFF`: ~6 tries over ~4 min, then
-  gives up quietly — never hammering a truly-down server). It re-upgrades its share handle each iteration (a retirement
-  or an unmount can land inside any sleep) and stops early on unmount, on a race back to `Direct` (an FE reconnect won),
-  or on an auth failure (`PermissionDenied` — the FE "Sign in" flow owns that; retrying risks locking the account).
-  Single-flight `reconnect_lock` coalesces it with any concurrent FE reconnect.
+- **`spawn_watcher_death_reconnect(share, generation)`** (in `crates/cmdr-smb/src/volume/reconnect.rs`, kicked from the
+  watcher's fatal-error exit). The watcher runs on its own dedicated smb2 session; that session erroring proves the
+  server connection broke. A background disconnect may not have touched the MAIN session yet, so it can still read
+  `Direct` — meaning `do_attempt_reconnect` would no-op. So the kick FIRST marks the main session the watcher was
+  spawned for `Disconnected` (a no-op once a reconnect replaced it), then drives `do_attempt_reconnect` on a bounded,
+  growing backoff (`WATCHER_DEATH_RECONNECT_BACKOFF`: ~6 tries over ~4 min, then gives up quietly — never hammering a
+  truly-down server). It re-upgrades its share handle each iteration (a retirement or an unmount can land inside any
+  sleep) and stops early on unmount, on a race back to `Direct` (an FE reconnect won), or on an auth failure
+  (`PermissionDenied` — the FE "Sign in" flow owns that; retrying risks locking the account). Single-flight
+  `reconnect_lock` coalesces it with any concurrent FE reconnect.
 - **`indexing::resume_smb_index_if_enabled(volume_id)`** fires at every session-install success — `do_attempt_reconnect`
   (in-place reconnect), `register_smb_volume` (launch/auto-upgrade), and `try_smb_upgrade` (manual "Connect directly").
   It's fire-and-forget (spawns, so it never starts the async indexer under `reconnect_lock` / a registry lock), a no-op
@@ -326,14 +360,14 @@ listings, and media enrichment's parallel prefetch reads.
   clone (microseconds), never across a `build_session`.
 - **Selection is a pure, unit-tested `PoolSlots`** (round-robin `next_alive`, `mark_dead`/`mark_alive`, single-flight
   `try_begin_reconnect`), decoupled from the real sessions so the handout/replacement logic is testable server-free.
-- **Failure handling.** A listing failing with a typed `ConnectionLost`/`SessionExpired` is retried on a sibling member,
-  the dead member is dropped, and a single-flight background task reconnects it (`build_session`, bounded growing
-  backoff `POOL_MEMBER_RECONNECT_BACKOFF`; gives up on auth — the MAIN session owns the credential-refresh /
-  `needs_credentials` flow). A dead member NEVER transitions the main volume's connection state. A per-directory error
-  (permission, not-found) is the same on any connection, so it's surfaced immediately, not retried. If every member is
-  momentarily dead, the listing falls back to the main session, which keeps the scan progressing and, if it too is dead,
-  yields the `DeviceDisconnected` the scanner's terminal-disconnect path expects. Members open STAGGERED at pool open; a
-  rejected Nth session (server session cap) just means the pool runs with fewer.
+- **Failure handling.** A listing failing with an error that ends its session (`state::ends_the_session`) is retried on
+  a sibling member, the dead member is dropped, and a single-flight background task reconnects it (`build_session`,
+  bounded growing backoff `POOL_MEMBER_RECONNECT_BACKOFF`; gives up on auth — the MAIN session owns the
+  credential-refresh / `needs_credentials` flow). A dead member NEVER transitions the main volume's connection state. A
+  per-directory error (permission, not-found) is the same on any connection, so it's surfaced immediately, not retried.
+  If every member is momentarily dead, the listing falls back to the main session, which keeps the scan progressing and,
+  if it too is dead, yields the `DeviceDisconnected` the scanner's terminal-disconnect path expects. Members open
+  STAGGERED at pool open; a rejected Nth session (server session cap) just means the pool runs with fewer.
 - **Params are a snapshot.** If the main session refreshes credentials mid-scan (password change), members failing auth
   give up and listings fall back to the main session (documented degradation, not a correctness issue).
 - **Reads: compound-only on members** (`open_read_stream_for_scan_impl`). Media enrichment's prefetch reads small HINTED
@@ -591,8 +625,8 @@ the registry's own lock. The flag lives on the INSTANCE, since it's a fact about
 live root starts honest again. ❌ Still not the same question as `supports_local_fs_access()`; see the Decision below.
 
 **Known gap**: nothing detects a mount that dies WITHOUT an unmount event, and a NAS dropping off the network is exactly
-that (macOS leaves the mount wedged). Probing is banned, and a direct `SmbVolume`'s own errors carry no errno
-(`map_smb_error` sets `raw_os_error: None`), so `volume::note_root_failure` can't fire for one either. Until some
+that (macOS leaves the mount wedged). Probing is banned, and a direct `SmbVolume`'s lost connection carries no errno
+(`map_smb_error` maps it to `DeviceDisconnected`), so `volume::note_root_failure` can't fire for one either. Until some
 evidence arrives on its own, an SMB volume on a wedged mount still claims OS visibility.
 
 **The watcher follows the active root.** It belongs to the session, not to one mount, and the absolute paths its
@@ -614,12 +648,18 @@ The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies
   `FILE_BASIC_INFORMATION` (`stamping.rs::source_times`; access and change times go as 0, "don't change"), so the
   creation date costs no frame. It asks the stream for `CREATED` and the flags (§ "Hidden and Locked on copies"); a
   share has no mode, and xattrs wait for named streams. Best effort: a refused stamp is a `warn!` and the copy succeeds,
-  and the write reports the creation date and Hidden refused (`stamping.rs::stamped`) for the copy's loss note.
-  Gotcha/Why: the server rewrites a file's date when the handle that WROTE it closes, so the moment matters. The
-  streaming writer stamps its own handle before `finish()` (`stamp_writer`, which `FileWriter::set_times` orders after
-  the pending writes); the one-frame compound write has already closed its handle, so it stamps by path right after, one
-  more compound frame (CREATE+SET_INFO+CLOSE). ❌ Never stamp by path while a writer is still open: its close wins. A
-  one-shot write to the user's real name (unstaged, `write_is_single_shot`) shows the server's dates for that one frame.
+  and the write reports the creation date and Hidden refused (`stamping.rs::stamped`) for the copy's loss note. ❗ A
+  stamp that meets the session ending fails the write with `DeviceDisconnected` through the funnel
+  (`stamping.rs::stamp_taken`): a write never reports `Ok` past its own last step seeing the connection die, or the
+  transfer lands the file or starts the next one on a dead session. The compound path deletes nothing on that error (its
+  CLOSE already ran, at what may be the user's real name); the transfer settles the create by comparing bytes and puts
+  the source's dates on by path (`transfer/interrupted_landing.rs::settle_unanswered_create`). The streaming path cleans
+  up as for a failed chunk. Gotcha/Why: the server rewrites a file's date when the handle that WROTE it closes, so the
+  moment matters. The streaming writer stamps its own handle before `finish()` (`stamp_writer`, which
+  `FileWriter::set_times` orders after the pending writes); the one-frame compound write has already closed its handle,
+  so it stamps by path right after, one more compound frame (CREATE+SET_INFO+CLOSE). ❌ Never stamp by path while a
+  writer is still open: its close wins. A one-shot write to the user's real name (unstaged, `write_is_single_shot`)
+  shows the server's dates for that one frame.
 - **The landing rename keeps `CreationTime`** (verified on the Docker guest share, Samba 4.20.6 with
   `store dos attributes = yes`,
   `conformance_test.rs::smb_integration_a_copy_keeps_the_creation_date_per_the_shared_contract`, 2026-10-11):
@@ -1134,7 +1174,9 @@ So `mapping.rs::map_smb_error` takes the path it is mapping a failure for, and `
 share-relative path beside its `op_name` and hands `map_smb_error` the display form. The server's own NTSTATUS wording
 goes to the log line in `handle_smb_result`, never into the payload. The variants that carry a DIAGNOSTIC rather than a
 path (`DeviceDisconnected`, `ConnectionTimeout`, `StorageFull`, `InvalidName`, `IoError`) still get `err.to_string()`:
-that string is the technical-details text, not something the frontend reads a filename out of.
+that string is the technical-details text, not something the frontend reads a filename out of. An `IoError` from smb2's
+`Io` (a local failure) also keeps the OS errno off the typed `io::Error` (`mapping.rs::local_errno`), ❌ never parsed
+from the message.
 
 - **Held to it by** `cmdr_fs::volume::conformance::assert_not_found_carries_the_path`, wired into
   `conformance_test.rs`'s `smb_integration_not_found_honors_the_shared_path_payload_contract` (Docker-gated like the

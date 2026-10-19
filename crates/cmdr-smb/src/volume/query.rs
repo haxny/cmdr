@@ -7,6 +7,7 @@
 //! are thin wrappers over these.
 
 use super::mapping::{directory_entry_to_file_entry, filetime_to_unix_secs, fs_info_to_space_info};
+use super::session::SessionLease;
 use super::{SmbVolume, slow_calls};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ListingProgress, SpaceInfo, VolumeError};
@@ -124,7 +125,7 @@ impl SmbVolume {
 
         let start = std::time::Instant::now();
 
-        let (tree, conn) = self.clone_session().await?;
+        let SessionLease { tree, conn, generation } = self.clone_session().await?;
         let runtime = self.inner.host().runtime();
         let listed = read_listing(&tree, conn, &smb_path, &display_path, on_progress, cancel, &runtime).await;
         slow_calls::note(&self.inner.share_name, "list_directory", start.elapsed());
@@ -133,7 +134,7 @@ impl SmbVolume {
             Err(ListingStop::Cancelled) => {
                 return Err(VolumeError::Cancelled("Listing cancelled".to_string()));
             }
-            Err(ListingStop::Smb(e)) => return self.handle_smb_result("list_directory", &smb_path, Err(e)),
+            Err(ListingStop::Smb(e)) => return self.handle_smb_result("list_directory", &smb_path, generation, Err(e)),
         };
 
         trace!(
@@ -175,7 +176,11 @@ impl SmbVolume {
         let mut backoff = DELETE_PENDING_BACKOFF.iter();
         let info = loop {
             let start = std::time::Instant::now();
-            let (tree, mut conn) = self.clone_session().await?;
+            let SessionLease {
+                tree,
+                mut conn,
+                generation,
+            } = self.clone_session().await?;
             let r = tree.stat(&mut conn, &smb_path).await;
             slow_calls::note(&self.inner.share_name, "get_metadata", start.elapsed());
             if let Err(e) = &r
@@ -189,7 +194,7 @@ impl SmbVolume {
                 tokio::time::sleep(*delay).await;
                 continue;
             }
-            break self.handle_smb_result("get_metadata", &smb_path, r)?;
+            break self.handle_smb_result("get_metadata", &smb_path, generation, r)?;
         };
 
         let name = Path::new(&smb_path)
@@ -219,7 +224,11 @@ impl SmbVolume {
 
         let start = std::time::Instant::now();
         match self.clone_session().await {
-            Ok((tree, mut conn)) => {
+            Ok(SessionLease {
+                tree,
+                mut conn,
+                generation: _,
+            }) => {
                 let found = tree.stat(&mut conn, &smb_path).await.is_ok();
                 slow_calls::note(&self.inner.share_name, "exists", start.elapsed());
                 found
@@ -237,10 +246,14 @@ impl SmbVolume {
 
         let info = {
             let start = std::time::Instant::now();
-            let (tree, mut conn) = self.clone_session().await?;
+            let SessionLease {
+                tree,
+                mut conn,
+                generation,
+            } = self.clone_session().await?;
             let r = tree.stat(&mut conn, &smb_path).await;
             slow_calls::note(&self.inner.share_name, "is_directory", start.elapsed());
-            self.handle_smb_result("is_directory", &smb_path, r)?
+            self.handle_smb_result("is_directory", &smb_path, generation, r)?
         };
 
         Ok(info.is_directory)
@@ -267,10 +280,14 @@ impl SmbVolume {
         }
 
         let info = {
-            let (tree, mut conn) = self.clone_session().await?;
+            let SessionLease {
+                tree,
+                mut conn,
+                generation,
+            } = self.clone_session().await?;
             let r = tree.fs_info(&mut conn).await;
             // The share root: the question is about the share, not any one file.
-            self.handle_smb_result("get_space_info", "", r)?
+            self.handle_smb_result("get_space_info", "", generation, r)?
         };
 
         Ok(fs_info_to_space_info(&info))

@@ -36,7 +36,7 @@ const PAYLOAD: &[u8] = b"the bytes of a photo nobody could open";
 /// Creates `{parent}/{name}` on the share with the exact bytes of `name`,
 /// bypassing every path conversion Cmdr does.
 async fn seed_dir_raw(vol: &SmbVolume, share_path: &str) {
-    let (tree, mut conn) = vol.clone_session().await.expect("session");
+    let SessionLease { tree, mut conn, .. } = vol.clone_session().await.expect("session");
     tree.create_directory(&mut conn, share_path)
         .await
         .unwrap_or_else(|e| panic!("seeding directory {share_path:?}: {e}"));
@@ -44,7 +44,7 @@ async fn seed_dir_raw(vol: &SmbVolume, share_path: &str) {
 
 /// Writes a file at `share_path` with the exact bytes given, bypassing Cmdr.
 async fn seed_file_raw(vol: &SmbVolume, share_path: &str, data: &[u8]) {
-    let (tree, mut conn) = vol.clone_session().await.expect("session");
+    let SessionLease { tree, mut conn, .. } = vol.clone_session().await.expect("session");
     tree.write_file(&mut conn, share_path, data)
         .await
         .unwrap_or_else(|e| panic!("seeding file {share_path:?}: {e}"));
@@ -84,7 +84,7 @@ async fn seed_album(vol: &SmbVolume) -> (String, PathBuf) {
 /// Removes everything a cell seeded, through the raw session so a regression in
 /// Cmdr's own path handling can't leave NFD debris behind on the fixture share.
 async fn remove_album(vol: &SmbVolume, top: &str) {
-    let (tree, mut conn) = vol.clone_session().await.expect("session");
+    let SessionLease { tree, mut conn, .. } = vol.clone_session().await.expect("session");
     let album = format!("{top}/{NFC_DIR}");
     if let Ok(entries) = tree.list_directory(&mut conn, &album).await {
         for entry in entries.iter().filter(|e| e.name != "." && e.name != "..") {

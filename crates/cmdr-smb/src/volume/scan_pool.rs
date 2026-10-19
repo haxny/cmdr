@@ -51,7 +51,7 @@ use futures_util::stream::FuturesUnordered;
 use super::mapping::map_smb_error;
 use super::query::{ListingStop, read_listing};
 use super::session::build_session;
-use super::state::ConnectionState;
+use super::state::{ConnectionState, ends_the_session};
 use super::streams::{ASSUMED_MAX_READ, InlineReadStream};
 use super::{SmbConnectionParams, SmbVolume};
 use cmdr_fs::entry::FileEntry;
@@ -380,13 +380,11 @@ async fn open_slots(params: &SmbConnectionParams, n: usize, volume_id: &str) -> 
 }
 
 /// Whether an smb2 listing error means THIS pool member's session is gone, so the
-/// listing should retry on a sibling and the member should reconnect. Classified
-/// by the TYPED kind, never a message substring.
+/// listing should retry on a sibling and the member should reconnect. The same
+/// question the main session's funnel asks ([`ends_the_session`]), answered for a
+/// member, which ❌ never moves the main session's state.
 fn is_pool_member_dead(err: &smb2::Error) -> bool {
-    matches!(
-        err.kind(),
-        smb2::ErrorKind::ConnectionLost | smb2::ErrorKind::SessionExpired
-    )
+    ends_the_session(err)
 }
 
 impl SmbVolume {

@@ -4,7 +4,7 @@
 
 use super::mapping::map_smb_error;
 use super::session::{MainSession, build_session, refresh_credentials_from_store, refresh_remembered_credentials};
-use super::state::ConnectionState;
+use super::state::{ConnectionState, SessionGeneration};
 use super::{SmbConnectionParams, SmbVolumeInner};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::SelfHandle;
@@ -39,6 +39,8 @@ impl SmbVolumeInner {
     /// Spawns the background watcher task on its own dedicated smb2 session.
     /// Replaces any prior `watcher_cancel`. Called from `connect_smb_volume`
     /// (initial setup) and from `attempt_reconnect` (after a session rebuild).
+    /// `generation` is the main session it was spawned for: its death marks
+    /// THAT session lost, never a newer one (`spawn_watcher_death_reconnect`).
     ///
     /// We could share the volume's session with the watcher (smb2 0.10's
     /// `Watcher` is `'static`, owns a `Connection` clone), but in practice
@@ -53,7 +55,7 @@ impl SmbVolumeInner {
     /// of internal reconnect (single source of truth is
     /// `SmbVolumeInner::do_attempt_reconnect`; the watcher bails on errors and we
     /// respawn here on the next successful reconnect).
-    pub(super) fn spawn_watcher(&self, params: &SmbConnectionParams) {
+    pub(super) fn spawn_watcher(&self, params: &SmbConnectionParams, generation: SessionGeneration) {
         use crate::build_smb_addr;
 
         // A retired share no longer owns its volume id, and the watcher is
@@ -86,6 +88,7 @@ impl SmbVolumeInner {
             // mount), and the paths it builds have to follow the root the registry
             // moved the ID to.
             mount_path: Arc::clone(&self.active_mount_path),
+            generation,
         };
 
         // The app's runtime, never `tokio::spawn`: a backend's watcher can be
@@ -232,24 +235,29 @@ impl SmbVolumeInner {
             ));
         }
 
-        // Install the new session: the client and its tree in one swap.
-        {
+        // Install the new session: the client and its tree in one swap, under
+        // the next generation. The bump runs in the same critical section, so no
+        // lease can carry the new session under the old generation, and a late
+        // error from the old one can no longer mark anything lost.
+        let generation = {
             let mut session_guard = self.session.lock().await;
             // Under the session lock, so no reader sees the new client paired with
             // the old connection's liveness or the reverse for longer than it takes
             // to swap a pointer.
             self.live_connection.replace(Some(client.connection().clone()));
-            *session_guard = Some(MainSession::new(client, tree));
-        }
+            let generation = self.state.advance();
+            *session_guard = Some(MainSession::new(client, tree, generation));
+            generation
+        };
 
         // Restart the watcher with current params (which may include refreshed creds).
         self.stop_watcher();
         let params_now = self.params.read().await.clone();
-        self.spawn_watcher(&params_now);
+        self.spawn_watcher(&params_now, generation);
 
         // Flip state and emit. Doing this last means an observer that wakes
         // up on the event will see a fully-installed session.
-        self.transition_to_direct();
+        self.transition_to_direct(generation);
 
         // The session is back. Resume the drive index if the user had it enabled
         // (a persisted index DB with a completed scan). Fire-and-forget: the hook
@@ -332,9 +340,12 @@ fn reconnect_backoff_should_give_up(err: &VolumeError) -> bool {
 /// (`smb_watcher::run_smb_watcher`), which has already flipped the index Stale.
 ///
 /// The watcher runs on its own dedicated smb2 session; that session erroring
-/// proves the connection to the server broke, so we mark the share Disconnected
-/// (a background disconnect may not have touched the main session yet, leaving it
-/// falsely Direct) and drive `do_attempt_reconnect` on a bounded, growing backoff.
+/// proves the connection to the server broke, so we mark the main session the
+/// watcher was spawned for (`generation`) lost (a background disconnect may not
+/// have touched it yet, leaving it falsely Direct) and drive
+/// `do_attempt_reconnect` on a bounded, growing backoff. A watcher left over from
+/// a session a reconnect already replaced marks nothing: the loop then finds the
+/// share Direct and stops, and that reconnect already spawned the new watcher.
 /// Reusing `do_attempt_reconnect` (not a second reconnect path) means:
 /// - it coalesces with any FE-initiated reconnect (single-flight `reconnect_lock`),
 /// - success rebuilds the session, RESPAWNS the watcher, and resumes the drive
@@ -350,7 +361,7 @@ fn reconnect_backoff_should_give_up(err: &VolumeError) -> bool {
 /// mark the SUCCESSOR disconnected, and one dying after an eject must not keep a
 /// reconnect loop running against a share the app has forgotten; the handle
 /// answers both, because it is the share itself rather than a name to look up.
-pub(super) fn spawn_watcher_death_reconnect(share: SelfHandle<SmbVolumeInner>) {
+pub(super) fn spawn_watcher_death_reconnect(share: SelfHandle<SmbVolumeInner>, generation: SessionGeneration) {
     /// The share, while it is still worth acting for: still allocated, still the
     /// registry's, and not unmounted.
     fn still_worth_reconnecting(share: &SelfHandle<SmbVolumeInner>) -> Option<Arc<SmbVolumeInner>> {
@@ -372,7 +383,7 @@ pub(super) fn spawn_watcher_death_reconnect(share: SelfHandle<SmbVolumeInner>) {
             return; // gone, retired, or unmounted
         };
         let volume_id = inner.volume_id.clone();
-        inner.transition_to_disconnected();
+        inner.transition_to_disconnected(generation);
         drop(inner);
 
         for (i, delay) in WATCHER_DEATH_RECONNECT_BACKOFF.iter().enumerate() {

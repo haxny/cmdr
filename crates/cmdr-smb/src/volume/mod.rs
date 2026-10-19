@@ -20,7 +20,7 @@ use smb2::client::tree::Tree;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::RwLock as StdRwLock;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize};
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 
 mod attributes;
 mod copy;
@@ -49,6 +49,7 @@ pub mod testing;
 // The backend's own public vocabulary, hoisted so callers write
 // `cmdr_smb::volume::ConnectionState`.
 pub use state::ConnectionState;
+use state::{SessionCell, SessionGeneration};
 
 use reconnect::spawn_watcher_death_reconnect;
 use session::build_session;
@@ -241,10 +242,10 @@ struct SmbVolumeInner {
     /// which reads as the session dying (`DETAILS.md` § "SMB live-reconnect
     /// lifecycle").
     session: Arc<tokio::sync::Mutex<Option<session::MainSession>>>,
-    /// Current connection health.
-    /// Wrapped in `Arc` so background tasks (streaming read producer) can update
-    /// the state on mid-stream connection loss.
-    state: Arc<AtomicU8>,
+    /// Current connection health, packed with the installed session's
+    /// generation so a loss only ever marks the session it happened on
+    /// (`state.rs`, `SessionCell`).
+    state: SessionCell,
     /// Cancel sender for the background watcher task. Send to stop watching.
     watcher_cancel: std::sync::Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
     /// Single-flight guard for `attempt_reconnect`. Concurrent callers (FE
@@ -367,8 +368,12 @@ impl SmbVolume {
                     share_root,
                 )])),
                 params: Arc::new(tokio::sync::RwLock::new(params)),
-                session: Arc::new(tokio::sync::Mutex::new(Some(session::MainSession::new(client, tree)))),
-                state: Arc::new(AtomicU8::new(ConnectionState::Direct as u8)),
+                session: Arc::new(tokio::sync::Mutex::new(Some(session::MainSession::new(
+                    client,
+                    tree,
+                    SessionGeneration::FIRST,
+                )))),
+                state: SessionCell::new(ConnectionState::Direct, SessionGeneration::FIRST),
                 watcher_cancel: std::sync::Mutex::new(None),
                 reconnect_lock: Arc::new(tokio::sync::Mutex::new(())),
                 unmounted: Arc::new(AtomicBool::new(false)),
@@ -547,7 +552,7 @@ pub async fn connect_smb_volume(
 ) -> Result<SmbVolume, smb2::Error> {
     let (client, tree) = build_session(&params).await?;
     let vol = SmbVolume::new(name, anchor, volume_id, params.clone(), client, tree, host);
-    vol.inner.spawn_watcher(&params);
+    vol.inner.spawn_watcher(&params, SessionGeneration::FIRST);
     // PII-free analytics: a direct SMB connection succeeded. No host / share / credential
     // identifiers ever cross.
     vol.inner.host.analytics().record("smb_connected", &[]);

@@ -33,7 +33,9 @@ use smb2::{FileInfo, ResumeKey};
 
 use super::SmbVolume;
 use super::mapping::user_flags_of;
+use super::session::SessionLease;
 use super::stamping::source_times;
+use super::state::SessionGeneration;
 
 /// How much of a file one slice asks the server to copy: exactly one copychunk
 /// request at smb2's opening limits (16 chunks of 1 MiB, which Windows and
@@ -60,7 +62,11 @@ impl SmbVolume {
             "SmbVolume::copy_on_server: share={:?}, from={smb_from:?}, to={smb_to:?}",
             self.inner.share_name
         );
-        let (tree, mut conn) = self.clone_session().await?;
+        let SessionLease {
+            tree,
+            mut conn,
+            generation,
+        } = self.clone_session().await?;
 
         // The dates come from a `stat`, the handle from an open; both ride one
         // round trip on the multiplexed connection.
@@ -71,7 +77,7 @@ impl SmbVolume {
                 tree.open_file(&mut conn, &smb_from)
             )
         };
-        let (source, total) = self.handle_copy_result("copy_on_server(open source)", &smb_from, open)?;
+        let (source, total) = self.handle_copy_result("copy_on_server(open source)", &smb_from, generation, open)?;
         let copied = match stat {
             Ok(info) if info.is_directory => Err(VolumeError::IsADirectory(self.to_display_path(&smb_from))),
             Ok(info) => {
@@ -82,10 +88,11 @@ impl SmbVolume {
                     info: &info,
                     smb_from: &smb_from,
                     smb_to: &smb_to,
+                    generation,
                 };
                 self.copy_from_open_source(&mut conn, &copy, progress).await
             }
-            Err(e) => self.handle_copy_result("copy_on_server(stat source)", &smb_from, Err(e)),
+            Err(e) => self.handle_copy_result("copy_on_server(stat source)", &smb_from, generation, Err(e)),
         };
         let _ = tree.close_handle(&mut conn, source).await;
         let copied = copied?;
@@ -117,9 +124,12 @@ impl SmbVolume {
         let key = self.handle_copy_result(
             "copy_on_server(resume key)",
             copy.smb_from,
+            copy.generation,
             copy.tree.request_resume_key(conn, copy.source).await,
         )?;
-        let dest = self.open_copy_destination(copy.tree, conn, copy.smb_to).await?;
+        let dest = self
+            .open_copy_destination(copy.tree, conn, copy.smb_to, copy.generation)
+            .await?;
 
         let mut outcome = self.copy_slices(conn, copy, dest, &key, progress).await;
         if outcome.is_ok() {
@@ -144,7 +154,7 @@ impl SmbVolume {
         }
         let closed = copy.tree.close_handle(conn, dest).await;
         if outcome.is_ok() {
-            outcome = self.handle_smb_result("copy_on_server(close)", copy.smb_to, closed);
+            outcome = self.handle_smb_result("copy_on_server(close)", copy.smb_to, copy.generation, closed);
         }
         if outcome.is_err() {
             // ❗ The partial goes with the failure, cancellation included. The
@@ -165,15 +175,22 @@ impl SmbVolume {
         tree: &Tree,
         conn: &mut Connection,
         smb_to: &str,
+        generation: SessionGeneration,
     ) -> Result<FileId, VolumeError> {
         let op = "copy_on_server(open destination)";
-        let (dest, existing) = self.handle_smb_result(op, smb_to, tree.open_file_readwrite(conn, smb_to).await)?;
+        let (dest, existing) =
+            self.handle_smb_result(op, smb_to, generation, tree.open_file_readwrite(conn, smb_to).await)?;
         if existing == 0 {
             return Ok(dest);
         }
         let _ = tree.close_handle(conn, dest).await;
-        self.handle_smb_result(op, smb_to, tree.write_file_compound(conn, smb_to, &[]).await)?;
-        let (dest, _) = self.handle_smb_result(op, smb_to, tree.open_file_readwrite(conn, smb_to).await)?;
+        self.handle_smb_result(
+            op,
+            smb_to,
+            generation,
+            tree.write_file_compound(conn, smb_to, &[]).await,
+        )?;
+        let (dest, _) = self.handle_smb_result(op, smb_to, generation, tree.open_file_readwrite(conn, smb_to).await)?;
         Ok(dest)
     }
 
@@ -205,7 +222,7 @@ impl SmbVolume {
                 .tree
                 .server_side_copy_range(conn, dest, key, copied, copied, take)
                 .await;
-            self.handle_copy_result("copy_on_server(copychunk)", copy.smb_to, result)?;
+            self.handle_copy_result("copy_on_server(copychunk)", copy.smb_to, copy.generation, result)?;
             copied += take;
             // ❗ The only cancel `copy_within` has: there is no token here.
             if progress.advanced(copied, copy.total).is_break() {
@@ -222,6 +239,7 @@ impl SmbVolume {
         &self,
         op_name: &str,
         smb_path: &str,
+        ran_on: SessionGeneration,
         result: Result<T, smb2::Error>,
     ) -> Result<T, VolumeError> {
         match result {
@@ -233,7 +251,7 @@ impl SmbVolume {
                 );
                 Err(VolumeError::NotSupported)
             }
-            other => self.handle_smb_result(op_name, smb_path, other),
+            other => self.handle_smb_result(op_name, smb_path, ran_on, other),
         }
     }
 }
@@ -247,6 +265,8 @@ struct SliceCopy<'a> {
     info: &'a FileInfo,
     smb_from: &'a str,
     smb_to: &'a str,
+    /// The session the copy runs on, for the error funnel.
+    generation: SessionGeneration,
 }
 
 /// `copy_within`'s bare progress callback as a [`ServerCopyProgress`]: reports

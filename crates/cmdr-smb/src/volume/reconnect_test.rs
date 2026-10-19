@@ -75,10 +75,10 @@ async fn single_flight_concurrent_callers_serialize() {
 #[tokio::test]
 async fn transition_to_disconnected_idempotent() {
     let (vol, events) = volume_with_recorded_events();
-    vol.inner.state.store(ConnectionState::Direct as u8, Ordering::Relaxed);
+    vol.inner.state.set_for_test(ConnectionState::Direct);
 
-    vol.inner.transition_to_disconnected();
-    vol.inner.transition_to_disconnected();
+    vol.inner.transition_to_disconnected(SessionGeneration::FIRST);
+    vol.inner.transition_to_disconnected(SessionGeneration::FIRST);
 
     assert_eq!(vol.session_state(), ConnectionState::Disconnected);
     assert_eq!(
@@ -95,8 +95,8 @@ async fn transition_to_disconnected_idempotent() {
 async fn transition_to_direct_idempotent() {
     let (vol, events) = volume_with_recorded_events();
 
-    vol.inner.transition_to_direct();
-    vol.inner.transition_to_direct();
+    vol.inner.transition_to_direct(SessionGeneration::FIRST);
+    vol.inner.transition_to_direct(SessionGeneration::FIRST);
 
     assert_eq!(vol.session_state(), ConnectionState::Direct);
     assert_eq!(
@@ -116,10 +116,10 @@ async fn transition_to_direct_idempotent() {
 #[tokio::test]
 async fn a_retired_share_announces_nothing_under_an_id_it_no_longer_owns() {
     let (vol, events) = volume_with_recorded_events();
-    vol.inner.state.store(ConnectionState::Direct as u8, Ordering::Relaxed);
+    vol.inner.state.set_for_test(ConnectionState::Direct);
     vol.on_superseded();
 
-    vol.inner.transition_to_disconnected();
+    vol.inner.transition_to_disconnected(SessionGeneration::FIRST);
 
     assert_eq!(
         vol.session_state(),
@@ -216,9 +216,9 @@ fn a_refused_signature_reaches_the_security_seam() {
         message_id: smb2::types::MessageId(7),
         reason: smb2::error::SignatureFailure::Mismatch,
     };
-    let mapped = vol.handle_smb_result::<()>("read", "a.txt", Err(refused()));
+    let mapped = vol.handle_smb_result::<()>("read", "a.txt", SessionGeneration::FIRST, Err(refused()));
     assert!(matches!(mapped, Err(VolumeError::SignatureInvalid(_))));
-    let _ = vol.handle_smb_result::<()>("read", "a.txt", Err(smb2::Error::Timeout));
+    let _ = vol.handle_smb_result::<()>("read", "a.txt", SessionGeneration::FIRST, Err(smb2::Error::Timeout));
     assert_eq!(
         events.refusals(),
         vec![(RECORDED_ID.to_string(), SecurityRefusal::ReplySignatureInvalid)]
@@ -247,13 +247,13 @@ fn a_guest_session_offered_for_a_named_login_is_its_own_state() {
 #[tokio::test]
 async fn a_refused_signature_drops_the_session() {
     let (vol, events) = volume_with_recorded_events();
-    vol.inner.state.store(ConnectionState::Direct as u8, Ordering::Relaxed);
+    vol.inner.state.set_for_test(ConnectionState::Direct);
     let refused = smb2::Error::SignatureInvalid {
         command: smb2::types::Command::Read,
         message_id: smb2::types::MessageId(7),
         reason: smb2::error::SignatureFailure::Mismatch,
     };
-    let _ = vol.handle_smb_result::<()>("read", "a.txt", Err(refused));
+    let _ = vol.handle_smb_result::<()>("read", "a.txt", SessionGeneration::FIRST, Err(refused));
     assert_eq!(vol.session_state(), ConnectionState::Disconnected);
     assert_eq!(
         events.transitions(),
@@ -417,4 +417,69 @@ async fn a_working_sign_in_with_remember_on_as_another_account_still_files_the_s
 
     assert_eq!(secret_at(&store, None), held("ada", "ada-pw"));
     assert_eq!(secret_at(&store, Some("TestShare")), held("grace", "grace-pw"));
+}
+
+/// The failing sender's `SendFailed` and every other waiter's `Disconnected` both
+/// end the session through the funnel; a local I/O failure, whatever its errno,
+/// never does.
+#[tokio::test]
+async fn a_send_failure_and_a_disconnect_end_the_session_and_a_local_io_failure_doesnt() {
+    const EPIPE: i32 = 32;
+    const EACCES: i32 = 13;
+    const ENOSPC: i32 = 28;
+    let send_failed = || smb2::Error::SendFailed {
+        command: smb2::types::Command::Write,
+        source: std::io::Error::from_raw_os_error(EPIPE),
+    };
+    for lost in [send_failed(), smb2::Error::Disconnected] {
+        let vol = make_test_volume_direct();
+        let mapped = vol.handle_smb_result::<()>("write", "a.txt", SessionGeneration::FIRST, Err(lost));
+        assert!(matches!(mapped, Err(VolumeError::DeviceDisconnected(_))), "{mapped:?}");
+        assert_eq!(vol.session_state(), ConnectionState::Disconnected);
+    }
+
+    let vol = make_test_volume_direct();
+    for errno in [EPIPE, EACCES, ENOSPC] {
+        let local = smb2::Error::Io(std::io::Error::from_raw_os_error(errno));
+        let _ = vol.handle_smb_result::<()>("write", "a.txt", SessionGeneration::FIRST, Err(local));
+        assert_eq!(
+            vol.session_state(),
+            ConnectionState::Direct,
+            "a local Io (errno {errno}) must not end the session"
+        );
+    }
+}
+
+/// A loss from a call that ran on the session a reconnect has since replaced is
+/// a late error from the OLD connection: it must not take down the new one, or
+/// every sibling on it takes an outage it never had. Through both entries: the
+/// per-call `handle_smb_result` and the producers' `note_smb_error`.
+#[tokio::test]
+async fn a_late_loss_from_a_replaced_session_leaves_the_new_one_direct() {
+    let (vol, events) = volume_with_recorded_events();
+    let old = SessionGeneration::FIRST;
+    // A reconnect installs the next session.
+    let new = vol.inner.state.advance();
+    vol.inner.transition_to_direct(new);
+    let announced_up = events.transitions();
+
+    let mapped = vol.handle_smb_result::<()>("read", "a.txt", old, Err(smb2::Error::Disconnected));
+    assert!(
+        matches!(mapped, Err(VolumeError::DeviceDisconnected(_))),
+        "the call itself still failed on the transport: {mapped:?}"
+    );
+    assert!(
+        vol.inner.note_smb_error(old, &smb2::Error::Disconnected),
+        "it's still a loss"
+    );
+    assert_eq!(vol.session_state(), ConnectionState::Direct);
+    assert_eq!(
+        events.transitions(),
+        announced_up,
+        "nothing more to announce: the share never went down"
+    );
+
+    // The new session's own loss still counts.
+    vol.inner.note_smb_error(new, &smb2::Error::Disconnected);
+    assert_eq!(vol.session_state(), ConnectionState::Disconnected);
 }

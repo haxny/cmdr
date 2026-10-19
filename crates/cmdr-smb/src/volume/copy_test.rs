@@ -86,7 +86,7 @@ fn a_server_without_copychunk_answers_not_supported() {
         });
         assert!(
             matches!(
-                vol.handle_copy_result("copy_within(resume key)", "a.bin", refused),
+                vol.handle_copy_result("copy_within(resume key)", "a.bin", SessionGeneration::FIRST, refused),
                 Err(VolumeError::NotSupported)
             ),
             "{status:?} must read as NotSupported"
@@ -107,7 +107,7 @@ fn other_refusals_keep_their_ordinary_mapping() {
         command: Command::Create,
     });
     assert!(matches!(
-        vol.handle_copy_result("copy_within(open source)", "a.bin", missing),
+        vol.handle_copy_result("copy_within(open source)", "a.bin", SessionGeneration::FIRST, missing),
         Err(VolumeError::NotFound(_))
     ));
 }

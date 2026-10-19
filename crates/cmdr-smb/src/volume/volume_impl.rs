@@ -10,6 +10,7 @@
 //! answers, whose whole content is the reasoning in their doc comments.
 
 use super::copy::ProgressOnly;
+use super::session::SessionLease;
 use super::state::ConnectionState;
 use super::streams::{InlineReadStream, fits_one_compound_read};
 use super::{SmbVolume, foreground_yield};
@@ -539,7 +540,11 @@ impl Volume for SmbVolume {
             // than hand back a prefix. ❌ Neither arm is decoration; dropping
             // either one copies a changed file under its final name, short.
             if let Some(size) = size_hint {
-                let (tree, mut conn) = self.clone_session().await?;
+                let SessionLease {
+                    tree,
+                    mut conn,
+                    generation,
+                } = self.clone_session().await?;
                 if fits_one_compound_read(conn.quick_read_limit(), size) {
                     debug!(
                         "SmbVolume::open_read_stream_with_hint: share={:?}, path={:?}, size={}; using compound fast-path",
@@ -570,8 +575,12 @@ impl Volume for SmbVolume {
                             );
                         }
                         read_result => {
-                            let (data, info) =
-                                self.handle_smb_result("open_read_stream_with_hint(compound)", &smb_path, read_result)?;
+                            let (data, info) = self.handle_smb_result(
+                                "open_read_stream_with_hint(compound)",
+                                &smb_path,
+                                generation,
+                                read_result,
+                            )?;
                             if data.len() as u64 == size {
                                 let modified_at = info.modified.to_system_time();
                                 return Ok(Box::new(
@@ -630,10 +639,11 @@ impl Volume for SmbVolume {
             // handful of ranged reads (the `TailCachedSource` collapses the
             // central-directory parse to ~1). Caching an open `FileReader` per path
             // is the future optimization; see the archive backend DETAILS.
-            let (tree, conn) = self.clone_session().await?;
+            let SessionLease { tree, conn, generation } = self.clone_session().await?;
             let reader = self.handle_smb_result(
                 "read_range(open)",
                 &smb_path,
+                generation,
                 tree.open_file_reader(conn, &smb_path).await,
             )?;
 
@@ -643,8 +653,8 @@ impl Volume for SmbVolume {
             // close explicitly on both the success and error paths.
             let close_result = reader.close().await;
 
-            let data = self.handle_smb_result("read_range", &smb_path, read_result)?;
-            self.handle_smb_result("read_range(close)", &smb_path, close_result)?;
+            let data = self.handle_smb_result("read_range", &smb_path, generation, read_result)?;
+            self.handle_smb_result("read_range(close)", &smb_path, generation, close_result)?;
             Ok(data)
         })
     }
@@ -775,13 +785,12 @@ impl Volume for SmbVolume {
         // out before installing a session into an orphaned volume.
         self.inner.unmounted.store(true, Ordering::Relaxed);
 
-        // Transition to Disconnected. We deliberately set the atomic directly
-        // instead of going through `transition_to_disconnected()`, because the
-        // volume is being unregistered: the FE will learn via `volumes-changed`
-        // and an extra `volume-connection-changed` event would race with that.
-        self.inner
-            .state
-            .store(ConnectionState::Disconnected as u8, Ordering::Relaxed);
+        // Transition to Disconnected, whichever session is installed. We
+        // deliberately skip `transition_to_disconnected()` (and its event),
+        // because the volume is being unregistered: the FE will learn via
+        // `volumes-changed` and an extra `volume-connection-changed` event would
+        // race with that.
+        self.inner.state.shut_down();
 
         // Cancel the background watcher task. The task will call watcher.close()
         // to release the SMB directory handle before exiting.
@@ -810,7 +819,7 @@ impl Volume for SmbVolume {
         // the Connection) vanishes. In practice both just drop their Arc
         // refcounts; the order is defensive.
         let session = self.inner.session.blocking_lock().take();
-        if let Some(super::session::MainSession { client, tree }) = session {
+        if let Some(super::session::MainSession { client, tree, .. }) = session {
             drop(tree);
             drop(client);
         }

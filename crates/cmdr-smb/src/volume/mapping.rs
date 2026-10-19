@@ -135,9 +135,21 @@ pub(super) fn map_smb_error(err: smb2::Error, path: &str) -> VolumeError {
         // Typed, never an `IoError`: a refused reply isn't a transport blip to retry.
         ErrorKind::SignatureInvalid => VolumeError::SignatureInvalid(err.to_string()),
         _ => VolumeError::IoError {
+            raw_os_error: local_errno(&err),
             message: err.to_string(),
-            raw_os_error: None,
         },
+    }
+}
+
+/// The OS error number of a LOCAL failure (smb2's `Io`, which on an established
+/// connection never means the connection was lost, since smb2 0.32.0), so the UI
+/// can say what went wrong. Read off the typed `io::Error`, ❌ never parsed from
+/// a message. `SendFailed` carries one too, but it maps to `DeviceDisconnected`
+/// by kind and its source is for the log only.
+fn local_errno(err: &smb2::Error) -> Option<i32> {
+    match err {
+        smb2::Error::Io(io) => io.raw_os_error(),
+        _ => None,
     }
 }
 
