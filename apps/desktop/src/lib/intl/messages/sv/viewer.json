@@ -210,7 +210,7 @@
   },
   "viewer.markdown.remoteImages.load": "Läs in bilder från webben",
   "@viewer.markdown.remoteImages.load": {
-    "sourceHash": "af4b47d"
+    "sourceHash": "ec1b218"
   },
   "viewer.markdown.image.remote": "Bild från webben",
   "@viewer.markdown.image.remote": {
@@ -232,13 +232,13 @@
   "@viewer.markdown.link.folder": {
     "sourceHash": "a8740f1"
   },
-  "viewer.markdown.link.blocked": "Förhandsvisningen följer inte länkar till absoluta sökvägar eller andra enheter.",
+  "viewer.markdown.link.blocked": "Förhandsvisningen följer bara webblänkar och länkar till filer på den här enheten.",
   "@viewer.markdown.link.blocked": {
-    "sourceHash": "4e23d4d"
+    "sourceHash": "f931a8d"
   },
-  "viewer.markdown.link.unreadable": "Vi kunde inte öppna filen som den här länken pekar på.",
+  "viewer.markdown.link.unreadable": "Vi kunde inte öppna det som den här länken pekar på.",
   "@viewer.markdown.link.unreadable": {
-    "sourceHash": "2d9c765"
+    "sourceHash": "e199e8c"
   },
   "viewer.toolbar.encoding.placeholder": "Teckenkodning",
   "@viewer.toolbar.encoding.placeholder": {

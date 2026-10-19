@@ -453,20 +453,6 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   malfunction; added `stopped working` / `stops working` to its `notMatch`. (de, fr)
 - `errorReporter.pageCrash.body`: "Reloading usually helps … sending a report helps get it fixed" repeats "helps" in
   adjacent sentences; several languages varied the verb. Consider "a report lets us fix it" or similar. (de, fr, ru, zh)
-- `viewer.markdown.link.unreadable`: the `@key` description says it also fires when a web link couldn't be handed to the
-  browser, but the English says "the file this link points to", so the translation says "file" for a web page too.
-  Consider a separate key for the web-link case, or English that doesn't name a file. (pt, vi, ru, zh, sv, de)
-- `commands.viewerGoBack.label` / `viewer.markdown.remoteImages.load`: two concept matchers caught the wrong sense. "Go
-  back to the previous document" tripped `back` though it's history navigation (`go-back`); consider a `back` `notMatch`
-  for "Go back to". "Load remote images" tripped `remote` (another machine/server) though it means pictures hosted on
-  websites; consider a `notMatch` for "remote images". sv recorded per-key exceptions meanwhile. (sv)
-- `viewer.markdown.link.blocked`: the `@key` description says it also fires for a `file://` address or another kind of
-  address the viewer doesn't open, but the English names only absolute paths and other drives, so a user clicking, say,
-  an `ftp://` link reads a reason that doesn't match. Consider "The viewer doesn’t follow this kind of link." or a
-  separate key. (zh, vi, fr)
-- No `link` (a hyperlink in a document, distinct from `symlink`) or `web` concept for the `viewer.markdown.*` batch;
-  each locale ruled them ad hoc (vi `liên kết`, `web`, both MS terminology + catalog). Add both so the next link/web
-  string checks against one ruling. (vi, de: `Link` per macOS „Als Link kopieren“, `Internet`)
 - `viewer.markdown.remoteImages.notice`: "Images from the web are hidden" tripped `hidden` (dotfiles), but it means held
   back from view (`hide`); added the phrase to `hidden`'s `notMatch`. (de)
 - `format` concept: "View formatted" / "format this document" (Markdown viewer) mean rich-text rendering, not a drive,

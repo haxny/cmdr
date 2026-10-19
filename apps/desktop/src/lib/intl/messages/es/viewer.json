@@ -206,9 +206,9 @@
   "@viewer.markdown.remoteImages.notice": {
     "sourceHash": "4cff98e"
   },
-  "viewer.markdown.remoteImages.load": "Cargar imágenes remotas",
+  "viewer.markdown.remoteImages.load": "Cargar imágenes de la web",
   "@viewer.markdown.remoteImages.load": {
-    "sourceHash": "af4b47d"
+    "sourceHash": "ec1b218"
   },
   "viewer.markdown.image.remote": "Imagen de la web",
   "@viewer.markdown.image.remote": {
@@ -230,13 +230,13 @@
   "@viewer.markdown.link.folder": {
     "sourceHash": "a8740f1"
   },
-  "viewer.markdown.link.blocked": "El visor no sigue enlaces a rutas absolutas ni a otras unidades.",
+  "viewer.markdown.link.blocked": "El visor solo sigue enlaces web y enlaces a archivos de esta unidad.",
   "@viewer.markdown.link.blocked": {
-    "sourceHash": "4e23d4d"
+    "sourceHash": "f931a8d"
   },
-  "viewer.markdown.link.unreadable": "No hemos podido abrir el archivo al que apunta este enlace.",
+  "viewer.markdown.link.unreadable": "No hemos podido abrir el destino de este enlace.",
   "@viewer.markdown.link.unreadable": {
-    "sourceHash": "2d9c765"
+    "sourceHash": "e199e8c"
   },
   "viewer.toolbar.encoding.placeholder": "Codificación",
   "@viewer.toolbar.encoding.placeholder": {

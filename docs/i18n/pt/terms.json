@@ -613,6 +613,12 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR ConnectToWindow, NetAuthAgent (Conectar)"
   },
+  "link": {
+    "chosen": "link",
+    "confidence": "high",
+    "forms": "web link → link da web",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
+  },
   "mcp-server": {
     "chosen": "servidor MCP",
     "confidence": "high",
@@ -3220,6 +3226,12 @@
     "accept": ["evento"],
     "confidence": "tentative",
     "sources": "shipped pt catalog"
+  },
+  "web": {
+    "chosen": "web",
+    "confidence": "tentative",
+    "forms": "from the web → da web; web links → links da web",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "whats-new": {
     "chosen": "Novidades",

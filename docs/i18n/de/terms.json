@@ -741,6 +741,12 @@
     "forms": "button Verbinden; Connect to server → Mit Server verbinden( …); Connecting … → Verbindung wird hergestellt …; Connecting to {name} … → Verbindung zu {name} wird hergestellt …; Connected → Verbunden; Connect as guest → Als Gast verbinden; reflexive with du: wenn du dich … verbindest",
     "sources": "macOS Finder (Mit Server verbinden, Verbinden, Serveradresse); NetAuthAgent (CONNECT)"
   },
+  "link": {
+    "chosen": "Link",
+    "confidence": "high",
+    "forms": "web link → Weblink; compounds Freigabelink, Google-Drive-Link",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology; macOS „Als Link kopieren“"
+  },
   "mcp-server": {
     "chosen": "MCP-Server",
     "confidence": "high",
@@ -1484,6 +1490,13 @@
     "confidence": "high",
     "forms": "Step 1 of 2: X → Schritt 1 von 2: X (the X keeps its standalone form)",
     "sources": "MS terminology (step → Schritt); shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting)"
+  },
+  "web": {
+    "accept": ["Web"],
+    "chosen": "Internet",
+    "confidence": "tentative",
+    "forms": "from the web → aus dem Internet; web links → Weblinks",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "working-tree": {
     "chosen": "Arbeitsbaum",

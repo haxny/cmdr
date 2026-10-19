@@ -205,9 +205,9 @@
   "@viewer.markdown.remoteImages.notice": {
     "sourceHash": "4cff98e"
   },
-  "viewer.markdown.remoteImages.load": "載入遠端影像",
+  "viewer.markdown.remoteImages.load": "載入來自網站的影像",
   "@viewer.markdown.remoteImages.load": {
-    "sourceHash": "af4b47d"
+    "sourceHash": "ec1b218"
   },
   "viewer.markdown.image.remote": "來自網站的影像",
   "@viewer.markdown.image.remote": {
@@ -229,13 +229,13 @@
   "@viewer.markdown.link.folder": {
     "sourceHash": "a8740f1"
   },
-  "viewer.markdown.link.blocked": "檢視器不會開啟指向絕對路徑或其他磁碟機的連結。",
+  "viewer.markdown.link.blocked": "檢視器只會開啟網頁連結，以及指向這個磁碟機上檔案的連結。",
   "@viewer.markdown.link.blocked": {
-    "sourceHash": "4e23d4d"
+    "sourceHash": "f931a8d"
   },
-  "viewer.markdown.link.unreadable": "無法開啟這個連結指向的檔案。",
+  "viewer.markdown.link.unreadable": "無法開啟這個連結指向的內容。",
   "@viewer.markdown.link.unreadable": {
-    "sourceHash": "2d9c765"
+    "sourceHash": "e199e8c"
   },
   "viewer.toolbar.encoding.placeholder": "編碼",
   "@viewer.toolbar.encoding.placeholder": {

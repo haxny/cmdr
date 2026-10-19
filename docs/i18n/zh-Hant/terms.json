@@ -786,6 +786,12 @@
     "forms": "a button or status → 連線 (已連線, 正在連線⋯); the verb in a sentence or command name → 連接 (連接伺服器⋯); casual → 連上 / 連著 / 連不上; a network connection → 網路連線",
     "sources": "AP-TW = AP-HK (Connect → 連線; Connect to Server… → 連接伺服器⋯), MS"
   },
+  "link": {
+    "chosen": "連結",
+    "confidence": "high",
+    "forms": "web link → 網頁連結",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
+  },
   "mcp-server": {
     "chosen": "MCP 伺服器",
     "confidence": "high",
@@ -1472,11 +1478,8 @@
   "format": {
     "chosen": "格式",
     "confidence": "high",
-    "exceptions": {
-      "viewer.markdown.error": "Format as a VERB (render a Markdown document) → 排版: 格式化 in Taiwan means formatting a disk, and Cmdr ships disk formatting.",
-      "viewer.toolbar.viewMode.viewFormatted": "Same verb sense as viewer.markdown.error: the rendered view → 以排版檢視, matching its siblings 以文字檢視 / 以影像檢視."
-    },
     "forms": "an archive's compression format → 壓縮格式; FAT32 format → FAT32 格式; date and time format → 日期和時間格式",
+    "note": "Rendering a Markdown document for display (a separate English sense) is 排版; 格式化 in Taiwan means formatting a disk.",
     "sources": "macOS Finder zh-TW (Format 格式, Compression format to use 要使用的壓縮格式), AppKit (「%2$@」格式的檔案); catalog"
   },
   "frame": {
@@ -4009,6 +4012,13 @@
     "chosen": "警告",
     "confidence": "confirmed",
     "sources": "AP-TW, MS (AP-HK has a typo glyph 警吿)"
+  },
+  "web": {
+    "accept": ["網頁"],
+    "chosen": "網站",
+    "confidence": "tentative",
+    "forms": "from the web → 來自網站的; web links → 網頁連結",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "whats-new": {
     "chosen": "新功能",

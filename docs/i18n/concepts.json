@@ -329,7 +329,8 @@
       "chat back",
       "take you back",
       "switch back",
-      "back to the defaults"
+      "back to the defaults",
+      "go back to"
     ],
     "sense": "Returning to the previous step, screen, or location."
   },
@@ -1688,7 +1689,7 @@
     "sense": "Installing an update, a tool, or a model."
   },
   "internet": {
-    "distinct": ["network"],
+    "distinct": ["network", "web"],
     "en": "internet",
     "match": ["internet", "internet connection"],
     "sense": "The internet as a whole, as opposed to a local network (mostly \"check your internet connection\" advice)."
@@ -1840,6 +1841,13 @@
     "match": ["line", "lines"],
     "notMatch": ["one-time line", "line break*", "in line"],
     "sense": "A line of text in the viewer, or a line in a config file."
+  },
+  "link": {
+    "distinct": ["symlink"],
+    "en": "link",
+    "match": ["link", "links"],
+    "notMatch": ["symbolic link", "symbolic links", "symlink", "symlinks", "linked worktree", "link loop"],
+    "sense": "A hyperlink: a clickable reference in a document, or a shareable web address (a share link, a Google Drive link)."
   },
   "linux-distribution": {
     "en": "distribution",
@@ -3320,6 +3328,7 @@
     "sense": "Exchanging the left and right panes."
   },
   "symlink": {
+    "distinct": ["link"],
     "en": "symbolic link",
     "match": ["symbolic link", "symbolic links", "symlink", "symlinks"],
     "sense": "A file-system link that points at another path."
@@ -3697,6 +3706,13 @@
     "match": ["watcher", "watching", "events"],
     "notMatch": ["watching for phones", "security events"],
     "sense": "The file-system change watcher and the change events it reports."
+  },
+  "web": {
+    "distinct": ["internet"],
+    "en": "the web",
+    "match": ["the web", "web link", "web links"],
+    "notMatch": ["the web address"],
+    "sense": "The World Wide Web as where something lives: images hosted on websites, links to web pages."
   },
   "whats-new": {
     "distinct": ["changelog"],

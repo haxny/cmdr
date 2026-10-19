@@ -2703,6 +2703,13 @@
     "confidence": "high",
     "sources": "macOS Preview (Line → Строка); MS (line, word processing → строка; line number → номер строки); Total Commander (Строка состояния)"
   },
+  "link": {
+    "accept": ["ссыл"],
+    "chosen": "ссылка",
+    "confidence": "high",
+    "forms": "web link → веб-ссылка; follow a link → переходить по ссылке",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
+  },
   "linux-distribution": {
     "chosen": "дистрибутив",
     "accept": ["дистрибутив"],
@@ -3942,10 +3949,7 @@
     "forms": "remote server → удаленный сервер; remote host → удаленный хост",
     "confidence": "high",
     "sources": "MS remote → «удаленный»; macOS live KIND_FORMATTER Remote → «Удаленный»",
-    "note": "«удален» also spells «deleted»; keep it as an adjective before a server or host so it never reads as removed.",
-    "exceptions": {
-      "viewer.markdown.remoteImages.load": "«удаленные изображения» reads as «deleted images»; the button says «изображения из интернета», matching its notice and `viewer.markdown.image.remote`."
-    }
+    "note": "«удален» also spells «deleted»; keep it as an adjective before a server or host so it never reads as removed."
   },
   "removable": {
     "chosen": "съемный",
@@ -5919,6 +5923,13 @@
     "confidence": "tentative",
     "sources": "TC menu: Laufwerksüberwachung (WatchDirs) → Слежение за каталогами: вкл/выкл; MS: watch (monitor a thread) → следить. No source uses «наблюдение» for a file watcher",
     "note": "Keep «наблюдение» here so «слежение» stays unambiguous for `tail`."
+  },
+  "web": {
+    "accept": ["веб"],
+    "chosen": "интернет",
+    "confidence": "tentative",
+    "forms": "from the web → из интернета; web links → веб-ссылки",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "whats-new": {
     "chosen": "Что нового",

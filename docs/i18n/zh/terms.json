@@ -682,6 +682,12 @@
     "forms": "Connecting to X… → 正在连接到 {name}…; Connect to server… → 连接服务器…; Connect as guest → 以来宾身份连接; internet connection → 联网 / 互联网连接",
     "sources": "macOS Finder, NetAuthAgent"
   },
+  "link": {
+    "chosen": "链接",
+    "confidence": "high",
+    "forms": "web link → 网页链接",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
+  },
   "mcp-server": {
     "chosen": "MCP 服务器",
     "confidence": "high",
@@ -1311,11 +1317,8 @@
   "format": {
     "chosen": "格式",
     "confidence": "high",
-    "exceptions": {
-      "viewer.markdown.error": "Formatting a Markdown document for display is laying it out, 排版; 格式化 is what a disk gets erased by, a scary misreading here.",
-      "viewer.toolbar.viewMode.viewFormatted": "The laid-out Markdown view is 排版样式, beside its siblings 以文本查看 / 以图像查看; 格式化 reads as disk formatting."
-    },
     "forms": "formatted as FAT32 → 采用 FAT32 格式; FAT32 / exFAT stay Latin",
+    "note": "Rendering a Markdown document for display (a separate English sense) is 排版; 格式化 reads as erasing a disk.",
     "sources": "macOS Finder PE4.5"
   },
   "free-space": {
@@ -3527,6 +3530,13 @@
     "confidence": "tentative",
     "forms": "file watching 文件监视; watcher debounce 文件监视防抖; events 事件",
     "sources": "standard"
+  },
+  "web": {
+    "accept": ["网页"],
+    "chosen": "网上",
+    "confidence": "tentative",
+    "forms": "from the web → 网上的; web links → 网页链接",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "whats-new": {
     "chosen": "新增功能",

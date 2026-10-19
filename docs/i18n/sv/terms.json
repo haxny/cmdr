@@ -285,9 +285,6 @@
   "back": {
     "chosen": "tillbaka",
     "confidence": "high",
-    "exceptions": {
-      "commands.viewerGoBack.label": "History navigation (the go-back concept, Gå bakåt), paired with commands.viewerGoForward.label Gå framåt like commands.navBack.label / navForward."
-    },
     "forms": "button Tillbaka; Tillbaka till chatten, Tillbaka till värdlistan",
     "sources": "macOS"
   },
@@ -666,6 +663,12 @@
     "confidence": "high",
     "forms": "ansluta, Anslut, Ansluter till {name}…, anslutning, ansluten; Connect as guest → Anslut som gäst",
     "sources": "macOS Finder (Anslut till server, Ansluter till ^0…)"
+  },
+  "link": {
+    "chosen": "länk",
+    "confidence": "high",
+    "forms": "web link → webblänk; compounds delningslänk, Google Drive-länk",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
   },
   "mcp-server": {
     "chosen": "MCP-server",
@@ -2457,9 +2460,6 @@
     "accept": ["på servern"],
     "chosen": "fjärr",
     "confidence": "tentative",
-    "exceptions": {
-      "viewer.markdown.remoteImages.load": "English sense: pictures hosted on websites, not a server the user connected; bilder från webben matches the bar's own notice and viewer.markdown.image.remote (Bild från webben)."
-    },
     "forms": "Fjärrserver in explanations; the field label Remote folder → Mapp på servern (no fjärrmapp)",
     "sources": "macOS (fjärrinloggning); catalog"
   },
@@ -3366,6 +3366,13 @@
     "confidence": "high",
     "forms": "events → händelser",
     "sources": "catalog; macOS (händelse)"
+  },
+  "web": {
+    "accept": ["webb"],
+    "chosen": "webben",
+    "confidence": "tentative",
+    "forms": "from the web → från webben; web links → webblänkar",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "whats-new": {
     "chosen": "Nyheter",

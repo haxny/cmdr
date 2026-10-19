@@ -206,9 +206,9 @@
   "@viewer.markdown.remoteImages.notice": {
     "sourceHash": "4cff98e"
   },
-  "viewer.markdown.remoteImages.load": "Tải hình ảnh từ xa",
+  "viewer.markdown.remoteImages.load": "Tải hình ảnh từ web",
   "@viewer.markdown.remoteImages.load": {
-    "sourceHash": "af4b47d"
+    "sourceHash": "ec1b218"
   },
   "viewer.markdown.image.remote": "Hình ảnh từ web",
   "@viewer.markdown.image.remote": {
@@ -230,13 +230,13 @@
   "@viewer.markdown.link.folder": {
     "sourceHash": "a8740f1"
   },
-  "viewer.markdown.link.blocked": "Trình xem không mở các liên kết tới đường dẫn tuyệt đối hoặc ổ đĩa khác.",
+  "viewer.markdown.link.blocked": "Trình xem chỉ mở liên kết web và liên kết tới tệp trên ổ đĩa này.",
   "@viewer.markdown.link.blocked": {
-    "sourceHash": "4e23d4d"
+    "sourceHash": "f931a8d"
   },
-  "viewer.markdown.link.unreadable": "Cmdr không mở được tệp mà liên kết này trỏ tới.",
+  "viewer.markdown.link.unreadable": "Cmdr không mở được nơi mà liên kết này trỏ tới.",
   "@viewer.markdown.link.unreadable": {
-    "sourceHash": "2d9c765"
+    "sourceHash": "e199e8c"
   },
   "viewer.toolbar.encoding.placeholder": "Mã hóa ký tự",
   "@viewer.toolbar.encoding.placeholder": {

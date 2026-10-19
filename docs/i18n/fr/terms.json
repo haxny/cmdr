@@ -731,6 +731,12 @@
     "note": "`se connecter` is the network action; signing in is `s’identifier`.",
     "sources": "macOS Finder (\"Se connecter comme…\", MenuBar 266.title, MN1 « Connexion à « ^0 »… »)"
   },
+  "link": {
+    "chosen": "lien",
+    "confidence": "high",
+    "forms": "web link → lien web",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
+  },
   "mcp-server": {
     "chosen": "serveur MCP",
     "confidence": "high",
@@ -3576,6 +3582,12 @@
     "confidence": "high",
     "forms": "the setting section → Surveillance du système de fichiers; event → évènement (modern spelling); buffer overflow → a saturé le tampon",
     "sources": "descriptive FR"
+  },
+  "web": {
+    "chosen": "Web",
+    "confidence": "tentative",
+    "forms": "the noun takes a capital (du Web, provenant du Web); the adjective is lowercase (liens web)",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "whats-new": {
     "chosen": "Nouveautés",

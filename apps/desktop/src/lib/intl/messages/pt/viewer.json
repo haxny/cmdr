@@ -206,9 +206,9 @@
   "@viewer.markdown.remoteImages.notice": {
     "sourceHash": "4cff98e"
   },
-  "viewer.markdown.remoteImages.load": "Carregar imagens remotas",
+  "viewer.markdown.remoteImages.load": "Carregar imagens da web",
   "@viewer.markdown.remoteImages.load": {
-    "sourceHash": "af4b47d"
+    "sourceHash": "ec1b218"
   },
   "viewer.markdown.image.remote": "Imagem da web",
   "@viewer.markdown.image.remote": {
@@ -230,13 +230,13 @@
   "@viewer.markdown.link.folder": {
     "sourceHash": "a8740f1"
   },
-  "viewer.markdown.link.blocked": "O visualizador não segue links para caminhos absolutos nem para outros discos.",
+  "viewer.markdown.link.blocked": "O visualizador só segue links da web e links para arquivos neste disco.",
   "@viewer.markdown.link.blocked": {
-    "sourceHash": "4e23d4d"
+    "sourceHash": "f931a8d"
   },
-  "viewer.markdown.link.unreadable": "Não foi possível abrir o arquivo para o qual este link aponta.",
+  "viewer.markdown.link.unreadable": "Não foi possível abrir o destino deste link.",
   "@viewer.markdown.link.unreadable": {
-    "sourceHash": "2d9c765"
+    "sourceHash": "e199e8c"
   },
   "viewer.toolbar.encoding.placeholder": "Codificação",
   "@viewer.toolbar.encoding.placeholder": {

@@ -206,9 +206,9 @@
   "@viewer.markdown.remoteImages.notice": {
     "sourceHash": "4cff98e"
   },
-  "viewer.markdown.remoteImages.load": "Távoli képek betöltése",
+  "viewer.markdown.remoteImages.load": "Képek betöltése a webről",
   "@viewer.markdown.remoteImages.load": {
-    "sourceHash": "af4b47d"
+    "sourceHash": "ec1b218"
   },
   "viewer.markdown.image.remote": "Kép a webről",
   "@viewer.markdown.image.remote": {
@@ -230,13 +230,13 @@
   "@viewer.markdown.link.folder": {
     "sourceHash": "a8740f1"
   },
-  "viewer.markdown.link.blocked": "A megjelenítő nem követi az abszolút útvonalakra vagy más meghajtókra mutató linkeket.",
+  "viewer.markdown.link.blocked": "A megjelenítő csak a webes linkeket és az ezen a meghajtón lévő fájlokra mutató linkeket követi.",
   "@viewer.markdown.link.blocked": {
-    "sourceHash": "4e23d4d"
+    "sourceHash": "f931a8d"
   },
-  "viewer.markdown.link.unreadable": "Nem sikerült megnyitni a fájlt, amelyre ez a link mutat.",
+  "viewer.markdown.link.unreadable": "Nem sikerült megnyitni azt, amire ez a link mutat.",
   "@viewer.markdown.link.unreadable": {
-    "sourceHash": "2d9c765"
+    "sourceHash": "e199e8c"
   },
   "viewer.toolbar.encoding.placeholder": "Kódolás",
   "@viewer.toolbar.encoding.placeholder": {

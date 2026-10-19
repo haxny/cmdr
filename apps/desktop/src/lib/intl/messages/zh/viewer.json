@@ -205,9 +205,9 @@
   "@viewer.markdown.remoteImages.notice": {
     "sourceHash": "4cff98e"
   },
-  "viewer.markdown.remoteImages.load": "加载远程图像",
+  "viewer.markdown.remoteImages.load": "加载网上的图像",
   "@viewer.markdown.remoteImages.load": {
-    "sourceHash": "af4b47d"
+    "sourceHash": "ec1b218"
   },
   "viewer.markdown.image.remote": "网上的图像",
   "@viewer.markdown.image.remote": {
@@ -229,13 +229,13 @@
   "@viewer.markdown.link.folder": {
     "sourceHash": "a8740f1"
   },
-  "viewer.markdown.link.blocked": "查看器不会打开指向绝对路径或其他驱动器的链接。",
+  "viewer.markdown.link.blocked": "查看器只会打开网页链接和指向此驱动器上文件的链接。",
   "@viewer.markdown.link.blocked": {
-    "sourceHash": "4e23d4d"
+    "sourceHash": "f931a8d"
   },
-  "viewer.markdown.link.unreadable": "无法打开这个链接指向的文件。",
+  "viewer.markdown.link.unreadable": "无法打开这个链接指向的内容。",
   "@viewer.markdown.link.unreadable": {
-    "sourceHash": "2d9c765"
+    "sourceHash": "e199e8c"
   },
   "viewer.toolbar.encoding.placeholder": "编码",
   "@viewer.toolbar.encoding.placeholder": {

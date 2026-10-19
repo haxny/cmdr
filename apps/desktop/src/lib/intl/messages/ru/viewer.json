@@ -209,7 +209,7 @@
   },
   "viewer.markdown.remoteImages.load": "Загрузить изображения из интернета",
   "@viewer.markdown.remoteImages.load": {
-    "sourceHash": "af4b47d"
+    "sourceHash": "ec1b218"
   },
   "viewer.markdown.image.remote": "Изображение из интернета",
   "@viewer.markdown.image.remote": {
@@ -231,13 +231,13 @@
   "@viewer.markdown.link.folder": {
     "sourceHash": "a8740f1"
   },
-  "viewer.markdown.link.blocked": "Окно просмотра не переходит по ссылкам на абсолютные пути и другие диски.",
+  "viewer.markdown.link.blocked": "Окно просмотра переходит только по веб-ссылкам и ссылкам на файлы на этом диске.",
   "@viewer.markdown.link.blocked": {
-    "sourceHash": "4e23d4d"
+    "sourceHash": "f931a8d"
   },
-  "viewer.markdown.link.unreadable": "Не удалось открыть файл, на который указывает эта ссылка.",
+  "viewer.markdown.link.unreadable": "Не удалось открыть то, на что указывает эта ссылка.",
   "@viewer.markdown.link.unreadable": {
-    "sourceHash": "2d9c765"
+    "sourceHash": "e199e8c"
   },
   "viewer.toolbar.encoding.placeholder": "Кодировка",
   "@viewer.toolbar.encoding.placeholder": {

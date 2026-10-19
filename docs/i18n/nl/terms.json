@@ -645,6 +645,12 @@
     "forms": "button Verbind; Connect to server → Verbind met server; Connect as guest → Verbind als gast; progress Verbinden met {name}…; status Verbonden; in a sentence verbinding maken; a phone plugged in by cable is aangesloten, not verbonden",
     "sources": "macOS Finder (Connect to server → Verbind met server, Connect As… → Verbind als…), AppKit (Connecting… → Verbinden…, Connected → Verbonden)"
   },
+  "link": {
+    "chosen": "link",
+    "confidence": "high",
+    "forms": "web link → weblink; compounds deellink, Google Drive-link",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
+  },
   "mcp-server": {
     "chosen": "MCP-server",
     "confidence": "high",
@@ -3467,6 +3473,12 @@
     "confidence": "tentative",
     "forms": "file change watcher → bewaker voor bestandswijzigingen; events processed → wijzigingen verwerkt; Watching for phones → Cmdr let op telefoons (tentative)",
     "sources": "from bewaken; wijzigingen reads clearer than gebeurtenissen"
+  },
+  "web": {
+    "chosen": "web",
+    "confidence": "tentative",
+    "forms": "from the web → van het web; web links → weblinks",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "whats-new": {
     "chosen": "Wat is er nieuw",

@@ -660,6 +660,12 @@
     "confidence": "high",
     "sources": "macOS/Microsoft es (combinación de teclas, 7 hits in the pile); catalog combinación (shortcuts.conflict.*, downloads.shortcutRow.invalidCombo)"
   },
+  "link": {
+    "chosen": "enlace",
+    "confidence": "high",
+    "forms": "web link → enlace web",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
+  },
   "mcp-server": {
     "chosen": "servidor MCP",
     "confidence": "high",
@@ -3417,6 +3423,13 @@
     "confidence": "tentative",
     "sources": "catalog (File system watching → Vigilancia del sistema de archivos)",
     "decision": "Coherencia del termbase"
+  },
+  "web": {
+    "accept": ["web"],
+    "chosen": "la web",
+    "confidence": "tentative",
+    "forms": "from the web → de la web; web links → enlaces web",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "whats-new": {
     "chosen": "Novedades",

@@ -208,9 +208,9 @@
   "@viewer.markdown.remoteImages.notice": {
     "sourceHash": "4cff98e"
   },
-  "viewer.markdown.remoteImages.load": "Entfernte Bilder laden",
+  "viewer.markdown.remoteImages.load": "Bilder aus dem Internet laden",
   "@viewer.markdown.remoteImages.load": {
-    "sourceHash": "af4b47d"
+    "sourceHash": "ec1b218"
   },
   "viewer.markdown.image.remote": "Bild aus dem Internet",
   "@viewer.markdown.image.remote": {
@@ -232,13 +232,13 @@
   "@viewer.markdown.link.folder": {
     "sourceHash": "a8740f1"
   },
-  "viewer.markdown.link.blocked": "Die Vorschau folgt keinen Links zu absoluten Pfaden oder anderen Laufwerken.",
+  "viewer.markdown.link.blocked": "Die Vorschau folgt nur Weblinks und Links zu Dateien auf diesem Laufwerk.",
   "@viewer.markdown.link.blocked": {
-    "sourceHash": "4e23d4d"
+    "sourceHash": "f931a8d"
   },
-  "viewer.markdown.link.unreadable": "Wir konnten die Datei, auf die dieser Link verweist, nicht öffnen.",
+  "viewer.markdown.link.unreadable": "Wir konnten nicht öffnen, worauf dieser Link verweist.",
   "@viewer.markdown.link.unreadable": {
-    "sourceHash": "2d9c765"
+    "sourceHash": "e199e8c"
   },
   "viewer.toolbar.encoding.placeholder": "Codierung",
   "@viewer.toolbar.encoding.placeholder": {

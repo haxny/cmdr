@@ -606,6 +606,12 @@
     "forms": "connect to a server → kết nối tới (prose) but the label Kết nối với máy chủ… (Finder N84); reconnect → kết nối lại; the connection dropped → Đã mất kết nối",
     "sources": "Xfce Thunar (kết nối mạng), macOS Finder (Kết nối với máy chủ), CFNetwork (Đã mất kết nối mạng)"
   },
+  "link": {
+    "chosen": "liên kết",
+    "confidence": "high",
+    "forms": "web link → liên kết web",
+    "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
+  },
   "mcp-server": {
     "chosen": "máy chủ MCP",
     "confidence": "high",
@@ -3212,6 +3218,12 @@
     "confidence": "tentative",
     "forms": "watcher → bộ theo dõi; file watching → Theo dõi tệp; events → sự kiện",
     "sources": "descriptive"
+  },
+  "web": {
+    "chosen": "web",
+    "confidence": "tentative",
+    "forms": "from the web → từ web; web links → liên kết web",
+    "sources": "catalog (viewer.markdown.* notice, placeholder, button, link notices), 2026-10-19"
   },
   "whats-new": {
     "chosen": "Có gì mới",
