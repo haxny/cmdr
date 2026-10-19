@@ -180,6 +180,12 @@ type CheckDefinition struct {
 	// ❌ Don't reach for this to silence a check that's merely failing: fix the
 	// check or fix the code. It's for lanes we've decided not to gate on.
 	Disabled string
+	// NamedOnly, when non-empty, holds the REASON this check joins no suite: it
+	// runs only when named (`pnpm check svelte-tests-related`). It's for a
+	// live tool that another lane already covers in full, so running it in a
+	// suite would only repeat work. Like Disabled, it clears every lane flag and
+	// carries a NotInCI reason (`TestNamedOnlyChecksClaimNoLane`).
+	NamedOnly string
 	// Inputs lists path globs (relative to repo root) describing what this check
 	// reads. The input-fingerprint cache (see scripts/check/checks/fingerprint.go)
 	// hashes the union of these plus the global inputs (GlobalInputs) and skips

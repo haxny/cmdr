@@ -214,6 +214,46 @@ func containsID(defs []CheckDefinition, id string) bool {
 	return false
 }
 
+func TestNamedOnlyChecksClaimNoLane(t *testing.T) {
+	count := 0
+	for _, c := range AllChecks {
+		if c.NamedOnly == "" {
+			continue
+		}
+		count++
+		if c.IsFast || c.IsSlow || c.CIOnly || c.JoinsScopedRuns {
+			t.Errorf("check %q is NamedOnly but still claims a lane; clear the lane flags", c.ID)
+		}
+		if c.NotInCI == "" {
+			t.Errorf("check %q is NamedOnly but has no NotInCI reason; a named-only check is never in a workflow", c.ID)
+		}
+		if kept := FilterDisabledChecks(AllChecks, nil); containsID(kept, c.ID) {
+			t.Errorf("check %q is NamedOnly but an unnamed run kept it", c.ID)
+		}
+		if kept := FilterDisabledChecks(AllChecks, []string{c.ID}); !containsID(kept, c.ID) {
+			t.Errorf("check %q was named explicitly but was still filtered out", c.ID)
+		}
+	}
+	if count == 0 {
+		t.Error("no check is NamedOnly; drop the field or this test")
+	}
+}
+
+// `AGENTS.md` tells agents what `--fast` covers by kind: light scanners, never a
+// compiler, typechecker, test suite, or formatter (those all weigh 2+ cores), so
+// an agent knows the rest is CI's. This keeps that one line true without listing
+// the lane's members anywhere.
+func TestFastLaneHoldsOnlyLightScanners(t *testing.T) {
+	for _, c := range AllChecks {
+		if !c.IsFast {
+			continue
+		}
+		if c.CpuWeight > 1 || c.Tech == "📐 Format" {
+			t.Errorf("%s is in --fast but weighs %d cores (tech %s); --fast holds light scanners only, so update AGENTS.md § Checker script if that changes", c.ID, c.CpuWeight, c.Tech)
+		}
+	}
+}
+
 // A lane that joins every scoped run must stay what makes that free: an enabled,
 // whole-repo scanner in the fast lane, never a formatter (a local run rewrites
 // files, and the git hooks own formatting).

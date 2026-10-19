@@ -138,10 +138,11 @@ Writing them:
 
 ## Checker script
 
-Always use **`pnpm check`** at the repo root (never raw `cargo` / `vitest` / etc.); it's cache-aware. Cadence: `--fast`
-while iterating, since CI is the full gate (§ Workflow); `--include-slow` (7-10 min) every second milestone or so. Scope
-by name (`pnpm check clippy`), tech (`rust`), or app (`desktop`). Full docs in `scripts/check/CLAUDE.md`. **Finish every
-unit of work by running the right checks.** Don't even try to tail the checker script.
+Always use **`pnpm check`** at the repo root (never raw `cargo` / `vitest` / etc.); it's cache-aware. **Before each
+commit: `pnpm check --fast && pnpm check svelte-tests-related`** (naming a check runs only that one). `--fast` (~6 s) is
+light scanners only, no compilers, typecheckers, test suites, or formatters; `svelte-tests-related` runs the vitest
+files that reach your branch's changes. CI runs the rest (§ Workflow). Scope by name (`pnpm check clippy`), tech
+(`rust`), or app (`desktop`). Full docs in `scripts/check/CLAUDE.md`. Don't even try to tail the checker script.
 
 ## Testing
 
@@ -180,8 +181,9 @@ inventory). Desktop-specific test, MCP, and E2E mechanics live in `apps/desktop/
 - Step back per milestone: is it solid AND elegant AND documented?
 - An **outside contributor's PR**: land it without asking them for anything, and have GitHub mark it merged.
   `docs/guides/handling-prs.md`.
-- **Landing**: a worktree branch reaches `main` only through `pnpm land`, on green CI; push between milestones with
-  `pnpm land -no-wait`. `scripts/land/CLAUDE.md`.
+- **Landing**: a worktree branch reaches `main` only through `pnpm land`, on green CI. CI takes 25–35 min, so run it in
+  the background (only the lead lands). Push each green milestone with `pnpm land -no-wait` and keep working.
+  `scripts/land/CLAUDE.md`.
 - Commits: nobody reads PRs, so the message explains the change. Conventional-commits style, leading with impact: the
   title says what the change achieves and why, which feeds our release notes. No title length cap, comprehensive bodies
   fine, no wraps, entities in backticks. Never `Co-Authored-By`.

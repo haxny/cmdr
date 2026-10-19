@@ -687,6 +687,8 @@ func showUsage() {
 			// Listed, not hidden: it's still runnable by name, and someone
 			// scanning for it should learn it's mothballed rather than missing.
 			name += " (disabled, run by name only)"
+		case check.NamedOnly != "":
+			name += " (run by name only)"
 		case check.IsSlow:
 			name += " (slow)"
 		}

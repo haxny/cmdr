@@ -308,6 +308,11 @@ clear `IsFast` / `IsSlow` / `CIOnly` and carry a `NotInCI` reason (`TestDisabled
 flag reads as "runs there" and would come back the moment `Disabled` is lifted. ❌ Never reach for `Disabled` to quiet a
 check that's going red — fix the check or the code. It's for a lane we've decided not to gate on.
 
+**Named-only checks:** `CheckDefinition.NamedOnly` holds the reason a LIVE check joins no suite: another lane already
+covers it in full, so a suite would only repeat the work (`svelte-tests-related`, a subset of `svelte-tests`). The same
+filter drops it, `--help` lists it as `(run by name only)`, and `TestNamedOnlyChecksClaimNoLane` holds it to the same
+no-lane-flags, has-`NotInCI` rules as a disabled check.
+
 Mothballed today: `invariant-density` (a `❌` count can't tell a rule that earns its place from one that doesn't, so it
 warned on guardrails we wanted; the table is still worth reading deliberately via `pnpm check invariant-density`).
 

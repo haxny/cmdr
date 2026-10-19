@@ -1151,6 +1151,18 @@ var AllChecks = []CheckDefinition{
 		Run:         RunSvelteTests,
 	},
 	{
+		ID:          "desktop-svelte-tests-related",
+		CpuWeight:   4,
+		Nickname:    "svelte-tests-related",
+		DisplayName: "tests reaching this branch's changes",
+		App:         AppDesktop,
+		Tech:        "🎨 Svelte",
+		NamedOnly:   "a subset of svelte-tests, which every suite and CI already run in full; agents name it beside --fast",
+		NotInCI:     "CI runs the full svelte-tests suite, which this is a subset of",
+		Inputs:      svelteInputs,
+		Run:         RunSvelteTestsRelated,
+	},
+	{
 		ID:          "desktop-svelte-e2e-linux-typecheck",
 		Nickname:    "e2e-linux-typecheck",
 		DisplayName: "e2e-linux typecheck",
@@ -1974,12 +1986,12 @@ func GetChecksByTech(app App, tech string) []CheckDefinition {
 	return result
 }
 
-// FilterDisabledChecks removes mothballed checks (those carrying a Disabled
-// reason) unless the user named one explicitly. Unlike the slow / CI-only
-// lanes, there's no flag that brings them back in bulk: naming the check is the
-// only way to run it, so a disabled check can never rejoin a suite by accident.
-// Runs before every other lane filter, so `--fast` / `--include-slow` /
-// `--only-slow` / `--ci` all see a set the disabled ones have already left.
+// FilterDisabledChecks removes the checks that join no suite, mothballed
+// (Disabled) and named-only (NamedOnly) alike, unless the user named one
+// explicitly. Unlike the slow / CI-only lanes, there's no flag that brings them
+// back in bulk: naming the check is the only way to run it, so neither kind can
+// join a suite by accident. Runs before every other lane filter, so `--fast` /
+// `--include-slow` / `--only-slow` / `--ci` all see a set they've already left.
 func FilterDisabledChecks(defs []CheckDefinition, namedChecks []string) []CheckDefinition {
 	named := make(map[string]bool, len(namedChecks))
 	for _, name := range namedChecks {
@@ -1989,7 +2001,7 @@ func FilterDisabledChecks(defs []CheckDefinition, namedChecks []string) []CheckD
 	}
 	var result []CheckDefinition
 	for _, def := range defs {
-		if def.Disabled == "" || named[def.ID] {
+		if (def.Disabled == "" && def.NamedOnly == "") || named[def.ID] {
 			result = append(result, def)
 		}
 	}
