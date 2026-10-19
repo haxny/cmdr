@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use cmdr_fs::log_private::LogPrivate;
 use tokio::runtime::Handle;
 
 use super::Index;
@@ -306,7 +307,7 @@ fn adopt_a_drive_index_left_in_the_data_dir(config: &IndexConfig) {
         log::info!(
             target: "indexing",
             "moved the drive index to {}: {} moved, {} discarded",
-            config.drive_index_dir.display(),
+            LogPrivate::dir_path(&config.drive_index_dir),
             report.moved.len(),
             report.discarded.len()
         );

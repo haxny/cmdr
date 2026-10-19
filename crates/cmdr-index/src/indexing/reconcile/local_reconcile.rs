@@ -58,6 +58,8 @@ mod latency_probe;
 use cost_budget::{Anchorage, BudgetVerdict, CostBudget, ReadCost};
 use latency_probe::LatencyProbe;
 
+use cmdr_fs::log_private::LogPrivate;
+
 use crate::indexing::DEBUG_STATS;
 use crate::indexing::IndexPathSpace;
 use crate::indexing::deletes;
@@ -199,7 +201,7 @@ impl GuardedReader {
                 log::warn!(
                     "local reconcile: read timed out after {:?}, abandoning {} (kept stale, heals later)",
                     self.timeout,
-                    path.display()
+                    LogPrivate::dir_path(&path)
                 );
                 self.respawn();
                 (None, true)
@@ -515,7 +517,7 @@ fn run_local_reconcile(
             DEBUG_STATS.record_reconcile_budget_trip();
             log::warn!(
                 "local reconcile: subtree {} read {} directories, {} of them pathologically slow ({:.1}% costing {:.1}s) — not descending further into it, its index rows stay as they are",
-                tripped.path.display(),
+                LogPrivate::dir_path(&tripped.path),
                 tripped.total_reads,
                 tripped.slow_reads,
                 100.0 * f64::from(tripped.slow_reads) / f64::from(tripped.total_reads.max(1)),
@@ -551,7 +553,7 @@ fn run_local_reconcile(
         if dir_path == *root && listing.children.is_empty() {
             log::warn!(
                 "local reconcile: root listed empty for {} — treating as a failed rescan, keeping prior index",
-                dir_path.display()
+                LogPrivate::dir_path(&dir_path)
             );
             return Err(ScanError::EmptyRoot);
         }
@@ -629,11 +631,11 @@ fn run_local_reconcile(
                     Ok(Some(id)) => queue.push_back((child_path, id, child_anchorage)),
                     Ok(None) => log::debug!(
                         "local reconcile: couldn't resolve new dir after flush: {}",
-                        child_path.display()
+                        LogPrivate::dir_path(&child_path)
                     ),
                     Err(e) => log::warn!(
                         "local reconcile: resolve_component failed for {}: {e}",
-                        child_path.display()
+                        LogPrivate::dir_path(&child_path)
                     ),
                 }
             }
@@ -651,7 +653,7 @@ fn run_local_reconcile(
         deletes::note_the_drive_left(work.volume_id(), writer);
         log::warn!(
             "local reconcile: {} stopped being listed, so its pass claims no completion",
-            root.display()
+            LogPrivate::dir_path(&root)
         );
         return Err(ScanError::RootUnlistable);
     }
@@ -675,7 +677,7 @@ fn run_local_reconcile(
     };
     log::info!(
         "local reconcile: complete for {}: +{added} -{removed} ~{updated} ({} re-listed) in {}ms{budget_note}",
-        root.display(),
+        LogPrivate::dir_path(&root),
         cmdr_fs::pluralize::pluralize(total_dirs, "dir"),
         start.elapsed().as_millis()
     );

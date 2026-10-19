@@ -32,6 +32,7 @@ use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 use tokio_util::sync::CancellationToken;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
 use super::scan_pace::ScanPacer;
@@ -96,7 +97,7 @@ pub(crate) async fn cover_volume_subtree(
     {
         log::debug!(
             "network_scanner: not covering {} (a NAS system dir or a tree the volume keeps out of its walks); marking it as ground we won't read",
-            root.display()
+            LogPrivate::dir_path(&root)
         );
         writes.mark_unreadable(root_id);
         writes.finish(root_id)?;
@@ -179,7 +180,7 @@ pub(crate) async fn cover_volume_subtree(
             Err(VolumeScanError::Volume(e)) if is_typed_disconnect(&e) => {
                 log::warn!(
                     "network_scanner: device disconnected covering {}: {e}; keeping what the walk covered",
-                    dir_path.display()
+                    LogPrivate::dir_path(&dir_path)
                 );
                 writes.share_went_away();
                 commit_scan_tx(writer, &mut tx_open)?;
@@ -214,7 +215,7 @@ pub(crate) async fn cover_volume_subtree(
                 heartbeat.abandoned(1);
                 log::debug!(
                     "network_scanner: skipping unlistable dir {} while covering (consecutive_failures={consecutive_failures}): {err}",
-                    dir_path.display(),
+                    LogPrivate::dir_path(&dir_path),
                 );
                 if consecutive_failures >= CONSECUTIVE_FAILURE_ABORT {
                     log::warn!(
@@ -278,7 +279,7 @@ pub(crate) async fn cover_volume_subtree(
                 Some(Slot::TakenHere) => {
                     log::debug!(
                         "network_scanner: {} has a same-name sibling this index can't hold; keeping the first",
-                        entry.path
+                        LogPrivate::path(&entry.path)
                     );
                     continue;
                 }
@@ -301,7 +302,7 @@ pub(crate) async fn cover_volume_subtree(
                 if !walk_descends(volume.as_ref(), &child_path, &entry.name, is_symlink) {
                     log::debug!(
                         "network_scanner: not descending into {} (a NAS system dir, a link, or a tree the volume keeps out of its walks)",
-                        child_path.display()
+                        LogPrivate::dir_path(&child_path)
                     );
                     writes.mark_unreadable(id);
                 } else {
@@ -350,7 +351,7 @@ pub(crate) async fn cover_volume_subtree(
 
     log::debug!(
         "network_scanner: covered {} ({} entries, {} dirs) in {}ms",
-        root.display(),
+        LogPrivate::dir_path(&root),
         total_entries,
         total_dirs,
         start.elapsed().as_millis()

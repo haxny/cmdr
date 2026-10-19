@@ -5,6 +5,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use cmdr_fs::log_private::LogPrivate;
+
 use super::phases;
 use super::signals::VolumeSignals;
 use super::steps_ahead::StepsAhead;
@@ -292,7 +294,7 @@ impl IndexManager {
 
         log::debug!(
             "IndexManager created for volume '{volume_id}' ({kind:?}) at {}",
-            volume_root.display()
+            LogPrivate::dir_path(&volume_root)
         );
 
         Ok(Self {

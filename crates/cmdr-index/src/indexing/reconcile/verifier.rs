@@ -9,6 +9,7 @@ use std::sync::{LazyLock, Mutex};
 use std::time::Instant;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use super::reconciler;
 use crate::indexing::IndexPathSpace;
@@ -513,13 +514,14 @@ async fn verify_and_correct(
             match scanner::scan_subtree(Path::new(new_dir), space, writer, work) {
                 Ok(summary) => {
                     log::debug!(
-                        "Verifier: scanned new dir path={new_dir:?} ({} entries, {}ms)",
+                        "Verifier: scanned new dir path={:?} ({} entries, {}ms)",
+                        LogPrivate::dir_path(new_dir),
                         summary.total_entries,
                         summary.duration_ms,
                     );
                 }
                 Err(e) => {
-                    log::warn!("Verifier: scan_subtree({new_dir}) failed: {e}");
+                    log::warn!("Verifier: scan_subtree({}) failed: {e}", LogPrivate::dir_path(new_dir));
                 }
             }
         }

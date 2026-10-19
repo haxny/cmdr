@@ -30,6 +30,7 @@ use crate::indexing::paths::path_prefix;
 use crate::indexing::read::pending_sizes;
 use crate::indexing::reconcile::reconciler::EventReconciler;
 use crate::indexing::writer::{IndexWriter, WriteMessage};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::pluralize::pluralize;
 
 /// How many consecutive silent 5 s beats a quiet loop absorbs before it says
@@ -594,7 +595,7 @@ pub(in crate::indexing) fn process_live_batch(
             log::info!(
                 "Removal storm: coalescing {} removals into a subtree rescan of {}",
                 count,
-                anchor.display(),
+                LogPrivate::dir_path(&anchor),
             );
             // ⚠️ Surfaced to the tap BEFORE the drop filter below throws the
             // strict-descendant removals away. Without this a sixty-thousand-file

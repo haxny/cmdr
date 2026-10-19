@@ -63,6 +63,7 @@ use crate::indexing::paths::path_prefix::{descendant_range_prefix, self_and_ance
 use crate::indexing::store::IndexStore;
 use crate::indexing::writer::{IndexWriter, WriteMessage};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 /// Meta key for the persisted branch set: index-relative paths, one per line.
 pub(crate) const COVERED_BRANCHES_KEY: &str = "walk_covered_branches";
@@ -190,7 +191,8 @@ impl Branch {
         if self.buffered.len() >= BRANCH_BUFFER_CAP {
             if !self.overflowed {
                 log::warn!(
-                    "Branch watch: {path} filled its buffer while a walk covered it; it will be re-listed instead"
+                    "Branch watch: {path} filled its buffer while a walk covered it; it will be re-listed instead",
+                    path = LogPrivate::dir_path(path),
                 );
             }
             self.overflowed = true;

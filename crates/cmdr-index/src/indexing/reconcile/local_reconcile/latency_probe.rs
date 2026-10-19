@@ -17,6 +17,8 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use cmdr_fs::log_private::LogPrivate;
+
 /// Default rollup period: frequent enough to watch a long walk live, rare enough
 /// that emission is free.
 const DEFAULT_PERIOD: Duration = Duration::from_secs(30);
@@ -134,7 +136,15 @@ impl LatencyProbe {
             target: LOG_TARGET,
             "reconcile_latency_spike_enabled period_s={} top_n={top_n} synthetic_roots={}",
             period.as_secs(),
-            roots.join(","),
+            std::fmt::from_fn(|f| {
+                for (i, root) in roots.iter().enumerate() {
+                    if i > 0 {
+                        f.write_str(",")?;
+                    }
+                    write!(f, "{}", LogPrivate::dir_path(root))?;
+                }
+                Ok(())
+            }),
         );
         Some(Self::new(period, top_n, roots, now))
     }
@@ -228,6 +238,7 @@ impl LatencyProbe {
                 target: LOG_TARGET,
                 "reconcile_latency {kind} slow #{rank} ms={:.1} path={path}",
                 dur.as_secs_f64() * 1000.0,
+                path = LogPrivate::dir_path(path),
             );
         }
     }

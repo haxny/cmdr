@@ -6,6 +6,7 @@ use super::{
     ScanCalibrationKind, ScanCalibrationSet, StepDurations, USER_DISABLED_KEY, USER_ENABLED_KEY, apply_pragmas,
     create_tables, register_platform_case_collation,
 };
+use cmdr_fs::log_private::LogPrivate;
 use rusqlite::{Connection, params};
 use std::path::Path;
 
@@ -62,7 +63,7 @@ impl IndexStore {
                 Err(e) if e.indicates_corruption() => {
                     log::warn!(
                         "Index DB at {} is corrupt ({e}), deleting and recreating",
-                        db_path.display()
+                        LogPrivate::file_path(db_path)
                     );
                     return Self::delete_and_recreate(db_path);
                 }
@@ -71,7 +72,7 @@ impl IndexStore {
                     attempt += 1;
                     log::warn!(
                         "Index DB at {} is locked ({e}), retrying in {backoff} ms (attempt {attempt} of {})",
-                        db_path.display(),
+                        LogPrivate::file_path(db_path),
                         OPEN_RETRY_BACKOFF_MS.len()
                     );
                     std::thread::sleep(std::time::Duration::from_millis(backoff));
@@ -79,7 +80,7 @@ impl IndexStore {
                 Err(e) => {
                     log::warn!(
                         "Index DB at {} failed to open ({e}); keeping the file (only corruption is thrown away)",
-                        db_path.display()
+                        LogPrivate::file_path(db_path)
                     );
                     return Err(e);
                 }
@@ -205,7 +206,10 @@ impl IndexStore {
                 .flatten()
                 .is_some(),
             Err(e) => {
-                log::debug!("persisted_scan_completed({}): read open failed: {e}", db_path.display());
+                log::debug!(
+                    "persisted_scan_completed({}): read open failed: {e}",
+                    LogPrivate::file_path(db_path)
+                );
                 false
             }
         }
@@ -240,7 +244,7 @@ impl IndexStore {
         match Self::open_read_connection(db_path) {
             Ok(conn) => Self::read_meta_value(&conn, key).ok().flatten().as_deref() == Some("1"),
             Err(e) => {
-                log::debug!("{key}({}): read open failed: {e}", db_path.display());
+                log::debug!("{key}({}): read open failed: {e}", LogPrivate::file_path(db_path));
                 false
             }
         }

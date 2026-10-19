@@ -5,6 +5,7 @@
 //! collation, so the answers match what the filesystem itself would call the
 //! same name.
 
+use cmdr_fs::log_private::LogPrivate;
 use rusqlite::{Connection, params};
 use std::path::Path;
 
@@ -48,13 +49,17 @@ pub fn resolve_scan_root(conn: &Connection, root: &Path, is_volume_root: bool) -
             Ok(Some(id)) => current_id = id,
             Ok(None) => {
                 log::debug!(
-                    "resolve_scan_root: resolve_path({root_str}) failed at component \"{component}\" (parent_id={current_id})"
+                    "resolve_scan_root: resolve_path({root_str}) failed at component \"{component}\" (parent_id={current_id})",
+                    root_str = LogPrivate::dir_path(&*root_str),
+                    component = LogPrivate::dir_name(component),
                 );
                 break;
             }
             Err(e) => {
                 log::debug!(
-                    "resolve_scan_root: resolve_path({root_str}) errored at component \"{component}\" (parent_id={current_id}): {e}"
+                    "resolve_scan_root: resolve_path({root_str}) errored at component \"{component}\" (parent_id={current_id}): {e}",
+                    root_str = LogPrivate::dir_path(&*root_str),
+                    component = LogPrivate::dir_name(component),
                 );
                 break;
             }

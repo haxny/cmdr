@@ -19,6 +19,7 @@ use crate::indexing::store::EntryRow;
 use crate::indexing::writer::{IndexWriter, WriteMessage};
 use cmdr_fs::firmlinks;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 /// Everything one flush hands to the writer, accumulated under ONE lock.
 ///
@@ -333,7 +334,7 @@ impl DirVisitor for InsertVisitor {
             if is_dir && self.policy.leaves_the_volume(&child.path) {
                 log::debug!(
                     "Scanner: not descending into {}, it's on another volume",
-                    child.path.display()
+                    LogPrivate::dir_path(&child.path)
                 );
                 continue;
             }
@@ -482,11 +483,11 @@ impl DirVisitor for InsertVisitor {
                     .events()
                     .emit(IndexEvent::PathAccessDenied { path: dir.path.clone() });
                 self.unreadable_ids.lock_ignore_poison().denied.push(dir.id);
-                log::debug!("Scanner: skipping errored dir {}: {e}", dir.path.display());
+                log::debug!("Scanner: skipping errored dir {}: {e}", LogPrivate::dir_path(&dir.path));
             }
             WalkReadError::Io(e) => {
                 self.unreadable_ids.lock_ignore_poison().abandoned.push(dir.id);
-                log::debug!("Scanner: skipping errored dir {}: {e}", dir.path.display());
+                log::debug!("Scanner: skipping errored dir {}: {e}", LogPrivate::dir_path(&dir.path));
             }
             // Already logged by the walker watchdog, so no line here.
             WalkReadError::TimedOut => self.unreadable_ids.lock_ignore_poison().abandoned.push(dir.id),

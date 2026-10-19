@@ -7,6 +7,8 @@
 
 use std::path::Path;
 
+use cmdr_fs::log_private::LogPrivate;
+
 use crate::indexing::IndexPathSpace;
 use crate::indexing::metadata::{MetadataSnapshot, extract_metadata};
 use crate::indexing::scanner;
@@ -95,7 +97,7 @@ pub(crate) fn read_fs_children(dir_path: &Path, space: &IndexPathSpace) -> Optio
             // slow, complete way instead.
             Ok(read) if read.unusable > 0 => log::warn!(
                 "reconcile: bulk read of {} couldn't parse {}, re-reading it with read_dir",
-                dir_path.display(),
+                LogPrivate::dir_path(&dir_path),
                 cmdr_fs::pluralize::pluralize_with(read.unusable as u64, "entry", "entries"),
             ),
             Ok(read) => return Some(bulk_children(dir_path, space, read)),
@@ -105,7 +107,7 @@ pub(crate) fn read_fs_children(dir_path: &Path, space: &IndexPathSpace) -> Optio
                 // diagnosis, and it fired ~750 times an hour. The caller counts
                 // it into `ReconcileSummary::unreadable_dirs`, which is what
                 // reaches the bundle.
-                log::trace!("reconcile: can't read {}: {e}", dir_path.display());
+                log::trace!("reconcile: can't read {}: {e}", LogPrivate::dir_path(&dir_path));
                 return None;
             }
         }
@@ -187,7 +189,7 @@ pub(super) fn read_fs_children_via_read_dir(dir_path: &Path, space: &IndexPathSp
         Ok(rd) => rd,
         Err(e) => {
             // TRACE for the same reason as the bulk read's arm above.
-            log::trace!("reconcile: can't read {}: {e}", dir_path.display());
+            log::trace!("reconcile: can't read {}: {e}", LogPrivate::dir_path(&dir_path));
             return None;
         }
     };

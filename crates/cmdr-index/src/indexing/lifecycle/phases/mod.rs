@@ -51,6 +51,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
+use cmdr_fs::log_private::LogPrivate;
 use tokio_util::sync::CancellationToken;
 
 use crate::indexing::IndexPathSpace;
@@ -432,7 +433,11 @@ impl Machine {
     fn run_phase(&self, phase: &Phase, queue: &mut PhaseQueue) {
         // The ORDER is the whole feature, so a support bundle has to show it. A
         // dozen lines per first index, and none after that.
-        log::info!("Phases: covering {} ({:?})", phase.path.display(), phase.kind);
+        log::info!(
+            "Phases: covering {} ({:?})",
+            LogPrivate::dir_path(&phase.path),
+            phase.kind
+        );
         set_phase_for(
             self.events.as_ref(),
             &self.volume_id,
@@ -462,7 +467,7 @@ impl Machine {
                 log::debug!(
                     "Phases: pass {} over {} covered nothing, so the rest is left to the next one",
                     pass + 1,
-                    phase.path.display()
+                    LogPrivate::dir_path(&phase.path)
                 );
                 self.report_a_vanished_volume_if_that_is_what_happened();
                 break;
@@ -560,7 +565,7 @@ impl Machine {
             };
             log::debug!(
                 "Phases: taking {} next, the user is looking at it",
-                phase.path.display()
+                LogPrivate::dir_path(&phase.path)
             );
             self.run_phase(&phase, queue);
             queue.mark_done(&phase.path);
@@ -623,7 +628,7 @@ impl Machine {
             if !preempted && self.a_visit_is_waiting_behind_this_walk(phase, queue) {
                 log::debug!(
                     "Phases: stopping the walk of {} to cover what the user just opened",
-                    roots.first().map(String::as_str).unwrap_or("-")
+                    LogPrivate::dir_path(roots.first().map_or("-", String::as_str))
                 );
                 walk_cancel.cancel();
                 preempted = true;

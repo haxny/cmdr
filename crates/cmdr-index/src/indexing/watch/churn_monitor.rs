@@ -20,6 +20,8 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::time::{Duration, Instant};
 
+use cmdr_fs::log_private::LogPrivate;
+
 /// Default rollup period. Long enough that emission is negligible (a handful of
 /// lines per period), short enough to see a `cargo build` start and stop.
 const DEFAULT_PERIOD: Duration = Duration::from_secs(30);
@@ -370,7 +372,7 @@ impl ChurnReport {
             self.seq,
             self.period_ms,
             self.raw_events,
-            self.batch_paths,
+            self.batch_paths, // allowed-log-private: a count of event batches, not a path
             self.node_count,
             self.nodes_dropped,
             self.deep_truncated,
@@ -385,7 +387,7 @@ impl ChurnReport {
                 node.direct,
                 node.distinct_children,
                 u8::from(node.children_capped),
-                node.path,
+                LogPrivate::dir_path(&node.path),
             );
         }
     }

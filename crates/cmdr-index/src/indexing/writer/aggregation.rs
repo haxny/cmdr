@@ -142,6 +142,7 @@ pub(super) fn handle_compute_partial_aggregates(
     match result {
         Ok(stats) => {
             log::info!(
+                // allowed-log-private: `source` is the aggregation input (`AggSource`), not a path
                 "ComputePartialAggregates({source:?}): {} dirs computed, {} rows written, \
                  {}/{hot_paths_count} hot paths resolved ({}ms)",
                 stats.dirs_computed,
@@ -210,6 +211,7 @@ pub(super) fn handle_compute_all_aggregates(
     // dir up from that would zero the whole tree outside the subtree.
     let use_maps = matches!(source, AggSource::Maps) && !accumulator.direct_stats.is_empty();
     log::info!(
+        // allowed-log-private: `source` is the aggregation input (`AggSource`), not a path
         "ComputeAllAggregates({source:?}): using {} (direct_stats={} parents, child_dirs={} parents)",
         if use_maps { "in-memory maps" } else { "SQL" },
         accumulator.direct_stats.len(),

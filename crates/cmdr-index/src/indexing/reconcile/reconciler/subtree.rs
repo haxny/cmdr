@@ -9,6 +9,7 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use cmdr_fs::log_private::LogPrivate;
 use rusqlite::Connection;
 
 use crate::indexing::IndexPathSpace;
@@ -159,7 +160,10 @@ pub(in crate::indexing) fn reconcile_subtree(
                     if parent_is_dir {
                         id
                     } else {
-                        log::debug!("reconcile_subtree: parent of {root_str} is not a directory row, escalating");
+                        log::debug!(
+                            "reconcile_subtree: parent of {} is not a directory row, escalating",
+                            LogPrivate::dir_path(&root_str)
+                        );
                         return Ok(ReconcileSummary {
                             added: 0,
                             added_dirs: 0,
@@ -179,7 +183,10 @@ pub(in crate::indexing) fn reconcile_subtree(
                     // anchored at the highest missing dir (strictly closer to the
                     // volume root, so the caller's re-queue converges by depth)
                     // rather than dropping the whole subtree's credit.
-                    log::debug!("reconcile_subtree: neither root nor parent in DB, escalating: {root_str}");
+                    log::debug!(
+                        "reconcile_subtree: neither root nor parent in DB, escalating: {}",
+                        LogPrivate::dir_path(&root_str)
+                    );
                     return Ok(ReconcileSummary {
                         added: 0,
                         added_dirs: 0,
@@ -202,7 +209,10 @@ pub(in crate::indexing) fn reconcile_subtree(
                     // The root vanished between the event and now: nothing to index
                     // and no chain to heal (a real delete will arrive as its own
                     // event), so no escalation.
-                    log::debug!("reconcile_subtree: can't stat root {root_str}: {e}");
+                    log::debug!(
+                        "reconcile_subtree: can't stat root {}: {e}",
+                        LogPrivate::dir_path(&root_str)
+                    );
                     return Ok(ReconcileSummary {
                         added: 0,
                         added_dirs: 0,
@@ -254,7 +264,10 @@ pub(in crate::indexing) fn reconcile_subtree(
                     // We just upserted and flushed, yet the row is absent: a write
                     // race or a concurrent delete. Re-queuing the same root would
                     // spin, so don't escalate; the next real event heals it.
-                    log::warn!("reconcile_subtree: root still not in DB after upsert, skipping: {root_str}");
+                    log::warn!(
+                        "reconcile_subtree: root still not in DB after upsert, skipping: {}",
+                        LogPrivate::dir_path(&root_str)
+                    );
                     return Ok(ReconcileSummary {
                         added,
                         added_dirs,

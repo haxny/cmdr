@@ -13,6 +13,8 @@
 
 use std::sync::OnceLock;
 
+use cmdr_fs::log_private::LogPrivate;
+
 use crate::indexing::store::IndexStore;
 use crate::indexing::writer::WriteMessage;
 
@@ -493,7 +495,10 @@ pub(in crate::indexing) fn e2e_allowlist_path() -> Option<&'static str> {
                 .ok()
                 .and_then(|p| p.to_str().map(String::from))
                 .unwrap_or_else(|| raw.clone());
-            log::debug!("E2E scan restriction: only indexing under {path}");
+            log::debug!(
+                "E2E scan restriction: only indexing under {}",
+                LogPrivate::dir_path(&path)
+            );
             Some(path)
         })
         .as_deref()

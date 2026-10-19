@@ -13,6 +13,8 @@
 //! [`super::repair::DeferredRepairs`], which repairs it on a later writer tick. See the
 //! ledger design in `indexing/DETAILS.md` § "The dir_stats ledger".
 
+use cmdr_fs::log_private::LogPrivate;
+
 use crate::indexing::store::IndexStore;
 
 use super::repair::{DeferredRepairs, recompute_recursive_has_symlinks, repair_dir_stats_upward};
@@ -66,7 +68,7 @@ pub(super) fn propagate_delta_by_id(
                         s.recursive_physical_size,
                         s.recursive_file_count,
                         s.recursive_dir_count,
-                        db = conn.path().unwrap_or("<unknown db>"),
+                        db = LogPrivate::file_path(conn.path().unwrap_or("<unknown db>")),
                     );
                     repair_dir_stats_upward(conn, current_id, repairs);
                     return;

@@ -29,6 +29,7 @@ use crate::indexing::scanner::{CoveredEntry, WalkHeartbeat};
 use crate::indexing::volume::IndexVolumeKind;
 use crate::indexing::watch::branches;
 use crate::indexing::writer::IndexWriter;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::pluralize::{pluralize, pluralize_with};
 
 /// How many batches may sit between the walk and its consumer.
@@ -500,7 +501,7 @@ fn walk_roots(
         // the walk the chain it needs, without claiming a listing for any of it.
         match bootstrap::ensure_walkable(context, ground, root) {
             Err(e) => {
-                log::warn!("Cover: can't walk {path}: {e}");
+                log::warn!("Cover: can't walk {}: {e}", LogPrivate::dir_path(path));
                 continue;
             }
             // A root this walk had to create is a row no index reader has ever

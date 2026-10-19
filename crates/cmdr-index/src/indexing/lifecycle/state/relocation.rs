@@ -18,6 +18,7 @@
 use std::path::PathBuf;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use super::teardown::finish_stopping;
 use super::{INDEX_REGISTRY, IndexPhase, PersistDisable, StartRequest, TeardownClaim};
@@ -98,7 +99,7 @@ pub(crate) fn follow_the_move(volume_id: &str, new_root: PathBuf) -> bool {
         Next::Drain(mgr) => {
             log::info!(
                 "'{volume_id}' moved to {}; restarting its index there",
-                new_root.display()
+                LogPrivate::dir_path(&new_root)
             );
             finish_stopping(volume_id, mgr, PersistDisable::No);
             true
@@ -106,7 +107,7 @@ pub(crate) fn follow_the_move(volume_id: &str, new_root: PathBuf) -> bool {
         Next::StartAgain(request) => {
             log::info!(
                 "'{volume_id}' moved to {} while its index was starting; starting it there",
-                new_root.display()
+                LogPrivate::dir_path(&new_root)
             );
             if let Err(e) = request.start(volume_id) {
                 log::warn!("Starting '{volume_id}' at its new root failed: {e}");
@@ -116,7 +117,7 @@ pub(crate) fn follow_the_move(volume_id: &str, new_root: PathBuf) -> bool {
         Next::Recorded => {
             log::info!(
                 "'{volume_id}' moved to {} mid-transition; it starts there once that ends",
-                new_root.display()
+                LogPrivate::dir_path(&new_root)
             );
             true
         }

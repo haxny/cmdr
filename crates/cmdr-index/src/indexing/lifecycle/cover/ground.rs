@@ -28,6 +28,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 use tokio_util::sync::CancellationToken;
 
@@ -136,7 +137,7 @@ impl Ground {
                     Err(e) => {
                         // One unwalkable root doesn't stop the others: it simply stays
                         // frontier, and the next search asks for it again.
-                        log::warn!("Cover: couldn't walk {}: {e}", root.display());
+                        log::warn!("Cover: couldn't walk {}: {e}", LogPrivate::dir_path(root));
                         (None, RootOutcome::Failed)
                     }
                 }
@@ -170,12 +171,12 @@ impl Ground {
                         log::warn!(
                             "Cover: '{}' went away while walking {}: {e}; leaving the rest of the frontier for the next search",
                             context.volume_id,
-                            root.display(),
+                            LogPrivate::dir_path(root),
                         );
                         (None, RootOutcome::VolumeGone)
                     }
                     Err(e) => {
-                        log::warn!("Cover: couldn't walk {}: {e}", root.display());
+                        log::warn!("Cover: couldn't walk {}: {e}", LogPrivate::dir_path(root));
                         (None, RootOutcome::Failed)
                     }
                 }
@@ -209,7 +210,10 @@ pub(super) fn repair_non_virgin(
     let conn = match IndexStore::open_read_connection(&db_path) {
         Ok(conn) => conn,
         Err(e) => {
-            log::warn!("Cover: couldn't open a connection to repair {}: {e}", root.display());
+            log::warn!(
+                "Cover: couldn't open a connection to repair {}: {e}",
+                LogPrivate::dir_path(root)
+            );
             return (None, RootOutcome::Failed);
         }
     };
@@ -227,7 +231,7 @@ pub(super) fn repair_non_virgin(
         Ok(summary) => {
             log::debug!(
                 "Cover: repaired {} through the serial reconcile (+{} -{} ~{})",
-                root.display(),
+                LogPrivate::dir_path(root),
                 summary.added,
                 summary.removed,
                 summary.updated,
@@ -250,7 +254,7 @@ pub(super) fn repair_non_virgin(
             (Some(scanned), verdict)
         }
         Err(e) => {
-            log::warn!("Cover: couldn't repair {}: {e}", root.display());
+            log::warn!("Cover: couldn't repair {}: {e}", LogPrivate::dir_path(root));
             (None, RootOutcome::Failed)
         }
     }

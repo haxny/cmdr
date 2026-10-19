@@ -57,6 +57,8 @@ use crate::indexing::store::{self, IndexStore};
 use crate::indexing::writer::{IndexWriter, WriteMessage};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::DirectoryChange;
 
 /// Per-volume buffer of SMB changes that arrived DURING a full (re)scan.
@@ -352,6 +354,8 @@ fn apply_one_change(volume_id: &str, writer: &IndexWriter, parent_path: &Path, c
             log::debug!(
                 target: "indexing::transports::smb::watch",
                 "change parent {parent_abs} not under mount root {mount_root}, skipping",
+                parent_abs = LogPrivate::dir_path(&*parent_abs),
+                mount_root = LogPrivate::dir_path(&mount_root),
             );
             return;
         }

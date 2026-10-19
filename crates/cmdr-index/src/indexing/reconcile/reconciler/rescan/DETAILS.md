@@ -156,10 +156,11 @@ fresh rather than muted. Whether that's worth a distinct signal is open.
 The bounded writer channel means a producer parks once it's full, so `reconcile_subtree`'s own duration silently
 included the wait ("reconcile slow for … (21s)" meant "the writer was saturated for 19 of those seconds").
 `reconcile_subtree` arms the thread-local writer-wait probe at its start and reports the span as
-`ReconcileSummary.writer_wait`. `reconcile_report` is pure and returns `(log::Level, String)`: `debug` under 10 s (see
-the churn signal below); past that the wait is named, and when it DOMINATES (over half the duration) the line stays at
-`debug` and says "reconcile waited" (writer saturation has its own signal in the writer heartbeat), else it warns
-"reconcile slow". The probe mechanism is in `../../../writer/DETAILS.md`.
+`ReconcileSummary.writer_wait`. `reconcile_report` is pure and returns the level plus the message as a `Display` (its
+`path=` is a marked dir, so it's log text and never a `String`): `debug` under 10 s (see the churn signal below); past
+that the wait is named, and when it DOMINATES (over half the duration) the line stays at `debug` and says "reconcile
+waited" (writer saturation has its own signal in the writer heartbeat), else it warns "reconcile slow". The probe
+mechanism is in `../../../writer/DETAILS.md`.
 
 **Both lines carry the walk's own CPU** (`, 4s CPU`), read from the drain thread's `cmdr_fs::thread_cpu` clock around
 the `reconcile_subtree` call, which runs synchronously on that thread. Wall time can't stand in for it: the walk is

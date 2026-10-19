@@ -65,6 +65,7 @@ pub(crate) use reconcile_scan::reconcile_volume_via_trait;
 
 pub(crate) use system_dirs::{exclusion_stamp_message, index_predates_exclusion_list, is_recursion_excluded_dir};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
 use super::scanner::ScanSummary;
@@ -289,15 +290,18 @@ pub(crate) async fn stat_one_directory(volume: Arc<dyn Volume>, path: PathBuf) -
         Ok(Ok(Ok(entry))) if entry.is_directory && !entry.is_symlink => Some(entry),
         Ok(Ok(Ok(_))) => None,
         Ok(Ok(Err(e))) => {
-            log::debug!("network_scanner: can't stat {}: {e}", path.display());
+            log::debug!("network_scanner: can't stat {}: {e}", LogPrivate::dir_path(&path));
             None
         }
         Ok(Err(join_err)) => {
-            log::debug!("network_scanner: stat task for {} failed: {join_err}", path.display());
+            log::debug!(
+                "network_scanner: stat task for {} failed: {join_err}",
+                LogPrivate::dir_path(&path)
+            );
             None
         }
         Err(_elapsed) => {
-            log::warn!("network_scanner: stat of {} timed out", path.display());
+            log::warn!("network_scanner: stat of {} timed out", LogPrivate::dir_path(&path));
             None
         }
     }
@@ -375,7 +379,7 @@ fn log_scan_progress(last_log: &mut Instant, phase: &str, dir_path: &Path, total
         "network_scanner: {phase}… {}, {}, current: {}",
         cmdr_fs::pluralize::pluralize(total_dirs, "dir"),
         cmdr_fs::pluralize::pluralize_with(total_entries, "entry", "entries"),
-        dir_path.display()
+        LogPrivate::dir_path(&dir_path)
     );
 }
 

@@ -18,6 +18,7 @@ use tokio_util::sync::CancellationToken;
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
 use super::scan_pace::ScanPacer;
@@ -206,7 +207,7 @@ pub async fn scan_volume_via_trait(
                 log::warn!(
                     "network_scanner: device disconnected listing {}: {e}; \
                      keeping honest partial ({} listed, {} queued/in-flight unscanned)",
-                    dir_path.display(),
+                    LogPrivate::dir_path(&dir_path),
                     cmdr_fs::pluralize::pluralize(total_dirs, "dir"),
                     cmdr_fs::pluralize::pluralize((queue.len() + inflight.len()) as u64, "dir"),
                 );
@@ -235,7 +236,7 @@ pub async fn scan_volume_via_trait(
                 consecutive_failures += 1;
                 log::debug!(
                     "network_scanner: skipping unlistable dir {} (consecutive_failures={consecutive_failures}): {err}",
-                    dir_path.display(),
+                    LogPrivate::dir_path(&dir_path),
                 );
                 if consecutive_failures >= CONSECUTIVE_FAILURE_ABORT {
                     log::warn!(
@@ -263,7 +264,7 @@ pub async fn scan_volume_via_trait(
             None => {
                 log::debug!(
                     "network_scanner: parent id missing for {}, skipping",
-                    dir_path.display()
+                    LogPrivate::dir_path(&dir_path)
                 );
                 continue;
             }
@@ -294,7 +295,7 @@ pub async fn scan_volume_via_trait(
                 if !walk_descends(volume.as_ref(), &child_path, &entry.name, is_symlink) {
                     log::debug!(
                         "network_scanner: not descending into {} (a NAS system dir, a link, or a tree the volume keeps out of its walks)",
-                        child_path.display()
+                        LogPrivate::dir_path(&child_path)
                     );
                 } else {
                     scan_ctx.register_dir(child_path.clone(), id);
@@ -347,7 +348,7 @@ pub async fn scan_volume_via_trait(
     if total_entries == 0 {
         log::warn!(
             "network_scanner: root listed empty for {} ({}ms) — treating as a failed scan, not marking complete",
-            root.display(),
+            LogPrivate::dir_path(&root),
             start.elapsed().as_millis()
         );
         // Close the (empty) transaction before bailing BEFORE finish, so the
@@ -369,7 +370,7 @@ pub async fn scan_volume_via_trait(
 
     log::info!(
         "network_scanner: walk complete for {}: entries={total_entries}, dirs={total_dirs} in {}ms",
-        root.display(),
+        LogPrivate::dir_path(&root),
         start.elapsed().as_millis()
     );
 

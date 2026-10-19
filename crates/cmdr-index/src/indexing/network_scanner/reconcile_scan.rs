@@ -17,6 +17,7 @@ use tokio_util::sync::CancellationToken;
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
 use super::scan_pace::ScanPacer;
@@ -155,11 +156,11 @@ pub(crate) async fn reconcile_volume_via_trait(
                     Ok(Some(id)) => queue.push_back((child_path, id)),
                     Ok(None) => log::debug!(
                         "network_scanner: reconcile couldn't resolve new dir after flush: {}",
-                        child_path.display()
+                        LogPrivate::dir_path(&child_path)
                     ),
                     Err(e) => log::warn!(
                         "network_scanner: reconcile resolve_component failed for {}: {e}",
-                        child_path.display()
+                        LogPrivate::dir_path(&child_path)
                     ),
                 }
             }
@@ -184,7 +185,7 @@ pub(crate) async fn reconcile_volume_via_trait(
                 log::warn!(
                     "network_scanner: device disconnected reconciling {}: {e}; \
                      keeping prior index ({} re-listed, {} queued/in-flight unreached)",
-                    dir_path.display(),
+                    LogPrivate::dir_path(&dir_path),
                     cmdr_fs::pluralize::pluralize(total_dirs, "dir"),
                     cmdr_fs::pluralize::pluralize((queue.len() + inflight.len() + new_dirs.len()) as u64, "dir"),
                 );
@@ -200,7 +201,7 @@ pub(crate) async fn reconcile_volume_via_trait(
                 consecutive_failures += 1;
                 log::debug!(
                     "network_scanner: skipping unlistable dir {} during reconcile (consecutive_failures={consecutive_failures}): {err}",
-                    dir_path.display(),
+                    LogPrivate::dir_path(&dir_path),
                 );
                 if consecutive_failures >= CONSECUTIVE_FAILURE_ABORT {
                     log::warn!(
@@ -230,7 +231,7 @@ pub(crate) async fn reconcile_volume_via_trait(
         if dir_path == root && entries.is_empty() {
             log::warn!(
                 "network_scanner: reconcile root listed empty for {} ({}ms) — treating as a failed rescan, keeping prior index",
-                root.display(),
+                LogPrivate::dir_path(&root),
                 start.elapsed().as_millis()
             );
             return Err(VolumeScanError::EmptyRoot);
@@ -306,7 +307,7 @@ pub(crate) async fn reconcile_volume_via_trait(
             if !walk_descends(volume.as_ref(), &child_path, &child_name, false) {
                 log::debug!(
                     "network_scanner: not descending into {} (a NAS system dir or a tree the volume keeps out of its walks)",
-                    child_path.display()
+                    LogPrivate::dir_path(&child_path)
                 );
                 continue;
             }
@@ -317,7 +318,7 @@ pub(crate) async fn reconcile_volume_via_trait(
             if !walk_descends(volume.as_ref(), &child_path, &child_name, false) {
                 log::debug!(
                     "network_scanner: not descending into {} (a NAS system dir or a tree the volume keeps out of its walks)",
-                    child_path.display()
+                    LogPrivate::dir_path(&child_path)
                 );
                 continue;
             }
@@ -334,7 +335,7 @@ pub(crate) async fn reconcile_volume_via_trait(
     let dirs_listed = cmdr_fs::pluralize::pluralize(total_dirs, "dir");
     log::info!(
         "network_scanner: reconcile complete for {}: +{added} -{removed} ~{updated} ({dirs_listed} re-listed) in {}ms",
-        root.display(),
+        LogPrivate::dir_path(&root),
         start.elapsed().as_millis()
     );
 

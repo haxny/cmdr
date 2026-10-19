@@ -14,6 +14,7 @@
 
 use std::path::{Path, PathBuf};
 
+use cmdr_fs::log_private::LogPrivate;
 use tokio_util::sync::CancellationToken;
 
 use super::{CoverContext, Ground, WalkFor};
@@ -108,7 +109,7 @@ pub(crate) fn context_for_walk(
     let volume = walkable_volume(volume_id)?;
     log::info!(
         "Cover: '{volume_id}' has no index; standing one up at {} ({:?}) for the walk to fill in",
-        volume.root.display(),
+        LogPrivate::dir_path(&volume.root),
         volume.kind,
     );
     state::start_indexing_for(

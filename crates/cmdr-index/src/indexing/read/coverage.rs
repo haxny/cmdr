@@ -52,6 +52,7 @@
 //! coverage claim in the database is unknown, and the whole scope goes to the walk.
 
 use cmdr_fs::firmlinks;
+use cmdr_fs::log_private::LogPrivate;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use super::enrichment::get_read_pool_for;
@@ -374,7 +375,9 @@ pub(crate) fn walk_coverage(
             log::warn!(
                 target: "indexing",
                 "coverage: stopping the descent below depth {MAX_DESCENT_DEPTH} under \"{scope_path}\"; \
-                 the parent chain looks cyclic, so \"{path}\" goes to the walk"
+                 the parent chain looks cyclic, so \"{path}\" goes to the walk",
+                scope_path = LogPrivate::dir_path(scope_path),
+                path = LogPrivate::dir_path(&path),
             );
             on_verdict(Verdict::Frontier, &path);
             continue;

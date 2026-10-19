@@ -200,11 +200,17 @@ func parse(files []string, onlyVol string) ([]period, error) {
 
 // fields splits a `k=v k=v … path=<rest>` payload. `path` is always last on a
 // node line precisely because paths contain spaces and `=`, so everything after
-// `path=` is taken verbatim.
+// `path=` is taken verbatim, minus the log-redaction markers the log file keeps
+// around it (`cmdr_fs::log_private`, U+FDD0–U+FDEF).
 func fields(payload string) map[string]string {
 	out := map[string]string{}
 	if i := strings.Index(payload, " path="); i >= 0 {
-		out["path"] = payload[i+len(" path="):]
+		out["path"] = strings.Map(func(r rune) rune {
+			if r >= 0xFDD0 && r <= 0xFDEF {
+				return -1
+			}
+			return r
+		}, payload[i+len(" path="):])
 		payload = payload[:i]
 	}
 	for _, tok := range strings.Fields(payload) {

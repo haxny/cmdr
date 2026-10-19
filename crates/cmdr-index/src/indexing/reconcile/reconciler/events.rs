@@ -7,6 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use cmdr_fs::log_private::LogPrivate;
 use rusqlite::Connection;
 
 use crate::indexing::IndexPathSpace;
@@ -409,12 +410,19 @@ fn handle_creation_or_modification(
             if let Some(anchor) = resolve_escalation_anchor(space, conn, normalized) {
                 *escalation = Some(anchor);
             }
-            log::trace!("Reconciler: parent path not in DB, escalating event for {normalized} (parent: {parent_path})");
+            log::trace!(
+                "Reconciler: parent path not in DB, escalating event for {} (parent: {})",
+                LogPrivate::path(normalized),
+                LogPrivate::dir_path(parent_path)
+            );
             skip_aggregator::ESCALATED_MISSING_PARENTS.record(normalized);
             return Some(origins.clone());
         }
         Err(e) => {
-            log::warn!("Reconciler: resolve_path failed for parent {parent_path}: {e}");
+            log::warn!(
+                "Reconciler: resolve_path failed for parent {}: {e}",
+                LogPrivate::dir_path(parent_path)
+            );
             return Some(origins.clone());
         }
     };

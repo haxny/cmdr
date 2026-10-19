@@ -22,6 +22,8 @@ use std::sync::atomic::AtomicU64;
 #[cfg(target_os = "macos")]
 use std::time::Duration;
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use cmdr_fs::log_private::LogPrivate;
 #[cfg(target_os = "macos")]
 use futures_util::StreamExt;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -157,7 +159,10 @@ impl DriveWatcher {
 
         let overflow = event_stream.overflow_flag();
 
-        log::info!("Watcher: started on {} (since_when={since_when})", root.display());
+        log::info!(
+            "Watcher: started on {} (since_when={since_when})",
+            LogPrivate::dir_path(root)
+        );
 
         // Spawn a task to read the async event stream and forward events.
         // Spawn through the host runtime seam, which resolves a handle instead of
@@ -344,14 +349,18 @@ impl DriveWatcher {
         // ground the user isn't working in reads identically to one covering the
         // right ground when the line is a bare number, and "the index went quiet"
         // is then unfalsifiable from a log alone (CI run 33909203247).
+        let root_count = roots.len().max(1);
         log::info!(
-            "Watcher: started on {} path(s) (inotify, recursive): {}",
-            roots.len().max(1),
-            roots
-                .iter()
-                .map(|r| r.display().to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
+            "Watcher: started on {root_count} path(s) (inotify, recursive): {}",
+            std::fmt::from_fn(|f| {
+                for (i, root) in roots.iter().enumerate() {
+                    if i > 0 {
+                        f.write_str(", ")?;
+                    }
+                    write!(f, "{}", LogPrivate::dir_path(root))?;
+                }
+                Ok(())
+            }),
         );
 
         let running_clone = Arc::clone(&running);
@@ -405,8 +414,8 @@ impl DriveWatcher {
         let branch = branch.to_path_buf();
         crate::indexing::host::runtime::spawn(async move {
             let _ = tokio::task::spawn_blocking(move || match watch_one(&watcher, &branch) {
-                Ok(()) => log::info!("Watcher: now watching branch {}", branch.display()),
-                Err(e) => log::warn!("Watcher: can't watch {}: {e}", branch.display()),
+                Ok(()) => log::info!("Watcher: now watching branch {}", LogPrivate::dir_path(&branch)),
+                Err(e) => log::warn!("Watcher: can't watch {}: {e}", LogPrivate::dir_path(&branch)),
             })
             .await;
         });

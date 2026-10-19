@@ -42,6 +42,7 @@ use crate::indexing::lifecycle::manager;
 use crate::indexing::paths::path_prefix;
 use crate::indexing::store::IndexStore;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -149,8 +150,8 @@ impl EventReconciler {
         if action == route::ShallowAnchorAction::Coalesce {
             log::info!(
                 "MustScanSubDirs: {} anchor {} inside the sweep window; coalescing ({} since the last sweep)",
-                reason.label(),
-                anchor.display(),
+                reason.label(), // allowed-log-private: a fixed sweep-reason word, not a user value
+                LogPrivate::dir_path(&anchor),
                 record.coalesced_since_sweep,
             );
             // Mirror the count into `meta` so it survives relaunch: the window spans
@@ -174,8 +175,8 @@ impl EventReconciler {
         let label = format!("{} MustScanSubDirs ({})", reason.label(), anchor.display());
         log::info!(
             "MustScanSubDirs: routing {} anchor {} to the visible scanner",
-            reason.label(),
-            anchor.display()
+            reason.label(), // allowed-log-private: a fixed sweep-reason word, not a user value
+            LogPrivate::dir_path(&anchor)
         );
         match &self.scan_trigger {
             ScanTrigger::Registry => {
@@ -206,7 +207,7 @@ impl EventReconciler {
         if !self.may_walk(&path) {
             log::trace!(
                 "Reconciler: leaving {} to the next search; it's outside this volume's walked branches",
-                path.display()
+                LogPrivate::dir_path(&path)
             );
             return;
         }
@@ -270,7 +271,7 @@ impl EventReconciler {
             // `DEBUG_STATS.record_must_scan` keeps the recent ones in memory.
             log::trace!(
                 "Reconciler: MustScanSubDirs for {} queued (rescan already active)",
-                path.display()
+                LogPrivate::dir_path(&path)
             );
             return;
         }
@@ -494,7 +495,10 @@ pub(super) fn start_next_rescan(drain: RescanDrain, writer: &IndexWriter) {
     // Debug, not info: this is one line per walk, thousands a day, and it's paired
     // with a completion line that carries the duration. The info-level signal for
     // the drain as a whole is [`churn`]'s 15-minute aggregate.
-    log::debug!("MustScanSubDirs: reconcile starting for {}", path.display());
+    log::debug!(
+        "MustScanSubDirs: reconcile starting for {}",
+        LogPrivate::dir_path(&path)
+    );
 
     // Kept for the rare spawn-failure handler below (the closure moves `path`).
     let path_for_spawn_failure = path.clone();
@@ -513,7 +517,7 @@ pub(super) fn start_next_rescan(drain: RescanDrain, writer: &IndexWriter) {
             Err(e) => {
                 log::warn!(
                     "MustScanSubDirs: couldn't open read connection for {}: {e}",
-                    path.display()
+                    LogPrivate::dir_path(&path)
                 );
                 // Release this root's hourglass before recursing to the next
                 // rescan. No completion was recorded, so a re-queued anchor is
@@ -556,7 +560,10 @@ pub(super) fn start_next_rescan(drain: RescanDrain, writer: &IndexWriter) {
                 (summary.escalation, walk_cost)
             }
             Err(e) => {
-                log::warn!("MustScanSubDirs: reconcile failed for {}: {e}", path.display());
+                log::warn!(
+                    "MustScanSubDirs: reconcile failed for {}: {e}",
+                    LogPrivate::dir_path(&path)
+                );
                 // No measured walk, so the throttle falls back to its floor.
                 (None, Duration::ZERO)
             }
@@ -618,7 +625,7 @@ pub(super) fn start_next_rescan(drain: RescanDrain, writer: &IndexWriter) {
         // sweep re-kicks.
         log::warn!(
             "MustScanSubDirs: couldn't spawn rescan thread for {}: {e}",
-            path_for_spawn_failure.display()
+            LogPrivate::dir_path(&path_for_spawn_failure)
         );
         rescan_active.store(false, Ordering::Relaxed);
         *active_rescan_path.lock_ignore_poison() = None;
@@ -655,9 +662,14 @@ const RECONCILE_SLOW_SECS: u64 = 10;
 /// loaded machine the wall time is mostly waiting on the disk. `None` (no
 /// per-thread clock) prints nothing rather than a number that looks measured.
 ///
-/// The path is a quoted `path=` field so a report's redactor knows exactly where it
-/// ends; in prose it would take the parenthesized stat with it.
-fn reconcile_report(path: &Path, summary: &ReconcileSummary, cpu: Option<Duration>) -> (log::Level, String) {
+/// The path is a marked `path=` field, so a report hashes exactly the path; in
+/// prose its redactor would take the parenthesized stat with it. The message is
+/// log text only, so it comes back as a `Display`, never a `String`.
+fn reconcile_report<'a>(
+    path: &'a Path,
+    summary: &ReconcileSummary,
+    cpu: Option<Duration>,
+) -> (log::Level, impl std::fmt::Display + 'a) {
     let changes = format!("+{} -{} ~{}", summary.added, summary.removed, summary.updated);
     let cpu = cpu.map_or_else(String::new, |cpu| format!(", {} CPU", churn::format_duration(cpu)));
     // The one aggregate that replaced a per-path DEBUG line. Printed only when it
@@ -671,14 +683,19 @@ fn reconcile_report(path: &Path, summary: &ReconcileSummary, cpu: Option<Duratio
             cmdr_fs::pluralize::pluralize_grouped(summary.unreadable_dirs, "unreadable dir")
         )
     };
+    let line = move |level, what: &'static str, stats: String| {
+        let message = std::fmt::from_fn(move |f| {
+            write!(
+                f,
+                "MustScanSubDirs: {what} for path={:?} ({stats})",
+                LogPrivate::dir_path(path)
+            )
+        });
+        (level, message)
+    };
     if summary.duration.as_secs() <= RECONCILE_SLOW_SECS {
-        return (
-            log::Level::Debug,
-            format!(
-                "MustScanSubDirs: reconcile complete for path={path:?} ({changes}{unreadable}, {}ms{cpu})",
-                summary.duration.as_millis(),
-            ),
-        );
+        let stats = format!("{changes}{unreadable}, {}ms{cpu}", summary.duration.as_millis());
+        return line(log::Level::Debug, "reconcile complete", stats);
     }
 
     let waited = summary.writer_wait.min(summary.duration);
@@ -698,13 +715,11 @@ fn reconcile_report(path: &Path, summary: &ReconcileSummary, cpu: Option<Duratio
     } else {
         "reconcile slow"
     };
-    (
-        level,
-        format!(
-            "MustScanSubDirs: {what} for path={path:?} ({changes}{unreadable}, {}s{cpu}{attribution})",
-            summary.duration.as_secs(),
-        ),
-    )
+    let stats = format!(
+        "{changes}{unreadable}, {}s{cpu}{attribution}",
+        summary.duration.as_secs()
+    );
+    line(level, what, stats)
 }
 
 #[cfg(test)]

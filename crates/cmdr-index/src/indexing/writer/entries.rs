@@ -12,6 +12,7 @@ use crate::indexing::IndexFailureSignal;
 use crate::indexing::aggregator::AggregationPhase;
 use crate::indexing::events::{EventSink, IndexEvent};
 use crate::indexing::store::{DirStatsById, EntryRow, IndexStore, IndexStoreError};
+use cmdr_fs::log_private::{LogKind, LogPrivate};
 use cmdr_fs::pluralize::pluralize_with;
 
 use super::delta::{propagate_delta_by_id, propagate_min_subtree_epoch, propagate_recursive_has_symlinks};
@@ -328,7 +329,17 @@ fn upsert_insert_new(
         next_id,
     ) {
         Ok(new_id) => {
-            log::trace!("Writer: UpsertEntryV2 inserted \"{name}\" (parent_id={parent_id}) → id={new_id}");
+            log::trace!(
+                "Writer: UpsertEntryV2 inserted \"{name}\" (parent_id={parent_id}) → id={new_id}",
+                name = LogPrivate::new(
+                    if is_directory {
+                        LogKind::DirName
+                    } else {
+                        LogKind::FileName
+                    },
+                    name
+                ),
+            );
             if is_directory {
                 // Initialize empty dir_stats for new directories so enrichment
                 // always has a row. Child events will update it incrementally.
@@ -491,6 +502,7 @@ pub(super) fn handle_move_entry_v2(
         log::debug!(
             target: "indexing::writer",
             "MoveEntryV2: id={entry_id} already at target (parent_id={new_parent_id}, new_name={new_name:?}), no-op",
+            new_name = LogPrivate::name(&new_name),
         );
         return;
     }
@@ -524,6 +536,7 @@ pub(super) fn handle_move_entry_v2(
             log::debug!(
                 target: "indexing::writer",
                 "MoveEntryV2: id={conflicting_id} already at destination (parent_id={new_parent_id}, new_name={new_name:?}), replacing it with id={entry_id}",
+                new_name = LogPrivate::name(&new_name),
             );
             let conflicting_is_dir = IndexStore::get_entry_by_id(conn, conflicting_id)
                 .ok()
@@ -558,8 +571,8 @@ pub(super) fn handle_move_entry_v2(
     log::debug!(
         target: "indexing::writer",
         "MoveEntryV2: id={entry_id} from={:?} to={:?} (parent_id {} → {})",
-        old_entry.name,
-        new_name,
+        LogPrivate::name(&old_entry.name),
+        LogPrivate::name(&new_name),
         old_entry.parent_id,
         new_parent_id,
     );

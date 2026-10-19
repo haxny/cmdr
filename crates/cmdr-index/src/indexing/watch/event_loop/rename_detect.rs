@@ -8,6 +8,7 @@
 
 use std::collections::HashSet;
 
+use cmdr_fs::log_private::LogPrivate;
 use rusqlite::Connection;
 
 use super::super::watcher;
@@ -102,6 +103,7 @@ pub(super) fn detect_renames_by_inode(
                 log::warn!(
                     target: "indexing::event_loop",
                     "rename pre-pass: resolve_path({new_parent_path}) failed: {e}",
+                    new_parent_path = LogPrivate::dir_path(&new_parent_path),
                 );
                 return true;
             }
@@ -136,6 +138,7 @@ pub(super) fn detect_renames_by_inode(
         log::debug!(
             target: "indexing::event_loop",
             "rename pre-pass: matched inode={inode} → MoveEntryV2 id={existing_id} new_parent={new_parent_id} new_name={new_name:?}",
+            new_name = LogPrivate::name(&new_name),
         );
 
         // The new parent's listing gained an entry, so it is an origin. The old

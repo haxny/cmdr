@@ -23,6 +23,7 @@ use crate::indexing::scanner;
 use crate::indexing::store::{self, IndexStore};
 use crate::indexing::writer::{IndexWriter, WriteMessage};
 use cmdr_fs::firmlinks;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::pluralize::{pluralize, pluralize_with};
 
 /// Run post-replay verification in the background.
@@ -116,13 +117,17 @@ pub(super) async fn run_background_verification(
                 match scanner::scan_subtree(Path::new(dir_path), &space, &scan_writer, &scan_work) {
                     Ok(summary) => {
                         log::debug!(
-                            "Background verification: scanned new dir path={dir_path:?} ({} entries, {}ms)",
+                            "Background verification: scanned new dir path={:?} ({} entries, {}ms)",
+                            LogPrivate::dir_path(dir_path),
                             summary.total_entries,
                             summary.duration_ms,
                         );
                     }
                     Err(e) => {
-                        log::warn!("Background verification: scan_subtree({dir_path}) failed: {e}");
+                        log::warn!(
+                            "Background verification: scan_subtree({}) failed: {e}",
+                            LogPrivate::dir_path(dir_path)
+                        );
                     }
                 }
             }
@@ -398,6 +403,7 @@ fn verify_affected_dirs_with(affected_paths: &HashSet<String>, writer: &IndexWri
                 log::info!(
                     "verify_affected_dirs: stopped diffing {parent_path} after {} on disk (partial diff)",
                     pluralize_with(threshold as u64, "entry", "entries"),
+                    parent_path = LogPrivate::dir_path(&parent_path),
                 );
                 break;
             }

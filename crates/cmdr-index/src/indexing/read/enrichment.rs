@@ -18,6 +18,7 @@ use crate::indexing::volume::ROOT_VOLUME_ID;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::firmlinks;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::pluralize::pluralize;
 use cmdr_fs::sqlite_util::{THREAD_CONN_SLOTS, ThreadConnCache};
 
@@ -303,7 +304,10 @@ pub fn enrich_entries_with_index_on_volume(volume_id: &str, entries: &mut [FileE
     let index_parent_path = match routing::index_read_path(volume_id, &parent_path) {
         Some(p) => p,
         None => {
-            log::debug!("enrich: parent {parent_path} not under volume '{volume_id}' mount root, skipping");
+            log::debug!(
+                "enrich: parent {} not under volume '{volume_id}' mount root, skipping",
+                LogPrivate::dir_path(&parent_path)
+            );
             return;
         }
     };
@@ -343,7 +347,8 @@ pub fn enrich_entries_with_index_on_volume(volume_id: &str, entries: &mut [FileE
     {
         log::debug!(
             "enrich: {enriched}/{} got sizes under {parent_path}",
-            pluralize(dir_count as u64, "dir")
+            pluralize(dir_count as u64, "dir"),
+            parent_path = LogPrivate::dir_path(&parent_path)
         );
     }
 }
@@ -429,7 +434,7 @@ pub fn enrich_via_parent_id_on(
         log::debug!(
             target: "stall_probe::enrich",
             "enrich_slow parent={} entries={} resolve_parent_ms={} list_children_ms={} batch_stats_ms={} match_ms={} total_ms={}",
-            parent_path,
+            LogPrivate::dir_path(&parent_path),
             entries.len(),
             resolve_parent_ms,
             list_children_ms,

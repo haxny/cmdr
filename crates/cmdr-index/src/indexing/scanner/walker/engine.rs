@@ -11,6 +11,7 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::utility_pool::UtilityPool;
 
 use super::{DirTask, DirVisitor, ReadDirFn, ReadProgress, WalkConfig, WalkReadError, WalkStats};
@@ -286,7 +287,7 @@ impl<V: DirVisitor + 'static> Engine<V> {
                 target: LOG_TARGET,
                 "giving up on subtree {} after {} consecutive failed reads (timeouts / IO errors); \
                  pruning its remaining unread directories (left honest-stale, not indexed)",
-                scheduled.budget.root.display(),
+                LogPrivate::dir_path(&scheduled.budget.root),
                 scheduled.budget.limit,
             );
         }
@@ -525,14 +526,14 @@ impl<V: DirVisitor + 'static> Engine<V> {
                         "read produced nothing for {:?} ({delivered} so far), abandoning {} \
                          (subtree skipped this scan)",
                         self.stall_timeout,
-                        task.task.path.display(),
+                        LogPrivate::dir_path(&task.task.path),
                     ),
                     AbandonReason::OverAllowance => log::warn!(
                         target: LOG_TARGET,
                         "read is trickling ({delivered}, past its {:?}-per-entry allowance), abandoning {} \
                          (subtree skipped this scan)",
                         self.per_entry_allowance,
-                        task.task.path.display(),
+                        LogPrivate::dir_path(&task.task.path),
                     ),
                 }
                 self.record_subtree_failure(&task);

@@ -38,6 +38,7 @@
 
 use std::path::Path;
 
+use cmdr_fs::log_private::LogPrivate;
 use rusqlite::Connection;
 
 use crate::indexing::IndexPathSpace;
@@ -66,7 +67,12 @@ pub(super) fn down_to(space: &IndexPathSpace, writer: &IndexWriter, path: &Path,
 pub(super) fn directory(space: &IndexPathSpace, writer: &IndexWriter, dir: &Path, work: &VolumeWork) -> Option<i64> {
     let db_path = writer.db_path();
     let conn = IndexStore::open_read_connection(&db_path)
-        .inspect_err(|e| log::warn!("Phases: can't read the index to stitch {}: {e}", dir.display()))
+        .inspect_err(|e| {
+            log::warn!(
+                "Phases: can't read the index to stitch {}: {e}",
+                LogPrivate::dir_path(dir)
+            )
+        })
         .ok()?;
     let absolute = space.absolute(&dir.to_string_lossy());
     let id = resolve(space, &conn, &absolute)?;

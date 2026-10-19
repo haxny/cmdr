@@ -34,6 +34,8 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use cmdr_fs::log_private::LogPrivate;
+
 use crate::indexing::lifecycle::state;
 use crate::indexing::volume::ROOT_VOLUME_ID;
 use crate::volume_files::{self, Removal, StoreDirs, VolumeStore};
@@ -112,7 +114,7 @@ fn enumerate_index_dbs(drive_index_dir: &Path) -> Vec<IndexDbFile> {
     let read_dir = match std::fs::read_dir(drive_index_dir) {
         Ok(rd) => rd,
         Err(e) => {
-            log::warn!(target: "indexing::retention", "cannot read {}: {e}", drive_index_dir.display());
+            log::warn!(target: "indexing::retention", "cannot read {}: {e}", LogPrivate::dir_path(drive_index_dir));
             return Vec::new();
         }
     };
@@ -129,7 +131,7 @@ fn enumerate_index_dbs(drive_index_dir: &Path) -> Vec<IndexDbFile> {
         let modified = match entry.metadata().and_then(|m| m.modified()) {
             Ok(t) => t,
             Err(e) => {
-                log::warn!(target: "indexing::retention", "cannot stat {}: {e}", path.display());
+                log::warn!(target: "indexing::retention", "cannot stat {}: {e}", LogPrivate::file_path(&path));
                 // Treat un-stattable as epoch (most-evictable) rather than skip,
                 // so a broken file can still be reclaimed.
                 SystemTime::UNIX_EPOCH
@@ -215,7 +217,7 @@ fn evict_over_cap(dirs: &StoreDirs, registered: &[String], cap: usize) {
         evictions.len()
     );
     for db in evictions {
-        log::info!(target: "indexing::retention", "evicting abandoned index DB {}", db.path.display());
+        log::info!(target: "indexing::retention", "evicting abandoned index DB {}", LogPrivate::file_path(&db.path));
         if let Err(e) = volume_files::remove(dirs, &db.volume_id, Removal::Forgotten) {
             log::warn!(target: "indexing::retention", "evicting '{}' left files behind: {e}", db.volume_id);
         }
