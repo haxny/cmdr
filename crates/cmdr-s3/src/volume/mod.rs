@@ -9,7 +9,7 @@
 //! through the [`VolumeHost`] seams handed to [`connect_s3_volume`].
 //! `CLAUDE.md` has the must-knows, `DETAILS.md` the decisions.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
@@ -131,10 +131,11 @@ struct S3VolumeInner {
     /// How long a paused upload holds its in-flight requests open, in
     /// milliseconds: `writes::PAUSE_HOLD`, except in a cell that can't wait it out.
     pause_hold_ms: AtomicU64,
-    /// The server-side paths of files the last listing of their folder showed
-    /// beside a folder of their own name, as `<name> (file)` (`paths.rs` §
-    /// "A file beside a folder of its name").
-    beside_folders: std::sync::Mutex<HashSet<String>>,
+    /// The server-side paths of files the last listing of their folder found
+    /// beside a folder of their own name, and whether it showed each as
+    /// `<name> (file)` or hid it (`paths.rs` § "A file beside a folder of its
+    /// name").
+    beside_folders: std::sync::Mutex<HashMap<String, paths::Shown>>,
 }
 
 impl S3VolumeInner {
@@ -364,7 +365,7 @@ impl S3Volume {
                 host,
                 ledger,
                 written: std::sync::Mutex::new(HashMap::new()),
-                beside_folders: std::sync::Mutex::new(HashSet::new()),
+                beside_folders: std::sync::Mutex::new(HashMap::new()),
                 part_floor: AtomicU64::new(MIN_PART_SIZE),
                 pause_hold_ms: AtomicU64::new(u64::try_from(writes::PAUSE_HOLD.as_millis()).unwrap_or(u64::MAX)),
             }),
@@ -390,6 +391,8 @@ mod copy_test;
 mod cut_off_record_test;
 #[cfg(test)]
 mod fake_s3;
+#[cfg(test)]
+mod folder_delete_test;
 #[cfg(test)]
 mod fresh_folder_test;
 #[cfg(test)]

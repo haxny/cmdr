@@ -103,6 +103,10 @@ mod faulty_volume;
 #[cfg(test)]
 mod safety_grid_tests;
 
+/// Every engine walk deletes a folder it walked as a folder (issue #510).
+#[cfg(test)]
+mod folder_delete_kind_tests;
+
 // The SMB integration suite lives outside `cmdr-operations`, so it reaches the
 // fault injector through the facade rather than by widening the submodule.
 #[cfg(any(test, feature = "testing"))]

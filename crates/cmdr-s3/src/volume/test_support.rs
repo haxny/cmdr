@@ -52,7 +52,7 @@ pub(super) fn make_test_volume_with(bucket: Option<&str>, host: VolumeHost) -> S
             written: std::sync::Mutex::new(std::collections::HashMap::new()),
             part_floor: std::sync::atomic::AtomicU64::new(crate::multipart::MIN_PART_SIZE),
             pause_hold_ms: std::sync::atomic::AtomicU64::new(5_000),
-            beside_folders: std::sync::Mutex::new(std::collections::HashSet::new()),
+            beside_folders: std::sync::Mutex::new(std::collections::HashMap::new()),
         }),
     }
 }

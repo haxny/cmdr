@@ -144,9 +144,10 @@ impl S3Volume {
                 if !found {
                     return Err(VolumeError::NotFound(remote));
                 }
-                let children = settle(children);
-                self.note_beside_folders(&remote, &children);
-                gathered.entries = children
+                let settled = settle(children);
+                self.note_beside_folders(&remote, &settled);
+                gathered.entries = settled
+                    .children
                     .into_iter()
                     .filter_map(|child| self.child_entry(&remote, child))
                     .collect();

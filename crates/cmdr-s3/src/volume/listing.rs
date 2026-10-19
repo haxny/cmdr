@@ -35,14 +35,24 @@ pub(super) enum Child {
 /// name. A path segment, so it's the same in every language.
 pub(super) const FILE_SUFFIX: &str = " (file)";
 
+/// What a whole listing shows, and what it knows but can't show.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Settled {
+    /// The rows: folders first, each folder once, and a file whose name a
+    /// folder also holds renamed with [`FILE_SUFFIX`].
+    pub children: Vec<Child>,
+    /// The names of files beside a folder of their name that stay out because
+    /// a real `<name> (file)` already holds their row's name. ❗ The folder's
+    /// row still means the folder alone (`paths.rs`).
+    pub hidden: Vec<String>,
+}
+
 /// A whole listing's children, every page's in order, made into what a pane
-/// can show: folders first, each folder once, and a file whose name a folder
-/// also holds renamed with [`FILE_SUFFIX`].
+/// can show ([`Settled`]).
 ///
 /// ❗ A renamed file whose new name is taken (a real `notes (file)` beside it)
-/// stays out, as it did before files beside folders were shown: two rows on
-/// one path break everything keyed on the path.
-pub(super) fn settle(children: Vec<Child>) -> Vec<Child> {
+/// stays out: two rows on one path break everything keyed on the path.
+pub(super) fn settle(children: Vec<Child>) -> Settled {
     let mut folders: Vec<String> = Vec::new();
     let mut objects = Vec::new();
     for child in children {
@@ -57,30 +67,39 @@ pub(super) fn settle(children: Vec<Child>) -> Vec<Child> {
         .map(|object| object.name().to_string())
         .chain(folders.iter().cloned())
         .collect();
-    let objects = objects.into_iter().filter_map(|object| match object {
-        Child::Object {
-            name,
-            size,
-            modified,
-            archived,
-            ..
-        } if folders.contains(&name) => {
-            let shown = format!("{name}{FILE_SUFFIX}");
-            (!taken.contains(&shown)).then_some(Child::Object {
-                name: shown,
+    let mut hidden = Vec::new();
+    let objects: Vec<Child> = objects
+        .into_iter()
+        .filter_map(|object| match object {
+            Child::Object {
+                name,
                 size,
                 modified,
                 archived,
-                beside_folder: true,
-            })
-        }
-        other => Some(other),
-    });
-    folders
+                ..
+            } if folders.contains(&name) => {
+                let shown = format!("{name}{FILE_SUFFIX}");
+                if taken.contains(&shown) {
+                    hidden.push(name);
+                    return None;
+                }
+                Some(Child::Object {
+                    name: shown,
+                    size,
+                    modified,
+                    archived,
+                    beside_folder: true,
+                })
+            }
+            other => Some(other),
+        })
+        .collect();
+    let children = folders
         .iter()
         .map(|name| Child::Folder { name: name.clone() })
         .chain(objects)
-        .collect()
+        .collect();
+    Settled { children, hidden }
 }
 
 impl Child {

@@ -611,6 +611,29 @@ pub trait Volume: Send + Sync {
         self.delete(path)
     }
 
+    /// Deletes the **empty directory** at `path`, for a caller that knows it
+    /// walked a directory there (a delete walk's folders, a move's source
+    /// sweep, a tree removal). Same no-recursion contract as
+    /// [`delete`](Self::delete).
+    ///
+    /// ❗ **Where one name can hold a file AND a folder, this never reaches the
+    /// file.** On an object store `notes` can sit beside `notes/…`, and a
+    /// folder with no marker is gone the moment its last child is: a plain
+    /// `delete` of its path then finds only the object and deletes that, a
+    /// file nobody selected. Such a backend overrides this to act on the
+    /// folder alone (S3, `crates/cmdr-s3/DETAILS.md` § "Folders, delete, and
+    /// rename"); a folder already gone answers `NotFound`.
+    ///
+    /// Default: [`delete_with_cancel`](Self::delete_with_cancel), right for
+    /// every backend where a name holds one thing.
+    fn delete_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        cancel: Option<&'a CancellationToken>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        self.delete_with_cancel(path, cancel)
+    }
+
     /// Renames/moves a file or directory within this volume.
     ///
     /// Both source and destination paths are relative to the volume root.

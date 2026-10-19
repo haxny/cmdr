@@ -593,8 +593,8 @@ async fn remove_tree_inner(volume: &Arc<dyn Volume>, path: &Path, side: PathRole
         };
     }
 
-    // Delete the now-empty directory
-    match volume.delete(path).await {
+    // Delete the now-empty directory, as a directory (`Volume::delete_directory`)
+    match volume.delete_directory(path, None).await {
         Ok(()) => Ok(false),
         Err(e) => Err(refused(path, e)),
     }

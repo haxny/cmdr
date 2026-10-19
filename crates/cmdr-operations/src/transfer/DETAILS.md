@@ -2296,14 +2296,15 @@ collisions** (case-insensitive SMB/APFS, TOCTOU): an unexpected `AlreadyExists` 
 conflict routed through the resolver, NEVER a hard error — scoped to children with no exact-match hit, branching on a
 per-level `name → resolution` map so an already-resolved child finalizes its stored decision instead of re-prompting
 (this per-level map is orthogonal to the op-wide apply-to-all latch). **Source-dir cleanup is inside-out, empty-only**:
-after a level completes, `volume.delete(source_dir)` is attempted; `Volume::delete`'s "file or EMPTY directory only"
-contract means a non-empty source (skipped/errored/unmoved child) fails benignly and the dir — plus all its ancestors —
-survives. An all-moved spine deletes deepest-first via the recursion unwind. Symlinks move as opaque entries, one rename
-and never descended, on both sides of every clash (§ "Symlinks are opaque to a move"). The downloads-watcher hook fires
-on BOTH halves of every child rename. Cancel mid-merge keeps already-renamed children (existing contract) and never
-deletes a dir still holding unmoved content. Pinned by `volume/rename_merge_tests.rs` (zero-folder-prompt,
-skip/overwrite/rename/stop policies, cancel, source-dir cleanup matrix, dest-inside-source, case-fold prompts-once /
-no-double-prompt, symlink) and the SMB integration pin `smb_integration_same_share_move_merges_with_no_folder_prompt`.
+after a level completes, `volume.delete_directory(source_dir)` is attempted; `Volume::delete`'s "file or EMPTY directory
+only" contract means a non-empty source (skipped/errored/unmoved child) fails benignly and the dir — plus all its
+ancestors — survives. An all-moved spine deletes deepest-first via the recursion unwind. Symlinks move as opaque
+entries, one rename and never descended, on both sides of every clash (§ "Symlinks are opaque to a move"). The
+downloads-watcher hook fires on BOTH halves of every child rename. Cancel mid-merge keeps already-renamed children
+(existing contract) and never deletes a dir still holding unmoved content. Pinned by `volume/rename_merge_tests.rs`
+(zero-folder-prompt, skip/overwrite/rename/stop policies, cancel, source-dir cleanup matrix, dest-inside-source,
+case-fold prompts-once / no-double-prompt, symlink) and the SMB integration pin
+`smb_integration_same_share_move_merges_with_no_folder_prompt`.
 
 **Decision**: `exacl` for ACLs (read, applied after landing, and stripped before a reversal's removal, all in
 `cmdr_fs::metadata`), not custom FFI bindings. **Why**: `exacl` adds zero new transitive dependencies (all of its deps,

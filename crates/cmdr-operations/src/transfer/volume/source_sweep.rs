@@ -7,7 +7,7 @@
 //! it at the time ([`SourceStamp`]), and every source folder it walked. The sweep
 //! lists each walked folder once more and removes only the files that are in the
 //! ledger AND still match their stamp; a folder goes only once it's empty
-//! (`Volume::delete` is empty-only for a directory on every backend).
+//! (`Volume::delete_directory`, empty-only and never the file of its name).
 //!
 //! Everything else stays, because the source holds the only copy of it:
 //!
@@ -197,7 +197,9 @@ async fn sweep_level(
             None => Ok(true),
         };
     }
-    match volume.delete(dir).await {
+    // ❗ As a folder, never `delete`: once such a folder's last file goes, a
+    // plain delete finds only a file of its name, which the move never copied.
+    match volume.delete_directory(dir, None).await {
         // A folder that only existed through what was in it (an object
         // store's prefix with no marker) went with its last file.
         Ok(()) | Err(VolumeError::NotFound(_)) => {

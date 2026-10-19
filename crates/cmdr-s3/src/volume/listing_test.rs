@@ -77,7 +77,7 @@ fn a_key_and_a_prefix_of_one_name_list_both_the_file_suffixed() {
     // ❗ S3 lets `notes` and `notes/…` both exist; one name in a pane can't be
     // two entries (both would carry one path), so the file shows as
     // `notes (file)`.
-    let listed = settle(children_of(&page(&["notes/"], vec![object("notes", 3)]), ""));
+    let listed = settle(children_of(&page(&["notes/"], vec![object("notes", 3)]), "")).children;
     assert_eq!(names(&listed), [("notes", true), ("notes (file)", false)]);
     assert!(matches!(
         &listed[1],
@@ -94,7 +94,7 @@ fn a_key_and_a_prefix_on_different_pages_still_list_both() {
     // `notes` sorts before `notes/`, so a page break can fall between them.
     let mut children = children_of(&page(&[], vec![object("a.txt", 1), object("notes", 3)]), "");
     children.extend(children_of(&page(&["notes/"], vec![]), ""));
-    let listed = settle(children);
+    let listed = settle(children).children;
     assert_eq!(
         names(&listed),
         [("notes", true), ("a.txt", false), ("notes (file)", false)]
@@ -103,7 +103,7 @@ fn a_key_and_a_prefix_on_different_pages_still_list_both() {
 
 #[test]
 fn a_file_with_no_folder_of_its_name_keeps_its_name() {
-    let listed = settle(children_of(&page(&["photos/"], vec![object("notes", 3)]), ""));
+    let listed = settle(children_of(&page(&["photos/"], vec![object("notes", 3)]), "")).children;
     assert_eq!(names(&listed), [("photos", true), ("notes", false)]);
     assert!(matches!(
         &listed[1],
@@ -117,9 +117,12 @@ fn a_file_with_no_folder_of_its_name_keeps_its_name() {
 #[test]
 fn a_suffixed_name_that_is_taken_leaves_the_file_out() {
     // A real `notes (file)` already holds the name the shadowed file would
-    // take; two rows on one path would break the pane, so it stays unlisted.
+    // take; two rows on one path would break the pane, so it stays unlisted,
+    // and ❗ is still reported, so the folder row never reaches it.
     let page = page(&["notes/"], vec![object("notes", 3), object("notes (file)", 5)]);
-    let listed = settle(children_of(&page, ""));
+    let settled = settle(children_of(&page, ""));
+    assert_eq!(settled.hidden, ["notes"]);
+    let listed = settled.children;
     assert_eq!(names(&listed), [("notes", true), ("notes (file)", false)]);
     assert!(matches!(
         &listed[1],
@@ -136,7 +139,7 @@ fn a_folder_named_twice_lists_once() {
     // A server that ignores the delimiter can name one folder on two pages.
     let mut children = children_of(&page(&[], vec![object("a/x", 1)]), "");
     children.extend(children_of(&page(&[], vec![object("a/y", 1)]), ""));
-    assert_eq!(names(&settle(children)), [("a", true)]);
+    assert_eq!(names(&settle(children).children), [("a", true)]);
 }
 
 #[test]

@@ -8,13 +8,13 @@
 //! server-absolute path is ❌ REFUSED rather than anchored; that module's header
 //! has why.
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::path::Path;
 
 use cmdr_fs::volume::VolumeError;
 
 use super::S3Volume;
-use super::listing::{Child, FILE_SUFFIX};
+use super::listing::{Child, FILE_SUFFIX, Settled};
 
 /// What a server-side path names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,8 +67,22 @@ pub(super) struct Resolved {
 // and remembers its real path in `beside_folders`. Every path then goes
 // through `resolve`: `…/photos (file)` names the key `photos`, and `…/photos`
 // names ONLY the folder, so no operation on the folder row (delete, rename,
-// stat) can reach the file. Each listing of the folder refreshes what it holds,
-// and deleting or renaming the file forgets it.
+// stat) can reach the file. A file a real `photos (file)` key hides is
+// remembered too, as `Hidden`: its folder's row still means only the folder,
+// while `…/photos (file)` keeps naming that real key. Each listing of the
+// folder refreshes what it holds, and deleting or renaming the file forgets
+// it. ❗ What a folder-only caller relies on is `delete_directory`, not this
+// map: a volume rebuilt under a live pane starts it empty.
+
+/// How the last listing of its folder showed a file beside a folder of its
+/// name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Shown {
+    /// As `<name> (file)`, a row that names this file.
+    AsFileRow,
+    /// Not at all: a real `<name> (file)` key holds that row.
+    Hidden,
+}
 
 impl S3Volume {
     /// The server-side path for `path`, or `NotFound` when `path` isn't on this
@@ -85,14 +99,14 @@ impl S3Volume {
             .ok_or_else(|| VolumeError::NotFound(path.to_string_lossy().into_owned()))?;
         let beside = self.beside_folders();
         if let Some(real) = shown.strip_suffix(FILE_SUFFIX)
-            && beside.contains(real)
+            && beside.get(real) == Some(&Shown::AsFileRow)
         {
             return Ok(Resolved {
                 remote: real.to_string(),
                 holder: Holder::File,
             });
         }
-        let holder = if beside.contains(&shown) {
+        let holder = if beside.contains_key(&shown) {
             Holder::Folder
         } else {
             Holder::Either
@@ -103,19 +117,20 @@ impl S3Volume {
     /// The server-side path a pane shows the object at `remote` under:
     /// `<remote> (file)` when it was listed beside a folder of its name.
     pub(super) fn shown_remote(&self, remote: &str) -> String {
-        if self.beside_folders().contains(remote) {
+        if self.beside_folders().get(remote) == Some(&Shown::AsFileRow) {
             format!("{remote}{FILE_SUFFIX}")
         } else {
             remote.to_string()
         }
     }
 
-    /// Records which files a listing of `parent` showed beside a folder of
-    /// their name, replacing what the folder's last listing said.
-    pub(super) fn note_beside_folders(&self, parent: &str, children: &[Child]) {
+    /// Records which files a listing of `parent` found beside a folder of
+    /// their name, shown or hidden, replacing what the folder's last listing
+    /// said.
+    pub(super) fn note_beside_folders(&self, parent: &str, settled: &Settled) {
         let mut beside = self.beside_folders();
-        beside.retain(|remote| parent_of(remote) != parent);
-        for child in children {
+        beside.retain(|remote, _| parent_of(remote) != parent);
+        for child in &settled.children {
             if let Child::Object {
                 name,
                 beside_folder: true,
@@ -123,8 +138,11 @@ impl S3Volume {
             } = child
                 && let Some(real) = name.strip_suffix(FILE_SUFFIX)
             {
-                beside.insert(child_of(parent, real));
+                beside.insert(child_of(parent, real), Shown::AsFileRow);
             }
+        }
+        for name in &settled.hidden {
+            beside.insert(child_of(parent, name), Shown::Hidden);
         }
     }
 
@@ -134,8 +152,8 @@ impl S3Volume {
         self.beside_folders().remove(remote);
     }
 
-    /// The set, whatever a panicking holder left: each entry is a whole path.
-    fn beside_folders(&self) -> std::sync::MutexGuard<'_, HashSet<String>> {
+    /// The map, whatever a panicking holder left: each key is a whole path.
+    fn beside_folders(&self) -> std::sync::MutexGuard<'_, HashMap<String, Shown>> {
         self.inner
             .beside_folders
             .lock()

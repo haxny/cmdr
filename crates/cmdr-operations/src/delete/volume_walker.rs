@@ -342,7 +342,7 @@ fn emit_cancelled_if_aborted(
 ///
 /// Uses `volume.list_directory()` for scanning, and `volume.delete()` per file or
 /// `volume.delete_files()` per batch where the backend batches
-/// (`Volume::delete_batch_size`).
+/// (`Volume::delete_batch_size`), then `volume.delete_directory()` per folder.
 /// Emits the same events as `delete_files_with_progress` so the frontend progress
 /// dialog works unchanged.
 #[allow(
@@ -749,10 +749,11 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
             });
         }
 
-        // Best-effort directory removal (may fail if not empty due to partial delete)
-        let _ = volume
-            .delete_with_cancel(&entry.path, Some(&state.backend_cancel))
-            .await;
+        // Best-effort directory removal (may fail if not empty due to partial
+        // delete). ❗ As a folder: on an object store a markerless folder is
+        // gone with its last child, and a plain delete would take the file of
+        // its name instead.
+        let _ = volume.delete_directory(&entry.path, Some(&state.backend_cancel)).await;
     }
 
     // Emit completion

@@ -162,7 +162,32 @@ impl S3Volume {
     /// it only the folder's marker: ❗ a folder whose last key went is never
     /// mistaken for the file of its name (`paths.rs`).
     pub(super) async fn delete_impl(&self, path: &Path) -> Result<(), VolumeError> {
+        let resolved = self.resolve(path)?;
+        self.delete_node(path, resolved).await
+    }
+
+    /// The folder at `path` and ❗ never the object of its name, whatever
+    /// this volume's listings saw: the caller walked a folder there. A
+    /// markerless folder whose last key just went answers `NotFound`, where
+    /// [`Self::delete_impl`] would fall back to an object of its name, which
+    /// is how a folder delete used to take a file nobody selected: one the
+    /// listing hid behind a real `<name> (file)`, or any beside-folder file on
+    /// a volume rebuilt without that listing.
+    pub(super) async fn delete_directory_impl(&self, path: &Path) -> Result<(), VolumeError> {
         let Resolved { remote, holder } = self.resolve(path)?;
+        if holder == Holder::File {
+            return Err(VolumeError::NotADirectory(remote));
+        }
+        let folder = Resolved {
+            remote,
+            holder: Holder::Folder,
+        };
+        self.delete_node(path, folder).await
+    }
+
+    /// [`Self::delete_impl`]'s body, for the holder `resolved` names.
+    async fn delete_node(&self, path: &Path, resolved: Resolved) -> Result<(), VolumeError> {
+        let Resolved { remote, holder } = resolved;
         let Target::Key { bucket, key } = target_of(&remote) else {
             // Deleting a bucket, or the account, isn't a file operation.
             return Err(VolumeError::NotSupported);

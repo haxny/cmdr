@@ -241,8 +241,9 @@ pub(super) async fn rename_merge_directory(
 
     // Source-dir cleanup, inside-out: empty-only delete. A level still holding a
     // skipped / errored / unmoved child fails benignly and survives, and so do
-    // its ancestors. Never deletes a source dir while content remains.
-    match ctx.volume.delete(source_dir).await {
+    // its ancestors. Never deletes a source dir while content remains, and
+    // never a file of its name (`Volume::delete_directory`).
+    match ctx.volume.delete_directory(source_dir, None).await {
         Ok(()) | Err(VolumeError::NotFound(_)) => {}
         Err(_non_empty_or_other) => {
             // Non-empty (children left behind) or a transient backend error:

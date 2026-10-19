@@ -1035,8 +1035,8 @@ every source folder it lists and every source file it carries, stamped from the 
 size, `modified_at`, and `inode` where the backend has one). The walk lists a level before any of its leaves stream, so
 a save during the copy counts too. After the copy lands, `sweep_moved_folder` lists each walked folder ONCE more (one
 round trip per folder, beside the per-delete ones it already pays) and deletes only a ledgered file whose listing still
-matches its stamp; a folder goes only once nothing stays in it, through the empty-only `Volume::delete`. What stays is
-the user's only copy of something, and the completion event counts it through `AppearedDuringMove`
+matches its stamp; a folder goes only once nothing stays in it, through the empty-only `Volume::delete_directory`. What
+stays is the user's only copy of something, and the completion event counts it through `AppearedDuringMove`
 (`../left_in_source.rs`, shared with the local engine): an entry the walk never saw APPEARED (a whole unknown folder
 counts once), a ledgered file that no longer matches CHANGED, and a merge Skip is spared without being counted. A
 top-level FILE source gets the same check with `get_metadata` before the copy and again before its delete (`stamp_file`,

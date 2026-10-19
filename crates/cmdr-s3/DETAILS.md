@@ -93,8 +93,12 @@ keys and the rights. `integration_test.rs` pins both servers' answers.
   `…/notes` as ❗ the folder ONLY: stat, read, share link, delete, rename, and `rename_work` on the folder row never
   fall through to the file (else the engine's delete of a folder whose last child just went would delete the file of its
   name). The suffix is a path segment, so it's untranslated. If a real `notes (file)` already holds the name, the
-  shadowed file stays unlisted. VersityGW (POSIX-backed) can't hold both at all; Garage can, and `beside_folder_test.rs`
-  drives every row operation there.
+  shadowed file stays unlisted, yet the map still records it (`paths::Shown::Hidden`), so the folder row means only the
+  folder while `…/notes (file)` keeps naming its own real key (`folder_delete_test.rs` over `fake_s3.rs`). ❗ The map is
+  a convenience for row operations, never what a folder delete's safety rests on: a volume rebuilt under a live pane
+  starts it empty, so the engine deletes a walked folder through `delete_directory` (§ "Folders, delete, and rename").
+  VersityGW (POSIX-backed) can't hold both at all; Garage can, and `beside_folder_test.rs` drives every row operation
+  there.
 - **A missing folder is `NotFound`**: S3 has no folders, so a prefix with no keys at all (its marker included) doesn't
   exist, and a listing that saw nothing says so rather than showing an empty folder.
 - **`get_metadata`**: the account root without a request; a bucket by `HeadBucket`; a key by `HeadObject`, and when that
@@ -649,6 +653,11 @@ folder wins over an object of the same name (`NameHolds`), except where the list
   (`listing::can_hold_keys`): `<key>/` for a key at the ceiling can't match anything, and B2 refuses it with
   `400 InvalidRequest` rather than an empty page, which made such an object undeletable there (verified on B2,
   `live_hostile_names_round_trip`, 2026-10-02; pinned by `long_key_test.rs` over `fake_s3.rs`).
+- **`delete_directory`** is the same delete with the holder pinned to the folder: the marker, or `NotFound` once nothing
+  sits under the prefix, ❗ never the HEAD fallback to an object (a `<name> (file)` row answers `NotADirectory`). Every
+  engine walk deletes the folders it walked this way (`Volume::delete_directory`'s doc). Why: a markerless folder
+  (`aws s3 sync` writes no markers) is gone with its last child, so `delete` on its path found only a file of its name
+  and deleted it, a file nobody selected (issue #510; `folder_delete_test.rs` over `fake_s3.rs`).
 - **`delete_files`** (`batch.rs`) is the batch a move's source sweep sends per folder level, and a volume delete per
   1,000 files (`delete_batch_size`): `DeleteObjects`, 1,000 keys a request with `Content-MD5`, quiet, its body parsed
   even on 200, each failed key reported against its own path (matched NFC on R2). ❗ By key, with no folder check: the

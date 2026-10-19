@@ -327,6 +327,16 @@ impl Volume for S3Volume {
         Box::pin(self.noting(self.delete_impl(path)))
     }
 
+    /// ❗ The folder only, never the object of its name (`mutation.rs`). One
+    /// `DeleteObject` can't be cut short, so there's nothing to cancel.
+    fn delete_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        _cancel: Option<&'a CancellationToken>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(self.noting(self.delete_directory_impl(path)))
+    }
+
     /// One small file by copy-then-delete. A folder or a big file answers
     /// `NotSupported`: callers ask `rename_work` first and move those.
     fn rename<'a>(

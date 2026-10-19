@@ -106,6 +106,12 @@ What the `Volume::delete` non-recursion contract does and doesn't buy this walke
 progress count, and it's a property of the conformance assertion every backend runs, not of a doc comment. The contract
 itself is single-sourced at `crates/cmdr-fs/src/volume/mod.rs`.
 
+The walker deletes the folders it walked through `Volume::delete_directory`, ❌ never `delete`: on S3 a markerless
+folder is gone with its last child, and a plain delete of its path then takes a file of the same name nobody selected
+(issue #510). The same holds for every engine walk that removes a folder it walked (the move's source sweep, the
+rename-merge's source cleanup, `remove_tree`), pinned by
+`crates/cmdr-operations/src/transfer/volume/folder_delete_kind_tests.rs`.
+
 ## Key decisions
 
 **Decision**: Volume delete reuses the scan preview and is oracle-aware on the no-preview path. **Why**: Before this,
