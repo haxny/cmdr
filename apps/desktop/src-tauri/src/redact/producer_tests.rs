@@ -276,3 +276,47 @@ fn the_desktop_volume_and_smb_lines_ship_each_value_as_one_token_of_its_kind() {
     let keyed = refused(&"user=\"alex\"", &"Alex's MacBook Pro (2)", &"Family Photos");
     assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
 }
+
+/// The small crates' lines (`cmdr-listing`, `cmdr-mtp`), in each site's format string, as a
+/// report ships them: the listing folder keeps its kind, and an MTP storage name and upload
+/// target hash like the keyed values they replaced.
+#[test]
+fn the_listing_and_mtp_lines_ship_each_value_as_one_token_of_its_kind() {
+    // A listed folder whose name reads like a file: only the site knows it's a folder.
+    let dir = "/Users/me/Library/Containers/com.example.app";
+    let done = |path: &dyn std::fmt::Display| {
+        format!("{HEAD}listing_done listing_id=7 path={path} entries=12 read_dir_ms=3 sort_ms=0 total_ms=4")
+    };
+    let golden = format!(
+        "{HEAD}listing_done listing_id=7 path=$HOME/Library/<dir>/<dir> entries=12 read_dir_ms=3 sort_ms=0 total_ms=4"
+    );
+    assert_eq!(shape(&done(&LogPrivate::dir_path(dir))), golden);
+    assert_ne!(shape(&done(&dir)), golden, "the unmarked spelling guesses the kind");
+
+    // An MTP storage name, marked as a volume.
+    let storage = "Alex's SD card (2)";
+    let probe =
+        |name: &dyn std::fmt::Debug| format!("{HEAD}Storage volumeName={name:?}: write probe succeeded, cleaning up");
+    let marked = probe(&LogPrivate::volume(storage));
+    assert_ships_none(&marked, &["Alex", "SD", "card"]);
+    assert_eq!(
+        shape(&marked),
+        format!("{HEAD}Storage volumeName=\"<volume>\": write probe succeeded, cleaning up")
+    );
+    let keyed = probe(&storage);
+    assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
+
+    // The upload line's folder and file name, each its own value.
+    let upload = |dir: &dyn std::fmt::Debug, file: &dyn std::fmt::Debug| {
+        format!("{HEAD}Upload failed for dir={dir:?} file={file:?} on mtp-1: Busy")
+    };
+    let (folder, file) = ("/DCIM/Summer (Lake House) 2026", "IMG Lake 0001.jpg");
+    let marked = upload(&LogPrivate::dir_path(folder), &LogPrivate::file_name(file));
+    assert_ships_none(&marked, &["Lake", "House", "Summer", "IMG", "0001"]);
+    assert_eq!(
+        shape(&marked),
+        format!("{HEAD}Upload failed for dir=\"/<dir>/<dir>\" file=\"<file>.jpg\" on mtp-1: Busy")
+    );
+    let keyed = upload(&folder, &file);
+    assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
+}
