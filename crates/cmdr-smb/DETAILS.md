@@ -617,9 +617,10 @@ The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies
   which the rename carries. A share with `store dos attributes = no` can't keep it; QNAP's answer is unverified.
 - **Folding the one-frame write's stamp into its compound would save a round trip per small file, and Samba allows it**
   (verified on the Docker guest share, Samba 4.20.6, 2026-10-11: CREATE+WRITE+FLUSH+SET_INFO+CLOSE in one compound, five
-  of five files listed the SET_INFO's dates, not the CLOSE's). Not adopted: it needs `smb2` to take `FileTimes` in
-  `write_file_compound`, and Windows refuses a FLUSH that isn't last in its compound, so that path needs its own shape
-  and a Windows check. Until then the stamp is the second frame.
+  of five files listed the SET_INFO's dates, not the CLOSE's). Not adopted as such: a FLUSH must end its chain (Windows
+  refuses one mid-chain, and Samba before 4.18 crashes on it). Since smb2 0.31.1 the CLOSE is already its own frame, so
+  the natural fold is a SET_INFO+CLOSE second frame on the open handle, which needs `smb2` to take `FileTimes` in
+  `write_file_compound`. Until then the stamp is a third frame.
 - **Pinned by** `conformance_test.rs`: `smb_integration_a_copy_keeps_the_source_date_per_the_shared_contract` and
   `smb_integration_a_copy_keeps_the_creation_date_per_the_shared_contract` (the shared assertions, compound path,
   through a staging-shaped temp and its rename), `smb_integration_a_streamed_write_keeps_the_source_date` (the writer
@@ -971,13 +972,14 @@ session); every owned-writer error site now does the same. **`abort()` before de
 so a fresh-session `delete_file` (CREATE-with-delete-on-close) hits a sharing violation against the still-open handle
 and the partial lingers. So: `write_chunk`/source-read errors `writer.abort().await` first (writer still owned), then
 `delete_partial()`. `finish()` consumes the writer, so on its failure the handle is already gone — best-effort
-`delete_partial()` only. The compound FAST-path (`write_file_compound`) is atomic CREATE+WRITE+FLUSH+CLOSE and the
-compound DRAIN loop buffers in memory before any handle opens, so neither leaves a streamed partial — those propagate
-their error unchanged. The original error always propagates (never `Cancelled`); cleanup is best-effort and never masks
-it. Pinned by `smb_integration_write_from_stream_source_error_deletes_partial` (source errors after the first chunk;
-asserts the propagated `IoError` and that no file remains at the destination). Don't refactor the owned-writer error
-sites into a post-block catch-all that loses the writer — you'd lose the `abort()` and the delete would no-op against
-the leaked handle.
+`delete_partial()` only. The compound FAST-path (`write_file_compound`) carries the whole file in one CREATE+WRITE+FLUSH
+frame (smb2 closes the handle itself, on success and failure alike) and the compound DRAIN loop buffers in memory before
+any handle opens, so neither leaves a streamed partial — those propagate their error unchanged. The original error
+always propagates (never `Cancelled`); cleanup is best-effort and never masks it. Pinned by
+`smb_integration_write_from_stream_source_error_deletes_partial` (source errors after the first chunk; asserts the
+propagated `IoError` and that no file remains at the destination). Don't refactor the owned-writer error sites into a
+post-block catch-all that loses the writer — you'd lose the `abort()` and the delete would no-op against the leaked
+handle.
 
 **Decision**: `SmbVolume` overrides `scan_for_copy_batch` to pipeline per-path stats over a single SMB session **Why**:
 A naive scan phase that loops `scan_for_copy` per top-level source costs N sequential RTTs before the copy phase can
@@ -1001,7 +1003,7 @@ paths, and if every path resolves via the oracle the stat pipeline is skipped en
 frame (`streams::fits_one_compound_write`) **Why**: The streaming open+read+close sequence costs 3 RTTs per file. For
 small files (typical 10 KB copies on a NAS) that dominates wall-clock at high-latency links (~60 ms RTT → ~180 ms/file
 just for protocol overhead, not data). `smb2` already exposes `Tree::read_file_compound` (CREATE+READ+CLOSE in a single
-compound frame = 1 RTT) and `Tree::write_file_compound` (CREATE+WRITE+FLUSH+CLOSE = 1 RTT), with
+compound frame = 1 RTT) and `Tree::write_file_compound` (CREATE+WRITE+FLUSH in one frame, then CLOSE = 2 RTTs), with
 `write_file_compound_exclusive` (`FileCreate`) for `WriteMode::CreateNew`, the same pair as `create_file_writer` /
 `create_file_writer_exclusive` on the streaming path, so every branch of `write_from_stream` (the frame, a staging
 temp's streamed fallback, a too-big write) honors the mode (why the mode matters:
@@ -1026,15 +1028,17 @@ the uplink's capacity, then `rate × 250 ms`, capped at `compound_write_limit`, 
 download one because home links are asymmetric), since one compound WRITE carries the whole file up the link with
 nothing else moving: at 375 KB/s a `stat` waited 23 s behind an 8 MiB upload and 1.5 s behind a streamed one
 ([smb2's upload benchmark](https://github.com/vdavid/smb2/blob/main/benchmarks/read-ahead/results/adaptive-uploads.md),
-smb2 0.25.0, 2026-09-23). The numbers sit on `fits_one_compound_write`. On a Windows server the compound write is two
-round trips: Windows refuses a FLUSH that isn't last in its chain, so smb2 ends the chain on the FLUSH and closes
-separately (from the first refusal on, per connection). The data is flushed when the call returns either way. The WRITE
-side's condition is also a DATA-SAFETY contract: `write_is_single_shot` answers with `fits_one_compound_write` on that
-limit, the fast path takes the frame for every size such a promise could cover (`one_frame_write_limit`: a staging temp
-takes today's limit, the real name keeps `max_write`, because the limit moves with every upload and expires after 30 s),
-and the transfer layer skips its `.cmdr-tmp-*` staging on the strength of that answer. What the backend owes in return
-(short sources stay on the compound path, a post-CREATE failure cleans up after itself):
-`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "The single-shot exemption".
+smb2 0.25.0, 2026-09-23). The numbers sit on `fits_one_compound_write`. The compound write is two round trips on every
+server: smb2 ends the chain on the FLUSH and closes separately, because a server may fail an op that goes async
+mid-chain (MS-SMB2 § 3.3.5.2.7; Windows answers `STATUS_INTERNAL_ERROR`), and Samba 4.4–4.17 (bug 15172, common in NAS
+firmware) then crashes its `smbd` and resets the connection (smb2 0.31.1, reproduced on Samba 4.15.13, 2026-10-19; a
+user's NAS dropped six times in 30 minutes on it). The data is flushed when the call returns, and a refused FLUSH is an
+error. The WRITE side's condition is also a DATA-SAFETY contract: `write_is_single_shot` answers with
+`fits_one_compound_write` on that limit, the fast path takes the frame for every size such a promise could cover
+(`one_frame_write_limit`: a staging temp takes today's limit, the real name keeps `max_write`, because the limit moves
+with every upload and expires after 30 s), and the transfer layer skips its `.cmdr-tmp-*` staging on the strength of
+that answer. What the backend owes in return (short sources stay on the compound path, a post-CREATE failure cleans up
+after itself): `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "The single-shot exemption".
 
 **Decision**: a streamed read (`open_smb_download_stream`) ends the consumer's stream at its last byte, before the
 CLOSE's answer **Why**: smb2's `FileDownload::next_chunk` puts the CLOSE on the wire before it hands out the last chunk,

@@ -66,7 +66,8 @@ pub(super) fn fits_one_compound_read(quick_read_limit: u64, size: u64) -> bool {
 /// the conservative floor rather than a guess.
 pub(super) const ASSUMED_MAX_WRITE: u64 = 65536;
 
-/// THE condition for the compound CREATE+WRITE+FLUSH+CLOSE fast path: the write
+/// THE condition for the one-frame write fast path (CREATE+WRITE+FLUSH in one
+/// compound, then a standalone CLOSE): the write
 /// fits `limit`, and an empty file has no WRITE to compound with, so it goes to
 /// the streaming writer.
 ///
@@ -495,15 +496,20 @@ impl SmbVolume {
 
             // Compound fast-path: when the caller promised a size that fits
             // in one WRITE, drain the source stream into a buffer and send
-            // CREATE+WRITE+FLUSH+CLOSE as a single compound frame (1 RTT
-            // instead of 4). Small files are the hot case; we fall through
-            // to the streaming writer for anything larger.
+            // CREATE+WRITE+FLUSH as a single compound frame, then a standalone
+            // CLOSE (2 RTTs instead of 4; smb2 keeps the FLUSH last in its
+            // chain because servers may fail an async op mid-chain, and Samba
+            // before 4.18 crashes on it). Small files are the hot case; we
+            // fall through to the streaming writer for anything larger.
             //
             // The frame is also what makes this write ALL-OR-NOTHING, which is
             // why `write_is_single_shot` lets the transfer layer skip its
             // `.cmdr-tmp-*` staging for exactly these writes: the server either
-            // gets the whole length-prefixed frame and runs all four ops, or
-            // discards it and creates nothing. ❌ So keep the drained buffer on
+            // gets the whole length-prefixed frame (every byte of the file) and
+            // runs it, or discards it and creates nothing. The CLOSE only
+            // releases the handle, which the server also does when the session
+            // dies, so a force-quit between the two can't truncate anything.
+            // ❌ So keep the drained buffer on
             // this path whenever it still fits one WRITE — dropping into the
             // multi-round-trip streaming writer after promising one shot is what
             // would put a truncated file at the user's real filename.

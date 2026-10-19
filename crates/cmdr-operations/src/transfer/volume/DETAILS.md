@@ -1226,9 +1226,10 @@ rather than reading the resolved enum — which under-reports, since it stays `A
 however single-shot it is.
 
 **Why it's safe**: staging buys exactly one property — no window in which the final name holds a byte-incomplete file. A
-single SMB2 compound frame has no such window. The client sends one length-prefixed frame carrying
-CREATE+WRITE+FLUSH+CLOSE; the server either receives it whole and runs all four ops or discards it and creates nothing,
-and it needs nothing further from the client to finish. So the force-quit that started all this (kill the process
+single SMB2 compound frame has no such window. The client sends one length-prefixed frame carrying CREATE+WRITE+FLUSH
+(the whole file); the server either receives it whole and runs it or discards it and creates nothing. The standalone
+CLOSE that follows only releases the handle, which the server also does when the session dies, so it needs nothing
+further from the client for the file to be complete. So the force-quit that started all this (kill the process
 mid-transfer, no error path, no `Drop`, no cleanup) cannot produce a truncated file on this path.
 
 **❌ Why it is NOT "small files are fine"**: smallness merely correlates with single-shot-ness today, through

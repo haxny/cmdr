@@ -355,11 +355,12 @@ async fn smb_integration_a_dated_single_shot_write_adds_one_frame_for_its_date()
     .unwrap();
     let (requests_after, compounds_after) = request_counts(&vol).await;
 
-    // The write's four ops, the date's three, the post-write stat's four.
+    // The write's four ops (CREATE+WRITE+FLUSH compounded, then its loose
+    // CLOSE), the date's three, the post-write stat's four.
     assert_eq!(
         (compounds_after - compounds_before, requests_after - requests_before),
         (3, 11),
-        "a dated one-shot write must add exactly one compound frame for its date, with no loose round trips"
+        "a dated one-shot write must add exactly one compound frame for its date, with no other loose round trips"
     );
     let listed = vol.get_metadata(Path::new(&smb_path)).await.unwrap().modified_at;
     assert_eq!(
