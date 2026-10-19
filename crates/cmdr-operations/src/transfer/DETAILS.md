@@ -1905,8 +1905,10 @@ again:
   runner because a one-pass decode can't stream a member again. So whatever would run the file again fails the member
   instead, and with no source to compare against, a cleared-way landing whose temp is gone ❌ never counts as landed.
 - `through_outages` around each merge level's prepare (a create whose second run answers `AlreadyExists` and reads as
-  "there", plus two listings) and around every driver's top-level destination probe (a read). ❗ Only a call that's safe
-  to run twice goes through it.
+  "there", plus two listings), around every driver's top-level destination probe (a read), and around the conflict
+  resolver's destination type probe (`volume/conflict.rs::resolve_dest_is_directory`, the stat an Overwrite clash asks
+  before the swap; pinned by `volume/conflict_tests.rs::a_share_that_drops_as_the_destination_is_probed_is_waited_for`
+  and the live Overwrite cell in `smb_outage_test.rs`). ❗ Only a call that's safe to run twice goes through it.
 - The start gate, `volume/preflight.rs::wait_for_gone_volumes`, at the top of all three volume drivers: a transfer that
   begins with a volume already gone (a Retry while the NAS is still down) waits before its first step rather than
   failing on it. It announces the wait itself (no probe is registered yet). Only a cancel stops the transfer there;

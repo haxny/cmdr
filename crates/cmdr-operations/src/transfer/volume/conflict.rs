@@ -35,6 +35,7 @@ use super::super::super::types::{
     ConflictResolution, VolumeCopyConfig, WriteConflictEvent, WriteConflictResolvedEvent, WriteOperationError,
 };
 use super::super::staged_write::Replaces;
+use super::super::volume_outage::through_outages;
 use super::displaced_destination::{DisplacedDestination, displace_destination};
 use super::item_identity::is_the_same_item;
 use super::naming::find_unique_volume_name;
@@ -148,7 +149,7 @@ pub(super) async fn resolve_volume_conflict(
         }));
     }
 
-    let destination_is_directory = resolve_dest_is_directory(dest_volume, dest_path).await?;
+    let destination_is_directory = resolve_dest_is_directory(state, dest_volume, dest_path).await?;
 
     // Dir-vs-dir is NOT a conflict — it's an unconditional merge. No policy
     // lookup, no `write-conflict` emit, no Stop prompt: a source folder landing
@@ -507,8 +508,15 @@ async fn reduce_volume_conditional_resolution(
 /// A LINK is not a directory here, whatever it points at: a merge into one
 /// would land the source's files in the link's target, outside the folder the
 /// user picked. It meets a folder as the type clash it is.
-async fn resolve_dest_is_directory(dest_volume: &Arc<dyn Volume>, path: &Path) -> Result<bool, WriteOperationError> {
-    match dest_volume.entry_kind(path).await {
+///
+/// A stat is safe to ask twice, so a destination that drops as it's asked is
+/// waited for (`through_outages`) and asked again, ❌ never answered by guess.
+async fn resolve_dest_is_directory(
+    state: &Arc<WriteOperationState>,
+    dest_volume: &Arc<dyn Volume>,
+    path: &Path,
+) -> Result<bool, WriteOperationError> {
+    match through_outages(state, &[dest_volume], || dest_volume.entry_kind(path)).await {
         Ok(kind) => Ok(kind == EntryKind::Directory),
         Err(VolumeError::NotFound(_)) => Ok(false),
         Err(e) => Err(map_volume_error(&path.display().to_string(), PathRole::Destination, e)),
@@ -575,7 +583,7 @@ async fn apply_volume_conflict_resolution(
             // behavior. See `dir_overwrite_must_merge_not_replace_even_with_recursive_delete`
             // in the test module; it pins this with a wrapper Volume that violates
             // the contract.
-            let dest_is_dir = resolve_dest_is_directory(dest_volume, dest_path).await?;
+            let dest_is_dir = resolve_dest_is_directory(state, dest_volume, dest_path).await?;
 
             if !dest_is_dir && !source_is_directory {
                 // file→file: in place where the destination publishes whole,

@@ -24,8 +24,8 @@
 //!
 //! A swap's landing is armed by PATH rather than by count, since a concurrent
 //! window's siblings rename and delete in no fixed order: the drop around the
-//! next delete of a path or rename onto it, on either side, and the late error
-//! of a delete. It can also copy inside itself on the server
+//! next delete of a path or rename onto it, on either side, the late error of
+//! a delete, and the drop at the next stat of a path. It can also copy inside itself on the server
 //! (`Volume::copy_within`), and it counts where every write went, so a cell can
 //! tell a landing resumed from its temp from a file streamed again.
 //!
@@ -92,6 +92,8 @@ pub(crate) struct OutageVolume {
     /// The next delete of this path answers a dropped session's error after
     /// someone else reconnected it, once.
     stale_error_at_delete_of: Mutex<Option<(PathBuf, RenameDrop)>>,
+    /// Drop the session as the next stat of this path starts, once.
+    drop_at_stat_of: Mutex<Option<PathBuf>>,
     /// Copy inside itself on the server (`Volume::copy_within`), counting each.
     copies_on_server: AtomicBool,
     server_copies: AtomicUsize,
@@ -146,6 +148,7 @@ impl OutageVolume {
             drop_at_rename_onto: Mutex::new(None),
             drop_at_delete_of: Mutex::new(None),
             stale_error_at_delete_of: Mutex::new(None),
+            drop_at_stat_of: Mutex::new(None),
             copies_on_server: AtomicBool::new(false),
             server_copies: AtomicUsize::new(0),
             generation: AtomicU64::new(0),
@@ -258,6 +261,12 @@ impl OutageVolume {
     /// already reconnected: the volume reads live on the next generation.
     pub(crate) fn stale_error_at_delete_of(&self, path: &Path, side: RenameDrop) {
         *self.stale_error_at_delete_of.lock_ignore_poison() = Some((path.to_path_buf(), side));
+    }
+
+    /// The session drops (and the server goes away) as the next stat of `path`
+    /// starts (`get_metadata`, and every probe built on it, `entry_kind` too).
+    pub(crate) fn drop_at_stat_of(&self, path: &Path) {
+        *self.drop_at_stat_of.lock_ignore_poison() = Some(path.to_path_buf());
     }
 
     /// Copies inside itself on the server from now on, the way SFTP's
@@ -426,6 +435,13 @@ impl Volume for OutageVolume {
     }
     fn get_metadata<'a>(&'a self, path: &'a Path) -> Fut<'a, Result<FileEntry, VolumeError>> {
         Box::pin(async move {
+            let armed_here = {
+                let mut armed = self.drop_at_stat_of.lock_ignore_poison();
+                armed.as_deref() == Some(path) && armed.take().is_some()
+            };
+            if armed_here {
+                self.go_away();
+            }
             self.gate()?;
             self.inner.get_metadata(path).await
         })

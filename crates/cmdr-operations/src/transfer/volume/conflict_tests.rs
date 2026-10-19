@@ -240,6 +240,93 @@ async fn a_destination_that_raced_away_still_resolves_as_a_plain_write() {
     assert_eq!(resolved.write_path, PathBuf::from("/notes.txt"));
 }
 
+const PROBE_OUTAGE_CADENCE: &[std::time::Duration] = &[
+    std::time::Duration::from_millis(10),
+    std::time::Duration::from_millis(20),
+];
+
+/// The share drops as the resolver asks what the destination is. That stat is
+/// safe to ask twice, so the resolver waits for the share and answers, rather
+/// than failing the item: a folder Overwrite onto a share whose connection
+/// dropped failed the first clash it met after the cut.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_share_that_drops_as_the_destination_is_probed_is_waited_for() {
+    use crate::outage_slot::OutagePolicy;
+    use crate::transfer::outage_volume_test_support::OutageVolume;
+    use std::time::Duration;
+
+    let engine = TestOperations::new();
+    let source = Arc::new(InMemoryVolume::new("source"));
+    source.create_file(Path::new("/notes.txt"), b"new").await.unwrap();
+    let source_dyn: Arc<dyn Volume> = source.clone();
+
+    let dest = Arc::new(InMemoryVolume::new("dest"));
+    dest.create_file(Path::new("/notes.txt"), b"old").await.unwrap();
+    let nas = OutageVolume::wrap(Arc::clone(&dest), "conflict-probe-outage");
+    nas.drop_at_stat_of(Path::new("/notes.txt"));
+    let dest_dyn: Arc<dyn Volume> = nas.clone();
+
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(0))
+            .with_outage_policy(OutagePolicy {
+                budget: Duration::from_secs(30),
+                cadence: PROBE_OUTAGE_CADENCE,
+                poll_every: Duration::from_millis(5),
+                attempt_timeout: Duration::from_secs(1),
+            }),
+    );
+    let comes_back = {
+        let (state, nas) = (Arc::clone(&state), Arc::clone(&nas));
+        tokio::spawn(async move {
+            cmdr_fs::testing::wait_until_async(Duration::from_secs(10), "the resolver to wait for the share", || {
+                state.outage.waiting_for().is_some()
+            })
+            .await;
+            nas.become_reachable();
+        })
+    };
+    let config = VolumeCopyConfig {
+        conflict_resolution: ConflictResolution::Overwrite,
+        ..VolumeCopyConfig::default()
+    };
+    let mut apply_to_all = ApplyToAll::default();
+    let events = CollectorEventSink::new();
+
+    let resolved = tokio::time::timeout(
+        Duration::from_secs(20),
+        resolve_volume_conflict(
+            &source_dyn,
+            Path::new("/notes.txt"),
+            &dest_dyn,
+            Path::new("/notes.txt"),
+            &config,
+            &events,
+            "op-probe-outage",
+            &state,
+            &mut apply_to_all,
+            None,
+            None,
+            Some(false),
+        ),
+    )
+    .await
+    .expect("the resolver answers once the share is back");
+    comes_back.abort();
+
+    let resolved = resolved
+        .expect("an outage the share comes back from doesn't fail the item")
+        .expect("Overwrite resolves to a write path");
+    assert!(nas.reconnect_attempts() > 0, "the share dropped");
+    assert_eq!(resolved.replaces, Replaces::Swap);
+    assert_eq!(resolved.write_path, PathBuf::from("/notes.txt"));
+    assert_eq!(
+        dest.get_metadata(Path::new("/notes.txt")).await.unwrap().size,
+        Some(3),
+        "the original is untouched"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn file_overwrite_keeps_the_original_and_writes_at_its_name() {
     let engine = TestOperations::new();

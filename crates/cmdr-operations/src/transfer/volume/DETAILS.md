@@ -325,8 +325,9 @@ of those sites was decided one at a time on one question: **can a wrong `false` 
   PROPAGATE, via `resolve_dest_is_directory`.** A guessed `false` reaches the same arm's replace-the-destination branch.
   The helper keeps ONE exception, and it's load-bearing: `VolumeError::NotFound` means the destination raced away
   between detection and resolution, which is an ANSWER (nothing to protect), so it resolves as "not a directory" and the
-  write proceeds. Failing there would break a write that would simply have succeeded. It asks `Volume::entry_kind`, so a
-  LINK at the destination is a leaf too: a merge into one lands the files in its target (`../DETAILS.md` § "Symlinks are
+  write proceeds. Failing there would break a write that would simply have succeeded. A transport fault isn't an answer
+  either way: the probe waits out the outage (`through_outages`) and asks again. It asks `Volume::entry_kind`, so a LINK
+  at the destination is a leaf too: a merge into one lands the files in its target (`../DETAILS.md` § "Symlinks are
   opaque to a move").
 - **`rename_merge.rs`'s `write_path` dir check — PROPAGATES.** A guessed `false` falls through to `exists()` and then
   `ctx.volume.delete(&write_path)`, aimed at a destination directory. Its input is now guarded upstream by the resolver,
@@ -1748,13 +1749,14 @@ it yet.
 The engine waits for a share that dropped off the network rather than failing on it, through `../volume_outage.rs`
 (`../DETAILS.md` § "Waiting out a volume that went away" owns the why and the guarantees). Where this directory asks:
 
-- **`stream_pipe.rs::stream_pipe_file`**: the source open, the write, and a landing rename that failed with nothing
-  cleared, all through the runner's one fault decision (`FileRun::on_fault`). After the wait, the file runs again from
-  its first byte with a fresh set of attempts, its failed attempt's temp cleared once the share can hear the delete.
-- **`merge.rs`'s level prepare** (the create, the destination listing, the source listing) and **every driver's
-  top-level destination probe** (`landing.rs::name_at_destination` for the serial drivers,
-  `copy_concurrent_source.rs::existing_dest_entry` for the window), each through `through_outages`, since each is safe
-  to run twice.
+- **`stream_pipe.rs::stream_pipe_file`**: the source open, the write, and any landing step the transport cut off (a
+  swap's included), all through the runner's one fault decision (`FileRun::on_fault`). After the wait, a cut-off landing
+  is settled first and a whole temp lands without streaming again; otherwise the file runs again from its first byte
+  with a fresh set of attempts, its failed attempt's temp cleared once the share can hear the delete.
+- **`merge.rs`'s level prepare** (the create, the destination listing, the source listing), **every driver's top-level
+  destination probe** (`landing.rs::name_at_destination` for the serial drivers,
+  `copy_concurrent_source.rs::existing_dest_entry` for the window), and **the conflict resolver's destination probe**
+  (`conflict.rs::resolve_dest_is_directory`), each through `through_outages`, since each is safe to run twice.
 - **The start gate**, `preflight.rs::wait_for_gone_volumes`, first thing in `copy.rs`, `move_cross.rs`, and
   `move_same.rs`: a transfer that begins with its volume already gone waits before its first step.
 

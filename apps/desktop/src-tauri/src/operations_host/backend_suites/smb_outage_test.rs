@@ -23,9 +23,9 @@ use cmdr_operations::testing::{
     CollectorEventSink, OutagePolicy, TestOperations, WriteOperationState, copy_volumes_with_progress,
 };
 use cmdr_operations::{
-    ConflictInfo, DryRunResult, OperationEventSink, ScanProgressEvent, VolumeCopyConfig, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationPhase, WriteProgressEvent,
-    WriteSettledEvent, WriteSourceItemDoneEvent,
+    ConflictInfo, ConflictResolution, DryRunResult, OperationEventSink, ScanProgressEvent, VolumeCopyConfig,
+    WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationPhase,
+    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 
 /// Files in the folder. Enough that the outage lands in the middle, with files
@@ -116,6 +116,34 @@ impl OperationEventSink for PauseAfterFiles {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_a_copy_waits_out_a_dropped_network_and_finishes() {
+    copy_through_a_cut(ConflictResolution::Stop).await;
+}
+
+/// The incident's `.DS_Store` shape: every file the copy writes REPLACES one
+/// already on the share, so each lands by a swap (delete the original, rename
+/// the new bytes onto its name), and the cut can fall inside one. A swap the
+/// drop interrupted settles once the network is back, and every original ends
+/// up replaced, with nothing parked under ` (recovered)` and no temp left.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_an_overwrite_waits_out_a_dropped_network_and_replaces_every_original() {
+    copy_through_a_cut(ConflictResolution::Overwrite).await;
+}
+
+/// What the share holds at `index` before an Overwrite: a different size and
+/// different bytes, so a file the copy left alone shows.
+fn original(index: usize) -> Vec<u8> {
+    let mut bytes = content(index);
+    bytes.truncate(FILE_BYTES / 2);
+    bytes.reverse();
+    bytes
+}
+
+/// Copies the folder onto the share through a proxy cut part-way, and checks
+/// the copy waited and every file landed byte-exact. Under
+/// `ConflictResolution::Overwrite` the share starts with an [`original`] at
+/// every name, so every file lands over one.
+async fn copy_through_a_cut(conflict_resolution: ConflictResolution) {
     // A direct connection seeds and verifies; the copy runs through the proxy.
     let direct = Arc::new(make_docker_volume().await);
     let base = test_dir_name();
@@ -124,6 +152,16 @@ async fn smb_integration_a_copy_waits_out_a_dropped_network_and_finishes() {
         .create_directory(Path::new(&base))
         .await
         .expect("the scratch dir");
+    if conflict_resolution == ConflictResolution::Overwrite {
+        let seeded = PathBuf::from(&base).join("batch");
+        direct.create_directory(&seeded).await.expect("the seeded folder");
+        for index in 0..FILE_COUNT {
+            direct
+                .create_file(&seeded.join(format!("f-{index:02}.bin")), &original(index))
+                .await
+                .expect("an original on the share");
+        }
+    }
 
     let proxy = OutageProxy::start(guest_port()).await;
     let through_proxy: Arc<dyn Volume> =
@@ -174,6 +212,7 @@ async fn smb_integration_a_copy_waits_out_a_dropped_network_and_finishes() {
             through_proxy,
             &dest_path,
             &VolumeCopyConfig {
+                conflict_resolution,
                 progress_interval_ms: 0,
                 ..VolumeCopyConfig::default()
             },
@@ -225,11 +264,11 @@ async fn smb_integration_a_copy_waits_out_a_dropped_network_and_finishes() {
         .expect("the destination folder")
         .into_iter()
         .map(|entry| entry.name)
-        .filter(|name| name.contains(".cmdr-tmp-"))
+        .filter(|name| name.contains(".cmdr-tmp-") || name.contains("(recovered)"))
         .collect();
     assert!(
         leftovers.is_empty(),
-        "no staged partial survives the outage: {leftovers:?}"
+        "no staged partial survives the outage, and nothing is parked aside: {leftovers:?}"
     );
 
     ensure_clean(&direct, &base).await;
