@@ -28,7 +28,7 @@
 
 use std::path::Path;
 
-use cmdr_fs::volume::{DirectoryCreation, StreamLength, VolumeError, WriteMode};
+use cmdr_fs::volume::{DirectoryCreation, EntryKind, StreamLength, VolumeError, WriteMode};
 use log::debug;
 
 use super::AdbVolume;
@@ -136,9 +136,11 @@ impl AdbVolume {
     pub(super) async fn delete_impl(&self, path: &Path) -> Result<(), VolumeError> {
         let device = self.to_device_path(path)?;
         debug!("AdbVolume::delete: {device}");
-        match self.probe(&device).await {
-            WhatIsThere::Nothing => return Err(volume_error_from_errno(ENOENT, &device)),
-            WhatIsThere::Directory => {
+        // `entry_kind_impl`, ❌ never the following `probe`: a link to a folder
+        // goes as the link it is (`rm -f`). Followed, `rmdir` refuses the link and
+        // the target's contents come back as `ENOTEMPTY`.
+        match self.entry_kind_impl(path).await? {
+            EntryKind::Directory => {
                 if let Err(e) = self.shell_verb(&["rmdir", &device], &device).await {
                     // The one refusal the contract names: something is still
                     // inside. Asked of the sync service, not of stderr.
@@ -149,7 +151,7 @@ impl AdbVolume {
                     return Err(e);
                 }
             }
-            WhatIsThere::NotADirectory => self.shell_verb(&["rm", "-f", &device], &device).await?,
+            EntryKind::File | EntryKind::Symlink => self.shell_verb(&["rm", "-f", &device], &device).await?,
         }
         self.notify_deleted(path).await;
         Ok(())

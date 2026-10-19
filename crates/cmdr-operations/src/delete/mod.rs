@@ -52,3 +52,5 @@ mod trash_pause_tests;
 mod volume_cancel_tests;
 #[cfg(test)]
 mod volume_hardlink_progress_tests;
+#[cfg(test)]
+mod volume_symlink_tests;

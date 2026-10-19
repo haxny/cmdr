@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{
-    BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, MutationEvent, Retirement,
+    BatchScanResult, CopyScanResult, DirectoryCreation, EntryKind, LaneKey, ListingProgress, MutationEvent, Retirement,
     ScanBoundary, ScanConflict, SignInShape, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress,
     StreamWritten, Volume, VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
 };
@@ -121,6 +121,15 @@ impl Volume for AdbVolume {
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
         Box::pin(self.noting(self.get_metadata_impl(path)))
+    }
+
+    /// One bare `STAT`: the trait default's `get_metadata` also runs a shell
+    /// `readlink` to follow a link, which this question never needs.
+    fn entry_kind<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<EntryKind, VolumeError>> + Send + 'a>> {
+        Box::pin(self.noting(self.entry_kind_impl(path)))
     }
 
     /// Kept rather than taken from the trait default: the default routes through

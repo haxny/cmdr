@@ -438,7 +438,8 @@ impl FakeTree {
         Ok(())
     }
 
-    /// Removes one node, refusing a directory that still holds something.
+    /// Removes one node (a link as itself), refusing a directory that still
+    /// holds something.
     pub fn remove_one(&mut self, path: &str) -> Result<(), i32> {
         if self.writes_refused_at(path) {
             return Err(EROFS);
@@ -447,7 +448,9 @@ impl FakeTree {
         if !self.nodes.contains_key(&path) {
             return Err(ENOENT);
         }
-        if !self.children(&path).is_empty() {
+        // Only a real directory holds anything: `children` follows a link, and
+        // a link goes on its own, as `rm` takes it on a phone.
+        if matches!(self.nodes.get(&path), Some(FakeNode::Dir { .. })) && !self.children(&path).is_empty() {
             return Err(ENOTEMPTY_DEVICE);
         }
         self.nodes.remove(&path);

@@ -542,3 +542,31 @@ async fn every_write_patches_the_pane_once() {
     volume.scan_for_copy(&fixture_path("/sdcard")).await.expect("scan");
     assert_eq!(listings.change_count(), 4);
 }
+
+/// A link is a leaf to everything that recurses: `entry_kind` answers it as a
+/// link, whatever it points at, and `delete` removes the link, ❌ never the
+/// folder behind it. Following it to `rmdir` refused, then reported the target's
+/// contents as `ENOTEMPTY`, so the link could never go at all.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_link_to_a_folder_is_a_link_and_deletes_as_one() {
+    use cmdr_fs::volume::EntryKind;
+
+    let mut tree = FakeTree::new();
+    tree.add_file("/sdcard/DCIM/x.jpg", b"photo")
+        .add_symlink("/sdcard/shortcut", "/sdcard/DCIM");
+    let server = FakeAdbServer::start(tree).await;
+    let (volume, _) = connect_fake(&server, FIXTURE_SERIAL).await;
+    let link = fixture_path("/sdcard/shortcut");
+
+    assert_eq!(volume.entry_kind(&link).await.expect("kind"), EntryKind::Symlink);
+    assert_eq!(
+        volume.entry_kind(&fixture_path("/sdcard/DCIM")).await.expect("kind"),
+        EntryKind::Directory
+    );
+    volume.delete(&link).await.expect("the link deletes");
+
+    let tree = server.tree();
+    let tree = tree.lock().unwrap();
+    assert!(tree.get("/sdcard/shortcut").is_none(), "the link is gone");
+    assert_eq!(tree.file_bytes("/sdcard/DCIM/x.jpg").as_deref(), Some(&b"photo"[..]));
+}

@@ -22,6 +22,19 @@ or cut-off batch is the backend's to send again (`cmdr-s3`'s `batch.rs`). Pinned
 `operations_host/backend_suites/s3_engine_integration_test.rs::a_folder_of_1005_objects_deletes` (two `DeleteObjects`,
 no per-object request).
 
+## A link is a leaf
+
+The volume walker descends only what is a directory AS ITSELF, so a link to a folder is one entry, deleted with one
+`Volume::delete` of the link. Every place a kind comes from is link-aware: a child's `EntryKind::of` (the listing's
+`is_symlink` beats its `is_directory`), a top-level source's entry in a pane's watcher-fresh parent listing
+(`scan_preview::kind_in_parent_listing`, no I/O), and otherwise `Volume::entry_kind`. A cached preview's "directory" is
+never taken on its word: the backend's batch scan follows a selected link (a cross-volume copy streams what a link
+points at), so the walker re-asks the parent listing or `entry_kind`, one probe per top-level folder with a cold parent.
+A delete-purpose preview recounts a selected link as one leaf (`count_selected_links_as_links`), so the dialog's count
+describes the delete, but the walker's own answer is what protects the target. Pinned by `volume_symlink_tests.rs`
+(nested link, link-following backend, pane-listed parent, cold preview, preview count). Regression anchor: #505 (a
+nested `data -> ~/Photos` link on an external drive took `~/Photos`).
+
 ## The volume delete's own lifecycle
 
 `volume_start.rs::start_volume_delete` registers the op with the manager and hands it a deferred async start;
@@ -48,7 +61,7 @@ wrong". The audit, top to bottom:
   its request"). Both walkers then fall through to a fresh scan. Before that binding, the LOCAL walker was the sharpest
   edge in the app: it takes the cached result wholesale and iterates `scan_result.files` without ever re-reading its own
   `sources`, so a `preview_id` pointing at another tree deleted that tree. Pinned by `preview_binding_tests.rs`.
-- **A source the cached `per_path` doesn't cover** (the volume walker's `None` arm). Forwards `is_dir_hint: None`, and
+- **A source the cached `per_path` doesn't cover** (the volume walker's `None` arm). Forwards `kind_hint: None`, and
   `scan_volume_recursive` PROPAGATES a failed probe rather than defaulting. It looks like the bug class and is its
   opposite; a `Some(false)` there would be the guess. The whole-map-empty case (`file_count > 0`, `per_path` empty) is
   the exact production shape the original copy bug rode in on, so it's pinned end to end in
@@ -76,8 +89,8 @@ meant a second 17 s parent listing for a 135-photo `/DCIM/Camera` delete after t
 pre-flight dialog, and the second scan emitted no per-top-level-file progress so the UI looked frozen. The fix has three
 parts. (1) `take_cached_scan_result(preview_id, sources)` at the top: on hit, top-level files are recorded from
 `CopyScanResult::total_bytes` with no `is_directory` probe and no `list_directory` round-trip, and top-level dirs
-recurse via the oracle-aware `scan_volume_recursive` (passing `is_dir_hint = Some(true)` so the recursion never
-re-probes). (2) The walker's internal `volume.list_directory(path, ...)` is preceded by
+recurse via the oracle-aware `scan_volume_recursive`, their kind re-checked link-aware first (§ "A link is a leaf"). (2)
+The walker's internal `volume.list_directory(path, ...)` is preceded by
 `Listings::authoritative_listing(volume_id, path)`; on hit, the cached entries replace the volume call at every
 recursion level. (3) On the no-preview path, the parent oracle supplies the top-level type when a pane has the source's
 parent open and watcher-fresh, skipping the probe; on a miss the hint stays `None` and the walker resolves it (see the

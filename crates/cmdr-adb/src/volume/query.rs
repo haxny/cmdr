@@ -2,7 +2,7 @@
 use std::path::Path;
 
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::volume::{ListingProgress, VolumeError};
+use cmdr_fs::volume::{EntryKind, ListingProgress, VolumeError};
 use tokio_util::sync::CancellationToken;
 
 use super::AdbVolume;
@@ -150,6 +150,24 @@ impl AdbVolume {
         }
         session.quit().await;
         Ok(entry)
+    }
+
+    /// What is at `path`, a link answered AS a link: one `STAT`, which the sync
+    /// service answers as an `lstat`, and ❌ no `readlink` to follow it.
+    pub(super) async fn entry_kind_impl(&self, path: &Path) -> Result<EntryKind, VolumeError> {
+        let device = self.to_device_path(path)?;
+        let mut session = self.open_sync(&device).await?;
+        let stat = session.stat(&device).await;
+        session.quit().await;
+        let stat = stat.map_err(|e| self.inner.map_adb_error(e, &device))?;
+        if !stat.exists() {
+            return Err(volume_error_from_errno(stat.errno.unwrap_or(ENOENT), &device));
+        }
+        Ok(match stat.kind() {
+            SyncEntryKind::Directory => EntryKind::Directory,
+            SyncEntryKind::Symlink => EntryKind::Symlink,
+            SyncEntryKind::File | SyncEntryKind::Other => EntryKind::File,
+        })
     }
 
     /// Whether `path` is there, as a plain yes/no. A path off this volume

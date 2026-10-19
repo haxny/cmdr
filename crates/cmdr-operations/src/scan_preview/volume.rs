@@ -3,7 +3,7 @@
 //! batch scan. The contract it owes: the parent module.
 
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
@@ -24,7 +24,7 @@ use super::super::types::{
 use super::settle_failed_preview;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::host::listings::ListingHost;
-use cmdr_fs::volume::{BatchScanResult, CopyScanResult, ScanRecorder, Volume};
+use cmdr_fs::volume::{BatchScanResult, CopyScanResult, EntryKind, ScanRecorder, Volume};
 
 /// The path a volume scan's failure names when the backend's error carries none
 /// of its own (a `NotFound` does): the one source, or the folder a multi-item
@@ -151,7 +151,7 @@ pub(crate) async fn run_volume_scan_preview(
             });
         }
 
-        run_oracle_aware_batch_scan(
+        let mut batch = run_oracle_aware_batch_scan(
             host.listings(),
             volume.as_ref(),
             &source_volume_id,
@@ -166,7 +166,14 @@ pub(crate) async fn run_volume_scan_preview(
         .await
         // The backend's typed error, kept typed: a `NotFound` names its own
         // path; anything without one names the first source.
-        .map_err(|e| map_volume_error(&scan_context_path(&sources), PathRole::Source, e))
+        .map_err(|e| map_volume_error(&scan_context_path(&sources), PathRole::Source, e))?;
+        // A delete takes a selected link and leaves its target, so its count
+        // must too. A transfer's walk keeps following one: a cross-volume copy
+        // streams what a link points at.
+        if purpose == ScanPreviewPurpose::Delete {
+            count_selected_links_as_links(host.listings(), volume.as_ref(), &source_volume_id, &mut batch).await;
+        }
+        Ok(batch)
     }
     .await;
 
@@ -525,4 +532,58 @@ pub(crate) async fn run_oracle_aware_batch_scan(
         per_path,
         files,
     })
+}
+
+/// What `source` is per a pane's watcher-fresh listing of its parent, with no
+/// I/O, a link reported AS a link (`EntryKind::of`). `None` when no pane vouches
+/// for the parent or the listing doesn't hold the name: ask the volume then.
+pub(crate) fn kind_in_parent_listing(listings: &dyn ListingHost, volume_id: &str, source: &Path) -> Option<EntryKind> {
+    let entries = listings.authoritative_listing(volume_id, source.parent()?)?;
+    let name = source.file_name()?;
+    entries
+        .iter()
+        .find(|entry| Path::new(&entry.path).file_name() == Some(name))
+        .map(EntryKind::of)
+}
+
+/// Recounts every selected LINK the backend's batch scan walked as a folder
+/// (its top-level stat follows links, as a copy's should) as the one leaf a
+/// delete removes, so the dialog's count describes the delete. Only per-path
+/// "directories" are asked, the parent listing first and `entry_kind` failing
+/// that; an unanswered probe leaves the count as it was, since the delete walker
+/// asks again before it descends anything.
+pub(crate) async fn count_selected_links_as_links(
+    listings: &dyn ListingHost,
+    volume: &dyn Volume,
+    volume_id: &str,
+    batch: &mut BatchScanResult,
+) {
+    for (source, scan) in &mut batch.per_path {
+        if !scan.top_level_is_directory {
+            continue;
+        }
+        let kind = match kind_in_parent_listing(listings, volume_id, source) {
+            Some(kind) => Some(kind),
+            None => volume.entry_kind(source).await.ok(),
+        };
+        if kind != Some(EntryKind::Symlink) {
+            continue;
+        }
+        let aggregate = &mut batch.aggregate;
+        aggregate.file_count = aggregate.file_count.saturating_sub(scan.file_count) + 1;
+        aggregate.dir_count = aggregate.dir_count.saturating_sub(scan.dir_count);
+        aggregate.total_bytes = aggregate.total_bytes.saturating_sub(scan.total_bytes);
+        aggregate.dedup_bytes = aggregate.dedup_bytes.saturating_sub(scan.dedup_bytes);
+        *scan = CopyScanResult {
+            file_count: 1,
+            dir_count: 0,
+            total_bytes: 0,
+            dedup_bytes: 0,
+            top_level_is_directory: false,
+            top_level_modified_at: scan.top_level_modified_at,
+            top_level_created_at: scan.top_level_created_at,
+        };
+        // The kept per-file list counted what the link points at.
+        batch.files = None;
+    }
 }

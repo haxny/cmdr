@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use super::super::error_classification::IoResultExt;
 use super::super::event_sinks::OperationEventSink;
 use super::super::scan::scan_sources;
+use super::super::scan_preview::kind_in_parent_listing;
 use super::super::scan_source_tracker::{FileVerdict, SourceItemTracker};
 use super::super::state::WriteOperationState;
 use super::super::transfer::volume::{PathRole, map_volume_error};
@@ -16,7 +17,7 @@ use super::super::types::{
     WriteOperationPhase, WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
 // ============================================================================
 // Delete implementation
@@ -305,6 +306,13 @@ impl VolumeScanTracker {
 /// files and directories. Directories are appended after their children, so the
 /// resulting list is already in deepest-first order for safe deletion.
 ///
+/// **A symlink is a leaf: the link goes, ❌ never its target's contents.** Only
+/// an [`EntryKind::Directory`] is listed and descended. A listing sets
+/// `is_directory` on a link to a folder (panes want it to navigate like one), and
+/// some backends' `is_directory` follows the link, so neither may decide a
+/// descent: `kind_hint` is an [`EntryKind`], read off an entry with
+/// [`EntryKind::of`] or asked of [`Volume::entry_kind`].
+///
 /// Emits scan progress two ways:
 /// 1. **Per-entry** via `list_directory`'s `on_progress` callback, so the FE sees the tally climb
 ///    mid-listing — important for MTP, where one `list_directory` call on `/DCIM/Camera` with 1k+
@@ -325,7 +333,7 @@ async fn scan_volume_recursive(
     volume: &dyn Volume,
     volume_id: &str,
     path: &Path,
-    is_dir_hint: Option<bool>,
+    kind_hint: Option<EntryKind>,
     entries: &mut Vec<VolumeDeleteEntry>,
     total_bytes: &mut u64,
     seen_inodes: &mut std::collections::HashSet<u64>,
@@ -342,20 +350,19 @@ async fn scan_volume_recursive(
         });
     }
 
-    // Resolve whether `path` is a directory. Prefer the caller's hint (the
-    // top-level cache-hit path supplies it from `CopyScanResult`, the
-    // recursive call supplies it from the parent's `FileEntry`). Without a
-    // hint, fall back to a real `is_directory` probe — which on MTP lists
-    // the parent dir, so we avoid it whenever the oracle can answer.
-    let is_dir = match is_dir_hint {
-        Some(v) => v,
+    // Resolve what `path` is. Prefer the caller's hint (a pane's listing of the
+    // parent at the top level, the parent's `FileEntry` in recursion). Without
+    // one, ask the volume's link-aware `entry_kind`, which on MTP lists the
+    // parent dir, so we avoid it whenever the oracle can answer.
+    let kind = match kind_hint {
+        Some(kind) => kind,
         None => volume
-            .is_directory(path)
+            .entry_kind(path)
             .await
             .map_err(|e| map_volume_error(&path.display().to_string(), PathRole::Source, e))?,
     };
 
-    if is_dir {
+    if kind == EntryKind::Directory {
         // Snapshot the cumulative tallies BEFORE the (potentially slow) listing
         // call. The per-entry callback shows `files_before + loaded_count` so the
         // FE sees a climbing number even when one `list_directory` takes seconds.
@@ -434,17 +441,19 @@ async fn scan_volume_recursive(
 
         // Recurse into children first. list_directory returns FileEntry with size,
         // so we use child.size directly instead of calling get_metadata (which
-        // returns NotSupported on MTP). Pass `is_dir_hint = Some(child.is_directory)`
-        // so the recursive call doesn't re-probe (avoids another parent listing
-        // on MTP).
+        // returns NotSupported on MTP). Pass the child's own kind as the hint so
+        // the recursive call doesn't re-probe (avoids another parent listing on
+        // MTP). `EntryKind::of`, ❌ never `child.is_directory`: that's true for a
+        // link to a folder, and descending it deletes the folder it points at.
         for child in &children {
             let child_path = PathBuf::from(&child.path);
-            if child.is_directory {
+            let child_kind = EntryKind::of(child);
+            if child_kind == EntryKind::Directory {
                 Box::pin(scan_volume_recursive(
                     volume,
                     volume_id,
                     &child_path,
-                    Some(true),
+                    Some(EntryKind::Directory),
                     entries,
                     total_bytes,
                     seen_inodes,
@@ -455,7 +464,13 @@ async fn scan_volume_recursive(
                 ))
                 .await?;
             } else {
-                let size = child.size.unwrap_or(0);
+                // A link frees only itself, whatever size the listing reports
+                // for what it points at.
+                let size = if child_kind == EntryKind::Symlink {
+                    0
+                } else {
+                    child.size.unwrap_or(0)
+                };
                 // Hardlink dedup: when the backend reports an inode, only
                 // count the first occurrence toward `total_bytes` and the
                 // tracker's running byte total. Subsequent hardlinks
@@ -491,7 +506,7 @@ async fn scan_volume_recursive(
             is_dir: true,
         });
     } else {
-        // Top-level file without listing context: size unknown, use 0.
+        // Top-level file or link without listing context: size unknown, use 0.
         // Progress still tracks file count accurately.
         tracker.files_so_far.fetch_add(1, Ordering::Relaxed);
         entries.push(VolumeDeleteEntry {
@@ -647,15 +662,20 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                     });
                 }
                 Some(_) => {
-                    // Top-level dir: recurse via the oracle-aware walker, with
-                    // `is_dir_hint = Some(true)` so the recursion never re-probes
-                    // the top-level. Any subtree that's open in another pane and
+                    // Top-level dir per the preview: recurse via the oracle-aware
+                    // walker. Any subtree that's open in another pane and
                     // watcher-fresh gets cache-fed inside the walker.
+                    //
+                    // ❌ Don't hand it `Some(Directory)` on the preview's word: a
+                    // preview's top-level stat may follow a link (a copy's does,
+                    // by design), so "directory" can be a link to one. The parent
+                    // listing answers link-aware with no I/O; failing that, the
+                    // walker asks `entry_kind`.
                     let result = scan_volume_recursive(
                         &*volume,
                         volume_id,
                         source,
-                        Some(true),
+                        kind_in_parent_listing(state.scope().host().listings(), volume_id, source),
                         &mut entries,
                         &mut total_bytes,
                         &mut seen_inodes,
@@ -675,9 +695,9 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                     //
                     // ❌ Don't "fix" the `None` here into a default. It looks
                     // like the bug this module's guardrails are about and is the
-                    // opposite: forwarding `is_dir_hint: None` is what makes
+                    // opposite: forwarding `kind_hint: None` is what makes
                     // `scan_volume_recursive` PROPAGATE a failed probe
-                    // (`map_err(...)?`) instead of guessing. A `Some(false)`
+                    // (`map_err(...)?`) instead of guessing. A `Some(File)`
                     // here would be the guess.
                     let result = scan_volume_recursive(
                         &*volume,
@@ -735,26 +755,10 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
     } else {
         for source in sources {
             // Oracle-first parent lookup: if the parent's listing is watched
-            // (open in some pane), pull `is_directory` from there instead of
-            // calling `volume.is_directory`, which on MTP lists the parent.
-            // Falls through to the trait probe when the oracle can't answer.
-            let parent_hint = source.parent().and_then(|parent| {
-                let cached_entries = state
-                    .scope()
-                    .host()
-                    .listings()
-                    .authoritative_listing(volume_id, parent)?;
-                let name = source.file_name()?.to_string_lossy().to_string();
-                cached_entries
-                    .iter()
-                    .find(|e| {
-                        PathBuf::from(&e.path)
-                            .file_name()
-                            .map(|n| n.to_string_lossy() == name)
-                            .unwrap_or(false)
-                    })
-                    .map(|e| e.is_directory)
-            });
+            // (open in some pane), take the entry's kind from there instead of
+            // calling `volume.entry_kind`, which on MTP lists the parent. Falls
+            // through to the trait probe when the oracle can't answer.
+            let parent_hint = kind_in_parent_listing(state.scope().host().listings(), volume_id, source);
 
             // Hand the hint (or the lack of one) straight to the walker: it
             // resolves an absent hint with a PROPAGATING probe and handles both

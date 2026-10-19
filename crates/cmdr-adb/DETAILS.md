@@ -90,8 +90,9 @@ own buffer) are `AdbError::Protocol`. Before the caps, one hostile `DNT2` or std
 without `shell_v2` (pre-Android 7, 2016) is refused with `AdbConnectError::DeviceTooOld` rather than guessed at: the
 legacy `shell:` service has no exit code, and inferring one from output would be string-matching control flow. Every
 argument is single-quoted (`'` → `'\''`). Verbs (`volume/writes.rs`): `mkdir -p`, `rmdir` for a directory and `rm -f`
-for anything else (strictly one node, so `delete` never recurses), `mv -f`, `cp -f` for `copy_within`, and
-`df -k <path>` (space info; parsed as data, never as an error signal). `read_range` uses
+for anything else, a link included (strictly one node, so `delete` never recurses; the kind comes from the non-following
+`entry_kind_impl`, since `rmdir` refuses a link to a folder), `mv -f`, `cp -f` for `copy_within`, and `df -k <path>`
+(space info; parsed as data, never as an error signal). `read_range` uses
 `dd if=<path> bs=65536 skip=<block> count=<blocks>`: Toybox 0.8.9–0.8.13 lacks GNU byte flags, but its block skip calls
 `lseek` on regular files and falls back to discard only on unseekable inputs (verified by reading each release's
 `toys/pending/dd.c`, 2026-09-29). The offset aligns down, the host trims the prefix, and `shell::run_bounded` rejects

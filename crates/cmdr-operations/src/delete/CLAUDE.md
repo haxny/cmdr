@@ -23,15 +23,15 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
 
 ## Must-knows
 
-- **Delete order is files first, then directories deepest-first**: the walker collects in DFS order and deletes in
-  reverse, so `remove_dir` always finds an empty one.
-- **Delete is not rollbackable.** Cancel stops further deletes; it can't restore what's gone.
-- **MTP/non-local volumes can't use `walkdir` or `fs::remove_*`**, hence the parallel path. Both emit identical events.
-- **Both delete paths reuse the scan-preview cache via `config.preview_id`**: on a hit the `ScanResult` is consumed
-  directly and an initial `phase: Deleting` event fires, so the FE keeps the right denominator.
+- **Files first, then directories deepest-first**, so `remove_dir` always finds an empty one. **Not rollbackable**:
+  Cancel stops further deletes.
+- **Both walkers reuse the scan-preview cache via `config.preview_id`** and emit identical events; on a hit an initial
+  `phase: Deleting` event keeps the FE's denominator right.
 - **A `preview_id` alone doesn't authorize acting on a path set.** The LOCAL walker iterates `scan_result.files` and
   never re-reads its `sources`, so an unbound cache deletes the PREVIEWED tree, with no rollback. Bind with
   `take_cached_scan_result`; ❌ never skip it.
+- **A symlink is a LEAF to the volume walker**: descend only an `EntryKind::Directory` (`EntryKind::of`,
+  `Volume::entry_kind`), ❌ never `is_directory` or a preview's word (both follow links). DETAILS § "A link is a leaf".
 - **❌ Never resolve a top-level source's type with `.unwrap_or(false)`.** Hand the `Option` to `scan_volume_recursive`,
   which propagates a failed probe: a guessed "file" books zero bytes for a whole tree.
 - **Trash has no scan phase**: `trashItemAtURL` is atomic per top-level item, so progress tracks items. A PARTLY refused
@@ -46,9 +46,8 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
 - **A refusal carries a typed `TrashRefusalKind`, read from the `NSError` DOMAIN + CODE**, ❌ never its localized words
   (`error-string-match` forbids it). A failed batch is `WriteOperationError::TrashRefused`, ❌ not an `IoError` (one
   flattened sentence leaves the dialog only "try again"), reporting `strongest_refusal`, ❌ not the most common one.
-- **Delete and trash don't `fsync`, and ❌ never a global `sync(2)`**: a non-durable delete is annoyance-class, and that
-  `sync` stalled every other app without making "complete" durable. `libc::sync` is a disallowed method in
-  `crates/cmdr-operations/clippy.toml`.
+- **Delete and trash don't `fsync`, and ❌ never a global `sync(2)`** (it stalled every other app; `clippy.toml`
+  disallows `libc::sync`).
 - **A recursive scan that bails with `Err(Cancelled)` must NOT emit `write-cancelled`; its top-level caller does**, via
   `emit_cancelled_if_aborted`. `scan_volume_recursive` checks cancel per level, so emitting at the bail site fires the
   terminal event once per stacked frame. Pinned by `delete_cancel_during_scan_emits_write_cancelled`.

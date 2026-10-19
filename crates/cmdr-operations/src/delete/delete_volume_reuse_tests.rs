@@ -28,14 +28,14 @@ use cmdr_listing::testing::{TestListing, TestListingGuard};
 // Counter-wrapping volume
 // ----------------------------------------------------------------------------
 
-/// Wraps an `InMemoryVolume` and counts `list_directory`, `is_directory`, and
-/// `delete` calls. Lets `listing_watch_coverage` be flipped at runtime so tests can
+/// Wraps an `InMemoryVolume` and counts `list_directory`, type probes
+/// (`is_directory` or `entry_kind`), and `delete` calls. Lets `listing_watch_coverage` be flipped at runtime so tests can
 /// pin both oracle-hit and oracle-miss behaviours.
 struct CountingVolume {
     inner: InMemoryVolume,
     watched: AtomicBool,
     list_dir_calls: AtomicUsize,
-    is_dir_calls: AtomicUsize,
+    type_probe_calls: AtomicUsize,
     delete_calls: AtomicUsize,
 }
 
@@ -45,7 +45,7 @@ impl CountingVolume {
             inner: InMemoryVolume::new(name),
             watched: AtomicBool::new(watched),
             list_dir_calls: AtomicUsize::new(0),
-            is_dir_calls: AtomicUsize::new(0),
+            type_probe_calls: AtomicUsize::new(0),
             delete_calls: AtomicUsize::new(0),
         }
     }
@@ -54,8 +54,8 @@ impl CountingVolume {
         self.list_dir_calls.load(Ordering::Relaxed)
     }
 
-    fn is_dir_count(&self) -> usize {
-        self.is_dir_calls.load(Ordering::Relaxed)
+    fn type_probe_count(&self) -> usize {
+        self.type_probe_calls.load(Ordering::Relaxed)
     }
 
     fn delete_count(&self) -> usize {
@@ -103,8 +103,16 @@ impl Volume for CountingVolume {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
-        self.is_dir_calls.fetch_add(1, Ordering::Relaxed);
+        self.type_probe_calls.fetch_add(1, Ordering::Relaxed);
         self.inner.is_directory(path)
+    }
+
+    fn entry_kind<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::EntryKind, VolumeError>> + Send + 'a>> {
+        self.type_probe_calls.fetch_add(1, Ordering::Relaxed);
+        self.inner.entry_kind(path)
     }
 
     fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
@@ -274,7 +282,7 @@ async fn delete_consumes_preview_id_skips_rescan() {
         "cached preview path must NOT call list_directory during delete"
     );
     assert_eq!(
-        vol.is_dir_count(),
+        vol.type_probe_count(),
         0,
         "cached preview path must NOT probe is_directory for top-level files"
     );
@@ -313,9 +321,9 @@ async fn delete_without_preview_id_still_walks() {
     // Watcher not flipped, oracle misses → fall through to `is_directory` per
     // source. Confirms the no-preview path keeps its top-level probe.
     assert_eq!(
-        vol.is_dir_count(),
+        vol.type_probe_count(),
         2,
-        "no-preview path must probe is_directory per top-level source on oracle miss"
+        "no-preview path must probe the type per top-level source on oracle miss"
     );
 }
 
@@ -363,7 +371,7 @@ async fn delete_top_level_files_no_is_directory_probes() {
 
     assert!(result.is_ok(), "delete should succeed: {:?}", result);
     assert_eq!(
-        vol.is_dir_count(),
+        vol.type_probe_count(),
         0,
         "watched parent listing must replace the per-source is_directory probe"
     );
@@ -427,7 +435,7 @@ async fn delete_mid_scan_listing_close() {
     // /root/sub falls through to list_directory because pane B closed before
     // recursion got there. So: zero is_directory probes, ≥1 list_directory.
     assert_eq!(
-        vol.is_dir_count(),
+        vol.type_probe_count(),
         0,
         "parent oracle should have answered top-level is_directory"
     );
@@ -561,7 +569,7 @@ async fn a_source_whose_stat_fails_surfaces_that_failure_instead_of_being_guesse
 /// The production shape the original bug rode in on: a cache hit whose
 /// `per_path` is EMPTY while `file_count` is non-zero. Every source misses the
 /// `by_path` lookup, so each falls to the `None` arm, which forwards
-/// `is_dir_hint: None` and lets `scan_volume_recursive` resolve the type with a
+/// `kind_hint: None` and lets `scan_volume_recursive` resolve the type with a
 /// PROPAGATING probe. That arm looks like the bug and isn't; this pins it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cache_hit_with_no_per_source_results_still_deletes_the_right_tree() {
