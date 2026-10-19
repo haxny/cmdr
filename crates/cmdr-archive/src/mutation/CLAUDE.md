@@ -2,7 +2,8 @@
 
 `ArchiveMutator::apply(archive_path, changeset, hooks)` — the zip-only write side, safe-overwrite by temp+rename.
 `Volume`-free and manager-free like the [read core](../read/CLAUDE.md): the write-ops `ArchiveEditOperation` driver
-wraps it with the real event sink, pause gate, and cancel intent.
+wraps it with the real event sink, pause gate, and cancel intent. `mutator.rs` is the write; `plan.rs` decides which
+original entries an edit keeps, and under what name.
 
 ## Must-knows
 
@@ -12,6 +13,9 @@ wraps it with the real event sink, pause gate, and cancel intent.
   `ReadOnlyDevice`, untouched). Don't route a non-zip archive here.
 - **Temp+rename is the ONLY strategy; never `ZipWriter::new_append`** (it corrupts the archive on cancel). The original
   is byte-for-byte intact until the final atomic rename.
+- **Deletes and renames match the READER's name for an entry (rc-zip, by header offset); an unrenamed entry goes through
+  `raw_copy_file`, which keeps its stored name bytes and UTF-8 flag** (vendored `zip` patch). ❌ Never write a kept
+  entry under `name()`: it re-encodes every Shift-JIS or GBK name as mojibake. DETAILS § "Entry names".
 - **An edit that would RETAIN an encrypted entry is refused** (`zip`'s raw copy drops the PKWARE flag → silent
   corruption). Deleting an encrypted entry is fine.
 - **`Changeset::compression_level` applies to ADDED entries only, clamped 1..=9 in `add_entry_options`.** The `zip`

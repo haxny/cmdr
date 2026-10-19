@@ -18,13 +18,24 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   original does NOT survive). Building fresh into a temp and renaming is Cmdr's mandated safe-overwrite and the only
   shape where cancel is genuinely free (abandon the temp, no rollback ledger). The original is byte-for-byte untouched
   until the final rename; a cancel or crash at any earlier point leaves it fully readable.
-- **Retained entries copy verbatim** via `raw_copy_file_rename` (no decompress/recompress), extra fields included. ❗
-  That's why `zip` carries its `unreserved` feature: without it, the writer refuses any entry with an extra-field ID it
-  reserves but doesn't model, and `ditto` (Finder's Compress) writes one, Info-ZIP's `0x5855`, so every rename or delete
-  inside a Finder-made zip would fail (verified on `zip` 9.0.1, `write.rs` `start_entry`, 2026-10-12; pinned by
-  `mutator_apple_double_test.rs`, which edits a `ditto` fixture). Only added files stream-compress (chunked, never
-  whole-buffered — the add chunk is also the pause/cancel granularity mid-file). An added file carries its SOURCE's
-  modification time into the entry (`add_entry_options`); a new folder and an in-memory file carry the write time.
+- **Entry names: plan by what the reader shows, write unchanged names as stored.** A zip from a Japanese, Chinese, or
+  Russian Windows tool stores Shift-JIS, GBK, or CP866 names without the UTF-8 flag. rc-zip (the reader) detects
+  Shift-JIS; the `zip` crate reads every such name as CP437. So `apply` matches deletes and renames against rc-zip's
+  name for each entry (`shown_names`, keyed by local header offset, which both crates agree on even behind an SFX stub
+  and unlike the ordinal, which `zip` shifts when it collapses a duplicate name), falling back to `zip`'s `name()` for
+  an entry rc-zip didn't list. An entry the edit doesn't rename goes through `raw_copy_file`, which writes its
+  `name_raw()` under its own UTF-8 flag; a renamed one gets its new name (the user's text, or a renamed folder's prefix
+  plus the shown rest) as flagged UTF-8 via `raw_copy_file_rename`. Upstream 9.0.1's `raw_copy_file` re-encoded the
+  CP437 reading as flagged UTF-8, garbling every non-ASCII name on any edit (#514); the fix is the vendored patch in
+  `vendor/zip/CMDR-PATCH.md`. Pinned by `mutator_raw_names_test.rs`.
+- **Retained entries copy verbatim** via `raw_copy_file` / `raw_copy_file_rename` (no decompress/recompress), extra
+  fields included. ❗ That's why `zip` carries its `unreserved` feature: without it, the writer refuses any entry with
+  an extra-field ID it reserves but doesn't model, and `ditto` (Finder's Compress) writes one, Info-ZIP's `0x5855`, so
+  every rename or delete inside a Finder-made zip would fail (verified on `zip` 9.0.1, `write.rs` `start_entry`,
+  2026-10-12; pinned by `mutator_apple_double_test.rs`, which edits a `ditto` fixture). Only added files stream-compress
+  (chunked, never whole-buffered — the add chunk is also the pause/cancel granularity mid-file). An added file carries
+  its SOURCE's modification time into the entry (`add_entry_options`); a new folder and an in-memory file carry the
+  write time.
 - **Every new entry's time is written twice, by `with_entry_mtime`** (the one place, which the host's fresh-ZIP producer
   calls too, so the two writers can't drift apart again):
   - The header's MS-DOS date and time, decomposed in LOCAL time. The field carries no zone and every tool (`unzip -l`,
@@ -73,10 +84,11 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   (`com.apple.lastuseddate#PS`, on most opened files), and an all-zero FinderInfo aren't, and cost one name-only
   `flistxattr`. A written sidecar carries the quarantine and the last-used date too. macOS only. The host's fresh-ZIP
   producer calls the same two functions.
-- **Every delete and rename takes the item's sidecars along** (`with_sidecar_deletes` / `with_sidecar_renames`): its own
-  and, for a folder, every one under `__MACOSX/<folder>/`. So F8, F2, and a move OUT of a zip leave no orphan. Every add
-  and sourced mkdir also drops any sidecar already at its name: the new item writes its own or has none, and two entries
-  at one name make the `zip` writer fail the whole edit. Sidecars never count toward `entries_changed`.
+- **Every delete and rename takes the item's sidecars along** (`plan.rs`: `with_sidecar_deletes` /
+  `with_sidecar_renames`): its own and, for a folder, every one under `__MACOSX/<folder>/`. So F8, F2, and a move OUT of
+  a zip leave no orphan. Every add and sourced mkdir also drops any sidecar already at its name: the new item writes its
+  own or has none, and two entries at one name make the `zip` writer fail the whole edit. Sidecars never count toward
+  `entries_changed`.
 - **A Locked or `deny delete` archive can't be edited.** The swap replaces the original, which means removing it, and
   `uchg` refuses that (`EPERM`) as does the ACL (`EACCES`). Both guard the very file the edit would remove, so the edit
   refuses and the original stays byte-identical. The temp never wears the ACL, so its cleanup can remove it.
@@ -104,7 +116,7 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   `crates/cmdr-operations/src/archive_edit/DETAILS.md` § "Remote edit" for why the remote side needs the age gate.
 - **Deletes/renames reshape the retained set.** A delete drops a file or a whole subtree (component-wise match, so `foo`
   never catches `foobar`); a rename rewrites a subtree prefix. Both are computed per original entry in one pass
-  (`plan_new_name`); deletes win over renames.
+  (`plan.rs`, `plan_new_name`); deletes win over renames.
 
 ## Testing
 
@@ -112,6 +124,8 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
 (add/delete/rename/mkdir/mkfile verified via our reader AND external `unzip -t`),
 cancel-midway-leaves-the-original-intact-with-no-temp, a leftover temp reaped on the next edit, the merge invariant (a
 delete keeps siblings' raw compressed bytes byte-identical), metadata (mode/mtime/xattr) survival,
-pause-parks-mid-add-then-completes-on-resume, and the encrypted-entry refusal.
+pause-parks-mid-add-then-completes-on-resume, and the encrypted-entry refusal. `mutator_raw_names_test.rs` pins the
+entry-name rules: a Shift-JIS name and an unflagged UTF-8 one keep their bytes and flags through an edit, and a delete
+or rename finds a Shift-JIS entry by its shown name.
 `crates/cmdr-operations/src/archive_edit/routing_tests.rs::ensure_zip_writable_allows_zip_and_refuses_read_only_formats`
 pins the non-zip-refuses-typed matrix.

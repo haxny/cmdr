@@ -65,3 +65,4 @@ pub use index::{ArchiveIndex, ArchiveNode};
 pub use name::{QuarantineReason, SanitizedName, sanitize_entry_name};
 pub use reader::ArchiveEntryReader;
 pub use source::{ArchiveByteSource, BytesSource, DEFAULT_TAIL_CACHE_LEN, LocalFileSource, TailCachedSource};
+pub(crate) use zip::shown_names_by_header_offset;

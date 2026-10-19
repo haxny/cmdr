@@ -17,6 +17,7 @@
 //! a fresh archive to a temp and renaming is Cmdr's mandated safe-overwrite
 //! (AGENTS.md principle 4) and the only shape where cancel is genuinely free
 //! (abandon the temp, no rollback ledger). Retained entries copy verbatim via
+//! `raw_copy_file` (name bytes and UTF-8 flag as stored) or, when renamed,
 //! `raw_copy_file_rename` (no decompress/recompress — byte-for-byte); only newly
 //! added files are compressed. An edit that would RETAIN an encrypted entry is
 //! refused instead: `zip`'s raw copy drops the traditional-PKWARE encryption flag,
@@ -37,6 +38,7 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter};
 use cmdr_fs::metadata::{CarriedMetadata, LandedMetadata, StagedItem, StagedTimes, apply_landed, apply_staged};
 use cmdr_fs::staging::{StagingTemp, temp_sibling_prefix};
 
+use super::plan::plan_retained;
 use crate::apple_double;
 
 /// Chunk size for streaming an added file's bytes into the compressor: bounds
@@ -210,57 +212,17 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
     let src_file = File::open(archive_path).map_err(MutationError::OpenOriginal)?;
     let mut src = ZipArchive::new(src_file).map_err(MutationError::Zip)?;
 
-    // Every delete and rename takes the item's AppleDouble sidecar along, and
-    // every add drops a stale one at its name (§ `with_sidecar_deletes`).
-    let deletes = with_sidecar_deletes(changeset);
-    let renames = with_sidecar_renames(&changeset.renames);
-
-    // Plan the retained set: for each original entry, compute its post-edit name
-    // (dropped by a delete, prefix-rewritten by a rename, or unchanged). One raw
-    // lookup per entry reads the name + compressed size together.
-    let mut retained: Vec<RetainedEntry> = Vec::new();
-    let mut retained_bytes: u64 = 0;
-    // Count original entries the edit removes or renames, for the user-facing
-    // affected-item tally (`entries_changed`), NOT the retained-rewrite total.
-    let mut deleted_count: usize = 0;
-    let mut renamed_count: usize = 0;
-    for index in 0..src.len() {
-        let file = src.by_index_raw(index).map_err(MutationError::Zip)?;
-        let original_name = file.name().map_err(MutationError::Zip)?.into_owned();
-        let compressed_size = file.compressed_size();
-        let encrypted = file.encrypted();
-        drop(file);
-        // A sidecar is metadata, never an item the user counts.
-        let is_item = !apple_double::is_in_macosx_folder(&original_name);
-        match plan_new_name(&original_name, &deletes, &renames) {
-            Some(new_name) => {
-                // Refuse before creating any temp: a retained encrypted entry can't
-                // be copied verbatim (the flag is lost), so touching this archive at
-                // all would corrupt it. Bailing here keeps the original untouched.
-                if encrypted {
-                    return Err(MutationError::EncryptedEntryRetained { name: original_name });
-                }
-                if new_name != original_name && is_item {
-                    renamed_count += 1;
-                }
-                retained.push(RetainedEntry {
-                    index,
-                    new_name,
-                    compressed_size,
-                });
-                retained_bytes += compressed_size;
-            }
-            None if is_item => deleted_count += 1,
-            None => {}
-        }
-    }
+    // Which original entries the edit keeps, and under what name. Refuses (with
+    // no temp made yet) an edit that would keep an encrypted entry.
+    let plan = plan_retained(&mut src, archive_path, changeset)?;
+    let retained = plan.entries;
 
     let added_bytes: u64 = changeset.adds.iter().map(add_source_len).sum();
     let entries_total = retained.len() + changeset.mkdirs.len() + changeset.adds.len();
     // The user-facing "files processed" count: entries this edit adds, removes, or
     // renames — never the retained entries it merely rewrites in place.
-    let entries_changed = deleted_count + renamed_count + changeset.mkdirs.len() + changeset.adds.len();
-    let bytes_total = retained_bytes + added_bytes;
+    let entries_changed = plan.deleted_count + plan.renamed_count + changeset.mkdirs.len() + changeset.adds.len();
+    let bytes_total = plan.bytes + added_bytes;
     let mut progress = MutationProgress {
         entries_done: 0,
         entries_total,
@@ -284,14 +246,17 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
     };
     let mut writer = ZipWriter::new(temp_file);
 
-    // Retained entries, copied verbatim (no decompress/recompress; encrypted
-    // entries survive byte-for-byte). Cancel/pause between entries.
+    // Retained entries, copied verbatim (no decompress/recompress). One the edit
+    // doesn't rename keeps its name bytes and UTF-8 flag as stored; a renamed one
+    // takes its new name as flagged UTF-8. Cancel/pause between entries.
     for entry in &retained {
         checkpoint(hooks)?;
         let file = src.by_index_raw(entry.index).map_err(MutationError::Zip)?;
-        writer
-            .raw_copy_file_rename(file, entry.new_name.clone())
-            .map_err(MutationError::Zip)?;
+        match &entry.new_name {
+            None => writer.raw_copy_file(file),
+            Some(new_name) => writer.raw_copy_file_rename(file, new_name),
+        }
+        .map_err(MutationError::Zip)?;
         progress.entries_done += 1;
         progress.bytes_done += entry.compressed_size;
         hooks.on_progress(progress);
@@ -373,13 +338,6 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
     fsync_parent_dir(archive_path);
 
     Ok(())
-}
-
-/// One original entry kept in the rewrite, with its post-edit name.
-struct RetainedEntry {
-    index: usize,
-    new_name: String,
-    compressed_size: u64,
 }
 
 /// Cancel/pause boundary between entries and chunks. Checks cancel first (so a
@@ -504,47 +462,6 @@ pub fn local_folder_sidecar(path: &Path) -> Option<Vec<u8>> {
     }
 }
 
-/// The deletes `changeset` asks for, each with its item's sidecars: the item's
-/// own (`__MACOSX/<parent>/._<name>`) and, for a folder, every one inside it
-/// (`__MACOSX/<item>/…`). Plus the sidecar name of every add and sourced mkdir:
-/// what's there is stale (the new item writes its own, or carries nothing), and
-/// leaving it would put two entries at one name, which the writer refuses.
-fn with_sidecar_deletes(changeset: &Changeset) -> Vec<String> {
-    let mut deletes = Vec::with_capacity(changeset.deletes.len() * 3 + changeset.adds.len());
-    for delete in &changeset.deletes {
-        let item = delete.trim_matches('/');
-        deletes.push(item.to_string());
-        if !item.is_empty() && !apple_double::is_in_macosx_folder(item) {
-            deletes.push(format!("{}/{item}", apple_double::MACOSX_FOLDER));
-            deletes.push(sidecar_entry_name(item));
-        }
-    }
-    let written = changeset
-        .adds
-        .iter()
-        .map(|add| add.inner_path.as_str())
-        .chain(changeset.mkdir_sources.keys().map(String::as_str));
-    deletes.extend(written.map(sidecar_entry_name));
-    deletes
-}
-
-/// The renames `changeset` asks for, each followed by its item's sidecars
-/// moving with it, the same two shapes [`with_sidecar_deletes`] drops.
-fn with_sidecar_renames(renames: &[(String, String)]) -> Vec<(String, String)> {
-    let mut out = Vec::with_capacity(renames.len() * 3);
-    for (from, to) in renames {
-        out.push((from.clone(), to.clone()));
-        let (from, to) = (from.trim_matches('/'), to.trim_matches('/'));
-        if from.is_empty() || apple_double::is_in_macosx_folder(from) {
-            continue;
-        }
-        let folder = apple_double::MACOSX_FOLDER;
-        out.push((format!("{folder}/{from}"), format!("{folder}/{to}")));
-        out.push((sidecar_entry_name(from), sidecar_entry_name(to)));
-    }
-    out
-}
-
 /// The write options for an added entry: Deflated compression at `compression_level`
 /// (`None` = the crate default, level 6), plus a modification time: the source
 /// file's for a `LocalPath` add (a copy/move INTO the archive), so the archived
@@ -649,44 +566,6 @@ fn add_source_len(add: &AddEntry) -> u64 {
     }
 }
 
-/// Computes an original entry's post-edit name, or `None` if a delete drops it.
-///
-/// A trailing slash (an explicit directory entry) is preserved. Deletes are
-/// checked before renames (a deleted entry is gone regardless of any rename).
-/// Both deletes and renames match a whole path component: `foo` deletes/renames
-/// `foo` and everything under `foo/`, but never a sibling `foobar`.
-fn plan_new_name(original_name: &str, deletes: &[String], renames: &[(String, String)]) -> Option<String> {
-    let is_dir = original_name.ends_with('/');
-    let logical = original_name.trim_end_matches('/');
-
-    for delete in deletes {
-        if path_matches_or_under(logical, delete.trim_matches('/')) {
-            return None;
-        }
-    }
-
-    let mut new_logical = logical.to_string();
-    for (from, to) in renames {
-        let from = from.trim_matches('/');
-        let to = to.trim_matches('/');
-        if logical == from {
-            new_logical = to.to_string();
-            break;
-        }
-        if let Some(rest) = logical.strip_prefix(&format!("{from}/")) {
-            new_logical = format!("{to}/{rest}");
-            break;
-        }
-    }
-
-    Some(if is_dir { format!("{new_logical}/") } else { new_logical })
-}
-
-/// Whether `path` is `target` itself or a descendant of it (component-wise).
-fn path_matches_or_under(path: &str, target: &str) -> bool {
-    path == target || path.strip_prefix(target).is_some_and(|rest| rest.starts_with('/'))
-}
-
 /// Removes any `foo.zip.cmdr-tmp-*` sibling of the archive (an abandoned build
 /// from a crashed edit). Best-effort — a failure here never blocks the edit.
 fn reap_sibling_temps(archive_path: &Path) {
@@ -775,3 +654,7 @@ mod mutator_test;
 #[cfg(all(test, target_os = "macos"))]
 #[path = "mutator_apple_double_test.rs"]
 mod mutator_apple_double_test;
+
+#[cfg(test)]
+#[path = "mutator_raw_names_test.rs"]
+mod mutator_raw_names_test;
