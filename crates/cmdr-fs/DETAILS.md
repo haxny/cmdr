@@ -24,19 +24,22 @@ the next section.
   `Directory` / `Symlink`, the answer `Volume::entry_kind` gives, a link reported as the link, where `is_directory` may
   follow it); `child_name.rs` (`ChildName`, a listed name proven to be one plain path component, the only way a source
   listing's name may join a destination path; a refusal is `VolumeError::InvalidName`. Why and who calls it:
-  `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Listed names are untrusted"); `server_side.rs`
-  (`RenameWork`, `SubtreeTally`, `ServerCopyProgress`: work a server does on its own, § "Server-side work"); `routed.rs`
-  (`ResolvedVolume`, `RoutedKind`: what the app's `VolumeManager::resolve` answers, here so the listing engine reads it
-  without the app); `retirement.rs` (how background work learns it stopped being the live volume); `channel_stream.rs`
-  (a network backend's read path, consumer half); `scan_boundary.rs` + `scan_stop.rs` + `scan_recorder.rs` (the one seam
-  a copy scan touches per entry: counts, Cancel, Pause, and the transfer tree's recorder); `scan_walk.rs`,
-  `mkdir_all.rs`, `patching.rs`, and `secret_store.rs` (the bodies a stat-and-listing backend gets for free);
-  `listing_progress.rs` (`report_while`: a long listing's running count sampled on a timer from the async side that owns
-  `on_progress`, which can't ride into the blocking reader); `liveness.rs` (the HTTP backends' silence watch, which
-  tells a server gone silent from one that's only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent or slow") and `tls.rs`
-  (their connect probes' TLS-refusal test, by the typed `io::ErrorKind`); `app_paths.rs` (whether an app path sits under
-  a volume root, segment-wise, and rebasing it onto a moved root); `remote_paths.rs` (a server tree's
-  `<scheme>://user@host:port` app spelling, and the ONE translation); `friendly_error/` (typed, word-free
+  `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Listed names are untrusted"); `transport_fault.rs`
+  (`VolumeError::transport_fault` and `is_transport_errno`: the ONE answer to "did the link fail, or did the other end
+  say no?", an exhaustive match plus one errno set decided by `io::ErrorKind`, which the write engine's retry, outage
+  wait, and local error mapping all ask; `crates/cmdr-operations/src/transfer/DETAILS.md` § "Retrying one FILE");
+  `server_side.rs` (`RenameWork`, `SubtreeTally`, `ServerCopyProgress`: work a server does on its own, § "Server-side
+  work"); `routed.rs` (`ResolvedVolume`, `RoutedKind`: what the app's `VolumeManager::resolve` answers, here so the
+  listing engine reads it without the app); `retirement.rs` (how background work learns it stopped being the live
+  volume); `channel_stream.rs` (a network backend's read path, consumer half); `scan_boundary.rs` + `scan_stop.rs` +
+  `scan_recorder.rs` (the one seam a copy scan touches per entry: counts, Cancel, Pause, and the transfer tree's
+  recorder); `scan_walk.rs`, `mkdir_all.rs`, `patching.rs`, and `secret_store.rs` (the bodies a stat-and-listing backend
+  gets for free); `listing_progress.rs` (`report_while`: a long listing's running count sampled on a timer from the
+  async side that owns `on_progress`, which can't ride into the blocking reader); `liveness.rs` (the HTTP backends'
+  silence watch, which tells a server gone silent from one that's only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent
+  or slow") and `tls.rs` (their connect probes' TLS-refusal test, by the typed `io::ErrorKind`); `app_paths.rs` (whether
+  an app path sits under a volume root, segment-wise, and rebasing it onto a moved root); `remote_paths.rs` (a server
+  tree's `<scheme>://user@host:port` app spelling, and the ONE translation); `friendly_error/` (typed, word-free
   classification); `usb_speed.rs` (❗ its doc comment reaches `bindings.ts`); `in_memory.rs` (the store and its knobs;
   `in_memory/volume_impl.rs` is its `impl Volume`); `conformance.rs` (+ `conformance/directory_creation.rs`, the three
   `create_directory_all` promises, and `conformance/modification_date.rs`, the two date ones); and `host/` (what a

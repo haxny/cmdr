@@ -2071,6 +2071,7 @@ pub mod secret_store;
 pub mod server_side;
 pub mod share_link;
 pub mod tls;
+mod transport_fault;
 mod types;
 mod usb_speed;
 
@@ -2119,6 +2120,7 @@ pub use scan_boundary::{ScanBoundary, stopped as scan_stopped};
 pub use scan_recorder::ScanRecorder;
 pub use scan_stop::{ScanStop, ScanStopSignal};
 pub use scan_walk::{ScanSource, Walking, conflicts_against, fold_batch, scan_conflicts, scan_one, scan_trees};
+pub use transport_fault::{TransportFault, is_transport_errno};
 pub use types::*;
 pub use usb_speed::UsbSpeed;
 
@@ -2140,3 +2142,5 @@ mod retirement_test;
 mod root_anchored_path_test;
 #[cfg(test)]
 mod root_echo_test;
+#[cfg(test)]
+mod transport_fault_test;
