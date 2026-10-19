@@ -3193,6 +3193,14 @@
     "forms": "tap Allow → tippe auf „Erlauben“; separable form antippen avoids two auf in a row",
     "sources": "AOSP de (Tippe auf „Übersicht“)"
   },
+  "technical-details": {
+    "accept": ["technischen Details"],
+    "chosen": "Technische Details",
+    "confidence": "high",
+    "forms": "the disclosure label Technische Details; Show technical details → Technische Details anzeigen",
+    "note": "A suggestion that points at the disclosure reuses the label verbatim.",
+    "sources": "catalog (fileExplorer.errorPane.technicalDetails, fileOperations.errorDialog.technicalDetails, commands.errorPaneToggleTechnicalDetails.label, errorReporter.pageCrash.detailsLabel); no hit in the pile (macOS, MS terminology, file managers)"
+  },
   "temporary": {
     "accept": ["temporäre", "vorübergehend"],
     "chosen": "temporär",

@@ -3257,7 +3257,9 @@
       "stops listing",
       "after you stop",
       "stop showing",
-      "stop working"
+      "stop working",
+      "stopped working",
+      "stops working"
     ],
     "sense": "Halting something that runs (a search, a local AI server, an operation during rollback)."
   },

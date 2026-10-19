@@ -209,6 +209,26 @@
   "@errorReporter.prefill.updateNotGenuine": {
     "sourceHash": "0e007a7"
   },
+  "errorReporter.prefill.pageCrash": "Det här Cmdr-fönstret slutade fungera.",
+  "@errorReporter.prefill.pageCrash": {
+    "sourceHash": "6337998"
+  },
+  "errorReporter.pageCrash.title": "Något gick fel i det här fönstret",
+  "@errorReporter.pageCrash.title": {
+    "sourceHash": "c77d29c"
+  },
+  "errorReporter.pageCrash.body": "Cmdr stötte på ett oväntat problem. Det brukar hjälpa att läsa in fönstret på nytt. Om det fortsätter att hända hjälper det att skicka en rapport, så att det kan åtgärdas.",
+  "@errorReporter.pageCrash.body": {
+    "sourceHash": "09f93b8"
+  },
+  "errorReporter.pageCrash.detailsLabel": "Tekniska detaljer",
+  "@errorReporter.pageCrash.detailsLabel": {
+    "sourceHash": "890ab35"
+  },
+  "errorReporter.pageCrash.reload": "Läs in på nytt",
+  "@errorReporter.pageCrash.reload": {
+    "sourceHash": "bdc090e"
+  },
   "errorReporter.prefill.reference": "Referens: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

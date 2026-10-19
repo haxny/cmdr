@@ -2956,6 +2956,13 @@
     "confidence": "high",
     "sources": "AOSP pt-BR"
   },
+  "technical-details": {
+    "chosen": "Detalhes técnicos",
+    "confidence": "high",
+    "forms": "the disclosure label Detalhes técnicos; Show technical details → Mostrar detalhes técnicos",
+    "note": "A suggestion that points at the disclosure reuses the label verbatim.",
+    "sources": "catalog (fileExplorer.errorPane.technicalDetails, fileOperations.errorDialog.technicalDetails, commands.errorPaneToggleTechnicalDetails.label, errorReporter.pageCrash.detailsLabel); no hit in the pile (macOS, MS terminology, file managers)"
+  },
   "temporary": {
     "chosen": "temporário",
     "accept": ["temporári", "temporar", "por um tempo"],

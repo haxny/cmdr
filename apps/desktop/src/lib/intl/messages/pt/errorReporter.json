@@ -208,6 +208,26 @@
   "@errorReporter.prefill.updateNotGenuine": {
     "sourceHash": "0e007a7"
   },
+  "errorReporter.prefill.pageCrash": "Esta janela do Cmdr parou de funcionar.",
+  "@errorReporter.prefill.pageCrash": {
+    "sourceHash": "6337998"
+  },
+  "errorReporter.pageCrash.title": "Algo deu errado nesta janela",
+  "@errorReporter.pageCrash.title": {
+    "sourceHash": "c77d29c"
+  },
+  "errorReporter.pageCrash.body": "O Cmdr encontrou um problema inesperado. Recarregar costuma ajudar. Se continuar acontecendo, enviar um relatório ajuda a corrigir isso.",
+  "@errorReporter.pageCrash.body": {
+    "sourceHash": "09f93b8"
+  },
+  "errorReporter.pageCrash.detailsLabel": "Detalhes técnicos",
+  "@errorReporter.pageCrash.detailsLabel": {
+    "sourceHash": "890ab35"
+  },
+  "errorReporter.pageCrash.reload": "Recarregar",
+  "@errorReporter.pageCrash.reload": {
+    "sourceHash": "bdc090e"
+  },
   "errorReporter.prefill.reference": "Referência: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

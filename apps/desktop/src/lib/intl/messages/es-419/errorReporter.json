@@ -94,5 +94,17 @@
   "errorReporter.prefill.updateNotGenuine": "Una actualización que se presentaba como la versión {version} no llevaba la firma de Cmdr, así que Cmdr no la instaló.",
   "@errorReporter.prefill.updateNotGenuine": {
     "sourceHash": "d63e012"
+  },
+  "errorReporter.prefill.pageCrash": "Esta ventana de Cmdr dejó de funcionar.",
+  "@errorReporter.prefill.pageCrash": {
+    "sourceHash": "c099a84"
+  },
+  "errorReporter.pageCrash.title": "Algo salió mal en esta ventana",
+  "@errorReporter.pageCrash.title": {
+    "sourceHash": "9c76cee"
+  },
+  "errorReporter.pageCrash.body": "Cmdr tuvo un problema inesperado. Recargar suele ayudar. Si sigue pasando, enviar un reporte ayuda a solucionarlo.",
+  "@errorReporter.pageCrash.body": {
+    "sourceHash": "ff27df2"
   }
 }

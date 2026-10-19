@@ -3247,6 +3247,13 @@
     "forms": "tap <button> → appuyez sur <bouton>, no quotes around the button name",
     "sources": "AOSP Settings fr (service_manage_description, tap_to_wake_summary)"
   },
+  "technical-details": {
+    "chosen": "Détails techniques",
+    "confidence": "high",
+    "forms": "the disclosure label Détails techniques; Show technical details → Afficher les détails techniques",
+    "note": "A suggestion that points at the disclosure reuses the label verbatim.",
+    "sources": "catalog (fileExplorer.errorPane.technicalDetails, fileOperations.errorDialog.technicalDetails, commands.errorPaneToggleTechnicalDetails.label, errorReporter.pageCrash.detailsLabel); no hit in the pile (macOS, MS terminology, file managers)"
+  },
   "temporary": {
     "accept": ["momentanément"],
     "chosen": "temporaire",

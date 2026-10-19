@@ -3066,6 +3066,13 @@
     "sources": "AOSP es throughout (Toca el sensor)",
     "decision": "El teléfono Android por ADB: el panel de conexión, los avisos del selector y la línea de invitación"
   },
+  "technical-details": {
+    "chosen": "Detalles técnicos",
+    "confidence": "high",
+    "forms": "the disclosure label Detalles técnicos; Show technical details → Mostrar detalles técnicos",
+    "note": "A suggestion that points at the disclosure reuses the label verbatim.",
+    "sources": "catalog (fileExplorer.errorPane.technicalDetails, fileOperations.errorDialog.technicalDetails, commands.errorPaneToggleTechnicalDetails.label, errorReporter.pageCrash.detailsLabel); no hit in the pile (macOS, MS terminology, file managers)"
+  },
   "temporary": {
     "chosen": "temporal",
     "accept": ["temporales", "pasajer", "un momento", "en este momento"],

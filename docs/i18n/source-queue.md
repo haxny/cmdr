@@ -449,3 +449,7 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `stateRecovery.chatHistory.title`: "so they start fresh" says the chats themselves restart, while the description says
   earlier chats are gone. A literal "die beginnen opnieuw" reads odd for chats; consider "so your chat list starts
   empty", matching the favorites/presets "the list starts empty" frame. (nl, zh-Hant, sv, pt, fr, es, hu, ru)
+- `errorReporter.prefill.pageCrash`: "stopped working" tripped `stop` (halting a running thing), but here it means a
+  malfunction; added `stopped working` / `stops working` to its `notMatch`. (de, fr)
+- `errorReporter.pageCrash.body`: "Reloading usually helps … sending a report helps get it fixed" repeats "helps" in
+  adjacent sentences; several languages varied the verb. Consider "a report lets us fix it" or similar. (de, fr, ru, zh)

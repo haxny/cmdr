@@ -3157,6 +3157,13 @@
     "confidence": "high",
     "sources": "AOSP Settings values-nl (Tik op een melding)"
   },
+  "technical-details": {
+    "chosen": "Technische details",
+    "confidence": "high",
+    "forms": "the disclosure label Technische details; Show technical details → Technische details tonen",
+    "note": "A suggestion that points at the disclosure reuses the label verbatim.",
+    "sources": "catalog (fileExplorer.errorPane.technicalDetails, fileOperations.errorDialog.technicalDetails, commands.errorPaneToggleTechnicalDetails.label, errorReporter.pageCrash.detailsLabel); no hit in the pile (macOS, MS terminology, file managers)"
+  },
   "temporary": {
     "accept": ["tijdelijke"],
     "chosen": "tijdelijk",
