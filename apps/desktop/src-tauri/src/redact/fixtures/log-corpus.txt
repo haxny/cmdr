@@ -181,3 +181,5 @@
 23:42:00.006 DEBUG indexing::verifier  Verifier: scanned new dir path="/Users/ada/Pictures/Lake House" (5 entries, 0ms)
 23:42:00.007 WARN  copy  copy failed for /Users/ada/Pictures/Lake <draft> House/beach.jpg: disk full
 23:42:00.008 INFO  write_operations  moving /Volumes/Backup/Q3 >final< Plans -> /tmp/Q3 >final< Plans
+23:42:00.009 WARN  smb  copy failed for smb://naspi/Family/Lake <draft> House/beach.jpg: share offline
+23:42:00.010 INFO  smb  listing \\naspi\Family\Q3 >final< Plans\notes.txt took 3ms

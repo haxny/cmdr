@@ -135,10 +135,10 @@ pub(super) fn redact_typed_path(
         return redact_media(path, context, preserve_redacted_segments, leaf);
     }
     if is_supported_remote_url(path) {
-        return redact_remote_url(path, context, leaf);
+        return redact_remote_url(path, context, preserve_redacted_segments, leaf);
     }
     if path.starts_with(r"\\") {
-        return redact_remote_unc(path, context, leaf);
+        return redact_remote_unc(path, context, preserve_redacted_segments, leaf);
     }
     if path.strip_prefix("//").is_some_and(|remainder| {
         remainder
@@ -146,7 +146,7 @@ pub(super) fn redact_typed_path(
             .next()
             .is_some_and(|authority| authority.contains('@'))
     }) {
-        return redact_scheme_less(path, context, leaf);
+        return redact_scheme_less(path, context, preserve_redacted_segments, leaf);
     }
     redact_relative_path(path, context, preserve_redacted_segments, leaf)
 }

@@ -284,8 +284,8 @@ fn redactor_regex() -> &'static Regex {
         // chars on the local branches: both are legal in a macOS or Linux name, and a tail that
         // stopped at one shipped the rest of it (`Secret <draft> Plans/beach.jpg`). Tokens are
         // therefore path chunks on a second pass, which the rewriters keep, and a token word
-        // ends the path (`split_trailing_noise`). Windows forbids both, so `win_home` stops
-        // there; the remote branches still do too (`DETAILS.md` § "Finding the end of a path").
+        // ends the path (`split_trailing_noise`). The same holds for `remote_url` and `unc`: a
+        // NAS names its files by Linux rules. Windows forbids both, so `win_home` stops there.
         //
         // The `(?x)` verbose flag lets us write this readably.
         let pattern = r#"(?x)
@@ -319,9 +319,9 @@ fn redactor_regex() -> &'static Regex {
                                   (?: / [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )* )+
             )
             | (?P<remote_url>     (?i: sftp | ssh | webdav | s3 | http | https | smb ) ://
-                                  [^\s"'<>|`]+ (?: \x20 [^\s"'<>|`]+ )*
+                                  [^\s"'|`]+ (?: \x20 [^\s"'|`]+ )*
             )
-            | (?P<unc>            \\\\ [^\\\s"'<>|`]+ (?: \\ [^\\\s"'<>|`]+ (?: \x20 [^\\\s"'<>|`]+ )* )* )
+            | (?P<unc>            \\\\ [^\\\s"'|`]+ (?: \\ [^\\\s"'|`]+ (?: \x20 [^\\\s"'|`]+ )* )* )
             | (?P<url_userinfo>   (?P<scheme>[a-zA-Z][a-zA-Z0-9+.-]*) ://
                                   (?P<userinfo>[^\s@/:"'<>|`]+ (?: : [^\s@/"'<>|`]* )? )
                                   @
@@ -530,20 +530,26 @@ fn dispatch(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String,
     if let Some(m) = caps.name("remote_url") {
         let (path, _) = split_trailing_noise(m.as_str());
         let reference = trim_reference_end(path);
-        return (redact_remote_url(reference, context, Leaf::Guess), reference.len());
+        return (
+            redact_remote_url(reference, context, true, Leaf::Guess),
+            reference.len(),
+        );
     }
     if let Some(m) = caps.name("unc") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_remote_unc(path, context, Leaf::Guess), path.len());
+        return (redact_remote_unc(path, context, true, Leaf::Guess), path.len());
     }
     if caps.name("url_userinfo").is_some() {
         let reference = caps.get(0).map_or("", |m| m.as_str());
-        return (redact_remote_url(reference, context, Leaf::Guess), whole_len(caps));
+        return (
+            redact_remote_url(reference, context, true, Leaf::Guess),
+            whole_len(caps),
+        );
     }
     if let Some(m) = caps.name("bare_userinfo") {
         let lead = caps.name("bare_lead").map(|m| m.as_str()).unwrap_or("");
         return (
-            format!("{lead}{}", redact_scheme_less(m.as_str(), context, Leaf::Guess)),
+            format!("{lead}{}", redact_scheme_less(m.as_str(), context, true, Leaf::Guess)),
             whole_len(caps),
         );
     }

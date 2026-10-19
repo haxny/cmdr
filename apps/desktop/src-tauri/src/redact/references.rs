@@ -5,11 +5,19 @@
 
 use super::RedactionContext;
 use super::context::TokenDomain;
+use super::fields::is_redacted_segment;
 use super::identity_token;
 use super::paths::{Leaf, redact_leaf};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-pub(super) fn redact_remote_url(reference: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+/// `preserve_redacted_segments` keeps a component that's already a token: only for input the line scanner may
+/// have rewritten before. Raw typed values never trust token-looking text.
+pub(super) fn redact_remote_url(
+    reference: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     if is_svelte_error_url(reference) {
         return reference.to_string();
     }
@@ -28,14 +36,20 @@ pub(super) fn redact_remote_url(reference: &str, context: Option<&RedactionConte
 
     let mut out = format!("{scheme}://");
     if let Some(userinfo) = userinfo {
-        out.push_str(&redact_userinfo(userinfo, context));
+        out.push_str(&redact_userinfo(userinfo, context, preserve_redacted_segments));
         out.push('@');
     }
-    out.push_str(&redact_host_port(host_port, parsed.as_ref(), context));
+    out.push_str(&redact_host_port(
+        host_port,
+        parsed.as_ref(),
+        context,
+        preserve_redacted_segments,
+    ));
     out.push_str(&redact_remote_suffix(
         suffix,
         scheme.eq_ignore_ascii_case("smb"),
         context,
+        preserve_redacted_segments,
         leaf,
     ));
     out
@@ -54,7 +68,12 @@ fn is_svelte_error_url(reference: &str) -> bool {
     })
 }
 
-pub(super) fn redact_scheme_less(reference: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+pub(super) fn redact_scheme_less(
+    reference: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     let Some(remainder) = reference.strip_prefix("//") else {
         return reference.to_string();
     };
@@ -67,34 +86,45 @@ pub(super) fn redact_scheme_less(reference: &str, context: Option<&RedactionCont
 
     let mut out = "//".to_string();
     if let Some(userinfo) = userinfo {
-        out.push_str(&redact_userinfo(userinfo, context));
+        out.push_str(&redact_userinfo(userinfo, context, preserve_redacted_segments));
         out.push('@');
     }
-    out.push_str(&redact_host_port(host_port, None, context));
-    out.push_str(&redact_remote_suffix(suffix, true, context, leaf));
+    out.push_str(&redact_host_port(host_port, None, context, preserve_redacted_segments));
+    out.push_str(&redact_remote_suffix(
+        suffix,
+        true,
+        context,
+        preserve_redacted_segments,
+        leaf,
+    ));
     out
 }
 
-pub(super) fn redact_remote_unc(reference: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+pub(super) fn redact_remote_unc(
+    reference: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     let Some(remainder) = reference.strip_prefix(r"\\") else {
         return reference.to_string();
     };
     let mut parts = remainder.split('\\');
     let authority = parts.next().unwrap_or_default();
-    let mut out = format!(r"\\{}", redact_host_port(authority, None, context));
+    let mut out = format!(
+        r"\\{}",
+        redact_host_port(authority, None, context, preserve_redacted_segments)
+    );
     if let Some(share) = parts.next() {
         out.push('\\');
-        out.push_str(&identity_token(
-            "share",
-            TokenDomain::Volume,
-            &decode_identity(share),
-            context,
-        ));
+        out.push_str(&kept_or(share, preserve_redacted_segments, || {
+            identity_token("share", TokenDomain::Volume, &decode_identity(share), context)
+        }));
     }
     let tail: Vec<&str> = parts.collect();
     if !tail.is_empty() {
         out.push('\\');
-        out.push_str(&redact_segments(&tail, '\\', context, leaf));
+        out.push_str(&redact_segments(&tail, '\\', context, preserve_redacted_segments, leaf));
     }
     out
 }
@@ -157,27 +187,56 @@ pub(super) fn trim_reference_end(reference: &str) -> &str {
     reference.trim_end_matches(['.', ',', ';', '!', ')', ']', '}'])
 }
 
-fn redact_userinfo(userinfo: &str, context: Option<&RedactionContext>) -> String {
-    let (username, password) = userinfo
-        .split_once(':')
-        .map_or((userinfo, None), |(user, password)| (user, Some(password)));
-    let mut out = identity_token("user", TokenDomain::Userinfo, &decode_identity(username), context);
+fn redact_userinfo(userinfo: &str, context: Option<&RedactionContext>, preserve_redacted_segments: bool) -> String {
+    // A token holds its own `:` (`<user:…>:<credential:…>`), so a kept one splits after its `>`.
+    let from = if preserve_redacted_segments && userinfo.starts_with('<') {
+        userinfo.find('>').map_or(0, |close| close + 1)
+    } else {
+        0
+    };
+    let (username, password) = userinfo[from..].find(':').map_or((userinfo, None), |at| {
+        (&userinfo[..from + at], Some(&userinfo[from + at + 1..]))
+    });
+    let mut out = kept_or(username, preserve_redacted_segments, || {
+        identity_token("user", TokenDomain::Userinfo, &decode_identity(username), context)
+    });
     if let Some(password) = password {
         out.push(':');
-        out.push_str(&identity_token(
-            "credential",
-            TokenDomain::Credential,
-            &decode_identity(password),
-            context,
-        ));
+        out.push_str(&kept_or(password, preserve_redacted_segments, || {
+            identity_token(
+                "credential",
+                TokenDomain::Credential,
+                &decode_identity(password),
+                context,
+            )
+        }));
     }
     out
 }
 
-fn redact_host_port(host_port: &str, parsed: Option<&url::Url>, context: Option<&RedactionContext>) -> String {
+/// `value` as it is when it's already a token and the caller may keep one, else `redact()`.
+fn kept_or(value: &str, preserve_redacted_segments: bool, redact: impl FnOnce() -> String) -> String {
+    if preserve_redacted_segments && is_redacted_segment(value) {
+        value.to_string()
+    } else {
+        redact()
+    }
+}
+
+fn redact_host_port(
+    host_port: &str,
+    parsed: Option<&url::Url>,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+) -> String {
     let (host, port, bracketed) = if let Some(after_open) = host_port.strip_prefix('[') {
         let Some(close) = after_open.find(']') else {
-            return format!("[{}", redact_host(after_open, context));
+            return format!(
+                "[{}",
+                kept_or(after_open, preserve_redacted_segments, || redact_host(
+                    after_open, context
+                ))
+            );
         };
         {
             let host = &after_open[..close];
@@ -200,7 +259,7 @@ fn redact_host_port(host_port: &str, parsed: Option<&url::Url>, context: Option<
         .and_then(|url| url.host_str().map(|parsed_host| (parsed_host, url.port())))
         .filter(|(parsed_host, _)| host.contains(':') && *parsed_host == host_port)
         .map_or((host, port), |(parsed_host, _)| (parsed_host, ""));
-    let redacted = redact_host(host, context);
+    let redacted = kept_or(host, preserve_redacted_segments, || redact_host(host, context));
     let mut out = if bracketed { format!("[{redacted}]") } else { redacted };
     if !port.is_empty() {
         out.push(':');
@@ -290,31 +349,40 @@ fn ipv6_kind(address: Ipv6Addr) -> &'static str {
     }
 }
 
-fn redact_remote_suffix(suffix: &str, smb: bool, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+fn redact_remote_suffix(
+    suffix: &str,
+    smb: bool,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     let (before_fragment, fragment) = suffix
         .split_once('#')
         .map_or((suffix, None), |(left, right)| (left, Some(right)));
     let (path, query) = before_fragment
         .split_once('?')
         .map_or((before_fragment, None), |(left, right)| (left, Some(right)));
-    let mut out = redact_remote_path(path, smb, context, leaf);
+    let mut out = redact_remote_path(path, smb, context, preserve_redacted_segments, leaf);
     if let Some(query) = query {
         out.push('?');
-        out.push_str(&redact_query(query, context));
+        out.push_str(&redact_query(query, context, preserve_redacted_segments));
     }
     if let Some(fragment) = fragment {
         out.push('#');
-        out.push_str(&identity_token(
-            "fragment",
-            TokenDomain::Fragment,
-            &decode_identity(fragment),
-            context,
-        ));
+        out.push_str(&kept_or(fragment, preserve_redacted_segments, || {
+            identity_token("fragment", TokenDomain::Fragment, &decode_identity(fragment), context)
+        }));
     }
     out
 }
 
-fn redact_remote_path(path: &str, smb: bool, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+fn redact_remote_path(
+    path: &str,
+    smb: bool,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     if path.is_empty() {
         return String::new();
     }
@@ -323,18 +391,27 @@ fn redact_remote_path(path: &str, smb: bool, context: Option<&RedactionContext>,
     let segments: Vec<&str> = path.split('/').filter(|segment| !segment.is_empty()).collect();
     let mut out = if leading { "/".to_string() } else { String::new() };
     if smb && !segments.is_empty() {
-        out.push_str(&identity_token(
-            "share",
-            TokenDomain::Volume,
-            &decode_identity(segments[0]),
-            context,
-        ));
+        out.push_str(&kept_or(segments[0], preserve_redacted_segments, || {
+            identity_token("share", TokenDomain::Volume, &decode_identity(segments[0]), context)
+        }));
         if segments.len() > 1 {
             out.push('/');
-            out.push_str(&redact_segments(&segments[1..], '/', context, leaf));
+            out.push_str(&redact_segments(
+                &segments[1..],
+                '/',
+                context,
+                preserve_redacted_segments,
+                leaf,
+            ));
         }
     } else {
-        out.push_str(&redact_segments(&segments, '/', context, leaf));
+        out.push_str(&redact_segments(
+            &segments,
+            '/',
+            context,
+            preserve_redacted_segments,
+            leaf,
+        ));
     }
     if trailing {
         out.push('/');
@@ -342,11 +419,21 @@ fn redact_remote_path(path: &str, smb: bool, context: Option<&RedactionContext>,
     out
 }
 
-fn redact_segments(segments: &[&str], separator: char, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+fn redact_segments(
+    segments: &[&str],
+    separator: char,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     let mut out = String::new();
     for (index, segment) in segments.iter().enumerate() {
         if index > 0 {
             out.push(separator);
+        }
+        if preserve_redacted_segments && is_redacted_segment(segment) {
+            out.push_str(segment);
+            continue;
         }
         let decoded = decode_identity(segment);
         if index + 1 == segments.len() && leaf.is_file(&decoded) {
@@ -358,22 +445,22 @@ fn redact_segments(segments: &[&str], separator: char, context: Option<&Redactio
     out
 }
 
-fn redact_query(query: &str, context: Option<&RedactionContext>) -> String {
+fn redact_query(query: &str, context: Option<&RedactionContext>, preserve_redacted_segments: bool) -> String {
     query
         .split('&')
         .map(|pair| {
             let (key, value) = pair
                 .split_once('=')
                 .map_or((pair, None), |(key, value)| (key, Some(value)));
-            let mut out = identity_token("query", TokenDomain::Query, &decode_identity(key), context);
+            let token = |part: &str| {
+                kept_or(part, preserve_redacted_segments, || {
+                    identity_token("query", TokenDomain::Query, &decode_identity(part), context)
+                })
+            };
+            let mut out = token(key);
             if let Some(value) = value {
                 out.push('=');
-                out.push_str(&identity_token(
-                    "query",
-                    TokenDomain::Query,
-                    &decode_identity(value),
-                    context,
-                ));
+                out.push_str(&token(value));
             }
             out
         })

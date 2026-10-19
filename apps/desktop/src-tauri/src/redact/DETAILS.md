@@ -246,13 +246,14 @@ What ends a prose path now, and nothing else:
    shape counts (`is_redacted_segment`), so `Lake <draft> House` stays one name.
 
 **`<` and `>` are path characters** on the local branches (home, system, mount, `abs_path`, and the walk inside
-external text): both are legal in a macOS or Linux name, and a tail that stopped at one shipped the rest
-(`Lake <draft> House/beach.jpg` lost only `Lake`; pinned by `angle_brackets_inside_a_name_never_end_its_path`). So a
-token is a path chunk on a second pass, which is why the rewriters keep tokens on scanner-owned input and rule 5
-exists. `abs_path`'s first segment still can't start with either, which leaves a URL's `//<user>:…@<host>/…` to the
-remote branches. Windows forbids both, so `win_home` stops there. **Known gap:** the remote branches
-(`remote_url`, `unc`) still stop at `<` / `>`, so `smb://nas/Photos/Lake <draft> House/x.jpg` ships
-` <draft> House/x.jpg`; fixing it needs `references.rs` to keep tokens on a second pass.
+external text) and the remote ones (`remote_url`, `unc`): both are legal in a macOS, Linux, or NAS name, and a tail
+that stopped at one shipped the rest (`Lake <draft> House/beach.jpg` lost only `Lake`; pinned by
+`angle_brackets_inside_a_name_never_end_its_path` and `angle_brackets_inside_a_remote_name_never_end_its_reference`).
+So a token is a path chunk on a second pass, which is why every rewriter keeps tokens on scanner-owned input
+(`preserve_redacted_segments`; for a URL that's each component, `<user:…>:<credential:…>` split after the first `>`),
+rule 5 exists, and an unbalanced trailing `>` goes back like any closing bracket (`<https://…/x>`). `abs_path`'s
+first segment still can't start with either, which leaves a URL's `//<user>:…@<host>/…` to the remote branches.
+Windows forbids both, so `win_home` stops there.
 
 After the cut, only characters with no name in them go back: `:<digits>` source locations, trailing `.` `,` `;` `!`
 `?`, and a closing bracket the path didn't open (`(under …/Summer trip): disk full`, the `move` line). A balanced `)`

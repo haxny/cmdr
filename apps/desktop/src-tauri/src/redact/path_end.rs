@@ -140,6 +140,7 @@ fn trim_closing_punctuation(s: &str, mut end: usize) -> usize {
             b')' => unbalanced('(', ')'),
             b']' => unbalanced('[', ']'),
             b'}' => !ends_with_unicode_escape(path) && unbalanced('{', '}'),
+            b'>' => unbalanced('<', '>'),
             _ => false,
         };
         if !trim {

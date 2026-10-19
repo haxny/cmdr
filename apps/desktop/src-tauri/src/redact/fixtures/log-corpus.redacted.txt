@@ -181,3 +181,5 @@
 23:42:00.006 DEBUG indexing::verifier  Verifier: scanned new dir path="$HOME/Pictures/<dir>" (5 entries, 0ms)
 23:42:00.007 WARN  copy  copy failed for $HOME/Pictures/<dir>/<file>.jpg: disk full
 23:42:00.008 INFO  write_operations  moving /Volumes/<volume>/<dir> -> /tmp/<dir>
+23:42:00.009 WARN  smb  copy failed for smb://<host>/<share>/<dir>/<file>.jpg: share offline
+23:42:00.010 INFO  smb  listing \\<host>\<share>\<dir>\<dir>

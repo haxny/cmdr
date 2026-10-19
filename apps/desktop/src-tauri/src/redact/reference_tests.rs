@@ -460,3 +460,29 @@ fn remote_references_and_derived_ids_are_idempotent() {
         assert_eq!(context.redact_line(&once), once, "not idempotent for {input:?}");
     }
 }
+
+/// `<` and `>` are legal in a name on a Linux or NAS server, and a remote reference that stopped
+/// at one shipped the rest of it (`smb://<host>/<share>/<dir> <draft> Plans/x.jpg`). Every
+/// spelling goes whole, and a second pass keeps every token, the authority's included.
+#[test]
+fn angle_brackets_inside_a_remote_name_never_end_its_reference() {
+    let context = context();
+    for input in [
+        "copy smb://nas/Photos/Secret <draft> Plans/beach.jpg",
+        "open sftp://alice:pw@nas:2222/home/Secret >draft< Plans/beach.jpg: denied",
+        "get https://nas.example/dav/Secret<draft>Plans/beach.jpg?k=Secret#Plans took 3ms",
+        r"copy \\nas\Photos\Secret <draft> Plans\beach.jpg",
+        r"open \\nas\Photos\<draft> Secret Plans\beach.jpg, retrying",
+        "moving smb://nas/Photos/Secret <draft> Plans -> smb://nas/Backup/Secret <draft> Plans",
+    ] {
+        for out in [r(input), context.redact_line(input).into_owned()] {
+            for word in ["Secret", "draft", "Plans", "beach", "alice", "nas"] {
+                assert!(!out.contains(word), "{word:?} shipped from {input:?}: {out}");
+            }
+        }
+        let once = context.redact_line(input).into_owned();
+        assert_eq!(context.redact_line(&once), once, "not idempotent for {input:?}");
+        let bare = r(input);
+        assert_eq!(r(&bare), bare, "not idempotent unsalted for {input:?}");
+    }
+}
