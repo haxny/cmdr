@@ -19,7 +19,7 @@ use super::super::super::ledger::{WrittenFile, WrittenIdentity};
 use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, recheck_volume};
 use super::super::super::state::{WindDown, WriteOperationState};
 use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
-use super::super::super::unblocked_removal::{RemovalRefused, delete_clearing_blockers};
+use super::super::super::unblocked_removal::{NodeKind, RemovalRefused, delete_clearing_blockers};
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -189,7 +189,7 @@ async fn reverse_written_file(runtime: &Handle, volume: &Arc<dyn Volume>, entry:
     // above, so a Locked one is ours to unlock (invariant 9).
     removal_result(
         &entry.path,
-        delete_clearing_blockers(runtime, volume, &entry.path).await,
+        delete_clearing_blockers(runtime, volume, &entry.path, NodeKind::File).await,
     )
 }
 
@@ -437,19 +437,21 @@ async fn delete_written_file(volume: &Arc<dyn Volume>, path: &Path) -> Result<()
 async fn prune_created_dir_if_empty(runtime: &Handle, volume: &Arc<dyn Volume>, dir: &Path) -> ItemResult {
     match volume.list_directory(dir, None).await {
         // Verified empty and ours, so a Locked one is ours to unlock (invariant 9).
-        Ok(entries) if entries.is_empty() => match delete_clearing_blockers(runtime, volume, dir).await {
-            Ok(()) => ItemResult::Reversed,
-            Err(RemovalRefused::Volume(VolumeError::NotFound(_))) => ItemResult::Skipped(SkipReason::AlreadyGone),
-            Err(RemovalRefused::Locked) => ItemResult::Skipped(SkipReason::Locked),
-            Err(RemovalRefused::Volume(e)) => {
-                log::debug!(
-                    "prune_created_dir_if_empty: couldn't remove empty created dir {}: {:?}",
-                    dir.display(),
-                    e
-                );
-                ItemResult::Skipped(SkipReason::Failed)
+        Ok(entries) if entries.is_empty() => {
+            match delete_clearing_blockers(runtime, volume, dir, NodeKind::Directory).await {
+                Ok(()) => ItemResult::Reversed,
+                Err(RemovalRefused::Volume(VolumeError::NotFound(_))) => ItemResult::Skipped(SkipReason::AlreadyGone),
+                Err(RemovalRefused::Locked) => ItemResult::Skipped(SkipReason::Locked),
+                Err(RemovalRefused::Volume(e)) => {
+                    log::debug!(
+                        "prune_created_dir_if_empty: couldn't remove empty created dir {}: {:?}",
+                        dir.display(),
+                        e
+                    );
+                    ItemResult::Skipped(SkipReason::Failed)
+                }
             }
-        },
+        }
         Ok(entries) => {
             log::debug!(
                 "prune_created_dir_if_empty: keeping created dir {}, it still holds {} entr{}",

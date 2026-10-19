@@ -19,11 +19,14 @@ use std::time::Duration;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use tokio_util::sync::CancellationToken;
 
-use super::cleanup::{TreeRemoval, remove_tree};
+use super::cleanup::{TreeRemoval, remove_tree, volume_rollback_with_progress};
 use super::{CarriedSource, stamp_source, sweep_carried_source};
 use crate::event_sinks::CollectorEventSink;
+use crate::ledger::WrittenFile;
+use crate::state::WindDown;
 use crate::testing::TestOperations;
 use crate::types::WriteOperationConfig;
+use crate::unblocked_removal::{NodeKind, delete_clearing_blockers};
 
 struct FolderDeleteSpy {
     inner: InMemoryVolume,
@@ -152,4 +155,59 @@ async fn a_tree_removal_deletes_its_folders_as_folders() {
         .expect("the tree goes");
 
     spy.assert_folders_deleted_as_folders().await;
+}
+
+/// A cancelled copy's rollback: its files, then the folders it created,
+/// deepest first, each pruned once it lists empty.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_copys_rollback_prunes_its_created_folders_as_folders() {
+    let spy = FolderDeleteSpy::seeded().await;
+    let volume: Arc<dyn Volume> = spy.clone();
+    let mut written = vec![
+        WrittenFile::volume(PathBuf::from("/d/a.txt"), 1),
+        WrittenFile::volume(PathBuf::from("/d/sub/b.txt"), 2),
+    ];
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
+
+    volume_rollback_with_progress(
+        &volume,
+        &mut written,
+        &[PathBuf::from("/d"), PathBuf::from("/d/sub")],
+        &CollectorEventSink::new(),
+        "folder-kind-rollback",
+        &WindDown::of(&state),
+        2,
+        3,
+        2,
+        3,
+    )
+    .await;
+
+    spy.assert_folders_deleted_as_folders().await;
+}
+
+/// The journal rollback's removal of a folder it created (`RemoveDir`) goes
+/// through the same unblocking removal, told it's a folder.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_unblocking_removal_of_a_folder_deletes_it_as_a_folder() {
+    let spy = FolderDeleteSpy::seeded().await;
+    let volume: Arc<dyn Volume> = spy.clone();
+    volume.delete(Path::new("/d/sub/b.txt")).await.unwrap();
+
+    delete_clearing_blockers(
+        &tokio::runtime::Handle::current(),
+        &volume,
+        Path::new("/d/sub"),
+        NodeKind::Directory,
+    )
+    .await
+    .expect("the empty folder goes");
+
+    assert_eq!(
+        spy.blind(),
+        Vec::<PathBuf>::new(),
+        "a folder deleted by a plain `delete`"
+    );
+    assert_eq!(spy.as_folders(), [PathBuf::from("/d/sub")]);
 }

@@ -19,6 +19,15 @@ use cmdr_fs::metadata::{ParentOpening, Unblock, open_parent_folder};
 use cmdr_fs::volume::{Volume, VolumeError};
 use tokio::runtime::Handle;
 
+/// What the item a reversal removes is: it decides `Volume::delete` or
+/// `Volume::delete_directory`, so a folder's removal never reaches a file of
+/// its name on an object store.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum NodeKind {
+    File,
+    Directory,
+}
+
 /// Why [`delete_clearing_blockers`] left the item where it is.
 #[derive(Debug)]
 pub(super) enum RemovalRefused {
@@ -36,7 +45,7 @@ impl From<VolumeError> for RemovalRefused {
     }
 }
 
-/// `volume.delete`, and when the item refuses with a permission refusal,
+/// `volume.delete` (`delete_directory` for a folder), and when the item refuses with a permission refusal,
 /// clearing what it wears (`Volume::clear_blockers`: Locked and the ACL on
 /// local disk, Read-only on a share) before one retry. Then, on local disk,
 /// opening the folder holding it (`open_parent_folder`: a copied folder carries
@@ -50,13 +59,14 @@ pub(super) async fn delete_clearing_blockers(
     runtime: &Handle,
     volume: &Arc<dyn Volume>,
     path: &Path,
+    kind: NodeKind,
 ) -> Result<(), RemovalRefused> {
-    let refused = match volume.delete(path).await {
+    let refused = match remove(volume, path, kind).await {
         Err(e @ VolumeError::PermissionDenied { .. }) => e,
         other => return Ok(other?),
     };
     let refused = match volume.clear_blockers(path).await {
-        Unblock::Cleared(_) => match volume.delete(path).await {
+        Unblock::Cleared(_) => match remove(volume, path, kind).await {
             Err(e @ VolumeError::PermissionDenied { .. }) => e,
             other => return Ok(other?),
         },
@@ -70,7 +80,7 @@ pub(super) async fn delete_clearing_blockers(
     // A few syscalls, but on a mounted share each one can block: off the runtime.
     match runtime.spawn_blocking(move || open_parent_folder(&local)).await {
         Ok(ParentOpening::Opened(folder)) => {
-            let deleted = volume.delete(path).await;
+            let deleted = remove(volume, path, kind).await;
             // Dropping it closes it too, so even a failed join puts it back.
             if let Ok(report) = runtime.spawn_blocking(move || folder.close()).await
                 && report.any_refused()
@@ -81,5 +91,13 @@ pub(super) async fn delete_clearing_blockers(
         }
         Ok(ParentOpening::Refused) => Err(RemovalRefused::Locked),
         Ok(ParentOpening::NothingToOpen) | Err(_) => Err(refused.into()),
+    }
+}
+
+/// One removal attempt of `path` as the `kind` it is.
+async fn remove(volume: &Arc<dyn Volume>, path: &Path, kind: NodeKind) -> Result<(), VolumeError> {
+    match kind {
+        NodeKind::File => volume.delete(path).await,
+        NodeKind::Directory => volume.delete_directory(path, None).await,
     }
 }

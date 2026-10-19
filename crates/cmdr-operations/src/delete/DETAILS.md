@@ -109,7 +109,8 @@ itself is single-sourced at `crates/cmdr-fs/src/volume/mod.rs`.
 The walker deletes the folders it walked through `Volume::delete_directory`, ❌ never `delete`: on S3 a markerless
 folder is gone with its last child, and a plain delete of its path then takes a file of the same name nobody selected
 (issue #510). The same holds for every engine walk that removes a folder it walked (the move's source sweep, the
-rename-merge's source cleanup, `remove_tree`), pinned by
+rename-merge's source cleanup, `remove_tree`) and every reversal removing a folder it created (a cancelled copy's prune,
+the journal rollback's `RemoveDir`, both through `unblocked_removal.rs` with `NodeKind::Directory`), pinned by
 `crates/cmdr-operations/src/transfer/volume/folder_delete_kind_tests.rs`.
 
 ## Key decisions

@@ -51,7 +51,7 @@ use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText
 use super::state::{StopMeans, WriteOperationState};
 use super::transfer::volume::move_file_across_volumes;
 use super::types::{DEFAULT_PROGRESS_INTERVAL_MS, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
-use super::unblocked_removal::RemovalRefused;
+use super::unblocked_removal::{NodeKind, RemovalRefused};
 
 /// Map the inverse op's journal kind to the manager's `WriteOperationType` (for
 /// the queue row + busy registration). The inverse kind is only ever delete /
@@ -166,8 +166,12 @@ impl RollbackRunner for ReversalRunner {
                 // One node each, and the engine has already established that it may
                 // go: a file verified unchanged, a directory verified empty. Neither
                 // recurses.
-                InverseAct::RemoveFile { volume, path } | InverseAct::RemoveDir { volume, path } => {
-                    delete_clearing_blockers(&self.state.scope().host().runtime(), volume, path).await
+                InverseAct::RemoveFile { volume, path } => {
+                    delete_clearing_blockers(&self.state.scope().host().runtime(), volume, path, NodeKind::File).await
+                }
+                InverseAct::RemoveDir { volume, path } => {
+                    let runtime = self.state.scope().host().runtime();
+                    delete_clearing_blockers(&runtime, volume, path, NodeKind::Directory).await
                 }
                 InverseAct::Restore {
                     from,
@@ -261,8 +265,13 @@ impl RollbackRunner for ReversalRunner {
 /// The planner verified the item as this operation's own right before this
 /// act, so what the removal clears is what the copy carried over
 /// (`unblocked_removal.rs`).
-async fn delete_clearing_blockers(runtime: &Handle, volume: &Arc<dyn Volume>, path: &Path) -> Result<(), ActRefusal> {
-    super::unblocked_removal::delete_clearing_blockers(runtime, volume, path)
+async fn delete_clearing_blockers(
+    runtime: &Handle,
+    volume: &Arc<dyn Volume>,
+    path: &Path,
+    kind: NodeKind,
+) -> Result<(), ActRefusal> {
+    super::unblocked_removal::delete_clearing_blockers(runtime, volume, path, kind)
         .await
         .map_err(|refused| match refused {
             RemovalRefused::Volume(e) => ActRefusal::Volume(e),
