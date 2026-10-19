@@ -1,0 +1,132 @@
+{
+  "bodyProbes": [
+    { "value": "a\"b\\c", "body": "a\\\"b\\\\c" },
+    { "value": "\n\r\t\u0000", "body": "\\n\\r\\t\\0" },
+    { "value": "\u0001\u001f\u007f\u0085\u009f", "body": "\\u{1}\\u{1f}\\u{7f}\\u{85}\\u{9f}" },
+    { "value": "\u202a\u202b\u202c\u202d\u202e", "body": "\\u{202a}\\u{202b}\\u{202c}\\u{202d}\\u{202e}" },
+    { "value": "\u2066\u2067\u2068\u2069", "body": "\\u{2066}\\u{2067}\\u{2068}\\u{2069}" },
+    { "value": "\u061c\u200e\u200f", "body": "\\u{61c}\\u{200e}\\u{200f}" },
+    { "value": "\u2028\u2029", "body": "\\u{2028}\\u{2029}" },
+    { "value": "\ufdd0\ufdd1\ufdd9\ufdef", "body": "\\u{fdd0}\\u{fdd1}\\u{fdd9}\\u{fdef}" },
+    { "value": "Summer (Lake House) 2026, Café 雪", "body": "Summer (Lake House) 2026, Café 雪" }
+  ],
+  "lines": [
+    {
+      "case": "a transfer read error, logged as the typed error",
+      "rawMessage": "{op} failed: {error}",
+      "values": {
+        "op": "Copy",
+        "error": {
+          "type": "read_error",
+          "path": "/Volumes/Backup/Summer (Lake House) Trip/.DS_Store",
+          "message": "Permission denied (os error 13)"
+        }
+      },
+      "line": "Copy failed: detail=\"{\\\"type\\\":\\\"read_error\\\",\\\"path\\\":\\\"\\u{fdd0}/Volumes/Backup/Summer (Lake House) Trip/.DS_Store\\u{fdd1}\\\",\\\"message\\\":\\\"Permission denied (os error 13)\\\"}\"",
+      "private": ["Backup", "Summer", "Lake House", "Trip"],
+      "parity": [{ "kind": "path", "value": "/Volumes/Backup/Summer (Lake House) Trip/.DS_Store" }]
+    },
+    {
+      "case": "a lost server connection with a share-relative path",
+      "rawMessage": "{op} failed (adopted): {error}",
+      "values": {
+        "op": "Move",
+        "error": {
+          "type": "server_connection_lost",
+          "path": "Photos/Summer (Lake House) Trip/.DS_Store",
+          "volumeName": "Family Photos",
+          "gaveUpAfterSecs": 30
+        }
+      },
+      "line": "Move failed (adopted): detail=\"{\\\"type\\\":\\\"server_connection_lost\\\",\\\"path\\\":\\\"\\u{fdd0}Photos/Summer (Lake House) Trip/.DS_Store\\u{fdd1}\\\",\\\"volumeName\\\":\\\"\\u{fdd7}Family Photos\\u{fdd1}\\\",\\\"gaveUpAfterSecs\\\":30}\"",
+      "private": ["Photos", "Summer", "Lake House", "Trip", "Family"],
+      "parity": [
+        { "kind": "path", "value": "Photos/Summer (Lake House) Trip/.DS_Store" },
+        { "kind": "volume", "value": "Family Photos" }
+      ]
+    },
+    {
+      "case": "duplicate source names",
+      "rawMessage": "{op} in the background was refused: {error}",
+      "values": {
+        "op": "Copy",
+        "error": {
+          "type": "duplicate_source_names",
+          "name": "Summer (Lake House) Trip",
+          "first": "/Users/ada/Pictures/Summer (Lake House) Trip",
+          "second": "/Volumes/Archive/Summer (Lake House) Trip"
+        }
+      },
+      "line": "Copy in the background was refused: detail=\"{\\\"type\\\":\\\"duplicate_source_names\\\",\\\"name\\\":\\\"\\u{fdd4}Summer (Lake House) Trip\\u{fdd1}\\\",\\\"first\\\":\\\"\\u{fdd0}/Users/ada/Pictures/Summer (Lake House) Trip\\u{fdd1}\\\",\\\"second\\\":\\\"\\u{fdd0}/Volumes/Archive/Summer (Lake House) Trip\\u{fdd1}\\\"}\"",
+      "private": ["ada", "Archive", "Summer", "Lake House", "Trip"],
+      "parity": [
+        { "kind": "name", "value": "Summer (Lake House) Trip" },
+        { "kind": "path", "value": "/Users/ada/Pictures/Summer (Lake House) Trip" },
+        { "kind": "path", "value": "/Volumes/Archive/Summer (Lake House) Trip" }
+      ]
+    },
+    {
+      "case": "an archive entry name refused",
+      "rawMessage": "{op} failed: {error}",
+      "values": {
+        "op": "Compress",
+        "error": {
+          "type": "archive_entry_name_refused",
+          "entry": "Notes/Secret Plans/../Draft one.txt",
+          "reason": "parentTraversal"
+        }
+      },
+      "line": "Compress failed: detail=\"{\\\"type\\\":\\\"archive_entry_name_refused\\\",\\\"entry\\\":\\\"\\u{fdd0}Notes/Secret Plans/../Draft one.txt\\u{fdd1}\\\",\\\"reason\\\":\\\"parentTraversal\\\"}\"",
+      "private": ["Notes", "Secret Plans", "Draft one"],
+      "parity": [{ "kind": "path", "value": "Notes/Secret Plans/../Draft one.txt" }]
+    },
+    {
+      "case": "a read-only device",
+      "rawMessage": "{op} failed: {error}",
+      "values": {
+        "op": "Copy",
+        "error": {
+          "type": "read_only_device",
+          "path": "Phone storage/Holiday Album/IMG_0042.jpg",
+          "deviceName": "Alex's Pixel",
+          "side": "destination"
+        }
+      },
+      "line": "Copy failed: detail=\"{\\\"type\\\":\\\"read_only_device\\\",\\\"path\\\":\\\"\\u{fdd0}Phone storage/Holiday Album/IMG_0042.jpg\\u{fdd1}\\\",\\\"deviceName\\\":\\\"\\u{fdd7}Alex's Pixel\\u{fdd1}\\\",\\\"side\\\":\\\"destination\\\"}\"",
+      "private": ["Holiday Album", "IMG_0042", "Alex", "Pixel"],
+      "parity": [
+        { "kind": "path", "value": "Phone storage/Holiday Album/IMG_0042.jpg" },
+        { "kind": "volume", "value": "Alex's Pixel" }
+      ]
+    },
+    {
+      "case": "leaf placeholders with quotes, a backslash, and an NFD accent",
+      "rawMessage": "Opening {path} in {volumeName} on {server} as {fileName}",
+      "values": {
+        "path": "Projects/Client \"Q3\"\\Budget/Cafe\u0301 notes.txt",
+        "volumeName": "Family Photos",
+        "server": "Alex's NAS",
+        "fileName": "Cafe\u0301 notes.txt"
+      },
+      "line": "Opening path=\"\ufdd0Projects/Client \\\"Q3\\\"\\\\Budget/Cafe\u0301 notes.txt\ufdd1\" in volumeName=\"\ufdd7Family Photos\ufdd1\" on server=\"\ufdd8Alex's NAS\ufdd1\" as file=\"\ufdd5Cafe\u0301 notes.txt\ufdd1\"",
+      "private": ["Projects", "Client", "Q3", "Budget", "Cafe", "notes", "Family", "Alex"],
+      "parity": [
+        { "kind": "path", "value": "Projects/Client \"Q3\"\\Budget/Cafe\u0301 notes.txt" },
+        { "kind": "volume", "value": "Family Photos" },
+        { "kind": "host", "value": "Alex's NAS" },
+        { "kind": "file_name", "value": "Cafe\u0301 notes.txt" }
+      ]
+    },
+    {
+      "case": "hostile names holding markers, raw and as text",
+      "rawMessage": "Rename {name} refused: {detail}",
+      "values": {
+        "name": "evil\ufdd1rest \\u{fdd1} Lakeside.txt",
+        "detail": "the server said no \ufdd1 (code 5)"
+      },
+      "line": "Rename file=\"\ufdd4evil\\u{fdd1}rest \\\\u{fdd1} Lakeside.txt\ufdd1\" refused: detail=\"the server said no \ufffd (code 5)\"",
+      "private": ["evil", "rest", "Lakeside"],
+      "parity": [{ "kind": "name", "value": "evil\ufdd1rest \\u{fdd1} Lakeside.txt" }]
+    }
+  ]
+}

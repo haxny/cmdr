@@ -84,6 +84,20 @@ describe('the production config', () => {
   })
 })
 
+describe('the devtools console', () => {
+  it('shows no log marker, raw or escaped, while the bridge gets the values as they came', async () => {
+    const bridgeSink = vi.fn<(record: LogRecord) => void>()
+    const consoleSink = vi.fn<(record: LogRecord) => void>()
+    await configure({ ...buildLoggerConfig({ isDev: true, verbose: false, consoleSink, bridgeSink }), reset: true })
+    const name = 'evil\ufdd1rest \\u{fdd0} tail'
+    getAppLogger(ORDINARY_CATEGORY).info('Rename {name} refused', { name })
+
+    const shown = consoleSink.mock.calls[0][0]
+    expect(shown.message).toEqual(['Rename ', 'evilrest  tail', ' refused'])
+    expect(bridgeSink.mock.calls[0][0].message).toEqual(['Rename ', name, ' refused'])
+  })
+})
+
 describe('the dev config', () => {
   it('sends every line from a debug category to the bridge once', async () => {
     const { bridged } = await configureFor({ isDev: true, verbose: false })

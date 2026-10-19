@@ -6,7 +6,26 @@ vi.mock('@tauri-apps/api/core', () => ({
 }))
 
 import { invoke } from '@tauri-apps/api/core'
+import { TypedFailure } from '#lib/ipc/typed-failure.js'
+import cases from './bridge-redaction-cases.json'
 import { getTauriBridgeSink, stopBridge } from './log-bridge'
+
+// The markers `log-markers.json` assigns, spelled out so a test reads the bytes it pins.
+const P = '\ufdd0'
+const C = '\ufdd1'
+const DIR_PATH = '\ufdd3'
+const NAME = '\ufdd4'
+const FILE_NAME = '\ufdd5'
+const DIR_NAME = '\ufdd6'
+const VOLUME = '\ufdd7'
+const HOST = '\ufdd8'
+
+class EjectFailureForTest extends TypedFailure<{ type: string; path: string }> {
+  constructor(failure: { type: string; path: string }) {
+    super(failure, `eject refused: ${failure.type}`)
+    this.name = 'EjectFailureForTest'
+  }
+}
 
 function makeRecord(overrides: Partial<LogRecord> = {}): LogRecord {
   return {
@@ -179,7 +198,7 @@ describe('log-bridge', () => {
     return callArgs[1].entries[0].message
   }
 
-  it('renders path and identity placeholders as keyed, Debug-quoted fields the report redactor reads', async () => {
+  it('renders path and identity placeholders as keyed, Debug-quoted, marked fields', async () => {
     const message = await renderedMessage({
       rawMessage: 'Listing {listingId} on {volumeId} failed for {path} (tries: {count}): {error}',
       message: [
@@ -196,8 +215,9 @@ describe('log-bridge', () => {
         '',
       ],
     })
+    // A volume ID has no marker kind: it stays a quoted field the redactor keys on.
     expect(message).toBe(
-      'Listing l-1 on volumeId="smb-nas-0123456789abcdef" failed for path="docs/Client \\"Plans\\"\\\\2026\\nnext" (tries: 3): detail="boom"',
+      `Listing l-1 on volumeId="smb-nas-0123456789abcdef" failed for path="${P}docs/Client \\"Plans\\"\\\\2026\\nnext${C}" (tries: 3): detail="boom"`,
     )
   })
 
@@ -206,7 +226,87 @@ describe('log-bridge', () => {
       rawMessage: 'calling listDirectoryStart: volumeId={volumeId}, path={loadPath}',
       message: ['calling listDirectoryStart: volumeId=', 'root', ', path=', '/Users/ada/Plans', ''],
     })
-    expect(message).toBe('calling listDirectoryStart: volumeId="root", path="/Users/ada/Plans"')
+    expect(message).toBe(`calling listDirectoryStart: volumeId="root", path="${DIR_PATH}/Users/ada/Plans${C}"`)
+  })
+
+  it('marks each placeholder with the kind its name says', async () => {
+    const cases: [placeholder: string, key: string, opener: string][] = [
+      ['path', 'path', P],
+      ['input', 'input', P],
+      ['destinationPath', 'destination', P],
+      ['loadPath', 'path', DIR_PATH],
+      ['landedPath', 'path', DIR_PATH],
+      ['root', 'path', DIR_PATH],
+      ['target', 'path', DIR_PATH],
+      ['dir', 'dir', DIR_PATH],
+      ['folder', 'dir', DIR_PATH],
+      ['folderName', 'dir', DIR_NAME],
+      ['name', 'file', NAME],
+      ['fileName', 'file', FILE_NAME],
+      ['volumeName', 'volumeName', VOLUME],
+      ['share', 'share', VOLUME],
+      ['host', 'host', HOST],
+      ['server', 'server', HOST],
+    ]
+    for (const [placeholder, key, opener] of cases) {
+      vi.mocked(invoke).mockClear()
+      expect(
+        await renderedMessage({ rawMessage: `at {${placeholder}}`, message: ['at ', 'Summer (Lake House)', ''] }),
+        placeholder,
+      ).toBe(`at ${key}="${opener}Summer (Lake House)${C}"`)
+    }
+  })
+
+  it("escapes a hostile name's own markers, raw or as text, so its span can't close early", async () => {
+    expect(
+      await renderedMessage({
+        rawMessage: 'Rename {name} refused',
+        message: ['Rename ', 'evil\ufdd1rest \\u{fdd1} tail', ' refused'],
+      }),
+    ).toBe(`Rename file="${NAME}evil\\u{fdd1}rest \\\\u{fdd1} tail${C}" refused`)
+  })
+
+  it('replaces reserved chars in text outside its spans, so foreign text never forges a marker', async () => {
+    expect(
+      await renderedMessage({
+        rawMessage: '{op} refused: {error}',
+        message: ['', 'Re\ufdd0name', ' refused: ', new Error('cannot open evil\ufdd1rest'), ''],
+      }),
+    ).toBe('Re\ufffdname refused: detail="Error: cannot open evil\ufffdrest"')
+  })
+
+  it("keeps a detail's own spans one depth down, their values escaped twice", async () => {
+    const failure = new EjectFailureForTest({ type: 'busy', path: '/Volumes/A "B"\\c' })
+    // describeForLog writes `"path":"<P>/Volumes/A \"B\"\\c<C>"`, which the detail quotes once more.
+    expect(
+      await renderedMessage({ rawMessage: 'Eject failed: {error}', message: ['Eject failed: ', failure, ''] }),
+    ).toBe(
+      'Eject failed: detail="EjectFailureForTest: eject refused: busy {\\"type\\":\\"busy\\",\\"path\\":\\"\\u{fdd0}/Volumes/A \\\\\\"B\\\\\\"\\\\\\\\c\\u{fdd1}\\"}"',
+    )
+  })
+
+  it('keeps the dedup suffix outside every span', async () => {
+    const sink = getTauriBridgeSink()
+    const record = makeRecord({ rawMessage: 'at {path}', message: ['at ', 'a/b', ''] })
+    sink(record)
+    sink(record)
+    await vi.advanceTimersByTimeAsync(100)
+    const callArgs = vi.mocked(invoke).mock.calls[0] as [string, { entries: { message: string }[] }]
+    expect(callArgs[1].entries[0].message).toBe(`at path="${P}a/b${C}" (×2, deduplicated)`)
+  })
+
+  it('produces exactly the lines the Rust redaction cells read', async () => {
+    // `redact/fe_bridge_tests.rs` feeds these same lines to the report redactor.
+    for (const testCase of cases.lines) {
+      vi.mocked(invoke).mockClear()
+      const names = [...testCase.rawMessage.matchAll(/\{([^{}\s]+)\}/g)].map((m) => m[1])
+      const literals = testCase.rawMessage.split(/\{[^{}\s]+\}/)
+      const values = testCase.values as Record<string, unknown>
+      const message = literals.flatMap((literal, index) =>
+        index < names.length ? [literal, values[names[index]]] : [literal],
+      )
+      expect(await renderedMessage({ rawMessage: testCase.rawMessage, message }), testCase.case).toBe(testCase.line)
+    }
   })
 
   it('renders error, err, and result values as detail fields', async () => {
@@ -224,7 +324,9 @@ describe('log-bridge', () => {
         rawMessage: 'Volume not found: {volumeName} on {server}, file {name}',
         message: ['Volume not found: ', 'Client Share', ' on ', 'nas', ', file ', 'a.pdf', ''],
       }),
-    ).toBe('Volume not found: volumeName="Client Share" on server="nas", file file="a.pdf"')
+    ).toBe(
+      `Volume not found: volumeName="${VOLUME}Client Share${C}" on server="${HOST}nas${C}", file file="${NAME}a.pdf${C}"`,
+    )
 
     vi.mocked(invoke).mockClear()
     expect(
@@ -247,7 +349,7 @@ describe('log-bridge', () => {
         rawMessage: 'Eject failed: {error}',
         message: ['Eject failed: ', failure, ''],
       }),
-    ).toBe('Eject failed: detail="{\\"type\\":\\"notFound\\",\\"path\\":\\"/Users/ada/Plans\\"}"')
+    ).toBe('Eject failed: detail="{\\"type\\":\\"notFound\\",\\"path\\":\\"\\u{fdd0}/Users/ada/Plans\\u{fdd1}\\"}"')
 
     vi.mocked(invoke).mockClear()
     expect(

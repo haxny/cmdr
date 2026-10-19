@@ -55,12 +55,12 @@ describe('describeForLog', () => {
   it("adds a TypedFailure's payload as compact JSON, which the report redactor tokenizes by key", () => {
     const failure = new EjectFailureForTest({ type: 'busy', path: '/Volumes/Client Share' })
     expect(describeForLog(failure)).toBe(
-      'EjectFailureForTest: eject refused: busy {"type":"busy","path":"/Volumes/Client Share"}',
+      'EjectFailureForTest: eject refused: busy {"type":"busy","path":"\ufdd0/Volumes/Client Share\ufdd1"}',
     )
   })
 
   it('renders plain objects and arrays as compact JSON', () => {
-    expect(describeForLog({ type: 'notFound', server: 'NAS' })).toBe('{"type":"notFound","server":"NAS"}')
+    expect(describeForLog({ type: 'notFound', server: 'NAS' })).toBe('{"type":"notFound","server":"\ufdd8NAS\ufdd1"}')
     expect(describeForLog([1, 'two'])).toBe('[1,"two"]')
   })
 
@@ -73,7 +73,7 @@ describe('describeForLog', () => {
   it('guards against cycles', () => {
     const node: Record<string, unknown> = { name: 'a' }
     node.self = node
-    expect(describeForLog(node)).toBe('{"name":"a","self":"[Circular]"}')
+    expect(describeForLog(node)).toBe('{"name":"\ufdd4a\ufdd1","self":"[Circular]"}')
   })
 
   it('keeps a repeated (non-cyclic) reference', () => {
@@ -99,6 +99,82 @@ describe('describeForLog', () => {
       ) {}
     }
     expect(describeForLog(new Point(1, 2))).toBe('{"x":1,"y":2}')
+  })
+
+  describe('marking identity-keyed JSON pairs', () => {
+    const P = '\ufdd0'
+    const C = '\ufdd1'
+
+    it('marks each key with the kind of value it holds', () => {
+      const opener: Record<string, string> = {
+        path: P,
+        source: P,
+        destination: P,
+        first: P,
+        second: P,
+        entry: P,
+        other: P,
+        archivePath: P,
+        keptAt: P,
+        landedAt: P,
+        refusedFolder: '\ufdd3',
+        name: '\ufdd4',
+        volumeName: '\ufdd7',
+        share: '\ufdd7',
+        deviceName: '\ufdd7',
+        server: '\ufdd8',
+        host: '\ufdd8',
+        hostname: '\ufdd8',
+        user: '\ufdd9',
+        username: '\ufdd9',
+      }
+      for (const [key, mark] of Object.entries(opener)) {
+        expect(describeForLog({ [key]: 'Summer (Lake House)' }), key).toBe(
+          `{"${key}":"${mark}Summer (Lake House)${C}"}`,
+        )
+      }
+    })
+
+    it('leaves IDs, other keys, and non-string values unmarked', () => {
+      expect(describeForLog({ volumeId: 'smb-1', serverId: 's', deviceId: 'd', type: 'x' })).toBe(
+        '{"volumeId":"smb-1","serverId":"s","deviceId":"d","type":"x"}',
+      )
+      expect(describeForLog({ volumeName: null, path: 5, name: ['a'] })).toBe(
+        '{"volumeName":null,"path":5,"name":["a"]}',
+      )
+    })
+
+    it('writes a value as its `{:?}` body, not its JSON escaping', () => {
+      expect(describeForLog({ path: 'a"b\\c\u0001\u202e\ufdd1' })).toBe(
+        `{"path":"${P}a\\"b\\\\c\\u{1}\\u{202e}\\u{fdd1}${C}"}`,
+      )
+    })
+
+    it('marks pairs at any depth, a typed error nested in its cause included', () => {
+      expect(
+        describeForLog({ type: 'new_data_kept_at', cause: { type: 'read_error', path: 'a/b', message: 'no' } }),
+      ).toBe(`{"type":"new_data_kept_at","cause":{"type":"read_error","path":"${P}a/b${C}","message":"no"}}`)
+    })
+
+    it('reads JSON tokens, so a key spelled inside a value is no pair', () => {
+      expect(describeForLog({ message: 'x","path":"y' })).toBe('{"message":"x\\",\\"path\\":\\"y"}')
+    })
+
+    it('replaces reserved chars everywhere outside its own spans', () => {
+      expect(describeForLog('evil\ufdd1rest')).toBe('evil\ufffdrest')
+      expect(describeForLog(new Error('no \ufdd0 way'))).toBe('Error: no \ufffd way')
+      expect(describeForLog({ ['k\ufdd1']: 'v\ufdd0' })).toBe('{"k\ufffd":"v\ufffd"}')
+      expect(describeForLog(new URL('https://example.com/\ufdd1'))).not.toMatch(/[\ufdd0-\ufdef]/)
+    })
+
+    it('never cuts inside a span when it caps', () => {
+      for (let pad = MAX_DESCRIBED_CHARS - 60; pad < MAX_DESCRIBED_CHARS; pad += 7) {
+        const described = describeForLog({ blob: 'x'.repeat(pad), path: 'Summer (Lake House) '.repeat(5) })
+        const opened = described.lastIndexOf(P)
+        expect(opened === -1 || described.indexOf(C, opened) !== -1, described.slice(-80)).toBe(true)
+        expect(described).toMatch(/…\[\d+ chars]$/)
+      }
+    })
   })
 
   it("still returns a line for a value that won't serialize", () => {

@@ -376,9 +376,11 @@ around them. So it has one mechanism, used at every such site:
   the limit. A detail nested in one (Flow B's note quotes a `log_error!` message that has its own `detail=`) gets the
   line's spans too, so it puts their tokens in before its own `{:?}` would escape the placeholders.
 - **Identity-keyed JSON pairs inside the value are tokenized first** (`"server":"…"`, `"share"`, `"username"`, `"path"`,
-  `"name"`, …): the frontend's `describeForLog` renders an object, and a typed error's payload, as compact JSON, and
-  its keys say what each value is, in a
-  spelling the line's own keyed fields may not share. `error`, `err`, `result`, and `detail` placeholders all render
+  `"name"`, `"source"`, `"first"`, `"entry"`, `"deviceName"`, …): the frontend's `describeForLog` renders an object,
+  and a typed error's payload, as compact JSON whose keys say what each value is, in a spelling the line's own keyed
+  fields may not share. It marks those same values (`apps/desktop/src/lib/logging/DETAILS.md` § "Marking values for
+  error reports"), so the span pass hashes them first; this is the fallback for a pair logged unmarked, and the two
+  key sets stay in step (`fe_bridge_tests.rs`). `error`, `err`, `result`, and `detail` placeholders all render
   as `detail=` fields (`log-bridge.ts`).
 - **Absolute paths under any prefix are tokenized inside the value** (`/srv/data/…`, `/mnt/…`), BEFORE the ordinary
   scan, as typed paths. A later word may start with `(` (`Path: …/Summer (Lake House) Trip/…; Error type: …`, a typed

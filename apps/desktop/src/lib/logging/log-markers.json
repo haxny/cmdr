@@ -1,0 +1,37 @@
+{
+  "reserved": { "first": "FDD0", "last": "FDEF" },
+  "closer": "FDD1",
+  "openers": {
+    "path": "FDD0",
+    "file_path": "FDD2",
+    "dir_path": "FDD3",
+    "name": "FDD4",
+    "file_name": "FDD5",
+    "dir_name": "FDD6",
+    "volume": "FDD7",
+    "host": "FDD8",
+    "user": "FDD9"
+  },
+  "jsonKeyKinds": {
+    "path": "path",
+    "source": "path",
+    "destination": "path",
+    "first": "path",
+    "second": "path",
+    "entry": "path",
+    "other": "path",
+    "archivePath": "path",
+    "keptAt": "path",
+    "landedAt": "path",
+    "refusedFolder": "dir_path",
+    "name": "name",
+    "volumeName": "volume",
+    "share": "volume",
+    "deviceName": "volume",
+    "server": "host",
+    "host": "host",
+    "hostname": "host",
+    "user": "user",
+    "username": "user"
+  }
+}

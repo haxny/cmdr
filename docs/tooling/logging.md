@@ -47,6 +47,11 @@ Pass a value raw (`{ error: e }`): the bridge renders every placeholder through 
 fails the build on them (it autofixes). `{*}` renders the whole property bag and satisfies the rule, but it's a blunt
 instrument: prefer naming what matters.
 
+Name a path or identity placeholder from `REDACTOR_KEY_BY_PLACEHOLDER` in `log-bridge.ts` (`{path}`, `{dir}`,
+`{fileName}`, `{volumeName}`, `{server}`, …): the bridge writes it as a keyed field with the value marked by its kind (§
+"Marked values"). Log a typed error as itself (`{error}`), never as prose built from its fields: `describeForLog` marks
+its `path`, `name`, `source`, `deviceName`, and other identity values the same way.
+
 ### Log levels
 
 From lowest to highest: `debug` < `info` < `warning` < `error` < `fatal`
@@ -210,10 +215,13 @@ the same color across runs and machines; the module path after it goes gray. The
 
 A log site may mark a user-derived value (a path, a name, a volume, a host, an account) between invisible Unicode
 noncharacters from U+FDD0–U+FDEF (`crates/cmdr-fs/src/log_private.rs`), so an error report hashes exactly that value
-instead of guessing where a name ends (`apps/desktop/src-tauri/src/redact/DETAILS.md` § "Marked spans").
+instead of guessing where a name ends (`apps/desktop/src-tauri/src/redact/DETAILS.md` § "Marked spans"). Frontend lines
+carry the same markers, written by the log bridge (`apps/desktop/src/lib/logging/DETAILS.md` § "Marking values for error
+reports").
 
 - **The terminal and Help > View debug log hide the markers** and show each marked value as itself (`Café`, not
-  `Cafe\u{301}`). The viewer's search, copy, and "Save range" work on that shown text.
+  `Cafe\u{301}`). The viewer's search, copy, and "Save range" work on that shown text. The browser devtools console
+  shows none either.
 - **The log FILE keeps them**: the error reporter reads them from it. There, `less` shows a marker as `<U+FDD2>`, a
   marker that went through `{:?}` reads `\u{fdd2}`, and a value printed by a `{}` site carries its `{:?}` escapes
   (`Cafe\u{301}`), one escape layer more inside a `detail=` field (`\\\"`). Markers sit between `key="` and the value,

@@ -25,12 +25,13 @@
  */
 
 import { configure, getConsoleSink, getLogger as getLogTapeLogger, withFilter } from '@logtape/logtape'
-import type { Logger, Sink } from '@logtape/logtape'
+import type { LogRecord, Logger, Sink } from '@logtape/logtape'
 // eslint-disable-next-line cmdr/no-raw-bindings-import -- logging/store bootstrap infra: the tauri-commands barrel imports the logger (storage.ts), so wrapping here would create an import cycle
 import { commands } from '#lib/ipc/bindings.js'
 import { load, type Store } from '@tauri-apps/plugin-store'
 import { resolveStorePath } from '#lib/settings/store-path.js'
 import { getTauriBridgeSink, startBridge } from './log-bridge'
+import { stripLogMarkers } from './log-markers'
 
 export type { Logger } from '@logtape/logtape'
 
@@ -145,11 +146,25 @@ export function buildLoggerConfig({
 
   return {
     sinks: {
-      console: withFilter(consoleSink, consoleLevel),
+      console: withFilter(withoutLogMarkers(consoleSink), consoleLevel),
       // Bridge: passes everything to Rust. RUST_LOG handles filtering there.
       tauriBridge: bridgeSink,
     },
     loggers,
+  }
+}
+
+/**
+ * `sink` fed records whose string parts carry no log marker, raw or escaped. The console is for a
+ * person, and a marker there is a hostile name's or another layer's (nothing marks before the
+ * bridge), so it's only litter.
+ */
+function withoutLogMarkers(sink: Sink): Sink {
+  return (record: LogRecord): void => {
+    sink({
+      ...record,
+      message: record.message.map((part) => (typeof part === 'string' ? stripLogMarkers(part) : part)),
+    })
   }
 }
 

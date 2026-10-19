@@ -185,13 +185,16 @@ pub(super) fn redact_detail_field(
 }
 
 /// Tokenize the values of identity-keyed JSON pairs (`"server":"NASPOLYA"`): the frontend logs
-/// a typed error as `JSON.stringify(error)`, whose keys say what each value is, in whatever
-/// spelling the error carried. Runs before the ordinary scan, which then leaves the tokens be.
+/// a typed error as compact JSON, whose keys say what each value is, in whatever spelling the
+/// error carried. The frontend marks these same values (`log-markers.json` `jsonKeyKinds`), so
+/// this is the fallback for a pair that reached the log unmarked; `fe_bridge_tests.rs` keeps the
+/// two key sets in step.
+/// Runs before the ordinary scan, which then leaves the tokens be.
 fn redact_json_identity_pairs(text: &str, context: Option<&RedactionContext>) -> String {
     static RE: OnceLock<Regex> = OnceLock::new();
     let re = RE.get_or_init(|| {
         Regex::new(
-            r#""(?P<key>server|host|hostname|share|volumeName|volumeId|serverId|deviceId|user|username|path|name)"\s*:\s*"(?P<value>(?:[^"\\]|\\.)*)""#,
+            r#""(?P<key>server|host|hostname|share|volumeName|deviceName|volumeId|serverId|deviceId|user|username|path|source|destination|first|second|entry|other|archivePath|keptAt|landedAt|refusedFolder|name)"\s*:\s*"(?P<value>(?:[^"\\]|\\.)*)""#,
         )
         .expect("valid JSON identity-pair regex")
     });
@@ -206,7 +209,10 @@ fn redact_json_identity_pairs(text: &str, context: Option<&RedactionContext>) ->
             "server" | "host" | "hostname" => identity_field_token("host", value, context),
             "share" => identity_field_token("share", value, context),
             "user" | "username" => identity_token("user", TokenDomain::Userinfo, value, context),
-            "path" => redact_typed_path(value, context, true, Leaf::Guess),
+            "deviceName" => identity_field_token("volumeName", value, context),
+            "path" | "source" | "destination" | "first" | "second" | "entry" | "other" | "archivePath" | "keptAt"
+            | "landedAt" => redact_typed_path(value, context, true, Leaf::Guess),
+            "refusedFolder" => redact_typed_path(value, context, true, Leaf::Dir),
             "name" => redact_leaf(value, has_extension_like_suffix(value), context),
             _ => identity_field_token(key, value, context),
         };

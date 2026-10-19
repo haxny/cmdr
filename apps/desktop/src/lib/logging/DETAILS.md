@@ -46,6 +46,40 @@ Error" and a log with no trace of why. So:
   `logPageCrash` and both `window` listeners emit through `whenLoggerReady`, which queues until `initLogger` has
   configured LogTape, then drains. `logger-ready.test.ts` pins it.
 
+## Marking values for error reports
+
+`log-markers.ts` (GitHub #491). A report used to guess where a name ends in prose and shipped what it guessed wrong, so
+the producer marks each user-derived value instead: opener of its kind, the value, closer, all Unicode noncharacters
+from the one reserved range in `cmdr_fs::log_private`, which also owns the format (`crates/cmdr-fs/DETAILS.md`; the
+reader is `src-tauri/src/redact/DETAILS.md` § "Marked spans"). Two producers here:
+
+- **The bridge** writes a leaf placeholder as `key="` + opener + body + closer + `"`, the shape of a Rust `{:?}` of
+  `LogPrivate`. The kind comes from `REDACTOR_KEY_BY_PLACEHOLDER`; a `null` kind (`volumeId`, `deviceId`) stays a plain
+  quoted field the redactor keys on. A `detail`-mapped placeholder (`detail`, `error`, `err`, `result`) is a container:
+  it `debugQuote`s what `describeForLog` marked, so those spans land one `{:?}` depth down with their values escaped
+  twice, exactly like Rust's `LogDetail`. Wrapping it as a leaf would hash the whole detail as one name.
+- **`describeForLog`** marks identity-keyed JSON values (`log-markers.json` `jsonKeyKinds`, the keys the typed IPC
+  errors carry: `WriteOperationError`'s `source`, `first`, `entry`, `deviceName`, and the rest). It rewrites the
+  serialized JSON's string tokens AFTER `JSON.stringify`, never in its replacer: a replacer's output gets JSON-escaped,
+  which would escape the span body twice at depth 0 and hash a quote or backslash differently from Rust. Such a value
+  isn't strictly valid JSON any more; it's log text. A nested `Error` inside an object renders unmarked, since it lands
+  inside a JSON string. The cap never cuts inside a span: one the cut would split goes whole.
+- **One content encoding**: a span's value is the body of Rust's `{:?}` (`debugBody`), byte-equal to Rust on the safety
+  set (`"`, `\`, control, line separators, bidi-format, the reserved range) and unescaping to the same value elsewhere
+  (Rust also escapes NFD combining marks; `debugBody` leaves them raw). A leaf is marked from its RAW string, so a
+  hostile name's own reserved chars become escape text and it hashes the same from either side.
+- **No frontend input carries legitimate markers**: IPC payloads are UI data. So every char of the range outside our own
+  spans (error messages, unmarked JSON, keys, template text) becomes U+FFFD; an OS message echoing a hostile name can't
+  forge a closer.
+- **Parity is pinned across languages**: `log-markers.json` is the frontend's only copy of the table, and
+  `src-tauri/src/redact/fe_bridge_tests.rs` checks it against `LogKind`, checks `debugBody` on the probes in
+  `bridge-redaction-cases.json` against Rust's `{:?}`, and feeds that file's golden bridge lines (pinned against the
+  real bridge by `log-bridge.test.ts`) to the report redactor: no name ships, and each value hashes as the same value
+  logged from Rust does.
+- **The devtools console strips markers** (raw and escaped, `stripLogMarkers`) from string parts; nothing marks before
+  the bridge, so any there is foreign litter. The log file keeps the bridge's markers; the terminal and Help > View
+  debug log decode them (`docs/tooling/logging.md` § "Marked values").
+
 ## Decisions
 
 - **LogTape on the frontend**: it gives the `getAppLogger()` API, hierarchical categories, and per-feature debug toggles
@@ -66,7 +100,10 @@ Error" and a log with no trace of why. So:
   prod log read `ERROR FE:fileExplorer … (x2, deduplicated)`. `logger.test.ts` configures LogTape with the real
   `buildLoggerConfig` and counts deliveries per sink, per mode.
 - **`debugCategories` doesn't reach the devtools console**: its sink filters on its own level (info in dev), which a
-  logger's `lowestLevel` can't lower. Use the verbose toggle to see debug lines there.
+  logger's `lowestLevel` can't lower. Use the verbose toggle to see debug lines there. `cmdr/no-stringified-log-values`
+  keeps call sites raw: it autofixes `String(x)` and the ternary in a property value to `x`, and a `${String(x)}` in a
+  template-literal message to a `{x}` placeholder (`{error}` for a caught value, so it lands in a redacted `detail`
+  field).
 - **Hand-rolled fern dispatch instead of `tauri-plugin-log`**: the plugin routes everything through one shared level. We
   need per-output filtering (file at Debug for error reports, terminal at Info for clean dev output). fern's tree of
   `Dispatch` chains makes this trivial. Full mechanism in `src-tauri/src/logging/CLAUDE.md`.
@@ -92,13 +129,13 @@ Error" and a log with no trace of why. So:
   lost its cause and a `TypedFailure` its payload. ERR-VEZUB, a `DeleteDialog` render crash, reached its report as
   `detail="[object Object]"`. One seam renders: strings verbatim, an `Error` as `Name: message; caused by …` (cycle- and
   depth-guarded), a `TypedFailure` plus its `.failure` as JSON, a class with its own `toString` (`URL`) through it, and
-  anything else as COMPACT JSON with a cycle guard, capped at 1,000 chars. Compact on purpose: inside a `detail="…"`
-  field the report redactor tokenizes `"path":"…"`, `"server":"…"`, and the other identity keys by matching exactly that
-  shape (`src-tauri/src/redact/detail.rs` `redact_json_identity_pairs`), so a path inside a logged object is still
-  redacted. Anything that must touch every logged value (a redaction marker) belongs here.
-  `cmdr/no-stringified-log-values` keeps call sites raw: it autofixes `String(x)` and the ternary in a property value to
-  `x`, and a `${String(x)}` in a template-literal message to a `{x}` placeholder (`{error}` for a caught value, so it
-  lands in a redacted `detail` field).
+  anything else as COMPACT JSON with a cycle guard, capped at 1,000 chars. The value of every identity-keyed pair
+  (`"path"`, `"name"`, `"server"`, …) is marked by its kind (§ "Marking values for error reports"). Compact on purpose:
+  for a pair that reaches a report unmarked, the redactor tokenizes the same keys by matching exactly that shape
+  (`src-tauri/src/redact/detail.rs` `redact_json_identity_pairs`). Anything that must touch every logged value belongs
+  here. `cmdr/no-stringified-log-values` keeps call sites raw: it autofixes `String(x)` and the ternary in a property
+  value to `x`, and a `${String(x)}` in a template-literal message to a `{x}` placeholder (`{error}` for a caught value,
+  so it lands in a redacted `detail` field).
 - **`apps/desktop/src/hooks.client.ts` exists for the errors SvelteKit catches.** Without a `handleError` hook,
   SvelteKit's `transformError` hands every `<svelte:boundary>` `{ status: 500, message: 'Internal Error' }`
   (`@sveltejs/kit` `runtime/client/client.js` `handle_error`, verified on 3.1.0, 2026-10-19), so `DialogManager`'s

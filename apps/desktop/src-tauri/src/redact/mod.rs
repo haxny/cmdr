@@ -44,6 +44,8 @@ mod context;
 mod detail;
 #[cfg(test)]
 mod detail_tests;
+#[cfg(test)]
+mod fe_bridge_tests;
 mod fields;
 mod markers;
 #[cfg(test)]
