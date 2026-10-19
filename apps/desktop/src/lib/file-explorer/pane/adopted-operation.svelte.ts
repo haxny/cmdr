@@ -138,6 +138,7 @@ export function createAdoptedOperation(deps: AdoptedOperationDeps) {
       appearedDuringMove,
       refused,
       metadataLeftBehind,
+      lockedKept,
       durabilityUnconfirmed,
     }: TransferCompletePayload): void {
       const op = adoptedProps?.operationType ?? 'copy'
@@ -150,6 +151,7 @@ export function createAdoptedOperation(deps: AdoptedOperationDeps) {
         filesSkipped,
         appearedDuringMove,
         metadataLeftBehind,
+        lockedKept,
       })
       const allSkipped = filesSkipped > 0 && filesSkipped === filesProcessed
       // A trash the OS refused part of says so here too, for the same reason it

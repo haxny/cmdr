@@ -48,6 +48,8 @@ Umbrella-level files:
   no progress dialog is showing; its two rules are pure, in `operation-conflict-rules.ts` (§ below).
 - `sources-gone.svelte.ts` + `SourcesGonePrompt.svelte` + `SourcesGoneDialog.svelte`: the question a queued operation
   asks when some of its sources left while it waited (§ "Sources that left while an operation queued").
+- `locked-sources.svelte.ts` + `LockedSourcesPrompt.svelte` + `LockedSourcesDialog.svelte`: the question a move asks,
+  before any byte moves, when some of what it moves is Locked (§ "Locked items in a move").
 - `RollbackConfirmDialog.svelte` + `reversal-wording.ts`: the question every Rollback goes through, the typed variant
   that decides what it says, and the same variant's catalog keys for the running bar (§ below).
 - `mutation-error.ts` + `mutation-error-messages.ts`: the rename / New Folder / New File refusal path (§ below).
@@ -376,6 +378,30 @@ left while an operation queued".
   focus: it writes nothing the person hadn't already asked for.
 
 Pinned by `sources-gone.svelte.test.ts` and `SourcesGoneDialog.svelte.test.ts`.
+
+## Locked items in a move
+
+`locked-sources.svelte.ts` is the main window's host for `write-locked-sources`: a move found Finder-Locked items (or
+ones a `deny delete` ACL protects) among what it's about to move, and waits before any byte moves (#408). The backend's
+half (what counts, when it asks, what each answer does): `crates/cmdr-operations/DETAILS.md` § "Moving Locked items".
+
+- **The question**: `LockedSourcesDialog` (mounted by `LockedSourcesPrompt.svelte` beside the sources-gone prompt) says
+  how many items are Locked and that moving them unlocks them only for the move, names up to five plus "and N more", and
+  offers Move anyway (`answerLockedSources(id, 'move_anyway')`, the focused one: each item ends up Locked again where it
+  lands), Skip locked items (`'skip'`), and Cancel (the ordinary `cancelOperation`). Any outcome takes the question
+  down; only a call that never landed leaves it up. No `onclose`: every way out decides something about the files.
+- **It waits for the window to be free, except for the move's OWN progress dialog.** Like the sources-gone host it
+  follows the late-dialog rule (`createWhenDialogsClear`), but a foreground move asks right after its scan with its
+  `transfer-progress` dialog up, and waiting behind that dialog would wait forever. So when the asking move is the
+  foreground one (`getForegroundOperationId()`), busy means a dialog other than this prompt AND `transfer-progress`
+  (`isAnySoftDialogOpenBesidesAll`). The prompt mounts after the explorer, so DOM order stacks it over the progress
+  dialog.
+- **It pauses nothing**, and drops the question of a move that ended some other way once its row has been seen live
+  (`reconcileLockedSourcesPrompts`), both like the sources-gone host.
+- **What stayed is said on completion**: `lockedKept` on `write-complete` adds a sentence to the completion toast
+  (`transfer/transfer-complete-toast.ts`).
+
+Pinned by `locked-sources.svelte.test.ts` and `LockedSourcesDialog.svelte.test.ts`.
 
 ## Letter keys on decision prompts
 

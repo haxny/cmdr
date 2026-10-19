@@ -546,6 +546,39 @@ describe('the note about metadata the destination couldn’t keep', () => {
   })
 })
 
+describe('the note about Locked items a move left where they were', () => {
+  const moved = (lockedKept: { skipped: number; systemLocked: number } | null) =>
+    composeTransferCompleteToast({
+      operationType: 'move',
+      filesProcessed: 3,
+      filesSkipped: 0,
+      fileCount: 3,
+      folderCount: 0,
+      lockedKept,
+    })
+
+  it('says how many Locked items the person chose to leave', () => {
+    expect(moved({ skipped: 2, systemLocked: 0 })).toBe('Moved 3 files. 2 locked items stayed where they were.')
+    expect(moved({ skipped: 1, systemLocked: 0 })).toBe('Moved 3 files. 1 locked item stayed where it was.')
+  })
+
+  it('says how many items macOS keeps locked', () => {
+    expect(moved({ skipped: 0, systemLocked: 1 })).toBe(
+      'Moved 3 files. 1 item is locked by macOS, so it stayed where it was.',
+    )
+  })
+
+  it('says both when both stayed', () => {
+    expect(moved({ skipped: 2, systemLocked: 3 })).toBe(
+      'Moved 3 files. 2 locked items stayed where they were. 3 items are locked by macOS, so they stayed where they were.',
+    )
+  })
+
+  it('says nothing more when nothing stayed', () => {
+    expect(moved(null)).toBe('Moved 3 files.')
+  })
+})
+
 describe('composeTrashRefusedToast', () => {
   // The sentence is the error dialog's own, so a partial trash and a fully
   // refused one explain themselves identically.

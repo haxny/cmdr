@@ -187,6 +187,26 @@
     "screenshot": "toast-transfer-complete.png",
     "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
   },
+  "transfer.lockedSkipped": "{count, plural, one {{countText} locked item stayed where it was.} other {{countText} locked items stayed where they were.}}",
+  "@transfer.lockedSkipped": {
+    "description": "Extra sentence appended to the move-complete toast when some of the moved items were Locked (Finder's Locked checkbox, which protects a file from being changed or deleted) and the user chose to skip them instead of unlocking them for the move. Those items are still in their original folder, unchanged. Keep it calm: nothing went wrong, the user asked for this. Use the same word for Locked as Finder does in your language.",
+    "placeholders": {
+      "count": "how many locked items stayed, used only to pick the plural form",
+      "countText": "the same number, already formatted for display"
+    },
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
+  "transfer.systemLockedKept": "{count, plural, one {{countText} item is locked by macOS, so it stayed where it was.} other {{countText} items are locked by macOS, so they stayed where they were.}}",
+  "@transfer.systemLockedKept": {
+    "description": "Extra sentence appended to the move-complete toast when some of the moved items are locked by macOS itself (a system-level lock only an administrator can lift), so the move couldn't take them and left them in their original folder. The user wasn't asked about these, because no answer could have moved them. Keep it calm and matter-of-fact: everything else moved.",
+    "placeholders": {
+      "count": "how many system-locked items stayed, used only to pick the plural form",
+      "countText": "the same number, already formatted for display"
+    },
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
 
   "transfer.metadataClass.creationDates": "creation dates",
   "@transfer.metadataClass.creationDates": {

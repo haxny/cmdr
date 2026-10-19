@@ -289,6 +289,7 @@ describe("an adopted view's outcomes touch no pane", () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      lockedKept: null,
       durabilityUnconfirmed: null,
     })
 
@@ -317,6 +318,7 @@ describe("an adopted view's outcomes touch no pane", () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      lockedKept: null,
       durabilityUnconfirmed: null,
     })
 
@@ -329,6 +331,7 @@ describe("an adopted view's outcomes touch no pane", () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      lockedKept: null,
       durabilityUnconfirmed: null,
     })
 
@@ -393,6 +396,7 @@ describe('a view whose pane has moved on since the operation was born', () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      lockedKept: null,
       durabilityUnconfirmed: null,
     })
 
@@ -414,6 +418,7 @@ describe('a view whose pane has moved on since the operation was born', () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      lockedKept: null,
       durabilityUnconfirmed: null,
     })
 

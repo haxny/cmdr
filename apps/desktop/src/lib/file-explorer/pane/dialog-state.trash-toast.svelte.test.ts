@@ -107,6 +107,7 @@ const ONE_FILE: TransferCompletePayload = {
   topLevelSkipped: null,
   refused: null,
   metadataLeftBehind: null,
+  lockedKept: null,
   durabilityUnconfirmed: null,
 }
 

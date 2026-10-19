@@ -8,6 +8,8 @@ import type { UnlistenFn } from '@tauri-apps/api/event'
 import { commands, events } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 import type {
+  LockedSourcesAnswer,
+  LockedSourcesAnswerOutcome,
   OperationSnapshot,
   OperationsChanged,
   ProgressAxis,
@@ -25,11 +27,14 @@ import type {
   TreeRowKind,
   TreeRowState,
   TreeWindow,
+  WriteLockedSourcesEvent,
   WriteProgressEvent,
   WriteSourcesGoneEvent,
 } from '#lib/ipc/bindings.js'
 
 export type {
+  LockedSourcesAnswer,
+  LockedSourcesAnswerOutcome,
   OperationSnapshot,
   OperationsChanged,
   ProgressAxis,
@@ -47,6 +52,7 @@ export type {
   TreeRowKind,
   TreeRowState,
   TreeWindow,
+  WriteLockedSourcesEvent,
   WriteSourcesGoneEvent,
 }
 
@@ -100,6 +106,23 @@ export async function onWriteSourcesGone(callback: (event: WriteSourcesGoneEvent
  *  outcome says whether this answer is the one that reached it. */
 export async function continueWithoutGoneSources(operationId: string): Promise<SourcesGoneAnswerOutcome> {
   return commands.continueWithoutGoneSources(operationId)
+}
+
+/** A move found Locked items among what it moves and waits, before any byte
+ *  moves, for `answerLockedSources` or a cancel. */
+export async function onWriteLockedSources(callback: (event: WriteLockedSourcesEvent) => void): Promise<UnlistenFn> {
+  return events.writeLockedSources.listen((event) => {
+    callback(event.payload)
+  })
+}
+
+/** Answers a move's Locked-items question: unlock them for the move, or skip
+ *  them. The outcome says whether this answer is the one that reached it. */
+export async function answerLockedSources(
+  operationId: string,
+  answer: LockedSourcesAnswer,
+): Promise<LockedSourcesAnswerOutcome> {
+  return commands.answerLockedSources(operationId, answer)
 }
 
 /** Cancel several operations at once (the "Cancel selected" action). Same

@@ -70,6 +70,8 @@
     import type { RollbackConfirmFixture } from './fixtures/rollback'
     import SourcesGoneDialog from '../file-operations/SourcesGoneDialog.svelte'
     import type { SourcesGoneFixture } from './fixtures/sources-gone'
+    import LockedSourcesDialog from '../file-operations/LockedSourcesDialog.svelte'
+    import type { LockedSourcesFixture } from './fixtures/locked-sources'
     import { getAppLogger } from '#lib/logging/logger.js'
     import { untrack } from 'svelte'
     import TransferProgressDialog from '#lib/file-operations/transfer/TransferProgressDialog.svelte'
@@ -105,6 +107,7 @@
         | { kind: 'about' }
         | { kind: 'rollback-confirmation'; props: RollbackConfirmFixture }
         | { kind: 'sources-gone'; props: SourcesGoneFixture }
+        | { kind: 'locked-sources'; props: LockedSourcesFixture }
         | { kind: 'acknowledgements' }
         | { kind: 'commercial-reminder' }
         | { kind: 'expiration'; props: ExpirationFixture }
@@ -255,6 +258,11 @@
         'sources-gone': (id) =>
             withFixture(fixtureRecords['sources-gone'][id], (f) => ({
                 kind: 'sources-gone',
+                props: f,
+            })),
+        'locked-sources': (id) =>
+            withFixture(fixtureRecords['locked-sources'][id], (f) => ({
+                kind: 'locked-sources',
                 props: f,
             })),
         'rollback-confirmation': (id) =>
@@ -413,6 +421,14 @@
             {...plan.props}
             answering={false}
             onContinue={closeGalleryDialog}
+            onCancel={closeGalleryDialog}
+        />
+    {:else if plan?.kind === 'locked-sources'}
+        <LockedSourcesDialog
+            {...plan.props}
+            answering={false}
+            onMoveAnyway={closeGalleryDialog}
+            onSkip={closeGalleryDialog}
             onCancel={closeGalleryDialog}
         />
     {/if}

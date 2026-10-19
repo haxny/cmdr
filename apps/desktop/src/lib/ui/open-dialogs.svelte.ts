@@ -43,8 +43,15 @@ export function isAnySoftDialogOpen(): boolean {
  *  For a dialog that waits for the window to be free, where its own previous
  *  question still being up is no reason to hold the next one. */
 export function isAnySoftDialogOpenBesides(id: SoftDialogId): boolean {
+  return isAnySoftDialogOpenBesidesAll([id])
+}
+
+/** Whether any soft dialog other than every one of `ids` is on screen in this
+ *  window. Reactive. For a prompt that may stack over one dialog it belongs to,
+ *  like a move's question over that move's own progress dialog. */
+export function isAnySoftDialogOpenBesidesAll(ids: readonly SoftDialogId[]): boolean {
   for (const open of openDialogs) {
-    if (open !== id) return true
+    if (!ids.includes(open)) return true
   }
   return false
 }

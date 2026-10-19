@@ -18,6 +18,7 @@ import { mount, unmount, tick, flushSync, type ComponentProps } from 'svelte'
 import type { OperationSnapshot, WriteConflictEvent } from '#lib/tauri-commands/index.js'
 import type { ConflictPrompt } from './operation-conflict.svelte'
 import type { SourcesGonePrompt as SourcesGonePromptState } from './sources-gone.svelte'
+import type { LockedSourcesPrompt as LockedSourcesPromptState } from './locked-sources.svelte'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { seconds } from '#lib/units/index.js'
 
@@ -44,6 +45,16 @@ vi.mock('./sources-gone.svelte', () => ({
   cancelSourcesGonePrompt: vi.fn(() => Promise.resolve()),
 }))
 
+let lockedSourcesPrompt: LockedSourcesPromptState | null = null
+
+vi.mock('./locked-sources.svelte', () => ({
+  getLockedSourcesPrompt: () => lockedSourcesPrompt,
+  isAnsweringLockedSources: () => false,
+  moveLockedSourcesAnyway: vi.fn(() => Promise.resolve()),
+  skipLockedSources: vi.fn(() => Promise.resolve()),
+  cancelLockedSourcesPrompt: vi.fn(() => Promise.resolve()),
+}))
+
 vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
@@ -67,6 +78,7 @@ import OperationConflictDialog from './OperationConflictDialog.svelte'
 import RollbackConfirmDialog from './RollbackConfirmDialog.svelte'
 import SourcesGoneDialog from './SourcesGoneDialog.svelte'
 import SourcesGonePrompt from './SourcesGonePrompt.svelte'
+import LockedSourcesPrompt from './LockedSourcesPrompt.svelte'
 import TransferProgressReadout from './TransferProgressReadout.svelte'
 import NewEntryNameField from './NewEntryNameField.svelte'
 import S3CostLine from './S3CostLine.svelte'
@@ -271,6 +283,48 @@ describe('SourcesGonePrompt a11y', () => {
     const dialog = target.querySelector('[role="dialog"]')
     expect(dialog?.getAttribute('aria-describedby')).toBe('sources-gone-message')
     expect(target.querySelector('#sources-gone-message')?.textContent).toContain('6 of the 22 items')
+  })
+})
+
+/**
+ * Tier 3 a11y test for `LockedSourcesPrompt.svelte` and the
+ * `LockedSourcesDialog` it mounts: a move's question about the Locked items it
+ * found. The count sentence is what the dialog is about, so it has to describe
+ * the dialog.
+ */
+describe('LockedSourcesPrompt a11y', () => {
+  async function mountDialog(): Promise<HTMLElement> {
+    lockedSourcesPrompt = {
+      operationId: 'op-1',
+      event: {
+        operationId: 'op-1',
+        operationType: 'move',
+        lockedCount: 6,
+        lockedSample: ['/Docs/contract.pdf', '/Docs/deed.pdf'],
+      },
+      snapshot: null,
+    }
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(LockedSourcesPrompt, { target })
+    await tick()
+    return target
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('has no a11y violations', async () => {
+    const target = await mountDialog()
+    await expectNoA11yViolations(target)
+  })
+
+  it('describes itself with the count sentence', async () => {
+    const target = await mountDialog()
+    const dialog = target.querySelector('[role="dialog"]')
+    expect(dialog?.getAttribute('aria-describedby')).toBe('locked-sources-message')
+    expect(target.querySelector('#locked-sources-message')?.textContent).toContain('6 items you’re moving are locked')
   })
 })
 

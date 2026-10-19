@@ -90,6 +90,11 @@ export const SOFT_DIALOG_REGISTRY = [
     whileOpen: BLOCKS_OPERATIONS,
   },
   {
+    id: 'locked-sources',
+    description: 'Asks whether a move should unlock the Locked items it found, or leave them where they are',
+    whileOpen: BLOCKS_OPERATIONS,
+  },
+  {
     id: 'archive-password',
     description: 'Prompts for an encrypted archive password before extracting',
     whileOpen: BLOCKS_OPERATIONS,

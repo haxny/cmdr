@@ -28,11 +28,13 @@
 
 import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
 import { formatDisjunctionList } from '#lib/intl/list-format.js'
+import { joinSentences } from '#lib/intl/sentence-join.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import type {
   AppearedDuringMove,
   DurabilityUnconfirmed,
+  LockedKept,
   LostMetadataClass,
   MetadataLeftBehind,
   TopLevelSkipped,
@@ -66,12 +68,32 @@ export interface TransferCompleteToastInput {
    *  Finder tags on a phone). Absent when nothing worth keeping stayed behind, which is the
    *  ordinary case. Adds one calm sentence naming the classes; the copy still reads as a success. */
   metadataLeftBehind?: MetadataLeftBehind | null
+  /** The Locked items a move left where they were: ones the person chose to skip, and ones macOS
+   *  keeps locked (no answer can move those). Absent when it left none, which is the ordinary case.
+   *  Adds a sentence per kind; the move still reads as a success. */
+  lockedKept?: LockedKept | null
 }
 
 /** Composes the copy/move/trash/delete completion toast from catalog keys. */
 export function composeTransferCompleteToast(input: TransferCompleteToastInput): string {
   const toast = withLeftBehind(composeOutcome(input), input.appearedDuringMove)
-  return withMetadataLeftBehind(toast, input.metadataLeftBehind)
+  return withLockedKept(withMetadataLeftBehind(toast, input.metadataLeftBehind), input.lockedKept)
+}
+
+/** Appends what a move left in place because it was Locked: what the person chose to skip, then
+ *  what macOS keeps locked (`crates/cmdr-operations/DETAILS.md` § "Moving Locked items"). */
+function withLockedKept(toast: string, kept: LockedKept | null | undefined): string {
+  if (!kept) return toast
+  const sentences = [toast]
+  if (kept.skipped > 0) {
+    sentences.push(tString('transfer.lockedSkipped', { count: kept.skipped, countText: formatNumber(kept.skipped) }))
+  }
+  if (kept.systemLocked > 0) {
+    sentences.push(
+      tString('transfer.systemLockedKept', { count: kept.systemLocked, countText: formatNumber(kept.systemLocked) }),
+    )
+  }
+  return joinSentences(sentences)
 }
 
 /** The catalog name of each metadata class, as it reads inside the note's list. */

@@ -42,6 +42,7 @@ import { rollbackConfirmFixtures } from './rollback'
 import { selectionAddFixtures, selectionRemoveFixtures } from './selection'
 import { serverSignInFixtures } from './servers'
 import { sourcesGoneFixtures } from './sources-gone'
+import { lockedSourcesFixtures } from './locked-sources'
 import {
   bulkRenameFixtures,
   errorReportFixtures,
@@ -83,6 +84,7 @@ export const fixtureRecords = {
   'selection-remove': selectionRemoveFixtures,
   'server-sign-in': serverSignInFixtures,
   'sources-gone': sourcesGoneFixtures,
+  'locked-sources': lockedSourcesFixtures,
   'transfer-confirmation': transferFixtures,
   'transfer-error': transferErrorFixtures,
   'transfer-progress': transferProgressFixtures,

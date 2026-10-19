@@ -45,6 +45,7 @@
     import StatusCorner from '#lib/status-corner/StatusCorner.svelte'
     import OperationConflictDialog from '#lib/file-operations/OperationConflictDialog.svelte'
     import SourcesGonePrompt from '#lib/file-operations/SourcesGonePrompt.svelte'
+    import LockedSourcesPrompt from '#lib/file-operations/LockedSourcesPrompt.svelte'
     import StaleDriveDialog from '#lib/indexing/StaleDriveDialog.svelte'
     import { initPathLimits } from '#lib/utils/filename-validation.js'
     import { initShortcutDispatch, destroyShortcutDispatch } from '#lib/shortcuts/shortcut-dispatch.js'
@@ -887,6 +888,7 @@
             <StaleDriveDialog />
             <OperationConflictDialog />
             <SourcesGonePrompt />
+            <LockedSourcesPrompt />
         {/if}
 
         {#if showApp}

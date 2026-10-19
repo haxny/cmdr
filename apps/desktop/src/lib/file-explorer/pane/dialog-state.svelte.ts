@@ -259,6 +259,7 @@ export function createDialogState(deps: DialogStateDeps) {
       topLevelSkipped,
       refused,
       metadataLeftBehind,
+      lockedKept,
       durabilityUnconfirmed,
     }: TransferCompletePayload,
     settledOperationId: string | null,
@@ -284,6 +285,7 @@ export function createDialogState(deps: DialogStateDeps) {
       appearedDuringMove,
       topLevelSkipped,
       metadataLeftBehind,
+      lockedKept,
     })
     // A trash the OS refused part of still ends as a completion, so without
     // this it said "Moved 1 file to trash" in success green and the item still

@@ -39,6 +39,7 @@ import {
   stopOperationConflictHost,
 } from '#lib/file-operations/operation-conflict.svelte.js'
 import { startSourcesGoneHost, stopSourcesGoneHost } from '#lib/file-operations/sources-gone.svelte.js'
+import { startLockedSourcesHost, stopLockedSourcesHost } from '#lib/file-operations/locked-sources.svelte.js'
 import {
   initOperationSessions,
   destroyOperationSessions,
@@ -227,6 +228,9 @@ export async function startWindowServices(ctx: WindowServicesContext): Promise<v
   // store, like the conflict host: it names the operation from the rows and drops a question whose
   // operation left them.
   await startSourcesGoneHost()
+  // The question a move asks, before any byte moves, when some of what it moves is Locked. After the
+  // store for the same reason.
+  await startLockedSourcesHost()
   await setupWindowFocusListener(listenerCtx)
   // Native Quick Look (macOS) event wiring: `quick-look-closed` flips `isOpen` on the state
   // singleton; `quick-look-key` routes panel keystrokes back into the focused pane, and the
@@ -289,6 +293,7 @@ export function stopWindowServices(): void {
   stopOperationFailureWatch()
   stopOperationConflictHost()
   stopSourcesGoneHost()
+  stopLockedSourcesHost()
   destroyMainWindowOperations()
   destroyOperationSessions()
   destroySnapshotPurge()

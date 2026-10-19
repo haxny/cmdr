@@ -364,8 +364,12 @@ export {
   showQueueRowContextMenu,
   onWriteSourcesGone,
   continueWithoutGoneSources,
+  onWriteLockedSources,
+  answerLockedSources,
 } from './operations'
 export type {
+  LockedSourcesAnswer,
+  LockedSourcesAnswerOutcome,
   OperationSnapshot,
   OperationsChanged,
   QueueMoveDirection,
@@ -374,6 +378,7 @@ export type {
   QueueRowMenuEntry,
   RetryOutcome,
   SourcesGoneAnswerOutcome,
+  WriteLockedSourcesEvent,
   WriteSourcesGoneEvent,
 } from './operations'
 // The live transfer tree's one window per call (progress dialog + queue).

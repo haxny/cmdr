@@ -148,6 +148,7 @@ describe('a completed duplicate the trigger asked to name', () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      lockedKept: null,
       durabilityUnconfirmed: null,
     })
     await drain()
@@ -182,6 +183,7 @@ describe('a completed duplicate the trigger asked to name', () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      lockedKept: null,
       durabilityUnconfirmed: null,
     })
     await drain()
@@ -205,6 +207,7 @@ describe('a completed duplicate the trigger asked to name', () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      lockedKept: null,
       durabilityUnconfirmed: null,
     })
     emitSettled({ operationId: 'op-1', operationType: 'copy' })

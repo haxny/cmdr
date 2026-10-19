@@ -201,6 +201,18 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
     ],
   },
   {
+    dialogId: 'locked-sources',
+    label: 'Locked items in a move',
+    hostWindow: 'main',
+    status: 'ready',
+    note: 'Asked by a move, before anything moves, when some of the items are Locked in Finder. All three answers just close the preview: in the app, Move anyway unlocks each item for the move and locks it again where it lands, Skip leaves the Locked items where they are, and Cancel ends the move. There’s no Escape: every way out is an answer.',
+    states: [
+      { id: 'one', label: 'One Locked file' },
+      { id: 'some', label: 'A few Locked files' },
+      { id: 'many', label: 'More Locked than it names' },
+    ],
+  },
+  {
     dialogId: 'transfer-error',
     label: 'Transfer error',
     hostWindow: 'main',

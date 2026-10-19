@@ -255,6 +255,7 @@ describe('steering the operation that IS running', () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      lockedKept: null,
       durabilityUnconfirmed: null,
     })
 
