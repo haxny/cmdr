@@ -10,6 +10,7 @@ use crate::host::testing::{FakeVolumes, RecordingEngineEvents};
 use crate::transfer_sides::test_hook;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::TestDir;
+use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;
 
 /// The host a cell's sweep runs on: a registry holding only the drives the
@@ -494,4 +495,145 @@ async fn a_locked_or_deny_delete_temp_is_cleared_and_swept() {
         assert_eq!(outcome, Outcome::Swept, "{}", temp.display());
         assert!(!temp.exists());
     }
+}
+
+/// A staged write's complete temp on its way to `notes.txt`, recorded as a
+/// landing the way `staged_write.rs::land` records one before clearing the way.
+struct Landing {
+    dir: TestDir,
+    temp: PathBuf,
+    destination: PathBuf,
+    kind: ItemKind,
+}
+
+fn landing(name: &str, new_bytes: &[u8]) -> Landing {
+    let dir = TestDir::new(name);
+    let destination = dir.join("notes.txt");
+    let temp = dir.join(format!("notes.txt.cmdr-tmp-{}", uuid::Uuid::new_v4()));
+    std::fs::write(&temp, new_bytes).expect("write the complete temp");
+    let kind = ItemKind::Landing {
+        destination: destination.clone(),
+        expected_size: new_bytes.len() as u64,
+    };
+    Landing {
+        dir,
+        temp,
+        destination,
+        kind,
+    }
+}
+
+async fn settle_landing(fixture: &Landing) -> Outcome {
+    settle_kind(
+        &sweep_host().host,
+        &Surface::Local,
+        &fixture.kind,
+        &fixture.temp,
+        Some(&fixture.destination),
+        None,
+    )
+    .await
+}
+
+/// ❗ The crash this kind exists for: the way was cleared (the delete of what
+/// held the name went through) and the landing rename never ran, so the temp is
+/// the destination's only copy. The sweep FINISHES the landing, ❌ never
+/// deletes it.
+#[tokio::test]
+async fn a_landing_whose_destination_is_missing_finishes_at_its_name() {
+    let fixture = landing("sweep-landing-restore", b"the new notes");
+
+    assert_eq!(settle_landing(&fixture).await, Outcome::Restored);
+    assert_eq!(
+        std::fs::read(&fixture.destination).expect("the new bytes have their name"),
+        b"the new notes"
+    );
+    assert!(!fixture.temp.exists(), "and nothing is left wearing a scratch name");
+}
+
+/// A crash after the record but before the clearing delete leaves the
+/// destination as it was and the temp as a spare complete copy. Neither may be
+/// lost: the temp's bytes get a real name beside it.
+#[tokio::test]
+async fn a_landing_whose_destination_is_occupied_is_kept_under_a_recovered_name() {
+    let fixture = landing("sweep-landing-occupied", b"the new notes");
+    std::fs::write(&fixture.destination, b"what was there").expect("the destination still holds its file");
+
+    assert_eq!(settle_landing(&fixture).await, Outcome::Recovered);
+    assert_eq!(
+        std::fs::read(&fixture.destination).expect("read"),
+        b"what was there",
+        "what holds the name is left exactly as it is"
+    );
+    assert_eq!(
+        std::fs::read(fixture.destination.with_file_name("notes (recovered).txt"))
+            .expect("the new bytes are kept beside it"),
+        b"the new notes"
+    );
+    assert!(!fixture.temp.exists());
+}
+
+/// A temp that isn't the size the landing recorded isn't provably the bytes we
+/// wrote, so the sweep doesn't move it anywhere, and ❌ doesn't delete it.
+#[tokio::test]
+async fn a_landing_whose_temp_changed_size_is_left_alone() {
+    let fixture = landing("sweep-landing-resized", b"the new notes");
+    std::fs::write(&fixture.temp, b"something else entirely").expect("the temp changed under us");
+
+    assert_eq!(settle_landing(&fixture).await, Outcome::LeftAlone);
+    assert_eq!(
+        std::fs::read(&fixture.temp).expect("the temp is still there"),
+        b"something else entirely"
+    );
+    assert!(!fixture.destination.exists(), "and nothing was put at the name");
+}
+
+/// The temp is gone: a crash after the landing rename went through but before
+/// its record was retired. The record retires, rather than being retried at
+/// every launch and every reconnect.
+#[tokio::test]
+async fn a_landing_whose_temp_is_gone_retires() {
+    let fixture = landing("sweep-landing-gone", b"the new notes");
+    std::fs::rename(&fixture.temp, &fixture.destination).expect("the landing went through");
+
+    assert_eq!(settle_landing(&fixture).await, Outcome::AlreadyGone);
+    assert_eq!(std::fs::read(&fixture.destination).expect("read"), b"the new notes");
+}
+
+/// ❗ The crash between the kind change's two lines: the `Landing` record is on
+/// disk and the `Temp` one for the same path isn't retired yet. The path
+/// settles as a landing, ❌ never as a temp (which would delete the only copy).
+#[test]
+fn a_path_recorded_as_both_temp_and_landing_settles_as_the_landing() {
+    let fixture = landing("sweep-landing-both", b"the new notes");
+    let data_dir = fixture.dir.join("data");
+    std::fs::create_dir_all(&data_dir).expect("create the data dir");
+    let previous_run = Ledger::recording_in(&data_dir);
+    let state = Arc::new(
+        crate::testing::TestOperations::new()
+            .new_operation_state(std::time::Duration::from_millis(50))
+            .with_in_flight_ledger(previous_run.clone()),
+    );
+    super::super::track(&state, ItemKind::Temp, &fixture.temp);
+    super::super::track(&state, fixture.kind.clone(), &fixture.temp);
+    previous_run.die();
+
+    let next_run = Ledger::for_test();
+    let next_app = crate::testing::TestOperations::new();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
+
+    assert_eq!(
+        std::fs::read(&fixture.destination).expect("the landing finished"),
+        b"the new notes"
+    );
+    assert!(!fixture.temp.exists());
+    assert_eq!(
+        tally,
+        SweepTally {
+            restored: 1,
+            ..SweepTally::default()
+        },
+        "one path, settled once, by its landing: {tally:?}"
+    );
+    assert!(next_run.live_paths().is_empty(), "and neither record is left to retry");
 }

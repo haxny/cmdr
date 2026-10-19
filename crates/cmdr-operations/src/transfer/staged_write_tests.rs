@@ -3,10 +3,12 @@
 //! temp when the landing fails or never finishes.
 
 use super::*;
+use crate::in_flight_temps::{ItemKind, Ledger, Record, TrackedItem};
 use crate::testing::TestOperations;
 use crate::transfer::volume::forward_volume_methods;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::InMemoryVolume;
+use std::sync::Mutex;
 use std::time::Duration;
 
 /// What `path` reports right now, which is how these cells tell "the
@@ -17,6 +19,19 @@ async fn size_of(volume: &InMemoryVolume, path: &str) -> Option<u64> {
 
 fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
     Arc::new(engine.new_operation_state(Duration::from_millis(50)))
+}
+
+/// `land`, for a cell about the landing alone: on a state of its own whose
+/// ledger records nothing on disk.
+async fn land_unrecorded(
+    dest: &Arc<dyn Volume>,
+    temp: &Path,
+    final_path: &Path,
+    landing: LandingName,
+) -> Result<(), FinalizeFailure> {
+    let engine = TestOperations::new();
+    let state = state(&engine);
+    land(dest, temp, final_path, landing, &LandingLedger::new(&state, temp)).await
 }
 
 /// A staged write must never hand the writer the final name, and the temp it
@@ -150,12 +165,11 @@ async fn landing_clears_a_claimed_name_that_is_genuinely_in_the_way() {
     inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
     inner.create_file(Path::new("/temp"), b"NEW").await.unwrap();
 
-    land(
+    land_unrecorded(
         &dest,
         Path::new("/temp"),
         Path::new("/notes.txt"),
         LandingName::ClaimedByTheCaller,
-        &|| {},
     )
     .await
     .unwrap();
@@ -181,12 +195,11 @@ async fn landing_onto_a_name_believed_free_leaves_it_alone() {
         .unwrap();
     inner.create_file(Path::new("/temp"), b"NEW").await.unwrap();
 
-    let outcome = land(
+    let outcome = land_unrecorded(
         &dest,
         Path::new("/temp"),
         Path::new("/notes.txt"),
         LandingName::ExpectedFree,
-        &|| {},
     )
     .await;
 
@@ -304,12 +317,11 @@ async fn land_with_a_rename_that_fails(failure: VolumeError) -> (Arc<InMemoryVol
 
     // The claimed reading, so the cell is about the rename's error and not
     // about who owns the name.
-    let outcome = land(
+    let outcome = land_unrecorded(
         &dest,
         Path::new("/temp"),
         Path::new("/notes.txt"),
         LandingName::ClaimedByTheCaller,
-        &|| {},
     )
     .await;
     (inner, outcome)
@@ -333,12 +345,11 @@ async fn a_landing_that_cleared_the_way_and_then_could_not_rename_rescues_the_ne
     // Only the final name is refused, so the rescue's own rename can land.
     inner.set_rename_to_failing(Path::new("/notes.txt"));
 
-    let failure = land(
+    let failure = land_unrecorded(
         &dest,
         Path::new("/notes.txt.cmdr-tmp-abc"),
         Path::new("/notes.txt"),
         LandingName::ClaimedByTheCaller,
-        &|| {},
     )
     .await
     .expect_err("a landing that can't rename has to fail");
@@ -491,4 +502,195 @@ async fn a_landing_dropped_midway_leaves_its_temp_to_the_abandoned_write_sweep()
         vec![temp],
         "the abandoned landing's temp must stay findable"
     );
+}
+
+/// The destination volume id the ledger cells below record their temps under.
+const LEDGER_VOLUME_ID: &str = "staged-write-test-nas";
+
+/// A state writing to [`LEDGER_VOLUME_ID`] and recording into `ledger`, the
+/// way a volume copy's state names its destination.
+fn state_recording_into(engine: &TestOperations, ledger: &Ledger) -> Arc<WriteOperationState> {
+    Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_journal_volumes("staged-write-test-source".to_string(), LEDGER_VOLUME_ID.to_string())
+            .with_in_flight_ledger(ledger.clone()),
+    )
+}
+
+/// A destination that notes what the ledger's log held when the landing's
+/// clearing `delete` went out, and can hold the landing rename that follows it.
+struct WatchedLanding {
+    inner: Arc<InMemoryVolume>,
+    data_dir: PathBuf,
+    on_disk_at_delete: Mutex<Option<Vec<Record>>>,
+    /// Whether the rename after a delete never answers: the landing a crash cut
+    /// off once the way was clear.
+    hold_rename_after_delete: bool,
+    deleted: std::sync::atomic::AtomicBool,
+}
+
+impl Volume for WatchedLanding {
+    forward_volume_methods!(inner =>
+        name, root, list_directory, get_metadata, exists, is_directory, create_file,
+    );
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn delete<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        *self.on_disk_at_delete.lock_ignore_poison() = Some(Ledger::replay_log(&self.data_dir));
+        self.deleted.store(true, std::sync::atomic::Ordering::SeqCst);
+        self.inner.delete(path)
+    }
+    fn rename<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        force: bool,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        if self.hold_rename_after_delete && self.deleted.load(std::sync::atomic::Ordering::SeqCst) {
+            return Box::pin(std::future::pending());
+        }
+        self.inner.rename(from, to, force)
+    }
+}
+
+/// A claimed name (`/notes.txt`, holding the caller's placeholder) and a
+/// complete staged write on its way there, recording into a ledger of its own.
+struct ClaimedLanding {
+    dir: cmdr_fs::testing::TestDir,
+    engine: TestOperations,
+    ledger: Ledger,
+    state: Arc<WriteOperationState>,
+    inner: Arc<InMemoryVolume>,
+    dest: Arc<WatchedLanding>,
+    staged: StagedWrite,
+    temp: PathBuf,
+}
+
+async fn claimed_landing(name: &str, hold_rename_after_delete: bool) -> ClaimedLanding {
+    let dir = cmdr_fs::testing::TestDir::new(name);
+    let data_dir = dir.join("data");
+    std::fs::create_dir_all(&data_dir).unwrap();
+    let ledger = Ledger::recording_in(&data_dir);
+    let engine = TestOperations::new();
+    let state = state_recording_into(&engine, &ledger);
+    let inner = Arc::new(InMemoryVolume::new("dest"));
+    inner.create_file(Path::new("/notes.txt"), b"").await.unwrap();
+    let dest = Arc::new(WatchedLanding {
+        inner: Arc::clone(&inner),
+        data_dir,
+        on_disk_at_delete: Mutex::new(None),
+        hold_rename_after_delete,
+        deleted: std::sync::atomic::AtomicBool::new(false),
+    });
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::StageOntoClaimedName);
+    let temp = staged.target().to_path_buf();
+    inner.create_file(&temp, b"THE NEW BYTES").await.unwrap();
+    ClaimedLanding {
+        dir,
+        engine,
+        ledger,
+        state,
+        inner,
+        dest,
+        staged,
+        temp,
+    }
+}
+
+/// Whether `records` hold `temp` as a landing on its way to `/notes.txt` at
+/// `size` bytes.
+fn records_landing(records: &[Record], temp: &Path, size: u64) -> bool {
+    records.iter().any(|record| {
+        matches!(record, Record::Tracked(TrackedItem {
+            kind: ItemKind::Landing { destination, expected_size },
+            path,
+            ..
+        }) if path == temp && destination == Path::new("/notes.txt") && *expected_size == size)
+    })
+}
+
+/// ❗ From the moment a landing may clear a name, its temp can be the
+/// destination's only copy, so the ledger has to know that BEFORE the clearing
+/// delete goes out: a crash right after it would otherwise leave the only copy
+/// with nothing recording it, or recorded as a temp, the one kind the sweep
+/// deletes on sight.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_claimed_name_landing_is_on_disk_as_a_landing_before_it_clears_the_way() {
+    let fixture = claimed_landing("staged-write-landing-recorded", false).await;
+    let dest: Arc<dyn Volume> = Arc::clone(&fixture.dest) as Arc<dyn Volume>;
+
+    fixture
+        .staged
+        .commit(&dest)
+        .await
+        .expect("the claimed name is cleared and landed");
+
+    let on_disk = fixture
+        .dest
+        .on_disk_at_delete
+        .lock_ignore_poison()
+        .clone()
+        .expect("the landing cleared the way");
+    assert!(
+        records_landing(&on_disk, &fixture.temp, 13),
+        "the landing record was on disk when the delete went out: {on_disk:?}"
+    );
+    assert!(
+        fixture.state.in_flight_temps.lock_ignore_poison().is_empty(),
+        "and the temp is no copy of ours to remove any more"
+    );
+    assert_eq!(
+        size_of(&fixture.inner, "/notes.txt").await,
+        Some(13),
+        "the new bytes landed"
+    );
+    fixture.ledger.clone().die();
+    assert!(
+        Ledger::replay_log(&fixture.dir.join("data")).is_empty(),
+        "and once landed, nothing is left recorded"
+    );
+}
+
+/// The crash that record is for: the way was cleared and the landing rename
+/// never answered. The temp is out of every in-operation sweep's reach, and
+/// the next launch finishes the landing.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_landing_cut_off_after_clearing_the_way_is_finished_by_the_next_launch() {
+    let fixture = claimed_landing("staged-write-landing-cut-off", true).await;
+    let dest: Arc<dyn Volume> = Arc::clone(&fixture.dest) as Arc<dyn Volume>;
+
+    let cut_off = tokio::time::timeout(Duration::from_millis(100), fixture.staged.commit(&dest)).await;
+    assert!(
+        cut_off.is_err(),
+        "the rename after the delete is rigged never to answer"
+    );
+    assert!(
+        !fixture.inner.exists(Path::new("/notes.txt")).await,
+        "the way was cleared"
+    );
+    assert!(
+        fixture.state.in_flight_temps.lock_ignore_poison().is_empty(),
+        "❗ the only copy is no temp the abandoned-write sweep may delete"
+    );
+
+    let data_dir = fixture.dir.join("data");
+    fixture.ledger.die();
+    let next_app = TestOperations::new();
+    next_app
+        .volumes()
+        .register(LEDGER_VOLUME_ID, Arc::clone(&fixture.inner) as Arc<dyn Volume>);
+    let tally = Ledger::for_test().launch_in(&data_dir, &next_app).wait();
+
+    assert_eq!(
+        size_of(&fixture.inner, "/notes.txt").await,
+        Some(13),
+        "the next launch lands the new bytes at their name: {tally:?}"
+    );
+    assert!(!fixture.inner.exists(&fixture.temp).await);
+    drop(fixture.engine);
 }

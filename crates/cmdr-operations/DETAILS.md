@@ -150,13 +150,14 @@ The full top-level inventory is here:
   `Volume::clear_blockers` after its plain removal is refused, never by a volume's own `delete`, which is also F8's).
   That recheck shares `verify_snapshot` + `SkipReason` with the operation-log history engine — ❌ never a batch or a
   fork of either, so one reversal can't quietly grow a laxer rule than the other; only the `Drop` net is unconditional.
-  The persisted leftover ledger is five files: `in_flight_records.rs` (what a record IS: its kind, its path space, and
+  The persisted leftover ledger is six files: `in_flight_records.rs` (what a record IS: its kind, its path space, and
   what that kind needs), `in_flight_temps.rs` (the log and the store, and what an operation records),
   `in_flight_claim.rs` (the engine's one claim: the only code that opens, replays, and truncates a ledger file),
-  `in_flight_log_writer.rs` (the thread that writes the log, so no record is file I/O on an async worker), and
-  `in_flight_sweep.rs` (what a launch and a returning drive DO with one). § "What the sweep does with each kind" and §
-  "Who claims the ledger" below hold the rules; `src/transfer/DETAILS.md` § "Which path space a recorded partial lives
-  in" holds the path-space decisions, and § "Testing the in-flight temp ledger" below the rules it imposes on tests.
+  `in_flight_log_writer.rs` (the thread that writes the log, so no record is file I/O on an async worker),
+  `in_flight_sweep.rs` (what a launch and a returning drive DO with one), and `in_flight_sweep_surface.rs` (the four
+  filesystem primitives those rules act through). § "What the sweep does with each kind" and § "Who claims the ledger"
+  below hold the rules; `src/transfer/DETAILS.md` § "Which path space a recorded partial lives in" holds the path-space
+  decisions, and § "Testing the in-flight temp ledger" below the rules it imposes on tests.
 - **`tests.rs` is the SHARED-vocabulary suite only**: the intent machine, the config the frontend sends, the `io::Error`
   conversion, and `no_spawn_async_sync_in_the_engine` — a fail-closed whole-tree scanner (the root must exist and at
   least 300 files must be scanned) that excludes itself by the filename `tests.rs`, so ❗ moving it to another file
@@ -2723,7 +2724,7 @@ defensive rather than reachable. Pinned by `a_skipped_row_is_logged_but_never_of
 
 ## What the sweep does with each kind
 
-The persisted ledger records three shapes of thing, and exactly one of them is disposable. The rules run from two places
+The persisted ledger records four shapes of thing, and exactly one of them is disposable. The rules run from two places
 — the engine's ledger claim at launch, and the volume registry's arrival announcement — on the claiming engine's host,
 and ❗ they must stay ONE set: a leftover on a USB stick meets whichever happens first, so rules that drifted apart
 would make its fate depend on whether the drive was plugged in at launch.
@@ -2732,6 +2733,14 @@ would make its fate depend on whether the drive was plugged in at launch.
   local one that refuses its `unlink` is cleared (`uchg`, ACL) and retried once (`Surface::remove_temp`): an APFS clone
   copies the source's Locked flag and ACL onto the temp in the same call, so a crash before the landing clears them
   leaves one. ❌ Only a temp: an aside is the user's own file, and its flags stay theirs.
+- **A landing** (`ItemKind::Landing`, also `.cmdr-tmp-*`) is a cross-volume staged write's complete temp whose way to
+  its name may have been cleared (`transfer/staged_write.rs::land`), so it can be the destination's only copy. ❌ Never
+  removed. The temp is read FIRST: gone means the landing rename went through (a crash before its record retired), so
+  the record retires rather than deferring forever. A temp of exactly `expected_size` takes its name when that's free
+  (finishing the landing), or a ` (recovered)` name beside whatever holds it; any other size stays where it is. The kind
+  change writes the landing BEFORE it retires the temp record (`in_flight_temps::hold_for_landing`), so a crash between
+  leaves both, and the sweep settles that path by the landing (`without_superseded_temps`); the other order would leave
+  a moment where only the record the sweep deletes is on disk.
 - **An aside** (`.cmdr-temp-*`) holds bytes that were ALREADY the user's, renamed out of the way so a replacement could
   take their name. It goes back to its own name when that name is free; it is removed ONLY when the replacement is
   provably complete, which for `FileAside` means a regular file of exactly the recorded size; in every other case its

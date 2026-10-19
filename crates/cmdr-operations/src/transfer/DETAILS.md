@@ -837,9 +837,9 @@ atomic-exclusive"). The case it defends is a file appearing between conflict res
 
 **On error the temp goes.** A failed write, a failed aside, or a failed landing removes the temp and deregisters it: the
 bytes there are a partial, or at most a complete copy whose source is still on disk (the item reports failed, so no
-source is ever deleted). This differs from the async cross-volume `StagedWrite::commit`, which deregisters BEFORE
-landing because a landing that fails there can leave the only complete copy of the new bytes. Locally the landing is one
-synchronous syscall, so that window doesn't exist.
+source is ever deleted). This differs from the async cross-volume `StagedWrite::commit`, which re-records the temp as
+a landing before it clears a name, because a landing that fails there can leave the only complete copy of the new bytes
+(§ "File writes are staged"). Locally the landing is one synchronous syscall, so that window doesn't exist.
 
 **What each arm puts on the temp.** Every arm but the clone goes through `cmdr_fs::metadata::apply_staged` on the temp's
 open fd: xattrs, then the exact mode, then birth, mtime, and atime in ONE call, so APFS and HFS+ can't drag birth down
@@ -1048,7 +1048,8 @@ all; see `../delete/CLAUDE.md`.
 
 **Decision**: a cross-volume file write streams into a `.cmdr-tmp-<uuid>` sibling and is renamed onto its final name
 only after its last byte, whether or not a conflict made it a safe-replace, unless the write is structurally incapable
-of leaving a partial there (`volume/DETAILS.md` § "The single-shot exemption"). `staged_write.rs` owns it;
+of leaving a partial there (`volume/DETAILS.md` § "The single-shot exemption"). `staged_write.rs` owns it (its landing,
+`land` and the ledger hand-off, in `staged_write_landing.rs`);
 `stream_pipe_file` and the sequential extractor are the two write sites.
 
 **Why**: the conflict layer only staged a file→file Overwrite. A NEW file has no conflict, so it streamed straight to
@@ -1081,11 +1082,21 @@ usually isn't, and a speculative delete would burn one extra round trip per file
 `Rename` resolution's `O_EXCL` placeholder, a file that arrived after the caller last looked), which the second attempt
 covers.
 
+❗ **Before the landing clears a name, its temp is recorded as a landing.** From that delete on, the temp may be the
+destination's only copy, so `land` measures it (one stat, on this path only; a temp it can't measure is not cleared
+for) and re-records it as `ItemKind::Landing { destination, expected_size }` through the non-temp barrier: on disk
+before the delete goes out, then the `Temp` record retires and the path leaves `state.in_flight_temps`
+(`in_flight_temps::hold_for_landing`). That order means a crash at any moment leaves a record the sweep finishes the
+landing from, ❌ never one it deletes (the rule: `crates/cmdr-operations/DETAILS.md` § "What the sweep does with each
+kind"). The landing record retires when the rename lands it, when the rescue below gives it a real name, or when the
+refused delete left the name taken (the temp is a spare copy then: it's discarded, or turned back into a temp if the
+discard fails). A landing that can't tell whether the delete went through, a rescue that couldn't rename either, and a
+landing cut off mid-way leave it recorded, held for the volume's next arrival. Pinned by
+`staged_write.rs::{a_claimed_name_landing_is_on_disk_as_a_landing_before_it_clears_the_way, a_landing_cut_off_after_clearing_the_way_is_finished_by_the_next_launch}`.
+
 ❗ **A cleared way plus a refused second rename strands committed data**, and the landing gets it out of temp space on
-the spot. The bytes are complete by then (the landing deregistered the temp just before clearing the way, so no sweep
-protects it and none should delete it), the destination name is now EMPTY, and the temp wears a `.cmdr-tmp-*` name that
-`cleanup.rs::reap_stale_transfer_temps` matches on age at the start of the next transfer into that folder — so the
-user's only copy of the new file would be deleted an hour later. `recovered_name.rs::rescue_out_of_temp_space` renames
+the spot. The bytes are complete by then, the destination name is now EMPTY, and the temp wears a `.cmdr-tmp-*` name,
+which a real name keeps out of every sweep's reach for good, recorded or not. `recovered_name.rs::rescue_out_of_temp_space` renames
 it to `<name> (recovered)<.ext>` and the failure carries that path as `FinalizeFailure::new_data_at`, exactly as
 `finalize::finalize_safe_replace` does; `stream_pipe_file` and `sequential_extract` label it with the DESTINATION
 (`at_source_or_rescued_dest`), since a rescued file is one the user can't find on their own. `recovered_name.rs` sits at
@@ -1145,10 +1156,10 @@ typed refusal. Pinned by `volume/finalize_recovery_tests.rs` (the three delete a
 of ours: while it is written, and through the landing until `land` releases it (it landed, it was discarded, or the way
 is about to be cleared). So a landing that never finishes (a cancel, the concurrent driver dropping its window, a crash)
 leaves the temp to the abandoned-write and startup sweeps, which is safe because the name was never cleared; and a temp
-that may hold the only complete copy at the destination is never in the set and can never be swept BY THE LEDGER. The
-NAME-based sweep is a separate danger and a separate answer: `finalize_safe_replace` renames such a temp to a
-` (recovered)` name on the spot, because `volume/cleanup.rs::reap_stale_transfer_temps` matches `.cmdr-tmp-` plus an age
-and knows nothing about any ledger (`volume/DETAILS.md` § "The post-write temp is committed data"). Whatever is still
+that may hold the only complete copy at the destination is never in the set, and is recorded as a landing, which no
+sweep deletes. The NAME-based sweep (`volume/cleanup.rs::reap_stale_transfer_temps`) spares every path the ledger
+records, but `finalize_safe_replace`'s temp has no record, so it renames such a temp to a ` (recovered)` name on the
+spot (`volume/DETAILS.md` § "The post-write temp is committed data"). Whatever is still
 listed when the driver's loop ends belongs to a task that was DROPPED mid-write — the concurrent driver drops the rest
 of its window on cancel and on the first failure — so `volume::cleanup::clean_abandoned_staged_writes` removes those,
 and the deep-merge children that were never tracked at all are now covered too.
@@ -1180,10 +1191,10 @@ and a delete from a FRESH session succeeded instantly on the same file. The cons
 permanent: the startup orphan sweep is volume-aware (§ "Which path space a recorded partial lives in"), so a refused
 temp is removed on a later launch, and the leftover toast is what tells the user in the meantime.
 
-Registration goes through `cmdr_operations::in_flight_temps`, which keeps the operation's in-memory list AND a persisted
-log in the app data dir once the engine claims it. Local copies register there too (`overwrite::stage_and_land_file`),
-but only the cross-volume drivers run `clean_abandoned_staged_writes`, since a local op's temps are registered and
-deregistered synchronously and anything left is a thread that never came back.
+Recording goes through `cmdr_operations::in_flight_temps` (`track_temp` for a staged write's temp), which keeps the
+operation's in-memory list AND a persisted log in the app data dir once the engine claims it. Local copies record there
+too (`overwrite::stage_and_land_file`), but only the cross-volume drivers run `clean_abandoned_staged_writes`, since a
+local op's temps are recorded and retired synchronously and anything left is a thread that never came back.
 
 **Crash recovery, two sweeps.**
 
@@ -1199,9 +1210,13 @@ deregistered synchronously and anything left is a thread that never came back.
   "Which path space a recorded partial lives in" below.
 - **The rest, on a later transfer into that directory.** `volume::cleanup::reap_stale_transfer_temps` runs once at the
   start of each cross-volume copy AND each cross-volume move, over the destination directory only: one `list_directory`,
-  then a `delete` for each `.cmdr-tmp-*` FILE whose mtime is at least `STALE_TEMP_MIN_AGE` (1 hour) old. The age gate is
-  what makes it safe against a concurrent instance — a live staged write touches its temp every chunk, and even a
-  destination-side foreground park is capped at a second — and an entry with no reported mtime is spared. It mirrors
+  then a `delete` for each `.cmdr-tmp-*` FILE whose mtime is at least `STALE_TEMP_MIN_AGE` (1 hour) old and whose path
+  the engine's ledger doesn't record on that volume (`in_flight_temps::is_recorded_on`, any kind, live or pending). The
+  age gate is what makes it safe against a concurrent instance — a streaming write touches its temp every chunk, and
+  even a destination-side foreground park is capped at a second — and an entry with no reported mtime is spared. ❗ The
+  ledger skip is what protects this instance's own complete temps: the write stamps the SOURCE's dates on the temp
+  (`stamping.rs`), so one that finished streaming (on its way to land, or a landing that may hold the only copy) reads
+  as old at once. Pinned by `volume/cleanup_tests.rs::the_stale_temp_reap_skips_what_the_ledger_records_however_old_it_looks`. It mirrors
   `archive_edit::remote::reap_remote_temps`. This is the backstop for anything the log missed (a power loss, a non-UTF-8
   path); a leftover deeper inside a copied subtree waits for a transfer into that directory, and there is no global
   filesystem sweep and there shouldn't be. ⚠️ It runs on both transfer verbs because a destination folder a person only
@@ -1230,10 +1245,11 @@ operation that names neither has its partial kept in the operation's own in-memo
 ledger's sweep holds the volume handle already, while a persisted path with no path space is one the next launch could
 resolve against the local filesystem and act on there.
 
-Two vocabularies, because the ledger carries both shapes. The cross-volume `staged_write.rs` still writes the plain `+`
-record, naming its volume from `WriteOperationState::dest_volume_id()` (the destination half of `journal_volumes`). The
-local `overwrite.rs` and `move_op/cross_fs.rs` write KINDED records, whose home comes from `in_flight_temps::home_for` —
-the operation's typed destination side (`transfer_sides.rs`), ❌ never a prefix match against the mount table. The three
+Both engines write KINDED records; the plain `+` line is only what an earlier build's log holds, still replayed and
+swept. The cross-volume `staged_write.rs` records its temps (and their landings) volume-space homed, naming the volume
+from `WriteOperationState::dest_volume_id()` (the destination half of `journal_volumes`). The local `overwrite.rs` and
+`move_op/cross_fs.rs` take their home from `in_flight_temps::home_for` — the operation's typed destination side
+(`transfer_sides.rs`), ❌ never a prefix match against the mount table. The three
 homes and why the local-mount / volume-namespace split can't be derived: `crates/cmdr-operations/DETAILS.md` § "What the
 sweep does with each kind".
 

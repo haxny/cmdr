@@ -671,7 +671,7 @@ pub async fn copy_volumes_with_progress(
     // left here. Staging means an interrupted transfer leaves a recognizable temp
     // rather than a truncated file at a real name; this is what eventually takes
     // them away. One listing, age-gated so a live transfer's temp is never touched.
-    let dest_listing = super::cleanup::reap_stale_transfer_temps(&dest_volume, dest_path).await;
+    let dest_listing = super::cleanup::reap_stale_transfer_temps(state, &dest_volume, dest_path).await;
 
     // That listing is also the answer to "which top-level names are already
     // taken?", which the concurrent spawn loop otherwise asks one

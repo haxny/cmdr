@@ -300,7 +300,7 @@ fn a_partial_with_no_named_path_space_is_kept_in_memory_but_not_persisted() {
 
     let state = state(&ledger);
     let temp = PathBuf::from("/photos/holiday.raw.cmdr-tmp-3333");
-    register(&state, &temp, None);
+    track_temp(&state, None, &temp);
 
     assert!(
         state.in_flight_temps.lock_ignore_poison().contains(&temp),
@@ -354,16 +354,17 @@ fn compaction_shrinks_the_log_without_forgetting_what_is_still_in_flight() {
     let ledger = Ledger::recording_in(&data_dir);
 
     let state = state(&ledger);
-    let long_lived = dir.join("a-big-download.iso.cmdr-tmp-0000");
-    register(&state, &long_lived, Some(TempHome::LocalFs));
+    let home = || Some(RecordHome::volume_space("in-flight-temps-test-nas-churn"));
+    let long_lived = PathBuf::from("/a-big-download.iso.cmdr-tmp-0000");
+    track_temp(&state, home(), &long_lived);
 
     // Enough churn to cross the compaction threshold several times over.
     let churned: Vec<PathBuf> = (0..400)
-        .map(|i| dir.join(format!("small-file-{i:04}.txt.cmdr-tmp-{i:04}")))
+        .map(|i| PathBuf::from(format!("/small-file-{i:04}.txt.cmdr-tmp-{i:04}")))
         .collect();
     for churn in &churned {
-        register(&state, churn, Some(TempHome::LocalFs));
-        deregister(&state, churn, Some(TempHome::LocalFs));
+        track_temp(&state, home(), churn);
+        retire_temp(&state, home(), churn);
     }
 
     ledger.flush_log();
@@ -371,17 +372,14 @@ fn compaction_shrinks_the_log_without_forgetting_what_is_still_in_flight() {
         std::fs::metadata(&log_path).unwrap().len() < COMPACT_ABOVE_BYTES * 2,
         "the log must stay bounded while a long transfer churns through it"
     );
-    ledger.flush_log();
-    let replayed = read_recorded(&log_path);
-    assert!(
-        replayed.contains(&Record::Legacy(RecordedTemp::Local(long_lived))),
-        "compaction must keep the partial that is still being written"
-    );
-    assert!(
-        churned
-            .iter()
-            .all(|churn| !replayed.contains(&Record::Legacy(RecordedTemp::Local(churn.clone())))),
-        "and must forget every partial that already landed"
+    let replayed: Vec<PathBuf> = read_recorded(&log_path)
+        .iter()
+        .map(|record| record.path().to_path_buf())
+        .collect();
+    assert_eq!(
+        replayed,
+        vec![long_lived],
+        "compaction must keep the partial that is still being written, and forget every one that already landed"
     );
 }
 
@@ -623,27 +621,34 @@ async fn the_sweep_refuses_a_volume_path_that_isnt_one_of_our_scratch_files() {
     );
 }
 
-/// Registering and deregistering keep both ledgers in step, so nothing
-/// sweeps a file that landed.
+/// Tracking and retiring a staged write's temp keep both ledgers in step, so
+/// nothing sweeps a file that landed.
 #[test]
-fn deregistering_clears_both_ledgers() {
+fn retiring_a_temp_clears_both_ledgers() {
     let dir = TestDir::new("in_flight_temps_both_ledgers");
     let data_dir = dir.join("data");
     std::fs::create_dir_all(&data_dir).unwrap();
     let ledger = Ledger::recording_in(&data_dir);
 
     let state = state(&ledger);
-    let temp = dir.join("notes.txt.cmdr-tmp-1234");
-    register(&state, &temp, Some(TempHome::LocalFs));
+    let home = || Some(RecordHome::volume_space("in-flight-temps-test-nas-both"));
+    let temp = PathBuf::from("/notes.txt.cmdr-tmp-1234");
+    track_temp(&state, home(), &temp);
     assert_eq!(state.in_flight_temps.lock_ignore_poison().len(), 1);
     assert_eq!(ledger.live_paths(), vec![temp.clone()]);
+    ledger.flush_log();
+    let written = std::fs::read_to_string(data_dir.join(STORE_FILENAME)).unwrap();
+    assert!(
+        written.starts_with("A{\"kind\":\"temp\""),
+        "a staged write's temp is a kinded record, ❌ never the `+` line only a temp can be: {written}"
+    );
 
-    deregister(&state, &temp, Some(TempHome::LocalFs));
+    retire_temp(&state, home(), &temp);
     assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
     assert!(ledger.live_paths().is_empty());
     ledger.flush_log();
     assert!(
-        !read_recorded(&data_dir.join(STORE_FILENAME)).contains(&Record::Legacy(RecordedTemp::Local(temp))),
+        read_recorded(&data_dir.join(STORE_FILENAME)).is_empty(),
         "the log must replay as nothing in flight"
     );
 }

@@ -10,6 +10,13 @@
 //! ## The rules, and the one thing none of them may do
 //!
 //! - A **temp** holds bytes on their way in. Nothing else has them, so it goes.
+//! - A **landing** is a complete temp whose way to its name may have been
+//!   cleared, so it can be the only copy. ❌ Never removed: its temp is read
+//!   first (gone means the landing went through, and the record retires), then
+//!   a whole one takes its free name, or a ` (recovered)` one beside whatever
+//!   holds it; one at any other size stays exactly where it is. A path recorded
+//!   as both a temp and a landing (a crash inside the kind change) settles as
+//!   the landing.
 //! - An **aside** holds bytes that were already the user's. It goes back to its
 //!   own name when that name is free; it is removed ONLY when the replacement
 //!   that displaced it is provably complete, which for a file means a regular
@@ -42,15 +49,11 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use cmdr_fs::metadata::{RemovalRefusal, remove_file_clearing_blockers};
-
 use super::{ItemHome, ItemKind, Ledger, Record, RecordedTemp, SweepTally, TrackedItem};
 use crate::host::EngineHost;
 use crate::transfer_sides::root_is_listed;
 use crate::types::MoveLeftoversKeptEvent;
 use crate::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
-use cmdr_fs::volume::{Volume, VolumeError};
-use cmdr_local::rename_local_exclusive;
 
 /// Settles the records an earlier run left that the local filesystem can answer
 /// for on its own, then takes whatever pending volume is already reachable.
@@ -62,7 +65,7 @@ pub(super) fn persisted_orphans(ledger: &Ledger, host: &EngineHost, locals: &[Re
     // worker, so `block_on` parks nothing the app shares.
     let runtime = host.runtime();
     let mut tally = SweepTally::default();
-    for record in locals {
+    for record in &without_superseded_temps(ledger, locals.to_vec()) {
         runtime.block_on(settle_and_record(ledger, host, record, &mut tally));
     }
 
@@ -128,11 +131,41 @@ pub(super) fn on_volume_arrival(ledger: &Ledger, host: &Arc<EngineHost>, volume_
 /// it over.
 async fn on_volume(ledger: &Ledger, host: &EngineHost, volume_id: &str, records: Vec<Record>) -> SweepTally {
     let mut tally = SweepTally::default();
+    let records = without_superseded_temps(ledger, records);
     for record in &records {
         settle_and_record(ledger, host, record, &mut tally).await;
     }
     log::debug!(target: "copy", "settled {} recorded leftovers on `{volume_id}`: {tally:?}", records.len());
     tally
+}
+
+/// Retires every `Temp` record whose path the same batch also records under
+/// another kind, and answers the rest.
+///
+/// ❗ A kind change writes its new record BEFORE it retires the `Temp` one
+/// (`in_flight_temps::hold_for_landing`), so a crash between the two leaves
+/// both. The path is then settled once, by the kind that knows it may be the
+/// only copy: settled as a temp, it would be deleted. Not counted on its own:
+/// the tally counts paths, and the other record answers for this one.
+fn without_superseded_temps(ledger: &Ledger, records: Vec<Record>) -> Vec<Record> {
+    let (superseded, kept): (Vec<Record>, Vec<Record>) = records.iter().cloned().partition(|record| {
+        let Record::Tracked(
+            temp @ TrackedItem {
+                kind: ItemKind::Temp, ..
+            },
+        ) = record
+        else {
+            return false;
+        };
+        records.iter().any(|other| {
+            matches!(other, Record::Tracked(item)
+                if !matches!(item.kind, ItemKind::Temp) && item.home == temp.home && item.path == temp.path)
+        })
+    });
+    for record in &superseded {
+        ledger.retire_record(record);
+    }
+    kept
 }
 
 /// Settles one record and puts the ledger in step with what happened.
@@ -346,7 +379,7 @@ fn name_matches_kind(kind: &ItemKind, path: &Path) -> bool {
         return false;
     };
     match kind {
-        ItemKind::Temp => name.contains(cmdr_fs::staging::STAGING_TEMP_MARKER),
+        ItemKind::Temp | ItemKind::Landing { .. } => name.contains(cmdr_fs::staging::STAGING_TEMP_MARKER),
         ItemKind::FileAside { .. }
         | ItemKind::DisplacedFile { .. }
         | ItemKind::DirOverwriteAside { .. }
@@ -366,6 +399,38 @@ async fn settle_kind(
 ) -> Outcome {
     match kind {
         ItemKind::Temp => surface.remove_temp(path).await.into_outcome(),
+        // ❌ Never a removal: from the moment it was recorded the way may have
+        // been cleared, and then the temp is the destination's only copy. The
+        // temp is read FIRST, so one the landing rename already moved retires
+        // rather than deferring at every launch.
+        ItemKind::Landing { expected_size, .. } => {
+            let Some(destination) = destination else {
+                return Outcome::LeftAlone;
+            };
+            match surface.standing_at(path).await {
+                Standing::Missing => Outcome::AlreadyGone,
+                Standing::Unknown => Outcome::Deferred,
+                Standing::File { size } if size == *expected_size => match surface.standing_at(destination).await {
+                    Standing::Missing => finish_landing(surface, path, destination).await,
+                    // What a crash before the clearing delete leaves: the name
+                    // still holds what it held, and the temp is a spare copy.
+                    Standing::File { .. } | Standing::Other => {
+                        recover(surface, path, destination, Rescued::Landing).await
+                    }
+                    Standing::Unknown => Outcome::Deferred,
+                },
+                // Not the bytes the landing recorded, so nothing proves where
+                // they belong.
+                Standing::File { .. } | Standing::Other => {
+                    log::warn!(
+                        target: "copy",
+                        "an unfinished landing's temp isn't the size it was recorded at, so it stays where it is: {}",
+                        path.display()
+                    );
+                    Outcome::LeftAlone
+                }
+            }
+        }
         ItemKind::StagingDir => match surface.remove_empty_dir(path).await {
             Removal::Removed => Outcome::Swept,
             Removal::AlreadyGone => Outcome::AlreadyGone,
@@ -397,11 +462,11 @@ async fn settle_kind(
                     // they asked for — but removing a directory means recursing,
                     // and ❌ no sweep here recurses over something that was the
                     // user's. It gets a real name instead, and they decide.
-                    Standing::Other => recover(surface, path, destination).await,
+                    Standing::Other => recover(surface, path, destination, Rescued::Aside).await,
                     Standing::Missing => Outcome::AlreadyGone,
                     Standing::Unknown => Outcome::Deferred,
                 },
-                Standing::File { .. } | Standing::Other => recover(surface, path, destination).await,
+                Standing::File { .. } | Standing::Other => recover(surface, path, destination, Rescued::Aside).await,
                 Standing::Unknown => Outcome::Deferred,
             }
         }
@@ -415,7 +480,7 @@ async fn settle_kind(
             match surface.standing_at(destination).await {
                 Standing::Missing => restore(surface, path, destination).await,
                 Standing::Unknown => Outcome::Deferred,
-                Standing::File { .. } | Standing::Other => recover(surface, path, destination).await,
+                Standing::File { .. } | Standing::Other => recover(surface, path, destination, Rescued::Aside).await,
             }
         }
     }
@@ -435,18 +500,47 @@ async fn restore(surface: &Surface, aside: &Path, destination: &Path) -> Outcome
         }
         // Something appeared between the read and the rename. The bytes are
         // still the user's, so they go beside it rather than over it.
-        Renaming::Occupied => recover(surface, aside, destination).await,
+        Renaming::Occupied => recover(surface, aside, destination, Rescued::Aside).await,
         Renaming::Refused => Outcome::Deferred,
     }
 }
 
-/// Keeps an aside's bytes under a ` (recovered)` name beside where they belong,
-/// because something else is standing at their own name.
+/// Gives a landing's temp the name it was on its way to, the destination having
+/// been free: the landing rename the crash (or the give-up) cut off.
+async fn finish_landing(surface: &Surface, temp: &Path, destination: &Path) -> Outcome {
+    match surface.rename_no_replace(temp, destination).await {
+        Renaming::Renamed => {
+            log::info!(
+                target: "copy",
+                "landed {} at {}: its landing was cut off after the way was cleared",
+                temp.display(),
+                destination.display()
+            );
+            Outcome::Restored
+        }
+        // Something took the name between the read and the rename: the new
+        // bytes go beside it, ❌ never over it.
+        Renaming::Occupied => recover(surface, temp, destination, Rescued::Landing).await,
+        Renaming::Refused => Outcome::Deferred,
+    }
+}
+
+/// Whose bytes [`recover`] is keeping, for the line it logs.
+#[derive(Clone, Copy)]
+enum Rescued {
+    /// An aside: bytes that were already the user's.
+    Aside,
+    /// A landing's temp: the complete new bytes a transfer was putting there.
+    Landing,
+}
+
+/// Keeps an aside's (or a landing's) bytes under a ` (recovered)` name beside
+/// where they belong, because something else is standing at their own name.
 ///
 /// The same convention `DisplacedEntry::keep_as_recovered_sibling` and the
 /// volume engine's rescue use, so a person meets one shape of rescued file
 /// rather than three.
-async fn recover(surface: &Surface, aside: &Path, destination: &Path) -> Outcome {
+async fn recover(surface: &Surface, aside: &Path, destination: &Path, rescued: Rescued) -> Outcome {
     let recovered = recovered_sibling(destination);
     let mut candidates = NameCandidates::for_file(&recovered);
     // The bare ` (recovered)` name first; `NameCandidates` starts at ` (1)`.
@@ -454,13 +548,21 @@ async fn recover(surface: &Surface, aside: &Path, destination: &Path) -> Outcome
     loop {
         match surface.rename_no_replace(aside, &candidate).await {
             Renaming::Renamed => {
-                log::warn!(
-                    target: "copy",
-                    "{} was displaced by something that never finished landing, and its own name is taken, \
-                     so it's kept at {}",
-                    destination.display(),
-                    candidate.display()
-                );
+                match rescued {
+                    Rescued::Aside => log::warn!(
+                        target: "copy",
+                        "{} was displaced by something that never finished landing, and its own name is taken, \
+                         so it's kept at {}",
+                        destination.display(),
+                        candidate.display()
+                    ),
+                    Rescued::Landing => log::warn!(
+                        target: "copy",
+                        "the new bytes for {} never finished landing, and the name is taken, so they're kept at {}",
+                        destination.display(),
+                        candidate.display()
+                    ),
+                }
                 return Outcome::Recovered;
             }
             Renaming::Occupied => {}
@@ -479,189 +581,6 @@ async fn recover(surface: &Surface, aside: &Path, destination: &Path) -> Outcome
         }
         candidate = candidates.current();
         candidates.advance();
-    }
-}
-
-/// Which filesystem answers a record's paths, and the four primitives the rules
-/// need from it.
-enum Surface {
-    /// This machine's filesystem.
-    Local,
-    /// One volume's own namespace.
-    Volume(Arc<dyn Volume>),
-}
-
-/// What is standing at a path.
-///
-/// ❗ [`Unknown`](Self::Unknown) is never read as [`Missing`](Self::Missing): a
-/// restore aimed at a path nobody could look at would bury whatever is there.
-enum Standing {
-    Missing,
-    /// A regular file, and how big it is.
-    File {
-        size: u64,
-    },
-    /// A directory, a symlink, or anything else that isn't a plain file.
-    Other,
-    /// The question couldn't be answered.
-    Unknown,
-}
-
-/// How a removal ended.
-enum Removal {
-    Removed,
-    AlreadyGone,
-    /// Including a `remove_dir` on a directory that isn't empty, which is the
-    /// staging-folder rule working.
-    Refused,
-}
-
-impl Removal {
-    fn into_outcome(self) -> Outcome {
-        match self {
-            Self::Removed => Outcome::Swept,
-            Self::AlreadyGone => Outcome::AlreadyGone,
-            Self::Refused => Outcome::Deferred,
-        }
-    }
-}
-
-/// How a no-replace rename ended.
-enum Renaming {
-    Renamed,
-    /// The name is taken, so the caller may try another one.
-    Occupied,
-    Refused,
-}
-
-impl Surface {
-    async fn standing_at(&self, path: &Path) -> Standing {
-        match self {
-            Self::Local => match std::fs::symlink_metadata(path) {
-                Ok(meta) if meta.is_file() => Standing::File { size: meta.len() },
-                Ok(_) => Standing::Other,
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Standing::Missing,
-                Err(e) => {
-                    log::debug!(target: "copy", "couldn't read what's at {}: {e}", path.display());
-                    Standing::Unknown
-                }
-            },
-            Self::Volume(volume) => match volume.get_metadata(path).await {
-                Ok(entry) if entry.is_directory || entry.is_symlink => Standing::Other,
-                // A backend that can't say how big a file is can't prove a
-                // replacement finished, so the aside is kept.
-                Ok(entry) => entry.size.map_or(Standing::Other, |size| Standing::File { size }),
-                Err(VolumeError::NotFound(_)) => Standing::Missing,
-                Err(e) => {
-                    log::debug!(target: "copy", "couldn't read what's at {}: {e}", path.display());
-                    Standing::Unknown
-                }
-            },
-        }
-    }
-
-    async fn remove_file(&self, path: &Path) -> Removal {
-        match self {
-            Self::Local => match std::fs::remove_file(path) {
-                Ok(()) => Removal::Removed,
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Removal::AlreadyGone,
-                Err(e) => {
-                    log::debug!(target: "copy", "couldn't remove the leftover {}: {e}", path.display());
-                    Removal::Refused
-                }
-            },
-            Self::Volume(volume) => match volume.delete(path).await {
-                Ok(()) => Removal::Removed,
-                Err(VolumeError::NotFound(_)) => Removal::AlreadyGone,
-                Err(e) => {
-                    log::debug!(target: "copy", "couldn't remove the leftover {}: {e}", path.display());
-                    Removal::Refused
-                }
-            },
-        }
-    }
-
-    /// Removes a staged partial the record has matched as OURS.
-    ///
-    /// A local one that refuses is cleared and retried once: an APFS clone
-    /// copies the source's `uchg` and ACL onto the temp in the same call, so a
-    /// crash before the landing clears them leaves a temp `unlink` refuses
-    /// (`cmdr_fs::metadata::remove_file_clearing_blockers`). ❌ Only a temp: an
-    /// aside is the user's own file, and its flags are theirs.
-    async fn remove_temp(&self, path: &Path) -> Removal {
-        match self {
-            Self::Local => match remove_file_clearing_blockers(path) {
-                Ok(()) => Removal::Removed,
-                Err(RemovalRefusal::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Removal::AlreadyGone,
-                Err(refusal) => {
-                    log::debug!(target: "copy", "couldn't remove the leftover {}: {refusal:?}", path.display());
-                    Removal::Refused
-                }
-            },
-            Self::Volume(_) => self.remove_file(path).await,
-        }
-    }
-
-    /// Removes a directory ONLY if it is empty.
-    ///
-    /// ❌ Never `remove_dir_all`, on any surface. `std::fs::remove_dir` gives
-    /// the empty-only promise in the kernel; a volume has no primitive that
-    /// does, so it refuses rather than listing and racing.
-    async fn remove_empty_dir(&self, path: &Path) -> Removal {
-        match self {
-            Self::Local => match std::fs::remove_dir(path) {
-                Ok(()) => Removal::Removed,
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Removal::AlreadyGone,
-                Err(e) => {
-                    log::debug!(target: "copy", "leaving the staging folder {}: {e}", path.display());
-                    Removal::Refused
-                }
-            },
-            Self::Volume(_) => {
-                log::warn!(
-                    target: "copy",
-                    "leaving the staging folder {}: only the local filesystem can promise an empty-only removal",
-                    path.display()
-                );
-                Removal::Refused
-            }
-        }
-    }
-
-    async fn rename_no_replace(&self, from: &Path, to: &Path) -> Renaming {
-        match self {
-            // The primitive `overwrite::rename_no_replace` delegates to, named at
-            // its home: `overwrite` tracks through this ledger, so reaching back
-            // up into it would weld the two modules into a cycle.
-            Self::Local => match rename_local_exclusive(from, to) {
-                Ok(()) => Renaming::Renamed,
-                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Renaming::Occupied,
-                Err(e) => {
-                    log::debug!(
-                        target: "copy",
-                        "couldn't put {} at {}: {e}",
-                        from.display(),
-                        to.display()
-                    );
-                    Renaming::Refused
-                }
-            },
-            // `force = false` is the backends' no-clobber rename, the same one
-            // `displaced_destination` leans on.
-            Self::Volume(volume) => match volume.rename(from, to, false).await {
-                Ok(()) => Renaming::Renamed,
-                Err(VolumeError::AlreadyExists(_)) => Renaming::Occupied,
-                Err(e) => {
-                    log::debug!(
-                        target: "copy",
-                        "couldn't put {} at {}: {e}",
-                        from.display(),
-                        to.display()
-                    );
-                    Renaming::Refused
-                }
-            },
-        }
     }
 }
 
@@ -703,6 +622,10 @@ fn report(tally: &SweepTally) {
         tally.swept, tally.already_gone, tally.restored, tally.recovered, tally.deferred, tally.left_alone
     );
 }
+
+#[path = "in_flight_sweep_surface.rs"]
+mod surface;
+use surface::{Removal, Renaming, Standing, Surface};
 
 #[cfg(test)]
 #[path = "in_flight_sweep_tests.rs"]

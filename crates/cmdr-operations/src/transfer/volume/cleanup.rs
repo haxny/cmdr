@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use super::super::super::event_sinks::OperationEventSink;
+use super::super::super::in_flight_temps;
 use super::super::super::ledger::{WrittenFile, WrittenIdentity};
 use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, recheck_volume};
 use super::super::super::state::{WindDown, WriteOperationState};
@@ -273,9 +274,10 @@ pub(super) async fn clean_partial_writes(volume: &Arc<dyn Volume>, partials: &[P
 ///
 /// The driver drops in-flight copy tasks on cancel and on the first failure, so
 /// their futures never reach their own cleanup. What they left behind is exactly
-/// what `state.in_flight_temps` still lists: a write that SUCCEEDED removes its
-/// entry before landing, so a temp holding committed data (a landing that failed
-/// after the bytes were complete) is never in this set and is never touched here.
+/// what `state.in_flight_temps` still lists: a landing about to clear the way
+/// re-records its temp as an `ItemKind::Landing` and takes it out of this set
+/// first, so a temp that may hold committed data is never in it and is never
+/// touched here.
 ///
 /// A temp whose task is wedged with an open handle refuses to delete — an
 /// abandoned SMB2 write keeps its handle, and the server answers the delete with
@@ -349,12 +351,17 @@ pub(super) async fn clean_abandoned_staged_writes(
 ///   temp another instance is streaming into right now is never removed. An entry
 ///   with no reported mtime is treated as fresh and spared.
 /// - **Files only**, and only names carrying the `.cmdr-tmp-` marker.
+/// - ❗ **Never a path the engine's ledger records** on this volume, under any
+///   kind, in flight or waiting for the volume (`in_flight_temps::is_recorded_on`).
+///   Every staged temp wears the SOURCE's dates (`stamping.rs`), so the age
+///   gate alone can't tell an abandoned one from a live write's or from a
+///   landing's (`ItemKind::Landing`), which may hold the only copy.
 ///
-/// ❗ **Nothing may leave committed data under a temp name.** This sweep is
-/// name-and-age based and knows nothing about any ledger, so a `.cmdr-tmp-*`
-/// that holds the only copy of something is deleted here an hour later.
-/// `finalize::finalize_safe_replace` is where that could happen, and it renames
-/// its temp to a ` (recovered)` name before returning for exactly this reason.
+/// ❗ **Nothing unrecorded may leave committed data under a temp name.** This
+/// sweep reaps by name and age whatever the ledger doesn't name, so a
+/// `.cmdr-tmp-*` that holds the only copy of something must be recorded or
+/// renamed. `finalize::finalize_safe_replace` renames its temp to a
+/// ` (recovered)` name before returning for exactly this reason.
 ///
 /// Best-effort throughout: a listing or delete failure is logged at debug and
 /// never fails or delays the user's transfer.
@@ -364,7 +371,11 @@ pub(super) async fn clean_abandoned_staged_writes(
 /// of one `get_metadata` round trip per source (`volume/copy.rs`, and
 /// `DETAILS.md` § "Answering the pre-check from one listing"). `None` means the
 /// listing itself failed — ❌ never read that as "the destination is empty".
-pub(super) async fn reap_stale_transfer_temps(volume: &Arc<dyn Volume>, dir: &Path) -> Option<Vec<FileEntry>> {
+pub(super) async fn reap_stale_transfer_temps(
+    state: &WriteOperationState,
+    volume: &Arc<dyn Volume>,
+    dir: &Path,
+) -> Option<Vec<FileEntry>> {
     let entries = match volume.list_directory(dir, None).await {
         Ok(entries) => entries,
         Err(e) => {
@@ -378,6 +389,13 @@ pub(super) async fn reap_stale_transfer_temps(volume: &Arc<dyn Volume>, dir: &Pa
         .map(|d| d.as_secs())
         .unwrap_or(0);
     let min_age_secs = STALE_TEMP_MIN_AGE.as_secs();
+    // An operation that never named its destination volume can't ask: nothing
+    // of its own was persisted, and its live temps are in its own state.
+    let recorded_by_the_ledger = |path: &Path| {
+        state
+            .dest_volume_id()
+            .is_some_and(|volume_id| in_flight_temps::is_recorded_on(state, volume_id, volume.root(), path))
+    };
 
     let mut survivors = Vec::with_capacity(entries.len());
     for entry in entries {
@@ -386,11 +404,11 @@ pub(super) async fn reap_stale_transfer_temps(volume: &Arc<dyn Volume>, dir: &Pa
             && entry
                 .modified_at
                 .is_some_and(|modified| now_secs.saturating_sub(modified) >= min_age_secs);
-        if !is_stale_temp {
+        let temp_path = dir.join(&entry.name);
+        if !is_stale_temp || recorded_by_the_ledger(&temp_path) {
             survivors.push(entry);
             continue;
         }
-        let temp_path = dir.join(&entry.name);
         log::info!(
             target: "copy",
             "reap_stale_transfer_temps: removing a transfer partial left by an earlier run: {}",

@@ -137,7 +137,7 @@ async fn the_stale_temp_reap_cannot_touch_rescued_data() {
     for name in names_in_root(&inner).await {
         inner.set_modified_at(&PathBuf::from("/").join(&name), Some(1));
     }
-    reap_stale_transfer_temps(&dest, Path::new("/")).await;
+    reap_stale_transfer_temps(&unwatched_state(&engine), &dest, Path::new("/")).await;
 
     assert_eq!(
         contents(&inner, Path::new("/notes (recovered).txt")).await.as_deref(),

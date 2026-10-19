@@ -72,6 +72,13 @@ impl Ledger {
         self.init_and_sweep(data_dir, engine.host_arc())
     }
 
+    /// What a launch would replay from `data_dir`'s log right now: only the
+    /// lines the writer thread has already written, with no flush first, so a
+    /// cell can ask what was on disk at a given moment.
+    pub(crate) fn replay_log(data_dir: &Path) -> Vec<Record> {
+        super::read_recorded(&data_dir.join(STORE_FILENAME))
+    }
+
     /// The set this ledger currently believes is on disk.
     pub(crate) fn live_paths(&self) -> Vec<std::path::PathBuf> {
         self.store()

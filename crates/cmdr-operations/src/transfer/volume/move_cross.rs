@@ -264,7 +264,7 @@ pub async fn move_volumes_with_progress(
     // transfer is streaming into right now is never touched. The move pipeline
     // builds no destination name index, so the listing it returns has no second
     // customer here.
-    super::cleanup::reap_stale_transfer_temps(&dest_volume, dest_path).await;
+    super::cleanup::reap_stale_transfer_temps(state, &dest_volume, dest_path).await;
 
     let outcome = drive_transfer_serial_async(
         &*events,

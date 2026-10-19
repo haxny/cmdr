@@ -976,18 +976,19 @@ partial-cleanup sweep removes the temp; on a failure INSIDE it the original may 
   gone. So the finalize immediately renames it out of temp space, to `<name> (recovered)<.ext>` (continuing the house
   ` (N)` series if that name is taken), and returns a `FinalizeFailure` naming where the bytes are. ❗ **Getting it out
   of `.cmdr-tmp-*` space is a data-safety act, not tidiness**: `cleanup.rs::reap_stale_transfer_temps` matches on the
-  `.cmdr-tmp-` marker plus an age and runs at the start of every copy and every volume move into that directory, and
-  `staged_write::land` deregisters its temp before clearing the way, so the in-flight ledger neither protects nor
-  deletes it. Left under its temp name, the user's only copy is deleted by the next transfer into the same folder an
-  hour later. Only `AlreadyExists` earns another candidate: the rename has already failed once, so a dead link would
-  fail identically under eight names and only add eight timeouts. When no rename lands at all, the bytes stay under the
-  temp name and the failure reports THAT path, which is the one shape in which committed data still wears a sweepable
-  name. The partial-cleanup contract ("delete partials on error") must not touch either. Each write site stops treating
-  the temp as a partial the moment `copy_single_path` returns `Ok`, BEFORE finalize runs: the **serial** closure clears
-  `last_dest_cell` to `None` up front; the **concurrent** task returns `cleanup_temp = false` so the result handler
-  skips adding the temp to `last_dest_path` (a stream failure sets `true` and cleans as before); the **cross-volume
-  move** has no dest partial-cleanup at all. Pinned by `finalize_recovery_tests.rs` (the rescue, the reap that can no
-  longer reach it, the taken-name series, and both give-up shapes),
+  `.cmdr-tmp-` marker plus an age and runs at the start of every copy and every volume move into that directory, sparing
+  only what the in-flight ledger records, and this temp has no record (a caller-minted temp; `staged_write::land`'s own
+  is recorded as a landing before it clears the way). Left under its temp name, the user's only copy is deleted by the
+  next transfer into the same folder an hour later. Only `AlreadyExists` earns another candidate: the rename has already
+  failed once, so a dead link would fail identically under eight names and only add eight timeouts. When no rename lands
+  at all, the bytes stay under the temp name and the failure reports THAT path, which is the one shape in which
+  committed data still wears a sweepable name. The partial-cleanup contract ("delete partials on error") must not touch
+  either. Each write site stops treating the temp as a partial the moment `copy_single_path` returns `Ok`, BEFORE
+  finalize runs: the **serial** closure clears `last_dest_cell` to `None` up front; the **concurrent** task returns
+  `cleanup_temp = false` so the result handler skips adding the temp to `last_dest_path` (a stream failure sets `true`
+  and cleans as before); the **cross-volume move** has no dest partial-cleanup at all. Pinned by
+  `finalize_recovery_tests.rs` (the rescue, the reap that can no longer reach it, the taken-name series, and both
+  give-up shapes),
   `copy_crashsafe_tests.rs::{cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure, cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failure}`,
   and `move_failure_tests.rs::cross_volume_move_preserves_new_data_on_finalize_failure`; all five landing sites answer
   the same four outcomes (lands, write fails, delete refused, rename refused after the delete) in

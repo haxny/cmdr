@@ -60,10 +60,12 @@ impl From<VolumeError> for FinalizeFailure {
 /// ❗ **This is what stops the hourly reap from eating them.**
 /// `cleanup.rs::reap_stale_transfer_temps` matches on the `.cmdr-tmp-` marker
 /// plus an age, and it runs at the start of every copy and every volume move
-/// into a directory. A temp left here is committed data with no ledger entry
-/// (`staged_write::commit` deregisters it before landing), so an hour later the
-/// next transfer into the same folder would delete the user's only copy. A file
-/// called `notes (recovered).txt` is one no sweep can match.
+/// into a directory, and it spares only what the in-flight ledger records. A
+/// `staged_write::land` temp is recorded as a landing until it lands or is
+/// rescued, but `finalize::finalize_safe_replace`'s has no record at all, so
+/// the next transfer into the same folder would delete the user's only copy. A
+/// file called `notes (recovered).txt` is one no sweep can match, recorded or
+/// not.
 ///
 /// Answers where the bytes ARE, which is never nothing: if the rescue rename
 /// fails too (the same dead connection that failed the finalize), the temp path
@@ -161,7 +163,9 @@ pub(crate) async fn discard_unplaced_temp(dest_volume: &dyn Volume, temp: &Path)
 
 /// The rescue couldn't happen, so the bytes stay where they are and the caller
 /// reports THAT path. Says so loudly: this is the one shape in which committed
-/// data still wears a name `cleanup.rs::reap_stale_transfer_temps` matches.
+/// data still wears a name `cleanup.rs::reap_stale_transfer_temps` matches
+/// (spared only while a ledger record holds it, as `staged_write::land` keeps
+/// its landing's).
 fn keeps_its_temp_name(temp: &Path) -> PathBuf {
     log::warn!(
         "rescue_out_of_temp_space: couldn't move {} to a real filename, so the new data stays under its temp name",

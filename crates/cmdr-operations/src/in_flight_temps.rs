@@ -5,8 +5,8 @@
 //!   It answers "what did this operation's abandoned tasks leave behind?" while
 //!   the operation is still alive, and its sweep is
 //!   `transfer::volume::cleanup::clean_abandoned_staged_writes`. ❗ Staged
-//!   partials only: that sweep DELETES what it finds, and an aside or a staging
-//!   directory can hold the user's only copy.
+//!   partials only: that sweep DELETES what it finds, and a landing, an aside,
+//!   or a staging directory can hold the user's only copy.
 //! - **The engine's file in the app data dir**, so the answer survives the
 //!   process. Only the engine the host installed claims it
 //!   (`Operations::claim_ledger`), once. An in-memory list dies with a force-quit or a crash — exactly the
@@ -24,10 +24,15 @@
 //! and the instance lock already keeps two processes off one data dir. What is
 //! recorded and still on disk at startup is ours.
 //!
-//! ## Three things get recorded, and only one of them is disposable
+//! ## Four things get recorded, and only one of them is disposable
 //!
 //! A **temp** (`.cmdr-tmp-*`) holds bytes on their way in; nothing else has
-//! them, so a leftover is garbage and goes. An **aside** (`.cmdr-temp-*`) holds
+//! them, so a leftover is garbage and goes. A **landing** is the same file once
+//! it's complete and the way to its name may be cleared: from then on it can be
+//! the destination's only copy, so its record changes kind
+//! ([`hold_for_landing`]: the landing on disk first, then the temp retired)
+//! and a sweep only ever finishes the landing or keeps the bytes under a real
+//! name. An **aside** (`.cmdr-temp-*`) holds
 //! bytes that were ALREADY the user's, renamed out of the way so a replacement
 //! could take their name — a leftover one is a file whose replacement never
 //! landed, and removing it would be the one unrecoverable mistake this whole
@@ -90,11 +95,12 @@
 //!   nothing accumulates across a long copy or a long session.
 //!
 //! The format is one line per record: an op byte, then the record as a JSON
-//! value (so a newline in a filename can't forge a record). `+` and `-` add and
-//! retire a bare TEMP, in the shape every build since the ledger existed writes:
-//! a JSON STRING for a local path, a JSON OBJECT (`{"volume_id":…,"path":…}`)
-//! for a path in that volume's space. `A` and `a` add and retire a KINDED record
-//! ([`TrackedItem`]). A trailing torn line — the process died mid-`write` — is
+//! value (so a newline in a filename can't forge a record). `A` and `a` add and
+//! retire a KINDED record ([`TrackedItem`]), which is all either engine writes.
+//! `+` and `-` add and retire a bare TEMP in the shape earlier builds wrote (a
+//! JSON STRING for a local path, a JSON OBJECT (`{"volume_id":…,"path":…}`) for
+//! a path in that volume's space); a log one of them left still replays and
+//! sweeps. A trailing torn line — the process died mid-`write` — is
 //! ignored on read. A path that isn't valid UTF-8 can't be written as JSON and
 //! goes unrecorded; the hour-gated directory scan remains its backstop.
 //!
@@ -263,18 +269,123 @@ struct Store {
     pending: BTreeSet<Record>,
 }
 
-/// Records `temp` as a partial this operation is writing, in both ledgers.
+/// Records a staged write's `temp` as a tracked [`ItemKind::Temp`] in `home`,
+/// plus the operation's own in-memory ledger: the cross-volume engine's
+/// [`track_in`], sync because a temp's record only queues.
 ///
-/// Call before the first byte can land there, and pair with [`deregister`] the
-/// moment the file stops being a partial. The persisted line is queued, not
-/// written: no file I/O happens on the caller's thread.
+/// Call before the first byte can land there, and pair with [`retire_temp`]
+/// the moment the file stops being a partial, or with [`hold_for_landing`]
+/// before anything clears the way for it. No file I/O happens on the caller's
+/// thread.
 ///
-/// `home` is where the path lives. `None` means the caller couldn't say — a
-/// volume transfer whose operation never named its destination volume, which
-/// production never does. The operation's own ledger still gets the path (its
-/// sweep deletes through the operation's own volume handle, so it needs no ID),
-/// but nothing is persisted: a path recorded without its path space is one the
-/// next launch could resolve against the wrong filesystem.
+/// `home: None` means the caller couldn't say where the path lives (an
+/// operation that never named its destination volume, which production never
+/// does). The operation's own ledger still gets the path (its sweep deletes
+/// through the operation's own volume handle, so it needs no ID), but nothing
+/// is persisted: a path recorded without its path space is one the next launch
+/// could resolve against the wrong filesystem.
+pub(super) fn track_temp(state: &WriteOperationState, home: Option<RecordHome>, temp: &Path) {
+    match home {
+        Some(home) => {
+            record(state, home, ItemKind::Temp, temp);
+        }
+        None => {
+            state.in_flight_temps.lock_ignore_poison().push(temp.to_path_buf());
+            log::debug!(
+                target: "copy",
+                "not persisting the in-flight temp {}: the operation didn't name the volume it writes to",
+                temp.display()
+            );
+        }
+    }
+}
+
+/// Stops tracking a temp [`track_temp`] recorded: it landed under its real
+/// name, or it's gone. `home` must be the one `track_temp` was given.
+pub(super) fn retire_temp(state: &WriteOperationState, home: Option<RecordHome>, temp: &Path) {
+    state.in_flight_temps.lock_ignore_poison().retain(|p| p != temp);
+    if let Some(home) = home {
+        Ledger::of(state).retire_record(&tracked_record(&home, ItemKind::Temp, temp));
+    }
+}
+
+/// The temp [`track_temp`] recorded holds complete bytes, and the way to
+/// `destination` is about to be cleared: from here it may be the destination's
+/// only copy. Re-records it as an [`ItemKind::Landing`], written before this
+/// resolves, THEN retires its `Temp` record and drops it from the operation's
+/// in-memory ledger, so no in-operation sweep may delete it.
+///
+/// ❗ That order is the guarantee. A crash between the two lines leaves both,
+/// and the sweep settles a path recorded under both by the landing
+/// (`in_flight_sweep.rs::without_superseded_temps`); the other order has a
+/// moment where only the `Temp` record, which the sweep deletes, is on disk.
+///
+/// Hands back the landing's record for the caller to settle
+/// ([`retire`] once it lands or is rescued, [`keep_for_arrival`] while the
+/// destination can't say). `None` for a `home` of `None`, which persists
+/// nothing.
+pub(super) async fn hold_for_landing(
+    state: &WriteOperationState,
+    home: Option<RecordHome>,
+    temp: &Path,
+    destination: &Path,
+    expected_size: u64,
+) -> Option<TrackedRecord> {
+    let Some(home) = home else {
+        state.in_flight_temps.lock_ignore_poison().retain(|p| p != temp);
+        return None;
+    };
+    let temp_record = tracked_record(&home, ItemKind::Temp, temp);
+    let landing = track_in(
+        state,
+        home,
+        ItemKind::Landing {
+            destination: destination.to_path_buf(),
+            expected_size,
+        },
+        temp,
+    )
+    .await;
+    state.in_flight_temps.lock_ignore_poison().retain(|p| p != temp);
+    Ledger::of(state).retire_record(&temp_record);
+    Some(landing)
+}
+
+/// The undo of [`hold_for_landing`], for a landing that cleared nothing and
+/// couldn't take its temp away: the temp is a removable copy of ours again, so
+/// it's tracked as one (in memory too) BEFORE the landing record retires.
+pub(super) fn back_to_temp(
+    state: &WriteOperationState,
+    home: Option<RecordHome>,
+    temp: &Path,
+    landing: Option<TrackedRecord>,
+) {
+    track_temp(state, home, temp);
+    if let Some(landing) = landing {
+        Ledger::of(state).retire_record(&landing.record);
+    }
+}
+
+/// Whether this operation's persisted ledger records `path` on `volume_id`,
+/// under any kind, in flight or waiting for its volume to come back.
+///
+/// `path` is in the volume's own namespace and `root` is that volume's root, so
+/// each record is compared in its own path space (`RecordHome::record_path`):
+/// as it is for a volume-space record, relative to `root` for a mount-homed one.
+pub(super) fn is_recorded_on(state: &WriteOperationState, volume_id: &str, root: &Path, path: &Path) -> bool {
+    Ledger::of(state)
+        .store()
+        .recorded
+        .iter()
+        .any(|record| record.names(volume_id, root, path))
+}
+
+/// Records `temp` as a partial in both ledgers, in the `+` line shape every
+/// build before the kinded records wrote. Nothing in production writes it any
+/// more; the replay cells use it to leave the log an earlier build would have.
+///
+/// `home: None` keeps the path in memory only, as [`track_temp`] does.
+#[cfg(test)]
 pub(super) fn register(state: &WriteOperationState, temp: &Path, home: Option<TempHome<'_>>) {
     state.in_flight_temps.lock_ignore_poison().push(temp.to_path_buf());
     let Some(record) = record_for(temp, home) else {
@@ -296,8 +407,9 @@ pub(super) fn is_registered(state: &WriteOperationState, temp: &Path) -> bool {
     state.in_flight_temps.lock_ignore_poison().iter().any(|p| p == temp)
 }
 
-/// Stops tracking `temp`: it landed under its real name, or it's gone. `home`
-/// must be the one [`register`] was given.
+/// Retires a [`register`]ed temp, in the `-` line shape earlier builds wrote.
+/// `home` must be the one `register` was given.
+#[cfg(test)]
 pub(super) fn deregister(state: &WriteOperationState, temp: &Path, home: Option<TempHome<'_>>) {
     state.in_flight_temps.lock_ignore_poison().retain(|p| p != temp);
     let Some(record) = record_for(temp, home) else {
@@ -309,7 +421,8 @@ pub(super) fn deregister(state: &WriteOperationState, temp: &Path, home: Option<
     compact_if_large(&mut store);
 }
 
-/// The log-shaped record for a path in `home`.
+/// The `+`-line record for a path in `home`.
+#[cfg(test)]
 fn record_for(temp: &Path, home: Option<TempHome<'_>>) -> Option<Record> {
     let temp = match home? {
         TempHome::LocalFs => RecordedTemp::Local(temp.to_path_buf()),
@@ -379,19 +492,8 @@ pub(super) async fn track_in(
 
 /// [`track`] and [`track_in`]'s shared body.
 fn record(state: &WriteOperationState, home: RecordHome, kind: ItemKind, absolute: &Path) -> TrackedRecord {
-    let kind = match kind.destination() {
-        Some(destination) => {
-            let stated = home.record_path(destination);
-            kind.with_destination(stated)
-        }
-        None => kind,
-    };
     let is_temp = matches!(kind, ItemKind::Temp);
-    let record = Record::Tracked(TrackedItem {
-        kind,
-        path: home.record_path(absolute),
-        home: home.home,
-    });
+    let record = tracked_record(&home, kind, absolute);
 
     if is_temp {
         state.in_flight_temps.lock_ignore_poison().push(absolute.to_path_buf());
@@ -404,6 +506,24 @@ fn record(state: &WriteOperationState, home: RecordHome, kind: ItemKind, absolut
         record,
         absolute: absolute.to_path_buf(),
     }
+}
+
+/// The record `kind` at `absolute` gets in `home`, every path in it stated the
+/// way that home stores them. The same inputs always make the same record,
+/// which is what lets [`retire_temp`] retire one by its path.
+fn tracked_record(home: &RecordHome, kind: ItemKind, absolute: &Path) -> Record {
+    let kind = match kind.destination() {
+        Some(destination) => {
+            let stated = home.record_path(destination);
+            kind.with_destination(stated)
+        }
+        None => kind,
+    };
+    Record::Tracked(TrackedItem {
+        kind,
+        path: home.record_path(absolute),
+        home: home.home.clone(),
+    })
 }
 
 /// The thing this record names is settled — it landed under its real name, or
@@ -511,6 +631,7 @@ impl Ledger {
         store.recorded.remove(record);
         store.pending.remove(record);
         append(&mut store, record.retire_op(), record);
+        compact_if_large(&mut store);
     }
 
     /// The volume IDs the ledger is currently waiting on.
@@ -611,9 +732,9 @@ mod log_writer;
 #[path = "in_flight_records.rs"]
 mod records;
 use records::{ItemHome, home_for};
-pub(super) use records::{
-    ItemKind, Record, RecordHome, RecordedTemp, TempHome, TrackedItem, TrackedRecord, VolumeTemp,
-};
+pub(super) use records::{ItemKind, Record, RecordHome, RecordedTemp, TrackedItem, TrackedRecord};
+#[cfg(test)]
+pub(super) use records::{TempHome, VolumeTemp};
 
 #[path = "in_flight_sweep.rs"]
 mod sweep;

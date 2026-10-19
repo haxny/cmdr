@@ -11,28 +11,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::WriteOperationState;
 
-/// Which path space a partial lives in, so a later launch reaches it through the
-/// same one that wrote it.
+/// Which path space a `+`-line partial lives in, in the shape the builds before
+/// the kinded records wrote it.
 ///
-/// ❌ Never guess this from the path. An absolute-looking path means one thing
-/// on the local filesystem and quite another inside a share's own namespace, and
-/// resolving the wrong one is how a sweep silently does nothing on a NAS — or,
-/// worse, removes a local file the ledger never meant.
+/// Nothing in production mints one any more (both engines record kinded items,
+/// whose home is a [`RecordHome`]), but the replay cells write those lines
+/// through the same door the old builds did, so the shape stays for them.
+#[cfg(test)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum TempHome<'a> {
     /// The local filesystem, addressed by an absolute OS path.
-    ///
-    /// Nothing mints one any more — the local engine records kinded items
-    /// instead — but the shape stays, because it's what a `+` line an earlier
-    /// build wrote means, and the replay tests write those lines through the
-    /// same door the old builds did.
-    #[cfg_attr(
-        not(test),
-        allow(
-            dead_code,
-            reason = "the shape a replayed `+` line speaks; only the replay tests mint one"
-        )
-    )]
     LocalFs,
     /// One volume's own path space, keyed by the volume ID — the identity that
     /// survives a remount, so a record written last week still names the same
@@ -46,7 +34,8 @@ pub(crate) enum TempHome<'a> {
 /// a wider `+` line.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Record {
-    /// A `+`/`-` line: a staged partial, with no kind of its own.
+    /// A `+`/`-` line: a staged partial, with no kind of its own. Only a log an
+    /// earlier build wrote holds one; nothing writes it any more.
     Legacy(RecordedTemp),
     /// An `A`/`a` line: something whose kind decides what may be done to it.
     Tracked(TrackedItem),
@@ -85,6 +74,25 @@ impl Record {
             Self::Legacy(RecordedTemp::Local(_)) => None,
             Self::Legacy(RecordedTemp::OnVolume(temp)) => Some(&temp.volume_id),
             Self::Tracked(item) => item.home.volume_id(),
+        }
+    }
+
+    /// Whether this record names `path` on `volume_id`, compared in the
+    /// record's own path space: as is for a volume's namespace, relative to
+    /// `root` for a mount (the way [`RecordHome::record_path`] stated it).
+    pub(crate) fn names(&self, volume_id: &str, root: &Path, path: &Path) -> bool {
+        match self {
+            Self::Legacy(RecordedTemp::Local(_)) => false,
+            Self::Legacy(RecordedTemp::OnVolume(temp)) => temp.volume_id == volume_id && temp.path == path,
+            Self::Tracked(item) => match &item.home {
+                ItemHome::Local => false,
+                ItemHome::VolumeSpace { volume_id: id } => {
+                    id == volume_id && RecordHome::volume_space(id).record_path(path) == item.path
+                }
+                ItemHome::Mount { volume_id: id } => {
+                    id == volume_id && RecordHome::mount(id, root).record_path(path) == item.path
+                }
+            },
         }
     }
 
@@ -159,6 +167,18 @@ pub(crate) enum ItemKind {
     /// A staged write: bytes on their way in, which nothing else has. A leftover
     /// is garbage.
     Temp,
+    /// A staged write's temp holding complete bytes on their way to
+    /// `destination`, from the moment the way there may be cleared. From then
+    /// on it can be the destination's only copy, so ❌ no sweep ever deletes
+    /// one: it finishes the landing, or keeps the bytes under a real name.
+    /// The cross-volume engine re-records its `Temp` as this
+    /// (`transfer/staged_write.rs::land`).
+    Landing {
+        destination: PathBuf,
+        /// The temp's size when it was recorded, so the sweep can tell the
+        /// bytes we wrote from anything else wearing the name.
+        expected_size: u64,
+    },
     /// The file `overwrite::stage_and_land_file` renamed aside so a replacement
     /// could take its name, with the size that replacement was to end up at.
     /// The only kind whose destination can be checked against a number.
@@ -191,6 +211,7 @@ impl ItemKind {
         match self {
             Self::Temp | Self::StagingDir => None,
             Self::FileAside { destination, .. }
+            | Self::Landing { destination, .. }
             | Self::DisplacedFile { destination }
             | Self::DirOverwriteAside { destination }
             | Self::VolumeAside { destination } => Some(destination),
@@ -202,6 +223,10 @@ impl ItemKind {
     pub(crate) fn with_destination(self, moved: PathBuf) -> Self {
         match self {
             Self::FileAside { expected_size, .. } => Self::FileAside {
+                destination: moved,
+                expected_size,
+            },
+            Self::Landing { expected_size, .. } => Self::Landing {
                 destination: moved,
                 expected_size,
             },
@@ -277,6 +302,16 @@ impl RecordHome {
         }
     }
 
+    /// A local mount that can go away, its paths stated relative to `root`.
+    pub(crate) fn mount(volume_id: &str, root: &Path) -> Self {
+        Self {
+            home: ItemHome::Mount {
+                volume_id: volume_id.to_string(),
+            },
+            root: Some(root.to_path_buf()),
+        }
+    }
+
     /// How the record should state `absolute`.
     pub(crate) fn record_path(&self, absolute: &Path) -> PathBuf {
         match &self.root {
@@ -308,12 +343,7 @@ pub(crate) fn home_for(state: &WriteOperationState, path: &Path) -> RecordHome {
     if destination.root == Path::new("/") || !path.starts_with(&destination.root) {
         return RecordHome::local();
     }
-    RecordHome {
-        home: ItemHome::Mount {
-            volume_id: destination.volume_id.clone(),
-        },
-        root: Some(destination.root.clone()),
-    }
+    RecordHome::mount(&destination.volume_id, &destination.root)
 }
 
 /// A recorded item, held by whoever created the thing it names so they can say

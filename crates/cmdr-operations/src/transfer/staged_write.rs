@@ -43,11 +43,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::super::host::Announced;
-use super::super::in_flight_temps::TempHome;
+use super::super::in_flight_temps::{self, RecordHome};
 use super::super::state::WriteOperationState;
-use super::recovered_name::{
-    AfterARefusedDelete, FinalizeFailure, discard_unplaced_temp, rescue_out_of_temp_space, what_a_refused_delete_left,
-};
+use super::recovered_name::FinalizeFailure;
 use super::transfer_probe::{TaskPhase, set_task_phase};
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::volume::{Volume, VolumeError, WriteMode};
@@ -205,7 +203,7 @@ impl StagedWrite {
         match staging {
             WriteStaging::Stage | WriteStaging::StageInFreshFolder | WriteStaging::StageOntoClaimedName => {
                 let staged = StagingTemp::mint(final_path, state.liveness_token());
-                super::super::in_flight_temps::register(state, staged.path(), dest_home(state));
+                in_flight_temps::track_temp(state, dest_home(state), staged.path());
                 temp = Some(staged);
             }
             // The caller's temp is the caller's to land; all we take is
@@ -273,7 +271,8 @@ impl StagedWrite {
     /// The temp stays in the in-flight set until [`land`] says it stopped being
     /// a removable copy of ours: it landed, it was taken away, or the landing is
     /// about to clear the name, from which point it may be the only complete
-    /// copy at the destination and ❗ nothing may sweep it. Until then a landing
+    /// copy at the destination, so ❗ nothing may sweep it and it's recorded as
+    /// a landing instead (`in_flight_temps::hold_for_landing`). Until then a landing
     /// that never finishes (a cancel, the concurrent driver dropping its window,
     /// a crash) leaves it findable by the abandoned-write sweep and the startup
     /// sweep, which is safe: the name was never cleared, and the source still
@@ -292,15 +291,8 @@ impl StagedWrite {
         // Landing is a device round trip of its own; a dump has to be able to
         // name it rather than showing a task still "streaming" at EOF.
         set_task_phase(TaskPhase::Finalizing);
-        // Once, however many of `land`'s exits call it: each deregistration
-        // appends to the persisted log.
-        let released = std::sync::atomic::AtomicBool::new(false);
-        let release = || {
-            if !released.swap(true, std::sync::atomic::Ordering::Relaxed) {
-                self.deregister(temp.path());
-            }
-        };
-        land(dest_volume, temp.path(), &self.final_path, self.landing, &release).await
+        let ledger = LandingLedger::new(&self.state, temp.path());
+        land(dest_volume, temp.path(), &self.final_path, self.landing, &ledger).await
     }
 
     /// Atomically replaces the final name with a completed generated file.
@@ -316,12 +308,12 @@ impl StagedWrite {
         };
         match dest_volume.rename(temp.path(), &self.final_path, true).await {
             Ok(()) => {
-                self.deregister(temp.path());
+                self.retire_temp(temp.path());
                 Ok(())
             }
             Err(error) => {
                 if dest_volume.delete(temp.path()).await.is_ok() {
-                    self.deregister(temp.path());
+                    self.retire_temp(temp.path());
                 }
                 Err(error)
             }
@@ -347,14 +339,14 @@ impl StagedWrite {
                 Ok(displaced) => displaced,
                 Err(error) => {
                     if dest_volume.delete(temp.path()).await.is_ok() {
-                        self.deregister(temp.path());
+                        self.retire_temp(temp.path());
                     }
                     return Err(error);
                 }
             };
         match dest_volume.rename(temp.path(), &self.final_path, false).await {
             Ok(()) => {
-                self.deregister(temp.path());
+                self.retire_temp(temp.path());
                 if let Some(displaced) = displaced {
                     displaced.discard(dest_volume).await;
                 }
@@ -369,7 +361,7 @@ impl StagedWrite {
                     None => None,
                 };
                 if dest_volume.delete(temp.path()).await.is_ok() {
-                    self.deregister(temp.path());
+                    self.retire_temp(temp.path());
                 }
                 let cause = super::super::types::WriteOperationError::WriteError {
                     path: self.final_path.display().to_string(),
@@ -400,7 +392,7 @@ impl StagedWrite {
         let Some(temp) = self.temp.take() else {
             return;
         };
-        self.deregister(temp.path());
+        self.retire_temp(temp.path());
         if let Err(e) = dest_volume.delete(temp.path()).await {
             log::debug!(
                 target: "copy",
@@ -447,8 +439,8 @@ impl StagedWrite {
         }
     }
 
-    fn deregister(&self, temp: &Path) {
-        super::super::in_flight_temps::deregister(&self.state, temp, dest_home(&self.state));
+    fn retire_temp(&self, temp: &Path) {
+        in_flight_temps::retire_temp(&self.state, dest_home(&self.state), temp);
     }
 }
 
@@ -458,134 +450,10 @@ impl StagedWrite {
 /// `None` when the operation didn't name that volume, which every volume
 /// copy/move deferred does and only a bare test state doesn't. The persisted
 /// ledger then skips the path rather than guessing at a path space (see
-/// `in_flight_temps::register`); the operation's own in-memory ledger still
+/// `in_flight_temps::track_temp`); the operation's own in-memory ledger still
 /// carries it, and that one deletes through the volume handle it already holds.
-pub(super) fn dest_home(state: &WriteOperationState) -> Option<TempHome<'_>> {
-    state.dest_volume_id().map(TempHome::Volume)
-}
-
-/// Moves a completed temp onto `final_path`.
-///
-/// Renames FIRST, and only clears `final_path` if that rename said something is
-/// in the way. The conflict layer's `volume::finalize::finalize_safe_replace` is
-/// the other way round because there the original is known to be in the way;
-/// here it usually isn't (a fresh copy, or a conflict the resolver already
-/// cleared), and a speculative delete would spend one extra round trip per file
-/// on SMB and MTP for nothing. The name can still be taken — a `Rename`
-/// resolution's `O_EXCL` placeholder, a cross-type Overwrite whose dest delete
-/// failed, a racing writer — so the second attempt covers it.
-///
-/// ❗ **Only `AlreadyExists` earns the delete**, and this is the difference
-/// between a transient blip and a destroyed file. A rename over a network
-/// backend fails for plenty of reasons that say nothing about the destination:
-/// the session blinked, the server refused, SFTP v3 collapsed an errno into its
-/// one catch-all code. Clearing the way on every `Err` would delete a file the
-/// user still has and then report the blip that "justified" it. It also covers a
-/// backend that can delete but not rename, which would otherwise destroy the
-/// destination and answer `NotSupported`.
-///
-/// ❗ **And only a name the CALLER claimed**, which is the other half of the
-/// same question. `AlreadyExists` says something is in the way; only
-/// [`LandingName`] says whose it is. Under
-/// [`LandingName::ExpectedFree`] nothing resolved a conflict for this write, so
-/// what's in the way is the user's file and a policy nobody applied to it: the
-/// landing reports the clash and leaves both sides alone. A case-insensitive
-/// destination is where that happens without any race — `Report.docx` renaming
-/// onto a stored `report.docx` — and clearing the way there replaced files under
-/// a Skip.
-///
-/// ❗ **A landing that fails with nothing cleared takes its temp away at once.**
-/// The name still holds what it held, the source still holds the new bytes, and
-/// a complete `.cmdr-tmp-*` of ours in the user's folder would otherwise wait
-/// an hour for the stale-temp reap (`recovered_name::discard_unplaced_temp`).
-/// That covers a rename refused for any reason but `AlreadyExists`, a clash on
-/// a name the caller believed free, and a claimed name whose delete was refused
-/// with the name still taken. ❗ Except a first rename that failed on the
-/// transport ([`VolumeError::transport_fault`]): the server may have performed
-/// it, so the temp stays registered and the caller settles which once the
-/// destination is back (`interrupted_landing.rs`). If nothing settles it (the
-/// wait gave up, or there was none to wait for), the operation's abandoned-write
-/// cleanup removes it, as for any registered temp. When the way was CLEARED and the rename then
-/// failed anyway, the temp is the only complete copy at the destination, so it
-/// is never deleted: it leaves temp space instead ([`FinalizeFailure::new_data_at`]).
-///
-/// `release` is called the moment the temp stops being a removable copy of ours:
-/// it landed, it was taken away, or the way is about to be cleared. Until then
-/// it stays in the operation's in-flight set, so a landing that never finishes
-/// is still swept (see [`StagedWrite::commit`]).
-async fn land(
-    dest_volume: &Arc<dyn Volume>,
-    temp: &Path,
-    final_path: &Path,
-    landing: LandingName,
-    release: &(dyn Fn() + Sync),
-) -> Result<(), FinalizeFailure> {
-    let discard = || async {
-        if discard_unplaced_temp(dest_volume.as_ref(), temp).await {
-            release();
-        }
-    };
-    let Err(first) = dest_volume.rename(temp, final_path, false).await else {
-        release();
-        return Ok(());
-    };
-    if !matches!(first, VolumeError::AlreadyExists(_)) {
-        // ❗ A dropped link may have swallowed a rename the server performed, so
-        // the temp stays registered for the caller's settle
-        // (`interrupted_landing.rs`): its proof that the landing was ours is
-        // that no discard of ours took the temp away. A discard here would run
-        // on whatever session answers next (a sibling's fresh one, when the
-        // error was the old session's) and, the temp being gone because it
-        // landed, release it.
-        if first.transport_fault().is_none() {
-            discard().await;
-        }
-        return Err(first.into());
-    }
-    if matches!(landing, LandingName::ExpectedFree | LandingName::FreeInFreshFolder) {
-        log::warn!(
-            target: "copy",
-            "staged write: {} is taken by something nobody resolved a conflict for; \
-             leaving it alone and taking our temp {} away.",
-            final_path.display(),
-            temp.display(),
-        );
-        discard().await;
-        return Err(first.into());
-    }
-    // From here the way may be cleared, and then the temp is the only complete
-    // copy at the destination: no sweep may touch it.
-    release();
-    let way_is_clear = match dest_volume.delete(final_path).await {
-        Ok(()) | Err(VolumeError::NotFound(_)) => true,
-        Err(_) => match what_a_refused_delete_left(dest_volume.as_ref(), final_path).await {
-            AfterARefusedDelete::Gone => true,
-            // Couldn't clear the way, so nothing was lost: the destination still
-            // holds whatever was in the way, the temp is a spare copy, and the
-            // rename error is the one to report.
-            AfterARefusedDelete::StillThere => {
-                discard_unplaced_temp(dest_volume.as_ref(), temp).await;
-                false
-            }
-            AfterARefusedDelete::Unknown => false,
-        },
-    };
-    if !way_is_clear {
-        return Err(first.into());
-    }
-    match dest_volume.rename(temp, final_path, false).await {
-        Ok(()) => Ok(()),
-        // ❗ The way is cleared and the bytes couldn't take the name, so the
-        // temp is now the only complete copy of a file with nothing at its
-        // destination — and it wears a `.cmdr-tmp-*` name
-        // `cleanup.rs::reap_stale_transfer_temps` matches an hour later. Get
-        // it out of temp space and report where it went. Same act, same
-        // reason, as `finalize::finalize_safe_replace`'s.
-        Err(error) => Err(FinalizeFailure {
-            new_data_at: Some(rescue_out_of_temp_space(dest_volume.as_ref(), temp, final_path).await),
-            error,
-        }),
-    }
+pub(super) fn dest_home(state: &WriteOperationState) -> Option<RecordHome> {
+    state.dest_volume_id().map(RecordHome::volume_space)
 }
 
 /// What one resolved write does to a FILE already holding the destination name,
@@ -741,6 +609,10 @@ pub(super) fn resolve_staging(requested: WriteStaging, lands_whole: bool) -> Wri
         other => other,
     }
 }
+
+#[path = "staged_write_landing.rs"]
+mod landing;
+use landing::{LandingLedger, land};
 
 #[cfg(test)]
 #[path = "staged_write_tests.rs"]

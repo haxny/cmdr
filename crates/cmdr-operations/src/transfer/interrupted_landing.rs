@@ -80,7 +80,7 @@ pub(super) async fn settle_interrupted_landing(
     bytes: u64,
 ) -> InterruptedLanding {
     if landed_before_the_drop(state, dest_volume, temp, final_path, bytes).await {
-        in_flight_temps::deregister(state, temp, dest_home(state));
+        in_flight_temps::retire_temp(state, dest_home(state), temp);
         return InterruptedLanding::Landed;
     }
     clear_unlanded_temp(state, dest_volume, temp).await;
@@ -118,7 +118,7 @@ async fn landed_before_the_drop(
 /// `land` has already moved it out of temp space.
 async fn clear_unlanded_temp(state: &WriteOperationState, dest_volume: &Arc<dyn Volume>, temp: &Path) {
     if discard_unplaced_temp(dest_volume.as_ref(), temp).await {
-        in_flight_temps::deregister(state, temp, dest_home(state));
+        in_flight_temps::retire_temp(state, dest_home(state), temp);
     }
 }
 

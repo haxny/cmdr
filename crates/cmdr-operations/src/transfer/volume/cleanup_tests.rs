@@ -618,3 +618,64 @@ async fn a_rollback_removes_a_locked_copy_and_a_locked_folder_it_made() {
         );
     }
 }
+
+/// ❗ Every staged temp wears the SOURCE's dates, so one holding committed data
+/// (a landing a give-up or a crash ended after the way was cleared) reads as an
+/// hour old the moment it's written. The reap goes by name and age, so the
+/// ledger is what tells it apart: a path the ledger records, as a temp or a
+/// landing, is a live write or committed data, and stays. An unrecorded one of
+/// the same age is still reaped.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_stale_temp_reap_skips_what_the_ledger_records_however_old_it_looks() {
+    use crate::in_flight_temps::{self, Ledger, RecordHome};
+    const VOLUME_ID: &str = "cleanup-test-reap-nas";
+    let engine = TestOperations::new();
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_journal_volumes("cleanup-test-source".to_string(), VOLUME_ID.to_string())
+            .with_in_flight_ledger(Ledger::for_test()),
+    );
+    let volume = Arc::new(InMemoryVolume::new("nas"));
+    let streaming = PathBuf::from("/streaming.mov.cmdr-tmp-1111");
+    let landing = PathBuf::from("/landing.mov.cmdr-tmp-2222");
+    let orphan = PathBuf::from("/orphan.mov.cmdr-tmp-3333");
+    for temp in [&streaming, &landing, &orphan] {
+        volume.create_file(temp, b"bytes").await.unwrap();
+        // A year before the reap runs, the way a source's stamped date reads.
+        volume.set_modified_at(temp, Some(1));
+    }
+    in_flight_temps::track_temp(&state, Some(RecordHome::volume_space(VOLUME_ID)), &streaming);
+    in_flight_temps::track_temp(&state, Some(RecordHome::volume_space(VOLUME_ID)), &landing);
+    in_flight_temps::hold_for_landing(
+        &state,
+        Some(RecordHome::volume_space(VOLUME_ID)),
+        &landing,
+        Path::new("/landing.mov"),
+        5,
+    )
+    .await;
+    let dest: Arc<dyn Volume> = Arc::clone(&volume) as Arc<dyn Volume>;
+
+    let listing = reap_stale_transfer_temps(&state, &dest, Path::new("/"))
+        .await
+        .expect("the listing answers");
+
+    assert!(
+        volume.exists(&streaming).await,
+        "a recorded temp is a live write, ❌ never reaped"
+    );
+    assert!(
+        volume.exists(&landing).await,
+        "a recorded landing may be the only copy, ❌ never reaped"
+    );
+    assert!(
+        !volume.exists(&orphan).await,
+        "an unrecorded temp that old is still a leftover, and goes"
+    );
+    let names: Vec<&str> = listing.iter().map(|entry| entry.name.as_str()).collect();
+    assert!(
+        names.contains(&"streaming.mov.cmdr-tmp-1111") && names.contains(&"landing.mov.cmdr-tmp-2222"),
+        "and what the reap kept is still in the listing it hands back: {names:?}"
+    );
+}
