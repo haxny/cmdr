@@ -151,8 +151,9 @@ pub fn start_watching(listing_id: &str, path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// The OS half of an arm. A test build arms [`WatchStream::Scripted`] unless the
-/// listing opted in with [`watch_for_real`]; it still refuses a path the OS would.
+/// The OS half of an arm. A test build arms `WatchStream::Scripted` unless the
+/// listing opted in with `watch_for_real`; it still refuses a path the OS would.
+/// (Plain backticks: both are `cfg(test)`-only, so rustdoc can't resolve a link.)
 fn arm_stream(listing_id: &str, path: &Path) -> Result<WatchStream, String> {
     #[cfg(test)]
     if !REAL_STREAMS.lock_ignore_poison().contains(listing_id) {
