@@ -1264,6 +1264,9 @@ completion → spawn live loop".
   so skipped ticks do zero extra work.
 - Keeps its sink by value (cloned in by the caller), so the spawned loop owns everything it needs; the genuinely pure
   decision logic already lives (and is unit-tested) in `partial_agg`.
+- A test that waits ON a tick takes `tick_override::tick_every` (test builds only, under the handle test lock) and waits
+  for the `ScanProgress` it emits, so it pays milliseconds per tick where a sleep sized to the 500 ms rate paid 1.2–1.5
+  s a cell. ❌ Never use it to assert a tick rate. The phase machine's interleaving tests are the users.
 
 ## `partial_agg` — the pure helpers (`partial_agg.rs`)
 

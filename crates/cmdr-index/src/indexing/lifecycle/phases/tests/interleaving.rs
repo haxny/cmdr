@@ -122,6 +122,7 @@ fn the_progress_pump_reports_and_polls_where_the_user_is_looking() {
     progress.entries_scanned.fetch_add(7, Ordering::Relaxed);
     let visits = std::sync::Arc::new(VisitLog::new());
     let done = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let _fast_ticks = crate::indexing::lifecycle::progress_reporter::tick_override::tick_every(FAST_TICK);
     crate::indexing::lifecycle::progress_reporter::ScanProgressReporter::new(
         std::sync::Arc::clone(&progress),
         writer.clone(),
@@ -187,6 +188,7 @@ fn the_progress_pump_outlives_the_walks_it_reports_on() {
         recorder,
         crate::indexing::host::policy::FakeHostPolicy::shared(),
     );
+    let _fast_ticks = crate::indexing::lifecycle::progress_reporter::tick_override::tick_every(FAST_TICK);
 
     drive.start();
     drive.wait_for_the_machine();
@@ -197,9 +199,8 @@ fn the_progress_pump_outlives_the_walks_it_reports_on() {
     );
     assert!(
         watcher.ticks_in_the_gap() > 0,
-        "❌ the pump died with the walk it was reporting on: nothing ticked in {:?} between frontier roots, \
-         so nothing would refresh the size of the folder the user is looking at until the run ends",
-        THE_GAP
+        "❌ the pump died with the walk it was reporting on: nothing ticked in {TICK_DEADLINE:?} between frontier \
+         roots, so nothing would refresh the size of the folder the user is looking at until the run ends"
     );
     assert!(
         watcher.walks_after_the_gap() > 0,
@@ -207,10 +208,52 @@ fn the_progress_pump_outlives_the_walks_it_reports_on() {
     );
 }
 
-/// How long one between-walks gap is held open. Three of the reporter's 500 ms
-/// ticks fit, so a machine-lifetime pump lands at least two of them here however
-/// the sleeps happen to line up.
-const THE_GAP: std::time::Duration = std::time::Duration::from_millis(1_500);
+/// The reporter's tick while these tests wait on it. What they prove is THAT a
+/// tick lands (in a gap, or after a folder opens), never how often, so the real
+/// 500 ms rate would only cost half a second a wait.
+const FAST_TICK: std::time::Duration = std::time::Duration::from_millis(20);
+
+/// How long a sink holds the machine still for the ticks it waits on. A pump that
+/// is alive lands one within [`FAST_TICK`]; this only decides how long a broken one
+/// takes to say so, and stays well under the 8 s nextest cap so the assertion,
+/// not the cap, reports it.
+const TICK_DEADLINE: std::time::Duration = std::time::Duration::from_secs(3);
+
+/// The progress ticks a sink has seen for its volume, which the machine's own
+/// thread can wait on from inside an `emit`.
+///
+/// The reporter emits from its own task, so a machine parked in `emit` doesn't
+/// stop it: the wait ends the moment the ticks arrive, or at [`TICK_DEADLINE`]
+/// if they never do.
+#[derive(Default)]
+struct Ticks {
+    count: std::sync::Mutex<usize>,
+    arrived: std::sync::Condvar,
+}
+
+impl Ticks {
+    fn note(&self) {
+        use cmdr_fs::ignore_poison::IgnorePoison;
+        *self.count.lock_ignore_poison() += 1;
+        self.arrived.notify_all();
+    }
+
+    fn count(&self) -> usize {
+        use cmdr_fs::ignore_poison::IgnorePoison;
+        *self.count.lock_ignore_poison()
+    }
+
+    /// Wait until `more` ticks past `since` have arrived, and return how many did.
+    fn wait_for(&self, since: usize, more: usize) -> usize {
+        use cmdr_fs::ignore_poison::IgnorePoison;
+        let count = self.count.lock_ignore_poison();
+        let (count, _) = self
+            .arrived
+            .wait_timeout_while(count, TICK_DEADLINE, |count| *count < since + more)
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        *count - since
+    }
+}
 
 /// A window that reloads mid-index joins a run already in progress, and the phase
 /// event is transition-only: on the whole-volume phase the next one is the end of
@@ -333,12 +376,11 @@ impl crate::indexing::events::EventSink for AsksTheStatusOnEveryPhase {
 struct PauseBetweenWalks {
     volume_id: &'static str,
     recorder: std::sync::Arc<crate::indexing::events::RecordingSink>,
-    /// Set while the gap is being held open, so a tick landing in it is counted.
-    holding: std::sync::atomic::AtomicBool,
     /// One gap is enough, and holding every one of them would only make the test
     /// slower.
     held: std::sync::atomic::AtomicBool,
-    ticks: std::sync::atomic::AtomicUsize,
+    ticks: Ticks,
+    ticks_in_the_gap: std::sync::atomic::AtomicUsize,
     walks_after: std::sync::atomic::AtomicUsize,
 }
 
@@ -347,9 +389,9 @@ impl PauseBetweenWalks {
         Self {
             volume_id,
             recorder,
-            holding: std::sync::atomic::AtomicBool::new(false),
             held: std::sync::atomic::AtomicBool::new(false),
-            ticks: std::sync::atomic::AtomicUsize::new(0),
+            ticks: Ticks::default(),
+            ticks_in_the_gap: std::sync::atomic::AtomicUsize::new(0),
             walks_after: std::sync::atomic::AtomicUsize::new(0),
         }
     }
@@ -360,7 +402,7 @@ impl PauseBetweenWalks {
 
     /// Progress events that arrived while no walk was running.
     fn ticks_in_the_gap(&self) -> usize {
-        self.ticks.load(Ordering::Relaxed)
+        self.ticks_in_the_gap.load(Ordering::Relaxed)
     }
 
     /// Walks that started after the gap, which is what makes it a gap rather than
@@ -380,20 +422,16 @@ impl crate::indexing::events::EventSink for PauseBetweenWalks {
             return;
         }
         match kind {
-            IndexEventKind::ScanProgress if self.holding.load(Ordering::Relaxed) => {
-                self.ticks.fetch_add(1, Ordering::Relaxed);
-            }
+            IndexEventKind::ScanProgress => self.ticks.note(),
             IndexEventKind::CoverageBranchStarted if self.held.load(Ordering::Relaxed) => {
                 self.walks_after.fetch_add(1, Ordering::Relaxed);
             }
             IndexEventKind::CoverageBranchEnded if !self.held.swap(true, Ordering::Relaxed) => {
-                self.holding.store(true, Ordering::Relaxed);
-                // allowed-test-sleep: the gap IS the thing under test. Nothing the
-                // machine does between two frontier roots can be waited on, because
-                // the property is that something keeps happening while it does
-                // nothing at all.
-                std::thread::sleep(THE_GAP);
-                self.holding.store(false, Ordering::Relaxed);
+                // The gap lasts until a tick lands in it: a machine-lifetime pump
+                // ends it within one tick, and a walk-lifetime one never does.
+                let before = self.ticks.count();
+                let landed = self.ticks.wait_for(before, 1);
+                self.ticks_in_the_gap.store(landed, Ordering::Relaxed);
             }
             _ => {}
         }
@@ -404,10 +442,6 @@ impl crate::indexing::events::EventSink for PauseBetweenWalks {
 /// inside it several batches after it starts, so "the machine stopped it" and
 /// "the machine finished it" are different observable outcomes.
 const A_BIG_SIBLING: usize = 2_000;
-
-/// How long the sink holds the machine still so the reporter's `open_listings`
-/// poll lands before the walk starts. Two of its 500 ms ticks fit.
-const UNTIL_THE_POLL_LANDS: std::time::Duration = std::time::Duration::from_millis(1_200);
 
 /// The headline of this milestone: a folder somebody opens while a big sibling is
 /// being walked doesn't wait for that sibling to finish.
@@ -446,10 +480,15 @@ fn a_folder_the_user_opens_stops_the_walk_of_a_big_sibling() {
         recorder,
         host,
     );
+    let _fast_ticks = crate::indexing::lifecycle::progress_reporter::tick_override::tick_every(FAST_TICK);
 
     drive.start();
     drive.wait_for_the_machine();
 
+    assert!(
+        opener.poll_landed.load(Ordering::Relaxed),
+        "precondition: the reporter polled after the folder opened, within {TICK_DEADLINE:?}"
+    );
     let branches = drive.walked_branches();
     let big = drive.path("big-a");
     let visited = drive.path("zzz-visited");
@@ -478,7 +517,7 @@ fn a_folder_the_user_opens_stops_the_walk_of_a_big_sibling() {
 }
 
 /// Opens a folder from inside the first walk's announcement, and holds the
-/// machine still long enough for the reporter's poll to hear about it.
+/// machine still until the reporter's poll has heard about it.
 ///
 /// The announcement goes out on the machine's own thread just BEFORE the walk
 /// starts, so what this arranges is the case the interlude between groups can't
@@ -489,6 +528,9 @@ struct OpensAFolderMidWalk {
     host: std::sync::Arc<crate::indexing::host::policy::FakeHostPolicy>,
     folder: &'static str,
     opened: std::sync::atomic::AtomicBool,
+    ticks: Ticks,
+    /// Whether a poll had heard about the folder before the walk was let go.
+    poll_landed: std::sync::atomic::AtomicBool,
 }
 
 impl OpensAFolderMidWalk {
@@ -504,6 +546,8 @@ impl OpensAFolderMidWalk {
             host,
             folder,
             opened: std::sync::atomic::AtomicBool::new(false),
+            ticks: Ticks::default(),
+            poll_landed: std::sync::atomic::AtomicBool::new(false),
         }
     }
 }
@@ -515,6 +559,10 @@ impl crate::indexing::events::EventSink for OpensAFolderMidWalk {
                 if volume_id == self.volume_id =>
             {
                 roots.first().cloned()
+            }
+            crate::indexing::events::IndexEvent::ScanProgress { volume_id, .. } if volume_id == self.volume_id => {
+                self.ticks.note();
+                None
             }
             _ => None,
         };
@@ -528,10 +576,15 @@ impl crate::indexing::events::EventSink for OpensAFolderMidWalk {
             .expect("the frontier root sits under the tree")
             .join(self.folder);
         self.host.note_open_listing(self.volume_id, opened);
-        // allowed-test-sleep: the machine hears where the user is looking on the
-        // reporter's own 500 ms tick and ❌ nothing faster (`visits.rs`), so the
-        // only way to arrange "the folder arrives while the walk is reading" is to
-        // let that tick happen. Nothing observable fires when a poll lands.
-        std::thread::sleep(UNTIL_THE_POLL_LANDS);
+        // The machine hears where the user is looking on the reporter's tick and
+        // ❌ nothing faster (`visits.rs`), and nothing fires when a poll lands. A
+        // tick emits its progress BEFORE it polls, so the first tick counted from
+        // here polls after the folder opened, and the second can't start until
+        // that poll has been noted.
+        // ❌ No assert here: a panic on the machine's thread would hang the test
+        // rather than fail it, so the test reads `poll_landed` afterwards.
+        let before = self.ticks.count();
+        let landed = self.ticks.wait_for(before, 2) >= 2;
+        self.poll_landed.store(landed, Ordering::Relaxed);
     }
 }

@@ -153,14 +153,59 @@ impl ScanProgressReporter {
     /// inheriting one) because a scan can start from the synchronous
     /// Tauri `setup()` hook where no Tokio runtime context exists.
     pub(crate) fn spawn(mut self, scan_done: Arc<AtomicBool>) -> JoinHandle<()> {
+        let period = tick_period();
         crate::indexing::host::runtime::spawn(async move {
             loop {
-                tokio::time::sleep(Duration::from_millis(500)).await;
+                tokio::time::sleep(period).await;
                 if scan_done.load(Ordering::Relaxed) {
                     break;
                 }
                 self.tick();
             }
         })
+    }
+}
+
+/// How often a reporter ticks. The `open_listings` contract is pinned to this
+/// rate, so ❌ don't shorten it for production.
+const TICK_PERIOD: Duration = Duration::from_millis(500);
+
+fn tick_period() -> Duration {
+    #[cfg(test)]
+    {
+        use cmdr_fs::ignore_poison::IgnorePoison;
+        if let Some(period) = *tick_override::PERIOD.lock_ignore_poison() {
+            return period;
+        }
+    }
+    TICK_PERIOD
+}
+
+/// A faster tick for a test that waits ON ticks, so it pays tens of milliseconds
+/// per tick where the real rate costs half a second each.
+///
+/// Process-global, so take it only while holding the handle test lock (every
+/// `Drive` fixture does), and only to wait for a tick sooner: ❌ never to assert a
+/// tick RATE, which is production's to set.
+#[cfg(test)]
+pub(crate) mod tick_override {
+    use std::time::Duration;
+
+    pub(super) static PERIOD: std::sync::Mutex<Option<Duration>> = std::sync::Mutex::new(None);
+
+    /// Every reporter spawned while the guard lives ticks every `period`.
+    pub(crate) fn tick_every(period: Duration) -> Guard {
+        use cmdr_fs::ignore_poison::IgnorePoison;
+        *PERIOD.lock_ignore_poison() = Some(period);
+        Guard
+    }
+
+    pub(crate) struct Guard;
+
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            use cmdr_fs::ignore_poison::IgnorePoison;
+            *PERIOD.lock_ignore_poison() = None;
+        }
     }
 }
