@@ -172,63 +172,88 @@ func firstIdentityIdent(expr string) string {
 // chain that starts right after an identifier (`(…)` of its own call first, then
 // `.a().b`), or "" when nothing follows it.
 func firstChainName(rest string) string {
-	i := 0
-	skipSpace := func() {
-		for i < len(rest) && (isRustSpaceByte(rest[i]) || rest[i] == '?') {
-			i++
-		}
-	}
-	skipCall := func() bool {
-		skipSpace()
-		if strings.HasPrefix(rest[i:], "::<") {
-			depth := 0
-			for ; i < len(rest); i++ {
-				if rest[i] == '<' {
-					depth++
-				} else if rest[i] == '>' {
-					depth--
-					if depth == 0 {
-						i++
-						break
-					}
-				}
-			}
-			skipSpace()
-		}
-		if i < len(rest) && (rest[i] == '(' || rest[i] == '[') {
-			closeAt := matchDelim(rest, i, rest[i], closingDelim(rest[i]))
-			if closeAt < 0 {
-				return false
-			}
-			i = closeAt + 1
-		}
-		return true
-	}
-	if !skipCall() {
+	c := &chainCursor{rest: rest}
+	if !c.skipCall() {
 		return ""
 	}
 	last := ""
 	for {
-		skipSpace()
-		if i >= len(rest) || rest[i] != '.' {
+		name, ok := c.nextSegment()
+		if !ok {
 			return last
 		}
-		i++
-		skipSpace()
-		start := i
-		for i < len(rest) && isRustIdentByte(rest[i]) {
-			i++
-		}
-		if i == start {
-			return last
-		}
-		if name := rest[start:i]; !transparentTails[name] {
+		if !transparentTails[name] {
 			last = name
 		}
-		if !skipCall() {
+		if !c.skipCall() {
 			return last
 		}
 	}
+}
+
+// chainCursor walks a method chain left to right for firstChainName.
+type chainCursor struct {
+	rest string
+	i    int
+}
+
+func (c *chainCursor) skipSpace() {
+	for c.i < len(c.rest) && (isRustSpaceByte(c.rest[c.i]) || c.rest[c.i] == '?') {
+		c.i++
+	}
+}
+
+// skipCall steps over a call's turbofish and `(…)` / `[…]`, if any. It reports
+// false on an unclosed bracket.
+func (c *chainCursor) skipCall() bool {
+	c.skipSpace()
+	if strings.HasPrefix(c.rest[c.i:], "::<") {
+		c.skipTurbofish()
+		c.skipSpace()
+	}
+	if c.i < len(c.rest) && (c.rest[c.i] == '(' || c.rest[c.i] == '[') {
+		closeAt := matchDelim(c.rest, c.i, c.rest[c.i], closingDelim(c.rest[c.i]))
+		if closeAt < 0 {
+			return false
+		}
+		c.i = closeAt + 1
+	}
+	return true
+}
+
+// skipTurbofish steps past the `<…>` that balances the first `<`, or to the end.
+func (c *chainCursor) skipTurbofish() {
+	depth := 0
+	for ; c.i < len(c.rest); c.i++ {
+		switch c.rest[c.i] {
+		case '<':
+			depth++
+		case '>':
+			depth--
+			if depth == 0 {
+				c.i++
+				return
+			}
+		}
+	}
+}
+
+// nextSegment reads the `.name` that follows, or reports false when none does.
+func (c *chainCursor) nextSegment() (string, bool) {
+	c.skipSpace()
+	if c.i >= len(c.rest) || c.rest[c.i] != '.' {
+		return "", false
+	}
+	c.i++
+	c.skipSpace()
+	start := c.i
+	for c.i < len(c.rest) && isRustIdentByte(c.rest[c.i]) {
+		c.i++
+	}
+	if c.i == start {
+		return "", false
+	}
+	return c.rest[start:c.i], true
 }
 
 // readsAsIdentity reports whether a Rust identifier names a path or a user's

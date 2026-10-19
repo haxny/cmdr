@@ -257,11 +257,11 @@ func splitTopLevelArgs(masked string, from, to int) [][2]int {
 	for i := from; i < to; i++ {
 		c := masked[i]
 		switch {
-		case c == '(' || c == '[' || c == '{':
+		case strings.IndexByte("([{", c) >= 0:
 			depth++
-		case c == ')' || c == ']' || c == '}':
+		case strings.IndexByte(")]}", c) >= 0:
 			depth--
-		case c == '<' && (angle > 0 || strings.HasSuffix(strings.TrimRight(masked[from:i], " \t\n"), "::")):
+		case c == '<' && (angle > 0 || opensTurbofish(masked[from:i])):
 			angle++
 		case c == '>' && angle > 0 && masked[i-1] != '-':
 			angle--
@@ -273,11 +273,20 @@ func splitTopLevelArgs(masked string, from, to int) [][2]int {
 	if s, e := trimSpan(masked, argStart, to); s < e {
 		args = append(args, [2]int{argStart, to})
 	}
-	for i, a := range args {
-		s, e := trimSpan(masked, a[0], a[1])
-		args[i] = [2]int{s, e}
+	return trimSpans(masked, args)
+}
+
+// opensTurbofish reports whether a `<` right after `before` opens a turbofish.
+func opensTurbofish(before string) bool {
+	return strings.HasSuffix(strings.TrimRight(before, " \t\n"), "::")
+}
+
+func trimSpans(s string, spans [][2]int) [][2]int {
+	for i, a := range spans {
+		start, end := trimSpan(s, a[0], a[1])
+		spans[i] = [2]int{start, end}
 	}
-	return args
+	return spans
 }
 
 // markedStringConversions returns the lines outside every log macro (and every

@@ -76,18 +76,9 @@ func RunLogPrivateValues(ctx *CheckContext) (CheckResult, error) {
 	if err != nil {
 		return CheckResult{}, err
 	}
-
-	var all logPrivateFileFindings
-	scanned := 0
-	for _, root := range roots {
-		rootFindings, rootScanned, scanErr := scanForLogPrivateValues(ctx.RootDir, root)
-		if scanErr != nil {
-			return CheckResult{}, fmt.Errorf("failed to scan Rust files: %w", scanErr)
-		}
-		all.sites = append(all.sites, rootFindings.sites...)
-		all.conversions = append(all.conversions, rootFindings.conversions...)
-		all.orphans = append(all.orphans, rootFindings.orphans...)
-		scanned += rootScanned
+	all, scanned, err := scanLogPrivateRoots(ctx.RootDir, roots)
+	if err != nil {
+		return CheckResult{}, err
 	}
 
 	allowlist := loadLogPrivateAllowlist(ctx.RootDir)
@@ -104,6 +95,36 @@ func RunLogPrivateValues(ctx *CheckContext) (CheckResult, error) {
 	}
 	staleMsg := formatLogPrivateStaleness(staleChanges, ctx.CI)
 
+	if hardParts := logPrivateHardFailures(all, counts, allowlist); len(hardParts) > 0 {
+		return CheckResult{}, fmt.Errorf("%s", strings.Join(appendNonEmpty(hardParts, staleMsg), "\n"))
+	}
+
+	okMsg := formatLogPrivateSuccess(scanned, allowlist)
+	if staleMsg != "" {
+		return SuccessWithChanges(okMsg + "; " + staleMsg), nil
+	}
+	return Success(okMsg), nil
+}
+
+func scanLogPrivateRoots(rootDir string, roots []string) (logPrivateFileFindings, int, error) {
+	var all logPrivateFileFindings
+	scanned := 0
+	for _, root := range roots {
+		rootFindings, rootScanned, err := scanForLogPrivateValues(rootDir, root)
+		if err != nil {
+			return logPrivateFileFindings{}, 0, fmt.Errorf("failed to scan Rust files: %w", err)
+		}
+		all.sites = append(all.sites, rootFindings.sites...)
+		all.conversions = append(all.conversions, rootFindings.conversions...)
+		all.orphans = append(all.orphans, rootFindings.orphans...)
+		scanned += rootScanned
+	}
+	return all, scanned, nil
+}
+
+// logPrivateHardFailures returns the report sections that fail the check: files
+// over budget, marked strings, reasonless entries, and orphan directives.
+func logPrivateHardFailures(all logPrivateFileFindings, counts map[string]int, allowlist logPrivateAllowlist) []string {
 	var overBudget []logPrivateSite
 	for _, s := range all.sites {
 		if counts[s.relPath] > allowlist.Files[s.relPath].Count {
@@ -127,10 +148,10 @@ func RunLogPrivateValues(ctx *CheckContext) (CheckResult, error) {
 	if len(all.orphans) > 0 {
 		hardParts = append(hardParts, formatOrphanDirectives(AllowLogPrivateComment, all.orphans))
 	}
-	if len(hardParts) > 0 {
-		return CheckResult{}, fmt.Errorf("%s", strings.Join(appendNonEmpty(hardParts, staleMsg), "\n"))
-	}
+	return hardParts
+}
 
+func formatLogPrivateSuccess(scanned int, allowlist logPrivateAllowlist) string {
 	allowlisted := 0
 	for _, entry := range allowlist.Files {
 		allowlisted += entry.Count
@@ -142,10 +163,7 @@ func RunLogPrivateValues(ctx *CheckContext) (CheckResult, error) {
 			FormatThousands(allowlisted), Pluralize(allowlisted, "value", "values"),
 			FormatThousands(len(allowlist.Files)), Pluralize(len(allowlist.Files), "file", "files"))
 	}
-	if staleMsg != "" {
-		return SuccessWithChanges(okMsg + "; " + staleMsg), nil
-	}
-	return Success(okMsg), nil
+	return okMsg
 }
 
 // formatLogPrivateOverBudget lists each over-budget file with every unmarked value
