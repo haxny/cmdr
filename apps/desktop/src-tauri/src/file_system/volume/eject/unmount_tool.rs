@@ -9,6 +9,8 @@
 
 use std::time::Duration;
 
+use cmdr_fs::log_private::LogPrivate;
+
 use super::EjectError;
 #[cfg(target_os = "macos")]
 use crate::ignore_poison::IgnorePoison;
@@ -341,11 +343,16 @@ where
         match (settle(&outcome, verb, &mut still_mounted), pause) {
             (Settled::Done, _) => {
                 if attempts == 1 {
-                    log::info!(target: "eject", "`{verb}` succeeded for {volume_id} at {mount_path}");
+                    log::info!(
+                        target: "eject",
+                        "`{verb}` succeeded for {volume_id} at {mount_path}",
+                        mount_path = LogPrivate::dir_path(mount_path),
+                    );
                 } else {
                     log::info!(
                         target: "eject",
-                        "`{verb}` succeeded for {volume_id} at {mount_path} on attempt {attempts}"
+                        "`{verb}` succeeded for {volume_id} at {mount_path} on attempt {attempts}",
+                        mount_path = LogPrivate::dir_path(mount_path),
                     );
                 }
                 return Ok(());
@@ -353,7 +360,8 @@ where
             (Settled::AlreadyGone, _) => {
                 log::info!(
                     target: "eject",
-                    "`{verb}` for {volume_id} at {mount_path} didn't go through on attempt {attempts} ({outcome}), but it's no longer mounted, so it counts as done"
+                    "`{verb}` for {volume_id} at {mount_path} didn't go through on attempt {attempts} ({outcome}), but it's no longer mounted, so it counts as done",
+                    mount_path = LogPrivate::dir_path(mount_path),
                 );
                 return Ok(());
             }
@@ -363,7 +371,8 @@ where
                 log::info!(
                     target: "eject",
                     "`{verb}` for {volume_id} at {mount_path} was refused on attempt {attempts} ({outcome}); retrying in {} ms",
-                    pause.as_millis()
+                    pause.as_millis(),
+                    mount_path = LogPrivate::dir_path(mount_path),
                 );
                 tokio::time::sleep(pause).await;
                 attempts += 1;
@@ -372,7 +381,8 @@ where
                 log::warn!(
                     target: "eject",
                     "`{verb}` for {volume_id} at {mount_path} didn't go through (attempts: {attempts}, {:.1} s since the first): {outcome}",
-                    first_attempt.elapsed().as_secs_f64()
+                    first_attempt.elapsed().as_secs_f64(),
+                    mount_path = LogPrivate::dir_path(mount_path),
                 );
                 return Err(error);
             }

@@ -5,6 +5,7 @@
 //! tell the frontend. Why a renamed volume moves rather than leaving and arriving:
 //! `../file_system/volume/DETAILS.md` § "A renamed drive".
 
+use cmdr_fs::log_private::LogPrivate;
 use log::{debug, error};
 use std::sync::OnceLock;
 use tauri::AppHandle;
@@ -32,11 +33,14 @@ pub(crate) fn handle_volume_mounted(volume_path: &str) {
     // news here: no registration, no event, no refresh. The startup sweep and
     // discovery skip the same rows (`mounts::mount_is_private_to_another_user`).
     if super::is_private_to_another_user(volume_path) {
-        debug!("Another account's mount appeared; leaving it alone: {}", volume_path);
+        debug!(
+            "Another account's mount appeared; leaving it alone: {}",
+            LogPrivate::dir_path(volume_path)
+        );
         return;
     }
 
-    debug!("Volume mounted: {}", volume_path);
+    debug!("Volume mounted: {}", LogPrivate::dir_path(volume_path));
 
     // Same funnel the startup sweep uses, so a drive that arrives now and one
     // that was already there land under the same ID with the same backend.
@@ -69,7 +73,7 @@ pub(crate) fn handle_volume_mounted(volume_path: &str) {
 /// Public for tests so the handler logic can be exercised without posting
 /// real `NSWorkspace` notifications.
 pub(crate) fn handle_volume_unmounted(volume_path: &str) {
-    debug!("Volume unmounted: {}", volume_path);
+    debug!("Volume unmounted: {}", LogPrivate::dir_path(volume_path));
 
     // Drop the gone mount from the volume that owned it. Look up by root rather
     // than by path-derived ID: by the time the unmount notification fires,
@@ -94,7 +98,7 @@ pub(crate) fn handle_volume_unmounted(volume_path: &str) {
             // The frontend retires a slow-connection notice about this share now, so
             // its server's next genuine fallback has to be news again.
             crate::network::os_mount_notice::forget_unmounted_volume(&id);
-            debug!("Unregistered volume: {} ({})", id, volume_path);
+            debug!("Unregistered volume: {} ({})", id, LogPrivate::dir_path(volume_path));
         }
         RootRemoval::Promoted { id, new_root } => {
             // ❌ No `on_unmount` and no index stop here: the filesystem is still
@@ -102,7 +106,8 @@ pub(crate) fn handle_volume_unmounted(volume_path: &str) {
             log::info!(
                 target: "cmdr_lib::volumes",
                 "{volume_path} unmounted, but volume {id} is still mounted at {}; promoted it to that root.",
-                new_root.display(),
+                LogPrivate::dir_path(&new_root),
+                volume_path = LogPrivate::dir_path(volume_path),
             );
             // A local drive's index read the gone root itself, so it restarts at the
             // survivor, the same as after a rename. Off this main-thread observer: the
@@ -113,10 +118,14 @@ pub(crate) fn handle_volume_unmounted(volume_path: &str) {
             log::warn!(
                 target: "cmdr_lib::volumes",
                 "{volume_path} unmounted and volume {id} can't move to one of its other mounts, so it stays there. Its own transport decides whether it keeps working.",
+                volume_path = LogPrivate::dir_path(volume_path),
             );
         }
         RootRemoval::SiblingDropped { id } => {
-            debug!("{volume_path} unmounted; volume {id} still serves from its active root");
+            debug!(
+                "{volume_path} unmounted; volume {id} still serves from its active root",
+                volume_path = LogPrivate::dir_path(volume_path),
+            );
         }
         RootRemoval::Unknown => {
             // Nothing knew this root. Fall back to a path-derived ID, which is
@@ -156,7 +165,7 @@ pub(crate) fn handle_volume_unmounted(volume_path: &str) {
 /// Public for tests so the handler logic can be exercised without posting real
 /// `NSWorkspace` notifications.
 pub(crate) fn handle_volume_will_unmount(volume_path: &str) {
-    debug!("Volume will unmount: {}", volume_path);
+    debug!("Volume will unmount: {}", LogPrivate::dir_path(volume_path));
     // The volume is still mounted here, so look it up by root the same way the
     // post-unmount path does (robust to SMB/case-folded ids). `find_by_root`
     // also matches a FALLBACK root, and a volume losing one of its spare mounts
@@ -259,7 +268,11 @@ fn unregister_volume_from_manager(volume_path: &str) {
 
     let volume_id = super::volume_id_for_mount(volume_path);
     get_volume_manager().unregister(&volume_id);
-    debug!("Unregistered volume: {} ({})", volume_id, volume_path);
+    debug!(
+        "Unregistered volume: {} ({})",
+        volume_id,
+        LogPrivate::dir_path(volume_path)
+    );
 }
 
 /// Tries to upgrade an SMB mount to a direct smb2 connection in the background.
@@ -311,7 +324,11 @@ fn try_upgrade_smb_mount(volume_path: &str) {
 /// of its own. Public for tests so the handler logic can be exercised without posting real
 /// `NSWorkspace` notifications.
 pub(crate) fn handle_volume_renamed(old_path: &str, new_path: &str) {
-    debug!("Volume renamed: {old_path} -> {new_path}");
+    debug!(
+        "Volume renamed: {old_path} -> {new_path}",
+        old_path = LogPrivate::dir_path(old_path),
+        new_path = LogPrivate::dir_path(new_path),
+    );
     let manager = crate::file_system::volume::manager::get_volume_manager();
     let keeps_its_id = manager
         .find_by_root(std::path::Path::new(old_path))
@@ -334,10 +351,15 @@ pub(crate) fn handle_volume_renamed(old_path: &str, new_path: &str) {
             });
             follow_with_the_index(&id);
         }
-        RootMove::SiblingMoved { id } => debug!("{old_path} renamed; volume {id} still serves from its active root"),
+        RootMove::SiblingMoved { id } => debug!(
+            "{old_path} renamed; volume {id} still serves from its active root",
+            old_path = LogPrivate::dir_path(old_path),
+        ),
         RootMove::BackendCantReroot { id } => log::warn!(
             target: "cmdr_lib::volumes",
-            "{old_path} was renamed to {new_path}, and volume {id} can't move with it, so it stays on the old root"
+            "{old_path} was renamed to {new_path}, and volume {id} can't move with it, so it stays on the old root",
+            old_path = LogPrivate::dir_path(old_path),
+            new_path = LogPrivate::dir_path(new_path),
         ),
         // Checked a moment ago, so only a concurrent unmount gets here: it's gone either way.
         RootMove::Unknown => handle_volume_mounted(new_path),

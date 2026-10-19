@@ -51,6 +51,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::device_volumes::DeviceVolumeProvider;
+use cmdr_fs::log_private::LogPrivate;
 use unmount_tool::UnmountVerb;
 
 // The whole vocabulary, so a caller reaches `eject::EjectError` rather than
@@ -110,7 +111,8 @@ async fn eject_now(volume_id: String) -> Result<EjectOutcome, EjectError> {
         if is_already_unmounted(volume_id, || is_still_mounted(&mount_path)) {
             log::info!(
                 target: "eject",
-                "{volume_id} at {mount_path} is no longer mounted, so there's nothing left to eject"
+                "{volume_id} at {mount_path} is no longer mounted, so there's nothing left to eject",
+                mount_path = LogPrivate::dir_path(&mount_path),
             );
             return Ok(EjectOutcome::AlreadyGone);
         }
@@ -182,13 +184,21 @@ async fn eject_now(volume_id: String) -> Result<EjectOutcome, EjectError> {
                 // Its root left the mount table while the eject was getting ready: the
                 // person's goal is met, the same as `is_already_unmounted`.
                 Ok(disk_target::Resolution::Gone) => {
-                    log::info!(target: "eject", "{volume_id} at {mount_path} left the mount table before its eject ran");
+                    log::info!(
+                        target: "eject",
+                        "{volume_id} at {mount_path} left the mount table before its eject ran",
+                        mount_path = LogPrivate::dir_path(&mount_path),
+                    );
                     Ok(EjectOutcome::AlreadyGone)
                 }
                 // Mounted, but no physical disk backs it (a macFUSE mount): today's
                 // per-volume teardown is the honest answer.
                 Ok(disk_target::Resolution::NoDisk) => {
-                    log::info!(target: "eject", "No physical disk backs {volume_id} at {mount_path}; ejecting the volume alone");
+                    log::info!(
+                        target: "eject",
+                        "No physical disk backs {volume_id} at {mount_path}; ejecting the volume alone",
+                        mount_path = LogPrivate::dir_path(&mount_path),
+                    );
                     eject_one_volume(volume_id, &mount_path, UnmountVerb::Eject).await?;
                     // The volume alone left the mount table: no physical disk powered down,
                     // so ❌ never `DiskEjected`.

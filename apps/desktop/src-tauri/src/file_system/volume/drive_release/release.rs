@@ -206,6 +206,7 @@ impl DriveRelease {
                 log::warn!(
                     target: "drive_release",
                     "{} was still being let go of at the release's deadline; its stop answers late",
+                    // allowed-log-private: a volume ID, which the redactor tokenizes by its shape
                     volume.volume_id
                 );
             }

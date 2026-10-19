@@ -247,6 +247,7 @@ impl Inner {
             // pool, so hand it back and let the next submit try again.
             let mut state = self.state.lock_ignore_poison();
             state.workers.truncate(index);
+            // allowed-log-private: a worker thread name of our own, not the user's
             log::warn!(target: "framework_pool", "could not spawn worker {name}: {err}");
         }
     }

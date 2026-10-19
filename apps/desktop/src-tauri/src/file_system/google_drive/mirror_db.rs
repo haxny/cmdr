@@ -67,6 +67,7 @@ use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use rusqlite::{Connection, OptionalExtension};
 
 use super::DriveItemKind;
@@ -334,7 +335,7 @@ fn open_read_only(db_path: &Path) -> Option<Connection> {
     match crate::sqlite_util::open_read_only(db_path) {
         Ok(conn) => Some(conn),
         Err(e) => {
-            log::debug!(target: "google_drive", "can't read {}: {e}", db_path.display());
+            log::debug!(target: "google_drive", "can't read {}: {e}", LogPrivate::file_path(db_path));
             None
         }
     }

@@ -44,6 +44,7 @@ pub fn is_in_icloud_drive(path: &Path) -> bool {
 #[cfg(target_os = "macos")]
 mod imp {
     use super::*;
+    use cmdr_fs::log_private::LogPrivate;
     use log::{debug, warn};
     use objc2::rc::Retained;
     use objc2_foundation::{NSError, NSFileManager, NSString, NSURL};
@@ -71,7 +72,7 @@ mod imp {
     /// Evicts a downloaded iCloud Drive file: keeps the placeholder, removes the local
     /// copy. The path's sync status flips to `OnlineOnly` once macOS lands the change.
     pub fn evict_item(path: &Path) -> Result<(), String> {
-        debug!(target: "cloud_actions", "evict_item: path={path:?}");
+        debug!(target: "cloud_actions", "evict_item: path={path:?}", path = LogPrivate::path(path));
         if !is_in_icloud_drive(path) {
             return Err("Removing the download is only supported for iCloud Drive files".to_string());
         }
@@ -98,7 +99,7 @@ mod imp {
     /// call returns once the request is queued, not once the download completes;
     /// `sync_status.rs` tracks the `Downloading → Synced` transition for the UI.
     pub fn request_download(path: &Path) -> Result<(), String> {
-        debug!(target: "cloud_actions", "request_download: path={path:?}");
+        debug!(target: "cloud_actions", "request_download: path={path:?}", path = LogPrivate::path(path));
         if !is_in_icloud_drive(path) {
             return Err("Making files available offline is only supported for iCloud Drive".to_string());
         }

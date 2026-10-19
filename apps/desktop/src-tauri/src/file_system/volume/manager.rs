@@ -6,6 +6,7 @@
 
 use super::Volume;
 use crate::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use std::collections::{HashMap, VecDeque};
 use std::path::Path;
 use std::sync::{Arc, LazyLock, Mutex, RwLock};
@@ -105,8 +106,8 @@ fn report_identity_conflict(id: &str, existing: &Arc<dyn Volume>, incoming: &Arc
     log::warn!(
         target: "cmdr_lib::file_system::volume",
         "Two different mount roots ({} and {}) claim volume ID {id}; {resolution}, so the two share per-volume state. Expected only for a cloned volume or a doubly-mounted filesystem.",
-        existing.root().display(),
-        incoming.root().display(),
+        LogPrivate::dir_path(existing.root()),
+        LogPrivate::dir_path(incoming.root()),
     );
 }
 

@@ -196,6 +196,7 @@ impl DriveRelease {
                             target: "drive_release",
                             "Resuming {} for {}",
                             candidate.volume_id,
+                            // allowed-log-private: the resume owner's fixed name of our own
                             owner.name()
                         );
                         self.shared.door.start_resumed(candidate.volume_id.clone(), ticket);
@@ -206,6 +207,7 @@ impl DriveRelease {
                             target: "drive_release",
                             "Not resuming {} for {}: {refusal:?}",
                             candidate.volume_id,
+                            // allowed-log-private: the resume owner's fixed name of our own
                             owner.name()
                         );
                         ResumeVerdict::NotResumed(refusal)

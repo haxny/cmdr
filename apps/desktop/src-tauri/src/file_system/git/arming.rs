@@ -112,7 +112,11 @@ fn arm_detached(listing_id: String, worktree_root: PathBuf) {
                 // Not a repository this listing's path belongs to after all (a
                 // directory merely named `.git`, a gitdir we can't open). The
                 // pane still lists; there's nothing to keep fresh.
-                log::debug!(target: "git", "no watcher for {}: {e}", worktree_root.display());
+                log::debug!(
+                    target: "git",
+                    "no watcher for {}: {e}",
+                    cmdr_fs::log_private::LogPrivate::dir_path(&worktree_root)
+                );
                 return;
             }
         };

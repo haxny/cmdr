@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_index::RemovableStop;
 
 use super::ask::{self, Answer, Chain, Unwaited};
@@ -216,8 +217,9 @@ impl Approver {
         log::info!(
             target: "unmount_approver",
             "{} of {:?} is about to unmount: {answer:?} after letting go of {ids:?} (git repos let go: {repos_let_go}; {:?} of the chain's budget left)",
+            // allowed-log-private: a BSD device name (`disk4s1`), the kernel's, not the user's
             disk.bsd_name,
-            path,
+            LogPrivate::dir_path(path),
             deadline.saturating_duration_since(self.gate.now()),
         );
         answer
@@ -246,8 +248,11 @@ impl Approver {
             log::warn!(
                 target: "unmount_approver",
                 "{} ({}) left the mount table with nobody asking Cmdr to let go of it first ({:?}); stopping its index now",
+                // allowed-log-private: a volume ID, which the redactor tokenizes by its shape
                 volume.volume_id,
+                // allowed-log-private: a BSD device name (`disk4s1`), the kernel's, not the user's
                 volume.bsd_name,
+                // allowed-log-private: the disappearance's cause, an enum of our own
                 volume.cause
             );
         }
@@ -304,8 +309,9 @@ impl Approver {
             log::warn!(
                 target: "unmount_approver",
                 "Nobody could say what else is mounted on {}'s disk, so this ask can only let go of {:?} and must refuse the unmount",
+                // allowed-log-private: a BSD device name (`disk4s1`), the kernel's, not the user's
                 disk.bsd_name,
-                path
+                LogPrivate::dir_path(path)
             );
             return AskGroup {
                 volumes,

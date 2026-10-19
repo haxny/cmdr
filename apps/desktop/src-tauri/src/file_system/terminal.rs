@@ -422,7 +422,8 @@ pub fn open_terminal_here(
     log::info!(
         target: "terminal",
         "opened {dir:?} in {} ({outcome:?})",
-        choice.id()
+        choice.id(),
+        dir = cmdr_fs::log_private::LogPrivate::dir_path(dir),
     );
     Ok(outcome)
 }

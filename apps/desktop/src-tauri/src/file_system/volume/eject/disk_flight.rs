@@ -81,7 +81,11 @@ pub(super) async fn eject_disk(
         .map(cmdr_operations::Operations::busy_volume_ids)
         .unwrap_or_default();
     if let Some(volume_id) = busy_sibling(&ids, &busy) {
-        log::info!(target: "eject", "Not ejecting the disk under {mount_path}: a write op is busy on {volume_id}");
+        log::info!(
+            target: "eject",
+            "Not ejecting the disk under {mount_path}: a write op is busy on {volume_id}",
+            mount_path = cmdr_fs::log_private::LogPrivate::dir_path(mount_path),
+        );
         return Err(EjectError::Busy);
     }
 

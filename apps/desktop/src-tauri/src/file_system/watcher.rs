@@ -26,6 +26,7 @@ use tauri::AppHandle;
 use tauri_specta::Event as _;
 
 use cmdr_fs::firmlinks;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::WatchCoverage;
 use cmdr_listing::ListingId;
 use cmdr_listing::host::{ListingObserver, OpenedListing};
@@ -137,7 +138,11 @@ pub fn app_handle_present() -> bool {
 ///
 /// Note: Initial entries are read from the listing cache when needed.
 pub fn start_watching(listing_id: &str, path: &Path) -> Result<(), String> {
-    log::debug!("start_watching: listing_id={}, path={}", listing_id, path.display());
+    log::debug!(
+        "start_watching: listing_id={}, path={}",
+        listing_id,
+        LogPrivate::dir_path(path)
+    );
     let stream = arm_stream(listing_id, path)?;
 
     // Store in manager (no entries - we use the listing cache)
@@ -363,7 +368,7 @@ pub(super) fn arm_and_reconcile(
     if arm_missed_a_change(mtime_before, dir_mtime(path), opened_at) {
         log::debug!(
             "start_watching_detached: {} may have changed before its watch started, re-reading",
-            path.display()
+            LogPrivate::dir_path(path)
         );
         let lid = listing_id.to_string();
         // `tauri::async_runtime::spawn`: this runs on the blocking pool, outside any
@@ -636,7 +641,10 @@ async fn reread_with_std_fs(listings: &Listings, id: &ListingId) {
 
 /// The watched directory itself is gone: tell the pane, and stop watching it.
 fn directory_deleted(listing_id: &str, path: &Path) {
-    log::info!("Watcher: Directory deleted, notifying frontend: {}", path.display());
+    log::info!(
+        "Watcher: Directory deleted, notifying frontend: {}",
+        LogPrivate::dir_path(path)
+    );
     let app_handle = { WATCHER_MANAGER.read_ignore_poison().app_handle.clone() };
     if let Some(app) = &app_handle {
         let event = DirectoryDeletedEvent {

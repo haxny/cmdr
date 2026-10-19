@@ -11,6 +11,7 @@
 
 use crate::ignore_poison::IgnorePoison;
 use crate::volume_broadcast::{VolumeMounted, VolumeUnmounted};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_local::linux_mounts::{self, MountEntry};
 use log::{debug, error, info, warn};
 use notify::{Event, EventKind, RecommendedWatcher, Watcher};
@@ -213,11 +214,11 @@ fn check_for_mount_changes() {
     };
 
     for path in &changes.mounted {
-        debug!("Volume mounted: {}", path);
+        debug!("Volume mounted: {}", LogPrivate::dir_path(path));
         emit_volume_mounted(path);
     }
     for path in &changes.unmounted {
-        debug!("Volume unmounted: {}", path);
+        debug!("Volume unmounted: {}", LogPrivate::dir_path(path));
         emit_volume_unmounted(path);
     }
     let changed = !changes.mounted.is_empty() || !changes.unmounted.is_empty();
@@ -284,7 +285,10 @@ fn start_gvfs_watcher() {
     let gvfs_path = Path::new(&gvfs_dir);
 
     if !gvfs_path.is_dir() {
-        debug!("GVFS directory {} not found, skipping GVFS watcher", gvfs_dir);
+        debug!(
+            "GVFS directory {} not found, skipping GVFS watcher",
+            LogPrivate::dir_path(&gvfs_dir)
+        );
         return;
     }
 
@@ -303,14 +307,18 @@ fn start_gvfs_watcher() {
     match watcher_result {
         Ok(mut watcher) => {
             if let Err(e) = watcher.watch(gvfs_path, notify::RecursiveMode::NonRecursive) {
-                warn!("Failed to watch GVFS directory {}: {}", gvfs_dir, e);
+                warn!(
+                    "Failed to watch GVFS directory {}: {}",
+                    LogPrivate::dir_path(&gvfs_dir),
+                    e
+                );
                 return;
             }
 
             let storage = GVFS_WATCHER.get_or_init(|| Mutex::new(None));
             *storage.lock_ignore_poison() = Some(watcher);
 
-            info!("GVFS watcher started on {}", gvfs_dir);
+            info!("GVFS watcher started on {}", LogPrivate::dir_path(&gvfs_dir));
         }
         Err(e) => {
             warn!("Failed to create GVFS watcher: {}", e);
@@ -344,7 +352,7 @@ fn check_for_gvfs_changes(gvfs_dir: &str) {
     // Newly mounted shares
     for path in &current {
         if !known_guard.contains(path) {
-            debug!("GVFS SMB share mounted: {}", path);
+            debug!("GVFS SMB share mounted: {}", LogPrivate::dir_path(path));
             emit_volume_mounted(path);
             changed = true;
         }
@@ -353,7 +361,7 @@ fn check_for_gvfs_changes(gvfs_dir: &str) {
     // Unmounted shares
     for path in known_guard.iter() {
         if !current.contains(path) {
-            debug!("GVFS SMB share unmounted: {}", path);
+            debug!("GVFS SMB share unmounted: {}", LogPrivate::dir_path(path));
             emit_volume_unmounted(path);
             changed = true;
         }
@@ -394,7 +402,7 @@ fn emit_volume_mounted(volume_path: &str) {
         if let Err(e) = payload.emit(app) {
             error!("Failed to emit volume-mounted event: {}", e);
         } else {
-            debug!("Emitted volume-mounted for {}", volume_path);
+            debug!("Emitted volume-mounted for {}", LogPrivate::dir_path(volume_path));
         }
     }
 }
@@ -414,7 +422,7 @@ fn emit_volume_unmounted(volume_path: &str) {
         if let Err(e) = payload.emit(app) {
             error!("Failed to emit volume-unmounted event: {}", e);
         } else {
-            debug!("Emitted volume-unmounted for {}", volume_path);
+            debug!("Emitted volume-unmounted for {}", LogPrivate::dir_path(volume_path));
         }
     }
 }
@@ -446,7 +454,11 @@ fn register_volume_with_manager(volume_path: &str) {
         crate::volume_host::host(),
     ));
     get_volume_manager().register(&volume_id, volume);
-    debug!("Registered mounted volume: {} -> {}", volume_id, volume_path);
+    debug!(
+        "Registered mounted volume: {} -> {}",
+        volume_id,
+        LogPrivate::dir_path(volume_path)
+    );
 }
 
 /// Drop a gone mount root from the volume that owned it.
@@ -466,24 +478,35 @@ fn unregister_volume_from_manager(volume_path: &str) {
             // The frontend retires a slow-connection notice about this share now, so
             // its server's next genuine fallback has to be news again.
             crate::network::os_mount_notice::forget_unmounted_volume(&id);
-            debug!("Unregistered volume: {} ({})", id, volume_path);
+            debug!("Unregistered volume: {} ({})", id, LogPrivate::dir_path(volume_path));
         }
         RootRemoval::Promoted { id, new_root } => {
             info!(
                 "{volume_path} unmounted, but volume {id} is still mounted at {}; promoted it to that root.",
-                new_root.display()
+                LogPrivate::dir_path(&new_root),
+                volume_path = LogPrivate::dir_path(volume_path),
             );
         }
         RootRemoval::ActiveRootStranded { id } => {
-            warn!("{volume_path} unmounted and volume {id} can't move to one of its other mounts, so it stays there.");
+            warn!(
+                "{volume_path} unmounted and volume {id} can't move to one of its other mounts, so it stays there.",
+                volume_path = LogPrivate::dir_path(volume_path),
+            );
         }
         RootRemoval::SiblingDropped { id } => {
-            debug!("{volume_path} unmounted; volume {id} still serves from its active root");
+            debug!(
+                "{volume_path} unmounted; volume {id} still serves from its active root",
+                volume_path = LogPrivate::dir_path(volume_path),
+            );
         }
         RootRemoval::Unknown => {
             let volume_id = super::volume_id_for_mount(volume_path);
             manager.unregister(&volume_id);
-            debug!("Unregistered volume: {} ({})", volume_id, volume_path);
+            debug!(
+                "Unregistered volume: {} ({})",
+                volume_id,
+                LogPrivate::dir_path(volume_path)
+            );
         }
     }
 }

@@ -69,8 +69,8 @@ pub fn note_root_failure(volume_id: &str, error: &VolumeError) {
         log::info!(
             target: "cmdr_lib::file_system::volume",
             "Volume {volume_id}'s mount at {} is gone (errno {errno}); promoted it to {}, which is still live.",
-            failed_root.display(),
-            new_root.display(),
+            cmdr_fs::log_private::LogPrivate::dir_path(&failed_root),
+            cmdr_fs::log_private::LogPrivate::dir_path(&new_root),
         );
         // The switcher and every pane still point at the old root, so tell them.
         crate::volume_broadcast::emit_volumes_changed();

@@ -109,70 +109,6 @@
       "count": 2,
       "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
     },
-    "apps/desktop/src-tauri/src/file_system/cloud_actions.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/framework_pool.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/git/arming.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/google_drive/mirror_db.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/mod.rs": {
-      "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/terminal.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/text_editor_macos.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/volume/drive_release/release.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/volume/drive_release/resume.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/volume/eject/disk_flight.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/volume/eject/mod.rs": {
-      "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/volume/eject/unmount_tool.rs": {
-      "count": 5,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/volume/manager.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/volume/mod.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/volume/mount_registration.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/file_system/watcher.rs": {
-      "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
     "apps/desktop/src-tauri/src/file_viewer/materialize.rs": {
       "count": 2,
       "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
@@ -331,18 +267,6 @@
     },
     "apps/desktop/src-tauri/src/usage/ledger.rs": {
       "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/volumes/lifecycle.rs": {
-      "count": 15,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/volumes/unmount_approver/callbacks.rs": {
-      "count": 7,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/volumes_linux/watcher.rs": {
-      "count": 16,
       "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
     },
     "crates/cmdr-adb/src/server.rs": {

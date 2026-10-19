@@ -26,6 +26,7 @@ use std::sync::Arc;
 
 use super::Volume;
 use super::manager::get_volume_manager;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_local::LocalPosixVolume;
 
 #[cfg(target_os = "macos")]
@@ -90,7 +91,11 @@ fn register_mount_root_as(volume_id: &str, root: &str) {
         crate::volume_host::host(),
     ));
     if get_volume_manager().register_if_absent(volume_id, volume) {
-        log::debug!(target: "volume", "Registered mount {root} as {volume_id}");
+        log::debug!(
+            target: "volume",
+            "Registered mount {root} as {volume_id}",
+            root = LogPrivate::dir_path(root),
+        );
     }
 }
 
@@ -165,6 +170,7 @@ fn adopt_with(
     log::info!(
         target: "volume",
         "Adopting the live mount at {root} for volume {volume_id}, which nothing had registered.",
+        root = LogPrivate::dir_path(&root),
     );
     // With the ID the probe proved, ❌ never a fresh derivation: see
     // `register_mount_root_as`.

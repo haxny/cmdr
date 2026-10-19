@@ -36,6 +36,7 @@ pub(crate) mod watcher;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_local::LocalPosixVolume;
 use volume::manager::get_volume_manager;
 
@@ -166,7 +167,11 @@ fn register_discovered_volumes() {
                 crate::volume_host::host(),
             ));
             get_volume_manager().register(&location.id, volume);
-            log::debug!("  Registered attached volume: {} -> {}", location.id, location.path);
+            log::debug!(
+                "  Registered attached volume: {} -> {}",
+                location.id,
+                LogPrivate::dir_path(&location.path)
+            );
         }
 
         let cloud = crate::volumes::get_cloud_drives();
@@ -178,7 +183,11 @@ fn register_discovered_volumes() {
                 crate::volume_host::host(),
             ));
             get_volume_manager().register(&location.id, volume);
-            log::debug!("  Registered cloud drive: {} -> {}", location.id, location.path);
+            log::debug!(
+                "  Registered cloud drive: {} -> {}",
+                location.id,
+                LogPrivate::dir_path(&location.path)
+            );
         }
     }
 
@@ -200,7 +209,11 @@ fn register_discovered_volumes() {
                 crate::volume_host::host(),
             ));
             get_volume_manager().register(&location.id, volume);
-            log::debug!("  Registered volume: {} -> {}", location.id, location.path);
+            log::debug!(
+                "  Registered volume: {} -> {}",
+                location.id,
+                LogPrivate::dir_path(&location.path)
+            );
         }
     }
 }

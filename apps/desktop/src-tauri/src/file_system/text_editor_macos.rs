@@ -394,7 +394,12 @@ pub fn open_in_editor(
     let mac = ThisMac;
     let (choice, outcome) = resolve_choice(parse_choice(setting), |choice| choice_is_installed(choice, &mac));
     launch(&launch_argv(&choice, file), file)?;
-    log::info!(target: "text_editor", "opened {file:?} in {} ({outcome:?})", choice.id());
+    log::info!(
+        target: "text_editor",
+        "opened {file:?} in {} ({outcome:?})",
+        choice.id(),
+        file = cmdr_fs::log_private::LogPrivate::file_path(file),
+    );
 
     let needs_name = report_needs_app_name(&outcome, ask_about_other_editors);
     // Both answers below can need the system default's id, so it's asked at most once,
