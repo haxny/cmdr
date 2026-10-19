@@ -21,7 +21,7 @@ use super::super::staged_write::{StagedWrite, WriteStaging, resolve_staging};
 use super::super::transfer_probe::{
     TaskPhase, arm_current_task_stall_abort, note_task_retry, set_task_bytes, set_task_phase,
 };
-use super::super::volume_outage::{self, OutageEnd, wait_after_failure};
+use super::super::volume_outage::{self, OutageEnd, StartedOn, wait_after_failure};
 use super::preflight::SourceFileFacts;
 use super::server_side_copy::try_server_side_copy;
 use super::transfer_error::{AtPath, PathedVolumeError, hard_abort_error};
@@ -215,6 +215,10 @@ pub(super) async fn stream_pipe_file(
         // that hangs before the first byte is half of the wedge shape. With
         // nothing staged, the abort has nothing to do but return.
         set_task_phase(TaskPhase::OpeningSource);
+        // Each step snapshots which session its volumes are on before it runs,
+        // so a failure that turns out to be a replaced session's is run again
+        // rather than reported (`volume_outage::StartedOn`).
+        let opened_on = StartedOn::now(&[source_volume, dest_volume]);
         let opened = tokio::select! {
             biased;
             () = state.backend_abort.cancelled() => return Err(hard_abort_error(source_path)).at_source(source_path),
@@ -225,14 +229,16 @@ pub(super) async fn stream_pipe_file(
             // A source share that's gone (a download from a NAS that dropped):
             // wait for it and open the file again. Nothing is staged yet, so
             // there's nothing to clear first.
-            Err(e) => match wait_after_failure(state, &e, &[source_volume, dest_volume], &mut outages).await {
-                OutageEnd::Back => {
-                    attempt = 1;
-                    continue;
+            Err(e) => {
+                match wait_after_failure(state, &e, &[source_volume, dest_volume], &opened_on, &mut outages).await {
+                    OutageEnd::Back => {
+                        attempt = 1;
+                        continue;
+                    }
+                    OutageEnd::Cancelled => return Err(volume_outage::cancelled()).at_source(source_path),
+                    OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(e).at_source(source_path),
                 }
-                OutageEnd::Cancelled => return Err(volume_outage::cancelled()).at_source(source_path),
-                OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(e).at_source(source_path),
-            },
+            }
         };
         let Some(size) = stream.total_size().known() else {
             return Err(VolumeError::NotSupported).at_source(source_path);
@@ -314,6 +320,7 @@ pub(super) async fn stream_pipe_file(
         // any backend.
         let write_progress =
             |progress: cmdr_fs::volume::StreamWriteProgress| on_file_progress(progress.bytes_written, size);
+        let written_on = StartedOn::now(&[source_volume, dest_volume]);
         let write_fut =
             dest_volume.write_from_stream(staged.target(), staged.write_mode(), length, stream, &write_progress);
         let outcome = tokio::select! {
@@ -364,19 +371,21 @@ pub(super) async fn stream_pipe_file(
         // falls through to the arms below exactly as before; a cancel during
         // the wait reaches the cancel arm (`is_cancelled` is set by then).
         let write_result = match write_result {
-            Err(e) => match wait_after_failure(state, &e, &[source_volume, dest_volume], &mut outages).await {
-                OutageEnd::Back => {
-                    staged.abandon_attempt(dest_volume).await;
-                    log::info!(
-                        target: "copy",
-                        "stream_pipe_file: running {} again now that its volume is back",
-                        dest_path.display(),
-                    );
-                    attempt = 1;
-                    continue;
+            Err(e) => {
+                match wait_after_failure(state, &e, &[source_volume, dest_volume], &written_on, &mut outages).await {
+                    OutageEnd::Back => {
+                        staged.abandon_attempt(dest_volume).await;
+                        log::info!(
+                            target: "copy",
+                            "stream_pipe_file: running {} again now that its volume is back",
+                            dest_path.display(),
+                        );
+                        attempt = 1;
+                        continue;
+                    }
+                    OutageEnd::Cancelled | OutageEnd::GaveUp | OutageEnd::NotWaitable => Err(e),
                 }
-                OutageEnd::Cancelled | OutageEnd::GaveUp | OutageEnd::NotWaitable => Err(e),
-            },
+            }
             ok => ok,
         };
         let written = match write_result {
@@ -452,6 +461,7 @@ pub(super) async fn stream_pipe_file(
         let bytes = written.bytes;
         let lost = lost.union(written.refused());
         let landing_from = staged.target().to_path_buf();
+        let landing_on = StartedOn::now(&[source_volume, dest_volume]);
         match staged.commit(dest_volume).await {
             Ok(()) => {
                 // Landed, so a ` (N)` placeholder at the name is filled, not ours
@@ -483,15 +493,26 @@ pub(super) async fn stream_pipe_file(
                 continue;
             }
             // The landing failed with NOTHING cleared because the destination
-            // went away under it: the rename may never have reached the server,
+            // went away under it (or answered with a session someone else had
+            // already replaced): the rename may never have reached the server,
             // or the server performed it and the drop swallowed the reply. Wait
             // for the share, then settle which (`interrupted_landing.rs`): our
             // file whole at its name counts as landed; anything else takes the
-            // temp away and runs the file again. ❌ Never with `new_data_at`
-            // set: then the temp was the only copy, and `land` has already
-            // moved it somewhere safe.
+            // temp away and runs the file again. On a transport fault `land`
+            // left the temp registered for exactly this, so a wait that gives
+            // up leaves it to the operation's abandoned-write cleanup. ❌ Never
+            // with `new_data_at` set: then the temp was the only copy, and
+            // `land` has already moved it somewhere safe.
             Err(failure) if failure.new_data_at.is_none() => {
-                match wait_after_failure(state, &failure.error, &[source_volume, dest_volume], &mut outages).await {
+                match wait_after_failure(
+                    state,
+                    &failure.error,
+                    &[source_volume, dest_volume],
+                    &landing_on,
+                    &mut outages,
+                )
+                .await
+                {
                     OutageEnd::Back => {
                         set_task_phase(TaskPhase::Finalizing);
                         let settled =

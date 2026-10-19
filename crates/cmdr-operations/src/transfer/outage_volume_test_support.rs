@@ -16,6 +16,12 @@
 //! reconnect can hang, as an SMB handshake a server accepted and never answered
 //! does (`#406`).
 //!
+//! Like SMB it reports a session generation ([`Volume::connection_generation`]),
+//! bumped by every reconnect that brings the session back. A test can make a
+//! rename answer a LATE error: the session drops and someone else reconnects it
+//! while the rename is in flight, so the rename fails with the old session's
+//! error and the volume already reads live on the next generation.
+//!
 //! Wraps an `InMemoryVolume` (rather than owning one) so a test can read the
 //! destination back through the same handle after the copy.
 
@@ -29,7 +35,7 @@ use cmdr_fs::volume::{
 use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 type Fut<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -63,6 +69,11 @@ pub(crate) struct OutageVolume {
     renames: AtomicUsize,
     /// Drop the session around this (0-based) rename, and on which side of it.
     drop_at_rename: Mutex<Option<(usize, RenameDrop)>>,
+    /// Drop the session around this (0-based) rename and have someone else
+    /// reconnect it before the rename's error arrives.
+    stale_error_at_rename: Mutex<Option<(usize, RenameDrop)>>,
+    /// Which session is up: bumped each time a reconnect brings it back.
+    generation: AtomicU64,
 }
 
 /// Counts itself into its counter when dropped: held across an await that never
@@ -102,6 +113,8 @@ impl OutageVolume {
             single_shot: AtomicBool::new(false),
             renames: AtomicUsize::new(0),
             drop_at_rename: Mutex::new(None),
+            stale_error_at_rename: Mutex::new(None),
+            generation: AtomicU64::new(0),
         })
     }
 
@@ -117,10 +130,23 @@ impl OutageVolume {
         self.reachable.store(true, Ordering::SeqCst);
     }
 
-    /// Somebody else (a pane's own backoff) reconnected the session.
+    /// Somebody else (a pane's own backoff, a sibling task's wait) reconnected
+    /// the session.
     pub(crate) fn reconnected_elsewhere(&self) {
         self.reachable.store(true, Ordering::SeqCst);
-        self.up.store(true, Ordering::SeqCst);
+        self.bring_the_session_back();
+    }
+
+    /// The session comes up, on the next generation if it was down.
+    fn bring_the_session_back(&self) {
+        if !self.up.swap(true, Ordering::SeqCst) {
+            self.generation.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    /// The session generation [`Volume::connection_generation`] reports.
+    pub(crate) fn generation(&self) -> u64 {
+        self.generation.load(Ordering::SeqCst)
     }
 
     pub(crate) fn require_sign_in(&self) {
@@ -157,6 +183,13 @@ impl OutageVolume {
     /// (0-based), on the given side of it.
     pub(crate) fn drop_at_rename(&self, n: usize, side: RenameDrop) {
         *self.drop_at_rename.lock_ignore_poison() = Some((n, side));
+    }
+
+    /// Rename number `n` (0-based) answers the error of a session that dropped
+    /// under it (on the given side), arriving only after someone else had
+    /// already reconnected: the volume reads live on the next generation.
+    pub(crate) fn stale_error_at_rename(&self, n: usize, side: RenameDrop) {
+        *self.stale_error_at_rename.lock_ignore_poison() = Some((n, side));
     }
 
     pub(crate) fn reconnect_attempts(&self) -> usize {
@@ -208,6 +241,9 @@ impl Volume for OutageVolume {
     fn max_concurrent_ops(&self) -> usize {
         self.inner.max_concurrent_ops()
     }
+    fn connection_generation(&self) -> Option<u64> {
+        Some(self.generation())
+    }
     fn connection_state(&self) -> Option<ConnectionState> {
         Some(
             if self.needs_sign_in.load(Ordering::SeqCst) && !self.up.load(Ordering::SeqCst) {
@@ -233,7 +269,7 @@ impl Volume for OutageVolume {
                 });
             }
             if self.reachable.load(Ordering::SeqCst) {
-                self.up.store(true, Ordering::SeqCst);
+                self.bring_the_session_back();
                 Ok(())
             } else {
                 Err(VolumeError::ConnectionTimeout("the server didn't answer".to_owned()))
@@ -301,6 +337,18 @@ impl Volume for OutageVolume {
                     self.go_away();
                 }
                 _ => {}
+            }
+            let stale = *self.stale_error_at_rename.lock_ignore_poison();
+            if let Some((at, side)) = stale
+                && at == n
+            {
+                self.gate()?;
+                if side == RenameDrop::AfterTheServerPerformsIt {
+                    self.inner.rename(from, to, force).await?;
+                }
+                self.go_away();
+                self.reconnected_elsewhere();
+                return Err(VolumeError::DeviceDisconnected("the session is down".to_owned()));
             }
             self.gate()?;
             self.inner.rename(from, to, force).await

@@ -1128,14 +1128,16 @@ source still holds the new bytes, and the temp is a complete copy of ours nobody
 user's folder as a visible `.cmdr-tmp-*` until the hourly reap. `recovered_name.rs::discard_unplaced_temp` deletes it
 (best effort: a delete that fails too is logged and left to the sweeps) in every such exit, one rule for both landings:
 `staged_write::land`'s rename refused for any reason but `AlreadyExists`, its clash on an `ExpectedFree` name, and its
-claimed-name delete that was refused; and `finalize_safe_replace`'s refused delete of the original. ❗ A refused delete
-is checked with one stat before anything else (`what_a_refused_delete_left`), because over a network the server can act
-and the answer still be lost: the name still taken means discard, the name empty after all means the way IS clear and
-the landing goes on (discarding there would leave neither file), and a stat that can't answer leaves the temp alone. ❌
-Never discard once the way was cleared: from then on the temp may be the only copy at the destination, and it is rescued
-instead. Short of the empty-after-all case, the copy fails with the typed refusal. Pinned by
-`volume/finalize_recovery_tests.rs` (the three delete answers, and both drivers end to end), `staged_write.rs::tests`,
-`volume/copy_landing_race_tests.rs` (no temp left on either driver), and on a live server by
+claimed-name delete that was refused; and `finalize_safe_replace`'s refused delete of the original. ❗ Not a first
+rename that failed on the TRANSPORT (`transport_fault`): the server may have performed it, so the temp stays registered
+for the settle after the outage wait (§ "A landing the drop cut off"), and the abandoned-write cleanup takes it if
+nothing settles it. ❗ A refused delete is checked with one stat before anything else (`what_a_refused_delete_left`),
+because over a network the server can act and the answer still be lost: the name still taken means discard, the name
+empty after all means the way IS clear and the landing goes on (discarding there would leave neither file), and a stat
+that can't answer leaves the temp alone. ❌ Never discard once the way was cleared: from then on the temp may be the
+only copy at the destination, and it is rescued instead. Short of the empty-after-all case, the copy fails with the
+typed refusal. Pinned by `volume/finalize_recovery_tests.rs` (the three delete answers, and both drivers end to end),
+`staged_write.rs::tests`, `volume/copy_landing_race_tests.rs` (no temp left on either driver), and on a live server by
 `operations_host/backend_suites/webdav_refusal_test.rs::webdav_integration_a_refused_replace_keeps_the_users_file`.
 
 **Finding the litter.** A staged temp is listed in `state.in_flight_temps` for exactly as long as it is a removable copy
@@ -1803,6 +1805,19 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
   `cmdr://state`; the probe heartbeats it to the UI every tick, accrues no stall time, dumps nothing, and restarts every
   task's abort clock (`TaskPhase::WaitingForVolume` is not abortable); and the ETA's working-time clock leaves the
   outage out (`human_wait.rs`), so the first sample after it doesn't divide one file's bytes by the outage's length.
+- **A late error is the old session's, and is run again at once.** In the concurrent window one task's reconnect
+  installs a new session while a sibling's call is still in flight on the one it replaced; that call's transport error
+  then arrives with the volume already live, which used to read as "not an outage" and end the copy (`ERR-VEZUB`, #489).
+  So every call snapshots `Volume::connection_generation` BEFORE it runs (`StartedOn`: `through_outages` per call,
+  `stream_pipe_file` per step), and a volume that reads live on a NEWER generation answers `Back` with nothing to dial.
+  The guarantee: a generation bump is proof of a stale error ONLY while the volume reads live; live on the SAME
+  generation stays `NotWaitable` (the error is real), and a backend that answers `None` keeps the old behavior exactly.
+  The shortcut spends one of the item's `MAX_OUTAGES_PER_ITEM`, so a flapping link stays bounded, and ❌ never touches
+  the lane's outage record (another waiter may be in a newer outage on it). The snapshot over-approximates on purpose: a
+  call that snapshotted while the volume was down, then ran on a sibling's fresh session and failed for real, gets one
+  re-run it didn't need; that's safe (only re-runnable work reaches these waits) and bounded. SMB answers the generation
+  from the counter its error funnels guard on (`crates/cmdr-smb/DETAILS.md` § "Which session a loss is about"), so the
+  same late error also never moves the fresh session's state.
 
 **Where it's asked, and why only there.** Only where a transfer meets the share, and only for calls that are safe to run
 again:
@@ -1832,7 +1847,11 @@ cell (`operations_host/backend_suites/smb_outage_test.rs`) hit it whenever the c
 concurrent window. So once the share is back the landing is settled first, and counts as DONE only on proof, all three
 of:
 
-- the temp is still in the operation's in-flight set, so no discard of ours took it (a discard releases it);
+- the temp is still in the operation's in-flight set, so no discard of ours took it (a discard releases it). That's why
+  `staged_write.rs::land` never discards after a first rename that failed on the transport: on a late error the delete
+  would reach a sibling's fresh session, find the landed temp gone, release it, and the re-run would meet our own file
+  as `DestinationExists`. A temp it leaves registered that nothing settles (the wait gave up, or had nothing to wait
+  for) goes with the operation's abandoned-write cleanup;
 - the temp is gone from the destination, and the only move ever asked of that `.cmdr-tmp-<uuid>` was ours;
 - the final name holds a file of exactly the size we wrote, so nothing replaced it while the share was away.
 
@@ -1866,10 +1885,12 @@ a drop swallowed.
 
 Pinned by `volume_outage_tests.rs` (the state machine: back, give-up, cancel, pause, sign-in, a queued job after a
 give-up, a Retry after one, a shared deadline, `through_outages`'s cap, a hung attempt abandoned, a cancel dropping one,
-and the queued job's one look bounded too) and `volume/copy_outage_tests.rs` (the real copy pipeline: both drivers, the
-give-up, a cancel during the wait, the start gate, a landing cut off before the server saw it, after it performed it,
-and after it performed it with the name then taken by someone else, and a single-shot write the drop swallowed, with the
-name then taken by a different-size and a same-size file).
+the queued job's one look bounded too, and a late error: waited past at once on a newer generation, not on the same one,
+and capped) and `volume/copy_outage_tests.rs` (the real copy pipeline: both drivers, the give-up, a cancel during the
+wait, the start gate, a landing cut off before the server saw it, after it performed it, and after it performed it with
+the name then taken by someone else, a single-shot write the drop swallowed, with the name then taken by a
+different-size and a same-size file, and a late error in the concurrent window). `volume/copy_landing_race_tests.rs`
+pins a performed landing answered by a late error landing once, in both drivers.
 
 ### The watchdog ACTS
 

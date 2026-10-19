@@ -240,9 +240,35 @@ async fn a_rename_that_failed_for_another_reason_leaves_the_destination_alone() 
         "a rename that never said the destination was in the way must not have cost the user their file"
     );
     assert!(
-        !inner.exists(Path::new("/temp")).await,
-        "and the temp the bytes couldn't leave goes at once: nothing was cleared, so the source still holds them"
+        inner.exists(Path::new("/temp")).await,
+        "and a transport failure leaves the temp for the caller's settle: the server may have performed the rename, \
+         and only a temp no discard of ours touched proves it was ours"
     );
+}
+
+/// A rename the destination REFUSED (not a dropped link) is a plain no: nothing
+/// was cleared and the source still holds the bytes, so the complete-but-unplaced
+/// temp goes at once rather than waiting for the hourly reap.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_refused_rename_takes_its_temp_away_at_once() {
+    let (inner, outcome) = land_with_a_rename_that_fails(VolumeError::PermissionDenied {
+        path: "/notes.txt".to_owned(),
+        raw_os_error: None,
+    })
+    .await;
+
+    assert!(
+        matches!(
+            outcome,
+            Err(FinalizeFailure {
+                error: VolumeError::PermissionDenied { .. },
+                ..
+            })
+        ),
+        "got {outcome:?}"
+    );
+    assert_eq!(size_of(&inner, "/notes.txt").await, Some(15));
+    assert!(!inner.exists(Path::new("/temp")).await, "the refused temp goes at once");
 }
 
 /// The same shape, one flavor further: a backend that can delete but can't

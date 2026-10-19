@@ -145,6 +145,60 @@ async fn a_multi_file_copy_waits_out_a_dropped_share_and_finishes() {
     }
 }
 
+/// The concurrent window, where one task's reconnect brings the share back
+/// while another task's call is still in flight on the OLD session: that call's
+/// error arrives late, with the share already live on the new one. It's waited
+/// past at once and the file runs again, so every file lands. Before, the live
+/// share made the late error final and it ended the copy (`ERR-VEZUB`). The
+/// error hits a landing rename the server never saw, where no per-file retry
+/// would have ridden it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_late_error_from_a_replaced_session_is_run_again_and_every_file_lands() {
+    let engine = TestOperations::new();
+    let source = source_with(5).await;
+    let (inner, nas, dest) = nas("outage-late-error");
+    nas.stale_error_at_rename(2, RenameDrop::BeforeTheServerSeesIt);
+    let state = outage_state(&engine, Duration::from_secs(30));
+    let op = engine.register_state("outage-late-error", Arc::clone(&state));
+
+    let sources: Vec<PathBuf> = (0..5).map(|n| PathBuf::from(format!("/f{n}.txt"))).collect();
+    copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        op.id(),
+        &state,
+        source,
+        &sources,
+        dest,
+        Path::new("/"),
+        &config(),
+    )
+    .await
+    .expect("a late error from a session someone already replaced must not fail the copy");
+
+    for n in 0..5 {
+        assert_eq!(
+            content_of(&inner, &format!("/f{n}.txt")).await,
+            format!("file {n}").into_bytes(),
+            "f{n} must land byte-exact"
+        );
+    }
+    assert_eq!(nas.generation(), 1, "the session really was replaced under a landing");
+    assert_eq!(
+        nas.reconnect_attempts(),
+        0,
+        "the copy dialed nothing: the share was already back"
+    );
+    let leftovers: Vec<String> = inner
+        .list_directory(Path::new("/"), None)
+        .await
+        .expect("the destination")
+        .into_iter()
+        .map(|entry| entry.name)
+        .filter(|name| name.contains(".cmdr-tmp-"))
+        .collect();
+    assert!(leftovers.is_empty(), "no staged partial survives: {leftovers:?}");
+}
+
 /// The share never comes back: after the budget, the copy fails exactly as it
 /// did before it knew how to wait, with what landed still there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

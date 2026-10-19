@@ -500,7 +500,12 @@ pub(super) fn dest_home(state: &WriteOperationState) -> Option<TempHome<'_>> {
 /// an hour for the stale-temp reap (`recovered_name::discard_unplaced_temp`).
 /// That covers a rename refused for any reason but `AlreadyExists`, a clash on
 /// a name the caller believed free, and a claimed name whose delete was refused
-/// with the name still taken. When the way was CLEARED and the rename then
+/// with the name still taken. ❗ Except a first rename that failed on the
+/// transport ([`VolumeError::transport_fault`]): the server may have performed
+/// it, so the temp stays registered and the caller settles which once the
+/// destination is back (`interrupted_landing.rs`). If nothing settles it (the
+/// wait gave up, or there was none to wait for), the operation's abandoned-write
+/// cleanup removes it, as for any registered temp. When the way was CLEARED and the rename then
 /// failed anyway, the temp is the only complete copy at the destination, so it
 /// is never deleted: it leaves temp space instead ([`FinalizeFailure::new_data_at`]).
 ///
@@ -525,7 +530,16 @@ async fn land(
         return Ok(());
     };
     if !matches!(first, VolumeError::AlreadyExists(_)) {
-        discard().await;
+        // ❗ A dropped link may have swallowed a rename the server performed, so
+        // the temp stays registered for the caller's settle
+        // (`interrupted_landing.rs`): its proof that the landing was ours is
+        // that no discard of ours took the temp away. A discard here would run
+        // on whatever session answers next (a sibling's fresh one, when the
+        // error was the old session's) and, the temp being gone because it
+        // landed, release it.
+        if first.transport_fault().is_none() {
+            discard().await;
+        }
         return Err(first.into());
     }
     if matches!(landing, LandingName::ExpectedFree | LandingName::FreeInFreshFolder) {

@@ -17,7 +17,10 @@
 //! done exactly when all three hold:
 //!
 //! - the temp is still in the operation's in-flight set, so no discard of ours
-//!   removed it (`land`'s discard releases it the moment it does);
+//!   removed it (`land`'s discard releases it the moment it does, which is why
+//!   `land` never discards after a transport fault: on a stale error the
+//!   delete would reach a fresh session, find the landed temp gone, and
+//!   release it);
 //! - the temp is gone from the destination, so something moved it, and the only
 //!   move ever asked for it was ours, onto `final_path`;
 //! - `final_path` holds a file of exactly the size we wrote, so nothing replaced

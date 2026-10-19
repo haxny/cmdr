@@ -429,6 +429,106 @@ async fn a_reconnect_made_elsewhere_ends_the_wait() {
     assert_eq!(wait_while_out(op.state(), &[&volume], None).await, OutageEnd::Back);
 }
 
+fn lost_session() -> VolumeError {
+    VolumeError::DeviceDisconnected("session lost".into())
+}
+
+/// A call's transport error that arrives after someone else (a sibling task's
+/// wait, a pane's backoff) already reconnected the volume was the OLD session's:
+/// the volume reads live on a newer generation than the call started on. That's
+/// proof enough to run the call again, at once, with nothing to dial. Before,
+/// the live volume made it `NotWaitable`, and the late error ended the copy.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_error_from_before_someone_elses_reconnect_is_waited_past_at_once() {
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-stale", quick_state(&engine));
+    let (nas, volume) = nas("outage-stale");
+    let started_on = StartedOn::now(&[&volume]);
+    // The session drops under the call, and a sibling reconnects it before the
+    // call's error comes back.
+    nas.go_away();
+    nas.reconnected_elsewhere();
+    assert_eq!(nas.generation(), 1, "the reconnect installed the next session");
+
+    let mut outages = 0;
+    let ended = wait_after_failure(op.state(), &lost_session(), &[&volume], &started_on, &mut outages).await;
+
+    assert_eq!(ended, OutageEnd::Back);
+    assert_eq!(
+        nas.reconnect_attempts(),
+        0,
+        "nothing to dial: the volume is already back"
+    );
+    assert_eq!(outages, 1, "it still counts against the file's outage cap");
+}
+
+/// The negative: a live volume on the SAME session the call ran on means the
+/// error is that session's own, real failure.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_error_from_the_current_session_is_not_waited_past() {
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-same-session", quick_state(&engine));
+    let (nas, volume) = nas("outage-same-session");
+    let started_on = StartedOn::now(&[&volume]);
+
+    let mut outages = 0;
+    let ended = wait_after_failure(op.state(), &lost_session(), &[&volume], &started_on, &mut outages).await;
+
+    assert_eq!(ended, OutageEnd::NotWaitable);
+    assert_eq!(outages, 0);
+    assert_eq!(nas.reconnect_attempts(), 0);
+}
+
+/// A flapping link that keeps answering late errors is still bounded: each one
+/// spends one of the file's outages.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn late_errors_are_waited_past_only_up_to_the_outage_cap() {
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-stale-cap", quick_state(&engine));
+    let (nas, volume) = nas("outage-stale-cap");
+    let calls = AtomicUsize::new(0);
+    let result: Result<(), VolumeError> = through_outages(op.state(), &[&volume], || {
+        calls.fetch_add(1, Ordering::SeqCst);
+        let nas = Arc::clone(&nas);
+        async move {
+            nas.go_away();
+            nas.reconnected_elsewhere();
+            Err(lost_session())
+        }
+    })
+    .await;
+
+    assert!(matches!(result, Err(VolumeError::DeviceDisconnected(_))));
+    assert_eq!(calls.load(Ordering::SeqCst) as u32, MAX_OUTAGES_PER_ITEM + 1);
+    assert_eq!(nas.reconnect_attempts(), 0, "every reconnect was someone else's");
+}
+
+/// `through_outages` snapshots per call, so a re-run's error is judged against
+/// the session THAT run started on.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn through_outages_runs_a_call_again_when_its_error_was_a_replaced_sessions() {
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-through-stale", quick_state(&engine));
+    let (nas, volume) = nas("outage-through-stale");
+    let calls = AtomicUsize::new(0);
+    let result = through_outages(op.state(), &[&volume], || {
+        let n = calls.fetch_add(1, Ordering::SeqCst);
+        let nas = Arc::clone(&nas);
+        async move {
+            if n == 0 {
+                nas.go_away();
+                nas.reconnected_elsewhere();
+                return Err(lost_session());
+            }
+            Ok(n)
+        }
+    })
+    .await;
+
+    assert_eq!(result.expect("the second run lands"), 1);
+    assert_eq!(nas.generation(), 1, "the session really was replaced");
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn through_outages_runs_the_call_again_once_the_volume_is_back() {
     let engine = TestOperations::new();

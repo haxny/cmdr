@@ -47,6 +47,21 @@
 //! - **Retries nothing it shouldn't.** Only a failure that is a
 //!   [`VolumeError::transport_fault`] ever triggers a wait, so a refusal or a
 //!   cancel is reported as it always was.
+//! - **A late error is the old session's.** In a concurrent window one task's
+//!   reconnect brings the share back while a sibling's call is still in flight
+//!   on the session it replaced; that call's error then arrives with the volume
+//!   already live. Each call snapshots [`Volume::connection_generation`] BEFORE
+//!   it runs ([`StartedOn`]), and a volume that reads live on a NEWER
+//!   generation answers [`OutageEnd::Back`] at once, with nothing to dial. Live
+//!   on the same generation stays [`OutageEnd::NotWaitable`]: the error is
+//!   real. It still spends one of the item's [`MAX_OUTAGES_PER_ITEM`], so a
+//!   flapping link stays bounded, and it never joins the lane's outage record
+//!   (another waiter may be in a newer outage there). A backend that answers
+//!   `None` keeps the old behavior exactly. The snapshot over-approximates on
+//!   purpose: a call that snapshotted while the volume was down, then ran on a
+//!   sibling's fresh session and failed for real, gets one re-run it didn't
+//!   need, which is safe (only re-runnable work reaches these waits) and
+//!   bounded.
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -97,6 +112,34 @@ pub(crate) struct OutageAnnounce<'a> {
     pub operation_type: WriteOperationType,
 }
 
+/// Which session each of a call's volumes was on when the call STARTED
+/// ([`Volume::connection_generation`]), in the order of the call's volume list.
+///
+/// ❗ Taken right before the call, never after its error: by then a sibling's
+/// reconnect may have moved the generation, and the snapshot would hide exactly
+/// the race it exists to see.
+#[derive(Debug, Clone)]
+pub(crate) struct StartedOn(Vec<Option<u64>>);
+
+impl StartedOn {
+    /// The generations `volumes` are on right now.
+    pub(crate) fn now(volumes: &[&Arc<dyn Volume>]) -> Self {
+        Self(volumes.iter().map(|volume| volume.connection_generation()).collect())
+    }
+
+    /// Whether `volume`, at `index` in the call's list, was reconnected while
+    /// the call ran: it reads live on a NEWER session than the call started on.
+    /// Live on the same session means the error was that session's own, and a
+    /// volume (or a snapshot) without a generation proves nothing.
+    fn replaced(&self, index: usize, volume: &Arc<dyn Volume>) -> bool {
+        let Some(Some(started)) = self.0.get(index) else {
+            return false;
+        };
+        volume.connection_state().is_some_and(ConnectionState::is_live)
+            && volume.connection_generation().is_some_and(|now| now > *started)
+    }
+}
+
 /// Waits for every volume in `volumes` that's out, one after the other.
 ///
 /// [`OutageEnd::NotWaitable`] when none of them is out in a way it can come back
@@ -106,24 +149,45 @@ pub(crate) async fn wait_while_out(
     volumes: &[&Arc<dyn Volume>],
     announce: Option<&OutageAnnounce<'_>>,
 ) -> OutageEnd {
-    let mut waited = false;
-    for volume in volumes {
+    // No failing call to judge (the start gate), so no snapshot: nothing here
+    // can prove an error stale.
+    wait_out(state, volumes, &StartedOn(Vec::new()), announce).await
+}
+
+/// [`wait_while_out`], for a failure from a call that started on `started_on`.
+async fn wait_out(
+    state: &Arc<WriteOperationState>,
+    volumes: &[&Arc<dyn Volume>],
+    started_on: &StartedOn,
+    announce: Option<&OutageAnnounce<'_>>,
+) -> OutageEnd {
+    let mut back = false;
+    for (index, volume) in volumes.iter().enumerate() {
+        if started_on.replaced(index, volume) {
+            // Someone else's reconnect (a sibling's wait, a pane's backoff)
+            // already brought it back: the error was the old session's. ❌ Not
+            // `Outages::back`: this waiter never joined the lane's record, and
+            // another may be in a NEWER outage on it.
+            log::info!(
+                target: "copy",
+                "volume outage: volumeName={:?} was reconnected while the call ran; running it again",
+                volume.name(),
+            );
+            back = true;
+            continue;
+        }
         if volume.connection_state() != Some(ConnectionState::Disconnected) {
             continue;
         }
         match wait_for_volume(state, volume, announce).await {
-            OutageEnd::Back => waited = true,
+            OutageEnd::Back => back = true,
             // A volume that's out but can't be waited for is the same answer as
             // one that isn't out: look at the next.
             OutageEnd::NotWaitable => {}
             ended => return ended,
         }
     }
-    if waited {
-        OutageEnd::Back
-    } else {
-        OutageEnd::NotWaitable
-    }
+    if back { OutageEnd::Back } else { OutageEnd::NotWaitable }
 }
 
 /// Runs `call`, and when it fails on a transport error while one of `volumes`
@@ -146,11 +210,12 @@ where
 {
     let mut outages = 0;
     loop {
+        let started_on = StartedOn::now(volumes);
         let error = match call().await {
             Ok(value) => return Ok(value),
             Err(error) => error,
         };
-        match wait_after_failure(state, error.volume_error(), volumes, &mut outages).await {
+        match wait_after_failure(state, error.volume_error(), volumes, &started_on, &mut outages).await {
             OutageEnd::Back => {}
             OutageEnd::Cancelled => return Err(error.into_cancelled()),
             OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(error),
@@ -178,21 +243,23 @@ impl OutageFailure for VolumeError {
     }
 }
 
-/// After `error`, waits for whichever of `volumes` went away, when that's what
-/// `error` was: a [`VolumeError::transport_fault`], with this item's
-/// outage budget ([`MAX_OUTAGES_PER_ITEM`], counted in `outages`) not spent and
-/// no cancel in. [`OutageEnd::NotWaitable`] for every other failure, which the
-/// caller reports as it always did.
+/// After `error` from a call that started on `started_on`, waits for whichever
+/// of `volumes` went away, when that's what `error` was: a
+/// [`VolumeError::transport_fault`], with this item's outage budget
+/// ([`MAX_OUTAGES_PER_ITEM`], counted in `outages`) not spent and no cancel in.
+/// [`OutageEnd::NotWaitable`] for every other failure, which the caller reports
+/// as it always did.
 pub(crate) async fn wait_after_failure(
     state: &Arc<WriteOperationState>,
     error: &VolumeError,
     volumes: &[&Arc<dyn Volume>],
+    started_on: &StartedOn,
     outages: &mut u32,
 ) -> OutageEnd {
     if *outages >= MAX_OUTAGES_PER_ITEM || error.transport_fault().is_none() || state.intent().is_cancelled() {
         return OutageEnd::NotWaitable;
     }
-    let ended = wait_while_out(state, volumes, None).await;
+    let ended = wait_out(state, volumes, started_on, None).await;
     if ended == OutageEnd::Back {
         *outages += 1;
     }
@@ -224,7 +291,7 @@ async fn wait_for_volume(
             // with no pane on it, nothing else would have noticed.
             log::info!(
                 target: "copy",
-                "volume outage: {name} already timed out for work queued before; trying it once"
+                "volume outage: volumeName={name:?} already timed out for work queued before; trying it once"
             );
             return match attempt_once(state, volume, None).await {
                 Attempt::Reconnected => {
@@ -241,7 +308,7 @@ async fn wait_for_volume(
     let _phase = TaskPhaseGuard::enter(TaskPhase::WaitingForVolume);
     log::warn!(
         target: "copy",
-        "volume outage: {name} went away; waiting up to {:?} for it to come back",
+        "volume outage: volumeName={name:?} went away; waiting up to {:?} for it to come back",
         deadline.saturating_duration_since(Instant::now()),
     );
     if let Some(announce) = announce {
@@ -277,7 +344,7 @@ async fn wait_for_volume(
             outages.gave_up(&lane);
             log::warn!(
                 target: "copy",
-                "volume outage: {name} didn't come back within {:?}; giving up",
+                "volume outage: volumeName={name:?} didn't come back within {:?}; giving up",
                 now.saturating_duration_since(started),
             );
             return OutageEnd::GaveUp;
@@ -331,7 +398,7 @@ fn came_back(outages: &Outages, lane: &LaneKey, name: &str, started: Instant) ->
     outages.back(lane);
     log::info!(
         target: "copy",
-        "volume outage: {name} is back after {:?}; carrying on",
+        "volume outage: volumeName={name:?} is back after {:?}; carrying on",
         started.elapsed(),
     );
     OutageEnd::Back
@@ -374,7 +441,7 @@ async fn attempt_once(
             Err(_elapsed) => {
                 log::warn!(
                     target: "copy",
-                    "volume outage: a reconnect attempt to {} didn't return within {attempt_timeout:?}; \
+                    "volume outage: a reconnect attempt to volumeName={:?} didn't return within {attempt_timeout:?}; \
                      dropping it and trying again on the next tick",
                     volume.name(),
                 );

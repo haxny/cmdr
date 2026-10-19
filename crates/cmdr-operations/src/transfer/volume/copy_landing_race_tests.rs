@@ -13,6 +13,10 @@
 //!
 //! The live-server twins are `operations_host/backend_suites/network_safety_test_support.rs`'s
 //! `a_name_taken_mid_upload_is_never_replaced`, which found this on WebDAV.
+//!
+//! The other race at the landing is with OUR OWN file: a rename the server
+//! performed whose reply is a late error from a session someone else already
+//! replaced. That file is ours and must count as landed once, never as a clash.
 
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -22,6 +26,7 @@ use super::tests::make_state;
 use super::*;
 use crate::event_sinks::CollectorEventSink;
 use crate::testing::TestOperations;
+use crate::transfer::outage_volume_test_support::{OutageVolume, RenameDrop};
 use crate::transfer::volume::forward_volume_methods;
 use crate::types::{ConflictResolution, WriteOperationError};
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
@@ -193,4 +198,98 @@ async fn serial_a_name_taken_at_landing_survives_under_rename_too() {
     let (dest, error) =
         copy_with_a_name_taken_at_landing(&engine, &["photo.jpg"], "photo.jpg", ConflictResolution::Rename).await;
     assert_theirs_survives(&dest, &error, "photo.jpg").await;
+}
+
+/// Copies `names` into `/dest` on a share whose landing rename number
+/// `at_rename` the server PERFORMS, while its reply is a late error: the session
+/// dropped under it and someone else reconnected before the error came back, so
+/// the share already reads live on a newer session.
+async fn copy_through_a_late_error_at_landing(
+    engine: &TestOperations,
+    lane: &str,
+    names: &[&str],
+    at_rename: usize,
+) -> (Arc<InMemoryVolume>, Arc<OutageVolume>, Result<(), WriteOperationError>) {
+    let source = Arc::new(InMemoryVolume::new("Source"));
+    for name in names {
+        source
+            .create_file(&Path::new("/").join(name), format!("SRC-{name}").as_bytes())
+            .await
+            .expect("seeding the source");
+    }
+    let inner = Arc::new(InMemoryVolume::new("Naspolya"));
+    inner
+        .create_directory(Path::new("/dest"))
+        .await
+        .expect("the destination folder");
+    let nas = OutageVolume::wrap(Arc::clone(&inner), lane);
+    nas.stale_error_at_rename(at_rename, RenameDrop::AfterTheServerPerformsIt);
+
+    let sources: Vec<PathBuf> = names.iter().map(|n| Path::new("/").join(n)).collect();
+    let outcome = copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        lane,
+        &make_state(engine),
+        source as Arc<dyn Volume>,
+        &sources,
+        Arc::clone(&nas) as Arc<dyn Volume>,
+        Path::new("/dest"),
+        &VolumeCopyConfig::default(),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|failure| failure.error);
+    (inner, nas, outcome)
+}
+
+async fn assert_each_landed_once(inner: &InMemoryVolume, nas: &OutageVolume, names: &[&str]) {
+    assert_eq!(nas.generation(), 1, "the session really was replaced mid-landing");
+    let mut listed: Vec<String> = inner
+        .list_directory(Path::new("/dest"), None)
+        .await
+        .expect("listing the destination")
+        .into_iter()
+        .map(|e| e.name)
+        .collect();
+    listed.sort();
+    let mut expected: Vec<String> = names.iter().map(|n| (*n).to_owned()).collect();
+    expected.sort();
+    assert_eq!(listed, expected, "each file exactly once, no staging left behind");
+    for name in names {
+        let entry = inner
+            .get_metadata(&Path::new("/dest").join(name))
+            .await
+            .expect("it landed");
+        assert_eq!(entry.size, Some(format!("SRC-{name}").len() as u64), "{name} is whole");
+    }
+}
+
+/// A landing the server performed, answered by a replaced session's late
+/// error: the share is back on a newer session at once, so the settle runs and
+/// finds our file whole at its name with the temp gone. That needs the temp to
+/// still be OURS when the settle looks: `land` must not discard it on a
+/// transport fault (on the fresh session that delete answers `NotFound`, which
+/// releases the temp, and the settle can then no longer prove the landing ours;
+/// the re-run met our own file and failed with `DestinationExists`).
+#[tokio::test]
+async fn serial_a_landing_answered_by_a_replaced_session_counts_as_landed_once() {
+    let engine = TestOperations::new();
+    let names = ["photo.jpg"];
+    let (inner, nas, outcome) =
+        copy_through_a_late_error_at_landing(&engine, "late-error-landing-serial", &names, 0).await;
+
+    outcome.expect("a landing the server performed is ours, not a clash");
+    assert_each_landed_once(&inner, &nas, &names).await;
+}
+
+/// The same in the concurrent window.
+#[tokio::test]
+async fn concurrent_a_landing_answered_by_a_replaced_session_counts_as_landed_once() {
+    let engine = TestOperations::new();
+    let names = ["a.jpg", "photo.jpg", "z.jpg"];
+    let (inner, nas, outcome) =
+        copy_through_a_late_error_at_landing(&engine, "late-error-landing-concurrent", &names, 1).await;
+
+    outcome.expect("a landing the server performed is ours, not a clash");
+    assert_each_landed_once(&inner, &nas, &names).await;
 }
