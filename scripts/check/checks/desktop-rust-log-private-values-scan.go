@@ -134,26 +134,26 @@ func insideSpans(spans [][2]int, offset int) bool {
 // a bare string literal (after `target: …` or a level); a macro with none (a
 // `macro_rules!` forwarding `$($arg)*`) has nothing to judge.
 func (f *logPrivateFile) judgeFormatInvocation(open, closeAt int) []logPrivateSite {
-	args := splitTopLevelArgs(f.masked, open+1, closeAt)
-	fmtIdx := -1
 	var fmtLit rustLiteral
-	for i, a := range args {
-		if lit, ok := f.literals[a[0]]; ok && lit.end == a[1] {
-			fmtIdx, fmtLit = i, lit
-			break
-		}
-	}
-	if fmtIdx < 0 {
-		return nil
-	}
-
+	found := false
 	var sites []logPrivateSite
 	named := map[string]bool{}
-	for _, a := range args[fmtIdx+1:] {
-		if m := namedArgPattern.FindStringSubmatchIndex(f.masked[a[0]:a[1]]); m != nil {
-			named[strings.TrimSpace(strings.SplitN(f.masked[a[0]:a[1]], "=", 2)[0])] = true
+	for _, a := range splitTopLevelArgs(f.masked, open+1, closeAt) {
+		if !found {
+			if lit, ok := f.literals[a[0]]; ok && lit.end == a[1] {
+				fmtLit, found = lit, true
+			}
+			continue
+		}
+		arg := f.masked[a[0]:a[1]]
+		if namedArgPattern.MatchString(arg) {
+			name, _, _ := strings.Cut(arg, "=")
+			named[strings.TrimSpace(name)] = true
 		}
 		sites = append(sites, f.judgeArg(a[0], a[1])...)
+	}
+	if !found {
+		return nil
 	}
 	sites = append(sites, f.judgeCaptures(fmtLit, named)...)
 	return sites

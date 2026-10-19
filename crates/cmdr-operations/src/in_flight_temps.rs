@@ -399,8 +399,8 @@ fn record_for(temp: &Path, home: Option<TempHome<'_>>) -> Option<Record> {
 /// Paths in `kind` are absolute too, as every producer holds them; the record
 /// states them the way its home needs.
 ///
-/// A TEMP also joins the operation's own in-memory ledger, the way [`register`]
-/// does. ❌ Nothing else may: that ledger's sweep deletes what it finds, and
+/// A TEMP also joins the operation's own in-memory ledger, the way
+/// [`track_temp`] does. ❌ Nothing else may: that ledger's sweep deletes what it finds, and
 /// every other kind can be the user's only copy.
 ///
 /// ❗ **Anything but a temp is written before this returns**, so a
