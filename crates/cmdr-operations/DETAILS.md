@@ -2591,6 +2591,17 @@ and line are that test's alone, under plain `cargo test` as under nextest:
   panes its volume with `panes.show_volume(…)`, since the listing engine asks the volume about watch coverage.
   `FakeVolumes` announces each registration to the engine's arrival listeners, as the app's registry does, so the
   in-flight sweep's deferred records wake on `engine.volumes().register(…)`.
+- **Gotcha: what the engine spawns runs on ITS runtime, not the test's.** `new()`'s detached host resolves to
+  `cmdr-fs`'s shared fallback runtime, so anything spawned through `host.runtime()` (the concurrent copy driver's
+  per-source tasks, the stall watchdog, an admitted op) runs on another runtime's threads. A thread-local test override
+  (`AutoYieldTuningGuard`, `durability`'s `DirSyncLog`, the mount-table hook, `cmdr_fs`'s `helper_calls_on_this_thread`)
+  doesn't reach it, a paused clock doesn't drive it, and on a pool two tasks start in either order. **Why**: the copy
+  tasks used to be futures the driver polled on the test's own task, and moving them to spawned tasks (ERR-8MEX6)
+  changed what the test thread can see. A cell that needs any of those three gives the engine its own runtime:
+  `TestOperations::with(|b| b.volume_host(VolumeHost::builder().runtime(Handle::current()).build()))` (`VolumeHost` is
+  `cmdr_fs::volume::host::VolumeHost`), on a `current_thread` test when it needs spawn order to be start order
+  (`copy_tree_order_tests.rs::the_concurrent_driver_starts_its_sources_in_tree_order`). Overrides the DRIVER reads
+  (`CancelDrainGuard`, `StallAbortGuard`) are fine either way: the driver runs on the test's task.
 - **A walk that never touches an engine** (a `WalkContext`, `run_oracle_aware_batch_scan`) takes
   `&host::testing::PANE_ORDER_LISTINGS`, or a `PaneListings` when it reads the oracle.
 - **What `FakeVolumes` can't route stays app-side**: the cells that need the app's registry (an archive or the git

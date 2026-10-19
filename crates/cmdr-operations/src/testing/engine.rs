@@ -36,6 +36,14 @@ const TEST_PROGRESS_INTERVAL: Duration = Duration::from_millis(50);
 ///
 /// Derefs to the engine, so a test calls `engine.manager()`,
 /// `engine.cancel_write_operation(…)`, and every other method on it directly.
+///
+/// ❗ What the engine SPAWNS (the concurrent copy driver's tasks, the stall
+/// watchdog) runs on the host's runtime, which for [`Self::new`] is
+/// `cmdr-fs`'s shared fallback, not the test's: a thread-local test override
+/// or a paused clock doesn't reach it. A cell that needs either passes the
+/// test's own runtime:
+/// `TestOperations::with(|b| b.volume_host(VolumeHost::builder().runtime(Handle::current()).build()))`.
+/// `DETAILS.md` § "Test isolation: an engine of the test's own".
 pub struct TestOperations {
     engine: Operations,
     events: Arc<RecordingEngineEvents>,
