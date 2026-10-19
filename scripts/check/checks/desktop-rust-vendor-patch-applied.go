@@ -21,8 +21,9 @@ import (
 //
 // The lockfile is the whole answer, so this reads it rather than asking cargo: a
 // path package carries no `source`, a crates.io one does. Three ways it fails:
-// the crate resolves from a registry (the patch is dead or shared with an
-// unpatched copy), the patch sits in `[[patch.unused]]`, or nothing depends on
+// the crate resolves from a registry on the vendored semver line or a newer one
+// (the patch is dead or shared with an unpatched copy; an OLDER line is out of a
+// patch's reach and passes, see `onAnOlderLine`), the patch sits in `[[patch.unused]]`, or nothing depends on
 // the crate any more (the fork is dead weight and should go).
 func RunVendorPatchApplied(ctx *CheckContext) (CheckResult, error) {
 	patched, err := readPathPatches(ctx.RootDir)
@@ -98,14 +99,19 @@ func readPathPatches(rootDir string) (map[string]string, error) {
 // judgePatch says what's wrong with one patch, or "" plus the vendored versions
 // when it applies.
 func judgePatch(name, path string, lock *cargoLock) (problem, vendoredVersions string) {
-	var vendored, fromRegistry []string
+	var vendored, registry, fromRegistry []string
 	for _, pkg := range lock.Package {
 		switch {
 		case pkg.Name != name:
 		case pkg.Source == "":
 			vendored = append(vendored, pkg.Version)
 		default:
-			fromRegistry = append(fromRegistry, pkg.Version)
+			registry = append(registry, pkg.Version)
+		}
+	}
+	for _, version := range registry {
+		if !onAnOlderLine(version, vendored) {
+			fromRegistry = append(fromRegistry, version)
 		}
 	}
 	unused := false
@@ -127,5 +133,40 @@ func judgePatch(name, path string, lock *cargoLock) (problem, vendoredVersions s
 			"delete %s, its `[patch.crates-io]` line, and its `exclude` entry", name, path, path), ""
 	default:
 		return "", strings.Join(vendored, ", ")
+	}
+}
+
+// onAnOlderLine reports whether a crates.io `version` sits on an older semver line
+// than every vendored copy, which a `[patch]` can't reach: it only replaces
+// compatible versions, so a transitive dependency still on an old major (`zip` 4
+// under `tauri-plugin-updater`, beside the vendored `zip` 9) resolves from crates.io
+// by design. The fix lives on the line the fork vendors. A version on the vendored
+// line or a newer one means a dependent slipped past the patch.
+func onAnOlderLine(version string, vendored []string) bool {
+	if len(vendored) == 0 {
+		return false
+	}
+	for _, vendoredVersion := range vendored {
+		if semverLine(version) == semverLine(vendoredVersion) || compareVersions(version, vendoredVersion) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// semverLine is the part of a version cargo treats as compatible: the major, or
+// for a `0.x` crate the minor (`0.0.x`: the patch).
+func semverLine(version string) string {
+	parts := strings.SplitN(strings.SplitN(version, "-", 2)[0], ".", 3)
+	for len(parts) < 3 {
+		parts = append(parts, "0")
+	}
+	switch {
+	case parts[0] != "0":
+		return parts[0]
+	case parts[1] != "0":
+		return "0." + parts[1]
+	default:
+		return "0.0." + parts[2]
 	}
 }

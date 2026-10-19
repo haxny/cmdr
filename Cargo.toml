@@ -22,7 +22,7 @@ members = [
   "crates/index-query",
   "crates/operation-log-dump",
 ]
-exclude = ["benchmarks/smb", "vendor/tauri-plugin-store"]
+exclude = ["benchmarks/smb", "vendor/tauri-plugin-store", "vendor/zip"]
 resolver = "2"
 
 # Third-party crates we patch, each identical to its crates.io release apart from the fix, which
@@ -32,6 +32,9 @@ resolver = "2"
 # `Store::save` writes a synced temp file and renames it over the store, so a crash mid-save
 # can't leave `settings.json`, `shortcuts.json`, or `license.json` truncated (#461).
 tauri-plugin-store = { path = "vendor/tauri-plugin-store" }
+# A raw copy keeps an entry's name bytes and UTF-8 flag as stored, so editing a zip with
+# Shift-JIS, GBK, or CP866 names leaves every one of them readable (#514).
+zip = { path = "vendor/zip" }
 
 # Optimized builds cross crate boundaries. Cargo's default (`lto = false`,
 # `codegen-units = 16`) inlines only `#[inline]` and generic functions between

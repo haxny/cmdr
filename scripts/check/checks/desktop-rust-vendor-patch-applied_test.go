@@ -100,6 +100,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 	}
 }
 
+// A `[patch]` only replaces semver-compatible versions, so a crates.io copy on an
+// OLDER line (a transitive dependency that never moved up, like `zip` 4 under
+// `tauri-plugin-updater` beside the vendored `zip` 9) is out of its reach and isn't
+// a leak. A newer line still fails: that's a dependent bumped past the fork.
+func TestVendorPatch_PassesBesideACratesIoCopyOfAnOlderLine(t *testing.T) {
+	lock := vendorPatchAppliedLock + `
+[[package]]
+name = "mdns-sd"
+version = "0.19.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+`
+	result, err := runVendorPatchOn(t, vendorPatchManifest, lock)
+	if err != nil {
+		t.Fatalf("a crates.io 0.19.7 beside the vendored 0.20.3 is an older line, got: %s", err.Error())
+	}
+	if !strings.Contains(result.Message, "0.20.3") {
+		t.Errorf("the success line should name the vendored version, got: %s", result.Message)
+	}
+}
+
+// The same line as the vendored copy resolving from crates.io means the patch
+// missed a dependent (an exact `=` pin, say), so the unpatched code ships to it.
+func TestVendorPatch_FailsWhenACratesIoCopyOnTheVendoredLineResolves(t *testing.T) {
+	lock := vendorPatchAppliedLock + `
+[[package]]
+name = "mdns-sd"
+version = "0.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+`
+	if _, err := runVendorPatchOn(t, vendorPatchManifest, lock); err == nil {
+		t.Fatal("expected a failure for an unpatched copy on the vendored line, got success")
+	}
+}
+
 // A patch for a crate nothing depends on any more is dead weight: say so, so the
 // fork gets dropped instead of silently carried.
 func TestVendorPatch_FailsWhenThePatchedCrateIsNoLongerADependency(t *testing.T) {
