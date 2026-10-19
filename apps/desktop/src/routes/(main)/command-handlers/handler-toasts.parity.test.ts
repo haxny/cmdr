@@ -93,7 +93,7 @@ describe('command-handler toast copy parity', () => {
     const { cloudMakeAvailableOffline } = await import('#lib/tauri-commands/index.js')
     vi.mocked(cloudMakeAvailableOffline).mockRejectedValueOnce('boom')
     const hctx = ctxWith({ getFileAndPathUnderCursor: () => ({ path: '/p', filename: 'f' }) })
-    await (fileHandlers['cloud.makeOffline'] as (h: CommandHandlerContext) => Promise<void>)(hctx)
+    await fileHandlers['cloud.makeOffline'](hctx)
     expect(mockedToast).toHaveBeenCalledWith('Couldn’t download from cloud. boom', { level: 'error' })
   })
 
@@ -101,7 +101,7 @@ describe('command-handler toast copy parity', () => {
     const { cloudRemoveDownload } = await import('#lib/tauri-commands/index.js')
     vi.mocked(cloudRemoveDownload).mockRejectedValueOnce('boom')
     const hctx = ctxWith({ getFileAndPathUnderCursor: () => ({ path: '/p', filename: 'f' }) })
-    await (fileHandlers['cloud.removeDownload'] as (h: CommandHandlerContext) => Promise<void>)(hctx)
+    await fileHandlers['cloud.removeDownload'](hctx)
     expect(mockedToast).toHaveBeenCalledWith('Couldn’t remove the download. boom', { level: 'error' })
   })
 
