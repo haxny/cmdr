@@ -720,13 +720,11 @@
   },
   "commands.viewerGoBack.label": "Go back to the previous document",
   "@commands.viewerGoBack.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. After the user follows a link in a formatted Markdown document to another file, which opens in the same window, this returns to the document they came from, like a web browser's Back button. The user can rebind or remove this key.",
-    "screenshot": "settings-keyboard-shortcuts.png"
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. After the user follows a link in a formatted Markdown document to another file, which opens in the same window, this returns to the document they came from, like a web browser's Back button. The user can rebind or remove this key."
   },
   "commands.viewerGoForward.label": "Go forward to the next document",
   "@commands.viewerGoForward.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. After going back from a document reached by a link (commands.viewerGoBack.label), this returns to it again, like a web browser's Forward button. The user can rebind or remove this key.",
-    "screenshot": "settings-keyboard-shortcuts.png"
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. After going back from a document reached by a link (commands.viewerGoBack.label), this returns to it again, like a web browser's Forward button. The user can rebind or remove this key."
   },
   "commands.multiRenameOpenPresets.label": "Open the presets menu",
   "@commands.multiRenameOpenPresets.label": {

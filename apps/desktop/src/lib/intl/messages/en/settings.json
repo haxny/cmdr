@@ -185,7 +185,9 @@
   },
   "settings.appearance.dateTimeFormat.keywords": "date, time, format, custom, timestamp",
   "@settings.appearance.dateTimeFormat.keywords": {
-    "description": "Search keywords for the “Date and time format” setting (settings.appearance.dateTimeFormat.label) in Settings > Appearance > Colors and formats. What it does: picks how dates and times look in the file list. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Date and time format” setting (settings.appearance.dateTimeFormat.label) in Settings > Appearance > Colors and formats. What it does: picks how dates and times look in the file list. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-appearance.png",
+    "screenshotNote": "Settings > Appearance, pictured here. Your string is one of the date and time format choices, or the example shown under one of them."
   },
   "settings.appearance.customDateTimeFormat.label": "Custom date/time format",
   "@settings.appearance.customDateTimeFormat.label": {
@@ -539,7 +541,9 @@
   },
   "settings.listing.briefColumnWidthMode.keywords": "brief, column, width, max, maximum, limit, pane, shrink-wrap",
   "@settings.listing.briefColumnWidthMode.keywords": {
-    "description": "Search keywords for the “Maximum column width in Brief mode” setting (settings.listing.briefColumnWidthMode.label) in Settings > Appearance > Listing. What it does: caps how wide columns in Brief mode (the multi-column view of names) can grow to fit long file names; below the cap, each column is as wide as its content (“shrink-wrap”). Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Maximum column width in Brief mode” setting (settings.listing.briefColumnWidthMode.label) in Settings > Appearance > Listing. What it does: caps how wide columns in Brief mode (the multi-column view of names) can grow to fit long file names; below the cap, each column is as wide as its content (“shrink-wrap”). Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-appearance-listing.png",
+    "screenshotNote": "Settings > Appearance > Listing, pictured here. Your string is one of the choices for how wide columns in the Brief view may grow."
   },
   "settings.listing.briefColumnWidthMaxPx.label": "Brief column width limit",
   "@settings.listing.briefColumnWidthMaxPx.label": {
@@ -1530,7 +1534,9 @@
   },
   "settings.network.timeoutMode.keywords": "timeout, network, slow, connection, latency",
   "@settings.network.timeoutMode.keywords": {
-    "description": "Search keywords for the “Network timeout mode” setting (settings.network.timeoutMode.label) in Settings > File systems > SMB/Network shares. What it does: picks how long Cmdr waits for a slow network share before giving up. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Network timeout mode” setting (settings.network.timeoutMode.label) in Settings > File systems > SMB/Network shares. What it does: picks how long Cmdr waits for a slow network share before giving up. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-file-systems-smb.png",
+    "screenshotNote": "Settings > File systems > SMB, pictured here. Your string is one of the network timeout choices, or the line under one of them."
   },
   "settings.network.customTimeout.label": "Custom timeout",
   "@settings.network.customTimeout.label": {
@@ -2595,7 +2601,9 @@
   },
   "settings.askCmdr.enabled.keywords": "ai, chat, assistant, enable, disable, turn on, turn off",
   "@settings.askCmdr.enabled.keywords": {
-    "description": "Search keywords for the “Ask Cmdr” setting (settings.askCmdr.enabled.label) in Settings > AI > Ask Cmdr. What it does: turns Ask Cmdr, the AI chat panel about your files, on or off. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Ask Cmdr” setting (settings.askCmdr.enabled.label) in Settings > AI > Ask Cmdr. What it does: turns Ask Cmdr, the AI chat panel about your files, on or off. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
   "settings.askCmdr.cloudOffHint": "Ask Cmdr uses your cloud AI service. Allow cloud AI in AI settings to start chatting.",
   "@settings.askCmdr.cloudOffHint": {
@@ -2645,7 +2653,9 @@
   },
   "settings.askCmdr.interactiveModel.keywords": "ai, chat, assistant, model, override, different model",
   "@settings.askCmdr.interactiveModel.keywords": {
-    "description": "Search keywords for the “Ask Cmdr model” setting (settings.askCmdr.interactiveModel.label) in Settings > AI > Ask Cmdr. What it does: picks a different AI model for the chat than Cmdr’s other AI features use. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Ask Cmdr model” setting (settings.askCmdr.interactiveModel.label) in Settings > AI > Ask Cmdr. What it does: picks a different AI model for the chat than Cmdr’s other AI features use. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
   "settings.askCmdr.chatMemorySize.label": "Chat memory size",
   "@settings.askCmdr.chatMemorySize.label": {
@@ -2670,7 +2680,9 @@
   },
   "settings.askCmdr.chatMemorySize.keywords": "chat, memory, context, window, tokens, size, budget, history",
   "@settings.askCmdr.chatMemorySize.keywords": {
-    "description": "Search keywords for the “Chat memory size” setting (settings.askCmdr.chatMemorySize.label) in Settings > AI > Ask Cmdr. What it does: sets how much of the conversation Cmdr sends to the AI model each time. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Chat memory size” setting (settings.askCmdr.chatMemorySize.label) in Settings > AI > Ask Cmdr. What it does: sets how much of the conversation Cmdr sends to the AI model each time. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
   "settings.askCmdr.proactive.title": "On its own",
   "@settings.askCmdr.proactive.title": {
@@ -2689,7 +2701,9 @@
   },
   "settings.askCmdr.proactive.keywords": "proactive, suggestions, automatic, notice, watch, wake, ai",
   "@settings.askCmdr.proactive.keywords": {
-    "description": "Search keywords for the “Let Cmdr start conversations” setting (settings.askCmdr.proactive.label) in Settings > AI > Ask Cmdr. What it does: lets Cmdr notice changes in your folders and start a chat with a suggestion by itself. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Let Cmdr start conversations” setting (settings.askCmdr.proactive.label) in Settings > AI > Ask Cmdr. What it does: lets Cmdr notice changes in your folders and start a chat with a suggestion by itself. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
   "settings.askCmdr.wakeDelay.label": "How soon Cmdr looks",
   "@settings.askCmdr.wakeDelay.label": {
@@ -2713,7 +2727,9 @@
   },
   "settings.askCmdr.wakeDelay.keywords": "delay, wait, timing, how often, frequency, calm, quiet, proactive",
   "@settings.askCmdr.wakeDelay.keywords": {
-    "description": "Search keywords for the “How soon Cmdr looks” setting (settings.askCmdr.wakeDelay.label) in Settings > AI > Ask Cmdr. What it does: sets how long Cmdr waits after a folder changes before it takes a look (shorter means quicker suggestions). Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “How soon Cmdr looks” setting (settings.askCmdr.wakeDelay.label) in Settings > AI > Ask Cmdr. What it does: sets how long Cmdr waits after a folder changes before it takes a look (shorter means quicker suggestions). Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
   "settings.askCmdr.wakeToast.label": "Show a notice when a suggestion appears",
   "@settings.askCmdr.wakeToast.label": {
@@ -2727,7 +2743,9 @@
   },
   "settings.askCmdr.wakeToast.keywords": "toast, notice, notification, suggestion, proactive, alert",
   "@settings.askCmdr.wakeToast.keywords": {
-    "description": "Search keywords for the “Show a notice when a suggestion appears” setting (settings.askCmdr.wakeToast.label) in Settings > AI > Ask Cmdr. What it does: shows a small notification when Cmdr has prepared a suggestion for you to review. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Show a notice when a suggestion appears” setting (settings.askCmdr.wakeToast.label) in Settings > AI > Ask Cmdr. What it does: shows a small notification when Cmdr has prepared a suggestion for you to review. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
   "settings.askCmdr.memory.title": "What Cmdr remembers",
   "@settings.askCmdr.memory.title": {
@@ -2746,7 +2764,9 @@
   },
   "settings.askCmdr.openMemoryFolder.keywords": "memory, folder, notes, remember, open",
   "@settings.askCmdr.openMemoryFolder.keywords": {
-    "description": "Search keywords for the “Open memory folder” row (settings.askCmdr.memory.open) in Settings > AI > Ask Cmdr. What it does: a button that opens the folder where Ask Cmdr keeps its notes about you. Never shown. Search already matches its label, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Open memory folder” row (settings.askCmdr.memory.open) in Settings > AI > Ask Cmdr. What it does: a button that opens the folder where Ask Cmdr keeps its notes about you. Never shown. Search already matches its label, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
   "settings.askCmdr.memory.forgotten": "Cmdr’s notes are gone. It starts over from here.",
   "@settings.askCmdr.memory.forgotten": {
@@ -3959,7 +3979,9 @@
   },
   "settings.askCmdr.forgetMemory.keywords": "forget, memory, erase, delete, remembers, privacy",
   "@settings.askCmdr.forgetMemory.keywords": {
-    "description": "Search keywords for the “Forget everything” row (askCmdr.forget.confirm) in Settings > AI > Ask Cmdr. What it does: a button that erases everything Ask Cmdr remembers about you. Never shown. Search already matches its label, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+    "description": "Search keywords for the “Forget everything” row (askCmdr.forget.confirm) in Settings > AI > Ask Cmdr. What it does: a button that erases everything Ask Cmdr remembers about you. Never shown. Search already matches its label, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
   "settings.shortcuts.resetAll.keywords": "reset, shortcuts, defaults, restore, keyboard",
   "@settings.shortcuts.resetAll.keywords": {

@@ -286,55 +286,81 @@
   },
   "viewer.kind.markdown": "Markdown",
   "@viewer.kind.markdown": {
-    "description": "Label for a Markdown document shown formatted (headings, lists, pictures) rather than as raw text, in the view-mode dropdown and the status bar. \"Markdown\" is the name of a text format; don't translate it."
+    "description": "Label for a Markdown document shown formatted (headings, lists, pictures) rather than as raw text, in the view-mode dropdown and the status bar. \"Markdown\" is the name of a text format; don't translate it.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.toolbar.viewMode.viewFormatted": "View formatted",
   "@viewer.toolbar.viewMode.viewFormatted": {
-    "description": "Option in the view-mode dropdown that switches a Markdown document back from its raw text to its formatted view, with headings, lists, and pictures laid out."
+    "description": "Option in the view-mode dropdown that switches a Markdown document back from its raw text to its formatted view, with headings, lists, and pictures laid out.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.loading": "Loading document",
   "@viewer.markdown.loading": {
-    "description": "Screen-reader-only status announced while the viewer formats a Markdown document for display."
+    "description": "Screen-reader-only status announced while the viewer formats a Markdown document for display.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.error": "Sorry, we couldn’t format this document. You can still read it as text.",
   "@viewer.markdown.error": {
-    "description": "Message shown in place of a Markdown document the viewer couldn’t format. The view-mode dropdown above offers the plain-text view."
+    "description": "Message shown in place of a Markdown document the viewer couldn’t format. The view-mode dropdown above offers the plain-text view.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.remoteImages.notice": "Images from the web are hidden. Loading them lets those sites see your IP address.",
   "@viewer.markdown.remoteImages.notice": {
-    "description": "Bar above a formatted Markdown document that contains pictures hosted on websites. The viewer doesn't load them by default, for privacy, like an email app holds back remote images. Sits next to the \"Load remote images\" button."
+    "description": "Bar above a formatted Markdown document that contains pictures hosted on websites. The viewer doesn't load them by default, for privacy, like an email app holds back remote images. Sits next to the \"Load remote images\" button.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.remoteImages.load": "Load images from the web",
   "@viewer.markdown.remoteImages.load": {
-    "description": "Button in the bar above a formatted Markdown document: loads the document's pictures from the websites they're hosted on, for this window only."
+    "description": "Button in the bar above a formatted Markdown document: loads the document's pictures from the websites they're hosted on, for this window only.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.image.remote": "Image from the web",
   "@viewer.markdown.image.remote": {
-    "description": "Small label shown in place of a picture in a formatted Markdown document while remote images are held back. The picture's own description, if it has one, follows it."
+    "description": "Small label shown in place of a picture in a formatted Markdown document while remote images are held back. The picture's own description, if it has one, follows it.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.image.blocked": "Image not shown",
   "@viewer.markdown.image.blocked": {
-    "description": "Small label shown in place of a picture in a formatted Markdown document that the viewer won't load, for example one that points outside the document's drive. The picture's own description, if it has one, follows it."
+    "description": "Small label shown in place of a picture in a formatted Markdown document that the viewer won't load, for example one that points outside the document's drive. The picture's own description, if it has one, follows it.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.image.missing": "Image not found",
   "@viewer.markdown.image.missing": {
-    "description": "Small label shown in place of a picture in a formatted Markdown document when the picture file couldn't be loaded: it's missing, or it isn't a picture. The picture's own description, if it has one, follows it."
+    "description": "Small label shown in place of a picture in a formatted Markdown document when the picture file couldn't be loaded: it's missing, or it isn't a picture. The picture's own description, if it has one, follows it.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.link.missing": "We couldn’t find the file this link points to.",
   "@viewer.markdown.link.missing": {
-    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document that points to another file, and that file isn't there (moved, renamed, or never existed). The current document stays open."
+    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document that points to another file, and that file isn't there (moved, renamed, or never existed). The current document stays open.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.link.folder": "This link points to a folder, so there’s nothing to show here.",
   "@viewer.markdown.link.folder": {
-    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document that points to a folder rather than a file. The viewer shows files only; the current document stays open."
+    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document that points to a folder rather than a file. The viewer shows files only; the current document stays open.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.link.blocked": "The viewer only follows web links and links to files on this drive.",
   "@viewer.markdown.link.blocked": {
-    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document that the viewer won't follow, for safety: a path starting at the drive's root, a file:// address, or another kind of address it doesn't open. Links to web pages, email addresses, and files next to the document do work."
+    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document that the viewer won't follow, for safety: a path starting at the drive's root, a file:// address, or another kind of address it doesn't open. Links to web pages, email addresses, and files next to the document do work.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.markdown.link.unreadable": "We couldn’t open what this link points to.",
   "@viewer.markdown.link.unreadable": {
-    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document and its target couldn't be opened: a file that exists but couldn't be read (for example because the device it's on stopped responding), or a web or email link that couldn't be handed to the browser or mail app. Deliberately doesn't name a file, since the target may be a web page. The current document stays open."
+    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document and its target couldn't be opened: a file that exists but couldn't be read (for example because the device it's on stopped responding), or a web or email link that couldn't be handed to the browser or mail app. Deliberately doesn't name a file, since the target may be a web page. The current document stays open.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
   "viewer.toolbar.encoding.placeholder": "Encoding",
   "@viewer.toolbar.encoding.placeholder": {
