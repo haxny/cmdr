@@ -115,6 +115,14 @@ impl CoverWalk {
         self.stop.is_cancelled()
     }
 
+    /// How many times this walk has given up on ground so far, so a test can hold
+    /// a later listing back until a give-up is in hand. A share's failed listing
+    /// counts here; a local failed `readdir` doesn't (`DETAILS.md`).
+    #[cfg(test)]
+    pub(in crate::indexing) fn gave_up_for_test(&self) -> u64 {
+        self.heartbeat.abandoned_count()
+    }
+
     /// The handle for a request whose every frontier root belongs to a walk
     /// already running (and for the degenerate empty frontier): no thread, no
     /// batches, and [`finish`](Self::finish) answers on the spot.

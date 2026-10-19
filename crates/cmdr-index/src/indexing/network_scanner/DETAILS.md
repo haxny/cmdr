@@ -363,7 +363,10 @@ places below, all of them consequences of a person having asked:
 
 Tests live with the driver, over an `InMemoryVolume`, because what they pin is the walk's contract with a backend rather
 than anything SMB- or MTP-specific: `lifecycle/cover/network_tests.rs` for the walk, and
-`lifecycle/cover/network_give_up_tests.rs` for what it does with a directory it couldn't read.
+`lifecycle/cover/network_give_up_tests.rs` for what it does with a directory it couldn't read. A give-up test ORDERS the
+proving listing (it gates it until `CoverWalk::gave_up_for_test` counts the failure) rather than leaning on tree depth:
+results are processed as they finish, so on a loaded runtime a refusal could land after every success and stay unproven
+(the Linux lane timed out on that about once a week through 2026-10).
 
 ### A failed listing is held until the share answers again
 

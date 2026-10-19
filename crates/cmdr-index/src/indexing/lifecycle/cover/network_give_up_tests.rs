@@ -12,17 +12,16 @@
 //! The rest of the trait-walk suite is `network_tests.rs`, and the harness both
 //! run on is `test_support.rs`.
 
-use super::test_support::{Gone, Share, StopsAnswering, Tree, drain};
+use super::test_support::{Gone, RefusesToList, Share, StopsAnswering, Tree, drain};
+use super::{CoverOutcome, CoverWalk, CoveredEntry};
+use tokio_util::sync::CancellationToken;
 
 /// The tree every give-up test walks: one directory that won't list, a sibling
 /// that will, and something one level under the sibling.
 ///
-/// ⚠️ The grandchild is load-bearing, not scenery. A give-up is only recorded once
-/// a LATER listing succeeds, and the walk keeps up to 64 round trips in flight —
-/// so `open` and `closed` resolve in whatever order the runtime hands them back.
-/// `open/deeper` is dispatched only after `open`'s result is processed, which puts
-/// one guaranteed success behind both of them and makes the outcome the same every
-/// run.
+/// ⚠️ The grandchild is load-bearing, not scenery: it's the LATER listing that
+/// proves the give-up, so walk this tree with [`walk_proving_the_give_up`], which
+/// holds it back until `closed` has failed.
 fn one_closed_door(t: &Tree) -> Vec<cmdr_fs::entry::FileEntry> {
     vec![
         t.dir("scope"),
@@ -35,6 +34,38 @@ fn one_closed_door(t: &Tree) -> Vec<cmdr_fs::entry::FileEntry> {
     ]
 }
 
+/// Walk [`one_closed_door`]'s scope with `open/deeper`'s listing held until the
+/// walk has given up on `closed`, so the success that proves the give-up comes
+/// after it every run.
+///
+/// ❌ Not "`deeper` is dispatched after `open` is processed, so it comes last":
+/// the walk keeps 64 round trips in flight and processes them as they finish, so
+/// on a loaded runtime `closed` sometimes failed AFTER `deeper` succeeded. Then no
+/// later listing proved it, it stayed frontier, and the wait for its mark ran into
+/// the 8 s cap (the Linux lane, about once a week through 2026-10).
+fn walk_proving_the_give_up(share: &Share, backend: &RefusesToList) -> (Vec<CoveredEntry>, CoverOutcome) {
+    let (walk, _cancel) = walk_up_to_the_proof(share, backend);
+    backend.release_the_gate();
+    drain(walk)
+}
+
+/// The same walk, handed back with `open/deeper`'s listing still held and the
+/// give-up on `closed` in hand: releasing the gate is what proves it.
+fn walk_up_to_the_proof(share: &Share, backend: &RefusesToList) -> (CoverWalk, CancellationToken) {
+    backend.gate_at(&share.path("scope/open/deeper"));
+    let (walk, cancel) = share.walk(&share.path("scope"));
+    backend.wait_for_the_gate();
+    cmdr_fs::testing::wait_until(GIVE_UP_LANDS_WITHIN, "the walk to give up on `closed`", || {
+        walk.gave_up_for_test() > 0
+    });
+    (walk, cancel)
+}
+
+/// How long a give-up test waits for the walk to give up, or for a give-up it
+/// proved to land in the index. Under the 8 s nextest cap, so a wait that never
+/// ends fails on its own message.
+const GIVE_UP_LANDS_WITHIN: std::time::Duration = std::time::Duration::from_secs(5);
+
 /// One directory that won't list on a share that is otherwise answering: its
 /// siblings are covered, and it is recorded as ground Cmdr gave up on rather than
 /// handed back to every later search.
@@ -46,22 +77,20 @@ fn one_closed_door(t: &Tree) -> Vec<cmdr_fs::entry::FileEntry> {
 /// twin measured 1,497 such directories at 101 s of a 147 s walk.
 #[test]
 fn a_directory_that_will_not_list_on_an_answering_share_is_given_up_on() {
-    let share = Share::refusing("cover-share-one-refusal-test", one_closed_door, &["scope/closed"]);
+    let (share, backend) = Share::refusing_for_now("cover-share-one-refusal-test", one_closed_door, &["scope/closed"]);
     let scope = share.path("scope");
     let closed = share.path("scope/closed");
 
-    let (_, outcome) = drain(share.walk(&scope).0);
+    let (_, outcome) = walk_proving_the_give_up(&share, &backend);
 
     assert_eq!(outcome.roots_covered, 1, "the walk finished the root it was given");
     assert!(
         outcome.abandoned_ground,
         "and says its answer is short, which no other field hints at"
     );
-    cmdr_fs::testing::wait_until(
-        std::time::Duration::from_secs(10),
-        "the walk's marks to become durable",
-        || share.coverage(&scope).frontier.is_empty(),
-    );
+    cmdr_fs::testing::wait_until(GIVE_UP_LANDS_WITHIN, "the walk's marks to become durable", || {
+        share.coverage(&scope).frontier.is_empty()
+    });
 
     let covered = share.coverage(&scope);
     assert_eq!(
@@ -91,12 +120,10 @@ fn ground_the_walk_gave_up_on_heals_on_a_successful_listing() {
     let scope = share.path("scope");
     let closed = share.path("scope/closed");
 
-    drain(share.walk(&scope).0);
-    cmdr_fs::testing::wait_until(
-        std::time::Duration::from_secs(10),
-        "the give-up to become durable",
-        || share.coverage(&scope).abandoned == [closed.clone()],
-    );
+    walk_proving_the_give_up(&share, &backend);
+    cmdr_fs::testing::wait_until(GIVE_UP_LANDS_WITHIN, "the give-up to become durable", || {
+        share.coverage(&scope).abandoned == [closed.clone()]
+    });
 
     // The share wakes up, and something walks the ground it was refused. The
     // frontier no longer offers it, so the walk is pointed at it directly — which
@@ -105,11 +132,9 @@ fn ground_the_walk_gave_up_on_heals_on_a_successful_listing() {
     let (_, outcome) = drain(share.walk(&closed).0);
 
     assert_eq!(outcome.roots_covered, 1, "the second walk read it end to end");
-    cmdr_fs::testing::wait_until(
-        std::time::Duration::from_secs(10),
-        "the healed ground to read as covered",
-        || share.coverage(&scope).abandoned.is_empty(),
-    );
+    cmdr_fs::testing::wait_until(GIVE_UP_LANDS_WITHIN, "the healed ground to read as covered", || {
+        share.coverage(&scope).abandoned.is_empty()
+    });
     let covered = share.coverage(&scope);
     assert!(
         covered.abandoned.is_empty() && covered.frontier.is_empty(),
@@ -314,8 +339,8 @@ fn a_cancelled_walk_keeps_the_give_ups_it_proved() {
                 t.file("scope/closed/b.txt", 2),
                 t.dir("scope/open"),
                 t.dir("scope/open/deeper"),
-                // Three levels, so `deeper`'s success is behind BOTH children of the
-                // scope however the runtime orders them, and `held` is behind that.
+                // Ground still to walk once `deeper` proves the give-up, so the
+                // cancel lands on a walk that isn't done.
                 t.dir("scope/open/deeper/held"),
                 t.file("scope/open/deeper/held/c.txt", 3),
             ]
@@ -324,10 +349,10 @@ fn a_cancelled_walk_keeps_the_give_ups_it_proved() {
     );
     let scope = share.path("scope");
     let closed = share.path("scope/closed");
-    backend.gate_at(&share.path("scope/open/deeper/held"));
 
-    let (walk, cancel) = share.walk(&scope);
-    backend.wait_for_the_gate();
+    // The cancel is in before the proving listing comes back, and the walk takes
+    // stock of it at the next result: the proof, then the stop.
+    let (walk, cancel) = walk_up_to_the_proof(&share, &backend);
     cancel.cancel();
     backend.release_the_gate();
 
@@ -335,7 +360,7 @@ fn a_cancelled_walk_keeps_the_give_ups_it_proved() {
     assert!(outcome.cancelled, "it was stopped, and says so");
 
     cmdr_fs::testing::wait_until(
-        std::time::Duration::from_secs(10),
+        GIVE_UP_LANDS_WITHIN,
         "the cancelled walk's marks to become durable",
         || share.coverage(&scope).abandoned == [closed.clone()],
     );
@@ -356,15 +381,13 @@ fn a_cancelled_walk_keeps_the_give_ups_it_proved() {
 /// — a worse bug than the one the mark fixes, and an invisible one.
 #[test]
 fn a_shares_give_ups_arm_the_retry_backoff() {
-    let share = Share::refusing("cover-share-retry-armed-test", one_closed_door, &["scope/closed"]);
+    let (share, backend) = Share::refusing_for_now("cover-share-retry-armed-test", one_closed_door, &["scope/closed"]);
     let scope = share.path("scope");
 
-    drain(share.walk(&scope).0);
-    cmdr_fs::testing::wait_until(
-        std::time::Duration::from_secs(10),
-        "the give-up to become durable",
-        || share.coverage(&scope).abandoned == [share.path("scope/closed")],
-    );
+    walk_proving_the_give_up(&share, &backend);
+    cmdr_fs::testing::wait_until(GIVE_UP_LANDS_WITHIN, "the give-up to become durable", || {
+        share.coverage(&scope).abandoned == [share.path("scope/closed")]
+    });
 
     assert!(
         share.retry_window_is_open(),
