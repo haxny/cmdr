@@ -21,11 +21,11 @@ use crate::ignore_poison::IgnorePoison;
 
 use super::content_kind::{CLASSIFY_HEAD_LEN, ViewerContentKind, classify_viewer_content, media_mime};
 use super::encoding::FileEncoding;
-use super::log_view::RowText;
 use super::materialize::PreviewTemp;
 use super::media::{self, MediaEntry};
 use super::media_backend::MediaBackend;
 use super::origin::SourceOrigin;
+use super::row_text::RowText;
 use super::session_store::{
     BackendType, MediaDimensions, SESSIONS, ViewerOpenResult, ViewerSession, ViewerSessionInit, generate_session_id,
 };

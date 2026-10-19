@@ -24,7 +24,6 @@ use super::content_kind::ViewerContentKind;
 use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, detect_from_head, same_byte_layout};
 use super::full_load::FullLoadBackend;
 use super::line_index::LineIndexBackend;
-use super::log_view::RowText;
 use super::markdown_session;
 use super::media;
 use super::media_session;
@@ -32,6 +31,7 @@ use super::origin::{SourceOrigin, open_for_viewer};
 use super::range_read::{
     RangeEnd, STREAM_CHUNK_BYTES, read_range as do_read_range, read_range_streamed as stream_range,
 };
+use super::row_text::RowText;
 use super::search_matcher::{Matcher, SearchMode};
 use super::session_store::{
     BackendType, SESSIONS, SearchState, SearchStatus, ViewerOpenResult, ViewerSession, ViewerSessionInit,

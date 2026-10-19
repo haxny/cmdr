@@ -38,7 +38,7 @@ use regex::{Regex, RegexBuilder};
 
 use crate::ignore_poison::IgnorePoison;
 
-use super::log_view::RowText;
+use super::row_text::RowText;
 use super::{MAX_SEARCH_MATCHES, SearchMatch};
 
 /// Maximum line length before `find_matches` switches to chunked scanning.

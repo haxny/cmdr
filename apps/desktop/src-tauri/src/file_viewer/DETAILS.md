@@ -47,7 +47,10 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
   the checkpoint before the old file's last row
 - `search_matcher.rs`: `Matcher` (literal or regex), `SearchMode`, `scan_line_with_matcher` helper. One matcher built
   per search; reused across every line. Huge-line chunking (1 MB windows, 256 byte overlap) lives here.
-- `log_view.rs`: `RowText`, how a session shows its rows, and `ViewedBackend`. See § "The debug log's view"
+- `row_text.rs`: `RowText`, how a session shows its rows. A leaf below `search_matcher.rs` and `log_view.rs`, both of
+  which read it (it lived in `log_view.rs` once, which welded the matcher, the row walk, and the log view into a module
+  cycle).
+- `log_view.rs`: `ViewedBackend`, the backend wrapper that applies a session's `RowText`. See § "The debug log's view"
 - `source.rs`: the floor every backend imports. `ByteSource` (positioned `read_at`), `SharedSource`,
   `LocalFileSource` (`pread` on a held `File`), `OpenedFile` (source + size + name), `open_local`. See § "Byte sources"
 - `volume_source.rs`: `VolumeSource`, a `ByteSource` over a volume's held `VolumeRandomReader` (SMB) with a small

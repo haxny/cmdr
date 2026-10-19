@@ -18,10 +18,11 @@ use crate::ignore_poison::IgnorePoison;
 
 use super::content_kind::ViewerContentKind;
 use super::encoding::FileEncoding;
-use super::log_view::{RowText, ViewedBackend};
+use super::log_view::ViewedBackend;
 use super::markdown_document::MarkdownDocument;
 use super::materialize::PreviewTemp;
 use super::origin::SourceOrigin;
+use super::row_text::RowText;
 use super::source::OpenedFile;
 use super::{BackendCapabilities, FileViewerBackend, LineChunk, SearchMatch, ViewerError};
 

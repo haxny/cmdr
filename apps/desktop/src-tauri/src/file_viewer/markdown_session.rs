@@ -23,13 +23,13 @@ use super::content_kind::{
     CLASSIFY_HEAD_LEN, MARKDOWN_RENDER_CAP_BYTES, ViewerContentKind, is_markdown_extension, is_renderable_markdown,
 };
 use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, decode_line, detect_from_head};
-use super::log_view::RowText;
 use super::markdown_document::MarkdownDocument;
 use super::markdown_links::{MarkdownLink, resolve_link};
 use super::markdown_render::render_markdown;
 use super::materialize::PreviewTemp;
 use super::media_backend::MediaBackend;
 use super::origin::SourceOrigin;
+use super::row_text::RowText;
 use super::session_store::{
     BackendType, SESSIONS, ViewerOpenResult, ViewerSession, ViewerSessionInit, generate_session_id,
 };

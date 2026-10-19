@@ -12,7 +12,7 @@ Frontend counterparts: [route shell](../../../src/routes/viewer/CLAUDE.md) and
 - `rows.rs` (the row rule), `row_walk.rs` (that rule read forward: `RowReader`,
   `collect_rows`, `search_rows`, and the row types), `range_read.rs` (range → UTF-8),
   `encoding.rs` (`FileEncoding` + detection), `full_load.rs` / `byte_seek.rs` / `line_index.rs` (the three backends),
-  `search_matcher.rs`, `log_view.rs` (the debug log's marker-free rows), `watcher.rs` (tail mode), `source.rs` +
+  `search_matcher.rs`, `row_text.rs` + `log_view.rs` (the debug log's marker-free rows), `watcher.rs` (tail mode), `source.rs` +
   `volume_source.rs` (SMB) under `origin.rs`: one held handle per session, ❌ never `File::open` per fetch (#303,
   `DETAILS.md` § "Byte sources").
 - Media (Image/PDF): `content_kind.rs` plus `media*.rs` (`media.rs`: the `cmdr-media://` token map).
