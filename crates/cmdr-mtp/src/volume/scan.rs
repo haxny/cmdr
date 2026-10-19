@@ -15,6 +15,7 @@ use cmdr_fs::volume::{
 };
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use log::debug;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -34,7 +35,9 @@ impl MtpVolume {
 
             debug!(
                 "MtpVolume::scan_for_copy: device={}, storage={}, path={}",
-                self.device_id, self.storage_id, mtp_path
+                self.device_id,
+                self.storage_id,
+                LogPrivate::path(&mtp_path)
             );
 
             self.manager
@@ -174,7 +177,7 @@ impl MtpVolume {
                     Some(entries) => {
                         debug!(
                             "MtpVolume::scan_for_copy_batch: oracle hit for parent {} ({} cached entries, {} selected children)",
-                            group.original_parent.display(),
+                            LogPrivate::dir_path(&group.original_parent),
                             entries.len(),
                             group.children.len()
                         );

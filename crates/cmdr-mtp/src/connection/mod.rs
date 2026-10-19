@@ -72,6 +72,7 @@ pub use mutation_ops::MtpDeleteScope;
 use scheduler::{DevicePriorityGate, ForegroundGuard};
 pub use volume_registrar::MtpVolumeRegistrar;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::VolumeHost;
 use log::{debug, error, info, warn};
 use mtp_rs::{MtpDevice, MtpDeviceBuilder};
@@ -770,7 +771,9 @@ impl MtpConnectionManager {
 
         info!(
             "Registering late-arriving storage '{}' (id={}) for device {}",
-            storage_info.name, storage_id, device_id
+            LogPrivate::volume(&storage_info.name),
+            storage_id,
+            device_id
         );
 
         // Release device lock before updating registry
@@ -1055,9 +1058,15 @@ async fn probe_write_capability(storage: &mtp_rs::Storage, storage_name: &str) -
     match storage.create_folder(None, PROBE_FOLDER_NAME).await {
         Ok(handle) => {
             // Success! Clean up by deleting the probe folder
-            debug!("Storage volumeName={storage_name:?}: write probe succeeded, cleaning up");
+            debug!(
+                "Storage volumeName={:?}: write probe succeeded, cleaning up",
+                LogPrivate::volume(storage_name)
+            );
             if let Err(e) = storage.delete(handle).await {
-                warn!("Storage volumeName={storage_name:?}: failed to clean up probe folder: {e:?}");
+                warn!(
+                    "Storage volumeName={:?}: failed to clean up probe folder: {e:?}",
+                    LogPrivate::volume(storage_name)
+                );
             }
             true
         }
@@ -1071,7 +1080,8 @@ async fn probe_write_capability(storage: &mtp_rs::Storage, storage_name: &str) -
             if is_read_only_error {
                 debug!(
                     "Storage '{}': write probe failed with read-only error: {:?}",
-                    storage_name, e
+                    LogPrivate::volume(storage_name),
+                    e
                 );
                 false
             } else {
@@ -1080,7 +1090,8 @@ async fn probe_write_capability(storage: &mtp_rs::Storage, storage_name: &str) -
                 // Android devices often don't allow creating at root but are still writable.
                 debug!(
                     "Storage '{}': write probe failed with non-fatal error (assuming writable): {:?}",
-                    storage_name, e
+                    LogPrivate::volume(storage_name),
+                    e
                 );
                 true
             }

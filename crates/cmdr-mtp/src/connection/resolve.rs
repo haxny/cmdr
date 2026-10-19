@@ -11,6 +11,7 @@ use std::pin::Pin;
 use super::cache::Cached;
 use super::errors::MtpConnectionError;
 use super::{MtpConnectionManager, normalize_mtp_path};
+use cmdr_fs::log_private::LogPrivate;
 
 impl MtpConnectionManager {
     /// Re-resolves the object handles along `dir`'s path so a subsequent
@@ -43,8 +44,8 @@ impl MtpConnectionManager {
             {
                 debug!(
                     "refresh_dir_handle: re-list of {} failed while healing handle for {}: {:?}",
-                    ancestor.display(),
-                    dir.display(),
+                    LogPrivate::dir_path(&ancestor),
+                    LogPrivate::dir_path(&dir),
                     e
                 );
                 return;
@@ -94,8 +95,9 @@ impl MtpConnectionManager {
 
             let parent = path.parent().unwrap_or(Path::new("/")).to_string_lossy().to_string();
             debug!(
-                "MTP resolve: {} isn't cached on {device_id}:{storage_id}, listing {parent} to find it",
-                path.display()
+                "MTP resolve: {} isn't cached on {device_id}:{storage_id}, listing {} to find it",
+                LogPrivate::path(&path),
+                LogPrivate::dir_path(&parent)
             );
             let not_found = || MtpConnectionError::ObjectNotFound {
                 device_id: device_id.to_string(),

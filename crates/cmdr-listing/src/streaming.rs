@@ -9,6 +9,7 @@ use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use crate::Inner;
 use crate::cached_listing::CachedListing;
@@ -214,7 +215,7 @@ impl Inner {
             "read_directory_with_progress: listing_id={}, volume_id={}, path={}",
             listing_id,
             volume_id,
-            path.display()
+            LogPrivate::dir_path(path)
         );
 
         let events = &self.events;
@@ -428,7 +429,7 @@ impl Inner {
             listing_done_level(read_dir_time),
             "listing_done listing_id={} path={} entries={} read_dir_ms={} sort_ms={} cache_write_ms={} enrich_ms={} watcher_start_ms={} to_complete_emit_ms={} total_ms={}",
             listing_id,
-            path.display(),
+            LogPrivate::dir_path(path),
             entries_count_for_log,
             read_dir_time.as_millis(),
             sort_ms,

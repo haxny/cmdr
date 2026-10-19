@@ -11,6 +11,7 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use super::{MetadataClasses, UserFlags};
+use crate::log_private::LogPrivate;
 
 /// The xattr macOS stamps on every file a process writes. The kernel ignores a
 /// write of it (verified on macOS 27.0, `xattr -w` then `-p` reads back the
@@ -207,6 +208,7 @@ fn local_xattrs(file: &File) -> Vec<Xattr> {
                 Ok(Some(value)) => Some(Xattr { name, value }),
                 Ok(None) => None,
                 Err(e) => {
+                    // allowed-log-private: an xattr key (`com.apple.…`), the triage clue, not a file's name
                     log::debug!(target: "metadata", "couldn't read xattr {name:?}: {e}");
                     None
                 }
@@ -248,13 +250,14 @@ fn xattrs_at(path: &Path) -> Vec<Xattr> {
                 Ok(Some(value)) => Some(Xattr { name, value }),
                 Ok(None) => None,
                 Err(e) => {
+                    // allowed-log-private: an xattr key (`com.apple.…`), the triage clue, not a file's name
                     log::debug!(target: "metadata", "couldn't read xattr {name:?}: {e}");
                     None
                 }
             })
             .collect(),
         Err(e) => {
-            log::debug!(target: "metadata", "couldn't list the xattrs of {}: {e}", path.display());
+            log::debug!(target: "metadata", "couldn't list the xattrs of {}: {e}", LogPrivate::path(path));
             Vec::new()
         }
     }

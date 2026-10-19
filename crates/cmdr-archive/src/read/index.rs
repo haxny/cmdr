@@ -21,6 +21,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::Xattr;
 use tokio::task::spawn_blocking;
 
@@ -541,8 +542,9 @@ pub(super) fn build_index<H>(
                 Some(bytes) => held.add(&target, apple_double::parse(&bytes)),
                 None => log::warn!(
                     target: "archive",
-                    "Skipped the {}-byte sidecar {path}: past the cap, so its item lands without its xattrs",
-                    raw.size
+                    "Skipped the {}-byte sidecar {}: past the cap, so its item lands without its xattrs",
+                    raw.size,
+                    LogPrivate::file_path(&path)
                 ),
             },
             EntryRole::Item | EntryRole::SiblingCandidate(_) => {

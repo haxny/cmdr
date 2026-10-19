@@ -15,6 +15,7 @@ use mtp_rs::ObjectHandle;
 use super::cache::{EVENT_DEBOUNCE_MS, EventDebouncer};
 use super::{MtpConnectionManager, normalize_mtp_path};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::DirectoryChange;
 use std::path::{Path, PathBuf};
 
@@ -314,7 +315,7 @@ impl MtpConnectionManager {
                     "MTP targeted refresh: DEBOUNCED for {}:{} dir={}, trailing emit already pending",
                     device_id,
                     storage_id,
-                    affected_dir.display()
+                    LogPrivate::dir_path(affected_dir)
                 );
                 return false;
             }
@@ -322,7 +323,7 @@ impl MtpConnectionManager {
                 "MTP targeted refresh: DEBOUNCED for {}:{} dir={}, scheduling trailing emit",
                 device_id,
                 storage_id,
-                affected_dir.display()
+                LogPrivate::dir_path(affected_dir)
             );
             let device_id = device_id.to_string();
             let affected_dir = affected_dir.to_path_buf();
@@ -341,7 +342,7 @@ impl MtpConnectionManager {
             "MTP targeted refresh: re-reading {}:{} dir={}",
             device_id,
             storage_id,
-            affected_dir.display()
+            LogPrivate::dir_path(affected_dir)
         );
 
         let device_id = device_id.to_string();

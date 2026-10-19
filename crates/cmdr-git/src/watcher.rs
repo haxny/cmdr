@@ -21,6 +21,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 use notify::event::{AccessKind, AccessMode};
 use notify::{EventKind, RecommendedWatcher, RecursiveMode};
@@ -122,7 +123,7 @@ impl GitWatcherBackend for NotifyWatcherBackend {
                 log::warn!(
                     target: "git",
                     "the `.git` watcher for {} reported {} problem(s), recomputing anyway: {}",
-                    logged_root.display(),
+                    LogPrivate::dir_path(&logged_root),
                     errors.len(),
                     errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("; ")
                 );

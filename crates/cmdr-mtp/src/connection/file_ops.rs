@@ -10,6 +10,7 @@ use tokio::sync::Mutex;
 
 use super::errors::{MtpConnectionError, is_stale_handle_rejection};
 use super::{MtpConnectionManager, acquire_device_lock, normalize_mtp_path};
+use cmdr_fs::log_private::LogPrivate;
 
 /// Cached state for a bounded-window MTP read.
 ///
@@ -87,7 +88,10 @@ impl MtpConnectionManager {
     ) -> Result<MtpReadSession, MtpConnectionError> {
         debug!(
             "MTP open_read_session: device={}, storage={}, path={}, offset={}",
-            device_id, storage_id, path, offset
+            device_id,
+            storage_id,
+            LogPrivate::file_path(path),
+            offset
         );
 
         let object_handle = self.resolve_path_to_handle(device_id, storage_id, path).await?;
@@ -112,7 +116,11 @@ impl MtpConnectionManager {
                 .map_err(|e| self.map_device_error(e, device_id))?
         };
 
-        debug!("MTP open_read_session: opened {} bytes for {}", windowed.size(), path);
+        debug!(
+            "MTP open_read_session: opened {} bytes for {}",
+            windowed.size(),
+            LogPrivate::file_path(path)
+        );
 
         Ok(MtpReadSession { device_arc, windowed })
     }
@@ -267,8 +275,11 @@ impl MtpConnectionManager {
         let _fg = self.foreground_guard(device_id).await;
 
         debug!(
-            "MTP upload_from_stream: device={}, storage={}, dest={}/{}, size={}",
-            device_id, storage_id, dest_folder, filename, size,
+            "MTP upload_from_stream: device={}, storage={}, dest={}, size={}",
+            device_id,
+            storage_id,
+            LogPrivate::file_path(&Path::new(dest_folder).join(filename)),
+            size,
         );
 
         let parent_handle = self.resolve_path_to_handle(device_id, storage_id, dest_folder).await?;
@@ -323,15 +334,18 @@ impl MtpConnectionManager {
                     // device just disconnected, this fails and the partial
                     // lingers (recognizable, nothing we can do with a dead
                     // device) — we log and move on.
+                    let dest = Path::new(dest_folder).join(filename);
                     if let Err(delete_err) = storage.delete(partial).await {
                         log::warn!(
                             target: "mtp_upload",
-                            "Failed to delete partial object after upload error (device={device_id}, dest={dest_folder}/{filename}): {delete_err}"
+                            "Failed to delete partial object after upload error (device={device_id}, dest={}): {delete_err}",
+                            LogPrivate::file_path(&dest)
                         );
                     } else {
                         log::debug!(
                             target: "mtp_upload",
-                            "Deleted partial object after upload error (device={device_id}, dest={dest_folder}/{filename})"
+                            "Deleted partial object after upload error (device={device_id}, dest={})",
+                            LogPrivate::file_path(&dest)
                         );
                     }
                 }
@@ -353,7 +367,9 @@ impl MtpConnectionManager {
                 if is_stale {
                     log::warn!(
                         target: "mtp_upload",
-                        "SendObjectInfo rejected for dir={dest_folder:?} file={filename:?} on {device_id}: cached parent handle is stale (device re-keyed). Refreshing handles and signaling a one-shot retry."
+                        "SendObjectInfo rejected for dir={:?} file={:?} on {device_id}: cached parent handle is stale (device re-keyed). Refreshing handles and signaling a one-shot retry.",
+                        LogPrivate::dir_path(dest_folder),
+                        LogPrivate::file_name(filename)
                     );
                     self.refresh_dir_handle(device_id, storage_id, Path::new(dest_folder))
                         .await;
@@ -368,7 +384,10 @@ impl MtpConnectionManager {
                 // otherwise leave no trace (no `error-report` breadcrumb).
                 log::warn!(
                     target: "mtp_upload",
-                    "Upload failed for dir={dest_folder:?} file={filename:?} on {device_id}: {:?}",
+                    "Upload failed for dir={:?} file={:?} on {device_id}: {:?}",
+                    LogPrivate::dir_path(dest_folder),
+                    LogPrivate::file_name(filename),
+                    // allowed-log-private: the device's protocol error, which names no path
                     upload_err.source
                 );
                 return Err(self.map_device_error(upload_err.source, device_id));
@@ -397,8 +416,9 @@ impl MtpConnectionManager {
             .await;
 
         debug!(
-            "MTP upload_from_stream complete: {} bytes to {}/{}",
-            size, dest_folder, filename
+            "MTP upload_from_stream complete: {} bytes to {}",
+            size,
+            LogPrivate::file_path(&new_path)
         );
 
         Ok(size)

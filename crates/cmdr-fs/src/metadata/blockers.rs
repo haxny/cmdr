@@ -16,6 +16,7 @@ use std::io;
 use std::path::Path;
 
 use super::LandedMetadata;
+use crate::log_private::LogPrivate;
 
 /// What [`clear_blockers`] did to one item.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,7 +61,7 @@ fn clear_on_macos(path: &Path) -> Unblock {
     let blocking = UserFlags::from_bsd(raw).intersection(UserFlags::RENAME_BLOCKERS);
     if !blocking.is_empty() {
         if let Err(e) = flags::write_raw(path, raw & !blocking.to_bsd()) {
-            log::debug!(target: "metadata", "couldn't unlock {}: {e}", path.display());
+            log::debug!(target: "metadata", "couldn't unlock {}: {e}", LogPrivate::path(path));
             return Unblock::Refused;
         }
         cleared.flags = blocking;
@@ -68,13 +69,13 @@ fn clear_on_macos(path: &Path) -> Unblock {
     match exacl::getfacl(path, exacl::AclOption::SYMLINK_ACL) {
         Ok(entries) if !entries.is_empty() => {
             if let Err(e) = exacl::setfacl(&[path], &[], exacl::AclOption::SYMLINK_ACL) {
-                log::debug!(target: "metadata", "couldn't strip the ACL of {}: {e}", path.display());
+                log::debug!(target: "metadata", "couldn't strip the ACL of {}: {e}", LogPrivate::path(path));
                 return Unblock::Refused;
             }
             cleared.acl = Some(Acl(entries));
         }
         Ok(_) => {}
-        Err(e) => log::debug!(target: "metadata", "couldn't read the ACL of {}: {e}", path.display()),
+        Err(e) => log::debug!(target: "metadata", "couldn't read the ACL of {}: {e}", LogPrivate::path(path)),
     }
     if cleared.is_empty() {
         Unblock::NothingToClear
@@ -216,7 +217,7 @@ pub fn open_parent_folder(child: &Path) -> ParentOpening {
     if mode & OWNER_WRITE_SEARCH != OWNER_WRITE_SEARCH {
         super::note_helper_call();
         if let Err(e) = std::fs::set_permissions(folder, std::fs::Permissions::from_mode(mode | OWNER_WRITE_SEARCH)) {
-            log::debug!(target: "metadata", "couldn't open {} for a removal: {e}", folder.display());
+            log::debug!(target: "metadata", "couldn't open {} for a removal: {e}", LogPrivate::dir_path(folder));
             super::apply_landed(folder, &restore);
             return ParentOpening::Refused;
         }

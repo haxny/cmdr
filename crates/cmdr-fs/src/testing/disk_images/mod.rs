@@ -47,6 +47,7 @@ use serde::de::DeserializeOwned;
 
 use super::TestDir;
 use crate::ignore_poison::IgnorePoison;
+use crate::log_private::LogPrivate;
 use facts::{AttachedImages, DiskFacts};
 use runner::{Call, TOOL_DEADLINE};
 
@@ -222,7 +223,7 @@ impl DiskImageSession {
                 Err(reason) => log::warn!(
                     target: "testing::disk_images",
                     "leaving {} attached, since it isn't provably ours: {reason:?}",
-                    image.image_path.display()
+                    LogPrivate::file_path(&image.image_path)
                 ),
             }
         }
@@ -242,12 +243,12 @@ impl DiskImageSession {
             Ok(_) => log::info!(
                 target: "testing::disk_images",
                 "detached {}, left attached by a run that couldn't clean up after itself",
-                image_path.display()
+                LogPrivate::file_path(&image_path)
             ),
             Err(error) => log::warn!(
                 target: "testing::disk_images",
                 "couldn't detach the leftover image {}: {error}",
-                image_path.display()
+                LogPrivate::file_path(&image_path)
             ),
         }
     }
@@ -767,7 +768,7 @@ impl Drop for DiskImage {
                 log::warn!(
                     target: "testing::disk_images",
                     "couldn't detach the disk image at {}: {error}",
-                    self.image_path.display()
+                    LogPrivate::file_path(&self.image_path)
                 );
             } else {
                 panic!(

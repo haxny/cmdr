@@ -8,6 +8,7 @@ use super::mapping::map_mtp_error;
 use super::streams::{MtpReadStream, mtp_read_window, volume_read_stream_to_chunk_stream};
 use crate::connection::{MtpConnectionError, MtpDeleteScope, UploadedFile};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, LaneKey, MutationEvent, ScanConflict, SourceItemInfo, SpaceInfo, StreamLength,
     StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
@@ -70,8 +71,8 @@ impl Volume for MtpVolume {
                 "MtpVolume::list_directory: device={}, storage={}, input_path={}, mtp_path={}, cancel={}",
                 self.device_id,
                 self.storage_id,
-                path.display(),
-                mtp_path,
+                LogPrivate::dir_path(path),
+                LogPrivate::dir_path(&mtp_path),
                 cancel_ref.is_some()
             );
 
@@ -249,7 +250,7 @@ impl Volume for MtpVolume {
                         Err(e) => {
                             debug!(
                                 "MtpVolume::notify_mutation: couldn't stat {}: {}",
-                                entry_path.display(),
+                                LogPrivate::path(&entry_path),
                                 e
                             );
                         }
@@ -274,7 +275,7 @@ impl Volume for MtpVolume {
                         Err(e) => {
                             debug!(
                                 "MtpVolume::notify_mutation: couldn't stat renamed entry {}: {}",
-                                new_path.display(),
+                                LogPrivate::path(&new_path),
                                 e
                             );
                         }

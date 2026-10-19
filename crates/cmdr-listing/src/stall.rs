@@ -25,6 +25,7 @@ use crate::foreign_path::{Listed, list_as_stored};
 use crate::host::MountTable;
 use crate::stalled_on::StalledOn;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::friendly_error::{ErrorCategory, listing_error_from_volume_error};
 use cmdr_fs::volume::{BackendKind, ListingProgress, Volume, VolumeError};
 
@@ -441,7 +442,7 @@ fn spawn_read(read: &ListingRead<'_>, slot: ReadSlot, beat: Arc<Beat>, cancel: C
             target: "stall_probe::listing_task",
             "task started: listing_id={}, path={}",
             listing_id,
-            path.display(),
+            LogPrivate::dir_path(&path),
         );
         // The slot rides here, so it frees when THIS read ends, however long after
         // the listing gave up on it.

@@ -35,6 +35,7 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter};
 /// `foo.zip` builds into the same-directory sibling `foo.zip.cmdr-tmp-<uuid>`
 /// (the app-wide scratch convention, shortened when it wouldn't fit); the
 /// sibling placement keeps the final rename atomic on one filesystem.
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, LandedMetadata, StagedItem, StagedTimes, apply_landed, apply_staged};
 use cmdr_fs::staging::{StagingTemp, temp_sibling_prefix};
 
@@ -248,7 +249,7 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
     if !landed.is_empty() {
         let report = apply_landed(archive_path, &landed);
         if report.any_refused() {
-            log::warn!(target: "archive_mutator", "{} lost some of its metadata in the edit: {report:?}", archive_path.display());
+            log::warn!(target: "archive_mutator", "{} lost some of its metadata in the edit: {report:?}", LogPrivate::file_path(archive_path));
         }
     }
 
@@ -551,7 +552,7 @@ fn carry_archive_metadata(original: &Path, temp: &File) -> LandedMetadata {
     let source = match File::open(original).and_then(|file| file.metadata().map(|meta| (file, meta))) {
         Ok(source) => source,
         Err(e) => {
-            log::warn!(target: "archive_mutator", "couldn't read the metadata of {}: {e}", original.display());
+            log::warn!(target: "archive_mutator", "couldn't read the metadata of {}: {e}", LogPrivate::file_path(original));
             return LandedMetadata::default();
         }
     };
@@ -567,7 +568,7 @@ fn carry_archive_metadata(original: &Path, temp: &File) -> LandedMetadata {
     };
     let report = apply_staged(StagedItem::File(temp), &carried, times);
     if report.any_refused() {
-        log::warn!(target: "archive_mutator", "the rebuilt {} took only some of its metadata: {report:?}", original.display());
+        log::warn!(target: "archive_mutator", "the rebuilt {} took only some of its metadata: {report:?}", LogPrivate::file_path(original));
     }
     LandedMetadata::of_source_acl(original).with_flags(carried.flags)
 }

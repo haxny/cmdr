@@ -10,6 +10,7 @@
 use std::path::Path;
 
 use super::reading::get_single_entry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{DirectoryChange, MutationEvent};
 
@@ -45,7 +46,11 @@ pub fn patch_listing_after_local_mutation(
                     listings.directory_changed(volume_id, parent_path, change);
                 }
                 Err(e) => {
-                    log::warn!("notify_mutation: couldn't stat {}: {}", entry_path.display(), e);
+                    log::warn!(
+                        "notify_mutation: couldn't stat {}: {}",
+                        LogPrivate::path(&entry_path),
+                        e
+                    );
                 }
             }
         }
@@ -68,7 +73,7 @@ pub fn patch_listing_after_local_mutation(
                 Err(e) => {
                     log::warn!(
                         "notify_mutation: couldn't stat renamed entry {}: {}",
-                        new_path.display(),
+                        LogPrivate::path(&new_path),
                         e
                     );
                 }

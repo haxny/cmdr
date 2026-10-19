@@ -25,6 +25,7 @@ use tokio_util::sync::CancellationToken;
 use crate::Inner;
 use crate::pipeline::ReadBy;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 
 /// A directory listing, and the path it lists as its volume spells it.
@@ -67,7 +68,11 @@ pub(crate) async fn list_as_stored(
     let Some(stored) = volume.find_stored_spelling(path, cancel).await? else {
         return Err(missed);
     };
-    log::debug!("list_as_stored: {} is stored as {}", path.display(), stored.display());
+    log::debug!(
+        "list_as_stored: {} is stored as {}",
+        LogPrivate::dir_path(path),
+        LogPrivate::dir_path(&stored)
+    );
     let entries = volume.list_directory_with_cancel(&stored, on_progress, cancel).await?;
     Ok(Listed { path: stored, entries })
 }
@@ -96,14 +101,14 @@ pub async fn stored_spellings(volume: &dyn Volume, paths: Vec<PathBuf>) -> Vec<P
             Ok(Some(spelling)) => {
                 log::debug!(
                     "stored_spellings: {} is stored as {}",
-                    path.display(),
-                    spelling.display()
+                    LogPrivate::path(&path),
+                    LogPrivate::path(&spelling)
                 );
                 stored.push(spelling);
             }
             Ok(None) => stored.push(path),
             Err(e) => {
-                log::debug!("stored_spellings: keeping {} as given: {e}", path.display());
+                log::debug!("stored_spellings: keeping {} as given: {e}", LogPrivate::path(&path));
                 stored.push(path);
             }
         }
@@ -155,7 +160,7 @@ impl Inner {
         if serving.is_some_and(|serving| !std::sync::Arc::ptr_eq(&serving, read_by)) {
             log::debug!(
                 "listing {listing_id} was read by a backend replaced mid-read; re-reading {}",
-                path.display()
+                LogPrivate::dir_path(path)
             );
             // A strong handle: the respell ends.
             let engine = std::sync::Arc::clone(self);
@@ -178,7 +183,7 @@ impl Inner {
             Ok(listed) => listed,
             Err(e) => {
                 // The pane keeps what it has; its next navigation or refresh asks again.
-                log::debug!("respell_listing: couldn't re-read {}: {e}", path.display());
+                log::debug!("respell_listing: couldn't re-read {}: {e}", LogPrivate::dir_path(&path));
                 return;
             }
         };

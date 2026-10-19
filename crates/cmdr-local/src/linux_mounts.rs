@@ -32,6 +32,7 @@ pub fn read_mount_table(path: &Path) -> Option<Vec<MountEntry>> {
     match std::fs::read_to_string(path) {
         Ok(contents) => Some(parse_proc_mounts_from_content(&contents)),
         Err(e) => {
+            // allowed-log-private: the kernel's mount table (`/proc/mounts`), a fixed system path
             log::warn!("Failed to read {}: {}", path.display(), e);
             None
         }

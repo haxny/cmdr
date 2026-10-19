@@ -9,6 +9,7 @@
 //! files, so the trait side stays in `local_posix.rs` and the work lives here.
 
 use super::LocalPosixVolume;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{
     CarriedMetadata, LandedMetadata, MetadataClasses, MetadataReport, StagedItem, StagedTimes, UserFlags, apply_landed,
     apply_staged, default_file_mode, default_folder_mode, routed_mode,
@@ -308,7 +309,7 @@ impl LocalPosixVolume {
                     log::warn!(
                         target: "write_durability",
                         "write_from_stream: fdatasync failed for {}: {e}",
-                        dest_for_sync.display()
+                        LogPrivate::file_path(&dest_for_sync)
                     );
                 }
                 let report = apply_staged(StagedItem::File(&file), &carried_for_apply, times);
@@ -316,7 +317,7 @@ impl LocalPosixVolume {
                     log::warn!(
                         target: "local_posix",
                         "write_from_stream: {} took only some of the source's metadata: {report:?}",
-                        dest_for_sync.display()
+                        LogPrivate::file_path(&dest_for_sync)
                     );
                 }
                 (file, report)
@@ -335,7 +336,7 @@ impl LocalPosixVolume {
                     Err(e) => log::debug!(
                         target: "write_durability",
                         "write_from_stream: parent dir fsync skipped for {}: {e}",
-                        parent.display()
+                        LogPrivate::dir_path(&parent)
                     ),
                 })
                 .await;
@@ -372,7 +373,7 @@ pub(super) fn apply_metadata_at(
             Ok(meta) if meta.is_dir() => default_folder_mode(),
             Ok(_) => default_file_mode(),
             Err(e) => {
-                log::debug!(target: "local_posix", "apply_metadata: couldn't stat {}: {e}", path.display());
+                log::debug!(target: "local_posix", "apply_metadata: couldn't stat {}: {e}", LogPrivate::path(path));
                 return None;
             }
         };
@@ -402,7 +403,7 @@ pub(super) fn apply_metadata_at(
         log::warn!(
             target: "local_posix",
             "apply_metadata: {} took only some of the source's metadata: {report:?}",
-            path.display()
+            LogPrivate::path(path)
         );
     }
     report

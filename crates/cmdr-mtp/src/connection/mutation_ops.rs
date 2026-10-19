@@ -19,6 +19,7 @@ use std::path::Path;
 
 use super::errors::MtpConnectionError;
 use super::{MtpConnectionManager, MtpObjectInfo, acquire_device_lock, normalize_mtp_path};
+use cmdr_fs::log_private::LogPrivate;
 
 /// What one attempt at a path-addressed mutation found.
 enum Attempt<T> {
@@ -123,7 +124,7 @@ impl MtpConnectionManager {
             "MTP delete_object: device={}, storage={}, path={}, scope={:?}, cancel={}",
             device_id,
             storage_id,
-            object_path,
+            LogPrivate::path(object_path),
             scope,
             cancel.is_some()
         );
@@ -150,7 +151,7 @@ impl MtpConnectionManager {
             self.invalidate_listing_cache(device_id, storage_id, parent).await;
         }
 
-        debug!("MTP delete complete: {}", object_path);
+        debug!("MTP delete complete: {}", LogPrivate::path(object_path));
         Ok(())
     }
 
@@ -212,7 +213,7 @@ impl MtpConnectionManager {
                 debug!(
                     "MTP delete refused (folder still has {} entries): {}",
                     children.len(),
-                    object_path
+                    LogPrivate::dir_path(object_path)
                 );
                 return Err(MtpConnectionError::DirectoryNotEmpty {
                     device_id: device_id.to_string(),
@@ -295,7 +296,7 @@ impl MtpConnectionManager {
         let path = normalize_mtp_path(object_path);
         warn!(
             "MTP on {device_id}:{storage_id}: the cached handle for {} points at another object; resolving it afresh",
-            path.display()
+            LogPrivate::path(&path)
         );
         self.forget_stale_path(device_id, storage_id, &path).await;
         match attempt().await? {
@@ -361,7 +362,10 @@ impl MtpConnectionManager {
 
         debug!(
             "MTP create_folder: device={}, storage={}, parent={:?}, new_name={:?}",
-            device_id, storage_id, parent_path, folder_name
+            device_id,
+            storage_id,
+            LogPrivate::dir_path(parent_path),
+            LogPrivate::dir_name(folder_name)
         );
 
         let parent_handle = self.resolve_path_to_handle(device_id, storage_id, parent_path).await?;
@@ -411,7 +415,7 @@ impl MtpConnectionManager {
         self.invalidate_listing_cache(device_id, storage_id, &parent_path_normalized)
             .await;
 
-        debug!("MTP folder created: {}", new_path_str);
+        debug!("MTP folder created: {}", LogPrivate::dir_path(&new_path_str));
 
         Ok(MtpObjectInfo {
             handle: new_handle.0 as u32,
@@ -442,7 +446,10 @@ impl MtpConnectionManager {
 
         debug!(
             "MTP rename_object: device={}, storage={}, path={}, new_name={}",
-            device_id, storage_id, object_path, new_name
+            device_id,
+            storage_id,
+            LogPrivate::path(object_path),
+            LogPrivate::name(new_name)
         );
 
         let (object_handle, object_info) = self
@@ -473,7 +480,11 @@ impl MtpConnectionManager {
         // Invalidate the parent directory's listing cache (rename affects the parent listing)
         self.invalidate_listing_cache(device_id, storage_id, parent).await;
 
-        debug!("MTP rename complete: {} -> {}", object_path, new_path_str);
+        debug!(
+            "MTP rename complete: {} -> {}",
+            LogPrivate::path(object_path),
+            LogPrivate::path(&new_path_str)
+        );
 
         Ok(MtpObjectInfo {
             handle: object_handle.0 as u32,
@@ -541,7 +552,10 @@ impl MtpConnectionManager {
 
         debug!(
             "MTP move_object: device={}, storage={}, path={}, new_parent={}",
-            device_id, storage_id, object_path, new_parent_path
+            device_id,
+            storage_id,
+            LogPrivate::path(object_path),
+            LogPrivate::dir_path(new_parent_path)
         );
 
         let (object_handle, object_info, move_result) = self
@@ -579,7 +593,11 @@ impl MtpConnectionManager {
                 let new_parent = normalize_mtp_path(new_parent_path);
                 self.invalidate_listing_cache(device_id, storage_id, &new_parent).await;
 
-                debug!("MTP move complete: {} -> {}", object_path, new_path_str);
+                debug!(
+                    "MTP move complete: {} -> {}",
+                    LogPrivate::path(object_path),
+                    LogPrivate::path(&new_path_str)
+                );
 
                 Ok(MtpObjectInfo {
                     handle: object_handle.0 as u32,
@@ -593,7 +611,8 @@ impl MtpConnectionManager {
                 // Move operation returned an error - might not be supported
                 warn!(
                     "MTP MoveObject failed for {}: {:?}. Device may not support this operation.",
-                    object_path, e
+                    LogPrivate::path(object_path),
+                    e
                 );
                 Err(MtpConnectionError::Other {
                     device_id: device_id.to_string(),

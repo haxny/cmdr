@@ -44,6 +44,8 @@ mod staged;
 
 use std::path::Path;
 
+use crate::log_private::LogPrivate;
+
 pub use blockers::{
     OpenedFolder, ParentOpening, RemovalLock, RemovalRefusal, Unblock, clear_blockers, open_parent_folder,
     removal_lock, remove_dir_clearing_blockers, remove_file_clearing_blockers, remove_tree_clearing_blockers,
@@ -276,7 +278,7 @@ fn write_mode(path: &Path, mode: u32) -> ClassOutcome {
     match std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)) {
         Ok(()) => ClassOutcome::Kept,
         Err(e) => {
-            log::debug!(target: "metadata", "couldn't set mode {mode:o} on {}: {e}", path.display());
+            log::debug!(target: "metadata", "couldn't set mode {mode:o} on {}: {e}", LogPrivate::path(path));
             ClassOutcome::Refused
         }
     }
@@ -288,7 +290,7 @@ fn read_acl(path: &Path) -> Option<Acl> {
         Ok(entries) if !entries.is_empty() => Some(Acl(entries)),
         Ok(_) => None,
         Err(e) => {
-            log::debug!(target: "metadata", "couldn't read the ACL of {}: {e}", path.display());
+            log::debug!(target: "metadata", "couldn't read the ACL of {}: {e}", LogPrivate::path(path));
             None
         }
     }
@@ -307,7 +309,7 @@ fn read_acl(path: &Path) -> Option<Acl> {
         }
         Ok(_) => None,
         Err(e) => {
-            log::debug!(target: "metadata", "couldn't read the ACL of {}: {e}", path.display());
+            log::debug!(target: "metadata", "couldn't read the ACL of {}: {e}", LogPrivate::path(path));
             None
         }
     }
@@ -321,7 +323,7 @@ fn write_acl(path: &Path, acl: &Acl) -> ClassOutcome {
     match written {
         Ok(()) => ClassOutcome::Kept,
         Err(e) => {
-            log::debug!(target: "metadata", "couldn't set the ACL on {}: {e}", path.display());
+            log::debug!(target: "metadata", "couldn't set the ACL on {}: {e}", LogPrivate::path(path));
             ClassOutcome::Refused
         }
     }

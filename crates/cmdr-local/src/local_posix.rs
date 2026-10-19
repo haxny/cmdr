@@ -15,6 +15,7 @@ use crate::space::{get_space_info_for_path, live_space_info_for_path};
 use cmdr_fs::entry::FileEntry;
 #[cfg(feature = "playwright-e2e")]
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport, Unblock, UserFlags};
 use cmdr_fs::volume::MountClass;
 use cmdr_fs::volume::host::VolumeHost;
@@ -130,7 +131,7 @@ pub(super) fn rename_exclusive_with(
     log::debug!(
         target: "volume",
         "rename_local_exclusive: {} doesn't support an atomic no-replace rename ({err}); checking first instead",
-        destination.display()
+        LogPrivate::path(destination)
     );
 
     rename_if_free(source, destination, name_state(std::fs::symlink_metadata(destination)))
@@ -576,7 +577,7 @@ impl Volume for LocalPosixVolume {
                     log::warn!(
                         target: "local_posix",
                         "delete: stat failed for {}: {} (kind={:?}, errno={:?})",
-                        abs_path.display(),
+                        LogPrivate::path(&abs_path),
                         e,
                         e.kind(),
                         e.raw_os_error()
@@ -593,7 +594,7 @@ impl Volume for LocalPosixVolume {
                         target: "local_posix",
                         "delete: {} {} failed: {} (kind={:?}, errno={:?})",
                         if metadata.is_dir() { "remove_dir" } else { "remove_file" },
-                        abs_path.display(),
+                        LogPrivate::path(&abs_path),
                         e,
                         e.kind(),
                         e.raw_os_error()

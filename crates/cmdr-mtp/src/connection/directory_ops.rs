@@ -14,6 +14,7 @@ use super::{
     normalize_mtp_path,
 };
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::indexing::WatchGap;
 
 /// Global counter for generating unique request IDs for debugging.
@@ -96,7 +97,7 @@ impl MtpConnectionManager {
             request_id,
             device_id,
             storage_id,
-            path,
+            LogPrivate::dir_path(path),
             concurrent_before + 1
         );
 
@@ -151,7 +152,7 @@ impl MtpConnectionManager {
             request_id,
             device_id,
             storage_id,
-            path,
+            LogPrivate::dir_path(path),
             concurrent_before + 1
         );
 
@@ -414,7 +415,7 @@ impl MtpConnectionManager {
         debug!(
             "MTP list_directory [req#{}]: calling list_objects (parent={:?}, cancel={})...",
             request_id,
-            parent_opt,
+            parent_opt, // allowed-log-private: an MTP object handle (a number), not a name
             cancel.is_some()
         );
         let object_infos = match storage.list_objects_with_cancel(parent_opt, cancel).await {
@@ -650,7 +651,7 @@ impl MtpConnectionManager {
         else {
             debug!(
                 "MTP list_directory [req#{request_id}]: cache MISS for path={}",
-                dir.display()
+                LogPrivate::dir_path(dir)
             );
             return None;
         };
@@ -789,7 +790,7 @@ impl MtpConnectionManager {
         {
             debug!(
                 "Invalidated listing cache for {} on device {}",
-                dir_path.display(),
+                LogPrivate::dir_path(dir_path),
                 device_id
             );
         }

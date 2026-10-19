@@ -35,6 +35,7 @@ use notify_debouncer_full::{
 
 use super::ArchiveIndexCache;
 use cmdr_fs::firmlinks;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::VolumeHost;
 
 /// Debounce window for archive content events. Matches the listing watcher's
@@ -125,7 +126,12 @@ pub(crate) fn start_watch(
 
     debouncer
         .watch(&watch_dir, RecursiveMode::NonRecursive)
-        .map_err(|e| log::warn!("archive watch: failed to watch {}: {e}", watch_dir.display()))
+        .map_err(|e| {
+            log::warn!(
+                "archive watch: failed to watch {}: {e}",
+                LogPrivate::dir_path(&watch_dir)
+            )
+        })
         .ok()?;
 
     ACTIVE_ARCHIVE_WATCHES.fetch_add(1, Ordering::SeqCst);

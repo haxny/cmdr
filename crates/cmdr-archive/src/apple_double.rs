@@ -311,6 +311,7 @@ pub(crate) fn sidecar_for(names: Vec<OsString>, mut get: impl FnMut(&OsStr) -> O
         if total + value.len() as u64 > MAX_SIDECAR_BYTES {
             log::warn!(
                 target: "archive",
+                // allowed-log-private: an xattr key (`com.apple.…`), the triage clue, not a file's name
                 "Left the {}-byte xattr {name:?} out of a sidecar: past the {MAX_SIDECAR_BYTES}-byte cap",
                 value.len()
             );

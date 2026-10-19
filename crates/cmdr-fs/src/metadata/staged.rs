@@ -79,6 +79,7 @@ fn write_xattrs(item: StagedItem<'_>, carried: &CarriedMetadata) -> ClassOutcome
             StagedItem::Path(path) | StagedItem::Link(path) => xattr::set(path, &xattr.name, &xattr.value),
         };
         if let Err(e) = written {
+            // allowed-log-private: an xattr key (`com.apple.…`), the triage clue, not a file's name
             log::debug!(target: "metadata", "couldn't set xattr {:?}: {e}", xattr.name);
             outcome = worse(outcome, refusal(&e));
         }

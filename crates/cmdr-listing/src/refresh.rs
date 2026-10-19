@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use crate::Inner;
 use crate::pipeline::{Prepared, ReadBy};
@@ -160,7 +161,7 @@ impl Inner {
             Err(e) => {
                 log::warn!(
                     "notify_directory_changed: failed to re-read {}: {}",
-                    parent_path.display(),
+                    LogPrivate::dir_path(&parent_path),
                     e
                 );
                 return;

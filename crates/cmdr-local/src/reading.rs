@@ -91,7 +91,7 @@ pub fn list_directory(path: &Path, listings: &dyn ListingHost) -> Result<Vec<Fil
 
     log::debug!(
         "list_directory: path={}, entries={}, total={}ms",
-        path.display(),
+        LogPrivate::dir_path(path),
         entries.len(),
         overall_start.elapsed().as_millis()
     );

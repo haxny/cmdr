@@ -5,6 +5,8 @@ use std::ops::BitOr;
 use std::path::Path;
 
 use super::ClassOutcome;
+#[cfg(target_os = "macos")]
+use crate::log_private::LogPrivate;
 
 /// A set of the user-settable flags Finder shows. `SF_*` system flags are never
 /// in it: a non-root process can't set or clear them, and a copy never tries.
@@ -117,7 +119,7 @@ pub(super) fn add_flags(path: &Path, flags: UserFlags) -> ClassOutcome {
     match read_raw(path).and_then(|raw| write_raw(path, raw | flags.to_bsd())) {
         Ok(()) => ClassOutcome::Kept,
         Err(e) => {
-            log::debug!(target: "metadata", "couldn't set the flags on {}: {e}", path.display());
+            log::debug!(target: "metadata", "couldn't set the flags on {}: {e}", LogPrivate::path(path));
             ClassOutcome::Refused
         }
     }

@@ -12,6 +12,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use super::capture::{FinalizeInputs, OperationJournal, WriterJournal};
 use super::recording::Recording;
@@ -106,7 +107,7 @@ impl OperationLog {
             journal: Arc::new(WriterJournal::new(writer.clone())),
             writer: Some(writer),
         });
-        log::debug!(target: "operation_log", "operation log ready at {}", db_path.display());
+        log::debug!(target: "operation_log", "operation log ready at {}", LogPrivate::file_path(db_path));
         Ok(())
     }
 

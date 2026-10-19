@@ -7,6 +7,7 @@ use log::debug;
 use super::errors::MtpConnectionError;
 use super::{MtpConnectionManager, normalize_mtp_path};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{CopyScanResult, ScanBoundary, ScanStop};
 
 /// A scan the user stopped. ❗ The typed `Cancelled` variant, so `map_mtp_error`
@@ -80,7 +81,9 @@ impl MtpConnectionManager {
     ) -> Result<CopyScanResult, MtpConnectionError> {
         debug!(
             "MTP scan_for_copy: device={}, storage={}, path={}",
-            device_id, storage_id, path
+            device_id,
+            storage_id,
+            LogPrivate::path(path)
         );
 
         boundary.check().await.map_err(|_| scan_cancelled(device_id))?;
@@ -128,7 +131,8 @@ impl MtpConnectionManager {
                 boundary.check().await.map_err(|_| scan_cancelled(device_id))?;
                 debug!(
                     "MTP scan_for_copy: list_directory failed for '{}', checking if it's a file: {:?}",
-                    path, e
+                    LogPrivate::path(path),
+                    e
                 );
                 if let Some(result) = self.try_scan_as_file(device_id, storage_id, path).await {
                     boundary
@@ -238,7 +242,7 @@ impl MtpConnectionManager {
 
         debug!(
             "MTP scan_for_copy: path '{}' is a file with size {}",
-            path,
+            LogPrivate::file_path(path),
             entry.size.unwrap_or(0)
         );
 

@@ -22,6 +22,7 @@ use crate::visible_rows::VisibleRows;
 #[cfg(test)]
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 
 // ============================================================================
 // Listing lifecycle
@@ -412,7 +413,7 @@ impl Inner {
                     index,
                     listing_id,
                     rows.len(),
-                    listing.path.as_path().display()
+                    LogPrivate::dir_path(listing.path.as_path())
                 );
             }
             result
