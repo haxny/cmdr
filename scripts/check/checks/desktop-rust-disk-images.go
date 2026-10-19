@@ -9,9 +9,11 @@ import (
 	"strings"
 )
 
-// The opt-in macOS disk-image lane: the `#[ignore]`d tests that attach real
-// synthetic APFS and HFS+ images through `cmdr_fs::testing::disk_images`, so
-// the eject and drive-safety pins run from `pnpm check` instead of by hand.
+// The opt-in lane for real-macOS-OS pins: mostly the `#[ignore]`d tests that
+// attach real synthetic APFS and HFS+ images through
+// `cmdr_fs::testing::disk_images`, plus any pin on real OS behavior too slow
+// under load for the default lane (today a real `fseventsd` replay). So the
+// eject, drive-safety, and OS pins run from `pnpm check` instead of by hand.
 //
 // Slow-lane and never in CI: `hdiutil` has no Linux counterpart, and CI's one
 // macOS job (`desktop-rust-macos`) leaves it out until that job has a green
