@@ -12,6 +12,7 @@ pub mod encoding;
 mod full_load;
 pub(crate) mod headless;
 mod line_index;
+mod markdown_document;
 mod markdown_images;
 mod markdown_links;
 mod markdown_render;

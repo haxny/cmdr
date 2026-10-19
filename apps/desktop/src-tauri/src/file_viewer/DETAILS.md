@@ -28,8 +28,8 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
 - `media_session.rs`: the media-open path. `try_open_media` (classify + dispatch, called by `open_session` before it
   builds a text backend), `open_media_session` (mint token, header-only dimensions, install a `MediaBackend` via
   `ViewerSession::new`), and `is_local_posix_path` (the local-volume gate)
-- `markdown_session.rs`, `markdown_render.rs`, `markdown_images.rs`: the formatted Markdown view, its sanitizer, and
-  its pictures. See § "Markdown rendering"
+- `markdown_session.rs`, `markdown_document.rs`, `markdown_render.rs`, `markdown_images.rs`, `markdown_links.rs`: the
+  formatted Markdown view, its per-session state, its sanitizer, its pictures, and its links. See § "Markdown rendering"
 - `range_read.rs`: backend-agnostic stitching of a `(line, offset) -> (line, offset)` range into UTF-8 text.
   `read_range_streamed` is the engine (hands the range to a sink in `STREAM_CHUNK_BYTES` pieces, breaking only on line
   boundaries); `read_range` is that read with a collecting sink, for callers that want one string. Plus the UTF-16 ->
@@ -208,8 +208,10 @@ option, like any text file. Files:
 
 - `markdown_session.rs`: `is_markdown` + `open_markdown_session` (called by `open_session_core` before the media
   check, unless `force_text`), `render_markdown_session` (the `viewer_render_markdown` command), `allow_remote_images`
-  (`viewer_allow_remote_images`), and `MarkdownDocument`, the per-session state `ViewerSession.markdown` holds: the
-  document's path on its volume, its image tokens, a `closed` flag, and the remote-images opt-in.
+  (`viewer_allow_remote_images`), and `resolve_markdown_link`.
+- `markdown_document.rs`: `MarkdownDocument`, the per-session state `ViewerSession.markdown` holds: the document's path
+  on its volume, its image tokens, a `closed` flag, and the remote-images opt-in. Its own module so `session_store.rs`
+  can hold it without depending on `markdown_session.rs`, which depends on the store (`module-cycles`).
 - `markdown_render.rs`: pure `render_markdown(source, image)`: `pulldown-cmark` (tables, footnotes, strikethrough,
   task lists, heading attributes, GFM alerts) → HTML → `ammonia`.
 - `markdown_images.rs`: pure `resolve_image_src`, plus `VolumeImage` and `RemoteImage`, the two `DeferredMedia`

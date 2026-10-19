@@ -18,7 +18,7 @@ use crate::ignore_poison::IgnorePoison;
 
 use super::content_kind::ViewerContentKind;
 use super::encoding::FileEncoding;
-use super::markdown_session::MarkdownDocument;
+use super::markdown_document::MarkdownDocument;
 use super::materialize::PreviewTemp;
 use super::origin::SourceOrigin;
 use super::source::OpenedFile;

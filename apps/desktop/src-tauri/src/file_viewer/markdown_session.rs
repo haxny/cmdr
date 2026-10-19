@@ -10,10 +10,9 @@
 //! (`markdown_images.rs`). The open stays as quick as any other; the render is its own
 //! call, and the images load after it.
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use serde::Serialize;
 
@@ -24,11 +23,10 @@ use super::content_kind::{
     CLASSIFY_HEAD_LEN, MARKDOWN_RENDER_CAP_BYTES, ViewerContentKind, is_markdown_extension, is_renderable_markdown,
 };
 use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, decode_line, detect_from_head};
-use super::markdown_images::{ImageTarget, RemoteImage, VolumeImage, resolve_image_src};
+use super::markdown_document::MarkdownDocument;
 use super::markdown_links::{MarkdownLink, resolve_link};
-use super::markdown_render::{ImageMarker, render_markdown};
+use super::markdown_render::render_markdown;
 use super::materialize::PreviewTemp;
-use super::media;
 use super::media_backend::MediaBackend;
 use super::origin::SourceOrigin;
 use super::session_store::{
@@ -46,78 +44,6 @@ pub struct MarkdownRender {
     pub html: String,
     /// Whether any image is on the web, so the view offers to load them.
     pub has_remote_images: bool,
-}
-
-/// A Markdown session's document: where it lives, and the image tokens its render minted.
-pub(super) struct MarkdownDocument {
-    /// The document's path on its volume (never a temp copy's), which relative image
-    /// sources resolve against.
-    path: PathBuf,
-    volume_id: String,
-    /// Set when the session closes, so an image pull still running stops.
-    closed: Arc<AtomicBool>,
-    /// Set by the user's "Load remote images"; until then no web image is fetched.
-    remote_allowed: Arc<AtomicBool>,
-    /// The tokens the last render minted, by what they point at, so a repeated image
-    /// shares one token (and one pull).
-    images: Mutex<HashMap<ImageTarget, String>>,
-}
-
-impl MarkdownDocument {
-    fn new(path: PathBuf, volume_id: String) -> Self {
-        Self {
-            path,
-            volume_id,
-            closed: Arc::new(AtomicBool::new(false)),
-            remote_allowed: Arc::new(AtomicBool::new(false)),
-            images: Mutex::new(HashMap::new()),
-        }
-    }
-
-    /// What an image `src` becomes, minting its token on first sight.
-    fn image_marker(&self, src: &str, volume_root: &Path) -> ImageMarker {
-        let target = resolve_image_src(src, &self.path, volume_root);
-        let mut images = self.images.lock_ignore_poison();
-        let token = |images: &mut HashMap<ImageTarget, String>, source: Arc<dyn media::DeferredMedia>| {
-            images
-                .entry(target.clone())
-                .or_insert_with(|| media::mint_deferred_token(source))
-                .clone()
-        };
-        match &target {
-            ImageTarget::Local(path) => {
-                let image = VolumeImage::new(path.clone(), self.volume_id.clone(), Arc::clone(&self.closed));
-                ImageMarker::Local(token(&mut images, Arc::new(image)))
-            }
-            ImageTarget::Remote(url) => {
-                let image = RemoteImage::new(url.clone(), Arc::clone(&self.remote_allowed), Arc::clone(&self.closed));
-                ImageMarker::Remote(token(&mut images, Arc::new(image)))
-            }
-            ImageTarget::Inline => ImageMarker::Inline,
-            ImageTarget::Blocked => ImageMarker::Blocked,
-        }
-    }
-
-    fn has_remote_images(&self) -> bool {
-        self.images
-            .lock_ignore_poison()
-            .keys()
-            .any(|target| matches!(target, ImageTarget::Remote(_)))
-    }
-
-    /// Drops every image token, so none outlives the render it came from.
-    fn drop_images(&self) {
-        for (_, token) in self.images.lock_ignore_poison().drain() {
-            media::drop_token(&token);
-        }
-    }
-
-    /// The session closed: stop the pulls and drop the tokens. Called from the single
-    /// `close_session` choke point, like a media session's token drop.
-    pub(super) fn close(&self) {
-        self.closed.store(true, Ordering::Relaxed);
-        self.drop_images();
-    }
 }
 
 /// Whether the file `opened` from `requested` opens in the rendered Markdown view. Reads
@@ -207,12 +133,12 @@ pub fn render_markdown_session(session_id: &str) -> Result<MarkdownRender, Viewe
         (document, session.open_file()?)
     };
     let text = read_document(&opened)?;
-    let volume_root = volume_root(&document.volume_id);
+    let volume_root = volume_root(document.volume_id());
 
     document.drop_images();
     let for_images = Arc::clone(&document);
     let html = render_markdown(&text, move |src| for_images.image_marker(src, &volume_root));
-    if document.closed.load(Ordering::Relaxed) {
+    if document.is_closed() {
         // The window closed mid-render, after `close` already dropped the tokens.
         document.drop_images();
     }
@@ -232,7 +158,7 @@ pub fn resolve_markdown_link(session_id: &str, href: &str) -> Result<MarkdownLin
         })?;
         markdown_of(session, session_id)?
     };
-    Ok(resolve_link(href, &document.path, &volume_root(&document.volume_id)))
+    Ok(resolve_link(href, document.path(), &volume_root(document.volume_id())))
 }
 
 /// The root of the volume a document lives on, which its relative references can't climb
@@ -250,9 +176,7 @@ pub fn allow_remote_images(session_id: &str) -> Result<(), ViewerError> {
     let session = sessions.get(session_id).ok_or_else(|| ViewerError::SessionNotFound {
         session_id: session_id.to_string(),
     })?;
-    markdown_of(session, session_id)?
-        .remote_allowed
-        .store(true, Ordering::Relaxed);
+    markdown_of(session, session_id)?.allow_remote_images();
     Ok(())
 }
 
