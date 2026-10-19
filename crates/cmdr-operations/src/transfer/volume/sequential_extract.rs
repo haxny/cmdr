@@ -190,7 +190,7 @@ pub(super) async fn extract_sequential_subtree(
                 return Err(failure.naming_the_replaced(planned.replaces.swap_target()));
             }
         };
-        staged.commit(dest_volume).await.map_err(|f| {
+        staged.commit(dest_volume, written.bytes).await.map_err(|f| {
             PathedVolumeError::from_landing(f, &planned.dest_path).naming_the_replaced(planned.replaces.swap_target())
         })?;
         // Landed, so the ` (N)` placeholder the plan pass reserved here is filled.

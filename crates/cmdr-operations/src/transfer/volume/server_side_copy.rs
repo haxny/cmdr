@@ -120,7 +120,7 @@ pub(super) async fn try_server_side_copy(
 
     match outcome {
         Ok(bytes) => {
-            staged.commit(dest_volume).await?;
+            staged.commit(dest_volume, bytes).await?;
             Ok(Some(bytes))
         }
         // ❌ A cancel is never retried more slowly. The intent is consulted as

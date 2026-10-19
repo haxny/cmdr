@@ -22,7 +22,8 @@ fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
 }
 
 /// `land`, for a cell about the landing alone: on a state of its own whose
-/// ledger records nothing on disk.
+/// ledger records nothing on disk, at the size the temp holds (what the write
+/// would have confirmed).
 async fn land_unrecorded(
     dest: &Arc<dyn Volume>,
     temp: &Path,
@@ -31,7 +32,13 @@ async fn land_unrecorded(
 ) -> Result<(), FinalizeFailure> {
     let engine = TestOperations::new();
     let state = state(&engine);
-    land(dest, temp, final_path, landing, &LandingLedger::new(&state, temp)).await
+    let size = dest
+        .get_metadata(temp)
+        .await
+        .ok()
+        .and_then(|entry| entry.size)
+        .unwrap_or(0);
+    land(dest, temp, final_path, landing, size, &LandingLedger::new(&state, temp)).await
 }
 
 /// A staged write must never hand the writer the final name, and the temp it
@@ -88,7 +95,7 @@ async fn a_single_shot_write_targets_the_final_name_and_needs_no_landing() {
     // The backend wrote the whole file in one shot; committing is a no-op
     // that must not touch the destination.
     inner.create_file(Path::new("/notes.txt"), b"NEW").await.unwrap();
-    staged.commit(&dest).await.unwrap();
+    staged.commit(&dest, 3).await.unwrap();
     assert!(inner.exists(Path::new("/notes.txt")).await);
 }
 
@@ -148,7 +155,7 @@ async fn commit_lands_the_bytes_and_stops_tracking_them() {
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
 
-    staged.commit(&dest).await.unwrap();
+    staged.commit(&dest, 3).await.unwrap();
 
     assert!(inner.exists(Path::new("/notes.txt")).await);
     assert!(!inner.exists(&temp).await);
@@ -406,7 +413,7 @@ async fn a_refused_landing_takes_its_temp_away_and_stops_tracking_it() {
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
 
-    let outcome = staged.commit(&dest).await;
+    let outcome = staged.commit(&dest, 3).await;
 
     assert!(
         matches!(
@@ -494,7 +501,7 @@ async fn a_landing_dropped_midway_leaves_its_temp_to_the_abandoned_write_sweep()
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
 
-    let landed = tokio::time::timeout(Duration::from_millis(50), staged.commit(&dest)).await;
+    let landed = tokio::time::timeout(Duration::from_millis(50), staged.commit(&dest, 3)).await;
 
     assert!(landed.is_err(), "the rename is rigged never to answer");
     assert_eq!(
@@ -626,7 +633,7 @@ async fn a_claimed_name_landing_is_on_disk_as_a_landing_before_it_clears_the_way
 
     fixture
         .staged
-        .commit(&dest)
+        .commit(&dest, 13)
         .await
         .expect("the claimed name is cleared and landed");
 
@@ -664,7 +671,7 @@ async fn a_landing_cut_off_after_clearing_the_way_is_finished_by_the_next_launch
     let fixture = claimed_landing("staged-write-landing-cut-off", true).await;
     let dest: Arc<dyn Volume> = Arc::clone(&fixture.dest) as Arc<dyn Volume>;
 
-    let cut_off = tokio::time::timeout(Duration::from_millis(100), fixture.staged.commit(&dest)).await;
+    let cut_off = tokio::time::timeout(Duration::from_millis(100), fixture.staged.commit(&dest, 13)).await;
     assert!(
         cut_off.is_err(),
         "the rename after the delete is rigged never to answer"

@@ -487,7 +487,7 @@ async fn produce_direct(
         stage.abandon(&dest_volume).await;
         return Err(EditError::Cancelled);
     }
-    publish_stage(stage, &dest_volume, &archive_path, replace_existing).await?;
+    publish_stage(stage, &dest_volume, &archive_path, replace_existing, written).await?;
     Ok(())
 }
 
@@ -594,7 +594,7 @@ async fn produce_via_spool(
         stage.abandon(&dest_volume).await;
         return Err(EditError::Cancelled);
     }
-    publish_stage(stage, &dest_volume, &archive_path, replace_existing).await?;
+    publish_stage(stage, &dest_volume, &archive_path, replace_existing, uploaded).await?;
     Ok(())
 }
 
@@ -615,9 +615,11 @@ async fn publish_stage(
     dest_volume: &Arc<dyn Volume>,
     archive_path: &Path,
     replace_existing: bool,
+    // The archive's size, as the validation just confirmed it.
+    size: u64,
 ) -> Result<(), EditError> {
     if !replace_existing {
-        stage.commit(dest_volume).await.map_err(|failure| {
+        stage.commit(dest_volume, size).await.map_err(|failure| {
             EditError::Op(super::super::transfer::volume::map_finalize_failure(
                 archive_path,
                 failure,

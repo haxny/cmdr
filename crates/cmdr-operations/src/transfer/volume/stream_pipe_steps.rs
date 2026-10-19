@@ -297,7 +297,7 @@ impl FileRun<'_> {
         let lost = lost.union(written.refused());
         let landing_from = staged.target().to_path_buf();
         let started_on = StartedOn::now(&[self.source_volume, dest_volume]);
-        match staged.commit(dest_volume).await {
+        match staged.commit(dest_volume, bytes).await {
             Ok(()) => {
                 // Landed, so a ` (N)` placeholder at the name is filled, not ours
                 // to take back (`naming.rs::take_back_unfilled_reservations`).

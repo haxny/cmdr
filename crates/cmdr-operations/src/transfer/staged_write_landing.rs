@@ -61,11 +61,10 @@ use cmdr_fs::volume::{Volume, VolumeError};
 ///
 /// ❗ **Before it clears the way, the temp is re-recorded as a landing**
 /// ([`LandingLedger::hold_for_landing`]): on disk as an `ItemKind::Landing`
-/// before the delete goes out, and out of the operation's in-flight set, so no
-/// in-operation sweep may delete it and a crash leaves a record the sweep
-/// finishes the landing from. That needs the temp's size, which one stat reads
-/// on this path alone; a temp that can't be measured is not cleared for. The
-/// landing record retires when the rename lands it, when the rescue gives it a
+/// at `size` (the byte count the write confirmed) before the delete goes out,
+/// and out of the operation's in-flight set, so no in-operation sweep may
+/// delete it and a crash leaves a record the sweep finishes the landing from.
+/// The landing record retires when the rename lands it, when the rescue gives it a
 /// real name, or when the refused delete left the name taken (the temp is a
 /// spare copy then, and goes or turns back into a temp). A landing that ends
 /// unsure, or is cut off, leaves it recorded for the sweep.
@@ -78,6 +77,7 @@ pub(super) async fn land(
     temp: &Path,
     final_path: &Path,
     landing: LandingName,
+    size: u64,
     ledger: &LandingLedger<'_>,
 ) -> Result<(), FinalizeFailure> {
     let discard = || async {
@@ -116,26 +116,7 @@ pub(super) async fn land(
     // From here the way may be cleared, and then the temp is the only complete
     // copy at the destination: it's recorded as a landing first, on disk, and
     // no sweep may touch it.
-    let measured = match dest_volume.get_metadata(temp).await {
-        Ok(entry) if !entry.is_directory && !entry.is_symlink => entry.size,
-        Ok(_) => None,
-        // The same rule as the first rename's: a transport fault leaves the
-        // temp registered for the caller's settle.
-        Err(error) => {
-            if error.transport_fault().is_none() {
-                discard().await;
-            }
-            return Err(error.into());
-        }
-    };
-    // A temp nobody can measure is one no sweep could ever prove whole, so
-    // nothing is cleared for it: the name keeps what it holds, and the temp is
-    // a spare copy like any other landing that cleared nothing.
-    let Some(expected_size) = measured else {
-        discard().await;
-        return Err(first.into());
-    };
-    let held = ledger.hold_for_landing(final_path, expected_size).await;
+    let held = ledger.hold_for_landing(final_path, size).await;
     if let Err(refused) = dest_volume.delete(final_path).await
         && !matches!(refused, VolumeError::NotFound(_))
     {

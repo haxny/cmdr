@@ -278,11 +278,15 @@ impl StagedWrite {
     /// sweep, which is safe: the name was never cleared, and the source still
     /// holds the bytes.
     ///
+    /// `size` is the byte count the write confirmed. A landing that clears the
+    /// way records the temp at that size (`ItemKind::Landing::expected_size`),
+    /// which is how a later sweep tells a whole temp from a short one.
+    ///
     /// `Err(VolumeError::NotSupported)` means this destination can't rename (or
     /// delete), so it can't stage at all; the caller may fall back to writing at
     /// the final name, and `land` has already taken the temp away. No production
     /// backend takes that branch.
-    pub(crate) async fn commit(mut self, dest_volume: &Arc<dyn Volume>) -> Result<(), FinalizeFailure> {
+    pub(crate) async fn commit(mut self, dest_volume: &Arc<dyn Volume>, size: u64) -> Result<(), FinalizeFailure> {
         let Some(temp) = self.temp.take() else {
             // Nothing of ours to land: the caller stages and lands its own temp,
             // and a single-shot write already sits at its final name.
@@ -292,7 +296,7 @@ impl StagedWrite {
         // name it rather than showing a task still "streaming" at EOF.
         set_task_phase(TaskPhase::Finalizing);
         let ledger = LandingLedger::new(&self.state, temp.path());
-        land(dest_volume, temp.path(), &self.final_path, self.landing, &ledger).await
+        land(dest_volume, temp.path(), &self.final_path, self.landing, size, &ledger).await
     }
 
     /// Atomically replaces the final name with a completed generated file.

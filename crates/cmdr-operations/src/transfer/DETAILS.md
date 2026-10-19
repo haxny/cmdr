@@ -1083,9 +1083,9 @@ usually isn't, and a speculative delete would burn one extra round trip per file
 covers.
 
 ❗ **Before the landing clears a name, its temp is recorded as a landing.** From that delete on, the temp may be the
-destination's only copy, so `land` measures it (one stat, on this path only; a temp it can't measure is not cleared for)
-and re-records it as `ItemKind::Landing { destination, expected_size }` through the non-temp barrier: on disk before the
-delete goes out, then the `Temp` record retires and the path leaves `state.in_flight_temps`
+destination's only copy, so `land` re-records it as `ItemKind::Landing { destination, expected_size }`, at the byte
+count the write confirmed (`StagedWrite::commit` takes it, so no stat measures the temp), through the non-temp barrier:
+on disk before the delete goes out, then the `Temp` record retires and the path leaves `state.in_flight_temps`
 (`in_flight_temps::hold_for_landing`). That order means a crash at any moment leaves a record the sweep finishes the
 landing from, ❌ never one it deletes (the rule: `crates/cmdr-operations/DETAILS.md` § "What the sweep does with each
 kind"). The landing record retires when the rename lands it, when the rescue below gives it a real name, or when the
