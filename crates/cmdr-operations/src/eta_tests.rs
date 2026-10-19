@@ -783,3 +783,68 @@ fn an_operation_with_no_bytes_follows_its_file_count_from_the_start() {
     assert_eq!(first.bottleneck, ProgressAxis::Files);
     assert_eq!(second.bottleneck, ProgressAxis::Files);
 }
+
+/// Drives a big-file move sampled every 200 ms: `first_completion` lands that
+/// long after the seed, and from there one file completes every 45 s while
+/// bytes stream at 40 MB/s. Returns the stats after each sample.
+fn big_files_every_45_s(first_completion: Duration, until_ms: u64) -> Vec<EtaStats> {
+    const FILE_MS: u64 = 45_000;
+    let start = Instant::now();
+    let mut est = EtaEstimator::new();
+    let bytes_total = 19_000_000_000_u64;
+    let files_total = 15_usize;
+    est.update_at(start, WriteOperationPhase::Copying, 0, bytes_total, 0, files_total);
+    let mut out = vec![est.update_at(
+        start + first_completion,
+        WriteOperationPhase::Copying,
+        0,
+        bytes_total,
+        1,
+        files_total,
+    )];
+    for step in 1..=until_ms / 200 {
+        let ms = step * 200;
+        let files = 1 + (ms / FILE_MS) as usize;
+        out.push(est.update_at(
+            at(start, ms),
+            WriteOperationPhase::Copying,
+            ms * 40_000,
+            bytes_total,
+            files,
+            files_total,
+        ));
+    }
+    out
+}
+
+/// Regression anchor for a 15-file video move that read "17 629 files/s": a
+/// thumbnail completed microseconds after the seed, the first post-seed sample
+/// took `1 / 57 µs` as the rate, and with completions 45 s apart nothing pulled
+/// it back down.
+#[test]
+fn a_completion_right_after_the_seed_does_not_read_as_thousands_per_second() {
+    let samples = big_files_every_45_s(Duration::from_micros(57), 100_000);
+    let worst = samples
+        .iter()
+        .map(|stats| stats.files_per_second)
+        .fold(0.0_f32, f32::max);
+    assert!(
+        worst < 1.0,
+        "files_per_second peaked at {worst} on a copy completing one file every 45 s"
+    );
+}
+
+/// The files rate is a count over the time it took, so it has to be measured
+/// between completions. Measured per 200 ms emit, each completion reads as
+/// `1 / 0.2 s = 5 files/s` however long the file took.
+#[test]
+fn the_files_rate_follows_the_time_between_completions_not_the_emit_interval() {
+    let samples = big_files_every_45_s(Duration::from_millis(200), 181_000);
+    let last = samples.last().expect("samples");
+    let expected = 1.0 / 45.0;
+    assert!(
+        (last.files_per_second - expected).abs() < expected * 0.2,
+        "files_per_second = {} expected ~{expected:.3} (one file per 45 s)",
+        last.files_per_second,
+    );
+}

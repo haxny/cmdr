@@ -18,6 +18,16 @@
 //! `α = 1 - exp(-Δt / τ)`, so the response is identical whether progress events
 //! arrive every 50 ms or every 500 ms.
 //!
+//! ## Files are counted between completions
+//!
+//! Bytes flow continuously, so bytes per emit interval is a fair sample. Files
+//! land one whole file at a time, so the files rate is measured over the
+//! working time from one completion to the next, ❌ never per emit: per emit,
+//! every completion reads as `1 / 0.2 s = 5 files/s` however long the file
+//! took. A window shorter than [`MIN_FILES_WINDOW`] waits for the next
+//! completion, which is what stops a thumbnail landing microseconds after the
+//! seed from reading as "17 629 files/s" on a video move.
+//!
 //! ## The clock is WORKING time, not wall time
 //!
 //! Every interval is measured minus whatever of it a person spent deciding —
@@ -64,6 +74,12 @@ const MIN_SAMPLES_FOR_ETA: u32 = 2;
 /// current phase (wall time minus every human wait). Catches the "200 ms in,
 /// rate is 50 MB/s" → "ETA = 0 s" footgun before the EWMA settles.
 const MIN_ELAPSED_FOR_ETA: Duration = Duration::from_millis(800);
+
+/// The shortest stretch of working time a files measurement may span. Just
+/// under one 200 ms emit interval, so every emit that carries a completion can
+/// measure, while a completion an off-cadence event reports microseconds after
+/// the last one folds into the next window instead of dividing by nothing.
+const MIN_FILES_WINDOW: Duration = Duration::from_millis(150);
 
 /// How far the other axis's ETA must lead the bottleneck's before it counts as
 /// leading: 10 %, so two axes running neck and neck don't trade places.
@@ -157,6 +173,13 @@ struct PhaseState {
     /// EWMA in absolute units per second, toward the phase target (forward or rollback).
     bytes_rate: f64,
     files_rate: f64,
+    /// Where the open files window starts: `working_elapsed` and the file count
+    /// at the last files measurement (or the phase start).
+    files_window_start: Duration,
+    files_window_count: usize,
+    /// Whether `files_rate` holds a measurement yet. The first one sets it
+    /// directly; later ones blend in.
+    files_measured: bool,
     samples: u32,
     /// The bottleneck as last reported.
     axis: ProgressAxis,
@@ -213,6 +236,9 @@ impl EtaEstimator {
                 last_files: files_done,
                 bytes_rate: 0.0,
                 files_rate: 0.0,
+                files_window_start: Duration::ZERO,
+                files_window_count: files_done,
+                files_measured: false,
                 samples: 0,
                 axis,
                 challenger_since: None,
@@ -243,61 +269,76 @@ impl EtaEstimator {
             state.last_human_wait = human_wait_total;
             state.last_bytes = bytes_done;
             state.last_files = files_done;
+            state.files_window_count = files_done;
             return compute_stats(state, bytes_done, bytes_total, files_done, files_total);
         }
 
         // Δ toward the phase target. A filling bar grows the counters; a draining
         // one shrinks them. `saturating_sub` neutralizes spurious regressions (a
         // late event arriving after a counter reset, etc.).
-        let (delta_bytes, delta_files) = if counters_drain {
-            (
-                state.last_bytes.saturating_sub(bytes_done) as f64,
-                state.last_files.saturating_sub(files_done) as f64,
-            )
-        } else {
-            (
-                bytes_done.saturating_sub(state.last_bytes) as f64,
-                files_done.saturating_sub(state.last_files) as f64,
-            )
-        };
+        let delta_bytes = toward_target(counters_drain, state.last_bytes, bytes_done) as f64;
+        let completed_now = toward_target(counters_drain, state.last_files as u64, files_done as u64) > 0;
 
         let inst_bytes_rate = delta_bytes / dt;
-        let inst_files_rate = delta_files / dt;
-
-        // Time-weighted EWMA: α = 1 − exp(−Δt / τ). At Δt = τ, α ≈ 0.63 (most
-        // of the weight on the new sample). At Δt ≪ τ, α small (heavy smoothing).
-        let alpha = 1.0 - (-dt / EWMA_TAU_SECS).exp();
 
         if state.samples == 0 {
             // First post-seed sample: initialize the EWMA directly. Starting
             // from 0 with α ≈ 0.06 means it would take ~30 samples to reach the
             // true rate, which is too sluggish for fast-finishing operations.
             state.bytes_rate = inst_bytes_rate;
-            state.files_rate = inst_files_rate;
         } else {
-            state.bytes_rate = alpha * inst_bytes_rate + (1.0 - alpha) * state.bytes_rate;
-            // Only update files_rate when a file actually completed. File
-            // completions are bursty (one whole file at a time), so EWMA-ing
-            // `delta_files == 0` samples decays the rate toward zero during
-            // long single-file streams (e.g. a 500 MB video over MTP). That
-            // makes `eta_files` explode, and `max(eta_bytes, eta_files)` picks
-            // the bogus value (a 393 h ETA on a 22 min copy). Treat zero-delta
-            // samples as "no information"; keep the last positive rate until
-            // another completion arrives.
-            if delta_files > 0.0 {
-                state.files_rate = alpha * inst_files_rate + (1.0 - alpha) * state.files_rate;
-            }
+            state.bytes_rate = ewma(state.bytes_rate, inst_bytes_rate, dt);
         }
 
         state.last_t = now;
         state.last_human_wait = human_wait_total;
         state.working_elapsed += Duration::from_secs_f64(dt);
+
+        // The files window closes only on a completion. Between completions
+        // there's no information, and EWMA-ing the empty samples decayed the
+        // rate toward zero during a long single-file stream (a 500 MB video
+        // over MTP), which made `eta_files` explode: a 393 h ETA on a 22 min
+        // copy. The rate holds until the next completion instead.
+        let window = state.working_elapsed.saturating_sub(state.files_window_start);
+        if completed_now && window >= MIN_FILES_WINDOW {
+            let window_secs = window.as_secs_f64();
+            let completed = toward_target(counters_drain, state.files_window_count as u64, files_done as u64) as f64;
+            let inst_files_rate = completed / window_secs;
+            state.files_rate = if state.files_measured {
+                ewma(state.files_rate, inst_files_rate, window_secs)
+            } else {
+                inst_files_rate
+            };
+            state.files_measured = true;
+            state.files_window_start = state.working_elapsed;
+            state.files_window_count = files_done;
+        }
         state.last_bytes = bytes_done;
         state.last_files = files_done;
         state.samples = state.samples.saturating_add(1);
 
         compute_stats(state, bytes_done, bytes_total, files_done, files_total)
     }
+}
+
+/// How far a counter moved toward the phase target since `last`. A filling bar
+/// grows its counters; a draining one shrinks them. `saturating_sub`
+/// neutralizes spurious regressions (a late event arriving after a counter
+/// reset, etc.).
+fn toward_target(counters_drain: bool, last: u64, now: u64) -> u64 {
+    if counters_drain {
+        last.saturating_sub(now)
+    } else {
+        now.saturating_sub(last)
+    }
+}
+
+/// Time-weighted EWMA step: α = 1 − exp(−Δt / τ). At Δt = τ, α ≈ 0.63 (most of
+/// the weight on the new sample). At Δt ≪ τ, α small (heavy smoothing). Weighting
+/// by the span a sample covers keeps the response the same at any cadence.
+fn ewma(rate: f64, sample: f64, span_secs: f64) -> f64 {
+    let alpha = 1.0 - (-span_secs / EWMA_TAU_SECS).exp();
+    alpha * sample + (1.0 - alpha) * rate
 }
 
 fn compute_stats(

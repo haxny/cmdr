@@ -447,9 +447,21 @@ When one axis has zero remaining work, its ETA is `0` and the other axis dominat
 of being pulled back toward historical numbers. Time-weighted means the response is the same whether progress events
 arrive every 50 ms or every 500 ms.
 
+**Files are counted between completions, not per emit.** Bytes flow continuously, so bytes over one emit interval is a
+fair sample. Files land whole, so the files rate is the completions since the last measurement over the WORKING time
+since it, measured only on a sample that carries a completion, with α weighted by that same span. Per emit, every
+completion read as `1 / 0.2 s = 5 files/s` however long the file took, and the first post-seed sample took `1 / Δt`
+straight: a thumbnail landing 57 µs after the seed put "17 629 files/s" on a 15-file video move, and with completions 45
+s apart nothing pulled it back. A window shorter than `MIN_FILES_WINDOW` (150 ms, just under one emit) stays open for
+the next completion. Between completions the rate holds (EWMA-ing the empty samples once decayed it to ~0 and made
+`eta_files` explode to a 393 h ETA on a 22 min MTP copy). Pinned in `eta_tests.rs`
+(`a_completion_right_after_the_seed_*`, `the_files_rate_follows_the_time_between_completions_*`,
+`long_single_file_stream_*`).
+
 **Warm-up:** the estimator returns `None` for ETA until it has ≥ 2 samples in the current phase AND ≥ 800 ms of WORKING
 time (`MIN_SAMPLES_FOR_ETA`, `MIN_ELAPSED_FOR_ETA`). This kills the early "200 ms in, rate = 50 MB/s → ETA = 0 s"
-footgun. Rates are populated as soon as we have the first delta; only the ETA is gated.
+footgun. The bytes rate populates on the first delta and the files rate on the first completion window; only the ETA is
+gated.
 
 **The rate window measures WORKING time, never wall time.** Each `EtaSample` carries the operation's cumulative
 human-wait reading (`human_wait.rs`), and `update()` subtracts whatever accrued since the last sample from the elapsed
