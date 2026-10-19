@@ -40,6 +40,25 @@ describe('FallbackErrorContent', () => {
     expect(target.querySelector('.oversized-more')).toBeNull()
   })
 
+  it('lists two offending files that share a name (copied from different folders)', async () => {
+    // `OversizedFile.name` is a basename, so copying two folders that each hold a big
+    // `video.mp4` repeats it. A name-keyed `{#each}` threw `each_key_duplicate` here.
+    const target = mountFallback({
+      type: 'files_too_large_for_filesystem',
+      filesystem: 'fat32',
+      maxSize: 4 * 1024 * 1024 * 1024,
+      totalCount: 2,
+      files: [
+        { name: 'video.mp4', size: 5 * 1024 * 1024 * 1024 },
+        { name: 'video.mp4', size: 6 * 1024 * 1024 * 1024 },
+      ],
+    })
+    await tick()
+
+    const names = [...target.querySelectorAll('.oversized-files .file-name')].map((el) => el.textContent)
+    expect(names).toEqual(['video.mp4', 'video.mp4'])
+  })
+
   it('lists the single offending file for a one-file FAT32 too-large error', async () => {
     const target = mountFallback({
       type: 'files_too_large_for_filesystem',

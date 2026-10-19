@@ -31,7 +31,9 @@
     <p id="error-dialog-message" class="message selectable">{@html friendly.message}</p>
     {#if oversizedFiles.length > 0}
         <ul class="oversized-files selectable">
-            {#each oversizedFiles as file (file.name)}
+            <!-- Keyed by index: `name` is a basename, so two copied folders that each hold a
+                 `video.mp4` repeat it, and a name key throws. The list never reorders. -->
+            {#each oversizedFiles as file, index (index)}
                 <li><span class="file-name">{file.name}</span><span class="file-size">{formatByteSize(file.size)}</span></li>
             {/each}
         </ul>

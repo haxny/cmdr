@@ -401,7 +401,9 @@
         <!-- Scrollable file list -->
         <div class="file-list-container">
             <div class="file-list" role="list">
-                {#each visibleItems as item, index (item.name)}
+                <!-- Keyed by full path: a search-results delete spans folders, so two rows can
+                     share a name (every folder's `.DS_Store`), and a name key throws. -->
+                {#each visibleItems as item, index (sourcePaths[index] ?? index)}
                     <div class="file-list-item" role="listitem">
                         <span class="item-icon" aria-hidden="true">
                             <Icon name={item.isDirectory ? 'folder' : 'file'} size={14} />
