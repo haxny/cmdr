@@ -67,10 +67,12 @@ finished run should never produce.
 ## Decision: rebase by default, capped
 
 Decision: when `origin/main` moved, `land` rebases onto it before pushing, and when it moves while CI runs, it rebases
-and waits for CI again, up to `maxCIRuns` (3) runs. Why: CI runs on the rebased SHA anyway, so a textually clean rebase
-that breaks something still can't land, and the old "rerun with `-rebase`" step only cost an agent a round trip. The cap
-is there because each run takes 25–35 min: on a `main` busy enough to move under three runs in a row, an unbounded loop
-would spin for hours without saying so.
+and waits for CI again, up to `maxCIRuns` (8) runs. Why: CI runs on the rebased SHA anyway, so a textually clean rebase
+that breaks something still can't land, and the old "rerun with `-rebase`" step only cost an agent a round trip. Eight,
+because several sessions landing at once each restart the others' CI, and a land that gives up after three hands the
+wait back to a person for nothing. A re-run is warmer than the first (`rust-cache` restores `target/`; Desktop (Rust)
+went from 34 to 18 min on PR #497's second run, 2026-10-19). The cap stays so a `main` that never settles can't spin a
+land for a whole day without saying so.
 
 Exception: a branch carrying a merge commit (a contributor's PR record, `docs/guides/handling-prs.md`; a release
 merge-back, `docs/guides/releasing.md`) is never rebased, since a plain rebase flattens the merge. `land` stops and

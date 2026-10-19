@@ -24,7 +24,7 @@ only way commits reach `main`: nobody, admin included, lands a SHA without a gre
   still demands `CI OK` on that exact SHA, SHAs stay identical, and GitHub marks the PR merged. Probe evidence:
   `DETAILS.md`.
 - **Re-run it at any stage.** A red CI prints the failed jobs and `gh run rerun <id> --failed`. When `main` moves while
-  CI runs, it rebases and runs CI again, three runs at most (`DETAILS.md` § Decision: rebase by default, capped).
+  CI runs, it rebases and runs CI again, eight runs at most (`DETAILS.md` § Decision: rebase by default, capped).
 - **It never rebases a branch carrying a merge commit** (a contributor's PR record, a release merge-back): it stops and
   names the manual fix, since a plain rebase flattens the merge.
 - **A newer push cancels the PR's running CI** (`cancel-in-progress` in `ci.yml`), so a watcher follows the newest run.

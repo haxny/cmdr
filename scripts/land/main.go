@@ -50,9 +50,10 @@ const (
 	pollEvery  = 30 * time.Second
 	// How long a CI run gets to show up after the push that starts it.
 	appearWithin = 5 * time.Minute
-	// How many CI runs one land waits through while `origin/main` keeps moving under it. Each
-	// takes 25–35 min, so a busier `main` than this needs a person, not a fourth run.
-	maxCIRuns = 3
+	// How many CI runs one land waits through while `origin/main` keeps moving under it. High
+	// enough that several sessions landing at once take turns rather than giving up; a `main`
+	// busier than this needs a person, not a ninth run.
+	maxCIRuns = 8
 )
 
 // errMainMoved: `origin/main` moved while CI ran, so the green SHA no longer fast-forwards it.
