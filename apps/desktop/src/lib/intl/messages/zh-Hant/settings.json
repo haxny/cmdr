@@ -84,9 +84,9 @@
   "@settings.appearance.sizeColors.opt.rainbow": {
     "sourceHash": "b1f7b2e"
   },
-  "settings.appearance.sizeColors.keywords": "大小, 顏色, 色彩, 分級, 彩虹, 醒目提示, 標示",
+  "settings.appearance.sizeColors.keywords": "大小, 顏色, 色彩, 分級, 彩虹, 醒目提示, 標示, 應用程式顏色, 強調色彩, 深淺, 色調",
   "@settings.appearance.sizeColors.keywords": {
-    "sourceHash": "8eb9856"
+    "sourceHash": "f1249f0"
   },
   "settings.appearance.dateColors.label": "日期顏色",
   "@settings.appearance.dateColors.label": {
@@ -109,9 +109,9 @@
   "@settings.appearance.dateColors.opt.wilting": {
     "sourceHash": "2aa30f1"
   },
-  "settings.appearance.dateColors.keywords": "日期, 顏色, 色彩, 新舊, 修改日期, 修改時間, 檔案年齡, 枯萎, 新鮮, 舊檔案",
+  "settings.appearance.dateColors.keywords": "日期, 顏色, 色彩, 新舊, 修改日期, 修改時間, 檔案年齡, 枯萎, 新鮮, 舊檔案, 應用程式顏色, 強調色彩, 褪色, 淡出",
   "@settings.appearance.dateColors.keywords": {
-    "sourceHash": "cc85453"
+    "sourceHash": "65cbe5d"
   },
   "settings.appearance.dateTimeFormat.label": "日期和時間格式",
   "@settings.appearance.dateTimeFormat.label": {
@@ -1478,7 +1478,7 @@
   },
   "settings.whatsNew.showOnUpdate.keywords": "更新記錄, 變更記錄, 版本資訊, 發行說明, 新功能, 更新說明",
   "@settings.whatsNew.showOnUpdate.keywords": {
-    "sourceHash": "ef19c9d"
+    "sourceHash": "6a9e154"
   },
   "settings.whatsNew.lastSeenVersion.label": "上次看到的變更記錄版本",
   "@settings.whatsNew.lastSeenVersion.label": {
@@ -1618,7 +1618,7 @@
   },
   "settings.fileViewer.suppressBinaryWarning.keywords": "檢視器, 二進位, 影像, 原始, 警告, 橫幅, 快速查看",
   "@settings.fileViewer.suppressBinaryWarning.keywords": {
-    "sourceHash": "12a2ca0"
+    "sourceHash": "1508efc"
   },
   "settings.fileExplorer.suppressQuickLookHint.label": "不顯示空白鍵的快速查看提示",
   "@settings.fileExplorer.suppressQuickLookHint.label": {
@@ -1630,7 +1630,7 @@
   },
   "settings.fileExplorer.suppressQuickLookHint.keywords": "快速查看, 預覽, 空白鍵, 提示, 提醒",
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
-    "sourceHash": "d3a493e"
+    "sourceHash": "8f4a843"
   },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "每個窗格記住的已關閉分頁數量",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
@@ -1800,9 +1800,9 @@
   "@settings.advanced.serviceResolveTimeout.description": {
     "sourceHash": "5cf231d"
   },
-  "settings.advanced.serviceResolveTimeout.keywords": "解析, 逾時, 超時, 服務",
+  "settings.advanced.serviceResolveTimeout.keywords": "解析, 逾時, 超時, 服務, 服務探索, 網路探索, 探索, 查詢, 區域網路, 本地網路, 等待",
   "@settings.advanced.serviceResolveTimeout.keywords": {
-    "sourceHash": "7f5c11b"
+    "sourceHash": "c4e3d7c"
   },
   "settings.search.recentSearches.maxCount.label": "要記住的最近搜尋數",
   "@settings.search.recentSearches.maxCount.label": {
@@ -2243,9 +2243,9 @@
   "@settings.askCmdr.interactiveModel.placeholder": {
     "sourceHash": "2631f3d"
   },
-  "settings.askCmdr.interactiveModel.keywords": "人工智慧, 聊天, 對話, 助理, 模型, 互動",
+  "settings.askCmdr.interactiveModel.keywords": "人工智慧, 聊天, 對話, 助理, 模型, 覆寫, 取代, 其他模型, 另一個模型",
   "@settings.askCmdr.interactiveModel.keywords": {
-    "sourceHash": "2e3c2d7"
+    "sourceHash": "e55416b"
   },
   "settings.askCmdr.chatMemorySize.label": "聊天記憶大小",
   "@settings.askCmdr.chatMemorySize.label": {
@@ -2295,9 +2295,9 @@
   "@settings.askCmdr.wakeDelay.summary": {
     "sourceHash": "ad03c00"
   },
-  "settings.askCmdr.wakeDelay.keywords": "延遲, 頻率, 節奏, 等待, 多久, 安靜, 打擾, 主動",
+  "settings.askCmdr.wakeDelay.keywords": "延遲, 頻率, 時機, 時間, 等待, 多久, 安靜, 打擾, 主動",
   "@settings.askCmdr.wakeDelay.keywords": {
-    "sourceHash": "800df1b"
+    "sourceHash": "f8bcbd5"
   },
   "settings.askCmdr.wakeToast.label": "有建議出現時顯示提示",
   "@settings.askCmdr.wakeToast.label": {
@@ -2894,9 +2894,9 @@
   "@settings.securityLog.showInFinder": {
     "sourceHash": "c2a9c77"
   },
-  "settings.updates.showSecurityLog.keywords": "安全性, 記錄, 日誌, 稽核, 事件, 檔案, 開啟",
+  "settings.updates.showSecurityLog.keywords": "安全性, 記錄, 日誌, 稽核, 事件, 檔案, 開啟, 顯示, 資料夾, 位置",
   "@settings.updates.showSecurityLog.keywords": {
-    "sourceHash": "9ce9447"
+    "sourceHash": "a5708ab"
   },
   "settings.fileSystemWatching.globalShortcutHint": "在「鍵盤快速鍵 → 前往最新下載項目（全域）」底下更改這個快速鍵。",
   "@settings.fileSystemWatching.globalShortcutHint": {
@@ -3160,9 +3160,9 @@
   "@settings.adb.status.notWatching": {
     "sourceHash": "6e1936c"
   },
-  "settings.adb.status.keywords": "狀態, 重新檢查, 找到, 監看, 安裝",
+  "settings.adb.status.keywords": "狀態, 重新檢查, 找到, 未找到, 偵測, 偵測手機, 安裝, 監看, 已連線",
   "@settings.adb.status.keywords": {
-    "sourceHash": "32678b7"
+    "sourceHash": "3e05996"
   },
   "settings.adb.recheck": "重新檢查",
   "@settings.adb.recheck": {

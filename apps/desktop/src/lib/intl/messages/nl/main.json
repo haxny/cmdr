@@ -39,7 +39,7 @@
   "@main.dockPinNudge.added": {
     "sourceHash": "61bec58"
   },
-  "main.dockPinNudge.addedButDockDidNotRestart": "Cmdrs symbool staat klaar, maar het Dock is nog niet opnieuw geladen. Je ziet het de volgende keer dat je inlogt.",
+  "main.dockPinNudge.addedButDockDidNotRestart": "Het symbool van Cmdr staat klaar, maar het Dock is nog niet opnieuw geladen. Je ziet het de volgende keer dat je inlogt.",
   "@main.dockPinNudge.addedButDockDidNotRestart": {
     "sourceHash": "7a4e3bb"
   },

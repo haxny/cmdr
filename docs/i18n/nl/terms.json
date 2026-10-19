@@ -720,7 +720,7 @@
     "accept": ["crashrapporten", "gecrasht", "crash", "vastgelopen"],
     "chosen": "crashrapport",
     "confidence": "high",
-    "forms": "the setting label stays Crashrapporten sturen; a sentence that covers both crash and background problem says een rapport",
+    "forms": "the setting label stays Crashrapporten versturen; a sentence that covers both crash and background problem says een rapport",
     "sources": "macOS Crashrapportage (feature); natural compound for the report"
   },
   "create": {
@@ -2843,7 +2843,7 @@
     "chosen": "Verstuur",
     "confidence": "high",
     "decision": "Eén ding, één naam: de interne driftronde",
-    "forms": "button Verstuur; dialog title X versturen (Foutrapport versturen); verb versturen; the toggle label Gebruiksstatistieken sturen and Crashrapporten sturen keep sturen",
+    "forms": "button Verstuur; dialog title X versturen (Foutrapport versturen); verb versturen; toggle labels too (Gebruiksstatistieken versturen, Crashrapporten versturen); plain sturen only in running prose",
     "sources": "macOS Finder (Send → Verstuur, Sending… → Versturen…)"
   },
   "server": {
@@ -3388,7 +3388,7 @@
     "chosen": "gebruik",
     "confidence": "high",
     "decision": "Usage stats: \"anonieme\" dropped, \"een willekeurige id\" named",
-    "forms": "usage stats → gebruiksstatistieken (toggle and onboarding title Gebruiksstatistieken sturen); spending → Uitgaven; a random id → een willekeurige id; tied to → gekoppeld aan",
+    "forms": "usage stats → gebruiksstatistieken (toggle and onboarding title Gebruiksstatistieken versturen); spending → Uitgaven; a random id → een willekeurige id; tied to → gekoppeld aan",
     "sources": "MS (usage → gebruik, spending → uitgaven, random → willekeurig, identifier → id)"
   },
   "usb-debugging": {

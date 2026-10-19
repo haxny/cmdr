@@ -459,7 +459,13 @@
   "chip": {
     "chosen": "chip",
     "accept": ["chips"],
-    "forms": "el chip del repo",
+    "forms": "el chip del repo; Settings: Mostrar el chip del repositorio, Chip del repositorio",
+    "avoid": [
+      {
+        "form": "insignia",
+        "why": "taken by the media index's per-image status badges (settings.mediaIndex.showFileStatusIcons.*); the repo element needs its own name"
+      }
+    ],
     "confidence": "tentative",
     "sources": "no pile hit for the UI-pill sense (2026-10-19); the loanword is the everyday Spanish UI word, and etiqueta is taken by tag"
   },
@@ -788,6 +794,13 @@
   "debounce": {
     "chosen": "retardo",
     "accept": ["demora", "espera"],
+    "forms": "Retardo de la vigilancia de archivos (the label)",
+    "avoid": [
+      {
+        "form": "antirrebote",
+        "why": "electronics jargon; the setting is a plain wait before refreshing"
+      }
+    ],
     "confidence": "tentative",
     "sources": "no pile hit for debounce (2026-10-19); retardo names the wait itself, which is what the setting tunes"
   },

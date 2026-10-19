@@ -83,9 +83,9 @@
   "@settings.appearance.sizeColors.opt.rainbow": {
     "sourceHash": "b1f7b2e"
   },
-  "settings.appearance.sizeColors.keywords": "kích cỡ, kích thước, màu, màu sắc, cấp, cầu vồng, ứng dụng, tô sáng, làm nổi bật",
+  "settings.appearance.sizeColors.keywords": "kích cỡ, kích thước, màu, màu sắc, cấp, cầu vồng, màu ứng dụng, màu nhấn, sắc độ, tông màu, tô sáng, làm nổi bật",
   "@settings.appearance.sizeColors.keywords": {
-    "sourceHash": "8eb9856"
+    "sourceHash": "f1249f0"
   },
   "settings.appearance.dateColors.label": "Màu ngày",
   "@settings.appearance.dateColors.label": {
@@ -107,9 +107,9 @@
   "@settings.appearance.dateColors.opt.wilting": {
     "sourceHash": "2aa30f1"
   },
-  "settings.appearance.dateColors.keywords": "ngày, màu, màu sắc, tuổi, cũ, mới, sửa đổi, ngày sửa đổi, héo, phai màu, ứng dụng",
+  "settings.appearance.dateColors.keywords": "ngày, màu, màu sắc, tuổi, cũ, mới, sửa đổi, ngày sửa đổi, héo, màu ứng dụng, màu nhấn, phai màu, phai, mờ dần",
   "@settings.appearance.dateColors.keywords": {
-    "sourceHash": "cc85453"
+    "sourceHash": "65cbe5d"
   },
   "settings.appearance.dateTimeFormat.label": "Định dạng ngày và giờ",
   "@settings.appearance.dateTimeFormat.label": {
@@ -1476,7 +1476,7 @@
   },
   "settings.whatsNew.showOnUpdate.keywords": "nhật ký thay đổi, ghi chú phát hành, có gì mới, điểm mới, ghi chú cập nhật",
   "@settings.whatsNew.showOnUpdate.keywords": {
-    "sourceHash": "ef19c9d"
+    "sourceHash": "6a9e154"
   },
   "settings.whatsNew.lastSeenVersion.label": "Phiên bản nhật ký thay đổi đã xem lần cuối",
   "@settings.whatsNew.lastSeenVersion.label": {
@@ -1616,7 +1616,7 @@
   },
   "settings.fileViewer.suppressBinaryWarning.keywords": "trình xem, nhị phân, hình ảnh, thô, xem thô, cảnh báo, biểu ngữ, xem nhanh",
   "@settings.fileViewer.suppressBinaryWarning.keywords": {
-    "sourceHash": "12a2ca0"
+    "sourceHash": "1508efc"
   },
   "settings.fileExplorer.suppressQuickLookHint.label": "Ẩn gợi ý Xem nhanh bằng phím dấu cách",
   "@settings.fileExplorer.suppressQuickLookHint.label": {
@@ -1628,7 +1628,7 @@
   },
   "settings.fileExplorer.suppressQuickLookHint.keywords": "xem nhanh, xem trước, phím dấu cách, dấu cách, gợi ý, thông báo, lời nhắc",
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
-    "sourceHash": "d3a493e"
+    "sourceHash": "8f4a843"
   },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Số tab đã đóng cần nhớ cho mỗi khung",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
@@ -1798,9 +1798,9 @@
   "@settings.advanced.serviceResolveTimeout.description": {
     "sourceHash": "5cf231d"
   },
-  "settings.advanced.serviceResolveTimeout.keywords": "phân giải, thời gian chờ, dịch vụ",
+  "settings.advanced.serviceResolveTimeout.keywords": "phân giải, thời gian chờ, dịch vụ, khám phá dịch vụ, khám phá mạng, dò tìm, tra cứu, mạng cục bộ, chờ, đợi",
   "@settings.advanced.serviceResolveTimeout.keywords": {
-    "sourceHash": "7f5c11b"
+    "sourceHash": "c4e3d7c"
   },
   "settings.search.recentSearches.maxCount.label": "Số tìm kiếm gần đây cần nhớ",
   "@settings.search.recentSearches.maxCount.label": {
@@ -2242,9 +2242,9 @@
   "@settings.askCmdr.interactiveModel.placeholder": {
     "sourceHash": "2631f3d"
   },
-  "settings.askCmdr.interactiveModel.keywords": "trí tuệ nhân tạo, trò chuyện, trợ lý, mô hình, tương tác, khe",
+  "settings.askCmdr.interactiveModel.keywords": "trí tuệ nhân tạo, trò chuyện, trợ lý, mô hình, ghi đè, thay thế, mô hình khác",
   "@settings.askCmdr.interactiveModel.keywords": {
-    "sourceHash": "2e3c2d7"
+    "sourceHash": "e55416b"
   },
   "settings.askCmdr.chatMemorySize.label": "Kích cỡ bộ nhớ trò chuyện",
   "@settings.askCmdr.chatMemorySize.label": {
@@ -2294,9 +2294,9 @@
   "@settings.askCmdr.wakeDelay.summary": {
     "sourceHash": "ad03c00"
   },
-  "settings.askCmdr.wakeDelay.keywords": "độ trễ, trễ, nhịp, chờ, thường xuyên, tần suất, bình tĩnh, yên tĩnh, chủ động",
+  "settings.askCmdr.wakeDelay.keywords": "độ trễ, trễ, chờ, thời điểm, thời gian, thường xuyên, tần suất, bình tĩnh, yên tĩnh, chủ động",
   "@settings.askCmdr.wakeDelay.keywords": {
-    "sourceHash": "800df1b"
+    "sourceHash": "f8bcbd5"
   },
   "settings.askCmdr.wakeToast.label": "Hiển thị thông báo khi có đề xuất mới",
   "@settings.askCmdr.wakeToast.label": {
@@ -2894,9 +2894,9 @@
   "@settings.securityLog.showInFinder": {
     "sourceHash": "c2a9c77"
   },
-  "settings.updates.showSecurityLog.keywords": "bảo mật, nhật ký, kiểm toán, sự kiện, tệp, mở",
+  "settings.updates.showSecurityLog.keywords": "bảo mật, nhật ký, kiểm toán, sự kiện, tệp, mở, hiển thị, hiện, thư mục, vị trí",
   "@settings.updates.showSecurityLog.keywords": {
-    "sourceHash": "9ce9447"
+    "sourceHash": "a5708ab"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Đổi phím tắt trong Phím tắt → Đến tệp tải về mới nhất (toàn cục).",
   "@settings.fileSystemWatching.globalShortcutHint": {
@@ -3159,9 +3159,9 @@
   "@settings.adb.status.notWatching": {
     "sourceHash": "6e1936c"
   },
-  "settings.adb.status.keywords": "trạng thái, kiểm tra lại, tìm thấy, đã tìm thấy, theo dõi, cài đặt",
+  "settings.adb.status.keywords": "trạng thái, kiểm tra lại, tìm thấy, đã tìm thấy, không tìm thấy, cài đặt, phát hiện điện thoại, theo dõi, đã kết nối",
   "@settings.adb.status.keywords": {
-    "sourceHash": "32678b7"
+    "sourceHash": "3e05996"
   },
   "settings.adb.recheck": "Kiểm tra lại",
   "@settings.adb.recheck": {

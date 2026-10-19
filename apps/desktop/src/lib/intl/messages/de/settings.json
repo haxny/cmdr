@@ -85,9 +85,9 @@
   "@settings.appearance.sizeColors.opt.rainbow": {
     "sourceHash": "b1f7b2e"
   },
-  "settings.appearance.sizeColors.keywords": "Größe, Farbe, Stufe, Regenbogen, App, Hervorhebung, hervorheben, einfärben",
+  "settings.appearance.sizeColors.keywords": "Größe, Farbe, Stufe, Regenbogen, App-Farbe, Akzentfarbe, Akzent, Farbtöne, Abstufung, Hervorhebung, hervorheben, einfärben",
   "@settings.appearance.sizeColors.keywords": {
-    "sourceHash": "8eb9856"
+    "sourceHash": "f1249f0"
   },
   "settings.appearance.dateColors.label": "Datumsfarben",
   "@settings.appearance.dateColors.label": {
@@ -110,9 +110,9 @@
   "@settings.appearance.dateColors.opt.wilting": {
     "sourceHash": "2aa30f1"
   },
-  "settings.appearance.dateColors.keywords": "Datum, Farbe, Alter, geändert, Änderungsdatum, verblassen, welken, App, frisch, neu, alt",
+  "settings.appearance.dateColors.keywords": "Datum, Farbe, Alter, geändert, Änderungsdatum, welken, verwelken, App-Farbe, Akzentfarbe, Akzent, verblassen, abblassen, frisch, neu, alt",
   "@settings.appearance.dateColors.keywords": {
-    "sourceHash": "cc85453"
+    "sourceHash": "65cbe5d"
   },
   "settings.appearance.dateTimeFormat.label": "Datums- und Zeitformat",
   "@settings.appearance.dateTimeFormat.label": {
@@ -1482,7 +1482,7 @@
   },
   "settings.whatsNew.showOnUpdate.keywords": "Neuigkeiten, Was ist neu, Änderungen, Änderungsprotokoll, Versionshinweise, Update-Hinweise",
   "@settings.whatsNew.showOnUpdate.keywords": {
-    "sourceHash": "ef19c9d"
+    "sourceHash": "6a9e154"
   },
   "settings.whatsNew.lastSeenVersion.label": "Zuletzt gesehene Version des Änderungsprotokolls",
   "@settings.whatsNew.lastSeenVersion.label": {
@@ -1622,7 +1622,7 @@
   },
   "settings.fileViewer.suppressBinaryWarning.keywords": "Viewer, Betrachter, binär, Binärdatei, Bild, roh, Rohansicht, Warnung, Banner, Hinweis, Übersicht",
   "@settings.fileViewer.suppressBinaryWarning.keywords": {
-    "sourceHash": "12a2ca0"
+    "sourceHash": "1508efc"
   },
   "settings.fileExplorer.suppressQuickLookHint.label": "Leertasten-Hinweis zur Übersicht unterdrücken",
   "@settings.fileExplorer.suppressQuickLookHint.label": {
@@ -1634,7 +1634,7 @@
   },
   "settings.fileExplorer.suppressQuickLookHint.keywords": "Übersicht, Vorschau, Leertaste, Hinweis, Tipp, Erinnerung, Benachrichtigung",
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
-    "sourceHash": "d3a493e"
+    "sourceHash": "8f4a843"
   },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Anzahl der pro Bereich gemerkten geschlossenen Tabs",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
@@ -1804,9 +1804,9 @@
   "@settings.advanced.serviceResolveTimeout.description": {
     "sourceHash": "5cf231d"
   },
-  "settings.advanced.serviceResolveTimeout.keywords": "auflösen, Auflösung, Dienst, Zeitüberschreitung, Zeitlimit",
+  "settings.advanced.serviceResolveTimeout.keywords": "auflösen, Auflösung, Dienst, Dienstsuche, Netzwerksuche, Netzwerkerkennung, nachschlagen, Suche, lokales Netzwerk, warten, Wartezeit, Zeitüberschreitung, Zeitlimit",
   "@settings.advanced.serviceResolveTimeout.keywords": {
-    "sourceHash": "7f5c11b"
+    "sourceHash": "c4e3d7c"
   },
   "settings.search.recentSearches.maxCount.label": "Zu merkende letzte Suchen",
   "@settings.search.recentSearches.maxCount.label": {
@@ -2251,9 +2251,9 @@
   "@settings.askCmdr.interactiveModel.placeholder": {
     "sourceHash": "2631f3d"
   },
-  "settings.askCmdr.interactiveModel.keywords": "KI, Chat, Assistent, Modell, interaktiv, Platz",
+  "settings.askCmdr.interactiveModel.keywords": "KI, Chat, Assistent, Modell, überschreiben, anderes Modell, eigenes Modell, abweichend",
   "@settings.askCmdr.interactiveModel.keywords": {
-    "sourceHash": "2e3c2d7"
+    "sourceHash": "e55416b"
   },
   "settings.askCmdr.chatMemorySize.label": "Chat-Speichergröße",
   "@settings.askCmdr.chatMemorySize.label": {
@@ -2303,9 +2303,9 @@
   "@settings.askCmdr.wakeDelay.summary": {
     "sourceHash": "ad03c00"
   },
-  "settings.askCmdr.wakeDelay.keywords": "Verzögerung, Takt, warten, oft, Häufigkeit, ruhig, leise, proaktiv",
+  "settings.askCmdr.wakeDelay.keywords": "Verzögerung, warten, Zeitpunkt, Timing, wie oft, Häufigkeit, ruhig, leise, proaktiv",
   "@settings.askCmdr.wakeDelay.keywords": {
-    "sourceHash": "800df1b"
+    "sourceHash": "f8bcbd5"
   },
   "settings.askCmdr.wakeToast.label": "Hinweis anzeigen, wenn ein Vorschlag da ist",
   "@settings.askCmdr.wakeToast.label": {
@@ -2906,9 +2906,9 @@
   "@settings.securityLog.showInFinder": {
     "sourceHash": "c2a9c77"
   },
-  "settings.updates.showSecurityLog.keywords": "Sicherheit, Protokoll, Prüfprotokoll, Audit, Ereignisse, Datei, öffnen, anzeigen",
+  "settings.updates.showSecurityLog.keywords": "Sicherheit, Protokoll, Prüfprotokoll, Audit, Ereignisse, Datei, öffnen, anzeigen, zeigen, Ordner, Speicherort, Ort",
   "@settings.updates.showSecurityLog.keywords": {
-    "sourceHash": "9ce9447"
+    "sourceHash": "a5708ab"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Ändere den Kurzbefehl unter Tastaturkurzbefehle → Zum neuesten Download springen (global).",
   "@settings.fileSystemWatching.globalShortcutHint": {
@@ -3172,9 +3172,9 @@
   "@settings.adb.status.notWatching": {
     "sourceHash": "6e1936c"
   },
-  "settings.adb.status.keywords": "Status, erneut prüfen, prüfen, gefunden, beobachten, überwachen, installieren",
+  "settings.adb.status.keywords": "Status, erneut prüfen, prüfen, gefunden, nicht gefunden, installieren, Telefone erkennen, Handy erkennen, beobachten, überwachen, verbunden",
   "@settings.adb.status.keywords": {
-    "sourceHash": "32678b7"
+    "sourceHash": "3e05996"
   },
   "settings.adb.recheck": "Erneut prüfen",
   "@settings.adb.recheck": {

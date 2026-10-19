@@ -163,8 +163,7 @@ line.
 
 - The stats carry a stable random id, so never `anoniem`, and never the jargon `pseudoniem`: `een willekeurige id` (MS),
   `gekoppeld aan`.
-- Label and onboarding title are one English string, so both read `Gebruiksstatistieken sturen` (infinitive: a toggle
-  label describes a setting).
+- Label and onboarding title are one English string, so both read `Gebruiksstatistieken versturen`.
 
 ## De terugdraaibevestiging en de rij die op antwoord wacht (`fileOperations.rollbackConfirm.*`, `queue.row.statusAwaitingAnswer`/`awaitingAnswerTooltip`, `transferProgress.foregroundBusyToast`/`rollbackTooltip`)
 
@@ -241,7 +240,7 @@ line.
 ## De instellingstekst voor rapporten dekt nu beide gevallen (`settings.updates.crashReports.description`)
 
 The description covers crashes and background problems (`een rapport`, no "crash"); the label stays
-`Crashrapporten sturen`, the setting's name. `appversie` is closed, as in `crashReporter.dialog.privacyNote`.
+`Crashrapporten versturen`, the setting's name. `appversie` is closed, as in `crashReporter.dialog.privacyNote`.
 
 ## Get Info en Beveiligd (macOS-UI-namen die Apple wél vertaalt) (`errors.write.fileLocked.*`, `errors.write.permissionDenied.suggestion.deleteMac`)
 

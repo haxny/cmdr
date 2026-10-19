@@ -84,9 +84,9 @@
   "@settings.appearance.sizeColors.opt.rainbow": {
     "sourceHash": "b1f7b2e"
   },
-  "settings.appearance.sizeColors.keywords": "tamaño, color, colores, nivel, arcoíris, app, resaltar, resaltado",
+  "settings.appearance.sizeColors.keywords": "tamaño, color, colores, nivel, arcoíris, color de la app, color de acento, acento, tonos, matices, resaltar, resaltado",
   "@settings.appearance.sizeColors.keywords": {
-    "sourceHash": "8eb9856"
+    "sourceHash": "f1249f0"
   },
   "settings.appearance.dateColors.label": "Colores de fecha",
   "@settings.appearance.dateColors.label": {
@@ -109,9 +109,9 @@
   "@settings.appearance.dateColors.opt.wilting": {
     "sourceHash": "2aa30f1"
   },
-  "settings.appearance.dateColors.keywords": "fecha, color, colores, antigüedad, edad, modificación, modificado, marchito, app, reciente, nuevo, viejo, antiguo",
+  "settings.appearance.dateColors.keywords": "fecha, color, colores, antigüedad, edad, modificación, modificado, marchito, marchitar, color de la app, color de acento, acento, desvanecer, atenuar, reciente, nuevo, viejo, antiguo",
   "@settings.appearance.dateColors.keywords": {
-    "sourceHash": "cc85453"
+    "sourceHash": "65cbe5d"
   },
   "settings.appearance.dateTimeFormat.label": "Formato de fecha y hora",
   "@settings.appearance.dateTimeFormat.label": {
@@ -1362,7 +1362,7 @@
   "@settings.fileOperations.mtpConnectionWarning.keywords": {
     "sourceHash": "4f395e7"
   },
-  "settings.fileExplorer.git.showRepoChip.label": "Mostrar la insignia del repositorio",
+  "settings.fileExplorer.git.showRepoChip.label": "Mostrar el chip del repositorio",
   "@settings.fileExplorer.git.showRepoChip.label": {
     "sourceHash": "7504b23"
   },
@@ -1480,7 +1480,7 @@
   },
   "settings.whatsNew.showOnUpdate.keywords": "novedades, notas de la versión, registro de cambios, qué hay de nuevo, cambios",
   "@settings.whatsNew.showOnUpdate.keywords": {
-    "sourceHash": "ef19c9d"
+    "sourceHash": "6a9e154"
   },
   "settings.whatsNew.lastSeenVersion.label": "Última versión del registro de cambios vista",
   "@settings.whatsNew.lastSeenVersion.label": {
@@ -1586,11 +1586,11 @@
   "@settings.advanced.virtualizationBufferColumns.keywords": {
     "sourceHash": "f4c112b"
   },
-  "settings.advanced.fileWatcherDebounce.label": "Antirrebote de la vigilancia de archivos",
+  "settings.advanced.fileWatcherDebounce.label": "Retardo de la vigilancia de archivos",
   "@settings.advanced.fileWatcherDebounce.label": {
     "sourceHash": "6a3842d"
   },
-  "settings.advanced.fileWatcherDebounce.description": "Retraso tras los cambios en el sistema de archivos antes de actualizar.",
+  "settings.advanced.fileWatcherDebounce.description": "Retardo tras los cambios en el sistema de archivos antes de actualizar.",
   "@settings.advanced.fileWatcherDebounce.description": {
     "sourceHash": "084a2a7"
   },
@@ -1620,7 +1620,7 @@
   },
   "settings.fileViewer.suppressBinaryWarning.keywords": "visor, binario, imagen, sin formato, en bruto, aviso, advertencia, banner, vista rápida",
   "@settings.fileViewer.suppressBinaryWarning.keywords": {
-    "sourceHash": "12a2ca0"
+    "sourceHash": "1508efc"
   },
   "settings.fileExplorer.suppressQuickLookHint.label": "Ocultar el aviso de Vista rápida con la tecla Espacio",
   "@settings.fileExplorer.suppressQuickLookHint.label": {
@@ -1632,7 +1632,7 @@
   },
   "settings.fileExplorer.suppressQuickLookHint.keywords": "vista rápida, previsualización, vista previa, espacio, barra espaciadora, aviso, sugerencia, consejo, recordatorio",
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
-    "sourceHash": "d3a493e"
+    "sourceHash": "8f4a843"
   },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Número de pestañas cerradas que recordar por panel",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
@@ -1802,9 +1802,9 @@
   "@settings.advanced.serviceResolveTimeout.description": {
     "sourceHash": "5cf231d"
   },
-  "settings.advanced.serviceResolveTimeout.keywords": "resolver, resolución, servicio, tiempo de espera",
+  "settings.advanced.serviceResolveTimeout.keywords": "resolver, resolución, servicio, descubrimiento de servicios, descubrimiento de red, detección de red, buscar, búsqueda, red local, esperar, espera, tiempo de espera",
   "@settings.advanced.serviceResolveTimeout.keywords": {
-    "sourceHash": "7f5c11b"
+    "sourceHash": "c4e3d7c"
   },
   "settings.search.recentSearches.maxCount.label": "Búsquedas recientes que recordar",
   "@settings.search.recentSearches.maxCount.label": {
@@ -2245,9 +2245,9 @@
   "@settings.askCmdr.interactiveModel.placeholder": {
     "sourceHash": "2631f3d"
   },
-  "settings.askCmdr.interactiveModel.keywords": "IA, chat, asistente, modelo, interactivo",
+  "settings.askCmdr.interactiveModel.keywords": "IA, chat, asistente, modelo, sustituir, reemplazar, otro modelo, modelo distinto",
   "@settings.askCmdr.interactiveModel.keywords": {
-    "sourceHash": "2e3c2d7"
+    "sourceHash": "e55416b"
   },
   "settings.askCmdr.chatMemorySize.label": "Tamaño de la memoria del chat",
   "@settings.askCmdr.chatMemorySize.label": {
@@ -2297,9 +2297,9 @@
   "@settings.askCmdr.wakeDelay.summary": {
     "sourceHash": "ad03c00"
   },
-  "settings.askCmdr.wakeDelay.keywords": "retardo, demora, frecuencia, cada cuánto, esperar, espera, a menudo, tranquilo, calma, proactivo",
+  "settings.askCmdr.wakeDelay.keywords": "retardo, demora, frecuencia, cada cuánto, esperar, espera, momento, cuándo, a menudo, tranquilo, calma, proactivo",
   "@settings.askCmdr.wakeDelay.keywords": {
-    "sourceHash": "800df1b"
+    "sourceHash": "f8bcbd5"
   },
   "settings.askCmdr.wakeToast.label": "Mostrar un aviso cuando aparezca una sugerencia",
   "@settings.askCmdr.wakeToast.label": {
@@ -2507,7 +2507,7 @@
   "@settings.summary.mtp": {
     "sourceHash": "f01960a"
   },
-  "settings.summary.git": "Insignia del repositorio, columna de estado por archivo y el portal virtual de `.git`.",
+  "settings.summary.git": "Chip del repositorio, columna de estado por archivo y el portal virtual de `.git`.",
   "@settings.summary.git": {
     "sourceHash": "fa23394"
   },
@@ -2896,9 +2896,9 @@
   "@settings.securityLog.showInFinder": {
     "sourceHash": "c2a9c77"
   },
-  "settings.updates.showSecurityLog.keywords": "seguridad, registro, auditoría, eventos, archivo, abrir, mostrar",
+  "settings.updates.showSecurityLog.keywords": "seguridad, registro, auditoría, eventos, archivo, abrir, mostrar, enseñar, carpeta, ubicación",
   "@settings.updates.showSecurityLog.keywords": {
-    "sourceHash": "9ce9447"
+    "sourceHash": "a5708ab"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Cambia el atajo en Atajos de teclado → Ir a la última descarga (global).",
   "@settings.fileSystemWatching.globalShortcutHint": {
@@ -3161,9 +3161,9 @@
   "@settings.adb.status.notWatching": {
     "sourceHash": "6e1936c"
   },
-  "settings.adb.status.keywords": "estado, volver a comprobar, comprobar, encontrado, vigilancia, instalar",
+  "settings.adb.status.keywords": "estado, volver a comprobar, comprobar, encontrado, no encontrado, instalar, detectar móviles, detectar teléfonos, vigilancia, conectado",
   "@settings.adb.status.keywords": {
-    "sourceHash": "32678b7"
+    "sourceHash": "3e05996"
   },
   "settings.adb.recheck": "Comprobar de nuevo",
   "@settings.adb.recheck": {

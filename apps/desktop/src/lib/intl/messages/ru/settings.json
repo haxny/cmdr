@@ -83,9 +83,9 @@
   "@settings.appearance.sizeColors.opt.rainbow": {
     "sourceHash": "b1f7b2e"
   },
-  "settings.appearance.sizeColors.keywords": "размер, цвет, раскраска, радуга, подсветка, уровень, выделение цветом, цвет приложения",
+  "settings.appearance.sizeColors.keywords": "размер, цвет, раскраска, радуга, подсветка, уровень, выделение цветом, цвет приложения, цвет акцента, акцентный цвет, акцент, оттенки",
   "@settings.appearance.sizeColors.keywords": {
-    "sourceHash": "8eb9856"
+    "sourceHash": "f1249f0"
   },
   "settings.appearance.dateColors.label": "Цвета дат",
   "@settings.appearance.dateColors.label": {
@@ -107,9 +107,9 @@
   "@settings.appearance.dateColors.opt.wilting": {
     "sourceHash": "2aa30f1"
   },
-  "settings.appearance.dateColors.keywords": "дата, цвет, возраст, давность, изменен, увядание, свежий, старый, новый, подсветка, цвет приложения",
+  "settings.appearance.dateColors.keywords": "дата, цвет, возраст, давность, изменен, увядание, свежий, старый, новый, подсветка, цвет приложения, цвет акцента, акцентный цвет, акцент, выцветание, блекнуть",
   "@settings.appearance.dateColors.keywords": {
-    "sourceHash": "cc85453"
+    "sourceHash": "65cbe5d"
   },
   "settings.appearance.dateTimeFormat.label": "Формат даты и времени",
   "@settings.appearance.dateTimeFormat.label": {
@@ -1476,7 +1476,7 @@
   },
   "settings.whatsNew.showOnUpdate.keywords": "журнал изменений, список изменений, изменения, что нового, примечания к выпуску, новое в версии, обновление",
   "@settings.whatsNew.showOnUpdate.keywords": {
-    "sourceHash": "ef19c9d"
+    "sourceHash": "6a9e154"
   },
   "settings.whatsNew.lastSeenVersion.label": "Последняя просмотренная версия журнала изменений",
   "@settings.whatsNew.lastSeenVersion.label": {
@@ -1616,7 +1616,7 @@
   },
   "settings.fileViewer.suppressBinaryWarning.keywords": "окно просмотра, просмотр, двоичный, бинарный, изображение, необработанный, сырой, предупреждение, баннер, Быстрый просмотр",
   "@settings.fileViewer.suppressBinaryWarning.keywords": {
-    "sourceHash": "12a2ca0"
+    "sourceHash": "1508efc"
   },
   "settings.fileExplorer.suppressQuickLookHint.label": "Скрывать подсказку о быстром просмотре по Пробелу",
   "@settings.fileExplorer.suppressQuickLookHint.label": {
@@ -1628,7 +1628,7 @@
   },
   "settings.fileExplorer.suppressQuickLookHint.keywords": "Быстрый просмотр, просмотр, предпросмотр, пробел, подсказка, уведомление, всплывающее сообщение, напоминание",
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
-    "sourceHash": "d3a493e"
+    "sourceHash": "8f4a843"
   },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Число закрытых вкладок в истории панели",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
@@ -1798,9 +1798,9 @@
   "@settings.advanced.serviceResolveTimeout.description": {
     "sourceHash": "5cf231d"
   },
-  "settings.advanced.serviceResolveTimeout.keywords": "разрешение имени, служба, сервис, тайм-аут, время ожидания, обнаружение",
+  "settings.advanced.serviceResolveTimeout.keywords": "разрешение имени, служба, сервис, тайм-аут, время ожидания, обнаружение, обнаружение служб, обнаружение сети, поиск, локальная сеть, ожидание, ждать",
   "@settings.advanced.serviceResolveTimeout.keywords": {
-    "sourceHash": "7f5c11b"
+    "sourceHash": "c4e3d7c"
   },
   "settings.search.recentSearches.maxCount.label": "Сколько недавних запросов помнить",
   "@settings.search.recentSearches.maxCount.label": {
@@ -2240,9 +2240,9 @@
   "@settings.askCmdr.interactiveModel.placeholder": {
     "sourceHash": "2631f3d"
   },
-  "settings.askCmdr.interactiveModel.keywords": "ИИ, чат, ассистент, помощник, модель, интерактивный, слот",
+  "settings.askCmdr.interactiveModel.keywords": "ИИ, чат, ассистент, помощник, модель, переопределить, другая модель, отдельная модель",
   "@settings.askCmdr.interactiveModel.keywords": {
-    "sourceHash": "2e3c2d7"
+    "sourceHash": "e55416b"
   },
   "settings.askCmdr.chatMemorySize.label": "Размер памяти чата",
   "@settings.askCmdr.chatMemorySize.label": {
@@ -2292,9 +2292,9 @@
   "@settings.askCmdr.wakeDelay.summary": {
     "sourceHash": "ad03c00"
   },
-  "settings.askCmdr.wakeDelay.keywords": "задержка, частота, ожидание, как часто, ритм, спокойно, тихо, проактивный",
+  "settings.askCmdr.wakeDelay.keywords": "задержка, частота, ожидание, как часто, время, когда, спокойно, тихо, проактивный",
   "@settings.askCmdr.wakeDelay.keywords": {
-    "sourceHash": "800df1b"
+    "sourceHash": "f8bcbd5"
   },
   "settings.askCmdr.wakeToast.label": "Уведомлять о новых предложениях",
   "@settings.askCmdr.wakeToast.label": {
@@ -2891,9 +2891,9 @@
   "@settings.securityLog.showInFinder": {
     "sourceHash": "c2a9c77"
   },
-  "settings.updates.showSecurityLog.keywords": "безопасность, журнал, аудит, события, файл, открыть, показать",
+  "settings.updates.showSecurityLog.keywords": "безопасность, журнал, аудит, события, файл, открыть, показать, папка, расположение, где находится",
   "@settings.updates.showSecurityLog.keywords": {
-    "sourceHash": "9ce9447"
+    "sourceHash": "a5708ab"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Измените сочетание в разделе «Сочетания клавиш» → «Перейти к последней загрузке (глобальное)».",
   "@settings.fileSystemWatching.globalShortcutHint": {
@@ -3156,9 +3156,9 @@
   "@settings.adb.status.notWatching": {
     "sourceHash": "6e1936c"
   },
-  "settings.adb.status.keywords": "состояние, статус, проверить снова, перепроверить, найден, наблюдение, отслеживание, установить, установка",
+  "settings.adb.status.keywords": "состояние, статус, проверить снова, перепроверить, найден, не найден, установить, установка, обнаружение телефонов, наблюдение, отслеживание, подключен",
   "@settings.adb.status.keywords": {
-    "sourceHash": "32678b7"
+    "sourceHash": "3e05996"
   },
   "settings.adb.recheck": "Проверить снова",
   "@settings.adb.recheck": {

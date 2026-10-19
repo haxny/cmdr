@@ -84,9 +84,9 @@
   "@settings.appearance.sizeColors.opt.rainbow": {
     "sourceHash": "b1f7b2e"
   },
-  "settings.appearance.sizeColors.keywords": "méret, szín, színezés, fokozat, szint, szivárvány, app, kiemelés",
+  "settings.appearance.sizeColors.keywords": "méret, szín, színezés, fokozat, szint, szivárvány, app színe, kiemelőszín, akcentusszín, árnyalatok, kiemelés",
   "@settings.appearance.sizeColors.keywords": {
-    "sourceHash": "8eb9856"
+    "sourceHash": "f1249f0"
   },
   "settings.appearance.dateColors.label": "Dátumszínek",
   "@settings.appearance.dateColors.label": {
@@ -109,9 +109,9 @@
   "@settings.appearance.dateColors.opt.wilting": {
     "sourceHash": "2aa30f1"
   },
-  "settings.appearance.dateColors.keywords": "dátum, szín, színezés, kor, életkor, módosítva, módosítás, hervadás, fakulás, friss, új, régi",
+  "settings.appearance.dateColors.keywords": "dátum, szín, színezés, kor, életkor, módosítva, módosítás, hervadás, fakulás, halványulás, app színe, kiemelőszín, akcentusszín, friss, új, régi",
   "@settings.appearance.dateColors.keywords": {
-    "sourceHash": "cc85453"
+    "sourceHash": "65cbe5d"
   },
   "settings.appearance.dateTimeFormat.label": "Dátum- és időformátum",
   "@settings.appearance.dateTimeFormat.label": {
@@ -1479,7 +1479,7 @@
   },
   "settings.whatsNew.showOnUpdate.keywords": "változásnapló, kiadási megjegyzések, újdonságok, mi új, frissítési megjegyzések",
   "@settings.whatsNew.showOnUpdate.keywords": {
-    "sourceHash": "ef19c9d"
+    "sourceHash": "6a9e154"
   },
   "settings.whatsNew.lastSeenVersion.label": "Utoljára látott változásnapló-verzió",
   "@settings.whatsNew.lastSeenVersion.label": {
@@ -1619,7 +1619,7 @@
   },
   "settings.fileViewer.suppressBinaryWarning.keywords": "megjelenítő, bináris, kép, nyers, nyers nézet, figyelmeztetés, sáv, szalag, gyorsnézet",
   "@settings.fileViewer.suppressBinaryWarning.keywords": {
-    "sourceHash": "12a2ca0"
+    "sourceHash": "1508efc"
   },
   "settings.fileExplorer.suppressQuickLookHint.label": "Szóközbillentyűs Gyorsnézet tipp elnyomása",
   "@settings.fileExplorer.suppressQuickLookHint.label": {
@@ -1631,7 +1631,7 @@
   },
   "settings.fileExplorer.suppressQuickLookHint.keywords": "gyorsnézet, előnézet, szóköz, tipp, buborék, emlékeztető, értesítés",
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
-    "sourceHash": "d3a493e"
+    "sourceHash": "8f4a843"
   },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Megjegyzendő bezárt lapok száma panelenként",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
@@ -1801,9 +1801,9 @@
   "@settings.advanced.serviceResolveTimeout.description": {
     "sourceHash": "5cf231d"
   },
-  "settings.advanced.serviceResolveTimeout.keywords": "feloldás, időtúllépés, időkorlát, szolgáltatás",
+  "settings.advanced.serviceResolveTimeout.keywords": "feloldás, időtúllépés, időkorlát, szolgáltatás, szolgáltatáskeresés, hálózatfelderítés, felderítés, keresés, kikeresés, helyi hálózat, várakozás, várakozási idő",
   "@settings.advanced.serviceResolveTimeout.keywords": {
-    "sourceHash": "7f5c11b"
+    "sourceHash": "c4e3d7c"
   },
   "settings.search.recentSearches.maxCount.label": "Megjegyzendő legutóbbi keresések",
   "@settings.search.recentSearches.maxCount.label": {
@@ -2244,9 +2244,9 @@
   "@settings.askCmdr.interactiveModel.placeholder": {
     "sourceHash": "2631f3d"
   },
-  "settings.askCmdr.interactiveModel.keywords": "ai, csevegés, asszisztens, segéd, modell, interaktív, hely",
+  "settings.askCmdr.interactiveModel.keywords": "ai, csevegés, asszisztens, segéd, modell, felülírás, másik modell, eltérő modell",
   "@settings.askCmdr.interactiveModel.keywords": {
-    "sourceHash": "2e3c2d7"
+    "sourceHash": "e55416b"
   },
   "settings.askCmdr.chatMemorySize.label": "A csevegés memóriájának mérete",
   "@settings.askCmdr.chatMemorySize.label": {
@@ -2296,9 +2296,9 @@
   "@settings.askCmdr.wakeDelay.summary": {
     "sourceHash": "ad03c00"
   },
-  "settings.askCmdr.wakeDelay.keywords": "késleltetés, ütem, várakozás, gyakoriság, milyen gyakran, nyugodt, csendes, proaktív",
+  "settings.askCmdr.wakeDelay.keywords": "késleltetés, várakozás, időzítés, gyakoriság, milyen gyakran, nyugodt, csendes, proaktív",
   "@settings.askCmdr.wakeDelay.keywords": {
-    "sourceHash": "800df1b"
+    "sourceHash": "f8bcbd5"
   },
   "settings.askCmdr.wakeToast.label": "Jelezze, ha új javaslat érkezik",
   "@settings.askCmdr.wakeToast.label": {
@@ -2896,9 +2896,9 @@
   "@settings.securityLog.showInFinder": {
     "sourceHash": "c2a9c77"
   },
-  "settings.updates.showSecurityLog.keywords": "biztonság, biztonsági napló, napló, audit, események, fájl, megnyitás, megjelenítés",
+  "settings.updates.showSecurityLog.keywords": "biztonság, biztonsági napló, napló, audit, események, fájl, megnyitás, megjelenítés, mutatás, mappa, hely, helye",
   "@settings.updates.showSecurityLog.keywords": {
-    "sourceHash": "9ce9447"
+    "sourceHash": "a5708ab"
   },
   "settings.fileSystemWatching.globalShortcutHint": "A parancsot a Billentyűparancsok → Ugrás a legutóbbi letöltéshez (globális) alatt módosíthatod.",
   "@settings.fileSystemWatching.globalShortcutHint": {
@@ -3161,9 +3161,9 @@
   "@settings.adb.status.notWatching": {
     "sourceHash": "6e1936c"
   },
-  "settings.adb.status.keywords": "állapot, újraellenőrzés, ellenőrzés, megtalálva, található, figyelés, telepítés",
+  "settings.adb.status.keywords": "állapot, újraellenőrzés, ellenőrzés, megtalálva, található, nem található, telepítés, telefonok figyelése, telefon felismerése, figyelés, csatlakoztatva",
   "@settings.adb.status.keywords": {
-    "sourceHash": "32678b7"
+    "sourceHash": "3e05996"
   },
   "settings.adb.recheck": "Újraellenőrzés",
   "@settings.adb.recheck": {

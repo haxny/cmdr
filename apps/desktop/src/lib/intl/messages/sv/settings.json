@@ -85,9 +85,9 @@
   "@settings.appearance.sizeColors.opt.rainbow": {
     "sourceHash": "b1f7b2e"
   },
-  "settings.appearance.sizeColors.keywords": "storlek, färg, färgkodning, nivå, regnbåge, app, markering",
+  "settings.appearance.sizeColors.keywords": "storlek, färg, färgkodning, nivå, regnbåge, appfärg, accentfärg, accent, nyanser, toner, markering",
   "@settings.appearance.sizeColors.keywords": {
-    "sourceHash": "8eb9856"
+    "sourceHash": "f1249f0"
   },
   "settings.appearance.dateColors.label": "Datumfärger",
   "@settings.appearance.dateColors.label": {
@@ -110,9 +110,9 @@
   "@settings.appearance.dateColors.opt.wilting": {
     "sourceHash": "2aa30f1"
   },
-  "settings.appearance.dateColors.keywords": "datum, färg, ålder, ändrad, vissna, vissnande, app, färsk, ny, gammal",
+  "settings.appearance.dateColors.keywords": "datum, färg, ålder, ändrad, vissna, vissnande, appfärg, accentfärg, accent, blekna, tona ut, färsk, ny, gammal",
   "@settings.appearance.dateColors.keywords": {
-    "sourceHash": "cc85453"
+    "sourceHash": "65cbe5d"
   },
   "settings.appearance.dateTimeFormat.label": "Datum- och tidsformat",
   "@settings.appearance.dateTimeFormat.label": {
@@ -1481,7 +1481,7 @@
   },
   "settings.whatsNew.showOnUpdate.keywords": "nyheter, ändringslogg, versionsinformation, vad är nytt, uppdatering",
   "@settings.whatsNew.showOnUpdate.keywords": {
-    "sourceHash": "ef19c9d"
+    "sourceHash": "6a9e154"
   },
   "settings.whatsNew.lastSeenVersion.label": "Senast sedda ändringsloggsversion",
   "@settings.whatsNew.lastSeenVersion.label": {
@@ -1621,7 +1621,7 @@
   },
   "settings.fileViewer.suppressBinaryWarning.keywords": "förhandsvisning, binär, binärfil, bild, rå, varning, banderoll, överblick",
   "@settings.fileViewer.suppressBinaryWarning.keywords": {
-    "sourceHash": "12a2ca0"
+    "sourceHash": "1508efc"
   },
   "settings.fileExplorer.suppressQuickLookHint.label": "Dölj tipset om Överblick med mellanslag",
   "@settings.fileExplorer.suppressQuickLookHint.label": {
@@ -1633,7 +1633,7 @@
   },
   "settings.fileExplorer.suppressQuickLookHint.keywords": "överblick, förhandsvisning, mellanslag, tips, påminnelse, notis",
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
-    "sourceHash": "d3a493e"
+    "sourceHash": "8f4a843"
   },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Antal stängda flikar att komma ihåg per panel",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
@@ -1803,9 +1803,9 @@
   "@settings.advanced.serviceResolveTimeout.description": {
     "sourceHash": "5cf231d"
   },
-  "settings.advanced.serviceResolveTimeout.keywords": "uppslagning, slå upp, tidsgräns, tjänst",
+  "settings.advanced.serviceResolveTimeout.keywords": "uppslagning, slå upp, tidsgräns, tjänst, tjänstidentifiering, nätverksidentifiering, nätverkssökning, lokalt nätverk, vänta, väntetid",
   "@settings.advanced.serviceResolveTimeout.keywords": {
-    "sourceHash": "7f5c11b"
+    "sourceHash": "c4e3d7c"
   },
   "settings.search.recentSearches.maxCount.label": "Senaste sökningar att komma ihåg",
   "@settings.search.recentSearches.maxCount.label": {
@@ -2251,9 +2251,9 @@
   "@settings.askCmdr.interactiveModel.placeholder": {
     "sourceHash": "2631f3d"
   },
-  "settings.askCmdr.interactiveModel.keywords": "ai, chatt, assistent, modell, interaktiv, plats",
+  "settings.askCmdr.interactiveModel.keywords": "ai, chatt, assistent, modell, åsidosätt, annan modell, egen modell",
   "@settings.askCmdr.interactiveModel.keywords": {
-    "sourceHash": "2e3c2d7"
+    "sourceHash": "e55416b"
   },
   "settings.askCmdr.chatMemorySize.label": "Chattens minnesstorlek",
   "@settings.askCmdr.chatMemorySize.label": {
@@ -2303,9 +2303,9 @@
   "@settings.askCmdr.wakeDelay.summary": {
     "sourceHash": "ad03c00"
   },
-  "settings.askCmdr.wakeDelay.keywords": "fördröjning, takt, vänta, hur ofta, frekvens, lugn, tyst, proaktiv",
+  "settings.askCmdr.wakeDelay.keywords": "fördröjning, vänta, tidpunkt, timing, hur ofta, frekvens, lugn, tyst, proaktiv",
   "@settings.askCmdr.wakeDelay.keywords": {
-    "sourceHash": "800df1b"
+    "sourceHash": "f8bcbd5"
   },
   "settings.askCmdr.wakeToast.label": "Visa en avisering när ett förslag dyker upp",
   "@settings.askCmdr.wakeToast.label": {
@@ -2903,9 +2903,9 @@
   "@settings.securityLog.showInFinder": {
     "sourceHash": "c2a9c77"
   },
-  "settings.updates.showSecurityLog.keywords": "säkerhet, logg, granskning, händelser, fil, öppna",
+  "settings.updates.showSecurityLog.keywords": "säkerhet, logg, granskning, händelser, fil, öppna, visa, mapp, plats",
   "@settings.updates.showSecurityLog.keywords": {
-    "sourceHash": "9ce9447"
+    "sourceHash": "a5708ab"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Ändra genvägen under Tangentbordsgenvägar → Gå till senaste hämtning (global).",
   "@settings.fileSystemWatching.globalShortcutHint": {
@@ -3169,9 +3169,9 @@
   "@settings.adb.status.notWatching": {
     "sourceHash": "6e1936c"
   },
-  "settings.adb.status.keywords": "status, kontrollera igen, hittad, hittades, bevakar, installera",
+  "settings.adb.status.keywords": "status, kontrollera igen, hittad, hittades, hittades inte, installera, upptäck telefoner, identifiera telefoner, bevakar, ansluten",
   "@settings.adb.status.keywords": {
-    "sourceHash": "32678b7"
+    "sourceHash": "3e05996"
   },
   "settings.adb.recheck": "Leta igen",
   "@settings.adb.recheck": {

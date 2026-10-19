@@ -453,6 +453,3 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   malfunction; added `stopped working` / `stops working` to its `notMatch`. (de, fr)
 - `errorReporter.pageCrash.body`: "Reloading usually helps … sending a report helps get it fixed" repeats "helps" in
   adjacent sentences; several languages varied the verb. Consider "a report lets us fix it" or similar. (de, fr, ru, zh)
-- nl labels outside the keyword batch: `settings.advanced.showStagingTempFiles.label` ("Cmdrs …" breaks the
-  brand-genitive rule), and `settings.analytics.enabled`/`updates.crashReports`/`updates.errorReports` labels use
-  `sturen`, ruling `versturen`. (nl)

@@ -84,9 +84,9 @@
   "@settings.appearance.sizeColors.opt.rainbow": {
     "sourceHash": "b1f7b2e"
   },
-  "settings.appearance.sizeColors.keywords": "grootte, kleur, kleuren, niveau, regenboog, app, markeren, accentueren",
+  "settings.appearance.sizeColors.keywords": "grootte, kleur, kleuren, niveau, regenboog, appkleur, accentkleur, accent, tinten, markeren, accentueren",
   "@settings.appearance.sizeColors.keywords": {
-    "sourceHash": "8eb9856"
+    "sourceHash": "f1249f0"
   },
   "settings.appearance.dateColors.label": "Datumkleuren",
   "@settings.appearance.dateColors.label": {
@@ -109,9 +109,9 @@
   "@settings.appearance.dateColors.opt.wilting": {
     "sourceHash": "2aa30f1"
   },
-  "settings.appearance.dateColors.keywords": "datum, kleur, kleuren, ouderdom, leeftijd, gewijzigd, bewerkingsdatum, verwelken, vers, nieuw, oud",
+  "settings.appearance.dateColors.keywords": "datum, kleur, kleuren, ouderdom, leeftijd, gewijzigd, bewerkingsdatum, verwelken, appkleur, accentkleur, accent, vervagen, verbleken, vers, nieuw, oud",
   "@settings.appearance.dateColors.keywords": {
-    "sourceHash": "cc85453"
+    "sourceHash": "65cbe5d"
   },
   "settings.appearance.dateTimeFormat.label": "Datum- en tijdnotatie",
   "@settings.appearance.dateTimeFormat.label": {
@@ -1482,7 +1482,7 @@
   },
   "settings.whatsNew.showOnUpdate.keywords": "wijzigingenlogboek, wat is er nieuw, nieuw, nieuwe functies, wijzigingen, update",
   "@settings.whatsNew.showOnUpdate.keywords": {
-    "sourceHash": "ef19c9d"
+    "sourceHash": "6a9e154"
   },
   "settings.whatsNew.lastSeenVersion.label": "Laatst geziene changelog-versie",
   "@settings.whatsNew.lastSeenVersion.label": {
@@ -1492,7 +1492,7 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
-  "settings.analytics.enabled.label": "Gebruiksstatistieken sturen",
+  "settings.analytics.enabled.label": "Gebruiksstatistieken versturen",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"
   },
@@ -1516,7 +1516,7 @@
   "@settings.analytics.email.keywords": {
     "sourceHash": "61438eb"
   },
-  "settings.updates.crashReports.label": "Crashrapporten sturen",
+  "settings.updates.crashReports.label": "Crashrapporten versturen",
   "@settings.updates.crashReports.label": {
     "sourceHash": "2b8f06d"
   },
@@ -1528,7 +1528,7 @@
   "@settings.updates.crashReports.keywords": {
     "sourceHash": "5fbf552"
   },
-  "settings.updates.errorReports.label": "Foutrapporten automatisch sturen",
+  "settings.updates.errorReports.label": "Foutrapporten automatisch versturen",
   "@settings.updates.errorReports.label": {
     "sourceHash": "471575d"
   },
@@ -1544,7 +1544,7 @@
   "@settings.updates.attachEmailToReports.label": {
     "sourceHash": "76c512e"
   },
-  "settings.updates.attachEmailToReports.description": "Voeg bij het sturen van een crash- of foutrapport je contact-e-mail voor de bèta toe, zodat we kunnen reageren. Je kunt dit per rapport wijzigen.",
+  "settings.updates.attachEmailToReports.description": "Voeg bij het versturen van een crash- of foutrapport je contact-e-mail voor de bèta toe, zodat we kunnen reageren. Je kunt dit per rapport wijzigen.",
   "@settings.updates.attachEmailToReports.description": {
     "sourceHash": "dd23637"
   },
@@ -1622,7 +1622,7 @@
   },
   "settings.fileViewer.suppressBinaryWarning.keywords": "weergavevenster, binair, afbeelding, ruw, ruwe weergave, waarschuwing, banner, snelle weergave",
   "@settings.fileViewer.suppressBinaryWarning.keywords": {
-    "sourceHash": "12a2ca0"
+    "sourceHash": "1508efc"
   },
   "settings.fileExplorer.suppressQuickLookHint.label": "De hint voor snelle weergave bij de spatietoets onderdrukken",
   "@settings.fileExplorer.suppressQuickLookHint.label": {
@@ -1634,7 +1634,7 @@
   },
   "settings.fileExplorer.suppressQuickLookHint.keywords": "snelle weergave, geef snel weer, voorvertoning, spatie, spatiebalk, hint, tip, melding, herinnering",
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
-    "sourceHash": "d3a493e"
+    "sourceHash": "8f4a843"
   },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Aantal gesloten tabbladen om per paneel te onthouden",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
@@ -1773,7 +1773,7 @@
   "@settings.advanced.showSafeSaveFiles.keywords": {
     "sourceHash": "a56607a"
   },
-  "settings.advanced.showStagingTempFiles.label": "Cmdrs tijdelijke bestanden tonen",
+  "settings.advanced.showStagingTempFiles.label": "Tijdelijke bestanden van Cmdr tonen",
   "@settings.advanced.showStagingTempFiles.label": {
     "sourceHash": "61c8190"
   },
@@ -1805,9 +1805,9 @@
   "@settings.advanced.serviceResolveTimeout.description": {
     "sourceHash": "5cf231d"
   },
-  "settings.advanced.serviceResolveTimeout.keywords": "resolutie, oplossen, opzoeken, time-out",
+  "settings.advanced.serviceResolveTimeout.keywords": "resolutie, oplossen, opzoeken, time-out, service, servicedetectie, netwerkdetectie, netwerk zoeken, lokaal netwerk, wachten, wachttijd",
   "@settings.advanced.serviceResolveTimeout.keywords": {
-    "sourceHash": "7f5c11b"
+    "sourceHash": "c4e3d7c"
   },
   "settings.search.recentSearches.maxCount.label": "Recente zoekopdrachten om te onthouden",
   "@settings.search.recentSearches.maxCount.label": {
@@ -2251,9 +2251,9 @@
   "@settings.askCmdr.interactiveModel.placeholder": {
     "sourceHash": "2631f3d"
   },
-  "settings.askCmdr.interactiveModel.keywords": "ai, chat, assistent, model, interactief",
+  "settings.askCmdr.interactiveModel.keywords": "ai, chat, assistent, model, overschrijven, ander model, afwijkend model",
   "@settings.askCmdr.interactiveModel.keywords": {
-    "sourceHash": "2e3c2d7"
+    "sourceHash": "e55416b"
   },
   "settings.askCmdr.chatMemorySize.label": "Grootte van het chatgeheugen",
   "@settings.askCmdr.chatMemorySize.label": {
@@ -2303,9 +2303,9 @@
   "@settings.askCmdr.wakeDelay.summary": {
     "sourceHash": "ad03c00"
   },
-  "settings.askCmdr.wakeDelay.keywords": "vertraging, ritme, wachten, hoe vaak, frequentie, rustig, stil, proactief",
+  "settings.askCmdr.wakeDelay.keywords": "vertraging, wachten, timing, moment, hoe vaak, frequentie, rustig, stil, proactief",
   "@settings.askCmdr.wakeDelay.keywords": {
-    "sourceHash": "800df1b"
+    "sourceHash": "f8bcbd5"
   },
   "settings.askCmdr.wakeToast.label": "Een melding tonen als er een suggestie is",
   "@settings.askCmdr.wakeToast.label": {
@@ -2908,9 +2908,9 @@
   "@settings.securityLog.showInFinder": {
     "sourceHash": "c2a9c77"
   },
-  "settings.updates.showSecurityLog.keywords": "beveiliging, log, logboek, audit, gebeurtenissen, bestand, openen, tonen",
+  "settings.updates.showSecurityLog.keywords": "beveiliging, log, logboek, audit, gebeurtenissen, bestand, openen, tonen, laten zien, map, locatie",
   "@settings.updates.showSecurityLog.keywords": {
-    "sourceHash": "9ce9447"
+    "sourceHash": "a5708ab"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Wijzig de sneltoets onder Sneltoetsen → Ga naar laatste download (globaal).",
   "@settings.fileSystemWatching.globalShortcutHint": {
@@ -3174,9 +3174,9 @@
   "@settings.adb.status.notWatching": {
     "sourceHash": "6e1936c"
   },
-  "settings.adb.status.keywords": "status, opnieuw controleren, controleer opnieuw, gevonden, niet gevonden, bewaken, installeren",
+  "settings.adb.status.keywords": "status, opnieuw controleren, controleer opnieuw, gevonden, niet gevonden, installeren, telefoons detecteren, telefoon herkennen, bewaken, verbonden",
   "@settings.adb.status.keywords": {
-    "sourceHash": "32678b7"
+    "sourceHash": "3e05996"
   },
   "settings.adb.recheck": "Controleer opnieuw",
   "@settings.adb.recheck": {
