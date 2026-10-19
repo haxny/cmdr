@@ -184,15 +184,22 @@ pub(super) async fn stream_pipe_file(
     // Set when an attempt's create at the FINAL name (a single-shot write) failed
     // on the transport: the server may have completed it, so the next attempt
     // settles that before writing again (`interrupted_landing.rs`).
-    let mut unanswered_create = None;
+    let mut unanswered_create: Option<(u64, cmdr_fs::metadata::MetadataClasses)> = None;
     loop {
         if let Some((size, lost)) = unanswered_create.take()
-            && settle_unanswered_create(source_volume, source_path, size, dest_volume, dest_path).await
-                == InterruptedLanding::Landed
+            && let Some(stamp) =
+                settle_unanswered_create(source_volume, source_path, size, dest_volume, dest_path).await
         {
             log::info!(target: "copy", "stream_pipe_file: {} was written whole before the reply was lost", dest_path.display());
             state.claimed_names.release_placeholder(dest_path);
-            state.metadata_losses.note_file(lost);
+            // The write's own stamp may be what the drop cut off (SMB stamps a
+            // compound write in a later request), so it goes on again by path,
+            // idempotent. What still won't go on is counted, ❌ never dropped
+            // silently.
+            let report = dest_volume
+                .apply_metadata(dest_path, &stamp.carried, stamp.modified)
+                .await;
+            state.metadata_losses.note_file(lost.union(report.refused_classes()));
             return Ok(size);
         }
         // Opening the source is a device round-trip on MTP / SMB and can hang on

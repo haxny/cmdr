@@ -31,22 +31,22 @@ fn outage_state(engine: &TestOperations, budget: Duration) -> Arc<WriteOperation
     )
 }
 
+/// The modification date every source file wears (2017-07-14, unix seconds):
+/// long before any test runs, so a copy that lost it shows.
+const SOURCE_MODIFIED: u64 = 1_500_000_000;
+
 /// A source with `count` files, both as a folder (`/batch/…`) and at the top
 /// level (`/f<n>.txt`), so a cell can pick the serial walk or the concurrent
-/// window.
+/// window. Every file is dated [`SOURCE_MODIFIED`].
 async fn source_with(count: usize) -> Arc<dyn Volume> {
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_directory(Path::new("/batch")).await.unwrap();
     for n in 0..count {
         let body = format!("file {n}");
-        source
-            .create_file(Path::new(&format!("/batch/f{n}.txt")), body.as_bytes())
-            .await
-            .unwrap();
-        source
-            .create_file(Path::new(&format!("/f{n}.txt")), body.as_bytes())
-            .await
-            .unwrap();
+        for path in [format!("/batch/f{n}.txt"), format!("/f{n}.txt")] {
+            source.create_file(Path::new(&path), body.as_bytes()).await.unwrap();
+            source.set_modified_at(Path::new(&path), Some(SOURCE_MODIFIED));
+        }
     }
     source
 }
@@ -431,6 +431,16 @@ async fn a_name_someone_else_took_during_the_outage_stays_a_conflict() {
     );
 }
 
+/// How much of the swallowed write the drop cut off besides its reply.
+#[derive(Clone, Copy)]
+enum SwallowedWrite {
+    /// The bytes and the source's date both landed.
+    Whole,
+    /// The bytes landed, the date stamp after them didn't (SMB stamps a
+    /// compound write by path, in a frame of its own).
+    WithoutItsStamp,
+}
+
 /// Copies `/batch` (four files) onto a share that lands every write in one shot
 /// (no temp, `CreateNew` at the final name) and drops right after the server
 /// completed the second file's write, before its reply arrived. With `theirs`,
@@ -439,11 +449,15 @@ async fn copy_through_a_swallowed_single_shot_write(
     engine: &TestOperations,
     lane: &str,
     theirs: Option<&'static [u8]>,
+    swallowed: SwallowedWrite,
 ) -> (Arc<InMemoryVolume>, Result<(), WriteOperationError>) {
     let source = source_with(4).await;
     let (inner, nas, dest) = nas(lane);
     nas.write_single_shot();
-    nas.drop_after_write(1);
+    match swallowed {
+        SwallowedWrite::Whole => nas.drop_after_write(1),
+        SwallowedWrite::WithoutItsStamp => nas.drop_after_write_before_its_stamp(1),
+    }
     let state = outage_state(engine, Duration::from_secs(30));
     let op = engine.register_state(lane, Arc::clone(&state));
     let watched = Arc::clone(&state);
@@ -494,8 +508,13 @@ async fn copy_through_a_swallowed_single_shot_write(
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_single_shot_write_the_drop_swallowed_counts_as_landed() {
     let engine = TestOperations::new();
-    let (inner, outcome) =
-        copy_through_a_swallowed_single_shot_write(&engine, "outage-single-shot-unanswered", None).await;
+    let (inner, outcome) = copy_through_a_swallowed_single_shot_write(
+        &engine,
+        "outage-single-shot-unanswered",
+        None,
+        SwallowedWrite::Whole,
+    )
+    .await;
 
     outcome.expect("a write the server completed is the copy's own file, not a conflict");
     for n in 0..4 {
@@ -507,6 +526,34 @@ async fn a_single_shot_write_the_drop_swallowed_counts_as_landed() {
     }
 }
 
+/// The swallowed write's bytes landed but its date stamp didn't (the stamp is
+/// what met the drop): the copy counts the file done and puts the source's date
+/// on by path once the share is back, ❌ never leaving it silently on the
+/// server's date.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_settled_single_shot_write_gets_the_date_its_stamp_lost() {
+    let engine = TestOperations::new();
+    let (inner, outcome) = copy_through_a_swallowed_single_shot_write(
+        &engine,
+        "outage-single-shot-unstamped",
+        None,
+        SwallowedWrite::WithoutItsStamp,
+    )
+    .await;
+
+    outcome.expect("a write the server completed is the copy's own file");
+    for n in 0..4 {
+        let path = format!("/batch/f{n}.txt");
+        assert_eq!(
+            content_of(&inner, &path).await,
+            format!("file {n}").into_bytes(),
+            "f{n} must land byte-exact"
+        );
+        let entry = inner.get_metadata(Path::new(&path)).await.expect("it landed");
+        assert_eq!(entry.modified_at, Some(SOURCE_MODIFIED), "the source's date is on f{n}");
+    }
+}
+
 /// The same swallowed single-shot write, but someone else saved the name while
 /// the share was gone: their file isn't the source's bytes, so it stays a
 /// conflict and stays theirs.
@@ -514,8 +561,13 @@ async fn a_single_shot_write_the_drop_swallowed_counts_as_landed() {
 async fn a_single_shot_name_someone_else_took_during_the_outage_stays_a_conflict() {
     let engine = TestOperations::new();
     const THEIRS: &[u8] = b"theirs!"; // one byte longer than "file 1"
-    let (inner, outcome) =
-        copy_through_a_swallowed_single_shot_write(&engine, "outage-single-shot-taken", Some(THEIRS)).await;
+    let (inner, outcome) = copy_through_a_swallowed_single_shot_write(
+        &engine,
+        "outage-single-shot-taken",
+        Some(THEIRS),
+        SwallowedWrite::Whole,
+    )
+    .await;
 
     let error = outcome.expect_err("a file the copy can't prove its own is never claimed");
     assert!(
@@ -534,8 +586,13 @@ async fn a_single_shot_name_someone_else_took_during_the_outage_stays_a_conflict
 async fn a_single_shot_name_taken_with_the_same_size_stays_a_conflict() {
     let engine = TestOperations::new();
     const THEIRS: &[u8] = b"theirs"; // exactly as long as "file 1"
-    let (inner, outcome) =
-        copy_through_a_swallowed_single_shot_write(&engine, "outage-single-shot-same-size", Some(THEIRS)).await;
+    let (inner, outcome) = copy_through_a_swallowed_single_shot_write(
+        &engine,
+        "outage-single-shot-same-size",
+        Some(THEIRS),
+        SwallowedWrite::Whole,
+    )
+    .await;
 
     let error = outcome.expect_err("a same-size file with other bytes is never claimed");
     assert!(

@@ -42,7 +42,9 @@
 //! the compound write stamps the source's dates in a separate request after it,
 //! which an unanswered write never reached. A 0-byte file our CREATE left
 //! without its WRITE, or a file someone else saved, isn't the source's bytes,
-//! so it stays the ordinary clash.
+//! so it stays the ordinary clash. For the same reason a settled create hands
+//! back the source's [`WriteStamp`]: the caller puts it on by path (idempotent),
+//! so the file never keeps the server's date silently.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -51,6 +53,7 @@ use super::super::in_flight_temps;
 use super::super::state::WriteOperationState;
 use super::recovered_name::discard_unplaced_temp;
 use super::staged_write::{StagedWrite, dest_home};
+use cmdr_fs::metadata::CarriedMetadata;
 use cmdr_fs::volume::{StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode};
 
 /// What a landing whose reply the outage swallowed turned out to have done.
@@ -126,35 +129,56 @@ pub(super) fn create_went_unanswered(staged: &StagedWrite, result: &Result<Strea
     ) && matches!(result, Err(e) if super::retry::is_retryable(e))
 }
 
+/// What a write puts on its file beyond the bytes, as the destination's own
+/// write would have: the source's date and the classes the destination keeps on
+/// a write, flags narrowed to the ones it stages (the rest wait for the landing,
+/// `landed_flags.rs`).
+pub(super) struct WriteStamp {
+    pub(super) carried: CarriedMetadata,
+    pub(super) modified: Option<std::time::SystemTime>,
+}
+
+impl WriteStamp {
+    /// What `dest`'s write of `stream` would have stamped.
+    fn of(stream: &dyn VolumeReadStream, dest: &dyn Volume) -> Self {
+        let caps = dest.metadata_caps();
+        let mut carried = stream.metadata(caps.stores);
+        carried.flags = carried.flags.intersection(caps.staged_flags);
+        Self {
+            carried,
+            modified: stream.modified_at(),
+        }
+    }
+}
+
 /// Settles a single-shot create of `size` bytes at `final_path` whose reply never
-/// came: [`InterruptedLanding::Landed`] only when the file there is exactly the
-/// source's bytes. [`InterruptedLanding::RunAgain`] leaves the name alone, so a
-/// file that isn't provably ours meets the next attempt's `CreateNew` refusal.
+/// came: `Some` only when the file there is exactly the source's bytes, with the
+/// [`WriteStamp`] the write may not have put on (its stamp is a later request,
+/// and the drop may have cut it off). `None` leaves the name alone, so a file
+/// that isn't provably ours meets the next attempt's `CreateNew` refusal.
 pub(super) async fn settle_unanswered_create(
     source_volume: &Arc<dyn Volume>,
     source_path: &Path,
     size: u64,
     dest_volume: &Arc<dyn Volume>,
     final_path: &Path,
-) -> InterruptedLanding {
+) -> Option<WriteStamp> {
     let same_size = matches!(
         dest_volume.get_metadata(final_path).await,
         Ok(entry) if !entry.is_directory && !entry.is_symlink && entry.size == Some(size)
     );
     if !same_size {
-        return InterruptedLanding::RunAgain;
+        return None;
     }
     let (Ok(ours), Ok(at_the_name)) = (
         source_volume.open_read_stream_with_hint(source_path, Some(size)).await,
         dest_volume.open_read_stream(final_path).await,
     ) else {
-        return InterruptedLanding::RunAgain;
+        return None;
     };
-    if same_bytes(ours, at_the_name).await {
-        InterruptedLanding::Landed
-    } else {
-        InterruptedLanding::RunAgain
-    }
+    // Read before the compare consumes the stream: the open already holds it.
+    let stamp = WriteStamp::of(&*ours, &**dest_volume);
+    same_bytes(ours, at_the_name).await.then_some(stamp)
 }
 
 /// Whether two streams yield the same bytes, whatever their chunking. A read

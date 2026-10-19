@@ -1839,7 +1839,11 @@ equal the source's, compared in full by re-reading both. ❌ Never on size alone
 theirs, pinned), and never on mtime: the compound write stamps the source's dates in a separate request after the frame,
 which an unanswered write never reached. Anything less runs the file again and meets the ordinary clash, which also
 covers a 0-byte file our CREATE made without its WRITE: it can't be told from someone else's empty file, so it's
-reported, never claimed.
+reported, never claimed. A settled create gets its stamp again: the source's date and what the destination keeps on a
+write (staged flags only) go on by path through `Volume::apply_metadata` (idempotent), read off the settle's own source
+stream, and what's refused joins the loss note, ❌ never dropped silently. The SMB write fails its compound path with
+`DeviceDisconnected` when the stamp itself met the drop (`crates/cmdr-smb/DETAILS.md` § "Dates on copies"), so this is
+the path that puts its dates on. Pinned by `copy_outage_tests.rs::a_settled_single_shot_write_gets_the_date_its_stamp_lost`.
 
 **Residual risk, accepted.** A byte-identical file someone else saved at the name during the outage is claimed as ours,
 so it enters the rollback ledger and an undo would remove it. Content-identical to the source and saved in the seconds

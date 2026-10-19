@@ -11,14 +11,17 @@
 //! performed it but before its reply arrived (the landing a drop swallows). It
 //! can also land every write in one shot (SMB's compound write for a small
 //! file) and drop right after the Nth write completed, the same swallowed reply
-//! for a write that had no temp. And its reconnect can hang, as an SMB handshake
-//! a server accepted and never answered does (`#406`).
+//! for a write that had no temp, optionally with the write's date stamp cut off
+//! too (SMB stamps a compound write by path, in a frame of its own). And its
+//! reconnect can hang, as an SMB handshake a server accepted and never answered
+//! does (`#406`).
 //!
 //! Wraps an `InMemoryVolume` (rather than owning one) so a test can read the
 //! destination back through the same handle after the copy.
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataReport};
 use cmdr_fs::volume::{
     ConnectionState, DirectoryCreation, InMemoryVolume, LaneKey, ListingProgress, ScanConflict, SourceItemInfo,
     SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
@@ -52,6 +55,9 @@ pub(crate) struct OutageVolume {
     drop_at_write: Mutex<Option<usize>>,
     /// Drop the session right after this (0-based) write completed.
     drop_after_write: Mutex<Option<usize>>,
+    /// The write `drop_after_write` names lands its bytes, but not the source's
+    /// date: the drop cut off the stamp that follows the bytes.
+    drop_cuts_the_stamp: AtomicBool,
     /// Promise single-shot writes (`Volume::write_is_single_shot`).
     single_shot: AtomicBool,
     renames: AtomicUsize,
@@ -92,6 +98,7 @@ impl OutageVolume {
             writes: AtomicUsize::new(0),
             drop_at_write: Mutex::new(None),
             drop_after_write: Mutex::new(None),
+            drop_cuts_the_stamp: AtomicBool::new(false),
             single_shot: AtomicBool::new(false),
             renames: AtomicUsize::new(0),
             drop_at_rename: Mutex::new(None),
@@ -130,6 +137,14 @@ impl OutageVolume {
     /// drops (and the server goes away) before its reply arrives.
     pub(crate) fn drop_after_write(&self, n: usize) {
         *self.drop_after_write.lock_ignore_poison() = Some(n);
+    }
+
+    /// Like [`drop_after_write`](Self::drop_after_write), but the drop also cuts
+    /// off the source's date: the file keeps the date the server gave it, as an
+    /// SMB compound write does when its path stamp never went out.
+    pub(crate) fn drop_after_write_before_its_stamp(&self, n: usize) {
+        self.drop_after_write(n);
+        self.drop_cuts_the_stamp.store(true, Ordering::SeqCst);
     }
 
     /// Lands every write in one indivisible shot, as SMB's compound write does
@@ -335,6 +350,12 @@ impl Volume for OutageVolume {
                 .write_from_stream(dest, mode, length, stream, on_progress)
                 .await?;
             if *self.drop_after_write.lock_ignore_poison() == Some(n) {
+                if self.drop_cuts_the_stamp.load(Ordering::SeqCst) {
+                    let servers_own = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map_or(0, |since| since.as_secs());
+                    self.inner.set_modified_at(dest, Some(servers_own));
+                }
                 self.go_away();
                 return Err(VolumeError::DeviceDisconnected("the session is down".to_owned()));
             }
@@ -343,5 +364,18 @@ impl Volume for OutageVolume {
     }
     fn write_is_single_shot<'a>(&'a self, _length: StreamLength) -> Fut<'a, bool> {
         Box::pin(async move { self.single_shot.load(Ordering::SeqCst) })
+    }
+    fn apply_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+        carried: &'a CarriedMetadata,
+        modified: Option<std::time::SystemTime>,
+    ) -> Fut<'a, MetadataReport> {
+        Box::pin(async move {
+            if self.gate().is_err() {
+                return MetadataReport::uniform(carried, modified, ClassOutcome::Refused);
+            }
+            self.inner.apply_metadata(path, carried, modified).await
+        })
     }
 }
