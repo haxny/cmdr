@@ -85,7 +85,7 @@ export async function setNetworkVolumeOptedIn(volumeId: string, enabled: boolean
       mediaIndexSetNetworkVolumeEnabled(volumeId, enabled),
     )
   } catch (err) {
-    log.warn('Failed to apply network opt-in for {volumeId}: {err}', { volumeId, err: String(err) })
+    log.warn('Failed to apply network opt-in for {volumeId}: {err}', { volumeId, err })
     throw err
   }
 }
@@ -109,7 +109,7 @@ export async function setVolumeAlwaysIndexed(volumeId: string, always: boolean):
       mediaIndexSetAlwaysIndexVolume(volumeId, always),
     )
   } catch (err) {
-    log.warn('Failed to apply always-index for volume {volumeId}: {err}', { volumeId, err: String(err) })
+    log.warn('Failed to apply always-index for volume {volumeId}: {err}', { volumeId, err })
     throw err
   }
 }

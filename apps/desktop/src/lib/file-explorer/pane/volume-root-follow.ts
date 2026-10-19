@@ -133,13 +133,13 @@ export function createVolumeRootFollow(
           followVolumeRootChange(change, full).catch((e: unknown) => {
             log.warn('Following the edited place {volumeId} broke down: {error}', {
               volumeId: change.volumeId,
-              error: String(e),
+              error: e,
             })
           })
         }),
         onServerPlaceMoved((moved) => {
           followServerMove(moved, moveDeps).catch((e: unknown) => {
-            log.warn('Following a server to its new address broke down: {error}', { error: String(e) })
+            log.warn('Following a server to its new address broke down: {error}', { error: e })
           })
         }),
       ])

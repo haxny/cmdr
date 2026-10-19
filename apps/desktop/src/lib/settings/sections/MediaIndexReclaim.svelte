@@ -51,7 +51,7 @@
         } catch (err) {
             if (seq !== previewSeq) return
             preview = null
-            log.warn('reclaim-preview query failed: {err}', { err: String(err) })
+            log.warn('reclaim-preview query failed: {err}', { err })
         }
     }
 
@@ -97,7 +97,7 @@
                 })
             }
         } catch (err) {
-            log.warn('reclaim prune failed: {err}', { err: String(err) })
+            log.warn('reclaim prune failed: {err}', { err })
             addToast(tString('settings.mediaIndex.reclaim.couldNotDelete'), { level: 'warn' })
         } finally {
             pruning = false

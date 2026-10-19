@@ -74,7 +74,7 @@
             await openSettingsWindow('security-notice-toast', MCP_SETTINGS_SECTION)
         } catch (error) {
             // The toast stays up, so the button is still there to try again.
-            log.warn("Couldn't open Settings from a security notice: {error}", { error: String(error) })
+            log.warn("Couldn't open Settings from a security notice: {error}", { error })
             return
         }
         dismissToast(toastId)
@@ -86,7 +86,7 @@
         void reconnectVolume(volumeId).catch((error: unknown) => {
             log.warn('Reconnecting {volumeId} from a security notice didn’t take: {error}', {
                 volumeId,
-                error: String(error),
+                error,
             })
         })
     }
@@ -96,7 +96,7 @@
         void disconnectSmbVolume(volumeId).catch((error: unknown) => {
             log.warn('Disconnecting {volumeId} from a security notice didn’t take: {error}', {
                 volumeId,
-                error: String(error),
+                error,
             })
         })
     }
@@ -105,7 +105,7 @@
         try {
             await openExternalUrl(WEBSITE)
         } catch (error) {
-            log.warn("Couldn't open getcmdr.com from a security notice: {error}", { error: String(error) })
+            log.warn("Couldn't open getcmdr.com from a security notice: {error}", { error })
         }
     }
 </script>

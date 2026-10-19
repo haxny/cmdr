@@ -59,7 +59,7 @@ class QuitPrompt {
     void quitConfirm().catch((e: unknown) => {
       // The gate's deadline is the backstop, so a dropped confirm costs
       // the user a wait, not the quit.
-      log.warn('Confirming the quit returned an error: {error}', { error: String(e) })
+      log.warn('Confirming the quit returned an error: {error}', { error: e })
     })
   }
 
@@ -67,7 +67,7 @@ class QuitPrompt {
   keepWorking() {
     this.#close()
     void quitCancel().catch((e: unknown) => {
-      log.warn('Calling off the quit returned an error: {error}', { error: String(e) })
+      log.warn('Calling off the quit returned an error: {error}', { error: e })
     })
   }
 

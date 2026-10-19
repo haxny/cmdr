@@ -305,7 +305,7 @@ export function createOperationEventFanout(): OperationEventFanout {
     if (refused) {
       log.warn('{missing} of the operation event subscriptions didn’t start: {error}', {
         missing: subscriptions.length - unlisteners.length,
-        error: String(refused.reason),
+        error: refused.reason,
       })
     }
 
@@ -324,7 +324,7 @@ export function createOperationEventFanout(): OperationEventFanout {
       applySnapshot(operations)
     } catch (error) {
       // A failed seed just leaves each session to seed itself.
-      log.warn("Couldn't seed the operation event fan-out: {error}", { error: String(error) })
+      log.warn("Couldn't seed the operation event fan-out: {error}", { error })
     }
   }
 

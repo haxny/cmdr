@@ -103,7 +103,7 @@ export function createTypeToJumpController(deps: TypeToJumpControllerDeps): Type
     } catch (e) {
       // The backend's refusal is typed (`FuzzyJumpError`), and `throwIpcError`
       // keeps its fields on the Error, so the log names the REASON.
-      log.warn("type-to-jump couldn't match: {reason}", { reason: (e as { type?: string }).type ?? String(e) })
+      log.warn("type-to-jump couldn't match: {reason}", { reason: (e as { type?: string }).type ?? e })
     }
   }
 

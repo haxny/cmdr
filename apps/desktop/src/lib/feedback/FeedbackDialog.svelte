@@ -72,7 +72,7 @@
         try {
             await openExternalUrl(url)
         } catch (e) {
-            log.warn("Couldn't open external link: {error}", { error: String(e) })
+            log.warn("Couldn't open external link: {error}", { error: e })
         }
     }
 

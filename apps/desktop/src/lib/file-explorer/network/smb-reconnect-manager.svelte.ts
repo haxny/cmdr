@@ -309,7 +309,7 @@ class SmbReconnectManager {
       // A flaky network flips a volume in and out of needs-auth, and every flip
       // re-asks: logged once per volume until a read works.
       if (this.signInReadFailures.shouldLog(volumeId)) {
-        log.warn('Reading the sign-in state for {volumeId} failed: {error}', { volumeId, error: String(e) })
+        log.warn('Reading the sign-in state for {volumeId} failed: {error}', { volumeId, error: e })
       }
       return
     }
@@ -375,7 +375,7 @@ class SmbReconnectManager {
           cb()
         } catch (e) {
           // Our own subscriber's bug, so it earns an error report.
-          log.error('Reconnect success callback threw: {error}', { error: String(e) })
+          log.error('Reconnect success callback threw: {error}', { error: e })
         }
       }
     })
@@ -426,7 +426,7 @@ class SmbReconnectManager {
       log.info("Reconnect attempt {attempt} for {volumeId} didn't take: {reason}", {
         attempt: attemptIndex + 1,
         volumeId,
-        reason: refusal === null ? String(e) : describeReconnectRefusal(refusal),
+        reason: refusal === null ? e : describeReconnectRefusal(refusal),
       })
       // Re-fetch entry: the last subscriber may have left during the attempt,
       // and a Cancel may have called this cycle off.

@@ -69,7 +69,7 @@ export const CLOUD_CONSENT_ANCHOR = 'settings-ai-cloud-consent'
  */
 export function openCloudConsentSettings(surface: SettingsSurface): void {
   void openSettingsWindow(surface, ['AI', 'Provider'], CLOUD_CONSENT_ANCHOR).catch((e: unknown) => {
-    log.warn('opening the AI settings failed: {error}', { error: String(e) })
+    log.warn('opening the AI settings failed: {error}', { error: e })
   })
 }
 
@@ -92,7 +92,7 @@ function ensureListening(): void {
   // before it returns a promise. The gates still refresh on mount and on open.
   const giveUp = (e: unknown): void => {
     listening = false
-    log.debug('listening for cloud consent changes failed: {error}', { error: String(e) })
+    log.debug('listening for cloud consent changes failed: {error}', { error: e })
   }
   try {
     void onCloudAiConsentChanged(() => {
@@ -120,7 +120,7 @@ async function setHeldRevoke(held: boolean): Promise<boolean> {
   try {
     await cloudAiConsentRevokePendingChanged()
   } catch (e) {
-    log.warn('telling the cloud gates about a held "no" failed: {error}', { error: String(e) })
+    log.warn('telling the cloud gates about a held "no" failed: {error}', { error: e })
   }
   return saved
 }
@@ -135,7 +135,7 @@ export async function settleHeldCloudConsentRevoke(): Promise<void> {
     await revokeCloudAiConsent()
   } catch (e) {
     log.warn("a held 'no' to cloud AI still can't reach the store, so it stays held: {error}", {
-      error: String(e),
+      error: e,
     })
     return
   }
@@ -151,7 +151,7 @@ export async function refreshCloudConsent(): Promise<void> {
   try {
     apply(await cloudAiConsentStatus())
   } catch (e) {
-    log.warn('reading the cloud AI consent status failed: {error}', { error: String(e) })
+    log.warn('reading the cloud AI consent status failed: {error}', { error: e })
     // Fail closed: an unreadable status keeps every gate shut rather than opening it.
     cloudConsentState.accepted = false
     cloudConsentState.acceptedAt = null
@@ -169,7 +169,7 @@ export async function acceptCloudConsent(): Promise<ConsentOutcome> {
   try {
     await acceptCloudAiConsent()
   } catch (e) {
-    log.warn('recording cloud AI consent failed: {error}', { error: String(e) })
+    log.warn('recording cloud AI consent failed: {error}', { error: e })
   }
   await refreshCloudConsent()
   return cloudConsentState.accepted === true ? 'done' : 'notSaved'
@@ -181,7 +181,7 @@ async function revokeOnce(): Promise<ConsentOutcome> {
   try {
     await revokeCloudAiConsent()
   } catch (e) {
-    log.warn('turning cloud AI off failed: {error}', { error: String(e) })
+    log.warn('turning cloud AI off failed: {error}', { error: e })
     outcome = 'notSaved'
   }
   await refreshCloudConsent()

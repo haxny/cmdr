@@ -9,8 +9,10 @@ timestamps. The Rust side's fern dispatch tree, with its per-output level filter
 - **`open-debug-log.ts`**: Help and palette entry point for the read-only debug log viewer.
 - **`logger.ts`**: LogTape config, `getAppLogger()` entry point, verbose toggle, `debugCategories`.
 - **`log-bridge.ts`**: batching sink (collects FE logs for 100 ms, dedups, throttles at 200/s, sends to Rust via IPC).
+- **`describe-for-log.ts`**: renders every logged value.
 - **`uncaught-errors.ts`**: forwards `window` `error` / `unhandledrejection` to `log.error` under the `uncaught`
-  category (registered from `routes/+layout.ts`); `logPageCrash` does it for throws SvelteKit catches.
+  category (registered from `routes/+layout.ts`); `logPageCrash` does it for throws SvelteKit catches
+  (`apps/desktop/src/hooks.client.ts`).
 - **`log-once.ts`**: `LogOnceGate`, which lets a failure that recurs per event, poll tick, or call log once until it
   clears.
 - Rust side: `src-tauri/src/commands/logging.rs` (batch IPC receiver + runtime level control); the dispatch tree is in
@@ -29,8 +31,9 @@ Usage (adding logging, `RUST_LOG` recipes, the verbose toggle): `docs/tooling/lo
 - **The bridge forwards the rendered message and nothing else, so every property must appear in the template.**
   `FrontendLogEntry` is level + category + message; nothing reads `record.properties`. A field the message never names
   is discarded at the IPC boundary and reaches neither the log file nor a bundle. `cmdr/no-unrendered-log-fields`
-  enforces it at every level (`debug` and `info` drop properties the same way). Note `String(obj)` renders
-  `[object Object]`, so interpolate a field you can read: `{error.message}`, or a pre-stringified value.
+  enforces it at every level (`debug` and `info` drop properties the same way).
+- **Pass logged values raw: `describeForLog` is the one place a value becomes text** (cause chains, `TypedFailure`
+  payloads, compact JSON the redactor tokenizes). `cmdr/no-stringified-log-values` autofixes `String(x)`.
 - **Name a path or identity placeholder from `REDACTOR_KEY_BY_PLACEHOLDER`** (`{path}`, `{name}`, `{volumeId}`, …): the
   bridge renders it as a `key="…"` field that a report tokenizes. ❌ Never a generic name (`{vol}`) or spliced in.
 - **The bridge dedups and throttles to protect against infinite-loop log floods.** Consecutive identical messages get

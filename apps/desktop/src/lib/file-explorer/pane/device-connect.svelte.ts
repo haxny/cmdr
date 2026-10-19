@@ -215,7 +215,7 @@ export function createDeviceConnect(deps: DeviceConnectDeps): DeviceConnect {
       // is never shown: it is untranslated diagnostics, and the log is where
       // that belongs. The pane gets the one sentence true either way, with a
       // Try again beside it — ❌ never an empty held pane.
-      log.warn('Opening the phone on {volumeId} broke down: {error}', { volumeId, error: String(error) })
+      log.warn('Opening the phone on {volumeId} broke down: {error}', { volumeId, error })
       return {
         kind: 'refused',
         refusal: tString('adb.connect.transport'),
@@ -246,7 +246,7 @@ export function createDeviceConnect(deps: DeviceConnectDeps): DeviceConnect {
     try {
       await cancelAdbConnect(id)
     } catch (e) {
-      log.warn('Calling off the ADB connect {id} broke down: {error}', { id, error: String(e) })
+      log.warn('Calling off the ADB connect {id} broke down: {error}', { id, error: e })
     }
   }
 

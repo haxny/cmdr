@@ -65,7 +65,7 @@ async function cloudOnlineOnlyRouting(sourcePaths: string[]): Promise<{
     }
   } catch (error) {
     log.warn('trashRoutingForPaths threw, keeping the trash. error={error}', {
-      error: error instanceof Error ? error.message : String(error),
+      error,
     })
     return NO_ONLINE_ONLY
   }
@@ -534,7 +534,7 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
       )
     } catch (error) {
       log.warn('openDeleteDialog: getSelectionEntries threw, bailing. error={error}', {
-        error: error instanceof Error ? error.message : String(error),
+        error,
       })
       return
     }

@@ -89,6 +89,6 @@ export async function initManagedPolicy(onChange: (change: ManagedPolicyChange) 
     const fetched = await fetchManagedPolicy()
     if (!firstRead.superseded) policy = fetched
   } catch (error) {
-    log.warn('Could not read the managed policy, showing nothing as managed: {error}', { error: String(error) })
+    log.warn('Could not read the managed policy, showing nothing as managed: {error}', { error })
   }
 }

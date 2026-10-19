@@ -42,7 +42,7 @@ export async function refreshFdaStatus(): Promise<void> {
   } catch (e) {
     // A broken probe must not invent a missing grant: that would put a scary badge in the
     // title bar because an IPC call failed. Leave the last known answer alone.
-    log.debug('Full Disk Access probe failed, keeping the last answer: {error}', { error: String(e) })
+    log.debug('Full Disk Access probe failed, keeping the last answer: {error}', { error: e })
   }
 }
 

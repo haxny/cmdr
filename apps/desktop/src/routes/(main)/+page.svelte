@@ -711,7 +711,7 @@
             } catch (e) {
                 dispatchLog.debug('Command {commandId} rejected on a user gesture: {reason}', {
                     commandId,
-                    reason: e instanceof Error ? e.message : String(e),
+                    reason: e,
                 })
             }
         }

@@ -131,7 +131,7 @@
         try {
             await change()
         } catch (e) {
-            log.warn("couldn't {what} a multi-rename preset: {reason}", { what, reason: String(e) })
+            log.warn("couldn't {what} a multi-rename preset: {reason}", { what, reason: e })
         }
     }
 

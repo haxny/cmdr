@@ -44,7 +44,7 @@ export function createDirectConnectionSwitches(): DirectConnectionSwitches {
     } catch (e) {
       log.warn('Reading the direct-connection switch for {volumeId} broke down: {error}', {
         volumeId,
-        error: String(e),
+        error: e,
       })
     }
   }
@@ -58,7 +58,7 @@ export function createDirectConnectionSwitches(): DirectConnectionSwitches {
     } catch (e) {
       log.warn('Switching the direct connection for {volumeId} broke down: {error}', {
         volumeId: volume.id,
-        error: String(e),
+        error: e,
       })
       return
     }

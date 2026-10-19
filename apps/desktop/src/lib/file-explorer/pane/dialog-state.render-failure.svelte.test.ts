@@ -111,11 +111,13 @@ describe('dialog render-failure recovery', () => {
     const dialogs = makeState()
     dialogs.showAlert('Heads up', 'Something to say')
 
-    dialogs.handleDialogRenderFailure(new TypeError('each_key_duplicate'))
+    const thrown = new TypeError('each_key_duplicate')
+    dialogs.handleDialogRenderFailure(thrown)
 
     expect(logError).toHaveBeenCalledTimes(1)
-    const [, details] = logError.mock.calls[0] as [string, { error: string }]
-    expect(details.error).toContain('each_key_duplicate')
+    // The raw value: the log bridge's `describeForLog` renders it, cause chain included.
+    const [, details] = logError.mock.calls[0] as [string, { error: unknown }]
+    expect(details.error).toBe(thrown)
     expect(addToast).toHaveBeenCalledWith('fileExplorer.pane.dialogRenderFailedToast', { level: 'error' })
   })
 })

@@ -31,6 +31,6 @@ export async function openTypingModeSettings(): Promise<void> {
       settingAnchorId('fileExplorer.typeToJump.mode'),
     )
   } catch (err) {
-    log.warn("Couldn't open Settings from the quick filter toast: {err}", { err: String(err) })
+    log.warn("Couldn't open Settings from the quick filter toast: {err}", { err })
   }
 }

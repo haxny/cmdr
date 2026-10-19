@@ -41,6 +41,6 @@ export async function openSettingsToRevealHandler(): Promise<void> {
     const { openSettingsWindow } = await import('#lib/settings/settings-window.js')
     await openSettingsWindow('reveal-toast', ['Behavior', 'Navigation & file ops'], REVEAL_HANDLER_ANCHOR_ID)
   } catch (err) {
-    log.warn('Could not open Settings from the reveal notice: {err}', { err: String(err) })
+    log.warn('Could not open Settings from the reveal notice: {err}', { err })
   }
 }

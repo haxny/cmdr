@@ -210,7 +210,7 @@
         } catch (e) {
             // The picker not opening leaves the field exactly as it was, which is
             // a path the user can still type. Nothing to put on screen.
-            log.warn('The key-file picker did not open: {error}', { error: String(e) })
+            log.warn('The key-file picker did not open: {error}', { error: e })
         }
     }
 </script>

@@ -40,7 +40,7 @@ export function createDataWipeFlow(): DataWipeFlow {
       summary = await getDataWipeSummary()
     } catch (e: unknown) {
       // The dialog says the same things without the numbers.
-      log.warn('adding up Cmdr’s data didn’t finish: {error}', { error: String(e) })
+      log.warn('adding up Cmdr’s data didn’t finish: {error}', { error: e })
     } finally {
       opening = false
     }
@@ -57,7 +57,7 @@ export function createDataWipeFlow(): DataWipeFlow {
       view = { kind: 'done', report }
     } catch (e: unknown) {
       const refusal = asDataWipeError(e)
-      if (refusal === null) log.warn('deleting all Cmdr data didn’t answer: {error}', { error: String(e) })
+      if (refusal === null) log.warn('deleting all Cmdr data didn’t answer: {error}', { error: e })
       view = { kind: 'confirm', summary, refusal: refusal ?? { type: 'interrupted' } }
     }
   }

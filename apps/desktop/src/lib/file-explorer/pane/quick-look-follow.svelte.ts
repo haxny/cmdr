@@ -91,7 +91,7 @@ export function initQuickLookFollow(deps: QuickLookFollowDeps): QuickLookFollow 
       if (path === quickLookLastSentPath) return
       quickLookLastSentPath = path
       void quickLookSetPath(path, volId).catch((e: unknown) => {
-        log.warn('quickLookSetPath failed: {error}', { error: String(e) })
+        log.warn('quickLookSetPath failed: {error}', { error: e })
       })
     }, QUICK_LOOK_FOLLOW_DEBOUNCE_MS)
   })

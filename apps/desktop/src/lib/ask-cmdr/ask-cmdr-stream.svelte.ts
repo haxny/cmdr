@@ -98,7 +98,7 @@ export function sendMessage(text: string): void {
       // `sendAskCmdrMessage` turns every Rust refusal into an outcome, so landing here means the
       // invoke itself broke (a missing command, an argument shape that drifted): a Cmdr bug, not
       // the provider. The turn ends as unfinished, with no raw IPC text in front of the person.
-      log.error('The send command itself broke, before any provider was involved: {error}', { error: String(e) })
+      log.error('The send command itself broke, before any provider was involved: {error}', { error: e })
       if (askCmdrState.streaming) applyFailed('unfinishedReply', null)
     },
   )

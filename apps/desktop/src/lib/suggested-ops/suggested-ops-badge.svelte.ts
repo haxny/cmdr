@@ -45,7 +45,7 @@ export async function startSuggestedOpsBadge(): Promise<void> {
     // Window services start this with `void`, so a throw here would be an unhandled rejection.
     // The seed still runs: what was waiting at launch beats a badge stuck at zero, and a later
     // start tries the subscription again.
-    log.warn("Couldn't subscribe the suggestions badge: {error}", { error: String(e) })
+    log.warn("Couldn't subscribe the suggestions badge: {error}", { error: e })
   }
   await seedFromStore()
 }
@@ -60,7 +60,7 @@ async function seedFromStore(): Promise<void> {
   } catch (e) {
     // A badge that can't be seeded stays at zero rather than guessing. The next event corrects
     // it, and nothing the user does depends on this number being right to the second.
-    log.warn("Couldn't seed the suggestions badge: {error}", { error: String(e) })
+    log.warn("Couldn't seed the suggestions badge: {error}", { error: e })
   }
 }
 

@@ -13,7 +13,7 @@
             await openPrivacySettings()
         } catch (error) {
             // The toast stays up, so the button is still there to try again.
-            log.warn("Couldn't open System Settings from the latest-download toast: {error}", { error: String(error) })
+            log.warn("Couldn't open System Settings from the latest-download toast: {error}", { error })
             return
         }
         dismissToast(LATEST_DOWNLOAD_FDA_TOAST_ID)

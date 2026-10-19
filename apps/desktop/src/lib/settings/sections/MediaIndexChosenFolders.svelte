@@ -50,7 +50,7 @@
             for (const cov of results) next[cov.path] = cov
             coverage = next
         } catch (err) {
-            log.warn('folder-coverage query failed: {err}', { err: String(err) })
+            log.warn('folder-coverage query failed: {err}', { err })
         }
     }
 
@@ -74,7 +74,7 @@
         try {
             picked = await openFolderPicker({ directory: true, multiple: false })
         } catch (err) {
-            log.warn('The folder picker did not open: {err}', { err: String(err) })
+            log.warn('The folder picker did not open: {err}', { err })
             return
         }
         // The user cancelled, or picked something we can't resolve to one path.

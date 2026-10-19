@@ -72,7 +72,7 @@ export async function openWhatsNew(): Promise<void> {
     const releases = await getWhatsNew(null, MANUAL_MAX)
     openWith(releases, [], true)
   } catch (e) {
-    log.warn("Couldn't load the changelog for the What's new popup: {error}", { error: String(e) })
+    log.warn("Couldn't load the changelog for the What's new popup: {error}", { error: e })
   }
 }
 
@@ -84,7 +84,7 @@ async function advisoriesSince(since: string): Promise<SecurityAdvisory[]> {
   try {
     return await getSecurityAdvisories(since)
   } catch (e) {
-    log.warn("Couldn't load the security advisories for the What's new popup: {error}", { error: String(e) })
+    log.warn("Couldn't load the security advisories for the What's new popup: {error}", { error: e })
     return []
   }
 }
@@ -112,7 +112,7 @@ export async function runWhatsNewStartupTrigger(gates: StartupGates): Promise<vo
   try {
     current = await getVersion()
   } catch (e) {
-    log.warn("Couldn't read the app version; skipping the What's new check: {error}", { error: String(e) })
+    log.warn("Couldn't read the app version; skipping the What's new check: {error}", { error: e })
     return
   }
 
@@ -124,7 +124,7 @@ export async function runWhatsNewStartupTrigger(gates: StartupGates): Promise<vo
       const releases = await getWhatsNew(override, MANUAL_MAX)
       openWith(releases, await advisoriesSince(override), true)
     } catch (e) {
-      log.debug("Couldn't load the changelog for the dev override: {error}", { error: String(e) })
+      log.debug("Couldn't load the changelog for the dev override: {error}", { error: e })
     }
     return
   }
@@ -158,7 +158,7 @@ export async function runWhatsNewStartupTrigger(gates: StartupGates): Promise<vo
         if (decision.changelog) releases = await getWhatsNew(decision.since, decision.max)
       } catch (e) {
         // Don't stamp on a fetch failure: a later launch can still show the diff.
-        log.warn("Couldn't load the changelog for the What's new popup: {error}", { error: String(e) })
+        log.warn("Couldn't load the changelog for the What's new popup: {error}", { error: e })
         return
       }
       // An empty slice on an auto-show collapses to a silent stamp (never an empty auto-popup), unless the security

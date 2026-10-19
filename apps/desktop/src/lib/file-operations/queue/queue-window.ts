@@ -63,7 +63,7 @@ async function readReduceTransparency(): Promise<boolean> {
   try {
     return await getShouldReduceTransparency()
   } catch (error) {
-    log.warn('Failed to read reduce-transparency; opening opaque: {error}', { error: String(error) })
+    log.warn('Failed to read reduce-transparency; opening opaque: {error}', { error })
     return true
   }
 }
@@ -97,7 +97,7 @@ export async function openQueueWindow(): Promise<void> {
       return
     }
   } catch (error) {
-    log.warn('Failed to check for an existing queue window: {error}', { error: String(error) })
+    log.warn('Failed to check for an existing queue window: {error}', { error })
     return
   }
 
@@ -148,7 +148,7 @@ export async function openQueueWindow(): Promise<void> {
   // A refused creation doesn't throw here: it arrives afterwards as `tauri://error`,
   // so without this a missing grant leaves no trace at all.
   void win.once('tauri://error', (event) => {
-    log.warn("Couldn't create the queue window: {error}", { error: String(event.payload) })
+    log.warn("Couldn't create the queue window: {error}", { error: event.payload })
   })
 
   // Apply the `NSVisualEffectView` material AFTER creation (the `windowEffects`
@@ -167,7 +167,7 @@ export async function openQueueWindow(): Promise<void> {
           radius: 16,
         })
         .catch((error: unknown) => {
-          log.warn('Failed to apply queue window effects: {error}', { error: String(error) })
+          log.warn('Failed to apply queue window effects: {error}', { error })
         })
     })
   }

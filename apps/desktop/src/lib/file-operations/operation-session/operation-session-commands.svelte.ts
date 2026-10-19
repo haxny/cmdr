@@ -102,7 +102,7 @@ export function createOperationSessionCommands(operationId: string, isPaused: ()
       log.warn('Failed to {intent} op={operationId}: {error}', {
         intent: next ? 'pause' : 'resume',
         operationId,
-        error: String(error),
+        error,
       })
       return false
     } finally {
@@ -125,7 +125,7 @@ export function createOperationSessionCommands(operationId: string, isPaused: ()
         // The request never landed, so the operation is still going and the
         // user must be able to ask again.
         cancelling = false
-        log.error('Failed to cancel op={operationId}: {error}', { operationId, error: String(error) })
+        log.error('Failed to cancel op={operationId}: {error}', { operationId, error })
         return false
       }
     },
@@ -138,7 +138,7 @@ export function createOperationSessionCommands(operationId: string, isPaused: ()
         return true
       } catch (error) {
         rollingBack = false
-        log.error('Failed to roll back op={operationId}: {error}', { operationId, error: String(error) })
+        log.error('Failed to roll back op={operationId}: {error}', { operationId, error })
         return false
       }
     },
@@ -160,7 +160,7 @@ export function createOperationSessionCommands(operationId: string, isPaused: ()
         }
         return outcome
       } catch (error) {
-        log.error('Failed to answer the clash on op={operationId}: {error}', { operationId, error: String(error) })
+        log.error('Failed to answer the clash on op={operationId}: {error}', { operationId, error })
         return null
       } finally {
         resolvingConflict = false

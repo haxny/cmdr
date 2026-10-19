@@ -62,7 +62,7 @@
             class="thread-link"
             onclick={() =>
                 void openThread().catch((error: unknown) => {
-                    log.warn("Couldn't open the wake's thread from its toast: {error}", { error: String(error) })
+                    log.warn("Couldn't open the wake's thread from its toast: {error}", { error })
                 })}
         >
             {tString('askCmdr.wakeToast.openThread')}

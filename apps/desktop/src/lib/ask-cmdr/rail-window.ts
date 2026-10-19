@@ -73,7 +73,7 @@ export async function growMainWindowForRail(railWidth: number): Promise<void> {
     await win.setPosition(new LogicalPosition(plan.rect.x, plan.rect.y))
     await win.setSize(new LogicalSize(plan.rect.width, plan.rect.height))
   } catch (e) {
-    log.warn('growing the window for the Ask Cmdr rail failed: {error}', { error: String(e) })
+    log.warn('growing the window for the Ask Cmdr rail failed: {error}', { error: e })
   }
 }
 
@@ -99,6 +99,6 @@ export async function shrinkMainWindowForRail(railWidth: number): Promise<void> 
     await win.setSize(new LogicalSize(target.width, target.height))
     await win.setPosition(new LogicalPosition(target.x, target.y))
   } catch (e) {
-    log.warn('shrinking the window after the Ask Cmdr rail closed failed: {error}', { error: String(e) })
+    log.warn('shrinking the window after the Ask Cmdr rail closed failed: {error}', { error: e })
   }
 }

@@ -51,7 +51,7 @@ export function handlePersistRestrictedSetting(payload: PersistRestrictedSetting
     persistSettingFromRestrictedWindow(id as SettingId, value as SettingsValues[SettingId])
     log.debug('Persisted {id} on behalf of a restricted window', { id })
   } catch (error) {
-    log.warn('Invalid restricted-window persist request for {id}: {error}', { id, error: String(error) })
+    log.warn('Invalid restricted-window persist request for {id}: {error}', { id, error })
   }
 }
 

@@ -203,7 +203,7 @@ export function createSmbViewState(deps: SmbViewStateDeps): SmbViewState {
     const targetVolumeId = deps.getVolumeId()
     smbReconnectManager.cancel(targetVolumeId)
     void disconnectPlace(targetVolumeId).catch((e: unknown) => {
-      log.warn('Disconnecting the place {volumeId} broke down: {error}', { volumeId: targetVolumeId, error: String(e) })
+      log.warn('Disconnecting the place {volumeId} broke down: {error}', { volumeId: targetVolumeId, error: e })
     })
     leaveVolume()
   }
@@ -249,7 +249,7 @@ export function createSmbViewState(deps: SmbViewStateDeps): SmbViewState {
     try {
       await disconnectPlace(volumeId)
     } catch (e) {
-      log.warn('Disconnecting the place {volumeId} broke down: {error}', { volumeId, error: String(e) })
+      log.warn('Disconnecting the place {volumeId} broke down: {error}', { volumeId, error: e })
     }
     const result = await connectPlace({ volumeId, connectionState: 'saved', openSignIn: openSignInForPlace })
     if (result.kind === 'connected' || result.kind === 'already_live') {

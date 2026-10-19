@@ -154,7 +154,7 @@ export async function editServerInView(view: { row: HubRow | null; host: Network
     return
   }
   const saved = await listSavedServers().catch((e: unknown) => {
-    log.warn('Reading the saved servers to edit {host} broke down: {error}', { host: host.name, error: String(e) })
+    log.warn('Reading the saved servers to edit {host} broke down: {error}', { host: host.name, error: e })
     return []
   })
   // The host is the only one in the merge, so it is either claimed by its saved server or a nearby row of its own.
@@ -209,7 +209,7 @@ export function createHubActions(deps: HubActionDeps): HubActions {
       try {
         await forgetServerSecret(places[0].volumeId)
       } catch (e) {
-        log.warn('Forgetting the secret of the S3 account {id} broke down: {error}', { id: row.id, error: String(e) })
+        log.warn('Forgetting the secret of the S3 account {id} broke down: {error}', { id: row.id, error: e })
         addToast(tString('fileExplorer.navigation.forgetSecretRefusedToast', { name: row.name }), { level: 'error' })
       }
     }
@@ -217,7 +217,7 @@ export function createHubActions(deps: HubActionDeps): HubActions {
       try {
         await forgetServer(place.volumeId)
       } catch (e) {
-        log.warn('Forgetting the S3 place {id} broke down: {error}', { id: place.volumeId, error: String(e) })
+        log.warn('Forgetting the S3 place {id} broke down: {error}', { id: place.volumeId, error: e })
         addToast(tString('fileExplorer.navigation.forgetServerRefusedToast', { name: place.name }), { level: 'error' })
       }
     }
@@ -266,7 +266,7 @@ export function createHubActions(deps: HubActionDeps): HubActions {
       await forgetSavedSmbHostPassword(row.id)
       if (row.host) setCredentialStatus(row.host.name, 'no_creds')
     } catch (e) {
-      log.warn('Forgetting the saved password of {id} broke down: {error}', { id: row.id, error: String(e) })
+      log.warn('Forgetting the saved password of {id} broke down: {error}', { id: row.id, error: e })
       addToast(tString('fileExplorer.navigation.forgetSecretRefusedToast', { name: row.name }), { level: 'error' })
     }
   }

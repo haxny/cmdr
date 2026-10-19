@@ -39,7 +39,7 @@
 
     function warn(what: string): (error: unknown) => void {
         return (error: unknown) => {
-            log.warn('{what} from the wake indicator failed: {error}', { what, error: String(error) })
+            log.warn('{what} from the wake indicator failed: {error}', { what, error })
         }
     }
 </script>

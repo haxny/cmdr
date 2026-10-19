@@ -20,7 +20,7 @@
                 settingAnchorId('appearance.showFunctionKeyBar'),
             )
         } catch (err) {
-            log.warn('Failed to open Settings from the function-key-bar-hidden toast: {err}', { err: String(err) })
+            log.warn('Failed to open Settings from the function-key-bar-hidden toast: {err}', { err })
         }
     }
 </script>

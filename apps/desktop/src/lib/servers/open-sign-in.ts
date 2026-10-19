@@ -302,7 +302,7 @@ async function dropCheckSession(volumeId: string): Promise<void> {
   } catch (e) {
     log.warn('Dropping the session the Add check opened for {volumeId} broke down: {error}', {
       volumeId,
-      error: String(e),
+      error: e,
     })
   }
 }
@@ -336,7 +336,7 @@ async function attemptAddSmb(
     const parsed = parseServerAddress(submission.address)
     log.warn('Adding the SMB host {host} broke down: {error}', {
       host: parsed.kind === 'parsed' ? parsed.host : 'an address that does not parse',
-      error: String(e),
+      error: e,
     })
     return { kind: 'refused', refusal: 'unreachable' }
   }
@@ -351,7 +351,7 @@ async function saveUnchecked(target: ServerTarget, secret: SecretOffer | null): 
   try {
     saved = readSavedServerOutcome(await updateSavedServer(target, null))
   } catch (e) {
-    log.warn('Saving the unchecked server broke down: {error}', { error: String(e) })
+    log.warn('Saving the unchecked server broke down: {error}', { error: e })
     return { kind: 'refused', refusal: 'save_unconfirmed' }
   }
   if (saved.kind === 'refused') return saved
@@ -359,7 +359,7 @@ async function saveUnchecked(target: ServerTarget, secret: SecretOffer | null): 
     try {
       await saveTargetSecret(target, secret.secret)
     } catch (e) {
-      log.warn('The server saved, but its password did not: {error}', { error: String(e) })
+      log.warn('The server saved, but its password did not: {error}', { error: e })
       return { kind: 'refused', refusal: 'saved_secret_not_updated' }
     }
   }
@@ -401,7 +401,7 @@ function dialSavedPlaceAttempt(volumeId: string): SignInAttempt {
       if (refusal) {
         log.info('Nothing saved answers for the place {volumeId}', { volumeId })
       } else {
-        log.warn('Dialing the saved place {volumeId} broke down: {error}', { volumeId, error: String(e) })
+        log.warn('Dialing the saved place {volumeId} broke down: {error}', { volumeId, error: e })
       }
       return { kind: 'refused', refusal: 'unreachable' }
     }

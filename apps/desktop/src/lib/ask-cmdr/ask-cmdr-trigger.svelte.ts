@@ -163,7 +163,7 @@ async function bootstrapActiveThread(): Promise<void> {
       await loadConversation(latest.id)
     }
   } catch (e) {
-    log.warn('bootstrapping the active thread failed: {error}', { error: String(e) })
+    log.warn('bootstrapping the active thread failed: {error}', { error: e })
   } finally {
     finishThreadLoad(load)
   }
@@ -255,7 +255,7 @@ export async function loadOlderMessages(): Promise<void> {
     askCmdrState.messages = [...buildRailMessages(detail), ...askCmdrState.messages]
     askCmdrState.historyCount += detail.messages.length
   } catch (e) {
-    log.warn('loading earlier messages failed: {error}', { error: String(e) })
+    log.warn('loading earlier messages failed: {error}', { error: e })
   } finally {
     askCmdrState.loadingOlder = false
   }
@@ -316,6 +316,6 @@ async function recordSlotChangeForActiveThread(): Promise<void> {
       }
     }
   } catch (e) {
-    log.warn('recording a slot change failed: {error}', { error: String(e) })
+    log.warn('recording a slot change failed: {error}', { error: e })
   }
 }

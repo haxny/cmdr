@@ -137,7 +137,7 @@ export async function reviseRenameRow(proposalId: string, rowId: string, destina
     current.nameRejected = false
     await refreshRenamePreflight(proposalId)
   } catch (e) {
-    log.warn('revising a proposed name failed: {error}', { error: String(e) })
+    log.warn('revising a proposed name failed: {error}', { error: e })
     const current = liveRenameRow(proposalId, rowId)
     if (current) current.nameRejected = true
   }
@@ -228,7 +228,7 @@ export async function applyRenameReview(): Promise<void> {
       noteRenameApplied(started.operationId, batch.allowedRowIds.length - swapsSkipped, swapsSkipped)
       dropAppliedProposal(batch.proposalId)
     } catch (e) {
-      log.warn('starting the rename plan failed: {error}', { error: String(e) })
+      log.warn('starting the rename plan failed: {error}', { error: e })
       break
     }
   }
@@ -350,7 +350,7 @@ export async function undoRename(
       candidate.jobFileCount = 0
     }
   } catch (e) {
-    log.warn('undoing the rename failed: {error}', { error: String(e) })
+    log.warn('undoing the rename failed: {error}', { error: e })
     // Nothing is known to have moved, so hand every line its Undo back.
     for (const [candidate, state] of previous) candidate.undo = state
   }
@@ -389,6 +389,6 @@ async function refreshRenamePreflight(proposalId: string): Promise<void> {
     const current = liveProposal(proposalId)
     if (!current || current.requestVersion !== version) return
     current.preflighting = false
-    log.warn('checking the rename plan failed: {error}', { error: String(e) })
+    log.warn('checking the rename plan failed: {error}', { error: e })
   }
 }

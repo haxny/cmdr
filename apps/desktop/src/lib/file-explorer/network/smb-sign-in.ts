@@ -117,7 +117,7 @@ async function rememberedUsername(request: SmbSignInRequest): Promise<string | u
   } catch (e) {
     log.warn('Reading the remembered username for {host} broke down: {error}', {
       host: request.host.name,
-      error: String(e),
+      error: e,
     })
     return undefined
   }

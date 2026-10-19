@@ -82,7 +82,7 @@ export async function listSavedPlaces(): Promise<Map<string, SavedPlaceFacts>> {
       ),
     )
   } catch (e) {
-    log.warn('Reading the saved servers for the row menus broke down: {error}', { error: String(e) })
+    log.warn('Reading the saved servers for the row menus broke down: {error}', { error: e })
     return new Map()
   }
 }
@@ -102,7 +102,7 @@ export async function setServerAutoReconnect(volumeId: string, on: boolean): Pro
   } catch (e) {
     log.warn('Switching "Reconnect automatically" for {volumeId} broke down: {error}', {
       volumeId,
-      error: String(e),
+      error: e,
     })
   }
 }
@@ -290,7 +290,7 @@ function refused(
     | 'fileExplorer.navigation.pinRefusedToast',
   volumeName: string,
 ): void {
-  log.warn('{what} {volumeId} broke down: {error}', { what, volumeId, error: String(error) })
+  log.warn('{what} {volumeId} broke down: {error}', { what, volumeId, error })
   addToast(tString(key, { name: volumeName }), { level: 'error' })
 }
 
@@ -304,7 +304,7 @@ function refused(
  */
 async function editServer(volumeId: string, volumeName: string): Promise<void> {
   const saved = await listSavedServers().catch((e: unknown) => {
-    log.warn('Reading the saved servers to edit {volumeId} broke down: {error}', { volumeId, error: String(e) })
+    log.warn('Reading the saved servers to edit {volumeId} broke down: {error}', { volumeId, error: e })
     return []
   })
   const server = saved.find((entry) => entry.places.some((place) => place.volumeId === volumeId))

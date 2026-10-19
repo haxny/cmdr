@@ -50,6 +50,6 @@ export async function pushAdbConfigToBackend(): Promise<void> {
   try {
     await setAdbSettings(enabled, binaryPath === '' ? null : binaryPath)
   } catch (error) {
-    log.warn('Could not apply the ADB settings: {error}', { error: String(error) })
+    log.warn('Could not apply the ADB settings: {error}', { error })
   }
 }

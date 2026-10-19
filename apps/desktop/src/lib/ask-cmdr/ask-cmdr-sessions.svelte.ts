@@ -89,7 +89,7 @@ export async function loadSessions(): Promise<void> {
     sessionsState.hasMore = page.length === SESSIONS_PAGE
   } catch (e) {
     sessionsState.hasMore = false
-    log.warn('loading the thread list failed: {error}', { error: String(e) })
+    log.warn('loading the thread list failed: {error}', { error: e })
   } finally {
     sessionsState.loading = false
   }
@@ -110,7 +110,7 @@ export async function loadMoreSessions(): Promise<void> {
     sessionsState.hasMore = page.length === SESSIONS_PAGE
   } catch (e) {
     sessionsState.hasMore = false
-    log.warn('loading more threads failed: {error}', { error: String(e) })
+    log.warn('loading more threads failed: {error}', { error: e })
   } finally {
     sessionsState.loadingMore = false
   }

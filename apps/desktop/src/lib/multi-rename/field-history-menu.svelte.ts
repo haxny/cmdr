@@ -88,7 +88,7 @@ export function createFieldHistoryMenu(deps: FieldHistoryDeps): FieldHistoryMenu
         entries = await getMultiRenameHistory()
       } catch (e) {
         // No history is a sheet without its lists, never a broken sheet.
-        log.warn("couldn't read the multi-rename field history: {reason}", { reason: String(e) })
+        log.warn("couldn't read the multi-rename field history: {reason}", { reason: e })
       }
     },
     historyOf,

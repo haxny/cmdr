@@ -19,7 +19,7 @@ export async function getDockPinState(): Promise<DockPinState> {
   try {
     return await commands.getDockPinState()
   } catch (e) {
-    log.warn(`Couldn't ask about the Dock: ${String(e)}`)
+    log.warn("Couldn't ask about the Dock: {error}", { error: e })
     return { kind: 'unavailable', reason: 'preferencesUnreadable' }
   }
 }
@@ -38,7 +38,7 @@ export async function addCmdrToDock(): Promise<DockPinFailure | null> {
     const res = await commands.addCmdrToDock()
     return res.status === 'error' ? res.error : null
   } catch (e) {
-    log.warn(`The Dock pin never answered: ${String(e)}`)
+    log.warn('The Dock pin never answered: {error}', { error: e })
     return { kind: 'timedOut' }
   }
 }

@@ -249,7 +249,7 @@ export async function openSettingsWindow(surface: SettingsSurface, section?: str
           radius: 16,
         })
         .catch((error: unknown) => {
-          log.warn('Failed to apply window effects: {error}', { error: String(error) })
+          log.warn('Failed to apply window effects: {error}', { error })
         })
     })
   }

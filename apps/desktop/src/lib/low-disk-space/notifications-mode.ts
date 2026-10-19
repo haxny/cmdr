@@ -64,7 +64,7 @@ export function setLowDiskSpaceNotificationsMode(value: LowDiskSpaceNotification
   try {
     setSetting(LOW_DISK_SPACE_NOTIFICATIONS_SETTING_KEY, value)
   } catch (err) {
-    log.warn('Failed to write low-disk-space notifications mode ({value}): {err}', { value, err: String(err) })
+    log.warn('Failed to write low-disk-space notifications mode ({value}): {err}', { value, err })
   }
 }
 
@@ -92,7 +92,7 @@ export async function pushLowDiskSpaceConfigToBackend(): Promise<void> {
   try {
     await setLowDiskSpaceConfig(mode !== 'off', threshold)
   } catch (err) {
-    log.warn('Failed to push low-disk-space config: {err}', { err: String(err) })
+    log.warn('Failed to push low-disk-space config: {err}', { err })
   }
 }
 

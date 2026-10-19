@@ -14,12 +14,14 @@
  * `error+` — so these land in the log file and in error-report bundles.
  */
 
+import { describeForLog } from './describe-for-log'
 import { getAppLogger, whenLoggerReady } from './logger'
 
 const log = getAppLogger('uncaught')
 
 /**
- * Splits a thrown value into its message (`Name: message`) and its frames.
+ * Splits a thrown value into its message (`describeForLog`: `Name: message` plus any cause chain)
+ * and its frames. `logPageCrash` uses it too, for the errors SvelteKit catches.
  *
  * The message goes to `{detail}`, which the log bridge renders as a `detail="…"` field: an
  * error report redacts it (paths under any prefix included) and caps it, because an error
@@ -32,18 +34,12 @@ const log = getAppLogger('uncaught')
  * and it cost a real diagnosis. (verified on macOS 26.6.2 / WKWebView and Linux WebKitGTK,
  * reading E2E logs, 2026-09-07)
  */
-function describe(value: unknown): { detail: string; stack: string } {
-  if (value instanceof Error) {
-    const detail = `${value.name}: ${value.message}`
-    const stack = value.stack ?? ''
-    return { detail, stack: stack.startsWith(detail) ? stack.slice(detail.length).replace(/^\n/, '') : stack }
-  }
-  try {
-    return { detail: typeof value === 'string' ? value : JSON.stringify(value), stack: '' }
-  } catch {
-    // A value that won't stringify (a cycle, a Proxy that throws) still deserves a line.
-    return { detail: String(value), stack: '' }
-  }
+export function describeThrown(value: unknown): { detail: string; stack: string } {
+  const detail = describeForLog(value)
+  if (!(value instanceof Error)) return { detail, stack: '' }
+  const headline = `${value.name}: ${value.message}`
+  const stack = value.stack ?? ''
+  return { detail, stack: stack.startsWith(headline) ? stack.slice(headline.length).replace(/^\n/, '') : stack }
 }
 
 let registered = false
@@ -68,7 +64,7 @@ export function registerUncaughtErrorLogging(): void {
     if (thrown === null && !event.message) return
     const { filename, lineno, colno } = event
     const source = filename ? `${filename}:${String(lineno)}:${String(colno)}` : 'unknown'
-    const { detail, stack } = thrown !== null ? describe(thrown) : { detail: event.message, stack: '' }
+    const { detail, stack } = thrown !== null ? describeThrown(thrown) : { detail: event.message, stack: '' }
     whenLoggerReady(() => {
       if (stack) log.error('Uncaught error at {source}: {detail}\n{stack}', { source, detail, stack })
       else log.error('Uncaught error at {source}: {detail}', { source, detail })
@@ -76,7 +72,7 @@ export function registerUncaughtErrorLogging(): void {
   })
 
   window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
-    const { detail, stack } = describe(event.reason)
+    const { detail, stack } = describeThrown(event.reason)
     whenLoggerReady(() => {
       if (stack) log.error('Unhandled promise rejection: {detail}\n{stack}', { detail, stack })
       else log.error('Unhandled promise rejection: {detail}', { detail })
@@ -100,7 +96,7 @@ export interface CaughtPageError {
  * nothing. Called from `hooks.client.ts`.
  */
 export function logPageCrash({ error, routeId }: CaughtPageError): string {
-  const { detail, stack } = describe(error)
+  const { detail, stack } = describeThrown(error)
   const route = routeId ?? 'no route'
   whenLoggerReady(() => {
     if (stack) log.error('Page crashed in {routeId}: {detail}\n{stack}', { routeId: route, detail, stack })

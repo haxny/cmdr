@@ -43,7 +43,7 @@ export function followWindowTitle(
         if (title === lastWritten) return
         lastWritten = title
         writeTitle(title).catch((error: unknown) => {
-          log.warn('Couldn’t update the window title: {error}', { error: String(error) })
+          log.warn('Couldn’t update the window title: {error}', { error })
         })
       })
     })

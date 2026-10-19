@@ -40,7 +40,7 @@ async function drain(): Promise<void> {
     recoveries = await takeStateRecoveries()
   } catch (error) {
     // The queue keeps them, so the next nudge or launch tries again.
-    log.warn("Couldn't fetch the recovered state files: {error}", { error: String(error) })
+    log.warn("Couldn't fetch the recovered state files: {error}", { error })
     return
   }
   for (const recovery of recoveries) {

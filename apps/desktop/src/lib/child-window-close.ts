@@ -39,6 +39,6 @@ export async function closeSelfWindow(): Promise<void> {
     await closeChildWindow(label)
   } catch (e) {
     // The window stays up, which is visible to the user and better than a half-torn-down one.
-    log.error('Closing window {label} returned an error: {error}', { label, error: String(e) })
+    log.error('Closing window {label} returned an error: {error}', { label, error: e })
   }
 }

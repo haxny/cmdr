@@ -40,9 +40,12 @@ log.error('Trash refused it: {errorType}', { errorType: error.type, error }) // 
 log.error('Trash refused it: {errorType} ({detail})', { errorType: error.type, detail: error.message }) // ✅
 ```
 
-A placeholder renders through `String(value)`, so an object interpolates as `[object Object]`. Name a readable field
-(`{error.message}`, which LogTape resolves as a path) or stringify before passing it. `{*}` renders the whole property
-bag and satisfies the rule, but it's a blunt instrument: prefer naming what matters.
+Pass a value raw (`{ error: e }`): the bridge renders every placeholder through `describeForLog`
+(`apps/desktop/src/lib/logging/describe-for-log.ts`), which gives an `Error` as `Name: message` plus its cause chain, a
+`TypedFailure` plus its payload, and an object as compact JSON. ❌ Don't pre-stringify: `String(e)` and the
+`e instanceof Error ? e.message : String(e)` ternary drop the cause and payload, and `cmdr/no-stringified-log-values`
+fails the build on them (it autofixes). `{*}` renders the whole property bag and satisfies the rule, but it's a blunt
+instrument: prefer naming what matters.
 
 ### Log levels
 

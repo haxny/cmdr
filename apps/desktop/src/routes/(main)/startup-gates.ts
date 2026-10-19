@@ -74,7 +74,7 @@ async function probeFullDiskAccess(fallback: boolean): Promise<boolean> {
   } catch (error) {
     log.error('Full disk access probe returned an error; reading it as {fallback}: {error}', {
       fallback,
-      error: String(error),
+      error,
     })
     return fallback
   }
@@ -101,7 +101,7 @@ async function openFdaGateForLaunch(): Promise<void> {
     await startIndexingAfterFdaDecision()
   } catch (error) {
     log.warn('Could not open the FDA gate at launch; indexing may stay deferred this session: {error}', {
-      error: String(error),
+      error,
     })
   }
 }
@@ -272,7 +272,7 @@ export async function maybeOfferRevealHandler(ctx: StartupGatesContext): Promise
   const [launchDayCount, handlerStatus] = await Promise.all([getLaunchDayCount(), getRevealHandlerState()])
   if (!shouldShowRevealNudge({ ...context, launchDayCount, handlerStatus })) return
 
-  log.info(`Offering the reveal handler after ${String(launchDayCount)} launch days`)
+  log.info('Offering the reveal handler after {launchDayCount} launch days', { launchDayCount })
   offerRevealHandler()
 }
 
@@ -299,7 +299,7 @@ export async function maybeOfferDockPin(ctx: StartupGatesContext): Promise<void>
   const [launchDayCount, pinState] = await Promise.all([getLaunchDayCount(), getDockPinState()])
   if (!shouldShowDockNudge({ ...context, launchDayCount, pinState })) return
 
-  log.info(`Offering the Dock pin after ${String(launchDayCount)} launch days`)
+  log.info('Offering the Dock pin after {launchDayCount} launch days', { launchDayCount })
   offerDockPin()
 }
 

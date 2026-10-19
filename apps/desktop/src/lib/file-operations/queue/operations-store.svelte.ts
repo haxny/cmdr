@@ -166,7 +166,7 @@ export function createOperationsStore() {
       }
     } catch (error) {
       // Perms / IPC failures must surface as a log line, not a dead window.
-      log.warn('Failed to initialize operations store: {error}', { error: String(error) })
+      log.warn('Failed to initialize operations store: {error}', { error })
     }
   }
 

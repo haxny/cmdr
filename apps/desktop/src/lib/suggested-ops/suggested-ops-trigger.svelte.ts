@@ -161,7 +161,7 @@ async function subscribeWhileOpen(): Promise<void> {
     // The dialog opens either way. Losing the subscription costs the live notice, not the
     // review: every refresh still compares the open group's op count, so a change that alters
     // it is still announced.
-    log.warn("Couldn't subscribe to suggestion changes: {error}", { error: String(e) })
+    log.warn("Couldn't subscribe to suggestion changes: {error}", { error: e })
   }
 }
 
@@ -196,7 +196,7 @@ export async function refreshSuggestions(): Promise<void> {
     }
   } catch (e) {
     suggestedOpsState.loadError = true
-    log.warn("Couldn't read the waiting suggestions: {error}", { error: String(e) })
+    log.warn("Couldn't read the waiting suggestions: {error}", { error: e })
   } finally {
     suggestedOpsState.loading = false
   }
@@ -252,7 +252,7 @@ export async function ensureOpWindow(groupId: number, startIndex: number): Promi
     // The virtual list only asks again when the viewport moves, so without this the rows would
     // sit on their loading placeholder for good while Approve stays live.
     if (suggestedOpsState.openGroupId === groupId) suggestedOpsState.windowError = true
-    log.warn("Couldn't read a page of proposed ops: {error}", { error: String(e) })
+    log.warn("Couldn't read a page of proposed ops: {error}", { error: e })
   } finally {
     suggestedOpsState.windowLoading = false
   }
@@ -307,7 +307,7 @@ export async function approveGroup(groupId: number): Promise<void> {
     if (result.kind === 'listChanged') suggestedOpsState.changedUnderReview = true
     await refreshSuggestions()
   } catch (e) {
-    log.warn("Couldn't approve the group: {error}", { error: String(e) })
+    log.warn("Couldn't approve the group: {error}", { error: e })
     await answerFailedDecision(e)
   } finally {
     suggestedOpsState.busyGroupId = null
@@ -348,7 +348,7 @@ export async function rejectGroup(groupId: number): Promise<void> {
     if (suggestedOpsState.openGroupId === groupId) collapseGroup()
     await refreshSuggestions()
   } catch (e) {
-    log.warn("Couldn't record the rejection: {error}", { error: String(e) })
+    log.warn("Couldn't record the rejection: {error}", { error: e })
     await answerFailedDecision(e)
   } finally {
     suggestedOpsState.busyGroupId = null

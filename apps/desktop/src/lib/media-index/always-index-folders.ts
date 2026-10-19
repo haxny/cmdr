@@ -43,7 +43,7 @@ export async function setFolderChosen(folder: string, chosen: boolean): Promise<
       mediaIndexSetAlwaysIndexFolder(folder, chosen),
     )
   } catch (err) {
-    log.warn('Failed to apply chosen folder {folder}: {err}', { folder, err: String(err) })
+    log.warn('Failed to apply chosen folder {folder}: {err}', { folder, err })
     throw err
   }
 }

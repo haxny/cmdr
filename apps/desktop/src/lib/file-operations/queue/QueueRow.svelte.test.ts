@@ -735,7 +735,7 @@ describe('QueueRow: Show (back to the main window)', () => {
     await vi.waitFor(() => {
       expect(logWarn).toHaveBeenCalledWith(expect.stringContaining('{operationId}'), {
         operationId: 'op-1',
-        error: 'Error: event emit refused',
+        error: new Error('event emit refused'),
       })
     })
   })

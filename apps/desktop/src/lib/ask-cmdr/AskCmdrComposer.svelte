@@ -79,7 +79,7 @@
         try {
             addAttachments(await askCmdrSelectionAttachments())
         } catch (e) {
-            log.warn('attaching the selection failed: {error}', { error: String(e) })
+            log.warn('attaching the selection failed: {error}', { error: e })
         }
         textarea?.focus()
     }

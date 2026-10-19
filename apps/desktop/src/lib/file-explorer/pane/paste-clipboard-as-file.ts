@@ -86,7 +86,7 @@ export async function pasteClipboardContentAsFile(deps: PasteClipboardAsFileDeps
   } catch (e) {
     if (progress.slow) dismissToast(stillPastingToastId)
     const failure = asMutationError(e)
-    if (!failure) log.warn('Paste-as-file threw an untyped value: {error}', { error: String(e) })
+    if (!failure) log.warn('Paste-as-file threw an untyped value: {error}', { error: e })
     const reason = renderMutationError(failure ?? { type: 'unexpected', detail: '' }, 'file')
     // Persistent: a late refusal may arrive after the person moved on.
     addToastForPane(deps.originPane, tString('fileExplorer.clipboard.notPasted', { reason }), {

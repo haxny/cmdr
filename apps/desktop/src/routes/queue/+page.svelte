@@ -168,7 +168,7 @@
         try {
             await announceMove(await moveQueuedOperation(id, direction), direction)
         } catch (error) {
-            log.warn('Failed to move operation {operationId}: {error}', { operationId: id, error: String(error) })
+            log.warn('Failed to move operation {operationId}: {error}', { operationId: id, error })
         }
     }
 
@@ -222,7 +222,7 @@
                 await announceMove(outcome, position < from ? 'earlier' : 'later')
                 return outcome.kind === 'moved'
             } catch (error) {
-                log.warn('Failed to place operation {operationId}: {error}', { operationId: id, error: String(error) })
+                log.warn('Failed to place operation {operationId}: {error}', { operationId: id, error })
                 return false
             }
         },
@@ -344,7 +344,7 @@
         } catch (error) {
             log.warn('Failed to open the menu of operation {operationId}: {error}', {
                 operationId: id,
-                error: String(error),
+                error,
             })
         }
     }
@@ -399,7 +399,7 @@
             await cancelOperations(ids)
             selectedIds.clear()
         } catch (error) {
-            log.warn('Failed to cancel selected operations: {error}', { error: String(error) })
+            log.warn('Failed to cancel selected operations: {error}', { error })
         }
     }
 
@@ -410,7 +410,7 @@
         try {
             await dismissFailedOperation(operationId)
         } catch (error) {
-            log.warn('Failed to dismiss operation {operationId}: {error}', { operationId, error: String(error) })
+            log.warn('Failed to dismiss operation {operationId}: {error}', { operationId, error })
         }
     }
 
@@ -418,7 +418,7 @@
         try {
             await dismissAllFailedOperations()
         } catch (error) {
-            log.warn('Failed to dismiss all failed operations: {error}', { error: String(error) })
+            log.warn('Failed to dismiss all failed operations: {error}', { error })
         }
     }
 
@@ -426,7 +426,7 @@
         try {
             await pauseAll()
         } catch (error) {
-            log.warn('Failed to pause all operations: {error}', { error: String(error) })
+            log.warn('Failed to pause all operations: {error}', { error })
         }
     }
 
@@ -434,7 +434,7 @@
         try {
             await resumeAll()
         } catch (error) {
-            log.warn('Failed to resume all operations: {error}', { error: String(error) })
+            log.warn('Failed to resume all operations: {error}', { error })
         }
     }
 

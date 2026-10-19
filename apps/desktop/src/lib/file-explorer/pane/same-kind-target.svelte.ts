@@ -55,7 +55,7 @@ let pushed: SameKindTarget | null = null
 function push(): void {
   pushed = target
   void updateSelectSameKindMenu(target).catch((error: unknown) => {
-    log.warn('Could not update the Select menu label: {error}', { error: String(error) })
+    log.warn('Could not update the Select menu label: {error}', { error })
   })
 }
 

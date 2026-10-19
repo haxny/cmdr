@@ -47,7 +47,7 @@ async function isPinned(server: ServerCommandTarget): Promise<boolean> {
     const saved = await listSavedServers()
     return saved.some((entry) => entry.places.some((place) => place.volumeId === server.volumeId && place.pinned))
   } catch (e) {
-    log.warn('Reading the pin for {volumeId} broke down: {error}', { volumeId: server.volumeId, error: String(e) })
+    log.warn('Reading the pin for {volumeId} broke down: {error}', { volumeId: server.volumeId, error: e })
     return false
   }
 }

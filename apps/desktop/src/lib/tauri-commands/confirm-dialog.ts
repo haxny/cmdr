@@ -16,7 +16,7 @@ export async function confirmWithCheckbox(request: CheckboxConfirmRequest): Prom
   try {
     return await commands.confirmWithCheckbox(request)
   } catch (e) {
-    log.warn('The confirmation "{title}" broke down: {error}', { title: request.title, error: String(e) })
+    log.warn('The confirmation "{title}" broke down: {error}', { title: request.title, error: e })
     return { kind: 'cancelled' }
   }
 }

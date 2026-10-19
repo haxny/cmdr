@@ -330,7 +330,7 @@ export function createOperationSession(operationId: string, fanout: OperationEve
     } catch (error) {
       // A failed seed leaves the session live and event-driven, which is the
       // safe direction: a running operation still reports itself.
-      log.warn('Failed to seed session for op={operationId}: {error}', { operationId, error: String(error) })
+      log.warn('Failed to seed session for op={operationId}: {error}', { operationId, error })
     }
   }
 

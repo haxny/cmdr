@@ -68,7 +68,7 @@ export function hostErrorReportDialog(): () => void {
     getCurrentWindow()
       .setFocus()
       .catch((error: unknown) => {
-        log.warn('Could not focus the main window for an error report: {error}', { error: String(error) })
+        log.warn('Could not focus the main window for an error report: {error}', { error })
       })
   })
     .then((fn) => {
@@ -76,7 +76,7 @@ export function hostErrorReportDialog(): () => void {
       else unlisten = fn
     })
     .catch((error: unknown) => {
-      log.warn('Could not listen for error-report requests from other windows: {error}', { error: String(error) })
+      log.warn('Could not listen for error-report requests from other windows: {error}', { error })
     })
   return () => {
     stopped = true
@@ -97,7 +97,7 @@ export function openErrorReportDialog(request: ErrorReportRequest): void {
   requestErrorReportInMainWindow({ from: request.from, initialNote: request.initialNote ?? '' }).catch(
     (error: unknown) => {
       // Never error level: that would auto-send a report about failing to open one.
-      log.warn('Could not ask the main window to open the error report: {error}', { error: String(error) })
+      log.warn('Could not ask the main window to open the error report: {error}', { error })
     },
   )
 }

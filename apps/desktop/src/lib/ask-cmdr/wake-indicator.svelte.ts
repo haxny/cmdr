@@ -102,7 +102,7 @@ async function seedFromBackend(): Promise<void> {
   } catch (e) {
     // An indicator that can't be seeded stays silent rather than guessing. The next event
     // corrects it, and nothing the user does depends on this being right to the second.
-    log.warn("Couldn't seed the wake indicator: {error}", { error: String(e) })
+    log.warn("Couldn't seed the wake indicator: {error}", { error: e })
   }
 }
 

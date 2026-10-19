@@ -213,7 +213,7 @@ export function createViewerCopyOrchestrator(deps: CopyOrchestratorDeps) {
       await navigator.clipboard.writeText(text)
       return true
     } catch (e) {
-      log.warn('Clipboard write rejected: {error}', { error: String(e) })
+      log.warn('Clipboard write rejected: {error}', { error: e })
       return false
     }
   }
@@ -321,7 +321,7 @@ export function createViewerCopyOrchestrator(deps: CopyOrchestratorDeps) {
     try {
       chosen = await showSavePanel({ defaultPath: defaultName, title: tString('viewer.saveAs.title') })
     } catch (e) {
-      log.warn('Save panel rejected: {error}', { error: String(e) })
+      log.warn('Save panel rejected: {error}', { error: e })
       addToast(tString('viewer.saveAs.panelFailed'), { level: 'warn' })
       return
     }

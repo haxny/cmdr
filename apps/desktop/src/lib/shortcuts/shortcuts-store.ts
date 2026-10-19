@@ -133,7 +133,7 @@ async function getStore(): Promise<Store> {
     // Resolve the store path so isolated instances (dev, per-worktree dev, E2E)
     // don't read the real production `shortcuts.json`. See `settings/store-path.ts`.
     const storePath = await resolveStorePath(STORE_NAME, (e) => {
-      log.warn('Could not resolve isolated shortcuts path, using default: {error}', { error: String(e) })
+      log.warn('Could not resolve isolated shortcuts path, using default: {error}', { error: e })
     })
     storeInstance = await load(storePath, {
       defaults: { _schemaVersion: SCHEMA_VERSION },
@@ -233,7 +233,7 @@ async function readRestrictedSnapshot(): Promise<[string, unknown][]> {
   try {
     return Object.entries(await getRestrictedWindowShortcuts())
   } catch (error) {
-    log.warn('Could not read custom shortcuts, using defaults: {error}', { error: String(error) })
+    log.warn('Could not read custom shortcuts, using defaults: {error}', { error })
     return []
   }
 }

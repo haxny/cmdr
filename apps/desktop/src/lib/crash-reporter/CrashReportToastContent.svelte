@@ -56,7 +56,7 @@
         } catch (e) {
             // No network or a server having a bad moment isn't worth an error line: it would try to
             // auto-report through the server that just didn't answer.
-            log.warn('Sending the crash log report returned an error: {error}', { error: String(e) })
+            log.warn('Sending the crash log report returned an error: {error}', { error: e })
             logNotSentReason = errorReportSendReason(errorReportSendFailureOf(e))
         } finally {
             sendingLog = false

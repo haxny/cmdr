@@ -63,7 +63,7 @@ export async function openOperationLog(): Promise<void> {
     operationLogState.hasMore = page.length === OPERATION_LOG_PAGE
   } catch (e) {
     operationLogState.loadError = true
-    log.warn("Couldn't load the operation log: {error}", { error: String(e) })
+    log.warn("Couldn't load the operation log: {error}", { error: e })
   } finally {
     operationLogState.loading = false
   }
@@ -84,7 +84,7 @@ export async function loadMoreOperations(): Promise<void> {
   } catch (e) {
     // A failed append leaves what's already shown intact and keeps `hasMore`, so Load
     // more stays up as the retry. Hiding it would make the list read as the whole history.
-    log.warn("Couldn't load more operations: {error}", { error: String(e) })
+    log.warn("Couldn't load more operations: {error}", { error: e })
   } finally {
     operationLogState.loadingMore = false
   }
@@ -132,6 +132,6 @@ export async function refreshOperation(opId: string): Promise<void> {
     )
   } catch (e) {
     // The row keeps what it showed; reopening the dialog reads it fresh.
-    log.warn("Couldn't refresh operation {opId}: {error}", { opId, error: String(e) })
+    log.warn("Couldn't refresh operation {opId}: {error}", { opId, error: e })
   }
 }

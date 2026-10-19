@@ -59,7 +59,7 @@ export async function countFoldersInPane(
     return outcome
   } catch (e) {
     const reason = (e as { type?: string }).type
-    log.warn("couldn't calculate folder sizes: {reason}", { reason: reason ?? String(e) })
+    log.warn("couldn't calculate folder sizes: {reason}", { reason: reason ?? e })
     if (reason === 'notConnected') {
       addToast(tString('fileExplorer.folderSizes.notConnected'), { level: 'warn' })
     }

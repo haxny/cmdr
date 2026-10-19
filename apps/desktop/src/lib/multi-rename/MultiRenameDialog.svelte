@@ -161,7 +161,7 @@
         fieldHistory.destroy()
         // The next ⌃M opens where this one left off.
         tool.persist().catch((e: unknown) => {
-            log.warn("couldn't remember the multi-rename settings: {reason}", { reason: String(e) })
+            log.warn("couldn't remember the multi-rename settings: {reason}", { reason: e })
         })
     })
 
@@ -222,7 +222,7 @@
             const refusal = asRollbackRefusal(e)
             undoNotice = rollbackRefusalNotice(refusal)
             if (refusal?.kind === 'alreadyRolledBack') setLastMultiRenameRun(null)
-            if (!refusal) log.warn("couldn't undo the last multi-rename: {error}", { error: String(e) })
+            if (!refusal) log.warn("couldn't undo the last multi-rename: {error}", { error: e })
         } finally {
             undoing = false
         }

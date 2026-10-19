@@ -70,7 +70,7 @@
             answer = next
             pendingChoice = null
         } catch (err) {
-            log.warn('Listing the apps for {settingId} did not work: {err}', { settingId, err: String(err) })
+            log.warn('Listing the apps for {settingId} did not work: {err}', { settingId, err })
         }
     }
 
@@ -101,7 +101,7 @@
                 filters: [{ name: 'Applications', extensions: ['app'] }],
             })
         } catch (err) {
-            log.warn('The app picker did not open: {err}', { err: String(err) })
+            log.warn('The app picker did not open: {err}', { err })
             return
         }
         // The user cancelled, or picked something that isn't one path.
@@ -112,7 +112,7 @@
                 choice = await resolvePick(picked)
             } catch (err) {
                 // The path itself is still a working choice; Rust launches it with `open -a`.
-                log.warn('Resolving the picked app did not work, storing its path: {err}', { err: String(err) })
+                log.warn('Resolving the picked app did not work, storing its path: {err}', { err })
             }
         }
         // A row picked while this pick waited is the newer choice; storing this one now

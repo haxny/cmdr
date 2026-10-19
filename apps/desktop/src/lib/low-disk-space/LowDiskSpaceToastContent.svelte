@@ -69,7 +69,7 @@
         try {
             await openSettingsToLowDiskSpace()
         } catch (err) {
-            log.warn('Failed to open Settings from the low-disk-space toast: {err}', { err: String(err) })
+            log.warn('Failed to open Settings from the low-disk-space toast: {err}', { err })
         }
     }
 </script>

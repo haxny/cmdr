@@ -82,7 +82,7 @@
         dependOn(provider, model) // a provider or model change moves the window this compares against
         void askCmdrModelWindow().then(
             (w) => { knownWindowTokens = w.knownWindowTokens },
-            (e: unknown) => { log.warn('reading the model window failed: {error}', { error: String(e) }) },
+            (e: unknown) => { log.warn('reading the model window failed: {error}', { error: e }) },
         )
     })
     // Only an explicit size can exceed a window; "Automatic" follows it by construction. An
@@ -135,7 +135,7 @@
         try {
             await requestRevealPath(await askCmdrMemoryFolder())
         } catch (e: unknown) {
-            log.warn('opening the memory folder failed: {error}', { error: String(e) })
+            log.warn('opening the memory folder failed: {error}', { error: e })
         }
     }
 
@@ -149,7 +149,7 @@
             forgotten = true
         } catch (e: unknown) {
             // The backend logged the cause and how many notes went (`MemoryStore::forget_all`).
-            log.warn('clearing Ask Cmdr’s memory failed: {error}', { error: String(e) })
+            log.warn('clearing Ask Cmdr’s memory failed: {error}', { error: e })
             forgotten = false
             notAllForgotten = true
         } finally {
@@ -164,7 +164,7 @@
         dependOn(enabled) // reload after turning on, so a first chat's cost appears
         void askCmdrCostSummary().then(
             (s) => { spend = s },
-            (e: unknown) => { log.warn('reading spend failed: {error}', { error: String(e) }) },
+            (e: unknown) => { log.warn('reading spend failed: {error}', { error: e }) },
         )
     })
 

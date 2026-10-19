@@ -66,6 +66,6 @@ export async function openSettingsToTextEditor(): Promise<void> {
       settingAnchorId(TEXT_EDITOR_SETTING_KEY),
     )
   } catch (err) {
-    log.warn('Failed to open Settings from a text editor toast: {err}', { err: String(err) })
+    log.warn('Failed to open Settings from a text editor toast: {err}', { err })
   }
 }

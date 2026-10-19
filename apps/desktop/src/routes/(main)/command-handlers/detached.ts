@@ -17,7 +17,7 @@ const log = getAppLogger('user-action')
 export function detached(work: Promise<unknown> | undefined): void {
   work?.catch((e: unknown) => {
     log.debug('Fire-and-forget command work rejected: {reason}', {
-      reason: e instanceof Error ? e.message : String(e),
+      reason: e,
     })
   })
 }

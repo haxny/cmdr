@@ -150,7 +150,7 @@ export async function connectPlace(request: ConnectPlaceRequest): Promise<Connec
       log.info('Nothing saved answers for the place {volumeId}', { volumeId })
       return { kind: 'refused', refusal: 'unreachable' }
     }
-    log.warn('Dialing the saved place {volumeId} broke down: {error}', { volumeId, error: String(e) })
+    log.warn('Dialing the saved place {volumeId} broke down: {error}', { volumeId, error: e })
     return { kind: 'refused', refusal: 'unreachable' }
   }
 
@@ -185,7 +185,7 @@ export async function cancelPlaceConnect(attemptId: string): Promise<void> {
   try {
     await cancelServerConnect(attemptId)
   } catch (e) {
-    log.warn('Cancelling the connect attempt {attemptId} broke down: {error}', { attemptId, error: String(e) })
+    log.warn('Cancelling the connect attempt {attemptId} broke down: {error}', { attemptId, error: e })
   }
 }
 

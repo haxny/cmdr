@@ -35,7 +35,7 @@
  *   // eslint-disable-next-line cmdr/no-unrendered-log-fields -- <reason>
  */
 
-const logMethods = new Set(['debug', 'info', 'warn', 'error', 'fatal'])
+import { appLoggerCallVisitors, propertiesObject } from './app-logger-calls.js'
 
 /**
  * Extract the placeholder keys LogTape would resolve from a message template,
@@ -81,21 +81,6 @@ function rootField(key) {
   return cut === -1 ? key : key.slice(0, cut)
 }
 
-/**
- * The object literal a call passes as its properties argument, unwrapping the
- * lazy `() => ({ ... })` form LogTape also accepts. Returns null when the
- * argument isn't a statically readable object.
- *
- * @param {import('estree').Node | undefined} node
- * @returns {import('estree').ObjectExpression | null}
- */
-function propertiesObject(node) {
-  if (!node) return null
-  if (node.type === 'ObjectExpression') return node
-  if (node.type === 'ArrowFunctionExpression' && node.body.type === 'ObjectExpression') return node.body
-  return null
-}
-
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
   meta: {
@@ -112,68 +97,33 @@ export default {
     schema: [],
   },
   create(context) {
-    /** Identifiers bound to a `getAppLogger(...)` result in this file. */
-    const loggerNames = new Set()
-    /** Candidate calls, checked on `Program:exit` once every binding is known. */
-    const pendingCalls = []
+    return appLoggerCallVisitors((node) => {
+      const template = node.arguments[0]
+      // A computed template can't be analyzed; say nothing rather than guess.
+      if (!template || template.type !== 'Literal' || typeof template.value !== 'string') return
 
-    return {
-      VariableDeclarator(node) {
-        if (
-          node.id.type === 'Identifier' &&
-          node.init &&
-          node.init.type === 'CallExpression' &&
-          node.init.callee.type === 'Identifier' &&
-          node.init.callee.name === 'getAppLogger'
-        ) {
-          loggerNames.add(node.id.name)
-        }
-      },
-      CallExpression(node) {
-        const callee = node.callee
-        if (
-          callee.type !== 'MemberExpression' ||
-          callee.computed ||
-          callee.object.type !== 'Identifier' ||
-          callee.property.type !== 'Identifier' ||
-          !logMethods.has(callee.property.name)
-        ) {
-          return
-        }
-        pendingCalls.push({ node, loggerName: callee.object.name })
-      },
-      'Program:exit': function () {
-        for (const { node, loggerName } of pendingCalls) {
-          if (!loggerNames.has(loggerName)) continue
+      const properties = propertiesObject(node.arguments[1])
+      if (!properties) return
 
-          const template = node.arguments[0]
-          // A computed template can't be analyzed; say nothing rather than guess.
-          if (!template || template.type !== 'Literal' || typeof template.value !== 'string') continue
+      // A spread makes the key set unknowable, so checking the rest would
+      // report fields the spread might legitimately be renaming around.
+      if (properties.properties.some((property) => property.type === 'SpreadElement')) return
 
-          const properties = propertiesObject(node.arguments[1])
-          if (!properties) continue
+      const { keys, rendersEverything } = parsePlaceholders(template.value)
+      if (rendersEverything) return
+      const rendered = new Set(keys.map(rootField))
 
-          // A spread makes the key set unknowable, so checking the rest would
-          // report fields the spread might legitimately be renaming around.
-          if (properties.properties.some((property) => property.type === 'SpreadElement')) continue
-
-          const { keys, rendersEverything } = parsePlaceholders(template.value)
-          if (rendersEverything) continue
-          const rendered = new Set(keys.map(rootField))
-
-          for (const property of properties.properties) {
-            if (property.type !== 'Property' || property.computed) continue
-            const key =
-              property.key.type === 'Identifier'
-                ? property.key.name
-                : property.key.type === 'Literal' && typeof property.key.value === 'string'
-                  ? property.key.value
-                  : null
-            if (key === null || rendered.has(key)) continue
-            context.report({ node: property, messageId: 'unrenderedField', data: { field: key } })
-          }
-        }
-      },
-    }
+      for (const property of properties.properties) {
+        if (property.type !== 'Property' || property.computed) continue
+        const key =
+          property.key.type === 'Identifier'
+            ? property.key.name
+            : property.key.type === 'Literal' && typeof property.key.value === 'string'
+              ? property.key.value
+              : null
+        if (key === null || rendered.has(key)) continue
+        context.report({ node: property, messageId: 'unrenderedField', data: { field: key } })
+      }
+    })
   },
 }

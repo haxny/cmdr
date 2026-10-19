@@ -42,7 +42,7 @@
         try {
             await openExternalUrl(url)
         } catch (e) {
-            log.warn("Couldn't open the security advisory link: {error}", { error: String(e) })
+            log.warn("Couldn't open the security advisory link: {error}", { error: e })
         }
     }
 </script>

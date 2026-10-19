@@ -186,7 +186,7 @@ export function createTransferTreeViewState(
       }
       view = answer
     } catch (error: unknown) {
-      log.warn('Transfer tree view failed: {error}', { error: String(error) })
+      log.warn('Transfer tree view failed: {error}', { error })
     }
   })
 

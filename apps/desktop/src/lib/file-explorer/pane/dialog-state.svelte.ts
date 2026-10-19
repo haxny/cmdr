@@ -80,6 +80,7 @@ import { isAnySoftDialogOpen } from '#lib/ui/open-dialogs.svelte.js'
 import { announceOperationBlocked } from './operation-start-gate'
 import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
 import { formatByteSize } from '#lib/units/index.js'
+import { pluralize } from '#lib/utils/pluralize.js'
 
 const log = getAppLogger('fileExplorer')
 
@@ -270,9 +271,14 @@ export function createDialogState(deps: DialogStateDeps) {
     // and isn't available at all to a window watching an operation it never
     // started. `#lib/search/snapshot-purge.ts` reads the per-path outcome
     // stream instead, for every window and every ending.
-    log.info(
-      `${transferOpLabel(op)} complete: ${String(filesProcessed)} files (${String(filesSkipped)} skipped, ${String(refused?.itemCount ?? 0)} refused, ${formatByteSize(bytesProcessed)})`,
-    )
+    log.info('{op} complete: {filesProcessed} {filesNoun} ({filesSkipped} skipped, {refusedCount} refused, {bytes})', {
+      op: transferOpLabel(op),
+      filesProcessed,
+      filesNoun: pluralize(filesProcessed, 'file'),
+      filesSkipped,
+      refusedCount: refused?.itemCount ?? 0,
+      bytes: formatByteSize(bytesProcessed),
+    })
     // Top-level counts for the per-type split ("Moved 1 file and 3 folders").
     // F5/F6, drag-and-drop, and clipboard paste all supply these now; absent
     // only when a kind probe came back partial → composer falls back.
@@ -864,7 +870,11 @@ export function createDialogState(deps: DialogStateDeps) {
 
     handleTransferCancelled(filesProcessed: number) {
       const op = transferProgressProps?.operationType ?? 'copy'
-      log.info(`${transferOpLabel(op)} cancelled after ${String(filesProcessed)} files`)
+      log.info('{op} cancelled after {filesProcessed} {filesNoun}', {
+        op: transferOpLabel(op),
+        filesProcessed,
+        filesNoun: pluralize(filesProcessed, 'file'),
+      })
 
       paneEffects.refreshPanesAfterTransfer()
       paneEffects.adjustSelectionAfterCancel(op)
@@ -1056,7 +1066,7 @@ export function createDialogState(deps: DialogStateDeps) {
      */
     handleDialogRenderFailure(error: unknown) {
       log.error('A dialog threw while rendering; dismissing every dialog and refocusing the pane: {error}', {
-        error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+        error,
       })
       addToast(tString('fileExplorer.pane.dialogRenderFailedToast'), { level: 'error' })
       this.dismissAllAfterRenderFailure()

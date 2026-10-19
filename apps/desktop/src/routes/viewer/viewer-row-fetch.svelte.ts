@@ -279,7 +279,7 @@ export function createViewerRowFetch(deps: RowFetchDeps) {
       // error log counts toward an auto-sent error report.
       log.warn('fetchRows[{fetchId}]: timed out', { fetchId })
     } else {
-      log.error("fetchRows[{fetchId}]: didn't come back ({reason})", { fetchId, reason: kind ?? String(e) })
+      log.error("fetchRows[{fetchId}]: didn't come back ({reason})", { fetchId, reason: kind ?? e })
     }
   }
 

@@ -59,7 +59,7 @@ export function setDownloadsNotificationsMode(value: DownloadsNotificationsMode)
   try {
     setSetting(DOWNLOADS_NOTIFICATIONS_SETTING_KEY, value)
   } catch (err) {
-    log.warn('Failed to write downloads-notifications mode ({value}): {err}', { value, err: String(err) })
+    log.warn('Failed to write downloads-notifications mode ({value}): {err}', { value, err })
   }
 }
 

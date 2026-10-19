@@ -110,7 +110,7 @@
                 await win.setMinSize(minSize)
                 await win.setMaxSize(maxSize)
             } catch (e) {
-                log.warn('Settings window setMinSize/setMaxSize failed: {error}', { error: String(e) })
+                log.warn('Settings window setMinSize/setMaxSize failed: {error}', { error: e })
             }
         })()
     })

@@ -39,7 +39,7 @@ export async function setFolderExcluded(folder: string, excluded: boolean): Prom
       'Folder exclusion for {folder} is saved but did not reach the backend; the next launch applies it: {err}',
       {
         folder,
-        err: String(err),
+        err,
       },
     )
     throw err

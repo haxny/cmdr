@@ -111,7 +111,7 @@
             // the very bug this mode exists to fix, so it lands on the honest dead end.
             if (isAmend) amendUnavailable = true
             else preparingFailed = true
-            log.warn("Couldn't load the error report preview: {error}", { error: String(e) })
+            log.warn("Couldn't load the error report preview: {error}", { error: e })
         } finally {
             preparing = false
         }
@@ -189,7 +189,7 @@
         } catch (e) {
             // Warn for every kind, a 4xx from the server included: an error-level line would
             // auto-send a report through this same endpoint, the one that just didn't take it.
-            log.warn('Sending error report returned an error: {error}', { error: String(e) })
+            log.warn('Sending error report returned an error: {error}', { error: e })
             const reason = errorReportSendReason(errorReportSendFailureOf(e))
             // No "Send error report…" on this toast: it's the failure of that very flow, so
             // offering to re-run it would be a confusing loop.

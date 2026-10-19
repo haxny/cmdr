@@ -29,7 +29,7 @@ export async function mapLegacyAskCmdrOptIn(): Promise<void> {
     answer = await askCmdrLegacyOptIn()
   } catch (e) {
     log.warn("couldn't read the old Ask Cmdr opt-in, so the switch waits for the next launch: {error}", {
-      error: String(e),
+      error: e,
     })
     return
   }

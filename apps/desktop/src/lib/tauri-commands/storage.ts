@@ -424,7 +424,7 @@ export async function openSystemSettingsUrl(url: string): Promise<void> {
     const res = await commands.openSystemSettingsUrl(url)
     if (res.status === 'error') throwIpcError(res.error)
   } catch (error) {
-    log.warn("Couldn't open the System Settings link {url}: {error}", { url, error: String(error) })
+    log.warn("Couldn't open the System Settings link {url}: {error}", { url, error })
   }
 }
 

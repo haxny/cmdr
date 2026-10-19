@@ -177,7 +177,7 @@ export function ejectTechnicalDetail(error: EjectError): string | null {
 export function wordEjectRefusal(error: unknown): string {
   const typed = asEjectError(error)
   if (!typed) {
-    log.warn('Eject refused with an untyped value: {error}', { error: String(error) })
+    log.warn('Eject refused with an untyped value: {error}', { error })
     return raw('errors.eject.unexpected')
   }
   const detail = ejectTechnicalDetail(typed)

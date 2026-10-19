@@ -27,7 +27,7 @@
                 log.warn('viewer_reload failed: {error}', { error: res.error })
             }
         } catch (e) {
-            log.warn('viewer_reload threw: {error}', { error: String(e) })
+            log.warn('viewer_reload threw: {error}', { error: e })
         } finally {
             dismissToast(toastId)
         }

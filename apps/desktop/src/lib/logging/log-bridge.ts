@@ -10,6 +10,7 @@
 // eslint-disable-next-line cmdr/no-raw-bindings-import -- logging/store bootstrap infra: the tauri-commands barrel imports the logger (storage.ts), so wrapping here would create an import cycle
 import { commands, type FrontendLogEntry } from '#lib/ipc/bindings.js'
 import type { LogRecord, Sink } from '@logtape/logtape'
+import { describeForLog } from './describe-for-log'
 
 interface PendingEntry {
   level: FrontendLogEntry['level']
@@ -83,19 +84,20 @@ function formatMessage(record: LogRecord): string {
   // for example ["Loading ", 42, " items"]. A tagged template carries no names, so it joins as is.
   const { message, rawMessage } = record
   const names = typeof rawMessage === 'string' ? [...rawMessage.matchAll(/\{([^{}\s]+)\}/g)].map((m) => m[1]) : []
-  if (names.length * 2 + 1 !== message.length) return message.map(String).join('')
+  if (names.length * 2 + 1 !== message.length) return message.map(describeForLog).join('')
 
   let out = ''
   message.forEach((part, index) => {
     const name = index % 2 === 1 ? names[(index - 1) / 2] : undefined
     const key = name === undefined ? undefined : REDACTOR_KEY_BY_PLACEHOLDER[name]
+    const text = describeForLog(part)
     if (key === undefined || name === undefined) {
-      out += String(part)
+      out += text
       return
     }
     // A template that already reads `volumeId={volumeId}` gets the quotes, not a second key.
     const keyed = out.endsWith(`${key}=`) || out.endsWith(`${name}=`)
-    out += keyed ? debugQuote(String(part)) : `${key}=${debugQuote(String(part))}`
+    out += keyed ? debugQuote(text) : `${key}=${debugQuote(text)}`
   })
   return out
 }

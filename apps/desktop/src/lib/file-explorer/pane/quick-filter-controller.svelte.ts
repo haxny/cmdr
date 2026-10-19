@@ -202,7 +202,7 @@ export function createQuickFilterController(deps: QuickFilterControllerDeps): Qu
     } catch (e) {
       // The backend refusal is typed (`ListingLookupError`); a gone listing is the
       // ordinary race with a navigation, and the next listing starts unfiltered.
-      log.warn("quick filter couldn't apply: {reason}", { reason: (e as { type?: string }).type ?? String(e) })
+      log.warn("quick filter couldn't apply: {reason}", { reason: (e as { type?: string }).type ?? e })
     } finally {
       inFlight = false
       // New-listing typing may have queued behind a departed listing's call.

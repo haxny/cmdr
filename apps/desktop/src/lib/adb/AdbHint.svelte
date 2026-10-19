@@ -66,7 +66,7 @@
         } catch (e: unknown) {
             // It is already gone for this session and would come back next
             // launch. Not worth a word to the user.
-            log.warn('Remembering the dismissed USB-debugging hint broke down: {error}', { error: String(e) })
+            log.warn('Remembering the dismissed USB-debugging hint broke down: {error}', { error: e })
         }
     }
 </script>

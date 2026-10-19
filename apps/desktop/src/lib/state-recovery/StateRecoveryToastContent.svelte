@@ -85,7 +85,7 @@
             await openSettingsWindow('state-recovery-toast', section)
         } catch (error) {
             // The toast stays up, so the button is still there to try again.
-            log.warn("Couldn't open Settings from a recovery notice: {error}", { error: String(error) })
+            log.warn("Couldn't open Settings from a recovery notice: {error}", { error })
             return
         }
         dismissToast(toastId)
@@ -95,7 +95,7 @@
         try {
             await showInFinder(path)
         } catch (error) {
-            log.warn("Couldn't show the set-aside copy in Finder: {error}", { error: String(error) })
+            log.warn("Couldn't show the set-aside copy in Finder: {error}", { error })
         }
     }
 </script>

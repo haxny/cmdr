@@ -133,7 +133,7 @@
             const logDir = await appLogDir()
             await revealItemInDir(logDir)
         } catch (error) {
-            log.error('Failed to open log directory: {error}', { error: String(error) })
+            log.error('Failed to open log directory: {error}', { error })
         }
     }
 
@@ -159,7 +159,7 @@ Timestamp: ${info.timestamp}
                 copyFeedback = false
             }, 2000)
         } catch (error) {
-            log.error('Failed to copy diagnostic info: {error}', { error: String(error) })
+            log.error('Failed to copy diagnostic info: {error}', { error })
         }
     }
 </script>

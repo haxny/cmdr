@@ -125,7 +125,7 @@
             shortcutEnabled = getGlobalGoToLatestEnabled()
             shortcutBinding = getGlobalGoToLatestBinding()
         } catch (err) {
-            log.warn('Failed to read global shortcut settings: {err}', { err: String(err) })
+            log.warn('Failed to read global shortcut settings: {err}', { err })
         }
         // Belt-and-braces re-check of the FDA gate so opening Settings recovers
         // from a stale focus-event read (e.g. user granted FDA, came straight here).
@@ -162,7 +162,7 @@
         try {
             await openPrivacySettings()
         } catch (err) {
-            log.warn('Failed to open System Settings: {err}', { err: String(err) })
+            log.warn('Failed to open System Settings: {err}', { err })
         }
     }
 

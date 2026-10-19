@@ -177,7 +177,7 @@ export async function performRename(
 function renameFailureMessage(e: unknown, isDirectory: boolean, newName?: string): string {
   const failure = asMutationError(e)
   if (failure) return renderMutationError(failure, isDirectory ? 'folder' : 'file', newName)
-  log.warn('A rename call threw an untyped value: {error}', { error: String(e) })
+  log.warn('A rename call threw an untyped value: {error}', { error: e })
   return renderMutationError({ type: 'unexpected', detail: '' }, isDirectory ? 'folder' : 'file')
 }
 

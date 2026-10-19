@@ -162,7 +162,7 @@
         } catch (error) {
             // The person can still get there by hand, and a grant made that way still needs the
             // restart below, so the flow carries on with the manual path on screen.
-            log.warn('openPrivacySettings failed: {error}', { error: String(error) })
+            log.warn('openPrivacySettings failed: {error}', { error })
             openSettingsFailed = true
         }
         // Pre-compute the step-2 banner so if the user changes their mind and comes back,

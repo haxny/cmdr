@@ -90,7 +90,7 @@ export class CreateSubmission {
   #refused(name: string, e: unknown): void {
     const { kind } = this.#deps
     const failure = asMutationError(e)
-    if (!failure) log.warn('A create call threw an untyped value: {error}', { error: String(e) })
+    if (!failure) log.warn('A create call threw an untyped value: {error}', { error: e })
     const typed = failure ?? { type: 'unexpected', detail: '' }
     const reason = renderMutationError(typed, kind, name)
     const incident: ReportIncident = { kind: 'createRefused', entry: kind, refusal: typed.type, reason }

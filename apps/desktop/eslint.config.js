@@ -48,6 +48,7 @@ import noTitleAttribute from './eslint-plugins/no-title-attribute.js'
 import noArbitrarySleepInE2E from './eslint-plugins/no-arbitrary-sleep-in-e2e.js'
 import noRawWaitBudget from './eslint-plugins/no-raw-wait-budget.js'
 import noUnrenderedLogFields from './eslint-plugins/no-unrendered-log-fields.js'
+import noStringifiedLogValues from './eslint-plugins/no-stringified-log-values.js'
 
 /* global process */
 const noTypecheck = process.env.ESLINT_NO_TYPECHECK === '1'
@@ -321,6 +322,7 @@ export default tseslint.config(
           'dialog-buttons-in-footer': dialogButtonsInFooter,
           'no-title-attribute': noTitleAttribute,
           'no-unrendered-log-fields': noUnrenderedLogFields,
+          'no-stringified-log-values': noStringifiedLogValues,
         },
       },
     },
@@ -395,6 +397,10 @@ export default tseslint.config(
       // bundle. ERR-BPAPM lost the OS's reason for a refused trash exactly this
       // way. Applies at every level: `debug`/`info` drop properties too.
       'cmdr/no-unrendered-log-fields': 'error',
+      // A logged value goes in raw: the bridge's `describeForLog` keeps an Error's cause
+      // chain and a TypedFailure's payload, where `String(x)` gives `[object Object]` for
+      // a plain object. ERR-VEZUB's dialog crash reached its report as exactly that.
+      'cmdr/no-stringified-log-values': 'error',
     },
   },
   {

@@ -195,7 +195,7 @@
                 return
             }
         } catch (e) {
-            log.warn('viewer_set_tail_mode threw: {error}', { error: String(e) })
+            log.warn('viewer_set_tail_mode threw: {error}', { error: e })
             tailMode = !next
         }
     }
@@ -295,7 +295,7 @@
             // self-terminates when the backend reports `is_indexing: false`.
             indexingPoll.start()
         } catch (e) {
-            log.error('set_encoding threw: {error}', { error: String(e) })
+            log.error('set_encoding threw: {error}', { error: e })
             currentEncoding = prev
         }
     }
@@ -441,7 +441,7 @@
         takeFocus: () => scroll.containerRef?.focus({ preventScroll: true }),
         showContextMenu: () => {
             showViewerContextMenu(selection.selection !== null).catch((e: unknown) => {
-                log.warn("Couldn't open the viewer's context menu: {error}", { error: String(e) })
+                log.warn("Couldn't open the viewer's context menu: {error}", { error: e })
             })
         },
     })
@@ -625,7 +625,7 @@
         },
         writeClipboardText: (text: string) => {
             navigator.clipboard.writeText(text).catch((e: unknown) => {
-                log.warn('Copying the search query to the clipboard failed: {error}', { error: String(e) })
+                log.warn('Copying the search query to the clipboard failed: {error}', { error: e })
             })
         },
     }

@@ -94,7 +94,7 @@ export async function goToTrashedItems(
   } catch (error) {
     log.debug('Landed in the trash but not on {name} (hidden, or gone since): {error}', {
       name: landed.name,
-      error: String(error),
+      error,
     })
   }
 }
@@ -113,7 +113,7 @@ async function openTrashDirFor(explorer: PaneRevealAPI, path: string): Promise<v
     // `timedOut` is the realistic one: a slow or sleeping volume that didn't answer in 2 s.
     log.info("Couldn't look up the trash for {path}: {reason}", {
       path,
-      reason: asMutationError(error)?.type ?? String(error),
+      reason: asMutationError(error)?.type ?? error,
     })
     addToast(tString('fileExplorer.navigation.locationUnreachableToast'), { level: 'info', id: NO_TRASH_TOAST_ID })
     return
@@ -151,7 +151,7 @@ async function firstTrashedItemPath(operationId: string): Promise<{ dir: string;
     // The volume's trash is still the right place to go; only the cursor is lost.
     log.info("Couldn't read where {operationId} put its items; opening the volume trash: {error}", {
       operationId,
-      error: String(error),
+      error,
     })
     return null
   }

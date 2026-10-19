@@ -20,7 +20,7 @@
             await openSettingsWindow('local-download-toast', ['AI', 'Provider'])
         } catch (error) {
             // The toast stays up, so the button is still there to try again.
-            log.warn("Couldn't open Settings from the local AI download toast: {error}", { error: String(error) })
+            log.warn("Couldn't open Settings from the local AI download toast: {error}", { error })
             return
         }
         dismissToast(toastId)

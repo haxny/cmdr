@@ -22,7 +22,7 @@
         try {
             await openPrivacySettings()
         } catch (error) {
-            log.warn("Couldn't open System Settings from the error pane: {error}", { error: String(error) })
+            log.warn("Couldn't open System Settings from the error pane: {error}", { error })
         }
     }
 

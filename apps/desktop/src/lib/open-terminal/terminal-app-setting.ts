@@ -60,6 +60,6 @@ export async function openSettingsToTerminalApp(): Promise<void> {
       settingAnchorId(TERMINAL_APP_SETTING_KEY),
     )
   } catch (err) {
-    log.warn('Failed to open Settings from an open-terminal-here toast: {err}', { err: String(err) })
+    log.warn('Failed to open Settings from an open-terminal-here toast: {err}', { err })
   }
 }

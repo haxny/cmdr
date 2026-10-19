@@ -93,7 +93,7 @@ async function getStore(): Promise<Store> {
     // Resolve the store path so isolated instances (dev, per-worktree dev, E2E)
     // don't read the real production `settings.json`. See `store-path.ts`.
     const storePath = await resolveStorePath('settings.json', (e) => {
-      log.warn('Could not resolve isolated settings path, using default: {error}', { error: String(e) })
+      log.warn('Could not resolve isolated settings path, using default: {error}', { error: e })
     })
     log.debug('Creating new store instance for {storeName}', { storeName: storePath })
     // Load WITHOUT seeding registry defaults. The store file must hold only the
@@ -460,7 +460,7 @@ export function setSetting<K extends SettingId>(id: K, value: SettingsValues[K])
           }
         })
         .catch((error: unknown) => {
-          log.warn('Failed to persist {id} from restricted window: {error}', { id, error: String(error) })
+          log.warn('Failed to persist {id} from restricted window: {error}', { id, error })
         })
     } else {
       log.debug('Restricted window: {id} change is session-only (not in the persist allowlist)', { id })

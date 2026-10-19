@@ -64,7 +64,7 @@ async function heartbeatLiveListings(): Promise<void> {
   try {
     gone = await keepListingsAlive([...live.keys()])
   } catch (e) {
-    log.warn("Couldn't send the listing heartbeat: {error}", { error: String(e) })
+    log.warn("Couldn't send the listing heartbeat: {error}", { error: e })
     return
   }
   for (const listingId of gone) reportListingGone(listingId)

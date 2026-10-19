@@ -67,7 +67,7 @@ export async function exitFullScreenOnEscape(): Promise<void> {
     if (!(await appWindow.isFullscreen())) return
     await appWindow.setFullscreen(false)
   } catch (error) {
-    log.warn("Couldn't leave full screen on Escape: {error}", { error: String(error) })
+    log.warn("Couldn't leave full screen on Escape: {error}", { error })
     return
   }
   if (getSetting('advanced.exitFullScreenOnEscapeHintShown')) return

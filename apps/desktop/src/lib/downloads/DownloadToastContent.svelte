@@ -145,7 +145,7 @@
         try {
             await openSettingsToDownloadsNotifications()
         } catch (err) {
-            log.warn('Failed to open Settings from the download toast: {err}', { err: String(err) })
+            log.warn('Failed to open Settings from the download toast: {err}', { err })
         }
     }
 

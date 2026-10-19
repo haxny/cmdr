@@ -47,7 +47,7 @@
                 })
             }
         } catch (err) {
-            log.warn('Failed to call setGlobalGoToLatestShortcut: {err}', { err: String(err) })
+            log.warn('Failed to call setGlobalGoToLatestShortcut: {err}', { err })
         }
         dismissToast(toastId)
     }

@@ -265,7 +265,7 @@ function announceNoUpgrade(result: NoUpgrade, shareName: string): DirectConnectO
 
 /** The attempt threw before the backend could answer: the one case with no typed reason to word. */
 function announceBreakdown(e: unknown): DirectConnectOutcome {
-  log.error('Direct SMB connection attempt broke down: {error}', { error: String(e) })
+  log.error('Direct SMB connection attempt broke down: {error}', { error: e })
   addToast(tString('fileExplorer.pane.directConnectionUnavailableToast'), { level: 'error' })
   return 'stillOnOsMount'
 }

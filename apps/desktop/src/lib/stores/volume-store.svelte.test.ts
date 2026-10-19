@@ -84,7 +84,7 @@ describe('requestVolumeRefresh', () => {
     expect(isVolumeRetryFailed()).toBe(true)
     expect(warn).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ error: 'Error: the bridge is gone' }),
+      expect.objectContaining({ error: new Error('the bridge is gone') }),
     )
   })
 

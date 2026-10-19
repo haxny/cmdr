@@ -46,7 +46,7 @@
                 if (askCmdrState.conversationId === id) fetched = { conversationId: id, cost: c }
             },
             (e: unknown) => {
-                log.warn('reading chat cost failed: {error}', { error: String(e) })
+                log.warn('reading chat cost failed: {error}', { error: e })
             },
         )
     })

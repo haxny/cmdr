@@ -454,7 +454,7 @@ async function readWriteBlocker(): Promise<BundleWriteBlocker | null> {
     return await updateWriteBlocker()
   } catch (error) {
     log.warn("Couldn't classify where the bundle lives: {error}", {
-      error: error instanceof Error ? error.message : String(error),
+      error,
     })
     return null
   }

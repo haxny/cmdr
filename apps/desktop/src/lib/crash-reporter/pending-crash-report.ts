@@ -22,7 +22,7 @@ export async function checkForPendingCrashReport(showDialog: (report: CrashRepor
   } catch (e) {
     // `check_pending_crash_report` answers an Option and can't refuse, so only a broken IPC bridge lands here.
     // The crash file stays on disk for the next launch.
-    log.error('Crash report check returned an error: {error}', { error: String(e) })
+    log.error('Crash report check returned an error: {error}', { error: e })
     return
   }
   if (!report) return

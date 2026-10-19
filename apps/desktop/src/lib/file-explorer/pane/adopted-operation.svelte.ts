@@ -33,6 +33,7 @@ import {
 import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { formatByteSize } from '#lib/units/index.js'
+import { pluralize } from '#lib/utils/pluralize.js'
 import { transferOpLabel } from './transfer-op-label'
 import type { TransferOperationType, WriteOperationError } from '../types'
 import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
@@ -143,7 +144,15 @@ export function createAdoptedOperation(deps: AdoptedOperationDeps) {
     }: TransferCompletePayload): void {
       const op = adoptedProps?.operationType ?? 'copy'
       log.info(
-        `${transferOpLabel(op)} complete (adopted): ${String(filesProcessed)} files (${String(filesSkipped)} skipped, ${String(refused?.itemCount ?? 0)} refused, ${formatByteSize(bytesProcessed)})`,
+        '{op} complete (adopted): {filesProcessed} {filesNoun} ({filesSkipped} skipped, {refusedCount} refused, {bytes})',
+        {
+          op: transferOpLabel(op),
+          filesProcessed,
+          filesNoun: pluralize(filesProcessed, 'file'),
+          filesSkipped,
+          refusedCount: refused?.itemCount ?? 0,
+          bytes: formatByteSize(bytesProcessed),
+        },
       )
       const toastMessage = composeTransferCompleteToast({
         operationType: op,
@@ -178,7 +187,11 @@ export function createAdoptedOperation(deps: AdoptedOperationDeps) {
      *  completion has none: the selection to adjust was never taken here. */
     handleCancelled(filesProcessed: number): void {
       const op = adoptedProps?.operationType ?? 'copy'
-      log.info(`${transferOpLabel(op)} cancelled (adopted) after ${String(filesProcessed)} files`)
+      log.info('{op} cancelled (adopted) after {filesProcessed} {filesNoun}', {
+        op: transferOpLabel(op),
+        filesProcessed,
+        filesNoun: pluralize(filesProcessed, 'file'),
+      })
 
       settle()
       deps.onRefocus()

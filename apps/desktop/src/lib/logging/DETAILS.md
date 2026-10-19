@@ -32,8 +32,10 @@ catches it and swaps the window for its error page. A v0.54.0 user on Catalina g
 Error" and a log with no trace of why. So:
 
 - `apps/desktop/src/hooks.client.ts` implements `handleError`. For an `unknown` or `app` throw it calls `logPageCrash`
-  (`Page crashed in {routeId}: {detail}\n{stack}`, error level, so an opted-in auto-send ships it) and returns
-  `{ detail }`. A `framework` error (a route that doesn't exist) isn't a crash and isn't logged.
+  (`Page crashed in {routeId}: {detail}\n{stack}`, error level, so an opted-in auto-send ships it; `detail` and the
+  frames come from `describeThrown`, the same split the `window` listeners use, cause chain included) and returns
+  `{ detail }`, plus `message: 'Name: message'` for an `unknown` throw. A `framework` error (a route that doesn't exist)
+  isn't a crash and isn't logged.
 - `apps/desktop/src/routes/+error.svelte` shows `page.error.detail` and offers a report (`pageCrash` incident) plus
   Reload. Only the root layout sits above it, so in the main window it hosts the report dialog and toasts itself.
 - **`whenLoggerReady` holds early lines.** LogTape drops anything logged before `configure`, and `initLogger` runs in
@@ -80,7 +82,26 @@ Error" and a log with no trace of why. So:
   always Debug under a 200 MB roof; and an uploaded bundle's redaction contract (`src-tauri/src/redact/`) is reasoned
   about over strings a developer wrote, not over whatever an object happens to hold. Making the author name what matters
   also reads better at triage time than an appended blob. Cost: the fix at a call site is a judgment call, not a
-  mechanical one, since a placeholder renders through `String(value)`.
+  mechanical one.
+- **Every rendered value goes through `describeForLog` (`describe-for-log.ts`), and call sites pass values raw.** The
+  bridge used to render with `String(part)`, and about 290 call sites pre-stringified on top (`String(e)`, the
+  `e instanceof Error ? e.message : String(e)` ternary), so a plain object logged as `[object Object]` and an `Error`
+  lost its cause and a `TypedFailure` its payload. ERR-VEZUB, a `DeleteDialog` render crash, reached its report as
+  `detail="[object Object]"`. One seam renders: strings verbatim, an `Error` as `Name: message; caused by …` (cycle- and
+  depth-guarded), a `TypedFailure` plus its `.failure` as JSON, a class with its own `toString` (`URL`) through it, and
+  anything else as COMPACT JSON with a cycle guard, capped at 1,000 chars. Compact on purpose: inside a `detail="…"`
+  field the report redactor tokenizes `"path":"…"`, `"server":"…"`, and the other identity keys by matching exactly that
+  shape (`src-tauri/src/redact/detail.rs` `redact_json_identity_pairs`), so a path inside a logged object is still
+  redacted. Anything that must touch every logged value (a redaction marker) belongs here.
+  `cmdr/no-stringified-log-values` keeps call sites raw: it autofixes `String(x)` and the ternary in a property value to
+  `x`, and a `${String(x)}` in a template-literal message to a `{x}` placeholder (`{error}` for a caught value, so it
+  lands in a redacted `detail` field).
+- **`apps/desktop/src/hooks.client.ts` exists for the errors SvelteKit catches.** Without a `handleError` hook,
+  SvelteKit's `transformError` hands every `<svelte:boundary>` `{ status: 500, message: 'Internal Error' }`
+  (`@sveltejs/kit` `runtime/client/client.js` `handle_error`, verified on 3.1.0, 2026-10-19), so `DialogManager`'s
+  boundary could never say what a dialog threw. For an `unknown` throw the hook also returns
+  `{ message: 'Name: message' }` (SvelteKit merges it over its fallback), which is what the boundary's `onerror`
+  receives; § Crashes SvelteKit catches has the logging side.
 - **A structured-log pipeline is the thing that would change this answer.** If logs ever need to be queried rather than
   read, carrying properties end to end becomes the right shape, and the rule becomes redundant. That is a different
   project, not an incremental widening of the bridge.

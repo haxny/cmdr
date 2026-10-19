@@ -113,7 +113,7 @@ async function requestComparison(asked: Asked, mode: CompareDirectoriesMode): Pr
     )
   } catch (e) {
     const reason = (e as { type?: string }).type
-    log.warn("compare directories couldn't run: {reason}", { reason: reason ?? String(e) })
+    log.warn("compare directories couldn't run: {reason}", { reason: reason ?? e })
     // A listing that went away mid-compare (the user navigated) has nothing to mark;
     // a comparison that ran out of time or broke tells the user.
     if (reason === 'timedOut' || reason === 'internal') {

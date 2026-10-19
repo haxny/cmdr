@@ -68,7 +68,7 @@
         try {
             await openExternalUrl(CHANGELOG_URL)
         } catch (e) {
-            log.warn("Couldn't open the changelog link: {error}", { error: String(e) })
+            log.warn("Couldn't open the changelog link: {error}", { error: e })
         }
     }
 
@@ -76,7 +76,7 @@
         try {
             await openExternalUrl(url)
         } catch (e) {
-            log.warn("Couldn't open the security advisory link: {error}", { error: String(e) })
+            log.warn("Couldn't open the security advisory link: {error}", { error: e })
         }
     }
 

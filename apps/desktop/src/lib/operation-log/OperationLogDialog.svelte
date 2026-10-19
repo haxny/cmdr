@@ -157,7 +157,7 @@
             // A typed refusal is an answer the dialog already words; only an untyped
             // throw is a diagnostic worth a warn.
             if (refusal) log.info("Couldn't roll {opId} back: {reason}", { opId, reason: refusal.kind })
-            else log.warn("Couldn't roll {opId} back: {error}", { opId, error: String(e) })
+            else log.warn("Couldn't roll {opId} back: {error}", { opId, error: e })
         } finally {
             dispatching.delete(opId)
         }
@@ -183,7 +183,7 @@
             })
         } catch (e) {
             itemsByOp.set(id, { loading: false, error: true, items: [], total: 0 })
-            log.warn("Couldn't load the operation's items: {error}", { error: String(e) })
+            log.warn("Couldn't load the operation's items: {error}", { error: e })
         }
     }
 </script>

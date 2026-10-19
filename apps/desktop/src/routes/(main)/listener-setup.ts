@@ -227,7 +227,7 @@ async function focusMainWindow() {
     const { getCurrentWindow } = await import('@tauri-apps/api/window')
     await getCurrentWindow().setFocus()
   } catch (error) {
-    log.warn('Focusing the main window failed: {error}', { error: String(error) })
+    log.warn('Focusing the main window failed: {error}', { error })
   }
 }
 

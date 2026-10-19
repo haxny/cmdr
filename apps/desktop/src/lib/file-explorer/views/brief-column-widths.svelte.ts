@@ -287,7 +287,7 @@ export function createBriefColumnWidths(deps: BriefColumnWidthsDeps): BriefColum
           // nothing else. Log it and stop; retrying would fight a missing measurement.
           .catch((err: unknown) => {
             log.debug('Brief column widths could not fill in unmeasured code points: {detail}', {
-              detail: String(err),
+              detail: err,
             })
           })
       }

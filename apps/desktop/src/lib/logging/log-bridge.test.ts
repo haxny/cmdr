@@ -239,6 +239,31 @@ describe('log-bridge', () => {
     expect(await renderedMessage({ rawMessage: template, message: ['Loaded ', 42, ' items'] })).toBe('Loaded 42 items')
   })
 
+  it('renders a raw caught value readably instead of as [object Object]', async () => {
+    // ERR-VEZUB arrived as `detail="[object Object]"`: the bridge stringified with `String(part)`.
+    const failure = { type: 'notFound', path: '/Users/ada/Plans' }
+    expect(
+      await renderedMessage({
+        rawMessage: 'Eject failed: {error}',
+        message: ['Eject failed: ', failure, ''],
+      }),
+    ).toBe('Eject failed: detail="{\\"type\\":\\"notFound\\",\\"path\\":\\"/Users/ada/Plans\\"}"')
+
+    vi.mocked(invoke).mockClear()
+    expect(
+      await renderedMessage({
+        rawMessage: 'Step {step} threw',
+        message: ['Step ', new Error('outer', { cause: new TypeError('inner') }), ' threw'],
+      }),
+    ).toBe('Step Error: outer; caused by TypeError: inner threw')
+
+    vi.mocked(invoke).mockClear()
+    const template = Object.assign(['Dock pin failed: ', ''], { raw: ['Dock pin failed: ', ''] })
+    expect(await renderedMessage({ rawMessage: template, message: ['Dock pin failed: ', { code: 5 }, ''] })).toBe(
+      'Dock pin failed: {"code":5}',
+    )
+  })
+
   it('silently drops entries when invoke fails', async () => {
     vi.mocked(invoke).mockRejectedValueOnce(new Error('Backend unavailable'))
 

@@ -592,7 +592,7 @@
             // ❗ An attempt promises an outcome. One that throws anyway (a broken
             // IPC bridge) must not leave the sheet disabled behind a spinner
             // nothing will stop, so it reads as the connection that didn't happen.
-            log.warn('A sign-in round broke down instead of answering: {error}', { error: String(e) })
+            log.warn('A sign-in round broke down instead of answering: {error}', { error: e })
         }
         busy = false
         await applyOutcome(outcome)
@@ -754,7 +754,7 @@
             // sentence says the password is the one thing that didn't: a Keychain
             // refusal (Deny, a locked keychain, no secret service). Save again
             // re-saves the same edit and retries the write.
-            log.warn('The edited server saved, but writing its password broke down: {error}', { error: String(e) })
+            log.warn('The edited server saved, but writing its password broke down: {error}', { error: e })
             busy = false
             await refuse('saved_secret_not_updated')
         } finally {
@@ -768,7 +768,7 @@
             return readSavedServerOutcome(await updateSavedServer(target, savedAs ?? editedId))
         } catch (e) {
             // Nothing confirmed the edit, which is exactly what this refusal says.
-            log.warn('Saving the edited server broke down: {error}', { error: String(e) })
+            log.warn('Saving the edited server broke down: {error}', { error: e })
             return { kind: 'refused', refusal: 'save_unconfirmed' }
         }
     }
@@ -787,7 +787,7 @@
         try {
             return readSavedServerOutcome(await updateSavedS3Account(id, form.displayName.trim(), endpoint))
         } catch (e) {
-            log.warn('Saving the edited S3 account broke down: {error}', { error: String(e) })
+            log.warn('Saving the edited S3 account broke down: {error}', { error: e })
             return { kind: 'refused', refusal: 'save_unconfirmed' }
         }
     }
@@ -811,7 +811,7 @@
                 await updateSavedSmbHost(id, form.displayName.trim(), typedAccount(form.username), address),
             )
         } catch (e) {
-            log.warn('Saving the edited SMB host broke down: {error}', { error: String(e) })
+            log.warn('Saving the edited SMB host broke down: {error}', { error: e })
         }
         busy = false
         await settleSmbSave(answer)
@@ -842,7 +842,7 @@
                 ),
             )
         } catch (e) {
-            log.warn('Ejecting and saving the edited SMB host broke down: {error}', { error: String(e) })
+            log.warn('Ejecting and saving the edited SMB host broke down: {error}', { error: e })
         }
         ejectAttempt = null
         busy = false

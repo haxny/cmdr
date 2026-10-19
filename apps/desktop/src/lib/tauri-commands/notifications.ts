@@ -15,7 +15,7 @@ export async function getNotificationPermission(): Promise<NotificationPermissio
   try {
     return await commands.getNotificationPermission()
   } catch (e) {
-    log.debug(`Couldn't ask about notification permission: ${String(e)}`)
+    log.debug("Couldn't ask about notification permission: {error}", { error: e })
     return 'unknown'
   }
 }

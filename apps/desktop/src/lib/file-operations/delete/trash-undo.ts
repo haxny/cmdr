@@ -70,7 +70,7 @@ function setPending(next: typeof pending): void {
 /** Fire-and-forget: a menu label that didn't land is worth a log line, never a throw into a trash's completion. */
 function pushToMenuBar(): void {
   void updateUndoTrashMenu(trashUndoTarget()).catch((error: unknown) => {
-    log.warn('Could not update the Undo move to trash menu item: {error}', { error: String(error) })
+    log.warn('Could not update the Undo move to trash menu item: {error}', { error })
   })
 }
 
@@ -235,7 +235,7 @@ export async function runTrashUndo(operationId: string): Promise<void> {
     dismissToast(TRASH_UNDO_TOAST_ID)
     addToast(trashUndoMessage(outcome), { level: trashUndoLevel(outcome), timeoutMs: 7000 })
   } catch (error) {
-    log.warn('Trash undo for {operationId} did not run: {error}', { operationId, error: String(error) })
+    log.warn('Trash undo for {operationId} did not run: {error}', { operationId, error })
     dismissToast(TRASH_UNDO_TOAST_ID)
     addToast(tString('fileOperations.trash.undoUnavailable'), { level: 'info', timeoutMs: 7000 })
   }

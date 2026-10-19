@@ -71,7 +71,7 @@ export function requestVolumeRefresh(): void {
   // `volumes-changed` event listener, which handles retryFailed. ❗ A request
   // the backend never took brings no event, so that case ends the refresh here.
   void refreshVolumes().catch((e: unknown) => {
-    logger.warn('Asking the backend to list volumes again broke down: {error}', { error: String(e) })
+    logger.warn('Asking the backend to list volumes again broke down: {error}', { error: e })
     refreshing = false
     markRetryFailed()
   })

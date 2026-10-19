@@ -139,7 +139,7 @@
         try {
             await retryFailedOperation(operationId)
         } catch (error) {
-            log.warn('Retrying op={operationId} was refused: {error}', { operationId, error: String(error) })
+            log.warn('Retrying op={operationId} was refused: {error}', { operationId, error })
         }
     }
 
@@ -211,7 +211,7 @@
         } catch (error) {
             log.warn('Could not ask the main window to show op={operationId}: {error}', {
                 operationId,
-                error: String(error),
+                error,
             })
         }
     }
