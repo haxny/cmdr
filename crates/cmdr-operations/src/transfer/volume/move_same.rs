@@ -125,9 +125,10 @@ impl crate::Operations {
             volume_ids: vec![volume_id],
             summary,
             // A same-volume move is a server-side rename-merge with no rollback:
-            // it stops without reversing and reports `rolled_back: false`. The
-            // progress dialog disables Rollback for exactly this case.
-            supports_rollback: false,
+            // it stops without reversing and reports `rolled_back: false`. Also
+            // true where the volume's renames copy (`moves_by_copy`), decided only
+            // once the task runs, so this verdict can't wait for it.
+            rollback_support: crate::types::RollbackSupport::SameVolumeMove,
             preview_id: config.preview_id.clone(),
             reverses: None,
         };

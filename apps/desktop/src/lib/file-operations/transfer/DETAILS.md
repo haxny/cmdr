@@ -295,12 +295,13 @@ destinations".
      reachable throughout: the conflict footer always shows one (stop, keep what is written, key C) beside Rollback,
      live or blocked, so a clash never forces a choice between answering it and undoing the whole operation. Two reasons
      reach the state, and the dialog folds them into one `rollbackBlockedTooltip`:
-     - **The strategy can't reverse at all**: the operation's `supportsRollback` is off, plus the props-only
+     - **The strategy can't reverse at all**: the operation's `rollbackSupport` names a reason, plus the props-only
        `isSameVolumeMove` for the frames before the first snapshot lands (a move where source and destination are the
        SAME non-default volume — one smb2 share, one MTP device — which the backend runs as a server-side
-       `volume.rename` rename-merge that stops without reversing). Tooltip: "Rollback is not available for same-volume
-       moves". Local→local same-FS moves keep a live Rollback (real `MoveTransaction` rollback), so the default local
-       volume is excluded from the props rule.
+       `volume.rename` rename-merge that stops without reversing). The tooltip is worded per reason
+       (`../reversal-wording.ts`'s `rollbackBlockedTooltipKey`): a move between volumes, one within a volume, a zip
+       rewrite, a move out of a zip, each saying why and what Cancel still does. Local→local same-FS moves keep a live
+       Rollback (real `MoveTransaction` rollback), so the default local volume is excluded from the props rule.
      - **It could, and the moment has passed**: `reversalWindowClosed` (`../reversal-wording.ts`) — a local cross-FS
        move in its `deleting` phase has landed every file and committed, so a Rollback there would only stop the source
        sweep. The tooltip says so and points at the Cancel that still spares the untouched originals; the stacked
@@ -881,9 +882,9 @@ Pinned by `TransferErrorDialog.typed.test.ts`, `DialogManager.svelte.test.ts`, a
   succeeds but delete fails, the user keeps files in both places (safer than losing data).
 - **Whether Rollback works is the OPERATION's answer, never the volume ids'.** A cross-volume move can't be reversed at
   all (the driver treats `RollingBack` exactly like `Stopped` and reports `rolled_back: false`) and looks, from the
-  props, exactly like a perfectly reversible transfer. So both this dialog's footers read `supportsRollback` off the
-  registry snapshot, the same flag the queue window reads. The props-only same-volume-move rule stands beside it for the
-  frames before the first snapshot lands. See `crates/cmdr-operations/DETAILS.md` § "Rollback availability".
+  props, exactly like a perfectly reversible transfer. So both this dialog's footers read `rollbackSupport` off the
+  registry snapshot, the same verdict the queue window reads. The props-only same-volume-move rule stands beside it for
+  the frames before the first snapshot lands. See `crates/cmdr-operations/DETAILS.md` § "Rollback availability".
 - **Dry-run conflict sampling.** If >200 conflicts, `DryRunResult.conflicts` contains a random sample. Check
   `conflictsSampled: true` and `conflictsTotal` for the exact count.
 - **Progress dialog edge case.** Same-FS move completes so fast that the complete event may fire before the dialog
@@ -1066,12 +1067,11 @@ otherwise the same one, down to the buttons. Four things differ, each for its ow
 - **Auto-queue is off.** It is a decision a DISPATCHING view makes (don't stack a second modal over the one already up);
   a view opened precisely to watch this operation would instead bounce it back out of sight, which reads as the button
   doing nothing. The queue row correspondingly doesn't offer Show on a `queued` row.
-- **Rollback comes from the registry row.** `rollbackUnavailable` reads the snapshot's `supportsRollback`, which is a
-  promise about the OPERATION; an adopted view has no volume ids or direction to reason from. The props-only
-  same-volume-move rule stands beside it for the window before the first snapshot lands, and the two phase gates
-  (nothing written during a scan, nothing reversible once a move is sweeping its sources) apply to an adopted view
-  exactly as they do to a dispatching one — they read the live phase, which is the one thing both kinds of view always
-  have.
+- **Rollback comes from the registry row.** `rollbackSupport` reads the snapshot's verdict, which is a promise about the
+  OPERATION; an adopted view has no volume ids or direction to reason from. The props-only same-volume-move rule stands
+  beside it for the window before the first snapshot lands, and the two phase gates (nothing written during a scan,
+  nothing reversible once a move is sweeping its sources) apply to an adopted view exactly as they do to a dispatching
+  one — they read the live phase, which is the one thing both kinds of view always have.
 - **The parent runs no pane tail.** An adopted view has no birth context, and the two-slot arrangement in `dialog-state`
   is what makes the wrong version unreachable: `../../file-explorer/pane/DETAILS.md` § "Birth context".
 - **An adopted REVERSAL ends by leaving the registry.** Show is offered on an operation-log undo too, and that operation

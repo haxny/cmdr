@@ -472,9 +472,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "Không thể hoàn tác khi di chuyển trong cùng một ổ đĩa",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "Không thể hoàn tác khi di chuyển giữa các ổ đĩa. Cmdr xóa từng bản gốc ngay khi bản sao của nó đã nằm an toàn ở đích, nên không còn bản gốc nào để quay lại. Hủy sẽ dừng lần di chuyển này, và tệp nào cũng nguyên vẹn ở chỗ cũ hoặc chỗ mới.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "Không thể hoàn tác khi di chuyển trong cùng một ổ đĩa. Chính ổ đĩa tự di chuyển từng mục, và Cmdr không thể đưa chúng trở lại giữa chừng. Hủy sẽ dừng lần di chuyển này: mục nào đã di chuyển thì ở lại chỗ mới, các mục còn lại vẫn ở chỗ cũ.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "Ở đây không có gì để hoàn tác. Cmdr ghi lại tệp nén một lần duy nhất vào lúc cuối, nên Hủy sẽ giữ tệp nén y nguyên như cũ.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "Ở đây không có gì để hoàn tác. Cmdr chỉ xóa các mục này khỏi tệp nén sau khi đã giải nén hết, nên Hủy sẽ giữ tệp nén như cũ. Những gì đã giải nén vẫn nằm ở đích dưới dạng bản sao.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "Không thể hoàn tác thao tác này.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "Đang hoàn tác…",
   "@fileOperations.transferProgress.titleRollingBack": {

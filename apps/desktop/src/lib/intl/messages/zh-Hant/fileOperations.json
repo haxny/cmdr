@@ -471,9 +471,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "同一個卷宗內的移動無法復原",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "在不同卷宗之間移動時無法復原。每個檔案的副本一安全到位，Cmdr 就會移除原本的檔案，所以已經沒有原本的檔案可以回復了。「取消」會停止這次移動，每個檔案都會完整地留在原本的位置或新的位置。",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "在同一個卷宗內移動時無法復原。每個項目都由卷宗自己移動，Cmdr 沒辦法在移動進行到一半時把它們放回原處。「取消」會停止這次移動：已經移動的項目會留在新的位置，其餘的會留在原本的位置。",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "這裡沒有可以復原的東西。Cmdr 會在最後一次重寫整個壓縮檔，所以「取消」會讓它原封不動。",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "這裡沒有可以復原的東西。Cmdr 要等這些項目全部解壓縮出來，才會把它們從壓縮檔中移除，所以「取消」會讓壓縮檔保持原樣。已經解壓縮出來的項目會以副本的形式留在目標位置。",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "這項操作無法復原。",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "正在復原⋯",
   "@fileOperations.transferProgress.titleRollingBack": {

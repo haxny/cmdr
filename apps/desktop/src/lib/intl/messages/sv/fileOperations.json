@@ -473,9 +473,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "Det går inte att ångra flyttar inom samma volym",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "Det går inte att ångra en flytt mellan volymer. Cmdr tar bort varje original så fort kopian ligger säkert på plats, så det finns inget original kvar att gå tillbaka till. Avbryt stoppar flytten och varje fil finns kvar hel på den ena eller andra sidan.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "Det går inte att ångra en flytt inom en och samma volym. Volymen flyttar varje objekt själv och Cmdr kan inte flytta tillbaka dem halvvägs. Avbryt stoppar flytten: det som har flyttats ligger kvar på sin nya plats och resten ligger kvar där det var.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "Här finns inget att ångra. Cmdr skriver om arkivet i ett svep i slutet, så Avbryt lämnar arkivet precis som det var.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "Här finns inget att ångra. Cmdr tar bort filerna ur arkivet först när alla är ute, så Avbryt lämnar arkivet som det var. Det som redan har extraherats ligger kvar på målet som en kopia.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "Den här åtgärden går inte att ångra.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "Ångrar…",
   "@fileOperations.transferProgress.titleRollingBack": {

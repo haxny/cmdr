@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { formatInteger } from '#lib/intl/number-format.js'
-import type { OpKind } from '#lib/ipc/bindings.js'
+import type { OpKind, RollbackSupport } from '#lib/ipc/bindings.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import {
   type RollbackConfirmVariant,
@@ -21,6 +21,7 @@ import {
   reversalTitleKey,
   reversalWindowClosed,
   inFlightRollbackTooltipKey,
+  rollbackBlockedTooltipKey,
 } from './reversal-wording'
 
 /** The three variants that describe undoing a FINISHED operation, which is what
@@ -204,7 +205,7 @@ describe('reversalWindowClosed', () => {
   )
 
   it('is about the MOVE, not the phase name: a copy in a deleting phase still reverses what it wrote', () => {
-    // A delete / trash reports `supportsRollback: false`, so the button never
+    // A delete / trash reports `rollbackSupport: 'nothingToPutBack'`, so the button never
     // reaches this question. The arms matter because a COPY must not be caught by
     // it: undoing a copy deletes the copies, whatever phase it is in.
     expect(reversalWindowClosed('copy', 'deleting')).toBe(false)
@@ -228,5 +229,37 @@ describe('inFlightRollbackTooltipKey', () => {
     expect(tString(inFlightRollbackTooltipKey('stopAndMoveBack'))).not.toBe(
       tString(inFlightRollbackTooltipKey('stopAndDelete')),
     )
+  })
+})
+
+describe('rollbackBlockedTooltipKey', () => {
+  const blocked = (support: RollbackSupport): string => {
+    const key = rollbackBlockedTooltipKey(support)
+    if (key === null) throw new Error(`${support} should block Rollback`)
+    return tString(key)
+  }
+
+  it('says nothing while the operation can roll back', () => {
+    expect(rollbackBlockedTooltipKey('supported')).toBeNull()
+  })
+
+  it('never tells a move between volumes it was a same-volume one', () => {
+    // The regression: one shared sentence named same-volume moves for every
+    // operation the backend couldn't reverse, a cross-volume move included.
+    const tip = blocked('crossVolumeMove')
+    expect(tip).toContain('between volumes')
+    expect(tip).not.toContain('within one volume')
+  })
+
+  it('gives each reason a person can meet its own sentence, each ending on what Cancel does', () => {
+    const reasons: RollbackSupport[] = ['crossVolumeMove', 'sameVolumeMove', 'archiveRewrite', 'archiveMoveOut']
+    const tips = reasons.map(blocked)
+    expect(new Set(tips).size).toBe(reasons.length)
+    for (const tip of tips) expect(tip).toContain('Cancel')
+  })
+
+  it('blocks every other reason too, with the plain fallback', () => {
+    const others: RollbackSupport[] = ['nothingToPutBack', 'instantChange', 'isReversal', 'settled']
+    for (const support of others) expect(blocked(support)).toBe('Rollback isn’t available for this operation.')
   })
 })

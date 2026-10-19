@@ -147,7 +147,7 @@ mod tests {
             status: LifecycleStatus::Running,
             source: Some("Holiday.mov".to_string()),
             destination: Some("Backup".to_string()),
-            supports_rollback: true,
+            rollback_support: cmdr_operations::testing::RollbackSupport::Supported,
             reverses: None,
             error: None,
             can_retry: false,

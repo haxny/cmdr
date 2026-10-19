@@ -26,7 +26,7 @@ function row(operationId: string, status: OperationRow['snapshot']['status']): O
       status,
       source: '/Users/me/a.jpg',
       destination: '/Users/me/backup',
-      supportsRollback: false,
+      rollbackSupport: 'archiveRewrite',
       reverses: null,
       error: null,
       canRetry: false,

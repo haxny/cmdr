@@ -2,8 +2,9 @@
  * Rollback-affordance matrix for `TransferProgressDialog.svelte`.
  *
  * Same-volume volume moves (one smb2 share / one MTP device, `volume.rename`
- * based) have NO backend rollback — the engine stops without reversing. So the
- * dialog DISABLES Rollback (with an explanatory tooltip) on that path, while a
+ * based) and cross-volume moves (copy, then delete each original) have NO
+ * backend rollback: the engine stops without reversing. So the dialog DISABLES
+ * Rollback on those paths with a tooltip saying why, worded per reason, while a
  * plain Cancel stays reachable. Every other copy/move keeps a live Rollback.
  *
  * Two Rollback affordances exist:
@@ -15,6 +16,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import type { OperationSnapshot, WriteConflictEvent } from '#lib/tauri-commands/index.js'
+import type { RollbackSupport } from '#lib/ipc/bindings.js'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import {
   destroyOperationSessions,
@@ -23,7 +25,10 @@ import {
 import TransferProgressDialog from './TransferProgressDialog.svelte'
 import { buttonLabel } from '../test-button-label'
 
-const ROLLBACK_TOOLTIP = 'Rollback is not available for same-volume moves'
+const SAME_VOLUME_TOOLTIP =
+  'Rollback isn’t available when moving within one volume. The volume moves each item itself, and Cmdr can’t move them back partway. Cancel stops the move: what’s moved stays moved, and the rest stays where it was.'
+const CROSS_VOLUME_TOOLTIP =
+  'Rollback isn’t available when moving between volumes. Cmdr removes each original as soon as its copy is safely in place, so there’s no original left to go back to. Cancel stops the move, and every file stays whole on one side or the other.'
 const ALREADY_LANDED_TOOLTIP =
   'Every file is already at the destination, so Cmdr can’t undo the move now. Cancel still stops it from removing the rest of the originals.'
 
@@ -35,11 +40,11 @@ let conflictCb: ((e: WriteConflictEvent) => void) | null = null
 // copying tick to reach the state these tests are about.
 //
 // `registry` is what the operation's own row says about itself: the dialog reads
-// `supportsRollback` off it, so a test that wants the backend's verdict rather
+// `rollbackSupport` off it, so a test that wants the backend's verdict rather
 // than the props-only rule sets it here.
 const { progressCbs, registry } = vi.hoisted(() => ({
   progressCbs: [] as ((event: Record<string, unknown>) => void)[],
-  registry: { supportsRollback: true },
+  registry: { rollbackSupport: 'supported' as RollbackSupport },
 }))
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
@@ -88,7 +93,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
         status: 'running',
         source: '/Users/test',
         destination: '/Users/test/dest',
-        supportsRollback: registry.supportsRollback,
+        rollbackSupport: registry.rollbackSupport,
         reverses: null,
         error: null,
         canRetry: false,
@@ -272,7 +277,7 @@ beforeEach(async () => {
   // registry that listens now, and it has to be up before a dialog binds.
   conflictCb = null
   progressCbs.length = 0
-  registry.supportsRollback = true
+  registry.rollbackSupport = 'supported'
   await initOperationSessions()
 })
 
@@ -298,8 +303,8 @@ describe('TransferProgressDialog Rollback — main footer', () => {
     expect(rollback?.getAttribute('aria-disabled')).toBe('true')
     expect(rollback?.disabled, 'a disabled button could not be focused to read the why').toBe(false)
     if (rollback) {
-      expect(readTooltipOnHover(rollback)).toBe(ROLLBACK_TOOLTIP)
-      expect(readTooltipOnFocus(rollback)).toBe(ROLLBACK_TOOLTIP)
+      expect(readTooltipOnHover(rollback)).toBe(SAME_VOLUME_TOOLTIP)
+      expect(readTooltipOnFocus(rollback)).toBe(SAME_VOLUME_TOOLTIP)
     }
   })
 
@@ -336,10 +341,10 @@ describe('TransferProgressDialog Rollback — main footer', () => {
   it('blocks Rollback on a cross-volume move, whose own row says it cannot be reversed', async () => {
     // The props alone can't tell: source and destination are two different
     // volumes, which is the shape of a perfectly reversible transfer. The
-    // operation's own `supportsRollback` is the authority, and the queue window
+    // operation's own `rollbackSupport` is the authority, and the queue window
     // has always read it — pre-fix this dialog offered a button that only
     // cancelled.
-    registry.supportsRollback = false
+    registry.rollbackSupport = 'crossVolumeMove'
     // The window's fan-out seeds its registry snapshot once, at init, and hands that row to
     // every session that attaches later, so the row has to say this before the window opens.
     destroyOperationSessions()
@@ -347,7 +352,7 @@ describe('TransferProgressDialog Rollback — main footer', () => {
     const target = await mountDialog({ operationType: 'move', sourceVolumeId: 'smb-share-1', destVolumeId: 'root' })
     const rollback = buttonByText(target, 'Rollback')
     expect(rollback?.getAttribute('aria-disabled')).toBe('true')
-    if (rollback) expect(readTooltipOnFocus(rollback)).toBe(ROLLBACK_TOOLTIP)
+    if (rollback) expect(readTooltipOnFocus(rollback)).toBe(CROSS_VOLUME_TOOLTIP)
   })
 
   it('keeps Rollback LIVE for a local→local same-FS move (default volume has real rollback)', async () => {
@@ -474,8 +479,8 @@ describe('TransferProgressDialog Rollback — conflict-section footer', () => {
     expect(rollback, 'Rollback present in conflict footer').toBeTruthy()
     expect(rollback?.getAttribute('aria-disabled')).toBe('true')
     if (rollback) {
-      expect(readTooltipOnHover(rollback)).toBe(ROLLBACK_TOOLTIP)
-      expect(readTooltipOnFocus(rollback)).toBe(ROLLBACK_TOOLTIP)
+      expect(readTooltipOnHover(rollback)).toBe(SAME_VOLUME_TOOLTIP)
+      expect(readTooltipOnFocus(rollback)).toBe(SAME_VOLUME_TOOLTIP)
     }
     // Plain Cancel must be available alongside it so the user can still back out.
     const cancel = buttonByText(target, 'Cancel')
@@ -486,7 +491,7 @@ describe('TransferProgressDialog Rollback — conflict-section footer', () => {
   it('blocks Rollback on a cross-volume move, the same verdict the main footer reads', async () => {
     // The two footers ask the operation, not the volume ids, so a clash answered
     // mid-transfer can't be the one moment Rollback looks available.
-    registry.supportsRollback = false
+    registry.rollbackSupport = 'crossVolumeMove'
     // The window's fan-out seeds its registry snapshot once, at init, and hands that row to
     // every session that attaches later, so the row has to say this before the window opens.
     destroyOperationSessions()
@@ -495,6 +500,8 @@ describe('TransferProgressDialog Rollback — conflict-section footer', () => {
     await fireConflict()
     const rollback = buttonByText(target, 'Rollback')
     expect(rollback?.getAttribute('aria-disabled')).toBe('true')
+    // And it explains itself in the same words, not the same-volume ones.
+    if (rollback) expect(readTooltipOnFocus(rollback)).toBe(CROSS_VOLUME_TOOLTIP)
     const cancel = buttonByText(target, 'Cancel')
     expect(cancel, 'a plain Cancel takes its place as the way out').toBeTruthy()
     expect(cancel?.disabled).toBe(false)

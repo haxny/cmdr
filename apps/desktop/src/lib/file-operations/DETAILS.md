@@ -343,8 +343,9 @@ that's free to narrow later.
   foreground. That's supported rather than avoided: `trapFocus` hands enforcement to the most recently mounted trap and
   back on close, and this dialog is mounted after `DualPaneExplorer` so it paints on top. Deferring the prompt until the
   foreground dialog closed would be a softer version of the wedge this fixes.
-- **`rollbackUnavailable` comes from the snapshot's `supportsRollback`**, which is more than the progress dialog knows:
-  a CROSS-volume move can't roll back either, and that dialog still derives the same-volume case itself.
+- **`rollbackSupport` comes from the snapshot**, which is more than the progress dialog knows: a CROSS-volume move can't
+  roll back either, and that dialog still derives the same-volume case itself. The conflict body words the blocked
+  Rollback's tooltip from the reason (`reversal-wording.ts`'s `rollbackBlockedTooltipKey`).
 
 ## Sources that left while an operation queued
 
@@ -543,8 +544,8 @@ word, since it really is deleting the partials.
   can read "Paused" instead of a "Rolling back..." that hides the pause.
 - The corner chip swaps its action word, which its tooltip and `aria-label` both lead with.
 - The progress dialog (reachable by pressing Show on the row) swaps its title and drops the Rollback button entirely:
-  the operation's own registry row says `supportsRollback: false`, and a button there would offer to re-apply what the
-  person just chose to undo.
+  the operation's own registry row says `rollbackSupport: 'isReversal'`, and a button there would offer to re-apply what
+  the person just chose to undo.
 - The in-flight cancel-rollback path is untouched on all three.
 
 **A settled operation withdraws the question** rather than leaving one that answers to nothing: the progress dialog
@@ -562,9 +563,10 @@ has been misled before the question ever appears.
 `aria-disabled` plus a tooltip rather than the bare `disabled` attribute, because a disabled button leaves the tab order
 and takes its explanation with it — exactly away from the keyboard and screen-reader users the app is built for. The
 press is guarded instead, so a blocked click asks nothing. Two reasons reach the state: the operation's strategy can't
-reverse at all (`supportsRollback`), or the moment has passed (`reversalWindowClosed`; the tooltip there names the
-Cancel that still works). The `disabled` attribute stays right for the scan phase and the settle window, where the
-button is inert for a moment rather than for a reason.
+reverse at all (`rollbackSupport`, whose reason picks the tooltip through `rollbackBlockedTooltipKey`), or the moment
+has passed (`reversalWindowClosed`). Every one of those tooltips says why, then names the Cancel that still works. The
+`disabled` attribute stays right for the scan phase and the settle window, where the button is inert for a moment rather
+than for a reason.
 
 ## `scan-throughput.ts`
 

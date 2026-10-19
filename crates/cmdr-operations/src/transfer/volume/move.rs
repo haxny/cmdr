@@ -202,7 +202,7 @@ impl crate::Operations {
             // Stopped and RollingBack alike, leaving what's at the destination
             // alone and reporting `rolled_back: false` (see the arm below). Undoing
             // it would also mean re-creating source files it has already deleted.
-            supports_rollback: false,
+            rollback_support: crate::types::RollbackSupport::CrossVolumeMove,
             preview_id: config.preview_id.clone(),
             reverses: None,
         };

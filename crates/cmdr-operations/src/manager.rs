@@ -74,6 +74,7 @@ use super::host::{EngineHost, OperationErrorReport};
 use super::scan_cache::{self, ScanPreviews};
 use super::state::{WriteOperationRegistry, WriteOperationState};
 use super::status_cache::StatusCache;
+pub(crate) use super::types::RollbackSupport;
 use super::types::{LifecycleStatus, WriteOperationError, WriteOperationType};
 
 mod reorder;
@@ -106,12 +107,13 @@ pub(crate) struct OperationDescriptor {
     pub volume_ids: Vec<String>,
     /// Short source→dest summary for the queue window. Best-effort.
     pub summary: OperationSummaryText,
-    /// Whether cancelling this op can also UNDO what it wrote. DETAILS § "Rollback availability".
+    /// Whether cancelling this op can also UNDO what it wrote, and if not, why.
+    /// DETAILS § "Rollback availability".
     ///
     /// A promise about the OPERATION, not about its current phase: it stays
-    /// true through the scan-wait, when there is nothing to undo yet. Whether
-    /// to OFFER Rollback is a view decision keyed on the progress phase.
-    pub supports_rollback: bool,
+    /// `Supported` through the scan-wait, when there is nothing to undo yet.
+    /// Whether to OFFER Rollback is a view decision keyed on the progress phase.
+    pub rollback_support: RollbackSupport,
     /// The scan preview this op intends to consume, from the confirming
     /// dialog. Claimed at registration so the op can wait on the walk instead
     /// of racing a second one down the same tree. `None` for an op with no
@@ -226,7 +228,7 @@ impl ManagerInner {
                 status: rec.status,
                 source: rec.descriptor.summary.source.clone(),
                 destination: rec.descriptor.summary.destination.clone(),
-                supports_rollback: rec.descriptor.supports_rollback,
+                rollback_support: rec.descriptor.rollback_support,
                 reverses: rec.descriptor.reverses,
                 error: None,
                 can_retry: false,
@@ -796,7 +798,7 @@ impl OperationManager {
                     destination: summary.destination,
                     // A settled failure offers no rollback from this row: the op is over,
                     // and there's no live intent machine left to reverse it.
-                    supports_rollback: false,
+                    rollback_support: RollbackSupport::Settled,
                     // Kept from the live record: a reversal that stopped early is still
                     // a reversal, and the row that explains it must not rename itself.
                     reverses,

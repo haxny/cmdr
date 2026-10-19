@@ -131,7 +131,7 @@ impl crate::Operations {
             summary: request.summary,
             // A zip edit is a whole-archive temp+rename rewrite: it either lands or
             // it doesn't, so there's no half-written state to reverse.
-            supports_rollback: false,
+            rollback_support: crate::types::RollbackSupport::ArchiveRewrite,
             preview_id: request.preview_id.clone(),
             reverses: None,
         };

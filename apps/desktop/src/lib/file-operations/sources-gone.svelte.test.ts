@@ -54,7 +54,7 @@ function row(id: string, status: OperationSnapshot['status'] = 'running'): Opera
       status,
       source: 'CD1 (22 items)',
       destination: 'Music',
-      supportsRollback: false,
+      rollbackSupport: 'crossVolumeMove',
       reverses: null,
       error: null,
       canRetry: false,

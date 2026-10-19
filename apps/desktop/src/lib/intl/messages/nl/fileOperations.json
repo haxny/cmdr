@@ -473,9 +473,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "Terugdraaien is niet beschikbaar voor verplaatsingen binnen hetzelfde volume",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "Terugdraaien kan niet bij het verplaatsen tussen volumes. Cmdr verwijdert elk origineel zodra de kopie veilig op zijn plek staat, dus er is geen origineel meer over om naar terug te gaan. Met Annuleer stopt Cmdr het verplaatsen, en elk bestand blijft heel aan de ene of de andere kant.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "Terugdraaien kan niet bij het verplaatsen binnen één volume. Het volume verplaatst elk onderdeel zelf, en Cmdr kan ze niet halverwege terugzetten. Met Annuleer stopt Cmdr het verplaatsen: wat al verplaatst is, blijft op de nieuwe plek, en de rest blijft waar die was.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "Er valt hier niets terug te draaien. Cmdr herschrijft het archief pas aan het eind in één keer, dus met Annuleer blijft het archief precies zoals het was.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "Er valt hier niets terug te draaien. Cmdr verwijdert deze bestanden pas uit het archief als ze er allemaal uit zijn, dus met Annuleer blijft het archief zoals het was. Wat al is uitgepakt, blijft als kopie op de bestemming staan.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "Deze bewerking kun je niet terugdraaien.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "Bezig met terugdraaien…",
   "@fileOperations.transferProgress.titleRollingBack": {

@@ -67,7 +67,7 @@ import type {
 } from '#lib/file-explorer/types.js'
 import type { TransferCompletePayload } from '#lib/file-explorer/pane/dialog-props.js'
 import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
-import type { ProgressStep } from '#lib/ipc/bindings.js'
+import type { ProgressStep, RollbackSupport } from '#lib/ipc/bindings.js'
 import { pluralize } from '#lib/utils/pluralize.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { tString } from '#lib/intl/messages.svelte.js'
@@ -823,14 +823,14 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     get isRollingBack(): boolean {
       return isRollingBack()
     },
-    /** The operation says it can't be reversed. `supportsRollback` is a promise
-     *  about the OPERATION, so the registry row is the authority wherever it has
-     *  arrived; the dialog's own same-volume-move rule stands beside it, for the
-     *  window before the first snapshot lands. An adopted view has nothing but
-     *  this: no volume ids, no direction, no birth context to reason from. */
-    get rollbackUnavailable(): boolean {
-      const snapshot = session()?.snapshot ?? null
-      return snapshot !== null && !snapshot.supportsRollback
+    /** Whether the operation can be reversed, and if not, why; `null` until the
+     *  first registry snapshot lands. `rollbackSupport` is a promise about the
+     *  OPERATION, so the registry row is the authority wherever it has arrived;
+     *  the dialog's own same-volume-move rule fills in only before that. An
+     *  adopted view has nothing but this: no volume ids, no direction, no birth
+     *  context to reason from. */
+    get rollbackSupport(): RollbackSupport | null {
+      return session()?.snapshot?.rollbackSupport ?? null
     },
     /** The operation has reported a cancel, and the dialog stays in
      *  "Cancelling…" until the backend has finished tearing down too. */

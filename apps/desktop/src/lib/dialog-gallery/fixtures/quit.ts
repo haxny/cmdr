@@ -28,7 +28,7 @@ function operation(
     status: 'running',
     source,
     destination,
-    supportsRollback: operationType === 'copy' || operationType === 'move',
+    rollbackSupport: operationType === 'copy' || operationType === 'move' ? 'supported' : 'nothingToPutBack',
     reverses: null,
     error: null,
     canRetry: false,

@@ -472,9 +472,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "Откат недоступен при перемещении в пределах одного тома",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "Откат недоступен при перемещении между томами. Cmdr удаляет каждый оригинал, как только его копия надежно окажется на месте, поэтому вернуться к оригиналу уже не получится. Кнопка «Отменить» остановит перемещение, и каждый файл останется целым: либо на старом месте, либо на новом.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "Откат недоступен при перемещении внутри одного тома. Каждый объект перемещает сам том, и Cmdr не может вернуть их на полпути. Кнопка «Отменить» остановит перемещение: уже перемещенные объекты останутся на новом месте, а остальные останутся там, где были.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "Откатывать здесь нечего. Cmdr перезаписывает архив за один раз в самом конце, поэтому кнопка «Отменить» оставит его точно таким, каким он был.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "Откатывать здесь нечего. Cmdr удаляет эти объекты из архива только после того, как распакует их все, поэтому кнопка «Отменить» оставит архив таким, каким он был. Уже распакованные объекты останутся в месте назначения как копии.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "Для этой операции откат недоступен.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "Откат…",
   "@fileOperations.transferProgress.titleRollingBack": {

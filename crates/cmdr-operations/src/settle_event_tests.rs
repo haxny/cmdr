@@ -519,7 +519,7 @@ fn spawn_on_lane(
         lanes: vec![LaneKey::new(lane)],
         volume_ids: vec![],
         summary: OperationSummaryText::default(),
-        supports_rollback: false,
+        rollback_support: crate::types::RollbackSupport::Supported,
         preview_id: None,
         reverses: None,
     };

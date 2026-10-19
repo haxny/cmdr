@@ -174,19 +174,19 @@
 
     /** The operation is counting, not yet writing: it holds an `operationId`
      *  and its lanes from the moment the user confirmed, and the backend's own
-     *  task is waiting on the `TransferDialog` preview. `supportsRollback` is a
+     *  task is waiting on the `TransferDialog` preview. `rollbackSupport` is a
      *  promise about the OPERATION, so the phase is what decides which controls
      *  make sense right now. */
     const isScanning = $derived(progress?.phase === 'scanning')
 
     /** Rollback is offered on exactly the operations the backend can reverse
-     *  (`supportsRollback`), and only while there's still something running to
+     *  (`rollbackSupport`), and only while there's still something running to
      *  reverse. A scanning operation has written nothing, so it has nothing to put
      *  back; a move removing its originals has already landed everything, so
      *  nothing can come back (`../reversal-wording.ts`). Same verdict the progress
      *  dialog reaches, same wording. */
     const canRollback = $derived(
-        snapshot.supportsRollback &&
+        snapshot.rollbackSupport === 'supported' &&
             (isRunning || isPaused) &&
             !isRollingBack &&
             !isScanning &&

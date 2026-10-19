@@ -12599,8 +12599,8 @@ export type OperationSnapshot = {
   status: LifecycleStatus
   source: string | null
   destination: string | null
-  // See [`OperationDescriptor::supports_rollback`](super::OperationDescriptor::supports_rollback).
-  supportsRollback: boolean
+  // See [`OperationDescriptor::rollback_support`](super::OperationDescriptor::rollback_support).
+  rollbackSupport: RollbackSupport
   /**
    *  See [`OperationDescriptor::reverses`](super::OperationDescriptor::reverses). Static for the op's whole life,
    *  which is why it rides the thin snapshot rather than the 200 ms progress
@@ -14040,6 +14040,63 @@ export type RollbackRefusal =
  *  (rollback); a fresh op sits at `NotRollbackable` until finalize proves otherwise.
  */
 export type RollbackState = 'notRollbackable' | 'rollbackable' | 'rollingBack' | 'rolledBack' | 'partiallyRolledBack'
+
+/**
+ *  Whether cancelling an operation can also UNDO what it wrote, and when it
+ *  can't, why. Every construction site of an `OperationDescriptor` names one, so
+ *  a new spawn path can't skip the decision, and the frontend words the disabled
+ *  Rollback button from the variant (`file-operations/reversal-wording.ts`).
+ *
+ *  A property of the operation's STRATEGY, fixed for its whole life. Whether to
+ *  OFFER Rollback right now is the view's call on top of it, keyed on the phase.
+ *  DETAILS § "Rollback availability".
+ */
+export type RollbackSupport =
+  /**
+   *  Cancelling can put things back: a local copy/move (`CopyTransaction` /
+   *  `MoveTransaction`), a volume copy, or a compress into a NEW archive.
+   */
+  | 'supported'
+  /**
+   *  A move between two volumes copies each file and then deletes its
+   *  original, so a stop leaves every file whole on one side or the other,
+   *  and there's no original left to return the landed ones to.
+   */
+  | 'crossVolumeMove'
+  /**
+   *  A move within one non-local volume: the volume renames each item itself
+   *  (or, where its renames copy, copies and deletes per item), and the
+   *  driver stops without sending anything back.
+   */
+  | 'sameVolumeMove'
+  /**
+   *  An all-or-nothing temp+rename rewrite of a zip (an edit, a copy or move
+   *  into one, a compress over an existing one): a cancel leaves the archive
+   *  as it was, so there's nothing partial to undo.
+   */
+  | 'archiveRewrite'
+  /**
+   *  A move out of a zip: the archive drops the entries only after they all
+   *  extracted, so a cancel leaves it intact and keeps the extracted copies.
+   */
+  | 'archiveMoveOut'
+  // A delete or trash: what's gone has nothing for a rollback to restore.
+  | 'nothingToPutBack'
+  /**
+   *  A rename or a new file/folder: no partial state, and no cancel path that
+   *  could catch it mid-flight. Bulk rename stops before the next name.
+   */
+  | 'instantChange'
+  /**
+   *  This operation IS the reversal of a finished one; rolling it back would
+   *  re-apply what the person just undid.
+   */
+  | 'isReversal'
+  /**
+   *  A retained failure row: the operation is over, and no live intent
+   *  machine is left to reverse it.
+   */
+  | 'settled'
 
 // Why a volume's root moved, which decides where a path inside the old root goes.
 export type RootChangeKind =

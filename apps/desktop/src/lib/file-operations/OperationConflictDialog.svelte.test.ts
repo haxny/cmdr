@@ -46,7 +46,7 @@ function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
     status: 'paused',
     source: '/Users/me/Pictures/2026',
     destination: '/Volumes/Naspolya/Backup',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,
@@ -193,9 +193,9 @@ describe('OperationConflictDialog', () => {
 
   it('offers a plain Cancel when the backend cannot reverse the operation', () => {
     // A same-volume move renames server-side and a cross-volume one has nothing
-    // staged; both say so through `supportsRollback`, which every surface that
+    // staged; both say so through `rollbackSupport`, which every surface that
     // offers Rollback now reads.
-    prompt = makePrompt({ snapshot: snapshot({ operationType: 'move', supportsRollback: false }) })
+    prompt = makePrompt({ snapshot: snapshot({ operationType: 'move', rollbackSupport: 'crossVolumeMove' }) })
     const host = render()
 
     const buttons = [...host.querySelectorAll('button')]
@@ -291,7 +291,7 @@ describe('OperationConflictDialog answered from the keyboard', () => {
   })
 
   it('cancels with C when the operation cannot roll back', () => {
-    prompt = makePrompt({ snapshot: snapshot({ operationType: 'move', supportsRollback: false }) })
+    prompt = makePrompt({ snapshot: snapshot({ operationType: 'move', rollbackSupport: 'crossVolumeMove' }) })
     const host = renderArmed()
     press(host, { key: 'c', code: 'KeyC' })
     expect(cancelConflictPrompt).toHaveBeenCalledWith(false)

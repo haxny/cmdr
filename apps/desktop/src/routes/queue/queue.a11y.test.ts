@@ -85,7 +85,7 @@ function op(operationId: string, over: Partial<OperationSnapshot> = {}): Operati
     status: 'running',
     source: '/Users/me/Documents',
     destination: '/Volumes/Backup',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,
@@ -132,7 +132,7 @@ describe('queue window a11y', () => {
       op('op-2', { status: 'queued' }),
       op('op-3', {
         status: 'failed',
-        supportsRollback: false,
+        rollbackSupport: 'settled',
         error: { type: 'io_error', path: '/Users/me/Documents/report.pdf', message: 'disk went away' },
       }),
     ])

@@ -1440,7 +1440,7 @@ WITHOUT reserving the `"root"` lane.
 ### Lifecycle status and `operations-changed`
 
 `LifecycleStatus` (Queued/Running/Paused/Done/Cancelled/Failed) lives on the manager record. The snapshot also carries
-`supports_rollback` (see below), `error` (see [Retained failures](#retained-failures)), and `items` (see
+`rollback_support` (see below), `error` (see [Retained failures](#retained-failures)), and `items` (see
 [What a row says it acts on](#what-a-row-says-it-acts-on-items)). Admission and settle set Queued/Running and
 removal-on-terminal; the pause/resume path sets the `Paused`↔`Running` flip (see [Pause / resume](#pause--resume)). It
 is distinct from `WriteOperationPhase` (the progress phase) and `OperationIntent` (the cancel/rollback machine). The
@@ -1517,7 +1517,7 @@ at `FAILURE_CAPACITY = 20`, oldest evicted first — and `snapshot()` appends th
   never by message text.
 - **First error per id wins.** `write-error` can fire twice for one op — an inner handler emits and returns `Err`, then
   `local_start.rs`'s safety net emits again — and the first one is what actually stopped it.
-- **A retained row reports `supports_rollback: false`** and reuses the live record's source/destination summary, so it
+- **A retained row reports `rollback_support: Settled`** and reuses the live record's source/destination summary, so it
   reads like the running row it replaces. If the record is already gone, it falls back to the event's own
   `operation_type` and no summary.
 - **Only an explicit action clears one**: `dismiss_failed_operation(id)`, `dismiss_all_failed_operations()`, or a Retry
@@ -1576,31 +1576,42 @@ deleted.
 A retained failure keeps the field (`retain_failure` copies it off the live record), so a reversal that stopped early
 still reads as a reversal on the row that explains why.
 
-### Rollback availability (`supports_rollback`)
+### Rollback availability (`rollback_support`)
 
-`OperationDescriptor::supports_rollback` says whether cancelling this op can also UNDO what it has written
-(`cancel_write_operation(id, rollback = true)`), and it rides through to `OperationSnapshot` so the queue window can
-offer Rollback on exactly the rows the progress dialog would. It's on the snapshot because the operation queue window is
-its own webview: it never sees the source/destination volume ids the dialog decides from, and two surfaces disagreeing
-about whether an operation is reversible is the kind of drift that ends with a button that lies.
+`OperationDescriptor::rollback_support` (a `types::RollbackSupport`) says whether cancelling this op can also UNDO what
+it has written (`cancel_write_operation(id, rollback = true)`), and when it can't, WHY. It rides through to
+`OperationSnapshot` so the queue window can offer Rollback on exactly the rows the progress dialog would. It's on the
+snapshot because the operation queue window is its own webview: it never sees the source/destination volume ids the
+dialog decides from, and two surfaces disagreeing about whether an operation is reversible is the kind of drift that
+ends with a button that lies.
 
 Every construction site states its own verdict (a struct literal, so a new spawn path can't forget to decide):
 
-- **`true`** — local copy/move via `start_write_operation` (`CopyTransaction` deletes the copies it made;
-  `MoveTransaction` renames them back), and volume copy (`volume/cleanup.rs` deletes the destination copies).
-- **`false`** — delete and trash (the files are already gone; there's nothing to put back); a SAME-volume move (a
-  server-side rename-merge that stops without reversing); a CROSS-volume move, which copies and deletes the source per
-  file and whose driver treats `RollingBack` exactly like `Stopped`, reporting `notRolledBack`; archive edits (an
-  all-or-nothing temp+rename rewrite); instant metadata ops; and the operation-log rollback's own inverse op (rolling
-  back a rollback would re-apply what the person just undid).
+- **`Supported`**: local copy/move via `start_write_operation` (`CopyTransaction` deletes the copies it made;
+  `MoveTransaction` renames them back), volume copy (`volume/cleanup.rs` deletes the destination copies), and a compress
+  into a NEW archive.
+- **`CrossVolumeMove`**: copies and deletes the source per file, and its driver treats `RollingBack` exactly like
+  `Stopped`, reporting `notRolledBack`.
+- **`SameVolumeMove`**: a server-side rename-merge that stops without reversing (also where the volume's renames copy,
+  `moves_by_copy`, decided only once the task runs).
+- **`ArchiveRewrite`**: a zip edit, a copy or move into one, or a compress over an existing one (all-or-nothing
+  temp+rename rewrites). **`ArchiveMoveOut`**: the archive drops entries only after every one extracted.
+- **`NothingToPutBack`**: delete and trash. **`InstantChange`**: rename, bulk rename, new file/folder. **`IsReversal`**:
+  the operation-log rollback's own inverse op (rolling back a rollback would re-apply what the person just undid).
+  **`Settled`**: a retained failure row.
 
-Both surfaces read it. The progress dialog blocks Rollback whenever the flag is off, so a cross-volume move no longer
-offers a button whose click only cancels; its own props-only same-volume-move rule stands beside the flag for the frames
-before the first snapshot lands, and never contradicts it.
+**Decision**: a reason, not a bool. **Why**: the disabled Rollback button explains itself, and with only a bool the
+frontend had one sentence for every blocked case, so a move from the Mac to a NAS was told Rollback "is not available
+for same-volume moves". The enum makes each site name its reason, and the frontend's
+`file-operations/reversal-wording.ts` (`rollbackBlockedTooltipKey`) maps it to copy that says why and what Cancel still
+does; a new variant is a compile error there.
 
-The flag is a property of the op's STRATEGY, so it never changes over the op's life. Whether Rollback is offered _right
-now_ is the UI's call on top of it, and both surfaces ask the same three questions: a running/paused op, not already
-rolling back (read from the live `write-progress` phase, since rollback is an `OperationIntent`, not a
+Both surfaces read it. The progress dialog blocks Rollback whenever the verdict isn't `Supported`; its own props-only
+same-volume-move rule blocks too, for the frames before the first snapshot lands, and never contradicts it.
+
+The verdict is a property of the op's STRATEGY, so it never changes over the op's life. Whether Rollback is offered
+_right now_ is the UI's call on top of it, and both surfaces ask the same three questions: a running/paused op, not
+already rolling back (read from the live `write-progress` phase, since rollback is an `OperationIntent`, not a
 `LifecycleStatus`), and not past the point where a reversal can still do anything. That last one is the local cross-FS
 move: `cross_fs.rs` commits its transaction before Phase 4, so a Rollback pressed during the `Deleting`-phase source
 sweep reverses nothing and only stops the sweep. The frontend names that window in one place,

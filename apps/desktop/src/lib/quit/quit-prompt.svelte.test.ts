@@ -37,7 +37,7 @@ function operation(): OperationSnapshot {
     status: 'running',
     source: 'Holiday.mov',
     destination: 'Backup',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,

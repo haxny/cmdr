@@ -89,7 +89,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
         status: 'running',
         source: '/Users/test',
         destination: null,
-        supportsRollback: false,
+        rollbackSupport: 'nothingToPutBack',
         reverses: null,
         error: null,
         canRetry: false,

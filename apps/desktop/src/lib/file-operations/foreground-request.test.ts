@@ -17,7 +17,7 @@ function row(operationId: string, operationType: OperationSnapshot['operationTyp
       status: 'running',
       source: '/Volumes/Card/DCIM',
       destination: '/Users/me/import',
-      supportsRollback: true,
+      rollbackSupport: 'supported',
       reverses: null,
       error: null,
       canRetry: false,

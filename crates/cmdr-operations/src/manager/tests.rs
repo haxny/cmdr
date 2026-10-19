@@ -30,7 +30,7 @@ fn descriptor(op_id: &str, lanes: Vec<&str>) -> OperationDescriptor {
         lanes: lanes.into_iter().map(LaneKey::new).collect(),
         volume_ids: vec![],
         summary: OperationSummaryText::default(),
-        supports_rollback: true,
+        rollback_support: RollbackSupport::Supported,
         preview_id: None,
         reverses: None,
     }
@@ -45,7 +45,7 @@ fn instant_descriptor(op_id: &str, op_type: WriteOperationType, volume_ids: Vec<
         lanes: vec![],
         volume_ids,
         summary: OperationSummaryText::default(),
-        supports_rollback: false,
+        rollback_support: RollbackSupport::InstantChange,
         preview_id: None,
         reverses: None,
     }
@@ -832,7 +832,7 @@ async fn run_instant_does_not_reserve_a_lane() {
         lanes: vec![LaneKey::new(lane.as_str())],
         volume_ids: vec![],
         summary: OperationSummaryText::default(),
-        supports_rollback: false,
+        rollback_support: RollbackSupport::InstantChange,
         preview_id: None,
         reverses: None,
     };

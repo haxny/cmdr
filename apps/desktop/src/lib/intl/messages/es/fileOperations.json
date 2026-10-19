@@ -472,9 +472,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "La reversión no está disponible para movimientos dentro del mismo volumen",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "La reversión no está disponible al mover entre volúmenes. Cmdr elimina cada original en cuanto su copia está a salvo en el destino, así que no queda ningún original al que volver. Cancelar detiene el movimiento y cada archivo queda entero, en el origen o en el destino.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "La reversión no está disponible al mover dentro de un mismo volumen. El propio volumen mueve cada elemento, y Cmdr no puede devolverlos a medio camino. Cancelar detiene el movimiento: lo ya movido se queda en su nuevo lugar y el resto, donde estaba.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "La reversión no tiene nada que deshacer aquí. Cmdr reescribe el archivo comprimido de una sola vez al final, así que Cancelar lo deja exactamente como estaba.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "La reversión no tiene nada que deshacer aquí. Cmdr quita estos elementos del archivo comprimido solo cuando ya se han extraído todos, así que Cancelar deja el archivo comprimido como estaba. Lo que ya se haya extraído se queda en el destino como copia.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "La reversión no está disponible para esta operación.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "Revirtiendo…",
   "@fileOperations.transferProgress.titleRollingBack": {

@@ -315,7 +315,7 @@ mod tests {
             status,
             source: Some("/Users/me/photos".to_string()),
             destination: Some("Naspolya".to_string()),
-            supports_rollback: false,
+            rollback_support: cmdr_operations::testing::RollbackSupport::Supported,
             reverses: None,
             error: None,
             can_retry: false,

@@ -7,7 +7,7 @@
         WriteOperationError,
         ConflictResolution,
     } from '#lib/file-explorer/types.js'
-    import type { OpKind, SpaceShortfall } from '#lib/ipc/bindings.js'
+    import type { OpKind, RollbackSupport, SpaceShortfall } from '#lib/ipc/bindings.js'
     import type { TransferCompletePayload } from '#lib/file-explorer/pane/dialog-props.js'
     import { getVolumes } from '#lib/stores/volume-store.svelte.js'
     import DirectionIndicator from './DirectionIndicator.svelte'
@@ -188,7 +188,7 @@
      *  rename-merge with NO rollback support — it stops without reversing and
      *  reports `rolled_back: false`. Local→local same-FS moves DO have real
      *  rollback (via `MoveTransaction`), so the default local volume is excluded.
-     *  Drives the disabled Rollback affordance + tooltip. */
+     *  Stands in for the registry row's `rollbackSupport` until it lands. */
     const isSameVolumeMove = $derived(
         operationType === 'move' &&
             sourceVolumeId !== DEFAULT_VOLUME_ID &&
@@ -238,7 +238,14 @@
      *  rollback (a cancelled copy cleaning up after itself), which keeps its own
      *  title: there the bar drains backwards and "Rolling back…" is honest. */
     const reversalVariant = $derived(reverses === null ? null : rollbackConfirmVariant(reverses))
-    const rollbackUnavailable = $derived(progress.rollbackUnavailable)
+    /** Whether this operation can reverse, and if not, why. Any reason the
+     *  registry row gives wins; otherwise the same-volume-move rule blocks, which
+     *  covers the frames before the first snapshot lands. */
+    const rollbackSupport = $derived.by((): RollbackSupport | null => {
+        const fromRegistry = progress.rollbackSupport
+        if (fromRegistry !== null && fromRegistry !== 'supported') return fromRegistry
+        return isSameVolumeMove ? 'sameVolumeMove' : fromRegistry
+    })
 
     /** Rollback is asked about before it happens: it undoes everything the
      *  operation has written or moved, and a file it overwrote has no backup
@@ -247,8 +254,7 @@
     const rollback = createTransferRollback({
         opKind: () => opKind,
         phase: () => phase,
-        isSameVolumeMove: () => isSameVolumeMove,
-        rollbackUnavailable: () => rollbackUnavailable,
+        rollbackSupport: () => rollbackSupport,
         operationSettled: () => progress.operationSettled,
         rollBack: () => void progress.handleCancel(true),
     })
@@ -456,7 +462,7 @@
     {/if}
     <!-- ❌ No Rollback affordance on a reversal, not even the disabled
          one: this operation IS the undo, and its registry row says
-         `supportsRollback: false`. A red button here would offer to
+         `rollbackSupport: 'isReversal'`. A red button here would offer to
          re-apply what the person just chose to undo. -->
     {#if (isCopy || isMove) && reversalVariant === null}
         <TransferRollbackControls {rollback} {isRollingBack} disabled={isCancelling || operationSettled || isScanning} />
@@ -537,7 +543,7 @@
             {conflictEvent}
             {isCopy}
             {isMove}
-            rollbackUnavailable={isSameVolumeMove || rollbackUnavailable}
+            {rollbackSupport}
             {isCancelling}
             {isResolvingConflict}
             onResolve={(resolution: ConflictResolution, applyToAll: boolean) => {

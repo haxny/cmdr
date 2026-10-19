@@ -474,9 +474,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "Le retour en arrière n’est pas disponible pour les déplacements au sein d’un même volume",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "Le retour en arrière n’est pas possible lors d’un déplacement entre volumes. Cmdr supprime chaque original dès que sa copie est bien en place, il ne reste donc aucun original auquel revenir. Annuler arrête le déplacement, et chaque fichier reste entier d’un côté ou de l’autre.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "Le retour en arrière n’est pas possible lors d’un déplacement au sein d’un même volume. Le volume déplace lui-même chaque élément, et Cmdr ne peut pas les remettre en place en cours de route. Annuler arrête le déplacement : les éléments déjà déplacés restent à leur nouvelle place, et les autres restent là où ils étaient.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "Ici, le retour en arrière n’aurait rien à défaire. Cmdr réécrit l’archive en une seule fois à la fin, donc Annuler laisse l’archive exactement telle qu’elle était.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "Ici, le retour en arrière n’aurait rien à défaire. Cmdr ne supprime ces fichiers de l’archive qu’une fois qu’ils en sont tous sortis, donc Annuler laisse l’archive telle qu’elle était. Ce qui est déjà extrait reste à destination, sous forme de copie.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "Le retour en arrière n’est pas possible pour cette opération.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "Retour en arrière…",
   "@fileOperations.transferProgress.titleRollingBack": {

@@ -727,3 +727,88 @@ async fn a_cross_volume_move_into_a_folder_that_takes_no_writes_is_refused_befor
         "no destination folder was created"
     );
 }
+
+/// The disabled Rollback button explains itself from this verdict, so a move
+/// between two volumes must say it's a cross-volume move, and one within a
+/// volume a same-volume one. Both are held in their scan-wait by an in-flight
+/// preview, so `list_operations` reads them before they can finish.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_volume_move_reports_why_it_cant_roll_back() {
+    use crate::scan_cache::{ScanOutcome, ScanPreviewState};
+    use crate::types::RollbackSupport;
+    use cmdr_fs::testing::wait_until_async;
+    use std::time::Duration;
+
+    let engine = TestOperations::new();
+    let (source, dest) = make_volumes();
+    source.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
+    source.create_file(Path::new("/b.txt"), b"bravo").await.unwrap();
+    let source: Arc<dyn Volume> = source;
+    let dest: Arc<dyn Volume> = dest;
+
+    let cases = [
+        (
+            "cross",
+            "/a.txt",
+            Arc::clone(&dest),
+            "dest-vol",
+            RollbackSupport::CrossVolumeMove,
+        ),
+        (
+            "same",
+            "/b.txt",
+            Arc::clone(&source),
+            "source-vol",
+            RollbackSupport::SameVolumeMove,
+        ),
+    ];
+    for (label, file, dest_volume, dest_volume_id, expected) in cases {
+        let preview_id = format!("rollback-support-{label}");
+        engine.stores().previews().register_preview(
+            preview_id.clone(),
+            Arc::new(ScanPreviewState {
+                cancelled: std::sync::atomic::AtomicBool::new(false),
+                progress_interval: Duration::from_millis(50),
+            }),
+        );
+        let events = Arc::new(CollectorEventSink::new());
+        let start = engine
+            .move_between_volumes(
+                Arc::clone(&events) as Arc<dyn OperationEventSink>,
+                "source-vol".to_string(),
+                Arc::clone(&source),
+                vec![PathBuf::from(file)],
+                dest_volume_id.to_string(),
+                dest_volume,
+                PathBuf::from("/moved"),
+                VolumeCopyConfig {
+                    preview_id: Some(preview_id.clone()),
+                    ..VolumeCopyConfig::default()
+                },
+                crate::target_names::TargetNames::default(),
+                cmdr_operation_log::types::Initiator::User,
+                None,
+            )
+            .await
+            .expect("move starts");
+
+        let row = engine
+            .list_operations()
+            .into_iter()
+            .find(|op| op.operation_id == start.operation_id)
+            .expect("the move is a queue row while its preview walks");
+        assert_eq!(row.rollback_support, expected, "{label}-volume move");
+
+        engine
+            .stores()
+            .previews()
+            .settle_preview(&preview_id, ScanOutcome::Cancelled, None);
+        wait_until_async(Duration::from_secs(5), "the move to settle", || {
+            engine
+                .list_operations()
+                .iter()
+                .all(|op| op.operation_id != start.operation_id)
+        })
+        .await;
+    }
+}

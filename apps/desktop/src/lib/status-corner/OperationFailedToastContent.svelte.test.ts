@@ -35,7 +35,7 @@ function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
     status: 'failed',
     source: '/Users/me/Documents/report.pdf',
     destination: '/Volumes/Backup',
-    supportsRollback: false,
+    rollbackSupport: 'settled',
     reverses: null,
     error: { type: 'read_only_device', path: '/Volumes/Backup', deviceName: 'Backup', side: 'destination' },
     canRetry: false,

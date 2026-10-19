@@ -97,7 +97,7 @@ function snapshot(
     status,
     source: '/src/folder',
     destination: '/dst/folder',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,

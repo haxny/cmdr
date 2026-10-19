@@ -1195,7 +1195,7 @@ renames everything in one call answers with no I/O, so nothing changes for local
   its last file is, so the folder's own `NotFound` counts as removed.
 - **The dest-inside-source guard and the already-in-place filter run first**, the same as for a rename-merge; only the
   remaining sources take the copy route.
-- **Not rollbackable while running**, like every cross-volume move (`supports_rollback: false`); what it journals
+- **Not rollbackable while running**, like every same-volume move (`rollback_support: SameVolumeMove`); what it journals
   (per-leaf rows under the one volume id) is what the operation log offers to undo afterwards.
 
 **Renames that run as moves name their target.** A move's destination is a FOLDER, so a rename (`/a/foo` → `/a/bar`)

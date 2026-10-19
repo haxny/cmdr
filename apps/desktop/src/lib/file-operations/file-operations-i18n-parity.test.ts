@@ -237,8 +237,20 @@ describe('transfer progress dialog chrome (en)', () => {
     expect(tString('fileOperations.transferProgress.conflictOverwriteAllOlder')).toBe('Overwrite all older')
     expect(tString('fileOperations.transferProgress.conflictCancel')).toBe('Cancel')
     expect(tString('fileOperations.transferProgress.conflictRollback')).toBe('Rollback')
-    expect(tString('fileOperations.transferProgress.rollbackUnavailableTooltip')).toBe(
-      'Rollback is not available for same-volume moves',
+    expect(tString('fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip')).toBe(
+      'Rollback isn’t available when moving between volumes. Cmdr removes each original as soon as its copy is safely in place, so there’s no original left to go back to. Cancel stops the move, and every file stays whole on one side or the other.',
+    )
+    expect(tString('fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip')).toBe(
+      'Rollback isn’t available when moving within one volume. The volume moves each item itself, and Cmdr can’t move them back partway. Cancel stops the move: what’s moved stays moved, and the rest stays where it was.',
+    )
+    expect(tString('fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip')).toBe(
+      'Rollback has nothing to undo here. Cmdr rewrites the archive in one go at the end, so Cancel leaves it exactly as it was.',
+    )
+    expect(tString('fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip')).toBe(
+      'Rollback has nothing to undo here. Cmdr removes these from the archive only after they’re all out, so Cancel leaves the archive as it was. Anything already extracted stays at the destination as a copy.',
+    )
+    expect(tString('fileOperations.transferProgress.rollbackUnavailableOtherTooltip')).toBe(
+      'Rollback isn’t available for this operation.',
     )
     expect(tString('fileOperations.transferProgress.rollbackTooltip')).toBe(
       'Stop, and delete every file written so far',

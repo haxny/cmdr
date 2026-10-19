@@ -842,7 +842,7 @@ fn descriptor_on_lane(op_id: &str, lane: &str, preview_id: Option<String>) -> su
         lanes: vec![cmdr_fs::volume::LaneKey::new(lane)],
         volume_ids: vec![],
         summary: super::manager::OperationSummaryText::default(),
-        supports_rollback: true,
+        rollback_support: crate::types::RollbackSupport::Supported,
         preview_id,
         reverses: None,
     }

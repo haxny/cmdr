@@ -471,9 +471,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "同一宗卷内的移动无法回滚",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "在不同宗卷之间移动时无法回滚。每个文件的副本一安全到位，Cmdr 就会移除它的原文件，所以已经没有原文件可以恢复了。“取消”会停止这次移动，每个文件都会完整地留在原来的位置或新位置。",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "在同一个宗卷内移动时无法回滚。每个项目都由宗卷自己移动，Cmdr 没法在移动进行到一半时把它们放回原处。“取消”会停止这次移动：已经移动的项目留在新位置，其余的留在原来的位置。",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "这里没有要回滚的内容。Cmdr 会在最后一次性重写压缩文件，所以“取消”会让它原封不动。",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "这里没有要回滚的内容。Cmdr 要等这些项目全部解压出来，才会把它们从压缩文件中移除，所以“取消”会让压缩文件保持原样。已经解压出来的内容会作为副本留在目标位置。",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "这项操作无法回滚。",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "正在回滚…",
   "@fileOperations.transferProgress.titleRollingBack": {

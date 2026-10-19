@@ -66,7 +66,7 @@ impl super::super::Operations {
             volume_ids: vec![volume_id.clone()],
             summary,
             // Deleted is deleted; there's nothing for a rollback to put back.
-            supports_rollback: false,
+            rollback_support: crate::types::RollbackSupport::NothingToPutBack,
             preview_id: config.preview_id.clone(),
             reverses: None,
         };

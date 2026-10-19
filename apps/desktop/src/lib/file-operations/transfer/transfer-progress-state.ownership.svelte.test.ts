@@ -342,16 +342,16 @@ describe('createTransferProgressState: adopting a running operation', () => {
 
   it('offers Rollback only where the operation says it can be reversed', async () => {
     // The snapshot is the authority: this view has no birth context to reason
-    // about volumes from, and `supportsRollback` is a promise about the
-    // operation itself.
+    // about volumes from, and `rollbackSupport` is a promise about the
+    // operation itself, reason included.
     const { state } = await adoptedState()
     if (!listeners.opsChanged) throw new Error('operations-changed subscriber never registered')
 
-    listeners.opsChanged({ operations: [{ ...snapshot(ADOPTED, 'running'), supportsRollback: false }] })
-    expect(state.rollbackUnavailable).toBe(true)
+    listeners.opsChanged({ operations: [{ ...snapshot(ADOPTED, 'running'), rollbackSupport: 'crossVolumeMove' }] })
+    expect(state.rollbackSupport).toBe('crossVolumeMove')
 
     listeners.opsChanged({ operations: [snapshot(ADOPTED, 'running')] })
-    expect(state.rollbackUnavailable).toBe(false)
+    expect(state.rollbackSupport).toBe('supported')
   })
 })
 

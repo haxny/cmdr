@@ -9,24 +9,23 @@
  * body too, which replaces that row. `../DETAILS.md` § "Rollback asks first".
  */
 
-import type { OpKind, WriteOperationPhase } from '#lib/ipc/bindings.js'
+import type { OpKind, RollbackSupport, WriteOperationPhase } from '#lib/ipc/bindings.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import {
   inFlightRollbackTooltipKey,
   inFlightRollbackVariant,
   reversalWindowClosed,
+  rollbackBlockedTooltipKey,
   type RollbackConfirmVariant,
 } from '../reversal-wording'
 
 export interface TransferRollbackInputs {
   opKind: () => OpKind
   phase: () => WriteOperationPhase | null
-  /** The props-only rule for the frames before the first registry snapshot:
-   *  a move within one non-default volume is a server-side rename-merge that
-   *  can't reverse. */
-  isSameVolumeMove: () => boolean
-  /** `supportsRollback` off the operation's registry row, inverted. */
-  rollbackUnavailable: () => boolean
+  /** Whether the operation's strategy can reverse, and if not, why. The
+   *  registry row's verdict, or the dialog's same-volume-move rule for the
+   *  frames before it lands; `null` while neither knows, which offers Rollback. */
+  rollbackSupport: () => RollbackSupport | null
   operationSettled: () => boolean
   /** Runs the confirmed rollback (`progress.handleCancel(true)`). */
   rollBack: () => void
@@ -57,19 +56,18 @@ export function createTransferRollback(inputs: TransferRollbackInputs): Transfer
   const liveTooltip = $derived(tString(inFlightRollbackTooltipKey(variant)))
   /** Two reasons, and they answer different halves of the question:
    *
-   *  - the operation's STRATEGY can't reverse at all (`supportsRollback` off its
-   *    registry row, the authority wherever it has arrived and an adopted view's
-   *    only source, with the same-volume-move rule beside it for the frames
-   *    before the first snapshot lands),
+   *  - the operation's STRATEGY can't reverse at all (`rollbackSupport`, worded
+   *    per reason: a move between volumes, one within a volume, a zip rewrite),
    *  - or it could, and the moment has passed: a move between filesystems on its
    *    source-deletion phase has already landed every file
    *    (`../reversal-wording.ts`).
    *
    *  Either way the plain Cancel stays live and stays accurate, which is what
-   *  the second tooltip points at. */
+   *  every one of these tooltips points at. */
   const blockedTooltip = $derived.by(() => {
-    if (inputs.isSameVolumeMove() || inputs.rollbackUnavailable())
-      return tString('fileOperations.transferProgress.rollbackUnavailableTooltip')
+    const support = inputs.rollbackSupport()
+    const strategyKey = support === null ? null : rollbackBlockedTooltipKey(support)
+    if (strategyKey !== null) return tString(strategyKey)
     if (reversalWindowClosed(inputs.opKind(), inputs.phase()))
       return tString('fileOperations.transferProgress.rollbackAlreadyLandedTooltip')
     return null

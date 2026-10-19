@@ -42,7 +42,7 @@ function buildRow(
   status: OperationSnapshot['status'],
   opType: OperationSnapshot['operationType'] = 'copy',
   progress: WriteProgressEvent | null = null,
-  supportsRollback = false,
+  reversible = false,
 ): OperationRow {
   return {
     snapshot: {
@@ -51,7 +51,7 @@ function buildRow(
       status,
       source: '/Users/me/Documents/report.pdf',
       destination: '/Volumes/Backup/report.pdf',
-      supportsRollback,
+      rollbackSupport: reversible ? 'supported' : 'crossVolumeMove',
       reverses: null,
       error: null,
       canRetry: false,
@@ -271,7 +271,7 @@ describe('QueueRow', () => {
     render({ row: buildRow('running', 'copy', null, true) })
     expect(rollbackButton()).not.toBeNull()
 
-    // A same-volume move / delete / trash reports `supportsRollback: false`;
+    // A cross-volume move, a delete, or a trash reports a `rollbackSupport` reason;
     // offering it would promise an undo the backend can't perform.
     if (instance) void unmount(instance)
     render({ row: buildRow('running', 'move', null, false) })
@@ -656,7 +656,7 @@ describe('QueueRow while the operation is still counting', () => {
 describe('QueueRow: a move on its last stage', () => {
   /** A move between two filesystems in its source-deletion phase: every file has
    *  landed at the destination and Cmdr is removing the originals. The strategy
-   *  reports `supportsRollback: true` (it really can reverse, up to here), so the
+   *  reports `rollbackSupport: 'supported'` (it really can reverse, up to here), so the
    *  phase is the only thing that says the moment has passed. */
   function sweeping(phase: 'copying' | 'deleting'): OperationRow {
     return buildRow(

@@ -263,7 +263,7 @@ impl crate::Operations {
             summary,
             // Every file this writes is a NEW one at the destination, so cancelling
             // with rollback can delete them again (`cleanup.rs`).
-            supports_rollback: true,
+            rollback_support: crate::types::RollbackSupport::Supported,
             preview_id: config.preview_id.clone(),
             reverses: None,
         };

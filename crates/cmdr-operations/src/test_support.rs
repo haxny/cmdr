@@ -140,7 +140,7 @@ impl QueuedOperationFixture {
                     lanes: vec![lane.clone()],
                     volume_ids,
                     summary: OperationSummaryText::default(),
-                    supports_rollback: false,
+                    rollback_support: crate::types::RollbackSupport::Supported,
                     preview_id: None,
                     reverses: None,
                 },

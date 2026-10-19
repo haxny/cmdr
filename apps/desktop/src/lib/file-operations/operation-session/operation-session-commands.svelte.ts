@@ -53,7 +53,7 @@ export interface OperationSessionCommands {
    *  an operation still queued behind a busy lane is dropped before it spawns. */
   cancel: () => Promise<boolean>
   /** Stop AND delete what has already been written. Only meaningful where the
-   *  snapshot says `supportsRollback`; the view decides when to offer it. */
+   *  snapshot says `rollbackSupport`; the view decides when to offer it. */
   rollback: () => Promise<boolean>
   /** Answer the clash named by `conflictId`, which every surface reads off the
    *  `write-conflict` event it is showing. Returns what the backend acted on —

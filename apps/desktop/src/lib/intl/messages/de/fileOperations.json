@@ -473,9 +473,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "Rollback ist bei Bewegungen auf demselben Volume nicht möglich",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "Beim Bewegen zwischen Volumes ist kein Rollback möglich. Cmdr entfernt jedes Original, sobald seine Kopie sicher am Ziel liegt, also ist kein Original mehr da, zu dem man zurückkehren könnte. Mit Abbrechen stoppt Cmdr die Bewegung, und jede Datei bleibt vollständig auf der einen oder der anderen Seite.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "Beim Bewegen innerhalb eines Volumes ist kein Rollback möglich. Das Volume bewegt jedes Objekt selbst, und Cmdr kann die Objekte nicht auf halbem Weg zurücklegen. Mit Abbrechen stoppt Cmdr die Bewegung: Was schon bewegt ist, bleibt am neuen Ort, und der Rest bleibt, wo er war.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "Für ein Rollback gibt es hier nichts rückgängig zu machen. Cmdr schreibt das Archiv erst am Ende in einem Zug neu, daher bleibt das Archiv mit Abbrechen genau so, wie es war.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "Für ein Rollback gibt es hier nichts rückgängig zu machen. Cmdr entfernt die Dateien erst aus dem Archiv, wenn alle draußen sind, daher bleibt das Archiv mit Abbrechen, wie es war. Was schon entpackt ist, bleibt als Kopie am Ziel.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "Für diesen Vorgang ist kein Rollback möglich.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "Rollback läuft …",
   "@fileOperations.transferProgress.titleRollingBack": {

@@ -160,7 +160,7 @@ impl crate::Operations {
             summary,
             // A rename moves no bytes: cancelling stops before the next name, and
             // the ones already renamed stay renamed.
-            supports_rollback: false,
+            rollback_support: crate::types::RollbackSupport::InstantChange,
             // No scan preview: nothing walked a tree to plan this op.
             preview_id: None,
             reverses: None,

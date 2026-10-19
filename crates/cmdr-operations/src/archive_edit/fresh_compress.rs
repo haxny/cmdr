@@ -164,7 +164,13 @@ pub(super) async fn start(
                 Some((&*dest_volume, &archive_path)),
             )),
         },
-        supports_rollback: net_new,
+        // A new archive is this op's own file, so a rollback removes it; compressing
+        // over an existing one is the same all-or-nothing rewrite as any zip edit.
+        rollback_support: if net_new {
+            crate::types::RollbackSupport::Supported
+        } else {
+            crate::types::RollbackSupport::ArchiveRewrite
+        },
         preview_id,
         reverses: None,
     };

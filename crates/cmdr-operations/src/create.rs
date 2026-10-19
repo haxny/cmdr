@@ -341,7 +341,7 @@ pub(super) fn instant_descriptor(
         },
         // An instant metadata op has no partial state, and no cancel path that
         // could catch it mid-flight.
-        supports_rollback: false,
+        rollback_support: crate::types::RollbackSupport::InstantChange,
         // No scan preview: nothing walked a tree to plan this op.
         preview_id: None,
         reverses: None,

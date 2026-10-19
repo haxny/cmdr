@@ -43,7 +43,7 @@ async function mountDialog(conflictEvent: WriteConflictEvent): Promise<HTMLEleme
       conflictEvent,
       isCopy: true,
       isMove: false,
-      rollbackUnavailable: false,
+      rollbackSupport: 'supported',
       isCancelling: false,
       isResolvingConflict: false,
       onResolve: () => {},

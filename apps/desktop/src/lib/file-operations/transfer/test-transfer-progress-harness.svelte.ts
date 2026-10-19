@@ -218,7 +218,7 @@ export function snapshot(
     status,
     source: '/s',
     destination: '/d',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,

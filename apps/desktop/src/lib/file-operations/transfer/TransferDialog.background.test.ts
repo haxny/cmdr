@@ -77,7 +77,7 @@ function liveRow(): { snapshot: OperationSnapshot } {
       status: 'running',
       source: '/a',
       destination: '/b',
-      supportsRollback: true,
+      rollbackSupport: 'supported',
       reverses: null,
       error: null,
       canRetry: false,

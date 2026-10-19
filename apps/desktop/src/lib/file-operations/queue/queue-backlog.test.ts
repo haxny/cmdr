@@ -25,7 +25,7 @@ function row(
       status,
       source: '/src/file',
       destination: '/dst/file',
-      supportsRollback: true,
+      rollbackSupport: 'supported',
       reverses: null,
       error: null,
       canRetry: false,

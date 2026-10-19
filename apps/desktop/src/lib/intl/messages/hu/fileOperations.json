@@ -473,9 +473,25 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "6df6c7f"
   },
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "A visszagörgetés nem érhető el az azonos köteten belüli áthelyezéseknél",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "sourceHash": "da6af1f"
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "Kötetek közötti áthelyezésnél nem érhető el a visszagörgetés. A Cmdr minden eredetit eltávolít, amint a másolata biztonságban a helyére került, így nem marad eredeti, amihez vissza lehetne térni. A Mégsem leállítja az áthelyezést, és minden fájl épen marad: vagy a régi, vagy az új helyén.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "Egy köteten belüli áthelyezésnél nem érhető el a visszagörgetés. Maga a kötet helyezi át egyenként az elemeket, és a Cmdr menet közben nem tudja visszahelyezni őket. A Mégsem leállítja az áthelyezést: ami már átkerült, az új helyén marad, a többi pedig ott, ahol volt.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "Itt nincs mit visszagörgetni. A Cmdr csak a végén, egyszerre írja újra az archívumot, így a Mégsem pontosan úgy hagyja, ahogy volt.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "Itt nincs mit visszagörgetni. A Cmdr csak akkor távolítja el az elemeket az archívumból, amikor már mind kikerültek belőle, így a Mégsem úgy hagyja az archívumot, ahogy volt. A már kicsomagolt elemek másolatként a célhelyen maradnak.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "Ennél a műveletnél nem érhető el a visszagörgetés.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
   },
   "fileOperations.transferProgress.titleRollingBack": "Visszagörgetés…",
   "@fileOperations.transferProgress.titleRollingBack": {

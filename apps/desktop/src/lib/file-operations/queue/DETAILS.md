@@ -31,8 +31,8 @@ The window renders from `createOperationsStore()`, which merges:
 
 1. **`operations-changed`** (`onOperationsChanged`): the thin registry snapshot the backend emits whenever an operation
    is registered, admitted, paused, resumed, or settles. Payload is `{ operations: OperationSnapshot[] }`, where each
-   `OperationSnapshot` is `{ operationId, operationType, status, source, destination, supportsRollback, error, items }`
-   — membership, lifecycle status, whether the row may offer Rollback, (on a retained failure only) the typed
+   `OperationSnapshot` is `{ operationId, operationType, status, source, destination, rollbackSupport, error, items }` —
+   membership, lifecycle status, whether the row may offer Rollback, (on a retained failure only) the typed
    `WriteOperationError` that stopped it, and what the row says the operation acts on (§ "Row layout"). No 200 ms
    progress. This decides which rows exist and each row's status.
 2. **`write-progress`** (`onWriteProgress`, the existing per-file stream): drives the live per-row progress bars. The
@@ -86,9 +86,10 @@ corner chip, the queue row, and the progress dialog cannot disagree about the sa
 
 - `operations: OperationRow[]` — reactive; each `OperationRow` is
   `{ snapshot: OperationSnapshot, progress: WriteProgressEvent | null }`. Ordered as the backend emits them.
-- `supportsRollback` on each snapshot — whether cancelling can also undo what the op wrote, decided per spawn path in
-  the backend (`crates/cmdr-operations/DETAILS.md` § "Rollback availability"). The row shows Rollback on exactly that
-  set, so this window and the progress dialog can't disagree about which operations are reversible.
+- `rollbackSupport` on each snapshot — whether cancelling can also undo what the op wrote (and if not, why), decided per
+  spawn path in the backend (`crates/cmdr-operations/DETAILS.md` § "Rollback availability"). The row shows Rollback on
+  exactly that set (`'supported'`), so this window and the progress dialog can't disagree about which operations are
+  reversible.
 - `hasRunning: boolean` — any op with `status === 'running'` (gates "Pause all").
 - `hasPaused: boolean` — any op with `status === 'paused'` (gates "Resume all").
 - `init(): Promise<void>` — subscribes to both streams, then seeds from `list_operations`. Subscribe-before-seed so a
@@ -191,9 +192,9 @@ its `progress.phase` is still `scanning`.
 - **Pause yes, Rollback no.** Pause parks the WALK (`crates/cmdr-operations/src/scan_bridge.rs` § `ScanPause`), so the
   row offers it during the scan exactly as it does during the write, and offers Resume on a scan paused from "Pause all"
   — without that, such a row's only way back was Cancel. A scanning operation has written nothing to reverse, so
-  Rollback stays away; `supportsRollback` stays true throughout, since it is a promise about the OPERATION and the phase
-  is what decides which controls make sense now. A PAUSED scanning row drops `ScanPhaseBody`'s spinner and its rates:
-  the spinner is the claim that the walk is moving.
+  Rollback stays away; `rollbackSupport` stays `'supported'` throughout, since it is a promise about the OPERATION and
+  the phase is what decides which controls make sense now. A PAUSED scanning row drops `ScanPhaseBody`'s spinner and its
+  rates: the spinner is the claim that the walk is moving.
 - **The status column still says "Running"**, and that is deliberate. `queue.row.status` is a `select` over the
   LIFECYCLE status, which genuinely is `running`; the readout names the activity, and the scan-phase line already says
   "Counting…" in the user's language. A "Scanning" arm would mix two axes into one column and would need a `phase` input

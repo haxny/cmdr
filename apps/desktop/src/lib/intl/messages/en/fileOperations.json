@@ -826,9 +826,37 @@
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
-  "fileOperations.transferProgress.rollbackUnavailableTooltip": "Rollback is not available for same-volume moves",
-  "@fileOperations.transferProgress.rollbackUnavailableTooltip": {
-    "description": "Tooltip on the disabled Rollback button. A move within one disk/device renames in place and can't be undone step by step. 'Rollback' means undoing the operation so far.",
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "Rollback isn’t available when moving between volumes. Cmdr removes each original as soon as its copy is safely in place, so there’s no original left to go back to. Cancel stops the move, and every file stays whole on one side or the other.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "description": "Tooltip on the switched-off Rollback button while moving files from one volume to another (for example from the Mac's disk to a network drive or a phone). 'Rollback' means undoing the operation so far. Three jobs, in this order: (a) Rollback is off for this kind of move, (b) why: Cmdr deletes each original right after its copy has safely arrived, so the originals of the files already moved no longer exist, (c) the Cancel button beside it still works, and stopping never leaves a file half-moved: each file is complete either at its old place or its new one. 'Cancel' is that button's own label (fileOperations.button.cancel), so use the same word you translated it with. 'Cmdr' is the app name and stays as it is. A 'volume' is a disk, drive, network share, or device, the same word the app uses elsewhere.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+  },
+
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "Rollback isn’t available when moving within one volume. The volume moves each item itself, and Cmdr can’t move them back partway. Cancel stops the move: what’s moved stays moved, and the rest stays where it was.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "description": "Tooltip on the switched-off Rollback button while moving files from one folder to another on the SAME network drive or device (for example within one NAS share, or within a phone). 'Rollback' means undoing the operation so far. Three jobs, in this order: (a) Rollback is off for this kind of move, (b) why: the drive or device does each move itself, and Cmdr can't send items back while the move is part done, (c) the Cancel button beside it still works: items already moved stay in their new place, the others stay where they were. 'Cancel' is that button's own label (fileOperations.button.cancel), so use the same word you translated it with. 'Cmdr' is the app name and stays as it is. A 'volume' is a disk, drive, network share, or device.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+  },
+
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "Rollback has nothing to undo here. Cmdr rewrites the archive in one go at the end, so Cancel leaves it exactly as it was.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "description": "Tooltip on the switched-off Rollback button while copying or moving files INTO a ZIP archive. 'Rollback' means undoing the operation so far. Two jobs: (a) there's nothing for Rollback to undo, (b) why, and what Cancel does instead: Cmdr only writes the changed archive once, at the very end, so pressing Cancel before then leaves the archive untouched. 'Cancel' is that button's own label (fileOperations.button.cancel), so use the same word you translated it with. 'Cmdr' is the app name and stays as it is.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+  },
+
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "Rollback has nothing to undo here. Cmdr removes these from the archive only after they’re all out, so Cancel leaves the archive as it was. Anything already extracted stays at the destination as a copy.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "description": "Tooltip on the switched-off Rollback button while moving files OUT of a ZIP archive into a normal folder. 'Rollback' means undoing the operation so far. Three jobs: (a) there's nothing for Rollback to undo, (b) why: Cmdr only deletes the files from the archive once every one of them has been extracted, so pressing Cancel leaves the archive complete, (c) files already extracted stay in the destination folder, as extra copies. 'Cancel' is that button's own label (fileOperations.button.cancel), so use the same word you translated it with. 'Cmdr' is the app name and stays as it is.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+  },
+
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "Rollback isn’t available for this operation.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "description": "Fallback tooltip on a switched-off Rollback button, for an operation that can't be undone and has no more specific explanation. 'Rollback' means undoing the operation so far.",
     "screenshot": "transfer-dialog.png",
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },

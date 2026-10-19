@@ -14,7 +14,7 @@ function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
     status: 'running',
     source: '/Users/me/Dropbox/report.pdf',
     destination: '/Volumes/Backup/report.pdf',
-    supportsRollback: false,
+    rollbackSupport: 'archiveRewrite',
     reverses: null,
     error: null,
     canRetry: false,

@@ -69,7 +69,7 @@ function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
     status: 'running',
     source: '/Users/me/Documents',
     destination: '/Volumes/Naspolya/Backup',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,
@@ -83,7 +83,7 @@ function failedSnapshot(operationId = 'op-1'): OperationSnapshot {
   return snapshot({
     operationId,
     status: 'failed',
-    supportsRollback: false,
+    rollbackSupport: 'settled',
     reverses: null,
     error: { type: 'source_not_found', path: '/Users/me/Documents/report.pdf' },
     canRetry: false,
@@ -169,7 +169,7 @@ describe('OperationChip', () => {
   it('names a reversal by what it does to the files, in the corner and in what a screen reader hears', () => {
     // Undoing a move is registered AS a move. Without `reverses` the corner
     // would read "Moving", which is what the person asked to undo.
-    store?._testApplySnapshot([snapshot({ operationType: 'move', reverses: 'move', supportsRollback: false })])
+    store?._testApplySnapshot([snapshot({ operationType: 'move', reverses: 'move', rollbackSupport: 'isReversal' })])
     emitProgress(progress({ operationType: 'move' }))
     renderChip()
     expect(chip()?.querySelector('.chip-label')?.textContent).toBe('Putting files back')
@@ -177,7 +177,7 @@ describe('OperationChip', () => {
   })
 
   it('never says Deleting in the corner over an undo that deletes nothing', () => {
-    store?._testApplySnapshot([snapshot({ operationType: 'move', reverses: 'trash', supportsRollback: false })])
+    store?._testApplySnapshot([snapshot({ operationType: 'move', reverses: 'trash', rollbackSupport: 'isReversal' })])
     emitProgress(progress({ operationType: 'move' }))
     renderChip()
     expect(chip()?.querySelector('.chip-label')?.textContent).not.toContain('Deleting')
@@ -185,7 +185,7 @@ describe('OperationChip', () => {
 
   it('does say Deleting for the reversal that really does delete', () => {
     store?._testApplySnapshot([
-      snapshot({ operationType: 'delete', destination: null, reverses: 'copy', supportsRollback: false }),
+      snapshot({ operationType: 'delete', destination: null, reverses: 'copy', rollbackSupport: 'isReversal' }),
     ])
     emitProgress(progress({ operationType: 'delete', etaSeconds: null }))
     renderChip()

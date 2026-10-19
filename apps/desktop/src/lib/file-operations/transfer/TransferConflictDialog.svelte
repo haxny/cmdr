@@ -13,7 +13,9 @@
     import { formatDate } from '#lib/file-explorer/selection/selection-info-utils.js'
     import type { WriteConflictEvent } from '#lib/tauri-commands/index.js'
     import type { ConflictResolution } from '#lib/file-explorer/types.js'
+    import type { RollbackSupport } from '#lib/ipc/bindings.js'
     import { answerDecisionKey, CONFLICT_KEYS, DECISION_KEYS_ARM_MS, type DecisionChoice } from '../decision-keys'
+    import { rollbackBlockedTooltipKey } from '../reversal-wording'
 
     interface Props {
         /** The conflict to resolve (one clash; the BE re-prompts per remaining clash). */
@@ -21,11 +23,11 @@
         /** Operation-type flags, driving the bottom Rollback/Cancel row. */
         isCopy: boolean
         isMove: boolean
-        /** The backend can't reverse this operation (a same-volume move renames
-         *  server-side; a cross-volume one has nothing staged to undo). The
-         *  Rollback affordance renders disabled with a tooltip, and a plain
-         *  Cancel sits alongside it so there's always a way out. */
-        rollbackUnavailable: boolean
+        /** Whether the backend can reverse this operation, and if not, why
+         *  (`null` while unknown, which offers Rollback). When it can't, the
+         *  Rollback affordance renders disabled with a tooltip saying why, and a
+         *  plain Cancel sits alongside it so there's always a way out. */
+        rollbackSupport: RollbackSupport | null
         /** Disables the cancel/rollback buttons while a cancel is in flight. */
         isCancelling: boolean
         /** Disables every resolution button while a resolution IPC is in flight. */
@@ -36,7 +38,7 @@
         onCancel: (rollback: boolean) => void
     }
 
-    const { conflictEvent, isCopy, isMove, rollbackUnavailable, isCancelling, isResolvingConflict, onResolve, onCancel }: Props =
+    const { conflictEvent, isCopy, isMove, rollbackSupport, isCancelling, isResolvingConflict, onResolve, onCancel }: Props =
         $props()
 
     /** Size-tier class for the "Existing" / "New" size cells. Tiers off the SAME
@@ -46,9 +48,12 @@
         return sizeTierClasses[dynamicTierIndex(bytes, getFileSizeFormat())]
     }
 
-    const ROLLBACK_UNAVAILABLE_TOOLTIP = $derived(
-        tString('fileOperations.transferProgress.rollbackUnavailableTooltip'),
-    )
+    /** Why Rollback is off, worded per reason (`../reversal-wording.ts`), or
+     *  `null` while it works. */
+    const rollbackBlockedTooltip = $derived.by(() => {
+        const key = rollbackSupport === null ? null : rollbackBlockedTooltipKey(rollbackSupport)
+        return key === null ? null : tString(key)
+    })
 
     // The same shape — filename, "Existing:" / "New:" rows, the 4×2 button grid,
     // the Rollback row — serves every clash type. Variants differ only in the row
@@ -123,7 +128,7 @@
     const rollBack = () => { onCancel(true) }
 
     /** The bottom row's live exit: a plain Cancel, or a Rollback that asks first. */
-    const offersRollback = $derived(!rollbackUnavailable && (isCopy || isMove))
+    const offersRollback = $derived(rollbackBlockedTooltip === null && (isCopy || isMove))
     const exitLocked = $derived(isCancelling || isResolvingConflict)
 
     /** Every button's letter, enabled exactly when the button is. `decision-keys.ts`. */
@@ -367,11 +372,11 @@
         >
             {tString('fileOperations.transferProgress.conflictCancel')}
         </Button>
-        {#if rollbackUnavailable}
+        {#if rollbackBlockedTooltip !== null}
             <!-- Blocked, not `disabled`: the reason is worth reading, and a
                  disabled button leaves the tab order with its tooltip. No click
                  handler, so pressing it does nothing. -->
-            <Button variant="danger" ariaDisabled tooltipContent={ROLLBACK_UNAVAILABLE_TOOLTIP}>
+            <Button variant="danger" ariaDisabled tooltipContent={rollbackBlockedTooltip}>
                 {tString('fileOperations.transferProgress.conflictRollback')}
             </Button>
         {:else if offersRollback}

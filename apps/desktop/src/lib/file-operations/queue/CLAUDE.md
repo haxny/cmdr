@@ -38,8 +38,8 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
   id alone. ❌ Not a command on the operation, ❌ never offered on a `queued` row. DETAILS § Show.
 - **A row commands its own operation through its session** (`../operation-session/CLAUDE.md`); the page keeps only the
   fleet actions and Dismiss.
-- **Cancel keeps partials, no confirm; Rollback is the opt-in undo**, shown ONLY where `supportsRollback` and
-  `reversalWindowClosed` allow it, ❌ never inferred from the type.
+- **Cancel keeps partials, no confirm; Rollback is the opt-in undo**, shown ONLY on a `supported` `rollbackSupport`
+  outside `reversalWindowClosed`, ❌ never inferred from the type.
 - **Window perms fail SILENTLY**: `await` every Tauri call in try/catch + `log.warn`; smoke-test with `pnpm dev` after a
   perm change.
 - **The list is a one-Tab-stop ARIA grid; its cursor is an operation ID**, ❌ not an index. ⌘A arrives as

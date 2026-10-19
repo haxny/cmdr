@@ -90,7 +90,7 @@ function snapshot(operationId: string, status: OperationSnapshot['status'] = 'ru
     status,
     source: '/Users/me/Documents/report.pdf',
     destination: '/Volumes/Backup/report.pdf',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,

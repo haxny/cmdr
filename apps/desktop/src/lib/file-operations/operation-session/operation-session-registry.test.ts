@@ -33,7 +33,7 @@ function snapshot(id: string, status: OperationSnapshot['status'] = 'running'): 
     status,
     source: '/src',
     destination: '/dst',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,

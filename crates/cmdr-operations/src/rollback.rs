@@ -388,7 +388,7 @@ impl crate::Operations {
             },
             // This IS the reversal. Offering to roll back a rollback would ask the
             // engine to re-apply what the person just chose to undo.
-            supports_rollback: false,
+            rollback_support: crate::types::RollbackSupport::IsReversal,
             // No scan preview: nothing walked a tree to plan this op.
             preview_id: None,
             // The ORIGINAL kind, so every surface naming this op words it by what the

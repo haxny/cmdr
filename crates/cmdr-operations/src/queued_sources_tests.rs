@@ -41,7 +41,7 @@ impl LaneHolder {
                 lanes: vec![lane.clone()],
                 volume_ids: vec![],
                 summary: OperationSummaryText::default(),
-                supports_rollback: false,
+                rollback_support: crate::types::RollbackSupport::Supported,
                 preview_id: None,
                 reverses: None,
             },

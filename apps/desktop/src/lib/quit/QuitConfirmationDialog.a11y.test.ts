@@ -24,7 +24,7 @@ function operation(operationId: string, operationType: OperationSnapshot['operat
     status: 'running',
     source: 'Holiday.mov',
     destination: operationType === 'copy' || operationType === 'move' ? 'Backup' : null,
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,

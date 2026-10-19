@@ -48,7 +48,7 @@ function failedRow(operationId: string): OperationRow {
     status: 'failed',
     source: '/Users/me/Documents/report.pdf',
     destination: '/Volumes/Backup',
-    supportsRollback: false,
+    rollbackSupport: 'settled',
     reverses: null,
     error: { type: 'source_not_found', path: '/Users/me/Documents/report.pdf' },
     canRetry: false,

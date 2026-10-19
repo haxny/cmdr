@@ -87,8 +87,9 @@ async fn retained_failure_stays_hidden_until_the_record_settles() {
         "the retained row keeps the live record's summary, so the queue row still reads like the others"
     );
     assert_eq!(retained[0].destination.as_deref(), Some("Naspolya"));
-    assert!(
-        !retained[0].supports_rollback,
+    assert_eq!(
+        retained[0].rollback_support,
+        RollbackSupport::Settled,
         "a settled failure offers no rollback from this row"
     );
     // No `dismiss_failure` cleanup: the retained row lives on this test's own

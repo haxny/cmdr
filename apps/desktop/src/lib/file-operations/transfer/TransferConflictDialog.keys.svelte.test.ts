@@ -11,6 +11,7 @@ import { flushSync, mount, unmount } from 'svelte'
 import TransferConflictDialog from './TransferConflictDialog.svelte'
 import { CONFLICT_KEYS, DECISION_KEYS_ARM_MS } from '../decision-keys'
 import type { WriteConflictEvent } from '#lib/tauri-commands/index.js'
+import type { RollbackSupport } from '#lib/ipc/bindings.js'
 import type { ConflictResolution } from '#lib/file-explorer/types.js'
 import { buttonLabel } from '../test-button-label'
 
@@ -46,7 +47,7 @@ const props = $state({
   conflictEvent: clash(),
   isCopy: true,
   isMove: false,
-  rollbackUnavailable: false,
+  rollbackSupport: 'supported' as RollbackSupport | null,
   isCancelling: false,
   isResolvingConflict: false,
 })
@@ -70,8 +71,8 @@ function render(): HTMLElement {
       get isMove() {
         return props.isMove
       },
-      get rollbackUnavailable() {
-        return props.rollbackUnavailable
+      get rollbackSupport() {
+        return props.rollbackSupport
       },
       get isCancelling() {
         return props.isCancelling
@@ -117,7 +118,7 @@ beforeEach(() => {
   props.conflictEvent = clash()
   props.isCopy = true
   props.isMove = false
-  props.rollbackUnavailable = false
+  props.rollbackSupport = 'supported'
   props.isCancelling = false
   props.isResolvingConflict = false
 })
@@ -243,7 +244,7 @@ describe('the way out', () => {
   })
 
   it('C cancels when the operation cannot roll back, and the blocked Rollback has no key', () => {
-    props.rollbackUnavailable = true
+    props.rollbackSupport = 'sameVolumeMove'
     const target = render()
     arm()
     press(letter(CONFLICT_KEYS.rollback))

@@ -22,7 +22,7 @@ function operation(operationId: string, operationType: OperationSnapshot['operat
     status: 'running',
     source: '/Volumes/Naspolya/media/Holiday.mov',
     destination: '/Users/dave/Backup',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,

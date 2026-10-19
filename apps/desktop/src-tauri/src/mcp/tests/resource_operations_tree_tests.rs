@@ -83,7 +83,7 @@ fn yaml_for(tree: TransferTreeView) -> String {
             status: LifecycleStatus::Running,
             source: Some("/src/Photos 2024".to_string()),
             destination: Some("/Volumes/naspi/photos".to_string()),
-            supports_rollback: true,
+            rollback_support: cmdr_operations::testing::RollbackSupport::Supported,
             reverses: None,
             error: None,
             can_retry: false,

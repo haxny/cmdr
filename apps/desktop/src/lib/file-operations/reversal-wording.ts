@@ -12,7 +12,7 @@
  * placeholders.
  */
 
-import type { OpKind, WriteOperationPhase } from '#lib/ipc/bindings.js'
+import type { OpKind, RollbackSupport, WriteOperationPhase } from '#lib/ipc/bindings.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /**
@@ -90,8 +90,37 @@ export function inFlightRollbackVariant(kind: OpKind): RollbackConfirmVariant {
 }
 
 /**
+ * Why Rollback is off for an operation whose STRATEGY can't reverse, as the disabled
+ * button's tooltip: the reason in the person's terms, then what the Cancel beside it
+ * does instead. `null` when the operation can roll back.
+ *
+ * Only copy and move show a Rollback button, so four reasons reach a person; the rest
+ * share one plain sentence. They're mapped so a new `RollbackSupport` variant is a
+ * compile error here rather than a vague tooltip in front of a user.
+ */
+export function rollbackBlockedTooltipKey(support: RollbackSupport): MessageKey | null {
+  switch (support) {
+    case 'supported':
+      return null
+    case 'crossVolumeMove':
+      return 'fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip'
+    case 'sameVolumeMove':
+      return 'fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip'
+    case 'archiveRewrite':
+      return 'fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip'
+    case 'archiveMoveOut':
+      return 'fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip'
+    case 'nothingToPutBack':
+    case 'instantChange':
+    case 'isReversal':
+    case 'settled':
+      return 'fileOperations.transferProgress.rollbackUnavailableOtherTooltip'
+  }
+}
+
+/**
  * Whether pressing Rollback RIGHT NOW could still reverse anything, which the
- * operation's `supportsRollback` can't answer on its own: that flag is a property of
+ * operation's `rollbackSupport` can't answer on its own: that verdict is a property of
  * the STRATEGY, decided once at spawn, and this is the other half of the question.
  *
  * One case needs it, and it's the last stage of a move between filesystems. That move

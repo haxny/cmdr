@@ -77,6 +77,56 @@ pub enum WriteOperationType {
     Compress,
 }
 
+/// Whether cancelling an operation can also UNDO what it wrote, and when it
+/// can't, why. Every construction site of an `OperationDescriptor` names one, so
+/// a new spawn path can't skip the decision, and the frontend words the disabled
+/// Rollback button from the variant (`file-operations/reversal-wording.ts`).
+///
+/// A property of the operation's STRATEGY, fixed for its whole life. Whether to
+/// OFFER Rollback right now is the view's call on top of it, keyed on the phase.
+/// DETAILS § "Rollback availability".
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum RollbackSupport {
+    /// Cancelling can put things back: a local copy/move (`CopyTransaction` /
+    /// `MoveTransaction`), a volume copy, or a compress into a NEW archive.
+    Supported,
+    /// A move between two volumes copies each file and then deletes its
+    /// original, so a stop leaves every file whole on one side or the other,
+    /// and there's no original left to return the landed ones to.
+    CrossVolumeMove,
+    /// A move within one non-local volume: the volume renames each item itself
+    /// (or, where its renames copy, copies and deletes per item), and the
+    /// driver stops without sending anything back.
+    SameVolumeMove,
+    /// An all-or-nothing temp+rename rewrite of a zip (an edit, a copy or move
+    /// into one, a compress over an existing one): a cancel leaves the archive
+    /// as it was, so there's nothing partial to undo.
+    ArchiveRewrite,
+    /// A move out of a zip: the archive drops the entries only after they all
+    /// extracted, so a cancel leaves it intact and keeps the extracted copies.
+    ArchiveMoveOut,
+    /// A delete or trash: what's gone has nothing for a rollback to restore.
+    NothingToPutBack,
+    /// A rename or a new file/folder: no partial state, and no cancel path that
+    /// could catch it mid-flight. Bulk rename stops before the next name.
+    InstantChange,
+    /// This operation IS the reversal of a finished one; rolling it back would
+    /// re-apply what the person just undid.
+    IsReversal,
+    /// A retained failure row: the operation is over, and no live intent
+    /// machine is left to reverse it.
+    Settled,
+}
+
+impl RollbackSupport {
+    /// Whether a cancel with `rollback = true` can undo anything.
+    #[must_use]
+    pub const fn is_supported(self) -> bool {
+        matches!(self, Self::Supported)
+    }
+}
+
 /// Which of an operation's two progress counts decides how long it has left:
 /// its bytes, or its file count. Decided once, in `eta.rs`, with hysteresis,
 /// and carried on `write-progress` and the transfer tree's view alike, so every
@@ -164,8 +214,8 @@ pub struct OperationSnapshot {
     pub status: LifecycleStatus,
     pub source: Option<String>,
     pub destination: Option<String>,
-    /// See [`OperationDescriptor::supports_rollback`](super::OperationDescriptor::supports_rollback).
-    pub supports_rollback: bool,
+    /// See [`OperationDescriptor::rollback_support`](super::OperationDescriptor::rollback_support).
+    pub rollback_support: RollbackSupport,
     /// See [`OperationDescriptor::reverses`](super::OperationDescriptor::reverses). Static for the op's whole life,
     /// which is why it rides the thin snapshot rather than the 200 ms progress
     /// tick.

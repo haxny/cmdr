@@ -14,7 +14,7 @@ function row(
     status: 'running',
     source: '/Users/me/Documents',
     destination: '/Volumes/Backup',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,

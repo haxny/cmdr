@@ -19,7 +19,8 @@ use super::state::{WriteOperationState, WriteSettledGuard};
 use super::transfer::copy::copy_files_with_progress_inner;
 use super::transfer::move_op::move_files_with_progress_inner;
 use super::types::{
-    WriteErrorEvent, WriteOperationConfig, WriteOperationError, WriteOperationStartResult, WriteOperationType,
+    RollbackSupport, WriteErrorEvent, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
+    WriteOperationType,
 };
 use super::validation::{
     ensure_destination_dir, validate_destination_not_inside_source, validate_destination_writable,
@@ -80,10 +81,7 @@ impl Operations {
             lanes,
             volume_ids,
             summary,
-            // A local copy/move writes NEW files it can delete again on rollback
-            // (`CopyTransaction` / `MoveTransaction`). A delete or trash has nothing
-            // to put back, and everything else that reaches here is neither.
-            supports_rollback: matches!(operation_type, WriteOperationType::Copy | WriteOperationType::Move),
+            rollback_support: local_rollback_support(operation_type),
             preview_id,
             reverses: None,
         };
@@ -501,6 +499,21 @@ impl Operations {
             },
         )
         .await
+    }
+}
+
+/// A local copy/move writes NEW files it can delete again on rollback
+/// (`CopyTransaction` / `MoveTransaction`); a delete or trash has nothing to put
+/// back. Only those four reach `start_write_operation`, but the match stays
+/// exhaustive so a new operation type has to decide.
+fn local_rollback_support(operation_type: WriteOperationType) -> RollbackSupport {
+    match operation_type {
+        WriteOperationType::Copy | WriteOperationType::Move => RollbackSupport::Supported,
+        WriteOperationType::Delete | WriteOperationType::Trash => RollbackSupport::NothingToPutBack,
+        WriteOperationType::Rename | WriteOperationType::CreateFolder | WriteOperationType::CreateFile => {
+            RollbackSupport::InstantChange
+        }
+        WriteOperationType::ArchiveEdit | WriteOperationType::Compress => RollbackSupport::ArchiveRewrite,
     }
 }
 

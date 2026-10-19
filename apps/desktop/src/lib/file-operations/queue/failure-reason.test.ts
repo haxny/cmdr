@@ -16,7 +16,7 @@ function snapshot(error: WriteOperationError | null, over: Partial<OperationSnap
     status: error === null ? 'running' : 'failed',
     source: '/Users/me/Documents/report.pdf',
     destination: '/Volumes/Backup',
-    supportsRollback: false,
+    rollbackSupport: 'settled',
     reverses: null,
     error,
     canRetry: false,

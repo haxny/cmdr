@@ -21,6 +21,7 @@
 import { describe, it, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import type { VolumeConflictInfo, WriteConflictEvent } from '#lib/tauri-commands/index.js'
+import type { RollbackSupport } from '#lib/ipc/bindings.js'
 import type { VolumeInfo } from '#lib/file-explorer/types.js'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import {
@@ -439,7 +440,7 @@ describe('TransferConflictDialog a11y', () => {
     conflictEvent: WriteConflictEvent
     isCopy: boolean
     isMove: boolean
-    rollbackUnavailable: boolean
+    rollbackSupport: RollbackSupport | null
   }): HTMLElement {
     const target = container()
     mount(TransferConflictDialog, {
@@ -448,7 +449,7 @@ describe('TransferConflictDialog a11y', () => {
         conflictEvent: opts.conflictEvent,
         isCopy: opts.isCopy,
         isMove: opts.isMove,
-        rollbackUnavailable: opts.rollbackUnavailable,
+        rollbackSupport: opts.rollbackSupport,
         isCancelling: false,
         isResolvingConflict: false,
         onResolve: () => {},
@@ -463,7 +464,7 @@ describe('TransferConflictDialog a11y', () => {
       conflictEvent: fileConflict(),
       isCopy: true,
       isMove: false,
-      rollbackUnavailable: false,
+      rollbackSupport: 'supported',
     })
     await tick()
     await expectNoA11yViolations(target)
@@ -474,7 +475,7 @@ describe('TransferConflictDialog a11y', () => {
       conflictEvent: fileConflict(),
       isCopy: false,
       isMove: true,
-      rollbackUnavailable: true,
+      rollbackSupport: 'sameVolumeMove',
     })
     await tick()
     await expectNoA11yViolations(target)
@@ -490,7 +491,7 @@ describe('TransferConflictDialog a11y', () => {
       }),
       isCopy: true,
       isMove: false,
-      rollbackUnavailable: false,
+      rollbackSupport: 'supported',
     })
     await tick()
     await expectNoA11yViolations(target)
@@ -507,7 +508,7 @@ describe('TransferConflictDialog a11y', () => {
       }),
       isCopy: false,
       isMove: true,
-      rollbackUnavailable: false,
+      rollbackSupport: 'supported',
     })
     await tick()
     await expectNoA11yViolations(target)

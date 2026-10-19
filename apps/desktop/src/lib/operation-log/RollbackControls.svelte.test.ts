@@ -106,7 +106,7 @@ function reversalSnapshot(operationId: string, status: OperationSnapshot['status
     status,
     source: '/Volumes/Backup',
     destination: null,
-    supportsRollback: false,
+    rollbackSupport: 'isReversal',
     reverses: 'copy',
     error: null,
     canRetry: false,

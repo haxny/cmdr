@@ -56,7 +56,7 @@ function reversal(status: OperationSnapshot['status']): OperationSnapshot {
     status,
     source: '/Volumes/Backup',
     destination: null,
-    supportsRollback: false,
+    rollbackSupport: 'isReversal',
     reverses: 'copy',
     error: null,
     canRetry: false,

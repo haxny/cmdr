@@ -126,7 +126,7 @@ impl crate::Operations {
             summary,
             // Moving OUT of a zip rewrites the archive to drop the entries: that
             // rewrite is all-or-nothing, so there's nothing partial to reverse.
-            supports_rollback: false,
+            rollback_support: crate::types::RollbackSupport::ArchiveMoveOut,
             preview_id: config.preview_id.clone(),
             reverses: None,
         };

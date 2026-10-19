@@ -30,7 +30,7 @@ async fn an_operation_registered_in_one_engine_is_invisible_to_another() {
             lanes: vec![LaneKey::new(format!("{op}-lane"))],
             volume_ids: vec!["side-by-side-volume".to_string()],
             summary: OperationSummaryText::default(),
-            supports_rollback: false,
+            rollback_support: crate::types::RollbackSupport::Supported,
             preview_id: None,
             reverses: None,
         },

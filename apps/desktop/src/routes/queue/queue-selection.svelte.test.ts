@@ -130,7 +130,7 @@ function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
     status: 'running',
     source: '/Users/me/Documents',
     destination: '/Volumes/Naspolya/Backup',
-    supportsRollback: true,
+    rollbackSupport: 'supported',
     reverses: null,
     error: null,
     canRetry: false,
@@ -144,7 +144,7 @@ function failed(operationId: string): OperationSnapshot {
   return snapshot({
     operationId,
     status: 'failed',
-    supportsRollback: false,
+    rollbackSupport: 'settled',
     reverses: null,
     error: { type: 'io_error', path: '/Users/me/Documents/report.pdf', message: 'disk went away' },
     canRetry: false,

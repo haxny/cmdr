@@ -47,7 +47,7 @@
     const isMove = $derived(snapshot?.operationType === 'move')
     /** The typed truth from the snapshot, rather than the progress dialog's own
      *  same-volume guess: a CROSS-volume move can't roll back either. */
-    const rollbackUnavailable = $derived(snapshot !== null && !snapshot.supportsRollback)
+    const rollbackSupport = $derived(snapshot?.rollbackSupport ?? null)
 
     /** What rolling THIS operation back would do to the files, so the question
      *  matches the operation rather than always reading as a delete.
@@ -95,7 +95,7 @@
             conflictEvent={prompt.event}
             {isCopy}
             {isMove}
-            {rollbackUnavailable}
+            {rollbackSupport}
             isCancelling={isCancellingConflictPrompt()}
             isResolvingConflict={isResolvingConflictPrompt()}
             onResolve={(resolution: ConflictResolution, applyToAll: boolean) => {

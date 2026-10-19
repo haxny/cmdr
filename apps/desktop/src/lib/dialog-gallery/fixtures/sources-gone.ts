@@ -30,7 +30,9 @@ function fixture(
       status: 'running',
       source: 'CD1',
       destination,
-      supportsRollback: false,
+      // What the backend would say for each fixture: the moves go to a NAS.
+      rollbackSupport:
+        operationType === 'copy' ? 'supported' : operationType === 'move' ? 'crossVolumeMove' : 'nothingToPutBack',
       reverses: null,
       error: null,
       canRetry: false,

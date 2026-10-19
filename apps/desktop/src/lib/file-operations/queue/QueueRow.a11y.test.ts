@@ -21,7 +21,7 @@ function row(
   status: OperationSnapshot['status'],
   opType: OperationSnapshot['operationType'] = 'copy',
   progress: WriteProgressEvent | null = null,
-  supportsRollback = false,
+  reversible = false,
 ): OperationRow {
   return {
     snapshot: {
@@ -30,7 +30,7 @@ function row(
       status,
       source: '/Users/me/Documents/report.pdf',
       destination: opType === 'delete' || opType === 'trash' ? null : '/Volumes/Backup/report.pdf',
-      supportsRollback,
+      rollbackSupport: reversible ? 'supported' : 'crossVolumeMove',
       reverses: null,
       error: null,
       canRetry: false,
