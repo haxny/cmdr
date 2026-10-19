@@ -214,6 +214,50 @@ fn a_start_that_meets_a_dead_index_rebuilds_it() {
     assert!(state::is_active(drive.volume_id), "and the volume is indexing again");
 }
 
+/// A clear deletes the database only once nothing holds the volume any more
+/// (#459). The dead index's phase machine outlived its manager's drain and opened
+/// a read connection while the rebuild created the new database at the same path:
+/// SQLite keys shared memory by inode but opens the `-shm` by NAME, so that
+/// connection took the new database's `-shm` for its own, truncated it as the
+/// first user it believed it was, and the rebuild's writer died on SIGBUS. The
+/// straggler here is a hold, which is what every drive-reading worker carries.
+#[test]
+fn a_clear_waits_for_the_volume_to_be_let_go_before_deleting_its_database() {
+    let drive = an_indexed_drive("cover-toggle-clear-waits-test");
+    let db_path = state::resolved_index_db_path(drive.volume_id).expect("a database path");
+    state::fail_index_for_test(
+        &crate::NoopEventSink,
+        drive.volume_id,
+        crate::indexing::store::IndexFailure {
+            code: 10,
+            extended_code: 778,
+        },
+    );
+    let straggler = VolumeWork::for_test(drive.volume_id);
+
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    let volume_id = drive.volume_id;
+    std::thread::spawn(move || {
+        let _ = done_tx.send(state::clear_index(
+            volume_id,
+            crate::volume_files::Removal::IndexRebuild,
+        ));
+    });
+
+    assert!(
+        done_rx.recv_timeout(std::time::Duration::from_millis(300)).is_err(),
+        "the clear waits while something still holds the volume"
+    );
+    assert!(db_path.exists(), "and deletes nothing under it");
+
+    drop(straggler);
+    done_rx
+        .recv_timeout(std::time::Duration::from_secs(10))
+        .expect("the clear finishes once the volume is let go")
+        .expect("and succeeds");
+    assert!(!db_path.exists(), "the dead database is gone");
+}
+
 /// A start meeting a drive whose manager is momentarily OUT of the registry, with
 /// nothing tearing it down, lets that manager come back and walks nothing again.
 ///

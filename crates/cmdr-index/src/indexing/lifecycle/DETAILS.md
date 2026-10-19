@@ -305,6 +305,17 @@ forget or an index rebuild) decides which stores go with the index. A clear that
 its reason in `TeardownClaim::Cleared`, so the handback takes exactly what an immediate clear would have. Both
 mechanisms: `crates/cmdr-index/DETAILS.md` § "A volume's files, and the one door they leave by".
 
+**A clear deletes only once the volume is let go** (`teardown.rs::remove_once_let_go`, #459). Withdrawal stops the read
+PATH, not a worker that outlives its manager's drain: the dead index's phase machine kept reading its frontier and
+opened a fresh read connection while the rebuild created the new database at the same path. SQLite shares a database's
+memory by inode but opens its `-shm` by NAME, and POSIX locks never conflict inside one process, so that connection took
+the new `-shm` for its own, truncated it as the first user it believed it was, and the rebuild's writer died on SIGBUS
+in `walIndexAppend` (verified on macOS 27.0, a 40-round stress of `cold_drive_tests` plus an lldb backtrace,
+2026-10-19). So the clear waits up to five seconds on the volume's hold, which every drive-reading worker carries, and
+keeps the files (an error) if something still holds it. The manager is dropped before the wait, since it carries a
+share. ⚠️ The one exception is the CLAIMED clear (`finish_the_claimed_teardown`): it runs on the scan start that handed
+the manager back, which may hold a share itself, so it deletes at once.
+
 **Freeing a slot and withdrawing its handles is ONE critical section** (`remove_instance_and_handles`, the start-up
 failure path). The two orders are not equivalent: withdraw-then-free is safe because the key still exists while the
 withdrawal runs, so no competing start can reserve yet; free-then-withdraw is NOT, because a competing
