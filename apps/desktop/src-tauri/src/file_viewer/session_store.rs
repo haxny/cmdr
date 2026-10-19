@@ -18,6 +18,7 @@ use crate::ignore_poison::IgnorePoison;
 
 use super::content_kind::ViewerContentKind;
 use super::encoding::FileEncoding;
+use super::markdown_session::MarkdownDocument;
 use super::materialize::PreviewTemp;
 use super::origin::SourceOrigin;
 use super::source::OpenedFile;
@@ -52,7 +53,7 @@ pub struct ViewerOpenResult {
     pub encoding: FileEncoding,
     /// Detected content kind. `Text` flows through the line pipeline (the fields
     /// above are populated); `Image` / `Pdf` render inline from `media_token` and
-    /// leave the text fields empty.
+    /// `Markdown` from `viewer_render_markdown`, both leaving the text fields empty.
     pub kind: ViewerContentKind,
     /// Present only for media kinds (`Image` / `Pdf`): the unguessable token the FE
     /// puts in the `cmdr-media://localhost/<token>` URL. `None` for text.
@@ -159,6 +160,9 @@ pub(super) struct ViewerSession {
     /// switch's session for the same window, and removed when the last session holding
     /// it closes. `None` for a normal on-disk open. See `file_viewer::materialize`.
     pub(super) temp: Option<Arc<PreviewTemp>>,
+    /// The rendered document of a Markdown session (its image tokens, the remote-images
+    /// opt-in), closed at `close_session`. `None` for every other session.
+    pub(super) markdown: Option<Arc<MarkdownDocument>>,
 }
 
 /// The fields that vary between a text open and a media open. Everything else on a
@@ -176,6 +180,7 @@ pub(super) struct ViewerSessionInit {
     pub(super) file: Option<OpenedFile>,
     pub(super) media_token: Option<String>,
     pub(super) temp: Option<Arc<PreviewTemp>>,
+    pub(super) markdown: Option<Arc<MarkdownDocument>>,
 }
 
 impl ViewerSession {
@@ -198,6 +203,7 @@ impl ViewerSession {
             file: Mutex::new(init.file),
             media_token: init.media_token,
             temp: init.temp,
+            markdown: init.markdown,
         }
     }
 

@@ -23,6 +23,7 @@ pub(super) fn content_token(kind: ViewerContentKind) -> &'static str {
         ViewerContentKind::Text => "text",
         ViewerContentKind::Image => "image",
         ViewerContentKind::Pdf => "pdf",
+        ViewerContentKind::Markdown => "markdown",
     }
 }
 

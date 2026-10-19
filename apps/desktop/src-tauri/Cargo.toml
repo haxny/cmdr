@@ -304,8 +304,13 @@ semver = "1"
 # which the test-build plist-file override also reads on Linux.
 plist = "1.8.0"
 # CommonMark rendering for the What's-new popup, so a lead renders the way GitHub and the website
-# render the same changelog. `html` only: the default `getopts` feature is the crate's own CLI.
+# render the same changelog, and for the viewer's rendered Markdown view. `html` only: the default
+# `getopts` feature is the crate's own CLI.
 pulldown-cmark = { version = "0.13.4", default-features = false, features = ["html"] }
+# Sanitizes the HTML the viewer renders from an untrusted Markdown file (READMEs carry raw `<img>`,
+# `<details>`, `<a>`): an allowlist of tags and attributes, so no script, handler, form, or frame
+# reaches the viewer's webview. Also hands back the parsed DOM, where the image sources get rewritten.
+ammonia = "4.2.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # The custom updater's trust check: unpacking the release tarball and requiring Cmdr's Developer

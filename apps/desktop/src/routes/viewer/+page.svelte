@@ -67,6 +67,7 @@
     import ViewerCopyDialogs from './ViewerCopyDialogs.svelte'
     import MediaImageView from './MediaImageView.svelte'
     import MediaPdfView from './MediaPdfView.svelte'
+    import MediaMarkdownView from './MediaMarkdownView.svelte'
     import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import Spinner from '#lib/ui/Spinner.svelte'
     import type { EncodingChoice, FileEncoding } from '#lib/ipc/bindings.js'
@@ -205,6 +206,7 @@
     // against the spacer rather than the scroll container.
     let spacerRef = $state<HTMLDivElement>()
     let imageViewRef = $state<{ handleKey: (e: KeyboardEvent) => boolean }>()
+    let markdownViewRef = $state<{ selectAll: () => void }>()
 
     // Window lifecycle state. `canClose` prevents closing before WebKit has settled the
     // mount; it flips right after mount, NOT when the open resolves, because a pull off
@@ -807,11 +809,17 @@
 
         // Edit > Copy / Select all from the viewer's own menu bar. Custom items rather than
         // native ones, because the native selectors would act on the status bar; see
-        // `viewer-menu-actions.ts`. Media sessions have no text to select or copy.
+        // `viewer-menu-actions.ts`. An image or PDF has no text to select or copy; a formatted
+        // Markdown document uses the browser's own selection, like Binary and Hex.
         unlistenEditAction = await onViewerEditAction(({ action }) => {
-            if ((viewMode === 'binary' || viewMode === 'hex') && action === 'copy') {
+            const formattedDocument = viewMode === 'media' && media.kind === 'markdown'
+            if ((viewMode === 'binary' || viewMode === 'hex' || formattedDocument) && action === 'copy') {
                 const selected = window.getSelection()?.toString()
                 if (selected) viewerEditActionDeps.writeClipboardText(selected)
+                return
+            }
+            if (formattedDocument && action === 'selectAll') {
+                markdownViewRef?.selectAll()
                 return
             }
             if (!isTextView) return
@@ -1257,6 +1265,8 @@
         <MediaImageView bind:this={imageViewRef} src={media.mediaSrc} {fileName} />
     {:else if media.kind === 'pdf'}
         <MediaPdfView src={media.mediaSrc} {fileName} />
+    {:else if media.kind === 'markdown' && sessionId}
+        <MediaMarkdownView bind:this={markdownViewRef} {sessionId} {fileName} />
     {:else}
         <div
             class="file-content"

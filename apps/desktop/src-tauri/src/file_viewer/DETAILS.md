@@ -28,6 +28,8 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
 - `media_session.rs`: the media-open path. `try_open_media` (classify + dispatch, called by `open_session` before it
   builds a text backend), `open_media_session` (mint token, header-only dimensions, install a `MediaBackend` via
   `ViewerSession::new`), and `is_local_posix_path` (the local-volume gate)
+- `markdown_session.rs`, `markdown_render.rs`, `markdown_images.rs`: the formatted Markdown view, its sanitizer, and
+  its pictures. See § "Markdown rendering"
 - `range_read.rs`: backend-agnostic stitching of a `(line, offset) -> (line, offset)` range into UTF-8 text.
   `read_range_streamed` is the engine (hands the range to a sink in `STREAM_CHUNK_BYTES` pieces, breaking only on line
   boundaries); `read_range` is that read with a collecting sink, for callers that want one string. Plus the UTF-16 ->
@@ -144,6 +146,8 @@ The viewer renders images and PDFs inline instead of showing the binary warning.
   comes from the token's stored magic-byte MIME, never the extension. Registered once in the `lib.rs` builder chain via
   `register_asynchronous_uri_scheme_protocol(media_protocol::SCHEME, ...)`, before any window exists (correct: `viewer-*`
   windows are lazy and inherit the app-wide scheme).
+- `media.rs` also holds `MediaSource`: a token names either a `Ready` file chosen at mint time, or a `Deferred` source
+  (`DeferredMedia`) the handler fetches on the first request (a Markdown document's pictures, § "Markdown rendering").
 - `media_backend.rs`: `MediaBackend`, a no-op `FileViewerBackend` so a media session can fill the non-optional
   `backend` field without a text backend. Every text-shaped call returns empty/zero.
 - `media_session.rs`: the media-open path, kept out of `session.rs` so that file stays text-backend orchestration.
@@ -194,6 +198,85 @@ asking, and the window already knows its own path anyway. The unguessable token 
 files it chose to serve; there is no way to name an arbitrary file, and an unknown token is simply a 404. The data URL
 shortcut for small images (already allowed by `img-src data:`) was rejected for uniformity — PDFs and large images need
 the scheme + range support regardless, so one path (the token scheme for everything) beats a size-cliff between two.
+
+## Markdown rendering
+
+A Markdown file (`.md`, `.markdown`, `.mdown`, `.mkd`, `.mkdn`, any case) up to `MARKDOWN_RENDER_CAP_BYTES` (10 MiB)
+opens formatted: `content_kind::is_renderable_markdown` decides by extension and size, after a media signature (a PNG
+named `.md` is an image) and the binary sniff have had their say. Past the cap it opens as plain text with no formatted
+option, like any text file. Files:
+
+- `markdown_session.rs`: `is_markdown` + `open_markdown_session` (called by `open_session_core` before the media
+  check, unless `force_text`), `render_markdown_session` (the `viewer_render_markdown` command), `allow_remote_images`
+  (`viewer_allow_remote_images`), and `MarkdownDocument`, the per-session state `ViewerSession.markdown` holds: the
+  document's path on its volume, its image tokens, a `closed` flag, and the remote-images opt-in.
+- `markdown_render.rs`: pure `render_markdown(source, image)`: `pulldown-cmark` (tables, footnotes, strikethrough,
+  task lists, heading attributes, GFM alerts) → HTML → `ammonia`.
+- `markdown_images.rs`: pure `resolve_image_src`, plus `VolumeImage` and `RemoteImage`, the two `DeferredMedia`
+  sources behind an image's token.
+
+**A Markdown session is shaped like a media session**: a `MediaBackend`, empty text fields, `kind: Markdown`, so the
+frontend's media branch, the "View as text" reopen, and Binary / Hex all work unchanged. Unlike a media session it
+keeps the file it opened (`file: Some(opened)`), because the render reads through it: a share over smb2, a pulled temp,
+or a local file alike. That's also why Markdown, unlike images, renders from any volume. The open reads only the
+classification head, so it stays inside the 2 s open tier; the render is its own command (30 s), reading at most the
+cap once.
+
+**The sanitizer is the security boundary.** The HTML lands in the viewer's own webview via `{@html}`. ammonia's defaults
+(no script, no `on*` handler, no form, frame, object, or stylesheet, `rel="noopener noreferrer"` on links) plus:
+`input` only as `type="checkbox"` and always `disabled` (task lists); `details[open]`; `align` on `p`, `div`, and
+headings (READMEs center their logos); `style` only on `th` / `td`, filtered to `text-align` (pulldown aligns columns
+that way); the alert and footnote classes; URL schemes `http`, `https`, `mailto`, and `data` (a `data:` link is
+dropped; only images keep one). `markdown_render_test.rs` pins each, and the script / handler / `javascript:` /
+frame / form stripping. ❌ Widen the allowlist only with a test beside it.
+
+**Ids carry an `md-` prefix, and in-page links are rewritten to match** (`#install` → `#md-install`, footnotes too).
+A heading's id is GitHub's slug of its text (`intro`, `intro-1` on a repeat), or its explicit `{#id}`. Decision/Why:
+the HTML shares a document with the viewer's own UI, so an unprefixed `id="loading-screen"` could shadow the page's
+element.
+
+**No image keeps its `src`.** The attribute filter asks the session about each source and writes the answer into a
+`data-md-image` marker: `local:<token>`, `remote:<token>`, or `blocked`; only an inline `data:image/…` keeps its `src`.
+The frontend turns markers into `cmdr-media://` URLs. Gotcha: ammonia's attribute filter sees one attribute at a time,
+so the pairing leans on its order: the marker is a "set" attribute, appended AFTER the element's own, so the `src`
+answer is always waiting when the marker comes up (`PendingImage`). `images_lose_their_source_and_carry_a_marker_instead`
+pins it; an ammonia upgrade that reorders attributes fails there.
+
+**Where a source points** (`resolve_image_src`, `markdown_images_test.rs`):
+
+- Relative: resolved like a browser resolves it against the document's folder, as a URL rooted at the volume
+  (`volume.root()`), so `..` past the root stops AT the root, and the query, fragment, and `%20` escapes are handled.
+  The path is the document's path on its VOLUME (the `requested` path, never a temp copy's), so a document in a zip
+  or on a phone finds its pictures there too.
+- `http(s)`, and protocol-relative `//host/…` as `https`: remote.
+- `data:image/…`: inline.
+- Decision: absolute paths (`/img.png`) and `file:` are BLOCKED, as is every other scheme. On GitHub `/img.png` means
+  the repository root, which the viewer doesn't know, and a document has no business naming arbitrary files.
+
+**An image's bytes are fetched on the webview's first request, never during the render.** Each image gets a deferred
+`cmdr-media://` token (`media::DeferredMedia`, `mint_deferred_token`); a repeated source shares one. The scheme handler
+runs `fetch` on a blocking thread with no total deadline, only a 45 s stall rule (`media_protocol::fetch_deferred`, the
+viewer pull's numbers and reasons), then serves the file like any media token. So the text shows at once and each
+picture fills in as it arrives; a picture that can't be had answers 404 and the frontend shows a placeholder.
+
+- `VolumeImage` goes through `materialize::materialize_markdown_image`: served in place when the OS can open it, else
+  pulled into a temp (a phone, a zip, a share whose mount went away) under `IMAGE_CAP_BYTES` (32 MiB), watched by its
+  own `PendingOpen` and stopped by the document's `closed` flag. Either way `image_entry` serves the file only when its
+  bytes classify as an image, so a crafted `<img src="../.ssh/id_rsa">` gets a 404.
+- `RemoteImage` answers 404 until `allow_remote_images`; then it downloads through `cmdr_http::client_builder()`
+  (proxy-aware, no cookies) under the same cap and a 30 s timeout, sniffs the bytes (an `image/svg+xml` content type
+  names an extension-less badge an SVG), and serves them from a temp.
+- Lifetime: the tokens live in `MarkdownDocument.images`; `close_session` calls `MarkdownDocument::close`, which sets
+  `closed` (in-flight pulls stop at their next chunk) and drops every token, and with it every temp. A re-render drops
+  the previous render's tokens first.
+
+**Decision: remote images are fetched by the backend and served over `cmdr-media:`; the CSP is untouched.** Why: the
+app-wide CSP keeps `img-src 'self' data: cmdr-media:`. Letting the webview load `https:` would mean widening it for
+every window (Tauri's CSP isn't per-window), so any future HTML-injection bug anywhere could beacon out. Fetching in
+Rust keeps the opt-in enforceable in one place (the token answers 404 until the user says yes, whatever the HTML
+asks), lets us cap the size, insist on image bytes, and send no cookies or referrer. The cost: a remote image takes a
+temp file and a backend round trip, and it's user-initiated traffic that isn't on `/trust`'s egress table (no managed
+policy key covers it yet).
 
 ## Preview of a routed file
 

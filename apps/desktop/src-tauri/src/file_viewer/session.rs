@@ -24,6 +24,7 @@ use super::content_kind::ViewerContentKind;
 use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, detect_from_head, same_byte_layout};
 use super::full_load::FullLoadBackend;
 use super::line_index::LineIndexBackend;
+use super::markdown_session;
 use super::media;
 use super::media_session;
 use super::origin::{SourceOrigin, open_for_viewer};
@@ -326,6 +327,22 @@ fn open_session_core(
     let file_size = opened.total_bytes;
     let on_a_volume = !matches!(origin, SourceOrigin::Local(_));
 
+    // A Markdown file renders. Unlike media it needs no local path to serve, so it renders
+    // from a share or a pulled temp too: the render reads through this session's handle.
+    // See `markdown_session.rs`.
+    if !force_text && markdown_session::is_markdown(&requested, &opened) {
+        return Ok(markdown_session::open_markdown_session(
+            markdown_session::MarkdownOpen {
+                requested,
+                volume_id: volume_id.to_string(),
+                file_path,
+                origin,
+                opened,
+                temp,
+            },
+        ));
+    }
+
     // Classify by magic bytes (unless the caller forced text, e.g. "View as text").
     // A media kind (Image/Pdf on a local volume) opens a no-op session that serves bytes
     // via `cmdr-media://`; the whole media-open path lives in `media_session.rs`.
@@ -389,6 +406,7 @@ fn open_session_core(
         file: Some(opened.clone()),
         media_token: None,
         temp,
+        markdown: None,
     });
 
     let result = ViewerOpenResult {
@@ -1209,6 +1227,10 @@ pub fn close_session(session_id: &str) -> Result<(), ViewerError> {
         // via `close_session_for_window`) funnel through.
         if let Some(token) = &session.media_token {
             media::drop_token(token);
+        }
+        // A Markdown session's image tokens go the same way, and its image pulls stop.
+        if let Some(document) = &session.markdown {
+            document.close();
         }
         // `session` drops at the end of this block, and with it its share of the
         // preview temp (if any): `PreviewTemp`'s `Drop` removes the subdir once the

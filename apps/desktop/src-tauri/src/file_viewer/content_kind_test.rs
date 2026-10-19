@@ -257,3 +257,55 @@ mod looks_binary {
         assert!(!looks_binary(&head, FileEncoding::Utf8));
     }
 }
+
+mod markdown {
+    use super::head;
+    use crate::file_viewer::content_kind::{MARKDOWN_RENDER_CAP_BYTES, is_renderable_markdown};
+
+    #[test]
+    fn markdown_extensions_render_whatever_their_case() {
+        let text = b"# Title\n\nSome *words*.\n";
+        for ext in ["md", "MD", "markdown", "Markdown", "mdown", "mkd", "mkdn"] {
+            assert!(is_renderable_markdown(text, Some(ext), 100), "{ext} should render");
+        }
+    }
+
+    #[test]
+    fn other_text_extensions_stay_text() {
+        let text = b"# Title\n";
+        for ext in ["txt", "mdx", "rmd", "html"] {
+            assert!(!is_renderable_markdown(text, Some(ext), 100), "{ext} should stay text");
+        }
+        assert!(!is_renderable_markdown(text, None, 100));
+    }
+
+    #[test]
+    fn markdown_over_the_cap_stays_text() {
+        let text = b"# Title\n";
+        assert!(is_renderable_markdown(text, Some("md"), MARKDOWN_RENDER_CAP_BYTES));
+        assert!(!is_renderable_markdown(text, Some("md"), MARKDOWN_RENDER_CAP_BYTES + 1));
+    }
+
+    #[test]
+    fn a_binary_or_media_file_named_md_is_not_rendered_as_markdown() {
+        let png = head(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        assert!(!is_renderable_markdown(&png, Some("md"), 100));
+        assert!(!is_renderable_markdown(b"%PDF-1.7\n", Some("md"), 100));
+        assert!(!is_renderable_markdown(
+            b"\x7fELF\x02\x01\x01\0\0\0\0\0\0\0\0\0",
+            Some("md"),
+            100
+        ));
+    }
+
+    #[test]
+    fn an_empty_markdown_file_renders() {
+        assert!(is_renderable_markdown(b"", Some("md"), 0));
+    }
+
+    #[test]
+    fn a_utf16_markdown_file_renders() {
+        let utf16: Vec<u8> = "\u{feff}# Hi\n".encode_utf16().flat_map(u16::to_le_bytes).collect();
+        assert!(is_renderable_markdown(&utf16, Some("md"), 100));
+    }
+}

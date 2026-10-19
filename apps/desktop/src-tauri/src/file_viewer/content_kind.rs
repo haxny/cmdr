@@ -15,16 +15,41 @@ use serde::Serialize;
 use super::encoding::FileEncoding;
 
 /// What the viewer should render a file as. The frontend branches on this:
-/// `Image` -> `<img>`, `Pdf` -> `<embed>`, `Text` -> the line pipeline.
+/// `Image` -> `<img>`, `Pdf` -> `<embed>`, `Markdown` -> the backend's sanitized HTML,
+/// `Text` -> the line pipeline.
 ///
 /// "Media" survives only as an internal code word (the `cmdr-media://` scheme and
-/// this enum); users never see it. Future kinds (Markdown, Html) slot in here.
+/// this enum); users never see it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum ViewerContentKind {
     Text,
     Image,
     Pdf,
+    Markdown,
+}
+
+/// The biggest Markdown file the viewer renders. Above it the file opens as text: a
+/// rendered view holds the whole document (and its HTML) at once, which the text
+/// pipeline never does.
+pub const MARKDOWN_RENDER_CAP_BYTES: u64 = 10 * 1024 * 1024;
+
+/// The extensions a Markdown file goes by, compared case-insensitively.
+const MARKDOWN_EXTENSIONS: [&str; 5] = ["md", "markdown", "mdown", "mkd", "mkdn"];
+
+/// Whether a file opens in the rendered Markdown view. Pure: no I/O.
+///
+/// Unlike images, this is extension-driven (Markdown has no magic), and locality
+/// doesn't matter: the render reads through the session's own byte source, so a file
+/// on a share or a phone renders like a local one. Three guards keep the wrong file
+/// out: a known media signature wins (a PNG named `.md` is an image), a binary-looking
+/// head stays text, and so does anything past [`MARKDOWN_RENDER_CAP_BYTES`].
+pub fn is_renderable_markdown(head: &[u8], ext: Option<&str>, size: u64) -> bool {
+    let named_markdown = ext.is_some_and(|ext| MARKDOWN_EXTENSIONS.iter().any(|md| ext.eq_ignore_ascii_case(md)));
+    named_markdown
+        && size <= MARKDOWN_RENDER_CAP_BYTES
+        && classify_by_magic(head).is_none()
+        && !looks_binary(head, super::encoding::detect_from_head(head))
 }
 
 /// Number of head bytes the caller should read and pass to [`classify_viewer_content`].
@@ -101,7 +126,7 @@ pub fn looks_binary(head: &[u8], encoding: FileEncoding) -> bool {
 /// magic, so it's the extension-driven fallback when no raster magic matches.
 pub fn media_mime(head: &[u8], kind: ViewerContentKind) -> Option<&'static str> {
     match kind {
-        ViewerContentKind::Text => None,
+        ViewerContentKind::Text | ViewerContentKind::Markdown => None,
         ViewerContentKind::Pdf => Some("application/pdf"),
         ViewerContentKind::Image => Some(image_mime(head)),
     }

@@ -7,7 +7,9 @@
 //!
 //! Security: the URL carries an unguessable 128-bit token, never a path (see
 //! [`super::media`]). The handler resolves the token to a [`super::media::MediaEntry`];
-//! an unknown token is a **404**, so there's no way to name an arbitrary file.
+//! an unknown token is a **404**, so there's no way to name an arbitrary file. A
+//! deferred token (an image in a Markdown document) first fetches its file under a stall
+//! rule ([`fetch_deferred`]), then serves it the same way.
 //!
 //! The handler is a **thin shell over pure functions** ([`parse_token_from_uri`],
 //! [`resolve_range`], the `Content-Type` from the entry) so the testable logic lives
@@ -25,11 +27,13 @@
 
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
+use cmdr_fs::deadline::{StallWatch, blocking_typed_result_until_stalled};
 use tauri::http::{Request, Response, StatusCode, header};
 
-use super::media::{MediaEntry, resolve_token};
+use super::media::{DeferredMedia, MediaEntry, MediaSource, resolve_token};
 
 /// The scheme name registered with Tauri. The frontend builds URLs as
 /// `cmdr-media://localhost/<token>` (macOS/Linux origin shape).
@@ -244,6 +248,62 @@ fn timed_out() -> Response<Vec<u8>> {
         .unwrap_or_else(|_| Response::new(Vec::new()))
 }
 
+/// How long a deferred fetch may go without progress before its request answers 504.
+/// The viewer's pull rule (`commands::file_viewer::PULL_STALL_LIMIT`), for the same
+/// reason: above every volume's own read timeout, so a dead connection answers first.
+const DEFERRED_STALL_LIMIT: Duration = Duration::from_secs(45);
+
+/// Why a deferred fetch produced nothing to serve.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum FetchFailure {
+    /// The bytes can't be had, or aren't what the token may serve: a 404.
+    NothingToServe,
+    /// No progress for the stall limit: a 504.
+    Stalled,
+}
+
+impl FetchFailure {
+    pub(super) fn response(self) -> Response<Vec<u8>> {
+        match self {
+            Self::NothingToServe => not_found(),
+            Self::Stalled => timed_out(),
+        }
+    }
+}
+
+/// Watches one deferred fetch for [`blocking_typed_result_until_stalled`].
+struct DeferredWatch(Arc<dyn DeferredMedia>);
+
+impl StallWatch<FetchFailure> for DeferredWatch {
+    fn idle_for(&self) -> Duration {
+        self.0.idle_for()
+    }
+
+    fn on_poll(&mut self) {}
+
+    fn give_up(&mut self) -> Option<FetchFailure> {
+        self.0.give_up();
+        Some(FetchFailure::Stalled)
+    }
+}
+
+/// Fetches a deferred token's bytes on a blocking thread, with no total deadline, only
+/// `stall_limit` without progress: a picture on a phone may take a while, and the
+/// viewer shows the rest of the document meanwhile.
+pub(super) async fn fetch_deferred(
+    deferred: Arc<dyn DeferredMedia>,
+    stall_limit: Duration,
+) -> Result<MediaEntry, FetchFailure> {
+    let mut watch = DeferredWatch(Arc::clone(&deferred));
+    blocking_typed_result_until_stalled(
+        stall_limit,
+        &mut watch,
+        |_join_failure| FetchFailure::NothingToServe,
+        move || deferred.fetch().ok_or(FetchFailure::NothingToServe),
+    )
+    .await
+}
+
 /// The Tauri async URI scheme handler. Thin shell: resolve the token, then run the
 /// blocking read under its own timeout off the IPC thread, and respond.
 ///
@@ -260,7 +320,7 @@ pub fn handle_request(request: Request<Vec<u8>>, responder: tauri::UriSchemeResp
         responder.respond(not_found());
         return;
     };
-    let Some(entry) = resolve_token(&token) else {
+    let Some(source) = resolve_token(&token) else {
         // Unknown token: never existed or already dropped (session closed).
         responder.respond(not_found());
         return;
@@ -269,6 +329,16 @@ pub fn handle_request(request: Request<Vec<u8>>, responder: tauri::UriSchemeResp
     // Own `spawn_blocking` + timeout: a scheme handler must answer with an HTTP
     // response, so it can't reuse the command layer's timeout helpers.
     tauri::async_runtime::spawn(async move {
+        let entry = match source {
+            MediaSource::Ready(entry) => entry,
+            MediaSource::Deferred(deferred) => match fetch_deferred(deferred, DEFERRED_STALL_LIMIT).await {
+                Ok(entry) => entry,
+                Err(failure) => {
+                    responder.respond(failure.response());
+                    return;
+                }
+            },
+        };
         let read = tauri::async_runtime::spawn_blocking(move || build_response(&entry, range_header));
         let response = match tokio::time::timeout(MEDIA_READ_TIMEOUT, read).await {
             Ok(Ok(resp)) => resp,

@@ -75,6 +75,8 @@ export {
   viewerOpenAsText,
   viewerGetLines,
   viewerGetBytes,
+  viewerRenderMarkdown,
+  viewerAllowRemoteImages,
   asViewerError,
   viewerSearchStart,
   viewerSearchPoll,

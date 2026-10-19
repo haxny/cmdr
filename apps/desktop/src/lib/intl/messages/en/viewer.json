@@ -284,6 +284,42 @@
     "screenshot": "viewer-search.png",
     "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "description": "Label for a Markdown document shown formatted (headings, lists, pictures) rather than as raw text, in the view-mode dropdown and the status bar. \"Markdown\" is the name of a text format; don't translate it."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "View formatted",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "description": "Option in the view-mode dropdown that switches a Markdown document back from its raw text to its formatted view, with headings, lists, and pictures laid out."
+  },
+  "viewer.markdown.loading": "Loading document",
+  "@viewer.markdown.loading": {
+    "description": "Screen-reader-only status announced while the viewer formats a Markdown document for display."
+  },
+  "viewer.markdown.error": "Sorry, we couldn’t format this document. You can still read it as text.",
+  "@viewer.markdown.error": {
+    "description": "Message shown in place of a Markdown document the viewer couldn’t format. The view-mode dropdown above offers the plain-text view."
+  },
+  "viewer.markdown.remoteImages.notice": "Images from the web are hidden. Loading them lets those sites see your IP address.",
+  "@viewer.markdown.remoteImages.notice": {
+    "description": "Bar above a formatted Markdown document that contains pictures hosted on websites. The viewer doesn't load them by default, for privacy, like an email app holds back remote images. Sits next to the \"Load remote images\" button."
+  },
+  "viewer.markdown.remoteImages.load": "Load remote images",
+  "@viewer.markdown.remoteImages.load": {
+    "description": "Button in the bar above a formatted Markdown document: loads the document's pictures from the websites they're hosted on, for this window only."
+  },
+  "viewer.markdown.image.remote": "Image from the web",
+  "@viewer.markdown.image.remote": {
+    "description": "Small label shown in place of a picture in a formatted Markdown document while remote images are held back. The picture's own description, if it has one, follows it."
+  },
+  "viewer.markdown.image.blocked": "Image not shown",
+  "@viewer.markdown.image.blocked": {
+    "description": "Small label shown in place of a picture in a formatted Markdown document that the viewer won't load, for example one that points outside the document's drive. The picture's own description, if it has one, follows it."
+  },
+  "viewer.markdown.image.missing": "Image not found",
+  "@viewer.markdown.image.missing": {
+    "description": "Small label shown in place of a picture in a formatted Markdown document when the picture file couldn't be loaded: it's missing, or it isn't a picture. The picture's own description, if it has one, follows it."
+  },
   "viewer.toolbar.encoding.placeholder": "Encoding",
   "@viewer.toolbar.encoding.placeholder": {
     "description": "Placeholder and accessibility label for the toolbar dropdown that picks the file's text encoding (e.g. UTF-8). Shown when no encoding is selected yet. \"Encoding\" means character encoding.",

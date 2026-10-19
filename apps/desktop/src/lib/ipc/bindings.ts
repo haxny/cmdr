@@ -1628,6 +1628,18 @@ export const commands = {
   // Reads at most 64 KiB of original file bytes for the binary and hex views.
   viewerGetBytes: (sessionId: string, offset: number, count: number) =>
     typedError<number[], ViewerError>(__TAURI_INVOKE('viewer_get_bytes', { sessionId, offset, count })),
+  /**
+   *  Renders a Markdown session's document to sanitized HTML. Images carry tokens, not
+   *  sources: the `cmdr-media://` handler fetches each one when the view asks for it.
+   */
+  viewerRenderMarkdown: (sessionId: string) =>
+    typedError<MarkdownRender, ViewerError>(__TAURI_INVOKE('viewer_render_markdown', { sessionId })),
+  /**
+   *  The user's "Load remote images" for one Markdown session. No I/O: it lets the
+   *  session's web-image tokens fetch when the view next asks for them.
+   */
+  viewerAllowRemoteImages: (sessionId: string) =>
+    typedError<null, ViewerError>(__TAURI_INVOKE('viewer_allow_remote_images', { sessionId })),
   // Gets the current status of a viewer session (backend type, indexing state).
   viewerGetStatus: (sessionId: string) =>
     typedError<ViewerSessionStatus, string>(__TAURI_INVOKE('viewer_get_status', { sessionId })),
@@ -10924,6 +10936,17 @@ export type ManualConnectResult = {
   sharePath: string | null
 }
 
+// What the viewer shows for a Markdown session.
+export type MarkdownRender = {
+  /**
+   *  Sanitized HTML. Images carry a `data-md-image` marker instead of a `src`:
+   *  `local:<token>`, `remote:<token>`, or `blocked` (`markdown_render.rs`).
+   */
+  html: string
+  // Whether any image is on the web, so the view offers to load them.
+  hasRemoteImages: boolean
+}
+
 // Why a mask doesn't parse. Typed, so the frontend words it.
 export type MaskError =
   // A `[` with no `]`; `at` is its character position, from 0.
@@ -17604,12 +17627,13 @@ export type ViewModeChanged = {
 
 /**
  *  What the viewer should render a file as. The frontend branches on this:
- *  `Image` -> `<img>`, `Pdf` -> `<embed>`, `Text` -> the line pipeline.
+ *  `Image` -> `<img>`, `Pdf` -> `<embed>`, `Markdown` -> the backend's sanitized HTML,
+ *  `Text` -> the line pipeline.
  *
  *  "Media" survives only as an internal code word (the `cmdr-media://` scheme and
- *  this enum); users never see it. Future kinds (Markdown, Html) slot in here.
+ *  this enum); users never see it.
  */
-export type ViewerContentKind = 'text' | 'image' | 'pdf'
+export type ViewerContentKind = 'text' | 'image' | 'pdf' | 'markdown'
 
 /**
  *  `viewer-context-menu-action`: Copy or Select all was picked from the viewer's right-click menu
@@ -17725,7 +17749,7 @@ export type ViewerOpenResult = {
   /**
    *  Detected content kind. `Text` flows through the line pipeline (the fields
    *  above are populated); `Image` / `Pdf` render inline from `media_token` and
-   *  leave the text fields empty.
+   *  `Markdown` from `viewer_render_markdown`, both leaving the text fields empty.
    */
   kind: ViewerContentKind
   /**

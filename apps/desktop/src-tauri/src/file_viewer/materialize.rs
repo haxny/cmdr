@@ -263,6 +263,40 @@ pub(crate) fn open_may_materialize(requested: &Path, volume_id: &str) -> bool {
             .is_some_and(|volume| !volume.paths_are_os_visible())
 }
 
+/// A local copy of an image a Markdown document names, when the OS can't open it (on a
+/// phone, inside a zip), else `Ok(None)` and the caller reads `requested` directly. Its
+/// own `cap`, since one picture in a document has no business weighing what a whole
+/// preview may; `open` watches the pull for a stall and `cancel` stops it when the
+/// document's session closes.
+pub(super) fn materialize_markdown_image(
+    requested: &Path,
+    volume_id: &str,
+    cap: u64,
+    open: &PendingOpen,
+    cancel: &AtomicBool,
+) -> Result<Option<PreviewTemp>, ViewerError> {
+    let pulled = materialize_with(requested, volume_id, &materialize_dir(), cap, open, Some(cancel))?;
+    Ok(pulled.map(|file| PreviewTemp::new(file, requested.to_path_buf(), volume_id)))
+}
+
+/// A temp holding `bytes` as `name`, for bytes no volume serves (a downloaded image):
+/// the same family, dir, reaper, and cleanup as a pull's temp. `source` is what the
+/// bytes are a copy of, for the logs.
+pub(super) fn write_preview_temp(name: &str, bytes: &[u8], source: &Path) -> Result<PreviewTemp, ViewerError> {
+    let cleanup_dir = materialize_dir().join(format!("{TEMP_SUBDIR_PREFIX}{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&cleanup_dir)?;
+    let temp_file = cleanup_dir.join(temp_basename(name));
+    if let Err(e) = std::fs::write(&temp_file, bytes) {
+        let _ = std::fs::remove_dir_all(&cleanup_dir);
+        return Err(e.into());
+    }
+    Ok(PreviewTemp::new(
+        MaterializedFile { temp_file, cleanup_dir },
+        source.to_path_buf(),
+        "",
+    ))
+}
+
 /// [`materialize_for_viewer`] with an explicit dir + cap, for tests.
 pub(crate) fn materialize_for_viewer_with(
     requested: &Path,

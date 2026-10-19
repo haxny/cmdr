@@ -275,6 +275,32 @@ async fn get_lines_within(
     result
 }
 
+/// How long a Markdown render may take: one read of at most 10 MiB through the
+/// session's own handle (on a slow share that's the long part), then the render.
+const MARKDOWN_RENDER_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Renders a Markdown session's document to sanitized HTML. Images carry tokens, not
+/// sources: the `cmdr-media://` handler fetches each one when the view asks for it.
+#[tauri::command]
+#[specta::specta]
+pub async fn viewer_render_markdown(session_id: String) -> Result<file_viewer::MarkdownRender, ViewerError> {
+    blocking_typed_result_with_timeout(
+        MARKDOWN_RENDER_TIMEOUT,
+        || ViewerError::TimedOut,
+        |message| ViewerError::Io { message },
+        move || file_viewer::render_markdown_session(&session_id),
+    )
+    .await
+}
+
+/// The user's "Load remote images" for one Markdown session. No I/O: it lets the
+/// session's web-image tokens fetch when the view next asks for them.
+#[tauri::command]
+#[specta::specta]
+pub fn viewer_allow_remote_images(session_id: String) -> Result<(), ViewerError> {
+    file_viewer::allow_remote_images(&session_id)
+}
+
 /// Reads at most 64 KiB of original file bytes for the binary and hex views.
 #[tauri::command]
 #[specta::specta]

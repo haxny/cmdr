@@ -35,9 +35,10 @@ describe('mediaUrl', () => {
 })
 
 describe('isMediaKind', () => {
-  it('treats image and pdf as media, text as not', () => {
+  it('treats image, pdf, and markdown as rendered, text as not', () => {
     expect(isMediaKind('image')).toBe(true)
     expect(isMediaKind('pdf')).toBe(true)
+    expect(isMediaKind('markdown')).toBe(true)
     expect(isMediaKind('text')).toBe(false)
   })
 })
@@ -56,6 +57,7 @@ describe('mediaKindLabel', () => {
     expect(mediaKindLabel('text')).toBe('Text')
     expect(mediaKindLabel('image')).toBe('Image')
     expect(mediaKindLabel('pdf')).toBe('PDF')
+    expect(mediaKindLabel('markdown')).toBe('Markdown')
   })
 })
 
@@ -63,6 +65,7 @@ describe('viewAsMediaLabel', () => {
   it('builds the reverse-switch label: sentence case, but PDF stays uppercase', () => {
     expect(viewAsMediaLabel('image')).toBe('View as image')
     expect(viewAsMediaLabel('pdf')).toBe('View as PDF')
+    expect(viewAsMediaLabel('markdown')).toBe('View formatted')
   })
 })
 

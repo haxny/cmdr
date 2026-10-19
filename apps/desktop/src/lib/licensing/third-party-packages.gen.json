@@ -88,6 +88,12 @@
       "url": "https://github.com/zakarumych/allocator-api2"
     },
     {
+      "name": "ammonia",
+      "version": "4.2.3",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/rust-ammonia/ammonia"
+    },
+    {
       "name": "anyhow",
       "version": "1.0.103",
       "license": "MIT OR Apache-2.0",
@@ -678,6 +684,12 @@
     {
       "name": "cssparser",
       "version": "0.37.0",
+      "license": "MPL-2.0",
+      "url": "https://github.com/servo/rust-cssparser"
+    },
+    {
+      "name": "cssparser",
+      "version": "0.38.0",
       "license": "MPL-2.0",
       "url": "https://github.com/servo/rust-cssparser"
     },
@@ -1666,6 +1678,12 @@
       "url": "https://github.com/servo/html5ever"
     },
     {
+      "name": "html5ever",
+      "version": "0.40.1",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/servo/html5ever"
+    },
+    {
       "name": "http",
       "version": "1.5.0",
       "license": "MIT OR Apache-2.0",
@@ -2050,8 +2068,20 @@
       "url": "https://github.com/JohnTitor/mach2"
     },
     {
+      "name": "maplit",
+      "version": "1.0.2",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/bluss/maplit"
+    },
+    {
       "name": "markup5ever",
       "version": "0.39.0",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/servo/html5ever"
+    },
+    {
+      "name": "markup5ever",
+      "version": "0.40.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/servo/html5ever"
     },
@@ -2638,14 +2668,32 @@
       "url": "https://github.com/rust-phf/rust-phf"
     },
     {
+      "name": "phf",
+      "version": "0.14.0",
+      "license": "MIT",
+      "url": "https://github.com/rust-phf/rust-phf"
+    },
+    {
       "name": "phf_codegen",
       "version": "0.13.1",
       "license": "MIT",
       "url": "https://github.com/rust-phf/rust-phf"
     },
     {
+      "name": "phf_codegen",
+      "version": "0.14.0",
+      "license": "MIT",
+      "url": "https://github.com/rust-phf/rust-phf"
+    },
+    {
       "name": "phf_generator",
       "version": "0.13.1",
+      "license": "MIT",
+      "url": "https://github.com/rust-phf/rust-phf"
+    },
+    {
+      "name": "phf_generator",
+      "version": "0.14.0",
       "license": "MIT",
       "url": "https://github.com/rust-phf/rust-phf"
     },
@@ -2664,6 +2712,12 @@
     {
       "name": "phf_shared",
       "version": "0.13.1",
+      "license": "MIT",
+      "url": "https://github.com/rust-phf/rust-phf"
+    },
+    {
+      "name": "phf_shared",
+      "version": "0.14.0",
       "license": "MIT",
       "url": "https://github.com/rust-phf/rust-phf"
     },
@@ -3425,7 +3479,19 @@
     },
     {
       "name": "string_cache",
+      "version": "0.11.0",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/servo/string-cache"
+    },
+    {
+      "name": "string_cache",
       "version": "0.9.0",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/servo/string-cache"
+    },
+    {
+      "name": "string_cache_codegen",
+      "version": "0.11.2",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/servo/string-cache"
     },
@@ -4092,6 +4158,12 @@
     {
       "name": "web_atoms",
       "version": "0.2.5",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/servo/html5ever"
+    },
+    {
+      "name": "web_atoms",
+      "version": "0.3.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/servo/html5ever"
     },

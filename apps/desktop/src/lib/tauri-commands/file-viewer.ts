@@ -9,6 +9,7 @@ import {
   type ChunkEnd,
   type FileEncoding,
   type LineChunk,
+  type MarkdownRender,
   type MediaDimensions,
   type RangeEnd,
   type SearchMatch as ViewerSearchMatch,
@@ -183,6 +184,22 @@ export async function viewerGetBytes(sessionId: string, offset: number, count: n
   const res = await commands.viewerGetBytes(sessionId, offset, count)
   if (res.status === 'error') throwViewerError(res.error)
   return res.data
+}
+
+/**
+ * A Markdown session's document as sanitized HTML. Its images carry `data-md-image`
+ * markers (`local:<token>`, `remote:<token>`, `blocked`) instead of a `src`.
+ */
+export async function viewerRenderMarkdown(sessionId: string): Promise<MarkdownRender> {
+  const res = await commands.viewerRenderMarkdown(sessionId)
+  if (res.status === 'error') throwViewerError(res.error)
+  return res.data
+}
+
+/** The user's "Load remote images" for one Markdown session. */
+export async function viewerAllowRemoteImages(sessionId: string): Promise<void> {
+  const res = await commands.viewerAllowRemoteImages(sessionId)
+  if (res.status === 'error') throwViewerError(res.error)
 }
 
 /** Starts a background search in the viewer session. */

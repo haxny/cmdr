@@ -32,7 +32,7 @@ const fixtureRoot = (() => {
 })()
 
 // Short first line + long wrappable lines below: the exact shape that broke.
-const testFilePath = path.join(fixtureRoot, 'left', 'short-first-line.md')
+const testFilePath = path.join(fixtureRoot, 'left', 'short-first-line.txt')
 const longLine = 'All work and no play makes the height map a dull boy. '.repeat(4).trim()
 const fileContent = `# T\n\n${`${longLine}\n`.repeat(120)}`
 // FullLoad line count: one line per newline, plus the trailing empty line

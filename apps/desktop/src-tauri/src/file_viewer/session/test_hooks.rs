@@ -248,6 +248,7 @@ pub fn test_only_install_session(backend: Box<dyn FileViewerBackend>, path: Path
         path,
         media_token: None,
         temp: None,
+        markdown: None,
     });
     SESSIONS.lock_ignore_poison().insert(session_id.clone(), session);
     session_id

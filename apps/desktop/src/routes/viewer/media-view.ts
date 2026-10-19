@@ -1,7 +1,8 @@
-// Pure helpers for the viewer's media (Image / PDF) rendering branch.
+// Pure helpers for the viewer's media (Image / PDF / Markdown) rendering branch.
 //
 // The viewer renders text through the virtual-scroll line machinery and media
-// (images, PDFs) inline from the backend's `cmdr-media://` scheme. These
+// (images, PDFs, a Markdown document's pictures) inline from the backend's
+// `cmdr-media://` scheme. These
 // pure functions hold the bits worth testing in isolation: the media URL
 // construction (kept in ONE place because the exact origin form may need a
 // one-line tweak after a live check), kind classification, and the
@@ -22,9 +23,9 @@ export function mediaUrl(token: string): string {
   return `cmdr-media://localhost/${encodeURIComponent(token)}`
 }
 
-/** Whether a kind renders as inline media (image / PDF) rather than text. */
+/** Whether a kind has a rendered view (image / PDF / formatted Markdown) rather than only text. */
 export function isMediaKind(kind: ViewerContentKind): boolean {
-  return kind === 'image' || kind === 'pdf'
+  return kind === 'image' || kind === 'pdf' || kind === 'markdown'
 }
 
 /** The dedicated viewer available for the current or previously detected media session. */
@@ -43,6 +44,8 @@ export function mediaKindLabel(kind: ViewerContentKind): string {
       return getMessage('viewer.kind.image')
     case 'pdf':
       return getMessage('viewer.kind.pdf')
+    case 'markdown':
+      return getMessage('viewer.kind.markdown')
     case 'text':
       return getMessage('viewer.kind.text')
   }
@@ -60,6 +63,8 @@ export function viewAsMediaLabel(kind: ViewerContentKind): string {
       return getMessage('viewer.toolbar.viewMode.viewAsImage')
     case 'pdf':
       return getMessage('viewer.toolbar.viewMode.viewAsPdf')
+    case 'markdown':
+      return getMessage('viewer.toolbar.viewMode.viewFormatted')
     case 'text':
       return getMessage('viewer.toolbar.viewMode.viewAsText')
   }

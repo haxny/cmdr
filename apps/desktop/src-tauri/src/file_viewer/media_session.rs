@@ -103,6 +103,7 @@ fn open_media_session(
         file: None,
         media_token: Some(media_token.clone()),
         temp,
+        markdown: None,
     });
 
     // No watcher and no LineIndex upgrade for media: there's no text viewport to

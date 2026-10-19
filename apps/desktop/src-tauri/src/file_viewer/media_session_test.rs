@@ -55,7 +55,8 @@ fn open_png_yields_image_session_with_token_and_dimensions() {
     assert!(!result.is_indexing);
     // A token was minted and resolves to this file with the PNG MIME.
     let token = result.media_token.clone().expect("image session mints a token");
-    let entry = media::resolve_token(&token).expect("minted token resolves");
+    let source = media::resolve_token(&token).expect("minted token resolves");
+    let entry = source.ready().expect("an image session's token is ready");
     assert_eq!(entry.kind, ViewerContentKind::Image);
     assert_eq!(entry.mime, "image/png");
     // Header-only dimensions read 1x1.
@@ -79,7 +80,8 @@ fn open_pdf_yields_pdf_session_with_token_and_no_dimensions() {
 
     assert_eq!(result.kind, ViewerContentKind::Pdf);
     let token = result.media_token.clone().expect("pdf session mints a token");
-    let entry = media::resolve_token(&token).expect("minted token resolves");
+    let source = media::resolve_token(&token).expect("minted token resolves");
+    let entry = source.ready().expect("a PDF session's token is ready");
     assert_eq!(entry.mime, "application/pdf");
     // PDFs carry no image dimensions.
     assert!(result.media_dimensions.is_none());

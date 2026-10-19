@@ -1982,7 +1982,7 @@ fn opens_a_file_out_of_a_git_snapshot_and_reads_its_lines() {
 
     let dir = temp_dir("viewer_session", "git_snapshot");
     let mut fixture = Fixture::init(dir.clone());
-    fixture.commit_file("README.md", b"first line\nsecond line\n", "initial");
+    fixture.commit_file("notes.txt", b"first line\nsecond line\n", "initial");
     // (nextest isolates the process-global manager per test.)
     get_volume_manager().register(
         "root",
@@ -1994,12 +1994,12 @@ fn opens_a_file_out_of_a_git_snapshot_and_reads_its_lines() {
     );
     git::wiring::set_virtual_portal_enabled(true);
 
-    let snapshot = dir.join(".git/branches/main/README.md");
+    let snapshot = dir.join(".git/branches/main/notes.txt");
     let opened = session::open_session(snapshot.to_str().unwrap(), "root").expect("the snapshot file opens");
     assert_eq!(opened.initial_lines.rows[0].text, "first line");
     assert_eq!(opened.initial_lines.rows[1].text, "second line");
     // The session is named for the path the user asked for, not for the temp.
-    assert!(opened.file_name.ends_with("README.md"));
+    assert!(opened.file_name.ends_with("notes.txt"));
 
     session::close_session(&opened.session_id).expect("close");
 

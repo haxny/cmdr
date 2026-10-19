@@ -153,3 +153,84 @@ fn resolved_range_len_is_inclusive() {
     };
     assert_eq!(single.len(), 1);
 }
+
+// --- deferred tokens ---
+
+mod deferred {
+    use std::path::PathBuf;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::time::Duration;
+
+    use tauri::http::StatusCode;
+
+    use crate::file_viewer::content_kind::ViewerContentKind;
+    use crate::file_viewer::media::{DeferredMedia, MediaEntry};
+    use crate::file_viewer::media_protocol::{FetchFailure, fetch_deferred};
+
+    struct Fake {
+        answer: Option<MediaEntry>,
+        idle: Duration,
+        gave_up: AtomicBool,
+    }
+
+    impl DeferredMedia for Fake {
+        fn fetch(&self) -> Option<MediaEntry> {
+            if self.idle > Duration::ZERO {
+                // A fetch that never finishes on its own: it waits to be told to stop.
+                while !self.gave_up.load(Ordering::Relaxed) {
+                    std::thread::yield_now();
+                }
+                return None;
+            }
+            self.answer.clone()
+        }
+        fn idle_for(&self) -> Duration {
+            self.idle
+        }
+        fn give_up(&self) {
+            self.gave_up.store(true, Ordering::Relaxed);
+        }
+    }
+
+    fn fake(answer: Option<MediaEntry>, idle: Duration) -> Arc<Fake> {
+        Arc::new(Fake {
+            answer,
+            idle,
+            gave_up: AtomicBool::new(false),
+        })
+    }
+
+    #[tokio::test]
+    async fn a_fetched_entry_is_served() {
+        let entry = MediaEntry {
+            canonical_path: PathBuf::from("/tmp/a.png"),
+            kind: ViewerContentKind::Image,
+            mime: "image/png".to_string(),
+        };
+        let fetched = fetch_deferred(fake(Some(entry), Duration::ZERO), Duration::from_secs(5))
+            .await
+            .expect("a fetch that answers is served");
+        assert_eq!(fetched.canonical_path, PathBuf::from("/tmp/a.png"));
+    }
+
+    #[tokio::test]
+    async fn a_fetch_with_nothing_to_serve_is_a_404() {
+        let failure = fetch_deferred(fake(None, Duration::ZERO), Duration::from_secs(5))
+            .await
+            .expect_err("nothing to serve");
+        assert_eq!(failure, FetchFailure::NothingToServe);
+        assert_eq!(failure.response().status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn a_stalled_fetch_is_given_up_and_answers_504() {
+        let source = fake(None, Duration::from_secs(60));
+        let failure = fetch_deferred(Arc::clone(&source) as Arc<dyn DeferredMedia>, Duration::from_millis(1))
+            .await
+            .expect_err("a stalled fetch answers");
+        assert_eq!(failure, FetchFailure::Stalled);
+        assert_eq!(failure.response().status(), StatusCode::GATEWAY_TIMEOUT);
+        assert!(source.gave_up.load(Ordering::Relaxed), "the fetch is told to stop");
+    }
+}

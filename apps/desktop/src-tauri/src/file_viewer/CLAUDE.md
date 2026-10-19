@@ -14,9 +14,9 @@ Frontend counterparts: [route shell](../../../src/routes/viewer/CLAUDE.md) and
   `encoding.rs` (`FileEncoding` + detection), `full_load.rs` / `byte_seek.rs` / `line_index.rs` (the three backends),
   `search_matcher.rs`, `watcher.rs` (tail mode), `source.rs` + `volume_source.rs` (SMB) under
   `origin.rs`: one held handle per session, ❌ never `File::open` per fetch (#303, `DETAILS.md` § "Byte sources").
-- Backend selection: `< 1MB` → `FullLoad`; else instant `ByteSeek` + background `LineIndex`.
 - Media (Image/PDF): `content_kind.rs` plus `media*.rs` (`media.rs`: the `cmdr-media://` token map).
-  `DETAILS.md` § "Media rendering".
+  `DETAILS.md` § "Media rendering". Markdown: `markdown_*.rs`, where ammonia's allowlist is the XSS boundary
+  (§ "Markdown rendering").
 - `materialize.rs` + `pending_open.rs`: pulling a file the OS can't open (routed, or on a phone) into a bounded temp,
   with progress and cancel, reused by "Open with" (`open_with_extract.rs`). `DETAILS.md` § "Preview of a routed file".
 - `headless.rs`: backend picks with no session, for `inspect_file`. `DETAILS.md` § "Headless reads".

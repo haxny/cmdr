@@ -50,7 +50,8 @@ Per-file inventory for the route. Locate symbols via `codegraph_search`; this is
   **`.svelte.ts`** (RAF controller).
 - Media: **`media-view.ts`** (pure helpers incl. `mediaUrl(token)`, the ONE `cmdr-media://localhost/` origin, + zoom
   math), **`viewer-media.svelte.ts`** (`createViewerMedia`: state, `isMedia`/`mediaSrc`, `lastMediaKind`, switch
-  triggers), **`MediaImageView` / `MediaPdfView`** (inline `<img>` / `<embed>`).
+  triggers), **`MediaImageView` / `MediaPdfView`** (inline `<img>` / `<embed>`), **`MediaMarkdownView`** (the formatted
+  Markdown document) + **`markdown-view.ts`** (its image markers → sources or placeholders). See § "Formatted Markdown".
 - Presentational: **`ViewerToolbar`** (title-bar overlay, owns `data-tauri-drag-region`, disabled-not-hidden in media),
   **`ViewerStatusBar`** (keeps `user-select: text`), **`ViewerCopyDialogs`**, **`EncodingPicker`**, **`ViewModePicker`**
   (text / binary / hex / optional rendered media), **`ViewerReloadToastContent`** (session id and change kind as toast
@@ -133,6 +134,28 @@ branches on `viewMode`: text uses the line pipeline; binary and hex use original
 - **Media mode uses `0`** in the picker and keyboard router only when the active or remembered backend kind is image or
   PDF. A plain text file has no Media option, and `0` retains its ordinary key behavior there. The reverse switch from
   forced Text reopens the natural media session; Binary and Hex can return to the existing media session.
+
+### Formatted Markdown
+
+A `markdown` session (backend: `src-tauri/src/file_viewer/DETAILS.md` § "Markdown rendering") is a media kind here:
+`isMediaKind` includes it, so it opens in media mode, `0` returns to it, and "View as text" / "View formatted" reopen
+like an image's. `MediaMarkdownView` asks `viewerRenderMarkdown(sessionId)` for the backend-sanitized HTML, shows it via
+`{@html}`, then `wireImages` turns each `data-md-image` marker into a source or a placeholder:
+
+- `local:<token>` gets `src = mediaUrl(token)`; the backend fetches the file on that request (a phone pull included), so
+  pictures fill in after the text. One that doesn't load (`error`) becomes a "not found" placeholder.
+- `remote:<token>` stays hidden behind a placeholder, and the bar above the document offers "Load remote images":
+  `viewerAllowRemoteImages`, then `loadRemoteImages` sets their sources. Per window, never persisted. Decision/Why:
+  loading a web image tells its site the user's IP address (a tracking pixel), and the backend fetches it so the
+  app-wide CSP never widens.
+- `blocked` (an absolute path, `file:`, another scheme) is a placeholder only.
+
+The placeholder is a `span[data-md-placeholder]` after the hidden `img`, naming it by its `alt`. Styles reach the
+injected HTML through `:global`, and the renderer's own classes (alerts, footnotes) are matched as `[class~='…']`, which
+keeps them out of `css-unused`'s sight (no markup carries them). The document scrolls natively in a focused container
+(arrows, Space, Page keys); it's `user-select: text`, and Edit > Copy / Select all act on the browser selection
+(`selectAll()` on the component). A link click is prevented, so the webview never navigates away; following links is not
+wired yet.
 
 ### Binary and hex views
 

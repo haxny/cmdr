@@ -25,8 +25,8 @@ remembered media kind, so supported images and PDFs never warn, even in Text mod
 - **Cmd+F / Ctrl+F** opens the search bar (case-insensitive, 100ms debounce); **Enter / Shift+Enter** = next/previous
   match; **Escape** closes the search bar (if open) else the window.
 - **W** toggles word wrap (per-line heights for FullLoad, averaged for others).
-- **1 / 2 / 3** switch Text / Binary / Hex; **0** returns to Media when the file has an image or PDF viewer. Binary and
-  Hex use original bytes, not decoded lines.
+- **1 / 2 / 3** switch Text / Binary / Hex; **0** returns to Media when the file has an image, PDF, or formatted
+  Markdown view. Binary and Hex use original bytes, not decoded lines.
 
 ## Architecture (summary)
 

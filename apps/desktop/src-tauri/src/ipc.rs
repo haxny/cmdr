@@ -237,6 +237,8 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_viewer::viewer_open_as_text,
                     crate::commands::file_viewer::viewer_get_lines,
                     crate::commands::file_viewer::viewer_get_bytes,
+                    crate::commands::file_viewer::viewer_render_markdown,
+                    crate::commands::file_viewer::viewer_allow_remote_images,
                     crate::commands::file_viewer::viewer_get_status,
                     crate::commands::file_viewer::viewer_search_start,
                     crate::commands::file_viewer::viewer_search_poll,

@@ -13,11 +13,16 @@
 //! `session::close_session` choke point that frees `SESSIONS`, so both teardown paths
 //! (the `viewer_close` IPC and the `WindowEvent::Destroyed` net) free the token too. A
 //! closed-window viewer must not leave a live token mapping a real path.
+//!
+//! **A token can name bytes that don't exist locally yet** ([`DeferredMedia`]): an image
+//! in a Markdown document may sit on a phone, inside a zip, or on the web. Its token is
+//! minted at render time, and the handler fetches the file on the first request.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::LazyLock;
 use std::sync::Mutex;
+use std::sync::{Arc, LazyLock};
+use std::time::Duration;
 
 use rand::RngExt;
 
@@ -37,24 +42,66 @@ pub struct MediaEntry {
     pub mime: String,
 }
 
-/// Global token -> entry map. A `Mutex` (not `RwLock`) because contention is trivial:
-/// minting and dropping happen once per viewer open/close, and resolution once per
-/// media request.
-static MEDIA_TOKENS: LazyLock<Mutex<HashMap<String, MediaEntry>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+/// A token's bytes that must be fetched before they can be served: pulled off a volume
+/// the OS can't open, or downloaded. The scheme handler calls [`fetch`](Self::fetch) on a
+/// blocking thread with no total deadline, watching [`idle_for`](Self::idle_for) for a
+/// stall, like a viewer open that pulls its file.
+pub trait DeferredMedia: Send + Sync {
+    /// Blocking. The local file to serve, or `None` (a 404) when the bytes can't be had
+    /// or aren't what the token may serve.
+    fn fetch(&self) -> Option<MediaEntry>;
+    /// How long since the fetch started or last made progress.
+    fn idle_for(&self) -> Duration;
+    /// The fetch went quiet for too long: stop it at its next chunk.
+    fn give_up(&self);
+}
+
+/// What a token names.
+#[derive(Clone)]
+pub enum MediaSource {
+    /// A local file, chosen and classified at mint time.
+    Ready(MediaEntry),
+    /// Bytes to fetch on the first request.
+    Deferred(Arc<dyn DeferredMedia>),
+}
+
+impl MediaSource {
+    /// The entry of a token minted over a local file, else `None`.
+    pub fn ready(&self) -> Option<&MediaEntry> {
+        match self {
+            Self::Ready(entry) => Some(entry),
+            Self::Deferred(_) => None,
+        }
+    }
+}
+
+/// Global token -> source map. A `Mutex` (not `RwLock`) because contention is trivial:
+/// minting and dropping happen once per viewer open/close (or render), and resolution
+/// once per media request.
+static MEDIA_TOKENS: LazyLock<Mutex<HashMap<String, MediaSource>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Mints a fresh 128-bit CSPRNG token for `entry`, stores it, and returns the token
 /// string (32 lowercase hex chars). The randomness source is `rand`'s OS-backed RNG,
 /// matching the "no new RNG crate" constraint.
 pub fn mint_token(entry: MediaEntry) -> String {
+    mint(MediaSource::Ready(entry))
+}
+
+/// Mints a token over bytes the handler fetches on the first request.
+pub fn mint_deferred_token(source: Arc<dyn DeferredMedia>) -> String {
+    mint(MediaSource::Deferred(source))
+}
+
+fn mint(source: MediaSource) -> String {
     let bytes: [u8; 16] = rand::rng().random();
     let token = hex_encode(&bytes);
-    MEDIA_TOKENS.lock_ignore_poison().insert(token.clone(), entry);
+    MEDIA_TOKENS.lock_ignore_poison().insert(token.clone(), source);
     token
 }
 
-/// Resolves a token to its entry, or `None` if the token is unknown (never existed or
+/// Resolves a token to its source, or `None` if the token is unknown (never existed or
 /// already dropped). The handler maps `None` to a 404.
-pub fn resolve_token(token: &str) -> Option<MediaEntry> {
+pub fn resolve_token(token: &str) -> Option<MediaSource> {
     MEDIA_TOKENS.lock_ignore_poison().get(token).cloned()
 }
 
@@ -124,7 +171,8 @@ mod tests {
     #[test]
     fn mint_then_resolve_roundtrips() {
         let token = mint_token(entry());
-        let resolved = resolve_token(&token).expect("token resolves");
+        let source = resolve_token(&token).expect("token resolves");
+        let resolved = source.ready().expect("a minted entry is ready");
         assert_eq!(resolved.canonical_path, PathBuf::from("/tmp/x.png"));
         assert_eq!(resolved.mime, "image/png");
         drop_token(&token);
