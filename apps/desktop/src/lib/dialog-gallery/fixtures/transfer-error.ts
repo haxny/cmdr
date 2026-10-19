@@ -327,6 +327,15 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       message: 'os error 60: Operation timed out',
     },
   },
+  // An Overwrite that stopped before clearing the way: Cmdr couldn't save its
+  // note of the replace, so the existing file is untouched.
+  landing_not_recorded: {
+    operationType: 'copy',
+    error: {
+      type: 'landing_not_recorded',
+      path: '/Volumes/naspi/papers/finances/2026-tax-return.pdf',
+    },
+  },
   // The copy stopped partway with a folder standing where one of the user's files
   // was. The fixture keeps the folder's name and the recovered name side by side,
   // which is the pair the reader has to make sense of.

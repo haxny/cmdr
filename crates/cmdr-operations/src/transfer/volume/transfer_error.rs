@@ -13,7 +13,7 @@ use super::super::super::state::WriteOperationState;
 use super::super::super::types::{
     PermissionSide, ReadOnlySide, WriteErrorEvent, WriteOperationError, WriteOperationType,
 };
-use super::super::recovered_name::FinalizeFailure;
+use super::super::recovered_name::{FinalizeFailure, LandingAftermath};
 use super::super::volume_outage::{self, LostConnection, OutageFailure};
 use cmdr_fs::volume::VolumeError;
 
@@ -78,8 +78,10 @@ impl From<(VolumeError, PathBuf)> for WriteFailure {
 /// When the landing rescued the new bytes (or couldn't, and left them under
 /// their temp name), the answer is `NewDataKeptAt` and it carries that path: the
 /// user's complete new file lives ONLY there, so an error that doesn't name it
-/// leaves them hunting. A landing that cleared nothing rescued nothing and lost
-/// nothing, so it maps like any other destination failure.
+/// leaves them hunting. A landing that refused to clear the way because its
+/// record couldn't reach the disk is `LandingNotRecorded`. Any other landing
+/// that cleared nothing rescued nothing and lost nothing, so it maps like any
+/// other destination failure.
 pub(crate) fn map_finalize_failure(dest_path: &Path, failure: FinalizeFailure) -> WriteOperationError {
     WriteFailure::from(PathedVolumeError::from_landing(failure, dest_path)).error
 }
@@ -111,11 +113,14 @@ pub(crate) struct PathedVolumeError {
     /// says which one the user has to look at.
     pub role: PathRole,
     pub error: VolumeError,
-    /// Set only by a failed landing that already cleared the way (a swap's
-    /// deleted original, a claimed name): where the complete new bytes are now. It changes what the user
-    /// is told (`WriteOperationError::NewDataKeptAt`), so it travels with the
-    /// error rather than being reconstructed anywhere.
-    pub new_data_at: Option<PathBuf>,
+    /// Set only by a failed landing that changes what the user is told: one
+    /// that already cleared the way (a swap's deleted original, a claimed name)
+    /// says where the complete new bytes are now
+    /// (`WriteOperationError::NewDataKeptAt`), and one that refused before
+    /// clearing anything says the file was left alone
+    /// (`WriteOperationError::LandingNotRecorded`). It travels with the error
+    /// rather than being reconstructed anywhere.
+    pub aftermath: Option<LandingAftermath>,
     /// Set only by an outage wait that ENDED the item's work on a server whose
     /// connection is gone (`volume_outage::lost_connection`): the connection is
     /// the cause the user needs (`WriteOperationError::ServerConnectionLost`),
@@ -133,25 +138,27 @@ pub(crate) struct PathedVolumeError {
 /// Maps with the side the failure carries. Both directions have cost a user a
 /// wrong diagnosis: a source delete's `EPERM` blamed on the destination
 /// (cmdr-reports#17), and a share refusing a nested folder read as the user's
-/// local source being locked (cmdr-reports#62). `new_data_at` turns it into
-/// `NewDataKeptAt` instead: the user needs to be told where their new file
-/// ended up rather than which errno the rename answered. `lost_connection`
-/// turns it into `ServerConnectionLost`: the server's connection is the cause,
-/// and the errno says nothing a person can act on. Where the new file is
-/// outranks both, and a `refusal` (made before any volume call) outranks
-/// everything: it already is the answer.
+/// local source being locked (cmdr-reports#62). A landing's `aftermath` turns it
+/// into `NewDataKeptAt` instead (the user needs to be told where their new file
+/// ended up rather than which errno the rename answered), or into
+/// `LandingNotRecorded` (Cmdr's own refusal, with no errno at all).
+/// `lost_connection` turns it into `ServerConnectionLost`: the server's
+/// connection is the cause, and the errno says nothing a person can act on.
+/// What the landing did outranks both, and a `refusal` (made before any volume
+/// call) outranks everything: it already is the answer.
 impl From<PathedVolumeError> for WriteFailure {
     fn from(e: PathedVolumeError) -> Self {
         if let Some(refusal) = e.refusal {
             return Self { error: *refusal };
         }
         let path = e.path.display().to_string();
-        let error = match (e.new_data_at, e.lost_connection) {
-            (Some(kept_at), _) => WriteOperationError::NewDataKeptAt {
+        let error = match (e.aftermath, e.lost_connection) {
+            (Some(LandingAftermath::NewDataKeptAt(kept_at)), _) => WriteOperationError::NewDataKeptAt {
                 path,
                 kept_at: kept_at.display().to_string(),
                 message: e.error.to_string(),
             },
+            (Some(LandingAftermath::NotRecorded), _) => WriteOperationError::LandingNotRecorded { path },
             (None, Some(lost)) => {
                 let LostConnection {
                     volume_name,
@@ -212,7 +219,7 @@ impl PathedVolumeError {
             path: path.to_path_buf(),
             role,
             error,
-            new_data_at: None,
+            aftermath: None,
             lost_connection: None,
             refusal: None,
         }
@@ -220,14 +227,14 @@ impl PathedVolumeError {
 
     /// Labels a failed landing (a staged write's rename, a safe-replace's
     /// swap) with the destination name the new bytes were meant to take. It
-    /// is entirely the destination's, and when it rescued the bytes,
-    /// `new_data_at` says where they went.
+    /// is entirely the destination's, and its `aftermath` says where the bytes
+    /// went when it rescued them, or that it refused before clearing anything.
     pub(super) fn from_landing(failure: FinalizeFailure, dest_path: &Path) -> Self {
         Self {
             path: dest_path.to_path_buf(),
             role: PathRole::Destination,
             error: failure.error,
-            new_data_at: failure.new_data_at,
+            aftermath: failure.aftermath,
             lost_connection: None,
             refusal: None,
         }
@@ -244,7 +251,7 @@ impl PathedVolumeError {
                 message: format!("{refusal:?}"),
                 raw_os_error: None,
             },
-            new_data_at: None,
+            aftermath: None,
             lost_connection: None,
             refusal: Some(Box::new(refusal)),
         }

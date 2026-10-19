@@ -251,6 +251,9 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   // it is just under a different name, and the one move left is the user's
   // (renaming it), which the suggestion spells out.
   new_data_kept_at: { category: 'needs_action', retryHint: false },
+  // Retry: nothing was touched (the file holding the name is as it was), so the
+  // same request again is how the replace gets another go.
+  landing_not_recorded: { category: 'needs_action', retryHint: true },
   // No Retry: the copy stopped for its own reason, and re-running it would land
   // on the folder that's already there. The move left is the user's, once
   // they've decided what to do with the folder.
@@ -561,6 +564,14 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
         title: w('sourceChanged.title'),
         message: w('sourceChanged.message', { path: escapeHtml(error.path) }),
         suggestion: w('sourceChanged.suggestion'),
+      }
+    // Cmdr refused to clear the way because its note of the replace couldn't be
+    // saved: named, and it says the file stays, because that's what was at stake.
+    case 'landing_not_recorded':
+      return {
+        title: w('landingNotRecorded.title'),
+        message: w('landingNotRecorded.message', { path: escapeHtml(error.path) }),
+        suggestion: w('landingNotRecorded.suggestion'),
       }
     default:
       return null

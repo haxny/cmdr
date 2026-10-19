@@ -2763,6 +2763,23 @@
     "description": "Recovery suggestion when the source file was replaced, or grew or shrank, mid-copy: running the copy again copies the version that is there now. Plain text.",
     "screenshot": "transfer-error-source_changed.png"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr didn’t replace this file",
+  "errors.write.landingNotRecorded.message": "Cmdr couldn’t save its note about replacing {path}, so it left the file where it was. Nothing there changed.",
+  "errors.write.landingNotRecorded.suggestion": "Try again. If it keeps happening, check that your Mac’s disk has free space, then restart Cmdr.",
+  "@errors.write.landingNotRecorded.title": {
+    "description": "Title of the copy/move error dialog when Cmdr was about to replace an existing file with the newly copied one and stopped first, because it couldn't save the small safety note it keeps on the Mac (the note that lets it finish the replace after a crash). Nothing was replaced. Plain text."
+  },
+  "@errors.write.landingNotRecorded.message": {
+    "description": "Body of the copy/move error dialog when Cmdr stopped before replacing an existing file. \"Its note about replacing\" is Cmdr's own record of the replace in progress, kept on the Mac so a crash can't lose the new file; without it, Cmdr won't remove the old file. \"Left the file where it was\" and \"Nothing there changed\" reassure that the existing file is untouched. \"Cmdr\" is the product name. Plain text.",
+    "placeholders": {
+      "path": {
+        "description": "The full path of the existing file Cmdr didn't replace, inserted verbatim. Do not translate or reformat it."
+      }
+    }
+  },
+  "@errors.write.landingNotRecorded.suggestion": {
+    "description": "Recovery suggestion when Cmdr couldn't save its note about a replace: try the same copy or move again, and if it keeps happening, free up space on the Mac's disk (where the note is saved) and restart Cmdr. \"Cmdr\" is the product name. Plain text."
+  },
   "errors.write.newDataKeptAt.title": "Your new file is under a different name",
   "errors.write.newDataKeptAt.message": "The new {path} is written and complete, but the destination wouldn’t let it take that name, and the file it was replacing is already gone. The new one is at {keptAt}.",
   "errors.write.newDataKeptAt.suggestion": "Open {keptAt} to check it, then rename it. If the destination is a network share or a phone, reconnect it first and the rename will go through.",

@@ -971,6 +971,8 @@ describe('getErrorDisplayMeta', () => {
     { error: { type: 'source_in_cold_storage', path: '/p' }, category: 'needs_action', retryHint: false },
     { error: { type: 'source_changed', path: '/p' }, category: 'transient', retryHint: true },
     { error: { type: 'mounted_volume_inside', mountPoint: '/p' }, category: 'needs_action', retryHint: false },
+    // Retry: the file was left as it was, and a retry is how the replace gets another go.
+    { error: { type: 'landing_not_recorded', path: '/p' }, category: 'needs_action', retryHint: true },
     { error: { type: 'io_error', path: '/p', message: 'm' }, category: 'serious', retryHint: true },
   ]
 

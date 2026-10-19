@@ -402,7 +402,9 @@ fn where_the_new_data_is_outranks_a_lost_connection() {
         volume_name: "Naspolya".to_string(),
         gave_up_after: None,
     }));
-    error.new_data_at = Some(PathBuf::from("/smb/share/a (recovered).jpg"));
+    error.aftermath = Some(LandingAftermath::NewDataKeptAt(PathBuf::from(
+        "/smb/share/a (recovered).jpg",
+    )));
 
     assert!(
         matches!(&WriteFailure::from(error).error, WriteOperationError::NewDataKeptAt { kept_at, .. } if kept_at == "/smb/share/a (recovered).jpg"),

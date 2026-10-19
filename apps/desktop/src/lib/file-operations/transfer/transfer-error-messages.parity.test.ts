@@ -692,6 +692,16 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'landing_not_recorded',
+    error: { type: 'landing_not_recorded', path: '/Volumes/nas/notes.txt' },
+    expected: {
+      title: 'Cmdr didn’t replace this file',
+      message:
+        'Cmdr couldn’t save its note about replacing /Volumes/nas/notes.txt, so it left the file where it was. Nothing there changed.',
+      suggestion: 'Try again. If it keeps happening, check that your Mac’s disk has free space, then restart Cmdr.',
+    },
+  },
+  {
     // Names the file: a move involves two, and "this file" left a reader guessing
     // between the one being moved and the one at the destination (cmdr-reports#17).
     name: 'delete_pending',

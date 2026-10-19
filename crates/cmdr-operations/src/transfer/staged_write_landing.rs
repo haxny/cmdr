@@ -12,7 +12,8 @@ use super::super::super::journal;
 use super::super::super::state::WriteOperationState;
 use super::super::interrupted_landing::holds_the_source;
 use super::super::recovered_name::{
-    AfterARefusedDelete, FinalizeFailure, discard_unplaced_temp, rescue_out_of_temp_space, what_a_refused_delete_left,
+    AfterARefusedDelete, FinalizeFailure, LandingAftermath, discard_unplaced_temp, rescue_out_of_temp_space,
+    what_a_refused_delete_left,
 };
 use super::{LandingName, dest_home};
 use cmdr_fs::log_private::LogPrivate;
@@ -255,7 +256,7 @@ enum CutOffAt {
 /// delete was refused with the name still taken. When the way was CLEARED and
 /// the rename then failed anyway, the temp is the only complete copy at the
 /// destination, so it is never deleted: it leaves temp space instead
-/// ([`FinalizeFailure::new_data_at`]).
+/// ([`LandingAftermath::NewDataKeptAt`]).
 ///
 /// ❗ **Classify before acting.** A step that fails on the transport
 /// ([`VolumeError::transport_fault`]) may have been performed by the server,
@@ -333,7 +334,7 @@ async fn clear_the_way(
             LogPrivate::file_path(&landing.final_path),
         );
         landing.discard(dest_volume).await;
-        return Err(LandingError::Failed(landing_not_recorded(&landing.final_path).into()));
+        return Err(LandingError::Failed(landing_not_recorded()));
     }
     match dest_volume.delete(&landing.final_path).await {
         Ok(()) | Err(VolumeError::NotFound(_)) => {}
@@ -349,14 +350,15 @@ async fn clear_the_way(
 
 /// The refusal for a landing whose record couldn't be confirmed on disk:
 /// nothing was cleared, and the original (or whatever held the name) is where
-/// it was.
-fn landing_not_recorded(final_path: &Path) -> VolumeError {
-    VolumeError::IoError {
-        message: format!(
-            "Cmdr couldn't save its note about replacing {}, so it left the file where it was",
-            final_path.display()
-        ),
-        raw_os_error: None,
+/// it was. Typed ([`LandingAftermath::NotRecorded`]), so the dialog words it;
+/// the `IoError` is a diagnostic for the logs, ❌ never shown.
+fn landing_not_recorded() -> FinalizeFailure {
+    FinalizeFailure {
+        error: VolumeError::IoError {
+            message: "the landing record couldn't be confirmed on disk".to_owned(),
+            raw_os_error: None,
+        },
+        aftermath: Some(LandingAftermath::NotRecorded),
     }
 }
 
@@ -440,7 +442,7 @@ async fn rescue(dest_volume: &Arc<dyn Volume>, mut landing: Landing, error: Volu
     }
     FinalizeFailure {
         error,
-        new_data_at: Some(new_data_at),
+        aftermath: Some(LandingAftermath::NewDataKeptAt(new_data_at)),
     }
 }
 

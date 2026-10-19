@@ -1904,12 +1904,15 @@ speaks `WriteOperationError` (a driver's resolve closure, the rename merge) maps
 `From<PathedVolumeError> for WriteOperationError`, the same one mapping `WriteFailure` does.
 
 **A `FinalizeFailure` becomes a pathed one through `PathedVolumeError::from_landing`, which is inherent to
-`PathedVolumeError` rather than a method on `FinalizeFailure`.** It is always the destination's, and it keeps
-`new_data_at`, which turns the mapping into `NewDataKeptAt`. `cargo-modules` attributes an `impl` to the module defining
-the type, so `impl FinalizeFailure` written in `transfer_error.rs` prints as `recovered_name → volume::transfer_error`
-and welds the two modules into a cycle that reads backwards from the code (`scripts/check/checks/DETAILS.md` § "Rust
-module cycles", trap 4). Hanging it off the type it PRODUCES leaves one honest edge, `transfer_error → recovered_name`.
-The call syntax is the wordier `PathedVolumeError::from_landing(f, path)`; that's the whole cost.
+`PathedVolumeError` rather than a method on `FinalizeFailure`.** It is always the destination's, and it keeps the
+landing's `aftermath` (`recovered_name.rs::LandingAftermath`), which turns the mapping into `NewDataKeptAt` (the way was
+cleared, and the new bytes are at that name) or `LandingNotRecorded` (Cmdr refused before clearing anything, because the
+landing record couldn't reach the disk; ❌ never an `IoError` carrying prose). `cargo-modules` attributes an `impl` to
+the module defining the type, so `impl FinalizeFailure` written in `transfer_error.rs` prints as
+`recovered_name → volume::transfer_error` and welds the two modules into a cycle that reads backwards from the code
+(`scripts/check/checks/DETAILS.md` § "Rust module cycles", trap 4). Hanging it off the type it PRODUCES leaves one
+honest edge, `transfer_error → recovered_name`. The call syntax is the wordier
+`PathedVolumeError::from_landing(f, path)`; that's the whole cost.
 
 **A walk's outage retry keeps the side**: `merge_level` runs its two listings (and the nested mkdir) through
 `volume_outage.rs::through_outages`, which is generic over `OutageFailure`, so each leg's failure leaves the wait still
@@ -1918,7 +1921,7 @@ labelled with its own volume.
 **Where each driver attaches it**:
 
 - Cross-volume move (`move_cross.rs`) and serial copy (`copy_serial.rs`) map the walker's `PathedVolumeError` through
-  `WriteFailure::from`, never the loop's `source_path`, so the side and a rescued file's `new_data_at` both survive.
+  `WriteFailure::from`, never the loop's `source_path`, so the side and a landing's `aftermath` both survive.
 - The concurrent driver carries TWO paths on `CopyTaskFailure` (`copy_concurrent_task.rs`) and they are not
   interchangeable: `failed_path` is the DESTINATION entry to drop from `in_flight_partials` and possibly clean, while
   `failure` is the `PathedVolumeError` the user is told about. Merging them would either clean the wrong path or report

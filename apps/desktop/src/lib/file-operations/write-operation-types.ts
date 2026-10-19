@@ -259,6 +259,9 @@ export type WriteOperationError =
   // `keptAt` is where the complete new data actually is (a ` (recovered)` name),
   // and it is the only copy in existence, so the message has to name it.
   | { type: 'new_data_kept_at'; path: string; keptAt: string; message: string }
+  // A replace refused before it cleared anything: Cmdr couldn't save its note
+  // of the landing, so whatever held `path` is still there, untouched.
+  | { type: 'landing_not_recorded'; path: string }
   // The copy stopped partway, and a folder that was replacing one of the user's
   // files keeps its name. Each `recovered` entry is a file that moved to a
   // ` (recovered)` sibling rather than being discarded with the folder's aside;

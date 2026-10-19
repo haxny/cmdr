@@ -492,6 +492,18 @@ pub enum WriteOperationError {
         /// What the destination said when the rename was refused.
         message: String,
     },
+    /// A replace refused before it cleared anything: Cmdr couldn't confirm its
+    /// note of the landing on disk (the in-flight ledger's writer is gone, or
+    /// the log refused the line), and without it a crash after the clearing
+    /// delete would leave the only copy of the new bytes on a temp nothing
+    /// protects. Whatever held `path` is still there, and the temp is gone.
+    ///
+    /// ❗ Its own variant, ❌ never an `IoError` with prose: the dialog tells the
+    /// user the file was left alone, and the backend carries no sentence.
+    LandingNotRecorded {
+        /// The name the new file was meant to take, still holding what was there.
+        path: String,
+    },
     /// The operation failed, and a folder that was replacing one of the user's
     /// files had already taken its name. Everything that landed is kept, so the
     /// folder stays; the file it displaced is beside it under a ` (recovered)`
@@ -586,6 +598,7 @@ macro_rules! item_path_of {
             | WriteOperationError::DeletePending { path }
             | WriteOperationError::SourceInColdStorage { path }
             | WriteOperationError::SourceChanged { path }
+            | WriteOperationError::LandingNotRecorded { path }
             | WriteOperationError::SymlinkLoop { path } => Some(path),
             _ => None,
         }

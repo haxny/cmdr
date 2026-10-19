@@ -36,22 +36,32 @@ use cmdr_fs::volume::{Volume, VolumeError};
 pub(crate) struct FinalizeFailure {
     /// What the destination said.
     pub error: VolumeError,
-    /// Where the only complete copy of the NEW bytes is now, when the name they
-    /// were meant to take is already cleared: the ` (recovered)` name, or the
-    /// `.cmdr-tmp-*` temp when even that rename couldn't happen.
-    ///
-    /// `None` when nothing was cleared, so nothing was rescued and nothing was
-    /// lost.
-    pub new_data_at: Option<PathBuf>,
+    /// What the user has to know past `error`, when the landing left something
+    /// they'd otherwise go looking for. `None` for an ordinary failure: nothing
+    /// was cleared, so nothing was rescued and nothing was lost.
+    pub aftermath: Option<LandingAftermath>,
+}
+
+/// What a failed landing did that changes what the user is told, beyond what
+/// the destination said. One or the other, ❌ never both: a refusal clears
+/// nothing, so it rescues nothing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum LandingAftermath {
+    /// The name the new bytes were meant to take is already cleared, and the
+    /// only complete copy of them is here now: the ` (recovered)` name, or the
+    /// `.cmdr-tmp-*` temp when even that rename couldn't happen
+    /// (`WriteOperationError::NewDataKeptAt`).
+    NewDataKeptAt(PathBuf),
+    /// Cmdr refused to clear the way: the landing record couldn't be confirmed
+    /// on disk, so whatever held the name is still there and the temp is gone
+    /// (`WriteOperationError::LandingNotRecorded`). `error` is a diagnostic only.
+    NotRecorded,
 }
 
 impl From<VolumeError> for FinalizeFailure {
     /// An ordinary failure, with nothing stranded anywhere.
     fn from(error: VolumeError) -> Self {
-        Self {
-            error,
-            new_data_at: None,
-        }
+        Self { error, aftermath: None }
     }
 }
 

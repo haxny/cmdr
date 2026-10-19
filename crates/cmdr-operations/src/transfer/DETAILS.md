@@ -1109,10 +1109,11 @@ on disk before the delete goes out, then the `Temp` record retires and the path 
 landing from, ❌ never one it deletes (the rule: `crates/cmdr-operations/DETAILS.md` § "What the sweep does with each
 kind"). ❗ **When the record can't be confirmed on disk, the way is NOT cleared** (fail closed): the writer is gone, the
 log refused the line, or the operation names no path space for it (`in_flight_temps::OnDisk`, `NotOnDisk`). The landing
-then fails as a refusal with nothing cleared, the original in place and the temp taken away: a crash after a delete with
-no record would leave the only copy on a temp the next transfer into that folder reaps on sight (it wears the source's
-dates). A ledger that keeps nothing on disk by design (one no claim opened, as a test's engine) has nothing to confirm
-against and lands as before. Pinned by
+then fails as a typed refusal (`LandingAftermath::NotRecorded`, reaching the user as
+`WriteOperationError::LandingNotRecorded`) with nothing cleared, the original in place and the temp taken away: a crash
+after a delete with no record would leave the only copy on a temp the next transfer into that folder reaps on sight (it
+wears the source's dates). A ledger that keeps nothing on disk by design (one no claim opened, as a test's engine) has
+nothing to confirm against and lands as before. Pinned by
 `staged_write.rs::tests::{a_swap_whose_landing_record_has_no_writer_leaves_the_original_in_place, a_swap_whose_landing_record_the_log_refused_leaves_the_original_in_place, a_swap_with_no_path_space_for_its_landing_record_leaves_the_original_in_place}`.
 The landing record retires when the rename lands it, when the rescue below gives it a real name, or when the refused
 delete left the name taken (the temp is a spare copy then: it's discarded, or turned back into a temp if the discard
@@ -1125,10 +1126,11 @@ arrival. Pinned by
 the spot. The bytes are complete by then, the destination name is now EMPTY, and the temp wears a `.cmdr-tmp-*` name,
 which a real name keeps out of every sweep's reach for good, recorded or not.
 `recovered_name.rs::rescue_out_of_temp_space` renames it to `<name> (recovered)<.ext>` and the failure carries that path
-as `FinalizeFailure::new_data_at`, a claimed name's landing and a swap's alike; `stream_pipe_file` and
-`sequential_extract` label it with the DESTINATION (`at_source_or_rescued_dest`), since a rescued file is one the user
-can't find on their own. A failure whose `delete` didn't succeed rescues nothing and reports nothing: the destination
-still holds whatever was in the way (§ "A landing that fails with nothing cleared takes its temp away" below). Pinned by
+as `FinalizeFailure::aftermath` (`LandingAftermath::NewDataKeptAt`), a claimed name's landing and a swap's alike;
+`stream_pipe_file` and `sequential_extract` label it with the DESTINATION (`at_source_or_rescued_dest`), since a rescued
+file is one the user can't find on their own. A failure whose `delete` didn't succeed rescues nothing and reports
+nothing: the destination still holds whatever was in the way (§ "A landing that fails with nothing cleared takes its
+temp away" below). Pinned by
 `staged_write.rs::a_landing_that_cleared_the_way_and_then_could_not_rename_rescues_the_new_bytes`.
 
 ❗ **And only for a name the CALLER claimed** (`LandingName`). `AlreadyExists` says something is in the way; only the

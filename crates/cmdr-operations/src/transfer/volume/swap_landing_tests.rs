@@ -14,7 +14,7 @@ use super::strategy::WriteStaging;
 use crate::event_sinks::CollectorEventSink;
 use crate::state::WriteOperationState;
 use crate::testing::TestOperations;
-use crate::transfer::recovered_name::FinalizeFailure;
+use crate::transfer::recovered_name::{FinalizeFailure, LandingAftermath};
 use crate::transfer::staged_write::StagedWrite;
 use crate::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::entry::FileEntry;
@@ -124,8 +124,8 @@ async fn a_swap_whose_rename_fails_moves_the_new_data_out_of_temp_space() {
     let failure = landed.expect_err("the swap's rename is rigged to fail");
 
     assert_eq!(
-        failure.new_data_at.as_deref(),
-        Some(Path::new("/notes (recovered).txt")),
+        failure.aftermath,
+        Some(LandingAftermath::NewDataKeptAt(PathBuf::from("/notes (recovered).txt"))),
         "the failure has to name where the user's new file actually is"
     );
     assert_eq!(
@@ -177,8 +177,10 @@ async fn a_taken_recovered_name_continues_the_house_series() {
     let failure = landed.expect_err("the swap's rename is rigged to fail");
 
     assert_eq!(
-        failure.new_data_at.as_deref(),
-        Some(Path::new("/notes (recovered) (1).txt"))
+        failure.aftermath,
+        Some(LandingAftermath::NewDataKeptAt(PathBuf::from(
+            "/notes (recovered) (1).txt"
+        )))
     );
     assert_eq!(
         contents(&inner, Path::new("/notes (recovered).txt")).await.as_deref(),
@@ -203,7 +205,7 @@ async fn a_rescue_that_cannot_rename_reports_the_temp_it_left() {
     let (temp, landed) = swap_over_the_original(&engine, &inner, &dest).await;
     let failure = landed.expect_err("every rename fails here");
 
-    assert_eq!(failure.new_data_at.as_deref(), Some(temp.as_path()));
+    assert_eq!(failure.aftermath, Some(LandingAftermath::NewDataKeptAt(temp.clone())));
     assert_eq!(contents(&inner, &temp).await.as_deref(), Some(&b"NEW"[..]));
 }
 
@@ -274,7 +276,7 @@ async fn a_refused_delete_keeps_the_original_and_takes_its_own_temp_away() {
         failure.error
     );
     assert!(
-        failure.new_data_at.is_none(),
+        failure.aftermath.is_none(),
         "nothing was cleared, so nothing was rescued"
     );
     assert_eq!(
@@ -413,7 +415,7 @@ async fn a_swap_that_never_deleted_the_original_reports_no_rescue() {
     let failure = landed.expect_err("the delete is rigged to fail");
 
     assert!(
-        failure.new_data_at.is_none(),
+        failure.aftermath.is_none(),
         "nothing was rescued, because nothing was lost"
     );
     assert_eq!(

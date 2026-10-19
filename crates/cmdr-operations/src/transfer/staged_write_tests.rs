@@ -2,10 +2,12 @@
 //! does with a name that's free, claimed, or taken, and what happens to the
 //! temp when the landing fails or never finishes.
 
+use super::super::recovered_name::LandingAftermath;
 use super::*;
 use crate::in_flight_temps::{ItemKind, Ledger, Record, TrackedItem};
 use crate::testing::TestOperations;
 use crate::transfer::volume::forward_volume_methods;
+use crate::types::WriteOperationError;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::InMemoryVolume;
 use std::sync::Mutex;
@@ -471,8 +473,8 @@ async fn a_landing_that_cleared_the_way_and_then_could_not_rename_rescues_the_ne
         "committed data may not be left under a name the stale-temp reap matches"
     );
     assert_eq!(
-        failure.new_data_at,
-        Some(PathBuf::from("/notes (recovered).txt")),
+        failure.aftermath,
+        Some(LandingAftermath::NewDataKeptAt(PathBuf::from("/notes (recovered).txt"))),
         "and the failure has to name where the only copy of the new file is"
     );
     assert_eq!(
@@ -525,7 +527,7 @@ async fn a_refused_landing_takes_its_temp_away_and_stops_tracking_it() {
             outcome,
             Err(FinalizeFailure {
                 error: VolumeError::AlreadyExists(_),
-                new_data_at: None,
+                aftermath: None,
             })
         ),
         "got {outcome:?}"
@@ -826,12 +828,18 @@ async fn assert_refused_with_the_original_in_place(
     landed: Result<(), FinalizeFailure>,
 ) {
     let failure = landed.expect_err("❗ a landing record that never reached the disk must not clear the way");
-    assert_eq!(failure.new_data_at, None, "nothing was cleared, so nothing was rescued");
     assert_eq!(size_of(inner, "/notes.txt").await, Some(3), "the original survives");
     assert_eq!(
         ledger.recorded_landings(),
         Vec::<PathBuf>::new(),
         "and no landing is left recorded"
+    );
+    // Typed, so the dialog says the original stayed: nothing was cleared, so
+    // nothing was rescued, and ❌ no sentence comes from the backend.
+    let reported = crate::transfer::volume::map_finalize_failure(Path::new("/notes.txt"), failure);
+    assert!(
+        matches!(&reported, WriteOperationError::LandingNotRecorded { path } if path == "/notes.txt"),
+        "the refusal is its own variant, named on the file it left alone: {reported:?}"
     );
 }
 
