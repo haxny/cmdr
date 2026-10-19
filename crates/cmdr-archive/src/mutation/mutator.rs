@@ -217,10 +217,7 @@ impl std::error::Error for MutationError {}
 /// touched until the final atomic rename; any earlier failure or cancel removes
 /// the temp and returns with the original intact.
 pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHooks) -> Result<(), MutationError> {
-    // The file a symlinked archive points at, so the temp is minted beside it
-    // and the rename replaces IT: renaming over the link would swap the link
-    // for a regular file holding the edit and leave the real archive unedited.
-    let archive_path = &std::fs::canonicalize(archive_path).map_err(MutationError::OpenOriginal)?;
+    let archive_path = &link_target(archive_path)?;
 
     // Reap any abandoned build from a prior crashed edit of THIS archive before
     // we start (there is no startup reaper). Our own temp uses a fresh uuid, so
@@ -597,6 +594,22 @@ fn add_source_len(add: &AddEntry) -> u64 {
     match &add.source {
         AddSource::Bytes(bytes) => bytes.len() as u64,
         AddSource::LocalPath(path) => std::fs::metadata(path).map(|m| m.len()).unwrap_or(0),
+    }
+}
+
+/// The file the edit rewrites: `archive_path` itself, or for a symlinked
+/// archive the file the link resolves to, so the temp is minted beside it and
+/// the rename replaces IT. Renaming over the link swapped the link for a
+/// regular file holding the edit and left the real archive unedited. Only the
+/// last component matters: through a linked FOLDER the rename already lands in
+/// the real one, so that path stays as given (which is also the path the
+/// driver's announcements name).
+fn link_target(archive_path: &Path) -> Result<PathBuf, MutationError> {
+    let meta = std::fs::symlink_metadata(archive_path).map_err(MutationError::OpenOriginal)?;
+    if meta.file_type().is_symlink() {
+        std::fs::canonicalize(archive_path).map_err(MutationError::OpenOriginal)
+    } else {
+        Ok(archive_path.to_path_buf())
     }
 }
 
