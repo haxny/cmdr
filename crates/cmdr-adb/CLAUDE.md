@@ -19,12 +19,12 @@ words.
 - **❗ Host framing (hex lengths, `OKAY`/`FAIL`) lives only in `transport.rs`**; `sync.rs` / `shell.rs` decode the
   device's packets through its raw helpers. **Every device-chosen length is capped BEFORE its buffer exists**
   (`MAX_DATA_CHUNK`, `MAX_FRAME_PAYLOAD`), or a hostile phone allocates 4 GiB. DETAILS § "Wire contract".
-- **❗ The peer is the server, not the phone.** `adb` owns USB and pairing; a refused loopback connect earns exactly one
-  `adb start-server` per process, ❌ never a retry loop that spawns processes.
+- **❗ The peer is the server, not the phone.** A refused loopback connect earns exactly one `adb start-server` per
+  process, ❌ never a retry loop.
 - **❗ `shell_v2` is required; a device without it is `AdbConnectError::DeviceTooOld`.** Legacy `shell:` has no exit
   code, and output is never parsed for one.
-- **❗ A shell failure is classified by a follow-up stat of the path and its parent, ❌ never by stderr.** The exit code
-  says "no"; the sync service says why. `DETAILS.md` § "The error policy".
+- **❗ A shell failure is classified by a follow-up stat of the path and its parent, ❌ never by stderr.** A guard
+  before a verb stats via `occupant` (a failed stat refuses), ❌ never `probe`. `DETAILS.md` § "The error policy".
 - **❗ `NotFound` / `PermissionDenied` carry the PATH**, ❌ never the device's wording: the frontend renders it as the
   missing file's name. `errors::volume_error_from_errno` takes the path for that reason.
 - **❗ Paths are `adb://<serial>/…` both ways; `volume/paths.rs` is the ONLY translation.** ❌ A bare `/sdcard` or a

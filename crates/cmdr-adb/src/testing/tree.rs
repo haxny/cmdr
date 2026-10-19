@@ -5,10 +5,10 @@
 //! [`FakeMount::read_only`] mount refuses the writes under it, the way a phone's
 //! system image at `/` does (`FakeTree::new` mounts it so).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::pixel_captures::{DF_K_ROOT, DF_K_SHARED_STORAGE, data_row};
-use crate::errors::{EEXIST, EISDIR, ENOENT, ENOTDIR, ENOTEMPTY_DEVICE, EROFS};
+use crate::errors::{EACCES, EEXIST, EISDIR, ENOENT, ENOTDIR, ENOTEMPTY_DEVICE, EROFS};
 
 /// One node of the in-memory device filesystem.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,6 +73,8 @@ pub struct FakeTree {
     mounts: Vec<FakeMount>,
     /// When set, every write answers `EROFS`.
     pub read_only: bool,
+    /// Paths the SYNC service may not stat, see [`FakeTree::deny_sync_stat`].
+    sync_stat_denied: BTreeSet<String>,
 }
 
 impl Default for FakeTree {
@@ -184,6 +186,7 @@ impl FakeTree {
             nodes: BTreeMap::new(),
             mounts: Vec::new(),
             read_only: false,
+            sync_stat_denied: BTreeSet::new(),
         };
         tree.add_dir("/");
         tree.add_dir("/sdcard");
@@ -319,6 +322,7 @@ impl FakeTree {
             nodes: BTreeMap::new(),
             mounts: Vec::new(),
             read_only: false,
+            sync_stat_denied: BTreeSet::new(),
         };
         tree.add_dir("/");
         tree.add_dir("/storage/emulated/0");
@@ -360,6 +364,24 @@ impl FakeTree {
             }
         }
         Err(ENOENT)
+    }
+
+    /// Makes the sync service's stat of `path` fail with `EACCES` (`STA2`) or a
+    /// mode of 0 (`STAT`), while the shell's verbs still see what's there: a
+    /// phone's `adbd` stats in its own SELinux domain, and `mv` runs as the
+    /// shell user. Chainable.
+    pub fn deny_sync_stat(&mut self, path: &str) -> &mut Self {
+        self.sync_stat_denied.insert(Self::normalize(path));
+        self
+    }
+
+    /// [`stat`](Self::stat) as the SYNC service answers it, honoring
+    /// [`deny_sync_stat`](Self::deny_sync_stat).
+    pub fn sync_stat(&self, path: &str) -> Result<FakeNode, i32> {
+        if self.sync_stat_denied.contains(&Self::normalize(path)) {
+            return Err(EACCES);
+        }
+        self.stat(path)
     }
 
     /// Whether a write at `path` is refused: the whole-tree

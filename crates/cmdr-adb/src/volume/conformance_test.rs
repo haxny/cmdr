@@ -119,6 +119,81 @@ async fn write_from_stream_create_new_refuses_to_clobber() {
     .await;
 }
 
+/// A phone whose sync service may not stat `/sdcard/target.txt` (an SELinux
+/// mismatch: `adbd` stats in its own domain, `mv` runs as the shell user).
+async fn seeded_with_target_unstatable() -> (FakeAdbServer, Arc<AdbVolume>) {
+    let mut tree = seeded_tree();
+    tree.deny_sync_stat("/sdcard/target.txt");
+    let server = FakeAdbServer::start(tree).await;
+    let (volume, _) = connect_fake(&server, FIXTURE_SERIAL).await;
+    (server, volume)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_forceless_rename_refuses_when_the_destination_cant_be_checked() {
+    // ❗ Regression anchor (#539): a stat that FAILED read as "nothing there",
+    // and the `mv -f` after it replaced the file the caller was promised a
+    // refusal for.
+    let (server, volume) = seeded_with_target_unstatable().await;
+    let outcome = volume
+        .rename(
+            &fixture_path("/sdcard/source.txt"),
+            &fixture_path("/sdcard/target.txt"),
+            false,
+        )
+        .await;
+    assert!(
+        outcome.is_err(),
+        "a destination it couldn't check is refused, got {outcome:?}"
+    );
+    let tree = server.tree();
+    let tree = tree.lock().unwrap();
+    assert_eq!(
+        tree.file_bytes("/sdcard/target.txt").as_deref(),
+        Some(&b"the user's target file"[..])
+    );
+    assert_eq!(tree.file_bytes("/sdcard/source.txt").as_deref(), Some(&b"source"[..]));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_create_new_write_refuses_when_the_destination_cant_be_checked() {
+    // The `CreateNew` landing has no second probe: its stat is the only guard.
+    let (server, volume) = seeded_with_target_unstatable().await;
+    let outcome = volume
+        .create_file(&fixture_path("/sdcard/target.txt"), b"new bytes")
+        .await;
+    assert!(
+        outcome.is_err(),
+        "a destination it couldn't check is refused, got {outcome:?}"
+    );
+    let tree = server.tree();
+    let tree = tree.lock().unwrap();
+    assert_eq!(
+        tree.file_bytes("/sdcard/target.txt").as_deref(),
+        Some(&b"the user's target file"[..])
+    );
+    assert!(
+        !tree.paths().iter().any(|p| is_staging_temp_name(p)),
+        "the staging name is gone: {:?}",
+        tree.paths()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_directory_all_never_answers_created_for_a_folder_it_couldnt_check() {
+    // `Created` lets the transfer driver skip its per-file conflict probe, so a
+    // folder whose stat failed must not earn it: its files would be replaced.
+    let mut tree = seeded_tree();
+    tree.deny_sync_stat("/sdcard/album");
+    let server = FakeAdbServer::start(tree).await;
+    let (volume, _) = connect_fake(&server, FIXTURE_SERIAL).await;
+    let outcome = volume.create_directory_all(&fixture_path("/sdcard/album")).await;
+    assert!(
+        !matches!(outcome, Ok(DirectoryCreation::Created)),
+        "an unchecked folder is never reported new, got {outcome:?}"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn create_directory_all_reports_an_existing_directory_honestly() {
     // `mkdir -p` says nothing about whether the directory was there, so the

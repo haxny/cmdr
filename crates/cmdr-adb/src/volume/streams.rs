@@ -187,9 +187,16 @@ impl AdbVolume {
 
         match pumped {
             Ok(written) => {
-                if mode.refuses_occupied() && self.probe(&device).await != WhatIsThere::Nothing {
-                    self.remove_partial(&staging).await;
-                    return Err(VolumeError::AlreadyExists(device));
+                if mode.refuses_occupied() {
+                    let refusal = match self.occupant(&device).await {
+                        Ok(WhatIsThere::Nothing) => None,
+                        Ok(_) => Some(VolumeError::AlreadyExists(device.clone())),
+                        Err(cant_tell) => Some(cant_tell),
+                    };
+                    if let Some(refusal) = refusal {
+                        self.remove_partial(&staging).await;
+                        return Err(refusal);
+                    }
                 }
                 if let Err(e) = self.shell_verb(&["mv", "-f", &staging, &device], &device).await {
                     self.remove_partial(&staging).await;

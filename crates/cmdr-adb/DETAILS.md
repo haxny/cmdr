@@ -253,6 +253,17 @@ may be localized. So a non-zero exit is read through what the sync service says 
 panel. The probe classifies, ❌ never guards: asked before, it is a TOCTOU window (the two the backend accepts on
 purpose are listed under the `Volume` answers).
 
+**A guard stat that fails refuses; it never reads as an empty spot.** The stats that decide whether a verb may clear or
+claim a name (a `force = false` rename, `create_file`, the `CreateNew` landing, `create_directory_all`'s `Created`
+promise, `delete`'s pick of `rmdir` or `rm -f`) go through `AdbVolume::occupant`, which answers `Nothing` only for
+`ENOENT`, `ENOTDIR`, or the v1 verbs' mode 0, and returns any other failure as the error. The classifier keeps the
+forgiving `probe`, where "can't tell" only picks which refusal to report. Why it matters on a real phone: the sync
+service stats in `adbd`'s SELinux domain while `mv` runs as the shell user, so a path the sync `STAT` is denied on could
+read as free and then be replaced (#539; the SELinux trigger is reasoned from the domains, not traced on a device). The
+v1 `STAT` zeroes the mode on any failure, so a device without `stat_v2` can't tell a denied stat from a missing file;
+that gap stays. The fake models the denial with `FakeTree::deny_sync_stat`, and `conformance_test.rs` holds the three
+guards to it.
+
 **`create_directory_all` names a file in the way** as `NotADirectory(device_path)`, the contract every backend keeps
 (`conformance::assert_create_directory_all_refuses_a_file_in_the_way`). `mkdir -p` says "File exists" or "Not a
 directory" only on stderr, so both halves are the probe's: the leaf stat that already decides `AlreadyExisted` refuses a

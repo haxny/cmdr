@@ -340,13 +340,13 @@ async fn serve_sync(stream: &mut TcpStream, shared: &Shared) -> std::io::Result<
             b"QUIT" => return Ok(()),
             b"STAT" => {
                 let path = read_sync_path(stream, arg).await?;
-                let body = stat_v1_bytes(shared.tree.lock_ignore_poison().get(&path));
+                let body = stat_v1_bytes(shared.tree.lock_ignore_poison().sync_stat(&path).ok().as_ref());
                 stream.write_all(b"STAT").await?;
                 stream.write_all(&body).await?;
             }
             b"STA2" => {
                 let path = read_sync_path(stream, arg).await?;
-                let body = stat_v2_bytes(&shared.tree.lock_ignore_poison().stat(&path));
+                let body = stat_v2_bytes(&shared.tree.lock_ignore_poison().sync_stat(&path));
                 stream.write_all(b"STA2").await?;
                 stream.write_all(&body).await?;
             }

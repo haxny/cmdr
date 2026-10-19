@@ -15,6 +15,15 @@
 //! `PermissionDenied(path)`; anything else → `IoError` carrying stderr for the
 //! technical-details panel.
 //!
+//! ## A guard can't read "couldn't ask" as "nothing there"
+//!
+//! The stat before a verb that clears or claims a name is
+//! [`AdbVolume::occupant`], which answers a failed stat (socket, timeout, an
+//! errno other than `ENOENT`/`ENOTDIR`) as an error. Only the classifier uses
+//! the forgiving [`AdbVolume::probe`]. The sync service runs in `adbd`'s
+//! SELinux domain and `mv` as the shell user, so a stat can be denied on a
+//! path the `mv -f` then replaces.
+//!
 //! ## The two accepted TOCTOU windows
 //!
 //! `create_file` and a `force = false` rename each `stat` the destination
@@ -32,7 +41,7 @@ use cmdr_fs::volume::{DirectoryCreation, EntryKind, StreamLength, VolumeError, W
 use log::debug;
 
 use super::AdbVolume;
-use crate::errors::{ENOENT, ENOTEMPTY_DEVICE, volume_error_from_errno};
+use crate::errors::{ENOENT, ENOTDIR, ENOTEMPTY_DEVICE, volume_error_from_errno};
 use crate::shell;
 use crate::sync::SyncEntryKind;
 
@@ -54,7 +63,7 @@ impl AdbVolume {
     pub(super) async fn create_file_impl(&self, path: &Path, content: &[u8]) -> Result<(), VolumeError> {
         let device = self.to_device_path(path)?;
         debug!("AdbVolume::create_file: {device}, size={}", content.len());
-        if self.probe(&device).await != WhatIsThere::Nothing {
+        if self.occupant(&device).await? != WhatIsThere::Nothing {
             return Err(VolumeError::AlreadyExists(device));
         }
         let stream = Box::new(super::streams::BytesReadStream::new(content.to_vec()));
@@ -96,7 +105,7 @@ impl AdbVolume {
         if device == "/" {
             return Ok(DirectoryCreation::AlreadyExisted);
         }
-        match self.probe(&device).await {
+        match self.occupant(&device).await? {
             WhatIsThere::Directory => return Ok(DirectoryCreation::AlreadyExisted),
             WhatIsThere::NotADirectory => return Err(VolumeError::NotADirectory(device)),
             WhatIsThere::Nothing => {}
@@ -173,11 +182,11 @@ impl AdbVolume {
         let device_from = self.to_device_path(from)?;
         let device_to = self.to_device_path(to)?;
         debug!("AdbVolume::rename: {device_from} → {device_to}, force={force}");
-        let found = self.probe(&device_to).await;
+        let found = self.occupant(&device_to).await?;
         if !force && found != WhatIsThere::Nothing {
             return Err(VolumeError::AlreadyExists(device_to));
         }
-        if self.probe(&device_from).await == WhatIsThere::Nothing {
+        if self.occupant(&device_from).await? == WhatIsThere::Nothing {
             return Err(volume_error_from_errno(ENOENT, &device_from));
         }
         // ❌ Never clear a destination that's the source re-cased: `/sdcard` is
@@ -259,28 +268,45 @@ impl AdbVolume {
         }
     }
 
-    /// What the sync service says is at `device`. A link is followed, so a
-    /// link to a folder reads as a folder.
+    /// What the sync service says is at `device`, for a GUARD: `Nothing` only
+    /// when the device says so (`ENOENT`, `ENOTDIR`, or a mode of 0 on the v1
+    /// verbs). A link is followed, so a link to a folder reads as a folder.
+    ///
+    /// ❗ A stat that couldn't be made (a refused socket, a timeout, an errno
+    /// such as the `EACCES` an SELinux mismatch earns) is the error, ❌ never
+    /// `Nothing`: every caller here clears or claims the name next, and the
+    /// shell's `mv -f` may well see a file the sync service couldn't. The v1
+    /// `STAT` zeroes the mode on ANY failure, so on a device without `stat_v2`
+    /// a denied stat still reads as free there.
     ///
     /// ❗ Takes and follows the DEVICE path on its own socket, ❌ never through
     /// `get_metadata_impl`: that one takes an app path, and a bare device path
     /// is refused there, so a link to a folder would read as a file.
-    pub(super) async fn probe(&self, device: &str) -> WhatIsThere {
-        let Ok(mut session) = self.open_sync(device).await else {
-            return WhatIsThere::Nothing;
-        };
+    pub(super) async fn occupant(&self, device: &str) -> Result<WhatIsThere, VolumeError> {
+        let mut session = self.open_sync(device).await?;
         let what = match session.stat(device).await {
-            Ok(stat) if stat.exists() => match stat.kind() {
+            Ok(stat) if stat.exists() => Ok(match stat.kind() {
                 SyncEntryKind::Directory => WhatIsThere::Directory,
                 SyncEntryKind::Symlink => match self.follow(&mut session, device).await {
                     Some(target) if target.kind() == SyncEntryKind::Directory => WhatIsThere::Directory,
                     _ => WhatIsThere::NotADirectory,
                 },
                 _ => WhatIsThere::NotADirectory,
+            }),
+            Ok(stat) => match stat.errno {
+                None | Some(ENOENT | ENOTDIR) => Ok(WhatIsThere::Nothing),
+                Some(errno) => Err(volume_error_from_errno(errno, device)),
             },
-            _ => WhatIsThere::Nothing,
+            Err(e) => Err(self.inner.map_adb_error(e, device)),
         };
         session.quit().await;
         what
+    }
+
+    /// [`occupant`](Self::occupant) for the CLASSIFIER, where "can't tell"
+    /// reads as `Nothing` and only shapes which refusal gets reported.
+    /// ❌ Never a guard before a verb that clears or claims a name.
+    pub(super) async fn probe(&self, device: &str) -> WhatIsThere {
+        self.occupant(device).await.unwrap_or(WhatIsThere::Nothing)
     }
 }
