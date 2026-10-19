@@ -59,31 +59,41 @@ function describeObjectOrPrimitive(value: unknown): string {
 
 /** A class with its own `toString` (`URL`, `Date`) says it best; anything else goes as JSON. */
 function describeObject(value: object): string {
-  if (!Array.isArray(value) && hasOwnToString(value)) return String(value)
-  return toJson(value)
+  const toString = Array.isArray(value) ? undefined : ownToString(value)
+  return toString ? String(toString.call(value)) : toJson(value)
 }
 
-function hasOwnToString(value: object): boolean {
-  return (value as { toString?: unknown }).toString !== Object.prototype.toString
+function ownToString(value: object): ((this: object) => unknown) | undefined {
+  const method = (value as { toString?: unknown }).toString
+  if (typeof method !== 'function' || method === Object.prototype.toString) return undefined
+  return method as (this: object) => unknown
 }
+
+/**
+ * `JSON.stringify` with its real return type: lib.d.ts says `string`, but a top-level `undefined`,
+ * function, or symbol yields `undefined`.
+ */
+const stringifyJson: (
+  value: unknown,
+  replacer: (this: object, key: string, nested: unknown) => unknown,
+) => string | undefined = JSON.stringify
 
 /** Compact JSON with a cycle guard; nested errors render as text instead of `{}`. */
 function toJson(value: unknown): string {
   const ancestors: unknown[] = []
   try {
-    return (
-      JSON.stringify(value, function (this: unknown, _key, nested: unknown) {
-        if (typeof nested === 'bigint') return nested.toString()
-        if (typeof nested !== 'object' || nested === null) return nested
-        if (nested instanceof Error) return describeError(nested)
-        // `this` is the holder of `nested`: unwind the ancestor stack to it, so a value
-        // repeated in a sibling isn't mistaken for a cycle.
-        while (ancestors.length > 0 && ancestors.at(-1) !== this) ancestors.pop()
-        if (ancestors.includes(nested)) return '[Circular]'
-        ancestors.push(nested)
-        return nested
-      }) ?? String(value)
-    )
+    const json = stringifyJson(value, function (this: object, _key, nested: unknown) {
+      if (typeof nested === 'bigint') return nested.toString()
+      if (typeof nested !== 'object' || nested === null) return nested
+      if (nested instanceof Error) return describeError(nested)
+      // `this` is the holder of `nested`: unwind the ancestor stack to it, so a value
+      // repeated in a sibling isn't mistaken for a cycle.
+      while (ancestors.length > 0 && ancestors.at(-1) !== this) ancestors.pop()
+      if (ancestors.includes(nested)) return '[Circular]'
+      ancestors.push(nested)
+      return nested
+    })
+    return json ?? String(value)
   } catch {
     // A getter that throws, or a Proxy: the value still deserves a line.
     return `[unserializable ${constructorName(value)}]`
