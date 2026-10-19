@@ -125,7 +125,10 @@ cache Docker named volumes), and a CI runner has one checkout anyway.
 The binary builds with `--profile e2e` (root `Cargo.toml`): `release` without thin LTO, with `debug-assertions` and
 `overflow-checks` pinned to release's values. It lands at `/target/<triple>/e2e/Cmdr`. Thin LTO costs ~35% of a clean
 release build (`docs/notes/index-extraction-baseline.md` § Build times) on the job that gates every land, and buys
-nothing for a Linux binary we never ship. CI build times before and after: #557.
+nothing for a Linux binary we never ship. Measured in CI on a cold cache (GitHub `ubuntu-latest`, 2026-10-19, #557): the
+cargo build went from 20m29s–21m17s (`release`, three runs) to 15m38s (`e2e`, run 39326403796), and the `cmdr` crate's
+tail (last dependency done to `Finished`) from 11m50s to 6m39s. A warm build's tail was 10m07s on `release`, so expect
+roughly 5 min off a warm run too.
 
 ## SMB E2E networking
 
