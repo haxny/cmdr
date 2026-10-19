@@ -739,6 +739,30 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
+  "fileOperations.lockedSources.title": "移動已鎖定的項目？",
+  "@fileOperations.lockedSources.title": {
+    "sourceHash": "69c0785"
+  },
+  "fileOperations.lockedSources.message": "{count, plural, other {你要移動的項目中有 {countText} 個已鎖定。Cmdr 可以只在移動時解鎖，到了新位置再重新鎖定。}}",
+  "@fileOperations.lockedSources.message": {
+    "sourceHash": "a82868b"
+  },
+  "fileOperations.lockedSources.moreItems": "{count, plural, other {另外還有 {countText} 個項目}}",
+  "@fileOperations.lockedSources.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.lockedSources.moveAnyway": "仍要移動",
+  "@fileOperations.lockedSources.moveAnyway": {
+    "sourceHash": "c3d9351"
+  },
+  "fileOperations.lockedSources.skip": "略過已鎖定的項目",
+  "@fileOperations.lockedSources.skip": {
+    "sourceHash": "e70b85a"
+  },
+  "fileOperations.lockedSources.heldToast": "一項移動操作有個關於已鎖定項目的問題要問你。目前開啟的對話方塊一關閉，你就會看到。",
+  "@fileOperations.lockedSources.heldToast": {
+    "sourceHash": "c76d27a"
+  },
   "fileOperations.transferProgress.progressBytes": "位元組",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

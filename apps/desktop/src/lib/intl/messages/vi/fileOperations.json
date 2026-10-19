@@ -740,6 +740,30 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
+  "fileOperations.lockedSources.title": "Di chuyển các mục bị khóa?",
+  "@fileOperations.lockedSources.title": {
+    "sourceHash": "69c0785"
+  },
+  "fileOperations.lockedSources.message": "{count, plural, other {{countText} mục bạn đang di chuyển bị khóa. Cmdr có thể mở khóa chỉ trong lúc di chuyển, rồi khóa lại ở nơi mới.}}",
+  "@fileOperations.lockedSources.message": {
+    "sourceHash": "a82868b"
+  },
+  "fileOperations.lockedSources.moreItems": "{count, plural, other {và thêm {countText} mục nữa}}",
+  "@fileOperations.lockedSources.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.lockedSources.moveAnyway": "Vẫn di chuyển",
+  "@fileOperations.lockedSources.moveAnyway": {
+    "sourceHash": "c3d9351"
+  },
+  "fileOperations.lockedSources.skip": "Bỏ qua các mục bị khóa",
+  "@fileOperations.lockedSources.skip": {
+    "sourceHash": "e70b85a"
+  },
+  "fileOperations.lockedSources.heldToast": "Một lần di chuyển có câu hỏi cho bạn về các mục bị khóa. Bạn sẽ thấy câu hỏi ngay khi hộp thoại đang mở đóng lại.",
+  "@fileOperations.lockedSources.heldToast": {
+    "sourceHash": "c76d27a"
+  },
   "fileOperations.transferProgress.progressBytes": "Byte",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

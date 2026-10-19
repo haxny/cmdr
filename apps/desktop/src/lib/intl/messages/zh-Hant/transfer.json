@@ -67,6 +67,14 @@
   "@transfer.metadataLeftBehind": {
     "sourceHash": "e8c3789"
   },
+  "transfer.lockedSkipped": "{count, plural, other {有 {countText} 個已鎖定的項目留在原處。}}",
+  "@transfer.lockedSkipped": {
+    "sourceHash": "5b9d086"
+  },
+  "transfer.systemLockedKept": "{count, plural, other {有 {countText} 個項目被 macOS 鎖定，所以留在原處。}}",
+  "@transfer.systemLockedKept": {
+    "sourceHash": "5aa9499"
+  },
   "transfer.metadataClass.creationDates": "製作日期",
   "@transfer.metadataClass.creationDates": {
     "sourceHash": "4b3c6e7"

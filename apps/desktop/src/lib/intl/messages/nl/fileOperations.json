@@ -741,6 +741,30 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
+  "fileOperations.lockedSources.title": "Beveiligde onderdelen verplaatsen?",
+  "@fileOperations.lockedSources.title": {
+    "sourceHash": "69c0785"
+  },
+  "fileOperations.lockedSources.message": "{count, plural, one {{countText} onderdeel dat je verplaatst, is beveiligd. Cmdr kan de beveiliging alleen voor het verplaatsen opheffen en het onderdeel op de nieuwe plek weer beveiligen.} other {{countText} onderdelen die je verplaatst, zijn beveiligd. Cmdr kan de beveiliging alleen voor het verplaatsen opheffen en de onderdelen op de nieuwe plek weer beveiligen.}}",
+  "@fileOperations.lockedSources.message": {
+    "sourceHash": "a82868b"
+  },
+  "fileOperations.lockedSources.moreItems": "{count, plural, one {en nog {countText} onderdeel} other {en nog {countText} onderdelen}}",
+  "@fileOperations.lockedSources.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.lockedSources.moveAnyway": "Verplaats toch",
+  "@fileOperations.lockedSources.moveAnyway": {
+    "sourceHash": "c3d9351"
+  },
+  "fileOperations.lockedSources.skip": "Sla beveiligde onderdelen over",
+  "@fileOperations.lockedSources.skip": {
+    "sourceHash": "e70b85a"
+  },
+  "fileOperations.lockedSources.heldToast": "Er is een vraag voor je over het verplaatsen van beveiligde onderdelen. Je ziet de vraag zodra het geopende venster sluit.",
+  "@fileOperations.lockedSources.heldToast": {
+    "sourceHash": "c76d27a"
+  },
   "fileOperations.transferProgress.progressBytes": "Bytes",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003",

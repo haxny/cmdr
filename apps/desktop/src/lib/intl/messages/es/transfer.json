@@ -67,6 +67,14 @@
   "@transfer.metadataLeftBehind": {
     "sourceHash": "e8c3789"
   },
+  "transfer.lockedSkipped": "{count, plural, one {{countText} elemento bloqueado se ha quedado donde estaba.} many {{countText} elementos bloqueados se han quedado donde estaban.} other {{countText} elementos bloqueados se han quedado donde estaban.}}",
+  "@transfer.lockedSkipped": {
+    "sourceHash": "5b9d086"
+  },
+  "transfer.systemLockedKept": "{count, plural, one {{countText} elemento está bloqueado por macOS, así que se ha quedado donde estaba.} many {{countText} elementos están bloqueados por macOS, así que se han quedado donde estaban.} other {{countText} elementos están bloqueados por macOS, así que se han quedado donde estaban.}}",
+  "@transfer.systemLockedKept": {
+    "sourceHash": "5aa9499"
+  },
   "transfer.metadataClass.creationDates": "fechas de creación",
   "@transfer.metadataClass.creationDates": {
     "sourceHash": "4b3c6e7"

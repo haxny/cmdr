@@ -67,6 +67,14 @@
   "@transfer.metadataLeftBehind": {
     "sourceHash": "e8c3789"
   },
+  "transfer.lockedSkipped": "{count, plural, one {{countText} защищенный объект остался на месте.} few {{countText} защищенных объекта остались на месте.} many {{countText} защищенных объектов остались на месте.} other {{countText} защищенного объекта остались на месте.}}",
+  "@transfer.lockedSkipped": {
+    "sourceHash": "5b9d086"
+  },
+  "transfer.systemLockedKept": "{count, plural, one {{countText} объект защищен самой macOS, поэтому остался на месте.} few {{countText} объекта защищены самой macOS, поэтому остались на месте.} many {{countText} объектов защищены самой macOS, поэтому остались на месте.} other {{countText} объекта защищены самой macOS, поэтому остались на месте.}}",
+  "@transfer.systemLockedKept": {
+    "sourceHash": "5aa9499"
+  },
   "transfer.metadataClass.creationDates": "даты создания",
   "@transfer.metadataClass.creationDates": {
     "sourceHash": "4b3c6e7"

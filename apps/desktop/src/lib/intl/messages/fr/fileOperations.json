@@ -742,6 +742,30 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
+  "fileOperations.lockedSources.title": "Déplacer les éléments verrouillés ?",
+  "@fileOperations.lockedSources.title": {
+    "sourceHash": "69c0785"
+  },
+  "fileOperations.lockedSources.message": "{count, plural, one {{countText} élément que vous déplacez est verrouillé. Cmdr peut le déverrouiller juste le temps du déplacement, puis le verrouiller à nouveau à son arrivée.} many {{countText} éléments que vous déplacez sont verrouillés. Cmdr peut les déverrouiller juste le temps du déplacement, puis les verrouiller à nouveau à leur arrivée.} other {{countText} éléments que vous déplacez sont verrouillés. Cmdr peut les déverrouiller juste le temps du déplacement, puis les verrouiller à nouveau à leur arrivée.}}",
+  "@fileOperations.lockedSources.message": {
+    "sourceHash": "a82868b"
+  },
+  "fileOperations.lockedSources.moreItems": "{count, plural, one {et {countText} élément de plus} many {et {countText} éléments de plus} other {et {countText} éléments de plus}}",
+  "@fileOperations.lockedSources.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.lockedSources.moveAnyway": "Déplacer quand même",
+  "@fileOperations.lockedSources.moveAnyway": {
+    "sourceHash": "c3d9351"
+  },
+  "fileOperations.lockedSources.skip": "Ignorer les éléments verrouillés",
+  "@fileOperations.lockedSources.skip": {
+    "sourceHash": "e70b85a"
+  },
+  "fileOperations.lockedSources.heldToast": "Un déplacement a une question pour vous au sujet d’éléments verrouillés. Vous la verrez dès que la boîte de dialogue ouverte sera fermée.",
+  "@fileOperations.lockedSources.heldToast": {
+    "sourceHash": "c76d27a"
+  },
   "fileOperations.transferProgress.progressBytes": "Octets",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

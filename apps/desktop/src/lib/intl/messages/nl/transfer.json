@@ -67,6 +67,14 @@
   "@transfer.metadataLeftBehind": {
     "sourceHash": "e8c3789"
   },
+  "transfer.lockedSkipped": "{count, plural, one {{countText} beveiligd onderdeel is gebleven waar het was.} other {{countText} beveiligde onderdelen zijn gebleven waar ze waren.}}",
+  "@transfer.lockedSkipped": {
+    "sourceHash": "5b9d086"
+  },
+  "transfer.systemLockedKept": "{count, plural, one {{countText} onderdeel is door macOS beveiligd en is daarom gebleven waar het was.} other {{countText} onderdelen zijn door macOS beveiligd en zijn daarom gebleven waar ze waren.}}",
+  "@transfer.systemLockedKept": {
+    "sourceHash": "5aa9499"
+  },
   "transfer.metadataClass.creationDates": "aanmaakdatums",
   "@transfer.metadataClass.creationDates": {
     "sourceHash": "4b3c6e7"

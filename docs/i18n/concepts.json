@@ -3573,7 +3573,12 @@
     "distinct": ["locked", "password-protected"],
     "en": "unlock",
     "match": ["unlock", "unlocks", "unlocking", "unlocked"],
-    "notMatch": ["unlock it in finder", "locked, and cmdr can't unlock"],
+    "notMatch": [
+      "unlock it in finder",
+      "locked, and cmdr can't unlock",
+      "cmdr can unlock it just for the move",
+      "cmdr can unlock them just for the move"
+    ],
     "sense": "Opening a password-protected archive with its password."
   },
   "unplug": {

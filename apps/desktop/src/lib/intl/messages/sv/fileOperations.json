@@ -741,6 +741,30 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
+  "fileOperations.lockedSources.title": "Flytta låsta objekt?",
+  "@fileOperations.lockedSources.title": {
+    "sourceHash": "69c0785"
+  },
+  "fileOperations.lockedSources.message": "{count, plural, one {{countText} objekt som du flyttar är låst. Cmdr kan låsa upp det bara under flytten och låsa det igen där det hamnar.} other {{countText} objekt som du flyttar är låsta. Cmdr kan låsa upp dem bara under flytten och låsa dem igen där de hamnar.}}",
+  "@fileOperations.lockedSources.message": {
+    "sourceHash": "a82868b"
+  },
+  "fileOperations.lockedSources.moreItems": "{count, plural, one {och ytterligare {countText} objekt} other {och ytterligare {countText} objekt}}",
+  "@fileOperations.lockedSources.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.lockedSources.moveAnyway": "Flytta ändå",
+  "@fileOperations.lockedSources.moveAnyway": {
+    "sourceHash": "c3d9351"
+  },
+  "fileOperations.lockedSources.skip": "Hoppa över låsta objekt",
+  "@fileOperations.lockedSources.skip": {
+    "sourceHash": "e70b85a"
+  },
+  "fileOperations.lockedSources.heldToast": "En flytt har en fråga till dig om låsta objekt. Du ser den så fort den öppna dialogen stängs.",
+  "@fileOperations.lockedSources.heldToast": {
+    "sourceHash": "c76d27a"
+  },
   "fileOperations.transferProgress.progressBytes": "Byte",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

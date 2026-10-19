@@ -67,6 +67,14 @@
   "@transfer.metadataLeftBehind": {
     "sourceHash": "e8c3789"
   },
+  "transfer.lockedSkipped": "{count, plural, one {{countText} zárolt elem a helyén maradt.} other {{countText} zárolt elem a helyén maradt.}}",
+  "@transfer.lockedSkipped": {
+    "sourceHash": "5b9d086"
+  },
+  "transfer.systemLockedKept": "{count, plural, one {{countText} elem a macOS zárolása miatt a helyén maradt.} other {{countText} elem a macOS zárolása miatt a helyén maradt.}}",
+  "@transfer.systemLockedKept": {
+    "sourceHash": "5aa9499"
+  },
   "transfer.metadataClass.creationDates": "létrehozási dátumok",
   "@transfer.metadataClass.creationDates": {
     "sourceHash": "4b3c6e7"

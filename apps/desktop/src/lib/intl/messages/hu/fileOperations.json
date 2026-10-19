@@ -741,6 +741,30 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
+  "fileOperations.lockedSources.title": "Áthelyezed a zárolt elemeket?",
+  "@fileOperations.lockedSources.title": {
+    "sourceHash": "69c0785"
+  },
+  "fileOperations.lockedSources.message": "{count, plural, one {{countText} elem, amelyet áthelyezel, zárolva van. A Cmdr feloldhatja a zárolását, de csak az áthelyezés idejére: az új helyén újra zárolja.} other {{countText} elem, amelyet áthelyezel, zárolva van. A Cmdr feloldhatja a zárolásukat, de csak az áthelyezés idejére: az új helyükön újra zárolja őket.}}",
+  "@fileOperations.lockedSources.message": {
+    "sourceHash": "a82868b"
+  },
+  "fileOperations.lockedSources.moreItems": "{count, plural, one {és {countText} további elem} other {és {countText} további elem}}",
+  "@fileOperations.lockedSources.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.lockedSources.moveAnyway": "Áthelyezés mindenképp",
+  "@fileOperations.lockedSources.moveAnyway": {
+    "sourceHash": "c3d9351"
+  },
+  "fileOperations.lockedSources.skip": "Zárolt elemek átugrása",
+  "@fileOperations.lockedSources.skip": {
+    "sourceHash": "e70b85a"
+  },
+  "fileOperations.lockedSources.heldToast": "Egy áthelyezésnek kérdése van hozzád a zárolt elemekkel kapcsolatban. Látni fogod, amint bezárul a nyitott párbeszédablak.",
+  "@fileOperations.lockedSources.heldToast": {
+    "sourceHash": "c76d27a"
+  },
   "fileOperations.transferProgress.progressBytes": "Bájtok",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

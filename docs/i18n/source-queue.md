@@ -36,6 +36,10 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   `status-column.ts` returns hardcoded English (`Modified`, `Untracked`), also used as the Git cell's tooltip and aria.
   Move those nine words into the catalog.
 
+- `unlock` concept means an archive password, but three keys now use "unlock" for Finder's Locked flag
+  (`fileOperations.lockedSources.message`, `cancelRollback.reason.locked.*`), each patched via `notMatch`. Move the
+  Finder sense into `locked` (or its own concept) so the next one doesn't trip `termbase`. (de, nl, ru)
+
 - `fileExplorer.network.browser.removeHostConfirm`, `.hostRemoved`, `.hostRemoveFailed`: descriptions (and key names)
   still say "remove" while the English says "Forget". Say forget, and that the host is a saved server.
 - `fileExplorer.network.share.useGuest`: "Use guest" is terse and the description doesn't say whether it reconnects as

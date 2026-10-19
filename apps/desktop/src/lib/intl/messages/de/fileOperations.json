@@ -742,6 +742,30 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
+  "fileOperations.lockedSources.title": "Geschützte Objekte bewegen?",
+  "@fileOperations.lockedSources.title": {
+    "sourceHash": "69c0785"
+  },
+  "fileOperations.lockedSources.message": "{count, plural, one {{countText} Objekt, das du bewegst, ist geschützt. Cmdr kann den Schutz nur für das Bewegen aufheben und das Objekt am neuen Ort wieder schützen.} other {{countText} Objekte, die du bewegst, sind geschützt. Cmdr kann den Schutz nur für das Bewegen aufheben und die Objekte am neuen Ort wieder schützen.}}",
+  "@fileOperations.lockedSources.message": {
+    "sourceHash": "a82868b"
+  },
+  "fileOperations.lockedSources.moreItems": "und {countText} {count, plural, one {weiteres Objekt} other {weitere Objekte}}",
+  "@fileOperations.lockedSources.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.lockedSources.moveAnyway": "Trotzdem bewegen",
+  "@fileOperations.lockedSources.moveAnyway": {
+    "sourceHash": "c3d9351"
+  },
+  "fileOperations.lockedSources.skip": "Geschützte Objekte überspringen",
+  "@fileOperations.lockedSources.skip": {
+    "sourceHash": "e70b85a"
+  },
+  "fileOperations.lockedSources.heldToast": "Beim Bewegen ist eine Frage zu geschützten Objekten aufgekommen. Du siehst die Frage, sobald der offene Dialog geschlossen ist.",
+  "@fileOperations.lockedSources.heldToast": {
+    "sourceHash": "c76d27a"
+  },
   "fileOperations.transferProgress.progressBytes": "Bytes",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003",

@@ -740,6 +740,30 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
+  "fileOperations.lockedSources.title": "¿Mover elementos bloqueados?",
+  "@fileOperations.lockedSources.title": {
+    "sourceHash": "69c0785"
+  },
+  "fileOperations.lockedSources.message": "{count, plural, one {{countText} elemento que estás moviendo está bloqueado. Cmdr puede desbloquearlo solo para moverlo y volver a bloquearlo al llegar.} many {{countText} elementos que estás moviendo están bloqueados. Cmdr puede desbloquearlos solo para moverlos y volver a bloquearlos al llegar.} other {{countText} elementos que estás moviendo están bloqueados. Cmdr puede desbloquearlos solo para moverlos y volver a bloquearlos al llegar.}}",
+  "@fileOperations.lockedSources.message": {
+    "sourceHash": "a82868b"
+  },
+  "fileOperations.lockedSources.moreItems": "{count, plural, one {y {countText} elemento más} many {y {countText} elementos más} other {y {countText} elementos más}}",
+  "@fileOperations.lockedSources.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.lockedSources.moveAnyway": "Mover de todos modos",
+  "@fileOperations.lockedSources.moveAnyway": {
+    "sourceHash": "c3d9351"
+  },
+  "fileOperations.lockedSources.skip": "Omitir elementos bloqueados",
+  "@fileOperations.lockedSources.skip": {
+    "sourceHash": "e70b85a"
+  },
+  "fileOperations.lockedSources.heldToast": "Un movimiento tiene una pregunta para ti sobre elementos bloqueados. La verás en cuanto se cierre el diálogo que está abierto.",
+  "@fileOperations.lockedSources.heldToast": {
+    "sourceHash": "c76d27a"
+  },
   "fileOperations.transferProgress.progressBytes": "Bytes",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003",
