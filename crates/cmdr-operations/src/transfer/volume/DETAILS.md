@@ -51,15 +51,13 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
   `move_cross` names nothing back, so the edge stays one-way.
 - **`conflict.rs` DECIDES; two thin siblings act and answer.** The resolver keeps the policy (`resolve_volume_conflict`,
   `apply_volume_conflict_resolution`, the conditional reduction). `landing.rs` answers where a name lands before any of
-  that (§ "Look-alike names and new-name spelling"). `finalize.rs` holds the landing (`finalize_safe_replace`; the
-  temp's name comes from `cmdr_fs::staging::temp_sibling_path`, like every scratch name), which no resolver call
-  reaches: the five write sites (`copy_serial.rs`, `copy_concurrent_task.rs`, `merge.rs`, `sequential_extract.rs`,
-  `move_cross.rs`) call it once their stream is done, long after the resolver returned. `item_identity.rs` holds
-  `is_the_same_item` / `is_the_same_volume_path`, asked by three callers that resolve no conflict at all (`copy.rs`'s
-  bulk skip, `move_same.rs`, `../../routing.rs`'s pre-flight). Neither belongs behind a policy module the callers don't
-  want.
+  that (§ "Look-alike names and new-name spelling"). A file Overwrite's swap is no resolver's business either: the
+  resolver answers `Replaces::Swap`, and the write's own landing makes it (`../staged_write.rs`,
+  `WriteStaging::StageOverOriginal`), at every write site alike. `item_identity.rs` holds `is_the_same_item` /
+  `is_the_same_volume_path`, asked by three callers that resolve no conflict at all (`copy.rs`'s bulk skip,
+  `move_same.rs`, `../../routing.rs`'s pre-flight). Neither belongs behind a policy module the callers don't want.
 - **`conflict.rs`'s tests are three `#[path]` children, one per question the resolver answers**: `conflict_tests.rs`
-  (merge safety, the overwrite ordering, the finalize swap), `conflict_conditional_tests.rs` (`OverwriteSmaller` /
+  (merge safety, what a file Overwrite resolves to), `conflict_conditional_tests.rs` (`OverwriteSmaller` /
   `OverwriteOlder`, on hints and on `get_metadata`), and `conflict_cross_type_tests.rs` (a blanket policy never crosses
   types). `conflict_same_item_tests.rs` is a `#[path]` child of `item_identity.rs`, which is where its subject lives. A
   test name reads `conflict::<child>::<test>` rather than the flat `conflict::tests::`.
@@ -112,10 +110,10 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
 - **The move suite is six files split by subject, all declared from `move_cross.rs`** (beside the engine they mostly
   drive; `super::super` is `volume` from there, the same as before): `move_tests.rs` (cross-volume happy path, conflict
   matrix, bulk skip, dest auto-create), `move_same_tests.rs` (the same-volume rename path), `move_cancel_tests.rs`,
-  `move_failure_tests.rs` (finalize-rename failure and error naming), `move_progress_tests.rs` (byte totals, scan
-  tallies, leaf granularity), and `move_merge_tests.rs` (the no-byte-lost policy matrix, which owns its own fixture
-  trees). Fixtures every suite shares (`make_state`, `make_state_with_interval_ms`, `make_volumes`, `config_default`)
-  plus the `CancelAfterFirstSink`, `SampleInFlightTableSink`, and `MoveRenameFailsDestVolume` doubles live in
+  `move_failure_tests.rs` (swap-rename failure and error naming), `move_progress_tests.rs` (byte totals, scan tallies,
+  leaf granularity), and `move_merge_tests.rs` (the no-byte-lost policy matrix, which owns its own fixture trees).
+  Fixtures every suite shares (`make_state`, `make_state_with_interval_ms`, `make_volumes`, `config_default`) plus the
+  `CancelAfterFirstSink`, `SampleInFlightTableSink`, and `MoveRenameFailsDestVolume` doubles live in
   `move_test_support.rs`, reached as `super::test_support` — a new move test adds itself to the matching subject rather
   than growing one file. `SampleInFlightTableSink` is the only way to see the probe's in-flight table: it renders the
   table from `emit_progress`, which the destination calls from inside `write_from_stream` and therefore inside the
@@ -208,7 +206,7 @@ NEWLY created (the `create_directory` call returned `Ok`, not `AlreadyExists`). 
 `volume_rollback_with_progress` deletes the recorded files individually (reverse order), then prunes the newly-created
 dirs deepest-first with `prune_created_dir_if_empty`, which lists each one and removes it only if that listing came back
 empty — a created dir that still holds a pre-existing sibling stays put. A top-level FILE source still records its
-single landed path (the original after a safe-replace finalize, never the temp), so file→file Overwrite rollback is
+single landed path (the original's own name after a safe-replace, never a temp), so file→file Overwrite rollback is
 unchanged. Pinned by `copy_rollback_tests.rs::rollback_of_merged_directory_preserves_preexisting_dest_files`. **Don't**
 revert to recording the directory root or to a recursive delete for created dirs — either reintroduces the merged-dir
 data loss. The cleanup path can't reach one any more (§ "Three ways to delete, and who may use each"), which turns that
@@ -221,15 +219,16 @@ so the post-loop records the individual files (into `copied_paths`) and newly-cr
 and CLEARS `last_dest_path` for a directory source, so the Stopped/error partial-cleanup sweep is never handed the dest
 directory ROOT. On a merge that root holds pre-existing dest-only files. The sweep itself can no longer recurse into one
 (§ "Three ways to delete, and who may use each"), so the ledger discipline and the capability split are two independent
-defenses of the same file. A FILE source routes its dest/temp through `last_dest_path` (serial) or `in_flight_partials`
-(concurrent) ONLY when that path can hold OUR partial: the caller's safe-replace temp, or a name the resolver claimed
+defenses of the same file. A FILE source routes its dest through `last_dest_path` (serial) or `in_flight_partials`
+(concurrent) ONLY when that path can hold OUR partial: a name the resolver claimed
 (`../staged_write.rs::failed_write_leaves_ours_at`). ❗ A plain staged write (`WriteStaging::Stage`) never qualifies:
 its bytes are on a `.cmdr-tmp-*` sibling `stream_pipe_file` abandons itself, and its final name was free when the driver
-looked, so whatever is there after a failure is someone else's. The commonest way to get there is exactly that: another
-writer took the name mid-upload and the no-replace landing refused, and the sweep used to delete their file. Pinned by
-`copy_landing_race_tests.rs` (both drivers) and, on live WebDAV, SFTP, and SMB servers,
-`a_name_taken_mid_upload_is_never_replaced`. A write that fell back to the final name unstaged (a destination that can't
-rename) cleans its own partial there instead (`remove_unstaged_partial`). Pinned by
+looked, so whatever is there after a failure is someone else's. ❗ Nor does a swap (`StageOverOriginal`): its name is
+the user's ORIGINAL, and its temp is the write's own (the safe-replace paragraph under § "Volume copy + move"). The
+commonest way to get there is exactly that: another writer took the name mid-upload and the no-replace landing refused,
+and the sweep used to delete their file. Pinned by `copy_landing_race_tests.rs` (both drivers) and, on live WebDAV,
+SFTP, and SMB servers, `a_name_taken_mid_upload_is_never_replaced`. A write that fell back to the final name unstaged (a
+destination that can't rename) cleans its own partial there instead (`remove_unstaged_partial`). Pinned by
 `copy_rollback_tests.rs::{cancel_mid_merge_stream_preserves_preexisting_dest_file, rollback_mid_merge_stream_preserves_preexisting_dest_file, cancel_mid_merge_stream_concurrent_preserves_preexisting_dest_file}`
 (serial Cancel, serial Rollback, concurrent Cancel) and `rollback_after_rename_keeps_preexisting_dest_file` (file→file
 Rename rollback removes only the `name (1)` it landed). **Don't** drop the `created` ledger in the `Err`/cancel arms or
@@ -948,55 +947,55 @@ wrapper Volume that violates the trait contract.
 (Local↔SMB↔MTP↔USB) must never destroy the existing destination before the new bytes are fully written — otherwise a
 mid-stream failure (network drop, USB yank, cancel) leaves the user with neither the old file nor a complete new one. So
 `apply_volume_conflict_resolution`'s file→file branch does NOT delete the dest. It returns a
-`ResolvedConflict { write_path: <temp sibling>, replaces: Replaces::ViaTemp(orig) }`: the streaming writer lands bytes
-in a `<name>.cmdr-tmp-<uuid>` sibling on the dest volume, and only after the temp is fully written does the caller call
-`finalize_safe_replace(dest_volume, temp, orig)`, which deletes `orig` (which survived the whole write) then
-`rename(temp, orig, force=false)`. On a failure BEFORE the finalize the original is untouched and the existing
-partial-cleanup sweep removes the temp; on a failure INSIDE it the original may be gone, so the temp is rescued to a
-` (recovered)` name instead (below).
+`ResolvedConflict { write_path: orig, replaces: Replaces::Swap }`, and the swap is a LANDING MODE of the write's own
+staging (`../staged_write.rs`, `WriteStaging::StageOverOriginal`): the streaming writer lands bytes in a
+`<name>.cmdr-tmp-<uuid>` sibling the `StagedWrite` mints and records like any other, and only after the temp is fully
+written does its landing delete `orig` (which survived the whole write) and `rename(temp, orig, force=false)`. So the
+temp has ONE owner, every write site (`copy_serial.rs`, `copy_concurrent_task.rs`, `merge.rs`, `move_cross.rs`,
+`sequential_extract.rs`, and the server-side copy) gets the same landing, and `write_path` names the file the user ends
+up with: ❌ no layer above `StagedWrite` sees a temp-shaped destination. On a failure BEFORE the landing the original is
+untouched and the write's own `abandon` (or, for a dropped task, `cleanup.rs::clean_abandoned_staged_writes`) removes
+the temp; on a failure INSIDE it the original may be gone, so the temp is recorded as a landing and rescued to a
+` (recovered)` name instead (below). The shared rules of that cleared-way landing: `../DETAILS.md` § "File writes are
+staged".
 
 - **Why explicit delete-then-rename, not `rename(force=true)`:** MTP's `rename(force=true)` does NOT delete an existing
   destination — it can create a duplicate. SMB(force=true) deletes-then-renames internally and Local replaces
-  atomically, but the finalize must be uniform across all backends, so it always deletes `orig` first then renames into
-  the now-absent slot. There is a tiny window between the delete and the rename where neither name resolves, but the
-  complete new data lives in the temp throughout, so a crash there leaves a recoverable `.cmdr-tmp-*` sibling rather
-  than data loss. If the `delete(orig)` fails, `finalize_safe_replace` returns the error WITHOUT deleting the temp (the
-  new data must survive), and reports no rescue: nothing was lost, since the destination still holds the user's file.
+  atomically, but the swap must be uniform across all backends, so it always deletes `orig` first then renames into the
+  now-absent slot. There is a tiny window between the delete and the rename where neither name resolves, but the
+  complete new data lives in the temp throughout, recorded as a landing before the delete goes out, so a crash there
+  leaves a temp the next sweep lands rather than data loss. If the `delete(orig)` is refused with the original still
+  there, the landing takes its spare temp away and reports the refusal typed, with no rescue: nothing was lost.
 - **Threading:** `resolve_volume_conflict` / `apply_volume_conflict_resolution` return `Option<ResolvedConflict>`. The
-  three streaming write sites (`volume::copy` serial + concurrent, `volume::move_cross`) carry `replaces` through to
-  their `transfer_one` work, track the TEMP as the in-flight partial (so cancel/error cleanup removes the temp, never
-  the original), and after a successful `copy_single_path` call `finalize_safe_replace` and record the ORIGINAL (not the
-  temp) in `copied_paths` / the milestone for rollback bookkeeping. The cross-volume move finalizes BEFORE deleting the
-  source (a move must never delete the source if the dest isn't fully in place). Under `Replaces::Nothing` nothing is
-  finalized. A destination that publishes every write whole takes the Overwrite in place instead (`Replaces::InPlace`, §
-  "Whole-publish destinations").
-- **The post-write temp is committed data, NOT a cleanable partial, and it does not STAY a temp.**
-  `finalize_safe_replace` deletes the original first, then renames the temp in. If the rename fails after the delete
-  succeeded (a disconnect at that instant), the temp holds the ONLY complete copy of the new data and the original is
-  gone. So the finalize immediately renames it out of temp space, to `<name> (recovered)<.ext>` (continuing the house
-  ` (N)` series if that name is taken), and returns a `FinalizeFailure` naming where the bytes are. ❗ **Getting it out
-  of `.cmdr-tmp-*` space is a data-safety act, not tidiness**: `cleanup.rs::reap_stale_transfer_temps` matches on the
-  `.cmdr-tmp-` marker plus an age and runs at the start of every copy and every volume move into that directory, sparing
-  only what the in-flight ledger records, and this temp has no record (a caller-minted temp; `staged_write::land`'s own
-  is recorded as a landing before it clears the way). Left under its temp name, the user's only copy is deleted by the
-  next transfer into the same folder an hour later. Only `AlreadyExists` earns another candidate: the rename has already
-  failed once, so a dead link would fail identically under eight names and only add eight timeouts. When no rename lands
-  at all, the bytes stay under the temp name and the failure reports THAT path, which is the one shape in which
-  committed data still wears a sweepable name. The partial-cleanup contract ("delete partials on error") must not touch
-  either. Each write site stops treating the temp as a partial the moment `copy_single_path` returns `Ok`, BEFORE
-  finalize runs: the **serial** closure clears `last_dest_cell` to `None` up front; the **concurrent** task returns
-  `cleanup_temp = false` so the result handler skips adding the temp to `last_dest_path` (a stream failure sets `true`
-  and cleans as before); the **cross-volume move** has no dest partial-cleanup at all. Pinned by
-  `finalize_recovery_tests.rs` (the rescue, the reap that can no longer reach it, the taken-name series, and both
-  give-up shapes),
+  write sites derive the staging from `replaces` (`staging_for`), so the swap happens inside `copy_single_path` (or the
+  extract's write), and a site records the landed name, which IS the original, in `copied_paths` / the milestone / the
+  journal. The cross-volume move's source sweep runs only after `copy_single_path` returned `Ok`, so a move never
+  deletes the source unless the dest is fully in place. A destination that publishes every write whole takes the
+  Overwrite in place instead (`Replaces::InPlace`, § "Whole-publish destinations").
+- **The post-write temp is committed data, NOT a cleanable partial, and it does not STAY a temp.** If the rename fails
+  after the delete succeeded (a disconnect at that instant), the temp holds the ONLY complete copy of the new data and
+  the original is gone. So the landing immediately renames it out of temp space, to `<name> (recovered)<.ext>`
+  (continuing the house ` (N)` series if that name is taken), and returns a `FinalizeFailure` naming where the bytes
+  are. ❗ **Getting it out of `.cmdr-tmp-*` space is a data-safety act, not tidiness**:
+  `cleanup.rs::reap_stale_transfer_temps` matches on the `.cmdr-tmp-` marker plus an age and runs at the start of every
+  copy and every volume move into that directory, sparing only what the in-flight ledger records. Only `AlreadyExists`
+  earns another candidate: the rename has already failed once, so a dead link would fail identically under eight names
+  and only add eight timeouts. When no rename lands at all, the bytes stay under the temp name, still recorded as a
+  landing, and the failure reports THAT path. ❗ No driver-side partial list ever names the temp or the original
+  (`failed_write_leaves_ours_at` answers `false` for `StageOverOriginal`), so the partial-cleanup contract ("delete
+  partials on error") can't reach either: a concurrent task DROPPED between `delete(orig)` and the rename (the driver
+  breaking on a sibling's failure) leaves its temp on disk, recorded as a landing, for the sweep that finishes the
+  landing. Pinned by `swap_landing_tests.rs` (the rescue, the reap that can no longer reach it, the taken-name series,
+  both give-up shapes, and the three delete answers),
   `copy_crashsafe_tests.rs::{cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure, cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failure}`,
   and `move_failure_tests.rs::cross_volume_move_preserves_new_data_on_finalize_failure`; all five landing sites answer
-  the same four outcomes (lands, write fails, delete refused, rename refused after the delete) in
-  `safe_replace_grid_tests.rs`. ❗ **Known gap**: the concurrent task's temp stays in `in_flight_partials` until
-  `record_success`, so a task DROPPED inside the finalize (the driver breaking on a sibling's failure) after
-  `delete(orig)` went through has its temp deleted by the post-loop's `clean_partial_writes`, and the destination holds
-  neither file (the source still does). Pinned as it behaves by
-  `safe_replace_grid_tests.rs::a_concurrent_task_dropped_mid_swap_has_its_temp_cleaned_as_a_partial`; the fix flips it.
+  the same four outcomes (lands, write fails, delete refused, rename refused after the delete), and when each stops
+  being rollbackable, in `safe_replace_grid_tests.rs`, whose
+  `a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land` pins the dropped task.
+- **A swap's landing failure ends the file, outage or not.** `stream_pipe_file`'s outage settle
+  (`../interrupted_landing.rs`) knows only a rename-first landing, and after a `delete(orig)` that went through
+  unanswered it would discard the destination's only copy, so a swap never takes it (`../DETAILS.md` § "Waiting out a
+  volume that went away").
 - **A cross-type Overwrite renames the destination ASIDE and holds it until the operation ends.** A type swap can't
   stage the new side the way file→file does: a folder replacing a file appears the moment its walk starts and fills in
   leaf by leaf over the rest of the operation, and any leaf can fail or be cancelled. Deleting the destination first
@@ -1034,9 +1033,8 @@ partial-cleanup sweep removes the temp; on a failure INSIDE it the original may 
   typed `WriteOperationError::OriginalsKeptAside`. The one delete that stays a delete is the `Rename`-policy branch
   clearing its own `O_EXCL` placeholder: that zero-byte file is ours, not the user's. Pinned by
   `move_same_overwrite_tests.rs`.
-- Pinned by
-  `conflict_tests.rs::{file_overwrite_keeps_original_until_temp_is_written, finalize_safe_replace_swaps_temp_over_original}`
-  and
+- Pinned by `conflict_tests.rs::file_overwrite_keeps_the_original_and_writes_at_its_name`,
+  `../staged_write_tests.rs::a_swap_lands_delete_first_and_never_renames_with_force`, and
   `copy_crashsafe_tests.rs::{cross_volume_overwrite_preserves_dest_on_midstream_failure, cross_volume_overwrite_success_replaces_and_cleans_temp, cross_volume_overwrite_concurrent_replaces_and_cleans_temp}`.
 
 **Cross-volume move source-delete removes a LEDGER, never the tree** (`source_sweep.rs`, the twin of the local
@@ -1133,7 +1131,7 @@ sources**.
    ONCE; mechanism in `crates/cmdr-archive/src/read/DETAILS.md` § "One-pass subtree extract") and walks the files in
    ARCHIVE order, the one driver that doesn't start files in tree order (§ "Processing order"). Each file the plan kept
    is streamed through the destination's `write_from_stream` (same safe-overwrite temp+rename, downloads-watcher
-   registration, fsync, and `finalize_safe_replace` safe-replace as `stream_pipe_file`), recorded in `created`, and
+   registration, fsync, and `StagedWrite` landing, swap included, as `stream_pipe_file`), recorded in `created`, and
    reported through a `LeafProgress` of its own. A file the plan SKIPPED (conflict resolution said skip) is drained and
    dropped.
 
@@ -1249,14 +1247,14 @@ route fails loudly; `operations_host/backend_suites/s3_rename_integration_test.r
 **Decision**: a write the DESTINATION performs as one indivisible operation skips the staging and goes straight to the
 file's final name (`WriteStaging::SingleShot`). The destination answers `Volume::write_is_single_shot(size)`;
 `transfer::staged_write::resolve_staging` is the only place that upgrades a staged write (`Stage` or
-`StageOntoClaimedName`) to it, and never an `AlreadyStaged` one (a caller's safe-replace temp keeps the ORIGINAL alive
+`StageOntoClaimedName`) to it, and never a `StageOverOriginal` one (a safe-replace's staging keeps the ORIGINAL alive
 until the new bytes are complete, which is strictly stronger). Today SMB is the only backend that answers `true`; MTP,
 local FS, archives, and in-memory keep the trait default of `false`.
 
 The answer has a SECOND consumer that is not about staging: the destination-side foreground yield exempts a single-shot
 write from its min-progress floor, because such a write holds nothing open on the server while it drains
 (`../DETAILS.md` § "Foreground auto-yield"). So `stream_pipe_file` probes once and passes the raw boolean to both,
-rather than reading the resolved enum — which under-reports, since it stays `AlreadyStaged` for a caller-staged write
+rather than reading the resolved enum — which under-reports, since it stays `StageOverOriginal` for a safe-replace
 however single-shot it is.
 
 **Why it's safe**: staging buys exactly one property — no window in which the final name holds a byte-incomplete file. A
@@ -1466,9 +1464,8 @@ what each pair keeps, and the decisions behind both close this section. Measured
   name only when the file has a flag its destination's write can't put on (`MetadataCaps::staged_flags`: SMB's write
   keeps Hidden itself, local disk keeps none). Then the WHOLE set goes, so a destination that replaces its flags as one
   word (SMB's attributes) keeps Hidden too. A plain file, or a Hidden one onto SMB, costs nothing.
-  - **Two landings**: `stream_pipe_file` lands most files and puts the set on right after `staged.commit`. A
-    safe-replace temp the CALLER lands (`WriteStaging::AlreadyStaged`) is held on `WriteOperationState`, keyed by the
-    temp, until `finalize_safe_replace` swaps it over the original and puts it on THERE (or drops it on a failed swap).
+  - **One landing**: `stream_pipe_file` lands every staged file, a safe-replace's swap over the original included, and
+    puts the set on right after `staged.commit`, at the file's final name (the original's, for a swap).
   - A refused flags write counts as a loss (`LockedAndHidden`). A crash between the landing and this step leaves a file
     without its Locked; accepted, like the native landing's same gap (`../DETAILS.md` § "Local copies stage").
   - Not on the one-pass sequential extract: no archive reports flags.
@@ -1853,11 +1850,11 @@ delete's `EPERM` read as the destination's. cmdr-reports#62 (`ERR-UK5NH`) was th
 SMB share whose `create_directory` refused a NESTED folder (`STATUS_ACCESS_DENIED`), labelled with the source item the
 walker was on, so the dialog told the user to unlock their intact local folder in Finder. Destination calls are the dest
 root's `create_directory_all`, the space query and `is_directory` probes, `merge_level`'s nested `create_directory` and
-level listing, every name probe (`landing.rs`), a deep clash's resolution, the file write, the staged landing, the
-safe-replace finalize, and `remove_tree` of a set-aside dest (`TreeRemoval::side`). Source calls are opening, listing,
-and reading the source, and the move's source sweep. Pinned by `failure_side_tests.rs` (a refused nested mkdir, file
-write, and landing on the serial copy, concurrent copy, and cross-volume move, plus source open and read failures) and
-`move_failure_tests.rs::cross_volume_move_that_cannot_remove_the_original_says_the_copy_landed`.
+level listing, every name probe (`landing.rs`), a deep clash's resolution, the file write, the staged landing (a
+safe-replace's swap included), and `remove_tree` of a set-aside dest (`TreeRemoval::side`). Source calls are opening,
+listing, and reading the source, and the move's source sweep. Pinned by `failure_side_tests.rs` (a refused nested mkdir,
+file write, and landing on the serial copy, concurrent copy, and cross-volume move, plus source open and read failures)
+and `move_failure_tests.rs::cross_volume_move_that_cannot_remove_the_original_says_the_copy_landed`.
 
 **A failed read reaches the engine as the WRITE's error.** The destination's `write_from_stream` pulls the source's
 chunks itself, so a source that drops mid-file returns from a destination call with nothing saying which volume broke.
@@ -1886,9 +1883,9 @@ override `open_read_stream_with_hint`), ❌ never `Known(0)`; a body that ends b
 fails as a transport cut in the backend itself, before this check sees it. Pinned by `source_length_tests.rs` (short and
 long copies, a short move).
 
-**A destination failure on a safe-replace temp names the file the temp replaces**
-(`PathedVolumeError::naming_the_replaced`, applied wherever `Replaces` is in hand: `merge.rs::copy_leaf`, the extract,
-and all three drivers): the `.cmdr-tmp-*` name means nothing to the user, the file they chose to overwrite does.
+**A destination failure names the file the user chose, ❌ never a temp.** Every write labels its destination failures
+with `write_path`, which under a safe-replace IS the original (the swap is the write's own landing), so the
+`.cmdr-tmp-*` name, which means nothing to the user, never reaches them.
 
 **A `FinalizeFailure` becomes a pathed one through `PathedVolumeError::from_landing`, which is inherent to
 `PathedVolumeError` rather than a method on `FinalizeFailure`.** It is always the destination's, and it keeps

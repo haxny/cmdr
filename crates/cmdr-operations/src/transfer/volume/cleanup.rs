@@ -360,8 +360,8 @@ pub(super) async fn clean_abandoned_staged_writes(
 /// ❗ **Nothing unrecorded may leave committed data under a temp name.** This
 /// sweep reaps by name and age whatever the ledger doesn't name, so a
 /// `.cmdr-tmp-*` that holds the only copy of something must be recorded or
-/// renamed. `finalize::finalize_safe_replace` renames its temp to a
-/// ` (recovered)` name before returning for exactly this reason.
+/// renamed: a staged landing records its temp as a landing before it clears
+/// the way, and rescues it to a ` (recovered)` name when its rename then fails.
 ///
 /// Best-effort throughout: a listing or delete failure is logged at debug and
 /// never fails or delays the user's transfer.

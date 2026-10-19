@@ -91,10 +91,10 @@ impl ConcurrentCopy<'_> {
             self.dest_path.to_path_buf()
         };
         // For a file→file Overwrite, conflict resolution says how the
-        // original is replaced (`Replaces`): a temp sibling to stream into
-        // plus the original to swap in after the write fully lands
-        // (safe-replace), or the original's own name on a destination that
-        // publishes whole. `Nothing` ⇒ write `dest_item_path` directly.
+        // original is replaced (`Replaces`): a swap the write's landing makes
+        // once its staged bytes are whole, or an in-place write on a
+        // destination that publishes whole. Either way the write goes to
+        // `dest_item_path`, the original's own name.
         let mut replaces = Replaces::Nothing;
         // Nothing has resolved anything yet, so the name this task writes to is
         // one we believe free (`staged_write.rs::LandingName`).
@@ -166,7 +166,8 @@ impl ConcurrentCopy<'_> {
         //
         // ❗ And only a path that can hold OUR partial: a plain staged write's
         // final name never does (`failed_write_leaves_ours_at`), and cleaning it
-        // deleted whatever another writer put there.
+        // deleted whatever another writer put there; a swap's is the user's
+        // original.
         let landing = if dest_name_claimed {
             LandingName::ClaimedByTheCaller
         } else {

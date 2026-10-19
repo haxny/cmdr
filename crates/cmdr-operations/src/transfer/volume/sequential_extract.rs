@@ -99,7 +99,7 @@ impl ExtractPlan {
 ///
 /// Data-safety parity with the per-entry path: dirs and conflicts are resolved by
 /// the same `copy_directory_streaming` code, and each byte write goes through the
-/// same `write_from_stream` + `finalize_safe_replace` as `stream_pipe_file`, so
+/// same `write_from_stream` + `StagedWrite` landing as `stream_pipe_file`, so
 /// the partial-cleanup, safe-replace, and rollback contracts all carry over.
 #[allow(
     clippy::too_many_arguments,
@@ -154,10 +154,10 @@ pub(super) async fn extract_sequential_subtree(
             continue;
         };
 
-        // Stage the write on a `.cmdr-tmp-*` sibling unless the conflict pass
-        // already did (`Replaces::ViaTemp`) or the destination lands this write
-        // in one shot (`resolve_staging`), so a killed extract leaves nothing at a
-        // final name. Same contract as `stream_pipe_file`; unlike it, a sequential
+        // Stage the write on a `.cmdr-tmp-*` sibling unless the destination
+        // lands this write in one shot (`resolve_staging`), so a killed extract
+        // leaves nothing at a final name; an overwrite's lands delete-first
+        // (`Replaces::Swap`). Same contract as `stream_pipe_file`; unlike it, a sequential
         // source can't be re-read, so a destination that can't land a staged write
         // fails the extract instead of falling back.
         let length = cmdr_fs::volume::StreamLength::Known(file.size);
@@ -186,13 +186,13 @@ pub(super) async fn extract_sequential_subtree(
             Ok(written) => written,
             Err(e) => {
                 staged.abandon(dest_volume).await;
-                let failure = source_reads.label(e, &file.source_path, &planned.dest_path);
-                return Err(failure.naming_the_replaced(planned.replaces.swap_target()));
+                return Err(source_reads.label(e, &file.source_path, &planned.dest_path));
             }
         };
-        staged.commit(dest_volume, written.bytes).await.map_err(|f| {
-            PathedVolumeError::from_landing(f, &planned.dest_path).naming_the_replaced(planned.replaces.swap_target())
-        })?;
+        staged
+            .commit(dest_volume, written.bytes)
+            .await
+            .map_err(|f| PathedVolumeError::from_landing(f, &planned.dest_path))?;
         // Landed, so the ` (N)` placeholder the plan pass reserved here is filled.
         // Every one this pass never reaches (a failure, a cancel between members)
         // stays on the op's ledger for the post-loop to take back
@@ -203,26 +203,13 @@ pub(super) async fn extract_sequential_subtree(
         state.metadata_losses.note_file(lost.union(written.refused()));
         let bytes = written.bytes;
 
-        // Safe-replace finalize for a file→file Overwrite (same as the per-entry
-        // path): the temp holds the complete new bytes; swap it over the original.
-        // A replaced file is recorded the way `merge.rs::copy_leaf` records it:
-        // an op that overwrote isn't rollbackable, and the journal can only say
-        // so if it's told.
-        let recorded = match planned.replaces {
-            Replaces::ViaTemp(orig) => {
-                super::finalize::finalize_safe_replace(dest_volume, &planned.dest_path, &orig, state)
-                    .await
-                    .map_err(|e| PathedVolumeError::from_landing(e, &orig))?;
-                created.record_overwrite();
-                orig
-            }
-            Replaces::InPlace => {
-                created.record_overwrite();
-                planned.dest_path
-            }
-            Replaces::Nothing => planned.dest_path,
-        };
-        created.record_file(recorded, bytes);
+        // A landed overwrite is recorded the way `merge.rs::copy_leaf` records
+        // it: an op that overwrote isn't rollbackable, and the journal can only
+        // say so if it's told.
+        if planned.replaces.overwrites() {
+            created.record_overwrite();
+        }
+        created.record_file(planned.dest_path, bytes);
         total_bytes += bytes;
         leaf.complete(bytes);
     }

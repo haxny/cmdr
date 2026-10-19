@@ -10,22 +10,24 @@
 //! - **lands**: the original holds the new bytes, the journal records the
 //!   ORIGINAL's path (never a temp) and calls the op not rollbackable, Locked
 //!   goes on at the original's name, and no `.cmdr-tmp-*` is left.
-//! - **the write fails**: the original is untouched and no temp is left.
+//! - **the write fails**: the original is untouched, no temp is left, and the
+//!   op stays rollbackable.
 //! - **the delete of the original is refused**: the original is untouched, the
-//!   temp is taken away, and the refusal arrives typed.
+//!   temp is taken away, the refusal arrives typed, and the op stays
+//!   rollbackable.
 //! - **the delete went through, then the rename was refused**: the new bytes
-//!   are rescued to ` (recovered)`, and the failure names that path
-//!   (`NewDataKeptAt`).
+//!   are rescued to ` (recovered)`, the failure names that path
+//!   (`NewDataKeptAt`), and the op isn't rollbackable (the original is gone).
 //!
 //! Every cell also asserts through `safety_oracle.rs`, with a dest-only sibling
 //! beside the replaced file: a failed replace never takes a byte from either
 //! side, and never touches what the source doesn't shadow.
 //!
-//! One cell pins a KNOWN BUG as it behaves today:
-//! `a_concurrent_task_dropped_mid_swap_has_its_temp_cleaned_as_a_partial`.
+//! One more cell drops a concurrent task between `delete(orig)` and the rename
+//! (`a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land`).
 //!
 //! Older pins of single cells stay where they are (`copy_crashsafe_tests.rs`,
-//! `move_failure_tests.rs`, `finalize_recovery_tests.rs`, `copy_flags_tests.rs`,
+//! `move_failure_tests.rs`, `swap_landing_tests.rs`, `copy_flags_tests.rs`,
 //! `journal_capture_volume_tests.rs`); this grid is the one place all five sites
 //! answer the same four questions.
 
@@ -49,6 +51,7 @@ use tokio::sync::Notify;
 use super::faulty_volume::{FaultyOp, FaultyVolume, forward_volume_methods};
 use super::safety_oracle::{SafetySpec, assert_operation_was_safe};
 use crate::event_sinks::CollectorEventSink;
+use crate::in_flight_temps::{ItemKind, Ledger, Record, TrackedItem};
 use crate::journal;
 use crate::testing::{TestOperationLog, TestOperations};
 use crate::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
@@ -298,9 +301,12 @@ async fn run(site: Site, arm: Arm) -> Ran {
         }
     }
     .map_err(|failure| failure.error);
-    if result.is_ok() {
-        journal::finalize_op(state.scope(), site.kind(), ExecutionStatus::Done);
-    }
+    let status = if result.is_ok() {
+        ExecutionStatus::Done
+    } else {
+        ExecutionStatus::Failed
+    };
+    journal::finalize_op(state.scope(), site.kind(), status);
 
     Ran {
         site,
@@ -403,6 +409,24 @@ impl Ran {
             .filter_map(|i| i.dest_path.clone())
             .collect();
         (row.rollback_state, files)
+    }
+
+    /// The op stops being rollbackable at exactly one moment: when the
+    /// original is (or may be) gone, which is once the landing's `delete(orig)`
+    /// went through. Before that, a failure leaves the user's file where it
+    /// was, and what else the op wrote can still be undone.
+    fn assert_rollbackable_while_the_original_survives(&self, original_survived: bool) {
+        let label = self.label();
+        let (rollback, _) = self.journal();
+        let expected = if original_survived {
+            RollbackState::Rollbackable
+        } else {
+            RollbackState::NotRollbackable
+        };
+        assert_eq!(
+            rollback, expected,
+            "{label}: rollbackable exactly while the original survives (survived: {original_survived})"
+        );
     }
 }
 
@@ -522,6 +546,7 @@ async fn a_failed_write_leaves_the_original_and_no_temp_at_every_site() {
         if let Site::Move = site {
             assert!(ran.source_still_holds_the_file().await, "{label}: the source stays");
         }
+        ran.assert_rollbackable_while_the_original_survives(true);
         ran.assert_safe(false).await;
     }
 }
@@ -549,6 +574,7 @@ async fn a_refused_delete_of_the_original_keeps_it_and_takes_the_temp_away_at_ev
         if let Site::Move = site {
             assert!(ran.source_still_holds_the_file().await, "{label}: the source stays");
         }
+        ran.assert_rollbackable_while_the_original_survives(true);
         ran.assert_safe(false).await;
     }
 }
@@ -582,11 +608,12 @@ async fn a_refused_rename_after_the_delete_rescues_the_new_bytes_at_every_site()
         if let Site::Move = site {
             assert!(ran.source_still_holds_the_file().await, "{label}: the source stays");
         }
+        ran.assert_rollbackable_while_the_original_survives(false);
         ran.assert_safe(false).await;
     }
 }
 
-// ── The known bug ───────────────────────────────────────────────────────────
+// ── A task dropped mid-swap ─────────────────────────────────────────────────
 
 /// A destination that holds the rename onto `held_onto` forever, after saying
 /// it got there: the swap's `delete(orig)` went through, and the task sits
@@ -659,16 +686,22 @@ impl Volume for FailsOnceTheSwapIsHeld {
     }
 }
 
-/// ❗ KNOWN BUG, pinned as it behaves today. A top-level concurrent
-/// safe-replace task sits between `delete(orig)` and its rename when a sibling
-/// fails; the driver drops its window, and the post-loop's
-/// `clean_partial_writes` deletes the task's temp, which it still lists as a
-/// partial (`in_flight_partials`). The destination ends with neither the
-/// original nor the new file, and the failure names the sibling. The source
-/// still holds the bytes, so the user can copy again; flip this cell when the
-/// temp stops being cleaned as a partial mid-landing.
+/// The destination volume id the dropped-swap cell records its landing under.
+const LEDGER_VOLUME_ID: &str = "safe-replace-grid-nas";
+
+/// ❗ A top-level concurrent safe-replace task sits between `delete(orig)` and
+/// its rename when a sibling fails, and the driver drops its window. From that
+/// delete on, the temp is the destination's only copy of the file, so no
+/// cleanup may take it: it's no driver-side partial (the name the drivers know
+/// is the user's original), it left the operation's in-flight temps when it
+/// became a landing, and the persisted ledger holds it as one. The failure
+/// still names the sibling, and the next launch finishes the landing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_concurrent_task_dropped_mid_swap_has_its_temp_cleaned_as_a_partial() {
+async fn a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land() {
+    let dir = TestDir::new("safe-replace-grid-dropped-swap");
+    let data_dir = dir.join("data");
+    std::fs::create_dir_all(&data_dir).unwrap();
+    let ledger = Ledger::recording_in(&data_dir);
     let engine = TestOperations::new();
     let reached = Arc::new(Notify::new());
     let source_inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
@@ -689,13 +722,19 @@ async fn a_concurrent_task_dropped_mid_swap_has_its_temp_cleaned_as_a_partial() 
         reached,
         held_temp: StdMutex::new(None),
     });
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_journal_volumes("safe-replace-grid-source".into(), LEDGER_VOLUME_ID.into())
+            .with_in_flight_ledger(ledger.clone()),
+    );
 
     let result = tokio::time::timeout(
         Duration::from_secs(30),
         super::copy::copy_volumes_with_progress(
             Arc::new(CollectorEventSink::new()),
             "op-safe-replace-dropped-mid-swap",
-            &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
+            &state,
             Arc::clone(&source) as Arc<dyn Volume>,
             &[
                 PathBuf::from("/a.txt"),
@@ -738,26 +777,39 @@ async fn a_concurrent_task_dropped_mid_swap_has_its_temp_cleaned_as_a_partial() 
         "the swap's delete went through"
     );
     assert_eq!(
-        read_all(&*dest_inner, &temp).await,
-        None,
-        "❗ BUG: the post-loop cleaned the committed temp as a partial"
+        read_all(&*dest_inner, &temp).await.as_deref(),
+        Some(NEW),
+        "❗ the destination's only copy survives the post-loop's cleanup"
     );
-    let names: Vec<String> = dest_inner
-        .list_directory(Path::new("/dest"), None)
-        .await
-        .unwrap()
-        .into_iter()
-        .map(|entry| entry.name)
-        .filter(|name| name.starts_with("notes"))
-        .collect();
+    assert!(
+        state.in_flight_temps.lock_ignore_poison().is_empty(),
+        "the landing is no removable temp of ours"
+    );
+    let landing_recorded = Ledger::replay_log(&data_dir).iter().any(|record| {
+        matches!(record, Record::Tracked(TrackedItem {
+            kind: ItemKind::Landing { destination, expected_size },
+            path,
+            ..
+        }) if *path == temp && destination == Path::new("/dest/notes.txt") && *expected_size == NEW.len() as u64)
+    });
+    assert!(landing_recorded, "the persisted ledger holds the temp as a landing");
+
+    ledger.die();
+    let next_app = TestOperations::new();
+    next_app
+        .volumes()
+        .register(LEDGER_VOLUME_ID, Arc::clone(&dest_inner) as Arc<dyn Volume>);
+    let tally = Ledger::for_test().launch_in(&data_dir, &next_app).wait();
     assert_eq!(
-        names,
-        Vec::<String>::new(),
-        "❗ BUG: neither the original nor the new bytes are left at the destination"
+        read_all(&*dest_inner, Path::new("/dest/notes.txt")).await.as_deref(),
+        Some(NEW),
+        "the next launch lands the new bytes at the original's name: {tally:?}"
     );
+    assert_eq!(read_all(&*dest_inner, &temp).await, None, "and the temp is gone");
     assert_eq!(
         read_all(&*source_inner, Path::new("/notes.txt")).await.as_deref(),
         Some(NEW),
         "the source still holds the new bytes"
     );
+    drop(engine);
 }

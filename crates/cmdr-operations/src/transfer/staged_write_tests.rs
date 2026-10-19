@@ -62,15 +62,107 @@ fn staging_writes_to_a_recognizable_temp_sibling() {
     );
 }
 
-/// A caller-staged write is passed through: no second temp, and nothing
-/// registered (the caller owns that path's lifetime).
+/// A write over the user's original stages exactly like any other: its own
+/// tracked temp beside the original, ❗ even where the destination would take
+/// it in one shot. The original's survival through the whole write is the
+/// stronger guarantee.
 #[test]
-fn a_caller_staged_write_is_not_staged_again() {
+fn a_write_over_an_original_stages_and_is_never_single_shot() {
     let engine = TestOperations::new();
     let state = state(&engine);
-    let caller_temp = Path::new("/dir/notes.txt.cmdr-tmp-abc");
-    let staged = StagedWrite::begin_unannounced(&state, caller_temp, WriteStaging::AlreadyStaged);
-    assert_eq!(staged.target(), caller_temp);
+    for single_shot in [false, true] {
+        let staging = resolve_staging(WriteStaging::StageOverOriginal, single_shot);
+        assert_eq!(staging, WriteStaging::StageOverOriginal, "single-shot: {single_shot}");
+        let staged = StagedWrite::begin_unannounced(&state, Path::new("/dir/notes.txt"), staging);
+        assert_ne!(staged.target(), Path::new("/dir/notes.txt"));
+        assert_eq!(staged.target().parent(), Some(Path::new("/dir")));
+        assert!(staged.target().to_string_lossy().contains(".cmdr-tmp-"));
+        assert_eq!(staged.write_mode(), WriteMode::CreateOrReplace);
+        assert!(
+            state
+                .in_flight_temps
+                .lock_ignore_poison()
+                .iter()
+                .any(|path| path == staged.target())
+        );
+    }
+}
+
+/// What a destination was asked to do, in order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Call {
+    Delete(PathBuf),
+    Rename { from: PathBuf, to: PathBuf, force: bool },
+}
+
+/// A destination that logs every delete and rename it gets.
+struct CallLog {
+    inner: Arc<InMemoryVolume>,
+    calls: Mutex<Vec<Call>>,
+}
+
+impl Volume for CallLog {
+    forward_volume_methods!(inner =>
+        name, root, list_directory, get_metadata, exists, is_directory, create_file,
+    );
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn delete<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        self.calls.lock_ignore_poison().push(Call::Delete(path.to_path_buf()));
+        self.inner.delete(path)
+    }
+    fn rename<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        force: bool,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        self.calls.lock_ignore_poison().push(Call::Rename {
+            from: from.to_path_buf(),
+            to: to.to_path_buf(),
+            force,
+        });
+        self.inner.rename(from, to, force)
+    }
+}
+
+/// ❗ A swap lands DELETE-FIRST: the original is known to be in the way, so a
+/// rename-first attempt would only cost a refused round trip. And ❌ never
+/// `rename(force)`, which on MTP can leave a duplicate beside the original.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_swap_lands_delete_first_and_never_renames_with_force() {
+    let engine = TestOperations::new();
+    let state = state(&engine);
+    let inner = Arc::new(InMemoryVolume::new("dest"));
+    inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
+    let log = Arc::new(CallLog {
+        inner: Arc::clone(&inner),
+        calls: Mutex::new(Vec::new()),
+    });
+    let dest: Arc<dyn Volume> = Arc::clone(&log) as Arc<dyn Volume>;
+
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::StageOverOriginal);
+    let temp = staged.target().to_path_buf();
+    inner.create_file(&temp, b"NEW").await.unwrap();
+    staged.commit(&dest, 3).await.expect("the swap lands");
+
+    assert_eq!(
+        *log.calls.lock_ignore_poison(),
+        vec![
+            Call::Delete(PathBuf::from("/notes.txt")),
+            Call::Rename {
+                from: temp.clone(),
+                to: PathBuf::from("/notes.txt"),
+                force: false,
+            },
+        ],
+    );
+    assert_eq!(size_of(&inner, "/notes.txt").await, Some(3), "the new bytes replaced the original");
+    assert!(!inner.exists(&temp).await);
     assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
 }
 
@@ -101,8 +193,8 @@ async fn a_single_shot_write_targets_the_final_name_and_needs_no_landing() {
 
 /// A write that goes straight to a final name nobody resolved a conflict for
 /// must refuse a taken name itself, because no landing will: `CreateNew`.
-/// Every other write may replace what's at its target (our own temp, the
-/// caller's temp, or a name the caller claimed with a placeholder).
+/// Every other write may replace what's at its target (our own temp, or a name
+/// the caller claimed with a placeholder).
 #[test]
 fn only_a_single_shot_write_onto_a_name_expected_free_must_create_new() {
     let engine = TestOperations::new();
@@ -128,11 +220,11 @@ fn only_a_single_shot_write_onto_a_name_expected_free_must_create_new() {
         WriteMode::CreateOrReplace,
         "a claimed name holds the caller's own placeholder, which the write must replace"
     );
-    assert_eq!(mode_for(WriteStaging::AlreadyStaged, true), WriteMode::CreateOrReplace);
+    assert_eq!(mode_for(WriteStaging::StageOverOriginal, true), WriteMode::CreateOrReplace);
     for requested in [
         WriteStaging::Stage,
         WriteStaging::StageOntoClaimedName,
-        WriteStaging::AlreadyStaged,
+        WriteStaging::StageOverOriginal,
     ] {
         assert_eq!(
             mode_for(requested, false),

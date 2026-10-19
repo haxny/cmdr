@@ -39,7 +39,7 @@ use super::conflict::resolve_volume_conflict;
 use super::displaced_destination::DisplacedLedger;
 use super::preflight::SourceFileFacts;
 use super::preflight::{SourceHint, scan_volume_sources, sources_in_tree_order};
-use super::strategy::{Replaces, copy_single_path, resolve_source_is_directory};
+use super::strategy::{copy_single_path, resolve_source_is_directory};
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error, source_not_removed};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::Volume;
@@ -438,10 +438,11 @@ pub async fn move_volumes_with_progress(
                     .dest_path
                     .expect("async driver always supplies dest_path")
                     .to_path_buf();
-                // `ViaTemp(orig)` ⇒ `dest_item_path` is a temp sibling on the
-                // dest volume; after the copy lands, swap it over `orig` BEFORE
-                // deleting the source (a move must never delete the source if
-                // the destination isn't fully in place).
+                // `Swap` ⇒ `dest_item_path` is the user's original, which the
+                // copy's landing replaces once its staged bytes are whole. That
+                // landing is inside the copy, so the source sweep below runs
+                // only after it succeeded (a move must never delete the source
+                // if the destination isn't fully in place).
                 let replaces = ctx.replaces.clone();
                 // Whether the driver's conflict resolution PICKED this
                 // destination name (a `Rename`, an Overwrite that cleared it),
@@ -585,51 +586,22 @@ pub async fn move_volumes_with_progress(
                                 dest_item_path.display(),
                                 e.error
                             );
-                            return Err(WriteFailure::from(e.naming_the_replaced(replaces.swap_target())).error);
+                            return Err(WriteFailure::from(e).error);
                         }
                     };
                     // Past the last byte. Set directly on the handle rather than
                     // through the task-local, whose scope ended with the copy:
-                    // everything below (the safe-replace finalize, then the
-                    // source sweep) is a move's most dangerous stretch, and a
-                    // dump taken during it must not still claim the task is
-                    // streaming.
+                    // the source sweep below is a move's most dangerous
+                    // stretch, and a dump taken during it must not still claim
+                    // the task is streaming.
                     probe.set_phase(super::super::transfer_probe::TaskPhase::Finalizing);
-                    // Overwrote iff the top-level Overwrite replaced a file (below,
-                    // or in place) OR a deep-merge child did. Captured before
-                    // `replaces` is consumed; feeds move eligibility.
+                    // Overwrote iff the top-level Overwrite replaced a file (a
+                    // swap, or in place) OR a deep-merge child did. Feeds move
+                    // eligibility.
                     let source_overwrote = replaces.overwrites() || created.any_overwrote();
-                    // Where a FILE source actually lands: `orig` after a safe-replace
-                    // (the temp `dest_item_path` gets renamed onto it below), else
-                    // `dest_item_path`. A DIR source's dest root is `dest_item_path`.
-                    let landed_dest = if source_is_dir {
-                        dest_item_path.clone()
-                    } else {
-                        replaces
-                            .swap_target()
-                            .map_or_else(|| dest_item_path.clone(), Path::to_path_buf)
-                    };
-
-                    // Safe-replace finalize (file→file Overwrite): the temp on
-                    // the dest volume now holds the complete new data. Delete
-                    // the original dest and rename the temp into place. This
-                    // MUST happen before deleting the source: if the finalize
-                    // fails, the source is untouched, the original dest is
-                    // intact, and the new data survives in the temp.
-                    if let Replaces::ViaTemp(orig) = replaces
-                        && let Err(e) =
-                            super::finalize::finalize_safe_replace(&dest_volume, &dest_item_path, &orig, &state).await
-                        {
-                            log::warn!(
-                                target: "move",
-                                "move_between_volumes: the safe-replace finalize for {} couldn't land (new data at {:?}, source {} untouched): {}",
-                                orig.display(),
-                                e.new_data_at,
-                                source_path.display(),
-                                e.error
-                            );
-                            return Err(super::transfer_error::map_finalize_failure(&orig, e));
-                        }
+                    // Where the source landed: the original's own name after an
+                    // overwrite, a DIR source's dest root otherwise.
+                    let landed_dest = dest_item_path;
 
                     // Remove the source, from the LEDGER the copy kept, ❌ never
                     // by walking what's on disk now (`source_sweep.rs`). What

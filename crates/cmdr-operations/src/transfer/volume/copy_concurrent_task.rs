@@ -4,10 +4,10 @@
 //! Everything the task needs arrives owned on [`CopyTask`], so the future is
 //! `'static` and spawns on its own (the probe's task-local scope is set inside
 //! it, in [`run_copy_task`]). The two result payloads carry back what the phase
-//! runner's cleanup and rollback have to know, and the
-//! distinction their doc comments draw between a STREAM failure and a FINALIZE
-//! failure is the most data-loss-sensitive line in this directory: read them
-//! before touching the arms that build them.
+//! runner's cleanup and rollback have to know, and
+//! `CopyTaskFailure::cleanup_temp`, which says whether the failed path may be
+//! cleaned at all, is the most data-loss-sensitive line in this directory: read
+//! its doc before touching the arms that build it.
 //!
 //! Conflict resolution is NOT here. It runs on the driver before a task is built
 //! (`copy_concurrent_source.rs`), so a Stop prompt holds back its source and
@@ -37,22 +37,19 @@ use cmdr_fs::volume::Volume;
 
 /// Success payload for one concurrent copy task.
 ///
-/// `partial_path` is the path the task pushed into `in_flight_partials` (the
-/// temp sibling under safe-replace, else the dest) so the result handler can
-/// remove the right entry. `recorded_path` is the top-level landed path (the
-/// original after a safe-replace finalize, else the dest) — recorded for
-/// rollback ONLY for a top-level file source. `created_files` / `created_dirs`
-/// carry the per-file destinations and newly-created subdirectories from a
+/// `recorded_path` is the top-level landed path (the original's own name after
+/// an overwrite): the entry the result handler drops from `in_flight_partials`,
+/// and what it records for rollback for a top-level file source.
+/// `created_files` / `created_dirs` carry the per-file destinations and newly-created subdirectories from a
 /// DIRECTORY source's recursive copy, so rollback removes exactly what the op
 /// wrote into a (possibly pre-existing, merged) dest directory and never the
 /// directory root.
 pub(super) struct CopyTaskSuccess {
-    pub(super) partial_path: PathBuf,
     pub(super) recorded_path: PathBuf,
     pub(super) source_is_dir: bool,
     pub(super) bytes: u64,
     /// Whether this source replaced any existing dest file (a top-level file→file
-    /// safe-replace, or a deep-merge child overwrite). Feeds the operation-log
+    /// swap, or a deep-merge child overwrite). Feeds the operation-log
     /// eligibility: a copy that overwrote isn't rollbackable (the original is gone).
     pub(super) overwrote: bool,
     pub(super) created_files: Vec<WrittenFile>,
@@ -69,15 +66,15 @@ pub(super) struct CopyTaskSuccess {
 /// Failure payload for one concurrent copy task.
 ///
 /// `failed_path` is the in-flight partial entry to remove from
-/// `in_flight_partials` (the temp sibling under safe-replace, else the dest
-/// item path). ❌ It is NOT the path to report: it names where the partial sits
-/// on the DESTINATION, which for a directory source is the dest dir root.
-/// `failure` carries the item the walker actually failed on (deep inside the
-/// subtree, not the top-level item the user selected) and the side that refused,
-/// and is the only one of the two a user can act on. Keep them separate. `cleanup_temp` distinguishes a STREAM failure (`true` — the
-/// dest/temp is a half-written partial and must be cleaned) from a FINALIZE
-/// failure after a SUCCESSFUL write (`false` — the temp holds the only complete
-/// copy of the new data and MUST be left on disk).
+/// `in_flight_partials` (the dest item path). ❌ It is NOT the path to report:
+/// it names where the partial sits on the DESTINATION, which for a directory
+/// source is the dest dir root. `failure` carries the item the walker actually
+/// failed on (deep inside the subtree, not the top-level item the user
+/// selected) and the side that refused, and is the only one of the two a user
+/// can act on. Keep them separate. `cleanup_temp` says whether `failed_path`
+/// can hold a partial of OURS (`failed_write_leaves_ours_at`): `false` for a
+/// plain staged write, whose temp is the write's own to abandon, and ❗ for a
+/// swap, whose `failed_path` is the user's original.
 ///
 /// `source_is_dir` plus `created_files` / `created_dirs` carry the per-file
 /// rollback ledger for a DIRECTORY source interrupted mid-stream. Without it the
@@ -127,11 +124,11 @@ pub(super) struct CopyTask {
     /// dispatch carries no mode here (the scan counts bytes), so a file landing
     /// on a local destination resolves one after its bytes cross.
     pub(super) source_facts: SourceFileFacts,
-    /// Where this task streams: the temp sibling under
-    /// [`Replaces::ViaTemp`], else the destination itself.
+    /// Where this task's file lands: the original's own name under
+    /// [`Replaces::Swap`].
     pub(super) dest_path: PathBuf,
-    /// What the write does to a file at the name: under `ViaTemp(orig)`, swap
-    /// the temp over `orig` after a successful write.
+    /// What the write does to a file at the name: under `Swap`, its landing
+    /// replaces the original after a successful write.
     pub(super) replaces: Replaces,
     /// Whether conflict resolution PICKED `dest_path` (a `Rename` pick, an
     /// Overwrite that cleared it) rather than it being the plain
@@ -258,86 +255,42 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, Box
     // landed durably (the move op may drop it from the archive).
     let task_skipped_count = created.skipped_file_count();
     let task_skipped_bytes = created.skipped_byte_count();
-    // Overwrote iff a top-level file→file Overwrite replaced a file (a
-    // safe-replace below, or an in-place write on a whole-publishing
-    // destination), OR a deep-merge child replaced an existing dest file.
-    // Computed before `replaces` is consumed. Feeds the operation-log
-    // eligibility (a copy that overwrote can't roll back).
-    let task_overwrote = replaces.overwrites() || created.any_overwrote();
     match result {
-        Ok(bytes) => {
-            // Safe-replace finalize: the temp now holds the complete new data;
-            // delete the original and rename the temp into place. On finalize
-            // error, surface it as this file's failure with `cleanup_temp =
-            // false` — the write SUCCEEDED, so the temp is committed data (the
-            // only complete copy, since finalize's delete step may already have
-            // removed the original). It must survive as a recoverable
-            // `.cmdr-tmp-*` artifact, NOT be cleaned.
-            if let Replaces::ViaTemp(orig) = replaces {
-                if let Err(e) = super::finalize::finalize_safe_replace(&dest_volume, &dest_path, &orig, &state).await {
-                    // Finalize is file→file only (safe-replace), so there's no
-                    // directory ledger to carry. The failure is the
-                    // DESTINATION's, and when the original is already gone it
-                    // also says where the new bytes ended up.
-                    return Err(Box::new(CopyTaskFailure {
-                        failed_path: dest_path,
-                        failure: PathedVolumeError::from_landing(e, &orig),
-                        source_path,
-                        cleanup_temp: false,
-                        source_is_dir: false,
-                        overwrote: task_overwrote,
-                        created_files,
-                        created_dirs,
-                    }));
-                }
-                // Landed at `orig`; the temp `dest_path` is gone after the
-                // rename. Report the temp as the partial to remove and `orig` as
-                // the recorded path for rollback bookkeeping. Safe-replace is
-                // file→file only, so there are no created dirs.
-                return Ok(CopyTaskSuccess {
-                    partial_path: dest_path,
-                    recorded_path: orig,
-                    source_is_dir: false,
-                    bytes,
-                    overwrote: task_overwrote,
-                    created_files,
-                    created_dirs,
-                    source_path,
-                    skipped_count: task_skipped_count,
-                    skipped_bytes: task_skipped_bytes,
-                });
-            }
-            Ok(CopyTaskSuccess {
-                partial_path: dest_path.clone(),
-                recorded_path: dest_path,
-                source_is_dir,
-                bytes,
-                overwrote: task_overwrote,
-                created_files,
-                created_dirs,
-                source_path,
-                skipped_count: task_skipped_count,
-                skipped_bytes: task_skipped_bytes,
-            })
-        }
-        // Stream failure (incl. mid-stream cancel): the dest/temp is a
-        // half-written partial → clean it (`cleanup_temp = true`), ❗ but only
-        // when `dest_path` can hold OUR partial. A plain staged write's final
-        // name never does, and cleaning it deleted whatever another writer put
-        // there (`failed_write_leaves_ours_at`). For a
-        // DIRECTORY source, carry the per-file ledger so the result handler
-        // records the individual partials instead of the dir root — the post-loop
-        // must never recursively delete a merged dest dir and destroy
+        // Landed at `dest_path`, which names the original for a top-level
+        // overwrite (a swap's landing ran inside the write).
+        Ok(bytes) => Ok(CopyTaskSuccess {
+            recorded_path: dest_path,
+            source_is_dir,
+            bytes,
+            // Overwrote iff a top-level file→file Overwrite replaced a file (a
+            // swap, or an in-place write on a whole-publishing destination), OR
+            // a deep-merge child replaced an existing dest file. Feeds the
+            // operation-log eligibility (a copy that overwrote can't roll back).
+            overwrote: replaces.overwrites() || created.any_overwrote(),
+            created_files,
+            created_dirs,
+            source_path,
+            skipped_count: task_skipped_count,
+            skipped_bytes: task_skipped_bytes,
+        }),
+        // A failure (incl. a mid-stream cancel, and a landing that couldn't
+        // finish): clean `dest_path` (`cleanup_temp = true`) ❗ only when it can
+        // hold OUR partial. A plain staged write's final name never does, and
+        // cleaning it deleted whatever another writer put there; a swap's names
+        // the user's original (`failed_write_leaves_ours_at`). A failed
+        // top-level write replaced nothing it can be blamed for: a swap that got
+        // past its delete told the journal itself (`staged_write.rs::land`). For
+        // a DIRECTORY source, carry the per-file ledger so the result handler
+        // records the individual partials instead of the dir root — the
+        // post-loop must never recursively delete a merged dest dir and destroy
         // pre-existing dest-only files.
         Err(e) => Err(Box::new(CopyTaskFailure {
             failed_path: dest_path,
-            // A deep-merge leaf's finalize failure arrives here too, carrying
-            // where its rescued bytes went.
-            failure: e.naming_the_replaced(replaces.swap_target()),
+            failure: e,
             source_path,
             cleanup_temp: failed_write_leaves_ours_at(staging),
             source_is_dir,
-            overwrote: task_overwrote,
+            overwrote: created.any_overwrote(),
             created_files,
             created_dirs,
         })),

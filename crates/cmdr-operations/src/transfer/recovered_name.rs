@@ -16,10 +16,11 @@
 //! [`what_a_refused_delete_left`] is how a landing whose delete answered an
 //! error finds out which of the two situations it is in.
 //!
-//! It sits at `transfer/` level rather than inside `volume/` because every
-//! landing reaches it: `volume::finalize::finalize_safe_replace` (a cross-volume
-//! file→file Overwrite), `staged_write::land` (any staged write), and
-//! `archive_edit::remote::swap_into_place` (a remote zip edit's swap).
+//! It sits at `transfer/` level rather than inside `volume/` because
+//! `staged_write::land` reaches it (every staged write, a file→file
+//! Overwrite's swap included), as do `interrupted_landing.rs`, the
+//! cross-type aside's put-back (`volume/displaced_destination.rs`), and a
+//! remote zip edit's swap (`archive_edit::remote::swap_into_place`).
 
 use std::path::{Path, PathBuf};
 
@@ -62,10 +63,9 @@ impl From<VolumeError> for FinalizeFailure {
 /// plus an age, and it runs at the start of every copy and every volume move
 /// into a directory, and it spares only what the in-flight ledger records. A
 /// `staged_write::land` temp is recorded as a landing until it lands or is
-/// rescued, but `finalize::finalize_safe_replace`'s has no record at all, so
-/// the next transfer into the same folder would delete the user's only copy. A
-/// file called `notes (recovered).txt` is one no sweep can match, recorded or
-/// not.
+/// rescued, but a record is only as durable as the ledger's log, and a
+/// landing's settles once it's rescued. A file called `notes (recovered).txt`
+/// is one no sweep can match, recorded or not.
 ///
 /// Answers where the bytes ARE, which is never nothing: if the rescue rename
 /// fails too (the same dead connection that failed the finalize), the temp path

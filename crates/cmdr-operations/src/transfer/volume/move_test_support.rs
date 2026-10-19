@@ -152,7 +152,7 @@ impl OperationEventSink for SampleInFlightTableSink {
 }
 
 /// Wraps an `InMemoryVolume` destination whose `rename` ALWAYS fails: models a
-/// disconnect at the exact instant `finalize_safe_replace` swaps the
+/// disconnect at the exact instant a safe-replace's landing swaps the
 /// fully-written temp over the original. Everything else delegates.
 pub(super) struct MoveRenameFailsDestVolume {
     pub(super) inner: Arc<InMemoryVolume>,

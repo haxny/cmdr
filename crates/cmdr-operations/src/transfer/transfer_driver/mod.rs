@@ -216,13 +216,11 @@ pub(super) struct TransferContext<'a> {
     /// Rename). For the sync driver this is `None` (the closure derives the
     /// destination from its own destination root + `source_path`).
     pub dest_path: Option<&'a Path>,
-    /// What the write does to a file at the destination name. Under
-    /// `Replaces::ViaTemp(orig)`, `dest_path` is a temp sibling: after a
-    /// successful streaming write, the closure must finalize by deleting `orig`
-    /// and renaming `dest_path` → `orig` (see
-    /// `volume::finalize::finalize_safe_replace`). Otherwise write `dest_path`
-    /// directly. Only the async driver sets anything but `Nothing`, from
-    /// `ConflictDecision::Proceed`.
+    /// What the write does to a file at the destination name. `dest_path` is
+    /// always the name the file lands at, so under `Replaces::Swap` it's the
+    /// user's original, which the closure's staged write replaces in its
+    /// landing (`staged_write.rs`). Only the async driver sets anything but
+    /// `Nothing`, from `ConflictDecision::Proceed`.
     pub replaces: &'a Replaces,
     /// Whether `dest_path` is a name conflict resolution PICKED (a `Rename`
     /// pick, an Overwrite whose destination it cleared) rather than the plain
@@ -486,14 +484,13 @@ pub(super) enum ConflictDecision {
     /// Proceed with the given (possibly rewritten) destination path. Driver
     /// calls `transfer_one` with `dest_path = Some(this)`.
     ///
-    /// `replaces` carries the file→file Overwrite contract: under
-    /// `Replaces::ViaTemp(orig)`, `dest_path` is a temp sibling the closure
-    /// streams into, and after a successful write the closure must finalize by
-    /// deleting `orig` and renaming the temp into place (see
-    /// `volume::finalize::finalize_safe_replace`); under `InPlace` the write
-    /// goes to the original's own name on a whole-publishing destination. The
-    /// driver passes both through `TransferContext` unchanged; only the closure
-    /// acts on them, so the driver stays agnostic to the replace mechanism.
+    /// `replaces` carries the file→file Overwrite contract, and `dest_path` is
+    /// the original's own name under both replacing shapes: under
+    /// `Replaces::Swap` the closure's staged write lands delete-first over it,
+    /// under `InPlace` the write goes there directly on a whole-publishing
+    /// destination. The driver passes both through `TransferContext`
+    /// unchanged; only the closure acts on them, so the driver stays agnostic
+    /// to the replace mechanism.
     Proceed { dest_path: PathBuf, replaces: Replaces },
 }
 

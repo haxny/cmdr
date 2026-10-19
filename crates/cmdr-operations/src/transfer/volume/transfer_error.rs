@@ -68,17 +68,18 @@ impl From<(VolumeError, PathBuf)> for WriteFailure {
     }
 }
 
-/// Turns a failed safe-replace finalize into the typed error the user reads.
+/// Turns a failed landing into the typed error the user reads, for a caller
+/// outside the transfer engine (fresh compression's publish).
 ///
 /// The rename that failed is entirely the DESTINATION's, so `dest_path` names
 /// the destination entry: the source is fully read and untouched by then, and
 /// pointing the user at it would send them looking at an intact file.
 ///
-/// When the finalize rescued the new bytes (or couldn't, and left them under
+/// When the landing rescued the new bytes (or couldn't, and left them under
 /// their temp name), the answer is `NewDataKeptAt` and it carries that path: the
 /// user's complete new file lives ONLY there, so an error that doesn't name it
-/// leaves them hunting. A finalize that failed on the DELETE rescued nothing
-/// and lost nothing, so it maps like any other destination failure.
+/// leaves them hunting. A landing that cleared nothing rescued nothing and lost
+/// nothing, so it maps like any other destination failure.
 pub(crate) fn map_finalize_failure(dest_path: &Path, failure: FinalizeFailure) -> WriteOperationError {
     WriteFailure::from(PathedVolumeError::from_landing(failure, dest_path)).error
 }
@@ -110,8 +111,8 @@ pub(crate) struct PathedVolumeError {
     /// says which one the user has to look at.
     pub role: PathRole,
     pub error: VolumeError,
-    /// Set only by a failed safe-replace finalize that already deleted the
-    /// original: where the complete new bytes are now. It changes what the user
+    /// Set only by a failed landing that already cleared the way (a swap's
+    /// deleted original, a claimed name): where the complete new bytes are now. It changes what the user
     /// is told (`WriteOperationError::NewDataKeptAt`), so it travels with the
     /// error rather than being reconstructed anywhere.
     pub new_data_at: Option<PathBuf>,
@@ -197,8 +198,8 @@ impl PathedVolumeError {
         }
     }
 
-    /// Labels a failed landing (a staged write's rename, a safe-replace
-    /// finalize) with the destination name the new bytes were meant to take. It
+    /// Labels a failed landing (a staged write's rename, a safe-replace's
+    /// swap) with the destination name the new bytes were meant to take. It
     /// is entirely the destination's, and when it rescued the bytes,
     /// `new_data_at` says where they went.
     pub(super) fn from_landing(failure: FinalizeFailure, dest_path: &Path) -> Self {
@@ -209,17 +210,6 @@ impl PathedVolumeError {
             new_data_at: failure.new_data_at,
             lost_connection: None,
         }
-    }
-
-    /// Names a destination failure on a caller's safe-replace temp after the
-    /// file that temp replaces (`Replaces::swap_target`): the `.cmdr-tmp-*`
-    /// name means nothing to the user, the file they chose to overwrite does.
-    /// A source failure, or a write with no temp, passes through.
-    pub(super) fn naming_the_replaced(mut self, swap_target: Option<&Path>) -> Self {
-        if let (PathRole::Destination, Some(original)) = (self.role, swap_target) {
-            self.path = original.to_path_buf();
-        }
-        self
     }
 }
 

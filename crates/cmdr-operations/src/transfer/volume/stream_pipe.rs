@@ -114,9 +114,10 @@ fn auto_yield_tuning() -> (Duration, u64, Duration) {
 /// `on_progress` callback can't `.await` to park), and what keeps a long
 /// single-file transfer from starving foreground tasks.
 ///
-/// The bytes never touch `dest_path` until the last one has landed: unless the
-/// caller already staged the write, they go to a `.cmdr-tmp-*` sibling that is
-/// renamed into place at the end (`staged_write.rs`).
+/// The bytes never touch `dest_path` until the last one has landed: they go to
+/// a `.cmdr-tmp-*` sibling that is renamed into place at the end
+/// (`staged_write.rs`), delete-first when `dest_path` is the user's original a
+/// file→file Overwrite replaces (`WriteStaging::StageOverOriginal`).
 ///
 /// A step runner: each pass walks the file's checkpoints in order (settle a
 /// create the transport may have completed, open the source, write, land), and
@@ -176,10 +177,6 @@ pub(super) async fn stream_pipe_file(
         announced_dest,
         state,
         on_file_progress,
-        // Whether the CALLER lands this write (a safe-replace temp it swaps over
-        // the original): then the flags that wait for the landing wait for that
-        // swap.
-        caller_lands: matches!(staging, WriteStaging::AlreadyStaged),
         staging,
         writing_at_the_final_name: false,
         attempt: 1,
@@ -210,14 +207,15 @@ struct FileRun<'a> {
     announced_dest: Announced<'a>,
     state: &'a Arc<WriteOperationState>,
     on_file_progress: &'a (dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
-    caller_lands: bool,
     /// The staging the caller asked for, until a destination that can't land a
     /// staged write sends the file back to be written at its final name.
     ///
     /// A destination that can't rename can't stage. No production backend is
     /// in that position (Local, SMB, and MTP all rename), but a minimal `Volume`
     /// impl must stay usable as a copy destination, so a `NotSupported` landing
-    /// re-runs the file unstaged (the pre-staging behavior) instead of failing.
+    /// re-runs the file unstaged (`WriteStaging::Unstaged`) instead of failing.
+    /// ❌ Never a swap: an unstaged write over the original would replace it
+    /// before the new bytes are whole, so a swap's `NotSupported` fails the file.
     staging: WriteStaging,
     /// Set once that fallback happened. From then on a failed attempt's partial
     /// sits AT the final name and is ours, so the terminal failure removes it

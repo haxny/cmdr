@@ -303,11 +303,7 @@ impl FileRun<'_> {
                 // to take back (`naming.rs::take_back_unfilled_reservations`).
                 state.claimed_names.release_placeholder(dest_path);
                 state.metadata_losses.note_file(lost);
-                if self.caller_lands {
-                    landed_flags::hold(state, dest_path, after_landing);
-                } else {
-                    landed_flags::put_on(dest_volume, dest_path, &after_landing, state).await;
-                }
+                landed_flags::put_on(dest_volume, dest_path, &after_landing, state).await;
                 Ok(bytes)
             }
             Err(FinalizeFailure {
@@ -323,26 +319,34 @@ impl FileRun<'_> {
                     "stream_pipe_file: destination can't land a staged write for {}; falling back to writing at the final name",
                     dest_path.display()
                 );
-                self.staging = WriteStaging::AlreadyStaged;
+                self.staging = WriteStaging::Unstaged;
                 self.writing_at_the_final_name = true;
                 Err(Stop::RunAgain)
             }
             // The landing failed with nothing cleared: the outage wait and the
             // settle decide (`on_fault`). ❌ Never with `new_data_at` set: then
             // the temp was the only copy, and `land` has already moved it
-            // somewhere safe.
-            Err(failure) if failure.new_data_at.is_none() => Err(Stop::Faulted(Box::new(Fault::Land {
-                failure,
-                started_on,
-                landing_from,
-                bytes,
-                lost,
-            }))),
-            // The write SUCCEEDED and the landing didn't: the temp holds the only
-            // complete copy of the new bytes, and `commit` already dropped it from
-            // the in-flight set so nothing sweeps it. When the landing had already
-            // cleared the way, `land` also got those bytes out of temp space and
-            // `new_data_at` says where they are. Surface the failure.
+            // somewhere safe. ❌ Nor for a swap: the settle knows only a
+            // rename-first landing, and after a `delete(orig)` that went through
+            // unanswered it would discard the destination's only copy. A swap's
+            // landing failure ends the file.
+            Err(failure)
+                if failure.new_data_at.is_none() && !matches!(self.staging, WriteStaging::StageOverOriginal) =>
+            {
+                Err(Stop::Faulted(Box::new(Fault::Land {
+                    failure,
+                    started_on,
+                    landing_from,
+                    bytes,
+                    lost,
+                })))
+            }
+            // The write SUCCEEDED and the landing didn't. When the landing had
+            // cleared the way, the temp holds the only complete copy of the new
+            // bytes: `land` got them out of temp space, and `new_data_at` says
+            // where they are. A swap that couldn't clear the way (or can't tell)
+            // reaches here too. Either way `land` has settled what the temp is
+            // in the ledgers. Surface the failure.
             Err(failure) => Err(Stop::Over(PathedVolumeError::from_landing(failure, dest_path))),
         }
     }

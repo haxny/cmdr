@@ -1,7 +1,7 @@
 //! Merge-safety tests for `conflict.rs` (the cross-volume conflict resolver):
 //! that an Overwrite merges rather than replaces, that an unestablished type
-//! never clears anything, and that the finalize swap keeps the original until
-//! the temp is whole. The resolver's other three questions have their own
+//! never clears anything, and that a file Overwrite leaves the original for
+//! the write's landing to replace. The resolver's other three questions have their own
 //! siblings: `conflict_conditional_tests.rs`, `conflict_same_item_tests.rs`,
 //! and `conflict_cross_type_tests.rs`.
 //!
@@ -10,7 +10,6 @@
 //! this directory follows.
 
 use super::super::super::staged_write::Replaces;
-use super::super::finalize::finalize_safe_replace;
 use super::*;
 use crate::event_sinks::CollectorEventSink;
 use crate::testing::TestOperations;
@@ -235,24 +234,21 @@ async fn a_destination_that_raced_away_still_resolves_as_a_plain_write() {
     .expect("a missing destination is an answer, not a failure")
     .expect("Overwrite must resolve to a write path");
 
-    // Resolves as file→file: safe-replace via a temp sibling, exactly as it
-    // would if the destination were a plain file.
-    assert_eq!(resolved.replaces, Replaces::ViaTemp(PathBuf::from("/notes.txt")));
-    assert!(
-        resolved.write_path.to_string_lossy().contains(".cmdr-tmp-"),
-        "expected a temp sibling, got {:?}",
-        resolved.write_path
-    );
+    // Resolves as file→file: a swap at the original's name, exactly as it would
+    // if the destination were a plain file.
+    assert_eq!(resolved.replaces, Replaces::Swap);
+    assert_eq!(resolved.write_path, PathBuf::from("/notes.txt"));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn file_overwrite_keeps_original_until_temp_is_written() {
+async fn file_overwrite_keeps_the_original_and_writes_at_its_name() {
     let engine = TestOperations::new();
     // For a file→file Overwrite, the resolver must NOT delete the existing
-    // destination. Instead it hands back a temp sibling to write into plus
-    // `Replaces::ViaTemp(orig)`, so the original survives the full
-    // streaming write and is only swapped out at finalize time. This is the
-    // safe-replace contract that protects data on a mid-stream failure.
+    // destination. It answers `Replaces::Swap` at the original's own name: the
+    // write stages on a temp sibling and only its landing replaces the
+    // original (`staged_write.rs`), so the original survives the full
+    // streaming write. This is the safe-replace contract that protects data on
+    // a mid-stream failure.
     let dest = Arc::new(InMemoryVolume::new("dest"));
     dest.create_file(Path::new("/notes.txt"), b"old content").await.unwrap();
     let dest_dyn: Arc<dyn Volume> = dest.clone();
@@ -277,53 +273,15 @@ async fn file_overwrite_keeps_original_until_temp_is_written() {
          can't lose both the old and the new copy."
     );
 
-    // (b) The caller is told to replace `/notes.txt` after the write lands.
+    // (b) The write replaces `/notes.txt` by a swap, and `write_path` names
+    // the file the user ends up with: no layer above the write ever sees a
+    // temp-shaped destination.
     assert_eq!(
         resolved.replaces,
-        Replaces::ViaTemp(PathBuf::from("/notes.txt")),
-        "file→file Overwrite must request a post-write replace of the original"
+        Replaces::Swap,
+        "file→file Overwrite must replace the original by a swap"
     );
-
-    // (c) The write lands in a temp sibling, not directly on the original.
-    assert_ne!(resolved.write_path, PathBuf::from("/notes.txt"));
-    assert_eq!(resolved.write_path.parent(), Path::new("/notes.txt").parent());
-    assert!(
-        resolved
-            .write_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .map(|n| n.contains(".cmdr-tmp-"))
-            .unwrap_or(false),
-        "temp sibling should carry the recognizable .cmdr-tmp- marker, got {:?}",
-        resolved.write_path
-    );
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn finalize_safe_replace_swaps_temp_over_original() {
-    let engine = TestOperations::new();
-    // After the streaming write lands the new bytes in the temp sibling,
-    // `finalize_safe_replace` must delete the original and rename the temp
-    // into its place — leaving exactly the new content and no temp behind.
-    let dest = Arc::new(InMemoryVolume::new("dest"));
-    dest.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
-    dest.create_file(Path::new("/notes.txt.cmdr-tmp-abc"), b"NEW")
-        .await
-        .unwrap();
-    let dest_dyn: Arc<dyn Volume> = dest.clone();
-
-    finalize_safe_replace(
-        &dest_dyn,
-        Path::new("/notes.txt.cmdr-tmp-abc"),
-        Path::new("/notes.txt"),
-        &engine.new_operation_state(std::time::Duration::ZERO),
-    )
-    .await
-    .unwrap();
-
-    assert!(!dest.exists(Path::new("/notes.txt.cmdr-tmp-abc")).await);
-    let mut stream = dest.open_read_stream(Path::new("/notes.txt")).await.unwrap();
-    assert_eq!(stream.next_chunk().await.unwrap().unwrap(), b"NEW");
+    assert_eq!(resolved.write_path, PathBuf::from("/notes.txt"));
 }
 
 /// A destination that publishes every write whole (an object store) keeps the

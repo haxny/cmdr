@@ -567,7 +567,6 @@ impl Settlements {
     /// journal it, record what it wrote for rollback, and emit the milestone.
     fn record_success(&mut self, ctx: &ConcurrentCopy<'_>, success: CopyTaskSuccess) {
         let CopyTaskSuccess {
-            partial_path,
             recorded_path,
             source_is_dir,
             bytes,
@@ -595,9 +594,9 @@ impl Settlements {
         if task_skipped_count == 0 {
             ctx.events.note_source_landed_clean(&done_source);
         }
-        // Remove the in-flight partial (the temp under safe-replace, else the
-        // dest) and record what the op wrote for rollback.
-        ctx.forget_in_flight_partial(&partial_path);
+        // Remove the in-flight partial and record what the op wrote for
+        // rollback.
+        ctx.forget_in_flight_partial(&recorded_path);
         // Whatever this source set aside is now fully replaced.
         ctx.displaced.landed_under(&recorded_path);
         let file_name_done = recorded_path.file_name().map(|n| n.to_string_lossy().to_string());
@@ -623,9 +622,8 @@ impl Settlements {
         // For a DIRECTORY source, record the individual files and the
         // newly-created subdirs the op wrote — never the directory root — so
         // rollback can't recursively delete a merged directory and destroy
-        // dest-only files. For a FILE source, record the landed path (the
-        // original after a safe-replace finalize, else the dest); `created_*`
-        // are empty.
+        // dest-only files. For a FILE source, record the landed path;
+        // `created_*` are empty.
         if source_is_dir {
             ctx.copied_paths.lock_ignore_poison().extend(created_files);
             ctx.created_dirs.lock_ignore_poison().extend(task_created_dirs);
@@ -710,15 +708,14 @@ impl Settlements {
             ctx.copied_paths.lock_ignore_poison().extend(created_files);
             ctx.created_dirs.lock_ignore_poison().extend(task_created_dirs);
         } else if cleanup_temp && !partial_stays_in_flight {
-            // FILE source stream failure: `failed_dest` is the single
-            // half-written partial. Clean it.
+            // FILE source failure at a name that can hold OUR partial (a
+            // claimed name the write took): `failed_dest` is that partial.
+            // Clean it.
             //
-            // `cleanup_temp == false` ⇒ finalize failed AFTER a successful
-            // write: `failed_dest` is the temp holding the ONLY complete copy of
-            // the new data (finalize already deleted the original). Do NOT
-            // designate it for cleanup — leaving it on disk as a `.cmdr-tmp-*`
-            // artifact is the correct, safe outcome. Cleaning it would be total
-            // data loss.
+            // `cleanup_temp == false` ⇒ `failed_dest` is a plain staged write's
+            // final name or a swap's original: never ours, and the write's own
+            // temp is the write's (or, past a swap's delete, a landing nothing
+            // may clean). Cleaning it would delete the user's file.
             self.last_dest_path = Some(failed_dest);
         }
         // `PathedVolumeError`'s conversion owns the branch: the side it carries

@@ -458,20 +458,20 @@ async fn a_failed_directory_source_records_its_files_and_never_its_root_as_a_par
 }
 
 // ============================================================================
-// `cleanup_temp`: a stream failure's partial IS cleaned
+// `cleanup_temp`: a swap's failed stream designates nothing
 // ============================================================================
 
 /// A FILE source resolved to a safe-replace Overwrite whose STREAM fails hands
-/// its temp back as `last_dest_path`, so the post-loop sweep removes it.
+/// NOTHING back as `last_dest_path` (`cleanup_temp = false`): the name it holds
+/// is the user's original, and the half-written temp went with the write
+/// itself (`StagedWrite::abandon`).
 ///
-/// This is the `cleanup_temp = true` arm. Its opposite number — a FINALIZE
-/// failure after a successful write, where the temp holds the only complete copy
-/// of the new data and MUST be left on disk — is pinned by
-/// `copy_crashsafe_tests.rs::cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failure`.
-/// Swapping the two arms is total data loss in one direction and a stray temp in
-/// the other, so both need something watching them.
+/// Designating the name would delete the user's file on the way out. The other
+/// half — a landing that failed after the swap's delete, where the temp holds
+/// the only complete copy of the new data and MUST be left on disk — is pinned
+/// by `copy_crashsafe_tests.rs::cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failure`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn a_stream_failure_hands_its_staged_partial_back_for_cleanup() {
+async fn a_swap_whose_stream_fails_designates_nothing_for_cleanup() {
     let engine = TestOperations::new();
     let source_inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source_inner.create_file(Path::new("/a.txt"), b"AAA").await.unwrap();
@@ -482,8 +482,8 @@ async fn a_stream_failure_hands_its_staged_partial_back_for_cleanup() {
         fail_for: PathBuf::from("/b.txt"),
     });
 
-    // `/b.txt` clashes, so an Overwrite resolves to a temp sibling plus a
-    // finalize — and the stream into that temp is the thing that fails.
+    // `/b.txt` clashes, so an Overwrite resolves to a swap — and the stream into
+    // its staged temp is the thing that fails.
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
     dest.create_file(Path::new("/b.txt"), b"BBB-old").await.unwrap();
 
@@ -500,16 +500,20 @@ async fn a_stream_failure_hands_its_staged_partial_back_for_cleanup() {
         run.outcome.copy_error.is_some(),
         "the failing source must surface an error"
     );
-    let partial = run
-        .outcome
-        .last_dest_path
-        .as_ref()
-        .expect("a FILE source's half-written partial must be designated for cleanup");
-    assert!(
-        partial.to_string_lossy().contains(STAGING_TEMP_MARKER),
-        "the partial to clean is the staged temp sibling, not the user's file: {}",
-        partial.display()
+    assert_eq!(
+        run.outcome.last_dest_path, None,
+        "❗ the only name the driver holds is the user's original"
     );
+    assert!(run.in_flight_partials.is_empty(), "{:?}", run.in_flight_partials);
+    let leftovers: Vec<String> = dest
+        .list_directory(Path::new("/"), None)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|entry| entry.name)
+        .filter(|name| name.contains(STAGING_TEMP_MARKER))
+        .collect();
+    assert!(leftovers.is_empty(), "the write took its own temp away: {leftovers:?}");
     // And the original the Overwrite was replacing is still whole: the temp is
     // what failed, so nothing has swapped over it.
     let mut stream = dest.open_read_stream(Path::new("/b.txt")).await.unwrap();
@@ -591,14 +595,15 @@ async fn a_conflict_resolved_to_skip_credits_both_progress_axes_once() {
     );
 }
 
-/// A file→file Overwrite is prepared as a STAGED write plus a swap, and it is
-/// the temp — never the user's file — that goes on the in-flight partial list.
+/// A file→file Overwrite is prepared as a swap at the original's own name, and
+/// ❗ nothing goes on the in-flight partial list: the name is the user's file,
+/// and the write's temp is the write's own (`failed_write_leaves_ours_at`).
 ///
 /// That is what makes a mid-stream failure survivable: the original is untouched
 /// until the temp is complete, and the cleanup sweep that runs on cancel or
-/// error can only reach the temp.
+/// error can't reach it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_file_overwrite_is_prepared_as_a_staged_write_plus_a_swap() {
+async fn a_file_overwrite_is_prepared_as_a_swap_with_no_partial_to_clean() {
     let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_file(Path::new("/a.txt"), b"NEW").await.unwrap();
@@ -615,20 +620,15 @@ async fn a_file_overwrite_is_prepared_as_a_staged_write_plus_a_swap() {
         .unwrap()
         .expect("an Overwrite spawns a task");
 
+    assert_eq!(
+        task.dest_path,
+        PathBuf::from("/a.txt"),
+        "the task writes at the name the user ends up with"
+    );
+    assert_eq!(task.replaces, super::super::strategy::Replaces::Swap);
     assert!(
-        task.dest_path.to_string_lossy().contains(STAGING_TEMP_MARKER),
-        "the bytes go to a temp sibling, not onto the file being replaced: {}",
-        task.dest_path.display()
-    );
-    assert_eq!(
-        task.replaces,
-        super::super::strategy::Replaces::ViaTemp(PathBuf::from("/a.txt")),
-        "the swap has to name the original, or the new data never takes its place"
-    );
-    assert_eq!(
-        *harness.in_flight_partials.lock_ignore_poison(),
-        vec![task.dest_path.clone()],
-        "the TEMP is the partial cleanup may remove; the original must never be on this list"
+        harness.in_flight_partials.lock_ignore_poison().is_empty(),
+        "❗ the original must never be on the partial list"
     );
 }
 

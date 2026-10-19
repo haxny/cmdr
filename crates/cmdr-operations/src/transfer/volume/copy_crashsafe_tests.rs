@@ -306,8 +306,8 @@ async fn cross_volume_overwrite_concurrent_replaces_and_cleans_temp() {
 }
 
 /// Wraps an `InMemoryVolume` destination whose `rename` fails when it would land
-/// something at `fails_onto`. Models a disconnect at the exact instant
-/// `finalize_safe_replace` tries to swap the fully-written temp over the
+/// something at `fails_onto`. Models a disconnect at the exact instant a
+/// safe-replace's landing tries to swap the fully-written temp over the
 /// original: `delete(orig)` succeeds, then `rename(temp, orig)` fails.
 /// Everything else delegates to the inner volume.
 ///

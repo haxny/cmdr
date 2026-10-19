@@ -12,10 +12,9 @@
 //! Hidden-only file onto a destination whose write keeps Hidden itself (SMB's
 //! `staged_flags`).
 //!
-//! Two landings. `stream_pipe_file` lands most files itself and puts the set on
-//! right after. A safe-replace temp the CALLER lands (`WriteStaging::AlreadyStaged`)
-//! is held here, keyed by that temp, until `finalize::finalize_safe_replace`
-//! swaps it over the original and puts it on there ([`land_held`]).
+//! One landing: `stream_pipe_file` lands every staged file, a safe-replace's
+//! swap over the original included, and puts the set on right after, at the
+//! file's final name.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -23,7 +22,6 @@ use std::sync::Arc;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 
 use super::super::super::state::WriteOperationState;
-use cmdr_fs::ignore_poison::IgnorePoison as _;
 use cmdr_fs::volume::{Volume, VolumeReadStream};
 
 /// What the file `stream` reads waits to wear until it has its final name on
@@ -53,32 +51,5 @@ pub(super) async fn put_on(dest: &Arc<dyn Volume>, landed: &Path, set: &CarriedM
             set.flags
         );
         state.metadata_losses.note_file(MetadataClasses::FLAGS);
-    }
-}
-
-/// Holds `set` for the caller-landed temp `temp`, until
-/// [`land_held`] knows its final name.
-pub(super) fn hold(state: &WriteOperationState, temp: &Path, set: CarriedMetadata) {
-    if set.is_empty() {
-        return;
-    }
-    state
-        .flags_after_landing
-        .lock_ignore_poison()
-        .insert(temp.to_path_buf(), set);
-}
-
-/// Takes what [`hold`] kept for `temp` and, when `landed_at` says the swap
-/// happened, puts it on there. Taken either way, so a failed landing leaves no
-/// entry behind.
-pub(super) async fn land_held(
-    dest: &Arc<dyn Volume>,
-    temp: &Path,
-    landed_at: Option<&Path>,
-    state: &WriteOperationState,
-) {
-    let held = state.flags_after_landing.lock_ignore_poison().remove(temp);
-    if let (Some(set), Some(landed)) = (held, landed_at) {
-        put_on(dest, landed, &set, state).await;
     }
 }

@@ -20,10 +20,9 @@ mod copy_concurrent_task;
 mod copy_serial;
 mod displaced_destination;
 mod extract_quarantine;
-// Both carry their own `//!` headers. ❌ No outer `///` here: rustdoc
+// It carries its own `//!` header. ❌ No outer `///` here: rustdoc
 // concatenates it with the child's header and resolves the merged doc in THIS
 // scope, so the child's links to its own items break.
-mod finalize;
 mod folder_metadata;
 mod item_identity;
 mod landed_flags;
@@ -130,9 +129,10 @@ mod self_collision_tests;
 #[cfg(test)]
 mod rename_merge_test_support;
 
-/// Where the new bytes go when a safe-replace finalize can't land them.
+/// What a safe-replace's swap does when the original won't go, or the new bytes
+/// can't take its name.
 #[cfg(test)]
-mod finalize_recovery_tests;
+mod swap_landing_tests;
 
 /// A file→file Overwrite at each of the five sites a safe-replace lands, across
 /// success and each refusal.

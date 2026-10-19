@@ -190,8 +190,8 @@ async fn webdav_integration_a_quota_refused_before_the_body_fails_as_full_and_lo
 
 /// An Overwrite whose new bytes are in, and whose DELETE of the user's file is
 /// refused: the one moment in a safe-replace where the original is at stake.
-/// `finalize_safe_replace` must stop there, keep the original, and clear away
-/// the complete-but-unplaced temp.
+/// The swap must stop there, keep the original, and clear away the
+/// complete-but-unplaced temp.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
 async fn webdav_integration_a_refused_replace_keeps_the_users_file() {

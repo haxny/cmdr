@@ -518,7 +518,7 @@ route it through `overwrite::safe_overwrite_dir`; the copy's folder→file case 
   finding 6), so the half-filled folder keeps the name too — discarding the aside would delete the user's only copy of
   that file, and restoring it has nowhere to go. `commit_keeping_displaced_aside` renames it to a ` (recovered)` sibling
   instead (`DisplacedEntry::keep_as_recovered_sibling`, over the shared `unique_name::recovered_sibling` the volume
-  engine's finalize rescue uses, continuing the house ` (N)` series when that name is taken), and
+  engine's landing rescue uses, continuing the house ` (N)` series when that name is taken), and
   `copy/mod.rs::fail_keeping_displaced_aside` wraps the failure in `WriteOperationError::OriginalsKeptAside` so the
   dialog names every path; a stop attaches the same paths to `CancelRollback::recovered` through
   `stop_keeping_displaced_aside`, so its toast names them too. The wrapped `cause` is the failure that actually stopped
@@ -538,9 +538,9 @@ route it through `overwrite::safe_overwrite_dir`; the copy's folder→file case 
 - Volume copy/move via `volume::conflict::apply_volume_conflict_resolution`: a type swap can't temp-rename across
   backends, so **cross-type** Overwrite deletes the dest first (`remove_tree(…, UserChoseOverwriteAcrossTypes)` for
   folder dests, `Volume::delete` for file dests) before the streaming writer / recursive copy lands the source.
-  **File→file** Overwrite does NOT delete first — it uses the safe-replace temp+finalize path (see "Cross-volume
-  file→file Overwrite is a safe-replace" below). Same-type dir-vs-dir still skips the delete to honor the
-  merge-not-replace guarantee. Pinned by
+  **File→file** Overwrite does NOT delete first — it uses the safe-replace swap landing (see "Cross-volume file→file
+  Overwrite is a safe-replace" below). Same-type dir-vs-dir still skips the delete to honor the merge-not-replace
+  guarantee. Pinned by
   `volume/copy_tests/conflicts.rs::test_volume_overwrite_{file_over_existing_folder,folder_over_existing_file}`.
 
 **Copy strategy selection** (`copy_strategy.rs`). `select_local_copy_strategy` names the mechanism, `copy_file_using`
@@ -1059,14 +1059,16 @@ exactly what the 2026-07-31 wedge did to two phone backups (one at 0 bytes, one 
 but a force-quit, a panic, or a dropped future runs no error path at all. Staging makes the guarantee structural rather
 than dependent on cleanup running.
 
-**Who stages.** `WriteStaging::AlreadyStaged` means the caller already minted the temp (the conflict layer's
-safe-replace, which additionally keeps the ORIGINAL in place until the temp is complete) and lands it itself; staging it
-again would just yield a `foo.cmdr-tmp-A.cmdr-tmp-B`. Every other write stages here, as `WriteStaging::Stage` or
-`WriteStaging::StageOntoClaimedName`. Each call site derives it identically via
-`volume::strategy::staging_for(&replaces, landing)`, so there is one rule, not four. Both write sites then run that
-choice through `resolve_staging`, the single place a staged write can become `SingleShot`. The one write that is
-`SingleShot` from the start is an in-place Overwrite on a destination that publishes every write whole
-(`staged_write::Replaces::InPlace`, `volume/DETAILS.md` § "Whole-publish destinations").
+**Who stages.** Every staged write stages here, and the temp has ONE owner, the `StagedWrite`: `WriteStaging::Stage`,
+`StageOntoClaimedName`, or, for a file→file Overwrite, `StageOverOriginal`. The conflict layer only DECIDES that a write
+replaces the user's file (`Replaces::Swap`) and hands back the original's own name as `write_path`, so `write_path`
+names the file the user gets on every path and ❌ no layer above `StagedWrite` ever sees a temp-shaped destination. Each
+call site derives the staging identically via `volume::strategy::staging_for(&replaces, landing)`, so there is one rule,
+not four. Every write site then runs that choice through `resolve_staging`, the single place a staged write can become
+`SingleShot`, and ❌ never for `StageOverOriginal` (the original surviving the whole write is the stronger guarantee).
+The one write that is `SingleShot` from the start is an in-place Overwrite on a destination that publishes every write
+whole (`staged_write::Replaces::InPlace`, `volume/DETAILS.md` § "Whole-publish destinations"). `WriteStaging::Unstaged`
+is `stream_pipe_file`'s fallback for a destination that can't rename (below), ❌ never a swap's.
 
 **Generated validated files reuse the same ownership.** `StagedWrite::begin_generated` always mints and records a
 sibling stage, and announces the archive and its temp like `begin` (it takes the archive as an `Announced`). A publisher
@@ -1077,10 +1079,26 @@ original a stable ` (recovered)` name and the typed failure names it; the sole g
 `.cmdr-tmp-*` name.
 
 **Landing** (`staged_write::land`) renames FIRST and only clears the final name if that rename said something is in the
-way. `finalize_safe_replace` is the other way round because there the original is known to be in the way; here it
-usually isn't, and a speculative delete would burn one extra round trip per file. The name can still be taken (a
+way: it usually isn't, and a speculative delete would burn one extra round trip per file. The name can still be taken (a
 `Rename` resolution's `O_EXCL` placeholder, a file that arrived after the caller last looked), which the second attempt
 covers.
+
+❗ **A swap lands the other way round** (`LandingName::ReplacesOriginal`, from `StageOverOriginal`): the original is
+known to be in the way, so the landing deletes it first and renames the temp into the empty slot, through the same
+cleared-way tail as a claimed name (the landing record before the delete, the refused-delete stat, the rescue below).
+Delete-then-rename, ❌ never `rename(force)`: MTP's force rename doesn't delete what's there and can leave a duplicate,
+so this is the one shape correct on every backend. A refused delete reports its own refusal (it's about the user's
+file), where a claimed name reports the first rename's `AlreadyExists`. The flags that wait for the final name go on
+after the commit, at the original's name, as for any staged write (`volume/landed_flags.rs`). Pinned by
+`staged_write.rs::tests::{a_swap_lands_delete_first_and_never_renames_with_force, a_write_over_an_original_stages_and_is_never_single_shot}`,
+`volume/swap_landing_tests.rs`, and at all five write sites by `volume/safe_replace_grid_tests.rs`.
+
+❗ **The moment a swap's delete goes through, the operation stops being rollbackable**
+(`LandingLedger::original_replaced` notes it on the journal, `NotRollbackableReason::Overwrote`): the file an undo would
+restore is gone, whatever the rename does next. A delete that can't be confirmed counts too. That's the ONE moment for a
+failure path at every site; a landed overwrite's journal row also says `overwrote`, recorded by the site from its
+`Replaces` (`CreatedPaths::record_overwrite` in the merge leaf and the extract, after the file landed), and a write that
+failed before the delete left the original in place, so the op stays rollbackable. Pinned by the grid's failure cells.
 
 ❗ **Before the landing clears a name, its temp is recorded as a landing.** From that delete on, the temp may be the
 destination's only copy, so `land` re-records it as `ItemKind::Landing { destination, expected_size }`, at the byte
@@ -1098,11 +1116,10 @@ landing cut off mid-way leave it recorded, held for the volume's next arrival. P
 the spot. The bytes are complete by then, the destination name is now EMPTY, and the temp wears a `.cmdr-tmp-*` name,
 which a real name keeps out of every sweep's reach for good, recorded or not.
 `recovered_name.rs::rescue_out_of_temp_space` renames it to `<name> (recovered)<.ext>` and the failure carries that path
-as `FinalizeFailure::new_data_at`, exactly as `finalize::finalize_safe_replace` does; `stream_pipe_file` and
+as `FinalizeFailure::new_data_at`, a claimed name's landing and a swap's alike; `stream_pipe_file` and
 `sequential_extract` label it with the DESTINATION (`at_source_or_rescued_dest`), since a rescued file is one the user
-can't find on their own. `recovered_name.rs` sits at `transfer/` level because both landings reach it. A failure whose
-`delete` didn't succeed rescues nothing and reports nothing: the destination still holds whatever was in the way (§ "A
-landing that fails with nothing cleared takes its temp away" below). Pinned by
+can't find on their own. A failure whose `delete` didn't succeed rescues nothing and reports nothing: the destination
+still holds whatever was in the way (§ "A landing that fails with nothing cleared takes its temp away" below). Pinned by
 `staged_write.rs::a_landing_that_cleared_the_way_and_then_could_not_rename_rescues_the_new_bytes`.
 
 ❗ **And only for a name the CALLER claimed** (`LandingName`). `AlreadyExists` says something is in the way; only the
@@ -1138,18 +1155,18 @@ which inject a failing rename through `InMemoryVolume::with_rename_failing`.
 ❗ **A landing that fails with nothing cleared takes its temp away at once.** The name still holds what it held, the
 source still holds the new bytes, and the temp is a complete copy of ours nobody needs; left alone it would sit in the
 user's folder as a visible `.cmdr-tmp-*` until the hourly reap. `recovered_name.rs::discard_unplaced_temp` deletes it
-(best effort: a delete that fails too is logged and left to the sweeps) in every such exit, one rule for both landings:
-`staged_write::land`'s rename refused for any reason but `AlreadyExists`, its clash on an `ExpectedFree` name, and its
-claimed-name delete that was refused; and `finalize_safe_replace`'s refused delete of the original. ❗ Not a first
-rename that failed on the TRANSPORT (`transport_fault`): the server may have performed it, so the temp stays registered
-for the settle after the outage wait (§ "A landing the drop cut off"), and the abandoned-write cleanup takes it if
-nothing settles it. ❗ A refused delete is checked with one stat before anything else (`what_a_refused_delete_left`),
-because over a network the server can act and the answer still be lost: the name still taken means discard, the name
-empty after all means the way IS clear and the landing goes on (discarding there would leave neither file), and a stat
-that can't answer leaves the temp alone. ❌ Never discard once the way was cleared: from then on the temp may be the
-only copy at the destination, and it is rescued instead. Short of the empty-after-all case, the copy fails with the
-typed refusal. Pinned by `volume/finalize_recovery_tests.rs` (the three delete answers, and both drivers end to end),
-`staged_write.rs::tests`, `volume/copy_landing_race_tests.rs` (no temp left on either driver), and on a live server by
+(best effort: a delete that fails too is logged and left to the sweeps) in every such exit of `staged_write::land`: a
+rename refused for any reason but `AlreadyExists`, a clash on an `ExpectedFree` name, and a refused delete of a claimed
+name or of a swap's original. ❗ Not a first rename that failed on the TRANSPORT (`transport_fault`): the server may
+have performed it, so the temp stays registered for the settle after the outage wait (§ "A landing the drop cut off"),
+and the abandoned-write cleanup takes it if nothing settles it. ❗ A refused delete is checked with one stat before
+anything else (`what_a_refused_delete_left`), because over a network the server can act and the answer still be lost:
+the name still taken means discard, the name empty after all means the way IS clear and the landing goes on (discarding
+there would leave neither file), and a stat that can't answer leaves the temp alone. ❌ Never discard once the way was
+cleared: from then on the temp may be the only copy at the destination, and it is rescued instead. Short of the
+empty-after-all case, the copy fails with the typed refusal. Pinned by `volume/swap_landing_tests.rs` (the three delete
+answers, and both drivers end to end), `staged_write.rs::tests`, `volume/copy_landing_race_tests.rs` (no temp left on
+either driver), and on a live server by
 `operations_host/backend_suites/webdav_refusal_test.rs::webdav_integration_a_refused_replace_keeps_the_users_file`.
 
 **Finding the litter.** A staged temp is listed in `state.in_flight_temps` for exactly as long as it is a removable copy
@@ -1158,11 +1175,16 @@ is about to be cleared). So a landing that never finishes (a cancel, the concurr
 leaves the temp to the abandoned-write and startup sweeps, which is safe because the name was never cleared; and a temp
 that may hold the only complete copy at the destination is never in the set, and is recorded as a landing, which no
 sweep deletes. The NAME-based sweep (`volume/cleanup.rs::reap_stale_transfer_temps`) spares every path the ledger
-records, but `finalize_safe_replace`'s temp has no record, so it renames such a temp to a ` (recovered)` name on the
-spot (`volume/DETAILS.md` § "The post-write temp is committed data"). Whatever is still listed when the driver's loop
-ends belongs to a task that was DROPPED mid-write — the concurrent driver drops the rest of its window on cancel and on
-the first failure — so `volume::cleanup::clean_abandoned_staged_writes` removes those, and the deep-merge children that
-were never tracked at all are now covered too.
+records, landings included. Whatever is still listed when the driver's loop ends belongs to a task that was DROPPED
+mid-write — the concurrent driver drops the rest of its window on cancel and on the first failure — so
+`volume::cleanup::clean_abandoned_staged_writes` removes those, deep-merge children and swaps included.
+
+❗ **No driver-side partial list names a staged write's temp**, a swap's included: `failed_write_leaves_ours_at` answers
+`false` for `Stage` and `StageOverOriginal`, because the name the drivers hold is the user's (a free name, or the
+original), and the temp has the one owner above. So a concurrent task dropped between a swap's `delete(orig)` and its
+rename leaves the temp on disk, recorded as a landing and in no partial list, for the sweep that finishes its landing
+(the failure still names whichever sibling ended the op). Pinned by
+`volume/safe_replace_grid_tests.rs::a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land`.
 
 **What that sweep can't remove, it REPORTS.** A dropped write task whose handle stays open (§ "Known gap" below) makes
 an SMB2 server answer the delete with a sharing violation for as long as that session lives (measured: refused
@@ -1531,8 +1553,8 @@ and `stream_pipe_file` can't arm a stall-abort. Without registration at all, `st
 lookup and every event goes out with `activity: None`, so the dialog shows a frozen bar with a confident ETA and says
 nothing. That is what a cross-volume MOVE did until it was registered, and a silent failure on the operation holding the
 user's only copy of the data is worse than a noisy one. The move also sets `TaskPhase::Finalizing` on its handle
-directly once the copy phase ends, because its safe-replace finalize and source sweep run after the task-local's scope
-closes and a dump taken during them must not still claim it is streaming.
+directly once the copy phase ends, because its source sweep runs after the task-local's scope closes and a dump taken
+during it must not still claim it is streaming.
 
 **`TaskPhase::Walking`** (label `"walking"`) covers the same gap for a DIRECTORY source: `merge_level` sets it at every
 level while it lists the source and resolves what is already at the destination, before any of that level's files reach
@@ -1637,8 +1659,8 @@ a small upload can stand aside. Pinned by
 against the PRODUCTION floor.
 
 **Why the carrier is the raw boolean, ❌ not `WriteStaging::SingleShot`.** `resolve_staging` upgrades only a staged
-request, so an `AlreadyStaged` write (a caller's safe-replace temp) reports `AlreadyStaged` however single-shot it is —
-the enum under-reports. Staging is a different question anyway: what the arm needs to know is whether a handle is open,
+request, so a `StageOverOriginal` write (a safe-replace) reports `StageOverOriginal` however single-shot it is — the
+enum under-reports. Staging is a different question anyway: what the arm needs to know is whether a handle is open,
 which is a property of `write_from_stream`'s branch alone. `stream_pipe_file` therefore probes `write_is_single_shot`
 ONCE, hands the answer to `resolve_staging` and to `CheckpointStream::new`, and both consumers see the same answer; two
 probes could straddle a reconnect and disagree. What makes the answer trustworthy is the backend contract in
@@ -1726,18 +1748,18 @@ which is what makes the retry safe by construction rather than by care:
   `a_retried_child_is_recorded_in_the_rollback_ledger_exactly_once`.
 - **The merge invariant** is a property of the level walk, and a retry re-walks nothing: it re-runs one child's write
   into a destination the walk already resolved. A retry can never turn a merge into a replace.
-- **Overwrite** is untouched, and a retry can only improve it. A safe-replace's `finalize_safe_replace` runs after
-  `copy_single_path` returns, so the ORIGINAL is intact through every attempt — including a file that fails all three. A
+- **Overwrite** is untouched, and a retry can only improve it. A safe-replace's swap is its landing, after the attempt
+  that got every byte down, so the ORIGINAL is intact through every attempt — including a file that fails all three. A
   cross-type Overwrite's destination sits aside until the operation ends (`volume/displaced_destination.rs`), so a retry
   re-runs only the write and every ending still finds the original to put back.
 
 **Staging across an attempt boundary.** Each attempt re-derives its staging and mints its own `.cmdr-tmp-<uuid>`, so
 nothing partial survives an attempt and no byte is written twice. `StagedWrite::abandon_attempt` clears the previous
-attempt's target first — one case WIDER than the terminal `abandon`, because between two attempts the next writer is us
-and not the caller: it also removes an `AlreadyStaged` caller temp, whose contents are only the partial we just gave up
-on. Leaving it would make the next attempt depend on how each backend treats a write onto an existing path
-(`LocalPosixVolume` truncates, `InMemoryVolume` refuses with `AlreadyExists`, MTP can make a duplicate object). A
-`SingleShot` write is still left entirely to its backend.
+attempt's target first — one case WIDER than the terminal `abandon`, because between two attempts the next writer is us:
+it also removes what an `Unstaged` attempt left at the final name, which is only the partial we just gave up on. Leaving
+it would make the next attempt depend on how each backend treats a write onto an existing path (`LocalPosixVolume`
+truncates, `InMemoryVolume` refuses with `AlreadyExists`, MTP can make a duplicate object). A `SingleShot` write is
+still left entirely to its backend.
 
 **What is retryable, and why by type.** Exactly a transport fault: `VolumeError::transport_fault`
 (`crates/cmdr-fs/src/volume/transport_fault.rs`), the ONE classifier the retry, the outage wait below, the
@@ -1859,8 +1881,10 @@ again:
   running the file again; the landing rename, only when it failed with nothing cleared (`new_data_at: None`), by letting
   `interrupted_landing.rs` settle whether the rename happened (§ "A landing the drop cut off" below): if it did, the
   file is done; if not, the temp is a spare copy, so it's taken away and the file runs again. ❌ Never after a landing
-  that cleared the way: then the temp is the only copy, and `land` already moved it somewhere safe. A new step gets the
-  wait by becoming a `Fault` variant, ❌ never with a `wait_after_failure` call of its own. The landed flags stay a
+  that cleared the way: then the temp is the only copy, and `land` already moved it somewhere safe. ❌ Nor for a swap
+  (`StageOverOriginal`): the settle knows only a rename-first landing, and after a `delete(orig)` that went through
+  unanswered it would discard the destination's only copy, so a swap's landing failure ends the file. A new step gets
+  the wait by becoming a `Fault` variant, ❌ never with a `wait_after_failure` call of its own. The landed flags stay a
   best-effort tail after the landing, outside the runner: a flag a drop cut off reads as `Refused`, the same as a
   server's refusal, so it's a counted, reported metadata loss, ❌ never a wait.
 - `through_outages` around each merge level's prepare (a create whose second run answers `AlreadyExists` and reads as

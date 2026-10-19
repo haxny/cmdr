@@ -314,7 +314,7 @@ async fn upload_archive(
 ///
 /// The next remote edit in that folder puts an aside whose original name is
 /// empty back (`restore_orphaned_asides`). Faults that answer get the same
-/// handling as the transfer engine's `finalize::finalize_safe_replace`:
+/// handling as the transfer engine's Overwrite swap (`staged_write_landing.rs`):
 ///
 /// - A rename that answers an error may still have landed (a lost response), so
 ///   the temp is checked first. Gone means the swap happened.

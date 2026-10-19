@@ -136,8 +136,8 @@ async fn hidden_and_locked_land_on_files_and_folders() {
     assert!(dest.exists(Path::new("/album/inside.txt")).await);
 }
 
-/// An Overwrite lands through the caller's safe-replace swap, so the file
-/// takes its flags there, on the ORIGINAL's name, never on the temp.
+/// An Overwrite lands through a safe-replace swap, so the file takes its flags
+/// after it, on the ORIGINAL's name, never on the temp.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_overwrite_lands_locked_at_the_name_it_replaced() {
     let engine = TestOperations::new();

@@ -3,9 +3,10 @@
 //! Handles what to do when a destination file already exists:
 //! - Stop: Emit conflict event, wait for user input via oneshot channel
 //! - Skip: Return None to skip this file
-//! - Overwrite (file→file): safe-replace — write into a temp sibling, then
-//!   delete the original and rename the temp in (`finalize_safe_replace`), so a
-//!   mid-stream failure can't lose both the old and the new copy. On a
+//! - Overwrite (file→file): safe-replace — the write stages on a temp sibling,
+//!   and its landing deletes the original and renames the temp in
+//!   (`Replaces::Swap`), so a mid-stream failure can't lose both the old and
+//!   the new copy. On a
 //!   destination that publishes every write whole (an object store), the write
 //!   replaces the original in place instead: the protocol keeps it readable
 //!   until the new bytes are complete, which is the same guarantee for one
@@ -43,13 +44,11 @@ use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
 /// Outcome of resolving a volume conflict.
 ///
-/// The caller writes streaming bytes to `write_path`. `replaces` says what that
-/// does to a file already at the name: under [`Replaces::ViaTemp`]`(orig)`,
-/// `write_path` is a temp sibling on the destination volume, and after the
-/// streaming write fully succeeds the caller must call
-/// [`super::finalize::finalize_safe_replace`] to delete `orig` (which survived
-/// the whole write) and rename `write_path` → `orig`. Otherwise `write_path` is
-/// the final destination and the caller writes directly.
+/// The caller writes streaming bytes to `write_path`, which is always the name
+/// the user ends up with. `replaces` says what that does to a file already at
+/// the name: under [`Replaces::Swap`] it's the user's original, which the
+/// write's staging keeps until the new bytes are whole and its landing then
+/// replaces (`staged_write.rs`).
 #[derive(Debug)]
 pub(super) struct ResolvedConflict {
     /// Where the streaming writer should land bytes.
@@ -61,7 +60,7 @@ pub(super) struct ResolvedConflict {
     /// `naming.rs::ClaimedName` is where the answer comes from.
     pub reserved_placeholder: bool,
     /// What the write does to a file at the destination name
-    /// ([`Replaces`]). Drives the finalize, the failed-write cleanup, and the
+    /// ([`Replaces`]). Drives the landing, the failed-write cleanup, and the
     /// journal's "this overwrote" at every write site.
     pub replaces: Replaces,
     /// `Some` ⇒ a cross-type Overwrite renamed the entry at `write_path` aside
@@ -541,10 +540,10 @@ async fn apply_volume_conflict_resolution(
         ConflictResolution::Overwrite => {
             // Cmdr's UX promise is "Overwrite means merge for dirs, replace for files":
             //
-            // - For files (file→file): SAFE-REPLACE. Stream into a temp sibling on the dest volume
-            //   and return `Replaces::ViaTemp(dest_path)`. The original survives the entire
-            //   write; only after the temp is fully written does the caller delete the original and
-            //   rename the temp into place (see `finalize_safe_replace`). A mid-stream failure
+            // - For files (file→file): SAFE-REPLACE. Return `Replaces::Swap` at the original's own
+            //   name: the write stages on a temp sibling, and only once the temp is fully written
+            //   does its landing delete the original and rename the temp into place
+            //   (`staged_write.rs`, `WriteStaging::StageOverOriginal`). A mid-stream failure
             //   (network drop, USB yank, cancel) leaves the original intact — we never lose both the
             //   old and the new copy. DO NOT delete the dest here. A destination that
             //   publishes every write whole (`Volume::publishes_writes_whole`, an
@@ -580,7 +579,7 @@ async fn apply_volume_conflict_resolution(
 
             if !dest_is_dir && !source_is_directory {
                 // file→file: in place where the destination publishes whole,
-                // else safe-replace via a temp sibling. No delete here.
+                // else a swap the write's landing makes. No delete here.
                 if dest_volume.publishes_writes_whole() {
                     return Ok(Some(ResolvedConflict {
                         write_path: dest_path.to_path_buf(),
@@ -589,11 +588,10 @@ async fn apply_volume_conflict_resolution(
                         displaced: None,
                     }));
                 }
-                let temp = cmdr_fs::staging::temp_sibling_path(dest_path);
                 return Ok(Some(ResolvedConflict {
-                    write_path: temp,
+                    write_path: dest_path.to_path_buf(),
                     reserved_placeholder: false,
-                    replaces: Replaces::ViaTemp(dest_path.to_path_buf()),
+                    replaces: Replaces::Swap,
                     displaced: None,
                 }));
             }
@@ -632,7 +630,7 @@ async fn apply_volume_conflict_resolution(
     }
 }
 
-/// Merge safety, the overwrite ordering, and the finalize swap.
+/// Merge safety, and what a file Overwrite resolves to.
 #[cfg(test)]
 #[path = "conflict_tests.rs"]
 mod tests;

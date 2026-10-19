@@ -37,7 +37,7 @@ use super::conflict::resolve_volume_conflict;
 use super::displaced_destination::DisplacedLedger;
 use super::preflight::SourceFileFacts;
 use super::preflight::SourceHint;
-use super::strategy::{Replaces, copy_single_path};
+use super::strategy::copy_single_path;
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::Volume;
@@ -344,9 +344,8 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                     .dest_path
                     .expect("async driver always supplies dest_path")
                     .to_path_buf();
-                // `ViaTemp(orig)` ⇒ `dest_item_path` is a temp sibling; after a
-                // successful write we delete `orig` and rename the temp into
-                // place (safe-replace for file→file Overwrite).
+                // `Swap` ⇒ `dest_item_path` is the user's original, which the
+                // write's landing replaces once its staged bytes are whole.
                 let replaces = ctx.replaces.clone();
                 // Whether the driver's conflict resolution PICKED this
                 // destination name (a `Rename`, an Overwrite that cleared it),
@@ -441,7 +440,8 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                     // ❗ Only a path that can hold OUR partial is designated for
                     // the post-loop cleanup. A plain staged write's final name
                     // never does, and deleting it on failure deleted whatever
-                    // another writer put there (`failed_write_leaves_ours_at`).
+                    // another writer put there; a swap's is the user's original
+                    // (`failed_write_leaves_ours_at`).
                     *last_dest_cell.lock_ignore_poison() =
                         super::strategy::failed_write_leaves_ours_at(staging).then(|| dest_item_path.clone());
 
@@ -503,20 +503,12 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                     };
                     match copy_result {
                         Ok(bytes_copied) => {
-                            // The write SUCCEEDED: the temp is now committed
-                            // data, not a partial. Clear it from the
-                            // partial-cleanup slot BEFORE finalize runs, so
-                            // a finalize failure can't trigger the post-loop
-                            // sweep to delete it. `finalize_safe_replace`
-                            // deletes the original first, so if its rename
-                            // then fails the temp is the ONLY complete copy
-                            // of the new data — it must survive on disk as a
-                            // recoverable `.cmdr-tmp-*` artifact.
+                            // The file landed: nothing at its name is a partial
+                            // any more.
                             *last_dest_cell.lock_ignore_poison() = None;
                             // Overwrote iff a top-level file→file Overwrite
-                            // replaced a file (safe-replace or in place), OR a
-                            // deep-merge child replaced a dest file. Captured
-                            // before `replaces` is consumed.
+                            // replaced a file (a swap or in place), OR a
+                            // deep-merge child replaced a dest file.
                             let source_overwrote = replaces.overwrites() || created.any_overwrote();
                             // A folder whose every file was declined landed
                             // nothing: that's a skip, the way the local engine
@@ -529,30 +521,8 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             } else {
                                 SourceItemOutcome::Done
                             };
-                            let landed_path = match replaces {
-                                Replaces::ViaTemp(orig) => {
-                                    if let Err(e) = super::finalize::finalize_safe_replace(
-                                        &dest_volume,
-                                        &dest_item_path,
-                                        &orig,
-                                        &state,
-                                    )
-                                    .await
-                                    {
-                                        // The rename that failed is entirely on the
-                                        // destination, so it names the destination
-                                        // entry: the source is already fully read and
-                                        // untouched, and reporting it here would point
-                                        // the user at an intact file. When the original
-                                        // is already gone the failure also carries where
-                                        // the new bytes were rescued to, and that path is
-                                        // what the user is told.
-                                        return Err(super::transfer_error::map_finalize_failure(&orig, e));
-                                    }
-                                    orig
-                                }
-                                Replaces::InPlace | Replaces::Nothing => dest_item_path,
-                            };
+                            // The original's own name after an overwrite.
+                            let landed_path = dest_item_path;
                             // Whatever this source set aside is now fully replaced.
                             displaced.landed_under(&landed_path);
                             // For a DIRECTORY source, record the individual
@@ -560,8 +530,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             // never the directory root — so rollback can't
                             // recursively delete a merged directory and
                             // destroy dest-only files. For a FILE source,
-                            // record the landed path (the original after a
-                            // safe-replace, else the dest); never the temp.
+                            // record the landed path; never a temp.
                             if source_is_dir {
                                 let files = std::mem::take(&mut *created.files.lock_ignore_poison());
                                 let dirs = std::mem::take(&mut *created.dirs.lock_ignore_poison());
@@ -667,7 +636,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             // directory source, a file deep inside), on the side
                             // that refused, ❌ never the top-level `source_path`
                             // the user selected.
-                            Err(WriteFailure::from(e.naming_the_replaced(replaces.swap_target())).error)
+                            Err(WriteFailure::from(e).error)
                         }
                     }
                 })

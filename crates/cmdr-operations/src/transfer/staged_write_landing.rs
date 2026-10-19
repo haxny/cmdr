@@ -7,23 +7,33 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::super::super::in_flight_temps::{self, TrackedRecord};
+use super::super::super::journal;
 use super::super::super::state::WriteOperationState;
 use super::super::recovered_name::{
     AfterARefusedDelete, FinalizeFailure, discard_unplaced_temp, rescue_out_of_temp_space, what_a_refused_delete_left,
 };
 use super::{LandingName, dest_home};
 use cmdr_fs::volume::{Volume, VolumeError};
+use cmdr_operation_log::types::NotRollbackableReason;
 
 /// Moves a completed temp onto `final_path`.
 ///
 /// Renames FIRST, and only clears `final_path` if that rename said something is
-/// in the way. The conflict layer's `volume::finalize::finalize_safe_replace` is
-/// the other way round because there the original is known to be in the way;
-/// here it usually isn't (a fresh copy, or a conflict the resolver already
-/// cleared), and a speculative delete would spend one extra round trip per file
-/// on SMB and MTP for nothing. The name can still be taken — a `Rename`
-/// resolution's `O_EXCL` placeholder, a cross-type Overwrite whose dest delete
-/// failed, a racing writer — so the second attempt covers it.
+/// in the way: it usually isn't (a fresh copy, or a conflict the resolver
+/// already cleared), and a speculative delete would spend one extra round trip
+/// per file on SMB and MTP for nothing. The name can still be taken — a
+/// `Rename` resolution's `O_EXCL` placeholder, a cross-type Overwrite whose
+/// dest delete failed, a racing writer — so the second attempt covers it.
+///
+/// ❗ **A swap is the other way round** ([`LandingName::ReplacesOriginal`], a
+/// file→file Overwrite): the original is known to be in the way, so it's
+/// deleted first and the temp renamed into the empty slot, through the same
+/// cleared-way rules below ([`land_in_the_cleared_way`]). Never
+/// `rename(force)`: MTP's doesn't delete what's there and can make a
+/// duplicate, so delete-then-rename is the one shape correct on every backend.
+/// The moment the original's delete goes through, the operation stops being
+/// rollbackable ([`LandingLedger::original_replaced`]): the file an undo would
+/// restore is gone.
 ///
 /// ❗ **Only `AlreadyExists` earns the delete**, and this is the difference
 /// between a transient blip and a destroyed file. A rename over a network
@@ -49,9 +59,9 @@ use cmdr_fs::volume::{Volume, VolumeError};
 /// a complete `.cmdr-tmp-*` of ours in the user's folder would otherwise wait
 /// an hour for the stale-temp reap (`recovered_name::discard_unplaced_temp`).
 /// That covers a rename refused for any reason but `AlreadyExists`, a clash on
-/// a name the caller believed free, and a claimed name whose delete was refused
-/// with the name still taken. ❗ Except a first rename that failed on the
-/// transport ([`VolumeError::transport_fault`]): the server may have performed
+/// a name the caller believed free, and a claimed name (or an original) whose
+/// delete was refused with the name still taken. ❗ Except a first rename that
+/// failed on the transport ([`VolumeError::transport_fault`]): the server may have performed
 /// it, so the temp stays registered and the caller settles which once the
 /// destination is back (`interrupted_landing.rs`). If nothing settles it (the
 /// wait gave up, or there was none to wait for), the operation's abandoned-write
@@ -80,6 +90,9 @@ pub(super) async fn land(
     size: u64,
     ledger: &LandingLedger<'_>,
 ) -> Result<(), FinalizeFailure> {
+    if landing == LandingName::ReplacesOriginal {
+        return land_in_the_cleared_way(dest_volume, temp, final_path, size, ledger, InTheWay::TheOriginal).await;
+    }
     let discard = || async {
         if discard_unplaced_temp(dest_volume.as_ref(), temp).await {
             ledger.release();
@@ -113,33 +126,74 @@ pub(super) async fn land(
         discard().await;
         return Err(first.into());
     }
-    // From here the way may be cleared, and then the temp is the only complete
-    // copy at the destination: it's recorded as a landing first, on disk, and
-    // no sweep may touch it.
+    land_in_the_cleared_way(dest_volume, temp, final_path, size, ledger, InTheWay::Claimed(first)).await
+}
+
+/// What a landing clears out of `final_path`'s way before its rename.
+enum InTheWay {
+    /// Something on a name the caller claimed, which the first rename met:
+    /// its `AlreadyExists` is the error to report if the way can't be cleared.
+    Claimed(VolumeError),
+    /// The user's original, which a swap replaces. A refused delete reports
+    /// its own refusal, which is about the user's file.
+    TheOriginal,
+}
+
+/// The landing's cleared-way tail, shared by a claimed name and a swap: record
+/// the temp as a landing, clear `final_path`, and rename the temp onto it.
+///
+/// From the delete on, the way may be cleared and the temp the only complete
+/// copy at the destination, so it's recorded as a landing first, on disk, and
+/// no sweep may touch it.
+async fn land_in_the_cleared_way(
+    dest_volume: &Arc<dyn Volume>,
+    temp: &Path,
+    final_path: &Path,
+    size: u64,
+    ledger: &LandingLedger<'_>,
+    in_the_way: InTheWay,
+) -> Result<(), FinalizeFailure> {
     let held = ledger.hold_for_landing(final_path, size).await;
+    let replaces_original = matches!(in_the_way, InTheWay::TheOriginal);
     if let Err(refused) = dest_volume.delete(final_path).await
         && !matches!(refused, VolumeError::NotFound(_))
     {
+        let report = match in_the_way {
+            InTheWay::Claimed(first) => first,
+            InTheWay::TheOriginal => refused,
+        };
         match what_a_refused_delete_left(dest_volume.as_ref(), final_path).await {
             AfterARefusedDelete::Gone => {}
             // Couldn't clear the way, so nothing was lost: the destination still
-            // holds whatever was in the way, the temp is a spare copy, and the
-            // rename error is the one to report.
+            // holds whatever was in the way, and the temp is a spare copy.
             AfterARefusedDelete::StillThere => {
+                log::warn!(
+                    target: "copy",
+                    "landing: {} still holds what was in the way after a refused delete ({report}); \
+                     taking the temp {} away",
+                    final_path.display(),
+                    temp.display(),
+                );
                 if discard_unplaced_temp(dest_volume.as_ref(), temp).await {
                     ledger.retire_landing(held);
                 } else {
                     ledger.landing_back_to_temp(held);
                 }
-                return Err(first.into());
+                return Err(report.into());
             }
             // Maybe cleared, maybe not: the temp may be the only copy, so the
             // landing record stays for the sweep to finish or rescue.
             AfterARefusedDelete::Unknown => {
+                if replaces_original {
+                    ledger.original_replaced();
+                }
                 ledger.keep_landing(held);
-                return Err(first.into());
+                return Err(report.into());
             }
         }
+    }
+    if replaces_original {
+        ledger.original_replaced();
     }
     match dest_volume.rename(temp, final_path, false).await {
         Ok(()) => {
@@ -150,8 +204,7 @@ pub(super) async fn land(
         // temp is now the only complete copy of a file with nothing at its
         // destination — and it wears a `.cmdr-tmp-*` name
         // `cleanup.rs::reap_stale_transfer_temps` matches once nothing records
-        // it. Get it out of temp space and report where it went. Same act,
-        // same reason, as `finalize::finalize_safe_replace`'s. A rescue that
+        // it. Get it out of temp space and report where it went. A rescue that
         // couldn't rename either leaves the bytes on the temp, recorded.
         Err(error) => {
             let new_data_at = rescue_out_of_temp_space(dest_volume.as_ref(), temp, final_path).await;
@@ -225,5 +278,15 @@ impl<'a> LandingLedger<'a> {
     /// landing record goes) for the sweeps to remove.
     fn landing_back_to_temp(&self, held: Option<TrackedRecord>) {
         in_flight_temps::back_to_temp(self.state, dest_home(self.state), self.temp, held);
+    }
+
+    /// A swap's delete of the user's original went through (or may have): the
+    /// operation stops being rollbackable now, whatever the rename does next,
+    /// because the file an undo would restore is gone. The ONE moment an
+    /// overwrite rules out rollback on a failure path: a write that never got
+    /// here left the original in place, and a landed swap's journal row says
+    /// so as well.
+    fn original_replaced(&self) {
+        journal::note_not_rollbackable(self.state.scope(), NotRollbackableReason::Overwrote);
     }
 }

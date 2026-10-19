@@ -1153,8 +1153,9 @@ pub async fn copy_volumes_with_progress(
 
     // Cancelled or errored. Before either branch, remove the staged partials of
     // tasks the driver abandoned mid-write: their futures were dropped, so
-    // nothing else will. A temp whose write finished is already off this list, so
-    // committed data is never in scope here. Whatever the destination wouldn't
+    // nothing else will. A temp that may be the destination's only copy (its
+    // landing cleared the way) is already off this list, recorded as a landing,
+    // so committed data is never in scope here. Whatever the destination wouldn't
     // let go of rides out on the cancel summary, so a Rollback that couldn't
     // clear the destination never reads as one that did.
     let staged_leftovers = super::cleanup::clean_abandoned_staged_writes(&dest_volume, state).await;

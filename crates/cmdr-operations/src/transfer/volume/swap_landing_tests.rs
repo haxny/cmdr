@@ -1,18 +1,21 @@
-//! What happens to the new bytes when a safe-replace finalize can't give them
-//! the destination's name.
+//! What a safe-replace's landing does when it can't simply swap the new bytes
+//! over the original (`WriteStaging::StageOverOriginal`, delete-first).
 //!
-//! By then the original is gone (the finalize deletes it between the last byte
-//! and the rename), so the temp is the ONLY complete copy in existence. It must
-//! leave `.cmdr-tmp-*` space, because `cleanup.rs::reap_stale_transfer_temps`
-//! matches on that marker plus an age and runs at the start of every transfer
-//! into the directory: an hour later it would delete the user's only copy.
+//! Once the original's delete has gone through, the temp is the ONLY complete
+//! copy in existence. It must leave `.cmdr-tmp-*` space when the rename after
+//! the delete fails, because `cleanup.rs::reap_stale_transfer_temps` matches on
+//! that marker plus an age and runs at the start of every transfer into the
+//! directory. And a delete the destination refused must never cost the user
+//! their original.
 
 use super::cleanup::reap_stale_transfer_temps;
 use super::faulty_volume::forward_volume_methods;
-use super::finalize::finalize_safe_replace;
+use super::strategy::WriteStaging;
 use crate::event_sinks::CollectorEventSink;
 use crate::state::WriteOperationState;
 use crate::testing::TestOperations;
+use crate::transfer::recovered_name::FinalizeFailure;
+use crate::transfer::staged_write::StagedWrite;
 use crate::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
@@ -22,8 +25,8 @@ use std::sync::Arc;
 
 /// A destination whose `rename` refuses to land anything at `fails_onto`, and
 /// forwards everything else. Models the disconnect at the exact instant the
-/// finalize swaps the completed temp over the original: `delete(orig)` goes
-/// through, the rename that follows doesn't.
+/// swap renames the completed temp onto the original's name: `delete(orig)`
+/// goes through, the rename that follows doesn't.
 struct RenameRefusesOne {
     inner: Arc<InMemoryVolume>,
     fails_onto: PathBuf,
@@ -49,26 +52,34 @@ impl Volume for RenameRefusesOne {
         }
         Box::pin(async {
             Err(VolumeError::IoError {
-                message: "simulated disconnect during the finalize rename".to_string(),
+                message: "simulated disconnect during the swap's rename".to_string(),
                 raw_os_error: None,
             })
         })
     }
 }
 
-/// The destination as a `dyn Volume`, plus the inner volume the cells read
-/// through. `/notes.txt` holds the user's old file; a completed temp beside it
-/// holds the new bytes, exactly as the streaming write leaves them.
-async fn dest_mid_finalize(fails_onto: &str) -> (Arc<InMemoryVolume>, Arc<dyn Volume>, PathBuf) {
-    let inner = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
+/// `/notes.txt` holds the user's old file, as every cell starts.
+async fn dest_holding_the_original(inner: InMemoryVolume) -> Arc<InMemoryVolume> {
+    let inner = Arc::new(inner.with_space_info(10_000_000, 10_000_000));
     inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
-    let temp = PathBuf::from("/notes.txt.cmdr-tmp-11111111");
+    inner
+}
+
+/// Stages a write over `/notes.txt`, puts the complete new bytes on its temp
+/// exactly as the streaming write leaves them, and lands it. Answers the temp
+/// and the landing's outcome.
+async fn swap_over_the_original(
+    engine: &TestOperations,
+    inner: &InMemoryVolume,
+    dest: &Arc<dyn Volume>,
+) -> (PathBuf, Result<(), FinalizeFailure>) {
+    let state = Arc::new(unwatched_state(engine));
+    let original = state.scope().host().announce_on(&**dest, Path::new("/notes.txt"));
+    let staged = StagedWrite::begin(&state, &**dest, original, WriteStaging::StageOverOriginal);
+    let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
-    let dest: Arc<dyn Volume> = Arc::new(RenameRefusesOne {
-        inner: Arc::clone(&inner),
-        fails_onto: PathBuf::from(fails_onto),
-    });
-    (inner, dest, temp)
+    (temp, staged.commit(dest, 3).await)
 }
 
 /// What `path` holds right now, or `None` if it isn't there.
@@ -91,16 +102,26 @@ async fn names_in_root(volume: &InMemoryVolume) -> Vec<String> {
         .collect()
 }
 
+/// A destination whose rename onto `/notes.txt` fails after the delete went
+/// through.
+async fn dest_refusing_the_rename() -> (Arc<InMemoryVolume>, Arc<dyn Volume>) {
+    let inner = dest_holding_the_original(InMemoryVolume::new("Dest")).await;
+    let dest: Arc<dyn Volume> = Arc::new(RenameRefusesOne {
+        inner: Arc::clone(&inner),
+        fails_onto: PathBuf::from("/notes.txt"),
+    });
+    (inner, dest)
+}
+
 /// The rescue: the complete new bytes take a real filename next to where they
 /// were meant to land, and nothing is left wearing a temp name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_failed_finalize_moves_the_new_data_out_of_temp_space() {
+async fn a_swap_whose_rename_fails_moves_the_new_data_out_of_temp_space() {
     let engine = TestOperations::new();
-    let (inner, dest, temp) = dest_mid_finalize("/notes.txt").await;
+    let (inner, dest) = dest_refusing_the_rename().await;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
-        .await
-        .expect_err("the finalize rename is rigged to fail");
+    let (_, landed) = swap_over_the_original(&engine, &inner, &dest).await;
+    let failure = landed.expect_err("the swap's rename is rigged to fail");
 
     assert_eq!(
         failure.new_data_at.as_deref(),
@@ -121,17 +142,12 @@ async fn a_failed_finalize_moves_the_new_data_out_of_temp_space() {
 
 /// The point of the rescue: the hourly stale-temp reap can't touch the rescued
 /// file, however long it sits there.
-///
-/// Pre-fix the new bytes stayed at `notes.txt.cmdr-tmp-<uuid>`, which is exactly
-/// what `reap_stale_transfer_temps` matches once it is an hour old, and the next
-/// transfer into that folder deleted the only copy.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_stale_temp_reap_cannot_touch_rescued_data() {
     let engine = TestOperations::new();
-    let (inner, dest, temp) = dest_mid_finalize("/notes.txt").await;
-    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
-        .await
-        .expect_err("the finalize rename is rigged to fail");
+    let (inner, dest) = dest_refusing_the_rename().await;
+    let (_, landed) = swap_over_the_original(&engine, &inner, &dest).await;
+    landed.expect_err("the swap's rename is rigged to fail");
 
     // A day later, the next transfer into the same folder runs the reap.
     for name in names_in_root(&inner).await {
@@ -151,15 +167,14 @@ async fn the_stale_temp_reap_cannot_touch_rescued_data() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_taken_recovered_name_continues_the_house_series() {
     let engine = TestOperations::new();
-    let (inner, dest, temp) = dest_mid_finalize("/notes.txt").await;
+    let (inner, dest) = dest_refusing_the_rename().await;
     inner
         .create_file(Path::new("/notes (recovered).txt"), b"AN EARLIER RESCUE")
         .await
         .unwrap();
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
-        .await
-        .expect_err("the finalize rename is rigged to fail");
+    let (_, landed) = swap_over_the_original(&engine, &inner, &dest).await;
+    let failure = landed.expect_err("the swap's rename is rigged to fail");
 
     assert_eq!(
         failure.new_data_at.as_deref(),
@@ -173,25 +188,20 @@ async fn a_taken_recovered_name_continues_the_house_series() {
 }
 
 /// When the destination refuses every rename — the same dead link that failed
-/// the finalize — the bytes stay under the temp name and the failure says so.
+/// the swap — the bytes stay under the temp name and the failure says so.
 /// Reporting the recovered path we never created would send the user to a file
 /// that isn't there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rescue_that_cannot_rename_reports_the_temp_it_left() {
     let engine = TestOperations::new();
-    let inner = Arc::new(
-        InMemoryVolume::new("Dest")
-            .with_space_info(10_000_000, 10_000_000)
-            .with_rename_failing(VolumeError::DeviceDisconnected("gone".to_string())),
-    );
-    inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
-    let temp = PathBuf::from("/notes.txt.cmdr-tmp-22222222");
-    inner.create_file(&temp, b"NEW").await.unwrap();
+    let inner = dest_holding_the_original(
+        InMemoryVolume::new("Dest").with_rename_failing(VolumeError::DeviceDisconnected("gone".to_string())),
+    )
+    .await;
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
-        .await
-        .expect_err("every rename fails here");
+    let (temp, landed) = swap_over_the_original(&engine, &inner, &dest).await;
+    let failure = landed.expect_err("every rename fails here");
 
     assert_eq!(failure.new_data_at.as_deref(), Some(temp.as_path()));
     assert_eq!(contents(&inner, &temp).await.as_deref(), Some(&b"NEW"[..]));
@@ -234,19 +244,15 @@ impl Volume for DeleteRefusesOne {
     }
 }
 
-/// `/notes.txt` holds the user's old file and a completed temp beside it holds
-/// the new bytes; the destination refuses to delete `/notes.txt`.
-async fn dest_refusing_the_delete(goes_through: bool) -> (Arc<InMemoryVolume>, Arc<dyn Volume>, PathBuf) {
-    let inner = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
-    inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
-    let temp = PathBuf::from("/notes.txt.cmdr-tmp-44444444");
-    inner.create_file(&temp, b"NEW").await.unwrap();
+/// The destination refuses to delete `/notes.txt`.
+async fn dest_refusing_the_delete(goes_through: bool) -> (Arc<InMemoryVolume>, Arc<dyn Volume>) {
+    let inner = dest_holding_the_original(InMemoryVolume::new("Dest")).await;
     let dest: Arc<dyn Volume> = Arc::new(DeleteRefusesOne {
         inner: Arc::clone(&inner),
         refuses: PathBuf::from("/notes.txt"),
         goes_through,
     });
-    (inner, dest, temp)
+    (inner, dest)
 }
 
 /// The server wouldn't let the original go, so the swap can't happen: the
@@ -257,11 +263,10 @@ async fn dest_refusing_the_delete(goes_through: bool) -> (Arc<InMemoryVolume>, A
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refused_delete_keeps_the_original_and_takes_its_own_temp_away() {
     let engine = TestOperations::new();
-    let (inner, dest, temp) = dest_refusing_the_delete(false).await;
+    let (inner, dest) = dest_refusing_the_delete(false).await;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
-        .await
-        .expect_err("the delete is rigged to be refused");
+    let (_, landed) = swap_over_the_original(&engine, &inner, &dest).await;
+    let failure = landed.expect_err("the delete is rigged to be refused");
 
     assert!(
         matches!(failure.error, VolumeError::PermissionDenied { .. }),
@@ -290,11 +295,10 @@ async fn a_refused_delete_keeps_the_original_and_takes_its_own_temp_away() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_delete_that_went_through_despite_its_answer_still_lands_the_new_bytes() {
     let engine = TestOperations::new();
-    let (inner, dest, temp) = dest_refusing_the_delete(true).await;
+    let (inner, dest) = dest_refusing_the_delete(true).await;
 
-    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
-        .await
-        .expect("the original is gone, so the swap completes");
+    let (_, landed) = swap_over_the_original(&engine, &inner, &dest).await;
+    landed.expect("the original is gone, so the swap completes");
 
     assert_eq!(
         contents(&inner, Path::new("/notes.txt")).await.as_deref(),
@@ -309,12 +313,11 @@ async fn a_delete_that_went_through_despite_its_answer_still_lands_the_new_bytes
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refused_delete_nobody_can_confirm_keeps_the_temp() {
     let engine = TestOperations::new();
-    let (inner, dest, temp) = dest_refusing_the_delete(false).await;
+    let (inner, dest) = dest_refusing_the_delete(false).await;
     inner.set_stat_failing(Path::new("/notes.txt"));
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
-        .await
-        .expect_err("the delete is rigged to be refused");
+    let (temp, landed) = swap_over_the_original(&engine, &inner, &dest).await;
+    let failure = landed.expect_err("the delete is rigged to be refused");
 
     assert!(matches!(failure.error, VolumeError::PermissionDenied { .. }));
     assert_eq!(contents(&inner, &temp).await.as_deref(), Some(&b"NEW"[..]));
@@ -395,26 +398,19 @@ async fn concurrent_a_refused_replace_leaves_no_staging() {
     copy_over_a_file_the_server_wont_let_go(&engine, &["a.txt", "notes.txt", "z.txt"]).await;
 }
 
-/// A finalize that fails on the DELETE rescued nothing and lost nothing: the
+/// A swap that fails on the DELETE rescued nothing and lost nothing: the
 /// destination still holds the user's file. Here the destination refuses EVERY
-/// delete, so the temp can't be taken away either; it stays for the stale-temp
-/// reap, which is safe because the source still holds its bytes.
+/// delete, so the temp can't be taken away either; it stays, recorded as a temp
+/// again, for the sweeps, which is safe because the source still holds its
+/// bytes.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_finalize_that_never_deleted_the_original_reports_no_rescue() {
+async fn a_swap_that_never_deleted_the_original_reports_no_rescue() {
     let engine = TestOperations::new();
-    let inner = Arc::new(
-        InMemoryVolume::new("Dest")
-            .with_space_info(10_000_000, 10_000_000)
-            .with_delete_failing(),
-    );
-    inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
-    let temp = PathBuf::from("/notes.txt.cmdr-tmp-33333333");
-    inner.create_file(&temp, b"NEW").await.unwrap();
+    let inner = dest_holding_the_original(InMemoryVolume::new("Dest").with_delete_failing()).await;
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
-        .await
-        .expect_err("the delete is rigged to fail");
+    let (temp, landed) = swap_over_the_original(&engine, &inner, &dest).await;
+    let failure = landed.expect_err("the delete is rigged to fail");
 
     assert!(
         failure.new_data_at.is_none(),
@@ -427,7 +423,7 @@ async fn a_finalize_that_never_deleted_the_original_reports_no_rescue() {
     assert_eq!(
         contents(&inner, &temp).await.as_deref(),
         Some(&b"NEW"[..]),
-        "a temp the destination won't delete stays, whole, for the stale-temp reap"
+        "a temp the destination won't delete stays, whole, for the sweeps"
     );
 }
 
@@ -436,8 +432,8 @@ async fn a_finalize_that_never_deleted_the_original_reports_no_rescue() {
 #[allow(dead_code, reason = "the macro expansion names the type")]
 type ListingRow = FileEntry;
 
-/// A state for a finalize no operation is watching: it holds no flags for any
-/// temp, so the swap is all that happens.
+/// A state no operation is watching: no journal, no persisted ledger, so the
+/// landing is all that happens.
 fn unwatched_state(engine: &TestOperations) -> WriteOperationState {
     engine.new_operation_state(std::time::Duration::ZERO)
 }

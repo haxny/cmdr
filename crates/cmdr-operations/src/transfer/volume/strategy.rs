@@ -83,13 +83,13 @@ pub(super) async fn copy_single_path(
     // no per-child conflict resolution (the cross-volume move's copy phase,
     // where the dest is a fresh staging area, and tests that don't merge).
     merge: Option<&MergeCtx<'_>>,
-    // Whether `dest_path` is the file's final name (`Stage`) or a `.cmdr-tmp-*`
-    // the caller already minted for a safe-replace and will land itself
-    // (`AlreadyStaged`), or the final name an in-place replace writes over.
-    // Every call site derives it the same way: `staging_for(&replaces,
-    // landing)`. Only the FILE branch reads it — a
-    // directory source's children each get their own staging decision inside the
-    // merge walker — and a directory conflict never yields a caller temp, so
+    // How the write to `dest_path` (always the file's final name) is staged:
+    // whose name it is (`Stage`, `StageOntoClaimedName`), an original a swap
+    // replaces (`StageOverOriginal`), or the final name an in-place replace
+    // writes over. Every call site derives it the same way:
+    // `staging_for(&replaces, landing)`. Only the FILE branch reads it — a
+    // directory source's children each get their own staging decision inside
+    // the merge walker — and a directory conflict never yields a swap, so
     // passing the same expression everywhere stays correct.
     staging: WriteStaging,
 ) -> Result<u64, PathedVolumeError> {
@@ -137,10 +137,9 @@ pub(super) async fn copy_single_path(
         .await
     } else {
         // A top-level FILE source records nothing into `created` here: the
-        // caller owns that path's rollback bookkeeping because it may be a
-        // safe-replace temp sibling (`write_path`) that gets renamed onto the
-        // original after the write lands — the caller records the ORIGINAL, not
-        // the temp. `created` is for the directory-merge case, where the
+        // caller owns that path's rollback bookkeeping (it records the landed
+        // name with the overwrite verdict it holds). `created` is for the
+        // directory-merge case, where the
         // recursive copy below is the only place that knows which files and
         // newly-created subdirs landed inside a (possibly pre-existing) dest
         // directory.

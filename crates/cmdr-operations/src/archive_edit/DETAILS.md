@@ -86,7 +86,7 @@ The remote ORIGINAL is byte-for-byte untouched until the very last swap:
    a name nothing reaps: the original at its name, then the original aside (the edit at the temp), then the edit at its
    name with the original aside. Gotcha/Why: the swap used to DELETE the original first, so a crash or a failed rename
    left the only copy under the temp name, and the sweep deleted the whole archive an hour later. Faults that answer are
-   handled like `transfer/volume/finalize.rs`: a rename that errors is followed by a stat of the temp (gone means it
+   handled like an Overwrite's swap (`transfer/staged_write_landing.rs`): a rename that errors is followed by a stat of the temp (gone means it
    landed); a refused move aside by `what_a_refused_delete_left` (still there: the spare temp goes); a failed landing
    puts the original back, or, if even that fails, rescues the edit to a ` (recovered)` name reported as
    `NewDataKeptAt`, the original staying aside. RECOVERY: the start of the next remote edit in that folder

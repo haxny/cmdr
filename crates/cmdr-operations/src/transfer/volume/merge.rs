@@ -237,7 +237,7 @@ impl<'a> LeafPool<'a> {
 /// window as a unit of work.
 #[allow(
     clippy::too_many_arguments,
-    reason = "One leaf's whole context: both volumes, both paths, what the listing knows about the source, the safe-replace original, how the write is staged, shared state, the ledger, the source's progress accounting, and the file's tree row."
+    reason = "One leaf's whole context: both volumes, both paths, what the listing knows about the source, what the write replaces, how the write is staged, shared state, the ledger, the source's progress accounting, and the file's tree row."
 )]
 async fn copy_leaf<'a>(
     source_volume: &'a Arc<dyn Volume>,
@@ -282,24 +282,16 @@ async fn copy_leaf<'a>(
     if streamed.is_err() && reserved_placeholder {
         take_back_reservation(dest_volume, &write_dest, &state.claimed_names).await;
     }
-    let bytes = streamed.map_err(|e| e.naming_the_replaced(replaces.swap_target()))?;
-    // Safe-replace finalize for a file→file Overwrite: the temp now holds the
-    // complete new bytes; swap it over the original. On finalize error the temp
-    // is preserved as committed data (see `finalize_safe_replace`).
-    // An overwrite (safe-replace or in place) makes the op not rollbackable.
+    let bytes = streamed?;
+    // The file landed at `write_dest`, the original's own name for an
+    // overwrite (a swap's landing ran inside the write). A landed overwrite's
+    // row says so; a swap that failed after its delete has already told the
+    // journal (`staged_write.rs::land`), and one that failed before it left the
+    // original in place, which is no overwrite at all.
     if replaces.overwrites() {
         created.record_overwrite();
     }
-    let recorded = match replaces {
-        Replaces::ViaTemp(orig) => {
-            super::finalize::finalize_safe_replace(dest_volume, &write_dest, &orig, state)
-                .await
-                .map_err(|e| PathedVolumeError::from_landing(e, &orig))?;
-            orig
-        }
-        Replaces::InPlace | Replaces::Nothing => write_dest,
-    };
-    created.record_file(recorded, bytes);
+    created.record_file(write_dest, bytes);
     leaf.complete(bytes);
     Ok(bytes)
 }
@@ -843,7 +835,7 @@ enum MergeChildDecision {
     /// Honor a Skip: do NOT touch the dest child at all.
     Skip,
     /// Proceed writing to `write_path`; `replace` says what that does to a file
-    /// at the name (`ViaTemp(orig)`: write to a temp sibling, finalize after).
+    /// at the name (`Swap`: the write's landing replaces the original there).
     /// `reserved_placeholder` says the resolver put a zero-byte `O_EXCL` file at
     /// `write_path` to hold the name, which the leaf owes taking back if its
     /// write never happens (`naming.rs::ClaimedName`).

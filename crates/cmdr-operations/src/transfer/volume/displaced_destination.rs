@@ -5,7 +5,7 @@
 //! bytes need no temp and the only thing at risk is the entry being replaced;
 //! each such aside settles the moment its one rename answers. A cross-type
 //! Overwrite (a folder landing on a file, or a file on a folder) can't stage
-//! the new side the way a file→file one does (`finalize.rs::finalize_safe_replace`),
+//! the new side the way a file→file one does (`WriteStaging::StageOverOriginal`),
 //! because a folder lands leaf by leaf over the rest of the operation. Those
 //! asides go to the operation's [`DisplacedLedger`] and settle when it ends.
 //! The local-FS twin is `crates/cmdr-operations/src/overwrite.rs::DisplacedEntry`.

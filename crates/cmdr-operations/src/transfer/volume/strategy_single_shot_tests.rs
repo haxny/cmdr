@@ -97,6 +97,11 @@ impl Volume for SingleShotDest {
     fn supports_streaming(&self) -> bool {
         true
     }
+    /// Nothing is ever at a name here, so a swap's delete of the original
+    /// finds nothing to remove.
+    fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move { Err(VolumeError::NotFound(path.display().to_string())) })
+    }
     fn rename<'a>(
         &'a self,
         from: &'a Path,
@@ -277,22 +282,28 @@ async fn a_tiny_write_to_a_backend_without_the_guarantee_still_stages() {
     );
 }
 
-/// A caller-staged write (the conflict layer's safe-replace temp) is passed
-/// through untouched even when the destination could do it in one shot: the
-/// caller keeps the ORIGINAL in place until the temp is complete, and landing it
-/// is the caller's job.
+/// A write over the user's original (a safe-replace) stays staged even when
+/// the destination could do it in one shot: the staging keeps the ORIGINAL in
+/// place until the temp is complete, which is the stronger guarantee.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_caller_staged_write_is_never_turned_into_a_single_shot() {
+async fn a_write_over_an_original_is_never_turned_into_a_single_shot() {
     let engine = TestOperations::new();
-    let caller_temp = Path::new("/notes.txt.cmdr-tmp-abc");
-    let (writes, renames, _state) = copy_one(&engine, 100, Some(1024), WriteStaging::AlreadyStaged, caller_temp).await;
+    let (writes, renames, _state) = copy_one(
+        &engine,
+        100,
+        Some(1024),
+        WriteStaging::StageOverOriginal,
+        Path::new("/notes.txt"),
+    )
+    .await;
 
+    assert_eq!(writes.len(), 1, "one write; got {writes:?}");
+    assert!(is_temp(&writes[0]), "the write goes to a temp; got {writes:?}");
     assert_eq!(
-        writes,
-        vec![caller_temp.to_path_buf()],
-        "the caller's temp is the write target; got {writes:?}"
+        renames,
+        vec![(writes[0].clone(), PathBuf::from("/notes.txt"))],
+        "and its landing renames it onto the original's name; got {renames:?}"
     );
-    assert!(renames.is_empty(), "the caller lands its own temp; got {renames:?}");
 }
 
 /// An object store publishes every write whole (S3's PUT and multipart

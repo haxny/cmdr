@@ -225,11 +225,11 @@ async fn a_file_that_exhausts_its_attempts_leaves_nothing_behind() {
 }
 
 /// Overwrite is not reversible, so a retry must never make it worse. Under a
-/// caller-staged safe-replace the ORIGINAL stays untouched through every attempt:
-/// the retry rewrites the caller's temp, and only the caller's `finalize` (which
-/// runs after this returns) ever touches the original.
+/// safe-replace every attempt writes its own temp beside the ORIGINAL, and only
+/// the landing after the attempt that got every byte down replaces it: the
+/// file lands once, whole, and no failed attempt's temp is left.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_retried_safe_replace_keeps_the_original_intact_the_whole_way() {
+async fn a_retried_safe_replace_replaces_the_original_once_its_bytes_are_whole() {
     let engine = TestOperations::new();
     let guard = engine.register_state("retry-safe-replace", make_state(&engine));
     let source = source_with_payload().await;
@@ -237,23 +237,17 @@ async fn a_retried_safe_replace_keeps_the_original_intact_the_whole_way() {
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
     flaky.inner.create_file(Path::new("/a.txt"), b"ORIGINAL").await.unwrap();
 
-    // The conflict layer's shape: the write targets a temp sibling it minted, and
-    // the original is swapped in later by `finalize_safe_replace`.
-    let temp = "/a.txt.cmdr-tmp-retrytest";
-    let bytes = copy_one(&source, &dest, guard.state(), WriteStaging::AlreadyStaged, temp)
+    let bytes = copy_one(&source, &dest, guard.state(), WriteStaging::StageOverOriginal, "/a.txt")
         .await
-        .expect("the retried safe-replace write must land in the temp");
+        .expect("the retried safe-replace lands");
 
     assert_eq!(bytes, PAYLOAD.len() as u64);
+    assert_eq!(flaky.write_calls(), 2, "one failed attempt, then one that got every byte down");
+    assert_eq!(flaky.read("/a.txt").await.as_deref(), Some(PAYLOAD));
     assert_eq!(
-        flaky.read("/a.txt").await.as_deref(),
-        Some(&b"ORIGINAL"[..]),
-        "the original must be untouched until the caller finalizes"
-    );
-    assert_eq!(
-        flaky.read(temp).await.as_deref(),
-        Some(PAYLOAD),
-        "the caller's temp must hold the complete new bytes after the retry"
+        flaky.names().await,
+        vec!["a.txt".to_string()],
+        "no attempt's temp may be left beside it"
     );
 }
 
@@ -268,14 +262,7 @@ async fn a_safe_replace_that_fails_every_attempt_still_leaves_the_original() {
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
     flaky.inner.create_file(Path::new("/a.txt"), b"ORIGINAL").await.unwrap();
 
-    let _ = copy_one(
-        &source,
-        &dest,
-        guard.state(),
-        WriteStaging::AlreadyStaged,
-        "/a.txt.cmdr-tmp-retrytest",
-    )
-    .await;
+    let _ = copy_one(&source, &dest, guard.state(), WriteStaging::StageOverOriginal, "/a.txt").await;
 
     assert_eq!(
         flaky.read("/a.txt").await.as_deref(),

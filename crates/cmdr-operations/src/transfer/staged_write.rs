@@ -6,16 +6,17 @@
 //! and left two phone backups at their final names — one at zero bytes, one
 //! truncated at 4 MiB — indistinguishable from complete files
 //! (`docs/notes/incidents/2026-07-31-transfer-wedge/README.md`). Neither had a
-//! conflict, so neither took the conflict layer's safe-replace temp; a fresh copy
-//! streamed straight to the destination path. Staging every write closes that:
-//! whatever a crash leaves behind wears a `.cmdr-tmp-*` name nobody mistakes for
-//! their data.
+//! conflict, so neither was staged; a fresh copy streamed straight to the
+//! destination path. Staging every write closes that: whatever a crash leaves
+//! behind wears a `.cmdr-tmp-*` name nobody mistakes for their data.
 //!
-//! **Who stages.** The conflict layer already mints a temp for a file→file
-//! Overwrite (`cmdr_fs::staging::temp_sibling_path`) and lands it itself, so a
-//! write onto one of those is [`WriteStaging::AlreadyStaged`] and passes through
-//! untouched — staging it again would only produce a `foo.cmdr-tmp-A.cmdr-tmp-B`.
-//! A write the DESTINATION lands in one indivisible shot is
+//! **Who stages.** Every staged write stages HERE, a file→file Overwrite
+//! included: the conflict layer only decides that the write replaces the user's
+//! original ([`Replaces::Swap`]), and the write stages as
+//! [`WriteStaging::StageOverOriginal`] and lands delete-first through the same
+//! landing as any other. So the temp has one owner, and `write_path` names the
+//! file the user gets on every path. A write the DESTINATION lands in one
+//! indivisible shot is
 //! [`WriteStaging::SingleShot`] and needs no temp: there is no moment at which
 //! the final name holds a partial. It has no landing either, so the no-replace
 //! rule travels with it instead: a name the caller expected free is written
@@ -68,11 +69,22 @@ pub(super) enum WriteStaging {
     /// cross-type Overwrite that removed what was there. Whatever the landing
     /// finds in the way is the caller's own doing, so it may clear it.
     StageOntoClaimedName,
-    /// The path handed to the writer is already a `.cmdr-tmp-*` the CALLER
-    /// minted and will land itself (the conflict layer's safe-replace, which
-    /// keeps the original in place until the temp is complete). Write straight
-    /// to it.
-    AlreadyStaged,
+    /// A file→file Overwrite ([`Replaces::Swap`]): the final name holds the
+    /// user's ORIGINAL, which survives the whole write. Staged exactly like
+    /// [`WriteStaging::Stage`], and landed delete-first
+    /// ([`LandingName::ReplacesOriginal`]).
+    ///
+    /// ❗ Never single-shot ([`resolve_staging`] leaves it alone): the
+    /// original's survival is the stronger guarantee, and a single-shot write
+    /// replaces it before the bytes are known to be whole.
+    StageOverOriginal,
+    /// No staging at all, because this destination can't land a staged write
+    /// (it can't rename): the bytes go straight to the final name, with
+    /// [`WriteMode::CreateOrReplace`], and a failed attempt's partial there is
+    /// ours. Only `stream_pipe_file` picks it, as its fallback for a
+    /// `NotSupported` landing of a write that replaces nothing. ❌ Never for a
+    /// swap: it would write over the original in place.
+    Unstaged,
     /// The DESTINATION lands this write in one indivisible shot (`Volume::
     /// write_is_single_shot`), or publishes every write whole by protocol
     /// (`Volume::publishes_writes_whole`, an object store), so the final name
@@ -107,6 +119,12 @@ pub(super) enum LandingName {
     /// way: a `Rename` pick reserved with an `O_EXCL` placeholder, a cross-type
     /// Overwrite whose destination delete has already run.
     ClaimedByTheCaller,
+    /// The name holds the user's original, which this write replaces (a
+    /// file→file Overwrite). The original is known to be in the way, so the
+    /// landing deletes it FIRST, then renames: never `rename(force)`, which on
+    /// MTP can make a duplicate. Only [`WriteStaging::StageOverOriginal`] lands
+    /// with it.
+    ReplacesOriginal,
 }
 
 impl LandingName {
@@ -127,8 +145,8 @@ impl LandingName {
 /// One file write's staging: where the bytes go, and how they get their final
 /// name.
 pub(crate) struct StagedWrite {
-    /// `Some(temp)` when we staged this write ourselves, `None` under
-    /// [`WriteStaging::AlreadyStaged`] and [`WriteStaging::SingleShot`].
+    /// `Some(temp)` for every staged write, `None` under
+    /// [`WriteStaging::Unstaged`] and [`WriteStaging::SingleShot`].
     ///
     /// The guard also keeps the temp out of the pane while it's being written
     /// (`cmdr_fs::staging`). Dropping it un-hides the file, which is why
@@ -137,27 +155,19 @@ pub(crate) struct StagedWrite {
     /// (a rescue or a discard that couldn't happen) is something the user may
     /// need to see.
     temp: Option<StagingTemp>,
-    /// Keeps a CALLER-minted temp out of the pane for the length of the write
-    /// ([`WriteStaging::AlreadyStaged`]).
-    ///
-    /// The conflict layer's safe-replace temp is minted several layers up and
-    /// passed down as a plain path (`ResolvedConflict::write_path`), through code
-    /// that clones it, so it can't carry its own guard. This adopts it for the
-    /// window that matters — the streaming write — and lets go at commit, a
-    /// rename short of the caller's `finalize_safe_replace`. Worst case that
-    /// leaves the temp visible for one round trip, which shows as a flicker and
-    /// never as a stuck entry: the pane re-reads through the same filter, so an
-    /// entry it shows once can always be taken away again.
-    #[allow(dead_code, reason = "Held for its Drop: the guard IS the hiding")]
-    caller_temp: Option<StagingTemp>,
-    /// Where the file must end up. Under `AlreadyStaged` this IS the caller's
-    /// temp, and landing it is the caller's job.
+    /// Where the file must end up: the user's original itself under
+    /// [`WriteStaging::StageOverOriginal`].
     final_path: PathBuf,
     /// What the caller believes about that name, which is what [`land`] needs to
-    /// tell a clash nobody answered from a name the caller itself claimed.
+    /// tell a clash nobody answered from a name the caller itself claimed, and
+    /// an original to replace from both.
     landing: LandingName,
     /// See [`write_mode`](Self::write_mode).
     write_mode: WriteMode,
+    /// [`WriteStaging::Unstaged`]: the bytes go to the final name, so what a
+    /// failed attempt leaves there is ours to clear before the next one
+    /// ([`abandon_attempt`](Self::abandon_attempt)).
+    unstaged: bool,
     state: Arc<WriteOperationState>,
 }
 
@@ -198,46 +208,44 @@ impl StagedWrite {
 
     /// [`Self::begin`] with nothing announced.
     fn begin_unannounced(state: &Arc<WriteOperationState>, final_path: &Path, staging: WriteStaging) -> Self {
-        let mut temp = None;
-        let mut caller_temp = None;
-        match staging {
-            WriteStaging::Stage | WriteStaging::StageInFreshFolder | WriteStaging::StageOntoClaimedName => {
+        let temp = match staging {
+            WriteStaging::Stage
+            | WriteStaging::StageInFreshFolder
+            | WriteStaging::StageOntoClaimedName
+            | WriteStaging::StageOverOriginal => {
                 let staged = StagingTemp::mint(final_path, state.liveness_token());
                 in_flight_temps::track_temp(state, dest_home(state), staged.path());
-                temp = Some(staged);
+                Some(staged)
             }
-            // The caller's temp is the caller's to land; all we take is
-            // responsibility for keeping it out of the pane while we write it.
-            WriteStaging::AlreadyStaged => {
-                caller_temp = Some(StagingTemp::adopt(final_path.to_path_buf(), state.liveness_token()))
-            }
-            // A single-shot write goes straight to the final name: no
-            // intermediate state to track, and nothing to hide.
-            WriteStaging::SingleShot(_) => {}
-        }
+            // Straight to the final name: no intermediate state to track, and
+            // nothing to hide.
+            WriteStaging::Unstaged | WriteStaging::SingleShot(_) => None,
+        };
         Self {
             temp,
-            caller_temp,
             final_path: final_path.to_path_buf(),
-            // `AlreadyStaged` never lands here and answers `ClaimedByTheCaller`
-            // for the same reason it needs no landing: the name is the caller's,
-            // and the caller does the swap. A single-shot write keeps the answer
-            // of the staged write it replaced, which is what `write_mode` reads.
+            // An unstaged write never lands and answers `ClaimedByTheCaller`
+            // for the same reason it may write over the name: what's there is
+            // its own attempt's. A single-shot write keeps the answer of the
+            // staged write it replaced, which is what `write_mode` reads.
             landing: match staging {
                 WriteStaging::Stage => LandingName::ExpectedFree,
                 WriteStaging::StageInFreshFolder => LandingName::FreeInFreshFolder,
-                WriteStaging::StageOntoClaimedName | WriteStaging::AlreadyStaged => LandingName::ClaimedByTheCaller,
+                WriteStaging::StageOntoClaimedName | WriteStaging::Unstaged => LandingName::ClaimedByTheCaller,
+                WriteStaging::StageOverOriginal => LandingName::ReplacesOriginal,
                 WriteStaging::SingleShot(landing) => landing,
             },
             write_mode: match staging {
                 WriteStaging::SingleShot(LandingName::ExpectedFree) => WriteMode::CreateNew,
                 WriteStaging::SingleShot(LandingName::FreeInFreshFolder) => WriteMode::CreateNewInFreshFolder,
-                WriteStaging::SingleShot(LandingName::ClaimedByTheCaller)
+                WriteStaging::SingleShot(LandingName::ClaimedByTheCaller | LandingName::ReplacesOriginal)
                 | WriteStaging::Stage
                 | WriteStaging::StageInFreshFolder
                 | WriteStaging::StageOntoClaimedName
-                | WriteStaging::AlreadyStaged => WriteMode::CreateOrReplace,
+                | WriteStaging::StageOverOriginal
+                | WriteStaging::Unstaged => WriteMode::CreateOrReplace,
             },
+            unstaged: matches!(staging, WriteStaging::Unstaged),
             state: Arc::clone(state),
         }
     }
@@ -259,9 +267,9 @@ impl StagedWrite {
     /// `operations_host/backend_suites/smb_transfer_safety_test.rs::smb_integration_a_single_shot_upload_never_replaces_a_name_taken_mid_upload`.
     ///
     /// Everything else may replace: our own freshly minted `.cmdr-tmp-*` (a
-    /// retried attempt writes over its predecessor), the caller's safe-replace
-    /// temp, or a final name the caller claimed, whose `O_EXCL` placeholder
-    /// sits at the name and must be written over.
+    /// retried attempt writes over its predecessor), a final name the caller
+    /// claimed, whose `O_EXCL` placeholder sits at the name and must be written
+    /// over, or an unstaged write's own earlier attempt.
     pub(super) fn write_mode(&self) -> WriteMode {
         self.write_mode
     }
@@ -278,6 +286,12 @@ impl StagedWrite {
     /// sweep, which is safe: the name was never cleared, and the source still
     /// holds the bytes.
     ///
+    /// A [`WriteStaging::StageOverOriginal`] write lands here too, delete-first
+    /// ([`LandingName::ReplacesOriginal`]), so the swap shares the cleared-way
+    /// rules: recorded as a landing before the original's delete goes out, a
+    /// refused delete checked with one stat, a refused rename after it rescued
+    /// out of temp space.
+    ///
     /// `size` is the byte count the write confirmed. A landing that clears the
     /// way records the temp at that size (`ItemKind::Landing::expected_size`),
     /// which is how a later sweep tells a whole temp from a short one.
@@ -288,8 +302,8 @@ impl StagedWrite {
     /// backend takes that branch.
     pub(crate) async fn commit(mut self, dest_volume: &Arc<dyn Volume>, size: u64) -> Result<(), FinalizeFailure> {
         let Some(temp) = self.temp.take() else {
-            // Nothing of ours to land: the caller stages and lands its own temp,
-            // and a single-shot write already sits at its final name.
+            // Nothing to land: an unstaged or single-shot write already sits at
+            // its final name.
             return Ok(());
         };
         // Landing is a device round trip of its own; a dump has to be able to
@@ -411,16 +425,14 @@ impl StagedWrite {
     /// so the next attempt writes onto a clean path.
     ///
     /// Wider than [`abandon`](Self::abandon) by exactly one case, and the reason
-    /// is that the next writer is US, not the caller. Under
-    /// [`WriteStaging::AlreadyStaged`] the target is the CALLER's safe-replace
-    /// temp, which `abandon` deliberately leaves alone because the caller owns its
-    /// lifetime — but between two attempts nobody else can be looking at it, it
-    /// holds nothing but the partial we just gave up on, and the ORIGINAL it will
-    /// eventually replace is untouched either way. Leaving it would make the next
-    /// attempt's behavior depend on how each backend treats a write onto an
-    /// existing path: `LocalPosixVolume` truncates, `InMemoryVolume` refuses with
-    /// `AlreadyExists`, and MTP can happily make a second object with the same
-    /// name.
+    /// is that the next writer is US. Under [`WriteStaging::Unstaged`] the
+    /// target is the final name, which `abandon` leaves alone (the terminal
+    /// failure's cleanup is `stream_pipe_file`'s, which knows it wrote there),
+    /// but between two attempts it holds nothing but the partial we just gave
+    /// up on. Leaving it would make the next attempt's behavior depend on how
+    /// each backend treats a write onto an existing path: `LocalPosixVolume`
+    /// truncates, `InMemoryVolume` refuses with `AlreadyExists`, and MTP can
+    /// happily make a second object with the same name.
     ///
     /// A `SingleShot` write is still left entirely to its backend: only the
     /// backend can tell "the server created the file and then refused the bytes"
@@ -431,7 +443,7 @@ impl StagedWrite {
             self.abandon(dest_volume).await;
             return;
         }
-        if self.caller_temp.is_some() {
+        if self.unstaged {
             let target = self.final_path.clone();
             if let Err(e) = dest_volume.delete(&target).await {
                 log::debug!(
@@ -463,20 +475,24 @@ pub(super) fn dest_home(state: &WriteOperationState) -> Option<RecordHome> {
 /// What one resolved write does to a FILE already holding the destination name,
 /// as conflict resolution decided it.
 ///
-/// A required, typed answer rather than an `Option<PathBuf>` because a third
-/// shape exists and each one drives a different finalize, cleanup, and journal:
-/// confusing them either deletes the user's original on a failed write or
-/// records an overwrite as a fresh file, which an undo would then delete.
+/// A required, typed answer rather than a `bool` because a third shape exists
+/// and each one drives a different landing, cleanup, and journal: confusing
+/// them either deletes the user's original on a failed write or records an
+/// overwrite as a fresh file, which an undo would then delete.
+///
+/// Under every shape the write's `write_path` is the name the user ends up
+/// with, the original's own for a replace: ❌ no layer above [`StagedWrite`]
+/// sees a temp-shaped destination.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Replaces {
     /// Nothing is replaced: a free name, a `Rename` pick, a merge into a
     /// folder, or a cross-type destination already set aside.
     Nothing,
-    /// A file→file Overwrite by SAFE-REPLACE: the write goes to a temp sibling,
-    /// and once it's complete the caller swaps it over `orig`
-    /// (`volume::finalize::finalize_safe_replace`). The original survives the
-    /// whole write.
-    ViaTemp(PathBuf),
+    /// A file→file Overwrite by SAFE-REPLACE: the write stages on a temp
+    /// sibling of the original ([`WriteStaging::StageOverOriginal`]), and its
+    /// landing deletes the original, then renames the temp onto its name. The
+    /// original survives the whole write.
+    Swap,
     /// A file→file Overwrite on a destination that publishes every write whole
     /// (`Volume::publishes_writes_whole`, an object store): the write goes to
     /// the original's own name with `CreateOrReplace`, and the destination
@@ -493,33 +509,19 @@ impl Replaces {
         !matches!(self, Self::Nothing)
     }
 
-    /// The original a safe-replace temp is swapped over after the write, and
-    /// so the name the bytes end up at. `None` for every other shape: the write
-    /// target already IS the final name.
-    pub(crate) fn swap_target(&self) -> Option<&Path> {
-        match self {
-            Self::ViaTemp(orig) => Some(orig),
-            Self::Nothing | Self::InPlace => None,
-        }
-    }
-
-    /// The file this write replaces, whatever the mechanism: a safe-replace's
-    /// `orig`, or `write_path` itself for an in-place one. A same-volume move
-    /// asks this, because it renames the SOURCE onto that name either way.
+    /// The file this write replaces, whatever the mechanism: `write_path`
+    /// itself, which names the original under both replacing shapes. A
+    /// same-volume move asks this, because it renames the SOURCE onto that name
+    /// either way.
     pub(crate) fn replaced_file(self, write_path: &Path) -> Option<PathBuf> {
-        match self {
-            Self::ViaTemp(orig) => Some(orig),
-            Self::InPlace => Some(write_path.to_path_buf()),
-            Self::Nothing => None,
-        }
+        self.overwrites().then(|| write_path.to_path_buf())
     }
 }
 
-/// The staging every call site derives the same way: a conflict resolution that
-/// handed back a temp to swap over an original ([`Replaces::ViaTemp`]) already
-/// staged the write, an in-place replace on a whole-publishing destination
-/// ([`Replaces::InPlace`]) writes the final name over, and anything else is
-/// ours to stage.
+/// The staging every call site derives the same way: a swap over an original
+/// ([`Replaces::Swap`]) stages delete-first, an in-place replace on a
+/// whole-publishing destination ([`Replaces::InPlace`]) writes the final name
+/// over, and anything else stages by whose name it is.
 ///
 /// `landing` is the OTHER thing only the caller knows: whether a conflict
 /// resolution put this write at this name. It decides what the landing rename's
@@ -534,7 +536,7 @@ impl Replaces {
 /// to avoid.
 pub(super) fn staging_for(replaces: &Replaces, landing: LandingName) -> WriteStaging {
     match (replaces, landing) {
-        (Replaces::ViaTemp(_), _) => WriteStaging::AlreadyStaged,
+        (Replaces::Swap, _) | (Replaces::Nothing, LandingName::ReplacesOriginal) => WriteStaging::StageOverOriginal,
         (Replaces::InPlace, _) => WriteStaging::SingleShot(LandingName::ClaimedByTheCaller),
         (Replaces::Nothing, LandingName::ExpectedFree) => WriteStaging::Stage,
         (Replaces::Nothing, LandingName::FreeInFreshFolder) => WriteStaging::StageInFreshFolder,
@@ -546,9 +548,14 @@ pub(super) fn staging_for(replaces: &Replaces, landing: LandingName) -> WriteSta
 /// THIS operation at `dest_path` when it fails, which is what makes that path a
 /// partial for the post-loop cleanup to remove.
 ///
-/// - `AlreadyStaged`: `dest_path` IS the caller's safe-replace temp. Ours.
 /// - `StageOntoClaimedName`: the caller claimed the name (a `Rename` pick's
 ///   `O_EXCL` placeholder, a cleared cross-type destination). Ours.
+/// - `Unstaged`: the bytes went to the name itself. Ours, though no driver
+///   meets it (`stream_pipe_file` falls back to it and cleans up after it).
+/// - `StageOverOriginal`: ❗ **never ours.** `dest_path` is the user's
+///   ORIGINAL, which survives a failed write; the temp is the write's own,
+///   abandoned by the write, and once the landing has cleared the way it's a
+///   landing no cleanup may touch.
 /// - `Stage`: ❗ **never ours.** The bytes went to a `.cmdr-tmp-*` sibling that
 ///   `stream_pipe_file` abandons itself, and the name was FREE when the driver
 ///   looked. Anything there now is someone else's, and the likeliest reason the
@@ -563,8 +570,11 @@ pub(super) fn staging_for(replaces: &Replaces, landing: LandingName) -> WriteSta
 ///   is the backend's to clean.
 pub(super) fn failed_write_leaves_ours_at(staging: WriteStaging) -> bool {
     match staging {
-        WriteStaging::AlreadyStaged | WriteStaging::StageOntoClaimedName => true,
-        WriteStaging::Stage | WriteStaging::StageInFreshFolder | WriteStaging::SingleShot(_) => false,
+        WriteStaging::StageOntoClaimedName | WriteStaging::Unstaged => true,
+        WriteStaging::Stage
+        | WriteStaging::StageInFreshFolder
+        | WriteStaging::StageOverOriginal
+        | WriteStaging::SingleShot(_) => false,
     }
 }
 
@@ -591,9 +601,9 @@ pub(super) fn failed_write_leaves_ours_at(staging: WriteStaging) -> bool {
 /// write and share the answer; two probes could straddle a reconnect and
 /// disagree.
 ///
-/// `AlreadyStaged` is never touched: the caller's temp keeps the ORIGINAL file
-/// in place until the new bytes are complete, which is a stronger guarantee than
-/// single-shot-ness and the caller's to land.
+/// `StageOverOriginal` is never touched: its staging keeps the ORIGINAL file in
+/// place until the new bytes are complete, which is a stronger guarantee than
+/// single-shot-ness. Nor is `Unstaged`, which has no stage to drop.
 ///
 /// The single-shot answer keeps whose name it is: a `Stage` (name expected
 /// free) becomes `SingleShot(ExpectedFree)`, which writes with
