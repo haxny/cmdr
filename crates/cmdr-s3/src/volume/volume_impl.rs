@@ -33,8 +33,20 @@ impl S3Volume {
     /// looks after (`cmdr_fs::volume::liveness`), and cuts it with
     /// `DeviceDisconnected` the moment the client is found gone: a silent
     /// server closes nothing, so nothing else would ever end the wait.
-    async fn noting<T>(&self, work: impl Future<Output = Result<T, VolumeError>> + Send) -> Result<T, VolumeError> {
-        let client = self.inner.client.read().await.clone();
+    pub(super) async fn noting<T>(
+        &self,
+        work: impl Future<Output = Result<T, VolumeError>> + Send,
+    ) -> Result<T, VolumeError> {
+        // ❗ The generation is read with the client, BEFORE `work` runs, so a
+        // failure is pinned to the client the call started on: one a reconnect
+        // replaced meanwhile is old news and moves nothing. `work` takes its own
+        // client a moment later, so the read can only be older than the one it
+        // used, which at worst leaves a real loss for the next call to notice,
+        // never a healthy client marked lost.
+        let (client, ran_on) = {
+            let installed = self.inner.client.read().await;
+            (installed.clone(), self.inner.session_generation())
+        };
         let outcome = match client {
             // No client: the work answers `DeviceDisconnected` on its own, at once.
             None => work.await,
@@ -55,7 +67,7 @@ impl S3Volume {
             }
         };
         if let Err(error) = &outcome {
-            self.note_lost_session(error);
+            self.note_lost_session(error, ran_on);
         }
         outcome
     }
@@ -381,10 +393,13 @@ impl Volume for S3Volume {
         paths: &'a [PathBuf],
     ) -> Pin<Box<dyn Future<Output = Vec<Result<(), VolumeError>>> + Send + 'a>> {
         Box::pin(async move {
+            // Read before the batch, like `noting`'s own: a per-key loss is
+            // pinned to the client the batch started on.
+            let ran_on = self.inner.session_generation();
             match self.noting(async { Ok(self.delete_files_impl(paths).await) }).await {
                 Ok(results) => {
                     if let Some(Err(error)) = results.iter().find(|result| result.is_err()) {
-                        self.note_lost_session(error);
+                        self.note_lost_session(error, ran_on);
                     }
                     results
                 }
@@ -463,6 +478,12 @@ impl Volume for S3Volume {
             ConnectionState::Disconnected => Published::Disconnected,
             ConnectionState::NeedsCredentials => Published::NeedsSignIn,
         })
+    }
+
+    /// The installed client's generation, bumped only when a reconnect installs
+    /// a rebuilt client (`reconnect.rs`).
+    fn connection_generation(&self) -> Option<u64> {
+        Some(self.inner.session_generation())
     }
 
     fn backend_kind(&self) -> BackendKind {

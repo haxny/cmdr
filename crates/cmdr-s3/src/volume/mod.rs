@@ -10,7 +10,7 @@
 //! `CLAUDE.md` has the must-knows, `DETAILS.md` the decisions.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
 use cmdr_fs::entry::FileEntry;
@@ -20,7 +20,7 @@ use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
 use cmdr_fs::volume::liveness::Timings;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
-use cmdr_fs::volume::{Retirement, VolumeError};
+use cmdr_fs::volume::{ConnectionCell, Retirement, VolumeError};
 use tokio_util::sync::CancellationToken;
 
 use crate::multipart::MIN_PART_SIZE;
@@ -97,8 +97,9 @@ struct S3VolumeInner {
     /// The live client. `None` once a request found the server gone, at which
     /// point every operation fails fast rather than each one timing out.
     client: tokio::sync::RwLock<Option<Arc<S3Client>>>,
-    /// The state the host was last told about (`state.rs`).
-    state: AtomicU8,
+    /// The state the host was last told about, packed with the installed
+    /// client's generation (`state.rs`).
+    state: ConnectionCell<ConnectionState>,
     /// Whether the registry still serves this volume under its id.
     retirement: Retirement,
     /// This state's own weak reference, for background work. Set by
@@ -366,7 +367,7 @@ impl S3Volume {
                 volume_id: volume_id.to_string(),
                 params: std::sync::RwLock::new(params),
                 client: tokio::sync::RwLock::new(Some(Arc::new(client))),
-                state: AtomicU8::new(ConnectionState::Connected as u8),
+                state: ConnectionCell::new(ConnectionState::Connected),
                 retirement: Retirement::new(),
                 me: me.clone(),
                 reconnect_lock: tokio::sync::Mutex::new(()),

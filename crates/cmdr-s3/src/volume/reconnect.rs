@@ -56,15 +56,15 @@ enum Stalled {
 
 impl S3Volume {
     /// Notices, once, that the server behind this volume is gone. ❗ Acts only
-    /// on the `Connected` → `Disconnected` edge.
-    pub(super) fn note_lost_session(&self, error: &VolumeError) {
+    /// on the `Connected` → `Disconnected` edge, and only for the client the
+    /// failing call RAN on (`ran_on`, read before the call started): a call
+    /// that started on a client a reconnect has since replaced must not drop
+    /// the fresh one and cut every request waiting on it.
+    pub(super) fn note_lost_session(&self, error: &VolumeError, ran_on: u64) {
         if !matches!(error, VolumeError::DeviceDisconnected(_)) {
             return;
         }
-        if self.inner.connection_state() != ConnectionState::Connected {
-            return;
-        }
-        if !self.inner.emit_if_changed(ConnectionState::Disconnected) {
+        if !self.inner.lose_session(ran_on) {
             return;
         }
         let inner = Arc::clone(&self.inner);
@@ -188,12 +188,14 @@ impl S3VolumeInner {
                 if self.unmounted.load(Ordering::Relaxed) {
                     return Err(gone());
                 }
-                // ❗ Installed and marked `Connected` under ONE guard, so a late
-                // `drop_dead_client` can never take it for the dead one.
+                // ❗ Installed, given the next generation, and marked
+                // `Connected` under ONE guard, so a late `drop_dead_client` can
+                // never take it for the dead one, and no call reads the new
+                // client under the old generation.
                 let mut installed = self.client.write().await;
                 *installed = Some(Arc::new(client));
                 self.auth_attempt_spent.store(false, Ordering::Relaxed);
-                self.emit_if_changed(ConnectionState::Connected);
+                self.session_installed();
                 drop(installed);
                 info!(target: "volume", "s3 volume '{}' is back", self.volume_id);
                 // An upload the outage cut off couldn't be aborted then.

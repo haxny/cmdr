@@ -300,7 +300,7 @@ interchangeable:
 - **How live is the SESSION?** `ConnectionState`, via `Volume::connection_state()`. The switcher dot, the pane's connect
   views, and the reconnect manager read it. Every connecting backend answers; a local disk, an archive, and the git
   portal answer `None`. Its companion `Volume::connection_generation()` says WHICH session: a counter only a successful
-  in-place rebuild bumps (`None` by default; SMB, SFTP, and WebDAV answer it). A transfer reads "live on a newer
+  in-place rebuild bumps (`None` by default; SMB, SFTP, WebDAV, and S3 answer it). A transfer reads "live on a newer
   generation than my call started on" as proof its error was the old session's
   (`crates/cmdr-operations/src/transfer/volume_outage.rs`). `connection_cell.rs`'s `ConnectionCell` is the shared half
   for the backends whose operations are their own liveness detector: the state and the generation in ONE atomic, so a

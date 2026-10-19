@@ -161,6 +161,16 @@ key id as the username and refuses any other key (`NotSupported`): another key i
 `SignInShape::AccessKeys`. The silence watch is the shared `cmdr_fs::volume::liveness`, probing with an unsigned HEAD on
 the endpoint through the pool-free client.
 
+❗ **A failing request loses only the client it went out on**, and `Volume::connection_generation` answers which client
+the volume is on. S3 is stateless per request, so there's no server-side session to name; the generation counts
+installed CLIENTS instead, bumped only when `rebuild` installs one (an attended sign-in over a live client counts; a
+loss, a no-op reconnect, or a failed probe never does). `noting` reads it with the client before the call runs, and so
+does `delete_files` for the per-key loss it notes after the batch; `note_lost_session` flips only while that generation
+is still installed (`ConnectionCell::lose`). The same mechanism and its reasoning as WebDAV's (§ "The reconnect model"
+there). Pinned by `reconnect_test.rs` (`a_late_loss_from_a_replaced_client_*`,
+`only_an_installed_client_moves_the_generation`, and the Docker cell
+`a_dropped_client_comes_back_on_an_unattended_probe`).
+
 ## Which side a test lives on
 
 Unit cells: the refusal table, the listing rules, path splitting, the error map, the state machine, the switch, and how

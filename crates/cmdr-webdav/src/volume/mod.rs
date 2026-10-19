@@ -94,7 +94,8 @@ struct WebdavVolumeInner {
     /// The live client. `None` once a request found the server gone, at which
     /// point every operation fails fast rather than each one timing out.
     client: tokio::sync::RwLock<Option<Arc<WebdavClient>>>,
-    /// The state the host was last told about (`state.rs`).
+    /// The state the host was last told about, packed with the installed
+    /// client's generation (`state.rs`).
     state: ConnectionCell<ConnectionState>,
     /// Whether the registry still serves this volume under its id.
     retirement: Retirement,

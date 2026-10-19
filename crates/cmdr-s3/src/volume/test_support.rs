@@ -2,7 +2,7 @@
 //! translation and the state machine without a server.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8};
+use std::sync::atomic::AtomicBool;
 
 use cmdr_fs::volume::Retirement;
 use cmdr_fs::volume::host::VolumeHost;
@@ -39,7 +39,7 @@ pub(super) fn make_test_volume_with(bucket: Option<&str>, host: VolumeHost) -> S
             volume_id: "s3-test".to_string(),
             params: std::sync::RwLock::new(params),
             client: tokio::sync::RwLock::new(None),
-            state: AtomicU8::new(ConnectionState::Connected as u8),
+            state: cmdr_fs::volume::ConnectionCell::new(ConnectionState::Connected),
             retirement: Retirement::new(),
             me: me.clone(),
             reconnect_lock: tokio::sync::Mutex::new(()),
