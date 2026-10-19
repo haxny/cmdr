@@ -6,7 +6,7 @@ the keychain, mounts, and every human-facing word stay in the app's `network/`.
 ## Module map
 
 - `src/volume/`: the backend — `mod.rs` (structs), `volume_impl.rs` (the whole `impl Volume`), and one module per
-  concern (`streams`, `session`/`reconnect`, `scan_pool`, `watcher/`, `testing`: Docker fixtures).
+  concern (`read_stream`/`write_stream`, `session`/`reconnect`, `scan_pool`, `watcher/`, `testing`: Docker fixtures).
 - `src/{types,errors,connection}.rs`: share-listing vocabulary, `smb2::Error` classification, the address builder,
   re-exported at the root.
 

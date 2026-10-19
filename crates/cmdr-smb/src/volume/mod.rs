@@ -31,6 +31,7 @@ mod mutation;
 mod paths;
 mod query;
 mod random_reader;
+mod read_stream;
 mod reconnect;
 mod scan;
 mod scan_pool;
@@ -39,9 +40,9 @@ mod slow_calls;
 mod spelling;
 mod stamping;
 mod state;
-mod streams;
 mod volume_impl;
 mod watcher;
+mod write_stream;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;

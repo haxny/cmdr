@@ -5,14 +5,14 @@
 //! here. What each one DOES lives next door, in the concern module that owns it:
 //! `paths` (path translation), `query` (listings, metadata, space), `mutation`
 //! (create / delete / rename and their listing-cache patches), `scan`,
-//! `scan_pool`, `streams`, `reconnect`. A method that needs more than a few
+//! `scan_pool`, `read_stream`, `write_stream`, `reconnect`. A method that needs more than a few
 //! lines of its own belongs there, not here; what stays here is the capability
 //! answers, whose whole content is the reasoning in their doc comments.
 
 use super::copy::ProgressOnly;
+use super::read_stream::{InlineReadStream, fits_one_compound_read};
 use super::session::SessionLease;
 use super::state::ConnectionState;
-use super::streams::{InlineReadStream, fits_one_compound_read};
 use super::{SmbVolume, foreground_yield};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport, Unblock, UserFlags};
@@ -239,7 +239,7 @@ impl Volume for SmbVolume {
         // An UPLOAD to this share (local → SMB) writes in discrete SMB2 WRITE
         // chunks and holds only a file handle between them, with NO oplock or
         // lease requested (`create_file_writer` → `OplockLevel::None`, no durable
-        // context; see `streams.rs`). So a running upload can stand aside for
+        // context; see `write_stream.rs`). So a running upload can stand aside for
         // the user browsing the same share between chunks. `CheckpointStream` caps
         // each such park so the open write handle never sits idle long enough for
         // the server to reap it. Contrast the read side (`supports_foreground_yield`):
@@ -670,7 +670,7 @@ impl Volume for SmbVolume {
     /// all-or-nothing, so the transfer layer may write it straight to the file's
     /// final name instead of staging it on a `.cmdr-tmp-*`. Answers with the
     /// SAME condition `write_from_stream_impl`'s fast path branches on
-    /// (`streams::fits_one_compound_write`); the two must never drift apart.
+    /// (`write_stream::fits_one_compound_write`); the two must never drift apart.
     fn write_is_single_shot<'a>(&'a self, length: StreamLength) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { false });

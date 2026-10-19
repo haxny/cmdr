@@ -1582,7 +1582,7 @@ the SMB side.
 upload streams chunks inside ONE `SendObject` PTP transaction, so parking mid-write would PIN the device session (the
 opposite of the read side, where a bounded window holds nothing between chunks). So MTP must NEVER opt into the
 destination flag, and it doesn't (default `false`). SMB writes are discrete SMB2 WRITE chunks with NO oplock or lease
-requested (`create_file_writer` → `OplockLevel::None`, no durable context; `crates/cmdr-smb/src/volume/streams.rs`), so
+requested (`create_file_writer` → `OplockLevel::None`, no durable context; `crates/cmdr-smb/src/volume/write_stream.rs`), so
 a brief park between them is safe. Only `SmbVolume` overrides `supports_foreground_yield_as_destination() → true`.
 
 **Decision/Why the destination park is HARD-CAPPED (data-safety bound, load-bearing).** The source arm takes
@@ -1609,7 +1609,7 @@ sleep for the quiet window's tail) are pinned against a frozen clock in `cmdr_fs
 file gets a fresh `CheckpointStream`), so a file SMALLER than the floor can never satisfy it and yields exactly zero
 times. That made the protection weakest where it is needed most: a folder of photos or documents going to a NAS stood
 aside for the user not once. The floor exists to keep an OPEN write handle warm, and a single-shot write has none while
-it matters: `crates/cmdr-smb/src/volume/streams.rs` drains the source fully into a buffer and only then sends
+it matters: `crates/cmdr-smb/src/volume/write_stream.rs` drains the source fully into a buffer and only then sends
 CREATE+WRITE+FLUSH+CLOSE as one frame, so during the drain — which is where every checkpoint happens — nothing is open
 on the server. So the arm skips the floor when the destination answers `Volume::write_is_single_shot` for this file, and
 a small upload can stand aside. Pinned by
@@ -2007,7 +2007,7 @@ unreachable from anything a person clicks.
 
 **Tier 1, cooperative (`state.backend_cancel`).** The cancel travels to the backend through the per-chunk `on_progress`
 callback, and the backend answers by dropping its own handle and deleting its own partial
-(`crates/cmdr-local/src/local_posix.rs`, `crates/cmdr-smb/src/volume/streams.rs` — the `writer.abort()` +
+(`crates/cmdr-local/src/local_posix.rs`, `crates/cmdr-smb/src/volume/write_stream.rs` — the `writer.abort()` +
 `delete_partial()` sequence). Writes are ❌ deliberately NOT raced against this token: dropping the write future would
 skip exactly that cleanup, on the healthy path, for every cancel. Every Cancel button, the queue window's stop, a
 Rollback, and the frontend teardown walk are tier 1 and stay tier 1.

@@ -1688,7 +1688,7 @@ pub trait Volume: Send + Sync {
     /// write holds an OPEN handle across the pause, so the destination yield MUST
     /// be bounded (a hard cap in `CheckpointStream`), never the unbounded park the
     /// read side uses. Only SMB opts in: its writes are discrete SMB2 WRITE chunks
-    /// with NO oplock or lease requested (`crates/cmdr-smb/src/volume/streams.rs`), so a brief, capped
+    /// with NO oplock or lease requested (`crates/cmdr-smb/src/volume/write_stream.rs`), so a brief, capped
     /// park between chunks is safe. ❌ MTP must NEVER opt in: an MTP upload streams
     /// inside ONE `SendObject` PTP transaction, so pausing mid-write would PIN the
     /// device session, the opposite of the read side.

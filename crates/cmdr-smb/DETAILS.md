@@ -143,13 +143,13 @@ on", not by watching a number.
 - **The concerns are named modules, and each one answers a single sentence.** `paths` translates between the app's
   volume-relative paths and the share-relative ones smb2 speaks; `query` reads the share without changing it (listings,
   metadata, existence, space); `mutation` changes it and patches the listings that showed it; then `session`,
-  `reconnect`, `state`, `streams`, `random_reader` (one held-open `FileReader` read by offset, which the file viewer
-  keeps for a whole session, #303), `scan`, `scan_pool`, `watcher`, `foreground_yield`, `slow_calls` (the rolled-up
-  `warn` for a metadata call the server held over a second), `attributes` (Hidden and Locked by path), and the stateless
-  `mapping`. Splitting further needs a responsibility you can name the same way; a line count is not one. `e5ea10d02`
-  reverted four splits invented to satisfy the counter, and every one of them had widened a visibility or torn a struct
-  from its trait impl to do it. These carry the same `pub(super)` the crate already used and leave no module reaching
-  into another's internals.
+  `reconnect`, `state`, `read_stream` (a file read as chunks), `write_stream` (a stream written into a file),
+  `random_reader` (one held-open `FileReader` read by offset, which the file viewer keeps for a whole session, #303),
+  `scan`, `scan_pool`, `watcher`, `foreground_yield`, `slow_calls` (the rolled-up `warn` for a metadata call the server
+  held over a second), `attributes` (Hidden and Locked by path), and the stateless `mapping`. Splitting further needs a
+  responsibility you can name the same way; a line count is not one. `e5ea10d02` reverted four splits invented to
+  satisfy the counter, and every one of them had widened a visibility or torn a struct from its trait impl to do it.
+  These carry the same `pub(super)` the crate already used and leave no module reaching into another's internals.
 - **`volume/foreground_yield.rs` answers "should a background transfer stand aside?" from the WORK, not the transport.**
   MTP has an explicit holder for its single scarce USB pipe; SMB frames just interleave over one connection, so there is
   nothing on the transport to count. A foreground LISTING is a scoped operation, though, so it holds a per-volume lease
@@ -690,9 +690,9 @@ The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies
 Locked is the DOS `READONLY` attribute, its Hidden is `HIDDEN` (`mapping.rs`: `user_flags_of`, `attributes_of`).
 Append-only and no-dump have no attribute and drop.
 
-- **Reads ride the CREATE response a read already gets**: `FileInfo.attributes` on both read paths (`streams.rs`), so a
-  file's flags cost no frame. A folder has no read, so `folder_metadata` spends one `stat` (`attributes.rs`); the app
-  asks only when its destination keeps a folder's flags.
+- **Reads ride the CREATE response a read already gets**: `FileInfo.attributes` on both read paths (`read_stream.rs`),
+  so a file's flags cost no frame. A folder has no read, so `folder_metadata` spends one `stat` (`attributes.rs`); the
+  app asks only when its destination keeps a folder's flags.
 - **A dotfile's Hidden is its name's, never a flag.** Samba reports every dotfile `HIDDEN` (`hide dot files`, on by
   default), and the name already hides it; a local copy wearing `UF_HIDDEN` too would stay hidden after a rename.
 - **Hidden rides the write's dates frame** (`source_times`: `FileTimes::set_attributes` in the same
@@ -799,7 +799,7 @@ the check and the send:
   main-session streaming, like a file too big for one READ, instead of skipping the photo as unreadable.
 - **The write**: `write_is_single_shot` answers on smb2's `quick_write_limit()`, which never exceeds
   `compound_write_limit()`, so the transfer stages a write the window can't fund, and the `FileWriter` streams it in
-  chunks the window carries. `write_from_stream` branches on `streams::one_frame_write_limit`: a `.cmdr-tmp-*` dest
+  chunks the window carries. `write_from_stream` branches on `write_stream::one_frame_write_limit`: a `.cmdr-tmp-*` dest
   follows today's limit (and streams if the frame is refused), the user's real name keeps `max_write`, the most any
   promise could have covered, and a refused frame there fails the write with nothing at the name. ❌ Never let a refused
   frame to a non-scratch name fall back to streaming: that name only gets a frame because the transfer skipped staging
@@ -1058,12 +1058,12 @@ leftover paths go through the pipelined stat. Decision is per-parent: one batch 
 paths, and if every path resolves via the oracle the stat pipeline is skipped entirely.
 
 **Decision**: `SmbVolume` has a compound fast-path in `open_read_stream_with_hint` for files up to the connection's
-`quick_read_limit()` (`streams::fits_one_compound_read`) and in `write_from_stream` for files that fit one compound
-frame (`streams::fits_one_compound_write`) **Why**: The streaming open+read+close sequence costs 3 RTTs per file. For
-small files (typical 10 KB copies on a NAS) that dominates wall-clock at high-latency links (~60 ms RTT → ~180 ms/file
-just for protocol overhead, not data). `smb2` already exposes `Tree::read_file_compound` (CREATE+READ+CLOSE in a single
-compound frame = 1 RTT) and `Tree::write_file_compound` (CREATE+WRITE+FLUSH in one frame, then CLOSE = 2 RTTs), with
-`write_file_compound_exclusive` (`FileCreate`) for `WriteMode::CreateNew`, the same pair as `create_file_writer` /
+`quick_read_limit()` (`read_stream::fits_one_compound_read`) and in `write_from_stream` for files that fit one compound
+frame (`write_stream::fits_one_compound_write`) **Why**: The streaming open+read+close sequence costs 3 RTTs per file.
+For small files (typical 10 KB copies on a NAS) that dominates wall-clock at high-latency links (~60 ms RTT → ~180
+ms/file just for protocol overhead, not data). `smb2` already exposes `Tree::read_file_compound` (CREATE+READ+CLOSE in a
+single compound frame = 1 RTT) and `Tree::write_file_compound` (CREATE+WRITE+FLUSH in one frame, then CLOSE = 2 RTTs),
+with `write_file_compound_exclusive` (`FileCreate`) for `WriteMode::CreateNew`, the same pair as `create_file_writer` /
 `create_file_writer_exclusive` on the streaming path, so every branch of `write_from_stream` (the frame, a staging
 temp's streamed fallback, a too-big write) honors the mode (why the mode matters:
 `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "The single-shot exemption"). The copy pipeline feeds per-file
@@ -1222,10 +1222,11 @@ Which side each one lives on, and why: § "Which side a test lives on" above.
   `FsInfo`→`SpaceInfo`, `smb2::Error`→`VolumeError`), `state_test.rs` (the binary state machine and how it widens),
   `paths_test.rs` (path translation both ways), `spelling_test.rs` (the foreign-path fold, match rule, and correction
   cache), `volume_impl_test.rs` (re-rooting and every capability flag), `reconnect_test.rs` (the reconnect early-exits,
-  the transitions and the events they suppress, the watch-coverage gate, both retirement paths), `streams_test.rs` (the
-  channel-backed read-stream consumer and the single-shot write promise), `scan_test.rs` (the progress ticker),
-  `retirement_test.rs`, `watcher/archive_refresh_test.rs`, and the inline `mod tests` in `foreground_yield.rs` and
-  `scan_pool.rs`. These run by default.
+  the transitions and the events they suppress, the watch-coverage gate, both retirement paths), `read_stream_test.rs`
+  (the channel-backed read-stream consumer and the compound read's limit), `write_stream_test.rs` (the one-frame write's
+  limit and the single-shot write promise), `scan_test.rs` (the progress ticker), `retirement_test.rs`,
+  `watcher/archive_refresh_test.rs`, and the inline `mod tests` in `foreground_yield.rs` and `scan_pool.rs`. These run
+  by default.
 - `host_seam_test.rs` — the PACE of what this backend tells the listing seam, which no type can hold: one call per
   mutation, none per directory entry. Its server-free cells pin the addressing and that an un-stattable creation patches
   nothing; its Docker cell seeds a directory, walks it with a listing and a copy scan, and asserts

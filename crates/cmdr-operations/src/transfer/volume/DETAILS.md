@@ -1260,9 +1260,9 @@ mid-transfer, no error path, no `Drop`, no cleanup) cannot produce a truncated f
 `max_write_size`. A caller-side size threshold would go on claiming the guarantee the day a backend retuned its
 fast-path condition, and the failure is silent: truncated files at real names, discovered months later. So the condition
 is asked of the destination, and the SMB backend answers with the SAME function its fast path branches on
-(`smb/streams.rs::fits_one_compound_write`, on the negotiated `max_write_size`, with `size > 0` because an empty file
-has no WRITE to compound with and takes the streaming writer). Two copies of that threshold IS the bug; don't introduce
-one.
+(`fits_one_compound_write` in `crates/cmdr-smb/src/volume/write_stream.rs`, on the negotiated `max_write_size`, with
+`size > 0` because an empty file has no WRITE to compound with and takes the streaming writer). Two copies of that
+threshold IS the bug; don't introduce one.
 
 ❗ **A single-shot write refuses a taken name itself.** Staging buys a second property besides "no partial at a real
 name": the landing is a rename that must not replace, so a name another writer took mid-upload is refused
@@ -1277,7 +1277,7 @@ required argument, so every caller states which it means. Pinned on a live share
 `operations_host/backend_suites/smb_transfer_safety_test.rs::smb_integration_a_single_shot_upload_never_replaces_a_name_taken_mid_upload`,
 and per backend by `cmdr_fs::volume::conformance::assert_write_from_stream_create_new_refuses_to_clobber`.
 
-**Backend obligations** taken on with a `true` answer, all in `crates/cmdr-smb/src/volume/streams.rs`:
+**Backend obligations** taken on with a `true` answer, all in `crates/cmdr-smb/src/volume/write_stream.rs`:
 
 - `WriteMode::CreateNew` goes out as the exclusive compound write (and the exclusive `FileWriter` on the rare streaming
   fallback), so the refusal is the server's, atomic, and a CREATE failure the cleanup below never touches.
@@ -1313,10 +1313,11 @@ that name is what the source actually gave us. The alternative (failing such a c
 
 Pinned by `strategy_single_shot_tests.rs` (both directions: single-shot writes at the final name with no rename; too
 big, or a backend that makes no promise, still stages; a caller temp is never converted),
-`staged_write::tests::a_single_shot_write_targets_the_final_name_and_needs_no_landing`, `cmdr-smb`'s `streams_test.rs`
-(the boundary of `fits_one_compound_write`, and no promise without a live session), and — against real Samba —
-`cmdr-smb`'s `wire_shape_integration_test.rs::smb_integration_a_single_shot_write_leaves_as_one_compound_frame`, which
-counts wire frames to prove the promised write really is one compound frame.
+`staged_write::tests::a_single_shot_write_targets_the_final_name_and_needs_no_landing`, `cmdr-smb`'s
+`write_stream_test.rs` (the boundary of `fits_one_compound_write`, and no promise without a live session), and — against
+real Samba — `cmdr-smb`'s
+`wire_shape_integration_test.rs::smb_integration_a_single_shot_write_leaves_as_one_compound_frame`, which counts wire
+frames to prove the promised write really is one compound frame.
 
 ## Whole-publish destinations
 

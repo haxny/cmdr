@@ -23,7 +23,7 @@
 //! `#[cfg(test)]` submodule of `volume`; shared helpers come from
 //! `super::test_support`.
 
-use super::streams::InlineReadStream;
+use super::read_stream::InlineReadStream;
 use super::test_support::*;
 use super::*;
 use cmdr_fs::volume::{StreamLength, WriteMode};

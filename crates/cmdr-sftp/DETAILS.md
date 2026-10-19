@@ -47,7 +47,7 @@ A sequential SFTP read is one request, one round trip, one chunk: 255 KiB over a
 server and its disks can do. `streams.rs` keeps `READ_WINDOW_DEPTH` positioned reads in flight and reassembles them in
 file order, which measures 7× that on the same link.
 
-**The shape**, following `cmdr-smb/src/volume/streams.rs`:
+**The shape**, following `crates/cmdr-smb/src/volume/read_stream.rs`:
 
 - A producer task on `host.runtime()` (❌ never `tokio::spawn` — a backend inherits whatever runtime it is called on),
   feeding a bounded channel two chunks deep. Peak memory per stream is `(depth + 2) × 255 KiB` whatever the file's size.
@@ -195,8 +195,8 @@ tuning.
   caused it.
 - ❗ **`write_is_single_shot` keeps its `false` default**, so the transfer layer stages every write here on a
   `.cmdr-tmp-*` sibling and a partial never wears a real filename. ❌ Which is also why there is no "the create landed
-  but the write didn't" classifier like `cmdr-smb/src/volume/streams.rs`'s — that one exists because SMB's compound path
-  SKIPS staging.
+  but the write didn't" classifier like `crates/cmdr-smb/src/volume/write_stream.rs`'s — that one exists because SMB's
+  compound path SKIPS staging.
 - **The upload stamps the source's date** (§ "Dates on copies").
 
 ### The depth, and the curve that set it

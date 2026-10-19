@@ -4,7 +4,7 @@
 //! Locked on copies".
 //!
 //! A FILE's read and write carry them in frames they already send (the read's
-//! CREATE response, the write's dates SET_INFO: `streams.rs`). What lives here
+//! CREATE response, the write's dates SET_INFO: `read_stream.rs`, `write_stream.rs`). What lives here
 //! goes by path: a landed item's whole set with its dates, a folder's read,
 //! and the unlock.
 

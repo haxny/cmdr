@@ -50,9 +50,9 @@ use futures_util::stream::FuturesUnordered;
 
 use super::mapping::map_smb_error;
 use super::query::{ListingStop, read_listing};
+use super::read_stream::{ASSUMED_MAX_READ, InlineReadStream};
 use super::session::build_session;
 use super::state::{ConnectionState, ends_the_session};
-use super::streams::{ASSUMED_MAX_READ, InlineReadStream};
 use super::{SmbConnectionParams, SmbVolume};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{Volume, VolumeError, VolumeReadStream};
