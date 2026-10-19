@@ -85,6 +85,7 @@ impl Record {
         }
     }
 
+    #[cfg(any(test, feature = "testing"))]
     fn key(&self) -> &str {
         match self {
             Self::Upload(upload) => &upload.key,
