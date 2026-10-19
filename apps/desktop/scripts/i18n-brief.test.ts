@@ -113,6 +113,10 @@ describe('buildBrief (fixture tree)', () => {
       'queue.offlineA': 'Make available offline',
       'queue.offlineB': 'Offline copy',
     })
+    write(join(messagesRoot, 'en', 'settings.json'), {
+      'settings.queue.keywords': 'operation, offline, jobs',
+      '@settings.queue.keywords': { description: 'Search keywords for the queue setting.' },
+    })
     write(join(messagesRoot, 'nl', 'queue.json'), {
       'queue.title': 'Bewerkingenwachtrij: {app} houdt de wachtrij vast.',
       'queue.row.label': '{count, plural, one {# overdracht} other {# overdrachten}} naar {folder}',
@@ -298,6 +302,16 @@ describe('buildBrief (fixture tree)', () => {
     const keys = brief.sections.find((section) => section.name === 'keys')?.text ?? ''
     // "offline" recurs in three keys; "nothing", "still", "Cmdr" are generic or a brand; "sparkly" is a one-off.
     expect(keys).toMatch(/No concept yet: offline\n|No concept yet: offline$/)
+  })
+
+  it('exempts a search keyword list from the termbase: no concepts, no "No concept yet", and says why', () => {
+    const brief = buildBrief({ ...opts, keys: ['settings.queue.keywords'] })
+    const keys = brief.sections.find((section) => section.name === 'keys')?.text ?? ''
+    const terms = brief.sections.find((section) => section.name === 'terms')?.text ?? ''
+    expect(keys).not.toContain('No concept yet')
+    expect(keys).toContain('Search keywords: hidden synonyms')
+    expect(terms).toContain('No registered concept appears in this batch.')
+    expect(terms).not.toContain('The file work Cmdr performs.')
   })
 
   it('reports per-section sizes for --stats', () => {

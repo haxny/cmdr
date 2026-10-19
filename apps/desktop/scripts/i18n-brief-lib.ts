@@ -18,8 +18,10 @@
  *    declared typography (`mechanics.json`) in one line
  *  - keys: key, English, a word diff from the English a stale translation was made
  *    from, `@key` description, placeholders/tags, current value(s), and the content
- *    words no concept covers ("No concept yet")
- *  - terms: every concept whose `match` hits a batch key's English, plus those of
+ *    words no concept covers ("No concept yet"); a search keyword list
+ *    (`isSearchKeywordsKey`) gets a note that the termbase doesn't govern it instead
+ *  - terms: every concept whose `match` hits a batch key's English (keyword lists
+ *    left out), plus those of
  *    its `distinct` neighbors whose words appear in the batch; sense once, then one
  *    ruling line per language
  *  - memory: per key, the nearest SHIPPED keys (`i18n-brief-memory.ts`); batch keys
@@ -41,6 +43,7 @@ import {
   loadCatalog,
   parseMessage,
   isRawKey,
+  isSearchKeywordsKey,
   rawTokens,
   visibleLiterals,
 } from './i18n-catalog-lib.ts'
@@ -344,6 +347,10 @@ function changeLines(previous: Record<string, string> | undefined, current: stri
   )
 }
 
+/** What a search keyword key gets in place of "No concept yet": the termbase doesn't govern it. */
+const KEYWORDS_NOTE =
+  'Search keywords: hidden synonyms, outside the termbase (no ruling, avoid-list, or pile mining applies; see the Search keywords instruction).'
+
 function keysSection(ctx: BriefContext): BriefSection {
   const lines = [`## Keys (${String(ctx.opts.keys.length)})`, '']
   for (const key of ctx.opts.keys) {
@@ -354,8 +361,11 @@ function keysSection(ctx: BriefContext): BriefSection {
     if (typeof metadata?.description === 'string') lines.push(`  - Note: ${metadata.description}`)
     const notes = placeholderNotes(key, value, metadata)
     if (notes.length > 0) lines.push(`  - ${notes.join(' · ')}`)
-    const uncovered = uncoveredWords(ctx, key)
-    if (uncovered.length > 0) lines.push(`  - No concept yet: ${uncovered.join(', ')}`)
+    if (isSearchKeywordsKey(key)) lines.push(`  - ${KEYWORDS_NOTE}`)
+    else {
+      const uncovered = uncoveredWords(ctx, key)
+      if (uncovered.length > 0) lines.push(`  - No concept yet: ${uncovered.join(', ')}`)
+    }
     if (ctx.opts.excludeTargetValues) continue
     for (const tag of ctx.opts.langs) {
       const current = ctx.targets.get(tag)?.[key]
@@ -399,13 +409,14 @@ interface ConceptsInPlay {
 function conceptsInPlay(ctx: BriefContext): ConceptsInPlay {
   const matchers = compileConcepts(ctx.concepts)
   const hitsBy = new Map<string, string[]>()
-  for (const key of ctx.opts.keys) {
+  const ruledKeys = ctx.opts.keys.filter((key) => !isSearchKeywordsKey(key))
+  for (const key of ruledKeys) {
     const text = englishMatchText(key, ctx.en.messages[key])
     for (const [id, hit] of matchers) {
       if (hit(text)) hitsBy.set(id, [...(hitsBy.get(id) ?? []), key])
     }
   }
-  const batchText = ctx.opts.keys
+  const batchText = ruledKeys
     .map((key) => englishMatchText(key, ctx.en.messages[key]))
     .join('\n')
     .toLowerCase()

@@ -466,7 +466,8 @@ exactly, since one typo in a two-to-five-character term is a different word. The
 
 - `keywordsKey` names a `settings.<id>.keywords` message (rows: the id without `row:`), typed `SearchKeywordsKey` so it
   can only point at a keywords message. Its value is a comma-separated list each language writes for itself (the `@key`
-  description tells translators: synonyms welcome, any count, not a 1:1 translation).
+  description tells translators: synonyms welcome, any count, not a 1:1 translation). The termbase doesn't govern these
+  lists: `docs/i18n/termbase.md` § Search keyword lists are outside the termbase.
 - `terms: string[]` holds what no language translates: brand and product names, protocols, file formats, key names
   (`openai`, `ssh`, `pdf`, `F4`). Indexed once, in every language.
 - **Decision / why:** an English `keywords` array could never be found by a Hungarian word, and putting brand names in

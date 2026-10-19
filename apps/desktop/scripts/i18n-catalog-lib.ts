@@ -627,6 +627,19 @@ export function isRawKey(key: string): boolean {
 }
 
 /**
+ * Whether a key is a Settings search keyword list (`settings.<id>.keywords`, the
+ * shape of the `SearchKeywordsKey` type): comma-separated synonyms each language
+ * writes for itself, never shown. Search already matches the setting's label and
+ * description, so a list exists to add the words a ruling leaves out, and the
+ * termbase doesn't govern it: no drift, avoid-list, ruled form, brand word, or
+ * pile mining applies. Single source of that exemption for the checks and the
+ * brief; the translator-facing rule is in `docs/i18n/translator-instructions.md`.
+ */
+export function isSearchKeywordsKey(key: string): boolean {
+  return key.startsWith('settings.') && key.endsWith('.keywords')
+}
+
+/**
  * Extracts the set of brace-token names (`{system_settings}`, `{path}`, …) from a
  * RAW (non-ICU) message. The raw error pipeline substitutes these by name with
  * `.replaceAll('{token}', value)`, so a translation MUST preserve the exact token

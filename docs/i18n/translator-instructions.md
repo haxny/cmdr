@@ -19,8 +19,16 @@ style guide disagree, the style guide's general rule wins unless the ruling says
 - **Where to write**: edit each value in place in apps/desktop/src/lib/intl/messages/{{TAG}}/<area>.json. Then stamp
   what you translated as current: in apps/desktop, run
   `node scripts/sync-locale-keys.ts {{TAG}} --restamp <key> --restamp <key> …` (one `--restamp` per key; it only moves a
-  hash that's out of date). It clears `reviewed` and `sameAsSourceJustification` on those keys, so add a justification
-  after restamping, never before.
+  hash that's out of date). A key that arrived as a fresh English skeleton already carries the current hash, so
+  restamping it changes nothing; it matters for a key whose English changed under an existing translation. It clears
+  `reviewed` and `sameAsSourceJustification` on the keys it moves, so add a justification after restamping, never
+  before.
+- **Search keywords** (`settings.*.keywords`): a hidden, comma-separated list Settings search matches, never shown.
+  Search already matches the setting's label and description, so write OTHER words a user of your language might type:
+  synonyms, everyday words, the related idea, any count, not a 1:1 translation. Term rulings, avoid-lists, and brand
+  names don't apply (brands, protocols, and file formats are matched in every language already), and there's nothing to
+  mine the pile for. For Chinese, Japanese, and Korean, prefer short, common words: a CJK query only finds a keyword
+  that contains it unbroken, with no typo tolerance.
 - **ICU**: keep every {placeholder}, <tag>…</tag>, and plural/select structure exactly; translate only the text between
   them. Reorder placeholders only as grammar needs; the set stays identical. Write plural branches for YOUR language's
   CLDR categories, not English's. Double every apostrophe (' becomes '').
@@ -63,7 +71,8 @@ style guide disagree, the style guide's general rule wins unless the ruling says
   it): distill first, and bump it when new decisions need room. Anything that applies beyond one language goes to
   docs/i18n/source-queue.md as a proposal to promote, never into this language's files.
 - **Check**: run `pnpm i18n:check-locale {{TAG}}` in `apps/desktop` (several tags work too). It prints one line per
-  clean check and the full report only for one that isn't; the batch is done when every line is a ✓.
+  clean check and the full report only for one that isn't; the batch is done when every line is a ✓. It's the one check
+  you need: `pnpm check --fast` runs most of the same checks across every locale but skips the termbase.
 - **Report**: your output may ship without human review, so translate only what you're confident in and flag every
   string where the context was insufficient. End with a **Source feedback** section: `@key` descriptions that were
   insufficient, screenshots that were missing or unhelpful, English that was ambiguous or inconsistent, and proposed

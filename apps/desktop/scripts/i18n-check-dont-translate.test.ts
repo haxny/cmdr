@@ -127,6 +127,29 @@ describe('runDontTranslateCheck negative cases (temp catalog copies)', () => {
   })
 })
 
+describe('runDontTranslateCheck: search keyword lists', () => {
+  let root: string
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'cmdr-i18n-dt-kw-'))
+    for (const [tag, value] of [
+      ['en', 'reveal, Finder, macOS'],
+      ['nl', 'tonen, onthullen'],
+    ]) {
+      mkdirSync(join(root, tag), { recursive: true })
+      writeFileSync(join(root, tag, 'settings.json'), JSON.stringify({ 'settings.reveal.keywords': value }))
+    }
+  })
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('lets a keyword list leave out a brand: it adds synonyms, and `terms` carries the brands', () => {
+    const { lines, write } = capture()
+    expect(runDontTranslateCheck({ messagesRoot: root, only: ['nl'], write })).toBe(EXIT_CLEAN)
+    expect(lines.join('\n')).toMatch(/nl: clean\./)
+  })
+})
+
 describe('no-locales path (only en)', () => {
   let root: string
   beforeEach(() => {

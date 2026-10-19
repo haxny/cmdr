@@ -247,7 +247,8 @@ Sections, each selected by the batch:
    description, placeholders (described ones from `@key.placeholders`, the rest bare) and tags, each target's current
    value, and "No concept yet": the key's content words no concept's `match` covers, leaving out generic English, brand
    words, and words fewer than three English keys use (a concept recurs). That line is how a missing concept ("offline")
-   shows up as work instead of passing for settled.
+   shows up as work instead of passing for settled. A search keyword list gets a one-line note instead (§ Search keyword
+   lists below).
 6. Terms in play: every concept whose `match` hits (and `notMatch` doesn't) a batch key's English. The sense, note, and
    hit keys print once; then one line per language with chosen / accept / prose only / forms / avoid / note /
    confidence, the `exceptions` for batch keys, and the `decision` heading, or "no ruling". Then up to eight `distinct`
@@ -290,6 +291,18 @@ about 2 s when most of the batch is stale (measured on sv, 2026-09-25).
   room; distilling (editing an entry in place, deleting what's superseded) lowers it for good.
 - A locale without `terms.json` is skipped silently.
 - `--list` prints every drifting key even under the baseline: the cleanup view.
+
+### Search keyword lists are outside the termbase
+
+A `settings.<id>.keywords` value (hidden Settings search synonyms; `isSearchKeywordsKey` in
+`apps/desktop/scripts/i18n-catalog-lib.ts` is the one predicate) never drifts, hits no concept in the brief, gets no "No
+concept yet" line, and is exempt from the don't-translate brand check. An `exceptions` entry naming one is a schema
+ERROR, since it would excuse nothing. **Why:** search already matches the row's label and description, which carry the
+ruled terms, so a keyword list exists to add the words a ruling leaves out ("accent" as the accent color, "shrink-wrap"
+as fit-to-content). Forcing ruled forms into it cost the ru translator 24 edits and five exceptions, and brands live in
+the row's language-neutral `terms` (`apps/desktop/src/lib/settings/DETAILS.md` § Search). Mechanics (typography, ICU)
+still apply.
+
 - A `<tag>/concepts-proposed.json`, when a parallel fan-out leaves one, is validated too, and its IDs count as known for
   that locale's `terms.json` until they're merged.
 

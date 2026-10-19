@@ -1959,9 +1959,6 @@
   "notification": {
     "chosen": "thông báo",
     "confidence": "high",
-    "exceptions": {
-      "settings.askCmdr.proactive.keywords": "English-sense: `notice` is the verb here (Cmdr notices things), not a notification."
-    },
     "forms": "toast → thông báo nhỏ",
     "sources": "macOS/MS"
   },
@@ -3229,9 +3226,6 @@
     "accept": ["ngắt"],
     "chosen": "ngắt dòng",
     "confidence": "high",
-    "exceptions": {
-      "settings.listing.briefColumnWidthMode.keywords": "English-sense: `shrink-wrap` means columns fit their content, not text wrapping."
-    },
     "forms": "the View menu item → Tự ngắt dòng",
     "sources": "MS terminology (word wrap → Tự ngắt dòng)"
   },

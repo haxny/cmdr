@@ -131,6 +131,20 @@ describe('validateTerms', () => {
     expect(text).toMatch(/operation: decision "No such heading" matches no heading in nl\/decisions\.md/)
     expect(text).toMatch(/operation: avoid\[0\] needs a "form" and a "why"/)
   })
+  it('flags an exception for a search keyword list, which the termbase already exempts', () => {
+    const enKeys = new Set([...base.enKeys, 'settings.queue.keywords'])
+    const terms = {
+      operation: {
+        chosen: 'x',
+        confidence: 'high',
+        sources: 's',
+        exceptions: { 'settings.queue.keywords': 'synonyms' },
+      },
+    }
+    expect(validateTerms({ ...base, enKeys, terms }).join('\n')).toMatch(
+      /operation: exception "settings\.queue\.keywords" is a search keyword list, which no ruling governs: drop it/,
+    )
+  })
   it('holds proseAccept to a list of strings', () => {
     const ok = { operation: { chosen: 'x', proseAccept: ['klus'], confidence: 'high', sources: 's' } }
     expect(validateTerms({ ...base, terms: ok })).toEqual([])
@@ -199,6 +213,11 @@ describe('findDrift', () => {
     const nl = { 'q.prose': 'Cmdr heeft je klus afgerond, dus je kunt dit venster sluiten.', 'q.label': 'Kluslogboek' }
     const withProse = { operation: { ...terms.operation, proseAccept: ['klus'] } }
     expect(findDrift({ tag: 'nl', terms: withProse, concepts, en, locale: nl }).map((f) => f.key)).toEqual(['q.label'])
+  })
+  it('skips a Settings search keyword list: hidden synonyms the termbase never governs', () => {
+    const en = { 'settings.queue.keywords': 'operation, queue, jobs' }
+    const nl = { 'settings.queue.keywords': 'actie, wachtrij, taken' }
+    expect(findDrift({ tag: 'nl', terms, concepts, en, locale: nl })).toEqual([])
   })
   it('skips a key in exceptions and a key the locale lacks', () => {
     const withException = { operation: { ...terms.operation, exceptions: { 'q.a': 'deliberate' } } }

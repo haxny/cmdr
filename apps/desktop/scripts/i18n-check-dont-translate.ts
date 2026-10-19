@@ -22,6 +22,9 @@
  *     ALSO guarded structurally by the parity check (raw `{token}` parity); listing
  *     them here adds a clearer, token-specific message for the common case.
  *
+ * Settings search keyword lists (`isSearchKeywordsKey`) are exempt: they add
+ * synonyms, and brands live in the row's language-neutral `terms`.
+ *
  * Warn-only by design: a judgment-call quality signal, so it never blocks a build.
  *
  * Run: `pnpm i18n:check-dont-translate` (desktop) or
@@ -29,7 +32,7 @@
  * point at a fixture (used by the tests).
  */
 
-import { BRAND_WORDS, SYSTEM_TOKENS, hasWholeWord, hasBrandPresent } from './i18n-catalog-lib.ts'
+import { BRAND_WORDS, SYSTEM_TOKENS, hasWholeWord, hasBrandPresent, isSearchKeywordsKey } from './i18n-catalog-lib.ts'
 import { EXIT_ERROR, runLocaleCheck } from './i18n-locale-check-lib.ts'
 import type { LocaleCheckOptions } from './i18n-locale-check-lib.ts'
 
@@ -77,6 +80,8 @@ export function runDontTranslateCheck(opts: LocaleCheckOptions = {}): number {
         // The record index is `string` to the types, but undefined at runtime when the key is absent.
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (englishValue === undefined) continue
+        // A keyword list adds synonyms; the row's language-neutral `terms` already carry its brands.
+        if (isSearchKeywordsKey(key)) continue
         const dropped = droppedTokens(englishValue, localeValue)
         if (dropped.length > 0) findings.add(key, `dropped ${dropped.join(', ')} (keep verbatim)`)
       }

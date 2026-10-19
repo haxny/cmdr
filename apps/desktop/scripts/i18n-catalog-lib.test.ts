@@ -27,6 +27,7 @@ import {
   sourceHash,
   isMetadataKey,
   isRawKey,
+  isSearchKeywordsKey,
   rawTokens,
   hasWholeWord,
   hasBrandPresent,
@@ -277,6 +278,19 @@ describe('isRawKey', () => {
   it('treats every non-errors key as ICU', () => {
     expect(isRawKey('common.ok')).toBe(false)
     expect(isRawKey('transfer.summary')).toBe(false)
+  })
+})
+
+describe('isSearchKeywordsKey', () => {
+  it('names the Settings search keyword lists, the same shape as the `SearchKeywordsKey` type', () => {
+    expect(isSearchKeywordsKey('settings.theme.mode.keywords')).toBe(true)
+    expect(isSearchKeywordsKey('settings.updates.showSecurityLog.keywords')).toBe(true)
+  })
+
+  it('leaves every other key alone, including a keywords leaf outside settings', () => {
+    expect(isSearchKeywordsKey('settings.theme.mode.label')).toBe(false)
+    expect(isSearchKeywordsKey('search.keywords')).toBe(false)
+    expect(isSearchKeywordsKey('settings.keywordsHint')).toBe(false)
   })
 })
 

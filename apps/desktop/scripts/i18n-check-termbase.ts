@@ -19,6 +19,9 @@
  *     half-cleaned locale reports one line rather than failing the build. A locale
  *     with no baseline is strict from its first `terms.json`.
  *
+ * Settings search keyword lists (`isSearchKeywordsKey`) are outside the termbase:
+ * never drift, and an `exceptions` entry naming one is a schema error.
+ *
  * A locale without `terms.json` is skipped silently: it hasn't been migrated.
  *
  * Run: `pnpm i18n:check-termbase` (desktop). `--messages-root <dir>` and
@@ -28,7 +31,7 @@
 
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { BASE_LOCALE, listLocales, loadCatalog, resolveLocaleSource } from './i18n-catalog-lib.ts'
+import { BASE_LOCALE, isSearchKeywordsKey, listLocales, loadCatalog, resolveLocaleSource } from './i18n-catalog-lib.ts'
 import { EXIT_CLEAN, EXIT_ERROR, EXIT_ISSUES } from './i18n-locale-check-lib.ts'
 import {
   CONFIDENCES,
@@ -208,13 +211,19 @@ function avoidErrors(at: string, avoid: unknown): string[] {
   )
 }
 
-/** Each `exceptions` key must be a real English key, with a reason. */
+/**
+ * Each `exceptions` key must be a real English key, with a reason, and not a
+ * search keyword list: drift already skips those, so the entry would excuse nothing.
+ */
 function exceptionErrors(at: string, exceptions: unknown, enKeys: ReadonlySet<string>): string[] {
   if (exceptions === undefined) return []
   if (!isRecord(exceptions)) return [`${at}: "exceptions" must be an object of key → reason`]
   return Object.entries(exceptions).flatMap(([key, reason]) => [
     ...(enKeys.has(key) ? [] : [`${at}: exception names "${key}", which isn't an English key`]),
     ...(isNonEmptyString(reason) ? [] : [`${at}: exception "${key}" needs a reason`]),
+    ...(isSearchKeywordsKey(key)
+      ? [`${at}: exception "${key}" is a search keyword list, which no ruling governs: drop it`]
+      : []),
   ])
 }
 
@@ -253,14 +262,15 @@ export interface FindDriftArgs {
 /**
  * Every (key, concept) pair where the English uses the concept, the locale has a
  * value, that value carries none of the ruling's forms, and the key isn't one of
- * the ruling's `exceptions`. A missing key is the coverage check's business.
+ * the ruling's `exceptions`. A missing key is the coverage check's business, and a
+ * search keyword list (`isSearchKeywordsKey`) is free synonyms, never drift.
  */
 export function findDrift({ tag, terms, concepts, en, locale }: FindDriftArgs): DriftFinding[] {
   const ruled = Object.fromEntries(Object.keys(terms).flatMap((id) => (id in concepts ? [[id, concepts[id]]] : [])))
   const matchers = compileConcepts(ruled)
   const findings: DriftFinding[] = []
   for (const key of Object.keys(en).sort()) {
-    if (!(key in locale)) continue
+    if (!(key in locale) || isSearchKeywordsKey(key)) continue
     const text = englishMatchText(key, en[key])
     for (const [id, hits] of matchers) {
       if (!hits(text)) continue
