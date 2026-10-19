@@ -219,6 +219,24 @@ impl Volume for WebdavVolume {
         }))
     }
 
+    /// The hint is what the stream declares when the GET's answer names no
+    /// length (a proxy that stripped it, a chunked body), so a copy holds the
+    /// body to the listing's size instead of being told nothing.
+    #[allow(
+        clippy::type_complexity,
+        reason = "async trait method returns a pinned boxed future by design"
+    )]
+    fn open_read_stream_with_hint<'a>(
+        &'a self,
+        path: &'a Path,
+        size_hint: Option<u64>,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
+        Box::pin(self.noting(async move {
+            let stream = self.open_read_stream_impl(path, 0).await?.hinted(size_hint);
+            Ok(Box::new(stream) as Box<dyn VolumeReadStream>)
+        }))
+    }
+
     #[allow(
         clippy::type_complexity,
         reason = "async trait method returns a pinned boxed future by design"

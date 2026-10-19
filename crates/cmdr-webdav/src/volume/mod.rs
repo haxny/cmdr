@@ -390,6 +390,10 @@ mod integration_test;
 // shared fixture lane subtracts the same atom, so a rename here has to move
 // `WebdavNextcloudTestAtom` with it (`scripts/check/checks/desktop-rust-webdav-nextcloud.go`).
 #[cfg(test)]
+mod fake_dav;
+#[cfg(test)]
+mod get_length_test;
+#[cfg(test)]
 mod nextcloud_test;
 #[cfg(test)]
 mod reconnect_test;

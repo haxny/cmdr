@@ -427,10 +427,11 @@ pub enum WriteOperationError {
     SourceInColdStorage {
         path: String,
     },
-    /// The source changed while a server-side copy read it, so the copy
-    /// published nothing (it could have mixed two versions). The source is the
-    /// new version now, and a move left it in place. A retry copies the new
-    /// version. S3-only today.
+    /// The source changed while the copy read it (an S3 server-side copy saw
+    /// it replaced, or its stream delivered more or fewer bytes than its
+    /// declared length), so the copy landed nothing that could mix two
+    /// versions or miss a part. A move left the source in place. A retry
+    /// copies the version that's there now.
     SourceChanged {
         path: String,
     },

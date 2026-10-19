@@ -36,6 +36,7 @@ use std::time::SystemTime;
 use cmdr_fs::metadata::{
     CarriedMetadata, ClassOutcome, MetadataClasses, MetadataReport, default_file_mode, routed_mode,
 };
+use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::volume::{StreamLength, StreamWriteProgress, StreamWritten, VolumeError, VolumeReadStream, WriteMode};
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
@@ -324,6 +325,14 @@ impl SftpVolume {
             }
 
             let Some(landed) = in_flight.next().await else {
+                // `Known(n)` promises exactly `n` bytes: a source that shrank or
+                // grew while it was read fails here, and the caller takes the
+                // partial away, as the WebDAV and S3 uploads do.
+                if let StreamLength::Known(declared) = length
+                    && written != declared
+                {
+                    return Err(size_mismatch(remote, written, declared));
+                }
                 return Ok(written);
             };
             written += landed?;
@@ -445,6 +454,18 @@ pub(super) async fn keep_source_attrs(
         return MetadataReport::uniform(&carried, modified_at, ClassOutcome::Refused);
     }
     MetadataReport::uniform(&carried, modified_at, ClassOutcome::Kept)
+}
+
+/// The source yielded a different byte count than its declared length.
+fn size_mismatch(remote: &str, got: u64, declared: u64) -> VolumeError {
+    VolumeError::IoError {
+        message: format!(
+            "{remote}: the source declared {} and yielded {}",
+            pluralize_grouped(declared, "byte"),
+            pluralize_grouped(got, "byte")
+        ),
+        raw_os_error: None,
+    }
 }
 
 #[cfg(test)]

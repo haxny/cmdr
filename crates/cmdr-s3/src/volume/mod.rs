@@ -390,6 +390,8 @@ mod fake_s3;
 #[cfg(test)]
 mod fresh_folder_test;
 #[cfg(test)]
+mod get_length_test;
+#[cfg(test)]
 mod integration_test;
 #[cfg(test)]
 mod late_cancel_test;

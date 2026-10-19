@@ -441,8 +441,9 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
         VolumeError::ColdStorage(_) => WriteOperationError::SourceInColdStorage {
             path: context_path.to_string(),
         },
-        // A server-side copy saw its source replaced mid-copy and published
-        // nothing. Named plainly: the user decides whether the new version is
+        // A server-side copy saw its source replaced mid-copy, or a source
+        // stream broke its declared length (`source_reads.rs`), and nothing
+        // landed. Named plainly: the user decides whether the new version is
         // the one to copy.
         VolumeError::SourceChanged(_) => WriteOperationError::SourceChanged {
             path: context_path.to_string(),

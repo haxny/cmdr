@@ -278,6 +278,12 @@ here as one server's answer, evidence-anchored, rather than as the protocol's.
   on httpd 2.4.68 by `curl` and by the two cells, 2026-09-02). Both halves of the skip are pinned there — the resumed
   stream and `read_range` — and each cell asks the server what it answered before asserting on the backend, so a fixture
   that started honouring `Range` fails rather than quietly re-testing the 206 path.
+- ❗ **A GET's length is the server's or the caller's, ❌ never a guessed `0`** (`streams.rs`). An answer with no
+  `Content-Length` (a proxy that stripped it, a chunked body) declares the caller's hint (`open_read_stream_with_hint`),
+  else `Unknown`; a body that ends before the length the server named (a 206's `Content-Range`) fails with an `IoError`
+  instead of ending cleanly. Before this, a lengthless `200` declared exactly zero bytes, so a WebDAV destination always
+  refused it and an MTP one was told to expect an empty object (#538). Pinned by `get_length_test.rs` against
+  `src/volume/fake_dav.rs`, the in-process server `slow_server_test.rs` shares.
 - **A PUT with no `Content-Length` is accepted, 201 Created, body byte-exact** (same server and date; 256 KiB by the
   Docker cell, 8 MiB by hand with `curl`). ❌ So "sabre/dav answers 411 to a chunked PUT" is NOT true of Nextcloud on
   Apache with `mod_php`, which is what the official image runs. `writes.rs` sends the length regardless, and the reason

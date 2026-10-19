@@ -19,7 +19,10 @@
 //!   a pause can land in the middle of, until [`FakeS3::read_freely`], and
 //!   counts every body byte as it arrives ([`FakeS3::body_bytes`]);
 //! - [`FakeS3::fault_puts`]: it answers a PUT `500 InternalError`, the way B2
-//!   answers about one in several hundred, before or after storing it.
+//!   answers about one in several hundred, before or after storing it;
+//! - [`FakeS3::answer_gets_without_length`]: it answers an object GET with no
+//!   `content-length` (the way a proxy that strips it does), optionally cut
+//!   off partway.
 //!
 //! It speaks path style over plain HTTP, one request per connection, and
 //! knows HEAD, PUT, DELETE, `ListObjectsV2`, and the multipart calls. A cell
@@ -93,6 +96,16 @@ struct World {
     fault_puts: usize,
     /// Whether a faulted `PutObject` stores the object before it answers.
     fault_puts_after_commit: bool,
+    /// How an object GET is answered; `None` refuses it (`501`).
+    gets: Option<GetBodies>,
+}
+
+/// An object GET's answer: close-delimited, with no `content-length`, and
+/// `cut_after` bytes of it sent when set. A ranged GET answers `206` naming the
+/// object's full length in `content-range`.
+#[derive(Clone, Copy)]
+struct GetBodies {
+    cut_after: Option<usize>,
 }
 
 pub(super) struct FakeS3 {
@@ -159,6 +172,12 @@ impl FakeS3 {
         let mut world = self.world.lock_ignore_poison();
         world.fault_puts = 1;
         world.fault_puts_after_commit = true;
+    }
+
+    /// From now on, an object GET answers its bytes (`x`s) with no
+    /// `content-length`, and only the first `cut_after` of them when set.
+    pub(super) fn answer_gets_without_length(&self, cut_after: Option<usize>) {
+        self.world.lock_ignore_poison().gets = Some(GetBodies { cut_after });
     }
 
     /// How many `DeleteObjects` requests reached the store (throttled ones
@@ -500,6 +519,14 @@ async fn answer(
             ),
             None => NOT_FOUND.into(),
         },
+        ("GET", Some(key), None) => {
+            let world = world.lock_ignore_poison();
+            match (world.gets, world.objects.get(&key)) {
+                (Some(gets), Some(stored)) => object_body(gets, stored.len, header(head, "range")),
+                (Some(_), None) => NOT_FOUND.into(),
+                (None, _) => "HTTP/1.1 501 Not Implemented\r\ncontent-length: 0\r\nconnection: close\r\n\r\n".into(),
+            }
+        }
         ("DELETE", Some(key), None) => {
             world.lock_ignore_poison().objects.remove(&key);
             "HTTP/1.1 204 No Content\r\nconnection: close\r\n\r\n".into()
@@ -520,6 +547,28 @@ async fn answer(
         _ => "HTTP/1.1 501 Not Implemented\r\ncontent-length: 0\r\nconnection: close\r\n\r\n".into(),
     };
     Some(response)
+}
+
+/// An object GET of `len` bytes as [`GetBodies`] shapes it, from the start of
+/// a `Range: bytes=<start>-` header when there is one.
+fn object_body(gets: GetBodies, len: usize, range: Option<&str>) -> String {
+    let start = range
+        .and_then(|range| range.strip_prefix("bytes="))
+        .and_then(|range| range.strip_suffix('-'))
+        .and_then(|start| start.parse::<usize>().ok());
+    let (status, content_range, from) = match start {
+        Some(start) => (
+            "206 Partial Content",
+            format!("content-range: bytes {start}-{}/{len}\r\n", len.saturating_sub(1)),
+            start,
+        ),
+        None => ("200 OK", String::new(), 0),
+    };
+    let sent = len.saturating_sub(from).min(gets.cut_after.unwrap_or(usize::MAX));
+    format!(
+        "HTTP/1.1 {status}\r\n{content_range}connection: close\r\n\r\n{}",
+        "x".repeat(sent)
+    )
 }
 
 /// The object at `key` as a HEAD sees it, replacing it afterwards when a cell

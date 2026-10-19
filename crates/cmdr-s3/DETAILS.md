@@ -121,6 +121,12 @@ keys and the rights. `integration_test.rs` pins both servers' answers.
   stream's `total_size` stays the whole object. ❗ A 200 to a ranged GET means the server ignored `Range`; the stream
   skips `offset` bytes locally (`judge_get`, unit-tested). A 416 (at or past the end) is an empty read. Both fixtures
   answer 206 with the exact window (verified on VersityGW v1.8.0 and Garage v2.4.1, `read_test.rs`, 2026-10-01).
+- ❗ **A length is the server's or the caller's, ❌ never a guessed `0`.** An answer with no length (a proxy that
+  stripped `Content-Length`) declares the caller's hint (`open_read_stream_with_hint`), else `Unknown`. A body that ends
+  before the length the server named (a 206's `Content-Range`) fails with an `IoError` instead of ending cleanly; hyper
+  already does that for a short body under `Content-Length`. The copy engine holds the hinted length to account
+  (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A source is held to its declared length"). #538, pinned by
+  `get_length_test.rs` against `FakeS3`.
 - **`read_range`** asks for exactly `[offset, offset + len)` and drops the response once the window is full, so a server
   that ignored the range doesn't stream the rest of the object. It backs remote-archive browsing.
 - **A refused GET reads its `<Error>` body** (bounded by `REQUEST_BUDGET`) and goes through `map_s3_error`. The account

@@ -171,7 +171,7 @@ pub(super) async fn extract_sequential_subtree(
         // adds the archive's quarantine to its xattrs (`extract_quarantine.rs`).
         // A member that fails to decode comes back as the WRITE's error; the
         // watch is what still names the archive for it.
-        let (stream, source_reads) = super::source_reads::watch(extractor.current_stream());
+        let (stream, source_reads) = super::source_reads::watch(extractor.current_stream(), &file.source_path, length);
         let stream = super::extract_quarantine::quarantine_stream(state, source_volume, stream);
         let lost = super::super::super::metadata_losses::file_losses(&**source_volume, &**dest_volume, &*stream);
         // One decode pass means one member at a time, but this member still

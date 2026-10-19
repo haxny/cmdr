@@ -14,7 +14,8 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use bytes::Bytes;
-use cmdr_fs::volume::{VolumeError, VolumeReadStream};
+use cmdr_fs::pluralize::pluralize_grouped;
+use cmdr_fs::volume::{StreamLength, VolumeError, VolumeReadStream};
 use futures_util::Stream;
 use futures_util::StreamExt;
 use reqwest::header::{CONTENT_RANGE, LAST_MODIFIED, RANGE};
@@ -30,7 +31,16 @@ type BodyStream = Pin<Box<dyn Stream<Item = Result<Bytes, reqwest::Error>> + Sen
 /// A GET body as a `VolumeReadStream`.
 pub(super) struct WebdavReadStream {
     body: BodyStream,
-    total: u64,
+    /// The file's full length as the SERVER named it. A body that ends before
+    /// reaching it was cut off, and fails rather than ending cleanly. `None`
+    /// when the answer names none (a proxy that stripped `Content-Length`, a
+    /// chunked body), ❌ never a guessed `0`.
+    total: Option<u64>,
+    /// The caller's idea of the length (`open_read_stream_with_hint`), what
+    /// the stream declares when the server named none.
+    size_hint: Option<u64>,
+    /// Where in the file the read starts.
+    offset: u64,
     read: u64,
     /// Bytes still to discard, for a 200 answer to a ranged request.
     skip: u64,
@@ -43,6 +53,31 @@ pub(super) struct WebdavReadStream {
     modified_at: Option<SystemTime>,
 }
 
+impl WebdavReadStream {
+    /// Declares `size_hint` when the server named no length.
+    pub(super) fn hinted(mut self, size_hint: Option<u64>) -> Self {
+        self.size_hint = size_hint;
+        self
+    }
+
+    /// Why a body that just ended is a cut rather than the end of the file: it
+    /// stopped short of the length the server named. `None` for a whole body,
+    /// or one whose length nobody named.
+    fn ended_short(&self) -> Option<VolumeError> {
+        let total = self.total?;
+        let reached = self.offset + self.read;
+        (reached < total).then(|| VolumeError::IoError {
+            message: format!(
+                "{}: the server named {} and the body ended after {}",
+                self.path,
+                pluralize_grouped(total, "byte"),
+                pluralize_grouped(reached, "byte")
+            ),
+            raw_os_error: None,
+        })
+    }
+}
+
 impl VolumeReadStream for WebdavReadStream {
     fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
         Box::pin(async move {
@@ -50,7 +85,8 @@ impl VolumeReadStream for WebdavReadStream {
                 // The idle budget between chunks, ❗ per chunk and never for the
                 // whole body: a multi-GB download has no total ceiling.
                 let next = match tokio::time::timeout(REQUEST_BUDGET, self.body.next()).await {
-                    Ok(next) => next?,
+                    Ok(Some(next)) => next,
+                    Ok(None) => return self.ended_short().map(Err),
                     Err(_elapsed) => return Some(Err(VolumeError::ConnectionTimeout(self.path.clone()))),
                 };
                 let chunk = match next {
@@ -77,8 +113,11 @@ impl VolumeReadStream for WebdavReadStream {
         })
     }
 
-    fn total_size(&self) -> cmdr_fs::volume::StreamLength {
-        cmdr_fs::volume::StreamLength::Known(self.total)
+    fn total_size(&self) -> StreamLength {
+        match self.total.or(self.size_hint) {
+            Some(total) => StreamLength::Known(total),
+            None => StreamLength::Unknown,
+        }
     }
 
     fn bytes_read(&self) -> u64 {
@@ -125,15 +164,17 @@ impl WebdavVolume {
         let response = self.send(&client, request, &remote, Attempted::Reaching).await?;
         let (total, skip) = match response.status() {
             StatusCode::PARTIAL_CONTENT => (
-                content_range_total(&response).unwrap_or(response.content_length().unwrap_or(0) + offset),
+                content_range_total(&response).or_else(|| response.content_length().map(|length| length + offset)),
                 0,
             ),
-            _ => (response.content_length().unwrap_or(0), offset),
+            _ => (response.content_length(), offset),
         };
         Ok(WebdavReadStream {
             modified_at: last_modified(&response),
             body: Box::pin(response.bytes_stream()),
             total,
+            size_hint: None,
+            offset,
             read: 0,
             skip,
             volume_id: self.volume_id().to_string(),
@@ -177,7 +218,11 @@ impl WebdavVolume {
             } else {
                 offset
             },
-            total: 0,
+            // No `total`: the window ends where the caller stops pulling, well
+            // before the file does.
+            total: None,
+            size_hint: None,
+            offset,
             read: 0,
             volume_id: self.volume_id().to_string(),
             path: remote,

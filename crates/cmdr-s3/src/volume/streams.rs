@@ -12,6 +12,7 @@ use std::pin::Pin;
 use std::time::SystemTime;
 
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
+use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::volume::{StreamLength, VolumeError, VolumeReadStream};
 use http::StatusCode;
 
@@ -28,10 +29,12 @@ use crate::transport::{Opened, REQUEST_BUDGET};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Answered {
     /// The body is the object from some point on: `skip` bytes to drop first
-    /// (a 200 to a ranged request), and the object's full length.
-    Window { total: u64, skip: u64 },
+    /// (a 200 to a ranged request), and the object's full length when the
+    /// answer names it: `None` when it doesn't (a proxy that stripped
+    /// `content-length`), ❌ never a guessed `0`.
+    Window { total: Option<u64>, skip: u64 },
     /// 416: the read starts at or past the end. Nothing to read.
-    PastTheEnd { total: u64 },
+    PastTheEnd { total: Option<u64> },
     /// Anything else: the body is an S3 `<Error>`.
     Refused,
 }
@@ -49,14 +52,12 @@ pub(super) fn judge_get(
     let range_total = content_range.and_then(|range| range.rsplit('/').next()?.trim().parse::<u64>().ok());
     match status {
         StatusCode::PARTIAL_CONTENT => Answered::Window {
-            total: range_total.unwrap_or_else(|| content_length.unwrap_or(0) + offset),
+            total: range_total.or_else(|| content_length.map(|length| length + offset)),
             skip: 0,
         },
-        StatusCode::RANGE_NOT_SATISFIABLE => Answered::PastTheEnd {
-            total: range_total.unwrap_or(0),
-        },
+        StatusCode::RANGE_NOT_SATISFIABLE => Answered::PastTheEnd { total: range_total },
         status if status.is_success() => Answered::Window {
-            total: content_length.unwrap_or(0),
+            total: content_length,
             skip: offset,
         },
         _ => Answered::Refused,
@@ -67,7 +68,14 @@ pub(super) fn judge_get(
 pub(super) struct S3ReadStream {
     /// `None` for a read that starts past the end: there's no body to pull.
     body: Option<Opened>,
-    total: u64,
+    /// The object's full length as the SERVER named it. A body that ends
+    /// before reaching it was cut off, and fails rather than ending cleanly.
+    total: Option<u64>,
+    /// The caller's idea of the length (`open_read_stream_with_hint`), what
+    /// the stream declares when the server named none.
+    size_hint: Option<u64>,
+    /// Where in the object the read starts.
+    offset: u64,
     read: u64,
     /// Bytes still to discard, for a 200 answer to a ranged request.
     skip: u64,
@@ -80,6 +88,31 @@ pub(super) struct S3ReadStream {
     carried: CarriedMetadata,
 }
 
+impl S3ReadStream {
+    /// Declares `size_hint` when the server named no length.
+    pub(super) fn hinted(mut self, size_hint: Option<u64>) -> Self {
+        self.size_hint = size_hint;
+        self
+    }
+
+    /// Why a body that just ended is a cut rather than the end of the object:
+    /// it stopped short of the length the server named. `None` for a whole
+    /// body, or one whose length nobody named.
+    fn ended_short(&self) -> Option<VolumeError> {
+        let total = self.total?;
+        let reached = self.offset + self.read;
+        (reached < total).then(|| VolumeError::IoError {
+            message: format!(
+                "{}: the server named {} and the body ended after {}",
+                self.path,
+                pluralize_grouped(total, "byte"),
+                pluralize_grouped(reached, "byte")
+            ),
+            raw_os_error: None,
+        })
+    }
+}
+
 impl VolumeReadStream for S3ReadStream {
     fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
         Box::pin(async move {
@@ -90,7 +123,7 @@ impl VolumeReadStream for S3ReadStream {
                 let chunk = match tokio::time::timeout(REQUEST_BUDGET, body.chunk()).await {
                     Ok(Some(Ok(chunk))) => chunk,
                     Ok(Some(Err(e))) => return Some(Err(e)),
-                    Ok(None) => return None,
+                    Ok(None) => return self.ended_short().map(Err),
                     Err(_elapsed) => return Some(Err(VolumeError::ConnectionTimeout(self.path.clone()))),
                 };
                 if self.skip > 0 {
@@ -109,7 +142,10 @@ impl VolumeReadStream for S3ReadStream {
     }
 
     fn total_size(&self) -> StreamLength {
-        StreamLength::Known(self.total)
+        match self.total.or(self.size_hint) {
+            Some(total) => StreamLength::Known(total),
+            None => StreamLength::Unknown,
+        }
     }
 
     fn bytes_read(&self) -> u64 {
@@ -145,6 +181,8 @@ impl S3Volume {
             Answered::Window { total, skip } => Ok(S3ReadStream {
                 body: Some(opened),
                 total,
+                size_hint: None,
+                offset,
                 read: 0,
                 skip,
                 path: remote,
@@ -154,6 +192,8 @@ impl S3Volume {
             Answered::PastTheEnd { total } => Ok(S3ReadStream {
                 body: None,
                 total,
+                size_hint: None,
+                offset,
                 read: 0,
                 skip: 0,
                 path: remote,
@@ -191,9 +231,13 @@ impl S3Volume {
             Answered::PastTheEnd { .. } => return Ok(Vec::new()),
             Answered::Refused => return Err(refusal(opened, &remote).await),
         };
+        // No `total`: the window ends where the caller stops pulling, well
+        // before the object does.
         let mut stream = S3ReadStream {
             body: Some(opened),
-            total: 0,
+            total: None,
+            size_hint: None,
+            offset,
             read: 0,
             skip,
             path: remote,

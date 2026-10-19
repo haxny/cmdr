@@ -6,7 +6,10 @@ use super::{Answered, judge_get};
 fn a_206_is_the_window_asked_for_and_names_the_full_length() {
     assert_eq!(
         judge_get(StatusCode::PARTIAL_CONTENT, Some("bytes 100-199/1000"), Some(100), 100),
-        Answered::Window { total: 1000, skip: 0 }
+        Answered::Window {
+            total: Some(1000),
+            skip: 0
+        }
     );
 }
 
@@ -14,7 +17,10 @@ fn a_206_is_the_window_asked_for_and_names_the_full_length() {
 fn a_206_without_content_range_counts_the_offset_in() {
     assert_eq!(
         judge_get(StatusCode::PARTIAL_CONTENT, None, Some(900), 100),
-        Answered::Window { total: 1000, skip: 0 }
+        Answered::Window {
+            total: Some(1000),
+            skip: 0
+        }
     );
 }
 
@@ -23,7 +29,10 @@ fn a_200_to_a_ranged_request_is_skipped_to_locally() {
     // RFC 9110 lets a server ignore `Range`: the body is the whole object.
     assert_eq!(
         judge_get(StatusCode::OK, None, Some(1000), 100),
-        Answered::Window { total: 1000, skip: 100 }
+        Answered::Window {
+            total: Some(1000),
+            skip: 100
+        }
     );
 }
 
@@ -31,7 +40,19 @@ fn a_200_to_a_ranged_request_is_skipped_to_locally() {
 fn a_whole_read_skips_nothing() {
     assert_eq!(
         judge_get(StatusCode::OK, None, Some(1000), 0),
-        Answered::Window { total: 1000, skip: 0 }
+        Answered::Window {
+            total: Some(1000),
+            skip: 0
+        }
+    );
+}
+
+#[test]
+fn an_answer_that_names_no_length_leaves_the_total_unknown() {
+    // A proxy that strips `content-length`: ❌ never a guessed `0`.
+    assert_eq!(
+        judge_get(StatusCode::OK, None, None, 0),
+        Answered::Window { total: None, skip: 0 }
     );
 }
 
@@ -39,7 +60,7 @@ fn a_whole_read_skips_nothing() {
 fn a_416_is_past_the_end_and_still_names_the_length() {
     assert_eq!(
         judge_get(StatusCode::RANGE_NOT_SATISFIABLE, Some("bytes */1000"), None, 1000),
-        Answered::PastTheEnd { total: 1000 }
+        Answered::PastTheEnd { total: Some(1000) }
     );
 }
 

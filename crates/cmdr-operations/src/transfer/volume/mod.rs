@@ -138,6 +138,10 @@ mod dest_precheck_failure_tests;
 #[cfg(test)]
 mod failure_side_tests;
 
+/// A source that doesn't deliver its declared length fails the file (#538).
+#[cfg(test)]
+mod source_length_tests;
+
 /// A copied folder keeps its source folder's dates, stamped after its contents.
 #[cfg(test)]
 mod folder_metadata_tests;

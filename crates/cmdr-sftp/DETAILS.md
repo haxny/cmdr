@@ -172,7 +172,9 @@ tuning.
   read hands over less) into pieces the server takes in one request.
 - **Progress reports bytes that LANDED**, never bytes issued, or the bar would finish long before the file.
 - **Length stays explicit.** Known and unknown inputs use this same bounded writer; every progress tick carries the
-  caller's `StreamLength`, and success returns the exact count accepted by the server without inventing a zero total.
+  caller's `StreamLength`, and success returns the exact count accepted by the server without inventing a zero total. ❗
+  A `Known(n)` source that yielded any other count (a local file that shrank or grew mid-read) fails the write and takes
+  the partial with it, as the WebDAV and S3 uploads do (#538; `write_path_test.rs`).
 - ❗ **Cancellation arrives only as `Break` from the progress callback.** There is no token on this path, so a backend
   that never called back would be uncancelable.
 - ❗ **The close is part of the write, and only the last clone may await it.** `File::close()` is awaited and its answer

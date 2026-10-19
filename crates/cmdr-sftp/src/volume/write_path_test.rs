@@ -245,6 +245,34 @@ async fn a_source_that_stops_partway_takes_the_partial_with_it() {
     clean_scratch(&volume, &dir).await;
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
+async fn a_source_that_breaks_its_declared_length_takes_the_partial_with_it() {
+    // `Known(n)` promises exactly `n` bytes (#538). A file that shrank or grew
+    // while it was read must not land at its new size as though it were whole.
+    let (volume, dir) = scratch_on("OPENSSH", 12480, "write-misdeclared").await;
+    for (label, declared) in [("short", PAYLOAD as u64 + 7), ("long", PAYLOAD as u64 - 7)] {
+        let path = format!("{dir}/{label}.bin");
+
+        let outcome = volume
+            .write_from_stream(
+                Path::new(&path),
+                WriteMode::CreateOrReplace,
+                StreamLength::Known(declared),
+                misdeclared_source(fixture_large_bytes(PAYLOAD), declared),
+                &|_| ControlFlow::Continue(()),
+            )
+            .await;
+
+        assert!(
+            matches!(outcome, Err(VolumeError::IoError { .. })),
+            "{label}: a byte count off the declared length fails the write; got {outcome:?}"
+        );
+        assert!(!volume.exists(Path::new(&path)).await, "{label}: nothing stays behind");
+    }
+    clean_scratch(&volume, &dir).await;
+}
+
 // ── The two renames ──────────────────────────────────────────────────
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -685,6 +713,17 @@ fn source(bytes: Vec<u8>) -> Box<dyn VolumeReadStream> {
         bytes,
         at: 0,
         length,
+        fails_at: None,
+    })
+}
+
+/// `bytes` under a declared length they don't match: a local file that shrank
+/// or grew while it was read.
+fn misdeclared_source(bytes: Vec<u8>, declared: u64) -> Box<dyn VolumeReadStream> {
+    Box::new(ScriptedSource {
+        bytes,
+        at: 0,
+        length: StreamLength::Known(declared),
         fails_at: None,
     })
 }

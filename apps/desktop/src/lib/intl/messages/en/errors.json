@@ -2701,11 +2701,11 @@
   "errors.write.sourceChanged.message": "The file at {path} changed while Cmdr was copying it, so Cmdr saved nothing. The file stays where it was.",
   "errors.write.sourceChanged.suggestion": "Try again to copy the version that’s there now.",
   "@errors.write.sourceChanged.title": {
-    "description": "Title of the copy/move error dialog when another app or person replaced the source file in cloud storage while Cmdr was copying it there on the server. Plain text.",
+    "description": "Title of the copy/move error dialog when the source file changed while Cmdr was copying it: another app or person replaced it in cloud storage, it grew or shrank while being read (a log still being written, a download still finishing), or it arrived shorter or longer than its size said. Plain text.",
     "screenshot": "transfer-error-source_changed.png"
   },
   "@errors.write.sourceChanged.message": {
-    "description": "Body of the copy/move error dialog when the source file was replaced mid-copy. Cmdr stopped before saving a copy that could mix the old and the new version, so nothing appeared at the destination. \"The file stays where it was\" matters for a move: the source was NOT deleted. \"Cmdr\" is the product name. Plain text.",
+    "description": "Body of the copy/move error dialog when the source file was replaced, or grew or shrank, mid-copy. Cmdr stopped before saving a copy that could mix the old and the new version or miss part of the file, so nothing appeared at the destination. \"The file stays where it was\" matters for a move: the source was NOT deleted. \"Cmdr\" is the product name. Plain text.",
     "placeholders": {
       "path": {
         "description": "The full path of the source file, inserted verbatim. Do not translate or reformat it."
@@ -2714,7 +2714,7 @@
     "screenshot": "transfer-error-source_changed.png"
   },
   "@errors.write.sourceChanged.suggestion": {
-    "description": "Recovery suggestion when the source file was replaced mid-copy: running the copy again copies the new version that is there now. Plain text.",
+    "description": "Recovery suggestion when the source file was replaced, or grew or shrank, mid-copy: running the copy again copies the version that is there now. Plain text.",
     "screenshot": "transfer-error-source_changed.png"
   },
   "errors.write.newDataKeptAt.title": "Your new file is under a different name",
@@ -3076,7 +3076,7 @@
   },
   "errors.volume.sourceChanged": "“{path}” changed while Cmdr was copying it, so Cmdr saved nothing. Try again to copy the new version.",
   "@errors.volume.sourceChanged": {
-    "description": "Shown when another app or person replaced a file in cloud storage while Cmdr was copying it there on the server, so Cmdr stopped and saved nothing (the copy could have mixed the old and the new version). The original file stays where it was. The literal `{path}` is a do-not-translate placeholder replaced at runtime with the path. Inline one-line message in a brief toast or under a name field. Plain text, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
+    "description": "Shown when a file changed while Cmdr was copying it (another app or person replaced it in cloud storage, or it grew or shrank while being read), so Cmdr stopped and saved nothing (the copy could have mixed the old and the new version, or missed part of the file). The original file stays where it was. The literal `{path}` is a do-not-translate placeholder replaced at runtime with the path. Inline one-line message in a brief toast or under a name field. Plain text, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "mkdir-confirmation-too-long.png",
     "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
   },

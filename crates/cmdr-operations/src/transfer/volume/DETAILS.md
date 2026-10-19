@@ -1854,6 +1854,27 @@ chunks itself, so a source that drops mid-file returns from a destination call w
 `SourceReads::label` names the source at its path when one did, else the destination at its path. Both
 `stream_pipe_file` and the one-pass extract (`sequential_extract.rs`) watch their streams.
 
+### A source is held to its declared length
+
+**Decision**: the same `watch` holds the source to the length the engine declares to the destination
+(`StreamLength::Known(n)`, "exactly `n` bytes"). A stream that runs past `n` fails on the chunk that crosses it, and one
+that ends short fails IN PLACE of its EOF, both as `VolumeError::SourceChanged` labelled as the source's. The
+destination's write fails, the engine drops the staged temp, and nothing lands; on a move the file never reaches the
+ledger, so the source sweep keeps the original. ❌ Not retried (`retry.rs`): a log still being written fails the same
+way each time, and the dialog's "changed during the copy" plus Retry is the honest answer.
+
+**Why in the stream, not a `written.bytes != n` check after the write**: a SINGLE-SHOT write (§ "The single-shot
+exemption") lands at the user's real name in one frame, so an after-the-fact check would find the wrong-sized file
+already there. The one single-shot destination, SMB's compound write, drains its source before it sends anything, so a
+stream that fails on its last pull stops the write before any name is touched. #538: before this, an S3 body cut short
+behind a proxy, an SFTP upload of a file that shrank mid-read, and a WebDAV `200` with no `Content-Length` (then
+declared `Known(0)`) each landed as done, and a move then deleted the original.
+
+**The backends own the honest length**: a GET answer that names no length declares the caller's size hint (S3 and WebDAV
+override `open_read_stream_with_hint`), ❌ never `Known(0)`; a body that ends before the length the server DID name
+fails as a transport cut in the backend itself, before this check sees it. Pinned by `source_length_tests.rs` (short and
+long copies, a short move).
+
 **A destination failure on a safe-replace temp names the file the temp replaces**
 (`PathedVolumeError::naming_the_replaced`, applied wherever `Replaces` is in hand: `merge.rs::copy_leaf`, the extract,
 and all three drivers): the `.cmdr-tmp-*` name means nothing to the user, the file they chose to overwrite does.

@@ -229,8 +229,10 @@ pub(super) async fn stream_pipe_file(
         let Some(size) = stream.total_size().known() else {
             return Err(VolumeError::NotSupported).at_source(source_path);
         };
-        let (stream, source_reads) = super::source_reads::watch(stream);
         let length = cmdr_fs::volume::StreamLength::Known(size);
+        // Holds the source to `size` too: one that ends short or runs long fails
+        // the write as `SourceChanged` before anything lands (`source_reads.rs`).
+        let (stream, source_reads) = super::source_reads::watch(stream, source_path, length);
         // An extract carries the archive's quarantine with the rest of what
         // the source reports, so the destination puts it on before the landing
         // like any other xattr (`extract_quarantine.rs`).
