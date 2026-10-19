@@ -2962,6 +2962,9 @@
     "accept": ["換成", "換掉"],
     "chosen": "取代",
     "confidence": "confirmed",
+    "exceptions": {
+      "errors.write.mountedVolumeInside.message.replace": "\"replacing the folder\" is the Overwrite answer, so 覆寫, matching the 「覆寫」 button the suggestion names."
+    },
     "sources": "AP-TW = AP-HK, NAU, THU, MS"
   },
   "report": {

@@ -2527,6 +2527,7 @@
     "chosen": "ersätt",
     "confidence": "high",
     "exceptions": {
+      "errors.write.mountedVolumeInside.message.replace": "Replacing means the Overwrite answer here, so skrivs över.",
       "fileOperations.rollbackConfirm.body": "Replaced means overwrote here, so skrivit över.",
       "fileOperations.rollbackConfirm.bodyStopAndMoveBack": "Replaced means overwrote here, so skrivit över."
     },

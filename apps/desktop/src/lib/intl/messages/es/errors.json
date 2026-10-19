@@ -1745,6 +1745,26 @@
   "@errors.write.sourceInColdStorage.suggestion": {
     "sourceHash": "f279603"
   },
+  "errors.write.mountedVolumeInside.title": "Hay una unidad montada de por medio",
+  "@errors.write.mountedVolumeInside.title": {
+    "sourceHash": "eedcbbc"
+  },
+  "errors.write.mountedVolumeInside.message.delete": "En {mountPoint} hay una unidad o un servidor montados, y eliminar ahí haría desaparecer todo su contenido. Cmdr se ha detenido antes de eliminar nada.",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "b7dc0f0"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "En {mountPoint} hay una unidad o un servidor montados, así que reemplazar la carpeta en la que está haría desaparecer todo el contenido de la unidad. Cmdr ha dejado esa carpeta y la unidad como estaban.",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "39a5185"
+  },
+  "errors.write.mountedVolumeInside.suggestion.delete": "Expulsa ese disco y vuelve a eliminar. Para vaciar la unidad en sí, ábrela y elimina ahí lo que contiene.",
+  "@errors.write.mountedVolumeInside.suggestion.delete": {
+    "sourceHash": "9825fac"
+  },
+  "errors.write.mountedVolumeInside.suggestion.replace": "Expulsa ese disco y vuelve a intentarlo. Para conservar la carpeta, elige “Omitir” o “Renombrar” en lugar de “Sobrescribir”.",
+  "@errors.write.mountedVolumeInside.suggestion.replace": {
+    "sourceHash": "4f08af3"
+  },
   "errors.write.sourceChanged.title": "Este archivo ha cambiado durante la copia",
   "@errors.write.sourceChanged.title": {
     "sourceHash": "1c63c8b"

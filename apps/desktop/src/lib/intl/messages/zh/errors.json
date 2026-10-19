@@ -1744,6 +1744,26 @@
   "@errors.write.sourceInColdStorage.suggestion": {
     "sourceHash": "f279603"
   },
+  "errors.write.mountedVolumeInside.title": "有个已装载的驱动器挡着",
+  "@errors.write.mountedVolumeInside.title": {
+    "sourceHash": "eedcbbc"
+  },
+  "errors.write.mountedVolumeInside.message.delete": "在 {mountPoint} 装载着一个驱动器或服务器，在那里删除会把上面的内容全部抹掉。Cmdr 还没删除任何东西就停下了。",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "b7dc0f0"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "在 {mountPoint} 装载着一个驱动器或服务器，所以覆盖包含它的文件夹会把驱动器上的内容全部抹掉。Cmdr 让那个文件夹和驱动器都保持原样。",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "39a5185"
+  },
+  "errors.write.mountedVolumeInside.suggestion.delete": "请先推出那个驱动器，再删除一次。想清空驱动器本身的话，就打开它，在那里删掉里面的东西。",
+  "@errors.write.mountedVolumeInside.suggestion.delete": {
+    "sourceHash": "9825fac"
+  },
+  "errors.write.mountedVolumeInside.suggestion.replace": "请先推出那个驱动器，再试一次。想保留这个文件夹的话，请选择“跳过”或“重命名”，而不是“覆盖”。",
+  "@errors.write.mountedVolumeInside.suggestion.replace": {
+    "sourceHash": "4f08af3"
+  },
   "errors.write.sourceChanged.title": "这个文件在拷贝期间发生了变化",
   "@errors.write.sourceChanged.title": {
     "sourceHash": "1c63c8b"

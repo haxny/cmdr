@@ -1745,6 +1745,26 @@
   "@errors.write.sourceInColdStorage.suggestion": {
     "sourceHash": "f279603"
   },
+  "errors.write.mountedVolumeInside.title": "Een gekoppelde schijf staat in de weg",
+  "@errors.write.mountedVolumeInside.title": {
+    "sourceHash": "eedcbbc"
+  },
+  "errors.write.mountedVolumeInside.message.delete": "Er is een schijf of server gekoppeld op {mountPoint}, en als je daar verwijdert, ben je alles kwijt wat erop staat. Cmdr is gestopt voordat er iets werd verwijderd.",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "b7dc0f0"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "Er is een schijf of server gekoppeld op {mountPoint}, dus als je de map vervangt waar die in zit, ben je alles kwijt wat op de schijf staat. Cmdr heeft die map en de schijf ongemoeid gelaten.",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "39a5185"
+  },
+  "errors.write.mountedVolumeInside.suggestion.delete": "Werp die schijf uit en verwijder daarna opnieuw. Wil je de schijf zelf leegmaken? Open hem dan en verwijder daar wat erop staat.",
+  "@errors.write.mountedVolumeInside.suggestion.delete": {
+    "sourceHash": "9825fac"
+  },
+  "errors.write.mountedVolumeInside.suggestion.replace": "Werp die schijf uit en probeer het daarna opnieuw. Wil je de map houden? Kies dan ‘Sla over’ of ‘Wijzig naam’ in plaats van ‘Overschrijf’.",
+  "@errors.write.mountedVolumeInside.suggestion.replace": {
+    "sourceHash": "4f08af3"
+  },
   "errors.write.sourceChanged.title": "Dit bestand is tijdens het kopiëren gewijzigd",
   "@errors.write.sourceChanged.title": {
     "sourceHash": "1c63c8b"

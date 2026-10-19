@@ -1745,6 +1745,26 @@
   "@errors.write.sourceInColdStorage.suggestion": {
     "sourceHash": "f279603"
   },
+  "errors.write.mountedVolumeInside.title": "Un disque monté fait obstacle",
+  "@errors.write.mountedVolumeInside.title": {
+    "sourceHash": "eedcbbc"
+  },
+  "errors.write.mountedVolumeInside.message.delete": "Un disque ou un serveur est monté sur {mountPoint}, et supprimer à cet endroit effacerait tout ce qu’il contient. Cmdr s’est arrêté avant de supprimer quoi que ce soit.",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "b7dc0f0"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "Un disque ou un serveur est monté sur {mountPoint}, donc remplacer le dossier qui le contient effacerait tout ce qui se trouve sur le disque. Cmdr a laissé ce dossier et le disque tels quels.",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "39a5185"
+  },
+  "errors.write.mountedVolumeInside.suggestion.delete": "Éjectez ce disque, puis supprimez à nouveau. Pour vider le disque lui-même, ouvrez-le et supprimez directement ce qu’il contient.",
+  "@errors.write.mountedVolumeInside.suggestion.delete": {
+    "sourceHash": "9825fac"
+  },
+  "errors.write.mountedVolumeInside.suggestion.replace": "Éjectez ce disque, puis réessayez. Pour garder le dossier, choisissez « Ignorer » ou « Renommer » plutôt que « Écraser ».",
+  "@errors.write.mountedVolumeInside.suggestion.replace": {
+    "sourceHash": "4f08af3"
+  },
   "errors.write.sourceChanged.title": "Ce fichier a changé pendant la copie",
   "@errors.write.sourceChanged.title": {
     "sourceHash": "1c63c8b"

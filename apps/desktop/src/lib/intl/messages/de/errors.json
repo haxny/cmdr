@@ -1745,6 +1745,26 @@
   "@errors.write.sourceInColdStorage.suggestion": {
     "sourceHash": "f279603"
   },
+  "errors.write.mountedVolumeInside.title": "Ein eingebundenes Laufwerk ist im Weg",
+  "@errors.write.mountedVolumeInside.title": {
+    "sourceHash": "eedcbbc"
+  },
+  "errors.write.mountedVolumeInside.message.delete": "Unter {mountPoint} ist ein Laufwerk oder Server eingebunden, und Löschen würde dort alles darauf mitlöschen. Cmdr hat gestoppt, bevor irgendetwas gelöscht wurde.",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "b7dc0f0"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "Unter {mountPoint} ist ein Laufwerk oder Server eingebunden, deshalb würde das Ersetzen des umgebenden Ordners alles auf dem Laufwerk mitlöschen. Cmdr hat den Ordner und das Laufwerk unverändert gelassen.",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "39a5185"
+  },
+  "errors.write.mountedVolumeInside.suggestion.delete": "Wirf das Laufwerk aus, dann lösche erneut. Um das Laufwerk selbst zu leeren, öffne es und lösche dort, was darauf ist.",
+  "@errors.write.mountedVolumeInside.suggestion.delete": {
+    "sourceHash": "9825fac"
+  },
+  "errors.write.mountedVolumeInside.suggestion.replace": "Wirf das Laufwerk aus, dann versuche es erneut. Um den Ordner zu behalten, wähle „Überspringen“ oder „Umbenennen“ statt „Überschreiben“.",
+  "@errors.write.mountedVolumeInside.suggestion.replace": {
+    "sourceHash": "4f08af3"
+  },
   "errors.write.sourceChanged.title": "Diese Datei hat sich beim Kopieren geändert",
   "@errors.write.sourceChanged.title": {
     "sourceHash": "1c63c8b"

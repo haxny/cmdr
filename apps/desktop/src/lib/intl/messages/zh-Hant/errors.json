@@ -1745,6 +1745,26 @@
   "@errors.write.sourceInColdStorage.suggestion": {
     "sourceHash": "f279603"
   },
+  "errors.write.mountedVolumeInside.title": "有個已裝載的磁碟機擋著",
+  "@errors.write.mountedVolumeInside.title": {
+    "sourceHash": "eedcbbc"
+  },
+  "errors.write.mountedVolumeInside.message.delete": "在 {mountPoint} 裝載著一個磁碟機或伺服器，在那裡刪除會把上面的內容全部抹掉。Cmdr 還沒刪除任何東西就停下了。",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "b7dc0f0"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "在 {mountPoint} 裝載著一個磁碟機或伺服器，所以覆寫包含它的資料夾會把磁碟機上的內容全部抹掉。Cmdr 讓那個資料夾和磁碟機都維持原樣。",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "39a5185"
+  },
+  "errors.write.mountedVolumeInside.suggestion.delete": "請先退出那個磁碟機，再刪除一次。想清空磁碟機本身的話，就開啟它，在那裡刪掉裡面的東西。",
+  "@errors.write.mountedVolumeInside.suggestion.delete": {
+    "sourceHash": "9825fac"
+  },
+  "errors.write.mountedVolumeInside.suggestion.replace": "請先退出那個磁碟機，再試一次。想保留這個資料夾的話，請選擇「略過」或「重新命名」，不要選「覆寫」。",
+  "@errors.write.mountedVolumeInside.suggestion.replace": {
+    "sourceHash": "4f08af3"
+  },
   "errors.write.sourceChanged.title": "這個檔案在複製時變動了",
   "@errors.write.sourceChanged.title": {
     "sourceHash": "1c63c8b"

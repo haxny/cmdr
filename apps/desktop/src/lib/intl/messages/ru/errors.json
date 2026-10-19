@@ -1745,6 +1745,26 @@
   "@errors.write.sourceInColdStorage.suggestion": {
     "sourceHash": "f279603"
   },
+  "errors.write.mountedVolumeInside.title": "Мешает подключенный диск",
+  "@errors.write.mountedVolumeInside.title": {
+    "sourceHash": "eedcbbc"
+  },
+  "errors.write.mountedVolumeInside.message.delete": "В папке {mountPoint} подключен диск или сервер, и удаление там сотрет все, что на нем есть. Cmdr остановился и ничего не удалил.",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "b7dc0f0"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "В папке {mountPoint} подключен диск или сервер, поэтому замена папки, в которой он находится, сотрет все, что есть на диске. Cmdr оставил эту папку и диск как есть.",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "39a5185"
+  },
+  "errors.write.mountedVolumeInside.suggestion.delete": "Извлеките этот диск и повторите удаление. Чтобы очистить сам диск, откройте его и удалите то, что на нем есть.",
+  "@errors.write.mountedVolumeInside.suggestion.delete": {
+    "sourceHash": "9825fac"
+  },
+  "errors.write.mountedVolumeInside.suggestion.replace": "Извлеките этот диск и повторите попытку. Чтобы сохранить папку, выберите «Пропустить» или «Переименовать» вместо «Заменить».",
+  "@errors.write.mountedVolumeInside.suggestion.replace": {
+    "sourceHash": "4f08af3"
+  },
   "errors.write.sourceChanged.title": "Файл изменился во время копирования",
   "@errors.write.sourceChanged.title": {
     "sourceHash": "1c63c8b"

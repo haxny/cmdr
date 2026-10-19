@@ -2639,6 +2639,7 @@
     "chosen": "替换",
     "confidence": "high",
     "exceptions": {
+      "errors.write.mountedVolumeInside.message.replace": "\"replacing the folder\" is the Overwrite answer, so 覆盖, matching the “覆盖” button the suggestion names.",
       "fileOperations.rollbackConfirm.body": "\"any file it replaced\" is the overwritten file, settled as 被覆盖掉的文件 across the rollback family.",
       "fileOperations.rollbackConfirm.bodyStopAndMoveBack": "\"any file it replaced\" is the overwritten file, settled as 被覆盖掉的文件 across the rollback family."
     },

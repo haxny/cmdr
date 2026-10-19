@@ -1745,6 +1745,26 @@
   "@errors.write.sourceInColdStorage.suggestion": {
     "sourceHash": "f279603"
   },
+  "errors.write.mountedVolumeInside.title": "Há um disco montado no caminho",
+  "@errors.write.mountedVolumeInside.title": {
+    "sourceHash": "eedcbbc"
+  },
+  "errors.write.mountedVolumeInside.message.delete": "Há um disco ou servidor montado em {mountPoint}, e apagar ali levaria junto tudo o que há nele. O Cmdr parou antes de apagar qualquer coisa.",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "b7dc0f0"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "Há um disco ou servidor montado em {mountPoint}, então substituir a pasta que o contém apagaria tudo o que há no disco. O Cmdr deixou essa pasta e o disco como estavam.",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "39a5185"
+  },
+  "errors.write.mountedVolumeInside.suggestion.delete": "Ejete esse disco e depois apague de novo. Para esvaziar o próprio disco, abra-o e apague o que há nele por lá.",
+  "@errors.write.mountedVolumeInside.suggestion.delete": {
+    "sourceHash": "9825fac"
+  },
+  "errors.write.mountedVolumeInside.suggestion.replace": "Ejete esse disco e tente de novo. Para manter a pasta, escolha “Ignorar” ou “Renomear” em vez de “Substituir”.",
+  "@errors.write.mountedVolumeInside.suggestion.replace": {
+    "sourceHash": "4f08af3"
+  },
   "errors.write.sourceChanged.title": "Este arquivo mudou durante a cópia",
   "@errors.write.sourceChanged.title": {
     "sourceHash": "1c63c8b"

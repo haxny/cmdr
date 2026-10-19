@@ -535,6 +535,14 @@
   "@errors.write.sourceChanged.title": {
     "sourceHash": "fb20395"
   },
+  "errors.write.mountedVolumeInside.message.delete": "En {mountPoint} hay una unidad o un servidor montados, y eliminar ahí haría desaparecer todo su contenido. Cmdr se detuvo antes de eliminar nada.",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "d0a45f2"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "En {mountPoint} hay una unidad o un servidor montados, así que reemplazar la carpeta en la que está haría desaparecer todo el contenido de la unidad. Cmdr dejó esa carpeta y la unidad como estaban.",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "781e29f"
+  },
   "errors.write.sourceChanged.message": "El archivo {path} cambió mientras Cmdr hacía la copia, así que Cmdr no guardó nada. El archivo sigue donde estaba.",
   "@errors.write.sourceChanged.message": {
     "sourceHash": "6751aad"
