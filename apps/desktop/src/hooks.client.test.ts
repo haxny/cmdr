@@ -40,11 +40,17 @@ describe('handleError', () => {
   })
 
   it('falls back to the path when no route matched', async () => {
-    const noRoute = { route: { id: null }, url: new URL('http://localhost/settings'), params: {} } as unknown as NavigationEvent
+    const noRoute = {
+      route: { id: null },
+      url: new URL('http://localhost/settings'),
+      params: {},
+    } as unknown as NavigationEvent
 
-    await handleError({ kind: 'unknown', error: new Error('boom'), event: noRoute })
+    const error = new Error('boom')
 
-    expect(h.logPageCrash).toHaveBeenCalledWith({ error: expect.any(Error), routeId: '/settings' })
+    await handleError({ kind: 'unknown', error, event: noRoute })
+
+    expect(h.logPageCrash).toHaveBeenCalledWith({ error, routeId: '/settings' })
   })
 
   it("keeps an app error's own message", async () => {

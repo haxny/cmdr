@@ -35,10 +35,11 @@ catches it and swaps the window for its error page. A v0.54.0 user on Catalina g
 Error" and a log with no trace of why. So:
 
 - `apps/desktop/src/hooks.client.ts` implements `handleError`. For an `unknown` or `app` throw it calls `logPageCrash`
-  (`Page crashed in {routeId}: {detail}\n{stack}`, error level, so an opted-in auto-send ships it; `detail` and the
-  frames come from `describeThrown`, the same split the `window` listeners use, cause chain included) and returns
-  `{ detail }`, plus `message: 'Name: message'` for an `unknown` throw. A `framework` error (a route that doesn't exist)
-  isn't a crash and isn't logged.
+  (`Page crashed in {routeId}: {detail}\n{stack}`, error level, so an opted-in auto-send ships it). Like the `window`
+  listeners it logs the thrown value RAW as `{detail}`, so the bridge's `describeForLog` renders it with its cause chain
+  and identity markers, and only the frames are split out. It returns `{ detail }` as plain text
+  (`describeForLog(…, { marks: false })`: a marked string must never reach the screen), plus `message: 'Name: message'`
+  for an `unknown` throw. A `framework` error (a route that doesn't exist) isn't a crash and isn't logged.
 - `apps/desktop/src/routes/+error.svelte` shows `page.error.detail` and offers a report (`pageCrash` incident) plus
   Reload. Only the root layout sits above it, so in the main window it hosts the report dialog and toasts itself.
 - **`whenLoggerReady` holds early lines.** LogTape drops anything logged before `configure`, and `initLogger` runs in

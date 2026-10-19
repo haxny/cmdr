@@ -12,8 +12,7 @@ timestamps. The Rust side's fern dispatch tree, with its per-output level filter
 - **`describe-for-log.ts`**: renders every logged value.
 - **`log-markers.ts`**: marks a value for error reports, mirroring `cmdr_fs::log_private` (table: `log-markers.json`).
 - **`uncaught-errors.ts`**: forwards `window` `error` / `unhandledrejection` to `log.error` under the `uncaught`
-  category (registered from `routes/+layout.ts`); `logPageCrash` does it for throws SvelteKit catches
-  (`apps/desktop/src/hooks.client.ts`).
+  category (registered from `routes/+layout.ts`); `logPageCrash` does it for throws SvelteKit catches.
 - **`log-once.ts`**: `LogOnceGate`, which lets a failure that recurs per event, poll tick, or call log once until it
   clears.
 - Rust side: `src-tauri/src/commands/logging.rs` (batch IPC receiver + runtime level control); the dispatch tree is in
@@ -43,10 +42,10 @@ Usage (adding logging, `RUST_LOG` recipes, the verbose toggle): `docs/tooling/lo
   ` (×N, deduplicated)`; above 200 FE logs/s the excess drops with an "Excessive frontend logging detected" warning.
   Don't remove these guards.
 - **An uncaught frontend throw is only visible because `uncaught-errors.ts` forwards it.** The console is unread under
-  Tauri, so without those listeners a crash leaves no line in the log file, a bundle, or a CI E2E run (render throws and early lines: `DETAILS.md` § Crashes SvelteKit catches). They observe and
-  never `preventDefault` (that would also blind `hmr-recovery`). ❗ WebKit's `error.stack` carries FRAMES ONLY, so the
-  message is put back in front of it; ❌ never log a stack verbatim here. The message rides `{detail}`, the frames
-  `{stack}`.
+  Tauri, so without it a crash leaves no line in the log file, a bundle, or a CI E2E run (render throws: `DETAILS.md` §
+  Crashes SvelteKit catches). It never calls `preventDefault` (that would blind `hmr-recovery`). The thrown value rides
+  `{detail}` raw, the frames `{stack}`: ❗ WebKit's `error.stack` is FRAMES ONLY, so ❌ never log a stack as the
+  message.
 - **`beforeunload` flush is best-effort (async)**, so logs right before a page unload may not all reach Rust.
 - **Error-report bundles (Help > Send error report…) include the file target's recent debug logs**, the same logs the
   cap setting governs. Keep the file chain at Debug.

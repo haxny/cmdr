@@ -36,9 +36,9 @@ describe('uncaught error logging', () => {
     )
 
     expect(h.error).toHaveBeenCalledTimes(1)
-    const [, ctx] = h.error.mock.calls[0] as [string, { source: string; detail: string }]
+    const [, ctx] = h.error.mock.calls[0] as [string, { source: string; detail: unknown }]
     expect(ctx.source).toBe('app.js:12:3')
-    expect(ctx.detail).toContain('kaboom')
+    expect(ctx.detail).toBe(boom)
   })
 
   it('keeps the message when the engine leaves it out of the stack', () => {
@@ -51,23 +51,25 @@ describe('uncaught error logging', () => {
     boom.stack = 'flush@app.js:1:17123\n@app.js:1:6396'
     window.dispatchEvent(new ErrorEvent('error', { error: boom, message: '', filename: 'app.js', lineno: 1, colno: 1 }))
 
-    const [, ctx] = h.error.mock.calls[0] as [string, { detail: string; stack: string }]
-    expect(ctx.detail).toBe('Error: each_key_duplicate')
+    const [, ctx] = h.error.mock.calls[0] as [string, { detail: unknown; stack: string }]
+    expect(ctx.detail).toBe(boom)
     expect(ctx.stack).toContain('flush@app.js')
   })
 
-  it('puts the message in {detail} and the frames in {stack}, so a report redacts and caps the message', () => {
+  it('puts the thrown value raw in {detail} and the frames in {stack}, so a report redacts and caps the message', () => {
     // `{detail}` renders as a `detail="…"` field, which the report pass redacts (paths with any
-    // prefix included) and caps. The frames are the app bundle's own URLs.
+    // prefix included) and caps. It goes in RAW: the bridge renders it through `describeForLog`,
+    // which marks identity values, and a pre-rendered string would have its markers scrubbed.
+    // The frames are the app bundle's own URLs.
     const event = new Event('unhandledrejection') as Event & { reason: unknown }
     const reason = new Error('Permission denied: /srv/data/Private Person/Medical records')
     reason.stack = 'Error: Permission denied: /srv/data/Private Person/Medical records\n    at load (app.js:1:2)'
     event.reason = reason
     window.dispatchEvent(event)
 
-    const [template, ctx] = h.error.mock.calls[0] as [string, { detail: string; stack: string }]
+    const [template, ctx] = h.error.mock.calls[0] as [string, { detail: unknown; stack: string }]
     expect(template).toBe('Unhandled promise rejection: {detail}\n{stack}')
-    expect(ctx.detail).toBe('Error: Permission denied: /srv/data/Private Person/Medical records')
+    expect(ctx.detail).toBe(reason)
     expect(ctx.stack).toBe('    at load (app.js:1:2)')
   })
 
@@ -79,8 +81,8 @@ describe('uncaught error logging', () => {
     window.dispatchEvent(event)
 
     expect(h.error).toHaveBeenCalledTimes(1)
-    const [, ctx] = h.error.mock.calls[0] as [string, { detail: string }]
-    expect(ctx.detail).toContain('promise went bad')
+    const [, ctx] = h.error.mock.calls[0] as [string, { detail: unknown }]
+    expect(ctx.detail).toBe(event.reason)
   })
 
   it('ignores a resource-load error, which is not a crash', () => {
@@ -107,11 +109,23 @@ describe('uncaught error logging', () => {
     const detail = logPageCrash({ error: boom, routeId: '/(main)' })
 
     expect(detail).toBe('TypeError: undefined is not an object')
-    const [template, ctx] = h.error.mock.calls[0] as [string, { routeId: string; detail: string; stack: string }]
+    const [template, ctx] = h.error.mock.calls[0] as [string, { routeId: string; detail: unknown; stack: string }]
     expect(template).toBe('Page crashed in {routeId}: {detail}\n{stack}')
     expect(ctx.routeId).toBe('/(main)')
-    expect(ctx.detail).toBe('TypeError: undefined is not an object')
+    expect(ctx.detail).toBe(boom)
     expect(ctx.stack).toBe('render@app.js:1:42')
+  })
+
+  it('hands the error page plain text, never log markers', () => {
+    // `describeForLog` marks identity-keyed values for the report redactor; a marked string is
+    // log text and must never reach the screen or the report note.
+    const thrown = { path: '/Users/someone/Secret plans.txt' }
+
+    const detail = logPageCrash({ error: thrown, routeId: '/(main)' })
+
+    expect(detail).toBe('{"path":"/Users/someone/Secret plans.txt"}')
+    const [, ctx] = h.error.mock.calls[0] as [string, { detail: unknown }]
+    expect(ctx.detail).toBe(thrown)
   })
 
   it('registers only once, so an HMR re-import cannot double-log', () => {

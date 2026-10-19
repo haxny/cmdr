@@ -20,12 +20,12 @@ import { getAppLogger, whenLoggerReady } from './logger'
 const log = getAppLogger('uncaught')
 
 /**
- * Splits a thrown value into its message (`describeForLog`: `Name: message` plus any cause chain)
- * and its frames. `logPageCrash` uses it too, for the errors SvelteKit catches.
- *
- * The message goes to `{detail}`, which the log bridge renders as a `detail="…"` field: an
- * error report redacts it (paths under any prefix included) and caps it, because an error
- * message can quote a path or a name. The frames are the app bundle's own URLs.
+ * The frames of a thrown value, without the `Name: message` header V8 opens them with. The
+ * thrown value itself goes to `{detail}` RAW, which the log bridge renders through
+ * `describeForLog` (`Name: message` plus any cause chain, identity values marked) as a
+ * `detail="…"` field: an error report redacts and caps it, because an error message can quote a
+ * path or a name. Pre-rendering it here would scrub those markers. The frames are the app
+ * bundle's own URLs.
  *
  * ❗ **The message is always there, whatever the engine put in the stack.** WebKit's
  * `error.stack` is FRAMES ONLY, where V8's opens with `Name: message`. Cmdr ships on
@@ -34,12 +34,11 @@ const log = getAppLogger('uncaught')
  * and it cost a real diagnosis. (verified on macOS 26.6.2 / WKWebView and Linux WebKitGTK,
  * reading E2E logs, 2026-09-07)
  */
-export function describeThrown(value: unknown): { detail: string; stack: string } {
-  const detail = describeForLog(value)
-  if (!(value instanceof Error)) return { detail, stack: '' }
+function framesOf(value: unknown): string {
+  if (!(value instanceof Error)) return ''
   const headline = `${value.name}: ${value.message}`
   const stack = value.stack ?? ''
-  return { detail, stack: stack.startsWith(headline) ? stack.slice(headline.length).replace(/^\n/, '') : stack }
+  return stack.startsWith(headline) ? stack.slice(headline.length).replace(/^\n/, '') : stack
 }
 
 let registered = false
@@ -64,7 +63,8 @@ export function registerUncaughtErrorLogging(): void {
     if (thrown === null && !event.message) return
     const { filename, lineno, colno } = event
     const source = filename ? `${filename}:${String(lineno)}:${String(colno)}` : 'unknown'
-    const { detail, stack } = thrown !== null ? describeThrown(thrown) : { detail: event.message, stack: '' }
+    const detail = thrown ?? event.message
+    const stack = framesOf(thrown)
     whenLoggerReady(() => {
       if (stack) log.error('Uncaught error at {source}: {detail}\n{stack}', { source, detail, stack })
       else log.error('Uncaught error at {source}: {detail}', { source, detail })
@@ -72,7 +72,8 @@ export function registerUncaughtErrorLogging(): void {
   })
 
   window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
-    const { detail, stack } = describeThrown(event.reason)
+    const detail: unknown = event.reason
+    const stack = framesOf(detail)
     whenLoggerReady(() => {
       if (stack) log.error('Unhandled promise rejection: {detail}\n{stack}', { detail, stack })
       else log.error('Unhandled promise rejection: {detail}', { detail })
@@ -89,18 +90,19 @@ export interface CaughtPageError {
 
 /**
  * Logs a throw SvelteKit caught (a component that threw while rendering, or a `load`), and
- * returns its `Name: message` for the error page to show.
+ * returns it as plain text (`Name: message` plus any cause chain, no log markers) for the error
+ * page to show.
  *
  * SvelteKit catches these itself and swaps the window for its error page, so the `window`
  * listeners above never see one: without this the person got a bare "500" and the log got
  * nothing. Called from `hooks.client.ts`.
  */
 export function logPageCrash({ error, routeId }: CaughtPageError): string {
-  const { detail, stack } = describeThrown(error)
+  const stack = framesOf(error)
   const route = routeId ?? 'no route'
   whenLoggerReady(() => {
-    if (stack) log.error('Page crashed in {routeId}: {detail}\n{stack}', { routeId: route, detail, stack })
-    else log.error('Page crashed in {routeId}: {detail}', { routeId: route, detail })
+    if (stack) log.error('Page crashed in {routeId}: {detail}\n{stack}', { routeId: route, detail: error, stack })
+    else log.error('Page crashed in {routeId}: {detail}', { routeId: route, detail: error })
   })
-  return detail
+  return describeForLog(error, { marks: false })
 }
