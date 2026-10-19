@@ -172,3 +172,7 @@
 23:41:00.000 WARN  move  source sweep: couldn't remove /Volumes/<volume>/<dir>/<dir>/<file>.jpg: NotFound
 23:41:00.001 INFO  scan_preview  scan preview 7 started: $HOME/Pictures/<dir> on volume root
 23:41:00.002 ERROR FE:transferProgress  Move error: Path: $HOME/Pictures/<dir>/<file>.jpg; Error type: io_error
+13:54:07.046 DEBUG smb2::client::times  tree: set times on <ipv4-private>\<share>\<dir>\<dir>\<file>.md
+13:54:02.911 INFO  stall_probe::listing  listing_done path=/Volumes/<volume>/<dir> entries=241 total_ms=264
+13:54:06.475 DEBUG FE:transferDialog  Initial path resolution: destinationPath="/Volumes/<volume>/<dir>", currentVolumeId=root
+13:54:06.723 DEBUG copy_concurrent_source  conflict detected at /Volumes/<volume>/<dir>/<dir> (source_is_dir=true, dest_is_dir=true)

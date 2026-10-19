@@ -156,7 +156,7 @@ fn redact_with<'a>(line: &'a str, context: Option<&RedactionContext>) -> Cow<'a,
         let (replacement, consumed) = if caps.name("detail_field").is_some() {
             redact_detail_field(&caps, context, echoed)
         } else {
-            dispatch(&caps, context)
+            dispatch(&caps, line, context)
         };
 
         let buf = out.get_or_insert_with(|| String::with_capacity(line.len()));
@@ -264,6 +264,13 @@ fn redactor_regex() -> &'static Regex {
                                   [^\s"'<>|`]+ (?: \x20 [^\s"'<>|`]+ )*
             )
             | (?P<unc>            \\\\ [^\\\s"'<>|`]+ (?: \\ [^\\\s"'<>|`]+ (?: \x20 [^\\\s"'<>|`]+ )* )* )
+            # A UNC path without its leading `\\`: `smb2` names a file on a DFS share
+            # `host\share\path` (`Tree::format_path`) and has logged it bare in prose. A
+            # host-shaped first word, then two separators at least, so `WORKGROUP\alice` and a
+            # lone `a\b` stay prose. Before `ipv4` and `mdns`, which would claim only the host.
+            | (?P<bare_unc>       [\p{L}\p{N}] [\p{L}\p{N}._-]*
+                                  (?: \\ [^\\\s"'<>|`]+ (?: \x20 [^\\\s"'<>|`]+ )* ){2,}
+            )
             | (?P<url_userinfo>   (?P<scheme>[a-zA-Z][a-zA-Z0-9+.-]*) ://
                                   (?P<userinfo>[^\s@/:"'<>|`]+ (?: : [^\s@/"'<>|`]* )? )
                                   @
@@ -420,29 +427,33 @@ fn redactor_regex() -> &'static Regex {
 /// A path branch consumes only the path, NOT the trailing noise it split off: the noise goes
 /// back to the scanner in [`redact_with`], which is what lets a pattern that begins inside
 /// the over-match still be recognized. Every other branch consumes its whole match.
-fn dispatch(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String, usize) {
+fn dispatch(caps: &Captures<'_>, line: &str, context: Option<&RedactionContext>) -> (String, usize) {
+    // A path that fills a quoted or backticked span ends at the closing quote, as at a `: `
+    // seam, so a lowercase last word there is part of the name, not prose to hand back.
+    let fills_quotes = fills_quotes(line, caps);
+    let path_end = |s| split_trailing_noise(s, !fills_quotes).0;
     if let Some(m) = caps.name("win_home") {
-        let (path, _) = split_trailing_noise(m.as_str());
+        let path = path_end(m.as_str());
         return (redact_windows_home(path, context), path.len());
     }
     if let Some(m) = caps.name("unix_home") {
-        let (path, _) = split_trailing_noise(m.as_str());
+        let path = path_end(m.as_str());
         return (redact_unix_home(path, context), path.len());
     }
     if let Some(m) = caps.name("unix_system") {
-        let (path, _) = split_trailing_noise(m.as_str());
+        let path = path_end(m.as_str());
         return (redact_unix_system(path, context), path.len());
     }
     if let Some(m) = caps.name("volumes") {
-        let (path, _) = split_trailing_noise(m.as_str());
+        let path = path_end(m.as_str());
         return (redact_volumes(path, context), path.len());
     }
     if let Some(m) = caps.name("media") {
-        let (path, _) = split_trailing_noise(m.as_str());
+        let path = path_end(m.as_str());
         return (redact_media(path, context), path.len());
     }
     if let Some(m) = caps.name("abs_path") {
-        let (path, _) = split_trailing_noise(m.as_str());
+        let path = path_end(m.as_str());
         if path.is_empty() {
             // Can't happen (a path starts with its slash), but consuming nothing would skip
             // the whole match unredacted. Hand back everything after the slash instead.
@@ -453,13 +464,20 @@ fn dispatch(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String,
         return (redact_relative_path(path, context, true), path.len());
     }
     if let Some(m) = caps.name("remote_url") {
-        let (path, _) = split_trailing_noise(m.as_str());
-        let reference = trim_reference_end(path);
+        let reference = trim_reference_end(path_end(m.as_str()));
         return (redact_remote_url(reference, context), reference.len());
     }
     if let Some(m) = caps.name("unc") {
-        let (path, _) = split_trailing_noise(m.as_str());
+        let path = path_end(m.as_str());
         return (redact_remote_unc(path, context), path.len());
+    }
+    if let Some(m) = caps.name("bare_unc") {
+        // Put the `\\` back, so the end rules and the rewrite see the UNC path it is and the
+        // share gets the token it has with its backslashes.
+        let unc = format!(r"\\{}", m.as_str());
+        let path = path_end(&unc);
+        let path = if path.len() > 2 { path } else { unc.as_str() };
+        return (redact_remote_unc(path, context)[2..].to_string(), path.len() - 2);
     }
     if caps.name("url_userinfo").is_some() {
         let reference = caps.get(0).map_or("", |m| m.as_str());
@@ -526,6 +544,17 @@ fn dispatch(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String,
         caps.get(0).map(|m| m.as_str().to_string()).unwrap_or_default(),
         whole_len(caps),
     )
+}
+
+/// Whether the match runs from right after an opening `"`, `'`, or `` ` `` to right before the
+/// same closing one (`destinationPath="/Volumes/x/tax returns"`). The path branches stop at a
+/// quote, so the quote is where the value ends.
+fn fills_quotes(line: &str, caps: &Captures<'_>) -> bool {
+    let Some(whole) = caps.get(0) else { return false };
+    let (before, after) = (&line[..whole.start()], &line[whole.end()..]);
+    ['"', '\'', '`']
+        .iter()
+        .any(|&quote| before.ends_with(quote) && after.starts_with(quote))
 }
 
 /// Byte length of the whole match, for the branches that consume all of it.

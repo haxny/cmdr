@@ -11,7 +11,7 @@ use super::paths::{
 };
 use super::references::{redact_host, redact_remote_unc, redact_remote_url, redact_scheme_less};
 use super::whole_len;
-use super::{redactor_regex, split_trailing_noise_with};
+use super::{redactor_regex, split_trailing_noise};
 use regex::Captures;
 
 /// Path-branch groups: a value one of these claims from its first byte is an absolute path
@@ -85,7 +85,7 @@ pub(super) fn redact_path_field(caps: &Captures<'_>, context: Option<&RedactionC
     if claimed_by_path_branch(value) {
         // The key says this is a path, so it ends where the path grammar ends, lowercase last
         // word included, and gets the same tokens as its quoted spelling.
-        let (path, _) = split_trailing_noise_with(value, false);
+        let (path, _) = split_trailing_noise(value, false);
         let path = super::references::trim_reference_end(path);
         if !path.is_empty() {
             let redacted = redact_typed_path(path, context, true);

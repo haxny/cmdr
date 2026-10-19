@@ -10,7 +10,7 @@ use super::names::unescape_debug;
 use super::paths::{has_extension_like_suffix, redact_leaf};
 use super::{
     REPORT_DETAIL_MAX_CHARS, RedactionContext, dispatch, identity_token, redact_with, redactor_regex,
-    split_trailing_noise, split_trailing_noise_with, whole_len,
+    split_trailing_noise, whole_len,
 };
 use regex::{Captures, Regex};
 use std::borrow::Cow;
@@ -40,7 +40,7 @@ pub(super) fn echoed_identities(line: &str, context: Option<&RedactionContext>) 
     let mut found = Vec::new();
     for caps in redactor_regex().captures_iter(line) {
         if let Some(branch) = ECHO_PATH_BRANCHES.iter().find_map(|g| caps.name(g)) {
-            if let Some(identity) = path_leaf_identity(branch.as_str(), &caps, context) {
+            if let Some(identity) = path_leaf_identity(branch.as_str(), &caps, line, context) {
                 found.push(identity);
             }
             continue;
@@ -86,11 +86,13 @@ pub(super) fn echoed_identities(line: &str, context: Option<&RedactionContext>) 
 fn path_leaf_identity(
     matched: &str,
     caps: &Captures<'_>,
+    line: &str,
     context: Option<&RedactionContext>,
 ) -> Option<EchoedIdentity> {
-    let (path, _) = split_trailing_noise(matched);
+    // The path is what the rewrite consumed, so the leaf ends exactly where its token does.
+    let (redacted, consumed) = dispatch(caps, line, context);
+    let path = matched.get(..consumed)?;
     let raw = path.rsplit(['/', '\\']).find(|seg| !seg.is_empty())?;
-    let (redacted, _) = dispatch(caps, context);
     let token = redacted.rsplit(['/', '\\']).find(|seg| !seg.is_empty())?;
     let is_name_token = token.starts_with("<file") || token.starts_with("<dir");
     (is_name_token && raw.chars().count() >= MIN_ECHOED_IDENTITY_CHARS).then(|| EchoedIdentity {
@@ -211,7 +213,7 @@ fn redact_any_absolute_path(text: &str, context: Option<&RedactionContext>) -> S
         let (Some(lead), Some(path)) = (caps.name("lead"), caps.name("path")) else {
             break;
         };
-        let (path_text, _) = split_trailing_noise_with(path.as_str(), false);
+        let (path_text, _) = split_trailing_noise(path.as_str(), false);
         if path_text.is_empty() {
             out.push_str(&text[pos..=path.start()]);
             pos = path.start() + 1;

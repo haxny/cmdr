@@ -109,10 +109,93 @@ fn the_leaf_scrub_spares_log_targets() {
     );
 }
 
+/// A bracket pair inside a folder name is part of the name. The forward scan once read the `]`
+/// of `[§ 12 AB]` as the end of a sentence, so the token stopped there and the rest of the folder
+/// name shipped in every listing, transfer, and verifier line (ERR-8MEX6). Only a closing bracket
+/// with no opener in its own segment ends a path (`(pane sent to /Volumes/x/y); following`).
+#[test]
+fn a_bracket_pair_inside_a_name_keeps_the_name_whole() {
+    let cases = [
+        (
+            "listing_done path=/Volumes/Team Share/1234-56.789 Acme Widget Co [§ 12 AB] 45X6_2020 QWERTY entries=241 read_dir_ms=257",
+            "listing_done path=/Volumes/<volume>/<dir> entries=241 read_dir_ms=257",
+        ),
+        (
+            "copy_between_volumes: 451 sources, dest=/Volumes/Team Share/Case 12 [Ref 3] Final Draft",
+            "copy_between_volumes: 451 sources, dest=/Volumes/<volume>/<dir>",
+        ),
+        (
+            "enrich: 7/7 dirs got sizes under /Volumes/Team Share/Case 12 [Ref 3] Final Draft",
+            "enrich: 7/7 dirs got sizes under /Volumes/<volume>/<dir>",
+        ),
+        (
+            "The share is mounted elsewhere (pane sent to /Volumes/Team Share/Case [A 1] Final QWERTY); following it",
+            "The share is mounted elsewhere (pane sent to /Volumes/<volume>/<dir>); following it",
+        ),
+        (
+            "conflict detected at /Volumes/Team Share/Plans/Report (final) (source_is_dir=true, dest_is_dir=true)",
+            "conflict detected at /Volumes/<volume>/<dir>/<dir> (source_is_dir=true, dest_is_dir=true)",
+        ),
+        (
+            "spawning copy /Users/alice/Work/Report (final) -> /Volumes/Team Share/Plans/Report (final)",
+            "spawning copy $HOME/<dir>/<dir> -> /Volumes/<volume>/<dir>/<dir>",
+        ),
+        (
+            "Cover: can't walk /srv/clients/Case [A 1] Tail: permission denied",
+            "Cover: can't walk /<dir>/<dir>/<dir>: permission denied",
+        ),
+    ];
+    for (input, expected) in cases {
+        assert_eq!(r(input), expected, "input: {input:?}");
+    }
+}
+
+/// A path that fills a quoted or backticked span ends at the closing quote, as at a `: ` seam,
+/// so its lowercase last words are part of the name, not prose to give back. The frontend's
+/// `destinationPath="…"` shipped them.
+#[test]
+fn a_path_filling_its_quotes_keeps_its_lowercase_last_words() {
+    let cases = [
+        (
+            "Initial path resolution: destinationPath=\"/Volumes/Team Share/Case 12 [Ref 3] final draft\", currentVolumeId=root",
+            "Initial path resolution: destinationPath=\"/Volumes/<volume>/<dir>\", currentVolumeId=root",
+        ),
+        (
+            "Verifier: 6 diffs in `/Volumes/Team Share/appeal templates` (0 stale, 6 new dir)",
+            "Verifier: 6 diffs in `/Volumes/<volume>/<dir>` (0 stale, 6 new dir)",
+        ),
+        (
+            "skipping '/mnt/backup/tax returns' for now",
+            "skipping '/mnt/<dir>/<dir>' for now",
+        ),
+        // A seam inside the quotes still ends the path.
+        (
+            "said \"/Volumes/Team Share/tax returns: failed\" once",
+            "said \"/Volumes/<volume>/<dir>: failed\" once",
+        ),
+    ];
+    for (input, expected) in cases {
+        assert_eq!(r(input), expected, "input: {input:?}");
+    }
+}
+
+/// The index verifier's diff samples: names keyed by kind, so none ships bare.
+#[test]
+fn verifier_diff_samples_are_keyed_names() {
+    assert_eq!(
+        r(
+            r#"Verifier: 6 diffs in path="/Volumes/Team Share/Case [A 1]" (0 stale, 1 new files, 1 new dir, 0 modified) [samples: +dir="appeal templates", +file="notes v2.md", ~dir="__pycache__"]"#
+        ),
+        r#"Verifier: 6 diffs in path="/Volumes/<volume>/<dir>" (0 stale, 1 new files, 1 new dir, 0 modified) [samples: +dir="<dir>", +file="<file>.md", ~dir="<dir>"]"#
+    );
+}
+
 #[test]
 fn prose_redaction_is_idempotent() {
     let context = context();
     for input in [
+        "listing_done path=/Volumes/Team Share/Case 12 [§ 3 AB] Final QWERTY entries=241",
+        "conflict detected at /Volumes/Team Share/Plans/Report (final) (source_is_dir=true)",
         "Cover: can't walk /srv/clients/Acme Corp/plans.pdf: permission denied",
         "op 01a0 (Trash) failed: /Users/k/Desktop/Shot 1.jpeg: the Trash refused it: “Shot 1.jpeg”",
         "Installing update into bundle: /Applications/Cmdr.app",

@@ -14,6 +14,7 @@ Depth and rationale. `CLAUDE.md` holds the must-knows and the pattern table.
 | `abs_path` | any other absolute path, two segments or more, not after a word char (`/srv/a`, `/DCIM/x.jpg`) | system root kept (`/Applications`), every other segment tokenized |
 | `remote_url` | SFTP/SSH/WebDAV/S3/HTTP(S)/SMB URL, with or without userinfo | scheme + hierarchy + port + address class + conservative extension; identities tokenized |
 | `unc` | `\\host\share\...` | `\\<host>\<share>\<redacted tail>` |
+| `bare_unc` | `host\share\...` with no leading `\\` (a DFS path), two separators at least | `<host>\<share>\<redacted tail>`, same tokens as with `\\` |
 | `url_userinfo` | another scheme's `scheme://user[:pass]@host/...` | same complete component redaction as recognized URLs |
 | `bare_userinfo` | `//user[:pass]@host/...` (no scheme) | SMB-shaped component redaction without inventing a scheme |
 | `detail_field` | external text: `detail="…"`, `stderr="…"`, `stdout="…"` (Debug-quoted) | redacted, keyed echoes scrubbed, capped (200 chars) |
@@ -167,11 +168,16 @@ The boundary rules, in order, each earning its place against one of those:
      path, `/` otherwise (there a `\` is a `{:?}` escape).
    - **A bare number or a lone capital with a dot (`12.`, `J.`) opens a name**, so the leaf `12. Summer Trip on
      volume root` keeps its words. A sentence ending on one costs a word of prose, never a leak.
+   - **A closing bracket ends the path only when its own segment never opened it** (`closes_a_pair`). `[§ 12 AB]` and
+     `(final)` are part of a folder name; the `)` of `(pane sent to /Volumes/x/y); following` was opened before the
+     path. Reading every `]` as a sentence end tokenized a folder up to its `]` and shipped the rest of its name in
+     every listing, transfer, and verifier line (ERR-8MEX6). Since a name's `(final)` now runs on, a `key=` word
+     (`(source_is_dir=true,`) ends the path before it: that's the next field, never a name.
 3. **`ends_filename` demands a LETTER-led extension**, unlike the looser `has_extension_like_suffix` used for the
    `<dir>`/`<file>` decision. `01.13.03` in a timestamp otherwise reads as an extension and halves the name. A digit-led
    real extension (`.7z`) just doesn't end the scan, which costs a word of prose, never a leak.
-4. **Backward trim of closing punctuation** (`.` included, so `…/state. Then` keeps its period as prose), then of a
-   **lowercase extension-less run**, floored at the first segment after the last separator. After the run, a lone
+4. **Backward trim of closing punctuation** (`.` included, so `…/state. Then` keeps its period as prose; a bracket only
+   when unpaired, by the same rule), then of a **lowercase extension-less run**, floored at the first segment after the last separator. After the run, a lone
    trailing ` -` goes back too: it's the start of a `{from} -> {to}` arrow (the regex stops at `>`), and it already
    stopped the run from eating the name's last word. That floor is
    what leaves `/Volumes/naspi and then it failed` as `naspi` rather than nothing. It is skipped when the path runs
@@ -181,6 +187,10 @@ The boundary rules, in order, each earning its place against one of those:
    trimming one shipped the tail of a temp name.
 5. **A `\u{…}` escape is part of a name.** Its closing `}` neither ends a sentence nor gets trimmed as punctuation, so
    `cafe\u{301} menu.pdf` stays whole.
+6. **A path filling its quotes skips the prose run** (`fills_quotes` in `dispatch`): a match running from just after an
+   opening `"`, `'`, or `` ` `` to just before the same closing one ends there, like at a seam, so
+   `destinationPath="/Volumes/x/tax returns"` keeps `returns`. Every other rule still applies, a seam inside the
+   quotes included. `split_trailing_noise(s, trim_prose_run)` takes the switch; keyed field values pass `false` too.
 
 ### Why the scan resumes mid-match
 
@@ -245,7 +255,7 @@ fixed set of keys (see the regex) with either a `{:?}`-quoted value or a bare on
   `end_of_bare_value` cuts at the first `: ` seam, `, `, or ` key=`, then drops an unbalanced `)`. A comma-space inside
   a bare name ends it early and leaks the rest; `{:?}` values can't hit that, which is why our own sites use it.
 - **An unquoted absolute value** that a path branch claims from its first byte is redacted as a typed path ending where
-  `split_trailing_noise_with(value, false)` says, which is every rule except the lowercase prose run (the key already
+  `split_trailing_noise(value, false)` says, which is every rule except the lowercase prose run (the key already
   says it's a path, so `…/Medical records` stays one leaf and matches its quoted spelling's token).
 - **`{:?}`-printed structs** use `key: "…"` (`PermissionDenied { path: "…" }`); a quoted value after `: ` is the same
   complete typed value. `path: ` before anything else is prose and gets rescanned. Anything else is walked here by `redact_relative_path`:
@@ -313,5 +323,12 @@ says nothing about anyone. A path token denotes a normalized segment name, not p
 ## Known gap: a lowercase last word before prose
 
 `/Volumes/x/summer trip failed to open` still reads `trip failed to open` as prose, because nothing local tells a
-folder's lowercase word from the sentence after it. The seam rule covers the common `{path}: {message}` shape; logging
-the path as a quoted field covers the rest.
+folder's lowercase word from the sentence after it. The seam rule covers the common `{path}: {message}` shape, a path
+filling its quotes is whole, and logging the path as a quoted field covers the rest.
+
+## Known gap: bare names and identities in prose
+
+The redactor recognizes a name only by a path around it or a key in front of it, so a site that formats one bare
+leaks it. Fix those at the site with a key: the index verifier's diff samples are `+dir="…"` / `-file="…"`, and
+`copy_between_volumes` logs volume IDs (which `derived_id` tokenizes) rather than display names, since an SMB volume's
+name is its share name. A bare `share=` / `server=NASPOLYA` is the same gap (§ "Decision: account names redacted, structured remote shares redacted").
