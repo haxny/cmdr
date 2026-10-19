@@ -40,7 +40,8 @@ Issue #456. Must-knows in `CLAUDE.md`; this is the why and the catalog.
 - `recording_turned_on` / `recording_turned_off` (`by`: `user` | `organization`): the opt-out itself.
 - `state_file_recovered` (`file`: `settings` | `shortcuts` | `license` | `app_status` | `operation_log` |
   `chat_history` | `favorites` | `go_to_path_history` | `search_history` | `selection_history` |
-  `multi_rename_presets` | `multi_rename_last_settings` | `multi_rename_field_history` | `launch_days`):
+  `multi_rename_presets` | `multi_rename_last_settings` | `multi_rename_field_history` | `launch_days` |
+  `credentials`):
   `../state_recovery/mod.rs` `report`, once per file Cmdr couldn't read and started fresh. Never the path. Its notice
   rides `state_recovery`'s own queue, since it names where the copy went.
 

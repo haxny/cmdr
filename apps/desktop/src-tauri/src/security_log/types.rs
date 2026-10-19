@@ -190,6 +190,8 @@ pub enum StateFile {
     SftpHostKeys,
     /// `ai/ai-state.json`: whether local AI is installed, its server, and a dismissed offer.
     LocalAi,
+    /// `credentials.enc`, the saved passwords and keys on a Linux without a keyring.
+    Credentials,
 }
 
 /// One line of the file: `{"v":1,"at":"<UTC ISO 8601>","event":{"kind":…}}`.

@@ -19,7 +19,8 @@ and where the old copy went (#461). The backend sets the file aside and queues t
   nobody sees.
 - **One toast per recovery**, each its own id: two files breaking at once are two things to know.
 - **The settings case points at Settings › Updates & privacy**, because usage stats and crash reports came back off; the
-  license case at Settings › License. Every other file only offers Dismiss and Show in Finder.
+  license case at Settings › License. Every other file only offers Dismiss and Show in Finder (the credentials case adds
+  a body saying why).
 - **The headline's key is a literal per `StateFile`** (a `Record<StateFile, …>`, so a new file is a type error), ❌
   never built at runtime: `desktop-message-keys-unused` needs a real call site per key.
 

@@ -4375,6 +4375,8 @@ export type MessageKey =
   | 'shortcuts.window.title'
   | 'stateRecovery.appStatus.title'
   | 'stateRecovery.chatHistory.title'
+  | 'stateRecovery.credentials.body'
+  | 'stateRecovery.credentials.title'
   | 'stateRecovery.dismiss'
   | 'stateRecovery.favorites.title'
   | 'stateRecovery.goToPathHistory.title'

@@ -99,6 +99,14 @@
   "@stateRecovery.localAi.title": {
     "description": "Headline of a notice shown once: Cmdr keeps a small file about its on-device AI (whether the AI model is downloaded and installed, and whether the person dismissed the offer to install it), and that file couldn't be read, so Cmdr may offer the local AI setup or download again. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
   },
+  "stateRecovery.credentials.title": "Cmdr couldn’t read your saved passwords and keys, so it starts fresh",
+  "@stateRecovery.credentials.title": {
+    "description": "Headline of a notice shown once, on Linux computers without a system keyring only: Cmdr keeps saved server passwords, AI API keys, and the license key in its own encrypted file there, locked to this computer. After a move to a new computer (or a reinstall), that file can't be opened any more, so Cmdr set it aside and started an empty one. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.credentials.body": "This happens after a move to a new computer. Cmdr asks for each password again the next time it needs it.",
+  "@stateRecovery.credentials.body": {
+    "description": "Body of the notice above: why the saved passwords are gone (the file is locked to the computer it was saved on) and what happens next (Cmdr asks again when it connects). Plain text. Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
   "stateRecovery.keptCopy": "Cmdr kept the old file at {path}.",
   "@stateRecovery.keptCopy": {
     "description": "Line under any of the notices above that a damaged file was set aside rather than deleted, and where. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window.",

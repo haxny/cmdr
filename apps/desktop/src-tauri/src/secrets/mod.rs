@@ -20,7 +20,8 @@ pub mod system_keychain_smb;
 #[cfg(target_os = "linux")]
 mod keyring_linux;
 
-#[cfg(target_os = "linux")]
+// Also compiled for tests on any Unix, so its recovery cells run on a Mac too.
+#[cfg(any(target_os = "linux", all(test, unix)))]
 mod encrypted_file;
 
 mod plain_file;

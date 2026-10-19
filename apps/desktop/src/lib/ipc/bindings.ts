@@ -16502,6 +16502,8 @@ export type StateFile =
   | 'sftp_host_keys'
   // `ai/ai-state.json`: whether local AI is installed, its server, and a dismissed offer.
   | 'local_ai'
+  // `credentials.enc`, the saved passwords and keys on a Linux without a keyring.
+  | 'credentials'
 
 // One state file Cmdr couldn't read and started fresh, as the person hears about it.
 export type StateRecovery = {
@@ -18253,8 +18255,10 @@ export type VolumeError =
    *  path. ❗ The source is the NEW version now: a move must never delete it.
    *
    *  Typed rather than an [`IoError`](Self::IoError) so the user is told
-   *  what happened; a retry copies the new version. S3-only today (a
-   *  server-side copy in parts, `cmdr-s3` `server_copy.rs`).
+   *  what happened; a retry copies the new version. Raised by an S3
+   *  server-side copy in parts (`cmdr-s3` `server_copy.rs`), and by the copy
+   *  engine for a source stream that delivered more or fewer bytes than its
+   *  `StreamLength::Known` (`cmdr-operations` `transfer/volume/source_reads.rs`).
    */
   | { type: 'sourceChanged'; data: string }
   /**

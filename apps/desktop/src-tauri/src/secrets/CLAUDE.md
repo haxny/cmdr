@@ -11,7 +11,7 @@ license key and short code, JSON under `license.key`). `data_wipe/` lists (`keys
 - **`keychain_macos.rs`**: macOS Keychain via `security-framework` (production macOS).
 - **`keyring_linux.rs`**: Linux Secret Service via `keyring-core` + `zbus-secret-service-keyring-store`.
 - **`encrypted_file.rs`**: Cocoon-encrypted (ChaCha20-Poly1305, `/etc/machine-id` key) fallback for prod Linux without
-  Secret Service.
+  Secret Service. A file this machine can't open is set aside on the next save (`DETAILS.md` § Linux migration notes).
 - **`plain_file.rs`**: Plain JSON file (dev mode, all platforms).
 - **`system_keychain_smb.rs`** (macOS only): reads SMB passwords *other* apps (Finder/macOS) saved in the login
   keychain, so an os-mount volume can borrow it and go green without retyping. See the guardrail below.

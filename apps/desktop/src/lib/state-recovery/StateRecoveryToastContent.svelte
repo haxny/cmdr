@@ -49,17 +49,20 @@
         smb_servers: () => tString('stateRecovery.smbServers.title'),
         sftp_host_keys: () => tString('stateRecovery.sftpHostKeys.title'),
         local_ai: () => tString('stateRecovery.localAi.title'),
+        credentials: () => tString('stateRecovery.credentials.title'),
     }
 
     const title = $derived(titles[recovery.file]())
 
-    /** What the person may want to do about it, for the two files where that isn't obvious. */
+    /** What the person may want to do about it, for the files where that isn't obvious. */
     const body = $derived.by(() => {
         switch (recovery.file) {
             case 'settings':
                 return tString('stateRecovery.settings.body')
             case 'license':
                 return tString('stateRecovery.license.body')
+            case 'credentials':
+                return tString('stateRecovery.credentials.body')
             default:
                 return null
         }

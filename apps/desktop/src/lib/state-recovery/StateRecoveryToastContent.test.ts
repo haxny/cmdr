@@ -76,6 +76,15 @@ describe('a recovered license file', () => {
   })
 })
 
+describe('a recovered credential store', () => {
+  it('says why the passwords are gone and that Cmdr asks again, with no settings button', async () => {
+    const target = await mountNotice({ file: 'credentials', keptCopy: KEPT })
+    expect(target.textContent).toMatch(/^Cmdr couldn’t read your saved passwords/)
+    expect(target.textContent).toContain('asks for each password again')
+    expect(labels(target)).toEqual(['Dismiss', 'Show in Finder'])
+  })
+})
+
 describe('every other file', () => {
   const others: StateFile[] = [
     'shortcuts',

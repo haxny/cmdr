@@ -25,6 +25,11 @@ notes.
 
 - **Encrypted-file path**: `~/.local/share/com.veszelovszki.cmdr/credentials.enc`, matching the app data dir
   convention. (Linux alpha users from before this convention would re-enter SMB passwords after upgrade.)
+- **A new machine id makes `credentials.enc` unreadable for good** (a home folder restored onto a new install, a cloned
+  VM). `get` and `keys` answer the error and touch nothing. The first `set` or `delete` sets the file aside through
+  `state_recovery::set_aside` (`StateFile::Credentials`, one notice) and starts an empty store. Before that, every save
+  read the file first and failed, so no password could ever be saved again (#537). The module also compiles for tests on
+  any Unix (with `cocoon` as a dev-dependency), so these cells run on a Mac.
 - **`keyring-core` over `keyring = "3"`**: adopted during the keyring v4 ecosystem split, when the canonical `keyring`
   crate became a sample/example crate and the cross-platform API moved to `keyring-core` with each backend shipping
   separately. We picked the zbus-based backend (`zbus-secret-service-keyring-store` with `rt-tokio-crypto-rust`) since

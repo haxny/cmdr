@@ -42,6 +42,10 @@ Issue #461. Must-knows in `CLAUDE.md`.
   The shared loader is `../network/server_list_file.rs`.
 - **`usage.json`, `ai/ai-state.json`**: through `read_state_file` like the lists above (set aside, or held when the
   rename fails), each starting from its defaults.
+- **`credentials.enc`** (`../secrets/encrypted_file.rs`, Linux without a keyring): on the first `set` or `delete` that
+  finds it undecryptable under this machine's id (a restored home folder, a cloned VM) or unparseable. The store starts
+  empty; a rename that doesn't happen lets the save replace the file, which no key on this machine opens anyway. `get`
+  and `keys` keep answering the error and touch nothing: a read decides nothing.
 - **Left on their own fallback, on purpose**: `update-check.json` (when the next update check is due; losing it costs
   one early check), `analytics-heartbeat.json` and the event spool (unsent telemetry and uptime, never the person's),
   `.window-state.json` (window geometry), and `install-ids.json` (two random ids; a lost one is minted again, which only
