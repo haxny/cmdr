@@ -481,6 +481,8 @@ fn build_copy_into_changeset_inner(
             mkdirs,
             mkdir_sources,
             deletes,
+            // An overwrite replaces what's at the name, hidden entries included.
+            deletes_spare_hidden: false,
             renames: Vec::new(),
             // The per-edit level is set on this changeset later, in
             // `archive_copy_into_start`, from the operation config.

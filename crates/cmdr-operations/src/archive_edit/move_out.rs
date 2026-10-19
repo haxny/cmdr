@@ -52,7 +52,8 @@ impl crate::Operations {
     ///   rollback deletes the dest copies so nothing durable remains to move out.
     ///
     /// The delete is still ONE atomic O(archive) rewrite over the converged subset (a
-    /// directory source deletes by prefix), never n per-entry rewrites.
+    /// directory source takes what the reader showed under it), never n per-entry
+    /// rewrites.
     ///
     /// `source_volume` is the read-only `ArchiveVolume`; `source_volume_id` is the
     /// parent drive's id (the FE tab volume) used for the lane + busy set. All
@@ -254,8 +255,11 @@ impl crate::Operations {
                 // The MOVE INVARIANT holds: the copy engine fsynced every destination
                 // file, and cancel/rollback was handled above, so no entry is deleted
                 // whose bytes aren't durably on disk and staying there.
+                // Only what the reader showed, so what it hid under a moved
+                // folder, which never extracted, stays in the archive.
                 let changeset = Changeset {
                     deletes: inner_deletes,
+                    deletes_spare_hidden: true,
                     ..Default::default()
                 };
                 let hooks = Arc::new(MutatorHooks::new(

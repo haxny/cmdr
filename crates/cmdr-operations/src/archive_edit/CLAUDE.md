@@ -37,9 +37,9 @@ are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cm
 - **Compress progress has two different byte axes**: `Compressing` is uncompressed source bytes; remote `Transferring`
   is completed-ZIP bytes. Both finishing phases clear BOTH totals and ETA. Ordinary archive mutation stays
   `ArchiveEdit` + `Copying`.
-- **Move OUT deletes only what durably landed**: extract first, then ONE batch `{ delete }` rewrite over the sources
-  that extracted with ZERO deep skips (a hard error deletes the durable prefix; cancel and rollback delete nothing). The
-  copy engine's deep `skipped_file_count` fold is what makes that count honest.
+- **Move OUT deletes only what durably landed**: extract, then ONE batch `{ delete }` over the sources that extracted
+  with ZERO deep skips (a hard error deletes the durable prefix; cancel and rollback nothing), with
+  `deletes_spare_hidden` so entries the reader hid stay. The deep `skipped_file_count` fold keeps the count honest.
 - **Unrepresentable entries (symlinks, fifos, devices, broken links) are SKIPPED, never lost**, and any skip suppresses
   a move's source deletion. Every skip increments `skipped_count` and surfaces as `files_skipped`.
 - **Conflicts are planned INSIDE the op**, against the working copy `run_managed_edit` hands the closure — planning up

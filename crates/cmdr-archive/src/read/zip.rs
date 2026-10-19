@@ -35,6 +35,19 @@ pub(super) struct ZipHandle {
     entry: Entry,
 }
 
+impl ZipHandle {
+    /// Where the entry's local header starts in the archive.
+    pub(super) fn header_offset(&self) -> u64 {
+        self.entry.header_offset
+    }
+}
+
+/// Whether the entry is a directory: signalled either by the mode bits or
+/// (very commonly) by a trailing slash on the name. A symlink is never one.
+fn is_dir_entry(entry: &Entry) -> bool {
+    entry.kind() != EntryKind::Symlink && (entry.kind() == EntryKind::Directory || entry.name.ends_with('/'))
+}
+
 /// Whether the entry is encrypted: general-purpose flag bit 0, or the AE-x
 /// (WinZip AES) marker method.
 fn is_encrypted(entry: &Entry) -> bool {
@@ -92,14 +105,10 @@ fn parse_in<Tz: chrono::TimeZone>(
                 None => entry.modified.timestamp(),
             };
             let encrypted = is_encrypted(&entry);
-            let is_symlink = entry.kind() == EntryKind::Symlink;
-            // A directory is signalled either by the mode bits or (very commonly)
-            // by a trailing slash on the name. A symlink is never a dir.
-            let is_dir = !is_symlink && (entry.kind() == EntryKind::Directory || entry.name.ends_with('/'));
             let raw = RawEntry {
                 name: entry.name.clone(),
-                is_dir,
-                is_symlink,
+                is_dir: is_dir_entry(&entry),
+                is_symlink: entry.kind() == EntryKind::Symlink,
                 size: entry.uncompressed_size,
                 compressed_size: entry.compressed_size,
                 modified: Some(modified),
@@ -128,6 +137,33 @@ pub(crate) fn shown_names_with_header_offsets(
         .into_iter()
         .map(|entry| (entry.header_offset, entry.name))
         .collect())
+}
+
+/// The entries the reader's tree shows, by local header offset, each with its
+/// inner path in that tree: every file node's own entry, and every explicit
+/// folder entry at a folder node. What the tree hides isn't here: a name that
+/// climbs out or nests too deep, a file under a file or at a folder's path, the
+/// earlier of two same-named files. So it's also what extracting a folder
+/// writes out, which a move out needs to delete exactly that.
+pub(crate) fn shown_entry_paths(
+    source: Arc<dyn ArchiveByteSource>,
+) -> Result<std::collections::HashMap<u64, String>, ArchiveError> {
+    let index = super::ArchiveIndex::parse(Arc::clone(&source), super::ArchiveFormat::Zip, None)?;
+    let mut shown = std::collections::HashMap::new();
+    for entry in parse_central_directory(source.as_ref())? {
+        let super::SanitizedName::Accepted(path) = super::sanitize_entry_name(&entry.name) else {
+            continue;
+        };
+        let is_shown = match index.is_directory(&path) {
+            Some(true) => is_dir_entry(&entry),
+            Some(false) => !is_dir_entry(&entry) && index.zip_header_offset(&path) == Some(entry.header_offset),
+            None => false,
+        };
+        if is_shown {
+            shown.insert(entry.header_offset, path);
+        }
+    }
+    Ok(shown)
 }
 
 /// Drives rc-zip's central-directory state machine over the byte source,

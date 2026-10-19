@@ -83,6 +83,13 @@ pub struct Changeset {
     pub mkdir_sources: HashMap<String, PathBuf>,
     /// Inner paths to drop. A directory target drops its whole subtree.
     pub deletes: Vec<String>,
+    /// `true` for a move out: a delete takes only the entries the reader's tree
+    /// shows, by where it shows them, which are exactly the ones the extract
+    /// wrote out. What the tree hides under a moved folder (a `..` component, a
+    /// file under a file, a file at a folder's path) never landed anywhere, so
+    /// it stays. `false` (an F8) takes the whole raw subtree, hidden entries
+    /// included, since the user asked for the folder gone.
+    pub deletes_spare_hidden: bool,
     /// `(from, to)` inner-path renames. A directory target rewrites every descendant's prefix.
     pub renames: Vec<(String, String)>,
     /// Deflate level (1..=9) for NEWLY added entries; `None` = the `zip` crate

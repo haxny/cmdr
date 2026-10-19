@@ -306,6 +306,17 @@ impl ArchiveIndex {
         self.nodes.get(normalize_lookup(inner_path)).map(|n| n.is_dir)
     }
 
+    /// Where the local header of the zip entry behind the FILE node at
+    /// `inner_path` starts, or `None` when there's no such zip file node.
+    pub(super) fn zip_header_offset(&self, inner_path: &str) -> Option<u64> {
+        match &self.store {
+            EntryStore::Zip(files) => files
+                .get(normalize_lookup(inner_path))
+                .map(super::zip::ZipHandle::header_offset),
+            EntryStore::Tar(_) | EntryStore::SevenZ(_) => None,
+        }
+    }
+
     /// Whether the archive contains any encrypted entry. Browsing still works
     /// (names live in the central directory); this lets the volume layer warn
     /// or gate extraction up front.

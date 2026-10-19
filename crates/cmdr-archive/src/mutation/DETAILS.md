@@ -132,7 +132,14 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   `crates/cmdr-operations/src/archive_edit/DETAILS.md` § "Remote edit" for why the remote side needs the age gate.
 - **Deletes/renames reshape the retained set.** A delete drops a file or a whole subtree (component-wise match, so `foo`
   never catches `foobar`); a rename rewrites a subtree prefix. Both are computed per original entry in one pass
-  (`plan.rs`, `plan_new_name`); deletes win over renames.
+  (`plan.rs`, `is_deleted` then `renamed_name`); deletes win over renames.
+- **`Changeset::deletes_spare_hidden` (a move out) matches an item by where the reader's TREE shows it**, not by its raw
+  name. `read::shown_entry_paths` lists each entry the tree shows, by header offset, with its tree path: a file node's
+  own entry, and an explicit folder entry at a folder node. An entry missing there (quarantined for `..` or depth, a
+  file under a file, a file at a folder's path) never extracted, so it stays; one whose raw name differs from its tree
+  path (`dir\a.txt`, `./dir/a.txt`) is matched by the tree path it extracted from. Sidecars aren't in the tree, so they
+  still go by raw name with their item. If the tree can't be built the edit stops (`OpenOriginal`), since there's no
+  telling what extracted. Without the flag (F8, an overwrite) a delete takes the raw subtree, hidden entries included.
 
 ## Testing
 

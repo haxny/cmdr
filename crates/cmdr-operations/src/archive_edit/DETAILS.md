@@ -336,12 +336,16 @@ other-archive ignored, delete-failure doesn't fail the edit).
   the un-landed child — the partial-merge-skip hazard); a HARD error deletes the durable PREFIX so a retry moves only
   the remainder; CANCEL and ROLLBACK delete nothing (cancel matches the plain cross-volume move, whose source-delete
   never runs on cancel; rollback removes the dest copies, so nothing durable remains). The delete stays ONE atomic
-  O(archive) rewrite over the converged subset (a dir source deletes by prefix), never n per-entry rewrites. **The
-  deep-skip count is load-bearing**: a merge child resolved to Skip is invisible to the driver's top-level accounting,
-  so the copy engine folds each source's `CreatedPaths::skipped_file_count` into `files_skipped`; without that fold a
-  directory source with a deep skip would report zero skips and the delete would drop its whole subtree (data loss).
-  Progress is two honest phases (extract bytes, then rewrite bytes). Pinned by the `move_out_*` tests (incl. the
-  deep-skipped-child, partial-converge, durable-prefix-on-error, and rollback pins).
+  O(archive) rewrite over the converged subset, never n per-entry rewrites. It sets `Changeset::deletes_spare_hidden`,
+  so a dir source takes only the entries the reader's tree SHOWED under it, which are exactly what extracted: a raw
+  entry the tree hides (a `..` component, a file under a file, a file at a folder's path) never landed, so a raw-name
+  prefix match would have deleted its only copy (#525, pinned by
+  `move_out_of_a_folder_keeps_the_entries_the_reader_hid_under_it`). F8 keeps the prefix match. **The deep-skip count is
+  load-bearing**: a merge child resolved to Skip is invisible to the driver's top-level accounting, so the copy engine
+  folds each source's `CreatedPaths::skipped_file_count` into `files_skipped`; without that fold a directory source with
+  a deep skip would report zero skips and the delete would drop its whole subtree (data loss). Progress is two honest
+  phases (extract bytes, then rewrite bytes). Pinned by the `move_out_*` tests (incl. the deep-skipped-child,
+  partial-converge, durable-prefix-on-error, and rollback pins).
 - **Conflicts.** An add whose inner path already exists is resolved against the archive index. BOTH the pre-resolved
   policies and Stop PLAN inside the managed op (`archive_copy_into_start`), against the working copy `run_managed_edit`
   hands the closure — the real archive for a LOCAL parent, the pulled-local copy for a REMOTE one. Planning up front

@@ -56,6 +56,10 @@ pub(super) fn plan_retained(
     let shown = shown_names(archive_path);
     refuse_a_folded_duplicate(src, &shown)?;
     let shown_names: HashMap<u64, String> = shown.into_iter().collect();
+    let tree_paths = changeset
+        .deletes_spare_hidden
+        .then(|| shown_tree_paths(archive_path))
+        .transpose()?;
 
     let prefix_len = leading_bytes_len(src);
     let mut plan = RetainedPlan {
@@ -68,12 +72,21 @@ pub(super) fn plan_retained(
     for index in 0..src.len() {
         let file = src.by_index_raw(index).map_err(MutationError::Zip)?;
         let original_name = planned_name(&file, &shown_names)?;
+        let header_start = file.header_start();
         let compressed_size = file.compressed_size();
         let encrypted = file.encrypted();
         drop(file);
         // A sidecar is metadata, never an item the user counts.
         let is_item = !apple_double::is_in_macosx_folder(&original_name);
-        match plan_new_name(&original_name, &deletes, &renames) {
+        let deleted = match &tree_paths {
+            // An item matches by where the tree shows it, so one the tree hides
+            // never goes. A sidecar isn't in the tree; it goes with its item.
+            Some(tree_paths) if is_item => tree_paths
+                .get(&header_start)
+                .is_some_and(|path| is_deleted(path, &deletes)),
+            _ => is_deleted(&original_name, &deletes),
+        };
+        match (!deleted).then(|| renamed_name(&original_name, &renames)) {
             Some(new_name) => {
                 // Refuse before creating any temp: a retained encrypted entry can't
                 // be copied verbatim (the flag is lost), so touching this archive at
@@ -110,6 +123,19 @@ pub(super) fn shown_names(archive_path: &Path) -> Vec<(u64, String)> {
         log::warn!(target: "archive_mutator", "Couldn't read {}'s entry names the way the reader shows them, so the edit matches the zip crate's: {err}", archive_path.display());
         Vec::new()
     })
+}
+
+/// Each entry the reader's tree shows, by local header offset, with its path in
+/// the tree (see [`crate::read::shown_entry_paths`]). Unlike [`shown_names`]
+/// this can't degrade to the `zip` crate's view: without the tree there's no
+/// telling which entries extracted, so the edit stops, the archive untouched.
+fn shown_tree_paths(archive_path: &Path) -> Result<HashMap<u64, String>, MutationError> {
+    crate::read::LocalFileSource::open(archive_path)
+        .map_err(MutationError::OpenOriginal)
+        .and_then(|source| {
+            crate::read::shown_entry_paths(std::sync::Arc::new(source))
+                .map_err(|err| MutationError::OpenOriginal(std::io::Error::other(err)))
+        })
 }
 
 /// Refuses an archive in which two entries share a name. The `zip` crate keeps
@@ -194,21 +220,22 @@ fn with_sidecar_renames(renames: &[(String, String)]) -> Vec<(String, String)> {
     out
 }
 
-/// Computes an original entry's post-edit name, or `None` if a delete drops it.
-///
-/// A trailing slash (an explicit directory entry) is preserved. Deletes are
-/// checked before renames (a deleted entry is gone regardless of any rename).
-/// Both deletes and renames match a whole path component: `foo` deletes/renames
-/// `foo` and everything under `foo/`, but never a sibling `foobar`.
-fn plan_new_name(original_name: &str, deletes: &[String], renames: &[(String, String)]) -> Option<String> {
+/// Whether a delete drops the entry named `name`: it is one of `deletes` or
+/// under one. The match takes a whole path component: `foo` takes `foo` and
+/// everything under `foo/`, but never a sibling `foobar`.
+fn is_deleted(name: &str, deletes: &[String]) -> bool {
+    let logical = name.trim_end_matches('/');
+    deletes
+        .iter()
+        .any(|delete| path_matches_or_under(logical, delete.trim_matches('/')))
+}
+
+/// Computes a kept entry's post-edit name, prefix-rewritten by a rename or
+/// unchanged. A trailing slash (an explicit directory entry) is preserved.
+/// Renames match a whole path component, like [`is_deleted`].
+fn renamed_name(original_name: &str, renames: &[(String, String)]) -> String {
     let is_dir = original_name.ends_with('/');
     let logical = original_name.trim_end_matches('/');
-
-    for delete in deletes {
-        if path_matches_or_under(logical, delete.trim_matches('/')) {
-            return None;
-        }
-    }
 
     let mut new_logical = logical.to_string();
     for (from, to) in renames {
@@ -224,7 +251,7 @@ fn plan_new_name(original_name: &str, deletes: &[String], renames: &[(String, St
         }
     }
 
-    Some(if is_dir { format!("{new_logical}/") } else { new_logical })
+    if is_dir { format!("{new_logical}/") } else { new_logical }
 }
 
 /// Whether `path` is `target` itself or a descendant of it (component-wise).

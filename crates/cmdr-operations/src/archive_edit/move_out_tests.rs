@@ -730,6 +730,81 @@ async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
     assert_eq!(names, vec!["__MACOSX/", "__MACOSX/._plain.txt", "plain.txt"]);
 }
 
+/// The reader hides some raw entries (a `..` component, a file under a file),
+/// so moving their folder out never extracts them. The archive delete takes
+/// only what the reader showed, so the hidden ones stay for a tool that can
+/// read them, where a raw-name prefix match took them too (#525).
+#[tokio::test]
+async fn move_out_of_a_folder_keeps_the_entries_the_reader_hid_under_it() {
+    use cmdr_local::LocalPosixVolume;
+
+    let engine = TestOperations::new();
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let archive = tmp.path().join("a.zip");
+    write_multi_zip(
+        &archive,
+        &[
+            ("dir/a.txt", b"shown"),
+            ("dir/../x.txt", b"climbs out"),
+            ("dir/f", b"a file"),
+            ("dir/f/g", b"under a file"),
+            ("keep.txt", b"keep"),
+        ],
+    );
+    let dest_dir = tmp.path().join("out");
+    std::fs::create_dir_all(&dest_dir).expect("mkdir dest");
+    let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "dest",
+        dest_dir.clone(),
+        crate::host::testing::pane_order_host(),
+    ));
+
+    let events = Arc::new(CollectorEventSink::new());
+    engine
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            archive_source_volume(&archive),
+            vec![archive.join("dir")],
+            "dest".to_string(),
+            dest_volume,
+            dest_dir.clone(),
+            move_out_config(),
+        )
+        .await
+        .expect("start move-out");
+    wait_until_async(Duration::from_secs(5), "the write-complete event", || {
+        !events.complete.lock_ignore_poison().is_empty()
+    })
+    .await;
+
+    assert_eq!(
+        std::fs::read(dest_dir.join("dir/a.txt")).ok().as_deref(),
+        Some(b"shown".as_slice())
+    );
+    assert_eq!(
+        std::fs::read(dest_dir.join("dir/f")).ok().as_deref(),
+        Some(b"a file".as_slice())
+    );
+    assert!(
+        read_entry(&archive, "dir/a.txt").is_none(),
+        "an extracted entry leaves the archive"
+    );
+    assert!(
+        read_entry(&archive, "dir/f").is_none(),
+        "an extracted entry leaves the archive"
+    );
+    assert_eq!(
+        read_entry(&archive, "dir/../x.txt").as_deref(),
+        Some(b"climbs out".as_slice())
+    );
+    assert_eq!(
+        read_entry(&archive, "dir/f/g").as_deref(),
+        Some(b"under a file".as_slice())
+    );
+    assert_eq!(read_entry(&archive, "keep.txt").as_deref(), Some(b"keep".as_slice()));
+}
+
 /// ❗ The extract's sink WRAPS the real one, so it forwards everything but the
 /// copy's terminals, the sources-gone prompt included: swallowed, the person is
 /// never asked and the operation waits forever (`OperationEventSink`'s doc).
