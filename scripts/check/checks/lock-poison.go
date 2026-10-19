@@ -28,14 +28,14 @@ const lockPoisonAllowlistRelPath = "scripts/check/checks/lock-poison-allowlist.j
 // (which carry arguments) and `mutex.lock().await` (tokio async, returns a
 // future, no `.unwrap()`) out of scope. `try_lock` / `try_read` / `try_write`
 // are out of scope by name (the `\b` before the verb won't match the `_`).
-var lockBareUnwrapPattern = regexp.MustCompile(`\b(lock|read|write)\(\)\.unwrap\(\)`)
+var lockBareUnwrapPattern = gateRegexp(regexp.MustCompile(`\b(lock|read|write)\(\)\.unwrap\(\)`))
 
 // lockExpectPattern captures the message argument of a `.lock().expect(<msg>)`
 // (and read/write) so we can check whether it names "poison". Same empty-parens
 // and verb-boundary constraints as the unwrap pattern. The message capture is
 // non-greedy up to the next `"` so multiple expects on one line each get their
 // own message checked by FindAllStringSubmatch.
-var lockExpectPattern = regexp.MustCompile(`\b(lock|read|write)\(\)\.expect\(\s*"((?:[^"\\]|\\.)*)"`)
+var lockExpectPattern = gateRegexp(regexp.MustCompile(`\b(lock|read|write)\(\)\.expect\(\s*"((?:[^"\\]|\\.)*)"`))
 
 // The swallow lane's patterns. lockAcquirePattern finds the acquisitions
 // themselves, under the same verb rules as the two above (empty parens, so
@@ -345,7 +345,7 @@ func scanForLockPoison(rootDir, srcDir string) (lockPoisonFileFindings, int, err
 	var all lockPoisonFileFindings
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -426,11 +426,11 @@ func (s *lockPoisonScanState) armTestMod(line string) bool {
 // swallow lane classifies a site by the block that follows it, which routinely
 // sits several lines below.
 func scanRustFileForLockPoison(path, relPath string) (lockPoisonFileFindings, error) {
-	data, err := os.ReadFile(path)
+	data, err := corpus.ReadFile(path)
 	if err != nil {
 		return lockPoisonFileFindings{}, err
 	}
-	lines := strings.Split(string(data), "\n")
+	lines := strings.Split(data, "\n")
 
 	var findings lockPoisonFileFindings
 	var state lockPoisonScanState

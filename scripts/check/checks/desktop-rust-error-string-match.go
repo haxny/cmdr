@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,8 +19,9 @@ const AllowErrorStringMatchComment = "// allowed-error-string-match:"
 
 // errorStringMatchPatterns flags substring-matching against error/state semantics.
 // We catch the common shapes; rarely-used variants fall through. False positives
-// can be silenced with the AllowErrorStringMatchComment.
-var errorStringMatchPatterns = []*regexp.Regexp{
+// can be silenced with the AllowErrorStringMatchComment. Each is gated on the
+// literal it requires (`.contains(` and friends), which almost no line has.
+var errorStringMatchPatterns = gateRegexps(
 	// Substring match on `message` (the field name on most VolumeError variants).
 	regexp.MustCompile(`\bmessage\.contains\(`),
 	regexp.MustCompile(`\bmessage\.starts_with\(`),
@@ -47,7 +47,7 @@ var errorStringMatchPatterns = []*regexp.Regexp{
 	// `allowed-error-string-match:` opt-out with a reason.
 	regexp.MustCompile(`\b(error|err|msg|err_msg|errmsg|lower|lowered)\.contains\(`),
 	regexp.MustCompile(`\b(error|err|msg|err_msg|errmsg|lower|lowered)\.starts_with\(`),
-}
+)
 
 type errorStringMatchSite struct {
 	relPath string
@@ -117,7 +117,7 @@ func scanForErrorStringMatch(rootDir, srcDir string) ([]errorStringMatchSite, []
 	var orphans []orphanDirective
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -137,20 +137,15 @@ func scanForErrorStringMatch(rootDir, srcDir string) ([]errorStringMatchSite, []
 			relPath = path
 		}
 
-		f, openErr := os.Open(path)
-		if openErr != nil {
-			return openErr
+		lines, readErr := corpus.Lines(path)
+		if readErr != nil {
+			return readErr
 		}
-		defer f.Close()
 
-		scanner := bufio.NewScanner(f)
-		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 		tracker := newDirectiveTracker(AllowErrorStringMatchComment, "//")
 		var prev string
-		lineNum := 0
-		for scanner.Scan() {
-			lineNum++
-			line := scanner.Text()
+		for i, line := range lines {
+			lineNum := i + 1
 			tracker.observe(lineNum, line)
 
 			trimmed := strings.TrimLeft(line, " \t")
@@ -180,7 +175,7 @@ func scanForErrorStringMatch(rootDir, srcDir string) ([]errorStringMatchSite, []
 			prev = line
 		}
 		orphans = append(orphans, tracker.orphans(relPath)...)
-		return scanner.Err()
+		return nil
 	})
 
 	return violations, orphans, scanned, err

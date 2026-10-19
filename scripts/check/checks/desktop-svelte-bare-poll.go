@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -129,7 +128,7 @@ func scanForBarePoll(rootDir, testDir string) ([]barePollSite, []orphanDirective
 	var orphans []orphanDirective
 	scanned := 0
 
-	err := filepath.WalkDir(testDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(testDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -168,23 +167,18 @@ func scanForBarePoll(rootDir, testDir string) ([]barePollSite, []orphanDirective
 func scanFileForBarePoll(path, relPath string) ([]barePollSite, []orphanDirective, error) {
 	var violations []barePollSite
 
-	f, openErr := os.Open(path)
-	if openErr != nil {
-		return nil, nil, openErr
+	lines, readErr := corpus.Lines(path)
+	if readErr != nil {
+		return nil, nil, readErr
 	}
-	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 	tracker := newDirectiveTracker(AllowBarePollComment, "//")
 	// `prev` is the line immediately above, comment or not, because that is where an
 	// opt-out directive lives. `prevCode` skips comments and blanks, because what
 	// decides whether this `await` starts a statement is the last real CODE above it.
 	var prev, prevCode string
-	lineNum := 0
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
+	for lineIdx, line := range lines {
+		lineNum := lineIdx + 1
 		tracker.observe(lineNum, line)
 
 		site, isComment := classifyBarePollLine(line, prev, prevCode, tracker, lineNum)
@@ -197,7 +191,7 @@ func scanFileForBarePoll(path, relPath string) ([]barePollSite, []orphanDirectiv
 			prevCode = line
 		}
 	}
-	return violations, tracker.orphans(relPath), scanner.Err()
+	return violations, tracker.orphans(relPath), nil
 }
 
 // classifyBarePollLine decides what one line is. It returns a site (minus its path) when

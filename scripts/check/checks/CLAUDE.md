@@ -24,12 +24,11 @@ One Go file per check, registered in `registry.go`'s `AllChecks`. Runner: `../CL
   DATA file (name a new allowlist JSON via `runnerDataInputs`) or an `init()` that registers rather than assigns (which
   drops every check back to the whole tree). `../DETAILS.md` § "The runner's own source".
 - **Wire every check into CI** (`ci.yml` / `slow-checks.yml`, or a `NotInCI` reason); `ci-coverage` enforces both ways.
-- **Length-based truncation is forbidden**: if 200 tests fail, all 200 panic bodies pass through. Filter by structure,
-  ❌ never by line count.
+- **Length-based truncation is forbidden**: filter output by structure, ❌ never by line count.
 - **A test lane calls `ctx.RecordTests(...)` BEFORE its pass/fail branch** (`test-log.go`), or a red run never says
   WHICH test failed.
-- **Pin every tool install** (❌ never `@latest`), or a compromised tool repo reaches every fresh checkout;
-  `EnsureGoTool` enforces it. Versions, sha256s, and the dated nightly: DETAILS § "Key decisions".
+- **Pin every tool install** (❌ never `@latest`); `EnsureGoTool` enforces it. Versions, sha256s, and the dated nightly:
+  DETAILS § "Key decisions".
 - **Need a Go version? `MiseGoVersion(rootDir)`**, ❌ never a literal; `go-version-single-source` enforces it.
 - **A Rust check never hardcodes a source path, its own features, its `Inputs`, or a `cmd.Dir`.** Cargo lanes take them
   from `HostCargoLaneArgs` + `rustCompileInputs`; scanners from `ScannerRoots` / `ScannerMemberKinds` +
@@ -39,8 +38,9 @@ One Go file per check, registered in `registry.go`'s `AllChecks`. Runner: `../CL
   build-directory lock while holding CPU weight.
 - **Wire allowlist staleness from day one**: reuse `directiveTracker` / `writeJSONAllowlist`, name the file via
   `runnerDataInputs`, and give every entry a mandatory `reason`.
-- **Error output goes through `indentOutput()`**; success messages carry stats ("12 tests passed"), not "OK". Return
-  `Skipped(reason)` when it can't run, `SuccessWithChanges` when it fixed something.
+- **Source scanners read through `corpus` and gate per-line regexes with `gateRegexp`** (DETAILS § "The shared source
+  corpus").
+- **Error output goes through `indentOutput()`**; success messages carry stats ("12 tests passed"), not "OK".
 - **Vitest lanes:** coverage needs a per-invocation `reportsDirectory` (`VITEST_COVERAGE_DIR`), or concurrent runs
   clobber each other's v8 files; ❌ a timeout's real message is never in the json report. DETAILS § "Vitest failure
   output".

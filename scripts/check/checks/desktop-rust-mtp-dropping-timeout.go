@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -143,7 +142,7 @@ func scanForDroppingTimeouts(rootDir, srcDir string) ([]droppingTimeoutSite, []o
 	var orphans []orphanDirective
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -175,32 +174,26 @@ func scanForDroppingTimeouts(rootDir, srcDir string) ([]droppingTimeoutSite, []o
 // scanRustFileForDroppingTimeouts scans one file, skipping `#[cfg(test)]` mods
 // (a test asserting with a tight timeout drives no real device).
 func scanRustFileForDroppingTimeouts(path, relPath string) ([]droppingTimeoutSite, []orphanDirective, error) {
-	f, openErr := os.Open(path)
-	if openErr != nil {
-		return nil, nil, openErr
+	lines, readErr := corpus.Lines(path)
+	if readErr != nil {
+		return nil, nil, readErr
 	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 
 	var violations []droppingTimeoutSite
 	// Reuses the lock-poison check's test-mod skip state machine (same package).
 	var state lockPoisonScanState
 	tracker := newDirectiveTracker(AllowDroppingTimeoutComment, "//")
 	var prev string
-	lineNum := 0
 
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
+	for lineIdx, line := range lines {
+		lineNum := lineIdx + 1
 
 		if site := classifyDroppingTimeoutLine(line, prev, relPath, lineNum, &state, tracker); site != nil {
 			violations = append(violations, *site)
 		}
 		prev = line
 	}
-	return violations, tracker.orphans(relPath), scanner.Err()
+	return violations, tracker.orphans(relPath), nil
 }
 
 func classifyDroppingTimeoutLine(

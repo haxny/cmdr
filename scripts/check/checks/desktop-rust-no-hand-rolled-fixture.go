@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -39,8 +38,8 @@ var handRolledFixtureTypes = []string{"CachedScanResult", "SourceHint", "VolumeP
 // and the negative-lookalike handling is done in the scanner: a `-> Type {`
 // return position and a `struct Type {` / `impl Type {` definition all end in the
 // same two tokens without constructing anything.
-var handRolledFixtureRegex = regexp.MustCompile(
-	`\b(` + strings.Join(handRolledFixtureTypes, "|") + `)\s*\{`)
+var handRolledFixtureRegex = gateRegexp(regexp.MustCompile(
+	`\b(` + strings.Join(handRolledFixtureTypes, "|") + `)\s*\{`))
 
 // fixtureDeclarationRegex matches the positions where `Type {` is a declaration
 // or a return type rather than a construction.
@@ -130,7 +129,7 @@ func scanForHandRolledFixture(rootDir, srcDir string) ([]handRolledFixtureSite, 
 	var orphans []orphanDirective
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -164,24 +163,18 @@ func scanForHandRolledFixture(rootDir, srcDir string) ([]handRolledFixtureSite, 
 func scanRustFileForHandRolledFixture(
 	path, relPath string, wholeFileIsTest bool,
 ) ([]handRolledFixtureSite, []orphanDirective, error) {
-	f, openErr := os.Open(path)
-	if openErr != nil {
-		return nil, nil, openErr
+	lines, readErr := corpus.Lines(path)
+	if readErr != nil {
+		return nil, nil, readErr
 	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 
 	var violations []handRolledFixtureSite
 	var state rustTestModState
 	tracker := newDirectiveTracker(AllowHandRolledFixtureComment, "//")
 	blockDirectiveLine := 0
-	lineNum := 0
 
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
+	for lineIdx, line := range lines {
+		lineNum := lineIdx + 1
 
 		inTest := wholeFileIsTest
 		if !wholeFileIsTest {
@@ -222,5 +215,5 @@ func scanRustFileForHandRolledFixture(
 		blockDirectiveLine = 0
 	}
 
-	return violations, tracker.orphans(relPath), scanner.Err()
+	return violations, tracker.orphans(relPath), nil
 }

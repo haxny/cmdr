@@ -75,7 +75,7 @@ func scanIpcEnums(rootDir, srcDir string) ([]ipcEnumViolation, int, error) {
 	var violations []ipcEnumViolation
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -83,11 +83,11 @@ func scanIpcEnums(rootDir, srcDir string) ([]ipcEnumViolation, int, error) {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := corpus.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		lines := strings.Split(string(data), "\n")
+		lines := strings.Split(data, "\n")
 
 		for i := range lines {
 			match := enumDeclPattern.FindStringSubmatch(lines[i])

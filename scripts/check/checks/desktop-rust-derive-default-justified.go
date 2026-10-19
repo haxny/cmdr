@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -166,7 +165,7 @@ func scanForDeriveDefault(rootDir, srcDir string) ([]deriveDefaultSite, []orphan
 	var orphans []orphanDirective
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -203,24 +202,18 @@ func scanForDeriveDefault(rootDir, srcDir string) ([]deriveDefaultSite, []orphan
 // doc comment directly: `#[repr(C)]` and `#[cfg(target_os = "macos")]`
 // legitimately sit between them.
 func scanRustFileForDeriveDefault(path, relPath string) ([]deriveDefaultSite, []orphanDirective, error) {
-	f, openErr := os.Open(path)
-	if openErr != nil {
-		return nil, nil, openErr
+	lines, readErr := corpus.Lines(path)
+	if readErr != nil {
+		return nil, nil, readErr
 	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 
 	var violations []deriveDefaultSite
 	var state rustTestModState
 	tracker := newDirectiveTracker(DefaultOKComment, "//")
 	blockDirectiveLine := 0
-	lineNum := 0
 
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
+	for lineIdx, line := range lines {
+		lineNum := lineIdx + 1
 
 		// Inverted polarity: the inline test mod is the carve-out, not the target.
 		if advanceTestModRegion(line, &state) {
@@ -261,5 +254,5 @@ func scanRustFileForDeriveDefault(path, relPath string) ([]deriveDefaultSite, []
 		blockDirectiveLine = 0
 	}
 
-	return violations, tracker.orphans(relPath), scanner.Err()
+	return violations, tracker.orphans(relPath), nil
 }

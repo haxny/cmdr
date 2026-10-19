@@ -628,7 +628,7 @@ func indentOf(line string) int {
 // relative to that directory.
 func readCrateSources(srcDir string) (map[string]string, error) {
 	files := map[string]string{}
-	err := filepath.WalkDir(srcDir, func(path string, entry os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -639,11 +639,11 @@ func readCrateSources(srcDir string) (map[string]string, error) {
 		if relErr != nil {
 			return relErr
 		}
-		content, readErr := os.ReadFile(path)
+		content, readErr := corpus.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
-		files[filepath.ToSlash(rel)] = string(content)
+		files[filepath.ToSlash(rel)] = content
 		return nil
 	})
 	return files, err

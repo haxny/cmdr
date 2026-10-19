@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -143,7 +142,7 @@ func scanForProbeUnwrap(rootDir, srcDir string) ([]probeUnwrapSite, []orphanDire
 	var orphans []orphanDirective
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -176,24 +175,18 @@ func scanForProbeUnwrap(rootDir, srcDir string) ([]probeUnwrapSite, []orphanDire
 // scanRustFileForProbeUnwrap scans one PRODUCTION file, skipping the body of any
 // inline test module.
 func scanRustFileForProbeUnwrap(path, relPath string) ([]probeUnwrapSite, []orphanDirective, error) {
-	f, openErr := os.Open(path)
-	if openErr != nil {
-		return nil, nil, openErr
+	lines, readErr := corpus.Lines(path)
+	if readErr != nil {
+		return nil, nil, readErr
 	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 
 	var violations []probeUnwrapSite
 	var state rustTestModState
 	tracker := newDirectiveTracker(AllowProbeUnwrapComment, "//")
 	blockDirectiveLine := 0
-	lineNum := 0
 
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
+	for lineIdx, line := range lines {
+		lineNum := lineIdx + 1
 
 		// INVERTED polarity against test-sleep's use of the same helper: there the
 		// test mod is the jurisdiction, here it's the carve-out.
@@ -231,5 +224,5 @@ func scanRustFileForProbeUnwrap(path, relPath string) ([]probeUnwrapSite, []orph
 		blockDirectiveLine = 0
 	}
 
-	return violations, tracker.orphans(relPath), scanner.Err()
+	return violations, tracker.orphans(relPath), nil
 }

@@ -260,11 +260,11 @@ func testUnderGate(lines []string, gate int) (string, int) {
 func scanRustSources(rootDir string, roots []string) (map[string]string, error) {
 	files := map[string]string{}
 	for _, root := range roots {
-		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".rs") {
+		err := corpus.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".rs") {
 				return err
 			}
-			data, readErr := os.ReadFile(path)
+			data, readErr := corpus.ReadFile(path)
 			if readErr != nil {
 				return readErr
 			}
@@ -272,7 +272,7 @@ func scanRustSources(rootDir string, roots []string) (map[string]string, error) 
 			if relErr != nil {
 				return relErr
 			}
-			files[filepath.ToSlash(relative)] = string(data)
+			files[filepath.ToSlash(relative)] = data
 			return nil
 		})
 		if err != nil {

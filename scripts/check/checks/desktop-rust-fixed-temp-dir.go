@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +22,7 @@ const AllowFixedTempDirComment = "// allowed-fixed-temp-dir:"
 // fixedTempDirRegex matches a use of the OS temp root. Any use in test code is
 // suspect, because the interesting mistake is joining a constant onto it; the
 // opt-out directive carries the handful of deliberate cases.
-var fixedTempDirRegex = regexp.MustCompile(`\b(?:std::)?env::temp_dir\s*\(\s*\)`)
+var fixedTempDirRegex = gateRegexp(regexp.MustCompile(`\b(?:std::)?env::temp_dir\s*\(\s*\)`))
 
 type fixedTempDirSite struct {
 	relPath string
@@ -102,7 +101,7 @@ func scanForFixedTempDir(rootDir, srcDir string) ([]fixedTempDirSite, []orphanDi
 	var orphans []orphanDirective
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -132,14 +131,10 @@ func scanForFixedTempDir(rootDir, srcDir string) ([]fixedTempDirSite, []orphanDi
 // line is test code; otherwise only the body of an inline `#[cfg(test)] mod`
 // counts, and the shared region tracker decides membership line by line.
 func scanRustFileForFixedTempDir(path, relPath string, wholeFileIsTest bool) ([]fixedTempDirSite, []orphanDirective, error) {
-	f, openErr := os.Open(path)
-	if openErr != nil {
-		return nil, nil, openErr
+	lines, readErr := corpus.Lines(path)
+	if readErr != nil {
+		return nil, nil, readErr
 	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 
 	var violations []fixedTempDirSite
 	var state rustTestModState
@@ -147,11 +142,9 @@ func scanRustFileForFixedTempDir(path, relPath string, wholeFileIsTest bool) ([]
 	// The directive can sit anywhere in the contiguous comment block immediately
 	// above the site, because a reason often wraps across two comment lines.
 	blockDirectiveLine := 0
-	lineNum := 0
 
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
+	for lineIdx, line := range lines {
+		lineNum := lineIdx + 1
 
 		inTest := wholeFileIsTest
 		if !wholeFileIsTest {
@@ -194,5 +187,5 @@ func scanRustFileForFixedTempDir(path, relPath string, wholeFileIsTest bool) ([]
 		blockDirectiveLine = 0
 	}
 
-	return violations, tracker.orphans(relPath), scanner.Err()
+	return violations, tracker.orphans(relPath), nil
 }

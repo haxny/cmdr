@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -698,7 +697,7 @@ func scanForNewSelectors(
 	var orphans []orphanDirective
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -706,12 +705,12 @@ func scanForNewSelectors(
 			return nil
 		}
 
-		raw, readErr := os.ReadFile(path)
+		source, readErr := corpus.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
 		scanned++
-		if !strings.Contains(string(raw), "objc2") {
+		if !strings.Contains(source, "objc2") {
 			return nil
 		}
 
@@ -721,13 +720,13 @@ func scanForNewSelectors(
 		}
 
 		tracker := newDirectiveTracker(AllowNewerSelectorComment, "//")
-		scanner := bufio.NewScanner(strings.NewReader(string(raw)))
-		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
-		lineNum := 0
+		lines, linesErr := corpus.Lines(path)
+		if linesErr != nil {
+			return linesErr
+		}
 		prev := ""
-		for scanner.Scan() {
-			lineNum++
-			line := scanner.Text()
+		for lineIdx, line := range lines {
+			lineNum := lineIdx + 1
 			tracker.observe(lineNum, line)
 			if strings.HasPrefix(strings.TrimLeft(line, " \t"), "//") {
 				prev = line
@@ -754,7 +753,7 @@ func scanForNewSelectors(
 			prev = line
 		}
 		orphans = append(orphans, tracker.orphans(filepath.ToSlash(relPath))...)
-		return scanner.Err()
+		return nil
 	})
 	if err != nil {
 		return nil, nil, 0, err

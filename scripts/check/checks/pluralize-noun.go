@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,7 +27,7 @@ const AllowPluralizeNounComment = "// allowed-pluralize-noun:"
 // `entries`, `directories`, `branches` slip through, matching the user's
 // regex `[a-zA-Z]\} [a-zA-Z][-a-zA-Z]+s\b`. Capture group 1 holds the noun
 // so we can filter common non-plural false positives below.
-var pluralizeNounSuffixRe = regexp.MustCompile(`[a-zA-Z]\} ([a-zA-Z][-a-zA-Z]+s)\b`)
+var pluralizeNounSuffixRe = gateRegexp(regexp.MustCompile(`[a-zA-Z]\} ([a-zA-Z][-a-zA-Z]+s)\b`))
 
 // pluralizeNounNonPluralWords are English words that end in `s` but aren't
 // plural nouns (verbs, copulas, demonstratives). Catches the most common
@@ -178,7 +177,7 @@ func scanForPluralizeNoun(rootDir, srcDir string, exts []string) ([]pluralizeNou
 		return nil, 0, nil
 	}
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -228,20 +227,15 @@ func scanPluralizeNounFile(rootDir, path string) ([]pluralizeNounSite, error) {
 		relPath = path
 	}
 
-	f, openErr := os.Open(path)
-	if openErr != nil {
-		return nil, openErr
+	lines, readErr := corpus.Lines(path)
+	if readErr != nil {
+		return nil, readErr
 	}
-	defer f.Close()
 
 	var violations []pluralizeNounSite
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 	var prev string
-	lineNum := 0
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
+	for lineIdx, line := range lines {
+		lineNum := lineIdx + 1
 
 		if isLikelyCommentLine(line) {
 			prev = line
@@ -270,9 +264,6 @@ func scanPluralizeNounFile(rootDir, path string) ([]pluralizeNounSite, error) {
 			text:    strings.TrimSpace(line),
 		})
 		prev = line
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
 	}
 	return violations, nil
 }

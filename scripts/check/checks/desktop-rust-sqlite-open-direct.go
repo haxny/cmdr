@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +23,7 @@ const sqliteOpenFactoryFile = "crates/cmdr-fs/src/sqlite_util.rs"
 // rawSqliteOpenPattern matches a direct rusqlite connection open: `Connection::open`,
 // `Connection::open_with_flags`, `Connection::open_in_memory`, with or without the
 // `rusqlite::` prefix.
-var rawSqliteOpenPattern = regexp.MustCompile(`\bConnection::open\w*\s*\(`)
+var rawSqliteOpenPattern = gateRegexp(regexp.MustCompile(`\bConnection::open\w*\s*\(`))
 
 type sqliteOpenSite struct {
 	relPath string
@@ -90,7 +89,7 @@ func scanForDirectSqliteOpen(rootDir, srcDir string) ([]sqliteOpenSite, int, err
 	var violations []sqliteOpenSite
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -107,19 +106,13 @@ func scanForDirectSqliteOpen(rootDir, srcDir string) ([]sqliteOpenSite, int, err
 			return nil
 		}
 
-		f, openErr := os.Open(path)
-		if openErr != nil {
-			return openErr
+		lines, readErr := corpus.Lines(path)
+		if readErr != nil {
+			return readErr
 		}
-		defer f.Close()
 
-		scanner := bufio.NewScanner(f)
-		// Allow long lines (default is 64 KB; some generated/test files exceed it).
-		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
-		lineNum := 0
-		for scanner.Scan() {
-			lineNum++
-			line := scanner.Text()
+		for lineIdx, line := range lines {
+			lineNum := lineIdx + 1
 			if !rawSqliteOpenPattern.MatchString(line) {
 				continue
 			}
@@ -134,7 +127,7 @@ func scanForDirectSqliteOpen(rootDir, srcDir string) ([]sqliteOpenSite, int, err
 				text:    strings.TrimSpace(line),
 			})
 		}
-		return scanner.Err()
+		return nil
 	})
 	if err != nil {
 		return nil, 0, err

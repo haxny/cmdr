@@ -106,7 +106,7 @@ func formatE2EStaleSelectorHits(hits []e2eStaleSelectorHit) string {
 // ---- vocabulary ----
 
 // e2eSelDatasetRegex finds `dataset.fooBar`, which renders as `data-foo-bar`.
-var e2eSelDatasetRegex = regexp.MustCompile(`\bdataset\.([A-Za-z][A-Za-z0-9]*)`)
+var e2eSelDatasetRegex = gateRegexp(regexp.MustCompile(`\bdataset\.([A-Za-z][A-Za-z0-9]*)`))
 
 // loadE2ESelVocabulary collects every whole word in the frontend source, where a word
 // may contain `-` and `_`. Classes reach the DOM through `class="…"`, `class:foo`,
@@ -114,7 +114,7 @@ var e2eSelDatasetRegex = regexp.MustCompile(`\bdataset\.([A-Za-z][A-Za-z0-9]*)`)
 // word, so presence is the bar rather than a model of every way to set one.
 func loadE2ESelVocabulary(srcDir string) (map[string]bool, error) {
 	vocab := make(map[string]bool)
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -127,11 +127,11 @@ func loadE2ESelVocabulary(srcDir string) (map[string]bool, error) {
 		if !isE2ESelVocabularyFile(d.Name()) {
 			return nil
 		}
-		body, readErr := os.ReadFile(path)
+		body, readErr := corpus.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
-		addE2ESelVocabulary(vocab, string(body))
+		addE2ESelVocabulary(vocab, body)
 		return nil
 	})
 	return vocab, err
@@ -183,7 +183,7 @@ func scanE2EStaleSelectors(rootDir string, vocab map[string]bool) (e2eStaleSelec
 			continue
 		}
 		found++
-		err := filepath.WalkDir(abs, func(path string, d os.DirEntry, err error) error {
+		err := corpus.WalkDir(abs, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -199,7 +199,7 @@ func scanE2EStaleSelectors(rootDir string, vocab map[string]bool) (e2eStaleSelec
 			if !strings.HasSuffix(d.Name(), ".ts") || strings.HasSuffix(d.Name(), ".test.ts") {
 				return nil
 			}
-			body, readErr := os.ReadFile(path)
+			body, readErr := corpus.ReadFile(path)
 			if readErr != nil {
 				return readErr
 			}
@@ -208,7 +208,7 @@ func scanE2EStaleSelectors(rootDir string, vocab map[string]bool) (e2eStaleSelec
 				relPath = path
 			}
 			report.files++
-			scanE2ESelFile(&report, filepath.ToSlash(relPath), string(body), vocab)
+			scanE2ESelFile(&report, filepath.ToSlash(relPath), body, vocab)
 			return nil
 		})
 		if err != nil {

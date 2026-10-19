@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,7 +24,7 @@ const AllowTestSleepComment = "// allowed-test-sleep:"
 // uses only `std::thread::sleep(`, `thread::sleep(`, and `tokio::time::sleep(`
 // (no bare `sleep(` imports), so anchoring on the `::sleep(` tail avoids matching
 // an unrelated local named `sleep`.
-var testSleepRegex = regexp.MustCompile(`\b(?:std::)?(?:thread|tokio::time|time)::sleep\s*\(`)
+var testSleepRegex = gateRegexp(regexp.MustCompile(`\b(?:std::)?(?:thread|tokio::time|time)::sleep\s*\(`))
 
 type testSleepSite struct {
 	relPath string
@@ -104,7 +103,7 @@ func scanForTestSleep(rootDir, srcDir string) ([]testSleepSite, []orphanDirectiv
 	var orphans []orphanDirective
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -180,7 +179,7 @@ type rustTestModState struct {
 // `\btest\b` deliberately misses `feature = "testing"` on its own — that gate
 // alone doesn't make a module test-only — and `not(` is excluded so
 // `#[cfg(not(test))]`, which marks the PRODUCTION arm, never arms the tracker.
-var testGatedCfgRegex = regexp.MustCompile(`#\[cfg\([^]]*\btest\b`)
+var testGatedCfgRegex = gateRegexp(regexp.MustCompile(`#\[cfg\([^]]*\btest\b`))
 
 // isTestGatedCfg reports whether a line carries a cfg attribute that makes what
 // follows test-only.
@@ -195,14 +194,10 @@ func isTestGatedCfg(line string) bool {
 // line is test code; otherwise only the body of an inline `#[cfg(test)] mod`
 // counts, and the region tracker decides membership line by line.
 func scanRustFileForTestSleep(path, relPath string, wholeFileIsTest bool) ([]testSleepSite, []orphanDirective, error) {
-	f, openErr := os.Open(path)
-	if openErr != nil {
-		return nil, nil, openErr
+	lines, readErr := corpus.Lines(path)
+	if readErr != nil {
+		return nil, nil, readErr
 	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 
 	var violations []testSleepSite
 	var state rustTestModState
@@ -211,11 +206,9 @@ func scanRustFileForTestSleep(path, relPath string, wholeFileIsTest bool) ([]tes
 	// above the sleep, because a reason often wraps across two comment lines. We
 	// remember the block's directive line and clear it on any non-comment line.
 	blockDirectiveLine := 0
-	lineNum := 0
 
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
+	for lineIdx, line := range lines {
+		lineNum := lineIdx + 1
 
 		inTest := wholeFileIsTest
 		if !wholeFileIsTest {
@@ -260,7 +253,7 @@ func scanRustFileForTestSleep(path, relPath string, wholeFileIsTest bool) ([]tes
 		blockDirectiveLine = 0
 	}
 
-	return violations, tracker.orphans(relPath), scanner.Err()
+	return violations, tracker.orphans(relPath), nil
 }
 
 // advanceTestModRegion advances the inline-test-mod state for one line and

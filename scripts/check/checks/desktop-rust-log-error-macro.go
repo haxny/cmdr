@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -96,7 +95,7 @@ func scanForRawLogError(rootDir, srcDir string) ([]logErrorSite, []string, int, 
 	allowlistHits := make(map[string]int, len(allowlistedLogErrorSites))
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -116,19 +115,13 @@ func scanForRawLogError(rootDir, srcDir string) ([]logErrorSite, []string, int, 
 			allowlistHits[relPath] = 0
 		}
 
-		f, openErr := os.Open(path)
-		if openErr != nil {
-			return openErr
+		lines, readErr := corpus.Lines(path)
+		if readErr != nil {
+			return readErr
 		}
-		defer f.Close()
 
-		scanner := bufio.NewScanner(f)
-		// Allow long lines (default is 64 KB; some generated/test files exceed it).
-		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
-		lineNum := 0
-		for scanner.Scan() {
-			lineNum++
-			line := scanner.Text()
+		for lineIdx, line := range lines {
+			lineNum := lineIdx + 1
 			if !strings.Contains(line, "log::error!") {
 				continue
 			}
@@ -147,7 +140,7 @@ func scanForRawLogError(rootDir, srcDir string) ([]logErrorSite, []string, int, 
 				text:    strings.TrimSpace(line),
 			})
 		}
-		return scanner.Err()
+		return nil
 	})
 	if err != nil {
 		return nil, nil, 0, err

@@ -37,8 +37,9 @@ recipe for adding one is § "Adding a new check". Only the layout rules live her
   `e2e-stale-selector-parse.go` is the TypeScript lexer and CSS selector parser behind
   `desktop-svelte-e2e-stale-selector`, kept apart so the check file holds only its wiring, vocabulary, and scan.
   `tracked-files.go` is the shared "what does git know about, and how do you read one" vocabulary (`repoFiles`,
-  `gitTrackedFiles`, `readTrackedFile`) that every whole-tree scanner enumerates and reads through. None appears in
-  `AllChecks`.
+  `gitTrackedFiles`, `readTrackedFile`) that every whole-tree scanner enumerates and reads through. `corpus.go` is the
+  run's one read of the tree and `literal-gate.go` the cheap pre-check in front of a per-line regex, both shared by the
+  source scanners (§ "The shared source corpus"). None appears in `AllChecks`.
 - **`changelog-commit-links.go` resolves every commit hash in `CHANGELOG.md` through ONE `git cat-file --batch-check`
   process**, not a process per reference. The recognition rule is § "CHANGELOG commit refs" below.
 
@@ -169,6 +170,8 @@ is broken — verify against the main clone first, where the answer is not clone
      (`tracked-files.go`). Git lists a tracked file until its deletion is STAGED, so a bare read turns the lane red with
      `open <path>: no such file or directory` on someone else's pending `rm`. Count only the files it hands back, so a
      skipped one can't inflate the success message's total.
+   - **A source scanner walks and reads through `corpus`, and gates its per-line regexes with `gateRegexp`** (§ "The
+     shared source corpus"). A bare `filepath.WalkDir` + `os.ReadFile` re-reads files every other scanner already read.
 4. Add a test file if the check has non-trivial logic (`{app}-{name}_test.go`).
 5. If the check grows an allowlist or an opt-out comment, wire staleness detection from day one (see § Allowlist
    shrink-wrap): dead entries must auto-remove or fail, and orphaned opt-out comments must fail. Reuse
@@ -225,6 +228,47 @@ below for the section-aware patterns to follow.
 - **`indentOutput(s)`** — indents captured stdout/stderr for error messages.
 - **`trimBuildNoise(s)`** — cuts everything before the last `Compiling …` line; when no such line exists (build failed
   before cargo ran), returns input verbatim.
+
+## The shared source corpus
+
+The fast lane runs ~20 in-process source scanners, and before the corpus each one walked and read its own copy of the
+tree: the 16 Rust scanners each opened 1,100–2,600 `.rs` files, and `pluralize-noun` another 5,000 frontend and Rust
+files. Profiled alone and in sequence on the M1 Max agent box (2026-10-19, `go test -cpuprofile` over each `Run`), the
+`open` and `read` syscalls were 65% of their CPU and the regex engine most of the rest. One file open on macOS costs
+~100 µs, so the reads, not the matching, set the pace.
+
+**`corpus` (`corpus.go`)** is a package-level, lazily filled memo keyed by absolute path, so it lives exactly as long as
+one `pnpm check` process:
+
+- `corpus.WalkDir(root, fn)` is `filepath.WalkDir` over remembered `os.ReadDir` listings: same order, same `SkipDir`,
+  same error callbacks. Each scanner keeps its own filtering (`isRustTestFile`, `ScannerRoots` jurisdiction, skip dirs)
+  on top, which is why the memo is per path rather than per "family": the scanners' roots differ (app tree, crates,
+  `src/` vs whole member), and a path memo serves all of them from one read.
+- `corpus.ReadFile(path)` returns the contents as a `string` (immutable, so sharing is safe); `corpus.Lines(path)` the
+  same split exactly as a `bufio.Scanner` loop splits it (`TestCorpusLinesMatchBufioScanner`), so a scanner's line
+  numbers don't move when it switches.
+- Every entry is a `sync.OnceValues`, so two checks asking at once read once, and nothing is written after it's built.
+  Lazy filling means a named run (`pnpm check error-string-match`) reads only its own tree.
+
+**`gateRegexp` (`literal-gate.go`)** wraps a `*regexp.Regexp` with a `strings.Contains` on the longest literal every
+match must contain, derived from the pattern's own syntax tree, so it can't drift from the pattern. Most source lines
+fail the gate and never reach the engine. `error-string-match` ran 12 regexes on every line of 1,700 files; gated, it
+went from 1.6 s to 0.07 s. `TestEveryScannerGateHasALiteral` fails on a wrapped pattern with nothing to gate on.
+
+**Gotcha: it's a snapshot.** A scanner that must see what an auto-fixer wrote earlier in the same run (one that
+`DependsOn` a formatter) has to read from disk. No in-process scanner does today; the formatter dependents are all
+external tools (ESLint, stylelint, `go vet`).
+
+**Not migrated, and why:**
+
+- The 12 i18n lanes (`desktop-i18n-*`, `*-fresh`) each spawn `node` on a TypeScript script, so their cost is 12 Node
+  startups plus 12 catalog parses inside Node, which a Go memo can't reach. Folding them into one Node process is a
+  separate change in `apps/desktop/scripts/`.
+- Scanners that read a handful of config or allowlist files gain nothing, and the SDK headers `macos-availability` reads
+  live outside the repo and are read by nobody else.
+
+**Fingerprint:** a scanner reaching `corpus` reaches `corpus.go` through `runner-sources.go`, which widens its input set
+by that one file. The executor never calls it, so it stays out of `GlobalInputs`.
 
 ## File-length allowlist
 

@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -86,7 +85,7 @@ func scanForTransportResets(rootDir, srcDir string) ([]transportResetSite, int, 
 	var violations []transportResetSite
 	scanned := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -114,21 +113,15 @@ func scanForTransportResets(rootDir, srcDir string) ([]transportResetSite, int, 
 // scanRustFileForTransportResets scans one file. Comment lines are skipped, so a
 // doc comment explaining why the reset is gone doesn't flag itself.
 func scanRustFileForTransportResets(path, relPath string) ([]transportResetSite, error) {
-	f, openErr := os.Open(path)
-	if openErr != nil {
-		return nil, openErr
+	lines, readErr := corpus.Lines(path)
+	if readErr != nil {
+		return nil, readErr
 	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 
 	var violations []transportResetSite
-	lineNum := 0
 
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
+	for lineIdx, line := range lines {
+		lineNum := lineIdx + 1
 
 		if strings.HasPrefix(strings.TrimLeft(line, " \t"), "//") {
 			continue
@@ -138,7 +131,7 @@ func scanRustFileForTransportResets(path, relPath string) ([]transportResetSite,
 		}
 		violations = append(violations, transportResetSite{relPath: relPath, line: lineNum, text: strings.TrimSpace(line)})
 	}
-	return violations, scanner.Err()
+	return violations, nil
 }
 
 func lineHasTransportReset(line string) bool {

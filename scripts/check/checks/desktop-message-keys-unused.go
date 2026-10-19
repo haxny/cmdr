@@ -169,7 +169,7 @@ func readUnusedCheckSources(srcDir string, exts ...string) ([]string, int, error
 	}
 	var sources []string
 	scanned := 0
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, walkErr error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -185,11 +185,11 @@ func readUnusedCheckSources(srcDir string, exts ...string) ([]string, int, error
 		if d.Name() == "keys.gen.ts" {
 			return nil
 		}
-		data, readErr := os.ReadFile(path)
+		data, readErr := corpus.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
-		sources = append(sources, string(data))
+		sources = append(sources, data)
 		scanned++
 		return nil
 	})

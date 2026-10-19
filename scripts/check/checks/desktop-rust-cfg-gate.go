@@ -231,18 +231,18 @@ var modDeclPattern = regexp.MustCompile(`^(?:pub(?:\s*\((?:crate|super)\))?\s+)?
 func buildModuleGatedFileSet(srcDir string) (map[string]bool, error) {
 	gatedFiles := make(map[string]bool)
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() || !strings.HasSuffix(d.Name(), ".rs") {
 			return nil
 		}
-		data, err := os.ReadFile(path)
+		data, err := corpus.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		for _, f := range declaredModuleFiles(path, strings.Split(string(data), "\n"), findCfgGatedModules) {
+		for _, f := range declaredModuleFiles(path, strings.Split(data, "\n"), findCfgGatedModules) {
 			gatedFiles[f] = true
 		}
 		return nil
@@ -299,7 +299,7 @@ func moduleFiles(moduleDir, modName string) []string {
 // rustFilesUnder lists every .rs file in a directory tree.
 func rustFilesUnder(dir string) []string {
 	var found []string
-	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	_ = corpus.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -316,11 +316,11 @@ var pathAttrPattern = regexp.MustCompile(`#\[path\s*=\s*"([^"]+)"\]`)
 
 // childModuleFiles returns the files of every child module a Rust source file declares.
 func childModuleFiles(path string) []string {
-	data, err := os.ReadFile(path)
+	data, err := corpus.ReadFile(path)
 	if err != nil {
 		return nil
 	}
-	return declaredModuleFiles(path, strings.Split(string(data), "\n"), findModuleDecls)
+	return declaredModuleFiles(path, strings.Split(data, "\n"), findModuleDecls)
 }
 
 // declaredModuleFiles resolves the module declarations `find` picks out of a source file's
@@ -391,7 +391,7 @@ func findCfgGatedModules(lines []string) []moduleDecl {
 // `use libc::…` and a bare `unsafe { libc::geteuid() }` alike. Matching only `use` lines
 // would miss the inline form, which compiles on macOS and breaks the Linux build with
 // nothing red locally.
-var crateRefPattern = regexp.MustCompile(`\b(\w+)::`)
+var crateRefPattern = gateRegexp(regexp.MustCompile(`\b(\w+)::`))
 
 // lineCommentPattern strips a `//` comment (including `///` and `//!`) so prose naming a
 // macOS-only crate doesn't read as a use of it. Block comments aren't stripped: naming a
@@ -481,7 +481,7 @@ func moduleRefPattern(modPaths []string) *regexp.Regexp {
 func macOSOnlyModulePaths(srcDir string) ([]string, error) {
 	var paths []string
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -493,7 +493,7 @@ func macOSOnlyModulePaths(srcDir string) ([]string, error) {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := corpus.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -501,7 +501,7 @@ func macOSOnlyModulePaths(srcDir string) ([]string, error) {
 		if !ok {
 			return nil
 		}
-		for _, modName := range findMacOSOnlyModules(strings.Split(string(data), "\n")) {
+		for _, modName := range findMacOSOnlyModules(strings.Split(data, "\n")) {
 			if prefix == "" {
 				paths = append(paths, modName)
 			} else {
@@ -570,7 +570,7 @@ func scanForUngatedUses(
 	var violations []violation
 	gatedUseCount := 0
 
-	err := filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+	err := corpus.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -583,12 +583,12 @@ func scanForUngatedUses(
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := corpus.ReadFile(path)
 		if err != nil {
 			return err
 		}
 
-		lines := strings.Split(string(data), "\n")
+		lines := strings.Split(data, "\n")
 		for i, line := range lines {
 			hits := make([]violation, 0, 2)
 			for _, crateName := range macOSCratesReferencedOn(line, macOSModules) {
