@@ -3,9 +3,11 @@
 //! [`TestDir`] is the scratch directory; [`unique_test_id`] names a test-owned entry
 //! in a process-wide map. [`wait_until`] serves sync `#[test]`s,
 //! [`wait_until_async`] serves `#[tokio::test]`s; both poll a condition to a
-//! deadline and panic when it never holds, so a wait can't silently pass. Don't
+//! deadline and panic when it never holds, so a wait can't silently pass.
+//! [`wait_until_async_while_moving`] is the one for throughput-bound work: it
+//! fails when the work stops moving, not when a stopwatch runs out. Don't
 //! hand-roll a poll loop, and don't sleep a fixed span hoping the work landed:
-//! the sleep inside those two helpers is the only sanctioned one in Rust test
+//! the sleep inside those helpers is the only sanctioned one in Rust test
 //! code, and the `test-sleep` check enforces that.
 //!
 //! Gated behind the `testing` feature, so it exists in dev targets and in no
@@ -177,6 +179,52 @@ pub fn wait_until_async<'a>(
     }
 }
 
+/// [`wait_until_async`], for work whose length is the work's own: `condition` may take as long as
+/// `moving` keeps answering something new, and the wait panics once it answers the same for `quiet`
+/// (the work stalled) or at `ceiling` overall.
+///
+/// For a wait whose length is throughput (bytes onto a shared fixture a loaded runner starves), a
+/// stopwatch either trips on a healthy slow run or is too long to catch a hang. `moving` is the
+/// work's own progress (bytes done, files done); ❌ never a heartbeat that ticks while stalled.
+/// Keep `ceiling` under the test's nextest cap, so it stays the authoritative deadline.
+#[track_caller]
+pub fn wait_until_async_while_moving<'a, M: PartialEq + std::fmt::Debug + 'a>(
+    quiet: Duration,
+    ceiling: Duration,
+    description: &'a str,
+    mut moving: impl FnMut() -> M + 'a,
+    mut condition: impl FnMut() -> bool + 'a,
+) -> impl Future<Output = ()> + 'a {
+    let caller = Location::caller();
+    async move {
+        let deadline = tokio::time::Instant::now() + ceiling;
+        let mut seen = moving();
+        let mut moved_at = tokio::time::Instant::now();
+        loop {
+            if condition() {
+                return;
+            }
+            let now = tokio::time::Instant::now();
+            let current = moving();
+            if current != seen {
+                seen = current;
+                moved_at = now;
+            }
+            assert!(
+                now.duration_since(moved_at) < quiet,
+                "no progress for {quiet:.1?} waiting for {description} (stuck at {seen:?}) (at {caller})"
+            );
+            assert!(
+                now < deadline,
+                "{}, still moving ({seen:?}) (at {caller})",
+                timed_out(ceiling, description)
+            );
+            // allowed-test-sleep: the sanctioned poll interval, as in `wait_until_async`
+            tokio::time::sleep(POLL_INTERVAL).await;
+        }
+    }
+}
+
 fn timed_out(timeout: Duration, description: &str) -> String {
     format!("timed out after {timeout:.1?} waiting for {description}")
 }
@@ -230,6 +278,48 @@ mod tests {
     #[should_panic(expected = "timed out after 20.0ms waiting for a condition that never holds")]
     async fn a_condition_that_never_holds_panics_with_the_description_async() {
         wait_until_async(Duration::from_millis(20), "a condition that never holds", || false).await;
+    }
+
+    /// Work that takes ten times `quiet` but moves the whole way is waited out.
+    #[tokio::test(start_paused = true)]
+    async fn work_that_keeps_moving_may_take_longer_than_the_quiet_budget() {
+        let started = tokio::time::Instant::now();
+        let ticks = || started.elapsed().as_millis() / 100;
+        wait_until_async_while_moving(
+            Duration::from_secs(1),
+            Duration::from_secs(60),
+            "the slow work",
+            ticks,
+            || started.elapsed() >= Duration::from_secs(10),
+        )
+        .await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    #[should_panic(expected = "no progress for 1.0s waiting for the stuck work (stuck at 7)")]
+    async fn work_that_stops_moving_panics_after_the_quiet_budget() {
+        wait_until_async_while_moving(
+            Duration::from_secs(1),
+            Duration::from_secs(60),
+            "the stuck work",
+            || 7,
+            || false,
+        )
+        .await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    #[should_panic(expected = "timed out after 5.0s waiting for the endless work, still moving")]
+    async fn work_that_moves_forever_panics_at_the_ceiling() {
+        let started = tokio::time::Instant::now();
+        wait_until_async_while_moving(
+            Duration::from_secs(1),
+            Duration::from_secs(5),
+            "the endless work",
+            || started.elapsed().as_millis() / 100,
+            || false,
+        )
+        .await;
     }
 
     #[test]

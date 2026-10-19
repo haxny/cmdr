@@ -4,8 +4,8 @@
 //! A volume that answers capability flags and refuses every read: [`CapabilityStub`].
 //!
 //! A scratch directory to write into: [`TestDir`]. Waiting for background work to land:
-//! [`wait_until`] serves sync `#[test]`s, [`wait_until_async`] serves `#[tokio::test]`s. These
-//! three and [`WedgedVolume`] live in `cmdr_fs::testing` (every crate in the workspace gets a scratch dir and waits the same
+//! [`wait_until`] serves sync `#[test]`s, [`wait_until_async`] serves `#[tokio::test]`s, and
+//! [`wait_until_async_while_moving`] serves throughput-bound work. These and [`WedgedVolume`] live in `cmdr_fs::testing` (every crate in the workspace gets a scratch dir and waits the same
 //! way) and are re-exported here so `crate::test_support::wait_until` keeps resolving. Don't
 //! hand-roll a poll loop, and don't sleep a fixed span hoping the work landed: the sleep inside
 //! those two helpers is the only sanctioned one in Rust test code.
@@ -39,7 +39,7 @@ use std::path::Path;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-pub(crate) use cmdr_fs::testing::{TestDir, WedgedVolume, wait_until, wait_until_async};
+pub(crate) use cmdr_fs::testing::{TestDir, WedgedVolume, wait_until, wait_until_async, wait_until_async_while_moving};
 
 use crate::file_system::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
 use cmdr_fs::entry::FileEntry;

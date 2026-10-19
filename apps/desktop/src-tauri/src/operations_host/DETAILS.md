@@ -319,7 +319,9 @@ other modules reach `smb_test_support` from there: `listing_host/tests/smb_pane_
   restores and every file must land byte-exact with no `.cmdr-tmp-*` left. A sibling cell cuts mid-file, cancels while
   the share is out, and pins that `write-cancelled` arrives at once naming the temp `removedWhenBack`, and that the
   background cleanup removes it once the share reconnects. ❌ Never stage an outage by stopping a
-  fixture container: the stacks are leased machine-wide, so that fails every other worktree's running suite.
+  fixture container: the stacks are leased machine-wide, so that fails every other worktree's running suite. Their
+  waits are paced by the copy's progress (`wait_until_async_while_moving`, `QUIET` of no progress, one `CELL_BUDGET`
+  under a 120 s cap), ❌ never a stopwatch: a healthy run on a starved shared Samba outlasted the general 30 s cap.
 - **The stress test's hung-run diagnostic gates on the log TARGET** (`MutexCaptureLogger::enabled` in
   `smb_stress_test.rs`): `cmdr_smb::*` for the `client-mutex:` records and `smb2::*` for `recv:`. Without that gate the
   whole process-wide trace stream flows through `log()` and gets `format!`-ed per record, which pushed

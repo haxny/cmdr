@@ -44,14 +44,17 @@ impl OutageProxy {
         let accepting = Arc::clone(&shared);
         let listener = tokio::spawn(async move {
             while let Ok((client, _)) = listener.accept().await {
+                // ❗ Checked and recorded under the lock `cut` takes: a dial
+                // that read "up" just before a cut must land in `live` before
+                // the cut drains it, or it forwards through the outage.
+                let mut live = accepting.live.lock_ignore_poison();
                 if !accepting.up.load(Ordering::SeqCst) {
                     // The network is down: the connection opens and closes at
                     // once, the way a dial into a dead route fails.
                     drop(client);
                     continue;
                 }
-                let forwarding = tokio::spawn(forward(client, target_port));
-                accepting.live.lock_ignore_poison().push(forwarding);
+                live.push(tokio::spawn(forward(client, target_port)));
             }
         });
         Self { port, shared, listener }
@@ -65,8 +68,9 @@ impl OutageProxy {
     /// The network goes away: every live connection closes, and new ones are
     /// refused until [`restore`](Self::restore).
     pub(crate) fn cut(&self) {
+        let mut live = self.shared.live.lock_ignore_poison();
         self.shared.up.store(false, Ordering::SeqCst);
-        for connection in self.shared.live.lock_ignore_poison().drain(..) {
+        for connection in live.drain(..) {
             connection.abort();
         }
     }

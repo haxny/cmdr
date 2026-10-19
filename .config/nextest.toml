@@ -285,6 +285,19 @@ filter = 'test(smb_integration_many_files_at_full_concurrency_land_intact)'
 slow-timeout = { period = "75s", terminate-after = 1 }
 
 [[profile.default.overrides]]
+# The dropped-network cells (`smb_outage_test.rs`): a copy of ~8 MiB through a
+# proxy they cut and restore, on the shared guest share. 1.7-11 s on an idle
+# M3 Max, but a HEALTHY run on a starved Samba took past the general 30 s cap,
+# killed with nothing said (CI run 39321102740, 2026-10-19), and 87 s on a
+# private copy of the guest at `docker update --cpus 0.01`. Their waits are
+# paced by the copy's own progress (`QUIET`, 20 s) inside one 90 s
+# `CELL_BUDGET`, so a stall fails sooner than the old cap did and names its
+# wait; 120 s keeps that budget authoritative and nextest the hang backstop.
+# Precedes the general block so it wins.
+filter = 'test(smb_outage_test::)'
+slow-timeout = { period = "120s", terminate-after = 1 }
+
+[[profile.default.overrides]]
 # SMB integration tests (`#[ignore]`-gated, only run by the
 # `desktop-rust-integration-tests` check, which boots a real Docker Samba stack).
 # Each test pays the SMB session setup + auth + network round-trip cost; the

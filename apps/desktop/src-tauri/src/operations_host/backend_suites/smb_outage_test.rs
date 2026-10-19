@@ -22,7 +22,7 @@
 use super::outage_proxy_test_support::OutageProxy;
 use super::smb_test_support::*;
 
-use crate::test_support::wait_until_async;
+use crate::test_support::wait_until_async_while_moving;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::ConnectionState;
 use cmdr_operations::testing::new_operation_state;
@@ -56,8 +56,58 @@ const FILE_BYTES: usize = 256 * 1024;
 /// takes the network away.
 const PAUSE_AFTER_FILES: usize = 3;
 
-/// A bound on every wait in here, so a regression fails rather than hangs.
-const WAIT: Duration = Duration::from_secs(30);
+/// How long a copy may go without moving (no new file or byte done) before a
+/// wait on it reads as a stall.
+///
+/// ❗ The waits here are paced by the copy, ❌ never a stopwatch: how long these
+/// cells take is the shared guest share's throughput. A healthy run on a
+/// starved Samba (one CPU of the stack, which the whole suite shares) took past
+/// the general 30 s cap on a CI runner (run 39321102740, 2026-10-19). On a
+/// private copy of the guest at `docker update --cpus 0.01` the copy cell
+/// took 87 s and finished, its longest stretch without progress 13 s (one
+/// window of ten writes awaiting the server; M3 Max, 2026-10-20). A wait that
+/// sees nothing move for this long is a hang, whatever the load.
+const QUIET: Duration = Duration::from_secs(20);
+
+/// Every wait in a cell together. Under the cells' 120 s nextest cap
+/// (`.config/nextest.toml`), so the wait that starved names itself rather than
+/// the cap killing the cell mute.
+const CELL_BUDGET: Duration = Duration::from_secs(90);
+
+/// What's left of a cell's [`CELL_BUDGET`].
+struct CellClock(tokio::time::Instant);
+
+impl CellClock {
+    fn start() -> Self {
+        Self(tokio::time::Instant::now() + CELL_BUDGET)
+    }
+
+    fn left(&self) -> Duration {
+        self.0.saturating_duration_since(tokio::time::Instant::now())
+    }
+}
+
+/// How far the copy has got: the newest tick's files and bytes. A re-sent tick
+/// (the outage wait's announcement) repeats it, so it doesn't count as moving.
+fn progress_of(events: &CollectorEventSink) -> Option<(usize, u64)> {
+    events
+        .progress
+        .lock_ignore_poison()
+        .last()
+        .map(|tick| (tick.files_done, tick.bytes_done))
+}
+
+/// Waits for `condition` while the copy keeps moving ([`QUIET`]), within what's
+/// left of the cell's budget.
+#[track_caller]
+fn while_copying<'a>(
+    clock: &CellClock,
+    events: &'a CollectorEventSink,
+    description: &'a str,
+    condition: impl FnMut() -> bool + 'a,
+) -> impl Future<Output = ()> + 'a {
+    wait_until_async_while_moving(QUIET, clock.left(), description, move || progress_of(events), condition)
+}
 
 /// Reconnect quickly and often: what's under test is that the copy waits and
 /// then carries on, not the production cadence.
@@ -190,7 +240,7 @@ async fn copy_through_a_cut(conflict_resolution: ConflictResolution) {
             budget: Duration::from_secs(60),
             cadence: CADENCE,
             poll_every: Duration::from_millis(20),
-            // Well inside `WAIT`, so one handshake that never returns can't
+            // Well inside `QUIET`, so one handshake that never returns can't
             // outlast the network coming back (`#406`).
             attempt_timeout: Duration::from_secs(5),
         }),
@@ -214,7 +264,7 @@ async fn copy_through_a_cut(conflict_resolution: ConflictResolution) {
     let copy_state = Arc::clone(&state);
     let op_id = op.id().to_owned();
     let dest_path = PathBuf::from(&base);
-    let mut copy = tokio::spawn(async move {
+    let copy = tokio::spawn(async move {
         copy_volumes_with_progress(
             sink,
             &op_id,
@@ -235,10 +285,14 @@ async fn copy_through_a_cut(conflict_resolution: ConflictResolution) {
 
     // Mid-copy: the network goes away while the copy is paused, then the copy
     // carries on into it.
-    wait_until_async(WAIT, "the copy to pause part-way", || state.pause_gate.is_paused()).await;
+    let clock = CellClock::start();
+    while_copying(&clock, &events, "the copy to pause part-way", || {
+        state.pause_gate.is_paused()
+    })
+    .await;
     proxy.cut();
     state.pause_gate.resume();
-    wait_until_async(WAIT, "the copy to wait for the share", || {
+    while_copying(&clock, &events, "the copy to wait for the share", || {
         state.outage.waiting_for().is_some()
     })
     .await;
@@ -251,14 +305,11 @@ async fn copy_through_a_cut(conflict_resolution: ConflictResolution) {
     assert!(state.outage.waiting_for().is_some(), "and says what it's waiting for");
 
     proxy.restore();
-    let finished = tokio::time::timeout(WAIT, &mut copy).await;
-    let result = match finished {
-        Ok(joined) => joined.expect("the copy task itself must not panic"),
-        Err(_) => {
-            copy.abort();
-            panic!("the copy didn't finish within {WAIT:?} of the network coming back");
-        }
-    };
+    while_copying(&clock, &events, "the copy to finish once the network is back", || {
+        copy.is_finished()
+    })
+    .await;
+    let result = copy.await.expect("the copy task itself must not panic");
     result.expect("a share that comes back within the budget must not fail the copy");
 
     for index in 0..FILE_COUNT {
@@ -381,7 +432,8 @@ async fn smb_integration_a_cancel_while_the_share_is_out_reports_at_once_and_rem
         .map_err(|failure| failure.error)
     });
 
-    wait_until_async(WAIT, "the copy to wait for the share", || {
+    let clock = CellClock::start();
+    while_copying(&clock, &events, "the copy to wait for the share", || {
         state.outage.waiting_for().is_some()
     })
     .await;
@@ -444,7 +496,7 @@ async fn smb_integration_a_cancel_while_the_share_is_out_reports_at_once_and_rem
         .attempt_reconnect()
         .await
         .expect("the share reconnects once the network is back");
-    tokio::time::timeout(WAIT, engine.leftover_cleanups_settled())
+    tokio::time::timeout(clock.left(), engine.leftover_cleanups_settled())
         .await
         .expect("the background cleanup settles once the share is back");
 
