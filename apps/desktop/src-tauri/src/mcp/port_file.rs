@@ -150,7 +150,7 @@ pub fn remove_port_file(dir: &Path, name: &str) {
         log::warn!(
             target: "mcp::port_file",
             "Could not remove port file {}: {}",
-            path.display(),
+            cmdr_fs::log_private::LogPrivate::file_path(&path),
             err,
         );
     }

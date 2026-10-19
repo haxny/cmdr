@@ -32,6 +32,8 @@ use tauri::{
 use super::context_menu_slots::Placeheld;
 use crate::file_system::open_with::AppCandidate;
 use crate::intl::menu_t;
+#[cfg(target_os = "macos")]
+use cmdr_fs::log_private::LogPrivate;
 
 /// Menu item ID prefix for "Open with" candidate apps. Followed by the app's bundle ID.
 pub const OPEN_WITH_ID_PREFIX: &str = "open-with:";
@@ -195,7 +197,7 @@ pub(super) fn launch_with<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>, a
 
     if !open_with_extract::any_needs_extraction(&paths) {
         if let Err(e) = open_paths_with(&paths, &app_path) {
-            log::warn!("Open with failed for {}: {e}", app_path.display());
+            log::warn!("Open with failed for {}: {e}", LogPrivate::path(&app_path));
         }
         return;
     }
@@ -206,8 +208,8 @@ pub(super) fn launch_with<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>, a
             Err(refused) => {
                 log::warn!(
                     "Open with: couldn't copy {} out for {}: {}",
-                    refused.path.display(),
-                    app_path.display(),
+                    LogPrivate::path(&refused.path),
+                    LogPrivate::path(&app_path),
                     refused.error
                 );
                 announce_refused_copy(&app, &refused, &app_path);
@@ -216,7 +218,7 @@ pub(super) fn launch_with<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>, a
         };
         let hopped = app.run_on_main_thread(move || {
             if let Err(e) = open_paths_with(&copies, &app_path) {
-                log::warn!("Open with failed for {}: {e}", app_path.display());
+                log::warn!("Open with failed for {}: {e}", LogPrivate::path(&app_path));
             }
         });
         if let Err(e) = hopped {

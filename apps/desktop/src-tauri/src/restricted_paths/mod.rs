@@ -88,7 +88,7 @@ pub fn record_denial(path: impl AsRef<Path>) {
             return; // Already in the set; no change.
         }
     }
-    log::debug!(target: "restricted_paths", "recorded denial: {}", path.display());
+    log::debug!(target: "restricted_paths", "recorded denial: {}", cmdr_fs::log_private::LogPrivate::path(path));
     schedule_emit();
 }
 
@@ -101,7 +101,7 @@ pub fn clear_path(path: impl AsRef<Path>) {
         guard.remove(path)
     };
     if removed {
-        log::debug!(target: "restricted_paths", "cleared: {}", path.display());
+        log::debug!(target: "restricted_paths", "cleared: {}", cmdr_fs::log_private::LogPrivate::path(path));
         schedule_emit();
     }
 }

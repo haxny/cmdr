@@ -80,6 +80,7 @@ pub fn parse(json: &str, source: &str) -> Option<Vec<Advisory>> {
     let file: AdvisoryFile = match serde_json::from_str(json) {
         Ok(file) => file,
         Err(e) => {
+            // allowed-log-private: `source` is a fixed label for where the list came from
             log::warn!(target: "security_advisories", "The {source} security advisory list doesn't parse, so it names no advisory: {e}");
             return None;
         }
@@ -94,6 +95,7 @@ pub fn parse(json: &str, source: &str) -> Option<Vec<Advisory>> {
                 url: raw.url,
             }),
             Err(e) => {
+                // allowed-log-private: `source` is a fixed label for where the list came from
                 log::warn!(target: "security_advisories", "The {source} security advisory list names {} as fixed in {:?}, which isn't semver ({e}), so it names no advisory", raw.id, raw.fixed_in);
                 None
             }

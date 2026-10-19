@@ -98,7 +98,11 @@ async fn refresh(cache: PathBuf) {
     match fetch(PRICES_URL).await {
         Ok((table, json)) => {
             if let Err(e) = write_cache(&cache, &json) {
-                log::warn!(target: "s3_costs", "couldn't cache the price table at {}: {e}", cache.display());
+                log::warn!(
+                    target: "s3_costs",
+                    "couldn't cache the price table at {}: {e}",
+                    cmdr_fs::log_private::LogPrivate::file_path(&cache)
+                );
             }
             *TABLE.write_ignore_poison() = Some(Arc::new(table));
             log::info!(target: "s3_costs", "refreshed the S3 price table");

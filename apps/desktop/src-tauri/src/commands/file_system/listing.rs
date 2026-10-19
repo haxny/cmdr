@@ -525,7 +525,7 @@ async fn refresh_listing_within(listing_id: String, force: bool, wait: Duration)
             target: "refresh_listing",
             "refresh_listing: short-circuit, watcher-backed non-local listing (listing_id={}, path={})",
             listing_id,
-            path.display(),
+            cmdr_fs::log_private::LogPrivate::dir_path(&path),
         );
         return TimedOut {
             data: (),

@@ -4,6 +4,7 @@
 //! (Adwaita, Papirus, Yaru, etc.) and `mime_guess` for extension-to-MIME mapping.
 //! Thread-safe: works with rayon parallelism unlike GTK-based icon providers.
 
+use cmdr_fs::log_private::LogPrivate;
 use image::DynamicImage;
 use log::{debug, warn};
 use std::sync::LazyLock;
@@ -21,6 +22,7 @@ static ICON_THEME: LazyLock<String> = LazyLock::new(|| {
 /// `"symlink"`, and `"ext:<extension>"` (for example, `"ext:png"`).
 pub fn get_icon_for_id(icon_id: &str, size: u16) -> Option<DynamicImage> {
     let icon_names = icon_names_for_id(icon_id);
+    // allowed-log-private: freedesktop icon theme names, not user values
     debug!("Icon lookup: {icon_id} -> names: {icon_names:?}");
     lookup_first_icon(&icon_names, size)
 }
@@ -79,20 +81,32 @@ fn lookup_first_icon(names: &[String], size: u16) -> Option<DynamicImage> {
         match &found {
             Some(path) => {
                 let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("?");
-                debug!("  {name}: found {path:?} (format: {ext})");
+                debug!(
+                    // allowed-log-private: `name` is a freedesktop icon theme name, not a user value
+                    "  {name}: found {path:?} (format: {ext})",
+                    path = LogPrivate::file_path(path)
+                );
 
                 // Skip SVGs: we don't have an SVG renderer and adding resvg would be heavy
                 if ext == "svg" {
+                    // allowed-log-private: a freedesktop icon theme name, not a user value
                     debug!("  {name}: skipped (SVG)");
                     continue;
                 }
 
                 match image::open(path) {
                     Ok(img) => return Some(img),
-                    Err(e) => warn!("  {name}: failed to load {path:?}: {e}"),
+                    Err(e) => {
+                        warn!(
+                            // allowed-log-private: `name` is a freedesktop icon theme name, not a user value
+                            "  {name}: failed to load {path:?}: {e}",
+                            path = LogPrivate::file_path(path)
+                        );
+                    }
                 }
             }
             None => {
+                // allowed-log-private: a freedesktop icon theme name, not a user value
                 debug!("  {name}: not found in theme '{theme}'");
             }
         }

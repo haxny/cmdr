@@ -385,8 +385,8 @@ define_class!(
                 target: "drag_out",
                 "writePromiseToURL: {} {} -> {}",
                 ivars.source_volume_id,
-                ivars.source_path.display(),
-                dest.display()
+                cmdr_fs::log_private::LogPrivate::path(&ivars.source_path),
+                cmdr_fs::log_private::LogPrivate::path(&dest)
             );
 
             // Block the (serial, ours) queue thread on the async service. The

@@ -11,6 +11,8 @@
 
 use std::path::{Path, PathBuf};
 
+use cmdr_fs::log_private::LogPrivate;
+
 use crate::secrets::{SecretStore, SecretStoreError};
 
 use super::plan::{TargetKind, TargetShape, WipeTarget};
@@ -104,7 +106,7 @@ fn remove_target(target: &WipeTarget) -> Option<WipeLeftover> {
         TargetShape::FilesWithPrefix(prefix) => remove_prefixed_files(&target.path, prefix),
     }
     .map(|path| {
-        log::warn!(target: "data_wipe", "{:?} couldn't be removed: {}", target.kind, path.display());
+        log::warn!(target: "data_wipe", "{:?} couldn't be removed: {}", target.kind, LogPrivate::path(&path));
         WipeLeftover::Path {
             path: path.to_string_lossy().into_owned(),
         }
@@ -122,7 +124,7 @@ fn remove_whole(path: &Path) -> Option<PathBuf> {
         _ => path.to_path_buf(),
     };
     if let Err(e) = remove_any(&doomed) {
-        log::warn!(target: "data_wipe", "removing {} stopped: {e}", doomed.display());
+        log::warn!(target: "data_wipe", "removing {} stopped: {e}", LogPrivate::path(&doomed));
     }
     if exists(&doomed) {
         return Some(doomed);

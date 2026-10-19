@@ -441,11 +441,17 @@ pub(crate) fn resolve_include_scope(paths: &[String], pool: &ReadPool, mount_roo
             match store::resolve_path(conn, index_path) {
                 Ok(Some(id)) => include_ids.push(id),
                 Ok(None) => {
-                    log::debug!("search: include path not found in index: {index_path}");
+                    log::debug!(
+                        "search: include path not found in index: {index_path}",
+                        index_path = cmdr_fs::log_private::LogPrivate::dir_path(index_path)
+                    );
                     unresolved.push(original.clone());
                 }
                 Err(e) => {
-                    log::warn!("search: failed to resolve include path {index_path}: {e}");
+                    log::warn!(
+                        "search: failed to resolve include path {index_path}: {e}",
+                        index_path = cmdr_fs::log_private::LogPrivate::dir_path(index_path)
+                    );
                     unresolved.push(original.clone());
                 }
             }

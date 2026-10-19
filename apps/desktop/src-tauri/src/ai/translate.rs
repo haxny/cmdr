@@ -29,6 +29,7 @@ pub async fn translate_once(
         .map_err(|e| {
             log::warn!(
                 target: "ai::translate",
+                // allowed-log-private: `label` names the calling pipeline (`"AI search"`), not a user value
                 "{label}: chat_completion failed after {:.1}s for a {}-char query: {e}",
                 t0.elapsed().as_secs_f64(),
                 user_query.chars().count()
@@ -38,6 +39,7 @@ pub async fn translate_once(
 
     log::info!(
         target: "ai::translate",
+        // allowed-log-private: `label` names the calling pipeline (`"AI search"`), not a user value
         "{label}: chat_completion returned {} chars in {:.1}s",
         response.len(),
         t0.elapsed().as_secs_f64()

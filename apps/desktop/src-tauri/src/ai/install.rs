@@ -210,6 +210,7 @@ async fn do_download<R: Runtime>(app: &AppHandle<R>) -> Result<(), LocalAiError>
 
     // Get the model to download (use default for new installs)
     let model = get_current_model();
+    // allowed-log-private: a bundled AI model's display name, not a user value
     log::debug!("AI download: using model {} ({})", model.id, model.display_name);
 
     // Set the model ID we're installing. The cancel flag was already reset by `decide_start`, under

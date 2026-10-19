@@ -43,6 +43,7 @@ const DOWNLOAD_READ_TIMEOUT: Duration = Duration::from_secs(30);
 use crate::ignore_poison::IgnorePoison as _;
 use crate::managed_policy::{Egress, UpdatePolicy, UpdateRefusal};
 use crate::server_request::describe_error_chain;
+use cmdr_fs::log_private::LogPrivate;
 
 /// What the latest check offered and what the latest download staged, shared by the three
 /// commands. The backend keeps both so a download fetches only what a check offered (never a URL
@@ -301,7 +302,7 @@ pub async fn update_write_blocker() -> Result<Option<BundleWriteBlocker>, String
     if let Some(reason) = blocker {
         log::warn!(
             "Can't install updates into {}: {reason}. The user needs to move Cmdr to Applications.",
-            bundle.display()
+            LogPrivate::dir_path(&bundle)
         );
     }
     Ok(blocker)
@@ -479,7 +480,11 @@ pub struct UpdateInstalled {
 #[specta::specta]
 pub async fn install_update(state: State<'_, UpdateState>) -> Result<UpdateInstalled, UpdateInstallError> {
     let (staged, policy) = staged_to_install(&state).await?;
-    log::info!("Installing update {} from {}", staged.version, staged.tarball.display());
+    log::info!(
+        "Installing update {} from {}",
+        staged.version,
+        LogPrivate::file_path(&staged.tarball)
+    );
 
     // The archive's own `Info.plist` is what binds its version (the manifest isn't signed), so the
     // installer asks the policy again about THAT version once it has extracted it.

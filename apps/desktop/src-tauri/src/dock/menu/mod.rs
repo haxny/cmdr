@@ -160,7 +160,7 @@ unsafe fn add_method(cls: &AnyClass, selector: Sel, imp: Imp, types: &std::ffi::
             "{:?} already implements `{selector:?}`, which leaves {what} switched off. \
              Something upstream (most likely a tao upgrade) grew this method; \
              adopting it now needs a swizzle that forwards to theirs, rather than an add.",
-            cls.name()
+            cls.name() // allowed-log-private: an Objective-C class name, not a user value
         );
         return;
     }

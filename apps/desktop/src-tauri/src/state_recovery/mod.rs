@@ -24,6 +24,7 @@ use tauri_specta::Event;
 
 use crate::ignore_poison::IgnorePoison;
 use crate::security_log::{self, SecurityEvent};
+use cmdr_fs::log_private::LogPrivate;
 
 pub use crate::security_log::StateFile;
 pub use plugin_stores::{recover_plugin_stores, settings_for_consent};
@@ -69,11 +70,21 @@ pub fn init(app: &AppHandle) {
 pub fn set_aside(path: &Path, file: StateFile) -> Option<PathBuf> {
     let kept = match move_aside(path, chrono::Local::now().naive_local()) {
         Ok(kept) => {
-            log::warn!(target: LOG_TARGET, "Set the unreadable {file:?} file aside at {kept:?}");
+            log::warn!(
+                target: LOG_TARGET,
+                // allowed-log-private: `file` is the `StateFile` variant, not a path
+                "Set the unreadable {file:?} file aside at {kept:?}",
+                kept = LogPrivate::file_path(&kept)
+            );
             Some(kept)
         }
         Err(e) => {
-            log::warn!(target: LOG_TARGET, "Couldn't set the unreadable {file:?} file at {path:?} aside: {e}");
+            log::warn!(
+                target: LOG_TARGET,
+                // allowed-log-private: `file` is the `StateFile` variant, not a path
+                "Couldn't set the unreadable {file:?} file at {path:?} aside: {e}",
+                path = LogPrivate::file_path(path)
+            );
             None
         }
     };

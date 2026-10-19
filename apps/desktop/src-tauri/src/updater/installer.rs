@@ -10,6 +10,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_update_trust::{CodeSignatureRefusal, extract_tarball};
 
 use super::UpdateInstallError;
@@ -134,7 +135,7 @@ pub fn install(
         &advisories::read_bundle_list,
     )?;
 
-    log::info!("Installing update into bundle: {}", bundle_path.display());
+    log::info!("Installing update into bundle: {}", LogPrivate::dir_path(&bundle_path));
 
     let staged_contents = staged_app.join("Contents");
     let bundle_contents = bundle_path.join("Contents");
@@ -412,9 +413,9 @@ fn delete_stale_files(dest: &Path, src_paths: &HashSet<PathBuf>) -> Result<(), S
     for relative in &dest_paths {
         if !src_paths.contains(relative) {
             let stale = dest.join(relative);
-            log::debug!("Deleting stale file: {}", stale.display());
+            log::debug!("Deleting stale file: {}", LogPrivate::file_path(&stale));
             if let Err(e) = fs::remove_file(&stale) {
-                log::warn!("Couldn't delete stale file {}: {e}", stale.display());
+                log::warn!("Couldn't delete stale file {}: {e}", LogPrivate::file_path(&stale));
             }
         }
     }

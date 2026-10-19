@@ -128,7 +128,7 @@ impl Drop for PreviewTemp {
             log::debug!(
                 target: "cmdr_lib::file_viewer",
                 "preview temp cleanup failed for {}: {e}",
-                self.cleanup_dir.display()
+                cmdr_fs::log_private::LogPrivate::dir_path(&self.cleanup_dir)
             );
         }
     }
@@ -171,7 +171,7 @@ pub(super) fn reap_temps_with_prefix(dir: &Path, prefix: &str) {
             log::debug!(
                 target: "cmdr_lib::file_viewer",
                 "reap_temps_with_prefix: could not remove {}: {e}",
-                entry.path().display()
+                cmdr_fs::log_private::LogPrivate::path(&entry.path())
             );
         }
     }

@@ -278,7 +278,13 @@ type LoctableData = HashMap<String, HashMap<String, String>>;
 #[cfg(target_os = "macos")]
 fn parse_loctable(path: &str) -> Option<LoctableData> {
     let value = plist::Value::from_file(path)
-        .map_err(|e| log::debug!(target: "system_strings", "parse_loctable({path}): {e}"))
+        .map_err(|e| {
+            log::debug!(
+                target: "system_strings",
+                "parse_loctable({path}): {e}",
+                path = cmdr_fs::log_private::LogPrivate::file_path(path)
+            );
+        })
         .ok()?;
     let dict = value.into_dictionary()?;
     let mut out: LoctableData = HashMap::with_capacity(dict.len());

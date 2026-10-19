@@ -18,6 +18,7 @@ use super::{
 use crate::logging;
 use crate::redact;
 use chrono::{DateTime, Datelike, Timelike, Utc};
+use cmdr_fs::log_private::LogPrivate;
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -296,7 +297,7 @@ pub(super) fn build_bundle_streaming_to_cap(
                 log::warn!(
                     target: "cmdr_lib::error_reporter",
                     "Skipping log file {} (couldn't stat: {err})",
-                    path.display(),
+                    LogPrivate::file_path(&path),
                 );
                 continue;
             }
@@ -312,7 +313,7 @@ pub(super) fn build_bundle_streaming_to_cap(
                 log::warn!(
                     target: "cmdr_lib::error_reporter",
                     "Skipping log file {} (tail-walk failed: {err})",
-                    path.display(),
+                    LogPrivate::file_path(&path),
                 );
                 continue;
             }
@@ -519,7 +520,7 @@ pub(super) fn load_and_filter_log_file(
             log::warn!(
                 target: "cmdr_lib::error_reporter",
                 "Skipping log file {} (couldn't stat: {err})",
-                path.display(),
+                LogPrivate::file_path(&path),
             );
             return None;
         }
@@ -545,7 +546,7 @@ pub(super) fn load_and_filter_log_file(
             log::warn!(
                 target: "cmdr_lib::error_reporter",
                 "Skipping log file {} (couldn't open: {err})",
-                path.display(),
+                LogPrivate::file_path(&path),
             );
             return None;
         }

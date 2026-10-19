@@ -239,7 +239,11 @@ fn secret_store_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("/tmp").join(crate::config::BUNDLE_ID));
 
     if let Err(e) = std::fs::create_dir_all(&dir) {
-        log::warn!("Could not create secret store directory {}: {}", dir.display(), e);
+        log::warn!(
+            "Could not create secret store directory {}: {}",
+            cmdr_fs::log_private::LogPrivate::dir_path(&dir),
+            e
+        );
     }
 
     dir

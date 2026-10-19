@@ -20,7 +20,11 @@ static OPENED: LazyLock<Mutex<Vec<PathBuf>>> = LazyLock::new(|| Mutex::new(Vec::
 
 /// Records an open request without launching anything.
 pub fn record(path: String) {
-    log::info!(target: "file_actions", "[mock] external open recorded (not launched): {path}");
+    log::info!(
+        target: "file_actions",
+        "[mock] external open recorded (not launched): {path}",
+        path = cmdr_fs::log_private::LogPrivate::path(&path)
+    );
     OPENED.lock_ignore_poison().push(PathBuf::from(path));
 }
 

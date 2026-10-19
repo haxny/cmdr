@@ -108,7 +108,7 @@ impl VolumeSource {
             Err(first) => {
                 debug!(
                     "viewer volume source: read at {offset} failed ({first}); reopening {} once",
-                    self.path.display()
+                    cmdr_fs::log_private::LogPrivate::file_path(&self.path)
                 );
                 let fresh = self.reopen(reader)?;
                 tauri::async_runtime::block_on(fresh.get().read_at(offset, len)).map_err(|e| map_volume_error(e, None))

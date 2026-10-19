@@ -47,7 +47,11 @@ struct DiskEntry {
 static CACHE_DIR: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
     let dir = crate::config::standalone_app_data_dir()?.join("icon-cache");
     if let Err(e) = fs::create_dir_all(&dir) {
-        log::warn!(target: "icons", "Could not create icon-cache dir {}: {e}", dir.display());
+        log::warn!(
+            target: "icons",
+            "Could not create icon-cache dir {}: {e}",
+            cmdr_fs::log_private::LogPrivate::dir_path(&dir)
+        );
         return None;
     }
     Some(dir)

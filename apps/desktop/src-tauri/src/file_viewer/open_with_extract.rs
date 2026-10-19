@@ -44,6 +44,8 @@ use crate::file_system::volume::RoutedKind;
 #[cfg(any(target_os = "macos", test))]
 use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
 use crate::ignore_poison::RwLockIgnorePoison;
+#[cfg(any(target_os = "macos", test))]
+use cmdr_fs::log_private::LogPrivate;
 
 /// Prefix on each launch's subdir, and on the stand-in dir: what the startup reaper
 /// matches. A different family from the viewer's `.cmdr-viewer-`.
@@ -267,7 +269,11 @@ fn make_read_only(file: &Path) {
         std::fs::set_permissions(file, permissions)
     });
     if let Err(e) = result {
-        log::debug!(target: "cmdr_lib::file_viewer", "open-with copy stays writable, {}: {e}", file.display());
+        log::debug!(
+            target: "cmdr_lib::file_viewer",
+            "open-with copy stays writable, {}: {e}",
+            LogPrivate::file_path(file)
+        );
     }
 }
 
@@ -297,7 +303,11 @@ pub(super) fn listing_path_in(path: &Path, dir: &Path) -> PathBuf {
         Err(e) => {
             // Asking about the path itself answers no apps, which is what the menu said
             // before this existed; "Other…" still works.
-            log::debug!(target: "cmdr_lib::file_viewer", "no open-with stand-in at {}: {e}", stand_in.display());
+            log::debug!(
+                target: "cmdr_lib::file_viewer",
+                "no open-with stand-in at {}: {e}",
+                LogPrivate::file_path(&stand_in)
+            );
             path.to_path_buf()
         }
     }

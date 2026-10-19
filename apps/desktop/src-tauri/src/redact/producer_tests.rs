@@ -215,3 +215,64 @@ fn the_index_lines_ship_each_value_as_one_token_of_its_kind() {
         "the unmarked name ships whole"
     );
 }
+
+/// The desktop crate's volume and SMB lines, in each site's format string, as a report ships
+/// them. A prose mount path with parens or a space no longer eats the words after it, and a
+/// share marked as a volume hashes like the keyed `share=` value it replaced.
+#[test]
+fn the_desktop_volume_and_smb_lines_ship_each_value_as_one_token_of_its_kind() {
+    // A prose mount path whose name holds parens: the greedy fallback runs to the next `'`.
+    let volume = "/Volumes/Summer (Lake House) 2026";
+    let stranded = |path: &dyn std::fmt::Display| {
+        format!("{HEAD}{path} unmounted and volume vol-abc can't move to one of its other mounts, so it stays there.")
+    };
+    let marked = stranded(&LogPrivate::dir_path(volume));
+    assert_ships_none(&marked, &["Lake", "House", "Summer"]);
+    let golden = format!(
+        "{HEAD}/Volumes/<volume> unmounted and volume vol-abc can't move to one of its other mounts, so it stays there."
+    );
+    assert_eq!(shape(&marked), golden);
+    assert_ne!(
+        shape(&stranded(&volume)),
+        golden,
+        "the unmarked spelling eats the sentence"
+    );
+
+    // Two prose mount paths with a space in the share name.
+    let taken = |default: &dyn std::fmt::Display, candidate: &dyn std::fmt::Display| {
+        format!("{HEAD}Mount path {default} taken by another server, using {candidate}")
+    };
+    let marked = taken(
+        &LogPrivate::dir_path("/Volumes/Family Photos"),
+        &LogPrivate::dir_path("/Volumes/Family Photos-1"),
+    );
+    assert_ships_none(&marked, &["Family", "Photos"]);
+    let golden = format!("{HEAD}Mount path /Volumes/<volume> taken by another server, using /Volumes/<volume>");
+    assert_eq!(shape(&marked), golden);
+    assert_ne!(
+        shape(&taken(&"/Volumes/Family Photos", &"/Volumes/Family Photos-1")),
+        golden,
+        "the unmarked spelling eats the prose between the paths"
+    );
+
+    // Keyed identities: each marked value hashes like the keyed value it replaced.
+    let refused = |who: &dyn std::fmt::Display, server: &dyn std::fmt::Debug, share: &dyn std::fmt::Debug| {
+        format!(
+            "{HEAD}server={server:?}, share={share:?} turned {who} away at sign-in (bad password); asking for a sign-in."
+        )
+    };
+    let marked = refused(
+        &format_args!("user={:?}", LogPrivate::user("alex")),
+        &LogPrivate::host("Alex's MacBook Pro (2)"),
+        &LogPrivate::volume("Family Photos"),
+    );
+    assert_ships_none(&marked, &["Alex", "MacBook", "Family", "Photos", "alex"]);
+    assert_eq!(
+        shape(&marked),
+        format!(
+            "{HEAD}server=\"<host>\", share=\"<volume>\" turned user=\"<user>\" away at sign-in (bad password); asking for a sign-in."
+        )
+    );
+    let keyed = refused(&"user=\"alex\"", &"Alex's MacBook Pro (2)", &"Family Photos");
+    assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
+}

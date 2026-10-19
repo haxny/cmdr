@@ -36,6 +36,7 @@ const WINDOW_CLOSE_DEFER_MS: u64 = 100;
 pub fn close_child_window(app: tauri::AppHandle, label: String) {
     let Some(window) = app.get_webview_window(&label) else {
         // Already gone: a double-close (Escape plus the red button) is ordinary, not a fault.
+        // allowed-log-private: a Tauri window label of our own
         log::debug!("Child window close: no window labelled {label}, nothing to close");
         return;
     };
@@ -47,12 +48,14 @@ pub fn close_child_window(app: tauri::AppHandle, label: String) {
     if let Err(e) = window.hide() {
         // Not fatal: without the hide we're back to the old behavior, which the delay alone made
         // rare. Closing anyway beats leaving the window up.
+        // allowed-log-private: a Tauri window label of our own
         log::warn!("Child window close: couldn't hide {label} before closing: {e}");
     }
 
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_millis(WINDOW_CLOSE_DEFER_MS)).await;
         if let Err(e) = window.close() {
+            // allowed-log-private: a Tauri window label of our own
             log::warn!("Child window close: couldn't close {label}: {e}");
         }
     });

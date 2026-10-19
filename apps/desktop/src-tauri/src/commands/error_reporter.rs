@@ -241,7 +241,7 @@ pub async fn save_error_report_to_disk(
         target: "cmdr_lib::error_reporter",
         "Saved error report bundle to disk: id={} path={}",
         bundle.manifest.id,
-        path.display(),
+        cmdr_fs::log_private::LogPrivate::file_path(&path),
     );
     Ok(path.display().to_string())
 }

@@ -91,7 +91,10 @@ fn machine_key(path: &std::path::Path) -> Result<Vec<u8>, SecretStoreError> {
         Ok(_) => Ok(FALLBACK_PASSWORD.to_vec()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(FALLBACK_PASSWORD.to_vec()),
         Err(e) => {
-            warn!("Couldn't read the machine id at {}: {e}", path.display());
+            warn!(
+                "Couldn't read the machine id at {}: {e}",
+                cmdr_fs::log_private::LogPrivate::file_path(path)
+            );
             Err(SecretStoreError::Other(format!("Couldn't read the machine id: {e}")))
         }
     }
@@ -128,7 +131,11 @@ fn read_store(path: &PathBuf, password: &[u8]) -> Result<StoreContents, ReadFail
     })?;
     let cocoon = Cocoon::new(password);
     let decrypted = cocoon.unwrap(&encrypted).map_err(|e| {
-        warn!("Couldn't decrypt credential file at {}: {:?}", path.display(), e);
+        warn!(
+            "Couldn't decrypt credential file at {}: {:?}",
+            cmdr_fs::log_private::LogPrivate::file_path(path),
+            e
+        );
         ReadFailure::Unreadable(SecretStoreError::Other(format!(
             "Couldn't decrypt credential file: {:?}",
             e
@@ -139,7 +146,11 @@ fn read_store(path: &PathBuf, password: &[u8]) -> Result<StoreContents, ReadFail
     // every stored secret. Surface the error so a read sees it, and a write
     // sets the file aside (`read_for_write`) rather than overwriting it.
     serde_json::from_slice(&decrypted).map_err(|e| {
-        warn!("Credential file at {} couldn't be parsed: {}", path.display(), e);
+        warn!(
+            "Credential file at {} couldn't be parsed: {}",
+            cmdr_fs::log_private::LogPrivate::file_path(path),
+            e
+        );
         ReadFailure::Unreadable(SecretStoreError::Other(format!(
             "Couldn't parse credential file: {}",
             e

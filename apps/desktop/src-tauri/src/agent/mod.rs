@@ -105,7 +105,7 @@ pub fn start(app: &AppHandle) {
             // Rollups the indexer's tap sent before now are already waiting in the channel and
             // get consumed as soon as the thread comes up.
             wake::start(app.clone(), db_path.clone(), data_dir.clone());
-            log::debug!(target: "agent::store", "main.db ready at {}", db_path.display());
+            log::debug!(target: "agent::store", "main.db ready at {}", cmdr_fs::log_private::LogPrivate::file_path(&db_path));
         }
         Err(e) => log::warn!(target: "agent::store", "main.db not opened: {e}"),
     }

@@ -31,7 +31,8 @@ pub async fn quick_look_open(app: AppHandle, path: String, volume_id: String) ->
     if !volume_supports_local_fs(&volume_id) {
         log::debug!(
             target: "quick_look",
-            "skipping open: volume {volume_id} doesn't support local fs access (path={path})"
+            "skipping open: volume {volume_id} doesn't support local fs access (path={path})",
+            path = cmdr_fs::log_private::LogPrivate::path(&path)
         );
         return Ok(false);
     }
@@ -65,7 +66,8 @@ pub async fn quick_look_set_path(app: AppHandle, path: String, volume_id: String
     if !volume_supports_local_fs(&volume_id) {
         log::debug!(
             target: "quick_look",
-            "skipping set_path: volume {volume_id} doesn't support local fs access (path={path})"
+            "skipping set_path: volume {volume_id} doesn't support local fs access (path={path})",
+            path = cmdr_fs::log_private::LogPrivate::path(&path)
         );
         return Ok(());
     }

@@ -552,6 +552,7 @@ pub(super) fn sf_symbol_image(symbol_name: &str) -> Option<Retained<NSImage>> {
     // allowed-newer-selector: guarded by the `macos_at_least(11, 0)` early return above
     let image = NSImage::imageWithSystemSymbolName_accessibilityDescription(&name, None);
     if image.is_none() {
+        // allowed-log-private: an SF Symbol name of our own
         log::warn!("SF Symbol not found: {symbol_name}");
     }
     image

@@ -415,7 +415,7 @@ pub async fn chat_completion(
     log::debug!(
         "AI chat_completion: sending request (adapter={:?}, model={})",
         target.model.adapter_kind,
-        &*target.model.model_name
+        &*target.model.model_name // allowed-log-private: an AI model's name, not a user value
     );
 
     let logged = backend.begin_request_log(&target, &req, Fidelity::RequestStruct);
@@ -529,7 +529,7 @@ pub async fn chat_completion_stream(
     log::debug!(
         "AI chat_completion_stream: opening stream (adapter={:?}, model={})",
         target.model.adapter_kind,
-        &*target.model.model_name
+        &*target.model.model_name // allowed-log-private: an AI model's name, not a user value
     );
 
     let logged = backend.begin_request_log(&target, &req, Fidelity::RequestStruct);

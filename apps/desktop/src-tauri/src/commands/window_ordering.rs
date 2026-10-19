@@ -123,6 +123,7 @@ pub fn order_window_to_back<R: Runtime>(app: AppHandle<R>, label: String) -> Res
         let app_for_main = app.clone();
         app.run_on_main_thread(move || {
             let Some(window) = app_for_main.get_webview_window(&label) else {
+                // allowed-log-private: a Tauri window label of our own
                 log::warn!(target: "ui", "order_window_to_back: no window with label {label}");
                 return;
             };

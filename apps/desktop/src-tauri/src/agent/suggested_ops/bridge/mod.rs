@@ -461,7 +461,7 @@ async fn capture_expected_sources(volume: &dyn Volume, sources: &[PathBuf]) -> E
             None => log::info!(
                 target: "agent::suggested_ops",
                 "{} couldn't be read at preflight, so the operation won't touch it",
-                source.display()
+                cmdr_fs::log_private::LogPrivate::path(source)
             ),
         }
     }

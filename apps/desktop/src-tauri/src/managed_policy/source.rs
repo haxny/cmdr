@@ -73,7 +73,7 @@ impl PlistFileSource {
     /// unmanaged until a spec writes one. A malformed one reads as empty too, with a warning.
     pub fn read(path: &std::path::Path) -> Self {
         if !path.exists() {
-            log::debug!(target: "managed_policy", "{} doesn't exist; reading no policy", path.display());
+            log::debug!(target: "managed_policy", "{} doesn't exist; reading no policy", cmdr_fs::log_private::LogPrivate::file_path(path));
             return Self {
                 values: plist::Dictionary::new(),
             };
@@ -81,11 +81,11 @@ impl PlistFileSource {
         let values = match plist::Value::from_file(path) {
             Ok(plist::Value::Dictionary(values)) => values,
             Ok(_) => {
-                log::warn!(target: "managed_policy", "{} isn't a plist dictionary; reading no policy", path.display());
+                log::warn!(target: "managed_policy", "{} isn't a plist dictionary; reading no policy", cmdr_fs::log_private::LogPrivate::file_path(path));
                 plist::Dictionary::new()
             }
             Err(e) => {
-                log::warn!(target: "managed_policy", "Couldn't read {}: {e}; reading no policy", path.display());
+                log::warn!(target: "managed_policy", "Couldn't read {}: {e}; reading no policy", cmdr_fs::log_private::LogPrivate::file_path(path));
                 plist::Dictionary::new()
             }
         };

@@ -84,7 +84,11 @@ impl Drop for Written {
         if let Err(e) = std::fs::remove_file(&self.path)
             && e.kind() != io::ErrorKind::NotFound
         {
-            log::debug!(target: "multi_rename::names_file", "couldn't remove {}: {e}", self.path.display());
+            log::debug!(
+                target: "multi_rename::names_file",
+                "couldn't remove {}: {e}",
+                cmdr_fs::log_private::LogPrivate::file_path(&self.path)
+            );
         }
     }
 }

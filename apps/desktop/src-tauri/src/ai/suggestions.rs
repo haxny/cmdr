@@ -199,7 +199,10 @@ pub async fn stream_folder_suggestions(
     include_hidden: bool,
     on_event: Channel<SuggestionStreamEvent>,
 ) -> Result<(), String> {
-    log::debug!("AI suggestions stream: start request_id={request_id} listing={listing_id} path={current_path}");
+    log::debug!(
+        "AI suggestions stream: start request_id={request_id} listing={listing_id} path={current_path}",
+        current_path = cmdr_fs::log_private::LogPrivate::dir_path(&current_path)
+    );
 
     // Register the cancellation token synchronously BEFORE any await. This closes the
     // race window where `cancel_folder_suggestions` could arrive before registration.

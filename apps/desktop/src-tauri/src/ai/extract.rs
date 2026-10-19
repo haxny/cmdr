@@ -2,6 +2,8 @@
 
 use std::fs;
 use std::path::Path;
+
+use cmdr_fs::log_private::LogPrivate;
 use tauri::{AppHandle, Manager, Runtime};
 
 use crate::pluralize::pluralize;
@@ -17,7 +19,10 @@ const BUNDLED_AI_DIR: &str = "resources/ai";
 
 /// Copies llama-server and its dylibs from the bundled resources to the AI data directory.
 pub fn extract_bundled_llama_server<R: Runtime>(app: &AppHandle<R>, ai_dir: &Path) -> Result<(), String> {
-    log::debug!("AI: copying bundled llama-server runtime to {:?}...", ai_dir);
+    log::debug!(
+        "AI: copying bundled llama-server runtime to {:?}...",
+        LogPrivate::dir_path(ai_dir)
+    );
 
     fs::create_dir_all(ai_dir).map_err(|e| format!("Failed to create AI directory: {e}"))?;
 
@@ -53,7 +58,11 @@ pub fn extract_bundled_llama_server<R: Runtime>(app: &AppHandle<R>, ai_dir: &Pat
             let _ = fs::remove_file(&dest_path);
             std::os::unix::fs::symlink(&target, &dest_path)
                 .map_err(|e| format!("Failed to create symlink {name}: {e}"))?;
-            log::debug!("AI extract: symlink {} -> {}", name, target.display());
+            log::debug!(
+                "AI extract: symlink {} -> {}",
+                LogPrivate::file_name(&*name),
+                LogPrivate::path(&target)
+            );
             continue;
         }
 

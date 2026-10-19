@@ -140,6 +140,7 @@ fn priced(
         .iter()
         .filter_map(|work| Estimate::of(table, work))
         .map(|estimate| {
+            // allowed-log-private: a storage provider's name from the price table, not a user value
             log::debug!(target: "s3_costs", "{operation:?} at {}: {:?}", estimate.provider_label, estimate.line_items);
             CostEstimate {
                 amount: estimate.total,

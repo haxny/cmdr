@@ -3,6 +3,7 @@
 //! `crate::state_recovery`, which sets aside a file we can't read and never lets one be saved over.
 
 use chrono::NaiveDate;
+use cmdr_fs::log_private::LogPrivate;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -74,7 +75,11 @@ pub(super) fn record(path: &Path, today: NaiveDate) {
         return;
     };
     if let Err(e) = write(path, &next) {
-        log::warn!(target: LOG_TARGET, "Couldn't record today's launch in {path:?}: {e}");
+        log::warn!(
+            target: LOG_TARGET,
+            "Couldn't record today's launch in {path:?}: {e}",
+            path = LogPrivate::file_path(path)
+        );
     }
 }
 

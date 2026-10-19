@@ -117,9 +117,11 @@ async fn read_accent_color_gsettings() -> Option<String> {
     let raw = String::from_utf8_lossy(&output.stdout);
     let name = raw.trim().trim_matches('\'');
     if let Some(hex) = gnome_accent_name_to_hex(name) {
+        // allowed-log-private: a GNOME accent color setting value, not a user value
         debug!("GNOME accent color: {name} -> {hex}");
         return Some(hex.to_owned());
     }
+    // allowed-log-private: a GNOME accent color setting value, not a user value
     warn!("Unrecognized GNOME accent color '{name}'");
     None
 }

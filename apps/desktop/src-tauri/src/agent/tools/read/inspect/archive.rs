@@ -224,7 +224,7 @@ impl Drop for TempCleanup {
             log::debug!(
                 target: "agent::tools::inspect",
                 "inspect_file: could not remove the extraction temp {}: {e}",
-                self.0.display()
+                cmdr_fs::log_private::LogPrivate::dir_path(&self.0)
             );
         }
     }

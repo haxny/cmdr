@@ -454,7 +454,7 @@ fn handle_events(
                     log::debug!(
                         target: "downloads::watcher",
                         "Emitting download-detected for {} (in_subdir={})",
-                        payload.path,
+                        cmdr_fs::log_private::LogPrivate::file_path(&payload.path),
                         payload.in_subdir,
                     );
                     sink.emit(payload);

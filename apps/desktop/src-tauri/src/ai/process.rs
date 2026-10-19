@@ -4,6 +4,8 @@ use super::extract::LLAMA_SERVER_BINARY;
 use std::fs;
 use std::path::Path;
 
+use cmdr_fs::log_private::LogPrivate;
+
 /// Log file name for llama-server output (useful for debugging startup issues).
 pub const SERVER_LOG_FILENAME: &str = "llama-server.log";
 
@@ -14,7 +16,7 @@ pub fn spawn_llama_server(ai_dir: &Path, model_filename: &str, port: u16, ctx_si
     let binary_path = ai_dir.join(LLAMA_SERVER_BINARY);
     let model_path = ai_dir.join(model_filename);
 
-    log::debug!("AI server: checking files at {:?}", ai_dir);
+    log::debug!("AI server: checking files at {:?}", LogPrivate::dir_path(ai_dir));
     log::debug!(
         "AI server: binary exists={}, model exists={}",
         binary_path.exists(),
@@ -32,12 +34,15 @@ pub fn spawn_llama_server(ai_dir: &Path, model_filename: &str, port: u16, ctx_si
         .try_clone()
         .map_err(|e| format!("Failed to clone log file handle: {e}"))?;
 
-    log::debug!("AI server: logging output to {:?}", log_path);
+    log::debug!("AI server: logging output to {:?}", LogPrivate::file_path(&log_path));
 
     // Spawn llama-server with DYLD_LIBRARY_PATH set to find the shared libraries
     // The @rpath in the binary points to the directory where the dylibs are located
     let ai_dir_str = ai_dir.to_string_lossy();
-    log::debug!("AI server: setting DYLD_LIBRARY_PATH to {}", ai_dir_str);
+    log::debug!(
+        "AI server: setting DYLD_LIBRARY_PATH to {}",
+        LogPrivate::dir_path(ai_dir)
+    );
 
     let child = std::process::Command::new(&binary_path)
         .env("DYLD_LIBRARY_PATH", &*ai_dir_str)

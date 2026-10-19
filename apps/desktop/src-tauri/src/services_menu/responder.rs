@@ -111,7 +111,7 @@ define_class!(
                 target: "services_menu",
                 "Writing {} path(s) to the services pasteboard, starting with {}",
                 paths.len(),
-                paths.first().map_or("", String::as_str)
+                cmdr_fs::log_private::LogPrivate::path(paths.first().map_or("", String::as_str))
             );
             let items = build_pasteboard_items(&paths);
             pboard.clearContents();

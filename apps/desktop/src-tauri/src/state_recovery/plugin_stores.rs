@@ -8,6 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use cmdr_fs::log_private::LogPrivate;
 use tauri::{AppHandle, Runtime};
 
 use super::{LOG_TARGET, StateFile};
@@ -113,7 +114,11 @@ fn recover(path: &Path, file: StateFile) -> bool {
     sweep_killed_saves(path);
     match fs::read(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return false,
-        Err(e) => log::warn!(target: LOG_TARGET, "Couldn't read {path:?}: {e}"),
+        Err(e) => log::warn!(
+            target: LOG_TARGET,
+            "Couldn't read {path:?}: {e}",
+            path = LogPrivate::file_path(path)
+        ),
         // The plugin's own reading: a JSON object. A single wrong value inside one is the
         // store's to drop, not a recovery.
         Ok(bytes) if serde_json::from_slice::<HashMap<String, serde_json::Value>>(&bytes).is_ok() => return false,
@@ -169,7 +174,11 @@ fn sweep_killed_saves(path: &Path) {
             && entry_name.ends_with(".tmp")
             && let Err(e) = fs::remove_file(entry.path())
         {
-            log::warn!(target: LOG_TARGET, "Couldn't remove the leftover temp file {entry_name}: {e}");
+            log::warn!(
+                target: LOG_TARGET,
+                "Couldn't remove the leftover temp file {entry_name}: {e}",
+                entry_name = LogPrivate::file_name(&*entry_name)
+            );
         }
     }
 }

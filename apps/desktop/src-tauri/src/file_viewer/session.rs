@@ -1356,7 +1356,11 @@ fn spawn_watcher_manager(session_id: String, path: PathBuf, stop: Arc<AtomicBool
         let sub = match VIEWER_WATCHER_MANAGER.subscribe(&path) {
             Ok(sub) => sub,
             Err(e) => {
-                debug!("viewer watcher subscribe failed for {}: {}", path.display(), e);
+                debug!(
+                    "viewer watcher subscribe failed for {}: {}",
+                    cmdr_fs::log_private::LogPrivate::file_path(&path),
+                    e
+                );
                 return;
             }
         };

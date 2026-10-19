@@ -49,7 +49,7 @@ pub(super) fn read_bundle_list(staged_app: &Path) -> Option<String> {
         Err(e) => {
             log::warn!(
                 "Couldn't read the update's security advisory list at {}, so it names no advisory: {e}",
-                path.display()
+                cmdr_fs::log_private::LogPrivate::file_path(&path)
             );
             None
         }

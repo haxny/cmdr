@@ -44,7 +44,7 @@ fn read_store(path: &PathBuf) -> Result<StoreContents, SecretStoreError> {
     serde_json::from_slice(&data).map_err(|e| {
         warn!(
             "Secret file at {} couldn't be parsed: {}; leaving in place",
-            path.display(),
+            cmdr_fs::log_private::LogPrivate::file_path(path),
             e
         );
         SecretStoreError::Other(format!("Couldn't parse secret file: {}", e))

@@ -19,6 +19,7 @@
 //! now fails the build on a framework newer than the floor; the story is in
 //! `docs/notes/system-requirements-and-es2025.md`.
 
+use cmdr_fs::log_private::LogPrivate;
 use image::RgbaImage;
 use log::{debug, error};
 use objc2::AnyThread;
@@ -141,12 +142,15 @@ fn path_to_nsstring(path: &Path) -> Option<Retained<NSString>> {
     let canonical = match path.canonicalize() {
         Ok(canonical) => canonical,
         Err(error) => {
-            debug!("No icon for '{}': {error}", path.display());
+            debug!("No icon for '{}': {error}", LogPrivate::path(path));
             return None;
         }
     };
     let Some(text) = canonical.to_str() else {
-        error!("Path '{}' is not valid UTF-8, so it gets no icon", canonical.display());
+        error!(
+            "Path '{}' is not valid UTF-8, so it gets no icon",
+            LogPrivate::path(&canonical)
+        );
         return None;
     };
     Some(NSString::from_str(text))

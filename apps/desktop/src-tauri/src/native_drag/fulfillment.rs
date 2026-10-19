@@ -53,6 +53,7 @@ use std::path::{Path, PathBuf};
 use crate::file_system::volume::Volume;
 use crate::file_system::volume::friendly_error::{ErrorCategory, ListingError, listing_error_from_volume_error};
 use crate::file_system::volume::{ChildName, VolumeError, VolumeReadStream, WriteMode};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_operation_log::types::OperationId;
 
 /// A drag-out fulfillment failure, carrying the typed [`ListingError`]
@@ -204,8 +205,8 @@ pub(crate) async fn fulfill_with_resolver(
         target: "drag_out",
         "fulfilling promise: {} {} -> {}",
         source_volume_id,
-        source_path.display(),
-        dest_path.display()
+        LogPrivate::path(source_path),
+        LogPrivate::path(dest_path)
     );
 
     let is_dir = volume
@@ -223,8 +224,8 @@ pub(crate) async fn fulfill_with_resolver(
         log::warn!(
             target: "drag_out",
             "promise fulfillment failed for {} -> {}: {}",
-            source_path.display(),
-            dest_path.display(),
+            LogPrivate::path(source_path),
+            LogPrivate::path(dest_path),
             err.nserror_title()
         );
     }

@@ -48,6 +48,7 @@ pub fn update_menu_context<R: Runtime>(app: AppHandle<R>, path: String, filename
 /// opens, and the guard still logs its own refusal if the click then goes nowhere.
 fn focus_for_context_menu<R: Runtime>(window: &Window<R>) {
     if let Err(e) = window.set_focus() {
+        // allowed-log-private: a Tauri window label of our own
         log::warn!(target: "menu", "couldn't focus `{}` before its context menu: {e}", window.label());
     }
 }

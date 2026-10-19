@@ -13,6 +13,7 @@ use axum::{
     },
     routing::{get, post},
 };
+use cmdr_fs::log_private::LogPrivate;
 use futures_util::stream;
 use serde_json::{Value, json};
 use std::convert::Infallible;
@@ -349,10 +350,14 @@ fn serve_on<R: Runtime + 'static>(app: AppHandle<R>, listener: tokio::net::TcpLi
         log::warn!(
             target: "mcp::server",
             "MCP server bound on {port} but could not write token file at {}: {err}",
-            data_dir.display(),
+            LogPrivate::dir_path(&data_dir),
         );
     } else {
-        log::debug!(target: "mcp::server", "Wrote MCP token file {}/{TOKEN_FILE_NAME}", data_dir.display());
+        log::debug!(
+            target: "mcp::server",
+            "Wrote MCP token file {}",
+            LogPrivate::file_path(&data_dir.join(TOKEN_FILE_NAME))
+        );
     }
 
     // Write the port file BEFORE handing the listener to the spawned serve task. Failure
@@ -362,13 +367,13 @@ fn serve_on<R: Runtime + 'static>(app: AppHandle<R>, listener: tokio::net::TcpLi
         log::warn!(
             target: "mcp::server",
             "MCP server bound on {port} but could not write port file at {}: {err}",
-            data_dir.display(),
+            LogPrivate::dir_path(&data_dir),
         );
     } else {
         log::debug!(
             target: "mcp::server",
-            "Wrote MCP port file {}/{PORT_FILE_NAME} = {port}",
-            data_dir.display(),
+            "Wrote MCP port file {} = {port}",
+            LogPrivate::file_path(&data_dir.join(PORT_FILE_NAME)),
         );
         if let Ok(mut slot) = port_file_dir_slot().lock() {
             *slot = Some(data_dir);
@@ -800,6 +805,7 @@ async fn process_request<R: Runtime>(
                 log::debug!("MCP ai_search: tools/call received, id={:?}", request.id);
             }
 
+            // allowed-log-private: an MCP tool name of our own
             log::debug!("MCP: executing tool {name}");
             // The HTTP transport is the ai_client consumer: it dispatches only the ai_client
             // view (an agent-only name is refused before dispatch). See `tool_registry`.
@@ -808,6 +814,7 @@ async fn process_request<R: Runtime>(
             match result {
                 Ok(ref value) => {
                     let text = format_tool_result(value);
+                    // allowed-log-private: an MCP tool name of our own
                     log::debug!("MCP: tool {name} succeeded, response length={}", text.len());
                     (
                         McpResponse::success(request.id, json!({"content": [{"type": "text", "text": text}]})),
@@ -815,6 +822,7 @@ async fn process_request<R: Runtime>(
                     )
                 }
                 Err(e) => {
+                    // allowed-log-private: an MCP tool name of our own
                     log::warn!("MCP: tool {name} failed, code={}, message={}", e.code, e.message);
                     (
                         McpResponse::error_with_data(request.id, e.code, e.message, e.data),

@@ -190,6 +190,7 @@ pub fn claim_data_dir_or_exit(data_dir: &Path) {
             log::debug!(target: "instance_lock", "Instance lock held for {}", LogPrivate::dir_path(data_dir));
         }
         Err(AcquireError::Busy { holder_pid }) => {
+            // allowed-log-private: `busy_log_message` marks the dir itself
             crate::log_error!(target: "instance_lock", "{}", busy_log_message(data_dir, holder_pid));
             // Under E2E nobody is there to click OK, and a modal that waits forever turns a clear
             // "data dir already taken" into an opaque harness timeout. The log line above is what

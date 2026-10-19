@@ -127,7 +127,7 @@ async fn route_call<R: Runtime>(app: &AppHandle<R>, scope: EvidenceScope, call: 
         log::warn!(
             target: "agent::tools",
             "{} was refused before dispatch by the schema gate: {} ({})",
-            call.tool.as_wire_name(),
+            call.tool.as_wire_name(), // allowed-log-private: an agent tool's wire name of our own
             problem.message,
             problem.data.as_ref().unwrap_or(&Value::Null)
         );

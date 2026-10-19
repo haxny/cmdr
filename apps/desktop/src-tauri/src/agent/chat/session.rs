@@ -314,7 +314,7 @@ pub fn resolve_prompt_budget(
         target: LOG_TARGET,
         "prompt budget for {model}: a {}-token ceiling, from {}",
         resolved.prompt_tokens,
-        resolved.source.label()
+        resolved.source.label() // allowed-log-private: a fixed budget-source phrase of our own
     );
     if resolved.over_known_window {
         log::info!(

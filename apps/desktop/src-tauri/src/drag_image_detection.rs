@@ -181,6 +181,7 @@ unsafe fn install_swizzles(webview_ptr: *mut std::ffi::c_void) {
         );
     }
 
+    // allowed-log-private: an Objective-C class name, not a user value
     log::debug!("drag_image_detection: swizzles installed on {:?}", cls.name());
 }
 

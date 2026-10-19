@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 static WATCHER: OnceLock<Mutex<Option<notify::RecommendedWatcher>>> = OnceLock::new();
 
@@ -36,11 +37,11 @@ pub(super) fn start(file: PathBuf) {
         }
     };
     if let Err(e) = notify::Watcher::watch(&mut watcher, &dir, notify::RecursiveMode::NonRecursive) {
-        log::warn!(target: "managed_policy", "Couldn't watch {}: {e}", dir.display());
+        log::warn!(target: "managed_policy", "Couldn't watch {}: {e}", LogPrivate::dir_path(&dir));
         return;
     }
     *WATCHER.get_or_init(|| Mutex::new(None)).lock_ignore_poison() = Some(watcher);
-    log::debug!(target: "managed_policy", "Watching {} for policy changes", file.display());
+    log::debug!(target: "managed_policy", "Watching {} for policy changes", LogPrivate::file_path(&file));
 }
 
 /// Whether an event in the folder concerns the override file. Compared by file name: the folder is

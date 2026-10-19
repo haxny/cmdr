@@ -10,6 +10,7 @@
 
 use std::sync::Arc;
 
+use cmdr_fs::log_private::LogPrivate;
 use tauri::{AppHandle, Manager};
 
 use super::kick_all_ready_passes_for;
@@ -157,11 +158,16 @@ pub async fn media_index_set_excluded_folder(app: AppHandle, folder: String, exc
     // The prune blocks on the writer thread, so run it off the IPC thread.
     let logged_folder = folder.clone();
     match tauri::async_runtime::spawn_blocking(move || scheduler.retro_delete_excluded_folder(&folder, &mounts)).await {
-        Ok(outcome) => log::debug!(target: "media_index", "retro-delete under '{logged_folder}': {outcome:?}"),
+        Ok(outcome) => log::debug!(
+            target: "media_index",
+            "retro-delete under '{logged_folder}': {outcome:?}",
+            logged_folder = LogPrivate::dir_path(&logged_folder)
+        ),
         // The purge was owed before it started, so a panic mid-way leaves it for the next pass.
         Err(e) => log::warn!(
             target: "media_index",
-            "retro-delete under '{logged_folder}' panicked ({e}); the next pass retries it"
+            "retro-delete under '{logged_folder}' panicked ({e}); the next pass retries it",
+            logged_folder = LogPrivate::dir_path(&logged_folder)
         ),
     }
 }

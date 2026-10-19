@@ -245,7 +245,12 @@ async fn deliver<R: Runtime>(app: &AppHandle<R>, request: RevealRequest) {
     }
     let dir = plan.dir.to_string_lossy().to_string();
     if let Err(err) = crate::mcp::go_to_in_pane(app, target, &dir, &plan.entries).await {
-        log::warn!(target: "reveal", "Couldn't show {dir}: {}", err.message);
+        log::warn!(
+            target: "reveal",
+            "Couldn't show {dir}: {}",
+            err.message,
+            dir = cmdr_fs::log_private::LogPrivate::dir_path(&dir)
+        );
         return;
     }
     // Announced only once the pane has actually moved, and only for Finder reveals: the

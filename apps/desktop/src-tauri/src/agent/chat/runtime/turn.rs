@@ -334,7 +334,7 @@ fn repeat_result(call: &AgentToolCall, content: serde_json::Value) -> AgentToolR
     log::warn!(
         target: LOG_TARGET,
         "the model re-sent an identical {} call that already came back with a problem; not running it again",
-        call.tool.as_wire_name()
+        call.tool.as_wire_name() // allowed-log-private: an agent tool's wire name of our own
     );
     AgentToolResult {
         call_id: call.call_id.clone(),

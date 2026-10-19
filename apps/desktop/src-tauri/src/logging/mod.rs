@@ -188,13 +188,13 @@ pub fn cleanup_legacy_log_files(log_dir: &Path) -> usize {
                 log::info!(
                     target: "cmdr_lib::logging",
                     "Removed legacy log file {}",
-                    path.display(),
+                    cmdr_fs::log_private::LogPrivate::file_path(&path),
                 );
             }
             Err(err) => log::warn!(
                 target: "cmdr_lib::logging",
                 "Failed to remove legacy log file {}: {err}",
-                path.display(),
+                cmdr_fs::log_private::LogPrivate::file_path(&path),
             ),
         }
     }
@@ -224,7 +224,7 @@ pub fn eager_prune(log_dir: &Path, keep_n: usize) -> std::io::Result<usize> {
             Err(err) => log::warn!(
                 target: "cmdr_lib::logging",
                 "Failed to prune log file {}: {err}",
-                path.display(),
+                cmdr_fs::log_private::LogPrivate::file_path(&path),
             ),
         }
     }
