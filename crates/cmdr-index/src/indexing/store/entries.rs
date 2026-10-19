@@ -13,6 +13,10 @@ use super::ROOT_ID;
 /// SQLite's default 999-parameter ceiling.
 const DELETE_CHUNK: usize = 256;
 
+/// The deepest `parent_id` chain [`IndexStore::is_within_subtree`] follows. Far past
+/// any real tree, so hitting it means the chain doesn't end.
+const MAX_TREE_DEPTH: usize = 4096;
+
 /// `"?, ?, …"` for an `IN` list of `count` bound parameters.
 fn placeholders(count: usize) -> String {
     vec!["?"; count].join(", ")
@@ -348,6 +352,27 @@ impl IndexStore {
             .query_row(params![entry_id], |row| row.get::<_, i64>(0))
             .optional()?;
         Ok(result)
+    }
+
+    /// Whether `id` is `ancestor_id` itself or anywhere below it.
+    ///
+    /// The question a re-parenting asks before it writes: putting a directory
+    /// under its own subtree closes a `parent_id` cycle, and every up-walk in the
+    /// writer then loops forever. Walks up from `id`, at most [`MAX_TREE_DEPTH`]
+    /// steps; a chain that long answers `true`, since it can't be proved to end.
+    pub fn is_within_subtree(conn: &Connection, ancestor_id: i64, id: i64) -> Result<bool, IndexStoreError> {
+        let mut current = id;
+        for _ in 0..MAX_TREE_DEPTH {
+            if current == ancestor_id {
+                return Ok(true);
+            }
+            match Self::get_parent_id(conn, current)? {
+                Some(parent) if parent != 0 && parent != current => current = parent,
+                // The root sentinel (or a row that's gone): the top of the chain.
+                _ => return Ok(false),
+            }
+        }
+        Ok(true)
     }
 
     /// Check if another entry with the same inode already has non-NULL sizes.

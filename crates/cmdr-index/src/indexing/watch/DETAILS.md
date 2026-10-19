@@ -306,6 +306,13 @@ unrelated file. Every local write path stores `inode: None` on such a `LocalExte
 `find_entry_by_inode` inert and every change fall back to the safe delete+create. The volume-level trust decision
 (`trust_inode` / `inodes_trustworthy`) is canonical in `../paths/DETAILS.md`.
 
+**A trusted inode can still be RECYCLED.** ext4 and friends reuse a freed inode for a later create, so a stale row (its
+removal not yet applied) can carry the inode of a path that now sits INSIDE that row's own subtree, for example the old
+row for `P` matching a fresh `P/child`. That is no rename, and moving the row under itself would close a `parent_id`
+cycle that wedges the writer (`../writer/DETAILS.md` § "Delta propagation and the search-generation coupling"). The
+pre-pass leaves such an event for the create path (`IndexStore::is_within_subtree`), and the writer refuses the move as
+the backstop for a match made against a not-yet-committed tree.
+
 ## Removal-storm coalescing (`event_loop/storm.rs`)
 
 `rm -rf` is depth-first (unlink all files, then rmdir each emptied dir, the root LAST), and FSEvents reports that order

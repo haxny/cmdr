@@ -609,6 +609,17 @@ zero-valued `dir_stats` row so enrichment always has a row. `MoveEntryV2 { entry
 the UNIQUE constraint. Same-parent renames don't change ancestor totals; cross-parent moves subtract from the old
 ancestor chain and add to the new one (and recompute the OR-aggregated `recursive_has_symlinks` on both chains).
 
+**The parent chain must stay acyclic, and `MoveEntryV2` is the only message that can break it.** It refuses (warn, no
+write) a move whose new parent is the entry itself or inside its subtree (`IndexStore::is_within_subtree`). Every
+up-walk here (`propagate_delta_by_id` has no short-circuit at all) loops forever on a cycle, inside the open implicit
+batch: the writer never answers another `Flush`, its uncommitted transaction holds the write lock so every other
+connection gets `database is locked`, and a scan start blocked in `flush_blocking` leaves its manager `Detached` for the
+session. That chain matches every symptom of the intermittent Linux E2E wedge (CI runs 39305420701 and 39315426411,
+2026-10-19: a rescan that never logged `Scan: watcher started`, then
+`... lands as its scan start hands the manager back` and `database is locked` on every restart); the CI log runs at
+INFO, so the cycle itself is inferred, reproduced only in the `move_entry_v2_refuses_*` tests. How such a move gets
+asked for: `../watch/DETAILS.md` § "Rename detection by inode".
+
 **`recursive_has_symlinks`** is OR-aggregated bottom-up; adding a symlink flips the flag to `true`, removing the last
 one triggers a recompute (`propagate_recursive_has_symlinks`) that walks up until the recomputed value matches the
 existing one (monotone, so the chain stabilizes early). Cmdr's recursive size deliberately omits symlinked bytes

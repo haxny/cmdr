@@ -585,3 +585,86 @@ fn move_entry_v2_bumps_writer_generation() {
 
     writer.shutdown();
 }
+
+/// Flush with a deadline, so a writer that never answers fails the test rather
+/// than hanging it.
+fn flush_within(writer: &IndexWriter, deadline: std::time::Duration) {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let flusher = writer.clone();
+    std::thread::spawn(move || {
+        let _ = tx.send(flusher.flush_blocking());
+    });
+    // Under nextest's 8 s slow-test timeout, so a wedge reports as this, not a kill.
+    rx.recv_timeout(deadline)
+        .expect("the writer never answered the flush: it's wedged")
+        .unwrap();
+}
+
+/// A directory with one child directory, both with stats, for the cycle tests.
+fn insert_parent_and_child(writer: &IndexWriter, db_path: &Path) {
+    let stats = |entry_id, dirs| DirStatsById {
+        entry_id,
+        recursive_logical_size: 100,
+        recursive_physical_size: 100,
+        recursive_file_count: 1,
+        recursive_dir_count: dirs,
+        recursive_has_symlinks: false,
+        min_subtree_epoch: 0,
+    };
+    insert_dir_with_stats(writer, db_path, 10, ROOT_ID, "left", stats(10, 1));
+    insert_dir_with_stats(writer, db_path, 20, 10, "sub-dir", stats(20, 0));
+}
+
+/// REGRESSION (the Linux E2E index wedge, 2026-10-19): an inode the filesystem
+/// recycled can match a stale row that is an ANCESTOR of the path now holding
+/// it, so the rename pre-pass asks to move a directory under its own child.
+/// Carried out, that makes a `parent_id` cycle, and `propagate_delta_by_id`
+/// then walks it forever inside the open batch: the writer never answers a
+/// flush again, its transaction locks the DB, and a rescan waiting on that
+/// flush keeps the manager detached for the rest of the session.
+#[test]
+fn move_entry_v2_refuses_to_move_a_dir_under_its_own_descendant() {
+    let (db_path, _dir) = setup_db();
+    let writer = IndexWriter::spawn(&db_path, crate::NoopEventSink::shared()).unwrap();
+    insert_parent_and_child(&writer, &db_path);
+
+    writer
+        .send(WriteMessage::MoveEntryV2 {
+            entry_id: 10,
+            new_parent_id: 20,
+            new_name: "left".into(),
+        })
+        .unwrap();
+    flush_within(&writer, std::time::Duration::from_secs(5));
+
+    let conn = IndexStore::open_write_connection(&db_path).unwrap();
+    let left = IndexStore::get_entry_by_id(&conn, 10).unwrap().unwrap();
+    assert_eq!(left.parent_id, ROOT_ID, "the refused move leaves the row where it was");
+    let stats = IndexStore::get_dir_stats_by_id(&conn, 20).unwrap().unwrap();
+    assert_eq!(stats.recursive_logical_size, 100, "and moves no size anywhere");
+
+    writer.shutdown();
+}
+
+/// The degenerate cycle: a directory as its own parent.
+#[test]
+fn move_entry_v2_refuses_to_make_a_dir_its_own_parent() {
+    let (db_path, _dir) = setup_db();
+    let writer = IndexWriter::spawn(&db_path, crate::NoopEventSink::shared()).unwrap();
+    insert_parent_and_child(&writer, &db_path);
+
+    writer
+        .send(WriteMessage::MoveEntryV2 {
+            entry_id: 10,
+            new_parent_id: 10,
+            new_name: "sub-dir-2".into(),
+        })
+        .unwrap();
+    flush_within(&writer, std::time::Duration::from_secs(5));
+
+    let conn = IndexStore::open_write_connection(&db_path).unwrap();
+    let left = IndexStore::get_entry_by_id(&conn, 10).unwrap().unwrap();
+    assert_eq!((left.parent_id, left.name.as_str()), (ROOT_ID, "left"));
+
+    writer.shutdown();
+}

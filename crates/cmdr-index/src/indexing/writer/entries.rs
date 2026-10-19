@@ -495,6 +495,24 @@ pub(super) fn handle_move_entry_v2(
         return;
     }
 
+    // ❌ Never put a directory under its own subtree: a recycled inode can match a stale ANCESTOR
+    // row, and the cycle that move closes loops the delta walk below forever in the open batch,
+    // wedging the writer. `DETAILS.md` § "Delta propagation and the search-generation coupling".
+    match IndexStore::is_within_subtree(conn, entry_id, new_parent_id) {
+        Ok(false) => {}
+        Ok(true) => {
+            log::warn!(
+                target: "indexing::writer",
+                "MoveEntryV2: refusing to move id={entry_id} under its own subtree (new parent id={new_parent_id}, name={new_name:?}); a recycled inode matched a stale row",
+            );
+            return;
+        }
+        Err(e) => {
+            signal.note(&e, &format!("MoveEntryV2 cycle check for id={entry_id}"));
+            return;
+        }
+    }
+
     // A different entry can already occupy the destination (parent_id, name_folded): the move
     // overwrote an existing file, or a concurrent upsert raced ahead of this message. On disk
     // the moved entry owns that name now, so delete the conflicting row first (subtree-aware,

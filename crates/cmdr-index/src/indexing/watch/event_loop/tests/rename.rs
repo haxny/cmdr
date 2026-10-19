@@ -452,6 +452,52 @@ fn detect_renames_by_inode_cross_parent_propagates_deltas() {
     writer.shutdown();
 }
 
+/// REGRESSION (the Linux E2E index wedge, 2026-10-19): a recycled inode can
+/// match a stale row that is an ANCESTOR of the path holding it now. Here the
+/// row for `P` carries the inode the filesystem gave `P/child`, so a "rename"
+/// to `P/child` would move `P` under itself. The pre-pass must leave the event
+/// for the create path, ❌ never send that move.
+#[test]
+fn detect_renames_by_inode_never_moves_a_row_under_itself() {
+    let fs_root = rename_test_tempdir();
+    let parent = fs_root.path().join("P");
+    let child = parent.join("child");
+    std::fs::create_dir_all(&child).unwrap();
+    let inode = std::os::unix::fs::MetadataExt::ino(&std::fs::symlink_metadata(&child).expect("stat child"));
+
+    let (writer, db_path, _db_dir) = rename_test_setup();
+    let root_id = insert_path_chain(&db_path, fs_root.path(), &writer);
+    let parent_id = {
+        let conn = IndexStore::open_write_connection(&db_path).unwrap();
+        IndexStore::insert_entry_v2(&conn, root_id, "P", true, false, None, None, None, Some(inode)).unwrap()
+    };
+
+    let mut events = vec![(
+        child.to_string_lossy().to_string(),
+        renamed_event(&child.to_string_lossy(), 300),
+    )];
+    let mut pending_paths = HashSet::new();
+    let mut max_event_id = 0u64;
+
+    let conn = IndexStore::open_write_connection(&db_path).unwrap();
+    let handled = detect_renames_by_inode(
+        &mut events,
+        &IndexPathSpace::root(),
+        &conn,
+        &writer,
+        &mut pending_paths,
+        &mut max_event_id,
+    );
+    writer.flush_blocking().unwrap();
+
+    assert!(handled.is_empty(), "a stale ancestor's inode is no rename");
+    assert_eq!(events.len(), 1, "the event stays for the create path");
+    let p = IndexStore::get_entry_by_id(&conn, parent_id).unwrap().unwrap();
+    assert_eq!((p.parent_id, p.name.as_str()), (root_id, "P"));
+
+    writer.shutdown();
+}
+
 /// Inode-unstable filesystems (exFAT/FAT) report a different inode for
 /// the renamed dir than the DB has. The pre-pass leaves the event in
 /// the batch so Phase 2 falls through to today's create/delete path,

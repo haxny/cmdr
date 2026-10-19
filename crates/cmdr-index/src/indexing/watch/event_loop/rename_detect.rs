@@ -107,6 +107,14 @@ pub(super) fn detect_renames_by_inode(
             }
         };
 
+        // A recycled inode can match a stale row that is an ancestor of the new
+        // path. That is no rename, and moving the row under itself would close a
+        // `parent_id` cycle (the writer refuses it too), so the event takes the
+        // create path instead.
+        if !matches!(IndexStore::is_within_subtree(conn, existing_id, new_parent_id), Ok(false)) {
+            return true;
+        }
+
         // Defensive no-op: if the entry is already at the target location
         // (e.g. an inode collision on a non-rename event), skip.
         if let Ok(Some(old_entry)) = IndexStore::get_entry_by_id(conn, existing_id)
