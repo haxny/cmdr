@@ -1857,6 +1857,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr n’a pas remplacé ce fichier",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr n’a pas pu enregistrer sa note sur le remplacement du fichier {path}, et a donc laissé le fichier là où il était. Rien n’a changé à cet endroit.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "Réessayez. Si cela se reproduit, vérifiez qu’il reste de l’espace libre sur le disque de votre Mac, puis redémarrez Cmdr.",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "Votre nouveau fichier porte un autre nom",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"

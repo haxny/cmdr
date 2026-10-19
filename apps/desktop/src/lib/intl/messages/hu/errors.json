@@ -1857,6 +1857,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "A Cmdr nem cserélte le ezt a fájlt",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "A Cmdr nem tudta elmenteni a cseréről szóló feljegyzését, ezért ott hagyta a fájlt, ahol volt: {path}. Ott semmi sem változott.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "Próbáld újra. Ha ismét előfordul, nézd meg, van-e szabad hely a Mac lemezén, majd indítsd újra a Cmdrt.",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "Az új fájlod más néven van meg",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"

@@ -547,6 +547,14 @@
   "@errors.write.sourceChanged.message": {
     "sourceHash": "6751aad"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr no reemplazó este archivo",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "638e9d7"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr no pudo guardar su nota sobre el reemplazo de {path}, así que dejó el archivo donde estaba. Ahí no cambió nada.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "32eb6d4"
+  },
   "errors.write.newDataKeptAt.title": "Tu archivo nuevo quedó con otro nombre",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "1c51b7d"

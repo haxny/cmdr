@@ -1857,6 +1857,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr hat diese Datei nicht ersetzt",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr konnte seine Notiz zum Ersetzen von {path} nicht speichern und hat die Datei deshalb gelassen, wo sie war. Dort hat sich nichts geändert.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "Versuche es noch einmal. Wenn es wieder passiert, prüfe, ob auf der Festplatte deines Macs noch Speicherplatz frei ist, und starte Cmdr dann neu.",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "Deine neue Datei liegt unter einem anderen Namen",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"

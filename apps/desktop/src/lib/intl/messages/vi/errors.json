@@ -1857,6 +1857,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr đã không thay thế tệp này",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr không lưu được ghi chú về việc thay thế {path}, nên Cmdr để nguyên tệp ở chỗ cũ. Ở đó không có gì thay đổi.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "Hãy thử lại. Nếu vẫn tiếp diễn, hãy kiểm tra xem ổ đĩa của máy Mac còn dung lượng trống không, rồi khởi động lại Cmdr.",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "Tệp mới của bạn đang mang tên khác",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"

@@ -1857,6 +1857,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr не заменил этот файл",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr не удалось сохранить свою заметку о замене файла {path}, поэтому файл остался на месте. Там ничего не изменилось.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "Попробуйте еще раз. Если это повторяется, проверьте, есть ли свободное место на диске Mac, а затем перезапустите Cmdr.",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "Новый файл сохранен под другим именем",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"

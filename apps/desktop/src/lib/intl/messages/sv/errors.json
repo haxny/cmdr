@@ -1857,6 +1857,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr ersatte inte den här filen",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr kunde inte spara sin notering om att ersätta {path}, så Cmdr lät filen ligga kvar där den var. Där ändrades ingenting.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "Försök igen. Om det fortsätter, kontrollera att det finns ledigt utrymme på din Macs disk och starta sedan om Cmdr.",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "Din nya fil ligger under ett annat namn",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"

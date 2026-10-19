@@ -1857,6 +1857,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "O Cmdr não substituiu este arquivo",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "O Cmdr não conseguiu salvar a nota em que registra a substituição de {path}, então deixou o arquivo onde estava. Nada mudou ali.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "Tente novamente. Se continuar acontecendo, confira se o disco do seu Mac tem espaço livre e depois reinicie o Cmdr.",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "Seu arquivo novo ficou com outro nome",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"

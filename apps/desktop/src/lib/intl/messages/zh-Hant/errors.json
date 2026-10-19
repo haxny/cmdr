@@ -1857,6 +1857,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr 沒有取代這個檔案",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr 無法儲存這次取代 {path} 的記錄，所以把檔案留在原本的位置。那裡什麼都沒變。",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "請再試一次。如果持續發生，請確認你 Mac 的磁碟還有可用空間，然後重新啟動 Cmdr。",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "你的新檔案換了個名字",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"

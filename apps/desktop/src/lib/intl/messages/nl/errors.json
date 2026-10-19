@@ -1857,6 +1857,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr heeft dit bestand niet vervangen",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr kon zijn notitie over het vervangen van {path} niet bewaren, dus het bestand staat nog waar het stond. Daar is niets veranderd.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "Probeer het opnieuw. Als het blijft gebeuren, controleer dan of de schijf van je Mac nog vrije ruimte heeft en herstart Cmdr daarna.",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "Je nieuwe bestand staat onder een andere naam",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"

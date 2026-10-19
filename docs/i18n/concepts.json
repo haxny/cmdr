@@ -2155,7 +2155,15 @@
     "distinct": ["feedback"],
     "en": "note",
     "match": ["note", "notes"],
-    "notMatch": ["note that", "read the note", "notes.txt", "update notes", "=note", "that notes"],
+    "notMatch": [
+      "note that",
+      "read the note",
+      "notes.txt",
+      "update notes",
+      "=note",
+      "that notes",
+      "note about replacing"
+    ],
     "sense": "Free text the user writes (a note on an error report, the feedback message), or Ask Cmdr's saved notes."
   },
   "notification": {

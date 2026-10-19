@@ -1856,6 +1856,18 @@
   "@errors.write.sourceChanged.suggestion": {
     "sourceHash": "97fc945"
   },
+  "errors.write.landingNotRecorded.title": "Cmdr 没有替换这个文件",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr 没能保存这次替换 {path} 的记录，所以把文件留在了原处。那里什么都没变。",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "请重试。如果一直这样，请确认你 Mac 的磁盘还有剩余空间，然后重新启动 Cmdr。",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
   "errors.write.newDataKeptAt.title": "你的新文件换了个名字",
   "@errors.write.newDataKeptAt.title": {
     "sourceHash": "06bc297"
