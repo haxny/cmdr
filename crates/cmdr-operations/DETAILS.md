@@ -54,7 +54,9 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 - **A loop parks where it checks cancel**, via `state.stop_or_park_sync()` / `_async()`, ❌ never hand-rolled; a SCAN's
   own is `ScanPause`, owing `note_parked`. **Parking on a PERSON owes both edges**, the `human_wait.rs` clock AND
   `announce_human_wait(sink)`, or the ETA lies. Clicks stop via `backend_cancel`; `backend_abort` /
-  `cancel_all_write_operations` are the quit deadline's.
+  `cancel_all_write_operations` are the quit deadline's. The boundary reads `stop_work`, `backend_cancel`'s child, which
+  a concurrent copy's first failure also fires (alone, so the intent stays `Running`): `src/transfer/DETAILS.md` §
+  "Cancel and rollback reach a parked driver".
 - **`write-conflict` takes an `ArmedConflict`** (`conflict_slot.rs`), so the slot is armed first; ❌ the dispatch mutex
   never spans a write. An answer NAMES its clash (`ConflictId`): ❌ never fuse `AlreadyResolved`, `StaleAnswer`, or
   `NoPendingConflict`, nor leave a settled prompt up.

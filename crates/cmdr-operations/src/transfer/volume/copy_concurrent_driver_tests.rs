@@ -32,7 +32,7 @@ use crate::event_sinks::CollectorEventSink;
 use crate::ledger::{WrittenFile, WrittenIdentity};
 use crate::testing::TestOperations;
 use crate::transfer::transfer_driver::LeafProgressLedger;
-use crate::types::{ConflictResolution, WriteOperationType};
+use crate::types::{ConflictResolution, WriteOperationError, WriteOperationType};
 use cmdr_fs::staging::STAGING_TEMP_MARKER;
 use cmdr_fs::volume::{InMemoryVolume, VolumeError, VolumeReadStream};
 use std::collections::HashSet;
@@ -413,7 +413,7 @@ async fn every_recorded_destination_carries_the_size_it_was_written_with() {
 
 /// The same ledger has to flow out of the FAILURE arm, not just the success one.
 /// A directory source whose subtree copy fails part-way hands back the files it
-/// managed to write and leaves `last_dest_path` empty — the dest directory root
+/// managed to write and lists no partial — the dest directory root
 /// is never designated as a partial to clean.
 ///
 /// The cancel-shaped sibling of this is pinned end to end by
@@ -435,11 +435,6 @@ async fn a_failed_directory_source_records_its_files_and_never_its_root_as_a_par
         run.outcome.copy_error.is_some(),
         "the failing child must surface as the operation's error"
     );
-    assert_eq!(
-        run.outcome.last_dest_path, None,
-        "a DIRECTORY source's dest root must never be handed to the partial-cleanup sweep: {:?}",
-        run.outcome.last_dest_path
-    );
     assert!(
         !run.copied_paths().contains(&PathBuf::from("/album")),
         "the merged destination ROOT must never be recorded, on the failure arm either: {:?}",
@@ -452,7 +447,7 @@ async fn a_failed_directory_source_records_its_files_and_never_its_root_as_a_par
     );
     assert!(
         !run.in_flight_partials.contains(&PathBuf::from("/album")),
-        "a directory source is never an in-flight partial: {:?}",
+        "a DIRECTORY source's dest root must never be handed to the partial-cleanup sweep: {:?}",
         run.in_flight_partials
     );
 }
@@ -462,7 +457,7 @@ async fn a_failed_directory_source_records_its_files_and_never_its_root_as_a_par
 // ============================================================================
 
 /// A FILE source resolved to a safe-replace Overwrite whose STREAM fails hands
-/// NOTHING back as `last_dest_path` (`cleanup_temp = false`): the name it holds
+/// NOTHING to the in-flight partials (`cleanup_temp = false`): the name it holds
 /// is the user's original, and the half-written temp went with the write
 /// itself (`StagedWrite::abandon`).
 ///
@@ -500,11 +495,11 @@ async fn a_swap_whose_stream_fails_designates_nothing_for_cleanup() {
         run.outcome.copy_error.is_some(),
         "the failing source must surface an error"
     );
-    assert_eq!(
-        run.outcome.last_dest_path, None,
-        "❗ the only name the driver holds is the user's original"
+    assert!(
+        run.in_flight_partials.is_empty(),
+        "❗ the only name the driver holds is the user's original: {:?}",
+        run.in_flight_partials
     );
-    assert!(run.in_flight_partials.is_empty(), "{:?}", run.in_flight_partials);
     let leftovers: Vec<String> = dest
         .list_directory(Path::new("/"), None)
         .await
@@ -864,4 +859,161 @@ async fn dropping_the_driver_aborts_every_task_in_its_window() {
         || Arc::strong_count(&parked) == 1,
     )
     .await;
+}
+
+// ============================================================================
+// The failure drain: a sibling inside its landing finishes it
+// ============================================================================
+
+/// A source whose read fails for ONE path, once `cue` gets a permit, so a test
+/// can hold the failure until a sibling is where it wants it.
+struct FailReadOnCueVolume {
+    inner: Arc<InMemoryVolume>,
+    fail_for: PathBuf,
+    cue: Arc<tokio::sync::Semaphore>,
+}
+
+impl Volume for FailReadOnCueVolume {
+    forward_volume_methods!(inner =>
+        name, root, list_directory, get_metadata, exists, is_directory, create_file, create_directory,
+        create_directory_all, delete, rename, get_space_info, supports_streaming, supports_export,
+        operations_are_local, max_concurrent_ops, scan_for_copy, supports_unknown_length_writes,
+        write_from_stream,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn open_read_stream<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
+        if path != self.fail_for {
+            return self.inner.open_read_stream(path);
+        }
+        Box::pin(async move {
+            if let Ok(permit) = self.cue.acquire().await {
+                permit.forget();
+            }
+            Err(VolumeError::IoError {
+                message: "simulated source read failure".to_string(),
+                raw_os_error: None,
+            })
+        })
+    }
+}
+
+/// A destination whose renames (every staged write's landing) wait for a
+/// permit, counting the ones that started.
+struct HeldRenameVolume {
+    inner: Arc<InMemoryVolume>,
+    entered: Arc<AtomicU64>,
+    release: Arc<tokio::sync::Semaphore>,
+}
+
+impl Volume for HeldRenameVolume {
+    forward_volume_methods!(inner =>
+        name, root, list_directory, get_metadata, exists, is_directory, create_file, create_directory,
+        create_directory_all, delete, get_space_info, supports_streaming, supports_export,
+        operations_are_local, max_concurrent_ops, scan_for_copy, supports_unknown_length_writes,
+        write_from_stream, open_read_stream,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn rename<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        force: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.entered.fetch_add(1, Ordering::SeqCst);
+            if let Ok(permit) = self.release.acquire().await {
+                permit.forget();
+            }
+            self.inner.rename(from, to, force).await
+        })
+    }
+}
+
+/// A sibling already inside its landing when another source fails has its whole
+/// file written: the drain lets it land, and it goes into the rollback ledger
+/// like any finished source. Dropping it there left a temp the post-loop cleaned
+/// as a partial and a file the ledger never heard of.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_sibling_landing_when_another_source_fails_lands_and_is_recorded() {
+    let engine = TestOperations::new();
+    let source_inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
+    for name in ["/fail.bin", "/lands.bin"] {
+        source_inner
+            .create_file(Path::new(name), &vec![7u8; 20_000])
+            .await
+            .unwrap();
+    }
+    let cue = Arc::new(tokio::sync::Semaphore::new(0));
+    let source: Arc<dyn Volume> = Arc::new(FailReadOnCueVolume {
+        inner: source_inner,
+        fail_for: PathBuf::from("/fail.bin"),
+        cue: Arc::clone(&cue),
+    });
+    let dest_inner = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
+    let entered = Arc::new(AtomicU64::new(0));
+    let release = Arc::new(tokio::sync::Semaphore::new(0));
+    let dest: Arc<dyn Volume> = Arc::new(HeldRenameVolume {
+        inner: Arc::clone(&dest_inner),
+        entered: Arc::clone(&entered),
+        release: Arc::clone(&release),
+    });
+    let sources = vec![PathBuf::from("/fail.bin"), PathBuf::from("/lands.bin")];
+    let harness = Harness::new(&engine, &sources);
+
+    let drive = harness.drive(source, dest, 4);
+    tokio::pin!(drive);
+    tokio::select! {
+        _ = &mut drive => panic!("the window must still be running"),
+        () = cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the sibling to reach its landing", || {
+            entered.load(Ordering::SeqCst) >= 1
+        }) => {}
+    }
+    cue.add_permits(1);
+    let mut early = None;
+    tokio::select! {
+        run = &mut drive => early = Some(run),
+        // allowed-test-sleep: a window in which a driver that stops waiting at the failure returns.
+        () = tokio::time::sleep(Duration::from_millis(300)) => {}
+    }
+    release.add_permits(1);
+    let run = match early {
+        Some(run) => run,
+        None => tokio::time::timeout(Duration::from_secs(5), drive)
+            .await
+            .expect("the drain returns once the landing finishes"),
+    };
+
+    assert!(
+        matches!(
+            run.outcome.copy_error.as_ref().map(|f| &f.error),
+            Some(WriteOperationError::IoError { .. })
+        ),
+        "the failure stays the operation's error"
+    );
+    assert_eq!(
+        run.copied_paths(),
+        vec![PathBuf::from("/lands.bin")],
+        "the sibling that landed during the drain is in the rollback ledger"
+    );
+    assert!(dest_inner.exists(Path::new("/lands.bin")).await, "and it landed whole");
+    let leftovers: Vec<String> = dest_inner
+        .list_directory(Path::new("/"), None)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|entry| entry.name)
+        .filter(|name| name.contains(STAGING_TEMP_MARKER))
+        .collect();
+    assert!(leftovers.is_empty(), "no temp left behind: {leftovers:?}");
 }

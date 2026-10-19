@@ -94,7 +94,7 @@ impl FolderMetadata {
     ) {
         let mut asking = true;
         for folder in self.folders {
-            if state.intent().is_cancelled() {
+            if state.work_stopped() {
                 return;
             }
             let carried = source_set(source_volume, dest_volume, &folder, state).await;

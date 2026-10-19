@@ -45,8 +45,8 @@ Copy and move across backends (Local, MTP, SMB, archive). File map: `DETAILS.md`
 ## Concurrency and failures
 
 - **A LOCAL `max_concurrent_ops` must ❌ NOT bound a REMOTE peer** (`copy.rs::transfer_concurrency`, ❌ never a
-  `min()`). The concurrent driver SPAWNS its tasks (ERR-8MEX6) and watches cancel/rollback ON ITS AWAIT. EVERY driver
-  sets its `DriverPhase`.
+  `min()`). The concurrent driver SPAWNS its tasks (ERR-8MEX6), watches `stop_work` ON ITS AWAIT, and DRAINS on a
+  failure as on a cancel, ❌ never aborts first. EVERY driver sets its `DriverPhase`.
 - **ONE `FileWindow` per operation** (`merge_ctx.rs::MergeCtx`), taken by every merge leaf and top-level FILE task
   (width 1 keeps MTP serial). ❌ Never per level or per source. A walker ❌ never holds a permit while it recurses
   (deadlock at width 1) and ❌ never returns before draining its leaves.
@@ -55,5 +55,4 @@ Copy and move across backends (Local, MTP, SMB, archive). File map: `DETAILS.md`
 - **Two test traps**: a `*_tests.rs` here is a `#[path]` CHILD (`super::` one level shallower), and a `FaultyVolume`
   cell must **assert `fault_fired(op)`**.
 
-Flows and decisions: `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or
-advising.
+Flows and decisions: `DETAILS.md`; read it before non-trivial work.

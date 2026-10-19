@@ -14,7 +14,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::super::state::{IntentCell, WriteOperationState};
+use super::super::state::WriteOperationState;
 use super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
 use cmdr_fs::volume::{ScanStop, ScanStopSignal, Volume, VolumeError, VolumeReadStream};
 
@@ -30,13 +30,13 @@ use cmdr_fs::volume::{ScanStop, ScanStopSignal, Volume, VolumeError, VolumeReadS
 /// session to release and nothing to reopen. Before each `next_chunk().await`, the
 /// wrapper:
 ///
-/// 1. **Parks while paused** via `pause_gate.wait_while_paused_async`. The
+/// 1. **Parks while paused** via `WriteOperationState::park_while_paused`. The
 ///    checkpoint runs at a chunk boundary — the previous chunk is fully written
 ///    and the next is not yet read — so a paused op holds only its in-flight
-///    `.cmdr-tmp-<uuid>`, never a torn target. Resume or cancel unblocks it
-///    (`wait_while_paused_async` returns the instant cancel is observed;
-///    cancellation wins over pause). This is identical for every backend — pause
-///    is always park-in-place now.
+///    `.cmdr-tmp-<uuid>`, never a torn target. Resume or a stop unblocks it
+///    (the park returns the instant the work stops: a cancel, or a sibling's
+///    failure; stopping wins over pause). This is identical for every backend —
+///    pause is always park-in-place now.
 /// 2. **Auto-yields the device to foreground work** for sources that opt in via
 ///    `Volume::supports_foreground_yield()` (MTP only). When a foreground op (a
 ///    listing / nav on the phone) is pending on the source device, the checkpoint
@@ -62,10 +62,11 @@ use cmdr_fs::volume::{ScanStop, ScanStopSignal, Volume, VolumeError, VolumeReadS
 /// overlap. The destination's `write_from_stream` (and its safe-replace
 /// temp+rename) is untouched.
 ///
-/// Cancellation is NOT enforced here: the backend's existing `on_progress`
-/// `is_cancelled` check after each write owns the cancel-then-cleanup ordering
-/// (drop the handle, remove the partial). A cancel observed while parked unblocks
-/// promptly and lets the next chunk flow through to that same `on_progress` check.
+/// Stopping is NOT enforced here: the backend's existing `on_progress` check
+/// after each write (`LeafProgress::on_chunk`, on `stop_work`) owns the
+/// stop-then-cleanup ordering (drop the handle, remove the partial). A stop
+/// observed while parked unblocks promptly and lets the next chunk flow through
+/// to that same `on_progress` check.
 pub(super) struct CheckpointStream {
     /// The open source stream. Always present — pause and foreground yield park in
     /// place between bounded windows; nothing is ever released or reopened.
@@ -235,13 +236,13 @@ impl CheckpointStream {
     /// Run the between-window pause checkpoint and the foreground auto-yield, then
     /// yield cooperatively.
     async fn checkpoint(&mut self) {
-        // Park between windows while paused (returns immediately on cancel). Pause
+        // Park between windows while paused (returns the moment the work stops). Pause
         // is park-in-place for every backend: a bounded-window read holds nothing
         // between windows, so there's no scarce resource to release.
         if self.state.pause_gate.is_paused() {
             set_task_phase(TaskPhase::ParkedPause);
         }
-        self.state.pause_gate.wait_while_paused_async(self.state.intent()).await;
+        self.state.park_while_paused().await;
 
         // Foreground auto-yield: when a foreground op (listing / nav on the phone)
         // is pending on the source device, don't start the next window until it
@@ -274,8 +275,8 @@ impl CheckpointStream {
         if !self.source_volume.supports_foreground_yield() {
             return;
         }
-        if self.state.intent().is_cancelled() {
-            return; // cancel owns teardown; never start a yield while cancelled
+        if self.state.work_stopped() {
+            return; // a stop owns teardown; never start a yield once the work stopped
         }
         // At EOF there's nothing left to yield for; let the copy finish.
         if self
@@ -303,35 +304,37 @@ impl CheckpointStream {
         // from a hang.
         set_task_phase(TaskPhase::ParkedSourceYield);
 
-        // Clone the source handle so the park loop borrows it, not `self` (we
-        // mutate `self.last_resume_offset` after the loop). Arc clone is cheap.
+        // Clone the source handle and the state so the park loop borrows them,
+        // not `self` (we mutate `self.last_resume_offset` after the loop). Arc
+        // clones are cheap.
         let source_volume = Arc::clone(&self.source_volume);
+        let state = Arc::clone(&self.state);
 
         // Debounce: wait for foreground to drain, then a quiet window; if a new
         // foreground op arrives during the window, re-park. This collapses a BURST
         // of listings into ONE suspension instead of re-checking every window. The
-        // whole loop is cancel-aware (a cancel breaks out promptly and lets the
-        // backend's `on_progress` own cleanup).
+        // whole loop ends the moment the work stops (`stop_work`: a cancel, or a
+        // sibling's failure) and lets the backend's `on_progress` own cleanup.
         loop {
-            if self.state.intent().is_cancelled() {
+            if state.work_stopped() {
                 break;
             }
             // Park until the device is clear of foreground work, but RACE it
-            // against cancellation: `wait_until_foreground_idle` only returns once
-            // foreground drains, and a cancel doesn't clear the foreground signal,
+            // against the stop: `wait_until_foreground_idle` only returns once
+            // foreground drains, and a stop doesn't clear the foreground signal,
             // so without this race a cancel-while-yielding would hang until the
             // (unrelated) foreground op happens to finish.
             tokio::select! {
+                biased;
+                () = state.stop_work.cancelled() => break,
                 () = source_volume.wait_until_foreground_idle() => {}
-                () = poll_until_cancelled(self.state.intent()) => break,
-            }
-            if self.state.intent().is_cancelled() {
-                break;
             }
             // Stay parked for the quiet window. If foreground becomes pending
             // again before it elapses (a burst), loop and re-drain.
-            if sleep_cancel_aware(self.state.intent(), self.foreground_debounce).await {
-                break; // cancelled during the wait
+            tokio::select! {
+                biased;
+                () = state.stop_work.cancelled() => break,
+                () = tokio::time::sleep(self.foreground_debounce) => {}
             }
             if !source_volume.foreground_pending().await {
                 break; // quiet for the full window ⇒ resume
@@ -366,8 +369,8 @@ impl CheckpointStream {
         if !self.dest_volume.supports_foreground_yield_as_destination() {
             return;
         }
-        if self.state.intent().is_cancelled() {
-            return; // cancel owns teardown; never start a yield while cancelled
+        if self.state.work_stopped() {
+            return; // a stop owns teardown; never start a yield once the work stopped
         }
         // At EOF there's nothing left to write; let the copy finalize (the
         // safe-replace rename must not wait behind a park).
@@ -420,61 +423,22 @@ impl CheckpointStream {
         //   later;
         // - one sleep to the cap, which is the data-safety bound above (it can't
         //   be missed, because it isn't a condition anyone has to re-check);
-        // - the cancel, which no foreground signal would ever announce, so it
-        //   needs its own arm here.
+        // - the stop (a cancel, or a sibling's failure), which no foreground
+        //   signal would ever announce, so it needs its own arm here.
         //
         // Clone the destination handle so the wait borrows it rather than `self`
         // (we mutate `self.last_resume_offset` right after). Arc clone is cheap.
         let dest_volume = Arc::clone(&self.dest_volume);
+        let state = Arc::clone(&self.state);
         tokio::select! {
+            biased;
+            () = state.stop_work.cancelled() => {}
             () = dest_volume.wait_until_foreground_idle() => {}
             () = tokio::time::sleep(self.dest_yield_hard_cap) => {}
-            () = poll_until_cancelled(self.state.intent()) => {}
         }
         // Resuming: restart the min-progress floor so the next yield can only fire
         // after another `min_progress_floor` bytes.
         set_task_phase(TaskPhase::Streaming);
         self.last_resume_offset = self.bytes_yielded;
-    }
-}
-
-/// Sleep for `dur`, returning early if the operation is cancelled. Returns
-/// `true` if it bailed on a cancel, `false` if the full window elapsed.
-///
-/// Cancel-awareness matters: a cancel during the auto-yield debounce wait must
-/// not be slept through. We slice the sleep and re-check `is_cancelled` between
-/// slices, so a cancel is observed within at most one slice. (A zero/near-zero
-/// debounce — what tests inject — returns at the first check, before any sleep.)
-///
-/// Free function (not a method) so it borrows only the cancel atomic, not
-/// `&CheckpointStream`: a `&self` held across an `.await` would force the
-/// wrapper's `next_chunk` future to require `CheckpointStream: Sync`, which it
-/// isn't (it holds a non-`Sync` `dyn VolumeReadStream`).
-async fn sleep_cancel_aware(intent: &IntentCell, dur: Duration) -> bool {
-    const SLICE: Duration = Duration::from_millis(20);
-    let mut remaining = dur;
-    loop {
-        if intent.is_cancelled() {
-            return true;
-        }
-        if remaining.is_zero() {
-            return false;
-        }
-        let step = remaining.min(SLICE);
-        tokio::time::sleep(step).await;
-        remaining = remaining.saturating_sub(step);
-    }
-}
-
-/// Resolves once the operation is cancelled; otherwise never. Used to RACE the
-/// auto-yield's `wait_until_foreground_idle` against a cancel via `select!`: the
-/// device gate only releases when foreground drains, and a cancel doesn't clear
-/// the foreground signal, so a cancel-while-parked needs a separate waker. We
-/// poll the intent (a cheap relaxed atomic load) on a short tick rather than
-/// reach into the gate's internals; the latency is bounded by the tick.
-async fn poll_until_cancelled(intent: &IntentCell) {
-    const TICK: Duration = Duration::from_millis(20);
-    while !intent.is_cancelled() {
-        tokio::time::sleep(TICK).await;
     }
 }

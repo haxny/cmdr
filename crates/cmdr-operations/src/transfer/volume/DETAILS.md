@@ -83,14 +83,14 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
   several filesystems, judged by its FOLDER's filesystem in both directions), `copy_precheck_tests.rs` (is this
   top-level name taken), `copy_prescan_reuse_tests.rs` (what the scan's findings let the copy skip — the size hint
   instead of a rescan, the pre-known conflicts as one upfront bulk skip — and the skip-mode-only and stale-entry guards
-  on both), `copy_crashsafe_tests.rs`, `copy_rollback_tests.rs`, `copy_cancel_tests.rs`, `copy_retry_tests.rs`,
-  `copy_outage_tests.rs` (a share that drops and comes back, or doesn't), `copy_source_hint_tests.rs` (the ABSENT hint
-  specifically, the other half of the pair), `copy_staged_write_tests.rs`, `copy_extract_out_tests.rs`,
-  `copy_window_tests.rs`, and the two `copy_concurrent*_tests.rs`. The fixtures `make_state` / `make_volumes` live in
-  `copy_tests/mod.rs` and every sibling reaches them as `super::tests`. ❗ Tests for a symbol ANOTHER module owns belong
-  to that module's suite, not here: `map_volume_error`'s are `transfer_error_tests.rs`, `remove_tree`'s are
-  `cleanup_tests.rs`. Both sets sat in the copy suite once, which is how `remove_tree` came to look untested from
-  `cleanup_tests.rs`.
+  on both), `copy_crashsafe_tests.rs`, `copy_rollback_tests.rs`, `copy_cancel_tests.rs`, `copy_failure_drain_tests.rs`
+  (one source fails while its siblings are mid-stream), `copy_retry_tests.rs`, `copy_outage_tests.rs` (a share that
+  drops and comes back, or doesn't), `copy_source_hint_tests.rs` (the ABSENT hint specifically, the other half of the
+  pair), `copy_staged_write_tests.rs`, `copy_extract_out_tests.rs`, `copy_window_tests.rs`, and the two
+  `copy_concurrent*_tests.rs`. The fixtures `make_state` / `make_volumes` live in `copy_tests/mod.rs` and every sibling
+  reaches them as `super::tests`. ❗ Tests for a symbol ANOTHER module owns belong to that module's suite, not here:
+  `map_volume_error`'s are `transfer_error_tests.rs`, `remove_tree`'s are `cleanup_tests.rs`. Both sets sat in the copy
+  suite once, which is how `remove_tree` came to look untested from `cleanup_tests.rs`.
 - **The same-volume rename-merge suite is six files split by subject**, all declared from `mod.rs` and sharing the
   fixtures in `rename_merge_test_support.rs` (which also holds the reason the whole family runs on `LocalPosixVolume`
   over a tempdir: `InMemoryVolume` models neither real subtree-rename nor empty-only-delete semantics).
@@ -220,23 +220,25 @@ and CLEARS `last_dest_path` for a directory source, so the Stopped/error partial
 directory ROOT. On a merge that root holds pre-existing dest-only files. The sweep itself can no longer recurse into one
 (§ "Three ways to delete, and who may use each"), so the ledger discipline and the capability split are two independent
 defenses of the same file. A FILE source routes its dest through `last_dest_path` (serial) or `in_flight_partials`
-(concurrent) ONLY when that path can hold OUR partial: a name the resolver claimed
-(`../staged_write.rs::failed_write_leaves_ours_at`). ❗ A plain staged write (`WriteStaging::Stage`) never qualifies:
-its bytes are on a `.cmdr-tmp-*` sibling `stream_pipe_file` abandons itself, and its final name was free when the driver
-looked, so whatever is there after a failure is someone else's. ❗ Nor does a swap (`StageOverOriginal`): its name is
-the user's ORIGINAL, and its temp is the write's own (the safe-replace paragraph under § "Volume copy + move"). The
-commonest way to get there is exactly that: another writer took the name mid-upload and the no-replace landing refused,
-and the sweep used to delete their file. Pinned by `copy_landing_race_tests.rs` (both drivers) and, on live WebDAV,
-SFTP, and SMB servers, `a_name_taken_mid_upload_is_never_replaced`. A write that fell back to the final name unstaged (a
-destination that can't rename) cleans its own partial there instead (`remove_unstaged_partial`). Pinned by
+(concurrent, where a failed task's stays listed for the post-loop) ONLY when that path can hold OUR partial: a name the
+resolver claimed (`../staged_write.rs::failed_write_leaves_ours_at`). ❗ A plain staged write (`WriteStaging::Stage`)
+never qualifies: its bytes are on a `.cmdr-tmp-*` sibling `stream_pipe_file` abandons itself, and its final name was
+free when the driver looked, so whatever is there after a failure is someone else's. ❗ Nor does a swap
+(`StageOverOriginal`): its name is the user's ORIGINAL, and its temp is the write's own (the safe-replace paragraph
+under § "Volume copy + move"). The commonest way to get there is exactly that: another writer took the name mid-upload
+and the no-replace landing refused, and the sweep used to delete their file. Pinned by `copy_landing_race_tests.rs`
+(both drivers) and, on live WebDAV, SFTP, and SMB servers, `a_name_taken_mid_upload_is_never_replaced`. A write that
+fell back to the final name unstaged (a destination that can't rename) cleans its own partial there instead
+(`remove_unstaged_partial`). Pinned by
 `copy_rollback_tests.rs::{cancel_mid_merge_stream_preserves_preexisting_dest_file, rollback_mid_merge_stream_preserves_preexisting_dest_file, cancel_mid_merge_stream_concurrent_preserves_preexisting_dest_file}`
 (serial Cancel, serial Rollback, concurrent Cancel) and `rollback_after_rename_keeps_preexisting_dest_file` (file→file
 Rename rollback removes only the `name (1)` it landed). **Don't** drop the `created` ledger in the `Err`/cancel arms or
-let a directory source's dest root reach `last_dest_path`. A task the concurrent driver ABORTS (at its cancel-drain
-deadline, or after the batch's first failure) never reaches either arm, nor does one that panics, so the driver holds an
-`Arc` on each in-flight task's `CreatedPaths` (`CopyTask.created`) and `ConcurrentDriver::finish` (or
-`Settlements::record_panic`) hands over, and journals, what every such directory source had already landed. A panic is
-the operation's failure, like a task error, ❌ never a source that silently goes missing. Pinned by
+let a directory source's dest root reach `last_dest_path` (serial) or `in_flight_partials` (concurrent). A task the
+concurrent driver ABORTS at its drain deadline (after a cancel or a failure) never reaches either arm, nor does one that
+panics, so the driver holds an `Arc` on each in-flight task's `CreatedPaths` (`CopyTask.created`) and
+`ConcurrentDriver::finish` (or `Settlements::record_panic`) hands over, and journals, what every such directory source
+had already landed. A panic is the operation's failure, like a task error, ❌ never a source that silently goes missing.
+Pinned by
 `copy_cancel_tests.rs::rollback_undoes_what_an_abandoned_folder_task_already_landed`.
 
 ### Three ways to delete, and who may use each
@@ -581,10 +583,10 @@ strictly serial walk too.
 **The walk drains before it returns, on every exit path.** A leaf still writing when `copy_directory_streaming` returned
 would keep touching the destination after the driver moved on to cleanup, and its `created` record would land too late
 for rollback to see. So the pool is drained after the walk finishes, fails, or hits a cancel. Under CANCEL that is
-prompt: `stream_pipe_file` checks the intent per chunk, and the concurrent driver's cancel-drain deadline is the
-backstop for a leaf that won't wind down. Under an ERROR it means the walk waits out the ≤ `W-1` leaves already
-streaming rather than abandoning them — they complete, get recorded, and the FIRST failure is still the one reported
-(`cleanup.rs`'s `remove_tree` follows the same first-failure rule). Pinned by
+prompt: `stream_pipe_file` checks `stop_work` per chunk, and the concurrent driver's drain deadline is the backstop for
+a leaf that won't wind down. Under an ERROR it means the walk waits out the ≤ `W-1` leaves already streaming rather than
+abandoning them — they complete, get recorded, and the FIRST failure is still the one reported (`cleanup.rs`'s
+`remove_tree` follows the same first-failure rule). Pinned by
 `merge_window_tests.rs::{a_cancel_mid_subtree_leaves_no_leaf_still_writing, a_rolled_back_wide_window_copy_leaves_no_directory_it_created}`.
 
 **One in-flight-table row per leaf.** `TaskProbe` is built on "one row, one write attempt": `arm_stall_abort` REPLACES

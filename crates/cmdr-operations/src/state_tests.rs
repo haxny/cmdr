@@ -864,3 +864,111 @@ fn latest_progress_skips_an_operation_that_has_emitted_nothing_yet() {
         "no tick, no row to seed"
     );
 }
+
+// ---- the stop-work token --------------------------------------------
+//
+// One token says "stop starting work" for both reasons a concurrent copy stops:
+// a person's stop, and its own first failure. Only the intent tells them apart.
+
+#[test]
+fn a_cancel_stops_work() {
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-stops-work", OperationIntent::Running);
+    assert!(!op.state().stop_work.is_cancelled(), "a fresh operation is working");
+
+    engine.cancel_write_operation(op.id(), false);
+
+    assert!(
+        op.state().stop_work.is_cancelled(),
+        "every stop fires the stop-work token, through `backend_cancel`"
+    );
+    assert!(op.state().work_stopped());
+}
+
+/// The failure drain fires ONLY the stop-work token: the intent stays
+/// `Running` (so the failure stays the operation's error, never a cancel), and
+/// `backend_cancel` stays quiet (MTP bridges it into the device's own cancel).
+#[test]
+fn a_failure_drain_stops_work_without_reading_as_a_cancel() {
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "failure-drain-stops-work", OperationIntent::Running);
+
+    op.state().stop_work_after_failure();
+
+    assert!(
+        op.state().stop_work.is_cancelled(),
+        "the drain fires the stop-work token"
+    );
+    assert!(op.state().work_stopped());
+    assert_eq!(
+        op.state().intent().load(),
+        OperationIntent::Running,
+        "❗ a failure is not a person's stop: the intent says nothing of it"
+    );
+    assert!(
+        !op.state().backend_cancel.is_cancelled(),
+        "❌ the drain never reaches a backend's own cancel token"
+    );
+    assert!(!op.state().backend_abort.is_cancelled());
+}
+
+/// What a drain does to a Stop-mode prompt still up for a sibling: drops it, the
+/// way a cancel does, so its waiter reads a stop instead of holding the drain
+/// open on a question nobody will answer.
+#[test]
+fn a_failure_drain_drops_the_pending_conflict_prompt() {
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "failure-drain-drops-prompt", OperationIntent::Running);
+    let (tx, mut rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
+    op.state().conflict_slot.arm(tx, placeholder_conflict);
+
+    op.state().stop_work_after_failure();
+
+    match rx.try_recv() {
+        Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {}
+        other => panic!("expected the prompt's sender to be dropped, got {other:?}"),
+    }
+}
+
+/// A loop boundary stops on the drain instead of starting the next item.
+#[tokio::test]
+async fn a_loop_boundary_stops_after_a_failure_drain() {
+    let state = TestOperations::new().new_state();
+    assert!(!state.stop_or_park_async().await, "a working operation carries on");
+
+    state.stop_work_after_failure();
+
+    assert!(state.stop_or_park_async().await, "the async boundary stops");
+    assert!(state.stop_or_park_sync(), "and the sync one");
+    assert!(
+        state.is_stopping_or_paused(),
+        "and the cheap probe says there's something to ask"
+    );
+}
+
+/// A task parked on Pause when a sibling fails is woken to stop, so it closes
+/// its handle and deletes its own partial instead of being dropped at the drain
+/// deadline. The pause flag stays set: nothing starts again.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_failure_drain_wakes_a_task_parked_on_pause() {
+    let engine = TestOperations::new();
+    let state = registered_in(&engine, "failure-drain-wakes-paused", OperationIntent::Running);
+    state.pause_gate.pause();
+
+    let parked = tokio::spawn({
+        let state = Arc::clone(&state);
+        async move { state.stop_or_park_async().await }
+    });
+    // allowed-test-sleep: negative assertion over a window; the park has nothing to await.
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(!parked.is_finished(), "still parked before the drain");
+
+    state.stop_work_after_failure();
+
+    let stopped = tokio::time::timeout(Duration::from_secs(2), parked)
+        .await
+        .expect("the parked task must observe the drain")
+        .expect("the task joins");
+    assert!(stopped, "it wakes to STOP, not to carry on");
+    assert!(state.pause_gate.is_paused(), "the drain wakes without resuming");
+}

@@ -235,7 +235,7 @@ pub(super) async fn scan_volume_sources(
         ),
     );
 
-    if state.intent().is_cancelled() {
+    if state.work_stopped() {
         return Err(cancelled_failure(events, operation_id, operation_type));
     }
 

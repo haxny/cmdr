@@ -203,6 +203,68 @@ async fn a_cancel_drops_a_hung_reconnect_attempt() {
     );
 }
 
+/// A sibling's failure ends a task's outage wait the way a Cancel does: the
+/// drain stops work, and a wait for the share is work. A hung reconnect in
+/// flight is dropped with it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_failure_drain_ends_the_wait_at_once() {
+    let engine = TestOperations::new();
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_outage_policy(OutagePolicy {
+                budget: Duration::from_secs(60),
+                attempt_timeout: Duration::from_secs(60),
+                ..QUICK
+            }),
+    );
+    let op = engine.register_state("outage-drain", state);
+    let (nas, volume) = nas("outage-drain");
+    nas.go_away();
+    nas.hang_reconnects();
+    let control = Arc::clone(&nas);
+    let draining = Arc::clone(op.state());
+    tokio::spawn(async move {
+        wait_until_async(WAIT, "an attempt to hang", || control.reconnect_attempts() >= 1).await;
+        draining.stop_work_after_failure();
+    });
+
+    let started = std::time::Instant::now();
+    let ended = wait_while_out(op.state(), &[&volume], None).await;
+
+    assert_eq!(ended, OutageEnd::Cancelled);
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "a draining sibling doesn't wait out a hung attempt (took {:?})",
+        started.elapsed()
+    );
+    assert_eq!(nas.abandoned_reconnects(), nas.reconnect_attempts());
+}
+
+/// And once the work has stopped, a failure starts no wait at all: nothing
+/// dials, and the failure is reported as it is.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_draining_sibling_starts_no_wait() {
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-drain-gate", quick_state(&engine));
+    let (nas, volume) = nas("outage-drain-gate");
+    nas.go_away();
+    op.state().stop_work_after_failure();
+    let mut outages = 0;
+
+    let ended = wait_after_failure(
+        op.state(),
+        &lost_session(),
+        &[&volume],
+        &StartedOn::now(&[&volume]),
+        &mut outages,
+    )
+    .await;
+
+    assert_eq!(ended, OutageEnd::NotWaitable);
+    assert_eq!(nas.reconnect_attempts(), 0, "nothing dialed");
+}
+
 /// The one look a job queued behind a give-up takes is bounded too: a hung
 /// attempt there would otherwise hold the job until someone cancels it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -140,7 +140,7 @@ pub(super) async fn rename_merge_directory(
     dest_dir: &Path,
     note_both_halves: &(dyn Fn(&Path, &Path) + Sync),
 ) -> Result<(), WriteOperationError> {
-    if ctx.state.intent().is_cancelled() {
+    if ctx.state.work_stopped() {
         return Err(WriteOperationError::Cancelled {
             message: "Operation cancelled by user".to_string(),
         });

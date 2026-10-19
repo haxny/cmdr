@@ -137,7 +137,7 @@ pub(super) async fn try_server_side_copy(
         // ❌ A cancel is never retried more slowly. The intent is consulted as
         // well as the variant, so a backend that labels its own stop something
         // else can't turn a Cancel click into a second, full-speed attempt.
-        Err(e) if matches!(e, VolumeError::Cancelled(_)) || state.intent().is_cancelled() => {
+        Err(e) if matches!(e, VolumeError::Cancelled(_)) || state.work_stopped() => {
             staged.abandon(dest_volume).await;
             Err(e.into())
         }

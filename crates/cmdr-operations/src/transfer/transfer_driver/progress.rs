@@ -389,10 +389,12 @@ pub(in crate::transfer) struct LeafProgress {
 
 impl LeafProgress {
     /// Per-chunk progress. `file_bytes_done` is THIS leaf's running byte count
-    /// (0 → leaf size). Throttled; returns `Break` to abort the write on cancel.
+    /// (0 → leaf size). Throttled; returns `Break` to abort the write once the
+    /// operation's work stops (a cancel, or a sibling's failure: `stop_work`),
+    /// so the backend closes its own handle and deletes its own partial.
     pub(in crate::transfer) fn on_chunk(&self, file_bytes_done: u64) -> ControlFlow<()> {
         let ledger = &self.source.ledger;
-        if ledger.state.intent().is_cancelled() {
+        if ledger.state.work_stopped() {
             return ControlFlow::Break(());
         }
         let snapshot = {

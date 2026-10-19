@@ -71,6 +71,18 @@ pub enum OperationErrorReport {
         /// The probe's dump of the wedged tasks, when the op had a probe.
         probe_dump: Option<String>,
     },
+    /// A volume copy whose first failure drained its window left `tasks`
+    /// in-flight tasks behind that didn't stop within `deadline`.
+    FailureDrainAbandoned {
+        /// The failed operation.
+        operation_id: OperationId,
+        /// How many tasks didn't stop.
+        tasks: usize,
+        /// How long the drain waited for them.
+        deadline: Duration,
+        /// The probe's dump of the wedged tasks, when the op had a probe.
+        probe_dump: Option<String>,
+    },
 
     // A bug, contained: the operation carries on, or its lanes are freed.
     /// The transfer tree stopped for this operation; the transfer carries on.

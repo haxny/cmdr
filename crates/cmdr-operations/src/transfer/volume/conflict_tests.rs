@@ -442,7 +442,7 @@ async fn a_blanket_file_overwrite_asks_the_destination_type_once() {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
     };
-    let mut apply_to_all = ApplyToAll::default();
+    let apply_to_all = std::sync::Mutex::new(ApplyToAll::default());
 
     let resolved = resolve_volume_conflict(
         &source_dyn,
@@ -453,7 +453,7 @@ async fn a_blanket_file_overwrite_asks_the_destination_type_once() {
         &CollectorEventSink::new(),
         "op-one-stat",
         &state,
-        &mut apply_to_all,
+        &apply_to_all,
         Some(3),
         Some(3),
         Some(false),

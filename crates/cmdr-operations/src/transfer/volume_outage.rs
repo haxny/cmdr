@@ -29,8 +29,9 @@
 //! - **Bounded.** Every wait ends: the volume comes back, the budget runs out,
 //!   the person cancels, or the backend says it can't come back on its own (a
 //!   changed password: [`ConnectionState::NeedsSignIn`] or an auth refusal).
-//! - **Cancelable at once.** Every await races `backend_cancel`; a Cancel never
-//!   waits out a reconnect attempt or a sleep, and drops the attempt in flight.
+//! - **Cancelable at once.** Every await races `stop_work`; a Cancel (or a
+//!   sibling's failure draining the window) never waits out a reconnect attempt
+//!   or a sleep, and drops the attempt in flight.
 //! - **No attempt holds the wait.** Each reconnect gets
 //!   [`OutagePolicy::attempt_timeout`](super::super::outage_slot::OutagePolicy::attempt_timeout)
 //!   (15 s); one that hasn't returned by then is dropped and counts as still
@@ -309,7 +310,8 @@ impl OutageFailure for VolumeError {
 /// After `error` from a call that started on `started_on`, waits for whichever
 /// of `volumes` went away, when that's what `error` was: a
 /// [`VolumeError::transport_fault`], with this item's outage budget
-/// ([`MAX_OUTAGES_PER_ITEM`], counted in `outages`) not spent and no cancel in.
+/// ([`MAX_OUTAGES_PER_ITEM`], counted in `outages`) not spent and the work not
+/// stopped (`state.stop_work`: a cancel, or the failure drain).
 /// [`OutageEnd::NotWaitable`] for every other failure, which the caller reports
 /// as it always did.
 pub(crate) async fn wait_after_failure(
@@ -319,7 +321,7 @@ pub(crate) async fn wait_after_failure(
     started_on: &StartedOn,
     outages: &mut u32,
 ) -> OutageEnd {
-    if *outages >= MAX_OUTAGES_PER_ITEM || error.transport_fault().is_none() || state.intent().is_cancelled() {
+    if *outages >= MAX_OUTAGES_PER_ITEM || error.transport_fault().is_none() || state.work_stopped() {
         return OutageEnd::NotWaitable;
     }
     let ended = wait_out(state, volumes, started_on, None).await;
@@ -382,7 +384,7 @@ async fn wait_for_volume(
     let mut failed_attempts = 0;
     let mut next_attempt = Instant::now();
     loop {
-        if state.intent().is_cancelled() {
+        if state.work_stopped() {
             return OutageEnd::Cancelled;
         }
         if state.pause_gate.is_paused() {
@@ -430,7 +432,7 @@ async fn wait_for_volume(
         let wake = next_attempt.min(deadline).min(now + policy.poll_every);
         tokio::select! {
             biased;
-            () = state.backend_cancel.cancelled() => return OutageEnd::Cancelled,
+            () = state.stop_work.cancelled() => return OutageEnd::Cancelled,
             () = tokio::time::sleep_until(wake) => {}
         }
     }
@@ -495,7 +497,7 @@ async fn attempt_once(
     let attempt_timeout = state.outage_policy.attempt_timeout;
     let result = tokio::select! {
         biased;
-        () = state.backend_cancel.cancelled() => return Attempt::Cancelled,
+        () = state.stop_work.cancelled() => return Attempt::Cancelled,
         // The loop reads the deadline next and gives up; an attempt still
         // dialing then is dropped, which the backends' single-flight tolerates.
         () = until_deadline => return Attempt::Failed,

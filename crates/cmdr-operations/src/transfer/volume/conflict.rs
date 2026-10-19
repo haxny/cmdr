@@ -198,7 +198,7 @@ pub(super) async fn resolve_volume_conflict(
             // the dispatch mutex would otherwise acquire it next and emit a fresh
             // `write-conflict` that no one will ever answer (the dialog is tearing
             // down) — a hang. Bail with `Cancelled` before emitting anything.
-            if state.intent().is_cancelled() {
+            if state.work_stopped() {
                 return Err(cancelled_at(dest_path));
             }
 

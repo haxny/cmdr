@@ -492,9 +492,9 @@ async fn cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure() 
 }
 
 /// CONCURRENT path: same finalize-failure scenario, ≥3 sources so the
-/// concurrent path runs. RED today: the failing task returns
-/// `Err((temp, e))`, the result handler sets `last_dest_path = Some(temp)`, and
-/// the post-loop deletes it — after finalize already deleted the original.
+/// concurrent path runs. The guard: a failing task whose temp the result
+/// handler designated as a partial would have the post-loop delete it — after
+/// finalize already deleted the original.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failure() {
     let engine = TestOperations::new();

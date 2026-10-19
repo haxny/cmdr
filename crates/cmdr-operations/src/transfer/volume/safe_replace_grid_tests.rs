@@ -661,7 +661,7 @@ impl Volume for HoldsTheSwapRename {
 }
 
 /// A source whose read of `fails` waits until the swap is held, then refuses:
-/// the sibling's failure that makes the concurrent driver drop its window.
+/// the sibling's failure that starts the concurrent driver's drain.
 struct FailsOnceTheSwapIsHeld {
     inner: Arc<InMemoryVolume>,
     fails: PathBuf,
@@ -695,14 +695,16 @@ impl Volume for FailsOnceTheSwapIsHeld {
 const LEDGER_VOLUME_ID: &str = "safe-replace-grid-nas";
 
 /// ❗ A top-level concurrent safe-replace task sits between `delete(orig)` and
-/// its rename when a sibling fails, and the driver drops its window. From that
-/// delete on, the temp is the destination's only copy of the file, so no
-/// cleanup may take it: it's no driver-side partial (the name the drivers know
-/// is the user's original), it left the operation's in-flight temps when it
-/// became a landing, and the persisted ledger holds it as one. The failure
-/// still names the sibling, and the next launch finishes the landing.
+/// its rename when a sibling fails, and its rename never answers, so the
+/// failure drain's deadline drops it. From that delete on, the temp is the
+/// destination's only copy of the file, so no cleanup may take it: it's no
+/// driver-side partial (the name the drivers know is the user's original), it
+/// left the operation's in-flight temps when it became a landing, and the
+/// persisted ledger holds it as one. The failure still names the sibling, and
+/// the next launch finishes the landing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land() {
+    let _drain = super::copy::wedge_test_support::CancelDrainGuard::set(Duration::from_millis(150));
     let dir = TestDir::new("safe-replace-grid-dropped-swap");
     let data_dir = dir.join("data");
     std::fs::create_dir_all(&data_dir).unwrap();

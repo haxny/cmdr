@@ -178,6 +178,22 @@ pub struct WriteOperationState {
     /// ❌ Don't read this to decide anything a user asked for; it means "the app
     /// is going away", not "the user changed their mind".
     pub backend_abort: CancellationToken,
+    /// "Stop starting work", for either reason: a person's Cancel or Rollback
+    /// (a child of [`backend_cancel`](Self::backend_cancel), so every stop
+    /// fires it), or the first failure in a concurrent copy's window
+    /// ([`stop_work_after_failure`](Self::stop_work_after_failure), which fires
+    /// ONLY this). Every place that stops for either reason watches it: the
+    /// per-chunk `on_progress` check (so a backend runs its own abort and
+    /// delete), the retry and outage waits, the walkers' next child. An async
+    /// `select!` arm awaits `stop_work.cancelled()`; a sync check asks
+    /// [`work_stopped`](Self::work_stopped).
+    ///
+    /// ❌ Never read it to tell the two apart (rollback or not, which terminal
+    /// event): that's the [`intent`](Self::intent)'s job, and a failure leaves
+    /// the intent `Running`. ❌ Never hand it to a backend in place of
+    /// `backend_cancel` (MTP bridges that token): a backend learns of the
+    /// failure drain through `on_progress`, the way it learns of a cancel.
+    pub stop_work: CancellationToken,
     /// Cooperative pause gate. The drivers call `pause_gate.wait_while_paused_*`
     /// at each between-files boundary, right after the `is_cancelled` check.
     /// Pause is orthogonal to `intent` (the cancel/rollback machine); the
@@ -287,6 +303,8 @@ impl WriteOperationState {
         // estimator reads the union.
         let human_wait = HumanWaitClock::shared();
         let tree_events = Arc::clone(scope.host().events_arc());
+        let backend_cancel = CancellationToken::new();
+        let stop_work = backend_cancel.child_token();
         Self {
             scope,
             intent: IntentCell::running(),
@@ -300,8 +318,9 @@ impl WriteOperationState {
             skipped_files: AtomicUsize::new(0),
             skipped_bytes: AtomicU64::new(0),
             reversal_drains: AtomicBool::new(false),
-            backend_cancel: CancellationToken::new(),
+            backend_cancel,
             backend_abort: CancellationToken::new(),
+            stop_work,
             pause_gate: PauseGate::new(Arc::clone(&human_wait)),
             outage: Arc::new(OutageSlot::new(Arc::clone(&human_wait))),
             outage_policy: OutagePolicy::default(),
@@ -382,28 +401,61 @@ impl WriteOperationState {
     /// preview) drives [`PauseGate`]'s `*_until` helpers directly and names its
     /// own predicate.
     pub fn stop_or_park_sync(&self) -> bool {
-        if self.intent.is_cancelled() {
+        if self.work_stopped() {
             return true;
         }
-        self.pause_gate.wait_while_paused_sync(&self.intent);
-        self.intent.is_cancelled()
+        self.pause_gate.wait_while_paused_sync_until(&|| self.work_stopped());
+        self.work_stopped()
     }
 
     /// Async sibling of [`stop_or_park_sync`](Self::stop_or_park_sync): same
     /// answer, parking the calling task instead of an executor thread.
     pub async fn stop_or_park_async(&self) -> bool {
-        if self.intent.is_cancelled() {
+        if self.work_stopped() {
             return true;
         }
-        self.pause_gate.wait_while_paused_async(&self.intent).await;
-        self.intent.is_cancelled()
+        self.park_while_paused().await;
+        self.work_stopped()
+    }
+
+    /// Parks the calling task while the operation is paused, returning on a
+    /// resume or the moment its work stops (a cancel, or the failure drain:
+    /// both wake the gate). For a checkpoint that parks and then carries on to
+    /// a check of its own; a loop boundary asks
+    /// [`stop_or_park_async`](Self::stop_or_park_async).
+    pub(crate) async fn park_while_paused(&self) {
+        self.pause_gate.wait_while_paused_until(&|| self.work_stopped()).await;
     }
 
     /// The cheap half of the boundary: `true` when there is anything to ask
     /// about. Two atomic loads, which is what lets a copy SCAN put the boundary
     /// on its per-entry path (`cmdr_fs::volume::ScanStopSignal`).
     pub fn is_stopping_or_paused(&self) -> bool {
-        self.intent.is_cancelled() || self.pause_gate.is_paused()
+        self.work_stopped() || self.pause_gate.is_paused()
+    }
+
+    /// Whether this operation should stop starting work: the sync reading of
+    /// [`stop_work`](Self::stop_work). The intent half covers the moment
+    /// between a stop's intent write and its token firing, and a test that sets
+    /// an intent without the stop path.
+    pub(crate) fn work_stopped(&self) -> bool {
+        self.stop_work.is_cancelled() || self.intent.is_cancelled()
+    }
+
+    /// Starts the FAILURE DRAIN: the concurrent copy driver's answer to its
+    /// first failed task. Fires [`stop_work`](Self::stop_work) and nothing a
+    /// person's stop would also say: the intent stays `Running`, so the
+    /// failure stays the operation's error (`write-error`, ❌ never
+    /// `write-cancelled`), and `backend_cancel` stays quiet. Everything that
+    /// stops on a cancel stops on this too, through the same paths: the
+    /// pending conflict prompt is dropped (its waiter reads that as a stop),
+    /// and a paused, parked task is woken so it can close its handle and
+    /// delete its own partial rather than wait for the drain deadline to drop
+    /// it. The pause flag stays set; nothing starts again. Idempotent.
+    pub(crate) fn stop_work_after_failure(&self) {
+        self.stop_work.cancel();
+        self.conflict_slot.abandon();
+        self.pause_gate.wake();
     }
 
     /// A handle to this operation's [`liveness`](Self::liveness), for tagging

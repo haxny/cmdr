@@ -1185,13 +1185,14 @@ by `volume/swap_landing_tests.rs` (the three delete answers, and both drivers en
 
 **Finding the litter.** A staged temp is listed in `state.in_flight_temps` for exactly as long as it is a removable copy
 of ours: while it is written, and through the landing until `land` releases it (it landed, it was discarded, or the way
-is about to be cleared). So a landing that never finishes (a cancel, the concurrent driver dropping its window, a crash)
-leaves the temp to the abandoned-write and startup sweeps, which is safe because the name was never cleared; and a temp
-that may hold the only complete copy at the destination is never in the set, and is recorded as a landing, which no
-sweep deletes. The NAME-based sweep (`volume/cleanup.rs::reap_stale_transfer_temps`) spares every path the ledger
-records, landings included. Whatever is still listed when the driver's loop ends belongs to a task that was DROPPED
-mid-write — the concurrent driver drops the rest of its window on cancel and on the first failure — so
-`volume::cleanup::clean_abandoned_staged_writes` removes those, deep-merge children and swaps included.
+is about to be cleared). So a landing that never finishes (a task the drain deadline dropped, a crash) leaves the temp
+to the abandoned-write and startup sweeps, which is safe because the name was never cleared; and a temp that may hold
+the only complete copy at the destination is never in the set, and is recorded as a landing, which no sweep deletes. The
+NAME-based sweep (`volume/cleanup.rs::reap_stale_transfer_temps`) spares every path the ledger records, landings
+included. A task that STOPS (a cancel, or a sibling's failure: § "Cancel and rollback reach a parked driver") takes its
+own temp with it, through its backend's abort and `StagedWrite::abandon`. Whatever is still listed when the driver's
+loop ends belongs to a task the drain's deadline DROPPED mid-write, so `volume::cleanup::clean_abandoned_staged_writes`
+removes those, deep-merge children and swaps included.
 
 ❗ **No driver-side partial list names a staged write's temp**, a swap's included: `failed_write_leaves_ours_at` answers
 `false` for `Stage` and `StageOverOriginal`, because the name the drivers hold is the user's (a free name, or the
@@ -1210,11 +1211,12 @@ another run) sat on their NAS. ❌ Don't fold them into `CancelRollback::skips` 
 walked to and chose to leave, and `reversed + skipped` is what the reversal's bar drains over. See § "Naming what a
 cancel left behind".
 
-**Known gap, deliberately open: the abandoned SMB handle.** A refused sweep is about the handle itself. Since smb2
-0.32.0 a dropped handle (`FileWriter`, `FileReader`, `FileUpload`, `FileDownload`) queues its SMB2 `CLOSE`, with no
-flush, before the drop returns, so it reaches the server after that handle's in-flight requests and before anything sent
-next: a copy task dropped mid-stream leaves a closed temp, and the sweep's delete right after works. Two shapes still
-leak a handle the app owns and can't reach:
+**Known gap, deliberately open: the abandoned SMB handle.** A refused sweep is about the handle itself, and only a task
+the drain's deadline DROPPED leaves one: a cancel and a failure both let every task stop on its own first, so its writer
+closes and deletes its temp the way a Cancel's does. Since smb2 0.32.0 a dropped handle (`FileWriter`, `FileReader`,
+`FileUpload`, `FileDownload`) also queues its SMB2 `CLOSE`, with no flush, before the drop returns, so it reaches the
+server after that handle's in-flight requests and before anything sent next: a copy task dropped mid-stream leaves a
+closed temp, and the sweep's delete right after works. Two shapes still leak a handle the app owns and can't reach:
 
 - **A drop with no credit on hand**: its `CLOSE` goes out a moment later, so a delete sent at once can still meet the
   open handle.
@@ -1706,13 +1708,12 @@ window whatever the destination promised. The floor baseline (`last_resume_offse
 every resume. Both durations/sizes are injectable fields on `CheckpointStream` (defaulting to the constants) so tests
 set debounce ≈ 0 and a tiny floor for determinism; the production constants are tuned against a real device.
 
-**Cancel-awareness.** A cancel during an auto-yield must not be slept through and must not hang. The debounce wait
-(`sleep_cancel_aware`) slices its sleep and re-checks `is_cancelled` between slices; every `wait_until_foreground_idle`
-park (both arms) is RACED against cancellation via `select!` + `poll_until_cancelled`, because the wait only resolves
-when foreground drains and a cancel doesn't clear the foreground signal, so it needs a separate waker.
-`poll_until_cancelled` is the one tick left on this path, and it bounds cancel latency alone (the intent is a bare
-atomic with nothing to subscribe to); the foreground wait itself is event-driven. On cancel the arm bails out and lets
-the next chunk flow to the backend's `on_progress` `is_cancelled` cleanup — identical to cancel-while-paused. Pinned by
+**Cancel-awareness.** A cancel (or a sibling's failure: both fire `state.stop_work`) during an auto-yield must not be
+slept through and must not hang. The debounce wait and every `wait_until_foreground_idle` park (both arms) is RACED
+against `stop_work.cancelled()` in a `biased` `select!`, because the wait only resolves when foreground drains and a
+stop doesn't clear the foreground signal, so it needs its own waker. No tick on this path: the token wakes the park the
+moment the work stops. On a stop the arm bails out and lets the next chunk flow to the backend's `on_progress` cleanup
+(`LeafProgress::on_chunk`) — identical to a stop while paused. Pinned by
 `volume::strategy::tests::auto_yield_parks_before_next_window_then_resumes_byte_exact` (parks without releasing +
 byte-exact assembly + single open at offset 0 + op stays Running), `auto_yield_debounces_a_burst_into_one_park` (the
 copy stays parked across both listings in the burst), `auto_yield_min_progress_floor_prevents_starvation`,
@@ -1793,10 +1794,12 @@ engine maps the same set to `ConnectionInterrupted`. `Cancelled` and `NotConnect
 faults. ❌ Everything else is a decision or a fact about the data: re-running the write fails the same way and only
 delays the report.
 
-**❌ A cancel is never retryable, and outranks a retryable error.** `should_retry` checks `is_cancelled` first, the
-backoff is a `select!` against `state.backend_cancel` (not a `sleep`), and a cancel that lands while an attempt is
-failing on something we WOULD have retried is reported AS a cancel — otherwise the post-loop, which keys
-`write-cancelled` off a `Cancelled`-shaped error, would log the user's own click as a failed transfer.
+**❌ A cancel is never retryable, and outranks a retryable error.** `should_retry` checks `work_stopped` first, the
+backoff is a `select!` against `state.stop_work` (not a `sleep`), and a cancel that lands while an attempt is failing on
+something we WOULD have retried is reported AS a cancel — otherwise the post-loop, which keys `write-cancelled` off a
+`Cancelled`-shaped error, would log the user's own click as a failed transfer. A sibling draining after another task's
+failure takes the same path: it never starts another attempt, and its stop is dropped in favor of the failure that
+started the drain.
 
 **Bounded, deliberately.** `MAX_ATTEMPTS = 3` and a 250 ms → 1 s backoff, so a file can add at most 1.25 s of waiting.
 Three is the smallest number that survives the observed shape (a blip takes out the attempt in flight, the next runs on
@@ -1838,8 +1841,9 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
 - **Bounded.** The volume comes back, the budget runs out, the person cancels, or the backend says time won't fix it
   (`NeedsSignIn`, or an auth refusal from the reconnect: dialing again risks locking the account). A link that flaps is
   ridden out at most `MAX_OUTAGES_PER_ITEM` (3) times per item.
-- **Cancelable at once.** Every await races `backend_cancel`, a reconnect attempt included; a cancel during the wait is
-  reported as the cancel it is.
+- **Cancelable at once.** Every await races `stop_work`, a reconnect attempt included; a cancel during the wait is
+  reported as the cancel it is. A sibling's failure ends the wait the same way (the failure drain), and once the work
+  has stopped a failure starts no wait at all.
 - **No single attempt holds the wait.** Each `attempt_reconnect` gets `OutagePolicy::attempt_timeout` (15 s, under the
   cadence's 30 s step); one that hasn't returned is dropped and counts as still down, and the next tick dials afresh.
   Without it, one SMB handshake that never returned held a copy for the whole budget after the NAS was back (`#406`).
@@ -2066,8 +2070,8 @@ KB/s.
   when foreground drains, a destination yield at its hard cap, a conflict when the human answers, a backoff on its timer
   — so aborting one would break something working as designed. A deliberate park also RESTARTS the clock, so parked
   seconds are never charged to the budget.
-- **Never while cancelling.** Cancel and rollback own their teardown via the driver's drain deadline; a second abort
-  path racing them would only make the wind-down harder to reason about.
+- **Never once the work stopped.** Cancel, rollback, and the failure drain own their teardown via the driver's drain
+  deadline; a second abort path racing them would only make the stop harder to reason about.
 - **Never for a `SingleShot` write** (the arm isn't even armed in `stream_pipe_file`). Those land in one indivisible
   frame at the file's FINAL name, and only the backend can tell "the server created the file and then refused the bytes"
   from "the file was already there". Aborting one from outside would add a client-initiated instance of the transport
@@ -2137,6 +2141,13 @@ callback, and the backend answers by dropping its own handle and deleting its ow
 skip exactly that cleanup, on the healthy path, for every cancel. Every Cancel button, the queue window's stop, a
 Rollback, and the frontend teardown walk are tier 1 and stay tier 1.
 
+The transfer's own checks (`on_progress`'s `LeafProgress::on_chunk`, the retry and outage waits, the walkers' next
+child, the concurrent driver's spawn loop) don't read `backend_cancel` itself: they read `state.stop_work`, its child
+token. A person's stop fires it through `backend_cancel`, and the concurrent driver's first failure fires it alone (§
+"Cancel and rollback reach a parked driver"), so a failure stops a sibling's write through this same tier-1 path while
+the backend's own token, which MTP bridges into the device's cancel, stays quiet. ❌ Never hand `stop_work` to a
+backend; the intent, not the token, says which of the two it was.
+
 **Tier 2, hard abort (`state.backend_abort`).** What tier 1 cannot do is bound the WAIT. A write that never calls
 `on_progress` never sees the cancel, and `smb2`'s own deadline for a chunk is 30 s of server silence, stretching to 180
 s while an ECHO keeps proving the connection alive (see the `STALL_ABORT_AFTER` doc comment in `transfer_probe.rs`), so
@@ -2178,8 +2189,9 @@ temp left behind". `state_tests.rs` carries the negatives at the state layer
 
 ## Cancel and rollback reach a parked driver
 
-**Decision**: the concurrent copy driver observes `OperationIntent` on the await it actually sits on, and bounds how
-long a cancelled operation waits for its tasks.
+**Decision**: the concurrent copy driver observes its work stopping on the await it actually sits on, and bounds how
+long a stopped operation waits for its tasks. A failure stops the work the same way a cancel does: the window DRAINS, it
+never drops.
 
 **Why**: `state.intent().is_cancelled()` was consulted only in the spawn loop (`while in_flight.len() < concurrency`). A
 driver whose window is full — or whose sources have run out — parks on `in_flight.next().await` and never returns to
@@ -2187,26 +2199,50 @@ that line while its tasks are parked. On 2026-07-31 that made Rollback a no-op: 
 never came, the dialog would not close, and the app had to be force-quit. An escape hatch that only works while the
 thing it is escaping is healthy is not an escape hatch.
 
-**How.** The `in_flight.next()` await is a `biased` `select!` against `state.backend_cancel.cancelled()`.
-`backend_cancel` is the right signal because `cancel_write_operation` fires it on EVERY transition out of `Running`, so
-one arm covers both Cancel and Rollback; `biased` makes the cancel win deterministically, and a task result that was
-also ready is simply re-polled on the next pass. Observing the cancel arms `drain_deadline`; from then on the same await
-is a `timeout_at`, so healthy tasks still get to finish (their results keep flowing through the normal handler, which is
-what keeps the rollback ledger complete), while the drain deadline caps the wait.
+**How.** The `in_flight.next()` await is a `biased` `select!` against `state.stop_work.cancelled()`. `stop_work` is the
+right signal because it's a child of `backend_cancel`, which `cancel_write_operation` fires on EVERY transition out of
+`Running`, so one arm covers Cancel and Rollback, and the driver fires it itself on its first failure; `biased` makes
+the stop win deterministically, and a task result that was also ready is simply re-polled on the next pass. Observing
+the stop arms `drain_deadline`; from then on the same await is a `timeout_at`, so every task gets to stop or finish
+(their results keep flowing through the normal handler, which is what keeps the rollback ledger complete), while the
+drain deadline caps the wait.
 
-**The deadline belongs to whoever asked for the wind-down** (`copy.rs::drain_deadline(aborting)`): 15 s for a
-cooperative cancel, because a task that hasn't answered yet might still come back with its own cleanup done; 1 s once
+**Drain, don't drop, on a failure** (`copy_concurrent.rs::ConcurrentDriver::keep_the_first_failure`). The first failed
+task (or a conflict resolution that refused) calls `WriteOperationState::stop_work_after_failure`: it fires `stop_work`
+and nothing a person's stop would also say, drops a sibling's pending Stop-mode prompt (its waiter reads a stop), and
+wakes a paused, parked task so it can stop rather than sit on the pause until the deadline. From there it's the cancel's
+shape exactly: the driver prepares no more sources, a sibling mid-stream stops at its next chunk (its backend runs
+`abort()` + delete, tier 1's cleanup), the merge walkers start no next child, an outage wait or a retry backoff ends,
+and a sibling inside its landing (no chunk left to stop at) finishes it and is recorded. A sibling in a swap landing's
+outage wait ends like any wait and gives the landing up under the cut-off rules (`CutOffLanding::give_up`: rescue, or
+leave it recorded as a landing, ❌ never cleaned).
+
+- **The failure stays the failure.** The intent stays `Running`, so the post-loop's cancel reclassification never fires,
+  and the terminal event is `write-error` with the FIRST failure. Every later one, a sibling's `Cancelled` from the
+  drain included, is logged and dropped.
+- **Why a token, not the intent.** The intent is what tells the two apart (rollback or not, which terminal event); a
+  failure that wrote `Stopped` would read as the person's click. Every place that stops for EITHER reason reads
+  `stop_work` (sync: `work_stopped`); every place that must tell them apart keeps reading the intent.
+- **A Rollback clicked during the drain** still rolls back, and the operation ends as that one rollback: the post-loop
+  drops the failure after `write-cancelled`, so no `write-error` follows it as a second terminal event.
+- Only the concurrent driver drains its window: the serial path and `move_cross.rs` run one source at a time, and a
+  directory's own walker already waits out its leaves on an error (`volume/DETAILS.md` § "One window for the whole
+  operation").
+
+**The deadline belongs to whoever asked for the stop** (`copy.rs::drain_deadline(aborting)`): 15 s for a cooperative
+cancel or a failure, because a task that hasn't answered yet might still come back with its own cleanup done; 1 s once
 the hard-abort tier is live, because that caller has already given up on exactly that and is holding a promise to a
 person. It stays re-negotiable WHILE it runs: the quit sequence cancels first and aborts a beat later, by which point
 the driver is already sitting on the cooperative deadline, so tier 2 has its own `select!` arm that cuts it short. That
 arm is latched (`drain_shortened`) because a fired token is ready forever and an unguarded arm would spin.
 
-**When the deadline fires** the driver logs at error level with the full `transfer_probe` dump — naming every task and
-what it is awaiting — and breaks. `ConcurrentDriver::finish` then aborts the window (the tasks are spawned into a
-`JoinSet`) and waits up to `ABORTED_TASKS_GRACE` (1 s) for them to stop, so each one's teardown (a backend writer's
-abort, its probe row) runs before the post-loop sweeps what it left; a result that raced the abort is recorded like any
-other, since it carries the only copy of its ledger. A task stuck INSIDE a poll can't be stopped by anything, and the
-driver lets go of it after the grace rather than freeze with it. The staged partials are removed by
+**When the deadline fires** the driver reports `OperationErrorReport::WindDownAbandoned` (after a person's stop) or
+`FailureDrainAbandoned` (after its first failure), which the app logs at error level with the full `transfer_probe` dump
+— naming every task and what it is awaiting — and breaks. `ConcurrentDriver::finish` then aborts the window (the tasks
+are spawned into a `JoinSet`) and waits up to `ABORTED_TASKS_GRACE` (1 s) for them to stop, so each one's teardown (a
+backend writer's abort, its probe row) runs before the post-loop sweeps what it left; a result that raced the abort is
+recorded like any other, since it carries the only copy of its ledger. A task stuck INSIDE a poll can't be stopped by
+anything, and the driver lets go of it after the grace rather than freeze with it. The staged partials are removed by
 `clean_abandoned_staged_writes` in the post-loop.
 
 **Decision/Why abandon rather than hold**: an abandoned task can leave an open SMB write handle behind. Servers reap
@@ -2223,7 +2259,12 @@ deliberately not done here.
 Pinned by `volume/copy_cancel_tests.rs`: cancel and rollback each reach a driver parked on genuinely wedged tasks and
 return, rollback undoes the file that already landed, a task that never winds down is abandoned at the deadline with
 nothing left at a real name, and a conflict prompt refused mid-copy (the resolver's `Cancelled`, reaching the post-loop
-through `ConcurrentOutcome`) sweeps the wedged tasks' partials and fires `write-cancelled`.
+through `ConcurrentOutcome`) sweeps the wedged tasks' partials and fires `write-cancelled`. The failure drain by
+`volume/copy_failure_drain_tests.rs` (each sibling's backend removes its own partial and the event is the first failure,
+a sibling that never stops is abandoned at the deadline, a paused copy's siblings wake to stop, a Rollback during the
+drain ends as one rollback),
+`copy_concurrent_driver_tests.rs::a_sibling_landing_when_another_source_fails_lands_and_is_recorded`, and the token
+itself by `state_tests.rs` (§ "the stop-work token").
 
 ## Key decisions
 

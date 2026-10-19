@@ -189,6 +189,20 @@ fn raise(report: OperationErrorReport) {
             deadline,
             probe_dump.map(|dump| format!("\n{dump}")).unwrap_or_default(),
         ),
+        OperationErrorReport::FailureDrainAbandoned {
+            operation_id,
+            tasks,
+            deadline,
+            probe_dump,
+        } => crate::log_error!(
+            target: "copy",
+            "copy_volumes_with_progress: op={} abandoning {} task(s) that did not stop within {:?} of its first failure. \
+             Their handles are left for the backend to reap; their staged partials are cleaned up below.{}",
+            operation_id,
+            tasks,
+            deadline,
+            probe_dump.map(|dump| format!("\n{dump}")).unwrap_or_default(),
+        ),
         OperationErrorReport::TreeAbandoned { cause } => match cause {
             TreeFailure::ReportPanicked => crate::log_error!(
                 target: TRANSFER_TREE_TARGET,

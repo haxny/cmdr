@@ -66,27 +66,28 @@ pub(super) fn backoff_after(failed_attempt: u32) -> Duration {
 
 /// Should the file run again after `failed_attempt` (1-based) hit `err`?
 ///
-/// Three independent gates, and a cancel beats all of them: a cancelled operation
-/// never starts another attempt, however retryable the error looked. Only a
+/// Three independent gates, and a stop beats all of them: an operation whose
+/// work stopped (a cancel, or a sibling's failure draining the window) never
+/// starts another attempt, however retryable the error looked. Only a
 /// [`VolumeError::transport_fault`] is worth another try: a refusal or a fact
 /// about the data fails the same way again and only delays the report.
 pub(super) fn should_retry(err: &VolumeError, failed_attempt: u32, state: &Arc<WriteOperationState>) -> bool {
-    !state.intent().is_cancelled() && failed_attempt < MAX_ATTEMPTS && err.transport_fault().is_some()
+    !state.work_stopped() && failed_attempt < MAX_ATTEMPTS && err.transport_fault().is_some()
 }
 
 /// Waits out the backoff for `failed_attempt`, returning `false` the moment the
-/// operation is cancelled.
+/// operation's work stops.
 ///
 /// ❌ Not a plain `sleep`: a cancel must win instantly, and a retry that outlives
 /// a cancel is the hang this whole effort exists to remove, wearing a new hat.
 pub(super) async fn wait_before_retry(state: &Arc<WriteOperationState>, failed_attempt: u32) -> bool {
-    if state.intent().is_cancelled() {
+    if state.work_stopped() {
         return false;
     }
     tokio::select! {
         biased;
-        () = state.backend_cancel.cancelled() => false,
-        () = tokio::time::sleep(backoff_after(failed_attempt)) => !state.intent().is_cancelled(),
+        () = state.stop_work.cancelled() => false,
+        () = tokio::time::sleep(backoff_after(failed_attempt)) => !state.work_stopped(),
     }
 }
 
@@ -138,6 +139,40 @@ mod tests {
         assert!(should_retry(&err, 1, guard.state()));
         engine.cancel_write_operation(guard.id(), false);
         assert!(!should_retry(&err, 1, guard.state()));
+    }
+
+    /// A sibling draining after another task's failure never STARTS another
+    /// attempt either: the drain exists to stop work, and a fresh write would
+    /// open a handle the drain then has to wait out.
+    #[test]
+    fn a_draining_sibling_schedules_no_further_attempt() {
+        let engine = TestOperations::new();
+        let guard = engine.register("retry-draining");
+        let err = VolumeError::ConnectionTimeout("send timed out".into());
+        guard.state().stop_work_after_failure();
+        assert!(!should_retry(&err, 1, guard.state()));
+    }
+
+    /// The drain ends a backoff already under way, like a cancel does.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_failure_drain_ends_the_backoff_immediately() {
+        let engine = TestOperations::new();
+        let guard = engine.register("retry-backoff-drain");
+        let state = Arc::clone(guard.state());
+        let draining = Arc::clone(&state);
+        tokio::spawn(async move {
+            // allowed-test-sleep: the drain has to land INSIDE the running backoff,
+            // which publishes nothing to wait on.
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            draining.stop_work_after_failure();
+        });
+        let started = tokio::time::Instant::now();
+        assert!(!wait_before_retry(&state, 1).await, "a draining sibling doesn't go on");
+        assert!(
+            started.elapsed() < Duration::from_millis(200),
+            "the backoff ends on the drain, not on its timer (took {:?})",
+            started.elapsed()
+        );
     }
 
     /// Every wait is short and rises, and the total a file can spend backing off

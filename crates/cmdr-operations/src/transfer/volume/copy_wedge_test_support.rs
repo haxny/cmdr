@@ -85,6 +85,47 @@ pub(super) struct GatedSource {
     /// driver has spawned everything it can and is parked awaiting tasks — which
     /// is the state these suites need to reach before they perturb it.
     pub(super) opened: Arc<AtomicU64>,
+    /// The one source whose read fails, and when.
+    failing: Option<FailingRead>,
+}
+
+/// A source path whose read stream fails once `trigger` gets a permit.
+struct FailingRead {
+    path: PathBuf,
+    trigger: Arc<tokio::sync::Semaphore>,
+}
+
+/// The stream [`FailingRead`] hands out: nothing until the trigger, then a
+/// refusal (an `IoError` with no errno, which no retry or outage wait takes).
+struct FailingChunkStream {
+    total: u64,
+    trigger: Arc<tokio::sync::Semaphore>,
+}
+
+impl VolumeReadStream for FailingChunkStream {
+    fn next_chunk(&mut self) -> StdPin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
+        Box::pin(async move {
+            if let Ok(permit) = self.trigger.acquire().await {
+                permit.forget();
+            }
+            Some(Err(VolumeError::IoError {
+                message: "Injected read failure".into(),
+                raw_os_error: None,
+            }))
+        })
+    }
+
+    fn total_size(&self) -> StreamLength {
+        StreamLength::Known(self.total)
+    }
+
+    fn bytes_read(&self) -> u64 {
+        0
+    }
+
+    fn modified_at(&self) -> Option<std::time::SystemTime> {
+        None
+    }
 }
 
 impl Volume for GatedSource {
@@ -147,11 +188,17 @@ impl Volume for GatedSource {
             let real_size = self.inner.get_metadata(path).await.ok().and_then(|m| m.size);
             let total = if real_size == Some(0) { 0 } else { file_size };
             opened.fetch_add(1, Ordering::SeqCst);
-            let stream: Box<dyn VolumeReadStream> = Box::new(GatedChunkStream {
-                total,
-                emitted: 0,
-                gate,
-            });
+            let stream: Box<dyn VolumeReadStream> = match self.failing.as_ref().filter(|f| f.path == path) {
+                Some(failing) => Box::new(FailingChunkStream {
+                    total,
+                    trigger: Arc::clone(&failing.trigger),
+                }),
+                None => Box::new(GatedChunkStream {
+                    total,
+                    emitted: 0,
+                    gate,
+                }),
+            };
             Ok(stream)
         })
     }
@@ -176,36 +223,47 @@ pub(super) struct IncrementalDest {
     /// How many renames have been entered, so a test can wait for the wedge
     /// rather than guessing at a duration.
     pub(super) renames_entered: Arc<AtomicU64>,
+    /// How many writes stopped on `on_progress`'s `Break` and removed their own
+    /// partial: tier 1's cleanup, the BACKEND's, as opposed to a sweep after
+    /// the driver dropped the write.
+    pub(super) aborted: Arc<AtomicU64>,
+    /// Writes that have published their (empty) file and are streaming.
+    pub(super) started: Arc<AtomicU64>,
+    /// Renames that went through (never counts a wedged one).
+    pub(super) landed: Arc<AtomicU64>,
+}
+
+/// What a test reads off an [`IncrementalDest`] without reaching through the
+/// `dyn`.
+pub(super) struct DestCounters {
+    pub(super) written: Arc<AtomicU64>,
+    pub(super) renames_entered: Arc<AtomicU64>,
+    pub(super) aborted: Arc<AtomicU64>,
+    pub(super) started: Arc<AtomicU64>,
+    pub(super) landed: Arc<AtomicU64>,
 }
 
 impl IncrementalDest {
-    /// Builds the volume and hands back the byte counter alongside it, so a test
-    /// can wait on "the write is under way" without reaching through the `dyn`.
-    pub(super) fn build(inner: Arc<InMemoryVolume>) -> (Arc<dyn Volume>, Arc<AtomicU64>) {
-        let written = Arc::new(AtomicU64::new(0));
-        let vol: Arc<dyn Volume> = Arc::new(Self {
-            inner,
-            written: Arc::clone(&written),
-            wedge_rename: false,
+    /// Builds the volume and hands back its counters. `wedge_rename` makes every
+    /// staged write's LANDING hang forever.
+    pub(super) fn build(inner: Arc<InMemoryVolume>, wedge_rename: bool) -> (Arc<dyn Volume>, DestCounters) {
+        let counters = DestCounters {
+            written: Arc::new(AtomicU64::new(0)),
             renames_entered: Arc::new(AtomicU64::new(0)),
-        });
-        (vol, written)
-    }
-
-    /// Same destination, but every staged write's LANDING hangs forever. Hands
-    /// back the written-bytes and entered-renames counters.
-    pub(super) fn build_with_wedged_rename(
-        inner: Arc<InMemoryVolume>,
-    ) -> (Arc<dyn Volume>, Arc<AtomicU64>, Arc<AtomicU64>) {
-        let written = Arc::new(AtomicU64::new(0));
-        let renames_entered = Arc::new(AtomicU64::new(0));
+            aborted: Arc::new(AtomicU64::new(0)),
+            started: Arc::new(AtomicU64::new(0)),
+            landed: Arc::new(AtomicU64::new(0)),
+        };
         let vol: Arc<dyn Volume> = Arc::new(Self {
             inner,
-            written: Arc::clone(&written),
-            wedge_rename: true,
-            renames_entered: Arc::clone(&renames_entered),
+            written: Arc::clone(&counters.written),
+            wedge_rename,
+            renames_entered: Arc::clone(&counters.renames_entered),
+            aborted: Arc::clone(&counters.aborted),
+            started: Arc::clone(&counters.started),
+            landed: Arc::clone(&counters.landed),
         });
-        (vol, written, renames_entered)
+        (vol, counters)
     }
 }
 
@@ -289,7 +347,12 @@ impl Volume for IncrementalDest {
         force: bool,
     ) -> StdPin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
         if !self.wedge_rename {
-            return self.inner.rename(from, to, force);
+            let landed = Arc::clone(&self.landed);
+            return Box::pin(async move {
+                self.inner.rename(from, to, force).await?;
+                landed.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            });
         }
         let entered = Arc::clone(&self.renames_entered);
         Box::pin(async move {
@@ -335,6 +398,7 @@ impl Volume for IncrementalDest {
             // Publish an empty file up front, like a `File::create` / SMB CREATE
             // does: this is the zero-byte artifact the incident left behind.
             self.publish(dest, &data).await?;
+            self.started.fetch_add(1, Ordering::SeqCst);
             while let Some(result) = stream.next_chunk().await {
                 let chunk = result?;
                 data.extend_from_slice(&chunk);
@@ -349,6 +413,7 @@ impl Volume for IncrementalDest {
                     // What every real backend does on cancel: drop the handle and
                     // remove the partial at the WRITE path.
                     let _ = self.inner.delete(dest).await;
+                    self.aborted.fetch_add(1, Ordering::SeqCst);
                     return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()));
                 }
             }
@@ -389,14 +454,19 @@ pub(super) struct Fixture {
     pub(super) dest: Arc<dyn Volume>,
     pub(super) dest_inner: Arc<InMemoryVolume>,
     pub(super) written: Arc<AtomicU64>,
+    /// Writes the destination aborted itself on `on_progress`'s `Break`.
+    pub(super) aborted: Arc<AtomicU64>,
+    /// Writes under way, and renames that went through.
+    pub(super) started: Arc<AtomicU64>,
+    pub(super) landed: Arc<AtomicU64>,
 }
 
 /// Builds the standard fixture: a gated source whose non-empty files stream
 /// `size` bytes, and a destination that publishes bytes as they arrive.
 pub(super) fn fixture(size: u64) -> Fixture {
     let dest_inner = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
-    let (dest, written) = IncrementalDest::build(Arc::clone(&dest_inner));
-    assemble(size, dest, dest_inner, written)
+    let (dest, counters) = IncrementalDest::build(Arc::clone(&dest_inner), false);
+    assemble(gated_source(size), dest, dest_inner, counters)
 }
 
 /// The same fixture with a destination whose LANDING never returns, so its tasks
@@ -404,8 +474,26 @@ pub(super) fn fixture(size: u64) -> Fixture {
 /// back the entered-renames counter to wait on.
 pub(super) fn fixture_with_wedged_landing(size: u64) -> (Fixture, Arc<AtomicU64>) {
     let dest_inner = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
-    let (dest, written, renames) = IncrementalDest::build_with_wedged_rename(Arc::clone(&dest_inner));
-    (assemble(size, dest, dest_inner, written), renames)
+    let (dest, counters) = IncrementalDest::build(Arc::clone(&dest_inner), true);
+    let renames = Arc::clone(&counters.renames_entered);
+    (assemble(gated_source(size), dest, dest_inner, counters), renames)
+}
+
+/// The standard fixture, except that reading `failing` fails (a refusal, so no
+/// retry and no outage wait) the moment the returned trigger gets a permit: the
+/// test holds one source's failure until its siblings are mid-stream.
+pub(super) fn fixture_with_failing_read(size: u64, failing: &Path) -> (Fixture, Arc<tokio::sync::Semaphore>) {
+    let dest_inner = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
+    let (dest, counters) = IncrementalDest::build(Arc::clone(&dest_inner), false);
+    let trigger = Arc::new(tokio::sync::Semaphore::new(0));
+    let parts = gated_source_failing(
+        size,
+        Some(FailingRead {
+            path: failing.to_path_buf(),
+            trigger: Arc::clone(&trigger),
+        }),
+    );
+    (assemble(parts, dest, dest_inner, counters), trigger)
 }
 
 /// Just the gated source half, for a suite that brings a destination of its
@@ -420,6 +508,10 @@ pub(super) struct GatedParts {
 
 /// A gated source whose non-empty files stream `size` bytes.
 pub(super) fn gated_source(size: u64) -> GatedParts {
+    gated_source_failing(size, None)
+}
+
+fn gated_source_failing(size: u64, failing: Option<FailingRead>) -> GatedParts {
     let source_inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     let gate = Arc::new(tokio::sync::Semaphore::new(0));
     let opened = Arc::new(AtomicU64::new(0));
@@ -428,6 +520,7 @@ pub(super) fn gated_source(size: u64) -> GatedParts {
         gate: Arc::clone(&gate),
         file_size: size,
         opened: Arc::clone(&opened),
+        failing,
     });
     GatedParts {
         source,
@@ -437,13 +530,18 @@ pub(super) fn gated_source(size: u64) -> GatedParts {
     }
 }
 
-fn assemble(size: u64, dest: Arc<dyn Volume>, dest_inner: Arc<InMemoryVolume>, written: Arc<AtomicU64>) -> Fixture {
+fn assemble(
+    parts: GatedParts,
+    dest: Arc<dyn Volume>,
+    dest_inner: Arc<InMemoryVolume>,
+    counters: DestCounters,
+) -> Fixture {
     let GatedParts {
         source,
         source_inner,
         gate,
         opened,
-    } = gated_source(size);
+    } = parts;
     Fixture {
         source,
         source_inner,
@@ -451,7 +549,10 @@ fn assemble(size: u64, dest: Arc<dyn Volume>, dest_inner: Arc<InMemoryVolume>, w
         opened,
         dest,
         dest_inner,
-        written,
+        written: counters.written,
+        aborted: counters.aborted,
+        started: counters.started,
+        landed: counters.landed,
     }
 }
 
@@ -475,14 +576,14 @@ pub(super) fn drain_override(aborting: bool) -> Option<Duration> {
 /// Thread-local, like `volume::strategy`'s `AutoYieldTuningGuard`: the driver runs
 /// inline on the test's own task (these tests `.await` it rather than spawning),
 /// so it reads this thread's value.
-pub(super) struct CancelDrainGuard {
+pub(in crate::transfer::volume) struct CancelDrainGuard {
     prev: Option<(Duration, Duration)>,
 }
 
 impl CancelDrainGuard {
     /// Overrides the cooperative-cancel deadline, leaving the abort one at a
     /// value so short it can't be what a test is measuring.
-    pub(super) fn set(deadline: Duration) -> Self {
+    pub(in crate::transfer::volume) fn set(deadline: Duration) -> Self {
         Self::set_both(deadline, Duration::from_millis(1))
     }
 

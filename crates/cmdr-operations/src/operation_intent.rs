@@ -327,19 +327,14 @@ impl PauseGate {
         }
     }
 
-    /// Async sibling of [`wait_while_paused_sync`](Self::wait_while_paused_sync): parks the calling task
-    /// (without blocking an executor thread) while paused, returning as soon as
-    /// the op resumes OR cancellation is observed. Call from the async volume
-    /// drivers, AFTER their `is_cancelled` loop-top check.
-    pub(crate) async fn wait_while_paused_async(&self, intent: &IntentCell) {
-        self.wait_while_paused_until(&|| intent.is_cancelled()).await;
-    }
-
-    /// [`wait_while_paused_async`](Self::wait_while_paused_async) with the
-    /// caller's own reading of "stop".
+    /// Async sibling of [`wait_while_paused_sync_until`](Self::wait_while_paused_sync_until):
+    /// parks the calling task (without blocking an executor thread) while
+    /// paused, returning as soon as the op resumes OR the caller's reading of
+    /// "stop" holds.
     ///
-    /// A forward transfer's reading is [`IntentCell::is_cancelled`] — intent isn't `Running`
-    /// — and that's what the sibling passes. An operation-log REVERSAL running
+    /// A forward transfer's reading is `WriteOperationState::work_stopped` (a
+    /// cancel, or a concurrent copy's failure drain), which it parks on through
+    /// `WriteOperationState::park_while_paused`. An operation-log REVERSAL running
     /// under an op whose intent already says `RollingBack` needs a different one,
     /// or its park would return instantly and a pause would hold nothing. Whoever
     /// parks names what stops them
@@ -653,17 +648,20 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn wait_while_paused_async_returns_immediately_when_not_paused() {
+    async fn wait_while_paused_until_returns_immediately_when_not_paused() {
         let gate = PauseGate::new(HumanWaitClock::shared());
         let intent = IntentCell::running();
         // Must not hang.
-        tokio::time::timeout(Duration::from_secs(1), gate.wait_while_paused_async(&intent))
-            .await
-            .expect("not-paused async wait must return immediately");
+        tokio::time::timeout(
+            Duration::from_secs(1),
+            gate.wait_while_paused_until(&|| intent.is_cancelled()),
+        )
+        .await
+        .expect("not-paused async wait must return immediately");
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn wait_while_paused_async_unblocks_on_resume() {
+    async fn wait_while_paused_until_unblocks_on_resume() {
         let gate = Arc::new(PauseGate::new(HumanWaitClock::shared()));
         let intent = Arc::new(IntentCell::running());
         gate.pause();
@@ -671,7 +669,7 @@ mod tests {
         let gate_t = Arc::clone(&gate);
         let intent_t = Arc::clone(&intent);
         let task = tokio::spawn(async move {
-            gate_t.wait_while_paused_async(&intent_t).await;
+            gate_t.wait_while_paused_until(&|| intent_t.is_cancelled()).await;
         });
 
         // `notified().await` exposes no "registered" signal, so we hold a window to prove the
@@ -687,7 +685,7 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn wait_while_paused_async_unblocks_on_cancel() {
+    async fn wait_while_paused_until_unblocks_on_cancel() {
         // Cancellation wins over pause for the async path too.
         let gate = Arc::new(PauseGate::new(HumanWaitClock::shared()));
         let intent = Arc::new(IntentCell::running());
@@ -696,7 +694,7 @@ mod tests {
         let gate_t = Arc::clone(&gate);
         let intent_t = Arc::clone(&intent);
         let task = tokio::spawn(async move {
-            gate_t.wait_while_paused_async(&intent_t).await;
+            gate_t.wait_while_paused_until(&|| intent_t.is_cancelled()).await;
         });
 
         // `notified().await` has no "registered now" signal, so we hold a window to prove the

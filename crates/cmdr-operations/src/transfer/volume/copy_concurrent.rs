@@ -44,7 +44,7 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::host::OperationErrorReport;
 use super::super::super::journal;
 use super::super::super::ledger::WrittenFile;
-use super::super::super::state::WriteOperationState;
+use super::super::super::state::{OperationIntent, WriteOperationState};
 use super::super::super::types::{SourceItemOutcome, VolumeCopyConfig, WriteOperationError};
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::{LeafProgressLedger, emit_source_outcome};
@@ -111,17 +111,18 @@ pub(super) struct ConcurrentCopy<'a> {
 
 /// What the driver leaves for the caller's post-loop bookkeeping. The counters
 /// aren't in here: they live in the shared atomics the caller already holds.
+///
+/// A failed FILE source whose name can hold OUR partial leaves it listed in
+/// `in_flight_partials` for the post-loop's cleanup; a directory source's
+/// cleanup runs per-file off the `copied_paths` / `created_dirs` ledgers.
 pub(super) struct ConcurrentOutcome {
-    /// The single half-written partial of a FILE source whose stream failed, for
-    /// the post-loop cleanup sweep. Stays `None` for a directory source, whose
-    /// cleanup runs per-file off the `copied_paths` / `created_dirs` ledgers.
-    pub(super) last_dest_path: Option<PathBuf>,
-    /// The first task failure, if any. The driver stops pushing new work and
-    /// drains on one.
+    /// The first failure, if any: a task's, a panic, or conflict resolution's.
+    /// The driver stops starting new work and drains on one.
     pub(super) copy_error: Option<WriteFailure>,
 }
 
-/// Runs the sliding window to completion, cancellation, or the first failure.
+/// Runs the sliding window to completion, cancellation, or the first failure
+/// and the drain after it.
 ///
 /// ❗ **Answers an outcome, never an `Err`**, and that is a data-safety property
 /// rather than a style choice. EVERY failure this driver can meet, a task's and
@@ -166,9 +167,10 @@ struct ConcurrentDriver<'a> {
     runtime: tokio::runtime::Handle,
     /// The sources still to prepare, in the order the user selected them.
     sources: std::iter::Enumerate<std::slice::Iter<'a, PathBuf>>,
-    /// Set once the driver has SEEN the user's cancel / rollback: from then on
-    /// it stops waiting indefinitely for its tasks and gives them a bounded
-    /// window to wind down. See `copy.rs::CANCEL_DRAIN_DEADLINE`.
+    /// Set once the driver has SEEN its work stop (`state.stop_work`: the
+    /// user's cancel or rollback, or its own first failure): from then on it
+    /// stops waiting indefinitely for its tasks and gives them a bounded window
+    /// to stop. See `copy.rs::CANCEL_DRAIN_DEADLINE`.
     drain_deadline: Option<tokio::time::Instant>,
     /// Whether that window is the hard-abort tier's short one rather than the
     /// cooperative cancel's. Latched, so the abort re-arms the deadline once.
@@ -184,11 +186,10 @@ struct ConcurrentDriver<'a> {
 /// long as it waits, and recording needs only that same `ctx`, read-only,
 /// beside this.
 // DEFAULT-OK: the empty value is the truth before the first task settles: no
-// failure, no partial, nothing in flight.
+// failure, nothing in flight.
 #[derive(Default)]
 struct Settlements {
     /// Handed back to the caller's post-loop; see `ConcurrentOutcome`.
-    last_dest_path: Option<PathBuf>,
     copy_error: Option<WriteFailure>,
     /// A handle on every in-flight task's own rollback ledger, keyed by its
     /// task and dropped when the task settles. What's left at
@@ -208,7 +209,7 @@ struct UnsettledSource {
 
 /// How one trip through the driver's await ended.
 enum AwaitStep {
-    /// The wind-down window was armed or shortened. Nothing settled; go round
+    /// The drain's window was armed or shortened. Nothing settled; go round
     /// again so the new deadline is the one being waited on.
     Rearmed,
     /// A task came back. Boxed because the payload dwarfs the other two
@@ -217,7 +218,7 @@ enum AwaitStep {
     /// streaming a file: one allocation is nothing next to that, while an
     /// unboxed variant sizes every trip through the await.
     Settled(Box<Joined>),
-    /// The window emptied, or the wind-down deadline expired with tasks still
+    /// The window emptied, or the drain's deadline expired with tasks still
     /// in it — those are aborted in `finish`, and their staged partials are
     /// cleaned up by the caller's post-loop.
     Finished,
@@ -237,37 +238,32 @@ impl<'a> ConcurrentDriver<'a> {
     }
 
     /// Fill the window, wait for something, record it. Ends when the sources and
-    /// the window are both empty, on the first failure (a task's, a panic, or
-    /// conflict resolution's), or when a wind-down deadline expires.
+    /// the window are both empty, or when a drain's deadline expires.
+    ///
+    /// ❗ A failure DRAINS, it doesn't abort: the first one (a task's, a panic,
+    /// or conflict resolution's) stops preparing sources
+    /// (`WriteOperationState::stop_work_after_failure`) and every task still in
+    /// the window is awaited under the drain deadline, the same as after a
+    /// Cancel. A sibling mid-stream stops at its next chunk, through tier 1's
+    /// `on_progress` path, so its backend closes its own handle and deletes its
+    /// own partial; one inside its landing finishes it and is recorded. Only a
+    /// task still running at the deadline is aborted, in `finish`.
     async fn run(&mut self) {
         loop {
             if let Err(failure) = self.spawn_ready_tasks().await {
                 // Conflict resolution refused (the destination couldn't be
-                // probed, a Stop prompt lost its answer). Recorded like a task
-                // failure and handled by the same post-loop: the sources already
-                // in flight are aborted, their staged partials swept from the
-                // in-flight ledger, and the user gets a terminal event.
+                // probed, a Stop prompt lost its answer). The batch's failure,
+                // recorded like a task's: the window drains and the same
+                // post-loop gives the user a terminal event.
                 self.record_resolver_failure(failure);
-                break;
             }
-            // A task failed while a source was being prepared, and was
-            // recorded then.
-            if self.settled.copy_error.is_some() || self.in_flight.is_empty() {
+            if self.in_flight.is_empty() {
                 break;
             }
             match self.await_next().await {
                 AwaitStep::Rearmed => continue,
                 AwaitStep::Finished => break,
-                AwaitStep::Settled(joined) => {
-                    self.settled.record_joined(&self.ctx, *joined);
-                    if self.settled.copy_error.is_some() {
-                        // The rest of the window is aborted in `finish`; their
-                        // streams close, temp files get cleaned up by the
-                        // per-backend write abort + delete path. Partial cleanup
-                        // is the caller's post-loop.
-                        break;
-                    }
-                }
+                AwaitStep::Settled(joined) => self.settled.record_joined(&self.ctx, *joined),
             }
         }
     }
@@ -284,7 +280,7 @@ impl<'a> ConcurrentDriver<'a> {
     /// mutex) without waiting on itself.
     async fn spawn_ready_tasks(&mut self) -> Result<(), WriteFailure> {
         while self.in_flight.len() < self.ctx.concurrency {
-            if self.ctx.state.intent().is_cancelled() || self.settled.copy_error.is_some() {
+            if self.ctx.state.work_stopped() {
                 break;
             }
             let Some((source_index, source_path)) = self.sources.next() else {
@@ -314,14 +310,15 @@ impl<'a> ConcurrentDriver<'a> {
     /// not minutes later when the person answers. Pinned by
     /// `copy_concurrent_tests.rs::a_top_level_conflict_prompt_holds_back_its_source_and_every_later_one`.
     ///
-    /// A failure recorded here ends the batch once preparation returns (`run`
-    /// and `spawn_ready_tasks` both check `copy_error`).
+    /// A failure recorded here stops the work like any other
+    /// (`Settlements::keep_the_first_failure`), so nothing after this source is
+    /// prepared.
     ///
-    /// No cancel arm, on purpose: a resolver dropped mid-answer can leave a
-    /// reserved name or a destination set aside that nothing settles. A cancel
-    /// ends preparation by itself instead: it abandons the prompt the resolver
-    /// is waiting on, and a resolver that gets the mutex checks the intent
-    /// before it asks anything.
+    /// No stop arm, on purpose: a resolver dropped mid-answer can leave a
+    /// reserved name or a destination set aside that nothing settles. A stop (a
+    /// Cancel or the first failure) ends preparation by itself instead: it
+    /// abandons the prompt the resolver is waiting on, and a resolver that gets
+    /// the mutex checks `work_stopped` before it asks anything.
     async fn prepare_while_draining(
         &mut self,
         source_index: usize,
@@ -345,15 +342,16 @@ impl<'a> ConcurrentDriver<'a> {
         }
     }
 
-    /// Wait for the next task, for the user's cancel, or for the wind-down
+    /// Wait for the next task, for the work to stop, or for the drain's
     /// deadline — whichever comes first.
     ///
-    /// Observing the user's intent HERE is what makes Cancel and Rollback work
-    /// at all. `spawn_ready_tasks` checks `is_cancelled` too, but a driver whose
-    /// window is full — or whose sources have run out — never gets back to it
-    /// while its tasks are parked, which is why Rollback did nothing in the
-    /// 2026-07-31 incident. `backend_cancel` fires on every transition out of
-    /// `Running`, so both Cancel and Rollback land here.
+    /// Observing the stop HERE is what makes Cancel and Rollback work at all.
+    /// `spawn_ready_tasks` checks it too, but a driver whose window is full —
+    /// or whose sources have run out — never gets back to it while its tasks
+    /// are parked, which is why Rollback did nothing in the 2026-07-31
+    /// incident. `stop_work` fires on every transition out of `Running` and on
+    /// the driver's own first failure, so a Cancel, a Rollback, and a failure
+    /// all land here.
     async fn await_next(&mut self) -> AwaitStep {
         // The await the driver parked on for 20 minutes in that incident.
         // Naming it means a dump distinguishes "the driver is waiting for tasks"
@@ -364,8 +362,8 @@ impl<'a> ConcurrentDriver<'a> {
         }
         let operation_id = self.ctx.operation_id;
         let next = match self.drain_deadline {
-            // Already winding down: bounded, so one task that never returns
-            // can't hold the operation (and the user's dialog) open.
+            // Already draining: bounded, so one task that never returns can't
+            // hold the operation (and the user's dialog) open.
             //
             // The window stays re-negotiable while it runs. A quit cancels first
             // and aborts what's left a beat later, and by then this await is
@@ -380,7 +378,7 @@ impl<'a> ConcurrentDriver<'a> {
                     log::info!(
                         target: "copy",
                         "copy_volumes_with_progress: op={operation_id} is no longer waiting for its {} in-flight task(s); \
-                         cutting the wind-down short (to {shortened:?})",
+                         cutting the drain short (to {shortened:?})",
                         self.in_flight.len(),
                     );
                     self.drain_deadline = Some(tokio::time::Instant::now() + shortened);
@@ -389,38 +387,57 @@ impl<'a> ConcurrentDriver<'a> {
                 result = tokio::time::timeout_at(deadline, self.in_flight.join_next_with_id()) => match result {
                     Ok(next) => next,
                     Err(_) => {
-                        self.ctx.state.scope().host().events().error_report(OperationErrorReport::WindDownAbandoned {
-                            operation_id: operation_id.into(),
-                            tasks: self.in_flight.len(),
-                            deadline: drain_deadline_for(self.drain_shortened),
-                            probe_dump: self
-                                .ctx
-                                .op_probe
-                                .as_ref()
-                                .map(|p| p.render_dump("abandoning wedged tasks")),
-                        });
+                        let operation_id = operation_id.into();
+                        let tasks = self.in_flight.len();
+                        let deadline = drain_deadline_for(self.drain_shortened);
+                        let probe_dump = self
+                            .ctx
+                            .op_probe
+                            .as_ref()
+                            .map(|p| p.render_dump("abandoning wedged tasks"));
+                        // The intent stays `Running` through a failure's drain.
+                        let report = match self.ctx.state.intent().load() {
+                            OperationIntent::Running => OperationErrorReport::FailureDrainAbandoned {
+                                operation_id,
+                                tasks,
+                                deadline,
+                                probe_dump,
+                            },
+                            _ => OperationErrorReport::WindDownAbandoned {
+                                operation_id,
+                                tasks,
+                                deadline,
+                                probe_dump,
+                            },
+                        };
+                        self.ctx.state.scope().host().events().error_report(report);
                         return AwaitStep::Finished;
                     }
                 },
             },
             None => {
                 tokio::select! {
-                    // Cancel wins the race: a task result that was also ready
+                    // A stop wins the race: a task result that was also ready
                     // is re-polled on the next pass, so nothing is dropped.
                     biased;
-                    () = self.ctx.state.backend_cancel.cancelled() => {
+                    () = self.ctx.state.stop_work.cancelled() => {
                         // An abort fires tier 1 first, so it can be what woke this
                         // arm; ask which window we're owed rather than assuming.
                         self.drain_shortened = self.ctx.state.backend_abort.is_cancelled();
                         let window = drain_deadline_for(self.drain_shortened);
-                        log::info!(
-                            target: "copy",
-                            "copy_volumes_with_progress: op={} observed {:?} while awaiting {} in-flight task(s); \
-                             winding them down (up to {window:?})",
-                            operation_id,
-                            self.ctx.state.intent().load(),
-                            self.in_flight.len(),
-                        );
+                        let tasks = self.in_flight.len();
+                        match self.ctx.state.intent().load() {
+                            OperationIntent::Running => log::info!(
+                                target: "copy",
+                                "copy_volumes_with_progress: op={operation_id} had a task fail; draining the {tasks} \
+                                 still in flight (up to {window:?})",
+                            ),
+                            intent => log::info!(
+                                target: "copy",
+                                "copy_volumes_with_progress: op={operation_id} observed {intent:?} while awaiting \
+                                 {tasks} in-flight task(s); winding them down (up to {window:?})",
+                            ),
+                        }
                         self.drain_deadline = Some(tokio::time::Instant::now() + window);
                         return AwaitStep::Rearmed;
                     }
@@ -436,30 +453,27 @@ impl<'a> ConcurrentDriver<'a> {
 
     /// Conflict resolution failed while preparing a source, which is not one
     /// task's failure but the whole batch's. Recorded the same way so the
-    /// post-loop can't tell them apart, and ❌ never overwriting a failure a task
-    /// already reported: the first one is the one that stopped the operation.
+    /// post-loop can't tell them apart.
     fn record_resolver_failure(&mut self, failure: WriteFailure) {
         log::warn!(
             target: "copy",
-            "copy_volumes_with_progress: op={} couldn't resolve a conflict; winding down {} in-flight task(s): {:?}",
+            "copy_volumes_with_progress: op={} couldn't resolve a conflict with {} task(s) in flight: {:?}",
             self.ctx.operation_id,
             self.in_flight.len(),
             failure.error,
         );
-        if self.settled.copy_error.is_none() {
-            self.settled.copy_error = Some(failure);
-        }
+        self.settled.keep_the_first_failure(&self.ctx, failure);
     }
 
     /// Hand the post-loop what it needs, after letting go of whatever is left in
     /// the window.
     async fn finish(mut self) -> ConcurrentOutcome {
-        // Abort whatever's left on cancel/error. On success, `in_flight` is
-        // already empty.
+        // Empty unless the drain's deadline expired: aborting what's left is
+        // what lets go of a wedged task.
         if let Some(probe) = self.ctx.op_probe.as_ref() {
             probe.set_driver_phase(
                 super::super::transfer_probe::DriverPhase::PostLoop,
-                "draining in-flight",
+                "aborting what the drain abandoned",
             );
         }
         self.abort_in_flight().await;
@@ -473,7 +487,6 @@ impl<'a> ConcurrentDriver<'a> {
         }
 
         ConcurrentOutcome {
-            last_dest_path: self.settled.last_dest_path,
             copy_error: self.settled.copy_error,
         }
     }
@@ -669,14 +682,15 @@ impl Settlements {
             );
         }
 
-        // A LATER failure, from a task that settled while the driver aborted
-        // the window after the first: its half-written partial stays in
-        // `in_flight_partials`, which the post-loop cleans exactly like
-        // `last_dest_path`, so the first failure's partial keeps that one slot.
-        let partial_stays_in_flight = !source_is_dir && cleanup_temp && self.last_dest_path.is_some();
-        // Otherwise remove it from in-flight partials; this one's own partial
-        // cleanup (if any) the post-loop logic will do.
-        if !partial_stays_in_flight {
+        // A name that can hold OUR partial (a claimed name the write took) stays
+        // in the in-flight partials for the post-loop's cleanup, whichever of
+        // the drain's failures left it. Any other name is dropped from them.
+        //
+        // `cleanup_temp == false` ⇒ `failed_dest` is a plain staged write's
+        // final name or a swap's original: never ours, and the write's own temp
+        // is the write's (or, past a swap's delete, a landing nothing may
+        // clean). Cleaning it would delete the user's file.
+        if !cleanup_temp {
             ctx.forget_in_flight_partial(&failed_dest);
         }
         if source_is_dir {
@@ -707,22 +721,29 @@ impl Settlements {
             }
             ctx.copied_paths.lock_ignore_poison().extend(created_files);
             ctx.created_dirs.lock_ignore_poison().extend(task_created_dirs);
-        } else if cleanup_temp && !partial_stays_in_flight {
-            // FILE source failure at a name that can hold OUR partial (a
-            // claimed name the write took): `failed_dest` is that partial.
-            // Clean it.
-            //
-            // `cleanup_temp == false` ⇒ `failed_dest` is a plain staged write's
-            // final name or a swap's original: never ours, and the write's own
-            // temp is the write's (or, past a swap's delete, a landing nothing
-            // may clean). Cleaning it would delete the user's file.
-            self.last_dest_path = Some(failed_dest);
         }
         // `PathedVolumeError`'s conversion owns the branch: the side it carries
         // picks the wording, and `new_data_at` says where the user's new file is.
-        // The first failure is the one that stopped the operation.
-        if self.copy_error.is_none() {
-            self.copy_error = Some(WriteFailure::from(reported));
+        self.keep_the_first_failure(ctx, WriteFailure::from(reported));
+    }
+
+    /// The FIRST failure is the one that stopped the operation, so it stays its
+    /// error: a sibling's later one, the stop the drain itself caused included,
+    /// is logged and dropped. The first also starts the drain, unless a person's
+    /// stop already stopped the work (its own result is then this failure).
+    fn keep_the_first_failure(&mut self, ctx: &ConcurrentCopy<'_>, failure: WriteFailure) {
+        if self.copy_error.is_some() {
+            log::debug!(
+                target: "copy",
+                "copy_volumes_with_progress: op={} keeps its first failure; a draining sibling ended with {:?}",
+                ctx.operation_id,
+                failure.error,
+            );
+            return;
+        }
+        self.copy_error = Some(failure);
+        if !ctx.state.work_stopped() {
+            ctx.state.stop_work_after_failure();
         }
     }
 
@@ -745,12 +766,13 @@ impl Settlements {
         );
         let path = unsettled.source_path.display().to_string();
         unsettled.hand_over(ctx);
-        if self.copy_error.is_none() {
-            self.copy_error = Some(WriteFailure::synthetic(WriteOperationError::IoError {
+        self.keep_the_first_failure(
+            ctx,
+            WriteFailure::synthetic(WriteOperationError::IoError {
                 path,
                 message: ended.to_string(),
-            }));
-        }
+            }),
+        );
     }
 
     /// The task `id` came back: stop holding its ledger. Its own result carries

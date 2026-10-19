@@ -41,14 +41,14 @@ Drivers: `transfer_driver/CLAUDE.md`. File map: `DETAILS.md` § Files.
   write is exempt from its floor.
 - **Every phase announces itself to `transfer_probe.rs`, on ALL THREE streaming paths**: ❌ no `.await` without a phase,
   ❌ never derive a stall from FE timing. A new streaming path owes BOTH `register_operation` and a `CURRENT_TASK_PROBE`
-  scope, plus a `MergeCtx.probe` if it opens a `FileWindow`. The watchdog judges movement by the counters the UI shows;
-  ❌ the probe gets none of its own. DETAILS § "The stall signal".
-- **Cancel has TWO tiers, and ❌ nothing a user clicks reaches tier 2.** Tier 1 (`state.backend_cancel`) travels via
-  `on_progress` so the BACKEND deletes its own partial; ❌ never race a write against it. Tier 2 (`state.backend_abort`,
-  the quit deadline's) skips cleanup. DETAILS § "Two tiers of cancel".
+  scope, plus a `MergeCtx.probe` if it opens a `FileWindow`. The watchdog reads the UI's counters, ❌ never its own.
+  DETAILS § "The stall signal".
+- **Cancel has TWO tiers, and ❌ nothing a user clicks reaches tier 2.** Tier 1 travels via `on_progress` so the BACKEND
+  deletes its own partial; ❌ never race a write against it. Tier 2 (`backend_abort`) skips cleanup. A cancel AND the
+  concurrent driver's first failure fire `state.stop_work` (it DRAINS, ❌ never drops); only the intent tells them
+  apart. DETAILS § "Two tiers of cancel".
 - **Retry is per-FILE, ONLY inside `stream_pipe_file`** (`retry.rs`): ❌ never higher, ❌ never on a `Cancelled`. A
   `Disconnected` volume is WAITED for (`volume_outage.rs`); ❌ only re-runnable calls use `through_outages`. **The stall
-  watchdog is GATED** (`connection_liveness() == Dead` AND `STALL_ABORT_AFTER`; only SMB answers `Dead`), so ❌ never
-  collapse the AND.
+  watchdog is GATED** (liveness `Dead`, SMB only, AND `STALL_ABORT_AFTER`): ❌ never collapse the AND.
 
-Read `DETAILS.md` before non-trivial work: semantics, staging, retry, outages, and stalls.
+Read `DETAILS.md` before non-trivial work.

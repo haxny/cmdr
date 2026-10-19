@@ -496,7 +496,7 @@ impl FileRun<'_> {
         // report it as one: the post-loop keys `write-cancelled` off a
         // `Cancelled`-shaped error, and a transport error in its place would
         // log the user's own click as a failed transfer.
-        if error.transport_fault().is_some() && self.state.intent().is_cancelled() {
+        if error.transport_fault().is_some() && self.state.work_stopped() {
             return ControlFlow::Break(
                 Err(VolumeError::Cancelled("Operation cancelled by user".to_string())).at_destination(dest_path),
             );

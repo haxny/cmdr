@@ -565,12 +565,12 @@ impl OperationProbe {
     /// - **Only the two phases that mean "inside a backend call"**
     ///   ([`TaskPhase::is_abortable_on_stall`]). Every park is deliberate and ends
     ///   on its own.
-    /// - **Never while cancelling.** Cancel and rollback own their own teardown
-    ///   (the driver's drain deadline); a second abort path racing them would just
-    ///   make the wind-down harder to reason about.
+    /// - **Never once the work stopped.** Cancel, rollback, and the failure drain
+    ///   own their own teardown (the driver's drain deadline); a second abort path
+    ///   racing them would just make the stop harder to reason about.
     fn track_and_abort_wedged_tasks(&self, now: Duration) {
         let now_ms = u64::try_from(now.as_millis()).unwrap_or(u64::MAX);
-        let cancelling = !matches!(self.state.intent().load(), OperationIntent::Running);
+        let stopping = self.state.work_stopped();
         // ❌ NEVER collapse this conjunction to "trust the liveness verdict".
         //
         // The verdict it reads is a keepalive result, and a keepalive
@@ -603,7 +603,7 @@ impl OperationProbe {
                 task.still_since_ms.store(now_ms, Ordering::Relaxed);
                 continue;
             }
-            if cancelling || task.is_stall_aborted() {
+            if stopping || task.is_stall_aborted() {
                 continue;
             }
             let phase = TaskPhase::from_u8(task.phase.load(Ordering::Relaxed));
@@ -790,11 +790,15 @@ impl OperationProbe {
 
     /// The whole in-flight table as log lines. This is the record the incident
     /// needed and did not have. The watchdog prints it on a stall; the driver
-    /// prints it when it abandons tasks that wouldn't wind down after a cancel.
+    /// prints it when it abandons tasks that wouldn't stop after a cancel or a
+    /// failure.
     pub(super) fn render_dump(&self, reason: &str) -> String {
         let tasks = self.tasks.lock_ignore_poison();
         let driver = DriverPhase::from_u8(self.driver_phase.load(Ordering::Relaxed));
         let intent = match self.state.intent().load() {
+            // The intent stays `Running` through the failure drain; only the
+            // stop-work token says the work stopped.
+            OperationIntent::Running if self.state.work_stopped() => "running(draining-after-failure)",
             OperationIntent::Running => "running",
             OperationIntent::RollingBack => "rolling-back",
             OperationIntent::Stopped => "stopped",

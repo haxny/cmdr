@@ -1020,7 +1020,8 @@ pub async fn copy_volumes_with_progress(
             deep_skipped_bytes: Arc::clone(&deep_skipped_bytes),
         })
         .await;
-        last_dest_path = outcome.last_dest_path;
+        // A failed task's own partial stays in `in_flight_partials`.
+        last_dest_path = None;
         copy_error = outcome.copy_error;
         // Sync counters for post-loop reporting.
         files_done = files_done_atomic.load(Ordering::Relaxed);
@@ -1198,6 +1199,16 @@ pub async fn copy_volumes_with_progress(
                 .with_staged_leftovers(&staged_leftovers)
                 .with_recovered(recovered),
         });
+        // The rollback is how this operation ended, and `write-cancelled` said
+        // so. A failure the person rolled back over (one that started a drain
+        // they then clicked Rollback during, or a sibling's error that came in
+        // after the click) ❌ must not follow it as a second terminal event.
+        if let Some(failure) = copy_error.take() {
+            log::info!(
+                "copy_volumes_with_progress: op={operation_id} rolled back over a failure: {:?}",
+                failure.error
+            );
+        }
     } else {
         // Stopped or error: keep completed files, clean up partial files.
         // Sequential path leaves at most one partial in `last_dest_path`.
@@ -1285,6 +1296,9 @@ mod extract_apple_double_tests;
 #[path = "copy_extract_out_tests.rs"]
 mod extract_out_tests;
 #[cfg(test)]
+#[path = "copy_failure_drain_tests.rs"]
+mod failure_drain_tests;
+#[cfg(test)]
 #[path = "look_alike_tests.rs"]
 mod look_alike_tests;
 #[cfg(test)]
@@ -1348,7 +1362,7 @@ mod tree_order_tests;
 mod tree_rows_tests;
 #[cfg(test)]
 #[path = "copy_wedge_test_support.rs"]
-mod wedge_test_support;
+pub(super) mod wedge_test_support;
 #[cfg(test)]
 #[path = "copy_window_tests.rs"]
 mod window_tests;
