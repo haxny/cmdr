@@ -145,7 +145,7 @@ pub(crate) fn upgrade_on_pane_open(volume_id: &str) {
     };
     log::debug!(
         "A pane landed on {volume_id}, which rides the OS mount at {}; trying the direct connection",
-        upgrade.mount_path
+        cmdr_fs::log_private::LogPrivate::dir_path(&upgrade.mount_path)
     );
     // The dial holds the mDNS browse for its own resolution (`discover_server`).
     tauri::async_runtime::spawn(dial(upgrade));

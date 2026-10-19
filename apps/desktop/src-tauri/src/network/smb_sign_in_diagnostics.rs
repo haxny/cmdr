@@ -80,8 +80,11 @@ pub fn log_sign_in_refusal(
     };
     log::warn!(
         target: "smb_sign_in",
+        // allowed-log-private: `source` is the `CredentialSource` variant, not a path
         "SMB sign-in refused: host={host:?}, port={port}, refusal={refusal}, source={source:?}, {}",
-        CredentialShape::of(user, password)
+        // allowed-log-private: the credential's shape (empty, domain form), never the user name itself
+        CredentialShape::of(user, password),
+        host = cmdr_fs::log_private::LogPrivate::host(host),
     );
 }
 

@@ -10,6 +10,7 @@ use crate::network::discovery_cache::{
     self, MdnsResolution, on_mdns_host_found, on_mdns_host_lost, on_mdns_host_resolved, on_mdns_state_changed,
 };
 use crate::network::{DiscoveryState, HostSource, NetworkHost, service_name_to_id};
+use cmdr_fs::log_private::LogPrivate;
 use log::{debug, warn};
 use mdns_sd::{Error as MdnsError, Receiver, ServiceDaemon, ServiceEvent};
 use std::net::IpAddr;
@@ -167,7 +168,10 @@ fn process_events(receiver: Receiver<ServiceEvent>, browse: u64, app_handle: App
             ServiceEvent::ServiceFound(_, fullname) => {
                 let name = extract_instance_name(&fullname);
                 let id = service_name_to_id(&name);
-                debug!("mDNS ServiceFound: server={name:?} serverId={id:?}");
+                debug!(
+                    "mDNS ServiceFound: server={:?} serverId={id:?}",
+                    LogPrivate::host(&name)
+                );
 
                 let host = NetworkHost {
                     id,
@@ -199,7 +203,10 @@ fn process_events(receiver: Receiver<ServiceEvent>, browse: u64, app_handle: App
 
                 debug!(
                     "mDNS ServiceResolved: serverId={:?} host={:?}, ip={:?}, port={}",
-                    id, hostname, ip_address, port
+                    id,
+                    hostname.as_deref().map(LogPrivate::host),
+                    ip_address.as_deref().map(LogPrivate::host),
+                    port
                 );
 
                 let resolution = MdnsResolution {
@@ -214,7 +221,10 @@ fn process_events(receiver: Receiver<ServiceEvent>, browse: u64, app_handle: App
             ServiceEvent::ServiceRemoved(_, fullname) => {
                 let name = extract_instance_name(&fullname);
                 let id = service_name_to_id(&name);
-                debug!("mDNS ServiceRemoved: server={name:?} serverId={id:?}");
+                debug!(
+                    "mDNS ServiceRemoved: server={:?} serverId={id:?}",
+                    LogPrivate::host(&name)
+                );
                 on_mdns_host_lost(&id, browse, &app_handle);
             }
             ServiceEvent::SearchStopped(stype) => {

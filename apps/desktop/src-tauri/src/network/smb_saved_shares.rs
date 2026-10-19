@@ -21,6 +21,7 @@ use crate::network::mount::MountError;
 use crate::network::one_shot_credentials::SecretOffer;
 use crate::network::os_mount_notice::FallbackNotice;
 use crate::network::{keychain, smb_upgrade};
+use cmdr_fs::log_private::LogPrivate;
 
 /// How long a Keychain read or write may take, the bound the secret commands use.
 const SECRET_STORE_LIMIT: Duration = Duration::from_secs(15);
@@ -157,7 +158,10 @@ pub fn remember_favorited_share(mount_path: &str, volume_id: &str) {
     let info = crate::volumes_linux::get_smb_mount_info(mount_path);
     let Some(info) = info else {
         // A non-SMB mount has no source to read.
-        log::debug!("No SMB mount source at {mount_path:?}; the favorite's share isn't saved");
+        log::debug!(
+            "No SMB mount source at {mount_path:?}; the favorite's share isn't saved",
+            mount_path = LogPrivate::dir_path(mount_path)
+        );
         return;
     };
     let row = favorited_share_row(
@@ -169,7 +173,11 @@ pub fn remember_favorited_share(mount_path: &str, volume_id: &str) {
         volume_id,
     );
     if known_shares::remember_share_unless_saved(row) {
-        log::info!("Saved the share {:?} on {:?} for a favorite", info.share, info.server);
+        log::info!(
+            "Saved the share {:?} on {:?} for a favorite",
+            LogPrivate::volume(&info.share),
+            LogPrivate::host(&info.server)
+        );
     }
 }
 
@@ -325,7 +333,10 @@ async fn store_password(host_name: &str, username: &str, password: &str) {
     })
     .await;
     if !stored {
-        log::warn!("The share mounted, but the Keychain didn't store its password for host={host_name:?}");
+        log::warn!(
+            "The share mounted, but the Keychain didn't store its password for host={host_name:?}",
+            host_name = LogPrivate::host(host_name)
+        );
     }
 }
 

@@ -17,6 +17,7 @@
 use super::{DiscoveryState, HostSource, NetworkDiscoveryStateChanged, NetworkHost, NetworkHostFound};
 use super::{NetworkHostLost, NetworkHostResolved};
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use log::debug;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -105,17 +106,17 @@ impl DiscoveryCache {
 
     /// A host from config: always evidence. Returns the host to announce.
     pub(crate) fn pinned_found(&mut self, host: NetworkHost) -> NetworkHost {
+        let change = if self.hosts.contains_key(&host.id) {
+            "UPDATED"
+        } else {
+            "ADDED"
+        };
         debug!(
-            "Host {}: serverId={:?}, server={:?}, ip={:?}, host={:?}",
-            if self.hosts.contains_key(&host.id) {
-                "UPDATED"
-            } else {
-                "ADDED"
-            },
-            host.id,
-            host.name,
-            host.ip_address,
-            host.hostname
+            "Host {change}: serverId={:?}, server={:?}, ip={:?}, host={:?}",
+            host.id, // allowed-log-private: a server id; the report's `serverId=` key tokenizes it in its own domain
+            LogPrivate::host(&host.name),
+            host.ip_address.as_deref().map(LogPrivate::host),
+            host.hostname.as_deref().map(LogPrivate::host)
         );
         let entry = CachedHost {
             host: host.clone(),
@@ -133,7 +134,11 @@ impl DiscoveryCache {
             return None;
         }
         let entry = self.hosts.entry(host.id.clone()).or_insert_with(|| {
-            debug!("Host ADDED: serverId={:?}, server={:?}", host.id, host.name);
+            debug!(
+                "Host ADDED: serverId={:?}, server={:?}",
+                host.id, // allowed-log-private: a server id; the report's `serverId=` key tokenizes it in its own domain
+                LogPrivate::host(&host.name)
+            );
             CachedHost {
                 host: host.clone(),
                 evidence: Evidence::Mdns {
@@ -170,7 +175,10 @@ impl DiscoveryCache {
         }
         let mut found_first = None;
         let entry = self.hosts.entry(host_id.to_string()).or_insert_with(|| {
-            debug!("Host RESOLVED before FOUND, creating entry: serverId={host_id:?}, server={name:?}");
+            debug!(
+                "Host RESOLVED before FOUND, creating entry: serverId={host_id:?}, server={name:?}",
+                name = LogPrivate::host(name)
+            );
             let host = NetworkHost {
                 id: host_id.to_string(),
                 name: name.to_string(),
@@ -209,7 +217,8 @@ impl DiscoveryCache {
         }
         debug!(
             "Host RESOLVED: serverId={host_id:?}, host={:?}, ip={:?}, port={port}",
-            entry.host.hostname, entry.host.ip_address
+            entry.host.hostname.as_deref().map(LogPrivate::host),
+            entry.host.ip_address.as_deref().map(LogPrivate::host)
         );
         Some((found_first, entry.host.clone()))
     }
@@ -253,7 +262,9 @@ impl DiscoveryCache {
         };
         debug!(
             "Host REMOVED: serverId={:?}, server={:?}, ip={:?}",
-            removed.host.id, removed.host.name, removed.host.ip_address
+            removed.host.id, // allowed-log-private: a server id; the report's `serverId=` key tokenizes it in its own domain
+            LogPrivate::host(&removed.host.name),
+            removed.host.ip_address.as_deref().map(LogPrivate::host)
         );
         true
     }

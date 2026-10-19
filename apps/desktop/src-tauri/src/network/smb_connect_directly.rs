@@ -29,6 +29,7 @@ use crate::volumes::{SmbMountInfo, get_smb_mount_info};
 #[cfg(target_os = "linux")]
 use crate::volumes_linux::{SmbMountInfo, get_smb_mount_info};
 use cmdr_fs::deadline::blocking_with_timeout;
+use cmdr_fs::log_private::LogPrivate;
 use std::time::Duration;
 
 /// How long an upgrade gives mDNS to name the server before looking up saved
@@ -176,7 +177,10 @@ async fn find_mounted_share_within(
     // ❗ Only this read is bounded, ❌ never the whole flow: the saved-password door
     // goes on to wait for the person's answer to the Keychain consent dialog.
     let Some(mount) = blocking_with_timeout(limit, None, move || Some(read(&path))).await else {
-        log::warn!("The mount at {mount_path} didn't answer a status read within {limit:?}; not dialing");
+        log::warn!(
+            "The mount at {mount_path} didn't answer a status read within {limit:?}; not dialing",
+            mount_path = LogPrivate::dir_path(&mount_path)
+        );
         return Err(UpgradeResult::MountNotResponding);
     };
     match mount {
@@ -235,9 +239,9 @@ pub(crate) async fn connect_directly(volume_id: &str) -> UpgradeResult {
     log::info!(
         "Upgrading volume {} to SmbVolume: server={:?}, share={:?}, user={:?}",
         volume_id,
-        info.server,
-        info.share,
-        info.username
+        LogPrivate::host(&info.server),
+        LogPrivate::volume(&info.share),
+        info.username.as_deref().map(LogPrivate::user)
     );
 
     // The mount source carries the IP, but Cmdr keys its Keychain entries by the
@@ -252,7 +256,7 @@ pub(crate) async fn connect_directly(volume_id: &str) -> UpgradeResult {
         let hint = info.username.clone();
         return credentials_needed(info, display_name, hint, CredentialsNeededReason::NoCredential);
     };
-    log::info!("Found Keychain credentials for user={:?}", username);
+    log::info!("Found Keychain credentials for user={:?}", LogPrivate::user(&username));
 
     let upgraded = try_smb_upgrade(&info, &mount_path, Some(&username), Some(&password), volume_id).await;
     match upgraded {

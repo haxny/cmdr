@@ -15,6 +15,7 @@
 
 use super::mount::MountError;
 use super::smb_connect_failure::{RefusedAt, SignInIdentity};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_smb::volume::SmbConnectionParams;
 use smb2::ErrorKind;
 use smb2::types::Command;
@@ -161,8 +162,8 @@ pub(crate) async fn clarify_share_not_found(
     if limit.is_zero() {
         log::info!(
             "NetFS found no share={:?} on server={:?}, and the mount's budget is spent, so the server isn't asked why",
-            attempt.params.share_name,
-            attempt.params.server
+            LogPrivate::volume(&attempt.params.share_name),
+            LogPrivate::host(&attempt.params.server)
         );
         return original;
     }
@@ -179,8 +180,8 @@ pub(crate) async fn clarify_share_not_found(
     };
     log::info!(
         "NetFS found no share={:?} on server={:?} as {:?}; asked directly, the server answered detail={:?} ({verdict:?})",
-        attempt.params.share_name,
-        attempt.params.server,
+        LogPrivate::volume(&attempt.params.share_name),
+        LogPrivate::host(&attempt.params.server),
         attempt.identity,
         cmdr_fs::log_detail::LogDetail(&answer),
     );

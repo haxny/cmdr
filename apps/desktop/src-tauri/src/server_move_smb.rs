@@ -28,6 +28,7 @@
 //!
 //! Why each holder does what it does: `docs/notes/server-address-move.md` § "SMB".
 
+use cmdr_fs::log_private::LogPrivate;
 use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
 
@@ -298,7 +299,11 @@ where
         }
         match take_down(mount.clone()).await {
             Ok(how) => {
-                log::info!(target: "volume", "{} came down from its server's old address ({how:?})", mount.share());
+                log::info!(
+                    target: "volume",
+                    "{} came down from its server's old address ({how:?})",
+                    LogPrivate::volume(mount.share())
+                );
                 if let OldMount::Volume { volume_id, .. } = mount {
                     ejected.push(volume_id);
                 }
@@ -383,7 +388,7 @@ pub async fn complete(moved: CompletedMove) {
     log::info!(
         target: "volume",
         "{} mounted at its server's new address; {} follows to {}",
-        moved.share_name,
+        LogPrivate::volume(&moved.share_name),
         moved.old_volume_id,
         moved.new_volume_id
     );

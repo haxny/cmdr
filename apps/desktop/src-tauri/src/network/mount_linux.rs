@@ -4,6 +4,7 @@
 //! GNOME/GTK desktops without requiring root privileges. Mounts appear under
 //! `/run/user/<uid>/gvfs/` or a similar GVFS-managed path.
 
+use cmdr_fs::log_private::LogPrivate;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
@@ -159,7 +160,9 @@ pub(crate) fn mount_share_sync(
 ) -> Result<MountResult, MountError> {
     if !is_gio_available() {
         log::warn!(
-            "Can't mount share={share:?} on server={server:?}: `gio` isn't installed (the gvfs-smb package provides it)"
+            "Can't mount share={share:?} on server={server:?}: `gio` isn't installed (the gvfs-smb package provides it)",
+            share = LogPrivate::volume(share),
+            server = LogPrivate::host(server),
         );
         return Err(MountError::GvfsMissing);
     }
@@ -171,7 +174,7 @@ pub(crate) fn mount_share_sync(
         username,
     };
     if let Some(mount_path) = find_gvfs_mount(&wanted) {
-        debug!("Share already mounted at path={:?}", mount_path);
+        debug!("Share already mounted at path={:?}", LogPrivate::dir_path(&mount_path));
         return Ok(MountResult {
             mount_path,
             already_mounted: true,
@@ -192,7 +195,8 @@ pub(crate) fn mount_share_sync(
 
     debug!(
         "Mounting SMB share: server={:?}, share={:?}, backend=gio",
-        server, share
+        LogPrivate::host(server),
+        LogPrivate::volume(share)
     );
 
     let output = run_gio_mount(&smb_url, username, password).map_err(|e| MountError::Unexpected {
@@ -204,10 +208,10 @@ pub(crate) fn mount_share_sync(
         let stderr = String::from_utf8_lossy(&output.stderr);
         log::info!(
             "Mount stopped: server={:?}, share={:?}, source=cli, backend=gio, error_kind=exit, code={:?}, stderr={:?}",
-            server,
-            share,
+            LogPrivate::host(server),
+            LogPrivate::volume(share),
             output.status.code(),
-            cmdr_fs::log_detail::LogDetail(&stderr)
+            cmdr_fs::log_detail::LogDetail(&stderr).marking(&[LogPrivate::host(server), LogPrivate::volume(share)])
         );
         return Err(classify_mount_error(&stderr, server, share, username));
     }
@@ -219,8 +223,8 @@ pub(crate) fn mount_share_sync(
     let Some(mount_path) = find_gvfs_mount(&wanted) else {
         log::warn!(
             "Mount missing after success: server={:?}, share={:?}, source=cli, backend=gio, error_kind=mount_missing",
-            server,
-            share
+            LogPrivate::host(server),
+            LogPrivate::volume(share)
         );
         return Err(MountError::MountMissing {
             server: server.to_string(),

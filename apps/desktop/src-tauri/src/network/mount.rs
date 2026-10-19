@@ -33,6 +33,7 @@
 use crate::network::NetworkHost;
 use crate::network::server_identity::SmbServer;
 use crate::volumes::SmbMountInfo;
+use cmdr_fs::log_private::LogPrivate;
 use core_foundation::base::TCFType;
 use core_foundation::string::CFString;
 use core_foundation::url::CFURL;
@@ -399,8 +400,8 @@ pub fn mount_share_sync(
         if url_ref.is_null() {
             log::warn!(
                 "Mount URL rejected: server={:?}, share={:?}, source=netfs, error_kind=invalid_url",
-                target.server,
-                target.share
+                LogPrivate::host(target.server),
+                LogPrivate::volume(target.share)
             );
             return Err(MountError::Unexpected {
                 server: server.to_string(),
@@ -528,7 +529,10 @@ pub fn mount_share_sync(
     let settled = settle_netfs_answer(result, target, sightings, &hosts);
     if matches!(settled, Err(MountError::MountMissing { .. })) {
         log::warn!(
-            "NetFS answered {result} for {url_string} and named {reported_path:?} as the mount point, but no mount of share={share:?} on server={server:?} is there"
+            "NetFS answered {result} for {url_string} and named {reported_path:?} as the mount point, but no mount of share={share:?} on server={server:?} is there",
+            reported_path = reported_path.as_deref().map(LogPrivate::dir_path),
+            share = LogPrivate::volume(share),
+            server = LogPrivate::host(server),
         );
     }
     settled
@@ -649,9 +653,9 @@ fn disambiguated_mount_path(target: MountTarget<'_>, hosts: &[NetworkHost]) -> O
         let candidate = format!("/Volumes/{}-{}", share, n);
         if !std::path::Path::new(&candidate).exists() {
             log::info!(
-                "Mount path /Volumes/{} taken by another server, using {}",
-                share,
-                candidate
+                "Mount path {} taken by another server, using {}",
+                LogPrivate::dir_path(&default_path),
+                LogPrivate::dir_path(&candidate)
             );
             return Some(candidate);
         }
@@ -687,28 +691,29 @@ fn find_mount_path_for_share(target: MountTarget<'_>, hosts: &[NetworkHost]) -> 
 pub fn unmount_smb_shares_from_host(targets: &[SmbServer]) -> Vec<String> {
     let mut unmounted = Vec::new();
     for mount_path in crate::network::server_identity::smb_mounts_from(targets) {
-        log::info!("Unmounting SMB share at path={mount_path:?}");
+        log::info!("Unmounting SMB share at path={:?}", LogPrivate::dir_path(&mount_path));
         let output = std::process::Command::new("diskutil")
             .args(["unmount", &mount_path])
             .output();
 
         match output {
             Ok(o) if o.status.success() => {
-                log::info!("Unmounted path={mount_path:?}");
+                log::info!("Unmounted path={:?}", LogPrivate::dir_path(&mount_path));
                 unmounted.push(mount_path);
             }
             Ok(o) => {
                 log::warn!(
                     "Unmount stopped: path={:?}, source=cli, backend=diskutil, error_kind=exit, code={:?}, stderr={:?}",
-                    mount_path,
+                    LogPrivate::dir_path(&mount_path),
                     o.status.code(),
                     cmdr_fs::log_detail::LogDetail(&String::from_utf8_lossy(&o.stderr))
+                        .marking(&[LogPrivate::dir_path(&mount_path)])
                 );
             }
             Err(e) => {
                 log::warn!(
                     "Unmount stopped: path={:?}, source=os, backend=diskutil, error_kind={:?}, code={:?}, detail={:?}",
-                    mount_path,
+                    LogPrivate::dir_path(&mount_path),
                     e.kind(),
                     e.raw_os_error(),
                     cmdr_fs::log_detail::LogDetail(&e.to_string())

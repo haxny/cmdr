@@ -7,6 +7,7 @@
 use crate::network::server_identity::SmbServer;
 use crate::network::{HostSource, NetworkHost, on_host_found, on_host_lost};
 use crate::state_recovery::StateFile;
+use cmdr_fs::log_private::LogPrivate;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
@@ -522,7 +523,9 @@ pub async fn add_manual_server<R: Runtime>(
     // `Loaded manual server` logs the same address, so one server reads as one token.
     info!(
         "Added manual server: host={:?}, port={}, serverId={:?}",
-        parsed.host, parsed.port, host.id
+        LogPrivate::host(&parsed.host),
+        parsed.port,
+        host.id // allowed-log-private: a server id; the report's `serverId=` key tokenizes it in its own domain
     );
     // The saved lists changed (the host's account, maybe its name), even where no
     // volume did: the hub re-reads them on `volumes-changed`.

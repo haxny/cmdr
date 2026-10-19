@@ -4,6 +4,7 @@
 
 use std::net::{IpAddr, SocketAddr};
 
+use cmdr_fs::log_private::LogPrivate;
 use log::debug;
 use serde::Serialize;
 
@@ -45,7 +46,10 @@ pub async fn check_reachability(host: &str, port: u16) -> Result<(), AddServerEr
     use tokio::time::{Duration, timeout};
 
     let addr = format!("{}:{}", host, port);
-    debug!("Checking TCP reachability: host={host:?}, port={port}");
+    debug!(
+        "Checking TCP reachability: host={host:?}, port={port}",
+        host = LogPrivate::host(host)
+    );
     let unreachable = |message: String, hint| AddServerError::Unreachable { message, hint };
 
     // Resolve first, so the hint can tell which addresses were dialed, then try
@@ -63,14 +67,14 @@ pub async fn check_reachability(host: &str, port: u16) -> Result<(), AddServerEr
     };
     match timeout(Duration::from_secs(REACHABILITY_TIMEOUT_SECS), probe).await {
         Ok(Ok(())) => {
-            debug!("Reachable: host={host:?}, port={port}");
+            debug!("Reachable: host={host:?}, port={port}", host = LogPrivate::host(host));
             Ok(())
         }
         Ok(Err((e, peers))) => {
             let hint = unreachable_hint(&e, &peers);
             debug!(
                 "Unreachable: host={:?}, port={}, source=os, error_kind={:?}, code={:?}, hint={:?}, detail={:?}",
-                host,
+                LogPrivate::host(host),
                 port,
                 e.kind(),
                 e.raw_os_error(),
@@ -80,7 +84,10 @@ pub async fn check_reachability(host: &str, port: u16) -> Result<(), AddServerEr
             Err(unreachable(format!("Couldn't reach {}: {}", addr, e), hint))
         }
         Err(_) => {
-            debug!("Timed out connecting to host={host:?}, port={port}");
+            debug!(
+                "Timed out connecting to host={host:?}, port={port}",
+                host = LogPrivate::host(host)
+            );
             Err(unreachable(
                 format!(
                     "Couldn't reach {}: connection timed out after {}s",

@@ -108,7 +108,7 @@ pub async fn run_smbclient_list(
         // and caps them (`redact/DETAILS.md` § "External-text fields").
         warn!(
             "smbclient share listing stopped: host={:?}, port={}, source=cli, backend=smbclient, error_kind=exit, code={:?}, nt_status={}, has_creds={}, stderr={:?}, stdout={:?}",
-            host,
+            cmdr_fs::log_private::LogPrivate::host(host),
             port,
             output.status.code(),
             nt_status_token(&stderr)

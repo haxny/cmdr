@@ -20,7 +20,8 @@ pub async fn list_shares_smbutil(
     let url = build_smbutil_url(hostname, ip_address, port);
     debug!(
         "Running smbutil view: host={:?}, port={}, backend=smbutil, auth=guest",
-        hostname, port
+        cmdr_fs::log_private::LogPrivate::host(hostname),
+        port
     );
 
     let shares = run_smbutil_view(&url, true).await?;
@@ -45,7 +46,8 @@ pub async fn list_shares_smbutil_authenticated_from_keychain(
     let url = build_smbutil_url(hostname, ip_address, port);
     debug!(
         "Running smbutil view: host={:?}, port={}, backend=smbutil, auth=keychain",
-        hostname, port
+        cmdr_fs::log_private::LogPrivate::host(hostname),
+        port
     );
 
     let shares = run_smbutil_view(&url, false).await.map_err(|e| {
@@ -118,7 +120,8 @@ pub async fn list_shares_smbutil(
     let host = ip_address.unwrap_or(hostname);
     debug!(
         "Trying share-list fallback: host={:?}, port={}, backend=smbclient, auth=guest",
-        host, port
+        cmdr_fs::log_private::LogPrivate::host(host),
+        port
     );
 
     let shares = super::smb_smbclient::run_smbclient_list(host, port, None).await?;
@@ -154,7 +157,9 @@ pub async fn list_shares_smbutil_with_auth(
     let host = ip_address.unwrap_or(hostname);
     debug!(
         "Trying share-list fallback: host={:?}, port={}, user={:?}, backend=smbclient, auth=credentials",
-        host, port, username
+        cmdr_fs::log_private::LogPrivate::host(host),
+        port,
+        cmdr_fs::log_private::LogPrivate::user(username)
     );
 
     let shares = super::smb_smbclient::run_smbclient_list(host, port, Some((username, password))).await?;

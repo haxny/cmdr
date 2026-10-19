@@ -9,6 +9,7 @@
 
 use crate::network::discovery_gate::{self, DiscoveryLease};
 use crate::network::{NetworkHost, cached_discovered_hosts, fresh_discovered_hosts};
+use cmdr_fs::log_private::LogPrivate;
 use std::time::Duration;
 
 /// The mDNS name discovery pairs with `ip` right now, lowercased (what Keychain
@@ -82,7 +83,10 @@ pub(crate) async fn discover_server(server: &str, timeout: Duration) -> Discover
         answer = known();
     }
     if waits && answer.is_none() {
-        log::debug!("Discovery didn't vouch for server={server:?} within {timeout:?}; proceeding without");
+        log::debug!(
+            "Discovery didn't vouch for server={server:?} within {timeout:?}; proceeding without",
+            server = LogPrivate::host(server)
+        );
     }
     DiscoveredServer {
         hostname: answer.flatten(),
@@ -127,7 +131,11 @@ pub(crate) fn resolve_server_address(server: &str) -> ServerAddress {
         return ServerAddress::Connectable(server.to_string());
     }
     if let Some(address) = service_address(server) {
-        log::debug!("Resolved mDNS service name server={server:?} to host={address:?}");
+        log::debug!(
+            "Resolved mDNS service name server={server:?} to host={address:?}",
+            server = LogPrivate::host(server),
+            address = LogPrivate::host(&address)
+        );
         return ServerAddress::Connectable(address);
     }
 
@@ -137,7 +145,7 @@ pub(crate) fn resolve_server_address(server: &str) -> ServerAddress {
     // this into a visible failure.
     log::debug!(
         "mDNS service name server={:?} isn't discovered yet, so there's nothing to dial for it",
-        server
+        LogPrivate::host(server)
     );
     ServerAddress::UndiscoveredService
 }
@@ -257,24 +265,38 @@ pub(crate) async fn get_keychain_password(
             };
             // Try share-level credentials first (more specific)
             if let Ok(creds) = keychain::get_credentials(server, Some(&share)) {
-                log::debug!("Found Keychain credentials via server={:?}, share={:?}", server, share);
+                log::debug!(
+                    "Found Keychain credentials via server={:?}, share={:?}",
+                    LogPrivate::host(server),
+                    LogPrivate::volume(&share)
+                );
                 note(server);
                 return Some((creds.username, creds.password));
             }
             // Try server-level credentials
             if let Ok(creds) = keychain::get_credentials(server, None) {
-                log::debug!("Found Keychain credentials via server={:?} (server-level)", server);
+                log::debug!(
+                    "Found Keychain credentials via server={:?} (server-level)",
+                    LogPrivate::host(server)
+                );
                 note(server);
                 return Some((creds.username, creds.password));
             }
         }
 
-        let tried = servers_to_try
-            .iter()
-            .map(|server| format!("server={server:?}"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        log::debug!("No Keychain credentials for [{tried}], share={share:?}");
+        let tried = std::fmt::from_fn(|f| {
+            for (index, server) in servers_to_try.iter().enumerate() {
+                if index > 0 {
+                    f.write_str(", ")?;
+                }
+                write!(f, "server={:?}", LogPrivate::host(server))?;
+            }
+            Ok(())
+        });
+        log::debug!(
+            "No Keychain credentials for [{tried}], share={share:?}",
+            share = LogPrivate::volume(&share)
+        );
         None
     })
     .await

@@ -17,6 +17,7 @@
 //! password over and over (ERR-SHUSC). [`RefusedAt::of`] reads the status AND the
 //! command, ❌ never the message text.
 
+use cmdr_fs::log_private::LogPrivate;
 use smb2::ErrorKind;
 use smb2::types::Command;
 
@@ -362,16 +363,23 @@ pub(crate) fn log_direct_connect_failure(
         match outcome {
             DirectConnectOutcome::StaysOnKernelMount => log::warn!(
                 target: "smb_fallback",
-                "Couldn't establish an smb2 connection for server={server:?}, share={share:?} ({reason:?}, {io}, slowest_attempt={slowest:?}): {err}. Staying on the macOS kernel mount.{why}"
+                "Couldn't establish an smb2 connection for server={server:?}, share={share:?} ({reason:?}, {io}, slowest_attempt={slowest:?}): {err}. Staying on the macOS kernel mount.{why}",
+                server = LogPrivate::host(server),
+                share = LogPrivate::volume(share),
             ),
             DirectConnectOutcome::SurfacedToCaller => log::warn!(
                 target: "smb_fallback",
-                "Couldn't establish an smb2 connection for server={server:?}, share={share:?} ({reason:?}, {io}, slowest_attempt={slowest:?}): {err}.{why}"
+                "Couldn't establish an smb2 connection for server={server:?}, share={share:?} ({reason:?}, {io}, slowest_attempt={slowest:?}): {err}.{why}",
+                server = LogPrivate::host(server),
+                share = LogPrivate::volume(share),
             ),
         }
         return;
     };
-    let who = username.map_or_else(|| "a guest".to_string(), |name| format!("user={name:?}"));
+    let who = std::fmt::from_fn(|f| match username {
+        Some(name) => write!(f, "user={:?}", LogPrivate::user(name)),
+        None => f.write_str("a guest"),
+    });
     let step = match refusal.at {
         RefusedAt::SignIn => "sign-in",
         RefusedAt::Share => "the share",
@@ -380,11 +388,15 @@ pub(crate) fn log_direct_connect_failure(
     match outcome {
         DirectConnectOutcome::StaysOnKernelMount => log::warn!(
             target: "smb_fallback",
-            "server={server:?}, share={share:?} turned {who} away at {step} ({err}), so it stays on the macOS kernel mount: slower, and Cmdr can't manage the connection. {advice}"
+            "server={server:?}, share={share:?} turned {who} away at {step} ({err}), so it stays on the macOS kernel mount: slower, and Cmdr can't manage the connection. {advice}",
+            server = LogPrivate::host(server),
+            share = LogPrivate::volume(share),
         ),
         DirectConnectOutcome::SurfacedToCaller => log::info!(
             target: "smb_fallback",
-            "server={server:?}, share={share:?} turned {who} away at {step} ({err}); asking for a sign-in. {advice}"
+            "server={server:?}, share={share:?} turned {who} away at {step} ({err}); asking for a sign-in. {advice}",
+            server = LogPrivate::host(server),
+            share = LogPrivate::volume(share),
         ),
     }
 }

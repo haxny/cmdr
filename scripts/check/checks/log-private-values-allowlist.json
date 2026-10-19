@@ -253,86 +253,6 @@
       "count": 2,
       "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
     },
-    "apps/desktop/src-tauri/src/network/discovery_cache.rs": {
-      "count": 13,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/keychain.rs": {
-      "count": 8,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/manual_servers.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/manual_servers_reachability.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/mdns_discovery.rs": {
-      "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/mod.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/mount.rs": {
-      "count": 10,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/mount_linux.rs": {
-      "count": 9,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/os_mount_notice.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/share_access.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_client.rs": {
-      "count": 6,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_connect_directly.rs": {
-      "count": 5,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_connect_failure.rs": {
-      "count": 8,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_pane_upgrade.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_saved_shares.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_server_address.rs": {
-      "count": 7,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_sign_in_diagnostics.rs": {
-      "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_smbclient.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_smbutil.rs": {
-      "count": 5,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/network/smb_upgrade.rs": {
-      "count": 12,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
     "apps/desktop/src-tauri/src/open_mock.rs": {
       "count": 1,
       "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
@@ -378,10 +298,6 @@
       "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
     },
     "apps/desktop/src-tauri/src/security_advisories/mod.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "apps/desktop/src-tauri/src/server_move_smb.rs": {
       "count": 2,
       "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
     },

@@ -26,6 +26,7 @@ use crate::network::smb_server_address::{
 use crate::volumes::SmbMountInfo;
 #[cfg(target_os = "linux")]
 use crate::volumes_linux::SmbMountInfo;
+use cmdr_fs::log_private::LogPrivate;
 
 /// What a mount is, as the OS records it: which volume it belongs to, and where
 /// it sits inside that volume's share.
@@ -405,7 +406,11 @@ pub(crate) async fn register_smb_volume(
     // anyway can only burn the resolver timeout and report a failure that isn't
     // one. The pass that runs once discovery goes active resolves it and connects.
     let ServerAddress::Connectable(resolved_server) = resolve_server_address(server) else {
-        log::debug!("Leaving {mount_path} on the kernel mount for now: server={server:?} isn't discovered yet");
+        log::debug!(
+            "Leaving {mount_path} on the kernel mount for now: server={server:?} isn't discovered yet",
+            mount_path = LogPrivate::dir_path(mount_path),
+            server = LogPrivate::host(server),
+        );
         return;
     };
 
@@ -423,7 +428,8 @@ pub(crate) async fn register_smb_volume(
         IdentityRead::Answered(identity) => identity,
         IdentityRead::NotResponding => {
             log::warn!(
-                "Leaving {mount_path} on the kernel mount: it didn't answer a status read within {MOUNT_READ_LIMIT:?}, so there's no telling which volume it is"
+                "Leaving {mount_path} on the kernel mount: it didn't answer a status read within {MOUNT_READ_LIMIT:?}, so there's no telling which volume it is",
+                mount_path = LogPrivate::dir_path(mount_path),
             );
             return;
         }
@@ -457,16 +463,18 @@ pub(crate) async fn register_smb_volume(
     // dials, so it never fails, and never raises a fallback notice either.
     if !crate::network::known_shares::direct_connection_enabled(&[server, &resolved_server], share) {
         log::debug!(
-            "share={share:?} on server={server:?} is set to stay on the macOS mount; not upgrading {volume_id}"
+            "share={share:?} on server={server:?} is set to stay on the macOS mount; not upgrading {volume_id}",
+            share = LogPrivate::volume(share),
+            server = LogPrivate::host(server),
         );
         return;
     }
 
     log::debug!(
         "Establishing smb2 connection for SmbVolume: host={:?}, port={}, share={:?}",
-        resolved_server,
+        LogPrivate::host(&resolved_server),
         port,
-        share
+        LogPrivate::volume(share)
     );
 
     let params = cmdr_smb::volume::SmbConnectionParams::new(&resolved_server, share, port, username, password);
@@ -487,7 +495,11 @@ pub(crate) async fn register_smb_volume(
             // window, and any prior SmbVolume is retired (not torn down) before
             // we replace it.
             register_replacing_predecessor(&volume_id, Arc::new(volume)).await;
-            log::info!("Registered SmbVolume for {} (id={})", mount_path, volume_id);
+            log::info!(
+                "Registered SmbVolume for {} (id={})",
+                LogPrivate::dir_path(mount_path),
+                volume_id
+            );
             // This server is off the slow path, so the next genuine fallback on it is
             // news again rather than a repeat.
             crate::network::os_mount_notice::clear_os_mount_notice(server);
@@ -589,7 +601,7 @@ pub(crate) async fn return_to_os_mount(volume_id: &str) -> bool {
     register_replacing_predecessor(volume_id, os_mount).await;
     log::info!(
         "Handed {volume_id} back to the macOS mount at {}",
-        current.root().display()
+        LogPrivate::dir_path(current.root())
     );
     true
 }
@@ -621,7 +633,9 @@ pub(crate) async fn try_smb_upgrade(
     let ServerAddress::Connectable(resolved_server) = resolve_server_address(server) else {
         log::info!(
             target: "smb_fallback",
-            "server={server:?}, share={share:?} can't be dialed: mDNS hasn't discovered it, so there's no address for it yet."
+            "server={server:?}, share={share:?} can't be dialed: mDNS hasn't discovered it, so there's no address for it yet.",
+            server = LogPrivate::host(server),
+            share = LogPrivate::volume(share),
         );
         return Err(UpgradeError::Network {
             reason: UpgradeFailure::Unreachable,
@@ -653,7 +667,11 @@ pub(crate) async fn try_smb_upgrade(
     {
         Ok(volume) => {
             register_replacing_predecessor(volume_id, Arc::new(volume)).await;
-            log::info!("Registered SmbVolume for {} (id={})", mount_path, volume_id);
+            log::info!(
+                "Registered SmbVolume for {} (id={})",
+                LogPrivate::dir_path(mount_path),
+                volume_id
+            );
             // Same as the auto path: the server is off the kernel mount, so a later
             // fallback on it is worth a fresh notice.
             crate::network::os_mount_notice::clear_os_mount_notice(server);

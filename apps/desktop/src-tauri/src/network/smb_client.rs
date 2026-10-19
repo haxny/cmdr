@@ -3,6 +3,7 @@
 //! Uses the `smb2` crate to list shares on network hosts.
 //! Implements caching and authentication handling.
 
+use cmdr_fs::log_private::LogPrivate;
 use log::{debug, warn};
 use std::time::Duration;
 
@@ -119,8 +120,8 @@ async fn list_shares_uncached(
     let guest = guest.given_credentials(credentials.is_some());
     debug!(
         "list_shares_uncached: host={:?}, ip_address={:?}, port={}, has_creds={}, guest={:?}",
-        hostname,
-        ip_address,
+        LogPrivate::host(hostname),
+        ip_address.map(LogPrivate::host),
         port,
         credentials.is_some(),
         guest
@@ -140,7 +141,7 @@ async fn list_shares_uncached(
             // the secondary error.
             warn!(
                 "smb2 share listing stopped: host={:?}, port={}, has_creds={}, source=backend, backend=smb2, error_kind=protocol, detail={:?}; falling back to CLI",
-                hostname,
+                LogPrivate::host(hostname),
                 port,
                 credentials.is_some(),
                 cmdr_fs::log_detail::LogDetail(message),
@@ -162,8 +163,8 @@ async fn list_shares_smb2(
 ) -> Result<ShareListResult, ShareListError> {
     debug!(
         "list_shares_smb2: host={:?}, ip={:?}, has_creds={}",
-        hostname,
-        ip_address,
+        LogPrivate::host(hostname),
+        ip_address.map(LogPrivate::host),
         credentials.is_some()
     );
 
@@ -181,7 +182,10 @@ async fn list_shares_smb2(
             }
             None => {
                 // allowed-pluralize-noun: `{port}` is a port number, and "wants" is a verb.
-                debug!("host={hostname:?}, port={port} wants an account and none was offered; not listing as guest");
+                debug!(
+                    "host={hostname:?}, port={port} wants an account and none was offered; not listing as guest", // allowed-pluralize-noun: `wants` is the verb, `port` a number field
+                    hostname = LogPrivate::host(hostname)
+                );
                 Err(ShareListError::AuthRequired {
                     message: "An account was set up for this server, so it isn't listed as guest".to_string(),
                 })
@@ -199,7 +203,10 @@ async fn list_shares_smb2(
     )
     .await
     .unwrap_or_else(|_| {
-        warn!("Guest share listing on host={hostname:?}, port={port} gave up after {outer_timeout:?}");
+        warn!(
+            "Guest share listing on host={hostname:?}, port={port} gave up after {outer_timeout:?}",
+            hostname = LogPrivate::host(hostname)
+        );
         Err(smb2::Error::Timeout)
     });
     match guest_attempt {
@@ -255,7 +262,10 @@ async fn list_authenticated(
     outer_timeout: Duration,
     connect_timeout: Duration,
 ) -> Result<ShareListResult, ShareListError> {
-    debug!("Trying authenticated access with user={user:?}");
+    debug!(
+        "Trying authenticated access with user={user:?}",
+        user = LogPrivate::user(user)
+    );
 
     match tokio::time::timeout(
         outer_timeout,

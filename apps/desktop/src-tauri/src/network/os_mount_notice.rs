@@ -24,6 +24,7 @@ use crate::ignore_poison::IgnorePoison;
 use crate::network::NetworkHost;
 use crate::network::server_identity::same_machine;
 use crate::network::smb_connect_failure::UpgradeFailure;
+use cmdr_fs::log_private::LogPrivate;
 use std::sync::{LazyLock, Mutex, OnceLock};
 use tauri::AppHandle;
 
@@ -155,12 +156,18 @@ pub(crate) fn announce_os_mount_fallback(
     {
         if notice == FallbackNotice::StayQuiet {
             log::debug!(
-                "Leaving server={server:?}, share={share:?} on the kernel mount without a notice: nobody asked about it"
+                "Leaving server={server:?}, share={share:?} on the kernel mount without a notice: nobody asked about it",
+                server = LogPrivate::host(server),
+                share = LogPrivate::volume(share),
             );
         }
         return;
     }
-    log::debug!("Telling the frontend about the kernel-mount fallback on server={server:?}, share={share:?}");
+    log::debug!(
+        "Telling the frontend about the kernel-mount fallback on server={server:?}, share={share:?}",
+        server = LogPrivate::host(server),
+        share = LogPrivate::volume(share),
+    );
     emit_fell_back_to_os_mount(server, volume_id, share, reason);
 }
 

@@ -180,8 +180,8 @@ pub async fn mount_share(
         Err(_timeout) => {
             log::warn!(
                 "Mounting share={:?} on server={:?} didn't finish within {} s",
-                attempt.share(),
-                attempt.server(),
+                cmdr_fs::log_private::LogPrivate::volume(attempt.share()),
+                cmdr_fs::log_private::LogPrivate::host(attempt.server()),
                 timeout_duration.as_secs()
             );
             Err(mount::MountError::Timeout {
