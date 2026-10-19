@@ -395,7 +395,7 @@ impl Volume for WebdavVolume {
     /// views. HTTP has no session, so `Direct` means the last request that
     /// reached the wire came back.
     fn connection_state(&self) -> Option<cmdr_fs::volume::ConnectionState> {
-        Some(self.inner.session.connection().state().into())
+        Some(self.inner.session.connection().state().published())
     }
 
     /// The installed client's generation, bumped only when a reconnect installs

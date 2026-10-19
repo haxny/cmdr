@@ -16,7 +16,7 @@ use std::sync::atomic::Ordering;
 
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::events::VolumeConnection;
-use cmdr_fs::volume::{CellState, Retirement, Retires};
+use cmdr_fs::volume::{CellState, ReportedState, Retirement, Retires};
 
 use super::{AdbVolume, AdbVolumeInner};
 
@@ -54,11 +54,11 @@ impl CellState for ConnectionState {
 /// Widens the backend's own state into the enum every connecting backend reports
 /// in. ❌ Deliberately not the frontend's wire enum: `events::volume_mapping`
 /// owns that translation.
-impl From<ConnectionState> for VolumeConnection {
-    fn from(state: ConnectionState) -> Self {
-        match state {
-            ConnectionState::Connected => Self::Connected,
-            ConnectionState::Disconnected => Self::Disconnected,
+impl ReportedState for ConnectionState {
+    fn reported(self) -> VolumeConnection {
+        match self {
+            ConnectionState::Connected => VolumeConnection::Connected,
+            ConnectionState::Disconnected => VolumeConnection::Disconnected,
         }
     }
 }

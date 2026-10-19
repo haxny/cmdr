@@ -2119,7 +2119,7 @@ pub use channel_stream::ChannelReadStream;
 pub use child_name::{ChildName, NotAChildName};
 pub use connection::{BackendKind, ConnectionState, DeviceReadiness, DeviceUnavailableReason, MountClass, SignInShape};
 pub use connection_cell::{CellState, ConnectionCell};
-pub use connection_reporter::ConnectionReporter;
+pub use connection_reporter::{ConnectionReporter, ReportedState};
 pub use entry_kind::EntryKind;
 pub use error::{ErrnoField, VolumeError};
 pub use ids::*;

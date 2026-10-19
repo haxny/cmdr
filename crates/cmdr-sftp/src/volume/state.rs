@@ -7,7 +7,7 @@
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::host::events::VolumeConnection;
-use cmdr_fs::volume::{CellState, Retirement, Retires, SelfHandle};
+use cmdr_fs::volume::{CellState, ReportedState, Retirement, Retires, SelfHandle};
 
 use super::SftpVolumeInner;
 use crate::auth::AuthRungUsed;
@@ -60,13 +60,13 @@ impl CellState for ConnectionState {
 /// ❌ Deliberately not the frontend's wire enum: `events::volume_mapping` owns
 /// that translation for every backend, and producing it here would weld this
 /// crate to the app.
-impl From<ConnectionState> for VolumeConnection {
-    fn from(state: ConnectionState) -> Self {
-        match state {
-            ConnectionState::Connected => Self::Connected,
-            ConnectionState::Disconnected => Self::Disconnected,
-            ConnectionState::NeedsCredentials => Self::NeedsCredentials,
-            ConnectionState::NeedsHostKeyApproval => Self::NeedsHostKeyApproval,
+impl ReportedState for ConnectionState {
+    fn reported(self) -> VolumeConnection {
+        match self {
+            ConnectionState::Connected => VolumeConnection::Connected,
+            ConnectionState::Disconnected => VolumeConnection::Disconnected,
+            ConnectionState::NeedsCredentials => VolumeConnection::NeedsCredentials,
+            ConnectionState::NeedsHostKeyApproval => VolumeConnection::NeedsHostKeyApproval,
         }
     }
 }

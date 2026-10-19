@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use super::CellState;
-use super::connection_reporter::ConnectionReporter;
+use super::connection_reporter::{ConnectionReporter, ReportedState};
 use super::host::VolumeHost;
 use super::host::events::{RecordingVolumeEvents, VolumeConnection, VolumeEventSink};
 
@@ -29,12 +29,12 @@ impl CellState for State {
     }
 }
 
-impl From<State> for VolumeConnection {
-    fn from(state: State) -> Self {
-        match state {
-            State::Up => Self::Connected,
-            State::Down => Self::Disconnected,
-            State::NeedsUser => Self::NeedsCredentials,
+impl ReportedState for State {
+    fn reported(self) -> VolumeConnection {
+        match self {
+            State::Up => VolumeConnection::Connected,
+            State::Down => VolumeConnection::Disconnected,
+            State::NeedsUser => VolumeConnection::NeedsCredentials,
         }
     }
 }

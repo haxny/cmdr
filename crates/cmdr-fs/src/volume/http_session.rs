@@ -28,13 +28,11 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
 
-use crate::ignore_poison::RwLockIgnorePoison;
-
 use super::host::VolumeHost;
 use super::host::events::VolumeConnection;
 use super::liveness::{Liveness, Timings};
 use super::secret_store::{SignIn, SignedIn};
-use super::{CellState, ConnectionReporter, ConnectionState, Retires, SelfHandle, VolumeError};
+use super::{CellState, ConnectionReporter, ConnectionState, ReportedState, Retires, SelfHandle, VolumeError};
 
 mod reconnect;
 
@@ -69,24 +67,29 @@ impl CellState for HttpConnectionState {
     }
 }
 
-impl From<HttpConnectionState> for VolumeConnection {
-    fn from(state: HttpConnectionState) -> Self {
-        match state {
-            HttpConnectionState::Connected => Self::Connected,
-            HttpConnectionState::Disconnected => Self::Disconnected,
-            HttpConnectionState::NeedsCredentials => Self::NeedsCredentials,
+impl ReportedState for HttpConnectionState {
+    fn reported(self) -> VolumeConnection {
+        match self {
+            Self::Connected => VolumeConnection::Connected,
+            Self::Disconnected => VolumeConnection::Disconnected,
+            Self::NeedsCredentials => VolumeConnection::NeedsCredentials,
         }
     }
 }
 
-/// What `Volume::connection_state` publishes, for the switcher dot and the
-/// pane's connect views.
-impl From<HttpConnectionState> for ConnectionState {
-    fn from(state: HttpConnectionState) -> Self {
-        match state {
-            HttpConnectionState::Connected => Self::Direct,
-            HttpConnectionState::Disconnected => Self::Disconnected,
-            HttpConnectionState::NeedsCredentials => Self::NeedsSignIn,
+impl HttpConnectionState {
+    /// What `Volume::connection_state` publishes, for the switcher dot and the
+    /// pane's connect views.
+    ///
+    /// ❗ A method, ❌ not `From<HttpConnectionState> for ConnectionState`: that
+    /// impl prints as `connection → http_session`, welding the two into a
+    /// module cycle (`scripts/check/checks/DETAILS.md` § "Rust module cycles",
+    /// trap 3).
+    pub fn published(self) -> ConnectionState {
+        match self {
+            Self::Connected => ConnectionState::Direct,
+            Self::Disconnected => ConnectionState::Disconnected,
+            Self::NeedsCredentials => ConnectionState::NeedsSignIn,
         }
     }
 }
@@ -417,6 +420,7 @@ impl<B: HttpBackend> HttpSession<B> {
     /// effect from the next watch started.
     #[cfg(any(test, feature = "testing"))]
     pub fn set_silence_timings(&self, timings: Timings) {
+        use crate::ignore_poison::RwLockIgnorePoison;
         *self.silence.write_ignore_poison() = timings;
     }
 

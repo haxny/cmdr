@@ -33,7 +33,18 @@ pub struct ConnectionReporter<S> {
     events: Arc<dyn VolumeEventSink>,
 }
 
-impl<S: CellState + Into<VolumeConnection>> ConnectionReporter<S> {
+/// A backend's connection state, as the host hears about it.
+///
+/// ❗ A trait, ❌ not an `Into<VolumeConnection>` bound: a `From<_> for
+/// VolumeConnection` inside `cmdr-fs` prints as `host::events → <the state's
+/// module>` (`scripts/check/checks/DETAILS.md` § "Rust module cycles", trap 3),
+/// which welded `http_session` into a module cycle with `host`.
+pub trait ReportedState: CellState {
+    /// The state in the vocabulary every connecting backend reports in.
+    fn reported(self) -> VolumeConnection;
+}
+
+impl<S: ReportedState> ConnectionReporter<S> {
     /// A reporter for `volume_id`, in `state`, on the session the volume was
     /// built with, telling `host`'s event sink.
     pub fn new(volume_id: &str, host: &VolumeHost, state: S) -> Self {
@@ -136,7 +147,7 @@ impl<S: CellState + Into<VolumeConnection>> ConnectionReporter<S> {
     /// somebody else now.
     fn announce(&self, state: S) {
         if !self.retirement.is_retired() {
-            self.events.connection_changed(&self.volume_id, state.into());
+            self.events.connection_changed(&self.volume_id, state.reported());
         }
     }
 }
