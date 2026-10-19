@@ -170,3 +170,48 @@ fn a_span_in_a_detail_inside_a_detail_ships_its_token() {
     assert_eq!(hashes(&in_note), hashes(&on_line), "{in_note}\n{on_line}");
     assert_eq!(hashes(&in_note).len(), 2, "{in_note}");
 }
+
+/// The index's own lines, in each site's format string, as a report ships them. Each pins what
+/// the marker buys over the line's unmarked spelling: the kind the site knows, the stat after a
+/// prose path, and a bare name no regex could find.
+#[test]
+fn the_index_lines_ship_each_value_as_one_token_of_its_kind() {
+    // A dir whose name reads like a file: only the site knows it's a folder.
+    let dir = "/Users/me/Library/Containers/com.example.app";
+    let reconcile = |path: &dyn std::fmt::Debug| {
+        format!("{HEAD}MustScanSubDirs: reconcile complete for path={path:?} (+0 -0 ~0, 6ms, 1ms CPU)")
+    };
+    let golden = format!(
+        "{HEAD}MustScanSubDirs: reconcile complete for path=\"$HOME/Library/<dir>/<dir>\" (+0 -0 ~0, 6ms, 1ms CPU)"
+    );
+    assert_eq!(shape(&reconcile(&LogPrivate::dir_path(dir))), golden);
+    assert_ne!(
+        shape(&reconcile(&dir)),
+        golden,
+        "the unmarked spelling guesses the kind"
+    );
+
+    // A prose path followed by a parenthesized word, which the greedy fallback can't tell apart.
+    let root = "/Users/me/Pictures/Summer (Lake House) 2026";
+    let covering = |path: &dyn std::fmt::Display| format!("{HEAD}Phases: covering {path} (Home)");
+    let marked = covering(&LogPrivate::dir_path(root));
+    assert_ships_none(&marked, &["Lake", "House", "Summer"]);
+    let golden = format!("{HEAD}Phases: covering $HOME/Pictures/<dir> (Home)");
+    assert_eq!(shape(&marked), golden);
+    assert_ne!(shape(&covering(&root)), golden, "the unmarked spelling eats the phase");
+
+    // A bare entry name, which has no path around it for a regex to claim.
+    let name = "IMG Lake 0001.jpg";
+    let inserted =
+        |name: &dyn std::fmt::Display| format!("{HEAD}Writer: UpsertEntryV2 inserted \"{name}\" (parent_id=5) → id=9");
+    let marked = inserted(&LogPrivate::new(LogKind::FileName, name));
+    assert_ships_none(&marked, &["Lake", "IMG", "0001"]);
+    assert_eq!(
+        shape(&marked),
+        format!("{HEAD}Writer: UpsertEntryV2 inserted \"<file>.jpg\" (parent_id=5) → id=9")
+    );
+    assert!(
+        shape(&inserted(&name)).contains("Lake"),
+        "the unmarked name ships whole"
+    );
+}

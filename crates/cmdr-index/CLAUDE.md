@@ -34,8 +34,8 @@ with no host at all.
   so the item exists in the non-test lib build with nothing calling it, and `#[deny(unused)]` makes that a hard error.
 - **`specta` is pinned to `=2.0.0-rc.24`, identical to the app's.** Two `specta` crates in one graph and these `Type`
   impls stop satisfying `tauri-specta`, which breaks bindings generation.
-- **Nothing here produces user-facing prose.** The index emits typed values; the host renders every word a human reads.
-  Diagnostic strings for `log::` are fine and stay English. `DETAILS.md` names the two deliberate exceptions.
+- **Nothing here produces user-facing prose.** The host renders every word a human reads. `log::` lines stay English,
+  each path and name marked with `cmdr_fs::log_private::LogPrivate`. `DETAILS.md` names the two exceptions.
 - **We never build a runtime.** The host injects a `tokio::runtime::Handle`; a second pool would compete for cores and
   split the thread-QoS story that lets indexing run in-process.
 - **Rebuild, don't migrate.** All three databases are disposable caches; a format or scope change rescans. ❌ No
