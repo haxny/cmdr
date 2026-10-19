@@ -2,7 +2,6 @@ package checks
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -100,7 +99,7 @@ func isRepoPathToken(tok string) bool {
 // the doc having to spell out the full path. Falls back to nil (which disables the
 // suffix tier, leaving strict resolution) outside a git work tree.
 func buildPathSuffixSet(rootDir string) map[string]bool {
-	out, err := runGit(rootDir, "ls-files")
+	tracked, err := corpus.GitLsFiles(rootDir)
 	if err != nil {
 		return nil
 	}
@@ -115,10 +114,7 @@ func buildPathSuffixSet(rootDir string) map[string]bool {
 			set[suffix] = true
 		}
 	}
-	for f := range strings.SplitSeq(strings.TrimSpace(out), "\n") {
-		if f == "" {
-			continue
-		}
+	for _, f := range tracked {
 		add(f, false)
 		for dir := path.Dir(f); dir != "." && dir != "/"; dir = path.Dir(dir) {
 			add(dir, true)
@@ -278,7 +274,7 @@ func linkResolves(rootDir, srcDoc, target string) (resolved, checkable bool) {
 			continue // escapes the repo root; not verifiable via this form
 		}
 		checkable = true
-		if fileExists(filepath.Join(rootDir, filepath.FromSlash(cand))) {
+		if corpus.Exists(filepath.Join(rootDir, filepath.FromSlash(cand))) {
 			return true, true
 		}
 	}
@@ -339,11 +335,11 @@ func RunDocsDeadLinks(ctx *CheckContext) (CheckResult, error) {
 
 	var dead []deadLink
 	for _, doc := range docs {
-		data, readErr := os.ReadFile(filepath.Join(ctx.RootDir, filepath.FromSlash(doc)))
+		data, readErr := corpus.ReadFile(filepath.Join(ctx.RootDir, filepath.FromSlash(doc)))
 		if readErr != nil {
 			continue
 		}
-		dead = append(dead, scanDocForDeadRefs(ctx.RootDir, doc, string(data), suffixes)...)
+		dead = append(dead, scanDocForDeadRefs(ctx.RootDir, doc, data, suffixes)...)
 	}
 
 	if len(dead) == 0 {

@@ -111,7 +111,7 @@ func TestGoVersionScannerCatchesEveryPinShape(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			violations, _ := scanForGoVersionPins([]byte(tc.line+"\n"), tc.file)
+			violations, _ := scanForGoVersionPins(tc.line+"\n", tc.file)
 			if len(violations) != 1 {
 				t.Fatalf("expected 1 violation for %q, got %d", tc.line, len(violations))
 			}
@@ -130,7 +130,7 @@ func TestGoVersionScannerLeavesInnocentLinesAlone(t *testing.T) {
 		`golang.org/x/tools/cmd/deadcode@v0.49.0`,
 	}
 	for _, line := range innocent {
-		violations, _ := scanForGoVersionPins([]byte(line+"\n"), "x.go")
+		violations, _ := scanForGoVersionPins(line+"\n", "x.go")
 		if len(violations) != 0 {
 			t.Errorf("false positive on %q:\n%s", line, strings.Join(violations, "\n"))
 		}
@@ -145,7 +145,7 @@ func TestGoVersionScannerSkipsWholeLineComments(t *testing.T) {
 		`// a workflow's go-version: '1.27' would trip this`,
 		`    # FROM golang:1.27 was replaced by the mise install`,
 	} {
-		violations, _ := scanForGoVersionPins([]byte(line+"\n"), "x.sh")
+		violations, _ := scanForGoVersionPins(line+"\n", "x.sh")
 		if len(violations) != 0 {
 			t.Errorf("a comment is not a pin, but %q was flagged", line)
 		}
@@ -154,7 +154,7 @@ func TestGoVersionScannerSkipsWholeLineComments(t *testing.T) {
 
 func TestGoVersionScannerHonoursTheOptOut(t *testing.T) {
 	violations, orphans := scanForGoVersionPins(
-		[]byte("GO_VERSION=1.27 # allowed-go-version-pin: upstream installer wants it inline\n"), "x.sh")
+		"GO_VERSION=1.27 # allowed-go-version-pin: upstream installer wants it inline\n", "x.sh")
 	if len(violations) != 0 {
 		t.Fatalf("opt-out ignored: %s", strings.Join(violations, "\n"))
 	}
@@ -164,7 +164,7 @@ func TestGoVersionScannerHonoursTheOptOut(t *testing.T) {
 }
 
 func TestGoVersionScannerRejectsAReasonlessOptOut(t *testing.T) {
-	violations, _ := scanForGoVersionPins([]byte("GO_VERSION=1.27 # allowed-go-version-pin:\n"), "x.sh")
+	violations, _ := scanForGoVersionPins("GO_VERSION=1.27 # allowed-go-version-pin:\n", "x.sh")
 	if len(violations) != 1 {
 		t.Fatalf("an empty reason must not excuse the pin, got %d violations", len(violations))
 	}

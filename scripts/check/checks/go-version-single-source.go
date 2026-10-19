@@ -199,10 +199,10 @@ func goVersionScannable(rel string) bool {
 
 // scanForGoVersionPins reports every line of data naming a Go toolchain version.
 // rel names the file in the report.
-func scanForGoVersionPins(data []byte, rel string) ([]string, []orphanDirective) {
+func scanForGoVersionPins(data string, rel string) ([]string, []orphanDirective) {
 	var violations []string
 	tracker := newDirectiveTracker("# allowed-go-version-pin:", "#")
-	for i, line := range strings.Split(string(data), "\n") {
+	for i, line := range strings.Split(data, "\n") {
 		lineNo := i + 1
 		tracker.observe(lineNo, line)
 		// A whole-line comment can name a version in prose ("the old
@@ -241,12 +241,12 @@ var goModDirectiveRE = regexp.MustCompile(`(?m)^go\s+(\d+\.\d+(?:\.\d+)?)\s*$`)
 // readGoModFloor extracts the `go` directive from one go.mod's content. A module
 // without one is not an error (the directive is optional), it just doesn't take
 // part in the compare.
-func readGoModFloor(data []byte, rel string) (goModFloor, bool) {
-	m := goModDirectiveRE.FindSubmatch(data)
+func readGoModFloor(data string, rel string) (goModFloor, bool) {
+	m := goModDirectiveRE.FindStringSubmatch(data)
 	if m == nil {
 		return goModFloor{}, false
 	}
-	return goModFloor{relPath: rel, version: string(m[1])}, true
+	return goModFloor{relPath: rel, version: m[1]}, true
 }
 
 // checkGoModFloors enforces invariants (2) and (3): every module declares the

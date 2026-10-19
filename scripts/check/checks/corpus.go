@@ -1,8 +1,10 @@
 package checks
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -23,8 +25,10 @@ import (
 var corpus = newSourceCorpus()
 
 type sourceCorpus struct {
-	files sync.Map // absolute path → *corpusFile
-	dirs  sync.Map // absolute path → *corpusDir
+	files    sync.Map // absolute path → *corpusFile
+	dirs     sync.Map // absolute path → *corpusDir
+	exists   sync.Map // absolute path → func() bool
+	listings sync.Map // root + "\x00" + args → func() ([]string, error)
 }
 
 type corpusFile struct {
@@ -85,6 +89,45 @@ func splitScannerLines(text string) []string {
 		lines[i] = strings.TrimSuffix(line, "\r")
 	}
 	return lines
+}
+
+// Exists reports whether something is at path (`os.Stat`, so a symlink counts by
+// its target), asking the disk once per path.
+func (c *sourceCorpus) Exists(path string) bool {
+	if f, ok := c.exists.Load(path); ok {
+		return f.(func() bool)()
+	}
+	f, _ := c.exists.LoadOrStore(path, sync.OnceValue(func() bool {
+		_, err := os.Stat(path)
+		return err == nil
+	}))
+	return f.(func() bool)()
+}
+
+// GitLsFiles is `git -C rootDir ls-files -z <args>`, run once per distinct
+// argument list: repo-relative, forward-slashed, in git's order. The slice is
+// shared, so ❌ never sort or write into it; copy first. An error means rootDir
+// isn't a git work tree (or git failed), so the caller takes its walk fallback.
+func (c *sourceCorpus) GitLsFiles(rootDir string, args ...string) ([]string, error) {
+	key := rootDir + "\x00" + strings.Join(args, "\x00")
+	if f, ok := c.listings.Load(key); ok {
+		return f.(func() ([]string, error))()
+	}
+	f, _ := c.listings.LoadOrStore(key, sync.OnceValues(func() ([]string, error) {
+		cmd := exec.Command("git", append([]string{"-C", rootDir, "ls-files", "-z"}, args...)...)
+		out, err := cmd.Output()
+		if err != nil {
+			return nil, fmt.Errorf("git ls-files in %s: %w", rootDir, err)
+		}
+		var files []string
+		for rel := range strings.SplitSeq(string(out), "\x00") {
+			if rel != "" {
+				files = append(files, rel)
+			}
+		}
+		return files, nil
+	}))
+	return f.(func() ([]string, error))()
 }
 
 // readDir is `os.ReadDir` (sorted entries), remembered per directory.

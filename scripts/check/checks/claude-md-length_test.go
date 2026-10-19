@@ -233,9 +233,11 @@ func TestRunClaudeMdLength_PerFileBudgetOverride(t *testing.T) {
 		t.Errorf("expected success (under the 1000 override), got code %d: %s", result.Code, result.Message)
 	}
 
-	// 1100 words: over its own 1000 budget → fails.
-	writeClaudeMd(t, tmp, rel, 1100)
-	if _, err := RunClaudeMdLength(&CheckContext{RootDir: tmp}); err == nil {
+	// 1100 words: over its own 1000 budget → fails. A fresh tree, since one
+	// process reads each file once (`corpus`).
+	over := t.TempDir()
+	writeClaudeMd(t, over, rel, 1100)
+	if _, err := RunClaudeMdLength(&CheckContext{RootDir: over}); err == nil {
 		t.Error("expected a failure over the 1000 override")
 	}
 }

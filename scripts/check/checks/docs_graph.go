@@ -2,7 +2,6 @@ package checks
 
 import (
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -77,11 +76,11 @@ func BuildDocGraph(rootDir string) (*DocGraph, error) {
 
 	contents := make(map[string]string, len(allDocs))
 	for _, rel := range allDocs {
-		data, readErr := os.ReadFile(filepath.Join(rootDir, filepath.FromSlash(rel)))
+		data, readErr := corpus.ReadFile(filepath.Join(rootDir, filepath.FromSlash(rel)))
 		if readErr != nil {
 			continue
 		}
-		contents[rel] = string(data)
+		contents[rel] = data
 	}
 
 	adj := buildDocEdges(allDocs, contents)
@@ -297,20 +296,22 @@ func findMarkdownDocs(rootDir string) ([]string, error) {
 	return walkMarkdownDocs(rootDir)
 }
 
+// markdownLsFilesArgs lists the in-scope .md files, tracked or untracked-but-not-
+// ignored. Every doc scanner passes the same args, so `corpus` asks git once.
+var markdownLsFilesArgs = []string{"--cached", "--others", "--exclude-standard", "--", "*.md"}
+
 // gitListMarkdownDocs asks git for the in-scope .md files (`--exclude-standard`
 // honors .gitignore). Returns (nil, false) when rootDir isn't a git work tree, so
 // the caller falls back to a plain walk. Paths are repo-root-relative because the
 // check always roots at the repo root.
 func gitListMarkdownDocs(rootDir string) ([]string, bool) {
-	cmd := exec.Command("git", "-C", rootDir, "ls-files", "--cached", "--others",
-		"--exclude-standard", "-z", "--", "*.md")
-	out, err := cmd.Output()
+	listed, err := corpus.GitLsFiles(rootDir, markdownLsFilesArgs...)
 	if err != nil {
 		return nil, false
 	}
 	var docs []string
-	for _, rel := range strings.Split(string(out), "\x00") {
-		if rel != "" && keepDocPath(rel) {
+	for _, rel := range listed {
+		if keepDocPath(rel) {
 			docs = append(docs, rel)
 		}
 	}

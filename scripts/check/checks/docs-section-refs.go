@@ -2,7 +2,6 @@ package checks
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -183,7 +182,7 @@ func resolveDocTarget(rootDir, srcDoc, target string) string {
 		if strings.HasPrefix(cand, "..") {
 			continue
 		}
-		if fileExists(filepath.Join(rootDir, filepath.FromSlash(cand))) {
+		if corpus.Exists(filepath.Join(rootDir, filepath.FromSlash(cand))) {
 			return cand
 		}
 	}
@@ -206,11 +205,11 @@ func scanDocForSectionRefs(rootDir, doc, content string, headings map[string][][
 		}
 		heads, ok := headings[target]
 		if !ok {
-			data, err := os.ReadFile(filepath.Join(rootDir, filepath.FromSlash(target)))
+			data, err := corpus.ReadFile(filepath.Join(rootDir, filepath.FromSlash(target)))
 			if err != nil {
 				continue
 			}
-			heads = docHeadings(string(data))
+			heads = docHeadings(data)
 			headings[target] = heads
 		}
 		if !claimMatches(claim, heads) {
@@ -243,12 +242,12 @@ func RunDocsSectionRefs(ctx *CheckContext) (CheckResult, error) {
 		if strings.HasPrefix(doc, specsDir) || strings.HasPrefix(doc, notesDir) {
 			continue
 		}
-		data, readErr := os.ReadFile(filepath.Join(ctx.RootDir, filepath.FromSlash(doc)))
+		data, readErr := corpus.ReadFile(filepath.Join(ctx.RootDir, filepath.FromSlash(doc)))
 		if readErr != nil {
 			continue
 		}
 		checked++
-		bad = append(bad, scanDocForSectionRefs(ctx.RootDir, doc, string(data), headings)...)
+		bad = append(bad, scanDocForSectionRefs(ctx.RootDir, doc, data, headings)...)
 	}
 
 	if len(bad) == 0 {

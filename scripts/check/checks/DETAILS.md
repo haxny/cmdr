@@ -231,11 +231,12 @@ below for the section-aware patterns to follow.
 
 ## The shared source corpus
 
-The fast lane runs ~20 in-process source scanners, and before the corpus each one walked and read its own copy of the
-tree: the 16 Rust scanners each opened 1,100–2,600 `.rs` files, and `pluralize-noun` another 5,000 frontend and Rust
-files. Profiled alone and in sequence on the M1 Max agent box (2026-10-19, `go test -cpuprofile` over each `Run`), the
-`open` and `read` syscalls were 65% of their CPU and the regex engine most of the rest. One file open on macOS costs
-~100 µs, so the reads, not the matching, set the pace.
+The fast lane runs ~30 in-process source scanners, and before the corpus each one walked and read its own copy of the
+tree: the 16 Rust scanners each opened 1,100–2,600 `.rs` files, `pluralize-noun` another 5,000 frontend and Rust files,
+and seven doc lanes each read the same ~900 Markdown files and asked git for the same listing. Profiled alone and in
+sequence on the M1 Max agent box (2026-10-19, `go test -cpuprofile` over each `Run`), the `open` and `read` syscalls
+were 65% of their CPU and the regex engine most of the rest. One file open on macOS costs ~100 µs, so the reads, not the
+matching, set the pace.
 
 **`corpus` (`corpus.go`)** is a package-level, lazily filled memo keyed by absolute path, so it lives exactly as long as
 one `pnpm check` process:
@@ -247,8 +248,17 @@ one `pnpm check` process:
 - `corpus.ReadFile(path)` returns the contents as a `string` (immutable, so sharing is safe); `corpus.Lines(path)` the
   same split exactly as a `bufio.Scanner` loop splits it (`TestCorpusLinesMatchBufioScanner`), so a scanner's line
   numbers don't move when it switches.
+- `corpus.Exists(path)` is a remembered `os.Stat`, for link resolution: `docs-dead-links`, `docs-section-refs`, and the
+  doc graph stat the same targets thousands of times between them.
+- `corpus.GitLsFiles(root, args…)` runs `git ls-files -z <args>` once per distinct argument list. `repoFiles`,
+  `findMarkdownDocs`, the table-hygiene listing, and the dead-links suffix index all come from it, so the doc lanes stop
+  spawning one git each. The slice is shared: copy before sorting (`gitTrackedFiles` hands out a clone).
+- `readTrackedFile` reads through `corpus.ReadFile`, so every git-enumerating scanner shares the reads too.
 - Every entry is a `sync.OnceValues`, so two checks asking at once read once, and nothing is written after it's built.
   Lazy filling means a named run (`pnpm check error-string-match`) reads only its own tree.
+- **Gotcha for tests: one process reads each path once.** A test that rewrites a file and runs the scanner again on the
+  same root sees the first content; give the second run its own `t.TempDir()`
+  (`TestRunClaudeMdLength_PerFileBudgetOverride`).
 
 **`gateRegexp` (`literal-gate.go`)** wraps a `*regexp.Regexp` with a `strings.Contains` on the longest literal every
 match must contain, derived from the pattern's own syntax tree, so it can't drift from the pattern. Most source lines

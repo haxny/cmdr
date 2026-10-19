@@ -159,7 +159,7 @@ func RunDocsLinkText(ctx *CheckContext) (CheckResult, error) {
 			continue
 		}
 		scanned++
-		hits = append(hits, scanLinkText(rel, string(data))...)
+		hits = append(hits, scanLinkText(rel, data)...)
 	}
 
 	if len(hits) == 0 {

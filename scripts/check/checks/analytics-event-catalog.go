@@ -111,7 +111,7 @@ func findAnalyticsEmitters(rootDir string) ([]analyticsEmitter, error) {
 		if !fileExists(abs) {
 			continue
 		}
-		err := filepath.WalkDir(abs, func(path string, d os.DirEntry, err error) error {
+		err := corpus.WalkDir(abs, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -124,7 +124,7 @@ func findAnalyticsEmitters(rootDir string) ([]analyticsEmitter, error) {
 			if !isAnalyticsScannableFile(path) {
 				return nil
 			}
-			data, readErr := os.ReadFile(path)
+			data, readErr := corpus.ReadFile(path)
 			if readErr != nil {
 				return readErr
 			}
@@ -132,7 +132,7 @@ func findAnalyticsEmitters(rootDir string) ([]analyticsEmitter, error) {
 			if relErr != nil {
 				return relErr
 			}
-			for _, event := range analyticsEventsIn(string(data), filepath.Base(path)) {
+			for _, event := range analyticsEventsIn(data, filepath.Base(path)) {
 				found = append(found, analyticsEmitter{event: event, file: rel})
 			}
 			return nil

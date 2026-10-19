@@ -202,7 +202,7 @@ func RunI18nTransSnippetParity(ctx *CheckContext) (CheckResult, error) {
 		if !present {
 			continue
 		}
-		usages, dynamic := parseTransUsages(string(source))
+		usages, dynamic := parseTransUsages(source)
 		dynamicTotal += dynamic
 
 		for _, usage := range usages {

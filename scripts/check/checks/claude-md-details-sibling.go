@@ -2,7 +2,6 @@ package checks
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -80,11 +79,11 @@ func RunClaudeMdDetailsSibling(ctx *CheckContext) (CheckResult, error) {
 // claudeMdReferencesDetails reports whether the CLAUDE.md at path references a
 // DETAILS.md (Markdown link or backtick path).
 func claudeMdReferencesDetails(path string) (bool, error) {
-	data, err := os.ReadFile(path)
+	data, err := corpus.ReadFile(path)
 	if err != nil {
 		return false, err
 	}
-	return detailsRefRe.Match(data), nil
+	return detailsRefRe.MatchString(data), nil
 }
 
 // formatDetailsSiblingViolations builds the failure body listing each CLAUDE.md

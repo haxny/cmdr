@@ -105,7 +105,7 @@ func collectCatalogImports(rootDir string) (map[string]bool, error) {
 		if !present {
 			continue
 		}
-		for _, m := range uiPrimitiveImportPattern.FindAllStringSubmatch(string(data), -1) {
+		for _, m := range uiPrimitiveImportPattern.FindAllStringSubmatch(data, -1) {
 			imported[m[1]] = true
 		}
 	}

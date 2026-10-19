@@ -3,9 +3,9 @@ package checks
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -102,7 +102,7 @@ func RunDocsTableHygiene(ctx *CheckContext) (CheckResult, error) {
 			continue
 		}
 		scanned++
-		hits = append(hits, scanTableHygiene(rel, string(data))...)
+		hits = append(hits, scanTableHygiene(rel, data)...)
 	}
 
 	if len(hits) == 0 {
@@ -365,19 +365,11 @@ func inAgentFacingScope(rel string) bool {
 // gitListAllMarkdown lists tracked + untracked-not-ignored .md files. Returns
 // (nil, false) when rootDir isn't a git work tree.
 func gitListAllMarkdown(rootDir string) ([]string, bool) {
-	cmd := exec.Command("git", "-C", rootDir, "ls-files", "--cached", "--others",
-		"--exclude-standard", "-z", "--", "*.md")
-	out, err := cmd.Output()
+	docs, err := corpus.GitLsFiles(rootDir, markdownLsFilesArgs...)
 	if err != nil {
 		return nil, false
 	}
-	var docs []string
-	for _, rel := range strings.Split(string(out), "\x00") {
-		if rel != "" {
-			docs = append(docs, rel)
-		}
-	}
-	return docs, true
+	return slices.Clone(docs), true
 }
 
 // walkAllMarkdown is the non-git fallback: a filesystem walk of every .md file,

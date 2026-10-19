@@ -133,6 +133,56 @@ func TestCorpusWalkDirMatchesFilepathWalkDir(t *testing.T) {
 	}
 }
 
+// The doc scanners each asked git for the same listing; the corpus asks once per
+// distinct argument list, and a listing that fails stays an error (not a run
+// that "listed nothing").
+func TestCorpusGitLsFilesRunsOncePerArgs(t *testing.T) {
+	root := t.TempDir()
+	gitInit(t, root)
+	writeCorpusFixture(t, root, map[string]string{"a.md": "", "b.rs": "", "dir/c.md": ""})
+	gitRun(t, root, "add", ".")
+	c := newSourceCorpus()
+
+	all, err := c.GitLsFiles(root)
+	if err != nil {
+		t.Fatalf("ls-files: %v", err)
+	}
+	if want := []string{"a.md", "b.rs", "dir/c.md"}; !reflect.DeepEqual(all, want) {
+		t.Errorf("got %q, want %q", all, want)
+	}
+	docs, err := c.GitLsFiles(root, "--", "*.md")
+	if err != nil || !reflect.DeepEqual(docs, []string{"a.md", "dir/c.md"}) {
+		t.Errorf("md listing: %q, %v", docs, err)
+	}
+
+	writeCorpusFixture(t, root, map[string]string{"late.rs": ""})
+	gitRun(t, root, "add", ".")
+	if again, _ := c.GitLsFiles(root); !reflect.DeepEqual(again, all) {
+		t.Errorf("a second ask re-ran git: %q", again)
+	}
+
+	if _, err := c.GitLsFiles(t.TempDir()); err == nil {
+		t.Error("want an error outside a git work tree")
+	}
+}
+
+// Link resolution stats the same targets from several doc scanners.
+func TestCorpusExistsRemembersTheAnswer(t *testing.T) {
+	root := t.TempDir()
+	writeCorpusFixture(t, root, map[string]string{"here.md": ""})
+	c := newSourceCorpus()
+	here, missing := filepath.Join(root, "here.md"), filepath.Join(root, "missing.md")
+	if !c.Exists(here) || c.Exists(missing) || !c.Exists(root) {
+		t.Fatal("wrong first answers")
+	}
+	if err := os.Remove(here); err != nil {
+		t.Fatal(err)
+	}
+	if !c.Exists(here) {
+		t.Error("a second ask hit the disk")
+	}
+}
+
 // Checks run in parallel goroutines, so two scanners asking for the same file
 // at once must both get it, with no race (`go test -race` holds this).
 func TestCorpusIsSafeForConcurrentScanners(t *testing.T) {

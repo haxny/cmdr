@@ -333,7 +333,7 @@ func scanIpcUsage(rootDir string) (ipcScan, error) {
 		return s, err
 	}
 	if present {
-		s.commands = parseIpcBindingsCommands(string(bindings))
+		s.commands = parseIpcBindingsCommands(bindings)
 	}
 	sort.Slice(s.wrappers, func(i, j int) bool { return s.wrappers[i].name < s.wrappers[j].name })
 	return s, nil
@@ -360,7 +360,7 @@ func readIpcSources(rootDir, dir string, keep func(rel string) bool) ([]ipcSourc
 			return nil, err
 		}
 		if present {
-			out = append(out, ipcSource{rel: rel, src: stripIpcCommentLines(string(data))})
+			out = append(out, ipcSource{rel: rel, src: stripIpcCommentLines(data)})
 		}
 	}
 	return out, nil

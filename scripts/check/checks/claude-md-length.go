@@ -121,11 +121,11 @@ func loadClaudeMdLengthAllowlist(rootDir string) claudeMdLengthAllowlist {
 // countWords returns the whitespace-separated word count of a file. Matches
 // `wc -w` so seeded counts and the check agree.
 func countWords(path string) (int, error) {
-	data, err := os.ReadFile(path)
+	data, err := corpus.ReadFile(path)
 	if err != nil {
 		return 0, err
 	}
-	return len(strings.Fields(string(data))), nil
+	return len(strings.Fields(data)), nil
 }
 
 // shrinkwrapClaudeMdLengthAllowlist computes the stale-entry verdicts: dead

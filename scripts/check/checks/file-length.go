@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -467,11 +466,11 @@ func RunFileLength(ctx *CheckContext) (CheckResult, error) {
 // line (a generated bundle, a minified asset) is measured instead of erroring out
 // and silently dropping out of every scan that calls this.
 func countLines(path string) (int, error) {
-	data, err := os.ReadFile(path)
+	data, err := corpus.ReadFile(path)
 	if err != nil {
 		return 0, err
 	}
-	count := bytes.Count(data, []byte{'\n'})
+	count := strings.Count(data, "\n")
 	if len(data) > 0 && data[len(data)-1] != '\n' {
 		count++
 	}
