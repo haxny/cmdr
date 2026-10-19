@@ -51,7 +51,7 @@ const CONFLICT_BUDGET: Duration = Duration::from_secs(5);
 
 /// `fixture_budget`, or ten minutes when the scenario runs against a real
 /// account (`CMDR_S3_LIVE=1`, `s3_live_engine_test.rs`): a home uplink moves a
-/// 140 MiB upload in tens of seconds, not the fixture's two. The live runner
+/// 70 MiB upload in tens of seconds, not the fixture's two. The live runner
 /// goes through `cargo test`, so the nextest cap above doesn't apply there.
 pub(super) fn budget(fixture_budget: Duration) -> Duration {
     if std::env::var("CMDR_S3_LIVE").as_deref() == Ok("1") {

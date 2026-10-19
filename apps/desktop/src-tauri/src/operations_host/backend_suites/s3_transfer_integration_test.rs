@@ -175,15 +175,30 @@ async fn s3_integration_a_directory_tree_lands_intact_off_a_bucket_on_garage() {
 
 // ── Onto a bucket, and between buckets ───────────────────────────────
 
-/// Past one 64 MiB part, so the engine's copy onto S3 goes out as a multipart
-/// upload (three parts) through `CheckpointStream`.
-const MULTIPART_BYTES: usize = 140 * 1024 * 1024;
+/// The part floor the copy onto a bucket cuts at: S3's own minimum
+/// (`S3Volume::set_part_floor`), so a few megabytes make several parts.
+const SMALL_PART: usize = 5 * 1024 * 1024;
+
+/// Past three [`SMALL_PART`]s, so the engine's copy onto S3 goes out as a
+/// multipart upload through `CheckpointStream`, with a short tail the provider
+/// folds or keeps (`cmdr-s3`'s `ShortTail`).
+///
+/// ❗ Small parts, ❌ never production's 64 MiB ones: what's under test is the
+/// multipart path, not its throughput. At 140 MiB the copy alone took over the
+/// cell's 6 s settle budget on a CI runner, where VersityGW gets one CPU of
+/// four the whole suite shares (CI run 39321102740, 2026-10-19), and a starved
+/// gateway takes that long here too (`docker update --cpus 0.15`).
+const MULTIPART_BYTES: usize = 3 * SMALL_PART + 123_457;
 
 /// A local file onto a bucket at the final key (no `.cmdr-tmp-*` staging: S3
 /// publishes whole), as one PUT and as a multipart upload, each carrying the
 /// local file's own mtime.
 pub(super) async fn copying_onto_a_bucket_lands_every_byte_and_the_mtime(target: &S3Target) {
-    let (remote, prefix, dir) = place(target, "copy-onto").await;
+    let volume = target.connect(Some(target.bucket())).await;
+    volume.set_part_floor(SMALL_PART as u64);
+    let prefix = target.prefix("copy-onto");
+    let dir = volume.root().join(prefix.trim_end_matches('/'));
+    let remote: Arc<dyn Volume> = Arc::new(volume);
     let local_dir = TestDir::new("s3_copy_onto_bucket");
     let mtime = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::new(1_354_040_105, 250_000_000);
     for (name, len) in [("small.bin", PAYLOAD_BYTES), ("large.bin", MULTIPART_BYTES)] {
@@ -224,6 +239,17 @@ pub(super) async fn copying_onto_a_bucket_lands_every_byte_and_the_mtime(target:
                 .await,
             Some("1354040105.25".to_string()),
             "{name}: the local file's own date rides as x-amz-meta-mtime"
+        );
+        // A completed multipart upload's ETag ends in `-<part count>`; a PUT's
+        // is the bare MD5. Pins that the small floor really took the parts path.
+        let etag = target
+            .stored_etag(target.bucket(), &format!("{prefix}{name}"))
+            .await
+            .unwrap_or_else(|| panic!("{name}: the object has an ETag"));
+        assert_eq!(
+            etag.trim_matches('"').contains('-'),
+            len == MULTIPART_BYTES,
+            "{name}: only the large file goes out in parts (ETag {etag})"
         );
     }
     assert_no_staging_litter(remote.as_ref(), &dir, "a copy onto a bucket").await;

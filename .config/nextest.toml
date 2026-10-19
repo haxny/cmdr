@@ -85,8 +85,8 @@ sftp-bench = { max-threads = 1 }
 vision-model = { max-threads = 1 }
 # Every S3 fixture cell (the app crate's `s3_integration_` ones and `cmdr-s3`'s own).
 # They all talk to the one shared VersityGW + Garage stack, many move tens of MiB
-# (a 140 MiB multipart upload, a 1,005-object rename, a 70 MiB upload copied and
-# moved), and each lands in 1–5 s alone. Ninety-odd of them at full parallelism on a
+# (a 65 MiB download, a 1,005-object rename, a 70 MiB upload copied and moved),
+# and each lands in 1–5 s alone. Ninety-odd of them at full parallelism on a
 # loaded machine all hit the 8 s cap together (measured 2026-10-02, load average 9:
 # every one killed; at four at a time, every one green). Four at a time keeps the
 # stack busy without starving it; the 30 s cap below is the hang backstop.
@@ -552,8 +552,10 @@ retries = 2
 # (named `…_on_versitygw` / `…_on_garage`, plus the connection-drop and reconnect
 # cells): queued four at a time on the `s3-fixture` group (see its note above),
 # with the `smb_integration_` block's 30 s hang backstop. The slowest by design:
-# the 140 MiB multipart copy onto a bucket (7.2 s alone on Garage under a load
-# average of 10, 2026-10-01) and the 1,005-object rename. ❌ Don't read 30 s as a
+# the 1,005-object rename and the cells that move a 65 MiB or 70 MiB object. A
+# multipart cell cuts 5 MiB parts (`S3Volume::set_part_floor`) rather than
+# moving 64 MiB ones: a 140 MiB copy onto VersityGW outran its 6 s settle budget
+# on a CI runner (2026-10-19). ❌ Don't read 30 s as a
 # runtime, and ❌ don't raise the global cap for these: the queue is what keeps
 # them under it. A new `cmdr-s3` fixture cell keeps the `_on_<fixture>` suffix.
 filter = 'test(s3_integration_) | (package(cmdr-s3) & (test(_on_versitygw) | test(_on_garage) | test(connection_drop_test::) | test(reconnect_test::)))'
