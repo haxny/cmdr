@@ -37,13 +37,13 @@ consequences the code is shaped around:
   `shell_v2` is `DeviceTooOld`), then the hello (one `STAT` of `/`). A cancel ends the attempt where it stands and
   leaves nothing behind: no volume, no socket. `CONNECT_BUDGET` is 10 s, all phases together.
 - **A generation with no session behind it.** There's no session to rebuild, so `Volume::connection_generation` counts
-  the times a reconnect's hello brought a device that was DOWN back (`do_attempt_reconnect` → `ConnectionCell::revive`,
-  packed with the state in one atomic); a hello that finds the device already up, a failed hello, and a loss move
-  nothing. `noting` reads it before each operation, and `note_lost_session` marks the device gone only while that
-  generation is still current (`ConnectionCell::lose`), so an operation that started before the device came back can't
-  mark it gone again, and a transfer whose operation failed then sees the device live on a newer generation and runs it
-  again (`cmdr-operations`'s `transfer/volume_outage.rs`). The tracker's `note_device_gone` and a failed hello are
-  verdicts about the device NOW, so they move the state on whatever generation is current. Pinned by
+  the times a reconnect's hello brought a device that was DOWN back (`do_attempt_reconnect` →
+  `ConnectionReporter::revive`, packed with the state in one atomic); a hello that finds the device already up, a failed
+  hello, and a loss move nothing. `noting` reads it before each operation, and `note_lost_session` marks the device gone
+  only while that generation is still current (`ConnectionReporter::lose`), so an operation that started before the
+  device came back can't mark it gone again, and a transfer whose operation failed then sees the device live on a newer
+  generation and runs it again (`cmdr-operations`'s `transfer/volume_outage.rs`). The tracker's `note_device_gone` and a
+  failed hello are verdicts about the device NOW, so they move the state on whatever generation is current. Pinned by
   `volume/reconnect_test.rs`, against the fake server.
 
 ## The wire contract

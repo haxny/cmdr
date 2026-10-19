@@ -895,8 +895,8 @@ async fn a_late_loss_from_a_replaced_session_leaves_the_new_one_connected() {
         .noting(async {
             // While the call is out, a sibling's failure marks the old session
             // lost and a reconnect installs a new one.
-            assert!(volume.inner.lose_session(volume.inner.session_generation()));
-            volume.inner.session_installed();
+            assert!(volume.inner.connection.lose(volume.inner.connection.generation()));
+            volume.inner.connection.install();
             Err(cmdr_fs::volume::VolumeError::DeviceDisconnected(
                 "old session".to_string(),
             ))
@@ -904,7 +904,7 @@ async fn a_late_loss_from_a_replaced_session_leaves_the_new_one_connected() {
         .await;
 
     assert!(outcome.is_err(), "the call's own answer is passed through untouched");
-    assert_eq!(volume.inner.connection_state(), ConnectionState::Connected);
+    assert_eq!(volume.inner.connection.state(), ConnectionState::Connected);
     assert_eq!(
         reported(&events),
         vec![VolumeConnection::Disconnected, VolumeConnection::Connected],
@@ -920,7 +920,7 @@ async fn a_late_loss_from_a_replaced_session_leaves_the_new_one_connected() {
         })
         .await;
     assert!(outcome.is_err());
-    assert_eq!(volume.inner.connection_state(), ConnectionState::Disconnected);
+    assert_eq!(volume.inner.connection.state(), ConnectionState::Disconnected);
 }
 
 /// The reported generation moves only when a session is installed: ❌ not on a
@@ -930,13 +930,13 @@ async fn only_an_installed_session_moves_the_generation() {
     let (_events, _credentials, volume) = offline_volume(AuthRungUsed::Agent);
     let first = Volume::connection_generation(&volume).expect("an SFTP volume reports its generation");
 
-    volume.inner.lose_session(first);
+    volume.inner.connection.lose(first);
     assert!(
         volume.attempt_reconnect().await.is_err(),
         "nothing listens on the fixture's port"
     );
     assert_eq!(Volume::connection_generation(&volume), Some(first));
 
-    volume.inner.session_installed();
+    volume.inner.connection.install();
     assert_eq!(Volume::connection_generation(&volume), Some(first + 1));
 }

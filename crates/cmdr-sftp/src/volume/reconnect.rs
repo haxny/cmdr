@@ -132,7 +132,7 @@ impl SftpVolume {
         if !matches!(error, VolumeError::DeviceDisconnected(_)) {
             return;
         }
-        if !self.inner.lose_session(ran_on) {
+        if !self.inner.connection.lose(ran_on) {
             return;
         }
         let inner = Arc::clone(&self.inner);
@@ -237,7 +237,7 @@ impl SftpVolumeInner {
             )));
         }
         if self.session.read().await.is_some() {
-            if self.connection_state() == ConnectionState::Connected {
+            if self.connection.state() == ConnectionState::Connected {
                 return Ok(Rebuilt::AlreadyLive);
             }
             // ❗ The dead session a lost-session notice hasn't got round to
@@ -273,7 +273,7 @@ impl SftpVolumeInner {
                 *session = Some(Arc::new(connection));
                 self.set_auth_rung(rung);
                 self.auth_attempt_spent.store(false, Ordering::Relaxed);
-                self.session_installed();
+                self.connection.install();
                 drop(session);
                 info!(target: "volume", "sftp volume '{}' is back", self.volume_id);
                 Ok(Rebuilt::Dialed(rung))
@@ -310,7 +310,7 @@ impl SftpVolumeInner {
     /// read here is never stale.
     async fn drop_dead_session(&self) {
         let mut session = self.session.write().await;
-        if self.connection_state() != ConnectionState::Connected {
+        if self.connection.state() != ConnectionState::Connected {
             session.take();
         }
     }
@@ -347,7 +347,7 @@ impl SftpVolumeInner {
     /// forward — a loop against either would spend authentication attempts, or
     /// dial a server whose key stopped matching.
     pub(super) fn start_reconnect_loop_if_down(&self) {
-        if self.connection_state() != ConnectionState::Disconnected || self.unmounted.load(Ordering::Relaxed) {
+        if self.connection.state() != ConnectionState::Disconnected || self.unmounted.load(Ordering::Relaxed) {
             return;
         }
         let handle = self.self_handle();
@@ -395,11 +395,11 @@ impl SftpVolumeInner {
             // credentials, and a frontend that got one would open a sign-in box
             // over a setting the user chose.
             Stalled::AutoReconnectOff => {
-                self.emit_if_changed(ConnectionState::Disconnected);
+                self.connection.emit_if_changed(ConnectionState::Disconnected);
                 VolumeError::NotSupported
             }
             Stalled::NeedsUser => {
-                self.emit_if_changed(ConnectionState::NeedsCredentials);
+                self.connection.emit_if_changed(ConnectionState::NeedsCredentials);
                 VolumeError::PermissionDenied {
                     path: self.volume_id.clone(),
                     raw_os_error: None,
@@ -411,7 +411,7 @@ impl SftpVolumeInner {
                 // The key itself doesn't ride this event (the wire enum is
                 // payload-free); the user opens the server again and the connect
                 // command's typed outcome carries the fingerprint.
-                self.emit_if_changed(ConnectionState::NeedsHostKeyApproval);
+                self.connection.emit_if_changed(ConnectionState::NeedsHostKeyApproval);
                 warn!(
                     target: "volume",
                     "sftp volume '{}' presented a host key that isn't the trusted one; not reconnecting",
@@ -423,7 +423,7 @@ impl SftpVolumeInner {
                 }
             }
             Stalled::Transient(error) => {
-                self.emit_if_changed(ConnectionState::Disconnected);
+                self.connection.emit_if_changed(ConnectionState::Disconnected);
                 error
             }
         }
@@ -462,7 +462,7 @@ async fn run_reconnect_loop(handle: SelfHandle<SftpVolumeInner>) {
         let Some(inner) = still_worth_reconnecting(&handle) else {
             return;
         };
-        if inner.connection_state() == ConnectionState::Connected {
+        if inner.connection.state() == ConnectionState::Connected {
             debug!(target: "volume", "sftp volume '{}' is already back; loop done", inner.volume_id);
             return;
         }

@@ -306,7 +306,9 @@ interchangeable:
   (`crates/cmdr-operations/src/transfer/volume_outage.rs`). `connection_cell.rs`'s `ConnectionCell` is the shared half
   for the backends whose operations are their own liveness detector: the state and the generation in ONE atomic, so a
   call's loss flips only the session it started on (`lose`, a CAS) and only an install moves the generation (`install`
-  for a backend holding a session object, `revive` for one whose reconnect is a probe). SMB keeps its own `SessionCell`,
+  for a backend holding a session object, `revive` for one whose reconnect is a probe). `connection_reporter.rs`'s
+  `ConnectionReporter` wraps the cell with the volume's `Retirement` and its event sink, so those four backends report a
+  transition once and a retired volume reports nothing, from one copy of the rule. SMB keeps its own `SessionCell`,
   which hands the generation out on a lease.
 - **WHICH BACKEND serves it?** `BackendKind`, via `Volume::backend_kind()`. ❗ The one an "is this SMB?" test must ask.
   A `connection_state().is_some()` used that way hands an SFTP volume to the SMB indexer, which is exactly what happened

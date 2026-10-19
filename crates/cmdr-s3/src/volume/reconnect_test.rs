@@ -163,8 +163,8 @@ async fn a_late_loss_from_a_replaced_client_leaves_the_new_one_connected() {
         .noting(async {
             // While the call is out, a sibling's failure marks the old client
             // lost and a reconnect installs a new one.
-            assert!(volume.inner.lose_session(volume.inner.session_generation()));
-            volume.inner.session_installed();
+            assert!(volume.inner.connection.lose(volume.inner.connection.generation()));
+            volume.inner.connection.install();
             Err(VolumeError::DeviceDisconnected("old client".to_string()))
         })
         .await;
@@ -198,13 +198,13 @@ async fn only_an_installed_client_moves_the_generation() {
         .connection_generation()
         .expect("an S3 volume reports its generation");
 
-    volume.inner.lose_session(first);
+    volume.inner.connection.lose(first);
     assert!(
         volume.attempt_reconnect().await.is_err(),
         "nothing is stored to probe with"
     );
     assert_eq!(volume.connection_generation(), Some(first));
 
-    volume.inner.session_installed();
+    volume.inner.connection.install();
     assert_eq!(volume.connection_generation(), Some(first + 1));
 }

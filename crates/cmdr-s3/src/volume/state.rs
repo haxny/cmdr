@@ -1,12 +1,8 @@
-//! Where a volume's connection stands, and the rule that keeps the frontend
-//! from flickering.
+//! Where a volume's connection stands, in this backend's own states.
 //!
-//! **A backend reports transitions, never states.** A server that is down fails
-//! every request aimed at it, and reporting each failure would flood a frontend
-//! that acted on the first one. So every report goes through
-//! [`S3VolumeInner::emit_if_changed`], which swaps an atomic and stays quiet
-//! when the value didn't move. ❗ A retired volume stays silent: its id belongs
-//! to a newer instance now. The same model as `crates/cmdr-webdav`.
+//! The reporting rules (transitions, never states; a retired volume stays
+//! silent; a failing call loses only the client it ran on) belong to
+//! `cmdr_fs::volume::ConnectionReporter`, which every connecting backend shares.
 
 use cmdr_fs::volume::host::events::VolumeConnection;
 use cmdr_fs::volume::{CellState, Retirement, Retires, SelfHandle};
@@ -55,7 +51,7 @@ impl From<ConnectionState> for VolumeConnection {
 
 impl Retires for S3VolumeInner {
     fn retirement(&self) -> &Retirement {
-        &self.retirement
+        self.connection.retirement()
     }
 }
 
@@ -64,66 +60,5 @@ impl S3VolumeInner {
     /// asking whether the registry still serves it.
     pub(super) fn self_handle(&self) -> SelfHandle<S3VolumeInner> {
         SelfHandle::new(self.me.clone())
-    }
-
-    /// Where the connection stands right now.
-    pub(super) fn connection_state(&self) -> ConnectionState {
-        self.state.state()
-    }
-
-    /// The installed client's generation: what `Volume::connection_generation`
-    /// answers, and what a call reads BEFORE it runs to name the client it ran
-    /// on (`volume_impl.rs` § noting).
-    pub(super) fn session_generation(&self) -> u64 {
-        self.state.generation()
-    }
-
-    /// Records that the connection is gone ❗ without reporting it, for the
-    /// paths where the volume is LEAVING: the frontend learns through
-    /// `volumes-changed`, and a `disconnected` alongside it would race that
-    /// into a banner for a volume no longer in the sidebar.
-    pub(super) fn mark_gone_silently(&self) {
-        self.state.set(ConnectionState::Disconnected);
-    }
-
-    /// Moves to `next` and reports it, ❗ only if that is a change. Returns
-    /// whether anything moved, so a transition several tasks noticed at once
-    /// is acted on once. For a reconnect attempt's outcome; a failing call goes
-    /// through [`lose_session`](Self::lose_session).
-    pub(super) fn emit_if_changed(&self, next: ConnectionState) -> bool {
-        let moved = self.state.set(next);
-        if moved {
-            self.announce(next);
-        }
-        moved
-    }
-
-    /// The client generation `ran_on` found the server gone: `Connected` →
-    /// `Disconnected` and reported, ❗ only while `ran_on` is still the
-    /// installed client. Whether this call flipped it, so exactly one of the
-    /// requests meeting the same dead server starts the recovery.
-    pub(super) fn lose_session(&self, ran_on: u64) -> bool {
-        let moved = self.state.lose(ran_on);
-        if moved {
-            self.announce(ConnectionState::Disconnected);
-        }
-        moved
-    }
-
-    /// A rebuilt client is in place: the next generation and `Connected`, in
-    /// one step, reported if the state moved. Called under the same guard that
-    /// installs the client.
-    pub(super) fn session_installed(&self) {
-        if self.state.install() {
-            self.announce(ConnectionState::Connected);
-        }
-    }
-
-    /// Tells the host about a transition, ❗ unless retired: the id belongs to
-    /// a newer instance now.
-    fn announce(&self, state: ConnectionState) {
-        if !self.retirement.is_retired() {
-            self.host.events().connection_changed(&self.volume_id, state.into());
-        }
     }
 }

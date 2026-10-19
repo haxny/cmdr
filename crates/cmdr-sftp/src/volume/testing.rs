@@ -12,7 +12,6 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
-use cmdr_fs::volume::Retirement;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::credentials::InMemoryCredentials;
 use cmdr_fs::volume::host::host_keys::InMemoryHostKeys;
@@ -59,6 +58,7 @@ pub fn count_panics() -> PanicCount {
 /// wire answers `DeviceDisconnected`. Its id and app root come from `params`, the
 /// way a dial's would.
 pub fn offline_volume(name: &str, params: SftpConnectionParams, rung: AuthRungUsed, host: VolumeHost) -> SftpVolume {
+    let volume_id = cmdr_fs::volume::sftp_volume_id(&params.host, params.port, &params.username);
     SftpVolume {
         name: name.to_string(),
         root: RemoteRoot::new(
@@ -66,14 +66,13 @@ pub fn offline_volume(name: &str, params: SftpConnectionParams, rung: AuthRungUs
             &params.remote_root,
         ),
         inner: Arc::new_cyclic(|me| SftpVolumeInner {
-            volume_id: cmdr_fs::volume::sftp_volume_id(&params.host, params.port, &params.username),
+            volume_id: volume_id.clone(),
             params: std::sync::RwLock::new(params),
             rung: std::sync::Mutex::new(rung),
             session: tokio::sync::RwLock::new(None),
             // A volume with no session behind it is one whose session went away,
             // which is what the reconnect cells are about.
-            state: cmdr_fs::volume::ConnectionCell::new(ConnectionState::Connected),
-            retirement: Retirement::new(),
+            connection: cmdr_fs::volume::ConnectionReporter::new(&volume_id, &host, ConnectionState::Connected),
             me: me.clone(),
             reconnect_lock: tokio::sync::Mutex::new(()),
             unmounted: AtomicBool::new(false),

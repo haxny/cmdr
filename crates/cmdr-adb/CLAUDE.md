@@ -45,7 +45,7 @@ words.
   Android tooling); the app retires a departed serial's volume and revives a stopped tracker through
   `forget_start_attempt`. Operations remain the liveness detector in between.
 - **❗ Features are read once at connect** (`DeviceFeatures::fetch`). ❌ Never re-probe at a call site.
-- **❗ Report transitions, never states** (`volume/state.rs`); a retired volume reports nothing.
+- **❗ Report through `cmdr_fs::volume::ConnectionReporter`** (transitions only), ❌ never `host.events()`.
 - **❌ Never `cfg(test)`-gate a fixture; use `any(test, feature = "testing")`.** The app's ADB suites share
   `testing::FakeAdbServer` and `volume::testing`.
 

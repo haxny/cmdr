@@ -381,12 +381,12 @@ under ONE write guard, and `drop_dead_session` takes only under a non-`Connected
 the fresh one.
 
 ❗ **A failing call loses only the session it ran on.** Every installed session gets the next generation, packed with
-the state in one atomic (`cmdr_fs::volume::ConnectionCell`; `rebuild`'s install calls `session_installed` under the same
+the state in one atomic (`cmdr_fs::volume::ConnectionReporter`; `rebuild`'s install calls its `install` under the same
 guard). `noting` reads the generation BEFORE the call runs, and `note_lost_session` flips only while that generation is
-still installed (`lose_session`, a CAS), so a call that started on a session a reconnect has since replaced can't mark
-the fresh one lost, drop it, and hand every operation on it an outage. The read can only be older than the session the
-call took (a reconnect installing between the read and the call's `clone_session`), which at worst leaves a real loss
-for the next call to notice, never a healthy session marked lost. The same counter is what
+still installed (`ConnectionReporter::lose`, a CAS), so a call that started on a session a reconnect has since replaced
+can't mark the fresh one lost, drop it, and hand every operation on it an outage. The read can only be older than the
+session the call took (a reconnect installing between the read and the call's `clone_session`), which at worst leaves a
+real loss for the next call to notice, never a healthy session marked lost. The same counter is what
 `Volume::connection_generation` answers, so a transfer whose call failed on the old session sees the volume live on a
 newer one and runs the call again (`cmdr-operations`'s `transfer/volume_outage.rs`). Only an install moves it: ❌ not a
 loss, ❌ not a reconnect that found the session live or didn't take. A reconnect attempt's own outcome (`report`) moves
@@ -397,9 +397,9 @@ whole dial, so no newer session can be there to overwrite. Pinned by `reconnect_
 
 **The state is three-valued** (`state.rs`), where SMB's is two: `NeedsCredentials` is a state this backend RESTS in,
 because a rung that redials out of the secret store stops after one refusal and a keyboard-interactive one never dials
-at all. Every report goes through `emit_if_changed`, so a server that is down produces one event rather than one per
-failing operation, and a RETIRED volume reports nothing at all — its id belongs to a newer instance, and news under it
-would show a healthy volume as dropped.
+at all. Every report goes through the shared `ConnectionReporter`, so a server that is down produces one event rather
+than one per failing operation, and a RETIRED volume reports nothing at all — its id belongs to a newer instance, and
+news under it would show a healthy volume as dropped.
 
 **Retirement and the self-handle.** The loop outlives the call that started it, so it reaches its own state through a
 `SelfHandle<SftpVolumeInner>` and re-asks every iteration: a volume that was ejected or superseded stops answering.

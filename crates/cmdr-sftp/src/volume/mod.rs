@@ -18,7 +18,7 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
-use cmdr_fs::volume::{ConnectionCell, Retirement, VolumeError};
+use cmdr_fs::volume::{ConnectionReporter, VolumeError};
 use tokio_util::sync::CancellationToken;
 
 use crate::auth::{AuthRungUsed, UnattendedReconnect};
@@ -98,14 +98,10 @@ struct SftpVolumeInner {
     /// read guard and drives its operation without holding the lock: the SFTP
     /// engine multiplexes on one channel, so N operations genuinely overlap.
     session: tokio::sync::RwLock<Option<Arc<SshConnection>>>,
-    /// The state the host was last told about, so a server that is down doesn't
-    /// produce one event per failing operation, packed with the installed
-    /// session's generation so a replaced session's late error can't mark its
-    /// successor lost (`state.rs`).
-    state: ConnectionCell<ConnectionState>,
-    /// Whether the registry still serves this volume under its id. Read back by
-    /// the reconnect loop through a `SelfHandle`.
-    retirement: Retirement,
+    /// Where the connection stands, packed with the installed session's
+    /// generation, and the retirement flag that silences its reports
+    /// (`cmdr_fs::volume::ConnectionReporter`).
+    connection: ConnectionReporter<ConnectionState>,
     /// This state's own weak reference, for the background work that outlives the
     /// call that started it. Set by `Arc::new_cyclic`.
     me: Weak<SftpVolumeInner>,
@@ -235,7 +231,7 @@ impl SftpVolume {
     /// hangs forever. `transport.rs` has the full note.
     pub async fn disconnect(&self) {
         self.inner.unmounted.store(true, Ordering::Relaxed);
-        self.inner.mark_gone_silently();
+        self.inner.connection.mark_gone_silently();
         self.inner.session.write().await.take();
     }
 
@@ -336,8 +332,7 @@ pub async fn connect_sftp_volume(
                     params: std::sync::RwLock::new(params),
                     rung: std::sync::Mutex::new(rung),
                     session: tokio::sync::RwLock::new(Some(Arc::new(connection))),
-                    state: ConnectionCell::new(ConnectionState::Connected),
-                    retirement: Retirement::new(),
+                    connection: ConnectionReporter::new(volume_id, &host, ConnectionState::Connected),
                     me: me.clone(),
                     reconnect_lock: tokio::sync::Mutex::new(()),
                     unmounted: AtomicBool::new(false),

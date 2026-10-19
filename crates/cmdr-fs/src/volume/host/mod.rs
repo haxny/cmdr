@@ -156,6 +156,12 @@ impl VolumeHost {
         self.events.as_ref()
     }
 
+    /// The event sink itself, for a part of a backend that reports on its own
+    /// (`volume::ConnectionReporter`).
+    pub(crate) fn event_sink(&self) -> Arc<dyn VolumeEventSink> {
+        Arc::clone(&self.events)
+    }
+
     /// The OS secret store.
     pub fn credentials(&self) -> &dyn CredentialStore {
         self.credentials.as_ref()

@@ -521,7 +521,7 @@ async fn a_source_that_ends_early_never_reaches_the_users_filename() {
     // answers, and reading it that way would take the whole volume offline over
     // one stale size.
     assert_eq!(
-        volume.inner.connection_state(),
+        volume.inner.connection.state(),
         super::ConnectionState::Connected,
         "one wrong `size` must not flip the volume offline"
     );

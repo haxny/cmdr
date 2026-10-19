@@ -49,7 +49,7 @@ impl SftpVolume {
         &self,
         work: impl Future<Output = Result<T, VolumeError>> + Send,
     ) -> Result<T, VolumeError> {
-        let ran_on = self.inner.session_generation();
+        let ran_on = self.inner.connection.generation();
         let outcome = work.await;
         if let Err(error) = &outcome {
             self.note_lost_session(error, ran_on);
@@ -415,7 +415,7 @@ impl Volume for SftpVolume {
     /// ❗ Published because the reconnect loop outlives the call that started it,
     /// and the registry needs somewhere to write "you left".
     fn retirement(&self) -> Option<&Retirement> {
-        Some(&self.inner.retirement)
+        Some(self.inner.connection.retirement())
     }
 
     /// Retires this instance ❗ without touching the live session.
@@ -428,7 +428,7 @@ impl Volume for SftpVolume {
     /// loop, which the successor now owns. The session goes when the last `Arc`
     /// does.
     fn on_superseded(&self) {
-        self.inner.retirement.retire();
+        self.inner.connection.retirement().retire();
     }
 
     /// The volume is leaving the registry: stop reconnecting and let the session
@@ -442,7 +442,7 @@ impl Volume for SftpVolume {
         // ❗ Silently, and that closes the edge as well as skipping the event: an
         // in-flight operation failing a moment from now finds the state already
         // moved, so it can't report a disconnect for a volume that is leaving.
-        self.inner.mark_gone_silently();
+        self.inner.connection.mark_gone_silently();
         // Dropping the transport IS the shutdown, and it needs an async context to
         // take the session out of its lock. ❌ Never `Sftp::close()`: it awaits a
         // read task that a `russh` channel never ends, so it hangs forever.
@@ -458,7 +458,7 @@ impl Volume for SftpVolume {
     fn connection_state(&self) -> Option<cmdr_fs::volume::ConnectionState> {
         use crate::volume::ConnectionState;
         use cmdr_fs::volume::ConnectionState as Published;
-        Some(match self.inner.connection_state() {
+        Some(match self.inner.connection.state() {
             ConnectionState::Connected => Published::Direct,
             ConnectionState::Disconnected => Published::Disconnected,
             ConnectionState::NeedsCredentials => Published::NeedsSignIn,
@@ -469,7 +469,7 @@ impl Volume for SftpVolume {
     /// The installed session's generation, bumped only when a reconnect installs
     /// a rebuilt session (`reconnect.rs`).
     fn connection_generation(&self) -> Option<u64> {
-        Some(self.inner.session_generation())
+        Some(self.inner.connection.generation())
     }
 
     fn backend_kind(&self) -> cmdr_fs::volume::BackendKind {

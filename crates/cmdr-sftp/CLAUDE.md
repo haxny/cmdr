@@ -43,7 +43,7 @@ Cmdr's SFTP backend: one SSH connection and one SFTP channel per volume. No `tau
 - **❗ Operations ARE how a dead session is found** (no watcher here), so every wire-touching delegator in
   `volume_impl.rs` wraps itself in `noting`. ❌ Keep `build_config`'s keepalive: nothing else ends a wait on a silent
   server.
-- **❗ Report transitions, never states** (`state.rs`); a retired volume reports nothing.
+- **❗ Report through `cmdr_fs::volume::ConnectionReporter`** (transitions only), ❌ never `host.events()`.
 - **⚠️ A non-UTF-8 filename kills the SESSION**, not just the listing.
 - **❗ Every `#[ignore]`d test here is a Docker cell** (the lane runs `--run-ignored only`). ❌ Never gate on
   `cfg(test)`; use `any(test, feature = "testing")`.

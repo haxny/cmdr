@@ -2066,6 +2066,7 @@ mod channel_stream;
 mod child_name;
 mod connection;
 mod connection_cell;
+mod connection_reporter;
 mod entry_kind;
 mod error;
 mod ids;
@@ -2117,6 +2118,7 @@ pub use channel_stream::ChannelReadStream;
 pub use child_name::{ChildName, NotAChildName};
 pub use connection::{BackendKind, ConnectionState, DeviceReadiness, DeviceUnavailableReason, MountClass, SignInShape};
 pub use connection_cell::{CellState, ConnectionCell};
+pub use connection_reporter::ConnectionReporter;
 pub use entry_kind::EntryKind;
 pub use error::{ErrnoField, VolumeError};
 pub use ids::*;
@@ -2146,6 +2148,8 @@ pub use usb_speed::UsbSpeed;
 mod capabilities_test;
 #[cfg(test)]
 mod connection_cell_test;
+#[cfg(test)]
+mod connection_reporter_test;
 #[cfg(test)]
 mod entry_kind_test;
 #[cfg(test)]

@@ -4,7 +4,6 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use cmdr_fs::volume::Retirement;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::liveness::Timings;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
@@ -39,8 +38,7 @@ pub(super) fn make_test_volume_with(bucket: Option<&str>, host: VolumeHost) -> S
             volume_id: "s3-test".to_string(),
             params: std::sync::RwLock::new(params),
             client: tokio::sync::RwLock::new(None),
-            state: cmdr_fs::volume::ConnectionCell::new(ConnectionState::Connected),
-            retirement: Retirement::new(),
+            connection: cmdr_fs::volume::ConnectionReporter::new("s3-test", &host, ConnectionState::Connected),
             me: me.clone(),
             reconnect_lock: tokio::sync::Mutex::new(()),
             unmounted: AtomicBool::new(false),

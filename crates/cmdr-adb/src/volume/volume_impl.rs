@@ -46,7 +46,7 @@ impl AdbVolume {
         &self,
         work: impl Future<Output = Result<T, VolumeError>> + Send,
     ) -> Result<T, VolumeError> {
-        let ran_on = self.inner.generation();
+        let ran_on = self.inner.connection.generation();
         let outcome = work.await;
         if let Err(error) = &outcome {
             self.note_lost_session(error, ran_on);
@@ -361,17 +361,17 @@ impl Volume for AdbVolume {
     // ── Lifecycle ────────────────────────────────────────────────────
 
     fn retirement(&self) -> Option<&Retirement> {
-        Some(&self.inner.retirement)
+        Some(self.inner.connection.retirement())
     }
 
     fn on_superseded(&self) {
-        self.inner.retirement.retire();
+        self.inner.connection.retirement().retire();
     }
 
     /// ❌ No connection event: the frontend learns through `volumes-changed`.
     fn on_unmount(&self) {
         self.inner.unmounted.store(true, Ordering::Relaxed);
-        self.inner.mark_gone_silently();
+        self.inner.connection.mark_gone_silently();
     }
 
     /// Where the dialed device stands. ❗ Only two states: the device authorizes
@@ -381,7 +381,7 @@ impl Volume for AdbVolume {
     fn connection_state(&self) -> Option<cmdr_fs::volume::ConnectionState> {
         use crate::volume::ConnectionState;
         use cmdr_fs::volume::ConnectionState as Published;
-        Some(match self.inner.connection_state() {
+        Some(match self.inner.connection.state() {
             ConnectionState::Connected => Published::Direct,
             ConnectionState::Disconnected => Published::Disconnected,
         })
@@ -391,7 +391,7 @@ impl Volume for AdbVolume {
     /// There's no session to rebuild (one socket per operation), so this is the
     /// generation a transfer compares against.
     fn connection_generation(&self) -> Option<u64> {
-        Some(self.inner.generation())
+        Some(self.inner.connection.generation())
     }
 
     fn backend_kind(&self) -> cmdr_fs::volume::BackendKind {

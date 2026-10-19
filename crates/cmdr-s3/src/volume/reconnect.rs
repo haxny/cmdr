@@ -64,7 +64,7 @@ impl S3Volume {
         if !matches!(error, VolumeError::DeviceDisconnected(_)) {
             return;
         }
-        if !self.inner.lose_session(ran_on) {
+        if !self.inner.connection.lose(ran_on) {
             return;
         }
         let inner = Arc::clone(&self.inner);
@@ -98,7 +98,7 @@ impl S3VolumeInner {
     /// waiting on it. ❗ Only under a non-`Connected` state: a late task must
     /// never take the fresh client a reconnect just installed.
     fn drop_dead_client(&self, client: &mut Option<Arc<S3Client>>) {
-        if self.connection_state() == ConnectionState::Connected {
+        if self.connection.state() == ConnectionState::Connected {
             return;
         }
         if let Some(dead) = client.take() {
@@ -164,7 +164,7 @@ impl S3VolumeInner {
             if installed.is_some() {
                 // ❗ Live only while the state says so: under any other state
                 // it's the dead client whose drop is still on its way.
-                if self.connection_state() == ConnectionState::Connected {
+                if self.connection.state() == ConnectionState::Connected {
                     return Ok(());
                 }
                 self.drop_dead_client(&mut installed);
@@ -195,7 +195,7 @@ impl S3VolumeInner {
                 let mut installed = self.client.write().await;
                 *installed = Some(Arc::new(client));
                 self.auth_attempt_spent.store(false, Ordering::Relaxed);
-                self.session_installed();
+                self.connection.install();
                 drop(installed);
                 info!(target: "volume", "s3 volume '{}' is back", self.volume_id);
                 // An upload the outage cut off couldn't be aborted then.
@@ -231,7 +231,7 @@ impl S3VolumeInner {
     /// Starts the backoff loop for a volume that is down. ❗ Only from
     /// `Disconnected`: `NeedsCredentials` is a state a person moves forward.
     pub(super) fn start_reconnect_loop_if_down(&self) {
-        if self.connection_state() != ConnectionState::Disconnected || self.unmounted.load(Ordering::Relaxed) {
+        if self.connection.state() != ConnectionState::Disconnected || self.unmounted.load(Ordering::Relaxed) {
             return;
         }
         let handle = self.self_handle();
@@ -261,18 +261,18 @@ impl S3VolumeInner {
     fn report(&self, stalled: Stalled) -> VolumeError {
         match stalled {
             Stalled::AutoReconnectOff => {
-                self.emit_if_changed(ConnectionState::Disconnected);
+                self.connection.emit_if_changed(ConnectionState::Disconnected);
                 VolumeError::NotSupported
             }
             Stalled::NeedsUser => {
-                self.emit_if_changed(ConnectionState::NeedsCredentials);
+                self.connection.emit_if_changed(ConnectionState::NeedsCredentials);
                 VolumeError::PermissionDenied {
                     path: self.volume_id.clone(),
                     raw_os_error: None,
                 }
             }
             Stalled::Transient(error) => {
-                self.emit_if_changed(ConnectionState::Disconnected);
+                self.connection.emit_if_changed(ConnectionState::Disconnected);
                 error
             }
         }
@@ -302,7 +302,7 @@ async fn run_reconnect_loop(handle: SelfHandle<S3VolumeInner>) {
         let Some(inner) = handle.live().filter(|inner| !inner.unmounted.load(Ordering::Relaxed)) else {
             return;
         };
-        if inner.connection_state() == ConnectionState::Connected {
+        if inner.connection.state() == ConnectionState::Connected {
             return;
         }
         let volume_id = inner.volume_id.clone();

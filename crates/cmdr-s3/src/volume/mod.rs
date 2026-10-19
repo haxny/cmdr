@@ -20,7 +20,7 @@ use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
 use cmdr_fs::volume::liveness::Timings;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
-use cmdr_fs::volume::{ConnectionCell, Retirement, VolumeError};
+use cmdr_fs::volume::{ConnectionReporter, VolumeError};
 use tokio_util::sync::CancellationToken;
 
 use crate::multipart::MIN_PART_SIZE;
@@ -97,11 +97,10 @@ struct S3VolumeInner {
     /// The live client. `None` once a request found the server gone, at which
     /// point every operation fails fast rather than each one timing out.
     client: tokio::sync::RwLock<Option<Arc<S3Client>>>,
-    /// The state the host was last told about, packed with the installed
-    /// client's generation (`state.rs`).
-    state: ConnectionCell<ConnectionState>,
-    /// Whether the registry still serves this volume under its id.
-    retirement: Retirement,
+    /// Where the connection stands, packed with the installed session's
+    /// generation, and the retirement flag that silences its reports
+    /// (`cmdr_fs::volume::ConnectionReporter`).
+    connection: ConnectionReporter<ConnectionState>,
     /// This state's own weak reference, for background work. Set by
     /// `Arc::new_cyclic`.
     me: Weak<S3VolumeInner>,
@@ -194,7 +193,7 @@ impl S3Volume {
     /// shutdown, and the connection pool goes with it.
     pub async fn disconnect(&self) {
         self.inner.unmounted.store(true, Ordering::Relaxed);
-        self.inner.mark_gone_silently();
+        self.inner.connection.mark_gone_silently();
         self.inner.client.write().await.take();
     }
 
@@ -367,8 +366,7 @@ impl S3Volume {
                 volume_id: volume_id.to_string(),
                 params: std::sync::RwLock::new(params),
                 client: tokio::sync::RwLock::new(Some(Arc::new(client))),
-                state: ConnectionCell::new(ConnectionState::Connected),
-                retirement: Retirement::new(),
+                connection: ConnectionReporter::new(volume_id, &host, ConnectionState::Connected),
                 me: me.clone(),
                 reconnect_lock: tokio::sync::Mutex::new(()),
                 unmounted: AtomicBool::new(false),

@@ -20,9 +20,9 @@ fn watched() -> (Arc<RecordingVolumeEvents>, S3Volume) {
 #[test]
 fn a_state_that_did_not_move_reports_nothing() {
     let (events, volume) = watched();
-    assert!(volume.inner.emit_if_changed(ConnectionState::Disconnected));
-    assert!(!volume.inner.emit_if_changed(ConnectionState::Disconnected));
-    assert!(volume.inner.emit_if_changed(ConnectionState::Connected));
+    assert!(volume.inner.connection.emit_if_changed(ConnectionState::Disconnected));
+    assert!(!volume.inner.connection.emit_if_changed(ConnectionState::Disconnected));
+    assert!(volume.inner.connection.emit_if_changed(ConnectionState::Connected));
     let seen: Vec<VolumeConnection> = events.transitions().into_iter().map(|(_, state)| state).collect();
     assert_eq!(seen, vec![VolumeConnection::Disconnected, VolumeConnection::Connected]);
 }
@@ -30,7 +30,10 @@ fn a_state_that_did_not_move_reports_nothing() {
 #[test]
 fn a_transition_names_the_volume_it_is_about() {
     let (events, volume) = watched();
-    volume.inner.emit_if_changed(ConnectionState::NeedsCredentials);
+    volume
+        .inner
+        .connection
+        .emit_if_changed(ConnectionState::NeedsCredentials);
     let transitions = events.transitions();
     assert_eq!(transitions.len(), 1);
     assert_eq!(transitions[0].0, volume.volume_id());
@@ -41,7 +44,7 @@ fn a_transition_names_the_volume_it_is_about() {
 fn a_retired_volume_reports_nothing_under_an_id_it_no_longer_owns() {
     let (events, volume) = watched();
     volume.on_superseded();
-    assert!(volume.inner.emit_if_changed(ConnectionState::Disconnected));
+    assert!(volume.inner.connection.emit_if_changed(ConnectionState::Disconnected));
     assert!(events.transitions().is_empty());
 }
 
@@ -49,6 +52,6 @@ fn a_retired_volume_reports_nothing_under_an_id_it_no_longer_owns() {
 fn a_volume_that_left_silently_reports_no_later_disconnect() {
     let (events, volume) = watched();
     volume.on_unmount();
-    assert!(!volume.inner.emit_if_changed(ConnectionState::Disconnected));
+    assert!(!volume.inner.connection.emit_if_changed(ConnectionState::Disconnected));
     assert!(events.transitions().is_empty());
 }

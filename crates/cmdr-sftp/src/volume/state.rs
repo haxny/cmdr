@@ -1,21 +1,9 @@
-//! Where a volume's connection stands, and the rule that keeps the frontend from
-//! flickering.
+//! Where a volume's session stands: this backend's own states, and the rung the
+//! session came up on.
 //!
-//! **A backend reports transitions, never states.** A server that is down fails
-//! every operation aimed at it, and reporting each failure as news would flood a
-//! frontend that acted on the first one. So every report goes through
-//! [`SftpVolumeInner::emit_if_changed`], which swaps an atomic and stays quiet
-//! when the value didn't move.
-//!
-//! ❗ **A retired volume stays silent.** Once a newer instance owns the id, this
-//! one's news would describe a volume that no longer exists under that name, and
-//! the frontend would show a healthy server as dropped.
-//!
-//! ❗ **A failing call loses only the session it ran on.** The state shares one
-//! atomic with the session's generation (`cmdr_fs::volume::ConnectionCell`), so a
-//! late error from a session a reconnect already replaced can't mark the fresh
-//! one lost, drop it, and hand every operation on it an outage it never had
-//! ([`SftpVolumeInner::lose_session`]).
+//! The reporting rules (transitions, never states; a retired volume stays
+//! silent; a failing call loses only the session it ran on) belong to
+//! `cmdr_fs::volume::ConnectionReporter`, which every connecting backend shares.
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::host::events::VolumeConnection;
@@ -87,7 +75,7 @@ impl From<ConnectionState> for VolumeConnection {
 /// reaches back through.
 impl Retires for SftpVolumeInner {
     fn retirement(&self) -> &Retirement {
-        &self.retirement
+        self.connection.retirement()
     }
 }
 
@@ -98,12 +86,6 @@ impl SftpVolumeInner {
         SelfHandle::new(self.me.clone())
     }
 
-    /// Whether this volume has stopped owning its id: superseded by a newer
-    /// instance, or removed from the registry outright.
-    pub(super) fn is_retired(&self) -> bool {
-        self.retirement.is_retired()
-    }
-
     /// Which credential built the live session.
     pub(super) fn auth_rung(&self) -> AuthRungUsed {
         *self.rung.lock_ignore_poison()
@@ -112,73 +94,6 @@ impl SftpVolumeInner {
     /// Records the rung a fresh session came up on.
     pub(super) fn set_auth_rung(&self, rung: AuthRungUsed) {
         *self.rung.lock_ignore_poison() = rung;
-    }
-
-    /// Where the connection stands right now.
-    pub(super) fn connection_state(&self) -> ConnectionState {
-        self.state.state()
-    }
-
-    /// The installed session's generation: what `Volume::connection_generation`
-    /// answers, and what a call reads BEFORE it runs to name the session it ran
-    /// on (`volume_impl.rs` § noting).
-    pub(super) fn session_generation(&self) -> u64 {
-        self.state.generation()
-    }
-
-    /// Records that the session is gone ❗ without reporting it.
-    ///
-    /// For the two paths where the volume is LEAVING: the frontend learns through
-    /// `volumes-changed`, and a `disconnected` alongside it would race that into a
-    /// banner for a volume that is no longer in the sidebar. It also closes the
-    /// edge, so an in-flight operation failing a moment later finds the state
-    /// already moved and doesn't report one of its own.
-    pub(super) fn mark_gone_silently(&self) {
-        self.state.set(ConnectionState::Disconnected);
-    }
-
-    /// Moves to `next` and reports it, ❗ only if that is a change.
-    ///
-    /// Returns whether anything moved, which is what lets the caller act once on
-    /// a transition several threads noticed at the same moment. For a reconnect
-    /// attempt's outcome; a failing call goes through
-    /// [`lose_session`](Self::lose_session).
-    pub(super) fn emit_if_changed(&self, next: ConnectionState) -> bool {
-        let moved = self.state.set(next);
-        if moved {
-            self.announce(next);
-        }
-        moved
-    }
-
-    /// The session generation `ran_on` is gone: `Connected` → `Disconnected`
-    /// and reported, ❗ only while `ran_on` is still the installed session.
-    /// Whether this call flipped it, so exactly one of the operations meeting
-    /// the same dead session starts the recovery.
-    pub(super) fn lose_session(&self, ran_on: u64) -> bool {
-        let moved = self.state.lose(ran_on);
-        if moved {
-            self.announce(ConnectionState::Disconnected);
-        }
-        moved
-    }
-
-    /// A rebuilt session is in place: the next generation and `Connected`, in
-    /// one step, reported if the state moved. Called under the same guard that
-    /// installs the session.
-    pub(super) fn session_installed(&self) {
-        if self.state.install() {
-            self.announce(ConnectionState::Connected);
-        }
-    }
-
-    /// Tells the host about a transition, ❗ unless retired: a retired volume
-    /// still tracks its own state for whoever holds it, but the id belongs to
-    /// somebody else now.
-    fn announce(&self, state: ConnectionState) {
-        if !self.is_retired() {
-            self.host.events().connection_changed(&self.volume_id, state.into());
-        }
     }
 }
 

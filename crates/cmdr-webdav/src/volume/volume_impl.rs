@@ -66,7 +66,7 @@ impl WebdavVolume {
         // never a healthy client marked lost.
         let (client, ran_on) = {
             let installed = self.inner.client.read().await;
-            (installed.clone(), self.inner.session_generation())
+            (installed.clone(), self.inner.connection.generation())
         };
         let outcome = match client {
             // No client: the work answers `DeviceDisconnected` on its own, at once.
@@ -413,20 +413,20 @@ impl Volume for WebdavVolume {
     // ── Lifecycle ────────────────────────────────────────────────────
 
     fn retirement(&self) -> Option<&Retirement> {
-        Some(&self.inner.retirement)
+        Some(self.inner.connection.retirement())
     }
 
     /// Retires this instance ❗ without touching the live client: whoever still
     /// holds an `Arc` keeps using it. What retires is what belongs to the ID.
     fn on_superseded(&self) {
-        self.inner.retirement.retire();
+        self.inner.connection.retirement().retire();
     }
 
     /// The volume is leaving the registry. ❌ No connection event: the frontend
     /// learns through `volumes-changed`.
     fn on_unmount(&self) {
         self.inner.unmounted.store(true, Ordering::Relaxed);
-        self.inner.mark_gone_silently();
+        self.inner.connection.mark_gone_silently();
         let inner = Arc::clone(&self.inner);
         inner.host.runtime().clone().spawn(async move {
             inner.client.write().await.take();
@@ -439,7 +439,7 @@ impl Volume for WebdavVolume {
     fn connection_state(&self) -> Option<cmdr_fs::volume::ConnectionState> {
         use crate::volume::ConnectionState;
         use cmdr_fs::volume::ConnectionState as Published;
-        Some(match self.inner.connection_state() {
+        Some(match self.inner.connection.state() {
             ConnectionState::Connected => Published::Direct,
             ConnectionState::Disconnected => Published::Disconnected,
             ConnectionState::NeedsCredentials => Published::NeedsSignIn,
@@ -449,7 +449,7 @@ impl Volume for WebdavVolume {
     /// The installed client's generation, bumped only when a reconnect installs
     /// a rebuilt client (`reconnect.rs`).
     fn connection_generation(&self) -> Option<u64> {
-        Some(self.inner.session_generation())
+        Some(self.inner.connection.generation())
     }
 
     fn backend_kind(&self) -> cmdr_fs::volume::BackendKind {

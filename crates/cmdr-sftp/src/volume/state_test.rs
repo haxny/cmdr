@@ -30,10 +30,10 @@ fn watched() -> (Arc<RecordingVolumeEvents>, super::super::SftpVolume) {
 fn a_state_that_did_not_move_reports_nothing() {
     let (events, volume) = watched();
 
-    assert!(volume.inner.emit_if_changed(ConnectionState::Disconnected));
-    assert!(!volume.inner.emit_if_changed(ConnectionState::Disconnected));
-    assert!(!volume.inner.emit_if_changed(ConnectionState::Disconnected));
-    assert!(volume.inner.emit_if_changed(ConnectionState::Connected));
+    assert!(volume.inner.connection.emit_if_changed(ConnectionState::Disconnected));
+    assert!(!volume.inner.connection.emit_if_changed(ConnectionState::Disconnected));
+    assert!(!volume.inner.connection.emit_if_changed(ConnectionState::Disconnected));
+    assert!(volume.inner.connection.emit_if_changed(ConnectionState::Connected));
 
     let seen: Vec<VolumeConnection> = events.transitions().into_iter().map(|(_, state)| state).collect();
     assert_eq!(
@@ -47,7 +47,10 @@ fn a_state_that_did_not_move_reports_nothing() {
 #[test]
 fn a_transition_names_the_volume_it_is_about() {
     let (events, volume) = watched();
-    volume.inner.emit_if_changed(ConnectionState::NeedsCredentials);
+    volume
+        .inner
+        .connection
+        .emit_if_changed(ConnectionState::NeedsCredentials);
 
     let transitions = events.transitions();
     assert_eq!(transitions.len(), 1);
@@ -65,10 +68,10 @@ fn a_retired_volume_reports_nothing_under_an_id_it_no_longer_owns() {
     volume.on_superseded();
 
     assert!(
-        volume.inner.emit_if_changed(ConnectionState::Disconnected),
+        volume.inner.connection.emit_if_changed(ConnectionState::Disconnected),
         "the volume still knows where it stands, for whoever is still holding it"
     );
-    assert_eq!(volume.inner.connection_state(), ConnectionState::Disconnected);
+    assert_eq!(volume.inner.connection.state(), ConnectionState::Disconnected);
     assert!(
         events.transitions().is_empty(),
         "but it says nothing under an id somebody else owns"
@@ -104,13 +107,13 @@ async fn unmounting_says_nothing_and_leaves_no_edge_behind() {
 
     volume.on_unmount();
 
-    assert_eq!(volume.inner.connection_state(), ConnectionState::Disconnected);
+    assert_eq!(volume.inner.connection.state(), ConnectionState::Disconnected);
     assert!(events.transitions().is_empty(), "the sidebar is the only news here");
 
     // The moment after: an in-flight operation discovers the dead session.
     volume.note_lost_session(
         &cmdr_fs::volume::VolumeError::DeviceDisconnected("gone".to_string()),
-        volume.inner.session_generation(),
+        volume.inner.connection.generation(),
     );
     assert!(
         events.transitions().is_empty(),

@@ -153,21 +153,21 @@ clipboard in Rust and returns only the outcome, so the URL never reaches IPC or 
 ## Connection state and reconnect
 
 The WebDAV model, nearly line for line (`crates/cmdr-webdav/DETAILS.md` § "The reconnect model" and § "Silent or slow"
-have the reasoning): `Connected | Disconnected | NeedsCredentials`, transitions only through `emit_if_changed`, the
-first `DeviceDisconnected` flips the state once and starts a 2/5/15/30/60/120 s backoff when "reconnect automatically"
-is on, one unattended probe out of the store, and a refusal (`KeysRejected`, `AccessDenied`, `BucketListRefused`)
-latches `NeedsCredentials` until a person signs in. `reconnect_with_credentials(username, password)` takes the access
-key id as the username and refuses any other key (`NotSupported`): another key is another account. `sign_in_prompt` is
-`SignInShape::AccessKeys`. The silence watch is the shared `cmdr_fs::volume::liveness`, probing with an unsigned HEAD on
-the endpoint through the pool-free client.
+have the reasoning): `Connected | Disconnected | NeedsCredentials`, transitions only through the shared
+`ConnectionReporter`, the first `DeviceDisconnected` flips the state once and starts a 2/5/15/30/60/120 s backoff when
+"reconnect automatically" is on, one unattended probe out of the store, and a refusal (`KeysRejected`, `AccessDenied`,
+`BucketListRefused`) latches `NeedsCredentials` until a person signs in.
+`reconnect_with_credentials(username, password)` takes the access key id as the username and refuses any other key
+(`NotSupported`): another key is another account. `sign_in_prompt` is `SignInShape::AccessKeys`. The silence watch is
+the shared `cmdr_fs::volume::liveness`, probing with an unsigned HEAD on the endpoint through the pool-free client.
 
 ❗ **A failing request loses only the client it went out on**, and `Volume::connection_generation` answers which client
 the volume is on. S3 is stateless per request, so there's no server-side session to name; the generation counts
 installed CLIENTS instead, bumped only when `rebuild` installs one (an attended sign-in over a live client counts; a
 loss, a no-op reconnect, or a failed probe never does). `noting` reads it with the client before the call runs, and so
 does `delete_files` for the per-key loss it notes after the batch; `note_lost_session` flips only while that generation
-is still installed (`ConnectionCell::lose`). The same mechanism and its reasoning as WebDAV's (§ "The reconnect model"
-there). Pinned by `reconnect_test.rs` (`a_late_loss_from_a_replaced_client_*`,
+is still installed (`ConnectionReporter::lose`). The same mechanism and its reasoning as WebDAV's (§ "The reconnect
+model" there). Pinned by `reconnect_test.rs` (`a_late_loss_from_a_replaced_client_*`,
 `only_an_installed_client_moves_the_generation`, and the Docker cell
 `a_dropped_client_comes_back_on_an_unattended_probe`).
 

@@ -9,7 +9,7 @@ use std::sync::atomic::AtomicBool;
 
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::listings::RecordingListings;
-use cmdr_fs::volume::{Retirement, adb_app_root, adb_volume_id};
+use cmdr_fs::volume::{adb_app_root, adb_volume_id};
 use tokio_util::sync::CancellationToken;
 
 use super::{AdbVolume, AdbVolumeInner, ConnectionState, app_root_for, connect_adb_volume};
@@ -31,21 +31,25 @@ pub fn fixture_path(device: &str) -> PathBuf {
 /// A volume with no server behind it, for the pure paths (path translation,
 /// capability answers). Every wire-touching call on it fails.
 pub fn detached_volume() -> AdbVolume {
+    let host = VolumeHost::detached();
     let (root, paths) = app_root_for(FIXTURE_SERIAL);
     AdbVolume {
         name: "Fixture phone".to_string(),
         root,
         paths,
         inner: Arc::new(AdbVolumeInner {
+            connection: cmdr_fs::volume::ConnectionReporter::new(
+                &adb_volume_id(FIXTURE_SERIAL),
+                &host,
+                ConnectionState::Connected,
+            ),
             volume_id: adb_volume_id(FIXTURE_SERIAL),
             serial: FIXTURE_SERIAL.to_string(),
             endpoint: AdbEndpoint::at(std::net::SocketAddr::from(([127, 0, 0, 1], 1))),
             features: DeviceFeatures::all(),
-            state: cmdr_fs::volume::ConnectionCell::new(ConnectionState::Connected),
-            retirement: Retirement::new(),
             unmounted: AtomicBool::new(false),
             reconnect_lock: tokio::sync::Mutex::new(()),
-            host: VolumeHost::detached(),
+            host,
         }),
     }
 }

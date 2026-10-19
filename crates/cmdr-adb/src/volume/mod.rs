@@ -33,7 +33,7 @@ use std::time::Duration;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
-use cmdr_fs::volume::{ConnectionCell, Retirement, VolumeError, adb_app_root, adb_volume_id};
+use cmdr_fs::volume::{ConnectionReporter, VolumeError, adb_app_root, adb_volume_id};
 use tokio_util::sync::CancellationToken;
 
 use crate::devices::{AdbDeviceState, list_devices};
@@ -104,12 +104,10 @@ struct AdbVolumeInner {
     /// What the device's own ADB supports, read once at connect. ❌ Never
     /// re-probed at a call site: `adbd` doesn't change under a session.
     features: DeviceFeatures,
-    /// The state the host was last told about, so a device that is gone doesn't
-    /// produce one event per failing operation, packed with the generation a
-    /// call reads to say when it started (`state.rs`).
-    state: ConnectionCell<ConnectionState>,
-    /// Whether the registry still serves this volume under its id.
-    retirement: Retirement,
+    /// Where the connection stands, packed with the installed session's
+    /// generation, and the retirement flag that silences its reports
+    /// (`cmdr_fs::volume::ConnectionReporter`).
+    connection: ConnectionReporter<ConnectionState>,
     /// Set by `on_unmount`, so a reconnect in flight bails rather than reviving
     /// a volume the app has forgotten.
     unmounted: AtomicBool,
@@ -147,7 +145,7 @@ impl AdbVolume {
     /// so two same-named accessors returning two different enums would resolve by
     /// receiver type and silently hand a caller the wrong one.
     pub fn session_state(&self) -> ConnectionState {
-        self.inner.connection_state()
+        self.inner.connection.state()
     }
 
     /// Opens a fresh sync socket to the device.
@@ -237,13 +235,13 @@ pub async fn connect_adb_volume(
         },
     };
 
+    let volume_id = adb_volume_id(&params.serial);
     let inner = Arc::new(AdbVolumeInner {
-        volume_id: adb_volume_id(&params.serial),
+        connection: ConnectionReporter::new(&volume_id, &host, ConnectionState::Connected),
+        volume_id,
         serial: params.serial.clone(),
         endpoint: params.endpoint.clone(),
         features,
-        state: ConnectionCell::new(ConnectionState::Connected),
-        retirement: Retirement::new(),
         unmounted: AtomicBool::new(false),
         reconnect_lock: tokio::sync::Mutex::new(()),
         host,
