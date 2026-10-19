@@ -8,6 +8,7 @@
 #   ./scripts/e2e-linux.sh               # Run tests
 #   ./scripts/e2e-linux.sh --build       # Force rebuild Docker images (base with --no-cache)
 #   ./scripts/e2e-linux.sh --build-only  # Build Docker images, then exit (no tests)
+#   ./scripts/e2e-linux.sh --build-app-only  # Build images + the Tauri binary, then exit (CI cache warm)
 #   ./scripts/e2e-linux.sh --shell       # Start interactive shell in container
 #   ./scripts/e2e-linux.sh --vnc         # Interactive VNC mode with hot reload
 #   ./scripts/e2e-linux.sh --clean       # Clean Linux build cache
@@ -177,6 +178,7 @@ log_error() {
 # Parse arguments
 FORCE_BUILD=false
 BUILD_ONLY=false
+BUILD_APP_ONLY=false
 INTERACTIVE=false
 VNC_MODE=false
 CLEAN=false
@@ -191,6 +193,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --build-only)
             BUILD_ONLY=true
+            shift
+            ;;
+        --build-app-only)
+            BUILD_APP_ONLY=true
             shift
             ;;
         --shell)
@@ -220,6 +226,8 @@ while [[ $# -gt 0 ]]; do
             echo "  --build           Force rebuild of Docker images (base with --no-cache; rarely"
             echo "                    needed — the base auto-rebuilds when Dockerfile.base changes)"
             echo "  --build-only      Build Docker images, then exit without running tests"
+            echo "  --build-app-only  Build Docker images and the Tauri binary, then exit without"
+            echo "                    running tests (CI's main-branch cache warm uses this)"
             echo "  --shell           Start interactive shell in container"
             echo "  --vnc             Interactive VNC mode with hot reload (pnpm dev)"
             echo "  --clean           Clean this checkout's Linux build cache (forces rebuild);"
@@ -430,6 +438,13 @@ if [ -z "$LINUX_TARGET" ]; then
 fi
 
 log_info "Using Linux target: $LINUX_TARGET"
+
+# The cache-warm job on `main` wants the build artifacts in the cache dirs and
+# nothing else: no fixture stacks, no app launch, no tests.
+if $BUILD_APP_ONLY; then
+    log_info "App built (--build-app-only); skipping tests."
+    exit 0
+fi
 
 # The binary path inside the container (target volume is mounted at /target)
 # The binary is named "Cmdr" (capital C) not "cmdr"

@@ -63,6 +63,11 @@ In the `ci.yml` `desktop-e2e-linux` job, runners start fresh, so the base image 
 script builds the base, and an `Export E2E base image` step re-creates the tar for the cache post-step. No registry
 involved.
 
+A PR can read only its own and `main`'s caches, and a verified `main` push skips the E2E lane, so `ci.yml`'s
+`warm-e2e-linux-cache` job rebuilds both E2E caches on `main` (through `e2e-linux.sh --build-app-only`: images plus the
+Tauri binary, no fixtures, no tests) whenever the current key has no entry there. Without it, each new PR's first run
+built cold, ~21 min against ~11 (`docs/tooling/ci.md` § Build caching).
+
 ### Volumes (cargo, target, node_modules, .svelte-kit)
 
 One volume is global, because it's content-addressed and expensive to refill:

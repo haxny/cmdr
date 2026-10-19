@@ -622,8 +622,8 @@ jobs:
   desktop-e2e-linux:
     name: E2E tests (Playwright, Linux)
     runs-on: ubuntu-latest
-    # ~13 min build + ~6 min for 313 tests on a green run, so 40 leaves room for a slow
-    # runner and a cold Docker cache while still cutting a runaway short.
+    # ~12 min warm build + ~8.5 min for 455 tests on a green run (a cold build is ~21
+    # min), so 40 leaves room for a slow runner while still cutting a runaway short.
     timeout-minutes: 40
     # Gated ONLY on change detection — not on desktop-rust OR desktop-svelte:
     # - desktop-rust: independent. A Rust unit-test failure shouldn't skip e2e
@@ -646,19 +646,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # The runner ships ~14 GB free; this job holds the ~3.5 GB E2E base image
-      # AND (on a base-cache miss) its docker-save tar at the same time, on top
-      # of the cargo/target bind-mount caches and the SMB container images.
-      # Reclaim unused preinstalled SDKs up front, same as desktop-rust.
-      # Best-effort (`|| true`): dir names drift across runner images.
-      - name: Free disk space
+      # No "Free disk space" step: it cost ~1.6 min a run for room this job doesn't
+      # need. The runner's root disk is 145 GB, and every one of 109 runs
+      # (2026-10-12 to 2026-10-19, #557) showed 107–108 GB free AFTER the reclaim,
+      # which only ever removed preinstalled SDKs (tens of GB at most). This job
+      # peaks at roughly 15 GB: the base image plus its tar on a miss, the
+      # cargo/target caches, and the fixture images. The `df` keeps the headroom
+      # visible in the log; if it ever runs tight, bring the reclaim back.
+      - name: Prepare Docker cache dirs
         run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/share/swift /opt/hostedtoolcache/CodeQL || true
+          mkdir -p /tmp/cmdr-docker-cache/cargo /tmp/cmdr-docker-cache/target /tmp/cmdr-docker-base-image
           df -h /
 
-      - name: Prepare Docker cache dirs
-        run: mkdir -p /tmp/cmdr-docker-cache/cargo /tmp/cmdr-docker-cache/target /tmp/cmdr-docker-base-image
-
+      # Restores main's entry on a PR (a PR can read its base branch's caches, never
+      # another PR's); `warm-e2e-linux-cache` below keeps that entry alive.
       - name: Cache Cargo + target (via host bind mounts into Docker)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -739,6 +740,116 @@ jobs:
           path: apps/desktop/test/e2e-playwright/test-results/
           if-no-files-found: error
           retention-days: 7
+
+  # ===========================================
+  # Keep the E2E build cache warm on main
+  # ===========================================
+  # A PR can restore its base branch's caches but never another PR's. Since a verified
+  # `main` push skips every lane, `desktop-e2e-linux` stopped running on `main`, so no
+  # main-scoped `Linux-docker-e2e-*` entry existed and each new PR's first E2E run
+  # built cold: ~21 min instead of ~11, 4 of 9 PR runs on 2026-10-19 (#557). This job
+  # rebuilds the two E2E caches on `main` whenever an entry for the current key is
+  # missing, and costs ~20 s when both are there.
+  # - Post-land, so `ci-ok` doesn't wait for it (exempt in `ciOKGateExempt`); a
+  #   failure here costs the next PR a cold build, nothing more.
+  # - Skips when the E2E lane itself runs on this push: that job saves the same keys.
+  # - The cache `path`s and keys MUST match `desktop-e2e-linux` byte for byte, or the
+  #   entries it saves are invisible to the lane (a cache's version hashes its paths).
+  warm-e2e-linux-cache:
+    name: Warm E2E build cache
+    runs-on: ubuntu-latest
+    # A cold build is ~22 min; 45 leaves room for a slow runner.
+    timeout-minutes: 45
+    needs: changes
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.result == 'success' &&
+      needs.changes.outputs.desktop != 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Look up the E2E Cargo + target cache
+        id: target-lookup
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            /tmp/cmdr-docker-cache/cargo
+            /tmp/cmdr-docker-cache/target
+          key: ${{ runner.os }}-docker-e2e-${{ hashFiles('Cargo.lock') }}
+          lookup-only: true
+
+      - name: Look up the E2E base image cache
+        id: base-lookup
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/cmdr-docker-base-image
+          key: ${{ runner.os }}-e2e-base-image-${{ hashFiles('apps/desktop/test/e2e-linux/docker/Dockerfile.base') }}
+          lookup-only: true
+
+      - name: Decide whether to warm
+        id: decide
+        env:
+          TARGET_HIT: ${{ steps.target-lookup.outputs.cache-hit }}
+          BASE_HIT: ${{ steps.base-lookup.outputs.cache-hit }}
+        run: |
+          if [[ "$TARGET_HIT" == "true" && "$BASE_HIT" == "true" ]]; then
+            echo "Both E2E caches exist on main for the current keys; nothing to warm."
+            echo "warm=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "warm=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      # From here on, the same cache steps as `desktop-e2e-linux` (see its comments).
+      - name: Prepare Docker cache dirs
+        if: steps.decide.outputs.warm == 'true'
+        run: |
+          mkdir -p /tmp/cmdr-docker-cache/cargo /tmp/cmdr-docker-cache/target /tmp/cmdr-docker-base-image
+          df -h /
+
+      - name: Cache Cargo + target (via host bind mounts into Docker)
+        if: steps.decide.outputs.warm == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            /tmp/cmdr-docker-cache/cargo
+            /tmp/cmdr-docker-cache/target
+          key: ${{ runner.os }}-docker-e2e-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-e2e-
+
+      - name: Cache E2E Docker base image
+        id: base-image-cache
+        if: steps.decide.outputs.warm == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/cmdr-docker-base-image
+          key: ${{ runner.os }}-e2e-base-image-${{ hashFiles('apps/desktop/test/e2e-linux/docker/Dockerfile.base') }}
+
+      - name: Load E2E base image from cache
+        if: steps.decide.outputs.warm == 'true' && steps.base-image-cache.outputs.cache-hit == 'true'
+        run: |
+          docker load -i /tmp/cmdr-docker-base-image/base.tar
+          rm /tmp/cmdr-docker-base-image/base.tar
+
+      - name: Build the E2E app in Docker
+        if: steps.decide.outputs.warm == 'true'
+        run: ./scripts/e2e-linux.sh --build-app-only
+        working-directory: ./apps/desktop
+        env:
+          CARGO_VOLUME: /tmp/cmdr-docker-cache/cargo
+          TARGET_VOLUME: /tmp/cmdr-docker-cache/target
+
+      - name: Export E2E base image for the cache save
+        if: always() && steps.decide.outputs.warm == 'true' && steps.base-image-cache.outputs.cache-hit != 'true'
+        run: |
+          if [ -n "$(docker image ls -q cmdr-e2e-base)" ]; then
+            docker save cmdr-e2e-base -o /tmp/cmdr-docker-base-image/base.tar
+          fi
+
+      - name: Reclaim cache dir ownership for the save step
+        if: always() && steps.decide.outputs.warm == 'true'
+        run: sudo chown -R "$(id -u):$(id -g)" /tmp/cmdr-docker-cache
 
   # ===========================================
   # Website
@@ -1203,7 +1314,8 @@ jobs:
   # ===========================================
   # `main`'s ruleset requires this job's check by its NAME, `CI OK`, so ❌ don't rename it. It must
   # report on every run, never be skipped: GitHub counts a skipped required check as passing.
-  # - `needs` lists every job but `deploy-website` (`ci-coverage` enforces it). `changes` belongs
+  # - `needs` lists every job but the post-land `deploy-website` and `warm-e2e-linux-cache`
+  #   (`ci-coverage` enforces it). `changes` belongs
   #   here too: when it fails, every lane is skipped, and the gate used to read that as green.
   # - `always()`, not `!cancelled()`, so a cancelled run reports red instead of skipped.
   # - Only `success` and `skipped` pass. A lane skipped by change detection is fine; `changes`

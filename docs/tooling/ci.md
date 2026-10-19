@@ -109,17 +109,21 @@ silent** (a warning, not a red job):
   ownership" step.** The Docker build runs as root and writes the bind-mounted dirs as root; the actions/cache post-step
   runs as the runner user, so `tar` can't read them and the **save fails as a warning** — which is exactly why this
   cache never persisted for months (every e2e run did a cold ~10-min build). A `chown` back to the runner after the
-  Docker run fixes it (warm e2e build ~10 min vs ~16-17 cold). If e2e ever starts building cold again, check that the
-  save isn't warning "Permission denied" again.
+  Docker run fixes it (warm e2e build ~11 min vs ~21 cold). If e2e ever starts building cold again, check that the save
+  isn't warning "Permission denied" again. **Second companion: the `warm-e2e-linux-cache` job.** A PR restores only its
+  own or `main`'s caches, and a verified `main` push skips the lane, so without it no main-scoped entry exists and every
+  new PR's first run builds cold (4 of 9 PR runs on 2026-10-19, #557). It runs post-land on `main`, rebuilds either E2E
+  cache only when the current key has no entry, and is exempt from `ci-ok` (`ciOKGateExempt`). Its cache `path`s and
+  keys must stay identical to the lane's.
 - **`desktop-e2e-linux` base image**: the E2E Docker base image (apt packages + Node + Rust; see
   `apps/desktop/test/e2e-linux/DETAILS.md` § "Build caching") cached as a `docker save` tar, keyed on
   `hashFiles(Dockerfile.base)` with **no restore-keys** (a stale tar's image carries a different content-hash tag, so
-  `e2e-linux.sh` would rebuild anyway). Saves the cold ~4-min image build per run. **Load-bearing companions: the "Free
-  disk space" step and the "Export E2E base image" step.** The job briefly holds the loaded image (~3.5 GB) plus, on a
-  cache miss, its tar — without the SDK reclaim that can overflow the runner's ~14 GB free disk. The export step is what
-  puts the tar on disk for the cache post-step; without it the cache saves an empty dir and every run builds cold
-  (silently — the cache "hits" but contains nothing, which is why the load step would fail loudly on a missing tar
-  rather than soft-skip).
+  `e2e-linux.sh` would rebuild anyway). Saves the cold ~4-min image build per run. **Load-bearing companion: the "Export
+  E2E base image" step.** (The job has no "Free disk space" step: the runner's root disk is 145 GB with 107+ GB free,
+  measured on 109 runs in October 2026, and the reclaim cost ~1.6 min a run, #557.) The export step is what puts the tar
+  on disk for the cache post-step; without it the cache saves an empty dir and every run builds cold (silently — the
+  cache "hits" but contains nothing, which is why the load step would fail loudly on a missing tar rather than
+  soft-skip).
 - **`slow-checks` dependency-checks**: rust-cache for cargo-udeps's nightly `target/`, plus the same "Free disk space"
   step. Kept alive by the 6-day cron (below).
 
@@ -130,9 +134,12 @@ least-used. Protect the per-push `desktop-rust` cache first; the weekly nightly 
 Watch with `gh cache list`.
 
 **Critical path.** The per-push wall clock is the longest single job, because `desktop-e2e-linux` gates only on change
-detection (not on `desktop-svelte`) and so starts at t=0 alongside everything else. E2E (~10 min warm) is that floor.
-Don't re-add a `needs: desktop-svelte` to the e2e job — it only added ~4 min of latency for a compute-saving skip that
-isn't worth it (see the comment on the job).
+detection (not on `desktop-svelte`) and so starts at t=0 alongside everything else. E2E is usually that floor. Measured
+over 109 runs (2026-10-12 to 2026-10-19, #557), a warm E2E job is ~24.5 min: ~1.3 setup, ~12 build (the final `cmdr`
+crate alone ~10), ~8.5 tests (455, one worker). The Rust lanes run 21–27 min, so they share the floor once E2E drops
+much below that; sharding the E2E tests (−3 to −4 min) only pays off after they shrink too. Don't re-add a
+`needs: desktop-svelte` to the e2e job — it only added ~4 min of latency for a compute-saving skip that isn't worth it
+(see the comment on the job).
 
 ## Slow checks cadence
 

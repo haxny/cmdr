@@ -13,8 +13,9 @@ const ciOKJobID = "ci-ok"
 // ciOKGateExempt names the ci.yml jobs `ci-ok` deliberately doesn't wait for, each with
 // its reason. Everything else must be in its `needs`.
 var ciOKGateExempt = map[string]string{
-	ciOKJobID:        "the gate itself",
-	"deploy-website": "a post-land deploy on `main` pushes, not a check; a PR never runs it",
+	ciOKJobID:              "the gate itself",
+	"deploy-website":       "a post-land deploy on `main` pushes, not a check; a PR never runs it",
+	"warm-e2e-linux-cache": "a post-land cache warm on `main` pushes, not a check; a failure only costs the next PR a cold E2E build",
 }
 
 // validateCIOKGate is rule 5: `ci-ok` is the one required check, so it must see every
