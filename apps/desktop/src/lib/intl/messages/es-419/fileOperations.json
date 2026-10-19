@@ -107,6 +107,10 @@
   "@fileOperations.transferProgress.rollbackTooltipStopAndMoveBack": {
     "sourceHash": "3c227c1"
   },
+  "fileOperations.transferProgress.rowsStillSettlingToast": "La lista de aquí todavía se está actualizando, así que no empezó nada. Inténtalo de nuevo en un momento.",
+  "@fileOperations.transferProgress.rowsStillSettlingToast": {
+    "sourceHash": "d22b221"
+  },
   "fileOperations.transferProgress.queueTooltip": "Mantenla en ejecución en segundo plano y adminístrala en la cola de operaciones (F2)",
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "69a623d"

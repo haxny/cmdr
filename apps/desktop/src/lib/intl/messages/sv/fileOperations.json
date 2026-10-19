@@ -873,6 +873,10 @@
   "@fileOperations.transferProgress.operationBlockedToast": {
     "sourceHash": "bc6efa8"
   },
+  "fileOperations.transferProgress.rowsStillSettlingToast": "Listan här uppdateras fortfarande, så inget startade. Försök igen om en stund.",
+  "@fileOperations.transferProgress.rowsStillSettlingToast": {
+    "sourceHash": "b91f199"
+  },
   "fileOperations.rollbackConfirm.title": "Ångra den här åtgärden?",
   "@fileOperations.rollbackConfirm.title": {
     "sourceHash": "13ff3ea"

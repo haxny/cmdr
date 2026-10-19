@@ -872,6 +872,10 @@
   "@fileOperations.transferProgress.operationBlockedToast": {
     "sourceHash": "bc6efa8"
   },
+  "fileOperations.transferProgress.rowsStillSettlingToast": "Этот список еще обновляется, поэтому ничего не запущено. Попробуйте еще раз чуть позже.",
+  "@fileOperations.transferProgress.rowsStillSettlingToast": {
+    "sourceHash": "b91f199"
+  },
   "fileOperations.rollbackConfirm.title": "Откатить эту операцию?",
   "@fileOperations.rollbackConfirm.title": {
     "sourceHash": "13ff3ea"

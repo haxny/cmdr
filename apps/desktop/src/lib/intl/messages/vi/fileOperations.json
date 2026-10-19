@@ -872,6 +872,10 @@
   "@fileOperations.transferProgress.operationBlockedToast": {
     "sourceHash": "bc6efa8"
   },
+  "fileOperations.transferProgress.rowsStillSettlingToast": "Danh sách ở đây vẫn đang cập nhật, nên chưa có gì bắt đầu. Hãy thử lại sau giây lát.",
+  "@fileOperations.transferProgress.rowsStillSettlingToast": {
+    "sourceHash": "b91f199"
+  },
   "fileOperations.rollbackConfirm.title": "Hoàn tác thao tác này?",
   "@fileOperations.rollbackConfirm.title": {
     "sourceHash": "13ff3ea"

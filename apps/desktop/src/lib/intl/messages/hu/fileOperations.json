@@ -873,6 +873,10 @@
   "@fileOperations.transferProgress.operationBlockedToast": {
     "sourceHash": "bc6efa8"
   },
+  "fileOperations.transferProgress.rowsStillSettlingToast": "Ez a lista még frissül, ezért semmi nem indult el. Próbáld újra egy pillanat múlva.",
+  "@fileOperations.transferProgress.rowsStillSettlingToast": {
+    "sourceHash": "b91f199"
+  },
   "fileOperations.rollbackConfirm.title": "Visszagörgeted ezt a műveletet?",
   "@fileOperations.rollbackConfirm.title": {
     "sourceHash": "13ff3ea"

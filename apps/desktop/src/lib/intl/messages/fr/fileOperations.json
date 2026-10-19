@@ -875,6 +875,10 @@
   "@fileOperations.transferProgress.operationBlockedToast": {
     "sourceHash": "bc6efa8"
   },
+  "fileOperations.transferProgress.rowsStillSettlingToast": "La liste affichée ici se met encore à jour, rien n’a donc démarré. Réessayez dans un instant.",
+  "@fileOperations.transferProgress.rowsStillSettlingToast": {
+    "sourceHash": "b91f199"
+  },
   "fileOperations.rollbackConfirm.title": "Revenir en arrière sur cette opération ?",
   "@fileOperations.rollbackConfirm.title": {
     "sourceHash": "13ff3ea"

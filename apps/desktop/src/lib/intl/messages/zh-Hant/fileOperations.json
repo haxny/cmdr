@@ -871,6 +871,10 @@
   "@fileOperations.transferProgress.operationBlockedToast": {
     "sourceHash": "bc6efa8"
   },
+  "fileOperations.transferProgress.rowsStillSettlingToast": "這裡的列表還在更新，所以什麼都還沒開始。請稍後再試一次。",
+  "@fileOperations.transferProgress.rowsStillSettlingToast": {
+    "sourceHash": "b91f199"
+  },
   "fileOperations.rollbackConfirm.title": "要把這項操作復原嗎？",
   "@fileOperations.rollbackConfirm.title": {
     "sourceHash": "13ff3ea"

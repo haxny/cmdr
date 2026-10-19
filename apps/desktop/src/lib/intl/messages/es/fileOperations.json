@@ -873,6 +873,10 @@
   "@fileOperations.transferProgress.operationBlockedToast": {
     "sourceHash": "bc6efa8"
   },
+  "fileOperations.transferProgress.rowsStillSettlingToast": "La lista de aquí todavía se está actualizando, así que no ha empezado nada. Inténtalo de nuevo en un momento.",
+  "@fileOperations.transferProgress.rowsStillSettlingToast": {
+    "sourceHash": "b91f199"
+  },
   "fileOperations.rollbackConfirm.title": "¿Revertir esta operación?",
   "@fileOperations.rollbackConfirm.title": {
     "sourceHash": "13ff3ea"
