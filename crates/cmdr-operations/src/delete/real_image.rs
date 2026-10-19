@@ -4,18 +4,14 @@
 //! `#[ignore]`d: each attaches a real disk image. Hand-run with
 //! `cargo nextest run -p cmdr-operations --run-ignored only -E 'test(delete::real_image::)'`,
 //! or through `pnpm check disk-images`. Serialized in the `disk-image` nextest
-//! group, and machine-wide by the harness's session lock.
-//!
-//! No hook can stand in for a mount here: the walk's first test is a device
-//! number that differs from the parent's, which only a real mount produces.
+//! group, and machine-wide by the harness's session lock. The fixture:
+//! `mount_boundary::test_support::NestedMount`.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
-use cmdr_fs::testing::TestDir;
-use cmdr_fs::testing::disk_images::{DiskImage, DiskImageSession, ImageSpec};
 use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;
 
@@ -23,74 +19,16 @@ use super::volume_walker::delete_volume_files_with_progress_inner;
 use super::walker::delete_files_with_progress_inner;
 use crate::Operations;
 use crate::event_sinks::{CollectorEventSink, CollectorScanPreviewSink, ScanPreviewEventSink};
+use crate::mount_boundary::test_support::{NestedMount, assert_refused_at_the_mount};
 use crate::scan_cache::ScanPreviewState;
 use crate::scan_preview::run_scan_preview;
 use crate::scan_watchdog::{ScanTarget, ScanWatchdog};
 use crate::state::WriteOperationState;
 use crate::testing::TestOperations;
-use crate::types::{ScanPreviewPurpose, WriteOperationConfig, WriteOperationError};
-
-/// `folder/` holds `mine.txt` and `mnt/`, where an APFS image is mounted with
-/// `precious.txt` on it.
-///
-/// ❗ Field order is drop order: the image detaches before the folder holding
-/// its mount point goes.
-struct NestedMount {
-    _image: DiskImage,
-    dir: TestDir,
-}
-
-impl NestedMount {
-    fn mount() -> Self {
-        let dir = TestDir::new("delete_nested_mount");
-        std::fs::create_dir_all(dir.join("folder/mnt")).expect("the mount point");
-        std::fs::write(dir.join("folder/mine.txt"), b"MINE").expect("a file beside the mount");
-        let session = DiskImageSession::acquire();
-        let mut image = DiskImage::attach(&session, ImageSpec::Apfs).expect("attach the image");
-        let mounted = image
-            .remount_volume_at(0, &dir.join("folder/mnt"))
-            .expect("mount it inside the folder")
-            .mount_point
-            .clone();
-        std::fs::write(mounted.join("precious.txt"), b"PRECIOUS").expect("a file on the image");
-        assert_eq!(
-            std::fs::read(dir.join("folder/mnt/precious.txt")).ok().as_deref(),
-            Some(&b"PRECIOUS"[..]),
-            "precondition: the image is reachable through the folder"
-        );
-        Self { _image: image, dir }
-    }
-
-    fn folder(&self) -> PathBuf {
-        self.dir.join("folder")
-    }
-
-    fn assert_untouched(&self) {
-        assert_eq!(
-            std::fs::read(self.dir.join("folder/mnt/precious.txt")).ok().as_deref(),
-            Some(&b"PRECIOUS"[..]),
-            "❗ the mounted drive's file must survive"
-        );
-        assert_eq!(
-            std::fs::read(self.dir.join("folder/mine.txt")).ok().as_deref(),
-            Some(&b"MINE"[..]),
-            "the refusal comes before anything is deleted"
-        );
-    }
-}
+use crate::types::{ScanPreviewPurpose, WriteOperationConfig};
 
 fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
     Arc::new(engine.new_operation_state(Duration::from_millis(50)))
-}
-
-fn assert_refused_at_the_mount(result: Result<(), WriteOperationError>) {
-    match result {
-        Err(WriteOperationError::MountedVolumeInside { mount_point }) => assert!(
-            Path::new(&mount_point).ends_with("folder/mnt"),
-            "names the mount: {mount_point}"
-        ),
-        other => panic!("expected the mounted-volume refusal, got {other:?}"),
-    }
 }
 
 #[test]

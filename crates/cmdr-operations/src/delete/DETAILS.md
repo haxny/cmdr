@@ -52,7 +52,9 @@ subtree and reporting it as left behind would be a delete that quietly did less 
   scan AND for a delete-purpose preview, since the local walker deletes a cached preview's file list as is; and the
   volume walker for a backend with a `local_path` (a `LocalPosixVolume` folder), on the blocking pool. A remote
   backend's mounts are its server's business.
-- **Copies don't stop at a mount**: the context field is `None` for every non-delete walk.
+- **Copies don't stop at a mount**: the context field is `None` for every non-delete walk. An Overwrite that REPLACES a
+  folder does refuse one (`mount_boundary::refuse_a_mount_inside`, read off the mount table without walking the tree):
+  `../transfer/DETAILS.md` § "An Overwrite never removes a mounted drive".
 
 Pinned on a real APFS image mounted inside a test folder (`real_image.rs`, the disk-image lane): the boot-disk walker
 for the folder and for the mount point, the delete preview (caches nothing), and the volume walker. Regression anchor:

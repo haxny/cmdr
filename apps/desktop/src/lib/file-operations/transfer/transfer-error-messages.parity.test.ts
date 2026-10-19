@@ -627,14 +627,28 @@ const cases: Case[] = [
   {
     // A delete that would have walked into a mounted drive: names the mount,
     // which can sit deep inside the selection, and says nothing was deleted.
-    name: 'mounted_volume_inside',
+    name: 'mounted_volume_inside (delete)',
     error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
+    op: 'delete',
     expected: {
-      title: 'Another drive is mounted here',
+      title: 'A mounted drive is in the way',
       message:
-        'A drive or server is mounted at /Users/david/projects/backup/nas, so this delete would erase everything on it too. Cmdr stopped before deleting anything.',
+        'A drive or server is mounted at /Users/david/projects/backup/nas, and deleting there would erase everything on it. Cmdr stopped before deleting anything.',
       suggestion:
         'Eject that drive, then delete again. To clear the drive itself, open it and delete what’s on it there.',
+    },
+  },
+
+  {
+    // An Overwrite that would have replaced a folder holding a mounted drive.
+    name: 'mounted_volume_inside (copy)',
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
+    op: 'copy',
+    expected: {
+      title: 'A mounted drive is in the way',
+      message:
+        'A drive or server is mounted at /Users/david/projects/backup/nas, so replacing the folder that holds it would erase everything on the drive. Cmdr left that folder and the drive as they were.',
+      suggestion: 'Eject that drive, then try again. To keep the folder, choose Skip or Rename instead of Overwrite.',
     },
   },
 

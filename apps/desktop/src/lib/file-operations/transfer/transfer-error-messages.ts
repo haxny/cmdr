@@ -244,7 +244,7 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   // No Retry: the same selection can only be refused again. The way out is
   // picking one of the two, or transferring them one at a time.
   duplicate_source_names: { category: 'needs_action', retryHint: false },
-  // No Retry: the drive is still mounted there, so the same delete refuses
+  // No Retry: the drive is still mounted there, so the same request refuses
   // again. The way out is ejecting it, which the suggestion says.
   mounted_volume_inside: { category: 'needs_action', retryHint: false },
   // No Retry: the same name is refused again. The way out is renaming the file
@@ -624,14 +624,6 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
         message: w('sourceInColdStorage.message', { path: escapeHtml(error.path) }),
         suggestion: w('sourceInColdStorage.suggestion'),
       }
-    // A delete that would have walked into a mounted drive: named, because the
-    // mount can sit deep inside the selection, and it's what to eject.
-    case 'mounted_volume_inside':
-      return {
-        title: w('mountedVolumeInside.title'),
-        message: w('mountedVolumeInside.message', { mountPoint: escapeHtml(error.mountPoint) }),
-        suggestion: w('mountedVolumeInside.suggestion'),
-      }
     // A server-side copy whose source was replaced mid-copy: named, and it says
     // the source stays, because a move would otherwise look like it lost it.
     case 'source_changed':
@@ -710,6 +702,21 @@ export function getUserFriendlyMessage(
         }),
         suggestion: w('insufficientSpace.suggestion'),
       }
+    // A delete or an Overwrite that would have removed a mounted drive: named,
+    // because the mount can sit deep inside the folder, and it's what to eject.
+    case 'mounted_volume_inside': {
+      // A delete reaches it walking the selection; a copy or move, replacing a
+      // folder on Overwrite.
+      const mountPoint = escapeHtml(error.mountPoint)
+      const deleting = operationType === 'delete' || operationType === 'trash'
+      return {
+        title: w('mountedVolumeInside.title'),
+        message: deleting
+          ? w('mountedVolumeInside.message.delete', { mountPoint })
+          : w('mountedVolumeInside.message.replace', { mountPoint }),
+        suggestion: deleting ? w('mountedVolumeInside.suggestion.delete') : w('mountedVolumeInside.suggestion.replace'),
+      }
+    }
     case 'duplicate_source_names':
       // Two selected items carry one name, so they'd both want
       // `<destination>/<name>`. Refused before anything is written, and the

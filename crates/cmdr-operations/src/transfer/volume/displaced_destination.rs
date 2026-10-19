@@ -84,6 +84,12 @@ pub(crate) async fn displace_destination(
     original: &Path,
     is_directory: bool,
 ) -> Result<Option<DisplacedDestination>, WriteOperationError> {
+    // A folder aside goes as a tree once its replacement lands
+    // ([`DisplacedDestination::discard`]), so one with a drive mounted inside it
+    // is refused before it's set aside.
+    if is_directory {
+        super::super::super::mount_boundary::refuse_a_volume_mount_inside(&**volume, original, state).await?;
+    }
     let aside = StagingTemp::mint_aside(original, uuid::Uuid::new_v4(), state.liveness_token());
     // On disk before the rename below puts the original here (`track_in`).
     let record = match state.dest_volume_id() {

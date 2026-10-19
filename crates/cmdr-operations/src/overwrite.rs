@@ -32,6 +32,7 @@ use cmdr_fs::metadata::{LandedMetadata, Unblock, apply_landed, clear_blockers};
 use super::error_classification::classify_io_error;
 use super::host::{Announced, AsideAttempt, OperationErrorReport};
 use super::in_flight_temps::{self, ItemKind, TrackedRecord};
+use super::mount_boundary::refuse_a_mount_inside;
 use super::state::WriteOperationState;
 use super::types::{RecoveredOriginal, WriteOperationError};
 use super::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
@@ -135,6 +136,7 @@ where
     F: FnOnce(&Path) -> Result<Staged, WriteOperationError>,
 {
     let dest = dest.path();
+    replacing.then(|| refuse_a_mount_inside(dest)).transpose()?; // step 4 removes a replaced folder as a tree
     // The temp's guard lives to the end of this function (and the aside's too,
     // when there is one), keeping the scratch out of the pane for as long as
     // it's on disk. One uuid covers both, so a crash leftover reads as two
@@ -672,6 +674,7 @@ pub(super) fn safe_overwrite_dir<F>(
 where
     F: FnOnce(&Path) -> Result<(), WriteOperationError>,
 {
+    refuse_a_mount_inside(dest)?; // step 3 removes a folder aside as a tree
     // The guard lives to the end of this function, keeping the aside out of the
     // pane for as long as it's on disk.
     let aside = StagingTemp::mint_aside(dest, Uuid::new_v4(), None);

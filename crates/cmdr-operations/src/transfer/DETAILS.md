@@ -2382,3 +2382,19 @@ reproduces the exact CI error, and the new shape is clean.
 
 This is the same class as `3d4c9816f`, where two `use` statements sat above their macOS-only use sites. Any code whose
 only consumer is behind `cfg(target_os = "macos")` needs the same `cfg` on the thing above it.
+
+## An Overwrite never removes a mounted drive
+
+A cross-type Overwrite (a file onto a folder) and the set-aside-and-materialize landing remove the replaced FOLDER as a
+tree once the new item lands: `remove_dir_all` locally (`overwrite.rs`: `stage_and_land_file` step 4,
+`safe_overwrite_dir` step 3), `cleanup::remove_tree` across volumes (`volume/displaced_destination.rs::discard`). A
+drive, disk image, or share mounted anywhere inside that folder would be emptied with it. So each refuses up front,
+before the temp is written or the folder set aside, with `WriteOperationError::MountedVolumeInside`
+(`mount_boundary::refuse_a_mount_inside`, or `refuse_a_volume_mount_inside` for a `LocalPosixVolume` destination).
+
+The check reads the OS mount table for a mount point at or under the folder's resolved path, so it costs one `lstat` for
+a file being replaced and never walks the folder. A table that can't be read refuses. A remote backend's destination
+isn't asked: what's mounted on a server is the server's. The dialog words it per operation
+(`errors.write.mountedVolumeInside.message.replace`). Pinned on a real APFS image mounted inside a test folder
+(`real_image.rs`, the disk-image lane). The delete's side of the same wall: `../delete/DETAILS.md` § "A mount is a
+wall".

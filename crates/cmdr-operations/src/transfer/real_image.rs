@@ -480,3 +480,74 @@ async fn a_copy_onto_another_volume_keeps_birth_time_and_locked() {
     assert_eq!(birth_secs(&landed_locked), BIRTH_SECS);
     // The image detaches with the Locked copy on it, which `hdiutil` doesn't mind.
 }
+
+// ============================================================================
+// An Overwrite never removes a folder a drive is mounted inside
+// ============================================================================
+
+/// A file landing on a folder that holds a mounted drive (a cross-type
+/// Overwrite the user answered): the landing would set the folder aside and
+/// `remove_dir_all` it, emptying the drive. Refused before the temp is written.
+#[test]
+#[ignore = "attaches a real disk image; run via `pnpm check disk-images`"]
+fn a_file_overwriting_a_folder_that_holds_a_mounted_drive_refuses_and_removes_nothing() {
+    use crate::host::Announced;
+    use crate::mount_boundary::test_support::{NestedMount, assert_refused_at_the_mount};
+    use crate::overwrite::{PostLanding, Staged, stage_and_land_file};
+
+    let nested = NestedMount::mount();
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(50)));
+    let folder = nested.folder();
+
+    let result = stage_and_land_file(&state, Announced::assumed(&folder), true, PostLanding::Apply, |temp| {
+        std::fs::write(temp, b"NEW").expect("write the temp");
+        Ok(Staged::bytes(3))
+    });
+
+    assert_refused_at_the_mount(result.map(|landed| landed.bytes));
+    nested.assert_untouched();
+}
+
+/// A folder landing on a folder that holds a mounted drive through the
+/// set-aside-and-materialize path (`safe_overwrite_dir`, which a move and a
+/// symlink copy take): refused before the folder is set aside.
+#[test]
+#[ignore = "attaches a real disk image; run via `pnpm check disk-images`"]
+fn a_safe_overwrite_of_a_folder_that_holds_a_mounted_drive_refuses_and_removes_nothing() {
+    use crate::mount_boundary::test_support::{NestedMount, assert_refused_at_the_mount};
+    use crate::overwrite::safe_overwrite_dir;
+
+    let nested = NestedMount::mount();
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(50)));
+
+    let result = safe_overwrite_dir(&state, &nested.folder(), |dest| {
+        std::fs::create_dir(dest).expect("the replacement folder");
+        Ok(())
+    });
+
+    assert_refused_at_the_mount(result);
+    nested.assert_untouched();
+}
+
+/// The cross-volume twin: a `LocalPosixVolume` destination's folder set aside
+/// for an Overwrite goes as a tree (`cleanup::remove_tree`) once the
+/// replacement lands, so the refusal comes before the set-aside.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "attaches a real disk image; run via `pnpm check disk-images`"]
+async fn a_volume_overwrite_of_a_folder_that_holds_a_mounted_drive_refuses_and_removes_nothing() {
+    use crate::mount_boundary::test_support::{NestedMount, assert_refused_at_the_mount};
+    use crate::transfer::volume::displace_destination;
+
+    let nested = NestedMount::mount();
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(50)));
+    let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "V",
+        nested.dir.to_path_buf(),
+        pane_order_host(),
+    ));
+
+    let result = displace_destination(&state, &volume, std::path::Path::new("folder"), true).await;
+
+    assert_refused_at_the_mount(result.map(|displaced| displaced.is_some()));
+    nested.assert_untouched();
+}
