@@ -256,11 +256,6 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
     operationType: 'delete',
     error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
   },
-  // A copy whose answered Overwrite would replace a folder holding a mounted share.
-  'mounted_volume_inside-copy': {
-    operationType: 'copy',
-    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
-  },
   // A move within an S3 account whose source another app replaced mid-copy.
   source_changed: {
     operationType: 'move',
@@ -371,6 +366,11 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
  * single-file branch that names the file inline instead of counting.
  */
 const extraStates: Record<string, TransferErrorFixture> = {
+  // A copy whose answered Overwrite would replace a folder holding a mounted share.
+  'mounted_volume_inside-copy': {
+    operationType: 'copy',
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
+  },
   'files_too_large_for_filesystem-single': {
     operationType: 'copy',
     error: {

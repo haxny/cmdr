@@ -638,6 +638,20 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
 }
 
 /**
+ * The mounted-drive refusal's wording, by how the operation reached the drive:
+ * a delete walking the selection, or a copy, move, or edit replacing a folder on
+ * Overwrite.
+ */
+function mountedVolumeMessage(mountPoint: string, operationType: TransferOperationType): FriendlyErrorMessage {
+  const reachedBy = operationType === 'delete' || operationType === 'trash' ? 'delete' : 'replace'
+  return {
+    title: w('mountedVolumeInside.title'),
+    message: w(`mountedVolumeInside.message.${reachedBy}`, { mountPoint: escapeHtml(mountPoint) }),
+    suggestion: w(`mountedVolumeInside.suggestion.${reachedBy}`),
+  }
+}
+
+/**
  * The two outcomes that WRAP another error as `cause` and word themselves around
  * that cause's own advice. Split out of `getUserFriendlyMessage` to keep its
  * switch inside the complexity limit. `null` means "not one of mine".
@@ -651,6 +665,40 @@ function causeWrappingMessage(
       return originalsKeptAsideMessage(error, operationType)
     case 'source_not_removed':
       return sourceNotRemovedMessage(error, operationType)
+    default:
+      return null
+  }
+}
+
+/**
+ * The refusals whose sentence names what the OPERATION was doing, not only the
+ * error's own fields. `null` means "not one of mine". Split out of
+ * `getUserFriendlyMessage` to keep its switch inside the complexity limit.
+ */
+function operationWordedMessage(
+  error: WriteOperationError,
+  operationType: TransferOperationType,
+): FriendlyErrorMessage | null {
+  switch (error.type) {
+    // A delete or an Overwrite that would have removed a mounted drive: named,
+    // because the mount can sit deep inside the folder, and it's what to eject.
+    case 'mounted_volume_inside':
+      return mountedVolumeMessage(error.mountPoint, operationType)
+    case 'duplicate_source_names':
+      // Two selected items carry one name, so they'd both want
+      // `<destination>/<name>`. Refused before anything is written, and the
+      // message names the name plus one of the two folders it came from, since
+      // "you picked two things called invoices" is only actionable once the user
+      // can see which two.
+      return {
+        title: w('duplicateSourceNames.title'),
+        message: w('duplicateSourceNames.message', {
+          name: escapeHtml(error.name),
+          first: escapeHtml(error.first),
+          second: escapeHtml(error.second),
+        }),
+        suggestion: w(`duplicateSourceNames.suggestion.${operationType}`),
+      }
     default:
       return null
   }
@@ -678,6 +726,9 @@ export function getUserFriendlyMessage(
   const wrapping = causeWrappingMessage(error, operationType)
   if (wrapping) return wrapping
 
+  const perOperation = operationWordedMessage(error, operationType)
+  if (perOperation) return perOperation
+
   switch (error.type) {
     case 'permission_denied':
       return permissionDeniedMessage(error, operationType)
@@ -701,36 +752,6 @@ export function getUserFriendlyMessage(
           available: colorizeSize(formatByteSizeTiered(error.available)),
         }),
         suggestion: w('insufficientSpace.suggestion'),
-      }
-    // A delete or an Overwrite that would have removed a mounted drive: named,
-    // because the mount can sit deep inside the folder, and it's what to eject.
-    case 'mounted_volume_inside': {
-      // A delete reaches it walking the selection; a copy or move, replacing a
-      // folder on Overwrite.
-      const mountPoint = escapeHtml(error.mountPoint)
-      const deleting = operationType === 'delete' || operationType === 'trash'
-      return {
-        title: w('mountedVolumeInside.title'),
-        message: deleting
-          ? w('mountedVolumeInside.message.delete', { mountPoint })
-          : w('mountedVolumeInside.message.replace', { mountPoint }),
-        suggestion: deleting ? w('mountedVolumeInside.suggestion.delete') : w('mountedVolumeInside.suggestion.replace'),
-      }
-    }
-    case 'duplicate_source_names':
-      // Two selected items carry one name, so they'd both want
-      // `<destination>/<name>`. Refused before anything is written, and the
-      // message names the name plus one of the two folders it came from, since
-      // "you picked two things called invoices" is only actionable once the user
-      // can see which two.
-      return {
-        title: w('duplicateSourceNames.title'),
-        message: w('duplicateSourceNames.message', {
-          name: escapeHtml(error.name),
-          first: escapeHtml(error.first),
-          second: escapeHtml(error.second),
-        }),
-        suggestion: w(`duplicateSourceNames.suggestion.${operationType}`),
       }
     case 'invalid_name':
       // The destination refused the NAME, so it never looked the file up and a
