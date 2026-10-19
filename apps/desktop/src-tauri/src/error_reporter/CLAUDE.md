@@ -19,6 +19,10 @@ Builds a privacy-redacted zip of recent logs plus a manifest and ships it to `PO
   dialog carries one; Flow B's own send never does (`email_for_kind` strips it from `Auto`).
 - **The amend key is a credential**: never log it, bundle it, or write it to disk. `AmendKey` has no `Display` and no
   `Serialize`, and its `Debug` prints a placeholder. Keep it that way.
+- **Only our own crates' DEBUG/TRACE ships; INFO+ from anyone, redacted.** The file chain tags our lines at write time
+  (`../logging/provenance.rs`), and both pipelines filter on that tag, continuations following their header. ❌ Never
+  decide provenance from the target column: our short targets can equal a third-party crate's. DETAILS § "Only our own
+  debug output ships".
 - **Never widen what we send.** No license keys, device IDs, raw paths, volume names, SMB creds, settings beyond the
   resolved flags, or anything outside the log dir. `manifest.system` is the one PII-reviewed exception (sizes and
   coarse machine identity). Add nothing naming a drive, path, or person.

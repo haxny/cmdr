@@ -56,9 +56,10 @@ From lowest to highest: `debug` < `info` < `warning` < `error` < `fatal`
 - **Dev mode (terminal)**: Shows `info` and above by default. `RUST_LOG` overrides per-module. The verbose toggle bumps
   the whole terminal to `debug` at runtime.
 - **Prod mode (terminal)**: Terminal isn't visible in shipped builds.
-- **File target**: Always `debug` when log storage is enabled (cap > 0). Absent when the cap is `0`. The file target is
-  independent: it ignores `RUST_LOG` and the verbose toggle, so error report bundles always carry the full debug
-  context.
+- **File target**: Always `debug` when log storage is enabled (cap > 0), except `mdns_sd` at `info`. Absent when the cap
+  is `0`. The file target is independent: it ignores `RUST_LOG` and the verbose toggle, so error report bundles always
+  carry our full debug context. A report ships `debug` and `trace` only from our own crates (lines tagged `·`, see
+  [Log format](#log-format)); `info` and above ship from anyone, redacted.
 
 ## Log levels
 
@@ -174,6 +175,11 @@ RUST_LOG=trace pnpm dev
 
 Format: `HH:MM:SS.mmm LEVEL target  message`. Frontend logs appear with an `FE:` prefix followed by the LogTape category
 name.
+
+The log FILE writes an ISO-8601 stamp with offset instead of the clock time, and a `·` right before the target of every
+line our own code wrote (`2026-10-19T10:19:34.908+02:00 DEBUG ·indexing::writer  …`). Untagged lines come from a
+third-party crate (`mdns_sd`, `smb2`, …) or from a build older than the tag; error reports leave out their `DEBUG` and
+`TRACE` (`apps/desktop/src-tauri/src/logging/provenance.rs`).
 
 The terminal adds ANSI on top of that, and only when there's a terminal to add it for: `NO_COLOR` turns it off,
 `CLICOLOR_FORCE` / `FORCE_COLOR` decide it outright (`0` off), and otherwise the app asks whether its own stderr is a

@@ -15,12 +15,26 @@ root Dispatch (level Trace: pure ceiling, per-chain filters do real gating)
 │     .chain(io::stderr())
 └── file chain (skipped when advanced.maxLogStorageMb = 0)
       .level(Debug)                      // always, regardless of RUST_LOG/verbose
+      .level_for("mdns_sd", Info)        // the one crate held back (below)
       .chain(RotatingFile(50 MB, KeepN)) // N = ceil(cap_mb / 50)
 ```
 
 Per-output filtering matters because error-report bundles need debug context regardless of the dev's `RUST_LOG`. With a
 single shared level you either bake terminal noise into the file (annoying for dev) or skimp on file context (bad for
 error reports). Two independent chains avoid the tradeoff.
+
+`mdns_sd` stays at Info in the file: its debug output was ~60% of a bundle's lines and of the log's disk use, and a
+report never ships a third-party crate's debug output anyway (next section).
+
+## Line provenance
+
+Every file line our own code logs carries `·` right before its target (`DEBUG ·indexing::writer  …`); a third-party
+crate's line doesn't. `provenance.rs` decides it per record from `record.module_path()` (ours: `cmdr_*`, the `Cmdr`
+binary, `mtp_rs`), and an error report ships DEBUG/TRACE only from tagged lines (`error_reporter/DETAILS.md` § "Only our
+own debug output ships"). Why the module path and not the target: the file strips `cmdr_lib::` and our sites use short
+custom targets (`copy`, `open_with`), so a target can't tell ours from a third-party crate's. Why tag OUR lines rather
+than theirs: a line without a verdict (an older build's rotated file, a downgraded build appending) then counts as
+third-party, which fails closed.
 
 ## Startup sequence
 
@@ -109,8 +123,8 @@ suppressed]` would stop being true. Payload floods get fixed at the call site.
 
 **Timestamp placement gotcha**: the ISO-8601 stamp is prepended by the writer at emit time, NOT in the fern `.format()`
 closure. The dedup key must be timestamp-free, or two identical messages a millisecond apart would hash differently and
-never coalesce. Don't move `file_timestamp()` back into the file-chain format. The on-disk line shape is unchanged
-(`<iso-ts> LEVEL target  message`), so the error reporter's timestamp parsing is unaffected.
+never coalesce. Don't move `file_timestamp()` back into the file-chain format. The on-disk line shape is
+`<iso-ts> LEVEL [·]target  message`, which the error reporter's timestamp and provenance parsing read.
 
 ## Why fern
 

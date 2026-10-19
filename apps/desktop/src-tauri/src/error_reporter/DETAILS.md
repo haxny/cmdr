@@ -265,6 +265,23 @@ command exists in every build: under `DisableCrashAndErrorReports` the dialog's 
   unchanged from the pre-streaming era. Auto-send runs in a debounced background task
   off the user's hot path, so the simpler shape is fine here.
 
+### Only our own debug output ships
+
+Both pipelines run every line through `ProvenanceFilter` (`bundle_builder.rs`) before redaction. A header line (one
+that opens with the file chain's timestamp) gets a verdict from `logging::provenance::header_ships_in_report`: INFO and
+above ship from anyone, DEBUG and TRACE only when the line carries the file chain's own-code tag (`·` before the
+target), and `smb2::client::durable` never. Continuation lines share their header's verdict; a continuation before any
+header, and a header whose level doesn't parse, drop.
+
+Why: a third-party crate's debug output prints names in shapes no redactor can bound. `mdns_sd`'s service dumps were
+8,669 of ERR-VEZUB's 13,946 lines, and `smb2` 0.32.0 prints share-relative paths positionally (`tree: exclusive delete
+of {path} refused`), plus a `durable: {path} reclaimed…` INFO on every resumed transfer (#491). The verdict is decided
+at WRITE time from `record.module_path()`, never from the target column, because our sites use short custom targets a
+third-party crate's could equal; `../logging/provenance.rs` has the details. An untagged line counts as third-party, so a
+rotated file an older build wrote fails closed: its DEBUG lines (ours included) stay out, its INFO+ ships.
+
+`smb2` joins our side, and its `durable` drop goes, once a release logs its paths as quoted fields.
+
 ### Why a tail-walker?
 
 The user-initiated bundle is capped at 1 MB compressed (~19 MB uncompressed). On a

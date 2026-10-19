@@ -14,6 +14,7 @@ use std::time::{Duration, SystemTime};
 use zip::{DateTime as ZipDateTime, ZipArchive};
 
 mod privacy_tests;
+mod provenance_tests;
 
 const RAW_STATE_SENTINEL: &str = "PRIVATE-STATE-SENTINEL-ASYMMETRIC";
 
@@ -696,10 +697,16 @@ fn build_bundle_24h_filter_drops_old_files() {
     let dir = TestDir::new("error-reporter-24h");
 
     // Two files: one that looks fresh, one whose mtime we set to 48h ago via filetime.
+    let stamp = |at: DateTime<Utc>| {
+        at.with_timezone(&chrono::Local)
+            .format("%Y-%m-%dT%H:%M:%S%.3f%:z")
+            .to_string()
+    };
     let fresh = dir.join("cmdr.log");
-    fs::write(&fresh, "fresh line\n").expect("write fresh");
+    fs::write(&fresh, format!("{} INFO  fresh line\n", stamp(Utc::now()))).expect("write fresh");
     let stale = dir.join("cmdr.log.1");
-    fs::write(&stale, "stale line\n").expect("write stale");
+    let two_days_ago = Utc::now() - chrono::Duration::hours(48);
+    fs::write(&stale, format!("{} INFO  stale line\n", stamp(two_days_ago))).expect("write stale");
     set_mtime_to_age(&stale, Duration::from_secs(48 * 3600));
 
     // Drive the file selection logic directly. `build_bundle` requires a Tauri app
@@ -745,7 +752,7 @@ fn build_bundle_window_scope_trims_old_lines() {
     fs::write(
         &log_path,
         format!(
-            "{old} OLD line that should be dropped\n{ok} NEW line that should be kept\n",
+            "{old} INFO  OLD line that should be dropped\n{ok} INFO  NEW line that should be kept\n",
             old = too_old.with_timezone(&chrono::Local).format(fmt),
             ok = inside.with_timezone(&chrono::Local).format(fmt),
         ),
@@ -784,7 +791,7 @@ fn build_bundle_window_scope_drops_an_old_records_continuations() {
     std::fs::write(
         &log_path,
         format!(
-            "{old} OLD header\n   0: old_frame\n{ok} NEW header\n   0: new_frame\n",
+            "{old} ERROR OLD header\n   0: old_frame\n{ok} ERROR NEW header\n   0: new_frame\n",
             old = too_old.with_timezone(&chrono::Local).format(fmt),
             ok = inside.with_timezone(&chrono::Local).format(fmt),
         ),

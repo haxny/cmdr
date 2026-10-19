@@ -17,12 +17,14 @@
 //! │                                          // stdout free for piped output)
 //! └── file chain
 //!       .level(Debug)                      // always, regardless of RUST_LOG/verbose
+//!       .level_for("mdns_sd", Info)        // its dumps were most of the file
 //!       .chain(<RotatingFile writer>)      // 50 MB per file, KeepN
 //! ```
 //!
 //! Both chains render `HH:MM:SS.mmm LEVEL target  message`. The terminal chain adds ANSI
 //! (level colors, plus the fixed-width colored target head `target_style` describes) when
-//! stderr is a terminal; the file writer gets plain text so `cat` is readable.
+//! stderr is a terminal; the file writer gets plain text so `cat` is readable, an ISO stamp
+//! instead of the clock time, and a `·` before the target of our own lines (`provenance`).
 //!
 //! Runtime mutability:
 //!
@@ -153,8 +155,8 @@ pub fn init(opts: InitOptions) -> Result<(), fern::InitError> {
         // logging. See `BrokenPipeTolerantWriter` doc for the longer story.
         .chain(Box::new(BrokenPipeTolerantWriter(std::io::stderr())) as Box<dyn Write + Send>);
 
-    // Default noise suppression, applied to the stdout chain only. The file chain
-    // intentionally keeps these at Debug so error reports include them.
+    // Default noise suppression, applied to the stdout chain only. The file chain keeps
+    // these at Debug for local debugging; error reports leave out third-party Debug anyway.
     for (module, level) in default_noise_overrides() {
         stdout_chain = stdout_chain.level_for(module, level);
     }
@@ -180,22 +182,7 @@ pub fn init(opts: InitOptions) -> Result<(), fern::InitError> {
         // core through the log file. It needs no interior mutex: fern serializes every
         // record through its own writer mutex. See `coalesce.rs`.
         let writer: Box<dyn Write + Send + 'static> = Box::new(super::coalesce::CoalescingWriter::new(rotator));
-
-        let file_chain = fern::Dispatch::new()
-            .format(|out, message, record| {
-                // No timestamp here: the coalescing writer adds it at emit time, keeping the
-                // dedup key (`LEVEL target  message`) free of the ever-changing stamp.
-                let target = record.target().strip_prefix("cmdr_lib::").unwrap_or(record.target());
-                let level = record.level();
-                // `ram` is empty unless `CMDR_LOG_RAM_USE` is set. When on, its value varies
-                // per line and so becomes part of the dedup key; that's an accepted debug-mode
-                // tradeoff (see `ram_gauge` § "Interaction with file-log dedup").
-                let ram = super::ram_gauge::tag();
-                out.finish(format_args!("{level:<5} {ram}{target}  {message}"));
-            })
-            .level(log::LevelFilter::Debug)
-            .chain(writer);
-        root = root.chain(file_chain);
+        root = root.chain(file_chain(writer));
     }
 
     root.apply()?;
@@ -213,6 +200,33 @@ pub fn init(opts: InitOptions) -> Result<(), fern::InitError> {
         version = env!("CARGO_PKG_VERSION"),
     );
     Ok(())
+}
+
+/// The file chain: Debug and up, plain text, into `writer`. The test dispatch builds it too, so
+/// the tests assert the line shape and levels that actually ship.
+///
+/// `mdns_sd` is the one crate held at Info here: its debug output was ~60% of a bundle's lines
+/// and of the log's disk use, and an error report never ships it anyway (`provenance.rs`).
+fn file_chain(writer: Box<dyn Write + Send>) -> fern::Dispatch {
+    fern::Dispatch::new()
+        .format(write_file_line)
+        .level(log::LevelFilter::Debug)
+        .level_for("mdns_sd", log::LevelFilter::Info)
+        .chain(writer)
+}
+
+/// Renders one file line: `LEVEL [·]target  message`, the `·` marking our own code
+/// (`provenance.rs`). No timestamp here: the coalescing writer adds it at emit time, keeping
+/// the dedup key free of the ever-changing stamp.
+fn write_file_line(out: fern::FormatCallback<'_>, message: &std::fmt::Arguments<'_>, record: &log::Record<'_>) {
+    let target = record.target().strip_prefix("cmdr_lib::").unwrap_or(record.target());
+    let level = record.level();
+    let own = super::provenance::line_tag(record.module_path());
+    // `ram` is empty unless `CMDR_LOG_RAM_USE` is set. When on, its value varies per line and
+    // so becomes part of the dedup key; that's an accepted debug-mode tradeoff (see
+    // `ram_gauge` § "Interaction with file-log dedup").
+    let ram = super::ram_gauge::tag();
+    out.finish(format_args!("{level:<5} {ram}{own}{target}  {message}"));
 }
 
 /// Renders one terminal line: `HH:MM:SS.mmm LEVEL head::tail  message`.
@@ -269,8 +283,8 @@ fn level_color(level: log::Level) -> &'static str {
 }
 
 /// Defaults applied to the stdout chain to suppress known-noisy crates. The file chain
-/// keeps these at Debug (it inherits the chain's Debug level) so error report bundles
-/// still capture them.
+/// keeps these at Debug (it inherits the chain's Debug level) for local debugging; an
+/// error report ships only our own crates' Debug (`provenance`).
 fn default_noise_overrides() -> Vec<(&'static str, log::LevelFilter)> {
     vec![
         ("nusb", log::LevelFilter::Warn),
@@ -403,13 +417,7 @@ fn build_dispatch_for_test(rust_log: Option<&str>, file_chain_enabled: bool, col
     let mut root = fern::Dispatch::new().level(log::LevelFilter::Trace).chain(stdout_chain);
 
     if file_chain_enabled {
-        let file_chain = fern::Dispatch::new()
-            .format(|out, message, record| {
-                out.finish(format_args!("{} {}", record.level(), message));
-            })
-            .level(log::LevelFilter::Debug)
-            .chain(Box::new(SharedBufferWriter(file_buf.clone())) as Box<dyn Write + Send>);
-        root = root.chain(file_chain);
+        root = root.chain(file_chain(Box::new(SharedBufferWriter(file_buf.clone()))));
     }
 
     let (filter, logger) = root.into_log();
@@ -456,6 +464,70 @@ mod tests {
         if logger.enabled(record.metadata()) {
             logger.log(&record);
         }
+    }
+
+    /// [`dispatch`] with the call site's module path, which is what decides a line's provenance.
+    fn dispatch_from(logger: &dyn log::Log, level: log::Level, target: &str, module_path: &str, message: &str) {
+        let args = format_args!("{message}");
+        let record = log::Record::builder()
+            .level(level)
+            .target(target)
+            .module_path(Some(module_path))
+            .args(args)
+            .build();
+        if logger.enabled(record.metadata()) {
+            logger.log(&record);
+        }
+    }
+
+    /// Our own lines carry the provenance tag whatever their target; a third-party crate's
+    /// don't, even under a target that reads like ours. Error reports ship DEBUG only from
+    /// tagged lines (`provenance.rs`).
+    #[test]
+    fn our_file_lines_carry_the_own_tag_and_nobody_elses_do() {
+        let _g = test_lock();
+        let d = build_dispatch_for_test(None, true, false);
+        dispatch_from(
+            &*d.logger,
+            log::Level::Debug,
+            "copy",
+            "cmdr_operations::transfer",
+            "ours-short-target",
+        );
+        dispatch_from(
+            &*d.logger,
+            log::Level::Debug,
+            "FE:viewer",
+            "cmdr_lib::commands::logging",
+            "ours-fe",
+        );
+        dispatch_from(
+            &*d.logger,
+            log::Level::Debug,
+            "copy",
+            "some_crate::copy",
+            "foreign-same-target",
+        );
+        dispatch(&*d.logger, log::Level::Debug, "copy", "no-module-path");
+        let f = buf_to_string(&d.file);
+        assert!(f.contains("DEBUG ·copy  ours-short-target"), "{f}");
+        assert!(f.contains("DEBUG ·FE:viewer  ours-fe"), "{f}");
+        assert!(f.contains("DEBUG copy  foreign-same-target"), "{f}");
+        assert!(f.contains("DEBUG copy  no-module-path"), "{f}");
+    }
+
+    /// `mdns_sd`'s debug output was most of every bundle and of the log's disk use; the file
+    /// keeps its Info and above.
+    #[test]
+    fn mdns_sd_debug_stays_out_of_the_file() {
+        let _g = test_lock();
+        let d = build_dispatch_for_test(None, true, false);
+        let mdns = "mdns_sd::service_daemon";
+        dispatch_from(&*d.logger, log::Level::Debug, mdns, mdns, "mdns-debug-dump");
+        dispatch_from(&*d.logger, log::Level::Warn, mdns, mdns, "mdns-warning");
+        let f = buf_to_string(&d.file);
+        assert!(!f.contains("mdns-debug-dump"), "{f}");
+        assert!(f.contains("mdns-warning"), "{f}");
     }
 
     fn buf_to_string(buf: &Mutex<Vec<u8>>) -> String {

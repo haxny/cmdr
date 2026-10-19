@@ -58,11 +58,11 @@ fn typed_log(now: DateTime<Utc>, suffix: &str) -> String {
     let after = timestamp(now);
     format!(
         "{before} INFO  privacy_test  SAFE-BEFORE-{suffix}\n\
-         {backtrace} DEBUG error_reporter::backtrace  Backtrace for retained typed diagnostic:\n\
+         {backtrace} DEBUG ·error_reporter::backtrace  Backtrace for retained typed diagnostic:\n\
             0: cmdr_lib::privacy_test::retained_frame_{suffix}\n\
             1: std::panicking::try\n\
          {after} WARN  cmdr_smb::volume::session  SmbVolume::read(share=\"PRIVATE-REMOTE-SHARE\"): backend=smb2, error_kind=ConnectionLost\n\
-         {after} DEBUG network::discovery_cache  Host ADDED: serverId=\"PRIVATE-CLIENT-ID-{suffix}\", server=\"PRIVATE-CLIENT-NAME-{suffix}\"\n\
+         {after} DEBUG ·network::discovery_cache  Host ADDED: serverId=\"PRIVATE-CLIENT-ID-{suffix}\", server=\"PRIVATE-CLIENT-NAME-{suffix}\"\n\
          {after} WARN  network::smb_smbclient  smbclient share listing stopped: host=\"PRIVATE-REMOTE-HOST\", port=445, code=Some(1), nt_status=NT_STATUS_BAD_NETWORK_NAME, stderr={stderr:?}, stdout={stdout:?}\n\
          {after} INFO  privacy_test  SAFE-AFTER-{suffix}\n",
         stderr = cmdr_fs::log_detail::LogDetail(EXTERNAL_STDERR),
@@ -128,7 +128,7 @@ fn assert_privacy_archive(bundle: &BuiltBundle) -> BundleManifest {
             "code=Some(1), nt_status=NT_STATUS_BAD_NETWORK_NAME, stderr=\"do_connect: Connection to <".to_string(),
             "failed (Error NT_STATUS_BAD_NETWORK_NAME) reading".to_string(),
             "stdout=\"Sharename listing ended early.".to_string(),
-            "network::discovery_cache  Host ADDED: serverId=\"<server-id:".to_string(),
+            "·network::discovery_cache  Host ADDED: serverId=\"<server-id:".to_string(),
             format!("SAFE-AFTER-{suffix}"),
         ] {
             assert!(

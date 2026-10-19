@@ -318,7 +318,9 @@ pub(super) fn build_bundle_streaming_to_cap(
             }
         };
 
-        if walk.lines.is_empty() {
+        let mut provenance = ProvenanceFilter::new();
+        let lines: Vec<String> = walk.lines.into_iter().filter(|line| provenance.ships(line)).collect();
+        if lines.is_empty() {
             // If we bailed at the cutoff with no lines, older rotations would be
             // older still. Stop walking entirely.
             if walk.hit_cutoff {
@@ -335,7 +337,7 @@ pub(super) fn build_bundle_streaming_to_cap(
             continue;
         }
 
-        for line in walk.lines {
+        for line in lines {
             let redacted = redaction.redact_line(&line).into_owned();
             if writer.write_all(redacted.as_bytes()).is_err() || writer.write_all(b"\n").is_err() {
                 budget_exhausted = true;
@@ -550,22 +552,47 @@ pub(super) fn load_and_filter_log_file(
     };
     let reader = BufReader::new(file);
 
-    // Record-level filter for the Flow B window: a timestamped line older than
+    // Record-level filters: for the Flow B window, a timestamped line older than
     // `lower_bound` drops, and so do the untimestamped continuation lines after it (a
-    // panic backtrace belongs to its header). Continuations before any header pass.
+    // panic backtrace belongs to its header); for every scope, provenance.
     let is_window = matches!(scope, BundleScope::Window { .. });
     let mut in_window = true;
+    let mut provenance = ProvenanceFilter::new();
     let mut lines: Vec<String> = Vec::new();
     for line in reader.lines().map_while(Result::ok) {
         if is_window && let Some(line_ts) = tail_walker::parse_leading_iso8601(&line) {
             in_window = line_ts >= lower_bound;
         }
-        if in_window {
+        if provenance.ships(&line) && in_window {
             lines.push(redaction.redact_line(&line).into_owned());
         }
     }
 
     Some((lines, mtime))
+}
+
+/// Which of a log file's lines a report may ship, by provenance (`logging::provenance`): a
+/// header (a line opening with the file chain's timestamp) gets the verdict, and its
+/// continuation lines share it. A line before any header has nothing to vouch for it (its
+/// header sits in an older rotation, or the file isn't ours), so it drops.
+///
+/// Feed it every line in file order, including lines another filter drops, so a header's
+/// verdict always reaches its continuations.
+struct ProvenanceFilter {
+    ships: bool,
+}
+
+impl ProvenanceFilter {
+    fn new() -> Self {
+        Self { ships: false }
+    }
+
+    fn ships(&mut self, line: &str) -> bool {
+        if tail_walker::parse_leading_iso8601(line).is_some() {
+            self.ships = logging::provenance::header_ships_in_report(line);
+        }
+        self.ships
+    }
 }
 
 /// Convert a [`SystemTime`] into a [`zip::DateTime`] (the format the zip crate stores

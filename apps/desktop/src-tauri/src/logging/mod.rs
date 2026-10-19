@@ -21,6 +21,7 @@
 
 mod coalesce;
 pub mod dispatch;
+pub(crate) mod provenance;
 pub mod ram_gauge;
 pub(crate) mod rotating_file;
 pub mod startup;

@@ -5,53 +5,43 @@ filtering**: the file is locked at Debug, the terminal defaults to Info.
 
 ## Module map
 
-- **`mod.rs`**: log-dir and keep-count state, debug-log path, log-file listing and pruning, `warn_once` (DETAILS § "What lives in `mod.rs`")
-- **`startup.rs`**: `init`, the one call `lib.rs` makes at startup (DETAILS § "Startup sequence")
-- **`dispatch.rs`**: `init` (builds + installs the fern tree), `set_stdout_threshold` / `stdout_threshold`, and
-  `write_terminal_line` (the terminal line format)
-- **`coalesce.rs`**: `CoalescingWriter`, the file chain's terminal writer; collapses identical-line floods (DETAILS §
-  "Duplicate coalescing")
-- **`target_style.rs`**: the terminal target column: head width, per-head color, ANSI on/off (DETAILS § "Terminal
-  target column")
-- **`ram_gauge.rs`**: optional per-line RAM prefix, `CMDR_LOG_RAM_USE=1` (DETAILS § "RAM gauge")
-- **`rotating_file.rs`**: `RotatingFile`, the size rotation under `CoalescingWriter` (DETAILS § "Rotation")
-- **`tests.rs`**: pruner / listing helper unit tests
+- **`mod.rs`**: log-dir and keep-count state, debug-log path, log-file listing and pruning, `warn_once`
+- **`startup.rs`**: `init`, the one call `lib.rs` makes at startup
+- **`dispatch.rs`**: builds + installs the fern tree, the stdout threshold, both line formats
+- **`provenance.rs`**: the `·` own-code tag on file lines, read back by error reports
+- **`coalesce.rs`**: `CoalescingWriter`, the file chain's writer; collapses identical-line floods
+- **`target_style.rs`**: the terminal target column. **`ram_gauge.rs`**: optional per-line RAM prefix
+- **`rotating_file.rs`**: `RotatingFile`, the size rotation under `CoalescingWriter`
 
-Dispatch-tree shape, why fern, timestamp formats, and decisions: `DETAILS.md`.
+Dispatch-tree shape, why fern, timestamp formats, each file's depth, and decisions: `DETAILS.md`.
 
 ## Adding log calls
 
 - **Use `log::*!` macros only.** `eprintln!` / `println!` / `dbg!` bypass the pipeline (no level filter, no file output,
   not in error-report bundles); clippy denies them crate-wide.
 - **Always pass a scoped `target:`** so logs filter via `RUST_LOG` (`log::debug!(target: "open_with", …)` →
-  `RUST_LOG=open_with=debug pnpm dev`) and earn their own terminal color. Without one the log gets the file's module
-  path: workable but noisier. One short stable `target:` per subsystem, reused.
+  `RUST_LOG=open_with=debug pnpm dev`) and earn their own terminal color. One short stable `target:` per subsystem.
 - **A per-event line with a varying payload (`attempt=27`, a name, a count) is a flood the coalescer can't catch**: its
   key is the exact line. Log per episode, or when the result changes. DETAILS § "Duplicate coalescing".
 
 ## Must-knows
 
-- **Two independent chains; don't collapse them into a shared level.** The terminal chain (writes to `stderr`, so piped
-  stdout stays clean) defaults to Info under `RUST_LOG` and noise overrides. The file chain is always Debug whatever the
-  dev set, because error-report bundles need debug context.
+- **Two independent chains; don't collapse them into a shared level.** The terminal chain (`stderr`, so piped stdout
+  stays clean) defaults to Info under `RUST_LOG` and noise overrides. The file chain is Debug whatever the dev set,
+  because error-report bundles need debug context; only `mdns_sd` is held at Info there (its dumps were most of it).
+- **The file tags OUR lines (`·` before the target), from `record.module_path()`, ❌ never the target.** Error reports
+  ship DEBUG/TRACE only from tagged lines, so an untagged line fails closed. DETAILS § "Line provenance".
 - **The verbose toggle is an AtomicU8 read per record, NOT a dispatch rebuild** (a rebuild drops records mid-swap). It
-  gates the terminal chain only; `RUST_LOG` sets the startup threshold. DETAILS § "Verbose toggle".
+  gates the terminal chain only; `RUST_LOG` sets the startup threshold.
 - **The file chain's ISO timestamp is prepended by `CoalescingWriter`, NOT the fern `.format()` closure.** ❌ Don't move
-  `file_timestamp()` back into that format: the dedup key must stay timestamp-free or identical lines a millisecond
-  apart never coalesce. DETAILS § "Duplicate coalescing".
+  `file_timestamp()` back: the dedup key must stay timestamp-free or identical lines a millisecond apart never coalesce.
 - **ANSI is terminal-only, resolved once at startup.** ❌ `is_terminal()` can't decide it alone: under `pnpm dev` the
-  Tauri CLI hands us a piped stderr, so `tauri-wrapper.ts` sets `CLICOLOR_FORCE`; `NO_COLOR` outranks both. DETAILS §
-  "Terminal target column".
-- **The RAM gauge is off unless `CMDR_LOG_RAM_USE` is truthy** (`ram_gauge::tag()` returns `""`, no alloc). When on, its
-  ever-changing number lands in the file dedup key, so floods coalesce less: accepted debug-mode tradeoff.
-- **Cap = 0 disables the file chain entirely** (`init` skips it). The terminal and the verbose toggle still work; the
-  error bundle ships an empty `logs/`.
+  Tauri CLI hands us a piped stderr, so `tauri-wrapper.ts` sets `CLICOLOR_FORCE`; `NO_COLOR` outranks both.
+- **The RAM gauge is off unless `CMDR_LOG_RAM_USE` is truthy.** When on, its number lands in the file dedup key, so
+  floods coalesce less: accepted.
+- **Cap = 0 disables the file chain entirely.** The terminal still works; the error bundle ships an empty `logs/`.
 - **`RotatingFile` never panics or caches the directory's state**: logging runs on every thread, and other processes
-  change the files (a panic there killed the index writer, CRASH-EC4QS). It bakes keep-N at startup; `set_keep_count` /
-  `eager_prune` act now (DETAILS § "Cap changes at runtime"). ❌ `keep_count()` never means "this session writes a
-  file": `debug_log_path()` does.
-- **Trust mtime, not the filename, for log ordering** (`.1`, `.2`, … suffixes). Files off the active pattern are swept
-  at startup.
-- **`eager_prune(dir, 0)` wipes everything, the live file included**: right when the user just disabled logging.
-- **Log-dir resolution is mirrored in `settings::loader`'s `early_load_*` helpers**; a bundle-id change touches both
-  (DETAILS § "Startup sequence").
+  change the files (a panic there killed the index writer, CRASH-EC4QS). ❌ `keep_count()` never means "this session
+  writes a file": `debug_log_path()` does.
+- **Trust mtime, not the filename, for log ordering.** `eager_prune(dir, 0)` wipes everything, the live file included.
+- **Log-dir resolution is mirrored in `settings::loader`'s `early_load_*` helpers**; a bundle-id change touches both.
