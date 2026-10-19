@@ -36,7 +36,6 @@ import {
   composeDurabilityUnconfirmedToast,
   composeTrashRefusedToast,
 } from '#lib/file-operations/transfer/transfer-complete-toast.js'
-import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
 import TrashCompleteToastContent from '#lib/file-operations/delete/TrashCompleteToastContent.svelte'
 import { isOperationLogRecording } from '#lib/operation-log/recording.js'
 import {
@@ -468,9 +467,9 @@ export function createDialogState(deps: DialogStateDeps) {
         promptBackgroundPassword(props, error, null)
         return
       }
-      log.error('{op} in the background was refused: {detail}', {
+      log.error('{op} in the background was refused: {error}', {
         op: transferOpLabel(props.operationType),
-        detail: getTechnicalDetails(error).replaceAll('\n', '; '),
+        error,
       })
       // Nothing ran, so there is no retained failure to claim, and nothing to
       // refresh. The Retry starts it in the background again. Held while another
@@ -908,12 +907,12 @@ export function createDialogState(deps: DialogStateDeps) {
         return
       }
 
-      // The same technical lines the error dialog shows, ending with the variant.
-      // The bridge forwards only the rendered message, so a payload passed as a
-      // bare property would never reach the log or a bundle.
-      log.error('{op} failed: {detail}', {
+      // The typed error itself: `describeForLog` renders it as JSON with each path
+      // and name marked, so a report hashes exactly those values. The bridge forwards
+      // only the rendered message, so the payload must sit in the template.
+      log.error('{op} failed: {error}', {
         op: transferOpLabel(op),
-        detail: getTechnicalDetails(error).replaceAll('\n', '; '),
+        error,
       })
 
       paneEffects.refreshPanesAfterTransfer()

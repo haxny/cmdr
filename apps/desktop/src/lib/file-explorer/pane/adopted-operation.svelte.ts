@@ -30,7 +30,6 @@ import {
   composeDurabilityUnconfirmedToast,
   composeTrashRefusedToast,
 } from '#lib/file-operations/transfer/transfer-complete-toast.js'
-import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { formatByteSize } from '#lib/units/index.js'
 import { pluralize } from '#lib/utils/pluralize.js'
@@ -204,12 +203,12 @@ export function createAdoptedOperation(deps: AdoptedOperationDeps) {
     handleError(error: WriteOperationError, progressAtStop: ProgressAtStop | null): void {
       const op = adoptedProps?.operationType ?? 'copy'
       const failedOperationId = getForegroundOperationId()
-      // The same technical lines the error dialog shows, ending with the variant.
-      // The bridge forwards only the rendered message, so a payload passed as a
-      // bare property would never reach the log or a bundle.
-      log.error('{op} failed (adopted): {detail}', {
+      // The typed error itself: `describeForLog` renders it as JSON with each path
+      // and name marked, so a report hashes exactly those values. The bridge forwards
+      // only the rendered message, so the payload must sit in the template.
+      log.error('{op} failed (adopted): {error}', {
         op: transferOpLabel(op),
-        detail: getTechnicalDetails(error).replaceAll('\n', '; '),
+        error,
       })
 
       settle()
