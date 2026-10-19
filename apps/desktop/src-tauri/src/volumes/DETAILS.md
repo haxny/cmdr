@@ -322,12 +322,16 @@ DiskArbitration-535.0.10, 2026-09-14).
    that wouldn't answer sets `unit_unreadable`, and step 7 then dissents whatever the volumes it COULD see said. Reading
    it as an empty unit would let the ask stop only the volume that was clicked and approve an unmount that takes a
    sibling down under its live FSEvents watcher.
-4. Marks the group unmount-pending at the drive-release gate, so no start lands on it meanwhile.
+4. Marks the group unmount-pending at the drive-release gate, so no start lands on it meanwhile, then lets go of the git
+   repos on the group's volumes (`Host::let_go_of_repos` → `cmdr_git::GitPortal::release_volume`, under the same
+   deadline): a plain unmount FAILS while any repo there has a pack file mapped, which used to make an open repo block
+   the user's eject (GitHub #488). In memory only, and milliseconds unless a status or commit walk is mid-read, which it
+   stops. What it does and why: `crates/cmdr-git/DETAILS.md` § "Letting go of a volume that's about to unmount".
 5. `drive_release::release(group, deadline)`: the one wait a DA queue may make.
 6. Records every volume it stopped while indexing, and carries an earlier ask's record forward to this epoch and
    generation. A volume Cmdr's own eject is taking down belongs to that flight, so the approver records none of those.
-7. Answers: dissent (`kDAReturnBusy`) if anything is still letting go, a write op is busy on the disk, or the unit read
-   came back unreadable; otherwise approve.
+7. Answers: dissent (`kDAReturnBusy`) if anything is still letting go, a repo wouldn't let go in time, a write op is
+   busy on the disk, or the unit read came back unreadable; otherwise approve.
 
 **The shared deadline** (`ask.rs`). DA times each callback from when it QUEUED it (10 s, `DAQueue.c:178-180`), not from
 when the client runs it, and a session runs its callbacks one at a time. So an ask starting while an earlier ask's
@@ -389,7 +393,9 @@ approver couldn't install, and logs an `error`. ❌ Never both: two pre-unmount 
 real `diskutil` unmounts: verified on macOS 27.0 (2026-09-16) that an idle volume's unmount is asked about while it's
 still mounted, a held file's refusal hands the index back after the idle, the first ask of a two-partition disk lets go
 of both partitions, a dissent refuses a non-force unmount, `hdiutil detach -force` ignores that dissent, and a person's
-enable issued during an ask never lands an index on the drive that's leaving.
+enable issued during an ask never lands an index on the drive that's leaving. A repo open on the drive with its pack
+mapped lets go during the ask, so a plain `diskutil unmount` goes through (Darwin 27.0.0, 2026-10-19); the test host
+releases through a real `GitPortal` set on `FakeHost::git`.
 
 ## Key decisions
 

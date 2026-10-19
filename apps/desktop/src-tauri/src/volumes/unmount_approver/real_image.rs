@@ -18,6 +18,7 @@ use cmdr_fs::testing::disk_images::{DiskImage, DiskImageSession, FileHolder, Ima
 use super::test_seams::{Fixture, real_fixture};
 use super::{Approval, Host, install};
 use crate::file_system::volume::drive_release::{Gated, SkipReason, StartKind};
+use crate::ignore_poison::IgnorePoison;
 use crate::test_support::wait_until;
 
 /// How long a test waits for DiskArbitration to deliver a callback, or for a resume to settle.
@@ -267,4 +268,48 @@ fn a_persons_enable_during_an_ask_never_lands_an_index_on_a_drive_thats_leaving(
     );
     assert!(!is_mounted(&mount_point));
     assert!(lane.fixture.index.started().is_empty());
+}
+
+#[test]
+#[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
+fn a_repo_open_on_the_drive_lets_go_so_a_plain_unmount_goes_through() {
+    use cmdr_git::test_fixtures::{Fixture as RepoFixture, git_cli};
+    use cmdr_git::{GitPortal, no_git_state_sink};
+
+    let session = DiskImageSession::acquire();
+    let image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach the image");
+    let lane = lane(&image);
+    let mount_point = image.volumes()[0].mount_point.clone();
+    let portal = Arc::new(GitPortal::with_scripted_watcher(
+        cmdr_fs::volume::host::VolumeHost::detached(),
+        no_git_state_sink(),
+    ));
+    *lane.fixture.host.git.lock_ignore_poison() = Some(Arc::clone(&portal));
+    let dir = mount_point.join("repo");
+    std::fs::create_dir(&dir).expect("make the repo dir");
+    let mut repo = RepoFixture::init(dir.clone());
+    repo.commit_file("README.md", b"hello\n", "initial");
+    repo.commit_file("data.bin", &[0x5a; 512 * 1024], "some data");
+    git_cli(&dir, &["repack", "-a", "-d", "-q"]);
+    drop(repo);
+    {
+        // Reading HEAD's tree maps the pack; the portal's cached handle keeps it mapped.
+        let (handle, _) = portal.discover(&dir).expect("open the repo on the drive");
+        let opened = handle.to_thread_local();
+        let _tree = opened.head_commit().expect("HEAD").tree().expect("its tree");
+    }
+
+    image
+        .unmount_volume(0)
+        .expect("diskutil unmount goes through: the ask let go of the repo before the kernel looked");
+
+    assert!(!is_mounted(&mount_point));
+    let released: Vec<_> = lane
+        .fixture
+        .host
+        .repo_releases()
+        .into_iter()
+        .flat_map(|(roots, _)| roots)
+        .collect();
+    assert_eq!(released, [mount_point]);
 }

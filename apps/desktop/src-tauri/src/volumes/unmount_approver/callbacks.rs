@@ -45,6 +45,10 @@ pub(crate) trait Host: Send + Sync + 'static {
     /// Whether Cmdr's own eject of the volume is in flight. Such a volume is the flight's to stop
     /// and to resume.
     fn is_ejecting(&self, volume_id: &str) -> bool;
+    /// Let go of every git repo on the volumes mounted at `mount_roots`, waiting until `deadline`
+    /// for the reads still holding one, and answer whether all let go. A plain unmount fails while
+    /// any repo there has a pack file mapped. In memory only: no filesystem.
+    fn let_go_of_repos(&self, mount_roots: &[PathBuf], deadline: Instant) -> bool;
     /// An idle callback came. For a test that waits for one.
     fn note_idle(&self) {}
     /// An idle handed these volumes back to the gate. For a test that waits for the batch.
@@ -160,11 +164,17 @@ impl Approver {
         };
         self.gate.set_unmount_pending(&ids);
 
+        // A plain unmount fails while a repo on the disk has a pack file mapped, so the repos let
+        // go first, under the same deadline. In memory only, and milliseconds unless a status or
+        // commit walk is mid-read, which it stops.
+        let roots: Vec<PathBuf> = group.iter().map(|volume| volume.path.clone()).collect();
+        let repos_let_go = self.host.let_go_of_repos(&roots, deadline);
+
         // Read before the release: past the deadline it answers without waiting on any of it.
         let unwaited = (now >= deadline).then(|| Unwaited {
             indexing: ids.iter().any(|id| self.host.is_indexing(id)),
             ticket_in_flight: ids.iter().any(|id| self.gate.holds_ticket(id)),
-            busy: self.is_busy(&ids),
+            busy: self.is_busy(&ids) || !repos_let_go,
         });
 
         let release = self.release(&group, generation, deadline);
@@ -188,7 +198,7 @@ impl Approver {
             Some(disk_facts) => ask::without_waiting(disk_facts),
             None => ask::after_release(
                 release.volumes.iter().map(|released| released.outcome),
-                self.is_busy(&ids),
+                self.is_busy(&ids) || !repos_let_go,
             ),
         };
         // ❗ An ask that couldn't read its disk refuses, whatever the volumes it COULD see answered:
@@ -205,7 +215,7 @@ impl Approver {
         );
         log::info!(
             target: "unmount_approver",
-            "{} of {:?} is about to unmount: {answer:?} after letting go of {ids:?} ({:?} of the chain's budget left)",
+            "{} of {:?} is about to unmount: {answer:?} after letting go of {ids:?} (git repos let go: {repos_let_go}; {:?} of the chain's budget left)",
             disk.bsd_name,
             path,
             deadline.saturating_duration_since(self.gate.now()),
@@ -508,6 +518,45 @@ mod tests {
             fx.index.stops_that_found_an_index(),
             2,
             "the sibling's ask finds its own volume already let go of"
+        );
+    }
+
+    #[test]
+    fn an_ask_lets_go_of_the_repos_on_every_volume_of_its_disk_by_the_chains_deadline() {
+        let fx = fixture();
+        let (a, b) = (path("A"), path("B"));
+        fx.indexed_volume("vol-a", "disk7s2", &a);
+        fx.indexed_volume("vol-b", "disk7s3", &b);
+        let group = vec![mounted("disk7s2", UNIT, &a), mounted("disk7s3", UNIT, &b)];
+        let asked_at = fx.gate.now();
+
+        let answer = fx
+            .approver
+            .on_unmount_ask(&asked("disk7s2", UNIT, &a), |_| Some(group.clone()));
+
+        assert_eq!(answer, Answer::Approve);
+        assert_eq!(
+            fx.host.repo_releases(),
+            [(vec![a, b], asked_at + APPROVAL_STOP_BUDGET)],
+            "a plain unmount fails while any repo on the disk has a pack mapped"
+        );
+    }
+
+    #[test]
+    fn repos_that_wont_let_go_in_time_refuse_the_unmount() {
+        let fx = fixture();
+        let a = path("A");
+        fx.indexed_volume("vol-a", "disk7s2", &a);
+        fx.host.repos_let_go.store(false, std::sync::atomic::Ordering::SeqCst);
+
+        let answer = fx.approver.on_unmount_ask(&asked("disk7s2", UNIT, &a), |_| {
+            Some(vec![mounted("disk7s2", UNIT, &a)])
+        });
+
+        assert_eq!(
+            answer,
+            Answer::Dissent,
+            "approving would only have the kernel refuse it, with the repo still reading the drive"
         );
     }
 

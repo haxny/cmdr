@@ -6,8 +6,9 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
+use std::time::Instant;
 
 use cmdr_index::{IndexVolumeKind, RemovableStop};
 
@@ -183,9 +184,21 @@ pub(super) struct FakeHost {
     pub(super) mounted: Mutex<HashSet<PathBuf>>,
     idles: AtomicUsize,
     resumes: Mutex<Vec<ResumeBatch>>,
+    /// Every repo release an ask made: the mount roots, and the deadline it had.
+    repo_releases: Mutex<Vec<(Vec<PathBuf>, Instant)>>,
+    /// What a repo release answers when no real portal is set; `true` unless a test says the repos
+    /// won't let go.
+    pub(super) repos_let_go: AtomicBool,
+    /// A real portal to release repos through, for the real-image lane.
+    pub(super) git: Mutex<Option<Arc<cmdr_git::GitPortal>>>,
 }
 
 impl FakeHost {
+    /// Every repo release an ask made, in order.
+    pub(super) fn repo_releases(&self) -> Vec<(Vec<PathBuf>, Instant)> {
+        self.repo_releases.lock_ignore_poison().clone()
+    }
+
     /// How many idle callbacks the approver has handled.
     pub(super) fn idles(&self) -> usize {
         self.idles.load(Ordering::SeqCst)
@@ -265,6 +278,21 @@ impl Host for FakeHost {
     fn note_resume(&self, batch: ResumeBatch) {
         self.resumes.lock_ignore_poison().push(batch);
     }
+
+    fn let_go_of_repos(&self, mount_roots: &[PathBuf], deadline: Instant) -> bool {
+        self.repo_releases
+            .lock_ignore_poison()
+            .push((mount_roots.to_vec(), deadline));
+        let portal = self.git.lock_ignore_poison().clone();
+        let Some(portal) = portal else {
+            return self.repos_let_go.load(Ordering::SeqCst);
+        };
+        let mut all_let_go = true;
+        for root in mount_roots {
+            all_let_go &= portal.release_volume(root, deadline);
+        }
+        all_let_go
+    }
 }
 
 /// A gate, its index, the host, and the approver over them.
@@ -313,6 +341,9 @@ fn build(presence: Presence, gate: impl FnOnce(Arc<dyn IndexDoor>) -> DriveRelea
         mounted: Mutex::default(),
         idles: AtomicUsize::new(0),
         resumes: Mutex::default(),
+        repo_releases: Mutex::default(),
+        repos_let_go: AtomicBool::new(true),
+        git: Mutex::default(),
     });
     let gate = gate(Arc::clone(&index) as Arc<dyn IndexDoor>);
     let approver = Approver::new(gate.clone(), Arc::clone(&host) as Arc<dyn Host>);

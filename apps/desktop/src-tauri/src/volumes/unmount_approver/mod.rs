@@ -19,9 +19,10 @@ mod test_seams;
 
 use std::ffi::c_void;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::sync::{Arc, OnceLock};
+use std::time::Instant;
 
 use cmdr_index::RemovableStop;
 use dispatch2::{DispatchQoS, DispatchQueue, DispatchQueueAttr, DispatchRetained};
@@ -271,6 +272,17 @@ impl Host for AppHost {
 
     fn is_ejecting(&self, volume_id: &str) -> bool {
         crate::file_system::volume::eject::is_ejecting(volume_id)
+    }
+
+    fn let_go_of_repos(&self, mount_roots: &[PathBuf], deadline: Instant) -> bool {
+        let portal = crate::file_system::git::wiring::portal();
+        // Every root is released, even after one couldn't let go in time: ❌ no `all`, which
+        // would stop at the first.
+        let mut all_let_go = true;
+        for root in mount_roots {
+            all_let_go &= portal.release_volume(root, deadline);
+        }
+        all_let_go
     }
 }
 

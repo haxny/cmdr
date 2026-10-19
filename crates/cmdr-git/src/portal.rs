@@ -18,7 +18,13 @@ use cmdr_fs::volume::git_error::FriendlyGitError;
 use cmdr_fs::volume::host::VolumeHost;
 
 use crate::fault_guard::{FaultWatch, GuardedRead};
+use crate::path::{self, Cat, VirtualGitPath};
 use crate::releasing;
+use crate::repo::{RepoCache, RepoHandle, RepoInfo};
+use crate::state_sink::GitStateSink;
+use crate::virtual_listing;
+use crate::watcher::GitWatcherRegistry;
+use cmdr_fs::entry::FileEntry;
 
 /// How often [`GitPortal::release_volume`] looks again for reads still holding a
 /// repo on the leaving volume.
@@ -28,12 +34,6 @@ const RELEASE_POLL: Duration = Duration::from_millis(5);
 /// is opened again: long enough to cover the unmount that follows an approval,
 /// short enough that a refused one hands git back within seconds.
 const REOPEN_HOLD: Duration = Duration::from_secs(5);
-use crate::path::{self, Cat, VirtualGitPath};
-use crate::repo::{RepoCache, RepoHandle, RepoInfo};
-use crate::state_sink::GitStateSink;
-use crate::virtual_listing;
-use crate::watcher::GitWatcherRegistry;
-use cmdr_fs::entry::FileEntry;
 
 /// Everything the virtual `.git` portal needs to answer, in one value.
 pub struct GitPortal {
