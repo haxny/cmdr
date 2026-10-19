@@ -1307,11 +1307,14 @@ mount, or that pops a password box, is worse than the leftover it was chasing. D
 the only trace of a multi-gigabyte partial.
 
 **What makes the deferral terminate** is `OperationVolumes::on_volume_arrival` (the registry's own, in the app): the
-ledger subscribes (once, and only when a launch actually has something waiting), and the moment that volume ID lands in
-the registry the records waiting on it are claimed and deleted on a task. A registration is the one moment a volume is
-known-usable without probing anything. The listener takes only the ID and the registry hands the volume back through
-`resolve`, which keeps the dependency pointing one way: the registry knows nothing about the ledger, so the two subtrees
-stay acyclic. A delete the volume refuses puts the record back, so a later arrival or a later launch tries again.
+ledger subscribes (once, and only when something actually waits), and the moment that volume ID lands in the registry,
+or a registered one reconnects in place, the records waiting on it are claimed and settled on a task. A registration and
+a reconnect are the two moments a volume is known-usable without probing anything; the app turns a backend's `Connected`
+transition into the announcement (`file_system/volume/DETAILS.md` § "Telling someone a volume arrived"). `claim_pending`
+hands each record out once, so a flapping link can't stack two sweeps on one record. The listener takes only the ID and
+the registry hands the volume back through `resolve`, which keeps the dependency pointing one way: the registry knows
+nothing about the ledger, so the two subtrees stay acyclic. A delete the volume refuses puts the record back, so a later
+arrival or a later launch tries again.
 
 **The sweep reports.** `SweepHandle::wait()` answers a `SweepTally` (swept / already gone / deferred / left alone) and
 the same numbers go out as one `info` line. Every record lands in exactly one counter, which is what makes a "the sweep

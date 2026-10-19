@@ -28,7 +28,8 @@ and `announce` / `announce_on`; `testing.rs` holds the fakes (`RecordingEngineEv
 - **A seam reports facts, ❌ never words**: an error report is a typed `OperationErrorReport`, an instant op's analytics
   an `InstantMutationFact` of categories. The app decides the event, the PostHog name, and the message.
 - **A site passing a path calls `OperationVolumes::resolve`, ❌ never `get`**; one that stays on `get` says why.
-- **An arrival listener runs INSIDE the registration**: return at once, hand work to the runtime.
+- **An arrival listener runs INSIDE the registration, or a reconnect's report**: return at once, hand work to the
+  runtime.
 
 Each seam's contract, its app answer, and the runtime rules: `DETAILS.md`. Read it before any non-trivial work here:
 editing, planning, reorganizing, or advising.

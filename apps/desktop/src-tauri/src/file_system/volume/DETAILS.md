@@ -907,6 +907,15 @@ just told about would otherwise deadlock, and every `register` arm (insert, repl
 a usable volume serving that ID. Pinned by
 `in_flight_temps_tests.rs::every_registration_path_announces_the_volume`.
 
+**A registered volume that reconnects IN PLACE is announced too** (`manager/reconnects.rs::ArrivalOnReconnect`, which
+`volume_host.rs` puts in front of every backend's event sink, app or not). A connecting backend that drops and rebuilds
+its session never registers again, yet the in-flight ledger holds what a cancelled copy couldn't remove while the share
+was out, and that has to be settled the moment the share is back, not at the next launch. So its `Connected` transition
+calls `VolumeManager::announce_reconnected`, which announces an id the registry holds and stays silent for any other.
+The backends report transitions, not states, and a retired instance stays silent (`cmdr_fs::volume::ConnectionReporter`),
+so a flapping link announces once per reconnect and a superseded volume never speaks for its successor's id. Pinned by
+`manager/arrival_tests.rs::a_registered_volume_that_reconnects_in_place_announces_itself`.
+
 ### A volume ID owns a set of mount roots
 
 **Decision**: a registry entry (`manager/roots.rs::Registration`) is the volume plus the SET of mount roots known to

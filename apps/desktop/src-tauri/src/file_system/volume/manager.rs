@@ -23,11 +23,15 @@ mod roots;
 /// Swapping an id's volume across a root change a person asked for.
 mod root_replace;
 
+/// A registered volume reconnecting in place announces itself like an arrival.
+mod reconnects;
+
 /// Following a mount root that moved while its filesystem stayed mounted (a rename).
 /// Only the macOS mount watcher sees a rename.
 #[cfg(any(target_os = "macos", test))]
 mod root_move;
 
+pub use reconnects::ArrivalOnReconnect;
 #[cfg(target_os = "macos")]
 pub use root_move::RootMove;
 pub use root_replace::RootReplacement;
@@ -147,6 +151,18 @@ impl VolumeManager {
     fn announce_arrival(&self, id: &str) {
         for listener in self.arrival_listeners.read_ignore_poison().iter() {
             listener(id);
+        }
+    }
+
+    /// Tells the listeners a registered `id` reconnected in place: the same
+    /// news as an arrival, for work waiting on that volume to be reachable
+    /// ([`ArrivalOnReconnect`]). Silent for an id nothing registered.
+    pub fn announce_reconnected(&self, id: &str) {
+        // The read guard is a temporary of this statement, released before any
+        // listener may ask the registry back.
+        let registered = self.volumes.read_ignore_poison().contains_key(id);
+        if registered {
+            self.announce_arrival(id);
         }
     }
 

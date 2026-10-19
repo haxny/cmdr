@@ -62,7 +62,8 @@
 //! before `init_volume_manager`, and a NAS registers later still (or not at all
 //! this session), so a volume-borne record is normally DEFERRED: re-recorded on
 //! disk, held in [`Store::pending`], and acted on the moment that volume ID
-//! arrives in the registry (`OperationVolumes::on_volume_arrival`). ❌ The sweep
+//! arrives in the registry or reconnects in place
+//! (`OperationVolumes::on_volume_arrival`). ❌ The sweep
 //! never dials, mounts, or authenticates anything to reach a volume: a launch
 //! that blocks on a dead mount, or that pops a NAS password box, is worse than
 //! the leftover it was chasing. A record whose volume never comes back rides

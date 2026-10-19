@@ -86,7 +86,8 @@ type ArrivalListener = Arc<dyn Fn(&str) + Send + Sync>;
 
 /// A volume registry the test fills: nothing is an archive, nothing routes but
 /// what [`FakeVolumes::route`] adds, and an id it doesn't hold is gone. A
-/// registration announces the id to every arrival listener, inside the call, as the app's registry does.
+/// registration, and a registered volume's reconnect, announce the id to every
+/// arrival listener, inside the call, as the app's registry does.
 // DEFAULT-OK: a registry the test hasn't filled holds no volume, which is what it says.
 #[derive(Default)]
 pub struct FakeVolumes {
@@ -125,6 +126,19 @@ impl FakeVolumes {
     /// Registers `volume` under `volume_id`, then tells every arrival listener.
     pub fn register(&self, volume_id: &str, volume: Arc<dyn Volume>) {
         self.volumes.lock_ignore_poison().insert(volume_id.to_string(), volume);
+        self.announce(volume_id);
+    }
+
+    /// The volume registered under `volume_id` reconnected in place: tells
+    /// every arrival listener, as the app's registry does on a `Connected`
+    /// transition. Silent for an id it doesn't hold.
+    pub fn reconnected(&self, volume_id: &str) {
+        if self.get(volume_id).is_some() {
+            self.announce(volume_id);
+        }
+    }
+
+    fn announce(&self, volume_id: &str) {
         // Outside both locks, so a listener may ask this registry back.
         let listeners = self.arrival_listeners.lock_ignore_poison().clone();
         for listener in listeners {

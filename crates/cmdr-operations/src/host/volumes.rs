@@ -50,10 +50,12 @@ pub trait OperationVolumes: VolumeLookup {
     /// sees an edit the engine just committed.
     fn forget_archive_index(&self, archive_path: &Path);
 
-    /// Tells `listener`, by id, whenever a volume becomes available.
+    /// Tells `listener`, by id, whenever a volume becomes available: it
+    /// registers, or a registered volume reconnects in place (its session came
+    /// back, which no registration announces).
     ///
-    /// ❗ The listener runs INSIDE the registration: it returns at once and
-    /// hands real work to a task.
+    /// ❗ The listener runs INSIDE the registration or the backend's report of
+    /// the reconnect: it returns at once and hands real work to a task.
     fn on_volume_arrival(&self, listener: Box<dyn Fn(&str) + Send + Sync>);
 
     /// Why nothing is registered under `volume_id`. Ask it only after a lookup

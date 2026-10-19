@@ -6,7 +6,8 @@
 //! actually give it; all this does is collect them.
 //!
 //! - listings — `listing_host::backends::AppListings`
-//! - events — `events::volume_mapping::TauriVolumeEvents`
+//! - events — `events::volume_mapping::TauriVolumeEvents`, behind
+//!   `file_system::volume::manager::ArrivalOnReconnect`
 //! - credentials — `network::credential_store::KeychainCredentials`
 //! - host keys — `network::sftp_host_keys::AppHostKeys`
 //! - indexing — `index_host::VolumeIndexNotifier`
@@ -41,7 +42,9 @@ use std::sync::{Arc, OnceLock};
 use tauri::AppHandle;
 
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::host::events::VolumeEventSink;
+use cmdr_fs::volume::host::events::{VolumeConnection, VolumeEventSink};
+
+use crate::file_system::volume::manager::ArrivalOnReconnect;
 
 /// The host [`install`] built. Backend construction paths reach it through
 /// [`host`].
@@ -50,6 +53,13 @@ static HOST: OnceLock<VolumeHost> = OnceLock::new();
 /// The directory each backend's durable private state goes under
 /// (`VolumeHost::state_dir`).
 const BACKEND_STATE_DIR: &str = "backend-state";
+
+/// The frontend channel of a host with no app: nobody to tell.
+struct SilentVolumeEvents;
+
+impl VolumeEventSink for SilentVolumeEvents {
+    fn connection_changed(&self, _volume_id: &str, _connection: VolumeConnection) {}
+}
 
 /// Wires every seam but the frontend event channel and the state directory,
 /// the two answers that need a running app.
@@ -77,11 +87,15 @@ fn wire(events: Option<Arc<dyn VolumeEventSink>>, state_root: Option<&std::path:
             // their watchers run on OS threads with no reactor, where
             // `tokio::spawn` panics.
             .runtime(tauri::async_runtime::handle().inner().clone())
-            .events(events)
+            .events(Arc::new(ArrivalOnReconnect::new(events)))
             .build(),
         // No `runtime` either: without an app there's no pool to join, and the
-        // seam builds its own shared fallback on first use.
-        None => builder.build(),
+        // seam builds its own shared fallback on first use. A reconnect still
+        // announces its volume: an app-side backend cell's leftovers are swept
+        // on it the way the app's are.
+        None => builder
+            .events(Arc::new(ArrivalOnReconnect::new(Arc::new(SilentVolumeEvents))))
+            .build(),
     }
 }
 

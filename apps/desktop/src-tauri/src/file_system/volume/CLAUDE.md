@@ -30,7 +30,7 @@ App-side backend, registry, and eject wiring. Every operation goes through a `Vo
   Promotion runs on evidence that arrives on its own: an unmount event, or `note_root_failure`'s mount-is-gone errno
   (`volumes/DETAILS.md` § "Hung mounts").
 - **Work that must WAIT for a volume subscribes with `on_volume_arrival`, ❌ never polls the registry.** A listener
-  gets the ID only and runs INSIDE the registration: return at once, hand work to a task.
+  gets the ID only and runs INSIDE the registration or reconnect: return at once, hand work to a task.
 - **Cross-volume copy flows only through `open_read_stream` / `write_from_stream`, chunk by chunk**, ❌ never draining
   a `VolumeReadStream` or collecting a remote file into a `Vec<u8>`. Every mutation must call `notify_mutation`,
   `write_from_stream` included: its default is a no-op and SMB/MTP events are lossy, so skipping it strands the pane.

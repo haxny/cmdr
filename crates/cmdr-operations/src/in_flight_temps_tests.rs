@@ -200,6 +200,61 @@ async fn a_deferred_record_is_swept_the_moment_its_volume_arrives() {
     );
 }
 
+/// A share that drops and comes back IN PLACE never registers again, so its
+/// reconnect is the arrival the records waiting on it get: what a cancel left
+/// on a NAS that was out is settled the moment the share is back, this session.
+/// Only that volume's records are claimed; another volume's stay waiting.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_reconnect_in_place_settles_what_waits_on_that_volume_and_nothing_else() {
+    let engine = TestOperations::new();
+    let ledger = Ledger::for_test();
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_in_flight_ledger(ledger.clone()),
+    );
+    let mut temps = Vec::new();
+    for (volume_id, name) in [
+        (
+            "in-flight-temps-test-nas-reconnects",
+            "/photos/holiday.raw.cmdr-tmp-5151",
+        ),
+        ("in-flight-temps-test-nas-stays-out", "/photos/beach.raw.cmdr-tmp-5252"),
+    ] {
+        let volume = Arc::new(InMemoryVolume::new("nas"));
+        let temp = PathBuf::from(name);
+        volume.create_file(&temp, b"half a photo").await.unwrap();
+        engine
+            .volumes()
+            .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+        let (record, _) = track_in(&state, RecordHome::volume_space(volume_id), ItemKind::Temp, &temp).await;
+        keep_for_arrival(&state, record);
+        temps.push((volume_id, volume, temp));
+    }
+    let [(reconnected_id, reconnected, swept), (_, stayed_out, waiting)] = &temps[..] else {
+        unreachable!("two volumes");
+    };
+
+    engine.volumes().reconnected(reconnected_id);
+
+    wait_until_async(ARRIVAL_WAIT, "the reconnected volume's temp to be swept", || {
+        !ledger.live_paths().contains(swept)
+    })
+    .await;
+    assert!(
+        !reconnected.exists(swept).await,
+        "the temp goes from the share that came back"
+    );
+    assert!(
+        stayed_out.exists(waiting).await,
+        "another volume's temp is no business of this reconnect"
+    );
+    assert!(
+        ledger.live_paths().contains(waiting),
+        "and its record still waits for its own volume"
+    );
+}
+
 /// A volume that comes back but refuses the delete keeps its record, so a later
 /// arrival (or a later launch) tries again. Losing the record on a transport
 /// blip would strand the partial forever.
