@@ -725,23 +725,34 @@ fn a_parked_send_records_its_wait_and_an_immediate_one_does_not() {
     );
 
     // The slot is full now, so this send parks until the receiver drains it.
+    //
+    // ❗ The drainer's clock starts only once the sender is AT the send: the depth
+    // bump to 2 comes a few µs before the park. Started at spawn instead, the
+    // sleep overlapped the sender's own way to the send and the recorded wait came
+    // in under it (49.9 ms against 50 ms on a loaded Linux runner, 2026-10-19).
     let drain_after = Duration::from_millis(50);
-    let drainer = thread::spawn(move || {
-        // allowed-test-sleep: this delay IS the measured quantity. The parked send must record at
-        // least `drain_after`, so the drainer holds the slot full for exactly that long
-        thread::sleep(drain_after);
-        let _ = receiver.recv();
-        // allowed-test-sleep: keeps the channel alive after the drain so the parked send lands
-        // rather than erroring on a hung-up receiver
-        thread::sleep(Duration::from_millis(100));
+    let bump_to_park = Duration::from_millis(5);
+    let depth = &depth;
+    let waited = thread::scope(|scope| {
+        scope.spawn(move || {
+            wait_until(Duration::from_secs(10), "the second send to reach the channel", || {
+                depth.load(Ordering::Relaxed) == 2
+            });
+            // allowed-test-sleep: this delay IS the measured quantity. The parked send must record at
+            // least `drain_after`; `bump_to_park` covers the µs between the depth bump and the park
+            thread::sleep(drain_after + bump_to_park);
+            let _ = receiver.recv();
+            // allowed-test-sleep: keeps the channel alive after the drain so the parked send lands
+            // rather than erroring on a hung-up receiver
+            thread::sleep(Duration::from_millis(100));
+        });
+        send_blocking_with_depth(&sender, depth, partial_agg()).expect("the drain lets the parked send land");
+        wait_probe::take()
     });
-    send_blocking_with_depth(&sender, &depth, partial_agg()).expect("the drain lets the parked send land");
-    let waited = wait_probe::take();
     assert!(
         waited >= drain_after,
         "a parked send must record the time it waited; got {waited:?}"
     );
-    drainer.join().unwrap();
 }
 
 // ── Busy-handler escalation policy ───────────────────────────────────

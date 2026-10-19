@@ -335,6 +335,10 @@ fn a_relaunch_with_no_replayable_journal_bumps_the_epoch() {
 /// is lost for good: covered ground is never re-walked (Decision 5). That is how a
 /// drive renamed before its first index completed lost what arrived in the gap
 /// between the two watches (#550).
+///
+/// macOS only: an FSEvents stream has event ids to record, and inotify has none, so
+/// a Linux resume always takes the epoch-bump path the test above pins.
+#[cfg(target_os = "macos")]
 #[test]
 fn a_quiet_session_still_leaves_the_next_one_a_point_to_replay_from() {
     let drive = Drive::new(
