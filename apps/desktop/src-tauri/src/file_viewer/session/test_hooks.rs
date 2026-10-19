@@ -235,6 +235,12 @@ impl FileViewerBackend for ScriptedBackend {
 /// Close it with `close_session` like any other session.
 #[cfg(test)]
 pub fn test_only_install_session(backend: Box<dyn FileViewerBackend>, path: PathBuf) -> String {
+    test_only_install_viewed_session(backend, path, RowText::Raw)
+}
+
+/// [`test_only_install_session`] with a row view, for the read paths under the debug log's.
+#[cfg(test)]
+pub fn test_only_install_viewed_session(backend: Box<dyn FileViewerBackend>, path: PathBuf, rows: RowText) -> String {
     let session_id = generate_session_id();
     let session = ViewerSession::new(ViewerSessionInit {
         backend,
@@ -249,6 +255,7 @@ pub fn test_only_install_session(backend: Box<dyn FileViewerBackend>, path: Path
         media_token: None,
         temp: None,
         markdown: None,
+        rows,
     });
     SESSIONS.lock_ignore_poison().insert(session_id.clone(), session);
     session_id

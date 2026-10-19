@@ -38,6 +38,7 @@ use regex::{Regex, RegexBuilder};
 
 use crate::ignore_poison::IgnorePoison;
 
+use super::log_view::RowText;
 use super::{MAX_SEARCH_MATCHES, SearchMatch};
 
 /// Maximum line length before `find_matches` switches to chunked scanning.
@@ -89,7 +90,15 @@ impl std::error::Error for MatcherBuildError {}
 
 /// One built matcher, shared across every line of a single search.
 #[derive(Debug)]
-pub enum Matcher {
+pub struct Matcher {
+    pattern: Pattern,
+    /// The text a row is matched as: what the session shows, so a match's column lands on the
+    /// text the user sees.
+    rows: RowText,
+}
+
+#[derive(Debug)]
+enum Pattern {
     /// Plain substring search via `str::find`. Faster than regex for the common
     /// "find this literal" case and avoids the regex builder's overhead.
     Literal {
@@ -123,19 +132,49 @@ impl Matcher {
             let regex = builder
                 .build()
                 .map_err(|e| MatcherBuildError::InvalidRegex(e.to_string()))?;
-            Ok(Matcher::Regex(regex))
+            Ok(Matcher::new(Pattern::Regex(regex)))
         } else {
             let needle_lower = if !mode.case_sensitive {
                 query.to_lowercase()
             } else {
                 String::new()
             };
-            Ok(Matcher::Literal {
+            Ok(Matcher::new(Pattern::Literal {
                 needle: query.to_string(),
                 needle_lower,
                 case_insensitive: !mode.case_sensitive,
-            })
+            }))
         }
+    }
+
+    fn new(pattern: Pattern) -> Self {
+        Self {
+            pattern,
+            rows: RowText::Raw,
+        }
+    }
+
+    /// The same matcher, reading each row as `rows` shows it.
+    pub fn viewing(self, rows: RowText) -> Self {
+        Self { rows, ..self }
+    }
+
+    /// Whether this is a case-insensitive literal search.
+    #[cfg(test)]
+    pub(crate) fn is_case_insensitive_literal(&self) -> bool {
+        matches!(
+            self.pattern,
+            Pattern::Literal {
+                case_insensitive: true,
+                ..
+            }
+        )
+    }
+
+    /// Whether this is a regex search.
+    #[cfg(test)]
+    pub(crate) fn is_regex(&self) -> bool {
+        matches!(self.pattern, Pattern::Regex(_))
     }
 
     /// Iterate matches in `line`, invoking `callback(start, end)` for each one in
@@ -151,7 +190,7 @@ impl Matcher {
         F: FnMut(usize, usize) -> ControlFlow<()>,
     {
         // Empty literal needle and empty regex matches: skip iterating, never report.
-        if let Matcher::Literal { needle, .. } = self
+        if let Pattern::Literal { needle, .. } = &self.pattern
             && needle.is_empty()
         {
             return;
@@ -172,8 +211,8 @@ impl Matcher {
     where
         F: FnMut(usize, usize) -> ControlFlow<()>,
     {
-        match self {
-            Matcher::Literal {
+        match &self.pattern {
+            Pattern::Literal {
                 needle,
                 needle_lower,
                 case_insensitive,
@@ -230,7 +269,7 @@ impl Matcher {
                     }
                 }
             }
-            Matcher::Regex(re) => {
+            Pattern::Regex(re) => {
                 for m in re.find_iter(slice) {
                     // Zero-width matches (for example `^` with no anchor target) would
                     // make the iteration above loop forever; `regex::find_iter` already
@@ -375,6 +414,8 @@ pub fn scan_line_with_matcher(
     results: &Mutex<Vec<SearchMatch>>,
 ) -> LineScan {
     let mut outcome = LineScan::Done;
+    let line = matcher.rows.render(line);
+    let line = line.as_ref();
     matcher.find_matches(line, |start_byte, end_byte| {
         if cancel.load(Ordering::Relaxed) {
             outcome = LineScan::Cancelled;

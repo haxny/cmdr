@@ -112,6 +112,7 @@ export type {
   ViewerSearchStatus,
   SearchPollResult,
   RangeEnd,
+  RowText,
   ViewerError,
 } from './file-viewer'
 

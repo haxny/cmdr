@@ -12,6 +12,7 @@ pub mod encoding;
 mod full_load;
 pub(crate) mod headless;
 mod line_index;
+mod log_view;
 mod markdown_document;
 mod markdown_images;
 mod markdown_links;
@@ -50,6 +51,8 @@ mod headless_test;
 #[cfg(test)]
 mod line_index_test;
 #[cfg(test)]
+mod log_view_test;
+#[cfg(test)]
 mod markdown_images_test;
 #[cfg(test)]
 mod markdown_links_test;
@@ -82,6 +85,7 @@ mod watcher_test;
 
 pub use content_kind::{ViewerContentKind, classify_viewer_content};
 pub use encoding::FileEncoding;
+pub use log_view::RowText;
 pub use markdown_links::MarkdownLink;
 pub use markdown_session::{MarkdownRender, allow_remote_images, render_markdown_session, resolve_markdown_link};
 pub use materialize::init_materialize_dir;

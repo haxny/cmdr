@@ -47,6 +47,7 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
   the checkpoint before the old file's last row
 - `search_matcher.rs`: `Matcher` (literal or regex), `SearchMode`, `scan_line_with_matcher` helper. One matcher built
   per search; reused across every line. Huge-line chunking (1 MB windows, 256 byte overlap) lives here.
+- `log_view.rs`: `RowText`, how a session shows its rows, and `ViewedBackend`. See § "The debug log's view"
 - `source.rs`: the floor every backend imports. `ByteSource` (positioned `read_at`), `SharedSource`,
   `LocalFileSource` (`pread` on a held `File`), `OpenedFile` (source + size + name), `open_local`. See § "Byte sources"
 - `volume_source.rs`: `VolumeSource`, a `ByteSource` over a volume's held `VolumeRandomReader` (SMB) with a small
@@ -573,6 +574,24 @@ if file_size < 1MB {
     // Upgrade to LineIndexBackend when ready
 }
 ```
+
+## The debug log's view
+
+Cmdr's log file carries invisible markers around user-derived values, which the error reporter reads
+(`../redact/DETAILS.md` § "Marked spans"). Help > View debug log opens it with `RowText::LogDisplay` (the `rows` arg of
+`viewer_open`): each row goes through `crate::redact::display_line`, markers gone and each value shown as itself.
+
+- **Decision: transform rows where they leave a backend, ❌ never in the frontend renderer.** Search columns, highlights,
+  and wrap are then all computed on the text the user sees. `ViewerSession::load_backend` wraps the current backend in
+  `ViewedBackend` on every read, so the index upgrade, an encoding switch, and a tail extend (which store raw backends
+  through `session.backend`) keep the view; `search_start` hands the matcher the same view, and `open_session_core`
+  applies it to the open's first rows.
+- **Copy and "Save range" take the shown text**: both read rows through `get_lines`, so the selection's UTF-16 offsets
+  land on the text they were measured on. The raw file is on disk for anything that needs the markers.
+- **Byte offsets stay the raw file's** (`byte_offset`, `end_byte_offset`, `ChunkEnd`), and so does
+  `CHUNK_BUDGET_BYTES`, counted before the transform.
+- **An explicit option, ❌ never content sniffing**: the viewer is generic, and only the caller knows the file is the
+  log. Pinned by `log_view_test.rs`.
 
 ## Headless reads (`headless.rs`)
 

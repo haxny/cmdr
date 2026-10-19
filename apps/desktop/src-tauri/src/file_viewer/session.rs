@@ -24,6 +24,7 @@ use super::content_kind::ViewerContentKind;
 use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, detect_from_head, same_byte_layout};
 use super::full_load::FullLoadBackend;
 use super::line_index::LineIndexBackend;
+use super::log_view::RowText;
 use super::markdown_session;
 use super::media;
 use super::media_session;
@@ -192,19 +193,34 @@ const VOLUME_INDEX_MAX_BYTES: u64 = 32 * 1024 * 1024;
 /// - Under 1 MB: FullLoad (instant, full random access)
 /// - Over 1 MB: ByteSeek first (instant open), then upgrades to LineIndex in background
 pub fn open_session(path: &str, volume_id: &str) -> Result<ViewerOpenResult, ViewerError> {
-    open_session_inner(path, volume_id, /*force_text=*/ false, &PendingOpen::new(), None)
+    open_session_inner(
+        path,
+        volume_id,
+        /*force_text=*/ false,
+        RowText::Raw,
+        &PendingOpen::new(),
+        None,
+    )
 }
 
 /// Opens a fresh, full text session regardless of content kind. Backs the "View as
 /// text" override: a media session isn't upgraded in place; the FE swaps to the
 /// session this returns. Reuses the text path verbatim.
 pub fn open_session_as_text(path: &str, volume_id: &str) -> Result<ViewerOpenResult, ViewerError> {
-    open_session_inner(path, volume_id, /*force_text=*/ true, &PendingOpen::new(), None)
+    open_session_inner(
+        path,
+        volume_id,
+        /*force_text=*/ true,
+        RowText::Raw,
+        &PendingOpen::new(),
+        None,
+    )
 }
 
 /// Opens a session for the viewer window `window_label`, watched by `open`, and
 /// links the window to it (so the window-destroyed handler frees it). `force_text`
-/// is the "View as text" override.
+/// is the "View as text" override; `rows` is how the session shows its rows (the debug
+/// log's view hides log markers, `log_view.rs`).
 ///
 /// A pull the open needs records its progress on `open` and stops once `open` is
 /// abandoned (the window closed, or it stopped responding). An open abandoned after
@@ -219,10 +235,11 @@ pub fn open_for_window(
     volume_id: &str,
     window_label: &str,
     force_text: bool,
+    rows: RowText,
     open: &PendingOpen,
 ) -> Result<ViewerOpenResult, ViewerError> {
     let reuse = reusable_temp(window_label, path, volume_id);
-    let result = open_session_inner(path, volume_id, force_text, open, reuse)?;
+    let result = open_session_inner(path, volume_id, force_text, rows, open, reuse)?;
     match open.deliver(|| register_window_session(window_label, &result.session_id)) {
         Ok(()) => Ok(result),
         Err(abandoned) => {
@@ -254,6 +271,7 @@ fn open_session_inner(
     path: &str,
     volume_id: &str,
     force_text: bool,
+    rows: RowText,
     open: &PendingOpen,
     reuse: Option<Arc<PreviewTemp>>,
 ) -> Result<ViewerOpenResult, ViewerError> {
@@ -266,7 +284,7 @@ fn open_session_inner(
     // previewing inside a zip, and a portal open is honestly `false` for it.
     let from_archive = cmdr_fs::archive_format::archive_boundary_candidate(Path::new(&expand_tilde(path)))
         .is_some_and(|(_, inner)| !inner.as_os_str().is_empty());
-    let result = open_session_core(path, volume_id, force_text, open, reuse);
+    let result = open_session_core(path, volume_id, force_text, rows, open, reuse);
     super::analytics::emit_viewer_opened(&result, from_archive, force_text);
     result
 }
@@ -275,6 +293,7 @@ fn open_session_core(
     path: &str,
     volume_id: &str,
     force_text: bool,
+    rows: RowText,
     open: &PendingOpen,
     reuse: Option<Arc<PreviewTemp>>,
 ) -> Result<ViewerOpenResult, ViewerError> {
@@ -378,7 +397,8 @@ fn open_session_core(
 
     // Get initial lines
     // Never cancelled: the open's own deadline handling closes a late session whole.
-    let initial_lines = backend_box.get_lines(&SeekTarget::Row(0), INITIAL_LINE_COUNT, &AtomicBool::new(false))?;
+    let mut initial_lines = backend_box.get_lines(&SeekTarget::Row(0), INITIAL_LINE_COUNT, &AtomicBool::new(false))?;
+    rows.apply(&mut initial_lines);
     let capabilities = backend_box.capabilities();
     let total_bytes = backend_box.total_bytes();
     let total_lines = backend_box.total_lines();
@@ -407,6 +427,7 @@ fn open_session_core(
         media_token: None,
         temp,
         markdown: None,
+        rows,
     });
 
     let result = ViewerOpenResult {
@@ -645,8 +666,9 @@ pub fn search_start(session_id: &str, query: String, mode: SearchMode) -> Result
         status: status.clone(),
     };
 
-    // The search walks the session's own open file, in the session's encoding.
-    let (file, encoding) = {
+    // The search walks the session's own open file, in the session's encoding, and matches each
+    // row as the session shows it.
+    let (file, encoding, matcher) = {
         let mut sessions = SESSIONS.lock_ignore_poison();
         let session = sessions
             .get_mut(session_id)
@@ -656,7 +678,7 @@ pub fn search_start(session_id: &str, query: String, mode: SearchMode) -> Result
         let file = session.file_at_backend_size()?;
         let encoding = *session.encoding.lock_ignore_poison();
         session.search = Some(search_state);
-        (file, encoding)
+        (file, encoding, matcher.viewing(session.rows))
     };
 
     spawn_search_worker(file, encoding, matcher, cancel, matches, bytes_scanned, status);

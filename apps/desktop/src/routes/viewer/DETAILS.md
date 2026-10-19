@@ -705,6 +705,11 @@ scrolls to the new end on every row-count change while it holds. The "at the end
 turns tail mode on after the open and `pinToEnd()`s once the content renders. Help > View debug log opens this way. Text
 only: a media open ignores it.
 
+**Opening in the log view.** `{ logView: true }` adds `log=1`, and the page passes `rows: 'logDisplay'` to `viewerOpen`:
+the backend hides the log markers and shows each marked value as itself, so every row, search hit, copy, and save the
+page handles is already the shown text. Help > View debug log opens this way too
+(`apps/desktop/src-tauri/src/file_viewer/DETAILS.md` § "The debug log's view").
+
 Tail mode is **not persisted** across sessions: it defaults off on every viewer open (unless the opener passed `tail=1`)
 and the user re-enables it per session. The viewer window has no `store:default` capability by security design (it
 renders arbitrary, possibly-hostile file content), so it can't write a per-path store. Viewer settings that DO persist

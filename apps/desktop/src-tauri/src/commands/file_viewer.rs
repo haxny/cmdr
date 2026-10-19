@@ -7,8 +7,9 @@ use tauri_specta::Event as _;
 use tokio::time::Duration;
 
 use crate::file_viewer::{
-    self, AbandonReason, EncodingOptions, FileEncoding, LineChunk, PendingOpen, RangeEnd, SearchMode, SearchPollResult,
-    SeekTarget, SeekTargetKind, ViewerError, ViewerOpenResult, ViewerPullProgress, ViewerSessionStatus,
+    self, AbandonReason, EncodingOptions, FileEncoding, LineChunk, PendingOpen, RangeEnd, RowText, SearchMode,
+    SearchPollResult, SeekTarget, SeekTargetKind, ViewerError, ViewerOpenResult, ViewerPullProgress,
+    ViewerSessionStatus,
 };
 use cmdr_fs::deadline::{StallWatch, blocking_typed_result_until_stalled, blocking_typed_result_with_timeout};
 use log::debug;
@@ -70,6 +71,9 @@ const SAVE_STALL_LIMIT: Duration = Duration::from_secs(90);
 /// total deadline, only the stall rule (`PULL_STALL_LIMIT`). Any other open keeps the
 /// strict 2 s read tier. Errors stay the typed `ViewerError`, so the FE words each
 /// variant (`TooLargeToPreview`, `Archive`, `StoppedResponding`, `TimedOut`).
+///
+/// `rows` is how the session shows its rows: `logDisplay` for Help > View debug log, which
+/// hides the log markers the file keeps for error reports (`file_viewer/log_view.rs`).
 #[tauri::command]
 #[specta::specta]
 pub async fn viewer_open(
@@ -77,8 +81,26 @@ pub async fn viewer_open(
     path: String,
     volume_id: String,
     window_label: String,
+    rows: RowText,
 ) -> Result<ViewerOpenResult, ViewerError> {
-    open_viewer(app_handle, path, volume_id, window_label, /*force_text=*/ false).await
+    let request = OpenRequest {
+        path,
+        volume_id,
+        window_label,
+        force_text: false,
+        rows,
+    };
+    open_viewer(app_handle, request).await
+}
+
+/// One viewer open, as the window asked for it.
+struct OpenRequest {
+    path: String,
+    volume_id: String,
+    window_label: String,
+    /// The "View as text" override.
+    force_text: bool,
+    rows: RowText,
 }
 
 /// The shared body of `viewer_open` and `viewer_open_as_text`.
@@ -90,16 +112,12 @@ pub async fn viewer_open(
 /// `open_may_materialize` is a string check plus a registry lookup, no I/O: over-
 /// granting the pull path to a mislabeled `.zip` is harmless, since the stall rule
 /// only ever gives up on an open that went quiet.
-async fn open_viewer(
-    app_handle: tauri::AppHandle,
-    path: String,
-    volume_id: String,
-    window_label: String,
-    force_text: bool,
-) -> Result<ViewerOpenResult, ViewerError> {
+async fn open_viewer(app_handle: tauri::AppHandle, request: OpenRequest) -> Result<ViewerOpenResult, ViewerError> {
+    let window_label = request.window_label.clone();
     let open = file_viewer::begin_pending_open(&window_label);
-    let expanded = crate::commands::file_system::expand_tilde(&path);
-    let result = if file_viewer::materialize::open_may_materialize(std::path::Path::new(&expanded), &volume_id) {
+    let expanded = crate::commands::file_system::expand_tilde(&request.path);
+    let result = if file_viewer::materialize::open_may_materialize(std::path::Path::new(&expanded), &request.volume_id)
+    {
         let target = window_label.clone();
         let emit = move |progress: ViewerPullProgress| {
             if !target.is_empty() {
@@ -107,16 +125,14 @@ async fn open_viewer(
                 let _ = progress.emit_to(&app_handle, target.as_str());
             }
         };
-        let label = window_label.clone();
-        open_pulling(&open, path, volume_id, label, force_text, PULL_STALL_LIMIT, emit).await
+        open_pulling(&open, request, PULL_STALL_LIMIT, emit).await
     } else {
         let work_open = Arc::clone(&open);
-        let work_label = window_label.clone();
         let result = blocking_typed_result_with_timeout(
             VIEWER_TIMEOUT,
             || ViewerError::TimedOut,
             |message| ViewerError::Io { message },
-            move || file_viewer::open_for_window(&path, &volume_id, &work_label, force_text, &work_open),
+            move || request.open(&work_open),
         )
         .await;
         if matches!(result, Err(ViewerError::TimedOut)) {
@@ -134,10 +150,7 @@ async fn open_viewer(
 /// progress to `emit`. No `AppHandle`, so tests drive it directly.
 async fn open_pulling(
     open: &Arc<PendingOpen>,
-    path: String,
-    volume_id: String,
-    window_label: String,
-    force_text: bool,
+    request: OpenRequest,
     stall_limit: Duration,
     emit: impl FnMut(ViewerPullProgress) + Send,
 ) -> Result<ViewerOpenResult, ViewerError> {
@@ -151,9 +164,22 @@ async fn open_pulling(
         stall_limit,
         &mut watch,
         |message| ViewerError::Io { message },
-        move || file_viewer::open_for_window(&path, &volume_id, &window_label, force_text, &work_open),
+        move || request.open(&work_open),
     )
     .await
+}
+
+impl OpenRequest {
+    fn open(&self, open: &PendingOpen) -> Result<ViewerOpenResult, ViewerError> {
+        file_viewer::open_for_window(
+            &self.path,
+            &self.volume_id,
+            &self.window_label,
+            self.force_text,
+            self.rows,
+            open,
+        )
+    }
 }
 
 /// Watches one pulling open for [`blocking_typed_result_until_stalled`].
@@ -202,7 +228,14 @@ pub async fn viewer_open_as_text(
     volume_id: String,
     window_label: String,
 ) -> Result<ViewerOpenResult, ViewerError> {
-    open_viewer(app_handle, path, volume_id, window_label, /*force_text=*/ true).await
+    let request = OpenRequest {
+        path,
+        volume_id,
+        window_label,
+        force_text: true,
+        rows: RowText::Raw,
+    };
+    open_viewer(app_handle, request).await
 }
 
 /// Fetches a range of lines from a viewer session.

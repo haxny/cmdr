@@ -1593,9 +1593,12 @@ export const commands = {
    *  total deadline, only the stall rule (`PULL_STALL_LIMIT`). Any other open keeps the
    *  strict 2 s read tier. Errors stay the typed `ViewerError`, so the FE words each
    *  variant (`TooLargeToPreview`, `Archive`, `StoppedResponding`, `TimedOut`).
+   *
+   *  `rows` is how the session shows its rows: `logDisplay` for Help > View debug log, which
+   *  hides the log markers the file keeps for error reports (`file_viewer/log_view.rs`).
    */
-  viewerOpen: (path: string, volumeId: string, windowLabel: string) =>
-    typedError<ViewerOpenResult, ViewerError>(__TAURI_INVOKE('viewer_open', { path, volumeId, windowLabel })),
+  viewerOpen: (path: string, volumeId: string, windowLabel: string, rows: RowText) =>
+    typedError<ViewerOpenResult, ViewerError>(__TAURI_INVOKE('viewer_open', { path, volumeId, windowLabel, rows })),
   /**
    *  Opens a fresh, full **text** session for `path`, ignoring media classification.
    *
@@ -14221,6 +14224,16 @@ export type RowStatus =
    *  `preview` never sees it).
    */
   | { type: 'missing' }
+
+/**
+ *  How a session shows its rows. Picked at open by the caller that knows what the file is
+ *  (Help > View debug log), ❌ never by sniffing the content.
+ */
+export type RowText =
+  // The file's text as decoded.
+  | 'raw'
+  // Cmdr's own log: log markers hidden, each marked value shown as itself.
+  | 'logDisplay'
 
 /**
  *  The mimalloc heap split into live data and allocator slack.

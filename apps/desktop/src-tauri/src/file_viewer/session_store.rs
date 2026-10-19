@@ -18,6 +18,7 @@ use crate::ignore_poison::IgnorePoison;
 
 use super::content_kind::ViewerContentKind;
 use super::encoding::FileEncoding;
+use super::log_view::{RowText, ViewedBackend};
 use super::markdown_document::MarkdownDocument;
 use super::materialize::PreviewTemp;
 use super::origin::SourceOrigin;
@@ -163,6 +164,8 @@ pub(super) struct ViewerSession {
     /// The rendered document of a Markdown session (its image tokens, the remote-images
     /// opt-in), closed at `close_session`. `None` for every other session.
     pub(super) markdown: Option<Arc<MarkdownDocument>>,
+    /// How rows leave this session: as decoded, or as the debug log shows them.
+    pub(super) rows: RowText,
 }
 
 /// The fields that vary between a text open and a media open. Everything else on a
@@ -181,6 +184,7 @@ pub(super) struct ViewerSessionInit {
     pub(super) media_token: Option<String>,
     pub(super) temp: Option<Arc<PreviewTemp>>,
     pub(super) markdown: Option<Arc<MarkdownDocument>>,
+    pub(super) rows: RowText,
 }
 
 impl ViewerSession {
@@ -204,13 +208,19 @@ impl ViewerSession {
             media_token: init.media_token,
             temp: init.temp,
             markdown: init.markdown,
+            rows: init.rows,
         }
     }
 
-    /// Loads a freshly cloned `Arc` to the current backend. Holds no lock so calls to
-    /// `get_lines` can run in parallel.
+    /// Loads a freshly cloned `Arc` to the current backend, seen through the session's row view.
+    /// Holds no lock so calls to `get_lines` can run in parallel. The swap sites use `backend`
+    /// itself: the view wraps on read, so a swapped-in backend keeps it.
     pub(super) fn load_backend(&self) -> Arc<Box<dyn FileViewerBackend>> {
-        self.backend.load_full()
+        let current = self.backend.load_full();
+        match self.rows {
+            RowText::Raw => current,
+            rows => Arc::new(Box::new(ViewedBackend { inner: current, rows })),
+        }
     }
 
     /// The session's open file, opening it on first use.

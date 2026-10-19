@@ -75,7 +75,7 @@ fn write_numbered(dir: &TestDir, name: &str, lines: usize) -> PathBuf {
 fn find_params_build_one_matcher_with_both_flags_defaulting_to_false() {
     let p = parse_params(&json!({ "paths": ["/a.txt"], "find": { "query": "needle" } })).unwrap();
     assert!(
-        matches!(p.ask, TextAsk::Find(ref m) if matches!(**m, Matcher::Literal { case_insensitive: true, .. })),
+        matches!(p.ask, TextAsk::Find(ref m) if m.is_case_insensitive_literal()),
         "{:?}",
         p.ask
     );
@@ -84,7 +84,7 @@ fn find_params_build_one_matcher_with_both_flags_defaulting_to_false() {
         "paths": ["/a.txt"], "find": { "query": "nee.le", "regex": true, "caseSensitive": true }
     }))
     .unwrap();
-    assert!(matches!(p.ask, TextAsk::Find(ref m) if matches!(**m, Matcher::Regex(_))));
+    assert!(matches!(p.ask, TextAsk::Find(ref m) if m.is_regex()));
 
     // No `find` is the window, as before.
     let p = parse_params(&json!({ "paths": ["/a.txt"], "startLine": 3 })).unwrap();

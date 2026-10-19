@@ -23,11 +23,11 @@ beforeEach(() => {
 afterEach(clearIpcMocks)
 
 describe('view debug log', () => {
-  it('opens the backend-resolved path in a tailed viewer', async () => {
+  it('opens the backend-resolved path in a tailed viewer that hides the log markers', async () => {
     const path = '/tmp/cmdr-worktree/logs/cmdr.log'
     mocks.getDebugLogPath.mockResolvedValue(path)
     await openDebugLog()
-    expect(mocks.openFileViewer).toHaveBeenCalledWith(path, 'root', { tail: true })
+    expect(mocks.openFileViewer).toHaveBeenCalledWith(path, 'root', { tail: true, logView: true })
     expect(mocks.addToast).not.toHaveBeenCalled()
   })
 

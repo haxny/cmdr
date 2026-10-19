@@ -13,6 +13,7 @@ import {
   type MarkdownRender,
   type MediaDimensions,
   type RangeEnd,
+  type RowText,
   type SearchMatch as ViewerSearchMatch,
   type SearchMode as ViewerSearchMode,
   type SearchPollResult,
@@ -32,6 +33,7 @@ export type {
   LineChunk,
   MediaDimensions,
   RangeEnd,
+  RowText,
   SearchPollResult,
   TotalRows,
   ViewerContentKind,
@@ -124,9 +126,17 @@ export interface ViewerSessionStatus {
  * free the session when the window is closed via the titlebar X (a path that never
  * fires `viewerClose`). Pass `getCurrentWindow().label`. Defaults to `''` (no
  * mapping) for callers without an owning window.
+ *
+ * `rows` is how the session shows its rows: `'logDisplay'` for Cmdr's own log (markers
+ * hidden, each marked value as itself), `'raw'` for everything else.
  */
-export async function viewerOpen(path: string, volumeId = 'root', windowLabel = ''): Promise<ViewerOpenResult> {
-  const res = await commands.viewerOpen(path, volumeId, windowLabel)
+export async function viewerOpen(
+  path: string,
+  volumeId = 'root',
+  windowLabel = '',
+  rows: RowText = 'raw',
+): Promise<ViewerOpenResult> {
+  const res = await commands.viewerOpen(path, volumeId, windowLabel, rows)
   if (res.status === 'error') throwViewerError(res.error)
   return res.data
 }

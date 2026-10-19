@@ -39,6 +39,17 @@ async fn a_phone_sending_slowly(id: &str, len: usize, delay: Duration) -> String
     path
 }
 
+/// An ordinary open of `path` on the phone `volume_id`, with no window.
+fn pull_request(path: String, volume_id: &str) -> OpenRequest {
+    OpenRequest {
+        path,
+        volume_id: volume_id.to_string(),
+        window_label: String::new(),
+        force_text: false,
+        rows: RowText::Raw,
+    }
+}
+
 /// A row fetch past its deadline answers `TimedOut`, and the fetch itself is told
 /// to stop: its cancel flag flips, so a read stuck on a slow mount quits at its next
 /// row instead of holding a blocking thread for nobody.
@@ -76,10 +87,7 @@ async fn a_pull_that_goes_quiet_answers_stopped_responding_and_leaves_no_temp() 
 
     let outcome = open_pulling(
         &Arc::new(PendingOpen::new()),
-        path,
-        "viewer-stall-cell".to_string(),
-        String::new(),
-        false,
+        pull_request(path, "viewer-stall-cell"),
         Duration::from_millis(250),
         |_| {},
     )
@@ -111,10 +119,7 @@ async fn a_pull_reports_its_progress_to_the_window_as_bytes_arrive() {
         let heard = Arc::clone(&heard);
         open_pulling(
             &Arc::new(PendingOpen::new()),
-            path,
-            "viewer-emit-cell".to_string(),
-            String::new(),
-            false,
+            pull_request(path, "viewer-emit-cell"),
             Duration::from_secs(5),
             move |progress| heard.lock_ignore_poison().push(progress),
         )

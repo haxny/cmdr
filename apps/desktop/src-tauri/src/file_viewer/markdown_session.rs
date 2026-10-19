@@ -23,6 +23,7 @@ use super::content_kind::{
     CLASSIFY_HEAD_LEN, MARKDOWN_RENDER_CAP_BYTES, ViewerContentKind, is_markdown_extension, is_renderable_markdown,
 };
 use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, decode_line, detect_from_head};
+use super::log_view::RowText;
 use super::markdown_document::MarkdownDocument;
 use super::markdown_links::{MarkdownLink, resolve_link};
 use super::markdown_render::render_markdown;
@@ -91,6 +92,7 @@ pub(super) fn open_markdown_session(open: MarkdownOpen) -> ViewerOpenResult {
         media_token: None,
         temp: open.temp,
         markdown: Some(Arc::new(MarkdownDocument::new(open.requested, open.volume_id))),
+        rows: RowText::Raw,
     });
     SESSIONS.lock_ignore_poison().insert(session_id.clone(), session);
 

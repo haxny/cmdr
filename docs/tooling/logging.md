@@ -190,6 +190,21 @@ before its first `::`) is padded to 14 columns and painted a color derived from 
 the same color across runs and machines; the module path after it goes gray. The head column makes the terminal shape
 `… INFO  downloads     ::watcher  Started watching …`. The log FILE is unaffected: no ANSI, no padding.
 
+## Marked values
+
+A log site may mark a user-derived value (a path, a name, a volume, a host, an account) between invisible Unicode
+noncharacters from U+FDD0–U+FDEF (`crates/cmdr-fs/src/log_private.rs`), so an error report hashes exactly that value
+instead of guessing where a name ends (`apps/desktop/src-tauri/src/redact/DETAILS.md` § "Marked spans").
+
+- **The terminal and Help > View debug log hide the markers** and show each marked value as itself (`Café`, not
+  `Cafe\u{301}`). The viewer's search, copy, and "Save range" work on that shown text.
+- **The log FILE keeps them**: the error reporter reads them from it. There, `less` shows a marker as `<U+FDD2>`, a
+  marker that went through `{:?}` reads `\u{fdd2}`, and a value printed by a `{}` site carries its `{:?}` escapes
+  (`Cafe\u{301}`). Markers sit between `key="` and the value, so `rg 'path="/Users/x'` misses a marked line. Strip them
+  first: `perl -CSD -pe 's/[\x{FDD0}-\x{FDEF}]|\\+u\{0*fd[de][0-9a-f]\}//gi' cmdr.log | rg 'path="/Users/x'`.
+- **`cmdr://logs` filters the redacted lines**, so `filter=` on a raw path or name matches nothing. An agent with
+  filesystem access reads the log file itself for that.
+
 ## RUST_LOG recipes
 
 Copy-paste commands for common debugging scenarios. All include `info` as the base level.

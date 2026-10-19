@@ -20,6 +20,7 @@
         onViewerHistoryAction,
         showViewerContextMenu,
         activateWindowMenu,
+        type RowText,
     } from '#lib/tauri-commands/index.js'
     import { replaceState } from '$app/navigation'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
@@ -106,6 +107,9 @@
     // URL param. Threaded to `viewerOpen` so a file inside a `.zip` on a remote
     // parent (direct SMB / MTP) is previewed by pulling the entry through that volume.
     let volumeId = $state('root')
+    // How the backend shows the rows, from the `log` URL param: Help > View debug log asks
+    // for the log view, which hides the log markers the file keeps for error reports.
+    let rows = $state<RowText>('raw')
     let loading = $state(true)
     let sessionId = $state('')
     let backendType = $state<'fullLoad' | 'byteSeek' | 'lineIndex'>('fullLoad')
@@ -736,10 +740,11 @@
         const t0 = performance.now()
         // Pass the window label so the backend can free this session when the
         // window is closed via the titlebar X (which never fires `viewerClose`).
-        const open = asText ? viewerOpenAsText : viewerOpen
         pull.start()
         try {
-            return await open(path, volumeId, getCurrentWindow().label)
+            return asText
+                ? await viewerOpenAsText(path, volumeId, getCurrentWindow().label)
+                : await viewerOpen(path, volumeId, getCurrentWindow().label, rows)
         } finally {
             pull.finish()
             log.debug('viewer_open IPC took {ms}ms', { ms: Math.round(performance.now() - t0) })
@@ -1074,6 +1079,7 @@
         navigation.start(pathParam)
         // Missing / empty `volume` param means the local drive (older links, MCP).
         volumeId = params.get('volume') || 'root'
+        rows = params.get('log') === '1' ? 'logDisplay' : 'raw'
         unlistenPull = await onViewerPullProgress(getCurrentWindow(), (progress) => {
             pull.report(progress)
         })

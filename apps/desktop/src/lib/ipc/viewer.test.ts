@@ -59,17 +59,18 @@ const openResult: ViewerOpenResult = {
 }
 
 describe('commands.viewerOpen', () => {
-  it('invokes viewer_open with the path, volume-id, and window-label positional args', async () => {
+  it('invokes viewer_open with the path, volume-id, window-label, and row-view positional args', async () => {
     const ipc = installIpcMock()
     ipc.mock('viewer_open', () => openResult)
 
-    const result = await commands.viewerOpen('/path/to/README.md', 'root', 'viewer-123')
+    const result = await commands.viewerOpen('/path/to/README.md', 'root', 'viewer-123', 'logDisplay')
 
     expect(result).toEqual({ status: 'ok', data: openResult })
     expect(ipc.lastCall('viewer_open')?.payload).toEqual({
       path: '/path/to/README.md',
       volumeId: 'root',
       windowLabel: 'viewer-123',
+      rows: 'logDisplay',
     })
   })
 
@@ -79,7 +80,7 @@ describe('commands.viewerOpen', () => {
       throw { kind: 'notFound', path: '/nope.txt' }
     })
 
-    const result = await commands.viewerOpen('/nope.txt', 'root', 'viewer-123')
+    const result = await commands.viewerOpen('/nope.txt', 'root', 'viewer-123', 'raw')
 
     expect(result.status).toBe('error')
     if (result.status === 'error') {

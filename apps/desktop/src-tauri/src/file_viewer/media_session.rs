@@ -21,6 +21,7 @@ use crate::ignore_poison::IgnorePoison;
 
 use super::content_kind::{CLASSIFY_HEAD_LEN, ViewerContentKind, classify_viewer_content, media_mime};
 use super::encoding::FileEncoding;
+use super::log_view::RowText;
 use super::materialize::PreviewTemp;
 use super::media::{self, MediaEntry};
 use super::media_backend::MediaBackend;
@@ -104,6 +105,7 @@ fn open_media_session(
         media_token: Some(media_token.clone()),
         temp,
         markdown: None,
+        rows: RowText::Raw,
     });
 
     // No watcher and no LineIndex upgrade for media: there's no text viewport to

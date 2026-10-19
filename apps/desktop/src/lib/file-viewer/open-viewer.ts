@@ -18,12 +18,13 @@ let cascadeIndex = 0
  * once. `volumeId` is the volume the file lives on (`'root'` for the local drive); it
  * rides the URL to the viewer so a file inside a `.zip` on a remote parent (direct
  * SMB / MTP) is previewed by pulling the entry through that volume. `tail` opens the
- * viewer in tail mode, parked at the end of the file, for a live view of a growing log.
+ * viewer in tail mode, parked at the end of the file, for a live view of a growing log. `logView` shows Cmdr's own log
+ * the way a person reads it: log markers hidden, each marked value as itself.
  */
 export async function openFileViewer(
   filePath: string,
   volumeId = 'root',
-  { tail = false }: { tail?: boolean } = {},
+  { tail = false, logView = false }: { tail?: boolean; logView?: boolean } = {},
 ): Promise<void> {
   const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
   const { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } = await import('#lib/app-mode.js')
@@ -49,7 +50,7 @@ export async function openFileViewer(
   }
 
   const win = new WebviewWindow(label, {
-    url: `/viewer?path=${encodedPath}&volume=${encodedVolume}${tail ? '&tail=1' : ''}`,
+    url: `/viewer?path=${encodedPath}&volume=${encodedVolume}${tail ? '&tail=1' : ''}${logView ? '&log=1' : ''}`,
     title: decorateChildWindowTitle(filePath.split('/').pop() ?? getMessage('viewer.window.fallbackTitle')),
     width: VIEWER_WIDTH,
     height: VIEWER_HEIGHT,

@@ -520,7 +520,16 @@ fn closing_the_window_mid_pull_stops_reading_and_leaves_no_temp() {
     let open = super::begin_pending_open(window);
     let opener = {
         let open = Arc::clone(&open);
-        std::thread::spawn(move || session::open_for_window(&path, "viewer-close-mid-pull-cell", window, false, &open))
+        std::thread::spawn(move || {
+            session::open_for_window(
+                &path,
+                "viewer-close-mid-pull-cell",
+                window,
+                false,
+                super::RowText::Raw,
+                &open,
+            )
+        })
     };
     crate::test_support::wait_until(
         std::time::Duration::from_secs(5),
@@ -621,6 +630,7 @@ fn switching_the_view_mode_reuses_the_windows_temp_and_reads_nothing_from_the_ph
         "viewer-mode-switch-cell",
         window,
         false,
+        super::RowText::Raw,
         &super::PendingOpen::new(),
     )
     .expect("the first open");
@@ -636,6 +646,7 @@ fn switching_the_view_mode_reuses_the_windows_temp_and_reads_nothing_from_the_ph
         "viewer-mode-switch-cell",
         window,
         true,
+        super::RowText::Raw,
         &super::PendingOpen::new(),
     )
     .expect("the view-as-text open");
@@ -680,6 +691,7 @@ fn another_window_on_the_same_file_pulls_its_own_copy() {
         "viewer-two-windows-cell",
         "viewer-window-one",
         false,
+        super::RowText::Raw,
         &super::PendingOpen::new(),
     )
     .expect("the first window's open");
@@ -689,6 +701,7 @@ fn another_window_on_the_same_file_pulls_its_own_copy() {
         "viewer-two-windows-cell",
         "viewer-window-two",
         false,
+        super::RowText::Raw,
         &super::PendingOpen::new(),
     )
     .expect("the second window's open");

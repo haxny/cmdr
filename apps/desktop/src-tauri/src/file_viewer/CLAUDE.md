@@ -12,8 +12,9 @@ Frontend counterparts: [route shell](../../../src/routes/viewer/CLAUDE.md) and
 - `rows.rs` (the row rule), `row_walk.rs` (that rule read forward: `RowReader`,
   `collect_rows`, `search_rows`, and the row types), `range_read.rs` (range → UTF-8),
   `encoding.rs` (`FileEncoding` + detection), `full_load.rs` / `byte_seek.rs` / `line_index.rs` (the three backends),
-  `search_matcher.rs`, `watcher.rs` (tail mode), `source.rs` + `volume_source.rs` (SMB) under
-  `origin.rs`: one held handle per session, ❌ never `File::open` per fetch (#303, `DETAILS.md` § "Byte sources").
+  `search_matcher.rs`, `log_view.rs` (the debug log's marker-free rows), `watcher.rs` (tail mode), `source.rs` +
+  `volume_source.rs` (SMB) under `origin.rs`: one held handle per session, ❌ never `File::open` per fetch (#303,
+  `DETAILS.md` § "Byte sources").
 - Media (Image/PDF): `content_kind.rs` plus `media*.rs` (`media.rs`: the `cmdr-media://` token map).
   `DETAILS.md` § "Media rendering". Markdown: `markdown_*.rs`, where ammonia's allowlist is the XSS boundary
   (§ "Markdown rendering").
@@ -42,7 +43,7 @@ Frontend counterparts: [route shell](../../../src/routes/viewer/CLAUDE.md) and
   detection runs its parity heuristic BEFORE the UTF-8 fast path.
 - **`SearchMatch.column` / `.length` are UTF-16 code units** within the ROW, so a column is bounded. **Reject
   cross-line regex** (`(?s)`, literal `\n`, `\n` escape) at build time; `(?m)` is fine.
-- **CRLF: a row keeps its `\r`**; only the `\n` falls outside the row's text.
+- **CRLF: a row keeps its `\r`**.
 - **Cancellation is per-read / per-search, never session-wide**, and checked inside the per-row loop.
 - **`write_range_to_file` streams; `read_range` buffers.** The save is the way out of the 100 MiB clipboard refusal, so
   it walks `read_range_streamed` in 1 MiB chunks under a stall watch. ❌ Never `read_range` + `fs::write`, and ❌ never
