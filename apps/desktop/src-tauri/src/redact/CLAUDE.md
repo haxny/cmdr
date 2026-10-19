@@ -21,12 +21,13 @@ values use `RedactionContext::redact_path` / `redact_name` / …, which fail clo
 - **❌ Never branch the policy on `context.is_none()`.** The context only salts tokens; a second MCP policy once let a
   URL swallow a following path (cmdr-reports#30). `unsalted_api_runs_the_report_policy_with_bare_tokens` pins it.
 - **Only exact derived-ID shapes are recognized** (known scheme + 16-hex digest, legacy `manual-…-<port>`).
-- **Log a relative path or name as `key={:?}` with a key from `path_field`**, and an identity as `host={host:?}` (or
-  `server`, `share`, `user`, the ID keys). Bare prose is invisible to the regex.
+- **Mark a value at its log site with `cmdr_fs::log_private::LogPrivate`**, keeping the site's `key=` and format spec.
+  A crate that can't depend on `cmdr-fs` logs a relative path or name as `key={:?}` with a key from `path_field`, an
+  identity as `host={host:?}` (or `server`, `share`, `user`, the ID keys). Bare prose is invisible to the regex.
 - **External OS/server/CLI text goes in `detail={:?}` / `stderr={:?}` / `stdout={:?}` via
-  `cmdr_fs::log_detail::LogDetail`**, next to its machine code. A report redacts it, scrubs the line's identities from
-  it, and caps it at 200 chars after span hashing. ❌ Never redact at the log site. `DETAILS.md` § "External-text
-  fields".
+  `cmdr_fs::log_detail::LogDetail`**, next to its machine code; `.marking(&[…])` marks the values the caller handed
+  over. A report redacts, echo-scrubs, and caps it after span hashing. ❌ Never redact at the log site. `DETAILS.md` §
+  "External-text fields".
 - **A prose path runs to the next hard delimiter** (`split_trailing_noise`): the `: ` seam, a new reference, ` -> `,
   and `, ` / `; ` / ` key=` after the last separator. ❌ Never end a path on a word's shape (a `)`, a dot, a lowercase
   run): each such rule shipped part of a name. `DETAILS.md` § "Finding the end of a path".

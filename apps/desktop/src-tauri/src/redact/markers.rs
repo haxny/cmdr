@@ -16,7 +16,7 @@ use super::names::unescape_debug;
 use super::path_end::split_trailing_noise;
 use super::paths::{Leaf, redact_leaf};
 use super::references::redact_host;
-use cmdr_fs::log_private::{CLOSER, LogKind, READER_SCRATCH, is_reserved};
+use cmdr_fs::log_private::{self, LogKind, MarkerRole, READER_SCRATCH, is_reserved};
 use regex::Regex;
 use std::borrow::Cow;
 use std::sync::OnceLock;
@@ -28,23 +28,6 @@ const BROKEN_KIND: &str = "redacted";
 const PLACEHOLDER_LEAD: char = *READER_SCRATCH.end();
 /// The ten chars a placeholder writes its index in, `0` first.
 const PLACEHOLDER_DIGITS: char = *READER_SCRATCH.start();
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Role {
-    Open(LogKind),
-    Close,
-}
-
-/// One marker as it sits in a line. An escaped one spans only its own backslashes; the run's
-/// other backslashes belong to the text before it.
-#[derive(Clone, Copy, Debug)]
-struct Marker {
-    start: usize,
-    end: usize,
-    /// How many `{:?}` layers it went through: 0 for a raw char.
-    depth: u32,
-    role: Role,
-}
 
 /// A line's spans: the line with a placeholder where each one was, and what replaces each.
 pub(super) struct Spans {
@@ -146,7 +129,7 @@ pub(super) fn read_spans(line: &str, context: Option<&RedactionContext>) -> Opti
     if !may_hold_markers(line) {
         return None;
     }
-    let markers = lex(line);
+    let markers = log_private::markers(line);
     if markers.is_empty() {
         return None;
     }
@@ -165,10 +148,10 @@ pub(super) fn read_spans(line: &str, context: Option<&RedactionContext>) -> Opti
         // Never short of the marker itself, so every slice below is well-formed.
         let limit = field.map_or(line_end, |(_, close)| close).max(marker.end);
         let (start, end, replacement) = match marker.role {
-            Role::Open(kind) => {
+            MarkerRole::Open(kind) => {
                 let closer = markers[next + 1..]
                     .iter()
-                    .find(|m| m.role == Role::Close && m.depth == marker.depth && m.end <= limit);
+                    .find(|m| m.role == MarkerRole::Close && m.depth == marker.depth && m.end <= limit);
                 match closer {
                     Some(closer) => {
                         let value = decode(&line[marker.end..closer.start], marker.depth);
@@ -182,7 +165,7 @@ pub(super) fn read_spans(line: &str, context: Option<&RedactionContext>) -> Opti
             }
             // Rule 3: a closer nothing opened. The text before it back to the last thing we know
             // ends a value, and the name glued after it, are the damage.
-            Role::Close => {
+            MarkerRole::Close => {
                 let back = field.map_or(boundary, |(open, _)| open.max(boundary)).min(marker.start);
                 let forward_limit = markers.get(next + 1).map_or(limit, |m| m.start.min(limit));
                 let end = marker.end + stray_tail(&line[marker.end..forward_limit], field.is_some());
@@ -280,75 +263,6 @@ fn may_hold_markers(line: &str) -> bool {
     memchr::memmem::find(bytes, b"\xEF\xB7").is_some() || memchr::memmem::find(bytes, b"u{").is_some()
 }
 
-/// Every marker in the line, raw or escaped at any depth, left to right.
-///
-/// An escaped marker is a maximal run of `r` backslashes, then an escape that decodes to a
-/// reserved char (`u{fdd1}`, any case, as `unescape_debug` reads it). Its depth is
-/// `1 + r.trailing_zeros()`: at depth `d` the marker's own escape is `2^(d-1)` backslashes, and
-/// every literal backslash in front of it arrives as a multiple of `2^d`, so `r = 2^(d-1) × odd`.
-fn lex(line: &str) -> Vec<Marker> {
-    let bytes = line.as_bytes();
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'\\' {
-            let run_start = i;
-            while i < bytes.len() && bytes[i] == b'\\' {
-                i += 1;
-            }
-            if let Some((c, len)) = escaped_char(&line[i..])
-                && is_reserved(c)
-            {
-                let run = i - run_start;
-                let depth = 1 + run.trailing_zeros();
-                let own = 1usize << (depth - 1);
-                out.push(Marker {
-                    start: i - own,
-                    end: i + len,
-                    depth,
-                    role: role_of(c),
-                });
-                i += len;
-            }
-        } else if bytes[i] == 0xEF
-            && let Some(c) = line[i..].chars().next()
-            && is_reserved(c)
-        {
-            out.push(Marker {
-                start: i,
-                end: i + c.len_utf8(),
-                depth: 0,
-                role: role_of(c),
-            });
-            i += c.len_utf8();
-        } else {
-            i += 1;
-        }
-    }
-    out
-}
-
-/// `u{…}` at the start of `s` with one to six hex digits: the char and the escape's length.
-fn escaped_char(s: &str) -> Option<(char, usize)> {
-    let hex_and_rest = s.strip_prefix("u{")?;
-    let close = hex_and_rest.find('}')?;
-    let hex = &hex_and_rest[..close];
-    if !(1..=6).contains(&hex.len()) || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
-        return None;
-    }
-    let c = u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)?;
-    Some((c, 2 + close + 1))
-}
-
-/// A reserved char nothing assigned opens a span of unknown kind: a broken one, almost always.
-fn role_of(c: char) -> Role {
-    if c == CLOSER {
-        Role::Close
-    } else {
-        Role::Open(LogKind::from_opener(c).unwrap_or(LogKind::Path))
-    }
-}
-
 /// Where the message starts in a log line (`<ts> LEVEL [·]target  message`), or 0 for text with no
 /// header. A stray closer may erase the message, never the header the bundle filters read, and the
 /// echo scrub leaves the header alone too (a folder named `2026` isn't the timestamp's year).
@@ -400,7 +314,7 @@ pub(crate) fn display_line(line: &str) -> Cow<'_, str> {
     if !may_hold_markers(line) {
         return Cow::Borrowed(line);
     }
-    let markers = lex(line);
+    let markers = log_private::markers(line);
     if markers.is_empty() {
         return Cow::Borrowed(line);
     }
@@ -411,11 +325,11 @@ pub(crate) fn display_line(line: &str) -> Cow<'_, str> {
         let marker = markers[next];
         out.push_str(&line[pos..marker.start]);
         let closer = match marker.role {
-            Role::Open(_) => markers[next + 1..]
+            MarkerRole::Open(_) => markers[next + 1..]
                 .iter()
-                .position(|m| m.role == Role::Close && m.depth == marker.depth)
+                .position(|m| m.role == MarkerRole::Close && m.depth == marker.depth)
                 .map(|offset| next + 1 + offset),
-            Role::Close => None,
+            MarkerRole::Close => None,
         };
         match closer {
             Some(closer) => {
@@ -435,7 +349,7 @@ pub(crate) fn display_line(line: &str) -> Cow<'_, str> {
     out.push_str(&line[pos..]);
     // A value can hold literal marker text; take that out too, until nothing is left of one.
     loop {
-        let markers = lex(&out);
+        let markers = log_private::markers(&out);
         if markers.is_empty() {
             break;
         }

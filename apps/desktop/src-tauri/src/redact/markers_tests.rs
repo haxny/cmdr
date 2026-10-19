@@ -6,18 +6,18 @@ use super::*;
 use cmdr_fs::log_private::{CLOSER, LogKind, READER_SCRATCH, RESERVED};
 
 const TEST_PROCESS_SECRET: [u8; 32] = [0x4b; 32];
-const HEAD: &str = "2026-10-19T10:00:00.000+02:00 INFO  ·listing  ";
+pub(super) const HEAD: &str = "2026-10-19T10:00:00.000+02:00 INFO  ·listing  ";
 
-fn context() -> RedactionContext {
+pub(super) fn context() -> RedactionContext {
     RedactionContext::for_test(TEST_PROCESS_SECRET, "ERR-SPANS")
 }
 
-fn r(s: &str) -> String {
+pub(super) fn r(s: &str) -> String {
     redact_line(s).into_owned()
 }
 
 /// The salted output with every hash dropped, so it compares against the unsalted shape.
-fn shape(s: &str) -> String {
+pub(super) fn shape(s: &str) -> String {
     let out = context().redact_line(s).into_owned();
     Regex::new(r"<([a-z0-9-]+):[0-9a-f]{12}>")
         .expect("valid token regex")
@@ -26,7 +26,7 @@ fn shape(s: &str) -> String {
 }
 
 /// Every `<kind:hash>` hash in a salted line, in order.
-fn hashes(line: &str) -> Vec<String> {
+pub(super) fn hashes(line: &str) -> Vec<String> {
     Regex::new(r"<[a-z0-9-]+:([0-9a-f]{12})>")
         .expect("valid token regex")
         .captures_iter(line)
@@ -44,7 +44,7 @@ fn assert_redacts_to(input: &str, expected: &str) {
 }
 
 /// No word of `private` and no reserved char (raw or escaped) reaches either API's output.
-fn assert_ships_none(input: &str, private: &[&str]) {
+pub(super) fn assert_ships_none(input: &str, private: &[&str]) {
     for out in [r(input), context().redact_line(input).into_owned()] {
         for word in private {
             assert!(!out.contains(word), "{word:?} shipped: {out}");
@@ -61,12 +61,12 @@ fn body(value: &str) -> String {
 }
 
 /// A span as a `{}` site writes it: raw markers around the value's `{:?}` body (depth 0).
-fn span(kind: LogKind, value: &str) -> String {
+pub(super) fn span(kind: LogKind, value: &str) -> String {
     format!("{}{}{CLOSER}", kind.opener(), body(value))
 }
 
 /// A span as a `{:?}` site writes it: the same, inside quotes.
-fn quoted(kind: LogKind, value: &str) -> String {
+pub(super) fn quoted(kind: LogKind, value: &str) -> String {
     format!("\"{}\"", span(kind, value))
 }
 

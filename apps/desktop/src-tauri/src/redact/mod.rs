@@ -52,6 +52,8 @@ mod names;
 mod path_end;
 mod paths;
 #[cfg(test)]
+mod producer_tests;
+#[cfg(test)]
 mod prose_tests;
 #[cfg(test)]
 mod reference_tests;

@@ -71,9 +71,10 @@ text, one depth deeper than the span's own closer.
 one behind a MAXIMAL run of r backslashes is depth `1 + r.trailing_zeros()`: at depth d the marker's own escape is
 2^(d-1) backslashes, and every literal backslash in front of it arrives as a multiple of 2^d, so r = 2^(d-1) × odd.
 Counting the length instead reads a value ending in `\` (run 5 at depth 1, 10 at depth 2) or foreign text ending in `\`
-before an opener (run 3) as another depth, and the span never closes. The lexer accepts any escape `unescape_debug`
-would decode to a reserved char (any case, 1–6 hex digits), and the fast path skips a line with neither the reserved
-chars' UTF-8 lead bytes (`EF B7`) nor a `u{`.
+before an opener (run 3) as another depth, and the span never closes. The lexer (`cmdr_fs::log_private::markers`,
+which the producers' span-aware caps read too) accepts any escape `unescape_debug` would decode to a reserved char
+(any case, 1–6 hex digits), and the fast path skips a line with neither the reserved chars' UTF-8 lead bytes (`EF B7`)
+nor a `u{`.
 
 **Why a span closes only at its own depth:** a literal `\u{fdd1}` at depth n spells exactly like a real closer at
 depth n+1 (`format!("{:?}", "\\u{fdd1}")` prints the same bytes as a Debug of a Debug of the marker). Matching depth
@@ -361,7 +362,10 @@ error's `Display`) is often the only direct window into what went wrong, and it 
 around them. So it has one mechanism, used at every such site:
 
 - **Producers log it whole** as `detail={:?}` (or `stderr={:?}` / `stdout={:?}`) through `cmdr_fs::log_detail::LogDetail`,
-  which trims, caps at 1 KiB with a `…[N bytes]` marker, and Debug-quotes. Local logs keep it; producers never redact.
+  which trims, caps at 1 KiB with a `…[N bytes]` marker, replaces any marker char in the text with U+FFFD, and
+  Debug-quotes. Local logs keep it; producers never redact. `LogDetail(text).marking(&[…])` marks the values the caller
+  handed the OS or tool where the text echoes them, so they hash exactly, one depth down (`crates/cmdr-fs/DETAILS.md` §
+  "Marked log values").
   Next to it they log the machine-readable code wherever one exists as a typed field: `code=` (errno or exit status),
   `nt_status=` (SMB), `sftp_status=` (SFTP v3 wire number), `error_kind=`.
 - **Redaction (`detail.rs`) treats the quoted value as one unit.** It unescapes it (so a `\"` around a quoted name

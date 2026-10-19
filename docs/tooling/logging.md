@@ -124,13 +124,28 @@ per-module overrides on the stdout chain only. Same `log` facade API.
 ### Usage in Rust
 
 ```rust
-use log::{debug, info, warn, error};
+use cmdr_fs::log_detail::LogDetail;
+use cmdr_fs::log_private::LogPrivate;
+use log::{debug, info, warn};
 
-debug!("Loading path: {:?}", path);
-info!("Loaded {} files", count);
-warn!("Slow operation: {}ms", elapsed);
-error!("Failed: {}", err);
+debug!(target: "listing", "listed path={:?} in {ms}ms", LogPrivate::dir_path(&path));
+info!(target: "listing", "Loaded {} files", count);
+warn!(target: "copy", "couldn't open {}: {e}", LogPrivate::file_path(&path));
+warn!(
+    target: "smb",
+    "tree connect failed share={:?} stderr={:?}",
+    LogPrivate::volume(&share),
+    LogDetail(&stderr).marking(&[LogPrivate::volume(&share)])
+);
+crate::log_error!(target: "copy", "Failed: {}", err);
 ```
+
+Wrap every user-derived value (a path, a file or folder name, a volume or share, a host, an account) in its `LogPrivate`
+kind (`path`, `file_path`, `dir_path`, `name`, `file_name`, `dir_name`, `volume`, `host`, `user`), keeping the site's
+key and format spec; use the neutral kind when the site doesn't know which. Foreign text goes in a `LogDetail`, with
+`.marking(&[…])` naming the values the caller handed over. Error-level sites use `log_error!`. A `LogPrivate` is log
+text only: never turn one into a `String`. How it works: § "Marked values" below and `crates/cmdr-fs/DETAILS.md` §
+"Marked log values".
 
 ### Enable debug for specific modules
 
@@ -200,8 +215,9 @@ instead of guessing where a name ends (`apps/desktop/src-tauri/src/redact/DETAIL
   `Cafe\u{301}`). The viewer's search, copy, and "Save range" work on that shown text.
 - **The log FILE keeps them**: the error reporter reads them from it. There, `less` shows a marker as `<U+FDD2>`, a
   marker that went through `{:?}` reads `\u{fdd2}`, and a value printed by a `{}` site carries its `{:?}` escapes
-  (`Cafe\u{301}`). Markers sit between `key="` and the value, so `rg 'path="/Users/x'` misses a marked line. Strip them
-  first: `perl -CSD -pe 's/[\x{FDD0}-\x{FDEF}]|\\+u\{0*fd[de][0-9a-f]\}//gi' cmdr.log | rg 'path="/Users/x'`.
+  (`Cafe\u{301}`), one escape layer more inside a `detail=` field (`\\\"`). Markers sit between `key="` and the value,
+  so `rg 'path="/Users/x'` misses a marked line. Strip them first:
+  `perl -CSD -pe 's/[\x{FDD0}-\x{FDEF}]|\\+u\{0*fd[de][0-9a-f]\}//gi' cmdr.log | rg 'path="/Users/x'`.
 - **`cmdr://logs` filters the redacted lines**, so `filter=` on a raw path or name matches nothing. An agent with
   filesystem access reads the log file itself for that.
 

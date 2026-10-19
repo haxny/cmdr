@@ -71,14 +71,14 @@ the next section.
   importance weights and the media coverage score cache), `git_meta` (what a git portal row's Size cell states),
   `name_fold.rs` (the ONE "same name, spelled another way" key: NFC + lowercase, shared by share IDs, transfer conflict
   buckets, the SMB spelling resolve, and cursor placement; beside it `normalize_for_comparison`, the local filesystem's
-  own key, which the drive index stores and the write engine matches sources under), `log_rollup`, `log_detail`
-  (`LogDetail`: external OS/server/CLI text as one Debug-quoted, 1 KiB-capped log field that the app's report pass
-  redacts; see `apps/desktop/src-tauri/src/redact/DETAILS.md`), `log_private` (the ONE marker table, `LogKind` with its
-  opener char plus the closer and the reserved range, that log producers and the app's span pass share; § "Marked spans"
-  in the same redact doc), `tcc_paths`, `ignore_poison`, `pluralize`, `tilde` (`expand_tilde`, for a path a person typed
-  on THIS machine), `byte_size` (`format_size`, the IEC byte count log lines and model-facing answers read),
-  `thread_qos`, `thread_cpu`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a keep-alive pool of `Utility`-QoS
-  threads, so background work that comes in streams, like index walks, reuses threads instead of creating one per job).
+  own key, which the drive index stores and the write engine matches sources under), `log_rollup`, `log_private` +
+  `log_detail` (`LogPrivate`, the wrapper a log site marks a user-derived value with, over the ONE marker table and
+  lexer the app's span pass reads too; `LogDetail` for external OS/server/CLI text as one Debug-quoted, 1 KiB-capped
+  field, and `LoggedText` for our own; § "Marked log values"), `tcc_paths`, `ignore_poison`, `pluralize`, `tilde`
+  (`expand_tilde`, for a path a person typed on THIS machine), `byte_size` (`format_size`, the IEC byte count log lines
+  and model-facing answers read), `thread_qos`, `thread_cpu`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a
+  keep-alive pool of `Utility`-QoS threads, so background work that comes in streams, like index walks, reuses threads
+  instead of creating one per job).
 - `mapped_file_faults/`: the SIGBUS recovery that turns a read of a mapped file whose disk went away into zeros, and the
   generation a reader checks to distrust what it read meanwhile. § "Mapped-file faults".
 - `testing/`: behind the `testing` feature. `TestDir`, the two waits, and `unique_test_id` (a pid-and-counter key for a
@@ -498,6 +498,43 @@ The API contract says this crate emits no user-facing strings. Two things look l
   grepping `String` in this crate and concluding the bar was abandoned should read this paragraph first.
 - **`git_meta`** (`src/git_meta.rs`) looks like the second, and isn't: `FileEntry::git_meta` is a typed `GitEntryMeta`
   that states a fact, and the host words the Size column from its own catalog.
+
+## Marked log values (`log_private`, `log_detail`)
+
+A log site that knows what a value is says so, so an error report hashes exactly that value instead of guessing where a
+name ends. The marker format, the depth rule, and how the report pass reads it are the app's:
+`apps/desktop/src-tauri/src/redact/DETAILS.md` § "Marked spans". This crate owns the producer side and the one table
+both sides read (`LogKind`, `CLOSER`, `RESERVED`, and `markers`, the lexer).
+
+- **`LogPrivate`, one type for every kind**: `LogPrivate::file_path(&p)`, `::dir_path`, `::path` (leaf kind unknown),
+  `::file_name`, `::dir_name`, `::name`, `::volume` (also a share), `::host`, `::user`, or `::new(kind, v)`. Each takes
+  anything `AsRef<OsStr>` and borrows it. `{}` writes opener + the value's `{:?}` body + closer; `{:?}` the same inside
+  quotes, so a site keeps its key AND its format spec (`path={:?}` stays `{:?}`) and a reader with no span pass still
+  sees a keyed field. Use the neutral kind when the site doesn't know; never guess.
+- **Wrap a whole value**: build the joined path and wrap that, never one side of `"{}/{}"`.
+- **Decision: the body goes through `<str as Debug>` itself**, via a `fmt::Write` adapter that drops the outer quotes
+  (`DebugBody`), never `str::escape_debug`, which leaves a grapheme-extend char raw after the first char: an NFD name
+  would then tokenize apart from its `{:?}` spelling. No allocation for a UTF-8 value; a non-UTF-8 one prints lossily,
+  as `Path::display` does. Escaping is per char, so `DebugEscaping` can quote a composed stream piece by piece (pinned
+  by `the_body_of_a_concatenation_is_the_concatenation_of_the_bodies`).
+- **Local text changes by the invisible markers plus the body escaping**: a `{}` site now shows a quote, a backslash, a
+  control char, or an NFD accent escaped in the raw file (`Cafe\u{301}`). The terminal and Help > View debug log decode
+  each span back. A value marked inside `LogDetail` is escaped once more there (`\\\"`).
+- **❌ A marked string is never data.** No `From`/`to_string` helper, `#[must_use]`; `ToString` comes free with
+  `Display`, so review is what catches a `.to_string()` or `format!` of one.
+- **`LogDetail`** quotes foreign text and replaces every reserved char in it with U+FFFD: an OS message echoing a
+  hostile name would otherwise quote a raw closer into a depth-1 one, the depth its own spans sit at. Its 1 KiB cap
+  stays.
+- **`LogDetail(text).marking(&[LogPrivate…])`** marks each occurrence of the values the caller handed the OS or tool,
+  then Debug-quotes the whole, so its spans land at depth 1. The longest value claims first (a file inside a marked dir
+  stays one span); an occurrence glued to a letter or digit is part of another word and stays text; both sides are
+  compared with reserved chars replaced, so a hostile name still finds its echo, and the span carries the RAW value, so
+  it hashes like the same value's leaf wrapper. The cap cuts before a span it would split. A differently spelled echo
+  (NFD, shell-quoted) stays text for the report's own redaction and echo scrub.
+- **`LoggedText`** is the sibling for text Cmdr already logged (the Flow B note quotes a `log_error!` message): same
+  quoting and cap, but it keeps every marker, since they're our sites' own. A stray from an unmarked site stays a stray,
+  one depth down, which the report pass fails closed on. Its cap uses `markers` and the report pass's pairing rule (a
+  closer at its opener's depth) to cut before a span it would split, at any depth.
 
 ## `ScanBoundary`: one seam, so a walk can't count without asking
 

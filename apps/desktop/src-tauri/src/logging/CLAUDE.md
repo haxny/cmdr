@@ -21,6 +21,8 @@ Dispatch-tree shape, why fern, timestamp formats, each file's depth, and decisio
   not in error-report bundles); clippy denies them crate-wide.
 - **Always pass a scoped `target:`** so logs filter via `RUST_LOG` (`log::debug!(target: "open_with", …)` →
   `RUST_LOG=open_with=debug pnpm dev`) and earn their own terminal color. One short stable `target:` per subsystem.
+- **Wrap each path, name, volume, host, or account in `cmdr_fs::log_private::LogPrivate`** so a report hashes it
+  exactly (`docs/tooling/logging.md` § "Usage in Rust").
 - **A per-event line with a varying payload (`attempt=27`, a name, a count) is a flood the coalescer can't catch**: its
   key is the exact line. Log per episode, or when the result changes. DETAILS § "Duplicate coalescing".
 

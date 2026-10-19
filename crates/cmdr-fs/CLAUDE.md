@@ -22,16 +22,15 @@ paths (`crate::file_system::volume::VolumeError`); other crates use `cmdr_fs::�
   stale after a copy. DETAILS § What the app kept.
 - **❌ Never gate BEHAVIOR on `cfg(test)` here; use `any(test, feature = "testing")`.** `cfg(test)` is off in a
   consumer's test build, so production behavior runs inside their suite and surfaces as someone else's flake.
-- **`InMemoryVolume` is the oracle for the `Volume` contracts data safety leans on**, and LIES on request
-  (`set_stat_failing`, `with_delete_failing`, …) so a defense against a hostile backend is testable. ❌ Never relax a
-  contract to green a test. Cross-backend promises live in `volume::conformance`.
+- **`InMemoryVolume` is the oracle for the `Volume` contracts data safety leans on**, and LIES on request so a defense
+  against a hostile backend is testable. ❌ Never relax a contract to green a test. Cross-backend promises live in
+  `volume::conformance`.
 - **Stream length is explicit**: real files use `StreamLength::Known`; generated output may use `Unknown`. A backend
   that has not opted into unknown writes must reject before opening the destination or polling the source.
 - **Atomic replacement is explicit**: `supports_atomic_replace_rename` means force-rename is one replacement step.
   Delete-then-rename backends keep the conservative default and need tracked aside/restore publication.
-- **❌ Never build a volume ID by hand, or by stripping characters.** `volume::ids` is the one funnel; an ID keys the
-  index DB, `lastUsedPaths`, tab state, and routing, so a lossy one hands two disks one identity and sends deletes to
-  the wrong one.
+- **❌ Never build a volume ID by hand, or by stripping characters.** `volume::ids` is the one funnel: a lossy ID hands
+  two disks one identity and sends deletes to the wrong one.
 - **❌ Never open SQLite outside `sqlite_util`'s factories.** They install the process-wide page-cache slab, installable
   only before the process's first connection (`desktop-rust-sqlite-open-direct` enforces it). ❌ Nor unlink a database
   by hand: `delete_database` retires threads' cached connections.
@@ -39,8 +38,9 @@ paths (`crate::file_system::volume::VolumeError`); other crates use `cmdr_fs::�
   every word, and `FileEntry.git_meta` states a FACT, ❌ never a sentence. DETAILS § The one place prose is produced
   here.
 - **A test needing a real removable volume uses `testing::disk_images` (macOS), ❌ never its own `hdiutil` or `diskutil`
-  call.** Its runner holds the machine-wide lock, SIGKILLs a stuck tool, and proves a disk is the test's own before
-  touching it. ❌ Never a physical disk or a new FAT/exFAT image. DETAILS § "`testing::disk_images`".
+  call**, a physical disk, or a new FAT/exFAT image: its runner is the guarded one. DETAILS § "`testing::disk_images`".
+- **A log line marks each user-derived value with `log_private::LogPrivate`.** ❌ Never make one into a `String`, a
+  path, or UI copy. DETAILS § "Marked log values".
 - **The global allocator is decided here** (`process_memory/allocator.rs`: system on macOS, mimalloc on Linux or with
   the `mimalloc` feature). Gate allocator code on the `cmdr_mimalloc` cfg, ❌ never `feature = "mimalloc"` (false on
   Linux). DETAILS § Which global allocator.
