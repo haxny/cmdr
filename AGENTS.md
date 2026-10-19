@@ -139,10 +139,12 @@ Writing them:
 ## Checker script
 
 Always use **`pnpm check`** at the repo root (never raw `cargo` / `vitest` / etc.); it's cache-aware. **Before each
-commit: `pnpm check --fast && pnpm check svelte-tests-related`** (naming a check runs only that one). `--fast` (~6 s) is
-light scanners only, no compilers, typecheckers, test suites, or formatters; `svelte-tests-related` runs the vitest
-files that reach your branch's changes. CI runs the rest (§ Workflow). Scope by name (`pnpm check clippy`), tech
-(`rust`), or app (`desktop`). Full docs in `scripts/check/CLAUDE.md`. Don't even try to tail the checker script.
+commit: `pnpm check --fast && pnpm check svelte-tests-related`**, plus `pnpm check clippy` if you touched Rust (naming a
+check runs only that one). `--fast` (~6 s) is light scanners only, no compilers, typecheckers, test suites, or
+formatters; `svelte-tests-related` runs the vitest files that reach your branch's changes; clippy (~25 s warm) catches
+in seconds what would otherwise cost a 30-minute CI cycle. CI runs the rest (§ Workflow). Scope by name
+(`pnpm check clippy`), tech (`rust`), or app (`desktop`). Full docs in `scripts/check/CLAUDE.md`. Don't even try to tail
+the checker script.
 
 ## Testing
 
