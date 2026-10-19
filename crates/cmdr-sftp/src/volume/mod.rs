@@ -11,14 +11,14 @@
 //! `CLAUDE.md` has the must-knows, `DETAILS.md` the decisions.
 
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
-use cmdr_fs::volume::{Retirement, VolumeError};
+use cmdr_fs::volume::{ConnectionCell, Retirement, VolumeError};
 use tokio_util::sync::CancellationToken;
 
 use crate::auth::{AuthRungUsed, UnattendedReconnect};
@@ -99,8 +99,10 @@ struct SftpVolumeInner {
     /// engine multiplexes on one channel, so N operations genuinely overlap.
     session: tokio::sync::RwLock<Option<Arc<SshConnection>>>,
     /// The state the host was last told about, so a server that is down doesn't
-    /// produce one event per failing operation (`state.rs`).
-    state: AtomicU8,
+    /// produce one event per failing operation, packed with the installed
+    /// session's generation so a replaced session's late error can't mark its
+    /// successor lost (`state.rs`).
+    state: ConnectionCell<ConnectionState>,
     /// Whether the registry still serves this volume under its id. Read back by
     /// the reconnect loop through a `SelfHandle`.
     retirement: Retirement,
@@ -334,7 +336,7 @@ pub async fn connect_sftp_volume(
                     params: std::sync::RwLock::new(params),
                     rung: std::sync::Mutex::new(rung),
                     session: tokio::sync::RwLock::new(Some(Arc::new(connection))),
-                    state: AtomicU8::new(ConnectionState::Connected as u8),
+                    state: ConnectionCell::new(ConnectionState::Connected),
                     retirement: Retirement::new(),
                     me: me.clone(),
                     reconnect_lock: tokio::sync::Mutex::new(()),

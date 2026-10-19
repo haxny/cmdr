@@ -38,10 +38,21 @@ impl SftpVolume {
     /// the operations ARE the detector. A delegator added without it leaves a
     /// volume showing as connected until somebody else's call notices
     /// (`reconnect.rs`).
-    async fn noting<T>(&self, work: impl Future<Output = Result<T, VolumeError>> + Send) -> Result<T, VolumeError> {
+    ///
+    /// ❗ The session generation is read BEFORE `work` runs, so a failure is
+    /// pinned to the session the call started on: one that a reconnect replaced
+    /// meanwhile is old news and moves nothing. The read can only be older than
+    /// the session the call actually took (a reconnect installing between the two
+    /// reads), which at worst leaves a real loss for the next call to notice,
+    /// never a healthy session marked lost.
+    pub(super) async fn noting<T>(
+        &self,
+        work: impl Future<Output = Result<T, VolumeError>> + Send,
+    ) -> Result<T, VolumeError> {
+        let ran_on = self.inner.session_generation();
         let outcome = work.await;
         if let Err(error) = &outcome {
-            self.note_lost_session(error);
+            self.note_lost_session(error, ran_on);
         }
         outcome
     }
@@ -453,6 +464,12 @@ impl Volume for SftpVolume {
             ConnectionState::NeedsCredentials => Published::NeedsSignIn,
             ConnectionState::NeedsHostKeyApproval => Published::NeedsHostKeyApproval,
         })
+    }
+
+    /// The installed session's generation, bumped only when a reconnect installs
+    /// a rebuilt session (`reconnect.rs`).
+    fn connection_generation(&self) -> Option<u64> {
+        Some(self.inner.session_generation())
     }
 
     fn backend_kind(&self) -> cmdr_fs::volume::BackendKind {

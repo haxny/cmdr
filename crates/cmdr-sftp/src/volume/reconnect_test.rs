@@ -24,9 +24,9 @@ use cmdr_fs::volume::host::events::{RecordingVolumeEvents, VolumeConnection, Vol
 use cmdr_fs::volume::host::host_keys::InMemoryHostKeys;
 use cmdr_fs::volume::{SignInShape, Volume};
 
-use super::super::SftpVolume;
 use super::super::test_support::{TEST_ROOT, make_test_volume_with};
 use super::super::testing::*;
+use super::super::{ConnectionState, SftpVolume};
 use crate::auth::{AuthRungUsed, UnattendedReconnect};
 
 const FIXTURE: &str = "sftp-servers/start.sh (sftp-fixture)";
@@ -576,9 +576,22 @@ async fn sftp_integration_the_toggle_off_leaves_a_reachable_server_alone() {
         "and the volume is genuinely still down"
     );
 
+    let first = Volume::connection_generation(&volume).expect("an SFTP volume reports its generation");
     volume.set_auto_reconnect(true);
     volume.attempt_reconnect().await.expect(FIXTURE);
     assert!(volume.exists(std::path::Path::new("hello.txt")).await);
+    assert_eq!(
+        Volume::connection_generation(&volume),
+        Some(first + 1),
+        "the rebuilt session is a new generation, and the refused attempt before it moved nothing"
+    );
+
+    volume.attempt_reconnect().await.expect(FIXTURE);
+    assert_eq!(
+        Volume::connection_generation(&volume),
+        Some(first + 1),
+        "a reconnect that found the session live installed nothing"
+    );
 }
 
 /// ❗ **Switching the toggle back on brings a volume that is already down back.**
@@ -861,4 +874,69 @@ async fn the_readiness_answer_follows_the_toggle_the_rung_and_the_store() {
         reads_after_off,
         "❗ neither answer needs the store, so neither pays for a Keychain prompt"
     );
+}
+
+// ── Which session a failure belongs to ──────────────────────────────
+
+/// ❗ **A late loss from a replaced session leaves the new one connected.**
+///
+/// A call that started on the old session and fails after a reconnect installed
+/// a fresh one is old news. Flipping the state on it would drop the HEALTHY
+/// session and hand every operation on it an outage it never had, which is what a
+/// transfer's concurrent window turned into terminal failures. Driven through
+/// `noting`, the funnel every delegator uses, so the generation is read where
+/// production reads it: before the call runs. The install itself needs a live
+/// server; `the_toggle_off_leaves_a_reachable_server_alone` is its Docker twin.
+#[tokio::test]
+async fn a_late_loss_from_a_replaced_session_leaves_the_new_one_connected() {
+    let (events, _credentials, volume) = offline_volume(AuthRungUsed::Agent);
+
+    let outcome: Result<(), _> = volume
+        .noting(async {
+            // While the call is out, a sibling's failure marks the old session
+            // lost and a reconnect installs a new one.
+            assert!(volume.inner.lose_session(volume.inner.session_generation()));
+            volume.inner.session_installed();
+            Err(cmdr_fs::volume::VolumeError::DeviceDisconnected(
+                "old session".to_string(),
+            ))
+        })
+        .await;
+
+    assert!(outcome.is_err(), "the call's own answer is passed through untouched");
+    assert_eq!(volume.inner.connection_state(), ConnectionState::Connected);
+    assert_eq!(
+        reported(&events),
+        vec![VolumeConnection::Disconnected, VolumeConnection::Connected],
+        "the sibling's loss and the reconnect, and nothing from the late error"
+    );
+
+    // The new session's own loss still counts.
+    let outcome: Result<(), _> = volume
+        .noting(async {
+            Err(cmdr_fs::volume::VolumeError::DeviceDisconnected(
+                "new session".to_string(),
+            ))
+        })
+        .await;
+    assert!(outcome.is_err());
+    assert_eq!(volume.inner.connection_state(), ConnectionState::Disconnected);
+}
+
+/// The reported generation moves only when a session is installed: ❌ not on a
+/// loss, ❌ not on a reconnect attempt that didn't take.
+#[tokio::test]
+async fn only_an_installed_session_moves_the_generation() {
+    let (_events, _credentials, volume) = offline_volume(AuthRungUsed::Agent);
+    let first = Volume::connection_generation(&volume).expect("an SFTP volume reports its generation");
+
+    volume.inner.lose_session(first);
+    assert!(
+        volume.attempt_reconnect().await.is_err(),
+        "nothing listens on the fixture's port"
+    );
+    assert_eq!(Volume::connection_generation(&volume), Some(first));
+
+    volume.inner.session_installed();
+    assert_eq!(Volume::connection_generation(&volume), Some(first + 1));
 }

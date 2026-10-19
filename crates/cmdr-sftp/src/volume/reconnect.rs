@@ -2,8 +2,10 @@
 //!
 //! There is no watcher on this backend, so nothing notices a dead session until
 //! something tries to use it. The first operation that does calls
-//! [`SftpVolume::note_lost_session`], which flips the state once, drops the
-//! transport, and starts the backoff loop below. Everything after that is the
+//! [`SftpVolume::note_lost_session`], which flips the state once (only if the
+//! session it ran on is still the installed one), drops the transport, and
+//! starts the backoff loop below. Each installed session gets the next
+//! generation, which is what `Volume::connection_generation` reports. Everything after that is the
 //! policy in [`crate::auth::reconnect_policy`] being obeyed.
 //!
 //! **Two independent switches decide what may happen, in this order.**
@@ -120,17 +122,17 @@ impl SftpVolume {
     /// is the only place this backend CAN learn it: with no watcher, a dead
     /// session is invisible until something asks it for something.
     ///
-    /// ❗ Acts only on the `Connected` → `Disconnected` edge. Several in-flight
-    /// operations see the same broken session at the same moment, and the ones
-    /// that lose the swap must not each start a reconnect loop.
-    pub(super) fn note_lost_session(&self, error: &VolumeError) {
+    /// ❗ Acts only on the `Connected` → `Disconnected` edge, and only for the
+    /// session the failing call RAN on (`ran_on`, read before the call started).
+    /// Several in-flight operations see the same broken session at the same
+    /// moment, and the ones that lose the swap must not each start a reconnect
+    /// loop; a call that started on a session a reconnect has since replaced
+    /// must not take the fresh one down.
+    pub(super) fn note_lost_session(&self, error: &VolumeError, ran_on: u64) {
         if !matches!(error, VolumeError::DeviceDisconnected(_)) {
             return;
         }
-        if self.inner.connection_state() != ConnectionState::Connected {
-            return;
-        }
-        if !self.inner.emit_if_changed(ConnectionState::Disconnected) {
+        if !self.inner.lose_session(ran_on) {
             return;
         }
         let inner = Arc::clone(&self.inner);
@@ -262,14 +264,16 @@ impl SftpVolumeInner {
                         self.volume_id.clone(),
                     )));
                 }
-                // ❗ Installed and marked `Connected` under ONE guard, so
-                // `drop_dead_session` never sees the new session beside a
-                // state that still says the old one died.
+                // ❗ Installed, given the next generation, and marked
+                // `Connected` under ONE guard, so `drop_dead_session` never sees
+                // the new session beside a state that still says the old one
+                // died, and no call reads the new session under the old
+                // generation.
                 let mut session = self.session.write().await;
                 *session = Some(Arc::new(connection));
                 self.set_auth_rung(rung);
                 self.auth_attempt_spent.store(false, Ordering::Relaxed);
-                self.emit_if_changed(ConnectionState::Connected);
+                self.session_installed();
                 drop(session);
                 info!(target: "volume", "sftp volume '{}' is back", self.volume_id);
                 Ok(Rebuilt::Dialed(rung))

@@ -10,7 +10,7 @@
 //! shipped build. The stack itself: `apps/desktop/test/sftp-servers/README.md`.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use cmdr_fs::volume::Retirement;
 use cmdr_fs::volume::host::VolumeHost;
@@ -72,7 +72,7 @@ pub fn offline_volume(name: &str, params: SftpConnectionParams, rung: AuthRungUs
             session: tokio::sync::RwLock::new(None),
             // A volume with no session behind it is one whose session went away,
             // which is what the reconnect cells are about.
-            state: AtomicU8::new(ConnectionState::Connected as u8),
+            state: cmdr_fs::volume::ConnectionCell::new(ConnectionState::Connected),
             retirement: Retirement::new(),
             me: me.clone(),
             reconnect_lock: tokio::sync::Mutex::new(()),
