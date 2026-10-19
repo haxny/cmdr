@@ -7,7 +7,7 @@
 //! `check_connection` does). [`Volume::attempt_reconnect`] succeeds only once
 //! the test has made the server reachable again, and a test can also arm the
 //! session to drop at the start of the Nth write, which is the mid-copy outage,
-//! or around the Nth rename: before the server sees it, or after the server
+//! at the Nth read-stream open (a copy FROM the share), or around the Nth rename: before the server sees it, or after the server
 //! performed it but before its reply arrived (the landing a drop swallows). It
 //! can also land every write in one shot (SMB's compound write for a small
 //! file) and drop right after the Nth write completed, the same swallowed reply
@@ -29,11 +29,12 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataReport};
 use cmdr_fs::volume::{
-    ConnectionState, DirectoryCreation, InMemoryVolume, LaneKey, ListingProgress, ScanConflict, SourceItemInfo,
-    SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
+    BatchScanResult, ConnectionState, CopyScanResult, DirectoryCreation, InMemoryVolume, LaneKey, ListingProgress,
+    ScanBoundary, ScanConflict, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume,
+    VolumeError, VolumeReadStream, WriteMode,
 };
 use std::future::Future;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -56,6 +57,9 @@ pub(crate) struct OutageVolume {
     hang_reconnects: AtomicBool,
     /// Reconnect attempts whose future was dropped while it hung.
     abandoned_reconnects: AtomicUsize,
+    opens: AtomicUsize,
+    /// Drop the session at the start of this (0-based) read-stream open.
+    drop_at_open: Mutex<Option<usize>>,
     writes: AtomicUsize,
     /// Drop the session at the start of this (0-based) write.
     drop_at_write: Mutex<Option<usize>>,
@@ -106,6 +110,8 @@ impl OutageVolume {
             reconnect_attempts: AtomicUsize::new(0),
             hang_reconnects: AtomicBool::new(false),
             abandoned_reconnects: AtomicUsize::new(0),
+            opens: AtomicUsize::new(0),
+            drop_at_open: Mutex::new(None),
             writes: AtomicUsize::new(0),
             drop_at_write: Mutex::new(None),
             drop_after_write: Mutex::new(None),
@@ -151,6 +157,12 @@ impl OutageVolume {
 
     pub(crate) fn require_sign_in(&self) {
         self.needs_sign_in.store(true, Ordering::SeqCst);
+    }
+
+    /// The session drops (and the server goes away) the moment read-stream open
+    /// number `n` (0-based) starts: a copy FROM the share meets the outage.
+    pub(crate) fn drop_at_open(&self, n: usize) {
+        *self.drop_at_open.lock_ignore_poison() = Some(n);
     }
 
     /// The session drops (and the server goes away) the moment write number
@@ -362,8 +374,28 @@ impl Volume for OutageVolume {
     }
     fn open_read_stream<'a>(&'a self, path: &'a Path) -> Fut<'a, Result<Box<dyn VolumeReadStream>, VolumeError>> {
         Box::pin(async move {
+            let n = self.opens.fetch_add(1, Ordering::SeqCst);
+            if *self.drop_at_open.lock_ignore_poison() == Some(n) {
+                self.go_away();
+            }
             self.gate()?;
             self.inner.open_read_stream(path).await
+        })
+    }
+    fn scan_for_copy<'a>(&'a self, path: &'a Path) -> Fut<'a, Result<CopyScanResult, VolumeError>> {
+        Box::pin(async move {
+            self.gate()?;
+            self.inner.scan_for_copy(path).await
+        })
+    }
+    fn scan_for_copy_batch_with_boundary<'a>(
+        &'a self,
+        paths: &'a [PathBuf],
+        boundary: &'a ScanBoundary<'a>,
+    ) -> Fut<'a, Result<BatchScanResult, VolumeError>> {
+        Box::pin(async move {
+            self.gate()?;
+            self.inner.scan_for_copy_batch_with_boundary(paths, boundary).await
         })
     }
     fn create_directory_errors_on_existing_dir(&self) -> bool {

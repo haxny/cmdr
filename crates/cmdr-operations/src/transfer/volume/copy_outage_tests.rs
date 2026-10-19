@@ -145,6 +145,53 @@ async fn a_multi_file_copy_waits_out_a_dropped_share_and_finishes() {
     }
 }
 
+/// A download FROM a share that drops as a file's source opens: nothing is
+/// staged yet, so the copy waits for the share and opens the file again.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_download_waits_out_a_source_share_that_drops_at_the_open() {
+    let engine = TestOperations::new();
+    let (source_inner, nas, source) = nas("outage-source-open");
+    for n in 0..3 {
+        let path = format!("/f{n}.txt");
+        source_inner
+            .create_file(Path::new(&path), format!("file {n}").as_bytes())
+            .await
+            .unwrap();
+    }
+    nas.drop_at_open(1);
+    let dest_inner = Arc::new(InMemoryVolume::new("Local").with_space_info(10_000_000, 10_000_000));
+    let dest: Arc<dyn Volume> = Arc::clone(&dest_inner) as Arc<dyn Volume>;
+    let state = outage_state(&engine, Duration::from_secs(30));
+    let op = engine.register_state("outage-source-open", Arc::clone(&state));
+    come_back_when_waited_for(&state, &nas);
+
+    let sources: Vec<PathBuf> = (0..3).map(|n| PathBuf::from(format!("/f{n}.txt"))).collect();
+    copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        op.id(),
+        &state,
+        source,
+        &sources,
+        dest,
+        Path::new("/"),
+        &config(),
+    )
+    .await
+    .expect("a source share that comes back within the budget must not fail the copy");
+
+    for n in 0..3 {
+        assert_eq!(
+            content_of(&dest_inner, &format!("/f{n}.txt")).await,
+            format!("file {n}").into_bytes(),
+            "f{n} must land byte-exact"
+        );
+    }
+    assert!(
+        nas.reconnect_attempts() >= 1,
+        "the source share really dropped at an open"
+    );
+}
+
 /// The concurrent window, where one task's reconnect brings the share back
 /// while another task's call is still in flight on the OLD session: that call's
 /// error arrives late, with the share already live on the new one. It's waited
