@@ -27,7 +27,7 @@ import { restoreFixtureTree } from '../e2e-shared/fixture-manifest.js'
 import { recreateFixtures } from '../e2e-shared/fixtures.js'
 import { ensureMcpClient, mcpReadResource } from '../e2e-shared/mcp-client.js'
 import {
-  clickButtonByText,
+  cancelTransferFromDialog,
   ensureAppReady,
   flushFileWatcher,
   getFixtureRoot,
@@ -340,7 +340,7 @@ test.describe('Archive editing', () => {
       await tauriPage.waitForSelector(`${TRANSFER_DIALOG} .btn-primary`, 3000)
       await tauriPage.click(`${TRANSFER_DIALOG} .btn-primary`)
       await tauriPage.waitForSelector(TRANSFER_PROGRESS, 5000)
-      await clickButtonByText(tauriPage, `${TRANSFER_PROGRESS} button`, 'Cancel')
+      await cancelTransferFromDialog(tauriPage, TRANSFER_PROGRESS)
       await expect
         .poll(async () => !(await tauriPage.isVisible('.modal-overlay')), { timeout: waitBudget(20000) })
         .toBeTruthy()

@@ -908,6 +908,22 @@
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Copy canceled} move {Move canceled} compress {Compress canceled} delete {Delete canceled} trash {Move to trash canceled} other {Canceled}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "description": "Title of the small alert that appears over the progress dialog once an operation the user canceled has fully stopped. It has one OK button, which closes both.",
+    "placeholders": {
+      "type": "the operation that was canceled: copy, move, compress, delete, or trash"
+    }
+  },
+
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {You’ve canceled this copy. The files it copied so far stay where they are.} move {You’ve canceled this move. The files it moved so far stay where they landed.} compress {You’ve canceled this compress.} delete {You’ve canceled this delete. The files it deleted so far are gone, and the rest are still there.} trash {You’ve canceled this move to trash. The files it moved so far stay in the trash, and the rest are where they were.} other {You’ve canceled this operation.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "description": "Body of the alert that appears over the progress dialog once an operation the user canceled has fully stopped. Says what happened to the files already handled, so the user knows nothing was undone.",
+    "placeholders": {
+      "type": "the operation that was canceled: copy, move, compress, delete, or trash"
+    }
+  },
+
   "fileOperations.transferProgress.titleCancellingSlow": "Canceling… (cleaning up)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "description": "Progress-dialog title shown when a cancel takes longer than a moment, because the files still being copied or moved have to stop and remove their unfinished parts first. Applies to every kind of drive (local, network, phone). Keep the trailing ellipsis on the first part; the parenthetical says what Cmdr is doing while the user waits.",

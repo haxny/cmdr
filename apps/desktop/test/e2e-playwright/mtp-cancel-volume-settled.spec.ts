@@ -205,6 +205,10 @@ test.describe('MTP cancel: settle gate keeps "Canceling…" until BE quiets down
       // — a fast settle (< 200 ms after cancel) may close before we poll.
       // But ordering must be right.
 
+      // A Cancel pressed in the dialog is acknowledged once the operation has
+      // stopped; OK on that alert is what closes the dialog behind it.
+      await clickButtonByText(tauriPage, '[data-dialog-id="alert"] button', 'OK', waitBudget(3_000))
+
       // Wait for the dialog to actually close — and assert it does. The
       // previous version polled without asserting, which let the test pass
       // even when the dialog stayed up (the dialog needs both `write-cancelled`

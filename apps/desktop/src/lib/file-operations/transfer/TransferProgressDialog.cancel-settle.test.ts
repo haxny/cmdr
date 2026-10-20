@@ -256,6 +256,47 @@ describe('TransferProgressDialog cancel-settle gate', () => {
     }
   })
 
+  it('after a Cancel pressed here, says so over the dialog and closes both on OK', async () => {
+    const { component, onCancelled, target } = await mountDialog()
+    if (!cancelledCb || !settledCb) throw new Error('subscribers never registered')
+    const cancelButton = [...target.querySelectorAll<HTMLButtonElement>('.modal-footer-actions button')].find(
+      (button) => button.textContent.trim() === 'Cancel',
+    )
+    cancelButton?.click()
+    await flushPromises()
+    cancelledCb({
+      operationId: 'op-1',
+      operationType: 'delete',
+      filesProcessed: 3,
+      rollback: {
+        outcome: 'notRolledBack',
+        reversed: 0,
+        skips: [],
+        stagedLeftovers: [],
+        originalsStillInPlace: null,
+        recovered: [],
+      },
+    })
+    settledCb({ operationId: 'op-1', operationType: 'delete', volumeId: 'mtp-1' })
+    await flushPromises()
+
+    const alert = document.querySelector('[role="alertdialog"]')
+    expect(alert, 'the acknowledgment is up').not.toBeNull()
+    expect(alert?.textContent).toContain('Delete canceled')
+    expect(alert?.textContent).toContain('You’ve canceled this delete.')
+    expect(target.querySelector('[data-dialog-id="transfer-progress"]'), 'the dialog stays behind it').not.toBeNull()
+    expect(onCancelled).not.toHaveBeenCalled()
+
+    const ok = [...(alert?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
+      (button) => button.textContent.trim() === 'OK',
+    )
+    ok?.click()
+    await flushPromises()
+    expect(onCancelled).toHaveBeenCalledExactlyOnceWith(3)
+
+    void unmount(component)
+  })
+
   it('write-complete path closes normally without waiting for settle', async () => {
     const { component, onComplete } = await mountDialog()
     vi.useFakeTimers({ shouldAdvanceTime: false })

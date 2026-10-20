@@ -38,6 +38,7 @@ import {
   dismissOverlay,
   dismissAllToasts,
   dispatchMenuCommand,
+  cancelTransferFromDialog,
   clickButtonByText,
   flushFileWatcher,
   getFixtureRoot,
@@ -259,7 +260,7 @@ test.describe('Dialog edge resizing', () => {
 
       expect(Math.abs(after.height - (before.height + 80))).toBeLessThan(TOLERANCE_PX)
       expect(Math.abs((await treeHeight()) - (treeBefore + 80))).toBeLessThan(TOLERANCE_PX)
-      await clickButtonByText(page, `[data-dialog-id="${TRANSFER_PROGRESS}"] button`, 'Cancel')
+      await cancelTransferFromDialog(page)
       await expect
         .poll(async () => !(await page.isVisible(`[data-dialog-id="${TRANSFER_PROGRESS}"]`)), {
           timeout: waitBudget(10000),
@@ -448,6 +449,8 @@ test.describe('Dialog footer', () => {
       expect(after.rightmost).toBeLessThanOrEqual(after.footerContentRight + TOLERANCE_PX)
 
       await clickButtonByText(page, `[data-dialog-id="${TRANSFER_PROGRESS}"] .modal-footer button`, longest.Cancel)
+      // The cancel's acknowledgment stacks over the dialog; OK closes both.
+      await clickButtonByText(page, '[data-dialog-id="alert"] button', 'OK', waitBudget(20000))
       await expect
         .poll(async () => !(await page.isVisible(`[data-dialog-id="${TRANSFER_PROGRESS}"]`)), {
           timeout: waitBudget(10000),

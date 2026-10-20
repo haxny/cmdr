@@ -12,7 +12,8 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { flushSync } from 'svelte'
-import type { WriteConflictEvent, WriteOperationStartResult } from '#lib/tauri-commands/index.js'
+import type { WriteCancelledEvent, WriteConflictEvent, WriteOperationStartResult } from '#lib/tauri-commands/index.js'
+import type { CancelRollback } from '#lib/ipc/bindings.js'
 import type { WriteOperationError } from '#lib/file-explorer/types.js'
 
 vi.mock('#lib/tauri-commands/index.js', async () =>
@@ -400,7 +401,77 @@ describe('createTransferProgressState: cancel + settle close-out', () => {
     flushSync()
     expect(state.settleSlow).toBe(false)
     vi.advanceTimersByTime(450)
+    // A Cancel pressed here is acknowledged before the dialog goes.
+    state.acknowledgeCancel()
     expect(config.onCancelled).toHaveBeenCalledWith(4)
+  })
+
+  /** A plain cancel's terminal event, as the backend sends it. */
+  function cancelledEvent(filesProcessed: number, over: Partial<CancelRollback> = {}): WriteCancelledEvent {
+    return {
+      operationId: 'op-1',
+      operationType: 'copy',
+      filesProcessed,
+      rollback: {
+        outcome: 'notRolledBack',
+        reversed: 0,
+        skips: [],
+        stagedLeftovers: [],
+        originalsStillInPlace: null,
+        recovered: [],
+        ...over,
+      },
+    }
+  }
+
+  it('holds the dialog on a "you canceled this" acknowledgment after a Cancel pressed here, and closes on OK', async () => {
+    const { state, config } = await startedState()
+    void state.handleCancel(false)
+    await settle()
+    if (!listeners.cancelled || !listeners.settled) throw new Error('cancel/settle subscribers never registered')
+    listeners.cancelled(cancelledEvent(4))
+    listeners.settled({ operationId: 'op-1', operationType: 'copy' })
+    flushSync()
+    vi.advanceTimersByTime(20_000)
+
+    expect(state.cancelAcknowledgement).toEqual({ operationType: 'copy' })
+    expect(config.onCancelled, 'the dialog waits for OK').not.toHaveBeenCalled()
+
+    state.acknowledgeCancel()
+    expect(config.onCancelled).toHaveBeenCalledExactlyOnceWith(4)
+    expect(state.cancelAcknowledgement).toBeNull()
+  })
+
+  it('asks for no acknowledgment when the cancel came from somewhere else', async () => {
+    // The queue window or an MCP agent stopped it: nobody here pressed anything.
+    const { state, config } = await startedState()
+    if (!listeners.cancelled || !listeners.settled) throw new Error('cancel/settle subscribers never registered')
+    listeners.cancelled(cancelledEvent(2))
+    listeners.settled({ operationId: 'op-1', operationType: 'copy' })
+    flushSync()
+    vi.advanceTimersByTime(450)
+
+    expect(state.cancelAcknowledgement).toBeNull()
+    expect(config.onCancelled).toHaveBeenCalledWith(2)
+  })
+
+  it('holds the "what stayed" summary until OK, so one cancel says one thing at a time', async () => {
+    const { state } = await startedState()
+    void state.handleCancel(false)
+    await settle()
+    if (!listeners.cancelled || !listeners.settled) throw new Error('cancel/settle subscribers never registered')
+    listeners.cancelled(
+      cancelledEvent(4, {
+        stagedLeftovers: [{ fate: 'landsWhenBack', count: 1, exampleName: 'holiday.jpg', volumeName: 'Naspolya' }],
+      }),
+    )
+    listeners.settled({ operationId: 'op-1', operationType: 'copy' })
+    flushSync()
+    vi.advanceTimersByTime(450)
+    expect(vi.mocked(addToast)).not.toHaveBeenCalled()
+
+    state.acknowledgeCancel()
+    expect(vi.mocked(addToast)).toHaveBeenCalledTimes(1)
   })
 
   it('is idempotent against a repeated cancel click', async () => {
@@ -588,6 +659,7 @@ describe('createTransferProgressState: rollback', () => {
     listeners.settled({ operationId: 'op-1', operationType: 'copy' })
     flushSync()
     vi.advanceTimersByTime(450)
+    state.acknowledgeCancel()
 
     expect(vi.mocked(addToast)).not.toHaveBeenCalled()
   })

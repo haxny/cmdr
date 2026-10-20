@@ -203,6 +203,15 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
   /** True once an outcome has been reported to the parent. Single-shot: a
    *  dismissal racing a terminal event must not close the dialog twice. */
   let closed = false
+  /** True once the person stopped the operation from THIS view with a plain
+   *  Cancel (button, Escape, or the clash prompt's Cancel). Only such a cancel is
+   *  acknowledged: one from the queue window or an MCP agent closes as before,
+   *  and a Rollback says what it undid in its own toast. */
+  let cancelPressedHere = false
+  let rollbackPressedHere = false
+  /** A cancel this view asked for has landed, and the dialog stays up behind a
+   *  "you canceled this" alert until OK. Holds what OK needs to finish closing. */
+  let pendingCancelAck = $state<{ event: WriteCancelledEvent } | null>(null)
 
   /** Flips true once the settle wait has exceeded `SLOW_SETTLE_LABEL_MS`.
    *  Drives the "(cleaning up)" tail on the dialog label. */
@@ -359,6 +368,18 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     })
   }
 
+  /** OK on the "you canceled this" alert: say what stayed, then close. No
+   *  anti-flicker floor, since the person has been reading the dialog. */
+  function acknowledgeCancel(): void {
+    const pending = pendingCancelAck
+    if (pending === null) return
+    pendingCancelAck = null
+    raiseCancelRollbackToast(pending.event.rollback, pending.event.operationType)
+    close(() => {
+      config.onCancelled(pending.event.filesProcessed)
+    }, false)
+  }
+
   /* ----------------------------------------------------------------------- */
   /* Watching the operation                                                   */
   /* ----------------------------------------------------------------------- */
@@ -450,6 +471,14 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
             staged: event.rollback.stagedLeftovers.reduce((total, group) => total + group.count, 0),
           },
         )
+        if (cancelPressedHere && !rollbackPressedHere) {
+          // The person stopped it from here: hold the dialog behind an alert
+          // that says so, and finish closing on its OK (`acknowledgeCancel`).
+          // The "what stayed" toast waits for that OK too, so one cancel says
+          // one thing at a time.
+          if (pendingCancelAck === null && !closed) pendingCancelAck = { event }
+          return
+        }
         // Said here rather than by the parent: the reversal's report rides the
         // cancelled event, and both the started and the adopted arms reach this
         // one place. Raised before the close so the summary is already up when
@@ -544,6 +573,8 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
   /** Cancel (keep what's written) or Rollback (undo it), through the operation's
    *  own commands, so every other surface watching sees the press. */
   async function handleCancel(rollback: boolean): Promise<void> {
+    if (rollback) rollbackPressedHere = true
+    else cancelPressedHere = true
     if (operationId === null) {
       // The backend hasn't named the operation yet. Record the command; birth
       // issues it the moment the id lands.
@@ -786,6 +817,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     destroy,
     detach,
     dismiss,
+    acknowledgeCancel,
     handleCancel,
     handleConflictResolution,
     handlePauseResume,
@@ -839,6 +871,11 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     },
     get settleSlow(): boolean {
       return settleSlow
+    },
+    /** Set while the "you canceled this" alert should be up, naming what was
+     *  canceled by the backend's own word for it. `acknowledgeCancel` clears it. */
+    get cancelAcknowledgement(): { operationType: WriteCancelledEvent['operationType'] } | null {
+      return pendingCancelAck === null ? null : { operationType: pendingCancelAck.event.operationType }
     },
     get operationSettled(): boolean {
       return session()?.settled ?? false

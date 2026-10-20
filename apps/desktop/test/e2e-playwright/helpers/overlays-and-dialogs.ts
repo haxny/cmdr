@@ -355,6 +355,22 @@ export async function clickButtonByText(
 }
 
 /**
+ * Presses Cancel on the progress dialog, then OK on the "you canceled this" alert
+ * it raises once the operation has fully stopped. The dialog stays up behind
+ * that alert until OK, so a spec that only pressed Cancel would wait out its
+ * timeout on a dialog that never closes. `timeout` bounds the wind-down: the
+ * alert appears only after `write-settled`.
+ */
+export async function cancelTransferFromDialog(
+  tauriPage: PageLike,
+  progressSelector = '[data-dialog-id="transfer-progress"]',
+  timeout = waitBudget(20000),
+): Promise<void> {
+  await clickButtonByText(tauriPage, `${progressSelector} button`, 'Cancel')
+  await clickButtonByText(tauriPage, '[data-dialog-id="alert"] button', 'OK', timeout)
+}
+
+/**
  * Assert that exactly ONE toast whose text contains `substring` appears within
  * `timeout`, then dismiss that single toast.
  *

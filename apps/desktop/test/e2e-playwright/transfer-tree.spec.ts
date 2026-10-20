@@ -28,7 +28,7 @@ import { test, expect } from './fixtures.js'
 import { restoreFixtureTree } from '../e2e-shared/fixture-manifest.js'
 import { recreateFixtures } from '../e2e-shared/fixtures.js'
 import {
-  clickButtonByText,
+  cancelTransferFromDialog,
   dismissAllToasts,
   dispatchMenuCommand,
   drainOperations,
@@ -280,7 +280,7 @@ test.describe('Transfer tree', () => {
       )
       .toBe(expectRows(open))
 
-    await clickButtonByText(page, `${PROGRESS} button`, 'Cancel')
+    await cancelTransferFromDialog(page, PROGRESS)
     await expect.poll(async () => !(await page.isVisible(PROGRESS)), { timeout: waitBudget(10000) }).toBeTruthy()
   })
 })

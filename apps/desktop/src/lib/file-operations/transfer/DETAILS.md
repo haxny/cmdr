@@ -1126,6 +1126,17 @@ Why: on a progress dialog, Escape means "stop", and hiding the window there surp
 dialog opens with focus on Pause, so Space pauses and resumes with no binding of its own, and the direction row is the
 dialog's `aria-describedby`, so a screen reader hears what's running beside the title before it hears "Pause".
 
+**A cancel pressed here is acknowledged.** Once a plain Cancel from this view (button, Escape, or the clash prompt's
+Cancel) has fully landed (`write-cancelled` AND `write-settled`), the dialog stays up with its last numbers and an
+`AlertDialog` stacks on it: "Copy canceled / You've canceled this copy…" with OK (Enter and Escape press it too). OK
+runs `acknowledgeCancel()`, which raises the "what stayed" toast (`cancel-rollback-toast.ts`) and closes with no
+anti-flicker floor. Why the dialog stays behind: the person sees how far it got before it goes. Only a cancel THIS view
+asked for (`cancelPressedHere`) waits: one from the queue window or an MCP agent closes as before, a Rollback says what
+it undid in its own toast, and the fallback closes (`dismiss()`, the last-resort timer, a settle with no terminal event)
+skip it, since each is already a way out. The copy says what happened to the files handled so far, per operation type
+(`canceledAlertMessage`). Pinned by `transfer-progress-state.svelte.test.ts` § cancel and
+`TransferProgressDialog.cancel-settle.test.ts`; E2E specs press Cancel through `cancelTransferFromDialog`.
+
 **Teardown stops nothing.** A close is a detach: `ModalDialog`'s `onclose` (× and MCP close) goes to `detach()`, which
 hands a still-running operation to the queue window (exactly as the Queue button does) and otherwise just stops
 watching. An unmount does neither — the operation lives in the backend registry, and the corner chip and the queue

@@ -2083,6 +2083,8 @@ export type MessageKey =
   | 'fileOperations.transferProgress.annotationNewer'
   | 'fileOperations.transferProgress.background'
   | 'fileOperations.transferProgress.backgroundedToast'
+  | 'fileOperations.transferProgress.canceledAlertMessage'
+  | 'fileOperations.transferProgress.canceledAlertTitle'
   | 'fileOperations.transferProgress.close'
   | 'fileOperations.transferProgress.conflictCancel'
   | 'fileOperations.transferProgress.conflictOverwrite'

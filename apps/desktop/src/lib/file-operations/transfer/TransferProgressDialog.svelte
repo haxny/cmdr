@@ -26,6 +26,7 @@
     import { createTransferTreeMemory } from '../transfer-tree/transfer-tree-view.svelte'
     import { treeOperationFor } from '../transfer-tree/tree-operation'
     import RollbackConfirmDialog from '../RollbackConfirmDialog.svelte'
+    import AlertDialog from '#lib/ui/AlertDialog.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
@@ -697,6 +698,21 @@
      the question up would otherwise still be promising a journey home. -->
 {#if rollback.confirming}
     <RollbackConfirmDialog variant={rollback.variant} onConfirm={rollback.confirm} onCancel={rollback.dismiss} />
+{/if}
+
+<!-- A cancel pressed here, once the operation has fully stopped: the dialog stays
+     behind it with its last numbers, so the person sees how far it got, and OK
+     closes both (`progress.acknowledgeCancel`). Same stacking as the question above. -->
+{#if progress.cancelAcknowledgement !== null}
+    <AlertDialog
+        title={tString('fileOperations.transferProgress.canceledAlertTitle', {
+            type: progress.cancelAcknowledgement.operationType,
+        })}
+        message={tString('fileOperations.transferProgress.canceledAlertMessage', {
+            type: progress.cancelAcknowledgement.operationType,
+        })}
+        onClose={progress.acknowledgeCancel}
+    />
 {/if}
 
 <style>
