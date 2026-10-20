@@ -8,6 +8,10 @@
     "scripts/check/checks/registry.go": "append-only check registry (one CheckDefinition entry per check); line count tracks the number of checks, not splittable logic"
   },
   "files": {
+    "apps/desktop/src/lib/file-operations/transfer/transfer-error-messages.parity.test.ts": {
+      "lines": 1218,
+      "reason": "One table: every `WriteOperationError` variant's en wording per operation, pinned case by case so a copy edit lands in the catalog AND here. It grows by one case per new refusal wording; splitting by variant would scatter the table a reviewer reads top to bottom."
+    },
     "crates/cmdr-s3/src/volume/server_copy.rs": {
       "lines": 800,
       "reason": "One cohesive job: the server-side copy (one `CopyObject`, or an `UploadPartCopy` multipart with its retry window and abort). It reached the limit when its log lines started marking every key by kind (one value per line); splitting the retry window from the part sender would cut the one loop that owns both."
