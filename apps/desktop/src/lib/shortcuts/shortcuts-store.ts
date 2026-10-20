@@ -27,6 +27,14 @@ let storeInstance: Store | null = null
 
 // In-memory cache of custom shortcuts
 const customShortcuts = new Map<string, string[]>()
+// Commands THIS window rebound or reset since its last save: the patch
+// `performSave` applies. Windows share one in-memory plugin store per file, and a
+// window that loaded before another's rebind (it listens only after loading)
+// never hears it, so saving its whole map would delete or roll back a binding it
+// never saw. A change heard from another window stays out: that window saved it.
+const changedHere = new Set<string>()
+// A reset-all from this window: its save deletes every `shortcut:*` key.
+let resetAllHere = false
 let initialized = false
 
 // ============================================================================
@@ -156,6 +164,7 @@ export async function initializeShortcuts(options: { restrictedWindow?: boolean 
   // Clear in-memory cache and load fresh
   customShortcuts.clear()
   for (const [commandId, shortcuts] of entries) seedCustomShortcut(commandId, shortcuts)
+  if (!options.restrictedWindow) await writeBackHealedEntries(entries)
 
   if (customShortcuts.size > 0) {
     log.debug('Loaded {count} {shortcutsNoun}: {ids}', {
@@ -202,6 +211,20 @@ async function readStoreEntries(): Promise<[string, unknown][]> {
 }
 
 /**
+ * Puts what load healing changed (a dropped native or junk entry, a canonicalized
+ * combo) back into the shared store at load, saved by the next save of any window.
+ * Not deferred to this window's next save, which writes only what it changed.
+ */
+async function writeBackHealedEntries(entries: [string, unknown][]): Promise<void> {
+  const store = await getStore()
+  for (const [commandId, raw] of entries) {
+    const healed = customShortcuts.get(commandId)
+    if (healed === undefined) await store.delete(`shortcut:${commandId}`)
+    else if (JSON.stringify(healed) !== JSON.stringify(raw)) await store.set(`shortcut:${commandId}`, healed)
+  }
+}
+
+/**
  * A restricted window's customizations, from the backend's read of `shortcuts.json`. A failed
  * read leaves the registry defaults in force, at warn level: an error-level log here would
  * file an error report on every viewer open (the reason restricted settings warn too).
@@ -220,8 +243,8 @@ function seedCustomShortcut(commandId: string, shortcuts: unknown): void {
   // Drop any persisted customization for a macOS-native command. AppKit owns
   // these accelerators, so the entry is a no-op illusion (David's dev
   // shortcuts.json carries `app.hide: []` from testing). Not loading it leaves
-  // the map without an entry, so the registry default applies and the next
-  // save reconciles the stale disk key away.
+  // the map without an entry, so the registry default applies, and
+  // `writeBackHealedEntries` deletes the stale disk key.
   if (isNativeShortcutCommand(commandId) || isFixedKeyCommand(commandId)) return
   if (!Array.isArray(shortcuts)) return // skip non-array garbage
 
@@ -494,6 +517,7 @@ export function setShortcut(commandId: string, index: number, shortcut: string):
 
   customShortcuts.set(commandId, current)
   cleanupIfMatchesDefaults(commandId)
+  changedHere.add(commandId)
   // Save immediately (no debounce) since shortcut changes are rare user actions
   // and we need persistence before the Settings window might close
   void saveToStore()
@@ -517,6 +541,7 @@ export function addShortcut(commandId: string, shortcut: string): void {
   current.push(toCanonicalShortcut(shortcut)) // canonical at the boundary, see `setShortcut`
   customShortcuts.set(commandId, current)
   cleanupIfMatchesDefaults(commandId)
+  changedHere.add(commandId)
   // Save immediately for reliable persistence
   void saveToStore()
   notifyListeners(commandId)
@@ -540,6 +565,7 @@ export function removeShortcut(commandId: string, index: number): void {
     current.splice(index, 1)
     customShortcuts.set(commandId, current)
     cleanupIfMatchesDefaults(commandId)
+    changedHere.add(commandId)
     // Save immediately for reliable persistence
     void saveToStore()
     notifyListeners(commandId)
@@ -555,6 +581,7 @@ export function removeShortcut(commandId: string, index: number): void {
 export function resetShortcut(commandId: string): void {
   if (customShortcuts.has(commandId)) {
     customShortcuts.delete(commandId)
+    changedHere.add(commandId)
     // Save immediately for reliable persistence
     void saveToStore()
     notifyListeners(commandId)
@@ -568,10 +595,10 @@ export function resetShortcut(commandId: string): void {
 export async function resetAllShortcuts(): Promise<void> {
   const modifiedIds = [...customShortcuts.keys()]
 
-  // Clear all customizations. With the map empty, saveToStore's reconcile step
-  // deletes every stale `shortcut:*` key from disk, so we don't duplicate the
-  // delete-loop here.
+  // Clear all customizations; the save deletes every `shortcut:*` key on disk,
+  // including ones another window wrote that this one never heard of: it's a reset.
   customShortcuts.clear()
+  resetAllHere = true
   await saveToStore()
 
   // Notify listeners for all modified commands
@@ -588,10 +615,9 @@ export async function resetAllShortcuts(): Promise<void> {
 // ============================================================================
 
 // Saves are fire-and-forget from every mutator (`void saveToStore()`), so two
-// rapid mutations used to run their reconcile-delete-set-save loops interleaved
-// over the same store. Chaining serializes them: each save starts only after the
-// previous one finished, and each reads the live `customShortcuts` at its own
-// start, so the last save always reflects the final state.
+// rapid mutations used to run their delete-set-save loops interleaved over the
+// same store. Chaining serializes them: each save starts only after the previous
+// one finished, and takes the pending changes at its own start.
 let saveChain: Promise<void> = Promise.resolve()
 
 function saveToStore(): Promise<void> {
@@ -599,32 +625,38 @@ function saveToStore(): Promise<void> {
   return saveChain
 }
 
+/**
+ * Applies this window's changes to the shared store and saves it: a command with
+ * a map entry is written (an empty array is "removed all", a real state), one
+ * without is deleted so the registry default applies. Commands this window didn't
+ * change aren't touched. A failed save puts its changes back for the next one.
+ */
 async function performSave(): Promise<void> {
+  const patch = [...changedHere]
+  const resetAll = resetAllHere
+  changedHere.clear()
+  resetAllHere = false
   try {
     const store = await getStore()
-    log.debug('Saving shortcuts: {shortcuts}', { shortcuts: JSON.stringify(Object.fromEntries(customShortcuts)) })
+    log.debug('Saving shortcuts for {ids}', { ids: patch.join(', ') })
 
-    // Reconcile disk with the in-memory map so the save reflects the full current
-    // state, not just additions. Delete every `shortcut:*` key that no longer has
-    // a map entry: when `resetShortcut` or `cleanupIfMatchesDefaults` drops an
-    // entry, the matching disk key must go too, or it resurrects on next load.
-    const keys = await store.keys()
-    for (const key of keys) {
-      if (key.startsWith('shortcut:') && !customShortcuts.has(key.replace('shortcut:', ''))) {
-        await store.delete(key)
+    if (resetAll) {
+      for (const key of await store.keys()) {
+        if (key.startsWith('shortcut:') && !customShortcuts.has(key.replace('shortcut:', ''))) await store.delete(key)
       }
     }
-
-    // Store each command's shortcuts at top level (like settings-store does)
-    // This avoids potential issues with nested objects
-    for (const [commandId, shortcuts] of customShortcuts) {
-      await store.set(`shortcut:${commandId}`, shortcuts)
+    for (const commandId of patch) {
+      const shortcuts = customShortcuts.get(commandId)
+      if (shortcuts === undefined) await store.delete(`shortcut:${commandId}`)
+      else await store.set(`shortcut:${commandId}`, shortcuts)
     }
     await store.set('_schemaVersion', SCHEMA_VERSION)
     await store.save()
     log.debug('Shortcuts saved successfully')
   } catch (error) {
     log.error('Failed to save shortcuts: {error}', { error })
+    for (const commandId of patch) changedHere.add(commandId)
+    resetAllHere ||= resetAll
   }
 }
 

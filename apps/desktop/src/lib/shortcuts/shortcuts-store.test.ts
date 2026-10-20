@@ -442,7 +442,7 @@ describe('shortcuts-store refuses to customize macOS-native commands', () => {
   // Cmdr can neither rebind nor intercept them, so any persisted customization is
   // an illusion. The editor no longer offers the controls, but the store mutators
   // are the real boundary — MCP events and future callers route through them too —
-  // so they must refuse, and load must reconcile away leaked entries.
+  // so they must refuse, and load must drop leaked entries.
 
   it('drops a persisted native customization on load (the dev shortcuts.json case)', async () => {
     // David's dev shortcuts.json carries `app.hide: []` from live testing.
@@ -557,7 +557,7 @@ describe('shortcuts-store save serialization', () => {
     await store.initializeShortcuts()
 
     // Three mutations in the same tick: their fire-and-forget saves chain
-    // instead of interleaving reconcile/set/save loops over the shared store.
+    // instead of interleaving delete/set/save loops over the shared store.
     store.addShortcut('app.about', 'F9')
     store.setShortcut('app.about', 0, 'F10')
     store.addShortcut('file.copy', '⌘5')
@@ -566,5 +566,69 @@ describe('shortcuts-store save serialization', () => {
 
     expect(disk.get('shortcut:app.about')).toEqual(['F10'])
     expect(store.getEffectiveShortcuts('file.copy')).toContain('⌘5')
+  })
+})
+
+/**
+ * Two windows over one backing store (`tauri-plugin-store` shares one in-memory store per
+ * path across windows). A window that loaded before another window's rebind, and only
+ * started listening after loading, never hears it; each `loadStore()` after
+ * `vi.resetModules()` is another window's module state, and nothing is delivered between them.
+ */
+describe('shortcuts-store saves only what this window changed', () => {
+  async function openWindow() {
+    vi.resetModules()
+    const window = await loadStore()
+    await window.initializeShortcuts()
+    return window
+  }
+
+  it("keeps another window's rebind it never heard of when it saves its own", async () => {
+    const settings = await openWindow()
+    const main = await openWindow()
+    main.addShortcut('app.about', 'F9')
+    await flushSave()
+
+    settings.addShortcut('file.copy', '⌘5')
+    await flushSave()
+
+    expect(disk.get('shortcut:app.about')).toEqual(['F9'])
+    expect(disk.get('shortcut:file.copy')).toContain('⌘5')
+  })
+
+  it('keeps a newer binding of a command it loaded when it saves another', async () => {
+    disk.set('shortcut:file.copy', ['⌘X'])
+    const settings = await openWindow()
+    const main = await openWindow()
+    main.setShortcut('file.copy', 0, '⌘Y')
+    await flushSave()
+
+    settings.addShortcut('app.about', 'F9')
+    await flushSave()
+
+    expect(disk.get('shortcut:file.copy')).toEqual(['⌘Y'])
+  })
+
+  it('still deletes a command it reset itself, and every command on reset-all', async () => {
+    disk.set('shortcut:file.copy', ['⌘X'])
+    disk.set('shortcut:app.about', ['F9'])
+    const settings = await openWindow()
+
+    settings.resetShortcut('file.copy')
+    await flushSave()
+    expect(disk.has('shortcut:file.copy')).toBe(false)
+    expect(disk.get('shortcut:app.about')).toEqual(['F9'])
+
+    await settings.resetAllShortcuts()
+    expect([...disk.keys()].filter((k) => k.startsWith('shortcut:'))).toEqual([])
+  })
+
+  it('writes a healed entry back at load, since no later save of this window covers it', async () => {
+    disk.set('shortcut:file.copy', [''])
+    disk.set('shortcut:selection.invert', ['⇧8', '*', '⌘I'])
+    await openWindow()
+
+    expect(disk.has('shortcut:file.copy')).toBe(false)
+    expect(disk.get('shortcut:selection.invert')).toEqual(['*', '⌘I'])
   })
 })

@@ -23,9 +23,8 @@ Background on default sort-order shortcuts: `docs/notes/sort-order-shortcut-rese
   `shortcut-vocabulary.test.ts` fails on it. DETAILS § Key capture.
 - **Delta-only persistence; empty array vs missing key differ.** `"nav.parent": []` means "user removed all shortcuts";
   a missing key means "use registry defaults". `initializeShortcuts` loads `[]`, so it survives a reload.
-- **`saveToStore` reconciles disk against the in-memory map on every write** (deletes any `shortcut:*` key with no map
-  entry), else a value dropped by reset/cleanup resurrects at next load. `saveChain` serializes saves so two rapid
-  mutations can't interleave.
+- **A window saves only the commands IT changed** (`changedHere`), ❌ never the whole map: windows share one store, so
+  it would delete or roll back a rebind it never heard of. DETAILS § Shortcuts store.
 - **macOS-native (`app.quit`/`hide`/`hideOthers`/`showAll`) and fixed-key (`FIXED_KEY_COMMAND_IDS`) commands are not
   customizable, enforced at the store boundary.** Load drops persisted entries, the mutators no-op with `log.warn`,
   `resetShortcut` stays permissive. MCP edits route through the same mutators, so they inherit the guard.

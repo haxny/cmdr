@@ -32,12 +32,15 @@ shortcuts:
 - Empty array means "all shortcuts removed"
 - Missing command means "use defaults from registry"
 - Saves are serialized: every mutator fires `void saveToStore()`, and the save chains onto the previous one
-  (`saveChain`) so two rapid mutations can't interleave their reconcile/delete/set/save loops over the shared store.
-- `saveToStore` reconciles disk against the in-memory map on every write: it deletes any `shortcut:*` key whose command
-  no longer has a map entry, then writes the current entries. So when `resetShortcut` / `cleanupIfMatchesDefaults` drops
-  an entry (e.g. a custom that's been edited back to defaults, or `app.showAll`'s `[]` default after removing an added
-  shortcut), the stale disk key goes too. Without this the old value resurrects at next load. `resetAllShortcuts` relies
-  on the same step — it just clears the map and saves.
+  (`saveChain`) so two rapid mutations can't interleave their delete/set/save loops over the shared store.
+- A save applies only the commands THIS window changed (`changedHere`): a command with a map entry is written, one
+  without is deleted. So when `resetShortcut` / `cleanupIfMatchesDefaults` drops an entry (a custom edited back to
+  defaults, or `app.showAll`'s `[]` default after removing an added shortcut), the stale disk key goes too, or the old
+  value resurrects at next load. `resetAllShortcuts` deletes every `shortcut:*` key. Why only this window's: every
+  window shares one in-memory plugin store per file, and a window that loaded before another's rebind (it listens only
+  after loading) never hears of it, so saving its whole map deleted the rebind or wrote back the older binding.
+- Load healing (dropped native and junk entries, canonicalized combos) goes back into the shared store at load
+  (`writeBackHealedEntries`), since no later save of this window covers a command it didn't change.
 - `initializeShortcuts` loads any array, including `[]`, and skips only non-array garbage (`Array.isArray` check). The
   empty array is the persisted "removed all shortcuts" state, so it must survive a reload, not be treated as absent.
   Both of its sources (the store, or a restricted window's backend snapshot, § "The viewer's keys") go through ONE
@@ -56,7 +59,7 @@ a void). The store enforces this at its boundary, the real seam for MCP events a
 
 - **Load drops them.** `initializeShortcuts` skips any persisted `shortcut:<native id>` entry (David's dev
   `shortcuts.json` carries `app.hide: []` from testing). Not loading it means the map has no entry, the registry default
-  applies, and the next `saveToStore` reconcile deletes the stale disk key.
+  applies, and load deletes the stale disk key (`writeBackHealedEntries`).
 - **Mutators no-op.** `setShortcut` / `addShortcut` / `removeShortcut` early-return with a `log.warn` for native
   commands (no write, no `notifyListeners`, no cross-window emit). `resetShortcut` stays permissive — it only ever
   DELETES a custom entry, never writes the illusion, so it can usefully clear a leaked native customization.
