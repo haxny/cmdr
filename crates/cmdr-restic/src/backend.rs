@@ -8,12 +8,12 @@
 //! (`repo.rs`). Same bridge as `cmdr-archive`'s `VolumeByteSource`.
 
 use bytes::Bytes;
-use cmdr_fs::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError, VolumeRandomReader};
 use rustic_core::repofile::KeyFile;
 use rustic_core::{BytesList, ErrorKind, FileType, Id, ReadBackend, RusticError, RusticResult, WriteBackend};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use tokio::runtime::Handle;
 
 /// Reads a restic repo's files through the volume it lives on, and refuses every
@@ -26,6 +26,8 @@ pub(crate) struct VolumeBackend {
     /// How many writes rustic tried. Every one is refused; the count is what lets
     /// a test pin "browsing never even tries to write".
     write_attempts: AtomicUsize,
+    /// Packs held open for positioned reads (see [`HeldReaders`]).
+    held: Mutex<HeldReaders>,
 }
 
 impl VolumeBackend {
@@ -35,6 +37,7 @@ impl VolumeBackend {
             root,
             handle,
             write_attempts: AtomicUsize::new(0),
+            held: Mutex::new(HeldReaders::default()),
         }
     }
 
@@ -124,10 +127,133 @@ impl VolumeBackend {
     }
 }
 
+impl VolumeBackend {
+    /// `[offset, offset + length)` of `path`. A pack is read through a reader
+    /// held open for it when the parent hands those out; anything else (and a
+    /// parent that doesn't) is one `read_range`.
+    fn read_window(&self, tpe: FileType, path: &Path, offset: u64, length: usize) -> Result<Vec<u8>, VolumeError> {
+        if tpe == FileType::Pack
+            && let Some(reader) = self.held_reader(path)?
+        {
+            return self.handle.block_on(reader.read_at(offset, length));
+        }
+        self.handle.block_on(self.parent.read_range(path, offset, length))
+    }
+
+    /// The reader held open for the pack at `path`, opened on first use. `None`
+    /// when the parent has no positioned readers (it said `NotSupported` once,
+    /// and isn't asked again).
+    ///
+    /// A pack is read at many offsets (a tree, then each blob of a file), and on
+    /// SMB a `read_range` is an open, a read, and a close: ~14 ms a tree, against
+    /// one round trip through a held handle (`docs/notes/restic/open-cost.md`).
+    /// Packs never change once written, so a held handle never goes stale.
+    fn held_reader(&self, path: &Path) -> Result<Option<Arc<HeldReader>>, VolumeError> {
+        {
+            let mut held = lock(&self.held);
+            if held.unsupported {
+                return Ok(None);
+            }
+            if let Some(reader) = held.take(path) {
+                return Ok(Some(reader));
+            }
+        }
+        let opened = match self.handle.block_on(self.parent.open_random_reader(path)) {
+            Ok(reader) => Arc::new(HeldReader {
+                reader: Some(reader),
+                handle: self.handle.clone(),
+            }),
+            Err(VolumeError::NotSupported) => {
+                lock(&self.held).unsupported = true;
+                return Ok(None);
+            }
+            Err(err) => return Err(err),
+        };
+        // Two reads of one new pack may both have opened it; the second's
+        // reader is dropped (and closed) here.
+        let mut held = lock(&self.held);
+        let reader = held.take(path).unwrap_or(opened);
+        held.put(path, Arc::clone(&reader));
+        Ok(Some(reader))
+    }
+}
+
+/// Packs held open for positioned reads, least recently used first, at most
+/// [`MAX_HELD_READERS`]. Dropping the adapter (the repo going away) drops them
+/// all, and each closes as its last user lets go ([`HeldReader`]'s `Drop`).
+#[derive(Default)]
+struct HeldReaders {
+    readers: Vec<(PathBuf, Arc<HeldReader>)>,
+    /// The parent answered `NotSupported`: every pack read is a `read_range`.
+    unsupported: bool,
+}
+
+impl HeldReaders {
+    /// The reader for `path`, moved to most recently used.
+    fn take(&mut self, path: &Path) -> Option<Arc<HeldReader>> {
+        let at = self.readers.iter().position(|(held, _)| held == path)?;
+        let entry = self.readers.remove(at);
+        let reader = Arc::clone(&entry.1);
+        self.readers.push(entry);
+        Some(reader)
+    }
+
+    /// Holds `reader` for `path`, letting go of the least recently used one past
+    /// the cap. `path` must not be held already.
+    fn put(&mut self, path: &Path, reader: Arc<HeldReader>) {
+        if self.readers.iter().all(|(held, _)| held != path) {
+            self.readers.push((path.to_path_buf(), reader));
+        }
+        if self.readers.len() > MAX_HELD_READERS {
+            self.readers.remove(0);
+        }
+    }
+}
+
+/// One pack's open reader. Closes itself on drop, on the runtime, so a reader
+/// let go mid-read (evicted while another thread reads through it) closes when
+/// that read finishes, and no server keeps a handle until its session ends.
+struct HeldReader {
+    reader: Option<Box<dyn VolumeRandomReader>>,
+    handle: Handle,
+}
+
+impl HeldReader {
+    async fn read_at(&self, offset: u64, length: usize) -> Result<Vec<u8>, VolumeError> {
+        match &self.reader {
+            Some(reader) => reader.read_at(offset, length).await,
+            None => Err(VolumeError::NotSupported),
+        }
+    }
+}
+
+impl Drop for HeldReader {
+    fn drop(&mut self) {
+        if let Some(reader) = self.reader.take() {
+            // A failed close only costs the server a handle until the session
+            // ends; there's no one left to tell.
+            drop(self.handle.spawn(async move {
+                let _ = reader.close().await;
+            }));
+        }
+    }
+}
+
+/// Locks a std mutex, taking the data over from a thread that panicked holding
+/// it: the reader list stays whole between statements.
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
 /// The most key files offered to rustic. A real repo has a handful (one per
 /// person or machine); a password typed into a crafted one with thousands would
 /// otherwise cost a second of scrypt per key.
 pub(crate) const MAX_KEYS: usize = 32;
+
+/// The most packs held open for positioned reads. A tree walk or a file read
+/// touches a few packs at a time; a handful more keeps a copy's working set open
+/// without holding a server-side handle per pack in the repo.
+pub(crate) const MAX_HELD_READERS: usize = 8;
 
 /// The largest file read as a key. A real one is about 450 bytes of JSON.
 const MAX_KEY_FILE_BYTES: u32 = 64 * 1024;
@@ -226,7 +352,7 @@ impl ReadBackend for VolumeBackend {
     fn read_partial(&self, tpe: FileType, id: &Id, _cacheable: bool, offset: u32, length: u32) -> RusticResult<Bytes> {
         let path = self.path_of(tpe, id);
         let (offset, length) = (u64::from(offset), length as usize);
-        let window = match self.handle.block_on(self.parent.read_range(&path, offset, length)) {
+        let window = match self.read_window(tpe, &path, offset, length) {
             Ok(bytes) => bytes,
             // No positioned reads on this parent: stream from the start and cut
             // the window out. Correct, not cheap; every Cmdr backend that hosts

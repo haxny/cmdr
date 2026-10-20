@@ -9,7 +9,8 @@ English a user reads.
 - `volume.rs`: `ResticVolume`, the view at `<repo>/Browse snapshots`. `hub.rs`: `ResticRepos`, the shared state
   (passwords, opened repos, indexes, snapshot lists, `latest`, the is-it-a-repo memo).
 - `path.rs` (`restic_route`, the classifier), `snapshots.rs` (naming, `latest`), `tree.rs` (nodes to rows),
-  `read_stream.rs`, `repo.rs` (open, index, typed errors), `backend.rs` (rustic's storage over the parent), `detect.rs`.
+  `read_stream.rs`, `repo.rs` (open, index, typed errors), `backend.rs` (rustic's storage over the parent, packs through
+  held readers), `detect.rs`.
 - `test_fixtures.rs` (`testing` only): real repos built with rustic, v1 and v2, plus an unlock door.
 
 ## Must-knows

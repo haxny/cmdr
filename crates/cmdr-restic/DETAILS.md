@@ -123,9 +123,14 @@ Layout, per restic's repo design:
 Reads:
 
 - `read_full` streams the whole file (`open_read_stream`). It serves the small files: config, keys, snapshots, index.
-- `read_partial` is ONE `read_range` of exactly the requested window, since pack files are read at random offsets and a
-  whole-pack read over SMB would be ruinous. A parent without `read_range` (`NotSupported`) falls back to streaming from
-  the start and cutting the window out; correct, not cheap. A window that comes back short is an error, so a pack
+- `read_partial` reads exactly the requested window, since pack files are read at random offsets and a whole-pack read
+  over SMB would be ruinous. A pack goes through a reader held open for it (`open_random_reader`), at most 8 at once,
+  least recently used let go first: on SMB a `read_range` is open + read + close, about 14 ms per tree read on David's
+  NAS against one round trip through a held handle (`docs/notes/restic/open-cost.md`). Packs never change once written,
+  so a held handle never goes stale. Each `HeldReader` closes itself on drop, on the runtime, so dropping the repo (or
+  evicting a reader mid-read) closes every handle once its last read ends. A parent without readers (`NotSupported`,
+  asked once) gets one `read_range` per window. A parent without `read_range` (`NotSupported`) falls back to streaming
+  from the start and cutting the window out; correct, not cheap. A window that comes back short is an error, so a pack
   truncated under us fails loudly instead of feeding rustic short bytes.
 
 Writes: `create`, `write_bytes`, and `remove` all refuse and count the attempt (`write_attempts`, test-only), so a test
@@ -156,7 +161,8 @@ open repo and `OpenStatus` isn't `Clone`. A compile-time assertion pins `Reposit
 `Send + Sync`, which concurrent reads through one `Arc<IndexedRepo>` rely on.
 
 `cache_dir: None` sets `no_cache`; `Some(dir)` lets rustic cache snapshot and index files there (never in the repo). The
-hub passes `None` today.
+hub always passes `None`: on the NAS repo, rustic's cache made the first walk 2.5–8 times slower, added 240 MB of RSS,
+and wrote 360 MB to disk (`docs/notes/restic/open-cost.md`).
 
 No restic lock is taken on read: rustic 0.13.0 has no lock file type at all (see below), and the zero-write tests pin an
 empty `locks/` too.
@@ -232,7 +238,9 @@ unlocked view.
   gate), plus Keychain through `cmdr_fs::volume::secret_store`.
 - **The index lifecycle**: today the per-repo `indexed` mutex is the single flight, and a cancelled waiter just drops
   its future (the load runs on). Byte-honest progress, cancel of the load itself, the memory cap and idle drop, and the
-  `cache_dir` seam replace that; the dependencies they need (`tokio` `sync` and `time`, `tokio-util`) are already here.
+  rest replace that; the dependencies they need (`tokio` `sync` and `time`, `tokio-util`) are already here. Sizing from
+  the NAS measurement: one indexed repo at a time, about eight unlocked, index RAM about five times the `index/`
+  folder's size, idle drop after five minutes.
 - **The host route** calls `restic_route`, then `confirm_repo` (or `serves_confirmed` on a sync seam), and builds a
   `ResticVolume` over the parked hub. The overlay calls `is_restic_repo` on the entries, then `overlay_row`.
 - `ResticVolume::backend_kind` keeps the trait's `Local` default until `cmdr-fs` gains a restic kind; the host's matches

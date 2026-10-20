@@ -1,8 +1,14 @@
 use super::VolumeBackend;
-use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::testing::wait_until_async;
+use cmdr_fs::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError, VolumeRandomReader};
 use rustic_core::{FileType, Id, ReadBackend, WriteBackend};
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 
 const ROOT: &str = "/backups/repo";
 const PACK_A: &str = "ab00000000000000000000000000000000000000000000000000000000000001";
@@ -258,4 +264,213 @@ fn rustics_own_default_cost_is_well_inside_the_ceiling() {
     // `scrypt::Params::recommended()`, what rustic's `init` writes.
     assert!(super::scrypt_cost_is_tolerable(1 << 17, 8, 1));
     assert!(!super::scrypt_cost_is_tolerable(u32::MAX, u32::MAX, u32::MAX));
+}
+
+// ── Held pack readers ──────────────────────────────────────────────────────
+
+/// A parent that hands out positioned readers (as `SmbVolume` does), counting
+/// opens, closes, and reads. Everything else is the in-memory volume's.
+struct ReaderParent {
+    inner: Arc<InMemoryVolume>,
+    opens: Arc<AtomicUsize>,
+    closes: Arc<AtomicUsize>,
+}
+
+impl ReaderParent {
+    fn over(inner: Arc<InMemoryVolume>) -> Arc<Self> {
+        Arc::new(Self {
+            inner,
+            opens: Arc::new(AtomicUsize::new(0)),
+            closes: Arc::new(AtomicUsize::new(0)),
+        })
+    }
+}
+
+struct CountingReader {
+    inner: Arc<InMemoryVolume>,
+    path: PathBuf,
+    size: u64,
+    closes: Arc<AtomicUsize>,
+}
+
+impl VolumeRandomReader for CountingReader {
+    fn size(&self) -> u64 {
+        self.size
+    }
+
+    fn read_at(
+        &self,
+        offset: u64,
+        len: usize,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, VolumeError>> + Send + '_>> {
+        self.inner.read_range(&self.path, offset, len)
+    }
+
+    fn close(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send>> {
+        self.closes.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async { Ok(()) })
+    }
+}
+
+impl Volume for ReaderParent {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn root(&self) -> &Path {
+        self.inner.root()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        self.inner.list_directory(path, on_progress)
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        self.inner.get_metadata(path)
+    }
+
+    fn read_range<'a>(
+        &'a self,
+        path: &'a Path,
+        offset: u64,
+        len: usize,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, VolumeError>> + Send + 'a>> {
+        self.inner.read_range(path, offset, len)
+    }
+
+    fn open_random_reader<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeRandomReader>, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            let size = self.inner.get_metadata(path).await?.size.unwrap_or(0);
+            self.opens.fetch_add(1, Ordering::SeqCst);
+            Ok(Box::new(CountingReader {
+                inner: Arc::clone(&self.inner),
+                path: path.to_path_buf(),
+                size,
+                closes: Arc::clone(&self.closes),
+            }) as Box<dyn VolumeRandomReader>)
+        })
+    }
+}
+
+fn backend_over(parent: &Arc<ReaderParent>) -> Arc<VolumeBackend> {
+    let parent: Arc<dyn Volume> = Arc::clone(parent) as Arc<dyn Volume>;
+    Arc::new(VolumeBackend::new(
+        parent,
+        PathBuf::from(ROOT),
+        tokio::runtime::Handle::current(),
+    ))
+}
+
+/// Writes `count` more packs, each 100 bytes, and returns their ids.
+async fn add_packs(parent: &InMemoryVolume, count: usize) -> Vec<Id> {
+    parent
+        .create_directory(&PathBuf::from(format!("{ROOT}/data/ee")))
+        .await
+        .expect("mkdir");
+    let mut ids = Vec::new();
+    for i in 0..count {
+        let hex = format!("ee{:062x}", i);
+        parent
+            .create_file(&PathBuf::from(format!("{ROOT}/data/ee/{hex}")), &[i as u8; 100])
+            .await
+            .expect("pack");
+        ids.push(id(&hex));
+    }
+    ids
+}
+
+/// ❗ A pack is read at many offsets (one tree, one blob each). Over SMB a
+/// `read_range` is open + read + close, ~14 ms a call, so the adapter opens a
+/// pack once and reads it through the held handle from then on.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_pack_is_opened_once_for_many_reads() {
+    let memory = layout_volume(InMemoryVolume::new("parent")).await;
+    let parent = ReaderParent::over(Arc::clone(&memory));
+    let be = backend_over(&parent);
+
+    let (first, second) = blocking(move || {
+        (
+            be.read_partial(FileType::Pack, &id(PACK_A), false, 10, 5)
+                .expect("read"),
+            be.read_partial(FileType::Pack, &id(PACK_A), false, 50, 3)
+                .expect("read"),
+        )
+    })
+    .await;
+
+    assert_eq!(&first[..], &[10, 11, 12, 13, 14]);
+    assert_eq!(&second[..], &[50, 51, 52]);
+    assert_eq!(parent.opens.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn held_readers_are_bounded_and_the_oldest_is_closed() {
+    let memory = layout_volume(InMemoryVolume::new("parent")).await;
+    let packs = add_packs(&memory, super::MAX_HELD_READERS + 1).await;
+    let parent = ReaderParent::over(Arc::clone(&memory));
+    let be = backend_over(&parent);
+
+    blocking(move || {
+        for pack in packs {
+            be.read_partial(FileType::Pack, &pack, false, 0, 1).expect("read");
+        }
+    })
+    .await;
+
+    let closes = Arc::clone(&parent.closes);
+    wait_until_async(Duration::from_secs(5), "the oldest reader is closed", || {
+        closes.load(Ordering::SeqCst) >= 1
+    })
+    .await;
+    assert_eq!(parent.opens.load(Ordering::SeqCst), super::MAX_HELD_READERS + 1);
+}
+
+/// The handles go when the repo does: a dropped adapter closes every reader it
+/// held, so no server keeps a handle open until its session ends.
+#[tokio::test(flavor = "multi_thread")]
+async fn dropping_the_adapter_closes_every_held_reader() {
+    let memory = layout_volume(InMemoryVolume::new("parent")).await;
+    let parent = ReaderParent::over(Arc::clone(&memory));
+    let be = backend_over(&parent);
+
+    blocking(move || {
+        be.read_partial(FileType::Pack, &id(PACK_A), false, 0, 1).expect("read");
+        be.read_partial(FileType::Pack, &id(PACK_B), false, 0, 1).expect("read");
+        drop(be);
+    })
+    .await;
+
+    let closes = Arc::clone(&parent.closes);
+    wait_until_async(Duration::from_secs(5), "both readers are closed", || {
+        closes.load(Ordering::SeqCst) == 2
+    })
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_parent_without_held_readers_keeps_using_ranged_reads() {
+    let parent = layout_volume(InMemoryVolume::new("parent")).await;
+    let be = backend(&parent);
+    blocking(move || {
+        be.read_partial(FileType::Pack, &id(PACK_A), false, 10, 5)
+            .expect("read");
+        be.read_partial(FileType::Pack, &id(PACK_A), false, 20, 5)
+            .expect("read");
+    })
+    .await;
+    assert_eq!(parent.read_range_log(), vec![(10, 5), (20, 5)]);
 }
