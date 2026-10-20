@@ -64,6 +64,23 @@ impl WebdavConnectionParams {
     pub fn port(&self) -> u16 {
         self.base_url.port_or_known_default().unwrap_or(80)
     }
+
+    /// The same server over `https`, for an `http` address: same host, path,
+    /// and account, an explicit port kept and the default one moved to 443.
+    /// `None` for an address that's already `https`.
+    pub fn https_twin(&self) -> Option<Self> {
+        if self.base_url.scheme() != "http" {
+            return None;
+        }
+        // `Url` leaves a default port unset, so `http://nas` lands on 443 and
+        // `http://nas:5005` stays on 5005.
+        let mut base_url = self.base_url.clone();
+        base_url.set_scheme("https").ok()?;
+        Some(Self {
+            base_url,
+            ..self.clone()
+        })
+    }
 }
 
 #[cfg(test)]

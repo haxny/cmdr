@@ -115,19 +115,18 @@ pub async fn connect_and_register(
     attempt_id: &str,
     secret: Option<SecretOffer>,
 ) -> WebdavConnection {
-    connect_and_register_since(
-        connect_wiring::DialTicket::now(),
-        display_name,
-        start_folder,
-        params,
-        attempt_id,
-        secret,
-    )
-    .await
+    let dial = Dial {
+        set_out: connect_wiring::DialTicket::now(),
+        https_first: true,
+    };
+    connect_and_register_with(dial, display_name, start_folder, params, attempt_id, secret).await
 }
 
 /// [`connect_and_register`] for a dial whose target was read from the store
 /// at `set_out`, taken BEFORE that read (`connect_wiring::DialTicket`).
+///
+/// ❗ Dials the saved address exactly: ❌ never `https`-first, since the saved
+/// URL is the server's identity (its volume id, its secret's key).
 pub async fn connect_and_register_since(
     set_out: connect_wiring::DialTicket,
     display_name: &str,
@@ -136,11 +135,50 @@ pub async fn connect_and_register_since(
     attempt_id: &str,
     secret: Option<SecretOffer>,
 ) -> WebdavConnection {
-    let volume_id = cmdr_fs::volume::webdav_volume_id(params.host(), params.port(), &params.username);
+    let dial = Dial {
+        set_out,
+        https_first: false,
+    };
+    connect_and_register_with(dial, display_name, start_folder, params, attempt_id, secret).await
+}
+
+/// How one dial sets out.
+struct Dial {
+    set_out: connect_wiring::DialTicket,
+    /// An `http` address a person just typed: try its `https` twin first
+    /// (`WebdavConnectionParams::preferring_https`, #540), and dial the typed
+    /// one only when that doesn't answer.
+    https_first: bool,
+}
+
+async fn connect_and_register_with(
+    dial: Dial,
+    display_name: &str,
+    start_folder: Option<String>,
+    params: WebdavConnectionParams,
+    attempt_id: &str,
+    secret: Option<SecretOffer>,
+) -> WebdavConnection {
+    let place_of = |params: &WebdavConnectionParams| {
+        cmdr_fs::volume::webdav_volume_id(params.host(), params.port(), &params.username)
+    };
+    // ❗ Both places register, so the attempt is armed (Cancel, a move calling it
+    // off) for the probe as much as for the dial.
+    let twin = dial.https_first.then(|| params.https_twin()).flatten();
+    let places = std::iter::once(&params).chain(twin.as_ref()).map(place_of).collect();
+    let (cancel, attempt) = ATTEMPTS.register_dialing(attempt_id, places, dial.set_out);
+    let params = if twin.is_some() {
+        params.preferring_https(&cancel).await
+    } else {
+        params
+    };
+    if cancel.is_cancelled() {
+        return WebdavConnection::Cancelled;
+    }
+    let volume_id = place_of(&params);
     let start_folder = saved_server_fields::start_folder_for_root(&params.remote_root.to_string_lossy(), start_folder);
     let (host, offer) =
         one_shot_credentials::host_for_dial(&params.credential_service(), &params.username, secret).await;
-    let (cancel, attempt) = ATTEMPTS.register_dialing(attempt_id, vec![volume_id.clone()], set_out);
     let label = saved_server_fields::server_label(display_name, &params.username, params.host());
     let outcome = cmdr_webdav::connect_webdav_volume(&label, &volume_id, params.clone(), host, cancel).await;
 

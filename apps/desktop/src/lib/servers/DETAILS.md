@@ -449,7 +449,9 @@ evidence: `user@host` fits all three protocols. The warning never blocks Connect
 rides every request, so the password crosses the network readable. `webdavAddressIsCleartext` reads the base URL the
 form would dial, so an address with no scheme (which dials `https`) never warns. Shown under the address in add and edit
 mode (after a protocol mismatch, which outranks it), and under the address header when signing back in, so it's on
-screen before the first secret leaves. It never blocks either.
+screen before the first secret leaves. It never blocks either. The backend tries the address's `https` twin first on an
+add and dials the typed `http` one only when that doesn't answer (`crates/cmdr-webdav/DETAILS.md` § "`https` first, for
+a typed `http` address"), so the warning describes the fallback.
 
 A port or path the address's scheme named for a DIFFERENT protocol is dropped (`sftp://nas:2222/srv` with WebDAV
 selected dials `https://nas`), while one typed with no scheme belongs to whichever protocol is selected. The account the

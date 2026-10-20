@@ -9,6 +9,28 @@ fn params(url: &str, user: &str) -> WebdavConnectionParams {
 }
 
 #[test]
+fn an_http_address_has_an_https_twin_on_the_default_port() {
+    let twin = params("http://nas.local/dav/", "ada")
+        .https_twin()
+        .expect("http has a twin");
+    assert_eq!(twin.base_url.as_str(), "https://nas.local/dav/");
+    assert_eq!(twin.credential_service(), "https://nas.local:443");
+}
+
+#[test]
+fn an_explicit_port_stays_on_the_https_twin() {
+    let twin = params("http://nas.local:5005/dav/", "ada")
+        .https_twin()
+        .expect("http has a twin");
+    assert_eq!(twin.base_url.as_str(), "https://nas.local:5005/dav/");
+}
+
+#[test]
+fn an_https_address_has_no_twin() {
+    assert!(params("https://nas.local/dav/", "ada").https_twin().is_none());
+}
+
+#[test]
 fn https_without_a_port_keys_on_443() {
     assert_eq!(
         params("https://cloud.example.com/remote.php/dav", "ada").credential_service(),

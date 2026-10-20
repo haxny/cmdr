@@ -454,6 +454,22 @@ reconnect can't undo an unpin; it defaults to FALSE, and `getKnownWebdavServers`
 one place that default is spelled. `getWebdavUnattendedReconnect(volumeId)`, and the backend-neutral
 `reconnectSmbVolume` / `reconnectSmbVolumeWithCredentials` / `getVolumeSignInState`.
 
+### `https` first, for a typed `http` address
+
+Basic auth rides every request, so over `http` the password crosses the network readable (#540; David's call,
+2026-10-19: warn, and try `https` first). `connectServer` (a typed address) dials through
+`WebdavConnectionParams::preferring_https` (`https_first.rs`): when the address is `http`, an unauthenticated `OPTIONS`
+to its `https_twin` (same host and path, an explicit port kept, the default one moved to 443) decides. Any HTTP answer
+over a TLS handshake this Mac trusts moves the dial, so the server is saved, keyed, and identified by the `https` URL
+from the start. A plain-`http` port, an untrusted certificate (the self-signed NAS), a refusal, and 4 s of silence all
+fall back to the typed address, and the sheet's warning stays up for it (`apps/desktop/src/lib/servers/DETAILS.md`).
+
+- ❌ **Never `https`-first for a SAVED place** (`connect_and_register_since`): the saved URL is its volume id and its
+  secret's key, so a silent move would orphan both.
+- ❗ **The probe runs under the attempt's cancel token**, with both candidate places registered, so Cancel and a server
+  move reach it like the dial.
+- ❗ **No credentials on the probe.** It runs before the password has anywhere safe to go.
+
 ## A folder's DELETE
 
 `DELETE` on a collection is recursive (RFC 4918 § 9.6.1), and so is a forced `MOVE` onto one (§ 9.9.3, the destination

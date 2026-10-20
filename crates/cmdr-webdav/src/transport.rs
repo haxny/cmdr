@@ -12,6 +12,7 @@ use std::time::Duration;
 use log::debug;
 use reqwest::header::{HeaderValue, WWW_AUTHENTICATE};
 use reqwest::{Method, RequestBuilder, Response, StatusCode};
+use tokio_util::sync::CancellationToken;
 use url::Url;
 
 use crate::chunking::ChunkedUploads;
@@ -106,6 +107,30 @@ const USER_ID_HEADER: &str = "X-User-Id";
 
 /// The most a PROPPATCH answer may hold: one resource's handful of statuses.
 const MAX_PROPPATCH_BODY: usize = 64 * 1024;
+
+/// How long the https-first probe (`https_first.rs`) waits before the `http`
+/// address is dialed as typed. Short: a person is waiting on the Add.
+const HTTPS_PROBE_BUDGET: Duration = Duration::from_secs(4);
+
+/// Whether a server answers HTTP over TLS at `url` with a certificate this Mac
+/// trusts. Any status counts: the question is the TLS, not the account. ❗ No
+/// credentials go out, and a plain-`http` port, an untrusted certificate, a
+/// refusal, and silence all answer `false`.
+pub(crate) async fn answers_over_tls(url: Url, cancel: &CancellationToken) -> bool {
+    let Ok(client) = cmdr_http::client_builder()
+        .user_agent("Cmdr")
+        .connect_timeout(HTTPS_PROBE_BUDGET)
+        .timeout(HTTPS_PROBE_BUDGET)
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+    else {
+        return false;
+    };
+    tokio::select! {
+        () = cancel.cancelled() => false,
+        sent = client.request(Method::OPTIONS, url).send() => sent.is_ok(),
+    }
+}
 
 /// One authenticated client for one account on one server.
 pub(crate) struct WebdavClient {

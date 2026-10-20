@@ -6,10 +6,11 @@ The WebDAV backend: a `Volume` over one `reqwest` client with one account's cred
 
 ## Module map
 
-- `params.rs`: `WebdavConnectionParams` and the store key (`scheme://host:port`, scoped by username).
-- `errors.rs`: `WebdavConnectError` and the status table (`map_status`, keyed by `Attempted`).
-- `transport.rs`: `WebdavClient`, PROPFIND, the connect probe. `propfind.rs`: the `multistatus` parser. `urls.rs`: a
-  remote path as a percent-encoded URL. `chunking.rs`: Nextcloud's chunked-upload URLs and plan.
+- `params.rs`: `WebdavConnectionParams` and the store key (`scheme://host:port`, scoped by username). `https_first.rs`:
+  `http` tries `https` first.
+- `errors.rs`: `WebdavConnectError`, the status table (`map_status` by `Attempted`).
+- `transport.rs`: `WebdavClient`, PROPFIND, connect probe. `propfind.rs`: `multistatus` parsing. `urls.rs`: remote paths
+  as percent-encoded URLs. `chunking.rs`: Nextcloud's chunked-upload URLs and plan.
 - `volume/`: `mod.rs` (the volume, `connect_webdav_volume`, `send`), `paths.rs`, `query.rs`, `streams.rs` (GET),
   `writes.rs` (the PUT), `chunked_upload.rs`, `mutation.rs`, `copy.rs`, `scan.rs`, `state.rs` + `reconnect.rs`,
   `volume_impl.rs`, `testing.rs` (fixtures, `testing` feature).
