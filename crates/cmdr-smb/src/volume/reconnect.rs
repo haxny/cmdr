@@ -10,6 +10,7 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::SelfHandle;
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::events::VolumeConnection;
+use cmdr_fs::volume::secret_store::SignIn;
 use log::{debug, info, warn};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
@@ -278,19 +279,15 @@ impl SmbVolumeInner {
     ///
     /// ❗ Dial first, write after (#530): writing first let a typo replace the password that
     /// worked for every share on the server, and wrote one back even with Remember off.
-    pub(super) async fn do_reconnect_with_credentials(
-        &self,
-        username: String,
-        password: String,
-    ) -> Result<(), VolumeError> {
+    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<(), VolumeError> {
         {
             let mut params_w = self.params.write().await;
-            params_w.username = username;
-            params_w.password = password;
+            params_w.username = sign_in.username;
+            params_w.password = sign_in.secret;
         }
         // `None`: a session was already live, so nothing proved these credentials.
         if let Some(connected_with) = self.reconnect_once().await?
-            && !refresh_remembered_credentials(&self.host, &connected_with).await
+            && !refresh_remembered_credentials(&self.host, &connected_with, sign_in.remember).await
         {
             // Non-fatal: the session is up; only the "silent next time" guarantee is lost.
             warn!(

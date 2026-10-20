@@ -433,6 +433,7 @@ pub async fn reconnect_volume_with_credentials(
     _volume_id: String,
     _username: String,
     _password: String,
+    _remember: bool,
 ) -> Result<(), String> {
     Err("Direct SMB connection not supported on this platform".to_string())
 }

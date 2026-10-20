@@ -38,7 +38,7 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use cmdr_fs::volume::secret_store;
+use cmdr_fs::volume::secret_store::{self, SignIn};
 use cmdr_fs::volume::{SelfHandle, VolumeError};
 use log::{debug, info, warn};
 use tokio_util::sync::CancellationToken;
@@ -172,12 +172,8 @@ impl SftpVolumeInner {
     /// see different files under the same paths and carry different volume ids
     /// (`sftp_volume_id(host, port, username)`), so signing in as another one
     /// means opening another volume rather than mending this one.
-    pub(super) async fn do_reconnect_with_credentials(
-        &self,
-        username: String,
-        password: String,
-    ) -> Result<(), VolumeError> {
-        if username != self.params().username {
+    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<(), VolumeError> {
+        if sign_in.username != self.params().username {
             return Err(VolumeError::NotSupported);
         }
         match self.auth_rung() {
@@ -199,7 +195,7 @@ impl SftpVolumeInner {
             } => {
                 self.auth_attempt_spent.store(false, Ordering::Relaxed);
                 let rebuilt = self
-                    .rebuild(Some(password.clone()))
+                    .rebuild(Some(sign_in.secret.clone()))
                     .await
                     .map_err(|stalled| self.report(stalled))?;
                 // ❗ Written only once the typed secret WORKED (#530): a typo
@@ -209,7 +205,7 @@ impl SftpVolumeInner {
                 if let Rebuilt::Dialed(rung) = rebuilt
                     && rung_took_the_secret(rung)
                 {
-                    self.refresh_remembered_secret(&username, &password).await;
+                    self.keep_signed_in_secret(&sign_in).await;
                 }
                 Ok(())
             }
@@ -428,22 +424,15 @@ impl SftpVolumeInner {
         }
     }
 
-    /// Brings a REMEMBERED secret up to date with the one the user just typed.
+    /// Files the secret a sign-in connected with, the way its Remember box asks:
+    /// on saves it (seeding an empty store), off only refreshes an entry still
+    /// there (`secret_store::keep_signed_in_secret`). "Remember the secret" means
+    /// exactly "the Keychain holds one for this account", so the box decides,
+    /// ❌ never the dial on its own.
     ///
-    /// ❗ **Refreshes, ❌ never seeds.** "Remember the secret" means exactly "the
-    /// Keychain holds one for this account", so a store with nothing in it is the
-    /// user having said no, and writing the typed secret there would switch the
-    /// other toggle on behind their back. `save_sftp_credentials` is how a person
-    /// says yes.
-    ///
-    /// ❗ Both halves on ONE blocking task: the store may put a Keychain prompt in
-    /// front of either, and a modal dialog on the async runtime stalls every other
-    /// volume. A refusal is non-fatal — only the "silent next time" guarantee is
-    /// lost.
-    async fn refresh_remembered_secret(&self, username: &str, secret: &str) {
-        let took =
-            secret_store::refresh_remembered_secret(&self.host, &self.params().credential_service(), username, secret)
-                .await;
+    /// A refusal is non-fatal: only the "silent next time" guarantee is lost.
+    async fn keep_signed_in_secret(&self, sign_in: &SignIn) {
+        let took = secret_store::keep_signed_in_secret(&self.host, &self.params().credential_service(), sign_in).await;
         if !took {
             warn!(
                 target: "volume",

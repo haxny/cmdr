@@ -903,12 +903,12 @@ pub trait Volume: Send + Sync {
     ///
     /// Invoked by the "Sign in" affordance the frontend shows when an in-place reconnect
     /// gave up on an auth failure (a password changed on the server). The implementation
-    /// persists the new credentials so the next reconnect is silent, then runs the normal
-    /// reconnect. Default `Err(NotSupported)`; SMB, SFTP, WebDAV, and S3 override it.
+    /// runs the normal reconnect with them and, ❗ only once that connected, files them the way
+    /// `sign_in.remember` asks (`secret_store::keep_signed_in_secret`, #530), so the next
+    /// reconnect is silent. Default `Err(NotSupported)`; SMB, SFTP, WebDAV, and S3 override it.
     fn reconnect_with_credentials<'a>(
         &'a self,
-        _username: String,
-        _password: String,
+        _sign_in: secret_store::SignIn,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
         Box::pin(async { Err(VolumeError::NotSupported) })
     }

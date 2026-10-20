@@ -481,10 +481,9 @@ impl Volume for S3Volume {
     /// `username` is the access key id, which must be this volume's own.
     fn reconnect_with_credentials<'a>(
         &'a self,
-        username: String,
-        password: String,
+        sign_in: cmdr_fs::volume::secret_store::SignIn,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        Box::pin(self.inner.do_reconnect_with_credentials(username, password))
+        Box::pin(self.inner.do_reconnect_with_credentials(sign_in))
     }
 
     // ── What this backend is, in capability terms ────────────────────

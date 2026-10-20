@@ -848,9 +848,10 @@ Keychain prompt.
 
 **What each switch does NOT do:**
 
-- ❌ Turning auto-reconnect on never writes a secret. An attended sign-in REFRESHES a remembered secret and never seeds
-  one (`reconnect::refresh_remembered_secret`): an empty store is the user having said no, and writing to it would flip
-  the other switch behind their back. That applies to the passphrase rung too, which has no special case.
+- ❌ Turning auto-reconnect on never writes a secret. An attended sign-in files one only as its Remember box says
+  (`SignIn::remember`, `reconnect::keep_signed_in_secret`), once the dial connected: on saves it, seeding an empty
+  store; off only refreshes an entry still there, since an empty store is the user having said no. That applies to the
+  passphrase rung too, which has no special case.
 - Remembering a secret doesn't turn auto-reconnect on. It only makes it possible.
 - Auto-reconnect off doesn't block an ATTENDED reconnect. `reconnect_with_credentials` is a person acting, and the
   switch is about what happens with nobody watching.
@@ -1170,7 +1171,7 @@ wrong `nothing` is a volume nobody can sign in to. The rung-by-rung cells are
   `reconnect_with_credentials` refuses a username that isn't this volume's, because the volume id is
   `host:port:username`: signing in as somebody else is opening another volume, not mending this one. Two accounts on one
   server are two volumes, two saved-server entries, and two secret-store entries.
-- ❗ **An attended sign-in refreshes a remembered secret and never starts remembering one** (§ "The two switches"). A
+- ❗ **An attended sign-in starts remembering a secret only when its Remember box says so** (§ "The two switches"). A
   volume whose secret isn't remembered asks again after every drop, and that is correct: it's what the user chose.
 
 **What to show for the two switches.** Both belong wherever a server is edited, and both are settable independently.

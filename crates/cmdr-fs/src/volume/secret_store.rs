@@ -57,3 +57,49 @@ pub async fn refresh_remembered_secret(host: &VolumeHost, service: &str, usernam
     .await;
     matches!(written, Ok(Ok(())))
 }
+
+/// What a person typed into a sign-in sheet to mend a volume: the account, its
+/// secret, and where they left the Remember box.
+///
+/// One payload rather than three positional arguments, so a `remember` can't
+/// land in the wrong slot. ❌ No `Debug`: the secret must never reach a log.
+#[derive(Clone)]
+pub struct SignIn {
+    /// The account. A backend whose volume id IS the account refuses another.
+    pub username: String,
+    /// The password, passphrase, or secret key, as typed.
+    pub secret: String,
+    /// The sheet's Remember box: whether the person wants this secret kept.
+    pub remember: bool,
+}
+
+/// Files the secret a sign-in CONNECTED with, the way the Remember box asks.
+///
+/// - **On**: saved, seeding an empty store; a checked box is a promise.
+/// - **Off**: [`refresh_remembered_secret`], so an entry still there is kept
+///   current and ❌ an empty store stays empty (the sheet forgot the entry
+///   before it dialed).
+///
+/// ❗ Call it only once the secret connected (#530). Answers whether the store
+/// took it; a `false` is logged, ❌ never a failed connection.
+pub async fn keep_signed_in_secret(host: &VolumeHost, service: &str, sign_in: &SignIn) -> bool {
+    if !sign_in.remember {
+        return refresh_remembered_secret(host, service, &sign_in.username, &sign_in.secret).await;
+    }
+    let host = host.clone();
+    let service = service.to_string();
+    let stored = StoredCredentials {
+        username: sign_in.username.clone(),
+        secret: sign_in.secret.clone(),
+    };
+    let written = tokio::task::spawn_blocking(move || {
+        host.credentials()
+            .save_credentials(&service, Some(&stored.username), &stored)
+    })
+    .await;
+    matches!(written, Ok(Ok(())))
+}
+
+#[cfg(test)]
+#[path = "secret_store_test.rs"]
+mod secret_store_test;

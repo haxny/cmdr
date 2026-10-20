@@ -23,7 +23,7 @@ use std::time::Duration;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::host::credentials::StoredCredentials;
-use cmdr_fs::volume::secret_store;
+use cmdr_fs::volume::secret_store::{self, SignIn};
 use cmdr_fs::volume::{SelfHandle, VolumeError};
 use log::{debug, info, warn};
 use tokio_util::sync::CancellationToken;
@@ -135,22 +135,18 @@ impl WebdavVolumeInner {
 
     /// The attended variant. `username` must be the account this volume IS:
     /// another account is another volume, so it answers `NotSupported`.
-    pub(super) async fn do_reconnect_with_credentials(
-        &self,
-        username: String,
-        password: String,
-    ) -> Result<(), VolumeError> {
-        if username != self.params().username {
+    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<(), VolumeError> {
+        if sign_in.username != self.params().username {
             return Err(VolumeError::NotSupported);
         }
         self.auth_attempt_spent.store(false, Ordering::Relaxed);
-        self.rebuild(Some(password.clone()))
+        self.rebuild(Some(sign_in.secret.clone()))
             .await
             .map_err(|stalled| self.report(stalled))?;
         // ❗ Written only once the typed secret WORKED (#530): a typo written
         // before the dial replaced the one that did. An attended rebuild always
         // dials, so `Ok` here means this secret was accepted.
-        self.refresh_remembered_secret(&username, &password).await;
+        self.keep_signed_in_secret(&sign_in).await;
         Ok(())
     }
 
@@ -280,13 +276,11 @@ impl WebdavVolumeInner {
         }
     }
 
-    /// Brings a REMEMBERED secret up to date with the one the user just typed.
-    /// ❗ Refreshes, ❌ never seeds: a store with nothing in it is the user
-    /// having said no.
-    async fn refresh_remembered_secret(&self, username: &str, secret: &str) {
-        let took =
-            secret_store::refresh_remembered_secret(&self.host, &self.params().credential_service(), username, secret)
-                .await;
+    /// Files the secret a sign-in connected with, the way its Remember box asks
+    /// (`secret_store::keep_signed_in_secret`): on saves it, off only refreshes
+    /// an entry still there.
+    async fn keep_signed_in_secret(&self, sign_in: &SignIn) {
+        let took = secret_store::keep_signed_in_secret(&self.host, &self.params().credential_service(), sign_in).await;
         if !took {
             warn!(
                 target: "volume",

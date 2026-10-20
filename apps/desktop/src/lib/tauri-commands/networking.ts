@@ -469,9 +469,10 @@ export async function reconnectVolume(volumeId: string): Promise<void> {
 /**
  * Reconnects a volume with freshly-entered credentials. Used by the "Sign in"
  * affordance shown when an in-place reconnect gave up on an auth failure (the
- * saved password went stale). The backend refreshes what it has stored and
- * reconnects; on success a `volume-connection-changed { state: "connected" }`
- * event follows.
+ * saved password went stale). The backend reconnects and, only once that
+ * connected, files the credentials the way `remember` (the Remember box) asks:
+ * on saves them, off only refreshes an entry still there. On success a
+ * `volume-connection-changed { state: "connected" }` event follows.
  *
  * Whether the USERNAME may change is the backend's call, not this wrapper's:
  * `getVolumeSignInState` is what tells the sheet which shape to render.
@@ -483,8 +484,9 @@ export async function reconnectVolumeWithCredentials(
   volumeId: string,
   username: string,
   password: string,
+  remember: boolean,
 ): Promise<void> {
-  const res = await commands.reconnectVolumeWithCredentials(volumeId, username, password)
+  const res = await commands.reconnectVolumeWithCredentials(volumeId, username, password, remember)
   if (res.status === 'error') throwReconnectError(res.error)
 }
 

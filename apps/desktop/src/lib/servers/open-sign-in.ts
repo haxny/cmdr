@@ -24,13 +24,9 @@ import {
   forgetServerSecret,
   getVolumeSignInState,
   hasServerSecret,
-  knownS3PlaceOf,
   listSavedServers,
   newServerAttemptId,
   reconnectVolumeWithCredentials,
-  saveS3Credentials,
-  saveSftpCredentials,
-  saveWebdavCredentials,
   savedServerId,
   updateSavedServer,
   type SavedServer,
@@ -184,8 +180,7 @@ export async function openSignInForPlace(request: SignInSeamRequest): Promise<Si
     log.info('No sheet for {volumeId}: nothing a person could type would help', { volumeId })
     return { signedIn: false }
   }
-  const identity = await identityFor(volumeId)
-  const { endpoint } = identity
+  const endpoint = await endpointFor(volumeId)
   // ❗ Seeded from what is STORED, ❌ never defaulted on: an attended sign-in
   // REFRESHES a remembered secret and never seeds one, so a default-on box would
   // seed one the user already declined. SMB is the exception, and asks nothing:
@@ -207,7 +202,6 @@ export async function openSignInForPlace(request: SignInSeamRequest): Promise<Si
     refusal: refusalFrom(firstOutcome) ?? request.refusal,
     attempt: withRememberFlip({
       volumeId,
-      identity,
       remembered,
       attempt: registered ? mendAttempt(volumeId, endpoint) : dialSavedPlaceAttempt(volumeId),
     }),
@@ -216,53 +210,28 @@ export async function openSignInForPlace(request: SignInSeamRequest): Promise<Si
 }
 
 /**
- * Writes the Remember box's flip, then runs the round it belongs to.
+ * Writes the Remember box turning OFF, then runs the round it belongs to.
  *
- * ❗ **The write lands BEFORE the attempt, and it is the whole mechanism.**
- * "Remember" means exactly "the Keychain holds a secret for this account"
- * (`crates/cmdr-sftp/DETAILS.md` § "The two switches"), so:
+ * ❗ **The forget lands BEFORE the attempt.** "Remember" means exactly "the
+ * Keychain holds a secret for this account" (`crates/cmdr-sftp/DETAILS.md` §
+ * "The two switches"), and with the box off the backend still REFRESHES an
+ * entry it finds, so waiting would leave it a live entry to write the typed
+ * password back into: the dial changing a switch behind the user's back.
  *
- * - Turned OFF, the entry goes NOW. Waiting would leave `refresh_remembered_secret`
- *   a live entry to write the typed password back into, which is the dial
- *   changing a switch behind the user's back.
- * - Turned ON over an empty store, the typed secret is filed NOW, so the mend
- *   has something to refresh. An attended sign-in never seeds one, so a box
- *   flipped on with nothing written would promise a thing that never happens.
+ * ❌ Turning it ON writes nothing here. The round carries the box
+ * (`secret.remember`), and the backend files the secret only once the dial
+ * CONNECTED (#530): written first, a typo was on record the moment it failed.
  *
  * ❗ Once per flip, ❌ not once per round: the local reading moves with the
  * store, so a second retry after a delete has nothing left to do.
  */
-function withRememberFlip(options: {
-  volumeId: string
-  identity: PlaceIdentity
-  remembered: boolean
-  attempt: SignInAttempt
-}): SignInAttempt {
+function withRememberFlip(options: { volumeId: string; remembered: boolean; attempt: SignInAttempt }): SignInAttempt {
   let stored = options.remembered
   return async (submission) => {
     const wanted = submission.mode === 'sign-in' ? (submission.secret?.remember ?? stored) : stored
-    if (wanted !== stored) {
-      if (!wanted) {
-        await forgetServerSecret(options.volumeId)
-        stored = false
-      } else if (submission.mode === 'sign-in' && submission.secret && options.identity.saveSecret) {
-        try {
-          await options.identity.saveSecret(submission.secret.secret)
-        } catch (e) {
-          // ❗ A store that refuses (Deny on the Keychain prompt, a locked
-          // keychain, no secret service) is an ANSWER, ❌ never a throw out of the
-          // attempt, which left the sheet stuck on busy. Nothing was filed, so
-          // `stored` stays put and the next press writes again, and no round runs
-          // on a box the store just refused. The line carries the store's words,
-          // ❌ never the secret.
-          log.warn('The Keychain refused the password for {volumeId}: {error}', {
-            volumeId: options.volumeId,
-            error: String(e),
-          })
-          return { kind: 'refused', refusal: 'secret_not_stored' }
-        }
-        stored = true
-      }
+    if (stored && !wanted) {
+      await forgetServerSecret(options.volumeId)
+      stored = false
     }
     return await options.attempt(submission)
   }
@@ -442,10 +411,10 @@ function dialSavedPlaceAttempt(volumeId: string): SignInAttempt {
 /**
  * A REGISTERED place whose session wants a credential: mended, ❌ never dialed.
  *
- * ❗ It refreshes a remembered secret and never seeds one — that rule lives in
- * the backend, which writes the store only where it already holds a secret for
- * this account. The Remember box is what the user changes that with, and
- * `withRememberFlip` has already written it by the time this runs.
+ * ❗ The Remember box rides along, and the backend acts on it only once the mend
+ * CONNECTED (#530): on, it saves the secret that worked; off, it refreshes an
+ * entry still there and never seeds one. `withRememberFlip` has already
+ * forgotten the entry by the time an OFF round runs.
  */
 function mendAttempt(volumeId: string, endpoint: SignInEndpoint): SignInAttempt {
   return async (submission) => {
@@ -454,7 +423,12 @@ function mendAttempt(volumeId: string, endpoint: SignInEndpoint): SignInAttempt 
     // read-only, and the account the volume already has is the one to send.
     const username = submission.username ?? endpoint.username ?? ''
     try {
-      await reconnectVolumeWithCredentials(volumeId, username, submission.secret?.secret ?? '')
+      await reconnectVolumeWithCredentials(
+        volumeId,
+        username,
+        submission.secret?.secret ?? '',
+        submission.secret?.remember ?? false,
+      )
       return { kind: 'connected', volumeId }
     } catch (e) {
       return { kind: 'refused', refusal: mendRefusal(e) }
@@ -478,56 +452,27 @@ function mendRefusal(error: unknown): ConnectRefusalKind {
   }
 }
 
-/** Who the sheet says is asking, and where a secret for them is filed. */
-interface PlaceIdentity {
-  /** The read-only header the sheet shows. */
-  endpoint: SignInEndpoint
-  /**
-   * Files the Keychain entry the next dial reads, or `null` when no saved server
-   * claims this place and there is nothing to key one on.
-   *
-   * ❗ It takes the whole tuple the volume id is minted from, ❌ never a host
-   * plus a default port: an entry written under a different key is one the dial
-   * never finds, and the box would then be lying in the other direction.
-   */
-  saveSecret: ((secret: string) => Promise<void>) | null
-}
-
 /**
- * The endpoint the sheet shows as its header, and the secret writer beside it.
+ * Who the sheet says is asking: the read-only header it shows. No secret is filed
+ * from here; the backend files it once a round connected (#530).
  *
  * ❗ Read from `listSavedServers()` rather than parsed out of a volume id: the id
  * is a hash minted in Rust from `(host, port, username)`, and nothing on this
  * side can take it apart.
  */
-async function identityFor(volumeId: string): Promise<PlaceIdentity> {
+async function endpointFor(volumeId: string): Promise<SignInEndpoint> {
   const servers = await listSavedServers()
   const owner = servers.find((server) => server.places.some((place) => place.volumeId === volumeId))
-  if (!owner) return { endpoint: unknownEndpoint(volumeId), saveSecret: null }
+  if (!owner) return unknownEndpoint(volumeId)
   const place = owner.places.find((p) => p.volumeId === volumeId)
   const parsed = place ? parseServerPath(place.appRoot) : null
-  const endpoint: SignInEndpoint = {
+  return {
     protocol: owner.protocol,
     displayName: place?.name ?? owner.displayName,
     address: headerAddressOf(owner, place, parsed),
     host: parsed?.host ?? owner.address,
     // ❗ The PLACE's account first: an SMB host's shares each remember their own.
     username: parsed?.username ?? place?.username ?? owner.username ?? undefined,
-  }
-  const saveSecret = owner.protocol === 's3' ? await s3SecretWriterFor(volumeId) : secretWriterFor(owner, parsed)
-  return { endpoint, saveSecret }
-}
-
-/**
- * An S3 place files its ACCOUNT's secret, keyed on the provider choice plus the
- * access key id, which only the saved entry knows (the listing carries neither the
- * preset nor its fields). `null` when no saved place answers for the id.
- */
-async function s3SecretWriterFor(volumeId: string): Promise<((secret: string) => Promise<void>) | null> {
-  const place = await knownS3PlaceOf(volumeId)
-  if (!place) return null
-  return async (secret) => {
-    await saveS3Credentials(place.provider, place.accessKeyId, secret)
   }
 }
 
@@ -544,38 +489,6 @@ function headerAddressOf(
   if (owner.protocol === 'smb' && place) return `smb://${owner.address}/${place.name}`
   const bucket = parsed?.protocol === 's3' ? parsed.path.split('/')[0] : ''
   return bucket ? `${owner.address}/${bucket}` : owner.address
-}
-
-/**
- * How each protocol files a secret: SFTP keys on `(host, port, username)`, the
- * same tuple its volume id hashes; WebDAV keys on the base URL and the account.
- * An SMB share has none here: `connect_saved_place` writes the password itself,
- * once the mount went through.
- *
- * A path that didn't parse leaves SFTP without a port, and a made-up one would
- * write an entry nothing reads, so it answers `null` instead.
- */
-function secretWriterFor(
-  owner: SavedServer,
-  parsed: ReturnType<typeof parseServerPath>,
-): ((secret: string) => Promise<void>) | null {
-  // `null` is an SMB host, which is not an account yet and files no secret here.
-  const username = parsed?.username ?? owner.username
-  if (username === null) return null
-  if (owner.protocol === 'sftp') {
-    if (!parsed) return null
-    const { host, port } = parsed
-    return async (secret) => {
-      await saveSftpCredentials(host, port, username, secret)
-    }
-  }
-  if (owner.protocol === 'webdav') {
-    const url = owner.address
-    return async (secret) => {
-      await saveWebdavCredentials(url, username, secret)
-    }
-  }
-  return null
 }
 
 /**

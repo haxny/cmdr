@@ -164,10 +164,10 @@ caller opens the host's places list.
 **Remember, and who decides where it starts.** `add`: on, because someone typing a password into a new server means to
 come back to it. `edit`: from `hasServerSecret`. `sign-in`: from the request's `remembered`, which the ❗ OPENER
 decides, ❌ never the sheet: whether the answer is worth what it costs is the protocol's business. SFTP, WebDAV, and S3
-ask `hasServerSecret`, because an attended sign-in REFRESHES a remembered secret and ❌ never seeds one, so a default-on
-box there would seed one the user already declined; the sheet is a moment a person is already waiting through, so the
-read is affordable there. SMB passes `true` unasked, because nothing is written until a sign-in works and its caller
-writes it, so a checked box promises nothing that hasn't been shown.
+ask `hasServerSecret`, because a checked box SAVES the secret once the round connects, so a default-on box there would
+save one the user already declined; the sheet is a moment a person is already waiting through, so the read is affordable
+there. SMB passes `true` unasked (every read of its Keychain can raise a prompt): nothing is written until a sign-in
+works, and then the box decides.
 
 ❗ **The read is not cheaper for SFTP, and ❌ don't reason as if it were.** `has_sftp_credentials` is
 `network::keychain::has_credentials`, which is literally `get_credentials(server, share).is_ok()` — the same call
@@ -176,22 +176,16 @@ protocol. On a right-click it is not worth paying: `../file-explorer/navigation/
 saved password" on every server row and lets `forgetServerSecret`'s own answer word the empty case, rather than reading
 the Keychain to decide whether to draw a menu item.
 
-**A flip is WRITTEN, before the round it belongs to.** `open-sign-in.ts`'s `withRememberFlip` wraps whichever attempt
-the standing picked, compares the box against what `hasServerSecret` answered, and writes once per flip: OFF →
-`forgetServerSecret` NOW, because `refresh_remembered_secret` writes wherever the store already holds something, so a
-mend over a live entry would put the just-declined password straight back; ON over an empty store →
-`saveSftpCredentials` / `saveWebdavCredentials` / `saveS3Credentials` NOW, because an attended sign-in refreshes a
-remembered secret and never seeds one, so a box flipped on with nothing written would promise a thing that never
-happens. ❌ Neither ever happens as a side effect of a dial. ❗ A save the Keychain refuses (Deny on the prompt, a
-locked keychain, no secret service) answers `secret_not_stored` under the password field and runs no round: nothing was
-filed, so the local reading stays where it was and the next press writes again.
+**The box rides the round, and the BACKEND files the secret once the round connected** (#530). A mend sends it as
+`reconnectVolumeWithCredentials(…, remember)`, a first dial inside its `SecretOffer`. On, the backend saves the secret
+that connected, seeding an empty store; off, it only refreshes an entry still there
+(`cmdr_fs::volume::secret_store::keep_signed_in_secret`, SMB's `session::refresh_remembered_credentials`). ❌ Nothing is
+written from here before a dial: a secret filed first was a typo on record the moment the dial failed. The key is the
+backend's too, so it's always the tuple the volume id is minted from.
 
-❗ **The writer takes the whole tuple the volume id is minted from** (`(host, port, username)` for SFTP, the base URL
-and the account for WebDAV), read off the place's `appRoot` rather than rebuilt from a host plus a default port: an
-entry written under a different key is one the dial never finds, and the box would be lying in the other direction. A
-place no saved server claims has no key to write under, so it has no writer. S3's key is the ACCOUNT's (the provider
-choice plus the access key id, shared by every bucket under the key), which the listing doesn't carry: the writer reads
-the saved place (`knownS3PlaceOf`, matched by the `volumeId` the backend publishes, ❌ never a frontend hash).
+❗ **Turning the box OFF is the one write here, and it lands BEFORE the round** (`open-sign-in.ts`'s `withRememberFlip`,
+once per flip): with the box off the backend still refreshes an entry it finds, so a mend over a live entry would put
+the just-declined password straight back.
 
 In EDIT mode there is nothing typed to save, so the box only ever forgets (`SignInSheet.svelte`'s `writeRememberFlip`);
 turning it on there rides the next successful sign-in's offer.

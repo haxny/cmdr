@@ -95,7 +95,11 @@ async fn a_sign_in_that_does_not_connect_leaves_the_remembered_secret_alone() {
     );
 
     let refusal = volume
-        .reconnect_with_credentials("ada".to_string(), "a-typo".to_string())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: "ada".to_string(),
+            secret: "a-typo".to_string(),
+            remember: false,
+        })
         .await;
 
     assert!(refusal.is_err(), "nothing listens on port 1");
@@ -120,13 +124,49 @@ async fn a_sign_in_that_connects_refreshes_a_remembered_secret() {
         .connected_with(Arc::clone(&remembered) as Arc<dyn CredentialStore>)
         .await;
     volume
-        .reconnect_with_credentials("ada".to_string(), "the-new-one".to_string())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: "ada".to_string(),
+            secret: "the-new-one".to_string(),
+            remember: false,
+        })
         .await
         .expect("the fake takes any password");
     assert_eq!(
         remembered.credentials(&service, Some("ada")).map(|held| held.secret),
         Some("the-new-one".to_string())
     );
+}
+
+/// ❗ **A checked Remember box is a promise**: a sign-in that connects with it
+/// on files the secret even over an empty store. Off, it stays empty.
+#[tokio::test]
+async fn a_sign_in_that_connects_files_the_secret_the_way_remember_asks() {
+    let server = FakeDav::start().await;
+    let service = server.credential_service();
+
+    for remember in [true, false] {
+        let store = Arc::new(InMemoryCredentials::new().with_entry(&service, Some("ada"), "ada", "dial-me-in"));
+        let (volume, _events) = server
+            .connected_with(Arc::clone(&store) as Arc<dyn CredentialStore>)
+            .await;
+        // Remember was off, or turned off: the sheet forgot the entry before this round.
+        store.forget(&service, Some("ada"));
+
+        volume
+            .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+                username: "ada".to_string(),
+                secret: "typed".to_string(),
+                remember,
+            })
+            .await
+            .expect("the fake takes any password");
+
+        assert_eq!(
+            store.credentials(&service, Some("ada")).map(|held| held.secret),
+            remember.then(|| "typed".to_string()),
+            "remember={remember}"
+        );
+    }
 }
 
 // ── Against the fixture ──────────────────────────────────────────────

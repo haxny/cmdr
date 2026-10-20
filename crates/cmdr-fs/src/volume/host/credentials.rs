@@ -127,6 +127,13 @@ mod in_memory {
             );
             self
         }
+
+        /// Drops one entry, the way turning Remember off does.
+        pub fn forget(&self, service: &str, scope: Option<&str>) {
+            self.entries
+                .lock_ignore_poison()
+                .remove(&(service.to_string(), scope.map(str::to_string)));
+        }
     }
 
     impl CredentialStore for InMemoryCredentials {

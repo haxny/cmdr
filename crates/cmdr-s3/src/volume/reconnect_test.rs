@@ -39,9 +39,60 @@ async fn with_nothing_stored_an_unattended_probe_asks_for_a_person() {
 async fn a_sign_in_with_another_key_is_refused() {
     let volume = make_test_volume(Some("cmdr-test"));
     let refusal = volume
-        .reconnect_with_credentials("AKIASOMEONEELSE".to_string(), "secret".to_string())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: "AKIASOMEONEELSE".to_string(),
+            secret: "secret".to_string(),
+            remember: false,
+        })
         .await;
     assert!(matches!(refusal, Err(VolumeError::NotSupported)), "got {refusal:?}");
+}
+
+/// ❗ **A typed secret is written only once it WORKED** (#530). Writing it
+/// before the dial let a typo replace the secret that worked. Port 1 refuses
+/// every dial, so whatever the store holds afterwards is what a failed sign-in
+/// left behind, Remember on or off.
+#[tokio::test]
+async fn a_sign_in_that_does_not_connect_leaves_the_store_alone() {
+    use cmdr_fs::volume::host::VolumeHost;
+    use cmdr_fs::volume::host::credentials::{CredentialStore, InMemoryCredentials};
+    use cmdr_fs::volume::secret_store::SignIn;
+    use std::sync::Arc;
+
+    for remember in [false, true] {
+        let store = Arc::new(InMemoryCredentials::new());
+        let host = VolumeHost::builder()
+            .credentials(Arc::clone(&store) as Arc<dyn CredentialStore>)
+            .build();
+        let volume = super::test_support::make_test_volume_with(Some("cmdr-test"), host);
+        // Filed after the volume exists, since the store key is the volume's own.
+        let service = volume.inner.params().credential_service();
+        store
+            .save_credentials(
+                &service,
+                Some("AKIATEST"),
+                &cmdr_fs::volume::host::credentials::StoredCredentials {
+                    username: "AKIATEST".to_string(),
+                    secret: "right".to_string(),
+                },
+            )
+            .expect("the test store takes it");
+
+        let refusal = volume
+            .reconnect_with_credentials(SignIn {
+                username: "AKIATEST".to_string(),
+                secret: "a-typo".to_string(),
+                remember,
+            })
+            .await;
+
+        assert!(refusal.is_err(), "nothing listens on port 1");
+        assert_eq!(
+            store.credentials(&service, Some("AKIATEST")).map(|held| held.secret),
+            Some("right".to_string()),
+            "remember={remember}: ❌ the secret that worked is still the one remembered"
+        );
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

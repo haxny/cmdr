@@ -244,12 +244,14 @@ pub(super) async fn refresh_credentials_from_store(
     })
 }
 
-/// After a sign-in WORKED, brings the remembered entry this share reads up to
-/// date with the credentials that connected.
+/// After a sign-in WORKED, files the credentials that connected the way its
+/// Remember box asks (#530).
 ///
-/// ❗ Refreshes, ❌ never seeds: no entry means the person turned Remember off
-/// (the sign-in sheet forgets before it dials), and writing one anyway put back
-/// the password they had just told Cmdr to forget (#530).
+/// - **Remember on**: an empty store gets this share's OWN entry (a checked box
+///   is a promise), ❌ never a server-level one other shares would fall back to.
+/// - **Remember off**: refreshes only, ❌ never seeds. No entry means the person
+///   turned Remember off (the sheet forgets before it dials), and writing one
+///   anyway put back the password they had just told Cmdr to forget.
 ///
 /// The entry is the one [`refresh_credentials_from_store`] reads: the share's
 /// own, else the server's. ❗ A server entry holding ANOTHER account is left
@@ -259,7 +261,11 @@ pub(super) async fn refresh_credentials_from_store(
 /// The reads and the write ride ONE blocking task, so a store that prompts asks
 /// once. Answers whether the store took it; `false` costs only "silent next
 /// time", ❌ never the session that just came up.
-pub(super) async fn refresh_remembered_credentials(host: &VolumeHost, connected: &SmbConnectionParams) -> bool {
+pub(super) async fn refresh_remembered_credentials(
+    host: &VolumeHost,
+    connected: &SmbConnectionParams,
+    remember: bool,
+) -> bool {
     let host = host.clone();
     let server = connected.server.clone();
     let share = connected.share_name.clone();
@@ -273,6 +279,7 @@ pub(super) async fn refresh_remembered_credentials(host: &VolumeHost, connected:
             Some(share.as_str())
         } else {
             match store.credentials(&server, None) {
+                None if remember => Some(share.as_str()),
                 None => return Ok(()),
                 Some(wide) if wide.username == stored.username => None,
                 Some(_) => Some(share.as_str()),

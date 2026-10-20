@@ -161,8 +161,8 @@ reports every occurrence, and a superseded instance reports too: a refused reply
 
 ⇐ `network::keychain::{get_credentials, save_credentials}`. Three sites: the session builder's narrow-then-wide lookup
 (`session.rs::refresh_credentials_from_store`, which tries share-level then server-level) and the sign-in path's write
-(`session.rs::refresh_remembered_credentials`, after a sign-in connected: it refreshes the entry the lookup reads and
-never seeds one).
+(`session.rs::refresh_remembered_credentials`, after a sign-in connected: it refreshes the entry the lookup reads, and
+seeds the share's own only when the Remember box is on).
 
 `(service, scope)` generalizes that pair: `(hostname, share)` for SMB, `("host:port", username)` for SFTP, and
 `(endpoint, bucket)` for S3. `secret` rather than `password` because S3's is an access key.

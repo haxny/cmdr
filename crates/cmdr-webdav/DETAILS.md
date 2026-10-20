@@ -373,11 +373,11 @@ Folder Operations": the `X-OC-CTime` request header and the `nc:creation_time` p
 and a retired volume reports nothing. `reconnect.rs`: `note_lost_session` acts once on the `Connected → Disconnected`
 edge, drops the client, and, if "reconnect automatically" is on, runs a 2/5/15/30/60/120 s backoff loop that re-reads
 the store and re-probes. A refusal latches `auth_attempt_spent`, moves to `NeedsCredentials`, and stops.
-`attempt_reconnect` probes now; `reconnect_with_credentials(username, password)` requires the volume's own username
-(another account is another volume: `NotSupported`), probes with the typed password, and ❗ only once that connected
-refreshes a REMEMBERED secret (never seeds one). Writing before the probe let a typo replace the secret that worked
-(#530). `UnattendedReconnect` is `SwitchOff`, `NoStoredSecret`, or `Possible`. `sign_in_prompt` is always
-`SignInShape::Password`, so the sheet renders one field under a read-only username.
+`attempt_reconnect` probes now; `reconnect_with_credentials(SignIn)` requires the volume's own username (another account
+is another volume: `NotSupported`), probes with the typed password, and ❗ only once that connected files the secret as
+its Remember box says (`secret_store::keep_signed_in_secret`: on saves, off only refreshes). Writing before the probe
+let a typo replace the secret that worked (#530). `UnattendedReconnect` is `SwitchOff`, `NoStoredSecret`, or `Possible`.
+`sign_in_prompt` is always `SignInShape::Password`, so the sheet renders one field under a read-only username.
 
 `note_lost_session` takes the dead client out and cancels its `lost` token, so every other operation still waiting on it
 answers `DeviceDisconnected` at once rather than at its own budget; the pool goes with the client, so no request is ever

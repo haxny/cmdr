@@ -4248,9 +4248,10 @@ export const commands = {
    *
    *  ❗ Backend-neutral, like [`reconnect_volume`]. Invoked by the "Sign in"
    *  affordance shown when an in-place reconnect gave up on an auth failure (a
-   *  `needs_credentials` `volume-connection-changed` event). The volume refreshes
-   *  what it has stored (so future reconnects are silent) and runs the standard
-   *  reconnect; on success the backend emits
+   *  `needs_credentials` `volume-connection-changed` event). The volume runs the
+   *  standard reconnect and, ❗ only once that connected, files the credentials the
+   *  way `remember` (the sheet's Remember box) asks: on saves them, off only
+   *  refreshes an entry still there (#530). On success the backend emits
    *  `volume-connection-changed { state: "connected" }`.
    *
    *  ❗ Whether the USERNAME may change is the backend's call, not this command's:
@@ -4259,9 +4260,9 @@ export const commands = {
    *  is. A backend that can't redial yields `ReconnectError::Volume` carrying
    *  `VolumeError::NotSupported`.
    */
-  reconnectVolumeWithCredentials: (volumeId: string, username: string, password: string) =>
+  reconnectVolumeWithCredentials: (volumeId: string, username: string, password: string, remember: boolean) =>
     typedError<null, ReconnectError>(
-      __TAURI_INVOKE('reconnect_volume_with_credentials', { volumeId, username, password }),
+      __TAURI_INVOKE('reconnect_volume_with_credentials', { volumeId, username, password, remember }),
     ),
   /**
    *  What FORM a "Sign in" affordance on this volume takes, right now: which fields

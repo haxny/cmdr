@@ -626,9 +626,10 @@ pub async fn reconnect_volume(volume_id: String) -> Result<(), ReconnectError> {
 ///
 /// ❗ Backend-neutral, like [`reconnect_volume`]. Invoked by the "Sign in"
 /// affordance shown when an in-place reconnect gave up on an auth failure (a
-/// `needs_credentials` `volume-connection-changed` event). The volume refreshes
-/// what it has stored (so future reconnects are silent) and runs the standard
-/// reconnect; on success the backend emits
+/// `needs_credentials` `volume-connection-changed` event). The volume runs the
+/// standard reconnect and, ❗ only once that connected, files the credentials the
+/// way `remember` (the sheet's Remember box) asks: on saves them, off only
+/// refreshes an entry still there (#530). On success the backend emits
 /// `volume-connection-changed { state: "connected" }`.
 ///
 /// ❗ Whether the USERNAME may change is the backend's call, not this command's:
@@ -642,6 +643,7 @@ pub async fn reconnect_volume_with_credentials(
     volume_id: String,
     username: String,
     password: String,
+    remember: bool,
 ) -> Result<(), ReconnectError> {
     use crate::file_system::volume::manager::get_volume_manager;
 
@@ -652,7 +654,11 @@ pub async fn reconnect_volume_with_credentials(
         })?;
 
     volume
-        .reconnect_with_credentials(username, password)
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username,
+            secret: password,
+            remember,
+        })
         .await
         .map_err(ReconnectError::from)
 }

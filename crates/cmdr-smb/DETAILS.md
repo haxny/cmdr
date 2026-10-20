@@ -222,13 +222,14 @@ reconnect manager listens for this event and runs a per-volume backoff cycle (ti
    § "The one edge that must not come back". The reconnect manager flips to `needs-auth`, stops the futile backoff, and
    FilePane shows a "Sign in" prompt (`SmbReauthView`) instead of the generic "unreachable" banner. The user signs in
    via `Volume::reconnect_with_credentials` (Tauri `reconnect_smb_volume_with_credentials`), which updates the in-memory
-   params, runs the reconnect, and ❗ only once a session came up refreshes the remembered entry
-   (`session::refresh_remembered_credentials`), so the next reconnect is silent. If the new creds are also wrong, it
-   re-emits `needs_credentials` — a bad retry re-prompts rather than dead-ending.
+   params, runs the reconnect, and ❗ only once a session came up files the credentials as the sheet's Remember box
+   (`SignIn::remember`) says (`session::refresh_remembered_credentials`), so the next reconnect is silent. If the new
+   creds are also wrong, it re-emits `needs_credentials` — a bad retry re-prompts rather than dead-ending.
    - **Which entry**: the one `refresh_credentials_from_store` reads (the share's own, else the server's), with the
-     credentials that actually connected. ❌ It never seeds: no entry means Remember is off (the sheet forgets before it
-     dials). ❗ A server-level entry for ANOTHER account stays, and this share gets its own: every other share on the
-     server signs in with it.
+     credentials that actually connected. ❗ A server-level entry for ANOTHER account stays, and this share gets its
+     own: every other share on the server signs in with it.
+   - **An empty store**: Remember on seeds the SHARE's own entry, ❌ never a server-level one other shares fall back to.
+     Remember off writes nothing (the sheet forgot the entry before it dialed).
    - **Why dial first** (#530): writing before the dial let a typo replace the server-level password every share falls
      back to, and wrote one back even with Remember off.
 

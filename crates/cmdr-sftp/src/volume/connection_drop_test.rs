@@ -207,7 +207,11 @@ async fn sftp_integration_with_the_switch_off_a_returning_server_stays_down_unti
 
     // The user signs in by hand.
     volume
-        .reconnect_with_credentials(FIXTURE_USER.to_string(), FIXTURE_PASSWORD.to_string())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: FIXTURE_USER.to_string(),
+            secret: FIXTURE_PASSWORD.to_string(),
+            remember: false,
+        })
         .await
         .expect(FIXTURE);
     assert!(names(&volume).await.is_ok(), "an attended reconnect brings it back");

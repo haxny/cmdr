@@ -255,7 +255,11 @@ async fn signing_in_is_refused_where_a_secret_would_not_help() {
     ] {
         let (_events, credentials, volume) = offline_volume(rung);
         let refusal = volume
-            .reconnect_with_credentials("ada".to_string(), "hunter2".to_string())
+            .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+                username: "ada".to_string(),
+                secret: "hunter2".to_string(),
+                remember: false,
+            })
             .await;
         assert!(
             matches!(refusal, Err(cmdr_fs::volume::VolumeError::NotSupported)),
@@ -276,7 +280,11 @@ async fn signing_in_as_a_different_account_is_refused() {
     let (_events, credentials, volume) = offline_volume(AuthRungUsed::Password);
 
     let refusal = volume
-        .reconnect_with_credentials("grace".to_string(), "hunter2".to_string())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: "grace".to_string(),
+            secret: "hunter2".to_string(),
+            remember: false,
+        })
         .await;
 
     assert!(matches!(refusal, Err(cmdr_fs::volume::VolumeError::NotSupported)));
@@ -480,7 +488,11 @@ async fn sftp_integration_signing_in_with_the_right_password_comes_back_and_is_r
     assert!(volume.attempt_reconnect().await.is_err(), "the stored one is wrong now");
 
     volume
-        .reconnect_with_credentials(FIXTURE_USER.to_string(), FIXTURE_PASSWORD.to_string())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: FIXTURE_USER.to_string(),
+            secret: FIXTURE_PASSWORD.to_string(),
+            remember: false,
+        })
         .await
         .expect(FIXTURE);
 
@@ -646,7 +658,11 @@ async fn sftp_integration_an_encrypted_key_with_nothing_remembered_asks_and_stay
     );
 
     volume
-        .reconnect_with_credentials(FIXTURE_USER.to_string(), FIXTURE_KEY_PASSPHRASE.to_string())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: FIXTURE_USER.to_string(),
+            secret: FIXTURE_KEY_PASSPHRASE.to_string(),
+            remember: false,
+        })
         .await
         .expect(FIXTURE);
 
@@ -753,7 +769,11 @@ async fn an_attended_sign_in_never_starts_remembering_a_secret_on_its_own() {
         let (_events, credentials, volume) = offline_volume_holding(rung, CountingCredentials::empty());
 
         let _ = volume
-            .reconnect_with_credentials("ada".to_string(), "hunter2".to_string())
+            .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+                username: "ada".to_string(),
+                secret: "hunter2".to_string(),
+                remember: false,
+            })
             .await;
 
         assert_eq!(
@@ -783,7 +803,11 @@ async fn a_sign_in_that_does_not_connect_leaves_the_remembered_secret_alone() {
         let (_events, credentials, volume) = offline_volume(rung);
 
         let refusal = volume
-            .reconnect_with_credentials("ada".to_string(), "a-typo".to_string())
+            .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+                username: "ada".to_string(),
+                secret: "a-typo".to_string(),
+                remember: false,
+            })
             .await;
 
         assert!(refusal.is_err(), "{rung:?}: the closed port refuses every dial");

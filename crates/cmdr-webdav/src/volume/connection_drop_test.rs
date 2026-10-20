@@ -225,7 +225,11 @@ async fn with_the_switch_off_a_returning_server_stays_down_until_asked() {
 
     // The user signs in by hand.
     volume
-        .reconnect_with_credentials(FIXTURE_USER.to_string(), FIXTURE_PASSWORD.to_string())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: FIXTURE_USER.to_string(),
+            secret: FIXTURE_PASSWORD.to_string(),
+            remember: false,
+        })
         .await
         .expect(FIXTURE);
     assert!(names(&volume).await.is_ok(), "an attended reconnect brings it back");
@@ -352,7 +356,11 @@ async fn with_the_switch_off_a_server_back_from_silence_stays_down_until_asked()
     );
 
     volume
-        .reconnect_with_credentials(FIXTURE_USER.to_string(), FIXTURE_PASSWORD.to_string())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: FIXTURE_USER.to_string(),
+            secret: FIXTURE_PASSWORD.to_string(),
+            remember: false,
+        })
         .await
         .expect(FIXTURE);
     assert!(names(&volume).await.is_ok(), "an attended reconnect brings it back");

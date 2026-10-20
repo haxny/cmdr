@@ -23,7 +23,7 @@ use std::time::Duration;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::host::credentials::StoredCredentials;
 use cmdr_fs::volume::liveness;
-use cmdr_fs::volume::secret_store;
+use cmdr_fs::volume::secret_store::{self, SignIn};
 use cmdr_fs::volume::{SelfHandle, VolumeError};
 use log::{debug, info, warn};
 use tokio_util::sync::CancellationToken;
@@ -132,17 +132,19 @@ impl S3VolumeInner {
 
     /// The attended variant. `access_key_id` must be the key this volume IS:
     /// another key is another account, so it answers `NotSupported`.
-    pub(super) async fn do_reconnect_with_credentials(
-        &self,
-        access_key_id: String,
-        secret: String,
-    ) -> Result<(), VolumeError> {
-        if access_key_id != self.params().access_key_id() {
+    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<(), VolumeError> {
+        if sign_in.username != self.params().access_key_id() {
             return Err(VolumeError::NotSupported);
         }
-        self.refresh_remembered_secret(&access_key_id, &secret).await;
         self.auth_attempt_spent.store(false, Ordering::Relaxed);
-        self.rebuild(Some(secret)).await.map_err(|stalled| self.report(stalled))
+        self.rebuild(Some(sign_in.secret.clone()))
+            .await
+            .map_err(|stalled| self.report(stalled))?;
+        // ❗ Written only once the typed secret WORKED (#530): written before the
+        // dial, a typo replaced the one that did. An attended rebuild always
+        // dials, so `Ok` here means this secret was accepted.
+        self.keep_signed_in_secret(&sign_in).await;
+        Ok(())
     }
 
     /// One rebuild attempt, under the single-flight lock. `offered` is a secret
@@ -274,16 +276,11 @@ impl S3VolumeInner {
         }
     }
 
-    /// Brings a REMEMBERED secret up to date with the one the user just typed.
-    /// ❗ Refreshes, ❌ never seeds.
-    async fn refresh_remembered_secret(&self, access_key_id: &str, secret: &str) {
-        let took = secret_store::refresh_remembered_secret(
-            &self.host,
-            &self.params().credential_service(),
-            access_key_id,
-            secret,
-        )
-        .await;
+    /// Files the secret a sign-in connected with, the way its Remember box asks
+    /// (`secret_store::keep_signed_in_secret`): on saves it, off only refreshes
+    /// an entry still there.
+    async fn keep_signed_in_secret(&self, sign_in: &SignIn) {
+        let took = secret_store::keep_signed_in_secret(&self.host, &self.params().credential_service(), sign_in).await;
         if !took {
             warn!(
                 target: "volume",

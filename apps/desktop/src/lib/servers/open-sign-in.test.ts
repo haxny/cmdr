@@ -143,13 +143,17 @@ describe('a place that is asking, with nothing registered', () => {
     expect(await attempt(wrong)).toEqual({ kind: 'refused', refusal: 'authentication_rejected' })
     expect(currentSignInRequest()).toBe(request)
 
-    // The third round turns Remember on, which is a write of its own before the
-    // dial: the box is the user's act, ❌ never a side effect of the dial.
+    // The third round turns Remember on. ❌ Nothing is written before the dial: the
+    // box rides the offer, and the backend files the secret only once the dial
+    // went through (#530).
     ipc.mock('save_sftp_credentials', () => null)
     const right = { mode: 'sign-in' as const, secret: { secret: 'hunter2', remember: true }, username: null }
     expect(await attempt(right)).toEqual({ kind: 'connected', volumeId: VOLUME_ID })
     expect(ipc.callCount('connect_saved_place')).toBe(2)
-    expect(ipc.callCount('save_sftp_credentials')).toBe(1)
+    expect(ipc.lastCall('connect_saved_place')?.payload).toMatchObject({
+      secret: { secret: 'hunter2', remember: true },
+    })
+    expect(ipc.callCount('save_sftp_credentials')).toBe(0)
 
     closeSignInSheet({ kind: 'connected', volumeId: VOLUME_ID })
     expect(await seam).toEqual({ signedIn: true, volumeId: VOLUME_ID })
@@ -283,6 +287,7 @@ describe('a REGISTERED place whose session wants a credential', () => {
       // because the volume id IS the account.
       username: 'ada',
       password: 'hunter2',
+      remember: false,
     })
     // ❗ A dial would register a SECOND volume under a second id.
     expect(ipc.callCount('connect_saved_place')).toBe(0)
@@ -486,144 +491,27 @@ describe('the Remember box in sign-in mode', () => {
     await seam
   })
 
-  it('files the typed secret when the box goes ON over an empty store, so the mend can refresh it', async () => {
-    ipc.mock('save_sftp_credentials', () => null)
+  it('hands the box ON to the mend and files nothing before it: the backend saves what CONNECTED', async () => {
+    // ❗ #530: a secret written before the dial is a typo on the record the moment the
+    // dial fails. The backend seeds or refreshes the store only once the mend went
+    // through (`secret_store::keep_signed_in_secret`).
     ipc.mock('reconnect_volume_with_credentials', () => null)
     const seam = openSignInForPlace({ volumeId: VOLUME_ID, registered: true })
     const request = await parkedRequest()
 
-    await attemptOf(request)({
+    const outcome = await attemptOf(request)({
       mode: 'sign-in',
       secret: { secret: 'hunter2', remember: true },
       username: null,
     })
-    // The whole tuple the volume id is minted from, so the entry this writes is
-    // the one the next dial reads.
-    expect(ipc.lastCall('save_sftp_credentials')?.payload).toMatchObject({
-      host: 'nas.local',
-      port: 22,
-      username: 'ada',
-      secret: 'hunter2',
+    expect(outcome).toEqual({ kind: 'connected', volumeId: VOLUME_ID })
+    expect(ipc.lastCall('reconnect_volume_with_credentials')?.payload).toMatchObject({
+      volumeId: VOLUME_ID,
+      password: 'hunter2',
+      remember: true,
     })
-    expect(firstRan('save_sftp_credentials')).toBeLessThan(firstRan('reconnect_volume_with_credentials'))
+    expect(ipc.callCount('save_sftp_credentials')).toBe(0)
     expect(ipc.callCount('forget_server_secret')).toBe(0)
-
-    closeSignInSheet({ kind: 'connected', volumeId: VOLUME_ID })
-    await seam
-  })
-
-  it('files an S3 place’s secret as its ACCOUNT’s, under the provider its saved entry knows', async () => {
-    // ❗ The listing carries neither the preset nor its fields, so the writer reads the
-    // saved place (`get_known_s3_places`), matched to this volume by the id it publishes.
-    const s3Id = 's3-s3-eu-west-1-amazonaws-com-443-akia-photos'
-    const provider = { kind: 'aws', region: 'eu-west-1' }
-    ipc.mock('list_saved_servers', () => [
-      {
-        ...SAVED_SERVER,
-        id: 's3-root',
-        protocol: 's3',
-        address: 's3.eu-west-1.amazonaws.com',
-        username: 'AKIA',
-        places: [
-          {
-            ...SAVED_SERVER.places[0],
-            volumeId: s3Id,
-            name: 'photos',
-            appRoot: 's3://AKIA@s3.eu-west-1.amazonaws.com:443/photos',
-          },
-        ],
-      },
-    ])
-    ipc.mock('get_known_s3_places', () => [
-      {
-        volumeId: s3Id,
-        provider,
-        accessKeyId: 'AKIA',
-        bucket: 'photos',
-        displayName: '',
-        autoReconnect: true,
-        pinned: true,
-      },
-    ])
-    ipc.mock('save_s3_credentials', () => null)
-    ipc.mock('reconnect_volume_with_credentials', () => null)
-    const seam = openSignInForPlace({ volumeId: s3Id, registered: true })
-    const request = await parkedRequest()
-    if (request.mode !== 'sign-in') throw new Error('unreachable')
-    expect(request.endpoint).toMatchObject({ address: 's3.eu-west-1.amazonaws.com/photos', username: 'AKIA' })
-
-    await attemptOf(request)({ mode: 'sign-in', secret: { secret: 's3cr3t', remember: true }, username: null })
-    expect(ipc.lastCall('save_s3_credentials')?.payload).toMatchObject({
-      provider,
-      accessKeyId: 'AKIA',
-      secret: 's3cr3t',
-    })
-    expect(firstRan('save_s3_credentials')).toBeLessThan(firstRan('reconnect_volume_with_credentials'))
-
-    closeSignInSheet({ kind: 'connected', volumeId: s3Id })
-    await seam
-  })
-
-  it('files the secret for an SFTP account whose username is an email address', async () => {
-    // ❗ The account is read off the place's `appRoot`, which Rust mints with the
-    // username raw. A path that doesn't parse leaves SFTP without a port, so such
-    // a place got no writer: the box went ON and nothing was ever filed.
-    const emailId = 'sftp-nas-local-22-ada-corp'
-    ipc.mock('list_saved_servers', () => [
-      {
-        ...SAVED_SERVER,
-        id: emailId,
-        username: 'ada@corp.example',
-        places: [
-          { ...SAVED_SERVER.places[0], volumeId: emailId, appRoot: 'sftp://ada@corp.example@nas.local:22/srv/data' },
-        ],
-      },
-    ])
-    ipc.mock('save_sftp_credentials', () => null)
-    ipc.mock('reconnect_volume_with_credentials', () => null)
-    const seam = openSignInForPlace({ volumeId: emailId, registered: true })
-    const request = await parkedRequest()
-    if (request.mode !== 'sign-in') throw new Error('unreachable')
-    expect(request.endpoint).toMatchObject({ host: 'nas.local', username: 'ada@corp.example' })
-
-    await attemptOf(request)({
-      mode: 'sign-in',
-      secret: { secret: 'hunter2', remember: true },
-      username: null,
-    })
-    expect(ipc.lastCall('save_sftp_credentials')?.payload).toMatchObject({
-      host: 'nas.local',
-      port: 22,
-      username: 'ada@corp.example',
-      secret: 'hunter2',
-    })
-
-    closeSignInSheet({ kind: 'connected', volumeId: emailId })
-    await seam
-  })
-
-  it('says the Keychain refused, and dials nothing, when the box goes ON and the password will not store', async () => {
-    // ❗ The flip lands before the round, so a store that refuses it (Deny on the
-    // Keychain prompt, a locked keychain, no secret service) must answer as a
-    // refusal: thrown out of the attempt, it left the sheet stuck on busy.
-    ipc.mock('save_sftp_credentials', () => {
-      throw { type: 'access_denied', message: 'User canceled the operation.' }
-    })
-    ipc.mock('reconnect_volume_with_credentials', () => null)
-    const seam = openSignInForPlace({ volumeId: VOLUME_ID, registered: true })
-    const request = await parkedRequest()
-    const attempt = attemptOf(request)
-    const offer = { mode: 'sign-in' as const, secret: { secret: 'hunter2', remember: true }, username: null }
-
-    expect(await attempt(offer)).toEqual({ kind: 'refused', refusal: 'secret_not_stored' })
-    // A box the store refused isn't what the user asked for, so the round waits.
-    expect(ipc.callCount('reconnect_volume_with_credentials')).toBe(0)
-    expect(JSON.stringify(warn.mock.calls)).not.toContain('hunter2')
-
-    // Nothing was filed, so the next press tries the write again.
-    ipc.mock('save_sftp_credentials', () => null)
-    expect(await attempt(offer)).toEqual({ kind: 'connected', volumeId: VOLUME_ID })
-    expect(ipc.callCount('save_sftp_credentials')).toBe(2)
 
     closeSignInSheet({ kind: 'connected', volumeId: VOLUME_ID })
     await seam

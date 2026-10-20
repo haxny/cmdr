@@ -201,7 +201,11 @@ async fn a_put_cut_off_by_an_outage_leaves_nothing_for_the_retry_to_trip_over() 
     );
 
     volume
-        .reconnect_with_credentials(FIXTURE_ACCESS_KEY.to_string(), fixture_secret())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: FIXTURE_ACCESS_KEY.to_string(),
+            secret: fixture_secret(),
+            remember: false,
+        })
         .await
         .expect(FIXTURE);
     let again = write_holing_at(&volume, &path, bytes.clone(), None).await;
@@ -249,7 +253,11 @@ async fn with_the_switch_off_a_returning_server_stays_down_until_asked() {
     ));
 
     volume
-        .reconnect_with_credentials(FIXTURE_ACCESS_KEY.to_string(), fixture_secret())
+        .reconnect_with_credentials(cmdr_fs::volume::secret_store::SignIn {
+            username: FIXTURE_ACCESS_KEY.to_string(),
+            secret: fixture_secret(),
+            remember: false,
+        })
         .await
         .expect(FIXTURE);
     volume.list_directory(volume.root(), None).await.expect(FIXTURE);
