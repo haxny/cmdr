@@ -16,7 +16,7 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 2854 / 4603 keys have a screenshot (62%):** 1595 direct (35%) and 1259 representative (27%). 1560 remain
+**Total: 2855 / 4487 keys have a screenshot (64%):** 1595 direct (36%) and 1260 representative (28%). 1443 remain
 uncoupled, and 189 are native surfaces a webview capture cannot reach.
 
 | Area            | Direct | Representative | Uncoupled | Native | Total | Any % |
@@ -30,10 +30,10 @@ uncoupled, and 189 are native surfaces a webview capture cannot reach.
 | crashReporter   |     12 |             11 |         0 |      0 |    23 |  100% |
 | downloads       |     10 |              5 |        21 |      0 |    36 |   42% |
 | errorReporter   |     16 |              0 |        42 |      0 |    58 |   28% |
-| errors          |    116 |            442 |         0 |      0 |   558 |  100% |
+| errors          |    116 |            455 |         0 |      0 |   571 |  100% |
 | feedback        |      7 |              5 |         1 |      0 |    13 |   92% |
 | fileExplorer    |    122 |             66 |       312 |      0 |   500 |   38% |
-| fileOperations  |    124 |             73 |        98 |      0 |   295 |   67% |
+| fileOperations  |    124 |             72 |       103 |      0 |   299 |   66% |
 | goToPath        |      5 |              6 |         2 |      0 |    13 |   85% |
 | indexing        |     34 |             17 |        20 |      0 |    71 |   72% |
 | licensing       |     49 |             35 |        25 |      0 |   109 |   77% |
@@ -51,7 +51,7 @@ uncoupled, and 189 are native surfaces a webview capture cannot reach.
 | securityNotices |      0 |              0 |        13 |      0 |    13 |    0% |
 | selection       |     14 |              0 |         1 |      0 |    15 |   93% |
 | servers         |     73 |             26 |        92 |      0 |   191 |   52% |
-| settings        |    404 |             36 |       395 |      0 |   835 |   53% |
+| settings        |    404 |             25 |       273 |      0 |   702 |   61% |
 | shortcuts       |     35 |             28 |         0 |      0 |    63 |  100% |
 | stateRecovery   |      0 |              0 |        21 |      0 |    21 |    0% |
 | suggestedOps    |      0 |              0 |        38 |      0 |    38 |    0% |
