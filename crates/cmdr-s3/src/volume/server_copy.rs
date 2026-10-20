@@ -27,6 +27,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime};
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeError, WriteMode};
 use futures_util::StreamExt;
@@ -784,7 +785,7 @@ fn settle_part(
             warn!(
                 target: "volume",
                 "s3: part {} of a server-side copy failed (attempt {}): {}; again in {wait:?}, {} in flight at most",
-                failure.number, failure.attempt, failure.error, copy.window.width
+                failure.number, failure.attempt, LogError(&failure.error), copy.window.width
             );
             copy.in_flight
                 .push(Box::pin(part(failure.number, failure.attempt + 1, Some(wait)).send()));

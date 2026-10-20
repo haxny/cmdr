@@ -6,8 +6,12 @@
 //! one moves a TypeScript union member too. `mod.rs` re-exports it as
 //! `volume::VolumeError`.
 
+use std::fmt::Write as _;
+
 use serde::{Deserialize, Serialize};
 
+use crate::log_error::{ErrorLogText, ErrorText, write_plain};
+use crate::log_private::LogPrivate;
 use crate::volume::git_error::FriendlyGitError;
 
 /// Error type for volume operations, and the value the frontend renders words
@@ -194,40 +198,56 @@ pub enum VolumeError {
 /// ❗ **For logs and debugging only.** Nothing a user reads comes from here: the
 /// frontend renders every word from the typed variant (`src/lib/error-messages/`
 /// and `src/lib/file-operations/…`), through the message catalog, in ten locales.
-/// A `to_string()` that reaches a UI surface is a bug, not a shortcut.
+/// A `to_string()` that reaches a UI surface is a bug, not a shortcut. A log line
+/// prints it through `LogError`, which marks the path it carries.
 impl std::fmt::Display for VolumeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::NotFound(path) => write!(f, "Path not found: {}", path),
-            Self::PermissionDenied { path, .. } => write!(f, "Permission denied: {}", path),
-            Self::AlreadyExists(path) => write!(f, "Already exists: {}", path),
-            Self::NotSupported => write!(f, "Operation not supported"),
-            Self::DeviceDisconnected(msg) => write!(f, "Device disconnected: {}", msg),
-            Self::NotConnected(path) => write!(f, "Not connected yet: {}", path),
-            Self::DeviceSessionReset(msg) => write!(f, "Device session restarted: {}", msg),
-            Self::ReadOnly(msg) => write!(f, "Read-only: {}", msg),
-            Self::StorageFull { message } => write!(f, "Storage full: {}", message),
-            Self::ConnectionTimeout(msg) => write!(f, "Connection timed out: {}", msg),
-            Self::Cancelled(msg) => write!(f, "Cancelled: {}", msg),
-            Self::IsADirectory(path) => write!(f, "Is a directory: {}", path),
-            Self::NotADirectory(path) => write!(f, "Not a directory: {}", path),
-            Self::InvalidName(msg) => write!(f, "Name not usable at the destination: {}", msg),
-            Self::DeletePending(path) => write!(f, "Delete pending: {}", path),
-            Self::AmbiguousName(path) => write!(f, "More than one stored name matches: {}", path),
-            Self::StaleDestinationHandle(path) => write!(f, "Destination folder handle was stale: {}", path),
-            Self::ColdStorage(path) => write!(f, "In cold storage, needs a restore before reading: {}", path),
-            Self::SourceChanged(path) => write!(f, "The source changed during the copy: {}", path),
-            Self::SignatureInvalid(msg) => write!(f, "Reply refused, its signature didn't hold: {}", msg),
-            Self::IoError { message, .. } => write!(f, "I/O error: {}", message),
-            Self::NeedsPassword { wrong_attempt } => {
-                if *wrong_attempt {
-                    f.write_str("Archive password is incorrect")
-                } else {
-                    f.write_str("Archive is password-protected")
-                }
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`. A path-carrying variant marks its
+/// path as the kind it is (a stale handle names a folder, cold storage and a changed
+/// source name a file); the diagnostic-carrying ones carry a backend's own words,
+/// which stay text. `ReadOnly` is a path from `from_io_at` and some backends but a
+/// message from others, so it's marked as a path: a message hashed whole loses a
+/// triage clue, an unmarked path ships a name.
+impl ErrorLogText for VolumeError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        let (prefix, value) = match self {
+            Self::NotFound(path) => ("Path not found: ", LogPrivate::path(path)),
+            Self::PermissionDenied { path, .. } => ("Permission denied: ", LogPrivate::path(path)),
+            Self::AlreadyExists(path) => ("Already exists: ", LogPrivate::path(path)),
+            Self::NotConnected(path) => ("Not connected yet: ", LogPrivate::path(path)),
+            Self::ReadOnly(path) => ("Read-only: ", LogPrivate::path(path)),
+            Self::IsADirectory(path) => ("Is a directory: ", LogPrivate::dir_path(path)),
+            Self::NotADirectory(path) => ("Not a directory: ", LogPrivate::path(path)),
+            Self::DeletePending(path) => ("Delete pending: ", LogPrivate::path(path)),
+            Self::AmbiguousName(path) => ("More than one stored name matches: ", LogPrivate::path(path)),
+            Self::StaleDestinationHandle(path) => ("Destination folder handle was stale: ", LogPrivate::dir_path(path)),
+            Self::ColdStorage(path) => (
+                "In cold storage, needs a restore before reading: ",
+                LogPrivate::file_path(path),
+            ),
+            Self::SourceChanged(path) => ("The source changed during the copy: ", LogPrivate::file_path(path)),
+            Self::NotSupported => return out.write_str("Operation not supported"),
+            Self::DeviceDisconnected(msg) => return write!(out, "Device disconnected: {msg}"),
+            Self::DeviceSessionReset(msg) => return write!(out, "Device session restarted: {msg}"),
+            Self::StorageFull { message } => return write!(out, "Storage full: {message}"),
+            Self::ConnectionTimeout(msg) => return write!(out, "Connection timed out: {msg}"),
+            Self::Cancelled(msg) => return write!(out, "Cancelled: {msg}"),
+            Self::InvalidName(msg) => return write!(out, "Name not usable at the destination: {msg}"),
+            Self::SignatureInvalid(msg) => return write!(out, "Reply refused, its signature didn't hold: {msg}"),
+            Self::IoError { message, .. } => return write!(out, "I/O error: {message}"),
+            Self::NeedsPassword { wrong_attempt: true } => return out.write_str("Archive password is incorrect"),
+            Self::NeedsPassword { wrong_attempt: false } => return out.write_str("Archive is password-protected"),
+            Self::FriendlyGit(err) => {
+                out.write_str("git: ")?;
+                return out.error(err);
             }
-            Self::FriendlyGit(err) => write!(f, "git: {}", err),
-        }
+        };
+        out.write_str(prefix)?;
+        out.value(value)
     }
 }
 

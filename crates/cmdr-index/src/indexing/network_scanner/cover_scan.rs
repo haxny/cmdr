@@ -32,6 +32,7 @@ use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 use tokio_util::sync::CancellationToken;
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
@@ -180,7 +181,8 @@ pub(crate) async fn cover_volume_subtree(
             Err(VolumeScanError::Volume(e)) if is_typed_disconnect(&e) => {
                 log::warn!(
                     "network_scanner: device disconnected covering {}: {e}; keeping what the walk covered",
-                    LogPrivate::dir_path(&dir_path)
+                    LogPrivate::dir_path(&dir_path),
+                    e = LogError(&e)
                 );
                 writes.share_went_away();
                 commit_scan_tx(writer, &mut tx_open)?;
@@ -216,6 +218,7 @@ pub(crate) async fn cover_volume_subtree(
                 log::debug!(
                     "network_scanner: skipping unlistable dir {} while covering (consecutive_failures={consecutive_failures}): {err}",
                     LogPrivate::dir_path(&dir_path),
+                    err = LogError(&err),
                 );
                 if consecutive_failures >= CONSECUTIVE_FAILURE_ABORT {
                     log::warn!(
@@ -227,7 +230,7 @@ pub(crate) async fn cover_volume_subtree(
                     writes.finish(root_id)?;
                     return Err(VolumeScanError::ConsecutiveFailures {
                         count: consecutive_failures,
-                        last: err.to_string(),
+                        last: Box::new(err),
                     });
                 }
                 continue;

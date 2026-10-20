@@ -20,7 +20,10 @@
 //!    git-specific copy from its parallel git factory.
 
 use std::error::Error as StdError;
-use std::fmt;
+use std::fmt::{self, Write as _};
+
+use crate::log_error::{ErrorLogText, ErrorText, write_plain};
+use crate::log_private::LogPrivate;
 
 use serde::{Deserialize, Serialize};
 
@@ -142,7 +145,18 @@ impl FriendlyGitError {
 
 impl fmt::Display for FriendlyGitError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "git: {} ({})", self.kind.token(), self.path)
+        f.write_str("git: ")?;
+        write_plain(self, f)
+    }
+}
+
+/// The kind token and the path under inspection (the repo or any path under it), marked as a
+/// path in a log line. `VolumeError::FriendlyGit` writes it after its own `git: `.
+impl ErrorLogText for FriendlyGitError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> fmt::Result {
+        write!(out, "{} (", self.kind.token())?;
+        out.value(LogPrivate::path(&self.path))?;
+        out.write_str(")")
     }
 }
 

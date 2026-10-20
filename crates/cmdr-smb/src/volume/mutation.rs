@@ -11,6 +11,7 @@
 use super::SmbVolume;
 use super::session::SessionLease;
 use super::state::SessionGeneration;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{MutationEvent, Volume, VolumeError};
 use log::{debug, warn};
@@ -401,7 +402,7 @@ impl SmbVolume {
                         warn!(
                             "SmbVolume::notify_mutation: couldn't stat path={:?}: {}",
                             LogPrivate::path(&entry_path),
-                            e
+                            LogError(&e)
                         );
                     }
                 }
@@ -426,7 +427,7 @@ impl SmbVolume {
                         warn!(
                             "SmbVolume::notify_mutation: couldn't stat renamed entry path={:?}: {}",
                             LogPrivate::path(&new_path),
-                            e
+                            LogError(&e)
                         );
                     }
                 }

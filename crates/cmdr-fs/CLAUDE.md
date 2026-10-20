@@ -39,8 +39,8 @@ paths (`crate::file_system::volume::VolumeError`); other crates use `cmdr_fs::�
   here.
 - **A test needing a real removable volume uses `testing::disk_images` (macOS), ❌ never its own `hdiutil` or `diskutil`
   call**, a physical disk, or a new FAT/exFAT image: its runner is the guarded one. DETAILS § "`testing::disk_images`".
-- **A log line marks each user-derived value with `log_private::LogPrivate`.** ❌ Never make one into a `String`, a
-  path, or UI copy. DETAILS § "Marked log values".
+- **Log a user value as `LogPrivate`, a path-carrying error as `LogError(&e)`.** ❌ Never a `String` of either, and ❌
+  no marking `Display`. DETAILS § "Marked log values".
 - **The global allocator is decided here** (`process_memory/allocator.rs`: system on macOS, mimalloc on Linux or with
   the `mimalloc` feature). Gate allocator code on the `cmdr_mimalloc` cfg, ❌ never `feature = "mimalloc"` (false on
   Linux). DETAILS § Which global allocator.

@@ -7,6 +7,7 @@ use super::session::{MainSession, build_session, refresh_credentials_from_store,
 use super::state::{ConnectionState, SessionGeneration};
 use super::{SmbConnectionParams, SmbVolumeInner};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::SelfHandle;
 use cmdr_fs::volume::VolumeError;
@@ -415,7 +416,8 @@ pub(super) fn spawn_watcher_death_reconnect(share: SelfHandle<SmbVolumeInner>, g
                 Err(e) if reconnect_backoff_should_give_up(&e) => {
                     info!(
                         "smb backend reconnect: '{}' needs credentials ({}); stopping — the Sign-in flow owns recovery",
-                        volume_id, e
+                        volume_id,
+                        LogError(&e)
                     );
                     return;
                 }
@@ -425,7 +427,7 @@ pub(super) fn spawn_watcher_death_reconnect(share: SelfHandle<SmbVolumeInner>, g
                         volume_id,
                         i + 1,
                         WATCHER_DEATH_RECONNECT_BACKOFF.len(),
-                        e
+                        LogError(&e)
                     );
                 }
             }

@@ -184,7 +184,7 @@ fn terminal_disconnect_classification() {
     assert!(
         VolumeScanError::ConsecutiveFailures {
             count: CONSECUTIVE_FAILURE_ABORT,
-            last: "io".into()
+            last: Box::new(VolumeScanError::Volume(VolumeError::DeviceDisconnected("io".into())))
         }
         .is_terminal_disconnect(),
         "the consecutive-failure backstop is a terminal disconnect"

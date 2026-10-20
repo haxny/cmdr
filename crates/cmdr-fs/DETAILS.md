@@ -74,11 +74,11 @@ the next section.
   own key, which the drive index stores and the write engine matches sources under), `log_rollup`, `log_private` +
   `log_detail` (`LogPrivate`, the wrapper a log site marks a user-derived value with, over the ONE marker table and
   lexer the app's span pass reads too; `LogDetail` for external OS/server/CLI text as one Debug-quoted, 1 KiB-capped
-  field, and `LoggedText` for our own; § "Marked log values"), `tcc_paths`, `ignore_poison`, `pluralize`, `tilde`
-  (`expand_tilde`, for a path a person typed on THIS machine), `byte_size` (`format_size`, the IEC byte count log lines
-  and model-facing answers read), `thread_qos`, `thread_cpu`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a
-  keep-alive pool of `Utility`-QoS threads, so background work that comes in streams, like index walks, reuses threads
-  instead of creating one per job).
+  field, and `LoggedText` for our own; `log_error`, the `LogError` a path-carrying error logs through; § "Marked log
+  values"), `tcc_paths`, `ignore_poison`, `pluralize`, `tilde` (`expand_tilde`, for a path a person typed on THIS
+  machine), `byte_size` (`format_size`, the IEC byte count log lines and model-facing answers read), `thread_qos`,
+  `thread_cpu`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a keep-alive pool of `Utility`-QoS threads, so
+  background work that comes in streams, like index walks, reuses threads instead of creating one per job).
 - `mapped_file_faults/`: the SIGBUS recovery that turns a read of a mapped file whose disk went away into zeros, and the
   generation a reader checks to distrust what it read meanwhile. § "Mapped-file faults".
 - `testing/`: behind the `testing` feature. `TestDir`, the two waits, and `unique_test_id` (a pid-and-counter key for a
@@ -501,7 +501,7 @@ The API contract says this crate emits no user-facing strings. Two things look l
 - **`git_meta`** (`src/git_meta.rs`) looks like the second, and isn't: `FileEntry::git_meta` is a typed `GitEntryMeta`
   that states a fact, and the host words the Size column from its own catalog.
 
-## Marked log values (`log_private`, `log_detail`)
+## Marked log values (`log_private`, `log_detail`, `log_error`)
 
 A log site that knows what a value is says so, so an error report hashes exactly that value instead of guessing where a
 name ends. The marker format, the depth rule, and how the report pass reads it are the app's:
@@ -538,6 +538,23 @@ both sides read (`LogKind`, `CLOSER`, `RESERVED`, and `markers`, the lexer).
   quoting and cap, but it keeps every marker, since they're our sites' own. A stray from an unmarked site stays a stray,
   one depth down, which the report pass fails closed on. Its cap uses `markers` and the report pass's pairing rule (a
   closer at its opener's depth) to cut before a span it would split, at any depth.
+- **`LogError(&e)` (`log_error.rs`)** logs an error whose fields hold paths. **Decision: no marking `Display`.** A
+  converted type writes its text ONCE, in `ErrorLogText::write_log_text`, through an `ErrorText`: its own words with
+  `write!`, each path or name with `out.value(LogPrivate::…)`, a nested converted error with `out.error(…)`. Its
+  `Display` is `write_plain(self, f)` (values as themselves); `LogError` runs the same function marking. **Why**:
+  `Display` and `Debug` reach IPC, technical-details panels, and stored messages (`to_string()`, `format!("{e:?}")`), so
+  a marker there would leak into UI; one function behind both texts means they can't drift (stripped of its markers, the
+  logged text IS `Display`, pinned by `the_logged_text_is_display_once_its_markers_are_gone`). In a log line the error's
+  own words and any backend message it carries are foreign text: their reserved chars print as U+FFFD. An empty value
+  writes no span. `{:?}` of a `LogError` quotes the marked text as one field, spans one depth down.
+- **Converted**: `VolumeError` (each path variant marks its path by the kind it carries: `StaleDestinationHandle` and
+  `IsADirectory` a dir, `ColdStorage` and `SourceChanged` a file, the rest neutral; `ReadOnly` too, since some backends
+  put a message there; the message variants stay text), `FriendlyGitError`, and `cmdr-index`'s `VolumeScanError` (whose
+  `ConsecutiveFailures` keeps the last error typed for this). A log site formats them through `LogError`; the type
+  system refuses `LogError` of anything else.
+- **The known gap**: an error flattened into a `String` before a log macro sees it (`io::Error::other(e.to_string())` in
+  a backend's byte stream, a `format!` into another error's message) prints plain and gets only the report's regex
+  fallback. Nothing here walks `source()`: no converted type has one.
 
 ## `ScanBoundary`: one seam, so a walk can't count without asking
 

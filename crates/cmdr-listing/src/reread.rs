@@ -25,6 +25,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::volume::VolumeError;
 
 use super::Inner;
@@ -109,7 +110,7 @@ impl Inner {
             Err(VolumeError::NotFound(_)) => return RefreshOutcome::DirectoryGone(path),
             Err(VolumeError::PermissionDenied { .. }) => return RefreshOutcome::Skipped,
             Err(e) => {
-                log::warn!("Watcher: Failed to re-read directory: {}", e);
+                log::warn!("Watcher: Failed to re-read directory: {}", LogError(&e));
                 return RefreshOutcome::Skipped;
             }
         };

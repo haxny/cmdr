@@ -25,6 +25,7 @@ use crate::foreign_path::{Listed, list_as_stored};
 use crate::host::MountTable;
 use crate::stalled_on::StalledOn;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::friendly_error::{ErrorCategory, listing_error_from_volume_error};
 use cmdr_fs::volume::{BackendKind, ListingProgress, Volume, VolumeError};
@@ -349,10 +350,11 @@ pub(crate) async fn read_until_answered(read: ListingRead<'_>, watch: &StallWatc
                     return ReadOutcome::Refused(error);
                 }
                 log::debug!(
-                    "listing {} on volume {}: a {} read answered {error}, asking again",
+                    "listing {} on volume {}: a {} read answered {}, asking again",
                     read.listing_id,
                     read.volume_id,
                     if was_hung { "stuck" } else { "retried" },
+                    LogError(&error),
                 );
                 let wait = if was_hung { Duration::ZERO } else { backoff.step() };
                 next_attempt_at = Some(next_attempt_at.map_or(Instant::now() + wait, |at| at.min(Instant::now() + wait)));

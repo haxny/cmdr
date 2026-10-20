@@ -19,6 +19,7 @@
 
 use std::time::Duration;
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use log::warn;
 
@@ -256,7 +257,7 @@ impl S3VolumeInner {
                 CutOff::Clear
             }
             Err(e) => {
-                warn!(target: "volume", "s3: the server kept a cut-off upload of {remote} and removing it failed: {e}", remote = LogPrivate::file_path(remote));
+                warn!(target: "volume", "s3: the server kept a cut-off upload of {remote} and removing it failed: {e}", remote = LogPrivate::file_path(remote), e = LogError(&e));
                 CutOff::Unsettled
             }
         }

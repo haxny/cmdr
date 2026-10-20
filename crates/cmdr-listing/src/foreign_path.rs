@@ -25,6 +25,7 @@ use tokio_util::sync::CancellationToken;
 use crate::Inner;
 use crate::pipeline::ReadBy;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 
@@ -108,7 +109,11 @@ pub async fn stored_spellings(volume: &dyn Volume, paths: Vec<PathBuf>) -> Vec<P
             }
             Ok(None) => stored.push(path),
             Err(e) => {
-                log::debug!("stored_spellings: keeping {} as given: {e}", LogPrivate::path(&path));
+                log::debug!(
+                    "stored_spellings: keeping {} as given: {}",
+                    LogPrivate::path(&path),
+                    LogError(&e)
+                );
                 stored.push(path);
             }
         }
@@ -183,7 +188,11 @@ impl Inner {
             Ok(listed) => listed,
             Err(e) => {
                 // The pane keeps what it has; its next navigation or refresh asks again.
-                log::debug!("respell_listing: couldn't re-read {}: {e}", LogPrivate::dir_path(&path));
+                log::debug!(
+                    "respell_listing: couldn't re-read {}: {}",
+                    LogPrivate::dir_path(&path),
+                    LogError(&e)
+                );
                 return;
             }
         };

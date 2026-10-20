@@ -15,6 +15,8 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 use super::{IndexManager, ScanCalibration};
+use cmdr_fs::log_error::LogError;
+
 use crate::indexing::events::{
     ActivityPhase, DEBUG_STATS, IndexEvent, ScanRunKind, announce_whole_volume_walk, set_phase_for,
 };
@@ -568,7 +570,8 @@ impl IndexManager {
                 // (we can't trust the partial tree), so drop them.
                 Err(ref e) if e.is_terminal_disconnect() => {
                     log::warn!(
-                        "network scan: disconnected for '{volume_id}' ({e}); keeping honest partial, marking Stale"
+                        "network scan: disconnected for '{volume_id}' ({e}); keeping honest partial, marking Stale",
+                        e = LogError(e)
                     );
                     discard_buffered_changes_for_kind(kind, &volume_id);
                     // Bump the epoch via the captured `writer` directly, NOT
@@ -610,7 +613,10 @@ impl IndexManager {
                             "network scan: cancelled for '{volume_id}' after {} entries, discarding partial",
                             partial.total_entries
                         ),
-                        e => log::warn!("network scan: failed for '{volume_id}' ({e}), discarding partial"),
+                        e => log::warn!(
+                            "network scan: failed for '{volume_id}' ({}), discarding partial",
+                            LogError(e)
+                        ),
                     }
                     discard_buffered_changes_for_kind(kind, &volume_id);
                     reset_to_not_indexed(&volume_id);

@@ -8,6 +8,7 @@ use super::mapping::map_mtp_error;
 use super::streams::{MtpReadStream, mtp_read_window, volume_read_stream_to_chunk_stream};
 use crate::connection::{MtpConnectionError, MtpDeleteScope, UploadedFile};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, LaneKey, MutationEvent, ScanConflict, SourceItemInfo, SpaceInfo, StreamLength,
@@ -251,7 +252,7 @@ impl Volume for MtpVolume {
                             debug!(
                                 "MtpVolume::notify_mutation: couldn't stat {}: {}",
                                 LogPrivate::path(&entry_path),
-                                e
+                                LogError(&e)
                             );
                         }
                     }
@@ -276,7 +277,7 @@ impl Volume for MtpVolume {
                             debug!(
                                 "MtpVolume::notify_mutation: couldn't stat renamed entry {}: {}",
                                 LogPrivate::path(&new_path),
-                                e
+                                LogError(&e)
                             );
                         }
                     }

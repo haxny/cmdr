@@ -47,6 +47,8 @@ use super::{
 };
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_error::LogError;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::{
@@ -617,7 +619,12 @@ impl Volume for ArchiveVolume {
             let (index, source) = match self.load().await {
                 Ok(loaded) => loaded,
                 Err(e) => {
-                    log::debug!(target: "archive", "Couldn't read the folder {inner}'s xattrs: {e}");
+                    log::debug!(
+                        target: "archive",
+                        "Couldn't read the folder {}'s xattrs: {}",
+                        LogPrivate::dir_path(&inner),
+                        LogError(&e)
+                    );
                     return CarriedMetadata::default();
                 }
             };

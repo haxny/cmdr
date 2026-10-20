@@ -17,6 +17,7 @@ use tokio_util::sync::CancellationToken;
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
@@ -188,6 +189,7 @@ pub(crate) async fn reconcile_volume_via_trait(
                     LogPrivate::dir_path(&dir_path),
                     cmdr_fs::pluralize::pluralize(total_dirs, "dir"),
                     cmdr_fs::pluralize::pluralize((queue.len() + inflight.len() + new_dirs.len()) as u64, "dir"),
+                    e = LogError(&e),
                 );
                 finish_reconcile(&listed_ids, epoch, &writer)?;
                 return Err(VolumeScanError::Volume(e));
@@ -202,6 +204,7 @@ pub(crate) async fn reconcile_volume_via_trait(
                 log::debug!(
                     "network_scanner: skipping unlistable dir {} during reconcile (consecutive_failures={consecutive_failures}): {err}",
                     LogPrivate::dir_path(&dir_path),
+                    err = LogError(&err),
                 );
                 if consecutive_failures >= CONSECUTIVE_FAILURE_ABORT {
                     log::warn!(
@@ -214,7 +217,7 @@ pub(crate) async fn reconcile_volume_via_trait(
                     finish_reconcile(&listed_ids, epoch, &writer)?;
                     return Err(VolumeScanError::ConsecutiveFailures {
                         count: consecutive_failures,
-                        last: err.to_string(),
+                        last: Box::new(err),
                     });
                 }
                 continue;

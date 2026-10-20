@@ -28,6 +28,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 use tokio_util::sync::CancellationToken;
@@ -172,11 +173,12 @@ impl Ground {
                             "Cover: '{}' went away while walking {}: {e}; leaving the rest of the frontier for the next search",
                             context.volume_id,
                             LogPrivate::dir_path(root),
+                            e = LogError(&e),
                         );
                         (None, RootOutcome::VolumeGone)
                     }
                     Err(e) => {
-                        log::warn!("Cover: couldn't walk {}: {e}", LogPrivate::dir_path(root));
+                        log::warn!("Cover: couldn't walk {}: {}", LogPrivate::dir_path(root), LogError(&e));
                         (None, RootOutcome::Failed)
                     }
                 }

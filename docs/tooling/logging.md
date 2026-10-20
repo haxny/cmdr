@@ -130,12 +130,13 @@ per-module overrides on the stdout chain only. Same `log` facade API.
 
 ```rust
 use cmdr_fs::log_detail::LogDetail;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use log::{debug, info, warn};
 
 debug!(target: "listing", "listed path={:?} in {ms}ms", LogPrivate::dir_path(&path));
 info!(target: "listing", "Loaded {} files", count);
-warn!(target: "copy", "couldn't open {}: {e}", LogPrivate::file_path(&path));
+warn!(target: "copy", "couldn't open {}: {}", LogPrivate::file_path(&path), LogError(&volume_error));
 warn!(
     target: "smb",
     "tree connect failed share={:?} stderr={:?}",
@@ -148,10 +149,12 @@ crate::log_error!(target: "copy", "Failed: {}", err);
 Wrap every user-derived value (a path, a file or folder name, a volume or share, a host, an account) in its `LogPrivate`
 kind (`path`, `file_path`, `dir_path`, `name`, `file_name`, `dir_name`, `volume`, `host`, `user`), keeping the site's
 key and format spec; use the neutral kind when the site doesn't know which. Foreign text goes in a `LogDetail`, with
-`.marking(&[…])` naming the values the caller handed over. Error-level sites use `log_error!`. A `LogPrivate` is log
-text only: never turn one into a `String`. How it works: § "Marked values" below and `crates/cmdr-fs/DETAILS.md` §
-"Marked log values". The `log-private-values` check holds every log macro to it on a per-file ratchet; a value that only
-looks like the user's (a setting's name) opts out with `// allowed-log-private: <reason>`.
+`.marking(&[…])` naming the values the caller handed over. An error type that carries a path (`VolumeError`,
+`FriendlyGitError`, `VolumeScanError`, …) logs as `LogError(&e)`, which marks its paths; one that doesn't implement
+`ErrorLogText` won't compile there. Error-level sites use `log_error!`. A `LogPrivate` is log text only: never turn one
+into a `String`. How it works: § "Marked values" below and `crates/cmdr-fs/DETAILS.md` § "Marked log values". The
+`log-private-values` check holds every log macro to it on a per-file ratchet; a value that only looks like the user's (a
+setting's name) opts out with `// allowed-log-private: <reason>`.
 
 ### Enable debug for specific modules
 

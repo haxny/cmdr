@@ -19,6 +19,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
 use bytes::Bytes;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{VolumeError, VolumeReadStream};
 use futures_util::StreamExt;
@@ -158,7 +159,8 @@ impl PartJob {
                         debug!(
                             target: "volume",
                             "s3: set part {} of {} aside for a pause; it goes again on resume",
-                            self.number, LogPrivate::file_path(&self.remote)
+                            self.number,
+                            LogPrivate::file_path(&self.remote),
                         );
                         attempt -= 1;
                         continue;
@@ -172,8 +174,10 @@ impl PartJob {
             };
             warn!(
                 target: "volume",
-                "s3: part {} of {} failed (attempt {attempt}): {failure}; again in {wait:?}",
-                self.number, LogPrivate::file_path(&self.remote)
+                "s3: part {} of {} failed (attempt {attempt}): {}; again in {wait:?}",
+                self.number,
+                LogPrivate::file_path(&self.remote),
+                LogError(&failure)
             );
             tokio::select! {
                 () = self.stop.cancelled() => return Err(VolumeError::Cancelled(self.volume_id.clone())),

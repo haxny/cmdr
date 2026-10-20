@@ -6,6 +6,7 @@
 //! and `max_concurrent_ops`) are the difference between a stale pane and a
 //! serialized transfer.
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataReport};
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
@@ -301,7 +302,8 @@ impl Volume for SftpVolume {
                     Err(e) => {
                         log::warn!(
                             "SftpVolume::apply_metadata: {} keeps the server's date, not the source's: {e}",
-                            cmdr_fs::log_private::LogPrivate::path(path)
+                            cmdr_fs::log_private::LogPrivate::path(path),
+                            e = LogError(&e)
                         );
                         ClassOutcome::Refused
                     }

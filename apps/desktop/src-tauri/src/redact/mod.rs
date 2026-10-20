@@ -46,6 +46,8 @@ mod detail;
 mod detail_tests;
 mod echoes;
 #[cfg(test)]
+mod error_producer_tests;
+#[cfg(test)]
 mod fe_bridge_tests;
 mod fields;
 mod markers;

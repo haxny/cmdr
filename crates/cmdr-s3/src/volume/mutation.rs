@@ -23,6 +23,7 @@
 use std::path::{Path, PathBuf};
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::mkdir_all::{self, LeadsTo, MakesDirectories};
@@ -354,7 +355,7 @@ impl S3Volume {
             }
         }
         if let Err(e) = self.delete_key(&client, from_bucket, from_key, &remote_from).await {
-            warn!(target: "volume", "s3: {remote_from} was copied to {remote_to} but its delete failed: {e}", remote_from = LogPrivate::path(&remote_from), remote_to = LogPrivate::path(&remote_to));
+            warn!(target: "volume", "s3: {remote_from} was copied to {remote_to} but its delete failed: {e}", remote_from = LogPrivate::path(&remote_from), remote_to = LogPrivate::path(&remote_to), e = LogError(&e));
             return Err(e);
         }
         self.forget_beside_folder(&remote_from);

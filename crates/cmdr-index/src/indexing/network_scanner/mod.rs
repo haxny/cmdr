@@ -65,6 +65,7 @@ pub(crate) use reconcile_scan::reconcile_volume_via_trait;
 
 pub(crate) use system_dirs::{exclusion_stamp_message, index_predates_exclusion_list, is_recursion_excluded_dir};
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, LogError, write_plain};
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
@@ -149,9 +150,10 @@ pub enum VolumeScanError {
     /// The consecutive-failure backstop tripped: `count` listings in a row
     /// failed with a non-typed (disconnect-shaped) error, so the walk aborted
     /// rather than churning every queued dir into a silently-empty row. `last`
-    /// is the most recent failing error's display. Treated as a terminal
-    /// disconnect by the completion handler — see `is_terminal_disconnect`.
-    ConsecutiveFailures { count: usize, last: String },
+    /// is the most recent failing error, kept typed so a log line marks its
+    /// path. Treated as a terminal disconnect by the completion handler — see
+    /// `is_terminal_disconnect`.
+    ConsecutiveFailures { count: usize, last: Box<VolumeScanError> },
     /// A writer send failed (the writer thread is gone).
     WriterSend(String),
     /// Setting up the scan context (root sentinel, id counter) failed.
@@ -197,20 +199,37 @@ impl VolumeScanError {
 
 impl std::fmt::Display for VolumeScanError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: the timed-out folder and the backend's error
+/// mark their paths in a log line.
+impl ErrorLogText for VolumeScanError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
-            Self::Timeout(p) => write!(f, "listing timed out: {}", p.display()),
-            Self::Volume(e) => write!(f, "volume error: {e}"),
-            Self::ConsecutiveFailures { count, last } => {
-                write!(f, "{count} consecutive listing failures (last: {last})")
+            Self::Timeout(p) => {
+                out.write_str("listing timed out: ")?;
+                out.value(LogPrivate::dir_path(p))
             }
-            Self::WriterSend(m) => write!(f, "writer send failed: {m}"),
-            Self::Context(m) => write!(f, "scan context setup failed: {m}"),
+            Self::Volume(e) => {
+                out.write_str("volume error: ")?;
+                out.error(e)
+            }
+            Self::ConsecutiveFailures { count, last } => {
+                write!(out, "{count} consecutive listing failures (last: ")?;
+                out.error(last.as_ref())?;
+                out.write_str(")")
+            }
+            Self::WriterSend(m) => write!(out, "writer send failed: {m}"),
+            Self::Context(m) => write!(out, "scan context setup failed: {m}"),
             Self::Cancelled(s) => write!(
-                f,
+                out,
                 "scan cancelled after {} entries in {} dirs",
                 s.total_entries, s.total_dirs
             ),
-            Self::EmptyRoot => write!(f, "root listing returned no children (treating as a failed scan)"),
+            Self::EmptyRoot => out.write_str("root listing returned no children (treating as a failed scan)"),
         }
     }
 }
@@ -290,7 +309,11 @@ pub(crate) async fn stat_one_directory(volume: Arc<dyn Volume>, path: PathBuf) -
         Ok(Ok(Ok(entry))) if entry.is_directory && !entry.is_symlink => Some(entry),
         Ok(Ok(Ok(_))) => None,
         Ok(Ok(Err(e))) => {
-            log::debug!("network_scanner: can't stat {}: {e}", LogPrivate::dir_path(&path));
+            log::debug!(
+                "network_scanner: can't stat {}: {}",
+                LogPrivate::dir_path(&path),
+                LogError(&e)
+            );
             None
         }
         Ok(Err(join_err)) => {

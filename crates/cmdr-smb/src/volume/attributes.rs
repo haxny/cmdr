@@ -11,6 +11,7 @@
 use super::SmbVolume;
 use super::mapping::{attributes_of, user_flags_of};
 use super::session::SessionLease;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{
     CarriedMetadata, ClassOutcome, LandedMetadata, MetadataClasses, MetadataReport, Unblock, UserFlags,
@@ -67,7 +68,8 @@ impl SmbVolume {
             Err(e) => {
                 warn!(
                     "SmbVolume::apply_metadata: {} keeps the server's dates and attributes, not the source's: {e}",
-                    LogPrivate::path(path)
+                    LogPrivate::path(path),
+                    e = LogError(&e)
                 );
                 ClassOutcome::Refused
             }
@@ -103,7 +105,8 @@ impl SmbVolume {
             Err(e) => {
                 debug!(
                     "SmbVolume::folder_metadata: {} reports no flags: {e}",
-                    LogPrivate::dir_path(path)
+                    LogPrivate::dir_path(path),
+                    e = LogError(&e)
                 );
                 CarriedMetadata::default()
             }
@@ -120,7 +123,8 @@ impl SmbVolume {
             Err(e) => {
                 debug!(
                     "SmbVolume::clear_blockers: {} can't be read: {e}",
-                    LogPrivate::path(path)
+                    LogPrivate::path(path),
+                    e = LogError(&e)
                 );
                 return Unblock::NothingToClear;
             }
@@ -134,7 +138,8 @@ impl SmbVolume {
             Err(e) => {
                 warn!(
                     "SmbVolume::clear_blockers: {} stays Read-only: {e}",
-                    LogPrivate::path(path)
+                    LogPrivate::path(path),
+                    e = LogError(&e)
                 );
                 Unblock::Refused
             }

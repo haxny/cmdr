@@ -18,6 +18,7 @@ use tokio_util::sync::CancellationToken;
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
@@ -210,6 +211,7 @@ pub async fn scan_volume_via_trait(
                     LogPrivate::dir_path(&dir_path),
                     cmdr_fs::pluralize::pluralize(total_dirs, "dir"),
                     cmdr_fs::pluralize::pluralize((queue.len() + inflight.len()) as u64, "dir"),
+                    e = LogError(&e),
                 );
                 commit_scan_tx(&writer, &mut tx_open)?;
                 finish_partial_scan(&mut batch, &listed_ids, epoch, &writer)?;
@@ -237,6 +239,7 @@ pub async fn scan_volume_via_trait(
                 log::debug!(
                     "network_scanner: skipping unlistable dir {} (consecutive_failures={consecutive_failures}): {err}",
                     LogPrivate::dir_path(&dir_path),
+                    err = LogError(&err),
                 );
                 if consecutive_failures >= CONSECUTIVE_FAILURE_ABORT {
                     log::warn!(
@@ -250,7 +253,7 @@ pub async fn scan_volume_via_trait(
                     finish_partial_scan(&mut batch, &listed_ids, epoch, &writer)?;
                     return Err(VolumeScanError::ConsecutiveFailures {
                         count: consecutive_failures,
-                        last: err.to_string(),
+                        last: Box::new(err),
                     });
                 }
                 continue;
