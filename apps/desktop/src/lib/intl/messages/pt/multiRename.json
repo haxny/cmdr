@@ -3,6 +3,14 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
+  "multiRename.scope.selection": "{count, plural, one {{countText} arquivo selecionado} many {{countText} arquivos selecionados} other {{countText} arquivos selecionados}}",
+  "@multiRename.scope.selection": {
+    "sourceHash": "30a7b9f"
+  },
+  "multiRename.scope.wholeFolder": "{count, plural, =1 {O único arquivo desta pasta (nada selecionado)} one {{countText} arquivo nesta pasta (nada selecionado)} many {Todos os {countText} arquivos desta pasta (nada selecionado)} other {Todos os {countText} arquivos desta pasta (nada selecionado)}}",
+  "@multiRename.scope.wholeFolder": {
+    "sourceHash": "37dc7a2"
+  },
   "multiRename.nameMask": "Máscara de nome",
   "@multiRename.nameMask": {
     "sourceHash": "3dcc6e4"

@@ -120,7 +120,7 @@
   "@fileOperations.delete.titleSelected": {
     "sourceHash": "66cbe54"
   },
-  "fileOperations.delete.selectedFilesPart": "{countText} geselecteerde {count, plural, one {bestand} other {bestanden}}",
+  "fileOperations.delete.selectedFilesPart": "{countText} {count, plural, one {geselecteerd bestand} other {geselecteerde bestanden}}",
   "@fileOperations.delete.selectedFilesPart": {
     "sourceHash": "c444d06"
   },
