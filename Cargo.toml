@@ -105,6 +105,14 @@ opt-level = 3
 [profile.dev.package.cocoon]
 opt-level = 3
 
+# The scrypt key derivation under restic repo unlocks, likewise: deliberately expensive, and unoptimized
+# about 8 s per unlock, so every test that opens a repo crawled (the `cmdr-restic` suite went 24 s -> 0.6 s;
+# rustc 1.97, rustic_core 0.13.0, `cargo test -p cmdr-restic`, 2026-10-20). `pbkdf2` is above.
+[profile.dev.package.scrypt]
+opt-level = 3
+[profile.dev.package.salsa20]
+opt-level = 3
+
 # The house lint set, in ONE place. A member opts in with `lints.workspace = true`
 # rather than repeating a `#![deny(…)]` block at its crate root, so a new crate
 # can't quietly become a lint-free zone and the set can't drift between crates.
