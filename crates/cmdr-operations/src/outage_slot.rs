@@ -115,8 +115,9 @@ pub struct CleanupPolicy {
     /// reconnect sweep.
     pub wait: Duration,
     /// How long the background pass waits before it asks a destination that
-    /// REFUSED a delete once more: long enough for a dropped write's handle
-    /// close to reach the server.
+    /// REFUSED a delete again, doubling for each later ask: long enough for a
+    /// dropped write's handle close, or a dropped session's teardown, to reach
+    /// the server.
     pub retry_after: Duration,
 }
 

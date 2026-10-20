@@ -1234,8 +1234,15 @@ ONE background pass per stopped operation, on the engine's runtime, holding no l
 1. A destination that's out gets one reconnect attempt (the operation's own, the only dial in the whole cleanup), then a
    short wait for someone else's (`CleanupPolicy::wait`, 20 s). An outage the operation already gave up on
    (`Outages::gave_up_on`) gets the attempt as its one look, ❌ no second wait.
-2. A refused temp is asked once more, a few seconds later (`retry_after`, 3 s): a write the drain's deadline dropped
-   with no credit on hand sends its CLOSE a moment late.
+2. A refused temp is asked again, up to three times, waiting `retry_after` (3 s) and doubling (3, 6, 12 s), whether the
+   refusal came at the stop or the moment the destination came back: a write the drain's deadline dropped with no credit
+   on hand sends its CLOSE a moment late, and the session an outage dropped holds its temp open until the server notices
+   that session is gone. On Samba that's a moment after the new session is up, so the first delete on it can meet
+   `STATUS_SHARING_VIOLATION`, and on a busy server one 3 s retry wasn't always enough (verified on the Docker `guest`
+   fixture through `OutageProxy`: 3 of 48 cancel cells under parallel load refused at once, 1 of 64 still refused 3 s
+   later; M3 Max, 2026-10-20, `#578`). Without the retries the temp waited for the share's NEXT reconnect, after the
+   stop had said it goes once the share is back. A real drop sends the server no FIN, so it can hold the old session far
+   longer; that temp waits in the ledger as step 3 says.
 3. What's still there goes to the ledger's pending set ONCE, after the pass is done
    (`in_flight_temps::keep_temp_for_arrival`), so the pass and the arrival sweep never act on one record together. The
    sweep runs on the volume's next arrival or in-place reconnect (§ "Which path space a recorded partial lives in"),
@@ -1253,8 +1260,8 @@ name and ❌ never worded as junk). Without the report a user who chose Rollback
 519 MB across four files (2.2 GB in another run) sat on their NAS. ❌ Don't fold them into `CancelRollback::skips` — a
 skip is a LEDGER item a reversal walked to and chose to leave, and `reversed + skipped` is what the reversal's bar
 drains over. A failed op's `write-error` carries no leftovers; its pass still runs. Pinned by `volume/cleanup_tests.rs`
-(out at the stop, refused for good, refused once, tier 2, a kept landing), `leftover_cleanup_tests.rs` (the one look),
-and end to end by
+(out at the stop, refused for good, refused once, tier 2, a kept landing), `leftover_cleanup_tests.rs` (the one look,
+refused the moment it's back), and end to end by
 `volume/copy_outage_tests.rs::a_cancel_while_the_share_is_out_reports_at_once_and_cleans_up_once_it_is_back`. See §
 "Naming what a cancel left behind".
 
@@ -1273,7 +1280,7 @@ closed temp, and the sweep's delete right after works. Two shapes still leak a h
 
 ❌ **Retry with backoff within the session cannot fix the second** (measured: refused continuously to t+191 s on a real
 share, then deleted instantly from a fresh session). The consequence is survivable rather than permanent: the background
-pass's one retry handles the first shape, and the second waits in the ledger for the share's next reconnect or the next
+pass's retries handle the first shape, and the second waits in the ledger for the share's next reconnect or the next
 launch, when the session that held it is gone; the leftover toast is what tells the user in the meantime.
 
 Recording goes through `cmdr_operations::in_flight_temps` (`track_temp` for a staged write's temp), which keeps the

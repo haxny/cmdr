@@ -17,10 +17,13 @@
 //!    ([`CleanupPolicy::wait`]) for someone else's reconnect (a pane's backoff).
 //!    An outage the operation already gave up on (the lane's fifteen-minute wait
 //!    ran out, `volume_outage.rs`) gets the attempt as its one look, and no wait.
-//! 2. **A temp the destination refused is asked once more**, a few seconds later
-//!    ([`CleanupPolicy::retry_after`]): a write the drain's deadline dropped
-//!    closes its handle a moment after the drop when no credit was on hand. One
-//!    refused for good (smb2#24's handle, held until the session ends) gets its
+//! 2. **A temp the destination refused is asked again**, up to three times
+//!    from [`CleanupPolicy::retry_after`] on, each wait doubling, whether it was
+//!    refused at the stop or the moment the destination came back: a write the
+//!    drain's deadline dropped closes its handle a moment after the drop when no
+//!    credit was on hand, and the session an outage dropped holds its temp open
+//!    until the server notices that session is gone (on Samba, a moment after
+//!    the new one is up, seconds when it's busy, `#578`). One refused for good (smb2#24's handle, held until the session ends) gets its
 //!    answer on the next reconnect, when that session is gone.
 //! 3. **What's still there goes to the ledger's pending set, ONCE, after the pass
 //!    is done** (`in_flight_temps::keep_temp_for_arrival`), so this pass and the
@@ -158,18 +161,59 @@ async fn run(volume: Arc<dyn Volume>, state: Arc<WriteOperationState>, left: Lef
     }
 }
 
+/// How many more times the pass asks for a refused temp, each wait twice the
+/// one before it, from [`CleanupPolicy::retry_after`]: 3 s, 6 s, and 12 s by
+/// default, about the pass's own wait for a share that's out.
+///
+/// [`CleanupPolicy::retry_after`]: crate::outage_slot::CleanupPolicy::retry_after
+const REFUSAL_RETRIES: u32 = 3;
+
 /// Deletes what it can of `left`, and answers what's still there.
+///
+/// A temp the share refuses the moment it's back gets the same retries as one
+/// refused at the stop: the session the outage dropped holds it open until the
+/// server notices that session is gone, which Samba does a moment after the
+/// new one is up, and seconds later when it's busy (`#578`).
 async fn take_away(volume: &Arc<dyn Volume>, state: &Arc<WriteOperationState>, left: LeftBehind) -> Vec<PathBuf> {
     if !left.out.is_empty() || !reads_live(volume) {
         bring_back(volume, state).await;
     }
-    if !left.refused.is_empty() {
-        tokio::time::sleep(state.cleanup_policy.retry_after).await;
+    let Deletes {
+        mut remaining,
+        mut refused,
+    } = delete_each(volume, state, left.out).await;
+    refused.extend(left.refused);
+    let mut pause = state.cleanup_policy.retry_after;
+    for _ in 0..REFUSAL_RETRIES {
+        if refused.is_empty() {
+            break;
+        }
+        tokio::time::sleep(pause).await;
+        pause = pause.saturating_mul(2);
+        let round = delete_each(volume, state, std::mem::take(&mut refused)).await;
+        remaining.extend(round.remaining);
+        refused = round.refused;
     }
-    let mut remaining = Vec::new();
-    for temp in left.out.into_iter().chain(left.refused) {
+    remaining.extend(refused);
+    remaining
+}
+
+/// What one round of deletes left.
+// DEFAULT-OK: an empty round is exactly one that took everything.
+#[derive(Default)]
+struct Deletes {
+    /// Not tried (the destination was out) or not answered in time.
+    remaining: Vec<PathBuf>,
+    /// The destination answered and refused.
+    refused: Vec<PathBuf>,
+}
+
+/// Deletes each of `temps` the destination takes, retiring its record.
+async fn delete_each(volume: &Arc<dyn Volume>, state: &Arc<WriteOperationState>, temps: Vec<PathBuf>) -> Deletes {
+    let mut round = Deletes::default();
+    for temp in temps {
         if !reads_live(volume) {
-            remaining.push(temp);
+            round.remaining.push(temp);
             continue;
         }
         match tokio::time::timeout(state.outage_policy.attempt_timeout, volume.delete(&temp)).await {
@@ -179,15 +223,15 @@ async fn take_away(volume: &Arc<dyn Volume>, state: &Arc<WriteOperationState>, l
             Ok(Err(error)) => {
                 log::debug!(
                     target: "copy",
-                    "leftover cleanup: {} is still refused ({error})",
+                    "leftover cleanup: {} is refused ({error})",
                     LogPrivate::file_path(&temp), error = LogError(&error),
                 );
-                remaining.push(temp);
+                round.refused.push(temp);
             }
-            Err(_elapsed) => remaining.push(temp),
+            Err(_elapsed) => round.remaining.push(temp),
         }
     }
-    remaining
+    round
 }
 
 /// Whether `volume` takes calls right now: a live session, or no session to

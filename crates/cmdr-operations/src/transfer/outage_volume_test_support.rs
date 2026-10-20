@@ -104,6 +104,9 @@ pub(crate) struct OutageVolume {
     drop_at_apply_metadata_of: Mutex<Option<PathBuf>>,
     /// Refuse every metadata apply on this path, with the session up.
     refuse_metadata_of: Mutex<Option<PathBuf>>,
+    /// Refuse the next deletes of this path that reach a live session, this
+    /// many times.
+    refuse_deletes_of: Mutex<Option<(PathBuf, usize)>>,
     /// Copy inside itself on the server (`Volume::copy_within`), counting each.
     copies_on_server: AtomicBool,
     server_copies: AtomicUsize,
@@ -162,6 +165,7 @@ impl OutageVolume {
             drop_at_stat_of: Mutex::new(None),
             drop_at_apply_metadata_of: Mutex::new(None),
             refuse_metadata_of: Mutex::new(None),
+            refuse_deletes_of: Mutex::new(None),
             copies_on_server: AtomicBool::new(false),
             server_copies: AtomicUsize::new(0),
             generation: AtomicU64::new(0),
@@ -299,6 +303,15 @@ impl OutageVolume {
     /// server that won't take a folder's dates.
     pub(crate) fn refuse_metadata_of(&self, path: &Path) {
         *self.refuse_metadata_of.lock_ignore_poison() = Some(path.to_path_buf());
+    }
+
+    /// The next `times` deletes of `path` that reach a live session are
+    /// refused: the session that dropped still holds the file open, because
+    /// the server hasn't noticed yet that it's gone (`STATUS_SHARING_VIOLATION`
+    /// on a share that tears the old session down some time after the new one
+    /// is up).
+    pub(crate) fn refuse_deletes_of(&self, path: &Path, times: usize) {
+        *self.refuse_deletes_of.lock_ignore_poison() = Some((path.to_path_buf(), times));
     }
 
     /// Copies inside itself on the server from now on, the way SFTP's
@@ -507,6 +520,22 @@ impl Volume for OutageVolume {
     }
     fn delete<'a>(&'a self, path: &'a Path) -> Fut<'a, Result<(), VolumeError>> {
         Box::pin(async move {
+            let refused_here = self.up.load(Ordering::SeqCst) && {
+                let mut armed = self.refuse_deletes_of.lock_ignore_poison();
+                match armed.as_mut() {
+                    Some((held, left)) if held == path && *left > 0 => {
+                        *left -= 1;
+                        true
+                    }
+                    _ => false,
+                }
+            };
+            if refused_here {
+                return Err(VolumeError::IoError {
+                    message: "sharing violation".to_string(),
+                    raw_os_error: None,
+                });
+            }
             self.under_path_drops(
                 path,
                 &self.drop_at_delete_of,

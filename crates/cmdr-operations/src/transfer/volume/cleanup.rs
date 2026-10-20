@@ -297,7 +297,7 @@ pub(super) async fn clean_partial_writes(volume: &Arc<dyn Volume>, partials: &[P
 ///   `inline_budget`, for a destination that reads live and dies under them.
 /// - A temp it couldn't take goes to the background pass
 ///   (`transfer/leftover_cleanup.rs`): one reconnect attempt and a short wait
-///   for one that was out, one retry for one that refused, then the ledger's
+///   for one that was out, a few retries for one that refused, then the ledger's
 ///   reconnect sweep for what's still there. The summary names each kind
 ///   ([`StagedLeftoverFate::RemovedWhenBack`], [`StagedLeftoverFate::Refused`]):
 ///   a user who chose Rollback asked for the destination to be cleared, and

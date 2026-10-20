@@ -681,7 +681,7 @@ async fn a_stop_with_the_destination_out_reports_at_once_and_the_temp_goes_once_
 }
 
 /// A temp the destination keeps refusing (smb2#24's handle, held until the
-/// session ends) is asked once more by the background pass, and then waits in
+/// session ends) is asked again by the background pass, and then waits in
 /// the ledger's pending set for that volume's next arrival or reconnect, by
 /// which time the session that held it is gone.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -714,7 +714,7 @@ async fn a_temp_the_destination_still_refuses_waits_in_the_ledger_for_its_next_r
 }
 
 /// A refusal that clears a moment later (a dropped write's CLOSE going out late,
-/// with no credit on hand) is taken by the background pass's one retry.
+/// with no credit on hand) is taken by the background pass's first retry.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_temp_refused_once_goes_on_the_background_retry() {
     use super::super::faulty_volume::{FaultyOp, FaultyVolume};
