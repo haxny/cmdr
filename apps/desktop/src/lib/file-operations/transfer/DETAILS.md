@@ -317,8 +317,8 @@ destinations".
      suggestion via `getUserFriendlyMessage` / `FallbackErrorContent`; category + retry classification via
      `getErrorDisplayMeta` (both in `transfer-error-messages.ts`, which hands a refused zip edit to
      `archive-edit-error-messages.ts`; the details block in `transfer-error-details.ts`, the two volume-went-away
-     sentences in `transfer-error-volume-gone.ts`, the shared raw `errors.write.*` lookup in `transfer-error-catalog.ts`).
-     All words live on the FE.
+     sentences in `transfer-error-volume-gone.ts`, the shared raw `errors.write.*` lookup in
+     `transfer-error-catalog.ts`). All words live on the FE.
    - Container colors and icon vary by category: error-bg + CircleAlert (`serious`), warning-bg + TriangleAlert
      (`transient`), neutral secondary-bg + Info (`needs_action`).
    - "Retry" button shows when `category === 'transient'` or the variant's `retryHint` is true, AND there's something to

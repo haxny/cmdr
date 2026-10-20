@@ -45,8 +45,8 @@ Copy and move across every volume backend. File map: `DETAILS.md` § Files. Shar
 ## Concurrency and failures
 
 - **A LOCAL `max_concurrent_ops` must ❌ NOT bound a REMOTE peer** (`copy.rs::transfer_concurrency`, ❌ never a
-  `min()`). The concurrent driver SPAWNS its tasks (ERR-8MEX6), watches `stop_work` ON ITS AWAIT, and DRAINS on a
-  failure as on a cancel, ❌ never aborts first. EVERY driver sets its `DriverPhase`.
+  `min()`). The concurrent driver SPAWNS its tasks (ERR-8MEX6), watches `stop_work`, and DRAINS on a failure, ❌ never
+  aborts first. EVERY driver sets its `DriverPhase`.
 - **ONE `FileWindow` per operation** (`merge_ctx.rs::MergeCtx`), taken by every merge leaf and top-level FILE task
   (width 1 keeps MTP serial), ❌ never per level or source. A walker ❌ never recurses holding a permit, awaits without
   polling its leaves (`LeafPool::drive`: one may hold the share's reconnect), or returns undrained.

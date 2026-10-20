@@ -1,7 +1,6 @@
 # Delete + trash
 
-A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (every backend, oracle-aware), and OS-native
-trash.
+A local-FS walker (`walkdir` + `fs::remove_file`), a volume walker (every backend), and OS-native trash.
 
 `../../CLAUDE.md` holds the shared `WriteOperationState`, `OperationIntent`, cancel, ETA, and settle contracts;
 `../transfer/CLAUDE.md` is the copy + move parallel. Frontend counterpart:
@@ -9,12 +8,12 @@ trash.
 
 ## Files
 
-- **`walker.rs`** (local) and **`volume_walker.rs`** (any `Volume`), both taking `&dyn OperationEventSink`;
-  `../local_start.rs` routes by `volume_id`. The volume walker asks `Listings::authoritative_listing` before every
-  `list_directory` and batches files per `Volume::delete_batch_size`. DETAILS § "Volume-delete internals".
-- **`outage.rs`**: waits out a dropped share. ❗ A re-run re-checks the entry against its walk (kind, size); a mismatch
-  stops the delete (`ChangedWhileDisconnected`), and `NotFound` means deleted ONLY after a wait. ❌ Never
-  `through_outages` around a delete. DETAILS § "Waiting out a dropped share".
+- **`walker.rs`** (local) and **`volume_walker.rs`** (any `Volume`, its scan in `volume_scan.rs`), routed by
+  `../local_start.rs`. The volume scan asks `authoritative_listing` before every `list_directory`; deletes batch per
+  `delete_batch_size`. DETAILS § "Volume-delete internals".
+- **`outage.rs`**: waits out a dropped share. ❗ A re-run re-checks the entry (kind, size); a mismatch stops the delete
+  (`ChangedWhileDisconnected`); `NotFound` means deleted ONLY after a wait. ❌ No `through_outages` around a delete.
+  DETAILS § "Waiting out a dropped share".
 - **`trash.rs`**: `move_to_trash_sync()` (macOS `trashItemAtURL`; Linux `trash` crate; reused by
   `trash_single_journaled`), `trash_files_with_progress()` (batch, per-item progress, cancel), and
   `trash_dir_for_path()` (❌ keep its ancestor walk, DETAILS § Where a trash is). Refusals are a typed `MutationError`,

@@ -238,8 +238,7 @@ concurrent driver ABORTS at its drain deadline (after a cancel or a failure) nev
 panics, so the driver holds an `Arc` on each in-flight task's `CreatedPaths` (`CopyTask.created`) and
 `ConcurrentDriver::finish` (or `Settlements::record_panic`) hands over, and journals, what every such directory source
 had already landed. A panic is the operation's failure, like a task error, ❌ never a source that silently goes missing.
-Pinned by
-`copy_cancel_tests.rs::rollback_undoes_what_an_abandoned_folder_task_already_landed`.
+Pinned by `copy_cancel_tests.rs::rollback_undoes_what_an_abandoned_folder_task_already_landed`.
 
 ### Three ways to delete, and who may use each
 
@@ -348,7 +347,7 @@ of those sites was decided one at a time on one question: **can a wrong `false` 
   through it renames the target's children out).
 - **`crates/cmdr-operations/src/rename.rs`'s probe — LEFT ALONE, with a comment saying why.** It feeds the journal
   snapshot's entry type only. A wrong value mislabels an undo entry and reaches no destructive branch.
-- **`delete/volume_walker.rs`'s no-preview probe** (`top_level_entry`) is the same family and is decided in
+- **`delete/volume_scan.rs`'s no-preview probe** (`top_level_entry`) is the same family and is decided in
   `../../delete/DETAILS.md` § "What each branch does with a missing or wrong fact".
 - **The two dest-inside-source guards — LEFT ALONE, deliberately.** `copy.rs` and `move_same.rs` each spell the probe
   `matches!(volume.is_directory(source).await, Ok(true))`, so an unanswerable stat means the guard doesn't fire. That's

@@ -1,4 +1,4 @@
-//! The volume walker's progress throttle.
+//! The volume scan's progress throttle.
 
 use super::*;
 

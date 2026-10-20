@@ -11,6 +11,7 @@
 pub(crate) mod cloud_trash;
 mod outage;
 pub(crate) mod trash;
+mod volume_scan;
 mod volume_start;
 mod volume_walker;
 mod walker;

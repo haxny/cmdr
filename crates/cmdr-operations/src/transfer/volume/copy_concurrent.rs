@@ -56,6 +56,7 @@ use super::merge_ctx::CreatedPaths;
 use super::preflight::SourceHint;
 use super::transfer_error::WriteFailure;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{Volume, VolumeError};
 
 /// Everything the concurrent driver needs from its caller.
@@ -755,7 +756,7 @@ impl Settlements {
             target: "copy",
             "copy_volumes_with_progress: op={} copy task for {} panicked: {ended}",
             ctx.operation_id,
-            unsettled.source_path.display(),
+            LogPrivate::path(&unsettled.source_path),
         );
         emit_source_outcome(
             &*ctx.events,

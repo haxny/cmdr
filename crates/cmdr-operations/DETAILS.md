@@ -1718,7 +1718,8 @@ mid-`Copying`).
   The fold is `impl FromIterator<PauseOutcome> for PauseAllOutcome`, which is what makes it testable without touching
   the process-global manager (`manager::tests::a_sweep_counts_every_outcome_it_collected`); ❌ never drive a real
   `pause_all()` from a test, it would park a sibling test's operation.
-- **Concurrent copy path.** `copy_volumes_with_progress`'s concurrent path has no single between-files boundary, and its per-file `on_progress` callback stays cancel-only (pinned by
+- **Concurrent copy path.** `copy_volumes_with_progress`'s concurrent path has no single between-files boundary, and its
+  per-file `on_progress` callback stays cancel-only (pinned by
   `transfer_driver::concurrent_tests::concurrent_per_file_callback_is_cancel_only_not_pause_aware`). But its in-flight
   files stream through the shared `stream_pipe_file`, so each parks between chunks via `CheckpointStream` when paused;
   the admission loop adds no new files while everyone is parked, so the batch effectively halts. Serial paths (local
@@ -2434,7 +2435,7 @@ Pinned by `delete/hardlink_progress_tests.rs`, `delete/volume_hardlink_progress_
 literals for active-phase events. Adding four optional fields to the struct would force every site to spell out their
 defaults, pure mechanical noise. The `new(...)` constructor takes the eight core counter fields and defaults the scan
 meta (`None` / `0`); the scan emit sites in `scan.rs`, `scan_preview.rs`, and
-`delete/volume_walker.rs::scan_volume_recursive` opt in via `.with_scan_meta(current_dir, dirs_done, expected)`. Future
+`delete/volume_scan.rs::scan_volume_recursive` opt in via `.with_scan_meta(current_dir, dirs_done, expected)`. Future
 scan-related fields go through the same builder. If a real refactor of the 20 literals to `new(...)` ever happens, the
 builder pattern still composes cleanly on top.
 

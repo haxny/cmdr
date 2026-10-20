@@ -8,6 +8,7 @@
 //! the webview asks, off the render's path. `DETAILS.md` § "Markdown rendering" has the
 //! rules and why.
 
+use cmdr_fs::log_private::LogPrivate;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -156,7 +157,7 @@ impl DeferredMedia for VolumeImage {
     fn fetch(&self) -> Option<MediaEntry> {
         self.fetch.get_or_fetch(|watch| {
             let temp = materialize_markdown_image(&self.path, &self.volume_id, IMAGE_CAP_BYTES, watch, &self.closed)
-                .inspect_err(|e| debug!(target: "cmdr_lib::file_viewer", "markdown image {} not pulled: {e}", self.path.display()))
+                .inspect_err(|e| debug!(target: "cmdr_lib::file_viewer", "markdown image {} not pulled: {e}", LogPrivate::path(&self.path)))
                 .ok()?;
             let local = temp.as_ref().map_or_else(|| self.path.clone(), |temp| temp.temp_file.clone());
             let ext = self.path.extension().and_then(|e| e.to_str());

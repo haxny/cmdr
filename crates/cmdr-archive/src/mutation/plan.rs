@@ -2,6 +2,7 @@
 //! what name. Pure bookkeeping over the source archive's central directory; the
 //! temp+rename write that follows lives in [`super::mutator`].
 
+use cmdr_fs::log_private::LogPrivate;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs::File;
 use std::io::Read;
@@ -207,7 +208,7 @@ pub(super) fn shown_names(archive_path: &Path) -> Vec<(u64, String)> {
         .map_err(crate::read::ArchiveError::from)
         .and_then(|source| crate::read::shown_names_with_header_offsets(&source));
     parsed.unwrap_or_else(|err| {
-        log::warn!(target: "archive_mutator", "Couldn't read {}'s entry names the way the reader shows them, so the edit matches the zip crate's: {err}", archive_path.display());
+        log::warn!(target: "archive_mutator", "Couldn't read {}'s entry names the way the reader shows them, so the edit matches the zip crate's: {err}", LogPrivate::path(archive_path));
         Vec::new()
     })
 }

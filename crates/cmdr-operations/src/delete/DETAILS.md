@@ -27,17 +27,17 @@ no per-object request).
 The volume walker descends only what is a directory AS ITSELF, so a link to a folder is one entry, deleted with one
 `Volume::delete` of the link. Every place a kind comes from is link-aware: a child's `EntryKind::of` (the listing's
 `is_symlink` beats its `is_directory`), a top-level source's entry in a pane's watcher-fresh parent listing
-(`scan_preview::entry_in_parent_listing`, no I/O, which also hands over a file's size), and otherwise `volume_walker.rs::top_level_entry`: `Volume::entry_kind`
-on a backend that can hold links (`BackendKind::has_symlinks`), a plain `get_metadata` elsewhere (what `entry_kind` asks
-there anyway, and its size serves the outage re-check). A cached preview's "directory" is
-never taken on its word: the backend's batch scan follows a selected link (a cross-volume copy streams what a link
-points at), so the walker re-asks the parent listing or `entry_kind`, one probe per top-level folder with a cold parent.
-A delete-purpose preview recounts a selected link as one leaf (`count_selected_links_as_links`), so the dialog's count
-describes the delete, but the walker's own answer is what protects the target. Pinned by `volume_symlink_tests.rs`
-(nested link, link-following backend, pane-listed parent, cold preview, preview count), `link_delete_tests.rs` (the same
-over a real `LocalPosixVolume`), and the backends' half by the conformance cell
-`assert_delete_of_a_link_to_a_folder_removes_the_link_alone` (local, ADB, SFTP). Regression anchor: #505 (a nested
-`data -> ~/Photos` link on an external drive took `~/Photos`).
+(`scan_preview::entry_in_parent_listing`, no I/O, which also hands over a file's size), and otherwise
+`volume_scan.rs::top_level_entry`: `Volume::entry_kind` on a backend that can hold links (`BackendKind::has_symlinks`),
+a plain `get_metadata` elsewhere (what `entry_kind` asks there anyway, and its size serves the outage re-check). A
+cached preview's "directory" is never taken on its word: the backend's batch scan follows a selected link (a
+cross-volume copy streams what a link points at), so the walker re-asks the parent listing or `entry_kind`, one probe
+per top-level folder with a cold parent. A delete-purpose preview recounts a selected link as one leaf
+(`count_selected_links_as_links`), so the dialog's count describes the delete, but the walker's own answer is what
+protects the target. Pinned by `volume_symlink_tests.rs` (nested link, link-following backend, pane-listed parent, cold
+preview, preview count), `link_delete_tests.rs` (the same over a real `LocalPosixVolume`), and the backends' half by the
+conformance cell `assert_delete_of_a_link_to_a_folder_removes_the_link_alone` (local, ADB, SFTP). Regression anchor:
+#505 (a nested `data -> ~/Photos` link on an external drive took `~/Photos`).
 
 ## A mount is a wall
 
@@ -82,13 +82,13 @@ A volume delete on a server (SMB, SFTP, WebDAV, S3) or a phone over ADB waits fo
   non-recursive `delete`, ❌ never a recursive one.
 - **A batch** (`delete_files`, S3) is one call, so its answer for a file the drop cut off goes into that file's loop as
   an error already in hand (with the batch's `StartedOn`), which starts at the wait.
-- **The size the re-check needs** comes from the listing (a pane's, for a top-level source), or from the scan preview for
-  a top-level file, so a file a pane already shows costs no request before its delete. A top-level
-  file with neither takes it from the walk's own probe on a backend without links (one `get_metadata`, so an object store
-  spends one HEAD per selected file, the one its cost estimate counts). Where links exist the probe is an `entry_kind`
-  with no size, so a file there gets one more `get_metadata`, only on a volume with a session (`connection_state`
-  answers): no other volume is ever waited for. Pinned by `a_selected_file_costs_one_stat_that_also_proves_it_for_a_re_run`
-  and `a_selected_file_its_pane_listing_describes_costs_no_stat`.
+- **The size the re-check needs** comes from the listing (a pane's, for a top-level source), or from the scan preview
+  for a top-level file, so a file a pane already shows costs no request before its delete. A top-level file with neither
+  takes it from the walk's own probe on a backend without links (one `get_metadata`, so an object store spends one HEAD
+  per selected file, the one its cost estimate counts). Where links exist the probe is an `entry_kind` with no size, so
+  a file there gets one more `get_metadata`, only on a volume with a session (`connection_state` answers): no other
+  volume is ever waited for. Pinned by `a_selected_file_costs_one_stat_that_also_proves_it_for_a_re_run` and
+  `a_selected_file_its_pane_listing_describes_costs_no_stat`.
 - **A folder's delete** keeps its best-effort silence for a refusal (it still holds a file the delete couldn't take),
   but an outage that ends it is reported: before, the folder pass swallowed it and the delete read as complete.
 - **The terminal error names the server**: `outage::EntryStop` / `ReadStop` carry what the wait learned
