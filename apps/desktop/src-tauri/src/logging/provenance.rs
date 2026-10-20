@@ -2,8 +2,8 @@
 //! error report picks the lines it ships.
 //!
 //! An error report carries DEBUG and TRACE only from our own crates: a third-party crate's debug
-//! output (`mdns_sd`'s service dumps, `smb2`'s positional paths) prints names in shapes no
-//! redactor can bound. INFO and above ship from anyone, redacted.
+//! output (`mdns_sd`'s service dumps) prints names in shapes no redactor can bound. INFO and
+//! above ship from anyone, redacted.
 //!
 //! The verdict comes from `record.module_path()`, ❗ never from the target: our sites use short
 //! custom targets (`copy`, `open_with`) and the file strips `cmdr_lib::`, so a third-party crate's
@@ -16,19 +16,21 @@
 /// `2026-10-19T10:00:00.000+02:00 DEBUG ·indexing::writer  …`.
 pub(crate) const OWN_LINE_TAG: &str = "·";
 
-/// Third-party modules whose lines never reach a report, at any level. `smb2` 0.32.0 logs
+/// Modules whose UNTAGGED lines never reach a report, at any level. `smb2` before 0.32.1 logged
 /// `durable: {path} reclaimed on the new session…` at INFO, WARN, and ERROR with a share-relative
-/// path in prose, which nothing can tell from the words around it. Goes when `smb2` logs its paths
-/// as quoted fields (#491).
-const WITHHELD_TARGETS: &[&str] = &["smb2::client::durable"];
+/// path in prose, which nothing can tell from the words around it. Since 0.32.1 it keys and quotes
+/// every path, and its lines carry our tag; an untagged one comes from an older build's rotated
+/// file.
+const UNTAGGED_WITHHELD_TARGETS: &[&str] = &["smb2::client::durable"];
 
 /// Whether a record's module belongs to our code: the app (`cmdr_lib`, the `Cmdr` binary), every
-/// `cmdr_*` workspace crate, and `mtp_rs` (ours, and it logs no path or name). Frontend lines count:
+/// `cmdr_*` workspace crate, `mtp_rs` (ours, and it logs no path or name), and `smb2` (ours, and it
+/// logs every path, share, name, host, and user as a quoted keyed field). Frontend lines count:
 /// `commands/logging.rs` logs them. A record with no module path (a `tracing` bridge, say) doesn't.
 pub(crate) fn is_own_module(module_path: Option<&str>) -> bool {
     let Some(path) = module_path else { return false };
     let krate = path.split("::").next().unwrap_or(path);
-    krate.starts_with("cmdr_") || krate == "Cmdr" || krate == "mtp_rs"
+    krate.starts_with("cmdr_") || matches!(krate, "Cmdr" | "mtp_rs" | "smb2")
 }
 
 /// The tag the file chain writes in front of a record's target: [`OWN_LINE_TAG`] or nothing.
@@ -62,9 +64,10 @@ pub(crate) fn header_ships_in_report(line: &str) -> bool {
         .split("  ")
         .next()
         .unwrap_or_default();
-    let withheld = WITHHELD_TARGETS
-        .iter()
-        .any(|w| target == *w || target.strip_prefix(w).is_some_and(|tail| tail.starts_with("::")));
+    let withheld = !own
+        && UNTAGGED_WITHHELD_TARGETS
+            .iter()
+            .any(|w| target == *w || target.strip_prefix(w).is_some_and(|tail| tail.starts_with("::")));
     if withheld {
         return false;
     }
@@ -89,15 +92,18 @@ mod tests {
             "cmdr_operations",
             "Cmdr",
             "mtp_rs::ptp",
+            "smb2::client::tree",
+            "smb2",
         ] {
             assert!(is_own_module(Some(own)), "{own}");
         }
         for foreign in [
             "mdns_sd::service_daemon",
-            "smb2::client::tree",
             "tracing::span",
             "cmdr",
             "mtp",
+            "smb2_cli",
+            "smb",
         ] {
             assert!(!is_own_module(Some(foreign)), "{foreign}");
         }
@@ -137,9 +143,10 @@ mod tests {
         assert!(ships("ERROR ·copy  copy failed"));
     }
 
-    /// `smb2`'s durable-handle records print a relative path in prose at every level.
+    /// An untagged `smb2` durable-handle record comes from a build whose `smb2` printed the
+    /// relative path in prose, so it stays out at every level. A tagged one keys and quotes it.
     #[test]
-    fn smb2_durable_records_never_ship() {
+    fn only_tagged_smb2_durable_records_ship() {
         let ships = |rest: &str| header_ships_in_report(&format!("{TS} {rest}"));
         assert!(!ships(
             "INFO  smb2::client::durable  durable: Photos/Summer (Lake House)/x.jpg reclaimed on the new session"
@@ -148,6 +155,12 @@ mod tests {
             "ERROR smb2::client::durable  durable: REFUSING a reclaimed handle for Photos/x.jpg"
         ));
         assert!(ships("INFO  smb2::client::durable_extra  a different module"));
+        assert!(ships(
+            "INFO  ·smb2::client::durable  durable: reclaimed on the new session; the transfer resumes rather than restarting path=\"Photos/x.jpg\""
+        ));
+        assert!(ships(
+            "DEBUG ·smb2::client::durable  durable: opened without durability (server declined or does not support it); an interrupted write will restart path=\"Photos/x.jpg\""
+        ));
     }
 
     #[test]

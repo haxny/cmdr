@@ -199,8 +199,8 @@ name.
 
 The log FILE writes an ISO-8601 stamp with offset instead of the clock time, and a `·` right before the target of every
 line our own code wrote (`2026-10-19T10:19:34.908+02:00 DEBUG ·indexing::writer  …`). Untagged lines come from a
-third-party crate (`mdns_sd`, `smb2`, …) or from a build older than the tag; error reports leave out their `DEBUG` and
-`TRACE` (`apps/desktop/src-tauri/src/logging/provenance.rs`).
+third-party crate (`mdns_sd`, `reqwest`, …) or from a build older than the tag; error reports leave out their `DEBUG`
+and `TRACE` (`apps/desktop/src-tauri/src/logging/provenance.rs`).
 
 The terminal adds ANSI on top of that, and only when there's a terminal to add it for: `NO_COLOR` turns it off,
 `CLICOLOR_FORCE` / `FORCE_COLOR` decide it outright (`0` off), and otherwise the app asks whether its own stderr is a
@@ -279,7 +279,7 @@ Frontend log targets use `FE:{category}` where category matches the `getAppLogge
 Set `CMDR_LOG_RAM_USE=1` to prefix every log line with the backend's current memory use, right after the level:
 
 ```
-2026-07-16T22:56:21.829+02:00 DEBUG (374 MB) smb2::client::tree  tree: fs_info done, total=...
+2026-07-16T22:56:21.829+02:00 DEBUG (374 MB) ·smb2::client::tree  tree: fs_info done, total=...
 ```
 
 ```bash

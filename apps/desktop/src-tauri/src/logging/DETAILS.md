@@ -30,7 +30,7 @@ report never ships a third-party crate's debug output anyway (next section).
 
 Every file line our own code logs carries `·` right before its target (`DEBUG ·indexing::writer  …`); a third-party
 crate's line doesn't. `provenance.rs` decides it per record from `record.module_path()` (ours: `cmdr_*`, the `Cmdr`
-binary, `mtp_rs`), and an error report ships DEBUG/TRACE only from tagged lines (`error_reporter/DETAILS.md` § "Only our
+binary, `mtp_rs`, `smb2`), and an error report ships DEBUG/TRACE only from tagged lines (`error_reporter/DETAILS.md` § "Only our
 own debug output ships"). Why the module path and not the target: the file strips `cmdr_lib::` and our sites use short
 custom targets (`copy`, `open_with`), so a target can't tell ours from a third-party crate's. Why tag OUR lines rather
 than theirs: a line without a verdict (an older build's rotated file, a downgraded build appending) then counts as
@@ -235,7 +235,7 @@ Opt-in debug aid in `ram_gauge.rs`: with `CMDR_LOG_RAM_USE` set to a truthy valu
 line carries the process's current memory use right after the level, on both chains:
 
 ```
-2026-07-16T22:56:21.829+02:00 DEBUG (374 MB) smb2::client::tree  tree: fs_info done, total=...
+2026-07-16T22:56:21.829+02:00 DEBUG (374 MB) ·smb2::client::tree  tree: fs_info done, total=...
 ```
 
 The point is a memory timeline: the inline number tells you which operation coincided with a jump. It answers *when and

@@ -89,6 +89,59 @@ fn the_streaming_pipeline_ships_only_our_debug() {
     assert_eq!(bundle.total_redacted_lines, 5, "the count covers shipped lines only");
 }
 
+/// `smb2` keys and quotes every path it logs, so its lines carry our tag and ship, DEBUG
+/// included, each path tokenized. An untagged `durable` record comes from a build whose `smb2`
+/// printed the path in prose, so it still stays out.
+#[test]
+fn tagged_smb2_lines_ship_with_their_paths_redacted() {
+    let dir = TestDir::new("provenance-smb2");
+    let log = dir.join("cmdr.log");
+    let now = Utc::now();
+    let t = timestamp(now - chrono::Duration::minutes(1));
+    let lines = [
+        format!(
+            "{t} DEBUG ·smb2::client::tree  tree: exclusive delete refused (Some(SHARING_VIOLATION)), deleting shared path=\"Photos/2026/Summer (Lake House)/x.jpg.cmdr-tmp-0f6c2a4e-1b7d-4c55-9a43-6d0e8f1b2c3d\""
+        ),
+        format!(
+            "{t} INFO  ·smb2::client::durable  durable: reclaimed on the new session; the transfer resumes rather than restarting path=\"Photos/Summer (Lake House)/y.jpg\""
+        ),
+        format!(
+            "{t} INFO  smb2::client::durable  durable: Photos/Old Trip (Pre-upgrade)/z.jpg reclaimed on the new session"
+        ),
+    ];
+    std::fs::write(&log, lines.join("\n") + "\n").expect("write log");
+
+    let bundle = build_bundle_streaming(
+        "ERR-PROV2".to_string(),
+        sample_manifest(),
+        vec![log],
+        now - chrono::Duration::hours(1),
+        SystemTime::now(),
+        &test_redaction(),
+    )
+    .expect("build_bundle_streaming");
+
+    let entries = read_zip_entries(&bundle.zip_bytes);
+    let body = entries.get("logs/cmdr.log").expect("log entry");
+    for kept in [
+        "tree: exclusive delete refused (Some(SHARING_VIOLATION)), deleting shared path=",
+        "durable: reclaimed on the new session; the transfer resumes rather than restarting path=",
+    ] {
+        assert!(body.contains(kept), "{kept:?} was dropped:\n{body}");
+    }
+    for leaked in [
+        "Summer",
+        "Lake House",
+        "x.jpg",
+        "y.jpg",
+        "Old Trip",
+        "Pre-upgrade",
+        "z.jpg",
+    ] {
+        assert!(!body.contains(leaked), "{leaked:?} shipped:\n{body}");
+    }
+}
+
 #[test]
 fn the_window_pipeline_ships_only_our_debug() {
     let dir = TestDir::new("provenance-window");
