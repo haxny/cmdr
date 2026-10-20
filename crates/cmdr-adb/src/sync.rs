@@ -45,6 +45,11 @@ pub struct SyncStat {
     pub mode: u32,
     /// Size in bytes. 32-bit on the v1 verbs.
     pub size: u64,
+    /// Whether `size` is the file's own size, exactly: `STA2`/`LIS2` (a 64-bit
+    /// `stat`). ❗ `false` on the v1 verbs (`STAT`/`LIST`, Android 7-era
+    /// devices): their size is the low 32 bits of an `lstat`, so a file past
+    /// 4 GiB wraps and a symlink reports its target path's length.
+    pub size_is_exact: bool,
     /// Modification time, seconds since the epoch.
     pub mtime: i64,
     /// The device's errno when the stat itself failed (v2 only). `None` on v1,
@@ -199,6 +204,7 @@ impl SyncSession {
         Ok(SyncStat {
             mode,
             size: u64::from(size),
+            size_is_exact: false,
             mtime: i64::from(mtime),
             errno: None,
         })
@@ -221,6 +227,7 @@ impl SyncSession {
         Ok(SyncStat {
             mode,
             size,
+            size_is_exact: true,
             mtime,
             errno: (error != 0).then(|| i32::try_from(error).unwrap_or(i32::MAX)),
         })

@@ -390,7 +390,10 @@ async fn serve_sync(stream: &mut TcpStream, shared: &Shared) -> std::io::Result<
                 }
                 let data = {
                     let tree = shared.tree.lock_ignore_poison();
-                    match tree.get(&path) {
+                    // `RECV` opens the path, so it follows links the way adbd's
+                    // `open` does (unlike the v1 `STAT`, an `lstat`).
+                    let opened = tree.resolve(&path).unwrap_or(path.clone());
+                    match tree.get(&opened) {
                         Some(FakeNode::File { data, .. }) => Ok(data.clone()),
                         Some(_) => Err(format!("open failed: {path}: Is a directory")),
                         None => Err(format!("open failed: {path}: No such file or directory")),

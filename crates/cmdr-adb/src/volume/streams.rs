@@ -75,7 +75,14 @@ impl AdbVolume {
             session.quit().await;
             return Err(VolumeError::IsADirectory(device));
         }
-        let total_size = stat.size;
+        // ❗ Only an exact size is declared (#538): a v1 `STAT` size wraps past
+        // 4 GiB and is a symlink's own, so the size check would fail a copy that
+        // was fine. Unknown reads to the device's `DONE` instead.
+        let length = if stat.size_is_exact {
+            StreamLength::Known(stat.size)
+        } else {
+            StreamLength::Unknown
+        };
         let modified_at = stat.modified_at();
         // The device's mode, off the same `stat`: what keeps a `0600` file
         // private and a script executable when it lands on local disk.
@@ -94,11 +101,9 @@ impl AdbVolume {
             .runtime()
             .spawn(async move { produce(inner, session, device, offset, chunk_tx, cancel_rx).await });
 
-        Ok(
-            ChannelReadStream::new(chunk_rx, cancel_tx, StreamLength::Known(total_size))
-                .with_modified_at(modified_at)
-                .with_metadata(carried),
-        )
+        Ok(ChannelReadStream::new(chunk_rx, cancel_tx, length)
+            .with_modified_at(modified_at)
+            .with_metadata(carried))
     }
 
     /// Reads one bounded range without `RECV` downloading the prefix.

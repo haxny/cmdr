@@ -68,7 +68,11 @@ only the low nine bits anyway.
 
 - `STAT` + len + path → `STAT` + mode + size + mtime (all u32; mode 0 = doesn't exist). `STA2` (feature `stat_v2`) →
   `STA2` + error(u32) + dev(u64) + ino(u64) + mode(u32) + nlink(u32) + uid + gid + size(u64) + atime + mtime + ctime
-  (i64 each). `STA2` is preferred: it carries errno and 64-bit sizes, which is what makes the error policy possible.
+  (i64 each). `STA2` is preferred: it carries errno and 64-bit sizes, which is what makes the error policy possible. ❗
+  A v1 size is the low 32 bits of an `lstat` (wraps past 4 GiB; a symlink's is its target path's length), so
+  `SyncStat::size_is_exact` is `false` there and a read stream opened over `STAT` declares `StreamLength::Unknown`,
+  reading to `DONE`. Declaring it `Known` failed a fine copy at the size check (#538); `STA2` devices keep the strict
+  check.
 - `LIST` + len + path → repeated `DENT` + mode + size + mtime + namelen + name, then `DONE` + 16 zero bytes. `LIS2`
   (feature `ls_v2`) → repeated `DNT2` + error + dev + ino + mode + nlink + uid + gid + size + atime + mtime + ctime +
   namelen + name, then `DONE`.

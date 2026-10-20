@@ -26,6 +26,10 @@ async fn stat_and_list(features: DeviceFeatures) {
     assert!(file.exists());
     assert_eq!(file.kind(), SyncEntryKind::File);
     assert_eq!(file.size, 12);
+    assert_eq!(
+        file.size_is_exact, features.stat_v2,
+        "❗ a v1 size is the low 32 bits of an lstat, never an exact size"
+    );
     assert_eq!(file.mtime, crate::testing::DEFAULT_MTIME);
 
     let dir = session.stat("/sdcard/DCIM").await.unwrap();
@@ -44,6 +48,7 @@ async fn stat_and_list(features: DeviceFeatures) {
     assert_eq!(names, vec!["DCIM", "hello.txt", "link"], "dot entries are skipped");
     assert_eq!(entries[2].stat.kind(), SyncEntryKind::Symlink);
     assert_eq!(entries[1].stat.size, 12);
+    assert_eq!(entries[1].stat.size_is_exact, features.ls_v2);
 
     assert!(collect(&mut session, "/sdcard/DCIM").await.is_empty());
     session.quit().await;
@@ -140,6 +145,7 @@ fn kind_reads_the_type_bits() {
     let stat = |mode| SyncStat {
         mode,
         size: 0,
+        size_is_exact: true,
         mtime: 0,
         errno: None,
     };
@@ -206,6 +212,7 @@ fn a_stat_reports_its_mtime_as_a_date_and_a_pre_epoch_one_as_none() {
     let stat = |mtime| SyncStat {
         mode: 0o100644,
         size: 0,
+        size_is_exact: true,
         mtime,
         errno: None,
     };

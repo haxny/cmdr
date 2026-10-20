@@ -307,6 +307,45 @@ async fn a_copy_keeps_the_source_date_over_the_v1_verbs() {
     conformance::assert_read_stream_reports_the_listed_date(volume.as_ref(), &dated).await;
 }
 
+async fn drain(stream: &mut dyn VolumeReadStream) -> Vec<u8> {
+    let mut out = Vec::new();
+    while let Some(chunk) = stream.next_chunk().await {
+        out.extend(chunk.expect("the fake serves every chunk"));
+    }
+    out
+}
+
+/// ❗ **A v1 `STAT` size is never declared as the stream's exact length**
+/// (#538): it's the low 32 bits of an `lstat`, so a file past 4 GiB wraps and a
+/// symlink reports its target path's length, and the size check then failed a
+/// copy that was fine. The stream reads to its end instead.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_read_over_the_v1_verbs_declares_no_exact_length() {
+    let mut tree = seeded_tree();
+    tree.add_symlink("/sdcard/notes-link", "/sdcard/notes.txt");
+    let server = FakeAdbServer::start(tree).await;
+    server.set_features("shell_v2");
+    let (volume, _) = connect_fake(&server, FIXTURE_SERIAL).await;
+
+    for path in ["/sdcard/notes.txt", "/sdcard/notes-link"] {
+        let mut stream = volume.open_read_stream(&fixture_path(path)).await.expect(path);
+        assert_eq!(stream.total_size(), StreamLength::Unknown, "{path}");
+        assert_eq!(drain(stream.as_mut()).await, b"the user's notes", "{path}");
+    }
+}
+
+/// And over `STA2` the size IS exact, so the strict check keeps guarding it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_read_over_stat_v2_declares_its_exact_length() {
+    let (_server, volume) = seeded().await;
+    let mut stream = volume
+        .open_read_stream(&fixture_path("/sdcard/notes.txt"))
+        .await
+        .expect("notes");
+    assert_eq!(stream.total_size(), StreamLength::Known(16));
+    assert_eq!(drain(stream.as_mut()).await, b"the user's notes");
+}
+
 /// Holds the device to `AdbVolume::METADATA_CAPS`: its streams report the mode
 /// the listing shows, and a write keeps no class it doesn't claim.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

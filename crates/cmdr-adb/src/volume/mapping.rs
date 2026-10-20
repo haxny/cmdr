@@ -47,6 +47,7 @@ mod tests {
         let stat = SyncStat {
             mode: 0o010_644,
             size: 0,
+            size_is_exact: true,
             mtime: 0,
             errno: None,
         };
