@@ -1616,9 +1616,9 @@
 
   "fileOperations.backgroundStart.needsPasswordToast": "“{archiveName}” needs its password. You’ll be asked as soon as the open dialog closes.",
   "@fileOperations.backgroundStart.needsPasswordToast": {
-    "description": "Quiet toast for an operation that was running in the background and stopped because it reads from a password-protected archive (zip). It needs a password prompt, but another dialog is on screen, so the prompt waits and appears by itself the moment that dialog closes. Nothing is lost and the user doesn’t need to do anything now; the toast only says why the prompt isn’t up yet.",
+    "description": "Quiet toast for an operation that was running in the background and stopped because it reads from a password-protected archive (zip) or an encrypted restic backup. It needs a password prompt, but another dialog is on screen, so the prompt waits and appears by itself the moment that dialog closes. Nothing is lost and the user doesn’t need to do anything now; the toast only says why the prompt isn’t up yet.",
     "placeholders": {
-      "archiveName": "file name of the archive, for example \"photos.zip\""
+      "archiveName": "file name of the archive, for example \"photos.zip\", or the backup folder’s name, for example \"m3-macbook-restic\""
     }
   },
 
@@ -2058,6 +2058,52 @@
   "@fileOperations.archivePassword.unlock": {
     "description": "Primary button in the archive-password dialog that submits the entered password and retries the copy/move. Short control label, active verb.",
     "screenshot": "archive-password-first-attempt.png"
+  },
+
+  "fileOperations.resticPassword.title": "Unlock this backup",
+  "@fileOperations.resticPassword.title": {
+    "description": "Title of the dialog that asks for a restic backup repository’s password. Shown when someone opens the repo’s snapshots, or copies files out of one, and Cmdr doesn’t know the password yet. Short heading. \"backup\" = a restic backup repository, a folder holding someone’s backups."
+  },
+
+  "fileOperations.resticPassword.retryTitle": "That didn’t work",
+  "@fileOperations.resticPassword.retryTitle": {
+    "description": "Title of the backup-password dialog when the password just entered (or the one saved in the Keychain) didn’t open the backup, so the user is asked again. Friendly and light, not scolding. Avoid the words \"error\" and \"failed\". Short heading."
+  },
+
+  "fileOperations.resticPassword.message": "<repo>{name}</repo> is a restic backup. Enter its password to browse its snapshots.",
+  "@fileOperations.resticPassword.message": {
+    "description": "Body of the backup-password dialog, shown the first time. Names the backup folder being unlocked. <repo> wraps the folder name, which is styled (bold); keep the tag around the name only. Keep \"restic\" as is: it’s the name of the backup tool. \"snapshots\" = the dated backups inside the repository, one per backup run.",
+    "placeholders": {
+      "name": "the backup repository’s folder name, e.g. m3-macbook-restic"
+    }
+  },
+
+  "fileOperations.resticPassword.retryMessage": "That password didn’t unlock <repo>{name}</repo>. Give it another go.",
+  "@fileOperations.resticPassword.retryMessage": {
+    "description": "Body of the backup-password dialog after a password didn’t open the backup, asking the user to try again. Friendly and encouraging, not scolding. Avoid the words \"error\" and \"failed\". <repo> wraps the backup folder name, which is styled (bold); keep the tag around the name only.",
+    "placeholders": {
+      "name": "the backup repository’s folder name, e.g. m3-macbook-restic"
+    }
+  },
+
+  "fileOperations.resticPassword.inputAria": "Backup password",
+  "@fileOperations.resticPassword.inputAria": {
+    "description": "Accessible label for the masked password input in the backup-password dialog (there is no visible label next to the field). Short."
+  },
+
+  "fileOperations.resticPassword.remember": "Remember in Keychain",
+  "@fileOperations.resticPassword.remember": {
+    "description": "Checkbox label in the backup-password dialog, checked by default. When checked, Cmdr saves the password in the macOS Keychain so it doesn’t ask again next time. Use the name macOS uses for its password store in your language (Apple calls it \"Keychain\" / \"Keychain Access\")."
+  },
+
+  "fileOperations.resticPassword.checking": "Checking the password…",
+  "@fileOperations.resticPassword.checking": {
+    "description": "Screen-reader label for the small spinner in the backup-password dialog while Cmdr tries the password on the backup (this takes a second or more, longer over a network). Not visible as text."
+  },
+
+  "fileOperations.resticPassword.unreachable": "Cmdr couldn’t check the password just now. Make sure the backup’s drive or server is reachable, then try again.",
+  "@fileOperations.resticPassword.unreachable": {
+    "description": "Short note inside the backup-password dialog when Cmdr couldn’t reach the backup to try the password (for example the network drive dropped, or it took too long). The password the user typed stays in the field, since it may be right. Avoid the words \"error\" and \"failed\". Keep \"Cmdr\" as is (the app’s name)."
   },
 
   "fileOperations.validation.disallowedChars": "{kind, select, folder {Folder name can’t contain “/” or null characters} other {Filename can’t contain “/” or null characters}}",

@@ -56,7 +56,9 @@ vi.mock('./listing-liveness', () => ({
 }))
 vi.mock('./tag-sweep', () => ({ sweepListingTags: vi.fn() }))
 vi.mock('../navigation/path-resolution', () => ({ resolveValidPath: h.resolveValidPath }))
-vi.mock('#lib/error-messages/listing-error.js', () => ({ renderListingError: (e: unknown) => ({ rendered: e }) }))
+vi.mock('#lib/error-messages/listing-error.js', () => ({
+  renderListingError: (e: unknown, where: unknown) => ({ rendered: e, where }),
+}))
 vi.mock('#lib/icon-cache.js', () => ({ evictPerPathIconsForDir: vi.fn() }))
 vi.mock('../rename/rename-activation', () => ({ cancelClickToRename: vi.fn() }))
 vi.mock('#lib/ui/toast/index.js', () => ({ dismissTransientToastsForPane: vi.fn() }))
@@ -120,7 +122,7 @@ describe('createListingLoader — error / MTP / cancel handling', () => {
       expect(spies.onNeedsPassword).toHaveBeenCalled()
     })
 
-    expect(spies.onNeedsPassword.mock.calls[0][0]).toMatchObject({ archivePath: '/a/locked.7z' })
+    expect(spies.onNeedsPassword.mock.calls[0][0]).toMatchObject({ path: '/a/locked.7z' })
     // No probe, so no walk-up: the pane stays put, showing the fallback the
     // prompt sits on top of, with the failed path in history so Back goes one
     // step rather than two.
@@ -244,7 +246,8 @@ describe('createListingLoader — error / MTP / cancel handling', () => {
     await vi.waitFor(() => {
       expect(state.error).toBe('permission denied')
     })
-    expect(state.friendlyError).toEqual({ rendered: { code: 'EACCES' } })
+    // The path rides along: the words for a locked container depend on what it is.
+    expect(state.friendlyError).toEqual({ rendered: { code: 'EACCES' }, where: { path: '/a' } })
     expect(spies.onPathChange).toHaveBeenCalledWith('/a')
   })
 

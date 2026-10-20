@@ -116,7 +116,7 @@
         onTransferErrorRetry?: () => void
         /** The error dialog's "Copy anyway" after a space shortfall. Offered only when `transferErrorProps.retry` holds the copy to start. */
         onTransferErrorCopyAnyway?: () => void
-        onUnlockSubmit: (password: string) => void
+        onUnlockSubmit: (answer: { password: string; remember: boolean }) => void
         onUnlockCancel: () => void
         onNewFolderCreated: (folderName: string) => void
         onNewFolderCancel: () => void
@@ -323,8 +323,12 @@
 
     {#if showUnlockDialog && unlockProps}
         <UnlockDialog
-            archiveName={unlockProps.archiveName}
+            container={unlockProps.container}
+            name={unlockProps.name}
             wrongAttempt={unlockProps.wrongAttempt}
+            checking={unlockProps.checking}
+            unreachable={unlockProps.unreachable}
+            rejections={unlockProps.rejections}
             onSubmit={onUnlockSubmit}
             onCancel={onUnlockCancel}
         />

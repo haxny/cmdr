@@ -29,7 +29,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
   setArchivePassword: vi.fn(() => Promise.resolve()),
-  clearArchivePassword: vi.fn(() => Promise.resolve()),
+  forgetContainerPassword: vi.fn(() => Promise.resolve()),
   notifyArchivePasswordPrompt: vi.fn(() => Promise.resolve()),
   notifyArchivePasswordDismissed: vi.fn(() => Promise.resolve()),
   dismissFailedOperation: vi.fn(() => Promise.resolve()),
@@ -195,7 +195,7 @@ describe('adopting an operation into the progress dialog', () => {
     )
     dialogs.foregroundOperation(adopted())
 
-    dialogs.handleUnlockSubmit('hunter2')
+    dialogs.handleUnlockSubmit({ password: 'hunter2', remember: false })
 
     await vi.waitFor(() => {
       expect(dialogs.showTransferProgressDialog).toBe(true)

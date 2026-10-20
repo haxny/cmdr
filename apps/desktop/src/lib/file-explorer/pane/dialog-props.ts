@@ -270,25 +270,43 @@ export interface TransferErrorPropsData {
   retry: TransferProgressPropsData | null
 }
 
+/**
+ * What a password prompt unlocks. Mirrors the backend's prompt-mirror
+ * `container` (`ArchivePasswordPrompt` in `#lib/ipc/bindings`).
+ * - `'archive'`: an encrypted archive. The password is stored unchecked and
+ *   proves itself on the retry.
+ * - `'resticRepo'`: a restic backup repo. The password is checked before the
+ *   prompt closes, and may be remembered in the Keychain.
+ */
+export type UnlockContainer = 'archive' | 'resticRepo'
+
 export interface UnlockPromptPropsData {
-  /** Display name of the archive being unlocked (e.g. "photos.zip"). */
-  archiveName: string
-  /** True when the stored password was rejected: re-prompt with distinct copy. */
+  /** What's locked; derived from the path (`unlock-flow.svelte.ts`). */
+  container: UnlockContainer
+  /** Display name: the archive file ("photos.zip") or the repo folder ("m3-restic"). */
+  name: string
+  /** True when a password was rejected: re-prompt with distinct copy. */
   wrongAttempt: boolean
-  /** Volume the archive lives on (the archive pane's parent-drive volume id). */
+  /** Volume the container lives on (a routed pane keeps its parent drive's volume id). */
   parentVolumeId: string
-  /** The archive path (or an inner path) to store the password against. */
-  archivePath: string
+  /** The container's path, or any path inside it, to unlock against. */
+  path: string
   /**
    * Which flow raised the prompt:
-   * - `'transfer'`: a copy/move out of an encrypted archive; on unlock it
+   * - `'transfer'`: a copy/move out of a locked container; on unlock it
    *   re-dispatches the operation the birth slot holds.
-   * - `'browse'`: a directory listing of a header-encrypted archive; on unlock it
-   *   re-lists the same directory via `retry`.
+   * - `'browse'`: a listing that needs the password (a header-encrypted
+   *   archive, a repo's snapshots); on unlock it re-lists via `retry`.
    */
   mode: 'transfer' | 'browse'
-  /** Browse mode only: re-load the same directory after the password is stored. */
+  /** Browse mode only: re-load the same directory after the unlock. */
   retry?: () => void
+  /** A repo is checking the password right now. */
+  checking: boolean
+  /** The last check couldn't reach the repo (gone, or too slow), so it said nothing about the password. */
+  unreachable: boolean
+  /** How many passwords the repo refused while this prompt was up. */
+  rejections: number
 }
 
 export interface DeleteDialogPropsData {

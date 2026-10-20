@@ -45,11 +45,11 @@ import {
 } from '#lib/file-operations/delete/trash-undo.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { moveCursorToNewFolder } from '#lib/file-operations/mkdir/new-folder-operations.js'
-import { archiveNameFromPath, pathCrossesArchiveBoundary } from './archive-paths'
+import { pathCrossesArchiveBoundary } from './archive-paths'
 import { transferOpLabel } from './transfer-op-label'
 import { createTransferPaneEffects } from './transfer-pane-effects'
 import { createAdoptedOperation } from './adopted-operation.svelte'
-import { createUnlockFlow } from './unlock-flow.svelte'
+import { createUnlockFlow, describeContainer } from './unlock-flow.svelte'
 import { createBackgroundOperations, type ArchiveNeedsPasswordError } from './background-operations.svelte'
 import { createWhenDialogsClear } from './when-dialogs-clear.svelte'
 import { createProgrammaticConfirm } from './programmatic-confirm'
@@ -443,7 +443,7 @@ export function createDialogState(deps: DialogStateDeps) {
       unlockFlow.promptForTransfer({
         operationType: props.operationType,
         parentVolumeId: props.sourceVolumeId,
-        archivePath: error.path,
+        path: error.path,
         wrongAttempt: error.wrongAttempt,
         operationId,
       })
@@ -453,7 +453,9 @@ export function createDialogState(deps: DialogStateDeps) {
         op: transferOpLabel(props.operationType),
       })
       addToast(
-        tString('fileOperations.backgroundStart.needsPasswordToast', { archiveName: archiveNameFromPath(error.path) }),
+        tString('fileOperations.backgroundStart.needsPasswordToast', {
+          archiveName: describeContainer(error.path).name,
+        }),
         { level: 'info', timeoutMs: 10000 },
       )
     }
@@ -686,7 +688,7 @@ export function createDialogState(deps: DialogStateDeps) {
 
     /** Raises the browse-time archive-password prompt (a listing of a
      *  header-encrypted archive). No transfer operation is involved. */
-    showUnlockForBrowse(info: { volumeId: string; archivePath: string; wrongAttempt: boolean; retry: () => void }) {
+    showUnlockForBrowse(info: { volumeId: string; path: string; wrongAttempt: boolean; retry: () => void }) {
       unlockFlow.promptForBrowse(info)
     },
 
@@ -895,7 +897,7 @@ export function createDialogState(deps: DialogStateDeps) {
         unlockFlow.promptForTransfer({
           operationType: op,
           parentVolumeId: transferProgressProps.sourceVolumeId,
-          archivePath: error.path,
+          path: error.path,
           wrongAttempt: error.wrongAttempt,
           operationId: failedOperationId,
         })
@@ -920,8 +922,8 @@ export function createDialogState(deps: DialogStateDeps) {
       openTransferError(op, error, failedOperationId, progressAtStop, retry)
     },
 
-    handleUnlockSubmit(password: string) {
-      unlockFlow.handleSubmit(password)
+    handleUnlockSubmit(answer: { password: string; remember: boolean }) {
+      unlockFlow.handleSubmit(answer)
     },
 
     handleUnlockCancel() {

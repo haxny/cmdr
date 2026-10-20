@@ -334,12 +334,16 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
   },
   {
     dialogId: 'archive-password',
-    label: 'Archive password',
+    label: 'Password prompt (archive, backup)',
     hostWindow: 'main',
     status: 'ready',
     states: [
-      { id: 'first-attempt', label: 'First attempt' },
-      { id: 'wrong-attempt', label: 'Wrong password re-prompt' },
+      { id: 'first-attempt', label: 'Archive: first attempt' },
+      { id: 'wrong-attempt', label: 'Archive: wrong password re-prompt' },
+      { id: 'repo-first-attempt', label: 'Backup: first attempt' },
+      { id: 'repo-checking', label: 'Backup: checking the password' },
+      { id: 'repo-wrong-attempt', label: 'Backup: wrong password re-prompt' },
+      { id: 'repo-unreachable', label: 'Backup: couldn’t reach it' },
     ],
   },
 

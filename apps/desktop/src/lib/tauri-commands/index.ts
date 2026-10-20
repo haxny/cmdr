@@ -730,10 +730,15 @@ export type { AdbConnectOutcomeError, AdbInstallStatus } from './adb'
 export { getDataWipeSummary, deleteAllAppData, quitAfterDataWipe, DataWipeFailure, asDataWipeError } from './data-wipe'
 export type { DataWipeError, DataWipeSummary, WipeLeftover, WipeReport } from './data-wipe'
 
-// Archive-password commands (encrypted-archive unlock)
+// Unlock commands (encrypted archives, restic repos)
 export {
   setArchivePassword,
-  clearArchivePassword,
+  unlockContainer,
+  cancelContainerUnlock,
+  forgetContainerPassword,
+  UnlockFailure,
+  type UnlockError,
+  type UnlockOutcome,
   notifyArchivePasswordPrompt,
   notifyArchivePasswordDismissed,
   type ArchivePasswordPrompt,

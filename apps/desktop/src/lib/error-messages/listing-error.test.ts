@@ -10,7 +10,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { renderListingError } from './listing-error'
-import { getListingErrorMessage } from './listing-error-messages'
+import { getListingErrorMessage, type ListingErrorReason } from './listing-error-messages'
 import { getGitErrorMessage } from './git-error-messages'
 import { getProviderSuggestion } from './provider-error-messages'
 import type { ListingError } from '#lib/ipc/bindings.js'
@@ -94,5 +94,33 @@ describe('renderListingError', () => {
     }
     const rendered = renderListingError(error)
     expect(rendered.suggestion).toBe(getListingErrorMessage({ reason: 'connectionTimedOut' }).suggestion)
+  })
+
+  // The backend says "needs a password" the same way for an archive and a
+  // restic repo; only the path tells them apart. The pane shows this behind the
+  // password prompt for as long as the repo takes to check it, so the words
+  // must name the right thing.
+  describe('a locked container', () => {
+    const locked: ListingError = {
+      category: 'needs_action',
+      reason: { reason: 'archiveNeedsPassword', wrongAttempt: false },
+      provider: null,
+      actionKind: null,
+      retryHint: false,
+      rawDetail: 'needs a password',
+    }
+
+    it('speaks of a backup inside a restic repo’s snapshot view', () => {
+      const rendered = renderListingError(locked, { path: '/Volumes/naspi/m3-restic/Browse snapshots/latest' })
+      expect(rendered.title).toBe('This backup needs its password')
+      expect(`${rendered.explanation} ${rendered.suggestion}`).not.toContain('archive')
+      expect(rendered.listingReason).toBe('archiveNeedsPassword')
+    })
+
+    it('speaks of an archive anywhere else', () => {
+      const rendered = renderListingError(locked, { path: '/Users/me/locked.7z' })
+      expect(rendered.title).toBe(getListingErrorMessage(locked.reason as ListingErrorReason).title)
+      expect(rendered.title).toContain('archive')
+    })
   })
 })

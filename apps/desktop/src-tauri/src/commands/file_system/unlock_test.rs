@@ -13,7 +13,9 @@ use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{InMemoryVolume, ListingProgress, PasswordLocked, UnlockOutcome, Volume, VolumeError};
 use cmdr_fs::entry::FileEntry;
 
-use super::{UnlockError, forget_container_password, unlock_container, unlock_within};
+use super::{
+    UnlockError, cancel_container_unlock, forget_container_password, in_flight_unlocks, unlock_container, unlock_within,
+};
 
 /// How the stub answers an unlock.
 #[derive(Clone, Copy)]
@@ -117,7 +119,14 @@ fn register(volume: Arc<dyn Volume>) -> String {
 }
 
 async fn unlock(id: &str, password: &str, remember: bool) -> Result<UnlockOutcome, UnlockError> {
-    unlock_container(id.to_string(), "/repo".to_string(), password.to_string(), remember).await
+    unlock_container(
+        id.to_string(),
+        "/repo".to_string(),
+        password.to_string(),
+        remember,
+        uuid::Uuid::new_v4().to_string(),
+    )
+    .await
 }
 
 #[tokio::test]
@@ -229,4 +238,68 @@ async fn forgetting_drops_what_the_container_kept() {
 
     assert!(answer.is_ok(), "{answer:?}");
     assert_eq!(stub.kept(), None);
+}
+
+#[tokio::test]
+async fn a_cancel_by_id_drops_the_unlock_and_keeps_nothing() {
+    let stub = Arc::new(LockedStub::new(Script::Hang));
+    let id = register(stub.clone());
+    let unlock_id = uuid::Uuid::new_v4().to_string();
+
+    let unlocking = unlock_container(
+        id.clone(),
+        "/repo".to_string(),
+        "hunter2".to_string(),
+        true,
+        unlock_id.clone(),
+    );
+    let cancelling = async {
+        // Let the unlock register and reach the container first.
+        tokio::task::yield_now().await;
+        cancel_container_unlock(unlock_id.clone()).await;
+    };
+    let (answer, ()) = tokio::join!(unlocking, cancelling);
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Err(UnlockError::Cancelled)), "{answer:?}");
+    assert_eq!(stub.kept(), None, "a cancelled unlock caches nothing and saves nothing");
+    assert!(
+        !in_flight_unlocks().contains(&unlock_id),
+        "a finished unlock leaves no entry"
+    );
+}
+
+#[tokio::test]
+async fn a_cancel_that_overtakes_its_unlock_still_drops_it() {
+    // Two IPC calls aren't ordered: the dialog's Cancel can reach the backend
+    // before the unlock it cancels has registered.
+    let stub = Arc::new(LockedStub::new(Script::Hang));
+    let id = register(stub.clone());
+    let unlock_id = uuid::Uuid::new_v4().to_string();
+
+    cancel_container_unlock(unlock_id.clone()).await;
+    let answer = unlock_container(
+        id.clone(),
+        "/repo".to_string(),
+        "hunter2".to_string(),
+        true,
+        unlock_id.clone(),
+    )
+    .await;
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Err(UnlockError::Cancelled)), "{answer:?}");
+    assert_eq!(stub.kept(), None);
+    assert!(!in_flight_unlocks().contains(&unlock_id));
+}
+
+#[tokio::test]
+async fn cancels_for_unlocks_that_never_come_stay_bounded() {
+    // A cancel that lands after its unlock finished leaves a marker nothing
+    // will claim. However many pile up, the registry stays small.
+    for _ in 0..1_000 {
+        cancel_container_unlock(uuid::Uuid::new_v4().to_string()).await;
+    }
+    let left = in_flight_unlocks().len();
+    assert!(left <= 64, "the registry kept {left}");
 }

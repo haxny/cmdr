@@ -161,6 +161,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_system::create_file,
                     crate::commands::file_system::unlock_container,
                     crate::commands::file_system::forget_container_password,
+                    crate::commands::file_system::cancel_container_unlock,
                     crate::commands::file_system::benchmark_log,
                     crate::commands::file_system::move_files,
                     crate::commands::file_system::delete_files,

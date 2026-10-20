@@ -186,7 +186,7 @@
          */
         onNeedsPassword?: (info: {
             volumeId: string
-            archivePath: string
+            path: string
             wrongAttempt: boolean
             retry: () => void
         }) => void

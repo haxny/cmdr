@@ -172,6 +172,14 @@ describe('friendly-error copy obeys the writing rules', () => {
     })
   }
 
+  it('the locked restic repo wording is clean', () => {
+    const where = { path: '/Volumes/naspi/m3-restic/Browse snapshots/latest' }
+    assertClean(
+      'listing:resticRepoNeedsPassword',
+      getListingErrorMessage({ reason: 'archiveNeedsPassword', wrongAttempt: false }, where),
+    )
+  })
+
   for (const kind of GIT_KINDS) {
     it(`git kind "${kind}" is clean`, () => {
       assertClean(`git:${kind}`, getGitErrorMessage(kind))

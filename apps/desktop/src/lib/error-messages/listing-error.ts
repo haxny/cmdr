@@ -15,7 +15,7 @@
 
 import type { ListingError, ListingErrorReason, ErrorCategory } from '#lib/ipc/bindings.js'
 import type { FriendlyError } from '#lib/file-explorer/types.js'
-import { getListingErrorMessage } from './listing-error-messages'
+import { getListingErrorMessage, type ListingErrorPlace } from './listing-error-messages'
 import { getGitErrorMessage } from './git-error-messages'
 import { getProviderSuggestion, type ProviderCategory } from './provider-error-messages'
 
@@ -28,10 +28,11 @@ function providerCategory(category: ErrorCategory): ProviderCategory {
 /**
  * Turns a typed `ListingError` into the rendered `FriendlyError` shape
  * `ErrorPane` consumes (title + trusted-markdown explanation/suggestion +
- * category + raw detail + retry/action affordances).
+ * category + raw detail + retry/action affordances). `where` is the path that
+ * failed to list, which picks the words for a locked container.
  */
-export function renderListingError(error: ListingError): FriendlyError {
-  const base = baseMessage(error.reason)
+export function renderListingError(error: ListingError, where?: ListingErrorPlace): FriendlyError {
+  const base = baseMessage(error.reason, where)
 
   // Provider overlay: when the backend detected a provider, the provider-
   // specific suggestion replaces the base reason's suggestion (mirrors the old
@@ -52,10 +53,10 @@ export function renderListingError(error: ListingError): FriendlyError {
 }
 
 /** Picks the base message: the git factory for `git`, else the listing factory. */
-function baseMessage(reason: ListingErrorReason) {
+function baseMessage(reason: ListingErrorReason, where: ListingErrorPlace | undefined) {
   if (reason.reason === 'git') {
     return getGitErrorMessage(reason.kind)
   }
   // Every non-git wire reason is a member of the listing factory's union.
-  return getListingErrorMessage(reason)
+  return getListingErrorMessage(reason, where)
 }

@@ -1488,7 +1488,7 @@
                 onMtpFatalError={(msg: string) => edgeFlow.handleMtpFatalError(paneId, msg)}
                 onNeedsPassword={(info: {
                     volumeId: string
-                    archivePath: string
+                    path: string
                     wrongAttempt: boolean
                     retry: () => void
                 }) => { dialogs.showUnlockForBrowse(info); }}
@@ -1593,8 +1593,8 @@
         dialogs.handleTransferErrorRetry()
     }}
     onTransferErrorCopyAnyway={() => { dialogs.handleTransferErrorCopyAnyway(); }}
-    onUnlockSubmit={(password: string) => {
-        dialogs.handleUnlockSubmit(password)
+    onUnlockSubmit={(answer: { password: string; remember: boolean }) => {
+        dialogs.handleUnlockSubmit(answer)
     }}
     onUnlockCancel={() => {
         dialogs.handleUnlockCancel()

@@ -184,7 +184,7 @@ export interface ListingLoaderDeps {
    * `retry` re-lists the SAME directory (after the password is stored the re-list
    * succeeds); `wrongAttempt` swaps the prompt copy after a rejected password.
    */
-  onNeedsPassword?: (info: { volumeId: string; archivePath: string; wrongAttempt: boolean; retry: () => void }) => void
+  onNeedsPassword?: (info: { volumeId: string; path: string; wrongAttempt: boolean; retry: () => void }) => void
 }
 
 export interface ListingLoader {
@@ -515,7 +515,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
             // would skip over it. `pushPath` deduplicates same-path retries. The
             // error screen is what the pane shows now, so a later cancel returns here.
             const showListingError = () => {
-              const rendered = payload.error ? renderListingError(payload.error) : undefined
+              const rendered = payload.error ? renderListingError(payload.error, { path: loadPath }) : undefined
               resetLoadingState(payload.message, false, rendered)
               lastShown = { volumeId, path: loadPath }
               deps.onPathChange?.(loadPath)
@@ -540,7 +540,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
               showListingError()
               deps.onNeedsPassword?.({
                 volumeId: deps.getVolumeId(),
-                archivePath: loadPath,
+                path: loadPath,
                 wrongAttempt: reason.wrongAttempt,
                 retry: () => {
                   void loadDirectory({ path: loadPath })

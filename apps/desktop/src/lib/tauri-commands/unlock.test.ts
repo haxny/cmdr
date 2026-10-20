@@ -8,28 +8,39 @@ vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     unlockContainer: vi.fn(),
     forgetContainerPassword: vi.fn(),
+    cancelContainerUnlock: vi.fn(),
     notifyArchivePasswordPrompt: vi.fn(),
     notifyArchivePasswordDismissed: vi.fn(),
   },
 }))
 
 import { commands } from '#lib/ipc/bindings.js'
+import { failureOf } from '#lib/ipc/typed-failure.js'
 import {
   setArchivePassword,
-  clearArchivePassword,
+  unlockContainer,
+  cancelContainerUnlock,
+  forgetContainerPassword,
+  UnlockFailure,
   notifyArchivePasswordPrompt,
   notifyArchivePasswordDismissed,
 } from './unlock'
 
-describe('setArchivePassword wrapper', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
+describe('setArchivePassword wrapper', () => {
   it('forwards the volume id, archive path, and password, remembering nothing', async () => {
     vi.mocked(commands.unlockContainer).mockResolvedValueOnce({ status: 'ok', data: 'stored' })
     await setArchivePassword('root', '/a/secret.zip/inner/x.pdf', 'hunter2')
-    expect(commands.unlockContainer).toHaveBeenCalledWith('root', '/a/secret.zip/inner/x.pdf', 'hunter2', false)
+    expect(commands.unlockContainer).toHaveBeenCalledWith(
+      'root',
+      '/a/secret.zip/inner/x.pdf',
+      'hunter2',
+      false,
+      expect.any(String),
+    )
   })
 
   it('throws the typed reason on an error result', async () => {
@@ -38,14 +49,46 @@ describe('setArchivePassword wrapper', () => {
   })
 })
 
-describe('clearArchivePassword wrapper', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
+describe('unlockContainer wrapper', () => {
+  const request = {
+    parentVolumeId: 'root',
+    path: '/b/m3-restic/Browse snapshots',
+    password: 'hunter2',
+    remember: true,
+    unlockId: 'unlock-1',
+  }
+
+  it('forwards every field in order and answers the typed outcome', async () => {
+    vi.mocked(commands.unlockContainer).mockResolvedValueOnce({ status: 'ok', data: 'wrongPassword' })
+    await expect(unlockContainer(request)).resolves.toBe('wrongPassword')
+    expect(commands.unlockContainer).toHaveBeenCalledWith(
+      'root',
+      '/b/m3-restic/Browse snapshots',
+      'hunter2',
+      true,
+      'unlock-1',
+    )
   })
 
-  it('forwards the volume id and archive path', async () => {
+  it('throws the refusal typed, so the dialog can tell a cancel from an unreachable repo', async () => {
+    vi.mocked(commands.unlockContainer).mockResolvedValueOnce({ status: 'error', error: { type: 'timedOut' } })
+    const thrown: unknown = await unlockContainer(request).catch((e: unknown) => e)
+    expect(failureOf(UnlockFailure, thrown)).toEqual({ type: 'timedOut' })
+  })
+})
+
+describe('cancelContainerUnlock wrapper', () => {
+  it('names the unlock to drop', async () => {
+    vi.mocked(commands.cancelContainerUnlock).mockResolvedValueOnce(undefined)
+    await cancelContainerUnlock('unlock-1')
+    expect(commands.cancelContainerUnlock).toHaveBeenCalledWith('unlock-1')
+  })
+})
+
+describe('forgetContainerPassword wrapper', () => {
+  it('forwards the volume id and container path', async () => {
     vi.mocked(commands.forgetContainerPassword).mockResolvedValueOnce({ status: 'ok', data: null })
-    await clearArchivePassword('root', '/a/secret.zip')
+    await forgetContainerPassword('root', '/a/secret.zip')
     expect(commands.forgetContainerPassword).toHaveBeenCalledWith('root', '/a/secret.zip')
   })
 
@@ -54,19 +97,16 @@ describe('clearArchivePassword wrapper', () => {
       status: 'error',
       error: { type: 'volumeNotFound', volumeId: 'root' },
     })
-    await expect(clearArchivePassword('root', '/a/secret.zip')).rejects.toThrow('volumeNotFound')
+    const thrown: unknown = await forgetContainerPassword('root', '/a/secret.zip').catch((e: unknown) => e)
+    expect(failureOf(UnlockFailure, thrown)).toEqual({ type: 'volumeNotFound', volumeId: 'root' })
   })
 })
 
-describe('archive-password prompt mirror', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
+describe('password prompt mirror', () => {
   it('forwards what the prompt is asking, and nothing more', async () => {
-    // The mirror is what lets `cmdr://state` name the archive. ❌ There is no
+    // The mirror is what lets `cmdr://state` name the container. ❌ There is no
     // password field on it, and there must never be one: the secret's only path
-    // is `setArchivePassword` (or, over MCP, the backend's own store).
+    // is the unlock call (or, over MCP, the backend's own store).
     const prompt = {
       archiveName: 'secret.zip',
       archivePath: '/a/secret.zip/inner/x.pdf',

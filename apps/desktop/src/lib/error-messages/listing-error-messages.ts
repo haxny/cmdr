@@ -20,6 +20,7 @@ import type { FriendlyErrorMessage } from './friendly-error-message'
 import { esc, expandSystemStrings } from './compose'
 import { getMessage } from '#lib/intl/messages.svelte.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { isVirtualResticPath } from '#lib/file-explorer/restic/path-detection.js'
 
 /**
  * Substitutes `{path}` / `{osMessage}` param tokens in a catalog value with the
@@ -126,6 +127,12 @@ export type ListingErrorReason =
   // ── empty-root hint ──
   | { reason: 'emptyRootICloud' }
 
+/** Where the listing failed, for the one reason whose words depend on it. */
+export interface ListingErrorPlace {
+  /** The path the pane tried to list. */
+  path: string
+}
+
 /**
  * Maps a classified listing reason to its user-facing message. The literal copy
  * lives in `errors.listing.*`; this fn keys on the reason and feeds the escaped
@@ -134,7 +141,13 @@ export type ListingErrorReason =
  * variant shape is the source of truth for which params exist, so the params are
  * read straight off `r` rather than re-enumerated per reason.
  */
-export function getListingErrorMessage(r: ListingErrorReason): FriendlyErrorMessage {
+export function getListingErrorMessage(r: ListingErrorReason, where?: ListingErrorPlace): FriendlyErrorMessage {
+  // The backend asks for a password the same way for an archive and a restic
+  // repo (`NeedsPassword`, ❌ no container field), so the failed path picks the
+  // words, with the same lexical test the pane's capabilities use.
+  if (r.reason === 'archiveNeedsPassword' && where && isVirtualResticPath(where.path)) {
+    return compose('resticRepoNeedsPassword')
+  }
   const params: Record<string, string> = {}
   if ('path' in r) params.path = esc(r.path)
   if ('osMessage' in r) params.osMessage = esc(r.osMessage)

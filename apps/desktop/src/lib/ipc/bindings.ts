@@ -700,10 +700,12 @@ export const commands = {
    *
    *  `path` may be the container itself OR any path inside it: both resolve to
    *  the same volume, so the frontend passes whichever it has in hand.
+   *  `unlock_id` is the caller's name for this unlock, which
+   *  `cancel_container_unlock` takes.
    */
-  unlockContainer: (parentVolumeId: string, path: string, password: string, remember: boolean) =>
+  unlockContainer: (parentVolumeId: string, path: string, password: string, remember: boolean, unlockId: string) =>
     typedError<UnlockOutcome, UnlockError>(
-      __TAURI_INVOKE('unlock_container', { parentVolumeId, path, password, remember }),
+      __TAURI_INVOKE('unlock_container', { parentVolumeId, path, password, remember, unlockId }),
     ),
   /**
    *  Forgets the password the container at `path` holds in memory (the person
@@ -712,6 +714,12 @@ export const commands = {
    */
   forgetContainerPassword: (parentVolumeId: string, path: string) =>
     typedError<null, UnlockError>(__TAURI_INVOKE('forget_container_password', { parentVolumeId, path })),
+  /**
+   *  Drops the unlock the caller named: it answers `Cancelled` and keeps nothing,
+   *  saving nothing to the Keychain. A no-op for an unlock that already answered;
+   *  one that hasn't started yet is cancelled the moment it does.
+   */
+  cancelContainerUnlock: (unlockId: string) => __TAURI_INVOKE<void>('cancel_container_unlock', { unlockId }),
   /**
    *  Logs a frontend benchmark event to stderr (unified timeline with Rust events).
    *  Only logs if RUSTY_COMMANDER_BENCHMARK=1 is set.

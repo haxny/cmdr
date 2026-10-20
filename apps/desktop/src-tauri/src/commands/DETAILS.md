@@ -535,6 +535,12 @@ unlock finishes behind the reply and keeps the password, and saves it to the Key
 didn't. It's safe because `PasswordLocked::unlock` is cancel-safe by contract (`crates/cmdr-fs/src/volume/password_locked.rs`):
 the slow part runs on the blocking pool, which a drop never interrupts, and state is committed only after it returns.
 
+The dialog's Cancel reaches the token by name: the frontend picks an `unlock_id` per check and hands it to both
+`unlock_container` and `cancel_container_unlock`, which share a small in-flight registry in the same file. Two IPC calls
+aren't ordered, so a cancel that overtakes its unlock leaves a cancelled token the unlock then claims (answering
+`Cancelled` at once), and an unlock's guard removes its entry however it ends. A cancel that lands after its unlock
+finished leaves a marker nothing claims; past 32 entries a cancel sweeps the cancelled ones, so they can't pile up.
+
 ### An optional leg gets a sub-budget, never the whole deadline
 
 When a command has one leg that MUST answer and another whose failure it treats as non-fatal, the optional leg runs on

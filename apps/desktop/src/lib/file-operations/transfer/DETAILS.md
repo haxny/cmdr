@@ -78,8 +78,9 @@ dialog after each test so pending debounce work cannot reach another test's mock
 Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`. The area's shape: `CLAUDE.md` § Module
 map. What the pieces DO is in the sections below: the two dialogs and both state factories in § "How transfer flows",
 the compress components (level slider, estimate line, name helper, dest-exists check) in § "Compress mode", the password
-prompt in § "Archive-password prompt", the `..` helpers in § "Index conversion for `..` entry", and pause / queue /
-`backgrounded` in § "Pause, Queue, and auto-queue". Only the layout facts that none of those carry live here:
+prompt in § "The unlock prompt (archives and restic repos)", the `..` helpers in § "Index conversion for `..` entry",
+and pause / queue / `backgrounded` in § "Pause, Queue, and auto-queue". Only the layout facts that none of those carry
+live here:
 
 - **In `transfer-progress-state.svelte.ts`, `backgrounded` and `destroyed` are plain `let`s, NOT `$state`.** They're
   read on teardown paths that run during synchronous reactive-scope disposal, where a `$state` rune read returns a STALE
@@ -339,28 +340,47 @@ destinations".
      on a reason Cmdr couldn't classify. The rule and why it's narrow: `#lib/onboarding/DETAILS.md` § "What an error
      message may add about it".
 
-## Archive-password prompt
+## The unlock prompt (archives and restic repos)
 
-Copying or moving a source out of an encrypted archive (legacy PKWARE ZipCrypto zip today) needs a password before the
-extract can decrypt. The backend raises a typed `WriteOperationError` of type `archive_needs_password` carrying the
-source `path` and a `wrongAttempt` flag; the frontend turns that into a prompt-and-retry loop instead of the generic
-error dialog.
+Copying or moving a source out of an encrypted archive (legacy PKWARE ZipCrypto zip today) or a restic backup repo needs
+a password before the read can decrypt. The backend raises a typed `WriteOperationError` of type
+`archive_needs_password` carrying the source `path` and a `wrongAttempt` flag; the frontend turns that into a
+prompt-and-retry loop instead of the generic error dialog. A listing that needs the password (a header-encrypted
+archive, a repo's snapshots) raises the same `UnlockDialog` in browse mode, from the listing loader's `onNeedsPassword`.
+
+The two containers answer differently, and the PATH says which one this is (`describeContainer` in
+`pane/unlock-flow.svelte.ts`: under a `Browse snapshots` component is a repo, via
+`apps/desktop/src/lib/file-explorer/restic/path-detection.ts`; anything else an archive). The backend's `NeedsPassword`
+deliberately carries no container field, so every archive mapping site stays untouched.
+
+- **A repo verifies before the dialog closes.** Submit calls `unlockContainer` with the "Remember in Keychain" choice
+  (on by default) and a fresh `unlockId`; the dialog stays up with the field and Unlock disabled and a spinner (its
+  `role="status"` label says it's checking), and Cancel stays live. `unlocked` closes and follows up exactly like an
+  archive's submit (browse re-lists, transfer re-dispatches); `wrongPassword` re-arms it in place (retry copy, the
+  `rejections` bump empties the field); a refusal that never reached the repo (`timedOut`, `volume`, ...) keeps the
+  password and shows the couldn't-reach note, since it says nothing about the password.
+- **Cancel mid-check closes at once.** `handleCancel` sends `cancelContainerUnlock(unlockId)` and only then
+  `forgetContainerPassword`, in that order: a check finishing between a forget and a later cancel would keep the
+  password behind the forget. A check whose id the flow no longer holds (cancelled, answered over MCP, swept) is ignored
+  when it answers. The backend half: `src-tauri/src/commands/DETAILS.md` § "The one deliberate drop".
+- **The fallback pane behind the prompt names a backup**: `renderListingError(error, { path })` picks
+  `errors.listing.resticRepoNeedsPassword` for a repo path, since it's visible for the whole check.
 
 - **Interception is a branch in `handleTransferError`** (`pane/dialog-state.svelte.ts`), NOT in the transfer dialogs.
   When `error.type === 'archive_needs_password'`, it shows `UnlockDialog` and returns before the generic-error path. It
   deliberately keeps `transferProgressProps` alive (only unmounting the progress dialog, which is safe because the
   write-error already settled the op) so the same operation can be re-dispatched. The archive lives on the source pane's
   volume (an archive pane keeps its parent drive's `volumeId`), so
-  `parentVolumeId = transferProgressProps. sourceVolumeId`; `archivePath` is the errored source `path`
-  (`unlock_container` accepts the archive file OR any inner path). The prompt names the archive via
-  `archiveNameFromPath` (the leftmost archive-boundary segment).
-- **Submit → store then re-dispatch.** `handleUnlockSubmit` calls `setArchivePassword`, then re-shows the progress
-  dialog with the same props but `previewId: null` — the first dispatch consumed the scan preview, so the retry re-scans
-  the archive index (fast; scanning reads the index without decrypting). ⚠️ Clearing the id is now load-bearing rather
-  than tidy: the retry is a NEW operation, and the backend refuses a second claim on one preview, so a carried-over id
-  would silently downgrade to a full re-walk. A wrong password makes the backend raise `archive_needs_password` again
-  with `wrongAttempt: true`, so the interception fires a second time and the dialog re-prompts (its distinct copy, empty
-  field via a fresh mount).
+  `parentVolumeId = transferProgressProps. sourceVolumeId`; the prompt's `path` is the errored source `path`
+  (`unlock_container` accepts the container OR any inner path). The prompt names an archive via `archiveNameFromPath`
+  (the leftmost archive-boundary segment), a repo by its folder.
+- **Submit → store then re-dispatch (an archive).** `handleUnlockSubmit` calls `setArchivePassword`, then re-shows the
+  progress dialog with the same props but `previewId: null` — the first dispatch consumed the scan preview, so the retry
+  re-scans the archive index (fast; scanning reads the index without decrypting). ⚠️ Clearing the id is now load-bearing
+  rather than tidy: the retry is a NEW operation, and the backend refuses a second claim on one preview, so a
+  carried-over id would silently downgrade to a full re-walk. A wrong password makes the backend raise
+  `archive_needs_password` again with `wrongAttempt: true`, so the interception fires a second time and the dialog
+  re-prompts (its distinct copy, empty field via a fresh mount).
 - **An agent's unlock stores but never starts.** The MCP `unlock` tool routes to `supplyStoredPassword` instead of
   `handleUnlockSubmit`, and ❌ never re-dispatches: it settles the transfer, and the agent runs `copy` / `move` again so
   extraction goes through the same gate as every other write. `pane/DETAILS.md` § "Only a PERSON's submit
@@ -368,10 +388,10 @@ error dialog.
 - **Mid-transfer wrong password.** ZipCrypto's open-time check false-accepts ~1/256, caught later at end-of-stream CRC,
   so a `wrongAttempt: true` error can arrive AFTER progress started. The interception is in the running-op error path,
   so this is handled the same as an up-front rejection — no separate pre-flight branch.
-- **Cancel settles cleanly.** `handleUnlockCancel` calls `clearArchivePassword` (forget the archive password) and runs
-  the same tail a dismissed transfer error does — refresh both panes, drop the source-pane operation snapshot and
-  selection, null the props, refocus — so nothing looks stuck. The op already terminated on the backend (the write-error
-  settled it), so there's no running op to cancel.
+- **Cancel settles cleanly.** `handleUnlockCancel` calls `forgetContainerPassword` (after dropping a repo check in
+  flight) and runs the same tail a dismissed transfer error does — refresh both panes, drop the source-pane operation
+  snapshot and selection, null the props, refocus — so nothing looks stuck. The op already terminated on the backend
+  (the write-error settled it), so there's no running op to cancel.
 - **AES archives reach here too.** WinZip AES (AE-1/AE-2, what `7z -mem=AES256` and recent WinZip write) decrypts
   through the `zip` crate's `aes-crypto` feature, and a password-protected 7z through `sevenz-rust2`'s `aes256`, so both
   raise this prompt and both can be unlocked by it (`crates/cmdr-archive/src/read/archive_test.rs`,

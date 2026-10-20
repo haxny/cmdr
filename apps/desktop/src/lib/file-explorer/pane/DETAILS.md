@@ -981,7 +981,8 @@ below rather than merely spreading lines:
 - `transfer-pane-effects.ts`: everything a settled transfer does to the panes, all of it reading birth context. The one
   module that can touch a pane, and the one an adopted view is built without.
 - `adopted-operation.svelte.ts`: the progress dialog's adopted arm, owning that slot and its four outcomes.
-- `unlock-flow.svelte.ts`: the password prompt and its `transfer` / `browse` modes.
+- `unlock-flow.svelte.ts`: the password prompt and its `transfer` / `browse` modes, for an archive (stored unchecked,
+  closes at once) or a restic repo (checked with the prompt up, cancelable mid-check).
 - `background-operations.svelte.ts`: operations with NO progress dialog, started there (F2 in a setup dialog) or sent
   there (Queue). Holds their birth context privately and watches each for the one stop nobody else asks about.
 - `transfer-op-label.ts`: the log-line label for an operation type, shared by the two families.
@@ -1123,12 +1124,12 @@ parked operation is already settled: `src-tauri/src/mcp/DETAILS.md` § "Answerin
 clearing the prompt also mirrors it to the backend (`notifyArchivePasswordPrompt` / `-Dismissed`), which is what lets
 `cmdr://state` name the archive at all; ❌ the password is never part of that mirror.
 
-**The archive-password flow can't aim the re-dispatch either.** `unlock-flow.svelte.ts` owns the prompt and both its
-modes but holds no reference to birth context: it asks `hasBirthContext()` and then calls `redispatchBirthOperation()`
-or `settleBirthOperation()`, neither of which takes an argument. So "the retry re-runs the operation the user unlocked"
-is a property of the wiring, not of the flow behaving itself. What the re-dispatch MUST keep doing is clearing
-`previewId` (a preview accepts exactly one claimant, so a carried-over id silently downgrades the retry to a full
-re-walk); that lives in `dialog-state.svelte.ts`'s `redispatchBirthOperation`.
+**The unlock flow can't aim the re-dispatch either.** `unlock-flow.svelte.ts` owns the prompt and both its modes but
+holds no reference to birth context: it asks `hasBirthContext()` and then calls `redispatchBirthOperation()` or
+`settleBirthOperation()`, neither of which takes an argument. So "the retry re-runs the operation the user unlocked" is
+a property of the wiring, not of the flow behaving itself. What the re-dispatch MUST keep doing is clearing `previewId`
+(a preview accepts exactly one claimant, so a carried-over id silently downgrades the retry to a full re-walk); that
+lives in `dialog-state.svelte.ts`'s `redispatchBirthOperation`.
 
 **A background job keeps its birth context out of the slot.** `background-operations.svelte.ts` holds the props of every
 operation running with no progress dialog, so a background start never occupies the slot and the next F5 opens at once.

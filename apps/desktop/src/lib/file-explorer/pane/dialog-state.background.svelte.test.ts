@@ -28,7 +28,7 @@ vi.mock('#lib/tauri-commands/index.js', async () => ({
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
   setArchivePassword: vi.fn(() => Promise.resolve()),
-  clearArchivePassword: vi.fn(() => Promise.resolve()),
+  forgetContainerPassword: vi.fn(() => Promise.resolve()),
   notifyArchivePasswordPrompt: vi.fn(() => Promise.resolve()),
   notifyArchivePasswordDismissed: vi.fn(() => Promise.resolve()),
   dismissFailedOperation: vi.fn(() => Promise.resolve()),
@@ -407,7 +407,7 @@ describe('an archive password, for a job with no dialog', () => {
     expect(dialogs.showUnlockDialog).toBe(true)
     expect(dialogs.showTransferProgressDialog).toBe(false)
 
-    dialogs.handleUnlockSubmit('hunter2')
+    dialogs.handleUnlockSubmit({ password: 'hunter2', remember: false })
     await settle()
 
     expect(copyBetweenVolumes).toHaveBeenCalledTimes(2)
@@ -447,7 +447,7 @@ describe('an archive password, for a job with no dialog', () => {
     await settle()
 
     expect(dialogs.showUnlockDialog).toBe(true)
-    expect(dialogs.unlockProps?.archivePath).toBe('/Users/me/secret.zip')
+    expect(dialogs.unlockProps?.path).toBe('/Users/me/secret.zip')
   })
 
   it('leaves the selection the person made since alone when the prompt is cancelled', async () => {
@@ -519,7 +519,7 @@ describe('an archive password, for a job with no dialog', () => {
     const retry = vi.fn()
     dialogs.showUnlockForBrowse({
       volumeId: 'root',
-      archivePath: '/Users/me/other.zip',
+      path: '/Users/me/other.zip',
       wrongAttempt: false,
       retry,
     })
@@ -527,14 +527,14 @@ describe('an archive password, for a job with no dialog', () => {
     listeners.error?.({ operationId: 'op-1', operationType: 'copy', error: needsPassword, progressAtStop: null })
     await settle()
 
-    expect(dialogs.unlockProps?.archivePath).toBe('/Users/me/other.zip')
+    expect(dialogs.unlockProps?.path).toBe('/Users/me/other.zip')
     expect(dialogs.transferProgressProps).toBeNull()
 
     // Once that prompt is answered, the held one asks.
     dialogs.handleUnlockCancel()
     await settle()
 
-    expect(dialogs.unlockProps?.archivePath).toBe('/Users/me/secret.zip')
+    expect(dialogs.unlockProps?.path).toBe('/Users/me/secret.zip')
   })
 
   it('restarts a permanent delete sent off with Queue in the progress dialog, never out of sight', async () => {
@@ -552,7 +552,7 @@ describe('an archive password, for a job with no dialog', () => {
     dialogs.handleTransferQueue('op-1')
     listeners.error?.({ operationId: 'op-1', operationType: 'delete', error: needsPassword, progressAtStop: null })
     await settle()
-    dialogs.handleUnlockSubmit('hunter2')
+    dialogs.handleUnlockSubmit({ password: 'hunter2', remember: false })
     await settle()
 
     expect(deleteFiles).not.toHaveBeenCalled()
@@ -572,7 +572,7 @@ describe('an archive password, for a job with no dialog', () => {
 
     expect(dialogs.showUnlockDialog).toBe(true)
 
-    dialogs.handleUnlockSubmit('hunter2')
+    dialogs.handleUnlockSubmit({ password: 'hunter2', remember: false })
     await settle()
 
     // It lives in the background now, so it starts there again.

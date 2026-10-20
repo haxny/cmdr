@@ -18,7 +18,7 @@
  * clear the 800-line `file-length` mark.
  */
 
-import { describe, it, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import type { VolumeConflictInfo, WriteConflictEvent } from '#lib/tauri-commands/index.js'
 import type { RollbackSupport } from '#lib/ipc/bindings.js'
@@ -130,15 +130,19 @@ beforeEach(() => {
 /**
  * Tier 3 a11y tests for `UnlockDialog.svelte`.
  *
- * Covers the first prompt and the wrong-attempt re-prompt. Tauri IPC is stubbed
- * so the dialog can mount cleanly in happy-dom.
+ * Covers the first prompt and the wrong-attempt re-prompt for an archive, and
+ * for a restic repo the Keychain checkbox, the busy state while the password
+ * is checked, and the couldn't-reach note. Tauri IPC is stubbed so the dialog
+ * can mount cleanly in happy-dom.
  */
 describe('UnlockDialog a11y', () => {
+  const callbacks = { onSubmit: () => {}, onCancel: () => {} }
+
   it('first prompt has no a11y violations', async () => {
     const target = container()
     mount(UnlockDialog, {
       target,
-      props: { archiveName: 'photos.zip', wrongAttempt: false, onSubmit: () => {}, onCancel: () => {} },
+      props: { container: 'archive', name: 'photos.zip', wrongAttempt: false, ...callbacks },
     })
     await tick()
     await expectNoA11yViolations(target)
@@ -148,7 +152,42 @@ describe('UnlockDialog a11y', () => {
     const target = container()
     mount(UnlockDialog, {
       target,
-      props: { archiveName: 'photos.zip', wrongAttempt: true, onSubmit: () => {}, onCancel: () => {} },
+      props: { container: 'archive', name: 'photos.zip', wrongAttempt: true, ...callbacks },
+    })
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+
+  it('repo prompt with its Keychain checkbox has no a11y violations, and the box is named', async () => {
+    const target = container()
+    mount(UnlockDialog, {
+      target,
+      props: { container: 'resticRepo', name: 'm3-restic', wrongAttempt: false, ...callbacks },
+    })
+    await tick()
+    await expectNoA11yViolations(target)
+    const box = target.querySelector<HTMLInputElement>('input[type="checkbox"]')
+    const labelId = box?.getAttribute('aria-labelledby') ?? ''
+    expect(document.getElementById(labelId)?.textContent).toContain('Remember in Keychain')
+  })
+
+  it('repo prompt while checking has no a11y violations, and says it is busy', async () => {
+    const target = container()
+    mount(UnlockDialog, {
+      target,
+      props: { container: 'resticRepo', name: 'm3-restic', wrongAttempt: false, checking: true, ...callbacks },
+    })
+    await tick()
+    await expectNoA11yViolations(target)
+    expect(target.querySelector('[aria-busy="true"]')).not.toBeNull()
+    expect(target.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Checking the password…')
+  })
+
+  it('repo prompt after an unreachable check has no a11y violations', async () => {
+    const target = container()
+    mount(UnlockDialog, {
+      target,
+      props: { container: 'resticRepo', name: 'm3-restic', wrongAttempt: false, unreachable: true, ...callbacks },
     })
     await tick()
     await expectNoA11yViolations(target)
