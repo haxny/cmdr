@@ -1923,7 +1923,9 @@ dependencies = [
  "cmdr-restic",
  "cmdr-smb",
  "rustic_core",
+ "serde_json",
  "tokio",
+ "tokio-util",
  "zeroize",
 ]
 

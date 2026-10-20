@@ -1,4 +1,5 @@
-use super::{ResticError, ResticRepo};
+use super::{IndexedRepo, ResticError, ResticRepo};
+use crate::snapshots::snapshot_list_of;
 use crate::test_fixtures::FixtureRepo;
 use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::host::VolumeHost;
@@ -35,11 +36,14 @@ async fn opens_with_the_password_and_lists_snapshots_oldest_first() {
     let parent = parent_with(&fixture, InMemoryVolume::new("nas")).await;
 
     let repo = open(&parent, PASSWORD).await.expect("the right password opens it");
-    let list = repo.snapshots().await.expect("lists snapshots");
+    let files = repo.refresh_snapshots(Vec::new()).await.expect("lists snapshots");
+    let list = snapshot_list_of(&files);
 
     let times: Vec<_> = list.snapshots().iter().map(|s| s.time).collect();
     assert_eq!(times, vec![at(1_790_000_000), at(1_791_000_000), at(1_792_000_000)]);
-    assert_eq!(list.latest().expect("latest").hostname, "mini");
+    let latest = list.latest().expect("latest");
+    let latest_file = files.iter().find(|f| *f.id.to_hex() == latest.id).expect("listed");
+    assert_eq!(latest_file.hostname, "mini");
     assert!(list.snapshots().iter().all(|s| s.folder_name.ends_with(')')));
 }
 
@@ -55,7 +59,7 @@ async fn a_wrong_password_is_typed_and_the_right_one_then_opens() {
     let repo = open(&parent, PASSWORD)
         .await
         .expect("the right password still opens it");
-    assert_eq!(repo.snapshots().await.expect("snapshots").snapshots().len(), 1);
+    assert_eq!(repo.refresh_snapshots(Vec::new()).await.expect("snapshots").len(), 1);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -65,8 +69,8 @@ async fn a_v1_repo_opens_too() {
     let parent = parent_with(&fixture, InMemoryVolume::new("nas")).await;
 
     let repo = open(&parent, PASSWORD).await.expect("v1 opens");
-    let list = repo.snapshots().await.expect("snapshots");
-    assert_eq!(list.snapshots()[0].hostname, "old-mac");
+    let files = repo.refresh_snapshots(Vec::new()).await.expect("snapshots");
+    assert_eq!(files[0].hostname, "old-mac");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -77,7 +81,7 @@ async fn opening_and_listing_never_write_to_the_repo() {
 
     let _ = open(&parent, "incorrect horse").await;
     let repo = open(&parent, PASSWORD).await.expect("opens");
-    repo.snapshots().await.expect("snapshots");
+    repo.refresh_snapshots(Vec::new()).await.expect("snapshots");
 
     assert_eq!(repo.backend.write_attempts(), 0);
     // No lock file either: rustic's read path doesn't take restic locks.
@@ -132,14 +136,16 @@ async fn reading_a_tree_uses_ranged_reads_of_the_pack_never_the_whole_pack() {
     let parent = parent_with(&fixture, InMemoryVolume::new("nas")).await;
 
     let repo = open(&parent, PASSWORD).await.expect("opens");
-    assert!(parent.read_range_log().is_empty(), "opening reads no pack");
-    let backend = Arc::clone(&repo.backend);
-    // `to_indexed` consumes the open repo, so take sole ownership of it.
-    let inner = Arc::try_unwrap(repo.repo).expect("the test holds the only handle");
+    let snapshot = repo.refresh_snapshots(Vec::new()).await.expect("snapshots").remove(0);
+    assert!(parent.read_range_log().is_empty(), "opening and listing read no pack");
+    let parent_dyn: Arc<dyn Volume> = Arc::clone(&parent) as Arc<dyn Volume>;
+    let indexed = IndexedRepo::open(parent_dyn, PathBuf::from(ROOT), PASSWORD, None, &VolumeHost::detached())
+        .await
+        .expect("index loads");
+    let indexed = Arc::new(indexed);
+    let reader = Arc::clone(&indexed);
     tokio::task::spawn_blocking(move || {
-        let snapshot = inner.get_all_snapshots().expect("snapshots").remove(0);
-        let indexed = inner.to_indexed().expect("index loads");
-        indexed.get_tree(&snapshot.tree).expect("root tree reads");
+        reader.repo.get_tree(&snapshot.tree).expect("root tree reads");
     })
     .await
     .expect("blocking task");
@@ -151,5 +157,5 @@ async fn reading_a_tree_uses_ranged_reads_of_the_pack_never_the_whole_pack() {
         reads.iter().all(|(_, len)| *len < largest_pack),
         "every read is a window, never a whole pack: {reads:?}"
     );
-    assert_eq!(backend.write_attempts(), 0);
+    assert_eq!(repo.backend.write_attempts() + indexed.backend.write_attempts(), 0);
 }

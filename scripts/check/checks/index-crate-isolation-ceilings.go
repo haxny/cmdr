@@ -433,21 +433,21 @@ var surfaceGuardedCrates = []struct {
 		},
 	},
 	{
-		// Measured 2026-10-20, at the crate's creation (#422), and set to exactly
-		// what it exposes, with no headroom.
+		// Measured 2026-10-20, when the crate grew its volume (#422), and set to
+		// exactly what it exposes, with no headroom.
 		//
-		// The six root promises serve three callers: detection (`is_restic_repo`),
-		// unlocking (`ResticRepo`, `ResticError`), and the snapshot folders
-		// (`SnapshotList`, `Snapshot`, `LATEST_FOLDER_NAME`). The items are their
-		// five methods: `ResticRepo::open` and `snapshots`, and `SnapshotList::
-		// snapshots`, `latest`, and `find`. No public module; the `testing`-gated
-		// `test_fixtures` counts apart. Item-by-item:
+		// The five root promises are what the host's route, overlay, and write
+		// guards need: detection (`is_restic_repo`), the lexical route
+		// (`restic_route`, `VIRTUAL_ENTRY_NAME`), the hub (`ResticRepos`), and the
+		// view (`ResticVolume`). Opening a repo, the snapshot list, and the trees
+		// stay crate-private: the volume that uses them lives here. No public
+		// module; the `testing`-gated `test_fixtures` counts apart. Item-by-item:
 		// `crates/cmdr-restic/DETAILS.md` § "The public surface is capped".
 		Name: "cmdr-restic",
 		Ceilings: surfaceCeilings{
-			RootPromises:   6,
+			RootPromises:   5,
 			PublicModules:  0,
-			SubsystemItems: 5,
+			SubsystemItems: 0,
 		},
 	},
 }

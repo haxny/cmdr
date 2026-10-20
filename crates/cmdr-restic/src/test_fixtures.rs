@@ -9,6 +9,7 @@
 //!
 //! Never in a shipped build.
 
+use crate::ResticVolume;
 use bytes::Bytes;
 use cmdr_fs::volume::Volume;
 use rustic_core::jiff::Timestamp;
@@ -71,14 +72,18 @@ impl FixtureRepo {
         Self { backend, repo }
     }
 
-    /// Saves a snapshot that backed up nothing (an empty tree), taken at `time`
-    /// on `hostname`. Enough for anything that only reads the snapshot list.
+    /// Saves a snapshot that backed up nothing (an empty tree, no summary), taken
+    /// at `time` on `hostname`. Enough for anything that only reads the snapshot
+    /// list.
     pub fn add_snapshot(&self, time: SystemTime, hostname: &str) {
         let mut snapshot = SnapshotOptions::default()
             .to_snapshot()
             .expect("default snapshot options are valid");
         snapshot.time = zoned(time);
         snapshot.hostname = hostname.to_string();
+        // No summary, as restic before 0.17 wrote them (rustic would otherwise
+        // add an all-zero one).
+        snapshot.summary = None;
         self.repo
             .save_snapshots(vec![snapshot])
             .expect("saving a snapshot to memory");
@@ -116,6 +121,10 @@ impl FixtureRepo {
 
     /// Writes the repo onto `volume` under `root`, folders included (an empty
     /// `locks/` too, as `restic init` leaves one).
+    ///
+    /// Files already there are left alone, so writing again after another
+    /// [`backup`](Self::backup) adds just the new ones: restic's files are named
+    /// by their content, and the config never changes.
     pub async fn write_into(&self, volume: &dyn Volume, root: &Path) {
         let mut dirs = vec![
             root.to_path_buf(),
@@ -142,12 +151,21 @@ impl FixtureRepo {
             }
         }
         for (path, bytes) in files {
-            volume
-                .create_file(&root.join(path), &bytes)
-                .await
-                .expect("fixture file");
+            let path = root.join(path);
+            if !volume.exists(&path).await {
+                volume.create_file(&path, &bytes).await.expect("fixture file");
+            }
         }
     }
+}
+
+/// Tries `password` on the repo `volume` views, the way the host's unlock will:
+/// `true` when it unlocks (the hub keeps it), `false` when it's wrong.
+///
+/// The door for tests that need an unlocked view before the host's unlock flow
+/// exists around them.
+pub async fn unlock(volume: &ResticVolume, password: &str) -> bool {
+    volume.unlock(password).await.expect("the repo answers")
 }
 
 fn new_repository(backend: &Arc<MemoryBackend>) -> Repository<()> {

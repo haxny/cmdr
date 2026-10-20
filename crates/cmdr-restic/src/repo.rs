@@ -1,25 +1,26 @@
-//! Opening a repo with its password, and reading its snapshot list.
+//! Opening a repo with its password, reading its snapshot list, and loading its
+//! index for the trees and file contents.
 //!
 //! Every `rustic_core` call runs on `spawn_blocking` (the storage adapter
 //! `block_on`s the parent volume, which would panic on an async worker), so
-//! each public method here is async and hops to a blocking thread once.
+//! each method here is async and hops to a blocking thread once.
 
 use crate::backend::{VolumeBackend, volume_error_in};
-use crate::snapshots::{RawSnapshot, SnapshotList, snapshot_list};
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::{Volume, VolumeError};
-use rustic_core::jiff::tz::TimeZone;
+use rustic_core::repofile::SnapshotFile;
 use rustic_core::{
-    Credentials, FileType, OpenStatus, ReadBackend, Repository, RepositoryBackends, RepositoryOptions, RusticError,
+    Credentials, FileType, IndexedFullStatus, OpenStatus, ReadBackend, Repository, RepositoryBackends,
+    RepositoryOptions, RusticError,
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::runtime::Handle;
 use zeroize::Zeroizing;
 
 /// Why a repo couldn't be opened or read. Typed, so the host words each one.
 #[derive(Debug, Clone)]
-pub enum ResticError {
+pub(crate) enum ResticError {
     /// The password doesn't unlock any of the repo's keys.
     WrongPassword,
     /// The folder has no restic `config`, so it isn't a repo (any more).
@@ -29,18 +30,54 @@ pub enum ResticError {
     /// rustic couldn't read the repo for another reason (a damaged or
     /// unsupported repo, a crashed worker).
     Unreadable {
-        /// rustic's own message, for the log. ❌ Never shown to a user or
+        /// rustic's own message, for the log and the technical details. ❌ Never
         /// matched on.
         detail: String,
     },
 }
 
+impl ResticError {
+    /// The [`VolumeError`] a volume answers for this, about `path`.
+    pub(crate) fn into_volume_error(self, path: &Path) -> VolumeError {
+        match self {
+            Self::WrongPassword => VolumeError::NeedsPassword { wrong_attempt: true },
+            Self::NotARepository => VolumeError::NotFound(path.display().to_string()),
+            Self::Volume(err) => err,
+            Self::Unreadable { detail } => VolumeError::IoError {
+                message: detail,
+                raw_os_error: None,
+            },
+        }
+    }
+}
+
+/// The repo options every open shares: no rustic cache unless the host gives a
+/// folder for one (❌ never rustic's default location).
+fn options(cache_dir: Option<PathBuf>) -> RepositoryOptions {
+    let mut options = RepositoryOptions::default();
+    options.no_cache = cache_dir.is_none();
+    options.cache_dir = cache_dir;
+    options
+}
+
+/// Opens and unlocks the repo behind `backend`. Runs on the blocking thread.
+fn open_blocking(
+    backend: &Arc<VolumeBackend>,
+    password: &str,
+    cache_dir: Option<PathBuf>,
+) -> Result<Repository<OpenStatus>, ResticError> {
+    let backends = RepositoryBackends::new(Arc::clone(backend) as _, None);
+    Repository::new(&options(cache_dir), &backends)
+        .and_then(|repo| repo.open(&Credentials::password(password)))
+        .map_err(|err| classify(&err, backend))
+}
+
 /// An unlocked restic repo, read through the volume it lives on.
 ///
-/// Holds rustic's opened (not yet indexed) repository: enough for the snapshot
-/// list, which never needs the index.
-pub struct ResticRepo {
-    pub(crate) repo: Arc<Repository<OpenStatus>>,
+/// Holds rustic's opened (not indexed) repository: enough for the snapshot list,
+/// which never needs the index.
+pub(crate) struct ResticRepo {
+    repo: Arc<Repository<OpenStatus>>,
     pub(crate) backend: Arc<VolumeBackend>,
     runtime: Handle,
 }
@@ -53,7 +90,78 @@ impl ResticRepo {
     /// thread. `cache_dir` is where rustic may keep its local cache of snapshot
     /// and index files; `None` runs without one. Opening never writes to the repo
     /// and never takes a restic lock.
-    pub async fn open(
+    pub(crate) async fn open(
+        parent: Arc<dyn Volume>,
+        root: PathBuf,
+        password: &str,
+        cache_dir: Option<PathBuf>,
+        host: &VolumeHost,
+    ) -> Result<Self, ResticError> {
+        let runtime = host.runtime();
+        let backend = Arc::new(VolumeBackend::new(parent, root, runtime.clone()));
+        let password = Zeroizing::new(password.to_string());
+        let task_backend = Arc::clone(&backend);
+        let repo = runtime
+            .spawn_blocking(move || open_blocking(&task_backend, &password, cache_dir))
+            .await
+            .map_err(worker_crashed)??;
+        Ok(Self {
+            repo: Arc::new(repo),
+            backend,
+            runtime,
+        })
+    }
+
+    /// Every snapshot in the repo, given the ones already known: rustic keeps
+    /// those, reads only the snapshot files it hasn't seen, and drops the ones
+    /// gone from the repo. Pass an empty `current` for a first read. Never reads
+    /// the index.
+    pub(crate) async fn refresh_snapshots(&self, current: Vec<SnapshotFile>) -> Result<Vec<SnapshotFile>, ResticError> {
+        let repo = Arc::clone(&self.repo);
+        let backend = Arc::clone(&self.backend);
+        self.runtime
+            .spawn_blocking(move || {
+                repo.update_all_snapshots(current)
+                    .map_err(|err| classify(&err, &backend))
+            })
+            .await
+            .map_err(worker_crashed)?
+    }
+}
+
+impl std::fmt::Debug for ResticRepo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResticRepo")
+            .field("name", &self.repo.name)
+            .finish_non_exhaustive()
+    }
+}
+
+/// A repo opened AND indexed: what browsing a snapshot's trees and reading its
+/// files need (`IndexedFull`).
+///
+/// Its own open, separate from the [`ResticRepo`] the snapshot list keeps:
+/// `to_indexed` consumes the opened repo, so sharing one would mean prying it
+/// out from under in-flight listings, and a failed load would lose it.
+pub(crate) struct IndexedRepo {
+    pub(crate) repo: Repository<IndexedFullStatus>,
+    pub(crate) backend: Arc<VolumeBackend>,
+}
+
+// Concurrent reads go through `&IndexedRepo` from several blocking threads at
+// once (a copy reads files in parallel), which is sound only while rustic's
+// indexed repository stays `Send + Sync` (true in 0.13.0: every field is an
+// `Arc<dyn … + Send + Sync>`, the index an `Arc`, the blob cache a
+// `quick_cache::sync::Cache`). A bump that breaks it fails to compile here.
+const _: fn() = || {
+    fn send_and_sync<T: Send + Sync>() {}
+    send_and_sync::<Repository<IndexedFullStatus>>();
+};
+
+impl IndexedRepo {
+    /// Opens the repo afresh with `password` and loads its full index, both on
+    /// one blocking thread. Reads every index file through the parent.
+    pub(crate) async fn open(
         parent: Arc<dyn Volume>,
         root: PathBuf,
         password: &str,
@@ -66,45 +174,18 @@ impl ResticRepo {
         let task_backend = Arc::clone(&backend);
         let repo = runtime
             .spawn_blocking(move || {
-                let mut options = RepositoryOptions::default();
-                options.no_cache = cache_dir.is_none();
-                options.cache_dir = cache_dir;
-                let backends = RepositoryBackends::new(Arc::clone(&task_backend) as _, None);
-                Repository::new(&options, &backends)
-                    .and_then(|repo| repo.open(&Credentials::password(password.as_str())))
+                open_blocking(&task_backend, &password, cache_dir)?
+                    .to_indexed()
                     .map_err(|err| classify(&err, &task_backend))
             })
             .await
             .map_err(worker_crashed)??;
-        Ok(Self {
-            repo: Arc::new(repo),
-            backend,
-            runtime,
-        })
+        Ok(Self { repo, backend })
     }
 
-    /// Every snapshot in the repo, named and ordered (local time from the
-    /// system's zone). Reads only the snapshot files, never the index.
-    pub async fn snapshots(&self) -> Result<SnapshotList, ResticError> {
-        let repo = Arc::clone(&self.repo);
-        let backend = Arc::clone(&self.backend);
-        self.runtime
-            .spawn_blocking(move || {
-                let snapshots = repo.get_all_snapshots().map_err(|err| classify(&err, &backend))?;
-                let raw = snapshots
-                    .into_iter()
-                    .map(|s| RawSnapshot {
-                        id: *s.id,
-                        time: s.time.timestamp(),
-                        hostname: s.hostname,
-                        paths: s.paths.iter().cloned().collect(),
-                        tags: s.tags.iter().cloned().collect(),
-                    })
-                    .collect();
-                Ok(snapshot_list(raw, &TimeZone::system()))
-            })
-            .await
-            .map_err(worker_crashed)?
+    /// Sorts a failure of a read through this repo. Runs on the blocking thread.
+    pub(crate) fn classify(&self, err: &RusticError) -> ResticError {
+        classify(err, &self.backend)
     }
 }
 
@@ -133,17 +214,10 @@ fn classify(err: &RusticError, backend: &VolumeBackend) -> ResticError {
     }
 }
 
-fn worker_crashed(err: tokio::task::JoinError) -> ResticError {
+/// A blocking task that panicked or was dropped: a typed error, ❌ never a crash.
+pub(crate) fn worker_crashed(err: tokio::task::JoinError) -> ResticError {
     ResticError::Unreadable {
         detail: format!("the blocking worker stopped: {err}"),
-    }
-}
-
-impl std::fmt::Debug for ResticRepo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ResticRepo")
-            .field("name", &self.repo.name)
-            .finish_non_exhaustive()
     }
 }
 

@@ -9,6 +9,7 @@
 
 use bytes::Bytes;
 use cmdr_fs::volume::{Volume, VolumeError};
+use rustic_core::repofile::KeyFile;
 use rustic_core::{BytesList, ErrorKind, FileType, Id, ReadBackend, RusticError, RusticResult, WriteBackend};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -91,6 +92,60 @@ impl VolumeBackend {
     }
 }
 
+impl VolumeBackend {
+    /// The key files rustic may try a password on: at most [`MAX_KEYS`] of them
+    /// (the first by id), each a real key file whose scrypt cost is tolerable.
+    ///
+    /// rustic tries every key it lists, and passes each file's own `N`, `r`, and
+    /// `p` (plaintext JSON) straight to scrypt with no ceiling. Anyone can leave
+    /// a folder that looks like a repo on a shared drive, so without this a
+    /// typed password could ask scrypt for terabytes (an allocation abort) or
+    /// thousands of one-second derivations. rustic finds keys only through this
+    /// listing, so a key skipped here is never derived.
+    fn tolerable_keys(&self, mut keys: Vec<(Id, u32)>) -> RusticResult<Vec<(Id, u32)>> {
+        keys.sort_unstable_by_key(|(id, _)| *id);
+        keys.truncate(MAX_KEYS);
+        let mut tolerable = Vec::with_capacity(keys.len());
+        for (id, size) in keys {
+            if size > MAX_KEY_FILE_BYTES {
+                continue;
+            }
+            let bytes = self
+                .read_stream(&self.path_of(FileType::Key, &id), None)
+                .map_err(backend_error)?;
+            let Ok(key) = serde_json::from_slice::<KeyFile>(&bytes) else {
+                continue;
+            };
+            if scrypt_cost_is_tolerable(key.n, key.r, key.p) {
+                tolerable.push((id, size));
+            }
+        }
+        Ok(tolerable)
+    }
+}
+
+/// The most key files offered to rustic. A real repo has a handful (one per
+/// person or machine); a password typed into a crafted one with thousands would
+/// otherwise cost a second of scrypt per key.
+pub(crate) const MAX_KEYS: usize = 32;
+
+/// The largest file read as a key. A real one is about 450 bytes of JSON.
+const MAX_KEY_FILE_BYTES: u32 = 64 * 1024;
+
+/// The ceiling on a key's scrypt cost, `N·r·p`: 8 times rustic's own default
+/// (`N = 2^17`, `r = 8`, `p = 1`) and 32 times restic's (`N = 2^15`). It also
+/// caps scrypt's memory, `128·N·r` bytes, at 1 GiB.
+const MAX_SCRYPT_COST: u64 = 1 << 23;
+
+/// Whether deriving a key with these scrypt parameters stays inside
+/// [`MAX_SCRYPT_COST`].
+pub(crate) fn scrypt_cost_is_tolerable(n: u32, r: u32, p: u32) -> bool {
+    u64::from(n)
+        .checked_mul(u64::from(r))
+        .and_then(|nr| nr.checked_mul(u64::from(p)))
+        .is_some_and(|cost| cost <= MAX_SCRYPT_COST)
+}
+
 /// A size as rustic's listing wants it. Pack files stay far below 4 GiB (rustic
 /// caps them), so the clamp is a guard, never a real path.
 fn size_u32(size: u64) -> u32 {
@@ -157,7 +212,8 @@ impl ReadBackend for VolumeBackend {
                 }
                 Ok(packs)
             }
-            FileType::Index | FileType::Key | FileType::Snapshot => self.list_ids_in(&self.root.join(tpe.dirname())),
+            FileType::Key => self.tolerable_keys(self.list_ids_in(&self.root.join(tpe.dirname()))?),
+            FileType::Index | FileType::Snapshot => self.list_ids_in(&self.root.join(tpe.dirname())),
         }
     }
 

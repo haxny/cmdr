@@ -32,8 +32,17 @@ rustic_core = { version = "0.13.0", default-features = false }
 bytes = "1"
 # The runtime `Handle` the storage adapter `block_on`s the parent's async reads
 # on. It arrives through `VolumeHost::runtime`; this crate never builds a runtime.
-tokio = { version = "1", features = ["rt"] }
-# Wipes the copy of the password the blocking open task carries, on drop.
+# `sync` for the hub's per-repo locks, `time` for the confirmation deadline and
+# the index's idle drop, `macros` for racing a listing against its cancel.
+tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
+# `CancellationToken`, the pane's cancel as `Volume::list_directory_with_cancel`
+# hands it over. The same version and features `cmdr-fs` uses.
+tokio-util = { version = "0.7.18", default-features = false }
+# Reads a key file's plaintext scrypt cost before rustic sees it (the adapter's
+# hostile-repo guard). Already in the graph through rustic_core.
+serde_json = "1"
+# Wipes every copy of a password the crate holds (the hub's slots, the blocking
+# open task's), on drop.
 zeroize = "1.9.0"
 
 [dev-dependencies]

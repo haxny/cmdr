@@ -14,12 +14,23 @@ fn id(hex: &str) -> Id {
     hex.parse().expect("test ids are valid hex")
 }
 
+/// restic's own scrypt cost (`N = 2^15`, `r = 8`, `p = 1`).
+const DEFAULT_N: u32 = 1 << 15;
+
+/// A key file as restic writes one: plaintext JSON naming its scrypt cost.
+fn key_json(n: u32, r: u32, p: u32) -> Vec<u8> {
+    format!(
+        r#"{{"created":"2026-10-12T21:00:03+02:00","username":"david","hostname":"m3","kdf":"scrypt","N":{n},"r":{r},"p":{p},"data":"AAAA","salt":"AAAA"}}"#
+    )
+    .into_bytes()
+}
+
 /// A parent holding a repo's on-disk layout, with arbitrary bytes for content:
 /// the adapter only moves bytes, so no real repo is needed at this layer.
 async fn layout_volume(volume: InMemoryVolume) -> Arc<InMemoryVolume> {
     let files: [(String, Vec<u8>); 6] = [
         (format!("{ROOT}/config"), b"config bytes".to_vec()),
-        (format!("{ROOT}/keys/{KEY}"), b"key".to_vec()),
+        (format!("{ROOT}/keys/{KEY}"), key_json(DEFAULT_N, 8, 1)),
         (format!("{ROOT}/snapshots/{SNAP}"), b"snapshot".to_vec()),
         (format!("{ROOT}/data/ab/{PACK_A}"), (0u8..=99).collect()),
         (format!("{ROOT}/data/cd/{PACK_B}"), vec![7; 1_000]),
@@ -73,7 +84,7 @@ async fn lists_each_type_from_its_folder_with_sizes() {
         )
     })
     .await;
-    assert_eq!(keys, vec![(id(KEY), 3)]);
+    assert_eq!(keys, vec![(id(KEY), key_json(DEFAULT_N, 8, 1).len() as u32)]);
     assert_eq!(snaps, vec![(id(SNAP), 8)], "`.DS_Store` isn't an id, so it's skipped");
     assert_eq!(index, vec![]);
     assert_eq!(sorted(packs), vec![(id(PACK_A), 100), (id(PACK_B), 1_000)]);
@@ -183,4 +194,68 @@ async fn every_write_is_refused_and_counted() {
         .await
         .expect("still there");
     assert_eq!(snapshot, b"snapshot");
+}
+
+/// Writes `count` more key files, ids from `first` on, as `json` makes them.
+async fn add_keys(parent: &InMemoryVolume, first: usize, count: usize, json: impl Fn(usize) -> Vec<u8>) -> Vec<Id> {
+    let mut ids = Vec::new();
+    for i in first..first + count {
+        let hex = format!("{:064x}", 0xe000 + i);
+        parent
+            .create_file(&PathBuf::from(format!("{ROOT}/keys/{hex}")), &json(i - first))
+            .await
+            .expect("key file");
+        ids.push(id(&hex));
+    }
+    ids
+}
+
+/// ❗ A key file names its own scrypt cost in plaintext, and rustic hands it to
+/// scrypt with no ceiling. A crafted "repo" on a shared drive could ask for
+/// terabytes of memory the moment someone types a password, so such a key is
+/// never offered to rustic.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_key_asking_scrypt_for_too_much_is_never_offered() {
+    let parent = layout_volume(InMemoryVolume::new("parent")).await;
+    add_keys(&parent, 0, 3, |i| match i {
+        0 => key_json(1 << 30, 8, 1),
+        1 => key_json(DEFAULT_N, 8, 1 << 20),
+        _ => key_json(1 << 20, 1 << 10, 1),
+    })
+    .await;
+    let be = backend(&parent);
+
+    let keys = blocking(move || be.list_with_size(FileType::Key).expect("keys")).await;
+
+    assert_eq!(keys.iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec![id(KEY)]);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_key_that_isnt_a_key_file_is_never_offered() {
+    let parent = layout_volume(InMemoryVolume::new("parent")).await;
+    add_keys(&parent, 0, 1, |_| b"not json".to_vec()).await;
+    add_keys(&parent, 1, 1, |_| vec![b' '; 100_000]).await;
+    let be = backend(&parent);
+
+    let keys = blocking(move || be.list_with_size(FileType::Key).expect("keys")).await;
+    assert_eq!(keys.iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec![id(KEY)]);
+}
+
+/// rustic tries every key it's offered, a second of scrypt each. A folder with
+/// thousands of keys would pin a core for hours, so only a few are offered.
+#[tokio::test(flavor = "multi_thread")]
+async fn only_a_bounded_number_of_keys_is_offered() {
+    let parent = layout_volume(InMemoryVolume::new("parent")).await;
+    add_keys(&parent, 0, 40, |_| key_json(DEFAULT_N, 8, 1)).await;
+    let be = backend(&parent);
+
+    let keys = blocking(move || be.list_with_size(FileType::Key).expect("keys")).await;
+    assert_eq!(keys.len(), super::MAX_KEYS);
+}
+
+#[test]
+fn rustics_own_default_cost_is_well_inside_the_ceiling() {
+    // `scrypt::Params::recommended()`, what rustic's `init` writes.
+    assert!(super::scrypt_cost_is_tolerable(1 << 17, 8, 1));
+    assert!(!super::scrypt_cost_is_tolerable(u32::MAX, u32::MAX, u32::MAX));
 }

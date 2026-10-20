@@ -1,15 +1,16 @@
 use super::{LATEST_FOLDER_NAME, RawSnapshot, snapshot_list};
-use rustic_core::Id;
 use rustic_core::jiff::Timestamp;
 use rustic_core::jiff::tz::TimeZone;
+use rustic_core::{Id, TreeId};
 
 fn raw(id_hex: &str, time: &str) -> RawSnapshot {
+    let id = id_hex.parse::<Id>().expect("valid hex id");
     RawSnapshot {
-        id: id_hex.parse::<Id>().expect("valid hex id"),
+        id,
         time: time.parse::<Timestamp>().expect("valid RFC 3339 time"),
-        hostname: "m3".to_string(),
-        paths: vec!["/Users/david".to_string()],
-        tags: vec![],
+        // Any tree will do for naming; reusing the id keeps each one distinct.
+        tree: TreeId::from(id),
+        size: None,
     }
 }
 
@@ -81,22 +82,25 @@ fn a_short_id_clash_in_the_same_second_lengthens_until_unique() {
     let names = names(&list);
     assert!(names.contains(&"2026-10-12 21.00.03 (a1b2c3d4e)"));
     assert!(names.contains(&"2026-10-12 21.00.03 (a1b2c3d4f)"));
-    // The lengthening is per second: an id with no clash keeps the short form.
+    // Only the ids that clash grow: one with no clash keeps the short form.
     assert!(names.contains(&"2026-10-12 21.00.03 (ffff0000)"));
 }
 
+/// ❗ A folder resolves by its id suffix alone, so two snapshots sharing eight
+/// digits in DIFFERENT seconds must still get different suffixes, or the by-id
+/// lookup couldn't tell them apart.
 #[test]
-fn the_same_short_id_in_different_seconds_keeps_the_short_form() {
+fn a_short_id_clash_across_different_seconds_lengthens_too() {
     let list = snapshot_list(
         vec![
             raw(&hex("a1b2c3d4e5"), "2026-10-12T19:00:03Z"),
-            raw(&hex("a1b2c3d4f6"), "2026-10-12T19:00:04Z"),
+            raw(&hex("a1b2c3d4f6"), "2026-10-13T08:00:00Z"),
         ],
         &stockholm(),
     );
     assert_eq!(
         names(&list),
-        vec!["2026-10-12 21.00.03 (a1b2c3d4)", "2026-10-12 21.00.04 (a1b2c3d4)"]
+        vec!["2026-10-12 21.00.03 (a1b2c3d4e)", "2026-10-13 10.00.00 (a1b2c3d4f)"]
     );
 }
 
@@ -135,18 +139,38 @@ fn latest_breaks_a_same_instant_tie_by_id() {
 }
 
 #[test]
-fn find_resolves_a_dated_name_and_latest() {
+fn a_short_id_finds_the_one_snapshot_it_starts() {
     let list = snapshot_list(
         vec![
-            raw(&hex("aa"), "2026-10-13T08:00:00Z"),
-            raw(&hex("bb"), "2026-10-14T08:00:00Z"),
+            raw(&hex("aa11"), "2026-10-13T08:00:00Z"),
+            raw(&hex("bb22"), "2026-10-14T08:00:00Z"),
         ],
         &stockholm(),
     );
-    let first_name = list.snapshots()[0].folder_name.clone();
-    assert!(list.find(&first_name).expect("dated").id.starts_with("aa"));
-    assert!(list.find(LATEST_FOLDER_NAME).expect("latest").id.starts_with("bb"));
-    assert!(list.find("2026-10-13 nope").is_none());
+    assert!(list.by_short_id("aa110000").expect("found").id.starts_with("aa11"));
+    assert!(list.by_short_id("bb220000").expect("found").id.starts_with("bb22"));
+    assert!(list.by_short_id("cc330000").is_none());
+}
+
+/// A folder name saved while its id was unique, then a newer backup that shares
+/// the saved prefix: the lookup refuses rather than guess. A longer saved suffix
+/// still resolves.
+#[test]
+fn an_ambiguous_short_id_finds_nothing_and_a_longer_one_still_resolves() {
+    let list = snapshot_list(
+        vec![
+            raw(&hex("a1b2c3d4e5"), "2026-10-12T19:00:03Z"),
+            raw(&hex("a1b2c3d4f6"), "2026-10-13T08:00:00Z"),
+        ],
+        &stockholm(),
+    );
+    assert!(list.by_short_id("a1b2c3d4").is_none(), "never the wrong snapshot");
+    assert!(
+        list.by_short_id("a1b2c3d4e")
+            .expect("unique")
+            .id
+            .starts_with("a1b2c3d4e5")
+    );
 }
 
 #[test]
@@ -160,21 +184,22 @@ fn an_empty_repo_has_no_latest() {
     let list = snapshot_list(vec![], &stockholm());
     assert!(list.snapshots().is_empty());
     assert!(list.latest().is_none());
-    assert!(list.find(LATEST_FOLDER_NAME).is_none());
 }
 
 #[test]
-fn a_snapshot_carries_its_host_paths_tags_and_time() {
+fn a_snapshot_carries_its_time_tree_and_processed_size() {
     let mut snapshot = raw(&hex("aa"), "2026-10-13T08:00:00Z");
-    snapshot.tags = vec!["daily".to_string()];
-    let list = snapshot_list(vec![snapshot], &stockholm());
+    snapshot.size = Some(4_096);
+    let tree = snapshot.tree;
+    let list = snapshot_list(vec![snapshot, raw(&hex("bb"), "2026-10-14T08:00:00Z")], &stockholm());
     let s = &list.snapshots()[0];
-    assert_eq!(s.hostname, "m3");
-    assert_eq!(s.paths, vec!["/Users/david".to_string()]);
-    assert_eq!(s.tags, vec!["daily".to_string()]);
     assert_eq!(
         s.time,
         std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_791_878_400)
     );
+    assert_eq!(s.tree, tree);
+    assert_eq!(s.size, Some(4_096));
     assert_eq!(s.id.len(), 64);
+    // No summary, no size: ❌ never a made-up zero.
+    assert_eq!(list.snapshots()[1].size, None);
 }
