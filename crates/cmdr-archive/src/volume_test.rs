@@ -17,7 +17,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_fs::volume::WriteMode;
-use cmdr_fs::volume::{ListingProgress, StreamLength, Volume, VolumeError, VolumeReadStream};
+use cmdr_fs::volume::{ListingProgress, StreamLength, UnlockOutcome, Volume, VolumeError, VolumeReadStream};
 
 /// A zip written into a scratch dir, cleaned up on drop. Hands out
 /// `ArchiveVolume`s backed by a configurable parent (default: a plain
@@ -595,6 +595,35 @@ async fn a_freshly_minted_volume_forgets_the_password_lru_eviction_semantic() {
     let reminted = archive.volume();
     assert!(matches!(
         reminted.open_read_stream(Path::new("secret.txt")).await,
+        Err(VolumeError::NeedsPassword { wrong_attempt: false })
+    ));
+}
+
+#[tokio::test]
+async fn the_unlock_seam_stores_the_password_unchecked() {
+    let bytes = build_zipcrypto_zip(&[encrypted_entry("secret.txt", "classified payload")], "hunter2");
+    let archive = TestArchive::from_bytes(bytes);
+    let volume = archive.volume();
+    let locked = volume.as_password_locked().expect("an archive is password-locked");
+
+    // A wrong password is still only STORED: an archive can't tell until a read.
+    assert_eq!(
+        locked.unlock("not-the-password".to_string(), false).await.unwrap(),
+        UnlockOutcome::Stored
+    );
+    // A fresh attempt replaces it, and `remember` changes nothing for an archive.
+    assert_eq!(
+        locked.unlock("hunter2".to_string(), true).await.unwrap(),
+        UnlockOutcome::Stored
+    );
+    assert_eq!(
+        read_all(&volume, Path::new("secret.txt")).await.unwrap(),
+        b"classified payload"
+    );
+
+    locked.forget_password();
+    assert!(matches!(
+        volume.open_read_stream(Path::new("secret.txt")).await,
         Err(VolumeError::NeedsPassword { wrong_attempt: false })
     ));
 }

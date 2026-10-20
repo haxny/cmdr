@@ -115,6 +115,15 @@ pub trait Volume: Send + Sync {
         false
     }
 
+    /// The unlock seam, for a volume whose contents need a password (an
+    /// encrypted archive, a restic repo). Default `None`: nothing to unlock.
+    ///
+    /// The host's one door to every kind of lock, so ❌ never a downcast to a
+    /// concrete backend in its place. See [`PasswordLocked`].
+    fn as_password_locked(&self) -> Option<&dyn PasswordLocked> {
+        None
+    }
+
     /// Returns this volume as `&dyn Any` for downcasting to a concrete
     /// backend type. Used by debug/IPC paths (for example, the SMB
     /// diagnostics dashboard) that need backend-specific state. Most
@@ -2108,6 +2117,7 @@ pub mod liveness;
 pub mod mkdir_all;
 pub mod mtp_ids;
 mod node_identity;
+mod password_locked;
 pub mod patching;
 mod read_stream;
 pub mod remote_paths;
@@ -2163,6 +2173,7 @@ pub use share_link::{ShareLink, ShareLinkExpiry};
 pub use in_memory::InMemoryVolume;
 pub use mkdir_all::{LeadsTo, MadeDirectories, MakesDirectories};
 pub use node_identity::NodeIdentity;
+pub use password_locked::{PasswordLocked, UnlockOutcome};
 pub use patching::{PatchSource, patch_created, patch_deleted, patch_mutation, patch_renamed};
 pub use read_stream::{SequentialExtract, VolumeRandomReader, VolumeReadStream};
 pub use remote_paths::{
@@ -2196,6 +2207,8 @@ mod in_memory_stream_test;
 mod in_memory_test;
 #[cfg(test)]
 mod listing_progress_test;
+#[cfg(test)]
+mod password_locked_test;
 #[cfg(test)]
 mod retirement_test;
 #[cfg(test)]

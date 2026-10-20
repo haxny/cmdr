@@ -30,22 +30,24 @@ the next section.
   wait, and local error mapping all ask; `crates/cmdr-operations/src/transfer/DETAILS.md` § "Retrying one FILE");
   `server_side.rs` (`RenameWork`, `SubtreeTally`, `ServerCopyProgress`: work a server does on its own, § "Server-side
   work"); `routed.rs` (`ResolvedVolume`, `RoutedKind`: what the app's `VolumeManager::resolve` answers, here so the
-  listing engine reads it without the app); `retirement.rs` (how background work learns it stopped being the live
-  volume); `connection_cell.rs` (a backend's connection state packed with its session generation, § "Three questions a
-  remote volume gets asked"); `channel_stream.rs` (a network backend's read path, consumer half); `scan_boundary.rs` +
-  `scan_stop.rs` + `scan_recorder.rs` (the one seam a copy scan touches per entry: counts, Cancel, Pause, and the
-  transfer tree's recorder); `scan_walk.rs`, `mkdir_all.rs`, `patching.rs`, and `secret_store.rs` (the bodies a
-  stat-and-listing backend gets for free); `listing_progress.rs` (`report_while`: a long listing's running count sampled
-  on a timer from the async side that owns `on_progress`, which can't ride into the blocking reader); `http_session.rs`
-  (the HTTP backends' shared connection lifecycle, § "The HTTP backends' connection lifecycle"); `liveness.rs` (their
-  silence watch, which tells a server gone silent from one that's only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent
-  or slow") and `tls.rs` (their connect probes' TLS-refusal test, by the typed `io::ErrorKind`); `app_paths.rs` (whether
-  an app path sits under a volume root, segment-wise, and rebasing it onto a moved root); `remote_paths.rs` (a server
-  tree's `<scheme>://user@host:port` app spelling, and the ONE translation); `friendly_error/` (typed, word-free
-  classification); `usb_speed.rs` (❗ its doc comment reaches `bindings.ts`); `in_memory.rs` (the store and its knobs;
-  `in_memory/volume_impl.rs` is its `impl Volume`); `conformance.rs` (+ `conformance/directory_creation.rs`, the three
-  `create_directory_all` promises, and `conformance/modification_date.rs`, the two date ones); and `host/` (what a
-  backend needs from the app, as named traits; read `src/volume/host/CLAUDE.md` before writing a backend).
+  listing engine reads it without the app); `password_locked.rs` (`PasswordLocked`, `UnlockOutcome`: the one unlock seam
+  for every locked container, reached through `Volume::as_password_locked`, cancel-safe by contract); `retirement.rs`
+  (how background work learns it stopped being the live volume); `connection_cell.rs` (a backend's connection state
+  packed with its session generation, § "Three questions a remote volume gets asked"); `channel_stream.rs` (a network
+  backend's read path, consumer half); `scan_boundary.rs` + `scan_stop.rs` + `scan_recorder.rs` (the one seam a copy
+  scan touches per entry: counts, Cancel, Pause, and the transfer tree's recorder); `scan_walk.rs`, `mkdir_all.rs`,
+  `patching.rs`, and `secret_store.rs` (the bodies a stat-and-listing backend gets for free); `listing_progress.rs`
+  (`report_while`: a long listing's running count sampled on a timer from the async side that owns `on_progress`, which
+  can't ride into the blocking reader); `http_session.rs` (the HTTP backends' shared connection lifecycle, § "The HTTP
+  backends' connection lifecycle"); `liveness.rs` (their silence watch, which tells a server gone silent from one that's
+  only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent or slow") and `tls.rs` (their connect probes' TLS-refusal test,
+  by the typed `io::ErrorKind`); `app_paths.rs` (whether an app path sits under a volume root, segment-wise, and
+  rebasing it onto a moved root); `remote_paths.rs` (a server tree's `<scheme>://user@host:port` app spelling, and the
+  ONE translation); `friendly_error/` (typed, word-free classification); `usb_speed.rs` (❗ its doc comment reaches
+  `bindings.ts`); `in_memory.rs` (the store and its knobs; `in_memory/volume_impl.rs` is its `impl Volume`);
+  `conformance.rs` (+ `conformance/directory_creation.rs`, the three `create_directory_all` promises, and
+  `conformance/modification_date.rs`, the two date ones); and `host/` (what a backend needs from the app, as named
+  traits; read `src/volume/host/CLAUDE.md` before writing a backend).
 - `entry.rs` + `icons/`: `FileEntry` and the classifiers behind `get_icon_id`.
 - `sqlite_util.rs`: the ONE process-wide page-cache slab, the connection factories every store opens through, and the
   one way a database file is deleted. `src/sqlite_util/thread_conn_cache.rs` is the per-thread read-connection cache and

@@ -52,8 +52,8 @@ use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::{
-    BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, ScanBoundary, SequentialExtract,
-    SpaceInfo, Volume, VolumeError, VolumeReadStream, WatchCoverage,
+    BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, PasswordLocked, ScanBoundary,
+    SequentialExtract, SpaceInfo, UnlockOutcome, Volume, VolumeError, VolumeReadStream, WatchCoverage,
 };
 use streams::{ArchiveSequentialExtract, ArchiveVolumeReadStream, VolumeByteSource};
 
@@ -144,14 +144,14 @@ impl ArchiveVolume {
     }
 
     /// Stores the password for this archive, overwriting any previous one (so a
-    /// fresh attempt replaces a rejected password). Called by the
-    /// `set_archive_password` IPC command after the frontend prompts.
+    /// fresh attempt replaces a rejected password). The host reaches it through
+    /// the [`PasswordLocked`] seam after the frontend prompts.
     pub fn set_password(&self, password: String) {
         *self.password.lock_ignore_poison() = Some(Zeroizing::new(password));
     }
 
-    /// Forgets any stored password (the `clear_archive_password` IPC command, and
-    /// the internal wrong-password reset).
+    /// Forgets any stored password (the person cancelled the prompt, through the
+    /// [`PasswordLocked`] seam, and the internal wrong-password reset).
     pub fn clear_password(&self) {
         *self.password.lock_ignore_poison() = None;
     }
@@ -390,7 +390,7 @@ impl ArchiveVolume {
             // With no password an encrypted entry fails fast here (`Encrypted` →
             // `NeedsPassword`); a WRONG password surfaces later, during streaming
             // (the decrypt/verify runs inside the producer), as the same typed
-            // signal — the frontend retries after `set_archive_password`.
+            // signal — the frontend retries after `unlock_container`.
             let reader = index.open_read(&inner, source, password).map_err(to_volume_error)?;
             Ok(Box::new(ArchiveVolumeReadStream {
                 reader,
@@ -401,6 +401,28 @@ impl ArchiveVolume {
                 xattrs,
             }) as Box<dyn VolumeReadStream>)
         })
+    }
+}
+
+/// An archive stores the password unchecked: it can only tell a wrong one by
+/// decrypting, which happens on the next read (`NeedsPassword { wrong_attempt:
+/// true }`). `remember` is ignored: an archive's password lives on this
+/// instance only and is never saved anywhere.
+impl PasswordLocked for ArchiveVolume {
+    fn unlock<'a>(
+        &'a self,
+        password: String,
+        _remember: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<UnlockOutcome, VolumeError>> + Send + 'a>> {
+        // Inside the future, so a host that drops it unpolled stored nothing.
+        Box::pin(async move {
+            self.set_password(password);
+            Ok(UnlockOutcome::Stored)
+        })
+    }
+
+    fn forget_password(&self) {
+        self.clear_password();
     }
 }
 
@@ -657,6 +679,10 @@ impl Volume for ArchiveVolume {
     /// volume that holds it. See [`Volume::routes_over_a_parent`].
     fn routes_over_a_parent(&self) -> bool {
         true
+    }
+
+    fn as_password_locked(&self) -> Option<&dyn PasswordLocked> {
+        Some(self)
     }
 
     fn local_path(&self) -> Option<PathBuf> {
