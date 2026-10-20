@@ -44,12 +44,12 @@ impl HttpBackend for S3VolumeInner {
         &self.host
     }
 
-    fn credential_key(&self) -> CredentialKey {
+    fn credential_key(&self) -> Option<CredentialKey> {
         let params = self.params();
-        CredentialKey {
+        Some(CredentialKey {
             service: params.credential_service(),
             scope: params.access_key_id().to_string(),
-        }
+        })
     }
 
     async fn dial(&self, secret: &str) -> Result<S3Client, DialRefusal> {

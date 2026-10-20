@@ -72,6 +72,9 @@ pub(super) async fn rebuild<B: HttpBackend>(owner: &B, offered: Option<String>) 
     }
     let secret = match offered {
         Some(secret) => secret,
+        // ❗ No secret exists for this backend, so there's nothing to look up
+        // and nothing a person could add: dial with none.
+        None if owner.credential_key().is_none() => String::new(),
         None => match stored_secret(owner).await {
             Some(stored) => stored.secret,
             None => return Err(Stalled::NeedsUser),
@@ -160,7 +163,7 @@ pub(super) fn start_reconnect_loop_if_down<B: HttpBackend>(owner: &B) {
 /// The store's entry for this account. On a blocking task, inside
 /// `secret_store`: the store may put a Keychain prompt in front of this.
 pub(super) async fn stored_secret<B: HttpBackend>(owner: &B) -> Option<StoredCredentials> {
-    let key = owner.credential_key();
+    let key = owner.credential_key()?;
     secret_store::stored_secret(owner.host(), &key.service, &key.scope).await
 }
 
@@ -168,7 +171,9 @@ pub(super) async fn stored_secret<B: HttpBackend>(owner: &B) -> Option<StoredCre
 /// (`secret_store::keep_signed_in_secret`): on saves it, off only refreshes an
 /// entry still there. Answers whether the store took it.
 pub(super) async fn keep_signed_in_secret<B: HttpBackend>(owner: &B, sign_in: &SignIn) -> bool {
-    let key = owner.credential_key();
+    let Some(key) = owner.credential_key() else {
+        return false;
+    };
     let took = secret_store::keep_signed_in_secret(owner.host(), &key.service, sign_in).await;
     if !took {
         warn!(

@@ -45,12 +45,12 @@ impl HttpBackend for WebdavVolumeInner {
         &self.host
     }
 
-    fn credential_key(&self) -> CredentialKey {
+    fn credential_key(&self) -> Option<CredentialKey> {
         let params = self.params();
-        CredentialKey {
+        Some(CredentialKey {
             service: params.credential_service(),
             scope: params.username,
-        }
+        })
     }
 
     async fn dial(&self, secret: &str) -> Result<WebdavClient, DialRefusal> {

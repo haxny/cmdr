@@ -1035,15 +1035,23 @@ folds a batch the same way.
 
 ## The HTTP backends' connection lifecycle (`http_session`)
 
-`cmdr-webdav` and `cmdr-s3` hold one HTTP client per volume and share everything about losing and rebuilding it:
-`src/volume/http_session.rs` (the state enum, `UnattendedReconnect`, the `HttpBackend` trait with `noting`,
-`note_lost_session`, and the reconnect entry points as provided methods, and the `HttpSession` state) plus
-`src/volume/http_session/reconnect.rs` (the single-flight `rebuild`, `report`, the silence watch's spawn, the store
-reads, and the 2/5/15/30/60/120 s backoff loop). A backend implements `HttpBackend` with only what differs: its client
-(`SessionClient`: the `Liveness` it feeds and a `ping`), its probe and the map from its refusals (`dial` →
-`DialRefusal::{Rejected, NeedsUser, Transient}`), where its secret is filed (`credential_key`), and, for S3, the upload
-sweep a rebuilt client starts (`client_installed`). The account check of an attended sign-in and a save-only "Try again"
-is shared too (`own_account`): a `SignIn` for another account than `credential_key().scope` answers `NotSupported`.
+`cmdr-webdav`, `cmdr-s3`, and `cmdr-nfs` (whose "client" is one RPC connection) hold one client per volume and share
+everything about losing and rebuilding it: `src/volume/http_session.rs` (the state enum, `UnattendedReconnect`, the
+`HttpBackend` trait with `noting`, `note_lost_session`, and the reconnect entry points as provided methods, and the
+`HttpSession` state) plus `src/volume/http_session/reconnect.rs` (the single-flight `rebuild`, `report`, the silence
+watch's spawn, the store reads, and the 2/5/15/30/60/120 s backoff loop). A backend implements `HttpBackend` with only
+what differs: its client (`SessionClient`: the `Liveness` it feeds and a `ping`), its probe and the map from its
+refusals (`dial` → `DialRefusal::{Rejected, NeedsUser, Transient}`), where its secret is filed (`credential_key`), and,
+for S3, the upload sweep a rebuilt client starts (`client_installed`). The account check of an attended sign-in and a
+save-only "Try again" is shared too (`own_account`): a `SignIn` for another account than `credential_key().scope`
+answers `NotSupported`.
+
+- **A backend with no secret answers `credential_key` with `None`** (NFS: `AUTH_SYS` carries a uid, nothing to keep).
+  `rebuild` then dials with an empty secret without reading the store, and `unattended_reconnect` answers `Possible`
+  whenever the switch is on. ❗ Its `dial` must answer only `Transient`: `Rejected` / `NeedsUser` would park it in
+  `NeedsCredentials`, a sign-in view with nothing to type. Pinned by `src/volume/http_session_test.rs`.
+- **A backend's own silence ladder** goes in through `HttpSession::with_silence_timings` (NFS: 5 s quiet, two 5 s
+  probes). When the transport watches the same `Liveness` itself, whichever watch starts first runs, so both carry it.
 
 - **The first `DeviceDisconnected` acts once.** `noting` hands every error to `note_lost_session`, which flips
   `Connected → Disconnected` through `ConnectionReporter::lose`, takes the dead client out, cancels its `lost` token (so

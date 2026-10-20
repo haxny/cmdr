@@ -14,7 +14,12 @@
 //! 1. **"Reconnect automatically"**, the user's per-server switch. Off means ❌
 //!    no unattended probe, ever, whatever is stored.
 //! 2. **The store.** A probe needs the secret; nothing stored means nothing to
-//!    try, and the frontend learns that through [`UnattendedReconnect`].
+//!    try, and the frontend learns that through [`UnattendedReconnect`]. A
+//!    backend with NO secret at all (NFS's `AUTH_SYS`) answers
+//!    [`HttpBackend::credential_key`] with `None`: it dials unattended with
+//!    nothing to offer, ❌ never reads the store, and never rests in
+//!    `NeedsCredentials` as long as its dial answers only
+//!    [`DialRefusal::Transient`].
 //!
 //! ❌ **Never loop on an authentication attempt.** Repeated refusals lock
 //! accounts. One unattended try, latched by the session's `auth_attempt_spent`;
@@ -22,8 +27,10 @@
 //! The store is only ever REFRESHED, never seeded.
 //!
 //! A backend brings only what differs: its client ([`SessionClient`]), its
-//! probe and the map from its refusals ([`HttpBackend::dial`]), and where its
-//! secret is filed ([`HttpBackend::credential_key`]).
+//! probe and the map from its refusals ([`HttpBackend::dial`]), where its
+//! secret is filed ([`HttpBackend::credential_key`]), and, when it isn't the
+//! 30 s every HTTP backend allows, its silence ladder
+//! ([`HttpSession::with_silence_timings`]).
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
@@ -161,10 +168,14 @@ pub trait HttpBackend: Retires + Send + Sync + Sized + 'static {
     /// Everything the backend asks the app around it.
     fn host(&self) -> &VolumeHost;
 
-    /// Where this volume's secret is filed.
-    fn credential_key(&self) -> CredentialKey;
+    /// Where this volume's secret is filed, or `None` for a backend that has
+    /// no secret at all: it dials with an empty one, unattended, and the store
+    /// is ❌ never read for it (a needless read is a needless Keychain prompt).
+    fn credential_key(&self) -> Option<CredentialKey>;
 
-    /// Builds a client with `secret` and proves it with the backend's probe.
+    /// Builds a client with `secret` (empty for a backend whose
+    /// [`credential_key`](Self::credential_key) is `None`) and proves it with
+    /// the backend's probe.
     /// Runs under the single-flight lock; a refusal maps to what the lifecycle
     /// does next.
     fn dial(&self, secret: &str) -> impl Future<Output = Result<Self::Client, DialRefusal>> + Send;
@@ -304,7 +315,8 @@ pub trait HttpBackend: Retires + Send + Sync + Sized + 'static {
 
     /// Whether `sign_in` names the account this volume IS.
     fn own_account(&self, sign_in: &SignIn) -> Result<(), VolumeError> {
-        if sign_in.username != self.credential_key().scope {
+        // A backend with no secret has no account to sign in to.
+        if self.credential_key().is_none_or(|key| sign_in.username != key.scope) {
             return Err(VolumeError::NotSupported);
         }
         Ok(())
@@ -336,7 +348,7 @@ pub trait HttpBackend: Retires + Send + Sync + Sized + 'static {
             if !self.session().auto_reconnect.load(Ordering::Relaxed) {
                 return UnattendedReconnect::SwitchOff;
             }
-            if reconnect::stored_secret(self).await.is_some() {
+            if self.credential_key().is_none() || reconnect::stored_secret(self).await.is_some() {
                 UnattendedReconnect::Possible
             } else {
                 UnattendedReconnect::NoStoredSecret
@@ -444,6 +456,24 @@ impl<B: HttpBackend> HttpSession<B> {
         self.client.write().await.take();
     }
 
+    /// The session with `timings` as its silence ladder, for a backend whose
+    /// own differs from the HTTP backends' 30 s (NFS gives up after 15 s: its
+    /// probe is the RPC layer's `NULL`, which a busy server still answers).
+    /// ❗ When the backend's transport runs a watch of its own over the SAME
+    /// `Liveness`, whichever starts first runs, so both must use these.
+    #[must_use]
+    pub fn with_silence_timings(self, timings: Timings) -> Self {
+        use crate::ignore_poison::RwLockIgnorePoison;
+        *self.silence.write_ignore_poison() = timings;
+        self
+    }
+
+    /// The silence ladder the next watch starts with.
+    pub fn silence_timings(&self) -> Timings {
+        use crate::ignore_poison::RwLockIgnorePoison;
+        *self.silence.read_ignore_poison()
+    }
+
     /// Shortens the silence ladder, for a cell that runs it in real time. Takes
     /// effect from the next watch started.
     #[cfg(any(test, feature = "testing"))]
@@ -473,3 +503,7 @@ impl<B: HttpBackend> HttpSession<B> {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "http_session_test.rs"]
+mod http_session_test;
