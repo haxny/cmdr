@@ -21,23 +21,23 @@
 //!   (`foo.zip.cmdr-tmp-<uuid>`); the original keeps its name and bytes.
 //! - **Swap** is the only step that changes the original. It prefers an atomic
 //!   rename-overwrite where the backend supports it (SMB with `ReplaceIfExists`),
-//!   and otherwise deletes the original then renames the temp into place. MTP
-//!   always takes this path (it has no rename-overwrite and allows same-name
-//!   siblings, so a rename onto a live name would DUPLICATE, not replace).
+//!   and otherwise renames the original ASIDE (`foo.zip.cmdr-temp-<uuid>`),
+//!   renames the temp into place, then deletes the aside. MTP always takes this
+//!   path (it has no rename-overwrite and allows same-name siblings, so a rename
+//!   onto a live name would DUPLICATE, not replace).
 //!
 //! ❗ A `.cmdr-tmp-*` name is NOT a safe place for the only copy: the transfer
 //! engine's sweep deletes any an hour old at the start of the next copy into the
-//! folder. So a swap whose rename fails after the delete moves the edited archive
-//! to a ` (recovered)` name and reports it (`NewDataKeptAt`); see
-//! [`swap_into_place`]. One window stays open: a crash or force quit between the
-//! delete and the rename leaves the edited archive under its temp name, where
-//! that sweep can reach it an hour later. Only a backend with an atomic replace
-//! closes it.
+//! folder. The aside shape is what keeps a complete archive under a name that
+//! sweep never matches after a crash at ANY step, and the next remote edit in
+//! the folder puts an orphaned original back; see [`swap_into_place`] and
+//! [`restore_orphaned_asides`].
 //!
 //! A cancel at ANY point before the swap completes leaves the remote original
 //! intact (the local temp and any partial remote temp are cleaned up). Pinned by
 //! `remote_tests`.
 
+use std::collections::HashSet;
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -52,6 +52,7 @@ use super::super::transfer::recovered_name::{
 };
 use super::super::types::WriteOperationError;
 use super::edit_error::EditError;
+use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{Volume, VolumeError, WriteMode};
 use cmdr_local::LocalPosixVolume;
 
@@ -66,7 +67,10 @@ pub(crate) type RemoteProgressObserver = Arc<dyn Fn(RemoteCommitProgress) + Send
 /// `foo.zip` uploads as the same-directory sibling `foo.zip.cmdr-tmp-<uuid>`, the
 /// app-wide scratch name (shortened when it wouldn't fit). The same module names
 /// the upload and the prefix that matches stale leftovers, so the two can't drift.
-use cmdr_fs::staging::{temp_sibling_path, temp_sibling_prefix};
+use cmdr_fs::staging::{
+    MAX_SCRATCH_NAME_BYTES, STAGING_ASIDE_MARKER, StagingTemp, is_staging_temp_in_flight, temp_sibling_path,
+    temp_sibling_prefix,
+};
 
 /// The minimum age a remote `<archive>.cmdr-tmp-*` leftover must reach before the
 /// next edit of the same archive reaps it. Deliberately generous: unlike the LOCAL
@@ -296,67 +300,103 @@ async fn upload_archive(
 /// Swaps the uploaded temp into the original's place — the ONLY step that changes
 /// the remote original. See the module-level data-safety contract.
 ///
-/// The same landing as the transfer engine's `finalize::finalize_safe_replace`,
-/// because the same sweep (`cleanup.rs::reap_stale_transfer_temps`, any
-/// `.cmdr-tmp-*` an hour old, at the start of every copy into the folder) would
-/// otherwise delete an archive left under its temp name:
+/// Where the backend has no atomic replace, the original goes ASIDE first
+/// (`<name>.cmdr-temp-<uuid>`, the house aside name), the temp takes its name,
+/// and only then is the aside deleted. The transfer engine's stale-temp sweep
+/// (`cleanup.rs::reap_stale_transfer_temps`, any `.cmdr-tmp-*` an hour old, at
+/// the start of every copy into the folder) never matches an aside, so a crash
+/// after ANY step leaves a complete archive under a name nothing reaps:
 ///
-/// - A replacing rename that answers an error may still have landed (a lost
-///   response), so the temp is checked before anything is deleted. Gone means
-///   the swap happened; deleting the original then would delete the edit.
-/// - A delete that answers an error is checked with one stat
-///   (`what_a_refused_delete_left`): still there means nothing changed, so the
-///   spare temp goes and the original stays whole; gone means the way is clear.
-/// - A rename that fails once the original is gone leaves the temp as the only
-///   copy, so it's moved to a ` (recovered)` name no sweep matches and the
-///   error says where (`NewDataKeptAt`).
+/// - after the upload: the original at its name (the temp is a spare copy);
+/// - after the move aside: the original at the aside, the edit at the temp;
+/// - after the landing: the edit at its name, the original at the aside, which
+///   stays until someone deletes it (`restore_orphaned_asides` never reaps one).
+///
+/// The next remote edit in that folder puts an aside whose original name is
+/// empty back (`restore_orphaned_asides`). Faults that answer get the same
+/// handling as the transfer engine's `finalize::finalize_safe_replace`:
+///
+/// - A rename that answers an error may still have landed (a lost response), so
+///   the temp is checked first. Gone means the swap happened.
+/// - A refused move aside is checked with one stat (`what_a_refused_delete_left`):
+///   still there means nothing changed, so the spare temp goes.
+/// - A landing that fails puts the original back. If even that fails, the edit
+///   moves to a ` (recovered)` name and the error says where (`NewDataKeptAt`),
+///   with the original still at its aside.
 async fn swap_into_place(parent: &dyn Volume, remote_temp: &Path, archive_path: &Path) -> Result<(), EditError> {
     // Prefer an ATOMIC rename-overwrite where the backend rejects a same-name
     // collision (SMB, local FS): if the server supports `ReplaceIfExists` the
     // rename replaces the original in one step; if not, it fails and we fall
-    // through to delete-then-rename. A backend that ALLOWS same-name siblings
+    // through to the aside swap. A backend that ALLOWS same-name siblings
     // (MTP) must NOT attempt this — a rename onto the live name would duplicate,
-    // not replace — so it goes straight to delete-then-rename.
+    // not replace — so it goes straight to the aside swap.
     if parent.create_directory_errors_on_existing_dir() {
         let Err(replace_err) = parent.rename(remote_temp, archive_path, true).await else {
             return Ok(());
         };
-        match parent.get_metadata(remote_temp).await {
-            Ok(_) => {}
-            Err(VolumeError::NotFound(_)) => {
+        match temp_is_gone(parent, remote_temp).await {
+            Some(true) => {
                 log::info!(target: "archive_remote_edit", "the replacing rename of {} answered {replace_err}, but its temp is gone, so it landed", archive_path.display());
                 return Ok(());
             }
-            // Can't tell whether it landed, so nothing gets deleted. If it
-            // didn't, the original is intact and the temp is a spare copy.
-            Err(_) => return Err(EditError::Op(to_write_error(archive_path, &replace_err))),
+            Some(false) => {}
+            // Can't tell whether it landed, so nothing moves. If it didn't, the
+            // original is intact and the temp is a spare copy.
+            None => return Err(EditError::Op(to_write_error(archive_path, &replace_err))),
         }
     }
 
-    // Delete-then-rename. Tolerate a MISSING original: `place_local_file` can
-    // publish a brand-new target on MTP, which allows same-name siblings.
-    match parent.delete(archive_path).await {
-        Ok(()) | Err(VolumeError::NotFound(_)) => {}
+    // Registered for the swap's length, so the pane hides it while it's ours
+    // and shows it the moment this returns or the process dies.
+    let aside = StagingTemp::mint_aside(archive_path, uuid::Uuid::new_v4(), None);
+    // Tolerate a MISSING original: `place_local_file` can publish a brand-new
+    // target on MTP, which allows same-name siblings.
+    let has_aside = match parent.rename(archive_path, aside.path(), false).await {
+        Ok(()) => true,
+        Err(VolumeError::NotFound(_)) => false,
+        // The answer isn't the act: ask whether the name is still taken.
         Err(err) => match what_a_refused_delete_left(parent, archive_path).await {
-            AfterARefusedDelete::Gone => {}
+            AfterARefusedDelete::Gone => parent.get_metadata(aside.path()).await.is_ok(),
             AfterARefusedDelete::StillThere => {
                 discard_unplaced_temp(parent, remote_temp).await;
                 return Err(EditError::Op(to_write_error(archive_path, &err)));
             }
-            // The temp stays: if the original IS gone, it's the only copy.
             AfterARefusedDelete::Unknown => return Err(EditError::Op(to_write_error(archive_path, &err))),
         },
-    }
-    if let Err(err) = parent.rename(remote_temp, archive_path, false).await {
+    };
+
+    if let Err(err) = parent.rename(remote_temp, archive_path, false).await
+        && temp_is_gone(parent, remote_temp).await != Some(true)
+    {
+        if has_aside && parent.rename(aside.path(), archive_path, false).await.is_ok() {
+            // The original is back in place, so the edit simply didn't happen.
+            discard_unplaced_temp(parent, remote_temp).await;
+            return Err(EditError::Op(to_write_error(archive_path, &err)));
+        }
         let kept_at = rescue_out_of_temp_space(parent, remote_temp, archive_path).await;
-        log::warn!(target: "archive_remote_edit", "{} is gone and the edited archive couldn't take its name, so it is at {} now: {err}", archive_path.display(), kept_at.display());
+        log::warn!(target: "archive_remote_edit", "the edited archive couldn't take the name {}, so it is at {} now (any old version at {}): {err}", archive_path.display(), kept_at.display(), aside.path().display());
         return Err(EditError::Op(WriteOperationError::NewDataKeptAt {
             path: archive_path.display().to_string(),
             kept_at: kept_at.display().to_string(),
             message: err.to_string(),
         }));
     }
+
+    if has_aside && let Err(err) = parent.delete(aside.path()).await {
+        // The edit is in place; the old version stays visible beside it.
+        log::warn!(target: "archive_remote_edit", "the edit of {} landed, but its old version stays at {}: {err}", archive_path.display(), aside.path().display());
+    }
     Ok(())
+}
+
+/// Whether a temp a rename answered an error about is gone, which means the
+/// rename landed after all. `None` when the stat can't say.
+async fn temp_is_gone(parent: &dyn Volume, remote_temp: &Path) -> Option<bool> {
+    match parent.get_metadata(remote_temp).await {
+        Ok(_) => Some(false),
+        Err(VolumeError::NotFound(_)) => Some(true),
+        Err(_) => None,
+    }
 }
 
 /// Reaps stale upload temps left on the remote by a crash between a prior upload
@@ -375,6 +415,9 @@ async fn swap_into_place(parent: &dyn Volume, remote_temp: &Path, archive_path: 
 /// Matches ONLY this archive's own temp shape (`<archive-name>.cmdr-tmp-…`, files
 /// only), so a sibling archive's temps and unrelated files are untouched.
 ///
+/// The same listing also puts back any original a crashed swap left aside in
+/// that folder (`restore_orphaned_asides`), for this archive or any other.
+///
 /// Best-effort throughout: a listing or delete failure is logged at debug and
 /// never fails or delays the user's edit.
 async fn reap_remote_temps(parent: &dyn Volume, archive_path: &Path) {
@@ -391,6 +434,7 @@ async fn reap_remote_temps(parent: &dyn Volume, archive_path: &Path) {
             return;
         }
     };
+    restore_orphaned_asides(parent, dir, &entries).await;
 
     let now_secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -415,6 +459,56 @@ async fn reap_remote_temps(parent: &dyn Volume, archive_path: &Path) {
             log::debug!(target: "archive_remote_edit", "couldn't reap remote temp {}: {err}", temp_path.display());
         }
     }
+}
+
+/// How far under [`MAX_SCRATCH_NAME_BYTES`] an aside's name must stay for its
+/// original's name to be read back whole. The mint shortens a name that won't
+/// fit by whole grapheme clusters, so a shortened one ends up to one cluster
+/// under the cap; 32 bytes clears any cluster a real name carries.
+const ASIDE_NAME_SLACK_BYTES: usize = 32;
+
+/// Puts back every original a crashed swap left aside in `dir`: an
+/// `<original>.cmdr-temp-<uuid>` file whose original name is empty is renamed
+/// back to it. Never deletes one: an aside whose original name is taken (a swap
+/// that landed and then couldn't delete it, or a file someone made since) stays
+/// where it is, visible, for a person to decide about.
+///
+/// Skipped too: an aside a live operation in this process holds (the pane
+/// hides those), and one whose name may have been shortened to fit, which no
+/// longer says the original's name. Both stay visible.
+///
+/// A swap by ANOTHER Cmdr instance, caught between its move aside and its
+/// landing, would get its original put back. That costs no data: its landing
+/// then finds the name taken, and it rescues its edit to a ` (recovered)` name.
+async fn restore_orphaned_asides(parent: &dyn Volume, dir: &Path, entries: &[FileEntry]) {
+    let taken: HashSet<&str> = entries.iter().map(|entry| entry.name.as_str()).collect();
+    for entry in entries {
+        if entry.is_directory || is_staging_temp_in_flight(&entry.name) {
+            continue;
+        }
+        let Some(original) = aside_original_name(&entry.name) else {
+            continue;
+        };
+        let aside = dir.join(&entry.name);
+        if taken.contains(original) {
+            log::info!(target: "archive_remote_edit", "keeping {}: {original} is there too, so it's an old version, not a lost one", aside.display());
+            continue;
+        }
+        match parent.rename(&aside, &dir.join(original), false).await {
+            Ok(()) => {
+                log::info!(target: "archive_remote_edit", "put {original} back from {}, which a crashed edit left aside", aside.display())
+            }
+            Err(err) => log::debug!(target: "archive_remote_edit", "couldn't put {} back: {err}", aside.display()),
+        }
+    }
+}
+
+/// The original's name an aside's own name carries, when it carries it whole:
+/// `<original>.cmdr-temp-<hyphenated uuid>`, clear of the length cap.
+fn aside_original_name(name: &str) -> Option<&str> {
+    let (original, uuid) = name.rsplit_once(STAGING_ASIDE_MARKER)?;
+    let whole = name.len() + ASIDE_NAME_SLACK_BYTES <= MAX_SCRATCH_NAME_BYTES;
+    (whole && !original.is_empty() && uuid.len() == 36 && uuid::Uuid::try_parse(uuid).is_ok()).then_some(original)
 }
 
 fn vol_op(path: &Path) -> impl Fn(VolumeError) -> EditError + '_ {

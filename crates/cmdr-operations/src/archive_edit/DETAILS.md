@@ -75,23 +75,30 @@ The remote ORIGINAL is byte-for-byte untouched until the very last swap:
 4. **Swap** is the ONLY step that changes the original. Where the backend REJECTS a same-name collision
    (`create_directory_errors_on_existing_dir()` true — SMB, local), existing-archive mutation first asks its
    force-rename operation to replace the name; a backend may implement that as multiple protocol operations. On refusal
-   it falls back to delete-then-rename. A backend that ALLOWS same-name siblings (MTP, flag false) goes STRAIGHT to
-   delete-then-rename — a rename onto the live name would DUPLICATE, not replace. It lands the way the transfer engine's
-   `transfer/volume/finalize.rs` does, because the transfer engine's stale-temp sweep
+   it falls back to the ASIDE swap. A backend that ALLOWS same-name siblings (MTP, flag false) goes STRAIGHT to it — a
+   rename onto the live name would DUPLICATE, not replace. The aside swap renames the original to
+   `foo.zip.cmdr-temp-<uuid>` (the house aside name, `StagingTemp::mint_aside`, hidden from the pane only while the swap
+   holds it), renames the temp into place, then deletes the aside. Why: the transfer engine's stale-temp sweep
    (`transfer/volume/cleanup.rs::reap_stale_transfer_temps`) deletes ANY `.cmdr-tmp-*` an hour old at the start of the
-   next copy into the folder, so a temp name is no place for the only copy. A replacing rename that errors is followed
-   by a stat of the temp (gone means it landed; deleting the original then would delete the edit); a refused delete by
-   `what_a_refused_delete_left` (still there: the spare temp goes, the original stays whole); and a rename that fails
-   after the delete by `rescue_out_of_temp_space`, a ` (recovered)` name reported as `NewDataKeptAt`. Gotcha/Why: the
-   swap used to report a bare error naming the temp, and the sweep deleted the whole archive an hour later. One window
-   stays open: a crash or force quit between the delete and the rename leaves the edit under its temp name, in that
-   sweep's reach.
+   next copy into the folder, and never matches `.cmdr-temp-`, so a crash after any step leaves a complete archive under
+   a name nothing reaps: the original at its name, then the original aside (the edit at the temp), then the edit at its
+   name with the original aside. Gotcha/Why: the swap used to DELETE the original first, so a crash or a failed rename
+   left the only copy under the temp name, and the sweep deleted the whole archive an hour later. Faults that answer are
+   handled like `transfer/volume/finalize.rs`: a rename that errors is followed by a stat of the temp (gone means it
+   landed); a refused move aside by `what_a_refused_delete_left` (still there: the spare temp goes); a failed landing
+   puts the original back, or, if even that fails, rescues the edit to a ` (recovered)` name reported as
+   `NewDataKeptAt`, the original staying aside. RECOVERY: the start of the next remote edit in that folder
+   (`reap_remote_temps`'s listing) runs `restore_orphaned_asides`, which renames an aside back when its original's name
+   is empty and NEVER deletes one: beside a taken name it's an old version, left visible for a person. It skips an aside
+   a live operation holds and one whose name may have been shortened to fit (it no longer says the original's name).
+   Known gap: nothing restores on OPEN, so until another zip in the folder is edited the user sees the aside, not the
+   archive.
 
 A cancel at ANY point before the swap completes leaves the remote original intact (the local scratch dir and any partial
 remote temp are cleaned up — a RAII `ScratchDir` and the upload's on-error delete). Pinned by `remote_tests`
 (round-trip, cancel-before-swap-leaves-the-original, the sibling-allowing delete-then-rename swap, and the three
-half-way swaps: a rename failing after the delete, a replacing rename that landed despite its error, and a refused
-delete), plus live-remote integration proofs that drive `pull_apply_upload_swap` against a REAL backend: the
+half-way swaps and `a_crash_after_any_step_of_the_swap_loses_no_archive`, a cut after each step followed by the sweep
+and the next touch), plus live-remote integration proofs that drive `pull_apply_upload_swap` against a REAL backend: the
 backend-blind scenarios in `network_archive_test_support.rs` (edit, cancel before the swap, routing detection,
 extract-out, copy-into, compress), which `smb_archive_integration_test.rs`, `sftp_archive_integration_test.rs`, and
 `webdav_archive_integration_test.rs` drive, and `mtp_archive_test` under the `virtual-mtp` feature

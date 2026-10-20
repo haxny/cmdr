@@ -391,7 +391,8 @@ async fn remote_edit_swaps_via_delete_then_rename_on_a_sibling_allowing_backend(
 // at the start of the next copy into that folder, so a swap must never leave the
 // only copy of the archive under its temp name.
 
-/// A phone-like parent (always delete-then-rename) seeded with `bundle.zip`.
+/// A phone-like parent (no atomic replace, so always the aside swap) seeded
+/// with `bundle.zip`.
 async fn sibling_allowing_parent(archive_path: &Path) -> Arc<InMemoryVolume> {
     let parent = InMemoryVolume::new("Remote-MTP").with_sibling_duplicates_allowed();
     parent.create_directory(Path::new("/device")).await.expect("seed dir");
@@ -402,41 +403,337 @@ async fn sibling_allowing_parent(archive_path: &Path) -> Arc<InMemoryVolume> {
     Arc::new(parent)
 }
 
-/// The original is deleted and the temp then can't take its name: the edited
-/// archive moves to a ` (recovered)` name no sweep matches, and the error says
-/// where it is.
+/// Every name in the archive's folder.
+async fn names_in(parent: &dyn Volume, dir: &str) -> Vec<String> {
+    sibling_names(parent, &Path::new(dir).join("x")).await
+}
+
+/// The aside a swap left in `/device`, if any.
+async fn aside_in_device(parent: &dyn Volume) -> Option<PathBuf> {
+    names_in(parent, "/device")
+        .await
+        .into_iter()
+        .find(|name| name.contains(".cmdr-temp-"))
+        .map(|name| Path::new("/device").join(name))
+}
+
+/// What the transfer engine's hourly sweep would leave: every `.cmdr-tmp-*`
+/// in `/device` deleted, the way `reap_stale_transfer_temps` deletes them.
+async fn sweep_transfer_temps(parent: &dyn Volume) {
+    for name in names_in(parent, "/device").await {
+        if name.contains(".cmdr-tmp-") {
+            parent
+                .delete(&Path::new("/device").join(name))
+                .await
+                .expect("sweep a temp");
+        }
+    }
+}
+
+/// Neither the move aside nor the putting back can happen, so the edit can't
+/// take the name and the original can't return to it: the edit moves to a
+/// ` (recovered)` name the error names, and the original stays at its aside.
 #[tokio::test]
-async fn a_rename_that_fails_after_the_delete_keeps_the_archive_under_a_findable_name() {
+async fn a_name_that_refuses_both_the_edit_and_the_original_keeps_both_findable() {
     let archive_path = PathBuf::from("/device/bundle.zip");
-    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
-        .failing_call(
-            FaultyOp::Rename,
-            1,
-            VolumeError::NotConnected("the phone stopped answering".into()),
-        )
-        .arc();
+    let inner = sibling_allowing_parent(&archive_path).await;
+    inner.set_rename_to_failing(&archive_path);
 
-    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+    let result = add_edit(inner.clone() as Arc<dyn Volume>, archive_path.clone()).await;
 
-    assert!(parent.fault_fired(FaultyOp::Rename), "the swap's rename failed");
     let Err(super::EditError::Op(WriteOperationError::NewDataKeptAt { path, kept_at, .. })) = result else {
         panic!("the error must say where the edited archive is");
     };
     assert_eq!(path, "/device/bundle.zip");
     assert!(
         !kept_at.contains(".cmdr-tmp-"),
-        "the archive must not keep a name the stale-temp sweep deletes: {kept_at}"
+        "the edit must not keep a name the stale-temp sweep deletes: {kept_at}"
     );
-    let back = read_remote_zip(parent.as_ref(), Path::new(&kept_at)).await;
-    assert!(
-        back.contains_key("keep.txt") && back.contains_key("added.txt"),
-        "the edited archive, whole"
-    );
-    let names = sibling_names(parent.as_ref(), &archive_path).await;
+    let edit = read_remote_zip(inner.as_ref(), Path::new(&kept_at)).await;
+    assert!(edit.contains_key("added.txt"), "the edited archive, whole");
+    let aside = aside_in_device(inner.as_ref()).await.expect("the original stays aside");
+    let original = read_remote_zip(inner.as_ref(), &aside).await;
+    assert!(original.contains_key("keep.txt") && !original.contains_key("added.txt"));
+    let names = names_in(inner.as_ref(), "/device").await;
     assert!(
         !names.iter().any(|n| n.contains(".cmdr-tmp-")),
         "nothing left in temp space, got: {names:?}"
     );
+}
+
+/// The edit can't take the name, but the original goes back to it: the edit
+/// simply didn't happen, and nothing is left beside the original.
+#[tokio::test]
+async fn a_landing_that_fails_puts_the_original_back() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
+        .failing_call(FaultyOp::Rename, 2, VolumeError::NotConnected("a hiccup".into()))
+        .arc();
+
+    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+
+    assert!(parent.fault_fired(FaultyOp::Rename), "the landing rename failed");
+    assert!(
+        matches!(result, Err(super::EditError::Op(ref e)) if !matches!(e, WriteOperationError::NewDataKeptAt { .. })),
+        "a plain refusal: the original is back"
+    );
+    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
+    assert!(
+        back.contains_key("keep.txt") && !back.contains_key("added.txt"),
+        "the original, at its name"
+    );
+    assert_eq!(
+        names_in(parent.as_ref(), "/device").await,
+        ["bundle.zip"],
+        "no temp, no aside"
+    );
+}
+
+/// The move aside is refused and the original is still there: the edit didn't
+/// happen, the original keeps its bytes, and the spare temp goes.
+#[tokio::test]
+async fn a_refused_move_aside_leaves_the_original_whole_and_takes_the_temp_away() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
+        .failing_call(FaultyOp::Rename, 1, VolumeError::NotConnected("busy".into()))
+        .arc();
+
+    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+
+    assert!(parent.fault_fired(FaultyOp::Rename), "the move aside was refused");
+    assert!(
+        matches!(result, Err(super::EditError::Op(ref e)) if !matches!(e, WriteOperationError::NewDataKeptAt { .. })),
+        "a plain refusal: nothing moved"
+    );
+    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
+    assert!(
+        back.contains_key("keep.txt") && !back.contains_key("added.txt"),
+        "the original, untouched"
+    );
+    assert_eq!(
+        names_in(parent.as_ref(), "/device").await,
+        ["bundle.zip"],
+        "no temp, no aside"
+    );
+}
+
+/// The edit landed but its old version couldn't be deleted: the edit is in
+/// place and the old version stays beside it, visible, under a name no sweep takes.
+#[tokio::test]
+async fn an_aside_that_wont_delete_stays_beside_the_landed_edit() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
+        .failing_call(FaultyOp::Delete, 1, VolumeError::NotConnected("busy".into()))
+        .arc();
+
+    assert!(
+        add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone())
+            .await
+            .is_ok()
+    );
+
+    assert!(parent.fault_fired(FaultyOp::Delete), "the aside delete was refused");
+    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
+    assert!(back.contains_key("added.txt"), "the edit is in place");
+    let aside = aside_in_device(parent.as_ref()).await.expect("the old version stays");
+    assert!(read_remote_zip(parent.as_ref(), &aside).await.contains_key("keep.txt"));
+}
+
+/// A crash after each step of the swap (modelled as the device going silent:
+/// every call after the cut fails, so nothing more reaches it), then the hourly
+/// transfer sweep, then the next remote zip edit in that folder. At every cut a
+/// complete archive survives the sweep, and the next edit puts the original back
+/// if its name is empty, never deleting an aside.
+#[tokio::test]
+async fn a_crash_after_any_step_of_the_swap_loses_no_archive() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let sibling = PathBuf::from("/device/other.zip");
+    // Mutating calls in order: upload, move aside, landing, delete aside.
+    for cut in 1..=3 {
+        let inner = sibling_allowing_parent(&archive_path).await;
+        inner
+            .create_file(&sibling, &build_zip(&[("other.txt", b"other")]))
+            .await
+            .expect("seed the sibling zip");
+        let dying = Arc::new(GoesSilentAfter::new(Arc::clone(&inner), cut));
+
+        // Only a cut after the landing has the edit in place to report.
+        let landed = add_edit(dying as Arc<dyn Volume>, archive_path.clone()).await.is_ok();
+        assert_eq!(landed, cut == 3, "cut {cut}: success only once the edit took its name");
+        sweep_transfer_temps(inner.as_ref()).await;
+
+        let at_name = inner.exists(&archive_path).await;
+        let aside = aside_in_device(inner.as_ref()).await;
+        match cut {
+            1 => assert!(at_name && aside.is_none(), "cut 1: the original, untouched"),
+            2 => assert!(!at_name && aside.is_some(), "cut 2: the original, aside"),
+            _ => assert!(at_name && aside.is_some(), "cut 3: the edit, the original aside"),
+        }
+        if let Some(aside) = &aside {
+            let original = read_remote_zip(inner.as_ref(), aside).await;
+            assert!(
+                !original.contains_key("added.txt"),
+                "cut {cut}: the aside is the original"
+            );
+        }
+
+        // The next touch: an edit of another zip in the same folder.
+        assert!(
+            add_edit(inner.clone() as Arc<dyn Volume>, sibling.clone())
+                .await
+                .is_ok()
+        );
+
+        let back = read_remote_zip(inner.as_ref(), &archive_path).await;
+        assert_eq!(
+            back.contains_key("added.txt"),
+            cut == 3,
+            "cut {cut}: the right version at the name"
+        );
+        assert!(back.contains_key("keep.txt"), "cut {cut}: a whole archive at the name");
+        assert_eq!(
+            aside_in_device(inner.as_ref()).await.is_some(),
+            cut == 3,
+            "cut {cut}: an aside goes back to an empty name, and is never reaped beside a taken one"
+        );
+    }
+}
+
+/// Only an aside whose name still says its original's name whole is put back:
+/// a user's file that merely contains the marker, or a name shortened to fit,
+/// stays where it is.
+#[test]
+fn only_a_whole_aside_name_reads_back_its_original() {
+    let uuid = "3f2a1b4c-0000-4000-8000-0123456789ab";
+    assert_eq!(
+        super::aside_original_name(&format!("bundle.zip.cmdr-temp-{uuid}")),
+        Some("bundle.zip")
+    );
+    assert_eq!(super::aside_original_name("notes.cmdr-temp-draft"), None);
+    assert_eq!(super::aside_original_name(&format!(".cmdr-temp-{uuid}")), None);
+    let near_the_cap = format!("{}.zip.cmdr-temp-{uuid}", "a".repeat(90));
+    assert_eq!(super::aside_original_name(&near_the_cap), None);
+}
+
+/// A parent that answers normally for its first `mutations` writes, renames,
+/// and deletes, then goes silent: every call after that fails, the way nothing
+/// reaches a phone that was unplugged or a process that died.
+struct GoesSilentAfter {
+    inner: Arc<InMemoryVolume>,
+    mutations_left: std::sync::Mutex<usize>,
+}
+
+impl GoesSilentAfter {
+    fn new(inner: Arc<InMemoryVolume>, mutations: usize) -> Self {
+        Self {
+            inner,
+            mutations_left: std::sync::Mutex::new(mutations),
+        }
+    }
+
+    /// Whether the cut has passed.
+    fn silent(&self) -> bool {
+        *self.mutations_left.lock().expect("lock") == 0
+    }
+
+    /// Spends one mutation, or answers that the parent is silent.
+    fn mutate(&self) -> Result<(), VolumeError> {
+        let mut left = self.mutations_left.lock().expect("lock");
+        if *left == 0 {
+            return Err(gone());
+        }
+        *left -= 1;
+        Ok(())
+    }
+}
+
+fn gone() -> VolumeError {
+    VolumeError::NotConnected("the device went away".into())
+}
+
+impl Volume for GoesSilentAfter {
+    crate::forward_volume_methods!(
+        inner => name,
+        root,
+        lane_key,
+        local_path,
+        supports_streaming,
+        supports_local_fs_access,
+        operations_are_local,
+        create_directory_errors_on_existing_dir,
+        supports_unknown_length_writes,
+        write_is_single_shot,
+        publishes_writes_whole,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
+        if self.silent() {
+            return Box::pin(async { Err(gone()) });
+        }
+        self.inner.list_directory(path, on_progress)
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>> {
+        if self.silent() {
+            return Box::pin(async { Err(gone()) });
+        }
+        self.inner.get_metadata(path)
+    }
+
+    fn open_read_stream<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn cmdr_fs::volume::VolumeReadStream>, VolumeError>> + Send + 'a>>
+    {
+        if self.silent() {
+            return Box::pin(async { Err(gone()) });
+        }
+        self.inner.open_read_stream(path)
+    }
+
+    fn write_from_stream<'a>(
+        &'a self,
+        dest: &'a Path,
+        mode: cmdr_fs::volume::WriteMode,
+        length: cmdr_fs::volume::StreamLength,
+        stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
+        on_progress: &'a (dyn Fn(cmdr_fs::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::StreamWritten, VolumeError>> + Send + 'a>> {
+        if let Err(e) = self.mutate() {
+            return Box::pin(async { Err(e) });
+        }
+        self.inner.write_from_stream(dest, mode, length, stream, on_progress)
+    }
+
+    fn rename<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        force: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        if let Err(e) = self.mutate() {
+            return Box::pin(async { Err(e) });
+        }
+        self.inner.rename(from, to, force)
+    }
+
+    fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        if let Err(e) = self.mutate() {
+            return Box::pin(async { Err(e) });
+        }
+        self.inner.delete(path)
+    }
 }
 
 /// The replacing rename lands on the server but its answer is an error. The temp
@@ -465,34 +762,6 @@ async fn a_replacing_rename_that_landed_despite_its_error_keeps_the_edit() {
     assert!(
         !names.iter().any(|n| n.contains(".cmdr-tmp-")),
         "no leftover upload temp, got: {names:?}"
-    );
-}
-
-/// The delete of the original is refused and the original is still there: the
-/// edit didn't happen, the original keeps its bytes, and the spare temp goes.
-#[tokio::test]
-async fn a_refused_delete_of_the_original_leaves_it_whole_and_takes_the_temp_away() {
-    let archive_path = PathBuf::from("/device/bundle.zip");
-    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
-        .failing_call(FaultyOp::Delete, 1, VolumeError::NotConnected("busy".into()))
-        .arc();
-
-    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
-
-    assert!(parent.fault_fired(FaultyOp::Delete), "the delete was refused");
-    assert!(
-        matches!(result, Err(super::EditError::Op(ref e)) if !matches!(e, WriteOperationError::NewDataKeptAt { .. })),
-        "a plain refusal: nothing moved"
-    );
-    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
-    assert!(
-        back.contains_key("keep.txt") && !back.contains_key("added.txt"),
-        "the original, untouched"
-    );
-    let names = sibling_names(parent.as_ref(), &archive_path).await;
-    assert!(
-        !names.iter().any(|n| n.contains(".cmdr-tmp-")),
-        "the unplaced temp is taken away, got: {names:?}"
     );
 }
 
