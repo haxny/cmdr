@@ -109,11 +109,12 @@ async fn webdav_integration_a_new_file_costs_one_put_and_one_move() {
 }
 
 /// An Overwrite: the upload rides the conflict layer's safe-replace temp, then
-/// the original goes and the temp takes its name. Still one `PUT` and one
-/// `MOVE`, plus the one `DELETE` of the original the swap needs.
+/// the original moves aside, the temp takes its name, and the aside goes
+/// (WebDAV has no one-step replace, so the swap keeps the original whole until
+/// the new bytes are at its name). One `PUT`, two `MOVE`s, and one `DELETE`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
-async fn webdav_integration_an_overwrite_costs_one_put_one_move_and_one_delete() {
+async fn webdav_integration_an_overwrite_costs_one_put_two_moves_and_one_delete() {
     let (proxy, remote, dir) = counted().await;
     seed(remote.as_ref(), &dir, &[("report.txt", b"DEST-old-report")]).await;
     let (_local_dir, local) = local_volume("wire-cost-overwrite");
@@ -144,13 +145,13 @@ async fn webdav_integration_an_overwrite_costs_one_put_one_move_and_one_delete()
     assert_eq!(proxy.requests("PUT") - puts, 1, "one PUT");
     assert_eq!(
         proxy.requests("MOVE") - moves,
-        1,
-        "❗ one MOVE: the safe-replace swap. A second means the backend staged under the engine's temp again"
+        2,
+        "❗ two MOVEs: the original aside, the temp onto its name. A third means the backend staged under the engine's temp again"
     );
     assert_eq!(
         proxy.requests("DELETE") - deletes,
         1,
-        "one DELETE: the original the swap replaces"
+        "one DELETE: the original's aside, once the new bytes are at its name"
     );
     clean_up_past_the_proxy(&dir).await;
 }

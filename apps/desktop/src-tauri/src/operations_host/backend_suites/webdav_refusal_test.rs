@@ -188,15 +188,16 @@ async fn webdav_integration_a_quota_refused_before_the_body_fails_as_full_and_lo
 
 // ── 403 while replacing the user's file ─────────────────────────────
 
-/// An Overwrite whose new bytes are in, and whose DELETE of the user's file is
-/// refused: the one moment in a safe-replace where the original is at stake.
-/// The swap must stop there, keep the original, and clear away the
-/// complete-but-unplaced temp.
+/// An Overwrite whose new bytes are in, and whose MOVE of the user's file
+/// aside is refused: the first step of a safe-replace that touches the
+/// original. The swap must stop there, keep the original, and clear away the
+/// complete-but-unplaced temp. (A `MOVE`'s request path is its source, so this
+/// refuses the move aside and never the temp's landing.)
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
 async fn webdav_integration_a_refused_replace_keeps_the_users_file() {
     let (proxy, remote, dir) = refusing(Refusal {
-        method: "DELETE",
+        method: "MOVE",
         path: PathRule::EndsWith("/report.txt"),
         status: 403,
         answer: Answer::AfterTheBody,
@@ -238,7 +239,7 @@ async fn webdav_integration_a_refused_replace_keeps_the_users_file() {
     assert_eq!(
         try_read(remote.as_ref(), &dir.join("report.txt")).await.as_deref(),
         Some(b"DEST-old-report".as_slice()),
-        "❗ the user's file the server wouldn't let us remove must be exactly as it was"
+        "❗ the user's file the server wouldn't let us move must be exactly as it was"
     );
     // The swap couldn't happen, so the finalize takes its complete-but-unplaced
     // temp away at once (the source still holds those bytes): nothing of ours
