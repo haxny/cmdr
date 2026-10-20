@@ -10,6 +10,7 @@ use cmdr_fs::volume::Volume;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::{Duration, Instant};
+use tokio::runtime::Handle;
 
 /// A repo's index: the one serving, and the load in flight (a first load, or
 /// a reload beside the one serving).
@@ -63,7 +64,7 @@ pub(crate) struct Installed {
     pub(crate) covers: HashSet<String>,
     pub(crate) generation: u64,
     pub(crate) tuning: Tuning,
-    pub(crate) runtime: tokio::runtime::Handle,
+    pub(crate) runtime: Handle,
 }
 
 impl Installed {
@@ -88,21 +89,25 @@ impl Installed {
             {
                 return;
             }
-            index.ready = Some(Ready {
+            let replaced = index.ready.replace(Ready {
                 parent: self.parent,
                 repo: Arc::clone(repo),
                 covers: self.covers,
                 generation: self.generation,
             });
+            drop(index);
+            free_off_the_runtime(&self.runtime, replaced);
         }
         slot.touch();
         if let Some(repos) = self.repos.upgrade() {
-            evict_indexes(&repos, &slot, &self.tuning);
+            evict_indexes(&repos, &slot, &self.tuning, &self.runtime);
         }
-        drop(
-            self.runtime
-                .spawn(drop_when_idle(Arc::downgrade(&slot), self.generation, self.tuning)),
-        );
+        drop(self.runtime.spawn(drop_when_idle(
+            Arc::downgrade(&slot),
+            self.generation,
+            self.tuning,
+            self.runtime.clone(),
+        )));
     }
 }
 
@@ -112,7 +117,12 @@ impl Installed {
 /// evicted would pay a re-open plus a full reload mid-copy. With every one in
 /// use, the cap is overshot. The password, the opened repo, and the
 /// snapshot list stay.
-fn evict_indexes(repos: &Mutex<HashMap<RepoKey, Arc<RepoSlot>>>, keep: &Arc<RepoSlot>, tuning: &Tuning) {
+fn evict_indexes(
+    repos: &Mutex<HashMap<RepoKey, Arc<RepoSlot>>>,
+    keep: &Arc<RepoSlot>,
+    tuning: &Tuning,
+    runtime: &Handle,
+) {
     let slots: Vec<Arc<RepoSlot>> = lock(repos).values().cloned().collect();
     let mut others: Vec<(Instant, Arc<RepoSlot>)> = slots
         .into_iter()
@@ -131,7 +141,9 @@ fn evict_indexes(repos: &Mutex<HashMap<RepoKey, Arc<RepoSlot>>>, keep: &Arc<Repo
             .as_ref()
             .is_some_and(|ready| !in_use(slot, ready, tuning.lease_grace))
         {
-            index.ready = None;
+            let gone = index.ready.take();
+            drop(index);
+            free_off_the_runtime(runtime, gone);
             over -= 1;
         }
     }
@@ -139,7 +151,7 @@ fn evict_indexes(repos: &Mutex<HashMap<RepoKey, Arc<RepoSlot>>>, keep: &Arc<Repo
 
 /// Drops a slot's index once nothing has used it for [`Tuning::index_idle_drop`]
 /// and nothing holds it. Ends when a newer load replaced it.
-async fn drop_when_idle(slot: Weak<RepoSlot>, generation: u64, tuning: Tuning) {
+async fn drop_when_idle(slot: Weak<RepoSlot>, generation: u64, tuning: Tuning, runtime: Handle) {
     let mut wait = tuning.index_idle_drop;
     loop {
         tokio::time::sleep(wait).await;
@@ -158,8 +170,20 @@ async fn drop_when_idle(slot: Weak<RepoSlot>, generation: u64, tuning: Tuning) {
             wait = tuning.index_idle_drop;
             continue;
         }
-        index.ready = None;
+        let gone = index.ready.take();
+        drop(index);
+        free_off_the_runtime(&runtime, gone);
         return;
+    }
+}
+
+/// Frees a loaded index on the blocking pool, never under the slot's lock or on
+/// an async worker: the last `Arc` of a 2.4M-blob index plus its 32 MB blob
+/// cache takes a while to deallocate, and every listing of the repo would wait
+/// on the lock meanwhile.
+pub(crate) fn free_off_the_runtime(runtime: &Handle, ready: Option<Ready>) {
+    if let Some(ready) = ready {
+        drop(runtime.spawn_blocking(move || drop(ready)));
     }
 }
 

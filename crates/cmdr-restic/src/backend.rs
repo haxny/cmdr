@@ -121,19 +121,32 @@ impl VolumeBackend {
         keys.sort_unstable_by_key(|(id, _)| *id);
         keys.truncate(MAX_KEYS);
         let mut tolerable = Vec::with_capacity(keys.len());
+        let mut summed_cost: u64 = 0;
         for (id, size) in keys {
             if size > MAX_KEY_FILE_BYTES {
                 continue;
             }
+            // Bounded by the limit too, not by the listing's size: a backend that
+            // reports none lists every file as 0 bytes.
+            let limit = MAX_KEY_FILE_BYTES as usize;
             let bytes = self
-                .read_stream(&self.path_of(FileType::Key, &id), None)
+                .read_stream(&self.path_of(FileType::Key, &id), Some(limit + 1))
                 .map_err(backend_error)?;
+            if bytes.len() > limit {
+                continue;
+            }
             let Ok(key) = serde_json::from_slice::<KeyFile>(&bytes) else {
                 continue;
             };
-            if scrypt_cost_is_tolerable(key.n, key.r, key.p) {
-                tolerable.push((id, size));
+            let Some(cost) = scrypt_cost(key.n, key.r, key.p).filter(|cost| *cost <= MAX_SCRYPT_COST) else {
+                continue;
+            };
+            // rustic tries the keys one after the other, so their costs add up.
+            if summed_cost + cost > MAX_TOTAL_SCRYPT_COST {
+                continue;
             }
+            summed_cost += cost;
+            tolerable.push((id, size));
         }
         Ok(tolerable)
     }
@@ -277,12 +290,23 @@ const MAX_SCRYPT_COST: u64 = 1 << 23;
 
 /// Whether deriving a key with these scrypt parameters stays inside
 /// [`MAX_SCRYPT_COST`].
+#[cfg(test)]
 pub(crate) fn scrypt_cost_is_tolerable(n: u32, r: u32, p: u32) -> bool {
+    scrypt_cost(n, r, p).is_some_and(|cost| cost <= MAX_SCRYPT_COST)
+}
+
+/// A key's scrypt cost, `N·r·p`, or `None` when it overflows.
+fn scrypt_cost(n: u32, r: u32, p: u32) -> Option<u64> {
     u64::from(n)
         .checked_mul(u64::from(r))
         .and_then(|nr| nr.checked_mul(u64::from(p)))
-        .is_some_and(|cost| cost <= MAX_SCRYPT_COST)
 }
+
+/// The ceiling on the SUMMED cost of every key offered: rustic tries them one
+/// after the other, so ten keys at [`MAX_SCRYPT_COST`] would be ten 1 GiB,
+/// multi-second derivations per typed password. Four at the ceiling, or 32 at
+/// rustic's default; a real repo has a handful of keys at the default.
+pub(crate) const MAX_TOTAL_SCRYPT_COST: u64 = 4 * MAX_SCRYPT_COST;
 
 /// A size as rustic's listing wants it. Pack files stay far below 4 GiB (rustic
 /// caps them), so the clamp is a guard, never a real path.

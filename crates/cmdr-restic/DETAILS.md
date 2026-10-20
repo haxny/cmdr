@@ -119,7 +119,9 @@ them, the host never does.
   in flight are DETACHED and stop at their next chunk, ❌ never aborted (a read dropped inside a device transaction can
   wedge a phone). Past 256 MiB of index files (`PREFETCH_LIMIT`) holding them costs too much: rustic reads them itself
   and the feed counts them and refuses new reads once cancelled, so search and icons stall for that load. The build
-  itself (decrypt and parse, ~0.3 s for 112 MB warm) isn't cancellable.
+  itself (decrypt and parse, ~0.3 s for 112 MB warm) isn't cancellable. The budget is decided from the listing's sizes,
+  so each file is held only up to its listed size plus 64 KiB (or the whole budget when the listing gave no size); one
+  that runs past is let go of and rustic reads it itself.
 - **Honest progress**: `ListingPhase::LoadingIndex { done_bytes, total_bytes, done_files, total_files }` from the index
   files' listing and the bytes actually read, ❌ never rustic's file count. Each waiter forwards it to its listing's
   `on_progress` at most every 100 ms. A moving phase is what keeps the listing engine's stall watch quiet
@@ -134,6 +136,8 @@ them, the host never does.
   silently. A cap by count, not bytes: estimate an index at ~5x its `index/` folder.
 - **Idle drop after five minutes** unused (`index_idle_drop`), unless a read stream still holds it. Getting it back is
   an unlock plus a load, which the progress phase covers.
+- **An index is freed on the blocking pool**, ❌ never under the slot's lock or on an async worker: the last `Arc` of a
+  2.4M-blob index plus its blob cache takes a while to deallocate (`index_slot::free_off_the_runtime`).
 - **Opened repos** (unlocked, snapshot list read, a few MB each) are capped at eight (`max_opened`), least recently used
   first, never one in use.
 - No log lines: the crate has no logger dependency, and nothing here needs one more than the typed answers it gives.
@@ -222,7 +226,9 @@ offers rustic at most 32 key files (the first by id), skips any over 64 KiB or n
 `N·r·p` exceeds 2^23: 8 times rustic's own default (`N = 2^17`, `r = 8`, `p = 1`), and a 1 GiB ceiling on scrypt's
 `128·N·r` bytes. rustic finds keys only through this listing (it passes no key hint on open), so a key skipped here is
 never derived. A crafted repo with 32 tolerable decoys sorting before the real key would refuse the password; that's the
-price of not pinning a core.
+price of not pinning a core. rustic tries the offered keys one after the other, so their SUMMED cost is capped too
+(`MAX_TOTAL_SCRYPT_COST`: four at the ceiling, or 32 at rustic's default). A key file is read with a bound of 64 KiB
+whatever the listing says its size is, since a backend that reports no size lists every file as 0 bytes.
 
 ## Opening a repo (`repo.rs`)
 

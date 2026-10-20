@@ -37,6 +37,10 @@ const PREFETCH_CONCURRENCY: usize = 4;
 /// anyway (`docs/notes/restic/open-cost.md`); past this, rustic streams them.
 pub(crate) const PREFETCH_LIMIT: u64 = 256 * 1024 * 1024;
 
+/// How far past its listed size an index file may run before the prefetch lets
+/// go of it.
+const CAP_SLACK: u64 = 64 * 1024;
+
 /// The longest a waiter goes between two progress ticks it forwards, so a pane
 /// hears a few a second rather than one per chunk read.
 const TICK_EVERY: Duration = Duration::from_millis(100);
@@ -296,9 +300,16 @@ async fn run(
             .spawn_blocking(move || open_blocking(&backend, &password, None))
     };
     if total_bytes <= spec.prefetch_limit {
-        prefetch(&spec.parent, &index_dir, &files, &feed, &spec.runtime)
-            .await
-            .map_err(ResticError::Volume)?;
+        prefetch(
+            &spec.parent,
+            &index_dir,
+            &files,
+            spec.prefetch_limit,
+            &feed,
+            &spec.runtime,
+        )
+        .await
+        .map_err(ResticError::Volume)?;
     }
     let open = opening.await.map_err(worker_crashed)??;
     if cancel.is_cancelled() {
@@ -338,15 +349,19 @@ async fn prefetch(
     parent: &Arc<dyn Volume>,
     dir: &Path,
     files: &[(Id, u64)],
+    budget: u64,
     feed: &Arc<IndexFeed>,
     runtime: &Handle,
 ) -> Result<(), VolumeError> {
-    let mut pending = files.iter().map(|(id, _)| *id);
+    // A file is held up to its listed size plus some slack, or the whole budget
+    // when the listing gave no size.
+    let cap_of = move |listed: u64| if listed > 0 { listed + CAP_SLACK } else { budget };
+    let mut pending = files.iter().map(|(id, listed)| (*id, cap_of(*listed)));
     let mut running = JoinSet::new();
     loop {
         while running.len() < PREFETCH_CONCURRENCY {
-            let Some(id) = pending.next() else { break };
-            let read = read_one(Arc::clone(parent), dir.join(&*id.to_hex()), id, Arc::clone(feed));
+            let Some((id, cap)) = pending.next() else { break };
+            let read = read_one(Arc::clone(parent), dir.join(&*id.to_hex()), id, cap, Arc::clone(feed));
             running.spawn_on(read, runtime);
         }
         let next = tokio::select! {
@@ -372,7 +387,17 @@ async fn prefetch(
 }
 
 /// Reads one index file whole into `feed`, counting each chunk as it lands.
-async fn read_one(parent: Arc<dyn Volume>, path: PathBuf, id: Id, feed: Arc<IndexFeed>) -> Result<(), VolumeError> {
+///
+/// Holds at most `cap` bytes: past it, the file is let go of (rustic reads it
+/// itself), so a listing that under-reports sizes (or reports none) never makes
+/// the prefetch hold more than it budgeted.
+async fn read_one(
+    parent: Arc<dyn Volume>,
+    path: PathBuf,
+    id: Id,
+    cap: u64,
+    feed: Arc<IndexFeed>,
+) -> Result<(), VolumeError> {
     let mut stream = parent.open_read_stream(&path).await?;
     let mut bytes = Vec::new();
     while let Some(chunk) = stream.next_chunk().await {
@@ -382,6 +407,9 @@ async fn read_one(parent: Arc<dyn Volume>, path: PathBuf, id: Id, feed: Arc<Inde
         let chunk = chunk?;
         feed.tally.add_bytes(chunk.len());
         bytes.extend_from_slice(&chunk);
+        if bytes.len() as u64 > cap {
+            return Ok(());
+        }
     }
     lock(&feed.prefetched).insert(id, Bytes::from(bytes));
     feed.tally.file_done();

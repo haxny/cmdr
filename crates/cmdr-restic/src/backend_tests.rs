@@ -474,3 +474,92 @@ async fn a_parent_without_held_readers_keeps_using_ranged_reads() {
     .await;
     assert_eq!(parent.read_range_log(), vec![(10, 5), (20, 5)]);
 }
+
+/// ❗ Each key passes the per-key ceiling, but rustic tries them one after the
+/// other: ten keys at the ceiling would be ten 1 GiB, multi-second derivations
+/// per typed password. Their SUMMED cost is capped too.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_keys_offered_stay_inside_a_summed_scrypt_cost() {
+    let parent = layout_volume(InMemoryVolume::new("parent")).await;
+    add_keys(&parent, 0, 10, |_| key_json(1 << 20, 8, 1)).await;
+    let be = backend(&parent);
+
+    let keys = blocking(move || be.list_with_size(FileType::Key).expect("keys")).await;
+    let default_key = id(KEY);
+    let ceiling_keys = keys.iter().filter(|(key, _)| *key != default_key).count();
+    assert!(
+        ceiling_keys as u64 * (1 << 23) <= super::MAX_TOTAL_SCRYPT_COST,
+        "{ceiling_keys} keys at the per-key ceiling offered"
+    );
+    assert!(ceiling_keys >= 1, "a tolerable key is still offered");
+}
+
+/// A parent whose listings report no sizes (some backends can't), over the
+/// in-memory volume.
+struct SizelessParent {
+    inner: Arc<InMemoryVolume>,
+}
+
+impl Volume for SizelessParent {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn root(&self) -> &Path {
+        self.inner.root()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            let mut entries = self.inner.list_directory(path, on_progress).await?;
+            for entry in &mut entries {
+                entry.size = None;
+            }
+            Ok(entries)
+        })
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        self.inner.get_metadata(path)
+    }
+
+    fn open_read_stream<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn cmdr_fs::volume::VolumeReadStream>, VolumeError>> + Send + 'a>>
+    {
+        self.inner.open_read_stream(path)
+    }
+}
+
+/// ❗ A listing that reports no size (`None` reads as 0) must not let a huge
+/// "key" file be read whole before any password is checked: the read itself
+/// stops past the key-file limit, and the key is skipped.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_key_file_past_the_limit_is_skipped_even_when_the_listing_hides_its_size() {
+    let inner = layout_volume(InMemoryVolume::new("parent")).await;
+    // Valid JSON (trailing whitespace is allowed), so only its size can refuse it.
+    let mut padded = key_json(DEFAULT_N, 8, 1);
+    padded.extend(std::iter::repeat_n(b' ', 200_000));
+    let big = add_keys(&inner, 0, 1, move |_| padded.clone()).await;
+    let parent: Arc<dyn Volume> = Arc::new(SizelessParent { inner });
+    let be = Arc::new(VolumeBackend::new(
+        parent,
+        PathBuf::from(ROOT),
+        tokio::runtime::Handle::current(),
+    ));
+
+    let keys = blocking(move || be.list_with_size(FileType::Key).expect("keys")).await;
+    assert!(!keys.iter().any(|(id, _)| *id == big[0]), "{keys:?}");
+}

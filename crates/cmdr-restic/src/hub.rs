@@ -7,7 +7,7 @@
 
 use crate::detect::is_restic_repo;
 use crate::index_load::{Load, LoadSpec, PREFETCH_LIMIT, Waiter};
-use crate::index_slot::{IndexSlot, Installed};
+use crate::index_slot::{IndexSlot, Installed, free_off_the_runtime};
 use crate::path::VIRTUAL_ENTRY_NAME;
 use crate::repo::{IndexedRepo, ResticError, ResticRepo};
 use crate::snapshots::{Snapshot, SnapshotList, snapshot_list_of};
@@ -444,7 +444,7 @@ impl ResticRepos {
             // master key. Open again, once, with the password held, and read the
             // snapshot list from scratch.
             Err(ResticError::Unreadable { .. }) => {
-                slot.drop_opened_repo();
+                slot.drop_opened_repo(&self.host.runtime());
                 let repo = self.opened(slot, parent).await?;
                 repo.refresh_snapshots(Vec::new())
                     .await
@@ -456,7 +456,7 @@ impl ResticRepos {
         // deleted after browsing: `NotFound`, ❌ never an empty list that reads
         // as "no backups".
         if files.is_empty() && !config_exists(parent.as_ref(), &slot.key.root).await? {
-            slot.drop_opened_repo();
+            slot.drop_opened_repo(&self.host.runtime());
             *lock(&slot.snapshots) = None;
             lock(&self.confirmations).remove(&slot.key);
             return Err(VolumeError::NotFound(slot.key.root.display().to_string()));
@@ -649,11 +649,12 @@ impl RepoSlot {
 
     /// Lets go of the opened repo and the loaded index: the repo changed under
     /// them (replaced or deleted). The password stays; the next call opens anew.
-    fn drop_opened_repo(&self) {
+    fn drop_opened_repo(&self, runtime: &tokio::runtime::Handle) {
         if let Ok(mut opened) = self.opened.try_lock() {
             *opened = None;
         }
-        lock(&self.index).ready = None;
+        let gone = lock(&self.index).ready.take();
+        free_off_the_runtime(runtime, gone);
     }
 
     /// Forgets the password held in memory (the person cancelled the prompt).

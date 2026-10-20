@@ -55,6 +55,8 @@ struct ScriptedParent {
     gate: watch::Receiver<bool>,
     /// Holds listings of `index/` the same way.
     list_gate: watch::Receiver<bool>,
+    /// Lists `index/` with no sizes, as a backend that can't report them does.
+    hide_index_sizes: bool,
     index_read_delay: Duration,
     index_reads: AtomicUsize,
     in_flight: AtomicUsize,
@@ -103,7 +105,14 @@ impl Volume for ScriptedParent {
             self.index_listings_started.fetch_add(1, Ordering::SeqCst);
             let mut gate = self.list_gate.clone();
             let _ = gate.wait_for(|open| *open).await;
-            let listed = self.inner.list_directory(path, on_progress).await;
+            let mut listed = self.inner.list_directory(path, on_progress).await;
+            if self.hide_index_sizes
+                && let Ok(entries) = &mut listed
+            {
+                for entry in entries {
+                    entry.size = None;
+                }
+            }
             self.index_listings_done.fetch_add(1, Ordering::SeqCst);
             listed
         })
@@ -165,6 +174,7 @@ struct RigOptions {
     tuning: Tuning,
     gate_open: bool,
     list_gate_open: bool,
+    hide_index_sizes: bool,
     index_read_delay: Duration,
     credentials: Option<Arc<dyn CredentialStore>>,
     unlock: bool,
@@ -177,6 +187,7 @@ impl Default for RigOptions {
             tuning: Tuning::default(),
             gate_open: true,
             list_gate_open: true,
+            hide_index_sizes: false,
             index_read_delay: Duration::ZERO,
             credentials: None,
             unlock: true,
@@ -209,6 +220,7 @@ impl Rig {
             inner,
             gate: gate_rx,
             list_gate: list_gate_rx,
+            hide_index_sizes: options.hide_index_sizes,
             index_read_delay: options.index_read_delay,
             index_reads: AtomicUsize::new(0),
             in_flight: AtomicUsize::new(0),
@@ -462,6 +474,30 @@ async fn an_index_too_big_to_prefetch_is_streamed_and_still_counted() {
         panic!("the load reported its phase");
     };
     assert!(done_bytes > 0, "rustic's own reads are counted");
+}
+
+/// ❗ The prefetch decides how much to hold from the listing's sizes, and a
+/// backend that reports none lists every index file as 0 bytes. A file read past
+/// the budget isn't held: the prefetch lets go of it and rustic reads it itself.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_prefetch_holds_no_more_than_its_budget_when_sizes_are_hidden() {
+    let rig = Rig::new(RigOptions {
+        tuning: Tuning {
+            prefetch_limit: 1,
+            ..Tuning::default()
+        },
+        hide_index_sizes: true,
+        ..RigOptions::default()
+    })
+    .await;
+
+    rig.volume.list_directory(&latest(ROOT), None).await.expect("lists");
+
+    assert_eq!(
+        rig.parent.index_reads(),
+        2 * rig.index_files,
+        "each file was let go of by the prefetch, then read by rustic"
+    );
 }
 
 // ── Memory: the cap, the idle drop, and what they never take ───────────────
