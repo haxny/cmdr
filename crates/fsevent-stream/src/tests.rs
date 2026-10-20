@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 
 #[cfg(feature = "async-std")]
 use async_std1 as async_std;
+use futures_util::future::FutureExt;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
 use tempfile::tempdir;
@@ -68,35 +69,28 @@ async fn must_abort_stream() {
     // Now there should be one runloop.
     assert_eq!(TEST_RUNNING_RUNLOOP_COUNT.load(Ordering::SeqCst), 1);
 
-    // Abort the stream immediately.
-    let abort_thread = thread::spawn(move || {
+    // Abort the stream from another thread, and wait for `abort` to return: it
+    // joins the runloop thread, whose stream release drops the only sender.
+    thread::spawn(move || {
         handler.abort();
-    });
+    })
+    .join()
+    .expect("to join");
 
-    // The stream should complete soon.
-    #[cfg(feature = "tokio")]
+    // So the stream has already ended, with nothing left to wait for. A timeout
+    // here raced `abort`'s own `fseventsd` round trips (stop, invalidate), which a
+    // loaded host stretched past the 1 s it allowed: 67 failures in the check
+    // runner's test log, none sooner than 1.3 s, 2026-08 to 2026-10.
     drop(
-        tokio::time::timeout(
-            Duration::from_secs(1),
-            stream.into_flatten().collect::<Vec<_>>(),
-        )
-        .await
-        .expect("to complete"),
-    );
-    #[cfg(feature = "async-std")]
-    drop(
-        async_std::future::timeout(
-            Duration::from_secs(1),
-            stream.into_flatten().collect::<Vec<_>>(),
-        )
-        .await
-        .expect("to complete"),
+        stream
+            .into_flatten()
+            .collect::<Vec<_>>()
+            .now_or_never()
+            .expect("an aborted stream to have ended by the time `abort` returns"),
     );
 
     // The runloop should be released.
     assert_eq!(TEST_RUNNING_RUNLOOP_COUNT.load(Ordering::SeqCst), 0);
-
-    abort_thread.join().expect("to join");
 }
 
 #[cfg(feature = "tokio")]
