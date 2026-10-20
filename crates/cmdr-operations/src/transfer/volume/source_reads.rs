@@ -99,7 +99,7 @@ impl WatchedStream {
         log::warn!(
             target: "copy",
             "source_reads: {} declared {} and delivered {}{}; failing the file rather than landing it",
-            self.source_path,
+            cmdr_fs::log_private::LogPrivate::file_path(&self.source_path),
             pluralize_grouped(declared, "byte"),
             pluralize_grouped(self.delivered, "byte"),
             if self.delivered > declared { " and more" } else { "" },

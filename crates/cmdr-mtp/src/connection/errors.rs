@@ -204,7 +204,8 @@ impl ErrorLogText for MtpConnectionError {
                 out.value(LogPrivate::path(path))
             }
             Self::AmbiguousName { device_id, path } => {
-                write!(f, "Same-named objects on {device_id}: {path}")
+                write!(out, "Same-named objects on {device_id}: ")?;
+                out.value(LogPrivate::path(path))
             }
             Self::DirectoryNotEmpty { device_id, path } => {
                 write!(out, "Folder still has contents on {device_id}: ")?;
