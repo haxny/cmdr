@@ -36,6 +36,7 @@ import { restoreFixtureTree } from '../e2e-shared/fixture-manifest.js'
 import { recreateFixtures } from '../e2e-shared/fixtures.js'
 import { ensureMcpClient, mcpCall } from '../e2e-shared/mcp-client.js'
 import {
+  clickButtonByText,
   dispatchMenuCommand,
   ensureAppReady,
   expectAndDismissToast,
@@ -198,6 +199,16 @@ test.describe('Compress (⌥F5)', () => {
         var cancel = btns.find(function(b){ return /cancel/i.test((b.textContent||'')); });
         if (cancel) cancel.click();
     })()`)
+    // A cancel that caught the write raises the "Compress canceled" alert over the
+    // dialog, and OK closes both; one that came too late ends as a completion, with
+    // no alert. Wait for whichever it is, then press OK if it's the alert.
+    const ALERT = '[data-dialog-id="alert"]'
+    await expect
+      .poll(async () => (await tauriPage.isVisible(ALERT)) || !(await tauriPage.isVisible('.modal-overlay')), {
+        timeout: waitBudget(20000),
+      })
+      .toBeTruthy()
+    if (await tauriPage.isVisible(ALERT)) await clickButtonByText(tauriPage, `${ALERT} button`, 'OK')
     await expect
       .poll(async () => !(await tauriPage.isVisible('.modal-overlay')), { timeout: waitBudget(20000) })
       .toBeTruthy()

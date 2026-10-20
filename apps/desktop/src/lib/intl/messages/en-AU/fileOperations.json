@@ -15,6 +15,14 @@
   "@fileOperations.delete.archiveWarningStrong": {
     "sourceHash": "d25cd46"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Copy cancelled} move {Move cancelled} compress {Compress cancelled} delete {Delete cancelled} trash {Move to Bin cancelled} other {Cancelled}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {You’ve cancelled this copy. The files it copied so far stay where they are.} move {You’ve cancelled this move. The files it moved so far stay where they landed.} compress {You’ve cancelled this compress.} delete {You’ve cancelled this delete. The files it deleted so far are gone, and the rest are still there.} trash {You’ve cancelled this move to the Bin. The files it moved so far stay in the Bin, and the rest are where they were.} other {You’ve cancelled this operation.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.trash.goToTrashAction": "Go to the Bin",
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "5332858"
