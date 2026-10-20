@@ -34,7 +34,7 @@ pub(crate) fn delete_files_with_progress_inner(
         // cache hit the same as a miss and fall through to a fresh local scan.
         let previews = state.scope().stores().previews();
         if let Some(cached) = previews
-            .take_cached_scan_result(preview_id, sources)
+            .take_cached_delete_scan(preview_id, sources)
             .filter(|c| !c.files.is_empty())
         {
             log::debug!(
@@ -73,6 +73,11 @@ pub(crate) fn delete_files_with_progress_inner(
         });
         return Ok(());
     }
+
+    // The scan's per-directory mount test may have run in a preview, before a
+    // drive was mounted inside the selection; the list would then name the
+    // drive's files. Asked again here, right before anything is removed.
+    super::super::mount_boundary::refuse_deleting_a_mount(sources)?;
 
     // Phase 2: Delete files first (deepest first)
     let mut files_done = 0;

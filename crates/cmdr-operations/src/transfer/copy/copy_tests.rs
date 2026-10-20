@@ -338,6 +338,7 @@ fn a_local_copy_never_acts_on_a_preview_of_a_different_selection() {
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_local_walk(
+            crate::types::ScanPreviewPurpose::Transfer,
             vec![other.clone()],
             vec![FileInfo::new(other.clone(), src_dir.clone(), &other_metadata)],
             Vec::new(),

@@ -35,6 +35,7 @@ fn get_scan_preview_totals_returns_cached_counts_after_complete() {
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_local_walk(
+            crate::types::ScanPreviewPurpose::Transfer,
             vec![source.clone()],
             files,
             vec![source.join("d1"), source.join("d2")],

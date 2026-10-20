@@ -142,7 +142,14 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
     let preview_id = "test-preview-id-skip-source-scan".to_string();
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
-        CachedScanResult::from_volume_batch(vec![PathBuf::from("/photo.jpg")], 1, 15, 15, one_photo()),
+        CachedScanResult::from_volume_batch(
+            crate::types::ScanPreviewPurpose::Transfer,
+            vec![PathBuf::from("/photo.jpg")],
+            1,
+            15,
+            15,
+            one_photo(),
+        ),
     );
 
     // Auto-resolve the conflict via Skip-all so the test doesn't hang waiting
@@ -185,7 +192,14 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
     // ── Stop mode with a hint: also no scan ─────────────────────────
     engine.stores().previews().insert_scan_result(
         "test-preview-id-stop".to_string(),
-        CachedScanResult::from_volume_batch(vec![PathBuf::from("/photo.jpg")], 1, 15, 15, one_photo()),
+        CachedScanResult::from_volume_batch(
+            crate::types::ScanPreviewPurpose::Transfer,
+            vec![PathBuf::from("/photo.jpg")],
+            1,
+            15,
+            15,
+            one_photo(),
+        ),
     );
     let stop_config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,

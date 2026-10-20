@@ -224,6 +224,7 @@ async fn delete_consumes_preview_id_skips_rescan() {
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(
+            crate::types::ScanPreviewPurpose::Delete,
             vec![PathBuf::from("/a.jpg"), PathBuf::from("/b.jpg")],
             2,
             11,

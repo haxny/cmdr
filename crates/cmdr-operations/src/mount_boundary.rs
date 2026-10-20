@@ -26,8 +26,9 @@ use super::types::{MountedVolumeAction, WriteOperationError};
 /// ordinary directory costs one `stat` of its parent and nothing else. The OS
 /// mount table settles the rest: a macOS firmlink (`/Users` under `/`) crosses
 /// from the system volume to the data volume with no mount at that path. A
-/// table that can't be read answers "boundary", since the caller is about to
-/// delete on the answer.
+/// parent that can't be read skips the shortcut and asks the table too, and a
+/// table that can't be read answers "boundary": the caller is about to delete
+/// on the answer, so it's never "no" without evidence.
 ///
 /// ❗ Blocks on a `stat`, so an async caller runs it on the blocking pool.
 pub(crate) fn is_mount_boundary(path: &Path, dev: u64) -> bool {
@@ -39,10 +40,7 @@ pub(crate) fn is_mount_boundary(path: &Path, dev: u64) -> bool {
     };
     // Following: the parent may be spelled through a link (`/tmp`), and what
     // holds `path` is the link's target.
-    let Ok(parent_meta) = std::fs::metadata(parent) else {
-        return false;
-    };
-    if parent_meta.dev() == dev {
+    if std::fs::metadata(parent).is_ok_and(|parent_meta| parent_meta.dev() == dev) {
         return false;
     }
     // The table spells a mount point with its links resolved (`/private/tmp/…`).
@@ -108,6 +106,31 @@ pub(crate) fn refuse_moving_a_mount(sources: &[PathBuf]) -> Result<(), WriteOper
         mount_at_or_under(sources.iter().map(PathBuf::as_path)),
         MountedVolumeAction::Move,
     )
+}
+
+/// Refuses a permanent delete of local `sources` when any of them is, or
+/// holds, a mount point, read off the mount table right before the delete
+/// phase removes anything. The walk's per-directory test ran at SCAN time,
+/// which may be a preview from before the drive was mounted; the table also
+/// lists a Linux bind mount, whose device matches its parent's.
+pub(crate) fn refuse_deleting_a_mount(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
+    refuse(
+        mount_at_or_under(sources.iter().map(PathBuf::as_path)),
+        MountedVolumeAction::Delete,
+    )
+}
+
+/// [`refuse_deleting_a_mount`] for a delete on a volume.
+pub(crate) async fn refuse_deleting_a_volume_mount(
+    volume: &dyn Volume,
+    sources: &[PathBuf],
+    state: &Arc<WriteOperationState>,
+) -> Result<(), WriteOperationError> {
+    let found = on_local_disk(volume, sources, state, |on_disk| {
+        mount_at_or_under(on_disk.iter().map(PathBuf::as_path))
+    })
+    .await?;
+    refuse(found, MountedVolumeAction::Delete)
 }
 
 /// [`is_mount_boundary`] for a directory the volume walker is about to descend.
@@ -204,3 +227,7 @@ pub(crate) fn refused_at(mount_point: &Path, action: MountedVolumeAction) -> Wri
 #[cfg(all(test, target_os = "macos"))]
 #[path = "mount_boundary_test_support.rs"]
 pub(crate) mod test_support;
+
+#[cfg(test)]
+#[path = "mount_boundary_tests.rs"]
+mod tests;

@@ -226,9 +226,16 @@ pub(crate) async fn run_volume_scan_preview(
                 &preview_id,
                 ScanOutcome::Complete,
                 Some(
-                    CachedScanResult::from_volume_batch(sources, total_files, total_bytes, dedup_bytes, batch.per_path)
-                        .keeping_files(batch.files)
-                        .with_tree(tree),
+                    CachedScanResult::from_volume_batch(
+                        purpose,
+                        sources,
+                        total_files,
+                        total_bytes,
+                        dedup_bytes,
+                        batch.per_path,
+                    )
+                    .keeping_files(batch.files)
+                    .with_tree(tree),
                 ),
             );
 

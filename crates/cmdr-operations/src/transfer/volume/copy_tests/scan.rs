@@ -117,6 +117,7 @@ async fn a_cached_preview_without_a_tree_gives_the_operation_its_sources_as_opaq
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(
+            crate::types::ScanPreviewPurpose::Transfer,
             sources.clone(),
             2,
             5,

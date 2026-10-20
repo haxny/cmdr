@@ -175,7 +175,14 @@ fn seed_cache(
                 .collect();
             engine.stores().previews().insert_scan_result(
                 id.clone(),
-                CachedScanResult::from_volume_batch(paths, file_count, bytes, bytes, per_path),
+                CachedScanResult::from_volume_batch(
+                    crate::types::ScanPreviewPurpose::Transfer,
+                    paths,
+                    file_count,
+                    bytes,
+                    bytes,
+                    per_path,
+                ),
             );
             Some(id)
         }

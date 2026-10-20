@@ -454,6 +454,7 @@ async fn a_top_level_dir_link_is_not_merged_when_a_preview_scanned_it_as_a_folde
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(
+            crate::types::ScanPreviewPurpose::Transfer,
             sources.clone(),
             batch.aggregate.file_count,
             batch.aggregate.total_bytes,

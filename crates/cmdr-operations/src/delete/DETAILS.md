@@ -47,23 +47,31 @@ before anything is deleted, as Finder does. A walk into the mount would empty th
 `remove_dir` would then fail silently. Decision/Why: refusing names the mount and changes nothing, where skipping the
 subtree and reporting it as left behind would be a delete that quietly did less than asked.
 
-- **The test** (`mount_boundary::is_mount_boundary`): a directory whose device differs from its parent's, confirmed by
-  the OS mount table (`transfer_sides::root_is_listed`, on the path with links resolved). The device check keeps an
-  ordinary directory at one parent `stat`; the table rules out a macOS firmlink, which crosses volumes with no mount. A
-  table that can't be read counts as a mount. A Linux bind mount of the same filesystem keeps its device and isn't
-  caught.
+- **The walk's test** (`mount_boundary::is_mount_boundary`): a directory whose device differs from its parent's,
+  confirmed by the OS mount table (`transfer_sides::root_is_listed`, on the path with links resolved). The device check
+  keeps an ordinary directory at one parent `stat`; the table rules out a macOS firmlink, which crosses volumes with no
+  mount. A parent that can't be read skips the shortcut and asks the table, and a table that can't be read counts as a
+  mount: it never answers "no" without evidence. A Linux bind mount of the same filesystem keeps its device, so the walk
+  misses it; the delete-phase check below catches it.
 - **Where it's asked**: the shared local walk (`scan_walker.rs`, `WalkContext::on_mount_boundary`) for a delete's own
-  scan AND for a delete-purpose preview, since the local walker deletes a cached preview's file list as is; and the
-  volume walker for a backend with a `local_path` (a `LocalPosixVolume` folder), on the blocking pool. A remote
-  backend's mounts are its server's business.
+  scan AND for a delete-purpose preview; and the volume walker for a backend with a `local_path` (a `LocalPosixVolume`
+  folder), on the blocking pool. A remote backend's mounts are its server's business.
+- **Asked again right before the delete phase** (`refuse_deleting_a_mount` / `refuse_deleting_a_volume_mount`): one
+  mount-table read for any mount at or under the sources. The local walker deletes a cached preview's file list as is,
+  and a drive mounted between the preview and the Delete press turns those paths into the drive's files (regression
+  anchor: #586). The table lists bind mounts too. A drive mounted DURING the delete phase isn't re-checked; that window
+  is the phase's own length.
+- **The local walker trusts only a delete's preview** (`ScanPreviews::take_cached_delete_scan`): every cached preview
+  records its `ScanPreviewPurpose`, and a list walked for a copy or a compress (which didn't stop at a mount and may
+  have followed a selected link) is dropped for a fresh scan.
 - **Copies don't stop at a mount**: the context field is `None` for every non-delete walk. An Overwrite that REPLACES a
   folder does refuse one (`mount_boundary::refuse_a_mount_inside`, read off the mount table without walking the tree),
   and so does a move onto another volume, for its sources: `../transfer/DETAILS.md` § "An Overwrite or a move never
   removes a mounted drive".
 
 Pinned on a real APFS image mounted inside a test folder (`real_image.rs`, the disk-image lane): the boot-disk walker
-for the folder and for the mount point, the delete preview (caches nothing), and the volume walker. Regression anchor:
-#507.
+for the folder and for the mount point, the delete preview (caches nothing), a drive mounted after the preview, and the
+volume walker. Regression anchor: #507.
 
 ## Waiting out a dropped share
 

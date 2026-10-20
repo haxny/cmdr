@@ -16,7 +16,7 @@ use std::time::Duration;
 use super::super::event_sinks::CollectorEventSink;
 use super::super::state::{CachedScanResult, FileInfo, WriteOperationState};
 use super::super::testing::TestOperations;
-use super::super::types::WriteOperationConfig;
+use super::super::types::{ScanPreviewPurpose, WriteOperationConfig};
 use super::volume_walker::delete_volume_files_with_progress_inner;
 use super::walker::delete_files_with_progress_inner;
 use cmdr_fs::testing::TestDir;
@@ -51,6 +51,7 @@ fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
 /// `source_dirs`: a per-file `FileInfo` list plus one `CopyScanResult` per
 /// top-level source. `files_per_source` pairs positionally with `source_dirs`.
 fn local_preview_of(
+    purpose: ScanPreviewPurpose,
     root: &std::path::Path,
     source_dirs: &[PathBuf],
     files_per_source: &[&[PathBuf]],
@@ -80,6 +81,7 @@ fn local_preview_of(
         ));
     }
     CachedScanResult::from_local_walk(
+        purpose,
         source_dirs.to_vec(),
         files,
         source_dirs.to_vec(),
@@ -118,6 +120,7 @@ fn a_local_delete_never_acts_on_a_preview_of_a_different_selection() {
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         local_preview_of(
+            ScanPreviewPurpose::Delete,
             &root,
             std::slice::from_ref(&untouched),
             &[std::slice::from_ref(&untouched_file)],
@@ -171,6 +174,7 @@ fn a_local_delete_never_acts_on_a_preview_covering_more_than_was_asked_for() {
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         local_preview_of(
+            ScanPreviewPurpose::Delete,
             &root,
             &[requested.clone(), deselected.clone()],
             &[
@@ -224,6 +228,7 @@ async fn a_volume_delete_stays_bound_to_its_own_sources() {
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(
+            ScanPreviewPurpose::Delete,
             vec![PathBuf::from("/foreign.txt")],
             1,
             7,
@@ -272,4 +277,63 @@ async fn a_volume_delete_stays_bound_to_its_own_sources() {
         None,
         "the requested path must be deleted"
     );
+}
+
+/// The cache's other fence: a preview walked for a COPY lists what a copy would
+/// read, which isn't what a delete may remove. A copy's walk that followed a
+/// link lists the files behind it, under the link's path, and deleting those
+/// paths unlinks the link target's files. The local walker trusts only a
+/// preview walked for a delete, and rescans otherwise.
+#[test]
+fn a_local_delete_never_acts_on_a_preview_walked_for_a_copy() {
+    let root = TestDir::new(&unique("local-delete-purpose"));
+
+    let photos = root.join("photos");
+    fs::create_dir_all(&photos).expect("create the link target");
+    let photo = photos.join("p.jpg");
+    fs::write(&photo, b"the only copy").expect("write the photo");
+
+    let selected = root.join("selected");
+    fs::create_dir_all(&selected).expect("create the selected dir");
+    std::os::unix::fs::symlink(&photos, selected.join("data")).expect("link into photos");
+
+    // What a walk that followed `data` would have listed.
+    let through_link = selected.join("data/p.jpg");
+    let engine = TestOperations::new();
+    let preview_id = unique("copy-preview");
+    engine.stores().previews().insert_scan_result(
+        preview_id.clone(),
+        local_preview_of(
+            ScanPreviewPurpose::Transfer,
+            &root,
+            std::slice::from_ref(&selected),
+            &[std::slice::from_ref(&through_link)],
+        ),
+    );
+
+    let op_id = unique("op");
+    let op = engine.register_state(&op_id, make_state(&engine));
+    let config = WriteOperationConfig {
+        preview_id: Some(preview_id),
+        ..WriteOperationConfig::default()
+    };
+
+    let result = delete_files_with_progress_inner(
+        &CollectorEventSink::new(),
+        &op_id,
+        op.state(),
+        std::slice::from_ref(&selected),
+        &config,
+    );
+
+    assert!(
+        result.is_ok(),
+        "the delete of the selected folder must succeed: {result:?}"
+    );
+    assert_eq!(
+        fs::read(&photo).ok().as_deref(),
+        Some(&b"the only copy"[..]),
+        "a copy's preview must never authorize deleting what a link points at"
+    );
+    assert!(!selected.exists(), "the selected folder, link and all, is deleted");
 }

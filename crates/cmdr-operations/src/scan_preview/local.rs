@@ -287,6 +287,7 @@ pub(crate) fn run_scan_preview(
                 ScanOutcome::Complete,
                 Some(
                     CachedScanResult::from_local_walk(
+                        purpose,
                         sources,
                         files,
                         dirs,

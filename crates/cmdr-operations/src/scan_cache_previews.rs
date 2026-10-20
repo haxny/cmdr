@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::Notify;
 
-use super::super::types::WriteOperationError;
+use super::super::types::{ScanPreviewPurpose, WriteOperationError};
 use super::{CachedScanResult, ScanCostFacts, ScanResult};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::log_private::LogPrivate;
@@ -345,6 +345,29 @@ impl ScanPreviews {
         preview_id: &str,
         requested_sources: &[PathBuf],
     ) -> Option<ScanResult> {
+        self.take_settled(preview_id, requested_sources, None)
+    }
+
+    /// [`Self::take_cached_scan_result`] for a caller that DELETES the cached
+    /// file list as is (the local delete walker): a preview walked for anything
+    /// but a delete isn't a hit. A copy's walk lists what a copy reads, and
+    /// only a delete's walk stops at a mount and counts a selected link as the
+    /// link, so another purpose's list could name files a delete must not
+    /// touch. The entry is dropped either way.
+    pub(crate) fn take_cached_delete_scan(
+        &self,
+        preview_id: &str,
+        requested_sources: &[PathBuf],
+    ) -> Option<ScanResult> {
+        self.take_settled(preview_id, requested_sources, Some(ScanPreviewPurpose::Delete))
+    }
+
+    fn take_settled(
+        &self,
+        preview_id: &str,
+        requested_sources: &[PathBuf],
+        walked_for: Option<ScanPreviewPurpose>,
+    ) -> Option<ScanResult> {
         let mut previews = self.write();
         let entry = previews.remove(preview_id)?;
         let PreviewPhase::Settled {
@@ -370,6 +393,18 @@ impl ScanPreviews {
                 preview_id,
                 cached.sources.iter().map(LogPrivate::path).collect::<Vec<_>>(),
                 requested_sources.iter().map(LogPrivate::path).collect::<Vec<_>>()
+            );
+            return None;
+        }
+        if let Some(wanted) = walked_for
+            && cached.purpose != wanted
+        {
+            log::warn!(
+                target: "cmdr_operations",
+                "scan preview {} was walked for {:?}, but the operation needs one walked for {:?}; ignoring the cache and rescanning",
+                preview_id,
+                cached.purpose,
+                wanted
             );
             return None;
         }
@@ -472,6 +507,7 @@ impl ScanPreviews {
         total_bytes: u64,
     ) {
         let result = CachedScanResult {
+            purpose: ScanPreviewPurpose::Transfer,
             sources,
             files: Vec::new(),
             dirs: Vec::new(),

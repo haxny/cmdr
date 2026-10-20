@@ -32,6 +32,7 @@
 use std::path::{Path, PathBuf};
 
 use super::transfer_tree::{NodeId, TreeModel, TreeOrder, built, from_local_scan};
+use super::types::ScanPreviewPurpose;
 use cmdr_fs::volume::{CopyScanResult, ScannedFile};
 
 #[path = "scan_cache_previews.rs"]
@@ -49,6 +50,11 @@ pub(super) use previews::{SCAN_RESULT_TTL, expired_scan_result_ids};
 /// the empty-`per_path` bug got certified by a suite full of fully-populated
 /// fixtures.
 pub(super) struct CachedScanResult {
+    /// What the preview was walked for. A walk keeps what its dialog needs, so
+    /// one purpose's file list isn't another's: only a delete's stops at a
+    /// mount and counts a selected link as the link, and the local delete
+    /// walker removes the list as is (`ScanPreviews::take_cached_delete_scan`).
+    purpose: ScanPreviewPurpose,
     /// The top-level paths the preview was asked to walk. A `preview_id` proves
     /// the frontend once asked for a scan; it proves nothing about WHICH scan,
     /// so `take_cached_scan_result` refuses an entry whose sources don't match
@@ -99,7 +105,12 @@ impl CachedScanResult {
     ///
     /// `file_count` is derived from `files`: a caller passing it is one more
     /// thing to get wrong.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "one argument per field of the walk's shape; a struct for them would be this struct again"
+    )]
     pub(super) fn from_local_walk(
+        purpose: ScanPreviewPurpose,
         sources: Vec<PathBuf>,
         files: Vec<FileInfo>,
         dirs: Vec<PathBuf>,
@@ -117,6 +128,7 @@ impl CachedScanResult {
             files.len()
         );
         Self {
+            purpose,
             sources,
             file_count: files.len(),
             files,
@@ -135,6 +147,7 @@ impl CachedScanResult {
     /// paths recurses itself), aggregate counters, and never an estimate
     /// (remote sources don't sample).
     pub(super) fn from_volume_batch(
+        purpose: ScanPreviewPurpose,
         sources: Vec<PathBuf>,
         file_count: usize,
         total_bytes: u64,
@@ -142,6 +155,7 @@ impl CachedScanResult {
         per_path: Vec<(PathBuf, CopyScanResult)>,
     ) -> Self {
         Self {
+            purpose,
             sources,
             files: Vec::new(),
             dirs: Vec::new(),

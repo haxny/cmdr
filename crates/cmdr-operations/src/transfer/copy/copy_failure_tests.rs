@@ -117,6 +117,7 @@ fn copy_batch_whose_second_item_fails(engine: &TestOperations, preview_id: &str)
     engine.stores().previews().insert_scan_result(
         preview_id.to_string(),
         CachedScanResult::from_local_walk(
+            crate::types::ScanPreviewPurpose::Transfer,
             sources.clone(),
             files,
             Vec::new(),
@@ -223,6 +224,7 @@ fn folder_over_file_copy_whose_second_leaf_fails(
     engine.stores().previews().insert_scan_result(
         preview_id.to_string(),
         CachedScanResult::from_local_walk(
+            crate::types::ScanPreviewPurpose::Transfer,
             vec![source.clone()],
             files,
             vec![source.clone()],

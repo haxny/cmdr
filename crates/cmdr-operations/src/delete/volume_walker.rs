@@ -331,6 +331,11 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
         return Ok(());
     }
 
+    // The walk asked each directory's device as it went; the mount table, read
+    // once more right before anything is removed, also names a drive mounted
+    // since and a Linux bind mount, whose device matches its parent's.
+    super::super::mount_boundary::refuse_deleting_a_volume_mount(&*volume, sources, state).await?;
+
     // Phase 2: Delete. Files first, then directories deepest-first.
     // entries are already in order: children before parents (due to recursive scan).
     // We process files first, then dirs in reverse order.

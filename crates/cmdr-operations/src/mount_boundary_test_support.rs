@@ -31,9 +31,37 @@ impl NestedMount {
     /// [`Self::mount`] under a session the caller holds, for a test that also
     /// attaches a drive of its own (a session per thread is the harness's rule).
     pub(crate) fn mount_in(session: &Arc<DiskImageSession>) -> Self {
+        PendingMount::new().mount_in(session)
+    }
+
+    pub(crate) fn folder(&self) -> PathBuf {
+        self.dir.join("folder")
+    }
+}
+
+/// The [`NestedMount`] folder before its drive is mounted, for a test that acts
+/// in between (a preview that ran before the drive showed up). Its `mnt/`
+/// holds a `precious.txt` of its own, which the mount then covers, so a list
+/// taken now names the drive's file too.
+pub(crate) struct PendingMount {
+    dir: TestDir,
+}
+
+impl PendingMount {
+    pub(crate) fn new() -> Self {
         let dir = TestDir::new("nested_mount");
         std::fs::create_dir_all(dir.join("folder/mnt")).expect("the mount point");
         std::fs::write(dir.join("folder/mine.txt"), b"MINE").expect("a file beside the mount");
+        std::fs::write(dir.join("folder/mnt/precious.txt"), b"UNDER").expect("a file the mount covers");
+        Self { dir }
+    }
+
+    pub(crate) fn folder(&self) -> PathBuf {
+        self.dir.join("folder")
+    }
+
+    pub(crate) fn mount_in(self, session: &Arc<DiskImageSession>) -> NestedMount {
+        let dir = self.dir;
         let mut image = DiskImage::attach(session, ImageSpec::Apfs).expect("attach the image");
         let mounted = image
             .remount_volume_at(0, &dir.join("folder/mnt"))
@@ -46,13 +74,11 @@ impl NestedMount {
             Some(&b"PRECIOUS"[..]),
             "precondition: the image is reachable through the folder"
         );
-        Self { _image: image, dir }
+        NestedMount { _image: image, dir }
     }
+}
 
-    pub(crate) fn folder(&self) -> PathBuf {
-        self.dir.join("folder")
-    }
-
+impl NestedMount {
     /// Both files where they were: the drive's, and the one beside the mount,
     /// since the refusal comes before anything is removed or set aside.
     pub(crate) fn assert_untouched(&self) {

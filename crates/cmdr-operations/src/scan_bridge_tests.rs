@@ -76,7 +76,16 @@ fn completed_result(sources: Vec<PathBuf>, files: &[PathBuf], source_root: &std:
             )
         })
         .collect();
-    CachedScanResult::from_local_walk(sources, infos, Vec::new(), total, total, per_path, None)
+    CachedScanResult::from_local_walk(
+        crate::types::ScanPreviewPurpose::Transfer,
+        sources,
+        infos,
+        Vec::new(),
+        total,
+        total,
+        per_path,
+        None,
+    )
 }
 
 // ============================================================================

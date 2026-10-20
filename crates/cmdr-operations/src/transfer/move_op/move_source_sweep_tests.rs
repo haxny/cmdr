@@ -35,6 +35,7 @@ fn seed_preview(engine: &TestOperations, preview_id: &str, source: &Path, files:
     engine.stores().previews().insert_scan_result(
         preview_id.to_string(),
         CachedScanResult::from_local_walk(
+            crate::types::ScanPreviewPurpose::Transfer,
             vec![source.to_path_buf()],
             infos,
             dirs,

@@ -19,16 +19,47 @@ use super::volume_walker::delete_volume_files_with_progress_inner;
 use super::walker::delete_files_with_progress_inner;
 use crate::Operations;
 use crate::event_sinks::{CollectorEventSink, CollectorScanPreviewSink, ScanPreviewEventSink};
-use crate::mount_boundary::test_support::{NestedMount, assert_refused_at_the_mount};
+use crate::mount_boundary::test_support::{NestedMount, PendingMount, assert_refused_at_the_mount};
 use crate::scan_cache::ScanPreviewState;
 use crate::scan_preview::run_scan_preview;
 use crate::scan_watchdog::{ScanTarget, ScanWatchdog};
 use crate::state::WriteOperationState;
 use crate::testing::TestOperations;
 use crate::types::{ScanPreviewPurpose, WriteOperationConfig};
+use cmdr_fs::testing::disk_images::DiskImageSession;
 
 fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
     Arc::new(engine.new_operation_state(Duration::from_millis(50)))
+}
+
+/// Runs the delete dialog's preview of `sources` to its end, caching what it found.
+async fn run_delete_preview(engine: &TestOperations, sources: &[PathBuf], preview_id: &str) {
+    let preview_state = Arc::new(ScanPreviewState {
+        cancelled: AtomicBool::new(false),
+        progress_interval: Duration::from_millis(50),
+    });
+    let watchdog = ScanWatchdog::start(
+        engine,
+        preview_id.to_string(),
+        ScanTarget::of(sources, "root"),
+        Duration::from_secs(600),
+        Arc::clone(&preview_state),
+        Arc::new(CollectorScanPreviewSink::new()) as Arc<dyn ScanPreviewEventSink>,
+    );
+    let (walker, walk_id, walk_sources) = (Operations::clone(engine), preview_id.to_string(), sources.to_vec());
+    tokio::task::spawn_blocking(move || {
+        run_scan_preview(
+            &walker,
+            Arc::new(CollectorScanPreviewSink::new()),
+            walk_id,
+            walk_sources,
+            preview_state,
+            ScanPreviewPurpose::Delete,
+            watchdog,
+        );
+    })
+    .await
+    .expect("the walk thread joins");
 }
 
 #[test]
@@ -59,32 +90,7 @@ async fn a_delete_preview_of_a_folder_holding_a_mounted_drive_caches_nothing_to_
     let engine = TestOperations::new();
     let sources = vec![nested.folder()];
     let preview_id = format!("nested-mount-{}", std::process::id());
-    let preview_state = Arc::new(ScanPreviewState {
-        cancelled: AtomicBool::new(false),
-        progress_interval: Duration::from_millis(50),
-    });
-    let watchdog = ScanWatchdog::start(
-        &engine,
-        preview_id.clone(),
-        ScanTarget::of(&sources, "root"),
-        Duration::from_secs(600),
-        Arc::clone(&preview_state),
-        Arc::new(CollectorScanPreviewSink::new()) as Arc<dyn ScanPreviewEventSink>,
-    );
-    let (walker, walk_id, walk_sources) = (Operations::clone(&engine), preview_id.clone(), sources.clone());
-    tokio::task::spawn_blocking(move || {
-        run_scan_preview(
-            &walker,
-            Arc::new(CollectorScanPreviewSink::new()),
-            walk_id,
-            walk_sources,
-            preview_state,
-            ScanPreviewPurpose::Delete,
-            watchdog,
-        );
-    })
-    .await
-    .expect("the walk thread joins");
+    run_delete_preview(&engine, &sources, &preview_id).await;
 
     assert!(
         engine
@@ -104,6 +110,35 @@ async fn a_delete_preview_of_a_folder_holding_a_mounted_drive_caches_nothing_to_
             ..WriteOperationConfig::default()
         },
     );
+    assert_refused_at_the_mount(result);
+    nested.assert_untouched();
+}
+
+/// A drive mounted after the preview finished, before Delete was pressed: the
+/// preview's list names `mnt/precious.txt`, which is now the DRIVE's file. The
+/// delete phase re-asks the mount table before it removes anything.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "attaches a real disk image; run via `pnpm check disk-images`"]
+async fn a_delete_of_a_folder_a_drive_was_mounted_in_after_its_preview_refuses_and_deletes_nothing() {
+    let session = DiskImageSession::acquire();
+    let pending = PendingMount::new();
+    let engine = TestOperations::new();
+    let sources = vec![pending.folder()];
+    let preview_id = format!("mounted-after-preview-{}", std::process::id());
+    run_delete_preview(&engine, &sources, &preview_id).await;
+    let nested = pending.mount_in(&session);
+
+    let result = delete_files_with_progress_inner(
+        &CollectorEventSink::new(),
+        "op-delete-mounted-after-preview",
+        &state(&engine),
+        &sources,
+        &WriteOperationConfig {
+            preview_id: Some(preview_id),
+            ..WriteOperationConfig::default()
+        },
+    );
+
     assert_refused_at_the_mount(result);
     nested.assert_untouched();
 }

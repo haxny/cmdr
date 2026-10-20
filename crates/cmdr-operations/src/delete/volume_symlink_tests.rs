@@ -287,6 +287,7 @@ async fn a_selected_folder_link_with_a_cold_preview_goes_as_a_link() {
     engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(
+            crate::types::ScanPreviewPurpose::Delete,
             sources.clone(),
             batch.aggregate.file_count,
             batch.aggregate.total_bytes,

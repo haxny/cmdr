@@ -63,7 +63,16 @@ fn publish_local_preview(engine: &TestOperations, preview_id: &str, sources: &[P
     .expect("the fixture tree walks cleanly");
     engine.stores().previews().insert_scan_result(
         preview_id.to_string(),
-        CachedScanResult::from_local_walk(sources.to_vec(), files, dirs, total_bytes, dedup_bytes, per_path, None),
+        CachedScanResult::from_local_walk(
+            crate::types::ScanPreviewPurpose::Transfer,
+            sources.to_vec(),
+            files,
+            dirs,
+            total_bytes,
+            dedup_bytes,
+            per_path,
+            None,
+        ),
     );
 }
 

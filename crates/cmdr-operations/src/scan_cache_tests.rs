@@ -28,6 +28,7 @@ fn one_file(bytes: u64) -> CopyScanResult {
 fn cached_for(sources: &[&str]) -> CachedScanResult {
     let bytes = 10 * sources.len() as u64;
     CachedScanResult::from_volume_batch(
+        ScanPreviewPurpose::Transfer,
         paths(sources),
         sources.len(),
         bytes,
@@ -212,7 +213,7 @@ fn inserting_a_completed_walk_with_no_per_source_results_trips_the_canary() {
     let preview_id = unique_preview("canary");
     engine.stores().previews().insert_scan_result(
         preview_id,
-        CachedScanResult::from_volume_batch(paths(&["/a"]), 3, 30, 30, Vec::new()),
+        CachedScanResult::from_volume_batch(ScanPreviewPurpose::Transfer, paths(&["/a"]), 3, 30, 30, Vec::new()),
     );
 }
 
@@ -239,6 +240,7 @@ fn the_canary_leaves_the_legitimate_shapes_alone() {
     engine.stores().previews().insert_scan_result(
         nothing_found.clone(),
         CachedScanResult::from_local_walk(
+            ScanPreviewPurpose::Transfer,
             paths(&["/empty-dir"]),
             Vec::new(),
             vec![PathBuf::from("/empty-dir")],
@@ -272,6 +274,7 @@ fn from_local_walk_derives_its_file_count_from_the_files_it_walked() {
         tree_node: None,
     };
     let cached = CachedScanResult::from_local_walk(
+        ScanPreviewPurpose::Transfer,
         paths(&["/src"]),
         vec![file],
         paths(&["/src"]),
@@ -300,7 +303,16 @@ fn from_local_walk_refuses_to_build_a_walk_that_found_files_but_no_sources() {
         is_symlink: false,
         tree_node: None,
     };
-    let _ = CachedScanResult::from_local_walk(paths(&["/src"]), vec![file], Vec::new(), 10, 10, Vec::new(), None);
+    let _ = CachedScanResult::from_local_walk(
+        ScanPreviewPurpose::Transfer,
+        paths(&["/src"]),
+        vec![file],
+        Vec::new(),
+        10,
+        10,
+        Vec::new(),
+        None,
+    );
 }
 
 /// `from_volume_batch` builds the remote shape: no per-file list (consumers
@@ -308,8 +320,14 @@ fn from_local_walk_refuses_to_build_a_walk_that_found_files_but_no_sources() {
 /// compress estimate, since remote sources don't sample.
 #[test]
 fn from_volume_batch_carries_no_file_list_and_no_estimate() {
-    let cached =
-        CachedScanResult::from_volume_batch(paths(&["/a"]), 4, 40, 40, vec![(PathBuf::from("/a"), one_file(40))]);
+    let cached = CachedScanResult::from_volume_batch(
+        ScanPreviewPurpose::Transfer,
+        paths(&["/a"]),
+        4,
+        40,
+        40,
+        vec![(PathBuf::from("/a"), one_file(40))],
+    );
 
     assert!(cached.files.is_empty());
     assert!(cached.dirs.is_empty());
@@ -347,9 +365,15 @@ fn cost_facts_carry_a_volume_scans_kept_files_and_its_folder_count() {
             modified_at: None,
         },
     ];
-    let cached =
-        CachedScanResult::from_volume_batch(paths(&["/a"]), 2, 40, 40, vec![(PathBuf::from("/a"), folder(2, 3, 40))])
-            .keeping_files(Some(kept.clone()));
+    let cached = CachedScanResult::from_volume_batch(
+        ScanPreviewPurpose::Transfer,
+        paths(&["/a"]),
+        2,
+        40,
+        40,
+        vec![(PathBuf::from("/a"), folder(2, 3, 40))],
+    )
+    .keeping_files(Some(kept.clone()));
     engine
         .stores()
         .previews()
@@ -391,6 +415,7 @@ fn cost_facts_of_a_local_walk_list_every_files_size_undated() {
         tree_node: None,
     };
     let cached = CachedScanResult::from_local_walk(
+        ScanPreviewPurpose::Transfer,
         paths(&["/src"]),
         vec![file(5), file(7)],
         paths(&["/src"]),
