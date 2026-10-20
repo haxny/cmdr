@@ -1,19 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { PaneAccess } from './pane-access'
 import type { FilePaneAPI } from './types'
 import type { FileEntry } from '../types'
 import type { SelectionAction } from '../../../routes/(main)/explorer-api'
 
-const { findFileIndexSpy, findFileIndicesSpy, refreshListingSpy, addToastSpy } = vi.hoisted(() => ({
-  findFileIndexSpy: vi.fn<() => Promise<number | null>>(),
-  findFileIndicesSpy: vi.fn<() => Promise<Record<string, number>>>(),
-  addToastSpy: vi.fn(),
-  refreshListingSpy: vi.fn<() => Promise<{ data: null; timedOut: boolean }>>(() =>
-    Promise.resolve({ data: null, timedOut: false }),
-  ),
-}))
+const { findFileIndexSpy, findFileIndicesSpy, refreshListingSpy, addToastSpy, snapshotSpy, toggleTagsSpy } = vi.hoisted(
+  () => ({
+    snapshotSpy: vi.fn(),
+    toggleTagsSpy: vi.fn(() => Promise.resolve()),
+    findFileIndexSpy: vi.fn<() => Promise<number | null>>(),
+    findFileIndicesSpy: vi.fn<() => Promise<Record<string, number>>>(),
+    addToastSpy: vi.fn(),
+    refreshListingSpy: vi.fn<() => Promise<{ data: null; timedOut: boolean }>>(() =>
+      Promise.resolve({ data: null, timedOut: false }),
+    ),
+  }),
+)
 
-vi.mock('#lib/tauri-commands/index.js', () => ({
+vi.mock('#lib/tauri-commands/index.js', async () => ({
+  asListingLookupError: (
+    await vi.importActual<typeof import('#lib/tauri-commands/listing-gone.js')>('#lib/tauri-commands/listing-gone.js')
+  ).asListingLookupError,
+  getSelectionSnapshot: snapshotSpy,
+  toggleTags: toggleTagsSpy,
   findFileIndex: findFileIndexSpy,
   findFileIndices: findFileIndicesSpy,
   refreshListing: refreshListingSpy,
@@ -773,6 +782,48 @@ describe('handleMcpSelectNames', () => {
     const cmds = create(buildAccess({ paneRefs: { left: undefined } }))
     await expect(cmds.handleMcpSelectNames('left', ['a.txt'], 'replace')).rejects.toThrow(
       'The left pane is unavailable',
+    )
+  })
+})
+
+/** A watcher insert above the selection, landing between the pane applying its rows and a tag toggle. */
+describe('toggleTagOnFocusedSelection when the rows moved under the press', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  async function movedAccess(catchesUp: boolean) {
+    const moved = await import('./moved-listing.test-fixtures')
+    const pane = moved.createMovedPane({ onSelection: true })
+    snapshotSpy.mockImplementation(
+      catchesUp ? moved.catchingUpAfterRefusal(pane, moved.selectionSnapshot) : moved.selectionSnapshot,
+    )
+    const ref = { ...buildPaneRef({ listingId: moved.MOVED_LISTING_ID }), ...pane }
+    return { access: buildAccess({ paneRefs: { left: ref } }), moved }
+  }
+
+  it('waits for the pane to apply the diff and tags the file it picked', async () => {
+    const { access, moved } = await movedAccess(true)
+
+    await create(access).toggleTagOnFocusedSelection(2)
+
+    expect(toggleTagsSpy).toHaveBeenCalledWith(moved.MOVED_LISTING_ID, [moved.SELECTED_PATH], 2)
+  })
+
+  it('refuses with the toast once the rows never settle, tagging nothing', async () => {
+    vi.useFakeTimers()
+    toggleTagsSpy.mockClear()
+    addToastSpy.mockClear()
+    const { access } = await movedAccess(false)
+
+    const toggled = create(access).toggleTagOnFocusedSelection(2)
+    await vi.advanceTimersByTimeAsync(3_500)
+    await toggled
+
+    expect(toggleTagsSpy).not.toHaveBeenCalled()
+    expect(addToastSpy).toHaveBeenCalledWith(
+      'The list here is still updating, so nothing started. Try again in a moment.',
+      { level: 'info' },
     )
   })
 })

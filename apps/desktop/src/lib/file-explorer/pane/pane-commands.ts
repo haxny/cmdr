@@ -9,6 +9,7 @@ import { addToast } from '#lib/ui/toast/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import type { McpSelectMode, ConfirmDialogType } from '#lib/commands/index.js'
 import { routeTypingKey } from './type-to-jump-keys'
+import { readPressedRows } from './pressed-rows'
 import { capabilitiesFor } from './volume-capabilities'
 import { readSelectedPathsForCopy as readSelectedPathsForCopyFrom, type SelectedPathsRead } from './selected-paths-read'
 import type { SelectionActionArgs } from '../../../routes/(main)/explorer-api'
@@ -149,9 +150,9 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
   /**
    * Toggle a Finder system color tag (index 1..=7) on the focused pane's selection,
    * or on the cursor entry when nothing is selected (mirrors how the file F-key ops
-   * fall back to the cursor). Resolves the selection to paths through the
-   * revision-checked `getSelectionSnapshot` (rows that moved since the pane applied
-   * them tag nothing, never the neighbor), then calls the `toggle_tags` IPC — it writes the
+   * fall back to the cursor). Resolves the selection to paths through
+   * `readPressedRows` (revision checked, waiting out a busy folder; rows that never
+   * settle tag nothing, with the toast, never the neighbor), then calls the `toggle_tags` IPC — it writes the
    * tags and refreshes the cached listing, so the dots update without extra work here.
    * Best-effort: a write failure is logged backend-side and surfaces as no visible
    * change, never a thrown dispatch.
@@ -163,17 +164,17 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     if (!listingId) return
 
     const includeHidden = access.getShowHiddenFiles()
-    const hasParent = paneRef.hasParentEntry()
-    const selectedIndices = paneRef.getSelectedIndices()
 
     let paths: string[]
-    if (selectedIndices.length > 0) {
-      try {
-        const rows = toBackendIndices(selectedIndices, hasParent)
-        paths = (await getSelectionSnapshot(listingId, includeHidden, rows, paneRef.getLastSequence())).paths
-      } catch {
-        return
-      }
+    if (paneRef.getSelectedIndices().length > 0) {
+      const pressed = await readPressedRows(
+        paneRef,
+        async ({ backendRows, expectedSequence }) =>
+          (await getSelectionSnapshot(listingId, includeHidden, backendRows, expectedSequence)).paths,
+        { cursorFallback: false },
+      )
+      if (pressed.kind !== 'read') return
+      paths = pressed.value
     } else {
       const cursorPath = paneRef.getPathUnderCursor()
       const filename = paneRef.getFilenameUnderCursor()

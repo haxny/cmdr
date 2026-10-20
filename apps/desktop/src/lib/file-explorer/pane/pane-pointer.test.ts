@@ -19,6 +19,7 @@
  */
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import type { FileEntry } from '../types'
+import { ListingLookupFailure } from '#lib/tauri-commands/listing-gone.js'
 
 const { ipc, settings, toast, background, boundCombos } = vi.hoisted<{
   ipc: { showFileContextMenu: Mock; showParentRowContextMenu: Mock; getSelectionSnapshot: Mock }
@@ -35,7 +36,10 @@ const { ipc, settings, toast, background, boundCombos } = vi.hoisted<{
   boundCombos: { 'file.copy': 'F5' },
 }))
 
-vi.mock('#lib/tauri-commands/index.js', () => ({
+vi.mock('#lib/tauri-commands/index.js', async () => ({
+  asListingLookupError: (
+    await vi.importActual<typeof import('#lib/tauri-commands/listing-gone.js')>('#lib/tauri-commands/listing-gone.js')
+  ).asListingLookupError,
   showFileContextMenu: ipc.showFileContextMenu,
   showParentRowContextMenu: ipc.showParentRowContextMenu,
   getSelectionSnapshot: ipc.getSelectionSnapshot,
@@ -222,27 +226,41 @@ describe('createPanePointer', () => {
       )
     })
 
-    it('falls back to the single entry when the selection lookup throws', async () => {
+    it('waits for the pane to apply a diff and acts on the whole selection it picked', async () => {
+      const moved = await import('./moved-listing.test-fixtures')
+      const pane = moved.createMovedPane({ onSelection: true })
+      ipc.getSelectionSnapshot.mockImplementation(moved.catchingUpAfterRefusal(pane, moved.selectionSnapshot))
+      const movedDeps = {
+        ...deps,
+        getListingId: pane.getListingId,
+        getSelectedIndices: pane.getSelectedIndices,
+        getHasParent: pane.hasParentEntry,
+        getRowSequence: pane.getLastSequence,
+      }
+
+      await createPanePointer(movedDeps).handleContextMenu(entryOf({ name: 'charlie.txt', path: moved.SELECTED_PATH }))
+
+      // Read again once the pane applied the diff, not shrunk to the clicked row after the first refusal.
+      expect(ipc.getSelectionSnapshot).toHaveBeenCalledTimes(2)
+      expect(ipc.showFileContextMenu.mock.calls[0]?.[3]).toEqual([moved.SELECTED_PATH])
+      expect(toast.addToast).not.toHaveBeenCalled()
+    })
+
+    it('refuses with the toast, opening no menu, when the selection never resolves', async () => {
+      // Shrinking the menu to the right-clicked row would turn a Delete of ten files into one.
+      vi.useFakeTimers()
       state.selected = [1]
-      ipc.getSelectionSnapshot.mockRejectedValue(new Error('gone'))
-      await createPanePointer(deps).handleContextMenu(entryOf())
-      expect(ipc.showFileContextMenu).toHaveBeenCalledWith(
-        '/dir/a.txt',
-        'a.txt',
-        false,
-        ['/dir/a.txt'],
-        {
-          listingId: 'listing-1',
-          canOpenTerminalHere: true,
-          canShare: true,
-          canTag: true,
-          canFavorite: true,
-          canShareLink: false,
-        },
-        { countText: undefined, sizeText: undefined },
-        boundCombos,
-        null,
-        sameKindOfEntry,
+      ipc.getSelectionSnapshot.mockRejectedValue(new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }))
+
+      const opened = createPanePointer(deps).handleContextMenu(entryOf())
+      await vi.advanceTimersByTimeAsync(3_500)
+      await opened
+      vi.useRealTimers()
+
+      expect(ipc.showFileContextMenu).not.toHaveBeenCalled()
+      expect(toast.addToast).toHaveBeenCalledWith(
+        'The list here is still updating, so nothing started. Try again in a moment.',
+        { level: 'info' },
       )
     })
 

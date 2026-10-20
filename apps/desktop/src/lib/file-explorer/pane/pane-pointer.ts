@@ -29,7 +29,7 @@ import { canOpenTerminalIn } from '#lib/open-terminal/terminal-target.js'
 import { isFileListBackgroundClick } from './pane-background-dblclick'
 import { sameKindTargetFor } from './select-same-kind'
 import DoubleClickPaneHintToastContent from './DoubleClickPaneHintToastContent.svelte'
-import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import { readPressedRows } from './pressed-rows'
 
 /** Shift+click args: extend the range from the cursor to the clicked row. */
 export interface ExtendSelectionFromMouseArgs {
@@ -121,22 +121,26 @@ export function createPanePointer(deps: PanePointerDeps): PanePointer {
     deps.clearJump()
     // Match Finder: if the right-clicked entry is part of the current selection,
     // actions apply to the whole selection. Otherwise they apply to just this entry.
-    // The selection resolves only against the revision the pane applied it in, or a
-    // watcher insert above it would hand the menu's Delete the neighbor.
+    // The selection resolves only against the revision the pane applied it in
+    // (`readPressedRows`, which waits out a busy folder), or a watcher insert above
+    // it would hand the menu's Delete the neighbor. Rows that never settle open NO
+    // menu: shrinking it to the clicked row would turn a Delete of ten files into one.
     let paths = [entry.path]
     const listingId = deps.getListingId()
-    const indices = toBackendIndices(deps.getSelectedIndices(), deps.getHasParent())
-    if (listingId && indices.length > 0) {
-      try {
-        const snapshot = await getSelectionSnapshot(listingId, deps.getIncludeHidden(), indices, deps.getRowSequence())
-        if (snapshot.paths.includes(entry.path)) {
-          paths = snapshot.paths
-        }
-      } catch {
-        // The rows moved or the listing is gone: the right-clicked row alone is
-        // still the one the user aimed at.
-      }
-    }
+    const pressed = await readPressedRows(
+      {
+        getListingId: deps.getListingId,
+        getSelectedIndices: deps.getSelectedIndices,
+        getCursorIndex: deps.getCursorIndex,
+        hasParentEntry: deps.getHasParent,
+        getLastSequence: deps.getRowSequence,
+      },
+      async ({ backendRows, expectedSequence }) =>
+        (await getSelectionSnapshot(listingId, deps.getIncludeHidden(), backendRows, expectedSequence)).paths,
+      { cursorFallback: false },
+    )
+    if (pressed.kind === 'refused') return
+    if (pressed.kind === 'read' && pressed.value.includes(entry.path)) paths = pressed.value
     const volumeId = deps.getVolumeId()
     const rowsAreOsPaths = rowIsOsVisible(volumeId, entry.path)
     // The header at the top of the menu says what the menu will act on, so its size has
