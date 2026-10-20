@@ -5,7 +5,7 @@
     import { onMcpSettingsClose, activateWindowMenu, isE2eMode } from '#lib/tauri-commands/index.js'
     import SettingsSidebar from '#lib/settings/components/SettingsSidebar.svelte'
     import SettingsContent from '#lib/settings/components/SettingsContent.svelte'
-    import { forceSave as forceSettingsSave } from '#lib/settings/index.js'
+    import { flushSettingsChanges, forceSave as forceSettingsSave } from '#lib/settings/index.js'
     import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { initializeShortcuts, flushPendingSave as flushShortcutsSave } from '#lib/shortcuts/index.js'
@@ -383,13 +383,14 @@
 
     /**
      * E2E-only: lets a spec force the pending settings/shortcuts write to disk instead of
-     * waiting out the store's 500 ms save debounce. Same `forceSave` the window already
-     * runs on close, so tests exercise the production flush path rather than a test-only
-     * one; it just isn't reachable from an injected script otherwise. Fire-and-forget on
+     * waiting out the store's 500 ms save debounce. The same write the window runs on
+     * close (`flushSettingsChanges` is `forceSave` when this window changed something), so
+     * tests exercise the production flush path rather than a test-only one; it just isn't
+     * reachable from an injected script otherwise. Fire-and-forget on
      * purpose — the caller polls the file, which is the assertion that matters.
      *
      * Deliberately NOT a shorter debounce under test: `saveToStore()` has no re-entrancy
-     * guard and does one IPC round-trip per registry entry, so shrinking the window would
+     * guard and does one IPC round-trip per changed key, so shrinking the window would
      * make overlapping saves routine and would stop any test covering the real 500 ms
      * window.
      */
@@ -400,11 +401,12 @@
         }
     }
 
-    // Flush any pending saves when the Settings window is closing
+    // Flush this window's pending saves when the Settings window is closing. Only its OWN
+    // changes: a window that changed nothing writes nothing (`flushSettingsChanges`).
     onDestroy(() => {
         log.debug('Settings page destroying, flushing pending saves')
         // Fire and forget - we can't await in onDestroy
-        void Promise.all([forceSettingsSave(), flushShortcutsSave()])
+        void Promise.all([flushSettingsChanges(), flushShortcutsSave()])
         // Clean up event listeners
         unlistenFocusSelf?.()
         unlistenNavigate?.()
@@ -422,7 +424,7 @@
     function handleBeforeUnload() {
         log.debug('Window unloading, flushing pending saves')
         // Use sync approach since beforeunload doesn't wait for promises
-        void Promise.all([forceSettingsSave(), flushShortcutsSave()])
+        void Promise.all([flushSettingsChanges(), flushShortcutsSave()])
     }
 </script>
 

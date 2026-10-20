@@ -41,6 +41,7 @@ export type { SettingsSection } from './settings-registry'
 
 // Store
 export {
+  flushSettingsChanges,
   forceSave,
   getSetting,
   initializeSettings,

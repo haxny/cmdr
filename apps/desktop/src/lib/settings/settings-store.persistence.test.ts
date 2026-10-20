@@ -548,3 +548,74 @@ describe('migration 8: a leftover plaintext OpenAI key is deleted', () => {
     expect(disk.get('_schemaVersion')).toBe(SCHEMA_VERSION)
   })
 })
+
+/**
+ * Two windows over one backing store (`tauri-plugin-store` shares one in-memory store per
+ * path across windows). Settings saves 500 ms after a change, and a window opened inside
+ * that half second loads the store without the new value and starts listening only after
+ * loading, so it never hears about it. Each `loadStore()` after `vi.resetModules()` is
+ * another window's module state; `emit` is mocked, which is exactly the "never heard" case.
+ */
+describe('a second window that never heard a change', () => {
+  async function openWindow() {
+    vi.resetModules()
+    const window = await loadStore()
+    await window.initializeSettings()
+    return window
+  }
+
+  it('keeps a setting changed just before it opened when it closes', async () => {
+    const main = await openWindow()
+    main.setSetting('developer.mcpEnabled', true) // inside the 500 ms debounce
+    const settings = await openWindow()
+    expect(await main.forceSave()).toBe(true)
+
+    await settings.forceSave() // the Settings window closing
+
+    expect(disk.get('developer.mcpEnabled')).toBe(true)
+  })
+
+  it('keeps a newer value of a key it loaded when it saves its own change', async () => {
+    disk.set('viewer.wordWrap', false)
+    disk.set('_schemaVersion', SCHEMA_VERSION)
+    const main = await openWindow()
+    main.setSetting('viewer.wordWrap', true)
+    const settings = await openWindow() // still reads `false`
+    expect(await main.forceSave()).toBe(true)
+
+    settings.setSetting('viewer.showTextCursor', true)
+    expect(await settings.forceSave()).toBe(true)
+
+    expect(disk.get('viewer.wordWrap')).toBe(true)
+    expect(disk.get('viewer.showTextCursor')).toBe(true)
+  })
+
+  it('writes nothing on close when it changed nothing', async () => {
+    const settings = await openWindow()
+
+    expect(await settings.flushSettingsChanges()).toBe(true)
+
+    // Not even the version stamp: no save ran.
+    expect([...disk.keys()]).toEqual([])
+  })
+
+  it('writes its own pending change on close', async () => {
+    const settings = await openWindow()
+    settings.setSetting('viewer.wordWrap', true)
+
+    expect(await settings.flushSettingsChanges()).toBe(true)
+
+    expect(disk.get('viewer.wordWrap')).toBe(true)
+  })
+
+  it('still deletes a key it reset itself', async () => {
+    disk.set('viewer.wordWrap', true)
+    disk.set('_schemaVersion', SCHEMA_VERSION)
+    const settings = await openWindow()
+
+    settings.resetSetting('viewer.wordWrap')
+    expect(await settings.forceSave()).toBe(true)
+
+    expect(disk.has('viewer.wordWrap')).toBe(false)
+  })
+})

@@ -148,17 +148,23 @@ Mechanics (`settings-store.ts`):
   persists and survives a future default flip. **Guardrail: never gate persistence on `value !== default`** — that drops
   default-equal choices and re-opens the leak.
 - **`getStore()` does not seed registry defaults into the plugin store**, so no save can flush a default into the file.
-- **`saveToStore()` writes exactly the explicit keys** and prunes any registry key that's persisted but no longer
-  explicit (e.g. after a reset). Non-registry keys are left alone: a key that leaves the registry needs a
-  `migrateSettings()` case that deletes it. A failed write is retried once, and the retry re-runs the whole write (an
-  attempt can throw partway through the `set` loop), so `forceSave()` answering `true` means every explicit key landed.
-- **`resetSetting()` UNSETS** (drops from the ledger, prunes on save); it does not write the default back.
+- **A window saves only the keys IT changed** (`changedHere`, the patch `writeChangedSettings` applies): an explicit one
+  is written, one it reset is deleted, and every other key is left alone. Why: every window shares one in-memory plugin
+  store per file (`tauri-plugin-store` keys it by path), and a window opened inside another's 500 ms debounce loads the
+  store without that window's newest value and only starts listening after loading, so it never hears of it. Saving its
+  WHOLE ledger then deleted the new key, or wrote back the older value it loaded, and the next launch read the old value
+  (a consent "no" from a toast could revert to "yes"). A closing window calls `flushSettingsChanges()`, which writes
+  nothing when that window changed nothing. A key that leaves the registry needs a `migrateSettings()` case that deletes
+  it, and an invalid stored value is deleted at load. A failed write is retried once, and the retry re-runs the whole
+  patch (an attempt can throw partway through), so `forceSave()` answering `true` means every pending change landed; a
+  patch that never lands goes back for the next save.
+- **`resetSetting()` UNSETS** (drops from the ledger, deleted on this window's next save); it does not write the default
+  back.
 - **`migrateSettings()` saves only when it changed a value or the file is already populated**, so a brand-new install
   writes nothing until an actor sets something. Consequence: migrations re-run each launch until the first real save
   stamps `_schemaVersion`, so **every migration step must be idempotent**.
-- **Cross-window `settings:changed` carries `explicit`**: a receiving window mirrors the ledger (adds on a set, removes
-  on a reset) so its own later save neither drops a key another window just set nor re-persists one another window just
-  reset.
+- **Cross-window `settings:changed` carries `explicit`**: a receiving window mirrors its cache and ledger (adds on a
+  set, removes on a reset) but doesn't write the key; the window that changed it does.
 - **Backend readers tolerate absent keys** (`src-tauri/src/settings/loader.rs`: missing file → `Settings::default()`,
   every field `Option<_>` with an `unwrap_or` fallback; `mcp/config.rs` has env → setting → build-default), so absence
   means "use my fallback", never an error.
