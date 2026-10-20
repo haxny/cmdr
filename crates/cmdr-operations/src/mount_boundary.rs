@@ -3,10 +3,13 @@
 //! A recursive delete that walks into a mount empties that volume, often a NAS
 //! or a server other people use, and the mount point's own `rmdir` then fails
 //! quietly, after its contents are gone. Both delete walkers ask
-//! [`is_mount_boundary`] of every directory they're about to descend, and an
+//! [`is_mount_boundary`] of every directory they're about to descend, an
 //! Overwrite that replaces a folder asks [`refuse_a_mount_inside`] before it
-//! sets the folder aside; either refuses the whole operation on a yes, before
-//! anything is removed, which is what Finder does.
+//! sets the folder aside, and a move onto another volume asks
+//! [`refuse_moving_a_mount`] of its sources before it copies anything (it would
+//! otherwise copy the drive's files off, then delete them there). Each refuses
+//! the whole operation on a yes, before anything is removed, which is what
+//! Finder does.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -14,7 +17,7 @@ use std::sync::Arc;
 use cmdr_fs::volume::Volume;
 
 use super::state::WriteOperationState;
-use super::types::WriteOperationError;
+use super::types::{MountedVolumeAction, WriteOperationError};
 
 /// Whether the directory at `path` is where another filesystem is mounted.
 /// `dev` is the device its own `lstat` reported.
@@ -47,25 +50,30 @@ pub(crate) fn is_mount_boundary(path: &Path, dev: u64) -> bool {
     super::transfer_sides::root_is_listed(&resolved).unwrap_or(true)
 }
 
-/// The first mount point at or under the directory `dir`, spelled under `dir`,
-/// read from the OS mount table: an Overwrite is about to remove the whole tree,
-/// and the table answers without walking it. `None` for a `dir` that isn't a
-/// directory (or isn't there). A table that can't be read answers `dir` itself,
-/// since the caller is about to remove on the answer.
+/// The first mount point at or under any of the directories `dirs`, spelled
+/// under that directory, read from the OS mount table: the caller is about to
+/// remove (or carry off) each whole tree, and the table answers without walking
+/// one. A path that isn't a directory (or isn't there) holds no mount. A table
+/// that can't be read answers the first directory itself, since the caller is
+/// about to act on the answer.
 ///
-/// ❗ Blocks on a `stat`, so an async caller runs it on the blocking pool.
-pub(crate) fn mount_at_or_under(dir: &Path) -> Option<PathBuf> {
-    if !std::fs::symlink_metadata(dir).is_ok_and(|meta| meta.is_dir()) {
-        return None;
-    }
-    // The table spells mount points with links resolved.
-    let resolved = dir.canonicalize().ok()?;
-    let Some(mount_points) = mount_points() else {
-        return Some(dir.to_path_buf());
-    };
-    mount_points
+/// ❗ Blocks on a `stat` per path, so an async caller runs it on the blocking pool.
+pub(crate) fn mount_at_or_under<'a>(dirs: impl IntoIterator<Item = &'a Path>) -> Option<PathBuf> {
+    let dirs: Vec<(&Path, PathBuf)> = dirs
         .into_iter()
-        .find_map(|mount| mount.strip_prefix(&resolved).ok().map(|below| dir.join(below)))
+        .filter(|dir| std::fs::symlink_metadata(dir).is_ok_and(|meta| meta.is_dir()))
+        // The table spells mount points with links resolved.
+        .filter_map(|dir| dir.canonicalize().ok().map(|resolved| (dir, resolved)))
+        .collect();
+    let (first, _) = dirs.first()?;
+    let Some(mount_points) = mount_points() else {
+        return Some(first.to_path_buf());
+    };
+    dirs.iter().find_map(|(dir, resolved)| {
+        mount_points
+            .iter()
+            .find_map(|mount| mount.strip_prefix(resolved).ok().map(|below| dir.join(below)))
+    })
 }
 
 /// Every mount point in the OS mount table, or `None` when it can't be read.
@@ -89,10 +97,17 @@ fn mount_points() -> Option<Vec<PathBuf>> {
 /// Refuses an Overwrite that would remove the local folder `dest` while a drive
 /// is mounted at or under it.
 pub(crate) fn refuse_a_mount_inside(dest: &Path) -> Result<(), WriteOperationError> {
-    match mount_at_or_under(dest) {
-        Some(mount_point) => Err(refused_at(&mount_point)),
-        None => Ok(()),
-    }
+    refuse(mount_at_or_under([dest]), MountedVolumeAction::Replace)
+}
+
+/// Refuses a move onto another volume when any of its local `sources` is, or
+/// holds, a mount point: the move copies each tree, then deletes what it
+/// copied, which would carry the drive's files off it.
+pub(crate) fn refuse_moving_a_mount(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
+    refuse(
+        mount_at_or_under(sources.iter().map(PathBuf::as_path)),
+        MountedVolumeAction::Move,
+    )
 }
 
 /// [`is_mount_boundary`] for a directory the volume walker is about to descend.
@@ -101,14 +116,16 @@ pub(crate) async fn refuse_a_volume_mount_point(
     path: &Path,
     state: &Arc<WriteOperationState>,
 ) -> Result<(), WriteOperationError> {
-    on_local_disk(volume, path, state, |on_disk| {
+    let found = on_local_disk(volume, &[path.to_path_buf()], state, |on_disk| {
         use std::os::unix::fs::MetadataExt;
+        let on_disk = on_disk.into_iter().next()?;
         // A path that can't be stat'd isn't refused here: the listing that
         // follows reports it.
         let dev = std::fs::symlink_metadata(&on_disk).ok()?.dev();
         is_mount_boundary(&on_disk, dev).then_some(on_disk)
     })
-    .await
+    .await?;
+    refuse(found, MountedVolumeAction::Delete)
 }
 
 /// [`refuse_a_mount_inside`] for a volume folder an Overwrite is about to set
@@ -118,43 +135,69 @@ pub(crate) async fn refuse_a_volume_mount_inside(
     path: &Path,
     state: &Arc<WriteOperationState>,
 ) -> Result<(), WriteOperationError> {
-    on_local_disk(volume, path, state, |on_disk| mount_at_or_under(&on_disk)).await
+    let found = on_local_disk(volume, &[path.to_path_buf()], state, |on_disk| {
+        mount_at_or_under(on_disk.iter().map(PathBuf::as_path))
+    })
+    .await?;
+    refuse(found, MountedVolumeAction::Replace)
 }
 
-/// Runs `find_mount` on the blocking pool over `path`'s spot on disk, for a
+/// [`refuse_moving_a_mount`] for a move off a volume.
+pub(crate) async fn refuse_moving_a_volume_mount(
+    volume: &dyn Volume,
+    sources: &[PathBuf],
+    state: &Arc<WriteOperationState>,
+) -> Result<(), WriteOperationError> {
+    let found = on_local_disk(volume, sources, state, |on_disk| {
+        mount_at_or_under(on_disk.iter().map(PathBuf::as_path))
+    })
+    .await?;
+    refuse(found, MountedVolumeAction::Move)
+}
+
+/// Runs `find_mount` on the blocking pool over `paths`' spots on disk, for a
 /// volume backed by a local folder (`Volume::local_path`): a drive or share
 /// mounted inside a `LocalPosixVolume` pane's tree is reachable through it.
 /// Other backends have no local path to ask about; what's mounted on a server
 /// is the server's.
 async fn on_local_disk(
     volume: &dyn Volume,
-    path: &Path,
+    paths: &[PathBuf],
     state: &Arc<WriteOperationState>,
-    find_mount: fn(PathBuf) -> Option<PathBuf>,
-) -> Result<(), WriteOperationError> {
-    let Some(root) = volume.local_path() else {
-        return Ok(());
+    find_mount: fn(Vec<PathBuf>) -> Option<PathBuf>,
+) -> Result<Option<PathBuf>, WriteOperationError> {
+    let (Some(root), Some(first)) = (volume.local_path(), paths.first()) else {
+        return Ok(None);
     };
-    let on_disk = cmdr_fs::volume::root_anchored(&root, path);
-    let mounted = state
+    let on_disk: Vec<PathBuf> = paths
+        .iter()
+        .map(|path| cmdr_fs::volume::root_anchored(&root, path))
+        .collect();
+    state
         .scope()
         .host()
         .runtime()
         .spawn_blocking(move || find_mount(on_disk))
         .await
         .map_err(|e| WriteOperationError::IoError {
-            path: path.display().to_string(),
+            path: first.display().to_string(),
             message: format!("the mount check didn't finish: {e}"),
-        })?;
-    match mounted {
-        Some(mount_point) => Err(refused_at(&mount_point)),
+        })
+}
+
+fn refuse(mount_point: Option<PathBuf>, action: MountedVolumeAction) -> Result<(), WriteOperationError> {
+    match mount_point {
+        Some(mount_point) => Err(refused_at(&mount_point, action)),
         None => Ok(()),
     }
 }
 
-fn refused_at(mount_point: &Path) -> WriteOperationError {
+/// The refusal naming `mount_point`, for what the operation would have done
+/// to the drive there.
+pub(crate) fn refused_at(mount_point: &Path, action: MountedVolumeAction) -> WriteOperationError {
     WriteOperationError::MountedVolumeInside {
         mount_point: mount_point.display().to_string(),
+        action,
     }
 }
 

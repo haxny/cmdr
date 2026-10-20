@@ -2792,10 +2792,12 @@
   "errors.write.mountedVolumeInside.title": "A mounted drive is in the way",
   "errors.write.mountedVolumeInside.message.delete": "A drive or server is mounted at {mountPoint}, and deleting there would erase everything on it. Cmdr stopped before deleting anything.",
   "errors.write.mountedVolumeInside.message.replace": "A drive or server is mounted at {mountPoint}, so replacing the folder that holds it would erase everything on the drive. Cmdr left that folder and the drive as they were.",
+  "errors.write.mountedVolumeInside.message.move": "A drive or server is mounted at {mountPoint}, so moving the folder that holds it would move everything off the drive. Cmdr stopped before moving anything.",
   "errors.write.mountedVolumeInside.suggestion.delete": "Eject that drive, then delete again. To clear the drive itself, open it and delete what’s on it there.",
   "errors.write.mountedVolumeInside.suggestion.replace": "Eject that drive, then try again. To keep the folder, choose Skip or Rename instead of Overwrite.",
+  "errors.write.mountedVolumeInside.suggestion.move": "Eject that drive, then move again. To move what’s on the drive, open it and move the files from there.",
   "@errors.write.mountedVolumeInside.title": {
-    "description": "Title of the error dialog when an operation would have removed a mounted drive, disk image, or network share along with a folder: a permanent delete of the folder holding it (or of the drive itself), or an Overwrite replacing that folder. Plain text. \"Mounted\" means connected and reachable as a folder, the way macOS puts a USB drive or a server under a folder. \"In the way\" means it is why Cmdr stopped.",
+    "description": "Title of the error dialog when an operation would have removed a mounted drive, disk image, or network share along with a folder: a permanent delete of the folder holding it (or of the drive itself), an Overwrite replacing that folder, or a move of that folder onto another drive. Plain text. \"Mounted\" means connected and reachable as a folder, the way macOS puts a USB drive or a server under a folder. \"In the way\" means it is why Cmdr stopped.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
@@ -2826,6 +2828,21 @@
   },
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "description": "Recovery suggestion for an Overwrite that reached a mounted drive. Plain text. \"Eject\" is the macOS verb for disconnecting a drive or server safely (Finder's Eject). Skip, Rename, and Overwrite are the button labels of the name-clash prompt (fileOperations.transferProgress.conflictSkip / conflictRename / conflictOverwrite): use the same words as those buttons.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.write.mountedVolumeInside.message.move": {
+    "description": "Body of the error dialog for a move onto another drive of a folder that holds a mounted drive (or of the mounted drive itself). A move onto another drive copies, then deletes the originals, so it would have moved the drive's files off it. Plain text. Says the move was refused up front, so nothing was moved. \"Server\" means a network share (for example a NAS).",
+    "placeholders": {
+      "mountPoint": {
+        "description": "The full path of the folder where the drive is mounted, inserted verbatim. Do not translate or reformat it."
+      }
+    },
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "description": "Recovery suggestion for a move that reached a mounted drive. Plain text. \"Eject\" is the macOS verb for disconnecting a drive or server safely (Finder's Eject). The second sentence is for someone who wanted the drive's files moved: they can open the drive and move them from there.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },

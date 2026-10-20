@@ -87,6 +87,12 @@ pub async fn move_volumes_with_progress(
         &[&source_volume, &dest_volume],
     )
     .await?;
+    // A source that is or holds a mount point (on a `LocalPosixVolume`) would
+    // have the drive's files copied off it and then deleted there: refused
+    // before the destination is touched.
+    super::super::super::mount_boundary::refuse_moving_a_volume_mount(&*source_volume, source_paths, state)
+        .await
+        .map_err(WriteFailure::synthetic)?;
 
     // Phase 0: Ensure the destination directory exists, creating it and any
     // missing ancestors on the dest volume (local, SMB, MTP, in-memory), so a

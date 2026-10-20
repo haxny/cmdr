@@ -10,6 +10,7 @@ use std::time::Instant;
 use super::super::Operations;
 use super::super::error_classification::classify_io_error;
 use super::super::event_sinks::ScanPreviewEventSink;
+use super::super::mount_boundary::refused_at;
 use super::super::scan_bridge::{ScanCounts, ScanPause, forward_scan_progress};
 use super::super::scan_cache::ScanOutcome;
 use super::super::scan_walker::{OnlineOnlyWatch, WalkContext, walk_sources_with_per_path};
@@ -17,8 +18,8 @@ use super::super::scan_watchdog::{ScanTally, ScanWatchdog};
 use super::super::state::{CachedScanResult, FileInfo, ScanPreviewState};
 use super::super::transfer_tree::{TreeOrder, from_local_scan};
 use super::super::types::{
-    ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewProgressEvent, ScanPreviewPurpose,
-    WriteOperationError,
+    MountedVolumeAction, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewProgressEvent,
+    ScanPreviewPurpose, WriteOperationError,
 };
 use super::settle_failed_preview;
 use cmdr_fs::volume::CopyScanResult;
@@ -150,9 +151,7 @@ pub(crate) fn run_scan_preview(
             seen: &online_only_seen,
         };
         let sidecars = cmdr_fs::apple_double::SidecarRule::new();
-        let refuse_mounted_volume = |path: &Path| WriteOperationError::MountedVolumeInside {
-            mount_point: path.display().to_string(),
-        };
+        let refuse_mounted_volume = |path: &Path| refused_at(path, MountedVolumeAction::Delete);
         let ctx = WalkContext {
             sidecars: &sidecars,
             progress_interval: state.progress_interval,

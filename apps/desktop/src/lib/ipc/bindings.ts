@@ -11628,6 +11628,23 @@ export type MountResult = {
 }
 
 /**
+ *  What a refused operation would have done to a mounted drive, for
+ *  [`WriteOperationError::MountedVolumeInside`]. Each is its own sentence: a
+ *  MOVE of the folder holding the drive and an Overwrite REPLACING a folder
+ *  both run under a move, so the operation type can't tell them apart.
+ */
+export type MountedVolumeAction =
+  // A permanent delete would have walked into the drive and emptied it.
+  | 'delete'
+  // An Overwrite would have set aside and removed the folder holding it.
+  | 'replace'
+  /**
+   *  A move onto another volume would have copied the drive's files off it,
+   *  then deleted them there.
+   */
+  | 'move'
+
+/**
  *  `mouse-nav`: a back / forward navigation gesture finished over the main
  *  window — a mouse's X1/X2 side button, or the swipe a Logi Options+ mouse
  *  substitutes for it. macOS only, emitted by the AppKit event monitor in
@@ -19233,13 +19250,15 @@ export type WriteOperationError =
    */
   | { type: 'duplicate_source_names'; name: string; first: string; second: string }
   /**
-   *  A delete reached a folder another drive, disk image, or server is
-   *  mounted on, inside the selection or as the selection itself. Refused
-   *  before anything is deleted, as Finder does: walking into the mount would
-   *  empty that volume, often a NAS other people use. `mount_point` is where
-   *  it's mounted, so the message can say which one to eject.
+   *  A delete, an Overwrite, or a move onto another volume reached a folder
+   *  another drive, disk image, or server is mounted on, inside the selection
+   *  or as the selection itself. Refused before anything is removed or
+   *  copied, as Finder does: going on would empty that volume, often a NAS
+   *  other people use. `mount_point` is where it's mounted, so the message
+   *  can say which one to eject; `action` is what the operation would have
+   *  done to it.
    */
-  | { type: 'mounted_volume_inside'; mountPoint: string }
+  | { type: 'mounted_volume_inside'; mountPoint: string; action: MountedVolumeAction }
   /**
    *  A fresh ZIP would hold an entry the archive reader quarantines: a name
    *  that climbs out of the archive (a macOS `..\notes.txt` reads as

@@ -16,9 +16,12 @@ use std::time::{Duration, Instant};
 
 use super::cancellable::run_cancellable_scoped;
 use super::event_sinks::OperationEventSink;
+use super::mount_boundary::refused_at;
 use super::scan_walker::{WalkContext, walk_dir_recursive};
 use super::state::{ScanResult, WriteOperationState};
-use super::types::{WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use super::types::{
+    MountedVolumeAction, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
+};
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{CopyScanResult, ScanRecorder, Volume, VolumeError};
 
@@ -295,9 +298,7 @@ fn scan_sources_internal(
     // resolve and no watchdog (that bounds a PREVIEW, not an operation's scan).
     let pause = super::scan_bridge::ScanPause::for_operation(Arc::clone(state));
     let sidecars = cmdr_fs::apple_double::SidecarRule::new();
-    let refuse_mounted_volume = |path: &Path| WriteOperationError::MountedVolumeInside {
-        mount_point: path.display().to_string(),
-    };
+    let refuse_mounted_volume = |path: &Path| refused_at(path, MountedVolumeAction::Delete);
     let ctx = WalkContext {
         sidecars: &sidecars,
         progress_interval,

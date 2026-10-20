@@ -136,6 +136,22 @@ pub enum ArchiveNameRefusal {
     Empty,
 }
 
+/// What a refused operation would have done to a mounted drive, for
+/// [`WriteOperationError::MountedVolumeInside`]. Each is its own sentence: a
+/// MOVE of the folder holding the drive and an Overwrite REPLACING a folder
+/// both run under a move, so the operation type can't tell them apart.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum MountedVolumeAction {
+    /// A permanent delete would have walked into the drive and emptied it.
+    Delete,
+    /// An Overwrite would have set aside and removed the folder holding it.
+    Replace,
+    /// A move onto another volume would have copied the drive's files off it,
+    /// then deleted them there.
+    Move,
+}
+
 /// Errors that can occur during write operations.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", rename_all = "snake_case", rename_all_fields = "camelCase")]
@@ -269,13 +285,16 @@ pub enum WriteOperationError {
         first: String,
         second: String,
     },
-    /// A delete reached a folder another drive, disk image, or server is
-    /// mounted on, inside the selection or as the selection itself. Refused
-    /// before anything is deleted, as Finder does: walking into the mount would
-    /// empty that volume, often a NAS other people use. `mount_point` is where
-    /// it's mounted, so the message can say which one to eject.
+    /// A delete, an Overwrite, or a move onto another volume reached a folder
+    /// another drive, disk image, or server is mounted on, inside the selection
+    /// or as the selection itself. Refused before anything is removed or
+    /// copied, as Finder does: going on would empty that volume, often a NAS
+    /// other people use. `mount_point` is where it's mounted, so the message
+    /// can say which one to eject; `action` is what the operation would have
+    /// done to it.
     MountedVolumeInside {
         mount_point: String,
+        action: MountedVolumeAction,
     },
     /// A fresh ZIP would hold an entry the archive reader quarantines: a name
     /// that climbs out of the archive (a macOS `..\notes.txt` reads as

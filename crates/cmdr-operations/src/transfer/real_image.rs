@@ -555,3 +555,81 @@ async fn a_volume_overwrite_of_a_folder_that_holds_a_mounted_drive_refuses_and_r
     );
     nested.assert_untouched();
 }
+
+// ============================================================================
+// A move never carries a mounted drive's files off it
+// ============================================================================
+
+/// A move onto another drive copies, then deletes what it copied, so moving a
+/// folder that holds a mounted drive would move that drive's files off it.
+/// Refused before anything is copied, for the folder and for the mount point.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "attaches a real disk image; run via `pnpm check disk-images`"]
+async fn a_move_onto_another_drive_of_a_folder_that_holds_a_mounted_drive_refuses_and_moves_nothing() {
+    use crate::mount_boundary::test_support::{NestedMount, assert_refused_at_the_mount};
+
+    let session = DiskImageSession::acquire();
+    let nested = NestedMount::mount_in(&session);
+    let image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach the destination");
+    let destination = image.volumes()[0].mount_point.clone();
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(50)));
+
+    for source in [nested.folder(), nested.folder().join("mnt")] {
+        let result = move_files_with_progress_inner(
+            &CollectorEventSink::new(),
+            "op-move-nested-mount",
+            &state,
+            std::slice::from_ref(&source),
+            &destination,
+            &WriteOperationConfig::default(),
+        );
+
+        assert_refused_at_the_mount(result);
+        nested.assert_untouched();
+        let landed = destination.join(source.file_name().expect("a named source"));
+        assert!(!landed.exists(), "nothing was copied: {}", landed.display());
+    }
+}
+
+/// The cross-volume engine's twin: a `LocalPosixVolume` source moving onto a
+/// volume of another kind copies and deletes per file.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "attaches a real disk image; run via `pnpm check disk-images`"]
+async fn a_volume_move_of_a_folder_that_holds_a_mounted_drive_refuses_and_moves_nothing() {
+    use crate::mount_boundary::test_support::{NestedMount, assert_refused_at_the_mount};
+    use crate::transfer::volume::move_volumes_with_progress;
+    use crate::types::VolumeCopyConfig;
+    use cmdr_fs::volume::InMemoryVolume;
+
+    let nested = NestedMount::mount();
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(50)));
+    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "V",
+        nested.dir.to_path_buf(),
+        pane_order_host(),
+    ));
+    let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(1 << 30, 1 << 30));
+
+    for source_path in ["folder", "folder/mnt"] {
+        let result = move_volumes_with_progress(
+            Arc::new(CollectorEventSink::new()),
+            "op-volume-move-nested-mount",
+            &state,
+            Arc::clone(&source),
+            &[std::path::PathBuf::from(source_path)],
+            Arc::clone(&dest),
+            std::path::Path::new("/"),
+            &VolumeCopyConfig::default(),
+        )
+        .await;
+
+        assert_refused_at_the_mount(result.map_err(|failure| failure.error));
+        nested.assert_untouched();
+        for copied in ["/folder", "/mnt", "/mine.txt", "/precious.txt"] {
+            assert!(
+                !dest.exists(std::path::Path::new(copied)).await,
+                "nothing was copied: {copied}"
+            );
+        }
+    }
+}

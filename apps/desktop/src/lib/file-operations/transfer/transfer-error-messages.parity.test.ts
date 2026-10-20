@@ -788,7 +788,7 @@ const cases: Case[] = [
     // A delete that would have walked into a mounted drive: names the mount,
     // which can sit deep inside the selection, and says nothing was deleted.
     name: 'mounted_volume_inside (delete)',
-    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas', action: 'delete' },
     op: 'delete',
     expected: {
       title: 'A mounted drive is in the way',
@@ -802,13 +802,41 @@ const cases: Case[] = [
   {
     // An Overwrite that would have replaced a folder holding a mounted drive.
     name: 'mounted_volume_inside (copy)',
-    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas', action: 'replace' },
     op: 'copy',
     expected: {
       title: 'A mounted drive is in the way',
       message:
         'A drive or server is mounted at /Users/david/projects/backup/nas, so replacing the folder that holds it would erase everything on the drive. Cmdr left that folder and the drive as they were.',
       suggestion: 'Eject that drive, then try again. To keep the folder, choose Skip or Rename instead of Overwrite.',
+    },
+  },
+
+  {
+    // A move's own Overwrite still words itself as the replacement it refused.
+    name: 'mounted_volume_inside (move, Overwrite)',
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas', action: 'replace' },
+    op: 'move',
+    expected: {
+      title: 'A mounted drive is in the way',
+      message:
+        'A drive or server is mounted at /Users/david/projects/backup/nas, so replacing the folder that holds it would erase everything on the drive. Cmdr left that folder and the drive as they were.',
+      suggestion: 'Eject that drive, then try again. To keep the folder, choose Skip or Rename instead of Overwrite.',
+    },
+  },
+
+  {
+    // A move onto another drive of a folder holding a mounted drive: it would
+    // have copied the drive's files off, then deleted them there.
+    name: 'mounted_volume_inside (move)',
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas', action: 'move' },
+    op: 'move',
+    expected: {
+      title: 'A mounted drive is in the way',
+      message:
+        'A drive or server is mounted at /Users/david/projects/backup/nas, so moving the folder that holds it would move everything off the drive. Cmdr stopped before moving anything.',
+      suggestion:
+        'Eject that drive, then move again. To move what’s on the drive, open it and move the files from there.',
     },
   },
 

@@ -258,6 +258,7 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       { id: 'source_changed', label: 'Source changed mid-copy (S3)' },
       { id: 'mounted_volume_inside', label: 'Delete reaches a mounted drive' },
       { id: 'mounted_volume_inside-copy', label: 'Overwrite reaches a mounted drive' },
+      { id: 'mounted_volume_inside-move', label: 'Move reaches a mounted drive' },
       { id: 'files_too_large_for_filesystem', label: 'Too large for the filesystem (three files)' },
       { id: 'files_too_large_for_filesystem-single', label: 'Too large for the filesystem (one file)' },
       { id: 'new_data_kept_at', label: 'New file kept under another name' },

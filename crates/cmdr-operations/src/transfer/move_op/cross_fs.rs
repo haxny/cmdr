@@ -69,6 +69,10 @@ pub(super) fn move_with_staging(
         destination,
         config.destination_name.as_deref(),
     )?;
+    // A source that is or holds a mount point would have the drive's files
+    // copied off it and then deleted there. Refused before Phase 1, so neither
+    // a fresh scan nor a cached preview's file list gets the chance.
+    crate::mount_boundary::refuse_moving_a_mount(sources)?;
     // Phase 1: Scan (or reuse cached preview results)
     let mut scan_result = if let Some(preview_id) = &config.preview_id {
         // Volume scans cache aggregate stats with an empty `files` list; the

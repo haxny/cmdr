@@ -2661,7 +2661,7 @@ reproduces the exact CI error, and the new shape is clean.
 This is the same class as `3d4c9816f`, where two `use` statements sat above their macOS-only use sites. Any code whose
 only consumer is behind `cfg(target_os = "macos")` needs the same `cfg` on the thing above it.
 
-## An Overwrite never removes a mounted drive
+## An Overwrite or a move never removes a mounted drive
 
 A cross-type Overwrite (a file onto a folder) and the set-aside-and-materialize landing remove the replaced FOLDER as a
 tree once the new item lands: `remove_dir_all` locally (`overwrite.rs`: `stage_and_land_file` step 4,
@@ -2672,7 +2672,15 @@ before the temp is written or the folder set aside, with `WriteOperationError::M
 
 The check reads the OS mount table for a mount point at or under the folder's resolved path, so it costs one `lstat` for
 a file being replaced and never walks the folder. A table that can't be read refuses. A remote backend's destination
-isn't asked: what's mounted on a server is the server's. The dialog words it per operation
+isn't asked: what's mounted on a server is the server's. The dialog words it as a replacement
 (`errors.write.mountedVolumeInside.message.replace`). Pinned on a real APFS image mounted inside a test folder
 (`real_image.rs`, the disk-image lane). The delete's side of the same wall: `../delete/DETAILS.md` § "A mount is a
 wall".
+
+A move onto another volume (`move_op/cross_fs.rs::move_with_staging`, `volume/move_cross.rs`) copies each tree, then
+deletes what it copied, so a source that is or holds a mount point would have the drive's files carried off it. Both
+engines refuse up front, before the scan and before a cached preview's file list is trusted, with the same check over
+every top-level source in one mount-table read (`mount_boundary::refuse_moving_a_mount` /
+`refuse_moving_a_volume_mount`). A same-volume move renames and moves nothing off a drive, so it isn't asked. The
+refusal carries `MountedVolumeAction` (`delete` / `replace` / `move`), set by the refusing site, because a move can
+refuse both as a move and as an Overwrite; the dialog keys its sentence on it, ❌ never on the operation type.

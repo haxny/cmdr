@@ -298,7 +298,7 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
   // A permanent delete of a project folder holding a mounted NAS share.
   mounted_volume_inside: {
     operationType: 'delete',
-    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas', action: 'delete' },
   },
   // A move within an S3 account whose source another app replaced mid-copy.
   source_changed: {
@@ -431,7 +431,12 @@ const extraStates: Record<string, TransferErrorFixture> = {
   // A copy whose answered Overwrite would replace a folder holding a mounted share.
   'mounted_volume_inside-copy': {
     operationType: 'copy',
-    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas' },
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas', action: 'replace' },
+  },
+  // A move onto an external drive of a project folder holding a mounted share.
+  'mounted_volume_inside-move': {
+    operationType: 'move',
+    error: { type: 'mounted_volume_inside', mountPoint: '/Users/david/projects/backup/nas', action: 'move' },
   },
   'files_too_large_for_filesystem-single': {
     operationType: 'copy',

@@ -6,6 +6,7 @@
 //! table, so only a real mount produces either.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use cmdr_fs::testing::TestDir;
 use cmdr_fs::testing::disk_images::{DiskImage, DiskImageSession, ImageSpec};
@@ -24,11 +25,16 @@ pub(crate) struct NestedMount {
 
 impl NestedMount {
     pub(crate) fn mount() -> Self {
+        Self::mount_in(&DiskImageSession::acquire())
+    }
+
+    /// [`Self::mount`] under a session the caller holds, for a test that also
+    /// attaches a drive of its own (a session per thread is the harness's rule).
+    pub(crate) fn mount_in(session: &Arc<DiskImageSession>) -> Self {
         let dir = TestDir::new("nested_mount");
         std::fs::create_dir_all(dir.join("folder/mnt")).expect("the mount point");
         std::fs::write(dir.join("folder/mine.txt"), b"MINE").expect("a file beside the mount");
-        let session = DiskImageSession::acquire();
-        let mut image = DiskImage::attach(&session, ImageSpec::Apfs).expect("attach the image");
+        let mut image = DiskImage::attach(session, ImageSpec::Apfs).expect("attach the image");
         let mounted = image
             .remount_volume_at(0, &dir.join("folder/mnt"))
             .expect("mount it inside the folder")
@@ -66,7 +72,7 @@ impl NestedMount {
 /// `result` is the typed refusal, naming the mount.
 pub(crate) fn assert_refused_at_the_mount<T: std::fmt::Debug>(result: Result<T, WriteOperationError>) {
     match result {
-        Err(WriteOperationError::MountedVolumeInside { mount_point }) => assert!(
+        Err(WriteOperationError::MountedVolumeInside { mount_point, .. }) => assert!(
             Path::new(&mount_point).ends_with("folder/mnt"),
             "names the mount: {mount_point}"
         ),

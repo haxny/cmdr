@@ -8,7 +8,7 @@
  * form an import cycle back into `file-explorer/`.
  */
 
-import type { ArchiveNameRefusal, ItemKinds, TrashRefusalKind } from '#lib/ipc/bindings.js'
+import type { ArchiveNameRefusal, ItemKinds, MountedVolumeAction, TrashRefusalKind } from '#lib/ipc/bindings.js'
 
 // ============================================================================
 // Write operation types
@@ -199,9 +199,10 @@ export type WriteOperationError =
   | { type: 'destination_full'; path: string }
   | { type: 'destination_inside_source'; source: string; destination: string }
   | { type: 'duplicate_source_names'; name: string; first: string; second: string }
-  // A delete reached a folder a drive or server is mounted on. Refused before
-  // anything is deleted, as Finder does.
-  | { type: 'mounted_volume_inside'; mountPoint: string }
+  // A delete, an Overwrite, or a move onto another drive reached a folder a
+  // drive or server is mounted on. Refused before anything is removed or
+  // copied, as Finder does. `action` is what it would have done to the drive.
+  | { type: 'mounted_volume_inside'; mountPoint: string; action: MountedVolumeAction }
   // A fresh zip would hold an entry the archive reader hides: a macOS `..\x`
   // reads as `../x`. Refused from the plan, before anything is compressed.
   | { type: 'archive_entry_name_refused'; entry: string; reason: ArchiveNameRefusal }

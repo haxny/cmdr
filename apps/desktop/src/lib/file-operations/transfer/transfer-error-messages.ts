@@ -21,7 +21,7 @@ import type {
   FriendlyError,
   PermissionRefusal,
 } from '#lib/file-explorer/types.js'
-import type { TrashRefusalKind } from '#lib/ipc/bindings.js'
+import type { MountedVolumeAction, TrashRefusalKind } from '#lib/ipc/bindings.js'
 import { fdaIsMissing } from '#lib/onboarding/fda-status.svelte.js'
 import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
 import { w, type FriendlyErrorMessage } from './transfer-error-catalog'
@@ -582,16 +582,17 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
 }
 
 /**
- * The mounted-drive refusal's wording, by how the operation reached the drive:
- * a delete walking the selection, or a copy, move, or edit replacing a folder on
- * Overwrite.
+ * The mounted-drive refusal's wording, by what the operation would have done to
+ * the drive (`action`, set by the refusing site): a delete walking into it, an
+ * Overwrite replacing the folder holding it, or a move onto another drive
+ * carrying its files off. A move can refuse either of the last two, so the
+ * operation type can't pick.
  */
-function mountedVolumeMessage(mountPoint: string, operationType: TransferOperationType): FriendlyErrorMessage {
-  const reachedBy = operationType === 'delete' || operationType === 'trash' ? 'delete' : 'replace'
+function mountedVolumeMessage(mountPoint: string, action: MountedVolumeAction): FriendlyErrorMessage {
   return {
     title: w('mountedVolumeInside.title'),
-    message: w(`mountedVolumeInside.message.${reachedBy}`, { mountPoint: escapeHtml(mountPoint) }),
-    suggestion: w(`mountedVolumeInside.suggestion.${reachedBy}`),
+    message: w(`mountedVolumeInside.message.${action}`, { mountPoint: escapeHtml(mountPoint) }),
+    suggestion: w(`mountedVolumeInside.suggestion.${action}`),
   }
 }
 
@@ -624,10 +625,11 @@ function operationWordedMessage(
   operationType: TransferOperationType,
 ): FriendlyErrorMessage | null {
   switch (error.type) {
-    // A delete or an Overwrite that would have removed a mounted drive: named,
-    // because the mount can sit deep inside the folder, and it's what to eject.
+    // A delete, an Overwrite, or a move that would have emptied a mounted drive:
+    // named, because the mount can sit deep inside the folder, and it's what to
+    // eject.
     case 'mounted_volume_inside':
-      return mountedVolumeMessage(error.mountPoint, operationType)
+      return mountedVolumeMessage(error.mountPoint, error.action)
     case 'duplicate_source_names':
       // Two selected items carry one name, so they'd both want
       // `<destination>/<name>`. Refused before anything is written, and the
