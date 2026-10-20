@@ -453,21 +453,24 @@ async fn settle_kind(
             let Some(destination) = destination else {
                 return Outcome::LeftAlone;
             };
+            let aside = match surface.standing_at(path).await {
+                Standing::Missing => return Outcome::AlreadyGone,
+                Standing::Unknown => return Outcome::Deferred,
+                aside => aside,
+            };
             match surface.standing_at(destination).await {
                 Standing::Missing => restore(surface, path, destination).await,
                 // The one case where the aside is provably redundant: the
                 // replacement is a whole file of exactly the size it was
                 // supposed to reach.
-                Standing::File { size } if size == *expected_size => match surface.standing_at(path).await {
+                Standing::File { size } if size == *expected_size => match aside {
                     Standing::File { .. } => surface.remove_file(path).await.into_outcome(),
                     // A file→folder overwrite sets a whole DIRECTORY aside. The
                     // replacement is provably complete, so the user did get what
                     // they asked for — but removing a directory means recursing,
                     // and ❌ no sweep here recurses over something that was the
                     // user's. It gets a real name instead, and they decide.
-                    Standing::Other => recover(surface, path, destination, Rescued::Aside).await,
-                    Standing::Missing => Outcome::AlreadyGone,
-                    Standing::Unknown => Outcome::Deferred,
+                    _ => recover(surface, path, destination, Rescued::Aside).await,
                 },
                 Standing::File { .. } | Standing::Other => recover(surface, path, destination, Rescued::Aside).await,
                 Standing::Unknown => Outcome::Deferred,
@@ -475,11 +478,19 @@ async fn settle_kind(
         }
         // The three kinds whose replacement can't be checked against a number: a
         // directory that filled leaf by leaf, or one a closure materialized. The
-        // original is kept whatever is standing there.
+        // original is kept whatever is standing there. The aside is read FIRST,
+        // as a landing's temp is: one whose rename never happened (a rename
+        // aside the transport cut off, recorded because it may have) retires
+        // rather than deferring at every launch.
         ItemKind::DisplacedFile { .. } | ItemKind::DirOverwriteAside { .. } | ItemKind::VolumeAside { .. } => {
             let Some(destination) = destination else {
                 return Outcome::LeftAlone;
             };
+            match surface.standing_at(path).await {
+                Standing::Missing => return Outcome::AlreadyGone,
+                Standing::Unknown => return Outcome::Deferred,
+                Standing::File { .. } | Standing::Other => {}
+            }
             match surface.standing_at(destination).await {
                 Standing::Missing => restore(surface, path, destination).await,
                 Standing::Unknown => Outcome::Deferred,

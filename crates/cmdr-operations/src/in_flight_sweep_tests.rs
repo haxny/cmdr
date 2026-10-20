@@ -234,6 +234,47 @@ async fn a_dir_overwrite_aside_goes_back_when_its_replacement_never_landed() {
     assert_eq!(std::fs::read(&fixture.destination).expect("read"), b"the user's notes");
 }
 
+/// A record can name an aside that never happened: a rename aside the
+/// transport cut off is recorded because it MAY have gone through. Every aside
+/// kind reads the aside first, so one that isn't there retires, whatever is at
+/// its destination, ❌ instead of a restore that refuses and defers forever.
+#[tokio::test]
+async fn an_aside_that_isnt_there_retires_whatever_its_destination_holds() {
+    for (label, destination_holds) in [("missing", None), ("the original", Some(b"the user's notes" as &[u8]))] {
+        let kinds = |destination: PathBuf| {
+            [
+                ItemKind::FileAside {
+                    destination: destination.clone(),
+                    expected_size: 16,
+                },
+                ItemKind::DisplacedFile {
+                    destination: destination.clone(),
+                },
+                ItemKind::DirOverwriteAside {
+                    destination: destination.clone(),
+                },
+                ItemKind::VolumeAside { destination },
+            ]
+        };
+        let fixture = displaced("sweep-aside-never-happened", b"");
+        std::fs::remove_file(&fixture.aside).expect("the rename aside never happened");
+        if let Some(bytes) = destination_holds {
+            std::fs::write(&fixture.destination, bytes).expect("the original, where it always was");
+        }
+        for kind in kinds(fixture.destination.clone()) {
+            let outcome = settle_aside(kind.clone(), &fixture).await;
+            assert_eq!(outcome, Outcome::AlreadyGone, "{label}: {kind:?}");
+        }
+        if let Some(bytes) = destination_holds {
+            assert_eq!(
+                std::fs::read(&fixture.destination).expect("read"),
+                bytes,
+                "{label}: untouched"
+            );
+        }
+    }
+}
+
 /// ❗ The rule a mistake here loses somebody's only copy: a staging folder with
 /// anything in it is left exactly where it is, whatever else the sweep would
 /// like to do. A destination that left before Phase 3 leaves a whole staged tree

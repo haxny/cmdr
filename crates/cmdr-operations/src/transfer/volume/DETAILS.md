@@ -1043,6 +1043,15 @@ staged".
   typed `WriteOperationError::OriginalsKeptAside`. The one delete that stays a delete is the `Rename`-policy branch
   clearing its own `O_EXCL` placeholder: that zero-byte file is ours, not the user's. Pinned by
   `move_same_overwrite_tests.rs`.
+- **An aside's rename waits out a dropped share, and its record outlives the error** (`displace_destination`, shared by
+  every site above and by a fresh compress's displaced publish). The `VolumeAside` record is on disk before the rename
+  goes out. A rename the transport cut off may have been performed, so the share is waited for (the copy's wait,
+  `../volume_outage.rs`) and one stat of the aside settles it: there means set aside, gone means run the rename again.
+  A wait that ends without the share settles what one stat can (gone: retire; there: put the file back now) and
+  otherwise keeps the record for the share's next arrival, whose sweep restores the file
+  (`../../in_flight_sweep.rs`, which reads an aside FIRST so one that never happened retires). The put-back
+  (`DisplacedDestination::restore`) classifies the same way before it rescues. ❌ Retiring the record on the raw error
+  left the user's file under a scratch name nothing knew about. Pinned by `displaced_destination_tests.rs`.
 - Pinned by `conflict_tests.rs::file_overwrite_keeps_the_original_and_writes_at_its_name`,
   `../staged_write_tests.rs::a_swap_lands_delete_first_and_never_renames_with_force`, and
   `copy_crashsafe_tests.rs::{cross_volume_overwrite_preserves_dest_on_midstream_failure, cross_volume_overwrite_success_replaces_and_cleans_temp, cross_volume_overwrite_concurrent_replaces_and_cleans_temp}`.

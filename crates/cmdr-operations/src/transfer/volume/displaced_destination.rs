@@ -17,9 +17,11 @@ use super::super::super::in_flight_temps::{self, ItemKind, RecordHome, TrackedRe
 use super::super::super::state::WriteOperationState;
 use super::super::super::types::RecoveredOriginal;
 use super::super::recovered_name::rescue_out_of_temp_space;
+use super::super::volume_outage::{OutageEnd, OutageFailure, StartedOn, lost_connection, wait_after_failure};
 use super::cleanup::{TreeRemoval, remove_tree};
 use super::transfer_error::{PathRole, PathedVolumeError};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::volume::{Volume, VolumeError};
 
@@ -78,6 +80,15 @@ impl std::fmt::Debug for DisplacedDestination {
 /// paths are the destination volume's own, and a direct SMB session's `/photos`
 /// is not this Mac's. `RecordHome::volume_space` is what keeps the sweep's
 /// `std::fs` off them.
+///
+/// ❗ **Classify before acting.** A rename that fails on the transport
+/// ([`VolumeError::transport_fault`]) may have been performed by the server, so
+/// the user's file may already wear the aside's name: the record stays, the
+/// share is waited for, and one stat of the aside settles what happened (there:
+/// set aside; gone: run the rename again). A wait that ends without the share
+/// settles what it can (`settle_unfinished_aside`) and leaves the record to
+/// the share's next arrival otherwise, whose sweep puts the file back. Retiring
+/// it on the error left the user's file under a scratch name nothing knew.
 pub(crate) async fn displace_destination(
     state: &Arc<WriteOperationState>,
     volume: &Arc<dyn Volume>,
@@ -110,22 +121,83 @@ pub(crate) async fn displace_destination(
         ),
         None => None,
     };
-    match volume.rename(original, aside.path(), false).await {
-        Ok(()) => Ok(Some(DisplacedDestination {
-            aside,
-            original: original.to_path_buf(),
-            is_directory,
-            record,
-            state: Arc::clone(state),
-        })),
-        Err(VolumeError::NotFound(_)) => {
-            retire(state, record.as_ref());
-            Ok(None)
+    let displaced = DisplacedDestination {
+        aside,
+        original: original.to_path_buf(),
+        is_directory,
+        record,
+        state: Arc::clone(state),
+    };
+    let volumes = [volume];
+    let mut outages = 0;
+    loop {
+        let started_on = StartedOn::now(&volumes);
+        let mut error = match volume.rename(original, displaced.aside.path(), false).await {
+            Ok(()) => return Ok(Some(displaced)),
+            Err(VolumeError::NotFound(_)) => {
+                displaced.forget();
+                return Ok(None);
+            }
+            Err(refused) if refused.transport_fault().is_none() => {
+                displaced.forget();
+                return Err(PathedVolumeError::new(PathRole::Destination, original, refused));
+            }
+            Err(cut_off) => cut_off,
+        };
+        let mut started_on = started_on;
+        // The server may have performed it: wait, then ask the aside.
+        let ended = loop {
+            match wait_after_failure(state, &error, &volumes, &started_on, &mut outages).await {
+                OutageEnd::Back => {}
+                ended => break ended,
+            }
+            started_on = StartedOn::now(&volumes);
+            match volume.get_metadata(displaced.aside.path()).await {
+                Ok(_) => return Ok(Some(displaced)),
+                Err(VolumeError::NotFound(_)) => break OutageEnd::Back,
+                Err(stat) if stat.transport_fault().is_some() => error = stat,
+                // The share answers but won't say: nothing proves the rename
+                // either way, so it ends as a give-up would.
+                Err(stat) => {
+                    error = stat;
+                    break OutageEnd::NotWaitable;
+                }
+            }
+        };
+        if ended == OutageEnd::Back {
+            // The aside isn't there, so the rename never happened: run it again.
+            continue;
         }
-        Err(e) => {
-            retire(state, record.as_ref());
-            Err(PathedVolumeError::new(PathRole::Destination, original, e))
+        settle_unfinished_aside(displaced, volume).await;
+        let failure = PathedVolumeError::new(PathRole::Destination, original, error);
+        return Err(match ended {
+            OutageEnd::Cancelled => failure.into_cancelled(),
+            _ => {
+                let lost = lost_connection(ended, failure.volume_error(), &volumes);
+                failure.with_lost_connection(lost)
+            }
+        });
+    }
+}
+
+/// A rename aside the transport cut off, whose wait ended without settling it:
+/// one stat decides what's left to do. Gone: it never happened, so nothing is
+/// claimed. There: the user's file is on the aside with nothing replacing it,
+/// so it goes back home now. Can't tell (the share is still out): the record
+/// waits for the share's next arrival, whose sweep does the same.
+async fn settle_unfinished_aside(displaced: DisplacedDestination, volume: &Arc<dyn Volume>) {
+    match volume.get_metadata(displaced.aside.path()).await {
+        Err(VolumeError::NotFound(_)) => displaced.forget(),
+        Ok(_) => {
+            if let Some(kept_at) = displaced.restore(volume).await {
+                log::warn!(
+                    target: "copy",
+                    "an Overwrite's aside couldn't go back to its name, so it's kept at {}",
+                    LogPrivate::file_path(&kept_at)
+                );
+            }
         }
+        Err(_) => displaced.keep_for_arrival(),
     }
 }
 
@@ -138,6 +210,20 @@ fn retire(state: &Arc<WriteOperationState>, record: Option<&TrackedRecord>) {
 }
 
 impl DisplacedDestination {
+    /// Nothing was set aside after all: its record goes, so nothing is claimed
+    /// to be on disk that isn't.
+    fn forget(self) {
+        retire(&self.state, self.record.as_ref());
+    }
+
+    /// Whether it was set aside can't be told while the share is out: the
+    /// record waits for the share's next arrival, whose sweep settles it.
+    fn keep_for_arrival(self) {
+        if let Some(record) = self.record {
+            in_flight_temps::keep_for_arrival(&self.state, record);
+        }
+    }
+
     /// The replacement landed, so the entry it replaced goes. Best-effort: a
     /// leftover wears the recognizable `.cmdr-temp-<uuid>` name and becomes
     /// visible in the pane once the operation ends.
@@ -174,8 +260,29 @@ impl DisplacedDestination {
     /// nothing landed at all, still the aside's), and the caller has to name
     /// that path in the failure the user reads, because it is the only place
     /// their file is.
+    ///
+    /// ❗ A rename back that fails on the transport may have been performed, so
+    /// one stat of the aside classifies it before anything acts on a guess: gone
+    /// means it's home; there, on a share that answers, the rename runs once
+    /// more; a share that doesn't answer keeps the record for its next arrival,
+    /// and the bytes are where the aside is. A rescue on the raw error would
+    /// report a file that was already home as kept under its scratch name.
     pub(crate) async fn restore(self, volume: &Arc<dyn Volume>) -> Option<PathBuf> {
-        match volume.rename(self.aside.path(), &self.original, false).await {
+        let mut result = volume.rename(self.aside.path(), &self.original, false).await;
+        if let Err(cut_off) = &result
+            && cut_off.transport_fault().is_some()
+        {
+            match volume.get_metadata(self.aside.path()).await {
+                Err(VolumeError::NotFound(_)) => result = Ok(()),
+                Ok(_) => result = volume.rename(self.aside.path(), &self.original, false).await,
+                Err(_) => {
+                    let kept_at = self.aside.path().to_path_buf();
+                    self.keep_for_arrival();
+                    return Some(kept_at);
+                }
+            }
+        }
+        match result {
             Ok(()) => {
                 retire(&self.state, self.record.as_ref());
                 None
@@ -309,3 +416,7 @@ async fn restore_into(
         recovered.push(RecoveredOriginal::new(&original, &kept_at));
     }
 }
+
+#[cfg(test)]
+#[path = "displaced_destination_tests.rs"]
+mod tests;
