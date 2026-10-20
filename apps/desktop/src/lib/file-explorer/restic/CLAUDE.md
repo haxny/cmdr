@@ -20,4 +20,4 @@ do. Backend: `apps/desktop/src-tauri/src/file_system/restic/CLAUDE.md` (the rout
   Accepted: confirming needs I/O, and the git portal has the same edge.
 - **Routed kinds nest, and the leftmost boundary wins** (`capabilitiesForPane`), as in the backend's `resolve`.
 
-What a pane inside the view may do, and why: `DETAILS.md`.
+What a pane inside the view may do, the row's icon, index progress, and its QA repro: `DETAILS.md`.

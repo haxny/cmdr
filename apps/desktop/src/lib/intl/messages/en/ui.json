@@ -100,6 +100,25 @@
       "count": "the same number of files (drives the singular/plural form of the noun)"
     }
   },
+  "ui.loadingIcon.loadingBackupIndex": "Loading the backup index: {amountText}",
+  "@ui.loadingIcon.loadingBackupIndex": {
+    "description": "Progress message shown centered in a pane, above a progress bar, while Cmdr reads a restic backup’s index before it can show the files in one of the backup’s snapshots. On a slow network drive this can take a while, so it counts up as the index loads. Use your language’s everyday word for a backup; “index” is the backup’s table of contents.",
+    "placeholders": {
+      "amountText": "how much of the index has loaded so far out of its total size, already worded, for example 48 MB of 312 MB"
+    }
+  },
+  "ui.loadingIcon.backupIndexAmount": "{doneText} of {totalText}",
+  "@ui.loadingIcon.backupIndexAmount": {
+    "description": "How much of a restic backup’s index has loaded, for example “48 MB of 312 MB”. Shown at the end of ui.loadingIcon.loadingBackupIndex, and read by screen readers as the value of the progress bar under it.",
+    "placeholders": {
+      "doneText": "how much has loaded so far, already formatted with its unit (e.g. 48 MB)",
+      "totalText": "the index’s total size, already formatted with its unit (e.g. 312 MB)"
+    }
+  },
+  "ui.loadingIcon.backupIndexAria": "Backup index",
+  "@ui.loadingIcon.backupIndexAria": {
+    "description": "Screen-reader name of the progress bar shown while a restic backup’s index loads (see ui.loadingIcon.loadingBackupIndex). Never shown. A short noun phrase naming what the bar measures."
+  },
   "ui.loadingIcon.openingFolder": "Opening folder…",
   "@ui.loadingIcon.openingFolder": {
     "description": "Loading message shown briefly while a folder is being opened, before its entries start arriving."

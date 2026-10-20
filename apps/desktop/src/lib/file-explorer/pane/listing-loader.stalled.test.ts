@@ -160,3 +160,77 @@ describe('createListingLoader: a stalled listing', () => {
     expect(state.stalled).toBeNull()
   })
 })
+
+/**
+ * A listing that has work to do before its first entry (a backup's index load)
+ * reports it as a typed phase on its progress events, so the pane can show real
+ * progress instead of "Loaded 0 files".
+ */
+describe('createListingLoader: a listing phase', () => {
+  const indexLoad = (doneBytes: number) => ({
+    kind: 'loadingIndex' as const,
+    doneBytes,
+    totalBytes: 312_000_000,
+    doneFiles: 3,
+    totalFiles: 40,
+  })
+
+  async function phasedLoad() {
+    const harness = makeHarness()
+    await harness.loader.loadDirectory({ path: '/r/Browse snapshots/latest' })
+    return harness
+  }
+
+  it('hands each phase to the pane as it moves', async () => {
+    const { state } = await phasedLoad()
+
+    h.listeners.progress[0]({ listingId: state.listingId, loadedCount: 0, phase: indexLoad(48_000_000) })
+    expect(state.loadingPhase).toEqual(indexLoad(48_000_000))
+
+    h.listeners.progress[0]({ listingId: state.listingId, loadedCount: 0, phase: indexLoad(200_000_000) })
+    expect(state.loadingPhase).toEqual(indexLoad(200_000_000))
+  })
+
+  it('drops the phase once entries arrive without one', async () => {
+    const { state } = await phasedLoad()
+    h.listeners.progress[0]({ listingId: state.listingId, loadedCount: 0, phase: indexLoad(48_000_000) })
+
+    h.listeners.progress[0]({ listingId: state.listingId, loadedCount: 120, phase: null })
+
+    expect(state.loadingPhase).toBeNull()
+    expect(state.loadingCount).toBe(120)
+  })
+
+  it('clears a stall the moment the phase moves', async () => {
+    const { state } = await phasedLoad()
+    h.listeners.stalled[0]({ listingId: state.listingId, stalledOn: 'server' })
+
+    h.listeners.progress[0]({ listingId: state.listingId, loadedCount: 0, phase: indexLoad(1_000_000) })
+
+    expect(state.stalled).toBeNull()
+  })
+
+  it('ignores a phase for a listing the pane already left, and starts the next load without one', async () => {
+    const { loader, state } = await phasedLoad()
+    const oldId = state.listingId
+    h.listeners.progress[0]({ listingId: oldId, loadedCount: 0, phase: indexLoad(1_000_000) })
+    await loader.loadDirectory({ path: '/Users/me' })
+    expect(state.loadingPhase).toBeNull()
+
+    h.listeners.progress[0]({ listingId: oldId, loadedCount: 0, phase: indexLoad(2_000_000) })
+
+    expect(state.loadingPhase).toBeNull()
+  })
+
+  it('drops the phase when the listing lands', async () => {
+    const { state } = await phasedLoad()
+    h.listeners.progress[0]({ listingId: state.listingId, loadedCount: 0, phase: indexLoad(312_000_000) })
+
+    h.listeners.complete[0]({ listingId: state.listingId, totalCount: 3, volumeRoot: '/r/Browse snapshots' })
+    await vi.waitFor(() => {
+      expect(state.loading).toBe(false)
+    })
+
+    expect(state.loadingPhase).toBeNull()
+  })
+})

@@ -53,7 +53,7 @@
     import { createVolumeSpace } from './volume-space.svelte'
     import ErrorPane from './ErrorPane.svelte'
     import ListingStalledView from './ListingStalledView.svelte'
-    import type { StalledOn } from '#lib/ipc/bindings.js'
+    import type { ListingPhase, StalledOn } from '#lib/ipc/bindings.js'
     import VolumeUnreachableBanner from './VolumeUnreachableBanner.svelte'
     import NetworkMountView from './NetworkMountView.svelte'
     import SearchResultsView from './SearchResultsView.svelte'
@@ -392,6 +392,9 @@
         },
         setLoadingCount: (count) => {
             loadingCount = count
+        },
+        setLoadingPhase: (phase) => {
+            loadingPhase = phase
         },
         setFinalizingCount: (count) => {
             finalizingCount = count
@@ -1391,6 +1394,8 @@
     let stalled = $state<StalledOn | null>(null)
     // Loading progress state for streaming
     let loadingCount = $state<number | undefined>(undefined)
+    // What the listing does before its first entry (a backup's index load), else `null`
+    let loadingPhase = $state<ListingPhase | null>(null)
     // Finalizing state (read_dir done, now sorting/caching)
     let finalizingCount = $state<number | undefined>(undefined)
 
@@ -2106,7 +2111,13 @@
     <AdbHint {volumeId} />
     <div class="content">
         {#snippet listLoadingView()}
-            <LoadingIcon {openingFolder} loadedCount={loadingCount} {finalizingCount} showCancelHint={true} />
+            <LoadingIcon
+                {openingFolder}
+                loadedCount={loadingCount}
+                phase={loadingPhase}
+                {finalizingCount}
+                showCancelHint={true}
+            />
         {/snippet}
         <TypeToJumpIndicator
             buffer={jump.buffer}

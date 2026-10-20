@@ -1321,9 +1321,12 @@ preserves "right-click → Copy link." For SvelteKit-internal navigation, don't 
 Progressive status text driven by props (mutually exclusive, evaluated top-down):
 
 1. `finalizingCount` set → "All N file/files loaded. Sorting your files, preparing view..."
-2. `loadedCount` set → "Loaded N file/files..."
-3. `openingFolder` true → "Opening folder..."
-4. Default → "Loading..."
+2. `phase` set (the listing's typed `ListingPhase`, today only a restic backup's `loadingIndex`) → "Loading the backup
+   index: 48 MB of 312 MB" plus a `ProgressBar` of the bytes. Above `loadedCount` because the progress events of a phase
+   still carry a `loadedCount` of 0.
+3. `loadedCount` set → "Loaded N file/files..."
+4. `openingFolder` true → "Opening folder..."
+5. Default → "Loading..."
 
 `showCancelHint` adds "Press [Esc] to cancel and go back" (the key rendered as a literal `ShortcutChip`) below the
 spinner. The container uses a 400ms `fadeIn` animation where the first 50% is invisible (effectively 200ms before fade

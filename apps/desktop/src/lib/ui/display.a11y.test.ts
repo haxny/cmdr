@@ -433,6 +433,23 @@ describe('LoadingIcon a11y', () => {
     await tick()
     await expectNoA11yViolations(target)
   })
+
+  it('a backup index load (text plus a named, valued progress bar) has no a11y violations', async () => {
+    const target = container()
+    const phase = {
+      kind: 'loadingIndex' as const,
+      doneBytes: 48_000_000,
+      totalBytes: 312_000_000,
+      doneFiles: 6,
+      totalFiles: 40,
+    }
+    mount(LoadingIcon, { target, props: { phase, showCancelHint: true } })
+    await tick()
+    const bar = target.querySelector('[role="progressbar"]')
+    expect(bar?.getAttribute('aria-label')).toBeTruthy()
+    expect(bar?.getAttribute('aria-valuetext')).toBeTruthy()
+    await expectNoA11yViolations(target)
+  })
 })
 
 /**

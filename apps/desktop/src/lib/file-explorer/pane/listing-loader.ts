@@ -15,7 +15,7 @@
  * load in flight, the `unlisten*` handles, and the `pendingLoad`
  * resolver/rejecter. The pane's lifecycle `$state`
  * (`loading` / `listingId` / `totalCount` / `error` / `friendlyError` /
- * `openingFolder` / `loadingCount` / `finalizingCount` / `volumeRootFromEvent` /
+ * `openingFolder` / `loadingCount` / `loadingPhase` / `finalizingCount` / `volumeRootFromEvent` /
  * `lastSequence`) STAYS in `FilePane` (~60 non-loader read sites — selection,
  * stats, menu, MCP sync, markup, five sub-factory dep getters) and is read/
  * written through injected accessors.
@@ -28,7 +28,7 @@
  */
 import { tick } from 'svelte'
 import type { ConnectionState, FriendlyError } from '../types'
-import type { StalledOn } from '#lib/ipc/bindings.js'
+import type { ListingPhase, StalledOn } from '#lib/ipc/bindings.js'
 import type { CancelLoadingPayload, ListingLoad, LoadDirectoryArgs, SwapState, VolumeChangePayload } from './types'
 import {
   type Location,
@@ -132,6 +132,8 @@ export interface ListingLoaderDeps {
    *  cleared by anything else heard for the load. */
   setStalled: (stalledOn: StalledOn | null) => void
   setLoadingCount: (count: number | undefined) => void
+  /** The work the listing does before its first entry (a backup's index load), or `null` while it only enumerates. */
+  setLoadingPhase: (phase: ListingPhase | null) => void
   setFinalizingCount: (count: number | undefined) => void
   setVolumeRootFromEvent: (root: string | undefined) => void
 
@@ -301,6 +303,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
     deps.setOpeningFolder(false)
     deps.setStalled(null)
     deps.setLoadingCount(undefined)
+    deps.setLoadingPhase(null)
     deps.setFinalizingCount(undefined)
     // Reject pending load promise on error/cancel
     rejectPendingLoad(errorMessage ? new Error(errorMessage) : new NavigationCancelled())
@@ -414,6 +417,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
     deps.setOpeningFolder(false)
     deps.setStalled(null)
     deps.setLoadingCount(undefined)
+    deps.setLoadingPhase(null)
     deps.setFinalizingCount(undefined)
     deps.setError(null)
     deps.setFriendlyError(null)
@@ -475,6 +479,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
           if (isEventForCurrentLoad(payload.listingId, captured, loadGeneration)) {
             deps.setStalled(null)
             deps.setLoadingCount(payload.loadedCount)
+            deps.setLoadingPhase(payload.phase)
           }
         }),
         onListingReadComplete((payload) => {
@@ -671,6 +676,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
     deps.setOpeningFolder(false)
     deps.setStalled(null)
     deps.setLoadingCount(undefined)
+    deps.setLoadingPhase(null)
     deps.setFinalizingCount(undefined)
     benchmark.logEvent('loading = false (UI can render)')
 
