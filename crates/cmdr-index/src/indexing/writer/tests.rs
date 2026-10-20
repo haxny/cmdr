@@ -38,11 +38,11 @@ pub(crate) fn wait_for_writer_to_settle(writer: &IndexWriter, before: u64) {
 /// window is a millisecond wide and a Mac essentially never loses the race, so a flush-only test
 /// reads as permanently green locally and fails ~40% of the time in the Linux container.
 ///
-/// TWO flushes on purpose. The ledger hook samples `queue_depth` for itself, and the hourglass
-/// hook one line above samples it separately, so a send landing between the two ticks the idle
-/// epoch with the ledger hook skipped (`writer/DETAILS.md` § "The caught-up point" calls that
-/// out). The first flush drains whatever the test was sending; the second runs against a quiet
-/// channel, where both samples see the same empty queue.
+/// TWO flushes on purpose. Once the first one returns, every iteration before it has finished and
+/// ticked, so the epoch read after it can only be passed by an iteration that sampled the queue
+/// AFTER the test's messages were processed. Read before a single flush instead, an iteration
+/// that sampled an empty queue just before the test's last send could tick after the read and
+/// end the wait with that send still queued.
 #[track_caller]
 pub(crate) fn settle_the_writer(writer: &IndexWriter) {
     writer.flush_blocking().expect("flush what the test sent");

@@ -1344,20 +1344,21 @@ fn writer_loop(
         stats.maybe_log_summary();
         probe.maybe_emit_heartbeat(queue_depth.load(Ordering::Relaxed));
 
+        // ONE `queue_depth` sample decides the batch close, both caught-up hooks below,
+        // and the `idle_epoch` tick that closes the iteration, so a tick proves BOTH
+        // hooks ran, on committed rows. Sampled per step, a send landing between two
+        // samples ran the hourglass clear, skipped the ledger, and still ticked, and a
+        // test waiting on the tick read a stale ancestor.
+        let settled = queue_depth.load(Ordering::Relaxed) == 0;
+
         // Close the implicit batch here, ahead of the caught-up hooks below, so a
         // cleared hourglass and a drained repair queue always sit on top of COMMITTED
         // rows. An empty queue closes it, which is the overwhelmingly common case and
         // why batching costs no latency; the caps in `batch.rs` bound a flood that
         // never lets the queue drain.
-        if batch.is_open(&conn) && batch.should_close(queue_depth.load(Ordering::Relaxed) == 0) {
+        if batch.is_open(&conn) && batch.should_close(settled) {
             batch.close(&conn, &mut probe, &failure_signal, &mut deferred_checkpoint);
         }
-
-        // Set by either caught-up hook below, and the trigger for the `idle_epoch` tick
-        // that closes the iteration. Each hook samples `queue_depth` for itself, so a
-        // send landing between the two samples can let one run and not the other; the
-        // epoch ticks whenever either of them saw an empty queue.
-        let mut settled = false;
 
         // Pending-size hourglass: once the writer has fully caught up (no more
         // queued work), every directory's `dir_stats` reflects all known
@@ -1373,13 +1374,10 @@ fn writer_loop(
         // Clearing is silent for the blips that never showed the hourglass (nearly
         // every drain). A folder that WAS showing it gets a `DirsUpdated`, since no
         // write is coming to tell the panes it settled.
-        if queue_depth.load(Ordering::Relaxed) == 0 {
-            settled = true;
-            if let Some(tracker) = pending_sizes::get_pending_sizes_for(&volume_id) {
-                let ended = tracker.clear();
-                if !ended.is_empty() {
-                    emit_dir_updated(events.as_ref(), ended);
-                }
+        if settled && let Some(tracker) = pending_sizes::get_pending_sizes_for(&volume_id) {
+            let ended = tracker.clear();
+            if !ended.is_empty() {
+                emit_dir_updated(events.as_ref(), ended);
             }
         }
 
@@ -1389,14 +1387,11 @@ fn writer_loop(
         // failed an original write (a checkpoint, a long reader) has had its chance
         // to clear. This is also where a burst of subtree aggregates pays for its
         // ancestors exactly once, which is what keeps a wide directory linear.
-        if queue_depth.load(Ordering::Relaxed) == 0 {
-            settled = true;
-            if settle_the_ledger(&conn, &rollups, &repairs) {
-                // A roll-up moved ancestor sizes no message handler emitted for, so
-                // the panes would otherwise keep showing the pre-burst number until
-                // something else refreshed them.
-                emit_full_refresh(events.as_ref());
-            }
+        if settled && settle_the_ledger(&conn, &rollups, &repairs) {
+            // A roll-up moved ancestor sizes no message handler emitted for, so the
+            // panes would otherwise keep showing the pre-burst number until something
+            // else refreshed them.
+            emit_full_refresh(events.as_ref());
         }
 
         // The writer is now genuinely caught up for this iteration, so publish it. This

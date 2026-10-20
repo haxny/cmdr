@@ -125,16 +125,17 @@ to advance. Because the epoch only ticks on an empty queue, an advance past a va
 message sent before the flush is processed AND its hooks have run. That lets a test assert the hooks' effect outright
 instead of polling for it, so a regression fails on the assertion rather than on a timeout.
 
-**Decision: the tick is gated on `settled`, the OR of the two hooks' own `queue_depth` samples.** Each hook samples the
-depth for itself, so a send landing between the two samples can let one run and not the other; a third sample for the
-tick could miss both and hang a waiter forever. Reading the depth once for all three would be tidier but would change
-when the existing hooks run, which this signal deliberately doesn't touch.
+**Decision: ONE `queue_depth` sample (`settled`) gates the batch close, both hooks, and the tick**, so a tick proves
+both hooks ran, on committed rows. ❌ Don't give a step its own sample. Each hook used to sample for itself, and the
+test's own next send could land between them: the hourglass ran, the ledger was skipped, the epoch ticked anyway, and
+`repair/deferred.rs`'s writer-loop test read a stale ancestor about one run in 600 under parallel load. One sample
+changes nothing a user sees: a send landing just after it was always possible, and the next iteration settles again.
 
-⚠️ **A tick therefore does NOT prove `settle_the_ledger` ran** — only that one of the two hooks saw an empty queue. It
-only bites while another thread is still sending, which is why the roll-up tests flush TWICE: the first flush drains the
-burst, the second runs against a quiet channel where both samples agree. `tests::settle_the_writer` is that protocol,
-and is what every test reading a `dir_stats` row back must use. A production waiter never needs the distinction, because
-the next message's iteration settles the ledger anyway and `Shutdown` settles it on the way out.
+**Read the epoch on a quiet writer.** An iteration that sampled an empty queue just BEFORE the test's last send can tick
+after the test reads the epoch, ending the wait with that send still queued. So `tests::settle_the_writer` flushes first
+(every earlier iteration has then finished and ticked), reads the epoch, and flushes again; it's what every test reading
+a `dir_stats` row back must use. A production waiter never needs it, because the next message's iteration settles the
+ledger anyway and `Shutdown` settles it on the way out.
 
 ⚠️ **A flush-only `dir_stats` read is a Linux-only flake, so a local `pnpm check rust-tests` will not find it.** The gap
 between the flush reply and the ledger hook is about a millisecond; measured in the `rust-tests-linux` container,
