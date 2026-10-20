@@ -298,3 +298,36 @@ async fn a_copy_into_a_snapshot_is_refused_up_front() {
 
     cleanup(&dir);
 }
+
+/// A `.git` category folder picked beside the repository's own `.git` files
+/// spans two volumes (the portal, the drive): refused whole, before anything is
+/// read, naming the first item the other volume serves. The same rule as a
+/// restic repo's `Browse snapshots` row beside its real files.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_copy_mixing_a_snapshot_with_real_git_files_refuses_whole() {
+    let engine = super::test_engine();
+    let dir = repo_registered_as_the_local_drive("span");
+    let dest_id = cmdr_fs::testing::unique_test_id("copy-snapshot-span-dest");
+    get_volume_manager().register(&dest_id, Arc::new(InMemoryVolume::new("Dest")));
+    let real = dir.join(".git/HEAD");
+    let snapshot = dir.join(".git/branches/main/readme.txt");
+
+    let answer = engine
+        .start_volume_copy(
+            Arc::new(CollectorEventSink::new()),
+            "root".to_string(),
+            vec![real, snapshot.clone()],
+            dest_id,
+            "/".to_string(),
+            VolumeCopyConfig::default(),
+            cmdr_operation_log::types::Initiator::User,
+            None,
+        )
+        .await;
+
+    assert!(
+        matches!(&answer, Err(cmdr_operations::WriteOperationError::SourcesSpanVolumes { path }) if Path::new(path) == snapshot),
+        "{answer:?}"
+    );
+    cleanup(&dir);
+}

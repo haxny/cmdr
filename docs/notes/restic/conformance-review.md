@@ -63,8 +63,10 @@ error, or a tool result. No error-string matching in production code.
 - **Confidence**: high on the backend shape; medium on the exact frontend sort order.
 - **Status**: Fixed in the frontend by restic-frontend-7 in `b9cc45b177`: Select all and invert leave out overlay rows
   (restic's and git's), so the common flow never builds a mixed batch. The backend backstop (a hand-picked mixed
-  selection, an agent) waits on a decision about its typed refusal: no existing `WriteOperationError` words a straddling
-  copy honestly.
+  selection, an agent) is in place too: copy, move, and compress refuse a batch whose sources aren't all served by one
+  volume with the new typed `WriteOperationError::SourcesSpanVolumes { path }` (the first item another volume serves),
+  before anything is read. One rule for restic's row and git's category folders; cells in the app's
+  `restic_guard_tests.rs` and `copy_snapshot_out_tests.rs`. Its frontend wording is restic-frontend-7's.
 
 ### 3. Bare future drops on the parent volume, which the house rules forbid for device backends
 

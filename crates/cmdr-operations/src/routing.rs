@@ -91,6 +91,54 @@ pub(crate) fn transfer_would_land_on_its_source(
 }
 
 impl crate::Operations {
+    /// The first of `paths` that a different volume serves than the first path,
+    /// or `None` when one volume serves them all: the drive for every one, or
+    /// one route (one archive, one repo's snapshots, one `.git` portal).
+    ///
+    /// A transfer reads through ONE source volume, and
+    /// [`resolve_source_volume`](Self::resolve_source_volume) lets the first path
+    /// pick it. A selection that straddles a route boundary (the `Browse
+    /// snapshots` row beside the repo's real files, a `.git` category folder
+    /// beside the repository's own files) would then read every other item
+    /// through the wrong volume, and a move could end half-done. Callers refuse
+    /// it whole with [`WriteOperationError::SourcesSpanVolumes`].
+    ///
+    /// Cheap for an ordinary batch: a path the lexical gate passes is the
+    /// drive's with no I/O, and one inside a route already met is that route's.
+    pub(crate) async fn source_on_another_volume(&self, volume_id: &str, paths: &[PathBuf]) -> Option<PathBuf> {
+        let manager = self.host().volumes();
+        let mut routes_met: Vec<Arc<dyn Volume>> = Vec::new();
+        let mut first: Option<Option<Arc<dyn Volume>>> = None;
+        for path in paths {
+            let serving = if !manager.routes_over_its_parent(path) {
+                None
+            } else if let Some(route) = routes_met.iter().find(|route| path.starts_with(route.root())) {
+                Some(Arc::clone(route))
+            } else {
+                let resolved = manager.resolve(volume_id, path).await;
+                let route = resolved.routed.and(resolved.volume);
+                if let Some(route) = &route {
+                    routes_met.push(Arc::clone(route));
+                }
+                route
+            };
+            match &first {
+                None => first = Some(serving),
+                Some(expected) => {
+                    let same = match (expected, &serving) {
+                        (None, None) => true,
+                        (Some(a), Some(b)) => Arc::ptr_eq(a, b),
+                        _ => false,
+                    };
+                    if !same {
+                        return Some(path.clone());
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Resolves a batch's source volume, routing a source that a ROUTE serves —
     /// inside a `.zip`, or inside a repo's virtual `.git` trees — to that read-only
     /// volume, and saying which route it was.
@@ -101,8 +149,8 @@ impl crate::Operations {
     /// source left on its parent volume would take the local-to-local fast path
     /// against a path with no inode and stall the transfer on its scan.
     ///
-    /// One `source_volume_id` per batch means no straddle risk — every path shares
-    /// the same archive, the same repo, or none — so the first path decides.
+    /// The first path decides: a batch that straddles a route boundary is refused
+    /// before this is asked ([`source_on_another_volume`](Self::source_on_another_volume)).
     ///
     /// [`RoutedKind`] rather than a bool, because the routes part ways on a
     /// MOVE: an archive can delete the source entries afterwards, a snapshot can't.
@@ -227,6 +275,11 @@ impl crate::Operations {
         // batch to its `ArchiveVolume` (extract-out), a snapshot path to the repo's
         // `GitPortalVolume` (copy out of `.git/branches/<name>/…`). Both then read
         // through the cross-volume engine.
+        if let Some(path) = self.source_on_another_volume(&source_volume_id, &source_paths).await {
+            return Err(WriteOperationError::SourcesSpanVolumes {
+                path: path.display().to_string(),
+            });
+        }
         let Some((source_volume, _source_route)) = self
             .resolve_source_volume(&source_volume_id, source_paths.first())
             .await
@@ -309,6 +362,11 @@ impl crate::Operations {
         // engine, then a batch `{ delete }` archive rewrite once the extract lands).
         // A snapshot source (git or restic) has no delete to pair with the copy,
         // so it's refused below rather than routed anywhere.
+        if let Some(path) = self.source_on_another_volume(&source_volume_id, &source_paths).await {
+            return Err(WriteOperationError::SourcesSpanVolumes {
+                path: path.display().to_string(),
+            });
+        }
         let Some((source_volume, source_route)) = self
             .resolve_source_volume(&source_volume_id, source_paths.first())
             .await
@@ -567,6 +625,11 @@ impl crate::Operations {
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
         // Route a routed source batch to its read-only volume, so compressing reads
         // through it: from inside a `.zip`, or from a repo's snapshots.
+        if let Some(path) = self.source_on_another_volume(&source_volume_id, &source_paths).await {
+            return Err(WriteOperationError::SourcesSpanVolumes {
+                path: path.display().to_string(),
+            });
+        }
         let Some((source_volume, _source_route)) = self
             .resolve_source_volume(&source_volume_id, source_paths.first())
             .await

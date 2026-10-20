@@ -288,6 +288,15 @@ pub enum WriteOperationError {
         first: String,
         second: String,
     },
+    /// The selected items aren't all served by one volume: some sit on the drive
+    /// and some inside a read-only view of it (a backup repo's `Browse snapshots`,
+    /// a repository's virtual `.git` folders, the inside of an archive), and one
+    /// transfer reads through one volume. Refused before anything is read or
+    /// written. `path` is the first item served by a different volume than the
+    /// first one, so the message can name what to leave out.
+    SourcesSpanVolumes {
+        path: String,
+    },
     /// A delete, an Overwrite, or a move onto another volume reached a folder
     /// another drive, disk image, or server is mounted on, inside the selection
     /// or as the selection itself. Refused before anything is removed or

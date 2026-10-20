@@ -302,6 +302,61 @@ async fn a_copy_or_move_into_the_view_and_a_move_out_refuse() {
     );
 }
 
+/// ❗ A hand-picked selection (or an agent's) of the `Browse snapshots` view
+/// beside the repo's real files can't run as one transfer: it reads through one
+/// volume, so the first item would decide and every other one would fail (or a
+/// move would end half-done). Refused whole, before anything is read, naming the
+/// first item served by another volume, whichever comes first.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_transfer_whose_sources_span_the_drive_and_the_view_refuses_whole() {
+    let engine = super::test_engine();
+    let (dest_id, dest) = drive("restic-guard-span-dest").await;
+    let (id, drive) = drive("restic-guard-span").await;
+    let real = Path::new(REPO).join("config");
+    let in_view = PathBuf::from(IN_VIEW_FILE);
+
+    for (sources, odd_one) in [
+        (vec![real.clone(), in_view.clone()], &in_view),
+        (vec![in_view.clone(), real.clone()], &real),
+    ] {
+        let copy = engine
+            .start_volume_copy(
+                Arc::new(CollectorEventSink::new()),
+                id.clone(),
+                sources.clone(),
+                dest_id.clone(),
+                "/share/out".to_string(),
+                VolumeCopyConfig::default(),
+                Initiator::User,
+                None,
+            )
+            .await;
+        assert!(
+            matches!(&copy, Err(WriteOperationError::SourcesSpanVolumes { path }) if Path::new(path) == odd_one.as_path()),
+            "{copy:?}"
+        );
+        let moved = engine
+            .start_volume_move(
+                Arc::new(CollectorEventSink::new()),
+                id.clone(),
+                sources,
+                dest_id.clone(),
+                "/share/out".to_string(),
+                VolumeCopyConfig::default(),
+                Initiator::User,
+                None,
+            )
+            .await;
+        assert!(
+            matches!(&moved, Err(WriteOperationError::SourcesSpanVolumes { .. })),
+            "{moved:?}"
+        );
+    }
+
+    assert!(drive.exists(&real).await, "nothing moved");
+    assert!(!dest.exists(Path::new("/share/out/config")).await, "nothing copied");
+}
+
 /// A copy OUT reads through the view: the source resolves to the restic route,
 /// the volume a copy reads with `open_read_stream`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
