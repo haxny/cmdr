@@ -15,9 +15,8 @@
 //!
 //! See `CLAUDE.md` for the must-knows and `DETAILS.md` for the design.
 
+#[allow(dead_code, reason = "TEMP: the repo layer that uses it lands next")]
+mod backend;
 mod detect;
 
 pub use detect::is_restic_repo;
-
-// Placeholder until the storage adapter lands in the next step.
-use rustic_core as _;

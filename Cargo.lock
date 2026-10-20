@@ -1917,8 +1917,10 @@ dependencies = [
 name = "cmdr-restic"
 version = "0.0.0"
 dependencies = [
+ "bytes",
  "cmdr-fs",
  "rustic_core",
+ "tokio",
 ]
 
 [[package]]

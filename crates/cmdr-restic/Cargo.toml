@@ -21,3 +21,13 @@ cmdr-fs = { path = "../cmdr-fs" }
 # rustic's own storage drivers (OpenDAL, SFTP, rest-server) when this crate reads
 # the repo through Cmdr's own volumes instead.
 rustic_core = { version = "0.13.0", default-features = false }
+# The byte buffer type rustic's backend traits exchange. Already in the graph.
+bytes = "1"
+# The runtime `Handle` the storage adapter `block_on`s the parent's async reads
+# on. It arrives through `VolumeHost::runtime`; this crate never builds a runtime.
+tokio = { version = "1", features = ["rt"] }
+
+[dev-dependencies]
+# `#[tokio::test]` needs `macros`; the adapter's sync-over-async bridge needs a
+# multi-threaded runtime to block on from `spawn_blocking`.
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
