@@ -49,6 +49,11 @@ its metadata is encrypted, so even listing prompts). `mcp-archive-password.spec.
 lets the restore sweep them away, because putting them in the pristine tree would hand two extra entries to every other
 spec's `left/`.
 
+`restic-fixtures/backup-repo/` is a real restic repo (format v2, password `hunter2`, one snapshot of `readme.txt` and
+`docs/notes.txt`, made with the restic 0.19.1 CLI, 2026-10-20). git drops its empty `locks/` and `data/<xx>/` folders,
+which restic doesn't need to read. `restic-browsing.spec.ts` copies it to a uniquely named folder under the fixture root
+per test, because the app remembers a repo's password by its path.
+
 ## Finding the SMB fixture's mount
 
 `smb-fixtures.ts` finds the fixture's mount by SOURCE (`fixtureMountPoints`: the fixture's host, port, and share), ❌
