@@ -21,7 +21,7 @@ values use `RedactionContext::redact_path` / `redact_name` / …, which fail clo
 - **❌ Never branch the policy on `context.is_none()`.** The context only salts tokens; a second MCP policy once let a
   URL swallow a following path (cmdr-reports#30). `unsalted_api_runs_the_report_policy_with_bare_tokens` pins it.
 - **Only exact derived-ID shapes are recognized** (known scheme + 16-hex digest, legacy `manual-…-<port>`).
-- **Mark a value at its log site with `cmdr_fs::log_private::LogPrivate`**, keeping the site's `key=` and format spec.
+- **Mark a value at its log site with `LogPrivate`** (a path-carrying error with `LogError`), keeping `key=` and spec.
   A crate that can't depend on `cmdr-fs` logs a relative path or name as `key={:?}` with a key from `path_field`, an
   identity as `host={host:?}` (or `server`, `share`, `user`, the ID keys). Bare prose is invisible to the regex.
 - **External OS/server/CLI text goes in `detail={:?}` / `stderr={:?}` / `stdout={:?}` via

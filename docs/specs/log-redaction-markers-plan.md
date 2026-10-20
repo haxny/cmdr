@@ -607,6 +607,15 @@ stripped; a hostile path in a field can't close the span early.
 **DONE**: census types converted or explicitly deferred to an issue with reasons; docs in `cmdr-fs` and the error
 modules.
 
+**Done note**: `cmdr_fs::log_error` (`LogError`, `ErrorLogText`, `ErrorText`, `write_plain`; no `UserPath` newtype was
+needed). Converted: `VolumeError`, `FriendlyGitError`, both `VolumeScanError`s, `MutationError` (operations and
+archive), `ReconnectError`, `MtpConnectionError`, `ArchiveError`, `ViewerError`, `FlushFailure`, `NotWalkable`,
+`SizeError`. `WriteOperationError` logs as `log_detail()` (the frontend's JSON in `detail=`) rather than through
+`LogError`. Sites found by compiling with each type's `Display` removed, then `{:?}` sites by a scan of files using
+them. Deferred with reasons: #568 (error text flattened into strings before a log macro, ~72 `format!` error strings,
+`io::Error::other(e.to_string())`, third-party errors). Cells: `redact/error_producer_tests.rs`,
+`cmdr-fs/src/log_error_test.rs`.
+
 ### 10. Lock-in (S)
 
 **Scope**: the check runs with no allowlist (strict) (no clippy `Path::display` ban: lead decision, the ratchet covers
