@@ -217,15 +217,31 @@ pub(super) fn launch_with<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>, a
                 return;
             }
         };
-        let hopped = app.run_on_main_thread(move || {
-            if let Err(e) = open_paths_with(&copies, &app_path) {
-                log::warn!("Open with failed for {}: {e}", LogPrivate::path(&app_path));
-            }
+        let notice = open_with_extract::OpenWithCopyLaunched::new(&paths, &copies, &app_path);
+        let launcher = app.clone();
+        let hopped = app.run_on_main_thread(move || match open_paths_with(&copies, &app_path) {
+            Ok(()) => announce_launched_copy(&launcher, notice),
+            Err(e) => log::warn!("Open with failed for {}: {e}", LogPrivate::path(&app_path)),
         });
         if let Err(e) = hopped {
             log::warn!("Open with: couldn't reach the main thread to launch: {e}");
         }
     });
+}
+
+/// Tells the main window the app got read-only copies, whose changes stay in the copy.
+#[cfg(target_os = "macos")]
+fn announce_launched_copy<R: Runtime>(
+    app: &AppHandle<R>,
+    notice: Option<crate::file_viewer::open_with_extract::OpenWithCopyLaunched>,
+) {
+    use tauri_specta::Event;
+
+    if let Some(notice) = notice
+        && let Err(e) = notice.emit(app)
+    {
+        log::warn!("Open with: couldn't tell the main window the app got a copy: {e}");
+    }
 }
 
 /// Tells the main window an "Open with" launch didn't happen, and why.

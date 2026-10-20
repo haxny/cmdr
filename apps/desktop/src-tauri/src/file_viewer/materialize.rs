@@ -152,25 +152,21 @@ fn materialize_dir() -> PathBuf {
 /// Removes every `.cmdr-viewer-*` subdir in `dir` (orphaned extractions from a crash).
 /// Best-effort: an unreadable dir or a failed remove is logged-then-ignored, never
 /// fatal. The prefix guard means it can only ever touch our own extraction subdirs.
+///
+/// Unconditional, unlike open-with's reaper (`open_with_copies.rs`): nothing outside
+/// Cmdr ever gets a viewer temp's path, so nothing else can have saved into one.
 pub(super) fn reap_orphan_temps(dir: &Path) {
-    reap_temps_with_prefix(dir, TEMP_SUBDIR_PREFIX);
-}
-
-/// Removes every subdir of `dir` whose name starts with `prefix`. The one reaper body,
-/// shared with the open-with temps (`open_with_extract.rs`), which keep their own dir
-/// and prefix.
-pub(super) fn reap_temps_with_prefix(dir: &Path, prefix: &str) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return; // dir doesn't exist yet (first run) — nothing to reap.
     };
     for entry in entries.flatten() {
         let name = entry.file_name();
-        if name.to_string_lossy().starts_with(prefix)
+        if name.to_string_lossy().starts_with(TEMP_SUBDIR_PREFIX)
             && let Err(e) = std::fs::remove_dir_all(entry.path())
         {
             log::debug!(
                 target: "cmdr_lib::file_viewer",
-                "reap_temps_with_prefix: could not remove {}: {e}",
+                "reap_orphan_temps: could not remove {}: {e}",
                 cmdr_fs::log_private::LogPrivate::path(&entry.path())
             );
         }

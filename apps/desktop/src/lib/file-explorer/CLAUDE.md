@@ -8,7 +8,7 @@ Dual-pane file explorer with keyboard-driven navigation, file selection, sorting
   feature subdirectories (each has its own colocated docs).
 - `pane/`: `DualPaneExplorer` + `FilePane` + dialog manager + per-pane state. Owns type-to-jump, live disk space, the
   `navigate()` transaction, volume capabilities, and the error-display pipeline (see `pane/CLAUDE.md`).
-- Sorting, the command palette, and the "Open with" refusal toast (`open-with-refused-bridge.ts`) have no own directory;
+- Sorting, the command palette, and the "Open with" copy toasts (`open-with-copy-bridge.ts`) have no own directory;
   their detail is in `DETAILS.md`.
 
 ## Must-knows

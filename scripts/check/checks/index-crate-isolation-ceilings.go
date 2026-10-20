@@ -403,6 +403,11 @@ var surfaceGuardedCrates = []struct {
 		// to exactly what the crate exposes, with no headroom (David approved the
 		// rule in the #415 plan).
 		//
+		// Raised to 86 on 2026-10-20 for `move_to_trash_sync`: the open-with reaper
+		// moves a copy an app changed to the Trash, unjournaled (no undo should list
+		// Cmdr's own leftovers), and a second objc trash call in the app would fork
+		// the refusal classification this one owns.
+		//
 		// The 82 root promises are `Operations`, the public list `lib.rs`
 		// re-exports (the queue's answers, the event sinks, instant mutations and
 		// their reply-within-a-deadline contract, pre-flight, the source binding,
@@ -419,7 +424,7 @@ var surfaceGuardedCrates = []struct {
 		Name:       "cmdr-operations",
 		HandleType: "Operations",
 		Ceilings: surfaceCeilings{
-			RootPromises:   85,
+			RootPromises:   86,
 			HandleMethods:  58,
 			PublicModules:  1,
 			SubsystemItems: 25,

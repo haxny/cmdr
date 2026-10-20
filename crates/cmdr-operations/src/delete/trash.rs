@@ -39,7 +39,7 @@ use cmdr_fs::log_private::LogPrivate;
 /// 2026-07-10). NSFileManager may de-duplicate the name (`file 2.txt`) if the
 /// Trash already holds one, so the returned location is the authoritative one.
 #[cfg(target_os = "macos")]
-pub(crate) fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError> {
+pub fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError> {
     use objc2::rc::{Retained, autoreleasepool};
     use objc2_foundation::{NSFileManager, NSString, NSURL};
 
@@ -135,7 +135,7 @@ fn refine_permission_refusal(path: &Path, reason: TrashRefusalKind) -> TrashRefu
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError> {
+pub fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError> {
     if fs::symlink_metadata(path).is_err() {
         return Err(MutationError::NotFound {
             path: path.display().to_string(),
@@ -154,7 +154,7 @@ pub(crate) fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, Mutatio
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-pub(crate) fn move_to_trash_sync(_path: &Path) -> Result<Option<PathBuf>, MutationError> {
+pub fn move_to_trash_sync(_path: &Path) -> Result<Option<PathBuf>, MutationError> {
     Err(MutationError::TrashNotSupported)
 }
 

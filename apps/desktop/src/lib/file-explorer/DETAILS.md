@@ -325,14 +325,16 @@ For the dialog-side wiring see `../search/CLAUDE.md`.
   the cursor, feeding each `move` in as a removal from where the row left plus an insertion where it arrived, and
   landing the row's own tracker on the new position by identity.
 
-## "Open with" refusal notice (`open-with-refused-bridge.ts`)
+## "Open with" copy notices (`open-with-copy-bridge.ts`)
 
 "Open with" on a file inside an archive or a `.git` snapshot runs entirely in Rust (the native context menu), and it has
 to copy the file out before an app can open it. When that copy can't be made, Rust emits `open-with-copy-refused` with a
 typed reason, and this bridge (mounted in `routes/(main)/window-services.ts`) words it as a warning toast, keyed per
 file name. One message per reason (`fileExplorer.openWith.copyRefused.*`), chosen by an exhaustive switch on
 `reason.kind`, ❌ never by the backend's message. `tooLarge` alone also reads the typed `source`: a file in a repo's
-history gets `tooLargeInRepoHistory`, since "from inside the archive" would be wrong there. Backend side:
+history gets `tooLargeInRepoHistory`, since "from inside the archive" would be wrong there. When the launch goes ahead,
+`open-with-copy-launched` (first copy's name, copy count, app) becomes an info toast,
+`fileExplorer.openWith.readOnlyCopy`: the app got a read-only copy, and what it saves there stays there. Backend side:
 `src-tauri/src/file_viewer/DETAILS.md` § "Open with on a routed file".
 
 ## TCC-restricted treatment

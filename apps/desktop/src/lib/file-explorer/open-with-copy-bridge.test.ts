@@ -1,9 +1,14 @@
 /**
- * Tests for the "Open with" refusal notice: what the person is told when they picked an
- * app for a file inside an archive and nothing opened.
+ * Tests for the "Open with" copy notices: what the person is told when they picked an app
+ * for a file inside an archive, and either nothing opened or the app got a read-only copy.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { OpenWithCopyRefusal, OpenWithCopyRefused, OpenWithCopySource } from '#lib/ipc/bindings.js'
+import type {
+  OpenWithCopyLaunched,
+  OpenWithCopyRefusal,
+  OpenWithCopyRefused,
+  OpenWithCopySource,
+} from '#lib/ipc/bindings.js'
 
 /** Only the fields these cells assert on; the real options type is wider. */
 type ToastOptions = { level: string; timeoutMs: number; id: string }
@@ -12,16 +17,22 @@ const addToast = vi.hoisted(() => vi.fn<(message: string, options: ToastOptions)
 vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
 
 let emitRefused: (payload: OpenWithCopyRefused) => void
+let emitLaunched: (payload: OpenWithCopyLaunched) => void
 const unlisten = vi.fn()
+const unlistenLaunched = vi.fn()
 vi.mock('#lib/tauri-commands/index.js', () => ({
   onOpenWithCopyRefused: (handler: (payload: OpenWithCopyRefused) => void) => {
     emitRefused = handler
     return Promise.resolve(unlisten)
   },
+  onOpenWithCopyLaunched: (handler: (payload: OpenWithCopyLaunched) => void) => {
+    emitLaunched = handler
+    return Promise.resolve(unlistenLaunched)
+  },
 }))
 
 import { formatByteSize } from '#lib/units/index.js'
-import { startOpenWithRefusedBridge } from './open-with-refused-bridge'
+import { startOpenWithCopyBridge } from './open-with-copy-bridge'
 
 const TWO_GIB = 2 * 1024 * 1024 * 1024
 
@@ -32,7 +43,8 @@ function refused(reason: OpenWithCopyRefusal, source: OpenWithCopySource = 'arch
 beforeEach(async () => {
   addToast.mockClear()
   unlisten.mockClear()
-  await startOpenWithRefusedBridge()
+  unlistenLaunched.mockClear()
+  await startOpenWithCopyBridge()
 })
 
 describe('the open-with refusal notice', () => {
@@ -91,8 +103,31 @@ describe('the open-with refusal notice', () => {
   })
 
   it('hands back the unsubscribe it was given', async () => {
-    const stop = await startOpenWithRefusedBridge()
+    const stop = await startOpenWithCopyBridge()
     stop()
     expect(unlisten).toHaveBeenCalled()
+    expect(unlistenLaunched).toHaveBeenCalled()
+  })
+})
+
+describe('the open-with read-only copy notice', () => {
+  it('says the app got a read-only copy whose changes stay there', () => {
+    emitLaunched({ fileName: 'notes.txt', appName: 'TextEdit', copyCount: 1 })
+
+    expect(addToast).toHaveBeenCalledTimes(1)
+    const [message, options] = addToast.mock.calls[0]
+    expect(message).toContain('TextEdit')
+    expect(message).toContain('notes.txt')
+    expect(message).toContain('read-only copy')
+    expect(message).toContain('won’t go back')
+    expect(options.level).toBe('info')
+  })
+
+  it('counts the copies when several rows were copied', () => {
+    emitLaunched({ fileName: 'a.pdf', appName: 'Preview', copyCount: 3 })
+
+    const [message] = addToast.mock.calls[0]
+    expect(message).toContain('3 files')
+    expect(message).not.toContain('a.pdf')
   })
 })

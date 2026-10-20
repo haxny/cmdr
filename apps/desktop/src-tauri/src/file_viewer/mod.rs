@@ -23,6 +23,7 @@ pub mod media;
 mod media_backend;
 pub mod media_protocol;
 mod media_session;
+mod open_with_copies;
 pub(crate) mod open_with_extract;
 mod origin;
 pub mod pending_open;

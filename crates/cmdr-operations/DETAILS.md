@@ -1197,12 +1197,12 @@ the optional seams), what each seam's contract is, and where Cmdr answers it: `s
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 85 root promises, 58 `Operations` methods, one public module (`host`), and
+`index-crate-isolation` holds this crate to 86 root promises, 58 `Operations` methods, one public module (`host`), and
 25 public items inside it (`scripts/check/checks/index-crate-isolation-ceilings.go`). The numbers are exactly what the
 crate exposes, measured with no headroom, so an addition has to be argued for. Everything counted exists for a named
 caller.
 
-Root promises (85), by who needs them:
+Root promises (86), by who needs them:
 
 - **The handle** (3): `Operations`, `OperationsBuilder` (from `Operations::builder`), and `AlreadyClaimed` (a second
   `claim_ledger`'s refusal).
@@ -1222,9 +1222,11 @@ Root promises (85), by who needs them:
   conflict check), `ScanCostFacts` (the S3 estimate prices a preview's counts), the source binding a reviewed batch
   supplies (`ExpectedSources`, `LocalContent`, `RemoteContent`, `SourceFingerprint`, for the agent's approved ops), and
   `UndoReport` (`undo_operations`' answer).
-- **Engine-free helpers the IPC edge asks** (6): `trash_routing_for_selection` and its `TrashRoutingAnswer` (F8's
-  trash-or-delete question), `trash_dir_for_path`, `held_in_another_spelling` (`destination_exists`'s look-alike half),
-  `same_local_file` (rename's case-only check), and `resolve_dest_path` (anchoring a volume-relative destination).
+- **Engine-free helpers the IPC edge asks** (7): `trash_routing_for_selection` and its `TrashRoutingAnswer` (F8's
+  trash-or-delete question), `trash_dir_for_path`, `move_to_trash_sync` (the bare, unjournaled trash move, for the
+  open-with reaper's changed copies, which no undo should list; a second objc trash call app-side would fork the refusal
+  classification), `held_in_another_spelling` (`destination_exists`'s look-alike half), `same_local_file` (rename's
+  case-only check), and `resolve_dest_path` (anchoring a volume-relative destination).
 - **The wire vocabulary** (40): the payloads, configs, and typed outcomes from `types` that cross IPC unchanged
   (`WriteOperationConfig`, `VolumeCopyConfig`, `WriteOperationError`, the `Write*Event` and `ScanPreview*Event`
   payloads, `ConflictResolution`, `LifecycleStatus`, `OperationStatus`, …). The Locked-items question added three (its

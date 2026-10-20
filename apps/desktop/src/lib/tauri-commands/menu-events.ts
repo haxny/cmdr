@@ -12,6 +12,7 @@ import {
   type MediaIndexFolderExclusion,
   type MenuBarRebuilt,
   type MenuSort,
+  type OpenWithCopyLaunched,
   type OpenWithCopyRefused,
   type ShowSearchResultInFolder,
   type ViewModeChanged,
@@ -94,6 +95,17 @@ export function onMediaIndexFolderChoice(handler: (payload: MediaIndexFolderChoi
  */
 export function onOpenWithCopyRefused(handler: (payload: OpenWithCopyRefused) => void): Promise<UnlistenFn> {
   return events.openWithCopyRefused.listen((event) => {
+    handler(event.payload)
+  })
+}
+
+/**
+ * An "Open with" click on a file inside an archive (or a repo's `.git` snapshot) did
+ * launch the app, on a read-only copy. The payload names the first copy, how many rows
+ * were copies, and the app, for the toast that says changes stay in the copy.
+ */
+export function onOpenWithCopyLaunched(handler: (payload: OpenWithCopyLaunched) => void): Promise<UnlistenFn> {
+  return events.openWithCopyLaunched.listen((event) => {
     handler(event.payload)
   })
 }

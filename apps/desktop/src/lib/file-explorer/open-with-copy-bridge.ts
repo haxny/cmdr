@@ -1,15 +1,17 @@
 /**
- * "Open with" refusal notice bridge.
+ * "Open with" copy notice bridge.
  *
- * Turns the backend's `open-with-copy-refused` event into a warning toast. A file
- * inside an archive (or a repo's `.git` snapshot) has no file of its own, so "Open
- * with" copies it out before launching the app; when that copy can't be made (too
- * big, a locked or damaged archive), no app opens, and without this the click
- * would do nothing at all.
+ * A file inside an archive (or a repo's `.git` snapshot) has no file of its own, so
+ * "Open with" copies it out before launching the app. Two backend events become toasts:
+ *
+ * - `open-with-copy-refused`: the copy couldn't be made (too big, a locked or damaged
+ *   archive), so no app opened; without the warning the click would do nothing at all.
+ * - `open-with-copy-launched`: the app got a read-only copy. Nothing else tells the
+ *   person that what they save there won't go back into the original.
  *
  * The click lands on the native context menu, which Rust handles end to end
  * (`menu/open_with.rs::launch_with`), so the frontend never sees the launch: the
- * event is its only way to hear about it. Keyed per file, so clicking again replaces
+ * events are its only way to hear about it. Keyed per file, so clicking again replaces
  * the notice instead of stacking a copy. Mounted from `routes/(main)/window-services.ts`
  * beside the other event bridges.
  */
@@ -19,19 +21,37 @@ import { addToast } from '#lib/ui/toast/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { formatByteSize } from '#lib/units/index.js'
-import { onOpenWithCopyRefused } from '#lib/tauri-commands/index.js'
-import type { OpenWithCopyRefused } from '#lib/ipc/bindings.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { onOpenWithCopyLaunched, onOpenWithCopyRefused } from '#lib/tauri-commands/index.js'
+import type { OpenWithCopyLaunched, OpenWithCopyRefused } from '#lib/ipc/bindings.js'
 
 const log = getAppLogger('fileExplorer')
 
 /** Long enough to read a two-sentence notice that says what to do next. */
 const NOTICE_TIMEOUT_MS = 10_000
 
-/** Mounts the listener. Returns its unsubscribe. */
-export async function startOpenWithRefusedBridge(): Promise<UnlistenFn> {
-  const unlisten = await onOpenWithCopyRefused(raiseNotice)
-  log.debug('Open-with refusal notice bridge mounted')
-  return unlisten
+/** Mounts both listeners. Returns their unsubscribe. */
+export async function startOpenWithCopyBridge(): Promise<UnlistenFn> {
+  const unlistenRefused = await onOpenWithCopyRefused(raiseNotice)
+  const unlistenLaunched = await onOpenWithCopyLaunched(raiseLaunchedNotice)
+  log.debug('Open-with copy notice bridge mounted')
+  return () => {
+    unlistenRefused()
+    unlistenLaunched()
+  }
+}
+
+function raiseLaunchedNotice({ fileName, appName, copyCount }: OpenWithCopyLaunched): void {
+  log.info('Open with {appName} launched on {copyCount} read-only copies', { appName, copyCount })
+  addToast(
+    tString('fileExplorer.openWith.readOnlyCopy', {
+      fileName,
+      appName,
+      count: copyCount,
+      countText: formatInteger(copyCount),
+    }),
+    { level: 'info', timeoutMs: NOTICE_TIMEOUT_MS, id: `open-with-copy-launched-${fileName}` },
+  )
 }
 
 function raiseNotice(payload: OpenWithCopyRefused): void {

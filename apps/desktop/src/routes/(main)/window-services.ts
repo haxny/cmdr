@@ -32,7 +32,7 @@ import { startStateRecoveryNotices, stopStateRecoveryNotices } from '#lib/state-
 import { startDragOutEventBridge } from '#lib/file-explorer/drag/drag-out-event-bridge.js'
 import { startOsMountNoticeBridge } from '#lib/file-explorer/network/os-mount-notice-bridge.js'
 import { startLeftoverNoticeBridge } from '#lib/file-operations/leftover-notice-bridge.js'
-import { startOpenWithRefusedBridge } from '#lib/file-explorer/open-with-refused-bridge.js'
+import { startOpenWithCopyBridge } from '#lib/file-explorer/open-with-copy-bridge.js'
 import { initQuickLookListeners } from '#lib/file-explorer/quick-look/quick-look-state.svelte.js'
 import {
   startOperationConflictHost,
@@ -255,10 +255,11 @@ export async function startWindowServices(ctx: WindowServicesContext): Promise<v
   // "a drive came back holding something an unfinished transfer left, and Cmdr kept it"
   // into an info toast. Belongs to no operation, so it has no transfer toast to join.
   unlistenFns.push(await startLeftoverNoticeBridge())
-  // "Open with" refusal notice: one `open-with-copy-refused` listener turning a file inside an
-  // archive that couldn't be copied out for the chosen app (too big, locked, damaged) into a
-  // warning toast. The native menu launches from Rust, so this event is all the frontend hears.
-  unlistenFns.push(await startOpenWithRefusedBridge())
+  // "Open with" copy notices: `open-with-copy-refused` turns a file inside an archive that
+  // couldn't be copied out for the chosen app (too big, locked, damaged) into a warning toast,
+  // and `open-with-copy-launched` says the app got a read-only copy. The native menu launches
+  // from Rust, so these events are all the frontend hears.
+  unlistenFns.push(await startOpenWithCopyBridge())
   // Drag-out completion bridge: one `drag-out-session-started` + `drag-out-session-complete`
   // pair per drag session, turned into a single signs-of-life → completion toast (downloading a
   // phone/NAS file to Finder shows nothing on Finder's side; this is our feedback surface).

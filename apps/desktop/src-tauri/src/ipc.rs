@@ -60,7 +60,7 @@ use crate::events::index_mapping::{
 use crate::file_system::git::wiring::GitStateChangedPayload;
 use crate::file_system::volume::eject::VolumesEjectingChanged;
 use crate::file_viewer::ViewerPullProgress;
-use crate::file_viewer::open_with_extract::OpenWithCopyRefused;
+use crate::file_viewer::open_with_extract::{OpenWithCopyLaunched, OpenWithCopyRefused};
 use crate::listing_host::events::{
     DirectoryDiff, ListingCancelledEvent, ListingCompleteEvent, ListingErrorEvent, ListingOpeningEvent,
     ListingProgressEvent, ListingReadCompleteEvent, ListingRespelledEvent, ListingStalledEvent,
@@ -1075,6 +1075,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             // An "Open with" click on a file inside an archive that couldn't be copied
             // out, so no app launched (file_viewer/open_with_extract.rs).
             OpenWithCopyRefused,
+            // The same launch that did go ahead, on read-only copies the app got.
+            OpenWithCopyLaunched,
             // Operation manager registry snapshot (crates/cmdr-operations/src/manager.rs).
             wire::OperationsChanged,
             SuggestionsChanged,

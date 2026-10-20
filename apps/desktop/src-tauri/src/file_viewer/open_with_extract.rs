@@ -10,12 +10,15 @@
 //!   session or refcount could ever say when a copy is done with; and a copy shared
 //!   across launches would cost archive-edit invalidation for nothing. The copy is
 //!   `0o444`: the app opens a preview, and nothing it saves goes back into the archive.
+//!   An app can still save into the copy's folder, so a changed copy goes to the Trash,
+//!   never away (`open_with_copies.rs`).
 //! - **Its own per-instance dir and prefix** (`<app_data_dir>/open-with-extract`,
 //!   `.cmdr-open-with-*`). The viewer's reaper runs over a different dir and prefix, so
 //!   neither can delete the other's live temps, and side-by-side dev / prod / worktree
 //!   instances never share one.
 //! - **Reaped at startup only.** The process boundary is what marks a temp abandoned:
-//!   an app may hold a copy open for as long as this run lasts. ❌ No TTL reaper.
+//!   an app may hold a copy open for as long as this run lasts. ❌ No TTL reaper. An
+//!   untouched copy is removed then; a changed one goes to the Trash.
 //! - **Listing apps against a stand-in.** LaunchServices answers no apps for a path
 //!   with nothing at it (verified on macOS 27.0 with `URLsForApplicationsToOpenURL:`
 //!   via `osascript`, 2026-10-01), and the menu is built before anything is pulled. So
@@ -35,9 +38,9 @@ use std::sync::{LazyLock, RwLock};
 
 use serde::{Deserialize, Serialize};
 
-use super::materialize::reap_temps_with_prefix;
 #[cfg(any(target_os = "macos", test))]
 use super::materialize::{RoutedPullFailure, TempSpot, extract_routed_into};
+use super::open_with_copies::{reap_launch_folders, record_pull};
 use super::{ArchiveFailureKind, ViewerError};
 #[cfg(any(target_os = "macos", test))]
 use crate::file_system::volume::RoutedKind;
@@ -53,7 +56,6 @@ const TEMP_SUBDIR_PREFIX: &str = ".cmdr-open-with-";
 
 /// The stand-ins' dir. Carries [`TEMP_SUBDIR_PREFIX`], so a launch reaps it too and it
 /// refills on the next right-click.
-#[cfg(any(target_os = "macos", test))]
 const STAND_IN_DIRNAME: &str = ".cmdr-open-with-types";
 
 /// The stand-in's file stem. Only its extension matters to LaunchServices.
@@ -90,9 +92,29 @@ fn open_with_dir() -> PathBuf {
         .unwrap_or_else(|| std::env::temp_dir().join(DEFAULT_DIRNAME))
 }
 
-/// Removes every `.cmdr-open-with-*` entry in `dir`.
+/// Clears what an earlier run left in `dir`: the stand-ins, every untouched copy, and,
+/// into the Trash, every copy an app changed.
 pub(super) fn reap_open_with_temps(dir: &Path) {
-    reap_temps_with_prefix(dir, TEMP_SUBDIR_PREFIX);
+    reap_open_with_temps_with(dir, &|path| {
+        cmdr_operations::move_to_trash_sync(path)
+            .map(|_in_trash| ())
+            .map_err(|e| e.to_string())
+    });
+}
+
+/// [`reap_open_with_temps`] with the Trash passed in, for tests.
+pub(super) fn reap_open_with_temps_with(dir: &Path, trash: &dyn Fn(&Path) -> Result<(), String>) {
+    let stand_ins = dir.join(STAND_IN_DIRNAME);
+    if let Err(e) = std::fs::remove_dir_all(&stand_ins)
+        && e.kind() != std::io::ErrorKind::NotFound
+    {
+        log::debug!(target: "cmdr_lib::file_viewer", "couldn't remove the open-with stand-ins: {e}");
+    }
+    reap_launch_folders(
+        dir,
+        |name| name.starts_with(TEMP_SUBDIR_PREFIX) && name != STAND_IN_DIRNAME,
+        trash,
+    );
 }
 
 /// Whether `name` is one of this family's subdirs (the reaper's match predicate).
@@ -127,16 +149,48 @@ pub struct OpenWithCopyRefused {
 impl OpenWithCopyRefused {
     /// The notice for `refused`, a launch of the app bundle at `app_path`.
     pub(crate) fn new(refused: &RefusedCopy, app_path: &Path) -> Self {
-        let lossy = |name: Option<&std::ffi::OsStr>, fallback: &Path| {
-            name.map_or_else(|| fallback.display().to_string(), |n| n.to_string_lossy().into_owned())
-        };
         Self {
-            file_name: lossy(refused.path.file_name(), &refused.path),
-            app_name: lossy(app_path.file_stem(), app_path),
+            file_name: display_name(refused.path.file_name(), &refused.path),
+            app_name: display_name(app_path.file_stem(), app_path),
             reason: refused.reason,
             source: refused.source,
         }
     }
+}
+
+/// `open-with-copy-launched`: an "Open with" launch went ahead on read-only copies of
+/// files only a route serves. The main window says so in a toast, since nothing else
+/// tells the person that what the app saves there won't reach the original.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenWithCopyLaunched {
+    /// The first copied file's own name, as the person sees it in the pane.
+    pub file_name: String,
+    /// How many of the launched rows were copies.
+    pub copy_count: u32,
+    /// The chosen app's display name (its bundle name without `.app`).
+    pub app_name: String,
+}
+
+#[cfg(any(target_os = "macos", test))]
+impl OpenWithCopyLaunched {
+    /// The notice for a launch of the app bundle at `app_path` on `launched`, what
+    /// [`launch_paths`] made of `rows`; `None` when no row needed a copy.
+    pub(crate) fn new(rows: &[PathBuf], launched: &[PathBuf], app_path: &Path) -> Option<Self> {
+        let mut copied = rows.iter().zip(launched).filter(|(row, launched)| row != launched);
+        let (first, _) = copied.next()?;
+        Some(Self {
+            file_name: display_name(first.file_name(), first),
+            copy_count: u32::try_from(copied.count() + 1).unwrap_or(u32::MAX),
+            app_name: display_name(app_path.file_stem(), app_path),
+        })
+    }
+}
+
+/// `name` as the person reads it, else the whole `fallback` path.
+#[cfg(any(target_os = "macos", test))]
+fn display_name(name: Option<&std::ffi::OsStr>, fallback: &Path) -> String {
+    name.map_or_else(|| fallback.display().to_string(), |n| n.to_string_lossy().into_owned())
 }
 
 /// What served the file the copy was pulled from. The archive refusals only ever come
@@ -243,6 +297,8 @@ pub(super) fn launch_paths_in(paths: &[PathBuf], dir: &Path, cap: u64) -> Result
                 return Ok(path.clone());
             };
             make_read_only(&copy.temp_file);
+            // After the mode change, which touches ctime only: the record's mtime holds.
+            record_pull(&copy.temp_file);
             Ok(copy.temp_file)
         })
         .collect()

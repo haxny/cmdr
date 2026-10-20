@@ -398,9 +398,21 @@ the reasons; the shape:
 - **A fresh copy per launch, `0o444`, under `<app_data_dir>/open-with-extract/.cmdr-open-with-<uuid>/`**, reaped by
   `init_open_with_extract_dir` at startup and never earlier: a launched app has no close event, so the process boundary
   is the only signal a copy is done with. ❌ No refcount, dedup cache, TTL reaper, shared dir with the viewer, or
-  write-back (edits an app saves stay in the copy).
-- **Each family's reaper sees only its own prefix in its own dir** (`reap_temps_with_prefix`), so the viewer's reaper
-  can never take a copy an app has open, and the reverse.
+  write-back.
+- **A changed copy goes to the Trash, ❌ never away** (`open_with_copies.rs`). Gotcha/Why: `0o444` guards the file,
+  not its folder, so an atomic save (vim `:w!`, BBEdit's safe save) replaces the copy and "Save a copy" lands beside it;
+  the reaper used to remove those with the rest, content that existed nowhere else. Each pull writes a
+  `.cmdr-open-with-pull.json` record (file name, size, mtime) after `make_read_only` (a mode change moves ctime only).
+  At startup, a folder holding exactly that file and record, with size and mtime unchanged, is removed; any other
+  folder (an edit, a second file, no record) has every entry but the record moved to the Trash under its own name
+  (`cmdr_operations::move_to_trash_sync`, unjournaled: no undo should list Cmdr's leftovers), logged at `warn`. An
+  entry the Trash refuses keeps its folder for the next launch. The stand-ins' folder goes outright.
+- **The launch says it's a copy.** After `open_paths_with` succeeds, `launch_with` emits `OpenWithCopyLaunched` (the
+  first copy's name, the copy count, the app) and the main window shows `fileExplorer.openWith.readOnlyCopy` as an info
+  toast: changes saved there won't reach the original.
+- **Each family's reaper sees only its own prefix in its own dir**, so the viewer's reaper (`reap_orphan_temps`,
+  unconditional, since no other app ever gets a viewer temp's path) can never take a copy an app has open, and the
+  reverse.
 - **The cap is `OPEN_WITH_CAP_BYTES` (2 GiB)**, refused from the declared size before a byte is written, like the
   viewer's 256 MiB preview cap: what people open in a real app (a video, a big PDF) runs bigger than what they preview.
 - **The launch path.** `../menu/open_with.rs::launch_with` keeps an ordinary launch synchronous on the main thread. When
@@ -413,7 +425,7 @@ the reasons; the shape:
   resolved `RoutedKind`, which `extract_routed_into` hands back with its failure (`RoutedPullFailure`) so the too-big
   toast can name where the file sits. The archive reasons only ever come from an archive: a portal read that breaks
   off maps to `Io` (`map_volume_error`), so a snapshot lands on `unreadable`. `launch_with` logs it and emits `OpenWithCopyRefused`, which the main
-  window's `../../../src/lib/file-explorer/open-with-refused-bridge.ts` shows as a warning toast: the click lands on the native
+  window's `../../../src/lib/file-explorer/open-with-copy-bridge.ts` shows as a warning toast: the click lands on the native
   menu, so the frontend hears of it no other way. A locked archive is `ArchiveFailureKind::NeedsPassword`
   (`map_volume_error`), because copying the file out (F5) asks for the password and fixes it. There's no "preparing"
   cue while a big pull runs: nothing on the main window fits one without a new progress surface. A failed LAUNCH

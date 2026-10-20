@@ -174,11 +174,12 @@ pub use scan_cache::ScanCostFacts;
 pub use source_binding::{ExpectedSources, LocalContent, RemoteContent, SourceFingerprint};
 
 // Engine-free helpers the IPC edge asks before or beside an operation: the F8
-// routing question, where a path's trash is, the look-alike name check,
-// whether two paths are one local file, and anchoring a volume-relative
+// routing question, where a path's trash is, the bare unjournaled trash move
+// (for the app's own leftovers, which no undo should list), the look-alike name
+// check, whether two paths are one local file, and anchoring a volume-relative
 // destination (`routing.rs`).
 pub use delete::cloud_trash::{TrashRoutingAnswer, routing_for_selection as trash_routing_for_selection};
-pub use delete::trash::trash_dir_for_path;
+pub use delete::trash::{move_to_trash_sync, trash_dir_for_path};
 pub use look_alike::held_in_another_spelling;
 pub use rename::same_local_file;
 pub use routing::resolve_dest_path;

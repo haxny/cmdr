@@ -5266,6 +5266,7 @@ export const events = {
   openFavorite: makeEvent<OpenFavorite>('open-favorite'),
   openFileViewer: makeEvent<OpenFileViewer>('open-file-viewer'),
   openSettings: makeEvent<OpenSettings>('open-settings'),
+  openWithCopyLaunched: makeEvent<OpenWithCopyLaunched>('open-with-copy-launched'),
   openWithCopyRefused: makeEvent<OpenWithCopyRefused>('open-with-copy-refused'),
   operationsChanged: makeEvent<OperationsChanged>('operations-changed'),
   osLocalesChanged: makeEvent<OsLocalesChanged>('os-locales-changed'),
@@ -12550,6 +12551,20 @@ export type OpenTerminalOutcome =
    *  mount went away), so nothing was launched.
    */
   | 'not_a_local_path'
+
+/**
+ *  `open-with-copy-launched`: an "Open with" launch went ahead on read-only copies of
+ *  files only a route serves. The main window says so in a toast, since nothing else
+ *  tells the person that what the app saves there won't reach the original.
+ */
+export type OpenWithCopyLaunched = {
+  // The first copied file's own name, as the person sees it in the pane.
+  fileName: string
+  // How many of the launched rows were copies.
+  copyCount: number
+  // The chosen app's display name (its bundle name without `.app`).
+  appName: string
+}
 
 // Why the copy couldn't be made, in the terms the toast words differently.
 export type OpenWithCopyRefusal =

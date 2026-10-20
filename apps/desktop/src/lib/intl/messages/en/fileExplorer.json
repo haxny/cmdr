@@ -1349,6 +1349,16 @@
       "appName": "the app the user picked, e.g. Preview. Never translate it"
     }
   },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} opened a read-only copy of {fileName}. Changes you save there won’t go back to the original.} other {{appName} opened read-only copies of {countText} files. Changes you save there won’t go back to the originals.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "description": "Info toast shown right after the user right-clicked a file inside an archive (a zip, tar, or 7z Cmdr browses like a folder) or inside a Git repository’s history (read-only folders inside its `.git` folder), picked an app under \"Open with\", and the app opened. Such a file has no file of its own on disk, so Cmdr gave the app a temporary read-only copy instead. The point is to warn that edits saved in the app stay in that copy and never reach the file inside the archive or the repository. Keep \"the original\" generic: it can be an archive entry or a file in a repo’s history. Cmdr keeps any changed copy in the Trash, but the toast needn’t say so.",
+    "placeholders": {
+      "appName": "the app the user picked, e.g. Preview or TextEdit. Never translate it",
+      "fileName": "the first copied file’s name, e.g. report.pdf. Never translate it",
+      "count": "how many files were opened as copies (drives the singular/plural form)",
+      "countText": "the same number, already formatted for display, e.g. 3"
+    }
+  },
   "fileExplorer.rename.fieldAriaLabel": "Rename {name}",
   "@fileExplorer.rename.fieldAriaLabel": {
     "description": "Accessibility label of the inline text field that replaces a file’s name in the file list while the user renames it (F2). Screen readers announce it when the field gets focus. VERB phrase: “Rename” is the action, followed by the file’s current name.",

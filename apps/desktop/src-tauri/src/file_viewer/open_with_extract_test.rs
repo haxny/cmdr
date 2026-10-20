@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use super::materialize::reap_orphan_temps;
 use super::open_with_extract::{
-    OpenWithCopyRefusal, OpenWithCopyRefused, OpenWithCopySource, RefusedCopy, is_open_with_temp_name, launch_paths_in,
-    listing_path_in, reap_open_with_temps,
+    OpenWithCopyLaunched, OpenWithCopyRefusal, OpenWithCopyRefused, OpenWithCopySource, RefusedCopy,
+    is_open_with_temp_name, launch_paths_in, listing_path_in, reap_open_with_temps_with,
 };
 use super::{ArchiveFailureKind, ViewerError};
 
@@ -249,7 +249,7 @@ fn each_reaper_takes_only_its_own_family() {
     assert!(!viewer.exists());
 
     std::fs::create_dir_all(&viewer).expect("mk viewer temp again");
-    reap_open_with_temps(dir.path());
+    reap_open_with_temps_with(dir.path(), &no_trash);
     assert!(!open_with.exists());
     assert!(viewer.exists(), "the open-with reaper must not touch a viewer temp");
 }
@@ -279,4 +279,150 @@ fn an_ordinary_path_lists_apps_against_itself() {
     let dir = tempfile::tempdir().expect("open-with dir");
     let plain = PathBuf::from("/Users/me/report.pdf");
     assert_eq!(listing_path_in(&plain, dir.path()), plain);
+}
+
+#[test]
+fn the_launched_notice_names_the_first_copy_and_counts_the_copies() {
+    let rows = [
+        PathBuf::from("/Users/me/bundle.zip/a.pdf"),
+        PathBuf::from("/Users/me/plain.pdf"),
+        PathBuf::from("/Users/me/bundle.zip/b.pdf"),
+    ];
+    let launched = [
+        PathBuf::from("/data/.cmdr-open-with-1/a.pdf"),
+        rows[1].clone(),
+        PathBuf::from("/data/.cmdr-open-with-2/b.pdf"),
+    ];
+
+    let notice = OpenWithCopyLaunched::new(&rows, &launched, Path::new("/System/Applications/Preview.app"))
+        .expect("two rows were copies");
+
+    assert_eq!(notice.file_name, "a.pdf");
+    assert_eq!(notice.copy_count, 2);
+    assert_eq!(notice.app_name, "Preview");
+    assert!(
+        OpenWithCopyLaunched::new(&rows[1..2], &launched[1..2], Path::new("/Applications/Preview.app")).is_none(),
+        "a launch with no copy says nothing"
+    );
+}
+
+/// The stand-ins are Cmdr's own empty files, never anything an app saw, so they go
+/// without a trip to the Trash.
+#[test]
+fn the_startup_reaper_removes_the_stand_ins_outright() {
+    let dir = tempfile::tempdir().expect("open-with dir");
+    let stand_in = listing_path_in(Path::new("/Users/me/bundle.zip/a.pdf"), dir.path());
+    assert!(stand_in.is_file());
+
+    reap_open_with_temps_with(dir.path(), &|path: &Path| {
+        panic!("trashed a stand-in: {}", path.display())
+    });
+
+    assert!(open_with_temps(dir.path()).is_empty());
+}
+
+/// A Trash that refuses everything: the reaper must then leave what it would have kept.
+fn no_trash(_path: &Path) -> Result<(), String> {
+    Err("no Trash in this test".to_string())
+}
+
+/// A stand-in Trash: moves each item into `trash`, so a test can find what was kept.
+fn into(trash: &Path) -> impl Fn(&Path) -> Result<(), String> + '_ {
+    move |path: &Path| {
+        let name = path.file_name().ok_or("no name")?;
+        std::fs::rename(path, trash.join(name)).map_err(|e| e.to_string())
+    }
+}
+
+fn open_with_temps(dir: &Path) -> Vec<PathBuf> {
+    std::fs::read_dir(dir)
+        .expect("read dir")
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| is_open_with_temp_name(&path.file_name().expect("name").to_string_lossy()))
+        .collect()
+}
+
+/// An editor's atomic save: write beside the copy, then rename over it (vim `:w!`,
+/// BBEdit's safe save). The copy's folder stays writable, so this gets past `0o444`.
+fn save_over(copy: &Path, content: &[u8]) {
+    let staged = copy.with_extension("saving");
+    std::fs::write(&staged, content).expect("stage the save");
+    std::fs::rename(&staged, copy).expect("land the save");
+}
+
+/// One pull of `inner` from `zip` into `dir`: the copy the app got.
+fn pull(zip: &Path, inner: &str, dir: &Path) -> PathBuf {
+    let mut got = launch_paths_in(&[zip.join(inner)], dir, CAP).expect("pull");
+    got.remove(0)
+}
+
+/// The data-loss case: an app saved over its copy (and dropped a second file beside it),
+/// and the next launch removed both with the rest. Both go to the Trash, under their
+/// own names, while an untouched copy is still removed.
+#[test]
+fn the_startup_reaper_moves_a_changed_copy_and_its_siblings_to_the_trash() {
+    ensure_root_volume();
+    let src = tempfile::tempdir().expect("src dir");
+    let zip = src.path().join("bundle.zip");
+    build_zip(&zip, &[("notes.txt", b"as pulled"), ("other.txt", b"never touched")]);
+    let dir = tempfile::tempdir().expect("open-with dir");
+    let edited = pull(&zip, "notes.txt", dir.path());
+    let untouched = pull(&zip, "other.txt", dir.path());
+    save_over(&edited, b"my edits");
+    std::fs::write(edited.with_file_name("notes copy.txt"), b"saved as a copy").expect("save a copy beside it");
+    let trash = tempfile::tempdir().expect("trash");
+
+    reap_open_with_temps_with(dir.path(), &into(trash.path()));
+
+    assert_eq!(
+        std::fs::read(trash.path().join("notes.txt")).expect("kept"),
+        b"my edits"
+    );
+    assert_eq!(
+        std::fs::read(trash.path().join("notes copy.txt")).expect("kept"),
+        b"saved as a copy"
+    );
+    assert!(!trash.path().join("other.txt").exists(), "an untouched copy isn't kept");
+    assert!(!untouched.exists());
+    assert!(open_with_temps(dir.path()).is_empty(), "every launch folder is gone");
+}
+
+/// A file dropped beside an untouched copy ("Save a copy" into the same folder) is
+/// content that exists nowhere else, so the folder counts as changed.
+#[test]
+fn a_new_file_beside_an_untouched_copy_is_kept_too() {
+    ensure_root_volume();
+    let src = tempfile::tempdir().expect("src dir");
+    let zip = src.path().join("bundle.zip");
+    build_zip(&zip, &[("report.pdf", b"%PDF-1.4")]);
+    let dir = tempfile::tempdir().expect("open-with dir");
+    let copy = pull(&zip, "report.pdf", dir.path());
+    std::fs::write(copy.with_file_name("report-signed.pdf"), b"%PDF-1.4 signed").expect("save beside");
+    let trash = tempfile::tempdir().expect("trash");
+
+    reap_open_with_temps_with(dir.path(), &into(trash.path()));
+
+    assert!(trash.path().join("report-signed.pdf").exists());
+    assert!(
+        trash.path().join("report.pdf").exists(),
+        "its folder's copy goes with it"
+    );
+}
+
+/// A Trash that can't take a kept file (a volume with none, a refusal) leaves it where
+/// it is for the next launch to try again: never a delete in its place.
+#[test]
+fn a_changed_copy_the_trash_refuses_stays_where_it_is() {
+    ensure_root_volume();
+    let src = tempfile::tempdir().expect("src dir");
+    let zip = src.path().join("bundle.zip");
+    build_zip(&zip, &[("notes.txt", b"as pulled")]);
+    let dir = tempfile::tempdir().expect("open-with dir");
+    let copy = pull(&zip, "notes.txt", dir.path());
+    save_over(&copy, b"my edits");
+
+    reap_open_with_temps_with(dir.path(), &no_trash);
+
+    assert_eq!(std::fs::read(&copy).expect("still there"), b"my edits");
 }
