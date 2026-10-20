@@ -60,8 +60,9 @@ newer build re-claims it.
 - **File present, non-empty**: read verbatim.
 - **File present, empty list**: the user cleared every favorite. Read verbatim (stays empty). Never
   re-seed.
-- **File present, corrupt or wrong `_schemaVersion`**: set aside (`../state_recovery/DETAILS.md`, which also tells the
-  person once), then read as
+- **File present but unreadable, corrupt, or wrong `_schemaVersion`**: set aside (`../state_recovery/DETAILS.md`,
+  which also tells the person once, and holds the file against every write when the set-aside can't happen), then read
+  as
   `Some(empty)` (NOT `None`). A broken file is "initialized but unreadable," so we must not re-seed
   the defaults over a user who had intentionally cleared their list.
 

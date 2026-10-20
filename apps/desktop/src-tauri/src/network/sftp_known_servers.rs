@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use super::saved_server_fields::{self, OwnAddress, Relocation};
 use super::server_list_file;
+use crate::state_recovery::StateFile;
 
 use crate::ignore_poison::IgnorePoison;
 
@@ -131,7 +132,7 @@ fn reconnects_automatically() -> bool {
 #[serde(rename_all = "camelCase")]
 pub struct KnownSftpServersStore {
     /// Every server, in the order they were first added.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::state_recovery::lenient_entries")]
     pub known_sftp_servers: Vec<KnownSftpServer>,
 }
 
@@ -157,15 +158,15 @@ fn same_server(entry: &KnownSftpServer, host: &str, port: u16, username: &str) -
 
 /// Loads the store from the app's data dir into memory.
 ///
-/// Call once at startup. A missing or unreadable file is an empty store: the
-/// user's server list is a convenience, and losing it costs one re-entry rather
-/// than access to anything.
+/// Call once at startup. A missing file is an empty store, and one that doesn't
+/// read is set aside first, so the next save can't land over it
+/// (`server_list_file::read`).
 ///
 /// Names that only repeat their server's own address are cleared first
 /// ([`clear_address_shaped_names`]), and the file is written back only when one
 /// was.
 pub fn load_known_sftp_servers<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    let Some((mut store, path)) = server_list_file::load(app, "known-sftp-servers.json") else {
+    let Some((mut store, path)) = server_list_file::load(app, "known-sftp-servers.json", StateFile::SftpServers) else {
         return;
     };
     let cleared = clear_address_shaped_names(&mut store);

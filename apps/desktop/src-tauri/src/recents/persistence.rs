@@ -1,5 +1,6 @@
 //! The JSON file under a recents list: a schema-versioned envelope, a durable
-//! write, and the set-aside path for a file we can't read.
+//! write, both through `crate::state_recovery`, which sets aside a file we can't
+//! read and never lets one be saved over.
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -21,54 +22,40 @@ struct Envelope<C> {
 
 /// Reads the list at `path`, newest first.
 ///
-/// A file we can't parse, or one stamped with a schema version we don't know, is
-/// set aside and we start empty: the user keeps using the dialog, hears once that
-/// it reset, and the unreadable file survives in case we want to look at it. There's
-/// only ever been one version, so a migrator would be speculative; when v2 lands,
-/// this version check becomes a `match`.
+/// A file we can't read or parse (non-UTF-8 bytes included), or one stamped with a
+/// schema version we don't know, is set aside and we start empty
+/// (`crate::state_recovery::read_state_file`): the user keeps using the dialog, hears
+/// once that it reset, and the unreadable file survives. When the set-aside can't
+/// happen, [`write`] refuses to save over the file for the session. There's only ever
+/// been one version, so a migrator would be speculative; when v2 lands, this version
+/// check becomes a `match`.
 pub(super) fn read<E: RecentEntry>(path: &Path) -> Vec<E> {
     cleanup_tmp_file(path);
-
-    let Ok(contents) = fs::read_to_string(path) else {
-        return Vec::new();
-    };
-
-    match serde_json::from_str::<Envelope<Vec<E>>>(&contents) {
-        Ok(envelope) if envelope.schema_version == E::SCHEMA_VERSION => envelope.entries,
-        Ok(envelope) => {
-            log::warn!(
-                target: E::LOG_TARGET,
-                "Schema mismatch in {} (file: {}, expected: {}); quarantining and starting fresh",
-                E::LOG_NAME, envelope.schema_version, E::SCHEMA_VERSION
-            );
-            quarantine_broken::<E>(path);
-            Vec::new()
+    crate::state_recovery::read_state_file(path, E::STATE_FILE, |bytes| {
+        match serde_json::from_slice::<Envelope<Vec<E>>>(bytes) {
+            Ok(envelope) if envelope.schema_version == E::SCHEMA_VERSION => Ok(envelope.entries),
+            Ok(envelope) => Err(format!(
+                "schema version {}, expected {}",
+                envelope.schema_version,
+                E::SCHEMA_VERSION
+            )),
+            Err(e) => Err(e.to_string()),
         }
-        Err(e) => {
-            log::warn!(
-                target: E::LOG_TARGET,
-                "Couldn't parse {} at {:?}: {e}",
-                E::LOG_NAME, path
-            );
-            quarantine_broken::<E>(path);
-            Vec::new()
-        }
-    }
+    })
+    .into_value()
+    .unwrap_or_default()
 }
 
 /// Writes `entries` durably: temp file + fsync + rename + parent-dir fsync, so the
 /// list survives a power loss and not only a process death. See
-/// `crate::config::durable_write_json`.
-pub(super) fn write<E: RecentEntry>(path: &Path, entries: &[E]) -> std::io::Result<()> {
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
+/// `crate::state_recovery::write_state_file`.
+pub(super) fn write<E: RecentEntry>(path: &Path, entries: &[E]) -> Result<(), crate::state_recovery::StateWriteError> {
     let envelope = Envelope {
         schema_version: E::SCHEMA_VERSION,
         entries,
     };
     let json = serde_json::to_string_pretty(&envelope).map_err(std::io::Error::other)?;
-    crate::config::durable_write_json(path, &path.with_extension("json.tmp"), &json)
+    crate::state_recovery::write_state_file(path, &json)
 }
 
 /// Drops a temp file a killed write left behind, so it can't shadow a later one.
@@ -76,15 +63,6 @@ fn cleanup_tmp_file(path: &Path) {
     let tmp = path.with_extension("json.tmp");
     if tmp.exists() {
         let _ = fs::remove_file(&tmp);
-    }
-}
-
-/// Sets the file aside (`crate::state_recovery`) so the unreadable snapshot survives and the person
-/// hears that this list reset. If the rename itself fails, drop the file outright: a deleted
-/// history beats a broken one.
-fn quarantine_broken<E: RecentEntry>(path: &Path) {
-    if crate::state_recovery::set_aside(path, E::STATE_FILE).is_none() {
-        let _ = fs::remove_file(path);
     }
 }
 
@@ -188,6 +166,54 @@ mod tests {
             .map(|copy| fs::read_to_string(copy).expect("read a copy"))
             .collect();
         assert_eq!(contents, vec!["first garbage", "second garbage"]);
+    }
+
+    /// A file that's there but can't be read (mode 000) is set aside before the next add writes
+    /// a one-entry list over it.
+    #[test]
+    fn an_unreadable_file_survives_the_next_add() {
+        use std::os::unix::fs::PermissionsExt;
+        // Root reads a mode-000 file anyway (the Linux Docker lane runs as root).
+        // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail.
+        if unsafe { libc::geteuid() } == 0 {
+            return;
+        }
+        let notices = crate::state_recovery::testing::capture_recoveries();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join(TestEntry::FILENAME);
+        write(&path, &[entry("b"), entry("a")]).expect("write the real list");
+        let original = fs::read(&path).expect("read it back");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).expect("make it unreadable");
+
+        let loaded: Vec<TestEntry> = read(&path);
+        assert!(loaded.is_empty());
+        write(&path, &[entry("c")]).expect("the next add saves");
+
+        let kept = crate::state_recovery::testing::kept_copies(&path);
+        assert_eq!(kept.len(), 1, "the real list is set aside: {kept:?}");
+        fs::set_permissions(&kept[0], fs::Permissions::from_mode(0o644)).expect("read the copy");
+        assert_eq!(fs::read(&kept[0]).expect("read the copy"), original);
+        assert_eq!(notices.recoveries().len(), 1);
+    }
+
+    /// Bytes that aren't UTF-8 don't parse, so they're set aside like any other broken file.
+    #[test]
+    fn a_non_utf8_file_survives_the_next_add() {
+        let _notices = crate::state_recovery::testing::capture_recoveries();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join(TestEntry::FILENAME);
+        fs::write(&path, b"{\"_schemaVersion\": 1, \"entries\": [\xff\xfe]}").expect("write");
+
+        let loaded: Vec<TestEntry> = read(&path);
+        assert!(loaded.is_empty());
+        write(&path, &[entry("c")]).expect("the next add saves");
+
+        let kept = crate::state_recovery::testing::kept_copies(&path);
+        assert_eq!(kept.len(), 1, "set aside: {kept:?}");
+        assert_eq!(
+            fs::read(&kept[0]).expect("read the copy"),
+            b"{\"_schemaVersion\": 1, \"entries\": [\xff\xfe]}"
+        );
     }
 
     #[test]

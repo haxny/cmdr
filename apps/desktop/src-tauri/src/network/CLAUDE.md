@@ -48,10 +48,11 @@ shared seams (`connect_wiring.rs`, `server_list_file.rs`, `saved_server_fields.r
 - **Forgetting a server's SMB password takes only its own entries** (`keychain::forget_server_credentials`): every name
   on ITS port, plus a port-less entry only when a lookup noted finding its password there
   (`note_found_under_portless`). ❌ Never delete a port-less key blind: it's also the 445 server's key.
+- **Saved-server lists: `server_list_file::{read, save}`, `lenient_entries` fields**, ❌ never `unwrap_or_default`.
 - **Only Cmdr's own mounts (and a favorite on an unsaved share) save an SMB share** (`smb_saved_shares.rs`), keyed by
   server + share, ❌ never by account,
-  with the id the mount reported. An upgrade or watcher path that wrote one would invent history (`DETAILS.md` § "Saved
+  with the id the mount reported. An upgrade or watcher writing one invents history (`DETAILS.md` § "Saved
   SMB shares").
 
-Architecture, flows, decisions, the per-server switches, and the smaller gotchas (ports, loopback addresses, the mDNS
-trailing dot): `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or advising.
+Architecture, flows, decisions, per-server switches, and smaller gotchas (ports, loopback, mDNS):
+`DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or advising.

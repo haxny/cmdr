@@ -2,6 +2,7 @@
 
 use super::account::set_account_at_path;
 use super::*;
+use std::fs;
 
 // -- parse_server_address: all input formats --
 
@@ -886,5 +887,56 @@ fn signing_in_as_an_account_makes_it_the_hosts_preference() {
     let fresh = set_account_at_path(&path, &SmbServer::new("10.0.0.25", 11482), &[], Some("ada")).unwrap();
     assert_eq!(fresh.id, generate_server_id("10.0.0.25", 11482));
     assert_eq!(fresh.username.as_deref(), Some("ada"));
+    assert_eq!(read_store_from_path(&path).servers.len(), 2);
+}
+
+// -- a file that doesn't read is never saved over --
+
+/// The one set-aside copy of `path`, read back whatever its mode.
+fn the_copy(path: &Path) -> Vec<u8> {
+    use std::os::unix::fs::PermissionsExt;
+    let kept = crate::state_recovery::testing::kept_copies(path);
+    assert_eq!(kept.len(), 1, "one copy of {path:?}: {kept:?}");
+    fs::set_permissions(&kept[0], fs::Permissions::from_mode(0o644)).expect("read the copy");
+    fs::read(&kept[0]).expect("read the copy")
+}
+
+/// A store that's there but can't be read (mode 000) is set aside before the next add writes a
+/// one-server list over it.
+#[test]
+fn an_unreadable_store_survives_the_next_add() {
+    use std::os::unix::fs::PermissionsExt;
+    // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail.
+    if unsafe { libc::geteuid() } == 0 {
+        return;
+    }
+    let _notices = crate::state_recovery::testing::capture_recoveries();
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let path = dir.path().join(MANUAL_SERVERS_FILENAME);
+    add_server_entry_to_path(&path, test_entry(31));
+    let original = fs::read(&path).expect("read the store");
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).expect("make it unreadable");
+
+    add_server_entry_to_path(&path, test_entry(32));
+
+    assert_eq!(the_copy(&path), original);
+}
+
+/// One server entry from a newer build costs that entry only, and the whole file is kept.
+#[test]
+fn one_entry_that_doesnt_read_keeps_the_rest_and_a_copy() {
+    let _notices = crate::state_recovery::testing::capture_recoveries();
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let path = dir.path().join(MANUAL_SERVERS_FILENAME);
+    let original = r#"{"servers": [
+        {"id": "manual-10-0-0-33", "address": "10.0.0.33", "port": 445, "addedAt": "2026-10-01T10:00:00Z"},
+        {"id": "manual-v6", "address": "fe80::1", "port": "from a newer build", "addedAt": "2026-10-01T10:00:00Z"}
+    ]}"#;
+    fs::write(&path, original).expect("write");
+
+    assert_eq!(read_store_from_path(&path).servers.len(), 1);
+    add_server_entry_to_path(&path, test_entry(34));
+
+    assert_eq!(the_copy(&path), original.as_bytes());
     assert_eq!(read_store_from_path(&path).servers.len(), 2);
 }

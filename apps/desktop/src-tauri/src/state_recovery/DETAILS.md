@@ -27,8 +27,18 @@ Issue #461. Must-knows in `CLAUDE.md`.
   through `OperationLog::open`; `AgentStore::open`): only on the typed
   `NotADatabase` / `DatabaseCorrupt` code. The DB is set aside, its `-wal` and `-shm` removed, and a fresh one built. A
   rename that doesn't happen falls back to deleting, the only way to a working DB.
-- **Favorites, the recents lists**: set aside; a rename that doesn't happen deletes the file (a deleted history beats a
-  broken one). Favorites reads as `Some(empty)`, never re-seeding (`../favorites/DETAILS.md`).
+- **Favorites, the recents lists, the saved-server lists** (`state_file.rs`, through `read_state_file`): a file that
+  can't be read (mode 000, `EIO`, bytes that aren't UTF-8), doesn't parse, or carries an unknown schema version is set
+  aside, and the store starts empty. Favorites reads as `Some(empty)`, never re-seeding (`../favorites/DETAILS.md`). A
+  rename that doesn't happen leaves the file and HOLDS the path: `write_state_file` refuses every write to it
+  (`StateWriteError::NotLoaded`) until a later read succeeds, and a store that rereads its file on every call
+  (`manual-servers.json`) hears about it once.
+- **Lists of independent entries** (saved S3 places and accounts, SFTP and WebDAV servers, SMB share rows, opt-outs and
+  pending moves, manual SMB servers): each list field is `#[serde(deserialize_with = "lenient_entries")]`, so an entry
+  that doesn't read (a provider `kind` from a newer build, a typo) is dropped alone. `read_state_file` then COPIES the
+  whole file aside (`keep_copy`: same naming, same three kept) and the person hears it once per session. The file itself
+  stays until the next save writes the entries that read; a launch before that copies it again.
+  The shared loader is `../network/server_list_file.rs`.
 - **`usage.json`**: set aside; a rename that doesn't happen leaves the file, and the launch runs on an empty in-memory
   ledger.
 
@@ -46,5 +56,13 @@ Issue #461. Must-knows in `CLAUDE.md`.
   corruption, and the first is often the more telling one. Three bound the disk a file that keeps breaking can use.
 - **Its own channel, not `security_notices`.** That module's notices never carry a path; this one has to say where the
   copy went.
+- **Set aside even when the file is only unreadable.** An unreadable file may be perfectly healthy (a root-owned
+  copy after a `sudo` run), but leaving it in place was what let the next save write the empty store over it (#506,
+  #517). The rename needs only the folder's permission, so it works on a mode-000 file, and the copy keeps the bytes.
+- **Hold, don't delete, when the rename fails.** Deleting a file nobody could read or move would be the data loss this
+  module exists to prevent; a held path costs that store's saves for one session.
+- **No `#[serde(other)]` catch-alls on the saved-server enums.** `S3ProviderChoice`, `ConnectionMode`, and `AuthOptions`
+  cross IPC as specta types, and a catch-all would both widen every frontend `switch` and write a newer build's entry
+  back without its fields. Dropping the entry and keeping the copy loses nothing.
 - **Not covered**: a `license.json` recovery loses the "key is in the secret store" marker, so the license reads as
   absent until the person enters the key again. The notice says so.

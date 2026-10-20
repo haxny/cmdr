@@ -16533,6 +16533,16 @@ export type StateFile =
   | 'multi_rename_field_history'
   // `usage.json`, the days Cmdr was opened on.
   | 'launch_days'
+  // `s3_known_places.json`: saved S3 accounts and bucket places.
+  | 's3_places'
+  // `known-sftp-servers.json`.
+  | 'sftp_servers'
+  // `webdav_known_servers.json`.
+  | 'webdav_servers'
+  // `known-shares.json`: saved SMB shares and each server's last sign-in.
+  | 'smb_shares'
+  // `manual-servers.json`: SMB servers added by address.
+  | 'smb_servers'
 
 // One state file Cmdr couldn't read and started fresh, as the person hears about it.
 export type StateRecovery = {

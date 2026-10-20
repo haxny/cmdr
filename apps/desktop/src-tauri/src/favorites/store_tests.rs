@@ -269,16 +269,16 @@ fn corrupted_json_quarantines_and_starts_fresh() {
 
     // A corrupt file is "initialized but broken", so it reads as an empty store (Some), not None
     // (which would re-seed the defaults over the user's lost-but-not-first-launch state).
-    let notices = crate::state_recovery::testing::capture_recoveries();
+    let notices = state_recovery::testing::capture_recoveries();
     let store = read_store_from_path(&path).expect("corrupt reads as Some(empty)");
     assert!(store.favorites.is_empty());
-    let kept = crate::state_recovery::testing::kept_copies(&path);
+    let kept = state_recovery::testing::kept_copies(&path);
     assert_eq!(kept.len(), 1, "expected one set-aside copy: {kept:?}");
     assert_eq!(fs::read_to_string(&kept[0]).expect("read the copy"), "{not valid json");
     assert!(!path.exists());
     let recoveries = notices.recoveries();
     assert_eq!(recoveries.len(), 1, "one notice");
-    assert_eq!(recoveries[0].file, crate::state_recovery::StateFile::Favorites);
+    assert_eq!(recoveries[0].file, state_recovery::StateFile::Favorites);
     assert_eq!(recoveries[0].kept_copy.as_deref(), kept[0].to_str());
 }
 
@@ -288,26 +288,60 @@ fn schema_version_mismatch_quarantines_and_starts_fresh() {
     let path = dir.path().join(FAVORITES_FILE_NAME);
     fs::write(&path, r#"{"_schemaVersion": 2, "favorites": []}"#).expect("write");
 
-    let notices = crate::state_recovery::testing::capture_recoveries();
+    let notices = state_recovery::testing::capture_recoveries();
     let store = read_store_from_path(&path).expect("mismatch reads as Some(empty)");
     assert!(store.favorites.is_empty());
-    assert_eq!(crate::state_recovery::testing::kept_copies(&path).len(), 1);
+    assert_eq!(state_recovery::testing::kept_copies(&path).len(), 1);
     assert_eq!(notices.recoveries().len(), 1);
 }
 
+/// A present-but-unreadable file (mode 000, as after a `sudo` run or a restore) must NOT read as
+/// `None`: `None` means "first launch" and would re-seed the four defaults OVER the user's real
+/// list. It reads as an empty store, and it's set aside first, so the next edit's write can't land
+/// over the real list.
 #[test]
-fn present_but_unreadable_reads_as_some_empty_and_never_reseeds() {
-    // A present-but-unreadable file (here simulated by a directory at the favorites path, which
-    // makes `read_to_string` fail with a non-NotFound error) must NOT read as `None`: `None`
-    // means "first launch" and would re-seed the four defaults OVER the user's real list.
+fn an_unreadable_file_reads_as_some_empty_and_survives_the_next_edit() {
+    use std::os::unix::fs::PermissionsExt;
+    // Root reads a mode-000 file anyway (the Linux Docker lane runs as root).
+    // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail.
+    if unsafe { libc::geteuid() } == 0 {
+        return;
+    }
+    let notices = state_recovery::testing::capture_recoveries();
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join(FAVORITES_FILE_NAME);
-    fs::create_dir(&path).expect("create dir where the file would be");
+    let original = store_with(&[("/Users/x/Projects", "Projects"), ("/Users/x/Music", "Music")]);
+    write_store_to_path(&path, &original).expect("write the real list");
+    let original_bytes = fs::read(&path).expect("read it back");
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).expect("make it unreadable");
 
-    let store = read_store_from_path(&path).expect("present-but-unreadable must read as Some, not None");
+    let mut store = read_store_from_path(&path).expect("present-but-unreadable must read as Some, not None");
     assert!(store.favorites.is_empty());
-    // It must NOT have been quarantined or removed: we can't confirm corruption, so leave it be.
-    assert!(path.exists(), "the unreadable path is left intact for a later read");
+    add_to_store(&mut store, "/Users/x/Desktop", None, None);
+    write_store_to_path(&path, &store).expect("the fresh list saves");
+
+    let kept = state_recovery::testing::kept_copies(&path);
+    assert_eq!(kept.len(), 1, "the real list is set aside: {kept:?}");
+    fs::set_permissions(&kept[0], fs::Permissions::from_mode(0o644)).expect("read the copy");
+    assert_eq!(fs::read(&kept[0]).expect("read the copy"), original_bytes);
+    assert_eq!(notices.recoveries().len(), 1, "one notice");
+}
+
+/// A file that doesn't parse is set aside before the next edit writes the one-entry list.
+#[test]
+fn a_corrupt_file_survives_the_next_edit() {
+    let _notices = state_recovery::testing::capture_recoveries();
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join(FAVORITES_FILE_NAME);
+    let truncated = r#"{"_schemaVersion": 1, "favorites": [{"trunc"#;
+    fs::write(&path, truncated).expect("write");
+
+    let mut store = read_store_from_path(&path).expect("corrupt reads as Some(empty)");
+    add_to_store(&mut store, "/Users/x/Desktop", None, None);
+    write_store_to_path(&path, &store).expect("the fresh list saves");
+
+    let kept = state_recovery::testing::kept_copies(&path);
+    assert_eq!(fs::read_to_string(&kept[0]).expect("read the copy"), truncated);
 }
 
 #[test]

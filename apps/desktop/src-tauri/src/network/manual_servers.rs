@@ -6,9 +6,9 @@
 
 use crate::network::server_identity::SmbServer;
 use crate::network::{HostSource, NetworkHost, on_host_found, on_host_lost};
-use log::{debug, info, warn};
+use crate::state_recovery::StateFile;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
@@ -128,7 +128,7 @@ impl ManualServerEntry {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ManualServersStore {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::state_recovery::lenient_entries")]
     servers: Vec<ManualServerEntry>,
 }
 
@@ -413,28 +413,6 @@ pub fn create_network_host(address: &str, port: u16) -> NetworkHost {
 }
 
 // ---------------------------------------------------------------------------
-// Atomic file writes
-// ---------------------------------------------------------------------------
-
-/// Durably writes content to a file using write-to-temp + fsync + rename + parent-dir fsync.
-/// On failure, the original file (if any) remains intact. The fsyncs make the write survive a
-/// power loss, not just process death: `manual-servers.json` holds user-entered SMB servers that
-/// aren't rediscoverable via mDNS, so a torn / zero-length write here loses real config. See
-/// `crate::config::durable_write_json` for the durability rationale.
-fn atomic_write_json(path: &Path, content: &str) -> std::io::Result<()> {
-    let tmp = path.with_extension("json.tmp");
-    crate::config::durable_write_json(path, &tmp, content)
-}
-
-/// Removes a stale `.tmp` file left over from a crash during atomic write.
-fn cleanup_tmp_file(path: &Path) {
-    let tmp = path.with_extension("json.tmp");
-    if tmp.exists() {
-        let _ = fs::remove_file(&tmp);
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Persistence
 // ---------------------------------------------------------------------------
 
@@ -454,30 +432,18 @@ pub fn all<R: Runtime>(app: &AppHandle<R>) -> Vec<ManualServerEntry> {
     read_store(app).servers
 }
 
-/// Reads the store from a path on disk.
+/// Reads the store from a path on disk (`server_list_file::read`): a file that
+/// doesn't read is set aside before anything writes over it, and a server entry
+/// that doesn't read costs that entry only.
 fn read_store_from_path(path: &Path) -> ManualServersStore {
-    cleanup_tmp_file(path);
-
-    match fs::read_to_string(path) {
-        Ok(contents) => serde_json::from_str(&contents).unwrap_or_default(),
-        Err(_) => ManualServersStore::default(),
-    }
+    super::server_list_file::read(path, StateFile::SmbServers)
 }
 
-/// Writes the store to a path on disk.
+/// Writes the store to a path on disk, durably. `manual-servers.json` holds
+/// user-entered SMB servers that aren't rediscoverable via mDNS, so a torn or
+/// zero-length write here loses real config.
 fn write_store_to_path(path: &Path, store: &ManualServersStore) {
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-
-    match serde_json::to_string_pretty(store) {
-        Ok(json) => {
-            if let Err(e) = atomic_write_json(path, &json) {
-                warn!("Couldn't write manual servers store: {}", e);
-            }
-        }
-        Err(e) => warn!("Couldn't serialize manual servers store: {}", e),
-    }
+    super::server_list_file::save(path, "the manual SMB servers", store);
 }
 
 /// Loads the store from disk.

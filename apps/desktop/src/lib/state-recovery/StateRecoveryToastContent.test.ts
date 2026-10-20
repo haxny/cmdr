@@ -90,6 +90,11 @@ describe('every other file', () => {
     'multi_rename_last_settings',
     'multi_rename_field_history',
     'launch_days',
+    's3_places',
+    'sftp_servers',
+    'webdav_servers',
+    'smb_shares',
+    'smb_servers',
   ]
 
   for (const file of others) {

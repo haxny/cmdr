@@ -22,9 +22,10 @@ entries the same; this module owns everything else.
 - **The two locks are never held at once, by construction.** `update` confines the cache guard to its own body and hands
   the disk write an owned snapshot; `load_at` releases the disk guard before taking the cache one. Keep any new
   operation inside `update` and the property holds itself.
-- **A file we can't read is set aside, not migrated.** Parse failure or an unknown `_schemaVersion` hands it to
-  `state_recovery::set_aside` (a timestamped copy, the person told once, keyed by `RecentEntry::STATE_FILE`) and the
-  list starts empty, so a stray edit can't break a dialog forever. When a v2 lands,
+- **A file we can't read is set aside, not migrated.** A read error, a parse failure (non-UTF-8 included), or an
+  unknown `_schemaVersion` goes through `state_recovery::read_state_file` (a timestamped copy, the person told once,
+  keyed by `RecentEntry::STATE_FILE`) and the list starts empty, so a stray edit can't break a dialog forever, and the
+  next add can't write over the old list. When a v2 lands,
   the version check in `persistence::read` becomes a `match`.
 - **The disk write is best-effort.** A failure is logged and the in-memory list stays consistent, so losing the app data
   dir costs persistence and never the session.

@@ -176,6 +176,16 @@ pub enum StateFile {
     MultiRenameFieldHistory,
     /// `usage.json`, the days Cmdr was opened on.
     LaunchDays,
+    /// `s3_known_places.json`: saved S3 accounts and bucket places.
+    S3Places,
+    /// `known-sftp-servers.json`.
+    SftpServers,
+    /// `webdav_known_servers.json`.
+    WebdavServers,
+    /// `known-shares.json`: saved SMB shares and each server's last sign-in.
+    SmbShares,
+    /// `manual-servers.json`: SMB servers added by address.
+    SmbServers,
 }
 
 /// One line of the file: `{"v":1,"at":"<UTC ISO 8601>","event":{"kind":…}}`.

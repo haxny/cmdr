@@ -26,6 +26,7 @@ use serde::{Deserialize, Serialize};
 
 use super::saved_server_fields::{self, Relocation};
 use super::server_list_file;
+use crate::state_recovery::StateFile;
 
 use crate::ignore_poison::IgnorePoison;
 
@@ -229,9 +230,9 @@ pub struct KnownS3PlacesStore {
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredS3PlacesFile {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::state_recovery::lenient_entries")]
     known_s3_places: Vec<StoredS3Place>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::state_recovery::lenient_entries")]
     known_s3_accounts: Vec<KnownS3Account>,
 }
 
@@ -288,10 +289,12 @@ fn known() -> &'static Mutex<KnownS3PlacesStore> {
     KNOWN.get_or_init(|| Mutex::new(KnownS3PlacesStore::default()))
 }
 
-/// Loads the store from the app's data dir. Call once at startup; a missing or
-/// unreadable file is an empty store.
+/// Loads the store from the app's data dir. Call once at startup; a missing file is an
+/// empty store, and one that doesn't read is set aside first (`server_list_file::read`).
 pub fn load_known_s3_places<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    let Some((file, path)) = server_list_file::load::<_, StoredS3PlacesFile>(app, "s3_known_places.json") else {
+    let Some((file, path)) =
+        server_list_file::load::<_, StoredS3PlacesFile>(app, "s3_known_places.json", StateFile::S3Places)
+    else {
         return;
     };
     let (store, migrated) = migrate(file);

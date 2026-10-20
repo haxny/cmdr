@@ -2,6 +2,7 @@
 //! per-share direct-connection switch.
 
 use super::*;
+use std::fs;
 
 /// Tests that mutate the global `KNOWN_SHARES` static must hold this lock
 /// to prevent cross-test interference (Rust runs tests in parallel).
@@ -1058,4 +1059,67 @@ fn a_host_move_carries_a_shares_direct_connection_opt_out() {
         "photos",
         &[]
     ));
+}
+
+// -- a file that doesn't read is never saved over --
+
+const SAVED: &str = r#"{
+  "knownNetworkShares": [
+    {"serverName":"Naspolya","shareName":"naspi","protocol":"smb","lastConnectedAt":"2026-10-01T12:00:00Z",
+     "lastConnectionMode":"guest","lastKnownAuthOptions":"guest_only","username":null,"pinned":true},
+    {"serverName":"Naspolya","shareName":"photos","protocol":"smb","lastConnectedAt":"2026-10-01T12:00:00Z",
+     "lastConnectionMode":"kerberos_from_a_newer_build","lastKnownAuthOptions":"guest_only","username":null}
+  ],
+  "directConnectionOptOuts": [{"serverName":"Naspolya","shareName":"naspi"}],
+  "pendingMoves": ["smb-naspolya-naspi"]
+}"#;
+
+/// The one set-aside copy of `path`, read back whatever its mode.
+fn the_copy(path: &Path) -> Vec<u8> {
+    use std::os::unix::fs::PermissionsExt;
+    let kept = crate::state_recovery::testing::kept_copies(path);
+    assert_eq!(kept.len(), 1, "one copy of {path:?}: {kept:?}");
+    fs::set_permissions(&kept[0], fs::Permissions::from_mode(0o644)).expect("read the copy");
+    fs::read(&kept[0]).expect("read the copy")
+}
+
+/// A store that's there but can't be read (mode 000) is set aside before the next save writes
+/// the empty store over its pins, switches, and pending moves.
+#[test]
+fn an_unreadable_store_survives_the_next_save() {
+    use std::os::unix::fs::PermissionsExt;
+    // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail.
+    if unsafe { libc::geteuid() } == 0 {
+        return;
+    }
+    let _notices = crate::state_recovery::testing::capture_recoveries();
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("known-shares.json");
+    fs::write(&path, SAVED).expect("write");
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).expect("make it unreadable");
+
+    let store = read_store_from_path(&path);
+    assert!(store.known_network_shares.is_empty());
+    write_store_to_path(&path, &store);
+
+    assert_eq!(the_copy(&path), SAVED.as_bytes());
+}
+
+/// A share row from a newer build (a connection mode this one doesn't know) costs that row only:
+/// the other row, the opt-outs, and the pending move read, and the whole file is kept.
+#[test]
+fn one_row_that_doesnt_read_keeps_the_rest_and_a_copy() {
+    let _notices = crate::state_recovery::testing::capture_recoveries();
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("known-shares.json");
+    fs::write(&path, SAVED).expect("write");
+
+    let store = read_store_from_path(&path);
+    write_store_to_path(&path, &store);
+
+    assert_eq!(store.known_network_shares.len(), 1);
+    assert!(store.known_network_shares[0].pinned);
+    assert_eq!(store.direct_connection_opt_outs.len(), 1);
+    assert_eq!(store.pending_moves, vec!["smb-naspolya-naspi".to_string()]);
+    assert_eq!(the_copy(&path), SAVED.as_bytes());
 }

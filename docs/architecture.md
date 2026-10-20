@@ -255,9 +255,10 @@ All under `apps/desktop/src-tauri/src/`.
 - `security_notices/`: the in-app notice for a refused access attempt: a `security_log` subscriber that picks which
   events reach the person and rate-limits them per source (`NoticeGate`), raising the typed `security-notice-raised`
   event. See its `apps/desktop/src-tauri/src/security_notices/CLAUDE.md`
-- `state_recovery/`: a state file Cmdr can't read (a plugin store, a recents list, a database) is set aside as a
-  timestamped copy, recorded in the security log, and queued as a one-time notice; the plugin stores are checked in
-  `setup()` before anything loads them. See its `apps/desktop/src-tauri/src/state_recovery/CLAUDE.md`
+- `state_recovery/`: a state file Cmdr can't read (a plugin store, a recents list, a saved-server list, a database) is
+  set aside as a timestamped copy, recorded in the security log, and queued as a one-time notice, and is never saved
+  over; the plugin stores are checked in `setup()` before anything loads them. See its
+  `apps/desktop/src-tauri/src/state_recovery/CLAUDE.md`
 - `agent/`: The in-app AI agent, whose first user-facing slice is "Ask Cmdr" (a chat rail). Its `agent/llm/` holds the
   provider-agnostic `AgentLlm` seam over the shipped `genai` client, its deterministic fake, and the typed message-part
   model that keeps opaque provider reasoning state lossless. Its `agent/store/proposals/` holds the durable proposal

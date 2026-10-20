@@ -71,6 +71,26 @@
   "@stateRecovery.launchDays.title": {
     "description": "Headline of a notice shown once: Cmdr keeps a local, never-shared list of the days it was opened (it decides when to show a few tips), and that file was damaged, so the count starts from today. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
   },
+  "stateRecovery.s3Places.title": "Cmdr couldn’t read all your saved S3 places, so some may be missing",
+  "@stateRecovery.s3Places.title": {
+    "description": "Headline of a notice shown once: the file holding the person's saved S3 cloud storage accounts and bucket places couldn't be read, either the whole file or only some entries in it (for example ones saved by a newer Cmdr version), so some or all of them are missing from the list now. Passwords and keys are safe; they're stored elsewhere. \"S3\" is a technical name for this kind of cloud storage and stays as is. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.sftpServers.title": "Cmdr couldn’t read all your saved SFTP servers, so some may be missing",
+  "@stateRecovery.sftpServers.title": {
+    "description": "Headline of a notice shown once: the file holding the person's saved SFTP servers couldn't be read, either the whole file or only some entries in it (for example ones saved by a newer Cmdr version), so some or all of them are missing from the list now. Passwords are safe; they're stored elsewhere. \"SFTP\" is a protocol name and stays as is. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.webdavServers.title": "Cmdr couldn’t read all your saved WebDAV servers, so some may be missing",
+  "@stateRecovery.webdavServers.title": {
+    "description": "Headline of a notice shown once: the file holding the person's saved WebDAV servers couldn't be read, either the whole file or only some entries in it (for example ones saved by a newer Cmdr version), so some or all of them are missing from the list now. Passwords are safe; they're stored elsewhere. \"WebDAV\" is a protocol name and stays as is. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.smbShares.title": "Cmdr couldn’t read all your saved SMB shares, so some may be missing",
+  "@stateRecovery.smbShares.title": {
+    "description": "Headline of a notice shown once: the file holding the person's saved SMB network shares (shared folders on other computers or a NAS) and their per-share choices couldn't be read, either the whole file or only some entries in it (for example ones saved by a newer Cmdr version), so some or all of them are missing now. Passwords are safe; they're stored elsewhere. \"SMB\" is a protocol name and stays as is. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.smbServers.title": "Cmdr couldn’t read all the servers you added by address, so some may be missing",
+  "@stateRecovery.smbServers.title": {
+    "description": "Headline of a notice shown once: the file holding the network servers the person added by typing their address (rather than ones Cmdr found on the network by itself) couldn't be read, either the whole file or only some entries in it (for example ones saved by a newer Cmdr version), so some or all of them are missing from the list now. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
   "stateRecovery.keptCopy": "Cmdr kept the old file at {path}.",
   "@stateRecovery.keptCopy": {
     "description": "Line under any of the notices above that a damaged file was set aside rather than deleted, and where. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window.",

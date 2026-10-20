@@ -17,18 +17,20 @@
 //! - The data dir is resolved WITHOUT an `AppHandle` (mirroring `install_id.rs`): `CMDR_DATA_DIR` if
 //!   set, else the OS default for the bundle id. This is load-bearing: `get_favorites()` (the read
 //!   path, in `volumes/mod.rs`) is sync and has no `AppHandle`, so the accessors must stay no-arg.
-//! - Atomic JSON write via the shared temp-then-rename helper (`crate::config::durable_write_json`).
+//! - Read and written through `crate::state_recovery::{read_state_file, write_state_file}`: an atomic
+//!   temp-then-rename write, and never one over a file that is there but did not load.
 //! - `id` is a stable random UUID minted on add, NEVER derived from the path: paths can repeat across
 //!   a rename, and a user can re-add a path they removed, so the id must outlive the path string.
 //! - `add` dedups by normalized path: re-adding an existing path moves it to the end (keeps its id),
 //!   so the user's existing label and position context isn't silently dropped.
-//! - Schema-versioned: a parse error or version mismatch sets the file aside and starts
+//! - Schema-versioned: an unreadable file, a parse error, or a version mismatch sets the file aside and starts
 //!   fresh, so a stray hand-edit can't break the menu forever.
 //! - The disk file is never locked across an `.await`; the in-memory mutex guard is always dropped
 //!   before any `fs` call.
 
 use crate::config;
 use crate::ignore_poison::IgnorePoison;
+use crate::state_recovery;
 use cmdr_fs::volume::app_paths::{path_under, rebase};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -382,65 +384,35 @@ fn cleanup_tmp_file(path: &Path) {
     }
 }
 
-/// Sets a corrupted file aside (`crate::state_recovery`) so the bad snapshot survives and the person
-/// hears that their favorites reset. If the rename fails, drop the file outright: the defaults stay
-/// out either way, since a corrupt file is not a first launch.
-fn quarantine_broken(path: &Path) {
-    if crate::state_recovery::set_aside(path, crate::state_recovery::StateFile::Favorites).is_none() {
-        let _ = fs::remove_file(path);
-    }
-}
-
-/// Reads the store from disk. Returns `None` when the file is absent (the signal to seed). A parse
-/// error or schema mismatch quarantines the file and returns a fresh default store (treated as
-/// already-initialized: a corrupt file is not "first launch").
+/// Reads the store from disk. Returns `None` when the file is absent (the signal to seed). A file
+/// that can't be read or parsed, or carries a schema version this build doesn't know, is set aside
+/// (`crate::state_recovery::read_state_file`) and reads as a fresh default store: present is not
+/// "first launch", so the defaults stay out. When the set-aside can't happen, the file stays and
+/// [`write_store_to_path`] refuses to write over it for the session.
 fn read_store_from_path(path: &Path) -> Option<FavoritesStore> {
     cleanup_tmp_file(path);
-
-    let contents = match fs::read_to_string(path) {
-        Ok(c) => c,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return None,
-        Err(e) => {
-            // The file is PRESENT but unreadable right now (transient I/O error, permission blip).
-            // Returning `None` here would signal "first launch" and re-seed the defaults OVER the
-            // user's real list (data loss). Instead read as an empty store WITHOUT overwriting disk:
-            // `load_or_seed` only writes when the read is `None`, so the unreadable file is left
-            // intact for a later successful read. We don't quarantine, since we couldn't read it to
-            // confirm it's actually corrupt.
-            log::warn!(
-                target: "favorites::store",
-                "Couldn't read favorites at {path:?} ({e}); treating as present (no re-seed) to protect the user's list"
-            );
-            return Some(FavoritesStore::default());
-        }
-    };
-
-    match serde_json::from_str::<FavoritesStore>(&contents) {
-        Ok(store) if store.schema_version == CURRENT_SCHEMA_VERSION => Some(store),
-        Ok(store) => {
-            log::warn!(
-                target: "favorites::store",
-                "Favorites schema mismatch (file: {}, expected: {}); quarantining and starting fresh",
-                store.schema_version, CURRENT_SCHEMA_VERSION
-            );
-            quarantine_broken(path);
-            Some(FavoritesStore::default())
-        }
-        Err(e) => {
-            log::warn!(target: "favorites::store", "Couldn't parse favorites at {path:?}: {e}");
-            quarantine_broken(path);
-            Some(FavoritesStore::default())
-        }
+    let read =
+        state_recovery::read_state_file(
+            path,
+            state_recovery::StateFile::Favorites,
+            |bytes| match serde_json::from_slice::<FavoritesStore>(bytes) {
+                Ok(store) if store.schema_version == CURRENT_SCHEMA_VERSION => Ok(store),
+                Ok(store) => Err(format!(
+                    "schema version {}, expected {CURRENT_SCHEMA_VERSION}",
+                    store.schema_version
+                )),
+                Err(e) => Err(e.to_string()),
+            },
+        );
+    match read {
+        state_recovery::StateRead::Missing => None,
+        read => Some(read.into_value().unwrap_or_default()),
     }
 }
 
-fn write_store_to_path(path: &Path, store: &FavoritesStore) -> std::io::Result<()> {
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
+fn write_store_to_path(path: &Path, store: &FavoritesStore) -> Result<(), state_recovery::StateWriteError> {
     let json = serde_json::to_string_pretty(store).map_err(std::io::Error::other)?;
-    let tmp = path.with_extension("json.tmp");
-    config::durable_write_json(path, &tmp, &json)
+    state_recovery::write_state_file(path, &json)
 }
 
 // ---------------------------------------------------------------------------

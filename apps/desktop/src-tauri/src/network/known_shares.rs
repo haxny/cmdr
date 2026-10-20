@@ -6,8 +6,8 @@
 use crate::ignore_poison::IgnorePoison;
 use crate::network::NetworkHost;
 use crate::network::server_identity::SmbServer;
+use crate::state_recovery::StateFile;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -93,7 +93,7 @@ struct ShareRef {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KnownSharesStore {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::state_recovery::lenient_entries")]
     pub known_network_shares: Vec<KnownNetworkShare>,
     /// The shares the user turned "Use Cmdr's fast direct connection" off for.
     ///
@@ -103,7 +103,7 @@ pub struct KnownSharesStore {
     /// that then shows up in the servers hub. Absence means on, so a store saved
     /// before the setting existed keeps every share on the fast connection. See
     /// [`direct_connection_enabled`].
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::state_recovery::lenient_entries")]
     direct_connection_opt_outs: Vec<ShareRef>,
     /// Saved shares whose server moved to a new address since their last mount, by the
     /// volume id their row still carries (`server_move::smb`).
@@ -113,7 +113,11 @@ pub struct KnownSharesStore {
     /// and tabs keep naming the old id, which now reaches the share at its new address;
     /// the first mount there completes the move ([`remember_share`] answers it). On disk,
     /// so a move survives a restart.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        deserialize_with = "crate::state_recovery::lenient_entries"
+    )]
     pending_moves: Vec<String>,
 }
 
@@ -141,22 +145,6 @@ fn get_known_shares_mutex() -> &'static Mutex<KnownSharesStore> {
     KNOWN_SHARES.get_or_init(|| Mutex::new(KnownSharesStore::default()))
 }
 
-/// Durably writes content to a file using write-to-temp + fsync + rename + parent-dir fsync.
-/// On failure, the original file (if any) remains intact. The fsyncs make the write survive a
-/// power loss, not just process death. See `crate::config::durable_write_json` for the rationale.
-fn atomic_write_json(path: &Path, content: &str) -> std::io::Result<()> {
-    let tmp = path.with_extension("json.tmp");
-    crate::config::durable_write_json(path, &tmp, content)
-}
-
-/// Removes a stale `.tmp` file left over from a crash during atomic write.
-fn cleanup_tmp_file(path: &Path) {
-    let tmp = path.with_extension("json.tmp");
-    if tmp.exists() {
-        let _ = fs::remove_file(&tmp);
-    }
-}
-
 /// Where the store lives on disk, set once by [`load_known_shares`]. Kept here so a
 /// write needs no `AppHandle`: "Connect directly" records its consent from code the
 /// MCP executor also calls, and that holds none. Unset (tests, no data dir) means the
@@ -176,16 +164,19 @@ pub fn load_known_shares<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
         return;
     };
     let _ = STORE_PATH.set(path.clone());
+    *get_known_shares_mutex().lock_ignore_poison() = read_store_from_path(&path);
+}
 
-    cleanup_tmp_file(&path);
+/// Reads the store at `path` (`server_list_file::read`): a file that doesn't read is
+/// set aside before anything writes over it, and a row, opt-out, or pending move that
+/// doesn't read (a downgrade's newer enum value) costs that entry only.
+fn read_store_from_path(path: &Path) -> KnownSharesStore {
+    super::server_list_file::read(path, StateFile::SmbShares)
+}
 
-    let store = if let Ok(contents) = fs::read_to_string(&path) {
-        serde_json::from_str(&contents).unwrap_or_default()
-    } else {
-        KnownSharesStore::default()
-    };
-
-    *get_known_shares_mutex().lock_ignore_poison() = store;
+/// Writes the store to `path`, durably (temp + rename).
+fn write_store_to_path(path: &Path, store: &KnownSharesStore) {
+    super::server_list_file::save(path, "the known SMB shares", store);
 }
 
 /// Saves known shares from memory to disk.
@@ -193,19 +184,8 @@ fn save_known_shares() {
     let Some(path) = STORE_PATH.get() else {
         return;
     };
-
     let store = get_known_shares_mutex().lock_ignore_poison().clone();
-
-    // Ensure parent directory exists
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-
-    if let Ok(json) = serde_json::to_string_pretty(&store)
-        && let Err(e) = atomic_write_json(path, &json)
-    {
-        log::warn!("Couldn't write known shares store: {}", e);
-    }
+    write_store_to_path(path, &store);
 }
 
 /// Creates a unique key for a share.

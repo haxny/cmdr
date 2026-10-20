@@ -6,10 +6,13 @@
 //! Every store that recovers calls [`set_aside`] (or [`report`] when nothing could be kept). That
 //! records one typed `StateFileRecovered` in the security log and queues one [`StateRecovery`]
 //! for the main window, which drains the queue through `take_state_recoveries` at start and on
-//! every [`StateRecoveryQueued`] nudge. The three plugin stores are checked before anything loads
-//! them: [`recover_plugin_stores`]. Design: `DETAILS.md`.
+//! every [`StateRecoveryQueued`] nudge. The plugin stores are checked before anything loads
+//! them: [`recover_plugin_stores`]. Cmdr's own JSON stores read and write through
+//! [`read_state_file`] and [`write_state_file`], which never let a file that didn't load be saved
+//! over. Design: `DETAILS.md`.
 
 mod plugin_stores;
+mod state_file;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -24,6 +27,7 @@ use crate::security_log::{self, SecurityEvent};
 
 pub use crate::security_log::StateFile;
 pub use plugin_stores::recover_plugin_stores;
+pub use state_file::{StateRead, StateWriteError, lenient_entries, read_state_file, write_state_file};
 
 const LOG_TARGET: &str = "state_recovery";
 
@@ -77,6 +81,25 @@ pub fn set_aside(path: &Path, file: StateFile) -> Option<PathBuf> {
     kept
 }
 
+/// Copies `path` to a timestamped sibling the way [`set_aside`] names it, keeps the newest
+/// [`KEPT_COPIES`], and reports the recovery, while the file itself stays. For a file that read
+/// only in part: the parts that read carry on, and the copy keeps the rest. Returns where the copy
+/// went, or `None` when it couldn't be made.
+pub fn keep_copy(path: &Path, file: StateFile) -> Option<PathBuf> {
+    let kept = match copy_aside(path, chrono::Local::now().naive_local()) {
+        Ok(kept) => {
+            log::warn!(target: LOG_TARGET, "Kept a copy of the partly unreadable {file:?} file at {kept:?}");
+            Some(kept)
+        }
+        Err(e) => {
+            log::warn!(target: LOG_TARGET, "Couldn't keep a copy of the partly unreadable {file:?} file at {path:?}: {e}");
+            return None;
+        }
+    };
+    report(file, kept.as_deref());
+    kept
+}
+
 /// Records that `file` started fresh: one security-log event and one queued notice. Use
 /// [`set_aside`] when there's a file to keep; this is for the case where nothing could be kept.
 pub fn report(file: StateFile, kept_copy: Option<&Path>) {
@@ -104,6 +127,23 @@ pub fn take_queued() -> Vec<StateRecovery> {
 
 /// The rename and the pruning behind [`set_aside`], over an injected clock.
 fn move_aside(path: &Path, now: chrono::NaiveDateTime) -> std::io::Result<PathBuf> {
+    let (kept, prefix) = kept_name(path, now)?;
+    fs::rename(path, &kept)?;
+    prune(path, &prefix);
+    Ok(kept)
+}
+
+/// The copy and the pruning behind [`keep_copy`], over an injected clock.
+fn copy_aside(path: &Path, now: chrono::NaiveDateTime) -> std::io::Result<PathBuf> {
+    let (kept, prefix) = kept_name(path, now)?;
+    fs::copy(path, &kept)?;
+    prune(path, &prefix);
+    Ok(kept)
+}
+
+/// The first free `<name>.broken-<stamp>[-n]` beside `path`, plus the prefix every copy of it
+/// shares.
+fn kept_name(path: &Path, now: chrono::NaiveDateTime) -> std::io::Result<(PathBuf, String)> {
     let name = path
         .file_name()
         .ok_or_else(|| std::io::Error::other("a state file path has a file name"))?
@@ -117,9 +157,7 @@ fn move_aside(path: &Path, now: chrono::NaiveDateTime) -> std::io::Result<PathBu
         kept = path.with_file_name(format!("{prefix}{stamp}-{n}"));
         n += 1;
     }
-    fs::rename(path, &kept)?;
-    prune(path, &prefix);
-    Ok(kept)
+    Ok((kept, prefix))
 }
 
 /// Deletes all but the newest [`KEPT_COPIES`] set-aside copies. The stamp sorts by time, and a

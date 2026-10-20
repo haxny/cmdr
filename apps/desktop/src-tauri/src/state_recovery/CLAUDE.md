@@ -11,13 +11,19 @@ the typed record; this module owns the copy and the notice.
   and the test capture (`testing::capture_recoveries`, `testing::kept_copies`).
 - `plugin_stores.rs`: `recover_plugin_stores`, the pre-load check of `settings.json`, `shortcuts.json`,
   `app-status.json`, and `license.json`, plus the fresh `settings.json` with the consent settings off.
+- `state_file.rs`: `read_state_file` / `write_state_file`, the pair Cmdr's own JSON stores read and write through, and
+  `lenient_entries`, the per-entry reader for lists of independent entries.
 - IPC: `../commands/state_recovery.rs`. Frontend: `apps/desktop/src/lib/state-recovery/CLAUDE.md`.
 
 ## Must-knows
 
 - **Every store that starts fresh goes through `set_aside` (or `report`)**, ❌ never a bare rename or delete: that's
   what keeps the copy, the record, and the notice in step. Today: the four plugin stores, `operation-log.db`, `main.db`,
-  favorites, the six recents lists (`RecentEntry::STATE_FILE`), and `usage.json`.
+  favorites, the six recents lists (`RecentEntry::STATE_FILE`), the five saved-server lists, and `usage.json`.
+- **A file that's there but didn't load is never saved over.** A JSON store reads with `read_state_file` and writes
+  with `write_state_file`, ❌ never `fs::read` + `unwrap_or_default` + `durable_write_json`: unreadable (mode 000,
+  `EIO`, non-UTF-8) counts as broken, and when the set-aside fails the path is held and every write refuses
+  (`StateWriteError::NotLoaded`) until a read succeeds.
 - **A single invalid VALUE isn't a recovery.** Only a file that doesn't parse at all (or carries an unknown schema
   version) is; a wrong value inside a good file stays the store's to drop with a log warning.
 - **`recover_plugin_stores` runs in `setup()` after the instance lock and `security_log::init`, before anything loads a

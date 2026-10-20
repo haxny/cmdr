@@ -5,7 +5,7 @@
      * `StateFile`, switched on the file, so the family reads alike. The look is the security
      * notices' (`#lib/security-notices/SecurityNoticeToastContent.svelte`).
      */
-    import type { StateRecovery } from '#lib/ipc/bindings.js'
+    import type { StateFile, StateRecovery } from '#lib/ipc/bindings.js'
     import Button from '#lib/ui/Button.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -23,38 +23,33 @@
 
     const log = getAppLogger('stateRecovery')
 
-    const title = $derived.by(() => {
-        switch (recovery.file) {
-            case 'settings':
-                return tString('stateRecovery.settings.title')
-            case 'shortcuts':
-                return tString('stateRecovery.shortcuts.title')
-            case 'license':
-                return tString('stateRecovery.license.title')
-            case 'app_status':
-                return tString('stateRecovery.appStatus.title')
-            case 'operation_log':
-                return tString('stateRecovery.operationLog.title')
-            case 'chat_history':
-                return tString('stateRecovery.chatHistory.title')
-            case 'favorites':
-                return tString('stateRecovery.favorites.title')
-            case 'go_to_path_history':
-                return tString('stateRecovery.goToPathHistory.title')
-            case 'search_history':
-                return tString('stateRecovery.searchHistory.title')
-            case 'selection_history':
-                return tString('stateRecovery.selectionHistory.title')
-            case 'multi_rename_presets':
-                return tString('stateRecovery.multiRenamePresets.title')
-            case 'multi_rename_last_settings':
-                return tString('stateRecovery.multiRenameLastSettings.title')
-            case 'multi_rename_field_history':
-                return tString('stateRecovery.multiRenameFieldHistory.title')
-            case 'launch_days':
-                return tString('stateRecovery.launchDays.title')
-        }
-    })
+    /**
+     * The headline per file. A `Record` over `StateFile`, so a new file without one is a type
+     * error, and each key stays a literal at its call site (`desktop-message-keys-unused`).
+     */
+    const titles: Record<StateFile, () => string> = {
+        settings: () => tString('stateRecovery.settings.title'),
+        shortcuts: () => tString('stateRecovery.shortcuts.title'),
+        license: () => tString('stateRecovery.license.title'),
+        app_status: () => tString('stateRecovery.appStatus.title'),
+        operation_log: () => tString('stateRecovery.operationLog.title'),
+        chat_history: () => tString('stateRecovery.chatHistory.title'),
+        favorites: () => tString('stateRecovery.favorites.title'),
+        go_to_path_history: () => tString('stateRecovery.goToPathHistory.title'),
+        search_history: () => tString('stateRecovery.searchHistory.title'),
+        selection_history: () => tString('stateRecovery.selectionHistory.title'),
+        multi_rename_presets: () => tString('stateRecovery.multiRenamePresets.title'),
+        multi_rename_last_settings: () => tString('stateRecovery.multiRenameLastSettings.title'),
+        multi_rename_field_history: () => tString('stateRecovery.multiRenameFieldHistory.title'),
+        launch_days: () => tString('stateRecovery.launchDays.title'),
+        s3_places: () => tString('stateRecovery.s3Places.title'),
+        sftp_servers: () => tString('stateRecovery.sftpServers.title'),
+        webdav_servers: () => tString('stateRecovery.webdavServers.title'),
+        smb_shares: () => tString('stateRecovery.smbShares.title'),
+        smb_servers: () => tString('stateRecovery.smbServers.title'),
+    }
+
+    const title = $derived(titles[recovery.file]())
 
     /** What the person may want to do about it, for the two files where that isn't obvious. */
     const body = $derived.by(() => {
