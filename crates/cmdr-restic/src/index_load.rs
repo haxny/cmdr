@@ -258,10 +258,17 @@ async fn run(
     progress: watch::Sender<Option<ListingPhase>>,
 ) -> Result<IndexedRepo, ResticError> {
     let index_dir = spec.root.join(FileType::Index.dirname());
+    // On its own task, so a cancel DETACHES the listing (dropping the handle),
+    // ❌ never drops it mid-transaction: that wedges a phone (MTP).
+    let listing = {
+        let (parent, dir) = (Arc::clone(&spec.parent), index_dir.clone());
+        spec.runtime
+            .spawn(async move { index_files(parent.as_ref(), &dir).await })
+    };
     let files = tokio::select! {
         biased;
         () = cancel.cancelled() => return Err(cancelled(&index_dir)),
-        files = index_files(spec.parent.as_ref(), &index_dir) => files.map_err(ResticError::Volume)?,
+        files = listing => files.map_err(worker_crashed)?.map_err(ResticError::Volume)?,
     };
     let total_bytes: u64 = files.iter().map(|(_, size)| size).sum();
     let tally = Arc::new(Tally {

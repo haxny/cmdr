@@ -56,10 +56,7 @@ impl VolumeManager {
             // browsable a second level down; the overlay never offers it either.
             return None;
         }
-        if !wiring::repos()
-            .confirm_repo(volume_id, parent.as_ref(), repo_root)
-            .await
-        {
+        if wiring::repos().confirm_repo(volume_id, &parent, repo_root).await != Some(true) {
             return None;
         }
         Some(self.register_restic(volume_id, parent, repo_root, path))

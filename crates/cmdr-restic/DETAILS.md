@@ -156,14 +156,18 @@ them, the host never does.
 The host's route is lexical (`restic_route`: the folder holding the FIRST `Browse snapshots` component), so it confirms
 the candidate before routing:
 
-- `confirm_repo(volume_id, parent, root)` answers from the memo, or lists `root` once (bounded by a 5 s deadline) and
-  runs `is_restic_repo`. A yes is remembered for good; a no for 30 s, so a real non-repo folder named `Browse snapshots`
-  doesn't cost a listing per call; a timeout or a failing parent not at all.
+- `confirm_repo(volume_id, parent, root)` answers `Some(true)`, `Some(false)`, or `None` (UNDECIDED: the parent failed
+  or outran the 5 s deadline), from the memo or ONE listing of `root` run through `is_restic_repo`. A yes is remembered
+  for good; a no for 30 s, so a real non-repo folder named `Browse snapshots` doesn't cost a listing per call; an
+  undecided answer for 5 s, so every path below a slow folder doesn't pay the deadline. A read may pass through on
+  `None`; ❗ a write must refuse on it, or it could put a real `Browse snapshots` folder inside a repo. The listing runs
+  on its own task and the deadline only stops the wait: it's detached, ❌ never dropped (an abandoned MTP transaction
+  wedges the phone). The index load's listing of `index/` is detached on a cancel the same way.
 - `overlay_row(volume_id, root)` is the row the host's overlay adds to a pane's listing of a repo it recognized from the
   entries, and it confirms the repo in the memo for free.
 - `serves_confirmed(volume_id, root)` is the memo alone, zero I/O, for a synchronous seam: `Some(true)`, `Some(false)`,
-  or `None` (never asked, or the no went stale).
-- The memo holds 1,024 answers; when full, the "no"s go first.
+  or `None` (never asked, undecided, or the no went stale).
+- The memo holds 1,024 answers; when full, the "no"s and undecided ones go first.
 
 ## The storage adapter (`backend.rs`)
 
@@ -273,7 +277,9 @@ snapshot still routes at the outer boundary). It's a candidate, not a verdict; �
 
 A folder is a restic repo when its listing holds a regular file named `config` and the folders `data`, `index`, `keys`,
 and `snapshots`. `locks` is optional: restic creates it lazily, and a copied repo often drops it. A symlink counts as
-neither: restic never writes one, and its target is unknown from the listing alone. Names match exactly.
+neither: restic never writes one, and its target is unknown from the listing alone. Names match exactly. A listing of
+more than 32 entries (`MAX_REPO_ROOT_ENTRIES`; a repo root holds six) isn't a repo, on its length alone, so a 100k-entry
+folder costs one comparison.
 
 ## Fixtures (`test_fixtures.rs`)
 

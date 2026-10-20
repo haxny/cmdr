@@ -39,6 +39,16 @@ fn extra_entries_dont_disqualify_a_repo() {
     assert!(is_restic_repo(&entries));
 }
 
+/// A repo root holds six entries. A crowded folder that happens to hold the five
+/// names is answered on its length alone, so a 100k-entry listing costs one
+/// comparison, never a scan.
+#[test]
+fn a_crowded_folder_isnt_a_repo() {
+    let mut entries = repo_listing();
+    entries.extend((0..super::MAX_REPO_ROOT_ENTRIES).map(|i| file(&format!("extra{i}"))));
+    assert!(!is_restic_repo(&entries));
+}
+
 #[test]
 fn each_required_entry_is_required() {
     for missing in ["config", "data", "index", "keys", "snapshots"] {

@@ -53,9 +53,13 @@ fn latest(root: &str) -> PathBuf {
 struct ScriptedParent {
     inner: Arc<InMemoryVolume>,
     gate: watch::Receiver<bool>,
+    /// Holds listings of `index/` the same way.
+    list_gate: watch::Receiver<bool>,
     index_read_delay: Duration,
     index_reads: AtomicUsize,
     in_flight: AtomicUsize,
+    index_listings_started: AtomicUsize,
+    index_listings_done: AtomicUsize,
 }
 
 impl ScriptedParent {
@@ -92,7 +96,17 @@ impl Volume for ScriptedParent {
         path: &'a Path,
         on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
-        self.inner.list_directory(path, on_progress)
+        Box::pin(async move {
+            if path.file_name().is_none_or(|name| name != "index") {
+                return self.inner.list_directory(path, on_progress).await;
+            }
+            self.index_listings_started.fetch_add(1, Ordering::SeqCst);
+            let mut gate = self.list_gate.clone();
+            let _ = gate.wait_for(|open| *open).await;
+            let listed = self.inner.list_directory(path, on_progress).await;
+            self.index_listings_done.fetch_add(1, Ordering::SeqCst);
+            listed
+        })
     }
 
     fn get_metadata<'a>(
@@ -138,6 +152,7 @@ impl Volume for ScriptedParent {
 struct Rig {
     parent: Arc<ScriptedParent>,
     gate: watch::Sender<bool>,
+    list_gate: watch::Sender<bool>,
     hub: Arc<ResticRepos>,
     volume: Arc<ResticVolume>,
     index_files: usize,
@@ -148,6 +163,7 @@ struct Rig {
 struct RigOptions {
     tuning: Tuning,
     gate_open: bool,
+    list_gate_open: bool,
     index_read_delay: Duration,
     credentials: Option<Arc<dyn CredentialStore>>,
     unlock: bool,
@@ -159,6 +175,7 @@ impl Default for RigOptions {
         Self {
             tuning: Tuning::default(),
             gate_open: true,
+            list_gate_open: true,
             index_read_delay: Duration::ZERO,
             credentials: None,
             unlock: true,
@@ -186,12 +203,16 @@ impl Rig {
             .filter(|(path, _)| path.starts_with("index"))
             .collect();
         let (gate, gate_rx) = watch::channel(options.gate_open);
+        let (list_gate, list_gate_rx) = watch::channel(options.list_gate_open);
         let parent = Arc::new(ScriptedParent {
             inner,
             gate: gate_rx,
+            list_gate: list_gate_rx,
             index_read_delay: options.index_read_delay,
             index_reads: AtomicUsize::new(0),
             in_flight: AtomicUsize::new(0),
+            index_listings_started: AtomicUsize::new(0),
+            index_listings_done: AtomicUsize::new(0),
         });
         let mut host = VolumeHost::detached();
         if let Some(credentials) = options.credentials {
@@ -202,6 +223,7 @@ impl Rig {
             volume: Arc::new(view_of(&hub, &parent, ROOT)),
             parent,
             gate,
+            list_gate,
             hub,
             index_files: index.len(),
             index_bytes: index.iter().map(|(_, bytes)| bytes.len() as u64).sum(),
@@ -303,6 +325,34 @@ async fn the_last_waiter_leaving_cancels_the_load_and_the_next_listing_starts_fr
         started + rig.index_files,
         "the next listing loaded afresh"
     );
+}
+
+/// ❗ A cancel while the load still lists `index/` detaches that listing, ❌
+/// never drops it: a transaction abandoned mid-flight wedges a phone (MTP).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_cancel_during_the_index_listing_lets_the_listing_finish() {
+    let rig = Rig::new(RigOptions {
+        list_gate_open: false,
+        ..RigOptions::default()
+    })
+    .await;
+    let parent = Arc::clone(&rig.parent);
+    let cancel = CancellationToken::new();
+    let listing = spawn_listing(&rig.volume, latest(ROOT), Some(cancel.clone()));
+    wait_until_async(WITHIN, "the load lists index/", || {
+        parent.index_listings_started.load(Ordering::SeqCst) == 1
+    })
+    .await;
+
+    cancel.cancel();
+    assert!(matches!(listing.await.expect("task"), Err(VolumeError::Cancelled(_))));
+    rig.list_gate.send_replace(true);
+
+    wait_until_async(WITHIN, "the detached listing runs to its end", || {
+        parent.index_listings_done.load(Ordering::SeqCst) == 1
+    })
+    .await;
+    assert_eq!(parent.index_reads(), 0, "a cancelled load reads no index file");
 }
 
 /// One pane cancelling while another still waits keeps the load alive for the

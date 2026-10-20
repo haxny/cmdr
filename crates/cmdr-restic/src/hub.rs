@@ -41,6 +41,10 @@ pub(crate) struct Tuning {
     /// (and isn't remembered): a wedged share would otherwise hang every path
     /// below it.
     pub(crate) confirm_deadline: Duration,
+    /// How long an undecided confirmation is trusted: long enough that every
+    /// path below a slow folder doesn't pay the deadline, short enough that a
+    /// NAS done waking its disks is asked again soon.
+    pub(crate) undecided_for: Duration,
     /// How long an index stays loaded with nothing using it. Getting it back
     /// costs an unlock plus a load (2–4 s on SMB), holding it costs ~0.5 GB.
     pub(crate) index_idle_drop: Duration,
@@ -64,6 +68,7 @@ impl Default for Tuning {
             latest_quiet: Duration::from_secs(30),
             not_a_repo_for: Duration::from_secs(30),
             confirm_deadline: Duration::from_secs(5),
+            undecided_for: Duration::from_secs(5),
             index_idle_drop: Duration::from_secs(5 * 60),
             lease_grace: Duration::from_secs(2),
             max_indexed: 1,
@@ -107,7 +112,13 @@ impl RepoKey {
 #[derive(Debug, Clone, Copy)]
 enum Confirmation {
     Repo,
-    NotARepo { since: Instant },
+    NotARepo {
+        since: Instant,
+    },
+    /// The parent didn't answer in time (or failed): no verdict, held briefly.
+    Undecided {
+        since: Instant,
+    },
 }
 
 /// The hub of every restic repo the app has met: passwords, opened repos,
@@ -144,23 +155,36 @@ impl ResticRepos {
 
     /// Whether `repo_root` on `parent` (registered as `volume_id`) is a restic
     /// repo: the check a host runs before routing a path through the view.
+    /// `Some(true)` a repo, `Some(false)` not one, `None` UNDECIDED: the parent
+    /// didn't answer inside the deadline or failed. A read may pass through on
+    /// `None`; ❗ a write must refuse, or it could put a real `Browse snapshots`
+    /// folder inside someone's repo.
     ///
     /// Answered from the memo when it can. A miss costs ONE listing of
     /// `repo_root`, bounded by a deadline; a yes is remembered for good, a no for
     /// a short while (so a real folder named [`VIRTUAL_ENTRY_NAME`] outside a
-    /// repo doesn't pay a listing per call), and a timeout or a failing parent
-    /// not at all.
-    pub async fn confirm_repo(&self, volume_id: &str, parent: &dyn Volume, repo_root: &Path) -> bool {
+    /// repo doesn't pay a listing per call), and an undecided answer for a few
+    /// seconds (so every path below a slow folder doesn't pay the deadline).
+    ///
+    /// The listing runs on its own task and a deadline only stops the WAIT: it's
+    /// detached, ❌ never dropped, since a transaction abandoned mid-flight wedges
+    /// a phone (MTP).
+    pub async fn confirm_repo(&self, volume_id: &str, parent: &Arc<dyn Volume>, repo_root: &Path) -> Option<bool> {
         let key = key(volume_id, repo_root);
         if let Some(known) = self.remembered(&key) {
             return known;
         }
-        let listing = tokio::time::timeout(self.tuning.confirm_deadline, parent.list_directory(repo_root, None)).await;
-        let answer = match listing {
-            Ok(Ok(entries)) => is_restic_repo(&entries),
-            Ok(Err(VolumeError::NotFound(_) | VolumeError::NotADirectory(_))) => false,
-            // Wedged or failing: no verdict, so nothing to remember.
-            Ok(Err(_)) | Err(_) => return false,
+        let listing = {
+            let (parent, root) = (Arc::clone(parent), repo_root.to_path_buf());
+            self.host
+                .runtime()
+                .spawn(async move { parent.list_directory(&root, None).await })
+        };
+        let answer = match tokio::time::timeout(self.tuning.confirm_deadline, listing).await {
+            Ok(Ok(Ok(entries))) => Some(is_restic_repo(&entries)),
+            Ok(Ok(Err(VolumeError::NotFound(_) | VolumeError::NotADirectory(_)))) => Some(false),
+            // Wedged, failing, or crashed: no verdict.
+            Ok(Ok(Err(_)) | Err(_)) | Err(_) => None,
         };
         self.remember(key, answer);
         answer
@@ -168,10 +192,10 @@ impl ResticRepos {
 
     /// What the memo knows about `repo_root` on `volume_id`, with zero I/O:
     /// `Some(true)` confirmed, `Some(false)` recently found not to be a repo,
-    /// `None` never asked (or the "no" went stale). For a synchronous seam that
-    /// can't afford a listing.
+    /// `None` never asked, undecided, or the "no" went stale. For a synchronous
+    /// seam that can't afford a listing.
     pub fn serves_confirmed(&self, volume_id: &str, repo_root: &Path) -> Option<bool> {
-        self.remembered(&key(volume_id, repo_root))
+        self.remembered(&key(volume_id, repo_root)).flatten()
     }
 
     /// The [`VIRTUAL_ENTRY_NAME`] row a pane's listing of `repo_root` gains, once
@@ -179,7 +203,7 @@ impl ResticRepos {
     /// (`is_restic_repo`). Also confirms `repo_root` in the memo, for free, so
     /// entering the row costs no confirmation listing.
     pub fn overlay_row(&self, volume_id: &str, repo_root: &Path) -> FileEntry {
-        self.remember(key(volume_id, repo_root), true);
+        self.remember(key(volume_id, repo_root), Some(true));
         let path = repo_root.join(VIRTUAL_ENTRY_NAME);
         FileEntry {
             extended_metadata_loaded: true,
@@ -193,24 +217,27 @@ impl ResticRepos {
         }
     }
 
-    fn remembered(&self, key: &RepoKey) -> Option<bool> {
+    /// The memo's answer, `None` when it has none (never asked, or stale);
+    /// `Some(None)` is a remembered "undecided".
+    fn remembered(&self, key: &RepoKey) -> Option<Option<bool>> {
         match lock(&self.confirmations).get(key)? {
-            Confirmation::Repo => Some(true),
-            Confirmation::NotARepo { since } if since.elapsed() < self.tuning.not_a_repo_for => Some(false),
-            Confirmation::NotARepo { .. } => None,
+            Confirmation::Repo => Some(Some(true)),
+            Confirmation::NotARepo { since } if since.elapsed() < self.tuning.not_a_repo_for => Some(Some(false)),
+            Confirmation::Undecided { since } if since.elapsed() < self.tuning.undecided_for => Some(None),
+            Confirmation::NotARepo { .. } | Confirmation::Undecided { .. } => None,
         }
     }
 
-    fn remember(&self, key: RepoKey, is_repo: bool) {
+    fn remember(&self, key: RepoKey, is_repo: Option<bool>) {
         let mut memo = lock(&self.confirmations);
         if memo.len() >= MAX_CONFIRMATIONS && !memo.contains_key(&key) {
-            // Stale and recent "no"s go first; a confirmed repo is worth keeping.
+            // "No"s and undecided answers go first; a confirmed repo is worth keeping.
             memo.retain(|_, known| matches!(known, Confirmation::Repo));
         }
-        let known = if is_repo {
-            Confirmation::Repo
-        } else {
-            Confirmation::NotARepo { since: Instant::now() }
+        let known = match is_repo {
+            Some(true) => Confirmation::Repo,
+            Some(false) => Confirmation::NotARepo { since: Instant::now() },
+            None => Confirmation::Undecided { since: Instant::now() },
         };
         memo.insert(key, known);
     }
