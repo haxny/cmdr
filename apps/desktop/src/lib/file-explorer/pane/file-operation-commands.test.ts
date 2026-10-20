@@ -240,6 +240,12 @@ describe('refuseMultiRename', () => {
     expect(alert?.[0]).toBe('Read-only git portal')
   })
 
+  it("refuses inside a restic repo's snapshot view with the backup alert", () => {
+    const { refused, alert } = refusal('/left/backup/Browse snapshots/latest/Users')
+    expect(refused).toBe(true)
+    expect(alert?.[0]).toBe('Read-only backup')
+  })
+
   it('refuses on a read-only volume with the rename alert', () => {
     const { refused, alert } = refusal('/left/photos', true)
     expect(refused).toBe(true)

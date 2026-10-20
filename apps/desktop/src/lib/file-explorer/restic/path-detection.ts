@@ -17,20 +17,23 @@ export const RESTIC_VIEW_FOLDER_NAME = 'Browse snapshots'
 
 const SEPARATOR = '/'
 
-/** Index of the first view component in `path`'s components, or -1. */
-function viewComponentIndex(components: string[]): number {
+/**
+ * Index of the first view component in a path's `/`-split components, or -1,
+ * so a caller can order the view against other routed boundaries.
+ */
+export function resticViewComponentIndex(components: readonly string[]): number {
   return components.indexOf(RESTIC_VIEW_FOLDER_NAME)
 }
 
 /** Whether `path` runs through a restic repo's snapshot view. */
 export function isVirtualResticPath(path: string): boolean {
-  return viewComponentIndex(path.split(SEPARATOR)) !== -1
+  return resticViewComponentIndex(path.split(SEPARATOR)) !== -1
 }
 
 /** The repo folder `path` browses into, or `null` when it's outside every view. */
 export function resticRepoRoot(path: string): string | null {
   const components = path.split(SEPARATOR)
-  const index = viewComponentIndex(components)
+  const index = resticViewComponentIndex(components)
   if (index === -1) return null
   return components.slice(0, index).join(SEPARATOR) || SEPARATOR
 }

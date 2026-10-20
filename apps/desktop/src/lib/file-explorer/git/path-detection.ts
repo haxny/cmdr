@@ -27,3 +27,18 @@ const VIRTUAL_GIT_PATH_REGEX = new RegExp(`/\\.git/(?:${VIRTUAL_GIT_CATEGORIES.j
 export function isVirtualGitPath(path: string): boolean {
   return VIRTUAL_GIT_PATH_REGEX.test(path)
 }
+
+const CATEGORY_NAMES: ReadonlySet<string> = new Set(VIRTUAL_GIT_CATEGORIES)
+
+/**
+ * Index of the `.git` component that opens a virtual category in a path's
+ * `/`-split components, or -1. The same test as `isVirtualGitPath`, per
+ * component, so a caller can order the portal against other routed boundaries
+ * (the leftmost one wins, as in the backend's `resolve`).
+ */
+export function virtualGitBoundaryIndex(components: readonly string[]): number {
+  for (let i = 1; i + 1 < components.length; i++) {
+    if (components[i] === '.git' && CATEGORY_NAMES.has(components[i + 1])) return i
+  }
+  return -1
+}

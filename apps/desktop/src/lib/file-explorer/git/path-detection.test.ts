@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isVirtualGitPath } from './path-detection'
+import { isVirtualGitPath, virtualGitBoundaryIndex } from './path-detection'
 
 describe('isVirtualGitPath', () => {
   it('treats the `.git` directory itself as real', () => {
@@ -57,5 +57,25 @@ describe('isVirtualGitPath', () => {
     // Exact category match required: `.git/branches-of-foo` is not virtual.
     expect(isVirtualGitPath('/Users/me/repo/.git/branches-of-foo')).toBe(false)
     expect(isVirtualGitPath('/Users/me/repo/.git/raw_logs')).toBe(false)
+  })
+})
+
+describe('virtualGitBoundaryIndex', () => {
+  const at = (path: string) => virtualGitBoundaryIndex(path.split('/'))
+
+  it('is the `.git` component that opens a category', () => {
+    expect(at('/repo/.git/branches/main')).toBe(2)
+    expect(at('/repo/.git/tags')).toBe(2)
+  })
+
+  it('takes the first one when portals nest', () => {
+    expect(at('/a/.git/commits/x/b/.git/branches')).toBe(2)
+  })
+
+  it('agrees with isVirtualGitPath on real `.git` paths', () => {
+    for (const path of ['/repo/.git', '/repo/.git/HEAD', '/repo/.git/branches-of-foo', '/Users/me/foo']) {
+      expect(at(path), path).toBe(-1)
+      expect(isVirtualGitPath(path), path).toBe(false)
+    }
   })
 })

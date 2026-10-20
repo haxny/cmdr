@@ -1,5 +1,7 @@
+import type { VolumeKind } from './volume-capabilities'
+
 /**
- * Pure helper for `FilePane.svelte`'s `hasParent` derivation.
+ * Pure helpers for `FilePane.svelte`'s `hasParent` derivation.
  *
  * The snapshot rule comes in as the `hasParentRow` capability
  * (`VolumeCapabilities.hasParentRow`, `false` for the search-results kind), NOT
@@ -43,4 +45,23 @@ export function computeHasParent(input: HasParentInput): boolean {
   if (input.currentPath === '/') return false
   if (input.currentPath === input.effectiveVolumeRoot) return false
   return true
+}
+
+/**
+ * The root `..` stops at, for `computeHasParent`.
+ *
+ * Prefer the listing event's root (accurate for a phone's storage), falling back
+ * to the drive's mount before one arrives. A ROUTED pane is the exception: the
+ * backend reports the container as the listing's root (the `.zip`, a repo's
+ * `Browse snapshots` folder, a `.git`), but the pane sits on the PARENT drive (the
+ * tab keeps its id), and the container's top folder has a parent. So the drive's
+ * mount is the root there, and `..` walks back out of the container.
+ */
+export function effectiveVolumeRootFor(
+  kind: VolumeKind,
+  volumePath: string,
+  volumeRootFromEvent: string | undefined,
+): string {
+  const routed = kind === 'archive' || kind === 'git-portal' || kind === 'restic'
+  return routed ? volumePath : (volumeRootFromEvent ?? volumePath)
 }

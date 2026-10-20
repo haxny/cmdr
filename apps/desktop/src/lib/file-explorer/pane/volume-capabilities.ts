@@ -8,8 +8,8 @@
  * (`capabilities`, straight from Rust's `Volume::capabilities()`). This module
  * doesn't re-derive those; it reads them. What stays here is the per-KIND
  * structure Rust has no volume for: the two virtual kinds (`network`,
- * `search-results`) have no `VolumeInfo` at all, the two ROUTED kinds (`archive`,
- * `git-portal`) are kind-from-PATH on top of the parent drive's volume, and every
+ * `search-results`) have no `VolumeInfo` at all, the three ROUTED kinds (`archive`,
+ * `git-portal`, `restic`) are kind-from-PATH on top of the parent drive's volume, and every
  * real volume needs a default for the window before its backend registers.
  *
  * ❌ Don't publish the backend's own identity (which Rust struct serves a
@@ -29,7 +29,7 @@
  *   the volume store, so callers that hold only a `volumeId` (F-bar, dispatch)
  *   don't replicate the find-in-store dance, and so the backend's published
  *   capabilities get folded in. `capabilitiesForPane(volumeId, path)` sits on
- *   top and adds the two routed kinds, which is where the git-portal toggle and
+ *   top and adds the three routed kinds, which is where the git-portal toggle and
  *   the archive-suffix table are read.
  *
  * ## Per-KIND vs per-VOLUME
@@ -60,7 +60,8 @@
 import type { LocationCategory, VolumeBackendCapabilities, VolumeInfo } from '#lib/file-explorer/types.js'
 import { volumeKindFor } from './volume-tint.svelte'
 import { getVolumes } from '#lib/stores/volume-store.svelte.js'
-import { isVirtualGitPath } from '../git/path-detection'
+import { isVirtualGitPath, virtualGitBoundaryIndex } from '../git/path-detection'
+import { isVirtualResticPath, resticViewComponentIndex } from '../restic/path-detection'
 import { getShowVirtualGitPortal } from '#lib/settings/reactive-settings.svelte.js'
 import { isPlainFilesystemPath } from '#lib/path/canonical.js'
 import { hasSupportedArchiveExtension, isWritableArchiveName, pathInsideArchive } from './archive-paths'
@@ -68,7 +69,7 @@ import { hasSupportedArchiveExtension, isWritableArchiveName, pathInsideArchive 
 /**
  * The closed set of volume kinds. The discriminant — every capability lookup
  * goes kind → record. No `'other'` member: the two virtual kinds plus the six
- * real kinds plus the two routed ones, nothing else.
+ * real kinds plus the three routed ones, nothing else.
  *
  * ❗ **Nothing switches exhaustively over this union.** Every consumer is a
  * positive-list comparison (`kind === 'mtp' || kind === 'adb'`,
@@ -79,13 +80,14 @@ import { hasSupportedArchiveExtension, isWritableArchiveName, pathInsideArchive 
  * volume defaults to `'local'` (see `volumeKindOf`), so the kind → table lookup
  * is total.
  *
- * `archive` and `git-portal` are KIND-FROM-PATH, not kind-from-id: a pane whose
- * PATH crosses a supported archive (`pathCrossesArchiveBoundary`) or one of the six
- * virtual `.git` categories (`isVirtualGitPath`) takes that kind regardless of
+ * `archive`, `git-portal`, and `restic` are KIND-FROM-PATH, not kind-from-id: a
+ * pane whose PATH crosses a supported archive (`pathCrossesArchiveBoundary`), one
+ * of the six virtual `.git` categories (`isVirtualGitPath`), or a restic repo's
+ * `Browse snapshots` view (`isVirtualResticPath`) takes that kind regardless of
  * its `volumeId`, which stays the parent drive (the tab keeps ONE id). This union
- * is DELIBERATELY WIDER than the tint union in `volume-tint.svelte.ts`: both
- * routed panes show the PARENT drive's tint (they live on that drive), so the
- * two are capability kinds only, never tint kinds.
+ * is DELIBERATELY WIDER than the tint union in `volume-tint.svelte.ts`: every
+ * routed pane shows the PARENT drive's tint (it lives on that drive), so the
+ * three are capability kinds only, never tint kinds.
  */
 export type VolumeKind =
   | 'local' // real filesystem volume (root, attached, cloud_drive, main_volume)
@@ -99,6 +101,7 @@ export type VolumeKind =
   | 'search-results' // the snapshot virtual volume (search-results:// namespace, flat result set)
   | 'archive' // a pane inside a supported archive (kind-from-path; zip is writable, see the row)
   | 'git-portal' // a pane inside one of the virtual `.git` category trees (kind-from-path, read-only)
+  | 'restic' // a pane inside a restic repo's `Browse snapshots` view (kind-from-path, read-only)
 
 /**
  * What a pane on a given volume can do. A real typed interface (NOT a
@@ -368,6 +371,23 @@ const CAPABILITY_TABLE: Readonly<Record<VolumeKind, VolumeCapabilities>> = Objec
     canShareLinks: false,
     renamesCanCopy: false,
   }),
+  restic: Object.freeze({
+    kind: 'restic',
+    // A pane at or below a restic repo's `Browse snapshots` folder. The
+    // `git-portal` row, for the same reasons: `ResticVolume` lists snapshots
+    // and their trees like folders, takes no writes, and copying OUT is the
+    // restore. `pollsForDeletedFolder: false` because the view has no inode, so
+    // the Mac's stat would call it gone and evict the user back to the repo.
+    hasBackendListing: true,
+    canWrite: false,
+    canBeSource: true,
+    hasParentRow: true,
+    syncsToMcp: true,
+    canBeIndexed: false,
+    pollsForDeletedFolder: false,
+    canShareLinks: false,
+    renamesCanCopy: false,
+  }),
 })
 
 /**
@@ -411,8 +431,8 @@ export function capabilitiesForKind(kind: VolumeKind): VolumeCapabilities {
  * reading Rust takes with `Volume::paths_are_os_visible()`), and so does
  * `search-results` — that's the one row where this parts company with
  * `canOpenTerminalIn`, which asks about the pane's own FOLDER and gets `false`
- * from a snapshot that has none. `mtp` / `adb` stream from a device, `archive`
- * and `git-portal` rows are synthesized from a container, and `network` lists
+ * from a snapshot that has none. `mtp` / `adb` stream from a device, `archive`,
+ * `git-portal`, and `restic` rows are synthesized from a container, and `network` lists
  * hosts rather than files.
  *
  * ❌ Never a test on the path string: an archive-inner path looks exactly like a
@@ -432,8 +452,8 @@ export function paneRowsAreOsVisible(kind: VolumeKind): boolean {
  *
  * - `search-results` is a per-session snapshot id: dead the moment the app
  *   restarts, and the one kind that can't point at a folder at all.
- * - `archive` and `git-portal` are views synthesized from a container, not
- *   directories. The `.git` portal's paths exist only while its setting is on.
+ * - `archive`, `git-portal`, and `restic` are views synthesized from a container,
+ *   not directories. The `.git` portal's paths exist only while its setting is on.
  * - `network` lists hosts rather than files.
  *
  * ❗ This is the AFFORDANCE half only: it decides whether the favorites menu's
@@ -461,6 +481,7 @@ export function kindCanBeFavorited(kind: VolumeKind): boolean {
     case 'search-results':
     case 'archive':
     case 'git-portal':
+    case 'restic':
       return false
   }
 }
@@ -543,11 +564,14 @@ export function capabilitiesForInfo(info: VolumeInfo): VolumeCapabilities {
  *    wrong tool here: it uses the WIDE archive check, which would call the `.zip`
  *    file itself unshareable, and sharing a freshly-made archive is the point.
  * 3. The row's path again, for the virtual `.git` portal, and only while the
- *    portal is switched ON (with it off the same path is whatever is on disk).
+ *    portal is switched ON (with it off the same path is whatever is on disk),
+ *    and for a restic repo's snapshot view (the `Browse snapshots` row itself
+ *    included: it has no inode).
  */
 export function rowIsOsVisible(volumeId: string, rowPath: string): boolean {
   if (!paneRowsAreOsVisible(capabilitiesFor(volumeId).kind)) return false
   if (pathInsideArchive(rowPath)) return false
+  if (isVirtualResticPath(rowPath)) return false
   return !rowIsServedByGitPortal(rowPath)
 }
 
@@ -600,12 +624,12 @@ export function paneFolderIsPolledForDeletion(volumeId: string, path: string): b
  * archive pane — whose `volumeId` is the WRITABLE parent drive — is gated by the
  * ARCHIVE row (zip mutation), not the parent drive's row.
  *
- * ❌ Neither routed branch folds in the parent volume's published capabilities:
+ * ❌ No routed branch folds in the parent volume's published capabilities:
  * those answer for the drive, and the pane is inside something ON it. Zip is
  * writable (the managed archive-edit flow); tar and 7z are browse + extract only,
  * so a path inside a non-zip archive gets `READ_ONLY_ARCHIVE`. Which format is
- * decided by the FIRST archive boundary segment (leftmost wins, matching the
- * backend), so a nested `foo.tar/bar.zip/…` is read-only (the outer tar governs).
+ * decided by the FIRST archive boundary segment, so a nested `foo.tar/bar.zip/…`
+ * is read-only (the outer tar governs).
  *
  * The second routed kind is the virtual `.git` portal. `isVirtualGitPath` is the
  * same LEXICAL test the backend routes on (`.git/<category>/…` for the six
@@ -614,15 +638,34 @@ export function paneFolderIsPolledForDeletion(volumeId: string, path: string): b
  * files under `.git/` (`config`, `HEAD`, `refs/heads/main`) are not portal paths
  * and keep the parent volume's full row: they stay editable, renamable, and
  * deletable, which is a constraint the backend defends too.
+ *
+ * The third is a restic repo's snapshot view: the first `Browse snapshots`
+ * component, the backend's `restic_route` rule (`../restic/path-detection.ts`).
+ * The repo folder and its real files keep the drive's row.
+ *
+ * The three nest both ways (a zip backed up in a snapshot, a repo inside a git
+ * snapshot), so the LEFTMOST boundary decides, as in the backend's `resolve`.
+ * The backend also confirms each boundary and this can't, so a real folder
+ * named `photos.zip` or `Browse snapshots` reads as routed here: the accepted
+ * lexical edge.
  */
 export function capabilitiesForPane(volumeId: string, path: string | undefined): VolumeCapabilities {
   if (path === undefined) return capabilitiesFor(volumeId)
-  const boundarySegment = path.split('/').find(hasSupportedArchiveExtension)
-  if (boundarySegment !== undefined) {
-    return isWritableArchiveName(boundarySegment) ? CAPABILITY_TABLE.archive : READ_ONLY_ARCHIVE
+  return routedCapabilities(path.split('/')) ?? capabilitiesFor(volumeId)
+}
+
+/** The row of the leftmost routed boundary in a pane path's components, or `null` when none crosses one. */
+function routedCapabilities(components: readonly string[]): VolumeCapabilities | null {
+  const archiveAt = components.findIndex(hasSupportedArchiveExtension)
+  const gitAt = getShowVirtualGitPortal() ? virtualGitBoundaryIndex(components) : -1
+  const resticAt = resticViewComponentIndex(components)
+  const found = [archiveAt, gitAt, resticAt].filter((at) => at !== -1)
+  if (found.length === 0) return null
+  const first = Math.min(...found)
+  if (first === archiveAt) {
+    return isWritableArchiveName(components[archiveAt]) ? CAPABILITY_TABLE.archive : READ_ONLY_ARCHIVE
   }
-  if (getShowVirtualGitPortal() && isVirtualGitPath(path)) return CAPABILITY_TABLE['git-portal']
-  return capabilitiesFor(volumeId)
+  return first === gitAt ? CAPABILITY_TABLE['git-portal'] : CAPABILITY_TABLE.restic
 }
 
 /**

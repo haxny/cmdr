@@ -89,6 +89,36 @@ describe('resolveTerminalFolder', () => {
     expect(folder).toBe('/')
   })
 
+  it("opens the repo folder when the pane is inside a restic repo's snapshot view", () => {
+    // Nothing under `Browse snapshots` is on disk; the repo folder is the nearest place.
+    const folder = resolveTerminalFolder(
+      pane({
+        panePath: '/Volumes/naspi/backups/m3/Browse snapshots/latest/Users',
+        cursorEntry: {
+          name: 'me',
+          path: '/Volumes/naspi/backups/m3/Browse snapshots/latest/Users/me',
+          isDirectory: true,
+        },
+      }),
+    )
+    expect(folder).toBe('/Volumes/naspi/backups/m3')
+  })
+
+  it('opens the repo folder itself when the cursor sits on its `Browse snapshots` row', () => {
+    const folder = resolveTerminalFolder(
+      pane({
+        panePath: '/Users/dave/backup',
+        cursorEntry: { name: 'Browse snapshots', path: '/Users/dave/backup/Browse snapshots', isDirectory: true },
+      }),
+    )
+    expect(folder).toBe('/Users/dave/backup')
+  })
+
+  it('takes the outermost container when an archive and a snapshot view nest', () => {
+    expect(resolveTerminalFolder(pane({ panePath: '/r/Browse snapshots/latest/a.zip/x' }))).toBe('/r')
+    expect(resolveTerminalFolder(pane({ panePath: '/d/b.zip/r/Browse snapshots/latest' }))).toBe('/d')
+  })
+
   it('refuses a pane whose volume hands out no OS-visible paths', () => {
     expect(resolveTerminalFolder(pane({ volumeKind: 'mtp', panePath: 'mtp://phone/DCIM' }))).toBeNull()
     expect(resolveTerminalFolder(pane({ volumeKind: 'adb', panePath: 'adb://phone/sdcard' }))).toBeNull()

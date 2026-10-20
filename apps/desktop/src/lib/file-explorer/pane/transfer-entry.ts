@@ -106,6 +106,16 @@ export function checkTransferDestinationGuard(
       },
     }
   }
+  // Same for a restic repo's snapshot view: a backup takes no writes.
+  if (destCaps.kind === 'restic') {
+    return {
+      ok: false,
+      alert: {
+        title: tString('fileExplorer.readOnly.resticTitle'),
+        message: tString('fileExplorer.readOnly.resticMessage'),
+      },
+    }
+  }
 
   const destVolume = getDestinationVolumeInfo(destVolumeId, volumes)
   if (destVolume?.mountIsReadOnly) {

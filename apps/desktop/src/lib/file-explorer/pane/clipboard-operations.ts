@@ -204,15 +204,16 @@ export function createClipboardOperations(access: PaneAccess, dialogs: DialogSta
 
   /**
    * The copy-out hint for a ROUTED pane (kind-from-path), or `null` when the pane
-   * isn't one. The system clipboard can't carry a routed path — neither an
-   * archive-inner entry nor a virtual `.git` snapshot entry is an OS-resolvable
-   * file — so ⌘C/⌘X are refused and the user is pointed at F5/F6 copy-out. Same
+   * isn't one. The system clipboard can't carry a routed path — an archive-inner
+   * entry, a virtual `.git` snapshot entry, and a file in a restic backup are none
+   * of them OS-resolvable files — so ⌘C/⌘X are refused and the user is pointed at F5/F6 copy-out. Same
    * shape as the scheme-path refusal, but a different reason and hint per kind.
    */
   function routedCopyOutHint(volumeId: string, path: string): MessageKey | null {
     const kind = capabilitiesForPane(volumeId, path).kind
     if (kind === 'archive') return 'fileExplorer.archive.useTransferToCopyOut'
     if (kind === 'git-portal') return 'fileExplorer.git.useTransferToCopyOut'
+    if (kind === 'restic') return 'fileExplorer.restic.useTransferToCopyOut'
     return null
   }
 

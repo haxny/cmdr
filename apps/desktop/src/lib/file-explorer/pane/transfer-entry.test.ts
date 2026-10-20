@@ -131,6 +131,18 @@ describe('checkTransferDestinationGuard', () => {
     expect(result.alert.title).toBe('Read-only git portal')
   })
 
+  it("blocks a restic repo's snapshot view as a destination with the read-only-backup alert", () => {
+    const result = checkTransferDestinationGuard('root', [ROOT], '/Users/me/backup/Browse snapshots/latest/Users')
+    expect(result.ok).toBe(false)
+    if (result.ok || !result.alert) throw new Error('expected a blocking alert')
+    expect(result.alert.title).toBe('Read-only backup')
+  })
+
+  it("allows the restic repo's own folder as a destination", () => {
+    // The repo's real files stay ordinary files; only the view is read-only.
+    expect(checkTransferDestinationGuard('root', [ROOT], '/Users/me/backup').ok).toBe(true)
+  })
+
   it('allows a REAL folder under `.git` as a destination', () => {
     // `.git/` stays writable outside the six virtual categories: pasting into
     // `.git/refs/heads` is an ordinary local write.

@@ -112,7 +112,7 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
 
     const volumeInfo = getDestinationVolumeInfo(volId, access.getVolumes())
 
-    // The two ROUTED kinds refuse up front rather than letting the user type a
+    // The three ROUTED kinds refuse up front rather than letting the user type a
     // name and hit the backend's typed rejection. Kind-from-path: the pane's
     // `volumeId` is the writable parent drive, so the PATH decides, and the
     // routed branches of `capabilitiesForPane` ignore fsType/category, so passing
@@ -120,7 +120,8 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
     // - A read-only archive (tar / 7z) is browse + extract only. A writable zip
     //   has `canWrite` on and falls through to the managed archive-edit flow.
     // - A git-portal pane is a snapshot of history with no directory behind it,
-    //   so it's read-only whatever the drive under it says.
+    //   so it's read-only whatever the drive under it says. A restic pane is a
+    //   backup's snapshot, read-only for the same reason.
     const paneCaps = capabilitiesForPane(volId, access.getPanePath(pane))
     if (paneCaps.kind === 'archive' && !paneCaps.canWrite) {
       return {
@@ -132,6 +133,12 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
       return {
         title: tString('fileExplorer.readOnly.gitPortalTitle'),
         message: tString('fileExplorer.readOnly.gitPortalMessage'),
+      }
+    }
+    if (paneCaps.kind === 'restic') {
+      return {
+        title: tString('fileExplorer.readOnly.resticTitle'),
+        message: tString('fileExplorer.readOnly.resticMessage'),
       }
     }
 

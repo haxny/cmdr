@@ -428,6 +428,17 @@ describe('copyToClipboard', () => {
     expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
+  it("refuses copy inside a restic repo's snapshot view and points at F5", async () => {
+    // A backed-up file lives in the repo's packs, with no path the OS clipboard
+    // can carry. Moving out of a backup is refused, so the hint names F5 only.
+    const access = buildAccess({ volumeId: 'root', path: '/x/backup/Browse snapshots/latest/Users' })
+
+    await createClipboardOperations(access, buildDialogs()).copyToClipboard()
+
+    expect(addToastSpy).toHaveBeenCalledWith('To copy files out of a backup, use F5.', { level: 'info' })
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
+  })
+
   it('copies normally from a REAL folder under `.git`', async () => {
     // `.git/refs/heads` is an ordinary local directory, so ⌘C is not refused.
     getSelectionSnapshotSpy.mockResolvedValue({ paths: ['/x/repo/.git/refs/heads/main'], fileCount: 1, folderCount: 0 })

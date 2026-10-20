@@ -208,6 +208,21 @@ describe('capabilitiesForKind — the frozen per-kind defaults', () => {
       canShareLinks: false,
       renamesCanCopy: false,
     },
+    restic: {
+      kind: 'restic',
+      hasBackendListing: true,
+      // A backup: `ResticVolume` takes no writes, so nothing here is writable.
+      canWrite: false,
+      // ...but restoring is the point, so copying OUT works.
+      canBeSource: true,
+      hasParentRow: true,
+      syncsToMcp: true,
+      canBeIndexed: false,
+      // The view has no inode, so a poll would call it gone and evict the user.
+      pollsForDeletedFolder: false,
+      canShareLinks: false,
+      renamesCanCopy: false,
+    },
   }
 
   for (const kind of Object.keys(expected) as VolumeKind[]) {
@@ -392,6 +407,12 @@ describe('paneFolderIsPolledForDeletion — which panes cover the FSEvents blind
       name: 'the virtual `.git` portal',
       volume: vol({ id: 'root', fsType: 'apfs' }),
       path: '/Users/me/repo/.git/branches/main',
+      polled: false,
+    },
+    {
+      name: "a restic repo's snapshot view",
+      volume: vol({ id: 'root', fsType: 'apfs' }),
+      path: '/Users/me/backup/Browse snapshots/latest/Users',
       polled: false,
     },
   ]
@@ -780,6 +801,43 @@ describe('capabilitiesForPane — kind-from-path resolution', () => {
     }
   })
 
+  it("returns the read-only restic row at and below a repo's snapshot view", () => {
+    volumes.list = [vol({ id: 'root', fsType: 'apfs', category: 'main_volume' })]
+    const repo = '/Volumes/naspi/backups/m3'
+    for (const path of [
+      `${repo}/Browse snapshots`,
+      `${repo}/Browse snapshots/latest`,
+      `${repo}/Browse snapshots/2026-10-12 21.00.03 (a1b2c3d4)/Users/me`,
+    ]) {
+      const caps = capabilitiesForPane('root', path)
+      expect(caps.kind, path).toBe('restic')
+      expect(caps.canWrite, path).toBe(false)
+      expect(caps.canBeSource, path).toBe(true)
+    }
+  })
+
+  it("keeps the repo folder and its real files on the parent volume's full row", () => {
+    // The repo's own files stay ordinary files: editable, deletable, indexable.
+    volumes.list = [vol({ id: 'root', fsType: 'apfs', category: 'main_volume' })]
+    for (const path of ['/r', '/r/config', '/r/snapshots', '/r/data/00', '/r/Browse snapshots.txt']) {
+      const caps = capabilitiesForPane('root', path)
+      expect(caps.kind, path).toBe('local')
+      expect(caps.canWrite, path).toBe(true)
+    }
+  })
+
+  it('takes the leftmost boundary across archives, the git portal, and restic', () => {
+    // The backend routes on the leftmost confirmed boundary, so the pane's kind
+    // follows the outermost container: a zip or a `.git` backed up inside a
+    // snapshot is bytes in the backup, and a repo inside a zip or a git snapshot
+    // is that container's.
+    volumes.list = [vol({ id: 'root', fsType: 'apfs', category: 'main_volume' })]
+    expect(capabilitiesForPane('root', '/r/Browse snapshots/latest/photos.zip/a').kind).toBe('restic')
+    expect(capabilitiesForPane('root', '/r/Browse snapshots/latest/proj/.git/branches/main').kind).toBe('restic')
+    expect(capabilitiesForPane('root', '/x/backups.zip/r/Browse snapshots/latest').kind).toBe('archive')
+    expect(capabilitiesForPane('root', '/repo/.git/branches/main/r/Browse snapshots/latest').kind).toBe('git-portal')
+  })
+
   it('a nested zip inside a read-only tar stays read-only (the outer format governs)', () => {
     volumes.list = [vol({ id: 'root', fsType: 'apfs', category: 'main_volume' })]
     // Leftmost archive component wins: `foo.tar` is the boundary, `bar.zip` is a
@@ -801,13 +859,23 @@ describe('paneRowsAreOsVisible — what the share sheet needs', () => {
   })
 
   it('says no for every kind whose rows have no file behind them', () => {
-    for (const kind of ['mtp', 'adb', 'network', 'archive', 'git-portal'] as const) {
+    for (const kind of ['mtp', 'adb', 'network', 'archive', 'git-portal', 'restic'] as const) {
       expect(paneRowsAreOsVisible(kind), kind).toBe(false)
     }
   })
 
   it('answers every kind in the union, so a new kind can`t be silently shareable', () => {
-    const kinds: VolumeKind[] = ['local', 'smb', 'mtp', 'adb', 'network', 'search-results', 'archive', 'git-portal']
+    const kinds: VolumeKind[] = [
+      'local',
+      'smb',
+      'mtp',
+      'adb',
+      'network',
+      'search-results',
+      'archive',
+      'git-portal',
+      'restic',
+    ]
     for (const kind of kinds) {
       expect(typeof paneRowsAreOsVisible(kind), kind).toBe('boolean')
     }
@@ -848,6 +916,13 @@ describe('rowIsOsVisible — the per-ROW share gate', () => {
     gitPortal.on = true
   })
 
+  it("says no for a row inside a restic repo's snapshot view", () => {
+    // The row is restored from the backup's packs; no file sits at that path.
+    volumes.list = [vol({ id: 'disk1', category: 'main_volume' })]
+    expect(rowIsOsVisible('disk1', '/r/Browse snapshots/latest/Users/me/notes.txt')).toBe(false)
+    expect(rowIsOsVisible('disk1', '/r/Browse snapshots')).toBe(false)
+  })
+
   it('says no on a phone, whatever the row looks like', () => {
     volumes.list = [vol({ id: 'mtp-1:1', category: 'mobile_device' })]
     expect(rowIsOsVisible('mtp-1:1', '/DCIM/IMG_0001.jpg')).toBe(false)
@@ -863,8 +938,8 @@ describe('kindCanBeFavorited — where a favorite may point', () => {
     }
   })
 
-  it('says no for the two virtual kinds and the two routed ones', () => {
-    for (const kind of ['network', 'search-results', 'archive', 'git-portal'] as const) {
+  it('says no for the two virtual kinds and the three routed ones', () => {
+    for (const kind of ['network', 'search-results', 'archive', 'git-portal', 'restic'] as const) {
       expect(kindCanBeFavorited(kind), kind).toBe(false)
     }
   })
@@ -882,6 +957,7 @@ describe('kindCanBeFavorited — where a favorite may point', () => {
       'search-results',
       'archive',
       'git-portal',
+      'restic',
     ]
     for (const kind of kinds) {
       expect(typeof kindCanBeFavorited(kind), kind).toBe('boolean')
@@ -927,6 +1003,12 @@ describe('paneFolderCanBeFavorited — the pane-level add gate', () => {
     } finally {
       gitPortal.on = true
     }
+  })
+
+  it("says no inside a restic repo's snapshot view", () => {
+    volumes.list = [vol({ id: 'disk1', category: 'main_volume' })]
+    expect(paneFolderCanBeFavorited('disk1', '/r/Browse snapshots/latest/Users')).toBe(false)
+    expect(paneFolderCanBeFavorited('disk1', '/r')).toBe(true)
   })
 
   it('says no on the search-results snapshot and on the servers hub', () => {

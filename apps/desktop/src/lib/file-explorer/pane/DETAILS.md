@@ -464,9 +464,10 @@ volume-id string. The record has two halves, and which half answers is the whole
 - **`capabilitiesFor(volumeId)`** is the store-reading entry point: it resolves the `VolumeInfo` once, classifies from
   it, and folds in whatever the backend published. It returns the frozen row by reference when backend and default
   already agree (every ordinary volume), so the hot path stays allocation-free.
-- **`capabilitiesForPane(volumeId, path)`** is the layer every write guard uses: it resolves the two ROUTED kinds from
-  the path first (archive by suffix, git portal by `isVirtualGitPath` gated on the live `showVirtualGitPortal` toggle),
-  and otherwise defers to `capabilitiesFor`. ❌ Neither routed branch folds in the parent drive's published
+- **`capabilitiesForPane(volumeId, path)`** is the layer every write guard uses: it resolves the three ROUTED kinds from
+  the path first (archive by suffix, git portal by `isVirtualGitPath` gated on the live `showVirtualGitPortal` toggle,
+  restic by the first `Browse snapshots` component), taking the LEFTMOST boundary when they nest, as the backend's
+  `resolve` does, and otherwise defers to `capabilitiesFor`. ❌ No routed branch folds in the parent drive's published
   capabilities: those answer for the drive, and the pane is inside something ON it.
 - **`deleted-dir-poll.ts` drops an answer about a folder the pane has since left**: a share that mounted back elsewhere
   moved the pane mid-poll, and the old path's "missing" walked it off the share.
@@ -515,13 +516,14 @@ There's no Search-specific capabilities shim — `lib/search/capabilities.ts` ke
   the button, while dispatch blocks (with its toast) only on the `search-results` kind and leaves the routed kinds to
   `readOnlyRefusal`'s kind-worded alert, which is the last line for a shortcut bound outside the bar.
 - **Clipboard** (`clipboard-operations.ts`): the snapshot-clip path gate off `kind === 'search-results'`; the routed
-  copy-out refusals off `routedCopyOutHint`, which maps `kind === 'archive'` / `'git-portal'` to their own "use F5/F6"
-  toast (a routed path isn't OS-resolvable, so the system clipboard can't carry it); the scheme-path copy/cut/paste
-  refusals off `caps.kind` being one of `mtp` / `adb` / `sftp` / `webdav`, via `schemePathClipboardFamily`. Those four
-  all hand out a path (`mtp://`, `adb://`, `sftp://`, `webdav://`) no other app can open. ❌ Don't generalize that gate
-  into a "no system clipboard" capability: `network` + `search-results` lack one too, and a device-worded toast on a
-  reachable network paste would be a new, mis-worded toast. Its MTP half is byte-equivalent, on the live clipboard-time
-  pane id set, to the old `startsWith('mtp-')` gate, pinned by the equivalence test in `clipboard-operations.test.ts`.
+  copy-out refusals off `routedCopyOutHint`, which maps `kind === 'archive'` / `'git-portal'` / `'restic'` to their own
+  "use F5" toast (a routed path isn't OS-resolvable, so the system clipboard can't carry it); the scheme-path
+  copy/cut/paste refusals off `caps.kind` being one of `mtp` / `adb` / `sftp` / `webdav`, via
+  `schemePathClipboardFamily`. Those four all hand out a path (`mtp://`, `adb://`, `sftp://`, `webdav://`) no other app
+  can open. ❌ Don't generalize that gate into a "no system clipboard" capability: `network` + `search-results` lack one
+  too, and a device-worded toast on a reachable network paste would be a new, mis-worded toast. Its MTP half is
+  byte-equivalent, on the live clipboard-time pane id set, to the old `startsWith('mtp-')` gate, pinned by the
+  equivalence test in `clipboard-operations.test.ts`.
 
   **The gate answers a FAMILY, not a boolean, and the family picks the NOUN**: `device` for `mtp` + `adb`, `server` for
   `sftp` + `webdav`. One wording for all four is what ERR-HGGU3 reported — an SFTP user read "MTP devices" and took it
@@ -1850,6 +1852,14 @@ is derived from the PATH while all I/O routing happens in `VolumeManager::resolv
 
 Backend routing, the overlay that decorates the `.git/` root listing, and the repo cache: `crates/cmdr-git/DETAILS.md`
 and `apps/desktop/src-tauri/src/file_system/git/DETAILS.md`.
+
+## A restic repo's snapshot view (kind-from-path)
+
+The third routed kind, built like the portal: one `volumeId` (the drive holding the repo), restic-ness from the PATH
+(`../restic/path-detection.ts`), every I/O routed by `resolve`. The `restic` row is the `git-portal` row: read-only,
+copy-out as the restore, no deleted-folder poll. Two differences: there's no toggle, and `..` at the view's top must
+walk back to the repo folder, so `has-parent.ts::effectiveVolumeRootFor` gives every routed kind the drive's mount as
+its root (the listing reports the view folder). Wording, the row's icon, and index progress: `../restic/DETAILS.md`.
 
 ## Enter-behavior policy (archives and bundles)
 

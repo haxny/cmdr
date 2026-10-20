@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isVirtualResticPath, resticRepoRoot } from './path-detection'
+import { isVirtualResticPath, resticRepoRoot, resticViewComponentIndex } from './path-detection'
 
 const REPO = '/Volumes/naspi/backups/m3-restic'
 
@@ -26,6 +26,17 @@ describe('isVirtualResticPath', () => {
     expect(isVirtualResticPath('/Users/me/foo')).toBe(false)
     expect(isVirtualResticPath('/')).toBe(false)
     expect(isVirtualResticPath('')).toBe(false)
+  })
+})
+
+describe('resticViewComponentIndex', () => {
+  it('is the first view component', () => {
+    expect(resticViewComponentIndex('/r/Browse snapshots/latest'.split('/'))).toBe(2)
+    expect(resticViewComponentIndex('/r/Browse snapshots/latest/b/Browse snapshots'.split('/'))).toBe(2)
+  })
+
+  it('is -1 outside every view', () => {
+    expect(resticViewComponentIndex('/r/Browse snapshots.txt'.split('/'))).toBe(-1)
   })
 })
 

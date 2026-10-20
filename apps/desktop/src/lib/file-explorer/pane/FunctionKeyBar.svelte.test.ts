@@ -100,6 +100,18 @@ describe('FunctionKeyBar capability disablement', () => {
     expect(f4Edit.disabled).toBe(false)
   })
 
+  it("a restic repo's snapshot view disables F2 / F7, keeping copy-out", () => {
+    const [f2Rename, f3View, , f5Copy, , f7NewFolder] = mountOn(
+      'root',
+      '/Users/david/backup/Browse snapshots/latest/Users',
+    )
+
+    expect(f7NewFolder.disabled).toBe(true)
+    expect(f2Rename.disabled).toBe(true)
+    expect(f5Copy.disabled).toBe(false)
+    expect(f3View.disabled).toBe(false)
+  })
+
   it('a read-only archive (tar) disables F2 / F7, keeping copy-out', () => {
     const [f2Rename, , , f5Copy, , f7NewFolder] = mountOn('root', '/Users/david/backup.tar/etc')
 

@@ -95,7 +95,7 @@
     import { getPaneTintBg, getPaneTintName } from './volume-tint.svelte'
     import { createCursorNavKeys } from './cursor-nav-keys'
     import { createSearchPaneKeys } from './search-pane-keys'
-    import { computeHasParent } from './has-parent'
+    import { computeHasParent, effectiveVolumeRootFor } from './has-parent'
     import { firstSelectedIndex } from './first-selected-index'
     import { sameKindIndices, sameKindTargetFor } from './select-same-kind'
     import { cursorRowAnchor } from './context-menu-anchor'
@@ -1486,13 +1486,9 @@
         debouncedSyncMcp.call()
     }
 
-    // Check if current directory has a parent (not at filesystem root AND not at volume root)
-    // Prefer volumeRoot from the listing event (accurate for MTP), fall back to prop (for initial state).
-    // Inside an archive the backend emits the `.zip` path as the listing's volume root, but the FE's
-    // volume is the PARENT drive (the tab keeps its id) — so at the archive root `/foo.zip` there IS a
-    // parent (the zip's containing dir). Use the parent mount (`volumePath`), so `..` shows and
-    // navigateToParent bubbles out of the archive instead of stopping at a false "volume root".
-    const effectiveVolumeRoot = $derived(caps.kind === 'archive' ? volumePath : (volumeRootFromEvent ?? volumePath))
+    // Check if current directory has a parent (not at filesystem root AND not at volume root).
+    // Which root that is, routed panes included: `has-parent.ts::effectiveVolumeRootFor`.
+    const effectiveVolumeRoot = $derived(effectiveVolumeRootFor(caps.kind, volumePath, volumeRootFromEvent))
     // Search-results panes have NO `..` row: the snapshot is a flat result set, not a directory.
     // Without this gate, the path comparison was true (search-results://sr-N never matches a real
     // volume root), causing `hasParent` to be `true`, which made `selectAll` skip index 0 (P6).

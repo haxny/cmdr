@@ -4,8 +4,8 @@ Dual-pane file explorer with keyboard-driven navigation, file selection, sorting
 
 ## Module map
 
-- `selection/`, `navigation/`, `rename/`, `operations/`, `views/`, `tabs/`, `git/`, `network/`, `quick-look/`: the
-  feature subdirectories (each has its own colocated docs).
+- `selection/`, `navigation/`, `rename/`, `operations/`, `views/`, `tabs/`, `git/`, `restic/`, `network/`,
+  `quick-look/`: the feature subdirectories (each has its own colocated docs).
 - `pane/`: `DualPaneExplorer` + `FilePane` + dialog manager + per-pane state. Owns type-to-jump, live disk space, the
   `navigate()` transaction, volume capabilities, and the error-display pipeline (see `pane/CLAUDE.md`).
 - Sorting, the command palette, and the "Open with" copy toasts (`open-with-copy-bridge.ts`) have no own directory;

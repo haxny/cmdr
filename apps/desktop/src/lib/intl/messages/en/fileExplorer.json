@@ -1225,6 +1225,18 @@
   "@fileExplorer.readOnly.gitPortalMessage": {
     "description": "Alert body when the user tries to modify something inside the virtual `.git` portal. Explains that the folders there are a read-only view of git history rather than folders on disk, and that reading out of them works. \"branches\", \"tags\", \"commits\", and \"git\" are git terms; use standard git terminology."
   },
+  "fileExplorer.readOnly.resticTitle": "Read-only backup",
+  "@fileExplorer.readOnly.resticTitle": {
+    "description": "Alert dialog title shown when the user tries a write action (rename, create, delete, paste) inside a restic backup. Cmdr shows a backup repository’s snapshots as read-only folders under a “Browse snapshots” folder, each holding the files as they were when that backup ran. Use your language’s everyday word for a backup."
+  },
+  "fileExplorer.readOnly.resticMessage": "Snapshots hold your files as they were when each backup ran, so you can browse and copy from them, but not change them.",
+  "@fileExplorer.readOnly.resticMessage": {
+    "description": "Alert body under fileExplorer.readOnly.resticTitle, when the user tries to change something inside a restic backup’s snapshots. Explains that the folders there are saved past versions rather than folders on disk, and that copying files out of them works. A “snapshot” is one backup run, as restic calls it; use your language’s usual backup-software term."
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "To copy files out of a backup, use F5.",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "description": "Info toast when the user presses the system-clipboard copy or cut shortcut (Cmd+C / Cmd+X) inside a restic backup, where Cmdr shows a backup repository’s snapshots as read-only folders. Those files live packed inside the backup and have no path the system clipboard can carry, so it points the user at the F5 (copy) transfer key instead. Moving out of a backup isn’t possible, so only F5 is named. F5 is a keyboard key name; keep it as-is. The sibling of fileExplorer.git.useTransferToCopyOut."
+  },
   "fileExplorer.archive.useTransferToCopyOut": "To copy files out of an archive, use F5 to copy or F6 to move.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "description": "Info toast when the user presses the system-clipboard copy or cut shortcut (Cmd+C / Cmd+X) inside an archive. The system clipboard can’t carry archive-inner paths, so it points them at the F5 (copy) and F6 (move) transfer keys instead. F5 and F6 are keyboard key names; keep them as-is."

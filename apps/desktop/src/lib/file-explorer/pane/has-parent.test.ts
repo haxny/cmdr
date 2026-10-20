@@ -5,7 +5,7 @@
  * guard, ⌘A in a snapshot pane silently skipped the first row.
  */
 import { describe, it, expect } from 'vitest'
-import { computeHasParent } from './has-parent'
+import { computeHasParent, effectiveVolumeRootFor } from './has-parent'
 import { createSelectionState } from './selection-state.svelte'
 
 describe('computeHasParent (R3 T1)', () => {
@@ -88,5 +88,33 @@ describe('selectAll integration with computeHasParent (R3 T1)', () => {
     expect(hasParent).toBe(true)
     sel.selectAll(hasParent, 5)
     expect(sel.getSelectedIndices()).toEqual([1, 2, 3, 4])
+  })
+})
+
+describe('effectiveVolumeRootFor', () => {
+  it("uses the listing's own root on an ordinary volume, so a phone's storage root has no `..`", () => {
+    expect(effectiveVolumeRootFor('mtp', '/', 'mtp://phone/65537')).toBe('mtp://phone/65537')
+    expect(effectiveVolumeRootFor('local', '/', undefined)).toBe('/')
+  })
+
+  it("uses the parent drive's mount inside a routed container, so `..` walks back out of it", () => {
+    // The listing reports the container as its root (`/x/foo.zip`, `/r/Browse snapshots`),
+    // but the pane sits on the parent drive, and the container's top folder has a parent.
+    expect(effectiveVolumeRootFor('archive', '/', '/x/foo.zip')).toBe('/')
+    expect(effectiveVolumeRootFor('restic', '/Volumes/naspi', '/Volumes/naspi/r/Browse snapshots')).toBe(
+      '/Volumes/naspi',
+    )
+    expect(effectiveVolumeRootFor('git-portal', '/', '/repo/.git')).toBe('/')
+  })
+
+  it("shows `..` at the top of a restic repo's snapshot view", () => {
+    const root = '/r/Browse snapshots'
+    expect(
+      computeHasParent({
+        hasParentRow: true,
+        currentPath: root,
+        effectiveVolumeRoot: effectiveVolumeRootFor('restic', '/', root),
+      }),
+    ).toBe(true)
   })
 })
