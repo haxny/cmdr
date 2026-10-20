@@ -521,6 +521,7 @@ async fn the_keys_offered_stay_inside_a_summed_scrypt_cost() {
     let ceiling_keys = keys.iter().filter(|(key, _)| *key != default_key).count();
     assert!(
         ceiling_keys as u64 * (1 << 23) <= super::MAX_TOTAL_SCRYPT_COST,
+        // allowed-pluralize-noun: a test's failure message, read by a developer only
         "{ceiling_keys} keys at the per-key ceiling offered"
     );
     assert!(ceiling_keys >= 1, "a tolerable key is still offered");
