@@ -11,6 +11,10 @@
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
   },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Overwrite and bin old folder",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
+  },
   "fileExplorer.navigation.groupFavorites": "Favourites",
   "@fileExplorer.navigation.groupFavorites": {
     "sourceHash": "7a1f2a8"

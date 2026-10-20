@@ -376,6 +376,7 @@ describe('the rulings the catalogs are supposed to encode', () => {
       // "bin" survives only as the verb ("Counting items to bin...", "and bin old file", "copy, move, and bin").
       expect(lowercased.map(([k]) => k).sort(), tag).toEqual([
         'fileExplorer.renameConflict.overwriteTrash',
+        'fileExplorer.renameConflict.overwriteTrashFolder',
         'fileOperations.transferProgress.scanTitleTrash',
         'settings.fileOperations.skipConfirmation.label',
       ])
