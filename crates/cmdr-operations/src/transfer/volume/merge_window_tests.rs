@@ -28,13 +28,17 @@ use super::*;
 use crate::event_sinks::CollectorEventSink;
 use crate::testing::TestOperations;
 
+use crate::outage_slot::OutagePolicy;
 use crate::types::{
     ConflictResolution, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
     WriteErrorEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::ConnectionState;
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_fs::volume::WriteMode;
 use cmdr_fs::volume::{StreamLength, StreamWriteProgress, StreamWritten};
+use std::sync::atomic::{AtomicBool, AtomicU64};
 
 /// How long a leaf lingers inside `write_from_stream` waiting for siblings to
 /// join it. Long enough that a real window fills, short enough that a serial walk
@@ -617,4 +621,184 @@ async fn a_failing_leaf_names_itself_and_its_landed_siblings_stay_recorded() {
         0,
         "the walk must drain its in-flight leaves before reporting the failure"
     );
+}
+
+// ============================================================================
+// The walker keeps its leaves moving through every wait of its own
+// ============================================================================
+
+/// A share whose session drops once, at the first write, and whose reconnect is
+/// single-flight the way SMB's is (`cmdr-smb`'s `reconnect_lock`): the caller
+/// that gets there first holds the lock while it dials, and every other caller
+/// waits for it.
+struct SingleFlightShare {
+    inner: Arc<InMemoryVolume>,
+    dropped: AtomicBool,
+    down: AtomicBool,
+    generation: AtomicU64,
+    reconnect_lock: tokio::sync::Mutex<()>,
+}
+
+impl SingleFlightShare {
+    fn new() -> Arc<Self> {
+        Arc::new(Self {
+            inner: Arc::new(InMemoryVolume::new("Share").with_space_info(10_000_000, 10_000_000)),
+            dropped: AtomicBool::new(false),
+            down: AtomicBool::new(false),
+            generation: AtomicU64::new(0),
+            reconnect_lock: tokio::sync::Mutex::new(()),
+        })
+    }
+
+    fn reachable(&self) -> Result<(), VolumeError> {
+        if self.down.load(Ordering::SeqCst) {
+            return Err(VolumeError::DeviceDisconnected("the share is gone".into()));
+        }
+        Ok(())
+    }
+}
+
+impl Volume for SingleFlightShare {
+    forward_volume_methods!(
+        inner => name, root, lane_key, list_directory, exists, is_directory, create_file, create_directory,
+        create_directory_all, delete, rename, get_space_info, supports_streaming, supports_export,
+        create_directory_errors_on_existing_dir, scan_for_copy, scan_for_copy_batch, open_read_stream,
+        supports_unknown_length_writes, write_is_single_shot,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn operations_are_local(&self) -> bool {
+        false
+    }
+
+    fn max_concurrent_ops(&self) -> usize {
+        4
+    }
+
+    fn connection_state(&self) -> Option<ConnectionState> {
+        Some(if self.down.load(Ordering::SeqCst) {
+            ConnectionState::Disconnected
+        } else {
+            ConnectionState::Direct
+        })
+    }
+
+    fn connection_generation(&self) -> Option<u64> {
+        Some(self.generation.load(Ordering::SeqCst))
+    }
+
+    /// Holds the lock across the dial, which takes a moment: whoever got the
+    /// lock has to be POLLED again to finish it and let the next caller in.
+    fn attempt_reconnect<'a>(&'a self) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            let _single_flight = self.reconnect_lock.lock().await;
+            if !self.down.load(Ordering::SeqCst) {
+                return Ok(());
+            }
+            // allowed-test-sleep: the dial's round trip, an await the lock holder has to be polled through.
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            self.generation.fetch_add(1, Ordering::SeqCst);
+            self.down.store(false, Ordering::SeqCst);
+            Ok(())
+        })
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.reachable()?;
+            self.inner.get_metadata(path).await
+        })
+    }
+
+    fn write_from_stream<'a>(
+        &'a self,
+        dest: &'a Path,
+        mode: WriteMode,
+        length: StreamLength,
+        stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
+        on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            if !self.dropped.swap(true, Ordering::SeqCst) {
+                self.down.store(true, Ordering::SeqCst);
+            }
+            self.reachable()?;
+            self.inner
+                .write_from_stream(dest, mode, length, stream, on_progress)
+                .await
+        })
+    }
+}
+
+/// Dial again quickly: what's under test is who gets to finish the dial.
+const OUTAGE_CADENCE: &[Duration] = &[Duration::from_millis(10)];
+
+/// A leaf that took the share's single-flight reconnect is the walker's own
+/// future, so it only finishes the dial when the walker polls it. A walker that
+/// waited out the same outage on an Overwrite clash's probe WITHOUT polling its
+/// leaves waited on itself: its attempt queued behind the leaf's lock until the
+/// outage budget ran out (found by the live soak on the `flaky` share, where
+/// the copy sat still long after the share was back).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_walker_waiting_out_an_outage_keeps_its_leaves_moving() {
+    let engine = TestOperations::new();
+    let source = folder_of(3).await;
+    let share = SingleFlightShare::new();
+    share.inner.create_directory(Path::new("/out")).await.unwrap();
+    share.inner.create_directory(Path::new("/out/album")).await.unwrap();
+    // The clash whose Overwrite probe meets the dropped share.
+    share
+        .inner
+        .create_file(Path::new("/out/album/f-02.bin"), b"the original")
+        .await
+        .unwrap();
+    let dest_volume: Arc<dyn Volume> = Arc::clone(&share) as Arc<dyn Volume>;
+
+    // Long enough that a starved walker shows as a hang, not as a give-up.
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_outage_policy(OutagePolicy {
+                budget: Duration::from_secs(60),
+                cadence: OUTAGE_CADENCE,
+                poll_every: Duration::from_millis(5),
+                attempt_timeout: Duration::from_secs(30),
+            }),
+    );
+    let sources = [PathBuf::from("/album")];
+    let config = overwrite_config();
+    let copy = copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        "merge-window-walker-outage",
+        &state,
+        source,
+        &sources,
+        Arc::clone(&dest_volume),
+        Path::new("/out"),
+        &config,
+    );
+    let result = tokio::time::timeout(Duration::from_secs(5), copy)
+        .await
+        .expect("the copy finishes once the share is back; a walker that stops polling its leaves waits on itself");
+    assert!(result.is_ok(), "the copy must succeed, got {result:?}");
+
+    assert!(share.dropped.load(Ordering::SeqCst), "the share dropped under the copy");
+    assert!(
+        share.generation.load(Ordering::SeqCst) > 0,
+        "and came back by a reconnect"
+    );
+    for index in 0..3 {
+        let landed = format!("/out/album/f-{index:02}.bin");
+        assert_eq!(
+            share.inner.get_metadata(Path::new(&landed)).await.unwrap().size,
+            Some(4_096),
+            "{landed} must land, the clash replaced"
+        );
+    }
 }

@@ -48,10 +48,11 @@ Copy and move across backends (Local, MTP, SMB, archive). File map: `DETAILS.md`
   `min()`). The concurrent driver SPAWNS its tasks (ERR-8MEX6), watches `stop_work` ON ITS AWAIT, and DRAINS on a
   failure as on a cancel, ❌ never aborts first. EVERY driver sets its `DriverPhase`.
 - **ONE `FileWindow` per operation** (`merge_ctx.rs::MergeCtx`), taken by every merge leaf and top-level FILE task
-  (width 1 keeps MTP serial). ❌ Never per level or per source. A walker ❌ never holds a permit while it recurses
-  (deadlock at width 1) and ❌ never returns before draining its leaves.
-- **A failure carries its path AND side** (`transfer_error.rs::PathedVolumeError`), set where the item is known. Source
-  streams go through `source_reads::watch` (side and length), ❌ never bare. § "Naming the item that failed".
+  (width 1 keeps MTP serial), ❌ never per level or source. A walker ❌ never recurses holding a permit, awaits without
+  polling its leaves (`LeafPool::drive`: one may hold the share's reconnect), or returns undrained.
+- **A failure carries its path AND side** (`transfer_error.rs::PathedVolumeError`): `at_source` / `at_destination` by
+  which volume's call failed, ❌ never above the frame that knows the item. Source streams go through
+  `source_reads::watch` (side and length), ❌ never bare. § "Naming the item that failed".
 - **Two test traps**: a `*_tests.rs` here is a `#[path]` CHILD (`super::` one level shallower), and a `FaultyVolume`
   cell must **assert `fault_fired(op)`**.
 

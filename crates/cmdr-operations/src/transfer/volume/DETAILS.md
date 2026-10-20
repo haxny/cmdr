@@ -580,6 +580,18 @@ destinations and streams nothing, so there are no bytes to overlap. It builds th
 `merge: None` (the archive scratch pull, and tests that never merge) has no `MergeCtx` to carry a window, so it keeps a
 strictly serial walk too.
 
+**The walker keeps its leaves moving through every await of its own.** The leaves are futures only their walker polls,
+so an await of the walker's that left them unpolled could wait on something a leaf holds. It did: a leaf took the
+share's single-flight reconnect (SMB's `reconnect_lock`) and needed polling again to finish the dial, while the walker
+waited out the same outage on an Overwrite clash's probe and queued behind that lock, so neither moved until the outage
+budget ran out. So every walker await goes through `LeafPool::drive` (the level's prepare, the per-entry pause park, the
+landing-name probe, the conflict resolver) or `LeafPool::reserve`, which keep folding in leaves while they wait; a
+recursion passes the pool down. Same rule as the concurrent driver's `prepare_while_draining` (§ "Whoever waits on the
+mutex keeps polling what it owns"). Pinned by
+`merge_window_tests.rs::a_walker_waiting_out_an_outage_keeps_its_leaves_moving` and the live soak
+`smb_outage_test.rs::smb_integration_an_overwrite_copy_rides_out_a_share_that_keeps_going_away`, which found it (3/3
+hung at the app's window of ten before the fix, 2026-10-20).
+
 **The walk drains before it returns, on every exit path.** A leaf still writing when `copy_directory_streaming` returned
 would keep touching the destination after the driver moved on to cleanup, and its `created` record would land too late
 for rollback to see. So the pool is drained after the walk finishes, fails, or hits a cancel. Under CANCEL that is

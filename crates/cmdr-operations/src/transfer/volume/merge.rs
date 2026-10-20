@@ -153,6 +153,35 @@ impl<'a> LeafPool<'a> {
         }
     }
 
+    /// Runs one of the walker's own awaits while THIS walker's leaves keep
+    /// moving.
+    ///
+    /// The leaves are futures only this walker polls, so an await of the
+    /// walker's that leaves them unpolled can wait on something a leaf holds.
+    /// The case that bit: a leaf takes the share's single-flight reconnect
+    /// (SMB's `reconnect_lock`) and must be polled again to finish the dial,
+    /// while the walker waits out the same outage on a clash's probe and queues
+    /// behind that lock, so neither moves until the outage budget runs out. ❌
+    /// Every walker await goes through here or [`Self::reserve`]; recursing
+    /// into a level passes the pool down, and that level's awaits drive it.
+    async fn drive<T>(&mut self, work: impl Future<Output = T>) -> T {
+        let mut work = std::pin::pin!(work);
+        loop {
+            if self.in_flight.is_empty() {
+                return work.await;
+            }
+            let landed = {
+                let in_flight = &mut self.in_flight;
+                tokio::select! {
+                    biased;
+                    out = &mut work => return out,
+                    Some(landed) = in_flight.next() => landed,
+                }
+            };
+            self.fold(landed);
+        }
+    }
+
     /// Runs one leaf's byte copy inside the window.
     ///
     /// A SERIAL window awaits it inline, so an MTP transfer sees exactly the
@@ -486,87 +515,92 @@ async fn merge_level<'a>(
     // that landed before the drop answers `AlreadyExists` the second time, which
     // reads as "there" (`../volume_outage.rs`, ❗ only for calls that are safe to
     // run twice).
-    let level = through_outages(state, &[source_volume, dest_volume], move || async move {
-        let dest_prepare = async {
-            // THIS walk's `create_directory` made the level (proof it was empty),
-            // ❌ never the `NotSupported` "treat as fresh" case below.
-            let mut made_here = false;
-            let level_pre_existed = if backend_create_directory_detects_collisions(dest_volume) {
-                match dest_volume.create_directory(dest_path).await {
-                    Ok(()) => {
-                        created.record_dir(dest_path.to_path_buf());
-                        // Made here, so it is the extract's to quarantine, now rather than
-                        // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
-                        super::extract_quarantine::quarantine_created_folder(
-                            state,
-                            source_volume,
-                            dest_volume,
-                            dest_path,
-                        )
-                        .await;
-                        made_here = true;
-                        false
-                    }
-                    Err(VolumeError::AlreadyExists(_)) => true,
-                    Err(VolumeError::NotSupported) => {
-                        // Backend can't create directories at all; assume
-                        // `write_from_stream` materializes parents on demand (LocalPosix
-                        // does via `create_dir_all` semantics). Treat as fresh.
-                        false
-                    }
-                    Err(e) => return Err(e),
-                }
-            } else {
-                // Untrusted-collision backend (MTP): pre-check existence.
-                if dest_volume.exists(dest_path).await {
-                    true
-                } else {
-                    match dest_volume.create_directory(dest_path).await {
-                        Ok(()) => {
-                            created.record_dir(dest_path.to_path_buf());
-                            // Made here, so it is the extract's to quarantine, now rather than
-                            // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
-                            super::extract_quarantine::quarantine_created_folder(
-                                state,
-                                source_volume,
-                                dest_volume,
-                                dest_path,
-                            )
-                            .await;
-                            made_here = true;
-                            false
+    let level = pool
+        .drive(through_outages(
+            state,
+            &[source_volume, dest_volume],
+            move || async move {
+                let dest_prepare = async {
+                    // THIS walk's `create_directory` made the level (proof it was empty),
+                    // ❌ never the `NotSupported` "treat as fresh" case below.
+                    let mut made_here = false;
+                    let level_pre_existed = if backend_create_directory_detects_collisions(dest_volume) {
+                        match dest_volume.create_directory(dest_path).await {
+                            Ok(()) => {
+                                created.record_dir(dest_path.to_path_buf());
+                                // Made here, so it is the extract's to quarantine, now rather than
+                                // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
+                                super::extract_quarantine::quarantine_created_folder(
+                                    state,
+                                    source_volume,
+                                    dest_volume,
+                                    dest_path,
+                                )
+                                .await;
+                                made_here = true;
+                                false
+                            }
+                            Err(VolumeError::AlreadyExists(_)) => true,
+                            Err(VolumeError::NotSupported) => {
+                                // Backend can't create directories at all; assume
+                                // `write_from_stream` materializes parents on demand (LocalPosix
+                                // does via `create_dir_all` semantics). Treat as fresh.
+                                false
+                            }
+                            Err(e) => return Err(e),
                         }
-                        // A race created it between the check and the create; merge.
-                        Err(VolumeError::AlreadyExists(_)) => true,
-                        Err(VolumeError::NotSupported) => false,
-                        Err(e) => return Err(e),
-                    }
-                }
-            };
+                    } else {
+                        // Untrusted-collision backend (MTP): pre-check existence.
+                        if dest_volume.exists(dest_path).await {
+                            true
+                        } else {
+                            match dest_volume.create_directory(dest_path).await {
+                                Ok(()) => {
+                                    created.record_dir(dest_path.to_path_buf());
+                                    // Made here, so it is the extract's to quarantine, now rather than
+                                    // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
+                                    super::extract_quarantine::quarantine_created_folder(
+                                        state,
+                                        source_volume,
+                                        dest_volume,
+                                        dest_path,
+                                    )
+                                    .await;
+                                    made_here = true;
+                                    false
+                                }
+                                // A race created it between the check and the create; merge.
+                                Err(VolumeError::AlreadyExists(_)) => true,
+                                Err(VolumeError::NotSupported) => false,
+                                Err(e) => return Err(e),
+                            }
+                        }
+                    };
 
-            // A level we created ourselves holds nothing, so there is no index to
-            // build and no name to look up: `None` is the answer for every child.
-            let dest_index = if level_pre_existed {
-                Some(DestNameIndex::build(dest_volume.list_directory(dest_path, None).await?))
-            } else {
-                None
-            };
-            Ok((dest_index, made_here))
-        };
+                    // A level we created ourselves holds nothing, so there is no index to
+                    // build and no name to look up: `None` is the answer for every child.
+                    let dest_index = if level_pre_existed {
+                        Some(DestNameIndex::build(dest_volume.list_directory(dest_path, None).await?))
+                    } else {
+                        None
+                    };
+                    Ok((dest_index, made_here))
+                };
 
-        let (dest_index, entries) = if legs_may_overlap {
-            tokio::join!(dest_prepare, source_volume.list_directory_as_source(source_path))
-        } else {
-            (
-                dest_prepare.await,
-                source_volume.list_directory_as_source(source_path).await,
-            )
-        };
-        // Each leg's failure is its own volume's: a share that won't create the
-        // nested folder is the destination's refusal, at the destination path.
-        Ok::<_, PathedVolumeError>((dest_index.at_destination(dest_path)?, entries.at_source(source_path)?))
-    })
-    .await?;
+                let (dest_index, entries) = if legs_may_overlap {
+                    tokio::join!(dest_prepare, source_volume.list_directory_as_source(source_path))
+                } else {
+                    (
+                        dest_prepare.await,
+                        source_volume.list_directory_as_source(source_path).await,
+                    )
+                };
+                // Each leg's failure is its own volume's: a share that won't create the
+                // nested folder is the destination's refusal, at the destination path.
+                Ok::<_, PathedVolumeError>((dest_index.at_destination(dest_path)?, entries.at_source(source_path)?))
+            },
+        ))
+        .await?;
     let ((dest_index, level_made_here), mut entries) = level;
     // Tree order, whatever order the backend listed in (SMB and MTP don't
     // sort): the walker starts files, asks conflicts, and creates folders in
@@ -595,7 +629,7 @@ async fn merge_level<'a>(
         // destination creation, a conflict decision per child) never passes
         // through the between-chunks checkpoint the byte path parks at, so this
         // is the only thing that stops a paused merge from walking on.
-        if state.stop_or_park_async().await {
+        if pool.drive(state.stop_or_park_async()).await {
             return Err(VolumeError::Cancelled("Operation cancelled by user".to_string())).at_source(source_path);
         }
 
@@ -612,7 +646,14 @@ async fn merge_level<'a>(
         let name = ChildName::new(&entry.name)
             .map_err(VolumeError::from)
             .at_source(&child_source)?;
-        let (child_dest, dest_hit) = where_it_lands(dest_volume, dest_path, name, dest_folder, NewName::Respell)
+        let (child_dest, dest_hit) = pool
+            .drive(where_it_lands(
+                dest_volume,
+                dest_path,
+                name,
+                dest_folder,
+                NewName::Respell,
+            ))
             .await
             // The probe asked the destination, about the name the child would take.
             .map_err(|e| PathedVolumeError::new(PathRole::Destination, &name.under(dest_path), e))?
@@ -688,7 +729,18 @@ async fn merge_level<'a>(
             // What a resolution can fail on is the clashing destination entry
             // (probing it, setting it aside), and the resolver names it: the
             // source's type and size come from the listing in hand.
-            match resolve_merge_child(ctx, source_volume, &child_source, entry, dest_volume, &child_dest, hit).await? {
+            match pool
+                .drive(resolve_merge_child(
+                    ctx,
+                    source_volume,
+                    &child_source,
+                    entry,
+                    dest_volume,
+                    &child_dest,
+                    hit,
+                ))
+                .await?
+            {
                 MergeChildDecision::Skip => {
                     // A DEEP skip: record it so the caller knows this subtree did
                     // not extract in full (the move-out op must keep the source in
