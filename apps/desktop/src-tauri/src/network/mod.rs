@@ -67,6 +67,10 @@ pub mod mount;
 #[path = "mount_linux.rs"]
 pub mod mount;
 
+// The warning while a mount call is stuck in the system's mount service. Both
+// platforms' mounts run under it through `mount_share` below.
+mod mount_watch;
+
 // Cross-platform: `same_server` and `credential_key` are used on both macOS and Linux
 // (mount dedup, `smb_upgrade`, keychain keying).
 pub mod server_identity;
@@ -166,8 +170,13 @@ pub async fn mount_share(
     let attempt = share_access::ShareAttempt::new(&server, &share, port, username.as_deref(), password.as_deref());
     let started = std::time::Instant::now();
     let timeout_duration = std::time::Duration::from_millis(timeout_ms.unwrap_or(DEFAULT_MOUNT_TIMEOUT_MS));
+    // Rides the blocking work, not this future: the call outlives our timeout when the
+    // system's mount service wedges, and that's exactly when its log lines matter.
+    let watch = mount_watch::MountWatch::start(&server, &share, mount_watch::SLOW_MOUNT);
     let mount_future = tokio::task::spawn_blocking(move || {
-        mount::mount_share_sync(&server, &share, username.as_deref(), password.as_deref(), port)
+        let result = mount::mount_share_sync(&server, &share, username.as_deref(), password.as_deref(), port);
+        watch.finish(result.is_ok());
+        result
     });
 
     let result = match tokio::time::timeout(timeout_duration, mount_future).await {

@@ -38,6 +38,13 @@ of the app build.
   - `mount_linux.rs`: Linux `gio mount` for GVFS-based user-space mounts, confirmed the same way
   - `share_access.rs`: both platforms' second opinion on a mount's "not found", asked of the server itself through
     `mod.rs::mount_share`, the one async mount entry point both platforms share (§ "A share that says not found")
+  - `mount_watch.rs`: the `warn` while a mount call is stuck in the system's mount service. `mount_share` moves a
+    `MountWatch` into the blocking work, so it logs every 15 s (`SLOW_MOUNT`) for as long as the call is out, even past
+    `DEFAULT_MOUNT_TIMEOUT_MS` (the timeout frees the caller, not the thread), and once more with the total when the call
+    returns. Why: after a network change macOS's `NetAuthSysAgent` can wedge until `killall NetAuthSysAgent`, NetFS
+    mounts queue behind it, and before this an error report couldn't say which share was waiting or since when. Server
+    and share go out marked (`LogPrivate`); ❌ never `error` level, which files a report. Unmounts don't use it: they go
+    through `diskutil` under the eject tool's own deadline.
 - **Server identity**: `server_identity.rs`: `SmbServer` (host + port, compared with `SmbServer::is`) is the one answer to "which SMB server is this"; `same_machine` is the name equivalence under it (mDNS service name, `.local` hostname, IP, enriched from the discovery state) and only answers "which MACHINE": one machine can run several servers, so a port-blind caller is a bug. Callers that still compare machines alone, because no port exists there: the Finder system-keychain aliases, the direct-connection opt-out list (`ShareRef` has no port), the OS-mount notice ledger, and the Linux GVFS mount check. Used by the mount-path disambiguation and the already-mounted short-circuit so string-shape differences can't split one server into two.
 - **Auth** (platform-agnostic):
   - `keychain.rs`: SMB credential management. Delegates storage to `crate::secrets::store()` (see `secrets/CLAUDE.md` for backend details)
