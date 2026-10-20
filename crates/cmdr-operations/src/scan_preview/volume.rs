@@ -380,6 +380,7 @@ pub(crate) async fn run_oracle_aware_batch_scan(
                         files: aggregate.file_count,
                         dirs: aggregate.dir_count,
                         bytes: aggregate.dedup_bytes,
+                        ..ListingProgress::default()
                     });
                     continue;
                 };
@@ -396,12 +397,14 @@ pub(crate) async fn run_oracle_aware_batch_scan(
                         files: aggregate.file_count,
                         dirs: aggregate.dir_count,
                         bytes: aggregate.dedup_bytes,
+                        ..ListingProgress::default()
                     };
                     let shifted = |p: ListingProgress| {
                         on_progress(ListingProgress {
                             files: baseline.files + p.files,
                             dirs: baseline.dirs + p.dirs,
                             bytes: baseline.bytes + p.bytes,
+                            ..p
                         })
                     };
                     let subtree: SubtreeTotals = scan_subtree_with_oracle(
@@ -466,6 +469,7 @@ pub(crate) async fn run_oracle_aware_batch_scan(
                         files: aggregate.file_count,
                         dirs: aggregate.dir_count,
                         bytes: aggregate.dedup_bytes,
+                        ..ListingProgress::default()
                     });
                 }
             }
@@ -487,12 +491,14 @@ pub(crate) async fn run_oracle_aware_batch_scan(
                 files: aggregate.file_count,
                 dirs: aggregate.dir_count,
                 bytes: aggregate.dedup_bytes,
+                ..ListingProgress::default()
             };
             let shifted = |p: ListingProgress| {
                 on_progress(ListingProgress {
                     files: baseline.files + p.files,
                     dirs: baseline.dirs + p.dirs,
                     bytes: baseline.bytes + p.bytes,
+                    ..p
                 })
             };
             // ❗ The boundary carries this walk's stop into the backend, so a

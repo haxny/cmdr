@@ -275,7 +275,8 @@ async fn list_directory_reports_one_cumulative_progress_tick() {
         ListingProgress {
             files: 2,
             dirs: 1,
-            bytes: 7
+            bytes: 7,
+            ..ListingProgress::default()
         }
     );
 }

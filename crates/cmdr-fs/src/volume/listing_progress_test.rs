@@ -34,6 +34,7 @@ async fn a_slow_listing_reports_its_running_count_and_then_its_answer() {
             files: 0,
             dirs: listed.load(Ordering::Relaxed),
             bytes: 0,
+            ..ListingProgress::default()
         },
         Some(&on_progress),
     )

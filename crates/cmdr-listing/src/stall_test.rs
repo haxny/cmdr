@@ -458,6 +458,7 @@ async fn a_read_that_keeps_making_progress_never_reports_a_stall() {
                             files,
                             dirs: 0,
                             bytes: 0,
+                            ..ListingProgress::default()
                         });
                     }
                 }

@@ -36,6 +36,7 @@ impl Live {
             files: self.files.load(Ordering::Relaxed),
             dirs: self.dirs.load(Ordering::Relaxed),
             bytes: self.bytes.load(Ordering::Relaxed),
+            ..ListingProgress::default()
         }
     }
 
@@ -105,6 +106,7 @@ async fn measure_through_volume(
                 files: scan.aggregate.file_count,
                 dirs: scan.aggregate.dir_count,
                 bytes: scan.aggregate.total_bytes,
+                ..ListingProgress::default()
             },
             physical: scan.aggregate.dedup_bytes,
             skipped: 0,

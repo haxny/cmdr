@@ -189,6 +189,7 @@ async fn unreadable_and_quickly_cancelled_retries_preserve_a_manual_partial() {
                 files: 1,
                 dirs: 0,
                 bytes: 3,
+                ..ListingProgress::default()
             },
             3,
             super::publish::Walk::Partial,

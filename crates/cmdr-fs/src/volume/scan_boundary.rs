@@ -205,6 +205,7 @@ impl<'a> ScanBoundary<'a> {
             files: self.files.load(Ordering::Relaxed),
             dirs: self.dirs.load(Ordering::Relaxed),
             bytes: self.bytes.load(Ordering::Relaxed),
+            ..ListingProgress::default()
         }
     }
 

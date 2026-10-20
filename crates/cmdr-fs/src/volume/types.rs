@@ -319,6 +319,9 @@ impl std::fmt::Display for LaneKey {
 /// entry count for "Loading N entries…" displays read `files + dirs`.
 // DEFAULT-OK: zero really is "nothing enumerated yet", the state a listing is in before
 // its walk starts.
+///
+/// Build one with a struct literal ending in `..ListingProgress::default()`, so a
+/// new field lands here and nowhere else.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct ListingProgress {
     /// Files enumerated so far, directories excluded.
@@ -327,9 +330,43 @@ pub struct ListingProgress {
     pub dirs: usize,
     /// Sum of file sizes so far; directories contribute 0.
     pub bytes: u64,
+    /// What the listing is doing before its first entry, when that takes a while
+    /// and has its own measure (a backup's index load). `None` while it's only
+    /// enumerating, which is nearly every listing.
+    pub phase: Option<ListingPhase>,
+}
+
+/// The work a listing does before it can enumerate, with its own progress.
+///
+/// Typed and word-free: the frontend words each phase. Movement in a phase counts
+/// as progress for the listing's stall watch, since no entry arrives meanwhile.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum ListingPhase {
+    /// Loading a backup repository's index, which every folder inside a snapshot
+    /// needs first. Counts the repo's index files and their bytes, read so far
+    /// and in all.
+    LoadingIndex {
+        /// Bytes of index files read so far.
+        done_bytes: u64,
+        /// The index files' sizes, summed.
+        total_bytes: u64,
+        /// Index files read so far.
+        done_files: u32,
+        /// Index files in the repo.
+        total_files: u32,
+    },
 }
 
 impl ListingProgress {
+    /// A tick that reports only `phase`, with nothing enumerated yet.
+    pub fn in_phase(phase: ListingPhase) -> Self {
+        Self {
+            phase: Some(phase),
+            ..Self::default()
+        }
+    }
+
     /// Total entries enumerated so far (files + dirs). Convenience for the
     /// streaming listing UI, which renders one "Loaded N entries…" line.
     pub fn entries(&self) -> usize {

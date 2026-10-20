@@ -131,6 +131,7 @@ pub(super) async fn scan_subtree_with_oracle(
                             files: baseline.files + p.files,
                             dirs: baseline.dirs + p.dirs,
                             bytes: baseline.bytes + p.bytes,
+                            ..p
                         })
                     };
                     Box::pin(scan_subtree_with_oracle(

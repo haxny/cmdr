@@ -119,6 +119,7 @@ impl Volume for CancellingVolume {
                         files: yielded.len(),
                         dirs: 0,
                         bytes: 0,
+                        ..cmdr_fs::volume::ListingProgress::default()
                     });
                 }
                 // Each `GetObjectInfo` on a real MTP device costs milliseconds; this IS that modeled

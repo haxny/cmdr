@@ -173,6 +173,7 @@ impl Volume for GitPortalVolume {
                 files: 0,
                 dirs: control.listed(),
                 bytes: 0,
+                ..ListingProgress::default()
             };
             let entries = report_while(listing, PROGRESS_SAMPLE_INTERVAL, sample, on_progress).await?;
             if let Some(callback) = on_progress {

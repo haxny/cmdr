@@ -201,6 +201,7 @@ async fn run_oracle_aware_batch_scan_forwards_dirs_and_bytes_from_backend() {
         files: 5,
         dirs: 3,
         bytes: 1234,
+        ..ListingProgress::default()
     };
     let vol = Arc::new(ProgressEmittingVolume::new("emit-vol", emit));
     panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
@@ -260,6 +261,7 @@ async fn dirs_and_bytes_baseline_shifts_across_parent_groups() {
         files: 2,
         dirs: 1,
         bytes: 100,
+        ..ListingProgress::default()
     };
     let vol = Arc::new(ProgressEmittingVolume::new("baseline-vol", emit));
     panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
