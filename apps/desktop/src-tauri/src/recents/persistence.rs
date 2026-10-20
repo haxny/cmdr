@@ -26,7 +26,7 @@ struct Envelope<C> {
 /// schema version we don't know, is set aside and we start empty
 /// (`crate::state_recovery::read_state_file`): the user keeps using the dialog, hears
 /// once that it reset, and the unreadable file survives. When the set-aside can't
-/// happen, [`write`] refuses to save over the file for the session. There's only ever
+/// happen, [`write`](fn@write) refuses to save over the file for the session. There's only ever
 /// been one version, so a migrator would be speculative; when v2 lands, this version
 /// check becomes a `match`.
 pub(super) fn read<E: RecentEntry>(path: &Path) -> Vec<E> {

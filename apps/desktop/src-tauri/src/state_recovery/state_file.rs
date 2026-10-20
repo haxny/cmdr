@@ -318,11 +318,11 @@ mod tests {
         let dir = TestDir::new("state_file_held");
         let path = dir.join("list.json");
         fs::write(&path, b"{\"trunc").expect("write");
-        set_immutable(&path, true);
+        testing::set_immutable(&path, true);
 
         let first = read_state_file(&path, StateFile::SftpServers, parse);
         let second = read_state_file(&path, StateFile::SftpServers, parse);
-        set_immutable(&path, false);
+        testing::set_immutable(&path, false);
         let refused = write_state_file(&path, "{}");
 
         assert_eq!(first, StateRead::Held);
@@ -337,16 +337,5 @@ mod tests {
             StateRead::Read(_)
         ));
         write_state_file(&path, "{}").expect("a good read lifts the hold");
-    }
-
-    #[cfg(target_os = "macos")]
-    fn set_immutable(path: &Path, on: bool) {
-        use std::os::unix::ffi::OsStrExt;
-        let c_path = std::ffi::CString::new(path.as_os_str().as_bytes()).expect("no NUL in a temp path");
-        let flags = if on { libc::UF_IMMUTABLE } else { 0 };
-        // SAFETY: (test) `c_path` is a valid NUL-terminated string that outlives the call, and
-        // `chflags` only reads it.
-        let status = unsafe { libc::chflags(c_path.as_ptr(), flags) };
-        assert_eq!(status, 0, "chflags on {path:?}");
     }
 }

@@ -363,14 +363,14 @@ mod tests {
         let dir = TestDir::new("plugin_stores_held_consent");
         let path = dir.join("settings.json");
         fs::write(&path, b"{\"analytics.enabled\": fal").expect("write");
-        set_immutable(&path, true);
+        testing::set_immutable(&path, true);
         let app = mock_app();
 
         recover_settings(app.handle(), &path);
         let frontend = app.store_builder(&path).build().expect("the frontend's load");
         let rust_side = settings_for_consent(&path);
         let saved = frontend.save();
-        set_immutable(&path, false);
+        testing::set_immutable(&path, false);
 
         for key in CONSENT_OFF_AFTER_RECOVERY {
             assert_eq!(frontend.get(key), Some(serde_json::json!(false)), "{key} in the store");
@@ -417,16 +417,5 @@ mod tests {
             serde_json::json!({ "analytics.enabled": true }),
             "a file saved after a recovery is the person's answer again"
         );
-    }
-
-    #[cfg(target_os = "macos")]
-    fn set_immutable(path: &Path, on: bool) {
-        use std::os::unix::ffi::OsStrExt;
-        let c_path = std::ffi::CString::new(path.as_os_str().as_bytes()).expect("no NUL in a temp path");
-        let flags = if on { libc::UF_IMMUTABLE } else { 0 };
-        // SAFETY: (test) `c_path` is a valid NUL-terminated string that outlives the call, and
-        // `chflags` only reads it.
-        let status = unsafe { libc::chflags(c_path.as_ptr(), flags) };
-        assert_eq!(status, 0, "chflags on {path:?}");
     }
 }

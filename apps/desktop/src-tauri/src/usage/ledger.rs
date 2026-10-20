@@ -50,7 +50,7 @@ fn appended(days: &[String], today: NaiveDate) -> Option<Vec<String>> {
 
 /// Reads the days at `path`. A missing file is a fresh ledger; one we can't read or parse, or one
 /// stamped with a schema we don't know, is set aside (`crate::state_recovery::read_state_file`)
-/// and this launch starts fresh in memory. When the set-aside can't happen, [`write`] refuses to
+/// and this launch starts fresh in memory. When the set-aside can't happen, [`write`](fn@write) refuses to
 /// write over the file for the session.
 pub(super) fn read(path: &Path) -> Vec<String> {
     cleanup_tmp_file(path);

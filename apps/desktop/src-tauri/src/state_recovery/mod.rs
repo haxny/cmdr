@@ -213,6 +213,19 @@ pub mod testing {
 
     use super::StateRecovery;
 
+    /// Sets or clears macOS's immutable flag on `path`. An immutable file refuses a rename, which
+    /// is how a test reaches the path where a set-aside can't happen.
+    #[cfg(target_os = "macos")]
+    pub fn set_immutable(path: &Path, on: bool) {
+        use std::os::unix::ffi::OsStrExt;
+        let c_path = std::ffi::CString::new(path.as_os_str().as_bytes()).expect("no NUL in a temp path");
+        let flags = if on { libc::UF_IMMUTABLE } else { 0 };
+        // SAFETY: (test) `c_path` is a valid NUL-terminated string that outlives the call, and
+        // `chflags` only reads it.
+        let status = unsafe { libc::chflags(c_path.as_ptr(), flags) };
+        assert_eq!(status, 0, "chflags on {path:?}");
+    }
+
     /// The set-aside copies of `path`, oldest first.
     pub fn kept_copies(path: &Path) -> Vec<PathBuf> {
         let (Some(dir), Some(name)) = (path.parent(), path.file_name()) else {
