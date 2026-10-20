@@ -50,8 +50,14 @@ fn copying_phase_bytes_total(sink: &CollectorEventSink) -> u64 {
         .expect("at least one Copying-phase progress event")
 }
 
+/// Active-phase events only: a mid-scan event carries the bytes FOUND so far against a
+/// `bytes_total` of 0, since the total isn't known until the walk ends.
 fn assert_no_mid_flight_overshoot(sink: &CollectorEventSink) {
-    for event in sink.progress.lock().unwrap().iter() {
+    let progress = sink.progress.lock().unwrap();
+    let active = progress
+        .iter()
+        .filter(|e| !matches!(e.phase, super::super::types::WriteOperationPhase::Scanning));
+    for event in active {
         assert!(
             event.bytes_done <= event.bytes_total,
             "mid-flight progress event overshoots: bytes_done={} > bytes_total={} (phase={:?})",
@@ -77,7 +83,8 @@ fn copy_counts_write_footprint_for_hardlinks() {
     fs::create_dir_all(&dest).unwrap();
 
     let op_id = "copy".to_string();
-    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::from_millis(10))));
+    // No throttle: every progress event fires, so the overshoot check sees all of them.
+    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::ZERO)));
     let sink = CollectorEventSink::new();
     let sources = vec![src.clone()];
     let config = WriteOperationConfig::default();
@@ -120,7 +127,8 @@ fn move_hardlinked_files_does_not_overshoot_progress() {
     fs::create_dir_all(&dest).unwrap();
 
     let op_id = "move".to_string();
-    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::from_millis(10))));
+    // No throttle: every progress event fires, so the overshoot check sees all of them.
+    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::ZERO)));
     let sink = CollectorEventSink::new();
     let sources = vec![src.clone()];
     let config = WriteOperationConfig::default();

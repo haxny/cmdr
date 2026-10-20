@@ -44,10 +44,8 @@ fn delete_hardlinked_files_does_not_overshoot_progress() {
     fs::write(dir.join("standalone"), vec![0u8; 4096]).unwrap();
 
     let engine = TestOperations::new();
-    let op = engine.register_state(
-        "overshoot",
-        Arc::new(engine.new_operation_state(Duration::from_millis(10))),
-    );
+    // No throttle: every progress event fires, so the overshoot check sees all of them.
+    let op = engine.register_state("overshoot", Arc::new(engine.new_operation_state(Duration::ZERO)));
 
     let sink = CollectorEventSink::new();
     let sources = vec![dir.to_path_buf()];
@@ -79,10 +77,15 @@ fn delete_hardlinked_files_does_not_overshoot_progress() {
     );
     assert_eq!(bytes_processed, bytes_total, "{msg}");
 
-    // Every emitted progress event must respect the same invariant — not
+    // Every active-phase progress event must respect the same invariant — not
     // just the terminal one. Catches "bar overshoots mid-delete then snaps
-    // back to 100% at the end" regressions.
-    for event in progress.iter() {
+    // back to 100% at the end" regressions. A mid-scan event carries the bytes
+    // FOUND so far against a `bytes_total` of 0 (unknown until the walk ends),
+    // so it's out of scope.
+    let active = progress
+        .iter()
+        .filter(|e| !matches!(e.phase, super::super::types::WriteOperationPhase::Scanning));
+    for event in active {
         assert!(
             event.bytes_done <= event.bytes_total,
             "mid-flight progress event overshoots: bytes_done={} > bytes_total={} \
