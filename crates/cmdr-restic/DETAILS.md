@@ -138,10 +138,12 @@ them, the host never does.
   `<volume id>:<repo path>`. The same share through an OS mount and through a direct session is two volume ids, so two
   entries.
 - **Unlock** (`PasswordLocked::unlock` on `ResticVolume`, over `ResticRepos::unlock`): opens the repo with the password
-  (scrypt on the blocking pool) and keeps the password and the opened repo only after the open returns, so a dialog's
-  Cancel (the host dropping the future) mid-scrypt keeps and saves nothing. Answers `Unlocked` or `WrongPassword`, never
-  `Stored`. Then files it per `remember` (`keep_signed_in_secret`: on saves, off only refreshes an entry already there
-  and never seeds one). A wrong password keeps and files nothing. `forget_password` clears the in-memory copy only.
+  (scrypt on the blocking pool) and keeps the password (and the opened repo, unless another open holds the slot's lock)
+  only after the open returns, with no await before the answer, so a dialog's Cancel (the host dropping the future)
+  keeps nothing. Answers `Unlocked` or `WrongPassword`, never `Stored`. Filing is a separate step,
+  `PasswordLocked::remember_password`, which the host runs only after an `Unlocked` nobody cancelled
+  (`keep_signed_in_secret`: on saves, off only refreshes an entry already there and never seeds one). A wrong password
+  keeps and files nothing. `forget_password` clears the in-memory copy only.
 - **A password that stopped working** (a stale stored one, or the repo's keys changed) is forgotten from memory, the
   store isn't asked again this session, and the call answers `NeedsPassword { wrong_attempt: true }`. `CredentialStore`
   has no delete, so a wrong stored entry is overwritten by the next remembered unlock.

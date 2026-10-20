@@ -531,9 +531,12 @@ handle too, and the blocking closure is never interrupted.
 
 **The one deliberate drop: an unlock.** `unlock_container` (`file_system/unlock.rs`) drops the container's unlock
 future on its 30 s budget or its cancel token, because detaching would be the bug here: a detached repo
-unlock finishes behind the reply and keeps the password, and saves it to the Keychain, after the person was told it
-didn't. It's safe because `PasswordLocked::unlock` is cancel-safe by contract (`crates/cmdr-fs/src/volume/password_locked.rs`):
-the slow part runs on the blocking pool, which a drop never interrupts, and state is committed only after it returns.
+unlock finishes behind the reply and keeps the password after the person was told it didn't. It's safe because
+`PasswordLocked::unlock` is cancel-safe by contract (`crates/cmdr-fs/src/volume/password_locked.rs`): the slow part runs
+on the blocking pool, which a drop never interrupts, and state is committed only after it returns, with no await
+before the answer. The Keychain save is NOT part of the unlock: `unlock_within` calls `remember_password` only after an
+`Unlocked` answer nobody cancelled, awaited to the end (a store write can't be taken back), and a Cancel that lands as
+the unlock answers makes the container forget the password instead.
 
 The dialog's Cancel reaches the token by name: the frontend picks an `unlock_id` per check and hands it to both
 `unlock_container` and `cancel_container_unlock`, which share a small in-flight registry in the same file. Two IPC calls

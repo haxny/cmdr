@@ -11,9 +11,12 @@
 //! A repo check runs a key derivation and opens the repo, which takes seconds on
 //! a slow NAS, so an unlock carries its own budget and takes a cancel token. Both
 //! DROP the unlock rather than detach it (`cmdr_fs::deadline` detaches): a
-//! detached unlock would keep the password and save it to the Keychain after the
-//! caller was told it didn't. Dropping is sound because `PasswordLocked::unlock`
-//! is cancel-safe by contract.
+//! detached unlock would keep the password after the caller was told it didn't.
+//! Dropping is sound because `PasswordLocked::unlock` is cancel-safe by contract.
+//! The Keychain save is a separate step (`PasswordLocked::remember_password`),
+//! run only once a verified answer is in and nobody cancelled, and never
+//! dropped: a store write can't be taken back. A Cancel that lands as the unlock
+//! answers still wins, and the container forgets the password.
 //!
 //! The dialog cancels by naming the unlock: it picks an `unlock_id`, passes it
 //! to `unlock_container`, and hands the same id to `cancel_container_unlock`
@@ -166,21 +169,41 @@ pub(crate) async fn unlock_within(
     cancel: &CancellationToken,
     budget: Duration,
 ) -> Result<UnlockOutcome, UnlockError> {
+    // The unlock consumes the password; the credential store may get this copy
+    // once the answer is in.
+    let to_file = password.clone();
     let unlock = async {
         let volume = resolve(parent_volume_id, path).await?;
         let locked = volume.as_password_locked().ok_or(UnlockError::NotLocked)?;
-        locked
-            .unlock(password, remember)
+        let outcome = locked
+            .unlock(password)
             .await
-            .map_err(|error| UnlockError::Volume { error })
+            .map_err(|error| UnlockError::Volume { error })?;
+        Ok((outcome, volume))
     };
     // Dropping the losing branch is the cancel: see the module header.
-    tokio::select! {
+    let (outcome, volume) = tokio::select! {
         biased;
-        () = cancel.cancelled() => Err(UnlockError::Cancelled),
-        () = tokio::time::sleep(budget) => Err(UnlockError::TimedOut),
-        answer = unlock => answer,
+        () = cancel.cancelled() => return Err(UnlockError::Cancelled),
+        () = tokio::time::sleep(budget) => return Err(UnlockError::TimedOut),
+        answer = unlock => answer?,
+    };
+    let Some(locked) = volume.as_password_locked() else {
+        return Err(UnlockError::NotLocked);
+    };
+    // A Cancel that landed as the unlock answered still wins: the person saw
+    // "cancelled", so the container forgets the password it just kept.
+    if cancel.is_cancelled() {
+        locked.forget_password();
+        return Err(UnlockError::Cancelled);
     }
+    // Only now, with a verified answer nobody cancelled, does the password go
+    // to the credential store, awaited to the end and outside the cancel and
+    // the budget: a store write can't be taken back.
+    if outcome == UnlockOutcome::Unlocked {
+        locked.remember_password(to_file, remember).await;
+    }
+    Ok(outcome)
 }
 
 async fn resolve(parent_volume_id: &str, path: &Path) -> Result<std::sync::Arc<dyn Volume>, UnlockError> {

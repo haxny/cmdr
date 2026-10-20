@@ -510,25 +510,35 @@ impl Volume for ResticVolume {
 /// repo with it (the ~0.5 s scrypt, on the blocking pool) and answers
 /// `Unlocked` or `WrongPassword`, never `Stored`.
 impl PasswordLocked for ResticVolume {
-    /// Opens the repo with `password`, keeps it in the hub, and files it in the
-    /// credential store per `remember` (only after it unlocked). A wrong one
-    /// keeps and saves nothing. Dropped mid-open, nothing is kept or saved; the
-    /// hub commits after the open returns.
+    /// Opens the repo with `password` and keeps it in the hub. A wrong one keeps
+    /// nothing. Dropped mid-open, nothing is kept: the hub commits after the open
+    /// returns, with no await before the answer.
     fn unlock<'a>(
         &'a self,
         password: String,
-        remember: bool,
     ) -> Pin<Box<dyn Future<Output = Result<UnlockOutcome, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             let password = Zeroizing::new(password);
             if !self.hub.unlock(&self.slot, &self.parent, &password).await? {
                 return Ok(UnlockOutcome::WrongPassword);
             }
-            // allowed-discarded-outcome: the unlock stands whether or not the
-            // store kept the password (a Deny on the Keychain prompt), and
-            // `UnlockOutcome` has no way to say so yet; the next launch asks.
-            let _kept = self.hub.keep_password(&self.slot, &password, remember).await;
             Ok(UnlockOutcome::Unlocked)
+        })
+    }
+
+    /// Files the password under service `restic://`, scope `<volume id>:<repo
+    /// path>`, per `remember` (`secret_store::keep_signed_in_secret`).
+    fn remember_password<'a>(
+        &'a self,
+        password: String,
+        remember: bool,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
+        Box::pin(async move {
+            let password = Zeroizing::new(password);
+            // allowed-discarded-outcome: the unlock stands whether or not the
+            // store kept the password (a Deny on the Keychain prompt), and the
+            // seam has no way to say so yet; the next launch asks.
+            let _kept = self.hub.keep_password(&self.slot, &password, remember).await;
         })
     }
 

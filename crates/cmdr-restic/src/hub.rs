@@ -237,8 +237,11 @@ impl ResticRepos {
     /// it unlocks (the password and the opened repo are kept), `Ok(false)` when
     /// it doesn't (nothing is kept). `Err` when the repo couldn't be asked.
     ///
-    /// Commits only after the open returns, so a caller that drops this future
-    /// mid-scrypt leaves no trace.
+    /// Commits only after the open returns, the password and the opened repo in
+    /// one step with no await between them and the answer, so a caller dropping
+    /// this future either kept nothing or already holds the answer. The opened
+    /// repo is kept only when no other open holds the slot's lock (that one
+    /// keeps its own), ❌ never waited for.
     pub(crate) async fn unlock(
         &self,
         slot: &RepoSlot,
@@ -250,7 +253,9 @@ impl ResticRepos {
             Ok(repo) => {
                 *lock(&slot.password) = Some(Zeroizing::new(password.to_string()));
                 slot.store_missed.store(false, Ordering::Relaxed);
-                *slot.opened.lock().await = Some(Bound::new(parent, Arc::new(repo)));
+                if let Ok(mut opened) = slot.opened.try_lock() {
+                    *opened = Some(Bound::new(parent, Arc::new(repo)));
+                }
                 slot.touch();
                 self.evict_opened(slot);
                 Ok(true)

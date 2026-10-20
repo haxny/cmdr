@@ -609,12 +609,12 @@ async fn the_unlock_seam_stores_the_password_unchecked() {
 
     // A wrong password is still only STORED: an archive can't tell until a read.
     assert_eq!(
-        locked.unlock("not-the-password".to_string(), false).await.unwrap(),
+        locked.unlock("not-the-password".to_string()).await.unwrap(),
         UnlockOutcome::Stored
     );
-    // A fresh attempt replaces it, and `remember` changes nothing for an archive.
+    // A fresh attempt replaces it.
     assert_eq!(
-        locked.unlock("hunter2".to_string(), true).await.unwrap(),
+        locked.unlock("hunter2".to_string()).await.unwrap(),
         UnlockOutcome::Stored
     );
     assert_eq!(

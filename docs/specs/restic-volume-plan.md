@@ -729,7 +729,8 @@ materialization of a restic file, `inspect_file` on a restic text file.
   `cmdr-git`), `crates/cmdr-listing/src/host/DETAILS.md` (overlays now see entries), `volume/DETAILS.md` (three routes).
 - `rg -n '\b(M[0-9][a-z]?|Milestone\s*[0-9]|Phase\s*[0-9])\b'` over every touched path.
 - `pnpm check --include-slow`, then the lead's `pnpm land -no-wait`.
-- An adversarial conformance review against the invariants below, and a docs-audit agent reading every commit body.
+- An adversarial conformance review against the invariants below, and a docs-audit agent reading every commit body. The
+  review and each finding's status: `docs/notes/restic/conformance-review.md`.
 - File follow-ups as issues (`claude-created`): rest-server and other non-browsable backends, watching `snapshots/` for
   new backups, a "forget saved password" action, host/tags/paths on snapshot rows if milestone 5a found no surface for
   them, nested archive browsing inside a snapshot, cache size cleanup.

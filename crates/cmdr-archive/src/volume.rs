@@ -406,13 +406,12 @@ impl ArchiveVolume {
 
 /// An archive stores the password unchecked: it can only tell a wrong one by
 /// decrypting, which happens on the next read (`NeedsPassword { wrong_attempt:
-/// true }`). `remember` is ignored: an archive's password lives on this
-/// instance only and is never saved anywhere.
+/// true }`). It keeps the trait's `remember_password`, which files nothing: an
+/// archive's password lives on this instance only and is never saved anywhere.
 impl PasswordLocked for ArchiveVolume {
     fn unlock<'a>(
         &'a self,
         password: String,
-        _remember: bool,
     ) -> Pin<Box<dyn Future<Output = Result<UnlockOutcome, VolumeError>> + Send + 'a>> {
         // Inside the future, so a host that drops it unpolled stored nothing.
         Box::pin(async move {

@@ -29,11 +29,14 @@ enum Script {
 }
 
 /// A locked container that keeps what a real one would: the password on a
-/// non-wrong outcome, and whether it was told to remember it.
+/// non-wrong outcome, and what it was asked to file in the credential store.
 struct LockedStub {
     inner: InMemoryVolume,
     script: Script,
-    kept: Mutex<Option<(String, bool)>>,
+    kept: Mutex<Option<String>>,
+    filed: Mutex<Option<(String, bool)>>,
+    /// Fired the moment the unlock answers: a Cancel that lands just after.
+    cancel_on_answer: Option<tokio_util::sync::CancellationToken>,
 }
 
 impl LockedStub {
@@ -42,11 +45,17 @@ impl LockedStub {
             inner: InMemoryVolume::new("Locked"),
             script,
             kept: Mutex::new(None),
+            filed: Mutex::new(None),
+            cancel_on_answer: None,
         }
     }
 
-    fn kept(&self) -> Option<(String, bool)> {
+    fn kept(&self) -> Option<String> {
         self.kept.lock_ignore_poison().clone()
+    }
+
+    fn filed(&self) -> Option<(String, bool)> {
+        self.filed.lock_ignore_poison().clone()
     }
 }
 
@@ -54,13 +63,15 @@ impl PasswordLocked for LockedStub {
     fn unlock<'a>(
         &'a self,
         password: String,
-        remember: bool,
     ) -> Pin<Box<dyn Future<Output = Result<UnlockOutcome, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             match self.script {
                 Script::Answer(outcome) => {
                     if outcome != UnlockOutcome::WrongPassword {
-                        *self.kept.lock_ignore_poison() = Some((password, remember));
+                        *self.kept.lock_ignore_poison() = Some(password);
+                    }
+                    if let Some(cancel) = &self.cancel_on_answer {
+                        cancel.cancel();
                     }
                     Ok(outcome)
                 }
@@ -71,6 +82,15 @@ impl PasswordLocked for LockedStub {
                 Script::Gone => Err(VolumeError::DeviceDisconnected("the NAS left".to_string())),
             }
         })
+    }
+
+    fn remember_password<'a>(
+        &'a self,
+        password: String,
+        remember: bool,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
+        *self.filed.lock_ignore_poison() = Some((password, remember));
+        Box::pin(async {})
     }
 
     fn forget_password(&self) {
@@ -146,8 +166,10 @@ async fn each_outcome_comes_back_as_the_container_answered() {
         if outcome == UnlockOutcome::WrongPassword {
             assert_eq!(kept, None, "a wrong password keeps nothing");
         } else {
-            assert_eq!(kept, Some(("hunter2".to_string(), true)), "for {outcome:?}");
+            assert_eq!(kept, Some("hunter2".to_string()), "for {outcome:?}");
         }
+        let filed = (outcome == UnlockOutcome::Unlocked).then(|| ("hunter2".to_string(), true));
+        assert_eq!(stub.filed(), filed, "only a verified unlock is filed, for {outcome:?}");
     }
 }
 
@@ -159,7 +181,7 @@ async fn remember_reaches_the_container_as_given() {
     get_volume_manager().unregister(&id);
 
     assert!(matches!(answer, Ok(UnlockOutcome::Unlocked)), "{answer:?}");
-    assert_eq!(stub.kept(), Some(("hunter2".to_string(), false)));
+    assert_eq!(stub.filed(), Some(("hunter2".to_string(), false)));
 }
 
 #[tokio::test]
@@ -205,6 +227,7 @@ async fn an_unlock_past_its_budget_times_out_and_keeps_nothing() {
 
     assert!(matches!(answer, Err(UnlockError::TimedOut)), "{answer:?}");
     assert_eq!(stub.kept(), None);
+    assert_eq!(stub.filed(), None);
 }
 
 #[tokio::test]
@@ -226,6 +249,35 @@ async fn a_cancelled_unlock_answers_cancelled_and_keeps_nothing() {
 
     assert!(matches!(answer, Err(UnlockError::Cancelled)), "{answer:?}");
     assert_eq!(stub.kept(), None, "a cancelled unlock caches nothing and saves nothing");
+    assert_eq!(stub.filed(), None);
+}
+
+/// ❗ A Cancel that lands the moment the unlock answered still wins: the person
+/// saw "cancelled", so the container forgets the password and nothing is filed
+/// in the Keychain (a store write can't be taken back).
+#[tokio::test]
+async fn a_cancel_right_after_the_answer_forgets_and_files_nothing() {
+    let cancel = tokio_util::sync::CancellationToken::new();
+    let stub = Arc::new(LockedStub {
+        cancel_on_answer: Some(cancel.clone()),
+        ..LockedStub::new(Script::Answer(UnlockOutcome::Unlocked))
+    });
+    let id = register(stub.clone());
+
+    let answer = unlock_within(
+        &id,
+        Path::new("/repo"),
+        "hunter2".to_string(),
+        true,
+        &cancel,
+        Duration::from_secs(30),
+    )
+    .await;
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Err(UnlockError::Cancelled)), "{answer:?}");
+    assert_eq!(stub.kept(), None, "the late cancel forgets the password");
+    assert_eq!(stub.filed(), None, "and files nothing");
 }
 
 #[tokio::test]
@@ -263,6 +315,7 @@ async fn a_cancel_by_id_drops_the_unlock_and_keeps_nothing() {
 
     assert!(matches!(answer, Err(UnlockError::Cancelled)), "{answer:?}");
     assert_eq!(stub.kept(), None, "a cancelled unlock caches nothing and saves nothing");
+    assert_eq!(stub.filed(), None);
     assert!(
         !in_flight_unlocks().contains(&unlock_id),
         "a finished unlock leaves no entry"

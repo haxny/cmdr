@@ -636,17 +636,25 @@ async fn a_stored_password_that_stopped_working_asks_as_a_wrong_attempt() {
     );
 }
 
-/// Remember on files the password, scoped to this repo on this volume, after it
-/// unlocked; and the miss memo clears, so a later look finds it.
+/// ❗ An unlock alone files nothing: a host can still drop it, or the person
+/// cancel, after it answered. Only `remember_password`, which the host calls once
+/// it holds an `Unlocked` nobody cancelled, files it, scoped to this repo on
+/// this volume.
 #[tokio::test(flavor = "multi_thread")]
-async fn unlocking_with_remember_files_the_password() {
+async fn only_remember_password_files_a_verified_password() {
     let store = Arc::new(InMemoryCredentials::new());
     let rig = locked_rig(Arc::clone(&store) as Arc<dyn CredentialStore>).await;
     let locked = rig.volume.as_password_locked().expect("a repo is password-locked");
 
-    let outcome = locked.unlock(PASSWORD.to_string(), true).await.expect("asks the repo");
-
+    let outcome = locked.unlock(PASSWORD.to_string()).await.expect("asks the repo");
     assert_eq!(outcome, UnlockOutcome::Unlocked);
+    assert!(
+        store.credentials(KEYCHAIN_SERVICE, Some(&scope(ROOT))).is_none(),
+        "the unlock itself files nothing"
+    );
+
+    locked.remember_password(PASSWORD.to_string(), true).await;
+
     let filed = store
         .credentials(KEYCHAIN_SERVICE, Some(&scope(ROOT)))
         .expect("filed under the repo's scope");
@@ -654,15 +662,15 @@ async fn unlocking_with_remember_files_the_password() {
     assert!(rig.volume.list_directory(&view(ROOT), None).await.is_ok());
 }
 
-/// Remember off seeds nothing, a wrong password files nothing, and an unlock
-/// dropped mid-scrypt (the dialog's Cancel) keeps and files nothing.
+/// An unlock dropped mid-scrypt (the dialog's Cancel) keeps nothing, a wrong
+/// password keeps nothing, and Remember off never seeds the store.
 #[tokio::test(flavor = "multi_thread")]
-async fn nothing_is_filed_without_remember_for_a_wrong_password_or_a_cancelled_unlock() {
+async fn nothing_is_kept_or_filed_for_a_cancelled_unlock_a_wrong_password_or_remember_off() {
     let store = Arc::new(InMemoryCredentials::new());
     let rig = locked_rig(Arc::clone(&store) as Arc<dyn CredentialStore>).await;
     let locked = rig.volume.as_password_locked().expect("a repo is password-locked");
 
-    let cancelled = tokio::time::timeout(Duration::from_millis(1), locked.unlock(PASSWORD.to_string(), true)).await;
+    let cancelled = tokio::time::timeout(Duration::from_millis(1), locked.unlock(PASSWORD.to_string())).await;
     assert!(cancelled.is_err(), "scrypt takes longer than a millisecond");
     // allowed-test-sleep: the dropped unlock's scrypt finishes on the blocking
     // pool; give it the time to (wrongly) commit anything
@@ -676,19 +684,38 @@ async fn nothing_is_filed_without_remember_for_a_wrong_password_or_a_cancelled_u
         "a cancelled unlock keeps no password"
     );
 
-    let wrong = locked
-        .unlock("incorrect".to_string(), true)
-        .await
-        .expect("asks the repo");
+    let wrong = locked.unlock("incorrect".to_string()).await.expect("asks the repo");
     assert_eq!(wrong, UnlockOutcome::WrongPassword);
     assert!(store.credentials(KEYCHAIN_SERVICE, Some(&scope(ROOT))).is_none());
 
-    let right = locked.unlock(PASSWORD.to_string(), false).await.expect("asks the repo");
+    let right = locked.unlock(PASSWORD.to_string()).await.expect("asks the repo");
     assert_eq!(right, UnlockOutcome::Unlocked);
+    locked.remember_password(PASSWORD.to_string(), false).await;
     assert!(
         store.credentials(KEYCHAIN_SERVICE, Some(&scope(ROOT))).is_none(),
         "remember off never seeds the store"
     );
+}
+
+/// ❗ The host cancels an unlock by dropping it. A drop after scrypt returned but
+/// while a concurrent open still holds the slot's open lock (a listing that
+/// started with a stale stored password) must keep nothing: the password and the
+/// opened repo land together, with no wait between them.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_unlock_dropped_while_another_open_runs_keeps_nothing() {
+    let rig = locked_rig(Arc::new(InMemoryCredentials::new())).await;
+    let slot = rig.volume.slot_for_tests();
+    let busy = slot.opened.lock().await;
+    let locked = rig.volume.as_password_locked().expect("a repo is password-locked");
+
+    let answered = tokio::time::timeout(Duration::from_secs(3), locked.unlock(PASSWORD.to_string())).await;
+    drop(busy);
+
+    assert!(
+        matches!(answered, Ok(Ok(UnlockOutcome::Unlocked))),
+        "the unlock commits without waiting on the other open, so no drop can land between keeping and answering: {answered:?}"
+    );
+    assert!(rig.volume.list_directory(&view(ROOT), None).await.is_ok());
 }
 
 /// Zero writes, still: a load, a listing, and a read through a scripted parent.
