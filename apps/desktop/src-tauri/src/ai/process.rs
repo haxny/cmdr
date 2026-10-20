@@ -144,21 +144,32 @@ pub fn kill_and_reap_in_background(pid: u32) {
     });
 }
 
-/// Stops any running llama-server processes spawned from the given AI directory.
-/// Belt-and-suspenders defense against orphan processes from race conditions or crashes.
+/// Stops every running llama-server whose executable is the one in `ai_dir`, whoever started it.
+///
+/// Belt-and-suspenders defense against orphans from race conditions or crashes, and the launch's
+/// only way to find the previous run's server when `ai-state.json` was set aside with its pid
+/// (`crate::state_recovery`). `pgrep` names the candidates by process name; each is stopped only
+/// once its executable path proves it ours, so a process that merely mentions the path (a
+/// `tail -f` of the log beside it) or another app's llama-server is never signalled.
 pub fn kill_stale_llama_servers(ai_dir: &Path) {
     #[cfg(unix)]
     {
-        let binary_path = ai_dir.join(LLAMA_SERVER_BINARY);
-        let binary_str = binary_path.to_string_lossy();
-
-        if let Ok(output) = std::process::Command::new("pgrep").arg("-f").arg(&*binary_str).output() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            for line in stdout.lines() {
-                if let Ok(pid) = line.trim().parse::<u32>() {
-                    log::info!("AI: stopping stale llama-server (PID {pid})");
-                    kill_process(pid);
-                }
+        // The OS reports an executable with its links resolved.
+        let Ok(ours) = ai_dir.canonicalize().map(|dir| dir.join(LLAMA_SERVER_BINARY)) else {
+            return;
+        };
+        let Ok(output) = std::process::Command::new("pgrep")
+            .arg("-x")
+            .arg(LLAMA_SERVER_BINARY)
+            .output()
+        else {
+            return;
+        };
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for pid in stdout.lines().filter_map(|line| line.trim().parse::<u32>().ok()) {
+            if executable_of(pid).as_deref() == Some(ours.as_path()) {
+                log::info!("AI: stopping stale llama-server (PID {pid})");
+                kill_process(pid);
             }
         }
     }
@@ -166,6 +177,29 @@ pub fn kill_stale_llama_servers(ai_dir: &Path) {
     {
         let _ = ai_dir;
     }
+}
+
+/// The executable behind `pid`, `None` once it's gone or isn't ours to see.
+#[cfg(target_os = "macos")]
+fn executable_of(pid: u32) -> Option<std::path::PathBuf> {
+    use std::os::unix::ffi::OsStringExt;
+    let pid = i32::try_from(pid).ok()?;
+    let mut buffer = vec![0u8; libc::PROC_PIDPATHINFO_MAXSIZE as usize];
+    let size = u32::try_from(buffer.len()).ok()?;
+    // SAFETY: `buffer` is a live, initialized buffer of exactly `size` bytes, which
+    // `proc_pidpath` fills with at most that many bytes of path. No other memory is shared.
+    let written = unsafe { libc::proc_pidpath(pid, buffer.as_mut_ptr().cast::<libc::c_void>(), size) };
+    if written <= 0 {
+        return None;
+    }
+    buffer.truncate(usize::try_from(written).ok()?);
+    Some(std::ffi::OsString::from_vec(buffer).into())
+}
+
+/// The executable behind `pid`, `None` once it's gone or isn't ours to see.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn executable_of(pid: u32) -> Option<std::path::PathBuf> {
+    fs::read_link(format!("/proc/{pid}/exe")).ok()
 }
 
 /// Returns true if the process with the given PID is still running.
@@ -183,5 +217,79 @@ pub fn is_process_alive(pid: u32) -> bool {
     {
         let _ = pid;
         false
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use crate::test_support::{TestDir, wait_until};
+    use std::process::{Child, Command};
+    use std::time::Duration;
+
+    /// Stopped by the end of the test, whatever it asserted.
+    struct Running(Child);
+
+    impl Running {
+        fn has_exited(&mut self) -> bool {
+            self.0.try_wait().expect("ask the child").is_some()
+        }
+    }
+
+    impl Drop for Running {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+
+    /// A stand-in llama-server: `sleep`, copied to where ours lives, so its executable IS our
+    /// binary's path.
+    fn spawn_fake_server(ai_dir: &Path) -> Running {
+        let binary = ai_dir.join(LLAMA_SERVER_BINARY);
+        fs::copy("/bin/sleep", &binary).expect("copy sleep in as llama-server");
+        Running(Command::new(&binary).arg("60").spawn().expect("start the fake server"))
+    }
+
+    /// The previous run's `ai-state.json` was unreadable at launch, so it was set aside along with
+    /// the running server's pid. The launch sweep finds that server by its executable anyway.
+    #[test]
+    fn a_server_from_a_run_whose_state_file_was_set_aside_is_stopped_at_launch() {
+        let _notices = crate::state_recovery::testing::capture_recoveries();
+        let dir = TestDir::new("ai_stray_server");
+        let mut server = spawn_fake_server(&dir);
+        fs::write(dir.join("ai-state.json"), b"{ not json").expect("a state file that won't parse");
+
+        let state = super::super::state::load_state(&dir);
+        assert_eq!(state.pid, None, "precondition: the pid went with the set-aside copy");
+        kill_stale_llama_servers(&dir);
+
+        wait_until(Duration::from_secs(5), "the stray server to stop", || {
+            server.has_exited()
+        });
+    }
+
+    /// A process whose command line only MENTIONS our binary (a `tail -f` of the log beside it)
+    /// isn't ours to stop. The real one beside it is, which is also how the test knows the sweep
+    /// has run its course.
+    #[test]
+    fn a_process_that_only_names_our_binary_in_its_arguments_keeps_running() {
+        let dir = TestDir::new("ai_not_our_server");
+        let mut server = spawn_fake_server(&dir);
+        let log = dir.join(SERVER_LOG_FILENAME);
+        fs::write(&log, b"").expect("the log");
+        let mut bystander = Running(
+            Command::new("/usr/bin/tail")
+                .arg("-f")
+                .arg(&log)
+                .stdout(std::process::Stdio::null())
+                .spawn()
+                .expect("start the bystander"),
+        );
+
+        kill_stale_llama_servers(&dir);
+
+        wait_until(Duration::from_secs(5), "our own server to stop", || server.has_exited());
+        assert!(!bystander.has_exited(), "❗ only our own llama-server may be stopped");
     }
 }
