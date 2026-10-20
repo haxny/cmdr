@@ -131,3 +131,87 @@ impl<S: AsyncRead + AsyncWrite + Unpin> ServerConn<S> {
         self.send(&reply).await;
     }
 }
+
+/// Server-side encoders for the NFSv3 types a fake answers with: the mirror of
+/// `nfs3`'s decoders.
+pub(crate) mod nfs3_wire {
+    use crate::proto::nfs3::{Fattr3, FileHandle, FileType, NfsTime};
+    use crate::xdr::Encoder;
+
+    /// `ftype3`'s number.
+    pub(crate) fn file_type_number(file_type: FileType) -> u32 {
+        match file_type {
+            FileType::Regular => 1,
+            FileType::Directory => 2,
+            FileType::BlockDevice => 3,
+            FileType::CharDevice => 4,
+            FileType::Symlink => 5,
+            FileType::Socket => 6,
+            FileType::Fifo => 7,
+        }
+    }
+
+    fn time(enc: &mut Encoder, time: NfsTime) {
+        enc.u32(time.seconds);
+        enc.u32(time.nseconds);
+    }
+
+    /// `fattr3`.
+    pub(crate) fn fattr(enc: &mut Encoder, attrs: &Fattr3) {
+        enc.u32(file_type_number(attrs.file_type));
+        enc.u32(attrs.mode);
+        enc.u32(attrs.nlink);
+        enc.u32(attrs.uid);
+        enc.u32(attrs.gid);
+        enc.u64(attrs.size);
+        enc.u64(attrs.used);
+        enc.u32(attrs.rdev.0);
+        enc.u32(attrs.rdev.1);
+        enc.u64(attrs.fsid);
+        enc.u64(attrs.fileid);
+        time(enc, attrs.atime);
+        time(enc, attrs.mtime);
+        time(enc, attrs.ctime);
+    }
+
+    /// `post_op_attr`.
+    pub(crate) fn post_op_attr(enc: &mut Encoder, attrs: Option<&Fattr3>) {
+        enc.bool(attrs.is_some());
+        if let Some(attrs) = attrs {
+            fattr(enc, attrs);
+        }
+    }
+
+    /// `nfs_fh3`.
+    pub(crate) fn handle(enc: &mut Encoder, handle: &FileHandle) {
+        enc.opaque(&handle.0);
+    }
+
+    /// `post_op_fh3`.
+    pub(crate) fn post_op_fh(enc: &mut Encoder, handle: Option<&FileHandle>) {
+        enc.bool(handle.is_some());
+        if let Some(handle) = handle {
+            self::handle(enc, handle);
+        }
+    }
+
+    /// A plain file or folder's attributes, the rest zeroed: what most fakes
+    /// need.
+    pub(crate) fn simple_attrs(file_type: FileType, fileid: u64, size: u64) -> Fattr3 {
+        Fattr3 {
+            file_type,
+            mode: 0o755,
+            nlink: 1,
+            uid: 1000,
+            gid: 1000,
+            size,
+            used: size,
+            rdev: (0, 0),
+            fsid: 1,
+            fileid,
+            atime: NfsTime::default(),
+            mtime: NfsTime::default(),
+            ctime: NfsTime::default(),
+        }
+    }
+}

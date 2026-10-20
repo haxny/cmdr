@@ -4,6 +4,11 @@
 //! Everything Cmdr says to an NFSv3 server: our own user-space client, so a
 //! `secure` export opens with no root and no OS mount.
 
+#[allow(
+    dead_code,
+    reason = "the protocol layer lands before the volume that calls it; drop this once the volume is wired"
+)]
+pub(crate) mod dial;
 pub(crate) mod errors;
 pub(crate) mod params;
 #[allow(

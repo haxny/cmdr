@@ -1,49 +1,17 @@
-//! NFSv3 (RFC 1813): the types and every procedure the volume uses, as typed
-//! calls on one [`RpcConnection`].
-//!
-//! - ❗ **Optional everywhere.** `post_op_attr`, `wcc_data`, and a READDIRPLUS
-//!   entry's handle and attributes may each be absent; they decode to `Option`,
-//!   ❌ never to a placeholder.
-//! - **Only the success arm is decoded.** A failure is its `nfsstat3`; the
-//!   attributes a failure arm carries are skipped.
-//! - **`NFS3ERR_JUKEBOX`** (the server is fetching the file from slow storage)
-//!   is retried here after 1 s, up to three times, before it reaches the caller.
-//! - **Budgets**: metadata and mutation calls carry the client's budget; READ,
-//!   WRITE, and COMMIT carry none (silence is the signal, through the transport's
-//!   ladder).
-
-use std::time::Duration;
+//! NFSv3's types (RFC 1813 § 2), each with its decoder (and encoder where a
+//! call sends it). ❗ `post_op_attr`, `wcc_data`, and the per-entry handle and
+//! attributes of READDIRPLUS decode to `Option`, ❌ never to a placeholder.
 
 use bytes::Bytes;
-use futures_util::StreamExt;
-use futures_util::stream;
-use log::debug;
 
-use crate::proto::rpc::{Procedure, Program, Repeat};
-use crate::transport::{CallError, MAX_PAYLOAD, RpcConnection};
+use crate::transport::CallError;
 use crate::xdr::{Decoder, Encoder, XdrError};
-
-/// NFS v3: program 100003, version 3.
-pub(crate) const NFS_V3: Program = Program {
-    number: 100_003,
-    version: 3,
-};
 
 /// `NFS3_FHSIZE`: the largest file handle.
 pub(crate) const MAX_HANDLE: usize = 64;
 /// The longest name or link target accepted from the wire. RFC 1813 sets no
 /// limit; Linux stores 255 bytes per name and 4,095 per path.
-const MAX_NAME: usize = 4096;
-
-/// How long a `JUKEBOX` answer waits before the call goes again.
-const JUKEBOX_DELAY: Duration = Duration::from_secs(1);
-/// How many times a `JUKEBOX` answer is retried before it's the caller's.
-const JUKEBOX_RETRIES: u32 = 3;
-/// How many times a listing restarts on `NFS3ERR_BAD_COOKIE` before giving up.
-const LISTING_RESTARTS: u32 = 3;
-/// How many LOOKUPs (or GETATTRs) a listing keeps in flight to fill entries
-/// the server listed without a handle or attributes.
-const LOOKUPS_IN_FLIGHT: usize = 16;
+pub(super) const MAX_NAME: usize = 4096;
 
 /// An NFS file handle: opaque bytes the server minted, at most 64.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -54,7 +22,7 @@ pub(crate) fn decode_handle(dec: &mut Decoder) -> Result<FileHandle, XdrError> {
     Ok(FileHandle(dec.opaque(MAX_HANDLE)?))
 }
 
-fn encode_handle(enc: &mut Encoder, handle: &FileHandle) {
+pub(super) fn encode_handle(enc: &mut Encoder, handle: &FileHandle) {
     enc.opaque(&handle.0);
 }
 
@@ -215,14 +183,14 @@ pub(crate) struct NfsTime {
     pub(crate) nseconds: u32,
 }
 
-fn decode_time(dec: &mut Decoder) -> Result<NfsTime, XdrError> {
+pub(super) fn decode_time(dec: &mut Decoder) -> Result<NfsTime, XdrError> {
     Ok(NfsTime {
         seconds: dec.u32()?,
         nseconds: dec.u32()?,
     })
 }
 
-fn encode_time(enc: &mut Encoder, time: NfsTime) {
+pub(super) fn encode_time(enc: &mut Encoder, time: NfsTime) {
     enc.u32(time.seconds);
     enc.u32(time.nseconds);
 }
@@ -287,7 +255,7 @@ pub(crate) fn decode_fattr(dec: &mut Decoder) -> Result<Fattr3, XdrError> {
     })
 }
 
-fn decode_post_op_attr(dec: &mut Decoder) -> Result<Option<Fattr3>, XdrError> {
+pub(super) fn decode_post_op_attr(dec: &mut Decoder) -> Result<Option<Fattr3>, XdrError> {
     dec.optional(decode_fattr)
 }
 
@@ -311,7 +279,7 @@ pub(crate) struct WccData {
     pub(crate) after: Option<Fattr3>,
 }
 
-fn decode_wcc(dec: &mut Decoder) -> Result<WccData, XdrError> {
+pub(super) fn decode_wcc(dec: &mut Decoder) -> Result<WccData, XdrError> {
     let before = dec.optional(|dec| {
         Ok(WccAttr {
             size: dec.u64()?,
@@ -355,7 +323,7 @@ pub(crate) struct Sattr3 {
     pub(crate) mtime: SetTime,
 }
 
-fn encode_sattr(enc: &mut Encoder, sattr: &Sattr3) {
+pub(super) fn encode_sattr(enc: &mut Encoder, sattr: &Sattr3) {
     for value in [sattr.mode, sattr.uid, sattr.gid] {
         enc.bool(value.is_some());
         if let Some(value) = value {
@@ -390,7 +358,7 @@ pub(crate) enum Stable {
 }
 
 impl Stable {
-    fn number(self) -> u32 {
+    pub(super) fn number(self) -> u32 {
         match self {
             Self::Unstable => 0,
             Self::DataSync => 1,
@@ -610,74 +578,13 @@ pub(crate) struct PathConf {
     pub(crate) case_preserving: bool,
 }
 
-/// One entry of a whole listing: name, handle, and attributes, all present.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ListedEntry {
-    /// The name, as the server's bytes.
-    pub(crate) name: Bytes,
-    /// Its handle.
-    pub(crate) handle: FileHandle,
-    /// Its attributes (a symlink's own).
-    pub(crate) attributes: Fattr3,
-}
-
-/// What [`Nfs3Client::list_dir`] hands its caller as the listing goes.
-#[derive(Debug)]
-pub(crate) enum ListingEvent {
-    /// Another batch of entries.
-    Entries(Vec<ListedEntry>),
-    /// The server invalidated the listing (`BAD_COOKIE`); it starts again from
-    /// the top. ❗ Discard every entry delivered so far.
-    Restarted,
-}
-
-mod procedures {
-    use super::{NFS_V3, Procedure, Repeat};
-
-    const fn safe(number: u32) -> Procedure {
-        Procedure {
-            program: NFS_V3,
-            number,
-            repeat: Repeat::Safe,
-        }
-    }
-
-    const fn never(number: u32) -> Procedure {
-        Procedure {
-            program: NFS_V3,
-            number,
-            repeat: Repeat::Never,
-        }
-    }
-
-    pub(super) const NULL: Procedure = safe(0);
-    pub(super) const GETATTR: Procedure = safe(1);
-    pub(super) const SETATTR: Procedure = never(2);
-    pub(super) const LOOKUP: Procedure = safe(3);
-    pub(super) const ACCESS: Procedure = safe(4);
-    pub(super) const READLINK: Procedure = safe(5);
-    pub(super) const READ: Procedure = safe(6);
-    pub(super) const WRITE: Procedure = safe(7);
-    pub(super) const CREATE: Procedure = never(8);
-    pub(super) const MKDIR: Procedure = never(9);
-    pub(super) const REMOVE: Procedure = never(12);
-    pub(super) const RMDIR: Procedure = never(13);
-    pub(super) const RENAME: Procedure = never(14);
-    pub(super) const READDIR: Procedure = safe(16);
-    pub(super) const READDIRPLUS: Procedure = safe(17);
-    pub(super) const FSSTAT: Procedure = safe(18);
-    pub(super) const FSINFO: Procedure = safe(19);
-    pub(super) const PATHCONF: Procedure = safe(20);
-    pub(super) const COMMIT: Procedure = safe(21);
-}
-
 /// `diropargs3`: a directory and a name in it.
-fn encode_dirop(enc: &mut Encoder, dir: &FileHandle, name: &[u8]) {
+pub(super) fn encode_dirop(enc: &mut Encoder, dir: &FileHandle, name: &[u8]) {
     encode_handle(enc, dir);
     enc.opaque(name);
 }
 
-fn is_dot_or_dot_dot(name: &[u8]) -> bool {
+pub(super) fn is_dot_or_dot_dot(name: &[u8]) -> bool {
     name == b"." || name == b".."
 }
 
@@ -843,492 +750,6 @@ pub(crate) fn status_of(mut dec: Decoder) -> Result<Result<Decoder, NfsStat3>, X
     }
 }
 
-/// Typed NFSv3 calls on one connection. Cheap to clone.
-#[derive(Clone)]
-pub(crate) struct Nfs3Client {
-    conn: RpcConnection,
-    /// The budget every metadata and mutation call carries. READ, WRITE, and
-    /// COMMIT carry none.
-    budget: Option<Duration>,
-}
-
-impl Nfs3Client {
-    /// Calls over `conn`, metadata and mutations capped at `budget`.
-    pub(crate) fn new(conn: RpcConnection, budget: Option<Duration>) -> Self {
-        Self { conn, budget }
-    }
-
-    /// The connection under this client: its liveness, its reserved port.
-    pub(crate) fn connection(&self) -> &RpcConnection {
-        &self.conn
-    }
-
-    /// One procedure, retried on `JUKEBOX`, decoded by `ok` on success.
-    async fn run<T>(
-        &self,
-        procedure: Procedure,
-        budget: Option<Duration>,
-        args: impl Fn(&mut Encoder),
-        ok: impl FnOnce(&mut Decoder) -> Result<T, XdrError>,
-    ) -> Result<T, NfsError> {
-        let mut retries = 0;
-        loop {
-            let results = self.conn.call(procedure, &args, budget).await?;
-            match status_of(results)? {
-                Ok(mut dec) => return Ok(ok(&mut dec)?),
-                Err(NfsStat3::Jukebox) if retries < JUKEBOX_RETRIES => {
-                    retries += 1;
-                    debug!(target: "nfs", "procedure {} answered JUKEBOX; asking again in {JUKEBOX_DELAY:?}", procedure.number);
-                    tokio::time::sleep(JUKEBOX_DELAY).await;
-                }
-                Err(status) => return Err(NfsError::Status(status)),
-            }
-        }
-    }
-
-    /// `NULL`: does the NFS program answer at all?
-    pub(crate) async fn null(&self) -> Result<(), NfsError> {
-        self.conn.call(procedures::NULL, |_| {}, self.budget).await?;
-        Ok(())
-    }
-
-    /// `GETATTR`.
-    pub(crate) async fn getattr(&self, handle: &FileHandle) -> Result<Fattr3, NfsError> {
-        self.run(
-            procedures::GETATTR,
-            self.budget,
-            |enc| encode_handle(enc, handle),
-            decode_getattr,
-        )
-        .await
-    }
-
-    /// `SETATTR`, refused with `NOT_SYNC` when `guard_ctime` is given and the
-    /// object's `ctime` no longer matches it.
-    pub(crate) async fn setattr(
-        &self,
-        handle: &FileHandle,
-        sattr: &Sattr3,
-        guard_ctime: Option<NfsTime>,
-    ) -> Result<WccData, NfsError> {
-        self.run(
-            procedures::SETATTR,
-            self.budget,
-            |enc| {
-                encode_handle(enc, handle);
-                encode_sattr(enc, sattr);
-                enc.bool(guard_ctime.is_some());
-                if let Some(ctime) = guard_ctime {
-                    encode_time(enc, ctime);
-                }
-            },
-            decode_wcc,
-        )
-        .await
-    }
-
-    /// `LOOKUP` of `name` in `dir`. ❗ Doesn't follow a link at the end.
-    pub(crate) async fn lookup(&self, dir: &FileHandle, name: &[u8]) -> Result<LookupOk, NfsError> {
-        self.run(
-            procedures::LOOKUP,
-            self.budget,
-            |enc| encode_dirop(enc, dir, name),
-            decode_lookup,
-        )
-        .await
-    }
-
-    /// `ACCESS`: which of the [`access`] bits in `asked` this identity has.
-    pub(crate) async fn access(&self, handle: &FileHandle, asked: u32) -> Result<AccessOk, NfsError> {
-        self.run(
-            procedures::ACCESS,
-            self.budget,
-            |enc| {
-                encode_handle(enc, handle);
-                enc.u32(asked);
-            },
-            |dec| {
-                Ok(AccessOk {
-                    attributes: decode_post_op_attr(dec)?,
-                    granted: dec.u32()?,
-                })
-            },
-        )
-        .await
-    }
-
-    /// `READLINK`: a symlink's target, as the server's bytes.
-    pub(crate) async fn readlink(&self, handle: &FileHandle) -> Result<Bytes, NfsError> {
-        self.run(
-            procedures::READLINK,
-            self.budget,
-            |enc| encode_handle(enc, handle),
-            |dec| {
-                let _attributes = decode_post_op_attr(dec)?;
-                dec.opaque(MAX_NAME)
-            },
-        )
-        .await
-    }
-
-    /// `READ` of up to `count` bytes at `offset` (capped at 1 MiB).
-    pub(crate) async fn read(&self, handle: &FileHandle, offset: u64, count: u32) -> Result<ReadOk, NfsError> {
-        let count = count.min(MAX_PAYLOAD);
-        self.run(
-            procedures::READ,
-            None,
-            |enc| {
-                encode_handle(enc, handle);
-                enc.u64(offset);
-                enc.u32(count);
-            },
-            |dec| decode_read(dec, count),
-        )
-        .await
-    }
-
-    /// `WRITE` of `data` at `offset`. The caller keeps `data` within the
-    /// server's `wtmax`.
-    pub(crate) async fn write(
-        &self,
-        handle: &FileHandle,
-        offset: u64,
-        stable: Stable,
-        data: &[u8],
-    ) -> Result<WriteOk, NfsError> {
-        let count = u32::try_from(data.len()).unwrap_or(u32::MAX);
-        self.run(
-            procedures::WRITE,
-            None,
-            |enc| {
-                encode_handle(enc, handle);
-                enc.u64(offset);
-                enc.u32(count);
-                enc.u32(stable.number());
-                enc.opaque(data);
-            },
-            decode_write,
-        )
-        .await
-    }
-
-    /// `CREATE` of `name` in `dir`.
-    pub(crate) async fn create(&self, dir: &FileHandle, name: &[u8], how: &CreateHow) -> Result<CreatedOk, NfsError> {
-        self.run(
-            procedures::CREATE,
-            self.budget,
-            |enc| {
-                encode_dirop(enc, dir, name);
-                match how {
-                    CreateHow::Unchecked(sattr) => {
-                        enc.u32(0);
-                        encode_sattr(enc, sattr);
-                    }
-                    CreateHow::Guarded(sattr) => {
-                        enc.u32(1);
-                        encode_sattr(enc, sattr);
-                    }
-                    CreateHow::Exclusive(verifier) => {
-                        enc.u32(2);
-                        enc.fixed_opaque(verifier);
-                    }
-                }
-            },
-            decode_created,
-        )
-        .await
-    }
-
-    /// `MKDIR` of `name` in `dir`.
-    pub(crate) async fn mkdir(&self, dir: &FileHandle, name: &[u8], sattr: &Sattr3) -> Result<CreatedOk, NfsError> {
-        self.run(
-            procedures::MKDIR,
-            self.budget,
-            |enc| {
-                encode_dirop(enc, dir, name);
-                encode_sattr(enc, sattr);
-            },
-            decode_created,
-        )
-        .await
-    }
-
-    /// `REMOVE` of the non-directory `name` in `dir`.
-    pub(crate) async fn remove(&self, dir: &FileHandle, name: &[u8]) -> Result<WccData, NfsError> {
-        self.run(
-            procedures::REMOVE,
-            self.budget,
-            |enc| encode_dirop(enc, dir, name),
-            decode_wcc,
-        )
-        .await
-    }
-
-    /// `RMDIR` of the empty directory `name` in `dir`.
-    pub(crate) async fn rmdir(&self, dir: &FileHandle, name: &[u8]) -> Result<WccData, NfsError> {
-        self.run(
-            procedures::RMDIR,
-            self.budget,
-            |enc| encode_dirop(enc, dir, name),
-            decode_wcc,
-        )
-        .await
-    }
-
-    /// `RENAME`. ❗ Replaces an existing target (a directory only when it's
-    /// empty).
-    pub(crate) async fn rename(
-        &self,
-        from_dir: &FileHandle,
-        from_name: &[u8],
-        to_dir: &FileHandle,
-        to_name: &[u8],
-    ) -> Result<RenameOk, NfsError> {
-        self.run(
-            procedures::RENAME,
-            self.budget,
-            |enc| {
-                encode_dirop(enc, from_dir, from_name);
-                encode_dirop(enc, to_dir, to_name);
-            },
-            |dec| {
-                Ok(RenameOk {
-                    from_dir_wcc: decode_wcc(dec)?,
-                    to_dir_wcc: decode_wcc(dec)?,
-                })
-            },
-        )
-        .await
-    }
-
-    /// One `READDIR` page of about `count` bytes from `cookie`.
-    pub(crate) async fn readdir(
-        &self,
-        dir: &FileHandle,
-        cookie: u64,
-        cookieverf: [u8; 8],
-        count: u32,
-    ) -> Result<DirPage<DirEntry>, NfsError> {
-        self.run(
-            procedures::READDIR,
-            self.budget,
-            |enc| {
-                encode_handle(enc, dir);
-                enc.u64(cookie);
-                enc.fixed_opaque(&cookieverf);
-                enc.u32(count);
-            },
-            decode_readdir,
-        )
-        .await
-    }
-
-    /// One `READDIRPLUS` page of about `maxcount` bytes from `cookie`.
-    pub(crate) async fn readdirplus(
-        &self,
-        dir: &FileHandle,
-        cookie: u64,
-        cookieverf: [u8; 8],
-        maxcount: u32,
-    ) -> Result<DirPage<DirEntryPlus>, NfsError> {
-        let maxcount = maxcount.min(MAX_PAYLOAD);
-        self.run(
-            procedures::READDIRPLUS,
-            self.budget,
-            |enc| {
-                encode_handle(enc, dir);
-                enc.u64(cookie);
-                enc.fixed_opaque(&cookieverf);
-                // `dircount` (names and cookies only) and `maxcount` (the whole
-                // reply): the same number, the shape the Linux client sends.
-                enc.u32(maxcount);
-                enc.u32(maxcount);
-            },
-            decode_readdirplus,
-        )
-        .await
-    }
-
-    /// `FSSTAT`.
-    pub(crate) async fn fsstat(&self, handle: &FileHandle) -> Result<FsStat, NfsError> {
-        self.run(
-            procedures::FSSTAT,
-            self.budget,
-            |enc| encode_handle(enc, handle),
-            decode_fsstat,
-        )
-        .await
-    }
-
-    /// `FSINFO`.
-    pub(crate) async fn fsinfo(&self, handle: &FileHandle) -> Result<FsInfo, NfsError> {
-        self.run(
-            procedures::FSINFO,
-            self.budget,
-            |enc| encode_handle(enc, handle),
-            decode_fsinfo,
-        )
-        .await
-    }
-
-    /// `PATHCONF`.
-    pub(crate) async fn pathconf(&self, handle: &FileHandle) -> Result<PathConf, NfsError> {
-        self.run(
-            procedures::PATHCONF,
-            self.budget,
-            |enc| encode_handle(enc, handle),
-            decode_pathconf,
-        )
-        .await
-    }
-
-    /// `COMMIT` of `count` bytes at `offset` (0 and 0: the whole file).
-    pub(crate) async fn commit(&self, handle: &FileHandle, offset: u64, count: u32) -> Result<CommitOk, NfsError> {
-        self.run(
-            procedures::COMMIT,
-            None,
-            |enc| {
-                encode_handle(enc, handle);
-                enc.u64(offset);
-                enc.u32(count);
-            },
-            decode_commit,
-        )
-        .await
-    }
-
-    /// The whole listing of `dir`, a page at a time, every entry with its
-    /// handle and attributes.
-    ///
-    /// - READDIRPLUS from cookie 0 with a zero `cookieverf`, echoing the
-    ///   returned verifier on every later page. `NOTSUPP` on the first page
-    ///   falls back to READDIR + a LOOKUP per entry.
-    /// - An entry READDIRPLUS sent without a handle costs a LOOKUP, and one
-    ///   without attributes a GETATTR (pipelined, [`LOOKUPS_IN_FLIGHT`] at a
-    ///   time), ❌ never a skipped or attribute-less row. One that's gone by the
-    ///   time it's looked up is left out: it no longer exists.
-    /// - `BAD_COOKIE` restarts from the top (telling `on_event`
-    ///   [`ListingEvent::Restarted`]), at most [`LISTING_RESTARTS`] times.
-    pub(crate) async fn list_dir(
-        &self,
-        dir: &FileHandle,
-        page_bytes: u32,
-        mut on_event: impl FnMut(ListingEvent),
-    ) -> Result<(), NfsError> {
-        let mut plus = true;
-        let mut restarts = 0;
-        'listing: loop {
-            let mut cookie = 0;
-            let mut cookieverf = [0u8; 8];
-            loop {
-                let (entries, next_cookie, next_verf, eof) = if plus {
-                    match self.readdirplus(dir, cookie, cookieverf, page_bytes).await {
-                        Ok(page) => {
-                            let entries = self.complete_plus(dir, page.entries).await?;
-                            (entries, page.next_cookie, page.cookieverf, page.eof)
-                        }
-                        Err(NfsError::Status(NfsStat3::NotSupp)) if cookie == 0 => {
-                            debug!(target: "nfs", "the server has no READDIRPLUS; listing with READDIR and LOOKUP");
-                            plus = false;
-                            continue;
-                        }
-                        Err(NfsError::Status(NfsStat3::BadCookie)) if restarts < LISTING_RESTARTS => {
-                            restarts += 1;
-                            on_event(ListingEvent::Restarted);
-                            continue 'listing;
-                        }
-                        Err(err) => return Err(err),
-                    }
-                } else {
-                    match self.readdir(dir, cookie, cookieverf, page_bytes).await {
-                        Ok(page) => {
-                            let entries = self.complete_plain(dir, page.entries).await?;
-                            (entries, page.next_cookie, page.cookieverf, page.eof)
-                        }
-                        Err(NfsError::Status(NfsStat3::BadCookie)) if restarts < LISTING_RESTARTS => {
-                            restarts += 1;
-                            on_event(ListingEvent::Restarted);
-                            continue 'listing;
-                        }
-                        Err(err) => return Err(err),
-                    }
-                };
-                if !entries.is_empty() {
-                    on_event(ListingEvent::Entries(entries));
-                }
-                if eof {
-                    return Ok(());
-                }
-                match next_cookie {
-                    Some(next) => cookie = next,
-                    None => return Err(NfsError::NoProgress),
-                }
-                cookieverf = next_verf;
-            }
-        }
-    }
-
-    /// Fills each READDIRPLUS entry's missing handle or attributes.
-    async fn complete_plus(&self, dir: &FileHandle, entries: Vec<DirEntryPlus>) -> Result<Vec<ListedEntry>, NfsError> {
-        let filled: Vec<Result<Option<ListedEntry>, NfsError>> = stream::iter(entries)
-            .map(|entry| async move {
-                match (entry.handle, entry.attributes) {
-                    (Some(handle), Some(attributes)) => Ok(Some(ListedEntry {
-                        name: entry.name,
-                        handle,
-                        attributes,
-                    })),
-                    (Some(handle), None) => match self.getattr(&handle).await {
-                        Ok(attributes) => Ok(Some(ListedEntry {
-                            name: entry.name,
-                            handle,
-                            attributes,
-                        })),
-                        Err(NfsError::Status(NfsStat3::NoEnt | NfsStat3::Stale)) => Ok(None),
-                        Err(err) => Err(err),
-                    },
-                    (None, _) => self.lookup_entry(dir, entry.name).await,
-                }
-            })
-            .buffered(LOOKUPS_IN_FLIGHT)
-            .collect()
-            .await;
-        filled.into_iter().filter_map(Result::transpose).collect()
-    }
-
-    /// LOOKUPs every READDIR entry, pipelined.
-    async fn complete_plain(&self, dir: &FileHandle, entries: Vec<DirEntry>) -> Result<Vec<ListedEntry>, NfsError> {
-        let filled: Vec<Result<Option<ListedEntry>, NfsError>> = stream::iter(entries)
-            .map(|entry| self.lookup_entry(dir, entry.name))
-            .buffered(LOOKUPS_IN_FLIGHT)
-            .collect()
-            .await;
-        filled.into_iter().filter_map(Result::transpose).collect()
-    }
-
-    /// One listed name's handle and attributes, or `None` when it's gone.
-    async fn lookup_entry(&self, dir: &FileHandle, name: Bytes) -> Result<Option<ListedEntry>, NfsError> {
-        let found = match self.lookup(dir, &name).await {
-            Ok(found) => found,
-            Err(NfsError::Status(NfsStat3::NoEnt)) => return Ok(None),
-            Err(err) => return Err(err),
-        };
-        let attributes = match found.attributes {
-            Some(attributes) => attributes,
-            None => match self.getattr(&found.handle).await {
-                Ok(attributes) => attributes,
-                Err(NfsError::Status(NfsStat3::NoEnt | NfsStat3::Stale)) => return Ok(None),
-                Err(err) => return Err(err),
-            },
-        };
-        Ok(Some(ListedEntry {
-            name,
-            handle: found.handle,
-            attributes,
-        }))
-    }
-}
-
 #[cfg(test)]
-#[path = "nfs3_test.rs"]
-mod nfs3_test;
+#[path = "types_test.rs"]
+mod types_test;

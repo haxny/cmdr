@@ -8,7 +8,11 @@ secret. The plan it's built from: `docs/specs/nfs-support-plan.md`.
 
 - `params.rs`: `NfsServer` (host, port, the fixture's portmap port override), `NfsIdentity` (uid, gid),
   `NfsConnectionParams` (the place: server, canonical export, identity, start folder, auto-reconnect).
-- `errors.rs`: `NfsConnectError`, every variant from a number the server sent.
+- `errors.rs`: `NfsConnectError`, every variant from a number the server sent; `nfsstat3` and call failures →
+  `VolumeError` with the path.
+- `xdr.rs` (bounded codec), `transport.rs` (`RpcConnection`: pipelined calls, reserved port, silence ladder), `proto/`
+  (`rpc`, `portmap`, `mount`, `nfs3`'s typed `Nfs3Client`), `dial.rs` (resolve → portmap → split + `MNT` → NFS
+  connection). DETAILS § "The protocol layer".
 - `volume/`: `mod.rs` (`NfsVolume`, `connect_nfs_volume`), `discovery.rs` (`list_exports`, `guess_identity`, and
   `resolve_export`, the export/folder split), `volume_impl.rs` (the `Volume` trait).
 
@@ -25,6 +29,8 @@ secret. The plan it's built from: `docs/specs/nfs-support-plan.md`.
   alone names its volume. `cmdr_fs::volume::remote_paths` owns the grammar; `server-path-utils.ts` mirrors it.
 - ❗ **`connect_nfs_volume` resolves the export/folder split.** Register under the returned volume's `volume_id()` and
   save its `params()`, ❌ never the id of what was passed in.
+- ❗ **Cancel a call by dropping it**: the XID is forgotten, ❌ never the connection. Only `transport.rs` and `rpc.rs`
+  touch bytes; a stuck call is resent only when its `Procedure` is `Repeat::Safe`.
 - ❌ **No `tauri`, no user-facing words** (`index-crate-isolation`). The public surface is capped: DETAILS § "The public
   surface is capped".
 

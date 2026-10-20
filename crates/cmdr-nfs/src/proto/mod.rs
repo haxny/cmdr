@@ -9,3 +9,7 @@ pub(crate) mod portmap;
 pub(crate) mod rpc;
 #[cfg(test)]
 pub(crate) mod server;
+
+#[cfg(test)]
+#[path = "knfsd_replies_test.rs"]
+mod knfsd_replies_test;

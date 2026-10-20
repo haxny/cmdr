@@ -291,6 +291,8 @@ pub(crate) fn random_u32() -> u32 {
 /// One call waiting for its reply.
 struct Pending {
     reply: oneshot::Sender<Bytes>,
+    /// What was asked, for the log and the test tap.
+    procedure: Procedure,
     /// Its place in send order, so a stuck call can tell whether calls sent
     /// after it have been answered.
     sent_as: u64,
@@ -341,6 +343,8 @@ impl Shared {
             return;
         };
         self.answered_up_to.fetch_max(pending.sent_as, Ordering::SeqCst);
+        #[cfg(test)]
+        tap::record(pending.procedure, &record);
         let _ = pending.reply.send(record);
     }
 
@@ -467,6 +471,7 @@ impl RpcConnection {
             xid,
             Pending {
                 reply: reply_tx,
+                procedure,
                 sent_as,
             },
         );
@@ -492,6 +497,8 @@ impl RpcConnection {
         let mut resent = false;
         loop {
             tokio::select! {
+                // A reply that's here wins over a timer firing at the same instant.
+                biased;
                 reply = &mut reply_rx => {
                     let Ok(record) = reply else { return Err(shared.disconnected()) };
                     return match decode_reply(record)? {
@@ -704,6 +711,36 @@ async fn connect_from_reserved_port(target: SocketAddr) -> io::Result<(TcpStream
 
 fn is_port_taken(err: &io::Error) -> bool {
     matches!(err.kind(), io::ErrorKind::AddrInUse | io::ErrorKind::AddrNotAvailable)
+}
+
+/// A test-only record of every reply delivered, process-wide: how the fixture
+/// cells capture real server replies as decoding fixtures.
+#[cfg(test)]
+pub(crate) mod tap {
+    use std::sync::Mutex;
+
+    use bytes::Bytes;
+    use cmdr_fs::ignore_poison::IgnorePoison;
+
+    use crate::proto::rpc::Procedure;
+
+    static TAPPED: Mutex<Option<Vec<(Procedure, Bytes)>>> = Mutex::new(None);
+
+    /// Starts recording every reply this process's connections deliver.
+    pub(crate) fn start() {
+        *TAPPED.lock_ignore_poison() = Some(Vec::new());
+    }
+
+    /// Stops recording and hands back what was recorded, in order.
+    pub(crate) fn take() -> Vec<(Procedure, Bytes)> {
+        TAPPED.lock_ignore_poison().take().unwrap_or_default()
+    }
+
+    pub(super) fn record(procedure: Procedure, record: &Bytes) {
+        if let Some(tapped) = TAPPED.lock_ignore_poison().as_mut() {
+            tapped.push((procedure, record.clone()));
+        }
+    }
 }
 
 #[cfg(test)]
