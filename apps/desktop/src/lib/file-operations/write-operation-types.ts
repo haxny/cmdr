@@ -205,6 +205,11 @@ export type WriteOperationError =
   | { type: 'destination_full'; path: string }
   | { type: 'destination_inside_source'; source: string; destination: string }
   | { type: 'duplicate_source_names'; name: string; first: string; second: string }
+  // The selection straddles a read-only view and the drive it sits on (a repo's
+  // `Browse snapshots` beside the repo's files), and one transfer reads through
+  // one volume. Refused before anything is read. `path` is the first item a
+  // different volume serves than the first one.
+  | { type: 'sources_span_volumes'; path: string }
   // A delete, an Overwrite, or a move onto another drive reached a folder a
   // drive or server is mounted on. Refused before anything is removed or
   // copied, as Finder does. `action` is what it would have done to the drive.

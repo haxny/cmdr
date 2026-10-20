@@ -128,6 +128,13 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       second: '/Users/david/Documents/2026/invoices',
     },
   },
+  sources_span_volumes: {
+    operationType: 'copy',
+    error: {
+      type: 'sources_span_volumes',
+      path: '/Volumes/naspi/backups/m3-macbook/Browse snapshots',
+    },
+  },
   archive_entry_name_refused: {
     operationType: 'compress',
     error: {

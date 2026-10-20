@@ -227,6 +227,9 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   // No Retry: the same selection can only be refused again. The way out is
   // picking one of the two, or transferring them one at a time.
   duplicate_source_names: { category: 'needs_action', retryHint: false },
+  // No Retry: the same selection still straddles the view. The way out is two
+  // transfers, which the suggestion says.
+  sources_span_volumes: { category: 'needs_action', retryHint: false },
   // No Retry: the drive is still mounted there, so the same request refuses
   // again. The way out is ejecting it, which the suggestion says.
   mounted_volume_inside: { category: 'needs_action', retryHint: false },
@@ -565,6 +568,15 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
         title: w('sourceInColdStorage.title'),
         message: w('sourceInColdStorage.message', { path: escapeHtml(error.path) }),
         suggestion: w('sourceInColdStorage.suggestion'),
+      }
+    // A selection straddling a view (a backup's snapshots, an archive's inside, a
+    // repository's history) and its drive. Named, because the item to leave out
+    // is the user's to find, and one sentence fits copy, move, and compress.
+    case 'sources_span_volumes':
+      return {
+        title: w('sourcesSpanVolumes.title'),
+        message: w('sourcesSpanVolumes.message', { path: escapeHtml(error.path) }),
+        suggestion: w('sourcesSpanVolumes.suggestion'),
       }
     // A server-side copy whose source was replaced mid-copy: named, and it says
     // the source stays, because a move would otherwise look like it lost it.

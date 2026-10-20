@@ -66,6 +66,20 @@
       ]
     },
     {
+      "case": "sources spanning a view and its drive",
+      "rawMessage": "{op} in the background was refused: {error}",
+      "values": {
+        "op": "Copy",
+        "error": {
+          "type": "sources_span_volumes",
+          "path": "/Volumes/Archive/Summer (Lake House) Trip/Browse snapshots"
+        }
+      },
+      "line": "Copy in the background was refused: detail=\"{\\\"type\\\":\\\"sources_span_volumes\\\",\\\"path\\\":\\\"\\u{fdd0}/Volumes/Archive/Summer (Lake House) Trip/Browse snapshots\\u{fdd1}\\\"}\"",
+      "private": ["Archive", "Summer", "Lake House", "Trip"],
+      "parity": [{ "kind": "path", "value": "/Volumes/Archive/Summer (Lake House) Trip/Browse snapshots" }]
+    },
+    {
       "case": "an archive entry name refused",
       "rawMessage": "{op} failed: {error}",
       "values": {

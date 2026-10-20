@@ -26,6 +26,7 @@ const pathOnlyTypes = new Set<WriteOperationError['type']>([
   'landing_not_recorded',
   'source_in_cold_storage',
   'source_changed',
+  'sources_span_volumes',
 ])
 
 /** Error types where technical details include path + error message. */

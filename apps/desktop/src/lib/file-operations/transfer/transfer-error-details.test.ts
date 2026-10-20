@@ -131,6 +131,12 @@ describe('getTechnicalDetails: variants with their own lines', () => {
     )
   })
 
+  it('names the first source a different volume serves', () => {
+    const error: WriteOperationError = { type: 'sources_span_volumes', path: '/r/Browse snapshots' }
+
+    expect(getTechnicalDetails(error)).toBe('Path: /r/Browse snapshots\nError type: sources_span_volumes')
+  })
+
   it('lists every oversized file under the filesystem limit', () => {
     const error: WriteOperationError = {
       type: 'files_too_large_for_filesystem',

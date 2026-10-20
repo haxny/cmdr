@@ -166,6 +166,17 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'sources_span_volumes',
+    error: { type: 'sources_span_volumes', path: '/r/Browse snapshots' },
+    op: 'copy',
+    expected: {
+      title: 'Part of your selection is inside a view',
+      message:
+        '/r/Browse snapshots is inside a backup’s snapshots, an archive, or a repository’s history, and the rest of your selection isn’t, so Cmdr can’t read them together. Nothing was changed.',
+      suggestion: 'Do it in two steps: the items inside the view on their own, then the rest.',
+    },
+  },
+  {
     name: 'symlink_loop',
     error: { type: 'symlink_loop', path: '/p' },
     expected: {

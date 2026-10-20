@@ -3824,6 +3824,27 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
+  "errors.write.sourcesSpanVolumes.title": "Part of your selection is inside a view",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "description": "Title of the copy/move/compress error dialog when the selection mixes items on the drive with items inside a read-only view Cmdr shows as folders (a restic backup’s “Browse snapshots”, the inside of a zip archive, a git repository’s virtual history folders). One operation can’t read from both, so Cmdr refuses before reading or writing anything. Plain text. This is a raw errors.* string (no ICU).",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.sourcesSpanVolumes.message": "{path} is inside a backup’s snapshots, an archive, or a repository’s history, and the rest of your selection isn’t, so Cmdr can’t read them together. Nothing was changed.",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "description": "Body of that dialog. Plain text with contractions. This is a raw errors.* string (no ICU), so {path} is a literal replacement target, not ICU syntax: keep it spelled exactly and move it to suit your grammar. “Snapshots” are a backup’s saved versions, as restic calls them; “history” is a git repository’s branches and commits.",
+    "placeholders": {
+      "path": "the full path of the first selected item that sits on the other side, e.g. /Volumes/NAS/backup/Browse snapshots"
+    },
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "Do it in two steps: the items inside the view on their own, then the rest.",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "description": "Recovery suggestion for that dialog: run the copy, move, or compress twice, once for the items inside the view and once for the others. Plain text. This is a raw errors.* string (no ICU).",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "errors.write.duplicateSourceNames.suggestion.move": "Move them one at a time, or rename one first.",
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "description": "Recovery suggestion for the same-name refusal, move variant. Plain text. This is a raw errors.* string (no ICU).",
