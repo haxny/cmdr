@@ -11804,7 +11804,7 @@ DEALINGS IN THE SOFTWARE.
 
 Covers: zip 9.0.1
 
-Text from: `LICENSE`
+Text from: `vendor/zip/LICENSE`
 
 ```text
 The MIT License (MIT)
