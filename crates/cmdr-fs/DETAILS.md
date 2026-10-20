@@ -690,6 +690,10 @@ everywhere, which is the point.
 
 - `assert_delete_leaves_a_non_empty_dir_intact` — the refusal that data-safety logic leans on rather than re-checking.
   This is the one MTP broke for years: it claimed the contract by implementing the trait, and nothing looked.
+- `assert_delete_of_a_link_to_a_folder_removes_the_link_alone` — `entry_kind` reports a link AS a link, and `delete`
+  removes the link and never its target: the volume delete walker treats a link as a leaf on that promise (#505). ADB
+  broke it (its `probe` follows a link, so a link to a folder met `rmdir`). Run by local, ADB, and SFTP; backends with
+  no links (SMB, WebDAV, S3, MTP) have nothing to run it against.
 - `assert_rename_refuses_an_existing_destination` — `force` is the only thing between a move and the file it would
   replace, and each backend earns the refusal differently (`renamex_np(RENAME_EXCL)`, an SMB `stat` plus the server's
   `ReplaceIfExists == false`, an MTP `exists` probe, a map lookup). No shared mechanism to trust, only a shared promise.

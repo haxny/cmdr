@@ -32,8 +32,10 @@ never taken on its word: the backend's batch scan follows a selected link (a cro
 points at), so the walker re-asks the parent listing or `entry_kind`, one probe per top-level folder with a cold parent.
 A delete-purpose preview recounts a selected link as one leaf (`count_selected_links_as_links`), so the dialog's count
 describes the delete, but the walker's own answer is what protects the target. Pinned by `volume_symlink_tests.rs`
-(nested link, link-following backend, pane-listed parent, cold preview, preview count). Regression anchor: #505 (a
-nested `data -> ~/Photos` link on an external drive took `~/Photos`).
+(nested link, link-following backend, pane-listed parent, cold preview, preview count), `link_delete_tests.rs` (the same
+over a real `LocalPosixVolume`), and the backends' half by the conformance cell
+`assert_delete_of_a_link_to_a_folder_removes_the_link_alone` (local, ADB, SFTP). Regression anchor: #505 (a nested
+`data -> ~/Photos` link on an external drive took `~/Photos`).
 
 ## A mount is a wall
 

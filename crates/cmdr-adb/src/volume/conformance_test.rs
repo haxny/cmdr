@@ -236,6 +236,25 @@ async fn create_directory_all_goes_through_a_link_to_a_folder() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn delete_of_a_link_to_a_folder_removes_the_link_alone() {
+    // A phone's folders are full of links (`/sdcard` itself is one), and the
+    // sync service follows a link when asked what's there: a delete that went
+    // by that answer would `rmdir` the link instead of removing it (#505).
+    let mut tree = seeded_tree();
+    tree.add_symlink("/sdcard/link", "/sdcard/album");
+    let server = FakeAdbServer::start(tree).await;
+    let (volume, _) = connect_fake(&server, FIXTURE_SERIAL).await;
+
+    conformance::assert_delete_of_a_link_to_a_folder_removes_the_link_alone(
+        volume.as_ref(),
+        &fixture_path("/sdcard/link"),
+        &fixture_path("/sdcard/album"),
+        "keep.txt",
+    )
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn delete_leaves_a_non_empty_directory_intact() {
     let (_server, volume) = seeded().await;
     conformance::assert_delete_leaves_a_non_empty_dir_intact(

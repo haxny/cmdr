@@ -277,6 +277,26 @@ async fn create_directory_all_honors_the_shared_through_a_link_contract() {
     .await;
 }
 
+/// The shared link-delete assertion: a link to a folder is a leaf, and its
+/// delete leaves the target alone (#505).
+#[tokio::test]
+async fn delete_of_a_link_to_a_folder_honors_the_shared_contract() {
+    let test_dir = TestDir::new("delete_of_a_link_conformance_test");
+    let volume = LocalPosixVolume::local_folder("Test", &*test_dir, VolumeHost::detached());
+
+    volume.create_directory(Path::new("real")).await.unwrap();
+    volume.create_file(Path::new("real/keep.txt"), b"keep").await.unwrap();
+    std::os::unix::fs::symlink(test_dir.join("real"), test_dir.join("link")).unwrap();
+
+    cmdr_fs::volume::conformance::assert_delete_of_a_link_to_a_folder_removes_the_link_alone(
+        &volume,
+        Path::new("link"),
+        Path::new("real"),
+        "keep.txt",
+    )
+    .await;
+}
+
 /// The shared writability-declaration assertion: `is_writable()` and the
 /// mutations LocalPosix offers say the same thing.
 #[tokio::test]

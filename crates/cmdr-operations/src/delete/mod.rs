@@ -50,6 +50,9 @@ mod delete_outage_tests;
 mod delete_volume_reuse_tests;
 #[cfg(test)]
 mod hardlink_progress_tests;
+/// A volume delete removes a symbolic link and never walks into its target (#505).
+#[cfg(test)]
+mod link_delete_tests;
 #[cfg(test)]
 mod preview_binding_tests;
 // The nested-mount pins (macOS, `#[ignore]`d, run by `pnpm check disk-images`). The

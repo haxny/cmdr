@@ -25,6 +25,7 @@ use super::{
 
 mod directory_creation;
 mod forced_rename;
+mod link_delete;
 mod metadata;
 mod modification_date;
 
@@ -33,6 +34,7 @@ pub use directory_creation::{
     assert_create_directory_all_reports_an_existing_dir_honestly,
 };
 pub use forced_rename::assert_forced_rename_keeps_a_non_empty_dir;
+pub use link_delete::assert_delete_of_a_link_to_a_folder_removes_the_link_alone;
 pub use metadata::{
     BIRTH_SECS, assert_apply_metadata_keeps, assert_read_stream_reports_the_listed_metadata,
     assert_write_from_stream_keeps_metadata,
