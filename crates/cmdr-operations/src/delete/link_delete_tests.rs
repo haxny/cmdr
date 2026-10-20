@@ -127,6 +127,7 @@ async fn a_selected_link_a_cold_preview_called_a_folder_is_removed_and_its_targe
     engine.stores().previews().insert_scan_result(
         "preview-link".to_string(),
         CachedScanResult::from_volume_batch(
+            crate::types::ScanPreviewPurpose::Delete,
             vec![link.clone()],
             1,
             13,

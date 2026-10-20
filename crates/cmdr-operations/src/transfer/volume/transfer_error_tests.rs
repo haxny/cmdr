@@ -418,11 +418,12 @@ fn where_the_new_data_is_outranks_a_lost_connection() {
 fn a_refusal_before_any_volume_call_reaches_the_dialog_as_itself() {
     let refusal = WriteOperationError::MountedVolumeInside {
         mount_point: "/Volumes/folder/Backup".to_string(),
+        action: crate::types::MountedVolumeAction::Replace,
     };
 
     let error = PathedVolumeError::refused(Path::new("/Volumes/folder"), refusal);
 
     assert!(
-        matches!(&WriteFailure::from(error).error, WriteOperationError::MountedVolumeInside { mount_point } if mount_point == "/Volumes/folder/Backup"),
+        matches!(&WriteFailure::from(error).error, WriteOperationError::MountedVolumeInside { mount_point, .. } if mount_point == "/Volumes/folder/Backup"),
     );
 }
