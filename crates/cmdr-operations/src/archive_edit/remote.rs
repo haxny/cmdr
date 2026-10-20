@@ -324,13 +324,14 @@ async fn upload_archive(
 ///   moves to a ` (recovered)` name and the error says where (`NewDataKeptAt`),
 ///   with the original still at its aside.
 async fn swap_into_place(parent: &dyn Volume, remote_temp: &Path, archive_path: &Path) -> Result<(), EditError> {
-    // Prefer an ATOMIC rename-overwrite where the backend rejects a same-name
-    // collision (SMB, local FS): if the server supports `ReplaceIfExists` the
-    // rename replaces the original in one step; if not, it fails and we fall
-    // through to the aside swap. A backend that ALLOWS same-name siblings
-    // (MTP) must NOT attempt this — a rename onto the live name would duplicate,
-    // not replace — so it goes straight to the aside swap.
-    if parent.create_directory_errors_on_existing_dir() {
+    // Take the one-step replace ONLY where the backend promises it's atomic
+    // (SMB's `ReplaceIfExists`). ❌ Never on a plain `create_directory_errors_on_existing_dir`:
+    // a forced rename may clear the destination in a step of its own (SFTP
+    // without `posix-rename@openssh.com`), and a crash between its two halves
+    // leaves the edit as the only copy, under a name the sweep deletes. MTP
+    // (same-name siblings, so a rename onto the live name would duplicate)
+    // never promises it either. Everything else takes the aside swap.
+    if parent.supports_atomic_replace_rename() {
         let Err(replace_err) = parent.rename(remote_temp, archive_path, true).await else {
             return Ok(());
         };

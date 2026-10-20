@@ -16,6 +16,7 @@ use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use super::super::super::state::{OperationIntent, WriteOperationState};
@@ -800,6 +801,11 @@ impl Volume for RenameLandsButErrs {
         self
     }
 
+    /// Stands in for SMB, the backend whose replace is one atomic step.
+    fn supports_atomic_replace_rename(&self) -> bool {
+        true
+    }
+
     fn rename<'a>(
         &'a self,
         from: &'a Path,
@@ -813,6 +819,141 @@ impl Volume for RenameLandsButErrs {
             } else {
                 Ok(())
             }
+        })
+    }
+}
+
+/// A backend whose forced rename clears the destination in a step of its own
+/// (SFTP without `posix-rename@openssh.com`, for one) and dies between the two
+/// halves. The swap must not hand it the replace: the original would be gone
+/// and the edit left under a `.cmdr-tmp-*` name the hourly sweep deletes.
+#[tokio::test]
+async fn a_backend_whose_forced_rename_clears_first_never_gets_the_replace() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let inner = remote_parent_with_zip(&archive_path, &build_zip(&[("keep.txt", b"keep me")])).await;
+    let dying = Arc::new(ClearsThenDiesOnAForcedRename {
+        inner: Arc::clone(&inner),
+        dead: AtomicBool::new(false),
+    });
+
+    let _ = add_edit(dying as Arc<dyn Volume>, archive_path.clone()).await;
+    sweep_transfer_temps(inner.as_ref()).await;
+
+    let mut whole = Vec::new();
+    for name in names_in(inner.as_ref(), "/device").await {
+        let at = Path::new("/device").join(&name);
+        if read_remote_zip(inner.as_ref(), &at).await.contains_key("keep.txt") {
+            whole.push(name);
+        }
+    }
+    assert!(!whole.is_empty(), "a complete archive must survive the sweep");
+}
+
+/// A parent whose forced rename deletes the destination, then dies: every call
+/// after that fails, the way nothing reaches a server once the process is gone.
+struct ClearsThenDiesOnAForcedRename {
+    inner: Arc<InMemoryVolume>,
+    dead: AtomicBool,
+}
+
+impl ClearsThenDiesOnAForcedRename {
+    fn alive(&self) -> Result<(), VolumeError> {
+        if self.dead.load(Ordering::SeqCst) {
+            Err(gone())
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Volume for ClearsThenDiesOnAForcedRename {
+    crate::forward_volume_methods!(
+        inner => name,
+        root,
+        lane_key,
+        local_path,
+        supports_streaming,
+        supports_local_fs_access,
+        operations_are_local,
+        create_directory_errors_on_existing_dir,
+        supports_unknown_length_writes,
+        write_is_single_shot,
+        publishes_writes_whole,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner.list_directory(path, on_progress).await
+        })
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner.get_metadata(path).await
+        })
+    }
+
+    fn open_read_stream<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn cmdr_fs::volume::VolumeReadStream>, VolumeError>> + Send + 'a>>
+    {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner.open_read_stream(path).await
+        })
+    }
+
+    fn write_from_stream<'a>(
+        &'a self,
+        dest: &'a Path,
+        mode: cmdr_fs::volume::WriteMode,
+        length: cmdr_fs::volume::StreamLength,
+        stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
+        on_progress: &'a (dyn Fn(cmdr_fs::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::StreamWritten, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner
+                .write_from_stream(dest, mode, length, stream, on_progress)
+                .await
+        })
+    }
+
+    fn rename<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        force: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            if force && self.inner.exists(to).await {
+                self.inner.delete(to).await?;
+                self.dead.store(true, Ordering::SeqCst);
+                return Err(gone());
+            }
+            self.inner.rename(from, to, force).await
+        })
+    }
+
+    fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner.delete(path).await
         })
     }
 }

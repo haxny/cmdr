@@ -72,13 +72,15 @@ The remote ORIGINAL is byte-for-byte untouched until the very last swap:
    `run_managed_edit` its `MutatorHooks::remote_progress_observer`, so the upload reports its own `Transferring` axis
    over the rewritten archive's bytes, then indeterminate `FinishingTransfer` through close and swap, under the op's own
    type (the pull stays silent).
-4. **Swap** is the ONLY step that changes the original. Where the backend REJECTS a same-name collision
-   (`create_directory_errors_on_existing_dir()` true — SMB, local), existing-archive mutation first asks its
-   force-rename operation to replace the name; a backend may implement that as multiple protocol operations. On refusal
-   it falls back to the ASIDE swap. A backend that ALLOWS same-name siblings (MTP, flag false) goes STRAIGHT to it — a
-   rename onto the live name would DUPLICATE, not replace. The aside swap renames the original to
-   `foo.zip.cmdr-temp-<uuid>` (the house aside name, `StagingTemp::mint_aside`, hidden from the pane only while the swap
-   holds it), renames the temp into place, then deletes the aside. Why: the transfer engine's stale-temp sweep
+4. **Swap** is the ONLY step that changes the original. Where the backend promises an ATOMIC replace
+   (`supports_atomic_replace_rename()`, today SMB's one `ReplaceIfExists` SET_INFO), the swap is one forced rename; on
+   refusal it falls back to the ASIDE swap. Every other backend goes STRAIGHT to the aside swap. Gotcha/Why: the gate
+   used to be `create_directory_errors_on_existing_dir()`, which let SFTP (a forced rename without
+   `posix-rename@openssh.com` deletes the destination first), WebDAV, and ADB hand the replace to a backend that may
+   clear the name in a step of its own, the exact window this contract closes. MTP must never force-rename onto the live
+   name either: it allows same-name siblings, so that would DUPLICATE, not replace. The aside swap renames the original
+   to `foo.zip.cmdr-temp-<uuid>` (the house aside name, `StagingTemp::mint_aside`, hidden from the pane only while the
+   swap holds it), renames the temp into place, then deletes the aside. Why: the transfer engine's stale-temp sweep
    (`transfer/volume/cleanup.rs::reap_stale_transfer_temps`) deletes ANY `.cmdr-tmp-*` an hour old at the start of the
    next copy into the folder, and never matches `.cmdr-temp-`, so a crash after any step leaves a complete archive under
    a name nothing reaps: the original at its name, then the original aside (the edit at the temp), then the edit at its
