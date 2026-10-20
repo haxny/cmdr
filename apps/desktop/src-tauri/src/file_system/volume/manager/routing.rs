@@ -1,10 +1,12 @@
 //! Which volume serves a path: [`VolumeManager::resolve`] and what it answers.
 //!
 //! The registry proper (hold volumes by ID) is the parent `manager` module.
-//! This is the dispatcher above the two ROUTES that can swap the volume out
-//! from under a path: the git portal (`git_routing.rs`) and archives
-//! (`archive_routing.rs`). Both mint a read-only volume on demand, register it,
-//! and cap how many stay registered; both hand the caller's path back verbatim.
+//! This is the dispatcher above the three ROUTES that can swap the volume out
+//! from under a path: the git portal (`git_routing.rs`), restic snapshots
+//! (`restic_routing.rs`), and archives (`archive_routing.rs`). Each mints a
+//! volume on demand, registers it, and caps how many stay registered; each
+//! hands the caller's path back verbatim. The dispatcher's one decision is the
+//! ORDER: the leftmost confirmed boundary wins.
 //!
 //! It's another inherent `impl VolumeManager` block (a type's impl can span
 //! files within a crate), so every method stays at `VolumeManager::…`.
@@ -12,18 +14,19 @@
 use super::super::ResolvedVolume;
 use super::VolumeManager;
 use std::collections::VecDeque;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Whether `path` could be served by a ROUTE rather than by the volume that
 /// physically holds it. Pure string work over path segments: no `stat`, no
 /// network, and deliberately permissive, because
 /// [`VolumeManager::resolve`] is the authoritative answer.
 ///
-/// True for exactly the paths with no file of their own on the parent volume: a
-/// non-empty archive-inner path, and anything inside a repo's virtual `.git`
-/// trees while the portal is switched on. ❗ The `.zip` FILE itself is NOT one of
-/// them — it's an ordinary file, and a copy, a move, and the viewer all have to
-/// treat it as bytes on disk.
+/// True for a non-empty archive-inner path, anything inside a repo's virtual
+/// `.git` trees while the portal is switched on, and any path at or under a
+/// `Browse snapshots` component (a real non-repo folder of that name too: the
+/// restic half is a candidate the hub confirms). ❗ The `.zip` FILE itself is NOT
+/// one of them — it's an ordinary file, and a copy, a move, and the viewer all
+/// have to treat it as bytes on disk.
 ///
 /// Call sites use it as the cheap gate in front of an `await`ed `resolve`, so an
 /// ordinary local or remote path pays nothing; whoever then acts on the answer
@@ -38,54 +41,109 @@ use std::path::Path;
 pub fn path_routes_over_its_parent(path: &Path) -> bool {
     let inside_an_archive = cmdr_fs::archive_format::archive_boundary_candidate(path)
         .is_some_and(|(_zip, inner)| !inner.as_os_str().is_empty());
-    inside_an_archive || crate::file_system::git::wiring::portal_serves(path)
+    inside_an_archive
+        || crate::file_system::git::wiring::portal_serves(path)
+        || cmdr_fs::restic_view::restic_route(path).is_some()
+}
+
+/// A place in a path where a route could take over, by the component it sits
+/// at. Lexical; each route confirms its own.
+enum Boundary {
+    /// A `.git/<category>` (the portal decides with no I/O).
+    GitPortal,
+    /// A `Browse snapshots` component, under the repo folder that holds it.
+    Restic(PathBuf),
+    /// The first archive-named component.
+    Archive,
+}
+
+/// Every route boundary in `path`, leftmost first: the order
+/// [`VolumeManager::resolve`] tries them in.
+fn boundaries(path: &Path) -> Vec<Boundary> {
+    let mut found: Vec<(usize, Boundary)> = Vec::new();
+    if let Some(worktree_root) = cmdr_git::portal_route(path) {
+        found.push((worktree_root.components().count(), Boundary::GitPortal));
+    }
+    for repo_root in super::restic_routing::restic_candidates(path) {
+        found.push((repo_root.components().count(), Boundary::Restic(repo_root)));
+    }
+    if let Some((archive, _inner)) = cmdr_fs::archive_format::archive_boundary_candidate(path) {
+        found.push((archive.components().count().saturating_sub(1), Boundary::Archive));
+    }
+    // Two boundaries can't share a component: each is a different name.
+    found.sort_by_key(|(at, _)| *at);
+    found.into_iter().map(|(_, boundary)| boundary).collect()
 }
 
 impl VolumeManager {
     /// Path-aware volume lookup: routes a path that reaches into a repo's
-    /// virtual `.git` trees to its read-only `GitPortalVolume`, and one that
-    /// crosses a `.zip` boundary to its read-only `ArchiveVolume`, registering
-    /// either on demand. Everything else is a plain [`get`](Self::get) with the
-    /// path unchanged.
+    /// virtual `.git` trees to its read-only `GitPortalVolume`, one at or below
+    /// a restic repo's `Browse snapshots` row to its read-only `ResticVolume`,
+    /// and one that crosses a `.zip` boundary to its `ArchiveVolume`,
+    /// registering each on demand. Everything else is a plain
+    /// [`get`](Self::get) with the path unchanged.
     ///
-    /// The git check runs FIRST and is pure string work, so a `.zip` sitting
-    /// inside a snapshot (`…/.git/branches/main/bundle.zip`) belongs to the
-    /// portal rather than to an archive route that would look for a file that
-    /// isn't on disk. A `.zip` in the repo's WORKING tree is untouched by it
-    /// and routes to the archive as always.
+    /// **The leftmost CONFIRMED boundary wins.** Routes nest both ways: a `.zip`
+    /// or a `.git/branches` inside a restic snapshot is backed-up data, not a
+    /// file on disk, and a restic repo inside a git snapshot is the portal's.
+    /// So the boundaries are tried left to right, and one that doesn't confirm
+    /// (a real folder named `photos.zip`, a non-repo folder named
+    /// `Browse snapshots`, the portal switched off) hands over to the next one,
+    /// ❌ never ends routing: a repo inside a real folder named `backups.zip/`
+    /// still browses.
     ///
-    /// This is `async` for the archive half alone: confirming a `.zip` boundary
-    /// on a REMOTE parent (direct SMB / MTP) costs a `get_metadata` plus a
-    /// four-byte `read_range` over the network. See
-    /// [`resolve_archive`](Self::resolve_archive).
+    /// This is `async` for two confirms: a `.zip` boundary on a REMOTE parent
+    /// costs a `get_metadata` plus a four-byte `read_range`
+    /// ([`resolve_archive`](Self::resolve_archive)), and a restic repo the hub
+    /// hasn't met costs one listing of its folder, remembered either way
+    /// ([`resolve_restic`](Self::resolve_restic)).
     ///
     /// Adopt this at every site that did `get(volume_id)` then
     /// `volume.method(path)`. The sync-only
     /// [`resolve_local_only`](Self::resolve_local_only) exists for the one
     /// caller that can't `.await` (the write-op fresh-listing oracle).
     pub async fn resolve(&self, volume_id: &str, path: &Path) -> ResolvedVolume {
-        if let Some(routed) = self.resolve_git_portal(volume_id, path) {
-            return routed;
+        for boundary in boundaries(path) {
+            let routed = match boundary {
+                Boundary::GitPortal => self.resolve_git_portal(volume_id, path),
+                Boundary::Restic(repo_root) => self.resolve_restic(volume_id, &repo_root, path).await,
+                Boundary::Archive => {
+                    Some(self.resolve_archive(volume_id, path).await).filter(ResolvedVolume::is_routed)
+                }
+            };
+            if let Some(routed) = routed {
+                return routed;
+            }
         }
-        self.resolve_archive(volume_id, path).await
+        ResolvedVolume::passthrough(self.get(volume_id), path)
     }
 
-    /// Sync sibling of [`resolve`](Self::resolve) that confirms **only local**
-    /// archive boundaries. A remote (direct SMB / MTP) `.zip` path returns a
-    /// passthrough (its parent volume, path unchanged), because a remote
-    /// confirm needs async I/O this method can't do. Git routing is lexical, so
-    /// it's identical here.
+    /// Sync sibling of [`resolve`](Self::resolve), with the same leftmost order,
+    /// that does no network or remote I/O. It confirms **only local** archive
+    /// boundaries (a remote `.zip` path passes through, its confirm needs async
+    /// I/O), routes restic only on the hub's memo (❌ no confirm listing: a
+    /// `read_dir` on a wedged OS mount would block a scan walker), and routes git
+    /// identically, since that's lexical.
     ///
     /// The ONE caller is the write-op fresh-listing oracle
-    /// (`Listings::authoritative_listing`), which runs on sync
-    /// recursive scan walkers. That oracle guards remote archives separately (a
-    /// non-local parent's volume-level `listing_watch_coverage` would falsely
-    /// claim freshness), so the local-only routing here is sufficient there.
+    /// (`Listings::authoritative_listing`), which runs on sync recursive scan
+    /// walkers. That oracle declines a remote archive path and an unrouted path
+    /// under a `Browse snapshots` component on its own, so a passthrough here
+    /// only costs a re-read.
     pub fn resolve_local_only(&self, volume_id: &str, path: &Path) -> ResolvedVolume {
-        if let Some(routed) = self.resolve_git_portal(volume_id, path) {
-            return routed;
+        for boundary in boundaries(path) {
+            let routed = match boundary {
+                Boundary::GitPortal => self.resolve_git_portal(volume_id, path),
+                Boundary::Restic(repo_root) => self.resolve_restic_from_memo(volume_id, &repo_root, path),
+                Boundary::Archive => {
+                    Some(self.resolve_local_archive(volume_id, path)).filter(ResolvedVolume::is_routed)
+                }
+            };
+            if let Some(routed) = routed {
+                return routed;
+            }
         }
-        self.resolve_local_archive(volume_id, path)
+        ResolvedVolume::passthrough(self.get(volume_id), path)
     }
 }
 

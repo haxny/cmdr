@@ -269,7 +269,7 @@ fn backend_holds_favorites(kind: BackendKind) -> bool {
         | BackendKind::S3
         | BackendKind::Mtp
         | BackendKind::Adb => true,
-        BackendKind::Archive | BackendKind::GitPortal => false,
+        BackendKind::Archive | BackendKind::GitPortal | BackendKind::Restic => false,
     }
 }
 
@@ -688,7 +688,7 @@ mod add_gate_tests {
     /// A view inside a drive has no folder of its own a favorite could reopen.
     #[test]
     fn an_archive_or_git_portal_backend_is_refused() {
-        for kind in [BackendKind::Archive, BackendKind::GitPortal] {
+        for kind in [BackendKind::Archive, BackendKind::GitPortal, BackendKind::Restic] {
             let volume = row("routed-1", "/Users/me/a.zip", LocationCategory::AttachedVolume, None);
             assert!(matches!(
                 favorite_volume_from("/Users/me/a.zip/docs", resolved(volume), |_| Some(kind)),
@@ -713,6 +713,7 @@ mod add_gate_tests {
         }
         assert!(!backend_holds_favorites(BackendKind::Archive));
         assert!(!backend_holds_favorites(BackendKind::GitPortal));
+        assert!(!backend_holds_favorites(BackendKind::Restic));
     }
 
     #[test]

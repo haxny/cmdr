@@ -63,7 +63,9 @@ the next section.
   behind it (and behind `temp_sibling_name` / `_path` / `_prefix` for the backends that name their own upload temps).
 - Leaves: `apple_double.rs` (whether a listed `._name` is the AppleDouble sidecar the kernel serves as `name`'s xattrs
   on a volume with none of its own, so a copy walk leaves it out), `archive_format.rs` (sole source of truth for archive
-  detection, and the extension-only split of a path at its archive component), `benchmark.rs` (the env-gated
+  detection, and the extension-only split of a path at its archive component), `restic_view.rs` (the `Browse snapshots`
+  name and the lexical split of a path at it, here so the listing engine and the write guards ask it without linking
+  `rustic_core`; `cmdr-restic` confirms), `benchmark.rs` (the env-gated
   `[TIMELINE]` stderr events, `docs/guides/benchmarking-file-loading.md`), `cloud_provider.rs` (macOS: which cloud
   provider owns a path, and what it can do; pure path rules, its module docs say why it's a type), `validation.rs` (the
   platform's name and path-length limits, and `ValidationError`, the typed refusal a rename's validity check carries

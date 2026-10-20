@@ -191,6 +191,7 @@ pub enum ReportBackend {
     Adb,
     Archive,
     GitPortal,
+    Restic,
 }
 
 impl From<BackendKind> for ReportBackend {
@@ -205,6 +206,7 @@ impl From<BackendKind> for ReportBackend {
             BackendKind::Adb => Self::Adb,
             BackendKind::Archive => Self::Archive,
             BackendKind::GitPortal => Self::GitPortal,
+            BackendKind::Restic => Self::Restic,
         }
     }
 }

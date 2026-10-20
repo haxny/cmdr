@@ -112,7 +112,7 @@ guard there once refused the REAL `.git/config` alongside the virtual folders, w
 
 1. **The route.** `VolumeManager::resolve` sends any `.git/<category>/…` path to the read-only `GitPortalVolume`. Read
    only by trait default, unwatchable by `can_watch_listings() == false`, invisible to `mount_id_for_path` by type.
-   `volume/DETAILS.md` § "Resolving a path: the two routes".
+   `volume/DETAILS.md` § "Resolving a path: the three routes".
 2. **The overlay.** `git::overlay::GitPortalOverlay` contributes the six category rows to a repo's `.git/` listing, run
    by the listing engine's read pipeline (`crates/cmdr-listing/src/pipeline.rs`, on every read that builds or replaces a
    listing) after the volume's entries arrive and before the cache insert. Pane-only by construction:

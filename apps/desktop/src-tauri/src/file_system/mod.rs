@@ -21,6 +21,7 @@ pub mod open_with;
 mod provider;
 #[cfg(test)]
 mod real_provider;
+pub mod restic;
 #[cfg(target_os = "macos")]
 pub mod share;
 #[cfg(target_os = "macos")]

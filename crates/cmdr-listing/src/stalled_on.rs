@@ -55,7 +55,7 @@ fn stalled_on_backend(backend: BackendKind) -> Option<StalledOn> {
         // MTP is a USB cable and ADB is a cable or Wi-Fi: neither word fits both.
         BackendKind::Mtp | BackendKind::Adb => Some(StalledOn::Unknown),
         // A real filesystem, or a view inside a file on one: the mount knows.
-        BackendKind::Local | BackendKind::Archive | BackendKind::GitPortal => None,
+        BackendKind::Local | BackendKind::Archive | BackendKind::GitPortal | BackendKind::Restic => None,
     }
 }
 
@@ -137,7 +137,12 @@ mod tests {
 
     #[test]
     fn filesystem_backends_defer_to_the_mount() {
-        for backend in [BackendKind::Local, BackendKind::Archive, BackendKind::GitPortal] {
+        for backend in [
+            BackendKind::Local,
+            BackendKind::Archive,
+            BackendKind::GitPortal,
+            BackendKind::Restic,
+        ] {
             assert_eq!(stalled_on_backend(backend), None, "{backend:?}");
         }
     }

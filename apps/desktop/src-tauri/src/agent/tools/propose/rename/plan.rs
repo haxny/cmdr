@@ -400,6 +400,15 @@ fn build_draft<R: Runtime>(
                 "Rename plans can't include files inside a repository's history.",
             ));
         }
+        // And a restic backup's snapshots, for the same reason. Confirmed, ❌ not
+        // the bare name: a real folder called `Browse snapshots` outside a repo
+        // holds real files a plan may rename. From the hub's memo, no I/O: a pane
+        // only stands in a view after its route confirmed the repo.
+        if crate::file_system::restic::wiring::memo_says_in_a_restic_view(&volume_id, Path::new(&rename.source_path)) {
+            return Err(invalid_params(
+                "Rename plans can't include files inside a backup's snapshots.",
+            ));
+        }
         // One group is one `start_bulk_rename` call, and that executor refuses a row whose
         // source and destination parents differ — so the group binds ONE parent folder, and a
         // plan that spans folders is refused here rather than half-applied later.

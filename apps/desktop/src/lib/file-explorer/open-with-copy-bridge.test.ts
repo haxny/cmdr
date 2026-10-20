@@ -82,6 +82,15 @@ describe('the open-with refusal notice', () => {
     expect(fromRepo).toContain(formatByteSize(TWO_GIB))
   })
 
+  it('says a too-big file sits in a backup, not an archive', () => {
+    emitRefused(refused({ kind: 'tooLarge', cap: TWO_GIB }, 'backup'))
+
+    const [message] = addToast.mock.calls[0]
+    expect(message).toContain('backup')
+    expect(message).not.toContain('archive')
+    expect(message).toContain('holiday.mov')
+  })
+
   it('says how big a copy the disk has no room for', () => {
     emitRefused(refused({ kind: 'notEnoughSpace', needed: TWO_GIB }))
 

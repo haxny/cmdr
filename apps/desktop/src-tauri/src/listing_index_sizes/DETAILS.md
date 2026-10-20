@@ -73,6 +73,10 @@ runs on; `count/` walks what it can't (SFTP, WebDAV, S3, archives, an excluded f
   or a lower bound (`≥`) when parts couldn't be read. A count done within 200 ms never blinks an hourglass. A ticker
   (50 ms) beside the walk does all the sending, so a walk stuck in one `readdir` still lights its row and still stops
   waiting on Esc. The UI finishing does not imply that backend I/O has terminated.
+- **⌥⇧⏎ skips a doorway row** (`count/mod.rs` `is_a_view_row`): a folder row a route serves while the listed folder
+  isn't routed (a `.git` category row, a restic repo's `Browse snapshots`) has no folder on the listing's volume, so
+  walking it there finds nothing, and walking the view would count every snapshot's files. Space on the row is the
+  person asking and counts it.
 - **Measuring** (`count/measure.rs`): on a volume with a local path (the Mac's disks, shares mounted under `/Volumes`)
   our own `walkdir` walk on a blocking thread, bumping the running totals per entry and asking the stop per entry. An
   unreadable subfolder is SKIPPED and counted, and the folder's size becomes a lower bound: `~/Library` gets a number

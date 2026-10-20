@@ -1549,6 +1549,7 @@ dependencies = [
  "cmdr-mtp",
  "cmdr-operation-log",
  "cmdr-operations",
+ "cmdr-restic",
  "cmdr-s3",
  "cmdr-sftp",
  "cmdr-smb",

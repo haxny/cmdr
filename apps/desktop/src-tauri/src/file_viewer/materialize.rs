@@ -610,8 +610,8 @@ fn temp_basename(entry_name: &str) -> String {
 /// The archive family has its own frontend copy under `ViewerError::Archive`, which
 /// the FE renders without inspecting the typed failure or message string. The typed
 /// failure preserves `NotSupported` for non-UI consumers. A portal read and a plain
-/// pull have no such family — a repository that can't be opened or a phone that
-/// dropped mid-read is a fault, not a kind of file — so they stay a plain `Io`.
+/// pull have no such family — a repository (git or restic) that can't be opened
+/// or a phone that dropped mid-read is a fault, not a kind of file — so they stay a plain `Io`.
 pub(super) fn map_volume_error(err: VolumeError, routed: Option<RoutedKind>) -> ViewerError {
     match err {
         VolumeError::NotFound(path) => ViewerError::NotFound { path },
@@ -628,7 +628,7 @@ pub(super) fn map_volume_error(err: VolumeError, routed: Option<RoutedKind>) -> 
                 },
                 message: ErrorDetail::of(other),
             },
-            Some(RoutedKind::GitPortal) | None => ViewerError::Io {
+            Some(RoutedKind::GitPortal | RoutedKind::Restic) | None => ViewerError::Io {
                 message: ErrorDetail::of(other),
             },
         },

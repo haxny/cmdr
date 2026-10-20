@@ -200,6 +200,7 @@ mod tests {
             BackendKind::Mtp,
             BackendKind::Archive,
             BackendKind::GitPortal,
+            BackendKind::Restic,
         ] {
             assert!(
                 !routes_to_local_external(kind, false),

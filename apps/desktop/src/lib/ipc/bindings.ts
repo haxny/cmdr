@@ -10717,10 +10717,40 @@ export type ListingOpeningEvent = {
   listingId: string
 }
 
+/**
+ *  The work a listing does before it can enumerate, with its own progress.
+ *
+ *  Typed and word-free: the frontend words each phase. Movement in a phase counts
+ *  as progress for the listing's stall watch, since no entry arrives meanwhile.
+ */
+export type ListingPhase =
+  /**
+   *  Loading a backup repository's index, which every folder inside a snapshot
+   *  needs first. Counts the repo's index files and their bytes, read so far
+   *  and in all.
+   */
+  {
+    kind: 'loadingIndex'
+    // Bytes of index files read so far.
+    doneBytes: number
+    // The index files' sizes, summed.
+    totalBytes: number
+    // Index files read so far.
+    doneFiles: number
+    // Index files in the repo.
+    totalFiles: number
+  }
+
 // Progress event payload
 export type ListingProgressEvent = {
   listingId: string
   loadedCount: number
+  /**
+   *  What the listing is doing before its first entry, when it has its own
+   *  measure (a backup's index load); `None` while it only enumerates. Typed,
+   *  so the frontend words it.
+   */
+  phase: ListingPhase | null
 }
 
 // Read-complete event payload (emitted when read_dir finishes, before sorting/caching)
@@ -12769,13 +12799,16 @@ export type OpenWithCopyRefused = {
 
 /**
  *  What served the file the copy was pulled from. The archive refusals only ever come
- *  from an archive; a repo snapshot's reads that break off are plain `Unreadable`.
+ *  from an archive; a repo or backup snapshot's reads that break off are plain
+ *  `Unreadable`.
  */
 export type OpenWithCopySource =
   // An entry inside a zip, tar, or 7z Cmdr browses like a folder.
   | 'archive'
   // A blob in one of a repo's virtual `.git` history trees.
   | 'repoHistory'
+  // A file in one of a restic repo's backup snapshots.
+  | 'backup'
 
 /**
  *  An operation's header plus a page of its items, with dir prefixes resolved to

@@ -15,7 +15,8 @@
 //! - locale: [`locale::AppLocale`] over `intl::active_locale`
 //! - mounts: [`mounts::AppMountTable`] over `getfsstat` / `/proc/mounts`
 //! - runtime: the app's own tokio handle, so there's one thread pool
-//! - overlays: the git portal's `.git/` rows (`file_system::git::overlay`)
+//! - overlays: the git portal's `.git/` rows (`file_system::git::overlay`), then
+//!   the restic repo's `Browse snapshots` row (`file_system::restic::overlay`)
 //! - observers, in this order: the change watch (`file_system::watcher`), git
 //!   arming (`file_system::git::arming`), then index sizes
 //!   (`listing_index_sizes`)
@@ -67,7 +68,10 @@ pub fn install(app: &AppHandle) {
                 // The portal's `.git/` landing rows. Everything below `.git/` is a
                 // routed volume instead; this seam is what keeps the six rows out of
                 // every walker.
-                .overlay(crate::file_system::git::overlay::overlay()),
+                .overlay(crate::file_system::git::overlay::overlay())
+                // The `Browse snapshots` row in a restic repo's listing. Everything
+                // at and below it is a routed volume, same split as the portal's.
+                .overlay(crate::file_system::restic::overlay::overlay()),
             ListingsBuilder::observer,
         )
         .build();
@@ -130,14 +134,15 @@ fn builder(events: Arc<dyn ListingEvents>) -> ListingsBuilder {
 /// The engine the test binary shares, since nothing there calls [`install`]:
 /// events dropped, the fallback runtime, every app answer (the tests list
 /// through the real volume registry, index, lease, language, and mount table),
-/// the git portal's overlay, and the change watch and git arming observers, so
-/// a listing behaves in tests as it does in the app. Index sizes stay out (its
+/// the git portal's and restic's overlays, and the change watch and git arming
+/// observers, so a listing behaves in tests as it does in the app. Index sizes stay out (its
 /// worker needs an `AppHandle`); last comes the lifecycle probe the app's
 /// ordering cells read (`tests/support.rs`).
 #[cfg(test)]
 fn test_listings() -> Listings {
     builder(Arc::new(cmdr_listing::host::NoEvents))
         .overlay(crate::file_system::git::overlay::overlay())
+        .overlay(crate::file_system::restic::overlay::overlay())
         .observer(crate::file_system::watcher::observer())
         .observer(crate::file_system::git::arming::observer())
         .observer(tests::support::lifecycle_probe())

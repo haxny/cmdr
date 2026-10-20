@@ -314,9 +314,10 @@ above after any change to the chip pipeline.
 
 `GitPortalVolume` (`volume.rs`) is a read-only `Volume` over one repo's virtual trees, the same shape `ArchiveVolume`
 has. The host's `VolumeManager::resolve` routes any path with a `.git/<category>/` segment to it
-(`apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "Resolving a path: the two routes") and hands it the input
-path verbatim; the volume maps that path to `(repo, category, ref, tree path)` with `path::classify_in` and answers from
-the same `virtual_listing` / `log` / `tree` code `GitPortal::category_rows` calls for the host's `.git/` listing.
+(`apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "Resolving a path: the three routes") and hands it the
+input path verbatim; the volume maps that path to `(repo, category, ref, tree path)` with `path::classify_in` and
+answers from the same `virtual_listing` / `log` / `tree` code `GitPortal::category_rows` calls for the host's `.git/`
+listing.
 
 - **Its namespace is the six categories and what's under them, nothing else.** Listing its root (`<worktree>/.git`)
   answers the six category rows ALONE, via `virtual_listing::list_categories`. Real `.git/*` entries are the parent

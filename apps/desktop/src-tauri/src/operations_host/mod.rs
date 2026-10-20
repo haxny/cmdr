@@ -46,6 +46,8 @@ mod portal_rename_tests;
 #[cfg(test)]
 mod registry_routing_tests;
 #[cfg(test)]
+mod restic_guard_tests;
+#[cfg(test)]
 mod terminal_effects_tests;
 pub(crate) mod wire;
 

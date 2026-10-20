@@ -1,7 +1,7 @@
 /**
  * "Open with" copy notice bridge.
  *
- * A file inside an archive (or a repo's `.git` snapshot) has no file of its own, so
+ * A file inside an archive (or a repo's `.git` snapshot, or a restic backup) has no file of its own, so
  * "Open with" copies it out before launching the app. Two backend events become toasts:
  *
  * - `open-with-copy-refused`: the copy couldn't be made (too big, a locked or damaged
@@ -23,7 +23,8 @@ import { tString } from '#lib/intl/messages.svelte.js'
 import { formatByteSize } from '#lib/units/index.js'
 import { formatInteger } from '#lib/intl/number-format.js'
 import { onOpenWithCopyLaunched, onOpenWithCopyRefused } from '#lib/tauri-commands/index.js'
-import type { OpenWithCopyLaunched, OpenWithCopyRefused } from '#lib/ipc/bindings.js'
+import type { OpenWithCopyLaunched, OpenWithCopyRefused, OpenWithCopySource } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 const log = getAppLogger('fileExplorer')
 
@@ -71,13 +72,8 @@ function noticeText({ fileName, appName, reason, source }: OpenWithCopyRefused):
   switch (reason.kind) {
     case 'tooLarge':
       // The archive reasons below only ever come from an archive; this one can come
-      // from a repo's history snapshot too, which isn't "inside the archive".
-      return tString(
-        source === 'repoHistory'
-          ? 'fileExplorer.openWith.copyRefused.tooLargeInRepoHistory'
-          : 'fileExplorer.openWith.copyRefused.tooLarge',
-        { fileName, appName, limit: formatByteSize(reason.cap) },
-      )
+      // from a repo's history or a backup snapshot too, neither "inside the archive".
+      return tString(tooLargeKey(source), { fileName, appName, limit: formatByteSize(reason.cap) })
     case 'notEnoughSpace':
       return tString('fileExplorer.openWith.copyRefused.notEnoughSpace', {
         fileName,
@@ -92,6 +88,22 @@ function noticeText({ fileName, appName, reason, source }: OpenWithCopyRefused):
       return tString('fileExplorer.openWith.copyRefused.unreadable', { fileName, appName })
     default: {
       const unhandled: never = reason
+      return unhandled
+    }
+  }
+}
+
+/** Where a too-big file sits, in the words its toast uses. */
+function tooLargeKey(source: OpenWithCopySource): MessageKey {
+  switch (source) {
+    case 'archive':
+      return 'fileExplorer.openWith.copyRefused.tooLarge'
+    case 'repoHistory':
+      return 'fileExplorer.openWith.copyRefused.tooLargeInRepoHistory'
+    case 'backup':
+      return 'fileExplorer.openWith.copyRefused.tooLargeInBackup'
+    default: {
+      const unhandled: never = source
       return unhandled
     }
   }

@@ -86,16 +86,13 @@ async fn scan_preview_source_volume(
     }
 }
 
-/// Rejects a local write op that touches a path a ROUTE serves: inside an
-/// archive, or inside a repo's virtual `.git` trees. Neither has a file on disk
-/// for `std::fs` to act on, so the local fast path would grind to a `NotFound`
-/// that reads like a broken app; this answers with the typed read-only refusal
-/// the frontend already renders.
+/// Rejects a local write op that touches a path a ROUTE serves (an archive, a
+/// repo's virtual `.git` trees, a restic repo's `Browse snapshots`), with the
+/// typed read-only refusal: there's no file for `std::fs` to act on.
 ///
-/// Both questions confirm rather than guess: the archive half stats the `.zip`
-/// and sniffs its magic, and the git half is `false` whenever the portal is
-/// switched off, so a real folder called `foo.zip` or a real `.git/branches/`
-/// keeps taking ordinary local writes.
+/// Every question confirms (❌ never the permissive `path_routes_over_its_parent`):
+/// a stat and magic sniff, the portal switch, a read of the repo folder. So a
+/// real `foo.zip/`, `.git/branches/`, or non-repo `Browse snapshots` takes writes.
 ///
 /// `side` says which half of the transfer these paths are, because the two are
 /// different sentences: a move OFF a snapshot is refused by its SOURCE, and
@@ -113,7 +110,10 @@ fn reject_if_routed_over_a_parent<'a>(
     for path in paths {
         // Only a path INSIDE an archive is read-only. The `.zip` file itself is a
         // regular file — copying/moving/deleting/trashing it must work.
-        if cmdr_archive::path_is_inside_archive(path) || crate::file_system::git::wiring::portal_serves(path) {
+        if cmdr_archive::path_is_inside_archive(path)
+            || crate::file_system::git::wiring::portal_serves(path)
+            || crate::file_system::restic::wiring::local_path_is_in_a_restic_view(path)
+        {
             return Err(WriteOperationError::ReadOnlyDevice {
                 path: path.to_string_lossy().into_owned(),
                 device_name: None,
@@ -658,6 +658,10 @@ pub fn dismiss_all_failed_operations() {
         engine.dismiss_all_failed_operations();
     }
 }
+
+#[cfg(test)]
+#[path = "write_ops_restic_test.rs"]
+mod write_ops_restic_test;
 
 #[cfg(test)]
 mod tests {

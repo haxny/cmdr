@@ -5,7 +5,7 @@ App-side backend, registry, and eject wiring. Every operation goes through a `Vo
 ## Module map
 
 - `mod.rs` re-exports all of `cmdr_fs::volume`; the trait is `crates/cmdr-fs/src/volume/mod.rs`.
-- `manager.rs` (+ `manager/`: `routing.rs`'s two routes, the mount-root set): the registry behind
+- `manager.rs` (+ `manager/`: `routing.rs`'s three routes, the mount-root set): the registry behind
   `get_volume_manager()`.
 - `mount_registration.rs`: the one way a MOUNT becomes a registered volume (startup sweep, mount watcher, adoption).
 - `backends/` (own `CLAUDE.md`), `eject/` (teardown by kind, macOS+Linux), `drive_release/` (the index stop/start
@@ -14,8 +14,7 @@ App-side backend, registry, and eject wiring. Every operation goes through a `Vo
 ## Must-knows
 
 - **A site passing a path calls `VolumeManager::resolve(volume_id, path).await`, ❌ never `get(volume_id)`.** It routes
-  `.zip`-crossing and `.git/<category>/` paths to their backends, path UNCHANGED, and answers `is_routed()`. The sync
-  `resolve_local_only` serves the ONE caller that can't `.await`.
+  `.zip`, `.git/<category>/`, and `Browse snapshots` paths, path UNCHANGED, and answers `is_routed()`. The sync `resolve_local_only` serves the ONE caller that can't `.await`.
 - **❗ Registration must never be cleverer than resolution.** A mount is registered through `mount_registration`, ❌
   never a caller's own `LocalPosixVolume::new` + `register`: resolution mints an ID for any mount this account can reach,
   so the sweep takes all of those (switcher rows are a separate, stricter question). Its net, adoption, takes a live

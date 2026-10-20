@@ -94,6 +94,11 @@ cmdr-adb = { path = "../../../crates/cmdr-adb" }
 # The route, the listing overlay, the toggle, and the `git-state-changed` event
 # stay here in `file_system/git/wiring.rs`.
 cmdr-git = { path = "../../../crates/cmdr-git" }
+# Restic backup repos as a read-only volume of snapshots, read through the
+# repo's own parent volume. No `tauri` in its tree, so `rustic_core` stays out of
+# this manifest. The route, the `Browse snapshots` overlay row, and the parked
+# hub stay here in `file_system/restic/`.
+cmdr-restic = { path = "../../../crates/cmdr-restic" }
 # The index: the file index, the media index, and folder importance, behind one
 # `Index` handle. Tauri-free by design and enforced — the app is its host, which
 # is why every seam it needs is answered in `src/index_host.rs` and nowhere else.
@@ -520,6 +525,9 @@ cmdr-mtp = { path = "../../../crates/cmdr-mtp", features = ["testing"] }
 # only: that's what publishes the repository fixtures the app's routing, overlay,
 # and toggle cells build their repos with.
 cmdr-git = { path = "../../../crates/cmdr-git", features = ["testing"] }
+# Same for restic: the on-disk fixture repos the route, overlay, and walker cells
+# browse.
+cmdr-restic = { path = "../../../crates/cmdr-restic", features = ["testing"] }
 # SMB integration tests hash source and destination bytes to catch pipeline
 # corruption (dropped/duplicated chunks, concurrency bleed) that a simple
 # size-check or `Vec<u8>` equality would either miss or report uselessly

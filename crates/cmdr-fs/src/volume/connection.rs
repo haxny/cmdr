@@ -138,6 +138,8 @@ pub enum BackendKind {
     Archive,
     /// One of the virtual `.git` category trees.
     GitPortal,
+    /// A restic repo's snapshots, at `<repo>/Browse snapshots`.
+    Restic,
 }
 
 /// What kind of mount a volume reached through `std::fs` sits on, as far as a
@@ -190,7 +192,7 @@ impl BackendKind {
             Self::Local | Self::Smb | Self::Mtp | Self::Adb => true,
             // S3 too: every request costs money, so no index walks it
             // (`docs/specs/s3-support-plan.md` § Product decisions).
-            Self::Sftp | Self::Webdav | Self::S3 | Self::Archive | Self::GitPortal => false,
+            Self::Sftp | Self::Webdav | Self::S3 | Self::Archive | Self::GitPortal | Self::Restic => false,
         }
     }
 
@@ -212,7 +214,8 @@ impl BackendKind {
             | Self::Mtp
             | Self::Adb
             | Self::Archive
-            | Self::GitPortal => false,
+            | Self::GitPortal
+            | Self::Restic => false,
         }
     }
 
@@ -231,7 +234,7 @@ impl BackendKind {
     pub fn detaches_by_session_drop(self) -> bool {
         match self {
             Self::Sftp | Self::Webdav | Self::S3 => true,
-            Self::Local | Self::Smb | Self::Mtp | Self::Adb | Self::Archive | Self::GitPortal => false,
+            Self::Local | Self::Smb | Self::Mtp | Self::Adb | Self::Archive | Self::GitPortal | Self::Restic => false,
         }
     }
 
@@ -245,7 +248,7 @@ impl BackendKind {
     pub fn is_server(self) -> bool {
         match self {
             Self::Smb | Self::Sftp | Self::Webdav | Self::S3 => true,
-            Self::Local | Self::Mtp | Self::Adb | Self::Archive | Self::GitPortal => false,
+            Self::Local | Self::Mtp | Self::Adb | Self::Archive | Self::GitPortal | Self::Restic => false,
         }
     }
 
@@ -262,8 +265,8 @@ impl BackendKind {
         match self {
             // SMB: a Windows share's junctions and symlinks, and on Samba 4.23
             // a Unix symlink a `stat` reports (`crates/cmdr-smb/DETAILS.md`
-            // § "Junctions and symlinks").
-            Self::Local | Self::Sftp | Self::Adb | Self::Archive | Self::Smb => true,
+            // § "Junctions and symlinks"). Restic: a snapshot's symlink nodes.
+            Self::Local | Self::Sftp | Self::Adb | Self::Archive | Self::Smb | Self::Restic => true,
             // WebDAV, S3, MTP, and the `.git` trees have none.
             Self::Webdav | Self::S3 | Self::Mtp | Self::GitPortal => false,
         }

@@ -1797,6 +1797,7 @@ export type MessageKey =
   | 'fileExplorer.openWith.copyRefused.needsPassword'
   | 'fileExplorer.openWith.copyRefused.notEnoughSpace'
   | 'fileExplorer.openWith.copyRefused.tooLarge'
+  | 'fileExplorer.openWith.copyRefused.tooLargeInBackup'
   | 'fileExplorer.openWith.copyRefused.tooLargeInRepoHistory'
   | 'fileExplorer.openWith.copyRefused.unreadable'
   | 'fileExplorer.openWith.readOnlyCopy'

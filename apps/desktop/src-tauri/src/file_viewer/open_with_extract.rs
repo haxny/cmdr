@@ -239,7 +239,8 @@ fn display_name(name: Option<&std::ffi::OsStr>, fallback: &Path) -> String {
 }
 
 /// What served the file the copy was pulled from. The archive refusals only ever come
-/// from an archive; a repo snapshot's reads that break off are plain `Unreadable`.
+/// from an archive; a repo or backup snapshot's reads that break off are plain
+/// `Unreadable`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum OpenWithCopySource {
@@ -247,6 +248,8 @@ pub enum OpenWithCopySource {
     Archive,
     /// A blob in one of a repo's virtual `.git` history trees.
     RepoHistory,
+    /// A file in one of a restic repo's backup snapshots.
+    Backup,
 }
 
 #[cfg(any(target_os = "macos", test))]
@@ -255,6 +258,7 @@ impl From<RoutedKind> for OpenWithCopySource {
         match routed {
             RoutedKind::Archive => Self::Archive,
             RoutedKind::GitPortal => Self::RepoHistory,
+            RoutedKind::Restic => Self::Backup,
         }
     }
 }

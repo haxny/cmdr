@@ -6,7 +6,8 @@ submodule's own `DETAILS.md` (`volume/`); the listing engine's is `crates/cmdr-l
 
 ## Module map
 
-Two submodules carry their own docs: `volume/` and `sync_status/` (the cloud badges). The leaves beside them:
+Three submodules carry their own docs: `volume/`, `sync_status/` (the cloud badges), and `restic/` (browsing a
+restic backup's snapshots: the overlay row, the parked hub, and the write guards). The leaves beside them:
 
 - `watcher.rs`: FSEvents-driven listing updates: the OS half (debounce, rebasing, the stat, the full-re-read decision,
   the `std::fs` fallback on `RefreshOutcome::NoVolume`, `directory-deleted`) over the engine's `observe_children` and

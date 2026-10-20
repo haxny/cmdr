@@ -28,7 +28,7 @@ mod measure;
 mod measure_test;
 mod publish;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -120,7 +120,10 @@ pub(crate) fn plan(
         .with_rows(&id, include_hidden, |rows| {
             rows.iter()
                 .filter(|entry| entry.is_directory && !entry.is_symlink)
-                .filter(|entry| only.is_none_or(|paths| paths.contains(&entry.path)))
+                .filter(|entry| match only {
+                    Some(paths) => paths.contains(&entry.path),
+                    None => !is_a_view_row(&dir, Path::new(&entry.path)),
+                })
                 .filter(|entry| {
                     let exact = entry.recursive_size.is_some() && entry.recursive_size_complete == Some(true);
                     match owned {
@@ -142,6 +145,22 @@ pub(crate) fn plan(
         dir,
         folders,
     })
+}
+
+/// Whether `row` is a doorway a listing overlay put into the listing of `dir`:
+/// a folder a ROUTE serves (a repo's `.git` category, a restic repo's
+/// `Browse snapshots`) while `dir` itself is an ordinary folder. It has no
+/// folder on `dir`'s volume, so walking it there finds nothing (an unreadable
+/// row), and walking the view instead would count every snapshot's files, up
+/// to tens of terabytes. ⌥⇧⏎ leaves it out; Space on the row is the person
+/// asking, and stays theirs.
+///
+/// Lexical on purpose: the plan runs synchronously over cached rows. Inside a
+/// view (`dir` routed too) every row is real to that view and counts.
+fn is_a_view_row(dir: &Path, row: &Path) -> bool {
+    use crate::file_system::git::wiring::portal_serves;
+    use cmdr_fs::restic_view::restic_route;
+    (portal_serves(row) && !portal_serves(dir)) || (restic_route(row).is_some() && restic_route(dir).is_none())
 }
 
 /// Counts the folders [`plan`] picks, resolving the listing's volume the way a

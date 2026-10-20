@@ -1311,6 +1311,15 @@
       "appName": "the app the user picked, e.g. Preview or QuickTime Player. Never translate it"
     }
   },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "{fileName} is bigger than {limit}, so Cmdr can’t open it in {appName} from the backup.",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "description": "Toast shown after the user right-clicked a file inside a restic backup (Cmdr shows a backup repository’s snapshots as read-only folders under a “Browse snapshots” folder, each holding the files as they were when that backup ran), picked an app under \"Open with\", and nothing opened. To open such a file, Cmdr first copies it into a temporary file on this Mac, and that copy has a size limit, which this file is over. The sibling of fileExplorer.openWith.copyRefused.tooLarge, which says \"from inside the archive\" instead; keep the two parallel. \"Backup\" is the backup the file was restored from, so use your language’s everyday word for one.",
+    "placeholders": {
+      "fileName": "the file’s name, e.g. holiday.mov. Never translate it",
+      "limit": "the size limit, already formatted with its unit, e.g. 2 GB",
+      "appName": "the app the user picked, e.g. Preview or QuickTime Player. Never translate it"
+    }
+  },
   "fileExplorer.openWith.copyRefused.notEnoughSpace": "Your Mac’s disk doesn’t have room for a {size} copy of {fileName}, so Cmdr can’t open it in {appName}. Free up some space, then try again.",
   "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
     "description": "Toast shown after the user right-clicked a file inside an archive (a zip Cmdr browses like a folder) or a Git repository’s history, picked an app under \"Open with\", and nothing opened. To open such a file, Cmdr first copies it into a temporary file on this Mac’s startup disk, and that disk doesn’t have enough free space for the copy. Suggests freeing space and trying again. Never use the words \"error\" or \"failed\".",

@@ -12,11 +12,13 @@ use std::sync::Arc;
 
 /// Which route swapped the volume in, when one did.
 ///
-/// Both variants mean the same thing to most readers — "this isn't the drive
-/// the caller named, it's a read-only volume mapping a namespace onto it" — so
-/// most sites ask [`ResolvedVolume::is_routed`]. Match a variant only where the
-/// answer is genuinely about that ONE backend (the archive-edit driver, the
-/// archive preview, the routed materialization's error mapping).
+/// Every variant means the same thing to most readers — "this isn't the drive
+/// the caller named, it's a volume mapping a namespace onto it" — so most sites
+/// ask [`ResolvedVolume::is_routed`]. A write path asks the two capability
+/// methods below, which match exhaustively so the next routed kind has to
+/// answer them. Compare to ONE variant only where the answer is genuinely about
+/// that backend (the archive-edit driver, the archive preview, the routed
+/// materialization's error mapping).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RoutedKind {
     /// The path crossed a `.zip` boundary into a `cmdr_archive::ArchiveVolume`.
@@ -24,6 +26,32 @@ pub enum RoutedKind {
     /// The path reached into a repo's virtual `.git` trees, so a
     /// `cmdr_git::GitPortalVolume` serves it.
     GitPortal,
+    /// The path reached into a restic repo's `Browse snapshots` view, so a
+    /// `cmdr_restic::ResticVolume` serves it.
+    Restic,
+}
+
+impl RoutedKind {
+    /// Whether a write may land inside this route: a copy, move, or new entry
+    /// INTO it. Only an archive takes one, through its managed edit driver; a
+    /// snapshot (git or restic) is history and refuses before anything is read.
+    pub fn takes_writes(self) -> bool {
+        match self {
+            Self::Archive => true,
+            Self::GitPortal | Self::Restic => false,
+        }
+    }
+
+    /// Whether a move may take files OUT of this route, which needs the source
+    /// gone once the copy lands. An archive rewrites itself without them; a
+    /// snapshot has no file to remove, so a move out of one is refused before
+    /// anything is copied.
+    pub fn can_give_up_files(self) -> bool {
+        match self {
+            Self::Archive => true,
+            Self::GitPortal | Self::Restic => false,
+        }
+    }
 }
 
 /// Outcome of a path-aware volume lookup: the volume that should serve `path`.

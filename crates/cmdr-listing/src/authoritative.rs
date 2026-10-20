@@ -109,6 +109,14 @@ impl Inner {
             return None;
         }
 
+        // The same doubt for a restic view. `resolve_local_only` routes one only on
+        // the hub's memo, so a path under a `Browse snapshots` component that came
+        // back unrouted is a view listing its parent's coverage says nothing about
+        // (or a real folder of that name, where declining costs one re-read).
+        if resolved.routed != Some(RoutedKind::Restic) && cmdr_fs::restic_view::restic_route(path).is_some() {
+            return None;
+        }
+
         // Only full coverage substitutes for a read. `ThisMachineOnly` means a live
         // watch that can't see other writers (an OS-mounted share), so the cache may
         // be missing entries nobody told us about — exactly the case where handing

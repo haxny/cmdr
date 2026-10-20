@@ -104,7 +104,7 @@ impl crate::Operations {
     /// One `source_volume_id` per batch means no straddle risk — every path shares
     /// the same archive, the same repo, or none — so the first path decides.
     ///
-    /// [`RoutedKind`] rather than a bool, because the two routes part ways on a
+    /// [`RoutedKind`] rather than a bool, because the routes part ways on a
     /// MOVE: an archive can delete the source entries afterwards, a snapshot can't.
     pub async fn resolve_source_volume(
         &self,
@@ -151,7 +151,7 @@ fn source_cannot_give_up_its_files(source_volume: &Arc<dyn Volume>) -> WriteOper
 }
 
 /// Refuses a transfer INTO a read-only routed volume (a repo's virtual `.git`
-/// trees). A drop onto a snapshot has nowhere to land: every mutation method on
+/// trees, a restic repo's snapshots). A drop onto a snapshot has nowhere to land: every mutation method on
 /// the volume answers `NotSupported`, so without this the transfer would start,
 /// build its plan, and fail on the first write with a half-drawn dialog.
 ///
@@ -245,7 +245,7 @@ impl crate::Operations {
             return Err(dest_volume_missing(self.host(), &dest_volume_id, &dest_path).await);
         };
 
-        if dest_resolved.routed == Some(RoutedKind::GitPortal) {
+        if dest_resolved.routed.is_some_and(|kind| !kind.takes_writes()) {
             return Err(destination_takes_no_writes(&dest_volume));
         }
 
@@ -307,8 +307,8 @@ impl crate::Operations {
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
         // An archive SOURCE routes to the compound move-out op (extract via the copy
         // engine, then a batch `{ delete }` archive rewrite once the extract lands).
-        // A git-portal source has no delete to pair with the copy, so it's refused
-        // below rather than routed anywhere.
+        // A snapshot source (git or restic) has no delete to pair with the copy,
+        // so it's refused below rather than routed anywhere.
         let Some((source_volume, source_route)) = self
             .resolve_source_volume(&source_volume_id, source_paths.first())
             .await
@@ -317,9 +317,10 @@ impl crate::Operations {
         };
 
         // A snapshot can be copied out of, never moved out of: `.git/branches/…` has
-        // no file to remove once the copy lands. Refused before the destination is
+        // no file to remove once the copy lands, and neither has a restic
+        // snapshot. Refused before the destination is
         // even resolved, so nothing is written and nothing is half-done.
-        if source_route == Some(RoutedKind::GitPortal) {
+        if source_route.is_some_and(|kind| !kind.can_give_up_files()) {
             return Err(source_cannot_give_up_its_files(&source_volume));
         }
 
@@ -332,7 +333,7 @@ impl crate::Operations {
             return Err(dest_volume_missing(self.host(), &dest_volume_id, &dest_path).await);
         };
 
-        if dest_resolved.routed == Some(RoutedKind::GitPortal) {
+        if dest_resolved.routed.is_some_and(|kind| !kind.takes_writes()) {
             return Err(destination_takes_no_writes(&dest_volume));
         }
 

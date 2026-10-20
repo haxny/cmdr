@@ -75,10 +75,11 @@ the crate boundary is what makes that a compile error rather than a habit.
 consumers: transfer engine, panes, delete, indexer BFS, viewer, MCP
         │  Arc<dyn Volume>
 VolumeManager (registry; resolve routes .zip paths to ArchiveVolume,
-               and .git/<category>/ paths to GitPortalVolume)
+               .git/<category>/ paths to GitPortalVolume, and
+               <repo>/Browse snapshots/… paths to ResticVolume)
         │
 backends ── file-ops face: impl Volume ──────────────────────────────┐
-  crates: LocalPosix  Archive  Smb  Sftp  WebDav  S3  Adb  Mtp  GitPortal │ cmdr-fs: Volume trait,
+  crates: LocalPosix Archive Smb Sftp WebDav S3 Adb Mtp GitPortal Restic │ cmdr-fs: Volume trait,
   cmdr-fs: InMemory (tests)                                          │ types, walkers, host seams
         │  lifecycle face: VolumeHost seams
 app-side halves: wiring + registration, discovery, keychain, mounts, ptpcamerad, DeviceVolumeProvider, tauri events
@@ -99,37 +100,50 @@ Every non-forced `LocalPosixVolume::rename` is atomic-no-overwrite. macOS uses `
 `renameat2(RENAME_NOREPLACE)`, covering the boot volume, attached local volumes, and cloud folders registered under
 their own volume IDs. A separate metadata check followed by plain `rename` is not an acceptable substitute.
 
-## Resolving a path: the two routes
+## Resolving a path: the three routes
 
 `VolumeManager::resolve(volume_id, path)` (`manager/routing.rs`) answers "which volume serves this path": the
-registered volume for `volume_id`, or a read-only volume minted by one of two ROUTES. Both hand the caller's path back
-verbatim and both are capped by an LRU; `ResolvedVolume.routed` says which one fired. The answer types (`ResolvedVolume`,
-`RoutedKind`) are `cmdr_fs::volume` vocabulary, so a consumer reading them needs no app path.
+registered volume for `volume_id`, or a volume minted by one of three ROUTES. Each hands the caller's path back verbatim
+and each is capped by an LRU of its own; `ResolvedVolume.routed` says which one fired. The answer types
+(`ResolvedVolume`, `RoutedKind`) are `cmdr_fs::volume` vocabulary, so a consumer reading them needs no app path.
 
 - **`RoutedKind::GitPortal`** (`manager/git_routing.rs`), when the path reaches into a repo's virtual `.git` trees:
   a `.git/<category>/` segment for one of the six categories, or exactly one of those category directories. Purely
-  lexical, no I/O, and checked FIRST, so a `.zip` inside a snapshot belongs to the portal rather than to an archive
-  route looking for a file that isn't on disk. `.git/` itself, `.git/config`, and every real entry under `.git` stay on
-  the parent volume, which is what keeps them editable and keeps a repo-folder delete walking them.
-- **`RoutedKind::Archive`** (`manager/archive_routing.rs`), when the path crosses a `.zip` boundary. This is the half
-  that makes `resolve` async: confirming a boundary on a remote parent (direct SMB / MTP) costs a `get_metadata` plus a
-  four-byte `read_range` over the network, where a local parent confirms with a zero-network `std::fs` stat and magic
-  sniff.
+  lexical, no I/O. `.git/` itself, `.git/config`, and every real entry under `.git` stay on the parent volume, which is
+  what keeps them editable and keeps a repo-folder delete walking them.
+- **`RoutedKind::Restic`** (`manager/restic_routing.rs`), at and below a restic repo's `Browse snapshots` row. The
+  candidate is lexical (`cmdr_fs::restic_view`); the verdict is the restic hub's memo, which the listing overlay seeds
+  for free, and a miss costs one bounded listing of the repo folder, remembered either way. A real non-repo folder of
+  that name passes through. The repo folder and its real files stay on the parent. `apps/desktop/src-tauri/src/file_system/restic/DETAILS.md`.
+- **`RoutedKind::Archive`** (`manager/archive_routing.rs`), when the path crosses a `.zip` boundary. Confirming a
+  boundary on a remote parent (direct SMB / MTP) costs a `get_metadata` plus a four-byte `read_range` over the
+  network, where a local parent confirms with a zero-network `std::fs` stat and magic sniff.
+
+- **The leftmost CONFIRMED boundary wins.** The routes nest both ways (a `.zip` or a `.git/branches` inside a restic
+  snapshot, a restic repo inside a git snapshot), so `resolve` collects every lexical boundary, tries them left to
+  right, and takes the first that confirms. An unconfirmed one (a real folder named `photos.zip`, a non-repo
+  `Browse snapshots`, the portal switched off) hands over to the next, ❌ never ends routing: a repo inside a real
+  folder named `backups.zip/` still browses. The restic and archive confirms are why `resolve` is `async`.
 
 - **`ResolvedVolume.path` is the caller's input path, verbatim.** A routed resolve only swaps the volume; the
   `ArchiveVolume` maps the whole `/…/foo.zip/inner` path into its own namespace via `inner_path()`, and the
-  `GitPortalVolume` maps `/…/.git/branches/main/src` through `git::path::classify_in`. Adoption sites read
-  `resolved.path`, so the "path unchanged" contract lives in one place.
-- **Most readers ask `is_routed()`, not the kind.** Skipping drive-index enrich/verify and refusing writes follow from
-  being routed at all: neither kind's paths are real FS paths and neither takes a mutation. Match a variant only where
-  the answer is about that ONE backend — the archive-edit changeset driver, the archive preview, the routed
-  materialization's error mapping, and the fresh-listing oracle's unconfirmed-remote-archive guard.
+  `GitPortalVolume` maps `/…/.git/branches/main/src` through `git::path::classify_in`, and the `ResticVolume`
+  classifies `/…/Browse snapshots/latest/…` itself. Adoption sites read `resolved.path`, so the "path unchanged"
+  contract lives in one place.
+- **Most readers ask `is_routed()`, not the kind.** Skipping drive-index enrich/verify follows from being routed at
+  all: no kind's paths are real FS paths. A write path asks `RoutedKind::takes_writes` / `can_give_up_files`, which
+  match exhaustively, so the next routed kind has to answer them (only an archive takes writes, through its edit
+  driver). Compare to one variant only where the answer is about that ONE backend: the archive-edit changeset driver,
+  the archive preview, the routed materialization's error mapping, and the fresh-listing oracle's unconfirmed-archive
+  and unconfirmed-restic guards.
 - **`path_routes_over_its_parent(path)` is the cheap gate in front of an `await`ed `resolve`** (same module). Pure
-  string work plus one atomic read, true for exactly the paths with no file of their own on the parent volume: a
-  non-empty archive-inner path, and anything the portal serves right now. It is deliberately narrow at both edges. The
-  `.zip` FILE itself is an ordinary file that a copy, a move, and the viewer must treat as bytes on disk, and a `.git`
-  path stops counting the moment the portal toggle goes off. Whoever acts on the answer still reads `resolved.routed`;
-  this only decides whether to ask. Its askers are the transfer source resolver, the scan-preview source, the local
+  string work plus one atomic read: a non-empty archive-inner path, anything the portal serves right now, and any path
+  at or under a `Browse snapshots` component. The `.zip` FILE itself is an ordinary file that a copy, a move, and the
+  viewer must treat as bytes on disk, and a `.git` path stops counting the moment the portal toggle goes off. The
+  restic half is permissive (a real folder of that name answers too, then resolves to no route), so ❌ never refuse a
+  write on this alone; the write guards that bypass `resolve` ask a confirmed question instead
+  (`apps/desktop/src-tauri/src/file_system/restic/DETAILS.md` § "Write guards"). Whoever acts on the answer still reads `resolved.routed`; this
+  only decides whether to ask. Its askers are the transfer source resolver, the scan-preview source, the local
   write fast path's guard, the viewer's materialization and open budget, the agent's `inspect_file` and its proposal
   boundary, and the MCP path-existence probe.
 - **❌ The path predicate and `Volume::routes_over_a_parent` are two questions, and merging them would cost one of
@@ -138,20 +152,24 @@ verbatim and both are capped by an LRU; `ResolvedVolume.routed` says which one f
   which is the only reason it can stay lexical. One predicate serving both would force a `stat` on the hot path, or a
   downcast where only a path is in hand.
 - **A routed volume is not a mount.** `mount_id_for_path` skips one because it says so: `Volume::routes_over_a_parent`
-  is `false` by default and `true` on `ArchiveVolume` (root = the `.zip`) and `GitPortalVolume` (root =
-  `<worktree>/.git`), either of which would otherwise win the longest-root race for every path inside it. ❌ Never a
+  is `false` by default and `true` on `ArchiveVolume` (root = the `.zip`), `GitPortalVolume` (root =
+  `<worktree>/.git`), and `ResticVolume` (root = `<repo>/Browse snapshots`), any of which would otherwise win the
+  longest-root race for every path inside it. ❌ Never a
   downcast to a list of concrete types: a future routed backend that forgets to join the list reintroduces the steal
   silently. By the declaration rather than by LRU membership, because registration happens a moment before the LRU
   insert. The rule is pinned against a capability-only stub
-  (`manager::tests::mount_id_for_path_skips_any_volume_that_routes_over_a_parent`), with the two shipping backends
+  (`manager::tests::mount_id_for_path_skips_any_volume_that_routes_over_a_parent`), with the three shipping backends
   covered beside their own routes.
-- **`resolve_local_only` is the sync sibling that confirms LOCAL archive boundaries only** (git routing is lexical, so
-  it's identical there), and its one caller is the write-op fresh-listing oracle
-  (`Listings::authoritative_listing`), which runs on sync recursive scan walkers. That oracle guards
-  remote archives separately, so local-only routing is sufficient there.
-- **Separate LRUs, 16 archives and 8 git portals**, sharing `touch_routed_lru`. Separate on purpose: browsing a folder
-  full of zips must not evict the portal of the repo the other pane is sitting in. Eviction is harmless either way,
-  since the next navigation re-resolves lazily.
+- **`resolve_local_only` is the sync sibling, same leftmost order, with no network or remote I/O**: it confirms LOCAL
+  archive boundaries only, routes restic on the hub's memo alone (❌ no confirm listing: a `read_dir` on a wedged OS
+  mount blocks a scan walker for minutes), and routes git identically, since that's lexical. Its one caller is the
+  write-op fresh-listing oracle (`Listings::authoritative_listing`), which runs on sync recursive scan walkers and
+  declines an unconfirmed remote archive path and an unrouted path under `Browse snapshots` on its own, so a
+  passthrough here only costs a re-read.
+- **Separate LRUs, 16 archives, 8 git portals, and 4 restic views**, sharing `touch_routed_lru`. Separate on purpose:
+  browsing a folder full of zips must not evict the portal of the repo the other pane is sitting in. Eviction is
+  harmless either way, since the next navigation re-resolves lazily (and a restic view's hub keeps every password and
+  index). The restic route also re-mints a view whose parent was replaced under the same id (an SMB reconnect).
 
 ## Trait capability model
 

@@ -47,6 +47,7 @@ pub mod path_locations;
 pub mod pluralize;
 pub mod process_cpu;
 pub mod process_memory;
+pub mod restic_view;
 pub mod sqlite_util;
 pub mod staging;
 pub mod tcc_paths;

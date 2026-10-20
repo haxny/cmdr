@@ -5,7 +5,7 @@ Sync status, volume management, and file watching. The engines are crates: listi
 
 ## Module map
 
-- Submodules with their own docs: `volume/`, `sync_status/` (cloud badges). Around them, a dozen leaves (`watcher.rs`, `google_drive/`, `share.rs`, …), one line each in DETAILS § Module map.
+- Submodules with their own docs: `volume/`, `sync_status/` (cloud badges), `restic/`. Around them, a dozen leaves (`watcher.rs`, `google_drive/`, `share.rs`, …), one line each in DETAILS § Module map.
 - `mod.rs` is a facade: it re-exports downward and bootstraps the volume registry (`init_volume_manager`), which is why
   it may know every backend.
 
