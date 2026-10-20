@@ -208,7 +208,7 @@ describe('OperationConflictDialog', () => {
     expect(cancelConflictPrompt).toHaveBeenCalledWith(false)
   })
 
-  it('has no × and ignores Escape, so a reflex cannot cancel a background transfer', () => {
+  it('has no ×, and an Escape the instant it appears cancels nothing, so a reflex cannot stop a background transfer', () => {
     prompt = makePrompt()
     const host = render()
 
@@ -256,16 +256,21 @@ describe('OperationConflictDialog answered from the keyboard', () => {
     expect(resolveConflictPrompt).toHaveBeenCalledWith('overwrite', true)
   })
 
-  it('skips on Enter and does nothing on Escape', () => {
+  it('skips on Enter', () => {
+    prompt = makePrompt()
+    const host = renderArmed()
+
+    press(host, { key: 'Enter', code: 'Enter' })
+    expect(resolveConflictPrompt).toHaveBeenCalledWith('skip', false)
+  })
+
+  it('cancels on Escape, keeping what was written', () => {
     prompt = makePrompt()
     const host = renderArmed()
 
     press(host, { key: 'Escape', code: 'Escape' })
     expect(resolveConflictPrompt).not.toHaveBeenCalled()
-    expect(cancelConflictPrompt).not.toHaveBeenCalled()
-
-    press(host, { key: 'Enter', code: 'Enter' })
-    expect(resolveConflictPrompt).toHaveBeenCalledWith('skip', false)
+    expect(cancelConflictPrompt).toHaveBeenCalledExactlyOnceWith(false)
   })
 
   it('ignores a letter typed the instant the prompt appeared', () => {
@@ -290,10 +295,10 @@ describe('OperationConflictDialog answered from the keyboard', () => {
     expect(resolveConflictPrompt).not.toHaveBeenCalled()
   })
 
-  it('cancels with C when the operation cannot roll back', () => {
+  it('cancels with Escape when the operation cannot roll back', () => {
     prompt = makePrompt({ snapshot: snapshot({ operationType: 'move', rollbackSupport: 'crossVolumeMove' }) })
     const host = renderArmed()
-    press(host, { key: 'c', code: 'KeyC' })
+    press(host, { key: 'Escape', code: 'Escape' })
     expect(cancelConflictPrompt).toHaveBeenCalledWith(false)
   })
 })

@@ -73,8 +73,13 @@ describe('decisionKeyOf', () => {
     expect(decisionKeyOf(keydown({ key: 'Enter', code: 'Enter' }, element('textarea')))).toBeNull()
   })
 
-  it('ignores everything that is not a letter or Enter', () => {
-    expect(decisionKeyOf(keydown({ key: 'Escape', code: 'Escape' }))).toBeNull()
+  it('reads Escape, under the same guards as a letter', () => {
+    expect(decisionKeyOf(keydown({ key: 'Escape', code: 'Escape' }))).toBe('Escape')
+    expect(decisionKeyOf(keydown({ key: 'Escape', code: 'Escape', repeat: true }))).toBeNull()
+    expect(decisionKeyOf(keydown({ key: 'Escape', code: 'Escape', metaKey: true }))).toBeNull()
+  })
+
+  it('ignores everything that is not a letter, Enter, or Escape', () => {
     expect(decisionKeyOf(keydown({ key: '1', code: 'Digit1' }))).toBeNull()
     expect(decisionKeyOf(keydown({ key: ' ', code: 'Space' }))).toBeNull()
     expect(decisionKeyOf(keydown({ key: 'F2', code: 'F2' }))).toBeNull()

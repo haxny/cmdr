@@ -100,6 +100,7 @@ Props:
 | `footerLeading`       | Snippet?                      | Content pinned left on the footer row; buttons stay right-aligned     |
 | `dialogId`            | `SoftDialogId?`               | Auto-calls `notifyDialogOpened`/`notifyDialogClosed` on mount/destroy |
 | `onclose`             | `() => void`?                 | Renders × button; also called on Escape                               |
+| `onescape`            | `() => void`?                 | Escape runs this instead of `onclose` (needs `onclose`; × unchanged)  |
 | `draggable`           | `boolean`                     | Default `true`. Title bar drag moves the dialog.                      |
 | `blur`                | `boolean`                     | `true` → 0.6 opacity + `backdrop-filter: blur(4px)` overlay           |
 | `containerStyle`      | `string`                      | Inline style appended to the dialog element (for sizing, colors)      |
@@ -268,9 +269,9 @@ carries `tabindex="-1"` so Escape/keydown events are captured either way. ❗ Ne
 on a focused button activates that button instead of the dialog's default action. So a dialog opened from a context menu
 or a shortcut takes keys at once, and one with fields never opens on a field it has locked ("Edit server…" opened on the
 scrim because its sheet focused the disabled Address). A dialog that wants a specific field focuses it itself, or calls
-`focusFirstField` on the part it means. The overlay also carries `use:trapFocus={{ onEscape: onclose }}` (see § "Focus
-trapping" below), so every `ModalDialog` consumer gets Tab containment and the Escape fallback for free. `trapFocus`
-deliberately doesn't move focus on mount.
+`focusFirstField` on the part it means. The overlay also carries `use:trapFocus` with Escape's action
+(`onescape ?? onclose`) (see § "Focus trapping" below), so every `ModalDialog` consumer gets Tab containment and the
+Escape fallback for free. `trapFocus` deliberately doesn't move focus on mount.
 
 ### Scrim clicks
 

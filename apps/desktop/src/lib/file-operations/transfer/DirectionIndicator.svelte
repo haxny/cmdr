@@ -17,15 +17,17 @@
         sourceLabel?: string
         /** Override for the destination label. Same fallback as `sourceLabel`. */
         destinationLabel?: string
+        /** For a dialog that names this row as its description (`aria-describedby`). */
+        id?: string
     }
 
-    const { sourcePath, destinationPath, direction, sourceLabel, destinationLabel }: Props = $props()
+    const { sourcePath, destinationPath, direction, sourceLabel, destinationLabel, id }: Props = $props()
 
     const sourceName = $derived(sourceLabel ?? getFolderName(sourcePath))
     const destinationName = $derived(destinationLabel ?? getFolderName(destinationPath))
 </script>
 
-<div class="direction-indicator">
+<div class="direction-indicator" {id}>
     {#if direction !== 'left'}
         <span class="folder-name source" use:tooltip={{ text: sourcePath, overflowOnly: true }}>{sourceName}</span>
         <span class="arrow">&#x2192;</span>

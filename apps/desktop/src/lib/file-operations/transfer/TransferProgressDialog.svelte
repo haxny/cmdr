@@ -327,12 +327,25 @@
         return event.metaKey || event.ctrlKey || event.altKey || event.shiftKey
     }
 
+    /** Where the files are going, shown for copy and move. It's also the dialog's
+     *  description, so a screen reader hears it beside the title on opening, when
+     *  focus lands on Pause rather than on anything that says what's running. */
+    const showDirection = $derived(!isDeleteOrTrash && Boolean(destinationPath))
+    const DIRECTION_ID = 'progress-dialog-direction'
+
+    /** Escape is the Cancel button (keeps what's written, asks nothing). Once
+     *  Cancel is spent, it's the close instead, so Escape always leads out. */
+    function handleEscape(): void {
+        if (isCancelling || operationSettled) progress.detach()
+        else void progress.handleCancel(false)
+    }
+
     /** The conflict body's answer keys, reached through this dialog's keydowns. */
     let conflictBody: { handleKeydown(event: KeyboardEvent): boolean } | undefined = $state()
 
     function handleKeydown(event: KeyboardEvent) {
-        // A clash's letter keys (and Enter = Skip). Esc never answers one: with a
-        // clash up there's no `onclose`, so `ModalDialog` passes it on unhandled.
+        // A clash's keys (Enter = Skip, Escape = Cancel). With a clash up there's
+        // no `onclose`, so `ModalDialog` passes Escape on to here unhandled.
         if (conflictBody?.handleKeydown(event)) return
 
         // Dialog-scoped F2 → "Queue" (send to background). This is Total
@@ -417,11 +430,14 @@
         <!-- Offered during the scan as much as during the write: the
              walk parks on the same gate the drivers do
              (`crates/cmdr-operations/src/scan_bridge.rs`), and the scan is where
-             somebody realizes they picked the wrong destination. -->
+             somebody realizes they picked the wrong destination.
+             Focused when it appears, so Space pauses and resumes with no
+             shortcut of its own: the focus ring shows what the key will do. -->
         <Button
             variant="secondary"
             onclick={progress.handlePauseResume}
             disabled={pauseInFlight}
+            autoFocus
             aria-label={isPaused
                 ? tString('fileOperations.transferProgress.resumeAria')
                 : tString('fileOperations.transferProgress.pauseAria')}
@@ -480,10 +496,12 @@
           // conflict prompt follows.
           undefined
         : () => {
-              // ❌ Never a cancel. Closing this dialog detaches it from the
-              // operation; only the Cancel button asks the operation to stop.
+              // ❌ Never a cancel. Closing this dialog (×, or an MCP close)
+              // detaches it from the operation; only Cancel and Escape stop it.
               progress.detach()
           }}
+    onescape={conflictEvent ? undefined : handleEscape}
+    ariaDescribedby={showDirection && !conflictEvent ? DIRECTION_ID : undefined}
     containerStyle={conflictEvent ? conflictDialogWidthStyle(DIALOG_WIDTH_PX) : DIALOG_WIDTH_STYLE}
     resizable={treeOperationId !== null && !conflictEvent ? true : 'horizontal'}
     restoreHeight={rememberedHeight}
@@ -565,8 +583,9 @@
              brings its two paths and no pane-relative direction, and naming
              neither end would be worse than naming both without the arrow
              pointing at a pane. -->
-        {#if !isDeleteOrTrash && destinationPath}
+        {#if showDirection}
             <DirectionIndicator
+                id={DIRECTION_ID}
                 sourcePath={sourceFolderPath}
                 {destinationPath}
                 {direction}

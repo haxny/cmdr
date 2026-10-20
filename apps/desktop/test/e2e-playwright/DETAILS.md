@@ -472,9 +472,10 @@ the capture walks, one test per step.
   ended, and the favorite it added removed. The spec's `afterEach` drains operations and restores the fixture tree.
   Checked by running `archive-editing.spec.ts` straight after it on the same app (2026-09-12).
 - **Every step fits the 2 s duration budget**, which is why the main-window overlays are six steps, the conflict step
-  cancels its parked copy before dismissing (the dialog withdraws Escape during a clash, so dismissing first waits out a
-  3 s poll), and `queue-failed` drains the throttled copies before starting its doomed ones. ❌ Don't regroup steps to
-  shorten the list; split one that grows past the budget. The spec costs about 14 s for 27 tests (two runs, 2026-09-12).
+  cancels its parked copy before dismissing (the dialog never closes on Escape during a clash, so dismissing first waits
+  out a 3 s poll), and `queue-failed` drains the throttled copies before starting its doomed ones. ❌ Don't regroup
+  steps to shorten the list; split one that grows past the budget. The spec costs about 14 s for 27 tests (two runs,
+  2026-09-12).
 
 ## Real SFTP and WebDAV servers
 

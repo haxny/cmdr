@@ -27,7 +27,7 @@ import { isTextInputTarget } from '#lib/utils/text-input-focus.js'
  */
 export const DECISION_KEYS_ARM_MS = 400
 
-/** The clash prompt's letters, after Total Commander's copy dialog. */
+/** The clash prompt's keys: letters after Total Commander's copy dialog, plus Escape for Cancel. */
 export const CONFLICT_KEYS = {
   skip: 'S',
   skipAll: 'K',
@@ -37,7 +37,8 @@ export const CONFLICT_KEYS = {
   overwriteAll: 'A',
   overwriteAllSmaller: 'M',
   overwriteAllOlder: 'L',
-  cancel: 'C',
+  /** Escape, the key that stops things everywhere else. A key name, which is also ARIA's spelling and the chip's input. */
+  cancel: 'Escape',
   rollback: 'B',
 } as const
 
@@ -50,9 +51,11 @@ export const ERROR_KEYS = {
 
 /**
  * The operation queue's row letters, acting on the row under the queue's cursor
- * (`queue/queue-keys.ts`). Cancel and Rollback match the clash prompt's, so a
- * hand that learned them there finds them here. No arming delay: nothing raises
- * the queue mid-keystroke, and Rollback asks first anyway.
+ * (`queue/queue-keys.ts`). Rollback matches the clash prompt's, so a hand that
+ * learned it there finds it here. Cancel stays C: Escape closes the queue
+ * window, and a key that stops a copy can't also be the window's close. No
+ * arming delay: nothing raises the queue mid-keystroke, and Rollback asks first
+ * anyway.
  */
 export const QUEUE_ROW_KEYS = {
   show: 'S',
@@ -72,7 +75,7 @@ export interface DecisionChoice {
 
 /**
  * The bare key this keypress means to a decision prompt: an uppercase letter,
- * `'Enter'`, or `null` for a keypress that must not answer anything.
+ * `'Enter'`, `'Escape'`, or `null` for a keypress that must not answer anything.
  *
  * - Any modifier means another combo (`⌘C` is copy, not Cancel), Shift included.
  * - A held key repeats, and a repeat must not answer the NEXT prompt too.
@@ -85,6 +88,7 @@ export function decisionKeyOf(event: KeyboardEvent): string | null {
   if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return null
   if (isTextInputTarget(event.target)) return null
   if (event.key === 'Enter') return event.target instanceof HTMLButtonElement ? null : 'Enter'
+  if (event.key === 'Escape') return 'Escape'
   return letterOf(event)
 }
 

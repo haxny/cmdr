@@ -81,7 +81,7 @@ const KEY_ACTIONS: readonly (readonly [CommandId, QueueKeyAction])[] = [
  */
 function queueCombo(event: KeyboardEvent): string | null {
   const letter = decisionKeyOf(event)
-  if (letter !== null && letter !== 'Enter') return letter
+  if (letter !== null && /^[A-Z]$/.test(letter)) return letter
   const combo = resolveKeyCombo(event)
   return /^[A-Z]$/.test(combo) ? null : combo
 }

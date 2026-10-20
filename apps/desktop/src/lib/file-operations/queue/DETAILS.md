@@ -430,11 +430,12 @@ where the row doesn't offer that button, so its key does nothing there.
     back out. ⌥↑ / ⌥↓ reorder (below). Escape closes the window.
   - **A letter per row button**, shown as its `keyHint` chip and acting on the cursor row from anywhere in it (the row,
     or a button → reached): S Show, P Pause / Resume, C Cancel, B Rollback (`QUEUE_ROW_KEYS` in `../decision-keys.ts`).
-    C and B are the clash prompt's own, and the letters read the prompts' way (`decisionKeyOf`): bare, never a held
-    key's repeat (a held P would pause and resume in turn), and the physical key on a non-Latin layout;
-    `queue-keys.ts::queueCombo` drops a bare letter that reading refuses. They stay clear of the window's other keys, of
-    Retry and Dismiss (no letter; ⌫ dismisses), and of F, which the row forwards to its live tree (§ "The inline tree");
-    inside the tree the grid hears no letter at all. Untranslated, like every decision letter.
+    B is the clash prompt's own; C stays here although the prompt cancels with Escape, since Escape closes this window.
+    The letters read the prompts' way (`decisionKeyOf`): bare, never a held key's repeat (a held P would pause and
+    resume in turn), and the physical key on a non-Latin layout; `queue-keys.ts::queueCombo` drops a bare letter that
+    reading refuses. They stay clear of the window's other keys, of Retry and Dismiss (no letter; ⌫ dismisses), and of
+    F, which the row forwards to its live tree (§ "The inline tree"); inside the tree the grid hears no letter at all.
+    Untranslated, like every decision letter.
   - Tab from the cursor row enters its live tree, where the tree owns the keys and Escape comes back (§ "The inline
     tree").
 - **⌘A arrives as a menu event, not a keydown.** The Edit > Select all accelerator fires before the webview sees the

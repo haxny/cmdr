@@ -27,7 +27,7 @@ import {
 import TransferProgressDialog from './TransferProgressDialog.svelte'
 import { buttonLabel } from '../test-button-label'
 import { DECISION_KEYS_ARM_MS } from '../decision-keys'
-import { resolveWriteConflict, cancelWriteOperation } from '#lib/tauri-commands/index.js'
+import { resolveWriteConflict, cancelOperation, cancelWriteOperation } from '#lib/tauri-commands/index.js'
 
 let conflictCb: ((e: WriteConflictEvent) => void) | null = null
 
@@ -464,8 +464,9 @@ describe('TransferProgressDialog conflict — folder → file, sourceSize null',
 
 /**
  * The dialog withdraws `ModalDialog`'s `onclose` while a clash is up, so there
- * is no × and no Escape: every exit from a clash decides something about the
- * user's files, and the conflict body carries its own buttons for all of them.
+ * is no × and Escape never closes: every exit from a clash decides something
+ * about the user's files, and the conflict body carries its own buttons for all
+ * of them (Escape presses its Cancel, once the prompt has armed).
  *
  * Pinned here because the rule is invisible from the outside and expensive to
  * relearn: the i18n capture harness assumed an Escape would take the dialog
@@ -475,7 +476,7 @@ describe('TransferProgressDialog conflict — folder → file, sourceSize null',
  * answer or cancel the operation first.
  */
 describe('TransferProgressDialog conflict — no way out that is not an answer', () => {
-  it('withdraws the × while a clash is on screen, and Escape leaves the clash up', async () => {
+  it('withdraws the × while a clash is on screen, and an Escape before it arms leaves the clash up', async () => {
     const target = await mountDialogWithConflict(makeEvent())
     expect(target.querySelector('.conflict-section')).not.toBeNull()
     expect(target.querySelector('.modal-close-button')).toBeNull()
@@ -549,20 +550,27 @@ describe('TransferProgressDialog conflict answered from the keyboard', () => {
     expect(resolveWriteConflict).toHaveBeenCalledWith('op-1', 1, 'skip', true)
   })
 
-  it('skips on Enter, and Escape answers nothing', async () => {
+  it('skips on Enter', async () => {
     const target = await mountDialogWithoutConflict()
     await raiseArmedClash(target)
-
-    target
-      .querySelector('.modal-overlay')
-      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-    await flushMicrotasks()
-    expect(resolveWriteConflict).not.toHaveBeenCalled()
-    expect(cancelWriteOperation).not.toHaveBeenCalled()
 
     target.querySelector('.modal-overlay')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     await flushMicrotasks()
     expect(resolveWriteConflict).toHaveBeenCalledWith('op-1', 1, 'skip', false)
+  })
+
+  it('cancels on Escape, keeping what was written, and answers no clash', async () => {
+    const target = await mountDialogWithoutConflict()
+    vi.mocked(cancelOperation).mockClear()
+    await raiseArmedClash(target)
+
+    target
+      .querySelector('.modal-overlay')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    await flushMicrotasks()
+    expect(resolveWriteConflict).not.toHaveBeenCalled()
+    expect(cancelWriteOperation, 'never a rollback').not.toHaveBeenCalled()
+    expect(cancelOperation).toHaveBeenCalledExactlyOnceWith('op-1')
   })
 
   it('asks before B rolls the copy back', async () => {

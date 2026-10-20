@@ -168,12 +168,13 @@ export async function captureConflictDialog(
     return '.conflict-section'
   })
   // The conflict flow leaves a real copy PARKED on an unanswered clash, and the
-  // way out of one is an answer, never an Escape: `TransferProgressDialog` passes
+  // way out of one is an answer, never a close: `TransferProgressDialog` passes
   // `onclose={undefined}` while a clash is up, because every exit from a clash
-  // decides something about the user's files. So the exit here is a real cancel on
-  // the operation, which ends it and takes the dialog down with it, and it comes
-  // FIRST: an Escape while the clash is up does nothing but wait out
-  // `dismissOverlay`'s close poll, which cost this step ~3 s.
+  // decides something about the user's files (Escape there presses Cancel, once
+  // the prompt has armed). So the exit here is a real cancel on the operation,
+  // which ends it and takes the dialog down with it, and it comes FIRST: leaving
+  // it to `dismissOverlay`'s Escape waits out its close poll, which cost this
+  // step ~3 s.
   //
   // ❗ Assert the drain, don't hope for it. A copy parked on a clash holds the
   // local lane AND a queue row, so leaving one behind fails every later surface

@@ -1,6 +1,6 @@
 /**
  * The clash prompt answered from the keyboard, Total Commander style: one bare
- * letter per button, Enter = Skip, nothing for Escape. The shared guards
+ * letter per button, Enter = Skip, Escape = Cancel. The shared guards
  * (modifiers, repeat, IME, text fields) are pinned in `../decision-keys.test.ts`;
  * this file pins the key map, the per-button disabled states, the arming delay,
  * and the focus the body reclaims. The hosts' forwarding is pinned beside them.
@@ -104,7 +104,9 @@ function press(init: KeyboardEventInit, target?: Element | null): KeyboardEvent 
   return event
 }
 
+/** The keypress for one of `CONFLICT_KEYS`: a bare letter, or a named key (Escape) as itself. */
 function letter(key: string): KeyboardEventInit {
+  if (key.length > 1) return { key, code: key }
   return { key: key.toLowerCase(), code: `Key${key}` }
 }
 
@@ -194,11 +196,19 @@ describe('Enter and Escape', () => {
     expect(onResolve).not.toHaveBeenCalled()
   })
 
-  it('never answers on Escape: every way out of a clash is a decision', () => {
+  it('Escape cancels, keeping what was written, and answers no clash', () => {
     render()
     arm()
-    press({ key: 'Escape', code: 'Escape' })
+    const event = press({ key: 'Escape', code: 'Escape' })
     expect(onResolve).not.toHaveBeenCalled()
+    expect(onCancel).toHaveBeenCalledExactlyOnceWith(false)
+    expect(event.defaultPrevented, 'claimed, so the window stays in full screen').toBe(true)
+  })
+
+  it('C no longer cancels: Escape took its place', () => {
+    render()
+    arm()
+    press({ key: 'c', code: 'KeyC' })
     expect(onCancel).not.toHaveBeenCalled()
   })
 })
@@ -228,22 +238,22 @@ describe('the way out', () => {
     expect(keys).toContain('B')
   })
 
-  it('C stops a copy that could roll back and keeps what it wrote, from a Cancel beside Rollback', () => {
+  it('Escape stops a copy that could roll back and keeps what it wrote, from a Cancel beside Rollback', () => {
     // Rollback isn't the only way out: someone who wants to stop and keep the
     // files already copied gets a plain Cancel too (cmdr-reports #48).
     const target = render()
     arm()
     const cancelButton = [...target.querySelectorAll('.conflict-cancel button')].find(
-      (b) => b.getAttribute('aria-keyshortcuts') === CONFLICT_KEYS.cancel,
+      (b) => b.getAttribute('aria-keyshortcuts') === 'Escape',
     )
     expect(cancelButton && buttonLabel(cancelButton)).toBe('Cancel')
-    expect(cancelButton?.querySelector('kbd')?.textContent).toBe('C')
+    expect(cancelButton?.querySelector('kbd')?.textContent).toBe('Esc')
     press(letter(CONFLICT_KEYS.cancel))
     expect(onCancel).toHaveBeenCalledTimes(1)
     expect(onCancel).toHaveBeenCalledWith(false)
   })
 
-  it('C cancels when the operation cannot roll back, and the blocked Rollback has no key', () => {
+  it('Escape cancels when the operation cannot roll back, and the blocked Rollback has no key', () => {
     props.rollbackSupport = 'sameVolumeMove'
     const target = render()
     arm()

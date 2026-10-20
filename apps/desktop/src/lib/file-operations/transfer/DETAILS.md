@@ -1120,21 +1120,27 @@ session attaching late (`../operation-session/DETAILS.md` § "Where a live opera
 what is left over — a window that has heard nothing at all, with the operation paused so no tick is coming, which after
 a reload is a real path. It shows "Paused", offers Resume, and fills in the moment the operation says where it is.
 
-**Teardown stops nothing.** A close is a detach: `ModalDialog`'s `onclose` goes to `detach()`, which hands a
-still-running operation to the queue window (exactly as the Queue button does) and otherwise just stops watching. An
-unmount does neither — the operation lives in the backend registry, and the corner chip and the queue window keep
-showing it. The one teardown-adjacent flag that still means "stop" is `cancelRequestedBeforeId`: an explicit Cancel
-pressed while the start command was in flight, which birth honours through `cancel_operation` (the MANAGER-level cancel,
-because an operation admitted behind a busy lane has no write op to cancel yet).
+**Escape cancels; × detaches.** Escape is the Cancel button (`onescape` → `handleCancel(false)`: keeps what's written,
+asks nothing), and once Cancel is spent (cancelling, or settled) it falls back to the close, so it always leads out.
+Why: on a progress dialog, Escape means "stop", and hiding the window there surprised the person who pressed it. The
+dialog opens with focus on Pause, so Space pauses and resumes with no binding of its own, and the direction row is the
+dialog's `aria-describedby`, so a screen reader hears what's running beside the title before it hears "Pause".
+
+**Teardown stops nothing.** A close is a detach: `ModalDialog`'s `onclose` (× and MCP close) goes to `detach()`, which
+hands a still-running operation to the queue window (exactly as the Queue button does) and otherwise just stops
+watching. An unmount does neither — the operation lives in the backend registry, and the corner chip and the queue
+window keep showing it. The one teardown-adjacent flag that still means "stop" is `cancelRequestedBeforeId`: an explicit
+Cancel pressed while the start command was in flight, which birth honours through `cancel_operation` (the MANAGER-level
+cancel, because an operation admitted behind a busy lane has no write op to cancel yet).
 
 Two shapes of that rule are worth stating, because each is one condition standing between a keystroke and the wrong
 answer:
 
-- **While a clash is showing there is no `onclose` at all**, so no × and no Escape. Backgrounding a parked operation
-  would leave it waiting on a question nobody is asking (the conflict host discards a clash the foreground owned), and
-  dismissing would tell the pane "cancelled" about an operation that is still parked. The conflict body carries Skip,
-  Rename, Overwrite, Cancel, and Rollback, which is every honest way out. Same rule the main window's conflict prompt
-  follows (`../DETAILS.md` § "Conflict prompts").
+- **While a clash is showing there is no `onclose` at all**, so no ×, and Escape goes to the conflict body as its
+  Cancel. Backgrounding a parked operation would leave it waiting on a question nobody is asking (the conflict host
+  discards a clash the foreground owned), and dismissing would tell the pane "cancelled" about an operation that is
+  still parked. The conflict body carries Skip, Rename, Overwrite, Cancel, and Rollback, which is every honest way out.
+  Same rule the main window's conflict prompt follows (`../DETAILS.md` § "Conflict prompts").
 - **`dismiss()` refuses to speak for an operation that ended some other way.** It reports `onCancelled`, and the pane
   runs a different tail for a cancel than for a completion, so it fires only while a cancel is what is happening.
 - **A detach with no session leaves the operation alone.** The binder acquires on the first effect flush after the id

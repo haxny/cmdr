@@ -14,8 +14,8 @@ Copy (F5), move (F6), compress (⌥F5): setup, conflict scan, progress, errors. 
 
 - **The dialog is a VIEW of its operation, ❌ never its owner.** Everything (phase, counts, ETA, clash, outcome) comes
   from its session (`../operation-session/CLAUDE.md`). ❌ Never a second smoother, listener, or event buffer.
-- **A close is a DETACH, ❌ never a cancel.** `onclose` calls `detach()`; only the Cancel button cancels, and unmounting
-  stops nothing. With no session yet it leaves the operation ALONE. ❌ While a clash is up there's no `onclose` at all:
+- **× DETACHES, Escape cancels.** `onclose` (×, MCP close) calls `detach()`; Escape (`onescape`) and Cancel cancel;
+  unmounting stops nothing. With no session a detach leaves the operation ALONE. ❌ No `onclose` while a clash is up:
   every way out of a clash decides something about the user's files.
 - **Background is FRONTEND-ONLY.** The progress dialog's Queue / F2 set `backgrounded`, open NO queue window (a toast
   instead), and unmount; the SETUP dialog's F2 is Enter plus `startInBackground`, ❌ no modal ever (DETAILS § "Starting

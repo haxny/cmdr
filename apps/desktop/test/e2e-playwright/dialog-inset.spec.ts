@@ -192,9 +192,10 @@ test.describe('Dialog body inset', () => {
       // panel geometry is the dialog's own, so they're worth measuring all the same.
       if (entry.status !== 'ready') continue
       // A real-operation row starts a real copy this sweep's Escape-based close
-      // can't end: the conflict prompt has no Escape (every way out is an answer)
-      // and would swallow every later dialog, and the progress dialog's Escape
-      // sends its paced copy to the background, still holding the local lane.
+      // can't cleanly end: the conflict prompt never closes on Escape (it
+      // cancels, once armed) and would swallow every later dialog, and the
+      // progress dialog's Escape cancels a copy that then takes its own time to
+      // wind down, still holding the local lane.
       if (entry.openedBy === 'real-operation') continue
       // `.at(0)`, not `[0]`: a registry row may carry NO states (`states: []`),
       // which indexing can't express without `noUncheckedIndexedAccess` — so the

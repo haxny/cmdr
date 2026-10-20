@@ -343,9 +343,11 @@ that's free to narrow later.
   reliably raise on macOS), once per run of prompts, skipped under `isE2eRun()`. The path into this bug ends with the
   queue window in front; a prompt nobody can see is the same wedge with more code. That's the opposite of the failure
   toast's reasoning, and deliberately: a settled failure asks for no decision, a conflict holds a transfer still.
-- **No `onclose`, so no × and no Escape.** Every exit is a decision about the user's files, and the conflict body's own
-  Cancel / Rollback row is the way out. ⚠️ It follows that E2E's `ensureAppReady` Escape can't clear this dialog; only a
-  real background conflict raises it, so no automated run should meet one.
+- **No `onclose`, so no × and Escape never closes.** Every exit is a decision about the user's files, and the conflict
+  body's own Cancel / Rollback row is the way out; Escape reaches the body and presses Cancel once the prompt has armed
+  (§ "Letter keys on decision prompts"). The arming delay is what keeps a reflex Escape at a prompt that just popped up
+  from stopping a background transfer. ⚠️ E2E's `ensureAppReady` Escape cancels this dialog's operation rather than
+  closing a dialog; only a real background conflict raises it, so no automated run should meet one.
 - **It can stack over an open progress dialog**, when a backgrounded operation clashes while a new one is running in the
   foreground. That's supported rather than avoided: `trapFocus` hands enforcement to the most recently mounted trap and
   back on close, and this dialog is mounted after `DualPaneExplorer` so it paints on top. Deferring the prompt until the
@@ -416,13 +418,16 @@ shown by both the progress dialog and `OperationConflictDialog`) and on `transfe
 letters live in `decision-keys.ts` (`CONFLICT_KEYS`, `ERROR_KEYS`):
 
 - Clash: S Skip, K Skip all, R Rename, N Rename all, O Overwrite, A Overwrite all, M Overwrite all smaller, L Overwrite
-  all older, C Cancel, B Rollback. Enter = Skip (this file): the safe default, never an overwrite.
+  all older, Escape Cancel, B Rollback. Enter = Skip (this file): the safe default, never an overwrite. Cancel is
+  Escape, not a letter, because Escape is what stops a transfer everywhere else (the progress dialog's own Escape is its
+  Cancel too), and its chip reads "Esc".
 - Error: R Retry, A Copy anyway, C Close. Enter = Close, as before.
 - The operation queue's row buttons read their letters the same way (`QUEUE_ROW_KEYS`: S Show, P Pause / Resume, C
   Cancel, B Rollback), on the row under the queue's cursor and without an arming delay (`queue/DETAILS.md` § Keyboard).
 
-Escape still answers no clash: with a clash up the host has no `onclose`, so `ModalDialog` hands Escape to the host's
-`onkeydown` and the body ignores it. B goes through `RollbackConfirmDialog` exactly like a click.
+Escape answers no clash, and never closes the prompt: with a clash up the host has no `onclose`, so `ModalDialog` hands
+Escape to the host's `onkeydown` and the body reads it as Cancel, armed and guarded like a letter (`decisionKeyOf`
+returns `'Escape'`). B goes through `RollbackConfirmDialog` exactly like a click.
 
 **The rules every key follows** (`decisionKeyOf`, pinned in `decision-keys.test.ts`):
 

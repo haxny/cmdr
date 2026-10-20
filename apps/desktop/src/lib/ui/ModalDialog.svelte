@@ -125,6 +125,13 @@
         topmost?: boolean
         /** Renders × button and handles Escape key */
         onclose?: () => void
+        /**
+         * Escape runs this instead of `onclose`, for a dialog where Escape means
+         * something other than closing (the progress dialog: Escape cancels the
+         * operation, × only stops watching it). Takes effect only alongside
+         * `onclose`: no `onclose` means Escape reaches `onkeydown` as usual.
+         */
+        onescape?: () => void
     }
 
     const {
@@ -151,7 +158,11 @@
         closeOnOverlayClick = false,
         topmost = false,
         onclose,
+        onescape,
     }: Props = $props()
+
+    /** What Escape does: `onescape` where the dialog gives one, else closing. */
+    const escapeAction = $derived(onclose ? (onescape ?? onclose) : undefined)
 
     let overlayElement: HTMLDivElement | undefined = $state()
     // Menus in the body (`Select`, `Combobox`) portal into the overlay: it carries the modal
@@ -419,12 +430,12 @@
             onkeydown?.(event)
             return
         }
-        if (event.key === 'Escape' && onclose) {
+        if (event.key === 'Escape' && escapeAction) {
             // ❌ Never drop this. An Escape the webview leaves unprevented goes back to
             // AppKit, which reads it as `cancelOperation:` and takes a full-screen window
             // out of full screen, so closing the dialog would ALSO restore the window.
             event.preventDefault()
-            onclose()
+            escapeAction()
             return
         }
         // When a button is focused (user Tab'd to it), let the browser activate
@@ -533,7 +544,7 @@
     tabindex="-1"
     onkeydown={handleOverlayKeydown}
     onclick={handleOverlayClick}
-    use:trapFocus={{ onEscape: onclose }}
+    use:trapFocus={{ onEscape: escapeAction }}
 >
     <div
         bind:this={dialogElement}

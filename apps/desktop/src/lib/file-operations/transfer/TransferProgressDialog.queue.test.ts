@@ -366,6 +366,42 @@ describe('TransferProgressDialog Pause/Resume', () => {
   })
 })
 
+describe('TransferProgressDialog keyboard: Escape and the opening focus', () => {
+  it('Escape cancels the transfer, keeping what it wrote, and backgrounds nothing', async () => {
+    const { target, onQueue } = await mountDialog()
+
+    target
+      .querySelector('.modal-overlay')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    await flushPromises()
+
+    expect(cancelOperationMock, 'Escape is the Cancel button').toHaveBeenCalledExactlyOnceWith('op-1')
+    expect(cancelWriteOperationMock, 'never a rollback').not.toHaveBeenCalled()
+    expect(onQueue, 'Escape no longer backgrounds').not.toHaveBeenCalled()
+  })
+
+  it('× still backgrounds: closing the window is not a cancel', async () => {
+    const { target, onQueue } = await mountDialog()
+
+    target.querySelector<HTMLButtonElement>('.modal-close-button')?.click()
+    await flushPromises()
+
+    expect(onQueue).toHaveBeenCalledOnce()
+    expect(cancelOperationMock).not.toHaveBeenCalled()
+  })
+
+  it('opens with focus on Pause, so Space pauses and resumes', async () => {
+    const { target } = await mountDialog()
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => {
+        resolve()
+      }),
+    )
+
+    expect(document.activeElement).toBe(queryButton(target, 'Pause this transfer'))
+  })
+})
+
 describe('TransferProgressDialog Queue button', () => {
   it('backgrounds the op: shows a toast, fires onQueue, opens no window, and does NOT cancel', async () => {
     const { component, target, onQueue } = await mountDialog()

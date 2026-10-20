@@ -70,11 +70,12 @@
 </script>
 
 {#if prompt}
-    <!-- No `onclose`: deliberately no × and no Escape. Every way out of this
-         dialog is a decision about the user's files, and the reflex Escape on a
-         modal that appeared over whatever they were doing would cancel a
-         transfer they may not even have been watching. The conflict body's own
-         Cancel / Rollback row is the way out, by click or by its letter. -->
+    <!-- No `onclose`: deliberately no ×, and Escape never closes. Every way out
+         of this dialog is a decision about the user's files, so Escape reaches
+         the conflict body, where it presses Cancel (keeping what's written). The
+         body's arming delay is what stops a reflex Escape on a modal that
+         appeared over whatever they were doing from cancelling a transfer they
+         may not even have been watching. -->
     <ModalDialog
         titleId="operation-conflict-title"
         ariaDescribedby={context === null ? undefined : 'operation-conflict-context'}

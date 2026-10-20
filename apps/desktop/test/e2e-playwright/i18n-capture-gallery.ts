@@ -234,9 +234,10 @@ function unshootableReason(entry: (typeof DIALOG_GALLERY_ENTRIES)[number], hasFi
   // never has in production; don't photograph it as if it were real.
   if (entry.hostWindow !== 'main') return `it really lives in the ${entry.hostWindow} window`
   if (entry.usesFixtureDir === true && !hasFixtures) return 'its fixture directory is unavailable'
-  // It starts a real copy that closing the preview doesn't end: the conflict
-  // prompt has no Escape by design, and the progress dialog's Escape sends its
-  // copy to the background, where the corner chip would sit in every later shot.
+  // It starts a real copy that closing the preview doesn't cleanly end: the
+  // conflict prompt never closes on Escape by design, and the progress dialog's
+  // Escape cancels a copy that winds down in its own time, its corner chip
+  // sitting in the later shots meanwhile.
   // The live tree it shows is captured on the queue window's running row instead.
   if (entry.openedBy === 'real-operation') return 'it starts a real copy that closing the preview doesn’t end'
   return null

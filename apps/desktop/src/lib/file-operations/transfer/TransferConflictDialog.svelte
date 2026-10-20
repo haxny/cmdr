@@ -171,10 +171,11 @@
     })
 
     /**
-     * Answers the clash from a bare letter (or Enter = Skip, the safe default).
-     * The host dialog forwards its keydowns here, so only a keypress inside THAT
-     * dialog can answer, and Escape never does (it isn't a choice). Returns
-     * whether the key answered.
+     * Answers the clash from a bare letter (or Enter = Skip, the safe default,
+     * and Escape = Cancel, which keeps what's written). The host dialog forwards
+     * its keydowns here, so only a keypress inside THAT dialog can answer. Neither
+     * host gives `ModalDialog` an `onclose` while a clash is up, so Escape reaches
+     * this body instead of closing anything. Returns whether the key answered.
      */
     export function handleKeydown(event: KeyboardEvent): boolean {
         if (armedConflictId !== conflictEvent.conflictId) return false
