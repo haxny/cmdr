@@ -420,7 +420,7 @@
     "sources": "MS and macOS (kamera); catalog -uppgifter for file metadata (Filuppgifter)"
   },
   "cancel": {
-    "accept": ["avbröt", "avbruten", "avbrutna", "avbrutet", "avbryts", "avbrutits"],
+    "accept": ["avbröt", "avbruten", "avbrutna", "avbrutet", "avbryts", "avbrutits", "avbrutit"],
     "chosen": "avbryt",
     "confidence": "high",
     "forms": "button Avbryt; status Avbruten; stopping a rollback is Stoppa, never Avbryt",

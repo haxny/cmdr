@@ -512,6 +512,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Đã hủy sao chép} move {Đã hủy di chuyển} compress {Đã hủy nén} delete {Đã hủy xóa} trash {Đã hủy chuyển vào thùng rác} other {Đã hủy}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Bạn đã hủy thao tác sao chép này. Các tệp đã sao chép đến giờ vẫn nằm nguyên tại chỗ.} move {Bạn đã hủy thao tác di chuyển này. Các tệp đã di chuyển đến giờ vẫn nằm ở nơi đã chuyển tới.} compress {Bạn đã hủy thao tác nén này.} delete {Bạn đã hủy thao tác xóa này. Các tệp đã xóa đến giờ không còn nữa và các tệp còn lại vẫn còn nguyên.} trash {Bạn đã hủy thao tác chuyển vào thùng rác này. Các tệp đã chuyển đến giờ vẫn nằm trong thùng rác và các tệp còn lại vẫn ở chỗ cũ.} other {Bạn đã hủy thao tác này.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "Đang hủy… (đang dọn dẹp)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"

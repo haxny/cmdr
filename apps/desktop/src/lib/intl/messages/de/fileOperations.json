@@ -513,6 +513,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Kopieren abgebrochen} move {Bewegen abgebrochen} compress {Komprimieren abgebrochen} delete {Löschen abgebrochen} trash {Bewegen in den Papierkorb abgebrochen} other {Abgebrochen}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Du hast das Kopieren abgebrochen. Die bisher kopierten Dateien bleiben, wo sie sind.} move {Du hast das Bewegen abgebrochen. Die bisher bewegten Dateien bleiben dort, wo sie gelandet sind.} compress {Du hast das Komprimieren abgebrochen.} delete {Du hast das Löschen abgebrochen. Die bisher gelöschten Dateien sind weg, die übrigen sind noch da.} trash {Du hast das Bewegen in den Papierkorb abgebrochen. Die bisher bewegten Dateien bleiben im Papierkorb, die übrigen sind noch dort, wo sie waren.} other {Du hast diesen Vorgang abgebrochen.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "Wird abgebrochen … (wird aufgeräumt)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"

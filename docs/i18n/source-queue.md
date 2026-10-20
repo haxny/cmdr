@@ -462,3 +462,7 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `format` concept: "View formatted" / "format this document" (Markdown viewer) mean rich-text rendering, not a drive,
   archive, or display format; added both to `format`'s `notMatch`. Consider a `rendered-view` concept if more keys use
   this sense. (fr)
+- `fileOperations.transferProgress.canceledAlertMessage`: "You’ve canceled this compress." uses "compress" as a noun,
+  which reads odd in English; consider "this compression" (most languages used their compression noun). The `en-GB` /
+  `en-AU` overlays fork `errors.write.cancelled.title.*` ("cancelled"), but not these two new keys, so British readers
+  get "canceled" here only. (all)

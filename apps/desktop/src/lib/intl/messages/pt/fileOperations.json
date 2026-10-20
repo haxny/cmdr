@@ -513,6 +513,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Cópia cancelada} move {Movimentação cancelada} compress {Compressão cancelada} delete {Operação de apagar cancelada} trash {Mover para o Lixo cancelado} other {Cancelado}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Você cancelou esta cópia. Os arquivos copiados até agora ficam onde estão.} move {Você cancelou esta movimentação. Os arquivos movidos até agora ficam onde foram parar.} compress {Você cancelou esta compressão.} delete {Você cancelou esta operação de apagar. Os arquivos apagados até agora não existem mais e o resto continua onde estava.} trash {Você cancelou esta operação de mover para o Lixo. Os arquivos movidos até agora ficam no Lixo e o resto continua onde estava.} other {Você cancelou esta operação.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "Cancelando… (limpando)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"

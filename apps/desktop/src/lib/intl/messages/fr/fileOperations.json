@@ -514,6 +514,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Copie annulée} move {Déplacement annulé} compress {Compression annulée} delete {Suppression annulée} trash {Placement dans la corbeille annulé} other {Opération annulée}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Vous avez annulé cette copie. Les fichiers copiés jusqu’à présent restent là où ils sont.} move {Vous avez annulé ce déplacement. Les fichiers déplacés jusqu’à présent restent là où ils sont arrivés.} compress {Vous avez annulé cette compression.} delete {Vous avez annulé cette suppression. Les fichiers supprimés jusqu’à présent ont disparu et les autres sont toujours là.} trash {Vous avez annulé ce placement dans la corbeille. Les fichiers déjà placés dans la corbeille y restent et les autres n’ont pas bougé.} other {Vous avez annulé cette opération.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "Annulation… (nettoyage en cours)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"

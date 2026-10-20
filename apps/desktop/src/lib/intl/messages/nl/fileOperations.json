@@ -513,6 +513,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Kopiëren geannuleerd} move {Verplaatsen geannuleerd} compress {Comprimeren geannuleerd} delete {Verwijderen geannuleerd} trash {Verplaatsen naar prullenmand geannuleerd} other {Geannuleerd}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Je hebt het kopiëren geannuleerd. De bestanden die tot nu toe zijn gekopieerd, blijven waar ze zijn.} move {Je hebt het verplaatsen geannuleerd. De bestanden die tot nu toe zijn verplaatst, blijven waar ze terechtgekomen zijn.} compress {Je hebt het comprimeren geannuleerd.} delete {Je hebt het verwijderen geannuleerd. De bestanden die tot nu toe zijn verwijderd, zijn weg en de rest staat er nog.} trash {Je hebt het verplaatsen naar de prullenmand geannuleerd. De bestanden die tot nu toe zijn verplaatst, blijven in de prullenmand en de rest staat er nog.} other {Je hebt deze bewerking geannuleerd.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "Bezig met annuleren… (opschonen)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"

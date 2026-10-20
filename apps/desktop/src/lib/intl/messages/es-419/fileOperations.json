@@ -95,6 +95,14 @@
   "@fileOperations.transferProgress.scanTitleTrash": {
     "sourceHash": "1b83d46"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Copia cancelada} move {Movimiento cancelado} compress {Compresión cancelada} delete {Eliminación cancelada} trash {Movimiento al basurero cancelado} other {Operación cancelada}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "e5b1b7c"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Cancelaste esta copia. Los archivos copiados hasta ahora se quedan donde están.} move {Cancelaste este movimiento. Los archivos movidos hasta ahora se quedan donde llegaron.} compress {Cancelaste esta compresión.} delete {Cancelaste esta eliminación. Los archivos eliminados hasta ahora ya no están y el resto sigue ahí.} trash {Cancelaste este movimiento al basurero. Los archivos movidos hasta ahora se quedan en el basurero y el resto sigue donde estaba.} other {Cancelaste esta operación.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "e0fae05"
+  },
   "fileOperations.transferProgress.stallUnknown": "La transferencia dejó de avanzar. Cancélala o déjala en ejecución en segundo plano.",
   "@fileOperations.transferProgress.stallUnknown": {
     "sourceHash": "af54155"

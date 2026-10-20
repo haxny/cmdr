@@ -511,6 +511,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {已取消複製} move {已取消移動} compress {已取消壓縮} delete {已取消刪除} trash {已取消移至垃圾桶} other {已取消}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {你已取消這次複製。目前為止複製好的檔案會留在原處。} move {你已取消這次移動。目前為止移動過的檔案會留在新位置。} compress {你已取消這次壓縮。} delete {你已取消這次刪除。目前為止刪除的檔案已經不在了，其餘檔案仍在原處。} trash {你已取消這次移至垃圾桶的操作。目前為止移過去的檔案會留在垃圾桶中，其餘檔案仍在原處。} other {你已取消這項操作。}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "正在取消⋯（正在清理）",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"

@@ -72,6 +72,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   minus step → `mínuszos lépésköz` are plain-word picks with no Tier-1 attestation (no pile here); `vezető nullák` and
   `negatív lépésköz` are the technical alternatives.
 - **`Mac-eden` vs `Macen`**: both ship; new text uses the majority `Macen` / `Macet`.
+- **`fileOperations.transferProgress.canceledAlertMessage` → `Megszakítottad ezt a másolást.`**: the `cancel` note says
+  a sentence about what the user stopped takes `leállít`, but this follows `errors.write.cancelled.message.*`
+  (`megszakítottad`) and the running-operation form; is `Leállítottad ezt a másolást` the better read?
 
 ## Length
 

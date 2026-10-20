@@ -513,6 +513,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {A másolás megszakítva} move {Az áthelyezés megszakítva} compress {A tömörítés megszakítva} delete {A törlés megszakítva} trash {A Kukába helyezés megszakítva} other {Megszakítva}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Megszakítottad ezt a másolást. Az eddig átmásolt fájlok ott maradnak, ahol vannak.} move {Megszakítottad ezt az áthelyezést. Az eddig áthelyezett fájlok ott maradnak, ahová kerültek.} compress {Megszakítottad ezt a tömörítést.} delete {Megszakítottad ezt a törlést. Az eddig törölt fájlok eltűntek, a többi még megvan.} trash {Megszakítottad ezt a Kukába helyezést. Az eddig áthelyezett fájlok a Kukában maradnak, a többi ott van, ahol volt.} other {Megszakítottad ezt a műveletet.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "Megszakítás… (rendrakás)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"

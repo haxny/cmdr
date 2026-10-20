@@ -512,6 +512,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Копирование отменено} move {Перемещение отменено} compress {Сжатие отменено} delete {Удаление отменено} trash {Перемещение в Корзину отменено} other {Отменено}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Вы отменили это копирование. Уже скопированные файлы остаются на своих местах.} move {Вы отменили это перемещение. Уже перемещенные файлы остаются там, куда попали.} compress {Вы отменили это сжатие.} delete {Вы отменили это удаление. Уже удаленные файлы исчезли, а остальные на месте.} trash {Вы отменили это перемещение в Корзину. Уже перемещенные файлы остаются в Корзине, а остальные лежат там же, где были.} other {Вы отменили эту операцию.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "Отмена… (очистка)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"

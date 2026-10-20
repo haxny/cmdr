@@ -513,6 +513,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Kopiering avbruten} move {Flytt avbruten} compress {Komprimering avbruten} delete {Radering avbruten} trash {Flytt till papperskorgen avbruten} other {Avbruten}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Du har avbrutit den här kopieringen. Filerna som kopierats hittills ligger kvar där de är.} move {Du har avbrutit den här flytten. Filerna som flyttats hittills ligger kvar där de hamnade.} compress {Du har avbrutit den här komprimeringen.} delete {Du har avbrutit den här raderingen. Filerna som raderats hittills är borta och resten finns kvar.} trash {Du har avbrutit den här flytten till papperskorgen. Filerna som flyttats hittills ligger kvar i papperskorgen och resten ligger kvar där de var.} other {Du har avbrutit den här åtgärden.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "Avbryter… (rensar upp)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"

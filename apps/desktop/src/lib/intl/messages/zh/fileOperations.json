@@ -511,6 +511,14 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {已取消拷贝} move {已取消移动} compress {已取消压缩} delete {已取消删除} trash {已取消移到废纸篓} other {已取消}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {你已取消这次拷贝。目前已拷贝的文件会留在原处。} move {你已取消这次移动。目前已移动的文件会留在新位置。} compress {你已取消这次压缩。} delete {你已取消这次删除。目前已删除的文件已经没有了，其余文件仍在原处。} trash {你已取消这次移到废纸篓的操作。目前已移走的文件会留在废纸篓中，其余文件仍在原处。} other {你已取消这项操作。}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "0c16ac3"
+  },
   "fileOperations.transferProgress.titleCancellingSlow": "正在取消…（正在清理）",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"
