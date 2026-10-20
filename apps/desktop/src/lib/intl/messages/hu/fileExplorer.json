@@ -912,6 +912,10 @@
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "A Mac lemezén nincs elég hely „{fileName}” {size} méretű másolatának, ezért a Cmdr nem tudja megnyitni ezzel: {appName}. Szabadíts fel egy kis helyet, aztán próbáld újra.",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "sourceHash": "5cd8e49"
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "„{fileName}” egy jelszóval védett archívumban van. Előbb másold egy mappába (a Cmdr majd elkéri a jelszót), aztán nyisd meg ezzel: {appName}.",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "sourceHash": "882a23f"
@@ -923,6 +927,10 @@
   "fileExplorer.openWith.copyRefused.unreadable": "„{fileName}” beolvasása nem sikerült, így nem nyitható meg ezzel: {appName}. Ellenőrizd, hogy a fájlt tároló meghajtó még csatlakozik, aztán próbáld újra.",
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
+  },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} megnyitotta „{fileName}” egy csak olvasható másolatát. Az ott mentett módosítások nem kerülnek vissza az eredetibe.} other {{appName} megnyitotta {countText} fájl csak olvasható másolatát. Az ott mentett módosítások nem kerülnek vissza az eredetiekbe.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "8abdd0e"
   },
   "fileExplorer.rename.fieldAriaLabel": "{name} átnevezése",
   "@fileExplorer.rename.fieldAriaLabel": {

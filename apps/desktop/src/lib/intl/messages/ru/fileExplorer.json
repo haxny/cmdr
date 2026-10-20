@@ -912,6 +912,10 @@
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "На диске вашего Mac не хватает места для копии файла {fileName} размером {size}, поэтому Cmdr не может открыть файл в {appName}. Освободите немного места и попробуйте еще раз.",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "sourceHash": "5cd8e49"
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "Файл {fileName} находится в архиве, защищенном паролем. Сначала скопируйте его в папку (Cmdr запросит пароль), затем откройте в {appName}.",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "sourceHash": "882a23f"
@@ -923,6 +927,10 @@
   "fileExplorer.openWith.copyRefused.unreadable": "Не удалось прочитать файл {fileName} для открытия в {appName}. Проверьте подключение диска и попробуйте еще раз.",
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
+  },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, =1 {В {appName} открыта копия файла {fileName}, доступная только для чтения. Изменения, которые вы там сохраните, не попадут в оригинал.} one {В {appName} открыты копии {countText} файла, доступные только для чтения. Изменения, которые вы там сохраните, не попадут в оригиналы.} few {В {appName} открыты копии {countText} файлов, доступные только для чтения. Изменения, которые вы там сохраните, не попадут в оригиналы.} many {В {appName} открыты копии {countText} файлов, доступные только для чтения. Изменения, которые вы там сохраните, не попадут в оригиналы.} other {В {appName} открыты копии {countText} файла, доступные только для чтения. Изменения, которые вы там сохраните, не попадут в оригиналы.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "8abdd0e"
   },
   "fileExplorer.rename.fieldAriaLabel": "Переименовать «{name}»",
   "@fileExplorer.rename.fieldAriaLabel": {

@@ -913,6 +913,10 @@
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "El disco de tu Mac no tiene espacio suficiente para una copia de {size} de {fileName}, así que Cmdr no puede abrirlo en {appName}. Libera algo de espacio y vuelve a intentarlo.",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "sourceHash": "5cd8e49"
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "{fileName} está en un archivo comprimido protegido con contraseña. Primero copia el archivo a una carpeta (Cmdr te pedirá la contraseña) y luego ábrelo en {appName}.",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "sourceHash": "882a23f"
@@ -924,6 +928,10 @@
   "fileExplorer.openWith.copyRefused.unreadable": "No se ha podido leer {fileName} para abrirlo en {appName}. Comprueba que la unidad donde está siga conectada y vuelve a intentarlo.",
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
+  },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} ha abierto una copia de solo lectura de {fileName}. Los cambios que guardes ahí no llegarán al original.} many {{appName} ha abierto copias de solo lectura de {countText} archivos. Los cambios que guardes ahí no llegarán a los originales.} other {{appName} ha abierto copias de solo lectura de {countText} archivos. Los cambios que guardes ahí no llegarán a los originales.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "8abdd0e"
   },
   "fileExplorer.rename.fieldAriaLabel": "Renombrar {name}",
   "@fileExplorer.rename.fieldAriaLabel": {

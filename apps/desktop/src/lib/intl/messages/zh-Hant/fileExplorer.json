@@ -911,6 +911,10 @@
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "你的 Mac 磁碟上沒有足夠空間存放「{fileName}」的 {size} 副本，所以 Cmdr 無法用 {appName} 開啟它。請騰出一些空間，然後再試一次。",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "sourceHash": "5cd8e49"
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "「{fileName}」在一個有密碼保護的封存檔裡。請先把它複製到一個資料夾（Cmdr 會問你密碼），再用 {appName} 開啟。",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "sourceHash": "882a23f"
@@ -922,6 +926,10 @@
   "fileExplorer.openWith.copyRefused.unreadable": "無法讀取「{fileName}」，所以沒辦法用 {appName} 開啟。請確認它所在的磁碟機仍然連接著，然後再試一次。",
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
+  },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, =1 {{appName} 開啟了「{fileName}」的唯讀副本。你在裡面儲存的變更不會寫回原本的檔案。} other {{appName} 開啟了 {countText} 個檔案的唯讀副本。你在裡面儲存的變更不會寫回原本的檔案。}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "8abdd0e"
   },
   "fileExplorer.rename.fieldAriaLabel": "重新命名「{name}」",
   "@fileExplorer.rename.fieldAriaLabel": {

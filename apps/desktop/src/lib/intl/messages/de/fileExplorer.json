@@ -913,6 +913,10 @@
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "Auf dem Laufwerk deines Macs ist nicht genug Platz für eine {size} große Kopie von {fileName}, deshalb kann Cmdr die Datei nicht in {appName} öffnen. Gib etwas Speicherplatz frei und versuche es dann erneut.",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "sourceHash": "5cd8e49"
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "{fileName} liegt in einem passwortgeschützten Archiv. Kopiere die Datei zuerst in einen Ordner (Cmdr wird dich nach dem Passwort fragen) und öffne sie danach in {appName}.",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "sourceHash": "882a23f"
@@ -924,6 +928,10 @@
   "fileExplorer.openWith.copyRefused.unreadable": "{fileName} ließ sich nicht lesen und deshalb nicht in {appName} öffnen. Prüfe, ob das Laufwerk noch verbunden ist, und versuche es dann erneut.",
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
+  },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} hat eine schreibgeschützte Kopie von {fileName} geöffnet. Änderungen, die du darin sicherst, gelangen nicht zurück ins Original.} other {{appName} hat schreibgeschützte Kopien von {countText} Dateien geöffnet. Änderungen, die du darin sicherst, gelangen nicht zurück in die Originale.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "8abdd0e"
   },
   "fileExplorer.rename.fieldAriaLabel": "{name} umbenennen",
   "@fileExplorer.rename.fieldAriaLabel": {

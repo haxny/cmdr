@@ -913,6 +913,10 @@
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "Disken i din Mac har inte tillräckligt med utrymme för en {size} stor kopia av {fileName}, så Cmdr kan inte öppna filen i {appName}. Frigör lite utrymme och försök igen.",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "sourceHash": "5cd8e49"
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "{fileName} ligger i ett lösenordsskyddat arkiv. Kopiera filen till en mapp först (Cmdr kommer att fråga efter lösenordet) och öppna den sedan i {appName}.",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "sourceHash": "882a23f"
@@ -924,6 +928,10 @@
   "fileExplorer.openWith.copyRefused.unreadable": "Det gick inte att läsa {fileName} för att öppna filen i {appName}. Kontrollera att enheten fortfarande är ansluten och försök igen.",
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
+  },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} öppnade en skrivskyddad kopia av {fileName}. Ändringar som du sparar där hamnar inte i originalet.} other {{appName} öppnade skrivskyddade kopior av {countText} filer. Ändringar som du sparar där hamnar inte i originalen.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "8abdd0e"
   },
   "fileExplorer.rename.fieldAriaLabel": "Byt namn på {name}",
   "@fileExplorer.rename.fieldAriaLabel": {

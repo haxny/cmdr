@@ -187,6 +187,10 @@
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "c59cae3"
   },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} abrió una copia de solo lectura de {fileName}. Los cambios que guardes ahí no llegarán al original.} many {{appName} abrió copias de solo lectura de {countText} archivos. Los cambios que guardes ahí no llegarán a los originales.} other {{appName} abrió copias de solo lectura de {countText} archivos. Los cambios que guardes ahí no llegarán a los originales.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "f436270"
+  },
   "fileExplorer.rename.hiddenAfterRename": "Tu archivo desapareció de la vista porque no se muestran los archivos ocultos.",
   "@fileExplorer.rename.hiddenAfterRename": {
     "sourceHash": "3b71f83"

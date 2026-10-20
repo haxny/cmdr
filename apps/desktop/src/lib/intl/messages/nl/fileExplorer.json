@@ -915,6 +915,10 @@
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "De schijf van je Mac heeft niet genoeg ruimte voor een kopie van {fileName} ({size}), dus Cmdr kan het bestand niet in {appName} openen. Maak wat ruimte vrij en probeer het dan opnieuw.",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "sourceHash": "5cd8e49"
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "{fileName} staat in een met een wachtwoord beveiligd archief. Kopieer het bestand eerst naar een map (Cmdr zal dan om het wachtwoord vragen) en open het daarna in {appName}.",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "sourceHash": "882a23f"
@@ -926,6 +930,10 @@
   "fileExplorer.openWith.copyRefused.unreadable": "Kon {fileName} niet lezen om in {appName} te openen. Controleer of de schijf nog is aangesloten en probeer het dan opnieuw.",
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
+  },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} heeft een alleen-lezenkopie van {fileName} geopend. Wijzigingen die je daarin bewaart, gaan niet terug naar het origineel.} other {{appName} heeft alleen-lezenkopieën van {countText} bestanden geopend. Wijzigingen die je daarin bewaart, gaan niet terug naar de originelen.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "8abdd0e"
   },
   "fileExplorer.rename.fieldAriaLabel": "Wijzig naam van {name}",
   "@fileExplorer.rename.fieldAriaLabel": {

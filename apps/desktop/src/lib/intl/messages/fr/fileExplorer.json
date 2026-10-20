@@ -913,6 +913,10 @@
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "Le disque de votre Mac n’a pas assez de place pour une copie de {size} de « {fileName} », donc Cmdr ne peut pas ouvrir le fichier dans {appName}. Libérez de l’espace, puis réessayez.",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "sourceHash": "5cd8e49"
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "« {fileName} » se trouve dans une archive protégée par un mot de passe. Copiez d’abord le fichier dans un dossier (Cmdr vous demandera le mot de passe), puis ouvrez-le dans {appName}.",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "sourceHash": "882a23f"
@@ -924,6 +928,10 @@
   "fileExplorer.openWith.copyRefused.unreadable": "Impossible de lire « {fileName} » pour l’ouvrir dans {appName}. Vérifiez que le disque est toujours connecté, puis réessayez.",
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
+  },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} a ouvert une copie en lecture seule de « {fileName} ». Les modifications que vous y enregistrez ne seront pas reportées dans l’original.} many {{appName} a ouvert des copies en lecture seule de {countText} fichiers. Les modifications que vous y enregistrez ne seront pas reportées dans les originaux.} other {{appName} a ouvert des copies en lecture seule de {countText} fichiers. Les modifications que vous y enregistrez ne seront pas reportées dans les originaux.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "8abdd0e"
   },
   "fileExplorer.rename.fieldAriaLabel": "Renommer {name}",
   "@fileExplorer.rename.fieldAriaLabel": {

@@ -913,6 +913,10 @@
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "Ổ đĩa trên máy Mac của bạn không đủ dung lượng cho bản sao {size} của “{fileName}”, nên Cmdr không thể mở tệp này bằng {appName}. Hãy giải phóng bớt dung lượng, rồi thử lại.",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "sourceHash": "5cd8e49"
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "“{fileName}” nằm trong một tệp nén được bảo vệ bằng mật khẩu. Hãy sao chép tệp vào một thư mục trước (Cmdr sẽ hỏi mật khẩu), rồi mở bằng {appName}.",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "sourceHash": "882a23f"
@@ -924,6 +928,10 @@
   "fileExplorer.openWith.copyRefused.unreadable": "Không thể đọc “{fileName}” để mở bằng {appName}. Hãy kiểm tra xem ổ đĩa chứa tệp có còn kết nối không, rồi thử lại.",
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
+  },
+  "fileExplorer.openWith.readOnlyCopy": "{count, plural, =1 {{appName} đã mở một bản sao chỉ đọc của “{fileName}”. Những thay đổi bạn lưu ở đó sẽ không được ghi về bản gốc.} other {{appName} đã mở bản sao chỉ đọc của {countText} tệp. Những thay đổi bạn lưu ở đó sẽ không được ghi về các bản gốc.}}",
+  "@fileExplorer.openWith.readOnlyCopy": {
+    "sourceHash": "8abdd0e"
   },
   "fileExplorer.rename.fieldAriaLabel": "Đổi tên {name}",
   "@fileExplorer.rename.fieldAriaLabel": {
