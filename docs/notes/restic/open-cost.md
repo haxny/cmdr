@@ -84,10 +84,26 @@ Baseline, `restic` 0.19.1 CLI over the mount, `--no-lock --no-cache`:
 Two findings for the volume milestones:
 
 - **`SmbVolume::read_range` is open + read + close per call** (`crates/cmdr-smb/src/volume/volume_impl.rs`), which is
-  the ~14 ms per tree and the serial ~20 MB/s copy-out. The adapter should keep open `open_random_reader` handles per
-  pack (a small LRU), and copy-out should read several blobs ahead in parallel.
+  the ~14 ms per tree and the serial ~20 MB/s copy-out. The adapter now holds `open_random_reader` handles per pack (up
+  to 8, least recently used let go first); § "Held pack readers" has the before and after. Copy-out should still read
+  several blobs ahead in parallel.
 - **The index load blocks all 16 rayon workers** for 2–5 s on SMB, as the plan's landmine predicted. Search and icons
   share that pool, so the load should run while nothing else needs it, or rustic's fan-out should be fenced.
+
+## Held pack readers
+
+The same probe with `PROBE_HELD_READERS=1`, which reads packs the way the crate's adapter now does: one
+`open_random_reader` per pack, held (up to 8, least recently used let go first), instead of one `read_range` per window.
+Direct SMB session only, since a held reader is what SMB lacks; the mount's `read_range` is a `pread` on an open file
+already. Same Mac, NAS, repo, and release build, 2026-10-20, held and not held interleaved, each phase run twice.
+
+- **Top three levels** (160 trees, 160 pack reads, 741 KB): 2.18–2.29 s before, 0.88–0.97 s after: ~14 ms down to ~5.8
+  ms per tree, 2.4x faster. Every read is still one call; only the open and close are gone.
+- **Finding a 100 MiB file** (the BFS tree search): 16.4 s and 16.4 s before, 6.1 s and 6.1 s after.
+- **100 MiB of the 1.7 GB file** (90–91 pack reads of ~1.4 MB): 15.9, 17.4, 19.5, and 21.1 MB/s before; 24.7, 25.0,
+  26.3, and 26.4 MB/s after, about 1.3x. What's left is reading one blob at a time: each 1.4 MB read waits for the last.
+  Reading several blobs ahead in parallel is the next lever for copy-out.
+- Zero write attempts in every run.
 
 ## Draft #422 comment (not posted)
 
@@ -99,8 +115,8 @@ Two findings for the volume milestones:
 >   index files' size).
 > - rustic's cache: the first browse downloads whole tree packs (265 MB for 160 trees) and writes 360 MB to disk. The
 >   warm re-open is great (0.25 s), but not worth that. Going with `no_cache`.
-> - Copy-out over direct SMB is ~20 MB/s today, because every ranged read opens and closes the pack. Keeping pack
->   handles open is on the list.
+> - Copy-out over direct SMB was ~20 MB/s, because every ranged read opened and closed the pack. Holding pack handles
+>   open brought it to ~25 MB/s and tree reads from ~14 ms to ~6 ms; reading blobs ahead in parallel is next.
 >
 > Plan: `to_indexed` up front, one indexed repo at a time, drop the index after five idle minutes. Details in
 > `docs/notes/restic/open-cost.md`.

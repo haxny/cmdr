@@ -13,6 +13,9 @@
 //!   (`to_indexed_ids` + a three-level tree walk), `full` (`to_indexed` + a
 //!   100 MiB file read), `cache` (`ids` with rustic's cache in `PROBE_CACHE_DIR`).
 //!
+//! `PROBE_HELD_READERS=1` reads packs through held-open readers, as the crate's
+//! adapter does, instead of one `read_range` each.
+//!
 //! One phase per process, so `/usr/bin/time -l`'s peak RSS belongs to it alone.
 //! Reads only: every write the repo sees is refused and counted. The password
 //! comes from `RESTIC_PASSWORD` and is never printed.
@@ -21,7 +24,7 @@
 
 use bytes::Bytes;
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::{MountClass, Volume, VolumeError};
+use cmdr_fs::volume::{MountClass, Volume, VolumeError, VolumeRandomReader};
 use cmdr_local::LocalPosixVolume;
 use cmdr_smb::volume::{MountAnchor, SmbConnectionParams, connect_smb_volume};
 use rustic_core::repofile::{Node, NodeType};
@@ -31,8 +34,8 @@ use rustic_core::{
 };
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tokio::runtime::{Handle, Runtime};
 
@@ -63,6 +66,15 @@ struct CountingBackend {
     all_in_flight: AtomicUsize,
     all_peak_in_flight: AtomicUsize,
     write_attempts: AtomicUsize,
+    /// Packs held open, least recently used first, when `PROBE_HELD_READERS=1`.
+    held: Option<Mutex<HeldPacks>>,
+}
+
+/// Pack paths and their open readers, least recently used first.
+type HeldPacks = Vec<(PathBuf, Arc<Box<dyn VolumeRandomReader>>)>;
+
+fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 fn type_slot(tpe: FileType) -> usize {
@@ -137,6 +149,31 @@ impl CountingBackend {
         );
     }
 
+    /// With `PROBE_HELD_READERS=1`, the pack's reader held open the way the crate's
+    /// adapter holds them (up to 8, least recently used let go first); otherwise
+    /// `None`, and the read is one `read_range` (open + read + close on SMB).
+    fn held_reader(&self, tpe: FileType, path: &Path) -> Result<Option<Arc<Box<dyn VolumeRandomReader>>>, VolumeError> {
+        let Some(held) = self.held.as_ref().filter(|_| tpe == FileType::Pack) else {
+            return Ok(None);
+        };
+        {
+            let mut held = lock(held);
+            if let Some(at) = held.iter().position(|(p, _)| p == path) {
+                let entry = held.remove(at);
+                let reader = Arc::clone(&entry.1);
+                held.push(entry);
+                return Ok(Some(reader));
+            }
+        }
+        let reader = Arc::new(self.handle.block_on(self.parent.open_random_reader(path))?);
+        let mut held = lock(held);
+        held.push((path.to_path_buf(), Arc::clone(&reader)));
+        if held.len() > 8 {
+            held.remove(0);
+        }
+        Ok(Some(reader))
+    }
+
     fn reset(&self) {
         for c in &self.by_type {
             c.calls.store(0, Ordering::Relaxed);
@@ -187,9 +224,11 @@ impl ReadBackend for CountingBackend {
 
     fn read_partial(&self, tpe: FileType, id: &Id, _cacheable: bool, offset: u32, length: u32) -> RusticResult<Bytes> {
         let path = self.path_of(tpe, id);
-        self.counted(tpe, || {
-            self.handle
-                .block_on(self.parent.read_range(&path, u64::from(offset), length as usize))
+        self.counted(tpe, || match self.held_reader(tpe, &path)? {
+            Some(reader) => self.handle.block_on(reader.read_at(u64::from(offset), length as usize)),
+            None => self
+                .handle
+                .block_on(self.parent.read_range(&path, u64::from(offset), length as usize)),
         })
     }
 
@@ -340,7 +379,9 @@ fn main() {
         all_in_flight: AtomicUsize::new(0),
         all_peak_in_flight: AtomicUsize::new(0),
         write_attempts: AtomicUsize::new(0),
+        held: (std::env::var("PROBE_HELD_READERS").as_deref() == Ok("1")).then(|| Mutex::new(Vec::new())),
     });
+    println!("held pack readers: {}", backend.held.is_some());
 
     let mut options = RepositoryOptions::default();
     if phase == "cache" {
