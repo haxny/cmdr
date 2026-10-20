@@ -10,6 +10,7 @@ use tauri::{AppHandle, Manager};
 
 use super::{AttachmentKindView, AttachmentRef};
 use crate::mcp::PaneStateStore;
+use crate::mcp::pane_state::PaneState;
 
 /// "Ask about selection": attachment refs for the focused pane's current selection, or
 /// its cursor item when nothing is selected. Reads [`PaneStateStore`] — the same live
@@ -26,6 +27,16 @@ pub fn ask_cmdr_selection_attachments(app: AppHandle) -> Vec<AttachmentRef> {
     } else {
         store.get_left()
     };
+    selection_attachments(&pane)
+}
+
+/// The attachment refs for `pane`'s selection, or its cursor row with nothing selected.
+///
+/// `selected_indices` and `cursor_index` are GLOBAL listing rows while `files` holds only
+/// the loaded window from `loaded_start`, so each row converts first (the same
+/// `checked_sub` as `mcp::executor` and `agent::tools::read::state`). Read with a global
+/// row, the window hands back whatever file sits at that offset: silently the wrong one.
+fn selection_attachments(pane: &PaneState) -> Vec<AttachmentRef> {
     let indices = if pane.selected_indices.is_empty() {
         vec![pane.cursor_index]
     } else {
@@ -33,7 +44,7 @@ pub fn ask_cmdr_selection_attachments(app: AppHandle) -> Vec<AttachmentRef> {
     };
     indices
         .into_iter()
-        .filter_map(|i| pane.files.get(i))
+        .filter_map(|i| i.checked_sub(pane.loaded_start).and_then(|i| pane.files.get(i)))
         .filter(|entry| !entry.path.is_empty())
         .map(pane_entry_to_attachment)
         .collect()
@@ -80,5 +91,49 @@ fn pane_entry_to_attachment(entry: &crate::mcp::pane_state::PaneFileEntry) -> At
         } else {
             AttachmentKindView::File
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mcp::pane_state::PaneFileEntry;
+
+    fn file(name: &str) -> PaneFileEntry {
+        PaneFileEntry {
+            name: name.to_string(),
+            path: format!("/x/{name}"),
+            ..Default::default()
+        }
+    }
+
+    fn paths(refs: Vec<AttachmentRef>) -> Vec<String> {
+        refs.into_iter().map(|r| r.path).collect()
+    }
+
+    #[test]
+    fn a_selection_in_a_scrolled_window_attaches_the_selected_rows_not_the_rows_at_that_offset() {
+        // `selected_indices` and `cursor_index` are GLOBAL listing rows, while `files`
+        // is only the loaded window from `loaded_start`. Reading the window with a
+        // global row attached whatever file sat at that offset inside the window.
+        let pane = PaneState {
+            files: vec![file("row1"), file("row2"), file("row3")],
+            loaded_start: 1,
+            loaded_end: 4,
+            selected_indices: vec![2, 3],
+            ..Default::default()
+        };
+        assert_eq!(paths(selection_attachments(&pane)), vec!["/x/row2", "/x/row3"]);
+    }
+
+    #[test]
+    fn the_cursor_row_in_a_scrolled_window_attaches_that_row() {
+        let pane = PaneState {
+            files: vec![file("row1"), file("row2"), file("row3")],
+            loaded_start: 1,
+            cursor_index: 2,
+            ..Default::default()
+        };
+        assert_eq!(paths(selection_attachments(&pane)), vec!["/x/row2"]);
     }
 }
