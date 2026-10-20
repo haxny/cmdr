@@ -1919,7 +1919,9 @@ version = "0.0.0"
 dependencies = [
  "bytes",
  "cmdr-fs",
+ "cmdr-local",
  "cmdr-restic",
+ "cmdr-smb",
  "rustic_core",
  "tokio",
  "zeroize",

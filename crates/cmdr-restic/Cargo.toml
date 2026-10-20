@@ -45,3 +45,7 @@ cmdr-fs = { path = "../cmdr-fs", features = ["testing"] }
 # `#[tokio::test]` needs `macros`; the adapter's sync-over-async bridge needs a
 # multi-threaded runtime to block on from `spawn_blocking`.
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+# The two parents `examples/open_cost.rs` measures a real repo through: the OS
+# mount and a direct SMB session. Dev-only, so the lib never links a backend.
+cmdr-local = { path = "../cmdr-local" }
+cmdr-smb = { path = "../cmdr-smb" }
