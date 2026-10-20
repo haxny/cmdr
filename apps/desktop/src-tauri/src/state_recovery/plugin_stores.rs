@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{AppHandle, Runtime};
 
@@ -16,6 +17,10 @@ use super::{LOG_TARGET, StateFile};
 /// (`lib/settings/definitions/updates-privacy.ts` holds both defaults). `operationLog.enabled`
 /// isn't here: undo history never leaves the Mac (David, 2026-10-16).
 const CONSENT_OFF_AFTER_RECOVERY: [&str; 2] = ["analytics.enabled", "updates.crashReports"];
+
+/// This session recovered `settings.json`, so [`settings_for_consent`] reads a missing file as
+/// every consent off rather than as a first launch.
+static SETTINGS_RECOVERED: AtomicBool = AtomicBool::new(false);
 
 /// The four plugin stores, at the paths their readers use. Call from `setup()` after the instance
 /// lock and the security log, and before anything reads one of them.
@@ -51,6 +56,7 @@ fn recover_settings<R: Runtime>(app: &AppHandle<R>, path: &Path) {
     if !recover(path, StateFile::Settings) {
         return;
     }
+    SETTINGS_RECOVERED.store(true, Ordering::Relaxed);
     let opened = tauri_plugin_store::StoreBuilder::new(app, path)
         .defaults(consents_off().into_iter().collect())
         .disable_auto_save()
@@ -63,9 +69,16 @@ fn recover_settings<R: Runtime>(app: &AppHandle<R>, path: &Path) {
 /// The stored `settings.json` as raw JSON, for a Rust reader that decides on consent (analytics).
 /// `Null` when there's no file (a first launch: the defaults). A file that's there but can't be
 /// read or parsed reads as every consent off, the same answer the frontend's store gives that
-/// session ([`recover_settings`]).
+/// session ([`recover_settings`]), and so does no file once this session recovered one.
 pub fn settings_for_consent(path: &Path) -> serde_json::Value {
+    consent_settings(path, SETTINGS_RECOVERED.load(Ordering::Relaxed))
+}
+
+/// [`settings_for_consent`] over an injected "this session recovered `settings.json`".
+fn consent_settings(path: &Path, recovered: bool) -> serde_json::Value {
     match fs::read(path) {
+        // A recovery whose fresh file didn't land leaves no file, and that's not a first launch.
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound && recovered => serde_json::Value::Object(consents_off()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => serde_json::Value::Null,
         Ok(bytes) => match serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(&bytes) {
             Ok(settings) => serde_json::Value::Object(settings),
@@ -367,16 +380,42 @@ mod tests {
         assert_eq!(fs::read(&path).expect("the file stays"), b"{\"analytics.enabled\": fal");
     }
 
+    /// A recovery whose fresh file didn't land (here removed after the fact, as an unwritable data
+    /// dir would leave it) leaves no `settings.json`. That's not a first launch, so Rust reads
+    /// both consents off, as the frontend's store does.
+    #[test]
+    fn no_settings_file_after_a_recovery_reads_every_consent_as_off() {
+        let _notices = testing::capture_recoveries();
+        let dir = TestDir::new("plugin_stores_consent_after_recovery");
+        let path = dir.join("settings.json");
+        fs::write(&path, b"{\"analytics.enabled\": fal").expect("write");
+        let app = mock_app();
+
+        recover_settings(app.handle(), &path);
+        fs::remove_file(&path).expect("the fresh file didn't land");
+
+        let rust_side = settings_for_consent(&path);
+        for key in CONSENT_OFF_AFTER_RECOVERY {
+            assert_eq!(rust_side.get(key), Some(&serde_json::json!(false)), "{key} for Rust");
+        }
+    }
+
     /// A file that reads keeps the person's own answers, and a missing one reads as no settings.
     #[test]
     fn a_healthy_or_missing_settings_file_keeps_its_consents() {
         let dir = TestDir::new("plugin_stores_consent_healthy");
         let path = dir.join("settings.json");
-        assert_eq!(settings_for_consent(&path), serde_json::Value::Null);
+        // Over the injected flag: another test in this process may have recovered a settings file.
+        assert_eq!(consent_settings(&path, false), serde_json::Value::Null);
         fs::write(&path, b"{\"analytics.enabled\": true}").expect("write");
         assert_eq!(
-            settings_for_consent(&path),
+            consent_settings(&path, false),
             serde_json::json!({ "analytics.enabled": true })
+        );
+        assert_eq!(
+            consent_settings(&path, true),
+            serde_json::json!({ "analytics.enabled": true }),
+            "a file saved after a recovery is the person's answer again"
         );
     }
 
