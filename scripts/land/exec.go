@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strings"
 )
 
@@ -53,6 +54,31 @@ func (r runner) remoteSHA(branch string) (string, error) {
 	}
 	sha, _, _ := strings.Cut(out, "\t")
 	return sha, nil
+}
+
+// fetchBranch points `refs/remotes/origin/<branch>` at origin's branch, or deletes it when origin
+// has no such branch (deleted after an earlier land), and returns the SHA, or "".
+func (r runner) fetchBranch(branch string) (string, error) {
+	sha, err := r.remoteSHA(branch)
+	if err != nil {
+		return "", err
+	}
+	tracking := "refs/remotes/origin/" + branch
+	if sha == "" {
+		_, err = r.git("update-ref", "-d", tracking)
+	} else {
+		_, err = r.git("fetch", "--quiet", "origin", fmt.Sprintf("+refs/heads/%s:%s", branch, tracking))
+	}
+	return sha, err
+}
+
+// inReflog reports whether the local branch ever pointed at sha, as before a rebase or squash.
+func (r runner) inReflog(branch, sha string) bool {
+	out, err := r.git("log", "--walk-reflogs", "--format=%H", "refs/heads/"+branch)
+	if err != nil {
+		return false
+	}
+	return slices.Contains(strings.Split(out, "\n"), sha)
 }
 
 // commits lists the commit messages in a range, oldest first.

@@ -59,6 +59,10 @@ const (
 // errMainMoved: `origin/main` moved while CI ran, so the green SHA no longer fast-forwards it.
 var errMainMoved = errors.New("origin/main moved while CI ran")
 
+// errOriginAhead: origin's feature branch has commits this branch never had, so pushing would
+// overwrite them.
+var errOriginAhead = errors.New("origin's branch has commits this one doesn't")
+
 type config struct {
 	root    string
 	squash  bool
@@ -228,19 +232,23 @@ func squash(r runner, commits []commit, message string) error {
 	return nil
 }
 
-// pushBranch pushes HEAD to its feature branch unless origin already has it. The lease names the
-// SHA it just read, so a push from another machine in between is refused instead of overwritten.
+// pushBranch pushes HEAD to its feature branch unless origin already has it. It overwrites
+// origin's branch only when this branch already integrated it (a rebase or squash of commits it
+// had); origin commits it never had (another machine, GitHub's "Update branch") stop the land.
 //
 // The pre-push hook may commit a formatting fix and stop the push; then this pushes once more
 // with that commit on top. It returns the SHA that's on origin.
 func pushBranch(r runner, branch, head string) (string, error) {
-	remote, err := r.remoteSHA(branch)
+	remote, err := r.fetchBranch(branch)
 	if err != nil {
 		return "", err
 	}
+	if remote != "" && remote != head && !r.isAncestor(remote, head) && !r.inReflog(branch, remote) {
+		return "", fmt.Errorf("%w (pushed from another machine, or by GitHub's \"Update branch\"), so I didn't overwrite them. Bring them in, then land again:\n  git pull --rebase origin %s\n  or take origin's version: git reset --hard origin/%s", errOriginAhead, branch, branch)
+	}
 	for attempt := 0; remote != head; attempt++ {
 		say("Pushing %s...", branch)
-		_, err = r.git("push", "--quiet", fmt.Sprintf("--force-with-lease=refs/heads/%s:%s", branch, remote), "origin", "HEAD:refs/heads/"+branch)
+		err = pushToOrigin(r, branch)
 		if err == nil {
 			return head, nil
 		}
@@ -252,6 +260,15 @@ func pushBranch(r runner, branch, head string) (string, error) {
 		head = newHead
 	}
 	return head, nil
+}
+
+// pushToOrigin pushes HEAD to origin's branch. The bare lease checks origin against the
+// remote-tracking ref `fetchBranch` just updated, and `--force-if-includes` refuses when that ref's
+// tip isn't in the local branch's history: the backstop for a push that lands between
+// `fetchBranch` and here. (An explicit lease value would make git ignore `--force-if-includes`.)
+func pushToOrigin(r runner, branch string) error {
+	_, err := r.git("push", "--quiet", "--force-with-lease=refs/heads/"+branch, "--force-if-includes", "origin", "HEAD:refs/heads/"+branch)
+	return err
 }
 
 func ensurePR(r runner, branch string, commits []commit) (pullRequest, error) {

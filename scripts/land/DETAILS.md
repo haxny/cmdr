@@ -50,11 +50,10 @@ record. A closed PR is never revived: `land` opens a fresh one.
 
 Each run reads the branch and GitHub and picks up from there (`nextStartStep`, `ciVerdict`): an already-pushed branch
 isn't pushed again, an open PR is reused, a `-squash` re-run on one commit is a no-op (a fresh SHA would restart CI),
-and a branch already on `origin/main` skips to syncing `main` and deleting the remote branch. The branch push uses
-`--force-with-lease` with the SHA it just read, so a push from another machine in between is refused, not overwritten.
-The pre-push hook may commit a formatting fix and stop that push; `pushBranch` then pushes once more with the fix on
-top. Untracked files don't count as dirty: they can't change what lands, and the main clone, where `release.sh` lands
-its release commit from, often has some.
+and a branch already on `origin/main` skips to syncing `main` and deleting the remote branch. The pre-push hook may
+commit a formatting fix and stop that push; `pushBranch` then pushes once more with the fix on top. Untracked files
+don't count as dirty: they can't change what lands, and the main clone, where `release.sh` lands its release commit
+from, often has some.
 
 `scripts/release.sh` depends on this interface: `pnpm land` from the main clone, exit 0 only when the SHA is on
 `origin/main`, local `main` synced by `fetch origin main:main`, and any CI run on the SHA counting. Change it with the
@@ -63,6 +62,24 @@ release flow (`docs/guides/releasing.md`).
 `ciVerdict` takes the newest CI run on the SHA (a `gh run rerun` reopens it, so an in-flight re-run reads as pending,
 not red) and the newest `CI OK` check run. Only `success` is green: GitHub would accept a skipped check, which a
 finished run should never produce.
+
+## Gotcha: the branch push must never overwrite commits only origin has
+
+Gotcha: a `--force-with-lease` whose expected SHA is read (`ls-remote`) right before the push protects nothing: it
+always matches, so origin's branch gets overwritten whatever it holds. It clobbered GitHub's "Update branch" merge on PR
+#481 (2026-10-20). Why the current shape (`pushBranch`, `pushToOrigin`):
+
+- Overwriting origin's branch is legitimate only when this branch already integrated what's there: a local rebase or
+  `-squash` of commits it pushed earlier.
+- `fetchBranch` updates `refs/remotes/origin/<branch>` (or deletes it when origin has no such branch, as after an
+  earlier land). If that tip is neither an ancestor of `HEAD` nor in the branch's reflog, `pushBranch` stops with
+  `errOriginAhead` and tells the user to `git pull --rebase` or `git reset --hard origin/<branch>`. Deciding this up
+  front keeps the refusal typed, with no stderr matching.
+- The push itself uses a bare `--force-with-lease=refs/heads/<branch>` (checks origin against the tracking ref) plus
+  `--force-if-includes` (refuses a tracking tip the local branch never had), the backstop for a push landing between the
+  fetch and ours. Git ignores `--force-if-includes` next to an explicit lease value, so never add one back.
+- Tested against real bare origins in `push_test.go` (verified on git 2.56.0; removing `--force-if-includes` turns
+  `TestPushToOriginRefusesAFetchedButUnintegratedTip` red, 2026-10-20).
 
 ## Decision: rebase by default, capped
 

@@ -7,7 +7,8 @@ only way commits reach `main`: nobody, admin included, lands a SHA without a gre
 
 - `main.go`: the flow (push, PR, wait, land, sync), every step skipped when it's already done.
 - `state.go`: the pure decisions (start step, CI verdict, messages, worktree parsing), tested in `state_test.go`.
-- `exec.go`: git and gh plumbing. `rulesets.go`: `pnpm land rulesets [-apply]`.
+- `exec.go`: git and gh plumbing; the branch push is tested against real bare origins in `push_test.go`. `rulesets.go`:
+  `pnpm land rulesets [-apply]`.
 
 ## Usage
 
@@ -27,6 +28,10 @@ only way commits reach `main`: nobody, admin included, lands a SHA without a gre
   CI runs, it rebases and runs CI again, eight runs at most (`DETAILS.md` § Decision: rebase by default, capped).
 - **It never rebases a branch carrying a merge commit** (a contributor's PR record, a release merge-back): it stops and
   names the manual fix, since a plain rebase flattens the merge.
+- **It never overwrites commits only origin's branch has** (another machine, GitHub's "Update branch"): it stops and
+  says how to bring them in. Keep the bare lease plus `--force-if-includes` (`DETAILS.md` § Gotcha: the branch push).
+- ❌ **Don't use the PR page's merge button.** `pnpm land` is the way to land: the button's bypass merge rewrites the
+  SHA, so `main` re-runs the whole suite.
 - **A newer push cancels the PR's running CI** (`cancel-in-progress` in `ci.yml`), so a watcher follows the newest run.
 - **The landing push uses `--no-verify`.** CI passed on that exact SHA, and a pre-push hook that adds a commit would
   land something CI never saw.
