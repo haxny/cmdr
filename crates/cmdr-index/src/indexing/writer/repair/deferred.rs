@@ -174,9 +174,8 @@ mod tests {
     use crate::indexing::stress_test_helpers::check_db_consistency;
     use crate::indexing::writer::delta::propagate_delta_by_id;
     use crate::indexing::writer::entry_fixtures::{dir_entry, file_entry};
-    use crate::indexing::writer::tests::setup_db;
+    use crate::indexing::writer::tests::{settle_the_writer, setup_db};
     use crate::indexing::writer::{AggSource, IndexWriter, WriteMessage};
-    use cmdr_fs::testing::wait_until;
 
     /// Reject every `dir_stats` write for `entry_id`, with a real SQLite failure
     /// (`RAISE(ABORT)`) rather than a mocked store: the propagation walk sees the
@@ -338,17 +337,17 @@ mod tests {
 
         unblock_dir_stats_writes(&conn);
         // Any later message gives the loop its next tick; the drain runs at the
-        // end of that iteration, just after the flush reply.
-        writer.flush_blocking().unwrap();
-        wait_until(
-            std::time::Duration::from_secs(2),
-            "the writer to repair the drifted chain without being asked",
-            || {
-                IndexStore::get_dir_stats_by_id(&conn, 10)
-                    .unwrap()
-                    .map(|s| s.recursive_logical_size)
-                    == Some(1000)
-            },
+        // end of that iteration, just after the flush reply. ❌ Not "poll until A
+        // reads 1000": the repair walk writes A and then ROOT as separate
+        // autocommits, so a check on A's heels caught ROOT still at 700. The
+        // writer's settle point is past the whole drain.
+        settle_the_writer(&writer);
+        assert_eq!(
+            IndexStore::get_dir_stats_by_id(&conn, 10)
+                .unwrap()
+                .map(|s| s.recursive_logical_size),
+            Some(1000),
+            "the writer repairs the drifted chain without being asked"
         );
         check_db_consistency(&conn);
 
