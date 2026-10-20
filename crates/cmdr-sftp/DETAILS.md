@@ -64,10 +64,13 @@ a file is an empty answer rather than an error, which is what makes the speculat
 
 **The length is what the `fstat` at open says.** A file that GREW under a running read isn't chased (SMB fixes its
 length at the CREATE response for the same reason); a file that SHRANK reports what exists, because a read answering
-empty ends the stream wherever it lands. ❗ So the hint on `open_read_stream_with_hint` buys nothing here and the trait
-default is the answer: SFTP has no compound open to spend it on, and the `fstat` rides along with a read we were going
-to issue anyway. `open_read_stream_at_offset` stays `NotSupported` — nothing calls it with a non-zero offset, and
-`CheckpointStream` parks a paused copy in place rather than reopening.
+empty ends the stream wherever it lands. ❗ An `fstat` answer without a size (the attribute is optional) declares
+`StreamLength::Unknown` and the window reads to the empty answer, ❌ never `Known(0)`: the copy engine fails a stream
+that misses its declared length, so a zero stand-in failed every such file (#538). ❗ So the hint on
+`open_read_stream_with_hint` buys nothing here and the trait default is the answer: SFTP has no compound open to spend
+it on, and the `fstat` rides along with a read we were going to issue anyway. `open_read_stream_at_offset` stays
+`NotSupported` — nothing calls it with a non-zero offset, and `CheckpointStream` parks a paused copy in place rather
+than reopening.
 
 **`read_range` runs the same window** over exactly `[offset, offset + len)`, and returns short only at end of file, so a
 caller never loops for a network short read. It is the natural place to reach for `read_all`, which is hazard 3.

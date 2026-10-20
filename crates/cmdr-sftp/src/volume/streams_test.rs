@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use super::{ChunkWindow, PositionedRead};
-use cmdr_fs::volume::VolumeError;
+use cmdr_fs::volume::{StreamLength, VolumeError};
 
 /// The bytes every cell reads, shared with the Docker suites so the two sides
 /// assert against the same shape: each 16-byte line holds its own line number, so
@@ -195,4 +195,42 @@ async fn the_window_keeps_its_whole_depth_in_flight() {
         8,
         "the window must keep its configured depth of reads outstanding"
     );
+}
+
+// ── What the open declares ───────────────────────────────────────────
+
+fn opened(size: Option<u64>) -> super::OpenedFile {
+    super::OpenedFile {
+        size,
+        modified_at: None,
+        mode: None,
+    }
+}
+
+#[test]
+fn an_fstat_size_is_the_declared_length() {
+    assert_eq!(opened(Some(4_096)).length(), StreamLength::Known(4_096));
+    assert_eq!(opened(Some(0)).length(), StreamLength::Known(0));
+}
+
+/// ❗ **A size the server didn't send is unknown, ❌ never `Known(0)`** (#538):
+/// the size check fails a copy whose bytes don't match what was declared, so a
+/// zero stand-in turned every such file into a copy that always fails. The same
+/// rule S3 and WebDAV keep for a missing `Content-Length`.
+#[test]
+fn a_missing_fstat_size_is_an_unknown_length() {
+    assert_eq!(opened(None).length(), StreamLength::Unknown);
+}
+
+/// With no size, the window reads until the server says the file ended.
+#[tokio::test]
+async fn a_file_of_unknown_size_is_read_to_its_end() {
+    let data = self_describing(5 * 1024 + 7);
+    let server = ScriptedServer::new(data.clone());
+    let mut window = ChunkWindow::new(server, 0, opened(None).read_end(), 4, 1024);
+
+    let read = drain(&mut window).await;
+
+    assert_eq!(read.len(), data.len(), "every byte, and no more");
+    assert!(read == data, "in its own place");
 }

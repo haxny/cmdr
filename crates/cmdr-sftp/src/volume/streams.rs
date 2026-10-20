@@ -112,7 +112,7 @@ impl RemoteFile {
             .await
             .map_err(|e| map_sftp_error(&e, &self.remote))?;
         Ok(OpenedFile {
-            size: meta.len().unwrap_or(0),
+            size: meta.len(),
             modified_at: meta.modified().map(|stamp| stamp.as_system_time()),
             mode: meta.permissions().map(super::mapping::permission_bits),
         })
@@ -121,12 +121,30 @@ impl RemoteFile {
 
 /// What the open learns about a file before its first byte is handed over.
 struct OpenedFile {
-    size: u64,
+    /// `None` when the server's `fstat` answer carries no size (the attribute
+    /// is optional in the protocol).
+    size: Option<u64>,
     /// `None` when the server's `fstat` answer carries no times.
     modified_at: Option<SystemTime>,
     /// The permission bits (`0o7777`) off the same answer: the mode a copy
     /// carries, at no round trip. `None` when the server sends none.
     mode: Option<u32>,
+}
+
+impl OpenedFile {
+    /// The length the stream declares. ❗ A size the server didn't send is
+    /// `Unknown`, ❌ never `Known(0)`: the copy engine fails a stream whose bytes
+    /// miss its declared length, so a zero stand-in failed every such file
+    /// (#538). The rule S3 and WebDAV keep for a missing `Content-Length`.
+    fn length(&self) -> StreamLength {
+        self.size.map_or(StreamLength::Unknown, StreamLength::Known)
+    }
+
+    /// Where the read window stops asking: the size, else wherever the server
+    /// says the file ends (an empty answer).
+    fn read_end(&self) -> u64 {
+        self.size.unwrap_or(u64::MAX)
+    }
 }
 
 impl PositionedRead for RemoteFile {
@@ -257,14 +275,12 @@ impl SftpVolume {
             Err(_) => return Err(VolumeError::DeviceDisconnected(self.inner.volume_id.clone())),
         };
 
-        Ok(
-            ChannelReadStream::new(chunk_rx, cancel_tx, StreamLength::Known(opened.size))
-                .with_modified_at(opened.modified_at)
-                .with_metadata(CarriedMetadata {
-                    mode: opened.mode,
-                    ..CarriedMetadata::default()
-                }),
-        )
+        Ok(ChannelReadStream::new(chunk_rx, cancel_tx, opened.length())
+            .with_modified_at(opened.modified_at)
+            .with_metadata(CarriedMetadata {
+                mode: opened.mode,
+                ..CarriedMetadata::default()
+            }))
     }
 
     /// Exactly `[offset, offset + len)`, filled from as few round trips as the
@@ -340,7 +356,7 @@ async fn produce_stream(
             return;
         }
     };
-    let size = opened.size;
+    let end = opened.read_end();
     if size_tx.send(Ok(opened)).is_err() {
         // The caller gave up before the size landed. Nothing to stream to.
         return;
@@ -359,7 +375,7 @@ async fn produce_stream(
     // draining the channel and parking each answer in its response arena, so a
     // slow consumer costs `depth` buffered chunks and never blocks the SSH
     // connection the other operations share.
-    let mut window = ChunkWindow::new(sizing, delivered, size, depth, CHUNK_BYTES);
+    let mut window = ChunkWindow::new(sizing, delivered, end, depth, CHUNK_BYTES);
     loop {
         let next = tokio::select! {
             biased;
