@@ -41,6 +41,9 @@ mod resolve;
 mod resolve_test;
 mod scheduler;
 mod session_reset;
+/// A cached handle that no longer names the object at its path.
+#[cfg(all(test, feature = "virtual-device"))]
+mod stale_handle_test;
 /// The manager and the recording registrar this crate's own device cells drive.
 #[cfg(test)]
 pub(crate) mod testing;
@@ -856,6 +859,28 @@ impl MtpConnectionManager {
             .path_to_handle
             .get(path)
             .copied()
+    }
+
+    /// Test-only: points the path cache's `path` at `handle`, the state a device
+    /// leaves Cmdr in when it frees a cached object's handle and hands it to
+    /// another object (the virtual device never reuses one, so a cell plants it).
+    #[cfg(all(test, feature = "virtual-device"))]
+    pub(crate) async fn plant_cached_handle(
+        &self,
+        device_id: &str,
+        storage_id: u32,
+        path: &Path,
+        handle: mtp_rs::ObjectHandle,
+    ) {
+        let devices = self.devices.lock().await;
+        let entry = devices.get(device_id).expect("a connected device");
+        entry
+            .path_cache
+            .write()
+            .expect("an unpoisoned path cache")
+            .entry(storage_id)
+            .or_default()
+            .insert(path.to_path_buf(), handle);
     }
 
     /// Test-only: how many `GetStorageInfo` round trips the bounded-read path has

@@ -181,8 +181,8 @@ async fn upload_records_the_new_object_in_both_directions() {
 }
 
 /// A delete must clear BOTH directions. Clearing only the forward map leaves the
-/// reverse entry pointing at a path that no longer exists — and Android reuses
-/// object handles, so the next object to inherit that handle resolves to the
+/// reverse entry pointing at a path that no longer exists — and on a device that
+/// reissues a freed handle, the next object to inherit it resolves to the
 /// DELETED object's path: a targeted refresh of the wrong directory, and an index
 /// upsert at the wrong path.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

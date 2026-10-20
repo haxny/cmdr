@@ -1,11 +1,42 @@
 //! MTP mutation operations: delete, create folder, rename, and move.
+//!
+//! ## A cached handle is checked before it's acted on
+//!
+//! Delete, rename, and move address an object by a handle the path cache
+//! holds, and a device that frees a handle may hand it to another object (MTP
+//! 1.1 § 3.4.1 forbids that within a session; some firmware does it anyway, and
+//! Android re-keys handles across a media rescan). So each one reads the
+//! object's `ObjectInfo` under the same device-lock hold as the mutation, and
+//! acts only when its name and parent are the path's ([`is_the_object_at`]).
+//! On a mismatch nothing is touched: the path is forgotten and resolved once
+//! more from a fresh listing ([`MtpConnectionManager::on_the_object_at`]), and
+//! a second mismatch is `ObjectNotFound`.
 
 use log::{debug, warn};
-use mtp_rs::{CancelToken, ObjectHandle, StorageId};
+use mtp_rs::{CancelToken, ObjectHandle, ObjectInfo, Storage, StorageId};
+use std::future::Future;
 use std::path::Path;
 
 use super::errors::MtpConnectionError;
 use super::{MtpConnectionManager, MtpObjectInfo, acquire_device_lock, normalize_mtp_path};
+
+/// What one attempt at a path-addressed mutation found.
+enum Attempt<T> {
+    /// It ran, on the object at the path.
+    Done(T),
+    /// The cached handle names another object, or none: nothing was touched.
+    StaleHandle,
+}
+
+/// Whether `info` describes the object at `path`, whose folder resolves to
+/// `parent`: its name is the path's last component and its parent is that
+/// folder. A root child may report `ObjectHandle::ALL` as its parent (the
+/// Android root quirk `handle_resolver.rs` also accepts).
+fn is_the_object_at(info: &ObjectInfo, path: &Path, parent: ObjectHandle) -> bool {
+    let named_so = path.file_name().is_some_and(|name| name == info.filename.as_str());
+    let filed_so = info.parent == parent || (parent == ObjectHandle::ROOT && info.parent == ObjectHandle::ALL);
+    named_so && filed_so
+}
 
 /// How far a delete may reach.
 ///
@@ -97,7 +128,43 @@ impl MtpConnectionManager {
             cancel.is_some()
         );
 
-        let object_handle = self.resolve_path_to_handle(device_id, storage_id, object_path).await?;
+        self.on_the_object_at(device_id, storage_id, object_path, move || {
+            self.delete_once(device_id, storage_id, object_path, scope, cancel)
+        })
+        .await?;
+
+        // Remove from path cache
+        let object_path_normalized = normalize_mtp_path(object_path);
+        {
+            let devices = self.devices.lock().await;
+            if let Some(entry) = devices.get(device_id)
+                && let Ok(mut cache_map) = entry.path_cache.write()
+                && let Some(storage_cache) = cache_map.get_mut(&storage_id)
+            {
+                storage_cache.remove_path(&object_path_normalized);
+            }
+        }
+
+        // Invalidate the parent directory's listing cache
+        if let Some(parent) = object_path_normalized.parent() {
+            self.invalidate_listing_cache(device_id, storage_id, parent).await;
+        }
+
+        debug!("MTP delete complete: {}", object_path);
+        Ok(())
+    }
+
+    /// One attempt at [`delete_object_with_cancel`](Self::delete_object_with_cancel),
+    /// on the handle the cache holds now.
+    async fn delete_once(
+        &self,
+        device_id: &str,
+        storage_id: u32,
+        object_path: &str,
+        scope: MtpDeleteScope,
+        cancel: Option<&CancelToken>,
+    ) -> Result<Attempt<()>, MtpConnectionError> {
+        let (object_handle, parent_handle) = self.resolve_with_parent(device_id, storage_id, object_path).await?;
         let device_arc = self.device_arc(device_id).await?;
 
         let device = acquire_device_lock(&device_arc, device_id, "delete_object").await?;
@@ -108,11 +175,14 @@ impl MtpConnectionManager {
             .await
             .map_err(|e| self.map_device_error(e, device_id))?;
 
-        // Get object info to check if it's a directory
-        let object_info = storage
-            .get_object_info(object_handle)
-            .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
+        // The object info says whether it's a directory, and that the handle is
+        // still the object at this path.
+        let Some(object_info) = self
+            .object_at(&storage, device_id, object_handle, object_path, parent_handle)
+            .await?
+        else {
+            return Ok(Attempt::StaleHandle);
+        };
 
         let is_dir = object_info.is_folder();
 
@@ -201,26 +271,74 @@ impl MtpConnectionManager {
                 .await
                 .map_err(|e| self.map_device_error(e, device_id))?;
         }
+        Ok(Attempt::Done(()))
+    }
 
-        // Remove from path cache
-        let object_path_normalized = normalize_mtp_path(object_path);
-        {
-            let devices = self.devices.lock().await;
-            if let Some(entry) = devices.get(device_id)
-                && let Ok(mut cache_map) = entry.path_cache.write()
-                && let Some(storage_cache) = cache_map.get_mut(&storage_id)
-            {
-                storage_cache.remove_path(&object_path_normalized);
-            }
+    /// Runs `attempt`, and once more from a fresh listing when the cached handle
+    /// turned out to name another object (module docs § "A cached handle is
+    /// checked before it's acted on"). A second stale answer is
+    /// [`MtpConnectionError::ObjectNotFound`]: whatever the path names, the device
+    /// won't say it's there.
+    async fn on_the_object_at<T, Fut>(
+        &self,
+        device_id: &str,
+        storage_id: u32,
+        object_path: &str,
+        attempt: impl Fn() -> Fut,
+    ) -> Result<T, MtpConnectionError>
+    where
+        Fut: Future<Output = Result<Attempt<T>, MtpConnectionError>>,
+    {
+        if let Attempt::Done(done) = attempt().await? {
+            return Ok(done);
         }
-
-        // Invalidate the parent directory's listing cache
-        if let Some(parent) = object_path_normalized.parent() {
-            self.invalidate_listing_cache(device_id, storage_id, parent).await;
+        let path = normalize_mtp_path(object_path);
+        warn!(
+            "MTP on {device_id}:{storage_id}: the cached handle for {} points at another object; resolving it afresh",
+            path.display()
+        );
+        self.forget_stale_path(device_id, storage_id, &path).await;
+        match attempt().await? {
+            Attempt::Done(done) => Ok(done),
+            Attempt::StaleHandle => Err(MtpConnectionError::ObjectNotFound {
+                device_id: device_id.to_string(),
+                path: path.to_string_lossy().into_owned(),
+            }),
         }
+    }
 
-        debug!("MTP delete complete: {}", object_path);
-        Ok(())
+    /// The handles of `object_path` and of the folder holding it.
+    async fn resolve_with_parent(
+        &self,
+        device_id: &str,
+        storage_id: u32,
+        object_path: &str,
+    ) -> Result<(ObjectHandle, ObjectHandle), MtpConnectionError> {
+        let object = self.resolve_path_to_handle(device_id, storage_id, object_path).await?;
+        let path = normalize_mtp_path(object_path);
+        let parent = path.parent().unwrap_or(Path::new("/")).to_string_lossy().into_owned();
+        let parent = self.resolve_path_to_handle(device_id, storage_id, &parent).await?;
+        Ok((object, parent))
+    }
+
+    /// The `ObjectInfo` of `handle` when it's still the object at `object_path`
+    /// in the folder `parent`, else `None`: a handle the device no longer knows
+    /// reads the same as one it gave to another object.
+    async fn object_at(
+        &self,
+        storage: &Storage,
+        device_id: &str,
+        handle: ObjectHandle,
+        object_path: &str,
+        parent: ObjectHandle,
+    ) -> Result<Option<ObjectInfo>, MtpConnectionError> {
+        let info = match storage.get_object_info(handle).await {
+            Ok(info) => info,
+            Err(e) if e.is_stale_handle() => return Ok(None),
+            Err(e) => return Err(self.map_device_error(e, device_id)),
+        };
+        let path = normalize_mtp_path(object_path);
+        Ok(is_the_object_at(&info, &path, parent).then_some(info))
     }
 
     /// Creates a new folder on the MTP device.
@@ -327,35 +445,13 @@ impl MtpConnectionManager {
             device_id, storage_id, object_path, new_name
         );
 
-        let object_handle = self.resolve_path_to_handle(device_id, storage_id, object_path).await?;
-        let device_arc = self.device_arc(device_id).await?;
-
-        let device = acquire_device_lock(&device_arc, device_id, "rename_object").await?;
-
-        // Get the storage
-        let storage = device
-            .storage(StorageId(u64::from(storage_id)))
-            .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
-
-        // Get object info to determine if it's a directory
-        let object_info = storage
-            .get_object_info(object_handle)
-            .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
-
+        let (object_handle, object_info) = self
+            .on_the_object_at(device_id, storage_id, object_path, move || {
+                self.rename_once(device_id, storage_id, object_path, new_name)
+            })
+            .await?;
         let is_dir = object_info.is_folder();
         let old_size = object_info.size;
-
-        // Set the new filename using storage.rename()
-        storage
-            .rename(object_handle, new_name)
-            .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
-
-        // Release device and storage lock
-        drop(storage);
-        drop(device);
 
         // Update path cache
         let old_path = normalize_mtp_path(object_path);
@@ -388,6 +484,41 @@ impl MtpConnectionManager {
         })
     }
 
+    /// One attempt at [`rename_object`](Self::rename_object), on the handle the
+    /// cache holds now. Answers the handle it renamed and the object's info.
+    async fn rename_once(
+        &self,
+        device_id: &str,
+        storage_id: u32,
+        object_path: &str,
+        new_name: &str,
+    ) -> Result<Attempt<(ObjectHandle, ObjectInfo)>, MtpConnectionError> {
+        let (object_handle, parent_handle) = self.resolve_with_parent(device_id, storage_id, object_path).await?;
+        let device_arc = self.device_arc(device_id).await?;
+
+        let device = acquire_device_lock(&device_arc, device_id, "rename_object").await?;
+
+        // Get the storage
+        let storage = device
+            .storage(StorageId(u64::from(storage_id)))
+            .await
+            .map_err(|e| self.map_device_error(e, device_id))?;
+
+        let Some(object_info) = self
+            .object_at(&storage, device_id, object_handle, object_path, parent_handle)
+            .await?
+        else {
+            return Ok(Attempt::StaleHandle);
+        };
+
+        // Set the new filename using storage.rename()
+        storage
+            .rename(object_handle, new_name)
+            .await
+            .map_err(|e| self.map_device_error(e, device_id))?;
+        Ok(Attempt::Done((object_handle, object_info)))
+    }
+
     /// Moves an object to a new parent folder on the MTP device.
     ///
     /// Falls back to copy+delete if the device doesn't support MoveObject.
@@ -413,43 +544,15 @@ impl MtpConnectionManager {
             device_id, storage_id, object_path, new_parent_path
         );
 
-        let object_handle = self.resolve_path_to_handle(device_id, storage_id, object_path).await?;
-        let new_parent_handle = self
-            .resolve_path_to_handle(device_id, storage_id, new_parent_path)
+        let (object_handle, object_info, move_result) = self
+            .on_the_object_at(device_id, storage_id, object_path, move || {
+                self.move_once(device_id, storage_id, object_path, new_parent_path)
+            })
             .await?;
-        let device_arc = self.device_arc(device_id).await?;
-
-        let device = acquire_device_lock(&device_arc, device_id, "move_object").await?;
-
-        // Get the storage
-        let storage = device
-            .storage(StorageId(u64::from(storage_id)))
-            .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
-
-        // Get object info
-        let object_info = storage
-            .get_object_info(object_handle)
-            .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
 
         let is_dir = object_info.is_folder();
         let object_size = object_info.size;
         let object_name = object_info.filename.clone();
-
-        // Try to use MoveObject operation
-        // storage.move_object expects the new parent handle directly, not Option
-        let new_parent_for_move = if new_parent_handle == ObjectHandle::ROOT {
-            ObjectHandle::ROOT
-        } else {
-            new_parent_handle
-        };
-
-        let move_result = storage.move_object(object_handle, new_parent_for_move, None).await;
-
-        // Release device and storage lock
-        drop(storage);
-        drop(device);
 
         match move_result {
             Ok(()) => {
@@ -498,5 +601,40 @@ impl MtpConnectionManager {
                 })
             }
         }
+    }
+
+    /// One attempt at [`move_object`](Self::move_object), on the handle the
+    /// cache holds now. Answers the handle it asked to move, the object's info,
+    /// and what `MoveObject` said, which the caller words.
+    async fn move_once(
+        &self,
+        device_id: &str,
+        storage_id: u32,
+        object_path: &str,
+        new_parent_path: &str,
+    ) -> Result<Attempt<(ObjectHandle, ObjectInfo, Result<(), mtp_rs::Error>)>, MtpConnectionError> {
+        let (object_handle, parent_handle) = self.resolve_with_parent(device_id, storage_id, object_path).await?;
+        let new_parent_handle = self
+            .resolve_path_to_handle(device_id, storage_id, new_parent_path)
+            .await?;
+        let device_arc = self.device_arc(device_id).await?;
+
+        let device = acquire_device_lock(&device_arc, device_id, "move_object").await?;
+
+        // Get the storage
+        let storage = device
+            .storage(StorageId(u64::from(storage_id)))
+            .await
+            .map_err(|e| self.map_device_error(e, device_id))?;
+
+        let Some(object_info) = self
+            .object_at(&storage, device_id, object_handle, object_path, parent_handle)
+            .await?
+        else {
+            return Ok(Attempt::StaleHandle);
+        };
+
+        let move_result = storage.move_object(object_handle, new_parent_handle, None).await;
+        Ok(Attempt::Done((object_handle, object_info, move_result)))
     }
 }

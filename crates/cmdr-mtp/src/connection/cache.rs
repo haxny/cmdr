@@ -19,6 +19,11 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 /// events ([`DeviceEvent::ObjectAdded`](mtp_rs::mtp::DeviceEvent) and friends, which carry only an
 /// opaque handle) short-circuit a parent-walk the moment they hit a cached
 /// ancestor instead of always walking to the storage root over USB.
+///
+/// A third map, `children`, indexes the forward entries by parent, so a fresh
+/// listing can drop what its folder no longer holds
+/// ([`record_listing`](Self::record_listing)) and a removed folder takes its
+/// subtree with it, without a scan of every cached path.
 #[derive(Default)]
 pub(super) struct PathHandleCache {
     /// Maps virtual path -> MTP object handle.
@@ -26,25 +31,40 @@ pub(super) struct PathHandleCache {
     /// Maps MTP object handle -> virtual path. The reverse of `path_to_handle`,
     /// kept in lockstep with it.
     pub(super) handle_to_path: HashMap<ObjectHandle, PathBuf>,
+    /// Maps a folder's path -> the cached paths directly inside it.
+    children: HashMap<PathBuf, HashSet<PathBuf>>,
 }
 
 impl PathHandleCache {
     /// Records a `(path, handle)` pair in both directions.
     ///
     /// Always insert through this (never `path_to_handle.insert` directly) so the
-    /// reverse map can't fall out of sync. `ObjectHandle` is `Copy` and `PathBuf`
-    /// is cheap to clone for a single map entry.
+    /// reverse map can't fall out of sync. A path that held a DIFFERENT handle
+    /// was another object, so what's cached under it goes: those children were
+    /// that object's.
     pub(super) fn insert(&mut self, path: PathBuf, handle: ObjectHandle) {
+        if self.path_to_handle.get(&path).is_some_and(|old| *old != handle) {
+            self.remove_path(&path);
+        }
+        if let Some(parent) = path.parent() {
+            self.children
+                .entry(parent.to_path_buf())
+                .or_default()
+                .insert(path.clone());
+        }
         self.path_to_handle.insert(path.clone(), handle);
         self.handle_to_path.insert(handle, path);
     }
 
-    /// Forgets `path` in both directions.
+    /// Forgets `path` in both directions, and everything cached under it.
     ///
     /// Always remove through this (never `path_to_handle.remove` directly).
     /// Dropping only the forward entry leaves the reverse map claiming a path for
-    /// a handle that no longer holds it — and MTP devices REUSE object handles, so
-    /// the next object to inherit it would resolve to the removed object's path.
+    /// a handle that no longer holds it, so an object that inherits the handle
+    /// would resolve to the removed object's path. The subtree goes too: a folder
+    /// that's gone or renamed no longer holds what was cached under its old path,
+    /// and a new folder taking the name would otherwise resolve its children to
+    /// the old handles.
     pub(super) fn remove_path(&mut self, path: &Path) {
         if let Some(handle) = self.path_to_handle.remove(path) {
             // Only if the reverse entry still points AT this path: a rename
@@ -53,6 +73,52 @@ impl PathHandleCache {
             if self.handle_to_path.get(&handle).is_some_and(|p| p == path) {
                 self.handle_to_path.remove(&handle);
             }
+        }
+        if let Some(parent) = path.parent()
+            && let Some(siblings) = self.children.get_mut(parent)
+        {
+            siblings.remove(path);
+        }
+        for child in self.children.remove(path).unwrap_or_default() {
+            self.remove_path(&child);
+        }
+    }
+
+    /// Records a complete listing of `parent`: every child it names, and the
+    /// end of every cached child it doesn't (with that child's subtree), so a
+    /// name the folder no longer holds can't resolve to a handle the device may
+    /// since have given to another object.
+    pub(super) fn record_listing(&mut self, parent: &Path, listed: Vec<(PathBuf, ObjectHandle)>) {
+        let fresh: HashSet<&Path> = listed.iter().map(|(path, _)| path.as_path()).collect();
+        let gone: Vec<PathBuf> = self
+            .children
+            .get(parent)
+            .map(|cached| {
+                cached
+                    .iter()
+                    .filter(|p| !fresh.contains(p.as_path()))
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
+        for path in gone {
+            self.remove_path(&path);
+        }
+        for (path, handle) in listed {
+            self.insert(path, handle);
+        }
+    }
+
+    /// Forgets the object `handle` named, for a removal the device reported.
+    /// A path that has since moved on to another handle is left alone.
+    pub(super) fn forget_handle(&mut self, handle: ObjectHandle) {
+        let Some(path) = self.handle_to_path.get(&handle).cloned() else {
+            return;
+        };
+        if self.path_to_handle.get(&path) == Some(&handle) {
+            self.remove_path(&path);
+        } else {
+            self.handle_to_path.remove(&handle);
         }
     }
 }
@@ -170,6 +236,73 @@ impl EventDebouncer {
         self.trailing_scheduled
             .write_ignore_poison()
             .retain(|key| key != device_id && !key.starts_with(&targeted_prefix));
+    }
+}
+
+#[cfg(test)]
+mod path_handle_cache_tests {
+    use std::path::{Path, PathBuf};
+
+    use mtp_rs::ObjectHandle;
+
+    use super::PathHandleCache;
+
+    fn at(path: &str, handle: u64) -> (PathBuf, ObjectHandle) {
+        (PathBuf::from(path), ObjectHandle(handle))
+    }
+
+    fn handle_of(cache: &PathHandleCache, path: &str) -> Option<u64> {
+        cache.path_to_handle.get(Path::new(path)).map(|h| h.0)
+    }
+
+    /// ❗ Regression anchor (#524): a name the folder no longer holds kept its
+    /// handle for the whole session, so a stale row resolved to whatever object
+    /// the device gave that handle next.
+    #[test]
+    fn a_fresh_listing_forgets_the_children_it_no_longer_names_and_their_subtrees() {
+        let mut cache = PathHandleCache::default();
+        cache.record_listing(Path::new("/"), vec![at("/DCIM", 1), at("/gone.txt", 2)]);
+        cache.record_listing(Path::new("/DCIM"), vec![at("/DCIM/a.jpg", 3)]);
+
+        cache.record_listing(Path::new("/"), vec![at("/Music", 4)]);
+
+        assert_eq!(handle_of(&cache, "/gone.txt"), None);
+        assert_eq!(handle_of(&cache, "/DCIM"), None);
+        assert_eq!(
+            handle_of(&cache, "/DCIM/a.jpg"),
+            None,
+            "a vanished folder takes its subtree"
+        );
+        assert_eq!(handle_of(&cache, "/Music"), Some(4));
+        assert!(!cache.handle_to_path.contains_key(&ObjectHandle(3)));
+    }
+
+    #[test]
+    fn a_folder_listed_under_a_new_handle_drops_what_was_cached_under_the_old_one() {
+        let mut cache = PathHandleCache::default();
+        cache.record_listing(Path::new("/"), vec![at("/DCIM", 1)]);
+        cache.record_listing(Path::new("/DCIM"), vec![at("/DCIM/a.jpg", 3)]);
+
+        cache.record_listing(Path::new("/"), vec![at("/DCIM", 9)]);
+
+        assert_eq!(handle_of(&cache, "/DCIM"), Some(9));
+        assert_eq!(
+            handle_of(&cache, "/DCIM/a.jpg"),
+            None,
+            "those children were the old folder's"
+        );
+    }
+
+    #[test]
+    fn a_removed_handle_stops_resolving_its_path() {
+        let mut cache = PathHandleCache::default();
+        cache.record_listing(Path::new("/"), vec![at("/a.txt", 1), at("/b.txt", 2)]);
+
+        cache.forget_handle(ObjectHandle(1));
+
+        assert_eq!(handle_of(&cache, "/a.txt"), None);
+        assert_eq!(handle_of(&cache, "/b.txt"), Some(2));
+        assert!(!cache.handle_to_path.contains_key(&ObjectHandle(1)));
     }
 }
 

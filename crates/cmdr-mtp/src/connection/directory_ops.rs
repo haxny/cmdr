@@ -694,10 +694,10 @@ impl MtpConnectionManager {
             if let Some(entry) = devices.get(device_id)
                 && let Ok(mut cache_map) = entry.path_cache.write()
             {
-                let storage_cache = cache_map.entry(storage_id).or_default();
-                for (path, handle) in cache_updates {
-                    storage_cache.insert(path, handle);
-                }
+                cache_map
+                    .entry(storage_id)
+                    .or_default()
+                    .record_listing(&parent_path, cache_updates);
             }
         }
 

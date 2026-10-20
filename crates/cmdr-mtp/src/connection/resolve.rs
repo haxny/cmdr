@@ -112,6 +112,39 @@ impl MtpConnectionManager {
         })
     }
 
+    /// Forgets a cached `path` whose handle turned out to name another object,
+    /// and its folder's cached listing, so the next resolve lists afresh.
+    pub(super) async fn forget_stale_path(&self, device_id: &str, storage_id: u32, path: &Path) {
+        use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+
+        {
+            let devices = self.devices.lock().await;
+            // Recover rather than skip: a poisoned cache left as it is keeps
+            // serving the handle this exists to forget.
+            if let Some(entry) = devices.get(device_id)
+                && let Some(storage_cache) = entry.path_cache.write_ignore_poison().get_mut(&storage_id)
+            {
+                storage_cache.remove_path(path);
+            }
+        }
+        if let Some(parent) = path.parent() {
+            self.invalidate_listing_cache(device_id, storage_id, parent).await;
+        }
+    }
+
+    /// Forgets a handle the device reported removed, on every storage: handles
+    /// are device-wide, and the event doesn't say which storage held it.
+    pub(super) async fn forget_removed_handle(&self, device_id: &str, handle: ObjectHandle) {
+        use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+
+        let devices = self.devices.lock().await;
+        if let Some(entry) = devices.get(device_id) {
+            for storage_cache in entry.path_cache.write_ignore_poison().values_mut() {
+                storage_cache.forget_handle(handle);
+            }
+        }
+    }
+
     /// The handle the path cache holds for an already-normalized `path`, if any.
     /// `NotConnected` when the device isn't in the registry.
     async fn cached_handle(

@@ -96,7 +96,7 @@ impl MtpConnectionManager {
     ///
     /// The caches MUST go: object handles don't survive the reset, and a stale
     /// reverse `PathHandleCache` entry resolves a NEW object to a dead path
-    /// (devices reuse handles). They live on the entry, so dropping it clears
+    /// (a new session may hand an old number to anything). They live on the entry, so dropping it clears
     /// them.
     ///
     /// ❌ Does NOT emit `MtpDeviceDisconnected` and does NOT unregister the

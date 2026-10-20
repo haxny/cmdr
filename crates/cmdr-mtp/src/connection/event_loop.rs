@@ -144,6 +144,13 @@ impl MtpConnectionManager {
             }
             DeviceEvent::ObjectRemoved { handle } => {
                 debug!("MTP object removed: {:?} on {}", handle, device_id);
+                // The handle is free now, and a device may hand it to the next
+                // object it creates: a cached path must stop resolving to it.
+                let forget_for = device_id.to_string();
+                let manager = Arc::clone(self);
+                self.host().runtime().spawn(async move {
+                    manager.forget_removed_handle(&forget_for, handle).await;
+                });
                 self.refresh_whole_device(device_id);
                 self.feed_index_removed(device_id, handle);
             }

@@ -214,6 +214,30 @@ the parent the same way, recursively up to the constant root) and looks again.
 
 Pinned by `connection/resolve_test.rs`.
 
+## A cached handle is checked before a destructive op (`mutation_ops.rs`)
+
+A handle in the path cache is only as good as the listing that put it there. MTP 1.1 § 3.4.1 forbids a device to reuse a
+handle within a session, and modern Android hands them out from a counter, but some firmware reissues a freed one
+(TinyUSB's MTP example does, hathach/tinyusb#4045), and Android re-keys handles across a media rescan (§ "Stale parent
+handle on upload"). A row still on screen then names a handle that belongs to someone else's file.
+
+- **Delete, rename, and move check before they act.** Each reads the handle's `ObjectInfo` under the same device-lock
+  hold as the mutation (delete and move already needed it) and acts only when its `filename` is the path's last
+  component and its `parent` is the cached handle of the path's folder (`ObjectHandle::ALL` also counts for a root
+  child). A mismatch, or a handle the device no longer knows, touches nothing: the path is forgotten with its folder's
+  listing, resolved once more from a fresh listing, and a second mismatch is `ObjectNotFound`. Zero extra round trips on
+  the happy path.
+- **The cache forgets what's gone.** `PathHandleCache::record_listing` (every complete listing, via `finalize_listing`)
+  drops a cached child the fresh listing no longer names, and `remove_path` takes the subtree with it, so a folder
+  recreated under the same name can't resolve its children to the old folder's handles. A path listed under a new handle
+  drops its old subtree the same way. `ObjectRemoved` forgets its handle on every storage (`forget_removed_handle`). A
+  `children` index keeps both O(entries touched), ❌ never a scan of the whole cache.
+- **Reads don't check.** `open_read_session` and `read_range_direct` still trust the cache; a stale handle there reads
+  the wrong bytes rather than destroying any, and the pruning above narrows the window.
+
+Pinned by `connection/stale_handle_test.rs` (a planted stale entry; the virtual device never reuses a handle) and
+`cache.rs`'s `path_handle_cache_tests`.
+
 ## Queued listings share the one that finished (`fresh_cached_listing`)
 
 A foreground listing checks the 5 s listing cache on the way in AND again once it holds the device lock. Callers of one
@@ -284,7 +308,7 @@ So `handle_device_session_reset` (the sibling of `handle_device_disconnected`, t
 
 1. **Drop the `DeviceEntry`** and stop the event loop. The path, listing, and storage caches live ON the entry, so
    dropping it clears them — required, not hygiene: handles don't survive the reset, and a stale reverse
-   `PathHandleCache` entry resolves a NEW object to a dead path (devices reuse handles).
+   `PathHandleCache` entry resolves a NEW object to a dead path (a new session may hand an old number to anything).
 2. **Flip every indexed storage Stale** (`IndexNotifier::device_watch_gap`, the device twin of the per-volume
    `watch_gap`: one PTP session carries every storage, so they go stale together and the backend never needs the
    device's volume list). Same call the disconnect path makes, for the same reason: events fired while the session was
@@ -406,8 +430,9 @@ Every write to `PathHandleCache` goes through `insert` or `remove_path`, which t
   handle isn't cached, so a one-sided write doesn't fail, it just makes every subsequent PTP event for objects Cmdr
   itself created re-walk to the storage root.
 - **A stale reverse entry returns the WRONG path.** `walk_handle_to_path` consults the reverse cache FIRST, so a handle
-  left pointing at a removed or renamed path resolves to it. MTP devices reuse object handles, so the next object to
-  inherit that handle lands a targeted refresh on the wrong directory and an index upsert at the wrong path.
+  left pointing at a removed or renamed path resolves to it. On a device that reissues a freed handle, or after a reset
+  gives a handle to a new object, that lands a targeted refresh on the wrong directory and an index upsert at the wrong
+  path.
 
 `remove_path` deletes the reverse entry only when it still points at the path being removed. A rename is
 `remove_path(old)` then `insert(new, handle)`; without that guard, a later cleanup of a stale forward entry would erase
