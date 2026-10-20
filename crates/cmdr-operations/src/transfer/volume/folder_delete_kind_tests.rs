@@ -23,6 +23,7 @@ use super::cleanup::{TreeRemoval, remove_tree, volume_rollback_with_progress};
 use super::{CarriedSource, stamp_source, sweep_carried_source};
 use crate::event_sinks::CollectorEventSink;
 use crate::ledger::WrittenFile;
+use crate::locked_sources::LockedPlan;
 use crate::state::WindDown;
 use crate::testing::TestOperations;
 use crate::types::WriteOperationConfig;
@@ -138,9 +139,15 @@ async fn a_moves_source_sweep_deletes_its_folders_as_folders() {
     let carried = stamp_source(&volume, Path::new("/d")).await.expect("the walk stamps");
     assert!(matches!(carried, CarriedSource::Folder(_)));
 
-    sweep_carried_source(&volume, Path::new("/d"), &carried, &Default::default())
-        .await
-        .expect("the sweep runs");
+    sweep_carried_source(
+        &volume,
+        Path::new("/d"),
+        &carried,
+        &Default::default(),
+        &LockedPlan::none(),
+    )
+    .await
+    .expect("the sweep runs");
 
     spy.assert_folders_deleted_as_folders().await;
 }
