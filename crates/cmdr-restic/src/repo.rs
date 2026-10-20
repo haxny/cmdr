@@ -44,7 +44,7 @@ impl ResticError {
             Self::NotARepository => VolumeError::NotFound(path.display().to_string()),
             Self::Volume(err) => err,
             Self::Unreadable { detail } => VolumeError::IoError {
-                message: detail,
+                message: detail.into(),
                 raw_os_error: None,
             },
         }

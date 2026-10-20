@@ -542,7 +542,7 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
         // its own.
         VolumeError::NoContent(path) => WriteOperationError::IoError {
             path,
-            message: "Has no bytes to copy (a link or a special file)".to_string(),
+            message: "Has no bytes to copy (a link or a special file)".into(),
         },
         // On the DESTINATION the folder holds two look-alikes of the name and
         // neither spelled as asked (`landing.rs`), or two same-named files on a

@@ -458,7 +458,9 @@ impl ReadBackend for VolumeBackend {
             }
             // Every waiter left: a new read is a NAS round trip for nobody.
             if feed.is_cancelled() {
-                return Err(backend_error(VolumeError::Cancelled(self.root.display().to_string())));
+                return Err(backend_error(VolumeError::Cancelled(
+                    self.root.display().to_string().into(),
+                )));
             }
             let bytes = self.read_stream(&self.path_of(tpe, id), None).map_err(backend_error)?;
             feed.note_read(bytes.len());

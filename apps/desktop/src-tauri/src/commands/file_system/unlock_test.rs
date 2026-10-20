@@ -79,7 +79,7 @@ impl PasswordLocked for LockedStub {
                     std::future::pending::<()>().await;
                     unreachable!("a pending future never resolves")
                 }
-                Script::Gone => Err(VolumeError::DeviceDisconnected("the NAS left".to_string())),
+                Script::Gone => Err(VolumeError::DeviceDisconnected("the NAS left".into())),
             }
         })
     }

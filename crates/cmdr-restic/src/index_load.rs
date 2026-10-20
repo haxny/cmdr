@@ -302,7 +302,7 @@ async fn prefetch(
             biased;
             () = feed.cancel().cancelled() => {
                 running.detach_all();
-                return Err(VolumeError::Cancelled(dir.display().to_string()));
+                return Err(VolumeError::Cancelled(dir.display().to_string().into()));
             }
             next = running.join_next() => next,
         };
@@ -311,7 +311,7 @@ async fn prefetch(
             Some(Ok(Ok(()))) => continue,
             Some(Ok(Err(err))) => err,
             Some(Err(crashed)) => VolumeError::IoError {
-                message: format!("an index read stopped: {crashed}"),
+                message: format!("an index read stopped: {crashed}").into(),
                 raw_os_error: None,
             },
         };
@@ -336,7 +336,7 @@ async fn read_one(
     let mut bytes = Vec::new();
     while let Some(chunk) = stream.next_chunk().await {
         if feed.is_cancelled() {
-            return Err(VolumeError::Cancelled(path.display().to_string()));
+            return Err(VolumeError::Cancelled(path.display().to_string().into()));
         }
         let chunk = chunk?;
         feed.add_bytes(chunk.len());
@@ -351,7 +351,7 @@ async fn read_one(
 }
 
 fn cancelled(path: &Path) -> ResticError {
-    ResticError::Volume(VolumeError::Cancelled(path.display().to_string()))
+    ResticError::Volume(VolumeError::Cancelled(path.display().to_string().into()))
 }
 
 /// Locks a std mutex, taking the data over from a thread that panicked holding

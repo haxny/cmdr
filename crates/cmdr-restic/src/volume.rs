@@ -344,7 +344,7 @@ impl Volume for ResticVolume {
             let entries = match cancel {
                 Some(token) => tokio::select! {
                     biased;
-                    () = token.cancelled() => return Err(VolumeError::Cancelled(path.display().to_string())),
+                    () = token.cancelled() => return Err(VolumeError::Cancelled(path.display().to_string().into())),
                     entries = listing => entries?,
                 },
                 None => listing.await?,

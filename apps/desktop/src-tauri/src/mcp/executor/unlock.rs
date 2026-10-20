@@ -359,7 +359,7 @@ mod tests {
         assert_eq!(outcome(UnlockError::TimedOut), "timed_out");
         assert_eq!(
             outcome(UnlockError::Volume {
-                error: crate::file_system::volume::VolumeError::DeviceDisconnected("gone".to_string())
+                error: crate::file_system::volume::VolumeError::DeviceDisconnected("gone".into())
             }),
             "unreachable"
         );

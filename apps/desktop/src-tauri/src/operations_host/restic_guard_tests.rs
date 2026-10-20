@@ -411,7 +411,7 @@ impl Volume for UndecidedDrive {
         if path == Path::new(REPO) {
             return Box::pin(async {
                 Err(VolumeError::IoError {
-                    message: "the NAS didn't answer".to_string(),
+                    message: "the NAS didn't answer".into(),
                     raw_os_error: None,
                 })
             });

@@ -199,7 +199,7 @@ async fn cancelling_the_pre_scan_of_a_whole_snapshot_ends_the_copy_with_nothing_
     })
     .await;
 
-    engine.cancel_write_operation(&started.operation_id, false);
+    engine.cancel_write_operation(&started.operation_id.as_str().into(), false);
     wait_until_async(Duration::from_secs(5), "the copy ends on the cancel", || {
         !events.cancelled.lock().expect("events").is_empty() || !events.errors.lock().expect("events").is_empty()
     })
