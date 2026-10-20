@@ -935,6 +935,89 @@ fn write_range_to_file_cancelled_mid_stream_leaves_nothing_behind() {
     session::close_session(&sid).unwrap();
 }
 
+/// A save that outlived its stall watch: the watch flags the cancel and says "that took
+/// too long", and the last write then finishes anyway. The rename must not land after
+/// that answer, or the destination changes behind a reported failure.
+#[test]
+fn write_range_to_file_cancelled_after_its_last_read_leaves_the_destination_alone() {
+    let dir = create_test_dir("write_range_cancel_late");
+    let dest = dir.join("out.txt");
+    fs::write(&dest, b"what was there").unwrap();
+    let session_for_probe: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let probe = session_for_probe.clone();
+
+    // Three short lines come back in one chunk, so the walk never looks at the flag
+    // again after this read: the cancel lands just as a stalled final write would.
+    let backend = session::ScriptedBackend::new("short", 3, move |_call| {
+        if let Some(sid) = probe.lock_ignore_poison().as_ref() {
+            session::cancel_read(sid, 1).unwrap();
+        }
+    });
+    let sid = session::test_only_install_session(Box::new(backend), dir.join("scripted.txt"));
+    *session_for_probe.lock_ignore_poison() = Some(sid.clone());
+
+    let err = session::write_range_to_file(&sid, 1, row(0, 0), RangeEnd::Eof, &dest, &session::SaveProgress::new())
+        .unwrap_err();
+
+    assert!(matches!(err, ViewerError::Cancelled), "got {err:?}");
+    assert_eq!(fs::read(&dest).unwrap(), b"what was there");
+    assert!(save_temp_file(&dir).is_none(), "the temp goes instead of the rename");
+
+    session::close_session(&sid).unwrap();
+}
+
+/// A file detected as UTF-8 from its head, with a stray Latin-1 byte past it.
+fn utf8_head_then_a_latin1_byte(dir: &Path) -> (PathBuf, usize) {
+    let line = "a".repeat(63);
+    let clean_rows = 1_200; // 1,200 64-byte lines: past the 64 KiB detection head
+    let mut bytes = Vec::new();
+    for _ in 0..clean_rows {
+        bytes.extend_from_slice(line.as_bytes());
+        bytes.push(b'\n');
+    }
+    bytes.extend_from_slice(b"caf\xE9 au lait\nend\n");
+    let file = dir.join("mostly-utf8.log");
+    fs::write(&file, &bytes).unwrap();
+    (file, clean_rows)
+}
+
+/// The decode swaps a byte it can't read for U+FFFD on screen, but the save keeps the
+/// file's own bytes: a quietly altered copy reported as a success is what this guards.
+#[test]
+fn write_range_to_file_keeps_the_source_bytes_a_utf8_decode_would_replace() {
+    let dir = create_test_dir("write_range_lossy");
+    let (file, bad_row) = utf8_head_then_a_latin1_byte(&dir);
+    let sid = session::open_session(file.to_str().unwrap(), "root")
+        .unwrap()
+        .session_id;
+    let dest = dir.join("out.txt");
+
+    session::write_range_to_file(
+        &sid,
+        1,
+        row(bad_row as u64 - 1, 60),
+        row(bad_row as u64 + 1, 2),
+        &dest,
+        &session::SaveProgress::new(),
+    )
+    .unwrap();
+    assert_eq!(fs::read(&dest).unwrap(), b"aaa\ncaf\xE9 au lait\nen");
+
+    // Within the one row, both ends measured past the replaced byte.
+    session::write_range_to_file(
+        &sid,
+        2,
+        row(bad_row as u64, 2),
+        row(bad_row as u64, 7),
+        &dest,
+        &session::SaveProgress::new(),
+    )
+    .unwrap();
+    assert_eq!(fs::read(&dest).unwrap(), b"f\xE9 au");
+
+    session::close_session(&sid).unwrap();
+}
+
 #[test]
 fn read_range_stitching_adjacent_ranges_equals_one_big_range() {
     let dir = create_test_dir("range_stitch");

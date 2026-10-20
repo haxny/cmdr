@@ -968,10 +968,21 @@ timeout shape. Why every family owns its error type: `docs/guides/error-handling
   `write_range_to_file` walks the range through `read_range_streamed` in `STREAM_CHUNK_BYTES` (1 MiB) pieces and writes
   each one to the temp. Chunks break on line boundaries, never inside a character, and each is decoded first, so a
   UTF-16 source saves as UTF-8 text (a raw byte copy would silently change every non-UTF-8 file). The cancel flag is
-  read between pieces and inside the per-line loop, and every failure path removes the partial temp. Pinned by
-  `write_range_to_file_streams_as_it_reads` (a scripted backend watches the destination temp from inside the read loop,
-  so a buffering save is caught by the temp still being empty at chunk two) and
-  `range_read::tests::streamed_read_hands_out_bounded_pieces`.
+  read between pieces, inside the per-line loop, and once more right before the rename (still registered, so a stall
+  watch's `cancel_read` that raced the last write lands there and the temp goes instead), and every failure path
+  removes the partial temp. Pinned by `write_range_to_file_streams_as_it_reads` (a scripted backend watches the
+  destination temp from inside the read loop, so a buffering save is caught by the temp still being empty at chunk two),
+  `range_read::tests::streamed_read_hands_out_bounded_pieces`, and
+  `write_range_to_file_cancelled_after_its_last_read_leaves_the_destination_alone`.
+- **A UTF-8 save keeps bytes the decode replaced.** Gotcha/Why: detection reads only the 64 KiB head, so a log with a
+  stray Latin-1 or binary byte past it decodes as UTF-8, and `from_utf8_lossy` swaps that byte for U+FFFD; saving the
+  decoded text quietly altered the copy and reported success. For a UTF-8-family session (`Utf8`, `Utf8WithBom`,
+  `UsAscii`), the save hands the walk a `RawBytes` reader, and a row whose text holds U+FFFD and whose source bytes
+  aren't valid UTF-8 emits those bytes (`range_read::row_piece`). The selection's ends map into the raw bytes through
+  `utf8_chunks` (`raw_index`): the lossy decode replaces each invalid run it reports with one U+FFFD, so the mapping is
+  exact. Clean rows still emit their text, so a lossless save is unchanged. Other encodings stay transcoded on purpose,
+  and the clipboard (`read_range`) passes no reader. Pinned by
+  `write_range_to_file_keeps_the_source_bytes_a_utf8_decode_would_replace`.
 - **A save is watched for silence, ❌ never held to a total deadline.** A selection's size is unbounded by
   construction (the save is what the > 100 MiB clipboard refusal offers instead), so a total budget would kill exactly
   the saves the button exists for: at a realistic 200 MB/s, the old shared `READ_RANGE_TIMEOUT` cut off anything past

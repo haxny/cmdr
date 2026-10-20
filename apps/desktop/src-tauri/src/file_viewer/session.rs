@@ -30,7 +30,7 @@ use super::media;
 use super::media_session;
 use super::origin::{SourceOrigin, open_for_viewer};
 use super::range_read::{
-    RangeEnd, STREAM_CHUNK_BYTES, read_range as do_read_range, read_range_streamed as stream_range,
+    RangeEnd, RawBytes, STREAM_CHUNK_BYTES, read_range as do_read_range, read_range_streamed as stream_range,
 };
 use super::row_text::RowText;
 use super::search_matcher::{Matcher, SearchMode};
@@ -965,11 +965,15 @@ impl SaveProgress {
 ///
 /// The bytes go through the same decode as an on-screen read, so a UTF-16 (or any
 /// other non-UTF-8) source saves as UTF-8 text. Chunks break on line boundaries, so no
-/// character is ever split across two writes.
+/// character is ever split across two writes. A UTF-8 source's row whose decode
+/// replaced a byte with U+FFFD saves the source's own bytes instead (`RawBytes`), so a
+/// stray Latin-1 or binary byte past the detection head reaches the copy unchanged.
 ///
 /// On success, returns `Ok(())`. On `Cancelled`, and on any other error, the partial
 /// temp file is best-effort removed and the typed error is returned, so a stopped save
-/// leaves nothing behind.
+/// leaves nothing behind. The cancel flag is read once more right before the rename:
+/// a stall watch that gave up (and said so) while the last write hung must not see the
+/// destination change after its answer.
 ///
 /// Reports each write into `progress`, and marks it done on every exit: that's what
 /// lets the IPC layer watch a save for silence instead of holding it to a total
@@ -1002,28 +1006,88 @@ fn write_range_to_file_inner(
     let staged = cmdr_fs::staging::StagingTemp::mint(dest_path, None);
     let tmp_path = staged.path();
 
-    let written = with_registered_read(session_id, read_id, |backend, cancel| {
+    let source = SaveSource::of(session_id)?;
+    let raw_bytes = |start: u64, end: u64| source.read(start, end);
+    let raw: Option<RawBytes<'_>> = source.is_utf8.then_some(&raw_bytes);
+
+    let landed = with_registered_read(session_id, read_id, |backend, cancel| {
         // Unbuffered on purpose: each piece the reader hands over is already a chunk, so
         // a `BufWriter` would only copy it a second time.
         let mut file = std::fs::File::create(tmp_path)?;
-        let mut sink = |piece: &str| {
-            file.write_all(piece.as_bytes())?;
+        let mut sink = |piece: &[u8]| {
+            file.write_all(piece)?;
             progress.note_written(piece.len());
             Ok(())
         };
-        stream_range(backend, anchor, focus, cancel, STREAM_CHUNK_BYTES, &mut sink)
+        stream_range(backend, anchor, focus, cancel, STREAM_CHUNK_BYTES, raw, &mut sink)?;
+        drop(file);
+        // Still registered, so a `cancel_read` that raced the last write lands here.
+        if cancel.load(Ordering::Relaxed) {
+            return Err(ViewerError::Cancelled);
+        }
+        std::fs::rename(tmp_path, dest_path).map_err(|e| ViewerError::Io { message: e.to_string() })
     });
 
-    if let Err(e) = written {
+    if let Err(e) = landed {
         // Best-effort cleanup; ignore secondary errors.
         let _ = std::fs::remove_file(tmp_path);
         return Err(e);
     }
-    if let Err(e) = std::fs::rename(tmp_path, dest_path) {
-        let _ = std::fs::remove_file(tmp_path);
-        return Err(ViewerError::Io { message: e.to_string() });
-    }
     Ok(())
+}
+
+/// Where a save reads a row's own bytes from, opened only if a row asks: most saves
+/// never need it.
+struct SaveSource {
+    session_id: String,
+    /// Whether the session decodes as UTF-8, the one family whose raw bytes ARE the
+    /// saved text's encoding. Any other source is transcoded on purpose.
+    is_utf8: bool,
+    opened: std::cell::OnceCell<Result<OpenedFile, ViewerError>>,
+}
+
+impl SaveSource {
+    fn of(session_id: &str) -> Result<Self, ViewerError> {
+        let sessions = SESSIONS.lock_ignore_poison();
+        let session = sessions.get(session_id).ok_or_else(|| ViewerError::SessionNotFound {
+            session_id: session_id.to_string(),
+        })?;
+        let encoding = *session.encoding.lock_ignore_poison();
+        Ok(Self {
+            session_id: session_id.to_string(),
+            is_utf8: matches!(
+                encoding,
+                FileEncoding::Utf8 | FileEncoding::Utf8WithBom | FileEncoding::UsAscii
+            ),
+            opened: std::cell::OnceCell::new(),
+        })
+    }
+
+    /// The source's bytes in `[start, end)`.
+    fn read(&self, start: u64, end: u64) -> Result<Vec<u8>, ViewerError> {
+        let opened = self.opened.get_or_init(|| {
+            let sessions = SESSIONS.lock_ignore_poison();
+            let session = sessions
+                .get(&self.session_id)
+                .ok_or_else(|| ViewerError::SessionNotFound {
+                    session_id: self.session_id.clone(),
+                })?;
+            session.file_at_backend_size()
+        });
+        let file = opened.as_ref().map_err(Clone::clone)?;
+        let len = usize::try_from(end.saturating_sub(start)).map_err(|_| ViewerError::OutOfRange)?;
+        let mut bytes = vec![0u8; len];
+        let mut filled = 0;
+        while filled < len {
+            let read = file.source.read_at(start + filled as u64, &mut bytes[filled..])?;
+            if read == 0 {
+                break;
+            }
+            filled += read;
+        }
+        bytes.truncate(filled);
+        Ok(bytes)
+    }
 }
 
 /// Flips the cancel flag for an in-flight read. No-op if the read has already finished

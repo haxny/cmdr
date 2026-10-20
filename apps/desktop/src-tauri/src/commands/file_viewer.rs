@@ -553,8 +553,10 @@ impl StallWatch<ViewerError> for SaveWatch {
             return None;
         }
         // The waiter detaches the work rather than dropping it, so the save has to be
-        // told: it sees the flag at its next chunk, removes its temp file, and answers
-        // `Cancelled` to nobody.
+        // told: it sees the flag at its next chunk, or after its last write right before
+        // the rename, removes its temp file instead of renaming it, and answers
+        // `Cancelled` to nobody. A write the OS never returns from can't see the flag at
+        // all, so its `.cmdr-tmp-` file stays until that write gives up.
         let _ = file_viewer::cancel_read(&self.session_id, self.read_id);
         // `TimedOut`, not `StoppedResponding`: that one means "the source stopped
         // sending the file", which says the wrong thing about a save's destination, and
