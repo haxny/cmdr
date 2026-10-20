@@ -597,11 +597,12 @@ async fn a_rename_the_review_started_settles_its_group_and_its_thread_line() {
         panic!("the claim is refused");
     };
     let reporting = open_write_connection(&db_path).expect("second connection");
+    let collector = Arc::new(CollectorEventSink::new());
 
     super::start_reviewed_renames(
         conn,
         reporting,
-        Arc::new(CollectorEventSink::new()),
+        Arc::clone(&collector) as Arc<dyn OperationEventSink>,
         claimed,
         "root".to_string(),
         rows,
@@ -612,10 +613,14 @@ async fn a_rename_the_review_started_settles_its_group_and_its_thread_line() {
     .await
     .expect("the batch starts");
 
+    // Wait for the settle to reach the inner sink, ❌ not for `Completed`: the decorator marks the
+    // group first and rewrites the thread line after, so a poll on the status could read the
+    // line still saying "running". It forwards the settle only once both writes are done.
     crate::test_support::wait_until_async(std::time::Duration::from_secs(5), "the group settles", || {
-        group_status(&reader, group_id) == ProposalStatus::Completed
+        !collector.settled.lock_ignore_poison().is_empty()
     })
     .await;
+    assert_eq!(group_status(&reader, group_id), ProposalStatus::Completed);
     let lines: Vec<_> = list_messages(&reader, conversation_id, 100, 0)
         .expect("messages")
         .into_iter()
