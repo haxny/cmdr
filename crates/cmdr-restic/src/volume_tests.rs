@@ -10,7 +10,7 @@ use crate::test_fixtures::{self, FixtureRepo};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError, conformance};
+use cmdr_fs::volume::{BackendKind, InMemoryVolume, Volume, VolumeError, conformance};
 use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -538,6 +538,11 @@ async fn it_answers_as_a_read_only_view_routed_over_its_parent() {
     assert!(volume.supports_streaming() && volume.supports_export());
     assert_eq!(volume.lane_key(), browse.parent.lane_key());
     assert_eq!(volume.max_concurrent_scan_listings(), 4);
+    assert_eq!(
+        volume.backend_kind(),
+        BackendKind::Restic,
+        "never the `Local` default: favorites, the error report, and the index read it"
+    );
     let mkdir = volume.create_directory_all(&view().join("latest/new")).await;
     assert!(matches!(mkdir, Err(VolumeError::NotSupported)), "got {mkdir:?}");
 }
