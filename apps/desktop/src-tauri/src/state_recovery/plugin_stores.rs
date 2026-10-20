@@ -20,8 +20,10 @@ const CONSENT_OFF_AFTER_RECOVERY: [&str; 2] = ["analytics.enabled", "updates.cra
 /// The four plugin stores, at the paths their readers use. Call from `setup()` after the instance
 /// lock and the security log, and before anything reads one of them.
 pub fn recover_plugin_stores<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(path) = frontend_store_path(app, "settings.json") {
+        recover_settings(app, &path);
+    }
     for (name, file) in [
-        ("settings.json", StateFile::Settings),
         ("shortcuts.json", StateFile::Shortcuts),
         ("app-status.json", StateFile::AppStatus),
     ] {
@@ -38,6 +40,47 @@ pub fn recover_plugin_stores<R: Runtime>(app: &AppHandle<R>) {
         }
         Err(e) => log::warn!(target: LOG_TARGET, "Couldn't resolve license.json to check it: {e}"),
     }
+}
+
+/// Checks `settings.json` like the other stores. When it needed recovering, the store the
+/// frontend loads is opened here first, with every consent off as its defaults: a fresh file says
+/// "no" too, a fresh file that didn't land starts from those defaults, and a file that stayed
+/// unloaded (the set-aside failed) never reaches the cache at all. So no session runs on a "yes"
+/// the person may never have given, whichever way the recovery went.
+fn recover_settings<R: Runtime>(app: &AppHandle<R>, path: &Path) {
+    if !recover(path, StateFile::Settings) {
+        return;
+    }
+    let opened = tauri_plugin_store::StoreBuilder::new(app, path)
+        .defaults(consents_off().into_iter().collect())
+        .disable_auto_save()
+        .build();
+    if let Err(e) = opened {
+        log::warn!(target: LOG_TARGET, "Couldn't open the recovered settings store with consents off: {e}");
+    }
+}
+
+/// The stored `settings.json` as raw JSON, for a Rust reader that decides on consent (analytics).
+/// `Null` when there's no file (a first launch: the defaults). A file that's there but can't be
+/// read or parsed reads as every consent off, the same answer the frontend's store gives that
+/// session ([`recover_settings`]).
+pub fn settings_for_consent(path: &Path) -> serde_json::Value {
+    match fs::read(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => serde_json::Value::Null,
+        Ok(bytes) => match serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(&bytes) {
+            Ok(settings) => serde_json::Value::Object(settings),
+            Err(_) => serde_json::Value::Object(consents_off()),
+        },
+        Err(_) => serde_json::Value::Object(consents_off()),
+    }
+}
+
+/// Every consent that defaults to on, set to off.
+fn consents_off() -> serde_json::Map<String, serde_json::Value> {
+    CONSENT_OFF_AFTER_RECOVERY
+        .iter()
+        .map(|key| ((*key).to_string(), serde_json::Value::Bool(false)))
+        .collect()
 }
 
 /// Where the frontend's store for `name` lives: `resolveStorePath` (`lib/settings/store-path.ts`)
@@ -75,17 +118,13 @@ fn recover(path: &Path, file: StateFile) -> bool {
 
 /// Starts the new `settings.json` with every consent setting that defaults to on set to off.
 fn write_fresh_settings(path: &Path) {
-    let fresh: serde_json::Map<String, serde_json::Value> = CONSENT_OFF_AFTER_RECOVERY
-        .iter()
-        .map(|key| ((*key).to_string(), serde_json::Value::Bool(false)))
-        .collect();
-    let written = serde_json::to_string_pretty(&fresh)
+    let written = serde_json::to_string_pretty(&consents_off())
         .map_err(std::io::Error::other)
         .and_then(|json| crate::config::durable_write_json(path, &temp_path(path, "recovery"), &json));
     if let Err(e) = written {
         log::warn!(
             target: LOG_TARGET,
-            "Couldn't write the fresh settings file, so this launch reads the defaults: {e}"
+            "Couldn't write the fresh settings file, so the settings store runs on its consents-off defaults this launch: {e}"
         );
     }
 }
@@ -289,5 +328,66 @@ mod tests {
         recover(&path, StateFile::Shortcuts);
 
         assert_eq!(names_in(&dir), vec![".settings.json.4242.0.tmp", "shortcuts.json"]);
+    }
+
+    fn mock_app() -> tauri::App<tauri::test::MockRuntime> {
+        let app = tauri::test::mock_app();
+        app.handle()
+            .plugin(tauri_plugin_store::Builder::default().build())
+            .expect("the store plugin registers on a mock app");
+        app
+    }
+
+    /// A `settings.json` that didn't load AND couldn't be set aside (here an immutable file,
+    /// which refuses the rename) may have held a "no" to usage stats or crash reports. For the
+    /// rest of the session both read as off: in the store the frontend loads, and for Rust's
+    /// own consent reads.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_settings_file_that_stays_unloaded_reads_every_consent_as_off() {
+        use tauri_plugin_store::StoreExt;
+        let _notices = testing::capture_recoveries();
+        let dir = TestDir::new("plugin_stores_held_consent");
+        let path = dir.join("settings.json");
+        fs::write(&path, b"{\"analytics.enabled\": fal").expect("write");
+        set_immutable(&path, true);
+        let app = mock_app();
+
+        recover_settings(app.handle(), &path);
+        let frontend = app.store_builder(&path).build().expect("the frontend's load");
+        let rust_side = settings_for_consent(&path);
+        let saved = frontend.save();
+        set_immutable(&path, false);
+
+        for key in CONSENT_OFF_AFTER_RECOVERY {
+            assert_eq!(frontend.get(key), Some(serde_json::json!(false)), "{key} in the store");
+            assert_eq!(rust_side.get(key), Some(&serde_json::json!(false)), "{key} for Rust");
+        }
+        assert!(saved.is_err(), "the held file is still never saved over");
+        assert_eq!(fs::read(&path).expect("the file stays"), b"{\"analytics.enabled\": fal");
+    }
+
+    /// A file that reads keeps the person's own answers, and a missing one reads as no settings.
+    #[test]
+    fn a_healthy_or_missing_settings_file_keeps_its_consents() {
+        let dir = TestDir::new("plugin_stores_consent_healthy");
+        let path = dir.join("settings.json");
+        assert_eq!(settings_for_consent(&path), serde_json::Value::Null);
+        fs::write(&path, b"{\"analytics.enabled\": true}").expect("write");
+        assert_eq!(
+            settings_for_consent(&path),
+            serde_json::json!({ "analytics.enabled": true })
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    fn set_immutable(path: &Path, on: bool) {
+        use std::os::unix::ffi::OsStrExt;
+        let c_path = std::ffi::CString::new(path.as_os_str().as_bytes()).expect("no NUL in a temp path");
+        let flags = if on { libc::UF_IMMUTABLE } else { 0 };
+        // SAFETY: (test) `c_path` is a valid NUL-terminated string that outlives the call, and
+        // `chflags` only reads it.
+        let status = unsafe { libc::chflags(c_path.as_ptr(), flags) };
+        assert_eq!(status, 0, "chflags on {path:?}");
     }
 }

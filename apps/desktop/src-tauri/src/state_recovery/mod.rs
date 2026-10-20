@@ -26,7 +26,7 @@ use crate::ignore_poison::IgnorePoison;
 use crate::security_log::{self, SecurityEvent};
 
 pub use crate::security_log::StateFile;
-pub use plugin_stores::recover_plugin_stores;
+pub use plugin_stores::{recover_plugin_stores, settings_for_consent};
 pub use state_file::{StateRead, StateWriteError, lenient_entries, read_state_file, write_state_file};
 
 const LOG_TARGET: &str = "state_recovery";

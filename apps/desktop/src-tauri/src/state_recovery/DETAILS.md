@@ -48,6 +48,13 @@ Issue #461. Must-knows in `CLAUDE.md`.
   reports, both default on, and starting at the defaults would undo it without a word. So the fresh file says "no" to
   both, and the notice says how to turn them back on. Security-relevant settings need nothing here: their defaults are
   the safe ones (updates, cloud AI, MCP).
+- **The "no" doesn't depend on the fresh file landing.** `recover_settings` opens the settings store before the frontend
+  does, with both consents off as its DEFAULTS, so the frontend gets that instance. A fresh file overrides nothing (it
+  says "no" too), a fresh file that didn't land leaves the defaults, and a file that stayed unloaded (rename refused)
+  never reaches the cache, so all three read "no". Rust's analytics gate reads through `settings_for_consent`, where a
+  present-but-unloadable file is also "no". Derived from the failed load itself, so there's no flag to forget.
+  Remaining gap: a fresh file that didn't land leaves no file at all, which Rust's raw read takes as a first launch
+  (consent on) while the frontend says off; that needs an unwritable data dir, where the spool can't be written either.
 - **`operationLog.enabled` stays on** (David, 2026-10-16): the operation log never leaves the Mac and undo depends on
   it, so it isn't a consent-type setting.
 - **A queue, not an event payload.** Most recoveries happen in `setup()`, before any window listens, so an event alone

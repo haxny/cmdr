@@ -32,7 +32,9 @@ the typed record; this module owns the copy and the notice.
   parse: the plugin reads both as empty. If the rename fails, the patched plugin refuses every save of that store for
   the session (`Error::LoadFailed`), so the empty store never lands over the file.
 - **After a `settings.json` recovery, usage stats and crash reports are OFF** (`CONSENT_OFF_AFTER_RECOVERY`), in the
-  fresh file both Rust and the frontend read. `operationLog.enabled` stays at its default ON (David, 2026-10-16).
+  fresh file both Rust and the frontend read. Whichever way the recovery went (even a file that stays unloaded),
+  `recover_settings` opens the frontend's store with consents-off defaults first and Rust's consent reads go through
+  `settings_for_consent`, ❌ never a raw `settings.json` read. `operationLog.enabled` stays ON (David, 2026-10-16).
 - **Once means the queue drains.** The main window takes everything at start and on each nudge; ❌ don't make the
   nudge carry the recovery, or a race between the two shows it twice.
 - ❌ Never a path in the security-log event (only the `StateFile` token); the path is the notice's alone.

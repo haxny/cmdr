@@ -162,17 +162,15 @@ fn suppression_reason() -> Option<SuppressionReason> {
 
 /// Reads the stored `settings.json` as a raw JSON value, before any managed lock: callers overlay
 /// the policy themselves (consent, the config shape). Resolves the data dir
-/// without an `AppHandle` (mirroring the install-id and early-load helpers). A missing or corrupt
-/// file yields `Value::Null`, which the builder treats as "no settings."
+/// without an `AppHandle` (mirroring the install-id and early-load helpers). A missing file yields
+/// `Value::Null`, which the builder treats as "no settings"; one that's there but can't be read or
+/// parsed reads as every consent off (`crate::state_recovery::settings_for_consent`), so a "no"
+/// the file may hold is never read as the default "yes".
 fn read_raw_settings() -> serde_json::Value {
     let Some(data_dir) = crate::config::standalone_app_data_dir() else {
         return serde_json::Value::Null;
     };
-    let settings_path = data_dir.join("settings.json");
-    std::fs::read_to_string(&settings_path)
-        .ok()
-        .and_then(|contents| serde_json::from_str(&contents).ok())
-        .unwrap_or(serde_json::Value::Null)
+    crate::state_recovery::settings_for_consent(&data_dir.join("settings.json"))
 }
 
 #[cfg(test)]
