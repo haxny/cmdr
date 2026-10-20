@@ -9,7 +9,8 @@ import (
 )
 
 // rulesets creates or updates the repo's rulesets from `.github/rulesets/*.json`, matching them by
-// name. Without `-apply` it only says what it would do. Rulesets with no file here (the tag one,
+// name, and leaves alone the ones GitHub already has as the file says (`covers`). Without
+// `-apply` it only says what it would do. Rulesets with no file here (the tag one,
 // "main: no force-push or deletion") are left alone.
 func rulesets(r runner, args []string) error {
 	fs := flag.NewFlagSet("rulesets", flag.ExitOnError)
@@ -32,15 +33,25 @@ func rulesets(r runner, args []string) error {
 	for _, rs := range existing {
 		ids[rs.Name] = rs.ID
 	}
+	pending := 0
 	for _, file := range files {
-		name, err := rulesetName(file)
+		name, want, err := readRuleset(file)
 		if err != nil {
 			return err
 		}
 		method, path := "POST", fmt.Sprintf("repos/%s/rulesets", repo)
 		if id, ok := ids[name]; ok {
 			method, path = "PUT", fmt.Sprintf("%s/%d", path, id)
+			var live any
+			if err := r.ghJSON(&live, "api", path); err != nil {
+				return err
+			}
+			if covers(want, live) {
+				say("%q matches %s", name, filepath.Base(file))
+				continue
+			}
 		}
+		pending++
 		say("%s %q from %s", map[string]string{"POST": "create", "PUT": "update"}[method], name, filepath.Base(file))
 		if !*apply {
 			continue
@@ -49,22 +60,55 @@ func rulesets(r runner, args []string) error {
 			return err
 		}
 	}
-	if !*apply {
+	if !*apply && pending > 0 {
 		say("Nothing changed; add -apply to do it.")
 	}
 	return nil
 }
 
-func rulesetName(file string) (string, error) {
+// covers reports whether GitHub's copy of a ruleset (live) says everything the file (want) says.
+// GitHub adds ids and defaults the file leaves out, so extra object keys don't count; arrays must
+// match item for item.
+func covers(want, live any) bool {
+	switch w := want.(type) {
+	case map[string]any:
+		l, ok := live.(map[string]any)
+		if !ok {
+			return false
+		}
+		for k, v := range w {
+			if lv, ok := l[k]; !ok || !covers(v, lv) {
+				return false
+			}
+		}
+		return true
+	case []any:
+		l, ok := live.([]any)
+		if !ok || len(l) != len(w) {
+			return false
+		}
+		for i := range w {
+			if !covers(w[i], l[i]) {
+				return false
+			}
+		}
+		return true
+	default:
+		return want == live
+	}
+}
+
+// readRuleset reads a ruleset file: its name, and the whole of it for `covers`.
+func readRuleset(file string) (string, any, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	var rs struct {
-		Name string `json:"name"`
+	var rs map[string]any
+	err = json.Unmarshal(data, &rs)
+	name, _ := rs["name"].(string)
+	if err != nil || name == "" {
+		return "", nil, fmt.Errorf("%s: not a ruleset with a name: %v", file, err)
 	}
-	if err := json.Unmarshal(data, &rs); err != nil || rs.Name == "" {
-		return "", fmt.Errorf("%s: not a ruleset with a name: %v", file, err)
-	}
-	return rs.Name, nil
+	return name, rs, nil
 }
