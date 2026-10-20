@@ -983,9 +983,11 @@ timeout shape. Why every family owns its error type: `docs/guides/error-handling
   `UsAscii`), the save hands the walk a `RawBytes` reader, and a row whose text holds U+FFFD and whose source bytes
   aren't valid UTF-8 emits those bytes (`range_read::row_piece`). The selection's ends map into the raw bytes through
   `utf8_chunks` (`raw_index`): the lossy decode replaces each invalid run it reports with one U+FFFD, so the mapping is
-  exact. Clean rows still emit their text, so a lossless save is unchanged. Other encodings stay transcoded on purpose,
-  and the clipboard (`read_range`) passes no reader. Pinned by
-  `write_range_to_file_keeps_the_source_bytes_a_utf8_decode_would_replace`.
+  exact, but only for the bytes the row was decoded from: raw bytes whose lossy decode doesn't start with the row's text
+  (the file changed under a backend holding it in memory) fall back to the decoded text. Clean rows still emit their
+  text, so a lossless save is unchanged. Other encodings stay transcoded on purpose, and the clipboard (`read_range`)
+  passes no reader. Pinned by `write_range_to_file_keeps_the_source_bytes_a_utf8_decode_would_replace` and the
+  `row_piece` edge tests in `range_read::tests` (CRLF, back-to-back invalid runs, a changed file).
 - **A save is watched for silence, ❌ never held to a total deadline.** A selection's size is unbounded by
   construction (the save is what the > 100 MiB clipboard refusal offers instead), so a total budget would kill exactly
   the saves the button exists for: at a realistic 200 MB/s, the old shared `READ_RANGE_TIMEOUT` cut off anything past

@@ -196,6 +196,12 @@ fn row_piece<'r>(
     if std::str::from_utf8(&bytes).is_ok() {
         return Ok(decoded); // the file holds a real U+FFFD
     }
+    // `raw_index` holds only for the bytes the row was decoded from. A file that changed
+    // under a backend holding it in memory reads back different ones, which would splice
+    // bytes from the wrong place into the selection.
+    if !String::from_utf8_lossy(&bytes).starts_with(row.text.as_str()) {
+        return Ok(decoded);
+    }
     let (from, to) = (raw_index(&bytes, lo), raw_index(&bytes, hi));
     Ok(Cow::Owned(bytes[from..to].to_vec()))
 }
@@ -506,5 +512,69 @@ mod tests {
         assert!(compare_ends(&b, &a).is_gt());
         assert!(compare_ends(&a, &c).is_lt());
         assert!(compare_ends(&c, &c).is_eq());
+    }
+
+    fn row_of(raw: &[u8]) -> ViewerRow {
+        let text_end = raw.iter().position(|&b| b == b'\n').unwrap_or(raw.len());
+        ViewerRow {
+            text: String::from_utf8_lossy(&raw[..text_end]).into_owned(),
+            byte_offset: 0,
+            continues: false,
+            line_number: Some(0),
+        }
+    }
+
+    /// `row.text[lo..hi]` as the save writes it, the row's raw bytes being `raw`.
+    fn saved(raw: &[u8], lo: usize, hi: usize) -> Vec<u8> {
+        let row = row_of(raw);
+        let read = |start: u64, end: u64| Ok(raw[start as usize..end as usize].to_vec());
+        row_piece(&row, raw.len() as u64, lo, hi, Some(&read))
+            .unwrap()
+            .into_owned()
+    }
+
+    /// Selection edges on either side of a replaced byte map to the bytes around it,
+    /// with nothing dropped or doubled, however the invalid run is shaped.
+    #[test]
+    fn a_replaced_row_saves_its_own_bytes_between_the_selection_edges() {
+        // "caf" + one U+FFFD (3 decoded bytes) for 0xE9 + " ok", CRLF-ended.
+        let raw = b"caf\xE9 ok\r\n";
+        let decoded_len = row_of(raw).text.len();
+        assert_eq!(saved(raw, 0, decoded_len), b"caf\xE9 ok\r");
+        assert_eq!(saved(raw, 3, 6), b"\xE9", "exactly the replaced byte");
+        assert_eq!(saved(raw, 0, 3), b"caf", "up to the replaced byte, not into it");
+        assert_eq!(saved(raw, 6, 9), b" ok", "from just past it");
+
+        // A multibyte char cut short (0xE2 0x82, no third byte), then a lone 0xFF: two
+        // invalid runs, two U+FFFD, back to back.
+        let raw = b"a\xE2\x82\xFFb\n";
+        assert_eq!(row_of(raw).text, "a\u{FFFD}\u{FFFD}b");
+        assert_eq!(saved(raw, 1, 4), b"\xE2\x82", "the first run alone");
+        assert_eq!(saved(raw, 4, 7), b"\xFF", "the second run alone");
+        assert_eq!(saved(raw, 0, 8), b"a\xE2\x82\xFFb");
+        // A valid multibyte char beside an invalid run keeps its bytes whole.
+        let raw = b"\xE2\x82\xAC\xE9\xC3\xA9\n";
+        assert_eq!(row_of(raw).text, "\u{20AC}\u{FFFD}\u{E9}");
+        assert_eq!(saved(raw, 0, 3), b"\xE2\x82\xAC");
+        assert_eq!(saved(raw, 6, 8), b"\xC3\xA9");
+    }
+
+    /// A file that holds a real U+FFFD has nothing to restore: its bytes ARE the text.
+    #[test]
+    fn a_real_replacement_character_saves_as_decoded() {
+        let raw = "x\u{FFFD}y\n".as_bytes();
+        assert_eq!(saved(raw, 0, 5), "x\u{FFFD}y".as_bytes());
+    }
+
+    /// Raw bytes that don't decode to the row on screen (the file changed under a
+    /// backend that holds it in memory) can't be mapped onto the selection, so the save
+    /// keeps the decoded text rather than splice in bytes from the wrong place.
+    #[test]
+    fn raw_bytes_that_no_longer_match_the_row_save_as_decoded() {
+        let row = row_of(b"caf\xE9 au lait\n");
+        let changed = b"XYZ\xFFwholly different\n".to_vec();
+        let read = move |_: u64, _: u64| Ok(changed.clone());
+        let piece = row_piece(&row, 15, 0, row.text.len(), Some(&read)).unwrap();
+        assert_eq!(&*piece, row.text.as_bytes());
     }
 }
