@@ -10,6 +10,22 @@ The idea in one line: mark every user-derived value where the line is written, s
 instead of guessing where a name ends. The regex redactor stays as the fallback for text nobody marked, with a greedy
 boundary.
 
+## Status and decisions for David
+
+Status (2026-10-20): milestones 1–10 are done. What's left is #568 (error text flattened into a `String` before a log
+macro sees it stays on the regex fallback). The lead made these calls; they're yours to confirm or overturn:
+
+1. **Markers are Unicode noncharacters** (U+FDD0–U+FDEF), one opener per kind. The log file shows them as invisible
+   chars (`<U+FDD2>` in `less`); printable brackets would collide with real names more often.
+2. **Only our own crates' DEBUG/TRACE reaches a bundle**, decided at write time from `module_path()`; an untagged line
+   counts as third-party. `mdns_sd` is capped at Info in the log file too (it was ~60% of a bundle).
+3. **No clippy ban on `Path::display`** (~576 non-log calls). The `log-private-values` check guards log macros instead,
+   strict with no allowlist, and `// allowed-log-private: <reason>` excuses a value that only looks like the user's.
+4. **Errors mark their paths through a `LogError(&e)` wrapper**, never a marking `Display`, so markers can't reach UI
+   text, IPC, or stored data. Cost: #568.
+5. **The terminal, the debug log viewer, and MCP show a marked value unescaped** (`Café`); only the raw log file shows
+   its `{:?}` spelling (`Cafe\u{301}`).
+
 ## Loud rules (every milestone)
 
 - ❗ **Read first**: `apps/desktop/src-tauri/src/redact/CLAUDE.md` + `DETAILS.md` in full (the § "Finding the end of a
@@ -222,8 +238,9 @@ milestone adds the redaction cell for the keyed shape.
     0.32.0 (Cmdr's pin) logs `durable: {path} reclaimed on the new session…` at INFO on every resumed transfer (the
     ERR-VUFQZ scenario), plus `durable: {path} …` WARNs and an ERROR (`client/durable.rs` ~345, 353, 437, 449, 463).
     Until the milestone-8b bump, the bundle filter drops every `smb2::client::durable` record whatever its level
-    (decided, open question 6); milestone 2 quotes them. smb2's other INFO+ lines are covered by existing or new claims
-    (`share=` below, the `dfs: namespace` UNC by `redact_remote_unc`; re-grep smb2 0.32.0 to confirm, read 2026-10-19).
+    (decided; lifted with the smb2 0.32.1 bump in 8b); milestone 2 quotes them. smb2's other INFO+ lines are covered by
+    existing or new claims (`share=` below, the `dfs: namespace` UNC by `redact_remote_unc`; re-grep smb2 0.32.0 to
+    confirm, read 2026-10-19).
   - **Continuation lines follow their header's verdict** (a multi-line third-party DEBUG record drops whole, the way
     `tail_walker` already drops an out-of-window record's continuations). Continuations before any parseable header, and
     a header that doesn't parse, drop (fail closed). Both bundle paths: `build_bundle_streaming` and
@@ -625,6 +642,15 @@ third-party text; update `docs/tooling/logging.md`; file what's left as issues.
 **DONE**: an end-of-effort conformance review against the invariants below, plus a docs audit of every touched
 `CLAUDE.md`.
 
+**Done note**: the check is strict (allowlist and shrink-wrap code removed). Its name classifier now also reads `key`,
+`remote`, `target`, `url`, `addr`, `device`, `query`, and kin as user values (`from` / `to` only as a whole name), with
+`_id` / `_kind` / size-like fields as scalars; the leaks it surfaced (keychain keys, Quick Look's path, SMB `addr=`,
+WebDAV's root URL, an S3 destination key, archive sidecar names, adb stderr, a NetFS mount URL) are marked. `cmdr-http`
+can't depend on `cmdr-fs`, so its PAC line logs a keyed `host={:?}` and opts out. `redact/CLAUDE.md` leads with marking;
+the regex reads as the fallback. Conformance: every invariant below has cells (`redact/markers_tests.rs`,
+`bundle_leak_tests.rs`, `fe_bridge_tests.rs`, `error_producer_tests.rs`, `logging/dispatch_tests.rs`,
+`mcp/tests/resource_log_tests.rs`, `logging/provenance.rs`); "the ratchet only shrinks" became "the check is strict".
+
 ## Invariants (the conformance review checks these)
 
 - **No name ships.** Every leak shape from ERR-VEZUB / ERR-VUFQZ has a cell; every hostile-marker case has a cell.
@@ -650,22 +676,6 @@ third-party text; update `docs/tooling/logging.md`; file what's left as issues.
 - **The Flow B auto note keeps `log_error!`'s markers** (one depth deeper); it's the one producer that quotes marked
   text instead of replacing reserved chars.
 - **`cmdr://logs` filters on redacted text**, never raw.
-- **The ratchet only shrinks.**
+- **The check is strict**: no allowlist, any unmarked value in a log macro fails.
 
-## Open questions for David
-
-The lead decided these (pending David's review); the plan above follows the decisions.
-
-1. **Marker characters**: noncharacters, one opener per kind. (The log FILE shows them as invisible chars or `<U+FDD2>`
-   in `less`; printable brackets would collide with real names more often.)
-2. **Third-party filter**: fail-closed. Only our crates' records keep DEBUG/TRACE in bundles, decided at write time from
-   `module_path()` (no maintained list of short targets needed); `mdns_sd` drops to Info in the log file too.
-3. **No clippy ban on `Path::display`** (~576 non-log calls); the Go ratchet on log macros covers the log paths.
-4. **`LogError(&e)` wrapper, not a marking `Display` on `UserPath`**: markers never reach UI text, IPC, or stored data.
-   Cost: an error formatted deep in a chain stays on the greedy fallback.
-5. **Accept interim over-redaction** of prose on unconverted lines until their batch lands (weeks).
-6. **smb2 lines stay out of bundles until milestone 8b's quoted-fields bump**: smb2 stays off the DEBUG provenance
-   allowlist (closes leak 3 now), and every `smb2::client::durable` record (relative paths in prose at INFO/WARN/ERROR
-   in 0.32.0) drops whatever its level. Cost, accepted: weeks without smb2 debug context in bundles, and a server
-   misbehaving on durable reclaim (`REFUSING a reclaimed handle`, an ERROR) stays invisible to triage meanwhile.
-   Rejected: a one-off redactor claim for smb2's prose shapes, the shape-guessing this effort retires.
+Decisions waiting on David: § "Status and decisions for David" at the top.

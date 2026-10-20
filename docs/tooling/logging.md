@@ -216,7 +216,7 @@ the same color across runs and machines; the module path after it goes gray. The
 
 ## Marked values
 
-A log site may mark a user-derived value (a path, a name, a volume, a host, an account) between invisible Unicode
+Every log site marks each user-derived value (a path, a name, a volume, a host, an account) between invisible Unicode
 noncharacters from U+FDD0–U+FDEF (`crates/cmdr-fs/src/log_private.rs`), so an error report hashes exactly that value
 instead of guessing where a name ends (`apps/desktop/src-tauri/src/redact/DETAILS.md` § "Marked spans"). Frontend lines
 carry the same markers, written by the log bridge (`apps/desktop/src/lib/logging/DETAILS.md` § "Marking values for error
