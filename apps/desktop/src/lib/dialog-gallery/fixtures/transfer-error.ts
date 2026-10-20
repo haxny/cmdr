@@ -246,15 +246,6 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       gaveUpAfterSecs: 900,
     },
   },
-  'server_connection_lost-delete': {
-    operationType: 'delete',
-    error: {
-      type: 'server_connection_lost',
-      path: '/Volumes/naspi/photos/2019/DSC01142.arw',
-      volumeName: 'Naspolya',
-      gaveUpAfterSecs: 900,
-    },
-  },
   // A delete that waited out the NAS and found someone else's file at a path it listed.
   changed_while_disconnected: {
     operationType: 'delete',
@@ -428,6 +419,15 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
  * single-file branch that names the file inline instead of counting.
  */
 const extraStates: Record<string, TransferErrorFixture> = {
+  'server_connection_lost-delete': {
+    operationType: 'delete',
+    error: {
+      type: 'server_connection_lost',
+      path: '/Volumes/naspi/photos/2019/DSC01142.arw',
+      volumeName: 'Naspolya',
+      gaveUpAfterSecs: 900,
+    },
+  },
   // A copy whose answered Overwrite would replace a folder holding a mounted share.
   'mounted_volume_inside-copy': {
     operationType: 'copy',
