@@ -353,8 +353,7 @@ each one beats the form the catalog had drifted to:
   `rollbackConfirm.body*` variants share that tail verbatim.
 - English's "the N items" (all of them) vs "N items" (some) → `cả` in the complete one, over `tất cả`, which reads like
   a select-all button.
-- `stagedLeftover.*` promises cleanup `trong một lần truyền sau`, ❌ never "next time": the cleanup skips anything under
-  an hour old, so an immediate retry cleans nothing.
+- `stagedLeftover.*` promises a retry `vào lần kết nối tới đó tiếp theo` (a reconnect or the next launch), never a time.
 
 ## Màn hình chặn khi WebKit quá cũ (`main.oldWebkit.*`)
 

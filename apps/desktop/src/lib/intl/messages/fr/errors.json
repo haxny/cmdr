@@ -1381,6 +1381,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr a attendu le retour de {volumeName} pendant {duration}, puis s’est arrêté. Cmdr supprimait alors {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "La connexion à {volumeName} s’est interrompue pendant que Cmdr supprimait {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "Vérifiez que le serveur est allumé et que votre réseau fonctionne, puis réessayez. Les fichiers déjà supprimés par Cmdr ne sont plus là.",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr a attendu le retour de {volumeName} pendant {duration}, puis s’est arrêté. Cmdr créait alors {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "La connexion à {volumeName} s’est interrompue pendant que Cmdr créait {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "Vérifiez que le serveur est allumé et que votre réseau fonctionne, puis réessayez.",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr a attendu le retour de {volumeName} pendant {duration}, puis s’est arrêté. Cmdr mettait alors {fileName} à jour.",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "La connexion à {volumeName} s’est interrompue pendant que Cmdr mettait {fileName} à jour.",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Vérifiez que le serveur est allumé et que votre réseau fonctionne, puis réessayez.",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr n’a pas touché à un fichier modifié",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "La connexion à {volumeName} s’est interrompue pendant la suppression. À son retour, {fileName} n’était plus le fichier que Cmdr avait dans sa liste : Cmdr n’y a donc pas touché et s’est arrêté.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Vérifiez ce qui s’y trouve maintenant, puis relancez la suppression si vous voulez toujours vous en débarrasser. Les fichiers que Cmdr avait supprimés avant ne sont plus là.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "Réponse du serveur refusée",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

@@ -1029,13 +1029,33 @@
   "@fileOperations.cancelRollback.reason.locked.counted": {
     "sourceHash": "4830a5e"
   },
-  "fileOperations.cancelRollback.stagedLeftover.named": "Nem sikerült eltávolítani: „{name}”. Ez egy hiányos másolat, amely a célhelyen maradt. Nyugodtan törölheted, a Cmdr pedig egy későbbi átvitel során eltávolítja onnan.",
+  "fileOperations.cancelRollback.stagedLeftover.named": "Nem sikerült eltávolítani: „{name}”. Ez egy hiányos másolat, amely a célhelyen maradt. Nyugodtan törölheted, a Cmdr pedig újra megpróbálja, amikor legközelebb kapcsolódik oda.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
-    "sourceHash": "d47b49d"
+    "sourceHash": "dbf80b7"
   },
-  "fileOperations.cancelRollback.stagedLeftover.counted": "{countText} hiányos {count, plural, one {másolat} other {másolat}} eltávolítása nem sikerült, ezek a célhelyen maradtak. Nyugodtan törölheted őket, a Cmdr pedig egy későbbi átvitel során eltávolítja őket onnan.",
+  "fileOperations.cancelRollback.stagedLeftover.counted": "{countText} hiányos {count, plural, one {másolat} other {másolat}} eltávolítása nem sikerült, ezek a célhelyen maradtak. Nyugodtan törölheted őket, a Cmdr pedig újra megpróbálja, amikor legközelebb kapcsolódik oda.",
   "@fileOperations.cancelRollback.stagedLeftover.counted": {
-    "sourceHash": "6567e25"
+    "sourceHash": "1f4dec3"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.named": "Egy hiányos másolat („{name}”) egyelőre a célhelyen marad: {volumeName}. A Cmdr eltávolítja, amint {volumeName} újra elérhető lesz.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.named": {
+    "sourceHash": "661c42a"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.counted": "{countText} hiányos {count, plural, one {másolat} other {másolat}} egyelőre a célhelyen marad: {volumeName}. A Cmdr eltávolítja őket, amint {volumeName} újra elérhető lesz.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.counted": {
+    "sourceHash": "d360188"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.named": "„{name}” már teljesen ott van a célhelyen ({volumeName}), csak ideiglenes néven. A saját nevét akkor kapja meg, amikor a Cmdr legközelebb kapcsolódik ide: {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.named": {
+    "sourceHash": "ae7aea2"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.counted": "{countText} elkészült {count, plural, one {fájl} other {fájl}} vár ideiglenes néven a célhelyen ({volumeName}). Mindegyik akkor kapja meg a saját nevét, amikor a Cmdr legközelebb kapcsolódik ide: {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.counted": {
+    "sourceHash": "eb3d194"
+  },
+  "fileOperations.leftovers.unfinishedLandingKept": "A Cmdr talált egy félbemaradt másolatot ezen a meghajtón: {volumeName}. A fájl („{fileName}”) mérete eltér a várttól, ezért a Cmdr nem fejezte be, hanem ezen a néven megtartotta: {keptName}.",
+  "@fileOperations.leftovers.unfinishedLandingKept": {
+    "sourceHash": "92ebd0a"
   },
   "fileOperations.leftovers.stagingFolderKept": "A Cmdr egy félbemaradt áthelyezés fájljait találta ezen a meghajtón: {volumeName}. A helyükön hagyta őket, egy rejtett, „{folderName}” nevű mappában.",
   "@fileOperations.leftovers.stagingFolderKept": {

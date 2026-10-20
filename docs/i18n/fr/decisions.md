@@ -437,8 +437,7 @@ values write the catalog's `’`.
 - Stopped after … → `Retour en arrière arrêté après …` over `Cmdr s’est arrêté` (reads as Cmdr quitting).
 - these stayed → `donc voici ce qui n’a pas bougé :` over `resté en place` (`en place` means back where it was).
 - Couldn’t undo {name} → `Cmdr n’a pas pu revenir en arrière sur {name}.`, never `annuler`.
-- Leftovers happen `lors d’un transfert ultérieur`, never "la prochaine fois": cleanup spares anything under an hour
-  old.
+- Leftovers: `réessaiera la prochaine fois qu’il se connectera à cet endroit`, never a time.
 
 ## L'écran de blocage quand le WebKit est trop ancien (`main.oldWebkit.*`)
 

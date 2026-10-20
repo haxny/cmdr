@@ -114,8 +114,7 @@ the installed macOS `pt_BR.lproj` bundles.
 
 ## Staged leftovers (`fileOperations.cancelRollback.stagedLeftover.*`, `fileOperations.leftovers.stagingFolderKept`)
 
-- `numa transferência posterior`, never `da próxima vez`: cleanup skips anything under an hour old, so an immediate
-  retry deletes nothing.
+- Retry: `na próxima vez que se conectar lá`, never a time.
 - `stagingFolderKept` guards the USER's files: never suggest deleting the folder. `deixou tudo onde está`: `tudo` avoids
   a clitic; not `no lugar`, which means "instead" in this catalog.
 

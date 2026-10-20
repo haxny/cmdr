@@ -1381,6 +1381,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr heeft {duration} gewacht tot {volumeName} terug was en is toen gestopt. Cmdr was {fileName} aan het verwijderen.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "De verbinding met {volumeName} werd verbroken terwijl Cmdr {fileName} aan het verwijderen was.",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "Controleer of de server aanstaat en je netwerk werkt, en probeer het dan opnieuw. Bestanden die Cmdr al heeft verwijderd, zijn weg.",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr heeft {duration} gewacht tot {volumeName} terug was en is toen gestopt. Cmdr was {fileName} aan het aanmaken.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "De verbinding met {volumeName} werd verbroken terwijl Cmdr {fileName} aan het aanmaken was.",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "Controleer of de server aanstaat en je netwerk werkt, en probeer het dan opnieuw.",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr heeft {duration} gewacht tot {volumeName} terug was en is toen gestopt. Cmdr was {fileName} aan het bijwerken.",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "De verbinding met {volumeName} werd verbroken terwijl Cmdr {fileName} aan het bijwerken was.",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Controleer of de server aanstaat en je netwerk werkt, en probeer het dan opnieuw.",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr heeft een gewijzigd bestand ongemoeid gelaten",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "De verbinding met {volumeName} werd verbroken tijdens het verwijderen. Toen die terug was, was {fileName} niet meer het bestand dat Cmdr in zijn lijst had, dus heeft Cmdr het bestand ongemoeid gelaten en is gestopt.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Kijk wat er nu staat en verwijder het opnieuw als het nog steeds weg moet. Bestanden die Cmdr daarvoor al heeft verwijderd, zijn weg.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "Antwoord van de server geweigerd",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

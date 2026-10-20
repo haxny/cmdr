@@ -1030,13 +1030,33 @@
   "@fileOperations.cancelRollback.reason.locked.counted": {
     "sourceHash": "4830a5e"
   },
-  "fileOperations.cancelRollback.stagedLeftover.named": "Não foi possível apagar {name}, uma cópia incompleta que ficou no destino. Você pode apagá-la sem problema, e o Cmdr também vai apagá-la numa transferência posterior para lá.",
+  "fileOperations.cancelRollback.stagedLeftover.named": "Não foi possível apagar {name}, uma cópia incompleta que ficou no destino. Você pode apagá-la sem problema, e o Cmdr tenta de novo na próxima vez que se conectar lá.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
-    "sourceHash": "d47b49d"
+    "sourceHash": "dbf80b7"
   },
-  "fileOperations.cancelRollback.stagedLeftover.counted": "Não foi possível apagar {countText} {count, plural, one {cópia incompleta que ficou} many {cópias incompletas que ficaram} other {cópias incompletas que ficaram}} no destino. Você pode apagá-las sem problema, e o Cmdr também vai apagá-las numa transferência posterior para lá.",
+  "fileOperations.cancelRollback.stagedLeftover.counted": "Não foi possível apagar {countText} {count, plural, one {cópia incompleta que ficou} many {cópias incompletas que ficaram} other {cópias incompletas que ficaram}} no destino. Você pode apagá-las sem problema, e o Cmdr tenta de novo na próxima vez que se conectar lá.",
   "@fileOperations.cancelRollback.stagedLeftover.counted": {
-    "sourceHash": "6567e25"
+    "sourceHash": "1f4dec3"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.named": "{name}, uma cópia incompleta, fica em {volumeName} por enquanto. O Cmdr apaga essa cópia assim que {volumeName} voltar.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.named": {
+    "sourceHash": "661c42a"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.counted": "{countText} {count, plural, one {cópia incompleta fica} many {cópias incompletas ficam} other {cópias incompletas ficam}} em {volumeName} por enquanto. O Cmdr apaga essas cópias assim que {volumeName} voltar.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.counted": {
+    "sourceHash": "d360188"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.named": "O arquivo {name} já está completo em {volumeName}, com um nome temporário, e recebe o próprio nome na próxima vez que o Cmdr se conectar a {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.named": {
+    "sourceHash": "ae7aea2"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.counted": "{countText} {count, plural, one {arquivo concluído aguarda} many {arquivos concluídos aguardam} other {arquivos concluídos aguardam}} em {volumeName} com nomes temporários. Cada um recebe o próprio nome na próxima vez que o Cmdr se conectar a {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.counted": {
+    "sourceHash": "eb3d194"
+  },
+  "fileOperations.leftovers.unfinishedLandingKept": "O Cmdr encontrou em {volumeName} uma cópia incompleta de {fileName} que não tem o tamanho que deveria, então manteve essa cópia como {keptName} em vez de concluí-la.",
+  "@fileOperations.leftovers.unfinishedLandingKept": {
+    "sourceHash": "92ebd0a"
   },
   "fileOperations.leftovers.stagingFolderKept": "O Cmdr encontrou arquivos de uma movimentação incompleta no disco {volumeName} e deixou tudo onde está, em uma pasta oculta chamada {folderName}.",
   "@fileOperations.leftovers.stagingFolderKept": {

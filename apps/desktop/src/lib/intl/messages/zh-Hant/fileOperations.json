@@ -1027,13 +1027,33 @@
   "@fileOperations.cancelRollback.reason.locked.counted": {
     "sourceHash": "4830a5e"
   },
-  "fileOperations.cancelRollback.stagedLeftover.named": "無法刪除 {name}，這是留在目標位置的一個不完整副本。你可以放心刪掉它，Cmdr 之後往那裡傳輸時也會清掉它。",
+  "fileOperations.cancelRollback.stagedLeftover.named": "無法刪除 {name}，這是留在目標位置的一個不完整副本。你可以放心刪掉它，Cmdr 下次連線到那裡時會再試一次。",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
-    "sourceHash": "d47b49d"
+    "sourceHash": "dbf80b7"
   },
-  "fileOperations.cancelRollback.stagedLeftover.counted": "無法刪除留在目標位置的 {countText} {count, plural, other {個不完整副本}}。你可以放心刪掉它們，Cmdr 之後往那裡傳輸時也會清掉它們。",
+  "fileOperations.cancelRollback.stagedLeftover.counted": "無法刪除留在目標位置的 {countText} {count, plural, other {個不完整副本}}。你可以放心刪掉它們，Cmdr 下次連線到那裡時會再試一次。",
   "@fileOperations.cancelRollback.stagedLeftover.counted": {
-    "sourceHash": "6567e25"
+    "sourceHash": "1f4dec3"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.named": "{name} 是一個不完整副本，暫時留在 {volumeName} 上。{volumeName} 一恢復連線，Cmdr 就會清掉它。",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.named": {
+    "sourceHash": "661c42a"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.counted": "{countText} {count, plural, other {個不完整副本}}暫時留在 {volumeName} 上。{volumeName} 一恢復連線，Cmdr 就會清掉它們。",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.counted": {
+    "sourceHash": "d360188"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.named": "{name} 已經完整存到 {volumeName} 上，只是目前用的是暫時的名稱。Cmdr 下次連線到 {volumeName} 時，會幫它換上正式的名稱。",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.named": {
+    "sourceHash": "ae7aea2"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.counted": "有 {countText} {count, plural, other {個寫入完成的檔案}}目前用的是暫時的名稱，在 {volumeName} 上等待。Cmdr 下次連線到 {volumeName} 時，會幫每個檔案換上正式的名稱。",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.counted": {
+    "sourceHash": "eb3d194"
+  },
+  "fileOperations.leftovers.unfinishedLandingKept": "Cmdr 在 {volumeName} 上找到 {fileName} 的一個不完整副本，它的大小跟應有的不一樣，所以 Cmdr 沒有把它補完，而是保留成 {keptName}。",
+  "@fileOperations.leftovers.unfinishedLandingKept": {
+    "sourceHash": "92ebd0a"
   },
   "fileOperations.leftovers.stagingFolderKept": "Cmdr 在 {volumeName} 上找到一次還沒完成的移動留下的檔案，沒有動它們，全都留在名為「{folderName}」的隱藏資料夾裡。",
   "@fileOperations.leftovers.stagingFolderKept": {

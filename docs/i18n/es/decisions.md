@@ -352,8 +352,8 @@ Tone: Cmdr did the careful thing; never an apology or alarm.
 - "Cmdr had written" → `que Cmdr había creado` (folders aren't written).
 - `*.counted` keys only show for two or more: plural verb outside the branches, `one` unused. If one can ever be 1, redo
   all five.
-- `stagedLeftover.*`: ⚠️ `en una transferencia posterior`, ❌ never `la próxima vez`: cleanup skips files younger than
-  an hour, so an immediate retry removes nothing.
+- `stagedLeftover.*`: the retry is `la próxima vez que se conecte a ese sitio` (a reconnect or the next launch), never a
+  time; `es-419` forks only the tense and `lugar`.
 
 ## La pantalla de bloqueo por WebKit antiguo (`main.oldWebkit.*`)
 

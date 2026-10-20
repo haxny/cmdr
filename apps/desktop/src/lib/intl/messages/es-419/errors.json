@@ -547,6 +547,70 @@
   "@errors.write.sourceChanged.message": {
     "sourceHash": "6751aad"
   },
+  "errors.write.serverConnectionLost.title": "Se perdió la conexión con {volumeName}",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "9edd944"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr esperó {duration} a que {volumeName} volviera y luego detuvo la copia. Estaba copiando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "7493cd0"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr esperó {duration} a que {volumeName} volviera y luego detuvo el movimiento. Estaba moviendo {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "022d004"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "Se cortó la conexión con {volumeName} mientras Cmdr copiaba {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "16168f3"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "Se cortó la conexión con {volumeName} mientras Cmdr movía {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "fc4b91a"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "Comprueba que el servidor esté encendido y que tu red funcione, y vuelve a intentarlo. Los archivos que se terminaron de copiar ya están ahí.",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "4743a18"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "Comprueba que el servidor esté encendido y que tu red funcione, y vuelve a intentarlo. Los archivos que se terminaron de mover ya están ahí.",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "7138132"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr esperó {duration} a que {volumeName} volviera y luego detuvo la eliminación. Estaba eliminando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "e6114bd"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "Se cortó la conexión con {volumeName} mientras Cmdr eliminaba {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "9a956e0"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr esperó {duration} a que {volumeName} volviera y luego detuvo la compresión. Estaba creando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "898a99a"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "Se cortó la conexión con {volumeName} mientras Cmdr creaba {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "5392c3c"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr esperó {duration} a que {volumeName} volviera y luego detuvo la edición. Estaba actualizando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "2bc9586"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "Se cortó la conexión con {volumeName} mientras Cmdr actualizaba {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "2252758"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr no tocó un archivo que había cambiado",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "11595dd"
+  },
+  "errors.write.changedWhileDisconnected.message": "Se cortó la conexión con {volumeName} durante la eliminación. Cuando volvió, {fileName} ya no era el archivo que Cmdr tenía en la lista, así que Cmdr lo dejó como estaba y se detuvo.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "79749df"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Revisa lo que hay ahora y vuelve a eliminarlo si aún quieres que desaparezca. Los archivos que Cmdr eliminó antes ya no están.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "47737ea"
+  },
   "errors.write.landingNotRecorded.title": "Cmdr no reemplazó este archivo",
   "@errors.write.landingNotRecorded.title": {
     "sourceHash": "638e9d7"

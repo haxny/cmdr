@@ -1380,6 +1380,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr 等待 {volumeName} 恢复连接等了 {duration}，然后就停止了。当时正在删除 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "Cmdr 删除 {fileName} 时，与 {volumeName} 的连接断开了。",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "检查一下服务器是否开着、网络是否正常，然后再试一次。Cmdr 已经删掉的文件就找不回来了。",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr 等待 {volumeName} 恢复连接等了 {duration}，然后就停止了。当时正在创建 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "Cmdr 创建 {fileName} 时，与 {volumeName} 的连接断开了。",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "检查一下服务器是否开着、网络是否正常，然后再试一次。",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr 等待 {volumeName} 恢复连接等了 {duration}，然后就停止了。当时正在更新 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "Cmdr 更新 {fileName} 时，与 {volumeName} 的连接断开了。",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "检查一下服务器是否开着、网络是否正常，然后再试一次。",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr 没有动一个有改动的文件",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "删除过程中，与 {volumeName} 的连接断开了。连接恢复后，{fileName} 已经不是 Cmdr 之前列出的那个文件了，所以 Cmdr 没有动它，并停止了操作。",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "先看看那里现在是什么，如果还是想删掉，就再删除一次。Cmdr 在这之前删掉的文件就找不回来了。",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "已拒绝服务器的回复",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

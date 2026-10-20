@@ -1030,13 +1030,33 @@
   "@fileOperations.cancelRollback.reason.locked.counted": {
     "sourceHash": "4830a5e"
   },
-  "fileOperations.cancelRollback.stagedLeftover.named": "{name} verwijderen lukte niet: een onvolledig exemplaar dat op de bestemming is blijven staan. Je kunt het gerust verwijderen, en Cmdr ruimt het bij een latere overdracht daarheen op.",
+  "fileOperations.cancelRollback.stagedLeftover.named": "{name} verwijderen lukte niet: een onvolledig exemplaar dat op de bestemming is blijven staan. Je kunt het gerust verwijderen, en Cmdr probeert het opnieuw de volgende keer dat het verbinding maakt met de bestemming.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
-    "sourceHash": "d47b49d"
+    "sourceHash": "dbf80b7"
   },
-  "fileOperations.cancelRollback.stagedLeftover.counted": "{countText} onvolledige {count, plural, one {exemplaar} other {exemplaren}} verwijderen lukte niet; die zijn op de bestemming blijven staan. Je kunt ze gerust verwijderen, en Cmdr ruimt ze bij een latere overdracht daarheen op.",
+  "fileOperations.cancelRollback.stagedLeftover.counted": "{countText} onvolledige {count, plural, one {exemplaar} other {exemplaren}} verwijderen lukte niet; die zijn op de bestemming blijven staan. Je kunt ze gerust verwijderen, en Cmdr probeert het opnieuw de volgende keer dat het verbinding maakt met de bestemming.",
   "@fileOperations.cancelRollback.stagedLeftover.counted": {
-    "sourceHash": "6567e25"
+    "sourceHash": "1f4dec3"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.named": "{name}, een onvolledig exemplaar, blijft voorlopig op {volumeName} staan. Cmdr ruimt het op zodra {volumeName} terug is.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.named": {
+    "sourceHash": "661c42a"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.counted": "{countText} onvolledige {count, plural, one {exemplaar blijft} other {exemplaren blijven}} voorlopig op {volumeName} staan. Cmdr ruimt ze op zodra {volumeName} terug is.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.counted": {
+    "sourceHash": "d360188"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.named": "{name} staat volledig op {volumeName}, nog onder een tijdelijke naam, en krijgt de juiste naam de volgende keer dat Cmdr verbinding maakt met {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.named": {
+    "sourceHash": "ae7aea2"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.counted": "{countText} {count, plural, one {voltooid bestand wacht} other {voltooide bestanden wachten}} op {volumeName} onder tijdelijke namen. Elk krijgt de juiste naam de volgende keer dat Cmdr verbinding maakt met {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.counted": {
+    "sourceHash": "eb3d194"
+  },
+  "fileOperations.leftovers.unfinishedLandingKept": "Cmdr heeft op {volumeName} een onvolledig exemplaar van {fileName} gevonden dat niet de grootte heeft die het zou moeten hebben, dus heeft Cmdr het als {keptName} bewaard in plaats van het af te maken.",
+  "@fileOperations.leftovers.unfinishedLandingKept": {
+    "sourceHash": "92ebd0a"
   },
   "fileOperations.leftovers.stagingFolderKept": "Cmdr heeft op {volumeName} bestanden gevonden waarvan het verplaatsen niet is voltooid, en heeft ze allemaal laten staan, in een verborgen map met de naam {folderName}.",
   "@fileOperations.leftovers.stagingFolderKept": {

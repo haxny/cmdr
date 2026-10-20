@@ -389,8 +389,8 @@ Connect to server → `Kapcsolódás szerverre` (Finder `N84`, over `szerverhez`
 
 ### `cancelRollback.stagedLeftover.*` (a Cmdr saját maradéka a célhelyen)
 
-unfinished copy → `hiányos másolat` (macOS `LA33`). ⚠️ `egy későbbi átvitel során`, ❌ never `legközelebb`: the cleanup
-skips anything younger than an hour, so an immediate retry clears nothing.
+unfinished copy → `hiányos másolat` (macOS `LA33`). The retry is `újra megpróbálja, amikor legközelebb kapcsolódik oda`
+(a reconnect or the next launch), never a time.
 
 ## A túl régi WebKit blokkoló képernyője (`main.oldWebkit.*`)
 

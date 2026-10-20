@@ -316,8 +316,8 @@ The boundaries that look like drift and aren't (register by UI slot and menu-bar
 - A full rollback leads with `Alles` and puts the count after a colon: Dutch can't put `de` before a numeral. The `one`
   branch drops the count (`Het onderdeel is teruggezet.`).
 - `verwijderen` (remove) and `terugzetten` (put back) never mix.
-- `stagedLeftover.*`: `onvolledig exemplaar`, `Cmdr ruimt het op`, and `bij een latere overdracht`, ❌ never "de
-  volgende keer": cleanup skips anything younger than an hour.
+- `stagedLeftover.*`: `onvolledig exemplaar`, `Cmdr ruimt het op`, and the retry
+  `de volgende keer dat het verbinding maakt met de bestemming`, never a time.
 
 ## Het blokkeerscherm bij te oude WebKit (`main.oldWebkit.*`)
 

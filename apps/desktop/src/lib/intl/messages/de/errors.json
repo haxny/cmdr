@@ -1381,6 +1381,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr hat {duration} darauf gewartet, dass {volumeName} wieder erreichbar wird, und dann gestoppt. Gelöscht wurde gerade {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "Die Verbindung zu {volumeName} ist abgebrochen, während Cmdr {fileName} gelöscht hat.",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "Prüfe, ob der Server eingeschaltet ist und dein Netzwerk funktioniert, und versuche es dann erneut. Dateien, die Cmdr schon gelöscht hat, sind weg.",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr hat {duration} darauf gewartet, dass {volumeName} wieder erreichbar wird, und dann gestoppt. Erstellt wurde gerade {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "Die Verbindung zu {volumeName} ist abgebrochen, während Cmdr {fileName} erstellt hat.",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "Prüfe, ob der Server eingeschaltet ist und dein Netzwerk funktioniert, und versuche es dann erneut.",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr hat {duration} darauf gewartet, dass {volumeName} wieder erreichbar wird, und dann gestoppt. Aktualisiert wurde gerade {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "Die Verbindung zu {volumeName} ist abgebrochen, während Cmdr {fileName} aktualisiert hat.",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Prüfe, ob der Server eingeschaltet ist und dein Netzwerk funktioniert, und versuche es dann erneut.",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr hat eine geänderte Datei in Ruhe gelassen",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "Die Verbindung zu {volumeName} ist beim Löschen abgebrochen. Als sie wieder da war, war {fileName} nicht mehr die Datei, die Cmdr aufgelistet hatte. Deshalb hat Cmdr die Datei in Ruhe gelassen und gestoppt.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Sieh nach, was jetzt dort liegt, und lösche es noch einmal, wenn es immer noch weg soll. Dateien, die Cmdr davor gelöscht hat, sind weg.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "Antwort des Servers abgelehnt",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

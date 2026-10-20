@@ -385,8 +385,8 @@ One English word, two correct Chinese renderings. Don't merge them:
 - `stopped*` share one frame: `其余的还留在 Cmdr/这次移动把它们放到的地方。`
 - Stopped after N `…N 个项目后停止了。` (clause first). `leftBehind` repeats `跳过没有把握的部分` exactly, then `：`.
 - Occupied `它原来的位置现在被别的东西占用了。`, the `位置` twin of renameUndo's `名称`.
-- The staged leftover is Cmdr's own file: `不完整副本`, cleared with `清掉`. ⚠️ `之后往那里传输时`, never `下次`: the
-  cleanup skips files under an hour old, so an immediate retry won't clear it.
+- The staged leftover is Cmdr's own file: `不完整副本`, cleared with `清掉`. The retry is `下次连接到那里时` (a
+  reconnect or the next launch), never a time.
 
 ## 旧 WebKit 与旧 macOS 提示（`main.oldWebkit.*`、`main.oldMacos.*`）
 

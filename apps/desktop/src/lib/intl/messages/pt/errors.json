@@ -1381,6 +1381,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "O Cmdr esperou {duration} pela volta de {volumeName} e depois parou. O Cmdr estava apagando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "A conexão com {volumeName} foi perdida enquanto o Cmdr apagava {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "Confira se o servidor está ligado e se a sua rede está funcionando, depois tente de novo. Os arquivos que o Cmdr já apagou não existem mais.",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "O Cmdr esperou {duration} pela volta de {volumeName} e depois parou. O Cmdr estava criando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "A conexão com {volumeName} foi perdida enquanto o Cmdr criava {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "Confira se o servidor está ligado e se a sua rede está funcionando, depois tente de novo.",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "O Cmdr esperou {duration} pela volta de {volumeName} e depois parou. O Cmdr estava atualizando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "A conexão com {volumeName} foi perdida enquanto o Cmdr atualizava {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Confira se o servidor está ligado e se a sua rede está funcionando, depois tente de novo.",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "O Cmdr não mexeu em um arquivo que mudou",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "A conexão com {volumeName} foi perdida durante o apagamento. Quando a conexão voltou, {fileName} não era mais o arquivo que o Cmdr tinha listado, então o Cmdr não mexeu nesse arquivo e parou.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Confira o que está lá agora e, se ainda quiser, apague de novo. Os arquivos que o Cmdr apagou antes disso não existem mais.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "Resposta do servidor recusada",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

@@ -678,7 +678,7 @@
     "sources": "TC 11.58 (Markieren menu, ⇧F2), DC and MC all say Verzeichnisse vergleichen; Cmdr follows the folder ruling (Finder Ordner, Unterordner). TC's compare by content → Vergleich nach Inhalt"
   },
   "complete": {
-    "accept": ["abschließen", "abgeschlossen", "unvollständig", "abschluss", "abzuschließen"],
+    "accept": ["abschließen", "abgeschlossen", "unvollständig", "vollständig", "abschluss", "abzuschließen"],
     "avoid": [
       {
         "form": "unvollständig (for unfinished)",

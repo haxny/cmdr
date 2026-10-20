@@ -1381,6 +1381,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr 等 {volumeName} 恢復連線等了 {duration}，然後就停下來了。當時正在刪除 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "Cmdr 刪除 {fileName} 時，與 {volumeName} 的連線中斷了。",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "檢查一下伺服器有沒有開著、網路是否正常，然後再試一次。Cmdr 已經刪掉的檔案就找不回來了。",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr 等 {volumeName} 恢復連線等了 {duration}，然後就停下來了。當時正在建立 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "Cmdr 建立 {fileName} 時，與 {volumeName} 的連線中斷了。",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "檢查一下伺服器有沒有開著、網路是否正常，然後再試一次。",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr 等 {volumeName} 恢復連線等了 {duration}，然後就停下來了。當時正在更新 {fileName}。",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "Cmdr 更新 {fileName} 時，與 {volumeName} 的連線中斷了。",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "檢查一下伺服器有沒有開著、網路是否正常，然後再試一次。",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr 沒有動一個有更動的檔案",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "刪除過程中，與 {volumeName} 的連線中斷了。連線恢復後，{fileName} 已經不是 Cmdr 之前列出的那個檔案了，所以 Cmdr 沒有動它，並停了下來。",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "先看看那裡現在是什麼，如果還是想刪掉，就再刪除一次。Cmdr 在這之前刪掉的檔案就找不回來了。",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "已拒絕伺服器的回覆",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

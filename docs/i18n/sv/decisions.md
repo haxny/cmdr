@@ -229,8 +229,8 @@ catalog.
 - "all {countText} items" → `alla {countText} objekt` (a quantifier, no article), and `one` drops the number
   (`Raderade objektet som Cmdr hade skrivit`). `stoppedDeleting` says `där Cmdr lade dem` (it covers copy and compress),
   `stoppedMovingBack` `där flytten lade dem`.
-- `stagedLeftover.*` is Cmdr's own work file: `ofullständig kopia`, `rensar bort`, and `vid en senare överföring`, ❌
-  never "nästa gång": cleanup skips anything younger than an hour, so the next try may clear nothing.
+- `stagedLeftover.*` is Cmdr's own work file: `ofullständig kopia`, `rensar bort`, and the retry
+  `nästa gång Cmdr ansluter dit` (a reconnect or the next launch), never a time.
 
 ## Rename toasts: chained (`fileExplorer.rename.chainKeptOriginalNameAndOthers`, `fileOperations.validation.nameNotUsable`)
 

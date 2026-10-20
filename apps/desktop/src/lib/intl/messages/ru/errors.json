@@ -1381,6 +1381,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr ждал в течение {duration}, пока сервер {volumeName} снова появится в сети, а затем остановил удаление. В это время удалялся файл {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "Соединение с сервером {volumeName} прервалось, пока Cmdr удалял файл {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "Проверьте, что сервер включен и сеть работает, и попробуйте еще раз. Файлы, которые Cmdr уже удалил, вернуть нельзя.",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr ждал в течение {duration}, пока сервер {volumeName} снова появится в сети, а затем остановил создание архива. В это время создавался архив {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "Соединение с сервером {volumeName} прервалось, пока Cmdr создавал архив {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "Проверьте, что сервер включен и сеть работает, и попробуйте еще раз.",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr ждал в течение {duration}, пока сервер {volumeName} снова появится в сети, а затем остановил изменение архива. В это время обновлялся архив {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "Соединение с сервером {volumeName} прервалось, пока Cmdr обновлял архив {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Проверьте, что сервер включен и сеть работает, и попробуйте еще раз.",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr не тронул измененный файл",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "Во время удаления прервалось соединение: {volumeName}. Когда оно восстановилось, файл {fileName} оказался не тем, который Cmdr видел в списке, поэтому Cmdr не стал его трогать и остановился.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Посмотрите, что там сейчас, и удалите снова, если это все еще нужно. Файлы, которые Cmdr удалил до этого, вернуть нельзя.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "Ответ сервера отклонен",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

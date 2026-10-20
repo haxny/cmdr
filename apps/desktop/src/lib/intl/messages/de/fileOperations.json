@@ -1032,13 +1032,33 @@
   "@fileOperations.cancelRollback.reason.locked.counted": {
     "sourceHash": "4830a5e"
   },
-  "fileOperations.cancelRollback.stagedLeftover.named": "Cmdr konnte {name} nicht entfernen: eine unvollständige Kopie, die am Ziel geblieben ist. Du kannst sie gefahrlos löschen, und Cmdr räumt sie bei einer späteren Übertragung dorthin weg.",
+  "fileOperations.cancelRollback.stagedLeftover.named": "Cmdr konnte {name} nicht entfernen: eine unvollständige Kopie, die am Ziel geblieben ist. Du kannst sie gefahrlos löschen, und Cmdr versucht es erneut, wenn es sich das nächste Mal mit dem Ziel verbindet.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
-    "sourceHash": "d47b49d"
+    "sourceHash": "dbf80b7"
   },
-  "fileOperations.cancelRollback.stagedLeftover.counted": "Cmdr konnte {countText} unvollständige {count, plural, one {Kopie} other {Kopien}} nicht entfernen, die am Ziel geblieben sind. Du kannst sie gefahrlos löschen, und Cmdr räumt sie bei einer späteren Übertragung dorthin weg.",
+  "fileOperations.cancelRollback.stagedLeftover.counted": "Cmdr konnte {countText} unvollständige {count, plural, one {Kopie} other {Kopien}} nicht entfernen, die am Ziel geblieben sind. Du kannst sie gefahrlos löschen, und Cmdr versucht es erneut, wenn es sich das nächste Mal mit dem Ziel verbindet.",
   "@fileOperations.cancelRollback.stagedLeftover.counted": {
-    "sourceHash": "6567e25"
+    "sourceHash": "1f4dec3"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.named": "{name}, eine unvollständige Kopie, bleibt vorerst auf {volumeName}. Cmdr räumt sie weg, sobald {volumeName} wieder erreichbar ist.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.named": {
+    "sourceHash": "661c42a"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.counted": "{countText} unvollständige {count, plural, one {Kopie bleibt} other {Kopien bleiben}} vorerst auf {volumeName}. Cmdr räumt sie weg, sobald {volumeName} wieder erreichbar ist.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.counted": {
+    "sourceHash": "d360188"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.named": "{name} liegt vollständig auf {volumeName}, vorerst unter einem temporären Namen. Den richtigen Namen bekommt die Datei, wenn Cmdr sich das nächste Mal mit {volumeName} verbindet.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.named": {
+    "sourceHash": "ae7aea2"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.counted": "{countText} vollständige {count, plural, one {Datei wartet} other {Dateien warten}} auf {volumeName} unter temporären Namen. Jede bekommt ihren richtigen Namen, wenn Cmdr sich das nächste Mal mit {volumeName} verbindet.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.counted": {
+    "sourceHash": "eb3d194"
+  },
+  "fileOperations.leftovers.unfinishedLandingKept": "Cmdr hat auf {volumeName} eine unvollständige Kopie von {fileName} gefunden, die nicht die erwartete Größe hat. Deshalb hat Cmdr sie als {keptName} behalten, statt sie fertigzustellen.",
+  "@fileOperations.leftovers.unfinishedLandingKept": {
+    "sourceHash": "92ebd0a"
   },
   "fileOperations.leftovers.stagingFolderKept": "Cmdr hat auf {volumeName} Dateien aus einer nicht abgeschlossenen Bewegung gefunden und sie an ihrem Platz gelassen: in einem verborgenen Ordner namens {folderName}.",
   "@fileOperations.leftovers.stagingFolderKept": {

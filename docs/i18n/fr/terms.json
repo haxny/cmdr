@@ -824,7 +824,7 @@
     "sources": "MS terminology FRA (crash → incident); macOS AppKit AppKitErrors.json (a quitté inopinément)"
   },
   "create": {
-    "accept": ["crée", "créé", "création"],
+    "accept": ["crée", "créé", "créait", "création"],
     "chosen": "Créer",
     "confidence": "high",
     "forms": "progress Création du dossier / Création du fichier; active voice Cmdr le créera, never the passive sera créé",

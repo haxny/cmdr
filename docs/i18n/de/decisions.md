@@ -423,8 +423,7 @@ Deliberate splits (don't unify):
 ### `cancelRollback.stagedLeftover.*` (Cmdrs eigene Reste am Ziel)
 
 - Cmdr's own leftover, not the person's file, so `Cmdr räumt sie weg` rather than `löschen`.
-- `bei einer späteren Übertragung`, never „beim nächsten Mal“: cleanup skips anything under an hour old, so an immediate
-  retry clears nothing.
+- Retry: `wenn es sich das nächste Mal mit dem Ziel verbindet`, never a time.
 
 ## Der Block-Screen bei zu altem WebKit (`main.oldWebkit.*`)
 

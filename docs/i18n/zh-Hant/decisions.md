@@ -30,8 +30,8 @@ evidence of that weight.
   (`那個項目`): `全部 1 個` reads wrong.
 - The rest names its place (`複製過去的地方` / `移動過去的地方`): a bare "still there" reads as `原處`, the opposite.
   `leftBehind` repeats `會略過沒有把握的部分`.
-- `stagedLeftover.*`: `不完整副本`, cleared with `清掉` (Cmdr's own files, not the user's), and ❌ never `下次`: the
-  cleanup skips files under an hour old, so an immediate retry doesn't clear them.
+- `stagedLeftover.*`: `不完整副本`, cleared with `清掉` (Cmdr's own files, not the user's); the retry is
+  `下次連線到那裡時` (a reconnect or the next launch), never a time.
 - `in {folder}` is a trailing, unquoted `位於 {folder}` (as `downloads.toast.inSubdir`): it follows `reversalDeleting`,
   so preverbal `在…中` can't fit, and `位於` marks a place, not the target.
 

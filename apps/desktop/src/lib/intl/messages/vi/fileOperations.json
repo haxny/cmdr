@@ -1028,13 +1028,33 @@
   "@fileOperations.cancelRollback.reason.locked.counted": {
     "sourceHash": "4830a5e"
   },
-  "fileOperations.cancelRollback.stagedLeftover.named": "Không xóa được {name}, một bản sao chưa hoàn chỉnh còn lại ở đích. Bạn có thể xóa nó mà không mất gì, và Cmdr cũng sẽ dọn nó trong một lần truyền sau tới đó.",
+  "fileOperations.cancelRollback.stagedLeftover.named": "Không xóa được {name}, một bản sao chưa hoàn chỉnh còn lại ở đích. Bạn có thể xóa nó mà không mất gì, và Cmdr sẽ thử lại vào lần kết nối tới đó tiếp theo.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
-    "sourceHash": "d47b49d"
+    "sourceHash": "dbf80b7"
   },
-  "fileOperations.cancelRollback.stagedLeftover.counted": "Không xóa được {countText} {count, plural, other {bản sao}} chưa hoàn chỉnh còn lại ở đích. Bạn có thể xóa chúng mà không mất gì, và Cmdr cũng sẽ dọn chúng trong một lần truyền sau tới đó.",
+  "fileOperations.cancelRollback.stagedLeftover.counted": "Không xóa được {countText} {count, plural, other {bản sao}} chưa hoàn chỉnh còn lại ở đích. Bạn có thể xóa chúng mà không mất gì, và Cmdr sẽ thử lại vào lần kết nối tới đó tiếp theo.",
   "@fileOperations.cancelRollback.stagedLeftover.counted": {
-    "sourceHash": "6567e25"
+    "sourceHash": "1f4dec3"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.named": "{name}, một bản sao chưa hoàn chỉnh, tạm thời vẫn nằm trên {volumeName}. Cmdr sẽ dọn nó ngay khi {volumeName} kết nối lại.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.named": {
+    "sourceHash": "661c42a"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.counted": "{countText} {count, plural, other {bản sao}} chưa hoàn chỉnh tạm thời vẫn nằm trên {volumeName}. Cmdr sẽ dọn chúng ngay khi {volumeName} kết nối lại.",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.counted": {
+    "sourceHash": "d360188"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.named": "{name} đã có đầy đủ trên {volumeName} nhưng đang mang tên tạm, và sẽ được đặt đúng tên vào lần tới Cmdr kết nối với {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.named": {
+    "sourceHash": "ae7aea2"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.counted": "{countText} {count, plural, other {tệp}} đã hoàn chỉnh đang chờ trên {volumeName} với tên tạm. Mỗi tệp sẽ được đặt đúng tên vào lần tới Cmdr kết nối với {volumeName}.",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.counted": {
+    "sourceHash": "eb3d194"
+  },
+  "fileOperations.leftovers.unfinishedLandingKept": "Cmdr tìm thấy trên {volumeName} một bản sao chưa hoàn chỉnh của {fileName} có kích cỡ không đúng như mong đợi, nên Cmdr giữ nó lại với tên {keptName} thay vì làm cho xong.",
+  "@fileOperations.leftovers.unfinishedLandingKept": {
+    "sourceHash": "92ebd0a"
   },
   "fileOperations.leftovers.stagingFolderKept": "Cmdr tìm thấy các tệp từ một lần di chuyển chưa hoàn tất trên {volumeName} và giữ nguyên chúng ở đó, trong một thư mục ẩn có tên {folderName}.",
   "@fileOperations.leftovers.stagingFolderKept": {

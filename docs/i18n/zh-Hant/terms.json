@@ -3681,6 +3681,13 @@
     "decision": "Android pane",
     "sources": "AOSP zh-rTW throughout"
   },
+  "temporary": {
+    "accept": ["暫存", "臨時", "一時"],
+    "chosen": "暫時",
+    "confidence": "tentative",
+    "forms": "a temporary name → 暫時的名稱 (as the rename cycle note); temporary files → 暫存檔案 (settings.advanced.showStagingTempFiles.label); a passing glitch → 一時",
+    "sources": "catalog 暫時 10 / 暫存 4 / 臨時 2; zh-TW pile (DC, TC) uses 暫存 for temp files and never 臨時; macOS loctables not greppable"
+  },
   "terminal": {
     "chosen": "終端機",
     "confidence": "high",

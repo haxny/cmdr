@@ -1381,6 +1381,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr ha esperado {duration} a que {volumeName} volviera y luego ha detenido la eliminación. Estaba eliminando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "Se ha cortado la conexión con {volumeName} mientras Cmdr eliminaba {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "Comprueba que el servidor esté encendido y que tu red funcione, y vuelve a intentarlo. Los archivos que Cmdr ha eliminado hasta ahora ya no están.",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr ha esperado {duration} a que {volumeName} volviera y luego ha detenido la compresión. Estaba creando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "Se ha cortado la conexión con {volumeName} mientras Cmdr creaba {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "Comprueba que el servidor esté encendido y que tu red funcione, y vuelve a intentarlo.",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr ha esperado {duration} a que {volumeName} volviera y luego ha detenido la edición. Estaba actualizando {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "Se ha cortado la conexión con {volumeName} mientras Cmdr actualizaba {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Comprueba que el servidor esté encendido y que tu red funcione, y vuelve a intentarlo.",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr no ha tocado un archivo que había cambiado",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "Se ha cortado la conexión con {volumeName} durante la eliminación. Cuando volvió, {fileName} ya no era el archivo que Cmdr tenía en la lista, así que Cmdr lo ha dejado como estaba y se ha detenido.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Revisa lo que hay ahora y vuelve a eliminarlo si aún quieres que desaparezca. Los archivos que Cmdr ha eliminado antes ya no están.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "Respuesta del servidor rechazada",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

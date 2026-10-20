@@ -1381,6 +1381,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr väntade i {duration} på att {volumeName} skulle komma tillbaka och stoppade sedan. Cmdr höll på att radera {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "Anslutningen till {volumeName} bröts medan Cmdr raderade {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "Kontrollera att servern är igång och att ditt nätverk fungerar, och försök sedan igen. Filer som Cmdr redan har raderat är borta.",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr väntade i {duration} på att {volumeName} skulle komma tillbaka och stoppade sedan. Cmdr höll på att skapa {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "Anslutningen till {volumeName} bröts medan Cmdr skapade {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "Kontrollera att servern är igång och att ditt nätverk fungerar, och försök sedan igen.",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr väntade i {duration} på att {volumeName} skulle komma tillbaka och stoppade sedan. Cmdr höll på att uppdatera {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "Anslutningen till {volumeName} bröts medan Cmdr uppdaterade {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Kontrollera att servern är igång och att ditt nätverk fungerar, och försök sedan igen.",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr lät en ändrad fil vara",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "Anslutningen till {volumeName} bröts under raderingen. När den kom tillbaka var {fileName} inte längre filen som Cmdr hade listat, så Cmdr lät filen vara och stoppade.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Kolla vad som finns där nu och radera igen om det fortfarande ska bort. Filer som Cmdr raderade innan dess är borta.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "Cmdr avvisade serverns svar",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

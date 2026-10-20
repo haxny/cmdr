@@ -268,10 +268,9 @@ Finder's sidebar is `боковое меню`, so the Ask Cmdr side panel is `б
 `Без изменений: {name}. Объект изменился…` contradicts itself, and `пропустить` is held for skip. Say
 `Оставлено как есть: {name}.`, then the reason; a folder names its head noun (`Папка {name} оставлена как есть.`).
 
-## Staged leftovers: a later transfer, not the next (`fileOperations.cancelRollback.stagedLeftover.*`)
+## Staged leftovers: retry on the next connection (`fileOperations.cancelRollback.stagedLeftover.*`)
 
-`Cmdr уберет ее позже, при одной из следующих передач сюда` over `при следующей передаче`: cleanup skips files under an
-hour old, so "the next one" overclaims.
+`попробует еще раз, когда в следующий раз подключится туда`, never a time; `туда` also replaces `к тому {volumeName}`.
 
 ## Trash refusals don't say часть (`errors.write.trashRefused.message.*`)
 

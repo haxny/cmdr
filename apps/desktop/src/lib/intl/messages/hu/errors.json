@@ -1381,6 +1381,54 @@
   "@errors.write.serverConnectionLost.suggestion.move": {
     "sourceHash": "fc87dc3"
   },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "A Cmdr arra várt, hogy {volumeName} újra elérhető legyen, de {duration} után leállt. Épp ezt a fájlt törölte: {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "Megszakadt a kapcsolat ezzel a szerverrel: {volumeName}. A Cmdr épp ezt a fájlt törölte: {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "Ellenőrizd, hogy be van-e kapcsolva a szerver, és működik-e a hálózatod, majd próbáld újra. A fájlok, amelyeket a Cmdr addig törölt, már nincsenek meg.",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "A Cmdr arra várt, hogy {volumeName} újra elérhető legyen, de {duration} után leállt. Épp ennek az archívumnak a létrehozásán dolgozott: {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "Megszakadt a kapcsolat ezzel a szerverrel: {volumeName}. A Cmdr épp ennek az archívumnak a létrehozásán dolgozott: {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "Ellenőrizd, hogy be van-e kapcsolva a szerver, és működik-e a hálózatod, majd próbáld újra.",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "A Cmdr arra várt, hogy {volumeName} újra elérhető legyen, de {duration} után leállt. Épp ezt az archívumot frissítette: {fileName}.",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "Megszakadt a kapcsolat ezzel a szerverrel: {volumeName}. A Cmdr épp ezt az archívumot frissítette: {fileName}.",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Ellenőrizd, hogy be van-e kapcsolva a szerver, és működik-e a hálózatod, majd próbáld újra.",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "A Cmdr nem nyúlt egy módosult fájlhoz",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "Törlés közben megszakadt a kapcsolat: {volumeName}. Amikor helyreállt, ez a fájl már nem az volt, amelyet a Cmdr korábban listázott: {fileName}. Ezért a Cmdr nem nyúlt hozzá, és leállt.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Nézd meg, mi van most ott, és ha még mindig nem kell, töröld újra. A fájlok, amelyeket a Cmdr előtte törölt, már nincsenek meg.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
   "errors.write.replySignatureRefused.title": "Elutasított szerverválasz",
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"

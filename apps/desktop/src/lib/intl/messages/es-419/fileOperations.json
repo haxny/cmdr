@@ -191,13 +191,17 @@
   "@fileOperations.cancelRollback.reason.failed.counted": {
     "sourceHash": "96484fb"
   },
-  "fileOperations.cancelRollback.stagedLeftover.named": "Cmdr no pudo eliminar {name}, una copia parcial que se quedó en el destino. Puedes borrarla sin problema, y Cmdr la eliminará en una transferencia posterior a ese lugar.",
+  "fileOperations.cancelRollback.stagedLeftover.named": "Cmdr no pudo eliminar {name}, una copia parcial que se quedó en el destino. Puedes borrarla sin problema, y Cmdr lo volverá a intentar la próxima vez que se conecte a ese lugar.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
-    "sourceHash": "f689952"
+    "sourceHash": "f06c777"
   },
-  "fileOperations.cancelRollback.stagedLeftover.counted": "Cmdr no pudo eliminar {countText} {count, plural, one {copia parcial que se quedó} many {copias parciales que se quedaron} other {copias parciales que se quedaron}} en el destino. Puedes borrarlas sin problema, y Cmdr las eliminará en una transferencia posterior a ese lugar.",
+  "fileOperations.cancelRollback.stagedLeftover.counted": "Cmdr no pudo eliminar {countText} {count, plural, one {copia parcial que se quedó} many {copias parciales que se quedaron} other {copias parciales que se quedaron}} en el destino. Puedes borrarlas sin problema, y Cmdr lo volverá a intentar la próxima vez que se conecte a ese lugar.",
   "@fileOperations.cancelRollback.stagedLeftover.counted": {
-    "sourceHash": "7b9ee0d"
+    "sourceHash": "63ce639"
+  },
+  "fileOperations.leftovers.unfinishedLandingKept": "Cmdr encontró en {volumeName} una copia sin terminar de {fileName} que no tiene el tamaño que debería, así que la conservó como {keptName} en lugar de terminarla.",
+  "@fileOperations.leftovers.unfinishedLandingKept": {
+    "sourceHash": "b1ada7c"
   },
   "fileOperations.leftovers.stagingFolderKept": "Cmdr encontró archivos de un movimiento sin terminar en {volumeName} y los conservó donde estaban, en una carpeta oculta llamada {folderName}.",
   "@fileOperations.leftovers.stagingFolderKept": {

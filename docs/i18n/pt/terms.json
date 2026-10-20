@@ -462,11 +462,7 @@
     ],
     "confidence": "tentative",
     "sources": "MS pt-BR (Clean Up → Limpar); Finder AR5 (Cleaning up → Organizando) rejected as another sense; shipped pt catalog",
-    "note": "Tentative only because Finder's own Cleaning up step words it differently.",
-    "exceptions": {
-      "fileOperations.cancelRollback.stagedLeftover.named": "names one leftover the user may delete too, so Cmdr removing it is plain apagar",
-      "fileOperations.cancelRollback.stagedLeftover.counted": "names leftovers the user may delete too, so Cmdr removing them is plain apagar"
-    }
+    "note": "Tentative only because Finder's own Cleaning up step words it differently."
   },
   "clear": {
     "chosen": "Limpar",
