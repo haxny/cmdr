@@ -109,7 +109,11 @@ describe('getTechnicalDetails: variants with their own lines', () => {
   })
 
   it('names the mount point a delete refused to reach into', () => {
-    const error: WriteOperationError = { type: 'mounted_volume_inside', mountPoint: '/Users/me/mnt/nas' }
+    const error: WriteOperationError = {
+      type: 'mounted_volume_inside',
+      mountPoint: '/Users/me/mnt/nas',
+      action: 'delete',
+    }
 
     expect(getTechnicalDetails(error)).toBe('Mount point: /Users/me/mnt/nas\nError type: mounted_volume_inside')
   })
