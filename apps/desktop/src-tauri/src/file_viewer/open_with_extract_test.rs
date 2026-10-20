@@ -428,6 +428,33 @@ fn a_changed_copy_the_trash_refuses_stays_where_it_is() {
     assert_eq!(std::fs::read(&copy).expect("still there"), b"my edits");
 }
 
+/// An atomic save that keeps the size and puts the old mtime back (`rsync -t`, a tool
+/// that preserves times) still lands a new file, so the copy counts as changed.
+#[test]
+fn a_same_size_save_that_keeps_the_mtime_still_counts_as_changed() {
+    ensure_root_volume();
+    let src = tempfile::tempdir().expect("src dir");
+    let zip = src.path().join("bundle.zip");
+    build_zip(&zip, &[("notes.txt", b"as pulled")]);
+    let dir = tempfile::tempdir().expect("open-with dir");
+    let copy = pull(&zip, "notes.txt", dir.path());
+    let pulled_mtime = std::fs::metadata(&copy).expect("meta").modified().expect("mtime");
+    save_over(&copy, b"my edits!");
+    std::fs::File::options()
+        .write(true)
+        .open(&copy)
+        .and_then(|file| file.set_modified(pulled_mtime))
+        .expect("put the mtime back");
+    let trash = tempfile::tempdir().expect("trash");
+
+    reap_open_with_temps_with(dir.path(), &into(trash.path()));
+
+    assert_eq!(
+        std::fs::read(trash.path().join("notes.txt")).expect("kept"),
+        b"my edits!"
+    );
+}
+
 /// No app ever opens the first row's copy when a later row's pull fails, so it goes
 /// right away instead of waiting out the session.
 #[test]

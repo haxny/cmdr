@@ -6,10 +6,12 @@
 //! once it's provably as pulled:
 //!
 //! - **Each pull leaves a record** ([`record_pull`]): a small sidecar in its launch
-//!   folder naming the file and its size and mtime right after the pull.
+//!   folder naming the file and its size, mtime, and inode right after the pull.
 //! - **A copy is untouched** when its folder holds exactly that file and the record, and
-//!   the file's size and mtime still match. Anything else (an edit, a second file, no
-//!   record at all) counts as changed.
+//!   the file's size, mtime, and inode still match. Anything else (an edit, a second
+//!   file, no record at all) counts as changed. The inode catches an atomic save that
+//!   keeps the size and puts the old mtime back; ❌ not ctime, which any metadata change
+//!   (a mode or an xattr) bumps on a copy whose content nobody changed.
 //! - **The startup reaper** ([`reap_launch_folders`]) removes an untouched copy and moves
 //!   everything in a changed one to the Trash, under its own name, logging at `warn`.
 //!   When the Trash refuses an item, the folder stays for the next launch: ❌ never a
@@ -21,8 +23,10 @@
 //!   still showing it, so an open-file check answers "free" for a copy on screen, and
 //!   removing a file an app does hold open is harmless (its inode lives until closed).
 //!   Unchanged, past the newest few, and old or over budget is what makes a copy safe
-//!   to take.
+//!   to take. Each copy is checked again right before it goes, so an app saving while
+//!   the sweep sorts can't slip in between the check and the removal.
 
+use std::os::unix::fs::MetadataExt as _;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -40,6 +44,9 @@ struct PullRecord {
     file_name: String,
     size: u64,
     modified: FileTime,
+    /// The copy's inode: an atomic save lands a new file, whatever size and mtime it
+    /// carries.
+    inode: u64,
     /// When the pull finished, which orders copies newest-first for the session sweep.
     pulled_at: FileTime,
 }
@@ -80,6 +87,7 @@ pub(super) fn record_pull(copy: &Path) {
             file_name,
             size: meta.len(),
             modified,
+            inode: meta.ino(),
             pulled_at: FileTime::of(SystemTime::now()).ok_or("no clock")?,
         };
         let json = serde_json::to_vec(&record).map_err(|e| e.to_string())?;
@@ -105,6 +113,7 @@ fn untouched_record(folder: &Path) -> Option<PullRecord> {
     let meta = std::fs::symlink_metadata(folder.join(&record.file_name)).ok()?;
     let as_pulled = meta.is_file()
         && meta.len() == record.size
+        && meta.ino() == record.inode
         && meta.modified().ok().and_then(FileTime::of) == Some(record.modified);
     (only_the_pull && as_pulled).then_some(record)
 }
@@ -206,6 +215,10 @@ pub(super) fn sweep_launch_folders(
         let over_budget = kept_bytes.saturating_add(record.size) > policy.budget_bytes;
         if index < policy.keep_newest || (age < policy.max_age && !over_budget) {
             kept_bytes = kept_bytes.saturating_add(record.size);
+            continue;
+        }
+        // The sort above took a while on a big dir; an app may have saved since.
+        if untouched_record(&folder).is_none() {
             continue;
         }
         if let Err(e) = std::fs::remove_dir_all(&folder) {

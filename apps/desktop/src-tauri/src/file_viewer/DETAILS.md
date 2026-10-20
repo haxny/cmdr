@@ -415,11 +415,14 @@ the reasons; the shape:
 - **A changed copy goes to the Trash, ❌ never away** (`open_with_copies.rs`). Gotcha/Why: `0o444` guards the file,
   not its folder, so an atomic save (vim `:w!`, BBEdit's safe save) replaces the copy and "Save a copy" lands beside it;
   the reaper used to remove those with the rest, content that existed nowhere else. Each pull writes a
-  `.cmdr-open-with-pull.json` record (file name, size, mtime) after `make_read_only` (a mode change moves ctime only).
-  At startup, a folder holding exactly that file and record, with size and mtime unchanged, is removed; any other
+  `.cmdr-open-with-pull.json` record (file name, size, mtime, inode) after `make_read_only` (a mode change moves ctime
+  only). The inode catches a save that keeps the size and restores the mtime. At startup, a folder holding exactly that
+  file and record, with all three unchanged, is removed; any other
   folder (an edit, a second file, no record) has every entry but the record moved to the Trash under its own name
   (`cmdr_operations::move_to_trash_sync`, unjournaled: no undo should list Cmdr's leftovers), logged at `warn`. An
-  entry the Trash refuses keeps its folder for the next launch. The stand-ins' folder goes outright.
+  entry the Trash refuses keeps its folder for the next launch. The stand-ins' folder goes outright. Decision/Why: a
+  record-less folder goes to the Trash too, which includes every copy a build without records left, once: nothing can
+  tell such a copy untouched (the archive it came from isn't recorded), and a cluttered Trash beats a lost edit.
 - **The launch says it's a copy.** After `open_paths_with` succeeds, `launch_with` emits `OpenWithCopyLaunched` (the
   first copy's name, the copy count, the app) and the main window shows `fileExplorer.openWith.readOnlyCopy` as an info
   toast: changes saved there won't reach the original.

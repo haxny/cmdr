@@ -1027,8 +1027,9 @@ Who may change an allowlist, and when. The short form is in `AGENTS.md` § Hard 
   `desktop-i18n-doc-citations` (connect the orphan, or repoint the citation).
 - **Three carve-outs**: an i18n `decisionsBytes` budget rises when new rulings need room (distill first);
   `invariant-density` is mothballed (no lane runs it, its allowlist is hand-bumpable); an `index-crate-isolation`
-  ceiling rises when the wider surface is genuinely better, said in `handle/DETAILS.md` and the commit, ❌ never merely
-  to pass.
+  ceiling rises when the wider surface is genuinely better, said in the crate's root `DETAILS.md` (its capped-surface
+  section, for example `crates/cmdr-operations/DETAILS.md` § "The public surface is capped") and the commit, ❌ never
+  merely to pass.
 
 ## svelte-tests coverage isolation
 
