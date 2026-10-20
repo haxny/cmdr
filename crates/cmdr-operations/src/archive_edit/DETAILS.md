@@ -92,9 +92,10 @@ The remote ORIGINAL is byte-for-byte untouched until the very last swap:
    `NewDataKeptAt`, the original staying aside. RECOVERY: the start of the next remote edit in that folder
    (`reap_remote_temps`'s listing) runs `restore_orphaned_asides`, which renames an aside back when its original's name
    is empty and NEVER deletes one: beside a taken name it's an old version, left visible for a person. It skips an aside
-   a live operation holds and one whose name may have been shortened to fit (it no longer says the original's name).
-   Known gap: nothing restores on OPEN, so until another zip in the folder is edited the user sees the aside, not the
-   archive.
+   a live operation holds, one whose name may have been shortened to fit (it no longer says the original's name), and
+   every aside of an original more than one claims (two crashed swaps with no edit in the folder between: no name says
+   which is newer, so a person picks). Known gap: nothing restores on OPEN, so until another zip in the folder is edited
+   the user sees the aside, not the archive.
 
 A cancel at ANY point before the swap completes leaves the remote original intact (the local scratch dir and any partial
 remote temp are cleaned up — a RAII `ScratchDir` and the upload's on-error delete). Pinned by `remote_tests`

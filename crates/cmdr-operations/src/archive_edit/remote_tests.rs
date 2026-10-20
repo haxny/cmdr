@@ -600,6 +600,37 @@ async fn a_crash_after_any_step_of_the_swap_loses_no_archive() {
     }
 }
 
+/// Two crashed swaps of one archive, with no edit in that folder between them,
+/// leave two asides claiming the same empty name: an older version and a newer
+/// one. Nothing in a name says which is which, so neither goes back; both stay
+/// visible for a person to choose.
+#[tokio::test]
+async fn two_asides_claiming_one_empty_name_both_stay_put() {
+    let sibling = PathBuf::from("/device/other.zip");
+    let inner = remote_parent_with_zip(&sibling, &build_zip(&[("other.txt", b"other")])).await;
+    let older = PathBuf::from("/device/bundle.zip.cmdr-temp-00000000-0000-4000-8000-000000000001");
+    let newer = PathBuf::from("/device/bundle.zip.cmdr-temp-ffffffff-0000-4000-8000-000000000002");
+    inner
+        .create_file(&older, &build_zip(&[("v.txt", b"older")]))
+        .await
+        .expect("seed the older aside");
+    inner
+        .create_file(&newer, &build_zip(&[("v.txt", b"newer")]))
+        .await
+        .expect("seed the newer aside");
+
+    assert!(add_edit(inner.clone() as Arc<dyn Volume>, sibling).await.is_ok());
+
+    assert!(
+        !inner.exists(Path::new("/device/bundle.zip")).await,
+        "an ambiguous pair must not pick a version for the name"
+    );
+    assert!(
+        inner.exists(&older).await && inner.exists(&newer).await,
+        "both asides stay"
+    );
+}
+
 /// Only an aside whose name still says its original's name whole is put back:
 /// a user's file that merely contains the marker, or a name shortened to fit,
 /// stays where it is.

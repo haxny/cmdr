@@ -37,7 +37,7 @@
 //! intact (the local temp and any partial remote temp are cleaned up). Pinned by
 //! `remote_tests`.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -475,24 +475,34 @@ const ASIDE_NAME_SLACK_BYTES: usize = 32;
 /// where it is, visible, for a person to decide about.
 ///
 /// Skipped too: an aside a live operation in this process holds (the pane
-/// hides those), and one whose name may have been shortened to fit, which no
-/// longer says the original's name. Both stay visible.
+/// hides those), one whose name may have been shortened to fit, which no
+/// longer says the original's name, and every aside of an original that more
+/// than one claims (two crashed swaps with no edit in the folder between
+/// them): nothing in the names says which is the newer version. All stay
+/// visible.
 ///
 /// A swap by ANOTHER Cmdr instance, caught between its move aside and its
 /// landing, would get its original put back. That costs no data: its landing
 /// then finds the name taken, and it rescues its edit to a ` (recovered)` name.
 async fn restore_orphaned_asides(parent: &dyn Volume, dir: &Path, entries: &[FileEntry]) {
     let taken: HashSet<&str> = entries.iter().map(|entry| entry.name.as_str()).collect();
-    for entry in entries {
-        if entry.is_directory || is_staging_temp_in_flight(&entry.name) {
-            continue;
-        }
-        let Some(original) = aside_original_name(&entry.name) else {
-            continue;
-        };
-        let aside = dir.join(&entry.name);
+    let asides: Vec<(&str, &str)> = entries
+        .iter()
+        .filter(|entry| !entry.is_directory && !is_staging_temp_in_flight(&entry.name))
+        .filter_map(|entry| aside_original_name(&entry.name).map(|original| (entry.name.as_str(), original)))
+        .collect();
+    let mut claims: HashMap<&str, usize> = HashMap::new();
+    for (_, original) in &asides {
+        *claims.entry(original).or_default() += 1;
+    }
+    for (name, original) in asides {
+        let aside = dir.join(name);
         if taken.contains(original) {
             log::info!(target: "archive_remote_edit", "keeping {}: {original} is there too, so it's an old version, not a lost one", aside.display());
+            continue;
+        }
+        if claims[original] > 1 {
+            log::info!(target: "archive_remote_edit", "keeping {}: more than one old version of {original} is aside, so a person picks", aside.display());
             continue;
         }
         match parent.rename(&aside, &dir.join(original), false).await {
