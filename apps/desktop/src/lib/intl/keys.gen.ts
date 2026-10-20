@@ -4538,6 +4538,7 @@ export type MessageKey =
   | 'stateRecovery.multiRenameFieldHistory.title'
   | 'stateRecovery.multiRenameLastSettings.title'
   | 'stateRecovery.multiRenamePresets.title'
+  | 'stateRecovery.nfsPlaces.title'
   | 'stateRecovery.operationLog.title'
   | 'stateRecovery.s3Places.title'
   | 'stateRecovery.searchHistory.title'

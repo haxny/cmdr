@@ -112,7 +112,9 @@ commands, and notable non-obvious placements.
   ask once their scan preview settles (`apps/desktop/src-tauri/src/s3_costs/DETAILS.md`).
 - **`nfs.ts`**: NFS servers minus everything the servers family already speaks: the add form's two questions before a
   place exists, `listNfsExports` (with a typed `listing_refused`, since a typed export may still mount) and
-  `guessNfsIdentity` (always answers, falling back to this Mac's ids). The model: `crates/cmdr-nfs/DETAILS.md`.
+  `guessNfsIdentity` (always answers, falling back to this Mac's ids), plus `knownNfsPlaceOf`, the saved place's uid,
+  gid, and start folder an edit form prefills from (by the backend's `volumeId`). The model:
+  `crates/cmdr-nfs/DETAILS.md`.
 - **`licensing.ts`**: license status, activation, expiry, server validation.
 - **`settings.ts`**: port checking, file watcher debounce, indexing toggle, MCP server control, AI subsystem commands.
   `cloudAiHostVerdicts(baseUrls)` answers each URL with the policy's own `ManagedAiRefusal | null` (local, no request).

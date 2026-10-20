@@ -4661,6 +4661,11 @@ export const commands = {
   guessNfsIdentity: (host: string, port: number | null, exportPath: string) =>
     __TAURI_INVOKE<GuessedNfsIdentity>('guess_nfs_identity', { host, port, exportPath }),
   /**
+   *  Every NFS place the user has saved, for an edit sheet that has to show (and
+   *  resend) the uid, gid, and start folder the servers listing doesn't carry.
+   */
+  getKnownNfsPlaces: () => __TAURI_INVOKE<SavedNfsPlace[]>('get_known_nfs_places'),
+  /**
    *  Every server the user has saved, across all three stores.
    *
    *  ❗ Cached state only, ❌ never the wire: the hub re-reads this on every
@@ -14864,6 +14869,40 @@ export type SavedAs =
   | { kind: 'sourceEncoding'; encoding: FileEncoding }
 
 /**
+ *  One saved NFS place as the edit sheet reads it: the stored entry plus the
+ *  volume id its row and its switcher entry carry, so a caller matches by id
+ *  rather than re-deriving one.
+ */
+export type SavedNfsPlace = {
+  // The place's volume id (`cmdr_fs::volume::nfs_volume_id`).
+  volumeId: string
+  // The server, as the person typed it.
+  host: string
+  // The NFS port the address named, or `null` for the portmapper's.
+  port: number | null
+  // The export, canonical (`/volume1/data`).
+  export: string
+  // The user id every request acts as.
+  uid: number
+  // The group id every request acts as.
+  gid: number
+  /**
+   *  The name a person gave its SERVER, empty when nobody did. ❗ The
+   *  server's, ❌ never the place's: an export reads as its own path.
+   */
+  displayName: string
+  /**
+   *  Where a pane lands when the place is opened, export-relative, or `null`
+   *  for the export's root.
+   */
+  startFolder: string | null
+  // The place's "Reconnect automatically" switch.
+  autoReconnect: boolean
+  // Whether it shows in the volume switcher.
+  pinned: boolean
+}
+
+/**
  *  One mountable thing under an account: an SFTP or WebDAV root, later an S3
  *  bucket or a shared drive. What a tab, a favorite, and a path point at.
  */
@@ -17136,6 +17175,8 @@ export type StateFile =
   | 'launch_days'
   // `s3_known_places.json`: saved S3 accounts and bucket places.
   | 's3_places'
+  // `nfs_known_places.json`: saved NFS servers and export places.
+  | 'nfs_places'
   // `known-sftp-servers.json`.
   | 'sftp_servers'
   // `webdav_known_servers.json`.

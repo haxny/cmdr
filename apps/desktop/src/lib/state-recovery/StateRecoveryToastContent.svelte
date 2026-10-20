@@ -44,6 +44,7 @@
         multi_rename_field_history: () => tString('stateRecovery.multiRenameFieldHistory.title'),
         launch_days: () => tString('stateRecovery.launchDays.title'),
         s3_places: () => tString('stateRecovery.s3Places.title'),
+        nfs_places: () => tString('stateRecovery.nfsPlaces.title'),
         sftp_servers: () => tString('stateRecovery.sftpServers.title'),
         webdav_servers: () => tString('stateRecovery.webdavServers.title'),
         smb_shares: () => tString('stateRecovery.smbShares.title'),

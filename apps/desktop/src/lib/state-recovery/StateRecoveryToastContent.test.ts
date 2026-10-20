@@ -100,6 +100,7 @@ describe('every other file', () => {
     'multi_rename_field_history',
     'launch_days',
     's3_places',
+    'nfs_places',
     'sftp_servers',
     'webdav_servers',
     'smb_shares',

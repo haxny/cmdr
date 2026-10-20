@@ -75,6 +75,10 @@
   "@stateRecovery.s3Places.title": {
     "description": "Headline of a notice shown once: the file holding the person's saved S3 cloud storage accounts and bucket places couldn't be read, either the whole file or only some entries in it (for example ones saved by a newer Cmdr version), so some or all of them are missing from the list now. Passwords and keys are safe; they're stored elsewhere. \"S3\" is a technical name for this kind of cloud storage and stays as is. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
   },
+  "stateRecovery.nfsPlaces.title": "Cmdr couldn’t read all your saved NFS places, so some may be missing",
+  "@stateRecovery.nfsPlaces.title": {
+    "description": "Headline of a notice shown once: the file holding the person's saved NFS servers and their shared folders (exports) couldn't be read, either the whole file or only some entries in it (for example ones saved by a newer Cmdr version), so some or all of them are missing from the list now. \"NFS\" is a technical name for this kind of network file sharing and stays as is. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
   "stateRecovery.sftpServers.title": "Cmdr couldn’t read all your saved SFTP servers, so some may be missing",
   "@stateRecovery.sftpServers.title": {
     "description": "Headline of a notice shown once: the file holding the person's saved SFTP servers couldn't be read, either the whole file or only some entries in it (for example ones saved by a newer Cmdr version), so some or all of them are missing from the list now. Passwords are safe; they're stored elsewhere. \"SFTP\" is a protocol name and stays as is. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."

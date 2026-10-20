@@ -1094,8 +1094,8 @@ export type {
 
 // NFS servers: what the add form asks before a place exists. Everything else goes
 // through the protocol-agnostic servers family above.
-export { listNfsExports, guessNfsIdentity } from './nfs'
-export type { GuessedNfsIdentity, NfsExportList, NfsIdentitySourceWire } from './nfs'
+export { listNfsExports, guessNfsIdentity, knownNfsPlaceOf } from './nfs'
+export type { GuessedNfsIdentity, NfsExportList, NfsIdentitySourceWire, SavedNfsPlace } from './nfs'
 
 export { confirmWithCheckbox } from './confirm-dialog'
 
