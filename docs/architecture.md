@@ -514,10 +514,12 @@ at the numbers their audits landed on. The two dev CLIs and the vendored fork ar
   half (the route, the `.git/` listing overlay, the toggle, the `git-state-changed` event) is
   `apps/desktop/src-tauri/src/file_system/git/`. Where the boundary runs, the capped surface, and every decision:
   `crates/cmdr-git/DETAILS.md`; guardrails: `crates/cmdr-git/CLAUDE.md`
-- `crates/cmdr-restic/`: reading a restic backup repository wherever it lives (#422). `rustic_core` over a read-only
-  storage adapter that reads the repo through its parent `Volume` (ranged reads for pack files, every write refused),
-  repo detection from a listing, unlock with typed wrong-password, and the snapshot list with its folder names (`latest`
-  included). The virtual tree, routing, and unlock UI build on it. See `crates/cmdr-restic/CLAUDE.md`
+- `crates/cmdr-restic/`: browsing a restic backup repository wherever it lives (#422). `ResticVolume`, the read-only
+  view of a repo's snapshots at `<repo>/Browse snapshots`, over a parked hub that holds passwords, indexes, and which
+  folders are repos; `rustic_core` reads the repo through its parent `Volume`, every write refused. The app-side half
+  (the route, the `Browse snapshots` listing overlay, the write guards) is
+  `apps/desktop/src-tauri/src/file_system/restic/`; the pane kind and index progress are
+  `apps/desktop/src/lib/file-explorer/restic/`. Guardrails: `crates/cmdr-restic/CLAUDE.md`
 - `crates/cmdr-smb/`: everything Cmdr says to an SMB server. `SmbVolume` over a live smb2 session, with its change
   watcher, reconnect state machine, and refcounted scan-connection pool, plus the protocol layer under it (address
   building, `smb2::Error` classification, the share-listing vocabulary). The second backend in its own crate; what

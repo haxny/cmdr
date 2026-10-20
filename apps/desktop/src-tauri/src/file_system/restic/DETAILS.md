@@ -51,7 +51,9 @@ the passwords, opened repos, and indexes, so eviction never drops an index or fo
 
 `VolumeManager`'s callers (copy, move, delete, trash, rename, create, bulk rename, rename-as-move) refuse through
 `resolve` plus `RoutedKind::takes_writes` / `can_give_up_files`: a restic route takes no writes, and a move out of one
-is refused before anything is copied, like git's. Two seams bypass `resolve` and ask here, each CONFIRMED (❌ never the
+is refused before anything is copied, like git's. When the confirm can't decide (the repo folder's listing failed or
+outran its deadline), `resolve` answers an UNDECIDED passthrough and those write gates refuse on it too
+(`file_system/volume/DETAILS.md` § "Resolving a path: the three routes"). Two seams bypass `resolve` and ask here, each CONFIRMED (❌ never the
 permissive path predicate, which would refuse a copy into a real folder named `Browse snapshots`):
 
 - **The local write fast path** (`commands/file_system/write_ops.rs` `reject_if_routed_over_a_parent`) has paths with

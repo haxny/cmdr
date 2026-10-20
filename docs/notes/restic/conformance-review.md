@@ -195,7 +195,7 @@ readers after a short idle (seconds), independent of the index.
 `repo.rs:46-49` and `:202-205`, `index_load.rs:357-360`: `Unreadable { detail }` (rustic's `display_log`) and "the
 blocking worker stopped: …" / "an index read stopped: …" become `VolumeError::IoError { message }`. They're diagnostics,
 not copy, but `IoError.message` is what the frontend's technical-details line shows. Rule 3 asks for typed answers; fine
-if the frontend never renders `message` outside technical details, worth a check in milestone 7.
+if the frontend never renders `message` outside technical details, worth a check in the frontend.
 
 - **Status**: Not changed. `IoError.message` is the technical-details line, the house shape for diagnostics every
   backend uses, and the frontend words the typed error itself; replacing rustic's `display_log` with a typed reason

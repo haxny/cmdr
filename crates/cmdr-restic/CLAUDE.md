@@ -2,43 +2,33 @@
 
 Reads a restic backup repository, wherever it lives, as a read-only volume of snapshots (#422). Built on `rustic_core`,
 read THROUGH the repo's parent `Volume`, so a repo on SMB, SFTP, S3, or a phone opens like a local one. No `tauri`, no
-English a user reads.
+English a user reads. The app's half: `apps/desktop/src-tauri/src/file_system/restic/CLAUDE.md`.
 
 ## Module map
 
 - `volume.rs`: `ResticVolume`, the view at `<repo>/Browse snapshots`, and its `PasswordLocked` unlock. `hub.rs`:
-  `ResticRepos`, the shared state (passwords, opened repos, indexes, snapshot lists, `latest`, the is-it-a-repo memo).
-  `index_load.rs`: the shared, cancellable index load and its byte progress; `index_slot.rs`: the index the hub keeps
-  (cap, idle drop).
-- `path.rs` (`restic_route`, the classifier), `snapshots.rs` (naming, `latest`), `tree.rs` (nodes to rows),
-  `read_stream.rs`, `repo.rs` (open, index, typed errors), `backend.rs` (rustic's storage over the parent, packs through
-  held readers), `detect.rs`.
-- `test_fixtures.rs` (`testing` only): real repos built with rustic, v1 and v2, plus an unlock door.
+  `ResticRepos`, the shared state (passwords, opened repos, snapshot lists, `latest`, the is-it-a-repo memo);
+  `index_load.rs` (the shared, cancellable index load) and `index_slot.rs` (cap, idle drop) hold its indexes.
+- `path.rs` (re-exports `cmdr_fs::restic_view`, classifies paths in the view), `snapshots.rs`, `tree.rs`,
+  `read_stream.rs`, `repo.rs` (open, index, typed errors), `backend.rs` (rustic's storage over the parent), `detect.rs`.
+- `test_fixtures.rs` (`testing` only): real v1 and v2 repos built with rustic, plus an unlock door.
 
 ## Must-knows
 
 - **Read-only, always.** Every `WriteBackend` method refuses; tests pin zero write attempts across browse and read.
-- **❌ Never call rustic on an async worker.** The adapter `block_on`s the parent and panics there. Every call goes
-  through `host.runtime().spawn_blocking`.
-- **❌ Never classify a rustic error by its text.** Wrong password is `is_incorrect_password()`, a parent failure the
-  `VolumeError` in the source chain. DETAILS § "Typed errors".
-- **❌ Never detect by trying a password**: the config is encrypted. Detection reads the folder's listing only.
-- **No `rustic_backend`.** The repo is read through Cmdr's own volumes.
-- **A dated folder resolves by its id suffix, ❌ never the time prefix** (local time moves with the zone). An ambiguous
-  suffix is `NotFound`, never a guess.
-- **`latest` doesn't move while anything reads under it**: copies address files by path. DETAILS § "`latest`".
-- **`to_indexed` consumes the open repo**, so the index is its own open (`IndexedRepo`), ❌ never pried out of the
-  snapshot list's `ResticRepo`.
-- **One index load per repo, cancelled by the LAST waiter leaving** (a dropped future: the pane's token is the only
-  signal). ❌ Never abort a prefetch read; detach it. Progress is real bytes. DETAILS § "The index lifecycle".
-- **❌ Never evict an index in use** (an `Arc` held outside the slot, or used within `lease_grace`); eviction and the
-  idle drop take the index only, ❌ never the password.
-- **Passwords go through `secret_store`**, asked once per session (a miss is memoized), filed only after a verified
-  unlock. ❌ No hub-wide lock across scrypt, a Keychain call, or a parent read.
-- **Mode is `& 0o777` of Go's `os.FileMode`**, ❌ never the raw value. Names go through `Node::name()`.
-- **A hostile repo can't reach scrypt**: the adapter caps key count and cost before rustic lists a key.
+- **❌ Never call rustic on an async worker**: the adapter `block_on`s the parent. Use `host.runtime().spawn_blocking`.
+- **❌ Never classify a rustic error by its text** (DETAILS § "Typed errors"), ❌ never detect by trying a password.
+- **A dated folder resolves by its id suffix, ❌ never the time prefix.** An ambiguous suffix is `NotFound`.
+- **`latest` doesn't move while anything reads under it**: copies address files by path.
+- **`to_indexed` consumes the open repo**, so the index is its own open (`IndexedRepo`).
+- **One index load per repo, cancelled by the LAST waiter leaving** (a dropped future). ❌ Never abort a parent read;
+  detach it (a dropped device transaction wedges a phone). Progress is real bytes.
+- **❌ Never evict an index in use**; eviction and the idle drop take the index only, ❌ never the password.
+- **Passwords go through `secret_store`**, filed only by `remember_password` after a verified unlock nobody cancelled.
+  ❌ No hub-wide lock across scrypt, a Keychain call, or a parent read.
+- **Mode is `& 0o777` of Go's `os.FileMode`**; names go through `Node::name()`, ❌ never the raw field.
+- **A hostile repo can't reach scrypt**: the adapter caps key count, size, and summed cost first.
 - **The heavy state is the hub's**, keyed by `(volume id, repo root)` as spelled; ❌ no `canonicalize`, ❌ no static.
-- The public surface is capped by `index-crate-isolation`; an addition is argued in `DETAILS.md`.
+- The public surface is capped by `index-crate-isolation`; argue an addition in `DETAILS.md`.
 
-The view, the hub, the adapter, errors, naming, fixtures, what the next layers build on, and the capped surface:
-`DETAILS.md`.
+The view, the hub, the index lifecycle, the adapter, errors, naming, fixtures, and the capped surface: `DETAILS.md`.

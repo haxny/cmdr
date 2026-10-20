@@ -5,7 +5,21 @@ detection, and the read-only view (`ResticVolume` over the shared `ResticRepos` 
 overlay, the unlock UI, and copy-out live in the app.
 
 Written against `rustic_core` 0.13.0 (default features off). The issue was researched on 0.12.0; what moved is in §
-"Against 0.13.0".
+"Against 0.13.0". An adversarial review against the design's invariants, and each finding's fix:
+`docs/notes/restic/conformance-review.md`.
+
+## Decisions
+
+- **The row's name is `Browse snapshots`, in every locale.** **Why:** it's a PATH component (history, favorites, MCP,
+  and the agent address paths), so a translated one would move every path when the language changes, like git's
+  `branches`. It sorts first among a repo's lowercase folders and can't clash with the real `snapshots/`. The name and
+  the lexical split live in `cmdr_fs::restic_view`.
+- **No settings toggle** (git has `showVirtualGitPortal`). **Why:** having a repo is the opt-in.
+- **The password ask stays `VolumeError::NeedsPassword { wrong_attempt }`, with no container field.** **Why:** the
+  frontend tells a repo from an archive by the path it already classifies, so no archive mapping site changes
+  (`apps/desktop/src/lib/file-operations/transfer/DETAILS.md` § "The unlock prompt").
+- **A repo's unlock verifies before the dialog closes** (an archive's is stored unchecked): the open is the check, so a
+  wrong password re-arms the dialog in place.
 
 ## The view (`volume.rs`)
 
@@ -99,8 +113,8 @@ dropping a volume loses nothing.
   `config`: `NotFound`, and the memo forgets it was a repo, ❌ never an empty list that reads as "no backups".
 
 Sizing comes from David's NAS repo (`docs/notes/restic/open-cost.md`: 2.4M blobs, 112 MB of index files, ~0.5–0.65 GB of
-RSS per loaded index, unlock ~0.5 s, load 2.5–4.3 s over direct SMB). `Tuning` holds every number below; tests shorten
-them, the host never does.
+RSS per loaded index, unlock ~0.5 s, load 2.5–4.3 s over direct SMB; verified on `rustic_core` 0.13.0, an M3 Max, and a
+QNAP TS-464, 2026-10-20). `Tuning` holds every number below; tests shorten them, the host never does.
 
 ### The index lifecycle (`hub.rs`, `index_load.rs`)
 
@@ -319,16 +333,18 @@ unlocked view.
 - A backup's source files are real files: macOS refuses a name that isn't UTF-8, so that case is a `tree.rs` cell over
   hand-built nodes.
 
-## What the next layers build on
+## How the host uses it
 
-- **The unlock**: the host reaches it through `Volume::as_password_locked`, like an archive's. It must build the hub
-  with the app's credential store in its `VolumeHost`, or lookups always miss.
-- **Index progress**: a listing into a snapshot reports `ListingPhase::LoadingIndex` ticks with zero entries; the pane
-  words them (and shouldn't render "Loaded 0 files" for one).
+- **The unlock**: the host reaches it through `Volume::as_password_locked`, like an archive's. The hub is built with the
+  app's credential store in its `VolumeHost`, or lookups always miss.
+- **Index progress**: a listing into a snapshot reports `ListingPhase::LoadingIndex` ticks with zero entries, which the
+  pane words as bytes over a bar (`apps/desktop/src/lib/file-explorer/restic/DETAILS.md` § "Index progress").
 - **Copy-out** holds the index through its read streams; a whole-snapshot pre-scan goes through `list_directory` per
   folder, which joins the same load.
 - **The host route** calls `restic_route`, then `confirm_repo` (or `serves_confirmed` on a sync seam), and builds a
-  `ResticVolume` over the parked hub. The overlay calls `is_restic_repo` on the entries, then `overlay_row`.
+  `ResticVolume` over the parked hub. The overlay calls `is_restic_repo` on the entries, then `overlay_row`, whose row
+  carries the reserved `restic:snapshots` icon id (`OVERLAY_ROW_ICON_ID`) the frontend draws and recognizes it by. Both:
+  `apps/desktop/src-tauri/src/file_system/restic/DETAILS.md`.
 - `ResticVolume::backend_kind` is `BackendKind::Restic`, so the host's matches (favorites, the error report, the stall
   watch, the index) never read a snapshot as a local disk. `VIRTUAL_ENTRY_NAME` and `restic_route` are defined in
   `cmdr_fs::restic_view` (the listing engine asks them without linking rustic) and re-exported here.

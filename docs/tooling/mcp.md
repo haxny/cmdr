@@ -200,10 +200,10 @@ re-read `cmdr://state`), `no_pending_conflict`, or `unknown_operation`. Branch o
 `applyToAll: true` answers the rest of the operation's clashes the same way. Both `dialog confirm` and
 `resolve_conflict` require the authenticated connection, so route them through `./scripts/mcp-call.sh`.
 
-## Unlocking an encrypted archive
+## Unlocking an encrypted archive or a restic backup
 
-An encrypted archive raises a password prompt, and `cmdr://state` says which archive is asking and in which of the two
-flows:
+An encrypted archive or a restic repo's snapshots raise a password prompt, and `cmdr://state` says which container is
+asking (`container: archive | resticRepo`) and in which of the two flows:
 
 ```bash
 ./scripts/mcp-call.sh --read-resource 'cmdr://state?include=dialogs'
@@ -231,8 +231,11 @@ What happens next depends on `mode`:
   the prompt was already over, and supplying a password never starts a write, so run `copy` / `move` again to extract —
   through the ordinary confirmation, like any other write. That second attempt succeeds with the stored password.
 
-Storing a password proves nothing about it. Re-read `cmdr://state` either way: the prompt is back with
-`wrongAttempt: true` when it was wrong. `dialog close archive-password` cancels instead, and forgets the password.
+Storing an archive password proves nothing about it. Re-read `cmdr://state` either way: the prompt is back with
+`wrongAttempt: true` when it was wrong. A restic repo checks first: a wrong one answers `outcome: "wrong_password"`,
+keeps nothing, and leaves the prompt up; a right one answers with `verified: true`. An agent's unlock never saves to the
+Keychain. The full contract: `apps/desktop/src-tauri/src/mcp/DETAILS.md` § "Answering the password prompt".
+`dialog close archive-password` cancels instead, and forgets the password.
 
 ## Quitting the app
 
