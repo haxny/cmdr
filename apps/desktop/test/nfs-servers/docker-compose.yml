@@ -1,0 +1,63 @@
+# The NFS fixture stack: one Linux kernel NFS server (knfsd), the server every
+# QNAP, Synology, and TrueNAS runs, with two exports: `/secure` (knfsd's default,
+# which refuses a client whose source port is past 1023) and `/insecure`. Why
+# knfsd and not a user-space server, and what a cell can and can't reach from
+# macOS: the README.
+#
+# ❗ The project is `nfs-fixture` and every service name carries that prefix, the
+# same convention as `webdav-fixture-*`, so `desktop-fixture-lane-coverage` can
+# identify a cell by an `#[ignore]` reason naming `nfs-servers/start.sh` or
+# `nfs-fixture`.
+#
+# Host ports are pinned to 15480+, a range of this stack's own: S3 owns 14480+,
+# WebDAV 13480+, SFTP 12480+, SMB's vendored consumer stack 11480+, and smb2's
+# own harness 10480+. The check runner exports every `NFS_FIXTURE_*_PORT` before
+# bring-up (`ApplyNfsPortEnv`).
+#
+# ❗ The portmap port trick: portmap answers the ports a service registered
+# INSIDE the container. So `rpc.nfsd` and `rpc.mountd` listen on the very
+# numbers this file publishes (`15481:15481`, `15482:15482`, the same variable on
+# both sides and in the env the entrypoint reads), and only rpcbind moves
+# (host 15480 → container 111). A client sets the portmap port from its params
+# and every `GETPORT` answer then works from the host as it stands.
+#
+# ❗ Every port publishes to 127.0.0.1 via the `${NFS_BIND_ADDR:-127.0.0.1}`
+# prefix. ❌ Never a bare `port:port` mapping: Docker then binds all interfaces,
+# and a writable `AUTH_SYS` export (no password at all, any client may claim any
+# uid) lands on the LAN and the tailnet of whoever runs the suite. These
+# containers routinely outlive the run that started them.
+# `TestNfsFixturePortsBindToLoopback` fails the run if a mapping loses it.
+
+services:
+  nfs-fixture-knfsd:
+    build: ./image
+    image: cmdr-nfs-fixture:latest
+    restart: unless-stopped
+    # ❗ Privileged, and it has to be: the server is the host kernel's `nfsd`,
+    # and starting it means mounting `/proc/fs/nfsd` and handing the kernel its
+    # listening sockets, which `CAP_SYS_ADMIN` alone doesn't get past AppArmor's
+    # `docker-default` profile on Ubuntu. Nothing else in this stack runs this
+    # way. The README, § "Why knfsd".
+    privileged: true
+    # Principle 5 applies to CI too. knfsd's page cache is the kernel's, not the
+    # container's, so the limit only caps the userland and the seed.
+    mem_limit: 256m
+    cpus: 2
+    environment:
+      NFS_PORT: '${NFS_FIXTURE_NFS_PORT:-15481}'
+      MOUNT_PORT: '${NFS_FIXTURE_MOUNT_PORT:-15482}'
+    ports:
+      - '${NFS_BIND_ADDR:-127.0.0.1}:${NFS_FIXTURE_PORTMAP_PORT:-15480}:111'
+      - '${NFS_BIND_ADDR:-127.0.0.1}:${NFS_FIXTURE_NFS_PORT:-15481}:${NFS_FIXTURE_NFS_PORT:-15481}'
+      - '${NFS_BIND_ADDR:-127.0.0.1}:${NFS_FIXTURE_MOUNT_PORT:-15482}:${NFS_FIXTURE_MOUNT_PORT:-15482}'
+    # ❗ Named volumes, ❌ never the image layer: knfsd refuses to export an
+    # overlayfs directory. Named also means no anonymous volume per recreation
+    # (the WebDAV stack once leaked 41 GB that way). The entrypoint wipes and
+    # re-seeds both on every start, so what persists is only disk, never state.
+    volumes:
+      - 'nfs-fixture-secure:/secure'
+      - 'nfs-fixture-insecure:/insecure'
+
+volumes:
+  nfs-fixture-secure:
+  nfs-fixture-insecure:

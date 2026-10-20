@@ -269,7 +269,9 @@ plus a real Nextcloud outside the default lane) stacks lease the same way under 
 `/tmp/cmdr-<stack>-leases` namespaces. `CMDR_WEBDAV_TEST_URL` points the whole WebDAV suite at a server of your own
 instead; the fixture README has the variables and which cells opt out. The S3 stack (`apps/desktop/test/s3-servers/`,
 ports 14480+, VersityGW plus Garage, which ignores conditional writes) leases the same way, and its README records what
-each server answered for every call the backend makes.
+each server answered for every call the backend makes. The NFS stack (`apps/desktop/test/nfs-servers/`, ports 15480+,
+the Linux kernel's own NFS server in a privileged container) leases the same way; its README says why `/secure` is
+reachable only from a Linux host.
 
 ### MCP servers (for ad-hoc exploration during test writing)
 

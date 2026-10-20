@@ -10,7 +10,7 @@ import (
 )
 
 // RunRustIntegrationTests runs the Docker-backed Rust integration tests for
-// every network fixture (SMB, SFTP, WebDAV, and S3 today). The lane's selection expression is built by
+// every network fixture (SMB, SFTP, WebDAV, S3, and NFS today). The lane's selection expression is built by
 // `fixtureIntegrationFilter` (see `fixture-lane-coverage.go`), which also holds
 // the fixture table `desktop-fixture-lane-coverage` guards.
 //
@@ -73,6 +73,12 @@ func RunRustIntegrationTests(ctx *CheckContext) (CheckResult, error) {
 	if err := waitForContainers("s3-fixture", S3FixtureServices(), 120*time.Second); err != nil {
 		return CheckResult{}, err
 	}
+	if err := waitForContainers("nfs-fixture", NfsFixtureServices(), 120*time.Second); err != nil {
+		return CheckResult{}, err
+	}
+	// After the wait, because it reads the running container's IP. Unset on
+	// macOS, where no path reaches `/secure` with the source port intact.
+	ApplyNfsDirectHostEnv()
 
 	// Workspace-wide, debug, and the same features as `desktop-rust-tests`
 	// (`buildNextestLane`), so this reuses that lane's warm test build: the filter

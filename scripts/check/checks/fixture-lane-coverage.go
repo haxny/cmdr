@@ -96,6 +96,12 @@ var laneFixtures = []laneFixture{
 		markers:        []string{"s3-servers/start.sh", "s3-fixture"},
 		backendPackage: "cmdr-s3",
 	},
+	{
+		name:           "NFS",
+		lanePrefix:     "nfs_integration_",
+		markers:        []string{"nfs-servers/start.sh", "nfs-fixture"},
+		backendPackage: "cmdr-nfs",
+	},
 }
 
 // AllowOutOfLaneFixtureCellComment marks a gated cell that belongs OUTSIDE the

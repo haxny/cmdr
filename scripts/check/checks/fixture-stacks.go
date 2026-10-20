@@ -44,4 +44,7 @@ var (
 	// S3Core is the S3 integration set: VersityGW and Garage, the two servers
 	// whose conditional-write behavior differs.
 	S3Core = StackMode{Stack: "s3", Mode: "core"}
+	// NfsCore is the NFS integration set: the one knfsd server, exporting
+	// `/secure` and `/insecure`.
+	NfsCore = StackMode{Stack: "nfs", Mode: "core"}
 )

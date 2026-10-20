@@ -176,6 +176,7 @@ jobs:
           filters: |
             rust:
               - 'apps/desktop/src-tauri/**'
+              - 'apps/desktop/test/nfs-servers/**'
               - 'apps/desktop/test/s3-servers/**'
               - 'apps/desktop/test/sftp-servers/**'
               - 'apps/desktop/test/smb-servers/**'
@@ -463,7 +464,7 @@ jobs:
   # ===========================================
   # Desktop app - Rust against the Docker fixtures
   # ===========================================
-  # The fixture lanes (SMB, SFTP, WebDAV, and S3 containers, plus a real Nextcloud) in their
+  # The fixture lanes (SMB, SFTP, WebDAV, S3, and NFS containers, plus a real Nextcloud) in their
   # own job, so their ~10 min of container bring-up runs alongside `desktop-rust` instead of
   # after it. Same filter and gate as `desktop-rust`; it restores that job's rust-cache entry
   # by name and never saves, so the repo keeps one Linux Rust entry. Dependency-only, like
@@ -501,7 +502,20 @@ jobs:
         run: go build -o check .
         working-directory: ./scripts/check
 
-      - name: Run the Docker fixture integration tests (SMB, SFTP, WebDAV, and S3)
+      # Two host settings the NFS fixture needs, before its stack comes up:
+      # - `modprobe nfsd`: the fixture is the host kernel's own NFS server, and
+      #   Ubuntu builds `nfsd` as a module a container can't load.
+      # - `ip_unprivileged_port_start=600`: the client binds a source port in
+      #   600–1023 for the `/secure` export, which a non-root process on Linux
+      #   may only do below this sysctl. The cells reach `/secure` at the
+      #   container's own IP, where the bridge keeps the source port intact
+      #   (a published port rewrites it). `apps/desktop/test/nfs-servers/README.md`.
+      - name: Prepare the host for the NFS fixture
+        run: |
+          sudo modprobe nfsd
+          sudo sysctl -w net.ipv4.ip_unprivileged_port_start=600
+
+      - name: Run the Docker fixture integration tests (SMB, SFTP, WebDAV, S3, and NFS)
         run: ./scripts/check/check --check desktop-rust-integration-tests --ci
 
       # The sabre/dav cells, against a real Nextcloud. Slow-lane locally (a ~1 GB

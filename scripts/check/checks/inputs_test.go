@@ -439,6 +439,10 @@ var realTreeReadingTests = map[string][]string{
 	"TestS3FixturePortsBindToLoopback":                         {s3ComposeRel},
 	"TestS3FixturePortsMatchComposeDefaults":                   {s3ComposeRel},
 	"TestS3ModeServicesAgree":                                  {s3StartRel},
+	"TestNfsFixturePortsBindToLoopback":                        {nfsComposeRel},
+	"TestNfsFixturePortsMatchComposeDefaults":                  {nfsComposeRel},
+	"TestNfsFixturePublishesEachProgramOnItsOwnNumber":         {nfsComposeRel},
+	"TestNfsModeServicesAgree":                                 {nfsStartRel},
 	"TestSmbPinnedPortsCoverEveryVendoredService":              {smbComposeRel},
 	// Reads only the crate directories `fixtureIntegrationFilter` stats to
 	// decide whether a `package(…)` clause parses.

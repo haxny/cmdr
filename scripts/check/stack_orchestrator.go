@@ -51,6 +51,7 @@ var portEnvAppliers = map[string]func(){
 	"sftp":   checks.ApplySftpPortEnv,
 	"webdav": checks.ApplyWebdavPortEnv,
 	"s3":     checks.ApplyS3PortEnv,
+	"nfs":    checks.ApplyNfsPortEnv,
 }
 
 // NewStackOrchestrator returns an orchestrator scoped to the given repo root. Its

@@ -225,12 +225,49 @@ var S3 = &Stack{
 	servicesWithoutHealthcheck: map[string]bool{},
 }
 
+// NFS is the NFS fixture stack: one Linux kernel NFS server (knfsd) exporting
+// `/secure` and `/insecure`, first-party like S3. Its two named volumes hold
+// only the seeded exports, which the entrypoint wipes and rewrites on every
+// start.
+//
+// ❗ Its one service runs `privileged`: the server is the host kernel's `nfsd`.
+// Why that over a user-space server, and what the host can reach of it:
+// `apps/desktop/test/nfs-servers/README.md`.
+//
+// ❗ `modeServices` has to stay in lock-step with the fixture's own case table
+// (`apps/desktop/test/nfs-servers/start.sh`); `TestNfsModeServicesAgree` says so.
+var NFS = &Stack{
+	Name:          "nfs",
+	ProjectName:   "nfs-fixture",
+	lockFile:      "cmdr-nfs.lock",
+	leaseDirName:  "cmdr-nfs-leases",
+	composeDirRel: "apps/desktop/test/nfs-servers",
+	composeDirEnv: "CMDR_NFS_COMPOSE_DIR",
+	composeFiles:  []string{"docker-compose.yml"},
+	// First-party image: its entrypoint writes the exports and seeds them, and an
+	// edit that never reaches a running container is a change that silently
+	// doesn't happen.
+	buildContextsRel: []string{"image"},
+	// Host ports live in their own pinned range, 15480+, clear of S3's 14480+,
+	// WebDAV's 13480+, SFTP's 12480+, SMB's 11480+, and smb2's 10480+.
+	portEnvPrefix: "NFS_FIXTURE_",
+	modeServices: map[string][]string{
+		ModeMinimal: {"nfs-fixture-knfsd"},
+		ModeCore:    {"nfs-fixture-knfsd"},
+		ModeAll:     nil,
+	},
+	// Empty: the image bakes a HEALTHCHECK that passes only once portmap lists
+	// MOUNT v3 and NFS v3 and the seed is done.
+	servicesWithoutHealthcheck: map[string]bool{},
+}
+
 // registered is every stack this package leases, keyed by name.
 var registered = map[string]*Stack{
 	SMB.Name:    SMB,
 	SFTP.Name:   SFTP,
 	WEBDAV.Name: WEBDAV,
 	S3.Name:     S3,
+	NFS.Name:    NFS,
 }
 
 // Lookup resolves a stack by name, listing the registered names when it can't.
