@@ -97,7 +97,7 @@ describe('duplicateInPlace', () => {
 
     expect(buildFromCursorSpy).not.toHaveBeenCalled()
     // Source and destination are the same folder. That IS the duplicate.
-    const context = buildFromSelectionSpy.mock.calls[0]?.[5] as { sourcePath: string; destPath: string }
+    const context = buildFromSelectionSpy.mock.calls[0]?.[3] as { sourcePath: string; destPath: string }
     expect(context.sourcePath).toBe('/Users/x/dir')
     expect(context.destPath).toBe('/Users/x/dir')
     expect(d.spies.startTransferProgress).toHaveBeenCalledExactlyOnceWith(

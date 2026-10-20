@@ -117,6 +117,8 @@ suite:
   mean the filename), unlike `SearchResultsView`'s own adapter, which synthesizes the `~`-shortened full path for the
   Name column. `SearchResultEntry.parentPath` is home-relative too, so it is display text and never a path to join onto.
 - `selected-paths-read.ts`: the selection as paths for copy-path / copy-filename (§ Copy-path below).
+- `pressed-rows.ts`: `readPressedRows`, the one revision-checked read of a press's rows, waiting out a busy folder (§
+  Compare directories).
 - `snapshot-source-volume.ts`: which real volume a search-results pane's rows live on, for the delete and transfer
   openers. ❌ Never assume `root` there — any volume with a persisted index is searchable, SMB and MTP included.
 - `trash-availability.ts`: `paneOffersTrash`, the one answer to "can this pane trash rather than delete" (the volume's
@@ -910,13 +912,13 @@ cursor at all, so the handler no-ops instead of copying a path nobody pointed at
 from the `search-results://` hazard above: the `..` row only exists where `hasParent` holds, which a snapshot pane never
 does.
 
-**Copy-path and copy-filename read the selection through `selected-paths-read.ts` first.** It reads the selected indices
-synchronously at dispatch and resolves them with `getSelectionSnapshot` against the pane's last-seen sequence, the same
-revision check the F5/F6 dialog builder uses. A listing that moved on (or row state still settling) answers `changed`,
-❌ never a re-read: a watcher insert renumbers rows, and the old indices would name other files. The paths are the rows'
-own `path`, the same field the cursor getter reads, so archive, S3, SFTP, and phone panes copy the same kind of path for
-N rows as for one. A search-results pane resolves from its frozen snapshot instead (no listing, no shifting); the
-Servers hub has no file selection and falls back to the cursor.
+**Copy-path and copy-filename read the selection through `selected-paths-read.ts` first.** It reads the selection
+through `readPressedRows`, the same revision-checked, busy-folder-tolerant read F5/F6 uses. Rows that never settle (or
+row state still settling at dispatch) answer `changed`, which the handler words itself; ❌ never the old indices re-read
+against newer rows, which would name other files. The paths are the rows' own `path`, the same field the cursor getter
+reads, so archive, S3, SFTP, and phone panes copy the same kind of path for N rows as for one. A search-results pane
+resolves from its frozen snapshot instead (no listing, no shifting); the Servers hub has no file selection and falls
+back to the cursor.
 
 **"Open terminal here" reads the cursor through a third getter**, `getCursorRowForTerminal()`, which returns the row's
 name, path, and `isDirectory`. It needs `..` as a real answer (like copy-path) AND the folder flag (unlike either
@@ -1904,18 +1906,23 @@ is worded per mode and promises no more than that.
   capture listing/generation/revision/work tokens, and validate the backend revision before writing. Compare selections,
   clearing an operation snapshot, reconfiguration, and disposal invalidate old work. Pending rename still allows the
   synchronous selection remap; reconfiguration clears its cursor intention.
-- **F5 resolves selected paths and counts under one lock.** `transfer-operations.ts` calls `getSelectionSnapshot` with
-  backend-space indices and the exact applied revision, for the cursor row too. A typed `changed` / `gone` refusal
-  announces `announceRowsStillSettling` (failing an MCP F5/F6 round-trip, via `TransferContext.mcpRequestId`) and opens
-  no transfer, rather than resolving those same old indices in a newer cache. The caller also rejects replaced/navigated
-  panes.
-- **Every read of a selection is revision-checked; there's no unchecked read by row number.** F8 / ⇧F8
-  (`getSelectionEntries`), ⌘C / ⌘X, a selection drag, the context menu, tags, and Services (`getSelectionSnapshot`, or
-  its Rust twin) all send the pane's applied sequence with the row numbers, read together at dispatch (or on the press,
-  for a drag). Why: a watcher insert above the selection reaches the backend before the pane hears the diff, and the old
-  row numbers then name the neighbor, so a delete, cut, or drag acts on a file nobody picked. The refusal is the
-  rows-still-settling toast (`operation-start-gate.ts`), and an MCP delete hears it as a failed round-trip. The context
-  menu falls back to the right-clicked row alone, and Services hands over nothing rather than the cursor row.
+- **F5 resolves selected paths and counts under one lock.** `transfer-operations.ts` reads the selection (or the cursor
+  row) through `readPressedRows` within the press's `ROW_SETTLE_BUDGET_MS` (`TransferContext.deadline`), and a refusal
+  fails an MCP F5/F6 round-trip (`TransferContext.mcpRequestId`). The caller also rejects replaced/navigated panes.
+- **Every read of a selection is revision-checked; there's no unchecked read by row number.** F5/F6, F8 / ⇧F8
+  (`getSelectionEntries`), ⌘C / ⌘X, a selection drag, the context menu, tags, and copy-path all read the press through
+  ONE helper, `pressed-rows.ts::readPressedRows`; Services resolves through `Listings::selection_snapshot` in Rust. Why:
+  a watcher insert above the selection reaches the backend before the pane hears the diff, and the old row numbers then
+  name the neighbor, so a delete, cut, or drag acts on a file nobody picked.
+- **A `changed` refusal waits, it doesn't refuse.** In a busy folder (a download running) the watcher fires every few
+  hundred ms, and refusing outright turned about a quarter of presses into a toast. `readPressedRows` retries every
+  `PRESS_RETRY_MS` (100 ms) within `ROW_SETTLE_BUDGET_MS` (3 s), and only the budget running out shows the
+  rows-still-settling toast (`operation-start-gate.ts`; an MCP caller hears a failed round-trip). ❗ Each attempt
+  re-reads the selection, cursor, and applied sequence FROM THE PANE, which carries its selection through every diff it
+  applies, so the rows name the same files in the newer revision; ❌ never resend the first attempt's row numbers. A
+  press whose shape changed meanwhile (another listing, a selection that appeared or vanished) is refused. The context
+  menu then opens no menu (❌ never shrinks to the right-clicked row: a Delete of ten files would become one), and
+  Services hands over nothing rather than the cursor row.
 
 ## Select all of the same kind
 

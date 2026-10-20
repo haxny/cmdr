@@ -19,7 +19,6 @@
 import { tempDir, join } from '@tauri-apps/api/path'
 import { getCachedIcon } from '#lib/icon-cache.js'
 import {
-  asListingLookupError,
   getSelectionSnapshot,
   startDragPaths,
   prepareSelfDragOverlay,
@@ -27,8 +26,7 @@ import {
   setSelfDragResolvedOperation,
 } from '#lib/tauri-commands/index.js'
 import { getSetting } from '#lib/settings/settings-store.js'
-import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
-import { announceRowsStillSettling } from '../pane/operation-start-gate'
+import { readPressedRows, type PressedPane } from '../pane/pressed-rows'
 import { cancelClickToRename } from '../rename/rename-activation'
 import { renderDragImage } from './drag-image-renderer'
 
@@ -73,17 +71,13 @@ interface SingleFileDragContext {
 /** Context for a selection-based drag */
 interface SelectionDragContext {
   type: 'selection'
-  listingId: string
-  /** The pane's selected rows (`..` offset included when `hasParent`). */
-  indices: number[]
-  includeHidden: boolean
-  hasParent: boolean
   /**
-   * The pane's applied listing revision, read together with `indices` on the press.
-   * The paths resolve only against it: a watcher insert above the selection
-   * renumbers the rows, and the old numbers would drag the neighbor.
+   * The pane, read LIVE when the drag starts: its selection and the revision it
+   * belongs to (`readPressedRows`). A watcher insert above the selection renumbers
+   * the rows, and row numbers captured on the press would drag the neighbor.
    */
-  expectedSequence: number
+  pane: PressedPane
+  includeHidden: boolean
   /** Volume id of the pane this drag originates from (for the self-drag identity). */
   sourceVolumeId: SourceVolumeId
   /** Icon ID to use for the drag preview (first selected file) */
@@ -503,27 +497,20 @@ async function performSingleFileDrag(
 
 /**
  * Performs a selection-based drag: resolves the selection's paths under the
- * revision guard, then drags exactly those. Rows that moved since the pane
- * applied them refuse the drag rather than handing it the neighbor, before any
+ * revision guard (waiting out a busy folder), then drags exactly those. Rows that
+ * never settle refuse the drag rather than handing it the neighbor, before any
  * drag image is written.
  * Uses the rich PNG as the OS drag image (visible outside, hidden inside by native swizzle).
  */
 async function performSelectionDrag(context: SelectionDragContext): Promise<void> {
-  let sourcePaths: string[]
-  try {
-    const snapshot = await getSelectionSnapshot(
-      context.listingId,
-      context.includeHidden,
-      toBackendIndices(context.indices, context.hasParent),
-      context.expectedSequence,
-    )
-    sourcePaths = snapshot.paths
-  } catch (error) {
-    if (!asListingLookupError(error)) throw error
-    announceRowsStillSettling(undefined)
-    return
-  }
-  if (sourcePaths.length === 0) return
+  const pressed = await readPressedRows(
+    context.pane,
+    async ({ listingId, backendRows, expectedSequence }) =>
+      (await getSelectionSnapshot(listingId, context.includeHidden, backendRows, expectedSequence)).paths,
+    { cursorFallback: false },
+  )
+  if (pressed.kind !== 'read' || pressed.value.length === 0) return
+  const sourcePaths = pressed.value
 
   const resolved = await resolveDragIconPath(context.iconId, context.fileInfos)
   if (!resolved) return

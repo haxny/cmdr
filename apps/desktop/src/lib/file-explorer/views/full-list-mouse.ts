@@ -14,6 +14,7 @@
  */
 
 import type { FileEntry } from '../types'
+import type { PressedPane } from '../pane/pressed-rows'
 // Type-only: keeping the drag module out of this one's runtime graph is what lets
 // the planner be unit-tested without a Tauri environment.
 import type { startSelectionDragTracking, DragFileInfo } from '../drag/drag-drop'
@@ -43,12 +44,10 @@ export interface RowMouseDownInput {
   selectedIndices: Set<number>
   /** Resolves a UI index to its entry; rows outside the fetched window return `undefined`. */
   getEntryAt: (globalIndex: number) => FileEntry | undefined
-  listingId: string
-  /** The pane's applied listing revision, which `selectedIndices` belong to. */
-  rowSequence: number
+  /** The host pane, read LIVE when a selection drag starts (`readPressedRows`). */
+  pressedPane: PressedPane
   volumeId: string
   includeHidden: boolean
-  hasParent: boolean
   /** True on a search-results pane: no backend listing to resolve indices against. */
   usingStaticEntries: boolean
   /** True while the inline rename editor is open (suppresses click-to-rename). */
@@ -135,11 +134,8 @@ export function planRowMouseDown(input: RowMouseDownInput): RowMouseDownPlan {
     selectNow: true,
     context: {
       type: 'selection',
-      listingId: input.listingId,
-      indices: [...selectedIndices],
+      pane: input.pressedPane,
       includeHidden: input.includeHidden,
-      hasParent: input.hasParent,
-      expectedSequence: input.rowSequence,
       sourceVolumeId: volumeId,
       iconId,
       fileInfos,

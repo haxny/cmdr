@@ -27,6 +27,7 @@
     import { markRunEdges } from './mark-run'
     import { createGitStatusColumn } from './full-list-git-column.svelte'
     import { planRowMouseDown } from './full-list-mouse'
+    import type { PressedPane } from '../pane/pressed-rows'
     import { formatSizeForDisplay, formatNumber } from '../selection/selection-info-utils'
     import { isVolumeAggregating, getWalkedGround } from '#lib/indexing/index-state.svelte.js'
     import { isPathAffectedByWalk } from '#lib/indexing/walked-ground.js'
@@ -552,6 +553,16 @@
         fetchVisibleRange()
     }
 
+    // A selection drag reads the pane LIVE when it starts (`readPressedRows`): the
+    // selection and the revision it belongs to, never row numbers captured on the press.
+    const pressedPane: PressedPane = {
+        getListingId: () => listingId,
+        getSelectedIndices: () => [...selectedIndices],
+        getCursorIndex: () => cursorIndex,
+        hasParentEntry: () => hasParent,
+        getLastSequence: () => getRowSequence?.() ?? 0,
+    }
+
     // Selects and initiates drag tracking. `planRowMouseDown` (full-list-mouse.ts)
     // owns the decision and the drag payload; this only performs it.
     function handleMouseDown(event: MouseEvent, index: number) {
@@ -561,11 +572,9 @@
             cursorIndex,
             selectedIndices,
             getEntryAt: cache.getEntryAt,
-            listingId,
-            rowSequence: getRowSequence?.() ?? 0,
+            pressedPane,
             volumeId,
             includeHidden,
-            hasParent,
             usingStaticEntries,
             isRenaming: renameState?.active ?? false,
             canStartRename: onStartRename !== undefined,

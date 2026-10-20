@@ -3,20 +3,20 @@
  * commands (Finder's ⌥⌘C "Copy as Pathname" and Total Commander's "Copy names
  * with full path" act on every selected item, so ours do too).
  *
- * ❗ The selected indices are read synchronously, at dispatch time, and resolved
- * through the revision-checked `getSelectionSnapshot` against the pane's last
- * seen sequence: a watcher insert renumbers rows, and copying the paths of
- * whatever now sits at the old indices would put the wrong files on the
- * clipboard. A moved-on listing is refused (`changed`), never reinterpreted,
- * the same answer the F5/F6 dialog builder gives (`transfer-operations.ts`).
+ * ❗ The selected indices are read through `readPressedRows`: revision checked
+ * against the pane's applied sequence, waiting out a busy folder, and re-read
+ * from the pane on each attempt. A watcher insert renumbers rows, and copying
+ * the paths of whatever now sits at the old indices would put the wrong files
+ * on the clipboard. Rows that never settle are refused (`changed`), never
+ * reinterpreted, the same answer F5/F6 gives (`transfer-operations.ts`).
  *
  * The rows' own `path` is what lands on the clipboard, exactly what the
  * single-entry `getPathToCopyUnderCursor` reads off the cursor row, so archive,
  * S3, SFTP, and phone panes copy the same kind of path for N rows as for one.
  */
-import { asListingLookupError, getSelectionSnapshot } from '#lib/tauri-commands/index.js'
+import { getSelectionSnapshot } from '#lib/tauri-commands/index.js'
 import { resolveSnapshotPaths, snapshotIdFromPanePath } from '#lib/search/snapshot-store.svelte.js'
-import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import { readPressedRows } from './pressed-rows'
 import { capabilitiesFor } from './volume-capabilities'
 import type { PaneAccess } from './pane-access'
 import type { FilePaneAPI } from './types'
@@ -58,20 +58,15 @@ export async function readSelectedPathsForCopy(access: PaneAccess): Promise<Sele
 
   if (!paneRef.isRowStateReady()) return CHANGED
   const listingId = paneRef.getListingId()
-  const backendIndices = toBackendIndices(selectedIndices, paneRef.hasParentEntry())
-  if (!listingId || backendIndices.length === 0) return NO_SELECTION
-  const expectedSequence = paneRef.getLastSequence()
+  if (!listingId) return NO_SELECTION
 
-  try {
-    const snapshot = await getSelectionSnapshot(
-      listingId,
-      access.getShowHiddenFiles(),
-      backendIndices,
-      expectedSequence,
-    )
-    return snapshot.paths.length > 0 ? { kind: 'paths', paths: snapshot.paths } : NO_SELECTION
-  } catch (error) {
-    if (asListingLookupError(error)) return CHANGED
-    throw error
-  }
+  // The caller words its own refusal (`fileExplorer.clipboard.selectionChanged`).
+  const pressed = await readPressedRows(
+    paneRef,
+    async ({ backendRows, expectedSequence }) =>
+      (await getSelectionSnapshot(listingId, access.getShowHiddenFiles(), backendRows, expectedSequence)).paths,
+    { cursorFallback: false, announce: false },
+  )
+  if (pressed.kind === 'refused') return CHANGED
+  return pressed.kind === 'read' && pressed.value.length > 0 ? { kind: 'paths', paths: pressed.value } : NO_SELECTION
 }

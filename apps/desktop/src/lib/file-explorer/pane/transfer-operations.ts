@@ -1,9 +1,7 @@
-import { asListingLookupError, getSelectionSnapshot, type Initiator } from '#lib/tauri-commands/index.js'
-import { announceRowsStillSettling } from './operation-start-gate'
-import { toBackendIndices, toBackendCursorIndex } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import { getSelectionSnapshot, type Initiator } from '#lib/tauri-commands/index.js'
+import { readPressedRows, type PressedPane } from './pressed-rows'
 import type { TransferOperationType, VolumeInfo } from '../types'
 import type { DuplicateFollowUp } from './duplicate-rename'
-import type { FilePaneAPI } from './types'
 
 export interface TransferContext {
   showHiddenFiles: boolean
@@ -13,6 +11,8 @@ export interface TransferContext {
   destVolumeId: string
   /** The MCP round-trip this build serves, which a refusal fails so the agent hears why nothing started. */
   mcpRequestId?: string
+  /** When the build stops waiting for the rows to settle (`readPressedRows`); defaults to its own budget. */
+  deadline?: number
 }
 
 export interface TransferDialogPropsData {
@@ -61,71 +61,30 @@ export interface TransferDialogPropsData {
 export type TransferDialogPropsDraft = Omit<TransferDialogPropsData, 'duplicateFollowUp'>
 
 /**
- * The rows' paths and counts, only while they're the ones the pane applied
- * (`expectedSequence`). `null` after telling the user nothing started: the rows
- * moved, and resolving the old row numbers in the newer rows would name other files.
+ * The transfer of what the press names: the pane's selection, or with
+ * `cursorFallback` its cursor row, read through `readPressedRows` (revision
+ * checked, waiting out a busy folder within `context.deadline`). `null` when
+ * there's nothing to transfer, or after telling the user (and an MCP caller)
+ * nothing started because the rows never settled.
  */
-async function guardedSnapshot(
-  context: TransferContext,
-  listingId: string,
-  backendIndices: number[],
-  expectedSequence: number,
-): Promise<{ paths: string[]; fileCount: number; folderCount: number } | null> {
-  try {
-    return await getSelectionSnapshot(listingId, context.showHiddenFiles, backendIndices, expectedSequence)
-  } catch (error) {
-    if (!asListingLookupError(error)) throw error
-    announceRowsStillSettling(context.mcpRequestId)
-    return null
-  }
-}
-
-export async function buildTransferPropsFromSelection(
+async function buildTransferPropsFromPane(
   operationType: TransferOperationType,
-  listingId: string,
-  selectedIndices: number[],
-  hasParent: boolean,
+  paneRef: PressedPane,
   isLeft: boolean,
   context: TransferContext,
-  expectedSequence: number,
+  cursorFallback: boolean,
 ): Promise<TransferDialogPropsDraft | null> {
-  const backendIndices = toBackendIndices(selectedIndices, hasParent)
-  if (backendIndices.length === 0) return null
-
-  const snapshot = await guardedSnapshot(context, listingId, backendIndices, expectedSequence)
-  if (!snapshot) return null
-  const sourcePaths = snapshot.paths
-  if (sourcePaths.length === 0) return null
-
-  return {
-    operationType,
-    sourcePaths,
-    destinationPath: context.destPath,
-    direction: isLeft ? 'right' : 'left',
-    currentVolumeId: context.destVolumeId,
-    fileCount: snapshot.fileCount,
-    folderCount: snapshot.folderCount,
-    sourceFolderPath: context.sourcePath,
-    sourceVolumeId: context.sourceVolumeId,
-    destVolumeId: context.destVolumeId,
-  }
-}
-
-export async function buildTransferPropsFromCursor(
-  operationType: TransferOperationType,
-  listingId: string,
-  paneRef: FilePaneAPI | undefined,
-  hasParent: boolean,
-  isLeft: boolean,
-  context: TransferContext,
-): Promise<TransferDialogPropsDraft | null> {
-  if (!paneRef) return null
-  const backendIndex = toBackendCursorIndex(paneRef.getCursorIndex(), hasParent)
-  if (backendIndex === null) return null
-
-  // The cursor row is a row number too: it resolves under the same revision guard.
-  const snapshot = await guardedSnapshot(context, listingId, [backendIndex], paneRef.getLastSequence())
-  if (!snapshot || snapshot.paths.length === 0) return null
+  const pressed = await readPressedRows(
+    paneRef,
+    ({ listingId, backendRows, expectedSequence }) =>
+      getSelectionSnapshot(listingId, context.showHiddenFiles, backendRows, expectedSequence),
+    { cursorFallback, deadline: context.deadline, mcpRequestId: context.mcpRequestId },
+  )
+  // Each builder answers for its own kind of press: the cursor builder never
+  // transfers a selection that appeared under it.
+  if (pressed.kind !== 'read' || pressed.onSelection === cursorFallback) return null
+  const snapshot = pressed.value
+  if (snapshot.paths.length === 0) return null
 
   return {
     operationType,
@@ -139,6 +98,26 @@ export async function buildTransferPropsFromCursor(
     sourceVolumeId: context.sourceVolumeId,
     destVolumeId: context.destVolumeId,
   }
+}
+
+/** The transfer of the pane's selection. A selection that vanishes while the rows settle is refused. */
+export function buildTransferPropsFromSelection(
+  operationType: TransferOperationType,
+  paneRef: PressedPane,
+  isLeft: boolean,
+  context: TransferContext,
+): Promise<TransferDialogPropsDraft | null> {
+  return buildTransferPropsFromPane(operationType, paneRef, isLeft, context, false)
+}
+
+/** The transfer of the pane's cursor row, with nothing selected. */
+export function buildTransferPropsFromCursor(
+  operationType: TransferOperationType,
+  paneRef: PressedPane,
+  isLeft: boolean,
+  context: TransferContext,
+): Promise<TransferDialogPropsDraft | null> {
+  return buildTransferPropsFromPane(operationType, paneRef, isLeft, context, true)
 }
 
 /**

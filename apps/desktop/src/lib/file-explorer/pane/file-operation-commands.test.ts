@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { TransferOperationType } from '../types'
+import type { FilePaneAPI } from './types'
 
 // Stubs and fixtures live in `file-operation-commands.test-harness.ts`, shared
 // with `file-operation-commands.search-results.test.ts`. Every factory below
@@ -768,32 +769,45 @@ describe('openDeleteDialog', () => {
 /** A watcher insert above the selection, landing between the pane applying its
  *  rows and F8: the old row numbers now name the neighbor (`moved-listing.test-fixtures.ts`). */
 describe('openDeleteDialog when the rows moved under the press', () => {
-  async function pressDeleteOverMovedRows(pane: { selectedIndices: number[]; cursorIndex?: number }) {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  async function pressDelete(options: { onSelection: boolean; catchesUp: boolean }) {
     const moved = await import('./moved-listing.test-fixtures')
-    getSelectionEntriesSpy.mockImplementation(moved.selectionEntries)
-    const paneRef = buildPaneRef({ listingId: moved.MOVED_LISTING_ID, ...pane })
+    const pane = moved.createMovedPane({ onSelection: options.onSelection })
+    getSelectionEntriesSpy.mockImplementation(
+      options.catchesUp ? moved.catchingUpAfterRefusal(pane, moved.selectionEntries) : moved.selectionEntries,
+    )
+    const paneRef = { ...buildPaneRef({ listingId: moved.MOVED_LISTING_ID }), ...pane } as unknown as FilePaneAPI
     const access = buildAccess({ paneRefs: { left: paneRef }, volumes: [volume()] })
     const dialogs = buildDialogs()
     await create(access, dialogs).openDeleteDialog({ permanent: true })
-    return dialogs
+    return { dialogs, moved }
   }
 
-  it('refuses rather than offering to delete the file that slid onto the selected row', async () => {
-    const { SELECTED_ROW } = await import('./moved-listing.test-fixtures')
-    const dialogs = await pressDeleteOverMovedRows({ selectedIndices: [SELECTED_ROW] })
+  it.each([true, false])(
+    'waits for the pane to apply the diff and offers the file it picked (selection: %s)',
+    async (onSelection) => {
+      const { dialogs, moved } = await pressDelete({ onSelection, catchesUp: true })
+
+      expect(dialogs.showDeleteConfirmation).toHaveBeenCalledTimes(1)
+      expect(dialogs.showDeleteConfirmation.mock.calls[0][0]).toMatchObject({ sourcePaths: [moved.SELECTED_PATH] })
+      expect(spies.addToast).not.toHaveBeenCalled()
+    },
+  )
+
+  it('refuses with the toast once the rows never settle within the budget', async () => {
+    vi.useFakeTimers()
+    const pressed = pressDelete({ onSelection: true, catchesUp: false })
+    await vi.advanceTimersByTimeAsync(3_500)
+    const { dialogs } = await pressed
 
     expect(dialogs.showDeleteConfirmation).not.toHaveBeenCalled()
     expect(spies.addToast).toHaveBeenCalledWith(
       'The list here is still updating, so nothing started. Try again in a moment.',
       { level: 'info' },
     )
-  })
-
-  it('refuses the cursor row the same way when nothing is selected', async () => {
-    const { SELECTED_ROW } = await import('./moved-listing.test-fixtures')
-    const dialogs = await pressDeleteOverMovedRows({ selectedIndices: [], cursorIndex: SELECTED_ROW })
-
-    expect(dialogs.showDeleteConfirmation).not.toHaveBeenCalled()
   })
 })
 

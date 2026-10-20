@@ -1,5 +1,4 @@
 import {
-  asListingLookupError,
   getSelectionSnapshot,
   copyPathsToClipboard,
   cutPathsToClipboard,
@@ -19,10 +18,10 @@ import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { TransferOperationType } from '../types'
 import { getCommonParentPath } from './transfer-operations'
 import { checkTransferDestinationGuard, resolveSourceVolumeId } from './transfer-entry'
-import { announceRowsStillSettling, operationStartIsBlocked } from './operation-start-gate'
+import { operationStartIsBlocked } from './operation-start-gate'
+import { readPressedRows } from './pressed-rows'
 import { capabilitiesFor, capabilitiesForPane } from './volume-capabilities'
 import { pasteClipboardContentAsFile } from './paste-clipboard-as-file'
-import { toBackendSelectionOrCursor } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 import type { createDialogState } from './dialog-state.svelte'
 import type { PaneAccess } from './pane-access'
 
@@ -179,41 +178,28 @@ export function createClipboardOperations(access: PaneAccess, dialogs: DialogSta
     const listingId = sourcePaneRef?.getListingId()
     if (!sourcePaneRef || !listingId) return null
 
-    // The rows and the revision they belong to, read together at dispatch.
-    const rows = toBackendSelectionOrCursor(
-      sourcePaneRef.getSelectedIndices(),
-      sourcePaneRef.getCursorIndex(),
-      sourcePaneRef.hasParentEntry(),
-    )
-    const expectedSequence = sourcePaneRef.getLastSequence()
     const volumeId = access.getPaneVolumeId(access.getFocusedPane())
     const path = access.getPanePath(access.getFocusedPane())
 
-    return { listingId, rows, expectedSequence, volumeId, path }
+    return { paneRef: sourcePaneRef, listingId, volumeId, path }
   }
 
   /**
    * The paths a copy or cut puts on the clipboard: the selection, else the cursor
    * row, read only while the rows are the ones the pane applied. A watcher insert
    * above them renumbers the rows, and the old numbers would put the neighbor on
-   * the clipboard (and move it on the next paste, for a cut). `null` means nothing
-   * goes on the clipboard, announced when the rows moved.
+   * the clipboard (and move it on the next paste, for a cut). `readPressedRows`
+   * waits out a busy folder. `null` means nothing goes on the clipboard,
+   * announced when the rows never settled.
    */
   async function readClipboardSourcePaths(state: NonNullable<ReturnType<typeof getClipboardPaneState>>) {
-    if (state.rows.length === 0) return null
-    try {
-      const snapshot = await getSelectionSnapshot(
-        state.listingId,
-        access.getShowHiddenFiles(),
-        state.rows,
-        state.expectedSequence,
-      )
-      return snapshot.paths.length > 0 ? snapshot.paths : null
-    } catch (error) {
-      if (!asListingLookupError(error)) throw error
-      announceRowsStillSettling(undefined)
-      return null
-    }
+    const pressed = await readPressedRows(
+      state.paneRef,
+      async ({ backendRows, expectedSequence }) =>
+        (await getSelectionSnapshot(state.listingId, access.getShowHiddenFiles(), backendRows, expectedSequence)).paths,
+      { cursorFallback: true },
+    )
+    return pressed.kind === 'read' && pressed.value.length > 0 ? pressed.value : null
   }
 
   /**

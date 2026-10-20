@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { VolumeInfo } from '#lib/file-explorer/types.js'
 import type { PaneAccess } from './pane-access'
 import type { FilePaneAPI } from './types'
@@ -592,34 +592,48 @@ describe('copy and cut when the rows moved under the press', () => {
     getSelectionSnapshotSpy.mockImplementation(moved.selectionSnapshot)
   })
 
-  async function movedAccess(pane: { selectedIndices: number[]; cursorIndex?: number }) {
-    const { MOVED_LISTING_ID } = await import('./moved-listing.test-fixtures')
-    return buildAccess({ paneRef: buildPaneRef({ listingId: MOVED_LISTING_ID, ...pane }) })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  async function movedAccess(options: { onSelection: boolean; catchesUp: boolean }) {
+    const moved = await import('./moved-listing.test-fixtures')
+    const pane = moved.createMovedPane({ onSelection: options.onSelection })
+    getSelectionSnapshotSpy.mockImplementation(
+      options.catchesUp ? moved.catchingUpAfterRefusal(pane, moved.selectionSnapshot) : moved.selectionSnapshot,
+    )
+    const paneRef = { ...buildPaneRef({ listingId: moved.MOVED_LISTING_ID }), ...pane } as unknown as FilePaneAPI
+    return { access: buildAccess({ paneRef }), moved }
   }
 
-  it.each(['copyToClipboard', 'cutToClipboard'] as const)(
-    '%s refuses rather than putting the file that slid onto the selected row on the clipboard',
-    async (command) => {
-      const { SELECTED_ROW } = await import('./moved-listing.test-fixtures')
-      const access = await movedAccess({ selectedIndices: [SELECTED_ROW] })
+  it.each([
+    ['copyToClipboard', true],
+    ['cutToClipboard', true],
+    ['cutToClipboard', false],
+  ] as const)(
+    '%s waits for the pane to apply the diff and puts the file it picked on the clipboard (selection: %s)',
+    async (command, onSelection) => {
+      const { access, moved } = await movedAccess({ onSelection, catchesUp: true })
 
       await createClipboardOperations(access, buildDialogs())[command]()
 
-      expect(written).toEqual([])
-      expect(addToastSpy).toHaveBeenCalledWith(
-        'The list here is still updating, so nothing started. Try again in a moment.',
-        { level: 'info' },
-      )
+      expect(written).toEqual([moved.SELECTED_PATH])
     },
   )
 
-  it('refuses the cursor row the same way when nothing is selected', async () => {
-    const { SELECTED_ROW } = await import('./moved-listing.test-fixtures')
-    const access = await movedAccess({ selectedIndices: [], cursorIndex: SELECTED_ROW })
+  it('refuses with the toast once the rows never settle within the budget', async () => {
+    vi.useFakeTimers()
+    const { access } = await movedAccess({ onSelection: true, catchesUp: false })
 
-    await createClipboardOperations(access, buildDialogs()).cutToClipboard()
+    const pressed = createClipboardOperations(access, buildDialogs()).cutToClipboard()
+    await vi.advanceTimersByTimeAsync(3_500)
+    await pressed
 
     expect(written).toEqual([])
+    expect(addToastSpy).toHaveBeenCalledWith(
+      'The list here is still updating, so nothing started. Try again in a moment.',
+      { level: 'info' },
+    )
   })
 })
 

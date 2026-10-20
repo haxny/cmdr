@@ -72,3 +72,49 @@ export async function selectionSnapshot(
   const entries = await selectionEntries(listingId, includeHidden, indices, expectedSequence)
   return { paths: entries.map((e) => e.path), fileCount: entries.length, folderCount: 0 }
 }
+
+/** The backend row `charlie.txt` sits on at `BACKEND_SEQUENCE`, once the pane applied the insert. */
+export const CAUGHT_UP_ROW = 2
+
+/**
+ * The pane's side of the press: its selection (or cursor) on `charlie.txt` at
+ * `APPLIED_SEQUENCE`. `catchUp()` is the pane applying the insert's diff: its own
+ * selection follows `charlie.txt` to `CAUGHT_UP_ROW` at `BACKEND_SEQUENCE`.
+ */
+export function createMovedPane(options: { onSelection: boolean }) {
+  const state = {
+    selected: options.onSelection ? [SELECTED_ROW] : [],
+    cursor: options.onSelection ? 0 : SELECTED_ROW,
+    sequence: APPLIED_SEQUENCE,
+  }
+  return {
+    getListingId: () => MOVED_LISTING_ID,
+    getSelectedIndices: () => [...state.selected],
+    getCursorIndex: () => state.cursor,
+    hasParentEntry: () => false,
+    getLastSequence: () => state.sequence,
+    catchUp: () => {
+      if (options.onSelection) state.selected = [CAUGHT_UP_ROW]
+      else state.cursor = CAUGHT_UP_ROW
+      state.sequence = BACKEND_SEQUENCE
+    },
+  }
+}
+
+/**
+ * Wraps a checked read so the pane applies the insert's diff right after the
+ * first refusal, the way a busy folder's next diff lands while a press waits.
+ */
+export function catchingUpAfterRefusal<A extends unknown[], R>(
+  pane: { catchUp: () => void },
+  read: (...args: A) => Promise<R>,
+): (...args: A) => Promise<R> {
+  return async (...args: A) => {
+    try {
+      return await read(...args)
+    } catch (error) {
+      pane.catchUp()
+      throw error
+    }
+  }
+}

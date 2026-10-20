@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest'
 import { planRowMouseDown, type RowMouseDownInput } from './full-list-mouse'
 import type { FileEntry } from '../types'
+import type { PressedPane } from '../pane/pressed-rows'
 
 function entry(name: string, overrides: Partial<FileEntry> = {}): FileEntry {
   return {
@@ -37,6 +38,15 @@ function mouseDown(init: MouseEventInit = {}, target?: HTMLElement): MouseEvent 
   return event
 }
 
+/** The host pane a selection drag reads live (`readPressedRows`). */
+const PANE: PressedPane = {
+  getListingId: () => 'listing-1',
+  getSelectedIndices: () => [1, 2],
+  getCursorIndex: () => 1,
+  hasParentEntry: () => true,
+  getLastSequence: () => 7,
+}
+
 function plan(overrides: Partial<RowMouseDownInput> = {}) {
   return planRowMouseDown({
     event: mouseDown(),
@@ -44,11 +54,9 @@ function plan(overrides: Partial<RowMouseDownInput> = {}) {
     cursorIndex: 1,
     selectedIndices: new Set<number>(),
     getEntryAt: (index) => ROWS[index],
-    listingId: 'listing-1',
-    rowSequence: 7,
+    pressedPane: PANE,
     volumeId: 'root',
     includeHidden: false,
-    hasParent: true,
     usingStaticEntries: false,
     isRenaming: false,
     canStartRename: true,
@@ -129,12 +137,9 @@ describe('with a selection', () => {
       selectNow: true,
       context: {
         type: 'selection',
-        listingId: 'listing-1',
-        indices: [1, 2],
+        // The pane itself, read live when the drag starts, never row numbers captured here.
+        pane: PANE,
         includeHidden: false,
-        hasParent: true,
-        // The revision the selected rows belong to travels with them.
-        expectedSequence: 7,
         sourceVolumeId: 'root',
         // The preview icon comes from the FIRST selected row, not the pressed one.
         iconId: 'icon-a.txt',

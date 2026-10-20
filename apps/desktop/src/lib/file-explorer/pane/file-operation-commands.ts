@@ -2,7 +2,6 @@ import {
   createDirectory,
   createFile,
   getFileAt,
-  asListingLookupError,
   getSelectionEntries,
   trashRoutingForPaths,
   type Initiator,
@@ -14,10 +13,7 @@ import { getSnapshot, resolveSnapshotEntries, snapshotIdFromPanePath } from '#li
 import { resolveSnapshotSourceVolume } from './snapshot-source-volume'
 import { openFileViewer } from '#lib/file-viewer/open-viewer.js'
 import { getAppLogger } from '#lib/logging/logger.js'
-import {
-  toBackendCursorIndex,
-  toBackendSelectionOrCursor,
-} from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import { toBackendCursorIndex } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 import { getInitialFolderName } from '#lib/file-operations/mkdir/new-folder-operations.js'
 import { getInitialFileName } from '#lib/file-operations/mkfile/new-file-operations.js'
 import type { CloudOnlineOnlyExtent, DeleteSourceItem } from '#lib/file-operations/delete/delete-dialog-utils.js'
@@ -28,7 +24,8 @@ import { capabilitiesFor, capabilitiesForPane } from './volume-capabilities'
 import { pathCrossesArchiveBoundary } from './archive-paths'
 import { paneOffersTrash } from './trash-availability'
 import { checkTransferDestinationGuard } from './transfer-entry'
-import { announceRowsStillSettling, operationStartIsBlocked } from './operation-start-gate'
+import { operationStartIsBlocked } from './operation-start-gate'
+import { readPressedRows } from './pressed-rows'
 import { duplicateInPlace } from './duplicate-command'
 import { openRenameAsMove } from './rename-as-move'
 import type { RenameAsMoveRequest } from './rename-flow.svelte'
@@ -522,57 +519,38 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
       return
     }
 
-    const hasParent = sourcePaneRef?.hasParentEntry()
-    const selectedIndices = sourcePaneRef?.getSelectedIndices()
-    const hasSelection = selectedIndices && selectedIndices.length > 0
-
-    const backendIndices = toBackendSelectionOrCursor(
-      selectedIndices ?? [],
-      sourcePaneRef?.getCursorIndex() ?? -1,
-      hasParent ?? false,
-    )
-    if (!sourcePaneRef || backendIndices.length === 0) {
-      log.warn(
-        'openDeleteDialog: no backendIndices (hasSelection={hasSelection}, cursorIndex={cursorIndex}, hasParent={hasParent}), bailing',
-        {
-          hasSelection,
-          cursorIndex: sourcePaneRef?.getCursorIndex() ?? -1,
-          hasParent: hasParent ?? false,
-        },
-      )
-      return
-    }
-
+    if (!sourcePaneRef) return
     // Full entries in one batch IPC, only while the rows are still the ones the
     // pane applied: a watcher insert above the selection renumbers them, and the
-    // old row numbers would offer to delete the neighbor.
-    let entries
+    // old row numbers would offer to delete the neighbor. `readPressedRows` waits
+    // out a busy folder and re-reads the press from the pane each attempt.
+    let pressed
     try {
-      entries = await getSelectionEntries(
-        listingId,
-        access.getShowHiddenFiles(),
-        backendIndices,
-        sourcePaneRef.getLastSequence(),
+      pressed = await readPressedRows(
+        sourcePaneRef,
+        ({ backendRows, expectedSequence }) =>
+          getSelectionEntries(listingId, access.getShowHiddenFiles(), backendRows, expectedSequence),
+        { cursorFallback: true, mcpRequestId },
       )
     } catch (error) {
-      if (asListingLookupError(error)) {
-        announceRowsStillSettling(mcpRequestId)
-        return
-      }
-      log.warn('openDeleteDialog: getSelectionEntries threw, bailing. error={error}, indices={indices}', {
+      log.warn('openDeleteDialog: getSelectionEntries threw, bailing. error={error}', {
         error: error instanceof Error ? error.message : String(error),
-        indices: backendIndices.join(','),
       })
       return
     }
+    if (pressed.kind !== 'read') {
+      if (pressed.kind === 'none') log.debug('openDeleteDialog: nothing selected or under the cursor, bailing')
+      return
+    }
+    const entries = pressed.value
+    const hasSelection = pressed.onSelection
     const validEntries = entries.filter((e) => e.name !== '..')
     if (validEntries.length === 0) {
       log.warn(
-        'openDeleteDialog: no validEntries after getSelectionEntries (got {count} {entriesNoun}, all filtered as ".." parent), bailing. backendIndices={indices}',
+        'openDeleteDialog: no validEntries after getSelectionEntries (got {count} {entriesNoun}, all filtered as ".." parent), bailing',
         {
           count: entries.length,
           entriesNoun: pluralize(entries.length, 'entry', 'entries'),
-          indices: backendIndices.join(','),
         },
       )
       return

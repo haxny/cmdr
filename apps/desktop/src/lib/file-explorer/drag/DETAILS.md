@@ -13,11 +13,11 @@ pane-to-pane drags.
 One backend command, `start_drag_paths`, routed through `native_drag.rs`, for every drag:
 
 - **Single file**: the frontend passes the row's path directly.
-- **Multi-file selection**: `performSelectionDrag` first resolves the selection's paths through the revision-checked
-  `getSelectionSnapshot`, with the pane's applied revision read on the press together with the indices (the views'
-  `getRowSequence` prop). Rows that moved since (a watcher insert above the selection) refuse the drag with the
-  rows-still-settling toast, before any drag image is written: the old row numbers would drag the neighbor, to another
-  pane or the Trash.
+- **Multi-file selection**: `performSelectionDrag` first resolves the selection's paths through `readPressedRows`
+  (`../pane/pressed-rows.ts`), reading the pane LIVE when the drag starts: the context carries a `PressedPane` the view
+  builds over its props (with the `getRowSequence` prop), never row numbers captured on the press. A busy folder's diffs
+  are waited out; rows that never settle refuse the drag with the rows-still-settling toast, before any drag image is
+  written: the old row numbers would drag the neighbor, to another pane or the Trash.
 - **Multi-file paths-by-value**: the search-results pane (`staticEntries`) has no backend listing to resolve rows
   against, but the FE already has absolute paths on each row, so it sends them directly. Wired via the
   `PathsDragContext` variant in `drag-drop.ts`; FullList picks this branch automatically when `usingStaticEntries`.

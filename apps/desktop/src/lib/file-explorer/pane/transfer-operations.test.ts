@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   getDestinationVolumeInfo,
   buildTransferPropsFromSelection,
@@ -17,14 +17,13 @@ vi.mock('#lib/tauri-commands/index.js', async () => {
     '#lib/tauri-commands/listing-gone.js',
   )
   return {
-    getListingStats: vi.fn(),
     getSelectionSnapshot: vi.fn(),
     asListingLookupError: actual.asListingLookupError,
   }
 })
 vi.mock('./operation-start-gate', () => ({ announceRowsStillSettling: vi.fn() }))
 
-const { getListingStats, getSelectionSnapshot } = await import('#lib/tauri-commands/index.js')
+const { getSelectionSnapshot } = await import('#lib/tauri-commands/index.js')
 const { announceRowsStillSettling } = await import('./operation-start-gate')
 
 describe('getDestinationVolumeInfo', () => {
@@ -93,7 +92,7 @@ describe('getDestinationVolumeInfo', () => {
   })
 })
 
-describe('buildTransferPropsFromSelection', () => {
+describe('buildTransferPropsFromSelection / buildTransferPropsFromCursor', () => {
   const context: TransferContext = {
     showHiddenFiles: false,
     sourcePath: '/source',
@@ -101,58 +100,47 @@ describe('buildTransferPropsFromSelection', () => {
     sourceVolumeId: 'vol-src',
     destVolumeId: 'vol-dest',
   }
+  /** A pane at `sequence`, its selection (or cursor) on the given rows, with `..` on row 0. */
+  const paneOf = (state: { selected?: number[]; cursor?: number; sequence?: number }) =>
+    ({
+      getListingId: () => 'listing-1',
+      getSelectedIndices: () => state.selected ?? [],
+      getCursorIndex: () => state.cursor ?? 0,
+      hasParentEntry: () => true,
+      getLastSequence: () => state.sequence ?? 0,
+    }) as unknown as FilePaneAPI
 
-  beforeEach(() => vi.clearAllMocks())
-
-  it('returns null for empty indices', async () => {
-    expect(await buildTransferPropsFromSelection('copy', 'listing-1', [], false, true, context, 0)).toBeNull()
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getSelectionSnapshot).mockReset()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
-  it('refuses F5 when the selected revision changed, never resolving the same rows in a newer cache', async () => {
-    vi.mocked(getSelectionSnapshot).mockRejectedValueOnce(
-      new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }),
-    )
-    const result = await buildTransferPropsFromSelection('copy', 'listing-1', [2], true, true, context, 7)
-    expect(result).toBeNull()
-    expect(getSelectionSnapshot).toHaveBeenCalledWith('listing-1', false, [1], 7)
-    expect(announceRowsStillSettling).toHaveBeenCalledTimes(1)
-  })
-
-  it('fails an MCP F5 round-trip when the rows moved, so the agent hears why nothing started', async () => {
-    vi.mocked(getSelectionSnapshot).mockRejectedValueOnce(
-      new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }),
-    )
-    const mcpContext = { ...context, mcpRequestId: 'req-7' }
-
-    expect(await buildTransferPropsFromSelection('move', 'listing-1', [2], true, true, mcpContext, 7)).toBeNull()
-    expect(announceRowsStillSettling).toHaveBeenCalledWith('req-7')
-  })
-
-  it('returns correct props for copy selection', async () => {
+  it('reads the selection as backend rows under the revision the pane applied', async () => {
     vi.mocked(getSelectionSnapshot).mockResolvedValueOnce({
       paths: ['/source/file1.txt', '/source/folder'],
-      fileCount: 2,
+      fileCount: 1,
       folderCount: 1,
     })
-    vi.mocked(getListingStats).mockResolvedValueOnce({
-      totalFiles: 2,
-      totalDirs: 1,
-      totalSize: 1000,
-      totalPhysicalSize: 1024,
-      selectedFiles: 2,
-      selectedDirs: 1,
-      selectedSize: null,
-      selectedPhysicalSize: null,
-    })
 
-    const result = await buildTransferPropsFromSelection('copy', 'listing-1', [0, 1], false, true, context, 0)
+    const result = await buildTransferPropsFromSelection(
+      'copy',
+      paneOf({ selected: [1, 2], sequence: 7 }),
+      true,
+      context,
+    )
+
+    // `..` is pane row 0, so pane rows 1 and 2 are backend rows 0 and 1.
+    expect(getSelectionSnapshot).toHaveBeenCalledWith('listing-1', false, [0, 1], 7)
     expect(result).toEqual({
       operationType: 'copy',
       sourcePaths: ['/source/file1.txt', '/source/folder'],
       destinationPath: '/dest',
       direction: 'right',
       currentVolumeId: 'vol-dest',
-      fileCount: 2,
+      fileCount: 1,
       folderCount: 1,
       sourceFolderPath: '/source',
       sourceVolumeId: 'vol-src',
@@ -160,59 +148,58 @@ describe('buildTransferPropsFromSelection', () => {
     })
   })
 
-  it('returns correct props for move selection', async () => {
-    vi.mocked(getSelectionSnapshot).mockResolvedValueOnce({ paths: ['/source/file.txt'], fileCount: 1, folderCount: 0 })
-    vi.mocked(getListingStats).mockResolvedValueOnce({
-      totalFiles: 1,
-      totalDirs: 0,
-      totalSize: 500,
-      totalPhysicalSize: 512,
-      selectedFiles: 1,
-      selectedDirs: 0,
-      selectedSize: null,
-      selectedPhysicalSize: null,
-    })
-
-    const result = await buildTransferPropsFromSelection('move', 'listing-1', [0], false, true, context, 0)
-    expect(result?.operationType).toBe('move')
-  })
-})
-
-describe('buildTransferPropsFromCursor', () => {
-  const context: TransferContext = {
-    showHiddenFiles: false,
-    sourcePath: '/source',
-    destPath: '/dest',
-    sourceVolumeId: 'vol-src',
-    destVolumeId: 'vol-dest',
-  }
-  const paneAt = (cursorIndex: number) =>
-    ({ getCursorIndex: () => cursorIndex, getLastSequence: () => 5 }) as unknown as FilePaneAPI
-
-  beforeEach(() => vi.clearAllMocks())
-
   it('reads the cursor row as a backend row under the revision the pane applied', async () => {
     vi.mocked(getSelectionSnapshot).mockResolvedValueOnce({ paths: ['/source/dir'], fileCount: 0, folderCount: 1 })
 
-    const result = await buildTransferPropsFromCursor('move', 'listing-1', paneAt(3), true, true, context)
+    const result = await buildTransferPropsFromCursor('move', paneOf({ cursor: 3, sequence: 5 }), true, context)
 
-    // `..` is pane row 0, so pane row 3 is backend row 2.
     expect(getSelectionSnapshot).toHaveBeenCalledWith('listing-1', false, [2], 5)
-    expect(result).toMatchObject({ sourcePaths: ['/source/dir'], fileCount: 0, folderCount: 1 })
-  })
-
-  it('refuses rather than moving the file that slid onto the cursor row', async () => {
-    vi.mocked(getSelectionSnapshot).mockRejectedValueOnce(
-      new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }),
-    )
-
-    expect(await buildTransferPropsFromCursor('move', 'listing-1', paneAt(3), true, true, context)).toBeNull()
-    expect(announceRowsStillSettling).toHaveBeenCalledTimes(1)
+    expect(result).toMatchObject({ operationType: 'move', sourcePaths: ['/source/dir'], folderCount: 1 })
   })
 
   it('offers nothing with the cursor on the `..` row', async () => {
-    expect(await buildTransferPropsFromCursor('copy', 'listing-1', paneAt(0), true, true, context)).toBeNull()
+    expect(await buildTransferPropsFromCursor('copy', paneOf({ cursor: 0 }), true, context)).toBeNull()
     expect(getSelectionSnapshot).not.toHaveBeenCalled()
+  })
+
+  it.each([true, false])(
+    'waits for the pane to apply the diff, then reads the rows it picked (selection: %s)',
+    async (onSelection) => {
+      const moved = await import('./moved-listing.test-fixtures')
+      const pane = moved.createMovedPane({ onSelection })
+      vi.mocked(getSelectionSnapshot).mockImplementation(moved.catchingUpAfterRefusal(pane, moved.selectionSnapshot))
+      const build = onSelection ? buildTransferPropsFromSelection : buildTransferPropsFromCursor
+
+      const result = await build('move', pane as unknown as FilePaneAPI, true, context)
+
+      expect(result?.sourcePaths).toEqual([moved.SELECTED_PATH])
+      expect(announceRowsStillSettling).not.toHaveBeenCalled()
+    },
+  )
+
+  it('refuses once the rows never settle, failing an MCP round-trip', async () => {
+    vi.useFakeTimers()
+    const moved = await import('./moved-listing.test-fixtures')
+    vi.mocked(getSelectionSnapshot).mockImplementation(moved.selectionSnapshot)
+    const pane = moved.createMovedPane({ onSelection: true }) as unknown as FilePaneAPI
+
+    const built = buildTransferPropsFromSelection('move', pane, true, { ...context, mcpRequestId: 'req-7' })
+    await vi.advanceTimersByTimeAsync(3_500)
+
+    expect(await built).toBeNull()
+    expect(announceRowsStillSettling).toHaveBeenCalledWith('req-7')
+  })
+
+  it('refuses a selection that vanished while it waited, never falling through to the cursor row', async () => {
+    const state = { selected: [2], sequence: 0 }
+    vi.mocked(getSelectionSnapshot).mockImplementation(() => {
+      state.selected = []
+      return Promise.reject(new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }))
+    })
+
+    expect(await buildTransferPropsFromSelection('copy', paneOf(state), true, context)).toBeNull()
+    expect(getSelectionSnapshot).toHaveBeenCalledTimes(1)
+    expect(announceRowsStillSettling).toHaveBeenCalledTimes(1)
   })
 })
 

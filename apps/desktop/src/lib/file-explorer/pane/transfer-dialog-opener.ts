@@ -9,20 +9,12 @@ import {
 } from './transfer-operations'
 import { capabilitiesFor } from './volume-capabilities'
 import { announceRowsStillSettling } from './operation-start-gate'
+import { ROW_SETTLE_BUDGET_MS } from './pressed-rows'
 import type { DuplicateFollowUp } from './duplicate-rename'
 import type { FilePaneAPI } from './types'
 import type { TransferOperationType } from '../types'
 import type { createDialogState } from './dialog-state.svelte'
 import type { PaneAccess } from './pane-access'
-
-/**
- * How long F5 / F6 / ⌥F5 wait for the source pane's rows to settle before saying why
- * nothing started. Rows settle in well under a second after a reload or resort; the
- * budget covers a loaded machine and a big folder's resort, and stays short enough that
- * a press never feels lost. While an operation runs from this pane its rows stay
- * unsettled until it ends, which is the case that reaches the toast.
- */
-const ROW_SETTLE_BUDGET_MS = 3000
 
 type DialogState = ReturnType<typeof createDialogState>
 
@@ -153,27 +145,18 @@ export function createTransferDialogOpener(access: PaneAccess, dialogs: Pick<Dia
     operationType: TransferOperationType,
     ref: FilePaneAPI,
     pane: 'left' | 'right',
-    mcpRequestId: string | undefined,
+    press: { deadline: number; mcpRequestId?: string },
   ) {
     const listingId = ref.getListingId()
     if (!listingId) return null
-    const hasParent = ref.hasParentEntry()
     const selectedIndices = ref.getSelectedIndices()
-    const context = buildTransferContext(pane, mcpRequestId)
+    const context = { ...buildTransferContext(pane, press.mcpRequestId), deadline: press.deadline }
     const isLeft = pane === 'left'
     const generation = ref.getViewGeneration()
     const props =
       selectedIndices.length > 0
-        ? await buildTransferPropsFromSelection(
-            operationType,
-            listingId,
-            selectedIndices,
-            hasParent,
-            isLeft,
-            context,
-            ref.getLastSequence(),
-          )
-        : await buildTransferPropsFromCursor(operationType, listingId, ref, hasParent, isLeft, context)
+        ? await buildTransferPropsFromSelection(operationType, ref, isLeft, context)
+        : await buildTransferPropsFromCursor(operationType, ref, isLeft, context)
     return props ? { props, listingId, generation } : null
   }
 
@@ -215,7 +198,7 @@ export function createTransferDialogOpener(access: PaneAccess, dialogs: Pick<Dia
     }
     for (;;) {
       if (!(await rowsSettled(sourcePaneRef, press))) return
-      const built = await buildListingProps(operationType, sourcePaneRef, pane, mcpRequestId)
+      const built = await buildListingProps(operationType, sourcePaneRef, pane, press)
       if (!built) return
       const { props, listingId, generation } = built
       if (transferSourceIsCurrent({ ref: sourcePaneRef, pane, listingId, generation })) {

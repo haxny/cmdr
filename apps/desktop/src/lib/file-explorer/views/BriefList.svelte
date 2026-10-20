@@ -7,6 +7,7 @@
     import { calculateVirtualWindowVariable, getScrollToPositionVariable } from './virtual-scroll'
     import { handleNavigationShortcut } from '../navigation/keyboard-shortcuts'
     import { startSelectionDragTracking, type DragFileInfo } from '../drag/drag-drop'
+    import type { PressedPane } from '../pane/pressed-rows'
     import {
         computeDragAutoScrollStep,
         type DragAutoScrollFrameResult,
@@ -568,6 +569,16 @@
         }
     }
 
+    // A selection drag reads the pane LIVE when it starts (`readPressedRows`): the
+    // selection and the revision it belongs to, never row numbers captured on the press.
+    const pressedPane: PressedPane = {
+        getListingId: () => listingId,
+        getSelectedIndices: () => [...selectedIndices],
+        getCursorIndex: () => cursorIndex,
+        hasParentEntry: () => hasParent,
+        getLastSequence: () => getRowSequence?.() ?? 0,
+    }
+
     // Handle file mousedown - selects and initiates drag tracking
     function handleMouseDown(event: MouseEvent, index: number) {
         if (event.button !== 0) return
@@ -628,11 +639,8 @@
                 event,
                 {
                     type: 'selection',
-                    listingId,
-                    indices: [...selectedIndices],
+                    pane: pressedPane,
                     includeHidden,
-                    hasParent,
-                    expectedSequence: getRowSequence?.() ?? 0,
                     sourceVolumeId: volumeId,
                     iconId,
                     fileInfos,

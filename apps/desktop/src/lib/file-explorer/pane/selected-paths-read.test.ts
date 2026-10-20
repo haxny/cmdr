@@ -46,6 +46,7 @@ function paneStub(config: PaneStubConfig = {}): FilePaneAPI {
     getSelectedIndices: () => config.selectedIndices ?? [],
     hasParentEntry: () => config.hasParent ?? false,
     getListingId: () => config.listingId ?? 'listing-1',
+    getCursorIndex: () => 0,
     getLastSequence: () => config.sequence ?? 7,
     isRowStateReady: () => config.rowStateReady ?? true,
     getCurrentPath: () => config.currentPath ?? '/Users/x/dir',
@@ -96,10 +97,22 @@ describe('readSelectedPathsForCopy', () => {
     expect(getSelectionSnapshotSpy).toHaveBeenCalledWith('listing-1', true, [0, 1], 7)
   })
 
-  it('refuses rather than reinterpret indices when the listing moved on', async () => {
+  it('waits for the pane to apply the diff, then copies the rows it picked', async () => {
+    const moved = await import('./moved-listing.test-fixtures')
+    const pane = moved.createMovedPane({ onSelection: true })
+    getSelectionSnapshotSpy.mockImplementation(moved.catchingUpAfterRefusal(pane, moved.selectionSnapshot))
+    const ref = { ...paneStub(), ...pane } as unknown as FilePaneAPI
+
+    expect(await readSelectedPathsForCopy(access(ref))).toEqual({ kind: 'paths', paths: [moved.SELECTED_PATH] })
+  })
+
+  it('refuses rather than reinterpret indices when the listing never settles', async () => {
+    vi.useFakeTimers()
     getSelectionSnapshotSpy.mockRejectedValue(new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }))
-    const read = await readSelectedPathsForCopy(access(paneStub({ selectedIndices: [0] })))
-    expect(read).toEqual({ kind: 'changed' })
+    const pending = readSelectedPathsForCopy(access(paneStub({ selectedIndices: [0] })))
+    await vi.advanceTimersByTimeAsync(3_500)
+    vi.useRealTimers()
+    expect(await pending).toEqual({ kind: 'changed' })
   })
 
   it('refuses when the listing is gone', async () => {
