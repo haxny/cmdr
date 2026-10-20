@@ -637,12 +637,17 @@ fn read_range_session_cancellation_returns_cancelled_and_cleans_up() {
 
     let sid_for_cancel = sid.clone();
     let canceller = thread::spawn(move || {
-        // 2 ms is enough that the read has started but nowhere near done on a ~16 MB
-        // file. The in-loop check (every 64 KB or 256 lines) fires well before the
-        // read completes.
-        // allowed-test-sleep: the canceller's head start IS the scenario; it has to land while
-        // the read is mid-flight, and the read exposes no "I have started" signal to wait on
-        thread::sleep(Duration::from_millis(2));
+        // Cancel the instant the read registers itself, which it does before reading a
+        // byte. The in-loop check (every 64 KB or 256 lines) then fires well before a
+        // ~16 MB read completes. ❗ A spin, ❌ not a sleep or a polling wait: a fixed
+        // 2 ms head start lost the race on a loaded macOS runner, where the canceller
+        // wasn't scheduled until the whole file was read (2026-10-20), and a poll
+        // interval would reopen the same window.
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while session::active_read_count(&sid_for_cancel) == 0 {
+            assert!(std::time::Instant::now() < deadline, "the read never registered");
+            thread::yield_now();
+        }
         session::cancel_read(&sid_for_cancel, 42).unwrap();
     });
 
