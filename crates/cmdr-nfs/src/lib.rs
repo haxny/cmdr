@@ -6,7 +6,22 @@
 
 pub(crate) mod errors;
 pub(crate) mod params;
+#[allow(
+    dead_code,
+    reason = "the protocol layer lands before the volume that calls it; drop this once the volume is wired"
+)]
+pub(crate) mod proto;
+#[allow(
+    dead_code,
+    reason = "the protocol layer lands before the volume that calls it; drop this once the volume is wired"
+)]
+pub(crate) mod transport;
 pub(crate) mod volume;
+#[allow(
+    dead_code,
+    reason = "the protocol layer lands before the volume that calls it; drop this once the volume is wired"
+)]
+pub(crate) mod xdr;
 
 pub use errors::NfsConnectError;
 pub use params::{NfsConnectionParams, NfsIdentity, NfsServer};

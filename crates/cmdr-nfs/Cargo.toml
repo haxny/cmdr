@@ -21,3 +21,24 @@ cmdr-fs = { path = "../cmdr-fs" }
 # `CancellationToken`, on the connect and discovery paths. Default features off,
 # the shape `cmdr-fs` pins.
 tokio-util = { version = "0.7.18", default-features = false }
+# The wire: XDR decodes slice the received record (`Bytes`), so a READ payload
+# reaches the caller with no copy, and every length is checked against what's
+# left of the record before anything is sliced or allocated.
+bytes = "1"
+# The transport: `net` for the TCP connection (`TcpSocket` binds the reserved
+# source port before connecting), `io-util` for the record reads, `sync` for the
+# pending-call map's oneshots, `time` for the per-call budgets and the stuck-call
+# timer, `macros` for `select!`, `rt` to spawn the reader and writer tasks.
+# Deliberately NOT `rt-multi-thread`: the runtime is the app's.
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt", "sync", "time"] }
+# `buffered`, which pipelines the per-entry LOOKUPs a listing needs.
+futures-util = "0.3"
+log = "0.4"
+# `gethostname`, for the machine name `AUTH_SYS` carries.
+libc = "0.2"
+
+[dev-dependencies]
+# `start_paused` clocks for the transport's timing cells (the stuck-call resend,
+# the silence ladder), so a 60 s rule costs no wall time; `rt-multi-thread` for
+# the loopback and fixture cells.
+tokio = { version = "1", features = ["rt-multi-thread", "test-util"] }

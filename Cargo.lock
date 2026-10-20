@@ -1861,7 +1861,12 @@ dependencies = [
 name = "cmdr-nfs"
 version = "0.0.0"
 dependencies = [
+ "bytes",
  "cmdr-fs",
+ "futures-util",
+ "libc",
+ "log",
+ "tokio",
  "tokio-util",
 ]
 
