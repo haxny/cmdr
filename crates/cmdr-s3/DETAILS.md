@@ -158,8 +158,8 @@ backends' connection lifecycle" has the mechanism (the first `DeviceDisconnected
 that fails loses only the client it went out on). `reconnect.rs` brings what is this backend's own: the connect probe,
 its refusals mapped (`KeysRejected`, `AccessDenied`, `BucketListRefused`, and `NeedsCredentials` spend the unattended
 try and latch `NeedsCredentials` until a person signs in; the rest are transient), and the unfinished-upload sweep a
-rebuilt client starts (`client_installed`). `reconnect_with_credentials(SignIn)` takes the access key id as
-the username and refuses any other key (`NotSupported`): another key is another account. `sign_in_prompt` is
+rebuilt client starts (`client_installed`). `reconnect_with_credentials(SignIn)` takes the access key id as the username
+and refuses any other key (`NotSupported`): another key is another account. `sign_in_prompt` is
 `SignInShape::AccessKeys`. The silence watch is the shared `cmdr_fs::volume::liveness`, probing with an unsigned HEAD on
 the endpoint through the pool-free client.
 
