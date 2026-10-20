@@ -104,6 +104,7 @@ pub use session::{
 };
 pub use session_store::{MediaDimensions, ViewerOpenResult};
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, write_plain};
 use serde::{Deserialize, Serialize};
 
 /// Maximum file size for FullLoadBackend (1 MB).
@@ -289,31 +290,42 @@ pub enum ViewerError {
 
 impl std::fmt::Display for ViewerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: a missing file's path is marked.
+impl ErrorLogText for ViewerError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
-            Self::Io { message } => write!(f, "{}", message),
-            Self::NotFound { path } => write!(f, "File not found: {}", path),
-            Self::IsDirectory => write!(f, "Cannot view a directory"),
-            Self::SessionNotFound { session_id } => write!(f, "Viewer session not found: {}", session_id),
-            Self::Cancelled => write!(f, "Read cancelled"),
-            Self::OutOfRange => write!(f, "Selection is past the end of the file"),
-            Self::TimedOut => write!(f, "Read timed out"),
-            Self::StoppedResponding => write!(f, "The source stopped sending the file"),
+            Self::Io { message } => write!(out, "{}", message),
+            Self::NotFound { path } => {
+                out.write_str("File not found: ")?;
+                out.value(cmdr_fs::log_private::LogPrivate::file_path(path))
+            }
+            Self::IsDirectory => write!(out, "Cannot view a directory"),
+            Self::SessionNotFound { session_id } => write!(out, "Viewer session not found: {}", session_id),
+            Self::Cancelled => write!(out, "Read cancelled"),
+            Self::OutOfRange => write!(out, "Selection is past the end of the file"),
+            Self::TimedOut => write!(out, "Read timed out"),
+            Self::StoppedResponding => write!(out, "The source stopped sending the file"),
             Self::TooLargeToPreview { size, cap } => {
                 // Display/log string only — the user sees the FE's friendly copy
                 // (`viewer.error.tooLargeToPreview`). Phrased to avoid a `1 bytes`
                 // singular. Names no namespace: a `.zip` entry and a `.git` snapshot
                 // blob both reach this cap.
                 write!(
-                    f,
+                    out,
                     "This item is too large to preview from here (size {size}, limit {cap})"
                 )
             }
             // Display/log string only — the user sees the FE's friendly copy
             // (`viewer.saveAs.destinationReadOnly`). Names no namespace, because
             // both a `.zip` and a `.git` snapshot reach it.
-            Self::DestinationIsReadOnly => write!(f, "Can't save into a read-only location"),
-            Self::Archive { message, .. } => write!(f, "{message}"),
-            Self::ColdStorage => write!(f, "The file is archived and needs a restore before it can be read"),
+            Self::DestinationIsReadOnly => write!(out, "Can't save into a read-only location"),
+            Self::Archive { message, .. } => write!(out, "{message}"),
+            Self::ColdStorage => write!(out, "The file is archived and needs a restore before it can be read"),
         }
     }
 }

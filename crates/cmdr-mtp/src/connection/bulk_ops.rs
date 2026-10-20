@@ -7,6 +7,7 @@ use log::debug;
 use super::errors::MtpConnectionError;
 use super::{MtpConnectionManager, normalize_mtp_path};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{CopyScanResult, ScanBoundary, ScanStop};
 
@@ -130,9 +131,9 @@ impl MtpConnectionManager {
                 // list_directory failed, likely because path is a file, not a directory.
                 boundary.check().await.map_err(|_| scan_cancelled(device_id))?;
                 debug!(
-                    "MTP scan_for_copy: list_directory failed for '{}', checking if it's a file: {:?}",
+                    "MTP scan_for_copy: list_directory failed for '{}', checking if it's a file: {}",
                     LogPrivate::path(path),
-                    e
+                    LogError(&e)
                 );
                 if let Some(result) = self.try_scan_as_file(device_id, storage_id, path).await {
                     boundary

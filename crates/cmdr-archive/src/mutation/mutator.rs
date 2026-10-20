@@ -23,6 +23,7 @@
 //! refused instead: `zip`'s raw copy drops the traditional-PKWARE encryption flag,
 //! which would silently corrupt the entry (see `MutationError::EncryptedEntryRetained`).
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, write_plain};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Read, Write};

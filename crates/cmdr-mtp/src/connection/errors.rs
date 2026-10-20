@@ -1,5 +1,8 @@
 //! Error types for MTP connection operations.
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, write_plain};
+use cmdr_fs::log_private::LogPrivate;
+
 /// Why an MTP operation couldn't happen, in a shape the app can act on.
 ///
 /// Every variant carries the `device_id` it is about, because a message the user
@@ -147,67 +150,78 @@ pub enum MtpConnectionError {
 
 impl std::fmt::Display for MtpConnectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: an object's path on the device is marked.
+impl ErrorLogText for MtpConnectionError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
             Self::DeviceNotFound { device_id } => {
-                write!(f, "Device not found: {device_id}")
+                write!(out, "Device not found: {device_id}")
             }
             Self::NotConnected { device_id } => {
-                write!(f, "Device not connected: {device_id}")
+                write!(out, "Device not connected: {device_id}")
             }
             Self::ExclusiveAccess {
                 device_id,
                 blocking_process,
             } => {
                 if let Some(proc) = blocking_process {
-                    write!(f, "Device {device_id} is in use by {proc}")
+                    write!(out, "Device {device_id} is in use by {proc}")
                 } else {
-                    write!(f, "Device {device_id} is in use by another process")
+                    write!(out, "Device {device_id} is in use by another process")
                 }
             }
             Self::Timeout { device_id } => {
-                write!(f, "Connection timed out for device: {device_id}")
+                write!(out, "Connection timed out for device: {device_id}")
             }
             Self::Disconnected { device_id } => {
-                write!(f, "Device disconnected: {device_id}")
+                write!(out, "Device disconnected: {device_id}")
             }
             Self::Protocol { device_id, message } => {
-                write!(f, "Protocol error for {device_id}: {message}")
+                write!(out, "Protocol error for {device_id}: {message}")
             }
             Self::DeviceBusy { device_id } => {
-                write!(f, "Device busy: {device_id}")
+                write!(out, "Device busy: {device_id}")
             }
             Self::StorageFull { device_id } => {
-                write!(f, "Storage full on device: {device_id}")
+                write!(out, "Storage full on device: {device_id}")
             }
             Self::StoreReadOnly { device_id } => {
-                write!(f, "Device is read-only: {device_id}")
+                write!(out, "Device is read-only: {device_id}")
             }
             Self::PermissionDenied { device_id } => {
-                write!(f, "Permission denied for device: {device_id}")
+                write!(out, "Permission denied for device: {device_id}")
             }
             Self::Cancelled { device_id, message } => {
-                write!(f, "Cancelled on {device_id}: {message}")
+                write!(out, "Cancelled on {device_id}: {message}")
             }
             Self::ObjectNotFound { device_id, path } => {
-                write!(f, "Object not found on {device_id}: {path}")
+                write!(out, "Object not found on {device_id}: ")?;
+                out.value(LogPrivate::path(path))
             }
             Self::AmbiguousName { device_id, path } => {
                 write!(f, "Same-named objects on {device_id}: {path}")
             }
             Self::DirectoryNotEmpty { device_id, path } => {
-                write!(f, "Folder still has contents on {device_id}: {path}")
+                write!(out, "Folder still has contents on {device_id}: ")?;
+                out.value(LogPrivate::dir_path(path))
             }
             Self::StaleParentHandle { device_id, dest_folder } => {
-                write!(f, "Stale destination folder handle on {device_id}: {dest_folder}")
+                write!(out, "Stale destination folder handle on {device_id}: ")?;
+                out.value(LogPrivate::dir_path(dest_folder))
             }
             Self::SessionReset { device_id } => {
                 write!(
-                    f,
+                    out,
                     "The connection to {device_id} restarted; it's still plugged in and can be reopened"
                 )
             }
             Self::Other { device_id, message } => {
-                write!(f, "Error for {device_id}: {message}")
+                write!(out, "Error for {device_id}: {message}")
             }
         }
     }

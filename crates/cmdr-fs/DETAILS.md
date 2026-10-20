@@ -549,9 +549,15 @@ both sides read (`LogKind`, `CLOSER`, `RESERVED`, and `markers`, the lexer).
   writes no span. `{:?}` of a `LogError` quotes the marked text as one field, spans one depth down.
 - **Converted**: `VolumeError` (each path variant marks its path by the kind it carries: `StaleDestinationHandle` and
   `IsADirectory` a dir, `ColdStorage` and `SourceChanged` a file, the rest neutral; `ReadOnly` too, since some backends
-  put a message there; the message variants stay text), `FriendlyGitError`, and `cmdr-index`'s `VolumeScanError` (whose
-  `ConsecutiveFailures` keeps the last error typed for this). A log site formats them through `LogError`; the type
-  system refuses `LogError` of anything else.
+  put a message there; the message variants stay text), `FriendlyGitError`, `cmdr-index`'s `VolumeScanError` (whose
+  `ConsecutiveFailures` keeps the last error typed for this), `NotWalkable`, and `SizeError`, `cmdr-operations`'
+  `MutationError`, conflict `VolumeScanError`, and `FlushFailure`, `MtpConnectionError`, `cmdr-archive`'s `ArchiveError`
+  and `MutationError`, and the app's `ReconnectError` and `ViewerError`. A log site formats them through `LogError`; the
+  type system refuses `LogError` of anything else. `WriteOperationError` (~50 variants, all IPC) logs as
+  `error.log_detail()` instead: the frontend's JSON in a `detail=` field, whose camelCase keys a report tokenizes.
+- **Finding the sites**: compile the workspace with a converted type's `Display` (and `Error`) removed; every error left
+  is a site that formats it plainly. A log site switches to `LogError`; a site building IPC or technical-detail text
+  stays plain on purpose.
 - **The known gap**: an error flattened into a `String` before a log macro sees it (`io::Error::other(e.to_string())` in
   a backend's byte stream, a `format!` into another error's message) prints plain and gets only the report's regex
   fallback. Nothing here walks `source()`: no converted type has one.

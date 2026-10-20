@@ -31,6 +31,8 @@
 //!    a phone and can drop history, so a stored total is only ever true as of a
 //!    moment.
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, write_plain};
+use cmdr_fs::log_private::LogPrivate;
 use std::path::PathBuf;
 
 /// One entry as the host actually saw it on disk.
@@ -225,11 +227,22 @@ pub enum SizeError {
 impl std::fmt::Display for SizeError {
     /// Diagnostic text for logs; the app renders its own words.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: a missing path is marked.
+impl ErrorLogText for SizeError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
-            Self::NotImplemented => f.write_str("on-demand subtree sizes aren't implemented"),
-            Self::VolumeUnavailable { volume_id } => write!(f, "nothing mounted for volume '{volume_id}'"),
-            Self::NotFound { path } => write!(f, "no such path: {}", path.display()),
-            Self::Cancelled => f.write_str("the size walk was stopped"),
+            Self::NotImplemented => out.write_str("on-demand subtree sizes aren't implemented"),
+            Self::VolumeUnavailable { volume_id } => write!(out, "nothing mounted for volume '{volume_id}'"),
+            Self::NotFound { path } => {
+                out.write_str("no such path: ")?;
+                out.value(LogPrivate::path(path))
+            }
+            Self::Cancelled => out.write_str("the size walk was stopped"),
         }
     }
 }

@@ -21,6 +21,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::Xattr;
 use tokio::task::spawn_blocking;
@@ -406,7 +407,7 @@ impl ArchiveIndex {
         let reader = match self.store.open_read(&sidecar.key, sidecar.size, source, password) {
             Ok(reader) => reader,
             Err(e) => {
-                log::debug!(target: "archive", "Couldn't open the sidecar {}: {e:?}", sidecar.key);
+                log::debug!(target: "archive", "Couldn't open the sidecar {}: {e}", sidecar.key, e = LogError(&e));
                 return None;
             }
         };

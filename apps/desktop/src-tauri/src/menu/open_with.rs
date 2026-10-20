@@ -33,6 +33,7 @@ use super::context_menu_slots::Placeheld;
 use crate::file_system::open_with::AppCandidate;
 use crate::intl::menu_t;
 #[cfg(target_os = "macos")]
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 
 /// Menu item ID prefix for "Open with" candidate apps. Followed by the app's bundle ID.
@@ -210,7 +211,7 @@ pub(super) fn launch_with<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>, a
                     "Open with: couldn't copy {} out for {}: {}",
                     LogPrivate::path(&refused.path),
                     LogPrivate::path(&app_path),
-                    refused.error
+                    LogError(&refused.error)
                 );
                 announce_refused_copy(&app, &refused, &app_path);
                 return;

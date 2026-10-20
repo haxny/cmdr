@@ -12,6 +12,7 @@
 //! and an ancestor that claimed a listing it never did would mark a whole tree
 //! covered off the back of one walked folder.
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, write_plain};
 use std::path::{Path, PathBuf};
 
 use cmdr_fs::log_private::LogPrivate;
@@ -280,11 +281,26 @@ pub(super) enum NotWalkable {
 
 impl std::fmt::Display for NotWalkable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: the folder in question is marked.
+impl ErrorLogText for NotWalkable {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
-            Self::OutsideVolume => f.write_str("the path is outside this volume's index"),
-            Self::NotADirectoryOnDisk(path) => write!(f, "{} isn't a readable directory", path.display()),
-            Self::FileRowInTheChain(path) => write!(f, "the index holds {} as a file", path.display()),
-            Self::Store(e) => write!(f, "the index store wouldn't answer: {e}"),
+            Self::OutsideVolume => out.write_str("the path is outside this volume's index"),
+            Self::NotADirectoryOnDisk(path) => {
+                out.value(LogPrivate::dir_path(path))?;
+                out.write_str(" isn't a readable directory")
+            }
+            Self::FileRowInTheChain(path) => {
+                out.write_str("the index holds ")?;
+                out.value(LogPrivate::path(path))?;
+                out.write_str(" as a file")
+            }
+            Self::Store(e) => write!(out, "the index store wouldn't answer: {e}"),
         }
     }
 }

@@ -103,7 +103,7 @@ impl Volume for MtpVolume {
                 Err(e) => debug!(
                     "MtpVolume::list_directory: failed in {:?}, error={:?}",
                     start.elapsed(),
-                    e
+                    LogError(&e)
                 ),
             }
 

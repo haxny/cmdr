@@ -11,6 +11,7 @@ use std::pin::Pin;
 use super::cache::Cached;
 use super::errors::MtpConnectionError;
 use super::{MtpConnectionManager, normalize_mtp_path};
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 
 impl MtpConnectionManager {
@@ -43,10 +44,10 @@ impl MtpConnectionManager {
                 .await
             {
                 debug!(
-                    "refresh_dir_handle: re-list of {} failed while healing handle for {}: {:?}",
+                    "refresh_dir_handle: re-list of {} failed while healing handle for {}: {}",
                     LogPrivate::dir_path(&ancestor),
                     LogPrivate::dir_path(&dir),
-                    e
+                    LogError(&e)
                 );
                 return;
             }

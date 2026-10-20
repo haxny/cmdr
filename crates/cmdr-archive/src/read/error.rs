@@ -5,6 +5,8 @@
 //! `String` payloads are for display /
 //! logging only.
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, write_plain};
+use cmdr_fs::log_private::LogPrivate;
 use rc_zip::error::{Error as RcZipError, FormatError};
 
 /// A failure while parsing or reading a zip archive.
@@ -58,16 +60,30 @@ pub enum ArchiveError {
 
 impl std::fmt::Display for ArchiveError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: an entry's path inside the archive is marked.
+impl ErrorLogText for ArchiveError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
-            Self::NotAnArchive => f.write_str("not a zip archive"),
-            Self::Corrupt(msg) => write!(f, "corrupt archive: {msg}"),
-            Self::Encrypted => f.write_str("archive entry is encrypted"),
-            Self::WrongPassword => f.write_str("archive password is incorrect"),
-            Self::Unsupported(msg) => write!(f, "unsupported archive feature: {msg}"),
-            Self::TooLarge(msg) => write!(f, "archive is too large to browse: {msg}"),
-            Self::NotFound(path) => write!(f, "no such entry: {path}"),
-            Self::IsADirectory(path) => write!(f, "entry is a directory: {path}"),
-            Self::Io(msg) => write!(f, "archive I/O error: {msg}"),
+            Self::NotAnArchive => out.write_str("not a zip archive"),
+            Self::Corrupt(msg) => write!(out, "corrupt archive: {msg}"),
+            Self::Encrypted => out.write_str("archive entry is encrypted"),
+            Self::WrongPassword => out.write_str("archive password is incorrect"),
+            Self::Unsupported(msg) => write!(out, "unsupported archive feature: {msg}"),
+            Self::TooLarge(msg) => write!(out, "archive is too large to browse: {msg}"),
+            Self::NotFound(path) => {
+                out.write_str("no such entry: ")?;
+                out.value(LogPrivate::path(path))
+            }
+            Self::IsADirectory(path) => {
+                out.write_str("entry is a directory: ")?;
+                out.value(LogPrivate::dir_path(path))
+            }
+            Self::Io(msg) => write!(out, "archive I/O error: {msg}"),
         }
     }
 }

@@ -3,6 +3,8 @@
 //! writer (`mutator.rs`) speak, kept here so the plan feeds the write one way.
 //! Re-exported from `mutator`, where callers name them.
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, write_plain};
+use cmdr_fs::log_private::LogPrivate;
 use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
@@ -114,24 +116,33 @@ pub enum MutationError {
 
 impl std::fmt::Display for MutationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: an entry's path inside the archive is marked.
+impl ErrorLogText for MutationError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
-            MutationError::Cancelled => write!(f, "the archive edit was cancelled"),
-            MutationError::OpenOriginal(e) => write!(f, "couldn't open the archive: {e}"),
-            MutationError::Zip(e) => write!(f, "the archive couldn't be rewritten: {e}"),
+            MutationError::Cancelled => write!(out, "the archive edit was cancelled"),
+            MutationError::OpenOriginal(e) => write!(out, "couldn't open the archive: {e}"),
+            MutationError::Zip(e) => write!(out, "the archive couldn't be rewritten: {e}"),
             MutationError::EncryptedEntryRetained { name } => {
-                write!(
-                    f,
-                    "the archive can't be edited because it contains an encrypted entry ('{name}')"
-                )
+                out.write_str("the archive can't be edited because it contains an encrypted entry ('")?;
+                out.value(LogPrivate::path(name))?;
+                out.write_str("')")
             }
             MutationError::DuplicateEntryName { name: Some(name) } => {
-                write!(
-                    f,
-                    "the archive can't be edited because two of its entries are named '{name}'"
-                )
+                out.write_str("the archive can't be edited because two of its entries are named '")?;
+                out.value(LogPrivate::path(name))?;
+                out.write_str("'")
             }
             MutationError::DuplicateEntryName { name: None } => {
-                write!(f, "the archive can't be edited because two of its entries share a name")
+                write!(
+                    out,
+                    "the archive can't be edited because two of its entries share a name"
+                )
             }
             MutationError::EntryUnderFile { entry, file } => {
                 write!(
@@ -140,9 +151,11 @@ impl std::fmt::Display for MutationError {
                 )
             }
             MutationError::ReadSource { inner_path, source } => {
-                write!(f, "couldn't read the source for '{inner_path}': {source}")
+                out.write_str("couldn't read the source for '")?;
+                out.value(LogPrivate::path(inner_path))?;
+                write!(out, "': {source}")
             }
-            MutationError::Io(e) => write!(f, "couldn't write the new archive: {e}"),
+            MutationError::Io(e) => write!(out, "couldn't write the new archive: {e}"),
         }
     }
 }

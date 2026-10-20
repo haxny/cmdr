@@ -18,6 +18,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{LandedMetadata, apply_landed};
 
@@ -639,7 +640,7 @@ pub(super) fn move_with_staging(
         log::warn!(
             target: "write_durability",
             "move_with_staging: op={} keeps every source, the destination isn't provably durable ({failure})",
-            operation_id
+            operation_id, failure = LogError(&failure)
         );
         // Typed, so the user reads "Cmdr kept your originals" rather than a
         // generic failure: the errno and the path come straight from the flush,

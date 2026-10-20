@@ -3,6 +3,7 @@
 //! Opens a file, picks the right backend based on file size, and provides a session-based
 //! API for the frontend. Sessions are cached by ID and cleaned up on close.
 
+use cmdr_fs::log_error::LogError;
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -537,7 +538,7 @@ fn open_session_core(
                     }
                 }
                 Err(e) => {
-                    debug!("Indexing failed for session {}: {}", session_id_clone, e);
+                    debug!("Indexing failed for session {}: {}", session_id_clone, LogError(&e));
                     if let Ok(sessions) = SESSIONS.lock()
                         && let Some(session) = sessions.get(&session_id_clone)
                     {
@@ -1515,14 +1516,20 @@ fn apply_tail_extend(session_id: &str, new_size: u64) {
         Some((origin, encoding)) => match reopen_backend(&origin, encoding) {
             Ok((backend, backend_type, opened)) => (backend, Some(backend_type), Some(opened)),
             Err(e) => {
-                debug!("apply_tail_extend: reopening session {session_id} failed: {e}");
+                debug!(
+                    "apply_tail_extend: reopening session {session_id} failed: {e}",
+                    e = LogError(&e)
+                );
                 return;
             }
         },
         None => match backend_snapshot.extend_to_boxed(new_size, &dummy_cancel) {
             Ok(b) => (b, None, None),
             Err(e) => {
-                debug!("apply_tail_extend: extending session {session_id} failed: {e}");
+                debug!(
+                    "apply_tail_extend: extending session {session_id} failed: {e}",
+                    e = LogError(&e)
+                );
                 return;
             }
         },

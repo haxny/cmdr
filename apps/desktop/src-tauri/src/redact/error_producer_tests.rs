@@ -177,3 +177,60 @@ fn an_error_nesting_a_volume_error_marks_the_path_through_it() {
         );
     }
 }
+
+/// The backend and viewer errors that carry a path of their own (an MTP object, an archive
+/// entry, a file the viewer couldn't find) mark it, and their plain spelling ships it.
+#[test]
+fn a_backend_error_carrying_a_path_marks_it() {
+    use crate::file_viewer::ViewerError;
+    use cmdr_archive::ArchiveError;
+    use cmdr_mtp::MtpConnectionError;
+
+    let device_id = || "mtp-20-5".to_string();
+    let lines: Vec<(String, String)> = vec![
+        (
+            format!(
+                "{HEAD}mtp: {}",
+                LogError(&MtpConnectionError::ObjectNotFound {
+                    device_id: device_id(),
+                    path: SHARE_PATH.into()
+                })
+            ),
+            format!(
+                "{HEAD}mtp: {}",
+                MtpConnectionError::ObjectNotFound {
+                    device_id: device_id(),
+                    path: SHARE_PATH.into()
+                }
+            ),
+        ),
+        (
+            format!(
+                "{HEAD}archive: {}",
+                LogError(&ArchiveError::NotFound(SHARE_PATH.into()))
+            ),
+            format!("{HEAD}archive: {}", ArchiveError::NotFound(SHARE_PATH.into())),
+        ),
+        (
+            format!(
+                "{HEAD}viewer: {}",
+                LogError(&ViewerError::NotFound {
+                    path: SHARE_PATH.into()
+                })
+            ),
+            format!(
+                "{HEAD}viewer: {}",
+                ViewerError::NotFound {
+                    path: SHARE_PATH.into()
+                }
+            ),
+        ),
+    ];
+    for (marked, plain) in lines {
+        assert_ships_none(&marked, &PRIVATE);
+        assert!(
+            PRIVATE.iter().any(|word| context().redact_line(&plain).contains(word)),
+            "the plain spelling should leak, or this cell proves nothing: {plain}"
+        );
+    }
+}

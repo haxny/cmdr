@@ -12,6 +12,7 @@ use log::{info, warn};
 
 use super::{DeviceWatch, MtpConnectionError, MtpConnectionManager};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::volume::host::indexing::WatchGap;
 
 /// How many times we try to reopen the device after a session reset.
@@ -161,7 +162,8 @@ impl MtpConnectionManager {
                 Err(e) => {
                     info!(
                         "MTP {device_id}: reopen attempt {} of {MAX_REOPEN_ATTEMPTS} didn't take yet ({e})",
-                        attempt + 1
+                        attempt + 1,
+                        e = LogError(&e)
                     );
                 }
             }

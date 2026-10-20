@@ -7,6 +7,7 @@
 //! holds the drive-index size lookup used to render directory sizes in conflict
 //! UI.
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, LogError, write_plain};
 use std::collections::HashSet;
 use std::fs;
 use std::io;
@@ -27,9 +28,18 @@ pub(super) struct FlushFailure {
 
 impl std::fmt::Display for FlushFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: the path a flush synced is marked.
+impl ErrorLogText for FlushFailure {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
+        out.value(LogPrivate::path(&self.path))?;
         match self.errno {
-            Some(errno) => write!(f, "{}: {}", self.path.display(), io::Error::from_raw_os_error(errno)),
-            None => write!(f, "{}: no OS error code", self.path.display()),
+            Some(errno) => write!(out, ": {}", io::Error::from_raw_os_error(errno)),
+            None => out.write_str(": no OS error code"),
         }
     }
 }
@@ -143,7 +153,7 @@ pub(super) fn unconfirmed_copy(
     log::warn!(
         target: "write_durability",
         "copy_files_with_progress: op={} completes without proof its output is durable ({failure})",
-        operation_id
+        operation_id, failure = LogError(&failure)
     );
     Some(super::types::DurabilityUnconfirmed {
         volume_name: state.sides.as_ref().map(|sides| sides.destination.volume_name.clone()),

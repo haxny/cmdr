@@ -14,6 +14,7 @@ use super::{
     normalize_mtp_path,
 };
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::indexing::WatchGap;
 
@@ -423,10 +424,10 @@ impl MtpConnectionManager {
             Err(e) => {
                 let mapped_err = self.map_device_error(e, device_id);
                 error!(
-                    "MTP list_directory [req#{}]: list_objects failed after {:?}: {:?}",
+                    "MTP list_directory [req#{}]: list_objects failed after {:?}: {}",
                     request_id,
                     list_objects_start.elapsed(),
-                    mapped_err
+                    LogError(&mapped_err)
                 );
                 return Err(mapped_err);
             }
