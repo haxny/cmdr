@@ -193,7 +193,10 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
   only exists from toybox 0.8.3 (Android 11; read from toybox's `cp.c` per release tag, 2026-10-20). A link to a folder
   never gives way (its `rmdir` fails). The window between the `rmdir` and the `mv` would bury the source in a folder
   recreated in between: misplaced, never lost. The fake shell's `mv` moves into a folder the same way, so a regression
-  shows in `conformance_test.rs`.
+  shows in `conformance_test.rs`. ❗ A destination that's the source RE-CASED is never cleared: casefolded `/sdcard`
+  takes it for the source, so the `rmdir` would take the source itself. "Re-cased" is Unicode's full case fold over NFD
+  (`writes.rs::is_the_source_recased`, `unicase` + `unicode-normalization`), the way ext4/f2fs casefold compares names,
+  so `Ö`/`ö` and `ß`/`SS` count; an ASCII-only check let a non-ASCII re-casing `rmdir` an empty source (#512).
 - **Liveness**: operations are the detector (there is no keepalive), so every wire-touching delegator classifies a
   `DeviceGone` into `VolumeError::DeviceDisconnected` and emits the transition once (`state.rs`). `track-devices`
   additionally retires the volume when its serial leaves the list, which is the push channel MTP never had.

@@ -191,7 +191,7 @@ impl AdbVolume {
         }
         // ❌ Never clear a destination that's the source re-cased: `/sdcard` is
         // case-insensitive, so that `rmdir` would take the source itself.
-        if found == WhatIsThere::Directory && !device_from.eq_ignore_ascii_case(&device_to) {
+        if found == WhatIsThere::Directory && !is_the_source_recased(&device_from, &device_to) {
             self.remove_empty_directory(to, &device_to).await?;
         }
         self.shell_verb(&["mv", "-f", &device_from, &device_to], &device_to)
@@ -310,3 +310,24 @@ impl AdbVolume {
         self.occupant(device).await.unwrap_or(WhatIsThere::Nothing)
     }
 }
+
+/// Whether `to` is `from` spelled in another case, which a casefolded `/sdcard`
+/// takes for the SAME entry.
+///
+/// ❗ Unicode's full case folding over the decomposed form (#512), the way
+/// ext4 and f2fs casefold compare names (`utf8_casefold`, NFD plus case fold):
+/// `Ö`/`ö` and `ß`/`SS` are one name there. An ASCII-only check read a non-ASCII
+/// re-casing as another folder, and the guard's `rmdir` took the source.
+fn is_the_source_recased(from: &str, to: &str) -> bool {
+    use unicode_normalization::UnicodeNormalization;
+    if from.is_ascii() && to.is_ascii() {
+        return from.eq_ignore_ascii_case(to);
+    }
+    let from: String = from.nfd().collect();
+    let to: String = to.nfd().collect();
+    unicase::eq(from.as_str(), to.as_str())
+}
+
+#[cfg(test)]
+#[path = "writes_test.rs"]
+mod writes_test;

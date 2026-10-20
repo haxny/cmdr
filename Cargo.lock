@@ -1506,6 +1506,8 @@ dependencies = [
  "specta",
  "tokio",
  "tokio-util",
+ "unicase",
+ "unicode-normalization",
 ]
 
 [[package]]

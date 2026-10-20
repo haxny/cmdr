@@ -48,6 +48,11 @@ tokio = { version = "1", features = ["io-util", "macros", "net", "process", "rt"
 # `CancellationToken`, on the cancelable listing and transfer paths. Default
 # features off, the same shape `cmdr-fs` pins, so no second copy enters the graph.
 tokio-util = { version = "0.7.18", default-features = false }
+# Full Unicode case folding (`ß` and `SS` fold together) plus canonical forms:
+# how the rename guard tells a re-cased source from another folder on a
+# casefolded `/sdcard`. Both already in the graph (`mime_guess`, `cmdr-fs`).
+unicase = "2.9"
+unicode-normalization = "0.1"
 
 [dev-dependencies]
 # Depending on ourselves turns the `testing` feature on for every DEV target and
