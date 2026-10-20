@@ -11,9 +11,12 @@
 //! live in the integration suites.
 
 use std::collections::HashMap;
+use std::future::Future;
 use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use super::super::super::state::{OperationIntent, WriteOperationState};
@@ -21,6 +24,7 @@ use super::super::super::testing::TestOperations;
 use super::pull_apply_upload_swap;
 use crate::in_flight_temps::{RecordHome, track_temp};
 use crate::transfer::volume::{FaultyOp, FaultyVolume};
+use crate::types::WriteOperationError;
 use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset, MutationHooks};
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
@@ -471,4 +475,606 @@ async fn a_remote_edit_journals_as_a_zip_edit_never_as_an_overwrite() {
         row.not_rollbackable_reason,
         Some(NotRollbackableReason::ZipEditUnsupported)
     );
+}
+
+// ---- A swap that goes wrong half-way ----------------------------------------
+//
+// The transfer engine's stale-temp sweep deletes any `.cmdr-tmp-*` it finds a
+// while later, so a swap must never leave the only copy of the archive under its
+// temp name with nothing recording it. Ported from `main`'s #513 cells: each
+// asserts that no step loses a whole archive.
+
+/// The volume id these cells record the swap under.
+const SWAP_VOLUME_ID: &str = "remote-swap";
+
+/// A phone-like parent (no atomic replace, same-name siblings allowed) seeded
+/// with `bundle.zip`.
+async fn sibling_allowing_parent(archive_path: &Path) -> Arc<InMemoryVolume> {
+    let parent = InMemoryVolume::new("Remote-MTP").with_sibling_duplicates_allowed();
+    parent.create_directory(Path::new("/device")).await.expect("seed dir");
+    parent
+        .create_file(archive_path, &build_zip(&[("keep.txt", b"keep me")]))
+        .await
+        .expect("seed zip");
+    Arc::new(parent)
+}
+
+/// [`run_add_edit`] on `state`, answering the orchestration's own result.
+async fn add_edit_on(
+    parent: Arc<dyn Volume>,
+    archive_path: PathBuf,
+    state: Arc<WriteOperationState>,
+) -> Result<(), super::EditError> {
+    pull_apply_upload_swap(
+        parent,
+        SWAP_VOLUME_ID,
+        archive_path,
+        state,
+        None,
+        move |working: &Path| -> Result<(), super::EditError> {
+            let changeset = Changeset {
+                adds: vec![add_entry("added.txt", b"fresh bytes")],
+                ..Default::default()
+            };
+            mutator::apply(working, &changeset, &NoHooks).expect("local mutator apply");
+            Ok(())
+        },
+    )
+    .await
+}
+
+/// [`add_edit_on`] on a running state of its own.
+async fn add_edit(parent: Arc<dyn Volume>, archive_path: PathBuf) -> Result<(), super::EditError> {
+    add_edit_on(parent, archive_path, running_state()).await
+}
+
+/// Every name in `dir`.
+async fn names_in(parent: &dyn Volume, dir: &str) -> Vec<String> {
+    sibling_names(parent, &Path::new(dir).join("x")).await
+}
+
+/// The paths in `/device` whose archive holds `entry`.
+async fn archives_holding(parent: &dyn Volume, entry: &str) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    for name in names_in(parent, "/device").await {
+        let at = Path::new("/device").join(&name);
+        if read_remote_zip(parent, &at).await.contains_key(entry) {
+            found.push(at);
+        }
+    }
+    found
+}
+
+/// What the transfer engine's stale-temp sweep would leave: every
+/// `.cmdr-tmp-*` in `/device` deleted, the harshest it could be.
+async fn sweep_transfer_temps(parent: &dyn Volume) {
+    for name in names_in(parent, "/device").await {
+        if name.contains(".cmdr-tmp-") {
+            parent
+                .delete(&Path::new("/device").join(name))
+                .await
+                .expect("sweep a temp");
+        }
+    }
+}
+
+/// Neither the edit nor anything else can take the archive's name: the edit
+/// moves to a ` (recovered)` name the error names, ❌ never left in temp space.
+#[tokio::test]
+async fn a_name_that_refuses_both_the_edit_and_the_original_keeps_both_findable() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let inner = sibling_allowing_parent(&archive_path).await;
+    inner.set_rename_to_failing(&archive_path);
+
+    let result = add_edit(inner.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+
+    let Err(super::EditError::Op(WriteOperationError::NewDataKeptAt { path, kept_at, .. })) = result else {
+        panic!("the error must say where the edited archive is");
+    };
+    assert_eq!(path, "/device/bundle.zip");
+    assert!(
+        !kept_at.contains(".cmdr-tmp-"),
+        "the edit must not keep a name the stale-temp sweep deletes: {kept_at}"
+    );
+    let edit = read_remote_zip(inner.as_ref(), Path::new(&kept_at)).await;
+    assert!(edit.contains_key("added.txt"), "the edited archive, whole");
+    let names = names_in(inner.as_ref(), "/device").await;
+    assert!(
+        !names.iter().any(|n| n.contains(".cmdr-tmp-")),
+        "nothing left in temp space, got: {names:?}"
+    );
+}
+
+/// The landing rename is refused after the way was cleared: the edit is kept
+/// under a ` (recovered)` name the error names.
+#[tokio::test]
+async fn a_landing_that_fails_keeps_the_edit_findable() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
+        .failing_call(FaultyOp::Rename, 1, VolumeError::NotConnected("a hiccup".into()))
+        .arc();
+
+    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+
+    assert!(parent.fault_fired(FaultyOp::Rename), "the landing rename failed");
+    let Err(super::EditError::Op(WriteOperationError::NewDataKeptAt { kept_at, .. })) = result else {
+        panic!("the error must say where the edited archive is");
+    };
+    assert!(
+        read_remote_zip(parent.as_ref(), Path::new(&kept_at))
+            .await
+            .contains_key("added.txt")
+    );
+}
+
+/// The swap's first step on the original is refused and the original is still
+/// there: the edit didn't happen, the original keeps its bytes, and the spare
+/// temp goes.
+#[tokio::test]
+async fn a_refused_first_step_on_the_original_leaves_it_whole_and_takes_the_temp_away() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
+        .failing_call(FaultyOp::Delete, 1, VolumeError::NotConnected("busy".into()))
+        .arc();
+
+    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+
+    assert!(parent.fault_fired(FaultyOp::Delete), "the swap's step was refused");
+    assert!(
+        matches!(result, Err(super::EditError::Op(ref e)) if !matches!(e, WriteOperationError::NewDataKeptAt { .. })),
+        "a plain refusal: nothing moved"
+    );
+    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
+    assert!(
+        back.contains_key("keep.txt") && !back.contains_key("added.txt"),
+        "the original, untouched"
+    );
+    assert_eq!(names_in(parent.as_ref(), "/device").await, ["bundle.zip"], "no temp");
+}
+
+/// A crash after each step of the swap (modelled as the device going silent:
+/// every call after the cut fails, so nothing more reaches it), then the next
+/// launch's ledger sweep, then the harshest stale-temp sweep, then the next
+/// remote zip edit in that folder. At every cut a complete archive is at the
+/// archive's name, ❗ no version anyone had is lost, and nothing is left in
+/// temp space.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_crash_after_any_step_of_the_swap_loses_no_archive() {
+    use crate::in_flight_temps::Ledger;
+
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let sibling = PathBuf::from("/device/other.zip");
+    // Mutating calls in order: upload, delete the original, landing rename.
+    for cut in 1..=3 {
+        let dir = cmdr_fs::testing::TestDir::new(&format!("remote-swap-crash-{cut}"));
+        let data_dir = dir.join("data");
+        std::fs::create_dir_all(&data_dir).expect("data dir");
+        let ledger = Ledger::recording_in(&data_dir);
+        let engine = TestOperations::new();
+        let state = Arc::new(
+            engine
+                .new_operation_state(Duration::from_millis(50))
+                .with_in_flight_ledger(ledger.clone()),
+        );
+        let inner = sibling_allowing_parent(&archive_path).await;
+        inner
+            .create_file(&sibling, &build_zip(&[("other.txt", b"other")]))
+            .await
+            .expect("seed the sibling zip");
+        let dying = Arc::new(GoesSilentAfter::new(Arc::clone(&inner), cut));
+
+        // Only a cut after the landing has the edit in place to report.
+        let landed = add_edit_on(dying as Arc<dyn Volume>, archive_path.clone(), state)
+            .await
+            .is_ok();
+        assert_eq!(landed, cut == 3, "cut {cut}: success only once the edit took its name");
+
+        // The process dies, and the next one launches with the device back.
+        ledger.die();
+        let next_app = TestOperations::new();
+        next_app
+            .volumes()
+            .register(SWAP_VOLUME_ID, Arc::clone(&inner) as Arc<dyn Volume>);
+        let tally = Ledger::for_test().launch_in(&data_dir, &next_app).wait();
+        sweep_transfer_temps(inner.as_ref()).await;
+        assert!(
+            add_edit(inner.clone() as Arc<dyn Volume>, sibling.clone())
+                .await
+                .is_ok(),
+            "cut {cut}: the next touch"
+        );
+
+        let back = read_remote_zip(inner.as_ref(), &archive_path).await;
+        assert!(
+            back.contains_key("keep.txt"),
+            "cut {cut}: a whole archive at the name: {tally:?}"
+        );
+        assert_eq!(
+            back.contains_key("added.txt"),
+            cut >= 2,
+            "cut {cut}: the edit lands once the original's delete went through"
+        );
+        if cut == 1 {
+            let edits: Vec<PathBuf> = archives_holding(inner.as_ref(), "added.txt")
+                .await
+                .into_iter()
+                .filter(|at| *at != sibling)
+                .collect();
+            assert_eq!(
+                edits.len(),
+                1,
+                "cut 1: ❗ the edit survives beside the original: {edits:?}"
+            );
+        }
+        let names = names_in(inner.as_ref(), "/device").await;
+        assert!(
+            !names.iter().any(|n| n.contains(".cmdr-tmp-")),
+            "cut {cut}: nothing left in temp space: {names:?}"
+        );
+        drop(engine);
+    }
+}
+
+/// Two old versions of one archive sit aside under scratch names nothing
+/// records (a crash of some earlier swap): nothing in a name says which is
+/// newer, so a remote edit in that folder leaves both visible and puts neither
+/// at the archive's name.
+#[tokio::test]
+async fn two_asides_claiming_one_empty_name_both_stay_put() {
+    let sibling = PathBuf::from("/device/other.zip");
+    let inner = remote_parent_with_zip(&sibling, &build_zip(&[("other.txt", b"other")])).await;
+    let older = PathBuf::from("/device/bundle.zip.cmdr-temp-00000000-0000-4000-8000-000000000001");
+    let newer = PathBuf::from("/device/bundle.zip.cmdr-temp-ffffffff-0000-4000-8000-000000000002");
+    inner
+        .create_file(&older, &build_zip(&[("v.txt", b"older")]))
+        .await
+        .expect("seed the older aside");
+    inner
+        .create_file(&newer, &build_zip(&[("v.txt", b"newer")]))
+        .await
+        .expect("seed the newer aside");
+
+    assert!(add_edit(inner.clone() as Arc<dyn Volume>, sibling).await.is_ok());
+
+    assert!(
+        !inner.exists(Path::new("/device/bundle.zip")).await,
+        "an ambiguous pair must not pick a version for the name"
+    );
+    assert!(
+        inner.exists(&older).await && inner.exists(&newer).await,
+        "both asides stay"
+    );
+}
+
+/// A parent that answers normally for its first `mutations` writes, renames,
+/// and deletes, then goes silent: every call after that fails, the way nothing
+/// reaches a phone that was unplugged or a process that died.
+struct GoesSilentAfter {
+    inner: Arc<InMemoryVolume>,
+    mutations_left: std::sync::Mutex<usize>,
+}
+
+impl GoesSilentAfter {
+    fn new(inner: Arc<InMemoryVolume>, mutations: usize) -> Self {
+        Self {
+            inner,
+            mutations_left: std::sync::Mutex::new(mutations),
+        }
+    }
+
+    /// Whether the cut has passed.
+    fn silent(&self) -> bool {
+        *self.mutations_left.lock().expect("lock") == 0
+    }
+
+    /// Spends one mutation, or answers that the parent is silent.
+    fn mutate(&self) -> Result<(), VolumeError> {
+        let mut left = self.mutations_left.lock().expect("lock");
+        if *left == 0 {
+            return Err(gone());
+        }
+        *left -= 1;
+        Ok(())
+    }
+}
+
+fn gone() -> VolumeError {
+    VolumeError::NotConnected("the device went away".into())
+}
+
+impl Volume for GoesSilentAfter {
+    crate::forward_volume_methods!(
+        inner => name,
+        root,
+        lane_key,
+        local_path,
+        supports_streaming,
+        supports_local_fs_access,
+        operations_are_local,
+        create_directory_errors_on_existing_dir,
+        supports_unknown_length_writes,
+        write_is_single_shot,
+        publishes_writes_whole,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
+        if self.silent() {
+            return Box::pin(async { Err(gone()) });
+        }
+        self.inner.list_directory(path, on_progress)
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>> {
+        if self.silent() {
+            return Box::pin(async { Err(gone()) });
+        }
+        self.inner.get_metadata(path)
+    }
+
+    fn open_read_stream<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn cmdr_fs::volume::VolumeReadStream>, VolumeError>> + Send + 'a>>
+    {
+        if self.silent() {
+            return Box::pin(async { Err(gone()) });
+        }
+        self.inner.open_read_stream(path)
+    }
+
+    fn write_from_stream<'a>(
+        &'a self,
+        dest: &'a Path,
+        mode: cmdr_fs::volume::WriteMode,
+        length: cmdr_fs::volume::StreamLength,
+        stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
+        on_progress: &'a (dyn Fn(cmdr_fs::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::StreamWritten, VolumeError>> + Send + 'a>> {
+        if let Err(e) = self.mutate() {
+            return Box::pin(async { Err(e) });
+        }
+        self.inner.write_from_stream(dest, mode, length, stream, on_progress)
+    }
+
+    fn rename<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        force: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        if let Err(e) = self.mutate() {
+            return Box::pin(async { Err(e) });
+        }
+        self.inner.rename(from, to, force)
+    }
+
+    fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        if let Err(e) = self.mutate() {
+            return Box::pin(async { Err(e) });
+        }
+        self.inner.delete(path)
+    }
+}
+
+/// The replacing rename lands on the server but its answer is an error. The temp
+/// is gone, so the swap happened: the edit is reported as landed, and nothing
+/// deletes the archive that now holds it.
+#[tokio::test]
+async fn a_replacing_rename_that_landed_despite_its_error_keeps_the_edit() {
+    let archive_path = PathBuf::from("/share/bundle.zip");
+    let inner = remote_parent_with_zip(&archive_path, &build_zip(&[("keep.txt", b"keep me")])).await;
+    let parent = Arc::new(RenameLandsButErrs { inner });
+
+    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+
+    assert!(result.is_ok(), "the rename landed, so the edit committed");
+    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
+    assert!(
+        back.contains_key("keep.txt") && back.contains_key("added.txt"),
+        "the edit is in place"
+    );
+    let names = sibling_names(parent.as_ref(), &archive_path).await;
+    assert!(
+        !names.iter().any(|n| n.contains(".cmdr-tmp-")),
+        "no leftover upload temp, got: {names:?}"
+    );
+}
+
+/// A parent whose replacing rename APPLIES and still answers an error, the way a
+/// lost response looks over a network share.
+struct RenameLandsButErrs {
+    inner: Arc<InMemoryVolume>,
+}
+
+impl Volume for RenameLandsButErrs {
+    crate::forward_volume_methods!(
+        inner => name,
+        root,
+        lane_key,
+        list_directory,
+        get_metadata,
+        exists,
+        is_directory,
+        create_file,
+        create_directory,
+        create_directory_all,
+        delete,
+        open_read_stream,
+        write_from_stream,
+        local_path,
+        supports_streaming,
+        supports_local_fs_access,
+        operations_are_local,
+        create_directory_errors_on_existing_dir,
+        supports_unknown_length_writes,
+        write_is_single_shot,
+        publishes_writes_whole,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    /// Stands in for SMB, the backend whose replace is one atomic step.
+    fn supports_atomic_replace_rename(&self) -> bool {
+        true
+    }
+
+    fn rename<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        force: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.inner.rename(from, to, force).await?;
+            if force {
+                Err(VolumeError::NotConnected("the reply got lost".into()))
+            } else {
+                Ok(())
+            }
+        })
+    }
+}
+
+/// A backend whose forced rename clears the destination in a step of its own
+/// (SFTP without `posix-rename@openssh.com`, for one) and dies between the two
+/// halves. The swap must not hand it the replace: the original would be gone
+/// and the edit left under a `.cmdr-tmp-*` name the stale-temp sweep deletes.
+#[tokio::test]
+async fn a_backend_whose_forced_rename_clears_first_never_gets_the_replace() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let inner = remote_parent_with_zip(&archive_path, &build_zip(&[("keep.txt", b"keep me")])).await;
+    let dying = Arc::new(ClearsThenDiesOnAForcedRename {
+        inner: Arc::clone(&inner),
+        dead: AtomicBool::new(false),
+    });
+
+    let _ = add_edit(dying as Arc<dyn Volume>, archive_path.clone()).await;
+    sweep_transfer_temps(inner.as_ref()).await;
+
+    assert!(
+        !archives_holding(inner.as_ref(), "keep.txt").await.is_empty(),
+        "a complete archive must survive the sweep"
+    );
+}
+
+/// A parent whose forced rename deletes the destination, then dies: every call
+/// after that fails, the way nothing reaches a server once the process is gone.
+struct ClearsThenDiesOnAForcedRename {
+    inner: Arc<InMemoryVolume>,
+    dead: AtomicBool,
+}
+
+impl ClearsThenDiesOnAForcedRename {
+    fn alive(&self) -> Result<(), VolumeError> {
+        if self.dead.load(Ordering::SeqCst) {
+            Err(gone())
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Volume for ClearsThenDiesOnAForcedRename {
+    crate::forward_volume_methods!(
+        inner => name,
+        root,
+        lane_key,
+        local_path,
+        supports_streaming,
+        supports_local_fs_access,
+        operations_are_local,
+        create_directory_errors_on_existing_dir,
+        supports_unknown_length_writes,
+        write_is_single_shot,
+        publishes_writes_whole,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner.list_directory(path, on_progress).await
+        })
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner.get_metadata(path).await
+        })
+    }
+
+    fn open_read_stream<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn cmdr_fs::volume::VolumeReadStream>, VolumeError>> + Send + 'a>>
+    {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner.open_read_stream(path).await
+        })
+    }
+
+    fn write_from_stream<'a>(
+        &'a self,
+        dest: &'a Path,
+        mode: cmdr_fs::volume::WriteMode,
+        length: cmdr_fs::volume::StreamLength,
+        stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
+        on_progress: &'a (dyn Fn(cmdr_fs::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::StreamWritten, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner
+                .write_from_stream(dest, mode, length, stream, on_progress)
+                .await
+        })
+    }
+
+    fn rename<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        force: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            if force && self.inner.exists(to).await {
+                self.inner.delete(to).await?;
+                self.dead.store(true, Ordering::SeqCst);
+                return Err(gone());
+            }
+            self.inner.rename(from, to, force).await
+        })
+    }
+
+    fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.alive()?;
+            self.inner.delete(path).await
+        })
+    }
 }

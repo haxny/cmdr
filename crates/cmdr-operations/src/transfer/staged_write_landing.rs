@@ -347,6 +347,12 @@ fn cut_off(landing: Landing, at: CutOffAt, error: VolumeError) -> LandingError {
 /// (the replace happened in full or not at all), so the temp is a spare copy
 /// and goes; a transport fault cuts the landing off, since the server may have
 /// performed it.
+///
+/// ❗ A refusal is read against the temp first: a reply the server lost after
+/// it performed the replace reads as a refusal too, and then the temp is gone.
+/// Gone, with nothing of ours having discarded it, means the replace happened,
+/// and discarding (or reporting a failure) would disown the edit that's now at
+/// the name.
 async fn replace_in_one_step(dest_volume: &Arc<dyn Volume>, mut landing: Landing) -> Result<(), LandingError> {
     match dest_volume.rename(landing.temp(), &landing.final_path, true).await {
         Ok(()) => {
@@ -359,6 +365,19 @@ async fn replace_in_one_step(dest_volume: &Arc<dyn Volume>, mut landing: Landing
             Err(cut_off(landing, CutOffAt::ReplacingRename, error))
         }
         Err(refused) => {
+            if matches!(
+                dest_volume.get_metadata(landing.temp()).await,
+                Err(VolumeError::NotFound(_))
+            ) {
+                log::info!(
+                    target: "copy",
+                    "landing: the replace onto {} answered {refused}, but its temp is gone, so it landed",
+                    LogPrivate::file_path(&landing.final_path), refused = LogError(&refused),
+                );
+                landing.original_replaced(&InTheWay::TheOriginal);
+                landing.settled();
+                return Ok(());
+            }
             landing.discard(dest_volume).await;
             Err(LandingError::Failed(refused.into()))
         }
