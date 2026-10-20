@@ -80,3 +80,22 @@ permissive path predicate, which would refuse a copy into a real folder named `B
 
 Selecting the row and copying it is a legal, enormous restore through the routed volume; its pre-scan stays
 cancelable, and nothing blocks it.
+
+## Reading out of a snapshot: copy, F3, and the agent
+
+Each rides the route, with no restic-specific code on the way. Cells on a real repo, backed up from a real folder,
+written onto a local drive registered in the app's registry (`test_repo.rs`, whose `ReadGate` can hold a reader inside
+an `index/` or `data/` read):
+
+- **Copy-out** (`apps/desktop/src-tauri/src/operations_host/restic_copy_out_tests.rs`): a file and a folder land byte
+  for byte with their dates and permission bits; a move out is refused before a byte is written. A symlink or a fifo
+  inside a copied folder is one skipped item (`VolumeError::NoContent`); restoring a link AS a link needs a cross-backend
+  symlink seam that doesn't exist yet. A Cancel during a whole-snapshot pre-scan lands inside the listing that waits on
+  the index load (the view opts into `ScanSource::abandons_reads_on_stop`).
+  A repo whose password the hub doesn't hold (remember off, then a restart) answers the copy with
+  `WriteOperationError::ArchiveNeedsPassword`, the prompt the unlock dialog's repo variant answers. Hub eviction keeps
+  the password, so it never prompts.
+- **F3** (`apps/desktop/src-tauri/src/file_viewer/session_test.rs`): materializes the file through the view's stream into the bounded temp, like
+  a file in a git snapshot; a restic read failure is a plain I/O error.
+- **`inspect_file`** (`apps/desktop/src-tauri/src/agent/tools/read/inspect/restic_snapshot_tests.rs`): the same temp, a text window, and the temp
+  gone afterwards. No new kind of content leaves.
