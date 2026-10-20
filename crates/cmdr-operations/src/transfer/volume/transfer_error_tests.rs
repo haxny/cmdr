@@ -75,6 +75,28 @@ fn a_not_found_from_the_destination_is_not_a_missing_source() {
 }
 
 #[test]
+fn a_source_name_two_items_answer_to_is_not_a_taken_destination() {
+    // An MTP folder can hold two same-named files, and the backend refuses to
+    // read either rather than pick one (#523). "Already exists" would send the
+    // user to a destination that holds nothing.
+    let err = map_volume_error(
+        "/DCIM/IMG_1.JPG",
+        PathRole::Source,
+        VolumeError::AmbiguousName("/DCIM/IMG_1.JPG".to_string()),
+    );
+    assert!(
+        !matches!(err, WriteOperationError::DestinationExists { .. }),
+        "a source refusal must not read as a taken destination, got {err:?}"
+    );
+    let dest = map_volume_error(
+        "/ctx",
+        PathRole::Destination,
+        VolumeError::AmbiguousName("/backup/IMG_1.JPG".to_string()),
+    );
+    assert!(matches!(dest, WriteOperationError::DestinationExists { path } if path == "/backup/IMG_1.JPG"));
+}
+
+#[test]
 fn a_file_in_the_way_of_the_destination_folder_keeps_its_own_path() {
     // The volume names the thing in the way, which is often an ancestor of the
     // folder the copy was told to land in (`/ctx`). That path is the only fact

@@ -11748,6 +11748,19 @@ export type MtpConnectionError =
       path: string
     }
   /**
+   *  More than one object in the folder answers to this name (PTP lets a phone
+   *  or camera hold same-named siblings), so the op refused to pick one.
+   *  Nothing was touched. ❌ Never resolve it by choosing a twin: on a delete
+   *  the wrong one is someone's file, and a copy would read one twin twice.
+   */
+  | {
+      type: 'ambiguousName'
+      // The device this is about.
+      device_id: string
+      // The storage-relative path more than one object answers to.
+      path: string
+    }
+  /**
    *  A `SingleNode`-scoped delete was asked to remove a directory that still
    *  has children, and refused. Nothing was deleted.
    *
@@ -18217,14 +18230,15 @@ export type VolumeError =
    */
   | { type: 'deletePending'; data: string }
   /**
-   *  A path from outside this volume's own listings matches more than one
-   *  stored entry once Unicode form and case are set aside, and none of them
-   *  exactly, so the backend refused to pick one. Carries the path as it was
-   *  given.
+   *  A path names more than one stored entry, so the backend refused to pick
+   *  one. Carries the path as it was given.
    *
-   *  Raised only by [`Volume::find_stored_spelling`](super::Volume::find_stored_spelling).
+   *  Two backends raise it: SMB's [`Volume::find_stored_spelling`](super::Volume::find_stored_spelling),
+   *  for a path that matches several entries once Unicode form and case are set
+   *  aside and none exactly (ERR-VETBX), and MTP, for any op on a name two
+   *  siblings share (PTP allows same-named files in one folder).
    *  ❌ Never resolve it by choosing a candidate: on a delete or an overwrite the
-   *  wrong twin is someone's file. SMB-only today (ERR-VETBX).
+   *  wrong twin is someone's file.
    */
   | { type: 'ambiguousName'; data: string }
   /**

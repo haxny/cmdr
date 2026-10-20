@@ -448,12 +448,20 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
         VolumeError::SourceChanged(_) => WriteOperationError::SourceChanged {
             path: context_path.to_string(),
         },
-        // A transfer raises it for the DESTINATION only (`landing.rs`): the folder
-        // holds two look-alikes of the name and neither spelled as asked, so it's
-        // taken and no answer picks which. "Already exists" is the truth, and it
-        // offers no Retry, which would ask the same question again. A transfer
-        // never resolves a source's spelling, so the role doesn't change it.
-        VolumeError::AmbiguousName(path) => WriteOperationError::DestinationExists { path },
+        // On the DESTINATION (`landing.rs`) the folder holds two look-alikes of
+        // the name and neither spelled as asked, so it's taken and no answer
+        // picks which: "already exists" is the truth, with no Retry that would
+        // ask the same question again. On the SOURCE it's an MTP folder holding
+        // two same-named files, and the backend won't pick one to read (#523):
+        // nothing is taken anywhere, so it stays a refusal of this item.
+        VolumeError::AmbiguousName(path) => match role {
+            PathRole::Destination => WriteOperationError::DestinationExists { path },
+            PathRole::Source => WriteOperationError::IoError {
+                path,
+                message: "More than one item on the device answers to this name, so Cmdr didn't pick one to read"
+                    .to_string(),
+            },
+        },
         // Surfaced only when the transfer engine's one-shot retry on a stale
         // destination handle ALSO failed. The fault is the destination folder
         // (its handle couldn't be re-resolved), never the source, so attach the

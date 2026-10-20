@@ -29,8 +29,8 @@ The MTP session layer: opens devices, owns the per-device tokio task, exposes ty
 - **The caches lie in specific ways.** `resolve_path_to_handle()` heals a miss by re-listing parents, else answers a
   typed `ObjectNotFound`; ❌ never call it holding the device lock. `PathHandleCache` is bidirectional: write via
   `insert` / `remove_path` / `record_listing`, ❌ never `path_to_handle`. A destructive op checks the handle's
-  `ObjectInfo` against the path first (`mutation_ops.rs` module docs). `ListingCache`'s 5 s TTL survives mutations;
-  invalidate for read-after-write.
+  `ObjectInfo` against the path first (`mutation_ops.rs` module docs). A name two siblings share resolves to
+  `AmbiguousName`, ❌ never to a twin. `ListingCache`'s 5 s TTL survives mutations; invalidate for read-after-write.
 - **A batch copy scan shares its `ScanBoundary` with `bulk_ops.rs`**, consulting the stop per entry and BEFORE each
   child listing. Plain `scan_for_copy` uses a silent boundary. Selected-source progress: `../../DETAILS.md`.
 - **A suppressed event must win `EventDebouncer::claim_trailing` before re-emitting**: one per burst, never one per

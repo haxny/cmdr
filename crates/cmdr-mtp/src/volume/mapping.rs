@@ -23,6 +23,9 @@ pub(super) fn map_mtp_error(e: MtpConnectionError) -> VolumeError {
             VolumeError::DeviceDisconnected(e.to_string())
         }
         MtpConnectionError::ObjectNotFound { path, .. } => VolumeError::NotFound(path),
+        // Same-named siblings: the refusal SMB raises for look-alike names, and
+        // for the same reason (`VolumeError::AmbiguousName`).
+        MtpConnectionError::AmbiguousName { path, .. } => VolumeError::AmbiguousName(path),
         MtpConnectionError::StaleParentHandle { dest_folder, .. } => VolumeError::StaleDestinationHandle(dest_folder),
         MtpConnectionError::ExclusiveAccess { .. } | MtpConnectionError::PermissionDenied { .. } => {
             VolumeError::PermissionDenied {

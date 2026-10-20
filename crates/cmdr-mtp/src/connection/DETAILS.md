@@ -238,6 +238,28 @@ handle on upload"). A row still on screen then names a handle that belongs to so
 Pinned by `connection/stale_handle_test.rs` (a planted stale entry; the virtual device never reuses a handle) and
 `cache.rs`'s `path_handle_cache_tests`.
 
+## Same-named siblings
+
+PTP lets a folder hold two objects with the same name (a camera card, a phone app writing twice), and both rows list
+with the same path. A path-keyed cache used to keep the LAST twin, so a copy of the folder read the second twin twice
+and never the first, and deleting row one deleted row two's file.
+
+- **The name resolves to neither.** `PathHandleCache::record_listing` records a name more than one child answers to as
+  `same_named` (no forward entry, a reverse entry per twin so a change event still finds the folder, nothing cached
+  beneath it). `resolve_path_to_handle` answers `MtpConnectionError::AmbiguousName` for it, so every path-addressed op
+  refuses (read, delete, rename, move, list) and touches nothing. `MtpVolume` maps it to `VolumeError::AmbiguousName`,
+  the variant SMB raises for look-alike names; a transfer reports it on the source as a refusal of that item.
+- **It lasts until a listing names one.** The next listing of the folder that has the name once makes it an ordinary
+  entry; one without it drops it. A `Tree` delete still clears both twins: it caches each child's handle right before
+  recursing into it.
+- **Open product decision**: the twins are still unaddressable from Cmdr. Making each row its own object needs the
+  handle in the row's identity (for example a disambiguated path that every op and the transfer engine accept), which
+  touches how such rows are named, shown, and copied. The refusal's wording is SMB's ("on the server", "spelled
+  differently"), which reads off for a phone.
+
+Pinned by `connection/same_name_test.rs` (the virtual device is backed by a real folder, which can't hold twins, so the
+cell records the twin listing itself) and `cache.rs`'s `path_handle_cache_tests`.
+
 ## Queued listings share the one that finished (`fresh_cached_listing`)
 
 A foreground listing checks the 5 s listing cache on the way in AND again once it holds the device lock. Callers of one

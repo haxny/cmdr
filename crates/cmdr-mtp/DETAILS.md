@@ -123,9 +123,9 @@ to build on (verified on `mtp-rs` 0.32.0, source read, 2026-09-02). A same-direc
 `[handle, storage_id, parent]`; neither takes an overwrite or exclusive flag, and PTP's response-code enum has no
 collision code to read one out of (`StoreFull`, `AccessDenied`, `InvalidParameter`, and no `ObjectAlreadyExists`). The
 protocol also permits two siblings with the same name, so a device asked to collide doesn't refuse: it complies, and the
-user ends up with a duplicate. ❌ Don't reach for a lock or a retry loop here. Cmdr isn't the only writer — the phone's
-own apps and MTP's other clients mutate the same storage — so a lock this side would buy nothing and read like a
-guarantee.
+user ends up with a duplicate, which Cmdr then refuses to address (`src/connection/DETAILS.md` § "Same-named siblings").
+❌ Don't reach for a lock or a retry loop here. Cmdr isn't the only writer — the phone's own apps and MTP's other
+clients mutate the same storage — so a lock this side would buy nothing and read like a guarantee.
 
 ## Dates on copies
 

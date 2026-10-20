@@ -8,6 +8,7 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
+use super::cache::Cached;
 use super::errors::MtpConnectionError;
 use super::{MtpConnectionManager, normalize_mtp_path};
 
@@ -146,7 +147,9 @@ impl MtpConnectionManager {
     }
 
     /// The handle the path cache holds for an already-normalized `path`, if any.
-    /// `NotConnected` when the device isn't in the registry.
+    /// `NotConnected` when the device isn't in the registry, and `AmbiguousName`
+    /// when the folder's last listing had more than one sibling answering to it:
+    /// the cache knows the path but not which object it means.
     async fn cached_handle(
         &self,
         device_id: &str,
@@ -160,9 +163,16 @@ impl MtpConnectionManager {
             device_id: device_id.to_string(),
         })?;
         let cache_map = entry.path_cache.read_ignore_poison();
-        Ok(cache_map
+        match cache_map
             .get(&storage_id)
-            .and_then(|storage_cache| storage_cache.path_to_handle.get(path))
-            .copied())
+            .and_then(|storage_cache| storage_cache.lookup(path))
+        {
+            Some(Cached::Handle(handle)) => Ok(Some(handle)),
+            Some(Cached::SameNamed) => Err(MtpConnectionError::AmbiguousName {
+                device_id: device_id.to_string(),
+                path: path.to_string_lossy().into_owned(),
+            }),
+            None => Ok(None),
+        }
     }
 }

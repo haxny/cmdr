@@ -86,6 +86,16 @@ pub enum MtpConnectionError {
         /// The storage-relative path that resolved to nothing.
         path: String,
     },
+    /// More than one object in the folder answers to this name (PTP lets a phone
+    /// or camera hold same-named siblings), so the op refused to pick one.
+    /// Nothing was touched. ❌ Never resolve it by choosing a twin: on a delete
+    /// the wrong one is someone's file, and a copy would read one twin twice.
+    AmbiguousName {
+        /// The device this is about.
+        device_id: String,
+        /// The storage-relative path more than one object answers to.
+        path: String,
+    },
     /// A `SingleNode`-scoped delete was asked to remove a directory that still
     /// has children, and refused. Nothing was deleted.
     ///
@@ -180,6 +190,9 @@ impl std::fmt::Display for MtpConnectionError {
             }
             Self::ObjectNotFound { device_id, path } => {
                 write!(f, "Object not found on {device_id}: {path}")
+            }
+            Self::AmbiguousName { device_id, path } => {
+                write!(f, "Same-named objects on {device_id}: {path}")
             }
             Self::DirectoryNotEmpty { device_id, path } => {
                 write!(f, "Folder still has contents on {device_id}: {path}")

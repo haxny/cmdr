@@ -24,26 +24,53 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 /// listing can drop what its folder no longer holds
 /// ([`record_listing`](Self::record_listing)) and a removed folder takes its
 /// subtree with it, without a scan of every cached path.
+///
+/// ❗ PTP lets a folder hold two siblings with the same name, and both list with
+/// the same path. Such a path gets NO forward entry: it's `same_named`, and
+/// [`lookup`](Self::lookup) answers [`Cached::SameNamed`] so every path-addressed
+/// op refuses it instead of picking a twin (`connection/DETAILS.md` § "Same-named
+/// siblings").
 #[derive(Default)]
 pub(super) struct PathHandleCache {
     /// Maps virtual path -> MTP object handle.
     pub(super) path_to_handle: HashMap<PathBuf, ObjectHandle>,
     /// Maps MTP object handle -> virtual path. The reverse of `path_to_handle`,
-    /// kept in lockstep with it.
+    /// kept in lockstep with it. A same-named sibling's handle maps to the path
+    /// it shares, so a change event for it still refreshes the right folder.
     pub(super) handle_to_path: HashMap<ObjectHandle, PathBuf>,
     /// Maps a folder's path -> the cached paths directly inside it.
     children: HashMap<PathBuf, HashSet<PathBuf>>,
+    /// Maps a path more than one sibling answered to in its folder's last
+    /// listing -> their handles.
+    same_named: HashMap<PathBuf, Vec<ObjectHandle>>,
+}
+
+/// What the path cache knows about one path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Cached {
+    /// The one object at the path.
+    Handle(ObjectHandle),
+    /// More than one sibling answers to the path, so it names no one object.
+    SameNamed,
 }
 
 impl PathHandleCache {
+    /// What the cache holds for `path`, if anything.
+    pub(super) fn lookup(&self, path: &Path) -> Option<Cached> {
+        if self.same_named.contains_key(path) {
+            return Some(Cached::SameNamed);
+        }
+        self.path_to_handle.get(path).copied().map(Cached::Handle)
+    }
+
     /// Records a `(path, handle)` pair in both directions.
     ///
     /// Always insert through this (never `path_to_handle.insert` directly) so the
-    /// reverse map can't fall out of sync. A path that held a DIFFERENT handle
-    /// was another object, so what's cached under it goes: those children were
-    /// that object's.
+    /// reverse map can't fall out of sync. A path that held a DIFFERENT handle,
+    /// or several, was another object, so what's cached under it goes: those
+    /// children were that object's.
     pub(super) fn insert(&mut self, path: PathBuf, handle: ObjectHandle) {
-        if self.path_to_handle.get(&path).is_some_and(|old| *old != handle) {
+        if self.same_named.contains_key(&path) || self.path_to_handle.get(&path).is_some_and(|old| *old != handle) {
             self.remove_path(&path);
         }
         if let Some(parent) = path.parent() {
@@ -74,6 +101,11 @@ impl PathHandleCache {
                 self.handle_to_path.remove(&handle);
             }
         }
+        for twin in self.same_named.remove(path).unwrap_or_default() {
+            if self.handle_to_path.get(&twin).is_some_and(|p| p == path) {
+                self.handle_to_path.remove(&twin);
+            }
+        }
         if let Some(parent) = path.parent()
             && let Some(siblings) = self.children.get_mut(parent)
         {
@@ -87,7 +119,8 @@ impl PathHandleCache {
     /// Records a complete listing of `parent`: every child it names, and the
     /// end of every cached child it doesn't (with that child's subtree), so a
     /// name the folder no longer holds can't resolve to a handle the device may
-    /// since have given to another object.
+    /// since have given to another object. A name more than one child answers
+    /// to is recorded as same-named, resolving to none of them.
     pub(super) fn record_listing(&mut self, parent: &Path, listed: Vec<(PathBuf, ObjectHandle)>) {
         let fresh: HashSet<&Path> = listed.iter().map(|(path, _)| path.as_path()).collect();
         let gone: Vec<PathBuf> = self
@@ -104,9 +137,32 @@ impl PathHandleCache {
         for path in gone {
             self.remove_path(&path);
         }
+        let mut by_path: HashMap<PathBuf, Vec<ObjectHandle>> = HashMap::with_capacity(listed.len());
         for (path, handle) in listed {
-            self.insert(path, handle);
+            by_path.entry(path).or_default().push(handle);
         }
+        for (path, handles) in by_path {
+            match handles[..] {
+                [handle] => self.insert(path, handle),
+                _ => self.record_same_named(path, handles),
+            }
+        }
+    }
+
+    /// Records `path` as a name all of `handles` answer to: no forward entry,
+    /// a reverse entry per twin, and nothing cached beneath it.
+    fn record_same_named(&mut self, path: PathBuf, handles: Vec<ObjectHandle>) {
+        self.remove_path(&path);
+        if let Some(parent) = path.parent() {
+            self.children
+                .entry(parent.to_path_buf())
+                .or_default()
+                .insert(path.clone());
+        }
+        for handle in &handles {
+            self.handle_to_path.insert(*handle, path.clone());
+        }
+        self.same_named.insert(path, handles);
     }
 
     /// Forgets the object `handle` named, for a removal the device reported.
@@ -245,7 +301,7 @@ mod path_handle_cache_tests {
 
     use mtp_rs::ObjectHandle;
 
-    use super::PathHandleCache;
+    use super::{Cached, PathHandleCache};
 
     fn at(path: &str, handle: u64) -> (PathBuf, ObjectHandle) {
         (PathBuf::from(path), ObjectHandle(handle))
@@ -291,6 +347,37 @@ mod path_handle_cache_tests {
             None,
             "those children were the old folder's"
         );
+    }
+
+    /// ❗ Regression anchor (#523): the last twin listed won the path, so a
+    /// delete of row one took row two's file.
+    #[test]
+    fn same_named_siblings_resolve_to_neither_until_a_listing_names_one() {
+        let mut cache = PathHandleCache::default();
+        cache.record_listing(Path::new("/"), vec![at("/IMG_1.JPG", 1), at("/IMG_1.JPG", 2)]);
+
+        assert_eq!(cache.lookup(Path::new("/IMG_1.JPG")), Some(Cached::SameNamed));
+        assert_eq!(
+            cache.handle_to_path.get(&ObjectHandle(1)).map(PathBuf::as_path),
+            Some(Path::new("/IMG_1.JPG")),
+            "an event for either twin still finds its folder"
+        );
+
+        cache.record_listing(Path::new("/"), vec![at("/IMG_1.JPG", 2)]);
+        assert_eq!(
+            cache.lookup(Path::new("/IMG_1.JPG")),
+            Some(Cached::Handle(ObjectHandle(2)))
+        );
+        assert!(!cache.handle_to_path.contains_key(&ObjectHandle(1)));
+
+        cache.record_listing(Path::new("/"), vec![at("/IMG_1.JPG", 3), at("/IMG_1.JPG", 4)]);
+        cache.record_listing(Path::new("/"), vec![]);
+        assert_eq!(
+            cache.lookup(Path::new("/IMG_1.JPG")),
+            None,
+            "a listing without the name ends it"
+        );
+        assert!(!cache.handle_to_path.contains_key(&ObjectHandle(3)));
     }
 
     #[test]

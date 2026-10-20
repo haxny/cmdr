@@ -39,6 +39,9 @@ mod resolve;
 /// Path → handle resolution on a cache miss: the heal, and the typed not-found.
 #[cfg(all(test, feature = "virtual-device"))]
 mod resolve_test;
+/// Two siblings answering to one name.
+#[cfg(all(test, feature = "virtual-device"))]
+mod same_name_test;
 mod scheduler;
 mod session_reset;
 /// A cached handle that no longer names the object at its path.
@@ -881,6 +884,28 @@ impl MtpConnectionManager {
             .entry(storage_id)
             .or_default()
             .insert(path.to_path_buf(), handle);
+    }
+
+    /// Test-only: records `listed` as a complete listing of `parent`, the way
+    /// `finalize_listing` does. The virtual device is backed by a real folder, so
+    /// it can't hold two same-named siblings; a cell hands their listing in here.
+    #[cfg(all(test, feature = "virtual-device"))]
+    pub(crate) async fn record_listing_for_test(
+        &self,
+        device_id: &str,
+        storage_id: u32,
+        parent: &Path,
+        listed: Vec<(PathBuf, mtp_rs::ObjectHandle)>,
+    ) {
+        let devices = self.devices.lock().await;
+        let entry = devices.get(device_id).expect("a connected device");
+        entry
+            .path_cache
+            .write()
+            .expect("an unpoisoned path cache")
+            .entry(storage_id)
+            .or_default()
+            .record_listing(parent, listed);
     }
 
     /// Test-only: how many `GetStorageInfo` round trips the bounded-read path has
