@@ -116,7 +116,7 @@ impl ListingOverlay for StaticOverlay {
         volume.name() == self.volume_name
     }
 
-    fn extra_entries(&self, _volume: &dyn Volume, path: &Path) -> Vec<FileEntry> {
+    fn extra_entries(&self, _volume_id: &str, _volume: &dyn Volume, path: &Path) -> Vec<FileEntry> {
         vec![FileEntry::new(
             self.row.clone(),
             path.join(&self.row).to_string_lossy().into_owned(),

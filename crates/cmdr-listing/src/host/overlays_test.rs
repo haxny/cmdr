@@ -27,7 +27,7 @@ impl ListingOverlay for FixedRows {
         path == self.at
     }
 
-    fn extra_entries(&self, _volume: &dyn Volume, path: &Path) -> Vec<FileEntry> {
+    fn extra_entries(&self, _volume_id: &str, _volume: &dyn Volume, path: &Path) -> Vec<FileEntry> {
         self.names
             .iter()
             .map(|name| {
@@ -63,7 +63,7 @@ async fn a_contributor_adds_its_rows_to_the_listing() {
         .build();
 
     let mut entries = vec![real_row("HEAD"), real_row("config")];
-    let added = decorate(&engine, &a_volume(), &at, &mut entries).await;
+    let added = decorate(&engine, "test", &a_volume(), &at, &mut entries).await;
 
     assert_eq!(added, 2);
     let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
@@ -86,7 +86,7 @@ async fn a_contributed_row_shadows_a_real_one_of_the_same_name() {
 
     // A repo made by an older git carries a real, deprecated `.git/branches/`.
     let mut entries = vec![real_row("branches"), real_row("HEAD")];
-    let added = decorate(&engine, &a_volume(), &at, &mut entries).await;
+    let added = decorate(&engine, "test", &a_volume(), &at, &mut entries).await;
 
     assert_eq!(added, 1);
     let branches: Vec<&FileEntry> = entries.iter().filter(|e| e.name == "branches").collect();
@@ -101,7 +101,14 @@ async fn a_contributed_row_shadows_a_real_one_of_the_same_name() {
 async fn a_directory_no_contributor_claims_is_left_alone() {
     let engine = TestEngine::new();
     let mut entries = vec![real_row("a.txt"), real_row("b.txt")];
-    let added = decorate(&engine, &a_volume(), Path::new("/overlay/untouched"), &mut entries).await;
+    let added = decorate(
+        &engine,
+        "test",
+        &a_volume(),
+        Path::new("/overlay/untouched"),
+        &mut entries,
+    )
+    .await;
 
     assert_eq!(added, 0);
     assert_eq!(entries.len(), 2);
@@ -127,7 +134,7 @@ impl ListingOverlay for MarkerInEntries {
         entries.iter().any(|entry| entry.name == MARKER)
     }
 
-    fn extra_entries(&self, _volume: &dyn Volume, path: &Path) -> Vec<FileEntry> {
+    fn extra_entries(&self, _volume_id: &str, _volume: &dyn Volume, path: &Path) -> Vec<FileEntry> {
         vec![FileEntry::new(
             MARKER_ROW.to_string(),
             path.join(MARKER_ROW).to_string_lossy().into_owned(),
@@ -147,7 +154,7 @@ fn marker_engine() -> TestEngine {
 async fn a_contributor_that_reads_entries_applies_when_the_marker_is_there() {
     let engine = marker_engine();
     let mut entries = vec![real_row(MARKER), real_row("data")];
-    let added = decorate(&engine, &a_volume(), Path::new("/repo"), &mut entries).await;
+    let added = decorate(&engine, "test", &a_volume(), Path::new("/repo"), &mut entries).await;
 
     assert_eq!(added, 1);
     assert!(entries.iter().any(|e| e.name == MARKER_ROW), "{entries:?}");
@@ -159,7 +166,7 @@ async fn a_contributor_that_reads_entries_applies_when_the_marker_is_there() {
 async fn a_contributor_that_reads_entries_stays_out_without_the_marker() {
     let engine = marker_engine();
     let mut entries = vec![real_row("data"), real_row("index")];
-    let added = decorate(&engine, &a_volume(), Path::new("/repo"), &mut entries).await;
+    let added = decorate(&engine, "test", &a_volume(), Path::new("/repo"), &mut entries).await;
 
     assert_eq!(added, 0);
     assert_eq!(entries.len(), 2);
@@ -207,6 +214,6 @@ async fn a_contributor_registered_twice_only_counts_once() {
     let engine = builder.build();
 
     let mut entries = Vec::new();
-    assert_eq!(decorate(&engine, &a_volume(), &at, &mut entries).await, 1);
+    assert_eq!(decorate(&engine, "test", &a_volume(), &at, &mut entries).await, 1);
     assert_eq!(entries.len(), 1);
 }

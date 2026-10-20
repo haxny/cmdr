@@ -2,10 +2,11 @@
 //!
 //! A [`ListingOverlay`] contributes extra [`FileEntry`]s to one directory's
 //! listing, folded in by the listing pipeline after the volume's own entries
-//! arrive. Cmdr's one contributor is the virtual `.git` portal, which puts the
-//! six category rows (`branches/`, `tags/`, …) into a repo's `.git/` listing
-//! while every real entry beside them stays the local volume's, editable and
-//! deletable as always.
+//! arrive. Cmdr's contributors are the virtual `.git` portal, which puts the six
+//! category rows (`branches/`, `tags/`, …) into a repo's `.git/` listing, and
+//! restic, which puts a `Browse snapshots` row into a backup repo's folder.
+//! Every real entry beside them stays the volume's, editable and deletable as
+//! always.
 //!
 //! ❌ **Never move this into a `Volume` impl**: a contributed row must reach a
 //! pane and nothing else, which is also why a decorated listing never answers
@@ -41,6 +42,8 @@ pub trait ListingOverlay: Send + Sync + 'static {
     fn applies_to(&self, volume: &dyn Volume, path: &Path, entries: &[FileEntry]) -> bool;
 
     /// The rows to fold in. Runs on the blocking pool, so it may open a
-    /// repository or hit the disk.
-    fn extra_entries(&self, volume: &dyn Volume, path: &Path) -> Vec<FileEntry>;
+    /// repository or hit the disk. `volume_id` is the id the listing was read
+    /// under, the same one a later `resolve` of a path below sees, so a
+    /// contributor can key what it learns here the way its route looks it up.
+    fn extra_entries(&self, volume_id: &str, volume: &dyn Volume, path: &Path) -> Vec<FileEntry>;
 }

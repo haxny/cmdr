@@ -65,9 +65,10 @@ Each entry: the question, what the engine does with the answer, the no-op, and C
 ## Overlays
 
 A `ListingOverlay` contributes extra `FileEntry`s to one directory's listing, folded in by the read pipeline
-(`pipeline.rs`) between the enrich and the sort, on every read that builds or replaces a listing. Cmdr's one contributor
-is the virtual `.git` portal, which puts the six category rows (`branches/`, `tags/`, …) into a repo's `.git/` listing
-while every real entry beside them stays the local volume's.
+(`pipeline.rs`) between the enrich and the sort, on every read that builds or replaces a listing. Cmdr has two
+contributors: the virtual `.git` portal, which puts the six category rows (`branches/`, `tags/`, …) into a repo's
+`.git/` listing, and restic, which puts one `Browse snapshots` row into a backup repo's folder. Every real entry beside
+them stays the volume's.
 
 **Decision:** ❌ never move this into a `Volume` impl or the volume manager. **Why:** a contributed row must reach a
 pane and NOTHING else. A copy scan, a delete walker, and the drive indexer all list through `Volume`, and the moment one
@@ -83,7 +84,11 @@ wins.
 `entries` are the volume's own rows (enriched, before any contributor's), which both callers already hold, so a
 contributor can recognize a directory by what it holds without a `stat`. **A contributor that scans them caps itself**
 (answer `false` past a small count), so a 100k-entry folder costs one length check. The git portal ignores them (it
-decides from the path).
+decides from the path); restic recognizes a repo by its five names.
+
+`extra_entries` also gets the `volume_id` the listing was read under. A contributor whose route confirms from a memo
+(restic) keys what it learns by the same id a later `resolve` of a path below sees, so entering its row costs no
+confirmation read.
 
 **Gotcha:** an incremental watcher change (`Added`, `Removed`, `Modified`) doesn't re-run the overlays; only a full
 re-read does. So a directory that BECOMES one a contributor claims (someone creates the marker file in a folder a pane

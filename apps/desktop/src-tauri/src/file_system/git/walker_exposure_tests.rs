@@ -66,7 +66,8 @@ async fn an_overlay_decorated_listing_of_dot_git_shows_the_six_rows() {
     let dot_git = dir.join(".git");
 
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = cmdr_listing::testing::decorate(crate::listing_host::listings(), &volume, &dot_git, &mut entries).await;
+    let added =
+        cmdr_listing::testing::decorate(crate::listing_host::listings(), "root", &volume, &dot_git, &mut entries).await;
     assert_eq!(added, 6, "one row per category");
 
     let names: Vec<String> = entries.into_iter().map(|e| e.name).collect();
@@ -91,7 +92,8 @@ async fn the_toggle_off_contributes_nothing_to_a_dot_git_listing() {
 
     super::wiring::set_virtual_portal_enabled(false);
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = cmdr_listing::testing::decorate(crate::listing_host::listings(), &volume, &dot_git, &mut entries).await;
+    let added =
+        cmdr_listing::testing::decorate(crate::listing_host::listings(), "root", &volume, &dot_git, &mut entries).await;
     super::wiring::set_virtual_portal_enabled(true);
 
     assert_eq!(added, 0);
@@ -244,7 +246,8 @@ async fn the_listing_oracle_declines_an_overlay_decorated_dot_git_listing() {
     let volume: std::sync::Arc<dyn Volume> =
         std::sync::Arc::new(LocalPosixVolume::local_folder("Test", &dir, crate::volume_host::host()));
     let mut cached = volume.list_directory(&dot_git, None).await.unwrap();
-    let added = cmdr_listing::testing::decorate(crate::listing_host::listings(), &volume, &dot_git, &mut cached).await;
+    let added =
+        cmdr_listing::testing::decorate(crate::listing_host::listings(), "root", &volume, &dot_git, &mut cached).await;
     assert_eq!(added, 6, "the pane's listing holds the six virtual rows");
 
     let _guard = TestListing::new()

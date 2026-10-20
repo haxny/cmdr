@@ -38,7 +38,7 @@ async fn a_dot_git_that_is_not_this_repos_gitdir_gets_no_rows() {
     let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Test", &dir, crate::volume_host::host()));
     let mut entries = volume.list_directory(&stray, None).await.expect("listing it");
     assert_eq!(
-        cmdr_listing::testing::decorate(crate::listing_host::listings(), &volume, &stray, &mut entries).await,
+        cmdr_listing::testing::decorate(crate::listing_host::listings(), "root", &volume, &stray, &mut entries).await,
         0,
         "{entries:?}"
     );
@@ -48,7 +48,14 @@ async fn a_dot_git_that_is_not_this_repos_gitdir_gets_no_rows() {
     let real = dir.join(".git");
     let mut real_entries = volume.list_directory(&real, None).await.expect("listing .git");
     assert_eq!(
-        cmdr_listing::testing::decorate(crate::listing_host::listings(), &volume, &real, &mut real_entries).await,
+        cmdr_listing::testing::decorate(
+            crate::listing_host::listings(),
+            "root",
+            &volume,
+            &real,
+            &mut real_entries
+        )
+        .await,
         6
     );
 

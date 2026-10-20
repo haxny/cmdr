@@ -199,15 +199,16 @@ pub async fn full_refresh(engine: &Listings, volume_id: &str, path: &Path, listi
 }
 
 /// Runs `engine`'s overlay step alone on `entries`, a listing of `path` on
-/// `volume`, and returns how many rows it added: what a test pinning one
+/// `volume` (registered as `volume_id`), and returns how many rows it added: what a test pinning one
 /// overlay's rows (the shadowing rule, the git portal's six) asserts on.
 pub async fn decorate(
     engine: &Listings,
+    volume_id: &str,
     volume: &Arc<dyn Volume>,
     path: &Path,
     entries: &mut Vec<cmdr_fs::entry::FileEntry>,
 ) -> usize {
-    engine.inner.decorate(volume, path, entries).await
+    engine.inner.decorate(volume_id, volume, path, entries).await
 }
 
 /// Builds a [`TestEngine`]. Every seam it isn't told about answers with a

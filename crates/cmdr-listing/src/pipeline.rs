@@ -114,7 +114,7 @@ impl Inner {
                 if !routed {
                     self.index.enrich(volume_id, &mut entries);
                 }
-                let overlay_rows = OverlayRows::Recounted(self.decorate(volume, path, &mut entries).await);
+                let overlay_rows = OverlayRows::Recounted(self.decorate(volume_id, volume, path, &mut entries).await);
                 Prepared {
                     entries,
                     overlay_rows,
@@ -188,13 +188,26 @@ impl Inner {
     ///
     /// Sorting happens after this returns, so a contributor hands rows over in any
     /// order.
-    pub(super) async fn decorate(&self, volume: &Arc<dyn Volume>, path: &Path, entries: &mut Vec<FileEntry>) -> usize {
+    pub(super) async fn decorate(
+        &self,
+        volume_id: &str,
+        volume: &Arc<dyn Volume>,
+        path: &Path,
+        entries: &mut Vec<FileEntry>,
+    ) -> usize {
         let applicable = self.applicable_overlays(volume.as_ref(), path, entries);
         if applicable.is_empty() {
             return 0;
         }
 
-        let contributed = gather(&self.runtime, applicable, Arc::clone(volume), path.to_path_buf()).await;
+        let contributed = gather(
+            &self.runtime,
+            applicable,
+            volume_id.to_string(),
+            Arc::clone(volume),
+            path.to_path_buf(),
+        )
+        .await;
         if contributed.is_empty() {
             return 0;
         }
@@ -218,6 +231,7 @@ impl Inner {
 async fn gather(
     runtime: &Handle,
     overlays: Vec<Arc<dyn ListingOverlay>>,
+    volume_id: String,
     volume: Arc<dyn Volume>,
     path: PathBuf,
 ) -> Vec<FileEntry> {
@@ -225,7 +239,7 @@ async fn gather(
         .spawn_blocking(move || {
             overlays
                 .iter()
-                .flat_map(|overlay| overlay.extra_entries(volume.as_ref(), &path))
+                .flat_map(|overlay| overlay.extra_entries(&volume_id, volume.as_ref(), &path))
                 .collect()
         })
         .await

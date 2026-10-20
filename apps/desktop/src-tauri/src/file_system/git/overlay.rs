@@ -47,7 +47,7 @@ impl ListingOverlay for GitPortalOverlay {
             && path.file_name().is_some_and(|name| name == ".git")
     }
 
-    fn extra_entries(&self, _volume: &dyn Volume, path: &Path) -> Vec<FileEntry> {
+    fn extra_entries(&self, _volume_id: &str, _volume: &dyn Volume, path: &Path) -> Vec<FileEntry> {
         let Some(worktree_root) = path.parent() else {
             return Vec::new();
         };
