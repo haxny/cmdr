@@ -24,7 +24,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::friendly_error::{ListingError, ListingErrorReason, Provider};
-use cmdr_fs::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
+use cmdr_fs::volume::{InMemoryVolume, ListingPhase, ListingProgress, Volume, VolumeError};
 use cmdr_listing::host::{ListingEnd, ListingEvents, ListingOverlay};
 use cmdr_listing::testing::{SpelledVolume, StreamingListingState, TestEngine, TestListingGuard, request};
 use cmdr_listing::{DirectoryDiffBatch, ListingId, StalledOn};
@@ -358,8 +358,8 @@ impl ListingEvents for CancelOnReadComplete {
     fn stalled(&self, id: &ListingId, on: StalledOn) {
         self.inner.stalled(id, on);
     }
-    fn progress(&self, id: &ListingId, loaded: usize) {
-        self.inner.progress(id, loaded);
+    fn progress(&self, id: &ListingId, progress: ListingProgress) {
+        self.inner.progress(id, progress);
     }
     fn read_complete(&self, id: &ListingId, total: usize) {
         self.inner.read_complete(id, total);
@@ -423,7 +423,7 @@ impl ListingOverlay for CancelAtDecorate {
         false
     }
 
-    fn extra_entries(&self, _volume: &dyn Volume, _path: &Path) -> Vec<FileEntry> {
+    fn extra_entries(&self, _volume_id: &str, _volume: &dyn Volume, _path: &Path) -> Vec<FileEntry> {
         Vec::new()
     }
 }
@@ -622,4 +622,35 @@ async fn an_empty_icloud_root_reads_as_restricted_yet_clears_the_path() {
     );
     assert_eq!(ended.analytics, [Some("needs_action".to_string())]);
     assert!(ended.listing.is_cached(), "the empty listing still lands");
+}
+
+/// A tick's phase reaches the wire beside the entry count, so the pane can word
+/// a backup's index load; a plain tick carries none.
+#[test]
+fn a_progress_tick_carries_its_phase_to_the_wire() {
+    let wire = Arc::new(WireCollector::default());
+    let reaction = TauriListingEvents::with(Arc::clone(&wire), Arc::new(RecordingEffects::default()));
+    let id = ListingId::new("phase-tick");
+    let loading = ListingPhase::LoadingIndex {
+        done_bytes: 48,
+        total_bytes: 312,
+        done_files: 3,
+        total_files: 20,
+    };
+
+    reaction.progress(&id, ListingProgress::in_phase(loading));
+    reaction.progress(
+        &id,
+        ListingProgress {
+            files: 4,
+            dirs: 1,
+            ..ListingProgress::default()
+        },
+    );
+
+    assert_eq!(
+        *wire.progress.lock_ignore_poison(),
+        [(0, Some(loading)), (5, None)],
+        "each tick's loaded count and phase, as the frontend hears them"
+    );
 }

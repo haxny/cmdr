@@ -28,7 +28,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::friendly_error::{ErrorCategory, listing_error_from_volume_error};
-use cmdr_fs::volume::{BackendKind, ListingProgress, Volume, VolumeError};
+use cmdr_fs::volume::{BackendKind, ListingPhase, ListingProgress, Volume, VolumeError};
 
 /// When a listing counts as stalled, and how it retries once it has.
 #[derive(Debug, Clone, Copy)]
@@ -203,9 +203,11 @@ pub(crate) enum ReadOutcome {
     Cancelled,
 }
 
-/// The most entries any of a listing's reads has reported, and when that last grew.
+/// The most entries any of a listing's reads has reported, the phase it last
+/// reported, and when either last moved.
 struct Beat {
     best: AtomicUsize,
+    phase: Mutex<Option<ListingPhase>>,
     last_moved: Mutex<Instant>,
     moved: Notify,
 }
@@ -214,15 +216,24 @@ impl Beat {
     fn new() -> Self {
         Self {
             best: AtomicUsize::new(0),
+            phase: Mutex::new(None),
             last_moved: Mutex::new(Instant::now()),
             moved: Notify::new(),
         }
     }
 
     /// A count that only repeats isn't movement: a local read stuck on one `stat`
-    /// reports the same number every tick.
-    fn report(&self, entries: usize) {
-        if entries > self.best.fetch_max(entries, Ordering::Relaxed) {
+    /// reports the same number every tick. A phase that changed is: an index load
+    /// enumerates nothing for seconds, and its bytes arriving are the read
+    /// answering.
+    fn report(&self, progress: &ListingProgress) {
+        let entries = progress.entries();
+        let grew = entries > self.best.fetch_max(entries, Ordering::Relaxed);
+        let phase_moved = progress.phase.is_some() && {
+            let mut last = self.phase.lock_ignore_poison();
+            std::mem::replace(&mut *last, progress.phase) != progress.phase
+        };
+        if grew || phase_moved {
             *self.last_moved.lock_ignore_poison() = Instant::now();
             self.moved.notify_one();
         }
@@ -272,8 +283,9 @@ pub(crate) struct ListingRead<'a> {
     pub mounts: &'a Arc<dyn MountTable>,
     /// The read went `stall_after` without a new entry, with what the folder lives on.
     pub on_stalled: &'a (dyn Fn(StalledOn) + Sync),
-    /// A read's running entry count, for the pane's "Loaded N files…" line.
-    pub on_progress: Arc<dyn Fn(usize) + Send + Sync>,
+    /// A read's running tally, for the pane's "Loaded N files…" line and any
+    /// phase it shows before the first entry.
+    pub on_progress: Arc<dyn Fn(ListingProgress) + Send + Sync>,
     pub listing_id: &'a str,
     pub volume_id: &'a str,
     pub volume: &'a Arc<dyn Volume>,
@@ -462,11 +474,8 @@ fn spawn_read(read: &ListingRead<'_>, slot: ReadSlot, beat: Arc<Beat>, cancel: C
             if cancel.is_cancelled() {
                 return;
             }
-            beat.report(p.entries());
-            // Streaming listing UI shows "Loaded N entries…", so it wants total
-            // entry count, not just files. `ListingProgress::entries()` sums
-            // files + dirs for that.
-            report_progress(p.entries());
+            beat.report(&p);
+            report_progress(p);
         };
         // A pane can ask by a spelling its volume doesn't store (typed, restored,
         // carried over from the kernel mount); this lands it on the stored one.

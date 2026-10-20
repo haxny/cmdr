@@ -9,7 +9,7 @@
 
 use std::path::{Path, PathBuf};
 
-use cmdr_fs::volume::VolumeError;
+use cmdr_fs::volume::{ListingProgress, VolumeError};
 use serde::{Deserialize, Serialize};
 
 use crate::DirectoryDiffBatch;
@@ -97,8 +97,10 @@ pub trait ListingEvents: Send + Sync {
     /// `on`. The listing keeps waiting; a later event supersedes this one.
     fn stalled(&self, id: &ListingId, on: StalledOn);
 
-    /// `loaded` entries arrived so far.
-    fn progress(&self, id: &ListingId, loaded: usize);
+    /// The read's running tally: entries arrived so far (`progress.entries()`),
+    /// and the phase it's in when it's doing work before its first entry (a
+    /// backup's index load).
+    fn progress(&self, id: &ListingId, progress: ListingProgress);
 
     /// The volume answered with `total` entries, before the sort and the cache.
     fn read_complete(&self, id: &ListingId, total: usize);
@@ -120,7 +122,7 @@ pub struct NoEvents;
 impl ListingEvents for NoEvents {
     fn opening(&self, _id: &ListingId) {}
     fn stalled(&self, _id: &ListingId, _on: StalledOn) {}
-    fn progress(&self, _id: &ListingId, _loaded: usize) {}
+    fn progress(&self, _id: &ListingId, _progress: ListingProgress) {}
     fn read_complete(&self, _id: &ListingId, _total: usize) {}
     fn finished(&self, _id: &ListingId, _end: ListingEnd) {}
     fn diff(&self, _id: &ListingId, _batches: Vec<DirectoryDiffBatch>) {}

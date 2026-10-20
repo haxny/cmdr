@@ -962,10 +962,13 @@ the stuck call answers when the server comes back differs by filesystem, so reco
 
 **The watch.** `read_until_answered` races each read against `StallPolicy::stall_after` (8 s) of silence: no entry count
 growth, since a local read stuck on one `stat` repeats the same number every progress tick. 8 s clears the 0.3–6 s a
-busy NAS holds a single request for (`listing_done_level`), so a slow answer never reads as a dead server. On a stall
-the listing emits `listing-stalled` and keeps waiting; the frontend swaps the spinner for the "still waiting" screen,
-and any later progress, complete, error, or cancelled event for the same listing replaces it. A read that resumes
-producing entries clears the stall, and a later silence reports it again.
+busy NAS holds a single request for (`listing_done_level`), so a slow answer never reads as a dead server. A tick whose
+`ListingProgress::phase` changed counts as movement too: a backup's index load (`cmdr-restic`) enumerates nothing for
+seconds, and its bytes arriving are the read answering. Each tick reaches the host whole (`ListingEvents::progress`), so
+the phase rides the `listing-progress` event for the pane to word. On a stall the listing emits `listing-stalled` and
+keeps waiting; the frontend swaps the spinner for the "still waiting" screen, and any later progress, complete, error,
+or cancelled event for the same listing replaces it. A read that resumes producing entries clears the stall, and a later
+silence reports it again.
 
 **After a stall, the listing answers for itself** until the volume does, so the pane recovers with no help:
 

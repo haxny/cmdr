@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{ListingPhase, ListingProgress};
 
 use crate::DirectoryDiffBatch;
 use crate::host::events::StalledOn;
@@ -20,6 +21,8 @@ pub struct RecordingEvents {
     pub stalled: Mutex<Vec<(String, StalledOn)>>,
     /// Per progress report, the rows loaded so far.
     pub progress: Mutex<Vec<(String, usize)>>,
+    /// Per progress report that carried a phase, that phase.
+    pub phases: Mutex<Vec<(String, ListingPhase)>>,
     /// Per finished read, the rows it read.
     pub read_complete: Mutex<Vec<(String, usize)>>,
     /// Per completed listing, its row count.
@@ -67,9 +70,14 @@ impl ListingEvents for RecordingEvents {
         self.stalled.lock_ignore_poison().push((id.to_string(), on));
     }
 
-    fn progress(&self, id: &ListingId, loaded: usize) {
+    fn progress(&self, id: &ListingId, progress: ListingProgress) {
         self.note("progress");
-        self.progress.lock_ignore_poison().push((id.to_string(), loaded));
+        self.progress
+            .lock_ignore_poison()
+            .push((id.to_string(), progress.entries()));
+        if let Some(phase) = progress.phase {
+            self.phases.lock_ignore_poison().push((id.to_string(), phase));
+        }
     }
 
     fn read_complete(&self, id: &ListingId, total: usize) {

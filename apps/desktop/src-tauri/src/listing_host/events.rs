@@ -18,11 +18,11 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use tauri_specta::Event;
 
-use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::friendly_error::{
     ListingError, archive_needs_password_listing_error, archive_unreadable_listing_error, enrich_with_provider,
     listing_error_for_restricted_empty_root, listing_error_from_volume_error,
 };
+use cmdr_fs::volume::{ListingPhase, ListingProgress, VolumeError};
 use cmdr_listing::DirectoryDiffBatch;
 use cmdr_listing::ListingId;
 use cmdr_listing::StalledOn;
@@ -39,6 +39,10 @@ use cmdr_listing::host::{ListingEnd, ListingEvents};
 pub struct ListingProgressEvent {
     pub listing_id: String,
     pub loaded_count: usize,
+    /// What the listing is doing before its first entry, when it has its own
+    /// measure (a backup's index load); `None` while it only enumerates. Typed,
+    /// so the frontend words it.
+    pub phase: Option<ListingPhase>,
 }
 
 /// Completion event payload
@@ -142,7 +146,7 @@ pub struct ListingRespelledEvent {
 pub(crate) trait ListingWire: Send + Sync {
     fn emit_opening(&self, listing_id: &str);
     fn emit_stalled(&self, listing_id: &str, stalled_on: StalledOn);
-    fn emit_progress(&self, listing_id: &str, loaded_count: usize);
+    fn emit_progress(&self, listing_id: &str, loaded_count: usize, phase: Option<ListingPhase>);
     fn emit_read_complete(&self, listing_id: &str, total_count: usize);
     fn emit_complete(&self, listing_id: &str, total_count: usize, volume_root: String, stored_path: Option<String>);
     fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>);
@@ -167,10 +171,11 @@ impl ListingWire for tauri::AppHandle {
         .emit(self);
     }
 
-    fn emit_progress(&self, listing_id: &str, loaded_count: usize) {
+    fn emit_progress(&self, listing_id: &str, loaded_count: usize, phase: Option<ListingPhase>) {
         let _ = ListingProgressEvent {
             listing_id: listing_id.to_string(),
             loaded_count,
+            phase,
         }
         .emit(self);
     }
@@ -401,8 +406,8 @@ impl<W: ListingWire, E: ListingEndEffects> ListingEvents for TauriListingEvents<
         self.wire.emit_stalled(id.as_str(), on);
     }
 
-    fn progress(&self, id: &ListingId, loaded: usize) {
-        self.wire.emit_progress(id.as_str(), loaded);
+    fn progress(&self, id: &ListingId, progress: ListingProgress) {
+        self.wire.emit_progress(id.as_str(), progress.entries(), progress.phase);
     }
 
     fn read_complete(&self, id: &ListingId, total: usize) {
@@ -465,6 +470,8 @@ pub(crate) struct WireCollector {
     pub errors: std::sync::Mutex<Vec<(String, String)>>,
     /// Per error, the typed classification it carried.
     pub classified: std::sync::Mutex<Vec<(String, Option<ListingError>)>>,
+    /// Per progress event, its loaded count and phase.
+    pub progress: std::sync::Mutex<Vec<(usize, Option<ListingPhase>)>>,
     /// Every event's kind (`"opening"`, `"error"`, …), in emit order.
     pub sequence: std::sync::Mutex<Vec<&'static str>>,
 }
@@ -491,8 +498,10 @@ impl ListingWire for std::sync::Arc<WireCollector> {
     fn emit_stalled(&self, _listing_id: &str, _stalled_on: StalledOn) {
         self.note("stalled");
     }
-    fn emit_progress(&self, _listing_id: &str, _loaded_count: usize) {
+    fn emit_progress(&self, _listing_id: &str, loaded_count: usize, phase: Option<ListingPhase>) {
+        use cmdr_fs::ignore_poison::IgnorePoison;
         self.note("progress");
+        self.progress.lock_ignore_poison().push((loaded_count, phase));
     }
     fn emit_read_complete(&self, _listing_id: &str, _total_count: usize) {
         self.note("read_complete");

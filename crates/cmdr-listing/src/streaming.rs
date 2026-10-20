@@ -20,7 +20,7 @@ use crate::pipeline::ReadBy;
 use crate::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
 use cmdr_fs::benchmark;
-use cmdr_fs::volume::VolumeError;
+use cmdr_fs::volume::{ListingProgress, VolumeError};
 
 // ============================================================================
 // Types and state
@@ -263,10 +263,10 @@ impl Inner {
         let total_start = std::time::Instant::now();
         let read_start = std::time::Instant::now();
         let on_stalled = |stalled_on| events.stalled(&id, stalled_on);
-        let on_progress: Arc<dyn Fn(usize) + Send + Sync> = {
+        let on_progress: Arc<dyn Fn(ListingProgress) + Send + Sync> = {
             let events = Arc::clone(events);
             let id = id.clone();
-            Arc::new(move |loaded| events.progress(&id, loaded))
+            Arc::new(move |progress| events.progress(&id, progress))
         };
         let outcome = read_until_answered(
             ListingRead {

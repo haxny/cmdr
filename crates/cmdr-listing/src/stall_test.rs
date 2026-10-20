@@ -25,7 +25,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::testing::wait_until_async;
-use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
+use cmdr_fs::volume::{ListingPhase, ListingProgress, Volume, VolumeError};
 
 /// Short enough to keep the suite fast, long enough that a healthy read never trips it.
 const TEST_POLICY: StallPolicy = StallPolicy {
@@ -426,85 +426,141 @@ async fn reads_on_a_hung_volume_stay_bounded_however_many_listings_start() {
     }
 }
 
-/// A slow folder that keeps producing entries is busy, not stalled.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_read_that_keeps_making_progress_never_reports_a_stall() {
-    struct SlowButSteady {
-        root: PathBuf,
-    }
-    impl Volume for SlowButSteady {
-        fn name(&self) -> &str {
-            "Slow but steady"
-        }
-        fn root(&self) -> &Path {
-            &self.root
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
-        fn list_directory<'a>(
-            &'a self,
-            _path: &'a Path,
-            on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
-        ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
-            Box::pin(async move {
-                let steps = 8;
-                for files in 1..=steps {
-                    // allowed-test-sleep: this fake backend IS a slow read; each wait is one
-                    // batch of entries arriving, shorter than the stall deadline
-                    tokio::time::sleep(TEST_POLICY.stall_after / 3).await;
-                    if let Some(report) = on_progress {
-                        report(ListingProgress {
-                            files,
-                            dirs: 0,
-                            bytes: 0,
-                            ..ListingProgress::default()
-                        });
-                    }
-                }
-                Ok((0..steps).map(entry).collect())
-            })
-        }
-        fn get_metadata<'a>(
-            &'a self,
-            _path: &'a Path,
-        ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
-            Box::pin(async { Err(VolumeError::NotFound("not scripted".to_string())) })
-        }
-        fn exists<'a>(&'a self, _path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
-            Box::pin(async { true })
-        }
-        fn is_directory<'a>(
-            &'a self,
-            _path: &'a Path,
-        ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
-            Box::pin(async { Ok(true) })
-        }
-    }
+/// A slow read that ticks every third of the stall deadline, with whatever
+/// `tick` reports for step `n`, and then lists `STEPS` entries.
+struct SlowButSteady {
+    root: PathBuf,
+    tick: fn(usize) -> ListingProgress,
+}
 
+impl SlowButSteady {
+    const STEPS: usize = 8;
+}
+
+impl Volume for SlowButSteady {
+    fn name(&self) -> &str {
+        "Slow but steady"
+    }
+    fn root(&self) -> &Path {
+        &self.root
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn list_directory<'a>(
+        &'a self,
+        _path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            for step in 1..=Self::STEPS {
+                // allowed-test-sleep: this fake backend IS a slow read; each wait is one
+                // tick of work arriving, shorter than the stall deadline
+                tokio::time::sleep(TEST_POLICY.stall_after / 3).await;
+                if let Some(report) = on_progress {
+                    report((self.tick)(step));
+                }
+            }
+            Ok((0..Self::STEPS).map(entry).collect())
+        })
+    }
+    fn get_metadata<'a>(
+        &'a self,
+        _path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        Box::pin(async { Err(VolumeError::NotFound("not scripted".to_string())) })
+    }
+    fn exists<'a>(&'a self, _path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
+        Box::pin(async { true })
+    }
+    fn is_directory<'a>(
+        &'a self,
+        _path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
+        Box::pin(async { Ok(true) })
+    }
+}
+
+/// Lists a [`SlowButSteady`] read to its end, and hands back the engine that
+/// heard its events.
+async fn list_slow_but_steady(tick: fn(usize) -> ListingProgress, name: &str) -> TestEngine {
     let engine = engine_on_a_local_disk();
     let volume_id = format!("test-steady-{}", uuid::Uuid::new_v4());
     engine.volumes.register(
         &volume_id,
         Arc::new(SlowButSteady {
             root: PathBuf::from("/"),
+            tick,
         }) as Arc<dyn Volume>,
     );
-    let listing = TestListingGuard::adopt(&engine, unique_test_id("stall-steady"));
+    {
+        let listing = TestListingGuard::adopt(&engine, unique_test_id(name));
+        let state = Arc::new(StreamingListingState::with_stall_watch(StallWatch {
+            policy: TEST_POLICY,
+            reads: Arc::new(HungReads::new()),
+        }));
+        let result = engine
+            .read_with(&state, &request(listing.id(), &volume_id, Path::new("/")))
+            .await;
+        assert!(result.is_ok(), "got {result:?}");
+    }
+    engine
+}
+
+/// A slow folder that keeps producing entries is busy, not stalled.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_read_that_keeps_making_progress_never_reports_a_stall() {
+    let engine = list_slow_but_steady(
+        |files| ListingProgress {
+            files,
+            ..ListingProgress::default()
+        },
+        "stall-steady",
+    )
+    .await;
+
     let sink = &engine.events;
-    let state = Arc::new(StreamingListingState::with_stall_watch(StallWatch {
-        policy: TEST_POLICY,
-        reads: Arc::new(HungReads::new()),
-    }));
-
-    let result = engine
-        .read_with(&state, &request(listing.id(), &volume_id, Path::new("/")))
-        .await;
-
-    assert!(result.is_ok(), "got {result:?}");
     assert!(
         sink.stalled.lock_ignore_poison().is_empty(),
         "a steady read must not stall"
+    );
+    assert_eq!(sink.complete.lock_ignore_poison().len(), 1);
+}
+
+/// ❗ A backup's index load enumerates no entry for its whole length (seconds on a
+/// NAS), so its bytes arriving must count as movement, or every load reads as a
+/// dead server and starts a second read. The phase also reaches the pane, which
+/// words it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_phase_that_keeps_moving_never_reports_a_stall_and_reaches_the_pane() {
+    let engine = list_slow_but_steady(
+        |step| {
+            ListingProgress::in_phase(ListingPhase::LoadingIndex {
+                done_bytes: step as u64 * 1_000,
+                total_bytes: SlowButSteady::STEPS as u64 * 1_000,
+                done_files: step as u32,
+                total_files: SlowButSteady::STEPS as u32,
+            })
+        },
+        "stall-phase",
+    )
+    .await;
+
+    let sink = &engine.events;
+    assert!(
+        sink.stalled.lock_ignore_poison().is_empty(),
+        "an index load whose bytes keep arriving must not stall"
+    );
+    let phases = sink.phases.lock_ignore_poison();
+    assert_eq!(phases.len(), SlowButSteady::STEPS, "every phase tick reaches the pane");
+    assert_eq!(
+        phases.last().map(|(_, phase)| *phase),
+        Some(ListingPhase::LoadingIndex {
+            done_bytes: 8_000,
+            total_bytes: 8_000,
+            done_files: 8,
+            total_files: 8,
+        })
     );
     assert_eq!(sink.complete.lock_ignore_poison().len(), 1);
 }
