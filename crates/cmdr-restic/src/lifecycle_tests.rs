@@ -53,15 +53,17 @@ fn latest(root: &str) -> PathBuf {
 struct ScriptedParent {
     inner: Arc<InMemoryVolume>,
     gate: watch::Receiver<bool>,
-    /// Holds listings of `index/` the same way.
+    /// Holds listings of the `gated_dir` folder (`index` unless a cell picks
+    /// another) the same way.
     list_gate: watch::Receiver<bool>,
+    gated_dir: &'static str,
     /// Lists `index/` with no sizes, as a backend that can't report them does.
     hide_index_sizes: bool,
     index_read_delay: Duration,
     index_reads: AtomicUsize,
     in_flight: AtomicUsize,
-    index_listings_started: AtomicUsize,
-    index_listings_done: AtomicUsize,
+    gated_listings_started: AtomicUsize,
+    gated_listings_done: AtomicUsize,
 }
 
 impl ScriptedParent {
@@ -99,10 +101,10 @@ impl Volume for ScriptedParent {
         on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
-            if path.file_name().is_none_or(|name| name != "index") {
+            if path.file_name().is_none_or(|name| name != self.gated_dir) {
                 return self.inner.list_directory(path, on_progress).await;
             }
-            self.index_listings_started.fetch_add(1, Ordering::SeqCst);
+            self.gated_listings_started.fetch_add(1, Ordering::SeqCst);
             let mut gate = self.list_gate.clone();
             let _ = gate.wait_for(|open| *open).await;
             let mut listed = self.inner.list_directory(path, on_progress).await;
@@ -113,7 +115,7 @@ impl Volume for ScriptedParent {
                     entry.size = None;
                 }
             }
-            self.index_listings_done.fetch_add(1, Ordering::SeqCst);
+            self.gated_listings_done.fetch_add(1, Ordering::SeqCst);
             listed
         })
     }
@@ -174,6 +176,7 @@ struct RigOptions {
     tuning: Tuning,
     gate_open: bool,
     list_gate_open: bool,
+    gated_dir: &'static str,
     hide_index_sizes: bool,
     index_read_delay: Duration,
     credentials: Option<Arc<dyn CredentialStore>>,
@@ -187,6 +190,7 @@ impl Default for RigOptions {
             tuning: Tuning::default(),
             gate_open: true,
             list_gate_open: true,
+            gated_dir: "index",
             hide_index_sizes: false,
             index_read_delay: Duration::ZERO,
             credentials: None,
@@ -220,12 +224,13 @@ impl Rig {
             inner,
             gate: gate_rx,
             list_gate: list_gate_rx,
+            gated_dir: options.gated_dir,
             hide_index_sizes: options.hide_index_sizes,
             index_read_delay: options.index_read_delay,
             index_reads: AtomicUsize::new(0),
             in_flight: AtomicUsize::new(0),
-            index_listings_started: AtomicUsize::new(0),
-            index_listings_done: AtomicUsize::new(0),
+            gated_listings_started: AtomicUsize::new(0),
+            gated_listings_done: AtomicUsize::new(0),
         });
         let mut host = VolumeHost::detached();
         if let Some(credentials) = options.credentials {
@@ -354,7 +359,7 @@ async fn a_cancel_during_the_index_listing_lets_the_listing_finish() {
     let cancel = CancellationToken::new();
     let listing = spawn_listing(&rig.volume, latest(ROOT), Some(cancel.clone()));
     wait_until_async(WITHIN, "the load lists index/", || {
-        parent.index_listings_started.load(Ordering::SeqCst) == 1
+        parent.gated_listings_started.load(Ordering::SeqCst) == 1
     })
     .await;
 
@@ -363,7 +368,7 @@ async fn a_cancel_during_the_index_listing_lets_the_listing_finish() {
     rig.list_gate.send_replace(true);
 
     wait_until_async(WITHIN, "the detached listing runs to its end", || {
-        parent.index_listings_done.load(Ordering::SeqCst) == 1
+        parent.gated_listings_done.load(Ordering::SeqCst) == 1
     })
     .await;
     assert_eq!(parent.index_reads(), 0, "a cancelled load reads no index file");
@@ -633,6 +638,37 @@ async fn a_new_snapshot_reloads_the_index_while_an_old_reader_finishes() {
         rest.extend_from_slice(&chunk.expect("the old reader finishes on the old index"));
     }
     assert_eq!(rest, vec![7u8; 3 * 1024 * 1024]);
+}
+
+/// Two root listings at once (two panes, a stalled listing's second attempt)
+/// share one refresh of the snapshot list: `snapshots/` is read once, and
+/// `latest` rebinds once.
+#[tokio::test(flavor = "multi_thread")]
+async fn concurrent_root_listings_share_one_snapshot_refresh() {
+    let rig = Rig::new(RigOptions {
+        list_gate_open: false,
+        gated_dir: "snapshots",
+        ..RigOptions::default()
+    })
+    .await;
+    let parent = Arc::clone(&rig.parent);
+    let before = parent.gated_listings_started.load(Ordering::SeqCst);
+
+    let first = spawn_listing(&rig.volume, view(ROOT), None);
+    wait_until_async(WITHIN, "the first refresh lists snapshots/", || {
+        parent.gated_listings_started.load(Ordering::SeqCst) > before
+    })
+    .await;
+    let second = spawn_listing(&rig.volume, view(ROOT), None);
+    rig.list_gate.send_replace(true);
+
+    let (first, second) = (first.await.expect("task"), second.await.expect("task"));
+    assert_eq!(first.expect("lists").len(), second.expect("lists").len());
+    assert_eq!(
+        parent.gated_listings_started.load(Ordering::SeqCst),
+        before + 1,
+        "one read of snapshots/ for both"
+    );
 }
 
 // ── The repo changing under the view ───────────────────────────────────────

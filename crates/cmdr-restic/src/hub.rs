@@ -432,6 +432,18 @@ impl ResticRepos {
         if let Some(list) = known.filter(|_| !refresh) {
             return Ok(list);
         }
+        // One refresh at a time per repo: a caller that asked while another
+        // refresh ran takes that one's list instead of reading `snapshots/` (and
+        // rebinding `latest`) again.
+        let asked = Instant::now();
+        let _refreshing = slot.refreshing.lock().await;
+        let fresh = lock(&slot.snapshots)
+            .as_ref()
+            .filter(|known| known.read_at > asked)
+            .map(|known| Arc::clone(&known.list));
+        if let Some(list) = fresh {
+            return Ok(list);
+        }
         let repo = self.opened(slot, parent).await?;
         let current = lock(&slot.snapshots)
             .as_ref()
@@ -466,6 +478,7 @@ impl ResticRepos {
         *lock(&slot.snapshots) = Some(Snapshots {
             files,
             list: Arc::clone(&list),
+            read_at: Instant::now(),
         });
         Ok(list)
     }
@@ -621,6 +634,8 @@ pub(crate) struct RepoSlot {
     /// Held while the credential store is asked, so it's asked once.
     store_lookup: tokio::sync::Mutex<()>,
     opened: tokio::sync::Mutex<Option<Bound<Arc<ResticRepo>>>>,
+    /// Held across a refresh of the snapshot list, so concurrent refreshes share one.
+    refreshing: tokio::sync::Mutex<()>,
     pub(crate) index: Mutex<IndexSlot>,
     snapshots: Mutex<Option<Snapshots>>,
     latest: Mutex<LatestPin>,
@@ -636,6 +651,7 @@ impl RepoSlot {
             store_missed: AtomicBool::new(false),
             store_lookup: tokio::sync::Mutex::new(()),
             opened: tokio::sync::Mutex::new(None),
+            refreshing: tokio::sync::Mutex::new(()),
             index: Mutex::new(IndexSlot::default()),
             snapshots: Mutex::new(None),
             latest: Mutex::new(LatestPin::default()),
@@ -718,6 +734,8 @@ impl<T> Bound<T> {
 struct Snapshots {
     files: Vec<SnapshotFile>,
     list: Arc<SnapshotList>,
+    /// When the refresh that read it finished.
+    read_at: Instant,
 }
 
 /// Which snapshot `latest` shows, and when something last read under it.
