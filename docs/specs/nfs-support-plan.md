@@ -63,14 +63,17 @@ Each is a recommendation for David to confirm or overturn; the plan is built on 
 - **The model: a server is the account, an export is its place** (SMB's host → shares, S3's account → buckets). One
   saved entry per PLACE (`host`, `port`, `export`, `uid`, `gid`, name, auto-reconnect, pin), the S3 store's shape.
   Volume id from `(host, port, export)`. Decision (revisit in review).
-- ❗ **The identity port is the CANONICAL one**: `nfs_volume_id(host, port: u16, export)` and
-  `nfs_app_root(host, port: u16)` take `port.unwrap_or(2049)`, ❌ never the port portmap answered (it can move when the
-  server restarts, and a moved port must not orphan every tab). Folding: host lowercased, port literal, export by bytes
-  after `normalize_remote_path`.
-- ❗ **The app root is the SERVER, and the export hangs under it**, S3's account/bucket split
-  (`crates/cmdr-fs/src/volume/remote_paths.rs`, `s3_app_root`): `nfs_app_root(host, port)` is `nfs://<host>:<port>`, and
-  the volume is `RemoteRoot::new(nfs_app_root(..), export)`. Nested exports (`/share` and `/share/Public`, common on
-  QNAP) then give one file one spelling whichever place a pane reached it through.
+- ❗ **The identity port is the CANONICAL one**: `nfs_volume_id(host, port: u16, export)` and the app root take
+  `port.unwrap_or(2049)`, ❌ never the port portmap answered (it can move when the server restarts, and a moved port
+  must not orphan every tab). Folding: host lowercased, port literal, export by bytes after `normalize_remote_path` (so
+  `/volume1/data/` and `/volume1//data` are one export), and only then escaped.
+- ❗ **The app root carries the export as ONE percent-escaped segment** (`%` → `%25`, `/` → `%2F`, leading `/` dropped,
+  the root export `/` → `%2F`): `nfs://nas.local:2049/volume1%2Fdata/photos`. Why: `server_of_path` must mint a volume
+  id from a path alone, and with nested exports (`/share` and `/share/Public`, common on QNAP) a server-only prefix
+  can't say which export a path belongs to. The cost, accepted: a file under nested exports has two spellings, one per
+  place. ❗ A HUMAN-typed `nfs://nas/volume1/data/photos` (unescaped) is an address, ❌ not an app path: Go to path and
+  ⌘K hand it to the NFS prefill and the connect-time split below, never straight to `server_of_path`, which would read
+  it as export `/volume1` and folder `data/photos`.
 - **The export/folder split happens in `connect`, before the id is minted.** `ServerTarget::Nfs.export` is what the
   person picked or typed (`host:/share/Public/photos` from Go to path). The backend resolves the real export by longest
   match against `EXPORT`, or, when `EXPORT` is refused, by `MNT` on ever-shorter prefixes; the rest becomes the start
@@ -375,11 +378,11 @@ M0 (one agent, ~20 min)  ──►  wave 1: M1 ∥ M2 ∥ M3 (~60 min)
   classic `host:/export/path`; NFS fields in `ServerFormFields.svelte`: Address, Name, an Export select filled by
   `listNfsExports` (a typed path still allowed when listing is refused), "Act as user ID" and "Group ID" number fields
   filled by `guessNfsIdentity`, Advanced with "Reconnect automatically" and Start folder. `server-path-utils.ts` mints
-  `nfs://<host>:<port>` with the canonical port (2049 when none was typed) and the export under it, the same split
-  `nfs_app_root` makes. A sentence and a field per new refusal in `connect-refusals.ts`. The sign-in flow already
-  answers `SignInShape` `nothing` with no sheet (`open-sign-in.ts`); the Rust side sends it (M4, M5). The hub hint.
-  `manual_servers.rs` stops answering `UnsupportedProtocol` for `nfs://` and hands it to the NFS prefill (Go to path and
-  ⌘K open the sheet on NFS).
+  `nfs://<host>:<port>/<escaped export>` with the canonical port (2049 when none was typed) and the same one-segment
+  escaping `nfs_app_root` does (§ "Product decisions"), with shared example rows in both test suites. A sentence and a
+  field per new refusal in `connect-refusals.ts`. The sign-in flow already answers `SignInShape` `nothing` with no sheet
+  (`open-sign-in.ts`); the Rust side sends it (M4, M5). The hub hint. `manual_servers.rs` stops answering
+  `UnsupportedProtocol` for `nfs://` and hands it to the NFS prefill (Go to path and ⌘K open the sheet on NFS).
 - **Intentions**: the person types a NAS address, picks an export from a list, sees a sensible uid, and connects.
 - **Landmines**: the toggle is the person's (`servers/CLAUDE.md`): an `nfs://` scheme sets it only through a prefill.
   Where an export path ends and a folder begins is unknowable from text: send the whole path, and the backend splits it
