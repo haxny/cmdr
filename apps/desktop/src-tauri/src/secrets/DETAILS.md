@@ -30,6 +30,14 @@ notes.
   `state_recovery::set_aside` (`StateFile::Credentials`, one notice) and starts an empty store. Before that, every save
   read the file first and failed, so no password could ever be saved again (#537). The module also compiles for tests on
   any Unix (with `cocoon` as a dev-dependency), so these cells run on a Mac.
+- ❗ **Set-aside needs a key this machine REALLY has.** The machine id is read at every operation (`machine_key`): a
+  machine id that exists but can't be read right now (EIO, EACCES) fails the operation, ❌ never the fixed fallback key,
+  which would fail to open this machine's own file and set it aside on the next save. The fallback keys only a machine
+  with no id at all (absent or blank `/etc/machine-id`), where it is that machine's real key for good, so a foreign file
+  there is still set aside.
+- ⚠️ **Known limitation: two OSes sharing one home folder** (a dual boot, each with its own machine id) can't share
+  `credentials.enc`: each one's first save sets the other's file aside. A keyring (Secret Service) avoids it; per-id file
+  names would trade it for a restored home starting empty without a notice.
 - **`keyring-core` over `keyring = "3"`**: adopted during the keyring v4 ecosystem split, when the canonical `keyring`
   crate became a sample/example crate and the cross-platform API moved to `keyring-core` with each backend shipping
   separately. We picked the zbus-based backend (`zbus-secret-service-keyring-store` with `rt-tokio-crypto-rust`) since

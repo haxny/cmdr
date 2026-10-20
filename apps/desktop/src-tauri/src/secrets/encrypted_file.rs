@@ -1,8 +1,10 @@
 //! Cocoon-encrypted file backend for Linux systems without a secret service.
 //!
 //! Stores secrets as a JSON map encrypted with ChaCha20-Poly1305 (via `cocoon`).
-//! The encryption key is derived from `/etc/machine-id` (standard on systemd systems),
-//! falling back to a fixed string where file permissions (0600) provide the primary protection.
+//! The encryption key is derived from `/etc/machine-id` (standard on systemd systems), read at
+//! every operation, falling back to a fixed string only where there is no machine id (file
+//! permissions, 0600, are the primary protection there). A machine id that exists but can't be
+//! read fails the operation.
 //!
 //! A new machine id (a restored home folder, a cloned VM) makes the file unreadable for good.
 //! The first save or forget after that sets it aside and starts an empty store.
@@ -26,33 +28,73 @@ struct StoreContents(HashMap<String, Vec<u8>>);
 /// Stores secrets in a cocoon-encrypted file.
 pub struct EncryptedFileStore {
     path: PathBuf,
-    /// The cocoon password: this machine's id, read once.
-    password: Vec<u8>,
+    /// Where the cocoon password comes from.
+    key: KeySource,
 }
+
+/// Where a store's cocoon password comes from.
+enum KeySource {
+    /// This machine's id, read at EVERY operation (`machine_key`), so a read that failed once
+    /// never keys the store for its whole life.
+    MachineId(PathBuf),
+    /// A fixed password, so a test can play "the same file on another machine".
+    #[cfg(test)]
+    Fixed(Vec<u8>),
+}
+
+/// The password for a machine with no machine id (non-systemd): file permissions (0600) are the
+/// primary protection there.
+const FALLBACK_PASSWORD: &[u8] = b"cmdr-credential-store";
 
 impl EncryptedFileStore {
     pub fn new(dir: PathBuf) -> Self {
-        Self::with_password(dir, encryption_password())
+        Self::with_machine_id(dir, PathBuf::from("/etc/machine-id"))
     }
 
-    /// A store under `password` rather than this machine's id, so a test can play "the same
-    /// file on another machine".
+    /// A store keyed by the machine id at `machine_id`.
+    fn with_machine_id(dir: PathBuf, machine_id: PathBuf) -> Self {
+        Self {
+            path: dir.join("credentials.enc"),
+            key: KeySource::MachineId(machine_id),
+        }
+    }
+
+    /// A store under `password` rather than this machine's id.
+    #[cfg(test)]
     fn with_password(dir: PathBuf, password: Vec<u8>) -> Self {
         Self {
             path: dir.join("credentials.enc"),
-            password,
+            key: KeySource::Fixed(password),
+        }
+    }
+
+    /// This machine's cocoon password, read now.
+    ///
+    /// ❗ A machine id that exists but can't be read is an ERROR, ❌ never the fallback (#537): the
+    /// fallback would fail to open this machine's own file, and a save would then set it aside as
+    /// if the home folder had moved machines. Only a machine with NO id keys by the fallback,
+    /// which is then its real key for good.
+    fn password(&self) -> Result<Vec<u8>, SecretStoreError> {
+        match &self.key {
+            KeySource::MachineId(path) => machine_key(path),
+            #[cfg(test)]
+            KeySource::Fixed(password) => Ok(password.clone()),
         }
     }
 }
 
-/// Reads `/etc/machine-id` as encryption password. Falls back to a fixed string
-/// on non-systemd systems where file permissions (0600) provide the primary protection.
-fn encryption_password() -> Vec<u8> {
-    std::fs::read_to_string("/etc/machine-id")
-        .unwrap_or_else(|_| "cmdr-credential-store".to_string())
-        .trim()
-        .as_bytes()
-        .to_vec()
+/// The machine id at `path` as a cocoon password: the fallback where there is none (absent or
+/// blank), an error where it can't be read right now.
+fn machine_key(path: &std::path::Path) -> Result<Vec<u8>, SecretStoreError> {
+    match std::fs::read_to_string(path) {
+        Ok(id) if !id.trim().is_empty() => Ok(id.trim().as_bytes().to_vec()),
+        Ok(_) => Ok(FALLBACK_PASSWORD.to_vec()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(FALLBACK_PASSWORD.to_vec()),
+        Err(e) => {
+            warn!("Couldn't read the machine id at {}: {e}", path.display());
+            Err(SecretStoreError::Other(format!("Couldn't read the machine id: {e}")))
+        }
+    }
 }
 
 /// Why a store file didn't read.
@@ -154,8 +196,8 @@ impl EncryptedFileStore {
     /// (`state_recovery`, which tells the person once) and the store starts empty, ❌ never left
     /// in the way: every later save would read it first and fail, so no password could ever be
     /// saved again. `get` and `keys` leave it alone; a read decides nothing.
-    fn read_for_write(&self) -> Result<StoreContents, SecretStoreError> {
-        match read_store(&self.path, &self.password) {
+    fn read_for_write(&self, password: &[u8]) -> Result<StoreContents, SecretStoreError> {
+        match read_store(&self.path, password) {
             Ok(contents) => Ok(contents),
             Err(ReadFailure::Io(e)) => Err(e),
             Err(ReadFailure::Unreadable(_)) => {
@@ -174,16 +216,17 @@ impl SecretStore for EncryptedFileStore {
         let _lock = FILE_STORE_LOCK
             .lock()
             .map_err(|e| SecretStoreError::Other(format!("Lock error: {}", e)))?;
-        let mut contents = self.read_for_write()?;
+        let password = self.password()?;
+        let mut contents = self.read_for_write(&password)?;
         contents.0.insert(key.to_string(), value.to_vec());
-        write_store(&self.path, &self.password, &contents)
+        write_store(&self.path, &password, &contents)
     }
 
     fn get(&self, key: &str) -> Result<Vec<u8>, SecretStoreError> {
         let _lock = FILE_STORE_LOCK
             .lock()
             .map_err(|e| SecretStoreError::Other(format!("Lock error: {}", e)))?;
-        let contents = read_store(&self.path, &self.password)?;
+        let contents = read_store(&self.path, &self.password()?)?;
         contents
             .0
             .get(key)
@@ -195,18 +238,19 @@ impl SecretStore for EncryptedFileStore {
         let _lock = FILE_STORE_LOCK
             .lock()
             .map_err(|e| SecretStoreError::Other(format!("Lock error: {}", e)))?;
-        let mut contents = self.read_for_write()?;
+        let password = self.password()?;
+        let mut contents = self.read_for_write(&password)?;
         if contents.0.remove(key).is_none() {
             return Err(SecretStoreError::NotFound(format!("No secret found for key: {}", key)));
         }
-        write_store(&self.path, &self.password, &contents)
+        write_store(&self.path, &password, &contents)
     }
 
     fn keys(&self) -> Result<Vec<String>, SecretStoreError> {
         let _lock = FILE_STORE_LOCK
             .lock()
             .map_err(|e| SecretStoreError::Other(format!("Lock error: {}", e)))?;
-        Ok(read_store(&self.path, &self.password)?.0.into_keys().collect())
+        Ok(read_store(&self.path, &self.password()?)?.0.into_keys().collect())
     }
 }
 
@@ -216,7 +260,7 @@ mod tests {
 
     #[test]
     fn test_encryption_roundtrip() {
-        let password = encryption_password();
+        let password = b"a-machine-id".to_vec();
         let data = b"test data for encryption";
         let mut cocoon = Cocoon::new(&password);
         let encrypted = cocoon.wrap(data).expect("wrap should succeed");
@@ -319,6 +363,46 @@ mod tests {
         store.set("license.key", b"{}").expect("a save works again");
 
         assert_eq!(recovery::kept_copies(&store.path).len(), 1);
+    }
+
+    /// ❗ **A machine id that can't be read RIGHT NOW is not a new machine** (#537): falling back
+    /// to the fixed key made this machine's own file undecryptable, and the first save set it
+    /// aside, every saved password with it. The save fails instead, and the file stays.
+    #[test]
+    fn a_machine_id_that_cant_be_read_right_now_never_sets_the_file_aside() {
+        let notices = recovery::capture_recoveries();
+        let dir = TestDir::new("encrypted_file_machine_id_unreadable");
+        let machine_id = dir.join("machine-id");
+        std::fs::write(&machine_id, "this-machine\n").expect("machine id");
+        EncryptedFileStore::with_machine_id(dir.to_path_buf(), machine_id.clone())
+            .set("smb://naspolya/photos", b"anna\0secret")
+            .expect("saved under this machine's id");
+
+        // A read that fails for a reason other than "there's no such file": EISDIR stands in for
+        // the transient EIO or EACCES.
+        std::fs::remove_file(&machine_id).expect("remove");
+        std::fs::create_dir(&machine_id).expect("a directory where the id was");
+        let store = EncryptedFileStore::with_machine_id(dir.to_path_buf(), machine_id.clone());
+
+        assert!(store.set("license.key", b"{}").is_err(), "the save says it didn't save");
+        assert!(store.delete("smb://naspolya/photos").is_err());
+        assert!(recovery::kept_copies(&store.path).is_empty(), "nothing set aside");
+        assert!(notices.recoveries().is_empty());
+
+        // Once the id reads again, everything is where it was.
+        std::fs::remove_dir(&machine_id).expect("remove");
+        std::fs::write(&machine_id, "this-machine\n").expect("machine id");
+        assert_eq!(store.get("smb://naspolya/photos").expect("get"), b"anna\0secret");
+    }
+
+    /// A machine with no machine id at all keys by the fixed fallback, for good: that IS this
+    /// machine's key, so its file round-trips.
+    #[test]
+    fn a_machine_without_a_machine_id_keys_by_the_fallback() {
+        let dir = TestDir::new("encrypted_file_machine_id_absent");
+        let store = EncryptedFileStore::with_machine_id(dir.to_path_buf(), dir.join("no-machine-id"));
+        store.set("ai.apiKey.openai", b"sk-test").expect("set");
+        assert_eq!(store.get("ai.apiKey.openai").expect("get"), b"sk-test");
     }
 
     #[test]
