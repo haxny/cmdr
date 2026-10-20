@@ -169,7 +169,9 @@ cap at all (measured 2026-09-05).
 
 - `file_system::git::wiring_tests::a_burst_reports_its_end_state_and_the_watch_survives_for_the_next_one`: the debounce
   is `notify`'s own, and so is the watch surviving git's rename over `HEAD`, so a fake standing in for either would
-  assert the fake's arithmetic.
+  assert the fake's arithmetic. Each burst is REDONE on a fresh branch until it's delivered, because a saturated
+  `fseventsd` drops events silently and the in-process burst takes milliseconds, so a lost one is lost whole; a new act
+  there goes through the same `burst_until_settled`.
 - `watcher_tests::a_deleted_repository_stops_reporting_and_still_gives_its_hold_back`: a scripted backend has no watches
   to LOSE, so only a real one can say what a repository's removal does to them.
 

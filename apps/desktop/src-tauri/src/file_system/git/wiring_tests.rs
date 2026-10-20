@@ -109,17 +109,7 @@ fn a_burst_reports_its_end_state_and_the_watch_survives_for_the_next_one() {
     assert_eq!(first.branch.as_deref(), Some("main"));
     assert_eq!(sink.count(), 0, "subscribing itself reports nothing");
 
-    // The branch switch at the end is what makes the REPORTED state
-    // distinguishable from the one `subscribe_state` answered with, which is
-    // otherwise `main` either way.
-    const COMMITS_IN_THE_BURST: usize = 5;
-    for index in 0..COMMITS_IN_THE_BURST {
-        fixture.commit_file(&format!("f{index}.txt"), b"x\n", "more");
-    }
-    fixture.create_branch("after-the-burst");
-    fixture.checkout("after-the-burst");
-
-    let changes = reports_settled_on(&sink, "after-the-burst");
+    let changes = burst_until_settled(&mut fixture, &sink, "after-the-burst");
     assert!(
         changes.iter().all(|(reported_root, _)| reported_root == &root),
         "every report names the canonical root: {changes:?}"
@@ -127,15 +117,9 @@ fn a_burst_reports_its_end_state_and_the_watch_survives_for_the_next_one() {
     let after_first_burst = changes.len();
 
     // A SECOND burst, after the first has already renamed a lockfile over `HEAD`
-    // and `index`. A dead watch delivers nothing here and the settle wait times
-    // out naming the reports it kept.
-    for index in 0..COMMITS_IN_THE_BURST {
-        fixture.commit_file(&format!("g{index}.txt"), b"y\n", "more still");
-    }
-    fixture.create_branch("after-the-second-burst");
-    fixture.checkout("after-the-second-burst");
-
-    let changes = reports_settled_on(&sink, "after-the-second-burst");
+    // and `index`. A dead watch delivers nothing to any of its attempts, and the
+    // settle wait times out naming the reports it kept.
+    let changes = burst_until_settled(&mut fixture, &sink, "after-the-second-burst");
     assert!(
         changes.len() > after_first_burst,
         "the watch was alive to report the second burst: {changes:?}"
@@ -145,10 +129,31 @@ fn a_burst_reports_its_end_state_and_the_watch_survives_for_the_next_one() {
     cleanup(&dir);
 }
 
-/// Everything the sink holds once its LAST report carries `branch` and it has
-/// then gone quiet for longer than the watcher's debounce window.
+/// How long one burst gets, redos included, to be delivered and go quiet. Two
+/// bursts stay inside the cell's 20 s nextest cap, so a starved run fails here
+/// with the reports it saw rather than as a bare SIGTERM.
+const SETTLE_TIMEOUT: Duration = Duration::from_secs(9);
+
+/// Everything the sink holds once a burst of `.git/*` writes ending on a fresh
+/// branch has been reported and the reports have gone quiet, redoing the burst
+/// on the next branch name until the watch delivers one.
 ///
-/// ❗ Waits on the end state, ❌ never on a count: the count depends on how the
+/// ❗ **A redo, ❌ never one burst and a longer wait.** A saturated `fseventsd`
+/// drops events silently: a bare FSEvents stream on an otherwise idle directory
+/// got five of 15 one-per-second creates while three shell loops churned files
+/// elsewhere, with no dropped-events flag on any (Darwin 27.0.0, a CoreServices
+/// probe, 2026-10-20). The fixture's burst is in-process and takes milliseconds,
+/// so a lost burst is lost whole, and the cell timed out on `reported so far: []`
+/// with not one `[git-watch]` line, in 10 of 30 runs under that churn. Waiting
+/// can't bring those writes back; a fresh burst can. A dead watch still fails,
+/// because it delivers none of the redos either.
+///
+/// ❗ **The branch switch is what each burst is judged by.** It makes the
+/// reported state distinguishable from everything before it, and since
+/// `cmdr_git::watcher::recompute_and_report` reads the repository NOW, a late
+/// delivery from an earlier attempt reports the latest branch too.
+///
+/// ❗ Lands on the end state, ❌ never on a count: the count depends on how the
 /// burst's writes fell against the window, the end state doesn't. A report taken
 /// at the FIRST write of a burst would still say the previous branch, so a
 /// watcher that stops reporting mid-burst never satisfies this.
@@ -157,27 +162,57 @@ fn a_burst_reports_its_end_state_and_the_watch_survives_for_the_next_one() {
 /// message whether the watcher delivered nothing at all or delivered a burst that
 /// never went quiet, and those are opposite bugs. A dead watch shows up here as
 /// a list that stops short of `branch`; a read loop as one that keeps growing.
-fn reports_settled_on(sink: &RecordingGitStateSink, branch: &str) -> Vec<(PathBuf, RepoInfo)> {
+fn burst_until_settled(fixture: &mut Fixture, sink: &RecordingGitStateSink, label: &str) -> Vec<(PathBuf, RepoInfo)> {
+    const COMMITS_IN_THE_BURST: usize = 5;
+    // A live stream reports within the debounce window plus delivery slack, so
+    // a short wait per attempt buys more redos per budget.
+    const ATTEMPT_WAIT: Duration = Duration::from_secs(1);
+    let deadline = Instant::now() + SETTLE_TIMEOUT;
+    let reports_on = |branch: &str| {
+        sink.changes()
+            .last()
+            .is_some_and(|(_, info)| info.branch.as_deref() == Some(branch))
+    };
+
+    let mut attempt = 0u32;
+    let branch = loop {
+        let branch = format!("{label}-{attempt}");
+        for index in 0..COMMITS_IN_THE_BURST {
+            fixture.commit_file(&format!("{branch}-{index}.txt"), b"x\n", "more");
+        }
+        fixture.create_branch(&branch);
+        fixture.checkout(&branch);
+        attempt += 1;
+
+        let attempt_ends = (Instant::now() + ATTEMPT_WAIT).min(deadline);
+        // The outer cap is deliberately unreachable: `attempt_ends` ends the
+        // wait first, and the deadline assert below carries the diagnostic.
+        wait_until(SETTLE_TIMEOUT, "one burst attempt's wait", || {
+            reports_on(&branch) || Instant::now() >= attempt_ends
+        });
+        if reports_on(&branch) {
+            break branch;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "the watcher reported none of {attempt} burst(s) ending on `{label}-*` in {SETTLE_TIMEOUT:?}; reported so far: {:?}",
+            sink.changes()
+        );
+    };
+
     // Twice the window, so a report arriving one poll interval late still counts
     // as part of the burst rather than as quiet.
     let quiet = WATCH_DEBOUNCE * 2;
-    const SETTLE_TIMEOUT: Duration = Duration::from_secs(10);
-    let deadline = Instant::now() + SETTLE_TIMEOUT;
-    let mut seen = 0usize;
+    let mut seen = sink.count();
     let mut unchanged_since = Instant::now();
-    // The outer cap is deliberately unreachable: the deadline inside fires first
-    // and carries the diagnostic, and this only backstops it.
-    wait_until(SETTLE_TIMEOUT * 2, "the watcher's reports to settle", || {
+    wait_until(SETTLE_TIMEOUT, "the watcher's reports to settle", || {
         let changes = sink.changes();
         if changes.len() != seen {
             seen = changes.len();
             unchanged_since = Instant::now();
             return false;
         }
-        let landed = changes
-            .last()
-            .is_some_and(|(_, info)| info.branch.as_deref() == Some(branch));
-        if landed && unchanged_since.elapsed() >= quiet {
+        if reports_on(&branch) && unchanged_since.elapsed() >= quiet {
             return true;
         }
         assert!(

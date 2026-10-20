@@ -467,11 +467,12 @@ slow-timeout = { period = "20s", terminate-after = 1 }
 [[profile.default.overrides]]
 # The git portal's ONE real-`.git/*` watcher cell. It arms a real `notify` debouncer on a
 # repository's gitdir (one recursive watch), writes two bursts of five commits plus a
-# branch switch, and blocks on each debounced delivery — so it is squarely the
-# delivery-blocking class this group exists for. Measured on an M1 Max: 1.8 s idle with both
-# bursts (2026-09-06), against the global 8 s cap. 20 s puts the cap above its own two 10 s
-# settle waits' worst case so the assertion (which names the reports it got) decides, and the
-# group keeps its live streams from multiplying the other watcher tests' starvation.
+# branch switch, redoing each burst on a fresh branch until it's delivered (a saturated
+# `fseventsd` drops events silently), and blocks on each debounced delivery — so it is
+# squarely the delivery-blocking class this group exists for. Measured on an M1 Max: 1.8 s
+# idle with both bursts (2026-09-06), against the global 8 s cap. 20 s puts the cap above its
+# own two 9 s settle budgets so the assertion (which names the reports it got) decides, and
+# the group keeps its live streams from multiplying the other watcher tests' starvation.
 #
 # ❗ It is one of only TWO cells that arm a real git watcher, and it has to stay that way:
 # every other subscription cell takes `GitPortal::with_scripted_watcher` and runs in ~0.05 s.
