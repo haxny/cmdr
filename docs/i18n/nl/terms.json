@@ -302,6 +302,19 @@
     "sources": "Double Commander (Werk op de achtergrond)",
     "note": "fileOperations.backgroundStart.background (Op de achtergrond) must stay a verbatim substring of backgroundAria (Start dit op de achtergrond)."
   },
+  "backup": {
+    "accept": ["back-ups", "back-uptools", "back-upwachtwoord", "Back-upwachtwoord", "back-upindex", "Back-upindex"],
+    "avoid": [
+      {
+        "form": "reservekopie",
+        "why": "macOS Finder and the catalog say back-up; reservekopie is the older Microsoft form"
+      }
+    ],
+    "chosen": "back-up",
+    "confidence": "high",
+    "forms": "de-woord (hij/hem); pl. back-ups; compounds close up after the hyphen (back-upwachtwoord, back-upindex, back-uptools); read-only title Alleen-lezen back-up stays open to avoid a double hyphen; a restic backup → een back-up die met restic is gemaakt (avoids restic-back-up)",
+    "sources": "macOS Finder (de back-up van de momentopname …), shipped catalog (errors.listing.lockUnavailable.suggestion back-uptools, errors.listing.diskReadProblem.suggestion maak een back-up)"
+  },
   "badge": {
     "accept": ["statusmarkering", "markeringen"],
     "avoid": [
@@ -3024,6 +3037,16 @@
     "confidence": "high",
     "forms": "The volume may be slow → Het volume is mogelijk traag; speed multipliers 4x zo langzaam als …; a lot slower → een stuk langzamer",
     "sources": "macOS Finder LA20 (… zijn erg traag)"
+  },
+  "snapshot": {
+    "accept": ["momentopnames", "momentopnamen", "git-momentopname"],
+    "chosen": "momentopname",
+    "confidence": "high",
+    "exceptions": {
+      "search.coverage.declined": "APFS system snapshot folders, a technical folder kind: snapshotmappen names them the way the disk does."
+    },
+    "forms": "pl. momentopnames (the catalog's form; momentopnamen also correct); git snapshot → git-momentopname; a backup's snapshots → de momentopnames van een back-up",
+    "sources": "macOS Finder (de back-up van de momentopname met de datum …), Microsoft terminology (momentopname), shipped catalog (fileExplorer.readOnly.gitPortalMessage, fileExplorer.git.useTransferToCopyOut)"
   },
   "sort": {
     "accept": ["sorteer", "sorteren", "gesorteerd", "Oplopend", "Aflopend", "sortering"],

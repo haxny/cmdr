@@ -73,6 +73,18 @@
   "@ui.loadingIcon.loaded": {
     "sourceHash": "69d2b22"
   },
+  "ui.loadingIcon.loadingBackupIndex": "Chargement de l’index de la sauvegarde : {amountText}",
+  "@ui.loadingIcon.loadingBackupIndex": {
+    "sourceHash": "965d284"
+  },
+  "ui.loadingIcon.backupIndexAmount": "{doneText} sur {totalText}",
+  "@ui.loadingIcon.backupIndexAmount": {
+    "sourceHash": "edce3be"
+  },
+  "ui.loadingIcon.backupIndexAria": "Index de la sauvegarde",
+  "@ui.loadingIcon.backupIndexAria": {
+    "sourceHash": "661044a"
+  },
   "ui.loadingIcon.openingFolder": "Ouverture du dossier…",
   "@ui.loadingIcon.openingFolder": {
     "sourceHash": "c3ab98e"

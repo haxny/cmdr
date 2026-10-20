@@ -72,6 +72,18 @@
   "@ui.loadingIcon.loaded": {
     "sourceHash": "69d2b22"
   },
+  "ui.loadingIcon.loadingBackupIndex": "Biztonsági mentés indexének betöltése: {amountText}",
+  "@ui.loadingIcon.loadingBackupIndex": {
+    "sourceHash": "965d284"
+  },
+  "ui.loadingIcon.backupIndexAmount": "{doneText}, összesen {totalText}",
+  "@ui.loadingIcon.backupIndexAmount": {
+    "sourceHash": "edce3be"
+  },
+  "ui.loadingIcon.backupIndexAria": "Biztonsági mentés indexe",
+  "@ui.loadingIcon.backupIndexAria": {
+    "sourceHash": "661044a"
+  },
   "ui.loadingIcon.openingFolder": "Mappa megnyitása…",
   "@ui.loadingIcon.openingFolder": {
     "sourceHash": "c3ab98e"

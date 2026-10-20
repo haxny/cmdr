@@ -1132,6 +1132,38 @@
   "@fileOperations.archivePassword.unlock": {
     "sourceHash": "4ac709a"
   },
+  "fileOperations.resticPassword.title": "Dieses Backup entsperren",
+  "@fileOperations.resticPassword.title": {
+    "sourceHash": "53b2b18"
+  },
+  "fileOperations.resticPassword.retryTitle": "Das hat nicht geklappt",
+  "@fileOperations.resticPassword.retryTitle": {
+    "sourceHash": "a12d349"
+  },
+  "fileOperations.resticPassword.message": "<repo>{name}</repo> ist ein restic-Backup. Gib das Passwort ein, dann kannst du die Snapshots durchsehen.",
+  "@fileOperations.resticPassword.message": {
+    "sourceHash": "c4dd0c2"
+  },
+  "fileOperations.resticPassword.retryMessage": "Mit diesem Passwort ließ sich <repo>{name}</repo> nicht entsperren. Versuche es noch mal.",
+  "@fileOperations.resticPassword.retryMessage": {
+    "sourceHash": "7440c4a"
+  },
+  "fileOperations.resticPassword.inputAria": "Backup-Passwort",
+  "@fileOperations.resticPassword.inputAria": {
+    "sourceHash": "3e39703"
+  },
+  "fileOperations.resticPassword.remember": "Im Schlüsselbund merken",
+  "@fileOperations.resticPassword.remember": {
+    "sourceHash": "3fd7384"
+  },
+  "fileOperations.resticPassword.checking": "Passwort wird geprüft …",
+  "@fileOperations.resticPassword.checking": {
+    "sourceHash": "adfc852"
+  },
+  "fileOperations.resticPassword.unreachable": "Cmdr konnte das Passwort gerade nicht prüfen. Stelle sicher, dass das Laufwerk oder der Server mit dem Backup erreichbar ist, und versuche es dann erneut.",
+  "@fileOperations.resticPassword.unreachable": {
+    "sourceHash": "cc4542d"
+  },
   "fileOperations.validation.disallowedChars": "{kind, select, folder {Der Ordnername darf kein „/“ und keine Nullzeichen enthalten} other {Der Dateiname darf kein „/“ und keine Nullzeichen enthalten}}",
   "@fileOperations.validation.disallowedChars": {
     "sourceHash": "1a3c594"

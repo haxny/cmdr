@@ -1131,6 +1131,38 @@
   "@fileOperations.archivePassword.unlock": {
     "sourceHash": "4ac709a"
   },
+  "fileOperations.resticPassword.title": "Déverrouiller cette sauvegarde",
+  "@fileOperations.resticPassword.title": {
+    "sourceHash": "53b2b18"
+  },
+  "fileOperations.resticPassword.retryTitle": "Ça n’a pas marché",
+  "@fileOperations.resticPassword.retryTitle": {
+    "sourceHash": "a12d349"
+  },
+  "fileOperations.resticPassword.message": "<repo>{name}</repo> est une sauvegarde restic. Saisissez le mot de passe pour en parcourir les instantanés.",
+  "@fileOperations.resticPassword.message": {
+    "sourceHash": "c4dd0c2"
+  },
+  "fileOperations.resticPassword.retryMessage": "Ce mot de passe n’a pas déverrouillé <repo>{name}</repo>. Réessayez.",
+  "@fileOperations.resticPassword.retryMessage": {
+    "sourceHash": "7440c4a"
+  },
+  "fileOperations.resticPassword.inputAria": "Mot de passe de la sauvegarde",
+  "@fileOperations.resticPassword.inputAria": {
+    "sourceHash": "3e39703"
+  },
+  "fileOperations.resticPassword.remember": "Mémoriser dans le trousseau",
+  "@fileOperations.resticPassword.remember": {
+    "sourceHash": "3fd7384"
+  },
+  "fileOperations.resticPassword.checking": "Vérification du mot de passe…",
+  "@fileOperations.resticPassword.checking": {
+    "sourceHash": "adfc852"
+  },
+  "fileOperations.resticPassword.unreachable": "Cmdr n’a pas pu vérifier le mot de passe à l’instant. Assurez-vous que le disque ou le serveur de la sauvegarde est accessible, puis réessayez.",
+  "@fileOperations.resticPassword.unreachable": {
+    "sourceHash": "cc4542d"
+  },
   "fileOperations.validation.disallowedChars": "{kind, select, folder {Le nom du dossier ne peut pas contenir « / » ni de caractère null} other {Le nom du fichier ne peut pas contenir « / » ni de caractère null}}",
   "@fileOperations.validation.disallowedChars": {
     "sourceHash": "1a3c594"

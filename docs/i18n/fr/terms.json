@@ -303,6 +303,18 @@
     "sources": "MS terminology FRA id 18761 (background → en arrière-plan); Double Commander; Total Commander",
     "note": "fileOperations.backgroundStart.background (En arrière-plan) must stay a verbatim substring of backgroundAria (Démarrer en arrière-plan)."
   },
+  "backup": {
+    "chosen": "sauvegarde",
+    "confidence": "high",
+    "forms": "feminine (la sauvegarde, cette sauvegarde, déverrouillée); a restic backup → une sauvegarde restic; backup password → mot de passe de la sauvegarde; backup index → index de la sauvegarde",
+    "avoid": [
+      {
+        "form": "backup",
+        "why": "macOS French says sauvegarde throughout Time Machine"
+      }
+    ],
+    "sources": "macOS Finder (Supprimer toutes les sauvegardes de « ^1 », disque de sauvegarde, instantané de sauvegarde); catalog (outils de sauvegarde)"
+  },
   "badge": {
     "chosen": "pastille",
     "confidence": "tentative",
@@ -1726,6 +1738,13 @@
     "forms": "masculine; the generic file-or-folder entity; a string whose English says file keeps fichier",
     "sources": "macOS Finder, pervasive (Compresser des éléments, Déplacer les éléments ici)"
   },
+  "just-now": {
+    "chosen": "à l’instant",
+    "accept": ["pour l’instant"],
+    "confidence": "high",
+    "forms": "relative-time label à l’instant (queryUi.age.justNow); couldn’t X just now → n’a pas pu X à l’instant; the right-now sense (can’t reach it just now) → pour l’instant",
+    "sources": "catalog (queryUi.age.justNow)"
+  },
   "keep": {
     "accept": ["garder", "gardé"],
     "chosen": "conserver",
@@ -3063,6 +3082,12 @@
     "decision": "Notification de repli sur le montage macOS",
     "forms": "agrees with the named object (la connexion … plus lente); speed multipliers spelled out (4 fois plus lente); a volume slow to answer → le volume met du temps à répondre",
     "sources": "Nautilus (plus lente)"
+  },
+  "snapshot": {
+    "chosen": "instantané",
+    "confidence": "high",
+    "forms": "masculine noun (un instantané, les instantanés); a git ref seen as a folder → instantané git; restic’s snapshots → les instantanés (d’une sauvegarde)",
+    "sources": "macOS Finder (Le Finder souhaite supprimer l’instantané de sauvegarde créé le ^0); catalog (fileExplorer.readOnly.gitPortalMessage, search.coverage.declined)"
   },
   "sort": {
     "accept": ["trié", "tri ", "croissant", "ordre de tri"],

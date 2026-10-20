@@ -481,3 +481,23 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `fileExplorer.tags.skipped`: `--lang all` briefs skip the `es-419` overlay, yet an es value with a Spain-only form
   (`no se ha podido`) fails the overlay test until es-419 forks it, and `--restamp` refuses overlays, so its hash took
   `sourceHash()` by hand. Have the brief flag needed forks and let `--restamp` stamp an overlay. (es)
+- `errors.write.sourcesSpanVolumes.title` / `.suggestion`: "a view" names a read-only virtual folder (backup snapshots,
+  archive inside, git history), but the word is the View menu / F3 Viewer elsewhere and no UI surface calls these
+  "views". A literal rendering (hu `nézet`) reads as the display mode. Consider wording the users see, like "inside a
+  backup, archive, or repository history”, or add a `virtual-view` concept with that sense. (hu, de, zh, ru: used
+  `виртуальная папка`, the catalog's word for the git portal's folders; sv used `vy`, same risk; vi used
+  `khu vực chỉ để xem`, "a view-only area", since `chế độ xem` is the display mode; pt used `visualização`, same risk;
+  fr used `vue`, same risk; zh-Hant used `虛擬資料夾`, since `檢視` is the verb and `顯示方式` the view mode; nl used
+  `weergave`, same risk; es used `vista`, same risk, since it's also `la vista breve` / `la vista completa`)
+- No `backup` concept: the restic keys use "backup" in 15+ strings and every locale picks a word ad hoc (de `Backup`,
+  per Finder's `Backup-Snapshot`). Add one, distinct from `snapshot` and `archive`. (de; fr added `backup` to
+  `concepts.json` with fr `sauvegarde`. Also widen `snapshot`'s sense, which names only git and APFS, to cover a restic
+  backup run. nl ruled `back-up` and `momentopname`, per Finder. es ruled `copia de seguridad` and `instantánea`, per
+  Finder's `la instantánea de las copias de seguridad`; es-419 forks it to `respaldo`, which flips the gender. pt ruled
+  `backup` (macOS's `backups do Time Machine`) and `instantâneo`.)
+- `errors.volume.noContent`: "a link" means a symlink but tripped `link` (hyperlink); added "a link or a special file"
+  to its `notMatch`. Saying "a symbolic link" in the English would fix it at the source. (de, zh, ru, sv, vi, zh-Hant:
+  used `符號連結`; nl used `koppeling`, macOS's word; es used `enlace`, which reads naturally as a file-system link
+  here; pt used `link simbólico`)
+- `fileOperations.resticPassword.unreachable`: "couldn't check the password just now" tripped `just-now` (the
+  relative-time label) but means "at the moment"; added "just now. make" to its `notMatch`. (sv, vi)

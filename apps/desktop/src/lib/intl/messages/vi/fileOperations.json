@@ -1128,6 +1128,38 @@
   "@fileOperations.archivePassword.unlock": {
     "sourceHash": "4ac709a"
   },
+  "fileOperations.resticPassword.title": "Mở khóa bản sao lưu này",
+  "@fileOperations.resticPassword.title": {
+    "sourceHash": "53b2b18"
+  },
+  "fileOperations.resticPassword.retryTitle": "Vẫn chưa được",
+  "@fileOperations.resticPassword.retryTitle": {
+    "sourceHash": "a12d349"
+  },
+  "fileOperations.resticPassword.message": "<repo>{name}</repo> là một bản sao lưu restic. Nhập mật khẩu để duyệt các ảnh chụp nhanh.",
+  "@fileOperations.resticPassword.message": {
+    "sourceHash": "c4dd0c2"
+  },
+  "fileOperations.resticPassword.retryMessage": "Mật khẩu đó không mở được <repo>{name}</repo>. Thử lại nhé.",
+  "@fileOperations.resticPassword.retryMessage": {
+    "sourceHash": "7440c4a"
+  },
+  "fileOperations.resticPassword.inputAria": "Mật khẩu bản sao lưu",
+  "@fileOperations.resticPassword.inputAria": {
+    "sourceHash": "3e39703"
+  },
+  "fileOperations.resticPassword.remember": "Ghi nhớ trong chuỗi khóa",
+  "@fileOperations.resticPassword.remember": {
+    "sourceHash": "3fd7384"
+  },
+  "fileOperations.resticPassword.checking": "Đang kiểm tra mật khẩu…",
+  "@fileOperations.resticPassword.checking": {
+    "sourceHash": "adfc852"
+  },
+  "fileOperations.resticPassword.unreachable": "Cmdr không thể kiểm tra mật khẩu lúc này. Hãy đảm bảo Cmdr truy cập được ổ đĩa hoặc máy chủ chứa bản sao lưu, rồi thử lại.",
+  "@fileOperations.resticPassword.unreachable": {
+    "sourceHash": "cc4542d"
+  },
   "fileOperations.validation.disallowedChars": "{kind, select, folder {Tên thư mục không được chứa “/” hoặc ký tự null} other {Tên tệp không được chứa “/” hoặc ký tự null}}",
   "@fileOperations.validation.disallowedChars": {
     "sourceHash": "1a3c594"

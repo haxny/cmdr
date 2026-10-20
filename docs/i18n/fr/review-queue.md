@@ -94,6 +94,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   history" (the UI elsewhere says `Historique des opérations`); `vous repartez donc de zéro` for the chats (the people
   restart, not the chats); `Cmdr a conservé l’ancien fichier sous {path}` (`sous` because {path} ends in the file name);
   `est défaillant` for a failing drive; subjunctive `confirmer que les copies soient …`.
+- **Restic backups** (`errors.write.sourcesSpanVolumes.*`, `fileOperations.resticPassword.*`): `vue` for the English
+  "view" (a read-only virtual folder); does it read as a display mode? `à l’instant` for "couldn’t check the password
+  just now" (meaning "right now").
 
 ## Overflow (check against the `en-XA` pseudolocale)
 

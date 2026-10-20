@@ -1127,6 +1127,38 @@
   "@fileOperations.archivePassword.unlock": {
     "sourceHash": "4ac709a"
   },
+  "fileOperations.resticPassword.title": "解锁这个备份",
+  "@fileOperations.resticPassword.title": {
+    "sourceHash": "53b2b18"
+  },
+  "fileOperations.resticPassword.retryTitle": "还是不行",
+  "@fileOperations.resticPassword.retryTitle": {
+    "sourceHash": "a12d349"
+  },
+  "fileOperations.resticPassword.message": "<repo>{name}</repo> 是一个 restic 备份。输入密码即可浏览它的快照。",
+  "@fileOperations.resticPassword.message": {
+    "sourceHash": "c4dd0c2"
+  },
+  "fileOperations.resticPassword.retryMessage": "这个密码没能解锁 <repo>{name}</repo>。再试一次吧。",
+  "@fileOperations.resticPassword.retryMessage": {
+    "sourceHash": "7440c4a"
+  },
+  "fileOperations.resticPassword.inputAria": "备份密码",
+  "@fileOperations.resticPassword.inputAria": {
+    "sourceHash": "3e39703"
+  },
+  "fileOperations.resticPassword.remember": "记住到钥匙串",
+  "@fileOperations.resticPassword.remember": {
+    "sourceHash": "3fd7384"
+  },
+  "fileOperations.resticPassword.checking": "正在检查密码…",
+  "@fileOperations.resticPassword.checking": {
+    "sourceHash": "adfc852"
+  },
+  "fileOperations.resticPassword.unreachable": "Cmdr 暂时无法检查密码。请确认能连上备份所在的驱动器或服务器，然后再试一次。",
+  "@fileOperations.resticPassword.unreachable": {
+    "sourceHash": "cc4542d"
+  },
   "fileOperations.validation.disallowedChars": "{kind, select, folder {文件夹名中不能包含“/”或空字符} other {文件名中不能包含“/”或空字符}}",
   "@fileOperations.validation.disallowedChars": {
     "sourceHash": "1a3c594"

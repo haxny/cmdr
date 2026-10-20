@@ -1127,6 +1127,38 @@
   "@fileOperations.archivePassword.unlock": {
     "sourceHash": "4ac709a"
   },
+  "fileOperations.resticPassword.title": "解鎖這個備份",
+  "@fileOperations.resticPassword.title": {
+    "sourceHash": "53b2b18"
+  },
+  "fileOperations.resticPassword.retryTitle": "還是不行",
+  "@fileOperations.resticPassword.retryTitle": {
+    "sourceHash": "a12d349"
+  },
+  "fileOperations.resticPassword.message": "<repo>{name}</repo> 是一個 restic 備份。輸入密碼就能瀏覽裡面的快照。",
+  "@fileOperations.resticPassword.message": {
+    "sourceHash": "c4dd0c2"
+  },
+  "fileOperations.resticPassword.retryMessage": "這組密碼沒能解鎖 <repo>{name}</repo>。再試一次吧。",
+  "@fileOperations.resticPassword.retryMessage": {
+    "sourceHash": "7440c4a"
+  },
+  "fileOperations.resticPassword.inputAria": "備份密碼",
+  "@fileOperations.resticPassword.inputAria": {
+    "sourceHash": "3e39703"
+  },
+  "fileOperations.resticPassword.remember": "記住在鑰匙圈中",
+  "@fileOperations.resticPassword.remember": {
+    "sourceHash": "3fd7384"
+  },
+  "fileOperations.resticPassword.checking": "正在檢查密碼⋯",
+  "@fileOperations.resticPassword.checking": {
+    "sourceHash": "adfc852"
+  },
+  "fileOperations.resticPassword.unreachable": "Cmdr 剛剛無法檢查密碼。請確認備份所在的磁碟機或伺服器連得上，然後再試一次。",
+  "@fileOperations.resticPassword.unreachable": {
+    "sourceHash": "cc4542d"
+  },
   "fileOperations.validation.disallowedChars": "{kind, select, folder {資料夾名稱不能包含「/」或 Null 字元} other {檔名不能包含「/」或 Null 字元}}",
   "@fileOperations.validation.disallowedChars": {
     "sourceHash": "1a3c594"

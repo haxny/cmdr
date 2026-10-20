@@ -344,6 +344,12 @@
     "notMatch": ["pane background", "background tint"],
     "sense": "Letting a running operation or task continue out of sight."
   },
+  "backup": {
+    "distinct": ["snapshot", "archive", "restore"],
+    "en": "backup",
+    "match": ["backup", "backups"],
+    "sense": "A backup repository (a restic backup) Cmdr browses read-only, or backup copies in general (backup tools, a backup drive)."
+  },
   "badge": {
     "en": "badge",
     "match": ["badge", "badges", "status badge", "status badges"],
@@ -1729,7 +1735,7 @@
     "en": "just now",
     "match": ["just now"],
     "sense": "The newest step of a relative-time label (just now, 5m ago).",
-    "notMatch": ["just now. try"]
+    "notMatch": ["just now. try", "just now. make"]
   },
   "keep": {
     "distinct": ["leave-alone"],
@@ -1850,7 +1856,15 @@
     "distinct": ["symlink"],
     "en": "link",
     "match": ["link", "links"],
-    "notMatch": ["symbolic link", "symbolic links", "symlink", "symlinks", "linked worktree", "link loop"],
+    "notMatch": [
+      "symbolic link",
+      "symbolic links",
+      "symlink",
+      "symlinks",
+      "linked worktree",
+      "link loop",
+      "a link or a special file"
+    ],
     "sense": "A hyperlink: a clickable reference in a document, or a shareable web address (a share link, a Google Drive link)."
   },
   "linux-distribution": {

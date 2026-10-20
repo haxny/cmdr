@@ -731,6 +731,18 @@
   "@errors.listing.archiveNeedsPassword.suggestion": {
     "sourceHash": "4043af6"
   },
+  "errors.listing.resticRepoNeedsPassword.title": "Este backup precisa da senha",
+  "@errors.listing.resticRepoNeedsPassword.title": {
+    "sourceHash": "8d09953"
+  },
+  "errors.listing.resticRepoNeedsPassword.explanation": "Este backup do restic está criptografado, então os instantâneos dele ficam bloqueados até você desbloqueá-lo.",
+  "@errors.listing.resticRepoNeedsPassword.explanation": {
+    "sourceHash": "8b4fb1b"
+  },
+  "errors.listing.resticRepoNeedsPassword.suggestion": "Digite a senha para navegar pelos instantâneos.",
+  "@errors.listing.resticRepoNeedsPassword.suggestion": {
+    "sourceHash": "dc91e8c"
+  },
   "errors.listing.emptyRootICloud.title": "O iCloud Drive parece vazio",
   "@errors.listing.emptyRootICloud.title": {
     "sourceHash": "413a7d1"
@@ -2161,6 +2173,10 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
+  "errors.volume.noContent": "“{path}” é um link simbólico ou um arquivo especial, então não tem conteúdo para o Cmdr copiar.",
+  "@errors.volume.noContent": {
+    "sourceHash": "cebab92"
+  },
   "errors.volume.ambiguousName": "Mais de um item no servidor corresponde a “{path}”, então o Cmdr não escolheu nenhum. Escolha o item na pasta onde ele está.",
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
@@ -2412,6 +2428,18 @@
   "errors.write.duplicateSourceNames.suggestion.copy": "Copie um de cada vez, ou renomeie um antes.",
   "@errors.write.duplicateSourceNames.suggestion.copy": {
     "sourceHash": "8bc2d76"
+  },
+  "errors.write.sourcesSpanVolumes.title": "Parte da sua seleção está dentro de uma visualização",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "sourceHash": "0dad5e0"
+  },
+  "errors.write.sourcesSpanVolumes.message": "{path} está dentro dos instantâneos de um backup, de um arquivo compactado ou do histórico de um repo, e o resto da sua seleção não está, então o Cmdr não consegue ler esses itens juntos. Nada foi alterado.",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "sourceHash": "46a2988"
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "Faça em duas etapas: primeiro só os itens dentro da visualização, depois o resto.",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "sourceHash": "c2f9729"
   },
   "errors.write.duplicateSourceNames.suggestion.move": "Mova um de cada vez, ou renomeie um antes.",
   "@errors.write.duplicateSourceNames.suggestion.move": {

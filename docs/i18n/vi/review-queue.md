@@ -86,6 +86,10 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   instead: unborn → `chưa có commit`, dirty → `có thay đổi`, working tree kept Latin
   (`Working tree có thay đổi chưa commit.`). A native developer should confirm `có thay đổi` reads as “dirty” after the
   middle dot, and whether `cây làm việc` would beat the loanword.
+- **Restic backups** (`errors.write.sourcesSpanVolumes.*`, `fileExplorer.readOnly.restic*`): EN "a view" (a read-only
+  virtual folder) became `khu vực chỉ để xem`; `chế độ xem` would read as the display mode, `thư mục ảo` is the
+  alternative. Backup snapshots are macOS's `ảnh chụp nhanh`, while the shipped git strings keep the shorter `ảnh chụp`;
+  confirm the split reads fine.
 
 ## Layout
 

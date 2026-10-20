@@ -829,6 +829,18 @@
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
+  "fileExplorer.readOnly.resticTitle": "Skrivskyddad säkerhetskopia",
+  "@fileExplorer.readOnly.resticTitle": {
+    "sourceHash": "55cd4b4"
+  },
+  "fileExplorer.readOnly.resticMessage": "Ögonblicksbilderna innehåller dina filer som de var när varje säkerhetskopiering kördes, så du kan bläddra i dem och kopiera ut ur dem, men inte ändra dem.",
+  "@fileExplorer.readOnly.resticMessage": {
+    "sourceHash": "68f4b46"
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "Om du vill kopiera ut filer ur en säkerhetskopia använder du F5.",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "sourceHash": "b3674bd"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Om du vill kopiera ut filer ur ett arkiv använder du F5 för att kopiera eller F6 för att flytta.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
@@ -904,6 +916,10 @@
   "fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": "{fileName} är större än {limit}, så Cmdr kan inte öppna filen i {appName} från repots historik.",
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
+  },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "{fileName} är större än {limit}, så Cmdr kan inte öppna filen i {appName} från säkerhetskopian.",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "sourceHash": "071fe99"
   },
   "fileExplorer.openWith.copyRefused.notEnoughSpace": "Disken i din Mac har inte tillräckligt med utrymme för en {size} stor kopia av {fileName}, så Cmdr kan inte öppna filen i {appName}. Frigör lite utrymme och försök igen.",
   "@fileExplorer.openWith.copyRefused.notEnoughSpace": {

@@ -72,6 +72,18 @@
   "@ui.loadingIcon.loaded": {
     "sourceHash": "69d2b22"
   },
+  "ui.loadingIcon.loadingBackupIndex": "Загрузка индекса резервной копии: {amountText}",
+  "@ui.loadingIcon.loadingBackupIndex": {
+    "sourceHash": "965d284"
+  },
+  "ui.loadingIcon.backupIndexAmount": "{doneText} из {totalText}",
+  "@ui.loadingIcon.backupIndexAmount": {
+    "sourceHash": "edce3be"
+  },
+  "ui.loadingIcon.backupIndexAria": "Индекс резервной копии",
+  "@ui.loadingIcon.backupIndexAria": {
+    "sourceHash": "661044a"
+  },
   "ui.loadingIcon.openingFolder": "Открытие папки…",
   "@ui.loadingIcon.openingFolder": {
     "sourceHash": "c3ab98e"

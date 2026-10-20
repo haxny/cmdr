@@ -829,6 +829,18 @@
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
+  "fileExplorer.readOnly.resticTitle": "Sauvegarde en lecture seule",
+  "@fileExplorer.readOnly.resticTitle": {
+    "sourceHash": "55cd4b4"
+  },
+  "fileExplorer.readOnly.resticMessage": "Les instantanés conservent vos fichiers tels qu’ils étaient au moment de chaque sauvegarde : vous pouvez les parcourir et en copier des fichiers, mais pas les modifier.",
+  "@fileExplorer.readOnly.resticMessage": {
+    "sourceHash": "68f4b46"
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "Pour copier des fichiers hors d’une sauvegarde, utilisez F5.",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "sourceHash": "b3674bd"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Pour copier des fichiers hors d’une archive, utilisez F5 pour copier ou F6 pour déplacer.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
@@ -904,6 +916,10 @@
   "fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": "« {fileName} » dépasse {limit}, donc Cmdr ne peut pas ouvrir le fichier dans {appName} depuis l’historique du dépôt.",
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
+  },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "« {fileName} » dépasse {limit}, donc Cmdr ne peut pas ouvrir le fichier dans {appName} depuis la sauvegarde.",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "sourceHash": "071fe99"
   },
   "fileExplorer.openWith.copyRefused.notEnoughSpace": "Le disque de votre Mac n’a pas assez de place pour une copie de {size} de « {fileName} », donc Cmdr ne peut pas ouvrir le fichier dans {appName}. Libérez de l’espace, puis réessayez.",
   "@fileExplorer.openWith.copyRefused.notEnoughSpace": {

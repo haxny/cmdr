@@ -187,6 +187,22 @@
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "c59cae3"
   },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "{fileName} ocupa más de {limit}, así que Cmdr no puede abrirlo en {appName} desde el respaldo.",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "sourceHash": "b1656c2"
+  },
+  "fileExplorer.readOnly.resticTitle": "Respaldo de solo lectura",
+  "@fileExplorer.readOnly.resticTitle": {
+    "sourceHash": "452d61f"
+  },
+  "fileExplorer.readOnly.resticMessage": "Las instantáneas guardan tus archivos tal como estaban cuando se hizo cada respaldo, así que puedes explorarlas y copiar desde ahí, pero no modificarlas.",
+  "@fileExplorer.readOnly.resticMessage": {
+    "sourceHash": "ea1fa9e"
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "Para copiar archivos fuera de un respaldo, usa F5.",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "sourceHash": "4771151"
+  },
   "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} abrió una copia de solo lectura de {fileName}. Los cambios que guardes ahí no llegarán al original.} many {{appName} abrió copias de solo lectura de {countText} archivos. Los cambios que guardes ahí no llegarán a los originales.} other {{appName} abrió copias de solo lectura de {countText} archivos. Los cambios que guardes ahí no llegarán a los originales.}}",
   "@fileExplorer.openWith.readOnlyCopy": {
     "sourceHash": "f436270"

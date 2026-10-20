@@ -87,3 +87,6 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
 - **Security notices** (`securityNotices.updateNotGenuine.*`, `updates.failure.notGenuine`): confirm
   `不是真正的 Cmdr 版本` reads as "not a real/official release" without sounding like piracy, and that `客人会话`
   (`servers.paneState.guestSessionRefusedHint`) is clear next to the shipped `以客人身份连接`.
+- **Mixed-source refusal** (`errors.write.sourcesSpanVolumes.title` / `.suggestion`): English "a view" is rendered
+  `只读视图` (bare `视图` reads as a display mode). Confirm a user connects `只读视图` to a backup's snapshots or an
+  archive's inside.

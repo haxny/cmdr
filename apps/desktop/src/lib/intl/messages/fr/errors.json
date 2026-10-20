@@ -731,6 +731,18 @@
   "@errors.listing.archiveNeedsPassword.suggestion": {
     "sourceHash": "4043af6"
   },
+  "errors.listing.resticRepoNeedsPassword.title": "Cette sauvegarde nécessite son mot de passe",
+  "@errors.listing.resticRepoNeedsPassword.title": {
+    "sourceHash": "8d09953"
+  },
+  "errors.listing.resticRepoNeedsPassword.explanation": "Cette sauvegarde restic est chiffrée : ses instantanés restent verrouillés tant que vous ne l’avez pas déverrouillée.",
+  "@errors.listing.resticRepoNeedsPassword.explanation": {
+    "sourceHash": "8b4fb1b"
+  },
+  "errors.listing.resticRepoNeedsPassword.suggestion": "Saisissez le mot de passe pour parcourir ses instantanés.",
+  "@errors.listing.resticRepoNeedsPassword.suggestion": {
+    "sourceHash": "dc91e8c"
+  },
   "errors.listing.emptyRootICloud.title": "iCloud Drive semble vide",
   "@errors.listing.emptyRootICloud.title": {
     "sourceHash": "413a7d1"
@@ -2161,6 +2173,10 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
+  "errors.volume.noContent": "« {path} » est un lien ou un fichier spécial, sans contenu que Cmdr puisse copier.",
+  "@errors.volume.noContent": {
+    "sourceHash": "cebab92"
+  },
   "errors.volume.ambiguousName": "Plusieurs éléments du serveur correspondent à « {path} » : Cmdr n’en a donc choisi aucun. Choisissez plutôt l’élément voulu dans son dossier.",
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
@@ -2412,6 +2428,18 @@
   "errors.write.duplicateSourceNames.suggestion.copy": "Copiez-les l’un après l’autre, ou renommez-en un d’abord.",
   "@errors.write.duplicateSourceNames.suggestion.copy": {
     "sourceHash": "8bc2d76"
+  },
+  "errors.write.sourcesSpanVolumes.title": "Une partie de votre sélection se trouve dans une vue",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "sourceHash": "0dad5e0"
+  },
+  "errors.write.sourcesSpanVolumes.message": "{path} se trouve dans les instantanés d’une sauvegarde, dans une archive ou dans l’historique d’un dépôt, contrairement au reste de votre sélection : Cmdr ne peut donc pas lire les deux ensemble. Rien n’a été modifié.",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "sourceHash": "46a2988"
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "Procédez en deux étapes : d’abord les éléments qui se trouvent dans la vue, puis le reste.",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "sourceHash": "c2f9729"
   },
   "errors.write.duplicateSourceNames.suggestion.move": "Déplacez-les l’un après l’autre, ou renommez-en un d’abord.",
   "@errors.write.duplicateSourceNames.suggestion.move": {

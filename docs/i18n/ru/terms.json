@@ -491,6 +491,24 @@
     "sources": "TC 5275 (в фоновом режиме); macOS Finder ViewOptionsWindow 103.title (Background: → Фон:, the picture sense)",
     "note": "fileOperations.backgroundStart.background (В фоне) must stay a verbatim substring of backgroundAria (Запустить в фоне)."
   },
+  "backup": {
+    "chosen": "резервная копия",
+    "accept": ["резервн"],
+    "forms": "gen. резервной копии; pl. резервные копии; the act → резервное копирование; Read-only backup → Резервная копия только для чтения; Backup password → Пароль резервной копии; a restic repo → резервная копия restic",
+    "avoid": [
+      {
+        "form": "бэкап",
+        "why": "colloquial slang; no macOS or MS source uses it"
+      },
+      {
+        "form": "дамп",
+        "why": "MS's database-dump sense, not a user's backup"
+      }
+    ],
+    "confidence": "high",
+    "sources": "macOS Finder (Time Machine): Удалить резервную копию, тому резервной копии, Идет проверка резервной копии; catalog: errors.listing.diskReadProblem.suggestion (создайте резервную копию), средства резервного копирования",
+    "note": "A restic repository holds many snapshots, but Russian users call the whole store резервная копия too, matching the English \"backup\"."
+  },
   "badge": {
     "chosen": "значок",
     "accept": ["значк", "значок"],

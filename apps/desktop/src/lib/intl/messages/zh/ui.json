@@ -71,6 +71,18 @@
   "@ui.loadingIcon.loaded": {
     "sourceHash": "69d2b22"
   },
+  "ui.loadingIcon.loadingBackupIndex": "正在加载备份索引：{amountText}",
+  "@ui.loadingIcon.loadingBackupIndex": {
+    "sourceHash": "965d284"
+  },
+  "ui.loadingIcon.backupIndexAmount": "{doneText}，共 {totalText}",
+  "@ui.loadingIcon.backupIndexAmount": {
+    "sourceHash": "edce3be"
+  },
+  "ui.loadingIcon.backupIndexAria": "备份索引",
+  "@ui.loadingIcon.backupIndexAria": {
+    "sourceHash": "661044a"
+  },
   "ui.loadingIcon.openingFolder": "正在打开文件夹…",
   "@ui.loadingIcon.openingFolder": {
     "sourceHash": "c3ab98e"

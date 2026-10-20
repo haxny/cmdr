@@ -274,6 +274,13 @@
     "sources": "MS terminology (background task → tác vụ nền); catalog (nine strings on ở chế độ nền); Total Commander (Nền beside Hàng đợi)",
     "note": "fileOperations.backgroundStart.background (Chạy nền) must stay a verbatim substring of backgroundAria (Bắt đầu chạy nền)."
   },
+  "backup": {
+    "accept": ["sao lưu"],
+    "chosen": "bản sao lưu",
+    "confidence": "high",
+    "forms": "a backup (the thing) → bản sao lưu; each backup ran → mỗi lần sao lưu chạy; backup tools / backup drive → công cụ sao lưu / ổ đĩa sao lưu",
+    "sources": "macOS Finder LocalizableMerged (Delete Backups → Xóa các bản sao lưu; backup disk → ổ đĩa sao lưu); MS style guide (sao lưu tệp)"
+  },
   "badge": {
     "chosen": "huy hiệu",
     "confidence": "tentative",
@@ -1548,6 +1555,13 @@
     "forms": "no classifier and no plural marker with a count (^0 mục); and N other items → và N mục khác",
     "sources": "macOS Finder (các mục, ^0 mục)"
   },
+  "just-now": {
+    "accept": ["lúc này"],
+    "chosen": "vừa xong",
+    "confidence": "high",
+    "forms": "the relative-time label → vừa xong; couldn't X just now (at the moment) → không thể X lúc này",
+    "sources": "catalog (queryUi.age.justNow, fileExplorer.errorPane.aMomentAgo; main.cliCommand.unavailable for lúc này); no pile hit"
+  },
   "keep": {
     "chosen": "giữ",
     "confidence": "high",
@@ -2773,6 +2787,13 @@
     "confidence": "high",
     "forms": "4x slower → chậm hơn 4 lần",
     "sources": "standard"
+  },
+  "snapshot": {
+    "accept": ["ảnh chụp"],
+    "chosen": "ảnh chụp nhanh",
+    "confidence": "high",
+    "forms": "a backup's snapshots → các ảnh chụp nhanh; git's snapshots of history keep the shipped shorter ảnh chụp (fileExplorer.readOnly.gitPortalMessage, fileExplorer.git.useTransferToCopyOut)",
+    "sources": "macOS Finder LocalizableMerged (backup snapshot → ảnh chụp nhanh bản sao lưu); catalog (ảnh chụp, git)"
   },
   "sort": {
     "accept": ["tăng dần", "giảm dần"],

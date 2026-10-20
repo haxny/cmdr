@@ -731,6 +731,18 @@
   "@errors.listing.archiveNeedsPassword.suggestion": {
     "sourceHash": "4043af6"
   },
+  "errors.listing.resticRepoNeedsPassword.title": "Dieses Backup benötigt sein Passwort",
+  "@errors.listing.resticRepoNeedsPassword.title": {
+    "sourceHash": "8d09953"
+  },
+  "errors.listing.resticRepoNeedsPassword.explanation": "Dieses restic-Backup ist verschlüsselt, deshalb bleiben seine Snapshots gesperrt, bis du es entsperrst.",
+  "@errors.listing.resticRepoNeedsPassword.explanation": {
+    "sourceHash": "8b4fb1b"
+  },
+  "errors.listing.resticRepoNeedsPassword.suggestion": "Gib das Passwort ein, dann kannst du die Snapshots durchsehen.",
+  "@errors.listing.resticRepoNeedsPassword.suggestion": {
+    "sourceHash": "dc91e8c"
+  },
   "errors.listing.emptyRootICloud.title": "iCloud Drive sieht leer aus",
   "@errors.listing.emptyRootICloud.title": {
     "sourceHash": "413a7d1"
@@ -2161,6 +2173,10 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
+  "errors.volume.noContent": "„{path}“ ist eine symbolische Verknüpfung oder eine Spezialdatei und hat keinen eigenen Inhalt, den Cmdr kopieren könnte.",
+  "@errors.volume.noContent": {
+    "sourceHash": "cebab92"
+  },
   "errors.volume.ambiguousName": "Mehr als ein Objekt auf dem Server passt zu „{path}“, deshalb hat Cmdr keines ausgewählt. Wähle es stattdessen in seinem Ordner aus.",
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
@@ -2412,6 +2428,18 @@
   "errors.write.duplicateSourceNames.suggestion.copy": "Kopiere sie nacheinander, oder benenne eines vorher um.",
   "@errors.write.duplicateSourceNames.suggestion.copy": {
     "sourceHash": "8bc2d76"
+  },
+  "errors.write.sourcesSpanVolumes.title": "Ein Teil deiner Auswahl liegt in einer Ansicht",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "sourceHash": "0dad5e0"
+  },
+  "errors.write.sourcesSpanVolumes.message": "{path} liegt in den Snapshots eines Backups, in einem Archiv oder in der Historie eines Repos, der Rest deiner Auswahl aber nicht, deshalb kann Cmdr nicht alles zusammen lesen. Es wurde nichts geändert.",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "sourceHash": "46a2988"
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "Mach es in zwei Schritten: zuerst die Objekte in der Ansicht für sich, dann den Rest.",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "sourceHash": "c2f9729"
   },
   "errors.write.duplicateSourceNames.suggestion.move": "Bewege sie nacheinander, oder benenne eines vorher um.",
   "@errors.write.duplicateSourceNames.suggestion.move": {

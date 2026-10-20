@@ -1129,6 +1129,38 @@
   "@fileOperations.archivePassword.unlock": {
     "sourceHash": "4ac709a"
   },
+  "fileOperations.resticPassword.title": "Desbloquear esta copia de seguridad",
+  "@fileOperations.resticPassword.title": {
+    "sourceHash": "53b2b18"
+  },
+  "fileOperations.resticPassword.retryTitle": "No ha funcionado",
+  "@fileOperations.resticPassword.retryTitle": {
+    "sourceHash": "a12d349"
+  },
+  "fileOperations.resticPassword.message": "<repo>{name}</repo> es una copia de seguridad de restic. Introduce la contraseña para explorar sus instantáneas.",
+  "@fileOperations.resticPassword.message": {
+    "sourceHash": "c4dd0c2"
+  },
+  "fileOperations.resticPassword.retryMessage": "Esa contraseña no ha desbloqueado <repo>{name}</repo>. Inténtalo de nuevo.",
+  "@fileOperations.resticPassword.retryMessage": {
+    "sourceHash": "7440c4a"
+  },
+  "fileOperations.resticPassword.inputAria": "Contraseña de la copia de seguridad",
+  "@fileOperations.resticPassword.inputAria": {
+    "sourceHash": "3e39703"
+  },
+  "fileOperations.resticPassword.remember": "Recordar en el Llavero",
+  "@fileOperations.resticPassword.remember": {
+    "sourceHash": "3fd7384"
+  },
+  "fileOperations.resticPassword.checking": "Comprobando la contraseña…",
+  "@fileOperations.resticPassword.checking": {
+    "sourceHash": "adfc852"
+  },
+  "fileOperations.resticPassword.unreachable": "Cmdr no ha podido comprobar la contraseña ahora mismo. Asegúrate de que la unidad o el servidor de la copia de seguridad estén accesibles y vuelve a intentarlo.",
+  "@fileOperations.resticPassword.unreachable": {
+    "sourceHash": "cc4542d"
+  },
   "fileOperations.validation.disallowedChars": "{kind, select, folder {El nombre de la carpeta no puede contener “/” ni caracteres nulos} other {El nombre del archivo no puede contener “/” ni caracteres nulos}}",
   "@fileOperations.validation.disallowedChars": {
     "sourceHash": "1a3c594"

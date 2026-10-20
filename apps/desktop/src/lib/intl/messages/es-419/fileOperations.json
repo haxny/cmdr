@@ -235,6 +235,30 @@
   "@fileOperations.archivePassword.retryMessage": {
     "sourceHash": "948e9f1"
   },
+  "fileOperations.resticPassword.title": "Desbloquear este respaldo",
+  "@fileOperations.resticPassword.title": {
+    "sourceHash": "2a3aa62"
+  },
+  "fileOperations.resticPassword.retryTitle": "No funcionó",
+  "@fileOperations.resticPassword.retryTitle": {
+    "sourceHash": "232cffb"
+  },
+  "fileOperations.resticPassword.message": "<repo>{name}</repo> es un respaldo de restic. Ingresa la contraseña para explorar sus instantáneas.",
+  "@fileOperations.resticPassword.message": {
+    "sourceHash": "2ec4a7f"
+  },
+  "fileOperations.resticPassword.retryMessage": "Esa contraseña no desbloqueó <repo>{name}</repo>. Inténtalo de nuevo.",
+  "@fileOperations.resticPassword.retryMessage": {
+    "sourceHash": "6f072f0"
+  },
+  "fileOperations.resticPassword.inputAria": "Contraseña del respaldo",
+  "@fileOperations.resticPassword.inputAria": {
+    "sourceHash": "445abca"
+  },
+  "fileOperations.resticPassword.unreachable": "Cmdr no pudo comprobar la contraseña ahora mismo. Asegúrate de que la unidad o el servidor del respaldo estén accesibles y vuelve a intentarlo.",
+  "@fileOperations.resticPassword.unreachable": {
+    "sourceHash": "0803374"
+  },
   "fileOperations.sourcesGone.message": "{type, select, copy {{goneText} de los {totalText} elementos que esta copia tenía pendientes {gone, plural, one {se movió o se eliminó} many {se movieron o se eliminaron} other {se movieron o se eliminaron}} mientras esperaba su turno.} move {{goneText} de los {totalText} elementos que este movimiento tenía pendientes {gone, plural, one {se movió o se eliminó} many {se movieron o se eliminaron} other {se movieron o se eliminaron}} mientras esperaba su turno.} delete {{goneText} de los {totalText} elementos que esta eliminación tenía pendientes {gone, plural, one {se movió o se eliminó} many {se movieron o se eliminaron} other {se movieron o se eliminaron}} mientras esperaba su turno.} trash {{goneText} de los {totalText} elementos que este movimiento al basurero tenía pendientes {gone, plural, one {se movió o se eliminó} many {se movieron o se eliminaron} other {se movieron o se eliminaron}} mientras esperaba su turno.} other {{goneText} de los {totalText} elementos que esta operación tenía pendientes {gone, plural, one {se movió o se eliminó} many {se movieron o se eliminaron} other {se movieron o se eliminaron}} mientras esperaba su turno.}}",
   "@fileOperations.sourcesGone.message": {
     "sourceHash": "7d5b149"

@@ -131,3 +131,6 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
   fresh“ → `startet von vorn` and „starts empty“ → `startet leer`; check `startet leer` reads naturally and the long
   titles (`appStatus`, `multiRenameLastSettings`) fit the toast. `transfer.durabilityUnconfirmed*` renders „is failing“
   as `Probleme macht` (calm, no failure claim).
+- restic keys: `errors.volume.noContent` coins `Spezialdatei` for a device file or pipe (no pile hit; `Gerätedatei` is
+  too narrow); `errors.write.sourcesSpanVolumes.*` renders „view“ as `Ansicht`, which may read as the display mode
+  (source-queue entry open). Check both.

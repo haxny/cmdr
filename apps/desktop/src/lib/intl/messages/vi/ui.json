@@ -72,6 +72,18 @@
   "@ui.loadingIcon.loaded": {
     "sourceHash": "69d2b22"
   },
+  "ui.loadingIcon.loadingBackupIndex": "Đang tải chỉ mục bản sao lưu: {amountText}",
+  "@ui.loadingIcon.loadingBackupIndex": {
+    "sourceHash": "965d284"
+  },
+  "ui.loadingIcon.backupIndexAmount": "{doneText} trên {totalText}",
+  "@ui.loadingIcon.backupIndexAmount": {
+    "sourceHash": "edce3be"
+  },
+  "ui.loadingIcon.backupIndexAria": "Chỉ mục bản sao lưu",
+  "@ui.loadingIcon.backupIndexAria": {
+    "sourceHash": "661044a"
+  },
   "ui.loadingIcon.openingFolder": "Đang mở thư mục…",
   "@ui.loadingIcon.openingFolder": {
     "sourceHash": "c3ab98e"

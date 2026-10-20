@@ -829,6 +829,18 @@
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
+  "fileExplorer.readOnly.resticTitle": "Bản sao lưu chỉ đọc",
+  "@fileExplorer.readOnly.resticTitle": {
+    "sourceHash": "55cd4b4"
+  },
+  "fileExplorer.readOnly.resticMessage": "Các ảnh chụp nhanh giữ tệp của bạn đúng như lúc mỗi lần sao lưu chạy, nên bạn có thể duyệt và sao chép từ đó, nhưng không thay đổi được.",
+  "@fileExplorer.readOnly.resticMessage": {
+    "sourceHash": "68f4b46"
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "Để sao chép tệp ra khỏi một bản sao lưu, hãy dùng F5.",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "sourceHash": "b3674bd"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Để sao chép tệp ra khỏi một tệp nén, hãy dùng F5 để sao chép hoặc F6 để di chuyển.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
@@ -904,6 +916,10 @@
   "fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": "“{fileName}” lớn hơn {limit}, nên Cmdr không thể mở tệp này bằng {appName} từ lịch sử của repo.",
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
+  },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "“{fileName}” lớn hơn {limit}, nên Cmdr không thể mở tệp này bằng {appName} từ bản sao lưu.",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "sourceHash": "071fe99"
   },
   "fileExplorer.openWith.copyRefused.notEnoughSpace": "Ổ đĩa trên máy Mac của bạn không đủ dung lượng cho bản sao {size} của “{fileName}”, nên Cmdr không thể mở tệp này bằng {appName}. Hãy giải phóng bớt dung lượng, rồi thử lại.",
   "@fileExplorer.openWith.copyRefused.notEnoughSpace": {

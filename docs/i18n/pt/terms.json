@@ -230,6 +230,19 @@
     "decision": "Background button",
     "note": "fileOperations.backgroundStart.background (Em segundo plano) must stay a verbatim substring of backgroundAria (Iniciar isto em segundo plano)."
   },
+  "backup": {
+    "chosen": "backup",
+    "accept": ["backups"],
+    "forms": "masculine (o backup, do backup); a restic backup → backup do restic; backup index → índice do backup; Read-only backup → Backup somente leitura",
+    "avoid": [
+      {
+        "form": "cópia de segurança",
+        "why": "macOS pt-BR says backup (backups do Time Machine), and so does Dolphin pt-BR (arquivos de backup)"
+      }
+    ],
+    "confidence": "high",
+    "sources": "macOS pt-BR Finder (BackupVolumeBrowserWindow: Estes discos contêm backups do Time Machine); KDE Dolphin pt-BR (arquivos de backup); shipped pt catalog (ferramentas de backup, faça backup)"
+  },
   "badge": {
     "chosen": "selo",
     "forms": "status badges → selos de status",
@@ -2781,6 +2794,17 @@
     "forms": "4x mais lenta do que …; a volume slow to answer → o volume está demorando para responder",
     "confidence": "high",
     "sources": "MS terminology pt-BR (conexão mais lenta)"
+  },
+  "snapshot": {
+    "chosen": "instantâneo",
+    "accept": ["instantâneos"],
+    "forms": "masculine (os instantâneos dele); a backup’s snapshots → os instantâneos de um backup",
+    "note": "The literal restic folder name “Browse snapshots” stays English wherever it appears as a folder name in a path.",
+    "exceptions": {
+      "search.coverage.declined": "Shipped before this ruling, about APFS snapshot folders (pastas de snapshot); left as is pending a native review of whether it should align to instantâneo (Disk Utility’s pt-BR wording), see review-queue.md."
+    },
+    "confidence": "high",
+    "sources": "MS terminology pt-BR (snapshot → instantâneo; volume snapshot → instantâneo de volume); shipped pt catalog (fileExplorer.readOnly.gitPortalMessage)"
   },
   "sort": {
     "chosen": "Ordenar",

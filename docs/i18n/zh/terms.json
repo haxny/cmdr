@@ -319,6 +319,12 @@
     "forms": "navigation back 返回 (menu, network browser, error pane); the onboarding wizard's previous step 上一步, paired with 下一步",
     "sources": "macOS (Back → 返回)"
   },
+  "backup": {
+    "chosen": "备份",
+    "confidence": "high",
+    "forms": "a restic backup 一个 restic 备份 / 这个备份; read-only backup 只读备份; backup password 备份密码; backup index 备份索引; backup tools 备份工具",
+    "sources": "macOS zh-CN Time Machine (删除备份, 时间机器备份磁盘); catalog (备份工具 in errors.listing.lockUnavailable.suggestion)"
+  },
   "background": {
     "avoid": [
       {
@@ -3102,6 +3108,12 @@
     "confidence": "high",
     "forms": "\"4x slower\" → 慢 4 倍; a lot slower 慢得多",
     "sources": "standard"
+  },
+  "snapshot": {
+    "chosen": "快照",
+    "confidence": "high",
+    "forms": "a restic backup's snapshots 备份的快照; git refs as folders git 快照 / git 历史的快照",
+    "sources": "macOS zh-CN Time Machine (备份快照); catalog (fileExplorer.readOnly.gitPortalMessage, fileExplorer.git.useTransferToCopyOut)"
   },
   "sort": {
     "accept": ["升序", "降序"],

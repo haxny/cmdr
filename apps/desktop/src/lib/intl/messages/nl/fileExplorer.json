@@ -831,6 +831,18 @@
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
+  "fileExplorer.readOnly.resticTitle": "Alleen-lezen back-up",
+  "@fileExplorer.readOnly.resticTitle": {
+    "sourceHash": "55cd4b4"
+  },
+  "fileExplorer.readOnly.resticMessage": "Momentopnames bevatten je bestanden zoals ze waren bij elke back-up, dus je kunt ze doorbladeren en eruit kopiëren, maar niet wijzigen.",
+  "@fileExplorer.readOnly.resticMessage": {
+    "sourceHash": "68f4b46"
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "Om bestanden uit een back-up te kopiëren, gebruik je F5.",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "sourceHash": "b3674bd"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Om bestanden uit een archief te halen, gebruik je F5 om te kopiëren of F6 om te verplaatsen.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
@@ -906,6 +918,10 @@
   "fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": "{fileName} is groter dan {limit}, dus Cmdr kan het bestand niet vanuit de geschiedenis van de repo in {appName} openen.",
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
+  },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "{fileName} is groter dan {limit}, dus Cmdr kan het bestand niet vanuit de back-up in {appName} openen.",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "sourceHash": "071fe99"
   },
   "fileExplorer.openWith.copyRefused.notEnoughSpace": "De schijf van je Mac heeft niet genoeg ruimte voor een kopie van {fileName} ({size}), dus Cmdr kan het bestand niet in {appName} openen. Maak wat ruimte vrij en probeer het dan opnieuw.",
   "@fileExplorer.openWith.copyRefused.notEnoughSpace": {

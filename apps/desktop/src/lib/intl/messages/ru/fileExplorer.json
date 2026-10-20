@@ -828,6 +828,18 @@
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
+  "fileExplorer.readOnly.resticTitle": "Резервная копия только для чтения",
+  "@fileExplorer.readOnly.resticTitle": {
+    "sourceHash": "55cd4b4"
+  },
+  "fileExplorer.readOnly.resticMessage": "Снимки хранят ваши файлы такими, какими они были во время каждого резервного копирования. Их можно просматривать и копировать, но нельзя изменять.",
+  "@fileExplorer.readOnly.resticMessage": {
+    "sourceHash": "68f4b46"
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "Для копирования файлов из резервной копии используйте F5.",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "sourceHash": "b3674bd"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Для копирования файлов из архива используйте F5, для перемещения — F6.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
@@ -896,13 +908,17 @@
   "@fileExplorer.git.useTransferToCopyOut": {
     "sourceHash": "a0d65fe"
   },
-  "fileExplorer.openWith.copyRefused.tooLarge": "Размер файла {fileName} превышает {limit}. Cmdr не может открыть его в {appName} прямо из архива.",
+  "fileExplorer.openWith.copyRefused.tooLarge": "Размер файла {fileName} превышает {limit}. Cmdr не может открыть его в программе {appName} прямо из архива.",
   "@fileExplorer.openWith.copyRefused.tooLarge": {
     "sourceHash": "43399e6"
   },
-  "fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": "Размер файла {fileName} превышает {limit}. Cmdr не может открыть его в {appName} из истории репозитория.",
+  "fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": "Размер файла {fileName} превышает {limit}. Cmdr не может открыть его в программе {appName} из истории репозитория.",
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
+  },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "Размер файла {fileName} превышает {limit}. Cmdr не может открыть его в программе {appName} из резервной копии.",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "sourceHash": "071fe99"
   },
   "fileExplorer.openWith.copyRefused.notEnoughSpace": "На диске вашего Mac не хватает места для копии файла {fileName} размером {size}, поэтому Cmdr не может открыть файл в {appName}. Освободите немного места и попробуйте еще раз.",
   "@fileExplorer.openWith.copyRefused.notEnoughSpace": {

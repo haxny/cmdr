@@ -829,6 +829,18 @@
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
+  "fileExplorer.readOnly.resticTitle": "Backup somente leitura",
+  "@fileExplorer.readOnly.resticTitle": {
+    "sourceHash": "55cd4b4"
+  },
+  "fileExplorer.readOnly.resticMessage": "Os instantâneos contêm seus arquivos como estavam quando cada backup foi feito, então você pode navegar por eles e copiar de dentro deles, mas não alterá-los.",
+  "@fileExplorer.readOnly.resticMessage": {
+    "sourceHash": "68f4b46"
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "Para copiar arquivos de dentro de um backup, use F5.",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "sourceHash": "b3674bd"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Para copiar arquivos de dentro de um arquivo compactado, use F5 para copiar ou F6 para mover.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
@@ -904,6 +916,10 @@
   "fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": "{fileName} tem mais de {limit}, então o Cmdr não consegue abrir o arquivo em {appName} a partir do histórico do repo.",
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
+  },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "{fileName} tem mais de {limit}, então o Cmdr não consegue abrir o arquivo em {appName} de dentro do backup.",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "sourceHash": "071fe99"
   },
   "fileExplorer.openWith.copyRefused.notEnoughSpace": "O disco do seu Mac não tem espaço para uma cópia de {size} de {fileName}, então o Cmdr não consegue abrir o arquivo em {appName}. Libere um pouco de espaço e tente de novo.",
   "@fileExplorer.openWith.copyRefused.notEnoughSpace": {

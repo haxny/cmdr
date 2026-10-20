@@ -1778,6 +1778,13 @@
     "forms": "neuter: weiteres Objekt / weitere Objekte; a sentence that refers back to {name} repeats das Objekt, never a pronoun",
     "sources": "macOS Finder (Ausgewählte Objekte, Objekte komprimieren; PE82)"
   },
+  "just-now": {
+    "accept": ["gerade"],
+    "chosen": "gerade eben",
+    "confidence": "high",
+    "forms": "the relative-time chip → gerade eben; the prose sense „couldn't X just now“ (= at the moment) → X ließ sich gerade nicht … / Cmdr konnte … gerade nicht …",
+    "sources": "catalog (queryUi.age.justNow, fileExplorer.errorPane.aMomentAgo)"
+  },
   "keep": {
     "accept": ["behält", "gelassen", "bleib"],
     "chosen": "behalten",
@@ -3051,6 +3058,13 @@
     "confidence": "high",
     "forms": "The volume may be slow → Das Volume ist vielleicht langsam; multipliers keep the digit with a hyphen (4-mal langsamer)",
     "sources": "catalog"
+  },
+  "snapshot": {
+    "accept": ["Snapshots", "Momentaufnahme", "Momentaufnahmen"],
+    "chosen": "Snapshot",
+    "confidence": "high",
+    "forms": "a backup's saved versions (restic, Time Machine) → Snapshot, pl. Snapshots; APFS snapshot folders → Snapshot-Ordner; a git commit or branch seen as a folder keeps the catalog's Momentaufnahme (Git-Momentaufnahme, fileExplorer.readOnly.gitPortalMessage)",
+    "sources": "macOS Finder DA9 (Backup-Snapshot); catalog (search.coverage.declined Snapshot-Ordner; fileExplorer.git.useTransferToCopyOut Git-Momentaufnahme); MS terminology Momentaufnahme (Windows, so not for backups)"
   },
   "sort": {
     "accept": ["Sortier", "sortiert", "Aufsteigend", "Absteigend"],

@@ -11,6 +11,14 @@
   "@ui.loadingIcon.loaded": {
     "sourceHash": "2058b43"
   },
+  "ui.loadingIcon.loadingBackupIndex": "Cargando el índice del respaldo: {amountText}",
+  "@ui.loadingIcon.loadingBackupIndex": {
+    "sourceHash": "d806120"
+  },
+  "ui.loadingIcon.backupIndexAria": "Índice del respaldo",
+  "@ui.loadingIcon.backupIndexAria": {
+    "sourceHash": "643bbfc"
+  },
   "ui.loadingIcon.cancelHint": "Presiona <key></key> para cancelar y volver",
   "@ui.loadingIcon.cancelHint": {
     "sourceHash": "d3b5941"

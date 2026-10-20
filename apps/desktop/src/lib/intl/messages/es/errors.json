@@ -731,6 +731,18 @@
   "@errors.listing.archiveNeedsPassword.suggestion": {
     "sourceHash": "4043af6"
   },
+  "errors.listing.resticRepoNeedsPassword.title": "Esta copia de seguridad necesita su contraseña",
+  "@errors.listing.resticRepoNeedsPassword.title": {
+    "sourceHash": "8d09953"
+  },
+  "errors.listing.resticRepoNeedsPassword.explanation": "Esta copia de seguridad de restic está cifrada, así que sus instantáneas permanecen bloqueadas hasta que la desbloquees.",
+  "@errors.listing.resticRepoNeedsPassword.explanation": {
+    "sourceHash": "8b4fb1b"
+  },
+  "errors.listing.resticRepoNeedsPassword.suggestion": "Introduce la contraseña para explorar sus instantáneas.",
+  "@errors.listing.resticRepoNeedsPassword.suggestion": {
+    "sourceHash": "dc91e8c"
+  },
   "errors.listing.emptyRootICloud.title": "iCloud Drive parece vacío",
   "@errors.listing.emptyRootICloud.title": {
     "sourceHash": "413a7d1"
@@ -2161,6 +2173,10 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
+  "errors.volume.noContent": "“{path}” es un enlace o un archivo especial, así que no tiene contenido que Cmdr pueda copiar.",
+  "@errors.volume.noContent": {
+    "sourceHash": "cebab92"
+  },
   "errors.volume.ambiguousName": "Más de un elemento del servidor coincide con “{path}”, así que Cmdr no ha elegido ninguno. Elígelo desde su carpeta.",
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
@@ -2412,6 +2428,18 @@
   "errors.write.duplicateSourceNames.suggestion.copy": "Cópialos de uno en uno, o renombra uno antes.",
   "@errors.write.duplicateSourceNames.suggestion.copy": {
     "sourceHash": "8bc2d76"
+  },
+  "errors.write.sourcesSpanVolumes.title": "Parte de tu selección está dentro de una vista",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "sourceHash": "0dad5e0"
+  },
+  "errors.write.sourcesSpanVolumes.message": "{path} está dentro de las instantáneas de una copia de seguridad, de un archivo comprimido o del historial de un repositorio, y el resto de tu selección no, así que Cmdr no puede leer las dos partes a la vez. No ha cambiado nada.",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "sourceHash": "46a2988"
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "Hazlo en dos pasos: primero los elementos de dentro de la vista por separado y luego el resto.",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "sourceHash": "c2f9729"
   },
   "errors.write.duplicateSourceNames.suggestion.move": "Muévelos de uno en uno, o renombra uno antes.",
   "@errors.write.duplicateSourceNames.suggestion.move": {

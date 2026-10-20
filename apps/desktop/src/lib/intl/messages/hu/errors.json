@@ -731,6 +731,18 @@
   "@errors.listing.archiveNeedsPassword.suggestion": {
     "sourceHash": "4043af6"
   },
+  "errors.listing.resticRepoNeedsPassword.title": "Ehhez a biztonsági mentéshez jelszó kell",
+  "@errors.listing.resticRepoNeedsPassword.title": {
+    "sourceHash": "8d09953"
+  },
+  "errors.listing.resticRepoNeedsPassword.explanation": "Ez a restic biztonsági mentés titkosított, ezért a pillanatképei zárva maradnak, amíg fel nem oldod.",
+  "@errors.listing.resticRepoNeedsPassword.explanation": {
+    "sourceHash": "8b4fb1b"
+  },
+  "errors.listing.resticRepoNeedsPassword.suggestion": "Add meg a jelszót, hogy böngészhesd a pillanatképeit.",
+  "@errors.listing.resticRepoNeedsPassword.suggestion": {
+    "sourceHash": "dc91e8c"
+  },
   "errors.listing.emptyRootICloud.title": "Az iCloud Drive üresnek tűnik",
   "@errors.listing.emptyRootICloud.title": {
     "sourceHash": "413a7d1"
@@ -2161,6 +2173,10 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
+  "errors.volume.noContent": "„{path}” szimbolikus link vagy speciális fájl, ezért nincs olyan tartalma, amelyet a Cmdr átmásolhatna.",
+  "@errors.volume.noContent": {
+    "sourceHash": "cebab92"
+  },
   "errors.volume.ambiguousName": "Több elem is illik erre az útvonalra a szerveren: „{path}”, ezért a Cmdr nem választott. Válaszd ki inkább a mappájából.",
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
@@ -2412,6 +2428,18 @@
   "errors.write.duplicateSourceNames.suggestion.copy": "Másold őket egyesével, vagy nevezd át az egyiket.",
   "@errors.write.duplicateSourceNames.suggestion.copy": {
     "sourceHash": "8bc2d76"
+  },
+  "errors.write.sourcesSpanVolumes.title": "A kijelölésed egy része egy nézeten belül van",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "sourceHash": "0dad5e0"
+  },
+  "errors.write.sourcesSpanVolumes.message": "{path} egy biztonsági mentés pillanatképeiben, egy archívumban vagy egy repó előzményeiben van, a kijelölésed többi része viszont nem, ezért a Cmdr nem tudja együtt beolvasni őket. Semmi sem változott.",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "sourceHash": "46a2988"
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "Csináld két lépésben: előbb külön a nézeten belüli elemeket, aztán a többit.",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "sourceHash": "c2f9729"
   },
   "errors.write.duplicateSourceNames.suggestion.move": "Helyezd át őket egyesével, vagy nevezd át az egyiket.",
   "@errors.write.duplicateSourceNames.suggestion.move": {

@@ -303,6 +303,13 @@
     "sources": "Total Commander sv (4004=\"I &bakgrunden\"); MS terminology",
     "note": "fileOperations.backgroundStart.background (I bakgrunden) must stay a verbatim substring of backgroundAria (Starta i bakgrunden)."
   },
+  "backup": {
+    "accept": ["säkerhetskopiering", "säkerhetskopiera"],
+    "chosen": "säkerhetskopia",
+    "confidence": "high",
+    "forms": "säkerhetskopian, säkerhetskopians; a restic backup → en restic-säkerhetskopia; the act of backing up (each backup ran) → säkerhetskopieringen; read-only backup → Skrivskyddad säkerhetskopia; backup index → säkerhetskopians index",
+    "sources": "macOS Finder sv (ögonblicksbilden av säkerhetskopia, En kontroll av säkerhetskopian pågår, Time Machine-säkerhetskopiering); catalog (säkerhetskopiera, säkerhetskopieringsverktyg)"
+  },
   "badge": {
     "accept": ["symbol"],
     "avoid": [
@@ -2925,6 +2932,12 @@
     "chosen": "långsam",
     "confidence": "high",
     "sources": "standard Swedish"
+  },
+  "snapshot": {
+    "chosen": "ögonblicksbild",
+    "confidence": "high",
+    "forms": "ögonblicksbilden, plural ögonblicksbilder, ögonblicksbilderna; git-ögonblicksbild; ögonblicksbildsmappar",
+    "sources": "macOS Finder sv (ögonblicksbilden av säkerhetskopia); catalog (gitPortalMessage, search.coverage.declined)"
   },
   "sort": {
     "accept": ["stigande", "fallande", "sortering"],

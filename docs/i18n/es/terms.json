@@ -268,6 +268,19 @@
     "decision": "El botón con la cola vacía: \"Background\"",
     "note": "fileOperations.backgroundStart.background (En segundo plano) must stay a verbatim substring of backgroundAria (Iniciarla en segundo plano)."
   },
+  "backup": {
+    "chosen": "copia de seguridad",
+    "accept": ["copias de seguridad"],
+    "forms": "feminine (esta copia de seguridad, la desbloquees); a restic repo → copia de seguridad de restic; backup index → el índice de la copia de seguridad",
+    "avoid": [
+      {
+        "form": "respaldo",
+        "why": "Latin American; macOS es-ES says copia de seguridad (42 hits in the pile, 0 respaldo)"
+      }
+    ],
+    "confidence": "high",
+    "sources": "macOS Finder (DA9 la instantánea de las copias de seguridad; Copias de seguridad ×42); catalog (errors.listing.diskReadProblem.suggestion)"
+  },
   "badge": {
     "chosen": "insignia",
     "accept": ["insignias"],
@@ -2910,6 +2923,13 @@
     "forms": "the volume may be slow → el volumen puede ir lento",
     "confidence": "high",
     "sources": "catalog (fileExplorer.pane.trashUnconfirmedToast, fileOperations.newEntry.stillCreating)"
+  },
+  "snapshot": {
+    "chosen": "instantánea",
+    "accept": ["instantáneas"],
+    "forms": "feminine (sus instantáneas, explorarlas); a backup's snapshots → las instantáneas de una copia de seguridad",
+    "confidence": "high",
+    "sources": "macOS Finder (DA9 la instantánea de las copias de seguridad); MS terminology (snapshot → instantánea); catalog (fileExplorer.readOnly.gitPortalMessage, search.coverage.declined)"
   },
   "sort": {
     "chosen": "Ordenar",

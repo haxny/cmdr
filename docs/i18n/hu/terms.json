@@ -351,6 +351,19 @@
     "decision": "A progress-párbeszéd gombja üres sornál",
     "note": "fileOperations.backgroundStart.background (Háttérben) must stay a verbatim substring of backgroundAria (Indítás a háttérben)."
   },
+  "backup": {
+    "chosen": "biztonsági mentés",
+    "accept": ["biztonsági mentő"],
+    "forms": "possessive/oblique: a biztonsági mentés pillanatképei, biztonsági mentésből, biztonsági mentéshez, biztonsági mentést; backup tools → biztonsági mentő eszközök; the password field → Biztonsági mentés jelszava",
+    "avoid": [
+      {
+        "form": "mentés",
+        "why": "the bare noun is Save in this catalog (Mentés ships 8×)"
+      }
+    ],
+    "confidence": "high",
+    "sources": "macOS Finder/AppKit (Time Machine biztonsági mentések, biztonsági mentésből; 40+ hits); catalog (biztonsági mentő eszközök)"
+  },
   "badge": {
     "chosen": "jelvény",
     "forms": "status badge → állapotjelvény; small badge → kis jelvény; title-bar pill → jelvény",

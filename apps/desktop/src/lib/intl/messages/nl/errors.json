@@ -731,6 +731,18 @@
   "@errors.listing.archiveNeedsPassword.suggestion": {
     "sourceHash": "4043af6"
   },
+  "errors.listing.resticRepoNeedsPassword.title": "Voor deze back-up is het wachtwoord nodig",
+  "@errors.listing.resticRepoNeedsPassword.title": {
+    "sourceHash": "8d09953"
+  },
+  "errors.listing.resticRepoNeedsPassword.explanation": "Deze back-up is met restic gemaakt en versleuteld, dus de momentopnames blijven vergrendeld totdat je hem ontgrendelt.",
+  "@errors.listing.resticRepoNeedsPassword.explanation": {
+    "sourceHash": "8b4fb1b"
+  },
+  "errors.listing.resticRepoNeedsPassword.suggestion": "Voer het wachtwoord in om de momentopnames te doorbladeren.",
+  "@errors.listing.resticRepoNeedsPassword.suggestion": {
+    "sourceHash": "dc91e8c"
+  },
   "errors.listing.emptyRootICloud.title": "iCloud Drive lijkt leeg",
   "@errors.listing.emptyRootICloud.title": {
     "sourceHash": "413a7d1"
@@ -2161,6 +2173,10 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
+  "errors.volume.noContent": "‘{path}’ is een koppeling of een speciaal bestand, dus er is geen inhoud die Cmdr kan kopiëren.",
+  "@errors.volume.noContent": {
+    "sourceHash": "cebab92"
+  },
   "errors.volume.ambiguousName": "Meer dan één onderdeel op de server past bij ‘{path}’, dus Cmdr heeft er geen gekozen. Open de map waarin het staat en kies het daar.",
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
@@ -2412,6 +2428,18 @@
   "errors.write.duplicateSourceNames.suggestion.copy": "Kopieer ze een voor een, of wijzig eerst de naam van een ervan.",
   "@errors.write.duplicateSourceNames.suggestion.copy": {
     "sourceHash": "8bc2d76"
+  },
+  "errors.write.sourcesSpanVolumes.title": "Een deel van je selectie staat in een weergave",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "sourceHash": "0dad5e0"
+  },
+  "errors.write.sourcesSpanVolumes.message": "{path} staat in de momentopnames van een back-up, in een archief of in de geschiedenis van een repo, en de rest van je selectie niet, dus Cmdr kan niet alles samen lezen. Er is niets gewijzigd.",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "sourceHash": "46a2988"
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "Doe het in twee stappen: eerst alleen de onderdelen in de weergave, dan de rest.",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "sourceHash": "c2f9729"
   },
   "errors.write.duplicateSourceNames.suggestion.move": "Verplaats ze een voor een, of wijzig eerst de naam van een ervan.",
   "@errors.write.duplicateSourceNames.suggestion.move": {

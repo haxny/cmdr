@@ -67,3 +67,7 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `…, que aparecen como 001, 003, 005`) dodges `Cuenta 1, 3, 5…`, which reads as the noun "account"; a native reader
   should say whether it sounds natural. `Inicio` for the counter's start field is Total Commander's own label
   (`6617="Inicio:"`); if a reader takes it as "Home", Finder's `Iniciar números en el:` is the reserve.
+- **A selection that straddles a read-only view** (`errors.write.sourcesSpanVolumes.title` / `.suggestion`): `vista`
+  mirrors the English "view" but is also the word for `la vista breve` / `la vista completa`; a reader should say
+  whether `Parte de tu selección está dentro de una vista` is clear, or whether `carpeta virtual` reads better (pending
+  the English rewording in `source-queue.md`).

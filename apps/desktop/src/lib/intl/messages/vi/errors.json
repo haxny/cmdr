@@ -731,6 +731,18 @@
   "@errors.listing.archiveNeedsPassword.suggestion": {
     "sourceHash": "4043af6"
   },
+  "errors.listing.resticRepoNeedsPassword.title": "Bản sao lưu này cần mật khẩu",
+  "@errors.listing.resticRepoNeedsPassword.title": {
+    "sourceHash": "8d09953"
+  },
+  "errors.listing.resticRepoNeedsPassword.explanation": "Bản sao lưu restic này được mã hóa, nên các ảnh chụp nhanh bên trong vẫn bị khóa cho đến khi bạn mở khóa nó.",
+  "@errors.listing.resticRepoNeedsPassword.explanation": {
+    "sourceHash": "8b4fb1b"
+  },
+  "errors.listing.resticRepoNeedsPassword.suggestion": "Nhập mật khẩu để duyệt các ảnh chụp nhanh.",
+  "@errors.listing.resticRepoNeedsPassword.suggestion": {
+    "sourceHash": "dc91e8c"
+  },
   "errors.listing.emptyRootICloud.title": "iCloud Drive trông như trống",
   "@errors.listing.emptyRootICloud.title": {
     "sourceHash": "413a7d1"
@@ -2161,6 +2173,10 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
+  "errors.volume.noContent": "“{path}” là liên kết mềm hoặc tệp đặc biệt, nên không có nội dung nào để Cmdr sao chép.",
+  "@errors.volume.noContent": {
+    "sourceHash": "cebab92"
+  },
   "errors.volume.ambiguousName": "Có nhiều mục trên máy chủ khớp với “{path}”, nên Cmdr không tự chọn mục nào. Hãy mở thư mục chứa nó rồi chọn ở đó.",
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
@@ -2412,6 +2428,18 @@
   "errors.write.duplicateSourceNames.suggestion.copy": "Hãy sao chép từng mục một, hoặc đổi tên một mục trước.",
   "@errors.write.duplicateSourceNames.suggestion.copy": {
     "sourceHash": "8bc2d76"
+  },
+  "errors.write.sourcesSpanVolumes.title": "Một phần lựa chọn của bạn nằm trong khu vực chỉ để xem",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "sourceHash": "0dad5e0"
+  },
+  "errors.write.sourcesSpanVolumes.message": "{path} nằm trong ảnh chụp nhanh của một bản sao lưu, một tệp nén hoặc lịch sử của một repo, còn những mục khác bạn chọn thì không, nên Cmdr không thể đọc chúng cùng lúc. Không có gì bị thay đổi.",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "sourceHash": "46a2988"
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "Hãy làm thành hai bước: trước tiên là riêng các mục trong khu vực chỉ để xem, sau đó là phần còn lại.",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "sourceHash": "c2f9729"
   },
   "errors.write.duplicateSourceNames.suggestion.move": "Hãy di chuyển từng mục một, hoặc đổi tên một mục trước.",
   "@errors.write.duplicateSourceNames.suggestion.move": {

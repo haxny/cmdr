@@ -373,6 +373,12 @@
     "note": "fileOperations.transferProgress.background (背景執行) must stay a verbatim substring of backgroundAria (讓它繼續在背景執行). fileOperations.backgroundStart.background (背景執行) must stay a verbatim substring of backgroundAria (背景執行這項操作).",
     "sources": "MS, AP-TW AppKit"
   },
+  "backup": {
+    "chosen": "備份",
+    "confidence": "high",
+    "forms": "a restic repository → 備份 (這個備份, restic 備份); its password → 備份密碼; its index → 備份索引",
+    "sources": "AP-TW + AP-HK Finder (刪除備份, 時光機備份, 「^0」的備份), MS (備份), DOL (備份檔案); catalog (errors.listing.lockUnavailable.suggestion 備份工具)"
+  },
   "badge": {
     "avoid": [
       {
@@ -3511,6 +3517,18 @@
     "forms": "a volume or server slow to answer → 回應很慢 / 回應太慢",
     "confidence": "high",
     "sources": "AP-TW (較慢), DOL (很慢); catalog (fileExplorer.pane.directConnectionTooSlowToast, fileExplorer.pane.trashUnconfirmedToast)"
+  },
+  "snapshot": {
+    "chosen": "快照",
+    "confidence": "high",
+    "forms": "a restic snapshot or a git ref seen as a folder → 快照; Apple's backup snapshot → 備份快照",
+    "avoid": [
+      {
+        "form": "快照集",
+        "why": "MS's database/report snapshot-set sense, not a single point-in-time copy"
+      }
+    ],
+    "sources": "AP-HK Finder (DA9 備份快照), MS (2051744 快照); catalog (fileExplorer.readOnly.gitPortalMessage, fileExplorer.git.useTransferToCopyOut, search.coverage.declined)"
   },
   "software": {
     "accept": ["硬體"],

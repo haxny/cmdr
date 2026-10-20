@@ -78,3 +78,8 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   naturally for "its data", chosen because `seus dados` would read as the user's.
 - **Undo history notice** (`stateRecovery.operationLog.title`): `seu histórico de desfazer` renders "your undo history".
   Confirm it reads naturally, or suggest `o histórico do Desfazer` / `o histórico de operações para desfazer`.
+- **Restic backups** (`errors.write.sourcesSpanVolumes.*`, `*.restic*`): "view" (a read-only virtual folder view such as
+  a backup's snapshots or an archive's inside) is `visualização`, the macOS word for a Finder view; confirm
+  `Parte da sua seleção está dentro de uma visualização` is understandable, or suggest a clearer noun. Also confirm
+  `search.coverage.declined`'s `pastas de snapshot` (APFS) should stay, or align to `instantâneo` like the restic
+  strings.

@@ -731,6 +731,18 @@
   "@errors.listing.archiveNeedsPassword.suggestion": {
     "sourceHash": "4043af6"
   },
+  "errors.listing.resticRepoNeedsPassword.title": "这个备份需要密码",
+  "@errors.listing.resticRepoNeedsPassword.title": {
+    "sourceHash": "8d09953"
+  },
+  "errors.listing.resticRepoNeedsPassword.explanation": "这个 restic 备份已加密，在你解锁之前，里面的快照会一直锁着。",
+  "@errors.listing.resticRepoNeedsPassword.explanation": {
+    "sourceHash": "8b4fb1b"
+  },
+  "errors.listing.resticRepoNeedsPassword.suggestion": "输入密码即可浏览它的快照。",
+  "@errors.listing.resticRepoNeedsPassword.suggestion": {
+    "sourceHash": "dc91e8c"
+  },
   "errors.listing.emptyRootICloud.title": "iCloud 云盘看起来是空的",
   "@errors.listing.emptyRootICloud.title": {
     "sourceHash": "413a7d1"
@@ -2160,6 +2172,10 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
+  "errors.volume.noContent": "“{path}”是链接或特殊文件，没有可供 Cmdr 拷贝的内容。",
+  "@errors.volume.noContent": {
+    "sourceHash": "cebab92"
+  },
   "errors.volume.ambiguousName": "服务器上有不止一个项目匹配“{path}”，所以 Cmdr 没有替你选。请到它所在的文件夹里选择。",
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
@@ -2411,6 +2427,18 @@
   "errors.write.duplicateSourceNames.suggestion.copy": "一个一个地拷贝，或者先给其中一个改名。",
   "@errors.write.duplicateSourceNames.suggestion.copy": {
     "sourceHash": "8bc2d76"
+  },
+  "errors.write.sourcesSpanVolumes.title": "所选内容有一部分在只读视图里",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "sourceHash": "0dad5e0"
+  },
+  "errors.write.sourcesSpanVolumes.message": "{path} 在备份的快照、压缩文件或仓库历史里，而所选的其他项目不在，所以 Cmdr 没法同时读取它们。什么都没有改变。",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "sourceHash": "46a2988"
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "分两步来做：先单独处理只读视图里的项目，再处理其余项目。",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "sourceHash": "c2f9729"
   },
   "errors.write.duplicateSourceNames.suggestion.move": "一个一个地移动，或者先给其中一个改名。",
   "@errors.write.duplicateSourceNames.suggestion.move": {

@@ -827,6 +827,18 @@
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
+  "fileExplorer.readOnly.resticTitle": "唯讀備份",
+  "@fileExplorer.readOnly.resticTitle": {
+    "sourceHash": "55cd4b4"
+  },
+  "fileExplorer.readOnly.resticMessage": "快照保存著你的檔案在每次備份時的樣子，可以瀏覽、也可以從中複製，但不能修改。",
+  "@fileExplorer.readOnly.resticMessage": {
+    "sourceHash": "68f4b46"
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "要把檔案從備份裡複製出來，請用 F5 複製。",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "sourceHash": "b3674bd"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "要把檔案從壓縮檔裡複製出來，請用 F5 複製或 F6 移動。",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
@@ -902,6 +914,10 @@
   "fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": "「{fileName}」超過 {limit}，所以 Cmdr 無法從存放庫的歷史記錄裡用 {appName} 開啟它。",
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
+  },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "「{fileName}」超過 {limit}，所以 Cmdr 無法從備份裡用 {appName} 開啟它。",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "sourceHash": "071fe99"
   },
   "fileExplorer.openWith.copyRefused.notEnoughSpace": "你的 Mac 磁碟上沒有足夠空間存放「{fileName}」的 {size} 副本，所以 Cmdr 無法用 {appName} 開啟它。請騰出一些空間，然後再試一次。",
   "@fileExplorer.openWith.copyRefused.notEnoughSpace": {

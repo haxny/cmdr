@@ -829,6 +829,18 @@
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
+  "fileExplorer.readOnly.resticTitle": "Copia de seguridad de solo lectura",
+  "@fileExplorer.readOnly.resticTitle": {
+    "sourceHash": "55cd4b4"
+  },
+  "fileExplorer.readOnly.resticMessage": "Las instantáneas guardan tus archivos tal como estaban cuando se hizo cada copia de seguridad, así que puedes explorarlas y copiar desde ahí, pero no modificarlas.",
+  "@fileExplorer.readOnly.resticMessage": {
+    "sourceHash": "68f4b46"
+  },
+  "fileExplorer.restic.useTransferToCopyOut": "Para copiar archivos fuera de una copia de seguridad, usa F5.",
+  "@fileExplorer.restic.useTransferToCopyOut": {
+    "sourceHash": "b3674bd"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Para copiar archivos fuera de un archivo comprimido, usa F5 para copiar o F6 para mover.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
@@ -904,6 +916,10 @@
   "fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": "{fileName} ocupa más de {limit}, así que Cmdr no puede abrirlo en {appName} desde el historial del repo.",
   "@fileExplorer.openWith.copyRefused.tooLargeInRepoHistory": {
     "sourceHash": "aab64d0"
+  },
+  "fileExplorer.openWith.copyRefused.tooLargeInBackup": "{fileName} ocupa más de {limit}, así que Cmdr no puede abrirlo en {appName} desde la copia de seguridad.",
+  "@fileExplorer.openWith.copyRefused.tooLargeInBackup": {
+    "sourceHash": "071fe99"
   },
   "fileExplorer.openWith.copyRefused.notEnoughSpace": "El disco de tu Mac no tiene espacio suficiente para una copia de {size} de {fileName}, así que Cmdr no puede abrirlo en {appName}. Libera algo de espacio y vuelve a intentarlo.",
   "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
