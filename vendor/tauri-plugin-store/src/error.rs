@@ -35,6 +35,13 @@ pub enum Error {
     /// Some Tauri API failed
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
+    /// The store file is there but its last load couldn't read or parse it, so a save would
+    /// overwrite it with what's only in memory. Saves stay refused until a load succeeds.
+    #[error("The store at \"{}\" didn't load, so it isn't saved over", path.display())]
+    LoadFailed {
+        /// The store file that didn't load.
+        path: std::path::PathBuf,
+    },
 }
 
 impl Serialize for Error {

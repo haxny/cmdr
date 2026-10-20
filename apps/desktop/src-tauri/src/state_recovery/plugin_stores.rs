@@ -1,6 +1,7 @@
 //! The `tauri-plugin-store` files, checked before anything loads them. The plugin reads a file it
-//! can't parse as an empty store and its next save overwrites the evidence, so `setup()` sets an
-//! unreadable one aside first and the plugin then starts from no file at all.
+//! can't read or parse as an empty store, so `setup()` sets such a file aside first and the plugin
+//! then starts from no file at all. When the set-aside doesn't happen, the patched plugin refuses
+//! every save of that store for the session (`vendor/tauri-plugin-store/CMDR-PATCH.md`).
 
 use std::collections::HashMap;
 use std::fs;
@@ -49,26 +50,21 @@ fn frontend_store_path<R: Runtime>(app: &AppHandle<R>, name: &str) -> Option<Pat
 }
 
 /// Checks one store file: sweeps temp files a killed save left, and sets the file aside when it
-/// isn't the JSON object the plugin reads. A recovered `settings.json` then gets its fresh file.
-/// Returns whether it recovered.
+/// can't be read (a root-owned file after a `sudo` run, a mode a restore reset, a disk read
+/// error) or isn't the JSON object the plugin reads. A recovered `settings.json` then gets its
+/// fresh file. Returns whether it recovered.
 fn recover(path: &Path, file: StateFile) -> bool {
     sweep_killed_saves(path);
-    let bytes = match fs::read(path) {
-        Ok(bytes) => bytes,
+    match fs::read(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return false,
-        Err(e) => {
-            // Present but unreadable right now: we can't tell it's damaged, so it stays put.
-            log::warn!(target: LOG_TARGET, "Couldn't read {path:?} to check it, leaving it as is: {e}");
-            return false;
-        }
-    };
-    // The plugin's own reading: a JSON object. A single wrong value inside one is the store's
-    // to drop, not a recovery.
-    if serde_json::from_slice::<HashMap<String, serde_json::Value>>(&bytes).is_ok() {
-        return false;
+        Err(e) => log::warn!(target: LOG_TARGET, "Couldn't read {path:?}: {e}"),
+        // The plugin's own reading: a JSON object. A single wrong value inside one is the
+        // store's to drop, not a recovery.
+        Ok(bytes) if serde_json::from_slice::<HashMap<String, serde_json::Value>>(&bytes).is_ok() => return false,
+        Ok(_) => {}
     }
     if super::set_aside(path, file).is_none() {
-        // The file stays, and the plugin reads it as empty. Nothing better is left to do.
+        // The file stays and the plugin reads it as empty, but refuses to save over it.
         return true;
     }
     if file == StateFile::Settings {
@@ -235,6 +231,50 @@ mod tests {
         );
         assert_eq!(names_in(&dir), vec!["settings.json"]);
         assert!(notices.recoveries().is_empty());
+    }
+
+    /// A file that's there but can't be read (mode 000, as after a `sudo` run or a restore) is set
+    /// aside like a damaged one, so its bytes stay and the plugin starts from no file. A recovered
+    /// `settings.json` still comes back with both consents off.
+    #[test]
+    fn an_unreadable_store_file_is_kept_and_starts_from_no_file() {
+        use std::os::unix::fs::PermissionsExt;
+        // Root reads a mode-000 file anyway (the Linux Docker lane runs as root).
+        // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail.
+        if unsafe { libc::geteuid() } == 0 {
+            return;
+        }
+        let notices = testing::capture_recoveries();
+        let dir = TestDir::new("plugin_stores_unreadable");
+        for (name, file) in [
+            ("settings.json", StateFile::Settings),
+            ("license.json", StateFile::License),
+        ] {
+            let path = dir.join(name);
+            fs::write(&path, b"{\"analytics.enabled\": false}").expect("write");
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).expect("make it unreadable");
+
+            assert!(recover(&path, file), "{name}: an unreadable file is a recovery");
+
+            let copy = copy_in(&dir, name);
+            fs::set_permissions(&copy, fs::Permissions::from_mode(0o644)).expect("read the copy");
+            assert_eq!(
+                fs::read(&copy).expect("read the copy"),
+                b"{\"analytics.enabled\": false}"
+            );
+        }
+        assert!(
+            !dir.join("license.json").exists(),
+            "the plugin starts from no license file"
+        );
+        let fresh: serde_json::Value =
+            serde_json::from_slice(&fs::read(dir.join("settings.json")).expect("a fresh file")).expect("valid JSON");
+        assert_eq!(
+            fresh,
+            serde_json::json!({ "analytics.enabled": false, "updates.crashReports": false })
+        );
+        let files: Vec<StateFile> = notices.recoveries().iter().map(|r| r.file).collect();
+        assert_eq!(files, vec![StateFile::Settings, StateFile::License]);
     }
 
     /// A save killed between writing its temp file and the rename leaves the temp file behind.

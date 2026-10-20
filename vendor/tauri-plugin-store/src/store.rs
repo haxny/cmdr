@@ -282,6 +282,9 @@ struct StoreInner<R: Runtime> {
     defaults: Option<HashMap<String, JsonValue>>,
     serialize_fn: SerializeFn,
     deserialize_fn: DeserializeFn,
+    /// The last load found a file it couldn't read or parse. Saving now would replace that file
+    /// with what's only in memory, so [`save`](Self::save) refuses until a load succeeds.
+    load_failed: bool,
 }
 
 impl<R: Runtime> StoreInner<R> {
@@ -299,6 +302,7 @@ impl<R: Runtime> StoreInner<R> {
             defaults,
             serialize_fn,
             deserialize_fn,
+            load_failed: false,
         }
     }
 
@@ -308,6 +312,11 @@ impl<R: Runtime> StoreInner<R> {
     /// renamed over the store file, so a crash or a full disk mid-save leaves either the old
     /// file or the new one, never a truncated one.
     pub fn save(&self) -> crate::Result<()> {
+        if self.load_failed {
+            return Err(crate::Error::LoadFailed {
+                path: self.path.clone(),
+            });
+        }
         fs::create_dir_all(self.path.parent().expect("invalid store path"))?;
 
         let bytes = (self.serialize_fn)(&self.cache).map_err(crate::Error::Serialize)?;
@@ -320,19 +329,29 @@ impl<R: Runtime> StoreInner<R> {
     ///
     /// Note: This method loads the data and merges it with the current store
     pub fn load(&mut self) -> crate::Result<()> {
-        let bytes = fs::read(&self.path)?;
-
-        self.cache
-            .extend((self.deserialize_fn)(&bytes).map_err(crate::Error::Deserialize)?);
-
+        let loaded = self.read_file();
+        self.cache.extend(loaded?);
         Ok(())
     }
 
     /// Load the store from the on-disk state, ignoring defaults
     pub fn load_ignore_defaults(&mut self) -> crate::Result<()> {
-        let bytes = fs::read(&self.path)?;
-        self.cache = (self.deserialize_fn)(&bytes).map_err(crate::Error::Deserialize)?;
+        self.cache = self.read_file()?;
         Ok(())
+    }
+
+    /// Reads and parses the store file, and remembers whether a file was there that couldn't be
+    /// read or parsed. No file at all is a new store, which saves as usual.
+    fn read_file(&mut self) -> crate::Result<HashMap<String, JsonValue>> {
+        let read = fs::read(&self.path)
+            .map_err(crate::Error::from)
+            .and_then(|bytes| (self.deserialize_fn)(&bytes).map_err(crate::Error::Deserialize));
+        self.load_failed = match &read {
+            Ok(_) => false,
+            Err(crate::Error::Io(err)) => err.kind() != std::io::ErrorKind::NotFound,
+            Err(_) => true,
+        };
+        read
     }
 
     /// Inserts a key-value pair into the store.

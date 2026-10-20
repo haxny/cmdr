@@ -21,7 +21,9 @@ the typed record; this module owns the copy and the notice.
 - **A single invalid VALUE isn't a recovery.** Only a file that doesn't parse at all (or carries an unknown schema
   version) is; a wrong value inside a good file stays the store's to drop with a log warning.
 - **`recover_plugin_stores` runs in `setup()` after the instance lock and `security_log::init`, before anything loads a
-  plugin store.** The plugin reads an unparseable file as empty and its next save would overwrite the evidence.
+  plugin store.** It sets aside a file that can't be READ (a root-owned file, an `EIO`) as well as one that doesn't
+  parse: the plugin reads both as empty. If the rename fails, the patched plugin refuses every save of that store for
+  the session (`Error::LoadFailed`), so the empty store never lands over the file.
 - **After a `settings.json` recovery, usage stats and crash reports are OFF** (`CONSENT_OFF_AFTER_RECOVERY`), in the
   fresh file both Rust and the frontend read. `operationLog.enabled` stays at its default ON (David, 2026-10-16).
 - **Once means the queue drains.** The main window takes everything at start and on each nudge; ❌ don't make the

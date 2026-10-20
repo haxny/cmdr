@@ -17,10 +17,11 @@ Issue #461. Must-knows in `CLAUDE.md`.
 
 - **`settings.json`, `shortcuts.json`, `app-status.json`, `license.json`** (`plugin_stores.rs`, from `setup()`): first
   sweeps the `.<name>.*.tmp` files a killed save left (the patched plugin's temp naming,
-  `vendor/tauri-plugin-store/CMDR-PATCH.md`), then checks that the file parses as the JSON object the plugin reads. An
-  unreadable one is set aside, so the plugin starts from no file. A recovered `settings.json` is replaced right away
-  with `{"analytics.enabled": false, "updates.crashReports": false}`, written temp+rename. A file present but unreadable
-  for an I/O reason is left alone: we can't tell it's damaged. Paths match their readers: the frontend's stores sit in
+  `vendor/tauri-plugin-store/CMDR-PATCH.md`), then checks that the file reads and parses as the JSON object the plugin
+  reads. One that doesn't, for either reason, is set aside, so the plugin starts from no file. A recovered
+  `settings.json` is replaced right away with `{"analytics.enabled": false, "updates.crashReports": false}`, written
+  temp+rename. A rename that doesn't happen leaves the file, and the patched plugin then refuses every save of that
+  store for the session, the exit save included (#506). Paths match their readers: the frontend's stores sit in
   `CMDR_DATA_DIR` when that's set (`resolveStorePath`), `license.json` always in the plugin's app data dir.
 - **`operation-log.db`, `main.db`** (`OperationLogStore::open`, which `operation_log_host::start` hands `set_aside`
   through `OperationLog::open`; `AgentStore::open`): only on the typed

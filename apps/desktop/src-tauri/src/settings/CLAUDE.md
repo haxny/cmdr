@@ -16,7 +16,8 @@ satisfies the live-apply rule below.
 - `restricted_shortcuts.rs`: the viewer's read-only snapshot of `shortcuts.json` (its keys are remappable, and it has no
   store access); `lib/shortcuts/DETAILS.md` § "The viewer's keys".
 - `loader_tests.rs`: `loader`'s own tests, in a sibling file wired in with `#[path]` so they still reach its private
-  parse helpers. `plugin_store_tests.rs`: the patched store plugin's atomic save (`vendor/tauri-plugin-store/`).
+  parse helpers. `plugin_store_tests.rs`: the patched store plugin's atomic save and its refusal to save over a file
+  that didn't load (`vendor/tauri-plugin-store/`).
 
 ## Must-knows
 

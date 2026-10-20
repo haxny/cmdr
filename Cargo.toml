@@ -30,7 +30,8 @@ resolver = "2"
 # past the vendored version makes cargo resolve crates.io again.
 [patch.crates-io]
 # `Store::save` writes a synced temp file and renames it over the store, so a crash mid-save
-# can't leave `settings.json`, `shortcuts.json`, or `license.json` truncated (#461).
+# can't leave `settings.json`, `shortcuts.json`, or `license.json` truncated (#461), and it
+# refuses to save over a store file that didn't load (#506).
 tauri-plugin-store = { path = "vendor/tauri-plugin-store" }
 # A raw copy keeps an entry's name bytes and UTF-8 flag as stored, so editing a zip with
 # Shift-JIS, GBK, or CP866 names leaves every one of them readable (#514).
