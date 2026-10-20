@@ -120,7 +120,7 @@ impl S3Volume {
 
     /// After a PUT of `size` bytes that was cancelled or failed without an
     /// answer, settles what it left at the key, by THIS write's token
-    /// ([`Self::clear_cut_off`] has the rules). ❗ Ours whole is the write
+    /// ([`S3VolumeInner::clear_cut_off`] has the rules). ❗ Ours whole is the write
     /// landing (the link died after the server published), answered as
     /// [`CutOff::Landed`] for the caller to report as written.
     ///

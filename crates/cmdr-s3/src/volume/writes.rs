@@ -481,7 +481,7 @@ impl S3Volume {
         }
     }
 
-    /// [`S3VolumeInner::head_object`].
+    /// [`super::S3VolumeInner::head_object`].
     pub(super) async fn head_object(
         &self,
         client: &S3Client,
