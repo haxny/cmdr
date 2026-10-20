@@ -1445,6 +1445,34 @@
   "@errors.write.archiveEntryNamesCollide.suggestion": {
     "sourceHash": "33fd97c"
   },
+  "errors.write.archiveDuplicateEntryName.title": "Deze zip bevat twee onderdelen met dezelfde naam",
+  "@errors.write.archiveDuplicateEntryName.title": {
+    "sourceHash": "19c70ac"
+  },
+  "errors.write.archiveDuplicateEntryName.message": "{path} bevat twee onderdelen met de naam {name}. Cmdr toont alleen het tweede, en als je de zip wijzigt, ben je het eerste definitief kwijt.",
+  "@errors.write.archiveDuplicateEntryName.message": {
+    "sourceHash": "9159f89"
+  },
+  "errors.write.archiveDuplicateEntryName.messageUnnamed": "{path} bevat twee onderdelen met dezelfde naam. Cmdr toont alleen het tweede, en als je de zip wijzigt, ben je het eerste definitief kwijt.",
+  "@errors.write.archiveDuplicateEntryName.messageUnnamed": {
+    "sourceHash": "a4acaaa"
+  },
+  "errors.write.archiveDuplicateEntryName.suggestion": "Wijzig de naam van een van de twee in een ander zip-programma en probeer het opnieuw.",
+  "@errors.write.archiveDuplicateEntryName.suggestion": {
+    "sourceHash": "f34b1f1"
+  },
+  "errors.write.archiveEncryptedEntry.title": "Deze zip bevat een met een wachtwoord beveiligd onderdeel",
+  "@errors.write.archiveEncryptedEntry.title": {
+    "sourceHash": "32bf063"
+  },
+  "errors.write.archiveEncryptedEntry.message": "Het onderdeel {name} in {path} is beveiligd met een wachtwoord, en Cmdr kan een beveiligd onderdeel niet intact houden bij het wijzigen van de zip. De zip is ongewijzigd gebleven.",
+  "@errors.write.archiveEncryptedEntry.message": {
+    "sourceHash": "4787626"
+  },
+  "errors.write.archiveEncryptedEntry.suggestion": "Kopieer liever wat je nodig hebt uit de zip, of wijzig de zip in een programma dat met wachtwoorden overweg kan.",
+  "@errors.write.archiveEncryptedEntry.suggestion": {
+    "sourceHash": "349350a"
+  },
   "errors.write.invalidName.title": "Ongeldige bestandsnaam",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

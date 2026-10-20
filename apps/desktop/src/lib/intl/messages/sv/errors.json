@@ -1445,6 +1445,34 @@
   "@errors.write.archiveEntryNamesCollide.suggestion": {
     "sourceHash": "33fd97c"
   },
+  "errors.write.archiveDuplicateEntryName.title": "Den här zip-filen innehåller två objekt med samma namn",
+  "@errors.write.archiveDuplicateEntryName.title": {
+    "sourceHash": "19c70ac"
+  },
+  "errors.write.archiveDuplicateEntryName.message": "{path} innehåller två objekt som heter {name}. Cmdr visar bara det senare, och om du ändrar zip-filen försvinner det tidigare permanent.",
+  "@errors.write.archiveDuplicateEntryName.message": {
+    "sourceHash": "9159f89"
+  },
+  "errors.write.archiveDuplicateEntryName.messageUnnamed": "{path} innehåller två objekt med samma namn. Cmdr visar bara det senare, och om du ändrar zip-filen försvinner det tidigare permanent.",
+  "@errors.write.archiveDuplicateEntryName.messageUnnamed": {
+    "sourceHash": "a4acaaa"
+  },
+  "errors.write.archiveDuplicateEntryName.suggestion": "Byt namn på ett av dem i ett annat zip-program och försök igen.",
+  "@errors.write.archiveDuplicateEntryName.suggestion": {
+    "sourceHash": "f34b1f1"
+  },
+  "errors.write.archiveEncryptedEntry.title": "Den här zip-filen innehåller ett lösenordsskyddat objekt",
+  "@errors.write.archiveEncryptedEntry.title": {
+    "sourceHash": "32bf063"
+  },
+  "errors.write.archiveEncryptedEntry.message": "Objektet {name} i {path} är lösenordsskyddat, och Cmdr kan inte bevara ett skyddat objekt intakt när zip-filen ändras. Cmdr lät zip-filen vara som den var.",
+  "@errors.write.archiveEncryptedEntry.message": {
+    "sourceHash": "4787626"
+  },
+  "errors.write.archiveEncryptedEntry.suggestion": "Kopiera ut det du behöver i stället, eller ändra zip-filen i ett program som hanterar lösenord.",
+  "@errors.write.archiveEncryptedEntry.suggestion": {
+    "sourceHash": "349350a"
+  },
   "errors.write.invalidName.title": "Ogiltigt filnamn",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

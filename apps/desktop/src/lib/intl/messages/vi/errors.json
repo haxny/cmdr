@@ -1445,6 +1445,34 @@
   "@errors.write.archiveEntryNamesCollide.suggestion": {
     "sourceHash": "33fd97c"
   },
+  "errors.write.archiveDuplicateEntryName.title": "Tệp zip này có hai mục trùng tên",
+  "@errors.write.archiveDuplicateEntryName.title": {
+    "sourceHash": "19c70ac"
+  },
+  "errors.write.archiveDuplicateEntryName.message": "{path} có hai mục cùng tên {name}. Cmdr chỉ hiển thị mục sau, và nếu thay đổi tệp zip, mục trước sẽ mất vĩnh viễn.",
+  "@errors.write.archiveDuplicateEntryName.message": {
+    "sourceHash": "9159f89"
+  },
+  "errors.write.archiveDuplicateEntryName.messageUnnamed": "{path} có hai mục trùng tên. Cmdr chỉ hiển thị mục sau, và nếu thay đổi tệp zip, mục trước sẽ mất vĩnh viễn.",
+  "@errors.write.archiveDuplicateEntryName.messageUnnamed": {
+    "sourceHash": "a4acaaa"
+  },
+  "errors.write.archiveDuplicateEntryName.suggestion": "Hãy đổi tên một trong hai mục bằng một công cụ zip khác rồi thử lại.",
+  "@errors.write.archiveDuplicateEntryName.suggestion": {
+    "sourceHash": "f34b1f1"
+  },
+  "errors.write.archiveEncryptedEntry.title": "Tệp zip này có một mục được bảo vệ bằng mật khẩu",
+  "@errors.write.archiveEncryptedEntry.title": {
+    "sourceHash": "32bf063"
+  },
+  "errors.write.archiveEncryptedEntry.message": "{name} trong {path} được bảo vệ bằng mật khẩu, và Cmdr không thể giữ nguyên vẹn một mục được bảo vệ khi thay đổi tệp zip. Cmdr đã để nguyên tệp zip.",
+  "@errors.write.archiveEncryptedEntry.message": {
+    "sourceHash": "4787626"
+  },
+  "errors.write.archiveEncryptedEntry.suggestion": "Thay vào đó, hãy sao chép ra những gì bạn cần, hoặc thay đổi tệp zip bằng một công cụ hỗ trợ mật khẩu.",
+  "@errors.write.archiveEncryptedEntry.suggestion": {
+    "sourceHash": "349350a"
+  },
   "errors.write.invalidName.title": "Tên tệp không hợp lệ",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

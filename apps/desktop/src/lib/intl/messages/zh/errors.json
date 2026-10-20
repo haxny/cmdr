@@ -1444,6 +1444,34 @@
   "@errors.write.archiveEntryNamesCollide.suggestion": {
     "sourceHash": "33fd97c"
   },
+  "errors.write.archiveDuplicateEntryName.title": "这个 zip 里有两个同名项目",
+  "@errors.write.archiveDuplicateEntryName.title": {
+    "sourceHash": "19c70ac"
+  },
+  "errors.write.archiveDuplicateEntryName.message": "{path} 里有两个都叫 {name} 的项目。Cmdr 只显示后一个，修改这个 zip 会让前一个永久丢失。",
+  "@errors.write.archiveDuplicateEntryName.message": {
+    "sourceHash": "9159f89"
+  },
+  "errors.write.archiveDuplicateEntryName.messageUnnamed": "{path} 里有两个同名项目。Cmdr 只显示后一个，修改这个 zip 会让前一个永久丢失。",
+  "@errors.write.archiveDuplicateEntryName.messageUnnamed": {
+    "sourceHash": "a4acaaa"
+  },
+  "errors.write.archiveDuplicateEntryName.suggestion": "在别的 zip 工具里把其中一个改名，然后再试一次。",
+  "@errors.write.archiveDuplicateEntryName.suggestion": {
+    "sourceHash": "f34b1f1"
+  },
+  "errors.write.archiveEncryptedEntry.title": "这个 zip 里有一个受密码保护的项目",
+  "@errors.write.archiveEncryptedEntry.title": {
+    "sourceHash": "32bf063"
+  },
+  "errors.write.archiveEncryptedEntry.message": "{path} 里的 {name} 受密码保护，而 Cmdr 修改 zip 时无法完整保留受保护的项目。Cmdr 没有改动这个 zip。",
+  "@errors.write.archiveEncryptedEntry.message": {
+    "sourceHash": "4787626"
+  },
+  "errors.write.archiveEncryptedEntry.suggestion": "可以改为把需要的内容拷贝出来，或者用支持密码的工具修改这个 zip。",
+  "@errors.write.archiveEncryptedEntry.suggestion": {
+    "sourceHash": "349350a"
+  },
   "errors.write.invalidName.title": "文件名无效",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

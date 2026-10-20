@@ -1445,6 +1445,34 @@
   "@errors.write.archiveEntryNamesCollide.suggestion": {
     "sourceHash": "33fd97c"
   },
+  "errors.write.archiveDuplicateEntryName.title": "Ebben a zipben két azonos nevű elem van",
+  "@errors.write.archiveDuplicateEntryName.title": {
+    "sourceHash": "19c70ac"
+  },
+  "errors.write.archiveDuplicateEntryName.message": "{path} két elemet tartalmaz ezzel a névvel: {name}. A Cmdr csak a későbbit mutatja, és ha módosítod a zipet, a korábbi végleg elveszik.",
+  "@errors.write.archiveDuplicateEntryName.message": {
+    "sourceHash": "9159f89"
+  },
+  "errors.write.archiveDuplicateEntryName.messageUnnamed": "{path} két azonos nevű elemet tartalmaz. A Cmdr csak a későbbit mutatja, és ha módosítod a zipet, a korábbi végleg elveszik.",
+  "@errors.write.archiveDuplicateEntryName.messageUnnamed": {
+    "sourceHash": "a4acaaa"
+  },
+  "errors.write.archiveDuplicateEntryName.suggestion": "Nevezd át a kettő közül az egyiket egy másik zipkezelő programban, aztán próbáld újra.",
+  "@errors.write.archiveDuplicateEntryName.suggestion": {
+    "sourceHash": "f34b1f1"
+  },
+  "errors.write.archiveEncryptedEntry.title": "Ebben a zipben van egy jelszóval védett elem",
+  "@errors.write.archiveEncryptedEntry.title": {
+    "sourceHash": "32bf063"
+  },
+  "errors.write.archiveEncryptedEntry.message": "{name} jelszóval védett ({path}), a Cmdr pedig nem tud épségben megtartani egy védett elemet, miközben a zipet módosítja. A zipet változatlanul hagyta.",
+  "@errors.write.archiveEncryptedEntry.message": {
+    "sourceHash": "4787626"
+  },
+  "errors.write.archiveEncryptedEntry.suggestion": "Inkább másold ki, amire szükséged van, vagy módosítsd a zipet egy jelszavakat kezelő programmal.",
+  "@errors.write.archiveEncryptedEntry.suggestion": {
+    "sourceHash": "349350a"
+  },
   "errors.write.invalidName.title": "Érvénytelen fájlnév",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

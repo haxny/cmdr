@@ -116,6 +116,8 @@
       "android tools",
       "backup tools",
       "zip tools",
+      "zip tool",
+      "a tool that handles",
       "some tools",
       "open the tool",
       "the tool opens"
@@ -1778,7 +1780,7 @@
   "later": {
     "en": "Later",
     "match": ["later"],
-    "notMatch": ["any time later", "or later", "a later"],
+    "notMatch": ["any time later", "or later", "a later", "the later one"],
     "sense": "A button that defers a prompt."
   },
   "layout": {

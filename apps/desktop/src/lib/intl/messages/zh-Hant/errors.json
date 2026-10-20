@@ -1445,6 +1445,34 @@
   "@errors.write.archiveEntryNamesCollide.suggestion": {
     "sourceHash": "33fd97c"
   },
+  "errors.write.archiveDuplicateEntryName.title": "這個 zip 裡有兩個同名項目",
+  "@errors.write.archiveDuplicateEntryName.title": {
+    "sourceHash": "19c70ac"
+  },
+  "errors.write.archiveDuplicateEntryName.message": "{path} 裡有兩個都叫 {name} 的項目。Cmdr 只會顯示後一個，修改這個 zip 會讓前一個永久遺失。",
+  "@errors.write.archiveDuplicateEntryName.message": {
+    "sourceHash": "9159f89"
+  },
+  "errors.write.archiveDuplicateEntryName.messageUnnamed": "{path} 裡有兩個同名項目。Cmdr 只會顯示後一個，修改這個 zip 會讓前一個永久遺失。",
+  "@errors.write.archiveDuplicateEntryName.messageUnnamed": {
+    "sourceHash": "a4acaaa"
+  },
+  "errors.write.archiveDuplicateEntryName.suggestion": "在其他 zip 工具裡把其中一個改名，然後再試一次。",
+  "@errors.write.archiveDuplicateEntryName.suggestion": {
+    "sourceHash": "f34b1f1"
+  },
+  "errors.write.archiveEncryptedEntry.title": "這個 zip 裡有一個有密碼保護的項目",
+  "@errors.write.archiveEncryptedEntry.title": {
+    "sourceHash": "32bf063"
+  },
+  "errors.write.archiveEncryptedEntry.message": "{path} 裡的 {name} 有密碼保護，而 Cmdr 修改 zip 時無法完整保留有密碼保護的項目。Cmdr 沒有改動這個 zip。",
+  "@errors.write.archiveEncryptedEntry.message": {
+    "sourceHash": "4787626"
+  },
+  "errors.write.archiveEncryptedEntry.suggestion": "你可以改為把需要的內容複製出來，或用支援密碼的工具修改這個 zip。",
+  "@errors.write.archiveEncryptedEntry.suggestion": {
+    "sourceHash": "349350a"
+  },
   "errors.write.invalidName.title": "檔名不合用",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"
