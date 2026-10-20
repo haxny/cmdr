@@ -134,6 +134,8 @@ fn refine_permission_refusal(path: &Path, reason: TrashRefusalKind) -> TrashRefu
     reason
 }
 
+/// Moves `path` to the trash via the `trash` crate. Returns `Ok(None)`: the crate
+/// doesn't surface the in-trash location, so no restore location is recorded.
 #[cfg(target_os = "linux")]
 pub fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError> {
     if fs::symlink_metadata(path).is_err() {
@@ -153,6 +155,7 @@ pub fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError>
     Ok(None)
 }
 
+/// Refuses with `TrashNotSupported`: this platform has no trash integration.
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
 pub fn move_to_trash_sync(_path: &Path) -> Result<Option<PathBuf>, MutationError> {
     Err(MutationError::TrashNotSupported)
