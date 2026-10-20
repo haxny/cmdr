@@ -1955,8 +1955,8 @@ so the progress dialog's one-shot `listOperations()` seed sees `queued` immediat
 unmounts the modal within a frame or two, with a toast and a queue window. That flash is not new, only more frequent;
 fixing it properly means moving dispatch out of the dialog.
 
-**Archive routes await but do not reuse.** `copy_into.rs` plans its changeset with its own `WalkDir` and never calls
-`take_cached_scan_result`, so `preview_id` is threaded through `route_archive_copy_into`, `compress_start`, and
+**Archive routes await but do not reuse.** `copy_into_plan.rs` plans its changeset with its own `WalkDir` and never
+calls `take_cached_scan_result`, so `preview_id` is threaded through `route_archive_copy_into`, `compress_start`, and
 `route_archive_delete` for the WAIT alone: it restores the serialization the frontend's scan-wait used to provide.
 Without it, ⌥F5's sampling preview and the planner's walk would run down the same tree at once, which is what costs on
 MTP and SMB. The duplicate walk itself is pre-existing and out of scope; teaching the archive changeset planner to seed

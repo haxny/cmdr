@@ -89,6 +89,18 @@ pub enum MutationError {
         /// couldn't parse the archive to say which.
         name: Option<String>,
     },
+    /// The edit would leave an entry under a FILE entry (`notes/a.txt` beside
+    /// a file `notes`), which every reader, Cmdr's and `unzip` alike, drops, so
+    /// the entry would be in the zip and nowhere to be seen. Refused before any
+    /// temp exists, the original untouched. Only what the edit writes or
+    /// renames is checked, so a zip that already holds such an entry stays
+    /// editable. Names have no trailing slash.
+    EntryUnderFile {
+        /// The entry that would sit under the file.
+        entry: String,
+        /// The file entry it would sit under.
+        file: String,
+    },
     /// An added entry's source bytes couldn't be read.
     ReadSource {
         /// Where the entry would have landed in the archive.
@@ -120,6 +132,12 @@ impl std::fmt::Display for MutationError {
             }
             MutationError::DuplicateEntryName { name: None } => {
                 write!(f, "the archive can't be edited because two of its entries share a name")
+            }
+            MutationError::EntryUnderFile { entry, file } => {
+                write!(
+                    f,
+                    "the archive can't be edited because '{entry}' would sit under the file '{file}'"
+                )
             }
             MutationError::ReadSource { inner_path, source } => {
                 write!(f, "couldn't read the source for '{inner_path}': {source}")

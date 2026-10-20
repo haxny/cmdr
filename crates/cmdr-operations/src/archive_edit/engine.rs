@@ -136,6 +136,9 @@ pub(super) fn to_write_error(archive_path: &Path, err: MutationError) -> WriteOp
         },
         MutationError::EncryptedEntryRetained { name } => WriteOperationError::ArchiveEncryptedEntry { path, name },
         MutationError::DuplicateEntryName { name } => WriteOperationError::ArchiveDuplicateEntryName { path, name },
+        MutationError::EntryUnderFile { entry, file } => {
+            WriteOperationError::ArchiveEntryUnderFile { path, entry, file }
+        }
         MutationError::ReadSource { inner_path, source } => WriteOperationError::ReadError {
             path: inner_path,
             message: source.to_string(),

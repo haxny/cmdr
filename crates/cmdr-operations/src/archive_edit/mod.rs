@@ -45,6 +45,7 @@
 mod compress;
 mod conflicts;
 mod copy_into;
+mod copy_into_plan;
 mod driver;
 mod edit_error;
 mod engine;
@@ -72,6 +73,8 @@ mod test_support;
 mod compress_remote_tests;
 #[cfg(test)]
 mod compress_tests;
+#[cfg(test)]
+mod copy_into_clash_tests;
 #[cfg(test)]
 mod copy_into_drift_tests;
 #[cfg(test)]

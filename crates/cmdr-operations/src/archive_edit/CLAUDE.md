@@ -8,8 +8,8 @@ are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cm
 - `routing.rs`: inner-path helpers, the tar/7z write guard, and duplicate pre-check.
 - `driver.rs`: managed lifecycle and delete routing. `engine.rs`: local/remote dispatch; `remote.rs`: pull, apply,
   upload, swap. `edit_error.rs`: shared error leaf. `conflicts.rs`: archive-index resolution.
-- Per-shape routes: `copy_into.rs` (transfer routing, plus the remote-source pull), `move_out.rs`, and `compress.rs`.
-  Fresh creation uses `fresh_plan.rs` (sources/identity), `fresh_compress.rs` (managed driver), `fresh_zip.rs` (bounded
+- Per-shape routes: `copy_into.rs` (routing, remote pull) + `copy_into_plan.rs`, `move_out.rs`, `compress.rs`. Fresh
+  creation uses `fresh_plan.rs` (sources/identity), `fresh_compress.rs` (managed driver), `fresh_zip.rs` (bounded
   producer), `fresh_pipeline.rs` (its run and join), `fresh_rows.rs` (its transfer-tree rows), and `fresh_validate.rs`
   (pre-publish checks). Create and rename routes live with their instant ops in `../create.rs` and `../rename.rs`.
 
@@ -43,7 +43,8 @@ are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cm
 - **Unrepresentable entries (symlinks, fifos, devices, broken links) are SKIPPED, never lost**, and any skip suppresses
   a move's source deletion. Every skip increments `skipped_count` and surfaces as `files_skipped`.
 - **Conflicts are planned INSIDE the op**, against the working copy `run_managed_edit` hands the closure — planning up
-  front would break a remote edit. Stop-mode prompts per FILE (dirs merge silently), storing the sender BEFORE the emit.
+  front would break a remote edit. Stop prompts per file and per folder meeting a file (dir-over-dir merges), sender
+  stored BEFORE the emit.
 - **The terminal `files_processed` is `MutationProgress::entries_changed`**, ❌ not `entries_total`: deleting one file
   from a 3-entry zip reports 1.
 - **Compression level comes from `behavior.archiveCompressionLevel`**: fresh creation passes it to `new_stream`;

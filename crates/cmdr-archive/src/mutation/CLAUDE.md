@@ -18,7 +18,8 @@ and error types both speak; `plan.rs` decides which original entries an edit kee
   entry under `name()`: it re-encodes every Shift-JIS or GBK name as mojibake. DETAILS § "Entry names".
 - **A rewrite keeps the comment, any bytes before the zip data (an SFX stub), and a symlink's target as the file it
   replaces** (`apply` resolves a linked archive first). An archive with a duplicate entry name is refused: the `zip`
-  crate folds the twins into one. DETAILS § "The rewrite keeps the archive's own shape".
+  crate folds the twins into one. DETAILS § "The rewrite keeps the archive's own shape". So is an edit that would write
+  an entry under a FILE entry, which every reader hides (`EntryUnderFile`).
 - **An edit that would RETAIN an encrypted entry is refused** (`zip`'s raw copy drops the PKWARE flag → silent
   corruption). Deleting an encrypted entry is fine.
 - **`Changeset::compression_level` applies to ADDED entries only, clamped 1..=9 in `add_entry_options`.** The `zip`

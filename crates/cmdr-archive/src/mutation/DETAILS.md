@@ -126,6 +126,14 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   crate's reader AND writer to stop keying by name, a structural patch (upstream `zip-rs/zip2` #841 asks for the reader
   half), so refusal is the answer until upstream moves. The host maps it to
   `WriteOperationError::ArchiveDuplicateEntryName`.
+- **Decision: refuse an edit that would write an entry under a FILE entry (`EntryUnderFile`).** Every reader (Cmdr's
+  index, `unzip`) drops an entry whose parent is a file, so `notes/a.txt` beside a file `notes` sits in the zip unseen
+  and unextractable. The host's copy-into planner asks about that clash first; `plan.rs`'s
+  `refuse_an_entry_under_a_file` is the backstop, run before any temp exists. It checks only what the edit WRITES (adds,
+  mkdirs, renamed kept entries), both ways round (a new entry under a file, a new file over kept entries), so a zip that
+  already holds such an entry stays editable. A kept entry is a folder by its trailing slash or its recorded mode (Unix
+  `S_IFDIR` or the DOS directory bit), as the reader decides, so a slashless folder entry never reads as a file. The
+  host maps it to `WriteOperationError::ArchiveEntryUnderFile`.
 - **Leftover policy — no startup reaper.** A leftover `foo.zip.cmdr-tmp-*` is always an ABANDONED build (the original is
   intact), so it's harmless. `apply` reaps siblings of the target at the START of the next edit of that archive (before
   building its own fresh-uuid temp), which is sufficient; a cancel/error removes its own temp immediately via an RAII
@@ -157,7 +165,7 @@ delete keeps siblings' raw compressed bytes byte-identical), metadata (mode/mtim
 pause-parks-mid-add-then-completes-on-resume, and the encrypted-entry refusal. `mutator_raw_names_test.rs` pins the
 entry-name rules: a Shift-JIS name and an unflagged UTF-8 one keep their bytes and flags through an edit, and a delete
 or rename finds a Shift-JIS entry by its shown name. `mutator_archive_shape_test.rs` pins the archive-level shape: the
-comment, a self-extractor prefix, a symlinked archive, the duplicate-name refusal, and two names sharing one local
-header each deleting alone.
+comment, a self-extractor prefix, a symlinked archive, the duplicate-name refusal, two names sharing one local header
+each deleting alone, and the entry-under-a-file refusal.
 `crates/cmdr-operations/src/archive_edit/routing_tests.rs::ensure_zip_writable_allows_zip_and_refuses_read_only_formats`
 pins the non-zip-refuses-typed matrix.

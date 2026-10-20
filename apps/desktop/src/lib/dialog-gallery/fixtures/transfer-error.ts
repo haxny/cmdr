@@ -161,6 +161,15 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       name: 'receipts/march.pdf',
     },
   },
+  archive_entry_under_file: {
+    operationType: 'move',
+    error: {
+      type: 'archive_entry_under_file',
+      path: '/Users/david/Downloads/project.zip',
+      entry: 'notes/a.txt',
+      file: 'notes',
+    },
+  },
   symlink_loop: {
     operationType: 'copy',
     error: { type: 'symlink_loop', path: '/Users/david/dev/node_modules/.pnpm/self/node_modules/self' },

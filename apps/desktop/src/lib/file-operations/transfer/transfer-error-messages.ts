@@ -242,6 +242,8 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   archive_duplicate_entry_name: { category: 'needs_action', retryHint: false },
   // No Retry: the same edit keeps the same protected entry.
   archive_encrypted_entry: { category: 'needs_action', retryHint: false },
+  // No Retry: the same edit lands the same entry under the same file.
+  archive_entry_under_file: { category: 'needs_action', retryHint: false },
   read_only_device: { category: 'needs_action', retryHint: false },
   // No Retry: the same folder refuses again. The way out is another destination.
   destination_not_writable: { category: 'needs_action', retryHint: false },
@@ -580,6 +582,7 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
     case 'archive_entry_names_collide':
     case 'archive_duplicate_entry_name':
     case 'archive_encrypted_entry':
+    case 'archive_entry_under_file':
       return archiveEditMessage(error)
     // STATUS_DELETE_PENDING: the file is marked for deletion on the server but an
     // open handle is keeping it alive. Transient: retry-after-a-moment. Named,

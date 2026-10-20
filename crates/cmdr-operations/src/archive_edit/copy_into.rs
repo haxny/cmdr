@@ -1,21 +1,17 @@
 //! Copy/move INTO a zip: the routing entry, source materialization (a remote
 //! source is streamed into a scratch dir first, a local one is used in place),
-//! the changeset planning (walk the local sources, resolve each collision via
-//! [`super::conflicts`], build one `{ add + mkdir + delete }` batch), and the
-//! managed-op driver that plans and applies inside the op — against the real
-//! archive for a LOCAL parent, or the pulled-local working copy for a REMOTE one.
+//! and the managed-op driver that plans (`copy_into_plan.rs`) and applies inside
+//! the op — against the real archive for a LOCAL parent, or the pulled-local
+//! working copy for a REMOTE one.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use walkdir::WalkDir;
-
 use super::super::OperationEventSink;
-use super::super::conflict::ApplyToAll;
 use super::super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
@@ -24,12 +20,11 @@ use super::super::transfer::volume::pull_path_to_local;
 use super::super::transfer::volume::{CarriedSource, stamp_source, sweep_carried_source};
 use super::super::types::ReadOnlySide;
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
-use super::conflicts::{ConflictMode, conditional_overwrites, find_unique_inner, resolve_effective};
+use super::copy_into_plan::{build_copy_into_changeset, build_copy_into_changeset_interactive};
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
-use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset, MutationError};
-use cmdr_archive::{ArchiveFormat, ArchiveIndex, LocalFileSource};
+use cmdr_archive::mutator::{self, MutationError};
 use cmdr_fs::volume::{LaneKey, Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::{ArchiveSubkind, ExecutionStatus};
@@ -313,261 +308,6 @@ async fn pull_one_source(
                 message: other.to_string(),
             }),
         })
-}
-
-/// The planned changeset for a copy/move-into, plus how many source entries were
-/// skipped (a conflict resolved to Skip, or a symlink / special file a zip can't
-/// hold). A non-zero count suppresses the source deletion on a move and surfaces
-/// as `files_skipped` on the terminal event.
-struct CopyIntoPlan {
-    changeset: Changeset,
-    skipped_count: usize,
-}
-
-/// Walks the local sources and builds the `{ add + delete + mkdir }` changeset
-/// under a pre-resolved policy (no prompting). Blocking — call from `spawn_blocking`.
-fn build_copy_into_changeset(
-    archive_path: &Path,
-    absolute_sources: &[PathBuf],
-    dest_inner: &str,
-    destination_name: Option<&str>,
-    conflict: ConflictResolution,
-) -> Result<CopyIntoPlan, WriteOperationError> {
-    let mut mode = ConflictMode::Policy(conflict);
-    build_copy_into_changeset_inner(archive_path, absolute_sources, dest_inner, destination_name, &mut mode).map_err(
-        |e| match e {
-            EditError::Op(w) => w,
-            // A pre-resolved policy never prompts, so it can't be cancelled here.
-            EditError::Cancelled => WriteOperationError::Cancelled {
-                message: "the archive copy was cancelled".to_string(),
-            },
-        },
-    )
-}
-
-/// Walks the local sources and builds the changeset with INTERACTIVE per-file
-/// conflict prompts (the Stop UX). Blocking (parses the index, walks the tree, and
-/// blocks on each prompt's oneshot) — call from `spawn_blocking` inside the managed
-/// op so `resolve_write_conflict(operation_id)` can answer.
-fn build_copy_into_changeset_interactive(
-    archive_path: &Path,
-    absolute_sources: &[PathBuf],
-    dest_inner: &str,
-    destination_name: Option<&str>,
-    events: &dyn OperationEventSink,
-    operation_id: &str,
-    state: &Arc<WriteOperationState>,
-) -> Result<CopyIntoPlan, EditError> {
-    let mut latch = ApplyToAll::default();
-    let mut mode = ConflictMode::Interactive {
-        events,
-        operation_id,
-        state,
-        apply_to_all: &mut latch,
-    };
-    build_copy_into_changeset_inner(archive_path, absolute_sources, dest_inner, destination_name, &mut mode)
-}
-
-/// The shared copy-into walk. Resolves each FILE collision via `mode`; directory
-/// collisions merge silently (an existing archive dir is never re-added and never
-/// prompts — the app-wide dir-vs-dir rule).
-fn build_copy_into_changeset_inner(
-    archive_path: &Path,
-    absolute_sources: &[PathBuf],
-    dest_inner: &str,
-    destination_name: Option<&str>,
-    mode: &mut ConflictMode<'_>,
-) -> Result<CopyIntoPlan, EditError> {
-    let source = LocalFileSource::open(archive_path).map_err(|e| {
-        EditError::Op(WriteOperationError::WriteError {
-            path: archive_path.display().to_string(),
-            message: e.to_string(),
-        })
-    })?;
-    let index = ArchiveIndex::parse(Arc::new(source), ArchiveFormat::Zip, None).map_err(|e| {
-        EditError::Op(WriteOperationError::WriteError {
-            path: archive_path.display().to_string(),
-            message: e.to_string(),
-        })
-    })?;
-
-    let mut adds: Vec<AddEntry> = Vec::new();
-    let mut mkdirs: Vec<String> = Vec::new();
-    // The local folder each mkdir comes from, whose xattrs ride its sidecar.
-    let mut mkdir_sources: HashMap<String, PathBuf> = HashMap::new();
-    let mut deletes: Vec<String> = Vec::new();
-    // Inner paths this changeset already claims (dedup + Rename uniqueness).
-    let mut planned: HashSet<String> = HashSet::new();
-    let mut skipped_count: usize = 0;
-
-    for src in absolute_sources {
-        let Some(name) = src.file_name().and_then(|n| n.to_str()) else {
-            continue;
-        };
-        let base_inner = join_inner_str(dest_inner, destination_name.unwrap_or(name));
-        // The root `__MACOSX` is where the zip's sidecars live, hidden from every
-        // listing: an item landing there could never be seen again, and an
-        // extract would read it as metadata. Skipped and counted, like a symlink.
-        if mutator::is_in_sidecar_folder(&base_inner) {
-            skipped_count += 1;
-            continue;
-        }
-        let meta = std::fs::symlink_metadata(src).map_err(|e| {
-            EditError::Op(WriteOperationError::ReadError {
-                path: src.display().to_string(),
-                message: e.to_string(),
-            })
-        })?;
-
-        if meta.is_dir() {
-            for entry in WalkDir::new(src).into_iter().filter_map(Result::ok) {
-                let rel = entry.path().strip_prefix(src).unwrap_or_else(|_| entry.path());
-                let inner = if rel.as_os_str().is_empty() {
-                    base_inner.clone()
-                } else {
-                    join_inner_str(&base_inner, &rel.to_string_lossy().replace('\\', "/"))
-                };
-                let file_type = entry.file_type();
-                if file_type.is_dir() {
-                    if !index.exists(&inner) && planned.insert(inner.clone()) {
-                        mkdir_sources.insert(inner.clone(), entry.path().to_path_buf());
-                        mkdirs.push(inner);
-                    }
-                } else if file_type.is_file() {
-                    plan_file_add(
-                        inner,
-                        entry.path(),
-                        archive_path,
-                        &index,
-                        mode,
-                        &mut adds,
-                        &mut deletes,
-                        &mut planned,
-                        &mut skipped_count,
-                    )?;
-                } else {
-                    // A symlink or special file (fifo/socket/device) inside the
-                    // tree: a zip can't represent it, so it can't be added. Count
-                    // it as skipped — that suppresses the source deletion on a
-                    // MOVE (data safety: the whole subtree stays put rather than
-                    // being deleted with the symlink unarchived) and surfaces the
-                    // skip to the user.
-                    skipped_count += 1;
-                }
-            }
-        } else if meta.is_file() {
-            plan_file_add(
-                base_inner,
-                src,
-                archive_path,
-                &index,
-                mode,
-                &mut adds,
-                &mut deletes,
-                &mut planned,
-                &mut skipped_count,
-            )?;
-        } else {
-            // A top-level symlink or special file, same reasoning as above: it
-            // can't be archived, so it's skipped (never silently deleted on a
-            // move by falling through with an empty changeset).
-            skipped_count += 1;
-        }
-    }
-
-    Ok(CopyIntoPlan {
-        changeset: Changeset {
-            adds,
-            mkdirs,
-            mkdir_sources,
-            deletes,
-            // An overwrite replaces what's at the name, hidden entries included.
-            deletes_spare_hidden: false,
-            renames: Vec::new(),
-            // The per-edit level is set on this changeset later, in
-            // `archive_copy_into_start`, from the operation config.
-            compression_level: None,
-        },
-        skipped_count,
-    })
-}
-
-/// Resolves one file's conflict (via `mode`) against the index + already-planned
-/// paths and appends the resulting add (and a delete, for an overwrite). Mutates
-/// the accumulators in place.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "shared accumulators for one pass; bundling them into a struct adds ceremony without clarity"
-)]
-fn plan_file_add(
-    inner: String,
-    src_path: &Path,
-    archive_path: &Path,
-    index: &ArchiveIndex,
-    mode: &mut ConflictMode<'_>,
-    adds: &mut Vec<AddEntry>,
-    deletes: &mut Vec<String>,
-    planned: &mut HashSet<String>,
-    skipped_count: &mut usize,
-) -> Result<(), EditError> {
-    let in_index = index.exists(&inner);
-    let collides = in_index || planned.contains(&inner);
-
-    let target = if collides {
-        // The clashing side is a file (this is the file-add path); classify the
-        // destructive file→folder variant only when an existing ARCHIVE entry at
-        // this name is a directory (a planned add is always a file).
-        let is_file_to_folder = index.is_directory(&inner) == Some(true);
-        let resolution = resolve_effective(mode, &inner, src_path, archive_path, index, is_file_to_folder)?;
-        match resolution {
-            ConflictResolution::Skip => {
-                *skipped_count += 1;
-                return Ok(());
-            }
-            ConflictResolution::Stop => {
-                // Only reachable under a pre-resolved `Policy(Stop)` (the
-                // interactive path never returns Stop). Treat as a hard collision.
-                return Err(EditError::Op(WriteOperationError::DestinationExists { path: inner }));
-            }
-            ConflictResolution::Overwrite => {
-                if in_index {
-                    deletes.push(inner.clone());
-                }
-                inner
-            }
-            ConflictResolution::Rename => find_unique_inner(&inner, index, planned),
-            ConflictResolution::OverwriteSmaller | ConflictResolution::OverwriteOlder => {
-                if in_index && conditional_overwrites(resolution, index, &inner, src_path) {
-                    deletes.push(inner.clone());
-                    inner
-                } else {
-                    *skipped_count += 1;
-                    return Ok(());
-                }
-            }
-        }
-    } else {
-        inner
-    };
-
-    planned.insert(target.clone());
-    adds.push(AddEntry {
-        inner_path: target,
-        source: AddSource::LocalPath(src_path.to_path_buf()),
-    });
-    Ok(())
-}
-
-/// Joins an archive-inner parent (possibly empty) and a child name into one
-/// `/`-separated inner path.
-fn join_inner_str(parent: &str, child: &str) -> String {
-    let parent = parent.trim_matches('/');
-    let child = child.trim_matches('/');
-    if parent.is_empty() {
-        child.to_string()
-    } else {
-        format!("{parent}/{child}")
-    }
 }
 
 impl crate::Operations {

@@ -360,13 +360,20 @@ other-archive ignored, delete-failure doesn't fail the edit).
   both kinds named. `conflicts.rs::resolve_effective` routes every arm through the shared
   `../conflict.rs::resolution_for_clash`, which the local-FS and cross-volume engines answer with too; the conditional
   variants stay refused whoever asked, having no honest question to ask here anyway (a directory node carries no size
-  and no mtime). The mirror direction never consults the policy at all: a source DIRECTORY meeting a same-named FILE
-  entry just skips its `mkdir` and adds its children under the name. Pinned by
-  `copy_into_tests.rs::a_blanket_overwrite_never_replaces_an_archive_directory_with_a_file`. **The Stop policy prompts
-  interactively** (`build_copy_into_changeset_interactive`): the op is registered so `resolve_write_conflict(op_id)` can
-  reach the oneshot, and each FILE collision emits a `write-conflict` and blocks on the answer, reusing the pure
-  `ApplyToAll` latch
-  - the oneshot plumbing (store the sender BEFORE the emit). Dir-vs-dir collisions merge silently — only files prompt
+  and no mtime). Pinned by `copy_into_tests.rs::a_blanket_overwrite_never_replaces_an_archive_directory_with_a_file`.
+  **The mirror direction, a source FOLDER meeting a same-named archive FILE, is the same clash**
+  (`copy_into_plan.rs::plan_dir`, `IncomingItem::Directory` into `resolve_effective`). Gotcha/Why: it used to skip the
+  folder's `mkdir` and add its children under the file's name, and every reader (Cmdr's index, `unzip`) drops an entry
+  whose parent is a file, so a move "landed" the files invisibly and then deleted the source. Now a blanket policy skips
+  the folder and its whole subtree (counted, so a move keeps its source), Rename lands it at a free ` (n)` name with its
+  children following, and only an Overwrite answered on the prompt for that shape deletes the file and adds the folder.
+  Pinned by `copy_into_clash_tests.rs`, nested cell included. The mutator refuses the shape as a backstop
+  (`MutationError::EntryUnderFile`, `crates/cmdr-archive/src/mutation/DETAILS.md`). An unreadable entry in a walked
+  source folder counts as skipped too, for the same move-keeps-source reason. **The Stop policy prompts interactively**
+  (`build_copy_into_changeset_interactive`): the op is registered so `resolve_write_conflict(op_id)` can reach the
+  oneshot, and each FILE collision (and each folder meeting a file) emits a `write-conflict` and blocks on the answer,
+  reusing the pure `ApplyToAll` latch
+  - the oneshot plumbing (store the sender BEFORE the emit). Dir-vs-dir collisions merge silently — they never prompt
     (the app-wide rule). A cancel during a pending prompt drops the sender → the planner bails → the archive is
     untouched. Every Skip (a conflict resolved to Skip, a conditional policy that declines to overwrite, or an
     unrepresentable entry) increments the plan's `skipped_count`, which gates the move-source deletion and surfaces as

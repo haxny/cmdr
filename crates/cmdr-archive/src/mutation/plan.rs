@@ -22,6 +22,14 @@ pub(super) struct RetainedEntry {
     pub(super) compressed_size: u64,
 }
 
+/// A kept entry's post-edit name, for [`refuse_an_entry_under_a_file`].
+struct KeptName {
+    name: String,
+    is_dir: bool,
+    /// Whether the edit renamed it, which makes it an entry the edit writes.
+    renamed: bool,
+}
+
 /// What an edit keeps of the original archive.
 pub(super) struct RetainedPlan {
     /// How many bytes precede the zip data (a self-extractor stub), copied to
@@ -69,6 +77,7 @@ pub(super) fn plan_retained(
         deleted_count: 0,
         renamed_count: 0,
     };
+    let mut kept: Vec<KeptName> = Vec::with_capacity(src.len());
     for index in 0..src.len() {
         let file = src.by_index_raw(index).map_err(MutationError::Zip)?;
         let header_start = file.header_start();
@@ -76,6 +85,9 @@ pub(super) fn plan_retained(
         let tree_path = tree_paths.as_mut().map(|paths| paths.take(header_start).flatten());
         let compressed_size = file.compressed_size();
         let encrypted = file.encrypted();
+        // A folder by its name's trailing slash or by its recorded mode (a
+        // Unix `S_IFDIR` or the DOS directory bit), as the reader decides.
+        let is_dir = file.is_dir() || file.unix_mode().is_some_and(|mode| mode & 0o170000 == 0o040000);
         drop(file);
         // A sidecar is metadata, never an item the user counts.
         let is_item = !apple_double::is_in_macosx_folder(&original_name);
@@ -97,6 +109,11 @@ pub(super) fn plan_retained(
                 if renamed && is_item {
                     plan.renamed_count += 1;
                 }
+                kept.push(KeptName {
+                    name: new_name.clone(),
+                    is_dir,
+                    renamed,
+                });
                 plan.entries.push(RetainedEntry {
                     index,
                     new_name: renamed.then_some(new_name),
@@ -108,7 +125,78 @@ pub(super) fn plan_retained(
             None => {}
         }
     }
+    refuse_an_entry_under_a_file(&kept, changeset)?;
     Ok(plan)
+}
+
+/// Refuses an edit that would write an entry under a FILE entry: an add or
+/// mkdir under a file the archive keeps or adds, or a file added where kept
+/// entries sit beneath its name. Every reader drops such an entry (a file can't
+/// be a folder too), so it would sit in the zip unseen and unextractable, which
+/// is how a move once lost the files it "added". The planner above resolves
+/// that clash with the user first; this is the backstop for any route that
+/// didn't.
+///
+/// Only entries the edit WRITES (adds, mkdirs, and renamed kept entries) are
+/// checked, so a zip that already holds such an entry stays editable, deletes
+/// included. Sidecars live in their own tree and never count.
+fn refuse_an_entry_under_a_file(kept: &[KeptName], changeset: &Changeset) -> Result<(), MutationError> {
+    struct Name<'a> {
+        name: &'a str,
+        is_dir: bool,
+        written: bool,
+    }
+    let kept = kept.iter().map(|k| Name {
+        name: k.name.trim_end_matches('/'),
+        is_dir: k.is_dir,
+        written: k.renamed,
+    });
+    let mkdirs = changeset.mkdirs.iter().map(|dir| Name {
+        name: dir.trim_matches('/'),
+        is_dir: true,
+        written: true,
+    });
+    let adds = changeset.adds.iter().map(|add| Name {
+        name: add.inner_path.trim_matches('/'),
+        is_dir: false,
+        written: true,
+    });
+    let names: Vec<Name<'_>> = kept
+        .chain(mkdirs)
+        .chain(adds)
+        .filter(|n| !n.name.is_empty() && !apple_double::is_in_macosx_folder(n.name))
+        .collect();
+    if !names.iter().any(|n| n.written) {
+        return Ok(());
+    }
+
+    let files: HashSet<&str> = names.iter().filter(|n| !n.is_dir).map(|n| n.name).collect();
+    // Each folder path any entry implies, with one entry beneath it.
+    let mut beneath: HashMap<&str, &str> = HashMap::new();
+    for n in &names {
+        for (slash, _) in n.name.match_indices('/') {
+            beneath.entry(&n.name[..slash]).or_insert(n.name);
+        }
+    }
+    let refuse = |entry: &str, file: &str| MutationError::EntryUnderFile {
+        entry: entry.to_string(),
+        file: file.to_string(),
+    };
+    for n in names.iter().filter(|n| n.written) {
+        if let Some((slash, _)) = n
+            .name
+            .match_indices('/')
+            .find(|(slash, _)| files.contains(&n.name[..*slash]))
+        {
+            return Err(refuse(n.name, &n.name[..slash]));
+        }
+        if !n.is_dir
+            && let Some(entry) = beneath.get(n.name)
+        {
+            return Err(refuse(entry, n.name));
+        }
+    }
+    Ok(())
 }
 
 /// Every entry's local header offset and name as Cmdr's reader shows it (see

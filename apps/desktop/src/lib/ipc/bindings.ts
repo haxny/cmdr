@@ -19106,6 +19106,14 @@ export type WriteOperationError =
    *  the entry is fine. `path` is the zip, `name` the entry.
    */
   | { type: 'archive_encrypted_entry'; path: string; name: string }
+  /**
+   *  The edit would leave an entry of the zip under a FILE entry (`notes/a.txt`
+   *  beside a file `notes`), which every reader drops, so it would sit in the
+   *  zip unseen. Refused before anything is written. The copy-into planner
+   *  asks about that clash first, so this is the backstop. `path` is the zip,
+   *  `entry` the entry that would sit under `file`, both inner paths.
+   */
+  | { type: 'archive_entry_under_file'; path: string; entry: string; file: string }
   | { type: 'symlink_loop'; path: string }
   | { type: 'cancelled'; message: string }
   /**

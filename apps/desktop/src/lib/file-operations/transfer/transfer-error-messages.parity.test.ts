@@ -383,6 +383,17 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'archive_entry_under_file (escapes HTML)',
+    error: { type: 'archive_entry_under_file', path: '/tmp/a&b.zip', entry: '<notes>/a.txt', file: '<notes>' },
+    op: 'move',
+    expected: {
+      title: 'Cmdr can’t put an item inside a file',
+      message:
+        '&lt;notes&gt;/a.txt would go inside &lt;notes&gt; in /tmp/a&amp;b.zip, but &lt;notes&gt; is a file there, so no zip tool could show or open it. Cmdr left the zip as it was.',
+      suggestion: 'Rename that file in the zip, or put the item somewhere else, then try again.',
+    },
+  },
+  {
     name: 'io_error (delete)',
     error: { type: 'io_error', path: '/p', message: 'm' },
     op: 'delete',

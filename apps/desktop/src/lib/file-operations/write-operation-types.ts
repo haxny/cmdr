@@ -214,6 +214,9 @@ export type WriteOperationError =
   // The edit would have to keep a password-protected entry, which the rewrite
   // can't copy intact. Refused before anything is written.
   | { type: 'archive_encrypted_entry'; path: string; name: string }
+  // The edit would leave an entry under a FILE entry of the zip, which every
+  // reader drops. Refused before anything is written.
+  | { type: 'archive_entry_under_file'; path: string; entry: string; file: string }
   | { type: 'symlink_loop'; path: string }
   | { type: 'cancelled'; message: string }
   // `side` is null for a backend session that dropped (MTP, SMB), which has no

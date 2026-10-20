@@ -54,6 +54,17 @@ export function archiveEditMessage(error: WriteOperationError): FriendlyErrorMes
         }),
         suggestion: w('archiveEncryptedEntry.suggestion'),
       }
+    // Both names, since the clash is between two entries of one zip.
+    case 'archive_entry_under_file':
+      return {
+        title: w('archiveEntryUnderFile.title'),
+        message: w('archiveEntryUnderFile.message', {
+          entry: escapeHtml(error.entry),
+          file: escapeHtml(error.file),
+          path: escapeHtml(error.path),
+        }),
+        suggestion: w('archiveEntryUnderFile.suggestion'),
+      }
     default:
       return null
   }

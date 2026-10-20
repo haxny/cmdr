@@ -208,3 +208,93 @@ fn entries_sharing_a_local_header_each_delete_by_their_own_name() {
         }
     }
 }
+
+// ---- An entry under a file entry ----------------------------------------------
+
+fn add(inner: &str) -> AddEntry {
+    AddEntry {
+        inner_path: inner.to_string(),
+        source: AddSource::Bytes(b"new".to_vec()),
+    }
+}
+
+/// Every reader drops an entry whose parent is a file, so an edit that would
+/// write one is refused before any temp exists, whichever side it writes.
+#[test]
+fn an_edit_that_would_put_an_entry_under_a_file_is_refused_untouched() {
+    let cases: [(&[&str], Changeset, &str, &str); 3] = [
+        (
+            &["notes", "keep.txt"],
+            Changeset {
+                adds: vec![add("notes/a.txt")],
+                ..Default::default()
+            },
+            "notes/a.txt",
+            "notes",
+        ),
+        (
+            &["notes"],
+            Changeset {
+                mkdirs: vec!["notes/sub".to_string()],
+                ..Default::default()
+            },
+            "notes/sub",
+            "notes",
+        ),
+        (
+            &["d/x.txt"],
+            Changeset {
+                adds: vec![add("d")],
+                ..Default::default()
+            },
+            "d/x.txt",
+            "d",
+        ),
+    ];
+    for (names, changeset, want_entry, want_file) in cases {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let entries: Vec<_> = names.iter().map(|name| stored(*name, "bytes")).collect();
+        let bytes = build_zip(&entries);
+        let path = write_zip(tmp.path(), "a.zip", &bytes);
+
+        let result = apply(&path, &changeset, &NoHooks);
+
+        assert!(
+            matches!(&result, Err(MutationError::EntryUnderFile { entry, file }) if entry == want_entry && file == want_file),
+            "{names:?}: got {result:?}"
+        );
+        assert_eq!(std::fs::read(&path).expect("read the original"), bytes, "{names:?}");
+        assert!(
+            leftover_temps(tmp.path()).is_empty(),
+            "{names:?}: no temp is left behind"
+        );
+    }
+}
+
+/// The refusal is about what the edit WRITES: a zip that already holds an entry
+/// under a file stays editable, and replacing a file with a folder of its name
+/// (the file deleted in the same edit) is fine.
+#[test]
+fn an_edit_that_writes_no_entry_under_a_file_applies() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = write_zip(
+        tmp.path(),
+        "malformed.zip",
+        &build_zip(&[stored("notes", "file"), stored("notes/hidden.txt", "hidden")]),
+    );
+    let changeset = Changeset {
+        adds: vec![add("other.txt")],
+        ..Default::default()
+    };
+    apply(&path, &changeset, &NoHooks).expect("an unrelated add applies");
+
+    let path = write_zip(tmp.path(), "replace.zip", &build_zip(&[stored("notes", "file")]));
+    let changeset = Changeset {
+        deletes: vec!["notes".to_string()],
+        mkdirs: vec!["notes".to_string()],
+        adds: vec![add("notes/a.txt")],
+        ..Default::default()
+    };
+    apply(&path, &changeset, &NoHooks).expect("a file replaced by a folder applies");
+    assert_eq!(entry_names(&path), ["notes/", "notes/a.txt"]);
+}

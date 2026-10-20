@@ -28,13 +28,28 @@ pub(super) enum ConflictMode<'a> {
     Policy(ConflictResolution),
     /// Interactive per-file prompting (the FE's Stop UX): each file collision emits
     /// a `write-conflict` and blocks on the user's answer, honoring the shared
-    /// `ApplyToAll` latch. Dir collisions never reach here (they merge silently).
+    /// `ApplyToAll` latch. Dir-over-dir collisions never reach here (they merge
+    /// silently); a dir meeting an archive FILE does.
     Interactive {
         events: &'a dyn OperationEventSink,
         operation_id: &'a str,
         state: &'a Arc<WriteOperationState>,
         apply_to_all: &'a mut ApplyToAll,
     },
+}
+
+/// One clash between something arriving and an archive entry (or a name this
+/// changeset already claims) at `inner`.
+#[derive(Clone, Copy)]
+pub(super) struct ArchiveClash<'a> {
+    /// The inner path both sides want.
+    pub(super) inner: &'a str,
+    /// The local source arriving there.
+    pub(super) src_path: &'a Path,
+    pub(super) incoming: IncomingItem,
+    /// Whether the archive entry at `inner` is a folder. `false` for a name
+    /// only this changeset claims (a planned add is always a file).
+    pub(super) destination_is_directory: bool,
 }
 
 /// Produces the concrete resolution for a collision. `Policy` returns its fixed
@@ -48,17 +63,18 @@ pub(super) enum ConflictMode<'a> {
 /// answer itself, or the "* all" carry it latched. Same rule as the local-FS
 /// and cross-volume engines.
 ///
-/// Only one direction exists here: a file always ARRIVES (a folder copied in is
-/// walked into its files), so a clash is either same-kind or file-over-folder.
+/// Both directions arrive here: a file meeting an archive folder, and a folder
+/// meeting an archive FILE, which the zip can't hold side by side (every reader
+/// drops an entry whose parent is a file). Folder-over-folder never does: it
+/// merges silently, the app-wide rule.
 pub(super) fn resolve_effective(
     mode: &mut ConflictMode<'_>,
-    inner: &str,
-    src_path: &Path,
+    clash: ArchiveClash<'_>,
     archive_path: &Path,
     index: &ArchiveIndex,
-    is_file_to_folder: bool,
 ) -> Result<ConflictResolution, EditError> {
-    let kind = ClashKind::of(IncomingItem::Leaf, Some(is_file_to_folder));
+    let inner = clash.inner;
+    let kind = ClashKind::of(clash.incoming, Some(clash.destination_is_directory));
     match mode {
         ConflictMode::Policy(c) => Ok(resolution_for_clash(None, *c, kind, &inner)),
         ConflictMode::Interactive {
@@ -70,16 +86,7 @@ pub(super) fn resolve_effective(
             if let Some(saved) = apply_to_all_effective(apply_to_all, kind) {
                 return Ok(saved.at(kind, &inner));
             }
-            let response = prompt_archive_conflict(
-                *events,
-                operation_id,
-                state,
-                index,
-                inner,
-                src_path,
-                archive_path,
-                is_file_to_folder,
-            )?;
+            let response = prompt_archive_conflict(*events, operation_id, state, index, clash, archive_path)?;
             apply_to_all_record(apply_to_all, kind, response.resolution, response.apply_to_all);
             Ok(answered_resolution_for_clash(response.resolution, kind, &inner))
         }
@@ -90,25 +97,31 @@ pub(super) fn resolve_effective(
 /// user's answer. Stores the oneshot sender BEFORE the emit (a responder can only
 /// answer a conflict it has observed; emit-first races the take and hangs the
 /// recv). A dropped sender (cancel) surfaces as `EditError::Cancelled`.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the prompt gathers both sides' metadata from distinct sources (local file + archive index); bundling adds ceremony"
-)]
 fn prompt_archive_conflict(
     events: &dyn OperationEventSink,
     operation_id: &str,
     state: &Arc<WriteOperationState>,
     index: &ArchiveIndex,
-    inner: &str,
-    src_path: &Path,
+    clash: ArchiveClash<'_>,
     archive_path: &Path,
-    is_file_to_folder: bool,
 ) -> Result<ConflictResolutionResponse, EditError> {
+    let ArchiveClash {
+        inner,
+        src_path,
+        incoming,
+        destination_is_directory,
+    } = clash;
+    let source_is_directory = incoming == IncomingItem::Directory;
     let node = index.get(inner);
     let dest_size = node.as_ref().and_then(|n| n.size);
     let dest_modified = node.as_ref().and_then(|n| n.modified);
     let src_meta = std::fs::metadata(src_path).ok();
-    let source_size = src_meta.as_ref().map(std::fs::Metadata::len);
+    // A folder's `len()` is its inode's own size, which says nothing about
+    // what's in it, so the prompt shows no size rather than a wrong one.
+    let source_size = src_meta
+        .as_ref()
+        .filter(|_| !source_is_directory)
+        .map(std::fs::Metadata::len);
     let source_modified = src_meta
         .as_ref()
         .and_then(|m| m.modified().ok())
@@ -136,8 +149,8 @@ fn prompt_archive_conflict(
         destination_modified: dest_modified,
         destination_is_newer,
         size_difference,
-        source_is_directory: false,
-        destination_is_directory: is_file_to_folder,
+        source_is_directory,
+        destination_is_directory,
         destination_is_look_alike: is_look_alike_clash(src_path, &archive_path.join(inner)),
     });
 

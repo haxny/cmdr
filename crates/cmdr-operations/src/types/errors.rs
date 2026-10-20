@@ -314,6 +314,16 @@ pub enum WriteOperationError {
         path: String,
         name: String,
     },
+    /// The edit would leave an entry of the zip under a FILE entry (`notes/a.txt`
+    /// beside a file `notes`), which every reader drops, so it would sit in the
+    /// zip unseen. Refused before anything is written. The copy-into planner
+    /// asks about that clash first, so this is the backstop. `path` is the zip,
+    /// `entry` the entry that would sit under `file`, both inner paths.
+    ArchiveEntryUnderFile {
+        path: String,
+        entry: String,
+        file: String,
+    },
     SymlinkLoop {
         path: String,
     },

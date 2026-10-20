@@ -2172,6 +2172,35 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
+  "errors.write.archiveEntryUnderFile.title": "Cmdr can’t put an item inside a file",
+  "@errors.write.archiveEntryUnderFile.title": {
+    "description": "Title of the error dialog when the user changes a zip (copies or moves something into it, renames, or creates something inside it) and the change would put an item inside a path that is a FILE in the zip, for example notes/a.txt where notes is a file. No zip tool can show or open such an item, so Cmdr refuses before changing anything. Rare: Cmdr normally asks about this clash first. Plain text. This is a raw errors.* string (no ICU).",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.archiveEntryUnderFile.message": "{entry} would go inside {file} in {path}, but {file} is a file there, so no zip tool could show or open it. Cmdr left the zip as it was.",
+  "@errors.write.archiveEntryUnderFile.message": {
+    "description": "Body of that dialog. Plain text, raw errors.* string (no ICU): keep {entry}, {file}, and {path} spelled exactly, and reorder them freely.",
+    "placeholders": {
+      "entry": {
+        "description": "The item that would land inside the file, as a path inside the zip, for example notes/a.txt. Inserted verbatim. Do not translate or reformat it."
+      },
+      "file": {
+        "description": "The file in the zip that it would land inside, as a path inside the zip, for example notes. Inserted verbatim. Do not translate or reformat it."
+      },
+      "path": {
+        "description": "The zip file's full path, for example /Users/david/Downloads/project.zip. Inserted verbatim. Do not translate or reformat it."
+      }
+    },
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.archiveEntryUnderFile.suggestion": "Rename that file in the zip, or put the item somewhere else, then try again.",
+  "@errors.write.archiveEntryUnderFile.suggestion": {
+    "description": "Recovery suggestion for that dialog: the user can rename the clashing file inside the zip, or choose another destination for the item. Plain text. This is a raw errors.* string (no ICU).",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "errors.write.invalidName.title": "Invalid file name",
   "errors.write.invalidName.message": "{path} has a name the destination can’t store.",
   "errors.write.invalidName.suggestion": "Rename it to something shorter and plainer, then try again. Some destinations refuse tabs or line breaks in a name, and some refuse reserved names like CON, NUL, or LPT1.",
