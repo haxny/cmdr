@@ -26,19 +26,25 @@ export type NfsExportListing =
   | { kind: 'no_nfs_v3' }
   | { kind: 'unreachable' }
 
+/** The server an ask goes to: the address's host, and the NFS port it named (`null`: ask portmap). */
+export interface NfsEndpoint {
+  host: string
+  port: number | null
+}
+
 /** The two backend asks, injected so tests can answer them out of order. */
 export interface NfsDiscoveryDeps {
-  listNfsExports: (host: string, port: number | null) => Promise<NfsExportList>
-  guessNfsIdentity: (host: string, port: number | null, exportPath: string) => Promise<GuessedNfsIdentity>
+  listNfsExports: (endpoint: NfsEndpoint) => Promise<NfsExportList>
+  guessNfsIdentity: (ask: NfsEndpoint & { exportPath: string }) => Promise<GuessedNfsIdentity>
 }
 
 /** One form's discovery state. */
 export interface NfsDiscovery {
   readonly listing: NfsExportListing
-  /** Asks `host` for its exports; an answer for an older ask is dropped. */
-  listFor: (host: string, port: number | null) => Promise<void>
+  /** Asks the server for its exports; an answer for an older ask is dropped. */
+  listFor: (endpoint: NfsEndpoint) => Promise<void>
   /** The guess for `exportPath`, or `null` when a newer ask superseded it or the bridge broke. */
-  guessFor: (host: string, port: number | null, exportPath: string) => Promise<GuessedNfsIdentity | null>
+  guessFor: (ask: NfsEndpoint & { exportPath: string }) => Promise<GuessedNfsIdentity | null>
   /** Forgets the list: the address stopped naming a server. */
   clear: () => void
 }
@@ -48,26 +54,26 @@ export function createNfsDiscovery(deps: NfsDiscoveryDeps): NfsDiscovery {
   let listAsk = 0
   let guessAsk = 0
 
-  async function listFor(host: string, port: number | null): Promise<void> {
+  async function listFor(endpoint: NfsEndpoint): Promise<void> {
     const ask = ++listAsk
     listing = { kind: 'loading' }
     let answer: NfsExportListing = { kind: 'unreachable' }
     try {
-      answer = listingOf(await deps.listNfsExports(host, port))
+      answer = listingOf(await deps.listNfsExports(endpoint))
     } catch (e) {
       // The log names the host, ❌ never more: it's what the person typed.
-      log.warn('Asking {host} for its NFS exports broke down: {error}', { host, error: e })
+      log.warn('Asking {host} for its NFS exports broke down: {error}', { host: endpoint.host, error: e })
     }
     if (ask === listAsk) listing = answer
   }
 
-  async function guessFor(host: string, port: number | null, exportPath: string): Promise<GuessedNfsIdentity | null> {
+  async function guessFor(request: NfsEndpoint & { exportPath: string }): Promise<GuessedNfsIdentity | null> {
     const ask = ++guessAsk
     try {
-      const guess = await deps.guessNfsIdentity(host, port, exportPath)
+      const guess = await deps.guessNfsIdentity(request)
       return ask === guessAsk ? guess : null
     } catch (e) {
-      log.warn('Guessing who owns an NFS export on {host} broke down: {error}', { host, error: e })
+      log.warn('Guessing who owns an NFS export on {host} broke down: {error}', { host: request.host, error: e })
       return null
     }
   }

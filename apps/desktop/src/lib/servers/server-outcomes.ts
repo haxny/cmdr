@@ -50,6 +50,10 @@ const PLAIN_REFUSALS: Record<PlainRefusalOutcome, ConnectRefusalKind> = {
   bucket_not_found: 'bucket_not_found',
   clock_skewed: 'clock_skewed',
   not_an_s3_endpoint: 'not_an_s3_endpoint',
+  export_not_found: 'export_not_found',
+  export_refused: 'export_refused',
+  reserved_port_required: 'reserved_port_required',
+  no_nfs_v3: 'no_nfs_v3',
 }
 
 /** One dial's answer, in the app's own vocabulary. */

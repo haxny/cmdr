@@ -114,6 +114,26 @@ describe('readSchemeInput: which scheme means what', () => {
     })
   })
 
+  it('reads a typed `nfs://` as an ADDRESS, ❌ never as a path to a saved export', async () => {
+    // ❗ A person's `nfs://nas.local/volume1/data` has no port and no escaped export,
+    // so it names no place: read as an app path it would mint export `/volume1`.
+    const root = 'nfs://nas.local:2049/volume1%2Fdata'
+    ipc.mock('list_saved_servers', () => [
+      {
+        ...SAVED_SERVER,
+        id: 'nfs-data',
+        protocol: 'nfs',
+        places: [{ ...SAVED_SERVER.places[0], volumeId: 'nfs-data', name: 'Data', appRoot: root }],
+      },
+    ])
+    expect(await readSchemeInput('nfs://nas.local/volume1/data/photos')).toEqual({
+      kind: 'add',
+      address: 'nfs://nas.local/volume1/data/photos',
+    })
+    // Cmdr's own spelling of a path in the saved export navigates.
+    expect(await readSchemeInput(`${root}/photos`)).toEqual({ kind: 'place', path: `${root}/photos`, label: 'Data' })
+  })
+
   it('navigates straight to a device', async () => {
     expect(await readSchemeInput('adb://ABC123/sdcard')).toEqual({
       kind: 'place',

@@ -16,12 +16,19 @@ import {
   getS3UnattendedReconnect,
   getSftpUnattendedReconnect,
   getWebdavUnattendedReconnect,
+  knownNfsPlaceOf,
   knownS3PlaceOf,
   saveS3Credentials,
   saveSftpCredentials,
   saveWebdavCredentials,
 } from '#lib/tauri-commands/index.js'
-import { formFromS3Place, formFromSftpServer, formFromWebdavServer, type ServerForm } from './server-form'
+import {
+  formFromNfsPlace,
+  formFromS3Place,
+  formFromSftpServer,
+  formFromWebdavServer,
+  type ServerForm,
+} from './server-form'
 
 /**
  * The edit form for a saved account's store row, or `null` when its store has none.
@@ -29,7 +36,8 @@ import { formFromS3Place, formFromSftpServer, formFromWebdavServer, type ServerF
  * ❗ SFTP and WebDAV are matched on the ADDRESS the listing published: the volume id
  * is minted in Rust and there is no frontend twin of that hash. An S3 place is looked
  * up by `placeId`, the volume id the backend publishes for each saved place, because
- * an account's buckets are each saved on their own. An SMB host has no store row here.
+ * an account's buckets are each saved on their own, and so is an NFS export. An SMB host has
+ * no store row here.
  */
 export async function savedEditForm(server: SavedServer, placeId: string): Promise<ServerForm | null> {
   switch (server.protocol) {
@@ -49,6 +57,10 @@ export async function savedEditForm(server: SavedServer, placeId: string): Promi
       const saved = await knownS3PlaceOf(placeId)
       return saved ? formFromS3Place(saved) : null
     }
+    case 'nfs': {
+      const saved = await knownNfsPlaceOf(placeId)
+      return saved ? formFromNfsPlace(saved) : null
+    }
     case 'smb':
       return null
   }
@@ -58,7 +70,8 @@ export async function savedEditForm(server: SavedServer, placeId: string): Promi
  * Files `secret` under the key the target's volume id is minted from, so the entry
  * this writes is the one the next dial reads: SFTP's `(host, port, username)`,
  * WebDAV's base URL and account, and for S3 the ACCOUNT (provider plus key id),
- * which every bucket under the key shares. Throws a `KeychainFailure` on refusal.
+ * which every bucket under the key shares. NFS has no secret (`AUTH_SYS` carries a uid),
+ * so there is nothing to file. Throws a `KeychainFailure` on refusal.
  */
 export async function saveTargetSecret(target: ServerTarget, secret: string): Promise<void> {
   switch (target.protocol) {
@@ -70,6 +83,8 @@ export async function saveTargetSecret(target: ServerTarget, secret: string): Pr
       return
     case 's3':
       await saveS3Credentials(target.provider, target.accessKeyId, secret)
+      return
+    case 'nfs':
       return
   }
 }
@@ -94,7 +109,9 @@ export async function unattendedReconnectWarning(
       return (await getWebdavUnattendedReconnect(id)) === 'no_stored_secret' ? warn : null
     case 's3':
       return (await getS3UnattendedReconnect(id)) === 'no_stored_secret' ? warn : null
+    // NFS stores no secret, so an unattended reconnect never waits on one.
     case 'smb':
+    case 'nfs':
       return null
   }
 }

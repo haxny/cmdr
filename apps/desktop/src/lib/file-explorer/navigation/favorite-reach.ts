@@ -11,7 +11,7 @@
 import type { FavoriteReach, FavoriteTarget } from '#lib/ipc/bindings.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import type { IconName } from '#lib/ui/icons/icon-map.js'
-import { volumeScheme } from '#lib/volume-scheme.js'
+import { volumeScheme, type VolumeScheme } from '#lib/volume-scheme.js'
 import type { VolumeInfo } from '../types'
 
 /** A reach the pane can't follow: a pick leaves the pane where it is and says why. */
@@ -113,22 +113,22 @@ export function favoriteIsDimmed(favorite: VolumeInfo): boolean {
  */
 export function favoriteFallbackGlyph(target: FavoriteTarget | null | undefined): IconName {
   if (!target?.volumeId) return 'folder'
-  const scheme = volumeScheme(target.volumeId)
-  switch (scheme) {
-    case 'smb':
-    case 'sftp':
-    case 'webdav':
-    case 's3':
-      return 'server'
-    case 'mtp':
-    case 'adb':
-      return 'smartphone'
-    case 'root':
-    case 'local':
-    case 'path':
-    case 'cloud':
-    case 'favorite':
-    case 'unknown':
-      return 'folder'
-  }
+  return FALLBACK_GLYPHS[volumeScheme(target.volumeId)]
+}
+
+/** Each scheme's glyph. A `Record`, so a new scheme can't compile without one. */
+const FALLBACK_GLYPHS: Record<VolumeScheme, IconName> = {
+  smb: 'server',
+  sftp: 'server',
+  webdav: 'server',
+  s3: 'server',
+  nfs: 'server',
+  mtp: 'smartphone',
+  adb: 'smartphone',
+  root: 'folder',
+  local: 'folder',
+  path: 'folder',
+  cloud: 'folder',
+  favorite: 'folder',
+  unknown: 'folder',
 }

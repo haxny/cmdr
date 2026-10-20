@@ -209,6 +209,60 @@ describe('parseServerAddress: the SMB shapes', () => {
   })
 })
 
+/**
+ * NFS: the server, an optional port, and a path that is the export, or an export
+ * and a folder under it. ❗ Where the export ends and the folder begins is
+ * unknowable from text (QNAP nests `/share` and `/share/Public`), so the path stays
+ * whole, and the backend splits it against the server's own export list.
+ */
+describe('parseServerAddress: the NFS shapes', () => {
+  it('reads an `nfs://` URL, export and folder as one path, with no port when it names none', () => {
+    expect(parseServerAddress('nfs://nas.local/volume1/data/photos')).toEqual({
+      kind: 'parsed',
+      protocol: 'nfs',
+      host: 'nas.local',
+      path: '/volume1/data/photos',
+    })
+  })
+
+  it('keeps a port the URL named: it is the NFS port, and asking portmap is skipped', () => {
+    expect(parseServerAddress('nfs://nas.local:15481/insecure')).toMatchObject({
+      protocol: 'nfs',
+      port: 15481,
+      path: '/insecure',
+    })
+  })
+
+  it('reads a bare `nfs://host`, an export still to pick', () => {
+    expect(parseServerAddress('nfs://NAS.local/')).toEqual({ kind: 'parsed', protocol: 'nfs', host: 'nas.local' })
+  })
+
+  it('reads the classic `host:/export/path` as a host and a path, naming no protocol', () => {
+    // ❗ Not evidence of NFS: `host:/path` is scp's spelling too, and an SFTP root
+    // typed that way must keep landing in the root folder.
+    expect(parseServerAddress('nas.local:/volume1/data')).toEqual({
+      kind: 'parsed',
+      host: 'nas.local',
+      path: '/volume1/data',
+    })
+  })
+
+  it('splits the classic spelling at the FIRST `:/`, so a folder may hold a colon', () => {
+    expect(parseServerAddress('nas.local:/share/10:30 meeting')).toMatchObject({
+      host: 'nas.local',
+      path: '/share/10:30 meeting',
+    })
+  })
+
+  it.each([
+    ['[fe80::1]:/share', 'an IPv6 literal, refused as for every protocol'],
+    ['nfs://[fe80::1]/share', 'and in a URL'],
+    ['nfs://nas:0/share', 'port zero'],
+  ])('refuses %j (%s)', (input) => {
+    expect(parseServerAddress(input)).toEqual({ kind: 'unparsed' })
+  })
+})
+
 describe('parseServerAddress: folding and refusing', () => {
   it('folds the host to lowercase and leaves the account alone', () => {
     // The same fold `cmdr_fs::volume::ids` performs: DNS is case-insensitive, a
@@ -282,6 +336,8 @@ describe('addressLooksLike', () => {
     ['nas.local:139', 'webdav', 'smb', "NetBIOS SMB's port"],
     ['nas.local:443', 'sftp', 'webdav', "HTTPS's port"],
     ['nas.local:80', 'smb', 'webdav', "HTTP's port"],
+    ['nfs://nas.local/share', 'smb', 'nfs', 'an nfs URL'],
+    ['nas.local:2049', 'smb', 'nfs', "NFS's port"],
   ] as const)('with %j and %s selected, says it looks like %s (%s)', (input, selected, looksLike, _why) => {
     expect(addressLooksLike(input, selected)).toBe(looksLike)
   })
@@ -298,6 +354,8 @@ describe('addressLooksLike', () => {
     ['', 'smb', 'nothing typed'],
     ['ada@', 'sftp', 'a half-typed address, which is the normal state of a field being typed into'],
     ['ftp://nas.local', 'smb', 'a protocol Cmdr does not speak, which Connect refuses on its own'],
+    ['nas.local:/share', 'sftp', 'the classic NFS spelling, which is scp spelling too'],
+    ['nfs://nas.local/share', 'nfs', 'an nfs URL with NFS selected'],
   ] as const)('says nothing about %j with %s selected (%s)', (input, selected, _why) => {
     expect(addressLooksLike(input, selected)).toBeNull()
   })

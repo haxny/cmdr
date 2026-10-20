@@ -31,9 +31,9 @@ describe('createNfsDiscovery: the export list', () => {
       listNfsExports: vi.fn(() => Promise.resolve(answers.shift() ?? UNREACHABLE)),
       guessNfsIdentity: vi.fn(),
     })
-    await discovery.listFor('nas.local', null)
+    await discovery.listFor({ host: 'nas.local', port: null })
     expect(discovery.listing).toEqual({ kind: 'listed', exports: ['/Public', '/volume1/data'] })
-    await discovery.listFor('nas.local', null)
+    await discovery.listFor({ host: 'nas.local', port: null })
     expect(discovery.listing).toEqual({ kind: 'unreachable' })
   })
 
@@ -43,9 +43,9 @@ describe('createNfsDiscovery: the export list', () => {
       listNfsExports: vi.fn(() => Promise.resolve(answers.shift() ?? UNREACHABLE)),
       guessNfsIdentity: vi.fn(),
     })
-    await discovery.listFor('nas', 15481)
+    await discovery.listFor({ host: 'nas', port: 15481 })
     expect(discovery.listing).toEqual({ kind: 'refused' })
-    await discovery.listFor('nas', 15481)
+    await discovery.listFor({ host: 'nas', port: 15481 })
     expect(discovery.listing).toEqual({ kind: 'no_nfs_v3' })
   })
 
@@ -57,9 +57,9 @@ describe('createNfsDiscovery: the export list', () => {
       listNfsExports: vi.fn(() => queue.shift() ?? Promise.resolve(UNREACHABLE)),
       guessNfsIdentity: vi.fn(),
     })
-    void discovery.listFor('nas', null)
+    void discovery.listFor({ host: 'nas', port: null })
     expect(discovery.listing).toEqual({ kind: 'loading' })
-    void discovery.listFor('nas.local', null)
+    void discovery.listFor({ host: 'nas.local', port: null })
     second.resolve({ outcome: 'listed', exports: ['/right'] })
     await settle()
     first.resolve({ outcome: 'listed', exports: ['/stale'] })
@@ -72,7 +72,7 @@ describe('createNfsDiscovery: the export list', () => {
       listNfsExports: vi.fn(() => Promise.reject(new Error('bridge down'))),
       guessNfsIdentity: vi.fn(),
     })
-    await discovery.listFor('nas', null)
+    await discovery.listFor({ host: 'nas', port: null })
     expect(discovery.listing).toEqual({ kind: 'unreachable' })
     discovery.clear()
     expect(discovery.listing).toEqual({ kind: 'idle' })
@@ -85,8 +85,8 @@ describe('createNfsDiscovery: the identity guess', () => {
   it('answers the guess for the export asked about', async () => {
     const guessNfsIdentity = vi.fn(() => Promise.resolve(guess))
     const discovery = createNfsDiscovery({ listNfsExports: vi.fn(), guessNfsIdentity })
-    expect(await discovery.guessFor('nas', null, '/Public')).toEqual(guess)
-    expect(guessNfsIdentity).toHaveBeenCalledWith('nas', null, '/Public')
+    expect(await discovery.guessFor({ host: 'nas', port: null, exportPath: '/Public' })).toEqual(guess)
+    expect(guessNfsIdentity).toHaveBeenCalledWith({ host: 'nas', port: null, exportPath: '/Public' })
   })
 
   it('answers nothing for an export typed past, or when the bridge breaks', async () => {
@@ -96,10 +96,10 @@ describe('createNfsDiscovery: the identity guess', () => {
       listNfsExports: vi.fn(),
       guessNfsIdentity: vi.fn(() => queue.shift() ?? Promise.reject(new Error('bridge down'))),
     })
-    const stale = discovery.guessFor('nas', null, '/Pub')
-    expect(await discovery.guessFor('nas', null, '/Public')).toEqual(guess)
+    const stale = discovery.guessFor({ host: 'nas', port: null, exportPath: '/Pub' })
+    expect(await discovery.guessFor({ host: 'nas', port: null, exportPath: '/Public' })).toEqual(guess)
     first.resolve({ uid: 1, gid: 1, source: 'root_owner' })
     expect(await stale).toBeNull()
-    expect(await discovery.guessFor('nas', null, '/Public')).toBeNull()
+    expect(await discovery.guessFor({ host: 'nas', port: null, exportPath: '/Public' })).toBeNull()
   })
 })

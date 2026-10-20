@@ -51,13 +51,14 @@ const FS_LABELS: Record<string, string> = {
 
 /**
  * `fsType` → protocol name, for a row in the Network group. The two SMB
- * spellings are the OS's (macOS `smbfs`, Linux `cifs`); `sftp`, `webdav`, and `s3` are
+ * spellings are the OS's (macOS `smbfs`, Linux `cifs`); `sftp`, `webdav`, `s3`, and `nfs` are
  * what the servers listing arm publishes (`src-tauri/src/server_volumes.rs`).
  */
 const PROTOCOL_LABELS: Record<string, string> = {
   sftp: 'SFTP',
   webdav: 'WebDAV',
   s3: 'S3',
+  nfs: 'NFS',
   smbfs: 'SMB',
   cifs: 'SMB',
 }

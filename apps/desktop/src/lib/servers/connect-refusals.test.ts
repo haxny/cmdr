@@ -41,6 +41,10 @@ const KINDS: ConnectRefusalKind[] = [
   'not_an_s3_endpoint',
   's3_field_malformed',
   'endpoint_malformed',
+  'export_not_found',
+  'export_refused',
+  'reserved_port_required',
+  'no_nfs_v3',
 ]
 
 const subject = { host: 'nas.local', username: 'ada' }
@@ -178,6 +182,25 @@ describe('S3 refusals', () => {
     expect(refusalField('endpoint_malformed')).toBe('address')
     // A Mac whose clock is off is nothing any field fixes.
     expect(refusalField('clock_skewed')).toBe('form')
+  })
+})
+
+describe('NFS refusals', () => {
+  it('puts each export refusal under the export, where picking another one fixes it', () => {
+    expect(refusalField('export_not_found')).toBe('export')
+    expect(refusalField('export_refused')).toBe('export')
+    // ❗ The fix is the export's `insecure` option (or another export), ❌ not the address.
+    expect(refusalField('reserved_port_required')).toBe('export')
+  })
+
+  it('puts a server with no NFSv3 under the address: no export on it can help', () => {
+    expect(refusalField('no_nfs_v3')).toBe('address')
+  })
+
+  it('names the server each one is about', () => {
+    for (const kind of ['export_not_found', 'export_refused', 'reserved_port_required', 'no_nfs_v3'] as const) {
+      expect(wordConnectRefusal(kind, subject), kind).toContain('nas.local')
+    }
   })
 })
 

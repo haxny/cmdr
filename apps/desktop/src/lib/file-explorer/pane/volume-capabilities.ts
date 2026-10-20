@@ -48,7 +48,7 @@
  * ## One classifier, not two
  *
  * `volume-tint.svelte.ts::volumeKindFor` classifies into
- * `'local' | 'smb' | 'sftp' | 'webdav' | 's3' | 'mtp' | 'adb' | 'other'` for tinting, collapsing the two virtual
+ * `'local' | 'smb' | 'sftp' | 'webdav' | 's3' | 'nfs' | 'mtp' | 'adb' | 'other'` for tinting, collapsing the two virtual
  * kinds + favorites into the untinted `'other'`. `volumeKindOf` here is the
  * SUPERSET: it adds the two virtual kinds as first-class, then DELEGATES to
  * `volumeKindFor` for the real kinds, overriding only its `'other'` fall-through
@@ -95,6 +95,7 @@ export type VolumeKind =
   | 'sftp' // an SFTP server (real backend listing, sftp:// scheme, no system clipboard, no terminal)
   | 'webdav' // a WebDAV server (real backend listing, webdav:// scheme, no system clipboard, no terminal)
   | 's3' // an S3 bucket or account root (real backend listing, s3:// scheme, no system clipboard, no terminal)
+  | 'nfs' // an NFS export Cmdr dials itself (real backend listing, nfs:// scheme, no system clipboard, no terminal)
   | 'mtp' // connected MTP storage (real backend listing, mtp:// scheme, no system clipboard)
   | 'adb' // an Android device over ADB (real backend listing, adb:// scheme, no system clipboard)
   | 'network' // the synthetic SMB browser virtual volume (host/share list, smb:// namespace)
@@ -256,6 +257,20 @@ const CAPABILITY_TABLE: Readonly<Record<VolumeKind, VolumeCapabilities>> = Objec
     canShareLinks: true,
     renamesCanCopy: true,
   }),
+  nfs: Object.freeze({
+    // The `webdav` row: a session-backed listing with no OS mount behind it. ❗ Not an
+    // NFS share macOS mounted itself, which is a local volume at `/Volumes/…`.
+    kind: 'nfs',
+    hasBackendListing: true,
+    canWrite: true,
+    canBeSource: true,
+    hasParentRow: true,
+    syncsToMcp: true,
+    canBeIndexed: false,
+    pollsForDeletedFolder: false,
+    canShareLinks: false,
+    renamesCanCopy: false,
+  }),
   mtp: Object.freeze({
     kind: 'mtp',
     hasBackendListing: true,
@@ -410,8 +425,8 @@ export function volumeKindOf(
   if (volumeId === 'network') return 'network'
   if (volumeId === 'search-results') return 'search-results'
   const tintKind = volumeKindFor(volumeId, fsType, category)
-  // `volumeKindFor` returns 'local' | 'smb' | 'sftp' | 'webdav' | 's3' | 'mtp' |
-  // 'adb' | 'other'. The first seven are real kinds in our union; 'other' (favorites +
+  // `volumeKindFor` returns 'local' | 'smb' | 'sftp' | 'webdav' | 's3' | 'nfs' | 'mtp' |
+  // 'adb' | 'other'. The first eight are real kinds in our union; 'other' (favorites +
   // real-but-unclassified) defaults to 'local' — the only sane capability set for
   // a listable volume.
   return tintKind === 'other' ? 'local' : tintKind
@@ -448,7 +463,7 @@ export function paneRowsAreOsVisible(kind: VolumeKind): boolean {
  * share, server, or phone stays listed while that place is offline, and a pick
  * dials it or says why it can't (`navigation/open-favorite.ts`).
  *
- * `local`, `smb`, `sftp`, `webdav`, `s3`, `mtp`, `adb`: yes. The rest no:
+ * `local`, `smb`, `sftp`, `webdav`, `s3`, `nfs`, `mtp`, `adb`: yes. The rest no:
  *
  * - `search-results` is a per-session snapshot id: dead the moment the app
  *   restarts, and the one kind that can't point at a folder at all.
@@ -474,6 +489,7 @@ export function kindCanBeFavorited(kind: VolumeKind): boolean {
     case 'sftp':
     case 'webdav':
     case 's3':
+    case 'nfs':
     case 'mtp':
     case 'adb':
       return true

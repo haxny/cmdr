@@ -161,6 +161,12 @@ export type SignInSheetRequest =
        * what they had, and the sheet re-reads it the same way a keystroke does.
        */
       prefill?: string
+      /**
+       * The protocol a door that's about one protocol opens on (the hub's NFS hint), with
+       * nothing typed. ❗ The door's choice, made by the person clicking it, like a prefill's
+       * scheme; typing still never moves the toggle.
+       */
+      protocol?: ServerProtocol
     }
   /** Answer a server that is asking. The endpoint is a read-only header. */
   | {

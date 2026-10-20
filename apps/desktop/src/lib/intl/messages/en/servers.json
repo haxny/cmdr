@@ -155,6 +155,14 @@
   "@servers.hub.discoveryOffLink": {
     "description": "Link beside the discovery-off line; it opens Settings at the switch that turns local network discovery back on. VERB phrase, imperative. \"Settings\" is the app’s own Settings window; use the word your language’s macOS uses for it."
   },
+  "servers.hub.nfsHint": "NFS servers don’t announce themselves, so they don’t show up here.",
+  "@servers.hub.nfsHint": {
+    "description": "One muted line at the bottom of the servers hub: NFS servers can’t be found automatically on the network, unlike SMB ones. Followed by a link (servers.hub.nfsHintLink) that opens the Add server form on NFS. “NFS” is a protocol name; keep it as-is."
+  },
+  "servers.hub.nfsHintLink": "Add one with its address",
+  "@servers.hub.nfsHintLink": {
+    "description": "Link after servers.hub.nfsHint in the servers hub. Opens the Add server form with NFS already selected, where the user types the NFS server’s address."
+  },
   "servers.hub.emptyTitle": "No servers yet",
   "@servers.hub.emptyTitle": {
     "description": "Heading of the empty state in the servers hub, when the user has saved none and Cmdr found none nearby. Short and neutral.",
@@ -391,6 +399,34 @@
   "@servers.refusal.notAnS3Endpoint": {
     "description": "Under the endpoint field when the address answers as a web server but not as S3-compatible storage. “S3” is a protocol name; don’t translate it."
   },
+  "servers.refusal.exportNotFound": "{host} has no export at that path. Pick one from the list, or check the spelling.",
+  "@servers.refusal.exportNotFound": {
+    "description": "Under the Export field when the NFS server has no export (shared folder) at the path the user picked or typed. “Export” is the NFS term for a folder a server shares; use the word your language’s NAS apps use.",
+    "placeholders": {
+      "host": "the NFS server’s hostname or address, like \"nas.local\""
+    }
+  },
+  "servers.refusal.exportRefused": "{host} doesn’t let this Mac open that export. Check which computers the export allows in the server’s NFS settings.",
+  "@servers.refusal.exportRefused": {
+    "description": "Under the Export field when the NFS server refused this Mac the export: its list of allowed computers or its rules leave this Mac out. The fix is on the server, in its NFS sharing settings.",
+    "placeholders": {
+      "host": "the NFS server’s hostname or address, like \"nas.local\""
+    }
+  },
+  "servers.refusal.reservedPortRequired": "{host} only accepts connections from a privileged port, which Cmdr can’t open here. Turn on the export’s “insecure” option on the server (some NAS apps call it “Allow connections from non-privileged ports”), then try again.",
+  "@servers.refusal.reservedPortRequired": {
+    "description": "Under the Export field when the NFS export only accepts requests from a privileged network port (below 1024) and Cmdr couldn’t use one. “insecure” is the literal name of the NFS export option, keep it in English inside the quotes; the second quoted name is how some NAS apps label the same switch, translate it the way those apps do. “Cmdr” is the product name.",
+    "placeholders": {
+      "host": "the NFS server’s hostname or address, like \"nas.local\""
+    }
+  },
+  "servers.refusal.noNfsV3": "{host} doesn’t offer NFS version 3, the version Cmdr speaks.",
+  "@servers.refusal.noNfsV3": {
+    "description": "Shown when the server answers but doesn’t speak NFS version 3, the only NFS version Cmdr supports: under the address in the Add server form, and under the Export field while the form asks the server for its exports. “NFS” is a protocol name; keep it as-is. “Cmdr” is the product name.",
+    "placeholders": {
+      "host": "the NFS server’s hostname or address, like \"nas.local\""
+    }
+  },
   "servers.refusal.s3FieldMalformed": "Use only lowercase letters, digits, and dashes here.",
   "@servers.refusal.s3FieldMalformed": {
     "description": "Under the Region, Location, or Account ID field of the S3 form, before anything was sent, when the typed value holds other characters. Short and instructive."
@@ -558,6 +594,10 @@
     "description": "One line under the address field while WebDAV is the selected protocol, telling the user what they can type or paste. Keep the example URL as-is.",
     "screenshot": "server-sign-in-add-prefilled.png"
   },
+  "servers.sheet.addressHelpNfs": "A hostname, or an address like nfs://nas.local/share or nas.local:/share.",
+  "@servers.sheet.addressHelpNfs": {
+    "description": "One line under the address field while NFS is the selected protocol, telling the user what they can type or paste. Keep the two example addresses as-is."
+  },
   "servers.sheet.addressLooksLikeSmb": "This looks like an SMB address. Pick SMB above if that’s what you meant.",
   "@servers.sheet.addressLooksLikeSmb": {
     "description": "Warning under the address field in the \"Add server\" form, shown while the user types an address that looks like it's for SMB (for example it starts with smb://) but a different protocol is selected in the SMB / SFTP / WebDAV picker right above the field. Nothing changes on its own; the user decides. “SMB” is a protocol name; keep it as-is. “Pick” matches the picker's buttons, which are above this line."
@@ -570,6 +610,10 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "description": "Warning under the address field in the \"Add server\" form, shown while the user types an address that looks like it's for WebDAV (for example it starts with https://) but a different protocol is selected in the SMB / SFTP / WebDAV picker right above the field. Nothing changes on its own; the user decides. “WebDAV” is a protocol name; keep it as-is."
   },
+  "servers.sheet.addressLooksLikeNfs": "This looks like an NFS address. Pick NFS above if that’s what you meant.",
+  "@servers.sheet.addressLooksLikeNfs": {
+    "description": "Warning under the address field in the \"Add server\" form, shown while the user types an address that looks like it's for NFS (it starts with nfs://, or ends in port 2049) but a different protocol is selected in the protocol picker right above the field. Nothing changes on its own; the user decides. “NFS” is a protocol name; keep it as-is."
+  },
   "servers.sheet.webdavCleartext": "This address isn’t encrypted, so anyone on your network can read the password Cmdr sends. Use an https address if your server has one.",
   "@servers.sheet.webdavCleartext": {
     "description": "Warning shown in the server sheet for a WebDAV server whose address starts with http:// (not https://): under the address field while adding or editing the server, and under the server's address when signing back in to it. Plain http sends the password readable to anyone on the same network (shared Wi-Fi, for example) with every request. Nothing is blocked; the user decides. Keep \"https\" as-is: it's the part of the address to change. Avoid the words \"error\" and \"failed\"."
@@ -577,6 +621,75 @@
   "servers.sheet.accountLocked": "The protocol and the account are what name this server. To use another account, add it as a new server.",
   "@servers.sheet.accountLocked": {
     "description": "Under the greyed-out Username field when the user is EDITING a saved SFTP or WebDAV server, explaining why the protocol (the SMB / SFTP / WebDAV / S3 picker) and the account can't be changed there, and what to do instead. The address above them CAN be changed, so don't say it can't. “Add” refers to adding a server from the Servers list."
+  },
+  "servers.sheet.identityLockedNfs": "The server and the export are what name this place. To open another export, add it as a new server.",
+  "@servers.sheet.identityLockedNfs": {
+    "description": "Under the greyed-out Export field when the user is EDITING a saved NFS place, explaining why the protocol, the address, and the export can't be changed there, and what to do instead. “Export” is the NFS term for a folder a server shares. “Add” refers to adding a server from the Servers list."
+  },
+  "servers.sheet.nfsExport": "Export",
+  "@servers.sheet.nfsExport": {
+    "description": "Label of the field in the NFS add form where the user picks or types the export: the folder the NFS server shares. Use the word your language’s NAS apps use for an NFS export. One word, NOUN."
+  },
+  "servers.sheet.nfsExportHelp": "Pick one from the list, or type its path. A folder inside an export works too.",
+  "@servers.sheet.nfsExportHelp": {
+    "description": "One line under the Export field in the NFS add form. The list fills in once the server answers; the user can also type an export’s path, or the path of a folder inside one, which Cmdr then opens."
+  },
+  "servers.sheet.nfsExportsEmptyList": "No exports listed",
+  "@servers.sheet.nfsExportsEmptyList": {
+    "description": "Shown inside the Export field’s open dropdown in the NFS add form when the server listed no exports, or hasn’t been asked yet. A short phrase."
+  },
+  "servers.sheet.nfsExportsNone": "{host} lists no exports for this Mac. Type the export’s path if you know it.",
+  "@servers.sheet.nfsExportsNone": {
+    "description": "Under the Export field in the NFS add form when the server answered but listed no exports (shared folders) this Mac may use. Typing one by hand can still work.",
+    "placeholders": {
+      "host": "the NFS server’s hostname or address, like \"nas.local\""
+    }
+  },
+  "servers.sheet.nfsExportsRefused": "{host} doesn’t list its exports. Type the export’s path.",
+  "@servers.sheet.nfsExportsRefused": {
+    "description": "Under the Export field in the NFS add form when the server answered but won’t say which exports (shared folders) it has. Typing one by hand can still work.",
+    "placeholders": {
+      "host": "the NFS server’s hostname or address, like \"nas.local\""
+    }
+  },
+  "servers.sheet.nfsExportsUnreachable": "Cmdr couldn’t reach {host} to list its exports. You can still type one.",
+  "@servers.sheet.nfsExportsUnreachable": {
+    "description": "Under the Export field in the NFS add form when nothing answered while Cmdr asked the server for its exports (shared folders). “Cmdr” is the product name.",
+    "placeholders": {
+      "host": "the NFS server’s hostname or address, like \"nas.local\""
+    }
+  },
+  "servers.sheet.nfsUid": "Act as user ID",
+  "@servers.sheet.nfsUid": {
+    "description": "Label of a number field in the NFS add form: the numeric user ID (a Unix uid, like 1000) Cmdr uses for every request to the server, which decides what the user may open there. Keep it short; it sits beside the Group ID field."
+  },
+  "servers.sheet.nfsGid": "Group ID",
+  "@servers.sheet.nfsGid": {
+    "description": "Label of a number field in the NFS add form: the numeric group ID (a Unix gid, like 100) Cmdr uses for every request to the server. Keep it short; it sits beside the user ID field."
+  },
+  "servers.sheet.nfsIdentityHelp": "The server decides what you can open by these numbers. NFS doesn’t ask for a password.",
+  "@servers.sheet.nfsIdentityHelp": {
+    "description": "One line under the user ID and group ID fields in the NFS add form, before Cmdr has guessed them or after the user typed their own. “NFS” is a protocol name; keep it as-is."
+  },
+  "servers.sheet.nfsIdentityMostCommonOwner": "Guessed from who owns the files in this export.",
+  "@servers.sheet.nfsIdentityMostCommonOwner": {
+    "description": "One line under the user ID and group ID fields in the NFS add form, when Cmdr filled them in with the IDs that own most of the files at the top of the chosen export."
+  },
+  "servers.sheet.nfsIdentityRootOwner": "Guessed from who owns this export’s folder.",
+  "@servers.sheet.nfsIdentityRootOwner": {
+    "description": "One line under the user ID and group ID fields in the NFS add form, when Cmdr filled them in with the IDs that own the export’s own top folder."
+  },
+  "servers.sheet.nfsIdentityThisMac": "Your IDs on this Mac. Change them if the files on the server belong to someone else.",
+  "@servers.sheet.nfsIdentityThisMac": {
+    "description": "One line under the user ID and group ID fields in the NFS add form, when Cmdr filled them in with the user’s own IDs on this Mac because it couldn’t tell who owns the files on the server."
+  },
+  "servers.sheet.nfsUidZeroWarning": "Most servers treat user ID 0 as nobody.",
+  "@servers.sheet.nfsUidZeroWarning": {
+    "description": "Warning under the user ID field in the NFS add form when the user typed 0 (the administrator’s ID): most NFS servers map it to an account with no rights. It doesn’t block anything."
+  },
+  "servers.sheet.nfsStartFolderHelp": "Where the export opens. Leave it empty to open the export itself.",
+  "@servers.sheet.nfsStartFolderHelp": {
+    "description": "One line under the Start folder field for an NFS server: a folder inside the export to open, and leaving it empty opens the export’s top folder. “Export” is the NFS term for a folder a server shares."
   },
   "servers.sheet.s3EndpointMoveHelp": "Did the server move? Type its new endpoint. Every bucket under this key comes along, with its favorites, open tabs, and saved secret access key.",
   "@servers.sheet.s3EndpointMoveHelp": {
@@ -652,6 +765,11 @@
   "servers.sheet.protocolS3": "S3",
   "@servers.sheet.protocolS3": {
     "description": "One option of the protocol picker in the Add server sheet: S3-compatible object storage (Amazon S3, Cloudflare R2, Backblaze B2, and others). A protocol name; keep it as-is.",
+    "screenshot": "server-sign-in-add.png"
+  },
+  "servers.sheet.protocolNfs": "NFS",
+  "@servers.sheet.protocolNfs": {
+    "description": "One option of the protocol picker in the Add server sheet: NFS, the file-sharing protocol Linux servers and NAS boxes speak. A protocol name; keep it as-is.",
     "screenshot": "server-sign-in-add.png"
   },
   "servers.sheet.s3Provider": "Provider",

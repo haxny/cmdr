@@ -9,6 +9,7 @@ describe('volumeScheme', () => {
     expect(volumeScheme('sftp-box-david-0123456789abcdef')).toBe('sftp')
     expect(volumeScheme('webdav-dav-host-0123456789abcdef')).toBe('webdav')
     expect(volumeScheme('s3-bucket-0123456789abcdef')).toBe('s3')
+    expect(volumeScheme('nfs-public-naspolya-0123456789abcdef')).toBe('nfs')
     expect(volumeScheme('adb-pixel-7-a1b2c3d')).toBe('adb')
     expect(volumeScheme('cloud-dropbox')).toBe('cloud')
     expect(volumeScheme('fav-42')).toBe('favorite')

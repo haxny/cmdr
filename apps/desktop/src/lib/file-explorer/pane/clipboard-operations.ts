@@ -65,7 +65,7 @@ type ClipboardRefusalFamily = 'device' | 'server'
 function schemePathClipboardFamily(volumeId: string): ClipboardRefusalFamily | null {
   const kind = capabilitiesFor(volumeId).kind
   if (kind === 'mtp' || kind === 'adb') return 'device'
-  if (kind === 'sftp' || kind === 'webdav' || kind === 's3') return 'server'
+  if (kind === 'sftp' || kind === 'webdav' || kind === 's3' || kind === 'nfs') return 'server'
   return null
 }
 

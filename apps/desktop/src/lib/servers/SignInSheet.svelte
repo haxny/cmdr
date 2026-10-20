@@ -169,6 +169,7 @@
     let startFolderInput = $state<HTMLInputElement | undefined>()
     let regionInput = $state<HTMLInputElement | undefined>()
     let bucketInput = $state<HTMLInputElement | undefined>()
+    let exportInput = $state<HTMLInputElement | undefined>()
 
     const isEdit = $derived(request.mode === 'edit')
     /** `nothing` never opens the sheet, so a shape that reaches here always asks something. */
@@ -206,16 +207,20 @@
     const identityHintKey = $derived.by((): MessageKey => {
         if (s3EditScope === 'account') return 'servers.sheet.identityLockedS3Account'
         if (s3EditScope === 'place') return 'servers.sheet.identityLockedS3'
+        if (editedServer?.protocol === 'nfs') return 'servers.sheet.identityLockedNfs'
         return 'servers.sheet.accountLocked'
     })
     /**
      * Whether the address takes typing. ❗ In edit mode too: a server that MOVED keeps its
      * favorites, tabs, and password, because Save moves it (`src-tauri/src/server_move.rs`;
      * an SMB host's shares follow at their first mount there, `server_move_smb.rs`). An S3
-     * preset's endpoint stays locked: another region is other storage.
+     * preset's endpoint stays locked: another region is other storage, and so does an NFS
+     * export's server, which no move carries yet.
      */
     const addressEditable = $derived(
-        !isEdit || editedServer?.protocol !== 's3' || (s3EditScope === 'account' && form.s3.provider === 'other'),
+        !isEdit ||
+            (editedServer?.protocol !== 's3' && editedServer?.protocol !== 'nfs') ||
+            (s3EditScope === 'account' && form.s3.provider === 'other'),
     )
     /** The line under an edit's address: what typing a new one moves along, in each protocol's terms. */
     const addressMoveHelpKey = $derived.by((): MessageKey => {
@@ -331,6 +336,7 @@
             if (looksLike === 'smb') return tString('servers.sheet.addressLooksLikeSmb')
             if (looksLike === 'sftp') return tString('servers.sheet.addressLooksLikeSftp')
             if (looksLike === 'webdav') return tString('servers.sheet.addressLooksLikeWebdav')
+            if (looksLike === 'nfs') return tString('servers.sheet.addressLooksLikeNfs')
         }
         if (request.mode !== 'sign-in' && form.protocol === 'webdav' && webdavAddressIsCleartext(form.address)) {
             return tString('servers.sheet.webdavCleartext')
@@ -390,6 +396,8 @@
             const required = s3RequiredFieldOf(form.s3)
             return form.username.trim() !== '' && (required === null || required.trim() !== '')
         }
+        // NFS can't dial without the export and both ids; the target says when it has them.
+        if (form.protocol === 'nfs') return serverTargetFrom(form) !== null
         return form.address.trim() !== ''
     })
 
@@ -418,6 +426,7 @@
             // A URL handed over from Go to path or ⌘K opens on the protocol its
             // scheme spells out: the person already said it (`formFromPrefill`).
             if (request.prefill !== undefined) form = formFromPrefill(request.prefill)
+            else if (request.protocol !== undefined) form = { ...form, protocol: request.protocol }
             void listSavedServers()
                 .then((servers) => {
                     savedServers = servers
@@ -661,13 +670,18 @@
     }
 
     function focusField(where: RefusalField) {
-        if (where === 'secret') secretInput?.focus()
-        else if (where === 'address') addressInput?.focus()
-        else if (where === 'root') rootInput?.focus()
-        else if (where === 'start_folder') startFolderInput?.focus()
-        // A preset's region IS the input that makes its endpoint; only Other has a separate one.
-        else if (where === 'region') (regionInput ?? addressInput)?.focus()
-        else if (where === 'bucket') bucketInput?.focus()
+        const inputs: Record<RefusalField, HTMLInputElement | undefined> = {
+            secret: secretInput,
+            address: addressInput,
+            root: rootInput,
+            start_folder: startFolderInput,
+            // A preset's region IS the input that makes its endpoint; only Other has a separate one.
+            region: regionInput ?? addressInput,
+            bucket: bucketInput,
+            export: exportInput,
+            form: undefined,
+        }
+        inputs[where]?.focus()
     }
 
     /**
@@ -985,6 +999,8 @@
                 addressRefusal={refusalWhere === 'address' ? refusalText : undefined}
                 regionRefusal={refusalWhere === 'region' ? refusalText : undefined}
                 bucketRefusal={refusalWhere === 'bucket' ? refusalText : undefined}
+                exportRefusal={refusalWhere === 'export' ? refusalText : undefined}
+                bind:exportInput
                 suggestedRegion={refusalRegion ?? undefined}
                 onUseRegion={offersUseRegion
                     ? () => {

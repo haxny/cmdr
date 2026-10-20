@@ -239,7 +239,8 @@ export function createPlaceConnect(deps: PlaceConnectDeps): PlaceConnect {
       kind: 'refused',
       refusal: wordPaneRefusal(refusal, {
         host: parsed?.host ?? info.name,
-        username: parsed?.username ?? info.name,
+        // An NFS place has no account in its path: AUTH_SYS carries a uid, a setting.
+        username: (parsed?.protocol === 'nfs' ? undefined : parsed?.username) ?? info.name,
         name: info.name,
         protocol: parsed?.protocol,
         region,
@@ -285,6 +286,7 @@ function walksOnConnect(volumeId: string): boolean {
     case 'sftp':
     case 'webdav':
     case 's3':
+    case 'nfs':
       return true
     case 'root':
     case 'local':

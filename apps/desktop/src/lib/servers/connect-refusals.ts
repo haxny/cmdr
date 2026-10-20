@@ -94,6 +94,17 @@ export type ConnectRefusalKind =
   | 'clock_skewed'
   /** S3: the address answers, but not as S3. */
   | 'not_an_s3_endpoint'
+  /** NFS: the server has no export by that path. */
+  | 'export_not_found'
+  /** NFS: the server refused this Mac the export (its allowed-clients list or its rules). */
+  | 'export_refused'
+  /**
+   * NFS: the export demands a privileged source port (a `secure` export, the Linux default), and this
+   * process couldn't bind one. ❗ The fix is the export's `insecure` option, ❌ not the address.
+   */
+  | 'reserved_port_required'
+  /** NFS: the server offers no NFSv3 over TCP, the one version Cmdr speaks. */
+  | 'no_nfs_v3'
   /**
    * Add mode, before any round trip: an S3 region, location, or account ID holds something besides
    * `a–z 0–9 -`, which no host name can carry.
@@ -157,6 +168,10 @@ const REFUSAL_KEYS: Record<ConnectRefusalKind, MessageKey> = {
   region_mismatch: 'servers.refusal.regionMismatch',
   clock_skewed: 'servers.refusal.clockSkewed',
   not_an_s3_endpoint: 'servers.refusal.notAnS3Endpoint',
+  export_not_found: 'servers.refusal.exportNotFound',
+  export_refused: 'servers.refusal.exportRefused',
+  reserved_port_required: 'servers.refusal.reservedPortRequired',
+  no_nfs_v3: 'servers.refusal.noNfsV3',
   s3_field_malformed: 'servers.refusal.s3FieldMalformed',
   endpoint_malformed: 'servers.refusal.endpointMalformed',
   address_taken: 'servers.refusal.addressTaken',
@@ -275,6 +290,8 @@ export type RefusalField =
   | 'region'
   /** S3: the bucket field, where typing a bucket is the way past a key that can't list buckets. */
   | 'bucket'
+  /** NFS: the export field, where picking another export is the way past one the server won't open. */
+  | 'export'
   /** The root folder, the ceiling nothing navigates above. */
   | 'root'
   /** The start folder, where opening the place lands. */
@@ -323,6 +340,13 @@ const REFUSAL_FIELDS: Record<ConnectRefusalKind, RefusalField> = {
   endpoint_malformed: 'address',
   // No field fixes this Mac's clock.
   clock_skewed: 'form',
+  // ❗ Each export refusal under the export: another export (an `insecure` one, one this
+  // Mac is allowed) is the fix a person can make from here.
+  export_not_found: 'export',
+  export_refused: 'export',
+  reserved_port_required: 'export',
+  // The server, not the export: no export on it can help.
+  no_nfs_v3: 'address',
   // The address is what to change: to one nothing else holds.
   address_taken: 'address',
   // The password is the one thing that didn't move, so its field is where the retry happens.

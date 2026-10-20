@@ -67,8 +67,12 @@
         exportHint,
         exportRefusal,
         onChange,
+        // eslint-disable-next-line no-useless-assignment -- a `$bindable` prop, set below for the sheet to place the caret
         exportInput = $bindable(),
-        discoveryDeps = { listNfsExports, guessNfsIdentity },
+        discoveryDeps = {
+            listNfsExports: ({ host, port }) => listNfsExports(host, port),
+            guessNfsIdentity: ({ host, port, exportPath }) => guessNfsIdentity(host, port, exportPath),
+        },
     }: Props = $props()
 
     const discovery = untrack(() => createNfsDiscovery(discoveryDeps))
@@ -97,7 +101,7 @@
             })
             return
         }
-        const timer = setTimeout(() => void discovery.listFor(server, serverPort), LIST_SETTLE_MS)
+        const timer = setTimeout(() => void discovery.listFor({ host: server, port: serverPort }), LIST_SETTLE_MS)
         return () => {
             clearTimeout(timer)
         }
@@ -109,7 +113,7 @@
         const exportPath = exportKey
         if (!exportEditable || !identityFromGuess || server === '' || exportPath === '') return
         const timer = setTimeout(() => {
-            void discovery.guessFor(server, serverPort, exportPath).then((guess) => {
+            void discovery.guessFor({ host: server, port: serverPort, exportPath }).then((guess) => {
                 // ❗ The fields as they are NOW: the person may have typed an id, or moved
                 // to another export, while the server was answering.
                 if (guess && fields.exportPath.trim() === exportPath) onChange(withGuessedIdentity(fields, guess))

@@ -33,12 +33,10 @@ async function render(
   answers: { list?: NfsExportList; guess?: GuessedNfsIdentity } = {},
 ): Promise<Rendered> {
   const onChange = vi.fn()
-  const listNfsExports = vi.fn(() =>
-    Promise.resolve(answers.list ?? { outcome: 'listed', exports: ['/Public', '/volume1/data'] }),
-  )
-  const guessNfsIdentity = vi.fn(() =>
-    Promise.resolve(answers.guess ?? { uid: 1000, gid: 100, source: 'most_common_owner' }),
-  )
+  const listed: NfsExportList = { outcome: 'listed', exports: ['/Public', '/volume1/data'] }
+  const guessed: GuessedNfsIdentity = { uid: 1000, gid: 100, source: 'most_common_owner' }
+  const listNfsExports = vi.fn(() => Promise.resolve(answers.list ?? listed))
+  const guessNfsIdentity = vi.fn(() => Promise.resolve(answers.guess ?? guessed))
   mount(NfsPlaceFields, {
     target: document.body.appendChild(document.createElement('div')),
     props: {
@@ -62,14 +60,14 @@ async function settle() {
   await tick()
 }
 
-const text = (selector: string) => document.body.querySelector(selector)?.textContent?.trim()
+const text = (selector: string) => document.body.querySelector(selector)?.textContent.trim()
 
 describe('NfsPlaceFields', () => {
   it('asks the server for its exports once the address settles, with the port it named', async () => {
     const { listNfsExports } = await render({}, { address: 'nfs://nas.local:15481' })
     expect(listNfsExports).not.toHaveBeenCalled()
     await settle()
-    expect(listNfsExports).toHaveBeenCalledWith('nas.local', 15481)
+    expect(listNfsExports).toHaveBeenCalledWith({ host: 'nas.local', port: 15481 })
     expect(text('#server-nfs-export-help')).toBe(
       'Pick one from the list, or type its path. A folder inside an export works too.',
     )
@@ -91,7 +89,7 @@ describe('NfsPlaceFields', () => {
   it('fills the guessed identity once an export is picked, and says where it came from', async () => {
     const { onChange, guessNfsIdentity } = await render({ exportPath: '/Public' })
     await settle()
-    expect(guessNfsIdentity).toHaveBeenCalledWith('nas.local', null, '/Public')
+    expect(guessNfsIdentity).toHaveBeenCalledWith({ host: 'nas.local', port: null, exportPath: '/Public' })
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ uid: '1000', gid: '100', identitySource: 'most_common_owner' }),
     )

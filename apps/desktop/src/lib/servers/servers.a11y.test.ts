@@ -21,6 +21,7 @@ import SignInCredentialFields from './SignInCredentialFields.svelte'
 import S3EndpointFields from './S3EndpointFields.svelte'
 import { emptyServerForm } from './server-form'
 import { emptyS3Fields } from './s3-form'
+import { emptyNfsFields } from './nfs-form'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { SignInAttemptOutcome, SignInSheetRequest } from './sign-in-contract'
 
@@ -37,6 +38,8 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   updateSavedServer: vi.fn(() => Promise.resolve({ outcome: 'saved' })),
   approveSftpHostKey: vi.fn(() => Promise.resolve({ outcome: 'recorded' })),
   approveWebdavCertificate: vi.fn(() => Promise.resolve()),
+  listNfsExports: vi.fn(() => Promise.resolve({ outcome: 'listed', exports: ['/Public'] })),
+  guessNfsIdentity: vi.fn(() => Promise.resolve({ uid: 1000, gid: 100, source: 'most_common_owner' })),
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn(() => Promise.resolve(null)) }))
@@ -200,6 +203,32 @@ describe('the three renderers on their own', () => {
         namePlaceholder: 'ada@nas.local',
         rootRefusal: "Cmdr can't open this folder on nas.local.",
         startFolderRefusal: 'The start folder has to be the root folder or a folder inside it.',
+        onChange: () => {},
+      },
+    })
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+
+  it('the NFS form, with a refusal under the export and the user ID 0 warning, has no violations', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(ServerFormFields, {
+      target,
+      props: {
+        form: {
+          ...emptyServerForm(),
+          protocol: 'nfs',
+          address: 'nfs://nas.local',
+          startFolder: '/photos',
+          nfs: { ...emptyNfsFields(), exportPath: '/Public', uid: '0', gid: '0', identityFromGuess: false },
+        },
+        disabled: false,
+        protocolEditable: true,
+        identityEditable: true,
+        addressEditable: true,
+        exportRefusal: 'nas.local has no export at that path.',
+        advancedOpen: true,
         onChange: () => {},
       },
     })

@@ -15,6 +15,7 @@ import {
   isServerVolumeId,
   isUnderServerRoot,
   joinServerPath,
+  nfsAppRoot,
   parseServerPath,
   serverAddressOf,
   serverAppRoot,
@@ -214,5 +215,105 @@ describe('serverAddressOf', () => {
 
   it('answers null off the server schemes', () => {
     expect(serverAddressOf('/Volumes/naspi')).toBeNull()
+  })
+})
+
+/**
+ * NFS: the export rides as ONE escaped segment, so a path alone names its export
+ * even beside a nested one (`/share` and `/share/Public`). Every row below is one
+ * of `crates/cmdr-fs/src/volume/remote_paths_test.rs`'s NFS cells, so the two
+ * halves of the grammar answer the same examples.
+ */
+describe('NFS paths', () => {
+  it('mints the app root with the export as one segment, as `nfs_app_root` does', () => {
+    expect(nfsAppRoot({ host: 'NAS.local', port: 2049, export: '/Public' })).toBe('nfs://nas.local:2049/Public')
+    expect(nfsAppRoot({ host: 'nas.local', port: 2049, export: '/volume1/data/' })).toBe(
+      'nfs://nas.local:2049/volume1%2Fdata',
+    )
+    expect(nfsAppRoot({ host: 'nas.local', port: 2049, export: '/' })).toBe('nfs://nas.local:2049/%2F')
+    expect(nfsAppRoot({ host: 'nas.local', port: 2049, export: '/100%/x' })).toBe('nfs://nas.local:2049/100%25%2Fx')
+  })
+
+  it('canonicalizes the export before escaping it, the way `canonical_nfs_export` does', () => {
+    const root = (exportPath: string) => nfsAppRoot({ host: 'nas', port: 2049, export: exportPath })
+    expect(root('/volume1//./data/')).toBe(root('/volume1/data'))
+    expect(root('///')).toBe('nfs://nas:2049/%2F')
+    expect(root('Public')).toBe('nfs://nas:2049/Public')
+  })
+
+  it('carries the canonical port, 2049 when the address named none', () => {
+    expect(nfsAppRoot({ host: 'nas', port: null, export: '/Public' })).toBe('nfs://nas:2049/Public')
+    expect(nfsAppRoot({ host: 'nas', port: 15481, export: '/Public' })).toBe('nfs://nas:15481/Public')
+  })
+
+  it('reads the export and the folder under it back out of an app path', () => {
+    for (const [path, exportPath, folder] of [
+      ['nfs://nas.local:2049/Public/photos/a.jpg', '/Public', 'photos/a.jpg'],
+      ['nfs://nas.local:2049/Public', '/Public', ''],
+      ['nfs://nas.local:2049/volume1%2Fdata/photos', '/volume1/data', 'photos'],
+      ['nfs://nas.local:2049/%2F/etc', '/', 'etc'],
+      ['nfs://nas.local:2049/100%25%2Fx', '/100%/x', ''],
+    ]) {
+      expect(parseServerPath(path), path).toEqual({
+        protocol: 'nfs',
+        host: 'nas.local',
+        port: 2049,
+        export: exportPath,
+        path: folder,
+      })
+    }
+  })
+
+  it('reads an IPv6 host by the LAST colon, as `server_of_path` does', () => {
+    expect(parseServerPath('nfs://fd7a::5:2049/Public')).toMatchObject({ host: 'fd7a::5', port: 2049 })
+  })
+
+  it('names nothing without an export or a port, or with an escape no root mints', () => {
+    for (const path of [
+      'nfs://nas.local:2049',
+      'nfs://nas.local:2049/',
+      'nfs://nas.local/Public',
+      'nfs://:2049/Public',
+      'nfs://nas.local:2049/a%2',
+      'nfs://nas.local:2049/a%zz',
+      'nfs://nas.local:2049/a%2f',
+    ]) {
+      expect(parseServerPath(path), path).toBeNull()
+    }
+  })
+
+  it('round-trips every export through its app root', () => {
+    for (const exportPath of ['/Public', '/volume1/data', '/', '/Caf\u00e9 & co', '/100%/x']) {
+      const root = nfsAppRoot({ host: 'Nas.Local', port: 15481, export: exportPath })
+      expect(parseServerPath(`${root}/sub/file`), exportPath).toMatchObject({ export: exportPath, path: 'sub/file' })
+      expect(serverAppRoot({ protocol: 'nfs', host: 'nas.local', port: 15481, export: exportPath })).toBe(root)
+    }
+  })
+
+  it('walks up to the export and no further, and joins under it', () => {
+    const root = 'nfs://nas:2049/volume1%2Fdata'
+    expect(getServerParentPath(`${root}/photos/2026`)).toBe(`${root}/photos`)
+    expect(getServerParentPath(`${root}/photos`)).toBe(root)
+    expect(getServerParentPath(root)).toBeNull()
+    expect(joinServerPath(root, 'photos')).toBe(`${root}/photos`)
+  })
+
+  it('shows the export decoded, then the folder, which is what someone on the server reads', () => {
+    expect(getServerDisplayPath('nfs://nas:2049/volume1%2Fdata/photos')).toBe('/volume1/data/photos')
+    expect(getServerDisplayPath('nfs://nas:2049/volume1%2Fdata')).toBe('/volume1/data')
+    expect(getServerDisplayPath('nfs://nas:2049/%2F/etc')).toBe('/etc')
+    expect(getServerDisplayPath('nfs://nas:2049/%2F')).toBe('/')
+  })
+
+  it('is a server path with a server id, and names the address it dials', () => {
+    expect(isServerPath('nfs://nas:2049/Public')).toBe(true)
+    expect(isServerVolumeId('nfs-public-naspolya-1a2b')).toBe(true)
+    expect(serverProtocolOfVolumeId('nfs-public-naspolya-1a2b')).toBe('nfs')
+    expect(serverAddressOf('nfs://nas.local:2049/Public/x')).toBe('nas.local:2049')
+  })
+
+  it('holds each export apart from its parent by whole components', () => {
+    expect(isUnderServerRoot('nfs://nas:2049/share', 'nfs://nas:2049/share%2FPublic/x')).toBe(false)
+    expect(isUnderServerRoot('nfs://nas:2049/share', 'nfs://nas:2049/share/Public/x')).toBe(true)
   })
 })

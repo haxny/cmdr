@@ -26,6 +26,7 @@
     import { asMountError } from '../network/mount-error'
     import { renderMountError } from '../network/mount-error-messages'
     import type { SignInAttemptOutcome } from '#lib/servers/sign-in-contract.js'
+    import type { ServerProtocol } from '#lib/ipc/bindings.js'
     import Button from '#lib/ui/Button.svelte'
     import Icon from '#lib/ui/Icon.svelte'
     import RemoteConnectView from './RemoteConnectView.svelte'
@@ -265,12 +266,13 @@
     }
 
     /**
-     * The Add row opens the ONE sign-in sheet. An SMB address lands back here as
+     * The Add row opens the ONE sign-in sheet (the NFS hint opens it on NFS). An SMB address lands back here as
      * a hand-off: its connect is a share MOUNT rather than a session, so the
      * host is injected and this view opens its places list.
      */
-    async function openAddServer() {
+    async function openAddServer(protocol?: ServerProtocol) {
         await openAddServerSheet({
+            protocol,
             onSmbHandOff: (handOff) => {
                 retireAutoMount()
                 currentNetworkHost = handOff.host
@@ -720,7 +722,7 @@
         onHostSelect={handleNetworkHostSelect}
         onServerSelect={handleServerSelect}
         onShareViaHost={handleShareViaHost}
-        onConnectToServer={() => void openAddServer()}
+        onConnectToServer={(protocol?: ServerProtocol) => void openAddServer(protocol)}
     />
 {/if}
 

@@ -19,6 +19,9 @@
      * for something nobody needs. An optional username is the one thing it takes:
      * it says the person means to sign in rather than browse as guest.
      *
+     * ❗ **NFS asks for an export and a uid, ❌ never a password** (`NfsPlaceFields`):
+     * `AUTH_SYS` carries no secret, so there's no Remember box either.
+     *
      * ❗ **The root folder is a CEILING, the start folder is a LANDING.** Nothing
      * navigates above the root; opening the place lands on the start folder, which
      * has to be the root or under it. Empty means the root.
@@ -37,6 +40,8 @@
     import type { S3FormFields } from './s3-form'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import S3EndpointFields from './S3EndpointFields.svelte'
+    import NfsPlaceFields from './NfsPlaceFields.svelte'
+    import type { NfsFormFields } from './nfs-form'
 
     /** A made-up access key ID in AWS's shape, for the placeholder. AWS's own documentation example. */
     const ACCESS_KEY_ID_EXAMPLE = 'AKIAIOSFODNN7EXAMPLE'
@@ -50,6 +55,7 @@
         smb: 'servers.sheet.addressHelpSmb',
         sftp: 'servers.sheet.addressHelpSftp',
         webdav: 'servers.sheet.addressHelpWebdav',
+        nfs: 'servers.sheet.addressHelpNfs',
     }
 
     interface Props {
@@ -115,6 +121,8 @@
         regionRefusal?: string
         /** S3: the sentence under the bucket. */
         bucketRefusal?: string
+        /** NFS: the sentence under the export. */
+        exportRefusal?: string
         /** S3, on `region_mismatch` with the region named: switches to it and tries again. */
         onUseRegion?: () => void
         /** The region `onUseRegion` switches to. */
@@ -140,6 +148,8 @@
         /** S3: Other's region input (a preset's region is `addressInput`). */
         regionInput?: HTMLInputElement
         bucketInput?: HTMLInputElement
+        /** NFS: the export's input. */
+        exportInput?: HTMLInputElement
     }
 
     /* eslint-disable prefer-const -- $bindable() requires `let` destructuring */
@@ -165,6 +175,7 @@
         startFolderRefusal,
         regionRefusal,
         bucketRefusal,
+        exportRefusal,
         onUseRegion,
         suggestedRegion,
         storedSecretWarning,
@@ -178,6 +189,7 @@
         startFolderInput = $bindable(),
         regionInput = $bindable(),
         bucketInput = $bindable(),
+        exportInput = $bindable(),
     }: Props = $props()
 
     const log = getAppLogger('servers')
@@ -187,12 +199,19 @@
         { value: 'sftp', label: tString('servers.sheet.protocolSftp') },
         { value: 'webdav', label: tString('servers.sheet.protocolWebdav') },
         { value: 's3', label: tString('servers.sheet.protocolS3') },
+        { value: 'nfs', label: tString('servers.sheet.protocolNfs') },
     ])
 
     const isS3 = $derived(form.protocol === 's3')
+    const isNfs = $derived(form.protocol === 'nfs')
 
-    /** SMB signs in from the mount, not from here, and keeps no folders here either. */
-    const asksForCredentials = $derived(form.protocol !== 'smb')
+    /**
+     * SMB signs in from the mount, not from here, and NFS has no secret at all (`AUTH_SYS`
+     * carries a uid): neither shows an account, a password, or Remember.
+     */
+    const asksForCredentials = $derived(form.protocol !== 'smb' && !isNfs)
+    /** SMB keeps nothing Advanced would hold; an S3 account's one setting is each place's own switch. */
+    const hasAdvanced = $derived(form.protocol !== 'smb' && s3EditScope !== 'account')
     /** Which sentence sits under the address: a refusal outranks a warning, which outranks the help line. */
     const addressDescribedBy = $derived.by(() => {
         if (addressRefusal) return addressRefusalHint ? 'server-address-refusal server-address-hint' : 'server-address-refusal'
@@ -366,6 +385,21 @@
     </div>
 {/if}
 
+{#if isNfs}
+    <NfsPlaceFields
+        fields={form.nfs}
+        address={form.address}
+        {disabled}
+        exportEditable={identityEditable}
+        exportHint={identityHint}
+        {exportRefusal}
+        bind:exportInput
+        onChange={(patch: Partial<NfsFormFields>) => {
+            onChange({ nfs: { ...form.nfs, ...patch } })
+        }}
+    />
+{/if}
+
 {#if asksForCredentials}
     <!-- S3's account is its access key ID, and its secret the secret access key: the same two
          fields, so the identity lock and the secret plumbing are the ones every account uses. -->
@@ -435,12 +469,14 @@
 
 <!-- SMB keeps nothing Advanced would hold, so it gets no disclosure that opens onto nothing; nor
      does an S3 account, whose one Advanced setting is each place's own switch. -->
-{#if asksForCredentials && s3EditScope !== 'account'}
+{#if hasAdvanced}
     <details class="advanced" bind:open={advancedOpen}>
         <summary>{tString('servers.sheet.advanced')}</summary>
         <div class="advanced-body">
-            <!-- S3 has no folders to root or start in: its bucket is the place. -->
+            <!-- S3 has no folders to root or start in: its bucket is the place. NFS starts in one,
+                 and has no root: the export is the ceiling. -->
             {#if !isS3}
+            {#if !isNfs}
             <div class="field">
                 <label for="server-remote-root" class="field-label">{tString('servers.sheet.rootFolder')}</label>
                 <TextInput
@@ -463,6 +499,7 @@
                     <p id="server-remote-root-help" class="field-help">{tString('servers.sheet.rootFolderHelp')}</p>
                 {/if}
             </div>
+            {/if}
 
             <div class="field">
                 <label for="server-start-folder" class="field-label">{tString('servers.sheet.startFolder')}</label>
@@ -484,7 +521,9 @@
                 {#if startFolderRefusal}
                     <p id="server-start-folder-refusal" class="field-refusal" role="alert">{startFolderRefusal}</p>
                 {:else}
-                    <p id="server-start-folder-help" class="field-help">{tString('servers.sheet.startFolderHelp')}</p>
+                    <p id="server-start-folder-help" class="field-help">
+                        {isNfs ? tString('servers.sheet.nfsStartFolderHelp') : tString('servers.sheet.startFolderHelp')}
+                    </p>
                 {/if}
             </div>
             {/if}

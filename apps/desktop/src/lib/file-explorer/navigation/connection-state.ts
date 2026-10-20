@@ -13,7 +13,7 @@
  * (`crates/cmdr-fs/src/volume/connection.rs`).
  */
 
-import { volumeScheme } from '#lib/volume-scheme.js'
+import { volumeScheme, type VolumeScheme } from '#lib/volume-scheme.js'
 import type { ConnectionState, VolumeBackendCapabilities } from '../types'
 
 /** `null` and `undefined` both arrive: Rust's `Option::None` serializes to `null`. */
@@ -66,29 +66,30 @@ export interface VolumePresence {
  * (`ERR-JUCNB`). Registration (`capabilities`) is the typed fact that it's connected.
  */
 export function answersNow(volume: VolumePresence): boolean {
-  const scheme = volumeScheme(volume.id)
-  switch (scheme) {
-    case 'mtp':
-    case 'adb':
-      return volume.capabilities != null
-    case 'root':
-    case 'local':
-    case 'path':
-    case 'smb':
-    case 'sftp':
-    case 'webdav':
-    case 's3':
-    case 'cloud':
-    case 'favorite':
-    case 'unknown': {
-      const state = volume.connectionState
-      return state === undefined || state === null || isLiveSession(state)
-    }
-    default: {
-      const unhandled: never = scheme
-      return unhandled
-    }
-  }
+  if (ANSWERS_ON_REGISTRATION[volumeScheme(volume.id)]) return volume.capabilities != null
+  const state = volume.connectionState
+  return state === undefined || state === null || isLiveSession(state)
+}
+
+/**
+ * Which schemes answer once REGISTERED rather than by their session: a phone, whose
+ * row is listed before anything dials it. A `Record`, so a new scheme can't compile
+ * without someone deciding.
+ */
+const ANSWERS_ON_REGISTRATION: Record<VolumeScheme, boolean> = {
+  mtp: true,
+  adb: true,
+  root: false,
+  local: false,
+  path: false,
+  smb: false,
+  sftp: false,
+  webdav: false,
+  s3: false,
+  nfs: false,
+  cloud: false,
+  favorite: false,
+  unknown: false,
 }
 
 /**

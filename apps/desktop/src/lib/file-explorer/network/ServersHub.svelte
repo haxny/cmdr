@@ -37,6 +37,7 @@
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { rowAnchorIn } from '../pane/context-menu-anchor'
     import type { NetworkHost } from '../types'
+    import type { ServerProtocol } from '#lib/ipc/bindings.js'
     import { updateLeftPaneState, updateRightPaneState, onNetworkHostContextAction } from '#lib/tauri-commands/index.js'
     import { getNetworkEnabled } from '#lib/settings/reactive-settings.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
@@ -79,7 +80,8 @@
          */
         onShareViaHost?: (host: NetworkHost, via: { share: string; label: string }) => void
         /** Enter on the "Add server…" row. */
-        onConnectToServer?: () => void
+        /** Opens the add sheet, on `protocol` when a door is about one (the NFS hint). */
+        onConnectToServer?: (protocol?: ServerProtocol) => void
     }
 
     const { paneId, isFocused = false, onHostSelect, onServerSelect, onShareViaHost, onConnectToServer }: Props =
@@ -636,6 +638,13 @@
             </span>
         </div>
 
+        <!-- NFS has no discovery, so a NAS that serves only NFS would never show up here.
+             The line says so, and its link opens the sheet already on NFS. -->
+        <div class="nfs-hint">
+            <span>{tString('servers.hub.nfsHint')}</span>
+            <LinkButton onclick={() => onConnectToServer?.('nfs')}>{tString('servers.hub.nfsHintLink')}</LinkButton>
+        </div>
+
         {#if list.isKnown && !isSearching && rows.length === 0}
             <div class="empty-state">
                 <img class="empty-icon" src="/icons/network-no-hosts.svg" alt="" />
@@ -837,7 +846,8 @@
         font-style: italic;
     }
 
-    .discovery-off {
+    .discovery-off,
+    .nfs-hint {
         display: flex;
         align-items: center;
         gap: var(--spacing-sm);

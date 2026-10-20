@@ -56,8 +56,15 @@ impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ParseError::Empty => write!(f, "Enter a server address"),
+            // ❗ This parser adds SMB hosts only (the add sheet's SMB hand-off and the MCP
+            // `connect_to_server` tool). Every other protocol, NFS included, is dialed
+            // through `connect_server` from the add sheet, which Go to path and ⌘K open.
             ParseError::UnsupportedProtocol(proto) => {
-                write!(f, "Only SMB shares are supported right now (got {}://)", proto)
+                write!(
+                    f,
+                    "This adds SMB servers only (got {}://). Add other servers from the Add server sheet.",
+                    proto
+                )
             }
             ParseError::Ipv6NotSupported => {
                 write!(

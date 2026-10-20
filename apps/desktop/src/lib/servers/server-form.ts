@@ -6,9 +6,10 @@
  * address MEANS are testable without mounting anything.
  */
 
-import type { SavedS3Place, SavedServer, ServerProtocol, ServerTarget } from '#lib/ipc/bindings.js'
+import type { SavedNfsPlace, SavedS3Place, SavedServer, ServerProtocol, ServerTarget } from '#lib/ipc/bindings.js'
 import type { SavedSftpServer, SavedWebdavServer } from '#lib/tauri-commands/index.js'
 import { mountSourceAsSmbUrl, parseServerAddress, uncAsSmbUrl, type ParsedAddress } from './address-parser'
+import { emptyNfsFields, nfsFieldsFromAppPath, parseNfsId, type NfsFormFields } from './nfs-form'
 import {
   emptyS3Fields,
   s3FieldsFromAppPath,
@@ -18,7 +19,7 @@ import {
   type S3FormFields,
 } from './s3-form'
 
-/** Every field the add and edit forms hold, across all four protocols. */
+/** Every field the add and edit forms hold, across all five protocols. */
 export interface ServerForm {
   protocol: ServerProtocol
   /** What the user typed, kept verbatim so their own spelling survives an edit. */
@@ -48,6 +49,12 @@ export interface ServerForm {
    * the secret plumbing are the ones every account uses.
    */
   s3: S3FormFields
+  /**
+   * NFS's own fields: the export and the identity it acts as (`nfs-form.ts`). The start
+   * folder and "Reconnect automatically" are the shared ones; there's no root folder (the
+   * export is the place) and no secret.
+   */
+  nfs: NfsFormFields
 }
 
 /** A blank form, on add mode's defaults. */
@@ -72,12 +79,13 @@ export function emptyServerForm(): ServerForm {
     useAgent: true,
     autoReconnect: true,
     s3: emptyS3Fields(),
+    nfs: emptyNfsFields(),
   }
 }
 
 /**
- * Folds what an address turned out to say into the form: the account, and the
- * SFTP root folder.
+ * Folds what an address turned out to say into the form: the account, the SFTP
+ * root folder, and the NFS export.
  *
  * ❗ **It never touches the protocol.** The toggle is the person's; what the
  * address names only feeds the warning under the field (`addressLooksLike`).
@@ -97,6 +105,12 @@ export function applyParsedAddress(form: ServerForm, parsed: ParsedAddress): Ser
   // stays in the base URL), and only when the address doesn't name another
   // protocol, whose path means something else.
   const pathIsRoot = form.protocol === 'sftp' && speaksOrNamesNone(parsed, 'sftp')
+  // An NFS path is the export, or an export and a folder, kept whole for the backend
+  // to split. ❗ NFS has no account, so an address's `user@` fills nothing.
+  if (form.protocol === 'nfs') {
+    const exportPath = speaksOrNamesNone(parsed, 'nfs') ? parsed.path : undefined
+    return { ...form, nfs: { ...form.nfs, exportPath: exportPath ?? form.nfs.exportPath } }
+  }
   return {
     ...form,
     ...usernameAfter(form, parsed.username),
@@ -135,6 +149,18 @@ export function formFromPrefill(address: string): ServerForm {
   // preset, so it fills the S3 fields rather than an address S3 has no field for.
   const s3 = s3FieldsFromAppPath(address.trim())
   if (s3) return { ...emptyServerForm(), protocol: 's3', username: s3.accessKeyId, s3: s3.fields }
+  // An `nfs://` app path with an escaped export names its export and folder exactly.
+  const nfs = nfsFieldsFromAppPath(address.trim())
+  if (nfs) {
+    const empty = emptyServerForm()
+    return {
+      ...empty,
+      protocol: 'nfs',
+      address: nfs.address,
+      startFolder: nfs.startFolder,
+      nfs: { ...empty.nfs, exportPath: nfs.exportPath },
+    }
+  }
   const parsed = parseServerAddress(address)
   const protocol = parsed.kind === 'parsed' && parsed.protocol !== undefined ? parsed.protocol : 'smb'
   return applyParsedAddress({ ...emptyServerForm(), protocol, address }, parsed)
@@ -189,6 +215,8 @@ export function serverTargetFrom(form: ServerForm): ServerTarget | null {
     }
   }
 
+  if (form.protocol === 'nfs') return nfsTargetFrom(form, parsed, displayName)
+
   if (form.protocol === 'webdav') {
     return {
       protocol: 'webdav',
@@ -204,6 +232,36 @@ export function serverTargetFrom(form: ServerForm): ServerTarget | null {
   // SMB: its connect is a share mount rather than a session, so it goes through
   // `connectToServer` and has no target here.
   return null
+}
+
+/**
+ * The NFS target, or `null` while the export or an id is missing (the sheet keeps
+ * Connect disabled until both are there).
+ *
+ * ❗ The port is the one the address named, ❌ never a default: `null` asks the
+ * server's portmapper where NFS listens, and the place's id and app path carry 2049
+ * either way (`nfsAppRoot`).
+ */
+function nfsTargetFrom(
+  form: ServerForm,
+  parsed: Extract<ParsedAddress, { kind: 'parsed' }>,
+  displayName: string,
+): ServerTarget | null {
+  const exportPath = form.nfs.exportPath.trim()
+  const uid = parseNfsId(form.nfs.uid)
+  const gid = parseNfsId(form.nfs.gid)
+  if (exportPath === '' || uid === null || gid === null) return null
+  return {
+    protocol: 'nfs',
+    displayName,
+    host: parsed.host,
+    port: speaksOrNamesNone(parsed, 'nfs') ? (parsed.port ?? null) : null,
+    export: exportPath,
+    uid,
+    gid,
+    startFolder: startFolderOf(form),
+    autoReconnect: form.autoReconnect,
+  }
 }
 
 /**
@@ -254,6 +312,11 @@ export function nameFallbackOf(form: ServerForm, saved: readonly SavedServer[] =
     // as the hub calls it (Go to path and ⌘K open this sheet on any `smb://`).
     const named = savedSmbHostOf(form, saved)
     return named?.nameSource === 'user' ? named.displayName : smbLabelOf(parsed)
+  }
+  if (form.protocol === 'nfs') {
+    // NFS's classic `host:/export` spelling (`showmount`'s, `mount`'s): the place is the export.
+    const exportPath = form.nfs.exportPath.trim()
+    return exportPath === '' ? parsed.host : `${parsed.host}:${exportPath}`
   }
   const username = form.username.trim()
   return username === '' ? parsed.host : `${username}@${parsed.host}`
@@ -370,6 +433,35 @@ export function formFromS3Place(place: SavedS3Place): ServerForm {
 }
 
 /**
+ * A saved NFS export, as the edit form holds it: its address (with the port only when
+ * one was typed, so a portmapper-found NFS stays one), the export, the identity it acts
+ * as, the server's RAW name (empty when nobody named it), the start folder, and its
+ * reconnect switch.
+ *
+ * ❗ The ids open as the person's, ❌ never a guess: an edit that guessed over the saved
+ * uid would change who every request acts as without anyone asking.
+ */
+export function formFromNfsPlace(place: SavedNfsPlace): ServerForm {
+  const empty = emptyServerForm()
+  return {
+    ...empty,
+    protocol: 'nfs',
+    address: place.port === null ? `nfs://${place.host}` : `nfs://${place.host}:${String(place.port)}`,
+    displayName: place.displayName,
+    startFolder: place.startFolder ?? '',
+    autoReconnect: place.autoReconnect,
+    remember: false,
+    nfs: {
+      exportPath: place.export,
+      uid: String(place.uid),
+      gid: String(place.gid),
+      identityFromGuess: false,
+      identitySource: null,
+    },
+  }
+}
+
+/**
  * The Nextcloud collection path, appended to a bare origin.
  *
  * ❗ The one remedy worth a button: a person who pastes their Nextcloud's home
@@ -445,7 +537,13 @@ function normalizeRoot(root: string): string {
 }
 
 /** The protocols' own ports, which a sentence leaves unsaid. */
-const DEFAULT_PORTS: Record<ServerProtocol, number[]> = { smb: [445], sftp: [22], webdav: [80, 443], s3: [80, 443] }
+const DEFAULT_PORTS: Record<ServerProtocol, number[]> = {
+  smb: [445],
+  sftp: [22],
+  webdav: [80, 443],
+  s3: [80, 443],
+  nfs: [2049],
+}
 
 /**
  * A host as a sentence names it: with its port when that isn't the protocol's own,

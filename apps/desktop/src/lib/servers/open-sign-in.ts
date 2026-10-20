@@ -40,6 +40,7 @@ import { forgetShareListsOfMachine } from '#lib/file-explorer/network/network-st
 import { isLiveSession } from '#lib/file-explorer/navigation/connection-state.js'
 import { getVolumes } from '#lib/stores/volume-store.svelte.js'
 import type { NetworkHost } from '#lib/file-explorer/types.js'
+import type { ServerProtocol } from '#lib/ipc/bindings.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import type { SignInSeamRequest, SignInSeamResult } from './connect-flow'
 import type { ConnectRefusalKind } from './connect-refusals'
@@ -87,7 +88,8 @@ export interface ConnectedPlace {
 
 /**
  * Opens add mode. `prefill` is an address the caller already has (a pasted link,
- * a go-to-path input), as the user spelled it.
+ * a go-to-path input), as the user spelled it; `protocol` is the toggle a door
+ * about one protocol opens on (the hub's NFS hint).
  *
  * `onSmbHandOff` is what SMB's add path lands in: its connect is a share MOUNT
  * rather than a session, so `connectToServer` injects a manual host and the
@@ -104,6 +106,7 @@ export interface ConnectedPlace {
  */
 export async function openAddServerSheet(options: {
   prefill?: string
+  protocol?: ServerProtocol
   onSmbHandOff: (handOff: SmbHandOff) => void
   onConnected: (place: ConnectedPlace) => void
   onAdded?: (server: AddedServer) => void
@@ -111,6 +114,7 @@ export async function openAddServerSheet(options: {
   const result = await openSignInSheet({
     mode: 'add',
     prefill: options.prefill,
+    protocol: options.protocol,
     attempt: (submission) => attemptAdd(submission, options.onSmbHandOff),
   })
   if (result.kind === 'connected') {
@@ -492,7 +496,8 @@ async function endpointFor(volumeId: string): Promise<SignInEndpoint> {
     address: headerAddressOf(owner, place, parsed),
     host: parsed?.host ?? owner.address,
     // ❗ The PLACE's account first: an SMB host's shares each remember their own.
-    username: parsed?.username ?? place?.username ?? owner.username ?? undefined,
+    username:
+      (parsed?.protocol === 'nfs' ? undefined : parsed?.username) ?? place?.username ?? owner.username ?? undefined,
   }
 }
 

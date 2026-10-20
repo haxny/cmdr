@@ -123,6 +123,18 @@ describe('capabilitiesForKind — the frozen per-kind defaults', () => {
       canShareLinks: true,
       renamesCanCopy: true,
     },
+    nfs: {
+      kind: 'nfs',
+      hasBackendListing: true,
+      canWrite: true,
+      canBeSource: true,
+      hasParentRow: true,
+      syncsToMcp: true,
+      canBeIndexed: false,
+      pollsForDeletedFolder: false,
+      canShareLinks: false,
+      renamesCanCopy: false,
+    },
     mtp: {
       kind: 'mtp',
       hasBackendListing: true,
@@ -282,6 +294,12 @@ describe('volumeKindOf — the unified superset classifier', () => {
     expect(volumeKindOf('webdav-cloud-443-ada', 'webdav', 'network')).toBe('webdav')
     expect(volumeKindOf('s3-127-0-0-1-14480-akia-photos-1a2b', 's3', 'network')).toBe('s3')
     expect(volumeKindOf('volumesnaspi', 'smbfs', 'network')).toBe('smb')
+  })
+
+  it('reads an NFS place by its id, so an NFS share macOS mounted itself stays an OS mount', () => {
+    expect(volumeKindOf('nfs-public-naspolya-1a2b', 'nfs', 'network')).toBe('nfs')
+    // `fsType: 'nfs'` alone is the kernel's own mount at `/Volumes/…`, ❌ not a Cmdr session.
+    expect(volumeKindOf('path-volumes-public-1a2b', 'nfs', 'network')).toBe('smb')
   })
 
   it('the favorite edge resolves to its containing real volume kind (local)', () => {
@@ -933,7 +951,7 @@ describe('kindCanBeFavorited — where a favorite may point', () => {
   it('says yes for every place a favorite can find again: disks, shares, servers, and phones', () => {
     // A favorite remembers its VOLUME, so one on a server or phone stays listed while
     // that place is offline, and a pick dials it (or says why it can't).
-    for (const kind of ['local', 'smb', 'sftp', 'webdav', 's3', 'mtp', 'adb'] as const) {
+    for (const kind of ['local', 'smb', 'sftp', 'webdav', 's3', 'nfs', 'mtp', 'adb'] as const) {
       expect(kindCanBeFavorited(kind), kind).toBe(true)
     }
   })
@@ -951,6 +969,7 @@ describe('kindCanBeFavorited — where a favorite may point', () => {
       'sftp',
       'webdav',
       's3',
+      'nfs',
       'mtp',
       'adb',
       'network',

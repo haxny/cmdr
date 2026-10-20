@@ -16,7 +16,7 @@ import {
   withGuessedIdentity,
   withTypedIdentity,
 } from './nfs-form'
-import type { SavedServer } from '#lib/ipc/bindings.js'
+import type { SavedNfsPlace } from '#lib/ipc/bindings.js'
 import {
   applyParsedAddress,
   emptyServerForm,
@@ -169,46 +169,48 @@ describe('an NFS prefill', () => {
 })
 
 describe('formFromNfsPlace', () => {
-  const server: SavedServer = {
-    id: 'nfs-data-nas-1a2b',
-    protocol: 'nfs',
-    displayName: 'Photos',
-    nameSource: 'user',
-    address: 'nas.local',
-    username: null,
-    pinned: true,
-    lastConnectedAt: null,
+  const place: SavedNfsPlace = {
+    volumeId: 'nfs-data-nas-1a2b',
+    host: 'nas.local',
+    port: null,
+    export: '/volume1/data',
+    uid: 1026,
+    gid: 100,
+    displayName: 'Naspolya',
+    startFolder: '/photos',
     autoReconnect: false,
-    places: [
-      {
-        volumeId: 'nfs-data-nas-1a2b',
-        name: 'Photos',
-        pinned: true,
-        connected: false,
-        appRoot: 'nfs://nas.local:2049/volume1%2Fdata',
-        username: null,
-        autoReconnect: false,
-      },
-    ],
+    pinned: true,
   }
 
-  it('reads the address, the export, the name, and the switch off the listing', () => {
-    expect(formFromNfsPlace(server, 'nfs-data-nas-1a2b')).toMatchObject({
+  it('reads the saved export back, the identity included', () => {
+    expect(formFromNfsPlace(place)).toMatchObject({
       protocol: 'nfs',
-      address: 'nfs://nas.local:2049',
-      displayName: 'Photos',
+      address: 'nfs://nas.local',
+      displayName: 'Naspolya',
+      startFolder: '/photos',
       autoReconnect: false,
-      nfs: { exportPath: '/volume1/data', uid: '', gid: '' },
+      nfs: { exportPath: '/volume1/data', uid: '1026', gid: '100' },
     })
+    expect(formFromNfsPlace({ ...place, port: 15481 }).address).toBe('nfs://nas.local:15481')
   })
 
-  it('opens the ids as typed, so no guess lands over the saved ones', () => {
-    const form = formFromNfsPlace(server, 'nfs-data-nas-1a2b')
-    expect(form?.nfs.identityFromGuess).toBe(false)
-    expect(withGuessedIdentity(form!.nfs, { uid: 0, gid: 0, source: 'this_mac' }).uid).toBe('')
+  it('opens the ids as the person’s, so no guess lands over the saved ones', () => {
+    const form = formFromNfsPlace(place)
+    expect(form.nfs.identityFromGuess).toBe(false)
+    expect(withGuessedIdentity(form.nfs, { uid: 0, gid: 0, source: 'this_mac' }).uid).toBe('1026')
   })
 
-  it('opens with an empty name for a place nobody named', () => {
-    expect(formFromNfsPlace({ ...server, nameSource: 'fallback' }, 'nfs-data-nas-1a2b')?.displayName).toBe('')
+  it('saves back the target it opened on', () => {
+    expect(serverTargetFrom(formFromNfsPlace(place))).toEqual({
+      protocol: 'nfs',
+      displayName: 'Naspolya',
+      host: 'nas.local',
+      port: null,
+      export: '/volume1/data',
+      uid: 1026,
+      gid: 100,
+      startFolder: '/photos',
+      autoReconnect: false,
+    })
   })
 })

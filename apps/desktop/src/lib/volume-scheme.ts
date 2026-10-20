@@ -21,6 +21,7 @@ export type VolumeScheme =
   | 'sftp'
   | 'webdav'
   | 's3'
+  | 'nfs'
   | 'mtp'
   | 'adb'
   | 'cloud'
@@ -35,6 +36,7 @@ const PREFIXES: ReadonlyArray<readonly [string, Exclude<VolumeScheme, 'root' | '
   ['sftp-', 'sftp'],
   ['webdav-', 'webdav'],
   ['s3-', 's3'],
+  ['nfs-', 'nfs'],
   ['mtp-', 'mtp'],
   ['adb-', 'adb'],
   ['cloud-', 'cloud'],

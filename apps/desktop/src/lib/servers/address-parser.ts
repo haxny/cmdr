@@ -34,11 +34,17 @@ export type ParsedAddress =
       protocol?: ServerProtocol
       /** Folded to lowercase, the way `cmdr_fs::volume::ids` folds it. */
       host: string
-      /** What the address named, else its scheme's default. Absent when it names neither. */
+      /**
+       * What the address named, else its scheme's default. Absent when it names neither,
+       * and for an `nfs://` that names none: the server's portmapper says (`ServerTarget.port`).
+       */
       port?: number
       /** ❗ NOT case-folded: a POSIX account may be case-sensitive. */
       username?: string
-      /** The path the address named, leading slash kept, trailing slashes dropped. Absent at the root. */
+      /**
+       * The path the address named, leading slash kept, trailing slashes dropped. Absent at the root.
+       * NFS: the export, or an export and a folder under it, whole (the backend splits them).
+       */
       path?: string
       /** WebDAV only: whether the base URL is TLS. Absent for the other two. */
       secure?: boolean
@@ -65,6 +71,7 @@ const SCHEMES: Partial<Record<string, { protocol: ServerProtocol; secure?: boole
   dav: { protocol: 'webdav', secure: false },
   https: { protocol: 'webdav', secure: true },
   http: { protocol: 'webdav', secure: false },
+  nfs: { protocol: 'nfs' },
 }
 
 /**
@@ -141,6 +148,7 @@ const WELL_KNOWN_PORTS: Partial<Record<number, ServerProtocol>> = {
   445: 'smb',
   80: 'webdav',
   443: 'webdav',
+  2049: 'nfs',
 }
 
 /**
@@ -218,7 +226,9 @@ function readAccount(authority: string): { username?: string; hostPort: string }
  *
  * The path is split off at the FIRST `/`, so everything before it is the
  * authority however many slashes follow. `host:` with nothing after it is scp's
- * spelling of "the path starts here" and carries no port.
+ * spelling of "the path starts here" and carries no port, and NFS's classic
+ * `nas:/volume1/data` (`mount`'s and `showmount`'s) is the same text. Splitting at
+ * that first `/` is what lets a folder name hold a colon.
  */
 function readEndpoint(rest: string, protocol: ServerProtocol | undefined, secure: boolean | undefined): ParsedAddress {
   const slash = rest.indexOf('/')
@@ -262,9 +272,12 @@ function readPort(text: string): number | undefined {
   return port >= 1 && port <= 65535 ? port : undefined
 }
 
-/** The protocol's own default, and WebDAV's two. An address that names no protocol has no default. */
+/**
+ * The protocol's own default, and WebDAV's two. An address that names no protocol has no default,
+ * and nor does NFS: with no port typed, the server's portmapper answers where NFS listens.
+ */
 function defaultPort(protocol: ServerProtocol | undefined, secure: boolean | undefined): number | undefined {
-  if (protocol === undefined) return undefined
+  if (protocol === undefined || protocol === 'nfs') return undefined
   if (protocol === 'sftp') return DEFAULT_PORTS.sftp
   if (protocol === 'smb') return DEFAULT_PORTS.smb
   return secure === false ? DEFAULT_PORTS.webdavPlain : DEFAULT_PORTS.webdavSecure

@@ -93,7 +93,7 @@ export function cleanupVolumeTints(): void {
   initialized = false
 }
 
-export type VolumeKind = 'local' | 'smb' | 'sftp' | 'webdav' | 's3' | 'mtp' | 'adb' | 'other'
+export type VolumeKind = 'local' | 'smb' | 'sftp' | 'webdav' | 's3' | 'nfs' | 'mtp' | 'adb' | 'other'
 
 /**
  * Pure classifier: pick the tint bucket for a volume.
@@ -110,8 +110,11 @@ export type VolumeKind = 'local' | 'smb' | 'sftp' | 'webdav' | 's3' | 'mtp' | 'a
  * ❗ `sftp`, `webdav`, and `s3` are checked BEFORE the `category === 'network'` arm,
  * which every server row also carries. Without that a server pane would be an SMB
  * pane: the SMB capability row, the system-clipboard gate open, and Open terminal
- * firing with an `sftp://` path. All four share the `tintSmb` setting (one
+ * firing with an `sftp://` path. All five share the `tintSmb` setting (one
  * "Servers" tint), so the split only matters to behavior.
+ *
+ * ❗ NFS goes by its id's `nfs-` scheme, ❌ not an `fsType`: an NFS share macOS itself
+ * mounted reports `nfs` too, and that one IS an OS mount (local paths, a terminal).
  */
 export function volumeKindFor(
   volumeId: string,
@@ -124,6 +127,7 @@ export function volumeKindFor(
   if (fsType === 'sftp') return 'sftp'
   if (fsType === 'webdav') return 'webdav'
   if (fsType === 's3') return 's3'
+  if (scheme === 'nfs') return 'nfs'
   if (category === 'network' || fsType === 'smbfs') return 'smb'
   if (scheme === 'root' || category === 'main_volume' || category === 'attached_volume' || category === 'cloud_drive') {
     return 'local'
@@ -134,10 +138,10 @@ export function volumeKindFor(
 /** Returns the selected tint for a given volume kind (reactive). */
 function tintForKind(kind: VolumeKind): VolumeTintColor {
   if (kind === 'local') return tintLocal
-  // One "Servers" tint across SMB, SFTP, WebDAV, and S3. ❌ No fourth setting: three
+  // One "Servers" tint across SMB, SFTP, WebDAV, S3, and NFS. ❌ No fourth setting: three
   // definition sites, a section row, and two parity tests for a color nobody
   // asked to set separately.
-  if (kind === 'smb' || kind === 'sftp' || kind === 'webdav' || kind === 's3') return tintSmb
+  if (kind === 'smb' || kind === 'sftp' || kind === 'webdav' || kind === 's3' || kind === 'nfs') return tintSmb
   if (kind === 'mtp' || kind === 'adb') return tintMtp
   return 'none'
 }

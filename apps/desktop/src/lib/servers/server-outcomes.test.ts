@@ -95,6 +95,14 @@ describe('readConnectOutcome', () => {
     }
   })
 
+  it('gives every NFS refusal its own kind', () => {
+    for (const kind of ['export_not_found', 'export_refused', 'reserved_port_required', 'no_nfs_v3'] as const) {
+      expect(readConnectOutcome({ outcome: kind })).toEqual({ kind: 'refused', refusal: kind })
+      // None is a credential question: NFS has no secret a sheet could ask for.
+      expect(needsAHuman(readConnectOutcome({ outcome: kind }))).toBe(false)
+    }
+  })
+
   it('carries the region a bucket lives in, and leaves it out when the server named none', () => {
     expect(readConnectOutcome({ outcome: 'region_mismatch', region: 'us-east-2' })).toEqual({
       kind: 'refused',
