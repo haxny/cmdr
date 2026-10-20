@@ -19,6 +19,7 @@ fn every_constructor_reads_back_as_its_own_scheme() {
             s3_volume_id("s3.amazonaws.com", 443, "AKIA", Some("photos")),
             VolumeScheme::S3,
         ),
+        (nfs_volume_id("naspolya", 2049, "/Public"), VolumeScheme::Nfs),
         (mtp_device_id("39041FDJH00A0K"), VolumeScheme::Mtp),
         (
             mtp_volume_id(&mtp_device_id("39041FDJH00A0K"), 65537),
@@ -80,6 +81,7 @@ fn only_the_ids_minted_for_a_mount_are_mount_backed() {
     assert!(!mount_backed("fav-1"));
     assert!(!mount_backed(&sftp_volume_id("naspolya", 22, "ada")));
     assert!(!mount_backed(&webdav_volume_id("naspolya", 443, "ada")));
+    assert!(!mount_backed(&nfs_volume_id("naspolya", 2049, "/Public")));
     assert!(!mount_backed(&adb_volume_id("R58M12345")));
 }
 
@@ -105,6 +107,7 @@ fn os_path_schemes_are_mount_rooted_and_namespaces_are_not() {
         "AKIA",
         Some("photos")
     )));
+    assert!(!mount_rooted(&nfs_volume_id("naspolya", 2049, "/Public")));
     assert!(!mount_rooted(&adb_volume_id("R58M12345")));
     assert!(!mount_rooted("mtp-abc-1234:65537"));
     assert!(!mount_rooted("fav-1"));
@@ -573,4 +576,64 @@ fn an_s3_id_keeps_the_access_key_out_of_its_readable_half() {
     let id = s3_volume_id("127.0.0.1", 14480, "GK00000000000000000000c0de", Some("cmdr-test"));
     assert!(!id.to_lowercase().contains("gk0000"), "got: {id}");
     assert!(id.contains("cmdr-test"), "the bucket still reads in it; got: {id}");
+}
+
+// ── NFS: one place per export ─────────────────────────────────────────
+
+#[test]
+fn every_export_on_one_nfs_server_has_its_own_id() {
+    // An export is the place, so two exports on one server (and one export on
+    // two ports) are two volumes.
+    let public = nfs_volume_id("naspolya", 2049, "/Public");
+    assert_ne!(public, nfs_volume_id("naspolya", 2049, "/Multimedia"));
+    assert_ne!(public, nfs_volume_id("naspolya", 15481, "/Public"));
+    assert!(public.starts_with("nfs-"), "got: {public}");
+}
+
+#[test]
+fn nfs_volume_id_folds_the_host_but_keeps_the_export_by_bytes() {
+    assert_eq!(
+        nfs_volume_id("Naspolya.LOCAL", 2049, "/Public"),
+        nfs_volume_id("naspolya.local", 2049, "/Public")
+    );
+    // A Linux server's export is a path on a case-sensitive filesystem, and it
+    // stores bytes, so neither case nor Unicode normalization is folded.
+    assert_ne!(
+        nfs_volume_id("naspolya", 2049, "/public"),
+        nfs_volume_id("naspolya", 2049, "/Public")
+    );
+    assert_ne!(
+        nfs_volume_id("naspolya", 2049, "/Caf\u{e9}"),
+        nfs_volume_id("naspolya", 2049, "/Cafe\u{301}")
+    );
+}
+
+#[test]
+fn an_nfs_export_spelled_with_a_trailing_slash_is_the_same_export() {
+    // `/Public/` and `/Public` name one export on every server, and `showmount`
+    // and a typed address disagree on which they print.
+    assert_eq!(
+        nfs_volume_id("naspolya", 2049, "/Public/"),
+        nfs_volume_id("naspolya", 2049, "/Public")
+    );
+    assert_eq!(
+        nfs_volume_id("naspolya", 2049, "/volume1/data//"),
+        nfs_volume_id("naspolya", 2049, "/volume1/data")
+    );
+    assert_eq!(
+        nfs_volume_id("naspolya", 2049, "/volume1//./data"),
+        nfs_volume_id("naspolya", 2049, "/volume1/data")
+    );
+    // The root export stays itself, and a relative spelling reads from it.
+    assert_eq!(canonical_nfs_export("/"), "/");
+    assert_eq!(canonical_nfs_export("///"), "/");
+    assert_eq!(canonical_nfs_export("Public"), "/Public");
+}
+
+#[test]
+fn a_nested_nfs_export_never_shares_an_id_with_its_parent() {
+    assert_ne!(
+        nfs_volume_id("naspolya", 2049, "/volume1"),
+        nfs_volume_id("naspolya", 2049, "/volume1/data")
+    );
 }

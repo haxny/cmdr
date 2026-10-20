@@ -13,7 +13,8 @@
 //!
 //! So a remote volume is rooted at `<prefix><remote root>`, where the prefix is
 //! minted here from the volume id's own identity tuple ([`sftp_app_root`],
-//! [`webdav_app_root`], [`adb_app_root`], each with its split back:
+//! [`webdav_app_root`], [`s3_app_root`], [`nfs_app_root`], [`adb_app_root`], each
+//! with its split back:
 //! [`server_of_path`], [`adb_serial_of_path`]) and the tree under it is the
 //! server's own. The whole path grammar lives in this one module, so the next
 //! scheme's author finds both halves. [`RemoteRoot`]
@@ -34,7 +35,7 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use super::{sftp_volume_id, webdav_volume_id};
+use super::{canonical_nfs_export, nfs_volume_id, sftp_volume_id, webdav_volume_id};
 
 /// A remote volume's root, in both the spellings it has.
 ///
@@ -235,6 +236,75 @@ pub fn s3_app_root(host: &str, port: u16, access_key_id: &str) -> String {
 /// The scheme [`s3_app_root`] mints and [`server_of_path`] reads back.
 const S3_SCHEME: &str = "s3";
 
+/// The `nfs://<host>:<port>/<export segment>` prefix every app path on an NFS
+/// export carries, and the place's root: the tree under it is the EXPORT's, so a
+/// volume's [`RemoteRoot`] speaks export-relative paths. The SFTP twin otherwise:
+/// [`sftp_app_root`].
+///
+/// ❗ **No account in the authority.** The uid and gid a place acts as are a
+/// setting, ❌ not its identity ([`nfs_volume_id`]), so the path doesn't carry
+/// them either.
+///
+/// ❗ **The export rides as ONE segment**, its leading `/` dropped and only `%`
+/// and `/` escaped (`%25`, `%2F`): `/Public` is `nfs://nas.local:2049/Public`,
+/// `/volume1/data` is `nfs://nas.local:2049/volume1%2Fdata`, and the root export
+/// `/` is the segment `%2F`. Without it, [`server_of_path`] couldn't tell where a
+/// multi-segment export ends and the folder under it begins, and it mints the id
+/// from the path alone. `server-path-utils.ts` mirrors this exactly.
+///
+/// The host is folded the way the id folds it; the export is canonicalized
+/// ([`canonical_nfs_export`]) and otherwise kept by bytes.
+pub fn nfs_app_root(host: &str, port: u16, export: &str) -> String {
+    let host = host.to_lowercase();
+    format!("{NFS_SCHEME}://{host}:{port}/{}", nfs_export_segment(export))
+}
+
+/// The scheme [`nfs_app_root`] mints and [`server_of_path`] reads back.
+const NFS_SCHEME: &str = "nfs";
+
+/// The one path segment an export rides as in [`nfs_app_root`].
+fn nfs_export_segment(export: &str) -> String {
+    let export = canonical_nfs_export(export);
+    if export == "/" {
+        return "%2F".to_string();
+    }
+    let mut out = String::with_capacity(export.len());
+    for ch in export[1..].chars() {
+        match ch {
+            '%' => out.push_str("%25"),
+            '/' => out.push_str("%2F"),
+            other => out.push(other),
+        }
+    }
+    out
+}
+
+/// The export one [`nfs_export_segment`] spells, or `None` for a segment no
+/// export mints: empty, or carrying an escape other than `%25` / `%2F`.
+fn nfs_export_of_segment(segment: &str) -> Option<String> {
+    if segment.is_empty() {
+        return None;
+    }
+    if segment == "%2F" {
+        return Some("/".to_string());
+    }
+    let mut export = String::with_capacity(segment.len() + 1);
+    export.push('/');
+    let mut rest = segment;
+    while let Some(at) = rest.find('%') {
+        export.push_str(&rest[..at]);
+        let escape = rest.get(at..at + 3)?;
+        export.push(match escape {
+            "%25" => '%',
+            "%2F" => '/',
+            _ => return None,
+        });
+        rest = &rest[at + 3..];
+    }
+    export.push_str(rest);
+    Some(export)
+}
+
 /// The scheme [`sftp_app_root`] mints and [`server_of_path`] reads back.
 const SFTP_SCHEME: &str = "sftp";
 
@@ -252,17 +322,21 @@ fn remote_app_root(scheme: &str, host: &str, port: u16, username: &str) -> Strin
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServerPath {
     /// The backend its scheme names: [`BackendKind::Sftp`](super::BackendKind::Sftp),
-    /// [`BackendKind::Webdav`](super::BackendKind::Webdav), or
-    /// [`BackendKind::S3`](super::BackendKind::S3).
+    /// [`BackendKind::Webdav`](super::BackendKind::Webdav),
+    /// [`BackendKind::S3`](super::BackendKind::S3), or
+    /// [`BackendKind::Nfs`](super::BackendKind::Nfs).
     pub kind: super::BackendKind,
-    /// The id that account mints ([`sftp_volume_id`], [`webdav_volume_id`], or
-    /// [`s3_volume_id`](super::s3_volume_id) for the bucket the path is in).
+    /// The id that account mints ([`sftp_volume_id`], [`webdav_volume_id`],
+    /// [`s3_volume_id`](super::s3_volume_id) for the bucket the path is in, or
+    /// [`nfs_volume_id`] for the export).
     pub volume_id: String,
 }
 
 /// The server account an `sftp://`, `webdav://`, or
-/// `s3://<user>@<host>:<port>[/…]` app path names, or `None` for any other path,
-/// and for one missing its user, host, or port.
+/// `s3://<user>@<host>:<port>[/…]` app path names, or the export an
+/// `nfs://<host>:<port>/<export segment>[/…]` one names ([`nfs_app_root`]), or
+/// `None` for any other path, and for one missing its user (NFS: its export),
+/// host, or port.
 ///
 /// The one split of what [`remote_app_root`] joins, kept beside it so the two
 /// can't drift. Pure for the reason [`adb_serial_of_path`] is: the path IS the
@@ -275,6 +349,9 @@ pub struct ServerPath {
 /// after its last `:`, which is how an IPv6 host (`sftp://ada@::1:22`) still
 /// splits.
 pub fn server_of_path(path: &str) -> Option<ServerPath> {
+    if let Some(rest) = path.strip_prefix(NFS_SCHEME).and_then(|rest| rest.strip_prefix("://")) {
+        return nfs_server_of_path(rest);
+    }
     let schemes = [
         (SFTP_SCHEME, super::BackendKind::Sftp),
         (WEBDAV_SCHEME, super::BackendKind::Webdav),
@@ -305,6 +382,21 @@ pub fn server_of_path(path: &str) -> Option<ServerPath> {
         _ => sftp_volume_id(host, port, username),
     };
     Some(ServerPath { kind, volume_id })
+}
+
+/// [`server_of_path`]'s NFS half, for what follows `nfs://`.
+fn nfs_server_of_path(rest: &str) -> Option<ServerPath> {
+    let mut segments = rest.split('/');
+    let (host, port) = segments.next()?.rsplit_once(':')?;
+    let port: u16 = port.parse().ok()?;
+    let export = nfs_export_of_segment(segments.next()?)?;
+    if host.is_empty() {
+        return None;
+    }
+    Some(ServerPath {
+        kind: super::BackendKind::Nfs,
+        volume_id: nfs_volume_id(host, port, &export),
+    })
 }
 
 /// The `adb://<serial>` prefix every app path on an ADB volume carries, and the

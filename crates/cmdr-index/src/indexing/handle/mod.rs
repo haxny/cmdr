@@ -285,6 +285,7 @@ impl Index {
             | VolumeScheme::Sftp
             | VolumeScheme::Webdav
             | VolumeScheme::S3
+            | VolumeScheme::Nfs
             | VolumeScheme::Unknown => {
                 #[cfg(any(target_os = "macos", target_os = "linux"))]
                 {

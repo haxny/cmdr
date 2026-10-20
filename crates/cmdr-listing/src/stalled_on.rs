@@ -51,7 +51,9 @@ pub(crate) async fn stalled_on(
 /// Exhaustive on purpose: a new backend doesn't compile until it answers.
 fn stalled_on_backend(backend: BackendKind) -> Option<StalledOn> {
     match backend {
-        BackendKind::Smb | BackendKind::Sftp | BackendKind::Webdav | BackendKind::S3 => Some(StalledOn::Server),
+        BackendKind::Smb | BackendKind::Sftp | BackendKind::Webdav | BackendKind::S3 | BackendKind::Nfs => {
+            Some(StalledOn::Server)
+        }
         // MTP is a USB cable and ADB is a cable or Wi-Fi: neither word fits both.
         BackendKind::Mtp | BackendKind::Adb => Some(StalledOn::Unknown),
         // A real filesystem, or a view inside a file on one: the mount knows.
@@ -122,6 +124,7 @@ mod tests {
             BackendKind::Sftp,
             BackendKind::Webdav,
             BackendKind::S3,
+            BackendKind::Nfs,
         ] {
             assert_eq!(stalled_on_backend(backend), Some(StalledOn::Server), "{backend:?}");
         }

@@ -1,0 +1,23 @@
+[package]
+name = "cmdr-nfs"
+version = "0.0.0"
+edition = "2024"
+license = "LicenseRef-BSL-1.1"
+publish = false
+
+# The house lint set lives in the workspace root's `[workspace.lints]`, so this
+# crate can't quietly become a lint-free zone. `unused_crate_dependencies` is the
+# one lint that stays at the crate root instead (it's judged per compilation unit).
+[lints]
+workspace = true
+
+# Every dependency below is already in `Cargo.lock`, at the version and with the
+# features pinned here, so the crate adds no package and no second configuration
+# of one. Keep it that way: `cargo tree -d` before and after any change here.
+[dependencies]
+# The `Volume` trait, every type it exchanges, the id funnel and app-path
+# spelling, and the host seams this backend asks the app through.
+cmdr-fs = { path = "../cmdr-fs" }
+# `CancellationToken`, on the connect and discovery paths. Default features off,
+# the shape `cmdr-fs` pins.
+tokio-util = { version = "0.7.18", default-features = false }

@@ -380,12 +380,12 @@ All under `apps/desktop/src-tauri/src/`.
 ## Workspace crates
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
-`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-http`, `cmdr-listing`,
+`cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-http`, `cmdr-listing`,
 `cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, `cmdr-operations`, and `cmdr-update-trust` carry no `tauri`
 dependency and no reach into the app; `index-crate-isolation` enforces that against the `cargo metadata` graph, and caps
-the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`,
-`cmdr-git`, `cmdr-restic`, `cmdr-listing`, `cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, and `cmdr-operations`
-at the numbers their audits landed on. The two dev CLIs and the vendored fork are ordinary members.
+the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`,
+`cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-listing`, `cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, and
+`cmdr-operations` at the numbers their audits landed on. The two dev CLIs and the vendored fork are ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
@@ -494,6 +494,9 @@ at the numbers their audits landed on. The two dev CLIs and the vendored fork ar
   `apps/desktop/src-tauri/src/s3_costs/CLAUDE.md`. The plan: `docs/specs/s3-support-plan.md`. Decisions:
   `crates/cmdr-s3/DETAILS.md`; guardrails: `crates/cmdr-s3/CLAUDE.md`. Its Docker servers:
   `apps/desktop/test/s3-servers/README.md`.
+- `crates/cmdr-nfs/`: everything Cmdr says to an NFSv3 server, through our own user-space client, so a `secure` export
+  opens without root or an OS mount: an `NfsVolume` per export, plus the add form's export listing and uid guess. Being
+  built out from `docs/specs/nfs-support-plan.md`; guardrails: `crates/cmdr-nfs/CLAUDE.md`.
 - `crates/cmdr-adb/`: everything Cmdr says to an Android device over ADB. `AdbVolume` per attached device, rooted at the
   device's real `/`, spoken to the ADB server on loopback (the sync service for stat, list, and transfers, `shell,v2`
   for the verbs it lacks, `host:track-devices` for hotplug), with a typed errno-based error policy and a fake ADB server

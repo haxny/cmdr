@@ -267,6 +267,7 @@ fn backend_holds_favorites(kind: BackendKind) -> bool {
         | BackendKind::Sftp
         | BackendKind::Webdav
         | BackendKind::S3
+        | BackendKind::Nfs
         | BackendKind::Mtp
         | BackendKind::Adb => true,
         BackendKind::Archive | BackendKind::GitPortal | BackendKind::Restic => false,
@@ -706,6 +707,7 @@ mod add_gate_tests {
             BackendKind::Sftp,
             BackendKind::Webdav,
             BackendKind::S3,
+            BackendKind::Nfs,
             BackendKind::Mtp,
             BackendKind::Adb,
         ] {

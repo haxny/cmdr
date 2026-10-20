@@ -276,3 +276,63 @@ fn an_s3_path_names_the_place_of_its_bucket() {
         );
     }
 }
+
+#[test]
+fn an_nfs_app_root_carries_the_export_as_one_segment() {
+    // ❗ No account in the authority (the uid is a setting, not identity), and the
+    // export rides as ONE segment, so `server_of_path` can tell where it ends.
+    assert_eq!(
+        nfs_app_root("NAS.local", 2049, "/Public"),
+        "nfs://nas.local:2049/Public"
+    );
+    assert_eq!(
+        nfs_app_root("nas.local", 2049, "/volume1/data/"),
+        "nfs://nas.local:2049/volume1%2Fdata"
+    );
+    assert_eq!(nfs_app_root("nas.local", 2049, "/"), "nfs://nas.local:2049/%2F");
+    assert_eq!(
+        nfs_app_root("nas.local", 2049, "/100%/x"),
+        "nfs://nas.local:2049/100%25%2Fx"
+    );
+}
+
+#[test]
+fn an_nfs_path_names_the_place_of_its_export() {
+    for (export, path) in [
+        ("/Public", "nfs://nas.local:2049/Public/photos/a.jpg"),
+        ("/Public", "nfs://nas.local:2049/Public"),
+        ("/volume1/data", "nfs://nas.local:2049/volume1%2Fdata/photos"),
+        ("/", "nfs://nas.local:2049/%2F/etc"),
+        ("/100%/x", "nfs://nas.local:2049/100%25%2Fx"),
+    ] {
+        let server = server_of_path(path).expect("an NFS path");
+        assert_eq!(server.kind, super::super::BackendKind::Nfs, "{path}");
+        assert_eq!(server.volume_id, nfs_volume_id("nas.local", 2049, export), "{path}");
+    }
+}
+
+#[test]
+fn an_nfs_path_without_an_export_or_a_port_names_nothing() {
+    for path in [
+        "nfs://nas.local:2049",
+        "nfs://nas.local:2049/",
+        "nfs://nas.local/Public",
+        "nfs://:2049/Public",
+        // A broken escape is no spelling `nfs_app_root` mints.
+        "nfs://nas.local:2049/a%2",
+        "nfs://nas.local:2049/a%zz",
+    ] {
+        assert_eq!(server_of_path(path), None, "{path}");
+    }
+}
+
+#[test]
+fn an_nfs_app_root_and_its_volume_id_agree_through_server_of_path() {
+    // Invariant 11: the path a volume mints and the id it registers under come
+    // from one tuple, so routing a path finds the volume that minted it.
+    for export in ["/Public", "/volume1/data", "/", "/Caf\u{e9} & co"] {
+        let root = nfs_app_root("Nas.Local", 15481, export);
+        let server = server_of_path(&format!("{root}/sub/file")).expect("an NFS path");
+        assert_eq!(server.volume_id, nfs_volume_id("nas.local", 15481, export), "{export}");
+    }
+}

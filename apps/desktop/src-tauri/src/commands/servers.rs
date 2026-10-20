@@ -35,9 +35,10 @@ mod outcomes;
 mod s3_accounts;
 mod saves;
 mod smb_hosts;
+mod target_ids;
 mod wire;
 use outcomes::{SavedEntry, outcome_from_s3, outcome_from_sftp, outcome_from_webdav, saved_by_id};
-use s3_accounts::{s3_accounts, s3_place};
+use s3_accounts::s3_accounts;
 use saves::{save_edit, save_target};
 use smb_hosts::smb_hosts;
 pub use wire::{
@@ -318,6 +319,9 @@ pub async fn connect_server(
             )
             .await,
         ),
+        // The NFS place store and its dial land with the NFS wiring; until then a
+        // dial reaches nothing, so it registers and saves nothing.
+        ServerTarget::Nfs { .. } => ServerConnectOutcome::Unreachable,
     }
 }
 
@@ -605,25 +609,7 @@ pub async fn update_saved_server(server: ServerTarget, editing: Option<String>) 
 #[tauri::command]
 #[specta::specta]
 pub fn saved_server_id(server: ServerTarget) -> Option<String> {
-    match server {
-        ServerTarget::Sftp {
-            host, port, username, ..
-        } => Some(cmdr_fs::volume::sftp_volume_id(&host, port, &username)),
-        ServerTarget::Webdav { url, username, .. } => {
-            let params = webdav_params(&url, &username, "/")?;
-            Some(cmdr_fs::volume::webdav_volume_id(
-                params.host(),
-                params.port(),
-                &username,
-            ))
-        }
-        ServerTarget::S3 {
-            provider,
-            access_key_id,
-            bucket,
-            ..
-        } => s3_place(provider, access_key_id, bucket, true).volume_id(),
-    }
+    target_ids::place_id(server)
 }
 
 /// Names the saved S3 account the listing calls `id`, and moves it to `endpoint`

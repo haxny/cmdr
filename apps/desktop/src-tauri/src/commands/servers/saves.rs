@@ -21,7 +21,10 @@ use crate::network::webdav_volume_wiring;
 /// called `update_known_sftp_server` / `update_known_webdav_server`), so this
 /// facade builds the known-servers entry itself instead of forwarding.
 pub(super) async fn save_target(server: ServerTarget) -> SavedServerOutcome {
-    save_entry(entry_of(server)).await
+    let Some(entry) = entry_of(server) else {
+        return SavedServerOutcome::Unreachable;
+    };
+    save_entry(entry).await
 }
 
 async fn save_entry(entry: Entry) -> SavedServerOutcome {
@@ -42,7 +45,10 @@ pub(super) async fn save_edit(id: &str, server: ServerTarget) -> SavedServerOutc
     let Some(saved) = saved_by_id(id) else {
         return SavedServerOutcome::Unreachable;
     };
-    match (saved, entry_of(server)) {
+    let Some(edit) = entry_of(server) else {
+        return SavedServerOutcome::Unreachable;
+    };
+    match (saved, edit) {
         (SavedEntry::Sftp(saved), Entry::Sftp(edit)) => crate::server_move::edit_sftp(saved, edit).await,
         (SavedEntry::Webdav(saved), Entry::Webdav(edit)) => crate::server_move::edit_webdav(saved, edit).await,
         // A place's endpoint is its ACCOUNT's, which only the account's own edit
@@ -79,8 +85,11 @@ impl Entry {
 ///
 /// ❗ `pinned: true` and a fresh `last_connected_at` are read only for a NEW
 /// entry: `remember` keeps a stored pin, and a move keeps both.
-fn entry_of(server: ServerTarget) -> Entry {
-    match server {
+///
+/// `None` for an NFS place, whose store lands with the NFS wiring: a save
+/// nobody can make answers `Unreachable`, ❌ never a quiet success.
+fn entry_of(server: ServerTarget) -> Option<Entry> {
+    let entry = match server {
         ServerTarget::Sftp {
             display_name,
             host,
@@ -131,5 +140,7 @@ fn entry_of(server: ServerTarget) -> Entry {
             place: s3_place(provider, access_key_id, bucket, auto_reconnect),
             account_name: display_name,
         },
-    }
+        ServerTarget::Nfs { .. } => return None,
+    };
+    Some(entry)
 }

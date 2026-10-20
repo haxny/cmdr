@@ -205,7 +205,9 @@ fn reach_without_row(volume_id: &str, facts: &ReachFacts, volumes: &[LocationInf
             }
         }
         // Nothing saved knows the id: a forgotten share or server.
-        VolumeScheme::Smb | VolumeScheme::Sftp | VolumeScheme::Webdav | VolumeScheme::S3 => FavoriteReach::Forgotten,
+        VolumeScheme::Smb | VolumeScheme::Sftp | VolumeScheme::Webdav | VolumeScheme::S3 | VolumeScheme::Nfs => {
+            FavoriteReach::Forgotten
+        }
         VolumeScheme::Favorite | VolumeScheme::Unknown => FavoriteReach::NotFound,
     }
 }

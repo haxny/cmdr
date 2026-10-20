@@ -29,6 +29,8 @@
 //!   ([`webdav_volume_id`]).
 //! - `s3-`: one place on an S3 account (a bucket, or the account root), keyed by
 //!   (host, port, access key id, bucket) ([`s3_volume_id`]).
+//! - `nfs-`: one export on an NFS server, keyed by (host, port, export)
+//!   ([`nfs_volume_id`]).
 //! - `mtp-`: an MTP device keyed by its serial (`super::mtp_ids`).
 //! - `path-`: the fallback when nothing better exists ([`path_volume_id`]),
 //!   keyed by the mount path. Stable only as long as the mount path is.
@@ -277,6 +279,42 @@ pub fn s3_volume_id(host: &str, port: u16, access_key_id: &str, bucket: Option<&
     )
 }
 
+/// Build the ID for one NFS export, the PLACE on an NFS server.
+///
+/// A server is the account and an export is a place under it (the S3 shape:
+/// `apps/desktop/src/lib/servers/DETAILS.md` § "The model"), so two exports on one
+/// host get an id each. The uid and gid the place acts as are ❌ NOT in the tuple:
+/// `AUTH_SYS` carries no secret, so they're a setting like SMB's username, and a
+/// uid typo fixed later must not orphan the place's tabs and favorites.
+///
+/// # Folding
+///
+/// The host is lowercased (DNS). The export is NOT folded, neither case nor
+/// Unicode normalization: it's a path on the server's filesystem, which a Linux
+/// NAS stores as bytes. Only its spelling is made canonical
+/// ([`canonical_nfs_export`]), so `/Public/` and `/Public` are one export. The
+/// port is literal.
+pub fn nfs_volume_id(host: &str, port: u16, export: &str) -> String {
+    let host = host.to_lowercase();
+    let port = port.to_string();
+    let export = canonical_nfs_export(export);
+    derived_id(VolumeScheme::Nfs, &format!("{export}-{host}"), &[&host, &port, &export])
+}
+
+/// The one spelling of an NFS export that identity and app paths are minted
+/// from: [`normalize_remote_path`](super::remote_paths::normalize_remote_path)'s
+/// (absolute, no empty, `.`, or `..` segment, no trailing `/`; the root export
+/// stays `/`), and otherwise the server's bytes.
+///
+/// ❗ [`nfs_volume_id`] and [`nfs_app_root`](super::nfs_app_root) both read
+/// through it, so a typed `/volume1//data/` and a listed `/volume1/data` reach
+/// one volume.
+pub fn canonical_nfs_export(export: &str) -> String {
+    super::remote_paths::normalize_remote_path(std::path::Path::new(export))
+        .to_string_lossy()
+        .into_owned()
+}
+
 /// Build the ID for an MTP device from its (opaque, verbatim) serial.
 ///
 /// Called by [`super::mtp_ids::device_id_for`], which owns the serial-vs-topology
@@ -332,6 +370,8 @@ pub enum VolumeScheme {
     Webdav,
     /// `s3-`: a place on an S3 account ([`s3_volume_id`]).
     S3,
+    /// `nfs-`: an export on an NFS server ([`nfs_volume_id`]).
+    Nfs,
     /// `mtp-`: an MTP device, or one storage on it (`super::mtp_ids`).
     Mtp,
     /// `adb-`: an Android device over ADB ([`adb_volume_id`]).
@@ -347,13 +387,14 @@ pub enum VolumeScheme {
 impl VolumeScheme {
     /// Every prefixed scheme with its tag. [`Self::of`] reads it and
     /// [`derived_id`] writes it, so minting and parsing can't drift apart.
-    const TAGGED: [(Self, &'static str); 10] = [
+    const TAGGED: [(Self, &'static str); 11] = [
         (Self::Local, "vol"),
         (Self::Path, "path"),
         (Self::Smb, "smb"),
         (Self::Sftp, "sftp"),
         (Self::Webdav, "webdav"),
         (Self::S3, "s3"),
+        (Self::Nfs, "nfs"),
         (Self::Mtp, "mtp"),
         (Self::Adb, "adb"),
         (Self::Cloud, "cloud"),
@@ -386,6 +427,7 @@ impl VolumeScheme {
             | Self::Sftp
             | Self::Webdav
             | Self::S3
+            | Self::Nfs
             | Self::Mtp
             | Self::Adb
             | Self::Cloud
@@ -402,7 +444,14 @@ impl VolumeScheme {
     pub fn is_mount_rooted(self) -> bool {
         match self {
             Self::Root | Self::Local | Self::Path | Self::Smb | Self::Cloud => true,
-            Self::Sftp | Self::Webdav | Self::S3 | Self::Mtp | Self::Adb | Self::Favorite | Self::Unknown => false,
+            Self::Sftp
+            | Self::Webdav
+            | Self::S3
+            | Self::Nfs
+            | Self::Mtp
+            | Self::Adb
+            | Self::Favorite
+            | Self::Unknown => false,
         }
     }
 

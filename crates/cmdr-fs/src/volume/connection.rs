@@ -130,6 +130,8 @@ pub enum BackendKind {
     Webdav,
     /// An S3-compatible object store (AWS, R2, B2, Wasabi, Hetzner, …).
     S3,
+    /// An export on an NFSv3 server, over Cmdr's own user-space client.
+    Nfs,
     /// A phone or camera over MTP/PTP.
     Mtp,
     /// An Android device over ADB.
@@ -191,8 +193,9 @@ impl BackendKind {
         match self {
             Self::Local | Self::Smb | Self::Mtp | Self::Adb => true,
             // S3 too: every request costs money, so no index walks it
-            // (`docs/specs/s3-support-plan.md` § Product decisions).
-            Self::Sftp | Self::Webdav | Self::S3 | Self::Archive | Self::GitPortal | Self::Restic => false,
+            // (`docs/specs/s3-support-plan.md` § Product decisions). NFS
+            // isn't indexed in the background either, like WebDAV.
+            Self::Sftp | Self::Webdav | Self::S3 | Self::Nfs | Self::Archive | Self::GitPortal | Self::Restic => false,
         }
     }
 
@@ -211,6 +214,7 @@ impl BackendKind {
             | Self::Sftp
             | Self::Webdav
             | Self::S3
+            | Self::Nfs
             | Self::Mtp
             | Self::Adb
             | Self::Archive
@@ -233,7 +237,7 @@ impl BackendKind {
     #[must_use]
     pub fn detaches_by_session_drop(self) -> bool {
         match self {
-            Self::Sftp | Self::Webdav | Self::S3 => true,
+            Self::Sftp | Self::Webdav | Self::S3 | Self::Nfs => true,
             Self::Local | Self::Smb | Self::Mtp | Self::Adb | Self::Archive | Self::GitPortal | Self::Restic => false,
         }
     }
@@ -247,7 +251,7 @@ impl BackendKind {
     #[must_use]
     pub fn is_server(self) -> bool {
         match self {
-            Self::Smb | Self::Sftp | Self::Webdav | Self::S3 => true,
+            Self::Smb | Self::Sftp | Self::Webdav | Self::S3 | Self::Nfs => true,
             Self::Local | Self::Mtp | Self::Adb | Self::Archive | Self::GitPortal | Self::Restic => false,
         }
     }
@@ -266,7 +270,7 @@ impl BackendKind {
             // SMB: a Windows share's junctions and symlinks, and on Samba 4.23
             // a Unix symlink a `stat` reports (`crates/cmdr-smb/DETAILS.md`
             // § "Junctions and symlinks"). Restic: a snapshot's symlink nodes.
-            Self::Local | Self::Sftp | Self::Adb | Self::Archive | Self::Smb | Self::Restic => true,
+            Self::Local | Self::Sftp | Self::Nfs | Self::Adb | Self::Archive | Self::Smb | Self::Restic => true,
             // WebDAV, S3, MTP, and the `.git` trees have none.
             Self::Webdav | Self::S3 | Self::Mtp | Self::GitPortal => false,
         }
@@ -293,6 +297,7 @@ impl BackendKind {
             // to mark.
             Self::Local
             | Self::Sftp
+            | Self::Nfs
             | Self::Adb
             | Self::Archive
             | Self::Restic

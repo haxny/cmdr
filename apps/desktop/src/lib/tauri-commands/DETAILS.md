@@ -110,6 +110,9 @@ commands, and notable non-obvious placements.
   under one key shares it, and the unattended-reconnect query. The model and every connect outcome:
   `crates/cmdr-s3/DETAILS.md`. Also `estimateOperationCost`, the list-price estimate the Copy, Move, and Delete dialogs
   ask once their scan preview settles (`apps/desktop/src-tauri/src/s3_costs/DETAILS.md`).
+- **`nfs.ts`**: NFS servers minus everything the servers family already speaks: the add form's two questions before a
+  place exists, `listNfsExports` (with a typed `listing_refused`, since a typed export may still mount) and
+  `guessNfsIdentity` (always answers, falling back to this Mac's ids). The model: `crates/cmdr-nfs/DETAILS.md`.
 - **`licensing.ts`**: license status, activation, expiry, server validation.
 - **`settings.ts`**: port checking, file watcher debounce, indexing toggle, MCP server control, AI subsystem commands.
   `cloudAiHostVerdicts(baseUrls)` answers each URL with the policy's own `ManagedAiRefusal | null` (local, no request).
@@ -215,6 +218,7 @@ commands, and notable non-obvious placements.
 - SFTP servers → `sftp.ts`.
 - WebDAV servers → `webdav.ts`.
 - S3 accounts → `s3.ts`.
+- NFS servers → `nfs.ts`.
 - Licensing → `licensing.ts`.
 - Settings/AI → `settings.ts`.
 - Clipboard file operations (copy/cut/paste files via system clipboard) → `clipboard-files.ts`.

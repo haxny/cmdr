@@ -24,6 +24,8 @@ pub enum ServerProtocol {
     /// An S3 account (an endpoint plus an access key id), whose places are its
     /// saved buckets and, when saved, its root.
     S3,
+    /// An NFS server, whose places are its saved exports.
+    Nfs,
 }
 
 /// Whether a person NAMED this server, or the label is a stand-in.
@@ -207,6 +209,31 @@ pub enum ServerTarget {
         /// Whether Cmdr may re-probe unattended when a request finds it gone.
         auto_reconnect: bool,
     },
+    /// One NFS export: display name, host, an optional port, the export, the
+    /// uid and gid it acts as, an optional start folder, and the auto-reconnect
+    /// switch.
+    Nfs {
+        /// What to call it in the UI.
+        display_name: String,
+        /// The server, as the user typed it: a name or an IP literal.
+        host: String,
+        /// The NFS port the address named. `None` asks the server's portmapper,
+        /// and the place's id and app path carry 2049. ❗ Part of the identity.
+        port: Option<u16>,
+        /// The export, as listed or typed (`/Public`, `/volume1/data`). ❗ Part
+        /// of the identity: each export is its own place.
+        export: String,
+        /// The user id every request acts as. ❗ A setting, ❌ not the identity:
+        /// changing it keeps the place and redials.
+        uid: u32,
+        /// The group id every request acts as. A setting, like `uid`.
+        gid: u32,
+        /// Where a pane lands when the place is opened: an export-relative path
+        /// (`/Photos`). `None` is the export's root.
+        start_folder: Option<String>,
+        /// Whether Cmdr may redial unattended when the connection drops.
+        auto_reconnect: bool,
+    },
 }
 
 /// What a connect attempt produced, across every protocol this family speaks.
@@ -273,6 +300,18 @@ pub enum ServerConnectOutcome {
     ClockSkewed,
     /// S3 only: the address answers, but not as S3.
     NotAnS3Endpoint,
+    /// NFS only: the server has no export by that path.
+    ExportNotFound,
+    /// NFS only: the server refused this Mac the export (its client list or
+    /// its rules), although the request came from a reserved port.
+    ExportRefused,
+    /// NFS only: the export refused us, and this process couldn't bind a source
+    /// port below 1024, which a `secure` export (the Linux default) demands. ❗
+    /// The fix is the port or the export's `insecure` option, ❌ not the address.
+    ReservedPortRequired,
+    /// NFS only: the server speaks no NFSv3 over TCP. ❌ Never a fallback to
+    /// another version.
+    NoNfsV3,
     /// The start folder isn't the root or under it. ❗ Refused before dialing,
     /// so nothing was registered or saved.
     StartFolderOutsideRoot,

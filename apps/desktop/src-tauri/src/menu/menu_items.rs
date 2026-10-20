@@ -128,6 +128,7 @@ impl DetachWord {
             | VolumeScheme::Sftp
             | VolumeScheme::Webdav
             | VolumeScheme::S3
+            | VolumeScheme::Nfs
             | VolumeScheme::Mtp
             | VolumeScheme::Cloud
             | VolumeScheme::Favorite

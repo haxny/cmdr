@@ -1092,6 +1092,11 @@ export type {
   SavedS3Place,
 } from './s3'
 
+// NFS servers: what the add form asks before a place exists. Everything else goes
+// through the protocol-agnostic servers family above.
+export { listNfsExports, guessNfsIdentity } from './nfs'
+export type { GuessedNfsIdentity, NfsExportList, NfsIdentitySourceWire } from './nfs'
+
 export { confirmWithCheckbox } from './confirm-dialog'
 
 export {

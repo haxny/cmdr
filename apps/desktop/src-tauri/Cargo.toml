@@ -84,6 +84,11 @@ cmdr-webdav = { path = "../../../crates/cmdr-webdav" }
 # `cargo check -p cmdr-s3` verifies it without building the app. The secret
 # store, the place list, and every command stay here.
 cmdr-s3 = { path = "../../../crates/cmdr-s3" }
+# The NFSv3 backend: our own user-space client (RPC, MOUNT, NFS over one TCP
+# connection from a reserved port) and a `Volume` per export. No `tauri` in its
+# tree, so `cargo check -p cmdr-nfs` verifies it without building the app. The
+# place list and every command stay here.
+cmdr-nfs = { path = "../../../crates/cmdr-nfs" }
 # The Android-over-ADB backend: a real-filesystem `Volume` per device behind the
 # ADB server, beside MTP. No `tauri`, no user-facing words; `docs/specs/android-adb-backend.md`.
 cmdr-adb = { path = "../../../crates/cmdr-adb" }

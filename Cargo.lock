@@ -1547,6 +1547,7 @@ dependencies = [
  "cmdr-listing",
  "cmdr-local",
  "cmdr-mtp",
+ "cmdr-nfs",
  "cmdr-operation-log",
  "cmdr-operations",
  "cmdr-restic",
@@ -1853,6 +1854,14 @@ dependencies = [
  "specta",
  "tempfile",
  "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "cmdr-nfs"
+version = "0.0.0"
+dependencies = [
+ "cmdr-fs",
  "tokio-util",
 ]
 

@@ -4645,6 +4645,22 @@ export const commands = {
   estimateOperationCost: (request: CostEstimateRequest) =>
     __TAURI_INVOKE<CostEstimate[]>('estimate_operation_cost', { request }),
   /**
+   *  The exports the server at `host` (and `port`, when the address named one)
+   *  lists.
+   */
+  listNfsExports: (host: string, port: number | null) =>
+    __TAURI_INVOKE<NfsExportList>('list_nfs_exports', { host, port }),
+  /**
+   *  Who the files in the export `export_path` on `host` belong to, as a uid and
+   *  gid to act as. (`export_path`, ❌ not `export`: the binding's parameter would
+   *  be a reserved word in TypeScript.)
+   *
+   *  ❗ Always answers: an export that can't be read to say falls back to this
+   *  Mac's own uid and gid, and the connect reports its own refusal.
+   */
+  guessNfsIdentity: (host: string, port: number | null, exportPath: string) =>
+    __TAURI_INVOKE<GuessedNfsIdentity>('guess_nfs_identity', { host, port, exportPath }),
+  /**
    *  Every server the user has saved, across all three stores.
    *
    *  ❗ Cached state only, ❌ never the wire: the hub re-reads this on every
@@ -9297,6 +9313,16 @@ export type GoToPathResolution =
   // Defensive: the input was empty or couldn't be turned into a path.
   | { kind: 'invalid'; reason: string }
 
+// The uid and gid the add form fills "Act as user ID" and "Group ID" with.
+export type GuessedNfsIdentity = {
+  // The user id.
+  uid: number
+  // The group id.
+  gid: number
+  // Why these.
+  source: NfsIdentitySourceWire
+}
+
 // A single recent-search entry, persisted verbatim.
 export type HistoryEntry = {
   id: string
@@ -12654,6 +12680,38 @@ export type NetworkHostLost = {
  */
 export type NetworkHostResolved = NetworkHost
 
+// What asking a server for its exports produced.
+export type NfsExportList =
+  // The exports the server lists, each canonical (`/Public`, `/volume1/data`).
+  | {
+      outcome: 'listed'
+      // Possibly empty: a server may export nothing to this Mac.
+      exports: string[]
+    }
+  /**
+   *  The server is there but won't list its exports to this Mac. ❗ Not a
+   *  dead end: an export typed by hand may still mount.
+   */
+  | { outcome: 'listing_refused' }
+  // The server speaks no NFSv3 over TCP.
+  | { outcome: 'no_nfs_v3' }
+  // Nothing answered inside the dial budget.
+  | { outcome: 'timed_out' }
+  // No route, refused, DNS, or a reply that made no sense.
+  | { outcome: 'unreachable' }
+
+// Where a guessed identity came from, so the form can say.
+export type NfsIdentitySourceWire =
+  // The most common non-zero owner of the files at the export's root.
+  | 'most_common_owner'
+  // The owner of the export's root folder itself.
+  | 'root_owner'
+  /**
+   *  This Mac's own uid and gid: nothing there had a non-zero owner, or the
+   *  export couldn't be read to say.
+   */
+  | 'this_mac'
+
 /**
  *  Why an operation is not rollbackable, set alongside
  *  `RollbackState::NotRollbackable`. A nullable column: `None` when the
@@ -15994,6 +16052,24 @@ export type ServerConnectOutcome =
   | { outcome: 'clock_skewed' }
   // S3 only: the address answers, but not as S3.
   | { outcome: 'not_an_s3_endpoint' }
+  // NFS only: the server has no export by that path.
+  | { outcome: 'export_not_found' }
+  /**
+   *  NFS only: the server refused this Mac the export (its client list or
+   *  its rules), although the request came from a reserved port.
+   */
+  | { outcome: 'export_refused' }
+  /**
+   *  NFS only: the export refused us, and this process couldn't bind a source
+   *  port below 1024, which a `secure` export (the Linux default) demands. ❗
+   *  The fix is the port or the export's `insecure` option, ❌ not the address.
+   */
+  | { outcome: 'reserved_port_required' }
+  /**
+   *  NFS only: the server speaks no NFSv3 over TCP. ❌ Never a fallback to
+   *  another version.
+   */
+  | { outcome: 'no_nfs_v3' }
   /**
    *  The start folder isn't the root or under it. ❗ Refused before dialing,
    *  so nothing was registered or saved.
@@ -16072,6 +16148,8 @@ export type ServerProtocol =
    *  saved buckets and, when saved, its root.
    */
   | 's3'
+  // An NFS server, whose places are its saved exports.
+  | 'nfs'
 
 // Why a request to Cmdr's api server didn't come back with a usable answer.
 export type ServerRequestError =
@@ -16170,6 +16248,42 @@ export type ServerTarget =
        */
       bucket: string | null
       // Whether Cmdr may re-probe unattended when a request finds it gone.
+      autoReconnect: boolean
+    }
+  /**
+   *  One NFS export: display name, host, an optional port, the export, the
+   *  uid and gid it acts as, an optional start folder, and the auto-reconnect
+   *  switch.
+   */
+  | {
+      protocol: 'nfs'
+      // What to call it in the UI.
+      displayName: string
+      // The server, as the user typed it: a name or an IP literal.
+      host: string
+      /**
+       *  The NFS port the address named. `None` asks the server's portmapper,
+       *  and the place's id and app path carry 2049. ❗ Part of the identity.
+       */
+      port: number | null
+      /**
+       *  The export, as listed or typed (`/Public`, `/volume1/data`). ❗ Part
+       *  of the identity: each export is its own place.
+       */
+      export: string
+      /**
+       *  The user id every request acts as. ❗ A setting, ❌ not the identity:
+       *  changing it keeps the place and redials.
+       */
+      uid: number
+      // The group id every request acts as. A setting, like `uid`.
+      gid: number
+      /**
+       *  Where a pane lands when the place is opened: an export-relative path
+       *  (`/Photos`). `None` is the export's root.
+       */
+      startFolder: string | null
+      // Whether Cmdr may redial unattended when the connection drops.
       autoReconnect: boolean
     }
 

@@ -697,6 +697,16 @@ macro_rules! ipc_command_manifest {
                 ]
                 dispatch_only: []
             }
+            // NFS servers: what the add form asks before a place exists. Connecting
+            // goes through `commands::servers` below. Same gate and same no-stub
+            // reasoning as the SFTP block.
+            cfg(any(target_os = "macos", target_os = "linux")) {
+                typed: [
+                    crate::commands::nfs::list_nfs_exports,
+                    crate::commands::nfs::guess_nfs_identity,
+                ]
+                dispatch_only: []
+            }
             // The protocol-agnostic server family, over the two blocks above. Same
             // gate and same no-stub reasoning.
             cfg(any(target_os = "macos", target_os = "linux")) {
