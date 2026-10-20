@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/rand/v2"
 	"os/exec"
 	"slices"
 	"strings"
+	"time"
 )
 
 // runner runs git and gh in one directory, the worktree being landed.
@@ -97,16 +99,95 @@ func (r runner) commits(rangeSpec string) ([]commit, error) {
 	return commits, nil
 }
 
-// gh runs a gh command and decodes its JSON stdout into out.
+// ghAPI GETs a REST path and decodes the JSON body into out. It reads the budget from the
+// response's own headers, which `gh api rate_limit` can contradict, so the polling calls use it.
+func (r runner) ghAPI(out any, path string) error {
+	body, err := r.ghRetrying(transientRetries, func() (string, *apiBudget, error) {
+		stdout, err := r.cmd("", "gh", "api", "--include", path)
+		status, budget, body, ok := parseAPIResponse(stdout)
+		switch {
+		case !ok:
+			return "", nil, err
+		case err == nil && status < 300:
+			return body, nil, nil
+		case err == nil:
+			err = fmt.Errorf("gh api %s: HTTP %d\n%s", path, status, body)
+		}
+		return "", &budget, err
+	})
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal([]byte(body), out)
+}
+
+// ghJSON runs a read-only gh command and decodes its JSON stdout into out. Reads are safe to
+// repeat, so a failure also gets a few short retries.
 func (r runner) ghJSON(out any, args ...string) error {
-	stdout, err := r.cmd("", "gh", args...)
+	stdout, err := r.ghRetrying(transientRetries, r.ghCall(args))
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal([]byte(stdout), out)
 }
 
+// gh runs a gh command that may write (open a PR, apply a ruleset), so it only waits out a spent
+// rate limit and never repeats a call that may have gone through.
 func (r runner) gh(args ...string) (string, error) {
-	out, err := r.cmd("", "gh", args...)
+	out, err := r.ghRetrying(0, r.ghCall(args))
 	return strings.TrimSpace(out), err
+}
+
+// ghCall runs gh with no budget headers to read, so a failure asks `gh api rate_limit`.
+func (r runner) ghCall(args []string) func() (string, *apiBudget, error) {
+	return func() (string, *apiBudget, error) {
+		out, err := r.cmd("", "gh", args...)
+		if err != nil {
+			return out, r.rateLimit(), err
+		}
+		return out, nil, nil
+	}
+}
+
+// ghRetrying runs call, and after a failure acts on `afterGHFailure`: it sleeps until a spent
+// budget refills, or retries up to `retries` times.
+func (r runner) ghRetrying(retries int, call func() (string, *apiBudget, error)) (string, error) {
+	for {
+		out, budget, err := call()
+		if err == nil {
+			return out, nil
+		}
+		next, wait := afterGHFailure(budget, retries, time.Now())
+		switch next {
+		case ghGiveUp:
+			return out, err
+		case ghWaitForReset:
+			say("GitHub's API budget for this account is spent (many lands polling at once?), so waiting %s for it to refill.", wait.Round(time.Second))
+		case ghRetryTransient:
+			retries--
+		}
+		time.Sleep(wait + jitter(wait/10))
+	}
+}
+
+// rateLimit reads the account's API budget, or nil when it can't.
+func (r runner) rateLimit() *apiBudget {
+	out, err := r.cmd("", "gh", "api", "rate_limit")
+	if err != nil {
+		return nil
+	}
+	var l rateLimit
+	if json.Unmarshal([]byte(out), &l) != nil {
+		return nil
+	}
+	b := l.budget()
+	return &b
+}
+
+// jitter spreads parallel lands' calls apart, so they don't all wake together.
+func jitter(upTo time.Duration) time.Duration {
+	if upTo <= 0 {
+		return 0
+	}
+	return rand.N(upTo)
 }

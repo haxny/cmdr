@@ -81,6 +81,24 @@ always matches, so origin's branch gets overwritten whatever it holds. It clobbe
 - Tested against real bare origins in `push_test.go` (verified on git 2.56.0; removing `--force-if-includes` turns
   `TestPushToOriginRefusesAFetchedButUnintegratedTip` red, 2026-10-20).
 
+## Decision: cheap polling that outlasts the API budget
+
+Many sessions landing at once poll one account, and on 2026-10-20 they spent its 5,000/h REST budget: `gh run list`
+answered 403 after CI was green, and that land was lost. So:
+
+- **One REST call per poll** (`repos/{repo}/actions/workflows/ci.yml/runs?head_sha=`), plus the `CI OK` check runs only
+  once the run finished. `gh run list --workflow` cost two calls (it resolves the workflow first).
+- **Poll by run age** (`pollDelay`): 20 s until the run shows up, every 3 min while it's younger than 15 min (CI takes
+  25–35 min), then every minute, each plus up to 25% jitter. About 15–25 calls per CI run, down from ~180 (three calls
+  every 30 s).
+- **A failed call waits out a spent budget** (`afterGHFailure`, `ghbudget.go`), then continues: it sleeps until the
+  reset, or a secondary limit's `Retry-After`. Reads otherwise get two short retries; writes (`gh pr create`, ruleset
+  apply) get none, since they may have gone through.
+- **The budget comes from the failing response's own headers** (`gh api --include`, parsed by `net/http`, so no stderr
+  matching). Gotcha: `gh api rate_limit` can disagree with them (2026-10-20: `core` showed 2,862 left while the Actions
+  API answered `X-RateLimit-Remaining: 0`), so it's only the fallback for `gh pr` / `gh run` calls, which print no
+  headers.
+
 ## Decision: rebase by default, capped
 
 Decision: when `origin/main` moved, `land` rebases onto it before pushing, and when it moves while CI runs, it rebases

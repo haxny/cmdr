@@ -47,7 +47,6 @@ const (
 	ciCheck    = "CI OK"
 	// Every PR this script opens is an agent's, and agent-made issues and PRs carry this label.
 	agentLabel = "claude-created"
-	pollEvery  = 30 * time.Second
 	// How long a CI run gets to show up after the push that starts it.
 	appearWithin = 5 * time.Minute
 	// How many CI runs one land waits through while `origin/main` keeps moving under it. High
@@ -291,17 +290,22 @@ func waitForCI(r runner, head string, timeout time.Duration) error {
 	start := time.Now()
 	announced := false
 	for {
-		var runs []workflowRun
-		if err := r.ghJSON(&runs, "run", "list", "-R", repo, "--workflow", ciWorkflow, "--commit", head, "--json", "databaseId,status,conclusion,createdAt"); err != nil {
+		// One REST call per poll; the `CI OK` check runs only matter once the run finished.
+		var runs struct {
+			WorkflowRuns []workflowRun `json:"workflow_runs"`
+		}
+		if err := r.ghAPI(&runs, fmt.Sprintf("repos/%s/actions/workflows/%s/runs?head_sha=%s&per_page=20", repo, ciWorkflow, head)); err != nil {
 			return err
 		}
 		var checks struct {
 			CheckRuns []checkRun `json:"check_runs"`
 		}
-		if err := r.ghJSON(&checks, "api", fmt.Sprintf("repos/%s/commits/%s/check-runs?check_name=%s&filter=all", repo, head, url.PathEscape(ciCheck))); err != nil {
-			return err
+		if v, _ := ciVerdict(runs.WorkflowRuns, nil); v != verdictMissing && v != verdictPending {
+			if err := r.ghAPI(&checks, fmt.Sprintf("repos/%s/commits/%s/check-runs?check_name=%s&filter=all", repo, head, url.PathEscape(ciCheck))); err != nil {
+				return err
+			}
 		}
-		v, run := ciVerdict(runs, checks.CheckRuns)
+		v, run := ciVerdict(runs.WorkflowRuns, checks.CheckRuns)
 		switch v {
 		case verdictGreen:
 			say("%s is green.", ciCheck)
@@ -321,7 +325,8 @@ func waitForCI(r runner, head string, timeout time.Duration) error {
 		if time.Since(start) > timeout {
 			return fmt.Errorf("CI is still running after %s; land again to keep waiting: pnpm land", timeout)
 		}
-		time.Sleep(pollEvery)
+		delay := pollDelay(v, time.Since(run.CreatedAt))
+		time.Sleep(delay + jitter(delay/4))
 	}
 }
 

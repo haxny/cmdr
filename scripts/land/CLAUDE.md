@@ -7,8 +7,8 @@ only way commits reach `main`: nobody, admin included, lands a SHA without a gre
 
 - `main.go`: the flow (push, PR, wait, land, sync), every step skipped when it's already done.
 - `state.go`: the pure decisions (start step, CI verdict, messages, worktree parsing), tested in `state_test.go`.
-- `exec.go`: git and gh plumbing; the branch push is tested against real bare origins in `push_test.go`. `rulesets.go`:
-  `pnpm land rulesets [-apply]`.
+- `exec.go`: git and gh plumbing; the branch push is tested against real bare origins in `push_test.go`. `ghbudget.go`:
+  when a failed gh call waits out a spent API budget. `rulesets.go`: `pnpm land rulesets [-apply]`.
 
 ## Usage
 

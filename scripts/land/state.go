@@ -117,12 +117,34 @@ func needsSquash(commits []commit, msg string) bool {
 	return msg != "" && strings.TrimSpace(msg) != strings.TrimSpace(commits[0].message())
 }
 
-// workflowRun is one row of `gh run list --json databaseId,status,conclusion,createdAt`.
+// workflowRun is one of `repos/{repo}/actions/workflows/{file}/runs`' `workflow_runs`.
 type workflowRun struct {
-	ID         int64     `json:"databaseId"`
+	ID         int64     `json:"id"`
 	Status     string    `json:"status"`
 	Conclusion string    `json:"conclusion"`
-	CreatedAt  time.Time `json:"createdAt"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+const (
+	// A run shows up seconds after the push.
+	appearPoll = 20 * time.Second
+	// CI takes 25–35 min (a warm re-run about 18), so a run younger than `earlyFor` is checked
+	// rarely, and an older one every minute, since it may finish any time.
+	earlyPoll = 3 * time.Minute
+	earlyFor  = 15 * time.Minute
+	latePoll  = time.Minute
+)
+
+// pollDelay is how long to wait before the next CI poll, before jitter.
+func pollDelay(v verdict, runAge time.Duration) time.Duration {
+	switch {
+	case v == verdictMissing:
+		return appearPoll
+	case runAge < earlyFor:
+		return earlyPoll
+	default:
+		return latePoll
+	}
 }
 
 // checkRun is one `CI OK` check run on the head SHA; a re-run adds a new one with a higher id.

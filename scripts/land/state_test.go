@@ -110,6 +110,24 @@ func TestCIVerdict(t *testing.T) {
 	}
 }
 
+func TestPollDelay(t *testing.T) {
+	cases := []struct {
+		name   string
+		v      verdict
+		runAge time.Duration
+		want   time.Duration
+	}{
+		{"waiting for the run to show up", verdictMissing, 0, appearPoll},
+		{"a young run can't be done yet", verdictPending, 2 * time.Minute, earlyPoll},
+		{"an older run may finish any time", verdictPending, 20 * time.Minute, latePoll},
+	}
+	for _, c := range cases {
+		if got := pollDelay(c.v, c.runAge); got != c.want {
+			t.Errorf("%s: got %s, want %s", c.name, got, c.want)
+		}
+	}
+}
+
 func TestOpenPR(t *testing.T) {
 	prs := []pullRequest{{Number: 1, State: "CLOSED"}, {Number: 2, State: "OPEN"}, {Number: 3, State: "MERGED"}}
 	if pr, ok := openPR(prs); !ok || pr.Number != 2 {
