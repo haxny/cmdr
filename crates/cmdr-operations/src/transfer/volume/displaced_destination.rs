@@ -244,7 +244,7 @@ impl DisplacedDestination {
                 log::warn!(
                     target: "copy",
                     "couldn't remove the displaced destination at {}: {e}. It keeps its record.",
-                    self.aside.path().display()
+                    LogPrivate::path(self.aside.path())
                 );
                 if let Some(record) = self.record {
                     in_flight_temps::keep_for_arrival(&self.state, record);
@@ -291,8 +291,8 @@ impl DisplacedDestination {
                 log::warn!(
                     target: "copy",
                     "couldn't put {} back at {}: {e}",
-                    self.aside.path().display(),
-                    self.original.display()
+                    LogPrivate::path(self.aside.path()),
+                    LogPrivate::path(&self.original)
                 );
                 let kept_at = rescue_out_of_temp_space(volume.as_ref(), self.aside.path(), &self.original).await;
                 // The rescue either gave the bytes a real name or left them on
@@ -410,8 +410,8 @@ async fn restore_into(
         log::warn!(
             target: "copy",
             "kept the entry an Overwrite set aside at {} beside its name, at {}",
-            original.display(),
-            kept_at.display()
+            LogPrivate::path(&original),
+            LogPrivate::path(&kept_at)
         );
         recovered.push(RecoveredOriginal::new(&original, &kept_at));
     }

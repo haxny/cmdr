@@ -25,6 +25,7 @@ use super::edit_error::EditError;
 use super::engine::{EditLeftovers, MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
 use cmdr_archive::mutator::{self, MutationError};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{LaneKey, Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::{ArchiveSubkind, ExecutionStatus};
@@ -210,8 +211,8 @@ impl MaterializedSources {
                 Err(e) => log::warn!(
                     target: "archive_edit",
                     "couldn't remove {} of moved source {}: {}",
-                    e.path.display(),
-                    path.display(),
+                    LogPrivate::path(&e.path),
+                    LogPrivate::path(path),
                     e.error
                 ),
             }

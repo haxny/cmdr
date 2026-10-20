@@ -174,7 +174,7 @@ async fn reverse_written_file(runtime: &Handle, volume: &Arc<dyn Volume>, entry:
             Err(e) => {
                 log::warn!(
                     "volume_rollback_with_progress: couldn't recheck {}: {e:?}",
-                    entry.path.display()
+                    LogPrivate::file_path(&entry.path)
                 );
                 return ItemResult::Skipped(SkipReason::UnverifiablePrecondition);
             }
@@ -184,7 +184,7 @@ async fn reverse_written_file(runtime: &Handle, volume: &Arc<dyn Volume>, entry:
             PresentRecheck::Skip(reason) => {
                 log::info!(
                     "volume_rollback_with_progress: leaving {} alone ({reason:?})",
-                    entry.path.display()
+                    LogPrivate::file_path(&entry.path)
                 );
                 return ItemResult::Skipped(reason);
             }
@@ -205,14 +205,14 @@ fn removal_result(path: &Path, removed: Result<(), RemovalRefused>) -> ItemResul
         Err(RemovalRefused::Locked) => {
             log::warn!(
                 "volume_rollback_with_progress: {} wears a lock this process can't clear",
-                path.display()
+                LogPrivate::file_path(path)
             );
             ItemResult::Skipped(SkipReason::Locked)
         }
         Err(RemovalRefused::Volume(e)) => {
             log::warn!(
                 "volume_rollback_with_progress: couldn't delete {}: {e:?}",
-                path.display()
+                LogPrivate::file_path(path)
             );
             ItemResult::Skipped(SkipReason::Failed)
         }
@@ -260,13 +260,13 @@ pub(super) async fn clean_partial_writes(volume: &Arc<dyn Volume>, partials: &[P
     for partial_path in partials {
         log::debug!(
             "copy_volumes_with_progress: cleaning up partial file {} for op={}",
-            partial_path.display(),
+            LogPrivate::file_path(partial_path),
             operation_id,
         );
         if let Err(e) = delete_written_file(volume, partial_path).await {
             log::warn!(
                 "copy_volumes_with_progress: couldn't clean up partial {}: {:?}",
-                e.path.display(),
+                LogPrivate::path(&e.path),
                 e.error
             );
         }
@@ -424,7 +424,7 @@ pub(super) async fn reap_stale_transfer_temps(
     let entries = match volume.list_directory(dir, None).await {
         Ok(entries) => entries,
         Err(e) => {
-            log::debug!(target: "copy", "skipping stale-temp reap of {}: {e}", dir.display());
+            log::debug!(target: "copy", "skipping stale-temp reap of {}: {e}", LogPrivate::dir_path(dir));
             return None;
         }
     };
@@ -457,10 +457,10 @@ pub(super) async fn reap_stale_transfer_temps(
         log::info!(
             target: "copy",
             "reap_stale_transfer_temps: removing a transfer partial left by an earlier run: {}",
-            temp_path.display()
+            LogPrivate::file_path(&temp_path)
         );
         if let Err(e) = volume.delete(&temp_path).await {
-            log::debug!(target: "copy", "couldn't reap stale temp {}: {e}", temp_path.display());
+            log::debug!(target: "copy", "couldn't reap stale temp {}: {e}", LogPrivate::file_path(&temp_path));
         }
     }
     Some(survivors)
@@ -508,7 +508,7 @@ async fn prune_created_dir_if_empty(runtime: &Handle, volume: &Arc<dyn Volume>, 
                 Err(RemovalRefused::Volume(e)) => {
                     log::debug!(
                         "prune_created_dir_if_empty: couldn't remove empty created dir {}: {:?}",
-                        dir.display(),
+                        LogPrivate::dir_path(dir),
                         e
                     );
                     ItemResult::Skipped(SkipReason::Failed)
@@ -518,7 +518,7 @@ async fn prune_created_dir_if_empty(runtime: &Handle, volume: &Arc<dyn Volume>, 
         Ok(entries) => {
             log::debug!(
                 "prune_created_dir_if_empty: keeping created dir {}, it still holds {} entr{}",
-                dir.display(),
+                LogPrivate::dir_path(dir),
                 entries.len(),
                 if entries.len() == 1 { "y" } else { "ies" }
             );
@@ -527,7 +527,7 @@ async fn prune_created_dir_if_empty(runtime: &Handle, volume: &Arc<dyn Volume>, 
         Err(e) => {
             log::debug!(
                 "prune_created_dir_if_empty: keeping created dir {}, couldn't list it: {:?}",
-                dir.display(),
+                LogPrivate::dir_path(dir),
                 e
             );
             ItemResult::Skipped(SkipReason::Failed)
@@ -592,7 +592,7 @@ pub(super) async fn remove_tree(
     path: &Path,
     why: TreeRemoval,
 ) -> Result<(), PathedVolumeError> {
-    log::debug!(target: "delete", "remove_tree: {} ({why:?})", path.display());
+    log::debug!(target: "delete", "remove_tree: {} ({why:?})", LogPrivate::path(path));
     remove_tree_inner(volume, path, why.side()).await.map(|_| ())
 }
 
@@ -639,7 +639,7 @@ async fn remove_tree_inner(volume: &Arc<dyn Volume>, path: &Path, side: PathRole
                 log::warn!(
                     target: "delete",
                     "remove_tree: couldn't delete {}: {:?}",
-                    e.path.display(),
+                    LogPrivate::path(&e.path),
                     e.error
                 );
                 // The child is still there, so this directory isn't empty either.

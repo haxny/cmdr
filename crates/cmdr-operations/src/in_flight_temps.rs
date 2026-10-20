@@ -119,6 +119,7 @@ use std::sync::{Arc, Mutex, MutexGuard, Once};
 use super::host::EngineHost;
 use super::state::WriteOperationState;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use log_writer::LogWriter;
 
 /// The persisted log's file name inside the app data dir.
@@ -300,7 +301,7 @@ pub(super) fn track_temp(state: &WriteOperationState, home: Option<RecordHome>, 
             log::debug!(
                 target: "copy",
                 "not persisting the in-flight temp {}: the operation didn't name the volume it writes to",
-                temp.display()
+                LogPrivate::file_path(temp)
             );
         }
     }

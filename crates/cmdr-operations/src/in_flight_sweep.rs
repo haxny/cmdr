@@ -271,7 +271,7 @@ fn is_a_staged_partial(path: &Path) -> bool {
         log::warn!(
             target: "copy",
             "the in-flight ledger holds a plain-removal record that isn't a staged partial, leaving it: {}",
-            path.display()
+            LogPrivate::file_path(path)
         );
     }
     named
@@ -293,7 +293,7 @@ async fn settle_tracked(host: &EngineHost, item: &TrackedItem) -> Outcome {
             target: "copy",
             "the in-flight ledger holds a {:?} record whose name isn't that shape, leaving it: {}",
             item.kind,
-            path.display()
+            LogPrivate::path(&path)
         );
         return Outcome::LeftAlone;
     }
@@ -443,7 +443,7 @@ async fn settle_kind(
                 log::warn!(
                     target: "copy",
                     "an unfinished move's staging folder still holds files, so it stays where it is: {}",
-                    path.display()
+                    LogPrivate::dir_path(path)
                 );
                 announce_leftovers_kept(host, drive_name, path);
                 Outcome::LeftAlone
@@ -507,8 +507,8 @@ async fn restore(surface: &Surface, aside: &Path, destination: &Path) -> Outcome
             log::info!(
                 target: "copy",
                 "put {} back at {}: the copy that was replacing it never finished",
-                aside.display(),
-                destination.display()
+                LogPrivate::path(aside),
+                LogPrivate::path(destination)
             );
             Outcome::Restored
         }
@@ -527,8 +527,8 @@ async fn finish_landing(surface: &Surface, temp: &Path, destination: &Path) -> O
             log::info!(
                 target: "copy",
                 "landed {} at {}: its landing was cut off after the way was cleared",
-                temp.display(),
-                destination.display()
+                LogPrivate::file_path(temp),
+                LogPrivate::file_path(destination)
             );
             Outcome::Restored
         }
@@ -578,14 +578,14 @@ async fn keep_beside(surface: &Surface, aside: &Path, destination: &Path, rescue
                         target: "copy",
                         "{} was displaced by something that never finished landing, and its own name is taken, \
                          so it's kept at {}",
-                        destination.display(),
-                        candidate.display()
+                        LogPrivate::path(destination),
+                        LogPrivate::path(&candidate)
                     ),
                     Rescued::Landing => log::warn!(
                         target: "copy",
                         "the new bytes for {} never finished landing, and the name is taken, so they're kept at {}",
-                        destination.display(),
-                        candidate.display()
+                        LogPrivate::file_path(destination),
+                        LogPrivate::file_path(&candidate)
                     ),
                     Rescued::UnprovenLanding => log::warn!(
                         target: "copy",
@@ -605,8 +605,8 @@ async fn keep_beside(surface: &Surface, aside: &Path, destination: &Path, rescue
             log::warn!(
                 target: "copy",
                 "every ` (N)` variant of {} is taken, so {} keeps its scratch name for now",
-                recovered.display(),
-                aside.display()
+                LogPrivate::path(&recovered),
+                LogPrivate::path(aside)
             );
             return None;
         }
