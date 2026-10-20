@@ -44,7 +44,10 @@ const (
 	VerdictReal ContentionVerdict = "real"
 	// VerdictRaced: an assertion or panic (no deadline in it) that a re-run passed.
 	// Load can't make an assertion false, only change who wins a race, so this is a
-	// defect in the test or the code, ❌ never contention (#504).
+	// defect in the test or the code, ❌ never reported as contention (#504). It
+	// softens to a warn like contention does, named as the race it is: kept red, the
+	// races that predate the verdict blocked every session's land, one per CI run
+	// (three in four runs, 2026-10-20), until each was fixed.
 	VerdictRaced ContentionVerdict = "raced"
 )
 
@@ -56,14 +59,15 @@ const BusyLoadPerCore = 1.5
 // WarnOnly decides whether a red run may be softened to a warn. Contention is proven
 // harmless, and inconclusive means the machine was too busy to prove anything, so
 // failing on it would just punish the user for running the suite while busy: exactly
-// the case this whole mechanism exists to stop mislabelling. A too-slow or real
-// verdict keeps the run red.
+// the case this whole mechanism exists to stop mislabelling. A race passed on a
+// re-run too, so it warns as well, under its own name (see [VerdictRaced]). A
+// too-slow or real verdict keeps the run red.
 func WarnOnly(verdicts []ContentionVerdict) bool {
 	if len(verdicts) == 0 {
 		return false
 	}
 	for _, v := range verdicts {
-		if v != VerdictContention && v != VerdictInconclusive {
+		if v != VerdictContention && v != VerdictInconclusive && v != VerdictRaced {
 			return false
 		}
 	}

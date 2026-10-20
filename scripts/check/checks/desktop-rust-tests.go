@@ -137,25 +137,36 @@ func resolveRustFailure(label string, run ContentionRunner, load LoadSampler, tr
 // contentionWarnMessage is the one line that lands in the check summary, so it has to
 // carry the whole story: what failed, and why it isn't being treated as a defect.
 func contentionWarnMessage(results []ContentionResult) string {
-	var starved, murky []string
+	var starved, raced, murky []string
 	for _, r := range results {
-		if r.Verdict == VerdictContention {
+		switch r.Verdict {
+		case VerdictContention:
 			starved = append(starved, r.Name)
-		} else {
+		case VerdictRaced:
+			raced = append(raced, r.Name)
+		default:
 			murky = append(murky, r.Name)
 		}
 	}
-	parts := make([]string, 0, 2)
+	parts := make([]string, 0, 3)
 	if len(starved) > 0 {
 		parts = append(parts, fmt.Sprintf("%d passed alone at the same deadline, so the suite was starving %s (%s)",
 			len(starved), Pluralize(len(starved), "it", "them"), strings.Join(starved, ", ")))
+	}
+	if len(raced) > 0 {
+		parts = append(parts, fmt.Sprintf("%d failed an assertion and passed alone, so %s a race to fix (%s)",
+			len(raced), Pluralize(len(raced), "it's", "they're"), strings.Join(raced, ", ")))
 	}
 	if len(murky) > 0 {
 		parts = append(parts, fmt.Sprintf("%d needed headroom while the machine was still busy, so the cause is unsettled (%s)",
 			len(murky), strings.Join(murky, ", ")))
 	}
-	return fmt.Sprintf("%d %s failed under load, none confirmed a defect: %s",
-		len(results), Pluralize(len(results), "test", "tests"), strings.Join(parts, "; "))
+	verdict := "none confirmed a defect"
+	if len(raced) > 0 {
+		verdict = "none failed alone"
+	}
+	return fmt.Sprintf("%d %s failed under load, %s: %s",
+		len(results), Pluralize(len(results), "test", "tests"), verdict, strings.Join(parts, "; "))
 }
 
 // nextestRanRE matches nextest's end-of-run summary. Its presence means the tests

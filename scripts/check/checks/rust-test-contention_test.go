@@ -416,22 +416,32 @@ func TestAnInTestDeadlineThatPassesAloneIsStillContention(t *testing.T) {
 	}
 }
 
-// A race keeps the run red, and the summary names it as one.
-func TestARacedAssertionKeepsTheRunRedAndSaysWhy(t *testing.T) {
+// A race warns like contention, ❌ never described as starvation: the warn names it
+// a race to fix. A real failure beside it still keeps the run red.
+func TestARacedAssertionWarnsAndNamesTheRace(t *testing.T) {
 	f := &fakeRun{outputs: map[string]string{}}
 	trimmed := "        FAIL [   0.090s] (1/1) cmdr_lib raced::one\n" +
 		"thread 'raced::one' panicked at src/foo.rs:42:\nassertion `left == right` failed\n"
-	_, err := resolveRustFailure("rust tests failed", f.run, quiet, trimmed)
+	result, err := resolveRustFailure("rust tests failed", f.run, quiet, trimmed)
 
-	if err == nil {
-		t.Fatal("a raced assertion must keep the lane red")
+	if err != nil {
+		t.Fatalf("a race that passed alone warns, got an error: %v", err)
 	}
-	for _, want := range []string{"raced::one", "race"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("error missing %q:\n%s", want, err.Error())
+	if result.Code != ResultWarning {
+		t.Errorf("code = %v, want %v", result.Code, ResultWarning)
+	}
+	for _, want := range []string{"raced::one", "a race to fix"} {
+		if !strings.Contains(result.Message, want) {
+			t.Errorf("message missing %q: %q", want, result.Message)
 		}
 	}
-	if WarnOnly([]ContentionVerdict{VerdictContention, VerdictRaced}) {
-		t.Error("WarnOnly must not soften a run with a raced test in it")
+	if strings.Contains(result.Message, "starving") {
+		t.Errorf("a race must not read as starvation: %q", result.Message)
+	}
+	if !WarnOnly([]ContentionVerdict{VerdictContention, VerdictRaced}) {
+		t.Error("WarnOnly softens a run whose only re-run verdicts are contention and races")
+	}
+	if WarnOnly([]ContentionVerdict{VerdictRaced, VerdictReal}) {
+		t.Error("a real failure beside a race still keeps the run red")
 	}
 }
