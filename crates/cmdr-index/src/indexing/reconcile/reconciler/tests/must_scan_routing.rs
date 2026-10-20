@@ -10,8 +10,12 @@ async fn must_scan_sub_dirs_queued() {
     let mut reconciler = EventReconciler::new();
     reconciler.switch_to_live();
 
-    let (writer, _dir, _conn) = setup_test_writer();
-    reconciler.queue_must_scan_sub_dirs(PathBuf::from("/test/dir"), &writer);
+    let (writer, dir, _conn) = setup_test_writer();
+    // A path the test owns and never creates: the settle delay holds back an anchor
+    // whose directory EXISTS and is young, so an absolute `/test/dir` made this test
+    // depend on whatever else on the machine had just created one (it failed that way
+    // once in a root-run Linux CI container, 2026-10-20).
+    reconciler.queue_must_scan_sub_dirs(dir.path().join("never-created"), &writer);
 
     // Should not have any pending rescans after starting one
     // (it was popped from the set and started)
