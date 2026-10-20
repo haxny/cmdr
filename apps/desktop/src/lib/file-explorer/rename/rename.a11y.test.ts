@@ -252,8 +252,8 @@ describe('RenameConflictDialog a11y', () => {
     mount(RenameConflictDialog, {
       target,
       props: {
-        renamedFile: { name: 'notes.txt', size: 1024, modifiedAt: undefined },
-        existingFile: { name: 'notes.txt', size: 2048, modifiedAt: undefined },
+        renamedFile: { name: 'notes.txt', size: 1024, modifiedAt: undefined, isDirectory: false },
+        existingFile: { name: 'notes.txt', size: 2048, modifiedAt: undefined, isDirectory: false },
         supportsTrash: false,
         onResolve: () => {},
       },
