@@ -15,9 +15,13 @@ Linux build would bring its own table rather than reuse this one.
 `null`. In order:
 
 1. A kind with no OS-visible paths (`mtp`, `adb`, `network`, `search-results`) ⇒ `null`. Nothing else is consulted.
-2. A pane inside an archive ⇒ the folder holding the archive FILE (`folderContainingArchive`). Nothing inside an archive
-   is on disk, so the containing folder is the nearest place a shell can stand.
-3. A folder under the cursor ⇒ that folder. It's what the user is pointing at, so it wins over the pane's own.
+2. A pane inside a routed container ⇒ the folder on disk that holds it: an archive's containing folder
+   (`folderContainingArchive`), a restic repo's folder for its `Browse snapshots` view, and the working tree for a
+   virtual `.git` portal path (only while `showVirtualGitPortal` is on; off, `.git/branches/` is a real folder). Nothing
+   inside is on disk, and a shell handed such a path lands nowhere. When containers nest, the outermost wins (the
+   shortest holding folder).
+3. A folder under the cursor ⇒ that folder, unless it's itself a routed row (the `Browse snapshots` row, a portal
+   category). It's what the user is pointing at, so it wins over the pane's own.
 4. Everything else ⇒ the pane's own folder: a file under the cursor, the `..` row, and an empty listing with no cursor
    at all.
 

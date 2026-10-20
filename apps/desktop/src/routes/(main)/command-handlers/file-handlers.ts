@@ -27,6 +27,7 @@ import { pathInsideArchive } from '#lib/file-explorer/pane/archive-paths.js'
 import { openInEditorOrExplain } from '#lib/file-explorer/pane/editor-open.js'
 import { openGetInfoOrExplain } from '#lib/file-explorer/pane/get-info-open.js'
 import { resolveTerminalFolder } from '#lib/open-terminal/terminal-target.js'
+import { getShowVirtualGitPortal } from '#lib/settings/reactive-settings.svelte.js'
 import { openTerminalHereForFolder } from '#lib/open-terminal/open-terminal-here.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { displayPath } from '#lib/utils/display-path.js'
@@ -258,6 +259,7 @@ export const fileHandlers = {
       // kind-from-path would hide the drive the archive actually lives on.
       volumeKind: capabilitiesFor(volumeId).kind,
       cursorEntry: (await explorerRef?.getCursorRowForTerminal()) ?? null,
+      virtualGitPortalOn: getShowVirtualGitPortal(),
     })
     await openTerminalHereForFolder({ folder, volumeId })
   },

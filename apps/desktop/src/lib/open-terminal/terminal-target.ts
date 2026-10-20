@@ -8,7 +8,8 @@
 
 import type { VolumeKind } from '#lib/file-explorer/pane/volume-capabilities.js'
 import { folderContainingArchive, pathCrossesArchiveBoundary } from '#lib/file-explorer/pane/archive-paths.js'
-import { isVirtualResticPath, resticRepoRoot } from '#lib/file-explorer/restic/path-detection.js'
+import { resticRepoRoot } from '#lib/file-explorer/restic/path-detection.js'
+import { virtualGitBoundaryIndex } from '#lib/file-explorer/git/path-detection.js'
 
 /** What the resolver needs to know about the pane it's acting on. */
 export interface TerminalTargetPane {
@@ -22,6 +23,11 @@ export interface TerminalTargetPane {
   volumeKind: VolumeKind
   /** The row under the cursor, or `null` when the pane has none. */
   cursorEntry: TerminalTargetCursorEntry | null
+  /**
+   * The live `fileExplorer.git.showVirtualGitPortal` toggle. With it off nothing
+   * routes `.git/branches/…`, so such a path is whatever sits on disk.
+   */
+  virtualGitPortalOn: boolean
 }
 
 /** The cursor row, as much of it as the folder rules need. */
@@ -57,18 +63,20 @@ export function canOpenTerminalIn(volumeKind: VolumeKind): boolean {
  *
  * 1. A volume with no OS-visible paths gets nothing.
  * 2. Inside an archive, the folder holding the archive FILE; inside a restic repo's
- *    snapshot view, the repo folder. The inner path isn't on disk, and the holding
- *    folder is the nearest place a shell can stand. When the two nest, the
- *    outermost wins, and its holding folder is the shorter path.
+ *    snapshot view, the repo folder; inside the virtual `.git` portal (while it's
+ *    on), the working tree, where git commands run. The inner path isn't on disk,
+ *    and the holding folder is the nearest useful place a shell can stand. When
+ *    they nest, the outermost wins, and its holding folder is the shortest path.
  * 3. A folder under the cursor is what the user is pointing at, so it wins over the
  *    pane's own folder. An archive file under the cursor doesn't: a shell can't
- *    enter it either. Nor does a repo's `Browse snapshots` row, which has no inode.
+ *    enter it either. Nor does a routed folder row (a repo's `Browse snapshots`, a
+ *    portal category), which has no inode.
  * 4. Otherwise the pane's own folder, which also covers `..`, a file, and an empty
  *    listing with no cursor at all.
  */
 export function resolveTerminalFolder(pane: TerminalTargetPane): string | null {
   if (!canOpenTerminalIn(pane.volumeKind)) return null
-  const holdingFolder = outermostHoldingFolder(pane.panePath)
+  const holdingFolder = outermostHoldingFolder(pane.panePath, pane.virtualGitPortalOn)
   if (holdingFolder !== null) return holdingFolder
 
   const cursor = pane.cursorEntry
@@ -76,17 +84,25 @@ export function resolveTerminalFolder(pane: TerminalTargetPane): string | null {
     cursor !== null &&
     cursor.name !== '..' &&
     cursor.isDirectory &&
-    !pathCrossesArchiveBoundary(cursor.path) &&
-    !isVirtualResticPath(cursor.path)
+    outermostHoldingFolder(cursor.path, pane.virtualGitPortalOn) === null
   return cursorIsEnterableFolder ? cursor.path : pane.panePath
 }
 
 /** The on-disk folder holding the outermost container `path` is inside, or `null` when it's on disk itself. */
-function outermostHoldingFolder(path: string): string | null {
+function outermostHoldingFolder(path: string, virtualGitPortalOn: boolean): string | null {
   const candidates = [
     pathCrossesArchiveBoundary(path) ? folderContainingArchive(path) : null,
     resticRepoRoot(path),
+    virtualGitPortalOn ? gitWorkingTree(path) : null,
   ].filter((folder): folder is string => folder !== null)
   if (candidates.length === 0) return null
   return candidates.reduce((outer, folder) => (folder.length < outer.length ? folder : outer))
+}
+
+/** The working tree a virtual `.git` portal path belongs to (the folder holding its `.git`), or `null`. */
+function gitWorkingTree(path: string): string | null {
+  const components = path.split('/')
+  const gitAt = virtualGitBoundaryIndex(components)
+  if (gitAt === -1) return null
+  return components.slice(0, gitAt).join('/') || '/'
 }

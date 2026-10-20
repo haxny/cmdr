@@ -7,6 +7,7 @@ function pane(overrides: Partial<TerminalTargetPane> = {}): TerminalTargetPane {
     panePath: '/Users/dave/code',
     volumeKind: 'local',
     cursorEntry: null,
+    virtualGitPortalOn: true,
     ...overrides,
   }
 }
@@ -117,6 +118,35 @@ describe('resolveTerminalFolder', () => {
   it('takes the outermost container when an archive and a snapshot view nest', () => {
     expect(resolveTerminalFolder(pane({ panePath: '/r/Browse snapshots/latest/a.zip/x' }))).toBe('/r')
     expect(resolveTerminalFolder(pane({ panePath: '/d/b.zip/r/Browse snapshots/latest' }))).toBe('/d')
+  })
+
+  it('opens the working tree when the pane is inside the virtual `.git` portal', () => {
+    // `.git/branches/main/src` is a snapshot of history, not a folder on disk; a shell
+    // handed it lands nowhere. The repo's working tree is where git commands run.
+    const folder = resolveTerminalFolder(
+      pane({
+        panePath: '/Users/dave/code/.git/branches/main/src',
+        cursorEntry: { name: 'lib', path: '/Users/dave/code/.git/branches/main/src/lib', isDirectory: true },
+      }),
+    )
+    expect(folder).toBe('/Users/dave/code')
+  })
+
+  it('opens the `.git` folder itself, not a portal category under the cursor', () => {
+    const folder = resolveTerminalFolder(
+      pane({
+        panePath: '/Users/dave/code/.git',
+        cursorEntry: { name: 'branches', path: '/Users/dave/code/.git/branches', isDirectory: true },
+      }),
+    )
+    expect(folder).toBe('/Users/dave/code/.git')
+  })
+
+  it('treats `.git/branches` as a real folder while the portal is switched off', () => {
+    const folder = resolveTerminalFolder(
+      pane({ panePath: '/Users/dave/code/.git/branches/old', virtualGitPortalOn: false }),
+    )
+    expect(folder).toBe('/Users/dave/code/.git/branches/old')
   })
 
   it('refuses a pane whose volume hands out no OS-visible paths', () => {
