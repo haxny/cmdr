@@ -442,14 +442,16 @@ mod tests {
         (kind, Box::new(move || fact_of(kind)))
     }
 
-    /// A job that answers only once `release` fires.
-    fn held(kind: FactKind) -> ((FactKind, FactJob), mpsc::Sender<()>) {
+    /// A job that answers only once `release` fires, and says on `started` when it's running.
+    fn held(kind: FactKind) -> ((FactKind, FactJob), mpsc::Receiver<()>, mpsc::Sender<()>) {
         let (release, wait) = mpsc::channel::<()>();
+        let (running, started) = mpsc::channel::<()>();
         let job: FactJob = Box::new(move || {
+            let _ = running.send(());
             let _ = wait.recv();
             fact_of(kind)
         });
-        ((kind, job), release)
+        ((kind, job), started, release)
     }
 
     fn fact_of(kind: FactKind) -> Fact {
@@ -489,7 +491,7 @@ mod tests {
     /// fact reaches the late route when it finally answers.
     #[test]
     fn a_slow_fact_misses_the_deadline_and_then_arrives_through_the_late_route() {
-        let (slow, release) = held(FactKind::Share);
+        let (slow, _started, release) = held(FactKind::Share);
         let gathering = start_with(vec![quick(FactKind::Tags), slow], on_threads);
         let (late_tx, late_rx) = mpsc::channel();
         let started = Instant::now();
@@ -510,15 +512,26 @@ mod tests {
     /// doesn't do its work at all.
     #[test]
     fn a_cancelled_gathering_drops_late_answers_and_skips_queued_work() {
-        let (slow, release) = held(FactKind::ProviderOffer);
+        let (slow, started, release) = held(FactKind::ProviderOffer);
         let gathering = start_with(vec![slow], on_threads);
         let (late_tx, late_rx) = mpsc::channel();
         let collected = gathering.collect(Instant::now(), move |fact| {
             let _ = late_tx.send(fact.kind());
         });
+        // Cancel only once the job is RUNNING: its thread may start after the cancel, and then
+        // it rightly skips its work (the second half below) and drops the receiver `release`
+        // sends to.
+        started.recv_timeout(LONG).expect("the held job starts");
         collected.cancel.cancel();
         release.send(()).expect("the held job is waiting");
-        assert!(late_rx.recv_timeout(Duration::from_millis(200)).is_err());
+        // The late route is the last owner of `late_tx`: once the job has answered and the
+        // gathering is gone, the channel closes, so "nothing arrived" needs no wait.
+        drop(collected);
+        assert_eq!(
+            late_rx.recv_timeout(LONG),
+            Err(mpsc::RecvTimeoutError::Disconnected),
+            "a late answer for a closed menu must go nowhere"
+        );
 
         // A job that only starts after the cancel never runs.
         let ran = Arc::new(AtomicBool::new(false));
