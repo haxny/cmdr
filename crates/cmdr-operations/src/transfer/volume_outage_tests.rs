@@ -242,7 +242,8 @@ async fn a_failure_drain_ends_the_wait_at_once() {
 }
 
 /// And once the work has stopped, a failure starts no wait at all: nothing
-/// dials, and the failure is reported as it is.
+/// dials, and the failure reads as the stop, so the drain swallows it and the
+/// first failure stays the operation's error.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_draining_sibling_starts_no_wait() {
     let engine = TestOperations::new();
@@ -261,7 +262,34 @@ async fn a_draining_sibling_starts_no_wait() {
     )
     .await;
 
-    assert_eq!(ended, OutageEnd::NotWaitable);
+    assert_eq!(ended, OutageEnd::Cancelled);
+    assert_eq!(nas.reconnect_attempts(), 0, "nothing dialed");
+}
+
+/// A transport fault that comes back AFTER the person clicked Cancel is the
+/// cancel's: the call was cut off by the share going while the operation was
+/// stopping. Read as "not waitable", it reached the person as "Lost the
+/// connection" (a `write-error`) instead of the `write-cancelled` they asked
+/// for, since only a cancel-shaped error is read back as a cancel.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_transport_fault_after_a_cancel_reads_as_the_cancel() {
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-after-cancel", quick_state(&engine));
+    let (nas, volume) = nas("outage-after-cancel");
+    nas.go_away();
+    engine.cancel_write_operation(op.id(), false);
+    let mut outages = 0;
+
+    let ended = wait_after_failure(
+        op.state(),
+        &lost_session(),
+        &[&volume],
+        &StartedOn::now(&[&volume]),
+        &mut outages,
+    )
+    .await;
+
+    assert_eq!(ended, OutageEnd::Cancelled);
     assert_eq!(nas.reconnect_attempts(), 0, "nothing dialed");
 }
 

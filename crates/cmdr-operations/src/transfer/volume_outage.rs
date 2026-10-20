@@ -312,8 +312,9 @@ impl OutageFailure for VolumeError {
 /// After `error` from a call that started on `started_on`, waits for whichever
 /// of `volumes` went away, when that's what `error` was: a
 /// [`VolumeError::transport_fault`], with this item's outage budget
-/// ([`MAX_OUTAGES_PER_ITEM`], counted in `outages`) not spent and the work not
-/// stopped (`state.stop_work`: a cancel, or the failure drain).
+/// ([`MAX_OUTAGES_PER_ITEM`], counted in `outages`) not spent. Once the work has
+/// stopped (`state.stop_work`: a cancel, or the failure drain) nothing waits,
+/// and the fault reads as the stop ([`OutageEnd::Cancelled`]).
 /// [`OutageEnd::NotWaitable`] for every other failure, which the caller reports
 /// as it always did.
 pub(crate) async fn wait_after_failure(
@@ -341,7 +342,12 @@ pub(crate) async fn wait_after_shortfall(
     started_on: &StartedOn,
     outages: &mut u32,
 ) -> OutageEnd {
-    if *outages >= MAX_OUTAGES_PER_ITEM || state.work_stopped() {
+    // A call the share cut off while the work was stopping is the stop's: read
+    // as `NotWaitable`, a Cancel reached the person as "Lost the connection".
+    if state.work_stopped() {
+        return OutageEnd::Cancelled;
+    }
+    if *outages >= MAX_OUTAGES_PER_ITEM {
         return OutageEnd::NotWaitable;
     }
     let ended = wait_out(state, volumes, started_on, None).await;
