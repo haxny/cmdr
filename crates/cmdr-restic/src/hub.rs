@@ -240,12 +240,17 @@ impl ResticRepos {
         parent: &Arc<dyn Volume>,
         refresh: bool,
     ) -> Result<Arc<SnapshotList>, VolumeError> {
-        let known = lock(&slot.snapshots).clone();
-        if let Some(known) = known.as_ref().filter(|_| !refresh) {
-            return Ok(Arc::clone(&known.list));
+        // Every stat and listing inside a snapshot comes through here, so the
+        // common answer is one `Arc` clone, never a copy of the files.
+        let known = lock(&slot.snapshots).as_ref().map(|known| Arc::clone(&known.list));
+        if let Some(list) = known.filter(|_| !refresh) {
+            return Ok(list);
         }
         let repo = self.opened(slot, parent).await?;
-        let current = known.map(|known| known.files).unwrap_or_default();
+        let current = lock(&slot.snapshots)
+            .as_ref()
+            .map(|known| known.files.clone())
+            .unwrap_or_default();
         let files = repo
             .refresh_snapshots(current)
             .await
@@ -419,7 +424,6 @@ struct Indexed {
 
 /// The snapshot list read last: rustic's files (handed back on a refresh, so
 /// only new ones are read) and the named list built from them.
-#[derive(Clone)]
 struct Snapshots {
     files: Vec<SnapshotFile>,
     list: Arc<SnapshotList>,
