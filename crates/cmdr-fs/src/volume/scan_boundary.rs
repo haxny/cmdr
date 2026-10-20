@@ -32,6 +32,10 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 use super::{CopyScanResult, ListingProgress, ScanOutages, ScanReadNext, ScanRecorder, ScanStop, VolumeError};
 
+/// How often [`ScanBoundary::stopped`] asks the stop while a read is in
+/// flight: well under what a person notices after pressing Cancel.
+const STOP_POLL: std::time::Duration = std::time::Duration::from_millis(50);
+
 /// Counts a scan as it walks and holds the cooperative stop it honors.
 ///
 /// A caller builds one and hands it to the batch scan; a backend with nothing to
@@ -183,6 +187,19 @@ impl<'a> ScanBoundary<'a> {
             return Err(stopped());
         }
         Ok(())
+    }
+
+    /// Resolves once the scan's owner stops it, for racing a read the walk may
+    /// abandon (`ScanSource::abandons_reads_on_stop`). Asks every
+    /// [`STOP_POLL`] (the stop has no wake-up of its own); parks while paused,
+    /// and never resolves when nothing can stop the scan.
+    pub(crate) async fn stopped(&self) {
+        if !self.stop.is_armed() {
+            return std::future::pending().await;
+        }
+        while !self.stop.should_stop().await {
+            tokio::time::sleep(STOP_POLL).await;
+        }
     }
 
     /// The caller's progress callback as it stands, for a backend that hands it

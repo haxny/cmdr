@@ -65,6 +65,35 @@ pub trait ScanSource: Sync {
     fn keeps_files(&self) -> bool {
         false
     }
+
+    /// Whether the walk may DROP a [`scan_stat`](Self::scan_stat) or
+    /// [`scan_list`](Self::scan_list) still in flight when the scan's owner
+    /// stops it. When `true`, each one races the stop, so a Cancel that lands
+    /// while a read waits on something slow (a restic repo's index load: minutes
+    /// on a big repo) ends the scan at once.
+    ///
+    /// ❌ Off by default, and only for a backend whose reads survive their future
+    /// being dropped (detached work, no half-done transaction): a USB transfer
+    /// cut mid-flight wedges a phone. Without it, a stop lands at the next
+    /// boundary, one read later.
+    fn abandons_reads_on_stop(&self) -> bool {
+        false
+    }
+}
+
+/// `read`, raced against the scan's stop when `source` may abandon it.
+async fn unless_stopped<T>(
+    source: &dyn ScanSource,
+    boundary: &ScanBoundary<'_>,
+    read: Walking<'_, T>,
+) -> Result<T, VolumeError> {
+    if !source.abandons_reads_on_stop() {
+        return read.await;
+    }
+    tokio::select! {
+        result = read => result,
+        () = boundary.stopped() => Err(super::scan_boundary::stopped()),
+    }
 }
 
 /// One subtree's file count, directory count, and bytes.
@@ -91,7 +120,9 @@ fn scan_tree_keeping<'a>(
     files: &'a mut Option<Vec<ScannedFile>>,
 ) -> Walking<'a, CopyScanResult> {
     Box::pin(async move {
-        let top = boundary.through_outages(path, || source.scan_stat(path)).await?;
+        let top = boundary
+            .through_outages(path, || unless_stopped(source, boundary, source.scan_stat(path)))
+            .await?;
         if !top.is_directory {
             let size = top.size.unwrap_or(0);
             keep(files, &top);
@@ -277,7 +308,10 @@ fn walk_directory<'a>(
         boundary.dir(dir).await?;
         // A listing a dropped session cut off runs again once the owner has
         // waited it out; its entries are counted only after it answers.
-        for entry in boundary.through_outages(dir, || source.scan_list(dir)).await? {
+        for entry in boundary
+            .through_outages(dir, || unless_stopped(source, boundary, source.scan_list(dir)))
+            .await?
+        {
             let child = dir.join(&entry.name);
             // ❗ A symlinked directory is ONE entry, never a subtree. Following
             // one double-counts its target (Android's `/sdcard` and

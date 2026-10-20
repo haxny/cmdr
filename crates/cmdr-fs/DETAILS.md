@@ -644,6 +644,12 @@ everything on `scan_walk`) asks per entry; one whose per-path scan is a bounded 
 (in-memory, archive) asks per source path, which is the smallest unit of waiting it has. `volume::conformance`'s
 `assert_batch_scan_stops_when_told` and `assert_batch_scan_asks_inside_the_walk` pin which is which.
 
+**A read the walk may abandon races the stop.** Between boundaries, a stop waits out the read in flight: one round trip
+on a share, but a listing in a restic snapshot can wait on the repo's whole index load, minutes on a big repo. A
+`ScanSource` whose reads survive their future being dropped answers `abandons_reads_on_stop()`, and `scan_walk` races
+each stat and listing against the stop (asked every 50 ms, since the stop has no wake-up). ❌ Off by default: dropping a
+read mid-flight wedges a phone mid-transaction.
+
 ### The recorder: the selection's shape, entry by entry
 
 A transfer shows its selection as a live tree (`crates/cmdr-operations/src/transfer_tree/`), and the copy scan is the

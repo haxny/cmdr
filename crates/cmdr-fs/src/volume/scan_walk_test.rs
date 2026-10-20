@@ -732,3 +732,78 @@ async fn a_read_the_owner_does_not_ride_out_ends_the_walk() {
         .unwrap_err();
     assert!(matches!(error, VolumeError::Cancelled(_)), "got {error:?}");
 }
+
+/// A source whose listings never answer: a read waiting on something slow (a
+/// restic repo's index load). Each listing stops the scan's owner as it goes
+/// in, so the stop lands while the walk stands INSIDE a listing.
+struct StuckListings {
+    signal: Arc<crate::volume::scan_stop::TestScanStop>,
+    abandons: bool,
+}
+
+impl ScanSource for StuckListings {
+    fn scan_stat<'a>(&'a self, path: &'a Path) -> Walking<'a, FileEntry> {
+        Box::pin(async move {
+            Ok(FileEntry::new(
+                "top".to_string(),
+                path.display().to_string(),
+                true,
+                false,
+            ))
+        })
+    }
+
+    fn scan_list<'a>(&'a self, _path: &'a Path) -> Walking<'a, Vec<FileEntry>> {
+        Box::pin(async move {
+            self.signal.stop();
+            std::future::pending().await
+        })
+    }
+
+    fn abandons_reads_on_stop(&self) -> bool {
+        self.abandons
+    }
+}
+
+/// A source that may drop a read mid-flight answers a Cancel that lands while
+/// it waits inside one, instead of after the read: a restic listing can wait
+/// minutes on an index load.
+#[tokio::test]
+async fn a_walk_that_may_abandon_a_listing_stops_inside_it() {
+    let signal = crate::volume::scan_stop::TestScanStop::new();
+    let source = StuckListings {
+        signal: Arc::clone(&signal),
+        abandons: true,
+    };
+    let boundary = ScanBoundary::silent().stopping_at(stop_from(&signal));
+
+    let outcome = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        scan_trees(&source, &[PathBuf::from("/top")], &boundary),
+    )
+    .await
+    .expect("the stop ends the listing it landed in");
+
+    assert!(matches!(outcome, Err(VolumeError::Cancelled(_))), "got {outcome:?}");
+}
+
+/// ❗ The default never drops a listing in flight: on a phone that's a USB
+/// transaction cut in half, which wedges the device. A stop then waits for the
+/// listing and lands at the next boundary.
+#[tokio::test]
+async fn a_walk_that_may_not_abandon_a_listing_waits_it_out() {
+    let signal = crate::volume::scan_stop::TestScanStop::new();
+    let source = StuckListings {
+        signal: Arc::clone(&signal),
+        abandons: false,
+    };
+    let boundary = ScanBoundary::silent().stopping_at(stop_from(&signal));
+
+    let outcome = tokio::time::timeout(
+        std::time::Duration::from_millis(300),
+        scan_trees(&source, &[PathBuf::from("/top")], &boundary),
+    )
+    .await;
+
+    assert!(outcome.is_err(), "the listing was left to answer: {outcome:?}");
+}
