@@ -50,7 +50,13 @@ async function mountSheet(): Promise<HTMLElement> {
   mounted.push(
     mount(MultiRenameDialog, {
       target,
-      props: { session: { sessionId: 'S', count: 1 }, onApplied: vi.fn(), onUndoStarted: vi.fn(), onClose: vi.fn() },
+      props: {
+        session: { sessionId: 'S', count: 1 },
+        nothingSelected: false,
+        onApplied: vi.fn(),
+        onUndoStarted: vi.fn(),
+        onClose: vi.fn(),
+      },
     }),
   )
   await settle()

@@ -435,16 +435,17 @@ describe('getFocusedPaneRenameTarget', () => {
       listingId: 'listing-1',
       selectedIndices: [1, 4],
       expectedSequence: 9,
+      nothingSelected: false,
     })
   })
 
-  it('names the whole folder when nothing or everything is selected', () => {
+  it('names the whole folder when nothing or everything is selected, and says which', () => {
     const none = create(buildAccess({ paneRefs: { left: buildPaneRef({ lastSequence: 3 }) } }))
-    expect(none.getFocusedPaneRenameTarget()?.selectedIndices).toBeNull()
+    expect(none.getFocusedPaneRenameTarget()).toMatchObject({ selectedIndices: null, nothingSelected: true })
     const all = create(
       buildAccess({ paneRefs: { left: buildPaneRef({ allSelected: true, selectedIndices: [0, 1, 2] }) } }),
     )
-    expect(all.getFocusedPaneRenameTarget()?.selectedIndices).toBeNull()
+    expect(all.getFocusedPaneRenameTarget()).toMatchObject({ selectedIndices: null, nothingSelected: false })
   })
 
   it('opens nothing while the selected rows are still settling, or on a pane with no listing', () => {

@@ -66,6 +66,7 @@ async function mountSheet(): Promise<HTMLElement> {
     target,
     props: {
       session: { sessionId: 'S', count: 5 },
+      nothingSelected: false,
       onApplied: () => {},
       onUndoStarted: () => {},
       onClose: () => {},

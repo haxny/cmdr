@@ -142,6 +142,8 @@
      */
     let showSelectionDialog = $state<'add' | 'remove' | null>(null)
     let multiRenameSession = $state.raw<MultiRenameOpened | null>(null)
+    /** The session took the whole folder because nothing was selected. */
+    let multiRenameNothingSelected = $state(false)
     let openingMultiRename = false
     const multiRenameLog = getAppLogger('multiRename')
     let selectionDialogSnapshot = $state.raw<{
@@ -568,6 +570,7 @@
                 target.expectedSequence,
             )
             if (opened.ok) {
+                multiRenameNothingSelected = target.nothingSelected
                 multiRenameSession = opened.value
                 return
             }
@@ -814,6 +817,7 @@
         {#if multiRenameSession}
             <MultiRenameDialog
                 session={multiRenameSession}
+                nothingSelected={multiRenameNothingSelected}
                 onApplied={handleMultiRenameApplied}
                 onUndoStarted={handleMultiRenameUndoStarted}
                 onClose={closeMultiRename}

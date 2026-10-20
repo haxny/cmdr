@@ -30,6 +30,8 @@ export interface MultiRenameSelection {
   selectedIndices: number[] | null
   /** The pane's applied listing sequence the row numbers belong to. */
   expectedSequence: number
+  /** Nothing is selected, so the session takes every row; the sheet's title says so. */
+  nothingSelected: boolean
 }
 
 /**
@@ -362,7 +364,8 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     if (!pane || !capabilitiesFor(pane.getVolumeId()).hasBackendListing) return null
     const listingId = pane.getListingId()
     if (listingId === '') return null
-    const selected = pane.isAllSelected()
+    const allSelected = pane.isAllSelected()
+    const selected = allSelected
       ? []
       : toBackendIndices(
           [...pane.getSelectedIndices()].sort((a, b) => a - b),
@@ -373,6 +376,7 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
       listingId,
       selectedIndices: selected.length > 0 ? selected : null,
       expectedSequence: pane.getLastSequence(),
+      nothingSelected: !allSelected && selected.length === 0,
     }
   }
 

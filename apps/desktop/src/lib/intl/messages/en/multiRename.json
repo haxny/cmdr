@@ -3,6 +3,20 @@
   "@multiRename.title": {
     "description": "Title of the Multi-Rename Tool sheet (Ctrl+M), which renames many files at once with a name mask, like Total Commander's tool of the same name."
   },
+  "multiRename.scope.selection": "{count, plural, one {{countText} selected file} other {{countText} selected files}}",
+  "@multiRename.scope.selection": {
+    "description": "Shown in the Multi-rename sheet’s title bar, after the tool’s name (multiRename.title), in quieter text: the sheet renames the files and folders the user selected. Pairs with multiRename.scope.wholeFolder, so the two must read clearly different.",
+    "placeholders": {
+      "countText": "how many files and folders are selected, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.scope.wholeFolder": "{count, plural, one {The only file in this folder (nothing selected)} other {All {countText} files in this folder (nothing selected)}}",
+  "@multiRename.scope.wholeFolder": {
+    "description": "Shown in the Multi-rename sheet’s title bar, after the tool’s name (multiRename.title), in quieter text: nothing was selected, so the sheet works on every file and folder in the current folder. Nothing is renamed until the user presses Rename, but users who expected “only my selection” must see at a glance that it’s the whole folder. Pairs with multiRename.scope.selection.",
+    "placeholders": {
+      "countText": "how many files and folders the current folder holds, ready to drop into the sentence (for example 1,234)"
+    }
+  },
   "multiRename.nameMask": "Name mask",
   "@multiRename.nameMask": {
     "description": "Label of the field holding the rename mask for the file name: plain text plus placeholders in brackets such as [N] (old name) or [C] (counter)."

@@ -72,11 +72,13 @@
   (↓ is the keyboard road), and carries `aria-haspopup="menu"`, `aria-expanded`, and the name "History". Ported from PR
   #386, whose chevron buttons it follows.
 - **Target**: the focused pane's selected rows in row order (backend numbers, `..` offset removed), or `null` for the
-  whole folder when nothing or everything is selected, plus `getLastSequence()`. A pane with no backend listing
-  (servers, search results), or a selection whose rows are still settling (`isRowStateReady`), opens nothing.
-  `routes/(main)/+page.svelte` reads it (`getFocusedPaneRenameTarget`) and opens the session (`openMultiRename`) before
-  the sheet mounts. A read-only pane (any archive, the `.git` portal, a read-only volume) gets `refuseMultiRename`’s
-  alert instead; the backend’s `ReadOnly` at Start is the safety net.
+  whole folder when nothing or everything is selected, plus `getLastSequence()` and `nothingSelected`. The sheet's title
+  names that scope after the tool's name (`multiRename.scope.selection` / `.wholeFolder`): taking the whole folder is a
+  convenience (nothing renames before Start), but a user who expected "selection only" was surprised. A pane with no
+  backend listing (servers, search results), or a selection whose rows are still settling (`isRowStateReady`), opens
+  nothing. `routes/(main)/+page.svelte` reads it (`getFocusedPaneRenameTarget`) and opens the session
+  (`openMultiRename`) before the sheet mounts. A read-only pane (any archive, the `.git` portal, a read-only volume)
+  gets `refuseMultiRename`’s alert instead; the backend’s `ReadOnly` at Start is the safety net.
 - **Start's toast** says how many files are renaming; a batch that ran as a move on S3 adds a warning for the swaps it
   left out (`swapsLeftOut`), as Ask Cmdr does.
 - **Gallery**: `not-triggerable`, since the preview is computed from a real listing.

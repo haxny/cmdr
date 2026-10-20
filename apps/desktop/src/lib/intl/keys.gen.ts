@@ -2776,6 +2776,8 @@ export type MessageKey =
   | 'multiRename.results.gone'
   | 'multiRename.results.readNow'
   | 'multiRename.resultsTooltip'
+  | 'multiRename.scope.selection'
+  | 'multiRename.scope.wholeFolder'
   | 'multiRename.search'
   | 'multiRename.searchOptionHelp.off'
   | 'multiRename.searchOptionHelp.on'
