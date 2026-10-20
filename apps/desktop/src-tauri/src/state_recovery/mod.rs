@@ -102,16 +102,31 @@ pub fn set_aside(path: &Path, file: StateFile) -> Option<PathBuf> {
 /// of the newest [`KEPT_COPIES`], and the person already heard about this one.
 pub fn keep_copy(path: &Path, file: StateFile) -> Option<PathBuf> {
     if let Some(existing) = identical_copy(path) {
-        log::debug!(target: LOG_TARGET, "The partly unreadable {file:?} file already has its copy at {existing:?}");
+        log::debug!(
+            target: LOG_TARGET,
+            // allowed-log-private: `file` is the `StateFile` variant, not a path
+            "The partly unreadable {file:?} file already has its copy at {existing:?}",
+            existing = LogPrivate::file_path(&existing)
+        );
         return Some(existing);
     }
     let kept = match copy_aside(path, chrono::Local::now().naive_local()) {
         Ok(kept) => {
-            log::warn!(target: LOG_TARGET, "Kept a copy of the partly unreadable {file:?} file at {kept:?}");
+            log::warn!(
+                target: LOG_TARGET,
+                // allowed-log-private: `file` is the `StateFile` variant, not a path
+                "Kept a copy of the partly unreadable {file:?} file at {kept:?}",
+                kept = LogPrivate::file_path(&kept)
+            );
             Some(kept)
         }
         Err(e) => {
-            log::warn!(target: LOG_TARGET, "Couldn't keep a copy of the partly unreadable {file:?} file at {path:?}: {e}");
+            log::warn!(
+                target: LOG_TARGET,
+                // allowed-log-private: `file` is the `StateFile` variant, not a path
+                "Couldn't keep a copy of the partly unreadable {file:?} file at {path:?}: {e}",
+                path = LogPrivate::file_path(path)
+            );
             return None;
         }
     };

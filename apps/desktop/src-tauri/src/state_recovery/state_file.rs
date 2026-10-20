@@ -10,6 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use cmdr_fs::log_private::LogPrivate;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer};
 
@@ -133,7 +134,12 @@ pub fn read_state_file<T>(
         Ok(value) => {
             if guard(path).is_none() {
                 let dropped = crate::pluralize::pluralize_with(dropped as u64, "entry", "entries");
-                log::warn!(target: LOG_TARGET, "{dropped} of the {file:?} file at {path:?} didn't read");
+                log::warn!(
+                    target: LOG_TARGET,
+                    // allowed-log-private: `file` is the `StateFile` variant, not a path
+                    "{dropped} of the {file:?} file at {path:?} didn't read",
+                    path = LogPrivate::file_path(path)
+                );
                 let copied = super::keep_copy(path, file).is_some();
                 set_guard(path, Some(if copied { Guard::Copied } else { Guard::Held }));
             }
@@ -147,7 +153,12 @@ fn unloaded<T>(path: &Path, file: StateFile, why: &str) -> StateRead<T> {
     if guard(path) == Some(Guard::Held) {
         return StateRead::Held;
     }
-    log::warn!(target: LOG_TARGET, "Couldn't load the {file:?} file at {path:?}: {why}");
+    log::warn!(
+        target: LOG_TARGET,
+        // allowed-log-private: `file` is the `StateFile` variant, not a path
+        "Couldn't load the {file:?} file at {path:?}: {why}",
+        path = LogPrivate::file_path(path)
+    );
     if super::set_aside(path, file).is_some() {
         set_guard(path, None);
         StateRead::SetAside
