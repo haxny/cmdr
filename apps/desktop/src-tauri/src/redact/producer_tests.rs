@@ -274,7 +274,11 @@ fn the_desktop_volume_and_smb_lines_ship_each_value_as_one_token_of_its_kind() {
         )
     );
     let keyed = refused(&"user=\"alex\"", &"Alex's MacBook Pro (2)", &"Family Photos");
-    assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
+    assert_eq!(
+        hashes(&context().redact_line(&marked)),
+        hashes(&context().redact_line(&keyed)),
+        "{marked}\n{keyed}"
+    );
 }
 
 /// The small crates' lines (`cmdr-listing`, `cmdr-mtp`), in each site's format string, as a
@@ -304,7 +308,11 @@ fn the_listing_and_mtp_lines_ship_each_value_as_one_token_of_its_kind() {
         format!("{HEAD}Storage volumeName=\"<volume>\": write probe succeeded, cleaning up")
     );
     let keyed = probe(&storage);
-    assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
+    assert_eq!(
+        hashes(&context().redact_line(&marked)),
+        hashes(&context().redact_line(&keyed)),
+        "{marked}\n{keyed}"
+    );
 
     // The upload line's folder and file name, each its own value.
     let upload = |dir: &dyn std::fmt::Debug, file: &dyn std::fmt::Debug| {
@@ -318,7 +326,105 @@ fn the_listing_and_mtp_lines_ship_each_value_as_one_token_of_its_kind() {
         format!("{HEAD}Upload failed for dir=\"/<dir>/<dir>\" file=\"<file>.jpg\" on mtp-1: Busy")
     );
     let keyed = upload(&folder, &file);
-    assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
+    assert_eq!(
+        hashes(&context().redact_line(&marked)),
+        hashes(&context().redact_line(&keyed)),
+        "{marked}\n{keyed}"
+    );
+}
+
+/// The write engine's lines, in each site's format string, as a report ships them: a prose
+/// destination keeps the sentence after it, an operation's source list keeps one token per
+/// source, and a share marked as a volume hashes like the keyed value it replaced.
+#[test]
+fn the_write_engine_lines_ship_each_value_as_one_token_of_its_kind() {
+    // A prose destination with parens, then the reason the clash was skipped.
+    let dest = "/Volumes/Backup/Summer (Lake House) 2026/notes.txt";
+    let skipped = |destination: &dyn std::fmt::Display| {
+        format!(
+            "{HEAD}OverwriteSmaller (volume): skipping {destination} — destination not strictly smaller (src=12, dst=40)"
+        )
+    };
+    let marked = skipped(&LogPrivate::path(dest));
+    assert_ships_none(&marked, &["Lake", "House", "Summer", "notes"]);
+    // `src=` and `dst=` are path keys to the regex, so the sizes go too: over-redacted, never
+    // leaked.
+    let golden = format!(
+        "{HEAD}OverwriteSmaller (volume): skipping /Volumes/<volume>/<dir>/<file>.txt — destination not strictly smaller (src=<dir>, dst=<dir>)"
+    );
+    assert_eq!(shape(&marked), golden);
+    assert_ne!(shape(&skipped(&dest)), golden, "the unmarked spelling eats the reason");
+
+    // An operation's source list: each source is its own value.
+    let sources = [
+        "/Users/me/Pictures/Summer (Lake House) 2026",
+        "/Users/me/Pictures/IMG Lake 0001.jpg",
+    ];
+    let marked = format!(
+        "{HEAD}copy_files_start: sources={:?}, destination={:?}, dry_run=false",
+        sources.iter().map(LogPrivate::path).collect::<Vec<_>>(),
+        LogPrivate::dir_path("/Volumes/Family Photos")
+    );
+    assert_ships_none(&marked, &["Lake", "House", "Summer", "IMG", "0001", "Family", "Photos"]);
+    assert_eq!(
+        shape(&marked),
+        format!(
+            "{HEAD}copy_files_start: sources=[\"$HOME/Pictures/<dir>\", \"$HOME/Pictures/<file>.jpg\"], destination=\"/Volumes/<volume>\", dry_run=false"
+        )
+    );
+    assert_eq!(hashes(&context().redact_line(&marked)).len(), 3, "{marked}");
+
+    // A dropped share, named as the volume it is.
+    let share = "Family Photos";
+    let outage = |name: &dyn std::fmt::Debug| {
+        format!("{HEAD}volume outage: volumeName={name:?} went away; waiting up to 30s for it to come back")
+    };
+    let marked = outage(&LogPrivate::volume(share));
+    assert_ships_none(&marked, &["Family", "Photos"]);
+    assert_eq!(
+        shape(&marked),
+        format!("{HEAD}volume outage: volumeName=\"<volume>\" went away; waiting up to 30s for it to come back")
+    );
+    let keyed = outage(&share);
+    assert_eq!(
+        hashes(&context().redact_line(&marked)),
+        hashes(&context().redact_line(&keyed)),
+        "{marked}\n{keyed}"
+    );
+}
+
+/// A failed copy's report line carries its typed error as the frontend's JSON in `detail=`
+/// (`operations_host/events.rs`), whose identity keys a report tokenizes. Its derived `Debug`
+/// shipped `volume_name: "Family Photos"` whole: no report pass knows that key.
+#[test]
+fn a_copy_failure_ships_no_name_from_its_typed_error() {
+    use cmdr_operations::WriteOperationError;
+    let errors = [
+        WriteOperationError::ServerConnectionLost {
+            path: "Photos/Summer (Lake House) Trip/.DS_Store".to_string(),
+            volume_name: "Family Photos".to_string(),
+            gave_up_after_secs: Some(30),
+        },
+        WriteOperationError::ReadError {
+            path: "/Volumes/Backup/Summer (Lake House) Trip/IMG 0001.jpg".to_string(),
+            message: "Permission denied (os error 13)".to_string(),
+        },
+    ];
+    let private = ["Lake", "House", "Summer", "Trip", "Family", "Photos", "IMG", "0001"];
+    for error in errors {
+        let json = serde_json::to_string(&error).expect("serializes");
+        let volume = format!(
+            "{HEAD}copy_between_volumes: operation op-1 failed: detail={:?}",
+            LogDetail(&json)
+        );
+        assert_ships_none(&volume, &private);
+        let local = format!(
+            "{HEAD}copy_files_with_progress: failed op=op-1 detail={:?}, keeping 3 completed files",
+            LogDetail(&json)
+        );
+        assert_ships_none(&local, &private);
+        assert!(r(&local).ends_with(", keeping 3 completed files"), "{}", r(&local));
+    }
 }
 
 /// The network backends' lines (`cmdr-smb`, `cmdr-sftp`, `cmdr-s3`), in each site's format
