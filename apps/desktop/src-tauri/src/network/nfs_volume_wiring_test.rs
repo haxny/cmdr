@@ -432,3 +432,84 @@ fn a_server_id_ignores_which_export_it_was_asked_through() {
         place("server-id.test", "/Media").server_id()
     );
 }
+
+/// The real crate, pointed at the fixture's relocated portmapper: the one
+/// change the knfsd fixture needs (`NfsServer::portmap_port`), made here in the
+/// test, ❌ never in the app. Everything else is [`super::CrateNfs`].
+struct FixtureNfs;
+
+impl NfsBackend for FixtureNfs {
+    fn dial<'a>(
+        &'a self,
+        name: &'a str,
+        mut params: NfsConnectionParams,
+        cancel: CancellationToken,
+    ) -> Pin<Box<dyn Future<Output = Result<Dialed, NfsConnectError>> + Send + 'a>> {
+        params.server.portmap_port = cmdr_nfs::testing::fixture_server().portmap_port;
+        super::CrateNfs.dial(name, params, cancel)
+    }
+
+    fn params_of(&self, volume: &dyn Volume) -> Option<NfsConnectionParams> {
+        super::CrateNfs.params_of(volume)
+    }
+
+    fn sharing_connection(&self, volume: &dyn Volume, name: &str) -> Option<Arc<dyn Volume>> {
+        super::CrateNfs.sharing_connection(volume, name)
+    }
+
+    fn set_auto_reconnect(&self, volume: &dyn Volume, on: bool) {
+        super::CrateNfs.set_auto_reconnect(volume, on);
+    }
+}
+
+#[tokio::test]
+#[ignore = "needs the NFS fixture stack: apps/desktop/test/nfs-servers/start.sh (nfs-fixture)"]
+async fn nfs_integration_a_typed_folder_connects_registers_the_export_and_saves_the_split() {
+    let typed = KnownNfsPlace {
+        host: "127.0.0.1".to_string(),
+        port: None,
+        export: "/insecure/photos/2024 summer".to_string(),
+        uid: 1000,
+        gid: 1000,
+        start_folder: None,
+        auto_reconnect: true,
+        pinned: false,
+        last_connected_at: String::new(),
+    };
+
+    let outcome = super::connect_and_register_with(
+        &FixtureNfs,
+        crate::network::connect_wiring::DialTicket::now(),
+        "Fixture NAS",
+        typed,
+        "nfs-fixture-connect",
+    )
+    .await;
+
+    let NfsConnection::Connected { volume_id } = outcome else {
+        panic!("the knfsd fixture's /insecure must connect: {outcome:?}");
+    };
+    assert_eq!(
+        volume_id,
+        id_of("127.0.0.1", "/insecure"),
+        "registered under the RESOLVED export"
+    );
+    let manager = get_volume_manager();
+    let volume = manager.get(&volume_id).expect("a connect registers the volume it made");
+    assert_eq!(volume.backend_kind(), BackendKind::Nfs);
+    let entries = volume
+        .list_directory(volume.root(), None)
+        .await
+        .expect("the export lists");
+    assert!(
+        entries.iter().any(|entry| entry.name == "hello.txt"),
+        "the live volume, ❌ a stand-in"
+    );
+    let saved = nfs_known_places::find(&volume_id).expect("a connect remembers the place");
+    assert_eq!(saved.export, "/insecure");
+    assert_eq!(saved.start_folder.as_deref(), Some("/photos/2024 summer"));
+
+    assert!(super::disconnect_with(&FixtureNfs, &volume_id).await);
+    assert!(manager.get(&volume_id).is_none(), "a disconnect unregisters");
+    nfs_known_places::forget(&volume_id);
+}

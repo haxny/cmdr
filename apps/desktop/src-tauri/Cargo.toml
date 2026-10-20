@@ -518,6 +518,9 @@ cmdr-smb = { path = "../../../crates/cmdr-smb", features = ["testing"] }
 cmdr-sftp = { path = "../../../crates/cmdr-sftp", features = ["testing"] }
 cmdr-webdav = { path = "../../../crates/cmdr-webdav", features = ["testing"] }
 cmdr-s3 = { path = "../../../crates/cmdr-s3", features = ["testing"] }
+# `cmdr_nfs::testing`, the knfsd fixture's connection helpers the app's NFS cells
+# dial through.
+cmdr-nfs = { path = "../../../crates/cmdr-nfs", features = ["testing"] }
 cmdr-adb = { path = "../../../crates/cmdr-adb", features = ["testing"] }
 # Same crate as the per-target normal dependency above, with `testing` on for dev
 # targets only: that's what publishes the virtual-device fixture and the
