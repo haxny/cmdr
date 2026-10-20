@@ -19,6 +19,7 @@ import HostKeyStep from './HostKeyStep.svelte'
 import ServerFormFields from './ServerFormFields.svelte'
 import SignInCredentialFields from './SignInCredentialFields.svelte'
 import S3EndpointFields from './S3EndpointFields.svelte'
+import NfsPlaceFields from './NfsPlaceFields.svelte'
 import { emptyServerForm } from './server-form'
 import { emptyS3Fields } from './s3-form'
 import { emptyNfsFields } from './nfs-form'
@@ -229,6 +230,51 @@ describe('the three renderers on their own', () => {
         addressEditable: true,
         exportRefusal: 'nas.local has no export at that path.',
         advancedOpen: true,
+        onChange: () => {},
+      },
+    })
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+
+  it('the NFS block, with a refused listing and a guessed identity, has no violations', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(NfsPlaceFields, {
+      target,
+      props: {
+        fields: {
+          ...emptyNfsFields(),
+          exportPath: '/Public',
+          uid: '1000',
+          gid: '100',
+          identitySource: 'most_common_owner',
+        },
+        address: 'nfs://nas.local',
+        disabled: false,
+        exportEditable: true,
+        onChange: () => {},
+        discoveryDeps: {
+          listNfsExports: () => Promise.resolve({ outcome: 'listing_refused' as const }),
+          guessNfsIdentity: () => Promise.resolve({ uid: 1000, gid: 100, source: 'most_common_owner' as const }),
+        },
+      },
+    })
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+
+  it('the NFS block in edit mode, with the export locked and a refusal under it, has no violations', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(NfsPlaceFields, {
+      target,
+      props: {
+        fields: { ...emptyNfsFields(), exportPath: '/Public', uid: '0', gid: '0', identityFromGuess: false },
+        address: 'nfs://nas.local',
+        disabled: false,
+        exportEditable: false,
+        exportRefusal: 'nas.local doesn’t let this Mac open that export.',
         onChange: () => {},
       },
     })
