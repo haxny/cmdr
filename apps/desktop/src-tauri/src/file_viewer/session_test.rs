@@ -1492,3 +1492,44 @@ fn opens_a_file_out_of_a_git_snapshot_and_reads_its_lines() {
 
     cleanup(&dir);
 }
+
+/// The viewer opens a file inside a restic snapshot the same way: the view
+/// streams it (blob by blob, out of the repo's packs) to a bounded temp, and the
+/// viewer opens that.
+#[test]
+fn opens_a_file_out_of_a_restic_snapshot_and_reads_its_lines() {
+    use crate::file_system::restic::test_repo::{SourceFile, backed_up_drive};
+
+    let _secrets = crate::test_support::isolate_secrets();
+    let drive = tauri::async_runtime::block_on(async {
+        let drive = backed_up_drive(
+            "viewer-restic",
+            &[SourceFile {
+                path: "notes.txt",
+                bytes: b"first line\nsecond line\n",
+                mode: 0o644,
+                modified: 1_600_000_000,
+            }],
+            &[],
+        )
+        .await;
+        drive.unlock().await;
+        drive
+    });
+
+    let file = drive.backed_up.join("notes.txt");
+    let opened = session::open_session(file.to_str().unwrap(), &drive.volume_id).expect("the backed-up file opens");
+    assert_eq!(opened.initial_lines.rows[0].text, "first line");
+    assert_eq!(opened.initial_lines.rows[1].text, "second line");
+    assert!(opened.file_name.ends_with("notes.txt"));
+    session::close_session(&opened.session_id).expect("close");
+
+    assert!(matches!(
+        session::open_session(drive.backed_up.to_str().unwrap(), &drive.volume_id),
+        Err(ViewerError::IsDirectory)
+    ));
+    assert!(matches!(
+        session::open_session(drive.backed_up.join("nope.txt").to_str().unwrap(), &drive.volume_id),
+        Err(ViewerError::NotFound { .. })
+    ));
+}

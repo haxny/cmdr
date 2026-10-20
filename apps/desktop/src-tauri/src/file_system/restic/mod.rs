@@ -17,6 +17,8 @@ pub mod wiring;
 #[cfg(test)]
 mod overlay_tests;
 #[cfg(test)]
+pub(crate) mod test_repo;
+#[cfg(test)]
 mod walker_exposure_tests;
 #[cfg(test)]
 mod wiring_tests;

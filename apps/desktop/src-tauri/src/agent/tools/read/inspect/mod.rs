@@ -55,6 +55,8 @@ mod git_snapshot_tests;
 mod pdf;
 #[cfg(test)]
 mod pdf_tests;
+#[cfg(test)]
+mod restic_snapshot_tests;
 mod runner;
 #[cfg(test)]
 mod tests;
