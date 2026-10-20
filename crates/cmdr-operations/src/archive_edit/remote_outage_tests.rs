@@ -410,6 +410,11 @@ async fn a_cancel_while_the_swap_waits_after_the_delete_keeps_the_landing() {
     let temps = ran.temps().await;
     assert_eq!(temps.len(), 1, "the edited archive stays on its temp: {temps:?}");
     assert_eq!(ran.ledger.recorded_landings(), temps, "recorded as a landing");
+    assert_eq!(
+        *ran.state.kept_landings.lock_ignore_poison(),
+        vec![PathBuf::from(ARCHIVE)],
+        "and the stop names the archive it's on its way to, for `write-cancelled`"
+    );
 }
 
 /// A Cancel while the upload waits: the original is untouched.
@@ -481,7 +486,12 @@ async fn a_drop_at_a_one_step_replace_waits_and_lands_without_uploading_again() 
         let ran = run_on(cut, Meanwhile::ComesBack, Replace::InOneStep).await;
         ran.assert_the_share_dropped();
         ran.assert_landed().await;
-        assert_eq!(ran.uploads(), 1, "{}: ❗ a whole temp lands without uploading again", ran.label);
+        assert_eq!(
+            ran.uploads(),
+            1,
+            "{}: ❗ a whole temp lands without uploading again",
+            ran.label
+        );
     }
 }
 
@@ -499,7 +509,11 @@ async fn a_share_that_stays_gone_at_a_one_step_replace_leaves_the_original_archi
         ),
         "the error says it was the connection"
     );
-    assert_eq!(ran.ledger.recorded_landings(), Vec::<PathBuf>::new(), "nothing was cleared");
+    assert_eq!(
+        ran.ledger.recorded_landings(),
+        Vec::<PathBuf>::new(),
+        "nothing was cleared"
+    );
     ran.nas.become_reachable();
     ran.assert_original_intact().await;
 }

@@ -17,7 +17,7 @@ use super::super::state::WriteSettledGuard;
 use super::super::types::ReadOnlySide;
 use super::super::types::{WriteOperationError, WriteOperationStartResult, WriteOperationType};
 use super::edit_error::EditError;
-use super::engine::{MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
+use super::engine::{EditLeftovers, MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
 use cmdr_archive::mutator::{self, Changeset, MutationError};
 use cmdr_fs::volume::LaneKey;
@@ -212,7 +212,7 @@ impl crate::Operations {
                     WriteOperationType::ArchiveEdit,
                     result,
                     skipped_count,
-                    None,
+                    EditLeftovers::of(&state, &parent_volume_id, None),
                     &final_progress,
                 );
 

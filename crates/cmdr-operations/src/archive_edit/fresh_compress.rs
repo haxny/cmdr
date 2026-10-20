@@ -20,7 +20,7 @@ use super::super::transfer::volume_outage::StartedOn;
 use super::super::transfer_tree::{TreeLanding, TreeOrder, from_archive_plan};
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
 use super::edit_error::EditError;
-use super::engine::{MutatorHooks, emit_archive_terminal};
+use super::engine::{EditLeftovers, MutatorHooks, emit_archive_terminal};
 use super::fresh_pipeline::{ProducerRuns, continue_unless, operation_cancelled, pipeline_failure, volume_write_error};
 use super::fresh_plan::{FreshPlan, PlanProgress, plan_sources, validate_aliases};
 use super::fresh_publish::{Published, Target, publish_stage};
@@ -290,7 +290,7 @@ pub(super) async fn start(
                 WriteOperationType::Compress,
                 outcome.map(|_| ()),
                 skipped,
-                None,
+                EditLeftovers::of(&state, &parent_volume_id, None),
                 &final_progress,
             );
             task_guard.disarm();

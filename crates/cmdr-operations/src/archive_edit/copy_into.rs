@@ -22,7 +22,7 @@ use super::super::types::ReadOnlySide;
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
 use super::copy_into_plan::{build_copy_into_changeset, build_copy_into_changeset_interactive};
 use super::edit_error::EditError;
-use super::engine::{MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
+use super::engine::{EditLeftovers, MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
 use cmdr_archive::mutator::{self, MutationError};
 use cmdr_fs::volume::{LaneKey, Volume, VolumeError};
@@ -516,7 +516,7 @@ impl crate::Operations {
                     operation_type,
                     outcome.map(|_| ()),
                     skipped_count,
-                    appeared_during_move,
+                    EditLeftovers::of(&state, &parent_volume_id, appeared_during_move),
                     &final_progress,
                 );
 

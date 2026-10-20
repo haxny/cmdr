@@ -77,9 +77,9 @@ The remote ORIGINAL is byte-for-byte untouched until the very last swap:
    (`StagedWrite::begin_over_original`, the copy engine's file→file Overwrite, `WriteStaging::StageOverOriginal`). On a
    backend whose forced rename replaces a file in one step (SMB's `ReplaceIfExists`, a local disk) that one rename is
    the swap, and the name never goes empty. Everywhere else the temp is re-recorded as a `Landing` (on disk before
-   anything is cleared; when the ledger can't confirm it, nothing is), then the original is deleted and the temp
-   renamed onto its name, ❌ never a rename onto a live name (MTP allows same-name siblings, so that would DUPLICATE).
-   From the delete on, the temp may be the only copy: a refused rename rescues it out of temp space (` (recovered)`,
+   anything is cleared; when the ledger can't confirm it, nothing is), then the original is deleted and the temp renamed
+   onto its name, ❌ never a rename onto a live name (MTP allows same-name siblings, so that would DUPLICATE). From the
+   delete on, the temp may be the only copy: a refused rename rescues it out of temp space (` (recovered)`,
    `NewDataKeptAt`), and a crash leaves the `Landing` record, whose sweep finishes the landing. The rules are
    `../transfer/DETAILS.md` § "File writes are staged"; ❌ no copy of them here.
 
@@ -99,18 +99,19 @@ delete can reach the share), and a swap step the transport cut off is settled on
 again, a gone temp counts as landed only when the archive holds exactly the edited bytes, and anything else uploads
 again. A wait that ends without the share gives the swap up under the refusal rules (rescue, or the temp kept recorded
 as a landing) and says "Lost the connection to {server}" (`ServerConnectionLost`), unless the landing's own outcome
-(`NewDataKeptAt`) outranks it; a Cancel reads as the cancel it is. Pinned by `remote_outage_tests.rs` (a drop at the
-pull, the upload, and each step of the swap, a stale error on the delete, a share that stays gone before and after the
-delete, a Cancel in either wait, and a refusal that fails at once).
+(`NewDataKeptAt`) outranks it; a Cancel reads as the cancel it is, and its `write-cancelled` names a landing it kept
+(`engine.rs::EditLeftovers`, the `LandsWhenBack` line a copy's carries). On a one-step replace there is no delete, so a
+share that stays gone at it leaves the original archive whole. Pinned by `remote_outage_tests.rs` (a drop at the pull,
+the upload, and each step of the swap, both shapes, a stale error on the delete, a share that stays gone before and
+after the delete, a Cancel in either wait, and a refusal that fails at once).
 
 A cancel at ANY point before the swap's delete leaves the remote original intact (the local scratch dir and any partial
 remote temp are cleaned up: a RAII `ScratchDir` and the staged write's abandon). Pinned by `remote_tests` (round-trip,
-cancel-before-swap-leaves-the-original, and the sibling-allowing swap), plus live-remote integration
-proofs that drive `pull_apply_upload_swap` against a REAL backend: the backend-blind scenarios in
-`network_archive_test_support.rs` (edit, cancel before the swap, routing detection, extract-out, copy-into, compress),
-which `smb_archive_integration_test.rs`, `sftp_archive_integration_test.rs`, and `webdav_archive_integration_test.rs`
-drive, and `mtp_archive_test` under the `virtual-mtp` feature
-(`virtual_mtp_archive_browses_and_extracts_via_read_range` +
+cancel-before-swap-leaves-the-original, and the sibling-allowing swap), plus live-remote integration proofs that drive
+`pull_apply_upload_swap` against a REAL backend: the backend-blind scenarios in `network_archive_test_support.rs` (edit,
+cancel before the swap, routing detection, extract-out, copy-into, compress), which `smb_archive_integration_test.rs`,
+`sftp_archive_integration_test.rs`, and `webdav_archive_integration_test.rs` drive, and `mtp_archive_test` under the
+`virtual-mtp` feature (`virtual_mtp_archive_browses_and_extracts_via_read_range` +
 `virtual_mtp_remote_zip_edit_deletes_an_entry_through_the_device`, exercising the MTP delete-then-rename swap). Cost:
 O(archive) network per edit (the pull), documented and accepted — there is no remote random-access WRITE adapter (that's
 only a future in-place-append optimization). Remote backends don't carry the archive file's mode/mtime/xattr across the
@@ -362,10 +363,12 @@ reaped, fresh spared, other-archive ignored, delete-failure doesn't fail the edi
   transfer degrades to a copy, so a symlink is never removed from the source while absent from the archive). The skip
   count rides in `ArchiveEditRequest.skipped_count` and surfaces as `files_skipped` on the terminal event.
 - **Both managed routes end through `engine.rs::emit_archive_terminal`**, which owns the one three-arm match from
-  outcome to `write-complete` / `write-cancelled` / `write-error`. Each route keeps only what it must do BEFORE that
-  emit (a move's source delete and the journal row, both in `copy_into.rs`); the match itself was a 26-line clone across
-  the two, free to drift. An archive edit reports `top_level_skipped: None`: its `skipped_count` is unrepresentable
-  entries and in-zip clashes, not items a user picked in a pane, so the FE words the summary from `files_skipped` alone.
+  outcome to `write-complete` / `write-cancelled` / `write-error`, with what the edit left behind (`EditLeftovers`: a
+  move's newcomers on `write-complete`, the landings a Cancel kept on `write-cancelled`, named on the parent's drive).
+  Each route keeps only what it must do BEFORE that emit (a move's source delete and the journal row, both in
+  `copy_into.rs`); the match itself was a 26-line clone across the two, free to drift. An archive edit reports
+  `top_level_skipped: None`: its `skipped_count` is unrepresentable entries and in-zip clashes, not items a user picked
+  in a pane, so the FE words the summary from `files_skipped` alone.
 - **Move OUT of a zip is a compound op** (`route_archive_move_out`), NOT a per-file `Volume::delete` (the
   `ArchiveVolume` is read-only). One managed Move op runs two phases on ONE lifecycle: (1) extract the selected entries
   to the destination through the ordinary cross-volume copy engine (`copy_volumes_with_progress`, wrapped in a

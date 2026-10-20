@@ -811,10 +811,10 @@ recording changes.
 
 - The remote swap IS a `StageOverOriginal` landing: `StagedWrite::begin_over_original(state, volume, final, volume_id)`,
   committed and, when cut off, waited for and settled with the local working copy as the byte-compare source. A
-  `RunAgain` uploads the local copy again. It gave up SMB's one-step `ReplaceIfExists` rename for delete-then-rename
-  (the copy's file Overwrite does the same). An archive edit's state names no destination volume (a move out writes
-  two), so a `StagedWrite` now carries its ledger home (`home_volume`), and `pull_apply_upload_swap` takes the parent's
-  id; a missing home fails closed.
+  `RunAgain` uploads the local copy again. (Its follow-up gave every swap landing SMB's one-step `ReplaceIfExists` back;
+  see below.) An archive edit's state names no destination volume (a move out writes two), so a `StagedWrite` now
+  carries its ledger home (`home_volume`), and `pull_apply_upload_swap` takes the parent's id; a missing home fails
+  closed.
 - The swap's `original_replaced` journal note would have worded an archive edit's refusal as an overwrite's; the remote
   edit notes `ZipEditUnsupported` first (first note wins).
 - `archive_edit/outage_wait.rs` is the archive side's one wait: `StepError::{Fault { error, otherwise }, Ended}`,
@@ -827,13 +827,29 @@ recording changes.
   `PublishError::{Failed(PublishFailure), CutOff(CutOffPublish)}`; `CutOffPublish::resume` answers `Republished`.
   `commit_without_a_wait` is test-only now. The publish loop is `archive_edit/fresh_publish.rs`.
 - `reap_remote_temps` skips what the ledger records (`is_recorded_on`).
-- Not covered, and why: the compress's planning walk (a pre-flight scan's twin); the displaced publish's own rename
-  aside (`displace_destination`), whose transport fault still fails at once, and which retires its `VolumeAside` record
-  on that error even though the server may have performed the rename (a follow-up for `displaced_destination.rs`, shared
-  with the cross-type aside); an archive edit's `write-cancelled` doesn't name a landing a Cancel kept
-  (`state.kept_landings` is filled, `emit_archive_terminal` doesn't read it).
+- Not covered, and why: the compress's planning walk (a pre-flight scan's twin).
 - Cells: `archive_edit/remote_outage_tests.rs`, `archive_edit/fresh_compress_outage_tests.rs`, the reap and journal
   cells in `remote_tests.rs`. No live Docker cell (the plan asked none for this milestone).
+
+**Follow-ups: done.** As built:
+
+- `displace_destination` (every rename aside: the cross-type aside, the same-volume move's, the displaced publish's)
+  classifies before acting: a transport-faulted rename keeps its `VolumeAside` record, waits for the share, and one stat
+  of the aside settles it (there: set aside; gone: run again). A wait that ends without the share puts the file back
+  when one stat can, else keeps the record for the share's next arrival. `DisplacedDestination::restore` classifies the
+  same way before it rescues. The sweep reads every aside kind's aside FIRST, so a record of an aside that never
+  happened retires (`AlreadyGone`) instead of deferring forever. Cells:
+  `transfer/volume/displaced_destination_tests.rs`,
+  `in_flight_sweep_tests.rs::an_aside_that_isnt_there_retires_whatever_its_destination_holds`.
+- An archive edit's `write-cancelled` names the landings its stop kept (`archive_edit/engine.rs::EditLeftovers`, the
+  copy's `LandsWhenBack` line on the parent's drive); the FE already words it. Cell:
+  `engine.rs::tests::a_cancelled_edit_names_the_landing_its_stop_kept`.
+- Every swap landing (copies and archive edits alike) takes ONE replacing rename on a backend with
+  `supports_atomic_replace_rename` (local disks, SMB): `staged_write_landing.rs::replace_in_one_step`, cut off as
+  `CutOffAt::ReplacingRename` and settled like a first rename except that a gone temp proves the landing only on the
+  source's bytes. No delete, no landing record, no `(recovered)` path; a give-up leaves the original whole. MTP and
+  every other backend keep delete-then-rename. Cells: `staged_write_tests.rs`, `swap_outage_tests.rs` and
+  `remote_outage_tests.rs` (the `InOneStep` cells).
 
 ### 11. Close-out soak (S)
 
@@ -858,9 +874,10 @@ fixed or filed as issues.
   list (`in_flight_partials`, `last_dest_cell`), ❌ never swept, reaped, or discarded, and a failure rescues it out of
   temp space (` (recovered)`) or leaves it for the sweep that finishes its landing. A rescue or discard follows a
   classified refusal or a given-up wait, ❌ never a raw transport error.
-- **Safe-replace order**: the original survives until a complete temp exists; delete-then-rename, ❌ never
-  `rename(force)` on MTP. `write_path` always names the file the user ends up with; ❌ no layer above `StagedWrite` sees
-  a temp-shaped destination.
+- **Safe-replace order**: the original survives until a complete temp exists; one replacing rename only where
+  `supports_atomic_replace_rename` says it's one step, else delete-then-rename, ❌ never `rename(force)` on MTP.
+  `write_path` always names the file the user ends up with; ❌ no layer above `StagedWrite` sees a temp-shaped
+  destination.
 - **Outage waits**: bounded (budget, `MAX_OUTAGES_PER_ITEM`, per-attempt timeout), cancel-at-once, pausable, shared per
   lane, ❌ only for re-runnable calls. A generation bump is proof of a stale error only when the volume reads live, and
   a stale error ❌ never moves a newer session's state.

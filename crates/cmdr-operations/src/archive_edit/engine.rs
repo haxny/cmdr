@@ -14,8 +14,9 @@ use super::super::OperationEventSink;
 use super::super::host::EngineHost;
 use super::super::state::WriteOperationState;
 use super::super::types::{
-    AppearedDuringMove, CancelRollback, ProgressStep, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
-    WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
+    AppearedDuringMove, CancelRollback, ProgressStep, StagedLeftoverFate, StagedLeftovers, WriteCancelledEvent,
+    WriteCompleteEvent, WriteErrorEvent, WriteOperationError, WriteOperationPhase, WriteOperationType,
+    WriteProgressEvent,
 };
 use super::edit_error::EditError;
 use super::remote::{RemoteCommitProgress, RemoteProgressObserver, pull_apply_upload_swap};
@@ -154,6 +155,44 @@ pub(super) fn to_write_error(archive_path: &Path, err: MutationError) -> WriteOp
     }
 }
 
+/// What an archive edit left behind for its terminal event to name, besides
+/// its outcome.
+pub(super) struct EditLeftovers {
+    /// What a move INTO an archive left in its source (`copy_into.rs`); `None`
+    /// for every other edit.
+    appeared_during_move: Option<AppearedDuringMove>,
+    /// Complete archives on their way to their names when the edit stopped,
+    /// left recorded for the drive's next arrival (`state.kept_landings`): a
+    /// remote edit's swap, or a compress's publish, that a Cancel ended after
+    /// the way was cleared. `write-cancelled` names them, as a copy's does.
+    kept_landings: Vec<StagedLeftovers>,
+}
+
+impl EditLeftovers {
+    /// Takes the landings `state`'s stop kept, on the drive `parent_volume_id`
+    /// names, beside what a move into an archive left in its source.
+    pub(super) fn of(
+        state: &WriteOperationState,
+        parent_volume_id: &str,
+        appeared_during_move: Option<AppearedDuringMove>,
+    ) -> Self {
+        let landings: Vec<PathBuf> = std::mem::take(&mut *state.kept_landings.lock_ignore_poison());
+        let kept_landings = if landings.is_empty() {
+            Vec::new()
+        } else {
+            let volume = state.scope().host().volumes().get(parent_volume_id);
+            let volume_name = volume.as_ref().map_or(parent_volume_id, |volume| volume.name());
+            StagedLeftovers::of(StagedLeftoverFate::LandsWhenBack, &landings, volume_name)
+                .into_iter()
+                .collect()
+        };
+        Self {
+            appeared_during_move,
+            kept_landings,
+        }
+    }
+}
+
 /// Emits the ONE terminal event an archive edit's outcome calls for, and
 /// nothing else.
 ///
@@ -165,6 +204,8 @@ pub(super) fn to_write_error(archive_path: &Path, err: MutationError) -> WriteOp
 ///
 /// `skipped_count` is meaningful only on the `Ok` path; the other two arms
 /// carry `entries_done` instead, since a run that stopped has no final tally.
+/// `left` rides on the arm it belongs to: what a move left in its source on
+/// `write-complete`, the landings a Cancel kept on `write-cancelled`.
 ///
 /// ❗ An archive edit tracks no top-level SELECTION, so `top_level_skipped` is
 /// `None`: its `skipped_count` is unrepresentable entries and in-zip clashes,
@@ -176,11 +217,13 @@ pub(super) fn emit_archive_terminal(
     operation_type: WriteOperationType,
     outcome: Result<(), EditError>,
     skipped_count: usize,
-    // What a move INTO an archive left in its source (`copy_into.rs`); `None`
-    // for every other edit.
-    appeared_during_move: Option<AppearedDuringMove>,
+    left: EditLeftovers,
     final_progress: &MutationProgress,
 ) {
+    let EditLeftovers {
+        appeared_during_move,
+        kept_landings,
+    } = left;
     match outcome {
         Ok(()) => events.emit_complete(WriteCompleteEvent {
             operation_id: op_id.to_string(),
@@ -199,7 +242,7 @@ pub(super) fn emit_archive_terminal(
             operation_id: op_id.to_string(),
             operation_type,
             files_processed: final_progress.entries_done,
-            rollback: CancelRollback::none(),
+            rollback: CancelRollback::none().with_staged_leftovers(kept_landings),
         }),
         Err(EditError::Op(err)) => {
             events.emit_error(WriteErrorEvent::new(op_id.to_string(), operation_type, err));
@@ -574,6 +617,51 @@ mod tests {
         assert_eq!(
             cached(&engine, id),
             (WriteOperationPhase::FinishingTransfer, 0, 0, 0, 0)
+        );
+    }
+
+    /// A Cancel that ended a remote edit's swap (or a compress's publish) after
+    /// the way was cleared kept the new archive recorded for the drive's next
+    /// arrival. `write-cancelled` names it, as a copy's does, so the person
+    /// reads where their archive is rather than nothing at all.
+    #[test]
+    fn a_cancelled_edit_names_the_landing_its_stop_kept() {
+        let engine = TestOperations::new();
+        let nas: Arc<dyn cmdr_fs::volume::Volume> = Arc::new(cmdr_fs::volume::InMemoryVolume::new("Naspolya"));
+        engine.volumes().register("archive-terminal-nas", nas);
+        let state = engine.new_operation_state(Duration::ZERO);
+        state
+            .kept_landings
+            .lock_ignore_poison()
+            .push(PathBuf::from("/share/bundle.zip"));
+        let events = CollectorEventSink::new();
+
+        emit_archive_terminal(
+            &events,
+            "archive-terminal-cancel",
+            WriteOperationType::ArchiveEdit,
+            Err(EditError::Cancelled),
+            0,
+            EditLeftovers::of(&state, "archive-terminal-nas", None),
+            &MutationProgress::default(),
+        );
+
+        let cancelled = events.cancelled.lock_ignore_poison();
+        let [cancelled] = cancelled.as_slice() else {
+            panic!("one `write-cancelled`, got {cancelled:?}");
+        };
+        assert_eq!(
+            cancelled.rollback.staged_leftovers,
+            vec![StagedLeftovers {
+                fate: StagedLeftoverFate::LandsWhenBack,
+                count: 1,
+                example_name: "bundle.zip".to_owned(),
+                volume_name: "Naspolya".to_owned(),
+            }],
+        );
+        assert!(
+            state.kept_landings.lock_ignore_poison().is_empty(),
+            "named once, by the one terminal event"
         );
     }
 
