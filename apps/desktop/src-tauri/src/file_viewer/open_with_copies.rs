@@ -5,7 +5,7 @@
 //! lands beside it. That content exists nowhere else, so a copy is only ever removed
 //! once it's provably as pulled:
 //!
-//! - **Each pull leaves a record** ([`record_pull`]): a small sidecar in its launch
+//! - **Each pull leaves a record** (`record_pull`): a small sidecar in its launch
 //!   folder naming the file and its size, mtime, and inode right after the pull.
 //! - **A copy is untouched** when its folder holds exactly that file and the record, and
 //!   the file's size, mtime, and inode still match. Anything else (an edit, a second
@@ -18,7 +18,7 @@
 //!   started is this session's and stays.
 //!   When the Trash refuses an item, the folder stays for the next launch: ❌ never a
 //!   delete in its place.
-//! - **The session sweep** ([`sweep_launch_folders`]), before each launch's pulls,
+//! - **The session sweep** (`sweep_launch_folders`), before each launch's pulls,
 //!   removes untouched copies past the newest few once they're old or over a size
 //!   budget, so a long session can't fill the disk. "No process holds it open" is
 //!   deliberately not the test: Preview and TextEdit read a file and close it while
@@ -30,12 +30,14 @@
 
 use std::os::unix::fs::MetadataExt as _;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+#[cfg(any(target_os = "macos", test))]
+use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
 /// The record's name inside a launch folder. Dot-led and Cmdr-prefixed, so no pulled
-/// file plausibly carries it; [`record_pull`] refuses one that does.
+/// file plausibly carries it; `record_pull` refuses one that does.
 const RECORD_NAME: &str = ".cmdr-open-with-pull.json";
 
 /// What one pull left in its launch folder.
@@ -69,6 +71,7 @@ impl FileTime {
         })
     }
 
+    #[cfg(any(target_os = "macos", test))]
     fn to_system_time(self) -> SystemTime {
         UNIX_EPOCH + Duration::new(self.secs, self.nanos)
     }
@@ -76,6 +79,7 @@ impl FileTime {
 
 /// Records `copy` as pulled, beside it in its launch folder. Best-effort: a copy with
 /// no record counts as changed, so a failure here only means it's kept, never lost.
+#[cfg(any(target_os = "macos", test))]
 pub(super) fn record_pull(copy: &Path) {
     let result = (|| -> Result<(), String> {
         let folder = copy.parent().ok_or("no launch folder")?;
@@ -194,6 +198,7 @@ fn trash_contents(folder: &Path, trash: &dyn Fn(&Path) -> Result<(), String>) ->
 }
 
 /// How the in-session sweep picks what goes.
+#[cfg(any(target_os = "macos", test))]
 pub(super) struct SweepPolicy {
     /// This many of the newest untouched copies always stay, whatever their age or size.
     pub(super) keep_newest: usize,
@@ -207,6 +212,7 @@ pub(super) struct SweepPolicy {
 /// `policy` lets go, as of `now`. Never touches a changed copy (an app may be editing
 /// it; the next startup takes it to the Trash) or a folder with no record yet (a pull
 /// still running beside this one).
+#[cfg(any(target_os = "macos", test))]
 pub(super) fn sweep_launch_folders(
     dir: &Path,
     is_launch_folder: impl Fn(&str) -> bool,
