@@ -12,21 +12,23 @@ GitHub by name and leaves every other ruleset alone.
   `renovate` app that opens and merges our Renovate PRs). These are the settings Scorecard's Branch-Protection tier 2
   looks for; the bypass actors cost only tier 5.
 - `main-ci-required.json` ("main: CI OK required"): the `CI OK` check (job `ci-ok` in `.github/workflows/ci.yml`),
-  pinned to the GitHub Actions app (`integration_id` 15368) so no other app can post a passing `CI OK`. `strict` is on
-  for Scorecard's "up to date before merge"; it only affects PR merges, since a direct push to `main` must fast-forward
-  and so always contains `main`. **No bypass actors**: nobody lands red. Releases need none either: the pipeline pushes
-  nothing to `main`, and `release.sh` lands its commit through `pnpm land` (`docs/guides/releasing.md` § What a release
-  publishes).
+  pinned to the GitHub Actions app (`integration_id` 15368) so no other app can post a passing `CI OK`. `strict` is off,
+  so GitHub merges a PR whose head is green even when `main` moved since (§ Decision: merge a green PR onto a moved
+  `main`); that costs Scorecard's "up to date before merge". **No bypass actors**: nobody lands red, and `--admin` can't
+  skip it. Releases need none either: the pipeline pushes nothing to `main`, and `release.sh` lands its commit through
+  `pnpm land` (`docs/guides/releasing.md` § What a release publishes).
 - Two older ones stay as they are: "main: no force-push or deletion" and "Release tags (v*)".
+- `pnpm land rulesets` compares each file with GitHub's copy and names only the ones that drifted. GitHub answers with
+  defaults the files leave out, so a field missing from a file isn't drift.
 
-Turning off the two `main` rulesets restores direct pushes, and `land` keeps working without them (it pushes a green SHA
-either way).
+Turning off the two `main` rulesets restores direct pushes, and `land` keeps working without them.
 
-## Decision: land by pushing the green SHA
+## Decision: land by pushing the green SHA when it fast-forwards
 
-Decision: after `CI OK` goes green on the PR head, `git push --no-verify origin <sha>:refs/heads/main`. Why: it
-fast-forwards, so SHAs, signatures, tags, and local `main` stay identical to what CI tested, and GitHub still marks the
-PR merged. The alternative, `gh pr merge --admin --rebase`, rewrites every SHA.
+Decision: when the green head still descends from `origin/main`, `git push --no-verify origin <sha>:refs/heads/main`.
+Why: it fast-forwards, so SHAs, signatures, tags, and local `main` stay identical to what CI tested, GitHub still marks
+the PR merged, and `main`'s own CI run finds `CI OK` already green on the SHA and skips the suite (`verified` in
+`ci.yml`).
 
 Probe (2026-10-18, temporary rulesets mimicking A and B on `refs/heads/probe-land/main`, a throwaway workflow posting
 `probe-ok`; all of it deleted afterwards):
@@ -99,19 +101,35 @@ answered 403 after CI was green, and that land was lost. So:
   API answered `X-RateLimit-Remaining: 0`), so it's only the fallback for `gh pr` / `gh run` calls, which print no
   headers.
 
-## Decision: rebase by default, capped
+## Decision: merge a green PR onto a moved `main`
 
-Decision: when `origin/main` moved, `land` rebases onto it before pushing, and when it moves while CI runs, it rebases
-and waits for CI again, up to `maxCIRuns` (8) runs. Why: CI runs on the rebased SHA anyway, so a textually clean rebase
-that breaks something still can't land, and the old "rerun with `-rebase`" step only cost an agent a round trip. Eight,
-because several sessions landing at once each restart the others' CI, and a land that gives up after three hands the
-wait back to a person for nothing. A re-run is warmer than the first (`rust-cache` restores `target/`; Desktop (Rust)
-went from 34 to 18 min on PR #497's second run, 2026-10-19). The cap stays so a `main` that never settles can't spin a
-land for a whole day without saying so.
+Decision: `land` rebases onto `origin/main` once, before the first push. When `main` moves while CI runs, it doesn't
+rebase and wait again: `nextLandPath` picks `gh pr merge <n> --admin --rebase --match-head-commit <green sha>`, GitHub
+rebases the PR onto the current `main`, and the CI run on every `main` push (`push: branches: [main]` in `ci.yml`)
+checks the result. It prints that it did, with a link to `main`'s CI runs, and doesn't wait for them.
+
+Why: with many sessions landing at once, each land that saw `main` move rebased and re-ran CI (25–35 min), which moved
+nobody forward. On 2026-10-20 eight-plus PRs went green two or three times each and none landed. Big teams accept the
+same trade: patches that passed CI on a slightly older base, with the rare semantic clash caught on `main` right after.
+The guarantee that stays: `--admin` only bypasses the approval ruleset, the CI ruleset has no bypass and `strict` is
+off, so GitHub still demands `CI OK` green on the PR's head SHA, and `--match-head-commit` pins that head.
+
+- **A conflict falls back to the old path**: GitHub's `rebaseable` on `repos/{repo}/pulls/{n}` (null for a few seconds
+  while GitHub works it out, so `prRebaseable` waits up to 15 s, then tries anyway). False, or a refused merge that
+  reads false afterwards, returns `errRebaseConflict`; `land` rebases here and waits for CI again, up to `maxCIRuns` (8)
+  runs, so a `main` that keeps clashing can't spin a land all day. The decision reads that typed field, never gh's
+  stderr.
+- **A refused merge re-reads the PR**: `gh` waits out a spent API budget and repeats the call, so a merge that went
+  through the first time reads `merged` and counts as landed.
+- **A re-run after a GitHub rebase merge finishes**: the branch's SHAs aren't on `main`, but
+  `git cherry origin/main HEAD` lists only `-` lines (every patch is upstream), so `readState` reports it landed.
+  `remove-worktree.sh` asks the same question before tearing a worktree down.
+- **The fast-forward still wins when it can**: it keeps SHAs identical and lets `main`'s CI skip the suite, which a
+  rebase merge's fresh SHAs can't.
 
 Exception: a branch carrying a merge commit (a contributor's PR record, `docs/guides/handling-prs.md`; a release
-merge-back, `docs/guides/releasing.md`) is never rebased, since a plain rebase flattens the merge. `land` stops and
-names the manual fix instead.
+merge-back, `docs/guides/releasing.md`) is never rebased, by `land` or by GitHub, since a plain rebase flattens the
+merge. When `main` moved, `land` stops and names the manual fix instead.
 
 ## Open points
 

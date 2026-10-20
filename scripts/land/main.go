@@ -10,14 +10,16 @@
 //  3. pushes the branch and opens its PR, or reuses the open one (the PR is plumbing: CI runs on
 //     `pull_request`, and nobody reviews it);
 //  4. waits for `CI OK` on the head SHA, and on red names the failed jobs and the re-run command;
-//  5. lands with `git push origin <sha>:main`: the admin bypasses the PR ruleset while the CI
-//     ruleset still demands `CI OK` on that exact SHA, the SHAs stay the same, and GitHub marks
-//     the PR merged;
+//  5. lands the green head: with `git push origin <sha>:main` while it still descends from
+//     `origin/main` (the SHAs stay the same, and GitHub marks the PR merged), else with
+//     `gh pr merge --admin --rebase`, which rebases it onto the `main` that moved under it and
+//     leaves the clash check to CI on `main`. Either way the CI ruleset demands `CI OK` green on
+//     the head; the admin only bypasses the approval ruleset;
 //  6. fast-forwards local `main` (wherever it's checked out), deletes the remote branch, and
 //     prints the command that removes the worktree.
 //
-// When `origin/main` moves while CI runs, it rebases and waits for CI again, up to
-// `maxCIRuns` runs in all.
+// When GitHub can't rebase the green PR (a conflict, or a merge commit a rebase would flatten),
+// it catches up here and waits for CI again, up to `maxCIRuns` runs in all.
 //
 // Every run reads where the branch stands and picks up from there, so it's safe to re-run after a
 // flake re-run, a rebase, or a closed laptop.
@@ -49,14 +51,19 @@ const (
 	agentLabel = "claude-created"
 	// How long a CI run gets to show up after the push that starts it.
 	appearWithin = 5 * time.Minute
-	// How many CI runs one land waits through while `origin/main` keeps moving under it. High
-	// enough that several sessions landing at once take turns rather than giving up; a `main`
-	// busier than this needs a person, not a ninth run.
+	// How many CI runs one land waits through when each green head needs a rebase here before it
+	// can land. A `main` that clashes with it this often needs a person, not a ninth run.
 	maxCIRuns = 8
+	// How long GitHub gets to work out whether it can rebase a PR after `main` moved.
+	rebaseableWithin = 15 * time.Second
 )
 
-// errMainMoved: `origin/main` moved while CI ran, so the green SHA no longer fast-forwards it.
+// errMainMoved: `origin/main` moved while CI ran, and GitHub can't land the green head on it, so
+// the branch catches up here and CI runs again.
 var errMainMoved = errors.New("origin/main moved while CI ran")
+
+// errRebaseConflict: GitHub can't rebase the green PR onto the `main` that moved under it.
+var errRebaseConflict = fmt.Errorf("GitHub can't rebase the PR onto main cleanly: %w", errMainMoved)
 
 // errOriginAhead: origin's feature branch has commits this branch never had, so pushing would
 // overwrite them.
@@ -106,8 +113,8 @@ func main() {
 	}
 }
 
-// land runs one land, and another on top of a rebase each time `origin/main` moves while CI runs,
-// up to `maxCIRuns` CI runs in all.
+// land runs one land, and another on top of a rebase each time GitHub can't land the green head
+// on the `main` that moved under it, up to `maxCIRuns` CI runs in all.
 func land(r runner, cfg config) error {
 	for run := 1; ; run++ {
 		err := landOnce(r, cfg)
@@ -115,9 +122,13 @@ func land(r runner, cfg config) error {
 			return err
 		}
 		if run >= maxCIRuns {
-			return fmt.Errorf("origin/main moved during each of %d CI runs, so I stopped. Land again when it's quieter: pnpm land", maxCIRuns)
+			return fmt.Errorf("origin/main moved during each of %d CI runs in a way GitHub couldn't rebase onto, so I stopped. Land again when it's quieter: pnpm land", maxCIRuns)
 		}
-		say("origin/main moved while CI ran, so rebasing and running CI again (run %d of %d).", run+1, maxCIRuns)
+		if errors.Is(err, errRebaseConflict) {
+			say("GitHub can't rebase the green PR onto the new main cleanly, so rebasing here and running CI again (run %d of %d).", run+1, maxCIRuns)
+		} else {
+			say("origin/main moved while CI ran, so catching up here (run %d of %d).", run+1, maxCIRuns)
+		}
 	}
 }
 
@@ -159,10 +170,9 @@ func landOnce(r runner, cfg config) error {
 	if err := waitForCI(r, head, cfg.timeout); err != nil {
 		return err
 	}
-	if err := landOnMain(r, head); err != nil {
+	if err := landGreen(r, pr, head, state.hasMerges); err != nil {
 		return err
 	}
-	say("Landed %s on main; GitHub marks %s merged.", head[:12], pr.URL)
 	return finish(r, state.branch)
 }
 
@@ -211,7 +221,7 @@ func readState(r runner) (branchState, error) {
 	return branchState{
 		branch:    branch,
 		dirty:     status != "",
-		landed:    r.isAncestor("HEAD", "origin/main"),
+		landed:    r.isAncestor("HEAD", "origin/main") || r.allUpstream(),
 		based:     r.isAncestor("origin/main", "HEAD"),
 		hasMerges: merges != "",
 	}, nil
@@ -283,7 +293,11 @@ func ensurePR(r runner, branch string, commits []commit) (pullRequest, error) {
 		return pullRequest{}, err
 	}
 	say("Opened %s", url)
-	return pullRequest{State: "OPEN", URL: url}, nil
+	number, ok := prNumber(url)
+	if !ok {
+		return pullRequest{}, fmt.Errorf("gh pr create printed %q, which has no PR number", url)
+	}
+	return pullRequest{Number: number, State: "OPEN", URL: url}, nil
 }
 
 func waitForCI(r runner, head string, timeout time.Duration) error {
@@ -352,17 +366,89 @@ func ciFailure(r runner, run workflowRun) error {
 	return errors.New(msg)
 }
 
-// landOnMain fast-forwards origin's `main` to the green SHA. `--no-verify`: CI already passed on
+// landGreen takes the green head onto `main` (`nextLandPath`): a fast-forward push while it still
+// descends from `origin/main`, else a GitHub rebase merge. It returns errMainMoved when only a
+// rebase here and a fresh CI run can land it.
+func landGreen(r runner, pr pullRequest, head string, hasMerges bool) error {
+	for {
+		if _, err := r.git("fetch", "--quiet", "origin", "main"); err != nil {
+			return err
+		}
+		based := r.isAncestor("origin/main", head)
+		var rebaseable *bool
+		if !based && !hasMerges {
+			var err error
+			if rebaseable, err = prRebaseable(r, pr.Number); err != nil {
+				return err
+			}
+		}
+		switch nextLandPath(based, hasMerges, rebaseable) {
+		case landFastForward:
+			err := pushToMain(r, head)
+			if err == nil {
+				say("Landed %s on main; GitHub marks %s merged.", head[:12], pr.URL)
+				return nil
+			}
+			// `main` moved between the fetch and the push: decide again.
+			if _, fetchErr := r.git("fetch", "--quiet", "origin", "main"); fetchErr == nil && !r.isAncestor("origin/main", head) {
+				continue
+			}
+			return fmt.Errorf("origin refused the land:\n%w", err)
+		case landGitHubRebase:
+			return mergeOnGitHub(r, pr, head)
+		case landRebaseAndRerun:
+			if hasMerges {
+				return errMainMoved
+			}
+			return errRebaseConflict
+		}
+	}
+}
+
+// pushToMain fast-forwards origin's `main` to the green SHA. `--no-verify`: CI already passed on
 // this exact SHA, and a pre-push hook that adds a commit would land something CI never saw.
-func landOnMain(r runner, head string) error {
+func pushToMain(r runner, head string) error {
 	_, err := r.git("push", "--quiet", "--no-verify", "origin", head+":refs/heads/main")
-	if err == nil {
-		return nil
+	return err
+}
+
+// prRebaseable asks GitHub whether it can rebase the PR onto `main`. GitHub works that out in the
+// background after `main` moves, so this gives it `rebaseableWithin`, then reports nil.
+func prRebaseable(r runner, number int) (*bool, error) {
+	deadline := time.Now().Add(rebaseableWithin)
+	for {
+		var pull pullDetails
+		if err := r.ghAPI(&pull, fmt.Sprintf("repos/%s/pulls/%d", repo, number)); err != nil {
+			return nil, err
+		}
+		if pull.Rebaseable != nil || time.Now().After(deadline) {
+			return pull.Rebaseable, nil
+		}
+		time.Sleep(3 * time.Second)
 	}
-	if _, fetchErr := r.git("fetch", "--quiet", "origin", "main"); fetchErr == nil && !r.isAncestor("origin/main", head) {
-		return errMainMoved
+}
+
+// mergeOnGitHub has GitHub rebase the green PR onto the `main` that moved under it, and CI on
+// `main` checks the result. `--admin` passes the approval ruleset; the CI one has no bypass, so
+// GitHub still demands `CI OK` green on the head, and `--match-head-commit` pins that head.
+func mergeOnGitHub(r runner, pr pullRequest, head string) error {
+	_, err := r.gh("pr", "merge", fmt.Sprint(pr.Number), "-R", repo, "--admin", "--rebase", "--match-head-commit", head)
+	if err != nil {
+		// The call may have gone through before it failed, or GitHub found the rebase conflicts.
+		var pull pullDetails
+		if readErr := r.ghAPI(&pull, fmt.Sprintf("repos/%s/pulls/%d", repo, pr.Number)); readErr != nil {
+			return fmt.Errorf("GitHub refused the merge, so nothing landed. Fix what it says, then land again: pnpm land\n%w", err)
+		}
+		switch {
+		case pull.Merged:
+		case pull.Rebaseable != nil && !*pull.Rebaseable:
+			return errRebaseConflict
+		default:
+			return fmt.Errorf("GitHub refused the merge, so nothing landed. Fix what it says, then land again: pnpm land\n%w", err)
+		}
 	}
-	return fmt.Errorf("origin refused the land:\n%w", err)
+	say("main moved while CI ran, so GitHub rebased the green PR onto it: %s\nCI on main checks the result: https://github.com/%s/actions/workflows/%s?query=branch%%3Amain", pr.URL, repo, ciWorkflow)
+	return nil
 }
 
 // finish syncs local `main` with origin's and deletes the landed remote branch. Both are

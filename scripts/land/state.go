@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -56,6 +57,45 @@ func nextStartStep(s branchState) startStep {
 		return stepRebase
 	default:
 		return stepProceed
+	}
+}
+
+// patchesUpstream reports whether `git cherry <upstream> <branch>` found every commit already
+// upstream ("-" lines only), as after GitHub rebased the branch onto `main` under fresh SHAs.
+func patchesUpstream(cherry string) bool {
+	for line := range strings.SplitSeq(cherry, "\n") {
+		if line != "" && !strings.HasPrefix(line, "- ") {
+			return false
+		}
+	}
+	return true
+}
+
+// landPath is how a branch whose head is green on CI gets onto `main`.
+type landPath int
+
+const (
+	// landFastForward: the head still descends from `origin/main`, so push it there as is.
+	landFastForward landPath = iota
+	// landGitHubRebase: `origin/main` moved, so GitHub rebases the green PR onto it, and CI on
+	// `main` checks the result.
+	landGitHubRebase
+	// landRebaseAndRerun: GitHub can't rebase it (a conflict, or a merge commit a rebase would
+	// flatten), so the branch catches up here and CI runs again.
+	landRebaseAndRerun
+)
+
+// nextLandPath picks the land path. rebaseable is GitHub's view of the PR, nil while it's still
+// computing it.
+func nextLandPath(based, hasMerges bool, rebaseable *bool) landPath {
+	switch {
+	case based:
+		return landFastForward
+	case hasMerges, rebaseable != nil && !*rebaseable:
+		return landRebaseAndRerun
+	default:
+		// Still computing: try, and GitHub refuses the merge if it can't rebase.
+		return landGitHubRebase
 	}
 }
 
@@ -193,6 +233,13 @@ type pullRequest struct {
 	URL    string `json:"url"`
 }
 
+// pullDetails is the part of `repos/{repo}/pulls/{n}` a GitHub merge decides on. Rebaseable is
+// null while GitHub is still working it out.
+type pullDetails struct {
+	Merged     bool  `json:"merged"`
+	Rebaseable *bool `json:"rebaseable"`
+}
+
 // openPR finds the branch's open PR; a closed one is never revived.
 func openPR(prs []pullRequest) (pullRequest, bool) {
 	for _, pr := range prs {
@@ -201,6 +248,12 @@ func openPR(prs []pullRequest) (pullRequest, bool) {
 		}
 	}
 	return pullRequest{}, false
+}
+
+// prNumber reads the number off a PR URL, the one thing `gh pr create` prints.
+func prNumber(url string) (int, bool) {
+	n, err := strconv.Atoi(url[strings.LastIndex(url, "/")+1:])
+	return n, err == nil && n > 0
 }
 
 // worktree is one entry of `git worktree list --porcelain`.

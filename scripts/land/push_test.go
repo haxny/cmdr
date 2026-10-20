@@ -162,6 +162,44 @@ func TestPushBranchAfterOriginDeletedIt(t *testing.T) {
 	}
 }
 
+// A GitHub rebase merge lands the branch's patches on `main` under fresh SHAs; a re-run of land
+// must still see the branch as landed.
+func TestAllUpstreamAfterAGitHubRebaseMerge(t *testing.T) {
+	origin := testOrigin(t)
+	a := testClone(t, origin, "feat")
+	commitFile := func(r runner, name string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(r.dir, name), []byte(name), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		mustGit(t, r, "add", name)
+		mustGit(t, r, "commit", "--quiet", "-m", "feat: "+name)
+	}
+	commitFile(a, "feat.txt")
+	feat := mustGit(t, a, "rev-parse", "HEAD")
+
+	other := testClone(t, origin, "main")
+	commitFile(other, "other.txt")
+	mustGit(t, other, "push", "--quiet", "origin", "main")
+	mustGit(t, a, "fetch", "--quiet", "origin", "main")
+	if a.allUpstream() {
+		t.Error("before the merge: the branch's commit isn't on main yet")
+	}
+
+	// What GitHub's rebase merge does.
+	mustGit(t, other, "fetch", "--quiet", "origin", "main")
+	mustGit(t, other, "fetch", "--quiet", a.dir, feat)
+	mustGit(t, other, "cherry-pick", feat)
+	mustGit(t, other, "push", "--quiet", "origin", "main")
+	mustGit(t, a, "fetch", "--quiet", "origin", "main")
+	if !a.allUpstream() {
+		t.Error("after the merge: every commit is on main, patch for patch")
+	}
+	if a.isAncestor("HEAD", "origin/main") {
+		t.Error("the test should exercise fresh SHAs, but HEAD is an ancestor of main")
+	}
+}
+
 // The pre-push hook may commit a formatting fix and stop the push; land pushes again with it.
 func TestPushBranchRetriesWithTheHooksCommit(t *testing.T) {
 	a := testClone(t, testOrigin(t), "feat")

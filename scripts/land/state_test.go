@@ -29,6 +29,45 @@ func TestNextStartStep(t *testing.T) {
 	}
 }
 
+func TestNextLandPath(t *testing.T) {
+	yes, no := true, false
+	cases := []struct {
+		name       string
+		based      bool
+		hasMerges  bool
+		rebaseable *bool
+		want       landPath
+	}{
+		{"main didn't move", true, false, nil, landFastForward},
+		{"main didn't move under a merge commit", true, true, nil, landFastForward},
+		{"main moved", false, false, &yes, landGitHubRebase},
+		{"main moved, GitHub still computing", false, false, nil, landGitHubRebase},
+		{"main moved into a conflict", false, false, &no, landRebaseAndRerun},
+		{"main moved under a merge commit", false, true, &yes, landRebaseAndRerun},
+	}
+	for _, c := range cases {
+		if got := nextLandPath(c.based, c.hasMerges, c.rebaseable); got != c.want {
+			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
+		}
+	}
+}
+
+func TestPatchesUpstream(t *testing.T) {
+	cases := []struct {
+		name, cherry string
+		want         bool
+	}{
+		{"every commit rebased onto main", "- 1111\n- 2222", true},
+		{"one commit not upstream", "- 1111\n+ 2222", false},
+		{"nothing on the branch", "", true},
+	}
+	for _, c := range cases {
+		if got := patchesUpstream(c.cherry); got != c.want {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
 var (
 	first  = commit{Subject: "feat: search finds files by size", Body: "- `SizeFilter` parses `>10mb`"}
 	second = commit{Subject: "fix: the size filter rounds like Finder"}
@@ -135,6 +174,15 @@ func TestOpenPR(t *testing.T) {
 	}
 	if _, ok := openPR(prs[:1]); ok {
 		t.Error("a closed PR isn't reused")
+	}
+}
+
+func TestPRNumber(t *testing.T) {
+	if n, ok := prNumber("https://github.com/vdavid/cmdr/pull/512"); !ok || n != 512 {
+		t.Errorf("got %d %v", n, ok)
+	}
+	if _, ok := prNumber("https://github.com/vdavid/cmdr/pull/"); ok {
+		t.Error("no number: got one")
 	}
 }
 

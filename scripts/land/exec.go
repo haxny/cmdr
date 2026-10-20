@@ -48,6 +48,13 @@ func (r runner) isAncestor(a, b string) bool {
 	return err == nil
 }
 
+// allUpstream reports whether every commit on HEAD is already on `origin/main` patch for patch, as
+// after GitHub rebased the branch onto it under fresh SHAs.
+func (r runner) allUpstream() bool {
+	out, err := r.git("cherry", "origin/main", "HEAD")
+	return err == nil && patchesUpstream(out)
+}
+
 // remoteSHA is what the branch points at on origin, or "" when origin has no such branch.
 func (r runner) remoteSHA(branch string) (string, error) {
 	out, err := r.git("ls-remote", "origin", "refs/heads/"+branch)
