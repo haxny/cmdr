@@ -633,3 +633,69 @@ async fn a_volume_move_of_a_folder_that_holds_a_mounted_drive_refuses_and_moves_
         }
     }
 }
+
+/// The into-archive twin: a move INTO a zip adds each tree, then deletes what
+/// it carried, so a folder holding a mounted drive would leave the drive's
+/// files in the zip and gone from the drive. Refused before the zip is opened.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "attaches a real disk image; run via `pnpm check disk-images`"]
+async fn a_move_into_a_zip_of_a_folder_that_holds_a_mounted_drive_refuses_and_moves_nothing() {
+    use std::io::Write;
+
+    use crate::event_sinks::OperationEventSink;
+    use crate::mount_boundary::test_support::{NestedMount, assert_refused_at_the_mount};
+
+    let nested = NestedMount::mount();
+    let archive_dir = TestDir::new("nested_mount_into_zip");
+    let archive = archive_dir.join("a.zip");
+    let mut writer = zip::ZipWriter::new(std::fs::File::create(&archive).expect("create the zip"));
+    writer
+        .start_file("placeholder.txt", zip::write::SimpleFileOptions::default())
+        .expect("start an entry");
+    writer.write_all(b"x").expect("write the entry");
+    writer.finish().expect("finish the zip");
+    let archive_before = std::fs::read(&archive).expect("read the zip");
+
+    let engine = TestOperations::new();
+    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "V",
+        nested.dir.to_path_buf(),
+        pane_order_host(),
+    ));
+
+    for source_path in ["folder", "folder/mnt"] {
+        let events = Arc::new(CollectorEventSink::new());
+        engine
+            .route_archive_copy_into(
+                Arc::clone(&events) as Arc<dyn OperationEventSink>,
+                Arc::clone(&source),
+                vec![std::path::PathBuf::from(source_path)],
+                archive.clone(),
+                format!("lane-{}", uuid::Uuid::new_v4()),
+                ConflictResolution::Overwrite,
+                0,
+                true, // is_move
+                None,
+                None,
+            )
+            .await
+            .expect("start the move into the zip");
+        wait_until_async(Duration::from_secs(30), "the move to settle", || {
+            !events.settled.lock_ignore_poison().is_empty()
+        })
+        .await;
+
+        let refusal = events
+            .errors
+            .lock_ignore_poison()
+            .first()
+            .map(|event| event.error.clone());
+        assert_refused_at_the_mount(refusal.map_or(Ok(()), Err));
+        nested.assert_untouched();
+        assert_eq!(
+            std::fs::read(&archive).expect("read the zip"),
+            archive_before,
+            "nothing was added to the zip"
+        );
+    }
+}

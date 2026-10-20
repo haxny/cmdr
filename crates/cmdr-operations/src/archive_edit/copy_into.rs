@@ -240,6 +240,12 @@ async fn materialize_sources(
     // during the pull or the rewrite counts as a change too.
     let mut carried = Vec::new();
     if is_move {
+        // A source that is or holds a mount point would have the drive's files
+        // added to the zip and then deleted there. Refused before anything is
+        // read, so the zip is never opened.
+        crate::mount_boundary::refuse_moving_a_volume_mount(&**source_volume, source_paths, state)
+            .await
+            .map_err(EditError::Op)?;
         for src in source_paths {
             let stamped = stamp_source(source_volume, src).await.map_err(|e| {
                 EditError::Op(WriteOperationError::ReadError {

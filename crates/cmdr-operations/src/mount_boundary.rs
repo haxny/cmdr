@@ -5,7 +5,7 @@
 //! quietly, after its contents are gone. Both delete walkers ask
 //! [`is_mount_boundary`] of every directory they're about to descend, an
 //! Overwrite that replaces a folder asks [`refuse_a_mount_inside`] before it
-//! sets the folder aside, and a move onto another volume asks
+//! sets the folder aside, and a move onto another volume or into a zip asks
 //! [`refuse_moving_a_mount`] of its sources before it copies anything (it would
 //! otherwise copy the drive's files off, then delete them there). Each refuses
 //! the whole operation on a yes, before anything is removed, which is what

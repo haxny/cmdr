@@ -185,7 +185,9 @@ reaped, fresh spared, other-archive ignored, delete-failure doesn't fail the edi
   in the source during the pull or the rewrite exists only there, so it stays, and the completion event counts it on
   `appearedDuringMove` (the toast's "changed / appeared during the move" sentences). The mechanism and its gaps:
   `../transfer/volume/DETAILS.md` § "Cross-volume move source-delete removes a LEDGER". Pinned by
-  `copy_into_drift_tests.rs` (local and remote source).
+  `copy_into_drift_tests.rs` (local and remote source). A local source that is or holds a mount point is refused before
+  the stamp (`mount_boundary::refuse_moving_a_volume_mount`), or the drive's files would land in the zip and then be
+  deleted there: `../transfer/DETAILS.md` § "An Overwrite or a move never removes a mounted drive".
 - **Fresh compress is its own managed driver** (`compress.rs` → `fresh_compress.rs`), not an archive mutation. It
   reserves source and destination lanes and registers `WriteOperationType::Compress` before any write. Journal and
   analytics retain `OpKind::ArchiveEdit`, `ArchiveSubkind::Compress`, and `archive_edit_completed`; `net_new` retains

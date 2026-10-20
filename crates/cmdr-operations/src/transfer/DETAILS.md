@@ -2677,10 +2677,11 @@ isn't asked: what's mounted on a server is the server's. The dialog words it as 
 (`real_image.rs`, the disk-image lane). The delete's side of the same wall: `../delete/DETAILS.md` § "A mount is a
 wall".
 
-A move onto another volume (`move_op/cross_fs.rs::move_with_staging`, `volume/move_cross.rs`) copies each tree, then
-deletes what it copied, so a source that is or holds a mount point would have the drive's files carried off it. Both
-engines refuse up front, before the scan and before a cached preview's file list is trusted, with the same check over
-every top-level source in one mount-table read (`mount_boundary::refuse_moving_a_mount` /
+A move onto another volume (`move_op/cross_fs.rs::move_with_staging`, `volume/move_cross.rs`) or into a zip
+(`materialize_sources` in `../archive_edit/copy_into.rs`) copies each tree, then deletes what it copied, so a source
+that is or holds a mount point would have the drive's files carried off it. All three refuse up front, before the scan
+(the zip: before the source is stamped or read) and before a cached preview's file list is trusted, with the same check
+over every top-level source in one mount-table read (`mount_boundary::refuse_moving_a_mount` /
 `refuse_moving_a_volume_mount`). A same-volume move renames and moves nothing off a drive, so it isn't asked. The
 refusal carries `MountedVolumeAction` (`delete` / `replace` / `move`), set by the refusing site, because a move can
 refuse both as a move and as an Overwrite; the dialog keys its sentence on it, ❌ never on the operation type.
