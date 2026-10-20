@@ -380,6 +380,7 @@ pub(crate) fn search_ranked(
     if query.count_only {
         log::debug!(
             "Count-only search: {} → {} matches ({} hidden), took {:?}",
+            // allowed-log-private: the summary logs the query's shape, never its words
             summarize_query_for_diagnostics(query),
             total_count,
             hidden_by_excludes,
@@ -420,6 +421,7 @@ pub(crate) fn search_ranked(
 
     log::debug!(
         "Search completed: {} → {} matches (returning {}, {} hidden), took {:?}",
+        // allowed-log-private: the summary logs the query's shape, never its words
         summarize_query_for_diagnostics(query),
         total_count,
         entries.len(),

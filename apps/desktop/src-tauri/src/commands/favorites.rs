@@ -244,7 +244,6 @@ fn favorite_volume_from(
         }),
         Some(_) => Err(AddFavoriteError::NotAPlace),
         None if is_a_place_to_connect(&volume) => {
-            // allowed-log-private: a volume id, which the report tokenizes by its shape
             log::debug!(target: "favorites", "volume {} isn't connected; a favorite needs it live", volume.id);
             Err(AddFavoriteError::PlaceNotConnected)
         }

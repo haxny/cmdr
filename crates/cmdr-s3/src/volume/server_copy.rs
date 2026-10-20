@@ -509,7 +509,7 @@ impl S3Volume {
                 self.verify_landing(client, &target, size, copied.etag.as_deref())
                     .await?;
             }
-            debug!(target: "volume", "s3 copied {} bytes to {to_remote} in one request", size);
+            debug!(target: "volume", "s3 copied {} bytes to {} in one request", size, LogPrivate::file_path(to_remote));
             return Ok(size);
         }
     }

@@ -407,7 +407,7 @@ impl ArchiveIndex {
         let reader = match self.store.open_read(&sidecar.key, sidecar.size, source, password) {
             Ok(reader) => reader,
             Err(e) => {
-                log::debug!(target: "archive", "Couldn't open the sidecar {}: {e}", sidecar.key, e = LogError(&e));
+                log::debug!(target: "archive", "Couldn't open the sidecar {}: {e}", LogPrivate::file_path(&sidecar.key), e = LogError(&e));
                 return None;
             }
         };

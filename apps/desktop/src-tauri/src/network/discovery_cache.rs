@@ -113,7 +113,7 @@ impl DiscoveryCache {
         };
         debug!(
             "Host {change}: serverId={:?}, server={:?}, ip={:?}, host={:?}",
-            host.id, // allowed-log-private: a server id; the report's `serverId=` key tokenizes it in its own domain
+            host.id,
             LogPrivate::host(&host.name),
             host.ip_address.as_deref().map(LogPrivate::host),
             host.hostname.as_deref().map(LogPrivate::host)
@@ -136,7 +136,7 @@ impl DiscoveryCache {
         let entry = self.hosts.entry(host.id.clone()).or_insert_with(|| {
             debug!(
                 "Host ADDED: serverId={:?}, server={:?}",
-                host.id, // allowed-log-private: a server id; the report's `serverId=` key tokenizes it in its own domain
+                host.id,
                 LogPrivate::host(&host.name)
             );
             CachedHost {
@@ -262,7 +262,7 @@ impl DiscoveryCache {
         };
         debug!(
             "Host REMOVED: serverId={:?}, server={:?}, ip={:?}",
-            removed.host.id, // allowed-log-private: a server id; the report's `serverId=` key tokenizes it in its own domain
+            removed.host.id,
             LogPrivate::host(&removed.host.name),
             removed.host.ip_address.as_deref().map(LogPrivate::host)
         );

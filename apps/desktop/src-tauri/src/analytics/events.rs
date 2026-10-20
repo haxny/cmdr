@@ -108,6 +108,7 @@ fn sanitize_props(event: &str, props: Value) -> Value {
             {
                 log::warn!(
                     target: "analytics",
+                    // allowed-log-private: an analytics prop key is a name in our own code
                     "Event '{event}' prop '{key}' looks PII-shaped (contains a path / email / home-prefix). \
                      Analytics props must be PII-free enums/counts/bools only; never paths, names, queries, or prompts."
                 );

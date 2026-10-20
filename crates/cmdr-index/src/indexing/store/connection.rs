@@ -244,6 +244,7 @@ impl IndexStore {
         match Self::open_read_connection(db_path) {
             Ok(conn) => Self::read_meta_value(&conn, key).ok().flatten().as_deref() == Some("1"),
             Err(e) => {
+                // allowed-log-private: `key` is an index meta key of ours
                 log::debug!("{key}({}): read open failed: {e}", LogPrivate::file_path(db_path));
                 false
             }

@@ -530,6 +530,7 @@ pub fn mount_share_sync(
     if matches!(settled, Err(MountError::MountMissing { .. })) {
         log::warn!(
             "NetFS answered {result} for {url_string} and named {reported_path:?} as the mount point, but no mount of share={share:?} on server={server:?} is there",
+            url_string = LogPrivate::host(&url_string),
             reported_path = reported_path.as_deref().map(LogPrivate::dir_path),
             share = LogPrivate::volume(share),
             server = LogPrivate::host(server),

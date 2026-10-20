@@ -1,4 +1,0 @@
-{
-  "$comment": "Accepted count of unmarked user values inside log macros per file (a `.display()`, a `.to_string_lossy()`, or an argument or inline capture named like a path or identity), seeded from the state when the check was introduced. A strict ratchet: local runs lower an entry to the current count and drop a file that reaches zero, and raising one or adding a file needs David's OK (scripts/check/checks/DETAILS.md § Allowlist consent). The fix for a file over its number is to wrap the value in `cmdr_fs::log_private::LogPrivate` (or mark foreign text with `LogDetail(text).marking(&[…])`), or to opt out a value that is not the user's with `// allowed-log-private: <reason>`; never to bump the number.",
-  "files": {}
-}

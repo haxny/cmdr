@@ -72,7 +72,10 @@ pub async fn try_list_shares_as_guest(
     timeout: Duration,
 ) -> Result<Vec<smb2::ShareInfo>, smb2::Error> {
     let addr = build_addr(hostname, ip_address, port);
-    debug!("try_list_shares_as_guest: addr={}", addr);
+    debug!(
+        "try_list_shares_as_guest: host={:?}, port={port}",
+        LogPrivate::host(ip_address.unwrap_or(hostname))
+    );
 
     let config = ClientConfig {
         addr,
@@ -109,8 +112,8 @@ pub async fn try_list_shares_authenticated(
 ) -> Result<Vec<smb2::ShareInfo>, smb2::Error> {
     let addr = build_addr(hostname, ip_address, port);
     debug!(
-        "try_list_shares_authenticated: addr={}, user={:?}",
-        addr,
+        "try_list_shares_authenticated: host={:?}, port={port}, user={:?}",
+        LogPrivate::host(ip_address.unwrap_or(hostname)),
         LogPrivate::user(username)
     );
 

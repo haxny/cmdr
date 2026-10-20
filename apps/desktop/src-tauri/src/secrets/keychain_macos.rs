@@ -1,6 +1,7 @@
 //! macOS Keychain backend via `security-framework`.
 
 use super::{SecretStore, SecretStoreError};
+use cmdr_fs::log_private::LogPrivate;
 use log::debug;
 use security_framework::item::{ItemClass, ItemSearchOptions, Limit, SearchResult};
 use security_framework::passwords::{delete_generic_password, get_generic_password, set_generic_password};
@@ -46,18 +47,18 @@ pub struct KeychainStore;
 
 impl SecretStore for KeychainStore {
     fn set(&self, key: &str, value: &[u8]) -> Result<(), SecretStoreError> {
-        debug!("Keychain: setting secret for key: {}", key);
+        debug!("Keychain: setting secret for key: {}", LogPrivate::host(key));
         set_generic_password(service_name(), key, value)
             .map_err(|e| SecretStoreError::Other(format!("Failed to save to Keychain: {}", e)))
     }
 
     fn get(&self, key: &str) -> Result<Vec<u8>, SecretStoreError> {
-        debug!("Keychain: getting secret for key: {}", key);
+        debug!("Keychain: getting secret for key: {}", LogPrivate::host(key));
         get_generic_password(service_name(), key).map_err(|e| classify_security_error(key, e))
     }
 
     fn delete(&self, key: &str) -> Result<(), SecretStoreError> {
-        debug!("Keychain: deleting secret for key: {}", key);
+        debug!("Keychain: deleting secret for key: {}", LogPrivate::host(key));
         delete_generic_password(service_name(), key).map_err(|e| classify_security_error(key, e))
     }
 

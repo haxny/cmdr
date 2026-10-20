@@ -19,6 +19,7 @@ use crate::chunking::ChunkedUploads;
 use crate::errors::{WebdavConnectError, classify_connect_error};
 use crate::propfind::{PropfindEntry, every_propstat_succeeded, parse_multistatus};
 use crate::urls::join_remote;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::liveness::Liveness;
 
 /// The connect budget, per request: the PROBE's total budget and the idle
@@ -358,7 +359,12 @@ impl WebdavClient {
     /// answer, which is both the tell and the id its uploads home is filed
     /// under (`chunking.rs`).
     pub(crate) async fn probe(&mut self, root_url: Url) -> Result<Vec<PropfindEntry>, WebdavConnectError> {
-        debug!(target: "volume", "webdav probe: PROPFIND {}", root_url);
+        debug!(
+            target: "volume",
+            "webdav probe: PROPFIND host={:?} path={:?}",
+            LogPrivate::host(root_url.host_str().unwrap_or_default()),
+            LogPrivate::dir_path(root_url.path())
+        );
         let request = self
             .request(method("PROPFIND"), root_url)
             .header("Depth", "0")

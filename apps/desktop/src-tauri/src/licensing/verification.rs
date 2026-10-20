@@ -114,6 +114,7 @@ fn validate_license_key_with_public_key(
         LicenseActivationError::BadPayload
     })?;
 
+    // allowed-log-private: `redact_email` keeps only a masked shape of the address
     log::debug!("License validated successfully for: {}", redact_email(&data.email));
 
     Ok(data)

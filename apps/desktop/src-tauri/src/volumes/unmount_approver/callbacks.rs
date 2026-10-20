@@ -248,7 +248,6 @@ impl Approver {
             log::warn!(
                 target: "unmount_approver",
                 "{} ({}) left the mount table with nobody asking Cmdr to let go of it first ({:?}); stopping its index now",
-                // allowed-log-private: a volume ID, which the redactor tokenizes by its shape
                 volume.volume_id,
                 // allowed-log-private: a BSD device name (`disk4s1`), the kernel's, not the user's
                 volume.bsd_name,

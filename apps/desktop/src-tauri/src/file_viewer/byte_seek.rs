@@ -215,7 +215,7 @@ impl FileViewerBackend for ByteSeekBackend {
 
         debug!(
             "ByteSeekBackend::get_lines: target={:?} -> byte {}, row {} ({} rows, {:?})",
-            target,
+            target, // allowed-log-private: a seek target (a row or byte), not a path
             row_start,
             first_row_number,
             collected.rows.len(),

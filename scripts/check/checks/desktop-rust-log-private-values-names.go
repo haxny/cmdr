@@ -9,7 +9,23 @@ import "strings"
 var identityStems = setOf(
 	"path", "dir", "directory", "file", "name", "folder", "root", "dest", "dst", "destination",
 	"source", "src", "share", "volume", "label", "host", "server", "user", "parent",
+	// A remote side, a link or copy target, a staging file, a listing entry, an
+	// object key or prefix: each IS a path on some backend (an S3 key leaked
+	// through `{key}` before these joined).
+	"remote", "target", "staging", "entry", "key", "prefix", "bucket", "mount", "link",
+	// Where a server lives, and who the user is on it.
+	"url", "uri", "addr", "address", "endpoint", "device", "account", "email",
+	// A search query holds the user's own words.
+	"query",
 )
+
+// identityLoneWords read as identity only as a whole name: alone, `from` / `to`
+// are the two sides of a copy or rename, while inside a name they're a
+// conversion (`to_string`, `from_utf8`) or a verb (`copied_to`).
+var identityLoneWords = setOf("from", "to")
+
+// ownIdentityCompounds end on a stem but name something of Cmdr's own.
+var ownIdentityCompounds = setOf("logtarget")
 
 // identityCompounds are the one-word spellings of a stem pair (`filename`), also
 // matched across the last two words of a name (`mount_point`).
@@ -24,18 +40,18 @@ var identityCompounds = setOf(
 var identityReprSuffixes = setOf(
 	"str", "string", "buf", "ref", "os", "lossy", "display", "raw", "abs", "absolute", "rel",
 	"relative", "canon", "canonical", "full", "lower", "lowercase", "norm", "normalized", "owned",
-	"utf8", "bytes", "opt", "trimmed", "folded", "nfc", "nfd", "key", "text",
+	"utf8", "bytes", "opt", "trimmed", "folded", "nfc", "nfd", "text",
 )
 
 // tallyPlurals are the plurals that name a COUNT in a log line (`tally.files`,
 // `self.dirs.load(…)`); a collection of paths is spelled `paths`.
-var tallyPlurals = setOf("files", "dirs", "folders")
+var tallyPlurals = setOf("files", "dirs", "folders", "entries")
 
 // quantityWords, leading a name, make it a number (`total_dirs`, `num_paths`).
 var quantityWords = setOf("total", "num", "n", "max", "min")
 
 // predicateWords anywhere but last make a name a bool (`is_dir`, `source_is_dir`).
-var predicateWords = setOf("is", "has", "use", "should", "can", "in", "was", "needs")
+var predicateWords = setOf("is", "has", "use", "should", "can", "in", "was", "needs", "requires")
 
 // scalarTails are the accessors whose result carries nothing of the value they
 // were called on: a length, a flag, a duration, an extension. A chain ending in
@@ -45,14 +61,32 @@ var scalarTails = setOf(
 	"is_dir", "is_file", "is_symlink", "is_absolute", "is_relative", "extension", "elapsed",
 	"as_secs", "as_secs_f32", "as_secs_f64", "as_millis", "as_micros", "as_nanos", "kind",
 	"raw_os_error", "capacity", "depth", "starts_with", "ends_with", "contains", "eq", "ne",
-	"contains_key", "is_ascii",
+	"contains_key", "is_ascii", "id", "size", "port",
 )
+
+// scalarTailSuffixes make any field or accessor ending in them a scalar
+// (`target.volume_id`, `model.adapter_kind`).
+var scalarTailSuffixes = []string{"_id", "_kind", "_count", "_len", "_size"}
+
+// isScalarTail reports whether a chain ending in `name` prints a fact about its
+// receiver rather than the receiver itself.
+func isScalarTail(name string) bool {
+	if scalarTails[name] {
+		return true
+	}
+	for _, suffix := range scalarTailSuffixes {
+		if strings.HasSuffix(name, suffix) {
+			return true
+		}
+	}
+	return false
+}
 
 // transparentTails pass their receiver through unchanged, so a chain is judged by
 // what comes before them.
 var transparentTails = setOf(
 	"unwrap", "expect", "as_ref", "as_deref", "clone", "to_owned", "borrow", "copied", "cloned",
-	"unwrap_or_default",
+	"unwrap_or_default", "unwrap_or",
 )
 
 // rustKeywords never name a value.
@@ -160,7 +194,7 @@ func firstIdentityIdent(expr string) string {
 		case ident[0] >= '0' && ident[0] <= '9', ident[0] >= 'A' && ident[0] <= 'Z', rustKeywords[ident]:
 		case strings.HasPrefix(next, "::"), strings.HasPrefix(next, "!"), strings.HasSuffix(prev, "'"):
 		case strings.HasPrefix(next, "(") && !isMethod:
-		case readsAsIdentity(ident) && !scalarTails[firstChainName(expr[j:])]:
+		case readsAsIdentity(ident) && !isScalarTail(firstChainName(expr[j:])):
 			return ident
 		}
 		i = j - 1
@@ -263,15 +297,10 @@ func (c *chainCursor) nextSegment() (string, bool) {
 // isn't one, so they don't, and neither do a tally (`files`, `total_dirs`) or a
 // flag (`is_dir`).
 func readsAsIdentity(name string) bool {
-	var words []string
-	for _, w := range strings.Split(strings.ToLower(name), "_") {
-		if w != "" {
-			words = append(words, w)
-		}
+	if identityLoneWords[strings.ToLower(name)] {
+		return true
 	}
-	for len(words) > 1 && identityReprSuffixes[words[len(words)-1]] {
-		words = words[:len(words)-1]
-	}
+	words := meaningWords(name)
 	if len(words) == 0 || (len(words) > 1 && quantityWords[words[0]]) {
 		return false
 	}
@@ -281,13 +310,28 @@ func readsAsIdentity(name string) bool {
 		}
 	}
 	last := words[len(words)-1]
-	if tallyPlurals[last] {
+	if tallyPlurals[last] || (len(words) >= 2 && ownIdentityCompounds[words[len(words)-2]+last]) {
 		return false
 	}
 	if isIdentityWord(last) {
 		return true
 	}
 	return len(words) >= 2 && identityCompounds[words[len(words)-2]+last]
+}
+
+// meaningWords splits a snake-case name into its lowercase words and drops the
+// trailing representation suffixes (`path_str` → `path`), keeping at least one.
+func meaningWords(name string) []string {
+	var words []string
+	for _, w := range strings.Split(strings.ToLower(name), "_") {
+		if w != "" {
+			words = append(words, w)
+		}
+	}
+	for len(words) > 1 && identityReprSuffixes[words[len(words)-1]] {
+		words = words[:len(words)-1]
+	}
+	return words
 }
 
 func isIdentityWord(w string) bool {

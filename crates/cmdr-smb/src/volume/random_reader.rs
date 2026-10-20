@@ -46,7 +46,7 @@ fn map_reader_error(
     share.note_smb_error(generation, &e);
     debug!(
         "SmbRandomReader::{op}(volume={:?}, path={:?}): {e}",
-        share.volume_id, // allowed-log-private: a volume id; the report's ID keys tokenize it in their own domain
+        share.volume_id,
         LogPrivate::file_path(display_path)
     );
     map_smb_error(e, display_path)

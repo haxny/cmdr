@@ -306,6 +306,7 @@ pub async fn execute_ai_search<R: tauri::Runtime>(app: &tauri::AppHandle<R>, par
         };
 
     let query = build_search_query_from_translate(&translate_result, scope_str, limit);
+    // allowed-log-private: the helper logs the query's shape, never its words
     log::info!("MCP ai_search: translated to {}", translated_query_for_log(&query));
 
     // One budget for the whole call, however many searches it takes: the caller
@@ -342,6 +343,7 @@ pub async fn execute_ai_search<R: tauri::Runtime>(app: &tauri::AppHandle<R>, par
     {
         log::info!(
             "MCP ai_search: returned 0 results with {}, retrying full-drive search",
+            // allowed-log-private: the helper logs the query's shape, never its words
             translated_query_for_log(&query)
         );
         let mut fallback_query = query;

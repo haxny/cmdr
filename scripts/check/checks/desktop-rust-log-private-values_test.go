@@ -1,15 +1,14 @@
 package checks
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
 // logPrivateFixtureRoot builds a fixture repo with the given files under the app
-// tree, plus an optional allowlist, and returns the root.
-func logPrivateFixtureRoot(t *testing.T, files map[string]string, allowlist map[string]logPrivateAllowance) string {
+// tree and returns the root.
+func logPrivateFixtureRoot(t *testing.T, files map[string]string) string {
 	t.Helper()
 	root := t.TempDir()
 	seedAppFixtureWorkspace(t, root)
@@ -17,21 +16,12 @@ func logPrivateFixtureRoot(t *testing.T, files map[string]string, allowlist map[
 	for rel, body := range files {
 		mustWrite(t, filepath.Join(srcDir, rel), body)
 	}
-	if allowlist != nil {
-		path := filepath.Join(root, logPrivateAllowlistRelPath)
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := writeJSONAllowlist(path, logPrivateAllowlist{Files: allowlist}); err != nil {
-			t.Fatalf("seed allowlist: %v", err)
-		}
-	}
 	return root
 }
 
 func runLogPrivateOn(t *testing.T, files map[string]string) (CheckResult, error) {
 	t.Helper()
-	return RunLogPrivateValues(&CheckContext{RootDir: logPrivateFixtureRoot(t, files, nil)})
+	return RunLogPrivateValues(&CheckContext{RootDir: logPrivateFixtureRoot(t, files)})
 }
 
 // expectLogPrivateFlags runs the check over one file and asserts it fails naming
@@ -47,7 +37,7 @@ func expectLogPrivateFlags(t *testing.T, body string, lines ...string) {
 			t.Errorf("expected a finding at site.rs:%s, got:\n%s", l, err.Error())
 		}
 	}
-	if got := strings.Count(err.Error(), "      apps/desktop/src-tauri/src/site.rs:"); got != len(lines) {
+	if got := strings.Count(err.Error(), "  apps/desktop/src-tauri/src/site.rs:"); got != len(lines) {
 		t.Errorf("expected %d findings, got %d:\n%s", len(lines), got, err.Error())
 	}
 }
@@ -160,6 +150,34 @@ fn f(paths: &[PathBuf], path: &Path, entry: &Entry, elapsed: Duration, file_coun
 `})
 }
 
+func TestLogPrivateValues_FlagsTheWiderIdentityNames(t *testing.T) {
+	expectLogPrivateFlags(t, `
+fn f(remote: &str, key: &str, root_url: Url, addr: String, device: &str, to: &Path, target: &Path) {
+    log::debug!("s3 copied to {remote} under {key}");
+    log::debug!("webdav probe: PROPFIND {}", root_url);
+    log::debug!("addr={}", addr);
+    log::debug!("device {device:?} staging {:?}", staging);
+    log::debug!("rename {from:?} -> {to:?}");
+    log::debug!("link points at {:?}", target);
+    log::debug!("sidecar {}", self.key);
+}
+`, "3", "3", "4", "5", "6", "6", "7", "7", "8", "9")
+}
+
+func TestLogPrivateValues_AScalarFieldOfAnIdentityIsAFactAboutIt(t *testing.T) {
+	expectLogPrivateClean(t, map[string]string{"site.rs": `
+fn f(target: &Target, entry: &Entry, old_entry: &Entry, n: usize) {
+    log::debug!("search on {}", target.volume_id);
+    log::debug!("model {:?}", target.model.adapter_kind);
+    log::debug!("size {}", entry.size.unwrap_or(0));
+    log::debug!("server {:?} on {}", entry.id, entry.port);
+    log::debug!("parent {}", old_entry.parent_id);
+    log::debug!("{}", n.to_string());
+    log::debug!("{}", self.log_target);
+}
+`})
+}
+
 func TestLogPrivateValues_SeesThroughStringsWithParensAndChars(t *testing.T) {
 	expectLogPrivateFlags(t, `
 fn f(path: &Path, c: char) {
@@ -256,95 +274,19 @@ fn f(path: &Path, text: &str) -> (String, String, String) {
 	}
 }
 
-func TestLogPrivateValues_AllowlistSuppressesKnownSites(t *testing.T) {
-	root := logPrivateFixtureRoot(t, map[string]string{"known.rs": `
-fn f(path: &Path) {
-    log::debug!("{}", path.display());
-    log::debug!("{:?}", path);
-}
-`}, map[string]logPrivateAllowance{
-		"apps/desktop/src-tauri/src/known.rs": {Count: 2, Reason: "predates the convention"},
-	})
-	res, err := RunLogPrivateValues(&CheckContext{RootDir: root})
-	if err != nil {
-		t.Fatalf("expected success for allowlisted sites, got: %v", err)
-	}
-	if res.Code != ResultSuccess || !strings.Contains(res.Message, "2 unmarked values allowlisted") {
-		t.Fatalf("expected success naming the allowlisted count, got %v: %s", res.Code, res.Message)
-	}
-}
-
-func TestLogPrivateValues_AllowlistRatchetsDownAndFailsOnGrowth(t *testing.T) {
-	root := logPrivateFixtureRoot(t, map[string]string{
-		"shrunk.rs": `fn f(p: &Path) { log::debug!("{}", p.display()); }`,
-		"grown.rs": `
-fn f(p: &Path) {
-    log::debug!("{}", p.display());
-    log::debug!("{}", p.display());
-}
-`,
-	}, map[string]logPrivateAllowance{
-		"apps/desktop/src-tauri/src/shrunk.rs": {Count: 3, Reason: "kept reason"},
-		"apps/desktop/src-tauri/src/grown.rs":  {Count: 1, Reason: "grown reason"},
-		"apps/desktop/src-tauri/src/gone.rs":   {Count: 4, Reason: "gone reason"},
-	})
-	_, err := RunLogPrivateValues(&CheckContext{RootDir: root})
-	if err == nil {
-		t.Fatal("expected the grown file to fail")
-	}
-	if !strings.Contains(err.Error(), "grown.rs:4") || !strings.Contains(err.Error(), "(allowlist: 1)") {
-		t.Errorf("expected grown.rs's sites listed against its budget, got:\n%s", err.Error())
-	}
-	if strings.Contains(err.Error(), "shrunk.rs:1") {
-		t.Errorf("did not expect shrunk.rs (within budget) listed, got:\n%s", err.Error())
-	}
-	list := loadLogPrivateAllowlist(root)
-	if got := list.Files["apps/desktop/src-tauri/src/shrunk.rs"]; got.Count != 1 || got.Reason != "kept reason" {
-		t.Errorf("expected shrunk.rs ratcheted 3 → 1 with its reason kept, got %+v", got)
-	}
-	if _, ok := list.Files["apps/desktop/src-tauri/src/gone.rs"]; ok {
-		t.Error("expected the entry for the deleted file to be dropped")
-	}
-	if got := list.Files["apps/desktop/src-tauri/src/grown.rs"]; got.Count != 1 {
-		t.Errorf("expected grown.rs to keep its budget at 1, got %d", got.Count)
-	}
-}
-
-func TestLogPrivateValues_CIReportsStalenessWithoutRewriting(t *testing.T) {
-	root := logPrivateFixtureRoot(t, map[string]string{
-		"shrunk.rs": `fn f(p: &Path) { log::debug!("{}", p.display()); }`,
-	}, map[string]logPrivateAllowance{
-		"apps/desktop/src-tauri/src/shrunk.rs": {Count: 3, Reason: "kept reason"},
-	})
-	res, err := RunLogPrivateValues(&CheckContext{RootDir: root, CI: true})
-	if err != nil {
-		t.Fatalf("expected success, got: %v", err)
-	}
-	if !strings.Contains(res.Message, "a local run shrink-wraps them") {
-		t.Errorf("expected the CI staleness note, got: %s", res.Message)
-	}
-	if got := loadLogPrivateAllowlist(root).Files["apps/desktop/src-tauri/src/shrunk.rs"]; got.Count != 3 {
-		t.Errorf("expected CI to leave the allowlist alone, got %d", got.Count)
-	}
-}
-
-func TestLogPrivateValues_AnEntryWithoutAReasonFails(t *testing.T) {
-	root := logPrivateFixtureRoot(t, map[string]string{
-		"known.rs": `fn f(p: &Path) { log::debug!("{}", p.display()); }`,
-	}, map[string]logPrivateAllowance{
-		"apps/desktop/src-tauri/src/known.rs": {Count: 1},
-	})
-	_, err := RunLogPrivateValues(&CheckContext{RootDir: root})
-	if err == nil || !strings.Contains(err.Error(), "known.rs") || !strings.Contains(err.Error(), "reason") {
-		t.Fatalf("expected a reasonless entry to fail, got: %v", err)
-	}
-}
-
 func TestReadsAsIdentity(t *testing.T) {
 	for _, name := range []string{
 		"path", "src_path", "dest", "dst", "volume_name", "path_str", "paths", "filename", "hostname",
 		"username", "server", "share", "label", "root", "roots", "dir", "directories", "parent_dir",
 		"name_lower", "_path", "folder", "source", "host", "user", "file", "subdir", "mount_point",
+		// A remote side, a link or copy target, a device, a staging file, an
+		// object key, a URL or address, a bucket, an account: each names the
+		// user's data or the place it lives.
+		"remote", "to_remote", "target", "link_target", "device", "staging", "key", "object_key",
+		"bucket_key", "root_url", "url_string", "addr", "address", "bucket", "prefix", "account",
+		"email", "query", "query_text", "endpoint", "entry", "old_entry", "uri",
+		// `from` / `to` name the two sides of a copy or rename, but only alone.
+		"from", "to",
 	} {
 		if !readsAsIdentity(name) {
 			t.Errorf("expected %q to read as a path or identity", name)
@@ -358,6 +300,11 @@ func TestReadsAsIdentity(t *testing.T) {
 		"files", "dirs", "folders", "kept_files", "total_dirs", "num_paths", "n_files",
 		// Flags: a name carrying a predicate word holds a bool.
 		"is_dir", "is_directory", "source_is_dir", "in_subdir", "use_concurrent_path", "has_parent",
+		"requires_api_key",
+		// `to` / `from` inside a longer name are a conversion, not a side.
+		"to_string", "to_owned", "from_utf8", "copied_to",
+		// Our own logging's target, and a count of entries.
+		"log_target", "entries",
 	} {
 		if readsAsIdentity(name) {
 			t.Errorf("did not expect %q to read as a path or identity", name)

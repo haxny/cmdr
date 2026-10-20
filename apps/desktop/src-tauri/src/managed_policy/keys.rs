@@ -73,6 +73,7 @@ pub fn parse(source: &dyn ManagedPrefsSource) -> Parsed {
 
     for key in source.listed_keys() {
         if !ALL_KEYS.contains(&key.as_str()) {
+            // allowed-log-private: a managed-policy key an admin wrote, not the user's data
             log::debug!(target: "managed_policy", "Ignoring the unknown managed key {key:?}");
         }
     }

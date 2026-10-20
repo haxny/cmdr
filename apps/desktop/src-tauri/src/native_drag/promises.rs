@@ -221,6 +221,7 @@ fn maybe_free_session(key: isize) {
     run_on_main(move || {
         let removed = with_retained_store(|store| store.remove(&key).is_some());
         if removed {
+            // allowed-log-private: a drag session key Cmdr minted
             log::debug!(target: "drag_out", "session {key} freed (gesture ended, fulfillments drained)");
         }
     });

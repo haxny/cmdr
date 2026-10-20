@@ -31,10 +31,10 @@ pub fn batch_fe_logs(entries: Vec<FrontendLogEntry>) {
     for entry in &entries {
         let target = format!("FE:{}", entry.category);
         match entry.level {
-            LogLevel::Debug => log::debug!(target: &target, "{}", entry.message),
-            LogLevel::Info => log::info!(target: &target, "{}", entry.message),
-            LogLevel::Warn | LogLevel::Warning => log::warn!(target: &target, "{}", entry.message),
-            LogLevel::Error => crate::log_error!(target: &target, "{}", entry.message),
+            LogLevel::Debug => log::debug!(target: &target, "{}", entry.message), // allowed-log-private: the FE bridge marked its values
+            LogLevel::Info => log::info!(target: &target, "{}", entry.message), // allowed-log-private: the FE bridge marked its values
+            LogLevel::Warn | LogLevel::Warning => log::warn!(target: &target, "{}", entry.message), // allowed-log-private: the FE bridge marked its values
+            LogLevel::Error => crate::log_error!(target: &target, "{}", entry.message), // allowed-log-private: the FE bridge marked its values
         }
     }
 }

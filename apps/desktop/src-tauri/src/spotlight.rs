@@ -175,6 +175,7 @@ mod macos {
             )
         };
         if query.is_null() {
+            // allowed-log-private: a fixed predicate Cmdr built, no user words in it
             log::warn!(target: "spotlight", "Spotlight rejected the recency query, so no folders are ranked by it: {query_text}");
             return Vec::new();
         }

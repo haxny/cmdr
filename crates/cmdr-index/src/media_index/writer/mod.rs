@@ -482,7 +482,9 @@ fn writer_loop(mut conn: Connection, receiver: mpsc::Receiver<WriteMessage>, vol
                 let result = apply_prune_prefix(&mut conn, &prefix);
                 match &result {
                     Ok(deleted) => note_deleted(&volume_id, &mut ann_pending, deleted),
-                    Err(e) => log::warn!(target: "media_index", "prune under '{prefix}' failed: {e}"),
+                    Err(e) => {
+                        log::warn!(target: "media_index", "prune under '{prefix}' failed: {e}", prefix = LogPrivate::dir_path(&prefix))
+                    }
                 }
                 let _ = done.send(result.map(|deleted| deleted.len()));
             }

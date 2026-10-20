@@ -3,6 +3,7 @@
 //! ecosystem split (see `Cargo.toml` for context).
 
 use super::{SecretStore, SecretStoreError};
+use cmdr_fs::log_private::LogPrivate;
 use log::{debug, warn};
 use std::sync::Once;
 
@@ -49,7 +50,7 @@ impl KeyringStore {
 
 impl SecretStore for KeyringStore {
     fn set(&self, key: &str, value: &[u8]) -> Result<(), SecretStoreError> {
-        debug!("Keyring: setting secret for key: {}", key);
+        debug!("Keyring: setting secret for key: {}", LogPrivate::host(key));
         ensure_default_store();
         let entry = keyring_core::Entry::new(SERVICE_NAME, key)
             .map_err(|e| SecretStoreError::Other(format!("Failed to create keyring entry: {}", e)))?;
@@ -59,7 +60,7 @@ impl SecretStore for KeyringStore {
     }
 
     fn get(&self, key: &str) -> Result<Vec<u8>, SecretStoreError> {
-        debug!("Keyring: getting secret for key: {}", key);
+        debug!("Keyring: getting secret for key: {}", LogPrivate::host(key));
         ensure_default_store();
         let entry = keyring_core::Entry::new(SERVICE_NAME, key)
             .map_err(|e| SecretStoreError::Other(format!("Failed to create keyring entry: {}", e)))?;
@@ -73,7 +74,7 @@ impl SecretStore for KeyringStore {
     }
 
     fn delete(&self, key: &str) -> Result<(), SecretStoreError> {
-        debug!("Keyring: deleting secret for key: {}", key);
+        debug!("Keyring: deleting secret for key: {}", LogPrivate::host(key));
         ensure_default_store();
         let entry = keyring_core::Entry::new(SERVICE_NAME, key)
             .map_err(|e| SecretStoreError::Other(format!("Failed to create keyring entry: {}", e)))?;

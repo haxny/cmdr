@@ -229,7 +229,7 @@ func (f *logPrivateFile) judgeArg(start, end int) []logPrivateSite {
 	if m := lossyConversionPattern.FindSubmatch(expr); m != nil {
 		return append(sites, logPrivateSite{line: line, what: string(m[1]), text: text})
 	}
-	if scalarTails[lastChainCall(string(expr))] {
+	if isScalarTail(lastChainCall(string(expr))) {
 		return sites
 	}
 	if ident := firstIdentityIdent(string(expr)); ident != "" {

@@ -10,6 +10,7 @@
 use std::ops::ControlFlow;
 use std::path::Path;
 
+use cmdr_fs::log_detail::LogDetail;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, default_file_mode, routed_mode};
 use cmdr_fs::staging::temp_sibling_name;
@@ -144,9 +145,9 @@ impl AdbVolume {
                 return Err(VolumeError::IsADirectory(device));
             }
             debug!(
-                "AdbVolume::read_range: dd exited {} for {device}: {}",
+                "AdbVolume::read_range: dd exited {} for {device}: stderr={:?}",
                 outcome.exit_code,
-                outcome.stderr_text().trim(),
+                LogDetail(outcome.stderr_text().trim()).marking(&[LogPrivate::file_path(&device)]),
                 device = LogPrivate::file_path(&device)
             );
             return Err(VolumeError::IoError {

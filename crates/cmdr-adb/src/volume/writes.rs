@@ -37,6 +37,7 @@
 
 use std::path::Path;
 
+use cmdr_fs::log_detail::LogDetail;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{DirectoryCreation, EntryKind, StreamLength, VolumeError, WriteMode};
 use log::debug;
@@ -274,7 +275,8 @@ impl AdbVolume {
         }
         let message = String::from_utf8_lossy(stderr).trim().to_string();
         debug!(
-            "AdbVolume: a shell verb on {path} failed: {message}",
+            "AdbVolume: a shell verb on {path} failed: stderr={:?}",
+            LogDetail(&message).marking(&[LogPrivate::path(path)]),
             path = LogPrivate::path(path)
         );
         VolumeError::IoError {

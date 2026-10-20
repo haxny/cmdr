@@ -2022,9 +2022,9 @@ Checks by app and tech:
   sqlite-open-direct (every SQLite connection opens through `crate::sqlite_util`, so the process-wide shared page cache
   is always installed before SQLite initializes), error-string-match, lock-poison (two lanes: an error-level one for an
   acquisition that records no poison-handling choice, and a warn-only one for a failure that's silently discarded, on a
-  per-file ratchet), log-private-values (an unmarked path, name, or identity in a log macro, on a per-file ratchet, and
-  a marked value made into a `String`; § "The log-private-values ratchet"), test-sleep (flags a fixed `thread::sleep` /
-  `tokio::time::sleep` in test code, where a condition-based `wait_until` belongs; opt out a genuine
+  per-file ratchet), log-private-values (an unmarked path, name, or identity in a log macro, strict with no allowlist,
+  and a marked value made into a `String`; § "The log-private-values check"), test-sleep (flags a fixed `thread::sleep`
+  / `tokio::time::sleep` in test code, where a condition-based `wait_until` belongs; opt out a genuine
   sleep-is-the-subject site with `// allowed-test-sleep: <reason>`), fixed-temp-dir (flags a test fixture built on
   `std::env::temp_dir()`, where every process on the machine shares the path and two suite runs delete each other's live
   fixtures; the sanctioned fixture is `crate::test_support::TestDir`, and a site where the temp root is load bearing
@@ -2475,13 +2475,13 @@ parser can't resolve is left alone rather than guessed at.
 removes a swallow. No slack buffer, for the same reason. Shrink-wrap ratchets an entry down to the current count and
 drops a file that reaches zero, so the number only goes down; raising one needs David's OK (§ "Allowlist consent").
 
-### The log-private-values ratchet
+### The log-private-values check
 
 **Decision**: `log-private-values`, a fast-lane Go scanner over every first-party member (app and tool kinds; the
 vendored `fsevent-stream` fork is out by kind), holds every log macro to the marker convention
 (`crates/cmdr-fs/DETAILS.md` § "Marked log values"). **Why**: an error report can only hash a value exactly when the
 site marked it; an unmarked one falls to the regex redactor's guess at where a name ends, which is the leak class behind
-#491. The check is the migration's progress bar and the fence that keeps a converted or new site exact.
+#491. It keeps every site exact: the migration drove it to zero, and it now fails on any new unmarked value.
 
 What it reads: every `trace!` / `debug!` / `info!` / `warn!` / `error!` / `log!` / `log_error!` invocation, bare or
 path-qualified, with any delimiter, parsed over `rust-source.go`'s masked copy so a `(` or `,` inside a string, a char
@@ -2492,26 +2492,29 @@ one, an argument is ONE unmarked value when it isn't built through a wrapper (`L
 
 - it calls `.display()` or `.to_string_lossy()`, or
 - an identifier in it reads as a path or identity (`readsAsIdentity`): its last word, after a representation suffix like
-  `_str` or `_lower`, is a stem (`path`, `dir`, `file`, `name`, `folder`, `root`, `dest`/`dst`, `source`/`src`, `share`,
-  `volume`, `label`, `host`, `server`, `user`, `parent`) or a compound (`filename`, `mount_point`). Not a tally
-  (`files`, `dirs`, `total_dirs`, `num_paths`), a flag (`is_dir`, `source_is_dir`), an id (`volume_id`), a type, a path
-  segment, a macro, or a free function's own name. Fields and method names count (`entry.name`, `entry.path()`), and a
-  chain ending in a scalar accessor (`.len()`, `.exists()`, `.extension()`, `.elapsed()`) prints a fact about the value,
-  so it doesn't.
+  `_str` or `_lower`, is a stem or a compound (`filename`, `mount_point`). The stems name a path (`path`, `dir`, `file`,
+  `name`, `folder`, `root`, `dest`/`dst`, `source`/`src`, `parent`, `entry`, `target`, `remote`, `staging`, `link`,
+  `mount`), an object store's path (`key`, `prefix`, `bucket`), where a server lives or who the user is on it (`share`,
+  `volume`, `label`, `host`, `server`, `url`/`uri`, `addr`/`address`, `endpoint`, `device`, `user`, `account`, `email`),
+  or the user's own words (`query`). `from` and `to` count only as a whole name: inside one they are a conversion
+  (`to_string`) or a verb. Not a tally (`files`, `dirs`, `entries`, `total_dirs`, `num_paths`), a flag (`is_dir`,
+  `source_is_dir`, `requires_api_key`), an id (`volume_id`), our own logging (`log_target`), a type, a path segment, a
+  macro, or a free function's own name. Fields and method names count (`entry.name`, `entry.path()`), and a chain ending
+  in a scalar (`.len()`, `.exists()`, `.extension()`, `.elapsed()`, `.id`, `.port`, `.size`, or any `_id` / `_kind` /
+  `_count` / `_len` / `_size` field) prints a fact about the value, so it doesn't. The stem list grew after an S3 object
+  key leaked through a `{key}` capture the narrower list never read as a path.
 
 An inline capture (`{path:?}`) counts the same way by name, unless it names a `name = …` argument (judged through the
 argument) or a constant (`{STATE_FILE_PATH}`). A `format!` nested in an argument is judged as its own invocation, once.
 In-file `#[cfg(test)]` / `#[test]` items and dedicated test files are skipped. Errors logged as `{e}` are out of scope:
 they render their paths through `Display`, which the `LogError` wrapper takes on.
 
-**Decision**: the unmarked values ratchet per file, in `log-private-values-allowlist.json`
-(`{"count": N, "reason": "…"}`; a reasonless entry fails), and a file over its count FAILS rather than warns. **Why**: a
-per-file count doesn't move when code above a site does (the same reasoning as the lock-poison swallow lane), and a warn
-would let a new unmarked site in, which is the one thing the ratchet exists to stop. It was seeded from `HEAD` by the
-check's own scan (908 values in 278 files) and only shrinks; raising a number or adding a file needs David's OK (§
-"Allowlist consent"). A value that only looks like the user's (a setting's name, a thread's name, a fixed path of our
-own) opts out with `// allowed-log-private: <reason>` on its line or the line above, and an unused directive fails as an
-orphan.
+**Decision**: strict, with no allowlist: any unmarked value fails. **Why**: the migration ran it as a per-file ratchet
+from 908 values in 278 files down to zero, and a budget left in place would only invite the next one back. A value that
+only looks like the user's (a setting's name, a log target, a seek offset, a fixed path of our own) opts out with
+`// allowed-log-private: <reason>` on its line or the line above (for a multi-line macro, the line above the flagged
+argument or format string), and an unused directive fails as an orphan. A crate that can't depend on `cmdr-fs`
+(`cmdr-http`) logs the value as a keyed `host={:?}` field, which the redactor reads exactly, and opts out saying so.
 
 **Decision**: outside log macros, a `LogPrivate` / `LogDetail` / `LogError` inside `format!`, or a
 `LogPrivate::…(…).to_string()`, fails outright (same opt-out). **Why**: a marked string is log text, never a path, a

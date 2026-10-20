@@ -89,7 +89,8 @@ impl Pac for MacPac {
         }
         let answer = evaluate_on_own_thread(source.clone(), url.as_str().to_string(), self.timeout);
         if answer.is_none() {
-            log::warn!(target: "cmdr_http", "couldn't run the PAC file for {url}, so it goes direct");
+            // allowed-log-private: cmdr-http can't depend on cmdr-fs, and a keyed `host="…"` is redacted exactly
+            log::warn!(target: "cmdr_http", "couldn't run the PAC file for host={:?}, so it goes direct", url.host_str().unwrap_or_default());
         }
         self.store(key, answer.clone());
         answer

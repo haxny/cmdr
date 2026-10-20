@@ -402,7 +402,7 @@ pub async fn download_update(state: State<'_, UpdateState>) -> Result<(), Update
 /// log (and so the person's notice) and marks the version as not genuine for the session.
 async fn download_verified(state: &UpdateState) -> Result<(UpdateInfo, Vec<u8>), UpdateDownloadError> {
     let offer = offer_to_download(state).await?;
-    log::info!("Downloading update {} from {}", offer.version, offer.url);
+    log::info!("Downloading update {} from {}", offer.version, offer.url); // allowed-log-private: our own release URL
     let bytes = fetch_verified_tarball(&offer.url, &offer.signature)
         .await
         .inspect_err(|e| {

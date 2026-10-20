@@ -5,6 +5,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::Xattr;
 
 use super::raw::RawEntry;
@@ -94,7 +95,7 @@ impl LazySidecar {
                 target: "archive",
                 "Skipped the {}-byte sidecar {}: past the {cap}-byte cap, so its item lands without its xattrs",
                 self.size,
-                self.key
+                LogPrivate::file_path(&self.key)
             );
             return false;
         }
@@ -112,11 +113,11 @@ impl LazySidecar {
                 // what's bounded.
                 Ok(chunk) if (bytes.len() + chunk.len()) as u64 <= cap => bytes.extend_from_slice(&chunk),
                 Ok(_) => {
-                    log::warn!(target: "archive", "Skipped the sidecar {}: it inflates past the {cap}-byte cap", self.key);
+                    log::warn!(target: "archive", "Skipped the sidecar {}: it inflates past the {cap}-byte cap", LogPrivate::file_path(&self.key));
                     return None;
                 }
                 Err(e) => {
-                    log::debug!(target: "archive", "Couldn't read the sidecar {}: {e:?}", self.key);
+                    log::debug!(target: "archive", "Couldn't read the sidecar {}: {e:?}", LogPrivate::file_path(&self.key));
                     return None;
                 }
             }

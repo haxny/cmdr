@@ -27,6 +27,7 @@ use super::state::{
 use super::{AiStarting, AiStatus, AiTranslateError, AiTranslateErrorKind, is_local_ai_supported};
 use crate::ignore_poison::IgnorePoison;
 use crate::managed_policy::{AiDestination, ManagedAiRefusal, ManagedPolicy};
+use cmdr_fs::log_private::LogPrivate;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tauri::{AppHandle, Runtime};
@@ -445,7 +446,8 @@ pub fn configure_ai<R: Runtime>(
     cloud_requires_api_key: bool,
 ) -> Result<ConfigureAiOutcome, String> {
     log::debug!(
-        "AI configure: provider={provider}, context_size={context_size}, cloud_provider={cloud_provider_id}, base_url={cloud_base_url}, model={cloud_model}, requires_api_key={cloud_requires_api_key}"
+        "AI configure: provider={provider}, context_size={context_size}, cloud_provider={cloud_provider_id}, base_url={base_url}, model={cloud_model}, requires_api_key={cloud_requires_api_key}",
+        base_url = LogPrivate::host(&cloud_base_url),
     );
 
     let (cloud_api_key, secret_store_error) = super::api_keys::read_for_backend(&cloud_provider_id);

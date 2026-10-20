@@ -176,6 +176,7 @@ pub fn vetted_link(advisory: &Advisory) -> Option<String> {
     if is_allowed_advisory_url(&advisory.url) {
         Some(advisory.url.clone())
     } else {
+        // allowed-log-private: an advisory URL from our own feed
         log::warn!(target: "security_advisories", "Not linking security advisory {}: {:?} isn't an allowed advisory link", advisory.id, advisory.url);
         None
     }

@@ -47,12 +47,14 @@ impl Operations {
             Ok(previous) => previous,
             Err(current) => {
                 log::info!(
+                    // allowed-log-private: `target` is the state the stop asked for
                     "cancel_write_operation: op={operation_id} {current:?} -> {target:?} is not a valid transition, ignoring"
                 );
                 return;
             }
         };
 
+        // allowed-log-private: `target` is the state the stop asked for
         log::info!("cancel_write_operation: op={operation_id} {current:?} -> {target:?}, signalling backends");
         // Any transition out of `Running` should also stop in-flight backend
         // I/O (per-handle MTP loops, etc.) — not just the loop above it.

@@ -347,7 +347,7 @@ var AllChecks = []CheckDefinition{
 		Tech:        "🦀 Rust",
 		DependsOn:   nil,
 		IsFast:      true,
-		Inputs:      inputs(rustScanInputs(KindApp, KindTool), runnerDataInputs("log-private-values-allowlist.json")),
+		Inputs:      rustScanInputs(KindApp, KindTool),
 		Run:         RunLogPrivateValues,
 	},
 	{

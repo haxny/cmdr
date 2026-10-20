@@ -525,7 +525,7 @@ pub async fn add_manual_server<R: Runtime>(
         "Added manual server: host={:?}, port={}, serverId={:?}",
         LogPrivate::host(&parsed.host),
         parsed.port,
-        host.id // allowed-log-private: a server id; the report's `serverId=` key tokenizes it in its own domain
+        host.id
     );
     // The saved lists changed (the host's account, maybe its name), even where no
     // volume did: the hub re-reads them on `volumes-changed`.
@@ -700,7 +700,9 @@ pub fn load_manual_servers<R: Runtime>(app_handle: &AppHandle<R>) {
         on_host_found(host, app_handle);
         debug!(
             "Loaded manual server: host={:?}, port={}, serverId={:?}",
-            entry.address, entry.port, entry.id
+            LogPrivate::host(&entry.address),
+            entry.port,
+            entry.id
         );
     }
 }

@@ -52,7 +52,7 @@ pub fn check_manifest(manifest: &UpdateManifest, current_version: &str) -> Optio
             return None;
         }
     };
-    let remote = match semver::Version::parse(&manifest.version) {
+    let latest = match semver::Version::parse(&manifest.version) {
         Ok(v) => v,
         Err(e) => {
             log::warn!(
@@ -63,25 +63,25 @@ pub fn check_manifest(manifest: &UpdateManifest, current_version: &str) -> Optio
         }
     };
 
-    if remote <= current {
-        log::debug!("No update available (current={current}, remote={remote})");
+    if latest <= current {
+        log::debug!("No update available (current={current}, remote={latest})");
         return None;
     }
 
-    let key = platform_key();
-    let Some(entry) = manifest.platforms.get(key) else {
+    let platform = platform_key();
+    let Some(entry) = manifest.platforms.get(platform) else {
         let mut offered: Vec<&str> = manifest.platforms.keys().map(String::as_str).collect();
         offered.sort_unstable();
         log::warn!(
-            "Update {remote} is out but has no {key} build, so this install stays on {current} (manifest offers: {})",
+            "Update {latest} is out but has no {platform} build, so this install stays on {current} (manifest offers: {})",
             offered.join(", ")
         );
         return None;
     };
 
-    log::info!("Update available: {current} -> {remote} (platform={key})");
+    log::info!("Update available: {current} -> {latest} (platform={platform})");
     Some(UpdateInfo {
-        version: remote,
+        version: latest,
         url: entry.url.clone(),
         signature: entry.signature.clone(),
     })

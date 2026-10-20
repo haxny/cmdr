@@ -17,6 +17,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_detail::LogDetail;
 use cmdr_fs::log_private::LogPrivate;
 
 use crate::errors::AdbConnectError;
@@ -198,9 +199,9 @@ async fn start_server(binary: PathBuf, port: u16) -> bool {
         }
         Ok(Ok(output)) => {
             warn!(
-                "adb start-server exited with {}: {}",
+                "adb start-server exited with {}: stderr={:?}",
                 output.status,
-                String::from_utf8_lossy(&output.stderr).trim()
+                LogDetail(String::from_utf8_lossy(&output.stderr).trim())
             );
             false
         }

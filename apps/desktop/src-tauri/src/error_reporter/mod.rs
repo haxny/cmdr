@@ -123,6 +123,7 @@ pub fn report_error(target: &str, message: &str, backtrace: &dyn std::fmt::Displ
     log::error!(target: target, "{message}");
     log::debug!(
         target: "cmdr_lib::error_reporter::backtrace",
+        // allowed-log-private: `target` is the log target, not a user value
         "Backtrace for [{target}] {message}:\n{backtrace}",
     );
     auto_dispatcher::on_error_logged(target, message);

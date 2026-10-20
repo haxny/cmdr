@@ -48,6 +48,7 @@ use tauri_specta::Event as _;
 
 use crate::ignore_poison::IgnorePoison;
 use crate::quick_look::{QuickLookClosed, QuickLookKeyEvent};
+use cmdr_fs::log_private::LogPrivate;
 
 const ESCAPE_KEY_CODE: u16 = 53;
 const SPACE_KEY_CODE: u16 = 49;
@@ -168,7 +169,7 @@ impl QuickLookController {
         // data source. We hold a `MainThreadMarker` (asserted at fn entry), and `QLPreviewPanel`
         // requires the main thread.
         unsafe { panel.reloadData() };
-        log::debug!(target: "quick_look", "panel opened for {:?}", self.current_url);
+        log::debug!(target: "quick_look", "panel opened for {:?}", self.current_url.as_deref().map(LogPrivate::path));
         true
     }
 
