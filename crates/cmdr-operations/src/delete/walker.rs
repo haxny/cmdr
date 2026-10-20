@@ -239,6 +239,7 @@ pub(crate) fn delete_files_with_progress_inner(
         refused: None,
         metadata_left_behind: None,
         durability_unconfirmed: None,
+        locked_kept: None,
     });
 
     Ok(())

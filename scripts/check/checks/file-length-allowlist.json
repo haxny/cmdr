@@ -269,7 +269,7 @@
       "reason": "TODO: split it, because it is 13 unrelated `Volume` / `VolumeReadStream` doubles serving nine suites and the seams show in who reads what. `RecursiveDeleteVolume` and `UndeletableSource` (lines 371-502, ~130 lines) have no `strategy_*` consumer at all; their readers are `cleanup_tests.rs`, `conflict_tests.rs`, and `move_failure_tests.rs`, so they belong in a `cleanup_test_support.rs`. The auto-yield cluster `ReleasingStream` + `ReleasingSource` + `AutoYieldTuningGuard` + `YieldingSource` + `NeverPendingYieldSource` (lines 765-1129, ~365 lines) is read only by `strategy_yield_tests.rs`, `strategy_dest_yield_tests.rs`, and `copy_wedge_test_support.rs`, and should join the existing `strategy_dest_yield_test_support.rs` or get its own `strategy_yield_test_support.rs`. `FlakyDest` (~125 lines) pairs with `strategy_retry_tests.rs`. That leaves the abort and stale-handle doubles (`SlowChunkedStream`, `SlowSource`, `FailOnceStaleDest`, `WedgedThenWorkingDest`, `WedgedOpenSource`, `TierOneWitnessDest`) at ~500 lines here. The header comment still claims four suites, so the file has outgrown its own description, and note that a `_test_support.rs` name gets the 800-line budget, not the 1,200-line test one."
     },
     "crates/cmdr-operations/src/types/events.rs": {
-      "lines": 927,
+      "lines": 1057,
       "reason": "Every payload the backend broadcasts about a write operation, plus the enums only those payloads carry, by the rule in its own header: one place to read the whole wire vocabulary the frontend listens to. Splitting by event would scatter that vocabulary without making any one payload easier to find."
     },
     "crates/cmdr-sftp/src/transport.rs": {
