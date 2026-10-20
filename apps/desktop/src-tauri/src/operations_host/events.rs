@@ -10,12 +10,13 @@ use tauri::AppHandle;
 use tauri_specta::Event as _;
 
 use super::wire;
+use cmdr_fs::log_detail::LogDetail;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_operations::host::{
     AsideAttempt, EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget, OperationErrorReport,
     TreeFailure,
 };
-use cmdr_operations::{LeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
+use cmdr_operations::{LeftoversKeptEvent, OperationsChanged, WriteOperationError, WriteProgressEvent};
 
 /// Typed `volumes-busy-changed` Tauri event. Wraps the busy volume-ID list in a
 /// struct because `tauri_specta::Event` payloads must be named types (a bare
@@ -124,16 +125,16 @@ fn raise(report: OperationErrorReport) {
             kept_files,
         } => crate::log_error!(
             target: LOCAL_COPY_TARGET,
-            "copy_files_with_progress: failed op={} error={:?}, keeping {} completed files",
+            "copy_files_with_progress: failed op={} detail={:?}, keeping {} completed files",
             operation_id,
-            error,
+            LogDetail(&typed_error_json(&error)),
             kept_files,
         ),
         OperationErrorReport::VolumeCopyFailed { operation_id, error } => crate::log_error!(
             target: VOLUME_COPY_TARGET,
-            "copy_between_volumes: operation {} failed: {:?}",
+            "copy_between_volumes: operation {} failed: detail={:?}",
             operation_id,
-            error,
+            LogDetail(&typed_error_json(&error)),
         ),
         OperationErrorReport::AsideStranded { attempt, aside, error } => match attempt {
             AsideAttempt::LandingRestore { original } => crate::log_error!(
@@ -224,6 +225,14 @@ fn raise(report: OperationErrorReport) {
              leftovers for the next transfer into that directory to reap"
         ),
     }
+}
+
+/// A failed copy's typed error as the JSON the frontend gets, for a `detail=` field. Its derived
+/// `Debug` would print `volume_name: "…"` and the other identity fields under keys no report
+/// pass knows, while the JSON's keys (`volumeName`, `entry`, `first`, …) are the ones a report
+/// tokenizes in a frontend line, so the same error ships the same way from either side.
+fn typed_error_json(error: &WriteOperationError) -> String {
+    serde_json::to_string(error).unwrap_or_else(|e| format!("(the error didn't serialize: {e})"))
 }
 
 /// The props every instant-op event carries, built once so they can't drift:

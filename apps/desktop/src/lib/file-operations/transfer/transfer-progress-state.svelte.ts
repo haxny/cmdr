@@ -76,7 +76,6 @@ import { bindOperationSession } from '../operation-session/bind-operation-sessio
 import type { OperationOutcome, ScanReadout } from '../operation-session/operation-session.svelte'
 import { startTransferOperation, type TransferStartConfig, type TransferStartResult } from './transfer-dispatch'
 import { raiseCancelRollbackToast } from './cancel-rollback-toast'
-import { getTechnicalDetails } from './transfer-error-messages'
 
 export interface TransferProgressStateConfig extends TransferStartConfig {
   /** An operation already running that this view ADOPTS instead of starting one
@@ -414,15 +413,15 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
             wrongAttempt: error.wrongAttempt,
           })
         } else {
-          // `getTechnicalDetails` is what the error dialog puts under "Technical
-          // details", and it ends with `Error type: <variant>`. Logging it means
-          // the log file and every error-report bundle carry the same reason the
-          // user could read on screen. Logging the variant alone once cost us the
-          // OS's words for a refused trash (ERR-BPAPM, 2026-09-08): the payload
-          // rode along as a property, and the bridge forwards only the message.
-          log.error('{op} error: {detail}', {
+          // The typed error itself: `describeForLog` renders it as JSON with each
+          // path and name marked, so a report hashes exactly those values and
+          // still carries the OS's words. The bridge forwards only the rendered
+          // message, so the payload must sit in the template: riding along as a
+          // bare property once cost us the reason for a refused trash
+          // (ERR-BPAPM, 2026-09-08).
+          log.error('{op} error: {error}', {
             op: operationLabel,
-            detail: getTechnicalDetails(error).replaceAll('\n', '; '),
+            error,
           })
         }
         // No floor: the error dialog takes this dialog's place, so there is
