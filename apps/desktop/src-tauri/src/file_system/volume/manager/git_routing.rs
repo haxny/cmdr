@@ -76,6 +76,7 @@ impl VolumeManager {
                 volume: Some(volume),
                 path: path.to_path_buf(),
                 routed: Some(RoutedKind::GitPortal),
+                unconfirmed: None,
             },
             // Registered then evicted before we could read it back (only
             // reachable under a pathologically small cap). Fall back to the

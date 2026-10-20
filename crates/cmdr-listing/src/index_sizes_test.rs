@@ -126,6 +126,7 @@ impl ListingVolumes for OneVolume {
             volume: Some(Arc::clone(&self.volume)),
             path: path.to_path_buf(),
             routed: self.routed,
+            unconfirmed: None,
         }
     }
 

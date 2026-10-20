@@ -114,7 +114,10 @@ and each is capped by an LRU of its own; `ResolvedVolume.routed` says which one 
 - **`RoutedKind::Restic`** (`manager/restic_routing.rs`), at and below a restic repo's `Browse snapshots` row. The
   candidate is lexical (`cmdr_fs::restic_view`); the verdict is the restic hub's memo, which the listing overlay seeds
   for free, and a miss costs one bounded listing of the repo folder, remembered either way. A real non-repo folder of
-  that name passes through. The repo folder and its real files stay on the parent. `apps/desktop/src-tauri/src/file_system/restic/DETAILS.md`.
+  that name passes through. The repo folder and its real files stay on the parent. When the folder's listing fails or outruns
+  the deadline the verdict is UNDECIDED: `resolve` passes through with `ResolvedVolume::unconfirmed`, so a read goes to
+  the drive and `route_serving` (every write gate behind it) refuses, ❌ never writing a real `Browse snapshots/` into
+  what may be a repo. `apps/desktop/src-tauri/src/file_system/restic/DETAILS.md`.
 - **`RoutedKind::Archive`** (`manager/archive_routing.rs`), when the path crosses a `.zip` boundary. Confirming a
   boundary on a remote parent (direct SMB / MTP) costs a `get_metadata` plus a four-byte `read_range` over the
   network, where a local parent confirms with a zero-network `std::fs` stat and magic sniff.

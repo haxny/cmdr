@@ -160,6 +160,7 @@ impl OperationVolumes for FakeVolumes {
                 volume: Some(volume),
                 path: path.to_path_buf(),
                 routed: Some(kind),
+                unconfirmed: None,
             },
             None => ResolvedVolume::passthrough(self.get(volume_id), path),
         };

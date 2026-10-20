@@ -11,11 +11,14 @@
 //! the view, which is the file the drive underneath would touch if a guard let
 //! the write through.
 
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::file_system::volume::manager::get_volume_manager;
-use cmdr_fs::volume::{InMemoryVolume, RoutedKind, Volume, VolumeError};
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{InMemoryVolume, ListingProgress, RoutedKind, Volume, VolumeError};
 use cmdr_operation_log::types::Initiator;
 use cmdr_operations::testing::CollectorEventSink;
 use cmdr_operations::{
@@ -319,4 +322,87 @@ async fn a_copy_out_resolves_its_source_to_the_view() {
         .expect("a source volume");
     assert_eq!(real, None, "the repo's real files are the drive's");
     assert_eq!(parent.name(), "Share");
+}
+
+/// A drive whose listing of the repo folder fails (a NAS that won't answer),
+/// so the restic route can't decide whether `REPO` is a repo. Everything else
+/// is the in-memory drive's, writes included.
+struct UndecidedDrive {
+    inner: Arc<InMemoryVolume>,
+}
+
+impl Volume for UndecidedDrive {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn root(&self) -> &Path {
+        self.inner.root()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn is_writable(&self) -> bool {
+        true
+    }
+
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        if path == Path::new(REPO) {
+            return Box::pin(async {
+                Err(VolumeError::IoError {
+                    message: "the NAS didn't answer".to_string(),
+                    raw_os_error: None,
+                })
+            });
+        }
+        self.inner.list_directory(path, on_progress)
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        self.inner.get_metadata(path)
+    }
+
+    fn create_directory<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        self.inner.create_directory(path)
+    }
+}
+
+/// ❗ When the route can't tell whether the folder holds a repo (its listing
+/// failed or outran the deadline), a write under `Browse snapshots` refuses:
+/// letting it through would put a real `Browse snapshots/` folder inside what may
+/// be a repo, which the view then hides forever. A read passes through to the
+/// drive.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_write_refuses_when_the_route_cant_decide() {
+    let engine = super::test_engine();
+    let (_, inner) = drive("restic-guard-undecided-backing").await;
+    let id = cmdr_fs::testing::unique_test_id("restic-guard-undecided");
+    get_volume_manager().register(
+        &id,
+        Arc::new(UndecidedDrive {
+            inner: Arc::clone(&inner),
+        }) as Arc<dyn Volume>,
+    );
+
+    let resolved = get_volume_manager().resolve(&id, Path::new(IN_VIEW)).await;
+    assert_eq!(resolved.routed, None, "a read goes to the drive");
+    assert_eq!(resolved.unconfirmed, Some(RoutedKind::Restic));
+
+    let folder = engine
+        .create_directory_managed(Some(id), IN_VIEW.to_string(), "new".to_string(), Initiator::User)
+        .await;
+    assert!(refused_read_only(&folder), "{folder:?}");
+    assert!(!inner.exists(&Path::new(IN_VIEW).join("new")).await);
 }

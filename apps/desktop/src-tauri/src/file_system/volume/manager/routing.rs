@@ -11,8 +11,9 @@
 //! It's another inherent `impl VolumeManager` block (a type's impl can span
 //! files within a crate), so every method stays at `VolumeManager::…`.
 
-use super::super::ResolvedVolume;
+use super::super::{ResolvedVolume, RoutedKind};
 use super::VolumeManager;
+use super::restic_routing::ResticAnswer;
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 
@@ -103,10 +104,18 @@ impl VolumeManager {
     /// [`resolve_local_only`](Self::resolve_local_only) exists for the one
     /// caller that can't `.await` (the write-op fresh-listing oracle).
     pub async fn resolve(&self, volume_id: &str, path: &Path) -> ResolvedVolume {
+        let mut undecided = false;
         for boundary in boundaries(path) {
             let routed = match boundary {
                 Boundary::GitPortal => self.resolve_git_portal(volume_id, path),
-                Boundary::Restic(repo_root) => self.resolve_restic(volume_id, &repo_root, path).await,
+                Boundary::Restic(repo_root) => match self.resolve_restic(volume_id, &repo_root, path).await {
+                    ResticAnswer::Routed(routed) => Some(routed),
+                    ResticAnswer::PassOn => None,
+                    ResticAnswer::Undecided => {
+                        undecided = true;
+                        None
+                    }
+                },
                 Boundary::Archive => {
                     Some(self.resolve_archive(volume_id, path).await).filter(ResolvedVolume::is_routed)
                 }
@@ -114,6 +123,11 @@ impl VolumeManager {
             if let Some(routed) = routed {
                 return routed;
             }
+        }
+        if undecided {
+            // Reads go to the drive; a write refuses rather than write into what
+            // may be a repo's read-only view.
+            return ResolvedVolume::undecided(self.get(volume_id), path, RoutedKind::Restic);
         }
         ResolvedVolume::passthrough(self.get(volume_id), path)
     }

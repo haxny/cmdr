@@ -27,6 +27,11 @@ use super::types::{ReadOnlySide, WriteOperationError};
 /// The read-only volume a route serves `path` with on `volume_id`, and which
 /// route it is, or `None` when the drive itself serves it. The `.zip` file
 /// itself is a plain file on its drive and answers `None`.
+///
+/// ❗ Fails CLOSED: when a route couldn't decide whether it serves `path` (a
+/// restic repo folder whose listing failed or outran its deadline), this answers
+/// that route with the drive's own volume, so the caller refuses the write
+/// rather than put a real folder into what may be a read-only view.
 pub(crate) async fn route_serving(
     host: &EngineHost,
     volume_id: &str,
@@ -38,7 +43,8 @@ pub(crate) async fn route_serving(
         return None;
     }
     let resolved = volumes.resolve(volume_id, path).await;
-    Some((resolved.volume?, resolved.routed?))
+    let kind = resolved.routed.or(resolved.unconfirmed)?;
+    Some((resolved.volume?, kind))
 }
 
 /// The first of `paths` a route serves, as [`route_serving`] answers it.

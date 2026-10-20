@@ -70,6 +70,12 @@ pub struct ResolvedVolume {
     /// Which route swapped `volume` in, or `None` for a passthrough. Sites use
     /// it to skip drive-index enrich/verify and the read-only write guards.
     pub routed: Option<RoutedKind>,
+    /// A route whose boundary is in `path` but couldn't be confirmed or ruled out
+    /// (its parent failed or outran the deadline), on a passthrough. A read may go
+    /// to the drive; ❗ a write must refuse, or it could write a real folder into
+    /// what is a repo's read-only view (a real `Browse snapshots/` inside a
+    /// restic repo).
+    pub unconfirmed: Option<RoutedKind>,
 }
 
 impl ResolvedVolume {
@@ -79,6 +85,16 @@ impl ResolvedVolume {
             volume,
             path: path.to_path_buf(),
             routed: None,
+            unconfirmed: None,
+        }
+    }
+
+    /// A passthrough over a path where the `kind` route couldn't decide: reads
+    /// go to the drive, writes refuse ([`unconfirmed`](Self::unconfirmed)).
+    pub fn undecided(volume: Option<Arc<dyn Volume>>, path: &Path, kind: RoutedKind) -> Self {
+        Self {
+            unconfirmed: Some(kind),
+            ..Self::passthrough(volume, path)
         }
     }
 

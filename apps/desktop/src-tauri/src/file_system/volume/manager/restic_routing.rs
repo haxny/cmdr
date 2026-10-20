@@ -37,29 +37,39 @@ pub(super) struct ResticRoutes {
     parents: HashMap<String, Weak<dyn Volume>>,
 }
 
+/// What the restic route answers for one candidate boundary.
+pub(super) enum ResticAnswer {
+    /// A confirmed repo: its view serves the path.
+    Routed(ResolvedVolume),
+    /// Not a repo (or not browsable here): the next route decides.
+    PassOn,
+    /// The parent couldn't say: the next route decides, and a write refuses.
+    Undecided,
+}
+
 impl VolumeManager {
     /// Routes `path` to the view of the repo at `repo_root` when the hub
-    /// confirms it's a repo; `None` hands over to the next route.
+    /// confirms it's a repo; [`ResticAnswer::PassOn`] hands over to the next
+    /// route, and [`ResticAnswer::Undecided`] does too but marks the answer so a
+    /// write refuses (the parent failed or outran the confirm's deadline).
     ///
     /// A miss in the hub's memo costs ONE bounded listing of `repo_root` on the
     /// parent, remembered both ways, so a real folder named `Browse snapshots`
     /// outside a repo pays it once, not per call.
-    pub(super) async fn resolve_restic(
-        &self,
-        volume_id: &str,
-        repo_root: &Path,
-        path: &Path,
-    ) -> Option<ResolvedVolume> {
-        let parent = self.get(volume_id)?;
+    pub(super) async fn resolve_restic(&self, volume_id: &str, repo_root: &Path, path: &Path) -> ResticAnswer {
+        let Some(parent) = self.get(volume_id) else {
+            return ResticAnswer::PassOn;
+        };
         if parent.routes_over_a_parent() {
             // A repo backed up inside a snapshot, or zipped in an archive, isn't
             // browsable a second level down; the overlay never offers it either.
-            return None;
+            return ResticAnswer::PassOn;
         }
-        if wiring::repos().confirm_repo(volume_id, &parent, repo_root).await != Some(true) {
-            return None;
+        match wiring::repos().confirm_repo(volume_id, &parent, repo_root).await {
+            Some(true) => ResticAnswer::Routed(self.register_restic(volume_id, parent, repo_root, path)),
+            Some(false) => ResticAnswer::PassOn,
+            None => ResticAnswer::Undecided,
         }
-        Some(self.register_restic(volume_id, parent, repo_root, path))
     }
 
     /// [`resolve_restic`](Self::resolve_restic) from the memo alone, for the
@@ -123,6 +133,7 @@ impl VolumeManager {
                 volume: Some(volume),
                 path: path.to_path_buf(),
                 routed: Some(RoutedKind::Restic),
+                unconfirmed: None,
             },
             // Registered then evicted before we could read it back (only
             // reachable under a pathologically small cap).
