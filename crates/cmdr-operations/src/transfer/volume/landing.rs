@@ -98,7 +98,7 @@ pub(super) fn top_level_precheck(
             .map_or_else(|| dest.to_path_buf(), |name| dest.with_file_name(name));
         Box::pin(async move {
             if let Some(probe) = probe {
-                probe.set_driver_phase(DriverPhase::PreparingNext, &dest.display().to_string());
+                probe.set_driver_phase_at(DriverPhase::PreparingNext, None, &dest);
             }
             name_at_destination(&state, &dest_volume, &dest, new_name).await
         })

@@ -19,7 +19,7 @@ fn probe_over(id: &str, state: &Arc<WriteOperationState>, ends: TransferEnds) ->
         concurrency: 10,
         total_files: 1,
         driver_phase: AtomicU8::new(DriverPhase::AwaitingTasks as u8),
-        driver_detail: Mutex::new(String::new()),
+        driver_detail: Mutex::new(DriverDetail::Label("")),
         tasks: Mutex::new(Vec::new()),
         sink: Mutex::new(None),
         still_for_seconds: AtomicU64::new(0),

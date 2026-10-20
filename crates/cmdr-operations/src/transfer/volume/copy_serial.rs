@@ -231,10 +231,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                     // share; `paused=` covers the pause gate, and nothing else
                     // covered this.
                     if let Some(probe) = op_probe_conflict.as_ref() {
-                        probe.set_driver_phase(
-                            DriverPhase::ResolvingConflict,
-                            &initial_dest_owned.display().to_string(),
-                        );
+                        probe.set_driver_phase_at(DriverPhase::ResolvingConflict, None, &initial_dest_owned);
                     }
                     let resolved = resolve_volume_conflict(
                         &source_volume,
@@ -453,10 +450,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                     // them. It stays set through the whole of `copy_single_path`
                     // — which for a directory source is the entire subtree.
                     if let Some(probe) = op_probe_serial.as_ref() {
-                        probe.set_driver_phase(
-                            DriverPhase::TransferringSource,
-                            &format!("{} {}", source_row.label(), source_path.display()),
-                        );
+                        probe.set_driver_phase_at(DriverPhase::TransferringSource, Some(source_row), &source_path);
                     }
                     // Held for this source's whole transfer; dropping it
                     // clears the row. Mirrors the concurrent path.
@@ -470,8 +464,8 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             } else {
                                 TaskRole::File
                             },
-                            &source_path.display().to_string(),
-                            &dest_item_path.display().to_string(),
+                            &source_path,
+                            &dest_item_path,
                         )
                     });
                     let probe_handle = task_probe

@@ -1533,6 +1533,12 @@ and its first leaf both reading `#0`, once per walker, is what the ` (walker)` m
 drivers' `transferring-source(#N …)` and `preparing-next(#N …)` details render through the same `TaskRow::label`, so the
 phase and the table can't drift apart.
 
+**The dump holds paths, never path text.** A row keeps its two ends as `PathBuf`s and the driver's step as a
+`DriverDetail` (a fixed label, or a path under an optional row), and the dump renders each path through `LogPrivate`.
+The dump reaches error reports (the stall warning, the wind-down report), so a path flattened to a `String` first would
+ship as unbounded prose. `set_driver_phase` takes only a `&'static str` label; a path goes through
+`set_driver_phase_at`.
+
 **Every driver sets its `DriverPhase`, and one that forgets says nothing.** The field is initialised to `Starting`, so a
 driver that never advances it reports `driver=starting()` however long it has been running. Both drivers set it now:
 `PreparingNext` around the destination-metadata fetch, `ResolvingConflict` around the resolver (parking on a person is

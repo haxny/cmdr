@@ -274,7 +274,7 @@ fn assert_driver_names_the_source_it_is_streaming(dumps: &[String]) {
         "the driver names the source it is inside, so a reader knows to go read the rows, got:\n{dump}"
     );
     assert!(
-        dump.contains("transferring-source(#0 /album)"),
+        dump.contains(&format!("transferring-source(#0 {})", LogPrivate::path("/album"))),
         "the phase detail carries the source path and its row number, got:\n{dump}"
     );
 }

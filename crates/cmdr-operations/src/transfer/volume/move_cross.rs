@@ -317,9 +317,10 @@ pub async fn move_volumes_with_progress(
                     // else running. A dump that names it has explained the whole
                     // stall; `paused=` covers the pause gate and nothing else
                     // covered this.
-                    op_probe_conflict.set_driver_phase(
+                    op_probe_conflict.set_driver_phase_at(
                         super::super::transfer_probe::DriverPhase::ResolvingConflict,
-                        &initial_dest_owned.display().to_string(),
+                        None,
+                        &initial_dest_owned,
                     );
                     // Reuse the cached scan hint so the conflict dialog
                     // doesn't re-list the parent dir per conflict on MTP.
@@ -521,9 +522,10 @@ pub async fn move_volumes_with_progress(
                     // points a reader straight at the rows below. It stands
                     // through the copy AND the source sweep after it, which the
                     // row's own `Finalizing` phase separates.
-                    op_probe.set_driver_phase(
+                    op_probe.set_driver_phase_at(
                         super::super::transfer_probe::DriverPhase::TransferringSource,
-                        &format!("{} {}", source_row.label(), source_path.display()),
+                        Some(source_row),
+                        &source_path,
                     );
                     // Held for this source's whole transfer, copy phase AND
                     // source sweep; dropping it clears the row. Mirrors
@@ -537,8 +539,8 @@ pub async fn move_volumes_with_progress(
                         } else {
                             super::super::transfer_probe::TaskRole::File
                         },
-                        &source_path.display().to_string(),
-                        &dest_item_path.display().to_string(),
+                        &source_path,
+                        &dest_item_path,
                     );
                     let probe = task_probe.probe();
                     // A FILE source's stamp, taken before a byte is read. A

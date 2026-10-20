@@ -196,8 +196,8 @@ impl<'a> LeafPool<'a> {
                 // Every row this walker opens is one leaf FILE's byte copy,
                 // holding the permit reserved just above.
                 TaskRole::File,
-                &row.source.display().to_string(),
-                &row.dest.display().to_string(),
+                &row.source,
+                &row.dest,
             );
             self.next_leaf += 1;
             handle

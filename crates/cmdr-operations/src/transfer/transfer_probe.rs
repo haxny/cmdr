@@ -21,6 +21,8 @@
 //! misses and every call is a no-op, which is what the unit tests and the
 //! local-FS path rely on.
 
+use std::fmt;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
@@ -28,6 +30,7 @@ use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use super::super::event_sinks::OperationEventSink;
 use super::super::host::OperationErrorReport;
@@ -187,8 +190,8 @@ pub(super) struct TaskProbe {
     /// Whether this row holds one of the window's slots. Fixed for the row's
     /// life: a walker never becomes a file copy or the reverse.
     role: TaskRole,
-    source: String,
-    dest: String,
+    source: PathBuf,
+    dest: PathBuf,
     phase: AtomicU8,
     /// Millis since the operation started, at the last phase transition.
     phase_since_ms: AtomicU64,
@@ -279,6 +282,7 @@ impl TaskProbe {
         let now_ms = u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX);
         let total = self.total_bytes.load(Ordering::Relaxed);
         let stall_aborts = self.stall_aborts.load(Ordering::Relaxed);
+        // allowed-log-private: a dump row is log text, and the dump only ever reaches a log macro
         format!(
             // allowed-pluralize-noun: a byte count in a diagnostic dump; the compact form is the point.
             "{row}{role} {phase} for {held}ms, {done}/{total} bytes, retries={retries}{aborted}, {source} -> {dest}",
@@ -298,8 +302,8 @@ impl TaskProbe {
             } else {
                 String::new()
             },
-            source = self.source,
-            dest = self.dest,
+            source = LogPrivate::path(&self.source),
+            dest = LogPrivate::path(&self.dest),
         )
     }
 }
@@ -311,9 +315,9 @@ pub(super) struct OperationProbe {
     concurrency: usize,
     total_files: usize,
     driver_phase: AtomicU8,
-    /// Free-form detail for the driver's current step (the path it is
-    /// pre-checking, typically). Written only at phase transitions.
-    driver_detail: Mutex<String>,
+    /// What the driver's current step is about (the path it is pre-checking,
+    /// typically). Written only at phase transitions.
+    driver_detail: Mutex<DriverDetail>,
     tasks: Mutex<Vec<Arc<TaskProbe>>>,
     /// Where to send a heartbeat. Set once at registration; `None` in the unit
     /// tests that don't exercise emission.
@@ -374,9 +378,20 @@ impl OperationProbe {
         self.state.last_progress_files().unwrap_or(0)
     }
 
-    pub(super) fn set_driver_phase(&self, phase: DriverPhase, detail: &str) {
+    /// The driver's step, named by a fixed label of our own.
+    pub(super) fn set_driver_phase(&self, phase: DriverPhase, label: &'static str) {
         self.driver_phase.store(phase as u8, Ordering::Relaxed);
-        detail.clone_into(&mut self.driver_detail.lock_ignore_poison());
+        *self.driver_detail.lock_ignore_poison() = DriverDetail::Label(label);
+    }
+
+    /// The driver's step, at `path` (under `row`'s label when the step belongs
+    /// to one source, so a reader can match it against the table).
+    pub(super) fn set_driver_phase_at(&self, phase: DriverPhase, row: Option<TaskRow>, path: &Path) {
+        self.driver_phase.store(phase as u8, Ordering::Relaxed);
+        *self.driver_detail.lock_ignore_poison() = DriverDetail::At {
+            row,
+            path: path.to_path_buf(),
+        };
     }
 
     /// Register a task entering the window. The returned handle removes it on
@@ -391,14 +406,14 @@ impl OperationProbe {
         self: &Arc<Self>,
         row: TaskRow,
         role: TaskRole,
-        source: &str,
-        dest: &str,
+        source: &(impl AsRef<Path> + ?Sized),
+        dest: &(impl AsRef<Path> + ?Sized),
     ) -> TaskProbeHandle {
         let probe = Arc::new(TaskProbe {
             row,
             role,
-            source: source.to_owned(),
-            dest: dest.to_owned(),
+            source: source.as_ref().to_path_buf(),
+            dest: dest.as_ref().to_path_buf(),
             phase: AtomicU8::new(TaskPhase::Spawned as u8),
             phase_since_ms: AtomicU64::new(u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX)),
             bytes_done: AtomicU64::new(0),
@@ -837,6 +852,24 @@ impl OperationProbe {
             out.push_str(&task.render());
         }
         out
+    }
+}
+
+/// What the driver's current step is about, as the dump renders it. A path is
+/// marked there: the dump reaches error reports (the stall warning, the
+/// wind-down report), and a raw path in prose is what they can't bound.
+pub(super) enum DriverDetail {
+    Label(&'static str),
+    At { row: Option<TaskRow>, path: PathBuf },
+}
+
+impl fmt::Display for DriverDetail {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Label(label) => f.write_str(label),
+            Self::At { row: Some(row), path } => write!(f, "{} {}", row.label(), LogPrivate::path(path)),
+            Self::At { row: None, path } => write!(f, "{}", LogPrivate::path(path)),
+        }
     }
 }
 

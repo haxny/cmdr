@@ -193,8 +193,8 @@ impl ConcurrentCopy<'_> {
                 } else {
                     super::super::transfer_probe::TaskRole::File
                 },
-                &source_path.display().to_string(),
-                &dest_item_path.display().to_string(),
+                &source_path,
+                &dest_item_path,
             )
         });
         Ok(Some(CopyTask {
@@ -300,15 +300,12 @@ impl ConcurrentCopy<'_> {
         if !matches!(folder, DestFolder::CreatedByUs)
             && let Some(probe) = self.op_probe.as_ref()
         {
-            probe.set_driver_phase(
+            probe.set_driver_phase_at(
                 super::super::transfer_probe::DriverPhase::PreparingNext,
                 // The same label the source's own row renders under, so a
                 // reader can match the driver's step against the table.
-                &format!(
-                    "{} {}",
-                    super::super::transfer_probe::TaskRow::source(source_index).label(),
-                    dest_item_path.display()
-                ),
+                Some(super::super::transfer_probe::TaskRow::source(source_index)),
+                dest_item_path,
             );
         }
         let name = ChildName::new(name)
@@ -348,9 +345,10 @@ impl ConcurrentCopy<'_> {
         // taken now has to say so rather than leave the pre-check's phase
         // standing.
         if let Some(probe) = self.op_probe.as_ref() {
-            probe.set_driver_phase(
+            probe.set_driver_phase_at(
                 super::super::transfer_probe::DriverPhase::ResolvingConflict,
-                &dest_item_path.display().to_string(),
+                None,
+                dest_item_path,
             );
         }
         let resolved = resolve_volume_conflict(

@@ -11,7 +11,9 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::state::WriteOperationState;
 use super::super::super::types::{TransferActivity, WriteProgressEvent};
-use super::{DriverPhase, NO_INBOUND_RATE, OperationProbe, TransferEnds, spawn_watchdog, stall_abort_after};
+use super::{
+    DriverDetail, DriverPhase, NO_INBOUND_RATE, OperationProbe, TransferEnds, spawn_watchdog, stall_abort_after,
+};
 
 /// One engine's live transfers, so a watchdog tick (and any future debug
 /// command) can see every transfer at once. Reached through each operation's
@@ -91,7 +93,7 @@ pub(in crate::transfer) fn register_operation(
         concurrency,
         total_files,
         driver_phase: AtomicU8::new(DriverPhase::Starting as u8),
-        driver_detail: Mutex::new(String::new()),
+        driver_detail: Mutex::new(DriverDetail::Label("")),
         tasks: Mutex::new(Vec::new()),
         sink: Mutex::new(Some(sink)),
         still_for_seconds: AtomicU64::new(0),

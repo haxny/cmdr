@@ -49,7 +49,7 @@ fn probe_with(id: &str, state: &Arc<WriteOperationState>, ends: TransferEnds) ->
         concurrency: 8,
         total_files: 764,
         driver_phase: AtomicU8::new(DriverPhase::AwaitingTasks as u8),
-        driver_detail: Mutex::new("sms-20260724020237.xml".to_owned()),
+        driver_detail: Mutex::new(DriverDetail::Label("sms-20260724020237.xml")),
         tasks: Mutex::new(Vec::new()),
         sink: Mutex::new(None),
         still_for_seconds: AtomicU64::new(0),
@@ -96,6 +96,26 @@ fn dump_names_driver_phase_intent_and_every_parked_task() {
     assert!(dump.contains("0/13421021 bytes"), "{dump}");
     assert!(dump.contains("#11 streaming"), "{dump}");
     assert!(dump.contains("4194304/13421021 bytes"), "{dump}");
+}
+
+/// The dump reaches error reports (the stall warning, the wind-down report), so
+/// every path in it is marked: the driver's step and each task's two ends.
+#[test]
+fn dump_marks_every_path_it_names() {
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-dump-marks");
+    let state = guard.state();
+    let probe = probe_for(guard.id(), state);
+    let (source, dest) = ("/src/Summer (Lake House)/a.jpg", "/dst/Summer (Lake House)/a.jpg");
+
+    probe.set_driver_phase_at(DriverPhase::ResolvingConflict, None, Path::new(dest));
+    let _task = probe.begin_task(TaskRow::source(0), TaskRole::File, source, dest);
+    let dump = probe.render_dump("test");
+
+    let marked_dest = LogPrivate::path(dest);
+    assert!(dump.contains(&format!("({marked_dest})")), "{dump}");
+    let marked_ends = format!("{} -> {marked_dest}", LogPrivate::path(source));
+    assert!(dump.contains(&marked_ends), "{dump}");
 }
 
 /// The header's arithmetic has to add up. A directory walker holds no window
@@ -352,7 +372,7 @@ fn a_transfer_publishing_progress_across_file_boundaries_is_never_called_still()
         Duration::ZERO,
     );
     let source = ledger.for_source(
-        std::path::Path::new("/src/item"),
+        Path::new("/src/item"),
         Arc::new(Mutex::new(Instant::now() - Duration::from_secs(1))),
     );
     let leaf_bytes = 2_800_000_u64;
@@ -693,11 +713,19 @@ fn two_rows_keep_their_own_stall_abort_signal_and_byte_count() {
     );
     let dump = probe.render_dump("test");
     assert!(
-        dump.contains("0/66476516 bytes, retries=0 stall-aborts=1, /src/a.bin -> /dst/a.bin"),
+        dump.contains(&format!(
+            "0/66476516 bytes, retries=0 stall-aborts=1, {} -> {}",
+            LogPrivate::path("/src/a.bin"),
+            LogPrivate::path("/dst/a.bin")
+        )),
         "{dump}"
     );
     assert!(
-        dump.contains("4194304/66476516 bytes, retries=0, /src/b.bin -> /dst/b.bin"),
+        dump.contains(&format!(
+            "4194304/66476516 bytes, retries=0, {} -> {}",
+            LogPrivate::path("/src/b.bin"),
+            LogPrivate::path("/dst/b.bin")
+        )),
         "{dump}"
     );
 }
