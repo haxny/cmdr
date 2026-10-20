@@ -47,6 +47,7 @@
         webdav_servers: () => tString('stateRecovery.webdavServers.title'),
         smb_shares: () => tString('stateRecovery.smbShares.title'),
         smb_servers: () => tString('stateRecovery.smbServers.title'),
+        sftp_host_keys: () => tString('stateRecovery.sftpHostKeys.title'),
     }
 
     const title = $derived(titles[recovery.file]())

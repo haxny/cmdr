@@ -91,6 +91,10 @@
   "@stateRecovery.smbServers.title": {
     "description": "Headline of a notice shown once: the file holding the network servers the person added by typing their address (rather than ones Cmdr found on the network by itself) couldn't be read, either the whole file or only some entries in it (for example ones saved by a newer Cmdr version), so some or all of them are missing from the list now. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
   },
+  "stateRecovery.sftpHostKeys.title": "Cmdr couldn’t read all the SFTP servers you trusted, so it may ask about some of them again",
+  "@stateRecovery.sftpHostKeys.title": {
+    "description": "Headline of a notice shown once: Cmdr remembers which SFTP servers the person approved the first time they connected (by each server's security fingerprint, its \"host key\"), and that file couldn't be read, either the whole file or only some entries in it. So for some or all of those servers, Cmdr will show the first-connection approval question again. \"SFTP\" is a protocol name and stays as is. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
   "stateRecovery.keptCopy": "Cmdr kept the old file at {path}.",
   "@stateRecovery.keptCopy": {
     "description": "Line under any of the notices above that a damaged file was set aside rather than deleted, and where. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window.",

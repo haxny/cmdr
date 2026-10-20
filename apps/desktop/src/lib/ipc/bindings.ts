@@ -16543,6 +16543,8 @@ export type StateFile =
   | 'smb_shares'
   // `manual-servers.json`: SMB servers added by address.
   | 'smb_servers'
+  // `known-sftp-hosts.json`: the SSH host keys the person approved.
+  | 'sftp_host_keys'
 
 // One state file Cmdr couldn't read and started fresh, as the person hears about it.
 export type StateRecovery = {

@@ -95,6 +95,7 @@ describe('every other file', () => {
     'webdav_servers',
     'smb_shares',
     'smb_servers',
+    'sftp_host_keys',
   ]
 
   for (const file of others) {

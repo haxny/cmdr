@@ -4391,6 +4391,7 @@ export type MessageKey =
   | 'stateRecovery.settings.body'
   | 'stateRecovery.settings.openSettings'
   | 'stateRecovery.settings.title'
+  | 'stateRecovery.sftpHostKeys.title'
   | 'stateRecovery.sftpServers.title'
   | 'stateRecovery.shortcuts.title'
   | 'stateRecovery.showInFinder'

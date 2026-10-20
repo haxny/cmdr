@@ -186,6 +186,8 @@ pub enum StateFile {
     SmbShares,
     /// `manual-servers.json`: SMB servers added by address.
     SmbServers,
+    /// `known-sftp-hosts.json`: the SSH host keys the person approved.
+    SftpHostKeys,
 }
 
 /// One line of the file: `{"v":1,"at":"<UTC ISO 8601>","event":{"kind":…}}`.

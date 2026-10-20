@@ -162,3 +162,28 @@ fn the_listing_shows_what_a_settings_screen_would_offer_to_forget() {
         "a settings row shows when it was approved"
     );
 }
+
+/// One approval that doesn't read (a newer build's field shape) costs that approval only: the
+/// rest stay trusted, and the whole file is copied aside before the next approval's save. A file
+/// that doesn't read at all is set aside the same way (`server_list_file_test.rs`).
+#[test]
+fn one_approval_that_doesnt_read_keeps_the_rest_and_a_copy() {
+    let _notices = crate::state_recovery::testing::capture_recoveries();
+    let dir = crate::test_support::TestDir::new("sftp_host_keys_partial");
+    let path = dir.join("known-sftp-hosts.json");
+    let original = r#"{"trustedHostKeys": [
+        {"host": "nas.local", "port": 22, "algorithm": "ssh-ed25519", "fingerprint": "SHA256:abc",
+         "approvedAt": "2026-10-01T10:00:00Z"},
+        {"host": "box.local", "port": "from a newer build"}
+    ]}"#;
+    std::fs::write(&path, original).expect("write");
+
+    let store: TrustedHostKeysStore = server_list_file::read(&path, StateFile::SftpHostKeys);
+    server_list_file::save(&path, "the trusted SSH host keys", &store);
+
+    assert_eq!(store.trusted_host_keys.len(), 1);
+    assert_eq!(store.trusted_host_keys[0].host, "nas.local");
+    let kept = crate::state_recovery::testing::kept_copies(&path);
+    assert_eq!(kept.len(), 1, "{kept:?}");
+    assert_eq!(std::fs::read_to_string(&kept[0]).expect("read the copy"), original);
+}

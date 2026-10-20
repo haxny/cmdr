@@ -34,7 +34,7 @@ Issue #461. Must-knows in `CLAUDE.md`.
   (`StateWriteError::NotLoaded`) until a later read succeeds, and a store that rereads its file on every call
   (`manual-servers.json`) hears about it once.
 - **Lists of independent entries** (saved S3 places and accounts, SFTP and WebDAV servers, SMB share rows, opt-outs and
-  pending moves, manual SMB servers): each list field is `#[serde(deserialize_with = "lenient_entries")]`, so an entry
+  pending moves, manual SMB servers, trusted SSH host keys): each list field is `#[serde(deserialize_with = "lenient_entries")]`, so an entry
   that doesn't read (a provider `kind` from a newer build, a typo) is dropped alone. `read_state_file` then COPIES the
   whole file aside (`keep_copy`: same naming, same three kept) and the person hears it once per session. The file itself
   stays until the next save writes the entries that read; a launch before that copies it again.

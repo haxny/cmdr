@@ -16,14 +16,15 @@
 //! again, but it belongs to `ssh`, and a file manager appending to it is a
 //! surprise nobody asked for.
 
-use std::fs;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
 use cmdr_fs::volume::host::host_keys::{HostKeyVerdict, HostKeys};
 use serde::{Deserialize, Serialize};
 
+use super::server_list_file;
 use crate::ignore_poison::IgnorePoison;
+use crate::state_recovery::StateFile;
 
 /// One approved host key.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
@@ -50,7 +51,7 @@ pub struct TrustedHostKey {
 #[serde(rename_all = "camelCase")]
 pub struct TrustedHostKeysStore {
     /// Every key the user has approved.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::state_recovery::lenient_entries")]
     pub trusted_host_keys: Vec<TrustedHostKey>,
 }
 
@@ -67,31 +68,21 @@ fn trusted() -> &'static Mutex<TrustedHostKeysStore> {
 
 /// Loads the store from the app's data dir into memory.
 ///
-/// Call once at startup. A missing or unreadable file is an empty store: every
-/// server then reads as first contact, which costs one approval and never
-/// trusts anything it shouldn't.
+/// Call once at startup. A missing file is an empty store: every server then
+/// reads as first contact, which costs one approval and never trusts anything it
+/// shouldn't. One that doesn't read is set aside first, so the next approval's
+/// save can't land over every other approval (`server_list_file::read`).
 pub fn load_trusted_host_keys<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    let Ok(dir) = crate::config::resolved_app_data_dir(app) else {
+    let Some((store, path)) = server_list_file::load(app, "known-sftp-hosts.json", StateFile::SftpHostKeys) else {
         return;
     };
-    let path = dir.join("known-sftp-hosts.json");
-    // A `.tmp` left by a crash mid-write.
-    let tmp = path.with_extension("json.tmp");
-    if tmp.exists() {
-        let _ = fs::remove_file(&tmp);
-    }
-
-    let store = fs::read_to_string(&path)
-        .ok()
-        .and_then(|text| serde_json::from_str(&text).ok())
-        .unwrap_or_default();
     *trusted().lock_ignore_poison() = store;
     let _ = STORE_PATH.set(path);
 }
 
 /// Writes the in-memory store back, durably.
 ///
-/// Temp file, fsync, rename, parent fsync (`config::durable_write_json`): a
+/// Temp file, fsync, rename, parent fsync (`server_list_file::save`): a
 /// half-written trust store would either lose approvals or, worse, be
 /// unparseable and read as "nothing is trusted", turning every mounted server
 /// into a fresh security prompt.
@@ -103,12 +94,7 @@ fn save() {
         return;
     };
     let store = trusted().lock_ignore_poison().clone();
-    let Ok(json) = serde_json::to_string_pretty(&store) else {
-        return;
-    };
-    if let Err(e) = crate::config::durable_write_json(path, &path.with_extension("json.tmp"), &json) {
-        log::warn!(target: "volume", "couldn't write trusted SSH host keys: source=os, error_kind={:?}, code={:?}, detail={:?}", e.kind(), e.raw_os_error(), cmdr_fs::log_detail::LogDetail(&e.to_string()));
-    }
+    server_list_file::save(path, "the trusted SSH host keys", &store);
 }
 
 /// Every key the user has approved, newest write last.
