@@ -13,6 +13,7 @@ members = [
   "crates/cmdr-mtp",
   "crates/cmdr-operation-log",
   "crates/cmdr-operations",
+  "crates/cmdr-restic",
   "crates/cmdr-s3",
   "crates/cmdr-sftp",
   "crates/cmdr-smb",

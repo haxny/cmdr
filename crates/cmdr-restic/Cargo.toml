@@ -1,0 +1,23 @@
+[package]
+name = "cmdr-restic"
+version = "0.0.0"
+edition = "2024"
+license = "LicenseRef-BSL-1.1"
+publish = false
+
+# The house lint set lives in the workspace root's `[workspace.lints]`, so this
+# crate can't quietly become a lint-free zone. `unused_crate_dependencies` is the
+# one lint that stays at the crate root instead (it's judged per compilation unit).
+[lints]
+workspace = true
+
+[dependencies]
+# The `Volume` trait, every type it exchanges, and the host seams this backend
+# asks the app through. The only Cmdr crate below this one.
+cmdr-fs = { path = "../cmdr-fs" }
+# The pure-Rust restic repository reader (the core of `rustic`). Default features
+# are empty (`cli`, `clap`, `merge`, `webdav` are all opt-in), and that's how it
+# stays: no CLI parsing, no WebDAV server. ❌ Never add `rustic_backend`: it brings
+# rustic's own storage drivers (OpenDAL, SFTP, rest-server) when this crate reads
+# the repo through Cmdr's own volumes instead.
+rustic_core = { version = "0.13.0", default-features = false }

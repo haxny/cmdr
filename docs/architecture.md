@@ -380,12 +380,12 @@ All under `apps/desktop/src-tauri/src/`.
 ## Workspace crates
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
-`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, `cmdr-listing`, `cmdr-collation`,
-`cmdr-local`, `cmdr-operation-log`, `cmdr-operations`, and `cmdr-update-trust` carry no `tauri` dependency and no reach
-into the app; `index-crate-isolation` enforces that against the `cargo metadata` graph, and caps the public surface of
-`cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`, `cmdr-git`, `cmdr-listing`,
-`cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, and `cmdr-operations` at the numbers their audits landed on. The
-two dev CLIs and the vendored fork are ordinary members.
+`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-http`, `cmdr-listing`,
+`cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, `cmdr-operations`, and `cmdr-update-trust` carry no `tauri`
+dependency and no reach into the app; `index-crate-isolation` enforces that against the `cargo metadata` graph, and caps
+the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`,
+`cmdr-git`, `cmdr-restic`, `cmdr-listing`, `cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, and `cmdr-operations`
+at the numbers their audits landed on. The two dev CLIs and the vendored fork are ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
@@ -514,6 +514,10 @@ two dev CLIs and the vendored fork are ordinary members.
   half (the route, the `.git/` listing overlay, the toggle, the `git-state-changed` event) is
   `apps/desktop/src-tauri/src/file_system/git/`. Where the boundary runs, the capped surface, and every decision:
   `crates/cmdr-git/DETAILS.md`; guardrails: `crates/cmdr-git/CLAUDE.md`
+- `crates/cmdr-restic/`: reading a restic backup repository wherever it lives (#422). `rustic_core` over a read-only
+  storage adapter that reads the repo through its parent `Volume` (ranged reads for pack files, every write refused),
+  repo detection from a listing, unlock with typed wrong-password, and the snapshot list with its folder names (`latest`
+  included). The virtual tree, routing, and unlock UI build on it. See `crates/cmdr-restic/CLAUDE.md`
 - `crates/cmdr-smb/`: everything Cmdr says to an SMB server. `SmbVolume` over a live smb2 session, with its change
   watcher, reconnect state machine, and refcounted scan-connection pool, plus the protocol layer under it (address
   building, `smb2::Error` classification, the share-listing vocabulary). The second backend in its own crate; what

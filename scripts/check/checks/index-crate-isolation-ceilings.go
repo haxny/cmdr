@@ -432,4 +432,18 @@ var surfaceGuardedCrates = []struct {
 			SubsystemItems: 25,
 		},
 	},
+	{
+		// Measured 2026-10-20, at the crate's creation (#422), and set to exactly
+		// what it exposes, with no headroom.
+		//
+		// The one root promise is `is_restic_repo`, the detector a host runs on a
+		// listing it already has. Item-by-item:
+		// `crates/cmdr-restic/DETAILS.md` § "The public surface is capped".
+		Name: "cmdr-restic",
+		Ceilings: surfaceCeilings{
+			RootPromises:   1,
+			PublicModules:  0,
+			SubsystemItems: 0,
+		},
+	},
 }
