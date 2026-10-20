@@ -393,5 +393,9 @@ fn the_network_backend_lines_ship_each_value_as_one_token_of_its_kind() {
         )
     );
     let keyed = slow(&share);
-    assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
+    assert_eq!(
+        hashes(&context().redact_line(&marked)),
+        hashes(&context().redact_line(&keyed)),
+        "{marked}\n{keyed}"
+    );
 }
