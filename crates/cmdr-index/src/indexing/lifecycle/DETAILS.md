@@ -597,7 +597,7 @@ anything changed between the rename and the restart is only found by listing.
 `moves::a_drive_renamed_while_it_indexes_keeps_indexing_at_its_new_mount_point` writes a file into exactly that gap. A
 partial drive never re-walks covered ground, so its gap comes back through the branch watch's replay from the point the
 old watch recorded (`../watch/DETAILS.md` § "A watch that starts from now records where now is";
-`moves::a_drive_renamed_before_its_first_index_completes_replays_what_arrived_in_the_gap`).
+`phases/tests/relaunch.rs::a_quiet_session_still_leaves_the_next_one_a_point_to_replay_from`).
 
 **The restart is RECORDED in the critical section that takes the volume down, ❌ never a stop followed by a start.** A
 stop frees the slot, a user's disable landing in the gap finds nothing to veto, and the start after it would bring back
