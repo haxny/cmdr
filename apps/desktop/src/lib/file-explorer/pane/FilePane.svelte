@@ -1474,7 +1474,7 @@
                 selectedIndices: selection.getSelectedIndices(),
                 rows: isSearchResultsView
                     ? { kind: 'snapshot', pathAt: (index) => searchSnapshot?.entries[index]?.path }
-                    : { kind: 'listing', listingId, includeHidden, hasParent },
+                    : { kind: 'listing', listingId, includeHidden, hasParent, sequence: rowState.getSequence() },
             }),
         )
     }, 100)
@@ -1570,6 +1570,7 @@
         getIncludeHidden: () => includeHidden,
         getVolumeId: () => volumeId,
         getSelectedIndices: () => Array.from(selection.selectedIndices),
+        getRowSequence: rowState.getSequence,
         getSelectedFilesTotalSize: () => contextMenuSelectionSizeBytes(selectionInfo.stats),
         onRequestFocus: () => onRequestFocus?.(),
         fetchCursorEntry: () => void selectionInfo.fetchEntry(),
@@ -1860,7 +1861,10 @@
     // is itself a trigger, so the newly-focused pane overwrites the other's push.
     $effect(() => {
         if (!isFocused) return
-        dependOn(selectionInfo.entry, caps.kind, listingId, includeHidden, hasParent, searchSnapshot)
+        // `softRefreshTick` moves on every applied diff, and with it the revision the
+        // pushed rows belong to: a stale one would refuse every service until the
+        // selection changed.
+        dependOn(selectionInfo.entry, caps.kind, listingId, includeHidden, hasParent, searchSnapshot, softRefreshTick)
         debouncedServicesSelection.call()
     })
 
@@ -2200,6 +2204,7 @@
                 bind:this={briefListRef}
                 loadingOverlay={showLoadingView ? listLoadingView : undefined}
                 listingId={listingPresentation.listingId}
+                getRowSequence={rowState.getSequence}
                 {volumeId}
                 totalCount={listingPresentation.totalCount}
                 {includeHidden}
@@ -2249,6 +2254,7 @@
                 bind:this={fullListRef}
                 loadingOverlay={showLoadingView ? listLoadingView : undefined}
                 listingId={listingPresentation.listingId}
+                getRowSequence={rowState.getSequence}
                 {volumeId}
                 totalCount={listingPresentation.totalCount}
                 {includeHidden}

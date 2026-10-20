@@ -2,7 +2,8 @@ import {
   createDirectory,
   createFile,
   getFileAt,
-  getFilesAtIndices,
+  asListingLookupError,
+  getSelectionEntries,
   trashRoutingForPaths,
   type Initiator,
 } from '#lib/tauri-commands/index.js'
@@ -13,7 +14,10 @@ import { getSnapshot, resolveSnapshotEntries, snapshotIdFromPanePath } from '#li
 import { resolveSnapshotSourceVolume } from './snapshot-source-volume'
 import { openFileViewer } from '#lib/file-viewer/open-viewer.js'
 import { getAppLogger } from '#lib/logging/logger.js'
-import { toBackendCursorIndex, toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import {
+  toBackendCursorIndex,
+  toBackendSelectionOrCursor,
+} from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 import { getInitialFolderName } from '#lib/file-operations/mkdir/new-folder-operations.js'
 import { getInitialFileName } from '#lib/file-operations/mkfile/new-file-operations.js'
 import type { CloudOnlineOnlyExtent, DeleteSourceItem } from '#lib/file-operations/delete/delete-dialog-utils.js'
@@ -24,7 +28,7 @@ import { capabilitiesFor, capabilitiesForPane } from './volume-capabilities'
 import { pathCrossesArchiveBoundary } from './archive-paths'
 import { paneOffersTrash } from './trash-availability'
 import { checkTransferDestinationGuard } from './transfer-entry'
-import { operationStartIsBlocked } from './operation-start-gate'
+import { announceRowsStillSettling, operationStartIsBlocked } from './operation-start-gate'
 import { duplicateInPlace } from './duplicate-command'
 import { openRenameAsMove } from './rename-as-move'
 import type { RenameAsMoveRequest } from './rename-flow.svelte'
@@ -522,14 +526,12 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
     const selectedIndices = sourcePaneRef?.getSelectedIndices()
     const hasSelection = selectedIndices && selectedIndices.length > 0
 
-    const backendIndices = hasSelection
-      ? toBackendIndices(selectedIndices, hasParent ?? false)
-      : (() => {
-          const cursorIndex = sourcePaneRef?.getCursorIndex()
-          const idx = toBackendCursorIndex(cursorIndex ?? -1, hasParent ?? false)
-          return idx !== null ? [idx] : []
-        })()
-    if (backendIndices.length === 0) {
+    const backendIndices = toBackendSelectionOrCursor(
+      selectedIndices ?? [],
+      sourcePaneRef?.getCursorIndex() ?? -1,
+      hasParent ?? false,
+    )
+    if (!sourcePaneRef || backendIndices.length === 0) {
       log.warn(
         'openDeleteDialog: no backendIndices (hasSelection={hasSelection}, cursorIndex={cursorIndex}, hasParent={hasParent}), bailing',
         {
@@ -541,12 +543,23 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
       return
     }
 
-    // Fetch full FileEntry data in a single batch IPC call
+    // Full entries in one batch IPC, only while the rows are still the ones the
+    // pane applied: a watcher insert above the selection renumbers them, and the
+    // old row numbers would offer to delete the neighbor.
     let entries
     try {
-      entries = await getFilesAtIndices(listingId, backendIndices, access.getShowHiddenFiles())
+      entries = await getSelectionEntries(
+        listingId,
+        access.getShowHiddenFiles(),
+        backendIndices,
+        sourcePaneRef.getLastSequence(),
+      )
     } catch (error) {
-      log.warn('openDeleteDialog: getFilesAtIndices threw, bailing. error={error}, indices={indices}', {
+      if (asListingLookupError(error)) {
+        announceRowsStillSettling(mcpRequestId)
+        return
+      }
+      log.warn('openDeleteDialog: getSelectionEntries threw, bailing. error={error}, indices={indices}', {
         error: error instanceof Error ? error.message : String(error),
         indices: backendIndices.join(','),
       })
@@ -555,7 +568,7 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
     const validEntries = entries.filter((e) => e.name !== '..')
     if (validEntries.length === 0) {
       log.warn(
-        'openDeleteDialog: no validEntries after getFilesAtIndices (got {count} {entriesNoun}, all filtered as ".." parent), bailing. backendIndices={indices}',
+        'openDeleteDialog: no validEntries after getSelectionEntries (got {count} {entriesNoun}, all filtered as ".." parent), bailing. backendIndices={indices}',
         {
           count: entries.length,
           entriesNoun: pluralize(entries.length, 'entry', 'entries'),

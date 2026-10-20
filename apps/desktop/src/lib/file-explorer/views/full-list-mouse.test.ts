@@ -45,6 +45,7 @@ function plan(overrides: Partial<RowMouseDownInput> = {}) {
     selectedIndices: new Set<number>(),
     getEntryAt: (index) => ROWS[index],
     listingId: 'listing-1',
+    rowSequence: 7,
     volumeId: 'root',
     includeHidden: false,
     hasParent: true,
@@ -132,6 +133,8 @@ describe('with a selection', () => {
         indices: [1, 2],
         includeHidden: false,
         hasParent: true,
+        // The revision the selected rows belong to travels with them.
+        expectedSequence: 7,
         sourceVolumeId: 'root',
         // The preview icon comes from the FIRST selected row, not the pressed one.
         iconId: 'icon-a.txt',

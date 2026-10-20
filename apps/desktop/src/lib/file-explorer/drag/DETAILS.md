@@ -10,22 +10,24 @@ pane-to-pane drags.
 
 ### Drag-out (initiating drags)
 
-Two backend commands, both routed through `native_drag.rs` so the pasteboard payload is identical:
+One backend command, `start_drag_paths`, routed through `native_drag.rs`, for every drag:
 
-- **Single file** → `start_drag_paths` (frontend passes the file path directly)
-- **Multi-file selection** → `start_selection_drag` (backend resolves paths from the listing cache, avoiding IPC
-  overhead for large selections)
-- **Multi-file paths-by-value** → `start_drag_paths` (the same single-file command, just with > 1 path). Used by the
-  search-results pane: `staticEntries` panes have no backend listing for `start_selection_drag` to resolve indices
-  against, but the FE already has absolute paths on each row, so we send them directly. Wired via the `PathsDragContext`
-  variant in `drag-drop.ts`; FullList picks this branch automatically when `usingStaticEntries`.
+- **Single file**: the frontend passes the row's path directly.
+- **Multi-file selection**: `performSelectionDrag` first resolves the selection's paths through the revision-checked
+  `getSelectionSnapshot`, with the pane's applied revision read on the press together with the indices (the views'
+  `getRowSequence` prop). Rows that moved since (a watcher insert above the selection) refuse the drag with the
+  rows-still-settling toast, before any drag image is written: the old row numbers would drag the neighbor, to another
+  pane or the Trash.
+- **Multi-file paths-by-value**: the search-results pane (`staticEntries`) has no backend listing to resolve rows
+  against, but the FE already has absolute paths on each row, so it sends them directly. Wired via the
+  `PathsDragContext` variant in `drag-drop.ts`; FullList picks this branch automatically when `usingStaticEntries`.
 
 Pasteboard layout is decided ONCE per drag session by the source volume's locality, never per item (a single drag can't
 mix local and virtual items — single-pane selections, single-volume panes). The locality-aware composition is a pure,
 unit-tested policy in `native_drag/type_plan.rs::plan_pasteboard_items`; `native_drag/mod.rs` is a thin executor of the
-plan. The backend derives locality from `Volume::paths_are_os_visible()`: `start_selection_drag` reads it off the
-listing's volume; `start_drag_paths` takes an optional `sourceVolumeId` (threaded from the FE drag-start path, which has
-it since the recorded-identity work; `null` defaults to local).
+plan. The backend derives locality from `Volume::paths_are_os_visible()` on the `sourceVolumeId` `start_drag_paths`
+takes (threaded from the FE drag-start path; `null` defaults to local), and from the paths themselves for a routed
+(archive, `.git` portal) session.
 
 - **Local sessions** (real local FS, OS-mounted shares, and direct SMB — the share stays mounted alongside the smb2
   session, so `file://` URLs are real) match Finder: files only, no path text, one `NSPasteboardItem` per file:
@@ -61,8 +63,8 @@ Key files:
 - `drag-out-toast.ts`: Pure `composeDragOutCompleteToast(payload)` — success counts via the shared transfer-toast
   composer, failure toast naming the file(s). Unit-tested
 - `drag-image-renderer.ts`: Canvas rendering for rich OS drag preview (retina-aware, fading edges)
-- `commands/file_system/drag.rs`: `start_drag_paths` and `start_selection_drag` Tauri commands; both hop to the AppKit
-  main thread before calling into `native_drag::start_drag`
+- `commands/file_system/drag.rs`: the `start_drag_paths` Tauri command; it hops to the AppKit main thread before calling
+  into `native_drag::start_drag`
 - `native_drag.rs`: Builds `NSPasteboardItem`s as above, wraps each in an `NSDraggingItem`, and begins the dragging
   session via a custom `CmdrDragSource` that returns the permissive op mask
 
@@ -110,9 +112,9 @@ round-trip entirely.
 - **Record (drag start).** Each `perform{SingleFile,Selection,Paths}Drag` in `drag-drop.ts` calls
   `recordSelfDragIdentity(sourceVolumeId, sourcePaths)`, storing `{ sourceVolumeId, sourcePaths, startedAt }` in module
   state. `sourcePaths` are the paths AS THE SOURCE VOLUME KNOWS THEM: the single path for a `single` drag, the
-  FE-resolved paths for a `paths` drag, and the backend-resolved paths (`get_paths_at_indices`, the SAME set the drag
-  itself uses) for a `selection` drag. `sourceVolumeId` is threaded as a prop into `FullList` / `BriefList` (`'root'`
-  for a local pane, the `mtp-*` / SMB id for a virtual one, `'search-results'` for a snapshot pane).
+  FE-resolved paths for a `paths` drag, and the revision-checked snapshot's paths (the SAME set the drag itself carries)
+  for a `selection` drag. `sourceVolumeId` is threaded as a prop into `FullList` / `BriefList` (`'root'` for a local
+  pane, the `mtp-*` / SMB id for a virtual one, `'search-results'` for a snapshot pane).
 - **Consume (drop).** `drag-drop-controller.svelte.ts::handleDrop` reads the recorded identity via
   `consumableSelfDragIdentity()` — but ONLY when `getIsDraggingFromSelf()` is true (the existing self-drag detection,
   NOT a parallel one) AND the recorded `sourceVolumeId` is a REGISTERED backend-real volume (present in `getVolumes()`).

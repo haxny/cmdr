@@ -354,8 +354,8 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   `network::config`. Behavior rationale: `media_index/DETAILS.md` § "The IPC surface".
 - **`importance.rs`**: `record_visit(Location)`, the fire-and-forget navigation-visit feeder. Gated on the volume's
   typed kind, failure-silent by contract. Rationale: `importance/DETAILS.md` § "The visit signal".
-- **`clipboard.rs`**: `copy_files_to_clipboard`, `cut_files_to_clipboard`, `copy_paths_to_clipboard` /
-  `cut_paths_to_clipboard` (paths-by-value siblings for the search-results pane, which has no backend listing),
+- **`clipboard.rs`**: `copy_paths_to_clipboard` / `cut_paths_to_clipboard` (paths by value: the frontend resolves a
+  pane selection through the revision-checked `get_selection_snapshot` first, never sends row numbers),
   `read_clipboard_files`, `clear_clipboard_cut_state`. macOS uses NSPasteboard via `clipboard::pasteboard`; non-macOS
   stubs return errors. `read_clipboard_files` returns `ClipboardReadResult { paths, is_cut, is_directory }` where
   `is_directory` is an index-aligned `Vec<Option<bool>>` from a batched off-main-thread `stat_paths_kinds_blocking`, so
@@ -481,8 +481,8 @@ frequently-changing implementation. Space-poller commands: `watch_volume_space`,
 
 ## Drag session locality
 
-`start_selection_drag` and `start_drag_paths` both run on the main thread (`run_drag_on_main_thread`) and pick a
-`DragSessionLocality` through `locality_for_volume`, keyed on `Volume::paths_are_os_visible()`. The question a drop
+`start_drag_paths` runs on the main thread (`run_drag_on_main_thread`) and picks a `DragSessionLocality` through
+`locality_for_volume`, keyed on `Volume::paths_are_os_visible()`. The question a drop
 target asks is whether a `file://` URL built from the path opens in ANOTHER app, not whether Cmdr can read it through
 `std::fs`:
 

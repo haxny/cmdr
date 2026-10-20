@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   getDestinationVolumeInfo,
-  getSelectedFilePaths,
   buildTransferPropsFromSelection,
+  buildTransferPropsFromCursor,
   buildTransferPropsFromDroppedPaths,
   buildTransferPropsFromSnapshot,
   getCommonParentPath,
   type TransferContext,
 } from './transfer-operations'
 import type { VolumeInfo } from '../types'
+import type { FilePaneAPI } from './types'
 import { ListingLookupFailure } from '#lib/tauri-commands/listing-gone.js'
 
 vi.mock('#lib/tauri-commands/index.js', async () => {
@@ -17,15 +18,14 @@ vi.mock('#lib/tauri-commands/index.js', async () => {
   )
   return {
     getListingStats: vi.fn(),
-    getPathsAtIndices: vi.fn(),
     getSelectionSnapshot: vi.fn(),
     asListingLookupError: actual.asListingLookupError,
   }
 })
-vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
-vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
+vi.mock('./operation-start-gate', () => ({ announceRowsStillSettling: vi.fn() }))
 
-const { getListingStats, getPathsAtIndices, getSelectionSnapshot } = await import('#lib/tauri-commands/index.js')
+const { getListingStats, getSelectionSnapshot } = await import('#lib/tauri-commands/index.js')
+const { announceRowsStillSettling } = await import('./operation-start-gate')
 
 describe('getDestinationVolumeInfo', () => {
   const volumes: VolumeInfo[] = [
@@ -93,24 +93,6 @@ describe('getDestinationVolumeInfo', () => {
   })
 })
 
-describe('getSelectedFilePaths', () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it('returns paths for valid files', async () => {
-    vi.mocked(getPathsAtIndices).mockResolvedValueOnce(['/p/file1.txt', '/p/file2.txt'])
-
-    expect(await getSelectedFilePaths('listing-1', [0, 1], false, false)).toEqual(['/p/file1.txt', '/p/file2.txt'])
-    expect(getPathsAtIndices).toHaveBeenCalledWith('listing-1', [0, 1], false, false)
-  })
-
-  it('passes hasParent to backend for ".." filtering', async () => {
-    vi.mocked(getPathsAtIndices).mockResolvedValueOnce(['/p/file.txt'])
-
-    expect(await getSelectedFilePaths('listing-1', [0, 1], false, true)).toEqual(['/p/file.txt'])
-    expect(getPathsAtIndices).toHaveBeenCalledWith('listing-1', [0, 1], false, true)
-  })
-})
-
 describe('buildTransferPropsFromSelection', () => {
   const context: TransferContext = {
     showHiddenFiles: false,
@@ -127,15 +109,13 @@ describe('buildTransferPropsFromSelection', () => {
   })
 
   it('refuses F5 when the selected revision changed, never resolving the same rows in a newer cache', async () => {
-    vi.mocked(getListingStats).mockResolvedValueOnce({ selectedFiles: 1 } as never)
-    vi.mocked(getPathsAtIndices).mockResolvedValueOnce(['/source/wrong-neighbor'])
     vi.mocked(getSelectionSnapshot).mockRejectedValueOnce(
       new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }),
     )
     const result = await buildTransferPropsFromSelection('copy', 'listing-1', [2], true, true, context, 7)
     expect(result).toBeNull()
     expect(getSelectionSnapshot).toHaveBeenCalledWith('listing-1', false, [1], 7)
-    expect(getPathsAtIndices).not.toHaveBeenCalled()
+    expect(announceRowsStillSettling).toHaveBeenCalledTimes(1)
   })
 
   it('returns correct props for copy selection', async () => {
@@ -154,7 +134,6 @@ describe('buildTransferPropsFromSelection', () => {
       selectedSize: null,
       selectedPhysicalSize: null,
     })
-    vi.mocked(getPathsAtIndices).mockResolvedValueOnce(['/source/file1.txt', '/source/folder'])
 
     const result = await buildTransferPropsFromSelection('copy', 'listing-1', [0, 1], false, true, context, 0)
     expect(result).toEqual({
@@ -183,10 +162,47 @@ describe('buildTransferPropsFromSelection', () => {
       selectedSize: null,
       selectedPhysicalSize: null,
     })
-    vi.mocked(getPathsAtIndices).mockResolvedValueOnce(['/source/file.txt'])
 
     const result = await buildTransferPropsFromSelection('move', 'listing-1', [0], false, true, context, 0)
     expect(result?.operationType).toBe('move')
+  })
+})
+
+describe('buildTransferPropsFromCursor', () => {
+  const context: TransferContext = {
+    showHiddenFiles: false,
+    sourcePath: '/source',
+    destPath: '/dest',
+    sourceVolumeId: 'vol-src',
+    destVolumeId: 'vol-dest',
+  }
+  const paneAt = (cursorIndex: number) =>
+    ({ getCursorIndex: () => cursorIndex, getLastSequence: () => 5 }) as unknown as FilePaneAPI
+
+  beforeEach(() => vi.clearAllMocks())
+
+  it('reads the cursor row as a backend row under the revision the pane applied', async () => {
+    vi.mocked(getSelectionSnapshot).mockResolvedValueOnce({ paths: ['/source/dir'], fileCount: 0, folderCount: 1 })
+
+    const result = await buildTransferPropsFromCursor('move', 'listing-1', paneAt(3), true, true, context)
+
+    // `..` is pane row 0, so pane row 3 is backend row 2.
+    expect(getSelectionSnapshot).toHaveBeenCalledWith('listing-1', false, [2], 5)
+    expect(result).toMatchObject({ sourcePaths: ['/source/dir'], fileCount: 0, folderCount: 1 })
+  })
+
+  it('refuses rather than moving the file that slid onto the cursor row', async () => {
+    vi.mocked(getSelectionSnapshot).mockRejectedValueOnce(
+      new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }),
+    )
+
+    expect(await buildTransferPropsFromCursor('move', 'listing-1', paneAt(3), true, true, context)).toBeNull()
+    expect(announceRowsStillSettling).toHaveBeenCalledTimes(1)
+  })
+
+  it('offers nothing with the cursor on the `..` row', async () => {
+    expect(await buildTransferPropsFromCursor('copy', 'listing-1', paneAt(0), true, true, context)).toBeNull()
+    expect(getSelectionSnapshot).not.toHaveBeenCalled()
   })
 })
 

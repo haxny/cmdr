@@ -16,16 +16,14 @@ export {
   findFirstFuzzyMatch,
   getFileAt,
   getFileBeside,
-  getPathsAtIndices,
   getSelectionSnapshot,
-  getFilesAtIndices,
+  getSelectionEntries,
   listDirectoryEnd,
   keepListingsAlive,
   setListingIncludeHidden,
   refreshListing,
   getListingStats,
   refreshListingIndexSizes,
-  startSelectionDrag,
   startDragPaths,
   prepareSelfDragOverlay,
   clearSelfDragOverlay,
@@ -830,8 +828,6 @@ export { showFunctionKeyBarContextMenu, onFunctionKeyBarHideRequested } from './
 
 // Clipboard file operations (copy/cut/paste files via system clipboard)
 export {
-  copyFilesToClipboard,
-  cutFilesToClipboard,
   copyPathsToClipboard,
   cutPathsToClipboard,
   readClipboardFiles,

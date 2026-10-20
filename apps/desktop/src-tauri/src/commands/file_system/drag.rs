@@ -5,8 +5,6 @@ use crate::file_system::volume::manager::path_routes_over_its_parent;
 #[cfg(target_os = "macos")]
 use crate::native_drag::{self, DragSessionLocality};
 #[cfg(target_os = "macos")]
-use cmdr_listing::{ListingId, ParentRow};
-#[cfg(target_os = "macos")]
 use std::path::PathBuf;
 #[cfg(target_os = "macos")]
 use std::sync::mpsc::channel;
@@ -96,56 +94,6 @@ pub fn start_drag_paths(
     _paths: Vec<String>,
     _icon_path: String,
     _source_volume_id: Option<String>,
-) -> Result<(), String> {
-    Err("Drag operation is not yet supported on this platform".to_string())
-}
-
-/// Initiates native drag from Rust directly, looking up paths from the listing cache (macOS only).
-#[cfg(target_os = "macos")]
-#[tauri::command]
-#[specta::specta]
-pub fn start_selection_drag(
-    app: tauri::AppHandle,
-    listing_id: String,
-    selected_indices: Vec<usize>,
-    include_hidden: bool,
-    has_parent: bool,
-    icon_path: String,
-) -> Result<(), String> {
-    let paths = crate::listing_host::listings()
-        .paths_at_indices(
-            &ListingId::new(listing_id.clone()),
-            &selected_indices,
-            include_hidden,
-            ParentRow::when(has_parent),
-        )
-        .map_err(|e| e.to_string())?;
-
-    if paths.is_empty() {
-        return Err("No valid files to drag".to_string());
-    }
-
-    // The listing knows its own volume, so the session's locality is derivable
-    // here without a new parameter.
-    let volume_id = crate::listing_host::listings()
-        .location(&ListingId::new(listing_id.clone()))
-        .map(|(vid, _)| vid);
-    let locality = locality_for_volume(volume_id.as_deref());
-
-    run_drag_on_main_thread(&app, paths, PathBuf::from(icon_path), locality, volume_id)
-}
-
-/// Stub for non-macOS platforms. Returns an error since drag is not yet implemented.
-#[cfg(not(target_os = "macos"))]
-#[tauri::command]
-#[specta::specta]
-pub fn start_selection_drag(
-    _app: tauri::AppHandle,
-    _listing_id: String,
-    _selected_indices: Vec<usize>,
-    _include_hidden: bool,
-    _has_parent: bool,
-    _icon_path: String,
 ) -> Result<(), String> {
     Err("Drag operation is not yet supported on this platform".to_string())
 }

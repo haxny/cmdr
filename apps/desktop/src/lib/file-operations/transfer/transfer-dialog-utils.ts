@@ -139,6 +139,22 @@ export function toBackendCursorIndex(frontendIndex: number, hasParent: boolean):
 }
 
 /**
+ * The backend rows a press acts on: the selection, else the cursor row (none on
+ * the `..` row). Row numbers in the pane's applied revision, so they reach the
+ * backend only through the revision-checked `getSelectionSnapshot` /
+ * `getSelectionEntries`, with that revision.
+ */
+export function toBackendSelectionOrCursor(
+  selectedIndices: number[],
+  cursorIndex: number,
+  hasParent: boolean,
+): number[] {
+  if (selectedIndices.length > 0) return toBackendIndices(selectedIndices, hasParent)
+  const cursor = toBackendCursorIndex(cursorIndex, hasParent)
+  return cursor === null ? [] : [cursor]
+}
+
+/**
  * Strips the volume prefix to get a volume-relative path. Always returns a
  * `/`-prefixed string, which is what the destination box's absolute-path check
  * demands.

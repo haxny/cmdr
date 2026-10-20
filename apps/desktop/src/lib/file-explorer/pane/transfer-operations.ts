@@ -1,12 +1,5 @@
-import {
-  asListingLookupError,
-  getFileAt,
-  getSelectionSnapshot,
-  getPathsAtIndices,
-  type Initiator,
-} from '#lib/tauri-commands/index.js'
-import { addToast } from '#lib/ui/toast/index.js'
-import { tString } from '#lib/intl/messages.svelte.js'
+import { asListingLookupError, getSelectionSnapshot, type Initiator } from '#lib/tauri-commands/index.js'
+import { announceRowsStillSettling } from './operation-start-gate'
 import { toBackendIndices, toBackendCursorIndex } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 import type { TransferOperationType, VolumeInfo } from '../types'
 import type { DuplicateFollowUp } from './duplicate-rename'
@@ -65,13 +58,24 @@ export interface TransferDialogPropsData {
  */
 export type TransferDialogPropsDraft = Omit<TransferDialogPropsData, 'duplicateFollowUp'>
 
-export async function getSelectedFilePaths(
+/**
+ * The rows' paths and counts, only while they're the ones the pane applied
+ * (`expectedSequence`). `null` after telling the user nothing started: the rows
+ * moved, and resolving the old row numbers in the newer rows would name other files.
+ */
+async function guardedSnapshot(
   listingId: string,
-  selectedIndices: number[],
-  showHiddenFiles: boolean,
-  hasParent: boolean,
-): Promise<string[]> {
-  return getPathsAtIndices(listingId, selectedIndices, showHiddenFiles, hasParent)
+  includeHidden: boolean,
+  backendIndices: number[],
+  expectedSequence: number,
+): Promise<{ paths: string[]; fileCount: number; folderCount: number } | null> {
+  try {
+    return await getSelectionSnapshot(listingId, includeHidden, backendIndices, expectedSequence)
+  } catch (error) {
+    if (!asListingLookupError(error)) throw error
+    announceRowsStillSettling(undefined)
+    return null
+  }
 }
 
 export async function buildTransferPropsFromSelection(
@@ -86,15 +90,8 @@ export async function buildTransferPropsFromSelection(
   const backendIndices = toBackendIndices(selectedIndices, hasParent)
   if (backendIndices.length === 0) return null
 
-  let snapshot: { paths: string[]; fileCount: number; folderCount: number }
-  try {
-    snapshot = await getSelectionSnapshot(listingId, context.showHiddenFiles, backendIndices, expectedSequence)
-  } catch (error) {
-    if (!asListingLookupError(error)) throw error
-    // Refuse rather than reinterpret old selection indices under a newer revision.
-    addToast(tString('fileExplorer.compareDirectories.keptChanging'), { level: 'warn' })
-    return null
-  }
+  const snapshot = await guardedSnapshot(listingId, context.showHiddenFiles, backendIndices, expectedSequence)
+  if (!snapshot) return null
   const sourcePaths = snapshot.paths
   if (sourcePaths.length === 0) return null
 
@@ -120,21 +117,22 @@ export async function buildTransferPropsFromCursor(
   isLeft: boolean,
   context: TransferContext,
 ): Promise<TransferDialogPropsDraft | null> {
-  const cursorIndex = paneRef?.getCursorIndex()
-  const backendIndex = toBackendCursorIndex(cursorIndex ?? -1, hasParent)
+  if (!paneRef) return null
+  const backendIndex = toBackendCursorIndex(paneRef.getCursorIndex(), hasParent)
   if (backendIndex === null) return null
 
-  const file = await getFileAt(listingId, backendIndex, context.showHiddenFiles)
-  if (!file || file.name === '..') return null
+  // The cursor row is a row number too: it resolves under the same revision guard.
+  const snapshot = await guardedSnapshot(listingId, context.showHiddenFiles, [backendIndex], paneRef.getLastSequence())
+  if (!snapshot || snapshot.paths.length === 0) return null
 
   return {
     operationType,
-    sourcePaths: [file.path],
+    sourcePaths: snapshot.paths,
     destinationPath: context.destPath,
     direction: isLeft ? 'right' : 'left',
     currentVolumeId: context.destVolumeId,
-    fileCount: file.isDirectory ? 0 : 1,
-    folderCount: file.isDirectory ? 1 : 0,
+    fileCount: snapshot.fileCount,
+    folderCount: snapshot.folderCount,
     sourceFolderPath: context.sourcePath,
     sourceVolumeId: context.sourceVolumeId,
     destVolumeId: context.destVolumeId,

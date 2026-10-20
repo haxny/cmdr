@@ -2,7 +2,7 @@
  * What a right-click on a search-results row hands the native menu.
  *
  * The snapshot pane can't reuse `pane-pointer::handleContextMenu`: that one
- * resolves the selection through `getPathsAtIndices` against a backend listing,
+ * resolves the selection through `getSelectionSnapshot` against a backend listing,
  * and a snapshot has none. The RULE is the same though, so it lives here as a
  * pure function both the view and its tests can reach.
  */

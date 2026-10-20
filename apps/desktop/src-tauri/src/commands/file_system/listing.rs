@@ -4,8 +4,8 @@ use crate::listing_host::listings;
 use cmdr_fs::entry::FileEntry;
 use cmdr_listing::{
     CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult, DirectorySortMode, FuzzyJumpError,
-    ListingId, ListingLookupError, ListingRequest, ListingStats, NameFilterResult, OnNoMatch, PaneMarks, ParentRow,
-    ResortResult, RowBeside, RowSpan, SelectionSnapshot, SortColumn, SortOrder,
+    ListingId, ListingLookupError, ListingRequest, ListingStats, NameFilterResult, OnNoMatch, PaneMarks, ResortResult,
+    RowBeside, RowSpan, SelectionSnapshot, SortColumn, SortOrder,
 };
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -341,38 +341,6 @@ pub async fn get_file_beside(
     listings().file_beside(&ListingId::new(listing_id), &name, side, include_hidden)
 }
 
-/// Gets file paths at specific frontend indices from a cached listing (batch version of path
-/// extraction). Handles the parent ".." offset internally; callers pass frontend indices.
-#[tauri::command]
-#[specta::specta]
-pub async fn get_paths_at_indices(
-    listing_id: String,
-    selected_indices: Vec<usize>,
-    include_hidden: bool,
-    has_parent: bool,
-) -> Result<Vec<String>, ListingLookupError> {
-    listings()
-        .paths_at_indices(
-            &ListingId::new(listing_id),
-            &selected_indices,
-            include_hidden,
-            ParentRow::when(has_parent),
-        )
-        .map(|paths| paths.into_iter().map(|p| p.to_string_lossy().into_owned()).collect())
-}
-
-/// Gets full FileEntry objects at specific backend indices from a cached listing.
-/// Callers are responsible for any parent offset adjustment before passing indices.
-#[tauri::command]
-#[specta::specta]
-pub async fn get_files_at_indices(
-    listing_id: String,
-    selected_indices: Vec<usize>,
-    include_hidden: bool,
-) -> Result<Vec<FileEntry>, ListingLookupError> {
-    listings().files_at_indices(&ListingId::new(listing_id), &selected_indices, include_hidden)
-}
-
 #[tauri::command]
 #[specta::specta]
 pub async fn list_directory_end(listing_id: String) {
@@ -429,6 +397,24 @@ pub async fn get_selection_snapshot(
     expected_sequence: u64,
 ) -> Result<SelectionSnapshot, ListingLookupError> {
     listings().selection_snapshot(
+        &ListingId::new(listing_id),
+        include_hidden,
+        &selected_indices,
+        expected_sequence,
+    )
+}
+
+/// The full entries on the selected rows, only while they still name the
+/// committed backend rows: the delete dialog's input.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_selection_entries(
+    listing_id: String,
+    include_hidden: bool,
+    selected_indices: Vec<usize>,
+    expected_sequence: u64,
+) -> Result<Vec<FileEntry>, ListingLookupError> {
+    listings().selection_entries(
         &ListingId::new(listing_id),
         include_hidden,
         &selected_indices,

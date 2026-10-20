@@ -7,14 +7,16 @@
  */
 
 import type { ServicesSelection } from '#lib/tauri-commands/index.js'
+import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 
 /** Where the pane keeps its rows, which decides how a selection can travel. */
 export type PaneRowSource =
   /**
    * A normal pane: rows live in the backend's listing cache, so selected rows
-   * travel as INDICES and the backend resolves them when a service asks.
+   * travel as INDICES and the backend resolves them when a service asks, only
+   * while the listing is still at `sequence`, the revision the pane applied them in.
    */
-  | { kind: 'listing'; listingId: string; includeHidden: boolean; hasParent: boolean }
+  | { kind: 'listing'; listingId: string; includeHidden: boolean; hasParent: boolean; sequence: number }
   /**
    * The search-results snapshot: its rows live here and there's no cached listing
    * to index into, so they travel as paths. An accessor rather than the whole
@@ -59,12 +61,14 @@ function selectedRows({ selectedIndices, rows }: ServicesSelectionArgs): Service
   // Mid-navigation the pane can hold indices with nothing to resolve them
   // against yet. The cursor row is the honest answer until the listing lands.
   if (!rows.listingId) return null
+  const indices = toBackendIndices([...selectedIndices], rows.hasParent)
+  if (indices.length === 0) return null
   return {
     kind: 'listing',
     listingId: rows.listingId,
-    indices: [...selectedIndices],
+    indices,
     includeHidden: rows.includeHidden,
-    hasParent: rows.hasParent,
+    sequence: rows.sequence,
   }
 }
 

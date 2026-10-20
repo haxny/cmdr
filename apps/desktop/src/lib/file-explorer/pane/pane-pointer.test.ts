@@ -21,14 +21,14 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import type { FileEntry } from '../types'
 
 const { ipc, settings, toast, background, boundCombos } = vi.hoisted<{
-  ipc: { showFileContextMenu: Mock; showParentRowContextMenu: Mock; getPathsAtIndices: Mock }
+  ipc: { showFileContextMenu: Mock; showParentRowContextMenu: Mock; getSelectionSnapshot: Mock }
   settings: { getSetting: Mock; setSetting: Mock }
   toast: { addToast: Mock }
   background: { isFileListBackgroundClick: Mock }
   /** What the registry answers here; every menu item's accelerator label comes from it. */
   boundCombos: Record<string, string>
 }>(() => ({
-  ipc: { showFileContextMenu: vi.fn(), showParentRowContextMenu: vi.fn(), getPathsAtIndices: vi.fn() },
+  ipc: { showFileContextMenu: vi.fn(), showParentRowContextMenu: vi.fn(), getSelectionSnapshot: vi.fn() },
   settings: { getSetting: vi.fn(), setSetting: vi.fn() },
   toast: { addToast: vi.fn() },
   background: { isFileListBackgroundClick: vi.fn() },
@@ -38,7 +38,7 @@ const { ipc, settings, toast, background, boundCombos } = vi.hoisted<{
 vi.mock('#lib/tauri-commands/index.js', () => ({
   showFileContextMenu: ipc.showFileContextMenu,
   showParentRowContextMenu: ipc.showParentRowContextMenu,
-  getPathsAtIndices: ipc.getPathsAtIndices,
+  getSelectionSnapshot: ipc.getSelectionSnapshot,
 }))
 vi.mock('#lib/shortcuts/index.js', () => ({ boundShortcuts: () => boundCombos }))
 vi.mock('#lib/settings/index.js', () => ({ getSetting: settings.getSetting, setSetting: settings.setSetting }))
@@ -70,6 +70,10 @@ function entryOf(over: Partial<FileEntry> = {}): FileEntry {
  */
 const sameKindOfEntry = { kind: 'sameExtension', extension: 'txt' }
 
+function snapshotOf(paths: string[]) {
+  return { paths, fileCount: paths.length, folderCount: 0 }
+}
+
 describe('createPanePointer', () => {
   let deps: PanePointerDeps
   let calls: Record<string, Mock>
@@ -86,7 +90,7 @@ describe('createPanePointer', () => {
     vi.clearAllMocks()
     ipc.showFileContextMenu.mockResolvedValue(undefined)
     ipc.showParentRowContextMenu.mockResolvedValue(undefined)
-    ipc.getPathsAtIndices.mockResolvedValue([])
+    ipc.getSelectionSnapshot.mockResolvedValue(snapshotOf([]))
     background.isFileListBackgroundClick.mockReturnValue(true)
     settings.getSetting.mockReturnValue(true)
     state = {
@@ -117,6 +121,7 @@ describe('createPanePointer', () => {
       getIncludeHidden: () => true,
       getVolumeId: () => state.volumeId,
       getSelectedIndices: () => state.selected,
+      getRowSequence: () => 9,
       getSelectedFilesTotalSize: () => state.selectedFilesTotalSize,
       onRequestFocus: calls.onRequestFocus,
       fetchCursorEntry: calls.fetchCursorEntry,
@@ -164,7 +169,7 @@ describe('createPanePointer', () => {
   describe('the context menu', () => {
     it('acts on the whole selection when the right-clicked row is part of it', async () => {
       state.selected = [1, 2]
-      ipc.getPathsAtIndices.mockResolvedValue(['/dir/a.txt', '/dir/b.txt'])
+      ipc.getSelectionSnapshot.mockResolvedValue(snapshotOf(['/dir/a.txt', '/dir/b.txt']))
       await createPanePointer(deps).handleContextMenu(entryOf())
       expect(ipc.showFileContextMenu).toHaveBeenCalledWith(
         '/dir/a.txt',
@@ -186,9 +191,16 @@ describe('createPanePointer', () => {
       )
     })
 
+    it('reads the selection in backend rows, against the revision the pane applied it in', async () => {
+      // `..` is pane row 0, so pane rows 1 and 2 are backend rows 0 and 1.
+      state.selected = [1, 2]
+      await createPanePointer(deps).handleContextMenu(entryOf())
+      expect(ipc.getSelectionSnapshot).toHaveBeenCalledWith('listing-1', true, [0, 1], 9)
+    })
+
     it('acts on the one entry when the right-clicked row is outside the selection', async () => {
       state.selected = [7]
-      ipc.getPathsAtIndices.mockResolvedValue(['/dir/other.txt'])
+      ipc.getSelectionSnapshot.mockResolvedValue(snapshotOf(['/dir/other.txt']))
       await createPanePointer(deps).handleContextMenu(entryOf())
       expect(ipc.showFileContextMenu).toHaveBeenCalledWith(
         '/dir/a.txt',
@@ -212,7 +224,7 @@ describe('createPanePointer', () => {
 
     it('falls back to the single entry when the selection lookup throws', async () => {
       state.selected = [1]
-      ipc.getPathsAtIndices.mockRejectedValue(new Error('gone'))
+      ipc.getSelectionSnapshot.mockRejectedValue(new Error('gone'))
       await createPanePointer(deps).handleContextMenu(entryOf())
       expect(ipc.showFileContextMenu).toHaveBeenCalledWith(
         '/dir/a.txt',
@@ -355,7 +367,7 @@ describe('createPanePointer', () => {
       // Sends nothing but the anchor differently from a right-click: the
       // selection-vs-row rule below it is the same code for both.
       state.selected = [1, 2]
-      ipc.getPathsAtIndices.mockResolvedValue(['/dir/a.txt', '/dir/b.txt'])
+      ipc.getSelectionSnapshot.mockResolvedValue(snapshotOf(['/dir/a.txt', '/dir/b.txt']))
       await createPanePointer(deps).handleContextMenu(entryOf(), { x: 116, y: 240 })
       expect(ipc.showFileContextMenu.mock.calls[0][4]).toEqual({
         listingId: 'listing-1',
@@ -392,7 +404,7 @@ describe('createPanePointer', () => {
     it('sends the selection total when the click landed inside the selection', async () => {
       state.selected = [1, 2]
       state.selectedFilesTotalSize = 3_355_443
-      ipc.getPathsAtIndices.mockResolvedValue(['/dir/a.txt', '/dir/b.txt'])
+      ipc.getSelectionSnapshot.mockResolvedValue(snapshotOf(['/dir/a.txt', '/dir/b.txt']))
       await createPanePointer(deps).handleContextMenu(entryOf({ size: 2_100_000 }))
       // The total, never the clicked row's own size: the menu acts on all of them.
       expect(targetArg()).toEqual({ countText: '2 items', sizeText: '3.36 MB' })
@@ -406,7 +418,7 @@ describe('createPanePointer', () => {
     it("sends no size when the pane can't total the selection honestly", async () => {
       state.selected = [1, 2]
       state.selectedFilesTotalSize = null
-      ipc.getPathsAtIndices.mockResolvedValue(['/dir/a.txt', '/dir/b.txt'])
+      ipc.getSelectionSnapshot.mockResolvedValue(snapshotOf(['/dir/a.txt', '/dir/b.txt']))
       await createPanePointer(deps).handleContextMenu(entryOf({ size: 2_100_000 }))
       // ❌ Never the clicked row's size as a stand-in: it would read as the total.
       expect(targetArg()).toEqual({ countText: '2 items', sizeText: undefined })

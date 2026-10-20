@@ -3,7 +3,7 @@
 //
 // ## macOS timing invariant
 //
-// `startDragPaths()` / `startSelectionDrag()` resolve BEFORE macOS delivers
+// `startDragPaths()` resolves BEFORE macOS delivers
 // `draggingEntered:`/`draggingExited:` events to the webview. Any state that the native
 // swizzle reads (SELF_DRAG_ACTIVE, rich image path) must NOT be cleared from JS code
 // that runs after the start call resolves; it would race with the AppKit callbacks.
@@ -11,22 +11,24 @@
 //
 // ## Pasteboard types
 //
-// Both backend commands route through `native_drag.rs`, which advertises both
-// `public.file-url` AND `public.utf8-plain-text` so terminals like Warp receive
-// shell-escaped paths as text. The crabnebula plugin only advertised file URLs,
-// which terminals don't subscribe to.
+// Every drag goes through `start_drag_paths` and `native_drag.rs`, which decides
+// the pasteboard layout once per session from the source volume's locality
+// (`native_drag/type_plan.rs`). A selection drag resolves its paths first, through
+// the revision-checked `getSelectionSnapshot`.
 
 import { tempDir, join } from '@tauri-apps/api/path'
 import { getCachedIcon } from '#lib/icon-cache.js'
 import {
-  startSelectionDrag,
+  asListingLookupError,
+  getSelectionSnapshot,
   startDragPaths,
   prepareSelfDragOverlay,
   clearSelfDragOverlay,
   setSelfDragResolvedOperation,
-  getPathsAtIndices,
 } from '#lib/tauri-commands/index.js'
 import { getSetting } from '#lib/settings/settings-store.js'
+import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import { announceRowsStillSettling } from '../pane/operation-start-gate'
 import { cancelClickToRename } from '../rename/rename-activation'
 import { renderDragImage } from './drag-image-renderer'
 
@@ -72,9 +74,16 @@ interface SingleFileDragContext {
 interface SelectionDragContext {
   type: 'selection'
   listingId: string
+  /** The pane's selected rows (`..` offset included when `hasParent`). */
   indices: number[]
   includeHidden: boolean
   hasParent: boolean
+  /**
+   * The pane's applied listing revision, read together with `indices` on the press.
+   * The paths resolve only against it: a watcher insert above the selection
+   * renumbers the rows, and the old numbers would drag the neighbor.
+   */
+  expectedSequence: number
   /** Volume id of the pane this drag originates from (for the self-drag identity). */
   sourceVolumeId: SourceVolumeId
   /** Icon ID to use for the drag preview (first selected file) */
@@ -86,8 +95,7 @@ interface SelectionDragContext {
 /**
  * Context for a multi-path drag where the frontend already has resolved
  * absolute paths. Used by the search-results pane, which has no backend
- * listing for `start_selection_drag` to resolve indices against. Routes
- * through `start_drag_paths` instead.
+ * listing to resolve rows against, so the paths travel as they are.
  */
 interface PathsDragContext {
   type: 'paths'
@@ -494,30 +502,35 @@ async function performSingleFileDrag(
 }
 
 /**
- * Performs a selection-based drag operation via the backend.
- * This avoids transferring file paths over IPC for large selections.
+ * Performs a selection-based drag: resolves the selection's paths under the
+ * revision guard, then drags exactly those. Rows that moved since the pane
+ * applied them refuse the drag rather than handing it the neighbor, before any
+ * drag image is written.
  * Uses the rich PNG as the OS drag image (visible outside, hidden inside by native swizzle).
  */
 async function performSelectionDrag(context: SelectionDragContext): Promise<void> {
+  let sourcePaths: string[]
+  try {
+    const snapshot = await getSelectionSnapshot(
+      context.listingId,
+      context.includeHidden,
+      toBackendIndices(context.indices, context.hasParent),
+      context.expectedSequence,
+    )
+    sourcePaths = snapshot.paths
+  } catch (error) {
+    if (!asListingLookupError(error)) throw error
+    announceRowsStillSettling(undefined)
+    return
+  }
+  if (sourcePaths.length === 0) return
+
   const resolved = await resolveDragIconPath(context.iconId, context.fileInfos)
   if (!resolved) return
 
-  // Record the true identity. The backend resolves the selection's paths from
-  // the listing cache for the drag itself; we resolve the SAME set here (same
-  // IPC, `get_paths_at_indices`) so the recorded identity carries the paths as
-  // the source volume knows them. On failure we leave the identity unrecorded —
-  // the drop then falls back to the resolver, which is the honest degrade.
-  try {
-    const sourcePaths = await getPathsAtIndices(
-      context.listingId,
-      context.indices,
-      context.includeHidden,
-      context.hasParent,
-    )
-    recordSelfDragIdentity(context.sourceVolumeId, sourcePaths)
-  } catch {
-    clearSelfDragIdentity()
-  }
+  // The recorded identity is the dragged set itself: the paths as the source
+  // volume knows them, for our own drop to build its transfer from.
+  recordSelfDragIdentity(context.sourceVolumeId, sourcePaths)
 
   // Store cleanup for later; the temp file must survive the entire drag session
   pendingImageCleanup = resolved.usedCanvas ? cleanupTempDragImage : cleanupTempIcon
@@ -530,14 +543,12 @@ async function performSelectionDrag(context: SelectionDragContext): Promise<void
 
   // Don't reset draggingFromSelf after startDrag; see performSingleFileDrag comment.
   draggingFromSelf = true
-  await startSelectionDrag(context.listingId, context.indices, context.includeHidden, context.hasParent, resolved.path)
+  await startDragPaths(sourcePaths, resolved.path, context.sourceVolumeId)
 }
 
 /**
  * Performs a paths-by-value drag. The search-results pane uses this because
- * it has no backend listing for `start_selection_drag` to resolve indices
- * against. `start_drag_paths` is the same Tauri command used for single-file
- * drags; it just accepts >1 path.
+ * it has no backend listing to resolve rows against.
  */
 async function performPathsDrag(context: PathsDragContext): Promise<void> {
   if (context.paths.length === 0) return

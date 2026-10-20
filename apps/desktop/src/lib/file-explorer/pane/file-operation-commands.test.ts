@@ -7,10 +7,14 @@ import type { TransferOperationType } from '../types'
 // harness stay free of a `vi.hoisted` block.
 vi.mock('#lib/tauri-commands/index.js', async () => {
   const { spies } = await import('./file-operation-commands.test-harness')
+  const { asListingLookupError } = await vi.importActual<typeof import('#lib/tauri-commands/listing-gone.js')>(
+    '#lib/tauri-commands/listing-gone.js',
+  )
   return {
     DEFAULT_VOLUME_ID: 'root',
+    asListingLookupError,
     getFileAt: spies.getFileAt,
-    getFilesAtIndices: spies.getFilesAtIndices,
+    getSelectionEntries: spies.getSelectionEntries,
     trashRoutingForPaths: spies.trashRoutingForPaths,
   }
 })
@@ -87,7 +91,7 @@ import {
 
 const {
   getFileAt: getFileAtSpy,
-  getFilesAtIndices: getFilesAtIndicesSpy,
+  getSelectionEntries: getSelectionEntriesSpy,
   openFileViewer: openFileViewerSpy,
   getInitialFolderName: getInitialFolderNameSpy,
   getInitialFileName: getInitialFileNameSpy,
@@ -673,7 +677,7 @@ describe('openDeleteDialog', () => {
     // archive. Even with the trash preselect (F8, `permanent: false`) and a
     // trash-capable parent drive, the confirm forces permanent, drops trash, and
     // sets the archive flag so the dialog shows the archive warning.
-    getFilesAtIndicesSpy.mockResolvedValue([fileEntry({ name: 'inner.txt' })])
+    getSelectionEntriesSpy.mockResolvedValue([fileEntry({ name: 'inner.txt' })])
     const access = buildAccess({
       paneRefs: { left: buildPaneRef({ listingId: 'lst-1', selectedIndices: [0] }) },
       volumes: [volume({ supportsTrash: true })],
@@ -693,7 +697,7 @@ describe('openDeleteDialog', () => {
   })
 
   it('deletes the selection (hasSelection branch) and is not flagged as from-cursor', async () => {
-    getFilesAtIndicesSpy.mockResolvedValue([fileEntry({ name: 'a.txt' }), fileEntry({ name: 'b.txt' })])
+    getSelectionEntriesSpy.mockResolvedValue([fileEntry({ name: 'a.txt' }), fileEntry({ name: 'b.txt' })])
     const paneRef = buildPaneRef({ listingId: 'lst-1', selectedIndices: [1, 2], hasParent: true })
     const access = buildAccess({
       paneRefs: { left: paneRef },
@@ -714,7 +718,7 @@ describe('openDeleteDialog', () => {
   })
 
   it('deletes the cursor item (no-selection branch) flagged as from-cursor', async () => {
-    getFilesAtIndicesSpy.mockResolvedValue([fileEntry({ name: 'cur.txt' })])
+    getSelectionEntriesSpy.mockResolvedValue([fileEntry({ name: 'cur.txt' })])
     const paneRef = buildPaneRef({ listingId: 'lst-1', selectedIndices: [], cursorIndex: 3 })
     const access = buildAccess({ paneRefs: { left: paneRef }, volumes: [volume()] })
     const dialogs = buildDialogs()
@@ -725,7 +729,7 @@ describe('openDeleteDialog', () => {
   })
 
   it('looks up supportsTrash from the source volume', async () => {
-    getFilesAtIndicesSpy.mockResolvedValue([fileEntry()])
+    getSelectionEntriesSpy.mockResolvedValue([fileEntry()])
     const paneRef = buildPaneRef({ listingId: 'lst-1', selectedIndices: [0] })
     const access = buildAccess({
       paneRefs: { left: paneRef },
@@ -738,8 +742,8 @@ describe('openDeleteDialog', () => {
     expect(dialogs.showDeleteConfirmation.mock.calls[0][0]).toMatchObject({ supportsTrash: false })
   })
 
-  it('bails when getFilesAtIndices throws', async () => {
-    getFilesAtIndicesSpy.mockRejectedValue(new Error('boom'))
+  it('bails when getSelectionEntries throws something other than a listing refusal', async () => {
+    getSelectionEntriesSpy.mockRejectedValue(new Error('boom'))
     const paneRef = buildPaneRef({ listingId: 'lst-1', selectedIndices: [0] })
     const access = buildAccess({ paneRefs: { left: paneRef }, volumes: [volume()] })
     const dialogs = buildDialogs()
@@ -750,12 +754,44 @@ describe('openDeleteDialog', () => {
   })
 
   it('bails when all fetched entries are the parent ".." entry', async () => {
-    getFilesAtIndicesSpy.mockResolvedValue([fileEntry({ name: '..' })])
+    getSelectionEntriesSpy.mockResolvedValue([fileEntry({ name: '..' })])
     const paneRef = buildPaneRef({ listingId: 'lst-1', selectedIndices: [0] })
     const access = buildAccess({ paneRefs: { left: paneRef }, volumes: [volume()] })
     const dialogs = buildDialogs()
 
     await create(access, dialogs).openDeleteDialog({ permanent: false })
+
+    expect(dialogs.showDeleteConfirmation).not.toHaveBeenCalled()
+  })
+})
+
+/** A watcher insert above the selection, landing between the pane applying its
+ *  rows and F8: the old row numbers now name the neighbor (`moved-listing.test-fixtures.ts`). */
+describe('openDeleteDialog when the rows moved under the press', () => {
+  async function pressDeleteOverMovedRows(pane: { selectedIndices: number[]; cursorIndex?: number }) {
+    const moved = await import('./moved-listing.test-fixtures')
+    getSelectionEntriesSpy.mockImplementation(moved.selectionEntries)
+    const paneRef = buildPaneRef({ listingId: moved.MOVED_LISTING_ID, ...pane })
+    const access = buildAccess({ paneRefs: { left: paneRef }, volumes: [volume()] })
+    const dialogs = buildDialogs()
+    await create(access, dialogs).openDeleteDialog({ permanent: true })
+    return dialogs
+  }
+
+  it('refuses rather than offering to delete the file that slid onto the selected row', async () => {
+    const { SELECTED_ROW } = await import('./moved-listing.test-fixtures')
+    const dialogs = await pressDeleteOverMovedRows({ selectedIndices: [SELECTED_ROW] })
+
+    expect(dialogs.showDeleteConfirmation).not.toHaveBeenCalled()
+    expect(spies.addToast).toHaveBeenCalledWith(
+      'The list here is still updating, so nothing started. Try again in a moment.',
+      { level: 'info' },
+    )
+  })
+
+  it('refuses the cursor row the same way when nothing is selected', async () => {
+    const { SELECTED_ROW } = await import('./moved-listing.test-fixtures')
+    const dialogs = await pressDeleteOverMovedRows({ selectedIndices: [], cursorIndex: SELECTED_ROW })
 
     expect(dialogs.showDeleteConfirmation).not.toHaveBeenCalled()
   })
@@ -776,7 +812,7 @@ describe('openDeleteDialog in a cloud-storage folder', () => {
   }
 
   beforeEach(() => {
-    getFilesAtIndicesSpy.mockResolvedValue([cloudEntry('a.pkg'), cloudEntry('b.pkg')])
+    getSelectionEntriesSpy.mockResolvedValue([cloudEntry('a.pkg'), cloudEntry('b.pkg')])
   })
 
   it('turns F8 into the permanent delete, and says why', async () => {

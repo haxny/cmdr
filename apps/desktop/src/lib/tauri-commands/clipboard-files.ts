@@ -13,34 +13,10 @@ export interface ClipboardReadResult {
   isDirectory: (boolean | null)[]
 }
 
-export async function copyFilesToClipboard(
-  listingId: string,
-  selectedIndices: number[],
-  cursorIndex: number,
-  hasParent: boolean,
-  includeHidden: boolean,
-): Promise<number> {
-  const res = await commands.copyFilesToClipboard(listingId, selectedIndices, cursorIndex, hasParent, includeHidden)
-  if (res.status === 'error') throwIpcError(res.error)
-  return res.data
-}
-
-export async function cutFilesToClipboard(
-  listingId: string,
-  selectedIndices: number[],
-  cursorIndex: number,
-  hasParent: boolean,
-  includeHidden: boolean,
-): Promise<number> {
-  const res = await commands.cutFilesToClipboard(listingId, selectedIndices, cursorIndex, hasParent, includeHidden)
-  if (res.status === 'error') throwIpcError(res.error)
-  return res.data
-}
-
 /**
- * Writes the given paths to the system clipboard as a copy. Paths-by-value
- * sibling of `copyFilesToClipboard`, used by the search-results pane where
- * there's no backend listing to resolve indices against.
+ * Writes the given paths to the system clipboard as a copy. Paths by value: a
+ * pane's selection is resolved through the revision-checked
+ * `getSelectionSnapshot` first, never sent as row numbers.
  */
 export async function copyPathsToClipboard(paths: string[]): Promise<number> {
   const res = await commands.copyPathsToClipboard(paths)
@@ -48,10 +24,7 @@ export async function copyPathsToClipboard(paths: string[]): Promise<number> {
   return res.data
 }
 
-/**
- * Writes the given paths to the system clipboard and marks them as cut.
- * Paths-by-value sibling of `cutFilesToClipboard`.
- */
+/** Writes the given paths to the system clipboard and marks them as cut. */
 export async function cutPathsToClipboard(paths: string[]): Promise<number> {
   const res = await commands.cutPathsToClipboard(paths)
   if (res.status === 'error') throwIpcError(res.error)

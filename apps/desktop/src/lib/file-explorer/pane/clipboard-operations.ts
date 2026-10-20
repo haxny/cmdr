@@ -1,6 +1,6 @@
 import {
-  copyFilesToClipboard,
-  cutFilesToClipboard,
+  asListingLookupError,
+  getSelectionSnapshot,
   copyPathsToClipboard,
   cutPathsToClipboard,
   readClipboardFiles,
@@ -19,9 +19,10 @@ import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { TransferOperationType } from '../types'
 import { getCommonParentPath } from './transfer-operations'
 import { checkTransferDestinationGuard, resolveSourceVolumeId } from './transfer-entry'
-import { operationStartIsBlocked } from './operation-start-gate'
+import { announceRowsStillSettling, operationStartIsBlocked } from './operation-start-gate'
 import { capabilitiesFor, capabilitiesForPane } from './volume-capabilities'
 import { pasteClipboardContentAsFile } from './paste-clipboard-as-file'
+import { toBackendSelectionOrCursor } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 import type { createDialogState } from './dialog-state.svelte'
 import type { PaneAccess } from './pane-access'
 
@@ -176,15 +177,43 @@ export function createClipboardOperations(access: PaneAccess, dialogs: DialogSta
   function getClipboardPaneState() {
     const sourcePaneRef = access.getPaneRef(access.getFocusedPane())
     const listingId = sourcePaneRef?.getListingId()
-    if (!listingId) return null
+    if (!sourcePaneRef || !listingId) return null
 
-    const hasParent = sourcePaneRef?.hasParentEntry() ?? false
-    const selectedIndices = sourcePaneRef?.getSelectedIndices() ?? []
-    const cursorIndex = sourcePaneRef?.getCursorIndex() ?? 0
+    // The rows and the revision they belong to, read together at dispatch.
+    const rows = toBackendSelectionOrCursor(
+      sourcePaneRef.getSelectedIndices(),
+      sourcePaneRef.getCursorIndex(),
+      sourcePaneRef.hasParentEntry(),
+    )
+    const expectedSequence = sourcePaneRef.getLastSequence()
     const volumeId = access.getPaneVolumeId(access.getFocusedPane())
     const path = access.getPanePath(access.getFocusedPane())
 
-    return { listingId, hasParent, selectedIndices, cursorIndex, volumeId, path }
+    return { listingId, rows, expectedSequence, volumeId, path }
+  }
+
+  /**
+   * The paths a copy or cut puts on the clipboard: the selection, else the cursor
+   * row, read only while the rows are the ones the pane applied. A watcher insert
+   * above them renumbers the rows, and the old numbers would put the neighbor on
+   * the clipboard (and move it on the next paste, for a cut). `null` means nothing
+   * goes on the clipboard, announced when the rows moved.
+   */
+  async function readClipboardSourcePaths(state: NonNullable<ReturnType<typeof getClipboardPaneState>>) {
+    if (state.rows.length === 0) return null
+    try {
+      const snapshot = await getSelectionSnapshot(
+        state.listingId,
+        access.getShowHiddenFiles(),
+        state.rows,
+        state.expectedSequence,
+      )
+      return snapshot.paths.length > 0 ? snapshot.paths : null
+    } catch (error) {
+      if (!asListingLookupError(error)) throw error
+      announceRowsStillSettling(undefined)
+      return null
+    }
   }
 
   /**
@@ -298,13 +327,9 @@ export function createClipboardOperations(access: PaneAccess, dialogs: DialogSta
     }
 
     try {
-      const count = await copyFilesToClipboard(
-        state.listingId,
-        state.selectedIndices,
-        state.cursorIndex,
-        state.hasParent,
-        access.getShowHiddenFiles(),
-      )
+      const paths = await readClipboardSourcePaths(state)
+      if (!paths) return
+      const count = await copyPathsToClipboard(paths)
       addToast(tString('fileExplorer.clipboard.copied', { countText: formatNumber(count), count }), { level: 'info' })
     } catch (error) {
       log.error('Clipboard copy failed: {error}', { error })
@@ -347,13 +372,9 @@ export function createClipboardOperations(access: PaneAccess, dialogs: DialogSta
     }
 
     try {
-      const count = await cutFilesToClipboard(
-        state.listingId,
-        state.selectedIndices,
-        state.cursorIndex,
-        state.hasParent,
-        access.getShowHiddenFiles(),
-      )
+      const paths = await readClipboardSourcePaths(state)
+      if (!paths) return
+      const count = await cutPathsToClipboard(paths)
       addToast(tString('fileExplorer.clipboard.cutReady', { countText: formatNumber(count), count }), {
         level: 'info',
       })

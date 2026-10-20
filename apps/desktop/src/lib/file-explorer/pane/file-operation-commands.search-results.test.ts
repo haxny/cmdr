@@ -10,7 +10,6 @@ vi.mock('#lib/tauri-commands/index.js', async () => {
   return {
     DEFAULT_VOLUME_ID: 'root',
     getFileAt: spies.getFileAt,
-    getFilesAtIndices: spies.getFilesAtIndices,
     trashRoutingForPaths: spies.trashRoutingForPaths,
   }
 })

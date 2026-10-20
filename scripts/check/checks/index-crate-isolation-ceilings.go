@@ -316,15 +316,14 @@ var surfaceGuardedCrates = []struct {
 		// `pub(crate)` and reach a host only through `host`'s re-exports, which is
 		// what `SubsystemItems` counts. `testing` is gated and counts apart.
 		//
-		// `RootPromises` rose 33 → 36 at the conformance review for `RowSpan`,
-		// `ParentRow`, and `OnNoMatch`: named argument types that replaced
-		// confusable positional `usize` / `bool` pairs on `file_range`,
-		// `paths_at_indices`, and `set_name_filter_guarded`.
+		// `RowSpan` and `OnNoMatch` are named argument types that replaced
+		// confusable positional `usize` / `bool` pairs on `file_range` and
+		// `set_name_filter_guarded`.
 		Name:       "cmdr-listing",
 		HandleType: "Listings",
 		Ceilings: surfaceCeilings{
-			RootPromises:   36,
-			HandleMethods:  47,
+			RootPromises:   35,
+			HandleMethods:  46,
 			PublicModules:  1,
 			SubsystemItems: 20,
 		},

@@ -312,9 +312,10 @@ result; the helper's own warning is enough for them. ❌ Don't "fix" this by com
 fixture path instead — trailing slashes, case-insensitive HFS+, and symlinked paths all make that comparison wrong in
 ways that would silently disable working rows.
 
-The same pass fetches real entries via `getFilesAtIndices` (backend indices, so the synthetic `..` row can't reach a
-fixture), which is where delete's items and transfer's sources come from. That's why `fixtures/disk.ts` holds BUILDERS
-rather than data: names, sizes, and folder flags come off the disk, not out of a literal.
+The same pass fetches real entries via `getFileRange` over the listing's first rows (backend rows, so the synthetic `..`
+row can't reach a fixture), which is where delete's items and transfer's sources come from. That's why
+`fixtures/disk.ts` holds BUILDERS rather than data: names, sizes, and folder flags come off the disk, not out of a
+literal.
 
 **Correct safety story** (the intuitive one is backwards): `DeleteDialog` and `TransferDialog` take `onConfirm` as a
 PROP and perform nothing themselves, so a gallery no-op is harmless wherever they point. `NewFolderDialog` calls

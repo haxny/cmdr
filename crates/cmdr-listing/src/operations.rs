@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 #[cfg(test)]
 use std::path::Path;
-use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 #[cfg(test)]
 use uuid::Uuid;
@@ -19,6 +18,7 @@ use crate::cached_listing::CachedListing;
 #[cfg(test)]
 use crate::pipeline::ReadBy;
 use crate::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use crate::visible_rows::VisibleRows;
 #[cfg(test)]
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::FileEntry;
@@ -418,56 +418,6 @@ impl Inner {
             result
         })
     }
-
-    /// Gets file paths at specific indices from a cached listing.
-    ///
-    /// Optimized for drag operations where we only need paths, not full FileEntry objects.
-    pub(crate) fn get_paths_at_indices(
-        &self,
-        listing_id: &str,
-        selected_indices: &[usize],
-        include_hidden: bool,
-        parent_row: ParentRow,
-    ) -> Result<Vec<PathBuf>, ListingLookupError> {
-        self.with_listing(listing_id, |listing| {
-            let rows = listing.rows(include_hidden);
-            let mut paths = Vec::with_capacity(selected_indices.len());
-            for &frontend_idx in selected_indices {
-                // The pane's `..` row names no entry; every row below it sits one
-                // below the listing's.
-                let backend_idx = match parent_row {
-                    ParentRow::Shown if frontend_idx == 0 => continue,
-                    ParentRow::Shown => frontend_idx - 1,
-                    ParentRow::Absent => frontend_idx,
-                };
-
-                if let Some(entry) = rows.get(backend_idx) {
-                    paths.push(PathBuf::from(&entry.path));
-                }
-            }
-            paths
-        })
-    }
-
-    /// Gets full FileEntry objects at specific backend indices from a cached listing.
-    ///
-    /// Unlike `get_paths_at_indices` (which takes frontend indices and handles the parent offset),
-    /// this takes backend indices directly. The caller is responsible for any offset adjustment.
-    /// Used by the delete dialog where full entry metadata (name, size, isDirectory, etc.) is needed.
-    pub(crate) fn get_files_at_indices(
-        &self,
-        listing_id: &str,
-        selected_indices: &[usize],
-        include_hidden: bool,
-    ) -> Result<Vec<FileEntry>, ListingLookupError> {
-        self.with_listing(listing_id, |listing| {
-            let rows = listing.rows(include_hidden);
-            selected_indices
-                .iter()
-                .filter_map(|&idx| rows.get(idx).cloned())
-                .collect::<Vec<FileEntry>>()
-        })
-    }
 }
 
 // ============================================================================
@@ -494,24 +444,6 @@ pub struct RowSpan {
     pub start: usize,
     /// How many rows, at most.
     pub count: usize,
-}
-
-/// Whether the pane numbers a `..` row at the top of its rows, which the
-/// listing doesn't hold.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ParentRow {
-    /// The pane's row 0 is `..`: it names no entry, and every other row sits
-    /// one below the listing's.
-    Shown,
-    /// The pane's rows are the listing's.
-    Absent,
-}
-
-impl ParentRow {
-    /// [`Self::Shown`] when `shown`, for a caller holding the pane's flag.
-    pub fn when(shown: bool) -> Self {
-        if shown { Self::Shown } else { Self::Absent }
-    }
 }
 
 /// Result of re-sorting a directory listing.
@@ -652,13 +584,17 @@ pub struct SelectionSnapshot {
 }
 
 impl Inner {
-    pub(crate) fn get_selection_snapshot(
+    /// Runs `read` over the pane's rows only while they are the committed ones:
+    /// the revision the pane applied (`expected_sequence`) and its own
+    /// hidden-files setting. Every selected-row read goes through here, because a
+    /// watcher insert renumbers rows and the old row numbers would name other files.
+    fn with_guarded_pane_rows<R>(
         &self,
         listing_id: &str,
         include_hidden: bool,
-        selected_indices: &[usize],
         expected_sequence: u64,
-    ) -> Result<SelectionSnapshot, ListingLookupError> {
+        read: impl FnOnce(&VisibleRows<'_>) -> Result<R, ListingLookupError>,
+    ) -> Result<R, ListingLookupError> {
         let cache = self.reconciled_cache(&[listing_id]);
         let listing = cache
             .get(listing_id)
@@ -667,23 +603,58 @@ impl Inner {
         if listing.include_hidden() != include_hidden {
             return Err(ListingLookupError::changed(listing_id));
         }
-        let rows = listing.pane_rows();
-        let mut snapshot = SelectionSnapshot {
-            paths: Vec::new(),
-            file_count: 0,
-            folder_count: 0,
-        };
-        for &row in selected_indices {
-            let entry = rows.get(row).ok_or_else(|| ListingLookupError::changed(listing_id))?;
-            snapshot.paths.push(entry.path.clone());
-            if entry.is_directory {
-                snapshot.folder_count += 1;
-            } else {
-                snapshot.file_count += 1;
-            }
-        }
+        let result = read(&listing.pane_rows())?;
         listing.touch();
-        Ok(snapshot)
+        Ok(result)
+    }
+
+    /// The entries on the selected rows, in selection order. A row past the end
+    /// refuses the whole read: it can only mean the rows moved under the caller.
+    fn guarded_selected_rows<'a>(
+        listing_id: &str,
+        rows: &VisibleRows<'a>,
+        selected: &[usize],
+    ) -> Result<Vec<&'a FileEntry>, ListingLookupError> {
+        selected
+            .iter()
+            .map(|&row| rows.get(row).ok_or_else(|| ListingLookupError::changed(listing_id)))
+            .collect()
+    }
+
+    pub(crate) fn get_selection_snapshot(
+        &self,
+        listing_id: &str,
+        include_hidden: bool,
+        selected_indices: &[usize],
+        expected_sequence: u64,
+    ) -> Result<SelectionSnapshot, ListingLookupError> {
+        self.with_guarded_pane_rows(listing_id, include_hidden, expected_sequence, |rows| {
+            let entries = Self::guarded_selected_rows(listing_id, rows, selected_indices)?;
+            let folder_count = entries.iter().filter(|entry| entry.is_directory).count();
+            Ok(SelectionSnapshot {
+                file_count: entries.len() - folder_count,
+                folder_count,
+                paths: entries.into_iter().map(|entry| entry.path.clone()).collect(),
+            })
+        })
+    }
+
+    /// The full entries on the selected rows, under the same guard as
+    /// [`get_selection_snapshot`](Self::get_selection_snapshot): the delete
+    /// dialog's input, which shows names, sizes, and kinds.
+    pub(crate) fn get_selection_entries(
+        &self,
+        listing_id: &str,
+        include_hidden: bool,
+        selected_indices: &[usize],
+        expected_sequence: u64,
+    ) -> Result<Vec<FileEntry>, ListingLookupError> {
+        self.with_guarded_pane_rows(listing_id, include_hidden, expected_sequence, |rows| {
+            Ok(Self::guarded_selected_rows(listing_id, rows, selected_indices)?
+                .into_iter()
+                .cloned()
+                .collect())
+        })
     }
 
     /// The names on the selected rows (every row with `None`), only while the
@@ -695,28 +666,15 @@ impl Inner {
         selected: Option<&[usize]>,
         expected_sequence: u64,
     ) -> Result<Vec<String>, ListingLookupError> {
-        let cache = self.reconciled_cache(&[listing_id]);
-        let listing = cache
-            .get(listing_id)
-            .ok_or_else(|| ListingLookupError::gone(listing_id))?;
-        check_expected(listing_id, listing, Some(expected_sequence))?;
-        if listing.include_hidden() != include_hidden {
-            return Err(ListingLookupError::changed(listing_id));
-        }
-        let rows = listing.pane_rows();
-        let names = match selected {
-            Some(selected) => selected
-                .iter()
-                .map(|&row| {
-                    rows.get(row)
-                        .map(|entry| entry.name.clone())
-                        .ok_or_else(|| ListingLookupError::changed(listing_id))
-                })
-                .collect::<Result<_, _>>()?,
-            None => rows.iter().map(|entry| entry.name.clone()).collect(),
-        };
-        listing.touch();
-        Ok(names)
+        self.with_guarded_pane_rows(listing_id, include_hidden, expected_sequence, |rows| {
+            Ok(match selected {
+                Some(selected) => Self::guarded_selected_rows(listing_id, rows, selected)?
+                    .into_iter()
+                    .map(|entry| entry.name.clone())
+                    .collect(),
+                None => rows.iter().map(|entry| entry.name.clone()).collect(),
+            })
+        })
     }
 
     /// The distinct volume ids under `prefix` that have at least one cached listing.

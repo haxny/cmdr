@@ -278,42 +278,6 @@ export async function getFileBeside(
 }
 
 /**
- * Gets file paths at specific frontend indices from a cached listing (batch).
- * Handles the parent ".." offset internally; pass frontend indices directly.
- * @param listingId - The listing ID from listDirectoryStart.
- * @param selectedIndices - Frontend indices of selected files.
- * @param includeHidden - Whether hidden files are shown (affects index mapping).
- * @param hasParent - Whether the ".." entry is shown at index 0.
- */
-export async function getPathsAtIndices(
-  listingId: string,
-  selectedIndices: number[],
-  includeHidden: boolean,
-  hasParent: boolean,
-): Promise<string[]> {
-  const res = await commands.getPathsAtIndices(listingId, selectedIndices, includeHidden, hasParent)
-  if (res.status === 'error') throwListingLookupError(res.error)
-  return res.data
-}
-
-/**
- * Gets full FileEntry objects at specific backend indices from a cached listing (batch).
- * Callers are responsible for any parent offset adjustment before passing indices.
- * @param listingId - The listing ID from listDirectoryStart.
- * @param selectedIndices - Backend indices of selected files.
- * @param includeHidden - Whether hidden files are shown (affects index mapping).
- */
-export async function getFilesAtIndices(
-  listingId: string,
-  selectedIndices: number[],
-  includeHidden: boolean,
-): Promise<FileEntry[]> {
-  const res = await commands.getFilesAtIndices(listingId, selectedIndices, includeHidden)
-  if (res.status === 'error') throwListingLookupError(res.error)
-  return res.data as FileEntry[]
-}
-
-/**
  * Ends a directory listing and cleans up the cache.
  * @param listingId - The listing ID to clean up.
  */
@@ -356,7 +320,13 @@ export async function setListingIncludeHidden(
   return res.data
 }
 
-/** Paths and counts resolved under one lock, only for the caller's exact row state. */
+/**
+ * Paths and counts resolved under one lock, only for the caller's exact row state:
+ * the pane's applied `expectedSequence` and its own hidden-files setting. A typed
+ * `changed` refusal means the rows moved since the pane applied them, so the old
+ * row numbers would name other files. Every read of a selection goes through here
+ * or `getSelectionEntries`.
+ */
 export async function getSelectionSnapshot(
   listingId: string,
   includeHidden: boolean,
@@ -366,6 +336,21 @@ export async function getSelectionSnapshot(
   const res = await commands.getSelectionSnapshot(listingId, includeHidden, selectedIndices, expectedSequence)
   if (res.status === 'error') throwListingLookupError(res.error)
   return res.data
+}
+
+/**
+ * The full entries on the selected backend rows, under the same revision guard as
+ * `getSelectionSnapshot`: the delete dialog's input, which shows names, sizes, and kinds.
+ */
+export async function getSelectionEntries(
+  listingId: string,
+  includeHidden: boolean,
+  selectedIndices: number[],
+  expectedSequence: number,
+): Promise<FileEntry[]> {
+  const res = await commands.getSelectionEntries(listingId, includeHidden, selectedIndices, expectedSequence)
+  if (res.status === 'error') throwListingLookupError(res.error)
+  return res.data as FileEntry[]
 }
 
 /**
@@ -441,37 +426,12 @@ export async function getListingStats(
 }
 
 /**
- * Starts a native drag operation for selected files from a cached listing.
- * This initiates the drag from Rust directly, avoiding IPC transfer of file paths.
- * The backend publishes a permissive operation mask (Copy | Move | Generic | Link);
- * macOS arbitrates the actual operation via modifier keys and destination preference.
- * @param listingId - The listing ID from listDirectoryStart.
- * @param selectedIndices - Frontend indices of selected files.
- * @param includeHidden - Whether hidden files are shown (affects index mapping).
- * @param hasParent - Whether the ".." entry is shown at index 0.
- * @param iconPath - Path to the drag preview icon (temp file).
- */
-export async function startSelectionDrag(
-  listingId: string,
-  selectedIndices: number[],
-  includeHidden: boolean,
-  hasParent: boolean,
-  iconPath: string,
-): Promise<void> {
-  const res = await commands.startSelectionDrag(listingId, selectedIndices, includeHidden, hasParent, iconPath)
-  if (res.status === 'error') throwIpcError(res.error)
-}
-
-/**
- * Begins a native drag with explicit file paths. Used for single-file drags
- * where the frontend has the path directly, and the search-results paths-by-value
- * drag. For a LOCAL source volume the pasteboard advertises `public.file-url` +
- * `public.utf8-plain-text` so terminal apps (Warp, etc.) can paste paths as text;
- * the operation mask is permissive and macOS picks the actual operation. For a
- * VIRTUAL source volume (MTP, direct SMB, search-results) the backend strips
- * those representations so an external drop can't materialize garbage. Pass the
- * source volume id so the backend can tell the two apart; `null` defaults to a
- * local session.
+ * Begins a native drag with explicit file paths, for every drag: a single row
+ * the frontend holds, a pane selection resolved through the revision-checked
+ * `getSelectionSnapshot`, and the search-results snapshot's paths. The source
+ * volume id decides the pasteboard layout for the whole session (file URLs for
+ * a local one, file promises for a virtual one; `native_drag/type_plan.rs`);
+ * `null` defaults to a local session.
  */
 export async function startDragPaths(paths: string[], iconPath: string, sourceVolumeId: string | null): Promise<void> {
   const res = await commands.startDragPaths(paths, iconPath, sourceVolumeId)

@@ -148,8 +148,10 @@ The method names below are `Listings`'; the app's IPC commands of the old names 
 2. The read lists the directory, runs the pipeline (§ "The overlay step"), sorts, stores in the cache, tells the
    observers, and reports `finished(Complete)`.
 3. The pane reads visible rows on demand (`file_range`), batch-resolves names to rows (`find_file_indices`, selection
-   adjustment during operations), and batch-reads selections (`paths_at_indices` / `files_at_indices`: transfer dialogs,
-   delete, drag, clipboard).
+   adjustment during operations), and batch-reads selections only under the revision guard (`selection_snapshot` /
+   `selection_entries` / `selection_names`: transfer dialogs, delete, drag, clipboard, the context menu, Services,
+   multi-rename). There's no unchecked read by row number on purpose: a watcher insert renumbers rows, and an old
+   selection read against the new rows names the neighbor.
 4. `end(id)` removes the listing from the cache and drops its pending diffs, then tells the observers.
 
 Both ends tell the observers (`host/observers.rs`), the seam for subsystems that keep something alive while a pane is
@@ -530,18 +532,18 @@ at `i` GOES. Applying the un-inverted permutation scrambles the whole listing wi
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 36 root promises, 47 `Listings` methods, one public module (`host`), and 20
+`index-crate-isolation` holds this crate to 35 root promises, 46 `Listings` methods, one public module (`host`), and 20
 public items inside it. The numbers are exactly what the crate exposes, with no headroom, so an addition has to be
 argued for. Everything counted exists for a named caller:
 
 - **The handle and its vocabulary** (root): `Listings`, `ListingsBuilder` (the constructors, `builder` and `detached`,
-  are two of the 47 methods), `ListingId`, `ListingRequest`, and the `host` module.
+  are two of the 46 methods), `ListingId`, `ListingRequest`, and the `host` module.
 - **Named arguments** (root): `PaneMarks` (a pane's cursor and selection, for `resort`, `set_include_hidden`, and
-  `set_name_filter_guarded`), `RowSpan` (`file_range`'s start and count), `ParentRow` (`paths_at_indices`' `..` offset),
-  and `OnNoMatch` (the quick filter's refusal). Each replaces a confusable positional `usize` or `bool` pair; the IPC
-  commands keep their wire params and build them at the boundary, so `bindings.ts` doesn't move.
+  `set_name_filter_guarded`), `RowSpan` (`file_range`'s start and count), and `OnNoMatch` (the quick filter's refusal).
+  Each replaces a confusable positional `usize` or `bool` pair; the IPC commands keep their wire params and build them
+  at the boundary, so `bindings.ts` doesn't move.
 - **A pane opening, reading, and closing a listing** (the IPC pass-throughs in `commands/file_system/listing.rs`): the
-  `start` / `cancel` / `end` / `keep_alive` methods, the 14 row-space reads (`file_range` through `with_rows`, plus
+  `start` / `cancel` / `end` / `keep_alive` methods, the 13 row-space reads (`file_range` through `with_rows`, plus
   `compare_directories` and `fuzzy_find_first_match`), the five pane settings (`resort`, `set_include_hidden`,
   `set_name_filter_guarded`, `scratch_visibility`, `set_scratch_visibility`), and every type they answer in:
   `VisibleRows`, `ListingStats`, `ResortResult`, `RowBeside`, `SelectionSnapshot`, `NameFilterResult`,

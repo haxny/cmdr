@@ -877,9 +877,10 @@ Pinned by `TransferErrorDialog.typed.test.ts`, `DialogManager.svelte.test.ts`, a
 
 ## Gotchas
 
-- **Always use batch IPC for selection lookups.** `get_paths_at_indices` (paths only) and `get_files_at_indices` (full
-  `FileEntry` objects) fetch all selected items in a single IPC call. Never loop over `getFileAt` per-index; with 50k
-  selected files, per-file IPC takes 5-10 seconds. Batch calls take ~1 ms regardless of count.
+- **Always use batch IPC for selection lookups.** `get_selection_snapshot` (paths and counts) and
+  `get_selection_entries` (full `FileEntry` objects) fetch all selected items in a single IPC call, and only while the
+  rows are the revision the pane applied (`pane/DETAILS.md` § Compare directories). Never loop over `getFileAt`
+  per-index; with 50k selected files, per-file IPC takes 5-10 seconds. Batch calls take ~1 ms regardless of count.
 - **MTP move is interleaved copy + delete per file.** Moves involving MTP volumes copy and then delete each file
   individually (not copy-all-then-delete-all). Minimizes duplicates on partial failure: if it fails mid-way, only the
   current file exists in both places. The progress UI shows three stages (Scanning → Copying → Removing source). If copy

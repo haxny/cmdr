@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { servicesSelectionForPane } from './services-selection'
 
-const listingRows = { kind: 'listing', listingId: 'listing-1', includeHidden: false, hasParent: true } as const
+const listingRows = {
+  kind: 'listing',
+  listingId: 'listing-1',
+  includeHidden: false,
+  hasParent: true,
+  sequence: 4,
+} as const
 const SNAPSHOT_PATHS = ['/a/one.txt', '/b/two.txt', '/c/three.txt']
 const snapshotRows = { kind: 'snapshot', pathAt: (index: number) => SNAPSHOT_PATHS[index] } as const
 
 describe('servicesSelectionForPane', () => {
-  it('sends the selection as listing indices, never as resolved paths', () => {
+  it('sends the selection as backend rows with their revision, never as resolved paths', () => {
     // The whole point of the indices shape: a select-all over a 500k folder is
-    // four numbers here, and the backend reads the paths only when a service asks.
+    // four numbers here, and the backend reads the paths only when a service asks,
+    // refusing them if a watcher insert renumbered the rows since (`sequence`).
+    // `..` is pane row 0 here, so pane rows 3 and 7 are backend rows 2 and 6.
     expect(
       servicesSelectionForPane({
         rowsAreOsVisible: true,
@@ -18,7 +26,7 @@ describe('servicesSelectionForPane', () => {
       }),
     ).toEqual({
       cursorPath: '/dir/cursor.txt',
-      rows: { kind: 'listing', listingId: 'listing-1', indices: [3, 7], includeHidden: false, hasParent: true },
+      rows: { kind: 'listing', listingId: 'listing-1', indices: [2, 6], includeHidden: false, sequence: 4 },
     })
   })
 
@@ -82,7 +90,19 @@ describe('servicesSelectionForPane', () => {
         rowsAreOsVisible: true,
         cursorPath: '/dir/cursor.txt',
         selectedIndices: [1],
-        rows: { kind: 'listing', listingId: '', includeHidden: false, hasParent: false },
+        rows: { kind: 'listing', listingId: '', includeHidden: false, hasParent: false, sequence: 0 },
+      }),
+    ).toEqual({ cursorPath: '/dir/cursor.txt', rows: null })
+  })
+
+  it('treats a selection of only the `..` row as no selection', () => {
+    // `..` names no backend row, so there's nothing to send but the cursor rule.
+    expect(
+      servicesSelectionForPane({
+        rowsAreOsVisible: true,
+        cursorPath: '/dir/cursor.txt',
+        selectedIndices: [0],
+        rows: listingRows,
       }),
     ).toEqual({ cursorPath: '/dir/cursor.txt', rows: null })
   })

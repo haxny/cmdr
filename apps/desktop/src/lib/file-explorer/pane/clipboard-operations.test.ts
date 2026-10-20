@@ -6,8 +6,6 @@ import type { TransferProgressPropsData } from './dialog-props'
 import type { ToastContent, ToastOptions } from '#lib/ui/toast/toast-store.svelte.js'
 
 const {
-  copyFilesToClipboardSpy,
-  cutFilesToClipboardSpy,
   copyPathsToClipboardSpy,
   cutPathsToClipboardSpy,
   readClipboardFilesSpy,
@@ -21,11 +19,10 @@ const {
   pasteClipboardContentAsFileSpy,
   getEffectiveShortcutsSpy,
   logErrorSpy,
+  getSelectionSnapshotSpy,
 } = vi.hoisted(() => ({
-  copyFilesToClipboardSpy: vi.fn<() => Promise<number>>(),
-  cutFilesToClipboardSpy: vi.fn<() => Promise<number>>(),
-  copyPathsToClipboardSpy: vi.fn<() => Promise<number>>(),
-  cutPathsToClipboardSpy: vi.fn<() => Promise<number>>(),
+  copyPathsToClipboardSpy: vi.fn<(paths: string[]) => Promise<number>>(),
+  cutPathsToClipboardSpy: vi.fn<(paths: string[]) => Promise<number>>(),
   readClipboardFilesSpy: vi.fn<() => Promise<{ paths: string[]; isCut: boolean; isDirectory?: (boolean | null)[] }>>(),
   clearClipboardCutStateSpy: vi.fn<() => Promise<void>>(),
   resolvePathVolumeSpy: vi.fn<(path: string) => Promise<{ volume: { id: string } | null }>>(),
@@ -37,12 +34,23 @@ const {
   pasteClipboardContentAsFileSpy: vi.fn<(deps: { onNothingCreated: () => void }) => Promise<void>>(),
   getEffectiveShortcutsSpy: vi.fn<(commandId: string) => string[]>(),
   logErrorSpy: vi.fn(),
+  getSelectionSnapshotSpy:
+    vi.fn<
+      (
+        listingId: string,
+        includeHidden: boolean,
+        indices: number[],
+        expectedSequence: number,
+      ) => Promise<{ paths: string[]; fileCount: number; folderCount: number }>
+    >(),
 }))
 
-vi.mock('#lib/tauri-commands/index.js', () => ({
+vi.mock('#lib/tauri-commands/index.js', async () => ({
   DEFAULT_VOLUME_ID: 'root',
-  copyFilesToClipboard: copyFilesToClipboardSpy,
-  cutFilesToClipboard: cutFilesToClipboardSpy,
+  asListingLookupError: (
+    await vi.importActual<typeof import('#lib/tauri-commands/listing-gone.js')>('#lib/tauri-commands/listing-gone.js')
+  ).asListingLookupError,
+  getSelectionSnapshot: getSelectionSnapshotSpy,
   copyPathsToClipboard: copyPathsToClipboardSpy,
   cutPathsToClipboard: cutPathsToClipboardSpy,
   readClipboardFiles: readClipboardFilesSpy,
@@ -122,6 +130,7 @@ function buildPaneRef(
 ): FilePaneAPI {
   const stub = {
     getListingId: () => ('listingId' in overrides ? overrides.listingId : 'listing-1'),
+    getLastSequence: () => 0,
     hasParentEntry: () => overrides.hasParent ?? false,
     getSelectedIndices: () => overrides.selectedIndices ?? [],
     getCursorIndex: () => overrides.cursorIndex ?? 0,
@@ -194,7 +203,7 @@ describe('copyToClipboard', () => {
     await createClipboardOperations(access, buildDialogs()).copyToClipboard()
 
     expect(copyPathsToClipboardSpy).toHaveBeenCalledWith(['/a.txt', '/b.txt'])
-    expect(copyFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
     expect(addToastSpy).toHaveBeenCalledWith('Copied 2 items', { level: 'info' })
   })
 
@@ -229,7 +238,7 @@ describe('copyToClipboard', () => {
       level: 'info',
     })
     expect(copyPathsToClipboardSpy).not.toHaveBeenCalled()
-    expect(copyFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
   it('copies a snapshot whose rows sit on an ordinary volume, so the refusal stays narrow', async () => {
@@ -285,14 +294,14 @@ describe('copyToClipboard', () => {
 
   it('falls back to the listing-id path when a snapshot resolves to no paths', async () => {
     resolveSnapshotPathsSpy.mockReturnValue([])
-    copyFilesToClipboardSpy.mockResolvedValue(3)
+    getSelectionSnapshotSpy.mockResolvedValue({ paths: [], fileCount: 0, folderCount: 0 })
     const paneRef = buildPaneRef({ currentPath: 'search-results://sr-1' })
     const access = buildAccess({ paneRef, volumeId: 'search-results' })
 
     await createClipboardOperations(access, buildDialogs()).copyToClipboard()
 
+    expect(getSelectionSnapshotSpy).toHaveBeenCalled()
     expect(copyPathsToClipboardSpy).not.toHaveBeenCalled()
-    expect(copyFilesToClipboardSpy).toHaveBeenCalled()
   })
 
   it('refuses MTP copy with a toast pointing at the copy key and never touches the clipboard IPC', async () => {
@@ -303,7 +312,7 @@ describe('copyToClipboard', () => {
     expect(addToastSpy).toHaveBeenCalledWith('The clipboard can’t carry files from this device. Use F5 to copy them.', {
       level: 'info',
     })
-    expect(copyFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
   it('refuses an SFTP copy as a SERVER, not as a device', async () => {
@@ -321,7 +330,7 @@ describe('copyToClipboard', () => {
     expect(addToastSpy).toHaveBeenCalledWith('The clipboard can’t carry files from this server. Use F5 to copy them.', {
       level: 'info',
     })
-    expect(copyFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
     expect(copyPathsToClipboardSpy).not.toHaveBeenCalled()
   })
 
@@ -350,15 +359,37 @@ describe('copyToClipboard', () => {
     })
   })
 
-  it('copies via listing id on a regular pane and forwards hasParent + showHiddenFiles', async () => {
-    copyFilesToClipboardSpy.mockResolvedValue(5)
+  it("copies the selection read under the revision guard, in backend rows, with the pane's settings", async () => {
+    getSelectionSnapshotSpy.mockResolvedValue({ paths: ['/d/a', '/d/b'], fileCount: 2, folderCount: 0 })
+    copyPathsToClipboardSpy.mockResolvedValue(2)
     const paneRef = buildPaneRef({ listingId: 'lst-9', hasParent: true, selectedIndices: [1, 2], cursorIndex: 4 })
     const access = buildAccess({ paneRef, volumeId: 'root', showHiddenFiles: false })
 
     await createClipboardOperations(access, buildDialogs()).copyToClipboard()
 
-    expect(copyFilesToClipboardSpy).toHaveBeenCalledWith('lst-9', [1, 2], 4, true, false)
-    expect(addToastSpy).toHaveBeenCalledWith('Copied 5 items', { level: 'info' })
+    // `..` is pane row 0, so pane rows 1 and 2 are backend rows 0 and 1.
+    expect(getSelectionSnapshotSpy).toHaveBeenCalledWith('lst-9', false, [0, 1], 0)
+    expect(copyPathsToClipboardSpy).toHaveBeenCalledWith(['/d/a', '/d/b'])
+    expect(addToastSpy).toHaveBeenCalledWith('Copied 2 items', { level: 'info' })
+  })
+
+  it('copies the cursor row when nothing is selected', async () => {
+    getSelectionSnapshotSpy.mockResolvedValue({ paths: ['/d/cur'], fileCount: 1, folderCount: 0 })
+    copyPathsToClipboardSpy.mockResolvedValue(1)
+    const paneRef = buildPaneRef({ listingId: 'lst-9', hasParent: true, selectedIndices: [], cursorIndex: 4 })
+
+    await createClipboardOperations(buildAccess({ paneRef }), buildDialogs()).copyToClipboard()
+
+    expect(getSelectionSnapshotSpy).toHaveBeenCalledWith('lst-9', true, [3], 0)
+  })
+
+  it('puts nothing on the clipboard with the cursor on the `..` row', async () => {
+    const paneRef = buildPaneRef({ listingId: 'lst-9', hasParent: true, selectedIndices: [], cursorIndex: 0 })
+
+    await createClipboardOperations(buildAccess({ paneRef }), buildDialogs()).copyToClipboard()
+
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
+    expect(copyPathsToClipboardSpy).not.toHaveBeenCalled()
   })
 
   it('does nothing when the focused pane has no listing id', async () => {
@@ -366,7 +397,7 @@ describe('copyToClipboard', () => {
 
     await createClipboardOperations(access, buildDialogs()).copyToClipboard()
 
-    expect(copyFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
     expect(addToastSpy).not.toHaveBeenCalled()
   })
 
@@ -381,7 +412,7 @@ describe('copyToClipboard', () => {
     expect(addToastSpy).toHaveBeenCalledWith('To copy files out of an archive, use F5 to copy or F6 to move.', {
       level: 'info',
     })
-    expect(copyFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
   it('refuses copy inside the virtual `.git` portal and points at F5/F6', async () => {
@@ -394,17 +425,18 @@ describe('copyToClipboard', () => {
     expect(addToastSpy).toHaveBeenCalledWith('To copy files out of a git snapshot, use F5 to copy or F6 to move.', {
       level: 'info',
     })
-    expect(copyFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
   it('copies normally from a REAL folder under `.git`', async () => {
     // `.git/refs/heads` is an ordinary local directory, so ⌘C is not refused.
-    copyFilesToClipboardSpy.mockResolvedValue(1)
+    getSelectionSnapshotSpy.mockResolvedValue({ paths: ['/x/repo/.git/refs/heads/main'], fileCount: 1, folderCount: 0 })
+    copyPathsToClipboardSpy.mockResolvedValue(1)
     const access = buildAccess({ volumeId: 'root', path: '/x/repo/.git/refs/heads' })
 
     await createClipboardOperations(access, buildDialogs()).copyToClipboard()
 
-    expect(copyFilesToClipboardSpy).toHaveBeenCalled()
+    expect(copyPathsToClipboardSpy).toHaveBeenCalledWith(['/x/repo/.git/refs/heads/main'])
   })
 })
 
@@ -437,7 +469,7 @@ describe('cutToClipboard', () => {
       level: 'info',
     })
     expect(cutPathsToClipboardSpy).not.toHaveBeenCalled()
-    expect(cutFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
   it('refuses a snapshot cut of a device row after the device is unplugged, and still names the device', async () => {
@@ -475,7 +507,7 @@ describe('cutToClipboard', () => {
     expect(addToastSpy).toHaveBeenCalledWith('The clipboard can’t carry files from this device. Use F6 to move them.', {
       level: 'info',
     })
-    expect(cutFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
   it('refuses a WebDAV cut as a SERVER, with the move key', async () => {
@@ -490,7 +522,7 @@ describe('cutToClipboard', () => {
     expect(addToastSpy).toHaveBeenCalledWith('The clipboard can’t carry files from this server. Use F6 to move them.', {
       level: 'info',
     })
-    expect(cutFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
   it('refuses an S3 cut as a SERVER too: an `s3://` path is nothing another app can open', async () => {
@@ -505,16 +537,17 @@ describe('cutToClipboard', () => {
     expect(addToastSpy).toHaveBeenCalledWith('The clipboard can’t carry files from this server. Use F6 to move them.', {
       level: 'info',
     })
-    expect(cutFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
   it('cuts via listing id on a regular pane and toasts the singular move-ready wording', async () => {
-    cutFilesToClipboardSpy.mockResolvedValue(1)
+    getSelectionSnapshotSpy.mockResolvedValue({ paths: ['/d/a'], fileCount: 1, folderCount: 0 })
+    cutPathsToClipboardSpy.mockResolvedValue(1)
     const access = buildAccess({ volumeId: 'root' })
 
     await createClipboardOperations(access, buildDialogs()).cutToClipboard()
 
-    expect(cutFilesToClipboardSpy).toHaveBeenCalled()
+    expect(cutPathsToClipboardSpy).toHaveBeenCalledWith(['/d/a'])
     expect(addToastSpy).toHaveBeenCalledWith('1 item ready to move. Paste to complete.', { level: 'info' })
   })
 
@@ -526,7 +559,7 @@ describe('cutToClipboard', () => {
     expect(addToastSpy).toHaveBeenCalledWith('To copy files out of an archive, use F5 to copy or F6 to move.', {
       level: 'info',
     })
-    expect(cutFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
   })
 
   it('refuses cut inside the virtual `.git` portal and points at F5/F6', async () => {
@@ -537,7 +570,56 @@ describe('cutToClipboard', () => {
     expect(addToastSpy).toHaveBeenCalledWith('To copy files out of a git snapshot, use F5 to copy or F6 to move.', {
       level: 'info',
     })
-    expect(cutFilesToClipboardSpy).not.toHaveBeenCalled()
+    expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
+  })
+})
+
+/** A watcher insert above the selection, landing between the pane applying its
+ *  rows and ⌘C / ⌘X: the old row numbers now name the neighbor (`moved-listing.test-fixtures.ts`). */
+describe('copy and cut when the rows moved under the press', () => {
+  /** Every path a clipboard write put on the pasteboard. */
+  let written: string[]
+
+  beforeEach(async () => {
+    const moved = await import('./moved-listing.test-fixtures')
+    written = []
+    const byValue = (paths: string[]) => {
+      written.push(...paths)
+      return Promise.resolve(paths.length)
+    }
+    copyPathsToClipboardSpy.mockImplementation(byValue)
+    cutPathsToClipboardSpy.mockImplementation(byValue)
+    getSelectionSnapshotSpy.mockImplementation(moved.selectionSnapshot)
+  })
+
+  async function movedAccess(pane: { selectedIndices: number[]; cursorIndex?: number }) {
+    const { MOVED_LISTING_ID } = await import('./moved-listing.test-fixtures')
+    return buildAccess({ paneRef: buildPaneRef({ listingId: MOVED_LISTING_ID, ...pane }) })
+  }
+
+  it.each(['copyToClipboard', 'cutToClipboard'] as const)(
+    '%s refuses rather than putting the file that slid onto the selected row on the clipboard',
+    async (command) => {
+      const { SELECTED_ROW } = await import('./moved-listing.test-fixtures')
+      const access = await movedAccess({ selectedIndices: [SELECTED_ROW] })
+
+      await createClipboardOperations(access, buildDialogs())[command]()
+
+      expect(written).toEqual([])
+      expect(addToastSpy).toHaveBeenCalledWith(
+        'The list here is still updating, so nothing started. Try again in a moment.',
+        { level: 'info' },
+      )
+    },
+  )
+
+  it('refuses the cursor row the same way when nothing is selected', async () => {
+    const { SELECTED_ROW } = await import('./moved-listing.test-fixtures')
+    const access = await movedAccess({ selectedIndices: [], cursorIndex: SELECTED_ROW })
+
+    await createClipboardOperations(access, buildDialogs()).cutToClipboard()
+
+    expect(written).toEqual([])
   })
 })
 

@@ -1618,7 +1618,7 @@
 
   "fileOperations.transferProgress.rowsStillSettlingToast": "The list here is still updating, so nothing started. Try again in a moment.",
   "@fileOperations.transferProgress.rowsStillSettlingToast": {
-    "description": "Quiet toast in the main window, shown when the user presses Copy, Move, or Compress on selected files while the file list they're in is still changing (it's reloading or re-sorting, or another operation is still running from it), and it didn't settle within a few seconds. The app can't safely tell which files are selected until it does, so nothing started and nothing changed: neutral news, not a warning. \"The list here\" is the file list the user is looking at. \"Try again\" means press the same command again shortly.",
+    "description": "Quiet toast in the main window, shown when the user presses Copy, Move, Compress, Delete, copies or cuts files to the clipboard, or starts dragging selected files while the file list they're in is still changing (it's reloading or re-sorting, a file just appeared or disappeared in the folder, or another operation is still running from it). The app can't safely tell which files are selected until the list settles, so nothing started and nothing changed: neutral news, not a warning. \"The list here\" is the file list the user is looking at. \"Try again\" means press the same command again shortly.",
     "screenshot": "transfer-dialog.png",
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },

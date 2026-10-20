@@ -65,14 +65,17 @@ export function announceOperationBlocked(blockedBy: SoftDialogId, mcpRequestId: 
 }
 
 /**
- * Says a transfer isn't starting because the source pane's rows didn't settle in time
- * (a reload or resort still landing, or an operation still running from that pane), so
- * the selection can't be read safely. Same two audiences as `announceOperationBlocked`:
- * a toast for the person who pressed F5, a failed round-trip for an MCP agent. Nothing
- * is in the way that the agent could close, so there's no `blockedBy`.
+ * Says an operation isn't starting because the source pane's rows aren't the ones its
+ * selection was made in: they didn't settle in time (a reload or resort still landing, or
+ * an operation still running from that pane), or they moved under the press (a watcher
+ * insert renumbered them, and the backend refused the old row numbers as `changed`).
+ * Either way the selection can't be read safely. Shared by F5/F6, delete, the clipboard,
+ * and drag. Same two audiences as `announceOperationBlocked`: a toast for the person who
+ * pressed the key, a failed round-trip for an MCP agent. Nothing is in the way that the
+ * agent could close, so there's no `blockedBy`.
  */
 export function announceRowsStillSettling(mcpRequestId: string | undefined): void {
-  log.info("Not starting a transfer: the source pane's rows didn't settle in time")
+  log.info("Not starting: the source pane's rows moved or didn't settle in time")
   addToast(tString('fileOperations.transferProgress.rowsStillSettlingToast'), { level: 'info' })
   if (mcpRequestId) {
     void emit('mcp-response', {

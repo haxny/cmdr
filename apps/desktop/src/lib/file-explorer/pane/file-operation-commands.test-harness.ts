@@ -18,7 +18,10 @@ import type { TrashRoutingAnswer } from '#lib/ipc/bindings.js'
  */
 export const spies = {
   getFileAt: vi.fn<() => Promise<FileEntry | null>>(),
-  getFilesAtIndices: vi.fn<() => Promise<FileEntry[]>>(),
+  getSelectionEntries:
+    vi.fn<
+      (listingId: string, includeHidden: boolean, indices: number[], expectedSequence: number) => Promise<FileEntry[]>
+    >(),
   trashRoutingForPaths: vi.fn<(sources: string[]) => Promise<TrashRoutingAnswer>>(),
   addToast: vi.fn<(content: ToastContent, options?: ToastOptions) => string>(),
   getSnapshot: vi.fn<() => SearchSnapshot | undefined>(),

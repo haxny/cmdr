@@ -25,8 +25,8 @@ Copy (F5), move (F6), compress (⌥F5): setup, conflict scan, progress, errors. 
   scheme-path refusal stays SEPARATE and BEFORE the shared guard.
 - **Single Copy/Move names its leaf; a trailing slash means "into"**. Forward `destinationName`. DETAILS § "Single-item
   destinations".
-- **Batch IPC for selection lookups** (`get_paths_at_indices` / `get_files_at_indices`), ❌ never per index (50k files:
-  5-10 s vs ~1 ms).
+- **Batch, revision-checked selection reads** (`get_selection_snapshot` / `get_selection_entries`), ❌ never per index
+  (50k files: 5-10 s vs ~1 ms).
 - **Speed, ETA, and bars are backend-owned and SHARED with the queue window** (`../TransferProgressReadout.svelte`): ❌
   no second rate here.
 - **A stall drops the ETA and says why** (`transfer-stall.ts`): the BACKEND classifies, this side owns the threshold. ❌

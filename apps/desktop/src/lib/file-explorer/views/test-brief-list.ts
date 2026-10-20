@@ -106,6 +106,7 @@ export async function mountBriefList(options: MountBriefListOptions = {}): Promi
   document.body.appendChild(target)
   const props = Object.assign(options.liveProps ?? {}, {
     listingId: 'listing-1',
+    getRowSequence: () => 0,
     volumeId: 'root',
     totalCount: entries.length,
     includeHidden: false,

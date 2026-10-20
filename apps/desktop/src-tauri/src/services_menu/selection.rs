@@ -20,20 +20,20 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 /// Where a pane's selected rows live.
 ///
-/// Two shapes because Cmdr has two kinds of pane, and the drag-out commands
-/// already split the same way (`start_selection_drag` against `start_drag_paths`
-/// in `commands/file_system/drag.rs`).
+/// Two shapes because Cmdr has two kinds of pane: one whose rows live in the
+/// backend listing cache, and the search-results snapshot, whose rows don't.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum SelectedRows {
-    /// Frontend indices into a cached listing, resolved on demand. `has_parent`
-    /// says whether index 0 is the synthetic `..` row, exactly as
-    /// `get_paths_at_indices` means it.
+    /// Backend row numbers into a cached listing (no `..` row), resolved on
+    /// demand, and only while the listing is still at `sequence`, the revision the
+    /// pane applied them in: a watcher insert renumbers rows, and the old numbers
+    /// would hand a service the neighbor.
     Listing {
         listing_id: String,
         indices: Vec<usize>,
         include_hidden: bool,
-        has_parent: bool,
+        sequence: u64,
     },
     /// Paths by value. The search-results snapshot keeps its rows in the frontend
     /// and has no cached listing to index into.
@@ -99,8 +99,8 @@ fn context_target() -> Option<Vec<PathBuf>> {
 ///
 /// Deliberately optimistic: it answers from the SHAPE of the selection without
 /// touching the listing cache, because it runs inside AppKit's menu validation and
-/// is asked once per registered send type. A selection whose indices have all gone
-/// stale still says yes here and writes nothing later, which the user sees as a
+/// is asked once per registered send type. A selection whose rows have moved
+/// still says yes here and writes nothing later, which the user sees as a
 /// service that did nothing rather than a menu that flickers.
 pub fn has_anything() -> bool {
     if context_target().is_some() {
@@ -121,14 +121,15 @@ pub fn resolve() -> Vec<PathBuf> {
             listing_id,
             indices,
             include_hidden,
-            has_parent,
+            sequence,
         } => crate::listing_host::listings()
-            .paths_at_indices(
+            .selection_snapshot(
                 &cmdr_listing::ListingId::new(listing_id.clone()),
-                indices,
                 *include_hidden,
-                cmdr_listing::ParentRow::when(*has_parent),
+                indices,
+                *sequence,
             )
+            .map(|snapshot| snapshot.paths.into_iter().map(PathBuf::from).collect())
             .unwrap_or_default(),
         SelectedRows::Paths { paths } => paths.iter().map(PathBuf::from).collect(),
     })
@@ -153,15 +154,13 @@ fn resolve_target(
 }
 
 /// Finder's rule, with the listing lookup handed in so it can be tested without a
-/// listing cache: a selection wins, the cursor row is the fallback, and a selection
-/// that resolves to nothing (its listing is gone, or every index is stale) falls
-/// back to the cursor rather than handing a service an empty pasteboard.
+/// listing cache: a selection wins, and the cursor row is the fallback only when
+/// nothing is selected. A selection that resolves to nothing (its rows moved, or
+/// its listing is gone) hands over nothing: the cursor row would be a file the
+/// user didn't pick.
 fn resolve_with(selection: &ServicesSelection, resolve_rows: impl Fn(&SelectedRows) -> Vec<PathBuf>) -> Vec<PathBuf> {
     if let Some(rows) = selection.rows.as_ref() {
-        let paths = resolve_rows(rows);
-        if !paths.is_empty() {
-            return paths;
-        }
+        return resolve_rows(rows);
     }
     if selection.cursor_path.is_empty() {
         return Vec::new();
@@ -183,7 +182,7 @@ mod tests {
             listing_id: "listing-1".to_string(),
             indices: indices.to_vec(),
             include_hidden: false,
-            has_parent: true,
+            sequence: 0,
         }
     }
 
@@ -231,19 +230,16 @@ mod tests {
     }
 
     #[test]
-    fn a_selection_whose_listing_has_gone_falls_back_to_the_cursor() {
-        // The listing cache evicts, and a navigation can land between the push and
-        // the click. Handing a service an empty pasteboard would look like the app
-        // ignoring the click; the cursor row is the same answer the user would get
-        // with nothing selected.
+    fn a_selection_on_rows_that_moved_hands_over_nothing_rather_than_the_cursor() {
+        // A watcher insert between the push and the click renumbers the rows, and
+        // the listing gone under a navigation is no better: the selected rows then
+        // resolve to nothing. The cursor row is NOT the same answer here, it's a
+        // file the user didn't pick, so the service gets nothing.
         let selection = ServicesSelection {
             cursor_path: "/dir/cursor.txt".to_string(),
             rows: Some(listing(&[1])),
         };
-        assert_eq!(
-            resolve_with(&selection, |_| Vec::new()),
-            vec![PathBuf::from("/dir/cursor.txt")]
-        );
+        assert!(resolve_with(&selection, |_| Vec::new()).is_empty());
     }
 
     #[test]

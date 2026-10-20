@@ -16,12 +16,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 vi.mock('@tauri-apps/api/path', () => ({ tempDir: vi.fn(), join: vi.fn() }))
 vi.mock('#lib/icon-cache.js', () => ({ getCachedIcon: vi.fn(), getCachedCustomFolderIcon: () => undefined }))
 vi.mock('#lib/tauri-commands/index.js', () => ({
-  startSelectionDrag: vi.fn(),
   startDragPaths: vi.fn(),
   prepareSelfDragOverlay: vi.fn(),
   clearSelfDragOverlay: vi.fn(),
   setSelfDragResolvedOperation: vi.fn(),
-  getPathsAtIndices: vi.fn(),
 }))
 vi.mock('#lib/settings/settings-store.js', () => ({ getSetting: vi.fn(() => 5) }))
 vi.mock('../rename/rename-activation', () => ({ cancelClickToRename: vi.fn() }))

@@ -14,7 +14,7 @@
  */
 
 import {
-  getPathsAtIndices,
+  getSelectionSnapshot,
   showFileContextMenu,
   showParentRowContextMenu,
   type MenuAnchor,
@@ -29,6 +29,7 @@ import { canOpenTerminalIn } from '#lib/open-terminal/terminal-target.js'
 import { isFileListBackgroundClick } from './pane-background-dblclick'
 import { sameKindTargetFor } from './select-same-kind'
 import DoubleClickPaneHintToastContent from './DoubleClickPaneHintToastContent.svelte'
+import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 
 /** Shift+click args: extend the range from the cursor to the clicked row. */
 export interface ExtendSelectionFromMouseArgs {
@@ -47,6 +48,8 @@ export interface PanePointerDeps {
   getVolumeId: () => string
   /** The pane's selected indices, for the "right-clicked inside the selection" test. */
   getSelectedIndices: () => number[]
+  /** The pane's applied listing revision, which the selected indices belong to. */
+  getRowSequence: () => number
   /**
    * The selection's total size for the context menu's header line, or `null` when
    * there isn't an honest one (no listing stats yet, or a folder in the selection —
@@ -118,17 +121,20 @@ export function createPanePointer(deps: PanePointerDeps): PanePointer {
     deps.clearJump()
     // Match Finder: if the right-clicked entry is part of the current selection,
     // actions apply to the whole selection. Otherwise they apply to just this entry.
+    // The selection resolves only against the revision the pane applied it in, or a
+    // watcher insert above it would hand the menu's Delete the neighbor.
     let paths = [entry.path]
     const listingId = deps.getListingId()
-    const indices = deps.getSelectedIndices()
+    const indices = toBackendIndices(deps.getSelectedIndices(), deps.getHasParent())
     if (listingId && indices.length > 0) {
       try {
-        const selectedPaths = await getPathsAtIndices(listingId, indices, deps.getIncludeHidden(), deps.getHasParent())
-        if (selectedPaths.includes(entry.path)) {
-          paths = selectedPaths
+        const snapshot = await getSelectionSnapshot(listingId, deps.getIncludeHidden(), indices, deps.getRowSequence())
+        if (snapshot.paths.includes(entry.path)) {
+          paths = snapshot.paths
         }
       } catch {
-        // Selection lookup failed: fall back to single-file action.
+        // The rows moved or the listing is gone: the right-clicked row alone is
+        // still the one the user aimed at.
       }
     }
     const volumeId = deps.getVolumeId()

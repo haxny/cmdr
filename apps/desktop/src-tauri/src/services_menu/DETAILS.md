@@ -110,8 +110,11 @@ Return types are empty: Cmdr takes nothing back from a service, so `validRequest
 `selection.rs` holds one `RwLock<Option<ServicesSelection>>`, replaced wholesale by the frontend push
 (`update_services_selection`, `FilePane.svelte`'s `debouncedServicesSelection`). The constraint that shapes it: **both
 AppKit methods run synchronously on the main thread and cannot await IPC**, so whatever they need must already be in
-memory and readable under a short lock with no I/O. `get_paths_at_indices` satisfies that (it reads a cached listing's
-rows, themselves cached per `include_hidden`), so the resolution can happen when a service asks.
+memory and readable under a short lock with no I/O. `Listings::selection_snapshot` satisfies that (it reads a cached
+listing's rows, themselves cached per `include_hidden`), so the resolution can happen when a service asks. The push
+carries backend row numbers plus the revision the pane applied them in (`sequence`), and the resolution refuses rows
+that moved since: a watcher insert renumbers them, and the old numbers would hand a service the neighbor. Every applied
+diff re-pushes (`FilePane.svelte`'s effect depends on `softRefreshTick`), so a stale revision lasts one debounce.
 
 Carrying INDICES rather than paths is what makes the push affordable. Selection changes are continuous (a held ⇧↓),
 so the expensive half belongs at the ask. A select-all over a 500k-row folder is a listing id and an index array here;
@@ -131,9 +134,9 @@ path, one string, and stays self-contained.
 
 ### Fallbacks
 
-A selection that resolves to nothing (its listing was evicted, or a navigation landed between the push and the ask)
-falls back to the cursor row rather than handing over an empty pasteboard: the user sees the same result they'd get
-with nothing selected, instead of a service that appears to ignore the click. `has_anything` answers from the SHAPE of
+A selection that resolves to nothing (its rows moved, its listing was evicted, or a navigation landed between the push
+and the ask) hands over nothing, and the service does nothing. ❌ Not the cursor row: with a selection, the cursor row
+is a file the user didn't pick, the same wrong-file outcome as the stale rows themselves. `has_anything` answers from the SHAPE of
 the selection without touching the listing cache, because it runs inside AppKit's menu validation, once per registered
 send type.
 

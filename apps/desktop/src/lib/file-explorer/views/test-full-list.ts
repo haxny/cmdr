@@ -163,6 +163,7 @@ export async function mountFullList(options: MountFullListOptions = {}): Promise
   document.body.appendChild(target)
   const props = Object.assign(options.liveProps ?? {}, {
     listingId: 'listing-1',
+    getRowSequence: () => 0,
     volumeId: 'root',
     totalCount: entries.length,
     includeHidden: false,

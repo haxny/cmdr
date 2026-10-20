@@ -310,9 +310,9 @@ Context-menu wiring on the snapshot pane:
   `entryUnderCursor.name` on a snapshot pane mirrors the raw `SearchResultEntry.name` (a basename). It also hands over
   the whole SELECTION's paths when the right-clicked row is part of it, and that row alone otherwise, which is Finder's
   rule and `pane-pointer::handleContextMenu`'s. Both live in `pane/snapshot-context-menu.ts` rather than in the pointer
-  module, because that one resolves a selection through `getPathsAtIndices` against a backend listing and a snapshot has
-  none. Cmd+C / Cmd+X call the paths-by-value clipboard IPCs (`copy_paths_to_clipboard` / `cut_paths_to_clipboard`)
-  instead of the listing-id-keyed family. Which rows every source-side op acts on, F5 / F6 / F8 included, and where
+  module, because that one resolves a selection through `getSelectionSnapshot` against a backend listing and a snapshot
+  has none. Cmd+C / Cmd+X call the paths-by-value clipboard IPCs (`copy_paths_to_clipboard` / `cut_paths_to_clipboard`)
+  every pane uses, with the snapshot's paths. Which rows every source-side op acts on, F5 / F6 / F8 included, and where
   post-operation snapshot cleanup happens: `../search/DETAILS.md` § "Source-side ops from the snapshot pane". Drag-out
   uses the `'paths'` drag context (see `drag/CLAUDE.md`) which routes through `start_drag_paths`.
 

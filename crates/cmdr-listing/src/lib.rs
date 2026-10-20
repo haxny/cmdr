@@ -77,7 +77,7 @@ pub use foreign_path::stored_spellings;
 pub use fuzzy_jump::FuzzyJumpError;
 pub use index_sizes::IndexSizes;
 pub use listing_id::ListingId;
-pub use operations::{ListingLookupError, PaneMarks, ParentRow, ResortResult, RowBeside, RowSpan, SelectionSnapshot};
+pub use operations::{ListingLookupError, PaneMarks, ResortResult, RowBeside, RowSpan, SelectionSnapshot};
 pub use quick_filter::{NameFilterResult, OnNoMatch};
 pub use reread::{ReadTicket, RefreshOutcome};
 pub use sorting::{DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator, sort_entries};
@@ -304,6 +304,8 @@ mod probe_test_support;
 mod read_generation_test;
 #[cfg(test)]
 mod row_beside_test;
+#[cfg(test)]
+mod selection_test;
 #[cfg(test)]
 mod sorting_dir_mode_test;
 #[cfg(test)]

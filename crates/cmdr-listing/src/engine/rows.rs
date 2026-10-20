@@ -2,7 +2,6 @@
 //! position in the listing's entries, which no caller sees.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
@@ -12,7 +11,7 @@ use crate::fuzzy_jump::FuzzyJumpError;
 use crate::listing_id::ListingId;
 use crate::stats::ListingStats;
 use crate::visible_rows::VisibleRows;
-use crate::{ListingLookupError, ParentRow, RowBeside, RowSpan, SelectionSnapshot};
+use crate::{ListingLookupError, RowBeside, RowSpan, SelectionSnapshot};
 
 use super::Listings;
 
@@ -69,29 +68,6 @@ impl Listings {
         self.inner.get_file_at(id.as_str(), row, include_hidden)
     }
 
-    /// The paths on the pane's rows `rows`. With a `..` row shown, the pane's
-    /// row 0 is skipped and every other row shifts down by one.
-    pub fn paths_at_indices(
-        &self,
-        id: &ListingId,
-        rows: &[usize],
-        include_hidden: bool,
-        parent_row: ParentRow,
-    ) -> Result<Vec<PathBuf>, ListingLookupError> {
-        self.inner
-            .get_paths_at_indices(id.as_str(), rows, include_hidden, parent_row)
-    }
-
-    /// The entries on rows `rows` (no `..` offset: the caller adjusts).
-    pub fn files_at_indices(
-        &self,
-        id: &ListingId,
-        rows: &[usize],
-        include_hidden: bool,
-    ) -> Result<Vec<FileEntry>, ListingLookupError> {
-        self.inner.get_files_at_indices(id.as_str(), rows, include_hidden)
-    }
-
     /// The pane's totals, and the selection's when `selected` names rows.
     pub fn stats(
         &self,
@@ -114,6 +90,19 @@ impl Listings {
     ) -> Result<SelectionSnapshot, ListingLookupError> {
         self.inner
             .get_selection_snapshot(id.as_str(), include_hidden, selected, expected_sequence)
+    }
+
+    /// The entries on the selected rows, under the same guard as
+    /// [`selection_snapshot`](Self::selection_snapshot).
+    pub fn selection_entries(
+        &self,
+        id: &ListingId,
+        include_hidden: bool,
+        selected: &[usize],
+        expected_sequence: u64,
+    ) -> Result<Vec<FileEntry>, ListingLookupError> {
+        self.inner
+            .get_selection_entries(id.as_str(), include_hidden, selected, expected_sequence)
     }
 
     /// The names on the selected rows (every row with `None`), under the same

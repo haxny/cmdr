@@ -10,15 +10,16 @@
  *   to the fixture directory and takes that pane's real one. ❌ Never hand them a
  *   made-up id: the conflict check then misbehaves SILENTLY, which is exactly the
  *   "renders broken, wastes the review" failure the gallery exists to prevent.
- * - `delete-confirmation` / `transfer-confirmation` need real ENTRIES. They come
- *   from the same `getFilesAtIndices` call the production trigger path uses, so
- *   the names, sizes, and folder flags on screen are the ones on disk.
+ * - `delete-confirmation` / `transfer-confirmation` need real ENTRIES. They're the
+ *   listing's first rows, read from the same backend listing the production
+ *   trigger path reads, so the names, sizes, and folder flags on screen are the
+ *   ones on disk. A range read, not a selection: nothing here was selected.
  *
  * Navigating the focused pane is a real side effect, and every disk-backed row
  * says so.
  */
 
-import { getFilesAtIndices } from '#lib/tauri-commands/index.js'
+import { getFileRange } from '#lib/tauri-commands/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { navigateToDirInPane, resolveLocationOrToast } from '#lib/file-explorer/navigation/navigate-and-select.js'
 import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
@@ -85,10 +86,9 @@ export async function resolveDiskFixture(
   const showHiddenFiles = getShowHiddenFiles()
   const tab = getActiveTab(explorerState.getTabMgr(paneSide))
 
-  // Backend indices: 0 is the first real entry, so the synthetic `..` row never
+  // Backend rows: 0 is the first real entry, so the synthetic `..` row never
   // reaches a fixture. A short listing simply returns fewer entries.
-  const indices = Array.from({ length: ENTRY_COUNT }, (_, index) => index)
-  const entries = await getFilesAtIndices(listingId, indices, showHiddenFiles)
+  const entries = await getFileRange(listingId, 0, ENTRY_COUNT, showHiddenFiles)
 
   return {
     ...fixtures,

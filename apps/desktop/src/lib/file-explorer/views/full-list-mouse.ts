@@ -44,6 +44,8 @@ export interface RowMouseDownInput {
   /** Resolves a UI index to its entry; rows outside the fetched window return `undefined`. */
   getEntryAt: (globalIndex: number) => FileEntry | undefined
   listingId: string
+  /** The pane's applied listing revision, which `selectedIndices` belong to. */
+  rowSequence: number
   volumeId: string
   includeHidden: boolean
   hasParent: boolean
@@ -111,10 +113,8 @@ export function planRowMouseDown(input: RowMouseDownInput): RowMouseDownPlan {
   const iconId = firstSelectedEntry?.iconId ?? entry.iconId
   const fileInfos = collectFileInfos(selectedIndices, getEntryAt)
 
-  // Search-results / static-entries panes have no backend listing, so
-  // `start_selection_drag` (which resolves indices against the backend listing cache)
-  // would fail. The entries already carry absolute paths, so we route
-  // through the paths-by-value drag flavour.
+  // Search-results / static-entries panes have no backend listing to resolve
+  // rows against. The entries already carry absolute paths, so they travel as they are.
   if (input.usingStaticEntries) {
     const paths: string[] = []
     for (const selectedIndex of selectedIndices) {
@@ -139,6 +139,7 @@ export function planRowMouseDown(input: RowMouseDownInput): RowMouseDownPlan {
       indices: [...selectedIndices],
       includeHidden: input.includeHidden,
       hasParent: input.hasParent,
+      expectedSequence: input.rowSequence,
       sourceVolumeId: volumeId,
       iconId,
       fileInfos,

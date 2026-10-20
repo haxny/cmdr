@@ -771,13 +771,12 @@ has no `..` row); `resolveSnapshotPaths` is the same call narrowed to paths. ❌
 cursor row alone for a while, so Cmd+A then delete took one file (ERR-Q373S). Wire path:
 
 - **Cmd+C / Cmd+X** route through `DualPaneExplorer.copyToClipboard` / `cutToClipboard`, which detect the snapshot pane
-  via `getSnapshotClipboardPaths` and call `copy_paths_to_clipboard` / `cut_paths_to_clipboard` (paths-by-value sibling
-  IPCs of the listing-id-keyed `copy_files_to_clipboard` family). The Rust commands reuse
-  `clipboard::write_file_urls_to_clipboard` and `set_cut_state` / `clear_cut_state`, so the system clipboard contract
-  (file URLs + newline-separated text) is identical. Both first run the same MTP refusal a live MTP pane gets, against
-  the volume the snapshot's search covered rather than the pane's virtual id: an `mtp://…` path can't go on the OS
-  clipboard, and `NSURL::fileURLWithPath` would take it for a relative path. `file-explorer/pane/DETAILS.md` § "Volume
-  capabilities" carries the mechanism.
+  via `getSnapshotClipboardPaths` and call `copy_paths_to_clipboard` / `cut_paths_to_clipboard`, the paths-by-value IPCs
+  every pane's copy and cut end in. The Rust commands reuse `clipboard::write_file_urls_to_clipboard` and
+  `set_cut_state` / `clear_cut_state`, so the system clipboard contract (file URLs + newline-separated text) is
+  identical. Both first run the same MTP refusal a live MTP pane gets, against the volume the snapshot's search covered
+  rather than the pane's virtual id: an `mtp://…` path can't go on the OS clipboard, and `NSURL::fileURLWithPath` would
+  take it for a relative path. `file-explorer/pane/DETAILS.md` § "Volume capabilities" carries the mechanism.
 - **F5 / F6** route through `openUnifiedTransferDialog`, which routes off the kind's `hasBackendListing` capability and
   calls `transfer-operations::buildTransferPropsFromSnapshot` instead of the listing-id-driven builders. The resolved
   entries feed the same `TransferDialogPropsData` shape every transfer uses, and the existing transfer IPCs run with

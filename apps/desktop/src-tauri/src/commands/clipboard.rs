@@ -8,9 +8,6 @@ use std::path::PathBuf;
 #[cfg(target_os = "macos")]
 use objc2::MainThreadMarker;
 
-#[cfg(target_os = "macos")]
-use cmdr_listing::{ListingId, ParentRow};
-
 use crate::clipboard;
 use cmdr_operations::MutationError;
 
@@ -27,69 +24,11 @@ pub struct ClipboardReadResult {
     is_directory: Vec<Option<bool>>,
 }
 
-/// The paths a copy or cut acts on: the selection, else the cursor's row.
-#[cfg(target_os = "macos")]
-fn selected_paths(
-    listing_id: String,
-    selected_indices: &[usize],
-    cursor_index: usize,
-    has_parent: bool,
-    include_hidden: bool,
-) -> Result<Vec<PathBuf>, String> {
-    let indices = resolve_indices(selected_indices, cursor_index, has_parent);
-    crate::listing_host::listings()
-        .paths_at_indices(
-            &ListingId::new(listing_id),
-            &indices,
-            include_hidden,
-            ParentRow::when(has_parent),
-        )
-        .map_err(|e| e.to_string())
-}
-
-/// Resolves selected file paths and writes them to the system clipboard.
-/// Clears any existing cut state (this is a copy, not a cut).
-#[cfg(target_os = "macos")]
-#[tauri::command]
-#[specta::specta]
-pub async fn copy_files_to_clipboard(
-    app: tauri::AppHandle,
-    listing_id: String,
-    selected_indices: Vec<usize>,
-    cursor_index: usize,
-    has_parent: bool,
-    include_hidden: bool,
-) -> Result<usize, String> {
-    let paths = selected_paths(listing_id, &selected_indices, cursor_index, has_parent, include_hidden)?;
-
-    if paths.is_empty() {
-        return Err("No files to copy".to_string());
-    }
-
-    let count = paths.len();
-
-    // Write to pasteboard on the main thread (NSPasteboard requires it)
-    let (tx, rx) = std::sync::mpsc::channel();
-    app.run_on_main_thread(move || {
-        let mtm = MainThreadMarker::new().expect("run_on_main_thread runs on the main thread");
-        let result = clipboard::write_file_urls_to_clipboard(mtm, &paths);
-        let _ = tx.send(result);
-    })
-    .map_err(|e| format!("Couldn't run on main thread: {e}"))?;
-
-    rx.recv()
-        .map_err(|e| format!("Couldn't receive pasteboard result: {e}"))??;
-
-    clipboard::clear_cut_state();
-
-    Ok(count)
-}
-
-/// Writes the given paths directly to the system clipboard. Used when the
-/// caller already has the absolute paths (search-results pane, where there's
-/// no backend listing to resolve indices against). Clears any cut state.
+/// Writes the given paths to the system clipboard and clears any cut state.
 ///
-/// Mirrors `copy_files_to_clipboard` but bypasses the listing-cache lookup.
+/// Paths by value, never row numbers: the frontend resolves a pane's selection
+/// through the revision-checked `get_selection_snapshot` first, because a watcher
+/// insert renumbers rows and old row numbers would name the neighbor.
 #[cfg(target_os = "macos")]
 #[tauri::command]
 #[specta::specta]
@@ -119,7 +58,6 @@ pub async fn copy_paths_to_clipboard(app: tauri::AppHandle, paths: Vec<String>) 
 }
 
 /// Writes the given paths directly to the system clipboard and marks them as cut.
-/// Sibling of `cut_files_to_clipboard` for paths-by-value callers.
 #[cfg(target_os = "macos")]
 #[tauri::command]
 #[specta::specta]
@@ -133,45 +71,6 @@ pub async fn cut_paths_to_clipboard(app: tauri::AppHandle, paths: Vec<String>) -
     let count = paths.len();
     let cut_paths = paths.clone();
 
-    let (tx, rx) = std::sync::mpsc::channel();
-    app.run_on_main_thread(move || {
-        let mtm = MainThreadMarker::new().expect("run_on_main_thread runs on the main thread");
-        let result = clipboard::write_file_urls_to_clipboard(mtm, &paths);
-        let _ = tx.send(result);
-    })
-    .map_err(|e| format!("Couldn't run on main thread: {e}"))?;
-
-    rx.recv()
-        .map_err(|e| format!("Couldn't receive pasteboard result: {e}"))??;
-
-    clipboard::set_cut_state(cut_paths);
-
-    Ok(count)
-}
-
-/// Resolves selected file paths, writes them to the system clipboard, and marks them as cut.
-/// On paste, files will be moved instead of copied.
-#[cfg(target_os = "macos")]
-#[tauri::command]
-#[specta::specta]
-pub async fn cut_files_to_clipboard(
-    app: tauri::AppHandle,
-    listing_id: String,
-    selected_indices: Vec<usize>,
-    cursor_index: usize,
-    has_parent: bool,
-    include_hidden: bool,
-) -> Result<usize, String> {
-    let paths = selected_paths(listing_id, &selected_indices, cursor_index, has_parent, include_hidden)?;
-
-    if paths.is_empty() {
-        return Err("No files to cut".to_string());
-    }
-
-    let count = paths.len();
-    let cut_paths = paths.clone();
-
-    // Write to pasteboard on the main thread
     let (tx, rx) = std::sync::mpsc::channel();
     app.run_on_main_thread(move || {
         let mtm = MainThreadMarker::new().expect("run_on_main_thread runs on the main thread");
@@ -363,34 +262,6 @@ pub fn clear_clipboard_cut_state() {
 #[cfg(not(target_os = "macos"))]
 #[tauri::command]
 #[specta::specta]
-pub async fn copy_files_to_clipboard(
-    _app: tauri::AppHandle,
-    _listing_id: String,
-    _selected_indices: Vec<usize>,
-    _cursor_index: usize,
-    _has_parent: bool,
-    _include_hidden: bool,
-) -> Result<usize, String> {
-    Err("Clipboard file operations are not yet supported on this platform".to_string())
-}
-
-#[cfg(not(target_os = "macos"))]
-#[tauri::command]
-#[specta::specta]
-pub async fn cut_files_to_clipboard(
-    _app: tauri::AppHandle,
-    _listing_id: String,
-    _selected_indices: Vec<usize>,
-    _cursor_index: usize,
-    _has_parent: bool,
-    _include_hidden: bool,
-) -> Result<usize, String> {
-    Err("Clipboard file operations are not yet supported on this platform".to_string())
-}
-
-#[cfg(not(target_os = "macos"))]
-#[tauri::command]
-#[specta::specta]
 pub async fn read_clipboard_files(_app: tauri::AppHandle) -> Result<ClipboardReadResult, String> {
     Err("Clipboard file operations are not yet supported on this platform".to_string())
 }
@@ -407,22 +278,4 @@ pub async fn copy_paths_to_clipboard(_app: tauri::AppHandle, _paths: Vec<String>
 #[specta::specta]
 pub async fn cut_paths_to_clipboard(_app: tauri::AppHandle, _paths: Vec<String>) -> Result<usize, String> {
     Err("Clipboard file operations are not yet supported on this platform".to_string())
-}
-
-// --- Helpers ---
-
-/// When no files are selected, falls back to the cursor index (adjusting for the ".." entry).
-#[cfg(target_os = "macos")]
-fn resolve_indices(selected_indices: &[usize], cursor_index: usize, has_parent: bool) -> Vec<usize> {
-    if !selected_indices.is_empty() {
-        return selected_indices.to_vec();
-    }
-
-    // Nothing selected -- use the cursor position.
-    // If the cursor is on ".." (index 0 with has_parent), skip it.
-    if has_parent && cursor_index == 0 {
-        return Vec::new();
-    }
-
-    vec![cursor_index]
 }

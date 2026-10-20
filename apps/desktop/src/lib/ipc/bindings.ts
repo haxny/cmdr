@@ -465,20 +465,17 @@ export const commands = {
       ListingLookupError
     >(__TAURI_INVOKE('get_file_beside', { listingId, name, side, includeHidden })),
   /**
-   *  Gets full FileEntry objects at specific backend indices from a cached listing.
-   *  Callers are responsible for any parent offset adjustment before passing indices.
+   *  The full entries on the selected rows, only while they still name the
+   *  committed backend rows: the delete dialog's input.
    */
-  getFilesAtIndices: (listingId: string, selectedIndices: number[], includeHidden: boolean) =>
+  getSelectionEntries: (
+    listingId: string,
+    includeHidden: boolean,
+    selectedIndices: number[],
+    expectedSequence: number,
+  ) =>
     typedError<FileEntry[], ListingLookupError>(
-      __TAURI_INVOKE('get_files_at_indices', { listingId, selectedIndices, includeHidden }),
-    ),
-  /**
-   *  Gets file paths at specific frontend indices from a cached listing (batch version of path
-   *  extraction). Handles the parent ".." offset internally; callers pass frontend indices.
-   */
-  getPathsAtIndices: (listingId: string, selectedIndices: number[], includeHidden: boolean, hasParent: boolean) =>
-    typedError<string[], ListingLookupError>(
-      __TAURI_INVOKE('get_paths_at_indices', { listingId, selectedIndices, includeHidden, hasParent }),
+      __TAURI_INVOKE('get_selection_entries', { listingId, includeHidden, selectedIndices, expectedSequence }),
     ),
   // Consume a selection only while it still names the committed backend rows.
   getSelectionSnapshot: (
@@ -1323,17 +1320,6 @@ export const commands = {
    */
   refreshListingIndexSizes: (listingId: string) =>
     typedError<null, string>(__TAURI_INVOKE('refresh_listing_index_sizes', { listingId })),
-  // Initiates native drag from Rust directly, looking up paths from the listing cache (macOS only).
-  startSelectionDrag: (
-    listingId: string,
-    selectedIndices: number[],
-    includeHidden: boolean,
-    hasParent: boolean,
-    iconPath: string,
-  ) =>
-    typedError<null, string>(
-      __TAURI_INVOKE('start_selection_drag', { listingId, selectedIndices, includeHidden, hasParent, iconPath }),
-    ),
   /**
    *  Begins a native drag with the given file paths. Used for single-file drags
    *  where the frontend has the path directly (no listing-cache lookup needed),
@@ -3757,46 +3743,15 @@ export const commands = {
    */
   isForceOnboarding: () => __TAURI_INVOKE<boolean>('is_force_onboarding'),
   /**
-   *  Resolves selected file paths and writes them to the system clipboard.
-   *  Clears any existing cut state (this is a copy, not a cut).
-   */
-  copyFilesToClipboard: (
-    listingId: string,
-    selectedIndices: number[],
-    cursorIndex: number,
-    hasParent: boolean,
-    includeHidden: boolean,
-  ) =>
-    typedError<number, string>(
-      __TAURI_INVOKE('copy_files_to_clipboard', { listingId, selectedIndices, cursorIndex, hasParent, includeHidden }),
-    ),
-  /**
-   *  Resolves selected file paths, writes them to the system clipboard, and marks them as cut.
-   *  On paste, files will be moved instead of copied.
-   */
-  cutFilesToClipboard: (
-    listingId: string,
-    selectedIndices: number[],
-    cursorIndex: number,
-    hasParent: boolean,
-    includeHidden: boolean,
-  ) =>
-    typedError<number, string>(
-      __TAURI_INVOKE('cut_files_to_clipboard', { listingId, selectedIndices, cursorIndex, hasParent, includeHidden }),
-    ),
-  /**
-   *  Writes the given paths directly to the system clipboard. Used when the
-   *  caller already has the absolute paths (search-results pane, where there's
-   *  no backend listing to resolve indices against). Clears any cut state.
+   *  Writes the given paths to the system clipboard and clears any cut state.
    *
-   *  Mirrors `copy_files_to_clipboard` but bypasses the listing-cache lookup.
+   *  Paths by value, never row numbers: the frontend resolves a pane's selection
+   *  through the revision-checked `get_selection_snapshot` first, because a watcher
+   *  insert renumbers rows and old row numbers would name the neighbor.
    */
   copyPathsToClipboard: (paths: string[]) =>
     typedError<number, string>(__TAURI_INVOKE('copy_paths_to_clipboard', { paths })),
-  /**
-   *  Writes the given paths directly to the system clipboard and marks them as cut.
-   *  Sibling of `cut_files_to_clipboard` for paths-by-value callers.
-   */
+  // Writes the given paths directly to the system clipboard and marks them as cut.
   cutPathsToClipboard: (paths: string[]) =>
     typedError<number, string>(__TAURI_INVOKE('cut_paths_to_clipboard', { paths })),
   /**
@@ -15372,17 +15327,17 @@ export type SeekTargetKind =
 /**
  *  Where a pane's selected rows live.
  *
- *  Two shapes because Cmdr has two kinds of pane, and the drag-out commands
- *  already split the same way (`start_selection_drag` against `start_drag_paths`
- *  in `commands/file_system/drag.rs`).
+ *  Two shapes because Cmdr has two kinds of pane: one whose rows live in the
+ *  backend listing cache, and the search-results snapshot, whose rows don't.
  */
 export type SelectedRows =
   /**
-   *  Frontend indices into a cached listing, resolved on demand. `has_parent`
-   *  says whether index 0 is the synthetic `..` row, exactly as
-   *  `get_paths_at_indices` means it.
+   *  Backend row numbers into a cached listing (no `..` row), resolved on
+   *  demand, and only while the listing is still at `sequence`, the revision the
+   *  pane applied them in: a watcher insert renumbers rows, and the old numbers
+   *  would hand a service the neighbor.
    */
-  | { kind: 'listing'; listingId: string; indices: number[]; includeHidden: boolean; hasParent: boolean }
+  | { kind: 'listing'; listingId: string; indices: number[]; includeHidden: boolean; sequence: number }
   /**
    *  Paths by value. The search-results snapshot keeps its rows in the frontend
    *  and has no cached listing to index into.

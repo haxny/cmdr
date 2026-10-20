@@ -27,9 +27,9 @@ the loan of AppKit's menu to it).
 - **❌ The responder goes BELOW the window, never after it.** `NSWindow` doesn't forward
   `validRequestorForSendType:returnType:` to its own `nextResponder`, so a responder spliced there is never asked. It
   sits between the content view and the window, where the walk from the first responder reaches it.
-- **The selection arrives as listing INDICES, not paths**, resolved from the listing cache only when asked. AppKit asks
-  synchronously on the main thread and can't await IPC. The search-results snapshot has no cached listing and is the
-  one shape that travels as paths.
+- **The selection arrives as listing INDICES, not paths**, resolved from the listing cache only when asked, and only
+  against the revision the pane applied them in (`sequence`). AppKit asks synchronously on the main thread and can't
+  await IPC. The search-results snapshot has no cached listing and is the one shape that travels as paths.
 - **`writeSelectionToPasteboard:` runs once per CANDIDATE SERVICE as the submenu opens**, not only when one is picked
   (seven calls in 90 ms, measured). Anything added there is paid per service, per open.
 - **The frontend decides whether a pane may offer rows at all** (`paneRowsAreOsVisible` over `capabilitiesForPane`), so

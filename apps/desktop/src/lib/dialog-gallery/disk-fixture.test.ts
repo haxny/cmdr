@@ -13,9 +13,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resolveDiskFixture, type FixtureDirPayload } from './disk-fixture'
 import type { ExplorerAPI } from '../../routes/(main)/explorer-api'
 
-const getFilesAtIndices = vi.fn(() => Promise.resolve([{ name: 'Photos', path: '/fixtures/Photos' }]))
+const getFileRange = vi.fn(() => Promise.resolve([{ name: 'Photos', path: '/fixtures/Photos' }]))
 vi.mock('#lib/tauri-commands/index.js', () => ({
-  getFilesAtIndices: (...args: unknown[]) => getFilesAtIndices(...(args as [])),
+  getFileRange: (...args: unknown[]) => getFileRange(...(args as [])),
 }))
 
 const navigateToDirInPane = vi.fn(() => Promise.resolve(true))
@@ -77,7 +77,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   navigateToDirInPane.mockResolvedValue(true)
   resolveLocationOrToast.mockResolvedValue({ volumeId: 'root', path: '/fixtures' })
-  getFilesAtIndices.mockResolvedValue([{ name: 'Photos', path: '/fixtures/Photos' }])
+  getFileRange.mockResolvedValue([{ name: 'Photos', path: '/fixtures/Photos' }])
 })
 
 describe('resolveDiskFixture', () => {
@@ -97,7 +97,7 @@ describe('resolveDiskFixture', () => {
     })
     expect(disk?.entries).toHaveLength(1)
     // Backend indices, so the synthetic `..` row can never reach a fixture.
-    expect(getFilesAtIndices).toHaveBeenCalledWith('listing-7', [0, 1, 2, 3, 4, 5], true)
+    expect(getFileRange).toHaveBeenCalledWith('listing-7', 0, 6, true)
   })
 
   it('opens nothing when the pane refused to navigate', async () => {
@@ -109,12 +109,12 @@ describe('resolveDiskFixture', () => {
     navigateToDirInPane.mockResolvedValue(false)
 
     expect(await resolveDiskFixture(makeExplorer('listing-of-the-previous-dir'), fixtures)).toBeNull()
-    expect(getFilesAtIndices).not.toHaveBeenCalled()
+    expect(getFileRange).not.toHaveBeenCalled()
   })
 
   it('opens nothing when the pane has no listing yet', async () => {
     expect(await resolveDiskFixture(makeExplorer(null), fixtures)).toBeNull()
-    expect(getFilesAtIndices).not.toHaveBeenCalled()
+    expect(getFileRange).not.toHaveBeenCalled()
   })
 
   it('opens nothing when the fixture directory doesn’t resolve to a volume', async () => {

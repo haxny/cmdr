@@ -1,7 +1,7 @@
 import {
   findFileIndex,
   findFileIndices,
-  getPathsAtIndices,
+  getSelectionSnapshot,
   refreshListing,
   toggleTags,
 } from '#lib/tauri-commands/index.js'
@@ -149,8 +149,9 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
   /**
    * Toggle a Finder system color tag (index 1..=7) on the focused pane's selection,
    * or on the cursor entry when nothing is selected (mirrors how the file F-key ops
-   * fall back to the cursor). Resolves selected indices → paths via the backend
-   * (which handles the `..` offset), then calls the `toggle_tags` IPC — it writes the
+   * fall back to the cursor). Resolves the selection to paths through the
+   * revision-checked `getSelectionSnapshot` (rows that moved since the pane applied
+   * them tag nothing, never the neighbor), then calls the `toggle_tags` IPC — it writes the
    * tags and refreshes the cached listing, so the dots update without extra work here.
    * Best-effort: a write failure is logged backend-side and surfaces as no visible
    * change, never a thrown dispatch.
@@ -168,7 +169,8 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     let paths: string[]
     if (selectedIndices.length > 0) {
       try {
-        paths = await getPathsAtIndices(listingId, selectedIndices, includeHidden, hasParent)
+        const rows = toBackendIndices(selectedIndices, hasParent)
+        paths = (await getSelectionSnapshot(listingId, includeHidden, rows, paneRef.getLastSequence())).paths
       } catch {
         return
       }

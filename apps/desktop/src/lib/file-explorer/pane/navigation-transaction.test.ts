@@ -89,7 +89,6 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => {
     getDirStatsBatch: vi.fn().mockResolvedValue([]),
     getDirSizeTooltip: vi.fn().mockResolvedValue(''),
     getListingStats: vi.fn().mockResolvedValue({ data: null, timedOut: false }),
-    getPathsAtIndices: vi.fn().mockResolvedValue([]),
     getSyncStatus: vi.fn().mockResolvedValue({ data: {}, timedOut: false }),
     getTotalCount: vi.fn().mockResolvedValue(0),
     setListingIncludeHidden: vi

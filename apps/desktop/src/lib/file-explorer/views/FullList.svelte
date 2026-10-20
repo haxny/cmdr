@@ -81,6 +81,11 @@
 
     interface Props {
         listingId: string
+        /** The pane's applied listing revision, which `selectedIndices` belong to.
+         *  A selection drag resolves its paths against it, read on the press. Every
+         *  pane on a backend listing passes it; a `staticEntries` mount has no
+         *  listing, drags its rows by path, and leaves it out. */
+        getRowSequence?: () => number
         /** Volume id of the host pane. Recorded into the self-drag identity at
          *  drag start so an in-app drop builds its transfer from the source
          *  volume + the paths the volume knows, never the lossy pasteboard
@@ -179,6 +184,7 @@
 
     const {
         listingId,
+        getRowSequence,
         volumeId,
         totalCount,
         includeHidden,
@@ -556,6 +562,7 @@
             selectedIndices,
             getEntryAt: cache.getEntryAt,
             listingId,
+            rowSequence: getRowSequence?.() ?? 0,
             volumeId,
             includeHidden,
             hasParent,
