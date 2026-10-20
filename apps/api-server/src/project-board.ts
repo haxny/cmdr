@@ -134,7 +134,11 @@ async function graphql(
  * column is a cosmetic problem, while an item that never arrived is the thing worth alerting on.
  *
  * Adding an issue already on the board returns its existing item rather than a duplicate, so a
- * redelivered webhook is harmless.
+ * redelivered webhook is harmless. A CONCURRENT add is different: an agent filing with
+ * `gh issue create --project` races this webhook, and GitHub refuses whichever add comes second
+ * ("Content already exists in this project", seen in the Worker logs 2026-10-20). So a refused add
+ * asks whether the issue is on the board anyway before calling it a failure, and leaves the card's
+ * fields to whoever won.
  */
 export async function addIssueToBoard(target: BoardTarget, issueNodeId: string): Promise<boolean> {
   const added = await graphql(
@@ -145,6 +149,10 @@ export async function addIssueToBoard(target: BoardTarget, issueNodeId: string):
   const item = (added?.['addProjectV2ItemById'] as { item?: { id?: unknown } } | undefined)?.item
   const itemId = typeof item?.id === 'string' ? item.id : null
   if (!itemId) {
+    if (await isIssueOnBoard(target, issueNodeId)) {
+      console.warn(`Project board: adding ${issueNodeId} was refused, but something else already put it on the board`)
+      return true
+    }
     console.error(`Project board: adding ${issueNodeId} produced no item`)
     return false
   }
@@ -160,6 +168,18 @@ export async function addIssueToBoard(target: BoardTarget, issueNodeId: string):
   }
 
   return true
+}
+
+/** Whether the issue has an item on the target board. False when that can't be read either. */
+async function isIssueOnBoard(target: BoardTarget, issueNodeId: string): Promise<boolean> {
+  const data = await graphql(
+    target.token,
+    'query ($id: ID!) { node(id: $id) { ... on Issue { projectItems(first: 100) { nodes { project { id } } } } } }',
+    { id: issueNodeId },
+  )
+  const nodes = (data?.['node'] as { projectItems?: { nodes?: { project?: { id?: unknown } }[] } } | undefined)
+    ?.projectItems?.nodes
+  return (nodes ?? []).some((n) => n.project?.id === target.projectId)
 }
 
 /** One single-select field on the board: its id, and its option ids by option name. */

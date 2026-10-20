@@ -126,7 +126,7 @@ webhookGitHub.post('/webhook/github', async (c) => {
       await recordOpsEvent(
         c.env.TELEMETRY_DB,
         'board-add-failed',
-        `${issue.ref} did not reach the backlog board. Check whether GITHUB_PROJECT_TOKEN has expired.`,
+        `${issue.ref} did not reach the backlog board. GitHub's answer is in the Worker logs under "Project board:"; an expired GITHUB_PROJECT_TOKEN is the usual cause.`,
       )
     }),
   )

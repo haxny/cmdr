@@ -519,8 +519,14 @@ triage box, whose agent reads stranger-written text (§ Card ratings).
 
 **Failures are loud.** A classic PAT expires, and the failure mode is issues quietly not arriving. `addIssueToBoard`
 returns false on every failure and the route records a `board-add-failed` ops alert, naming the issue and pointing at
-the token. The status update is deliberately NOT part of that answer: an item in the wrong column is cosmetic, an item
-that never arrived is not.
+the token and the Worker logs. The status update is deliberately NOT part of that answer: an item in the wrong column is
+cosmetic, an item that never arrived is not.
+
+**A refused add isn't a failure until the board says so.** Agents file with `gh issue create --project`, which races the
+webhook, and GitHub refuses the second of two concurrent adds with `Content already exists in this project` (verified in
+the Worker logs, 2026-10-20: six false `board-add-failed` alerts in one filing burst). So on a refused add,
+`addIssueToBoard` reads the issue's `projectItems` and counts it as added when the board is among them, leaving Status
+to whoever won. The check is structural (board membership), never the error message.
 
 **The signature is the only thing that refuses.** Everything the route understands answers 204, including ignored
 events, because a 4xx on a normal delivery is a red cross in GitHub's webhook UI forever. Renovate and Dependabot are

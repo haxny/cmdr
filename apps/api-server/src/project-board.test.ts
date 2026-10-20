@@ -154,6 +154,45 @@ describe('addIssueToBoard', () => {
     await expect(addIssueToBoard(target, 'I_node')).resolves.toBe(false)
   })
 
+  it('counts as added when a racing add put the issue on the board first', async () => {
+    // Regression anchor (2026-10-20): an agent filing with `gh issue create --project` races the
+    // webhook, GitHub refuses the second add with "Content already exists in this project", and a
+    // card that DID land raised a board-add-failed alert blaming the token.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: { addProjectV2ItemById: null },
+          errors: [{ type: 'UNPROCESSABLE', message: 'Content already exists in this project' }],
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: { node: { projectItems: { nodes: [{ project: { id: 'PVT_other' } }, { project: { id: 'PVT_x' } }] } } },
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(addIssueToBoard(target, 'I_node')).resolves.toBe(true)
+    // No status call: whoever won the race owns the card's fields.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(requestBody(fetchMock.mock.calls[1])).toContain('I_node')
+  })
+
+  it('reports failure when the add is refused and the issue is not on this board', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({ data: { addProjectV2ItemById: null }, errors: [{ message: 'nope' }] }))
+        .mockResolvedValueOnce(
+          jsonResponse({ data: { node: { projectItems: { nodes: [{ project: { id: 'PVT_other' } }] } } } }),
+        ),
+    )
+
+    await expect(addIssueToBoard(target, 'I_node')).resolves.toBe(false)
+  })
+
   it('reports failure rather than throwing when the network is down', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
     await expect(addIssueToBoard(target, 'I_node')).resolves.toBe(false)
