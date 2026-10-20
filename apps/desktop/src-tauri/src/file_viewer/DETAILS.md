@@ -397,7 +397,11 @@ the reasons; the shape:
 
 - **A fresh copy per launch, `0o444`, under `<app_data_dir>/open-with-extract/.cmdr-open-with-<uuid>/`**, reaped by
   `init_open_with_extract_dir` at startup: a launched app has no close event, so the process boundary is the only sure
-  signal a copy is done with. ❌ No refcount, dedup cache, shared dir with the viewer, or write-back.
+  signal a copy is done with. ❌ No refcount, dedup cache, shared dir with the viewer, or write-back. The reap runs on
+  its own `open-with-reaper` thread (it asks the Trash, an XPC round trip per item, which startup's main thread must not
+  wait on), so it races this session's launches; it takes only folders whose mtime is before the process started
+  (`left_by_an_earlier_run`). A new pull is a fresh uuid folder and an app saving into an old one bumps its mtime, so
+  neither is ever reaped. The stand-ins' folder follows the same rule.
 - **The session sweep bounds the pile** (`sweep_launch_folders`, run by `launch_paths` before each launch's pulls, under
   `SESSION_SWEEP`): untouched copies past the newest four go once they're 12 hours old, or oldest first once the
   untouched copies pass 4 GiB together. Ordered by the record's `pulledAt`. A changed copy is never swept (an app may be

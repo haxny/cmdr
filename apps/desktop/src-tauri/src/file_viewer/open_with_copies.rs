@@ -12,8 +12,10 @@
 //!   file, no record at all) counts as changed. The inode catches an atomic save that
 //!   keeps the size and puts the old mtime back; ❌ not ctime, which any metadata change
 //!   (a mode or an xattr) bumps on a copy whose content nobody changed.
-//! - **The startup reaper** ([`reap_launch_folders`]) removes an untouched copy and moves
-//!   everything in a changed one to the Trash, under its own name, logging at `warn`.
+//! - **The startup reaper** ([`reap_launch_folders`]), on a background thread, removes an
+//!   untouched copy an earlier run left and moves everything in a changed one to the
+//!   Trash, under its own name, logging at `warn`. A folder touched since this process
+//!   started is this session's and stays.
 //!   When the Trash refuses an item, the folder stays for the next launch: ❌ never a
 //!   delete in its place.
 //! - **The session sweep** ([`sweep_launch_folders`]), before each launch's pulls,
@@ -119,21 +121,28 @@ fn untouched_record(folder: &Path) -> Option<PullRecord> {
 }
 
 /// The startup sweep of the open-with dir: every subdir of `dir` that `is_launch_folder`
-/// names goes, an untouched one removed and a changed one's contents handed to `trash`.
-/// `trash` is the real Trash in the app and a stand-in under test.
+/// names and an earlier run left goes, an untouched one removed and a changed one's
+/// contents handed to `trash`. `trash` is the real Trash in the app and a stand-in under
+/// test.
+///
+/// It runs in the background, beside this session's launches, so it takes only folders
+/// last touched before `started` (this process's start, [`left_by_an_earlier_run`]): a
+/// pull this session makes is a fresh uuid folder, and an app saving into an old one
+/// bumps its mtime, so neither is ever reaped.
 pub(super) fn reap_launch_folders(
     dir: &Path,
     is_launch_folder: impl Fn(&str) -> bool,
+    started: SystemTime,
     trash: &dyn Fn(&Path) -> Result<(), String>,
 ) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return; // dir doesn't exist yet (first run) — nothing to reap.
     };
     for entry in entries.flatten() {
-        if !is_launch_folder(&entry.file_name().to_string_lossy()) {
+        let folder = entry.path();
+        if !is_launch_folder(&entry.file_name().to_string_lossy()) || !left_by_an_earlier_run(&folder, started) {
             continue;
         }
-        let folder = entry.path();
         if untouched_record(&folder).is_none() && !trash_contents(&folder, trash) {
             continue;
         }
@@ -141,6 +150,15 @@ pub(super) fn reap_launch_folders(
             log::debug!(target: "cmdr_lib::file_viewer", "couldn't remove open-with copy {}: {e}", folder.display());
         }
     }
+}
+
+/// Whether `folder` was last touched before `started`. Its mtime moves when anything is
+/// created, renamed, or removed in it, so a folder pulled or saved into since is this
+/// session's. An unreadable mtime counts as this session's: kept is the safe answer.
+pub(super) fn left_by_an_earlier_run(folder: &Path, started: SystemTime) -> bool {
+    std::fs::metadata(folder)
+        .and_then(|meta| meta.modified())
+        .is_ok_and(|modified| modified < started)
 }
 
 /// Moves everything in `folder` but its record to the Trash. Answers whether the folder

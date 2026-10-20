@@ -42,9 +42,9 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(any(target_os = "macos", test))]
 use super::materialize::{MaterializedFile, RoutedPullFailure, TempSpot, extract_routed_into};
-use super::open_with_copies::reap_launch_folders;
 #[cfg(any(target_os = "macos", test))]
 use super::open_with_copies::{SweepPolicy, record_pull, sweep_launch_folders};
+use super::open_with_copies::{left_by_an_earlier_run, reap_launch_folders};
 use super::{ArchiveFailureKind, ViewerError};
 #[cfg(any(target_os = "macos", test))]
 use crate::file_system::volume::RoutedKind;
@@ -93,9 +93,22 @@ static OPEN_WITH_DIR: LazyLock<RwLock<Option<PathBuf>>> = LazyLock::new(|| RwLoc
 
 /// Records the per-instance dir and reaps what an earlier run left in it. Called once
 /// at startup from `lib.rs` with `<app_data_dir>/open-with-extract`.
+///
+/// The reap runs on its own thread: it lists a folder and asks the Trash (an XPC round
+/// trip per item), which the startup path on the main thread must not wait on. It takes
+/// only what was there before `started`, so a launch this session can't lose its copy
+/// to it.
 pub fn init_open_with_extract_dir(dir: PathBuf) {
-    reap_open_with_temps(&dir);
-    *OPEN_WITH_DIR.write_ignore_poison() = Some(dir);
+    let started = std::time::SystemTime::now();
+    *OPEN_WITH_DIR.write_ignore_poison() = Some(dir.clone());
+    // 8 MiB: the Trash is a framework call, which a small thread stack can overflow.
+    let spawned = std::thread::Builder::new()
+        .name("open-with-reaper".to_string())
+        .stack_size(8 * 1024 * 1024)
+        .spawn(move || reap_open_with_temps(&dir, started));
+    if let Err(e) = spawned {
+        log::warn!(target: "cmdr_lib::file_viewer", "couldn't start the open-with reaper, so last run's copies stay: {e}");
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -106,10 +119,10 @@ fn open_with_dir() -> PathBuf {
         .unwrap_or_else(|| std::env::temp_dir().join(DEFAULT_DIRNAME))
 }
 
-/// Clears what an earlier run left in `dir`: the stand-ins, every untouched copy, and,
-/// into the Trash, every copy an app changed.
-pub(super) fn reap_open_with_temps(dir: &Path) {
-    reap_open_with_temps_with(dir, &|path| {
+/// Clears what an earlier run (one that ended before `started`) left in `dir`: the
+/// stand-ins, every untouched copy, and, into the Trash, every copy an app changed.
+fn reap_open_with_temps(dir: &Path, started: std::time::SystemTime) {
+    reap_open_with_temps_with(dir, started, &|path| {
         cmdr_operations::move_to_trash_sync(path)
             .map(|_in_trash| ())
             .map_err(|e| e.to_string())
@@ -117,9 +130,15 @@ pub(super) fn reap_open_with_temps(dir: &Path) {
 }
 
 /// [`reap_open_with_temps`] with the Trash passed in, for tests.
-pub(super) fn reap_open_with_temps_with(dir: &Path, trash: &dyn Fn(&Path) -> Result<(), String>) {
+pub(super) fn reap_open_with_temps_with(
+    dir: &Path,
+    started: std::time::SystemTime,
+    trash: &dyn Fn(&Path) -> Result<(), String>,
+) {
+    // Only last run's: a right-click this session may already have made a stand-in.
     let stand_ins = dir.join(STAND_IN_DIRNAME);
-    if let Err(e) = std::fs::remove_dir_all(&stand_ins)
+    if left_by_an_earlier_run(&stand_ins, started)
+        && let Err(e) = std::fs::remove_dir_all(&stand_ins)
         && e.kind() != std::io::ErrorKind::NotFound
     {
         log::debug!(target: "cmdr_lib::file_viewer", "couldn't remove the open-with stand-ins: {e}");
@@ -127,6 +146,7 @@ pub(super) fn reap_open_with_temps_with(dir: &Path, trash: &dyn Fn(&Path) -> Res
     reap_launch_folders(
         dir,
         |name| name.starts_with(TEMP_SUBDIR_PREFIX) && name != STAND_IN_DIRNAME,
+        started,
         trash,
     );
 }

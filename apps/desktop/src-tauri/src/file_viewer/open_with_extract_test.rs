@@ -250,7 +250,7 @@ fn each_reaper_takes_only_its_own_family() {
     assert!(!viewer.exists());
 
     std::fs::create_dir_all(&viewer).expect("mk viewer temp again");
-    reap_open_with_temps_with(dir.path(), &no_trash);
+    reap_open_with_temps_with(dir.path(), std::time::SystemTime::now(), &no_trash);
     assert!(!open_with.exists());
     assert!(viewer.exists(), "the open-with reaper must not touch a viewer temp");
 }
@@ -315,7 +315,7 @@ fn the_startup_reaper_removes_the_stand_ins_outright() {
     let stand_in = listing_path_in(Path::new("/Users/me/bundle.zip/a.pdf"), dir.path());
     assert!(stand_in.is_file());
 
-    reap_open_with_temps_with(dir.path(), &|path: &Path| {
+    reap_open_with_temps_with(dir.path(), std::time::SystemTime::now(), &|path: &Path| {
         panic!("trashed a stand-in: {}", path.display())
     });
 
@@ -374,7 +374,7 @@ fn the_startup_reaper_moves_a_changed_copy_and_its_siblings_to_the_trash() {
     std::fs::write(edited.with_file_name("notes copy.txt"), b"saved as a copy").expect("save a copy beside it");
     let trash = tempfile::tempdir().expect("trash");
 
-    reap_open_with_temps_with(dir.path(), &into(trash.path()));
+    reap_open_with_temps_with(dir.path(), std::time::SystemTime::now(), &into(trash.path()));
 
     assert_eq!(
         std::fs::read(trash.path().join("notes.txt")).expect("kept"),
@@ -402,7 +402,7 @@ fn a_new_file_beside_an_untouched_copy_is_kept_too() {
     std::fs::write(copy.with_file_name("report-signed.pdf"), b"%PDF-1.4 signed").expect("save beside");
     let trash = tempfile::tempdir().expect("trash");
 
-    reap_open_with_temps_with(dir.path(), &into(trash.path()));
+    reap_open_with_temps_with(dir.path(), std::time::SystemTime::now(), &into(trash.path()));
 
     assert!(trash.path().join("report-signed.pdf").exists());
     assert!(
@@ -423,9 +423,36 @@ fn a_changed_copy_the_trash_refuses_stays_where_it_is() {
     let copy = pull(&zip, "notes.txt", dir.path());
     save_over(&copy, b"my edits");
 
-    reap_open_with_temps_with(dir.path(), &no_trash);
+    reap_open_with_temps_with(dir.path(), std::time::SystemTime::now(), &no_trash);
 
     assert_eq!(std::fs::read(&copy).expect("still there"), b"my edits");
+}
+
+/// The startup reaper runs in the background, so a launch can pull (and an app can
+/// save into) a copy while it works. It only takes what an earlier run left: a folder
+/// made or touched after this process started is this session's, and stays.
+#[test]
+fn the_startup_reaper_leaves_a_copy_pulled_after_this_process_started_alone() {
+    ensure_root_volume();
+    let src = tempfile::tempdir().expect("src dir");
+    let zip = src.path().join("bundle.zip");
+    build_zip(&zip, &[("old.txt", b"as pulled"), ("new.txt", b"as pulled")]);
+    let dir = tempfile::tempdir().expect("open-with dir");
+    let leftover = pull(&zip, "old.txt", dir.path());
+    save_over(&leftover, b"last run's edits");
+    let started = std::time::SystemTime::now();
+    let this_session = pull(&zip, "new.txt", dir.path());
+    save_over(&this_session, b"edits in progress");
+    let trash = tempfile::tempdir().expect("trash");
+
+    reap_open_with_temps_with(dir.path(), started, &into(trash.path()));
+
+    assert!(
+        trash.path().join("old.txt").exists(),
+        "last run's changed copy is kept in the Trash"
+    );
+    assert_eq!(std::fs::read(&this_session).expect("left alone"), b"edits in progress");
+    assert!(!trash.path().join("new.txt").exists());
 }
 
 /// An atomic save that keeps the size and puts the old mtime back (`rsync -t`, a tool
@@ -447,7 +474,7 @@ fn a_same_size_save_that_keeps_the_mtime_still_counts_as_changed() {
         .expect("put the mtime back");
     let trash = tempfile::tempdir().expect("trash");
 
-    reap_open_with_temps_with(dir.path(), &into(trash.path()));
+    reap_open_with_temps_with(dir.path(), std::time::SystemTime::now(), &into(trash.path()));
 
     assert_eq!(
         std::fs::read(trash.path().join("notes.txt")).expect("kept"),
