@@ -85,7 +85,15 @@ pub fn set_aside(path: &Path, file: StateFile) -> Option<PathBuf> {
 /// [`KEPT_COPIES`], and reports the recovery, while the file itself stays. For a file that read
 /// only in part: the parts that read carry on, and the copy keeps the rest. Returns where the copy
 /// went, or `None` when it couldn't be made.
+///
+/// A copy of these exact bytes already there (an earlier launch made it, and nothing has saved over
+/// the file since) is the answer as it is: a second one would push an older, different copy out
+/// of the newest [`KEPT_COPIES`], and the person already heard about this one.
 pub fn keep_copy(path: &Path, file: StateFile) -> Option<PathBuf> {
+    if let Some(existing) = identical_copy(path) {
+        log::debug!(target: LOG_TARGET, "The partly unreadable {file:?} file already has its copy at {existing:?}");
+        return Some(existing);
+    }
     let kept = match copy_aside(path, chrono::Local::now().naive_local()) {
         Ok(kept) => {
             log::warn!(target: LOG_TARGET, "Kept a copy of the partly unreadable {file:?} file at {kept:?}");
@@ -139,6 +147,21 @@ fn copy_aside(path: &Path, now: chrono::NaiveDateTime) -> std::io::Result<PathBu
     fs::copy(path, &kept)?;
     prune(path, &prefix);
     Ok(kept)
+}
+
+/// A kept copy of `path` whose bytes are exactly the file's, if there is one.
+fn identical_copy(path: &Path) -> Option<PathBuf> {
+    let current = fs::read(path).ok()?;
+    let prefix = format!("{}.broken-", path.file_name()?.to_string_lossy());
+    fs::read_dir(path.parent()?)
+        .ok()?
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_name().to_string_lossy().starts_with(&prefix))
+        .map(|entry| entry.path())
+        .find(|copy| {
+            fs::metadata(copy).is_ok_and(|m| m.len() == current.len() as u64)
+                && fs::read(copy).is_ok_and(|bytes| bytes == current)
+        })
 }
 
 /// The first free `<name>.broken-<stamp>[-n]` beside `path`, plus the prefix every copy of it

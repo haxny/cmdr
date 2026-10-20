@@ -285,6 +285,30 @@ mod tests {
         write_state_file(&path, r#"{"entries": []}"#).expect("an edit saves over it, the copy holds the rest");
     }
 
+    /// The next launch reads the same partly unreadable file again (nothing saved over it yet).
+    /// The copy it would make is already there, so there's no second copy, which would push out an
+    /// older, different one, and no second notice for the same thing.
+    #[test]
+    fn a_partly_unreadable_file_already_copied_is_not_copied_or_announced_again() {
+        let notices = testing::capture_recoveries();
+        let dir = TestDir::new("state_file_partial_relaunch");
+        let path = dir.join("list.json");
+        let original = br#"{"entries": [{"kind": "plain", "name": "a"}, {"kind": "from_a_newer_build"}]}"#;
+        fs::write(&path, original).expect("write");
+
+        assert!(matches!(
+            read_state_file(&path, StateFile::SftpServers, parse),
+            StateRead::Read(_)
+        ));
+        set_guard(&path, None); // A new launch: this session's memory of the path is gone.
+        let again = read_state_file(&path, StateFile::SftpServers, parse);
+
+        assert!(matches!(again, StateRead::Read(_)));
+        assert_eq!(testing::kept_copies(&path).len(), 1, "still one copy");
+        assert_eq!(notices.recoveries().len(), 1, "still one notice");
+        write_state_file(&path, r#"{"entries": []}"#).expect("an edit still saves over it");
+    }
+
     /// When the file can't be moved aside (here an immutable file, which refuses the rename), it's
     /// held: every write refuses until a read succeeds, and the person hears about it once.
     #[cfg(target_os = "macos")]

@@ -36,8 +36,9 @@ Issue #461. Must-knows in `CLAUDE.md`.
 - **Lists of independent entries** (saved S3 places and accounts, SFTP and WebDAV servers, SMB share rows, opt-outs and
   pending moves, manual SMB servers, trusted SSH host keys): each list field is `#[serde(deserialize_with = "lenient_entries")]`, so an entry
   that doesn't read (a provider `kind` from a newer build, a typo) is dropped alone. `read_state_file` then COPIES the
-  whole file aside (`keep_copy`: same naming, same three kept) and the person hears it once per session. The file itself
-  stays until the next save writes the entries that read; a launch before that copies it again.
+  whole file aside (`keep_copy`: same naming, same three kept) and the person hears it once. The file itself stays
+  until the next save writes the entries that read; a launch before that finds a copy of the same bytes already there
+  and neither copies nor tells again, so repeat launches can't push an older, different copy out of the three.
   The shared loader is `../network/server_list_file.rs`.
 - **`usage.json`, `ai/ai-state.json`**: through `read_state_file` like the lists above (set aside, or held when the
   rename fails), each starting from its defaults.
@@ -57,9 +58,9 @@ Issue #461. Must-knows in `CLAUDE.md`.
   does, with both consents off as its DEFAULTS, so the frontend gets that instance. A fresh file overrides nothing (it
   says "no" too), a fresh file that didn't land leaves the defaults, and a file that stayed unloaded (rename refused)
   never reaches the cache, so all three read "no". Rust's analytics gate reads through `settings_for_consent`, where a
-  present-but-unloadable file is also "no". Derived from the failed load itself, so there's no flag to forget.
-  Remaining gap: a fresh file that didn't land leaves no file at all, which Rust's raw read takes as a first launch
-  (consent on) while the frontend says off; that needs an unwritable data dir, where the spool can't be written either.
+  present-but-unloadable file is also "no", and so is no file at all once this session recovered `settings.json`
+  (`SETTINGS_RECOVERED`): a fresh file that didn't land isn't a first launch. A file the person saves later that
+  session is their answer again.
 - **`operationLog.enabled` stays on** (David, 2026-10-16): the operation log never leaves the Mac and undo depends on
   it, so it isn't a consent-type setting.
 - **A queue, not an event payload.** Most recoveries happen in `setup()`, before any window listens, so an event alone
