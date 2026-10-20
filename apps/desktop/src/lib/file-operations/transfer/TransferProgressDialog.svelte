@@ -583,7 +583,7 @@
              brings its two paths and no pane-relative direction, and naming
              neither end would be worse than naming both without the arrow
              pointing at a pane. -->
-        {#if showDirection}
+        {#if showDirection && destinationPath}
             <DirectionIndicator
                 id={DIRECTION_ID}
                 sourcePath={sourceFolderPath}
