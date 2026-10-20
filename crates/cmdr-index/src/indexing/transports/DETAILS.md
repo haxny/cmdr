@@ -110,10 +110,15 @@ volume's lifetime, not just while a pane shows the share, so the index must upda
   channel so it fires only after the upsert/delete commits). The existing FE refresh path (`DirsUpdated` →
   `refreshIndexSizes` → `getDirStatsBatch`) re-reads the just-written sizes. The coupling is one-directional: the
   listing layer notifies the indexer, never the reverse.
-- **Single-writer + reads-off-the-lock.** `apply_smb_change` only ENQUEUES on the volume's existing writer thread; it
-  never opens a write connection. Id resolution uses the volume's `ReadPool`, never the registry lock. It's synchronous
-  (all local DB reads + channel enqueues, no network round trip), so it's safe inline from the sync composer. It no-ops
-  for `root` (local disk feeds its index from FSEvents) and any non-`Running` volume.
+- **Single-writer, resolved ON the writer.** `apply_smb_change` only ENQUEUES on the volume's existing writer thread; it
+  never opens a connection or takes the registry lock. The change rides as one `WriteMessage::ResolveThenWrite`, and the
+  writer runs `resolve_change` on its own connection at that message's turn, so it sees every row the messages before it
+  wrote, committed or still in the open batch. Decision/Why: resolved on a `ReadPool` connection at enqueue time, a
+  rename right behind its create (every write to a phone stages under `<name>.cmdr-tmp-<uuid>` and renames) missed the
+  uncommitted staging row, upserted the final name, and left the staging row for good; a `Removed` right behind its
+  `Added` no-oped the same way. Pinned by `a_rename_right_behind_its_create_moves_the_row_the_create_made`. It's
+  synchronous (channel enqueues only, no network round trip), so it's safe inline from the sync composer. It no-ops for
+  `root` (local disk feeds its index from FSEvents) and any non-`Running` volume.
 - **Watcher lifetime is already volume-index-scoped.** The watcher is spawned in `connect_smb_volume` (on the direct-
   smb2 upgrade) and canceled only by `on_unmount` or `do_attempt_reconnect` (which respawns it). Pane close
   (`list_directory_end`) can't reach it. Pinned by `smb_integration_pane_close_does_not_kill_index_watcher`.
@@ -183,9 +188,10 @@ by the stored handle. PTP events are device-wide but storages are separate names
 - **Path space — no mount-strip.** The MTP resolver produces storage-relative paths (`/DCIM/Camera`) and the index
   `ROOT_ID` is the storage root, so `apply_mtp_*` resolves against the index directly. The read-side `index_read_path`
   strips the `mtp://{device}/{storage}` scheme prefix off listing/dir-stats paths (owned by `../paths/DETAILS.md`).
-- The rest matches SMB verbatim: enqueue on the volume's writer, index write before the `DirsUpdated` emit, reads off
-  the `ReadPool`, buffer-during-scan (`SCAN_CHANGE_BUFFER`, 50,000, overflow ⇒ Stale) replayed after aggregation,
-  discard-on-interrupt.
+- One difference from SMB: a removal's handle still resolves on the `ReadPool` at enqueue time, so an `ObjectRemoved`
+  right behind its own upsert can miss the uncommitted row, the shape SMB's `ResolveThenWrite` closed.
+- The rest matches SMB: enqueue on the volume's writer, index write before the `DirsUpdated` emit, buffer-during-scan
+  (`SCAN_CHANGE_BUFFER`, 50,000, overflow ⇒ Stale) replayed after aggregation, discard-on-interrupt.
 
 **Needs real-device QA** (no live MTP hardware in CI; the pure pieces are unit-tested): connect → scan → green badge;
 add/delete a file on the phone → index reflects it while connected; unplug → yellow; rescan → green; a same-port vs.

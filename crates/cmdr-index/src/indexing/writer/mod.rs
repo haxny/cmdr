@@ -224,6 +224,10 @@ pub enum AggSource {
     Sql,
 }
 
+/// What [`WriteMessage::ResolveThenWrite`] runs on the writer's connection: the
+/// writes a change maps to, given everything committed or batched before it.
+pub type Resolver = Box<dyn FnOnce(&rusqlite::Connection) -> Vec<WriteMessage> + Send>;
+
 /// Messages sent to the writer thread via a bounded mpsc channel.
 pub enum WriteMessage {
     /// Full scan: batch of entries with pre-assigned integer IDs.
@@ -252,6 +256,17 @@ pub enum WriteMessage {
         new_parent_id: i64,
         new_name: String,
     },
+    /// A live change whose ids are looked up on the WRITER's connection, at its
+    /// turn in the queue, and whose writes then run in place.
+    ///
+    /// For a change that names rows by path (a listing patch's `Renamed` or
+    /// `Removed`). Looked up on a read connection when it's queued, it misses
+    /// every row an earlier message still holds uncommitted in the batch, so a
+    /// rename right behind its create upserted the new name and left the old row
+    /// for good. Here it sees exactly what every message before it wrote. The
+    /// resolver may return mutations only (`BatchRole::Mutation`): they join the
+    /// batch this message opened.
+    ResolveThenWrite(Resolver),
     /// Watcher: delete a single entry and its dir_stats by entry ID.
     DeleteEntryById(i64),
     /// Watcher: delete a subtree (directory removed with all children) by entry ID.
@@ -480,6 +495,7 @@ impl WriteMessage {
             WriteMessage::InsertEntriesV2(_) => "InsertEntriesV2",
             WriteMessage::UpsertEntryV2 { .. } => "UpsertEntryV2",
             WriteMessage::MoveEntryV2 { .. } => "MoveEntryV2",
+            WriteMessage::ResolveThenWrite(_) => "ResolveThenWrite",
             WriteMessage::DeleteEntryById(_) => "DeleteEntryById",
             WriteMessage::DeleteSubtreeById(_) => "DeleteSubtreeById",
             WriteMessage::DeleteDescendantsById(_) => "DeleteDescendantsById",
@@ -1488,6 +1504,35 @@ fn process_message(
                 repairs,
                 signal,
             );
+        }
+        WriteMessage::ResolveThenWrite(resolve) => {
+            for write in resolve(conn) {
+                debug_assert!(
+                    matches!(batch::role(&write), BatchRole::Mutation),
+                    "a resolver returned a {}, which can't join the open batch",
+                    write.kind()
+                );
+                if process_message(
+                    conn,
+                    write,
+                    accumulator,
+                    events,
+                    volume_id,
+                    expected_total_entries,
+                    last_full_aggregate_ms,
+                    next_id,
+                    mutation_tracker,
+                    probe,
+                    propagate_deltas,
+                    heal_latch,
+                    deferred_checkpoint,
+                    repairs,
+                    rollups,
+                    signal,
+                ) {
+                    return true;
+                }
+            }
         }
         WriteMessage::DeleteEntryById(entry_id) => {
             mutation_tracker.record_delete_entry();

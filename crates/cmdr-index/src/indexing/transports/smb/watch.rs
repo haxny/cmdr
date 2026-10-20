@@ -34,8 +34,10 @@
 //!   write connection here. A change arriving while the volume isn't `Running`
 //!   (disabled) is dropped; one arriving mid-scan is BUFFERED and replayed after
 //!   the scan, so it isn't lost against the rebuilding index.
-//! - **Reads off the registry lock**: id resolution uses the volume's `ReadPool`
-//!   (`get_read_pool_for`), never the lifecycle mutex.
+//! - **Resolved on the writer, in queue order**: id resolution runs on the
+//!   writer's own connection (`WriteMessage::ResolveThenWrite`), never a
+//!   `ReadPool` one, which can't see a row an earlier change still holds in the
+//!   uncommitted batch. Nor the lifecycle mutex.
 //! - **Resolve deletes against the INDEX, not a live stat**: SMB coalescing can
 //!   deliver a false `Removed` (an atomic rename's old name, a deleted-then-
 //!   recreated path). We deliberately do NOT stat the live volume per delete (that
@@ -123,7 +125,7 @@ pub fn index_relative_path(mount_root: &str, abs_path: &str) -> Option<String> {
 }
 
 /// The single index-write a `DirectoryChange` maps to, decided where we still
-/// have the live volume and the read connection. Kept as a tiny enum so the
+/// have the writer's connection. Kept as a tiny enum so the
 /// per-variant mapping is obvious and the resolved-id sends are funneled through
 /// one place. Not all changes produce a write (a `Removed` whose entry was never
 /// indexed yields `None`).
@@ -176,27 +178,37 @@ impl ResolvedWrite {
         }
     }
 
-    /// Enqueue the corresponding writer message. Inode/nlink are `None`: SMB
-    /// entries carry no stable inode, so hardlink dedup doesn't apply.
+    /// Enqueue the corresponding writer messages.
+    #[cfg(any(test, feature = "testing"))]
     fn send(self, writer: &IndexWriter) {
+        for msg in self.into_messages() {
+            if let Err(e) = writer.send(msg) {
+                log::debug!(target: "indexing::transports::smb::watch", "writer send failed (writer gone): {e}");
+                return;
+            }
+        }
+    }
+
+    /// The writer messages this write is. Inode/nlink are `None`: SMB entries
+    /// carry no stable inode, so hardlink dedup doesn't apply.
+    fn into_messages(self) -> Vec<WriteMessage> {
         let msg = match self {
             ResolvedWrite::Rename { entry_id, refreshed } => {
                 // The move first, so the refresh lands on the moved row (an upsert
                 // is keyed by parent and name) rather than beside it.
+                let mut messages = Vec::with_capacity(2);
                 if let ResolvedWrite::Upsert {
                     parent_id, ref name, ..
                 } = *refreshed
-                    && let Err(e) = writer.send(WriteMessage::MoveEntryV2 {
+                {
+                    messages.push(WriteMessage::MoveEntryV2 {
                         entry_id,
                         new_parent_id: parent_id,
                         new_name: name.clone(),
-                    })
-                {
-                    log::debug!(target: "indexing::transports::smb::watch", "writer send failed (writer gone): {e}");
-                    return;
+                    });
                 }
-                refreshed.send(writer);
-                return;
+                messages.extend(refreshed.into_messages());
+                return messages;
             }
             ResolvedWrite::Upsert {
                 parent_id,
@@ -220,21 +232,17 @@ impl ResolvedWrite {
             ResolvedWrite::DeleteFile(id) => WriteMessage::DeleteEntryById(id),
             ResolvedWrite::DeleteSubtree(id) => WriteMessage::DeleteSubtreeById(id),
         };
-        if let Err(e) = writer.send(msg) {
-            log::debug!(target: "indexing::transports::smb::watch", "writer send failed (writer gone): {e}");
-        }
+        vec![msg]
     }
 }
 
 /// Apply one SMB `DirectoryChange` to the volume's index, if the volume has a
-/// live (`Running`) index. Resolves ids against the volume's `ReadPool`,
-/// enqueues the writer message, and (on success) asks the writer to emit
-/// `DirsUpdated` for the affected directory so the FE refreshes sizes AFTER
-/// the write lands.
+/// live (`Running`) index. Enqueues the change for the writer to resolve and
+/// write, then asks the writer to emit `DirsUpdated` for the affected directory
+/// so the FE refreshes sizes AFTER the write lands.
 ///
 /// `parent_path` is the watcher's mount-absolute directory path. Synchronous: all
-/// work is local DB reads off the `ReadPool` plus enqueues on the writer channel,
-/// no network round trip, so it's safe to call inline from the (sync)
+/// work is enqueues on the writer channel, no network round trip, so it's safe to call inline from the (sync)
 /// composer (the app's `listing_host::directory_changed`). No-op (cheap early return) when the volume isn't a
 /// live non-`root` index, so wiring this in costs one `Arc`-clone check for
 /// non-indexed shares and for every `root` (local-disk) change.
@@ -324,19 +332,12 @@ pub(crate) fn replay_buffered_changes(volume_id: &str) -> bool {
     true
 }
 
-/// Apply one change straight to the index (resolution + writer enqueue + FE
-/// refresh emit). The non-buffering path: used live (not scanning) and during
-/// replay. Resolves ids off the volume's `ReadPool` (no registry lock, no write
-/// connection), then enqueues onto the single per-volume writer.
+/// Apply one change to the index (writer enqueue + FE refresh emit). The
+/// non-buffering path: used live (not scanning) and during replay. The writer
+/// resolves its ids when it gets to it (`send_change`), so nothing here takes
+/// the registry lock or a connection.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 fn apply_one_change(volume_id: &str, writer: &IndexWriter, parent_path: &Path, change: &DirectoryChange) {
-    use crate::indexing::read::enrichment::get_read_pool_for;
-
-    let pool = match get_read_pool_for(volume_id) {
-        Some(p) => p,
-        None => return,
-    };
-
     let Some(volume) = crate::indexing::host::volumes::current().get(volume_id) else {
         return; // share unmounted; the freshness layer will flip it Stale
     };
@@ -361,16 +362,7 @@ fn apply_one_change(volume_id: &str, writer: &IndexWriter, parent_path: &Path, c
         }
     };
 
-    // Resolve the parent id (and, for deletes, the target entry) off the read
-    // pool — no registry lock, no write connection.
-    let resolved: Option<ResolvedWrite> = pool
-        .with_conn(|conn| resolve_change(conn, &parent_rel, change))
-        .unwrap_or(None);
-
-    let Some(write) = resolved else {
-        return;
-    };
-    write.send(writer);
+    send_change(writer, parent_rel, change.clone());
 
     // Sequence the FE refresh AFTER the index write: `EmitDirUpdated` rides the
     // same writer channel, so the writer fires `DirsUpdated` only once the
@@ -378,7 +370,24 @@ fn apply_one_change(volume_id: &str, writer: &IndexWriter, parent_path: &Path, c
     // just-written index (the existing refreshIndexSizes → getDirStatsBatch path).
     // Emit for the mount-absolute parent path: that's the listing-cache key the
     // FE matches against, and the index read routes back through the volume id.
+    // Sent whether or not the change resolves to a write, which is only known on
+    // the writer; a refresh of an unchanged folder costs one sizes read.
     let _ = writer.send(WriteMessage::EmitDirUpdated(vec![parent_abs.into_owned()]));
+}
+
+/// Enqueue `change` for the writer to resolve against its OWN connection, at its
+/// turn in the queue. ❗ Never against a read connection: one misses every row an
+/// earlier change still holds in the writer's uncommitted batch, so a rename
+/// right behind its create (every write to a phone, which stages and renames)
+/// upserted the final name and left the staging row behind for good.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn send_change(writer: &IndexWriter, parent_rel: String, change: DirectoryChange) {
+    let resolve = move |conn: &rusqlite::Connection| {
+        resolve_change(conn, &parent_rel, &change).map_or_else(Vec::new, ResolvedWrite::into_messages)
+    };
+    if let Err(e) = writer.send(WriteMessage::ResolveThenWrite(Box::new(resolve))) {
+        log::debug!(target: "indexing::transports::smb::watch", "writer send failed (writer gone): {e}");
+    }
 }
 
 /// Resolve a change against an explicit index connection and enqueue the matching

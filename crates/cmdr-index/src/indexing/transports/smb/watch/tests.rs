@@ -375,6 +375,50 @@ fn a_renamed_folder_keeps_its_children() {
     );
 }
 
+/// A rename that follows its create before the writer commits still moves the
+/// row the create made. A copy onto a phone is exactly that pair: the staging
+/// name's `Added`, then its `Renamed` into place, milliseconds apart. Resolved
+/// against a read connection, the rename looked for a staging row that sat
+/// uncommitted in the writer's batch, missed it, upserted the final name alone,
+/// and left the staging name as a row for good (raced under load in
+/// `adb_index_test::a_cmdr_copy_onto_a_phone_and_a_delete_on_it_patch_its_index`).
+/// The explicit transaction holds the create uncommitted, which is the window a
+/// busy writer leaves open at random.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[test]
+fn a_rename_right_behind_its_create_moves_the_row_the_create_made() {
+    let (conn, dir) = seed_index();
+    let writer = IndexWriter::spawn(&dir.path().join("smb-watch-test.db"), crate::NoopEventSink::shared())
+        .expect("spawn writer");
+    writer.send(WriteMessage::BeginTransaction).expect("begin");
+    for change in [
+        DirectoryChange::Added(file_entry(
+            "up.bin.cmdr-tmp-1",
+            "/Volumes/share/sub/up.bin.cmdr-tmp-1",
+            9,
+        )),
+        DirectoryChange::Renamed {
+            old_name: "up.bin.cmdr-tmp-1".into(),
+            new_entry: file_entry("up.bin", "/Volumes/share/sub/up.bin", 9),
+        },
+    ] {
+        send_change(&writer, "/sub".to_string(), change);
+    }
+    writer.send(WriteMessage::CommitTransaction).expect("commit");
+    writer.flush_blocking().expect("flush");
+    writer.shutdown();
+
+    assert_eq!(
+        store::resolve_path(&conn, "/sub/up.bin.cmdr-tmp-1").expect("readable"),
+        None,
+        "the staging name must not survive as a row"
+    );
+    assert!(
+        store::resolve_path(&conn, "/sub/up.bin").expect("readable").is_some(),
+        "the file answers under its final name"
+    );
+}
+
 /// The same `Added` applied twice leaves the folder sizes where one left them.
 /// Cmdr's own create sends its `Added` through the composer, beside the drive's
 /// own watch reporting the same file, so on an indexed external drive the index

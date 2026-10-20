@@ -72,6 +72,7 @@ pub(super) fn role(msg: &WriteMessage) -> BatchRole {
         // today, so they're the whole point of the batch.
         WriteMessage::UpsertEntryV2 { .. }
         | WriteMessage::MoveEntryV2 { .. }
+        | WriteMessage::ResolveThenWrite(_)
         | WriteMessage::DeleteEntryById(_)
         | WriteMessage::DeleteSubtreeById(_)
         | WriteMessage::DeleteDescendantsById(_)
