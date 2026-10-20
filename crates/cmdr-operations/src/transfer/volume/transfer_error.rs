@@ -134,18 +134,24 @@ pub(crate) struct PathedVolumeError {
     /// (`WriteOperationError::LandingNotRecorded`). It travels with the error
     /// rather than being reconstructed anywhere.
     pub aftermath: Option<LandingAftermath>,
-    /// Set only by an outage wait that ENDED the item's work on a server whose
-    /// connection is gone (`volume_outage::lost_connection`): the connection is
-    /// the cause the user needs (`WriteOperationError::ServerConnectionLost`),
-    /// and only the wait knows it. Boxed: it's rare, and every transfer
-    /// `Result` carries this type by value.
-    pub lost_connection: Option<Box<LostConnection>>,
-    /// Set only by a refusal made before any volume call failed (a drive
-    /// mounted inside a folder an Overwrite would set aside,
-    /// `PathedVolumeError::refused`): it already is the user's answer, and it
-    /// outranks everything else here. Boxed for the same reason as
-    /// `lost_connection`.
-    pub refusal: Option<Box<WriteOperationError>>,
+    /// What the failure learned beyond its errno that the user needs instead.
+    /// Boxed: it's rare, and every transfer `Result` carries this type by value
+    /// (`clippy::result_large_err` holds it under 128 bytes).
+    pub cause: Option<Box<FailureCause>>,
+}
+
+/// A cause that outranks a failure's errno in what the user is told.
+#[derive(Debug, Clone)]
+pub(crate) enum FailureCause {
+    /// An outage wait ENDED the item's work on a server whose connection is
+    /// gone (`volume_outage::lost_connection`): the connection is the cause the
+    /// user needs (`WriteOperationError::ServerConnectionLost`), and only the
+    /// wait knows it.
+    LostConnection(LostConnection),
+    /// A refusal made before any volume call failed (a drive mounted inside a
+    /// folder an Overwrite would set aside, `PathedVolumeError::refused`): it
+    /// already is the user's answer, and it outranks everything else here.
+    Refused(WriteOperationError),
 }
 
 /// Maps with the side the failure carries. Both directions have cost a user a
@@ -155,17 +161,20 @@ pub(crate) struct PathedVolumeError {
 /// into `NewDataKeptAt` instead (the user needs to be told where their new file
 /// ended up rather than which errno the rename answered), or into
 /// `LandingNotRecorded` (Cmdr's own refusal, with no errno at all).
-/// `lost_connection` turns it into `ServerConnectionLost`: the server's
-/// connection is the cause, and the errno says nothing a person can act on.
-/// What the landing did outranks both, and a `refusal` (made before any volume
-/// call) outranks everything: it already is the answer.
+/// A lost connection (`FailureCause::LostConnection`) turns it into
+/// `ServerConnectionLost`: the server's connection is the cause, and the errno
+/// says nothing a person can act on. What the landing did outranks both, and a
+/// `FailureCause::Refused` (made before any volume call) outranks everything:
+/// it already is the answer.
 impl From<PathedVolumeError> for WriteFailure {
     fn from(e: PathedVolumeError) -> Self {
-        if let Some(refusal) = e.refusal {
-            return Self { error: *refusal };
-        }
+        let lost = match e.cause.map(|cause| *cause) {
+            Some(FailureCause::Refused(refusal)) => return Self { error: refusal },
+            Some(FailureCause::LostConnection(lost)) => Some(lost),
+            None => None,
+        };
         let path = e.path.display().to_string();
-        let error = match (e.aftermath, e.lost_connection) {
+        let error = match (e.aftermath, lost) {
             (Some(LandingAftermath::NewDataKeptAt(kept_at)), _) => WriteOperationError::NewDataKeptAt {
                 path,
                 kept_at: kept_at.display().to_string(),
@@ -176,7 +185,7 @@ impl From<PathedVolumeError> for WriteFailure {
                 let LostConnection {
                     volume_name,
                     gave_up_after,
-                } = *lost;
+                } = lost;
                 WriteOperationError::ServerConnectionLost {
                     path,
                     volume_name,
@@ -202,7 +211,9 @@ impl OutageFailure for PathedVolumeError {
     }
 
     fn with_lost_connection(mut self, lost: Option<LostConnection>) -> Self {
-        self.lost_connection = lost.map(Box::new);
+        if let Some(lost) = lost {
+            self.cause = Some(Box::new(FailureCause::LostConnection(lost)));
+        }
         self
     }
 }
@@ -224,8 +235,7 @@ impl PathedVolumeError {
             role,
             error,
             aftermath: None,
-            lost_connection: None,
-            refusal: None,
+            cause: None,
         }
     }
 
@@ -239,8 +249,7 @@ impl PathedVolumeError {
             role: PathRole::Destination,
             error: failure.error,
             aftermath: failure.aftermath,
-            lost_connection: None,
-            refusal: None,
+            cause: None,
         }
     }
 
@@ -256,8 +265,7 @@ impl PathedVolumeError {
                 raw_os_error: None,
             },
             aftermath: None,
-            lost_connection: None,
-            refusal: Some(Box::new(refusal)),
+            cause: Some(Box::new(FailureCause::Refused(refusal))),
         }
     }
 

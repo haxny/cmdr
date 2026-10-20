@@ -202,7 +202,10 @@ async fn a_share_that_stays_gone_after_the_rename_aside_keeps_its_record_for_the
     let failure = share.displace().await.expect_err("the wait gave up");
 
     assert!(
-        failure.lost_connection.is_some(),
+        matches!(
+            failure.cause.as_deref(),
+            Some(super::super::transfer_error::FailureCause::LostConnection(_))
+        ),
         "the failure says it was the connection: {failure:?}"
     );
     let aside = share.the_aside().await;
