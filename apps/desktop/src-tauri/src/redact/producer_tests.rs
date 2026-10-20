@@ -320,3 +320,78 @@ fn the_listing_and_mtp_lines_ship_each_value_as_one_token_of_its_kind() {
     let keyed = upload(&folder, &file);
     assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
 }
+
+/// The network backends' lines (`cmdr-smb`, `cmdr-sftp`, `cmdr-s3`), in each site's format
+/// string, as a report ships them: share-relative paths keyed on a share keep their kind, a
+/// bucket key in prose (no leading `/`, so no regex claims it) ships as tokens, and a slow share
+/// named as a volume hashes like the keyed value it replaced.
+#[test]
+fn the_network_backend_lines_ship_each_value_as_one_token_of_its_kind() {
+    // An SMB rename: the share and both share-relative paths, keyed.
+    let share = "Family Photos";
+    let (from, to) = (
+        "Trips/Summer (Lake House) 2026/a.jpg",
+        "Trips/Summer (Lake House) 2026/b.jpg",
+    );
+    let rename = |share: &dyn std::fmt::Debug, from: &dyn std::fmt::Debug, to: &dyn std::fmt::Debug| {
+        format!("{HEAD}SmbVolume::rename: share={share:?}, from={from:?}, to={to:?}, force=false")
+    };
+    let marked = rename(
+        &LogPrivate::volume(share),
+        &LogPrivate::path(from),
+        &LogPrivate::path(to),
+    );
+    assert_ships_none(&marked, &["Family", "Photos", "Trips", "Summer", "Lake", "House"]);
+    assert_eq!(
+        shape(&marked),
+        format!(
+            "{HEAD}SmbVolume::rename: share=\"<volume>\", from=\"<dir>/<dir>/<file>.jpg\", to=\"<dir>/<dir>/<file>.jpg\", force=false"
+        )
+    );
+
+    // A remote path in prose, on an SFTP rename and an S3 copy-then-delete.
+    let sftp = |from: &dyn std::fmt::Display, to: &dyn std::fmt::Display| {
+        format!("{HEAD}SftpVolume::rename: {from} → {to}, force=false")
+    };
+    let marked = sftp(
+        &LogPrivate::path("/home/alex/Summer (Lake House)/a.jpg"),
+        &LogPrivate::path("/home/alex/Summer (Lake House)/b.jpg"),
+    );
+    assert_ships_none(&marked, &["alex", "Summer", "Lake", "House"]);
+    assert_eq!(
+        shape(&marked),
+        format!("{HEAD}SftpVolume::rename: $HOME/<dir>/<file>.jpg → $HOME/<dir>/<file>.jpg, force=false")
+    );
+    let s3 = |from: &dyn std::fmt::Display, to: &dyn std::fmt::Display| {
+        format!("{HEAD}s3: {from} was copied to {to} but its delete failed: the server said no")
+    };
+    let (from, to) = ("Trips/Summer (Lake House)/a.jpg", "Trips/Summer (Lake House)/b.jpg");
+    let marked = s3(&LogPrivate::path(from), &LogPrivate::path(to));
+    assert_ships_none(&marked, &["Trips", "Summer", "Lake", "House"]);
+    let golden = format!(
+        "{HEAD}s3: <dir>/<dir>/<file>.jpg was copied to <dir>/<dir>/<file>.jpg but its delete failed: the server said no"
+    );
+    assert_eq!(shape(&marked), golden);
+    assert_ne!(
+        shape(&s3(&from, &to)),
+        golden,
+        "the unmarked spelling ships both keys whole"
+    );
+
+    // A slow share, rolled up per share.
+    let slow = |share: &dyn std::fmt::Debug| {
+        format!(
+            "{HEAD}SMB metadata call was slow: share={share:?} get_metadata took 3210 ms. The server held it; check its load (a busy NAS does this under heavy writes)"
+        )
+    };
+    let marked = slow(&LogPrivate::volume(share));
+    assert_ships_none(&marked, &["Family", "Photos"]);
+    assert_eq!(
+        shape(&marked),
+        format!(
+            "{HEAD}SMB metadata call was slow: share=\"<volume>\" get_metadata took 3210 ms. The server held it; check its load (a busy NAS does this under heavy writes)"
+        )
+    );
+    let keyed = slow(&share);
+    assert_eq!(hashes(&marked), hashes(&keyed), "{marked}\n{keyed}");
+}
