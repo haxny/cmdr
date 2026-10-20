@@ -178,6 +178,8 @@ pub enum StateFile {
     LaunchDays,
     /// `s3_known_places.json`: saved S3 accounts and bucket places.
     S3Places,
+    /// `nfs_known_places.json`: saved NFS servers and export places.
+    NfsPlaces,
     /// `known-sftp-servers.json`.
     SftpServers,
     /// `webdav_known_servers.json`.

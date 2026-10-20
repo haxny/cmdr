@@ -126,3 +126,55 @@ fn this_mac_identity() -> NfsIdentity {
     let (uid, gid) = unsafe { (libc::getuid(), libc::getgid()) };
     NfsIdentity { uid, gid }
 }
+
+/// One saved NFS place as the edit sheet reads it: the stored entry plus the
+/// volume id its row and its switcher entry carry, so a caller matches by id
+/// rather than re-deriving one.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedNfsPlace {
+    /// The place's volume id (`cmdr_fs::volume::nfs_volume_id`).
+    pub volume_id: String,
+    /// The server, as the person typed it.
+    pub host: String,
+    /// The NFS port the address named, or `null` for the portmapper's.
+    pub port: Option<u16>,
+    /// The export, canonical (`/volume1/data`).
+    pub export: String,
+    /// The user id every request acts as.
+    pub uid: u32,
+    /// The group id every request acts as.
+    pub gid: u32,
+    /// The name a person gave its SERVER, empty when nobody did. ❗ The
+    /// server's, ❌ never the place's: an export reads as its own path.
+    pub display_name: String,
+    /// Where a pane lands when the place is opened, export-relative, or `null`
+    /// for the export's root.
+    pub start_folder: Option<String>,
+    /// The place's "Reconnect automatically" switch.
+    pub auto_reconnect: bool,
+    /// Whether it shows in the volume switcher.
+    pub pinned: bool,
+}
+
+/// Every NFS place the user has saved, for an edit sheet that has to show (and
+/// resend) the uid, gid, and start folder the servers listing doesn't carry.
+#[tauri::command]
+#[specta::specta]
+pub fn get_known_nfs_places() -> Vec<SavedNfsPlace> {
+    crate::network::nfs_known_places::all()
+        .into_iter()
+        .map(|entry| SavedNfsPlace {
+            volume_id: entry.volume_id(),
+            display_name: crate::network::nfs_known_places::server_name(&entry),
+            host: entry.host,
+            port: entry.port,
+            export: entry.export,
+            uid: entry.uid,
+            gid: entry.gid,
+            start_folder: entry.start_folder,
+            auto_reconnect: entry.auto_reconnect,
+            pinned: entry.pinned,
+        })
+        .collect()
+}

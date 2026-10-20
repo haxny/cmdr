@@ -44,6 +44,8 @@ type ConcurrencySource = (BackendName, fn() -> usize);
 ///   would run into.
 /// - `"s3"` reads a constant, a starting point until per-provider throughput
 ///   is measured on real accounts.
+/// - `"nfs"` reads a constant too: every operation's calls pipeline over one TCP
+///   connection to the server, so more buy contention on that one link.
 /// - `"adb"` reads the constant 1: the device's `adbd` serializes I/O, so more
 ///   sockets buy nothing.
 ///
@@ -54,6 +56,7 @@ const MAX_CONCURRENT_OPERATIONS_SOURCES: &[ConcurrencySource] = &[
     ("sftp", sftp_concurrency),
     ("webdav", webdav_concurrency),
     ("s3", s3_concurrency),
+    ("nfs", nfs_concurrency),
     ("adb", adb_concurrency),
 ];
 
@@ -104,6 +107,18 @@ const S3_MAX_CONCURRENT_OPERATIONS: usize = 4;
 
 fn s3_concurrency() -> usize {
     S3_MAX_CONCURRENT_OPERATIONS
+}
+
+/// How many operations an NFS volume runs at once.
+///
+/// Not a user-facing knob. Four, the other servers' number: NFSv3 pipelines
+/// every call over one TCP connection, so four overlap a listing with a
+/// transfer without one operation's READ window starving the rest. To be
+/// re-measured against a real NAS with the read window's depth.
+const NFS_MAX_CONCURRENT_OPERATIONS: usize = 4;
+
+fn nfs_concurrency() -> usize {
+    NFS_MAX_CONCURRENT_OPERATIONS
 }
 
 /// What a backend with no row above gets.
@@ -207,6 +222,27 @@ mod tests {
         );
         assert_ne!(
             AppBackendSettings.max_concurrent_operations("webdav"),
+            UNREGISTERED_MAX_CONCURRENT_OPERATIONS,
+            "a missing row is invisible at runtime, so this is what says the row is there"
+        );
+
+        set_smb_concurrency(previous);
+    }
+
+    /// NFS's row is a constant: a missing row would silently halve every
+    /// transfer, as for WebDAV.
+    #[test]
+    fn nfs_reads_its_own_constant_and_not_the_smb_slider() {
+        let _turn = one_writer_at_a_time();
+        let previous = smb_concurrency();
+
+        set_smb_concurrency(32);
+        assert_eq!(
+            AppBackendSettings.max_concurrent_operations("nfs"),
+            NFS_MAX_CONCURRENT_OPERATIONS
+        );
+        assert_ne!(
+            AppBackendSettings.max_concurrent_operations("nfs"),
             UNREGISTERED_MAX_CONCURRENT_OPERATIONS,
             "a missing row is invisible at runtime, so this is what says the row is there"
         );

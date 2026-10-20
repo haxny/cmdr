@@ -3,9 +3,12 @@
 //! `servers.rs` to keep that file under its length cap; the facade's rationale
 //! stays there.
 
+use super::nfs_places::nfs_place;
 use super::outcomes::{SavedEntry, saved_by_id};
 use super::s3_accounts::s3_place;
 use super::wire::ServerTarget;
+use crate::network::nfs_known_places::KnownNfsPlace;
+use crate::network::nfs_volume_wiring;
 use crate::network::s3_known_places::KnownS3Place;
 use crate::network::s3_volume_wiring;
 use crate::network::saved_server_fields::SavedServerOutcome;
@@ -32,6 +35,7 @@ async fn save_entry(entry: Entry) -> SavedServerOutcome {
         Entry::Sftp(entry) => sftp_volume_wiring::save_without_connecting(entry).await,
         Entry::Webdav(entry) => webdav_volume_wiring::save_without_connecting(entry).await,
         Entry::S3 { place, account_name } => s3_volume_wiring::save_without_connecting(place, &account_name).await,
+        Entry::Nfs { place, server_name } => nfs_volume_wiring::save_without_connecting(place, &server_name).await,
     }
 }
 
@@ -56,6 +60,12 @@ pub(super) async fn save_edit(id: &str, server: ServerTarget) -> SavedServerOutc
         (SavedEntry::S3(_), entry @ Entry::S3 { .. }) if entry.s3_place_id().as_deref() == Some(id) => {
             save_entry(entry).await
         }
+        // ❗ The host, port, and export are the place itself; the uid, gid, name,
+        // start folder, and switch are what an edit moves. A changed address is
+        // another place, so it's refused rather than saved beside this one.
+        (SavedEntry::Nfs(_), entry @ Entry::Nfs { .. }) if entry.nfs_place_id().as_deref() == Some(id) => {
+            save_entry(entry).await
+        }
         _ => SavedServerOutcome::AccountChanged,
     }
 }
@@ -70,6 +80,12 @@ enum Entry {
         place: KnownS3Place,
         account_name: String,
     },
+    /// One export on a server, and the SERVER's name the target carried
+    /// (`nfs_known_places::adopt_typed_name`).
+    Nfs {
+        place: KnownNfsPlace,
+        server_name: String,
+    },
 }
 
 impl Entry {
@@ -79,15 +95,19 @@ impl Entry {
             _ => None,
         }
     }
+
+    fn nfs_place_id(&self) -> Option<String> {
+        match self {
+            Self::Nfs { place, .. } => Some(place.volume_id()),
+            _ => None,
+        }
+    }
 }
 
 /// The store entry `server` describes.
 ///
 /// ❗ `pinned: true` and a fresh `last_connected_at` are read only for a NEW
 /// entry: `remember` keeps a stored pin, and a move keeps both.
-///
-/// `None` for an NFS place, whose store lands with the NFS wiring: a save
-/// nobody can make answers `Unreachable`, ❌ never a quiet success.
 fn entry_of(server: ServerTarget) -> Option<Entry> {
     let entry = match server {
         ServerTarget::Sftp {
@@ -140,7 +160,10 @@ fn entry_of(server: ServerTarget) -> Option<Entry> {
             place: s3_place(provider, access_key_id, bucket, auto_reconnect),
             account_name: display_name,
         },
-        ServerTarget::Nfs { .. } => return None,
+        nfs @ ServerTarget::Nfs { .. } => {
+            let (place, server_name) = nfs_place(nfs)?;
+            Entry::Nfs { place, server_name }
+        }
     };
     Some(entry)
 }

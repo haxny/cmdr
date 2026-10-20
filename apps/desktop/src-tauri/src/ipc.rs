@@ -704,6 +704,7 @@ macro_rules! ipc_command_manifest {
                 typed: [
                     crate::commands::nfs::list_nfs_exports,
                     crate::commands::nfs::guess_nfs_identity,
+                    crate::commands::nfs::get_known_nfs_places,
                 ]
                 dispatch_only: []
             }

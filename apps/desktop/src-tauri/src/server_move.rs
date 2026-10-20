@@ -52,7 +52,7 @@ use crate::network::s3_known_places::{self, KnownS3Place, S3ProviderChoice};
 use crate::network::saved_server_fields::{self, Relocation, SavedServerOutcome};
 use crate::network::sftp_known_servers::{self, KnownSftpServer};
 use crate::network::webdav_known_servers::{self, KnownWebdavServer};
-use crate::network::{connect_wiring, s3_volume_wiring, sftp_volume_wiring, webdav_volume_wiring};
+use crate::network::{connect_wiring, nfs_volume_wiring, s3_volume_wiring, sftp_volume_wiring, webdav_volume_wiring};
 use crate::volume_broadcast::{self, MovedPlace, ServerPlaceMoved};
 
 /// How long the secret store gets to answer, the same as every secret command.
@@ -366,6 +366,7 @@ fn leave_behind(moving: &mut connect_wiring::PlaceMove, places: &[String]) {
         let called_off = sftp_volume_wiring::cancel_dials_to(place)
             + webdav_volume_wiring::cancel_dials_to(place)
             + s3_volume_wiring::cancel_dials_to(place)
+            + nfs_volume_wiring::cancel_dials_to(place)
             + crate::network::smb_saved_shares::cancel_dials_to(place);
         if called_off > 0 {
             log::info!(target: "volume", "called off {called_off} dial(s) to {place} at its old address");
@@ -432,7 +433,8 @@ async fn follow(moved: Move) {
     for (old_id, _) in &moved.places {
         let dropped = sftp_volume_wiring::disconnect(old_id).await
             || webdav_volume_wiring::disconnect(old_id).await
-            || s3_volume_wiring::disconnect(old_id).await;
+            || s3_volume_wiring::disconnect(old_id).await
+            || nfs_volume_wiring::disconnect(old_id).await;
         if dropped {
             log::info!(target: "volume", "dropped {old_id}'s session at its old address");
         }

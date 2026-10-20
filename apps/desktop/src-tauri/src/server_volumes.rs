@@ -1,4 +1,4 @@
-//! The SFTP, WebDAV, and S3 places, as rows in the volume list.
+//! The SFTP, WebDAV, S3, and NFS places, as rows in the volume list.
 //!
 //! The server twin of `device_volumes`: that module turns attached devices into
 //! volumes, this one turns SAVED and LIVE servers into them. A server is not
@@ -25,10 +25,12 @@ use cmdr_fs::volume::app_paths::path_is_under;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
 use cmdr_fs::volume::{BackendKind, ConnectionState};
 
-use crate::network::{s3_known_places, saved_server_fields, sftp_known_servers, webdav_known_servers};
+use crate::network::{
+    nfs_known_places, s3_known_places, saved_server_fields, sftp_known_servers, webdav_known_servers,
+};
 use crate::volume_listing::{LocationCategory, LocationInfo};
 
-/// One SFTP, WebDAV, or S3 place, from the stores and the registry.
+/// One SFTP, WebDAV, S3, or NFS place, from the stores and the registry.
 #[derive(Debug, Clone)]
 pub(crate) struct ServerPlace {
     /// The volume id, from the same funnel the registry keys on.
@@ -43,7 +45,7 @@ pub(crate) struct ServerPlace {
     /// folder as an app path. `None` when there is none, when the root no longer
     /// holds it, and for a live volume nothing saved.
     pub landing_path: Option<String>,
-    /// `"sftp"`, `"webdav"`, or `"s3"`. ❗ Load-bearing beyond display: the MCP volumes
+    /// `"sftp"`, `"webdav"`, `"s3"`, or `"nfs"`. ❗ Load-bearing beyond display: the MCP volumes
     /// resource keys `kind` on it, and the frontend's `volumeKindFor` reads it
     /// AHEAD of the `category === 'network'` arm, so a row without it is an SMB
     /// pane.
@@ -144,6 +146,25 @@ pub(crate) fn server_places() -> Vec<ServerPlace> {
         });
     }
 
+    for entry in nfs_known_places::all() {
+        let params = entry.params();
+        let id = params.volume_id();
+        // The export IS the root: an NFS place's paths are export-relative.
+        let root = RemoteRoot::new(params.app_root(), std::path::Path::new("/"));
+        places.push(ServerPlace {
+            state: registered(&id, BackendKind::Nfs).unwrap_or(ConnectionState::Saved),
+            id,
+            // An export by its own path, the root export by its server's name.
+            name: nfs_known_places::place_label(&entry),
+            // ❗ The minted spelling, ❌ not `root.app_root()`'s trailing-slash
+            // one: `server-path-utils.ts` mints this exact string.
+            app_root: params.app_root(),
+            landing_path: landing_under(&root, "/", entry.start_folder.as_deref()),
+            fs_type: "nfs",
+            pinned: entry.pinned,
+        });
+    }
+
     // ❗ And every REGISTERED server volume the stores don't know about, so a
     // live session is never a ghost. `forget_server` removes the saved entry
     // before it disconnects, and in that window a volume with no row is one a
@@ -153,6 +174,7 @@ pub(crate) fn server_places() -> Vec<ServerPlace> {
             BackendKind::Sftp => "sftp",
             BackendKind::Webdav => "webdav",
             BackendKind::S3 => "s3",
+            BackendKind::Nfs => "nfs",
             _ => continue,
         };
         if places.iter().any(|place| place.id == id) {
@@ -312,7 +334,7 @@ pub(crate) fn place_root(volume_id: &str) -> Option<String> {
         .map(|place| place.app_root)
 }
 
-/// The server volume an `sftp://`, `webdav://`, or `s3://` path belongs to,
+/// The server volume an `sftp://`, `webdav://`, `s3://`, or `nfs://` path belongs to,
 /// registered or merely saved.
 ///
 /// ❗ **The most specific root wins.** An S3 account's root place

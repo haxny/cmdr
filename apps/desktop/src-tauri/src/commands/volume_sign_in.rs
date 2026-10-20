@@ -38,6 +38,9 @@ pub async fn get_volume_sign_in_state(volume_id: String) -> cmdr_fs::volume::Sig
         None if known_shares::share_by_volume_id(&volume_id).is_some() => {
             cmdr_fs::volume::SignInShape::UsernamePassword { guest_allowed: false }
         }
+        // ❗ A saved NFS export not connected right now: `AUTH_SYS` has no secret,
+        // so there's no sheet to show, ❌ not the `Password` fallback below.
+        None if crate::network::nfs_known_places::find(&volume_id).is_some() => cmdr_fs::volume::SignInShape::Nothing,
         None => cmdr_fs::volume::SignInShape::Password,
     }
 }

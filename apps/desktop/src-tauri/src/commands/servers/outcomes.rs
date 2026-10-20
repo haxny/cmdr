@@ -5,10 +5,11 @@
 use super::super::sftp::SftpHostKeyIdentity;
 use super::webdav_params;
 use super::wire::ServerConnectOutcome;
+use crate::network::nfs_volume_wiring::NfsConnection;
 use crate::network::s3_volume_wiring::S3Connection;
 use crate::network::sftp_volume_wiring::SftpConnection;
 use crate::network::webdav_volume_wiring::WebdavConnection;
-use crate::network::{known_shares, s3_known_places, sftp_known_servers, webdav_known_servers};
+use crate::network::{known_shares, nfs_known_places, s3_known_places, sftp_known_servers, webdav_known_servers};
 
 /// A saved entry, found by the id its place carries.
 pub(super) enum SavedEntry {
@@ -16,6 +17,8 @@ pub(super) enum SavedEntry {
     Webdav(webdav_known_servers::KnownWebdavServer),
     /// One saved S3 place (a bucket, or an account root).
     S3(s3_known_places::KnownS3Place),
+    /// One saved NFS place (an export).
+    Nfs(nfs_known_places::KnownNfsPlace),
     /// A saved SMB share whose last mount had that id.
     Smb(known_shares::KnownNetworkShare),
 }
@@ -42,6 +45,9 @@ pub(super) fn saved_by_id(volume_id: &str) -> Option<SavedEntry> {
     }
     if let Some(entry) = s3_known_places::find(volume_id) {
         return Some(SavedEntry::S3(entry));
+    }
+    if let Some(entry) = nfs_known_places::find(volume_id) {
+        return Some(SavedEntry::Nfs(entry));
     }
     // ❗ Stored, ❌ not derived, unlike the two above: an SMB id comes off the
     // mount's `statfs`, and only the row knows which spelling the mount got.
@@ -104,5 +110,19 @@ pub(super) fn outcome_from_s3(connection: S3Connection) -> ServerConnectOutcome 
         S3Connection::TimedOut => ServerConnectOutcome::TimedOut,
         S3Connection::Unreachable => ServerConnectOutcome::Unreachable,
         S3Connection::Cancelled => ServerConnectOutcome::Cancelled,
+    }
+}
+
+/// The NFS wiring's outcome, widened into the superset.
+pub(super) fn outcome_from_nfs(connection: NfsConnection) -> ServerConnectOutcome {
+    match connection {
+        NfsConnection::Connected { volume_id } => ServerConnectOutcome::Connected { volume_id },
+        NfsConnection::ExportNotFound => ServerConnectOutcome::ExportNotFound,
+        NfsConnection::ExportRefused => ServerConnectOutcome::ExportRefused,
+        NfsConnection::ReservedPortRequired => ServerConnectOutcome::ReservedPortRequired,
+        NfsConnection::NoNfsV3 => ServerConnectOutcome::NoNfsV3,
+        NfsConnection::TimedOut => ServerConnectOutcome::TimedOut,
+        NfsConnection::Unreachable => ServerConnectOutcome::Unreachable,
+        NfsConnection::Cancelled => ServerConnectOutcome::Cancelled,
     }
 }

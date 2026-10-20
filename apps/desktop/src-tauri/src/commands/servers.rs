@@ -20,17 +20,20 @@
 //! WebDAV have exactly one place per account; SMB and S3 have many (an S3
 //! account's buckets, plus its root when saved).
 
+use crate::network::nfs_volume_wiring;
 use crate::network::one_shot_credentials::SecretOffer;
 use crate::network::s3_volume_wiring;
 use crate::network::saved_server_fields::{self, SavedServerOutcome};
 use crate::network::sftp_volume_wiring;
 use crate::network::webdav_volume_wiring;
 use crate::network::{
-    known_shares, manual_servers, s3_known_places, sftp_known_servers, smb_saved_shares, webdav_known_servers,
+    known_shares, manual_servers, nfs_known_places, s3_known_places, sftp_known_servers, smb_saved_shares,
+    webdav_known_servers,
 };
 use cmdr_sftp::SftpConnectionParams;
 use cmdr_webdav::WebdavConnectionParams;
 
+mod nfs_places;
 mod outcomes;
 mod s3_accounts;
 mod saves;
@@ -147,6 +150,7 @@ fn saved_servers(
     }
 
     servers.extend(s3_accounts(manager, &app_roots));
+    servers.extend(nfs_places::nfs_servers(manager, &app_roots));
     servers.extend(smb_hosts(manual, known, hosts));
     servers
 }
@@ -236,6 +240,7 @@ pub async fn connect_saved_place(
             )
             .await,
         ),
+        SavedEntry::Nfs(entry) => nfs_places::connect_saved(set_out, entry, &attempt_id).await,
         // A saved SMB share: mounted as its account, then connected the usual way.
         SavedEntry::Smb(row) => {
             smb_saved_shares::connect_saved_share(row, set_out, &attempt_id, secret, username).await
@@ -319,9 +324,7 @@ pub async fn connect_server(
             )
             .await,
         ),
-        // The NFS place store and its dial land with the NFS wiring; until then a
-        // dial reaches nothing, so it registers and saves nothing.
-        ServerTarget::Nfs { .. } => ServerConnectOutcome::Unreachable,
+        nfs @ ServerTarget::Nfs { .. } => nfs_places::connect(nfs, &attempt_id).await,
     }
 }
 
@@ -335,11 +338,12 @@ pub fn cancel_server_connect(attempt_id: String) -> bool {
     let sftp = sftp_volume_wiring::cancel_connect(&attempt_id);
     let webdav = webdav_volume_wiring::cancel_connect(&attempt_id);
     let s3 = s3_volume_wiring::cancel_connect(&attempt_id);
+    let nfs = nfs_volume_wiring::cancel_connect(&attempt_id);
     let smb = smb_saved_shares::cancel_connect(&attempt_id);
     let smb_share_list_mount = crate::network::cancel_mount(&attempt_id);
     // The sheet's "Eject and save" runs under the same kind of id, and its Cancel is this one.
     let eject_and_save = crate::server_move::smb::cancel_eject_and_save(&attempt_id);
-    sftp || webdav || s3 || smb || smb_share_list_mount || eject_and_save
+    sftp || webdav || s3 || nfs || smb || smb_share_list_mount || eject_and_save
 }
 
 /// Drops a place's session and takes it out of the registry, answering whether
@@ -370,7 +374,8 @@ pub(crate) async fn disconnect_place_inner(volume_id: &str) -> bool {
     let root = crate::server_volumes::place_root(volume_id);
     let dropped = sftp_volume_wiring::disconnect(volume_id).await
         || webdav_volume_wiring::disconnect(volume_id).await
-        || s3_volume_wiring::disconnect(volume_id).await;
+        || s3_volume_wiring::disconnect(volume_id).await
+        || nfs_volume_wiring::disconnect(volume_id).await;
     if dropped {
         crate::volume_broadcast::emit_volume_gone(volume_id, root.as_deref().unwrap_or_default());
     }
@@ -401,6 +406,7 @@ fn set_place_pinned_inner(volume_id: &str, pinned: bool) -> bool {
         SavedEntry::Sftp(entry) => sftp_known_servers::set_pinned(&entry.host, entry.port, &entry.username, pinned),
         SavedEntry::Webdav(entry) => webdav_known_servers::set_pinned(&entry.url, &entry.username, pinned),
         SavedEntry::S3(_) => s3_known_places::set_pinned(volume_id, pinned),
+        SavedEntry::Nfs(_) => nfs_known_places::set_pinned(volume_id, pinned),
         SavedEntry::Smb(_) => known_shares::set_share_pinned(volume_id, pinned),
     };
     if moved {
@@ -439,6 +445,7 @@ fn set_place_auto_reconnect_inner(volume_id: &str, on: bool) -> bool {
         }
         SavedEntry::Webdav(entry) => webdav_volume_wiring::apply_auto_reconnect(&entry.url, &entry.username, on),
         SavedEntry::S3(_) => s3_volume_wiring::apply_auto_reconnect(volume_id, on),
+        SavedEntry::Nfs(_) => nfs_volume_wiring::apply_auto_reconnect(volume_id, on),
         // A share has no such switch: the kernel mount's own reconnect is macOS's.
         SavedEntry::Smb(_) => false,
     };
@@ -477,6 +484,7 @@ pub async fn forget_server(id: String) -> bool {
         SavedEntry::Sftp(entry) => sftp_known_servers::forget(&entry.host, entry.port, &entry.username),
         SavedEntry::Webdav(entry) => webdav_known_servers::forget(&entry.url, &entry.username),
         SavedEntry::S3(_) => s3_known_places::forget(&id),
+        SavedEntry::Nfs(_) => nfs_known_places::forget(&id),
         SavedEntry::Smb(row) => {
             // ❗ The row and its pin, and nothing else: a mounted share stays
             // mounted, so there's no pane to send home and no session to drop.
@@ -495,7 +503,8 @@ pub async fn forget_server(id: String) -> bool {
     // disconnecting first would put the republish ahead of the redirect.
     let _ = sftp_volume_wiring::disconnect(&id).await
         || webdav_volume_wiring::disconnect(&id).await
-        || s3_volume_wiring::disconnect(&id).await;
+        || s3_volume_wiring::disconnect(&id).await
+        || nfs_volume_wiring::disconnect(&id).await;
     crate::volume_broadcast::emit_volumes_changed();
     true
 }
@@ -522,6 +531,8 @@ pub async fn has_server_secret(id: String) -> bool {
         SavedEntry::Sftp(entry) => super::sftp::has_sftp_credentials(entry.host, entry.port, entry.username).await,
         SavedEntry::Webdav(entry) => super::webdav::has_webdav_credentials(entry.url, entry.username).await,
         SavedEntry::S3(entry) => super::s3::has_s3_credentials(entry.provider, entry.access_key_id).await,
+        // `AUTH_SYS` has no secret to remember.
+        SavedEntry::Nfs(_) => false,
         SavedEntry::Smb(row) => {
             cmdr_fs::deadline::blocking_with_timeout(std::time::Duration::from_secs(15), false, move || {
                 crate::network::keychain::has_share_credentials(&row.server_name, &row.share_name)
@@ -554,6 +565,8 @@ pub async fn forget_server_secret(id: String) -> bool {
         SavedEntry::S3(entry) => super::s3::delete_s3_credentials(entry.provider, entry.access_key_id)
             .await
             .is_ok(),
+        // Nothing stored, so nothing to remove.
+        SavedEntry::Nfs(_) => false,
         // SMB keeps one password per HOST, plus a share's own beside another
         // account's: both go.
         SavedEntry::Smb(row) => {

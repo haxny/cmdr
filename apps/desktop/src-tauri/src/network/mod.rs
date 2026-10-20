@@ -21,6 +21,8 @@ pub mod known_shares;
 pub mod live_server_edit;
 pub mod manual_servers;
 pub mod mdns_discovery;
+pub mod nfs_known_places;
+pub mod nfs_volume_wiring;
 pub mod one_shot_credentials;
 pub mod s3_known_places;
 pub mod s3_volume_wiring;
@@ -60,6 +62,12 @@ pub fn load_webdav_stores<R: tauri::Runtime>(app: &AppHandle<R>) {
 /// [`load_webdav_stores`].
 pub fn load_s3_stores<R: tauri::Runtime>(app: &AppHandle<R>) {
     s3_known_places::load_known_s3_places(app);
+}
+
+/// Reads the NFS place list off disk. One call at startup, beside
+/// [`load_s3_stores`].
+pub fn load_nfs_stores<R: tauri::Runtime>(app: &AppHandle<R>) {
+    nfs_known_places::load_known_nfs_places(app);
 }
 
 #[cfg(target_os = "macos")]
