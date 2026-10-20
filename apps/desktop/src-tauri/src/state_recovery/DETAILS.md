@@ -39,8 +39,13 @@ Issue #461. Must-knows in `CLAUDE.md`.
   whole file aside (`keep_copy`: same naming, same three kept) and the person hears it once per session. The file itself
   stays until the next save writes the entries that read; a launch before that copies it again.
   The shared loader is `../network/server_list_file.rs`.
-- **`usage.json`**: set aside; a rename that doesn't happen leaves the file, and the launch runs on an empty in-memory
-  ledger.
+- **`usage.json`, `ai/ai-state.json`**: through `read_state_file` like the lists above (set aside, or held when the
+  rename fails), each starting from its defaults.
+- **Left on their own fallback, on purpose**: `update-check.json` (when the next update check is due; losing it costs
+  one early check), `analytics-heartbeat.json` and the event spool (unsent telemetry and uptime, never the person's),
+  `.window-state.json` (window geometry), and `install-ids.json` (two random ids; a lost one is minted again, which only
+  resets analytics continuity, and holding it would mint a new in-memory id every launch instead). The agent's
+  `outcomes.md` isn't JSON: `MemoryStore::record_outcome` skips a decision when the log is there but unreadable.
 
 ## Decisions
 

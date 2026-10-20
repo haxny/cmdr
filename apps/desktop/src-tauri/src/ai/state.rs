@@ -165,19 +165,26 @@ pub(super) fn get_ai_dir<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
         .join("ai")
 }
 
+/// Reads `ai-state.json`. A missing file is the defaults; one that can't be read or parsed is set
+/// aside first (`crate::state_recovery::read_state_file`), so the next [`save_state`] can't write
+/// the defaults over the install record, the running server's pid, and a dismissal.
 pub(super) fn load_state(ai_dir: &Path) -> AiState {
     let path = ai_dir.join(STATE_FILENAME);
-    fs::read_to_string(&path)
-        .ok()
-        .and_then(|contents| serde_json::from_str(&contents).ok())
-        .unwrap_or_default()
+    crate::state_recovery::read_state_file(&path, crate::state_recovery::StateFile::LocalAi, |bytes| {
+        serde_json::from_slice(bytes).map_err(|e| e.to_string())
+    })
+    .into_value()
+    .unwrap_or_default()
 }
 
+/// Writes `ai-state.json` durably (temp + rename), never over a file that didn't load.
 pub(super) fn save_state(ai_dir: &Path, state: &AiState) {
-    let _ = fs::create_dir_all(ai_dir);
     let path = ai_dir.join(STATE_FILENAME);
-    if let Ok(json) = serde_json::to_string_pretty(state) {
-        let _ = fs::write(path, json);
+    let written = serde_json::to_string_pretty(state)
+        .map_err(|e| crate::state_recovery::StateWriteError::Io(std::io::Error::other(e)))
+        .and_then(|json| crate::state_recovery::write_state_file(&path, &json));
+    if let Err(e) = written {
+        log::warn!(target: "ai", "Couldn't save the local AI state: {e}");
     }
 }
 
@@ -228,6 +235,37 @@ mod tests {
         assert_eq!(state.pid, None);
         assert_eq!(state.installed_model_id, "ministral-3b-instruct-q4km");
         assert_eq!(state.dismissed_until, None);
+    }
+
+    /// An `ai-state.json` that's there but can't be read (mode 000) is set aside before the next
+    /// state change writes the defaults over the install record and the dismissal.
+    #[test]
+    fn an_unreadable_state_file_survives_the_next_save() {
+        use std::os::unix::fs::PermissionsExt;
+        // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail.
+        if unsafe { libc::geteuid() } == 0 {
+            return;
+        }
+        let _notices = crate::state_recovery::testing::capture_recoveries();
+        let dir = crate::test_support::TestDir::new("ai_state_unreadable");
+        let installed = AiState {
+            installed: true,
+            dismissed_until: Some(1_900_000_000),
+            ..AiState::default()
+        };
+        save_state(&dir, &installed);
+        let path = dir.join(STATE_FILENAME);
+        let original = fs::read(&path).expect("the state exists");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).expect("make it unreadable");
+
+        let loaded = load_state(&dir);
+        assert!(!loaded.installed);
+        save_state(&dir, &loaded);
+
+        let kept = crate::state_recovery::testing::kept_copies(&path);
+        assert_eq!(kept.len(), 1, "set aside: {kept:?}");
+        fs::set_permissions(&kept[0], fs::Permissions::from_mode(0o644)).expect("read the copy");
+        assert_eq!(fs::read(&kept[0]).expect("read the copy"), original);
     }
 
     #[test]

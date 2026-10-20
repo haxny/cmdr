@@ -1,6 +1,6 @@
 //! The `usage.json` file: a schema-versioned envelope holding the local calendar days Cmdr was
-//! launched on, the pure append the launch hook drives, and the quarantine for a file we can't
-//! read.
+//! launched on, and the pure append the launch hook drives, read and written through
+//! `crate::state_recovery`, which sets aside a file we can't read and never lets one be saved over.
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -48,32 +48,24 @@ fn appended(days: &[String], today: NaiveDate) -> Option<Vec<String>> {
     Some(next)
 }
 
-/// Reads the days at `path`. A missing file is a fresh ledger; one we can't parse, or one stamped
-/// with a schema we don't know, is quarantined and this launch starts fresh in memory.
+/// Reads the days at `path`. A missing file is a fresh ledger; one we can't read or parse, or one
+/// stamped with a schema we don't know, is set aside (`crate::state_recovery::read_state_file`)
+/// and this launch starts fresh in memory. When the set-aside can't happen, [`write`] refuses to
+/// write over the file for the session.
 pub(super) fn read(path: &Path) -> Vec<String> {
     cleanup_tmp_file(path);
-
-    let Ok(contents) = fs::read_to_string(path) else {
-        return Vec::new();
-    };
-
-    match serde_json::from_str::<Envelope>(&contents) {
-        Ok(envelope) if envelope.schema_version == SCHEMA_VERSION => envelope.launch_days,
-        Ok(envelope) => {
-            log::warn!(
-                target: LOG_TARGET,
-                "Launch-day ledger at {path:?} is schema {} (we read {SCHEMA_VERSION}); quarantining and starting fresh",
+    crate::state_recovery::read_state_file(path, crate::state_recovery::StateFile::LaunchDays, |bytes| {
+        match serde_json::from_slice::<Envelope>(bytes) {
+            Ok(envelope) if envelope.schema_version == SCHEMA_VERSION => Ok(envelope.launch_days),
+            Ok(envelope) => Err(format!(
+                "schema version {}, expected {SCHEMA_VERSION}",
                 envelope.schema_version
-            );
-            quarantine_broken(path);
-            Vec::new()
+            )),
+            Err(e) => Err(e.to_string()),
         }
-        Err(e) => {
-            log::warn!(target: LOG_TARGET, "Couldn't parse the launch-day ledger at {path:?}: {e}");
-            quarantine_broken(path);
-            Vec::new()
-        }
-    }
+    })
+    .into_value()
+    .unwrap_or_default()
 }
 
 /// Notes `today` in the ledger at `path`, writing only when the day is new.
@@ -87,17 +79,14 @@ pub(super) fn record(path: &Path, today: NaiveDate) {
 }
 
 /// Writes the days durably: temp file + fsync + rename + parent-dir fsync, so the ledger survives a
-/// power loss and not only a process death. See `crate::config::durable_write_json`.
-fn write(path: &Path, days: &[String]) -> std::io::Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
+/// power loss and not only a process death. See `crate::state_recovery::write_state_file`.
+fn write(path: &Path, days: &[String]) -> Result<(), crate::state_recovery::StateWriteError> {
     let envelope = Envelope {
         schema_version: SCHEMA_VERSION,
         launch_days: days.to_vec(),
     };
     let json = serde_json::to_string_pretty(&envelope).map_err(std::io::Error::other)?;
-    crate::config::durable_write_json(path, &path.with_extension("json.tmp"), &json)
+    crate::state_recovery::write_state_file(path, &json)
 }
 
 /// Drops a temp file a killed write left behind, so it can't shadow a later one.
@@ -106,14 +95,6 @@ fn cleanup_tmp_file(path: &Path) {
     if tmp.exists() {
         let _ = fs::remove_file(&tmp);
     }
-}
-
-/// Sets the file aside (`crate::state_recovery`) so the unreadable ledger survives and the person
-/// hears it reset. A real ledger is never wiped without a copy left behind. If the rename itself
-/// fails, the file stays and this launch runs on an empty in-memory ledger: a hint that stays quiet
-/// costs less than a deleted history.
-fn quarantine_broken(path: &Path) {
-    crate::state_recovery::set_aside(path, crate::state_recovery::StateFile::LaunchDays);
 }
 
 #[cfg(test)]
@@ -126,6 +107,31 @@ mod tests {
 
     fn days(keys: &[&str]) -> Vec<String> {
         keys.iter().map(|k| (*k).to_string()).collect()
+    }
+
+    /// A ledger that's there but can't be read (mode 000) is set aside before today's launch is
+    /// written as the only day.
+    #[test]
+    fn an_unreadable_ledger_survives_the_next_launch() {
+        use std::os::unix::fs::PermissionsExt;
+        // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail.
+        if unsafe { libc::geteuid() } == 0 {
+            return;
+        }
+        let _notices = crate::state_recovery::testing::capture_recoveries();
+        let dir = crate::test_support::TestDir::new("ledger_unreadable");
+        let path = dir.join("usage.json");
+        record(&path, day(2026, 9, 7));
+        record(&path, day(2026, 9, 8));
+        let original = fs::read(&path).expect("the ledger exists");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).expect("make it unreadable");
+
+        record(&path, day(2026, 9, 9));
+
+        let kept = crate::state_recovery::testing::kept_copies(&path);
+        assert_eq!(kept.len(), 1, "set aside: {kept:?}");
+        fs::set_permissions(&kept[0], fs::Permissions::from_mode(0o644)).expect("read the copy");
+        assert_eq!(fs::read(&kept[0]).expect("read the copy"), original);
     }
 
     #[test]

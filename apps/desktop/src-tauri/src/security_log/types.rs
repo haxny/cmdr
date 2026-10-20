@@ -188,6 +188,8 @@ pub enum StateFile {
     SmbServers,
     /// `known-sftp-hosts.json`: the SSH host keys the person approved.
     SftpHostKeys,
+    /// `ai/ai-state.json`: whether local AI is installed, its server, and a dismissed offer.
+    LocalAi,
 }
 
 /// One line of the file: `{"v":1,"at":"<UTC ISO 8601>","event":{"kind":…}}`.

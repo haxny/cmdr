@@ -95,6 +95,10 @@
   "@stateRecovery.sftpHostKeys.title": {
     "description": "Headline of a notice shown once: Cmdr remembers which SFTP servers the person approved the first time they connected (by each server's security fingerprint, its \"host key\"), and that file couldn't be read, either the whole file or only some entries in it. So for some or all of those servers, Cmdr will show the first-connection approval question again. \"SFTP\" is a protocol name and stays as is. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
   },
+  "stateRecovery.localAi.title": "Cmdr couldn’t read its local AI setup, so it may offer to set it up again",
+  "@stateRecovery.localAi.title": {
+    "description": "Headline of a notice shown once: Cmdr keeps a small file about its on-device AI (whether the AI model is downloaded and installed, and whether the person dismissed the offer to install it), and that file couldn't be read, so Cmdr may offer the local AI setup or download again. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
   "stateRecovery.keptCopy": "Cmdr kept the old file at {path}.",
   "@stateRecovery.keptCopy": {
     "description": "Line under any of the notices above that a damaged file was set aside rather than deleted, and where. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window.",

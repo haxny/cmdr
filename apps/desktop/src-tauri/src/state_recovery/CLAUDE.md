@@ -19,8 +19,8 @@ the typed record; this module owns the copy and the notice.
 
 - **Every store that starts fresh goes through `set_aside` (or `report`)**, ❌ never a bare rename or delete: that's
   what keeps the copy, the record, and the notice in step. Today: the four plugin stores, `operation-log.db`, `main.db`,
-  favorites, the six recents lists (`RecentEntry::STATE_FILE`), the five saved-server lists, the trusted SSH host keys, and
-  `usage.json`.
+  favorites, the six recents lists (`RecentEntry::STATE_FILE`), the five saved-server lists, the trusted SSH host keys,
+  `usage.json`, and `ai-state.json`. What deliberately stays on a plain default: `DETAILS.md` § Per store.
 - **A file that's there but didn't load is never saved over.** A JSON store reads with `read_state_file` and writes
   with `write_state_file`, ❌ never `fs::read` + `unwrap_or_default` + `durable_write_json`: unreadable (mode 000,
   `EIO`, non-UTF-8) counts as broken, and when the set-aside fails the path is held and every write refuses

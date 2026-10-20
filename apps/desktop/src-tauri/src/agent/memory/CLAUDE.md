@@ -38,7 +38,8 @@ The tool handlers live with the rest of the toolset (`../tools/memory.rs`); the 
 - **A refusal is TYPED and names a way out.** A full folder tells the model to prune (`MemoryRefusal::DirectoryFull`
   with its numbers), ❌ never fails silently; `MemoryRefusal::token()` is what anything downstream matches on.
 - **Unreadable is not absent.** Under a bare `read_to_string(..).ok()` a non-UTF8 or permission-denied hub file leaves
-  the agent believing it has never remembered anything, so it starts the user over. Both cases are logged.
+  the agent believing it has never remembered anything, so it starts the user over. Both cases are logged;
+  `record_outcome` skips a decision rather than write over an unreadable `outcomes.md`.
 - **Writes go through `config::durable_write_json`.** A settings control invites the user into this folder while the
   agent may be writing in it, so a torn file is reachable rather than theoretical.
 - **The user has two controls, and both are the user's reach into an app-managed folder**: Settings › Ask Cmdr opens it

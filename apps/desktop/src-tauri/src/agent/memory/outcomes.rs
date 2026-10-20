@@ -56,7 +56,16 @@ impl MemoryStore {
     /// this path to tell about it. A failure is logged and swallowed: the user's answer is
     /// already recorded in `main.db`, and a lost lesson costs a re-proposal, never correctness.
     pub fn record_outcome(&self, entry: &str) {
-        let existing = std::fs::read_to_string(self.root().join(OUTCOMES_FILE)).unwrap_or_default();
+        // Unreadable is not absent: folding into "nothing" and writing it would replace every
+        // lesson in a log that's only unreadable for now, so that decision goes unlearned.
+        let existing = match std::fs::read_to_string(self.root().join(OUTCOMES_FILE)) {
+            Ok(text) => text,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+            Err(e) => {
+                log::warn!(target: LOG_TARGET, "the agent did not get to learn from a decision, its log didn't read: {e}");
+                return;
+            }
+        };
         let next = fold(&existing, entry);
         if let Err(e) = self.store_capped(OUTCOMES_FILE, &next, MEMORY_DIR_MAX_BYTES) {
             log::warn!(target: LOG_TARGET, "the agent did not get to learn from a decision: {e:?}");
@@ -128,6 +137,28 @@ mod tests {
 
     fn entry(n: usize) -> String {
         format!("2026-08-23 rejected: move 12 files under /Users/x/Downloads (entry {n})")
+    }
+
+    /// A decision log that's there but can't be read (mode 000) is left as it is: folding one
+    /// decision into "nothing" and writing that would replace every lesson in it.
+    #[test]
+    fn an_unreadable_log_is_never_written_over() {
+        use std::os::unix::fs::PermissionsExt;
+        // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail.
+        if unsafe { libc::geteuid() } == 0 {
+            return;
+        }
+        let dir = crate::test_support::TestDir::new("outcomes_unreadable");
+        let store = MemoryStore::new(dir.to_path_buf());
+        store.record_outcome(&entry(1));
+        let path = dir.join(OUTCOMES_FILE);
+        let original = std::fs::read(&path).expect("the log exists");
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).expect("make it unreadable");
+
+        store.record_outcome(&entry(2));
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).expect("read it again");
+
+        assert_eq!(std::fs::read(&path).expect("read the log"), original);
     }
 
     /// The ring is what makes a mechanical writer safe, so its bound is the test that matters:

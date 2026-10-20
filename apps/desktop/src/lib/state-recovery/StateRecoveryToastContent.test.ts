@@ -96,6 +96,7 @@ describe('every other file', () => {
     'smb_shares',
     'smb_servers',
     'sftp_host_keys',
+    'local_ai',
   ]
 
   for (const file of others) {

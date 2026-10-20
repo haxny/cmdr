@@ -16545,6 +16545,8 @@ export type StateFile =
   | 'smb_servers'
   // `known-sftp-hosts.json`: the SSH host keys the person approved.
   | 'sftp_host_keys'
+  // `ai/ai-state.json`: whether local AI is installed, its server, and a dismissed offer.
+  | 'local_ai'
 
 // One state file Cmdr couldn't read and started fresh, as the person hears about it.
 export type StateRecovery = {

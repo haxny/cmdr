@@ -4381,6 +4381,7 @@ export type MessageKey =
   | 'stateRecovery.license.body'
   | 'stateRecovery.license.openSettings'
   | 'stateRecovery.license.title'
+  | 'stateRecovery.localAi.title'
   | 'stateRecovery.multiRenameFieldHistory.title'
   | 'stateRecovery.multiRenameLastSettings.title'
   | 'stateRecovery.multiRenamePresets.title'
