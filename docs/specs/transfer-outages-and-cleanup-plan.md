@@ -4,6 +4,32 @@ Issues: [#489](https://github.com/vdavid/cmdr/issues/489) (copies to session vol
 and the error blames a file) and [#490](https://github.com/vdavid/cmdr/issues/490) (a failed SMB copy leaves temps and
 open handles). Incident: `ERR-VEZUB` (0.54.0). Plan written 2026-10-19 against `8e3891a89`.
 
+## Status and decisions for David
+
+Status (2026-10-20): milestones 1–11 are done, including the close-out soak, conformance review, and docs audit. Once
+this lands, #489 and #490 can close and this spec can be wiped (`docs/specs/DETAILS.md` § "Wiping a shipped spec"). What
+the close-out left open is filed: #569 (pre-flight scan and compress planning walk don't wait), #570 (moving a folder
+link on SFTP or ADB), #571 (same-volume renames and instant ops don't wait), #572 (a failed op doesn't name the bytes it
+kept), #573–#577 (smaller landing and cleanup edges the conformance review found), #578 (a live cell that's flaky under
+parallel load). The lead made these calls; they're yours to confirm or overturn:
+
+1. **A Cancel never waits on a dropped share**, and a failed op takes the same shape: it's reported at once, cleanup
+   finishes in the background (one dial, 20 s), and what's left goes to the ledger and is swept when the share
+   reconnects.
+2. **Bytes whose way was already cleared are finished, not rolled back.** A swap a Cancel, give-up, or drop cut off
+   after the original's delete keeps the new bytes recorded as a landing, and the next sweep that reaches the share puts
+   them at the name (possibly a launch later). On SMB and local disks this window doesn't exist: the swap is one atomic
+   replacing rename, so a give-up leaves the original whole.
+3. **A delete STOPS when an entry changed while the share was away** (`ChangedWhileDisconnected`) rather than skipping
+   it: someone is working in that tree right now, and a delete has no rollback.
+4. **Accepted residual risk**: a byte-identical file someone saved at the name during an outage is claimed as ours (an
+   undo would remove it), over failing every NAS copy whose reply a drop swallowed.
+5. **`PreviousSessionId` is out of scope** (see "The smb2 dependency"); it needs a new smb2 API.
+6. **All new user-facing copy is a v0 draft for your review**: the "Lost the connection to {server}" error (copy, move,
+   delete, compress, archive edit), "changed while disconnected", the cancel summary's "removed once it's back" and
+   "lands once it's back" lines, and the unfinished-landing notice. ❗ The 17 new keys aren't translated yet and 2
+   reworded ones are stale; `i18n-coverage` fails CI until a translator pass runs.
+
 ## Loud rules (every milestone)
 
 - ❗ **Read first**: `crates/cmdr-operations/src/transfer/CLAUDE.md`, `transfer/volume/CLAUDE.md`,
@@ -862,6 +888,22 @@ no `.cmdr-tmp-*` on the share. Then the adversarial conformance review and docs 
 nextest run against the leased fixture; `e2e-linux.sh` is the Playwright suite's and doesn't apply); review findings
 fixed or filed as issues.
 
+**Status: done.** As built:
+
+- The cell is `smb_outage_test.rs::smb_integration_an_overwrite_copy_rides_out_a_share_that_keeps_going_away`: 48 files,
+  every other one over an original, through the app's own volume wiring (its SMB window of ten). The copy parks three
+  times and the share dies under it each time; a watch connection tracks the fixture's halves so seeding, starting, and
+  reading back happen inside an up half. Green on every run since the fix: five alone by name, about 20 more beside the
+  other outage cells.
+- It found a deadlock (3 of 3 hung at the app's window of ten): a merge walker awaited an outage wait without polling
+  its leaves, while a leaf held SMB's single-flight `reconnect_lock` mid-dial. Every walker await now goes through
+  `LeafPool::drive` (`f35ce3a42`). The "reconnect attempt didn't return within 15 s" it looked like was that deadlock;
+  none appear since.
+- Its probe dump also showed a resumed read still labelled `parked(pause)`, a label the stall abort exempts
+  (`f82bec139`).
+- Conformance review: one fix (`87b8a9e2f`: a transport fault after a stop reads as the stop, so a Cancel no longer ends
+  as "Lost the connection"), the rest filed as #572–#577. Docs audit applied (`cd4fada93`).
+
 ## Invariants (the conformance review checks these)
 
 - **The merge invariant**: a merge never deletes or overwrites a dest file the source doesn't shadow, under every
@@ -892,12 +934,3 @@ fixed or filed as issues.
   (`transport_fault`, one errno set), one landing function, one way to record a temp, one stop-work token.
 - **Errors**: typed end to end; ❌ no string matching; a failure carries its path and side from the frame that knows the
   item.
-
-## Decisions (made by the lead, pending David's review)
-
-1. **A user's Cancel never waits on a dropped share.** Cleanup after it continues in the background with a short outage
-   wait; whatever's left goes to the `in_flight_temps` ledger and is swept on reconnect (milestone 9). A failed op takes
-   the same shape.
-2. **`PreviousSessionId` is out of scope** (see "The smb2 dependency"); a possible later smb2 API.
-3. **All new user-facing copy is a draft** (milestone 7's error, milestone 9's deferred-leftovers wording): it lands as
-   v0 at most, for David's review.
