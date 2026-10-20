@@ -53,10 +53,18 @@ path stays the caller's path.
 ### Reads (`read_stream.rs`)
 
 `open_read_stream` opens the node (`open_file`, which needs the full index) and reads 1 MiB windows (`read_file_at`) on
-the blocking pool; `read_range` is one `read_file_at`. Each window reads only the blobs it spans, and each blob read is
-a `read_range` window of the pack on the parent, never the whole pack. A chunk that comes back empty before the recorded
-size is `SourceChanged`: a short file never lands silently. The stream reports the node's date and permission bits.
-Directories answer `IsADirectory`; symlinks and special files `NotSupported`.
+the blocking pool, four ahead of the one handed out (`READ_AHEAD`): one at a time left the link idle between blob reads,
+~21 MB/s against ~39 MB/s over direct SMB (`docs/notes/restic/open-cost.md` § "Reading blobs ahead"). A dropped stream
+DETACHES its reads in flight, ❌ never aborts them, so a parent mid-transaction (a phone) finishes each round trip
+whole; memory stays at four windows. `read_range` is one `read_file_at`. Each window reads only the blobs it spans, and
+each blob read is a `read_range` window of the pack on the parent, never the whole pack. A chunk that comes back short
+of what it asked for is `SourceChanged`: a short file never lands silently. The stream reports the node's date and
+permission bits. Directories answer `IsADirectory`; symlinks and special files `NoContent`, which a folder copy counts
+as one skipped item (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A child with no bytes is one skipped
+item").
+
+Copy-out's scan opts into `ScanSource::abandons_reads_on_stop`: a listing here is safe to drop mid-flight (its waiter
+leaves the index load), so a Cancel lands inside a listing that waits on the load.
 
 ### `latest`
 
@@ -84,6 +92,10 @@ dropping a volume loses nothing.
 - **A replaced parent re-opens.** An SMB share reconnecting replaces the parent `Arc` under the same volume id. Each
   opened value (and each load) remembers the parent it was opened through (compared by `Arc` address), and a call
   arriving with a different parent opens again; the password survives.
+- **A repo that changed under the view.** Replaced in place (`restic init` again, another repo copied over it), the
+  cached open can't decrypt the new snapshot files (`Unreadable`): the hub drops the opened repo and the index and opens
+  once more with the password it holds, so the root lists the new repo. Deleted, a refresh finds no snapshots and no
+  `config`: `NotFound`, and the memo forgets it was a repo, ❌ never an empty list that reads as "no backups".
 
 Sizing comes from David's NAS repo (`docs/notes/restic/open-cost.md`: 2.4M blobs, 112 MB of index files, ~0.5–0.65 GB of
 RSS per loaded index, unlock ~0.5 s, load 2.5–4.3 s over direct SMB). `Tuning` holds every number below; tests shorten

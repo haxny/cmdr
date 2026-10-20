@@ -437,10 +437,30 @@ impl ResticRepos {
             .as_ref()
             .map(|known| known.files.clone())
             .unwrap_or_default();
-        let files = repo
-            .refresh_snapshots(current)
-            .await
-            .map_err(|err| Self::refused(slot, err))?;
+        let files = match repo.refresh_snapshots(current).await {
+            Ok(files) => files,
+            // The cached open can't read the repo any more: it was replaced in
+            // place (`restic init` again, another repo copied over it) under a new
+            // master key. Open again, once, with the password held, and read the
+            // snapshot list from scratch.
+            Err(ResticError::Unreadable { .. }) => {
+                slot.drop_opened_repo();
+                let repo = self.opened(slot, parent).await?;
+                repo.refresh_snapshots(Vec::new())
+                    .await
+                    .map_err(|err| Self::refused(slot, err))?
+            }
+            Err(err) => return Err(Self::refused(slot, err)),
+        };
+        // A repo always has a `config`. No snapshots AND no `config` is a repo
+        // deleted after browsing: `NotFound`, ❌ never an empty list that reads
+        // as "no backups".
+        if files.is_empty() && !config_exists(parent.as_ref(), &slot.key.root).await? {
+            slot.drop_opened_repo();
+            *lock(&slot.snapshots) = None;
+            lock(&self.confirmations).remove(&slot.key);
+            return Err(VolumeError::NotFound(slot.key.root.display().to_string()));
+        }
         let list = Arc::new(snapshot_list_of(&files));
         lock(&slot.latest).rebind(&list, self.tuning.latest_quiet);
         *lock(&slot.snapshots) = Some(Snapshots {
@@ -564,6 +584,15 @@ impl ResticRepos {
     }
 }
 
+/// Whether the repo at `root` on `parent` still has its `config`.
+async fn config_exists(parent: &dyn Volume, root: &Path) -> Result<bool, VolumeError> {
+    match parent.get_metadata(&root.join("config")).await {
+        Ok(_) => Ok(true),
+        Err(VolumeError::NotFound(_)) => Ok(false),
+        Err(err) => Err(err),
+    }
+}
+
 fn key(volume_id: &str, repo_root: &Path) -> RepoKey {
     RepoKey {
         volume_id: volume_id.to_string(),
@@ -616,6 +645,15 @@ impl RepoSlot {
 
     fn password_in_memory(&self) -> Option<Zeroizing<String>> {
         lock(&self.password).clone()
+    }
+
+    /// Lets go of the opened repo and the loaded index: the repo changed under
+    /// them (replaced or deleted). The password stays; the next call opens anew.
+    fn drop_opened_repo(&self) {
+        if let Ok(mut opened) = self.opened.try_lock() {
+            *opened = None;
+        }
+        lock(&self.index).ready = None;
     }
 
     /// Forgets the password held in memory (the person cancelled the prompt).

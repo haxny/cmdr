@@ -158,6 +158,7 @@ struct Rig {
     index_files: usize,
     index_bytes: u64,
     _source: TestDir,
+    fixture: FixtureRepo,
 }
 
 struct RigOptions {
@@ -228,6 +229,7 @@ impl Rig {
             index_files: index.len(),
             index_bytes: index.iter().map(|(_, bytes)| bytes.len() as u64).sum(),
             _source: source,
+            fixture,
         };
         if options.unlock {
             assert!(
@@ -595,6 +597,52 @@ async fn a_new_snapshot_reloads_the_index_while_an_old_reader_finishes() {
         rest.extend_from_slice(&chunk.expect("the old reader finishes on the old index"));
     }
     assert_eq!(rest, vec![7u8; 3 * 1024 * 1024]);
+}
+
+// ── The repo changing under the view ───────────────────────────────────────
+
+impl Rig {
+    /// Deletes every file of the repo from the drive (the folders stay, empty).
+    async fn delete_repo_files(&self) {
+        for (path, _) in self.fixture.files() {
+            self.parent.inner.delete(&Path::new(ROOT).join(path)).await.expect("rm");
+        }
+    }
+}
+
+/// A repo deleted after browsing answers `NotFound`, ❌ never an empty snapshot
+/// list: an empty `snapshots/` reads as "no backups", which is a lie.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_deleted_repo_answers_not_found_not_an_empty_list() {
+    let rig = Rig::new(RigOptions::default()).await;
+    rig.volume.list_directory(&view(ROOT), None).await.expect("lists");
+
+    rig.delete_repo_files().await;
+
+    let listing = rig.volume.list_directory(&view(ROOT), None).await;
+    assert!(matches!(listing, Err(VolumeError::NotFound(_))), "got {listing:?}");
+}
+
+/// A repo replaced in place (`restic init` again, another repo copied over it)
+/// has a new master key: the cached open can't read it, so the hub opens again
+/// with the password it holds and lists the new repo, ❌ never stays broken until
+/// a restart.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_repo_replaced_in_place_opens_again_and_lists_the_new_one() {
+    let rig = Rig::new(RigOptions::default()).await;
+    rig.volume.list_directory(&view(ROOT), None).await.expect("lists");
+
+    rig.delete_repo_files().await;
+    let replacement = FixtureRepo::init(PASSWORD);
+    replacement.add_snapshot(at(1_795_000_000), "m3");
+    replacement.write_into(rig.parent.inner.as_ref(), Path::new(ROOT)).await;
+
+    let rows = rig
+        .volume
+        .list_directory(&view(ROOT), None)
+        .await
+        .expect("lists the new repo");
+    assert_eq!(rows.len(), 2, "its one snapshot plus `latest`: {rows:?}");
 }
 
 /// Walks down from `dir` to the folder holding `name` (a snapshot of a Mac
