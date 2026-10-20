@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::Outcome;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{RemovalRefusal, remove_file_clearing_blockers};
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -82,7 +83,7 @@ impl Surface {
                 Ok(entry) => entry.size.map_or(Standing::Other, |size| Standing::File { size }),
                 Err(VolumeError::NotFound(_)) => Standing::Missing,
                 Err(e) => {
-                    log::debug!(target: "copy", "couldn't read what's at {}: {e}", LogPrivate::path(path));
+                    log::debug!(target: "copy", "couldn't read what's at {}: {e}", LogPrivate::path(path), e = LogError(&e));
                     Standing::Unknown
                 }
             },
@@ -103,7 +104,7 @@ impl Surface {
                 Ok(()) => Removal::Removed,
                 Err(VolumeError::NotFound(_)) => Removal::AlreadyGone,
                 Err(e) => {
-                    log::debug!(target: "copy", "couldn't remove the leftover {}: {e}", LogPrivate::file_path(path));
+                    log::debug!(target: "copy", "couldn't remove the leftover {}: {e}", LogPrivate::file_path(path), e = LogError(&e));
                     Removal::Refused
                 }
             },
@@ -185,7 +186,7 @@ impl Surface {
                         target: "copy",
                         "couldn't put {} at {}: {e}",
                         LogPrivate::path(from),
-                        LogPrivate::path(to)
+                        LogPrivate::path(to), e = LogError(&e)
                     );
                     Renaming::Refused
                 }

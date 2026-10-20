@@ -14,6 +14,7 @@ use std::sync::Arc;
 use super::super::super::look_alike::{LookAlike, look_alike_in};
 use super::super::super::unique_name::ClaimedNames;
 use super::super::super::unique_name::NameCandidates;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
@@ -200,7 +201,7 @@ pub(super) async fn take_back_reservation(dest_volume: &Arc<dyn Volume>, path: &
     match dest_volume.get_metadata(path).await {
         Ok(entry) if !entry.is_directory && entry.size.unwrap_or(0) == 0 => {
             if let Err(e) = dest_volume.delete(path).await {
-                log::debug!(target: "copy", "couldn't take back the reservation at {}: {e}", LogPrivate::file_path(path));
+                log::debug!(target: "copy", "couldn't take back the reservation at {}: {e}", LogPrivate::file_path(path), e = LogError(&e));
             }
         }
         Ok(_) => log::warn!(

@@ -394,8 +394,9 @@ fn the_write_engine_lines_ship_each_value_as_one_token_of_its_kind() {
 }
 
 /// A failed copy's report line carries its typed error as the frontend's JSON in `detail=`
-/// (`operations_host/events.rs`), whose identity keys a report tokenizes. Its derived `Debug`
-/// shipped `volume_name: "Family Photos"` whole: no report pass knows that key.
+/// (`WriteOperationError::log_detail`, at `operations_host/events.rs` and the write engine's own
+/// failure lines), whose identity keys a report tokenizes. Its derived `Debug` shipped
+/// `volume_name: "Family Photos"` whole: no report pass knows that key.
 #[test]
 fn a_copy_failure_ships_no_name_from_its_typed_error() {
     use cmdr_operations::WriteOperationError;
@@ -412,15 +413,14 @@ fn a_copy_failure_ships_no_name_from_its_typed_error() {
     ];
     let private = ["Lake", "House", "Summer", "Trip", "Family", "Photos", "IMG", "0001"];
     for error in errors {
-        let json = serde_json::to_string(&error).expect("serializes");
         let volume = format!(
             "{HEAD}copy_between_volumes: operation op-1 failed: detail={:?}",
-            LogDetail(&json)
+            error.log_detail()
         );
         assert_ships_none(&volume, &private);
         let local = format!(
             "{HEAD}copy_files_with_progress: failed op=op-1 detail={:?}, keeping 3 completed files",
-            LogDetail(&json)
+            error.log_detail()
         );
         assert_ships_none(&local, &private);
         assert!(r(&local).ends_with(", keeping 3 completed files"), "{}", r(&local));

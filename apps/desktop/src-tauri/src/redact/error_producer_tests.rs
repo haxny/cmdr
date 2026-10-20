@@ -111,3 +111,69 @@ fn a_hostile_name_in_an_error_field_never_closes_its_span_early() {
         assert!(!line.contains(|c| RESERVED.contains(&c)), "{line:?}");
     }
 }
+
+/// The errors that nest a `VolumeError` (an instant mutation's refusal, a conflict check's, a
+/// reconnect's, a network scan's) mark its path through the nesting, and a mutation's own path
+/// and asked-for name too. Their plain spelling ships the share-relative path whole.
+#[test]
+fn an_error_nesting_a_volume_error_marks_the_path_through_it() {
+    use crate::file_system::volume::reconnect_error::ReconnectError;
+    use cmdr_operations::{MutationError, VolumeScanError as ConflictScanError};
+
+    let inner = || VolumeError::NotFound(SHARE_PATH.to_string());
+    let lines: Vec<(String, String)> = vec![
+        (
+            format!("{HEAD}rename refused: {}", LogError(&MutationError::from(inner()))),
+            format!("{HEAD}rename refused: {}", MutationError::from(inner())),
+        ),
+        (
+            format!(
+                "{HEAD}rename refused: {}",
+                LogError(&MutationError::NotFound {
+                    path: SHARE_PATH.into()
+                })
+            ),
+            format!(
+                "{HEAD}rename refused: {}",
+                MutationError::NotFound {
+                    path: SHARE_PATH.into()
+                }
+            ),
+        ),
+        (
+            format!(
+                "{HEAD}rename refused: {}",
+                LogError(&MutationError::AlreadyExists {
+                    name: "IMG 0001 Lake House.jpg".into()
+                })
+            ),
+            format!(
+                "{HEAD}rename refused: {}",
+                MutationError::AlreadyExists {
+                    name: "IMG 0001 Lake House.jpg".into()
+                }
+            ),
+        ),
+        (
+            format!(
+                "{HEAD}conflict check gave up: {}",
+                LogError(&ConflictScanError::Volume { error: inner() })
+            ),
+            format!(
+                "{HEAD}conflict check gave up: {}",
+                ConflictScanError::Volume { error: inner() }
+            ),
+        ),
+        (
+            format!("{HEAD}reconnect: {}", LogError(&ReconnectError::from(inner()))),
+            format!("{HEAD}reconnect: {}", ReconnectError::from(inner())),
+        ),
+    ];
+    for (marked, plain) in lines {
+        assert_ships_none(&marked, &PRIVATE);
+        assert!(
+            PRIVATE.iter().any(|word| context().redact_line(&plain).contains(word)),
+            "the plain spelling should leak, or this cell proves nothing: {plain}"
+        );
+    }
+}

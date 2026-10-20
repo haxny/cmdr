@@ -9,6 +9,7 @@
 //! already the wire type, so a backend that grows a variant reaches the
 //! frontend without a second vocabulary to keep in step.
 
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, write_plain};
 use cmdr_fs::volume::VolumeError;
 use serde::{Deserialize, Serialize};
 
@@ -33,11 +34,22 @@ pub enum ReconnectError {
 }
 
 impl std::fmt::Display for ReconnectError {
-    /// ❗ For logs and debugging only.
+    /// ❗ For logs and debugging only. A log line prints it through `LogError`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: the volume's refusal marks its path.
+impl ErrorLogText for ReconnectError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
-            Self::VolumeNotFound { volume_id } => write!(f, "volume not found: {volume_id}"),
-            Self::Volume { error } => write!(f, "volume: {error}"),
+            Self::VolumeNotFound { volume_id } => write!(out, "volume not found: {volume_id}"),
+            Self::Volume { error } => {
+                out.write_str("volume: ")?;
+                out.error(error)
+            }
         }
     }
 }

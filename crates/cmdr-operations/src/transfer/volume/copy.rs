@@ -369,9 +369,9 @@ impl crate::Operations {
                         // auto-report threshold. See `WriteOperationError::is_expected_recoverable`.
                         log::warn!(
                             target: "copy",
-                            "copy_between_volumes: operation {} needs user input: {:?}",
+                            "copy_between_volumes: operation {} needs user input: detail={:?}",
                             op_id,
-                            failure.error
+                            failure.error.log_detail()
                         );
                         events.emit_error(write_error_event_from(
                             &state,
@@ -1208,8 +1208,8 @@ pub async fn copy_volumes_with_progress(
         // after the click) ❌ must not follow it as a second terminal event.
         if let Some(failure) = copy_error.take() {
             log::info!(
-                "copy_volumes_with_progress: op={operation_id} rolled back over a failure: {:?}",
-                failure.error
+                "copy_volumes_with_progress: op={operation_id} rolled back over a failure: detail={:?}",
+                failure.error.log_detail()
             );
         }
     } else {

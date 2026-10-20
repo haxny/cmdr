@@ -19,6 +19,7 @@ use tokio::time::Duration;
 
 use cmdr_fs::deadline::{Deadline, timeout_detached_within};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, LogError, write_plain};
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{ScanConflict, Volume, VolumeError};
@@ -72,18 +73,29 @@ impl VolumeScanError {
 }
 
 impl std::fmt::Display for VolumeScanError {
-    /// ❗ For logs and debugging only.
+    /// ❗ For logs and debugging only. A log line prints it through `LogError`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: a volume's error marks its path.
+impl ErrorLogText for VolumeScanError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
             Self::DestinationVolumeNotFound { volume_id } => {
-                write!(f, "destination volume not found: {volume_id}")
+                write!(out, "destination volume not found: {volume_id}")
             }
             Self::DestinationVolumeNotConnected { volume_id } => {
-                write!(f, "destination volume not connected yet: {volume_id}")
+                write!(out, "destination volume not connected yet: {volume_id}")
             }
-            Self::Volume { error } => write!(f, "volume: {error}"),
-            Self::TimedOut => f.write_str("timed out"),
-            Self::Unexpected { detail } => write!(f, "unexpected: {detail}"),
+            Self::Volume { error } => {
+                out.write_str("volume: ")?;
+                out.error(error)
+            }
+            Self::TimedOut => out.write_str("timed out"),
+            Self::Unexpected { detail } => write!(out, "unexpected: {detail}"),
         }
     }
 }
@@ -214,7 +226,7 @@ impl crate::Operations {
                             "source stats unavailable after {:.1}s of their {:.1}s share, using name-only items: {}",
                             stat_deadline.elapsed().as_secs_f64(),
                             stat_deadline.total().as_secs_f64(),
-                            e
+                            LogError(&e)
                         );
                     }
                 }
@@ -300,7 +312,7 @@ fn log_conflict_outcome(deadline: &Deadline, what: &str, e: &VolumeScanError) {
         "conflict check gave up after {:.1}s: {} ({})",
         deadline.elapsed().as_secs_f64(),
         what,
-        e
+        LogError(e)
     );
 }
 

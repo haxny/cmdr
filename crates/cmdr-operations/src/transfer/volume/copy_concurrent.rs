@@ -457,10 +457,10 @@ impl<'a> ConcurrentDriver<'a> {
     fn record_resolver_failure(&mut self, failure: WriteFailure) {
         log::warn!(
             target: "copy",
-            "copy_volumes_with_progress: op={} couldn't resolve a conflict with {} task(s) in flight: {:?}",
+            "copy_volumes_with_progress: op={} couldn't resolve a conflict with {} task(s) in flight: detail={:?}",
             self.ctx.operation_id,
             self.in_flight.len(),
-            failure.error,
+            failure.error.log_detail(),
         );
         self.settled.keep_the_first_failure(&self.ctx, failure);
     }
@@ -735,9 +735,9 @@ impl Settlements {
         if self.copy_error.is_some() {
             log::debug!(
                 target: "copy",
-                "copy_volumes_with_progress: op={} keeps its first failure; a draining sibling ended with {:?}",
+                "copy_volumes_with_progress: op={} keeps its first failure; a draining sibling ended with detail={:?}",
                 ctx.operation_id,
-                failure.error,
+                failure.error.log_detail(),
             );
             return;
         }

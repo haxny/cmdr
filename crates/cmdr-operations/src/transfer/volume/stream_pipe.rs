@@ -24,6 +24,7 @@ use super::preflight::SourceFileFacts;
 use super::server_side_copy::{ServerSideCopy, try_server_side_copy};
 use super::source_reads::SourceReads;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -477,7 +478,7 @@ impl FileRun<'_> {
                 "stream_pipe_file: attempt {attempt} of {} for {} failed ({error}); running the file again in {:?}",
                 retry::MAX_ATTEMPTS,
                 LogPrivate::file_path(dest_path),
-                retry::backoff_after(attempt),
+                retry::backoff_after(attempt), error = LogError(&error),
             );
             note_task_retry();
             set_task_phase(TaskPhase::WaitingToRetry);
@@ -510,7 +511,7 @@ impl FileRun<'_> {
             log::warn!(
                 target: "copy",
                 "stream_pipe_file: giving up on {} after {attempt} attempt(s): {error}",
-                LogPrivate::file_path(dest_path),
+                LogPrivate::file_path(dest_path), error = LogError(&error),
             );
         }
         ControlFlow::Break(Err(source_reads
@@ -531,7 +532,7 @@ async fn remove_unstaged_partial(writing_at_the_final_name: bool, dest_volume: &
         log::debug!(
             target: "copy",
             "stream_pipe_file: couldn't remove the unstaged partial {}: {e}",
-            LogPrivate::file_path(dest_path)
+            LogPrivate::file_path(dest_path), e = LogError(&e)
         );
     }
 }

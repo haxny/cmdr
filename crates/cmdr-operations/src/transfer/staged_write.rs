@@ -50,6 +50,7 @@ use super::super::state::WriteOperationState;
 #[cfg(test)]
 use super::recovered_name::FinalizeFailure;
 use super::transfer_probe::{TaskPhase, set_task_phase};
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::volume::{Volume, VolumeError, WriteMode};
@@ -415,7 +416,7 @@ impl StagedWrite {
             Err(e) => log::debug!(
                 target: "copy",
                 "staged write: couldn't remove the partial {} after a failed write, leaving it listed: {e}",
-                LogPrivate::file_path(temp.path())
+                LogPrivate::file_path(temp.path()), e = LogError(&e)
             ),
         }
     }
@@ -449,7 +450,7 @@ impl StagedWrite {
                 log::debug!(
                     target: "copy",
                     "staged write: couldn't clear {} before the next attempt: {e}",
-                    LogPrivate::file_path(&target)
+                    LogPrivate::file_path(&target), e = LogError(&e)
                 );
             }
         }

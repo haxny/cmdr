@@ -17,6 +17,7 @@ use super::super::recovered_name::{
 };
 use super::{LandingName, home_of};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -336,7 +337,7 @@ fn cut_off(landing: Landing, at: CutOffAt, error: VolumeError) -> LandingError {
     log::info!(
         target: "copy",
         "landing: {} was cut off on the transport ({error}); settling it once the destination is back",
-        LogPrivate::file_path(&landing.final_path),
+        LogPrivate::file_path(&landing.final_path), error = LogError(&error),
     );
     LandingError::CutOff(Box::new(CutOffLanding { landing, at, error }))
 }
@@ -431,7 +432,7 @@ async fn after_a_refused_delete(
                 "landing: {} still holds what was in the way after a refused delete ({report}); \
                  taking the temp {} away",
                 LogPrivate::file_path(&landing.final_path),
-                LogPrivate::file_path(landing.temp()),
+                LogPrivate::file_path(landing.temp()), report = LogError(&report),
             );
             if !landing.discard(dest_volume).await {
                 landing.landing_back_to_temp();

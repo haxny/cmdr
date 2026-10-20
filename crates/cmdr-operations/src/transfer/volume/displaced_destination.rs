@@ -21,6 +21,7 @@ use super::super::volume_outage::{OutageEnd, OutageFailure, StartedOn, lost_conn
 use super::cleanup::{TreeRemoval, remove_tree};
 use super::transfer_error::{PathRole, PathedVolumeError};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -244,7 +245,7 @@ impl DisplacedDestination {
                 log::warn!(
                     target: "copy",
                     "couldn't remove the displaced destination at {}: {e}. It keeps its record.",
-                    LogPrivate::path(self.aside.path())
+                    LogPrivate::path(self.aside.path()), e = LogError(&e)
                 );
                 if let Some(record) = self.record {
                     in_flight_temps::keep_for_arrival(&self.state, record);
@@ -292,7 +293,7 @@ impl DisplacedDestination {
                     target: "copy",
                     "couldn't put {} back at {}: {e}",
                     LogPrivate::path(self.aside.path()),
-                    LogPrivate::path(&self.original)
+                    LogPrivate::path(&self.original), e = LogError(&e)
                 );
                 let kept_at = rescue_out_of_temp_space(volume.as_ref(), self.aside.path(), &self.original).await;
                 // The rescue either gave the bytes a real name or left them on

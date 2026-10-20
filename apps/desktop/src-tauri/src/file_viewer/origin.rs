@@ -85,7 +85,8 @@ pub(super) fn open_for_viewer(requested: &Path, volume_id: &str) -> Option<Volum
         Err(e) => {
             debug!(
                 "viewer: {} doesn't open through its volume ({e}); opening it the usual way",
-                cmdr_fs::log_private::LogPrivate::file_path(requested)
+                cmdr_fs::log_private::LogPrivate::file_path(requested),
+                e = cmdr_fs::log_error::LogError(&e)
             );
             None
         }

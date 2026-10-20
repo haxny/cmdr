@@ -25,6 +25,7 @@
 use std::path::{Path, PathBuf};
 
 use super::super::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{Volume, VolumeError};
 
@@ -137,7 +138,7 @@ pub(crate) async fn what_a_refused_delete_left(dest_volume: &dyn Volume, path: &
             log::warn!(
                 target: "copy",
                 "landing: couldn't tell whether {} survived a refused delete ({e}), so the temp stays",
-                LogPrivate::path(path)
+                LogPrivate::path(path), e = LogError(&e)
             );
             AfterARefusedDelete::Unknown
         }
@@ -165,7 +166,7 @@ pub(crate) async fn discard_unplaced_temp(dest_volume: &dyn Volume, temp: &Path)
             log::warn!(
                 target: "copy",
                 "landing: couldn't remove the unplaced temp {} ({e}); the stale-temp sweep will",
-                LogPrivate::file_path(temp)
+                LogPrivate::file_path(temp), e = LogError(&e)
             );
             false
         }

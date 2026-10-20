@@ -33,6 +33,7 @@ use super::super::super::state::WriteOperationState;
 use super::super::volume_outage::through_outages;
 use super::transfer_error::{AtPath, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
@@ -227,9 +228,9 @@ fn note_outcome(
         Err(e) => {
             log::warn!(
                 target: "move",
-                "source sweep: couldn't remove {}: {:?}",
+                "source sweep: couldn't remove {}: {}",
                 LogPrivate::path(&e.path),
-                e.error
+                LogError(&e.error)
             );
             *remains = true;
             first_failure.get_or_insert(e);

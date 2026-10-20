@@ -18,6 +18,7 @@ use crate::transfer::volume::source_reads::{self, SourceReads};
 use crate::transfer::volume::transfer_error::{AtPath, PathedVolumeError, hard_abort_error};
 use crate::transfer::volume::{extract_quarantine, landed_flags};
 use crate::transfer::volume_outage::StartedOn;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{StreamWritten, VolumeError, VolumeReadStream};
@@ -362,7 +363,7 @@ impl FileRun<'_> {
                 log::info!(
                     target: "copy",
                     "stream_pipe_file: nothing proves {} landed before the drop ({error}); running it again",
-                    LogPrivate::file_path(self.dest_path),
+                    LogPrivate::file_path(self.dest_path), error = LogError(&error),
                 );
                 Ok(None)
             }

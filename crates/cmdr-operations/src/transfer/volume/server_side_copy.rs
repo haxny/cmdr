@@ -16,6 +16,7 @@ use super::super::staged_write::{CutOffLanding, LandingError, StagedWrite, Write
 use super::super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
 use super::super::volume_outage::StartedOn;
 use super::transfer_error::hard_abort_error;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeError};
 
@@ -110,17 +111,23 @@ pub(super) async fn try_server_side_copy(
             &progress,
         ) => result,
     };
-    log::debug!(
-        target: "copy",
-        "try_server_side_copy: {} answered for {} after {:?}: {}",
-        LogPrivate::volume(dest_volume.name()),
-        LogPrivate::file_path(dest_path),
-        started.elapsed(),
-        match &outcome {
-            Ok(bytes) => format!("done, size {bytes}"),
-            Err(e) => e.to_string(),
-        },
-    );
+    match &outcome {
+        Ok(bytes) => log::debug!(
+            target: "copy",
+            "try_server_side_copy: {} answered for {} after {:?}: done, size {bytes}",
+            LogPrivate::volume(dest_volume.name()),
+            LogPrivate::file_path(dest_path),
+            started.elapsed(),
+        ),
+        Err(e) => log::debug!(
+            target: "copy",
+            "try_server_side_copy: {} answered for {} after {:?}: {}",
+            LogPrivate::volume(dest_volume.name()),
+            LogPrivate::file_path(dest_path),
+            started.elapsed(),
+            LogError(e),
+        ),
+    }
 
     match outcome {
         Ok(bytes) => {

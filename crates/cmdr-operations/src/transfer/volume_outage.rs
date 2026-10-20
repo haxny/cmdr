@@ -80,6 +80,7 @@ use super::super::state::WriteOperationState;
 use super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::transfer_probe::{TaskPhase, current_task_phase, set_task_phase};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ConnectionState, LaneKey, Volume, VolumeError};
 
@@ -546,7 +547,7 @@ async fn attempt_once(
             Attempt::Hopeless
         }
         Err(error) => {
-            log::debug!(target: "copy", "volume outage: reconnect attempt failed: {error}");
+            log::debug!(target: "copy", "volume outage: reconnect attempt failed: {error}", error = LogError(&error));
             Attempt::Failed
         }
     }

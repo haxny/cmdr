@@ -55,6 +55,7 @@ use super::super::transfer::volume_outage::{OutageEnd, StartedOn, lost_connectio
 use super::super::types::WriteOperationError;
 use super::edit_error::EditError;
 use super::outage_wait::{Next, StepError, landing_failure, rerun_through_outages, wait_out};
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
@@ -436,7 +437,7 @@ async fn reap_remote_temps(
     let entries = match parent.list_directory(dir, None).await {
         Ok(entries) => entries,
         Err(err) => {
-            log::debug!(target: "archive_remote_edit", "skipping remote temp reap ({}): {err}", LogPrivate::dir_path(dir));
+            log::debug!(target: "archive_remote_edit", "skipping remote temp reap ({}): {err}", LogPrivate::dir_path(dir), err = LogError(&err));
             return;
         }
     };
@@ -461,7 +462,7 @@ async fn reap_remote_temps(
             continue;
         }
         if let Err(err) = parent.delete(&temp_path).await {
-            log::debug!(target: "archive_remote_edit", "couldn't reap remote temp {}: {err}", LogPrivate::file_path(&temp_path));
+            log::debug!(target: "archive_remote_edit", "couldn't reap remote temp {}: {err}", LogPrivate::file_path(&temp_path), err = LogError(&err));
         }
     }
 }

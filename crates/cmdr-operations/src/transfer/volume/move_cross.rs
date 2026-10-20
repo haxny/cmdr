@@ -42,6 +42,7 @@ use super::preflight::{SourceHint, scan_volume_sources, sources_in_tree_order};
 use super::strategy::{copy_single_path, resolve_source_is_directory};
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error, source_not_removed};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
@@ -587,7 +588,7 @@ pub async fn move_volumes_with_progress(
                                 e.role,
                                 LogPrivate::path(&source_path),
                                 LogPrivate::path(&dest_item_path),
-                                e.error
+                                LogError(&e.error)
                             );
                             return Err(WriteFailure::from(e).error);
                         }
@@ -657,7 +658,7 @@ pub async fn move_volumes_with_progress(
                             "move_between_volumes: source delete failed for {} (under {}) after successful copy: {}",
                             LogPrivate::path(&e.path),
                             LogPrivate::path(&source_path),
-                            e.error
+                            LogError(&e.error)
                         );
                         // ❗ The copy LANDED, so the move didn't fail: say so.
                         return Err(source_not_removed(&e.path, &landed_dest, e.error));

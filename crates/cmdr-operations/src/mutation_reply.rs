@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use super::mutation_error::MutationError;
 use cmdr_fs::deadline::{Raced, race_detached};
+use cmdr_fs::log_error::LogError;
 
 /// How long an instant mutation's IPC reply waits before it says "still
 /// running". Not a limit on the work: past it the frontend switches from its
@@ -141,7 +142,7 @@ where
                 match &result {
                     Ok(_) => log::info!(target: "write_ops", "a mutation past its deadline landed: {settled_id}"),
                     Err(e) => {
-                        log::info!(target: "write_ops", "a mutation past its deadline was refused: {settled_id} {e}")
+                        log::info!(target: "write_ops", "a mutation past its deadline was refused: {settled_id} {e}", e = LogError(e))
                     }
                 }
                 on_settled(settled_id, result);

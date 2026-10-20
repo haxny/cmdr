@@ -21,8 +21,8 @@ the engine-wide facts, the per-op sinks, and what a terminal event does besides 
 - **A terminal emit's side effects keep their order** (`terminal_effects.rs`): the MCP ring and the retained failure
   land BEFORE the emit. ❌ Never on `OperationEventSink` or a collector sink: test sinks stay side-effect-free.
 - **An engine error report keeps its message and target word for word** (`events.rs::raise`): dispatch filters and log
-  greps key off them. Its paths go through `LogPrivate`, and a typed error goes in `detail=` as the frontend's JSON
-  (its `Debug` keys are ones no report pass tokenizes).
+  greps key off them. Its paths go through `LogPrivate`, and a `WriteOperationError` goes in `detail=` as
+  `error.log_detail()`, the frontend's JSON (its `Debug` keys are ones no report pass tokenizes).
 - **A test binary never installs**: its first read builds `test_engine()` (these answers, no app handle, no sink
   factory), which every app-side cell shares (`app_engine()`) with unique ids. An engine suite builds
   `testing::TestOperations` instead.

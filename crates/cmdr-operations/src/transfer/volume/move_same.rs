@@ -218,7 +218,7 @@ impl crate::Operations {
                         log::info!("move_within_same_volume: operation {} cancelled", op_id);
                     }
                     Err(e) => {
-                        log::warn!(target: "move", "move operation {} failed: {:?}", op_id, e);
+                        log::warn!(target: "move", "move operation {} failed: detail={:?}", op_id, e.log_detail());
                         state.transfer_tree.note_failure(&e);
                         events.emit_error(WriteErrorEvent::new(op_id.clone(), WriteOperationType::Move, e));
                     }

@@ -620,6 +620,15 @@ macro_rules! item_path_of {
 }
 
 impl WriteOperationError {
+    /// The error for a log line's `detail={:?}` field: the JSON the frontend gets, quoted and
+    /// capped as external text (`LogDetail`). Its derived `Debug` would print `volume_name: "…"`,
+    /// `entry`, `first`, and the rest under snake_case keys no report pass knows, while the
+    /// JSON's keys (`volumeName`, `entry`, `first`, …) are the ones a report tokenizes in a
+    /// frontend line, so the same error ships the same way from either side.
+    pub fn log_detail(&self) -> WriteErrorDetail {
+        WriteErrorDetail(serde_json::to_string(self).unwrap_or_else(|e| format!("(the error didn't serialize: {e})")))
+    }
+
     /// The item an in-flight failure happened ON, as its variant names it: the
     /// file or folder the operation was reading or writing when it stopped.
     ///
@@ -719,4 +728,13 @@ pub enum TrashRefusalKind {
 pub struct OversizedFile {
     pub name: String,
     pub size: u64,
+}
+
+/// [`WriteOperationError::log_detail`]: a log line's `detail={:?}` value, never data.
+pub struct WriteErrorDetail(String);
+
+impl std::fmt::Debug for WriteErrorDetail {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        cmdr_fs::log_detail::LogDetail(&self.0).fmt(f)
+    }
 }

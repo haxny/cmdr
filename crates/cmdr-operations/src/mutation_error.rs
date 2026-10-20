@@ -14,6 +14,8 @@
 
 use super::host::{self, UnregisteredVolume};
 use super::types::TrashRefusalKind;
+use cmdr_fs::log_error::{ErrorLogText, ErrorText, write_plain};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::VolumeError;
 use serde::{Deserialize, Serialize};
 
@@ -111,29 +113,55 @@ pub enum MutationError {
 
 impl std::fmt::Display for MutationError {
     /// ❗ For logs and debugging only; the frontend renders every user-facing
-    /// word from the typed variant.
+    /// word from the typed variant. A log line prints it through `LogError`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write_plain(self, f)
+    }
+}
+
+/// The one text behind `Display` and `LogError`: each path and the asked-for name marked.
+impl ErrorLogText for MutationError {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
         match self {
-            Self::NameEmpty => f.write_str("name is empty"),
-            Self::NameHasDisallowedCharacter => f.write_str("name holds a disallowed character"),
-            Self::NotFound { path } => write!(f, "not found: {path}"),
-            Self::CantRenameVolumeRoot => f.write_str("a volume root can't be renamed"),
-            Self::ParentNotWritable { path } => write!(f, "parent not writable: {path}"),
-            Self::FileLocked { path } => write!(f, "locked (immutable): {path}"),
-            Self::SipProtected { path } => write!(f, "SIP-protected: {path}"),
-            Self::VolumeGone { volume_id } => write!(f, "volume gone: {volume_id}"),
-            Self::ArchiveNotEditable => f.write_str("archive not editable"),
-            Self::ArchiveReadOnly => f.write_str("archive is read-only"),
-            Self::RenameOutOfArchive => f.write_str("rename out of an archive"),
-            Self::RenameAcrossArchives => f.write_str("rename across archives"),
-            Self::ArchiveEditNotReady => f.write_str("archive-edit driver not ready"),
-            Self::ArchiveEditCouldntStart { detail } => write!(f, "archive edit didn't start: {detail}"),
-            Self::AlreadyExists { name } => write!(f, "already exists: {name}"),
-            Self::TrashNotSupported => f.write_str("this platform has no Trash"),
-            Self::TrashRefused { reason, detail } => write!(f, "the Trash refused it ({reason:?}): {detail}"),
-            Self::Volume { error } => write!(f, "volume: {error}"),
-            Self::TimedOut => f.write_str("timed out"),
-            Self::Unexpected { detail } => write!(f, "unexpected: {detail}"),
+            Self::NameEmpty => out.write_str("name is empty"),
+            Self::NameHasDisallowedCharacter => out.write_str("name holds a disallowed character"),
+            Self::NotFound { path } => {
+                out.write_str("not found: ")?;
+                out.value(LogPrivate::path(path))
+            }
+            Self::CantRenameVolumeRoot => out.write_str("a volume root can't be renamed"),
+            Self::ParentNotWritable { path } => {
+                out.write_str("parent not writable: ")?;
+                out.value(LogPrivate::dir_path(path))
+            }
+            Self::FileLocked { path } => {
+                out.write_str("locked (immutable): ")?;
+                out.value(LogPrivate::path(path))
+            }
+            Self::SipProtected { path } => {
+                out.write_str("SIP-protected: ")?;
+                out.value(LogPrivate::path(path))
+            }
+            Self::VolumeGone { volume_id } => write!(out, "volume gone: {volume_id}"),
+            Self::ArchiveNotEditable => out.write_str("archive not editable"),
+            Self::ArchiveReadOnly => out.write_str("archive is read-only"),
+            Self::RenameOutOfArchive => out.write_str("rename out of an archive"),
+            Self::RenameAcrossArchives => out.write_str("rename across archives"),
+            Self::ArchiveEditNotReady => out.write_str("archive-edit driver not ready"),
+            Self::ArchiveEditCouldntStart { detail } => write!(out, "archive edit didn't start: {detail}"),
+            Self::AlreadyExists { name } => {
+                out.write_str("already exists: ")?;
+                out.value(LogPrivate::name(name))
+            }
+            Self::TrashNotSupported => out.write_str("this platform has no Trash"),
+            Self::TrashRefused { reason, detail } => write!(out, "the Trash refused it ({reason:?}): {detail}"),
+            Self::Volume { error } => {
+                out.write_str("volume: ")?;
+                out.error(error)
+            }
+            Self::TimedOut => out.write_str("timed out"),
+            Self::Unexpected { detail } => write!(out, "unexpected: {detail}"),
         }
     }
 }

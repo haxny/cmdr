@@ -22,6 +22,7 @@ use super::super::super::types::RecoveredOriginal;
 use super::super::volume::{DisplacedDestination, displace_destination};
 use super::landing::holds_our_size;
 use super::{StagedWrite, home_of};
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -151,7 +152,7 @@ impl Publish {
                 log::info!(
                     target: "copy",
                     "publish: {} was cut off on the transport ({error}); settling it once the destination is back",
-                    LogPrivate::file_path(&self.final_path),
+                    LogPrivate::file_path(&self.final_path), error = LogError(&error),
                 );
                 Err(PublishError::CutOff(Box::new(CutOffPublish { publish: self, error })))
             }
@@ -192,7 +193,7 @@ impl Publish {
             Err(e) => log::debug!(
                 target: "copy",
                 "publish: couldn't remove the unpublished temp {}, leaving it listed: {e}",
-                LogPrivate::file_path(self.temp.path()),
+                LogPrivate::file_path(self.temp.path()), e = LogError(&e),
             ),
         }
         PublishFailure { error, recovered }

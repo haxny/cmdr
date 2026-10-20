@@ -27,6 +27,7 @@ use super::mutation_error::MutationError;
 use super::routed_writes::{route_serving, routed_mutation_refusal};
 use super::types::{ReadOnlySide, WriteOperationType};
 use cmdr_archive::mutator::Changeset;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{RenameWork, Volume};
 use cmdr_operation_log::types::{Initiator, OpKind};
@@ -122,9 +123,9 @@ fn log_rename_refusal(stage: RenameStage, from: &Path, volume_id: &str, error: &
     );
     let stage = stage.label();
     if expected {
-        log::debug!(target: "volume", "{stage} refused on '{volume_id}': {error} ({})", LogPrivate::path(from));
+        log::debug!(target: "volume", "{stage} refused on '{volume_id}': {error} ({})", LogPrivate::path(from), error = LogError(error));
     } else {
-        log::warn!(target: "volume", "{stage} refused on '{volume_id}': {error} ({})", LogPrivate::path(from));
+        log::warn!(target: "volume", "{stage} refused on '{volume_id}': {error} ({})", LogPrivate::path(from), error = LogError(error));
     }
 }
 

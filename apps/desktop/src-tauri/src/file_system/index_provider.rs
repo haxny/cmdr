@@ -9,6 +9,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::volume::Volume;
 
 use cmdr_index::host::volumes::{
@@ -128,7 +129,12 @@ impl VolumeProvider for AppVolumeProvider {
     fn volume_used_bytes(&self, path: &Path) -> Option<u64> {
         cmdr_local::space::get_space_info_for_path(path)
             .map(|info| info.used_bytes())
-            .map_err(|e| log::warn!("Failed to read volume used bytes (tier-2 will degrade): {e}"))
+            .map_err(|e| {
+                log::warn!(
+                    "Failed to read volume used bytes (tier-2 will degrade): {}",
+                    LogError(&e)
+                )
+            })
             .ok()
     }
 

@@ -50,6 +50,7 @@ use tokio_util::task::TaskTracker;
 
 use super::super::in_flight_temps;
 use super::super::state::WriteOperationState;
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ConnectionState, Volume, VolumeError};
 
@@ -179,7 +180,7 @@ async fn take_away(volume: &Arc<dyn Volume>, state: &Arc<WriteOperationState>, l
                 log::debug!(
                     target: "copy",
                     "leftover cleanup: {} is still refused ({error})",
-                    LogPrivate::file_path(&temp),
+                    LogPrivate::file_path(&temp), error = LogError(&error),
                 );
                 remaining.push(temp);
             }
@@ -208,7 +209,9 @@ async fn bring_back(volume: &Arc<dyn Volume>, state: &Arc<WriteOperationState>) 
     let attempt_timeout = state.outage_policy.attempt_timeout.min(policy.wait);
     match tokio::time::timeout(attempt_timeout, volume.attempt_reconnect()).await {
         Ok(Ok(())) => return,
-        Ok(Err(error)) => log::debug!(target: "copy", "leftover cleanup: the reconnect attempt failed: {error}"),
+        Ok(Err(error)) => {
+            log::debug!(target: "copy", "leftover cleanup: the reconnect attempt failed: {error}", error = LogError(&error))
+        }
         Err(_elapsed) => log::debug!(target: "copy", "leftover cleanup: the reconnect attempt didn't return"),
     }
     let outages = state.scope().stores().outages();

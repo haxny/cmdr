@@ -47,7 +47,10 @@ impl Drop for HeldReader {
         if let Some(reader) = self.0.take() {
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = reader.close().await {
-                    debug!("viewer volume source: closing the reader failed: {e}");
+                    debug!(
+                        "viewer volume source: closing the reader failed: {e}",
+                        e = cmdr_fs::log_error::LogError(&e)
+                    );
                 }
             });
         }
@@ -108,7 +111,8 @@ impl VolumeSource {
             Err(first) => {
                 debug!(
                     "viewer volume source: read at {offset} failed ({first}); reopening {} once",
-                    cmdr_fs::log_private::LogPrivate::file_path(&self.path)
+                    cmdr_fs::log_private::LogPrivate::file_path(&self.path),
+                    first = cmdr_fs::log_error::LogError(&first)
                 );
                 let fresh = self.reopen(reader)?;
                 tauri::async_runtime::block_on(fresh.get().read_at(offset, len)).map_err(|e| map_volume_error(e, None))

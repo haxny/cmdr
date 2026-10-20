@@ -215,3 +215,32 @@ fn terminal_disconnect_classification() {
     assert!(!VolumeScanError::WriterSend("gone".into()).is_terminal_disconnect());
     assert!(!VolumeScanError::Context("ctx".into()).is_terminal_disconnect());
 }
+
+/// A scan error logged through `LogError` marks the folder it timed out on and the path its
+/// last failure carried, through the `ConsecutiveFailures` nesting, and reads as `Display` once
+/// the markers are gone.
+#[test]
+fn a_logged_scan_error_marks_every_path_it_carries() {
+    use cmdr_fs::log_error::LogError;
+    use cmdr_fs::log_private::{CLOSER, LogKind, RESERVED};
+
+    let timeout = VolumeScanError::Timeout(PathBuf::from("Trips/Lake House"));
+    let backstop = VolumeScanError::ConsecutiveFailures {
+        count: CONSECUTIVE_FAILURE_ABORT,
+        last: Box::new(VolumeScanError::Volume(VolumeError::NotFound(
+            "Trips/Lake House/a.jpg".into(),
+        ))),
+    };
+    let logged = LogError(&timeout).to_string();
+    assert!(
+        logged.contains(&format!("{}Trips/Lake House{CLOSER}", LogKind::DirPath.opener())),
+        "{logged:?}"
+    );
+    let logged = LogError(&backstop).to_string();
+    assert!(
+        logged.contains(&format!("{}Trips/Lake House/a.jpg{CLOSER}", LogKind::Path.opener())),
+        "{logged:?}"
+    );
+    let stripped: String = logged.chars().filter(|c| !RESERVED.contains(c)).collect();
+    assert_eq!(stripped, backstop.to_string());
+}

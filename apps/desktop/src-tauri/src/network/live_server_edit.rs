@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
+use cmdr_fs::log_error::LogError;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
 use cmdr_fs::volume::{Volume, VolumeError};
 
@@ -145,7 +146,7 @@ async fn confirm_folder(
         Ok(Ok(Ok(true))) => Ok(()),
         Ok(Ok(Ok(false) | Err(VolumeError::NotFound(_) | VolumeError::PermissionDenied { .. }))) => Err(missing),
         Ok(Ok(Err(error))) => {
-            log::info!(target: "volume", "an edited place's folder couldn't be confirmed: {error:?}");
+            log::info!(target: "volume", "an edited place's folder couldn't be confirmed: {error}", error = LogError(&error));
             Err(SavedServerOutcome::Unreachable)
         }
         Ok(Err(join_error)) => {

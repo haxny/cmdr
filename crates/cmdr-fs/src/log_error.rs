@@ -25,6 +25,14 @@ pub trait ErrorLogText {
     fn write_log_text(&self, out: &mut ErrorText<'_>) -> fmt::Result;
 }
 
+/// A borrowed error writes what it borrows, so a site holding `&e` logs `LogError(e)` or
+/// `LogError(&e)` alike.
+impl<T: ErrorLogText + ?Sized> ErrorLogText for &T {
+    fn write_log_text(&self, out: &mut ErrorText<'_>) -> fmt::Result {
+        (**self).write_log_text(out)
+    }
+}
+
 /// Where an [`ErrorLogText`] writes: plain for `Display`, marking for [`LogError`].
 pub struct ErrorText<'w> {
     out: &'w mut dyn fmt::Write,

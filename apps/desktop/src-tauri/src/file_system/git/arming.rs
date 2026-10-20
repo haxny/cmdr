@@ -115,7 +115,8 @@ fn arm_detached(listing_id: String, worktree_root: PathBuf) {
                 log::debug!(
                     target: "git",
                     "no watcher for {}: {e}",
-                    cmdr_fs::log_private::LogPrivate::dir_path(&worktree_root)
+                    cmdr_fs::log_private::LogPrivate::dir_path(&worktree_root),
+                    e = cmdr_fs::log_error::LogError(&e)
                 );
                 return;
             }
