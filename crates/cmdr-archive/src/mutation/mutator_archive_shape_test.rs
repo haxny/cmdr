@@ -145,3 +145,45 @@ fn an_edit_through_a_symlink_changes_the_target_and_keeps_the_link() {
     assert_eq!(entry_names(&target), vec!["keep.txt"], "the target holds the edit");
     assert!(leftover_temps(tmp.path()).is_empty() && leftover_temps(&real_dir).is_empty());
 }
+
+/// `a.txt`, `b.txt`, and `c.txt`, with `b.txt`'s central record pointed at
+/// `a.txt`'s local header, as a malformed or hostile zip can: two names, one
+/// offset. Both crates list all three.
+fn shared_header_zip(dir: &Path) -> PathBuf {
+    let mut bytes = build_zip(&[
+        stored("a.txt", "alpha"),
+        stored("b.txt", "bravo"),
+        stored("c.txt", "charlie"),
+    ]);
+    let record = (0..bytes.len() - 51)
+        .find(|&i| bytes[i..].starts_with(b"PK\x01\x02") && &bytes[i + 46..i + 51] == b"b.txt")
+        .expect("b.txt's central record");
+    bytes[record + 42..record + 46].copy_from_slice(&0u32.to_le_bytes());
+    write_zip(dir, "shared.zip", &bytes)
+}
+
+/// Pairing the reader's names with the writer's entries by header offset alone
+/// gave both entries the later name, so deleting one took its twin too, and
+/// deleting the other took nothing.
+#[test]
+fn entries_sharing_a_local_header_each_delete_by_their_own_name() {
+    for spare_hidden in [false, true] {
+        for (target, left) in [("a.txt", ["b.txt", "c.txt"]), ("b.txt", ["a.txt", "c.txt"])] {
+            let tmp = tempfile::tempdir().expect("tempdir");
+            let path = shared_header_zip(tmp.path());
+            let changeset = Changeset {
+                deletes: vec![target.to_string()],
+                deletes_spare_hidden: spare_hidden,
+                ..Default::default()
+            };
+
+            apply(&path, &changeset, &NoHooks).expect("the edit applies");
+
+            assert_eq!(
+                entry_names(&path),
+                left,
+                "deleting {target} (spare hidden: {spare_hidden})"
+            );
+        }
+    }
+}

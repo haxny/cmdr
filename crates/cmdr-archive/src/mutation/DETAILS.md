@@ -23,11 +23,13 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   Shift-JIS; the `zip` crate reads every such name as CP437. So `apply` matches deletes and renames against rc-zip's
   name for each entry (`shown_names`, keyed by local header offset, which both crates agree on even behind an SFX stub
   and unlike the ordinal, which `zip` shifts when it collapses a duplicate name), falling back to `zip`'s `name()` for
-  an entry rc-zip didn't list. An entry the edit doesn't rename goes through `raw_copy_file`, which writes its
-  `name_raw()` under its own UTF-8 flag; a renamed one gets its new name (the user's text, or a renamed folder's prefix
-  plus the shown rest) as flagged UTF-8 via `raw_copy_file_rename`. Upstream 9.0.1's `raw_copy_file` re-encoded the
-  CP437 reading as flagged UTF-8, garbling every non-ASCII name on any edit (#514); the fix is the vendored patch in
-  `vendor/zip/CMDR-PATCH.md`. Pinned by `mutator_raw_names_test.rs`.
+  an entry rc-zip didn't list. Entries sharing an offset (a hostile zip can point two central records at one local
+  header) pair in directory order (`ByHeaderOffset`); keyed by offset alone, both took the later name, so deleting one
+  took its twin and deleting the other took nothing. An entry the edit doesn't rename goes through `raw_copy_file`,
+  which writes its `name_raw()` under its own UTF-8 flag; a renamed one gets its new name (the user's text, or a renamed
+  folder's prefix plus the shown rest) as flagged UTF-8 via `raw_copy_file_rename`. Upstream 9.0.1's `raw_copy_file`
+  re-encoded the CP437 reading as flagged UTF-8, garbling every non-ASCII name on any edit (#514); the fix is the
+  vendored patch in `vendor/zip/CMDR-PATCH.md`. Pinned by `mutator_raw_names_test.rs`.
 - **Retained entries copy verbatim** via `raw_copy_file` / `raw_copy_file_rename` (no decompress/recompress), extra
   fields included. ❗ That's why `zip` carries its `unreserved` feature: without it, the writer refuses any entry with
   an extra-field ID it reserves but doesn't model, and `ditto` (Finder's Compress) writes one, Info-ZIP's `0x5855`, so
@@ -135,12 +137,13 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   never catches `foobar`); a rename rewrites a subtree prefix. Both are computed per original entry in one pass
   (`plan.rs`, `is_deleted` then `renamed_name`); deletes win over renames.
 - **`Changeset::deletes_spare_hidden` (a move out) matches an item by where the reader's TREE shows it**, not by its raw
-  name. `read::shown_entry_paths` lists each entry the tree shows, by header offset, with its tree path: a file node's
-  own entry, and an explicit folder entry at a folder node. An entry missing there (quarantined for `..` or depth, a
-  file under a file, a file at a folder's path) never extracted, so it stays; one whose raw name differs from its tree
-  path (`dir\a.txt`, `./dir/a.txt`) is matched by the tree path it extracted from. Sidecars aren't in the tree, so they
-  still go by raw name with their item. If the tree can't be built the edit stops (`OpenOriginal`), since there's no
-  telling what extracted. Without the flag (F8, an overwrite) a delete takes the raw subtree, hidden entries included.
+  name. `read::shown_entry_paths` lists every entry's header offset, with its tree path when the tree shows it: a file
+  node's own entry, and an explicit folder entry at a folder node. An entry missing there (quarantined for `..` or
+  depth, a file under a file, a file at a folder's path) never extracted, so it stays; one whose raw name differs from
+  its tree path (`dir\a.txt`, `./dir/a.txt`) is matched by the tree path it extracted from. Sidecars aren't in the tree,
+  so they still go by raw name with their item. If the tree can't be built the edit stops (`OpenOriginal`), since
+  there's no telling what extracted. Without the flag (F8, an overwrite) a delete takes the raw subtree, hidden entries
+  included.
 
 ## Testing
 
@@ -151,6 +154,7 @@ delete keeps siblings' raw compressed bytes byte-identical), metadata (mode/mtim
 pause-parks-mid-add-then-completes-on-resume, and the encrypted-entry refusal. `mutator_raw_names_test.rs` pins the
 entry-name rules: a Shift-JIS name and an unflagged UTF-8 one keep their bytes and flags through an edit, and a delete
 or rename finds a Shift-JIS entry by its shown name. `mutator_archive_shape_test.rs` pins the archive-level shape: the
-comment, a self-extractor prefix, a symlinked archive, and the duplicate-name refusal.
+comment, a self-extractor prefix, a symlinked archive, the duplicate-name refusal, and two names sharing one local
+header each deleting alone.
 `crates/cmdr-operations/src/archive_edit/routing_tests.rs::ensure_zip_writable_allows_zip_and_refuses_read_only_formats`
 pins the non-zip-refuses-typed matrix.

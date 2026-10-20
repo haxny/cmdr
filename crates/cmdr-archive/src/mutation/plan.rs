@@ -2,7 +2,7 @@
 //! what name. Pure bookkeeping over the source archive's central directory; the
 //! temp+rename write that follows lives in [`super::mutator`].
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -55,10 +55,10 @@ pub(super) fn plan_retained(
     let renames = with_sidecar_renames(&changeset.renames);
     let shown = shown_names(archive_path);
     refuse_a_folded_duplicate(src, &shown)?;
-    let shown_names: HashMap<u64, String> = shown.into_iter().collect();
-    let tree_paths = changeset
+    let mut shown_names = ByHeaderOffset::new(shown);
+    let mut tree_paths = changeset
         .deletes_spare_hidden
-        .then(|| shown_tree_paths(archive_path))
+        .then(|| shown_tree_paths(archive_path).map(ByHeaderOffset::new))
         .transpose()?;
 
     let prefix_len = leading_bytes_len(src);
@@ -71,19 +71,18 @@ pub(super) fn plan_retained(
     };
     for index in 0..src.len() {
         let file = src.by_index_raw(index).map_err(MutationError::Zip)?;
-        let original_name = planned_name(&file, &shown_names)?;
         let header_start = file.header_start();
+        let original_name = planned_name(&file, shown_names.take(header_start))?;
+        let tree_path = tree_paths.as_mut().map(|paths| paths.take(header_start).flatten());
         let compressed_size = file.compressed_size();
         let encrypted = file.encrypted();
         drop(file);
         // A sidecar is metadata, never an item the user counts.
         let is_item = !apple_double::is_in_macosx_folder(&original_name);
-        let deleted = match &tree_paths {
+        let deleted = match &tree_path {
             // An item matches by where the tree shows it, so one the tree hides
             // never goes. A sidecar isn't in the tree; it goes with its item.
-            Some(tree_paths) if is_item => tree_paths
-                .get(&header_start)
-                .is_some_and(|path| is_deleted(path, &deletes)),
+            Some(tree_path) if is_item => tree_path.as_deref().is_some_and(|path| is_deleted(path, &deletes)),
             _ => is_deleted(&original_name, &deletes),
         };
         match (!deleted).then(|| renamed_name(&original_name, &renames)) {
@@ -125,11 +124,12 @@ pub(super) fn shown_names(archive_path: &Path) -> Vec<(u64, String)> {
     })
 }
 
-/// Each entry the reader's tree shows, by local header offset, with its path in
-/// the tree (see [`crate::read::shown_entry_paths`]). Unlike [`shown_names`]
-/// this can't degrade to the `zip` crate's view: without the tree there's no
-/// telling which entries extracted, so the edit stops, the archive untouched.
-fn shown_tree_paths(archive_path: &Path) -> Result<HashMap<u64, String>, MutationError> {
+/// Every entry's local header offset, with its path in the reader's tree when
+/// the tree shows it (see [`crate::read::shown_entry_paths`]). Unlike
+/// [`shown_names`] this can't degrade to the `zip` crate's view: without the
+/// tree there's no telling which entries extracted, so the edit stops, the
+/// archive untouched.
+fn shown_tree_paths(archive_path: &Path) -> Result<Vec<(u64, Option<String>)>, MutationError> {
     crate::read::LocalFileSource::open(archive_path)
         .map_err(MutationError::OpenOriginal)
         .and_then(|source| {
@@ -168,14 +168,37 @@ fn leading_bytes_len(src: &ZipArchive<File>) -> u64 {
         .unwrap_or_else(|| src.central_directory_start())
 }
 
-/// The name an edit matches `file` by: what the reader shows for it, the name
-/// the user picked. The `zip` crate's own reading is the fallback, for an entry
-/// the reader didn't list. Planning by name never touches the name bytes: an
-/// entry the edit keeps under its name is copied with its stored bytes.
-fn planned_name<R: Read>(file: &ZipFile<'_, R>, shown_names: &HashMap<u64, String>) -> Result<String, MutationError> {
-    match shown_names.get(&file.header_start()) {
-        Some(shown) => Ok(shown.clone()),
+/// The name an edit matches `file` by: `shown`, what the reader shows for it,
+/// the name the user picked. The `zip` crate's own reading is the fallback, for
+/// an entry the reader didn't list. Planning by name never touches the name
+/// bytes: an entry the edit keeps under its name is copied with its stored bytes.
+fn planned_name<R: Read>(file: &ZipFile<'_, R>, shown: Option<String>) -> Result<String, MutationError> {
+    match shown {
+        Some(shown) => Ok(shown),
         None => Ok(file.name().map_err(MutationError::Zip)?.into_owned()),
+    }
+}
+
+/// The reader's per-entry facts, handed to the `zip` crate's entries by local
+/// header offset, the one thing both crates agree on. Entries sharing an offset
+/// (a malformed or hostile zip can point two central records at one local
+/// header) take theirs in directory order, which both crates keep once
+/// [`refuse_a_folded_duplicate`] has ruled out a fold. Keyed by offset alone,
+/// both twins took the later one's name, so deleting either took the other too.
+struct ByHeaderOffset<T>(HashMap<u64, VecDeque<T>>);
+
+impl<T> ByHeaderOffset<T> {
+    fn new(entries: Vec<(u64, T)>) -> Self {
+        let mut by_offset: HashMap<u64, VecDeque<T>> = HashMap::new();
+        for (offset, value) in entries {
+            by_offset.entry(offset).or_default().push_back(value);
+        }
+        Self(by_offset)
+    }
+
+    /// The next fact for the entry at `offset`, or `None` when the reader listed none.
+    fn take(&mut self, offset: u64) -> Option<T> {
+        self.0.get_mut(&offset).and_then(VecDeque::pop_front)
     }
 }
 

@@ -139,31 +139,32 @@ pub(crate) fn shown_names_with_header_offsets(
         .collect())
 }
 
-/// The entries the reader's tree shows, by local header offset, each with its
-/// inner path in that tree: every file node's own entry, and every explicit
-/// folder entry at a folder node. What the tree hides isn't here: a name that
-/// climbs out or nests too deep, a file under a file or at a folder's path, the
-/// earlier of two same-named files. So it's also what extracting a folder
-/// writes out, which a move out needs to delete exactly that.
+/// Every central-directory entry's local header offset, in directory order,
+/// with its inner path in the reader's tree when the tree shows it: every file
+/// node's own entry, and every explicit folder entry at a folder node. What the
+/// tree hides gets `None`: a name that climbs out or nests too deep, a file
+/// under a file or at a folder's path, the earlier of two same-named files. So
+/// the paths are also what extracting a folder writes out, which a move out
+/// needs to delete exactly that.
 pub(crate) fn shown_entry_paths(
     source: Arc<dyn ArchiveByteSource>,
-) -> Result<std::collections::HashMap<u64, String>, ArchiveError> {
+) -> Result<Vec<(u64, Option<String>)>, ArchiveError> {
     let index = super::ArchiveIndex::parse(Arc::clone(&source), super::ArchiveFormat::Zip, None)?;
-    let mut shown = std::collections::HashMap::new();
-    for entry in parse_central_directory(source.as_ref())? {
+    let shown_path = |entry: &Entry| {
         let super::SanitizedName::Accepted(path) = super::sanitize_entry_name(&entry.name) else {
-            continue;
+            return None;
         };
         let is_shown = match index.is_directory(&path) {
-            Some(true) => is_dir_entry(&entry),
-            Some(false) => !is_dir_entry(&entry) && index.zip_header_offset(&path) == Some(entry.header_offset),
+            Some(true) => is_dir_entry(entry),
+            Some(false) => !is_dir_entry(entry) && index.zip_header_offset(&path) == Some(entry.header_offset),
             None => false,
         };
-        if is_shown {
-            shown.insert(entry.header_offset, path);
-        }
-    }
-    Ok(shown)
+        is_shown.then_some(path)
+    };
+    Ok(parse_central_directory(source.as_ref())?
+        .iter()
+        .map(|entry| (entry.header_offset, shown_path(entry)))
+        .collect())
 }
 
 /// Drives rc-zip's central-directory state machine over the byte source,
