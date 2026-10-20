@@ -16,11 +16,9 @@ pub struct NfsServer {
     /// to 2049 when it has no answer; an explicit one skips the NFS lookup.
     pub port: Option<u16>,
     /// Where the portmapper answers, when not on 111. Only a Docker fixture sets
-    /// it: its `rpcbind` is published on a high port.
+    /// it: its `rpcbind` is published on a high port. MOUNT has no well-known
+    /// port, so it always comes from the portmapper.
     pub portmap_port: Option<u16>,
-    /// The MOUNT port, when the portmapper isn't to be asked for it. Only a
-    /// Docker fixture sets it; MOUNT has no well-known port.
-    pub mount_port: Option<u16>,
 }
 
 impl NfsServer {
@@ -30,7 +28,6 @@ impl NfsServer {
             host: host.to_string(),
             port,
             portmap_port: None,
-            mount_port: None,
         }
     }
 

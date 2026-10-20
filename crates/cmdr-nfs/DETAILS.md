@@ -7,8 +7,8 @@ Must-knows and the module map: `CLAUDE.md`. This file carries the decisions. The
 
 A server is the ACCOUNT and an export is its PLACE (SMB's host and shares, S3's account and buckets): one saved entry
 and one volume per export. `NfsServer` is the account half (host, the port the address named, and the fixture-only
-portmap and MOUNT port overrides); `NfsConnectionParams` adds the export, the identity, the start folder, and the
-auto-reconnect switch.
+portmap port override; MOUNT's port always comes from portmap); `NfsConnectionParams` adds the export, the identity, the
+start folder, and the auto-reconnect switch.
 
 **Decision: the uid and gid are a setting of the place, not its identity.** `AUTH_SYS` carries no secret, so they're a
 preference like SMB's username, and fixing a uid typo must not orphan the place's tabs and favorites. A changed identity
@@ -30,10 +30,10 @@ with `/` under it, so the paths the volume speaks are export-relative. No accoun
 ## Connecting
 
 `connect_nfs_volume(name, params, host, cancel)` takes what the person picked or typed and resolves the real export
-(longest match against `EXPORT`, or `MNT` on ever-shorter prefixes when listing is refused); the rest of a typed path
-becomes the start folder when none was given. So the caller learns the id from the returned volume
-(`NfsVolume::volume_id`) and saves its resolved `NfsVolume::params`. Until the client lands, every dial answers
-`NfsConnectError::Transport`.
+first (`discovery::resolve_export`: longest match against `EXPORT`, or `MNT` on ever-shorter prefixes when listing is
+refused); the rest of a typed path becomes the start folder when none was given. So the caller learns the id from the
+returned volume (`NfsVolume::volume_id`) and saves its resolved `NfsVolume::params`. Until the client lands, every dial
+answers `NfsConnectError::Transport`.
 
 `list_exports` answers the canonical export paths, or `ListingRefused` when the server won't list them to this client (a
 typed export may still mount). `guess_identity` takes this Mac's identity as its fallback and answers it as

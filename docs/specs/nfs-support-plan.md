@@ -182,7 +182,7 @@ box (last commit there 2026-09-26). The QNAP manual pass needs the laptop's copy
   readable only through a secondary group answers `PermissionDenied`.
 - **The dial**: resolve → portmap `GETPORT` for MOUNT v3/TCP and NFS v3/TCP on port 111 (NFS falls back to 2049 when
   portmap has no answer; an explicit port in the URL skips the NFS lookup only, since MOUNT has no well-known port and
-  always comes from portmap, or from the params' `portmap_port` / `mount_port` overrides the fixture uses) → `MNT` with
+  always comes from portmap, which the fixture relocates through the server's `portmap_port` override) → `MNT` with
   `AUTH_SYS` → root handle, and the reply's `auth_flavors` must list `AUTH_SYS` (1), else `ExportRefused` (a
   Kerberos-only export) → `FSINFO` (`rtpref`, `wtpref`, `rtmax`, `wtmax`, `dtpref`, `maxfilesize`, `properties`) →
   `GETATTR` root. `RPC_PROG_MISMATCH` or no v3 in portmap is `NoNfsV3`. `MNT3ERR_ACCES` (or `AUTH_TOOWEAK` /
@@ -281,13 +281,35 @@ M0 (one agent, ~20 min)  ──►  wave 1: M1 ∥ M2 ∥ M3 (~60 min)
   `ServerConnectOutcome` variants (`export_not_found`, `export_refused`, `reserved_port_required`, `no_nfs_v3`), the
   `list_nfs_exports(host, port)` and `guess_nfs_identity(host, port, export)` commands as stubs, bindings regenerated.
   The fixture port range: 15480+ (SMB 11480, SFTP 12480, WebDAV 13480, S3 14480 are taken).
-- ❗ **Frozen in M0, because M5 builds against them while M4 fills them**: `src/params.rs` (`NfsConnectionParams`: host,
-  `port: Option<u16>`, export, uid, gid, start folder, auto-reconnect, and the fixture's `portmap_port` /
-  `mount_port: Option<u16>` overrides), the signatures and return types of `connect_nfs_volume`, `list_exports` (a typed
-  `ListingRefused` distinct from unreachable, since the form still takes a typed export), and `guess_identity`
-  (`{ uid, gid, source: MostCommonOwner | RootOwner | ThisMac }`), the `NfsConnectError` variants M5 maps, and the id /
-  app-root signatures (§ "Product decisions": canonical port, server-only prefix). Only M0 regenerates `bindings.ts`; a
-  later IPC type change goes through the lead.
+- ❗ **Frozen in M0 (landed in `77f421a35` and its follow-up), because M5 builds against them while M4 fills them**:
+  - `NfsServer { host, port: Option<u16>, portmap_port: Option<u16> }` (the fixture override; MOUNT's port always comes
+    from portmap) with `identity_port()` (`port.unwrap_or(2049)`); `NfsIdentity { uid, gid }`;
+    `NfsConnectionParams::new(server, export, identity)` with pub `server`, `identity`, `start_folder: Option<String>`,
+    `auto_reconnect`, and `export()` / `volume_id()` / `app_root()`.
+  - `connect_nfs_volume(name, params, host: VolumeHost, cancel) -> Result<NfsVolume, NfsConnectError>`, ❌ no
+    `volume_id` argument: it runs
+    `discovery::resolve_export(server, typed, identity, &cancel) -> ResolvedExport { export, folder }` first, so the
+    caller registers under the returned `NfsVolume::volume_id()` and saves `NfsVolume::params()` (the resolved split).
+    Also on `NfsVolume`: `sharing_connection(name)`, `set_auto_reconnect(on)`, and `sign_in_prompt` answering
+    `SignInShape::Nothing`.
+  - `list_exports(&server, cancel) -> Result<Vec<String>, NfsConnectError>` (`ListingRefused` distinct from
+    `Unreachable`);
+    `guess_identity(&server, export, this_mac: NfsIdentity, cancel) -> Result<NfsIdentityGuess { identity, source: MostCommonOwner | RootOwner | ThisMac }, NfsConnectError>`.
+  - `NfsConnectError`: `Unreachable(String)`, `TimedOut`, `NoNfsV3`, `ExportNotFound`, `ExportRefused`,
+    `ListingRefused`, `ReservedPortRequired`, `Transport(String)` (the strings log-only), `Cancelled`.
+  - IPC: `list_nfs_exports(host, port) -> NfsExportList`
+    (`listed { exports } | listing_refused | no_nfs_v3 | timed_out | unreachable`) and
+    `guess_nfs_identity(host, port, exportPath) -> GuessedNfsIdentity { uid, gid, source }` (`exportPath`: `export` is a
+    reserved word in TypeScript), wrapped in `tauri-commands/nfs.ts`. Only M0 regenerates `bindings.ts`; a later IPC
+    type change goes through the lead.
+- ❗ **The app-path grammar, which `server-path-utils.ts` mirrors exactly**: `nfs_app_root(host, port, export)` =
+  `nfs://<host lowercased>:<port>/<segment>`, where the export is first canonical (`canonical_nfs_export`, i.e.
+  `normalize_remote_path`: absolute, no empty / `.` / `..` segment, no trailing `/`, bytes otherwise kept), then its
+  leading `/` is dropped and only `%` → `%25` and `/` → `%2F` are escaped; the root export `/` is the segment `%2F`.
+  Examples: `/Public` → `nfs://nas.local:2049/Public`, `/volume1/data/` → `nfs://nas.local:2049/volume1%2Fdata`, `/` →
+  `nfs://nas.local:2049/%2F`, `/100%/x` → `nfs://nas.local:2049/100%25%2Fx`. Everything after the segment is the
+  export-relative path. `server_of_path` refuses an empty segment, a missing port, and any escape other than `%25` /
+  `%2F`. No `@` and no account in the authority.
 - **Intentions**: after M0, M1–M3 touch disjoint files and compile against fixed signatures.
 - **Landmines**: `index-crate-isolation` needs a surface ceiling for the new crate; start it at what the stub exposes
   and let later milestones raise it with a reason. `workspace-member-coverage` and `rcgu_prune_test.go` list crates.
@@ -349,17 +371,17 @@ M0 (one agent, ~20 min)  ──►  wave 1: M1 ∥ M2 ∥ M3 (~60 min)
 - ❗ **portmap answers the CONTAINER's ports.** Run unfs3 with fixed ports equal to the published host ports
   (`-n 15481 -m 15482`, published `15481:15481`), and `rpcbind` at host 15480 → container 111, so `GETPORT` answers
   ports that work from the host. The client then takes the portmap port from the params (fixtures only: an `nfs://`
-  URL's port is the NFS port; crate cells set `portmap_port` / `mount_port` on `NfsConnectionParams` directly, and only
-  the app-side cell reads `NFS_FIXTURE_PORTMAP_PORT`, in the test, ❌ never in the crate). ❗ **A published port almost
-  surely rewrites the source port**: a `127.0.0.1` publish on Linux goes through `docker-proxy` (loopback can't be
-  DNAT'd without `route_localnet`), and OrbStack's forwarding is a proxy too, so `/secure` would refuse every client
-  whatever we bind. Measure it FIRST on OrbStack and on a Linux runner (connect from port 900, have the server log the
-  peer port). If the port is rewritten, the `/secure` cell dials the container's own IP (on Linux the bridge routes it
-  with the port intact; on OrbStack it's reachable from the host, but whether the port survives is the measurement), and
-  the Linux CI job runs `sudo sysctl -w net.ipv4.ip_unprivileged_port_start=600` before the lane so the bind works. If
-  no macOS path keeps the port, the `/secure` cell runs on the Linux lane only and says so in its skip reason. Record
-  what you measured, dated, in the README. unfs3 runs as root inside the container so it can switch to the request's
-  uid; the seed `chown`s accordingly. ❌ Never pause or stop the shared container in a cell; drops go through
+  URL's port is the NFS port; crate cells set `portmap_port` on the params' `NfsServer` directly, and only the app-side
+  cell reads `NFS_FIXTURE_PORTMAP_PORT`, in the test, ❌ never in the crate). ❗ **A published port almost surely
+  rewrites the source port**: a `127.0.0.1` publish on Linux goes through `docker-proxy` (loopback can't be DNAT'd
+  without `route_localnet`), and OrbStack's forwarding is a proxy too, so `/secure` would refuse every client whatever
+  we bind. Measure it FIRST on OrbStack and on a Linux runner (connect from port 900, have the server log the peer
+  port). If the port is rewritten, the `/secure` cell dials the container's own IP (on Linux the bridge routes it with
+  the port intact; on OrbStack it's reachable from the host, but whether the port survives is the measurement), and the
+  Linux CI job runs `sudo sysctl -w net.ipv4.ip_unprivileged_port_start=600` before the lane so the bind works. If no
+  macOS path keeps the port, the `/secure` cell runs on the Linux lane only and says so in its skip reason. Record what
+  you measured, dated, in the README. unfs3 runs as root inside the container so it can switch to the request's uid; the
+  seed `chown`s accordingly. ❌ Never pause or stop the shared container in a cell; drops go through
   `cmdr_fs::testing::tcp_proxy::TcpProxy`.
 - **Test plan**: the check runner's Go tests (`TestNfsFixturePortsMatchComposeDefaults`, loopback binding, mode lists
   agree); `start.sh` on this box; `rpcinfo` and a `showmount -e` against it.
@@ -390,7 +412,12 @@ M0 (one agent, ~20 min)  ──►  wave 1: M1 ∥ M2 ∥ M3 (~60 min)
   the new strings; write English plus `@key` descriptions. UI copy is a draft for David's review. The path grammar's TS
   and Rust halves must agree exactly (`isUnderServerRoot`, last `@`, last `:`). ❗ The classic `host:/export/path`
   splits at the FIRST `:/` (outside brackets, so `[fe80::1]:/share` works), ❌ not the last `:`: a folder name may hold
-  a colon. An `nfs://` authority has no `@` (no account in it).
+  a colon. An `nfs://` authority has no `@` (no account in it). ❗ **Every label shows the export DECODED**: the
+  breadcrumb, the volume label, the switcher row, and `serverSidePath` say `/volume1/data/photos`, ❌ never
+  `volume1%2Fdata`; the escaped segment is an identity spelling, not words for a person. ❗ **A typed `nfs://` is an
+  ADDRESS unless it is at or under a known volume root**: `nfs://nas/volume1/data/photos` typed unescaped would read as
+  export `/volume1`, so Go to path and ⌘K hand it to the NFS prefill and the connect-time longest-match split, ❌ never
+  straight to `server_of_path`.
 - **Test plan**: `address-parser.test.ts` example rows for every NFS shape; `server-form.test.ts`, `connect-refusals`,
   the a11y test, `manual_servers_test.rs`; `pnpm check svelte-tests-related`.
 - **DONE**: green fast checks + related tests + clippy; committed.

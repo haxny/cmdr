@@ -45,6 +45,38 @@ pub async fn list_exports(server: &NfsServer, cancel: CancellationToken) -> Resu
     Err(NfsConnectError::Transport("the NFS client isn't built yet".to_string()))
 }
 
+/// What a typed export path resolves to on the server: the real export, and the
+/// folder under it the rest of the path names.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ResolvedExport {
+    /// The export, canonical.
+    pub(crate) export: String,
+    /// The export-relative folder the rest of the typed path names (`/photos`),
+    /// or `None` when the path was the export itself.
+    pub(crate) folder: Option<String>,
+}
+
+/// Splits `typed` (`/share/Public/photos`) into the export it lives in and the
+/// folder under it: the longest export `EXPORT` lists that `typed` is at or
+/// under, or, when the server won't list, `MNT` as `identity` on ever-shorter
+/// prefixes until one mounts. ❗ Runs before any id is minted, so a volume id
+/// never carries a folder.
+///
+/// The client isn't built yet, so every call answers a typed
+/// [`NfsConnectError::Transport`].
+pub(crate) async fn resolve_export(
+    server: &NfsServer,
+    typed: &str,
+    identity: NfsIdentity,
+    cancel: &CancellationToken,
+) -> Result<ResolvedExport, NfsConnectError> {
+    let _ = (server, typed, identity);
+    if cancel.is_cancelled() {
+        return Err(NfsConnectError::Cancelled);
+    }
+    Err(NfsConnectError::Transport("the NFS client isn't built yet".to_string()))
+}
+
 /// Who owns the files in `export`, from one `MNT` and one `READDIRPLUS` of its
 /// root as `this_mac`: what the add form fills "Act as user ID" and "Group ID"
 /// with. Answers `this_mac` itself ([`NfsIdentitySource::ThisMac`]) when nothing

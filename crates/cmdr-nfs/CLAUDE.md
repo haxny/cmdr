@@ -6,11 +6,11 @@ secret. The plan it's built from: `docs/specs/nfs-support-plan.md`.
 
 ## Module map
 
-- `params.rs`: `NfsServer` (host, port, the fixture's portmap and MOUNT port overrides), `NfsIdentity` (uid, gid),
+- `params.rs`: `NfsServer` (host, port, the fixture's portmap port override), `NfsIdentity` (uid, gid),
   `NfsConnectionParams` (the place: server, canonical export, identity, start folder, auto-reconnect).
 - `errors.rs`: `NfsConnectError`, every variant from a number the server sent.
-- `volume/`: `mod.rs` (`NfsVolume`, `connect_nfs_volume`), `discovery.rs` (`list_exports`, `guess_identity`),
-  `volume_impl.rs` (the `Volume` trait).
+- `volume/`: `mod.rs` (`NfsVolume`, `connect_nfs_volume`), `discovery.rs` (`list_exports`, `guess_identity`, and
+  `resolve_export`, the export/folder split), `volume_impl.rs` (the `Volume` trait).
 
 ## Must-knows
 

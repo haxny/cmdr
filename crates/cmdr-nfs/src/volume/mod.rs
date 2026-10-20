@@ -23,6 +23,7 @@ use crate::params::NfsConnectionParams;
 mod discovery;
 mod volume_impl;
 
+use discovery::resolve_export;
 pub use discovery::{NfsIdentityGuess, NfsIdentitySource, guess_identity, list_exports};
 
 /// A volume backed by one export on an NFS server.
@@ -99,9 +100,7 @@ pub async fn connect_nfs_volume(
     host: VolumeHost,
     cancel: CancellationToken,
 ) -> Result<NfsVolume, NfsConnectError> {
-    let _ = (name, params, host);
-    if cancel.is_cancelled() {
-        return Err(NfsConnectError::Cancelled);
-    }
+    let resolved = resolve_export(&params.server, params.export(), params.identity, &cancel).await?;
+    let _ = (name, resolved, host);
     Err(NfsConnectError::Transport("the NFS client isn't built yet".to_string()))
 }
