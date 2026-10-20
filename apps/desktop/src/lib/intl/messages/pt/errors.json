@@ -1885,6 +1885,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "Há um disco ou servidor montado em {mountPoint}, então mover a pasta que o contém tiraria tudo o que há no disco. O Cmdr parou antes de mover qualquer coisa.",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "Ejete esse disco e depois apague de novo. Para esvaziar o próprio disco, abra-o e apague o que há nele por lá.",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1892,6 +1896,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "Ejete esse disco e tente de novo. Para manter a pasta, escolha “Ignorar” ou “Renomear” em vez de “Substituir”.",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "Ejete esse disco e depois mova de novo. Para mover o que há no disco, abra-o e mova os arquivos de lá.",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "Este arquivo mudou durante a cópia",
   "@errors.write.sourceChanged.title": {

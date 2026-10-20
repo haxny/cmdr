@@ -1884,6 +1884,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "在 {mountPoint} 装载着一个驱动器或服务器，所以移动包含它的文件夹会把驱动器上的内容全部移走。Cmdr 还没移动任何东西就停下了。",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "请先推出那个驱动器，再删除一次。想清空驱动器本身的话，就打开它，在那里删掉里面的东西。",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1891,6 +1895,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "请先推出那个驱动器，再试一次。想保留这个文件夹的话，请选择“跳过”或“重命名”，而不是“覆盖”。",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "请先推出那个驱动器，再移动一次。想移动驱动器里的东西的话，就打开它，从那里移动这些文件。",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "这个文件在拷贝期间发生了变化",
   "@errors.write.sourceChanged.title": {

@@ -1885,6 +1885,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "在 {mountPoint} 裝載著一個磁碟機或伺服器，所以移動包含它的資料夾會把磁碟機上的內容全部移走。Cmdr 還沒移動任何東西就停下了。",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "請先退出那個磁碟機，再刪除一次。想清空磁碟機本身的話，就開啟它，在那裡刪掉裡面的東西。",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1892,6 +1896,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "請先退出那個磁碟機，再試一次。想保留這個資料夾的話，請選擇「略過」或「重新命名」，不要選「覆寫」。",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "請先退出那個磁碟機，再移動一次。想移動磁碟機裡的東西的話，就開啟它，從那裡移動這些檔案。",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "這個檔案在複製時變動了",
   "@errors.write.sourceChanged.title": {

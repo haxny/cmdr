@@ -1885,6 +1885,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "Er is een schijf of server gekoppeld op {mountPoint}, dus als je de map verplaatst waar die in zit, haal je alles van de schijf af. Cmdr is gestopt voordat er iets werd verplaatst.",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "Werp die schijf uit en verwijder daarna opnieuw. Wil je de schijf zelf leegmaken? Open hem dan en verwijder daar wat erop staat.",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1892,6 +1896,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "Werp die schijf uit en probeer het daarna opnieuw. Wil je de map houden? Kies dan ‘Sla over’ of ‘Wijzig naam’ in plaats van ‘Overschrijf’.",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "Werp die schijf uit en verplaats daarna opnieuw. Wil je verplaatsen wat erop staat? Open hem dan en verplaats de bestanden van daaruit.",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "Dit bestand is tijdens het kopiëren gewijzigd",
   "@errors.write.sourceChanged.title": {

@@ -1885,6 +1885,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "Có một ổ đĩa hoặc máy chủ đang được gắn kết tại {mountPoint}, nên di chuyển thư mục chứa nó sẽ chuyển hết mọi thứ ra khỏi ổ đĩa. Cmdr đã dừng trước khi di chuyển bất cứ thứ gì.",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "Hãy tháo ổ đĩa đó, rồi xóa lại. Muốn dọn sạch chính ổ đĩa đó, hãy mở ổ đĩa ra rồi xóa nội dung ngay bên trong.",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1892,6 +1896,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "Hãy tháo ổ đĩa đó, rồi thử lại. Để giữ thư mục, hãy chọn “Bỏ qua” hoặc “Đổi tên” thay vì “Ghi đè”.",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "Hãy tháo ổ đĩa đó, rồi di chuyển lại. Muốn di chuyển những gì có trên ổ đĩa, hãy mở ổ đĩa ra rồi di chuyển các tệp từ trong đó.",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "Tệp này đã thay đổi trong lúc sao chép",
   "@errors.write.sourceChanged.title": {

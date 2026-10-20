@@ -1885,6 +1885,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "Egy meghajtó vagy szerver van ide csatolva: {mountPoint}. Ezért ha áthelyeznéd a mappát, amelyben van, minden lekerülne a meghajtóról. A Cmdr leállt, mielőtt bármit áthelyezett volna.",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "Add ki azt a meghajtót, majd törölj újra. Ha magát a meghajtót akarod kiüríteni, nyisd meg, és ott töröld, ami rajta van.",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1892,6 +1896,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "Add ki azt a meghajtót, majd próbáld újra. Ha meg akarod tartani a mappát, a „Felülírás” helyett válaszd az „Átugrás” vagy az „Átnevezés” lehetőséget.",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "Add ki azt a meghajtót, majd helyezd át újra. Ha azt akarod áthelyezni, ami a meghajtón van, nyisd meg, és onnan helyezd át a fájlokat.",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "Ez a fájl megváltozott másolás közben",
   "@errors.write.sourceChanged.title": {

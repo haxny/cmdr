@@ -1885,6 +1885,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "Un disque ou un serveur est monté sur {mountPoint}, donc déplacer le dossier qui le contient viderait le disque de tout son contenu. Cmdr s’est arrêté avant de déplacer quoi que ce soit.",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "Éjectez ce disque, puis supprimez à nouveau. Pour vider le disque lui-même, ouvrez-le et supprimez directement ce qu’il contient.",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1892,6 +1896,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "Éjectez ce disque, puis réessayez. Pour garder le dossier, choisissez « Ignorer » ou « Renommer » plutôt que « Écraser ».",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "Éjectez ce disque, puis déplacez à nouveau. Pour déplacer ce qu’il contient, ouvrez-le et déplacez les fichiers directement depuis le disque.",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "Ce fichier a changé pendant la copie",
   "@errors.write.sourceChanged.title": {

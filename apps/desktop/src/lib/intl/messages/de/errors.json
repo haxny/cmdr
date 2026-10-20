@@ -1885,6 +1885,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "Unter {mountPoint} ist ein Laufwerk oder Server eingebunden, deshalb würde das Bewegen des umgebenden Ordners alles vom Laufwerk mitnehmen. Cmdr hat gestoppt, bevor irgendetwas bewegt wurde.",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "Wirf das Laufwerk aus, dann lösche erneut. Um das Laufwerk selbst zu leeren, öffne es und lösche dort, was darauf ist.",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1892,6 +1896,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "Wirf das Laufwerk aus, dann versuche es erneut. Um den Ordner zu behalten, wähle „Überspringen“ oder „Umbenennen“ statt „Überschreiben“.",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "Wirf das Laufwerk aus, dann bewege erneut. Um zu bewegen, was auf dem Laufwerk ist, öffne es und bewege die Dateien von dort.",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "Diese Datei hat sich beim Kopieren geändert",
   "@errors.write.sourceChanged.title": {

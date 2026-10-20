@@ -1885,6 +1885,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "En {mountPoint} hay una unidad o un servidor montados, así que mover la carpeta en la que está se llevaría todo el contenido de la unidad. Cmdr se ha detenido antes de mover nada.",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "Expulsa ese disco y vuelve a eliminar. Para vaciar la unidad en sí, ábrela y elimina ahí lo que contiene.",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1892,6 +1896,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "Expulsa ese disco y vuelve a intentarlo. Para conservar la carpeta, elige “Omitir” o “Renombrar” en lugar de “Sobrescribir”.",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "Expulsa ese disco y vuelve a mover. Para mover lo que hay en la unidad, ábrela y mueve los archivos desde ahí.",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "Este archivo ha cambiado durante la copia",
   "@errors.write.sourceChanged.title": {

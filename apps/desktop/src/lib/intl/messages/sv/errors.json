@@ -1885,6 +1885,10 @@
   "@errors.write.mountedVolumeInside.message.replace": {
     "sourceHash": "39a5185"
   },
+  "errors.write.mountedVolumeInside.message.move": "En enhet eller server är monterad på {mountPoint}, så om du flyttar mappen som rymmer den flyttas allt bort från enheten. Cmdr stoppade innan något flyttades.",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
   "errors.write.mountedVolumeInside.suggestion.delete": "Mata ut enheten och radera sedan igen. Om du vill tömma själva enheten öppnar du den och raderar det som finns på den där.",
   "@errors.write.mountedVolumeInside.suggestion.delete": {
     "sourceHash": "9825fac"
@@ -1892,6 +1896,10 @@
   "errors.write.mountedVolumeInside.suggestion.replace": "Mata ut enheten och försök sedan igen. Om du vill behålla mappen väljer du ”Hoppa över” eller ”Byt namn” i stället för ”Skriv över”.",
   "@errors.write.mountedVolumeInside.suggestion.replace": {
     "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "Mata ut enheten och flytta sedan igen. Om du vill flytta det som finns på enheten öppnar du den och flyttar filerna därifrån.",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
   },
   "errors.write.sourceChanged.title": "Den här filen ändrades under kopieringen",
   "@errors.write.sourceChanged.title": {
