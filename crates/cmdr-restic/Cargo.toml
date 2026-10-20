@@ -11,6 +11,13 @@ publish = false
 [lints]
 workspace = true
 
+[features]
+# "This is a test build." Consumers turn it on through a dev-dependency, which
+# keeps it off in every shipped build. It publishes `test_fixtures` (tiny repos
+# built with `rustic_core` itself), so the app's restic tests build repos the
+# same way this crate's do instead of growing a second, drifting set.
+testing = []
+
 [dependencies]
 # The `Volume` trait, every type it exchanges, and the host seams this backend
 # asks the app through. The only Cmdr crate below this one.
@@ -26,8 +33,15 @@ bytes = "1"
 # The runtime `Handle` the storage adapter `block_on`s the parent's async reads
 # on. It arrives through `VolumeHost::runtime`; this crate never builds a runtime.
 tokio = { version = "1", features = ["rt"] }
+# Wipes the copy of the password the blocking open task carries, on drop.
+zeroize = "1.9.0"
 
 [dev-dependencies]
+# Depending on ourselves turns the `testing` feature on for every DEV target and
+# leaves it off for the lib, so a shipped build carries no fixture builders.
+cmdr-restic = { path = ".", features = ["testing"] }
+# `TestDir`, the scratch folder a backup fixture reads its source files from.
+cmdr-fs = { path = "../cmdr-fs", features = ["testing"] }
 # `#[tokio::test]` needs `macros`; the adapter's sync-over-async bridge needs a
 # multi-threaded runtime to block on from `spawn_blocking`.
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

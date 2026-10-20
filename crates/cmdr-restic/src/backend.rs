@@ -38,6 +38,7 @@ impl VolumeBackend {
     }
 
     /// How many write calls rustic made (all refused).
+    #[cfg(test)]
     pub(crate) fn write_attempts(&self) -> usize {
         self.write_attempts.load(Ordering::Relaxed)
     }

@@ -13,10 +13,26 @@
 //! so anywhere Cmdr can browse, a repo opens. It never writes to the repo, never
 //! names the application around it, and never produces a word a human reads.
 //!
+//! - [`is_restic_repo`]: is this folder a repo? From its listing alone.
+//! - [`ResticRepo`]: open one with its password, then list its snapshots as a
+//!   [`SnapshotList`] of named [`Snapshot`]s, `latest` included.
+//!
 //! See `CLAUDE.md` for the must-knows and `DETAILS.md` for the design.
 
-#[allow(dead_code, reason = "TEMP: the repo layer that uses it lands next")]
+//noinspection RsUnusedImport
+// We dev-depend on ourselves so the `testing` feature is on for dev targets and
+// off for the lib (see `Cargo.toml`). That makes `cmdr_restic` an extern crate of
+// its own test target, which `unused_crate_dependencies` reports.
+#[cfg(test)]
+use cmdr_restic as _;
+
 mod backend;
 mod detect;
+mod repo;
+mod snapshots;
+#[cfg(any(test, feature = "testing"))]
+pub mod test_fixtures;
 
 pub use detect::is_restic_repo;
+pub use repo::{ResticError, ResticRepo};
+pub use snapshots::{LATEST_FOLDER_NAME, Snapshot, SnapshotList};

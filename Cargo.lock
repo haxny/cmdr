@@ -1919,8 +1919,10 @@ version = "0.0.0"
 dependencies = [
  "bytes",
  "cmdr-fs",
+ "cmdr-restic",
  "rustic_core",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]
