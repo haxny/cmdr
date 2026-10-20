@@ -2,7 +2,7 @@
 //! and what happens once a load lands (installed, other repos' indexes evicted
 //! past the cap, an idle drop armed). DETAILS § "The index lifecycle".
 
-use crate::hub::{RepoKey, RepoSlot, Tuning};
+use super::{RepoKey, RepoSlot, Tuning};
 use crate::index_load::{Load, Waiter};
 use crate::repo::{IndexedRepo, ResticError};
 use crate::snapshots::Snapshot;

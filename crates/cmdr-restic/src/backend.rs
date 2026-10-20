@@ -7,7 +7,7 @@
 //! the runtime's own workers: rustic is only ever driven from `spawn_blocking`
 //! (`repo.rs`). Same bridge as `cmdr-archive`'s `VolumeByteSource`.
 
-use crate::index_load::IndexFeed;
+use crate::index_feed::IndexFeed;
 use bytes::Bytes;
 use cmdr_fs::volume::{Volume, VolumeError, VolumeRandomReader};
 use rustic_core::repofile::KeyFile;

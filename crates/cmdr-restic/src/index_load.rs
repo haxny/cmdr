@@ -12,13 +12,12 @@
 //! counts them and refuses new reads once cancelled.
 
 use crate::backend::VolumeBackend;
+use crate::index_feed::IndexFeed;
 use crate::repo::{IndexedRepo, ResticError, open_blocking, worker_crashed};
 use bytes::Bytes;
 use cmdr_fs::volume::{ListingPhase, ListingProgress, Volume, VolumeError};
 use rustic_core::{FileType, Id};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 use tokio::runtime::Handle;
@@ -196,64 +195,6 @@ impl Waiter {
     }
 }
 
-/// The index files' running tally, published to the load's waiters as it moves.
-struct Tally {
-    done_bytes: AtomicU64,
-    done_files: AtomicU32,
-    total_bytes: u64,
-    total_files: u32,
-    state: watch::Sender<Option<ListingPhase>>,
-}
-
-impl Tally {
-    fn add_bytes(&self, bytes: usize) {
-        self.done_bytes.fetch_add(bytes as u64, Ordering::Relaxed);
-        self.publish();
-    }
-
-    fn file_done(&self) {
-        self.done_files.fetch_add(1, Ordering::Relaxed);
-        self.publish();
-    }
-
-    fn publish(&self) {
-        let phase = ListingPhase::LoadingIndex {
-            done_bytes: self.done_bytes.load(Ordering::Relaxed),
-            total_bytes: self.total_bytes,
-            done_files: self.done_files.load(Ordering::Relaxed),
-            total_files: self.total_files,
-        };
-        self.state.send_replace(Some(phase));
-    }
-}
-
-/// The storage adapter's side of a load: the index files read ahead of rustic,
-/// the load's cancel, and its tally.
-pub(crate) struct IndexFeed {
-    prefetched: Mutex<HashMap<Id, Bytes>>,
-    cancel: CancellationToken,
-    tally: Arc<Tally>,
-}
-
-impl IndexFeed {
-    /// The bytes of index file `id` when the prefetch read them. Handed over,
-    /// not copied, so the memory goes as rustic takes each one.
-    pub(crate) fn take(&self, id: &Id) -> Option<Bytes> {
-        lock(&self.prefetched).remove(id)
-    }
-
-    /// Whether every waiter left: the adapter refuses new index reads then.
-    pub(crate) fn is_cancelled(&self) -> bool {
-        self.cancel.is_cancelled()
-    }
-
-    /// rustic read an index file itself (not prefetched), `bytes` long.
-    pub(crate) fn note_read(&self, bytes: usize) {
-        self.tally.add_bytes(bytes);
-        self.tally.file_done();
-    }
-}
-
 /// The load itself: list `index/`, read the files ahead of rustic (when small
 /// enough) while the repo opens beside it, then build the index.
 async fn run(
@@ -275,19 +216,12 @@ async fn run(
         files = listing => files.map_err(worker_crashed)?.map_err(ResticError::Volume)?,
     };
     let total_bytes: u64 = files.iter().map(|(_, size)| size).sum();
-    let tally = Arc::new(Tally {
-        done_bytes: AtomicU64::new(0),
-        done_files: AtomicU32::new(0),
+    let feed = Arc::new(IndexFeed::new(
+        cancel.clone(),
         total_bytes,
-        total_files: u32::try_from(files.len()).unwrap_or(u32::MAX),
-        state: progress,
-    });
-    tally.publish();
-    let feed = Arc::new(IndexFeed {
-        prefetched: Mutex::new(HashMap::new()),
-        cancel: cancel.clone(),
-        tally,
-    });
+        u32::try_from(files.len()).unwrap_or(u32::MAX),
+        progress,
+    ));
     let backend = Arc::new(
         VolumeBackend::new(Arc::clone(&spec.parent), spec.root.clone(), spec.runtime.clone())
             .with_index_feed(Arc::clone(&feed)),
@@ -321,7 +255,7 @@ async fn run(
         .await
         .map_err(worker_crashed)?;
     // Anything rustic didn't ask for (a file gone between the two listings).
-    lock(&feed.prefetched).clear();
+    feed.clear();
     indexed
 }
 
@@ -366,7 +300,7 @@ async fn prefetch(
         }
         let next = tokio::select! {
             biased;
-            () = feed.cancel.cancelled() => {
+            () = feed.cancel().cancelled() => {
                 running.detach_all();
                 return Err(VolumeError::Cancelled(dir.display().to_string()));
             }
@@ -401,18 +335,18 @@ async fn read_one(
     let mut stream = parent.open_read_stream(&path).await?;
     let mut bytes = Vec::new();
     while let Some(chunk) = stream.next_chunk().await {
-        if feed.cancel.is_cancelled() {
+        if feed.is_cancelled() {
             return Err(VolumeError::Cancelled(path.display().to_string()));
         }
         let chunk = chunk?;
-        feed.tally.add_bytes(chunk.len());
+        feed.add_bytes(chunk.len());
         bytes.extend_from_slice(&chunk);
         if bytes.len() as u64 > cap {
             return Ok(());
         }
     }
-    lock(&feed.prefetched).insert(id, Bytes::from(bytes));
-    feed.tally.file_done();
+    feed.put(id, Bytes::from(bytes));
+    feed.file_done();
     Ok(())
 }
 

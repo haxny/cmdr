@@ -152,7 +152,7 @@ QNAP TS-464, 2026-10-20). `Tuning` holds every number below; tests shorten them,
 - **Idle drop after five minutes** unused (`index_idle_drop`), unless a read stream still holds it. Getting it back is
   an unlock plus a load, which the progress phase covers.
 - **An index is freed on the blocking pool**, ❌ never under the slot's lock or on an async worker: the last `Arc` of a
-  2.4M-blob index plus its blob cache takes a while to deallocate (`index_slot::free_off_the_runtime`).
+  2.4M-blob index plus its blob cache takes a while to deallocate (`hub::index_slot::free_off_the_runtime`).
 - **Opened repos** (unlocked, snapshot list read, a few MB each) are capped at eight (`max_opened`), least recently used
   first, never one in use.
 - No log lines: the crate has no logger dependency, and nothing here needs one more than the typed answers it gives.

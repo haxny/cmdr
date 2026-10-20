@@ -7,7 +7,6 @@
 
 use crate::detect::is_restic_repo;
 use crate::index_load::{Load, LoadSpec, PREFETCH_LIMIT, Waiter};
-use crate::index_slot::{IndexSlot, Installed, free_off_the_runtime};
 use crate::path::VIRTUAL_ENTRY_NAME;
 use crate::repo::{IndexedRepo, ResticError, ResticRepo};
 use crate::snapshots::{Snapshot, SnapshotList, snapshot_list_of};
@@ -15,6 +14,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::secret_store::{self, SignIn};
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
+use index_slot::{IndexSlot, Installed, free_off_the_runtime};
 use rustic_core::repofile::SnapshotFile;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -761,6 +761,12 @@ impl LatestPin {
         }
     }
 }
+
+// The index the hub keeps (install, cap, idle drop). A child, not a sibling:
+// it reads the slot's own state, and a sibling would weld the two modules into
+// a cycle (`module-cycles`).
+#[path = "index_slot.rs"]
+mod index_slot;
 
 #[cfg(test)]
 #[path = "hub_tests.rs"]
