@@ -157,7 +157,8 @@ func onAnOlderLine(version string, vendored []string) bool {
 // semverLine is the part of a version cargo treats as compatible: the major, or
 // for a `0.x` crate the minor (`0.0.x`: the patch).
 func semverLine(version string) string {
-	parts := strings.SplitN(strings.SplitN(version, "-", 2)[0], ".", 3)
+	release, _, _ := strings.Cut(version, "-")
+	parts := strings.SplitN(release, ".", 3)
 	for len(parts) < 3 {
 		parts = append(parts, "0")
 	}
