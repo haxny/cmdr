@@ -237,9 +237,10 @@ export interface FilePaneAPI {
   isAllSelected(): boolean
   setSelectedIndices(indices: number[]): void
   clearSelection(): void
-  selectAll(): void
-  /** Flip every selectable row; `..` stays untouched. */
-  invertSelection(): void
+  /** Select every row but `..` and the rows an overlay adds beside real files (`overlay-rows.ts`). */
+  selectAll(): Promise<void>
+  /** Flip every selectable row; `..` and overlay rows stay unselected. */
+  invertSelection(): Promise<void>
   /**
    * ADD every row of the same kind as the one under the cursor (every folder, or
    * every file sharing its extension) to the selection, without clearing it and

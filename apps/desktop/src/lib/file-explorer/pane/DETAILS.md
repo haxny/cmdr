@@ -874,7 +874,9 @@ or doubles a real shortcut. Every handler here therefore resolves through `event
   `selectAll` / `deselectAll` / `invert`. Its arms all `stopPropagation()`, so each command runs exactly once (`⌘A` used
   to run twice, locally and centrally; invisible only because both did the same thing). `invert` defaults to `*`, which
   is whichever key types `*` on the user's layout, main row or numpad. The menu item carries no accelerator for the same
-  reason `+` / `-` don't: a bare-key accelerator would eat `*` in every text field.
+  reason `+` / `-` don't: a bare-key accelerator would eat `*` in every text field. Select all and invert leave out `..`
+  AND the rows a listing overlay adds beside real files (a repo's `Browse snapshots`, `.git`'s category rows):
+  `overlay-rows.ts` finds them by name, then confirms each by its reserved view icon id, one IPC lookup per press.
 - `selection-dialog-keys.ts` — `+` / `-` → `selection.selectFiles` / `deselectFiles`, the same registry match.
 - `handleOpenOrParentKey` — `nav.open` (`Enter` / `⌘↓`) and `nav.parent` (`Backspace` / `⌘↑`). The `⌘Backspace`
   carve-out is now structural rather than a hand-written `!e.metaKey`: it's `file.delete`'s combo, not `nav.parent`'s,

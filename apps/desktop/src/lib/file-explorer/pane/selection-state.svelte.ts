@@ -149,11 +149,13 @@ export function createSelectionState(options?: { onChanged?: () => void }) {
     onChanged?.()
   }
 
-  function selectAll(hasParent: boolean, effectiveTotalCount: number) {
+  // `skip`: rows an overlay adds beside real files (`overlay-rows.ts`), left out
+  // like `..`, so "select all, copy" means the real files.
+  function selectAll(hasParent: boolean, effectiveTotalCount: number, skip?: ReadonlySet<number>) {
     selectedIndices.clear()
     const startIndex = hasParent ? 1 : 0 // Skip ".." entry
     for (let i = startIndex; i < effectiveTotalCount; i++) {
-      selectedIndices.add(i)
+      if (!skip?.has(i)) selectedIndices.add(i)
     }
     clearRangeState()
     onChanged?.()
@@ -168,12 +170,13 @@ export function createSelectionState(options?: { onChanged?: () => void }) {
   // Flip every selectable row: selected → unselected and back. `..` (index 0
   // when `hasParent`) stays untouched, mirroring `selectAll`. Indices past
   // `effectiveTotalCount` (stale after a refresh) are dropped rather than kept
-  // inverted, so the result is always a subset of the visible rows.
-  function invertSelection(hasParent: boolean, effectiveTotalCount: number) {
+  // inverted, so the result is always a subset of the visible rows. `skip` as in
+  // `selectAll`: a skipped row ends up unselected.
+  function invertSelection(hasParent: boolean, effectiveTotalCount: number, skip?: ReadonlySet<number>) {
     const startIndex = hasParent ? 1 : 0
     const next: number[] = []
     for (let i = startIndex; i < effectiveTotalCount; i++) {
-      if (!selectedIndices.has(i)) next.push(i)
+      if (!selectedIndices.has(i) && !skip?.has(i)) next.push(i)
     }
     selectedIndices.clear()
     for (const i of next) selectedIndices.add(i)

@@ -87,7 +87,7 @@ export function createTransferPaneEffects(
       if (prevSnapshot === 'all' && op !== 'copy' && op !== 'compress') {
         // Re-select all survivors (move/delete/trash changed the source listing;
         // copy and compress leave the source listing intact, so indices still hold)
-        getSourcePaneRef()?.selectAll()
+        void getSourcePaneRef()?.selectAll()
       } else if (prevSnapshot == null) {
         // No snapshot was taken, so there's nothing to restore: clear.
         getSourcePaneRef()?.clearSelection()

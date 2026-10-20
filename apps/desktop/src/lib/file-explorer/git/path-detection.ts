@@ -14,7 +14,8 @@
  * Keep them in sync.
  */
 
-const VIRTUAL_GIT_CATEGORIES = ['branches', 'tags', 'commits', 'stash', 'worktrees', 'submodules'] as const
+/** The six category folders the portal adds under `.git/`. */
+export const VIRTUAL_GIT_CATEGORIES = ['branches', 'tags', 'commits', 'stash', 'worktrees', 'submodules'] as const
 
 const VIRTUAL_GIT_PATH_REGEX = new RegExp(`/\\.git/(?:${VIRTUAL_GIT_CATEGORIES.join('|')})(?:/|$)`)
 

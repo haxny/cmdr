@@ -96,6 +96,7 @@
     import { createCursorNavKeys } from './cursor-nav-keys'
     import { createSearchPaneKeys } from './search-pane-keys'
     import { computeHasParent, effectiveVolumeRootFor } from './has-parent'
+    import { overlayRowsToSkip } from './overlay-rows'
     import { firstSelectedIndex } from './first-selected-index'
     import { sameKindIndices, sameKindTargetFor } from './select-same-kind'
     import { cursorRowAnchor } from './context-menu-anchor'
@@ -1041,12 +1042,18 @@
         selection.clearSelection()
     }
 
-    export function selectAll(): void {
-        selection.selectAll(hasParent, effectiveTotalCount)
+    // Both leave out the rows an overlay adds beside real files, like `..` (`overlay-rows.ts`).
+    const overlayRowsHere = () =>
+        overlayRowsToSkip({ listingId, includeHidden, panePath: currentPath, paneKind: caps.kind, hasParent })
+
+    export async function selectAll(): Promise<void> {
+        const skip = await overlayRowsHere()
+        selection.selectAll(hasParent, effectiveTotalCount, skip)
     }
 
-    export function invertSelection(): void {
-        selection.invertSelection(hasParent, effectiveTotalCount)
+    export async function invertSelection(): Promise<void> {
+        const skip = await overlayRowsHere()
+        selection.invertSelection(hasParent, effectiveTotalCount, skip)
     }
 
     /**
@@ -1721,9 +1728,9 @@
         onCommand: (commandId) => onCommand?.(commandId),
         toggleSelectionAtCursor: () => { countFolderOnSpace(selection.toggleAt(cursorIndex, hasParent)); },
         toggleSelectionAndMoveDown: toggleSelectionAndMoveDownAtCursor,
-        selectAll: () => { selection.selectAll(hasParent, effectiveTotalCount); },
+        selectAll: () => void selectAll(),
         deselectAll: () => { selection.deselectAll(); },
-        invertSelection: () => { selection.invertSelection(hasParent, effectiveTotalCount); },
+        invertSelection: () => void invertSelection(),
         selectSameKind: () => { void selectSameKind(); },
         clearRangeState: () => { selection.clearRangeState(); },
     })

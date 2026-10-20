@@ -83,6 +83,25 @@ describe('createSelectionState', () => {
       state.selectAll(false, 3)
       expect(onChanged).toHaveBeenCalled()
     })
+
+    it('leaves out the rows it is told to skip, like `..`', () => {
+      // A view row an overlay adds (a repo's `Browse snapshots`) sits beside real
+      // files; "select all, copy" means the real files.
+      const state = createSelectionState()
+      state.selectAll(true, 6, new Set([2]))
+      expect(state.getSelectedIndices()).toEqual([1, 3, 4, 5])
+      // So the backend never gets "all rows", which would carry the view row back in.
+      expect(state.isAllSelected(true, 6)).toBe(false)
+    })
+  })
+
+  describe('invertSelection with skipped rows', () => {
+    it('never selects a skipped row', () => {
+      const state = createSelectionState()
+      state.toggleAt(1, false)
+      state.invertSelection(false, 4, new Set([2]))
+      expect(state.getSelectedIndices()).toEqual([0, 3])
+    })
   })
 
   describe('isAllSelected', () => {

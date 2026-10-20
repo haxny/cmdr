@@ -297,10 +297,10 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
         paneRef.clearSelection()
         break
       case 'selectAll':
-        paneRef.selectAll()
+        void paneRef.selectAll()
         break
       case 'invert':
-        paneRef.invertSelection()
+        void paneRef.invertSelection()
         break
       case 'selectSameKind':
         // Two round trips (the cursor row, then the whole-listing snapshot), so
@@ -520,8 +520,8 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
       // Clear selection
       paneRef.setSelectedIndices([])
     } else if (count === 'all') {
-      // Select all
-      paneRef.selectAll()
+      // Select all, awaited so the sync below carries it
+      await paneRef.selectAll()
     } else {
       // Calculate the indices to select
       const endIndex = start + count - 1
