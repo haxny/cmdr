@@ -118,6 +118,16 @@ describe('buildTransferPropsFromSelection', () => {
     expect(announceRowsStillSettling).toHaveBeenCalledTimes(1)
   })
 
+  it('fails an MCP F5 round-trip when the rows moved, so the agent hears why nothing started', async () => {
+    vi.mocked(getSelectionSnapshot).mockRejectedValueOnce(
+      new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }),
+    )
+    const mcpContext = { ...context, mcpRequestId: 'req-7' }
+
+    expect(await buildTransferPropsFromSelection('move', 'listing-1', [2], true, true, mcpContext, 7)).toBeNull()
+    expect(announceRowsStillSettling).toHaveBeenCalledWith('req-7')
+  })
+
   it('returns correct props for copy selection', async () => {
     vi.mocked(getSelectionSnapshot).mockResolvedValueOnce({
       paths: ['/source/file1.txt', '/source/folder'],

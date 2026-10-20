@@ -34,9 +34,10 @@ type DialogState = ReturnType<typeof createDialogState>
  */
 export function createTransferDialogOpener(access: PaneAccess, dialogs: Pick<DialogState, 'showTransfer'>) {
   /** Builds a TransferContext from pane state. */
-  function buildTransferContext(pane: 'left' | 'right'): TransferContext {
+  function buildTransferContext(pane: 'left' | 'right', mcpRequestId?: string): TransferContext {
     const other = access.otherPane(pane)
     return {
+      mcpRequestId,
       showHiddenFiles: access.getShowHiddenFiles(),
       sourcePath: access.getPanePath(pane),
       destPath: access.getPanePath(other),
@@ -148,12 +149,17 @@ export function createTransferDialogOpener(access: PaneAccess, dialogs: Pick<Dia
   }
 
   /** Builds the dialog props from the pane's backend listing: the selection, else the cursor row. */
-  async function buildListingProps(operationType: TransferOperationType, ref: FilePaneAPI, pane: 'left' | 'right') {
+  async function buildListingProps(
+    operationType: TransferOperationType,
+    ref: FilePaneAPI,
+    pane: 'left' | 'right',
+    mcpRequestId: string | undefined,
+  ) {
     const listingId = ref.getListingId()
     if (!listingId) return null
     const hasParent = ref.hasParentEntry()
     const selectedIndices = ref.getSelectedIndices()
-    const context = buildTransferContext(pane)
+    const context = buildTransferContext(pane, mcpRequestId)
     const isLeft = pane === 'left'
     const generation = ref.getViewGeneration()
     const props =
@@ -209,7 +215,7 @@ export function createTransferDialogOpener(access: PaneAccess, dialogs: Pick<Dia
     }
     for (;;) {
       if (!(await rowsSettled(sourcePaneRef, press))) return
-      const built = await buildListingProps(operationType, sourcePaneRef, pane)
+      const built = await buildListingProps(operationType, sourcePaneRef, pane, mcpRequestId)
       if (!built) return
       const { props, listingId, generation } = built
       if (transferSourceIsCurrent({ ref: sourcePaneRef, pane, listingId, generation })) {

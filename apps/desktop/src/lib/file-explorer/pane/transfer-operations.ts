@@ -11,6 +11,8 @@ export interface TransferContext {
   destPath: string
   sourceVolumeId: string
   destVolumeId: string
+  /** The MCP round-trip this build serves, which a refusal fails so the agent hears why nothing started. */
+  mcpRequestId?: string
 }
 
 export interface TransferDialogPropsData {
@@ -64,16 +66,16 @@ export type TransferDialogPropsDraft = Omit<TransferDialogPropsData, 'duplicateF
  * moved, and resolving the old row numbers in the newer rows would name other files.
  */
 async function guardedSnapshot(
+  context: TransferContext,
   listingId: string,
-  includeHidden: boolean,
   backendIndices: number[],
   expectedSequence: number,
 ): Promise<{ paths: string[]; fileCount: number; folderCount: number } | null> {
   try {
-    return await getSelectionSnapshot(listingId, includeHidden, backendIndices, expectedSequence)
+    return await getSelectionSnapshot(listingId, context.showHiddenFiles, backendIndices, expectedSequence)
   } catch (error) {
     if (!asListingLookupError(error)) throw error
-    announceRowsStillSettling(undefined)
+    announceRowsStillSettling(context.mcpRequestId)
     return null
   }
 }
@@ -90,7 +92,7 @@ export async function buildTransferPropsFromSelection(
   const backendIndices = toBackendIndices(selectedIndices, hasParent)
   if (backendIndices.length === 0) return null
 
-  const snapshot = await guardedSnapshot(listingId, context.showHiddenFiles, backendIndices, expectedSequence)
+  const snapshot = await guardedSnapshot(context, listingId, backendIndices, expectedSequence)
   if (!snapshot) return null
   const sourcePaths = snapshot.paths
   if (sourcePaths.length === 0) return null
@@ -122,7 +124,7 @@ export async function buildTransferPropsFromCursor(
   if (backendIndex === null) return null
 
   // The cursor row is a row number too: it resolves under the same revision guard.
-  const snapshot = await guardedSnapshot(listingId, context.showHiddenFiles, [backendIndex], paneRef.getLastSequence())
+  const snapshot = await guardedSnapshot(context, listingId, [backendIndex], paneRef.getLastSequence())
   if (!snapshot || snapshot.paths.length === 0) return null
 
   return {

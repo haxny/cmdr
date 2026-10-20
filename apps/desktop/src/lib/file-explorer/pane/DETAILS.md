@@ -1906,8 +1906,9 @@ is worded per mode and promises no more than that.
   synchronous selection remap; reconfiguration clears its cursor intention.
 - **F5 resolves selected paths and counts under one lock.** `transfer-operations.ts` calls `getSelectionSnapshot` with
   backend-space indices and the exact applied revision, for the cursor row too. A typed `changed` / `gone` refusal
-  announces `announceRowsStillSettling` and opens no transfer, rather than resolving those same old indices in a newer
-  cache. The caller also rejects replaced/navigated panes.
+  announces `announceRowsStillSettling` (failing an MCP F5/F6 round-trip, via `TransferContext.mcpRequestId`) and opens
+  no transfer, rather than resolving those same old indices in a newer cache. The caller also rejects replaced/navigated
+  panes.
 - **Every read of a selection is revision-checked; there's no unchecked read by row number.** F8 / ⇧F8
   (`getSelectionEntries`), ⌘C / ⌘X, a selection drag, the context menu, tags, and Services (`getSelectionSnapshot`, or
   its Rust twin) all send the pane's applied sequence with the row numbers, read together at dispatch (or on the press,
