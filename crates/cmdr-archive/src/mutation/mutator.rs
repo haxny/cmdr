@@ -175,8 +175,9 @@ pub enum MutationError {
     /// the reader hides too but other tools may show. Refused before any temp
     /// exists, the original untouched.
     DuplicateEntryName {
-        /// The shared name, as the reader shows it.
-        name: String,
+        /// The shared name, as the reader shows it; `None` when the reader
+        /// couldn't parse the archive to say which.
+        name: Option<String>,
     },
     /// An added entry's source bytes couldn't be read.
     ReadSource {
@@ -201,11 +202,14 @@ impl std::fmt::Display for MutationError {
                     "the archive can't be edited because it contains an encrypted entry ('{name}')"
                 )
             }
-            MutationError::DuplicateEntryName { name } => {
+            MutationError::DuplicateEntryName { name: Some(name) } => {
                 write!(
                     f,
                     "the archive can't be edited because two of its entries are named '{name}'"
                 )
+            }
+            MutationError::DuplicateEntryName { name: None } => {
+                write!(f, "the archive can't be edited because two of its entries share a name")
             }
             MutationError::ReadSource { inner_path, source } => {
                 write!(f, "couldn't read the source for '{inner_path}': {source}")

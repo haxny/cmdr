@@ -210,7 +210,7 @@ export type WriteOperationError =
   | { type: 'archive_entry_names_collide'; entry: string; other: string; archivePath: string }
   // The zip being edited holds two entries under one name, and a rewrite would
   // drop the earlier one. Refused before anything is written.
-  | { type: 'archive_duplicate_entry_name'; path: string; name: string }
+  | { type: 'archive_duplicate_entry_name'; path: string; name: string | null }
   // The edit would have to keep a password-protected entry, which the rewrite
   // can't copy intact. Refused before anything is written.
   | { type: 'archive_encrypted_entry'; path: string; name: string }

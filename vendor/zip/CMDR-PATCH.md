@@ -23,6 +23,14 @@ and that copy only reads update bundles.
   rather than re-deriving it from the name bytes at write time; every path that gives an entry a name sets it
   (`needs_language_encoding`, `ZipFileData::set_language_encoding_for`). `ZipRawValues` carries a raw copy's own flag
   into `start_entry`. `src/format/flags.rs`: `ZipFileFlags::set`.
+- `src/read/zip_archive.rs`: `ZipArchive::central_directory_len()`, the number of central-directory records counted
+  before same-named ones fold into one `IndexMap` entry (`ZipArchiveMetadata::central_directory_len`). More than `len()`
+  means a duplicate name whose earlier record no index reaches, which a rewrite through this reader would drop, so Cmdr
+  refuses such an edit (`crates/cmdr-archive/src/mutation/plan.rs`, `refuse_a_folded_duplicate`) without needing its
+  own reader to parse the archive. Upstream `zip-rs/zip2` #841 (open) asks to expose the fold; this is the smallest
+  answer to it, and belongs in the same upstream PR draft. Tested from Cmdr
+  (`mutator_archive_shape_test::a_duplicate_name_is_refused_even_without_the_readers_names`): upstream's writer
+  refuses a duplicate name, so a fixture needs a hand-built zip.
 - Unit tests at the end of `src/write.rs`'s `tests` module, the same ones as upstream.
 - Known limit: a raw copy re-encodes a non-ASCII entry COMMENT as UTF-8 (the reader keeps no raw comment bytes), so a
   CP437 comment under a clear flag reads back garbled. Entry comments are rare; names were the data loss.

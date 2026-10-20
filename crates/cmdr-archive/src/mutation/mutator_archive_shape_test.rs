@@ -110,7 +110,7 @@ fn an_archive_with_a_duplicate_name_is_refused_untouched() {
     let result = delete(&path, "other.txt");
 
     assert!(
-        matches!(&result, Err(MutationError::DuplicateEntryName { name }) if name == "twin.txt"),
+        matches!(&result, Err(MutationError::DuplicateEntryName { name: Some(name) }) if name == "twin.txt"),
         "got {result:?}"
     );
     assert_eq!(
@@ -119,6 +119,27 @@ fn an_archive_with_a_duplicate_name_is_refused_untouched() {
         "the original is untouched"
     );
     assert!(leftover_temps(tmp.path()).is_empty(), "no temp is left behind");
+}
+
+/// The refusal stands on the `zip` crate's own count of central-directory
+/// records, so it holds when the reader can't parse the archive and the planner
+/// has no names of its own (it gets an empty list then). It can't name the twin.
+#[test]
+fn a_duplicate_name_is_refused_even_without_the_readers_names() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let bytes = build_zipcrypto_zip(
+        &[plain_entry("twin.txt", "earlier"), plain_entry("twin.txt", "later")],
+        "unused",
+    );
+    let path = write_zip(tmp.path(), "twins.zip", &bytes);
+    let src = ZipArchive::new(File::open(&path).expect("open the zip")).expect("the zip parses");
+
+    let result = crate::mutation::plan::refuse_a_folded_duplicate(&src, &[]);
+
+    assert!(
+        matches!(&result, Err(MutationError::DuplicateEntryName { name: None })),
+        "got {result:?}"
+    );
 }
 
 /// The rename replaces the file the link points at, so the edit lands where the

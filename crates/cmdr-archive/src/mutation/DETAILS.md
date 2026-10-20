@@ -118,10 +118,13 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
     unedited.
 - **Decision: refuse an archive with a duplicate entry name (`DuplicateEntryName`).** The `zip` crate keys entries by
   raw name in an `IndexMap` and folds a duplicate into one slot (the later one's data), and the rewrite copies through
-  it, so the earlier copy would silently vanish. rc-zip lists every central-directory record, so `plan.rs`'s
-  `refuse_a_folded_duplicate` refuses when it lists more entries than the `zip` crate holds, before any temp exists.
-  Preserving both would need the `zip` crate's reader AND writer to stop keying by name, a structural patch (upstream
-  `zip-rs/zip2` #841 asks for the reader half), so refusal is the answer until upstream moves. The host maps it to
+  it, so the earlier copy would silently vanish. `plan.rs`'s `refuse_a_folded_duplicate` refuses, before any temp
+  exists, when the `zip` crate's own record count (`central_directory_len`, a vendored-patch addition) exceeds its entry
+  count. Gotcha: comparing against rc-zip's record count instead missed every fold in a zip rc-zip can't parse (the
+  planner then has no names), so the count must come from the `zip` crate itself. rc-zip's names only say WHICH name;
+  without them the refusal carries `name: None` and the FE words it without one. Preserving both would need the `zip`
+  crate's reader AND writer to stop keying by name, a structural patch (upstream `zip-rs/zip2` #841 asks for the reader
+  half), so refusal is the answer until upstream moves. The host maps it to
   `WriteOperationError::ArchiveDuplicateEntryName`.
 - **Leftover policy — no startup reaper.** A leftover `foo.zip.cmdr-tmp-*` is always an ABANDONED build (the original is
   intact), so it's harmless. `apply` reaps siblings of the target at the START of the next edit of that archive (before

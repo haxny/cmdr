@@ -31,6 +31,9 @@ pub struct ZipArchiveMetadata {
     pub(crate) config: Config,
     pub(crate) comment: Box<[u8]>,
     pub(crate) zip64_extensible_data_sector: Option<Box<[u8]>>,
+    /// How many records the central directory held, before same-named ones
+    /// folded into one entry of `files`.
+    pub(crate) central_directory_len: usize,
 }
 
 impl ZipArchiveMetadata {
@@ -72,6 +75,7 @@ impl SharedBuilder {
         comment: Box<[u8]>,
         zip64_extensible_data_sector: Option<Box<[u8]>>,
     ) -> ZipArchiveMetadata {
+        let central_directory_len = self.files.len();
         let mut index_map = IndexMap::with_capacity(self.files.len());
         self.files.into_iter().for_each(|(file_name_raw, file)| {
             index_map.insert(file_name_raw, file);
@@ -83,6 +87,7 @@ impl SharedBuilder {
             config: self.config,
             comment,
             zip64_extensible_data_sector,
+            central_directory_len,
         }
     }
 }
@@ -126,6 +131,7 @@ impl<R> ZipArchive<R> {
             Some((_, file)) => file.header_start,
             None => central_start,
         };
+        let central_directory_len = files.len();
         let shared = Arc::new(ZipArchiveMetadata {
             files,
             offset: initial_offset,
@@ -135,6 +141,7 @@ impl<R> ZipArchive<R> {
             },
             comment,
             zip64_extensible_data_sector,
+            central_directory_len,
         });
         Self { reader, shared }
     }
@@ -359,6 +366,14 @@ impl<R: Read + Seek> ZipArchive<R> {
     /// Number of files contained in this zip.
     pub fn len(&self) -> usize {
         self.shared.len()
+    }
+
+    /// Number of records in the central directory. More than [`Self::len`] when
+    /// two records share a name: the archive keeps one entry per name (the later
+    /// record's), so the earlier one is unreachable, and a copy of the archive
+    /// through this reader drops it.
+    pub fn central_directory_len(&self) -> usize {
+        self.shared.central_directory_len
     }
 
     /// Get the starting offset of the zip central directory.

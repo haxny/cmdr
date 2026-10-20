@@ -2129,6 +2129,17 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
+  "errors.write.archiveDuplicateEntryName.messageUnnamed": "{path} holds two items under one name. Cmdr shows only the later one, and changing the zip would lose the earlier one for good.",
+  "@errors.write.archiveDuplicateEntryName.messageUnnamed": {
+    "description": "Body of that dialog when Cmdr can tell two items share a name but not which name (the zip is too damaged for its reader to list). Same meaning as errors.write.archiveDuplicateEntryName.message, just without the name. Plain text, raw errors.* string (no ICU): keep {path} spelled exactly.",
+    "placeholders": {
+      "path": {
+        "description": "The zip file's full path, for example /Users/david/Downloads/photos.zip. Inserted verbatim. Do not translate or reformat it."
+      }
+    },
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "errors.write.archiveDuplicateEntryName.suggestion": "Rename one of the two in another zip tool, then try again.",
   "@errors.write.archiveDuplicateEntryName.suggestion": {
     "description": "Recovery suggestion for that dialog. Plain text. This is a raw errors.* string (no ICU).",

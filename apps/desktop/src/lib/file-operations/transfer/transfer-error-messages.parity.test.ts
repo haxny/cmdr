@@ -361,6 +361,17 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'archive_duplicate_entry_name (no name known)',
+    error: { type: 'archive_duplicate_entry_name', path: '/tmp/a&b.zip', name: null },
+    op: 'move',
+    expected: {
+      title: 'This zip holds two items with the same name',
+      message:
+        '/tmp/a&amp;b.zip holds two items under one name. Cmdr shows only the later one, and changing the zip would lose the earlier one for good.',
+      suggestion: 'Rename one of the two in another zip tool, then try again.',
+    },
+  },
+  {
     name: 'archive_encrypted_entry (escapes HTML)',
     error: { type: 'archive_encrypted_entry', path: '/tmp/a&b.zip', name: 'receipts/<march>.pdf' },
     op: 'move',

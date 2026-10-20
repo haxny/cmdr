@@ -1152,6 +1152,7 @@ export type MessageKey =
   | 'errors.volume.staleDestinationHandle'
   | 'errors.volume.storageFull'
   | 'errors.write.archiveDuplicateEntryName.message'
+  | 'errors.write.archiveDuplicateEntryName.messageUnnamed'
   | 'errors.write.archiveDuplicateEntryName.suggestion'
   | 'errors.write.archiveDuplicateEntryName.title'
   | 'errors.write.archiveEncryptedEntry.message'

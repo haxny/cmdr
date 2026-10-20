@@ -19095,9 +19095,10 @@ export type WriteOperationError =
    *  copies through a library that keeps only the later one, so the earlier
    *  copy would silently go (Cmdr's reader shows only the later one too, but
    *  other tools show both). Refused before anything is written. `path` is
-   *  the zip, `name` the shared entry name.
+   *  the zip, `name` the shared entry name, `None` when the reader couldn't
+   *  parse the zip to say which.
    */
-  | { type: 'archive_duplicate_entry_name'; path: string; name: string }
+  | { type: 'archive_duplicate_entry_name'; path: string; name: string | null }
   /**
    *  The edit would have to keep a password-protected entry of the zip, and
    *  the rewrite can't copy one without losing its encrypted flag (the bytes
