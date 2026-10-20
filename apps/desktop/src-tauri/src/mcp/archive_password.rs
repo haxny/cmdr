@@ -1,7 +1,7 @@
 //! What the password prompt is asking, mirrored for MCP. One prompt serves
 //! every locked container (an encrypted archive, a restic repo).
 //!
-//! The prompt lives in the frontend (`archive-password-flow.svelte.ts`), which
+//! The prompt lives in the frontend (`unlock-flow.svelte.ts`), which
 //! is the only place that knows WHICH container raised it, in which of the two
 //! flows, and whether a stored password was just rejected. `SoftDialogTracker`
 //! carries the id and nothing else, so without this mirror an agent reads a bare

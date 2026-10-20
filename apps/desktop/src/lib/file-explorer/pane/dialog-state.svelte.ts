@@ -11,7 +11,7 @@
  *   this window only watches. It is built WITHOUT the pane effects and without
  *   any way to write birth context — see its module doc for why that is the one
  *   hazard in this feature.
- * - `archive-password-flow.svelte.ts`: the password prompt and its two flows.
+ * - `unlock-flow.svelte.ts`: the password prompt and its two flows.
  * - `background-operations.svelte.ts`: operations running with NO progress
  *   dialog, started there by F2 or sent there by Queue. It holds its own birth
  *   context and hands it back here for the two follow-ups that need a dialog: a
@@ -49,7 +49,7 @@ import { archiveNameFromPath, pathCrossesArchiveBoundary } from './archive-paths
 import { transferOpLabel } from './transfer-op-label'
 import { createTransferPaneEffects } from './transfer-pane-effects'
 import { createAdoptedOperation } from './adopted-operation.svelte'
-import { createArchivePasswordFlow } from './archive-password-flow.svelte'
+import { createUnlockFlow } from './unlock-flow.svelte'
 import { createBackgroundOperations, type ArchiveNeedsPasswordError } from './background-operations.svelte'
 import { createWhenDialogsClear } from './when-dialogs-clear.svelte'
 import { createProgrammaticConfirm } from './programmatic-confirm'
@@ -153,7 +153,7 @@ export function createDialogState(deps: DialogStateDeps) {
       showNewFileDialog ||
       showAlertDialog ||
       showTransferErrorDialog ||
-      archivePassword.showDialog ||
+      unlockFlow.showDialog ||
       showDeleteDialog
     )
   }
@@ -174,7 +174,7 @@ export function createDialogState(deps: DialogStateDeps) {
    */
   function progressSlotHolder(): SoftDialogId | null {
     if (transferProgressProps === null) return null
-    return archivePassword.showDialog ? 'archive-password' : 'transfer-progress'
+    return unlockFlow.showDialog ? 'archive-password' : 'transfer-progress'
   }
 
   /** Refuses a start, saying so to whoever asked. The wording and the round-trip
@@ -378,7 +378,7 @@ export function createDialogState(deps: DialogStateDeps) {
     }
   }
 
-  const archivePassword = createArchivePasswordFlow({
+  const unlockFlow = createUnlockFlow({
     hasBirthContext: () => transferProgressProps !== null,
     redispatchBirthOperation: () => {
       const props = transferProgressProps
@@ -440,7 +440,7 @@ export function createDialogState(deps: DialogStateDeps) {
   ): void {
     const askedNow = whenDialogsClear.run(() => {
       transferProgressProps = props
-      archivePassword.promptForTransfer({
+      unlockFlow.promptForTransfer({
         operationType: props.operationType,
         parentVolumeId: props.sourceVolumeId,
         archivePath: error.path,
@@ -577,9 +577,9 @@ export function createDialogState(deps: DialogStateDeps) {
   const programmaticConfirm = createProgrammaticConfirm({
     isTransferDialogOpen: () => showTransferDialog && transferDialogProps !== null,
     isDeleteDialogOpen: () => showDeleteDialog && deleteDialogProps !== null,
-    isArchivePasswordOpen: () => archivePassword.showDialog,
+    isArchivePasswordOpen: () => unlockFlow.showDialog,
     supplyStoredPassword: () => {
-      archivePassword.supplyStoredPassword()
+      unlockFlow.supplyStoredPassword()
     },
   })
 
@@ -624,11 +624,11 @@ export function createDialogState(deps: DialogStateDeps) {
     get transferErrorProps() {
       return transferErrorProps
     },
-    get showArchivePasswordDialog() {
-      return archivePassword.showDialog
+    get showUnlockDialog() {
+      return unlockFlow.showDialog
     },
-    get archivePasswordProps() {
-      return archivePassword.props
+    get unlockProps() {
+      return unlockFlow.props
     },
     get showDeleteDialog() {
       return showDeleteDialog
@@ -686,13 +686,8 @@ export function createDialogState(deps: DialogStateDeps) {
 
     /** Raises the browse-time archive-password prompt (a listing of a
      *  header-encrypted archive). No transfer operation is involved. */
-    showArchivePasswordForBrowse(info: {
-      volumeId: string
-      archivePath: string
-      wrongAttempt: boolean
-      retry: () => void
-    }) {
-      archivePassword.promptForBrowse(info)
+    showUnlockForBrowse(info: { volumeId: string; archivePath: string; wrongAttempt: boolean; retry: () => void }) {
+      unlockFlow.promptForBrowse(info)
     },
 
     // --- Handler functions (passed to DialogManager) ---
@@ -897,7 +892,7 @@ export function createDialogState(deps: DialogStateDeps) {
       // progress dialog unmounts) so an unlock can re-dispatch the same op and a
       // cancel can settle through the normal refresh/selection paths.
       if (error.type === 'archive_needs_password' && transferProgressProps) {
-        archivePassword.promptForTransfer({
+        unlockFlow.promptForTransfer({
           operationType: op,
           parentVolumeId: transferProgressProps.sourceVolumeId,
           archivePath: error.path,
@@ -925,12 +920,12 @@ export function createDialogState(deps: DialogStateDeps) {
       openTransferError(op, error, failedOperationId, progressAtStop, retry)
     },
 
-    handleArchivePasswordSubmit(password: string) {
-      archivePassword.handleSubmit(password)
+    handleUnlockSubmit(password: string) {
+      unlockFlow.handleSubmit(password)
     },
 
-    handleArchivePasswordCancel() {
-      archivePassword.handleCancel()
+    handleUnlockCancel() {
+      unlockFlow.handleCancel()
     },
 
     handleTransferErrorClose() {
@@ -1085,7 +1080,7 @@ export function createDialogState(deps: DialogStateDeps) {
       alertDialogProps = null
       showTransferErrorDialog = false
       transferErrorProps = null
-      archivePassword.forget()
+      unlockFlow.forget()
       showDeleteDialog = false
       deleteDialogProps = null
       deps.onRefocus()

@@ -107,7 +107,7 @@ vi.mock('#lib/stores/volume-store.svelte.js', async (importOriginal) => {
   }
 })
 
-import ArchivePasswordDialog from './ArchivePasswordDialog.svelte'
+import UnlockDialog from './UnlockDialog.svelte'
 import TransferConflictDialog from './TransferConflictDialog.svelte'
 import TransferDialog from './TransferDialog.svelte'
 import TransferErrorDialog from './TransferErrorDialog.svelte'
@@ -128,15 +128,15 @@ beforeEach(() => {
 })
 
 /**
- * Tier 3 a11y tests for `ArchivePasswordDialog.svelte`.
+ * Tier 3 a11y tests for `UnlockDialog.svelte`.
  *
  * Covers the first prompt and the wrong-attempt re-prompt. Tauri IPC is stubbed
  * so the dialog can mount cleanly in happy-dom.
  */
-describe('ArchivePasswordDialog a11y', () => {
+describe('UnlockDialog a11y', () => {
   it('first prompt has no a11y violations', async () => {
     const target = container()
-    mount(ArchivePasswordDialog, {
+    mount(UnlockDialog, {
       target,
       props: { archiveName: 'photos.zip', wrongAttempt: false, onSubmit: () => {}, onCancel: () => {} },
     })
@@ -146,7 +146,7 @@ describe('ArchivePasswordDialog a11y', () => {
 
   it('wrong-attempt re-prompt has no a11y violations', async () => {
     const target = container()
-    mount(ArchivePasswordDialog, {
+    mount(UnlockDialog, {
       target,
       props: { archiveName: 'photos.zip', wrongAttempt: true, onSubmit: () => {}, onCancel: () => {} },
     })

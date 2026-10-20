@@ -1,5 +1,5 @@
-// Archive-password commands: store or clear the per-archive password used to
-// unlock an encrypted archive (ZipCrypto today). The password lives on the
+// Unlock commands: hand a password to a locked container, or forget it. The
+// archive wrappers serve an encrypted archive (ZipCrypto today). The password lives on the
 // resolved `ArchiveVolume` on the backend (remember-for-this-archive, LRU-capped,
 // forgotten on restart or eviction). The frontend calls `setArchivePassword`
 // after prompting, then retries the copy/move so the extract path can decrypt.

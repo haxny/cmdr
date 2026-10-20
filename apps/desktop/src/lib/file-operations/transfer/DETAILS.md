@@ -347,31 +347,31 @@ source `path` and a `wrongAttempt` flag; the frontend turns that into a prompt-a
 error dialog.
 
 - **Interception is a branch in `handleTransferError`** (`pane/dialog-state.svelte.ts`), NOT in the transfer dialogs.
-  When `error.type === 'archive_needs_password'`, it shows `ArchivePasswordDialog` and returns before the generic-error
-  path. It deliberately keeps `transferProgressProps` alive (only unmounting the progress dialog, which is safe because
-  the write-error already settled the op) so the same operation can be re-dispatched. The archive lives on the source
-  pane's volume (an archive pane keeps its parent drive's `volumeId`), so
+  When `error.type === 'archive_needs_password'`, it shows `UnlockDialog` and returns before the generic-error path. It
+  deliberately keeps `transferProgressProps` alive (only unmounting the progress dialog, which is safe because the
+  write-error already settled the op) so the same operation can be re-dispatched. The archive lives on the source pane's
+  volume (an archive pane keeps its parent drive's `volumeId`), so
   `parentVolumeId = transferProgressProps. sourceVolumeId`; `archivePath` is the errored source `path`
   (`unlock_container` accepts the archive file OR any inner path). The prompt names the archive via
   `archiveNameFromPath` (the leftmost archive-boundary segment).
-- **Submit → store then re-dispatch.** `handleArchivePasswordSubmit` calls `setArchivePassword`, then re-shows the
-  progress dialog with the same props but `previewId: null` — the first dispatch consumed the scan preview, so the retry
-  re-scans the archive index (fast; scanning reads the index without decrypting). ⚠️ Clearing the id is now load-bearing
-  rather than tidy: the retry is a NEW operation, and the backend refuses a second claim on one preview, so a
-  carried-over id would silently downgrade to a full re-walk. A wrong password makes the backend raise
-  `archive_needs_password` again with `wrongAttempt: true`, so the interception fires a second time and the dialog
-  re-prompts (its distinct copy, empty field via a fresh mount).
+- **Submit → store then re-dispatch.** `handleUnlockSubmit` calls `setArchivePassword`, then re-shows the progress
+  dialog with the same props but `previewId: null` — the first dispatch consumed the scan preview, so the retry re-scans
+  the archive index (fast; scanning reads the index without decrypting). ⚠️ Clearing the id is now load-bearing rather
+  than tidy: the retry is a NEW operation, and the backend refuses a second claim on one preview, so a carried-over id
+  would silently downgrade to a full re-walk. A wrong password makes the backend raise `archive_needs_password` again
+  with `wrongAttempt: true`, so the interception fires a second time and the dialog re-prompts (its distinct copy, empty
+  field via a fresh mount).
 - **An agent's unlock stores but never starts.** The MCP `unlock` tool routes to `supplyStoredPassword` instead of
-  `handleArchivePasswordSubmit`, and ❌ never re-dispatches: it settles the transfer, and the agent runs `copy` / `move`
-  again so extraction goes through the same gate as every other write. `pane/DETAILS.md` § "Only a PERSON's submit
+  `handleUnlockSubmit`, and ❌ never re-dispatches: it settles the transfer, and the agent runs `copy` / `move` again so
+  extraction goes through the same gate as every other write. `pane/DETAILS.md` § "Only a PERSON's submit
   re-dispatches".
 - **Mid-transfer wrong password.** ZipCrypto's open-time check false-accepts ~1/256, caught later at end-of-stream CRC,
   so a `wrongAttempt: true` error can arrive AFTER progress started. The interception is in the running-op error path,
   so this is handled the same as an up-front rejection — no separate pre-flight branch.
-- **Cancel settles cleanly.** `handleArchivePasswordCancel` calls `clearArchivePassword` (forget the archive password)
-  and runs the same tail a dismissed transfer error does — refresh both panes, drop the source-pane operation snapshot
-  and selection, null the props, refocus — so nothing looks stuck. The op already terminated on the backend (the
-  write-error settled it), so there's no running op to cancel.
+- **Cancel settles cleanly.** `handleUnlockCancel` calls `clearArchivePassword` (forget the archive password) and runs
+  the same tail a dismissed transfer error does — refresh both panes, drop the source-pane operation snapshot and
+  selection, null the props, refocus — so nothing looks stuck. The op already terminated on the backend (the write-error
+  settled it), so there's no running op to cancel.
 - **AES archives reach here too.** WinZip AES (AE-1/AE-2, what `7z -mem=AES256` and recent WinZip write) decrypts
   through the `zip` crate's `aes-crypto` feature, and a password-protected 7z through `sevenz-rust2`'s `aes256`, so both
   raise this prompt and both can be unlocked by it (`crates/cmdr-archive/src/read/archive_test.rs`,

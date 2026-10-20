@@ -184,7 +184,7 @@
          * browse-time prompt request to the parent (which owns the dialog state).
          * `retry` re-lists the same directory after the password is stored.
          */
-        onArchiveNeedsPassword?: (info: {
+        onNeedsPassword?: (info: {
             volumeId: string
             archivePath: string
             wrongAttempt: boolean
@@ -240,7 +240,7 @@
         onNetworkHostChange,
         onCancelLoading,
         onMtpFatalError,
-        onArchiveNeedsPassword,
+        onNeedsPassword,
         unreachable = null,
         onRetryUnreachable,
         onOpenHome,
@@ -437,7 +437,7 @@
         onVolumeChange: (change) => onVolumeChange?.(change),
         onMtpFatalError: (message) => onMtpFatalError?.(message),
         onCancelLoading: (cancelled) => onCancelLoading?.(cancelled),
-        onArchiveNeedsPassword: (info) => onArchiveNeedsPassword?.(info),
+        onNeedsPassword: (info) => onNeedsPassword?.(info),
     })
 
     // Keep the last settled rows through a sub-100 ms navigation. The list

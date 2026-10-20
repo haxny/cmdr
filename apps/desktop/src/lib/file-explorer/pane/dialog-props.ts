@@ -3,7 +3,7 @@
  * the dependency surface the dialog factories are built from.
  *
  * Types only, so the four dialog modules (`dialog-state.svelte.ts`,
- * `adopted-operation.svelte.ts`, `archive-password-flow.svelte.ts`,
+ * `adopted-operation.svelte.ts`, `unlock-flow.svelte.ts`,
  * `transfer-pane-effects.ts`) can name each other's data without importing each
  * other's behavior.
  */
@@ -270,7 +270,7 @@ export interface TransferErrorPropsData {
   retry: TransferProgressPropsData | null
 }
 
-export interface ArchivePasswordPropsData {
+export interface UnlockPromptPropsData {
   /** Display name of the archive being unlocked (e.g. "photos.zip"). */
   archiveName: string
   /** True when the stored password was rejected: re-prompt with distinct copy. */

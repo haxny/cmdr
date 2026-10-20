@@ -271,7 +271,7 @@ unlock always passes `remember: false`: saving to the Keychain is the person's c
   running `copy` / `move` again.
 
 **❌ `unlock` must never start a write. This is the whole design constraint.** A person's submit re-dispatches
-the parked copy for them; the agent path settles it instead (`archive-password-flow.svelte.ts::supplyStoredPassword` →
+the parked copy for them; the agent path settles it instead (`unlock-flow.svelte.ts::supplyStoredPassword` →
 `settleBirthOperation`, ❌ never `redispatchBirthOperation`). Two reasons it isn't merely conservative: that re-dispatch
 is a genuinely NEW operation — the backend already settled the old one, because `retain_failure` excludes
 `ArchiveNeedsPassword` by typed variant (`crates/cmdr-operations/DETAILS.md` § "Retained failures") — and a new operation

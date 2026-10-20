@@ -47,7 +47,7 @@
     import LicenseKeyDialog from '#lib/licensing/LicenseKeyDialog.svelte'
     import ExtensionChangeDialog from '#lib/file-explorer/rename/ExtensionChangeDialog.svelte'
     import RenameConflictDialog from '#lib/file-explorer/rename/RenameConflictDialog.svelte'
-    import ArchivePasswordDialog from '#lib/file-operations/transfer/ArchivePasswordDialog.svelte'
+    import UnlockDialog from '#lib/file-operations/transfer/UnlockDialog.svelte'
     import TransferErrorDialog from '#lib/file-operations/transfer/TransferErrorDialog.svelte'
     import SignInSheet from '#lib/servers/SignInSheet.svelte'
     import CrashReportDialog from '#lib/crash-reporter/CrashReportDialog.svelte'
@@ -354,7 +354,7 @@
     {:else if plan?.kind === 'rename-conflict'}
         <RenameConflictDialog {...plan.props} onResolve={closeGalleryDialog} />
     {:else if plan?.kind === 'archive-password'}
-        <ArchivePasswordDialog {...plan.props} onSubmit={closeGalleryDialog} onCancel={closeGalleryDialog} />
+        <UnlockDialog {...plan.props} onSubmit={closeGalleryDialog} onCancel={closeGalleryDialog} />
     {:else if plan?.kind === 'transfer-error'}
         <TransferErrorDialog {...plan.props} onClose={closeGalleryDialog} onRetry={closeGalleryDialog} />
     {:else if plan?.kind === 'server-sign-in'}

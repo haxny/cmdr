@@ -737,7 +737,7 @@ export {
   notifyArchivePasswordPrompt,
   notifyArchivePasswordDismissed,
   type ArchivePasswordPrompt,
-} from './archive'
+} from './unlock'
 export type {
   MtpDeviceInfo,
   MtpStorageInfo,

@@ -1486,12 +1486,12 @@
                     edgeFlow.handleCancelLoading(paneId, cancelled)
                 }}
                 onMtpFatalError={(msg: string) => edgeFlow.handleMtpFatalError(paneId, msg)}
-                onArchiveNeedsPassword={(info: {
+                onNeedsPassword={(info: {
                     volumeId: string
                     archivePath: string
                     wrongAttempt: boolean
                     retry: () => void
-                }) => { dialogs.showArchivePasswordForBrowse(info); }}
+                }) => { dialogs.showUnlockForBrowse(info); }}
                 onConfirmRenameAsMove={(request: RenameAsMoveRequest) => { fileOps.confirmRenameAsMove(paneId, request); }}
                 unreachable={getActiveTab(tabMgr).unreachable}
                 onRetryUnreachable={() => edgeFlow.handleRetryUnreachable(paneId)}
@@ -1552,8 +1552,8 @@
     alertDialogProps={dialogs.alertDialogProps}
     showTransferErrorDialog={dialogs.showTransferErrorDialog}
     transferErrorProps={dialogs.transferErrorProps}
-    showArchivePasswordDialog={dialogs.showArchivePasswordDialog}
-    archivePasswordProps={dialogs.archivePasswordProps}
+    showUnlockDialog={dialogs.showUnlockDialog}
+    unlockProps={dialogs.unlockProps}
     onTransferConfirm={(payload: TransferConfirmPayload) => {
         dialogs.handleTransferConfirm(payload)
     }}
@@ -1593,11 +1593,11 @@
         dialogs.handleTransferErrorRetry()
     }}
     onTransferErrorCopyAnyway={() => { dialogs.handleTransferErrorCopyAnyway(); }}
-    onArchivePasswordSubmit={(password: string) => {
-        dialogs.handleArchivePasswordSubmit(password)
+    onUnlockSubmit={(password: string) => {
+        dialogs.handleUnlockSubmit(password)
     }}
-    onArchivePasswordCancel={() => {
-        dialogs.handleArchivePasswordCancel()
+    onUnlockCancel={() => {
+        dialogs.handleUnlockCancel()
     }}
     onNewFolderCreated={(name: string) => {
         dialogs.handleNewFolderCreated(name)

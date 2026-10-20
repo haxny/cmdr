@@ -981,7 +981,7 @@ below rather than merely spreading lines:
 - `transfer-pane-effects.ts`: everything a settled transfer does to the panes, all of it reading birth context. The one
   module that can touch a pane, and the one an adopted view is built without.
 - `adopted-operation.svelte.ts`: the progress dialog's adopted arm, owning that slot and its four outcomes.
-- `archive-password-flow.svelte.ts`: the password prompt and its `transfer` / `browse` modes.
+- `unlock-flow.svelte.ts`: the password prompt and its `transfer` / `browse` modes.
 - `background-operations.svelte.ts`: operations with NO progress dialog, started there (F2 in a setup dialog) or sent
   there (Queue). Holds their birth context privately and watches each for the one stop nobody else asks about.
 - `transfer-op-label.ts`: the log-line label for an operation type, shared by the two families.
@@ -1123,12 +1123,12 @@ parked operation is already settled: `src-tauri/src/mcp/DETAILS.md` § "Answerin
 clearing the prompt also mirrors it to the backend (`notifyArchivePasswordPrompt` / `-Dismissed`), which is what lets
 `cmdr://state` name the archive at all; ❌ the password is never part of that mirror.
 
-**The archive-password flow can't aim the re-dispatch either.** `archive-password-flow.svelte.ts` owns the prompt and
-both its modes but holds no reference to birth context: it asks `hasBirthContext()` and then calls
-`redispatchBirthOperation()` or `settleBirthOperation()`, neither of which takes an argument. So "the retry re-runs the
-operation the user unlocked" is a property of the wiring, not of the flow behaving itself. What the re-dispatch MUST
-keep doing is clearing `previewId` (a preview accepts exactly one claimant, so a carried-over id silently downgrades the
-retry to a full re-walk); that lives in `dialog-state.svelte.ts`'s `redispatchBirthOperation`.
+**The archive-password flow can't aim the re-dispatch either.** `unlock-flow.svelte.ts` owns the prompt and both its
+modes but holds no reference to birth context: it asks `hasBirthContext()` and then calls `redispatchBirthOperation()`
+or `settleBirthOperation()`, neither of which takes an argument. So "the retry re-runs the operation the user unlocked"
+is a property of the wiring, not of the flow behaving itself. What the re-dispatch MUST keep doing is clearing
+`previewId` (a preview accepts exactly one claimant, so a carried-over id silently downgrades the retry to a full
+re-walk); that lives in `dialog-state.svelte.ts`'s `redispatchBirthOperation`.
 
 **A background job keeps its birth context out of the slot.** `background-operations.svelte.ts` holds the props of every
 operation running with no progress dialog, so a background start never occupies the slot and the next F5 opens at once.
@@ -1155,12 +1155,12 @@ outcome. It would have nothing to reach it with either: no `sourcePaneSide` to p
 from the completion event) and falls back to the file count instead of the per-type split. A failure still opens the
 error dialog with the same handover, because the reason is worth reading wherever the operation started.
 
-**The axis is FRESH versus STALE context, not adopted versus started.** `handleArchivePasswordSubmit` starts a NEW
-operation from context captured before the prompt went up and re-snapshots the source pane's selection against wherever
-that pane is NOW; a plain transfer whose source pane navigated away mid-copy is the same shape. So
-`clearSourcePaneAfterTransfer` and `adjustSelectionAfterCancel` ask `sourcePaneStillShowsBirthFolder()` first — the
-pane's current folder against the one the operation was born in. Refreshing a listing is harmless whatever the answer
-and still happens; changing a selection the user made somewhere else is not.
+**The axis is FRESH versus STALE context, not adopted versus started.** `handleUnlockSubmit` starts a NEW operation from
+context captured before the prompt went up and re-snapshots the source pane's selection against wherever that pane is
+NOW; a plain transfer whose source pane navigated away mid-copy is the same shape. So `clearSourcePaneAfterTransfer` and
+`adjustSelectionAfterCancel` ask `sourcePaneStillShowsBirthFolder()` first — the pane's current folder against the one
+the operation was born in. Refreshing a listing is harmless whatever the answer and still happens; changing a selection
+the user made somewhere else is not.
 
 A snapshot pane is outside this rule rather than an exception to it: its `search-results://<id>` can never equal an
 operation's `sourceFolderPath`, so neither selection tail ever runs there. Its selection is kept honest by the entries

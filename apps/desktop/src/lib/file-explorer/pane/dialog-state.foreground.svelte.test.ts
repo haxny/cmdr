@@ -195,7 +195,7 @@ describe('adopting an operation into the progress dialog', () => {
     )
     dialogs.foregroundOperation(adopted())
 
-    dialogs.handleArchivePasswordSubmit('hunter2')
+    dialogs.handleUnlockSubmit('hunter2')
 
     await vi.waitFor(() => {
       expect(dialogs.showTransferProgressDialog).toBe(true)

@@ -1,5 +1,5 @@
 /**
- * Tests for the archive-password Tauri command wrappers.
+ * Tests for the unlock Tauri command wrappers.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -19,7 +19,7 @@ import {
   clearArchivePassword,
   notifyArchivePasswordPrompt,
   notifyArchivePasswordDismissed,
-} from './archive'
+} from './unlock'
 
 describe('setArchivePassword wrapper', () => {
   beforeEach(() => {

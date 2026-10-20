@@ -108,13 +108,13 @@ describe('archive-password interception', () => {
 
     dialogs.handleTransferError(needsPassword(false), null)
 
-    expect(dialogs.showArchivePasswordDialog).toBe(true)
+    expect(dialogs.showUnlockDialog).toBe(true)
     expect(dialogs.showTransferErrorDialog).toBe(false)
     // The progress dialog is unmounted but its props stay alive for a retry.
     expect(dialogs.showTransferProgressDialog).toBe(false)
     expect(dialogs.transferProgressProps).not.toBeNull()
 
-    const props = dialogs.archivePasswordProps
+    const props = dialogs.unlockProps
     expect(props).toEqual({
       archiveName: 'secret.zip',
       wrongAttempt: false,
@@ -130,7 +130,7 @@ describe('archive-password interception', () => {
 
     dialogs.handleTransferError(needsPassword(true), null)
 
-    expect(dialogs.archivePasswordProps?.wrongAttempt).toBe(true)
+    expect(dialogs.unlockProps?.wrongAttempt).toBe(true)
   })
 
   it('does NOT intercept other error variants (they still show the error dialog)', () => {
@@ -140,7 +140,7 @@ describe('archive-password interception', () => {
     const ioError: WriteOperationError = { type: 'io_error', path: '/x', message: 'boom' }
     dialogs.handleTransferError(ioError, null)
 
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     expect(dialogs.showTransferErrorDialog).toBe(true)
     expect(dialogs.transferProgressProps).toBeNull()
   })
@@ -152,11 +152,11 @@ describe('archive-password submit → re-dispatch', () => {
     dialogs.startTransferProgress(copyProps())
     dialogs.handleTransferError(needsPassword(false), null)
 
-    dialogs.handleArchivePasswordSubmit('hunter2')
+    dialogs.handleUnlockSubmit('hunter2')
 
     expect(setArchivePassword).toHaveBeenCalledWith('root', '/Users/me/secret.zip/inner/report.pdf', 'hunter2')
     // The prompt closes immediately; the re-dispatch runs after the store resolves.
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     await vi.waitFor(() => {
       expect(dialogs.showTransferProgressDialog).toBe(true)
     })
@@ -173,12 +173,12 @@ describe('archive-password cancel → settle', () => {
     dialogs.startTransferProgress(copyProps())
     dialogs.handleTransferError(needsPassword(false), null)
 
-    dialogs.handleArchivePasswordCancel()
+    dialogs.handleUnlockCancel()
 
     expect(clearArchivePassword).toHaveBeenCalledWith('root', '/Users/me/secret.zip/inner/report.pdf')
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     expect(dialogs.showTransferProgressDialog).toBe(false)
-    expect(dialogs.archivePasswordProps).toBeNull()
+    expect(dialogs.unlockProps).toBeNull()
     expect(dialogs.transferProgressProps).toBeNull()
     expect(rightPane.spies.clearSelection).toHaveBeenCalled()
     expect(onRefocus).toHaveBeenCalled()
@@ -186,7 +186,7 @@ describe('archive-password cancel → settle', () => {
 })
 
 // Browse path: a directory listing of a header-encrypted archive needs the
-// password even to list it (no transfer op involved). `showArchivePasswordForBrowse`
+// password even to list it (no transfer op involved). `showUnlockForBrowse`
 // opens the prompt; submit stores the password and re-lists via `retry`; cancel
 // forgets the password and leaves the fallback error pane in place.
 describe('archive-password browse path', () => {
@@ -199,12 +199,12 @@ describe('archive-password browse path', () => {
 
   it('opens the prompt in browse mode from a listing failure', () => {
     const { dialogs } = makeState()
-    dialogs.showArchivePasswordForBrowse(browseInfo(false))
+    dialogs.showUnlockForBrowse(browseInfo(false))
 
-    expect(dialogs.showArchivePasswordDialog).toBe(true)
+    expect(dialogs.showUnlockDialog).toBe(true)
     // Browse mode carries no transfer op.
     expect(dialogs.transferProgressProps).toBeNull()
-    expect(dialogs.archivePasswordProps).toMatchObject({
+    expect(dialogs.unlockProps).toMatchObject({
       archiveName: 'locked.7z',
       wrongAttempt: false,
       parentVolumeId: 'root',
@@ -216,13 +216,13 @@ describe('archive-password browse path', () => {
   it('submit stores the password and re-lists via retry', async () => {
     const { dialogs } = makeState()
     const retry = vi.fn()
-    dialogs.showArchivePasswordForBrowse(browseInfo(false, retry))
+    dialogs.showUnlockForBrowse(browseInfo(false, retry))
 
-    dialogs.handleArchivePasswordSubmit('hunter2')
+    dialogs.handleUnlockSubmit('hunter2')
 
     expect(setArchivePassword).toHaveBeenCalledWith('root', '/Users/me/locked.7z', 'hunter2')
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
-    expect(dialogs.archivePasswordProps).toBeNull()
+    expect(dialogs.showUnlockDialog).toBe(false)
+    expect(dialogs.unlockProps).toBeNull()
     // The re-list runs after the store resolves.
     await vi.waitFor(() => {
       expect(retry).toHaveBeenCalled()
@@ -233,13 +233,13 @@ describe('archive-password browse path', () => {
 
   it('cancel forgets the password without touching the transfer path', () => {
     const { dialogs, rightPane } = makeState()
-    dialogs.showArchivePasswordForBrowse(browseInfo(false))
+    dialogs.showUnlockForBrowse(browseInfo(false))
 
-    dialogs.handleArchivePasswordCancel()
+    dialogs.handleUnlockCancel()
 
     expect(clearArchivePassword).toHaveBeenCalledWith('root', '/Users/me/locked.7z')
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
-    expect(dialogs.archivePasswordProps).toBeNull()
+    expect(dialogs.showUnlockDialog).toBe(false)
+    expect(dialogs.unlockProps).toBeNull()
     // No transfer op to settle: the source pane's selection is left untouched.
     expect(rightPane.spies.clearSelection).not.toHaveBeenCalled()
     expect(onRefocus).toHaveBeenCalled()
@@ -247,9 +247,9 @@ describe('archive-password browse path', () => {
 
   it('passes wrongAttempt through so a rejected password re-prompts with distinct copy', () => {
     const { dialogs } = makeState()
-    dialogs.showArchivePasswordForBrowse(browseInfo(true))
+    dialogs.showUnlockForBrowse(browseInfo(true))
 
-    expect(dialogs.archivePasswordProps?.wrongAttempt).toBe(true)
+    expect(dialogs.unlockProps?.wrongAttempt).toBe(true)
   })
 })
 
@@ -276,7 +276,7 @@ describe('archive-password mirror for cmdr://state', () => {
 
   it('mirrors a browse prompt with no operation attached', () => {
     const { dialogs } = makeState()
-    dialogs.showArchivePasswordForBrowse({
+    dialogs.showUnlockForBrowse({
       volumeId: 'root',
       archivePath: '/Users/me/locked.7z',
       wrongAttempt: false,
@@ -293,7 +293,7 @@ describe('archive-password mirror for cmdr://state', () => {
     dialogs.startTransferProgress(copyProps())
     dialogs.handleTransferError(needsPassword(false), null)
 
-    dialogs.handleArchivePasswordCancel()
+    dialogs.handleUnlockCancel()
 
     expect(notifyArchivePasswordDismissed).toHaveBeenCalled()
   })
@@ -315,7 +315,7 @@ describe('archive-password supplied over MCP', () => {
     expect(dialogs.showTransferProgressDialog).toBe(false)
     expect(dialogs.transferProgressProps).toBeNull()
     // And it settles cleanly rather than leaving the pane looking mid-copy.
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     expect(rightPane.spies.clearSelection).toHaveBeenCalled()
     expect(onRefocus).toHaveBeenCalled()
   })
@@ -338,7 +338,7 @@ describe('archive-password supplied over MCP', () => {
   it('completes a browse by re-listing, because a listing is a read', () => {
     const { dialogs } = makeState()
     const retry = vi.fn()
-    dialogs.showArchivePasswordForBrowse({
+    dialogs.showUnlockForBrowse({
       volumeId: 'root',
       archivePath: '/Users/me/locked.7z',
       wrongAttempt: false,
@@ -348,7 +348,7 @@ describe('archive-password supplied over MCP', () => {
     void dialogs.confirmOpenDialog('archive-password')
 
     expect(retry).toHaveBeenCalled()
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     expect(notifyArchivePasswordDismissed).toHaveBeenCalled()
   })
 
@@ -356,7 +356,7 @@ describe('archive-password supplied over MCP', () => {
     const { dialogs } = makeState()
     void dialogs.confirmOpenDialog('archive-password')
 
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     expect(notifyArchivePasswordDismissed).not.toHaveBeenCalled()
   })
 })

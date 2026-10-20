@@ -174,7 +174,7 @@ describe('foreground failure handover', () => {
 
     dialogs.handleTransferError(needsPassword, null)
 
-    expect(dialogs.showArchivePasswordDialog).toBe(true)
+    expect(dialogs.showUnlockDialog).toBe(true)
     expect(getForegroundFailureId()).toBeNull()
   })
 

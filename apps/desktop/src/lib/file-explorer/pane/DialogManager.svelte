@@ -2,7 +2,7 @@
     import TransferDialog from '../../file-operations/transfer/TransferDialog.svelte'
     import TransferProgressDialog from '../../file-operations/transfer/TransferProgressDialog.svelte'
     import TransferErrorDialog from '../../file-operations/transfer/TransferErrorDialog.svelte'
-    import ArchivePasswordDialog from '../../file-operations/transfer/ArchivePasswordDialog.svelte'
+    import UnlockDialog from '../../file-operations/transfer/UnlockDialog.svelte'
     import DeleteDialog from '#lib/file-operations/delete/DeleteDialog.svelte'
     import NewFolderDialog from '#lib/file-operations/mkdir/NewFolderDialog.svelte'
     import NewFileDialog from '#lib/file-operations/mkfile/NewFileDialog.svelte'
@@ -15,7 +15,7 @@
         NewFileDialogPropsData,
         AlertDialogPropsData,
         TransferErrorPropsData,
-        ArchivePasswordPropsData,
+        UnlockPromptPropsData,
         DeleteDialogPropsData,
         TransferConfirmPayload,
         TransferConfirmer,
@@ -41,8 +41,8 @@
         alertDialogProps,
         showTransferErrorDialog,
         transferErrorProps,
-        showArchivePasswordDialog,
-        archivePasswordProps,
+        showUnlockDialog,
+        unlockProps,
         showDeleteDialog,
         deleteDialogProps,
         onTransferConfirm,
@@ -60,8 +60,8 @@
         onTransferErrorClose,
         onTransferErrorRetry,
         onTransferErrorCopyAnyway,
-        onArchivePasswordSubmit,
-        onArchivePasswordCancel,
+        onUnlockSubmit,
+        onUnlockCancel,
         onNewFolderCreated,
         onNewFolderCancel,
         onNewFileCreated,
@@ -86,8 +86,8 @@
         alertDialogProps: AlertDialogPropsData | null
         showTransferErrorDialog: boolean
         transferErrorProps: TransferErrorPropsData | null
-        showArchivePasswordDialog: boolean
-        archivePasswordProps: ArchivePasswordPropsData | null
+        showUnlockDialog: boolean
+        unlockProps: UnlockPromptPropsData | null
         showDeleteDialog: boolean
         deleteDialogProps: DeleteDialogPropsData | null
         onTransferConfirm: (payload: TransferConfirmPayload) => void
@@ -116,8 +116,8 @@
         onTransferErrorRetry?: () => void
         /** The error dialog's "Copy anyway" after a space shortfall. Offered only when `transferErrorProps.retry` holds the copy to start. */
         onTransferErrorCopyAnyway?: () => void
-        onArchivePasswordSubmit: (password: string) => void
-        onArchivePasswordCancel: () => void
+        onUnlockSubmit: (password: string) => void
+        onUnlockCancel: () => void
         onNewFolderCreated: (folderName: string) => void
         onNewFolderCancel: () => void
         onNewFileCreated: (fileName: string) => void
@@ -321,12 +321,12 @@
         />
     {/if}
 
-    {#if showArchivePasswordDialog && archivePasswordProps}
-        <ArchivePasswordDialog
-            archiveName={archivePasswordProps.archiveName}
-            wrongAttempt={archivePasswordProps.wrongAttempt}
-            onSubmit={onArchivePasswordSubmit}
-            onCancel={onArchivePasswordCancel}
+    {#if showUnlockDialog && unlockProps}
+        <UnlockDialog
+            archiveName={unlockProps.archiveName}
+            wrongAttempt={unlockProps.wrongAttempt}
+            onSubmit={onUnlockSubmit}
+            onCancel={onUnlockCancel}
         />
     {/if}
 

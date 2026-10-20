@@ -404,15 +404,15 @@ describe('an archive password, for a job with no dialog', () => {
     listeners.error?.({ operationId: 'op-1', operationType: 'copy', error: needsPassword, progressAtStop: null })
     await settle()
 
-    expect(dialogs.showArchivePasswordDialog).toBe(true)
+    expect(dialogs.showUnlockDialog).toBe(true)
     expect(dialogs.showTransferProgressDialog).toBe(false)
 
-    dialogs.handleArchivePasswordSubmit('hunter2')
+    dialogs.handleUnlockSubmit('hunter2')
     await settle()
 
     expect(copyBetweenVolumes).toHaveBeenCalledTimes(2)
     expect(vi.mocked(copyBetweenVolumes).mock.calls[1]?.[4]).toEqual(expect.objectContaining({ previewId: null }))
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     expect(dialogs.showTransferProgressDialog).toBe(false)
     expect(dialogs.transferProgressProps).toBeNull()
   })
@@ -426,7 +426,7 @@ describe('an archive password, for a job with no dialog', () => {
     listeners.error?.({ operationId: 'op-1', operationType: 'copy', error: needsPassword, progressAtStop: null })
     await settle()
 
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     expect(dialogs.transferProgressProps).toBe(foreground)
     expect(addToast).toHaveBeenCalledWith(
       '“secret.zip” needs its password. You’ll be asked as soon as the open dialog closes.',
@@ -446,8 +446,8 @@ describe('an archive password, for a job with no dialog', () => {
     })
     await settle()
 
-    expect(dialogs.showArchivePasswordDialog).toBe(true)
-    expect(dialogs.archivePasswordProps?.archivePath).toBe('/Users/me/secret.zip')
+    expect(dialogs.showUnlockDialog).toBe(true)
+    expect(dialogs.unlockProps?.archivePath).toBe('/Users/me/secret.zip')
   })
 
   it('leaves the selection the person made since alone when the prompt is cancelled', async () => {
@@ -458,7 +458,7 @@ describe('an archive password, for a job with no dialog', () => {
 
     listeners.error?.({ operationId: 'op-1', operationType: 'copy', error: needsPassword, progressAtStop: null })
     await settle()
-    dialogs.handleArchivePasswordCancel()
+    dialogs.handleUnlockCancel()
     await settle()
 
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest mock, no `this` binding
@@ -474,14 +474,14 @@ describe('an archive password, for a job with no dialog', () => {
     listeners.error?.({ operationId: 'op-1', operationType: 'copy', error: needsPassword, progressAtStop: null })
     await settle()
 
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     expect(dialogs.showTransferDialog).toBe(true)
     expect(onRefocus).not.toHaveBeenCalled()
 
     dialogs.handleTransferCancel()
     await settle()
 
-    expect(dialogs.showArchivePasswordDialog).toBe(true)
+    expect(dialogs.showUnlockDialog).toBe(true)
   })
 
   it.each([
@@ -508,7 +508,7 @@ describe('an archive password, for a job with no dialog', () => {
       dialogs.handleAdoptedError(needsPassword, null)
       await settle()
 
-      expect(dialogs.showArchivePasswordDialog).toBe(true)
+      expect(dialogs.showUnlockDialog).toBe(true)
       expect(dialogs.showTransferErrorDialog).toBe(false)
       expect(dialogs.showTransferProgressDialog).toBe(false)
     },
@@ -517,7 +517,7 @@ describe('an archive password, for a job with no dialog', () => {
   it('leaves a browse password prompt that is already up alone', async () => {
     const { dialogs } = await startCopyInBackground()
     const retry = vi.fn()
-    dialogs.showArchivePasswordForBrowse({
+    dialogs.showUnlockForBrowse({
       volumeId: 'root',
       archivePath: '/Users/me/other.zip',
       wrongAttempt: false,
@@ -527,14 +527,14 @@ describe('an archive password, for a job with no dialog', () => {
     listeners.error?.({ operationId: 'op-1', operationType: 'copy', error: needsPassword, progressAtStop: null })
     await settle()
 
-    expect(dialogs.archivePasswordProps?.archivePath).toBe('/Users/me/other.zip')
+    expect(dialogs.unlockProps?.archivePath).toBe('/Users/me/other.zip')
     expect(dialogs.transferProgressProps).toBeNull()
 
     // Once that prompt is answered, the held one asks.
-    dialogs.handleArchivePasswordCancel()
+    dialogs.handleUnlockCancel()
     await settle()
 
-    expect(dialogs.archivePasswordProps?.archivePath).toBe('/Users/me/secret.zip')
+    expect(dialogs.unlockProps?.archivePath).toBe('/Users/me/secret.zip')
   })
 
   it('restarts a permanent delete sent off with Queue in the progress dialog, never out of sight', async () => {
@@ -552,7 +552,7 @@ describe('an archive password, for a job with no dialog', () => {
     dialogs.handleTransferQueue('op-1')
     listeners.error?.({ operationId: 'op-1', operationType: 'delete', error: needsPassword, progressAtStop: null })
     await settle()
-    dialogs.handleArchivePasswordSubmit('hunter2')
+    dialogs.handleUnlockSubmit('hunter2')
     await settle()
 
     expect(deleteFiles).not.toHaveBeenCalled()
@@ -570,9 +570,9 @@ describe('an archive password, for a job with no dialog', () => {
     listeners.error?.({ operationId: 'op-1', operationType: 'copy', error: needsPassword, progressAtStop: null })
     await settle()
 
-    expect(dialogs.showArchivePasswordDialog).toBe(true)
+    expect(dialogs.showUnlockDialog).toBe(true)
 
-    dialogs.handleArchivePasswordSubmit('hunter2')
+    dialogs.handleUnlockSubmit('hunter2')
     await settle()
 
     // It lives in the background now, so it starts there again.

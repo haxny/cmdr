@@ -89,7 +89,7 @@ export function makeHarness(over: Partial<PaneState> = {}) {
     adoptStoredPath: vi.fn(),
     onVolumeChange: vi.fn(),
     onMtpFatalError: vi.fn(),
-    onArchiveNeedsPassword: vi.fn(),
+    onNeedsPassword: vi.fn(),
     onCancelLoading: vi.fn(),
     renameCancel: vi.fn(),
     renameForgetChainReports: vi.fn(),
@@ -199,7 +199,7 @@ export function makeHarness(over: Partial<PaneState> = {}) {
     adoptStoredPath: spies.adoptStoredPath,
     onVolumeChange: spies.onVolumeChange,
     onMtpFatalError: spies.onMtpFatalError,
-    onArchiveNeedsPassword: spies.onArchiveNeedsPassword,
+    onNeedsPassword: spies.onNeedsPassword,
     onCancelLoading: spies.onCancelLoading,
   }
   const loader = createListingLoader(deps)

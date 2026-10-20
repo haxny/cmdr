@@ -101,7 +101,7 @@ describe('dialog render-failure recovery', () => {
     expect(dialogs.showTransferDialog).toBe(false)
     expect(dialogs.showTransferProgressDialog).toBe(false)
     expect(dialogs.showTransferErrorDialog).toBe(false)
-    expect(dialogs.showArchivePasswordDialog).toBe(false)
+    expect(dialogs.showUnlockDialog).toBe(false)
     expect(dialogs.showDeleteDialog).toBe(false)
     expect(dialogs.showNewFolderDialog).toBe(false)
     expect(dialogs.showNewFileDialog).toBe(false)

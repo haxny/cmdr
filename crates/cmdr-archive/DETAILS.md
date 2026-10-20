@@ -248,8 +248,7 @@ password to read its metadata; zip and content-encrypted 7z ignore it at parse).
   `crates/cmdr-fs/src/volume/friendly_error/volume_error.rs` maps `NeedsPassword` to
   `ListingErrorReason::ArchiveNeedsPassword { wrong_attempt }` (NOT the unreadable-archive reason), and
   `crates/cmdr-listing/src/streaming.rs` surfaces it without provider enrichment. The frontend's listing-loader
-  intercepts that reason and raises the SAME `ArchivePasswordDialog` at browse time; on unlock it re-lists the
-  directory.
+  intercepts that reason and raises the SAME `UnlockDialog` at browse time; on unlock it re-lists the directory.
 
 Both are machine-readable.
 

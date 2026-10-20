@@ -117,10 +117,10 @@ describe('createListingLoader — error / MTP / cancel handling', () => {
       error: { reason: { reason: 'archiveNeedsPassword', wrongAttempt: false } },
     })
     await vi.waitFor(() => {
-      expect(spies.onArchiveNeedsPassword).toHaveBeenCalled()
+      expect(spies.onNeedsPassword).toHaveBeenCalled()
     })
 
-    expect(spies.onArchiveNeedsPassword.mock.calls[0][0]).toMatchObject({ archivePath: '/a/locked.7z' })
+    expect(spies.onNeedsPassword.mock.calls[0][0]).toMatchObject({ archivePath: '/a/locked.7z' })
     // No probe, so no walk-up: the pane stays put, showing the fallback the
     // prompt sits on top of, with the failed path in history so Back goes one
     // step rather than two.

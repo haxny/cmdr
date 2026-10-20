@@ -1,11 +1,11 @@
 /**
- * Fixtures for `archive-password` (`#lib/file-operations/transfer/ArchivePasswordDialog.svelte`).
+ * Fixtures for `archive-password` (`#lib/file-operations/transfer/UnlockDialog.svelte`).
  *
  * Raw copy on purpose: this module is dev-only and sits outside the i18n-enforced
  * areas, so fixture strings never reach the message catalog.
  */
 
-/** Props of `ArchivePasswordDialog.svelte`, minus its callbacks. */
+/** Props of `UnlockDialog.svelte`, minus its callbacks. */
 export interface ArchivePasswordFixture {
   archiveName: string
   wrongAttempt: boolean

@@ -184,12 +184,7 @@ export interface ListingLoaderDeps {
    * `retry` re-lists the SAME directory (after the password is stored the re-list
    * succeeds); `wrongAttempt` swaps the prompt copy after a rejected password.
    */
-  onArchiveNeedsPassword?: (info: {
-    volumeId: string
-    archivePath: string
-    wrongAttempt: boolean
-    retry: () => void
-  }) => void
+  onNeedsPassword?: (info: { volumeId: string; archivePath: string; wrongAttempt: boolean; retry: () => void }) => void
 }
 
 export interface ListingLoader {
@@ -543,7 +538,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
             // cannot answer.
             if (reason?.reason === 'archiveNeedsPassword') {
               showListingError()
-              deps.onArchiveNeedsPassword?.({
+              deps.onNeedsPassword?.({
                 volumeId: deps.getVolumeId(),
                 archivePath: loadPath,
                 wrongAttempt: reason.wrongAttempt,

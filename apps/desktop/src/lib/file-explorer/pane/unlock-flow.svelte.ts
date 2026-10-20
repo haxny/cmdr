@@ -31,11 +31,11 @@ import { getAppLogger } from '#lib/logging/logger.js'
 import { archiveNameFromPath } from './archive-paths'
 import { transferOpLabel } from './transfer-op-label'
 import type { TransferOperationType } from '../types'
-import type { ArchivePasswordPropsData } from './dialog-props'
+import type { UnlockPromptPropsData } from './dialog-props'
 
 const log = getAppLogger('fileExplorer')
 
-export interface ArchivePasswordFlowDeps {
+export interface UnlockFlowDeps {
   /** Whether an operation this window started is waiting on the unlock. */
   hasBirthContext: () => boolean
   /** Re-runs the operation the birth slot holds, with a fresh scan. Takes no
@@ -49,9 +49,9 @@ export interface ArchivePasswordFlowDeps {
   onRefocus: () => void
 }
 
-export function createArchivePasswordFlow(deps: ArchivePasswordFlowDeps) {
+export function createUnlockFlow(deps: UnlockFlowDeps) {
   let showDialog = $state(false)
-  let promptProps = $state<ArchivePasswordPropsData | null>(null)
+  let promptProps = $state<UnlockPromptPropsData | null>(null)
 
   /** Stores the password, logging (but not surfacing) a store failure: whatever
    *  retries next will simply re-prompt, since the password never landed. */
@@ -67,7 +67,7 @@ export function createArchivePasswordFlow(deps: ArchivePasswordFlowDeps) {
    *  names the archive and `unlock` has something to answer. The two go
    *  together: a prompt on screen that nothing outside can see is exactly the
    *  blind spot this flow used to be. ❌ The password is not part of the mirror. */
-  function showPrompt(props: ArchivePasswordPropsData, operationId: string | null): void {
+  function showPrompt(props: UnlockPromptPropsData, operationId: string | null): void {
     promptProps = props
     showDialog = true
     void notifyArchivePasswordPrompt({
@@ -99,7 +99,7 @@ export function createArchivePasswordFlow(deps: ArchivePasswordFlowDeps) {
     get showDialog(): boolean {
       return showDialog
     },
-    get props(): ArchivePasswordPropsData | null {
+    get props(): UnlockPromptPropsData | null {
       return promptProps
     },
 

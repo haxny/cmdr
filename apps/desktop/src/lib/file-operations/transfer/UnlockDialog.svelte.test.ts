@@ -1,5 +1,5 @@
 /**
- * Rendering + interaction tests for `ArchivePasswordDialog.svelte`.
+ * Rendering + interaction tests for `UnlockDialog.svelte`.
  *
  * The dialog prompts for an encrypted archive's password before a copy/move out
  * of it can extract. Two shapes: the first prompt, and the re-prompt after a
@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import ArchivePasswordDialog from './ArchivePasswordDialog.svelte'
+import UnlockDialog from './UnlockDialog.svelte'
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
@@ -35,9 +35,9 @@ beforeEach(() => {
   document.body.appendChild(target)
 })
 
-describe('ArchivePasswordDialog — first prompt', () => {
+describe('UnlockDialog — first prompt', () => {
   it('renders the first-prompt copy, names the archive, and focuses the field', async () => {
-    mount(ArchivePasswordDialog, {
+    mount(UnlockDialog, {
       target,
       props: { archiveName: 'photos.zip', wrongAttempt: false, onSubmit: () => {}, onCancel: () => {} },
     })
@@ -55,7 +55,7 @@ describe('ArchivePasswordDialog — first prompt', () => {
 
   it('submits the typed password on Unlock click', async () => {
     const onSubmit = vi.fn()
-    mount(ArchivePasswordDialog, {
+    mount(UnlockDialog, {
       target,
       props: { archiveName: 'photos.zip', wrongAttempt: false, onSubmit, onCancel: () => {} },
     })
@@ -72,7 +72,7 @@ describe('ArchivePasswordDialog — first prompt', () => {
 
   it('submits on Enter in the field', async () => {
     const onSubmit = vi.fn()
-    mount(ArchivePasswordDialog, {
+    mount(UnlockDialog, {
       target,
       props: { archiveName: 'photos.zip', wrongAttempt: false, onSubmit, onCancel: () => {} },
     })
@@ -88,7 +88,7 @@ describe('ArchivePasswordDialog — first prompt', () => {
 
   it('disables Unlock (no submit) while the field is empty', async () => {
     const onSubmit = vi.fn()
-    mount(ArchivePasswordDialog, {
+    mount(UnlockDialog, {
       target,
       props: { archiveName: 'photos.zip', wrongAttempt: false, onSubmit, onCancel: () => {} },
     })
@@ -103,7 +103,7 @@ describe('ArchivePasswordDialog — first prompt', () => {
 
   it('cancels on the Cancel button', async () => {
     const onCancel = vi.fn()
-    mount(ArchivePasswordDialog, {
+    mount(UnlockDialog, {
       target,
       props: { archiveName: 'photos.zip', wrongAttempt: false, onSubmit: () => {}, onCancel },
     })
@@ -114,9 +114,9 @@ describe('ArchivePasswordDialog — first prompt', () => {
   })
 })
 
-describe('ArchivePasswordDialog — wrong-attempt re-prompt', () => {
+describe('UnlockDialog — wrong-attempt re-prompt', () => {
   it('shows distinct copy and starts with an empty field', async () => {
-    mount(ArchivePasswordDialog, {
+    mount(UnlockDialog, {
       target,
       props: { archiveName: 'photos.zip', wrongAttempt: true, onSubmit: () => {}, onCancel: () => {} },
     })
