@@ -632,6 +632,26 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'server_connection_lost (compress, gave up)',
+    error: { type: 'server_connection_lost', path: '/nas/photos.zip', volumeName: 'Naspolya', gaveUpAfterSecs: 900 },
+    op: 'compress',
+    expected: {
+      title: 'Lost the connection to Naspolya',
+      message: `Cmdr waited ${fifteenMinutes} for Naspolya to come back, then stopped. It was creating photos.zip.`,
+      suggestion: 'Check that the server is on and your network is up, then try again.',
+    },
+  },
+  {
+    name: 'server_connection_lost (archive edit, dropped)',
+    error: { type: 'server_connection_lost', path: '/nas/photos.zip', volumeName: 'Naspolya', gaveUpAfterSecs: null },
+    op: 'archive_edit',
+    expected: {
+      title: 'Lost the connection to Naspolya',
+      message: 'The connection to Naspolya dropped while Cmdr was updating photos.zip.',
+      suggestion: 'Check that the server is on and your network is up, then try again.',
+    },
+  },
+  {
     // A delete that waited out the drop and found someone else's file at a path it listed.
     name: 'changed_while_disconnected',
     error: { type: 'changed_while_disconnected', path: '/nas/photos/a.jpg', volumeName: 'Naspolya' },

@@ -1979,6 +1979,30 @@
   "@errors.write.serverConnectionLost.suggestion.delete": {
     "description": "What to do after a permanent delete stopped because a network server's connection was lost: check the server and the network, then try again. The second sentence says plainly that the files the delete already removed are gone (a delete can't be undone). Plain text."
   },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr waited {duration} for {volumeName} to come back, then stopped. It was creating {fileName}.",
+  "errors.write.serverConnectionLost.message.dropped.compress": "The connection to {volumeName} dropped while Cmdr was creating {fileName}.",
+  "errors.write.serverConnectionLost.suggestion.compress": "Check that the server is on and your network is up, then try again.",
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr waited {duration} for {volumeName} to come back, then stopped. It was updating {fileName}.",
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "The connection to {volumeName} dropped while Cmdr was updating {fileName}.",
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Check that the server is on and your network is up, then try again.",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "description": "Body of the compress error dialog when Cmdr waited a while for a dropped network server to come back, then stopped creating a ZIP archive on it. Plain text. The literals {duration} (an already-formatted length of time, like \"15m\"), {volumeName} (the server's name), and {fileName} (the archive's file name, like \"photos.zip\") are do-not-translate placeholders. The connection is the cause; the archive is only context."
+  },
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "description": "Body of the compress error dialog when the connection to a network server dropped while Cmdr was creating a ZIP archive on it, and Cmdr couldn't wait for it this time (the server needs a sign-in, or the connection kept dropping). Plain text. The literals {volumeName} (the server's name) and {fileName} (the archive's file name) are do-not-translate placeholders."
+  },
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "description": "What to do after creating a ZIP archive on a network server stopped because the server's connection was lost: check the server and the network, then try again. Plain text."
+  },
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "description": "Body of the error dialog when Cmdr waited a while for a dropped network server to come back, then stopped changing a ZIP archive stored on it (adding, removing, or renaming files inside it). Plain text. The literals {duration} (an already-formatted length of time, like \"15m\"), {volumeName} (the server's name), and {fileName} (the archive's file name, like \"photos.zip\") are do-not-translate placeholders. \"Updating\" means changing what's inside the archive."
+  },
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "description": "Body of the error dialog when the connection to a network server dropped while Cmdr was changing a ZIP archive stored on it, and Cmdr couldn't wait for it this time (the server needs a sign-in, or the connection kept dropping). Plain text. The literals {volumeName} (the server's name) and {fileName} (the archive's file name) are do-not-translate placeholders."
+  },
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "description": "What to do after changing a ZIP archive on a network server stopped because the server's connection was lost: check the server and the network, then try again. Plain text."
+  },
   "errors.write.changedWhileDisconnected.title": "Cmdr left a changed file alone",
   "errors.write.changedWhileDisconnected.message": "The connection to {volumeName} dropped during the delete. When it came back, {fileName} wasn’t the file Cmdr had listed, so Cmdr left it and stopped.",
   "errors.write.changedWhileDisconnected.suggestion": "Check what’s there now, then delete again if you still want it gone. Files Cmdr deleted before it are gone.",

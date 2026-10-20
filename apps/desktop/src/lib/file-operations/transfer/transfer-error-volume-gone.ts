@@ -88,10 +88,14 @@ function deviceDisconnectedMessage(
 }
 
 /** The operations that have their own "lost the connection" sentences, by the verb their keys use. */
-const SERVER_CONNECTION_LOST_VERBS: Partial<Record<TransferOperationType, 'copy' | 'move' | 'delete'>> = {
+const SERVER_CONNECTION_LOST_VERBS: Partial<
+  Record<TransferOperationType, 'copy' | 'move' | 'delete' | 'compress' | 'archiveEdit'>
+> = {
   copy: 'copy',
   move: 'move',
   delete: 'delete',
+  compress: 'compress',
+  archive_edit: 'archiveEdit',
 }
 
 /**
