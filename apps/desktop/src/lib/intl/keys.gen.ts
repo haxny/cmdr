@@ -1780,6 +1780,7 @@ export type MessageKey =
   | 'fileExplorer.networkMount.tryAgain'
   | 'fileExplorer.openWith.copyRefused.archiveUnreadable'
   | 'fileExplorer.openWith.copyRefused.needsPassword'
+  | 'fileExplorer.openWith.copyRefused.notEnoughSpace'
   | 'fileExplorer.openWith.copyRefused.tooLarge'
   | 'fileExplorer.openWith.copyRefused.tooLargeInRepoHistory'
   | 'fileExplorer.openWith.copyRefused.unreadable'

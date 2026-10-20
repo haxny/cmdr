@@ -396,9 +396,22 @@ serves: a file inside an archive, or a blob in a `.git` snapshot. It reuses this
 the reasons; the shape:
 
 - **A fresh copy per launch, `0o444`, under `<app_data_dir>/open-with-extract/.cmdr-open-with-<uuid>/`**, reaped by
-  `init_open_with_extract_dir` at startup and never earlier: a launched app has no close event, so the process boundary
-  is the only signal a copy is done with. ❌ No refcount, dedup cache, TTL reaper, shared dir with the viewer, or
-  write-back.
+  `init_open_with_extract_dir` at startup: a launched app has no close event, so the process boundary is the only sure
+  signal a copy is done with. ❌ No refcount, dedup cache, shared dir with the viewer, or write-back.
+- **The session sweep bounds the pile** (`sweep_launch_folders`, run by `launch_paths` before each launch's pulls, under
+  `SESSION_SWEEP`): untouched copies past the newest four go once they're 12 hours old, or oldest first once the
+  untouched copies pass 4 GiB together. Ordered by the record's `pulledAt`. A changed copy is never swept (an app may be
+  editing it; startup trashes it), nor a folder with no record yet (a pull running beside this one). Decision/Why: the
+  sweep doesn't ask whether a process holds the copy open. Preview and TextEdit read a file, close it, and keep showing
+  it, so an open-file check (`proc_pidinfo`, `lsof`) answers "free" for a copy on screen; and removing a file an app
+  does hold open is harmless, since its inode lives until the app closes it. Unchanged, past the newest few, and old or
+  over budget is the conservative test.
+- **A launch that refuses a row removes the copies it already made** for the rows before it (`launch_paths_in`): no app
+  ever opens them.
+- **A pull checks for room first** (`TempSpot::check_room`, open-with's spot only): the declared size against the
+  volume's free space, purgeable space counted (`cmdr_local::space::get_space_info_for_path`, about 0.6 s of NSURL),
+  refused as `ViewerError::NotEnoughSpace` before a byte is written. The viewer's spot skips it: a preview stays under
+  256 MiB, and an open shouldn't pay the NSURL query. No answer goes ahead, and a full disk then stops the write.
 - **A changed copy goes to the Trash, ❌ never away** (`open_with_copies.rs`). Gotcha/Why: `0o444` guards the file,
   not its folder, so an atomic save (vim `:w!`, BBEdit's safe save) replaces the copy and "Save a copy" lands beside it;
   the reaper used to remove those with the rest, content that existed nowhere else. Each pull writes a
@@ -420,7 +433,7 @@ the reasons; the shape:
   under the path is `mount_id_for_path` (else the default volume), since the menu carries paths only and a route rides
   on its parent drive's volume.
 - **A pull that can't finish launches nothing and says why.** `launch_paths` answers a `RefusedCopy` (the row, plus a
-  typed `OpenWithCopyRefusal`: `tooLarge { cap }`, `needsPassword`, `archiveUnreadable`, `unreadable`, mapped from the
+  typed `OpenWithCopyRefusal`: `tooLarge { cap }`, `notEnoughSpace { needed }`, `needsPassword`, `archiveUnreadable`, `unreadable`, mapped from the
   `ViewerError` variant, ❌ never its message), and an `OpenWithCopySource` (`archive` / `repoHistory`) taken from the
   resolved `RoutedKind`, which `extract_routed_into` hands back with its failure (`RoutedPullFailure`) so the too-big
   toast can name where the file sits. The archive reasons only ever come from an archive: a portal read that breaks

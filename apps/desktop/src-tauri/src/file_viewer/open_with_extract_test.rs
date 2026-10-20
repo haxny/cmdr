@@ -5,9 +5,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::materialize::reap_orphan_temps;
+use super::open_with_copies::SweepPolicy;
 use super::open_with_extract::{
     OpenWithCopyLaunched, OpenWithCopyRefusal, OpenWithCopyRefused, OpenWithCopySource, RefusedCopy,
-    is_open_with_temp_name, launch_paths_in, listing_path_in, reap_open_with_temps_with,
+    is_open_with_temp_name, launch_paths_in, listing_path_in, reap_open_with_temps_with, sweep_open_with_copies_at,
 };
 use super::{ArchiveFailureKind, ViewerError};
 
@@ -425,4 +426,110 @@ fn a_changed_copy_the_trash_refuses_stays_where_it_is() {
     reap_open_with_temps_with(dir.path(), &no_trash);
 
     assert_eq!(std::fs::read(&copy).expect("still there"), b"my edits");
+}
+
+/// No app ever opens the first row's copy when a later row's pull fails, so it goes
+/// right away instead of waiting out the session.
+#[test]
+fn a_launch_whose_later_row_fails_leaves_no_copy_of_the_earlier_rows() {
+    ensure_root_volume();
+    let src = tempfile::tempdir().expect("src dir");
+    let zip = src.path().join("bundle.zip");
+    build_zip(&zip, &[("small.txt", b"fits"), ("big.bin", &[7u8; 4096])]);
+    let dir = tempfile::tempdir().expect("open-with dir");
+
+    let refused =
+        launch_paths_in(&[zip.join("small.txt"), zip.join("big.bin")], dir.path(), 100).expect_err("over the cap");
+
+    assert_eq!(refused.path, zip.join("big.bin"));
+    assert!(open_with_temps(dir.path()).is_empty(), "the first row's copy went too");
+}
+
+const HOUR: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+
+/// `count` untouched copies in `dir`, oldest first.
+fn pulls(count: usize, dir: &Path) -> (tempfile::TempDir, Vec<PathBuf>) {
+    ensure_root_volume();
+    let src = tempfile::tempdir().expect("src dir");
+    let zip = src.path().join("bundle.zip");
+    let names: Vec<String> = (0..count).map(|i| format!("f{i}.txt")).collect();
+    let entries: Vec<(&str, &[u8])> = names
+        .iter()
+        .map(|name| (name.as_str(), b"0123456789".as_slice()))
+        .collect();
+    build_zip(&zip, &entries);
+    let copies = names.iter().map(|name| pull(&zip, name, dir)).collect();
+    (src, copies)
+}
+
+/// Copies pile up all session otherwise, up to 2 GiB each. Old ones go, but never the
+/// newest few (an app may still be showing one), and never one an app changed.
+#[test]
+fn the_session_sweep_removes_old_untouched_copies_but_keeps_the_newest_and_the_changed() {
+    let dir = tempfile::tempdir().expect("open-with dir");
+    let (_src, copies) = pulls(6, dir.path());
+    save_over(&copies[0], b"my edits");
+    let policy = SweepPolicy {
+        keep_newest: 4,
+        max_age: 12 * HOUR,
+        budget_bytes: u64::MAX,
+    };
+
+    sweep_open_with_copies_at(dir.path(), std::time::SystemTime::now() + 13 * HOUR, &policy);
+
+    assert_eq!(std::fs::read(&copies[0]).expect("changed: kept"), b"my edits");
+    assert!(!copies[1].exists(), "the oldest untouched copy went");
+    for copy in &copies[2..] {
+        assert!(copy.exists(), "the newest four stay: {}", copy.display());
+    }
+}
+
+#[test]
+fn the_session_sweep_leaves_young_copies_alone() {
+    let dir = tempfile::tempdir().expect("open-with dir");
+    let (_src, copies) = pulls(6, dir.path());
+    let policy = SweepPolicy {
+        keep_newest: 4,
+        max_age: 12 * HOUR,
+        budget_bytes: u64::MAX,
+    };
+
+    sweep_open_with_copies_at(dir.path(), std::time::SystemTime::now(), &policy);
+
+    assert!(copies.iter().all(|copy| copy.exists()));
+}
+
+/// Over the size budget, the oldest go first, whatever their age.
+#[test]
+fn the_session_sweep_evicts_the_oldest_past_the_size_budget() {
+    let dir = tempfile::tempdir().expect("open-with dir");
+    let (_src, copies) = pulls(4, dir.path());
+    let policy = SweepPolicy {
+        keep_newest: 1,
+        max_age: 12 * HOUR,
+        budget_bytes: 25,
+    };
+
+    sweep_open_with_copies_at(dir.path(), std::time::SystemTime::now(), &policy);
+
+    assert!(!copies[0].exists() && !copies[1].exists(), "10 + 10 + 10 is over 25");
+    assert!(copies[2].exists() && copies[3].exists());
+}
+
+#[test]
+fn a_pull_with_no_room_for_it_is_refused() {
+    use super::materialize::room_refusal;
+
+    assert!(matches!(
+        room_refusal(500, Some(499)),
+        Some(ViewerError::NotEnoughSpace {
+            needed: 500,
+            available: 499
+        })
+    ));
+    assert!(room_refusal(500, Some(500)).is_none());
+    assert!(
+        room_refusal(500, None).is_none(),
+        "no answer goes ahead: a full disk then stops the write"
+    );
 }

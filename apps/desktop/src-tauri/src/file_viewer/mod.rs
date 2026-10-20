@@ -287,6 +287,10 @@ pub enum ViewerError {
     /// Deep Archive) and can't be read until someone restores it, so there's
     /// nothing to preview yet and a Retry can't help.
     ColdStorage,
+    NotEnoughSpace {
+        needed: u64,
+        available: u64,
+    },
 }
 
 impl std::fmt::Display for ViewerError {
@@ -327,6 +331,12 @@ impl ErrorLogText for ViewerError {
             Self::DestinationIsReadOnly => write!(out, "Can't save into a read-only location"),
             Self::Archive { message, .. } => write!(out, "{message}"),
             Self::ColdStorage => write!(out, "The file is archived and needs a restore before it can be read"),
+            Self::NotEnoughSpace { needed, available } => {
+                write!(
+                    out,
+                    "Not enough free space for the copy (needs {needed}, has {available})"
+                )
+            }
         }
     }
 }

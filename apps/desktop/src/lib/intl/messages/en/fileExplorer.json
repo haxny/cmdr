@@ -1325,6 +1325,15 @@
       "appName": "the app the user picked, e.g. Preview or QuickTime Player. Never translate it"
     }
   },
+  "fileExplorer.openWith.copyRefused.notEnoughSpace": "Your Mac’s disk doesn’t have room for a {size} copy of {fileName}, so Cmdr can’t open it in {appName}. Free up some space, then try again.",
+  "@fileExplorer.openWith.copyRefused.notEnoughSpace": {
+    "description": "Toast shown after the user right-clicked a file inside an archive (a zip Cmdr browses like a folder) or a Git repository’s history, picked an app under \"Open with\", and nothing opened. To open such a file, Cmdr first copies it into a temporary file on this Mac’s startup disk, and that disk doesn’t have enough free space for the copy. Suggests freeing space and trying again. Never use the words \"error\" or \"failed\".",
+    "placeholders": {
+      "size": "the copy’s size, already formatted with its unit, e.g. 1.2 GB",
+      "fileName": "the file’s name, e.g. holiday.mov. Never translate it",
+      "appName": "the app the user picked, e.g. QuickTime Player. Never translate it"
+    }
+  },
   "fileExplorer.openWith.copyRefused.needsPassword": "{fileName} is in a password-protected archive. Copy it to a folder first (Cmdr will ask for the password), then open it in {appName}.",
   "@fileExplorer.openWith.copyRefused.needsPassword": {
     "description": "Toast shown after the user right-clicked a file inside an encrypted archive (a zip or 7z Cmdr browses like a folder), picked an app under \"Open with\", and nothing opened, because Cmdr doesn’t have the archive’s password yet. Copying the file out (F5) shows a password prompt; after that, the file can be opened. \"Archive\" means a zip/7z file.",

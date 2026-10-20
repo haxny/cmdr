@@ -78,6 +78,12 @@ function noticeText({ fileName, appName, reason, source }: OpenWithCopyRefused):
           : 'fileExplorer.openWith.copyRefused.tooLarge',
         { fileName, appName, limit: formatByteSize(reason.cap) },
       )
+    case 'notEnoughSpace':
+      return tString('fileExplorer.openWith.copyRefused.notEnoughSpace', {
+        fileName,
+        appName,
+        size: formatByteSize(reason.needed),
+      })
     case 'needsPassword':
       return tString('fileExplorer.openWith.copyRefused.needsPassword', { fileName, appName })
     case 'archiveUnreadable':

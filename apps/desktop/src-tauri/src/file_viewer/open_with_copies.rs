@@ -14,9 +14,17 @@
 //!   everything in a changed one to the Trash, under its own name, logging at `warn`.
 //!   When the Trash refuses an item, the folder stays for the next launch: ❌ never a
 //!   delete in its place.
+//! - **The session sweep** ([`sweep_launch_folders`]), before each launch's pulls,
+//!   removes untouched copies past the newest few once they're old or over a size
+//!   budget, so a long session can't fill the disk. "No process holds it open" is
+//!   deliberately not the test: Preview and TextEdit read a file and close it while
+//!   still showing it, so an open-file check answers "free" for a copy on screen, and
+//!   removing a file an app does hold open is harmless (its inode lives until closed).
+//!   Unchanged, past the newest few, and old or over budget is what makes a copy safe
+//!   to take.
 
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
@@ -32,6 +40,8 @@ struct PullRecord {
     file_name: String,
     size: u64,
     modified: FileTime,
+    /// When the pull finished, which orders copies newest-first for the session sweep.
+    pulled_at: FileTime,
 }
 
 /// A file's mtime to the nanosecond, as seconds and nanoseconds since the Unix epoch.
@@ -48,6 +58,10 @@ impl FileTime {
             secs: since.as_secs(),
             nanos: since.subsec_nanos(),
         })
+    }
+
+    fn to_system_time(self) -> SystemTime {
+        UNIX_EPOCH + Duration::new(self.secs, self.nanos)
     }
 }
 
@@ -66,6 +80,7 @@ pub(super) fn record_pull(copy: &Path) {
             file_name,
             size: meta.len(),
             modified,
+            pulled_at: FileTime::of(SystemTime::now()).ok_or("no clock")?,
         };
         let json = serde_json::to_vec(&record).map_err(|e| e.to_string())?;
         std::fs::write(folder.join(RECORD_NAME), json).map_err(|e| e.to_string())
@@ -75,31 +90,23 @@ pub(super) fn record_pull(copy: &Path) {
     }
 }
 
-/// Whether the launch folder at `folder` still holds exactly what its pull left.
-fn is_untouched(folder: &Path) -> bool {
-    let Some(record) = std::fs::read(folder.join(RECORD_NAME))
+/// The record of the launch folder at `folder` when it still holds exactly what its
+/// pull left, else `None`: changed, or never recorded.
+fn untouched_record(folder: &Path) -> Option<PullRecord> {
+    let record = std::fs::read(folder.join(RECORD_NAME))
         .ok()
-        .and_then(|bytes| serde_json::from_slice::<PullRecord>(&bytes).ok())
-    else {
-        return false;
-    };
-    let Ok(entries) = std::fs::read_dir(folder) else {
-        return false;
-    };
-    let only_the_pull = entries.into_iter().all(|entry| {
+        .and_then(|bytes| serde_json::from_slice::<PullRecord>(&bytes).ok())?;
+    let only_the_pull = std::fs::read_dir(folder).ok()?.all(|entry| {
         entry.is_ok_and(|entry| {
             let name = entry.file_name();
             name == RECORD_NAME || name.to_string_lossy() == record.file_name
         })
     });
-    if !only_the_pull {
-        return false;
-    }
-    std::fs::symlink_metadata(folder.join(&record.file_name)).is_ok_and(|meta| {
-        meta.is_file()
-            && meta.len() == record.size
-            && meta.modified().ok().and_then(FileTime::of) == Some(record.modified)
-    })
+    let meta = std::fs::symlink_metadata(folder.join(&record.file_name)).ok()?;
+    let as_pulled = meta.is_file()
+        && meta.len() == record.size
+        && meta.modified().ok().and_then(FileTime::of) == Some(record.modified);
+    (only_the_pull && as_pulled).then_some(record)
 }
 
 /// The startup sweep of the open-with dir: every subdir of `dir` that `is_launch_folder`
@@ -118,7 +125,7 @@ pub(super) fn reap_launch_folders(
             continue;
         }
         let folder = entry.path();
-        if !is_untouched(&folder) && !trash_contents(&folder, trash) {
+        if untouched_record(&folder).is_none() && !trash_contents(&folder, trash) {
             continue;
         }
         if let Err(e) = std::fs::remove_dir_all(&folder) {
@@ -157,4 +164,52 @@ fn trash_contents(folder: &Path, trash: &dyn Fn(&Path) -> Result<(), String>) ->
         }
     }
     all_trashed
+}
+
+/// How the in-session sweep picks what goes.
+pub(super) struct SweepPolicy {
+    /// This many of the newest untouched copies always stay, whatever their age or size.
+    pub(super) keep_newest: usize,
+    /// An untouched copy past the newest few goes once it's this old.
+    pub(super) max_age: Duration,
+    /// Past the newest few, the oldest go until the untouched copies fit in this.
+    pub(super) budget_bytes: u64,
+}
+
+/// The in-session sweep, run before each launch's pulls: removes the untouched copies
+/// `policy` lets go, as of `now`. Never touches a changed copy (an app may be editing
+/// it; the next startup takes it to the Trash) or a folder with no record yet (a pull
+/// still running beside this one).
+pub(super) fn sweep_launch_folders(
+    dir: &Path,
+    is_launch_folder: impl Fn(&str) -> bool,
+    now: SystemTime,
+    policy: &SweepPolicy,
+) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    let mut untouched: Vec<(PathBuf, PullRecord)> = entries
+        .flatten()
+        .filter(|entry| is_launch_folder(&entry.file_name().to_string_lossy()))
+        .filter_map(|entry| {
+            let folder = entry.path();
+            untouched_record(&folder).map(|record| (folder, record))
+        })
+        .collect();
+    untouched.sort_by_key(|(_, record)| std::cmp::Reverse(record.pulled_at.to_system_time()));
+    let mut kept_bytes: u64 = 0;
+    for (index, (folder, record)) in untouched.into_iter().enumerate() {
+        let age = now
+            .duration_since(record.pulled_at.to_system_time())
+            .unwrap_or_default();
+        let over_budget = kept_bytes.saturating_add(record.size) > policy.budget_bytes;
+        if index < policy.keep_newest || (age < policy.max_age && !over_budget) {
+            kept_bytes = kept_bytes.saturating_add(record.size);
+            continue;
+        }
+        if let Err(e) = std::fs::remove_dir_all(&folder) {
+            log::debug!(target: "cmdr_lib::file_viewer", "couldn't sweep open-with copy {}: {e}", folder.display());
+        }
+    }
 }

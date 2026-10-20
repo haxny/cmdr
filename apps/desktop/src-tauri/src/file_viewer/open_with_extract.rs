@@ -16,9 +16,11 @@
 //!   `.cmdr-open-with-*`). The viewer's reaper runs over a different dir and prefix, so
 //!   neither can delete the other's live temps, and side-by-side dev / prod / worktree
 //!   instances never share one.
-//! - **Reaped at startup only.** The process boundary is what marks a temp abandoned:
-//!   an app may hold a copy open for as long as this run lasts. ❌ No TTL reaper. An
-//!   untouched copy is removed then; a changed one goes to the Trash.
+//! - **Swept in the session, reaped at startup.** The process boundary is what marks a
+//!   copy abandoned, so the startup reaper takes every untouched one, and a changed one
+//!   to the Trash. Before each launch, a sweep also takes untouched copies past the
+//!   newest few once they're old or over a size budget (`SESSION_SWEEP`), so a long
+//!   session can't fill the disk; a changed copy waits for the next startup.
 //! - **Listing apps against a stand-in.** LaunchServices answers no apps for a path
 //!   with nothing at it (verified on macOS 27.0 with `URLsForApplicationsToOpenURL:`
 //!   via `osascript`, 2026-10-01), and the menu is built before anything is pulled. So
@@ -39,8 +41,10 @@ use std::sync::{LazyLock, RwLock};
 use serde::{Deserialize, Serialize};
 
 #[cfg(any(target_os = "macos", test))]
-use super::materialize::{RoutedPullFailure, TempSpot, extract_routed_into};
-use super::open_with_copies::{reap_launch_folders, record_pull};
+use super::materialize::{MaterializedFile, RoutedPullFailure, TempSpot, extract_routed_into};
+use super::open_with_copies::reap_launch_folders;
+#[cfg(any(target_os = "macos", test))]
+use super::open_with_copies::{SweepPolicy, record_pull, sweep_launch_folders};
 use super::{ArchiveFailureKind, ViewerError};
 #[cfg(any(target_os = "macos", test))]
 use crate::file_system::volume::RoutedKind;
@@ -69,10 +73,20 @@ const DEFAULT_DIRNAME: &str = "cmdr-open-with-extract";
 
 /// Max bytes pulled for one launch. Larger than the viewer's 256 MiB preview cap: a
 /// whole video or a big PDF is what people open in a real app. The declared size is
-/// checked before a byte is written, so this is also the zip-bomb guard, and each copy
-/// stays on disk until the next launch, which is what keeps it bounded.
+/// checked before a byte is written, so this is also the zip-bomb guard. It bounds one
+/// copy; [`SESSION_SWEEP`] bounds their sum.
 #[cfg(target_os = "macos")]
 pub(crate) const OPEN_WITH_CAP_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+
+/// What the sweep before each launch lets go. Generous on purpose: a copy an app still
+/// shows is one the person may come back to, so the newest four always stay, and an
+/// older one goes after 12 hours, or sooner once the copies pass 4 GiB together.
+#[cfg(target_os = "macos")]
+const SESSION_SWEEP: SweepPolicy = SweepPolicy {
+    keep_newest: 4,
+    max_age: std::time::Duration::from_secs(12 * 60 * 60),
+    budget_bytes: 4 * 1024 * 1024 * 1024,
+};
 
 /// The per-instance dir, set at startup by [`init_open_with_extract_dir`].
 static OPEN_WITH_DIR: LazyLock<RwLock<Option<PathBuf>>> = LazyLock::new(|| RwLock::new(None));
@@ -114,6 +128,17 @@ pub(super) fn reap_open_with_temps_with(dir: &Path, trash: &dyn Fn(&Path) -> Res
         dir,
         |name| name.starts_with(TEMP_SUBDIR_PREFIX) && name != STAND_IN_DIRNAME,
         trash,
+    );
+}
+
+/// The in-session sweep of `dir` as of `now` (`open_with_copies::sweep_launch_folders`).
+#[cfg(any(target_os = "macos", test))]
+pub(super) fn sweep_open_with_copies_at(dir: &Path, now: std::time::SystemTime, policy: &SweepPolicy) {
+    sweep_launch_folders(
+        dir,
+        |name| name.starts_with(TEMP_SUBDIR_PREFIX) && name != STAND_IN_DIRNAME,
+        now,
+        policy,
     );
 }
 
@@ -220,6 +245,9 @@ impl From<RoutedKind> for OpenWithCopySource {
 pub enum OpenWithCopyRefusal {
     /// Over `OPEN_WITH_CAP_BYTES` (`cap`), refused before a byte was written.
     TooLarge { cap: u64 },
+    /// The startup disk hasn't room for the copy's `needed` bytes, refused before a
+    /// byte was written.
+    NotEnoughSpace { needed: u64 },
     /// The archive needs a password it hasn't been given. Copying the file out asks
     /// for it, after which "Open with" works too.
     NeedsPassword,
@@ -233,6 +261,7 @@ impl From<&ViewerError> for OpenWithCopyRefusal {
     fn from(error: &ViewerError) -> Self {
         match error {
             ViewerError::TooLargeToPreview { cap, .. } => Self::TooLarge { cap: *cap },
+            ViewerError::NotEnoughSpace { needed, .. } => Self::NotEnoughSpace { needed: *needed },
             ViewerError::Archive { failure, .. } => match failure {
                 ArchiveFailureKind::NeedsPassword => Self::NeedsPassword,
                 ArchiveFailureKind::Unsupported | ArchiveFailureKind::Unreadable => Self::ArchiveUnreadable,
@@ -264,44 +293,69 @@ pub(crate) struct RefusedCopy {
 }
 
 /// What to hand the app: each path as it is, or a fresh read-only copy of one only a
-/// route serves. Blocking (it streams the file out): run it off the main thread.
+/// route serves. Sweeps the copies earlier launches this session left first, so they
+/// can't pile up. Blocking (it streams the file out): run it off the main thread.
 #[cfg(target_os = "macos")]
 pub(crate) fn launch_paths(paths: &[PathBuf]) -> Result<Vec<PathBuf>, RefusedCopy> {
-    launch_paths_in(paths, &open_with_dir(), OPEN_WITH_CAP_BYTES)
+    let dir = open_with_dir();
+    sweep_open_with_copies_at(&dir, std::time::SystemTime::now(), &SESSION_SWEEP);
+    launch_paths_in(paths, &dir, OPEN_WITH_CAP_BYTES)
 }
 
-/// [`launch_paths`] into an explicit dir under an explicit cap, for tests.
+/// [`launch_paths`] into an explicit dir under an explicit cap, for tests. A row that
+/// can't be copied takes the copies already made for the rows before it along: no app
+/// will ever open them.
 #[cfg(any(target_os = "macos", test))]
 pub(super) fn launch_paths_in(paths: &[PathBuf], dir: &Path, cap: u64) -> Result<Vec<PathBuf>, RefusedCopy> {
     let spot = TempSpot {
         dir,
         prefix: TEMP_SUBDIR_PREFIX,
+        check_room: true,
     };
-    paths
-        .iter()
-        .map(|path| {
-            if !path_routes_over_its_parent(path) {
-                return Ok(path.clone());
+    let mut launched = Vec::with_capacity(paths.len());
+    let mut copy_folders = Vec::new();
+    for path in paths {
+        match launch_path(path, spot, cap) {
+            Ok(Some(copy)) => {
+                copy_folders.push(copy.cleanup_dir);
+                launched.push(copy.temp_file);
             }
-            // `None`: the route didn't confirm (a real folder named `foo.zip`), so the
-            // path is a real file and opens as it is.
-            let copy = extract_routed_into(path, &parent_volume_id(path), spot, cap).map_err(
-                |RoutedPullFailure { routed, error }| RefusedCopy {
-                    path: path.clone(),
-                    reason: OpenWithCopyRefusal::from(&error),
-                    source: OpenWithCopySource::from(routed),
-                    error,
-                },
-            )?;
-            let Some(copy) = copy else {
-                return Ok(path.clone());
-            };
-            make_read_only(&copy.temp_file);
-            // After the mode change, which touches ctime only: the record's mtime holds.
-            record_pull(&copy.temp_file);
-            Ok(copy.temp_file)
-        })
-        .collect()
+            Ok(None) => launched.push(path.clone()),
+            Err(refused) => {
+                for folder in &copy_folders {
+                    if let Err(e) = std::fs::remove_dir_all(folder) {
+                        log::debug!(target: "cmdr_lib::file_viewer", "couldn't remove unlaunched copy {}: {e}", folder.display());
+                    }
+                }
+                return Err(refused);
+            }
+        }
+    }
+    Ok(launched)
+}
+
+/// One row's read-only copy, or `None` when the row opens as it is.
+#[cfg(any(target_os = "macos", test))]
+fn launch_path(path: &Path, spot: TempSpot<'_>, cap: u64) -> Result<Option<MaterializedFile>, RefusedCopy> {
+    if !path_routes_over_its_parent(path) {
+        return Ok(None);
+    }
+    // `None`: the route didn't confirm (a real folder named `foo.zip`), so the path is a
+    // real file and opens as it is.
+    let copy = extract_routed_into(path, &parent_volume_id(path), spot, cap).map_err(
+        |RoutedPullFailure { routed, error }| RefusedCopy {
+            path: path.to_path_buf(),
+            reason: OpenWithCopyRefusal::from(&error),
+            source: OpenWithCopySource::from(routed),
+            error,
+        },
+    )?;
+    if let Some(copy) = &copy {
+        make_read_only(&copy.temp_file);
+        // After the mode change, which touches ctime only: the record's mtime holds.
+        record_pull(&copy.temp_file);
+    }
+    Ok(copy)
 }
 
 /// The volume physically holding `path`: the longest registered mount under it, else

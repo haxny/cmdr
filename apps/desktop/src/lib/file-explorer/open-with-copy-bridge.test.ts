@@ -51,6 +51,7 @@ describe('the open-with refusal notice', () => {
   it.each<[string, OpenWithCopyRefusal]>([
     ['too large', { kind: 'tooLarge', cap: TWO_GIB }],
     ['locked', { kind: 'needsPassword' }],
+    ['out of disk space', { kind: 'notEnoughSpace', needed: TWO_GIB }],
     ['a damaged archive', { kind: 'archiveUnreadable' }],
     ['anything else', { kind: 'unreadable' }],
   ])('names the file and the app when it is %s', (_label, reason) => {
@@ -79,6 +80,14 @@ describe('the open-with refusal notice', () => {
     expect(fromRepo).not.toContain('archive')
     expect(fromRepo).toContain('holiday.mov')
     expect(fromRepo).toContain(formatByteSize(TWO_GIB))
+  })
+
+  it('says how big a copy the disk has no room for', () => {
+    emitRefused(refused({ kind: 'notEnoughSpace', needed: TWO_GIB }))
+
+    const [message] = addToast.mock.calls[0]
+    expect(message).toContain(formatByteSize(TWO_GIB))
+    expect(message).toContain('space')
   })
 
   it('tells a locked archive apart from a damaged one', () => {

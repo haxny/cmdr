@@ -12571,6 +12571,11 @@ export type OpenWithCopyRefusal =
   // Over `OPEN_WITH_CAP_BYTES` (`cap`), refused before a byte was written.
   | { kind: 'tooLarge'; cap: number }
   /**
+   *  The startup disk hasn't room for the copy's `needed` bytes, refused before a
+   *  byte was written.
+   */
+  | { kind: 'notEnoughSpace'; needed: number }
+  /**
    *  The archive needs a password it hasn't been given. Copying the file out asks
    *  for it, after which "Open with" works too.
    */
@@ -17894,6 +17899,7 @@ export type ViewerError =
    *  nothing to preview yet and a Retry can't help.
    */
   | { kind: 'coldStorage' }
+  | { kind: 'notEnoughSpace'; needed: number; available: number }
 
 /**
  *  `viewer-history-action`: Go > Back or Go > Forward was picked while a viewer window had

@@ -185,6 +185,10 @@ pub(super) fn is_orphan_temp_name(name: &str) -> bool {
 pub(super) struct TempSpot<'a> {
     pub(super) dir: &'a Path,
     pub(super) prefix: &'a str,
+    /// Whether to refuse a pull the disk hasn't room for ([`room_refusal`]). Open-with's
+    /// copies run to 2 GiB and are worth the NSURL query (about 0.6 s); a viewer preview
+    /// stays under 256 MiB and opens without it.
+    pub(super) check_room: bool,
 }
 
 impl<'a> TempSpot<'a> {
@@ -193,6 +197,7 @@ impl<'a> TempSpot<'a> {
         Self {
             dir,
             prefix: TEMP_SUBDIR_PREFIX,
+            check_room: false,
         }
     }
 }
@@ -481,6 +486,11 @@ async fn pull_to_temp(
     if declared > cap {
         return Err(ViewerError::TooLargeToPreview { size: declared, cap });
     }
+    if spot.check_room
+        && let Some(refused) = room_refusal(declared, available_bytes_at(spot.dir))
+    {
+        return Err(refused);
+    }
 
     let cleanup_dir = spot.dir.join(format!("{}{}", spot.prefix, uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&cleanup_dir)?;
@@ -554,6 +564,23 @@ async fn stream_to_file(
     }
     file.flush()?;
     Ok(())
+}
+
+/// The refusal for a pull of `needed` bytes onto a disk with `available` free, if it
+/// can't fit. No answer goes ahead: a full disk then stops the write mid-pull.
+pub(super) fn room_refusal(needed: u64, available: Option<u64>) -> Option<ViewerError> {
+    available
+        .filter(|&available| available < needed)
+        .map(|available| ViewerError::NotEnoughSpace { needed, available })
+}
+
+/// Free bytes on the volume holding `dir`, purgeable space counted (what Finder shows),
+/// asked of the nearest folder that exists: `dir` itself is made on the first pull.
+fn available_bytes_at(dir: &Path) -> Option<u64> {
+    let existing = dir.ancestors().find(|ancestor| ancestor.exists())?;
+    cmdr_local::space::get_space_info_for_path(existing)
+        .ok()?
+        .available_bytes()
 }
 
 fn stopped_error(open: &PendingOpen, cancel: Option<&AtomicBool>) -> Option<ViewerError> {

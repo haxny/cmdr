@@ -54,6 +54,7 @@ function logLevelFor(ve: ViewerError): 'warn' | 'error' {
     case 'tooLargeToPreview':
     case 'archive':
     case 'coldStorage':
+    case 'notEnoughSpace': // only an "Open with" pull checks for room, so a viewer open never meets it
     case 'cancelled':
     case 'io':
       return 'warn'
