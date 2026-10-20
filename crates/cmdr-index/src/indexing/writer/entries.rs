@@ -329,16 +329,14 @@ fn upsert_insert_new(
         next_id,
     ) {
         Ok(new_id) => {
+            let kind = if is_directory {
+                LogKind::DirName
+            } else {
+                LogKind::FileName
+            };
             log::trace!(
                 "Writer: UpsertEntryV2 inserted \"{name}\" (parent_id={parent_id}) → id={new_id}",
-                name = LogPrivate::new(
-                    if is_directory {
-                        LogKind::DirName
-                    } else {
-                        LogKind::FileName
-                    },
-                    name
-                ),
+                name = LogPrivate::new(kind, name),
             );
             if is_directory {
                 // Initialize empty dir_stats for new directories so enrichment
@@ -516,6 +514,7 @@ pub(super) fn handle_move_entry_v2(
             log::warn!(
                 target: "indexing::writer",
                 "MoveEntryV2: refusing to move id={entry_id} under its own subtree (new parent id={new_parent_id}, name={new_name:?}); a recycled inode matched a stale row",
+                new_name = LogPrivate::name(&new_name),
             );
             return;
         }

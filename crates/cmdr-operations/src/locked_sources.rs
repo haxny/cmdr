@@ -31,6 +31,7 @@
 //! and the re-lock leaves the item unlocked at whichever path it's at; the same
 //! accepted gap as a copy's landing (`DETAILS.md` § "Moving Locked items").
 
+use cmdr_fs::log_private::LogPrivate;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -240,7 +241,7 @@ impl LockedPlan {
             Unblock::Cleared(cleared) => Some(cleared),
             Unblock::NothingToClear => None,
             Unblock::Refused => {
-                log::warn!(target: "locked_sources", "couldn't unlock {}, the move meets its refusal", local.display());
+                log::warn!(target: "locked_sources", "couldn't unlock {}, the move meets its refusal", LogPrivate::path(&local));
                 None
             }
         };
@@ -297,7 +298,7 @@ impl Drop for Unlocked {
 fn relock(path: &Path, cleared: &LandedMetadata) {
     let report = apply_landed(path, cleared);
     if report.any_refused() {
-        log::warn!(target: "locked_sources", "{} couldn't be locked again: {report:?}", path.display());
+        log::warn!(target: "locked_sources", "{} couldn't be locked again: {report:?}", LogPrivate::path(path));
     }
 }
 

@@ -145,10 +145,11 @@ impl ErrorLogText for MutationError {
                 )
             }
             MutationError::EntryUnderFile { entry, file } => {
-                write!(
-                    f,
-                    "the archive can't be edited because '{entry}' would sit under the file '{file}'"
-                )
+                out.write_str("the archive can't be edited because '")?;
+                out.value(LogPrivate::path(entry))?;
+                out.write_str("' would sit under the file '")?;
+                out.value(LogPrivate::path(file))?;
+                out.write_str("'")
             }
             MutationError::ReadSource { inner_path, source } => {
                 out.write_str("couldn't read the source for '")?;
