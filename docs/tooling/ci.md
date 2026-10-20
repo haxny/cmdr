@@ -237,9 +237,11 @@ Where the score stands (public API, 2026-10-13: 7.6, with Vulnerabilities at 5 a
 ## CodeQL
 
 `codeql.yml` runs CodeQL (`build-mode: none`, the default `code-scanning` suite) on GitHub Actions workflows, JS/TS, and
-Rust. Rust takes ~6x the other two together, so a push runs it only when Rust sources changed; the weekly run and a
-dispatch always run all three. The Rust extractor analyzes the shipped target (`aarch64-apple-darwin`) with `cfg(test)`
-off, through `CODEQL_EXTRACTOR_RUST_OPTION_*` env vars.
+Rust. Rust takes ~6x the other two together (12–20 min on a runner), so a PR never runs it and a push to `main` runs it
+only when Rust sources changed; the weekly run and a dispatch always run all three. A Rust finding surfaces after
+landing, and the release gate's open-alert check holds the next release on it. SAST only needs CodeQL to have run on a
+PR, not on every language. The Rust extractor analyzes the shipped target (`aarch64-apple-darwin`) with `cfg(test)` off,
+through `CODEQL_EXTRACTOR_RUST_OPTION_*` env vars.
 
 - **What it scans**: `.github/codeql/codeql-config.yml`. Test code, fixtures, the E2E harness, and generated files stay
   out (their hard-coded passwords and `http://` URLs are the point of a test), and `rust/cleartext-logging` is excluded:
