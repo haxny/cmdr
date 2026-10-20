@@ -88,14 +88,16 @@ impl TransportTimings {
     /// NFS's own ladder: 5 s of silence, then two probes of 5 s each, so a dead
     /// server is gone after 15 s (the other backends allow 30 s). `NULL` is
     /// answered by the RPC layer even on a busy server, so a probe that goes
-    /// unanswered says a lot more than an HTTP one.
+    /// unanswered says a lot more than an HTTP one. A call is stuck after 20 s,
+    /// so a dropped metadata reply gets its one resend well inside the 60 s
+    /// call budget.
     pub(crate) const PRODUCTION: Self = Self {
         liveness: Timings {
             quiet: Duration::from_secs(5),
             probe_budget: Duration::from_secs(5),
             unanswered_limit: 2,
         },
-        stuck_after: Duration::from_secs(60),
+        stuck_after: Duration::from_secs(20),
     };
 }
 

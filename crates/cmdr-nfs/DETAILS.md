@@ -56,7 +56,7 @@ and needs a license allowlist change).
     every waiting call answers `Disconnected` at once. A framed reply that won't decode fails only its call.
   - Every byte heard and every record sent feeds `cmdr_fs::volume::liveness`, with NFS's 5 s quiet / 5 s probe / two
     probes; the probe is `NULL` on a FRESH connection from an ephemeral port. The ladder giving up poisons.
-  - ❗ **A reply that never comes**: a call unanswered for `stuck_after` (60 s) while a call sent AFTER it was answered
+  - ❗ **A reply that never comes**: a call unanswered for `stuck_after` (20 s) while a call sent AFTER it was answered
     is resent once, same XID, if `Repeat::Safe`; `Repeat::Never` (CREATE, MKDIR, REMOVE, RMDIR, RENAME, SETATTR) fails
     `Unanswered` (`IoError` `ETIMEDOUT`) and RETIRES the connection (new calls answer `Retired`, in-flight ones finish);
     a resent call silent again poisons. With nothing later answered it's the ladder's case and nothing is resent.
@@ -72,9 +72,8 @@ and needs a license allowlist change).
   with the verifier echoed and the next cookie taken from the page's LAST entry (even a dropped `..`), the READDIR +
   LOOKUP fallback on a first-page `NOTSUPP`, missing handles and attributes filled (16 in flight), an entry gone by its
   LOOKUP left out, `BAD_COOKIE` restarting (signalled as `ListingEvent::Restarted`) up to three times.
-- ⚠️ A 60 s metadata budget equals `stuck_after`, so a metadata call times out at the moment it would be resent; only
-  budget-less calls (READ, WRITE, COMMIT) and longer budgets ever see the resend. Deliberate for now: a metadata call
-  stuck that long is better failed than retried.
+- **Why 20 s**: it sits well inside the 60 s metadata budget, so a GETATTR, LOOKUP, or READDIRPLUS whose reply was
+  dropped is resent and answered instead of timing out (`transport_test.rs` pins it on a paused clock).
 
 ## The dial
 

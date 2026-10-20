@@ -218,7 +218,7 @@ async fn a_dropped_reply_is_resent_once_with_the_same_xid_once_a_later_call_is_a
     server.reply(later_call.xid, |enc| enc.u32(20)).await;
     assert_eq!(later.await.unwrap().unwrap(), 20);
 
-    // The server never answers the first: 60 s on, it comes again, same XID.
+    // The server never answers the first: 20 s on, it comes again, same XID.
     let resent = server.next_call().await.unwrap();
     assert_eq!(resent.xid, original.xid);
     assert_eq!(resent.procedure, 1);
@@ -426,4 +426,30 @@ async fn a_reset_tcp_connection_poisons_the_transport_immediately() {
     let answer = ask(&conn, 1, Repeat::Safe).await;
     serving.await.unwrap();
     assert!(matches!(answer, Err(CallError::Disconnected(_))), "{answer:?}");
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_stuck_metadata_call_is_resent_at_20_s_and_answered_inside_its_60_s_budget() {
+    let (conn, mut server) = pair();
+    let started = Instant::now();
+    let getattr = {
+        let conn = conn.clone();
+        tokio::spawn(async move {
+            let mut results = conn
+                .call(procedure(1, Repeat::Safe), |_| {}, Some(Duration::from_secs(60)))
+                .await?;
+            Ok::<u32, CallError>(results.u32()?)
+        })
+    };
+    let original = server.next_call().await.unwrap();
+    let later = spawn_ask(&conn, 2, Repeat::Safe);
+    let later_call = server.next_call().await.unwrap();
+    server.reply(later_call.xid, |enc| enc.u32(20)).await;
+    later.await.unwrap().unwrap();
+
+    let resent = server.next_call().await.unwrap();
+    assert_eq!(resent.xid, original.xid);
+    assert_eq!(started.elapsed(), Duration::from_secs(20));
+    server.reply(resent.xid, |enc| enc.u32(10)).await;
+    assert_eq!(getattr.await.unwrap(), Ok(10));
 }
