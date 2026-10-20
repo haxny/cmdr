@@ -1473,6 +1473,18 @@
   "@errors.write.archiveEncryptedEntry.suggestion": {
     "sourceHash": "349350a"
   },
+  "errors.write.archiveEntryUnderFile.title": "Cmdr kan geen onderdeel in een bestand zetten",
+  "@errors.write.archiveEntryUnderFile.title": {
+    "sourceHash": "e0d0138"
+  },
+  "errors.write.archiveEntryUnderFile.message": "{entry} zou in {path} binnen {file} terechtkomen, maar {file} is daar een bestand, dus geen enkel zip-programma zou het onderdeel kunnen tonen of openen. Cmdr heeft de zip ongewijzigd gelaten.",
+  "@errors.write.archiveEntryUnderFile.message": {
+    "sourceHash": "556f6a3"
+  },
+  "errors.write.archiveEntryUnderFile.suggestion": "Wijzig de naam van dat bestand in de zip, of zet het onderdeel ergens anders neer, en probeer het opnieuw.",
+  "@errors.write.archiveEntryUnderFile.suggestion": {
+    "sourceHash": "6ae33d1"
+  },
   "errors.write.invalidName.title": "Ongeldige bestandsnaam",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

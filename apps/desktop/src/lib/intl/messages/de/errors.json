@@ -1473,6 +1473,18 @@
   "@errors.write.archiveEncryptedEntry.suggestion": {
     "sourceHash": "349350a"
   },
+  "errors.write.archiveEntryUnderFile.title": "Cmdr kann kein Objekt in eine Datei legen",
+  "@errors.write.archiveEntryUnderFile.title": {
+    "sourceHash": "e0d0138"
+  },
+  "errors.write.archiveEntryUnderFile.message": "{entry} würde in {path} innerhalb von {file} landen, aber {file} ist dort eine Datei, daher könnte kein Zip-Programm das Objekt anzeigen oder öffnen. Cmdr hat das Zip so gelassen, wie es war.",
+  "@errors.write.archiveEntryUnderFile.message": {
+    "sourceHash": "556f6a3"
+  },
+  "errors.write.archiveEntryUnderFile.suggestion": "Benenne diese Datei im Zip um, oder lege das Objekt woanders ab. Versuche es danach noch einmal.",
+  "@errors.write.archiveEntryUnderFile.suggestion": {
+    "sourceHash": "6ae33d1"
+  },
   "errors.write.invalidName.title": "Ungültiger Dateiname",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

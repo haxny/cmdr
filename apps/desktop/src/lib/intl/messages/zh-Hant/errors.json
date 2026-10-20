@@ -1473,6 +1473,18 @@
   "@errors.write.archiveEncryptedEntry.suggestion": {
     "sourceHash": "349350a"
   },
+  "errors.write.archiveEntryUnderFile.title": "Cmdr 無法把項目放進檔案裡",
+  "@errors.write.archiveEntryUnderFile.title": {
+    "sourceHash": "e0d0138"
+  },
+  "errors.write.archiveEntryUnderFile.message": "{entry} 會放進 {path} 裡的 {file} 之中，但 {file} 在那裡是一個檔案，所以任何 zip 工具都無法顯示或開啟這個項目。Cmdr 沒有改動這個 zip。",
+  "@errors.write.archiveEntryUnderFile.message": {
+    "sourceHash": "556f6a3"
+  },
+  "errors.write.archiveEntryUnderFile.suggestion": "在 zip 裡幫那個檔案改名，或者把這個項目放到別處，然後再試一次。",
+  "@errors.write.archiveEntryUnderFile.suggestion": {
+    "sourceHash": "6ae33d1"
+  },
   "errors.write.invalidName.title": "檔名不合用",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

@@ -1473,6 +1473,18 @@
   "@errors.write.archiveEncryptedEntry.suggestion": {
     "sourceHash": "349350a"
   },
+  "errors.write.archiveEntryUnderFile.title": "O Cmdr não pode colocar um item dentro de um arquivo",
+  "@errors.write.archiveEntryUnderFile.title": {
+    "sourceHash": "e0d0138"
+  },
+  "errors.write.archiveEntryUnderFile.message": "{entry} ficaria dentro de {file}, em {path}, mas lá {file} é um arquivo, então nenhuma ferramenta de zip conseguiria mostrar ou abrir o item. O Cmdr deixou o zip como estava.",
+  "@errors.write.archiveEntryUnderFile.message": {
+    "sourceHash": "556f6a3"
+  },
+  "errors.write.archiveEntryUnderFile.suggestion": "Renomeie esse arquivo no zip, ou coloque o item em outro lugar, e depois tente de novo.",
+  "@errors.write.archiveEntryUnderFile.suggestion": {
+    "sourceHash": "6ae33d1"
+  },
   "errors.write.invalidName.title": "Nome de arquivo inválido",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

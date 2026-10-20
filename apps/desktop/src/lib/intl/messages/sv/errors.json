@@ -1473,6 +1473,18 @@
   "@errors.write.archiveEncryptedEntry.suggestion": {
     "sourceHash": "349350a"
   },
+  "errors.write.archiveEntryUnderFile.title": "Cmdr kan inte lägga ett objekt inuti en fil",
+  "@errors.write.archiveEntryUnderFile.title": {
+    "sourceHash": "e0d0138"
+  },
+  "errors.write.archiveEntryUnderFile.message": "{entry} skulle hamna inuti {file} i {path}, men där är {file} en fil, så inget zip-program skulle kunna visa eller öppna objektet. Cmdr lät zip-filen vara som den var.",
+  "@errors.write.archiveEntryUnderFile.message": {
+    "sourceHash": "556f6a3"
+  },
+  "errors.write.archiveEntryUnderFile.suggestion": "Byt namn på den filen i zip-filen eller lägg objektet någon annanstans, och försök sedan igen.",
+  "@errors.write.archiveEntryUnderFile.suggestion": {
+    "sourceHash": "6ae33d1"
+  },
   "errors.write.invalidName.title": "Ogiltigt filnamn",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

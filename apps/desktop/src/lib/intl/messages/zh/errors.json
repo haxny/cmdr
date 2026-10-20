@@ -1472,6 +1472,18 @@
   "@errors.write.archiveEncryptedEntry.suggestion": {
     "sourceHash": "349350a"
   },
+  "errors.write.archiveEntryUnderFile.title": "Cmdr 无法把项目放进文件里",
+  "@errors.write.archiveEntryUnderFile.title": {
+    "sourceHash": "e0d0138"
+  },
+  "errors.write.archiveEntryUnderFile.message": "{entry} 会放进 {path} 里的 {file} 之中，但 {file} 在那里是一个文件，所以任何 zip 工具都无法显示或打开这个项目。Cmdr 没有改动这个 zip。",
+  "@errors.write.archiveEntryUnderFile.message": {
+    "sourceHash": "556f6a3"
+  },
+  "errors.write.archiveEntryUnderFile.suggestion": "在 zip 里给那个文件改名，或者把这个项目放到别处，然后再试一次。",
+  "@errors.write.archiveEntryUnderFile.suggestion": {
+    "sourceHash": "6ae33d1"
+  },
   "errors.write.invalidName.title": "文件名无效",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"

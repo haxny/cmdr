@@ -1473,6 +1473,18 @@
   "@errors.write.archiveEncryptedEntry.suggestion": {
     "sourceHash": "349350a"
   },
+  "errors.write.archiveEntryUnderFile.title": "Cmdr không thể đặt một mục vào bên trong một tệp",
+  "@errors.write.archiveEntryUnderFile.title": {
+    "sourceHash": "e0d0138"
+  },
+  "errors.write.archiveEntryUnderFile.message": "{entry} sẽ nằm bên trong {file} trong {path}, nhưng {file} ở đó là một tệp, nên không công cụ zip nào có thể hiển thị hay mở mục này. Cmdr đã để nguyên tệp zip.",
+  "@errors.write.archiveEntryUnderFile.message": {
+    "sourceHash": "556f6a3"
+  },
+  "errors.write.archiveEntryUnderFile.suggestion": "Hãy đổi tên tệp đó trong tệp zip, hoặc đặt mục này ở chỗ khác, rồi thử lại.",
+  "@errors.write.archiveEntryUnderFile.suggestion": {
+    "sourceHash": "6ae33d1"
+  },
   "errors.write.invalidName.title": "Tên tệp không hợp lệ",
   "@errors.write.invalidName.title": {
     "sourceHash": "1fb1e45"
