@@ -27,13 +27,18 @@ pub trait ListingOverlay: Send + Sync + 'static {
     /// on.
     fn id(&self) -> &'static str;
 
-    /// Whether this overlay has anything to say about `path` on `volume`.
+    /// Whether this overlay has anything to say about `path` on `volume`, whose
+    /// listing holds `entries` (the volume's own, enriched, before any
+    /// contributor's rows).
     ///
     /// ❗ Cheap and zero-I/O: this runs on EVERY directory listing in the app,
-    /// so it has to be a look at the path and the volume's capability flags.
-    /// The expensive half is [`extra_entries`](Self::extra_entries), which only
-    /// runs when this answered `true`.
-    fn applies_to(&self, volume: &dyn Volume, path: &Path) -> bool;
+    /// so it has to be a look at the path, the volume's capability flags, and
+    /// the entries already in hand. A contributor that scans `entries` caps
+    /// itself (answer `false` past a small count), so a 100k-entry folder costs
+    /// a length check. The expensive half is
+    /// [`extra_entries`](Self::extra_entries), which only runs when this
+    /// answered `true`.
+    fn applies_to(&self, volume: &dyn Volume, path: &Path, entries: &[FileEntry]) -> bool;
 
     /// The rows to fold in. Runs on the blocking pool, so it may open a
     /// repository or hit the disk.

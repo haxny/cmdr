@@ -112,7 +112,7 @@ impl ListingOverlay for StaticOverlay {
         "static"
     }
 
-    fn applies_to(&self, volume: &dyn Volume, _path: &Path) -> bool {
+    fn applies_to(&self, volume: &dyn Volume, _path: &Path, _entries: &[FileEntry]) -> bool {
         volume.name() == self.volume_name
     }
 

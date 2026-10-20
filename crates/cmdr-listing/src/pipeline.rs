@@ -150,7 +150,7 @@ impl Inner {
         // Asked outside every engine lock: the volume seam reads the host's
         // registry. No volume served means no overlay can apply.
         if let Some(volume) = self.volumes.get(volume_id)
-            && !self.applicable_overlays(volume.as_ref(), path).is_empty()
+            && !self.applicable_overlays(volume.as_ref(), path, &entries).is_empty()
         {
             return None;
         }
@@ -162,12 +162,18 @@ impl Inner {
         })
     }
 
-    /// The overlays that have something to say about `path` on `volume`, in
-    /// registration order. Cheap: `applies_to` is zero-I/O by contract.
-    fn applicable_overlays(&self, volume: &dyn Volume, path: &Path) -> Vec<Arc<dyn ListingOverlay>> {
+    /// The overlays that have something to say about `path` on `volume`, whose
+    /// listing holds `entries`, in registration order. Cheap: `applies_to` is
+    /// zero-I/O by contract.
+    fn applicable_overlays(
+        &self,
+        volume: &dyn Volume,
+        path: &Path,
+        entries: &[FileEntry],
+    ) -> Vec<Arc<dyn ListingOverlay>> {
         self.overlays()
             .iter()
-            .filter(|overlay| overlay.applies_to(volume, path))
+            .filter(|overlay| overlay.applies_to(volume, path, entries))
             .cloned()
             .collect()
     }
@@ -183,7 +189,7 @@ impl Inner {
     /// Sorting happens after this returns, so a contributor hands rows over in any
     /// order.
     pub(super) async fn decorate(&self, volume: &Arc<dyn Volume>, path: &Path, entries: &mut Vec<FileEntry>) -> usize {
-        let applicable = self.applicable_overlays(volume.as_ref(), path);
+        let applicable = self.applicable_overlays(volume.as_ref(), path, entries);
         if applicable.is_empty() {
             return 0;
         }

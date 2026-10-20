@@ -71,9 +71,10 @@ nothing else, so a read path that skips the overlays doesn't compile. Five paths
 (`refresh.rs`'s `notify_full_refresh_locked`), a backend swap's re-read (`foreign_path::respell_listing`), and the
 watcher's full re-read, also ⌘R (`Listings::refresh`, `reread.rs`). Its `std::fs` fallback, with no volume to decorate
 through, keeps the count the listing had (`OverlayRows::Unchanged`). A device backend's `Replaced` hand-over is
-synchronous and can't wait on the overlays' blocking gather, so it asks only their zero-I/O `applies_to`
-(`Inner::prepare_handed_over`): none applies (every device backend today) and it records zero contributed rows; one
-applies and the arm drops the backend's entries and re-reads the directory as a `FullRefresh` does.
+synchronous and can't wait on the overlays' blocking gather, so it asks only their zero-I/O `applies_to`, over the
+handed-over entries (`Inner::prepare_handed_over`): none applies (every device backend today) and it records zero
+contributed rows; one applies and the arm drops the backend's entries and re-reads the directory as a `FullRefresh`
+does.
 
 Today's one contributor is the git portal, which puts the six virtual category rows into a repo's `.git/` listing.
 Placement matters three ways:

@@ -414,7 +414,7 @@ impl ListingOverlay for CancelAtDecorate {
         "cancel-at-decorate"
     }
 
-    fn applies_to(&self, volume: &dyn Volume, _path: &Path) -> bool {
+    fn applies_to(&self, volume: &dyn Volume, _path: &Path, _entries: &[FileEntry]) -> bool {
         if volume.name() == self.volume_name
             && let Some(cancel) = self.cancel.get()
         {

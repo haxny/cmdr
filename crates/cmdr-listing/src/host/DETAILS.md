@@ -75,9 +75,20 @@ of them sees a row with no inode behind it, a repo delete stops half-way with `.
 bug; this seam is the shape that makes it unrepresentable. The same rule is why a listing carrying contributed rows
 never answers the fresh-listing oracle (`authoritative.rs`, `CachedListing::has_overlay_rows`).
 
-`applies_to(volume, path)` is cheap and zero-I/O: it runs on every listing in the app, and on a backend's synchronous
-`Replaced` hand-over, which can't wait for the blocking gather (`crates/cmdr-listing/DETAILS.md` § "The overlay step").
-`extra_entries` runs only when it answered `true`, on the blocking pool. The first overlay per `id` wins.
+`applies_to(volume, path, entries)` is cheap and zero-I/O: it runs on every listing in the app, and on a backend's
+synchronous `Replaced` hand-over, which can't wait for the blocking gather (`crates/cmdr-listing/DETAILS.md` § "The
+overlay step"). `extra_entries` runs only when it answered `true`, on the blocking pool. The first overlay per `id`
+wins.
+
+`entries` are the volume's own rows (enriched, before any contributor's), which both callers already hold, so a
+contributor can recognize a directory by what it holds without a `stat`. **A contributor that scans them caps itself**
+(answer `false` past a small count), so a 100k-entry folder costs one length check. The git portal ignores them (it
+decides from the path).
+
+**Gotcha:** an incremental watcher change (`Added`, `Removed`, `Modified`) doesn't re-run the overlays; only a full
+re-read does. So a directory that BECOMES one a contributor claims (someone creates the marker file in a folder a pane
+is showing) gets its row on the next navigation or refresh, ❌ not live. **Why:** accepted rather than hooked: re-asking
+every overlay on every incremental change costs per-change work for a case that happens once per directory's life.
 
 ## Observers
 

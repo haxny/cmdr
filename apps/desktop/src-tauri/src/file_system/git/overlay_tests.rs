@@ -70,8 +70,8 @@ fn a_volume_with_no_local_path_never_gets_the_portal() {
 
     let overlay = GitPortalOverlay;
     let dot_git = Path::new("/anywhere/repo/.git");
-    assert!(overlay.applies_to(&local, dot_git));
-    assert!(!overlay.applies_to(&remote, dot_git));
+    assert!(overlay.applies_to(&local, dot_git, &[]));
+    assert!(!overlay.applies_to(&remote, dot_git, &[]));
 }
 
 /// Only a directory called `.git` is claimed, never a real entry under one and
@@ -82,7 +82,7 @@ fn only_the_dot_git_directory_itself_is_claimed() {
     let volume = LocalPosixVolume::local_folder("Local", Path::new("/"), crate::volume_host::host());
     let overlay = GitPortalOverlay;
 
-    assert!(overlay.applies_to(&volume, Path::new("/repo/.git")));
+    assert!(overlay.applies_to(&volume, Path::new("/repo/.git"), &[]));
     for other in [
         "/repo",
         "/repo/.git/refs",
@@ -90,7 +90,7 @@ fn only_the_dot_git_directory_itself_is_claimed() {
         "/repo/src",
         "/repo/.github",
     ] {
-        assert!(!overlay.applies_to(&volume, Path::new(other)), "{other}");
+        assert!(!overlay.applies_to(&volume, Path::new(other), &[]), "{other}");
     }
 }
 
@@ -190,7 +190,7 @@ fn the_toggle_silences_both_portal_seams() {
 
     super::wiring::set_virtual_portal_enabled(true);
     assert!(super::wiring::is_virtual_portal_enabled());
-    assert!(overlay.applies_to(&volume, &dot_git), "the overlay claims .git/");
+    assert!(overlay.applies_to(&volume, &dot_git, &[]), "the overlay claims .git/");
     assert!(
         cmdr_git::portal_route(&dot_git.join("branches")).is_some(),
         "the route claims .git/branches"
@@ -199,7 +199,7 @@ fn the_toggle_silences_both_portal_seams() {
     super::wiring::set_virtual_portal_enabled(false);
     assert!(!super::wiring::is_virtual_portal_enabled());
     assert!(
-        !overlay.applies_to(&volume, &dot_git),
+        !overlay.applies_to(&volume, &dot_git, &[]),
         "with the portal off, .git/ is whatever is on disk"
     );
 

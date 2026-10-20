@@ -41,7 +41,7 @@ impl ListingOverlay for GitPortalOverlay {
     /// directory. The categories under it still route
     /// (`<linked>/.git/branches` and deeper resolve through the gitlink), so
     /// only the `.git/` landing listing is missing there.
-    fn applies_to(&self, volume: &dyn Volume, path: &Path) -> bool {
+    fn applies_to(&self, volume: &dyn Volume, path: &Path, _entries: &[FileEntry]) -> bool {
         wiring::is_virtual_portal_enabled()
             && wiring::volume_holds_real_repos(volume)
             && path.file_name().is_some_and(|name| name == ".git")

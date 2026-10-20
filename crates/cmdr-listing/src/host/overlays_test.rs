@@ -23,7 +23,7 @@ impl ListingOverlay for FixedRows {
         self.id
     }
 
-    fn applies_to(&self, _volume: &dyn Volume, path: &Path) -> bool {
+    fn applies_to(&self, _volume: &dyn Volume, path: &Path, _entries: &[FileEntry]) -> bool {
         path == self.at
     }
 
@@ -105,6 +105,90 @@ async fn a_directory_no_contributor_claims_is_left_alone() {
 
     assert_eq!(added, 0);
     assert_eq!(entries.len(), 2);
+}
+
+/// The real entry whose presence makes [`MarkerInEntries`] apply.
+const MARKER: &str = "config";
+
+/// The row [`MarkerInEntries`] contributes.
+const MARKER_ROW: &str = "Contributed";
+
+/// An overlay that decides from the listing's ENTRIES, not the path: it applies
+/// wherever a real entry called [`MARKER`] is in the listing, the way a
+/// contributor recognizes a directory by what it holds.
+struct MarkerInEntries;
+
+impl ListingOverlay for MarkerInEntries {
+    fn id(&self) -> &'static str {
+        "test-marker-in-entries"
+    }
+
+    fn applies_to(&self, _volume: &dyn Volume, _path: &Path, entries: &[FileEntry]) -> bool {
+        entries.iter().any(|entry| entry.name == MARKER)
+    }
+
+    fn extra_entries(&self, _volume: &dyn Volume, path: &Path) -> Vec<FileEntry> {
+        vec![FileEntry::new(
+            MARKER_ROW.to_string(),
+            path.join(MARKER_ROW).to_string_lossy().into_owned(),
+            true,
+            false,
+        )]
+    }
+}
+
+fn marker_engine() -> TestEngine {
+    TestEngine::builder().overlay(Arc::new(MarkerInEntries)).build()
+}
+
+/// A contributor sees the entries the volume read, so a listing holding the
+/// marker gets the row.
+#[tokio::test]
+async fn a_contributor_that_reads_entries_applies_when_the_marker_is_there() {
+    let engine = marker_engine();
+    let mut entries = vec![real_row(MARKER), real_row("data")];
+    let added = decorate(&engine, &a_volume(), Path::new("/repo"), &mut entries).await;
+
+    assert_eq!(added, 1);
+    assert!(entries.iter().any(|e| e.name == MARKER_ROW), "{entries:?}");
+}
+
+/// The same contributor stays out of a listing without the marker, whatever
+/// the path.
+#[tokio::test]
+async fn a_contributor_that_reads_entries_stays_out_without_the_marker() {
+    let engine = marker_engine();
+    let mut entries = vec![real_row("data"), real_row("index")];
+    let added = decorate(&engine, &a_volume(), Path::new("/repo"), &mut entries).await;
+
+    assert_eq!(added, 0);
+    assert_eq!(entries.len(), 2);
+}
+
+/// A device backend's synchronous hand-over asks the same question of the
+/// handed-over entries: the marker there means "re-read instead" (`None`), and
+/// its absence lets the entries in with zero contributed rows.
+#[test]
+fn a_handed_over_listing_holding_the_marker_asks_for_a_re_read() {
+    let volume_id = "test-handed-over-marker";
+    let engine = TestEngine::builder()
+        .overlay(Arc::new(MarkerInEntries))
+        .volume(volume_id, a_volume())
+        .build();
+    let path = Path::new("/repo");
+
+    let with_marker = vec![real_row(MARKER), real_row("data")];
+    assert!(
+        engine.inner.prepare_handed_over(volume_id, path, with_marker).is_none(),
+        "an applicable overlay escalates to a full re-read"
+    );
+
+    let without_marker = vec![real_row("data")];
+    let prepared = engine
+        .inner
+        .prepare_handed_over(volume_id, path, without_marker)
+        .expect("no overlay applies, so the entries go in as handed over");
+    assert_eq!(prepared.len(), 1);
 }
 
 /// Registering the same id twice keeps the first, so a double setup can't
