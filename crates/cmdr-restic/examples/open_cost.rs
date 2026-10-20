@@ -14,7 +14,9 @@
 //!   100 MiB file read), `cache` (`ids` with rustic's cache in `PROBE_CACHE_DIR`).
 //!
 //! `PROBE_HELD_READERS=1` reads packs through held-open readers, as the crate's
-//! adapter does, instead of one `read_range` each.
+//! adapter does, instead of one `read_range` each. In `full`, the file read
+//! takes `PROBE_CHUNK_KIB`-sized windows (default 4096) with `PROBE_READ_AHEAD`
+//! of them in flight (default 1).
 //!
 //! One phase per process, so `/usr/bin/time -l`'s peak RSS belongs to it alone.
 //! Reads only: every write the repo sees is refused and counted. The password
@@ -260,6 +262,12 @@ fn env(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| panic!("{name} isn't set"))
 }
 
+fn env_or(name: &str, default: usize) -> usize {
+    std::env::var(name).map_or(default, |value| {
+        value.parse().unwrap_or_else(|_| panic!("{name} isn't a number"))
+    })
+}
+
 fn build_parent(via: &str, rt: &Runtime, host: VolumeHost, repo: &str) -> (Arc<dyn Volume>, PathBuf) {
     match via {
         "mount" => {
@@ -342,23 +350,35 @@ fn find_big_file<S: IndexedTree>(repo: &Repository<S>, root: TreeId, min: u64, m
     None
 }
 
-fn read_file<S: IndexedFull>(repo: &Repository<S>, node: &Node, total: usize) {
+/// Reads the first `total` bytes of `node` in `chunk`-sized windows, `ahead`
+/// of them in flight at once (1 is one after the other), handed back in order
+/// the way a read stream hands them to a copy.
+fn read_file<S: IndexedFull + Sync>(repo: &Repository<S>, node: &Node, total: usize, chunk: usize, ahead: usize) {
     let file = repo.open_file(node).expect("open_file");
-    let chunk = 4 << 20;
     let start = Instant::now();
     let mut read = 0;
-    while read < total {
-        let bytes = repo
-            .read_file_at(&file, read, chunk.min(total - read))
-            .expect("read_file_at");
-        if bytes.is_empty() {
-            break;
+    std::thread::scope(|scope| {
+        let mut in_flight = VecDeque::new();
+        let mut queued_to = 0;
+        while read < total {
+            while in_flight.len() < ahead && queued_to < total {
+                let (offset, len) = (queued_to, chunk.min(total - queued_to));
+                let file = &file;
+                in_flight.push_back(scope.spawn(move || repo.read_file_at(file, offset, len).expect("read_file_at")));
+                queued_to += len;
+            }
+            let Some(window) = in_flight.pop_front() else { break };
+            let bytes = window.join().expect("a window's reader");
+            if bytes.is_empty() {
+                break;
+            }
+            read += bytes.len();
         }
-        read += bytes.len();
-    }
+    });
     let elapsed = start.elapsed().as_secs_f64();
     println!(
-        "file read: {read} bytes in {elapsed:.3} s = {:.1} MB/s",
+        "file read ({} KiB windows, {ahead} in flight): {read} bytes in {elapsed:.3} s = {:.1} MB/s",
+        chunk >> 10,
         read as f64 / 1e6 / elapsed
     );
 }
@@ -447,10 +467,12 @@ fn main() {
             let start = Instant::now();
             let node = find_big_file(&repo, latest_tree, 100 << 20, 20_000).expect("a file of 100 MiB or more");
             println!("found a {} byte file in {}", node.meta.size, secs(start));
+            let chunk = env_or("PROBE_CHUNK_KIB", 4096) << 10;
+            let ahead = env_or("PROBE_READ_AHEAD", 1);
             for round in 1..=2 {
                 backend.reset();
                 print!("round {round} ");
-                read_file(&repo, &node, 100 << 20);
+                read_file(&repo, &node, 100 << 20, chunk, ahead);
                 backend.report("file read");
             }
         }

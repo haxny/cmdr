@@ -1,23 +1,41 @@
 //! One file of a snapshot as a [`VolumeReadStream`]: bounded chunks, each one
-//! `read_file_at` on a blocking thread.
+//! `read_file_at` on a blocking thread, [`READ_AHEAD`] of them in flight.
 
 use crate::hub::RepoSlot;
-use crate::repo::{IndexedRepo, worker_crashed};
+use crate::repo::{IndexedRepo, ResticError, worker_crashed};
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{StreamLength, VolumeError, VolumeReadStream};
 use rustic_core::vfs::OpenFile;
+use std::collections::VecDeque;
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::runtime::Handle;
+use tokio::task::JoinHandle;
 
-/// How much one chunk reads. The house streaming size: peak memory per transfer
-/// stays one chunk, and a 1 MiB read spans a handful of blobs.
+/// How much one chunk reads. The house streaming size, and a 1 MiB read spans a
+/// handful of blobs.
 pub(crate) const CHUNK_SIZE: usize = 1024 * 1024;
 
-/// A snapshot file's bytes, read in [`CHUNK_SIZE`] windows.
+/// How many chunks a stream reads ahead of the one handed out. Each read waits
+/// a round trip for its blobs, so one at a time leaves the link idle: four
+/// took copy-out over direct SMB from ~21 to ~39 MB/s, and eight did no better
+/// (`docs/notes/restic/open-cost.md` § "Reading blobs ahead"). Bounds a
+/// stream's memory at four chunks.
+pub(crate) const READ_AHEAD: usize = 4;
+
+/// One chunk's read, running on the blocking pool.
+type Pending = JoinHandle<Result<Vec<u8>, ResticError>>;
+
+/// A snapshot file's bytes, read in [`CHUNK_SIZE`] windows, handed out in
+/// order.
+///
+/// ❗ Dropping the stream (a Cancel) DETACHES the reads in flight, ❌ never
+/// aborts them: a blocking read can't be cut, and each one finishes its parent
+/// round trip whole, so a parent mid-transaction (a phone) is never left
+/// half-way. At most [`READ_AHEAD`] of them run on after a drop.
 pub(crate) struct ResticReadStream {
     pub(crate) repo: Arc<IndexedRepo>,
     pub(crate) file: Arc<OpenFile>,
@@ -32,6 +50,37 @@ pub(crate) struct ResticReadStream {
     /// a read there, so `latest` stays put for the whole copy.
     pub(crate) latest_of: Option<Arc<RepoSlot>>,
     pub(crate) read: u64,
+    /// The chunks in flight, oldest first, each with the length it asked for.
+    pub(crate) ahead: VecDeque<(Pending, usize)>,
+    /// Where the next chunk to start reading begins.
+    pub(crate) queued_to: u64,
+}
+
+impl ResticReadStream {
+    /// Starts chunk reads until [`READ_AHEAD`] are in flight or the file's end
+    /// is queued.
+    fn fill(&mut self) {
+        while self.ahead.len() < READ_AHEAD && self.queued_to < self.size {
+            let want = usize::try_from(self.size - self.queued_to).map_or(CHUNK_SIZE, |left| left.min(CHUNK_SIZE));
+            let offset = usize::try_from(self.queued_to).unwrap_or(usize::MAX);
+            let (repo, file) = (Arc::clone(&self.repo), Arc::clone(&self.file));
+            let read = self.runtime.spawn_blocking(move || {
+                repo.repo
+                    .read_file_at(&file, offset, want)
+                    .map(|bytes| bytes.to_vec())
+                    .map_err(|err| repo.classify(&err))
+            });
+            self.ahead.push_back((read, want));
+            self.queued_to += want as u64;
+        }
+    }
+
+    /// After a chunk that didn't come back whole: detaches the reads behind it,
+    /// so a caller asking again starts over at the chunk that failed.
+    fn forget_ahead(&mut self) {
+        self.ahead.clear();
+        self.queued_to = self.read;
+    }
 }
 
 impl VolumeReadStream for ResticReadStream {
@@ -43,20 +92,30 @@ impl VolumeReadStream for ResticReadStream {
             if let Some(slot) = &self.latest_of {
                 slot.touch_latest();
             }
-            let want = usize::try_from(self.size - self.read).map_or(CHUNK_SIZE, |left| left.min(CHUNK_SIZE));
-            let offset = usize::try_from(self.read).unwrap_or(usize::MAX);
-            let chunk = read_at(&self.runtime, &self.repo, &self.file, offset, want)
+            self.fill();
+            let (read, want) = self.ahead.pop_front()?;
+            let chunk = read
                 .await
+                .map_err(worker_crashed)
+                .and_then(|chunk| chunk)
                 .map_err(|err| err.into_volume_error(&self.path));
             Some(match chunk {
-                // A file that ends before its recorded size is a damaged snapshot;
-                // feeding a short file to a copy would land it silently.
-                Ok(bytes) if bytes.is_empty() => Err(VolumeError::SourceChanged(self.path.display().to_string())),
+                // A chunk that comes back short means the file ends before its
+                // recorded size: a damaged snapshot. The chunks after it were
+                // asked for at offsets that assume it was whole, and feeding a
+                // short file to a copy would land it silently.
+                Ok(bytes) if bytes.len() != want => {
+                    self.forget_ahead();
+                    Err(VolumeError::SourceChanged(self.path.display().to_string()))
+                }
                 Ok(bytes) => {
                     self.read += bytes.len() as u64;
                     Ok(bytes)
                 }
-                Err(err) => Err(err),
+                Err(err) => {
+                    self.forget_ahead();
+                    Err(err)
+                }
             })
         })
     }
@@ -92,7 +151,7 @@ pub(crate) async fn read_at(
     file: &Arc<OpenFile>,
     offset: usize,
     len: usize,
-) -> Result<Vec<u8>, crate::repo::ResticError> {
+) -> Result<Vec<u8>, ResticError> {
     let (repo, file) = (Arc::clone(repo), Arc::clone(file));
     runtime
         .spawn_blocking(move || {
@@ -104,3 +163,7 @@ pub(crate) async fn read_at(
         .await
         .map_err(worker_crashed)?
 }
+
+#[cfg(test)]
+#[path = "read_stream_tests.rs"]
+mod tests;

@@ -105,6 +105,24 @@ already. Same Mac, NAS, repo, and release build, 2026-10-20, held and not held i
   Reading several blobs ahead in parallel is the next lever for copy-out.
 - Zero write attempts in every run.
 
+## Reading blobs ahead
+
+The same probe's `full` phase with `PROBE_CHUNK_KIB=1024` (the read stream's window) and `PROBE_READ_AHEAD=N` windows in
+flight, handed back in order the way a stream hands them to a copy. Held pack readers on, direct SMB session, same Mac,
+NAS, repo, and release build, 2026-10-20; each run reads the same 100 MiB twice (rounds 1 and 2), and the one-at-a-time
+and four-ahead runs were each repeated.
+
+- **One window at a time** (what the stream did): 22.9, 21.2, 22.1, and 19.7 MB/s. 105–110 pack reads, 149–163 MB of
+  packs for 105 MB of content.
+- **Four ahead**: 29.7, 39.3, 38.8, and 41.0 MB/s, about 1.8x. 84–88 pack reads, 111–115 MB of packs.
+- **Eight ahead**: 35.8 and 39.2 MB/s, no better than four.
+- The serial run reads ~40% more pack bytes for the same content: some blobs straddling two windows are fetched twice
+  despite rustic's 32 MB blob cache (cause not traced). Concurrent windows asking for the same blob share one fetch
+  (`quick_cache`'s `get_or_insert_with` holds a placeholder), which fits the read-ahead's lower byte count.
+
+So the read stream keeps four 1 MiB windows in flight: at most 4 MiB held per stream, and a copy's Cancel detaches at
+most four reads.
+
 ## Draft #422 comment (not posted)
 
 > Measured the open cost on my NAS repo (9 snapshots, 2.4M blobs, 132 GiB, 112 MB of index files; rustic_core 0.13.0, M3

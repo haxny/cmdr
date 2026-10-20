@@ -246,8 +246,8 @@ impl ResticVolume {
         }
         if !node.is_file() {
             // A symlink is never followed, and a device, fifo, or socket has no
-            // bytes in a backup.
-            return Err(VolumeError::NotSupported);
+            // bytes in a backup. Typed, so a folder copy skips it and carries on.
+            return Err(VolumeError::NoContent(path.display().to_string()));
         }
         let (task_repo, task_node, at) = (Arc::clone(&repo), node.clone(), path.to_path_buf());
         let file = self
@@ -268,6 +268,8 @@ impl ResticVolume {
             mode: permissions_of(node.meta.mode),
             latest_of: resolved.via_latest.then(|| Arc::clone(&self.slot)),
             read: 0,
+            ahead: std::collections::VecDeque::new(),
+            queued_to: 0,
         })
     }
 }
@@ -557,6 +559,13 @@ impl ScanSource for ResticVolume {
 
     fn scan_list<'a>(&'a self, path: &'a Path) -> Walking<'a, Vec<FileEntry>> {
         self.list_directory(path, None)
+    }
+
+    /// `true`: a read here is safe to drop mid-flight (its waiter leaves the
+    /// index load, and blocking reads finish detached), so a copy's Cancel
+    /// lands inside a listing that waits on the index load, not after it.
+    fn abandons_reads_on_stop(&self) -> bool {
+        true
     }
 }
 

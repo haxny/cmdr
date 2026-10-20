@@ -357,6 +357,11 @@ async fn a_folder_or_a_link_has_no_bytes_to_stream() {
             path.display()
         );
     }
+    // Typed, so a copy of the folder skips the link and carries on.
+    assert!(matches!(
+        browse.volume.open_read_stream(&dir.join("link")).await.err(),
+        Some(VolumeError::NoContent(_))
+    ));
 }
 
 #[tokio::test(flavor = "multi_thread")]
