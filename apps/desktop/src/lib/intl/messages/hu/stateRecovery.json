@@ -71,6 +71,34 @@
   "@stateRecovery.launchDays.title": {
     "sourceHash": "00f947b"
   },
+  "stateRecovery.s3Places.title": "A Cmdr nem tudta beolvasni az összes mentett S3-helyedet, ezért lehet, hogy néhány hiányzik",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.sftpServers.title": "A Cmdr nem tudta beolvasni az összes mentett SFTP-szerveredet, ezért lehet, hogy néhány hiányzik",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "A Cmdr nem tudta beolvasni az összes mentett WebDAV-szerveredet, ezért lehet, hogy néhány hiányzik",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "A Cmdr nem tudta beolvasni az összes mentett SMB-megosztásodat, ezért lehet, hogy néhány hiányzik",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "A Cmdr nem tudta beolvasni az összes szervert, amelyet a címe megadásával adtál hozzá, ezért lehet, hogy néhány hiányzik",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "A Cmdr nem tudta beolvasni az összes SFTP-szervert, amelyet megbízhatóként jelöltél, ezért lehet, hogy néhánynál újra rákérdez",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.localAi.title": "A Cmdr nem tudta beolvasni a helyi AI telepítési állapotát, ezért lehet, hogy újra felajánlja a beállítását",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
   "stateRecovery.keptCopy": "A Cmdr megtartotta a régi fájlt itt: {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

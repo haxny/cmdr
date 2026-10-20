@@ -42,7 +42,7 @@
   },
   "add": {
     "chosen": "Adicionar",
-    "accept": ["adiciona", "adicione", "adicioná"],
+    "accept": ["adiciona", "adicione", "adicioná", "adicionou"],
     "forms": "button Adicionar; description Adiciona; imperative Adicione; ao relatório / aos favoritos / à fila",
     "confidence": "high",
     "sources": "KDE Dolphin, Total Commander, Double Commander pt-BR (Adicionar ao/à …)"

@@ -71,6 +71,34 @@
   "@stateRecovery.launchDays.title": {
     "sourceHash": "00f947b"
   },
+  "stateRecovery.s3Places.title": "Cmdr kon niet al je opgeslagen S3-locaties lezen, dus misschien ontbreken er een paar",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.sftpServers.title": "Cmdr kon niet al je opgeslagen SFTP-servers lezen, dus misschien ontbreken er een paar",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "Cmdr kon niet al je opgeslagen WebDAV-servers lezen, dus misschien ontbreken er een paar",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "Cmdr kon niet al je opgeslagen SMB-shares lezen, dus misschien ontbreken er een paar",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "Cmdr kon niet alle servers lezen die je via hun adres hebt toegevoegd, dus misschien ontbreken er een paar",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "Cmdr kon niet alle SFTP-servers lezen die je vertrouwt, dus Cmdr vraagt bij sommige misschien opnieuw of je ze vertrouwt",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.localAi.title": "Cmdr kon niet lezen hoe de lokale AI is ingesteld, dus misschien biedt Cmdr opnieuw aan om die in te stellen",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
   "stateRecovery.keptCopy": "Cmdr heeft het oude bestand bewaard in {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

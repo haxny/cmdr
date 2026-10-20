@@ -71,6 +71,34 @@
   "@stateRecovery.launchDays.title": {
     "sourceHash": "00f947b"
   },
+  "stateRecovery.s3Places.title": "Cmdr 无法读取你保存的所有 S3 位置，所以可能少了一些",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.sftpServers.title": "Cmdr 无法读取你保存的所有 SFTP 服务器，所以可能少了一些",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "Cmdr 无法读取你保存的所有 WebDAV 服务器，所以可能少了一些",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "Cmdr 无法读取你保存的所有 SMB 共享，所以可能少了一些",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "Cmdr 无法读取你通过地址添加的所有服务器，所以可能少了一些",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "Cmdr 无法读取你信任过的所有 SFTP 服务器，所以连接其中一些时可能会再问你一次",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.localAi.title": "Cmdr 无法读取本地 AI 的安装状态，所以可能会再次提议帮你设置",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
   "stateRecovery.keptCopy": "Cmdr 已把旧文件保留在 {path}。",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

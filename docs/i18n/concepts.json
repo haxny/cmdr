@@ -282,6 +282,7 @@
     "distinct": ["ask", "ask-cmdr"],
     "en": "ask about",
     "match": ["ask about", "you ask about", "when you ask"],
+    "notMatch": ["ask about some of them"],
     "sense": "Putting a question to the AI about files, a folder, or the selection."
   },
   "aspect-ratio": {

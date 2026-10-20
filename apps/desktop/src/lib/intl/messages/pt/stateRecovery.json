@@ -71,6 +71,34 @@
   "@stateRecovery.launchDays.title": {
     "sourceHash": "00f947b"
   },
+  "stateRecovery.s3Places.title": "O Cmdr não conseguiu ler todos os seus locais S3 salvos, então alguns podem estar faltando",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.sftpServers.title": "O Cmdr não conseguiu ler todos os seus servidores SFTP salvos, então alguns podem estar faltando",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "O Cmdr não conseguiu ler todos os seus servidores WebDAV salvos, então alguns podem estar faltando",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "O Cmdr não conseguiu ler todos os seus compartilhamentos SMB salvos, então alguns podem estar faltando",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "O Cmdr não conseguiu ler todos os servidores que você adicionou pelo endereço, então alguns podem estar faltando",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "O Cmdr não conseguiu ler todos os servidores SFTP em que você confiou, então ele pode perguntar de novo sobre alguns deles",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.localAi.title": "O Cmdr não conseguiu ler o estado da IA local, então ele pode oferecer configurá-la de novo",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
   "stateRecovery.keptCopy": "O Cmdr manteve o arquivo antigo em {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

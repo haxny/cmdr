@@ -71,6 +71,34 @@
   "@stateRecovery.launchDays.title": {
     "sourceHash": "00f947b"
   },
+  "stateRecovery.s3Places.title": "Cmdr không đọc được tất cả vị trí S3 bạn đã lưu, nên có thể thiếu một số vị trí",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.sftpServers.title": "Cmdr không đọc được tất cả máy chủ SFTP bạn đã lưu, nên có thể thiếu một số máy chủ",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "Cmdr không đọc được tất cả máy chủ WebDAV bạn đã lưu, nên có thể thiếu một số máy chủ",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "Cmdr không đọc được tất cả mục chia sẻ SMB bạn đã lưu, nên có thể thiếu một số mục",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "Cmdr không đọc được tất cả máy chủ bạn đã thêm bằng địa chỉ, nên có thể thiếu một số máy chủ",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "Cmdr không đọc được tất cả máy chủ SFTP bạn đã tin cậy, nên Cmdr có thể hỏi lại về một số máy chủ trong đó",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.localAi.title": "Cmdr không đọc được thông tin thiết lập AI cục bộ, nên Cmdr có thể đề nghị bạn thiết lập lại",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
   "stateRecovery.keptCopy": "Cmdr đã giữ tệp cũ tại {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

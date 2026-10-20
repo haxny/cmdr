@@ -71,6 +71,34 @@
   "@stateRecovery.launchDays.title": {
     "sourceHash": "eef7490"
   },
+  "stateRecovery.s3Places.title": "Cmdr no pudo leer todas tus ubicaciones S3 guardadas, así que puede que falten algunas",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "fd71588"
+  },
+  "stateRecovery.sftpServers.title": "Cmdr no pudo leer todos tus servidores SFTP guardados, así que puede que falten algunos",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "0356a18"
+  },
+  "stateRecovery.webdavServers.title": "Cmdr no pudo leer todos tus servidores WebDAV guardados, así que puede que falten algunos",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "01220bc"
+  },
+  "stateRecovery.smbShares.title": "Cmdr no pudo leer todos tus recursos compartidos SMB guardados, así que puede que falten algunos",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "0685a34"
+  },
+  "stateRecovery.smbServers.title": "Cmdr no pudo leer todos los servidores que agregaste por su dirección, así que puede que falten algunos",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "d3da009"
+  },
+  "stateRecovery.sftpHostKeys.title": "Cmdr no pudo leer todos los servidores SFTP en los que confiaste, así que puede que vuelva a preguntarte por algunos",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5aa3290"
+  },
+  "stateRecovery.localAi.title": "Cmdr no pudo leer el estado de su IA local, así que puede que vuelva a ofrecerte configurarla",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "e3adfce"
+  },
   "stateRecovery.keptCopy": "Cmdr conservó el archivo antiguo en “{path}”.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "4c7eeac"

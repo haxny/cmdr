@@ -71,6 +71,34 @@
   "@stateRecovery.launchDays.title": {
     "sourceHash": "00f947b"
   },
+  "stateRecovery.s3Places.title": "Cmdr konnte nicht alle deine gespeicherten S3-Orte lesen, deshalb fehlen vielleicht einige",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.sftpServers.title": "Cmdr konnte nicht alle deine gespeicherten SFTP-Server lesen, deshalb fehlen vielleicht einige",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "Cmdr konnte nicht alle deine gespeicherten WebDAV-Server lesen, deshalb fehlen vielleicht einige",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "Cmdr konnte nicht alle deine gespeicherten SMB-Freigaben lesen, deshalb fehlen vielleicht einige",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "Cmdr konnte nicht alle Server lesen, die du über ihre Adresse hinzugefügt hast, deshalb fehlen vielleicht einige",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "Cmdr konnte nicht alle SFTP-Server lesen, denen du vertraut hast, deshalb fragt es bei einigen davon vielleicht noch einmal nach",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.localAi.title": "Cmdr konnte die Einrichtung der lokalen KI nicht lesen, deshalb bietet es die Einrichtung vielleicht noch einmal an",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
   "stateRecovery.keptCopy": "Cmdr hat die alte Datei unter „{path}“ aufbewahrt.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

@@ -71,6 +71,34 @@
   "@stateRecovery.launchDays.title": {
     "sourceHash": "00f947b"
   },
+  "stateRecovery.s3Places.title": "Cmdr не удалось прочитать все ваши сохраненные места S3, поэтому некоторых из них может не хватать",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.sftpServers.title": "Cmdr не удалось прочитать все ваши сохраненные серверы SFTP, поэтому некоторых из них может не хватать",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "Cmdr не удалось прочитать все ваши сохраненные серверы WebDAV, поэтому некоторых из них может не хватать",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "Cmdr не удалось прочитать все ваши сохраненные общие папки SMB, поэтому некоторых из них может не хватать",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "Cmdr не удалось прочитать все серверы, которые вы добавили по адресу, поэтому некоторых из них может не хватать",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "Cmdr не удалось прочитать все серверы SFTP, которым вы доверяете, поэтому он может снова спросить о некоторых из них",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.localAi.title": "Cmdr не удалось прочитать состояние локального ИИ, поэтому он может снова предложить настроить ИИ",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
   "stateRecovery.keptCopy": "Cmdr оставил старый файл здесь: {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

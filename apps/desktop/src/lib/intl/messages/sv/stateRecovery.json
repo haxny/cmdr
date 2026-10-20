@@ -71,6 +71,34 @@
   "@stateRecovery.launchDays.title": {
     "sourceHash": "00f947b"
   },
+  "stateRecovery.s3Places.title": "Cmdr kunde inte läsa alla dina sparade S3-platser, så några kan saknas",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.sftpServers.title": "Cmdr kunde inte läsa alla dina sparade SFTP-servrar, så några kan saknas",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "Cmdr kunde inte läsa alla dina sparade WebDAV-servrar, så några kan saknas",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "Cmdr kunde inte läsa alla dina sparade delade SMB-mappar, så några kan saknas",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "Cmdr kunde inte läsa alla servrar som du har lagt till med adress, så några kan saknas",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "Cmdr kunde inte läsa alla SFTP-servrar som du litar på, så Cmdr kan fråga om några av dem igen",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.localAi.title": "Cmdr kunde inte läsa hur den lokala AI:n är inställd, så Cmdr kan erbjuda dig att ställa in den igen",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
   "stateRecovery.keptCopy": "Cmdr behöll den gamla filen på {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"
