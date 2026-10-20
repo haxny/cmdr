@@ -446,8 +446,8 @@ rides every request, so the password crosses the network readable. `webdavAddres
 form would dial, so an address with no scheme (which dials `https`) never warns. Shown under the address in add and edit
 mode (after a protocol mismatch, which outranks it), and under the address header when signing back in, so it's on
 screen before the first secret leaves. It never blocks either. The backend tries the address's `https` twin first on an
-add and dials the typed `http` one only when that doesn't answer (`crates/cmdr-webdav/DETAILS.md` § "`https` first, for
-a typed `http` address"), so the warning describes the fallback.
+add and dials the typed `http` one when that doesn't answer as WebDAV or its dial doesn't come up
+(`crates/cmdr-webdav/DETAILS.md` § "`https` first, for a typed `http` address"), so the warning describes the fallback.
 
 A port or path the address's scheme named for a DIFFERENT protocol is dropped (`sftp://nas:2222/srv` with WebDAV
 selected dials `https://nas`), while one typed with no scheme belongs to whichever protocol is selected. The account the

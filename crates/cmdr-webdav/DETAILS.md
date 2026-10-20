@@ -458,11 +458,18 @@ one place that default is spelled. `getWebdavUnattendedReconnect(volumeId)`, and
 
 Basic auth rides every request, so over `http` the password crosses the network readable (#540; David's call,
 2026-10-19: warn, and try `https` first). `connectServer` (a typed address) dials through
-`WebdavConnectionParams::preferring_https` (`https_first.rs`): when the address is `http`, an unauthenticated `OPTIONS`
-to its `https_twin` (same host and path, an explicit port kept, the default one moved to 443) decides. Any HTTP answer
-over a TLS handshake this Mac trusts moves the dial, so the server is saved, keyed, and identified by the `https` URL
-from the start. A plain-`http` port, an untrusted certificate (the self-signed NAS), a refusal, and 4 s of silence all
-fall back to the typed address, and the sheet's warning stays up for it (`apps/desktop/src/lib/servers/DETAILS.md`).
+`WebdavConnectionParams::dial_preferring_https` (`https_first.rs`): when the address is `http`, an unauthenticated
+`OPTIONS` to its `https_twin` (same host and path, an explicit port kept, the default one moved to 443) decides. An
+answer carrying a `DAV` header (any status) over a TLS handshake this Mac trusts moves the dial, so the server is saved,
+keyed, and identified by the `https` URL from the start. A plain-`http` port, an untrusted certificate (the self-signed
+NAS), a refusal, 4 s of silence, and an answer without `DAV` all fall back to the typed address, and the sheet's warning
+stays up for it (`apps/desktop/src/lib/servers/DETAILS.md`).
+
+- ❗ **Only a `DAV` answer counts** (#540): a 443 serving another vhost, or a 301 back to `http`, answers `OPTIONS` too.
+  A server that wants auth before it says `DAV` reads as "doesn't answer", which errs toward the typed address.
+- ❗ **A twin whose DIAL fails falls back to the typed address**, whatever the reason but Cancel: the probe proves
+  something speaks WebDAV there, ❌ not that it's the server typed (another root, another account). The caller hands in
+  one dial closure that re-offers the secret under each address's own key.
 
 - ❌ **Never `https`-first for a SAVED place** (`connect_and_register_since`): the saved URL is its volume id and its
   secret's key, so a silent move would orphan both.

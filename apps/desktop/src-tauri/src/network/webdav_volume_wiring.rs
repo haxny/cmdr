@@ -146,8 +146,8 @@ pub async fn connect_and_register_since(
 struct Dial {
     set_out: connect_wiring::DialTicket,
     /// An `http` address a person just typed: try its `https` twin first
-    /// (`WebdavConnectionParams::preferring_https`, #540), and dial the typed
-    /// one only when that doesn't answer.
+    /// (`WebdavConnectionParams::dial_preferring_https`, #540), and dial the
+    /// typed one when that doesn't answer as WebDAV or its dial doesn't come up.
     https_first: bool,
 }
 
@@ -167,25 +167,29 @@ async fn connect_and_register_with(
     let twin = dial.https_first.then(|| params.https_twin()).flatten();
     let places = std::iter::once(&params).chain(twin.as_ref()).map(place_of).collect();
     let (cancel, attempt) = ATTEMPTS.register_dialing(attempt_id, places, dial.set_out);
-    let params = if twin.is_some() {
-        params.preferring_https(&cancel).await
-    } else {
-        params
+    // One dial of one address, its secret offered under THAT address's key. The
+    // https-first path may run it twice (the twin, then the typed address).
+    let dial_one = |params: WebdavConnectionParams| {
+        let (cancel, secret) = (cancel.clone(), secret.clone());
+        async move {
+            let volume_id = place_of(&params);
+            let (host, offer) =
+                one_shot_credentials::host_for_dial(&params.credential_service(), &params.username, secret).await;
+            let label = saved_server_fields::server_label(display_name, &params.username, params.host());
+            let volume = cmdr_webdav::connect_webdav_volume(&label, &volume_id, params.clone(), host, cancel).await?;
+            Ok((params, volume_id, volume, offer))
+        }
     };
-    if cancel.is_cancelled() {
-        return WebdavConnection::Cancelled;
-    }
-    let volume_id = place_of(&params);
-    let start_folder = saved_server_fields::start_folder_for_root(&params.remote_root.to_string_lossy(), start_folder);
-    let (host, offer) =
-        one_shot_credentials::host_for_dial(&params.credential_service(), &params.username, secret).await;
-    let label = saved_server_fields::server_label(display_name, &params.username, params.host());
-    let outcome = cmdr_webdav::connect_webdav_volume(&label, &volume_id, params.clone(), host, cancel).await;
-
-    let volume = match outcome {
-        Ok(volume) => volume,
+    let dialed = if twin.is_some() {
+        params.dial_preferring_https(&cancel, dial_one).await
+    } else {
+        dial_one(params).await
+    };
+    let (params, volume_id, volume, offer) = match dialed {
+        Ok(dialed) => dialed,
         Err(e) => return failed(e),
     };
+    let start_folder = saved_server_fields::start_folder_for_root(&params.remote_root.to_string_lossy(), start_folder);
     // The server moved while this dial was out: remembering it here would save
     // the old URL again, beside the moved entry (`connect_wiring.rs`).
     let Some(_landing) = attempt.land().await else {

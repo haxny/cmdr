@@ -112,11 +112,17 @@ const MAX_PROPPATCH_BODY: usize = 64 * 1024;
 /// address is dialed as typed. Short: a person is waiting on the Add.
 const HTTPS_PROBE_BUDGET: Duration = Duration::from_secs(4);
 
-/// Whether a server answers HTTP over TLS at `url` with a certificate this Mac
-/// trusts. Any status counts: the question is the TLS, not the account. ❗ No
+/// The compliance-class header every WebDAV server sends on `OPTIONS` (RFC 4918
+/// § 10.1), and the probe's proof it reached one.
+const DAV_HEADER: &str = "DAV";
+
+/// Whether a WebDAV server answers at `url`: for an `https` URL, over TLS with
+/// a certificate this Mac trusts. Any status counts (the question is the
+/// server, not the account), ❗ but only with a `DAV` header: a 443 serving
+/// another site, or a redirect back to `http`, answers without one. ❗ No
 /// credentials go out, and a plain-`http` port, an untrusted certificate, a
 /// refusal, and silence all answer `false`.
-pub(crate) async fn answers_over_tls(url: Url, cancel: &CancellationToken) -> bool {
+pub(crate) async fn answers_as_webdav(url: Url, cancel: &CancellationToken) -> bool {
     let Ok(client) = cmdr_http::client_builder()
         .user_agent("Cmdr")
         .connect_timeout(HTTPS_PROBE_BUDGET)
@@ -128,7 +134,9 @@ pub(crate) async fn answers_over_tls(url: Url, cancel: &CancellationToken) -> bo
     };
     tokio::select! {
         () = cancel.cancelled() => false,
-        sent = client.request(Method::OPTIONS, url).send() => sent.is_ok(),
+        sent = client.request(Method::OPTIONS, url).send() => {
+            sent.is_ok_and(|answer| answer.headers().contains_key(DAV_HEADER))
+        }
     }
 }
 
