@@ -167,6 +167,13 @@ pub enum VolumeError {
     /// engine for a source stream that delivered more or fewer bytes than its
     /// `StreamLength::Known` (`cmdr-operations` `transfer/volume/source_reads.rs`).
     SourceChanged(String),
+    /// The entry has no bytes a copy can carry: a symlink the backend can't
+    /// recreate, or a device, fifo, or socket. Carries the path.
+    ///
+    /// Typed so a copy skips that one item and carries on, ❌ never failing a
+    /// whole folder over it. Raised by a restic snapshot's read stream today
+    /// (`cmdr-restic`), where a backup of a Mac is full of symlinks.
+    NoContent(String),
     /// A reply on a signed session carried a bad or missing signature, so the backend refused
     /// it rather than trust what it said. Carries what the backend reported, for the
     /// technical-details panel.
@@ -242,6 +249,7 @@ impl ErrorLogText for VolumeError {
                 LogPrivate::file_path(path),
             ),
             Self::SourceChanged(path) => ("The source changed during the copy: ", LogPrivate::file_path(path)),
+            Self::NoContent(path) => ("No bytes to copy (a link or a special file): ", LogPrivate::path(path)),
             Self::NotSupported => return out.write_str("Operation not supported"),
             Self::DeviceDisconnected(msg) => return detail_line(out, "Device disconnected: ", msg),
             Self::DeviceSessionReset(msg) => return detail_line(out, "Device session restarted: ", msg),

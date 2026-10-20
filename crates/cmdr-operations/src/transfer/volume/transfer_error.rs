@@ -537,6 +537,13 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
         VolumeError::SourceChanged(_) => WriteOperationError::SourceChanged {
             path: context_path.to_string(),
         },
+        // A merge walk skips such a child and carries on (`merge.rs::copy_leaf`),
+        // so this reaches the dialog only for a link or special file selected on
+        // its own.
+        VolumeError::NoContent(path) => WriteOperationError::IoError {
+            path,
+            message: "Has no bytes to copy (a link or a special file)".to_string(),
+        },
         // On the DESTINATION the folder holds two look-alikes of the name and
         // neither spelled as asked (`landing.rs`), or two same-named files on a
         // device, so it's taken and no answer picks which: "already exists" is

@@ -1152,6 +1152,7 @@ export type MessageKey =
   | 'errors.volume.ioError'
   | 'errors.volume.isADirectory'
   | 'errors.volume.needsPassword'
+  | 'errors.volume.noContent'
   | 'errors.volume.notADirectory'
   | 'errors.volume.notConnected'
   | 'errors.volume.notFound'

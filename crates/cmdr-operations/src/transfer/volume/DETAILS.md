@@ -1997,3 +1997,15 @@ phase), `move_failure_tests.rs::cross_volume_move_delete_error_names_the_child_t
 (delete phase), and `cleanup_tests.rs::remove_tree_reports_the_leaf_that_refused` (the walker itself). The
 `UndeletableSource` double (`strategy_test_support.rs`) stages it: `InMemoryVolume` alone can't, because its `delete`
 drops a directory entry whether or not the directory still holds children.
+
+## A child with no bytes is one skipped item
+
+**Decision**: a merge leaf whose source answers `VolumeError::NoContent` (a symlink the source can't recreate, a device,
+fifo, or socket; a restic snapshot's read stream today) records a skip (`CreatedPaths::record_skip`, counted in
+`files_skipped`) and the walk carries on. A move's sweep spares it like any skipped child. Selected on its own, the same
+error fails the transfer as an `IoError`.
+
+**Why**: a backup of a Mac is full of symlinks, and the cross-volume engine has no seam to recreate one on another
+volume, so failing the folder on the first link made every real folder impossible to restore. Restoring a link AS a link
+is the better answer and wants a cross-backend symlink seam; until then a skip is honest and counted. Pinned by
+`no_content_skip_tests.rs` (serial and concurrent copies, a move).

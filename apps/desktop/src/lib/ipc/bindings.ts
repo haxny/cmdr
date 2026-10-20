@@ -18729,6 +18729,15 @@ export type VolumeError =
    */
   | { type: 'sourceChanged'; data: string }
   /**
+   *  The entry has no bytes a copy can carry: a symlink the backend can't
+   *  recreate, or a device, fifo, or socket. Carries the path.
+   *
+   *  Typed so a copy skips that one item and carries on, ❌ never failing a
+   *  whole folder over it. Raised by a restic snapshot's read stream today
+   *  (`cmdr-restic`), where a backup of a Mac is full of symlinks.
+   */
+  | { type: 'noContent'; data: string }
+  /**
    *  A reply on a signed session carried a bad or missing signature, so the backend refused
    *  it rather than trust what it said. Carries what the backend reported, for the
    *  technical-details panel.

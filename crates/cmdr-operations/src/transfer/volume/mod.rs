@@ -156,6 +156,9 @@ mod failure_side_tests;
 /// A stopped transfer names the new files its stop kept at the destination.
 #[cfg(test)]
 mod kept_new_data_tests;
+/// A child with no bytes to copy is one skipped item, not a failed folder.
+#[cfg(test)]
+mod no_content_skip_tests;
 
 /// A source that doesn't deliver its declared length fails the file (#538).
 #[cfg(test)]

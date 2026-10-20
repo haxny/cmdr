@@ -311,6 +311,17 @@ async fn copy_leaf<'a>(
     if streamed.is_err() && reserved_placeholder {
         take_back_reservation(dest_volume, &write_dest, &state.claimed_names).await;
     }
+    // A child with no bytes (a link the source can't recreate, a fifo) is one
+    // skipped item, ❌ never the end of its folder; a move's sweep spares it.
+    if let Err(PathedVolumeError {
+        error: VolumeError::NoContent(_),
+        role: PathRole::Source,
+        ..
+    }) = &streamed
+    {
+        created.record_skip(child_source, 0);
+        return Ok(0);
+    }
     let bytes = streamed?;
     // The file landed at `write_dest`, the original's own name for an
     // overwrite (a swap's landing ran inside the write). A landed overwrite's

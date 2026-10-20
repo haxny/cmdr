@@ -38,6 +38,7 @@ const VOLUME_CASES: VolumeError[] = [
   { type: 'deletePending', data: '/Volumes/share/doomed.txt' },
   { type: 'coldStorage', data: '/photos/2019.tar' },
   { type: 'sourceChanged', data: '/docs/report.pdf' },
+  { type: 'noContent', data: '/backup/Users/me/link' },
   { type: 'ambiguousName', data: '/Volumes/share/café.txt' },
   { type: 'duplicateName', data: '/DCIM/IMG_0001.JPG' },
   { type: 'staleDestinationHandle', data: '/DCIM/Camera' },
