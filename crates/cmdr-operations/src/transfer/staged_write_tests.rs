@@ -108,6 +108,22 @@ enum Call {
 struct CallLog {
     inner: Arc<InMemoryVolume>,
     calls: Mutex<Vec<Call>>,
+    /// Whether its forced rename replaces a file in one step
+    /// (`Volume::supports_atomic_replace_rename`).
+    replaces_atomically: bool,
+}
+
+impl CallLog {
+    async fn over_an_original(replaces_atomically: bool) -> (Arc<InMemoryVolume>, Arc<Self>) {
+        let inner = Arc::new(InMemoryVolume::new("dest"));
+        inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
+        let log = Arc::new(CallLog {
+            inner: Arc::clone(&inner),
+            calls: Mutex::new(Vec::new()),
+            replaces_atomically,
+        });
+        (inner, log)
+    }
 }
 
 impl Volume for CallLog {
@@ -116,6 +132,9 @@ impl Volume for CallLog {
     );
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+    fn supports_atomic_replace_rename(&self) -> bool {
+        self.replaces_atomically
     }
     fn delete<'a>(
         &'a self,
@@ -139,19 +158,15 @@ impl Volume for CallLog {
     }
 }
 
-/// ❗ A swap lands DELETE-FIRST: the original is known to be in the way, so a
-/// rename-first attempt would only cost a refused round trip. And ❌ never
-/// `rename(force)`, which on MTP can leave a duplicate beside the original.
+/// ❗ On a backend whose forced rename isn't one atomic step, a swap lands
+/// DELETE-FIRST: the original is known to be in the way, so a rename-first
+/// attempt would only cost a refused round trip. And ❌ never `rename(force)`,
+/// which on MTP can leave a duplicate beside the original.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_swap_lands_delete_first_and_never_renames_with_force() {
     let engine = TestOperations::new();
     let state = state(&engine);
-    let inner = Arc::new(InMemoryVolume::new("dest"));
-    inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
-    let log = Arc::new(CallLog {
-        inner: Arc::clone(&inner),
-        calls: Mutex::new(Vec::new()),
-    });
+    let (inner, log) = CallLog::over_an_original(false).await;
     let dest: Arc<dyn Volume> = Arc::clone(&log) as Arc<dyn Volume>;
 
     let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::StageOverOriginal);
@@ -176,6 +191,79 @@ async fn a_swap_lands_delete_first_and_never_renames_with_force() {
         "the new bytes replaced the original"
     );
     assert!(!inner.exists(&temp).await);
+    assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
+}
+
+/// ❗ Where the destination's forced rename replaces a file in ONE step (a local
+/// disk's `rename(2)`, SMB's `ReplaceIfExists`), a swap takes it: the name
+/// never goes empty, so there's no moment where the temp is the only copy and
+/// nothing to record as a landing, and it's one round trip instead of two.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_swap_on_an_atomic_replace_backend_lands_in_one_replacing_rename() {
+    let engine = TestOperations::new();
+    let state = state(&engine);
+    let (inner, log) = CallLog::over_an_original(true).await;
+    let dest: Arc<dyn Volume> = Arc::clone(&log) as Arc<dyn Volume>;
+
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::StageOverOriginal);
+    let temp = staged.target().to_path_buf();
+    inner.create_file(&temp, b"THE NEW BYTES").await.unwrap();
+    staged.commit(&dest, 13).await.expect("the swap lands");
+
+    assert_eq!(
+        *log.calls.lock_ignore_poison(),
+        vec![Call::Rename {
+            from: temp.clone(),
+            to: PathBuf::from("/notes.txt"),
+            force: true,
+        }],
+        "one replacing rename, ❌ no delete of the original",
+    );
+    assert_eq!(
+        size_of(&inner, "/notes.txt").await,
+        Some(13),
+        "the new bytes replaced the original"
+    );
+    assert!(!inner.exists(&temp).await);
+    assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
+}
+
+/// A replacing rename the destination refused never touched the original (the
+/// replace is one step or nothing), so the temp is a spare copy and goes.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_refused_replacing_rename_leaves_the_original_and_takes_the_temp_away() {
+    let engine = TestOperations::new();
+    let state = state(&engine);
+    let inner = Arc::new(
+        InMemoryVolume::new("dest").with_rename_failing(VolumeError::PermissionDenied {
+            path: "/notes.txt".to_owned(),
+            raw_os_error: None,
+        }),
+    );
+    inner.create_file(Path::new("/notes.txt"), b"OLD").await.unwrap();
+    let log = Arc::new(CallLog {
+        inner: Arc::clone(&inner),
+        calls: Mutex::new(Vec::new()),
+        replaces_atomically: true,
+    });
+    let dest: Arc<dyn Volume> = Arc::clone(&log) as Arc<dyn Volume>;
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::StageOverOriginal);
+    let temp = staged.target().to_path_buf();
+    inner.create_file(&temp, b"THE NEW BYTES").await.unwrap();
+
+    let failure = staged
+        .commit(&dest, 13)
+        .await
+        .map_err(LandingError::ended)
+        .expect_err("refused");
+
+    assert!(matches!(failure.error, VolumeError::PermissionDenied { .. }));
+    assert!(
+        failure.aftermath.is_none(),
+        "nothing was cleared, so nothing was rescued"
+    );
+    assert_eq!(size_of(&inner, "/notes.txt").await, Some(3), "the original stays");
+    assert!(!inner.exists(&temp).await, "the spare temp goes");
     assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
 }
 

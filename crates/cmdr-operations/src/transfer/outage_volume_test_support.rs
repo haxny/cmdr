@@ -10,8 +10,9 @@
 //! at the Nth read-stream open (a copy FROM the share), or around the Nth rename: before the server sees it, or after the server
 //! performed it but before its reply arrived (the landing a drop swallows). It
 //! can also land every write in one shot (SMB's compound write for a small
-//! file) and drop right after the Nth write completed, the same swallowed reply
-//! for a write that had no temp, optionally with the write's date stamp cut off
+//! file), replace a file in one forced rename (SMB's `ReplaceIfExists`), and
+//! drop right after the Nth write completed, the same swallowed reply for a
+//! write that had no temp, optionally with the write's date stamp cut off
 //! too (SMB stamps a compound write by path, in a frame of its own). And its
 //! reconnect can hang, as an SMB handshake a server accepted and never answered
 //! does (`#406`).
@@ -81,6 +82,9 @@ pub(crate) struct OutageVolume {
     drop_cuts_the_stamp: AtomicBool,
     /// Promise single-shot writes (`Volume::write_is_single_shot`).
     single_shot: AtomicBool,
+    /// Promise a forced rename replaces a file in one step
+    /// (`Volume::supports_atomic_replace_rename`), as SMB's `ReplaceIfExists`.
+    replaces_atomically: AtomicBool,
     renames: AtomicUsize,
     /// Drop the session around this (0-based) rename, and on which side of it.
     drop_at_rename: Mutex<Option<(usize, RenameDrop)>>,
@@ -148,6 +152,7 @@ impl OutageVolume {
             drop_after_write: Mutex::new(None),
             drop_cuts_the_stamp: AtomicBool::new(false),
             single_shot: AtomicBool::new(false),
+            replaces_atomically: AtomicBool::new(false),
             renames: AtomicUsize::new(0),
             drop_at_rename: Mutex::new(None),
             stale_error_at_rename: Mutex::new(None),
@@ -235,6 +240,12 @@ impl OutageVolume {
     /// for a small file, so the transfer writes straight to the final name.
     pub(crate) fn write_single_shot(&self) {
         self.single_shot.store(true, Ordering::SeqCst);
+    }
+
+    /// Replaces a file in one forced rename, as SMB's `ReplaceIfExists` does,
+    /// so a swap lands in that one step rather than delete-then-rename.
+    pub(crate) fn replace_atomically(&self) {
+        self.replaces_atomically.store(true, Ordering::SeqCst);
     }
 
     /// The session drops (and the server goes away) around rename number `n`
@@ -535,6 +546,9 @@ impl Volume for OutageVolume {
             })
             .await
         })
+    }
+    fn supports_atomic_replace_rename(&self) -> bool {
+        self.replaces_atomically.load(Ordering::SeqCst)
     }
     fn supports_copy_within(&self) -> bool {
         self.copies_on_server.load(Ordering::SeqCst)

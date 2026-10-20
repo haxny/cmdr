@@ -13,8 +13,9 @@
 //! **Who stages.** Every staged write stages HERE, a file→file Overwrite
 //! included: the conflict layer only decides that the write replaces the user's
 //! original ([`Replaces::Swap`]), and the write stages as
-//! [`WriteStaging::StageOverOriginal`] and lands delete-first through the same
-//! landing as any other. So the temp has one owner, and `write_path` names the
+//! [`WriteStaging::StageOverOriginal`] and lands through the same landing as
+//! any other: one replacing rename where the destination has one, else
+//! delete-first. So the temp has one owner, and `write_path` names the
 //! file the user gets on every path. A write the DESTINATION lands in one
 //! indivisible shot is
 //! [`WriteStaging::SingleShot`] and needs no temp: there is no moment at which
@@ -72,7 +73,7 @@ pub(super) enum WriteStaging {
     StageOntoClaimedName,
     /// A file→file Overwrite ([`Replaces::Swap`]): the final name holds the
     /// user's ORIGINAL, which survives the whole write. Staged exactly like
-    /// [`WriteStaging::Stage`], and landed delete-first
+    /// [`WriteStaging::Stage`], and landed over the original
     /// ([`LandingName::ReplacesOriginal`]).
     ///
     /// ❗ Never single-shot ([`resolve_staging`] leaves it alone): the
@@ -122,9 +123,10 @@ pub(super) enum LandingName {
     ClaimedByTheCaller,
     /// The name holds the user's original, which this write replaces (a
     /// file→file Overwrite). The original is known to be in the way, so the
-    /// landing deletes it FIRST, then renames: never `rename(force)`, which on
-    /// MTP can make a duplicate. Only [`WriteStaging::StageOverOriginal`] lands
-    /// with it.
+    /// landing replaces it in one forced rename where the destination's is one
+    /// step (`Volume::supports_atomic_replace_rename`), and otherwise deletes it
+    /// FIRST, then renames: never `rename(force)` there, which on MTP can make a
+    /// duplicate. Only [`WriteStaging::StageOverOriginal`] lands with it.
     ReplacesOriginal,
 }
 
@@ -328,11 +330,12 @@ impl StagedWrite {
     /// sweep, which is safe: the name was never cleared, and the source still
     /// holds the bytes.
     ///
-    /// A [`WriteStaging::StageOverOriginal`] write lands here too, delete-first
-    /// ([`LandingName::ReplacesOriginal`]), so the swap shares the cleared-way
-    /// rules: recorded as a landing before the original's delete goes out, a
-    /// refused delete checked with one stat, a refused rename after it rescued
-    /// out of temp space.
+    /// A [`WriteStaging::StageOverOriginal`] write lands here too
+    /// ([`LandingName::ReplacesOriginal`]): in one replacing rename where the
+    /// destination has one, else delete-first, sharing the cleared-way rules:
+    /// recorded as a landing before the original's delete goes out, a refused
+    /// delete checked with one stat, a refused rename after it rescued out of
+    /// temp space.
     ///
     /// `size` is the byte count the write confirmed. A landing that clears the
     /// way records the temp at that size (`ItemKind::Landing::expected_size`),

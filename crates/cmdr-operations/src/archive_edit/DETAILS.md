@@ -74,17 +74,18 @@ The remote ORIGINAL is byte-for-byte untouched until the very last swap:
    archive's bytes, then indeterminate `FinishingTransfer` through close and swap, under the op's own type (the pull
    stays silent).
 4. **Swap** is the ONLY step that changes the original: a staged write's swap landing
-   (`StagedWrite::begin_over_original`, the copy engine's file→file Overwrite, `WriteStaging::StageOverOriginal`): the
-   temp is re-recorded as a `Landing` (on disk before anything is cleared; when the ledger can't confirm it, nothing
-   is), then the original is deleted and the temp renamed onto its name, ❌ never a rename onto a live name (MTP allows
-   same-name siblings, so that would DUPLICATE). From the delete on, the temp may be the only copy: a refused rename
-   rescues it out of temp space (` (recovered)`, `NewDataKeptAt`), and a crash leaves the `Landing` record, whose sweep
-   finishes the landing. The rules are `../transfer/DETAILS.md` § "File writes are staged"; ❌ no copy of them here.
+   (`StagedWrite::begin_over_original`, the copy engine's file→file Overwrite, `WriteStaging::StageOverOriginal`). On a
+   backend whose forced rename replaces a file in one step (SMB's `ReplaceIfExists`, a local disk) that one rename is
+   the swap, and the name never goes empty. Everywhere else the temp is re-recorded as a `Landing` (on disk before
+   anything is cleared; when the ledger can't confirm it, nothing is), then the original is deleted and the temp
+   renamed onto its name, ❌ never a rename onto a live name (MTP allows same-name siblings, so that would DUPLICATE).
+   From the delete on, the temp may be the only copy: a refused rename rescues it out of temp space (` (recovered)`,
+   `NewDataKeptAt`), and a crash leaves the `Landing` record, whose sweep finishes the landing. The rules are
+   `../transfer/DETAILS.md` § "File writes are staged"; ❌ no copy of them here.
 
-- **Decision: delete-then-rename on every backend, SMB included**, which gives up SMB's one-step `ReplaceIfExists`
-  rename. Why: one landing function owns every swap (the copy engine's file Overwrite lands the same way), so the remote
-  edit inherits its `Landing` record, its refusal rules, and its outage settle instead of keeping a third copy of them.
-  The window between the delete and the rename is what the record covers: a crash there is finished by the sweep.
+- **Decision: the swap is the copy engine's landing, not a swap of its own.** One landing function owns every swap (the
+  copy engine's file Overwrite lands the same way), so the remote edit inherits its one-step replace, its `Landing`
+  record, its refusal rules, and its outage settle instead of keeping a third copy of them.
 
 **The swap's ledger home is the parent's id** (`pull_apply_upload_swap`'s `parent_volume_id`). An archive edit's state
 names no destination volume (a move out extracts onto one volume and rewrites the archive on another), so the swap names
@@ -104,7 +105,7 @@ delete, a Cancel in either wait, and a refusal that fails at once).
 
 A cancel at ANY point before the swap's delete leaves the remote original intact (the local scratch dir and any partial
 remote temp are cleaned up: a RAII `ScratchDir` and the staged write's abandon). Pinned by `remote_tests` (round-trip,
-cancel-before-swap-leaves-the-original, and the sibling-allowing delete-then-rename swap), plus live-remote integration
+cancel-before-swap-leaves-the-original, and the sibling-allowing swap), plus live-remote integration
 proofs that drive `pull_apply_upload_swap` against a REAL backend: the backend-blind scenarios in
 `network_archive_test_support.rs` (edit, cancel before the swap, routing detection, extract-out, copy-into, compress),
 which `smb_archive_integration_test.rs`, `sftp_archive_integration_test.rs`, and `webdav_archive_integration_test.rs`

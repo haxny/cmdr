@@ -10,6 +10,10 @@
 //! ends without the share keeps the new bytes, recorded as a landing for the
 //! next sweep that reaches it, ❌ never cleaned as a partial.
 //!
+//! On a share whose forced rename replaces a file in one step (SMB's
+//! `ReplaceIfExists`), the swap is that one rename: the name never goes empty,
+//! and a wait that ends without the share leaves the original whole.
+//!
 //! The landing alone, without a wait, is `swap_landing_tests.rs`; the same
 //! sites without an outage are `safe_replace_grid_tests.rs`.
 
@@ -100,9 +104,11 @@ enum Cut {
     /// The server deleted `orig`; the reply is lost.
     DeleteUnanswered,
     /// The delete went through; the rename after it never reaches the server.
+    /// On a share that replaces in one step there's no delete: the replacing
+    /// rename never reaches the server.
     RenameUnsent,
     /// The delete went through; the server renamed the temp onto `orig`, and
-    /// the reply is lost.
+    /// the reply is lost. (On a one-step share: the replacing rename.)
     RenameUnanswered,
     /// `delete(orig)` answers the error of a session someone else already
     /// replaced: the share reads live on a newer generation (it never reached
@@ -123,6 +129,16 @@ enum Meanwhile {
     StaysGone,
 }
 
+/// How the share replaces a file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Replace {
+    /// Delete, then rename: every backend without a one-step replace.
+    DeleteThenRename,
+    /// One forced rename (`Volume::supports_atomic_replace_rename`), as SMB's
+    /// `ReplaceIfExists`: the name never goes empty.
+    InOneStep,
+}
+
 /// A finished cell.
 struct Ran {
     site: Site,
@@ -140,7 +156,12 @@ struct Ran {
 
 /// Runs one Overwrite at `site` with the share armed to drop at `cut`.
 async fn run(site: Site, cut: Cut, meanwhile: Meanwhile) -> Ran {
-    let op_id = format!("op-swap-outage-{site:?}-{cut:?}-{meanwhile:?}");
+    run_on(site, cut, meanwhile, Replace::DeleteThenRename).await
+}
+
+/// [`run`], on a share that replaces a file the way `replace` says.
+async fn run_on(site: Site, cut: Cut, meanwhile: Meanwhile, replace: Replace) -> Ran {
+    let op_id = format!("op-swap-outage-{site:?}-{cut:?}-{meanwhile:?}-{replace:?}");
     let engine = TestOperations::new();
 
     let dest_inner = Arc::new(InMemoryVolume::new("Naspolya").with_space_info(10_000_000, 10_000_000));
@@ -154,6 +175,9 @@ async fn run(site: Site, cut: Cut, meanwhile: Meanwhile) -> Ran {
         .unwrap();
     dest_inner.create_file(Path::new(site.orig()), OLD).await.unwrap();
     let nas = OutageVolume::wrap(Arc::clone(&dest_inner), &op_id);
+    if replace == Replace::InOneStep {
+        nas.replace_atomically();
+    }
     let orig = Path::new(site.orig());
     match cut {
         Cut::DeleteUnsent => nas.drop_at_delete_of(orig, RenameDrop::BeforeTheServerSeesIt),
@@ -690,5 +714,79 @@ async fn a_cancel_during_the_wait_after_the_delete_leaves_the_landing_for_the_ar
             "{label}: the arrival sweep lands the new bytes at the original's name"
         );
         assert!(!ran.dest_inner.exists(&temp).await, "{label}: and the temp is gone");
+    }
+}
+
+// ── A share that replaces a file in one step ────────────────────────────────
+
+/// The drop hits a one-step replace before the server sees it: once the share
+/// is back, the temp is still whole and the original still in place, so the
+/// replace runs again and lands, without the file streaming again.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_drop_before_a_one_step_replace_waits_and_lands_at_every_site() {
+    for site in Site::ALL {
+        let ran = run_on(site, Cut::RenameUnsent, Meanwhile::ComesBack, Replace::InOneStep).await;
+        assert!(ran.nas.reconnect_attempts() > 0, "{}: the share dropped", ran.label());
+        ran.assert_landed().await;
+        ran.assert_streamed_once();
+    }
+}
+
+/// The server performed the one-step replace and the reply was lost: the temp
+/// is gone and the name holds exactly the source's bytes, so the file counts as
+/// landed. A one-pass extract has no source to compare against, so it reports,
+/// and the file is there anyway.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_one_step_replace_whose_reply_was_lost_counts_as_landed_only_on_the_sources_bytes() {
+    for site in Site::ALL {
+        let ran = run_on(site, Cut::RenameUnanswered, Meanwhile::ComesBack, Replace::InOneStep).await;
+        let label = ran.label();
+        assert!(ran.nas.reconnect_attempts() > 0, "{label}: the share dropped");
+        if site.streams_again() {
+            ran.assert_landed().await;
+            ran.assert_streamed_once();
+        } else {
+            assert!(
+                ran.result.is_err(),
+                "{label}: ❗ never counted as landed without the proof"
+            );
+            assert_eq!(
+                ran.orig().await.as_deref(),
+                Some(NEW),
+                "{label}: what the server landed stays"
+            );
+            assert_eq!(ran.temps().await, Vec::<PathBuf>::new(), "{label}");
+        }
+        assert_eq!(ran.ledger.recorded_landings(), Vec::<PathBuf>::new(), "{label}");
+    }
+}
+
+/// ❗ The point of the one-step replace: an outage that outlasts the wait at it
+/// leaves the user's ORIGINAL whole at its name, with nothing recorded as a
+/// landing, where delete-then-rename would have left the name empty and the new
+/// bytes on a temp for the next sweep.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_outage_that_outlasts_the_wait_at_a_one_step_replace_leaves_the_original_whole_at_every_site() {
+    for site in Site::ALL {
+        let ran = run_on(site, Cut::RenameUnsent, Meanwhile::StaysGone, Replace::InOneStep).await;
+        let label = ran.label();
+        assert!(ran.result.is_err(), "{label}: the op fails");
+        assert_eq!(
+            ran.orig().await.as_deref(),
+            Some(OLD),
+            "{label}: ❗ the original stays whole"
+        );
+        assert_eq!(
+            ran.ledger.recorded_landings(),
+            Vec::<PathBuf>::new(),
+            "{label}: nothing was cleared, so nothing is a landing"
+        );
+        if site != Site::Concurrent {
+            assert!(
+                matches!(ran.result, Err(WriteOperationError::ServerConnectionLost { .. })),
+                "{label}: the failure says it was the connection, got {:?}",
+                ran.result
+            );
+        }
     }
 }

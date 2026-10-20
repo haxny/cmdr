@@ -1091,19 +1091,31 @@ way: it usually isn't, and a speculative delete would burn one extra round trip 
 covers.
 
 ❗ **A swap lands the other way round** (`LandingName::ReplacesOriginal`, from `StageOverOriginal`): the original is
-known to be in the way, so the landing deletes it first and renames the temp into the empty slot, through the same
-cleared-way tail as a claimed name (the landing record before the delete, the refused-delete stat, the rescue below).
-Delete-then-rename, ❌ never `rename(force)`: MTP's force rename doesn't delete what's there and can leave a duplicate,
-so this is the one shape correct on every backend. A refused delete reports its own refusal (it's about the user's
-file), where a claimed name reports the first rename's `AlreadyExists`. The flags that wait for the final name go on
-after the commit, at the original's name, as for any staged write (`volume/landed_flags.rs`). Pinned by
-`staged_write.rs::tests::{a_swap_lands_delete_first_and_never_renames_with_force, a_write_over_an_original_stages_and_is_never_single_shot}`,
-`volume/swap_landing_tests.rs`, and at all five write sites by `volume/safe_replace_grid_tests.rs`.
+known to be in the way. Two shapes, picked by the destination:
 
-❗ **The moment a swap's delete goes through, the operation stops being rollbackable**
+- **One replacing rename** where the destination's forced rename replaces a file in one step
+  (`Volume::supports_atomic_replace_rename`: a local disk's `rename(2)`, SMB's `ReplaceIfExists`;
+  `staged_write_landing.rs::replace_in_one_step`). The name never goes empty, so the temp is never the only copy and
+  nothing is recorded as a landing; a refusal leaves the original whole and takes the spare temp away; a transport fault
+  cuts the landing off (`CutOffAt::ReplacingRename`), and the settle runs the replace again on a whole temp or counts a
+  gone temp as landed only on the source's bytes (the name held the original, maybe at the same size). A wait that ends
+  without the share leaves the original whole, the temp to the abandoned-write cleanup. One round trip instead of two.
+- **Delete, then rename** everywhere else: the landing deletes the original first and renames the temp into the empty
+  slot, through the same cleared-way tail as a claimed name (the landing record before the delete, the refused-delete
+  stat, the rescue below). ❌ Never `rename(force)` there: MTP's force rename doesn't delete what's there and can leave
+  a duplicate. A refused delete reports its own refusal (it's about the user's file), where a claimed name reports the
+  first rename's `AlreadyExists`.
+
+The flags that wait for the final name go on after the commit, at the original's name, as for any staged write
+(`volume/landed_flags.rs`). Pinned by
+`staged_write.rs::tests::{a_swap_lands_delete_first_and_never_renames_with_force, a_swap_on_an_atomic_replace_backend_lands_in_one_replacing_rename, a_write_over_an_original_stages_and_is_never_single_shot}`,
+`volume/swap_landing_tests.rs`, at all five write sites by `volume/safe_replace_grid_tests.rs`, and through an outage by
+`volume/swap_outage_tests.rs` (both shapes).
+
+❗ **The moment a swap's delete (or its one replacing rename) goes through, the operation stops being rollbackable**
 (`staged_write_landing.rs::Landing::original_replaced` notes it on the journal, `NotRollbackableReason::Overwrote`): the
-file an undo would restore is gone, whatever the rename does next. A delete that can't be confirmed counts too. That's
-the ONE moment for a failure path at every site; a landed overwrite's journal row also says `overwrote`, recorded by the
+file an undo would restore is gone, whatever the rename does next. A step that can't be confirmed counts too. That's the
+ONE moment for a failure path at every site; a landed overwrite's journal row also says `overwrote`, recorded by the
 site from its `Replaces` (`CreatedPaths::record_overwrite` in the merge leaf and the extract, after the file landed),
 and a write that failed before the delete left the original in place, so the op stays rollbackable. Pinned by the grid's
 failure cells.

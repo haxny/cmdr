@@ -91,12 +91,29 @@ struct Ran {
 }
 
 async fn run(cut: Cut, meanwhile: Meanwhile) -> Ran {
-    let label = format!("{cut:?}/{meanwhile:?}");
+    run_on(cut, meanwhile, Replace::DeleteThenRename).await
+}
+
+/// How the share replaces a file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Replace {
+    DeleteThenRename,
+    /// One forced rename (`Volume::supports_atomic_replace_rename`), as SMB's
+    /// `ReplaceIfExists`.
+    InOneStep,
+}
+
+/// [`run`], on a share that replaces a file the way `replace` says.
+async fn run_on(cut: Cut, meanwhile: Meanwhile, replace: Replace) -> Ran {
+    let label = format!("{cut:?}/{meanwhile:?}/{replace:?}");
     let engine = TestOperations::new();
     let inner = Arc::new(InMemoryVolume::new("Naspolya"));
     inner.create_directory(Path::new("/share")).await.unwrap();
     inner.create_file(Path::new(ARCHIVE), &original_zip()).await.unwrap();
     let nas = OutageVolume::wrap(Arc::clone(&inner), &format!("zip-edit-{label}"));
+    if replace == Replace::InOneStep {
+        nas.replace_atomically();
+    }
     let archive = Path::new(ARCHIVE);
     match cut {
         Cut::PullOpen => nas.drop_at_open(0),
@@ -454,4 +471,35 @@ async fn a_refused_upload_fails_at_once() {
         Some(original_zip()),
         "the original is untouched"
     );
+}
+
+/// On a share that replaces a file in one step (SMB), the zip edit's swap is
+/// that one rename: a drop at it waits, and lands without uploading again.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_drop_at_a_one_step_replace_waits_and_lands_without_uploading_again() {
+    for cut in [Cut::RenameUnsent, Cut::RenameUnanswered] {
+        let ran = run_on(cut, Meanwhile::ComesBack, Replace::InOneStep).await;
+        ran.assert_the_share_dropped();
+        ran.assert_landed().await;
+        assert_eq!(ran.uploads(), 1, "{}: ❗ a whole temp lands without uploading again", ran.label);
+    }
+}
+
+/// ❗ And when the share stays gone at that one step, the original archive is
+/// still whole at its name, with nothing recorded as a landing: the replace
+/// happened in full or not at all.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_share_that_stays_gone_at_a_one_step_replace_leaves_the_original_archive() {
+    let ran = run_on(Cut::RenameUnsent, Meanwhile::StaysGone, Replace::InOneStep).await;
+    ran.assert_the_share_dropped();
+    assert!(
+        matches!(
+            &ran.result,
+            Err(EditError::Op(WriteOperationError::ServerConnectionLost { .. }))
+        ),
+        "the error says it was the connection"
+    );
+    assert_eq!(ran.ledger.recorded_landings(), Vec::<PathBuf>::new(), "nothing was cleared");
+    ran.nas.become_reachable();
+    ran.assert_original_intact().await;
 }

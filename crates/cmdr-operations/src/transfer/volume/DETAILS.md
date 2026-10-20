@@ -956,22 +956,24 @@ mid-stream failure (network drop, USB yank, cancel) leaves the user with neither
 `ResolvedConflict { write_path: orig, replaces: Replaces::Swap }`, and the swap is a LANDING MODE of the write's own
 staging (`../staged_write.rs`, `WriteStaging::StageOverOriginal`): the streaming writer lands bytes in a
 `<name>.cmdr-tmp-<uuid>` sibling the `StagedWrite` mints and records like any other, and only after the temp is fully
-written does its landing delete `orig` (which survived the whole write) and `rename(temp, orig, force=false)`. So the
-temp has ONE owner, every write site (`copy_serial.rs`, `copy_concurrent_task.rs`, `merge.rs`, `move_cross.rs`,
-`sequential_extract.rs`, and the server-side copy) gets the same landing, and `write_path` names the file the user ends
-up with: ❌ no layer above `StagedWrite` sees a temp-shaped destination. On a failure BEFORE the landing the original is
-untouched and the write's own `abandon` (or, for a dropped task, `cleanup.rs::clean_abandoned_staged_writes`) removes
-the temp; on a failure INSIDE it the original may be gone, so the temp is recorded as a landing and rescued to a
-` (recovered)` name instead (below). The shared rules of that cleared-way landing: `../DETAILS.md` § "File writes are
-staged".
+written does its landing replace `orig` (which survived the whole write): one replacing rename where the destination has
+one, else delete `orig` and `rename(temp, orig, force=false)`. So the temp has ONE owner, every write site
+(`copy_serial.rs`, `copy_concurrent_task.rs`, `merge.rs`, `move_cross.rs`, `sequential_extract.rs`, and the server-side
+copy) gets the same landing, and `write_path` names the file the user ends up with: ❌ no layer above `StagedWrite` sees
+a temp-shaped destination. On a failure BEFORE the landing the original is untouched and the write's own `abandon` (or,
+for a dropped task, `cleanup.rs::clean_abandoned_staged_writes`) removes the temp; on a failure INSIDE it the original
+may be gone, so the temp is recorded as a landing and rescued to a ` (recovered)` name instead (below). The shared rules
+of that cleared-way landing: `../DETAILS.md` § "File writes are staged".
 
-- **Why explicit delete-then-rename, not `rename(force=true)`:** MTP's `rename(force=true)` does NOT delete an existing
-  destination — it can create a duplicate. SMB(force=true) deletes-then-renames internally and Local replaces
-  atomically, but the swap must be uniform across all backends, so it always deletes `orig` first then renames into the
-  now-absent slot. There is a tiny window between the delete and the rename where neither name resolves, but the
-  complete new data lives in the temp throughout, recorded as a landing before the delete goes out, so a crash there
-  leaves a temp the next sweep lands rather than data loss. If the `delete(orig)` is refused with the original still
-  there, the landing takes its spare temp away and reports the refusal typed, with no rescue: nothing was lost.
+- **Why `rename(force=true)` only where it's one step:** a backend that declares `supports_atomic_replace_rename` (local
+  disks, SMB's `ReplaceIfExists`) swaps the file in under the name in one call, so the name never goes empty and the
+  landing takes it. Everywhere else force isn't safe: MTP's `rename(force=true)` does NOT delete an existing
+  destination, it can create a duplicate, so the landing deletes `orig` first and renames into the now-absent slot.
+  There is a tiny window between that delete and the rename where neither name resolves, but the complete new data lives
+  in the temp throughout, recorded as a landing before the delete goes out, so a crash there leaves a temp the next
+  sweep lands rather than data loss. If the `delete(orig)` is refused with the original still there, the landing takes
+  its spare temp away and reports the refusal typed, with no rescue: nothing was lost. The shapes and their outage
+  settle: `../DETAILS.md` § "File writes are staged".
 - **Threading:** `resolve_volume_conflict` / `apply_volume_conflict_resolution` return `Option<ResolvedConflict>`. The
   write sites derive the staging from `replaces` (`staging_for`), so the swap happens inside `copy_single_path` (or the
   extract's write), and a site records the landed name, which IS the original, in `copied_paths` / the milestone / the
@@ -1046,12 +1048,12 @@ staged".
 - **An aside's rename waits out a dropped share, and its record outlives the error** (`displace_destination`, shared by
   every site above and by a fresh compress's displaced publish). The `VolumeAside` record is on disk before the rename
   goes out. A rename the transport cut off may have been performed, so the share is waited for (the copy's wait,
-  `../volume_outage.rs`) and one stat of the aside settles it: there means set aside, gone means run the rename again.
-  A wait that ends without the share settles what one stat can (gone: retire; there: put the file back now) and
-  otherwise keeps the record for the share's next arrival, whose sweep restores the file
-  (`../../in_flight_sweep.rs`, which reads an aside FIRST so one that never happened retires). The put-back
-  (`DisplacedDestination::restore`) classifies the same way before it rescues. ❌ Retiring the record on the raw error
-  left the user's file under a scratch name nothing knew about. Pinned by `displaced_destination_tests.rs`.
+  `../volume_outage.rs`) and one stat of the aside settles it: there means set aside, gone means run the rename again. A
+  wait that ends without the share settles what one stat can (gone: retire; there: put the file back now) and otherwise
+  keeps the record for the share's next arrival, whose sweep restores the file (`../../in_flight_sweep.rs`, which reads
+  an aside FIRST so one that never happened retires). The put-back (`DisplacedDestination::restore`) classifies the same
+  way before it rescues. ❌ Retiring the record on the raw error left the user's file under a scratch name nothing knew
+  about. Pinned by `displaced_destination_tests.rs`.
 - Pinned by `conflict_tests.rs::file_overwrite_keeps_the_original_and_writes_at_its_name`,
   `../staged_write_tests.rs::a_swap_lands_delete_first_and_never_renames_with_force`, and
   `copy_crashsafe_tests.rs::{cross_volume_overwrite_preserves_dest_on_midstream_failure, cross_volume_overwrite_success_replaces_and_cleans_temp, cross_volume_overwrite_concurrent_replaces_and_cleans_temp}`.
