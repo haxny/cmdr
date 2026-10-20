@@ -15,6 +15,7 @@ use super::super::recovered_name::{
     AfterARefusedDelete, FinalizeFailure, LandingAftermath, discard_unplaced_temp, rescue_out_of_temp_space,
     what_a_refused_delete_left,
 };
+use super::super::volume::DisplacedDestination;
 use super::{LandingName, home_of};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_error::LogError;
@@ -22,6 +23,13 @@ use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_operation_log::types::NotRollbackableReason;
+
+#[path = "staged_write_landing_aside.rs"]
+mod aside;
+use aside::{
+    after_a_refused_aside, give_up_onto_aside, rename_onto_aside, resume_setting_aside,
+    run_again_with_the_original_home, swap_through_an_aside,
+};
 
 /// Why a landing didn't give the bytes their name.
 #[derive(Debug)]
@@ -43,9 +51,11 @@ pub(crate) enum LandingError {
 /// ❗ Dropped mid-way (a task the concurrent driver let go, a cancel's drain
 /// deadline), a temp recorded as a landing stays recorded and is handed to
 /// the volume's next arrival, which finishes the landing: from the clearing
-/// delete on it may be the destination's only copy. A temp still recorded as a
-/// temp stays in the operation's in-flight set for the abandoned-write sweep,
-/// which is safe: nothing was cleared, and the source holds the bytes.
+/// delete on it may be the destination's only copy. A swap's original held
+/// aside goes to the volume's next arrival the same way, whose sweep puts it
+/// back or, once the replacement is whole at the name, removes it. A temp
+/// still recorded as a temp stays in the operation's in-flight set for the
+/// abandoned-write sweep, which is safe: nothing it held was the only copy.
 pub(super) struct Landing {
     state: Arc<WriteOperationState>,
     /// The temp, kept out of the pane until the landing settles
@@ -59,6 +69,9 @@ pub(super) struct Landing {
     /// write's).
     home_volume: Option<String>,
     recorded: Recorded,
+    /// A swap's original, from the moment its aside is recorded until the swap
+    /// settles it ([`swap_through_an_aside`]).
+    aside: Option<DisplacedDestination>,
     /// Set by every discard of the temp this landing asks for: a temp gone
     /// from the destination is proof of a landing only when nothing of ours
     /// deleted it.
@@ -95,6 +108,7 @@ impl Landing {
             size,
             home_volume,
             recorded: Recorded::Temp,
+            aside: None,
             discard_asked: false,
         }
     }
@@ -168,34 +182,24 @@ impl Landing {
         gone
     }
 
-    /// A swap's delete of the user's original went through (or may have): the
-    /// operation stops being rollbackable now, whatever the rename does next,
-    /// because the file an undo would restore is gone. The ONE moment an
-    /// overwrite rules out rollback on a failure path: a write that never got
-    /// here left the original in place, and a landed swap's journal row says
-    /// so as well.
-    fn original_replaced(&self, in_the_way: &InTheWay) {
-        if matches!(in_the_way, InTheWay::TheOriginal) {
-            journal::note_not_rollbackable(self.state.scope(), NotRollbackableReason::Overwrote);
-        }
+    /// The new bytes took the user's original's name (or may have): the
+    /// operation stops being rollbackable now, whatever happens next, because
+    /// the file an undo would restore is no longer at its name. The ONE moment
+    /// an overwrite rules out rollback on a failure path: a swap that never got
+    /// here put the original back, and a landed swap's journal row says so as
+    /// well.
+    fn original_replaced(&self) {
+        journal::note_not_rollbackable(self.state.scope(), NotRollbackableReason::Overwrote);
     }
 }
 
 impl Drop for Landing {
     fn drop(&mut self) {
         self.keep_landing();
+        if let Some(aside) = self.aside.take() {
+            aside.keep_for_arrival();
+        }
     }
-}
-
-/// What a landing clears out of the final name's way before its rename.
-#[derive(Debug)]
-pub(super) enum InTheWay {
-    /// Something on a name the caller claimed, which the first rename met:
-    /// its `AlreadyExists` is the error to report if the way can't be cleared.
-    Claimed(VolumeError),
-    /// The user's original, which a swap replaces. A refused delete reports
-    /// its own refusal, which is about the user's file.
-    TheOriginal,
 }
 
 /// Whether a transport fault cuts the landing off for the caller's wait, or
@@ -213,9 +217,10 @@ enum CutOffAt {
     /// A rename-first landing's first rename: nothing was cleared, and the
     /// temp is still a removable copy of ours. The server may have renamed it.
     FirstRename,
-    /// The delete that clears the way: it may have gone through. The temp is
-    /// recorded as a landing.
-    ClearingDelete(InTheWay),
+    /// The delete that clears a claimed name: it may have gone through. The
+    /// temp is recorded as a landing. Carries the first rename's
+    /// `AlreadyExists`, the error to report if the way can't be cleared.
+    ClearingDelete(VolumeError),
     /// The rename onto the cleared name: the delete went through, so the temp
     /// may be the destination's only copy. The server may have renamed it.
     RenameOntoCleared,
@@ -224,6 +229,14 @@ enum CutOffAt {
     /// the temp is still a removable copy of ours. The server may have
     /// performed it.
     ReplacingRename,
+    /// A swap's rename of the original onto its recorded aside
+    /// ([`swap_through_an_aside`]): the server may have moved it. The temp is
+    /// still a removable copy of ours either way, since the original is whole
+    /// wherever it is.
+    SettingAside,
+    /// A swap's rename of the temp onto the name its original vacated: the
+    /// server may have renamed it. The original is whole at its aside.
+    RenameOntoAside,
 }
 
 /// Moves a completed temp onto its final name.
@@ -241,13 +254,15 @@ enum CutOffAt {
 /// (`Volume::supports_atomic_replace_rename`: a local disk's `rename(2)`, SMB's
 /// `ReplaceIfExists`), the swap is that rename ([`replace_in_one_step`]): the
 /// name never goes empty, so the temp is never the only copy and nothing needs
-/// recording as a landing. Everywhere else the original is deleted first and
-/// the temp renamed into the empty slot, through the same cleared-way rules
-/// below ([`clear_the_way`]); ❌ never `rename(force)` there, because MTP's
-/// doesn't delete what's there and can make a duplicate. The moment the
-/// original is replaced (or its delete goes through), the operation stops
-/// being rollbackable ([`Landing::original_replaced`]): the file an undo would
-/// restore is gone.
+/// recording as a landing. Everywhere else the original is renamed ASIDE first,
+/// under a record, the temp renamed onto the empty name, and only then is the
+/// aside deleted ([`swap_through_an_aside`]): the original stays whole until the
+/// new bytes are whole at its name, and ❌ never `rename(force)` there, because
+/// MTP's doesn't delete what's there and can make a duplicate, and SFTP's may
+/// delete it in a step of its own. The moment the new bytes take the name (or
+/// may have), the operation stops being rollbackable
+/// ([`Landing::original_replaced`]): the file an undo would restore is no
+/// longer at it.
 ///
 /// ❗ **Only `AlreadyExists` earns the delete**, and this is the difference
 /// between a transient blip and a destroyed file. A rename over a network
@@ -273,11 +288,11 @@ enum CutOffAt {
 /// a complete `.cmdr-tmp-*` of ours in the user's folder would otherwise wait
 /// an hour for the stale-temp reap (`recovered_name::discard_unplaced_temp`).
 /// That covers a rename refused for any reason but `AlreadyExists`, a clash on
-/// a name the caller believed free, and a claimed name (or an original) whose
-/// delete was refused with the name still taken. When the way was CLEARED and
-/// the rename then failed anyway, the temp is the only complete copy at the
-/// destination, so it is never deleted: it leaves temp space instead
-/// ([`LandingAftermath::NewDataKeptAt`]).
+/// a name the caller believed free, a claimed name whose delete was refused
+/// with the name still taken, and a swap whose original went back to its name.
+/// When the way was CLEARED and the rename then failed anyway, the temp is the
+/// only complete copy at the destination, so it is never deleted: it leaves temp
+/// space instead ([`LandingAftermath::NewDataKeptAt`]).
 ///
 /// ❗ **Classify before acting.** A step that fails on the transport
 /// ([`VolumeError::transport_fault`]) may have been performed by the server,
@@ -290,23 +305,24 @@ enum CutOffAt {
 /// ([`CutOffLanding`]); the refusal rules run only for a refusal, or once the
 /// wait gave up.
 ///
-/// ❗ **Before it clears the way, the temp is re-recorded as a landing**
+/// ❗ **Before it clears a claimed name, the temp is re-recorded as a landing**
 /// (`in_flight_temps::hold_for_landing`): on disk as an `ItemKind::Landing` at
 /// the write's size before the delete goes out, and out of the operation's
 /// in-flight set, so no in-operation sweep may delete it and a crash leaves a
-/// record the sweep finishes the landing from. ❗ When that record can't be
-/// confirmed on disk, the way is NOT cleared: the landing fails as a refusal
-/// with nothing cleared, the original in place. The landing record retires
-/// when the rename lands it, when the rescue gives it a real name, or when the
-/// refused delete left the name taken (the temp is a spare copy then, and goes
-/// or turns back into a temp). A landing that ends unsure, or is cut off and
-/// never resumed, leaves it recorded for the sweep.
+/// record the sweep finishes the landing from. ❗ **And before a swap moves the
+/// original aside, the aside is recorded** (`in_flight_temps::hold_aside`, an
+/// `ItemKind::FileAside` at the write's size): a crash leaves a record the sweep
+/// puts the original back from, or, once the replacement is whole at the name,
+/// removes the aside by. When either record can't be confirmed on disk, nothing
+/// is moved: the landing fails as a refusal with nothing cleared, the original
+/// in place. A landing that ends unsure, or is cut off and never resumed,
+/// leaves its records for the sweep.
 pub(super) async fn land(dest_volume: &Arc<dyn Volume>, mut landing: Landing) -> Result<(), LandingError> {
     if landing.name == LandingName::ReplacesOriginal {
         if dest_volume.supports_atomic_replace_rename() {
             return replace_in_one_step(dest_volume, landing).await;
         }
-        return clear_the_way(dest_volume, landing, InTheWay::TheOriginal, Patience::Waits).await;
+        return swap_through_an_aside(dest_volume, landing).await;
     }
     let Err(first) = dest_volume.rename(landing.temp(), &landing.final_path, false).await else {
         landing.settled();
@@ -330,7 +346,7 @@ pub(super) async fn land(dest_volume: &Arc<dyn Volume>, mut landing: Landing) ->
         landing.discard(dest_volume).await;
         return Err(LandingError::Failed(first.into()));
     }
-    clear_the_way(dest_volume, landing, InTheWay::Claimed(first), Patience::Waits).await
+    clear_the_way(dest_volume, landing, first, Patience::Waits).await
 }
 
 fn cut_off(landing: Landing, at: CutOffAt, error: VolumeError) -> LandingError {
@@ -356,25 +372,22 @@ fn cut_off(landing: Landing, at: CutOffAt, error: VolumeError) -> LandingError {
 async fn replace_in_one_step(dest_volume: &Arc<dyn Volume>, mut landing: Landing) -> Result<(), LandingError> {
     match dest_volume.rename(landing.temp(), &landing.final_path, true).await {
         Ok(()) => {
-            landing.original_replaced(&InTheWay::TheOriginal);
+            landing.original_replaced();
             landing.settled();
             Ok(())
         }
         Err(error) if error.transport_fault().is_some() => {
-            landing.original_replaced(&InTheWay::TheOriginal);
+            landing.original_replaced();
             Err(cut_off(landing, CutOffAt::ReplacingRename, error))
         }
         Err(refused) => {
-            if matches!(
-                dest_volume.get_metadata(landing.temp()).await,
-                Err(VolumeError::NotFound(_))
-            ) {
+            if temp_is_gone(dest_volume, &landing).await {
                 log::info!(
                     target: "copy",
                     "landing: the replace onto {} answered {refused}, but its temp is gone, so it landed",
                     LogPrivate::file_path(&landing.final_path), refused = LogError(&refused),
                 );
-                landing.original_replaced(&InTheWay::TheOriginal);
+                landing.original_replaced();
                 landing.settled();
                 return Ok(());
             }
@@ -384,12 +397,25 @@ async fn replace_in_one_step(dest_volume: &Arc<dyn Volume>, mut landing: Landing
     }
 }
 
-/// The landing's cleared-way tail, shared by a claimed name and a swap: record
-/// the temp as a landing, clear the final name, and rename the temp onto it.
+/// Whether the temp is provably gone from the destination, which, with
+/// nothing of ours having discarded it, means a rename that answered an
+/// error performed it anyway.
+async fn temp_is_gone(dest_volume: &Arc<dyn Volume>, landing: &Landing) -> bool {
+    !landing.discard_asked
+        && matches!(
+            dest_volume.get_metadata(landing.temp()).await,
+            Err(VolumeError::NotFound(_))
+        )
+}
+
+/// The landing's cleared-way tail for a claimed name: record the temp as a
+/// landing, clear the final name, and rename the temp onto it. `first` is the
+/// first rename's `AlreadyExists`, the error to report if the way can't be
+/// cleared.
 async fn clear_the_way(
     dest_volume: &Arc<dyn Volume>,
     mut landing: Landing,
-    in_the_way: InTheWay,
+    first: VolumeError,
     patience: Patience,
 ) -> Result<(), LandingError> {
     if !landing.hold().await {
@@ -405,12 +431,10 @@ async fn clear_the_way(
     match dest_volume.delete(&landing.final_path).await {
         Ok(()) | Err(VolumeError::NotFound(_)) => {}
         Err(error) if patience == Patience::Waits && error.transport_fault().is_some() => {
-            landing.original_replaced(&in_the_way);
-            return Err(cut_off(landing, CutOffAt::ClearingDelete(in_the_way), error));
+            return Err(cut_off(landing, CutOffAt::ClearingDelete(first), error));
         }
-        Err(refused) => return after_a_refused_delete(dest_volume, landing, in_the_way, refused, patience).await,
+        Err(refused) => return after_a_refused_delete(dest_volume, landing, first, refused, patience).await,
     }
-    landing.original_replaced(&in_the_way);
     rename_onto_cleared(dest_volume, landing, patience).await
 }
 
@@ -433,45 +457,33 @@ fn landing_not_recorded() -> FinalizeFailure {
 async fn after_a_refused_delete(
     dest_volume: &Arc<dyn Volume>,
     mut landing: Landing,
-    in_the_way: InTheWay,
+    first: VolumeError,
     refused: VolumeError,
     patience: Patience,
 ) -> Result<(), LandingError> {
     match what_a_refused_delete_left(dest_volume.as_ref(), &landing.final_path).await {
-        AfterARefusedDelete::Gone => {
-            landing.original_replaced(&in_the_way);
-            rename_onto_cleared(dest_volume, landing, patience).await
-        }
+        AfterARefusedDelete::Gone => rename_onto_cleared(dest_volume, landing, patience).await,
         // Couldn't clear the way, so nothing was lost: the destination still
         // holds whatever was in the way, and the temp is a spare copy.
         AfterARefusedDelete::StillThere => {
-            let report = refusal_to_report(in_the_way, refused);
             log::warn!(
                 target: "copy",
-                "landing: {} still holds what was in the way after a refused delete ({report}); \
+                "landing: {} still holds what was in the way after a refused delete ({refused}); \
                  taking the temp {} away",
                 LogPrivate::file_path(&landing.final_path),
-                LogPrivate::file_path(landing.temp()), report = LogError(&report),
+                LogPrivate::file_path(landing.temp()), refused = LogError(&refused),
             );
             if !landing.discard(dest_volume).await {
                 landing.landing_back_to_temp();
             }
-            Err(LandingError::Failed(report.into()))
+            Err(LandingError::Failed(first.into()))
         }
         // Maybe cleared, maybe not: the temp may be the only copy, so the
         // landing record stays for the sweep to finish or rescue.
         AfterARefusedDelete::Unknown => {
-            landing.original_replaced(&in_the_way);
             landing.keep_landing();
-            Err(LandingError::Failed(refusal_to_report(in_the_way, refused).into()))
+            Err(LandingError::Failed(first.into()))
         }
-    }
-}
-
-fn refusal_to_report(in_the_way: InTheWay, refused: VolumeError) -> VolumeError {
-    match in_the_way {
-        InTheWay::Claimed(first) => first,
-        InTheWay::TheOriginal => refused,
     }
 }
 
@@ -502,6 +514,11 @@ async fn rename_onto_cleared(
 async fn rescue(dest_volume: &Arc<dyn Volume>, mut landing: Landing, error: VolumeError) -> FinalizeFailure {
     let new_data_at = rescue_out_of_temp_space(dest_volume.as_ref(), landing.temp(), &landing.final_path).await;
     if new_data_at == landing.temp() {
+        // ❗ All that holds the new bytes now. A swap's temp is still recorded
+        // as a temp (its original went aside, never cleared), and a temp is
+        // what the abandoned-write sweep deletes on sight: it becomes a
+        // landing first.
+        landing.hold().await;
         landing.keep_landing();
     } else {
         landing.settled();
@@ -580,17 +597,20 @@ impl CutOffLanding {
     ///   server, and the way is cleared again. After a delete that went
     ///   through, ❗ the rename alone, ❌ never another delete: a file
     ///   someone put at the name during the outage makes it refuse, and the
-    ///   new bytes are rescued and reported, never their file deleted.
+    ///   new bytes are rescued and reported, never their file deleted. A move
+    ///   aside asks the aside: there means it moved, and the rename lands; gone
+    ///   means it never did, and the move runs again.
     /// - **The temp is gone** and nothing of ours discarded it, so the server
     ///   performed our rename: landed when the name holds what we wrote. A
     ///   first rename's proof is the size (nothing cleared, so nothing else
     ///   could have moved our temp onto a name that was free); after the way
-    ///   was cleared or a one-step replace (whose name held the original,
-    ///   possibly at the same size), ❗ the name must hold exactly the SOURCE's
-    ///   bytes, compared in full, and with no `source` to compare against (a
-    ///   one-pass extract) it never counts as landed.
+    ///   was cleared, a one-step replace, or a move aside (whose name held the
+    ///   original, possibly at the same size), ❗ the name must hold exactly the
+    ///   SOURCE's bytes, compared in full, and with no `source` to compare
+    ///   against (a one-pass extract) it never counts as landed. A landed swap's
+    ///   aside goes; an unproven one's original goes back to its name first.
     /// - **Anything else** (a temp that isn't whole, a name that doesn't prove
-    ///   it): run the file again.
+    ///   it): run the file again, a swap's original back at its name first.
     ///
     /// A step of this that meets the transport again cuts the landing off
     /// again; one that meets a refusal settles by the refusal rules.
@@ -604,12 +624,18 @@ impl CutOffLanding {
             // left the in-flight set goes; one recorded as a landing stays
             // recorded (the sweep leaves a short one alone).
             Ok(_) => {
-                if matches!(at, CutOffAt::FirstRename | CutOffAt::ReplacingRename) {
+                if matches!(
+                    at,
+                    CutOffAt::FirstRename
+                        | CutOffAt::ReplacingRename
+                        | CutOffAt::SettingAside
+                        | CutOffAt::RenameOntoAside
+                ) {
                     landing.discard(dest_volume).await;
                 } else {
                     landing.keep_landing();
                 }
-                Resumed::RunAgain(error)
+                run_again_with_the_original_home(dest_volume, landing, error).await
             }
             Err(VolumeError::NotFound(_)) => {
                 let landed = !landing.discard_asked
@@ -637,9 +663,10 @@ impl CutOffLanding {
                         "landing: {} landed before the drop swallowed the reply; counting it done",
                         LogPrivate::file_path(&landing.final_path),
                     );
+                    landing.discard_aside(dest_volume).await;
                     Resumed::Landed
                 } else {
-                    Resumed::RunAgain(error)
+                    run_again_with_the_original_home(dest_volume, landing, error).await
                 }
             }
             Err(stat) if stat.transport_fault().is_some() => Resumed::CutOff(Box::new(Self {
@@ -658,16 +685,20 @@ impl CutOffLanding {
     /// the temp is a spare copy and goes; can't tell: it stays recorded as a
     /// landing for the next sweep that reaches the share); a rename after the
     /// delete rescues the bytes out of temp space, or leaves them recorded when
-    /// the share can't take that rename either. `Ok` when the share answered
-    /// after all and the landing finished.
+    /// the share can't take that rename either. A swap that moved the original
+    /// aside puts it back, or leaves its aside record for the next sweep when
+    /// the share can't say. `Ok` when the share answered after all and the
+    /// landing finished.
     pub(crate) async fn give_up(self, dest_volume: &Arc<dyn Volume>) -> Result<(), FinalizeFailure> {
         let Self { landing, at, error } = self;
         let ended = match at {
             CutOffAt::FirstRename | CutOffAt::ReplacingRename => return Err(error.into()),
-            CutOffAt::ClearingDelete(in_the_way) => {
-                after_a_refused_delete(dest_volume, landing, in_the_way, error, Patience::GaveUp).await
+            CutOffAt::ClearingDelete(first) => {
+                after_a_refused_delete(dest_volume, landing, first, error, Patience::GaveUp).await
             }
             CutOffAt::RenameOntoCleared => return Err(rescue(dest_volume, landing, error).await),
+            CutOffAt::SettingAside => after_a_refused_aside(dest_volume, landing, error, Patience::GaveUp).await,
+            CutOffAt::RenameOntoAside => return give_up_onto_aside(dest_volume, landing, error).await,
         };
         ended.map_err(|ended| match ended {
             LandingError::Failed(failure) => failure,
@@ -692,21 +723,21 @@ async fn resume_with_a_whole_temp(dest_volume: &Arc<dyn Volume>, landing: Landin
         CutOffAt::FirstRename => land(dest_volume, landing).await.into(),
         CutOffAt::ReplacingRename => replace_in_one_step(dest_volume, landing).await.into(),
         CutOffAt::RenameOntoCleared => rename_onto_cleared(dest_volume, landing, Patience::Waits).await.into(),
-        CutOffAt::ClearingDelete(in_the_way) => match dest_volume.get_metadata(&landing.final_path).await {
+        CutOffAt::RenameOntoAside => rename_onto_aside(dest_volume, landing, Patience::Waits).await.into(),
+        CutOffAt::SettingAside => resume_setting_aside(dest_volume, landing).await,
+        CutOffAt::ClearingDelete(first) => match dest_volume.get_metadata(&landing.final_path).await {
             // The delete went through before the drop.
             Err(VolumeError::NotFound(_)) => rename_onto_cleared(dest_volume, landing, Patience::Waits).await.into(),
             // It never reached the server: what was in the way still is.
-            Ok(_) => clear_the_way(dest_volume, landing, in_the_way, Patience::Waits)
-                .await
-                .into(),
+            Ok(_) => clear_the_way(dest_volume, landing, first, Patience::Waits).await.into(),
             Err(stat) if stat.transport_fault().is_some() => Resumed::CutOff(Box::new(CutOffLanding {
                 landing,
-                at: CutOffAt::ClearingDelete(in_the_way),
+                at: CutOffAt::ClearingDelete(first),
                 error: stat,
             })),
             Err(stat) => CutOffLanding {
                 landing,
-                at: CutOffAt::ClearingDelete(in_the_way),
+                at: CutOffAt::ClearingDelete(first),
                 error: stat,
             }
             .give_up(dest_volume)

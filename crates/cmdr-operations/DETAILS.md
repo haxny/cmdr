@@ -2757,10 +2757,13 @@ in at launch.
   take their name. It goes back to its own name when that name is free; it is removed ONLY when the replacement is
   provably complete, which for `FileAside` means a regular file of exactly the recorded size; in every other case its
   bytes keep a ` (recovered)` name beside where they belong (the same convention
-  `DisplacedEntry::keep_as_recovered_sibling` and the volume engine's rescue use). The aside is read FIRST, as a
-  landing's temp is: one that isn't there retires (`AlreadyGone`). A record can name an aside that never happened (a
-  rename aside the transport cut off is recorded because it MAY have, `transfer/volume/displaced_destination.rs`), and
-  without the read its restore would refuse and defer at every arrival.
+  `DisplacedEntry::keep_as_recovered_sibling` and the volume engine's rescue use). A cross-volume swap's aside
+  (`transfer/staged_write_landing_aside.rs`) is a `FileAside` too, and ❗ a volume's records settle in `ItemKind`'s
+  variant order, so a landing that same swap left (its new bytes rescued onto a `Landing`) finishes first and the aside
+  then sees the replacement whole. The aside is read FIRST, as a landing's temp is: one that isn't there retires
+  (`AlreadyGone`). A record can name an aside that never happened (a rename aside the transport cut off is recorded
+  because it MAY have, `transfer/volume/displaced_destination.rs`), and without the read its restore would refuse and
+  defer at every arrival.
 - **A staging directory** (`.cmdr-staging-<op>`) is a cross-filesystem move's half-built tree. ❌ Only ever
   `remove_dir`, never recursively: a destination that left the mount table returns before Phase 5, and if it left before
   Phase 3 that folder holds the whole staged tree on a drive that comes back later, with the originals possibly already

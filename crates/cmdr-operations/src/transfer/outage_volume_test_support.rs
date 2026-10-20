@@ -93,6 +93,11 @@ pub(crate) struct OutageVolume {
     stale_error_at_rename: Mutex<Option<(usize, RenameDrop)>>,
     /// Drop the session around the next rename onto this path, once.
     drop_at_rename_onto: Mutex<Option<(PathBuf, RenameDrop)>>,
+    /// Drop the session around the next rename FROM this path, once.
+    drop_at_rename_of: Mutex<Option<(PathBuf, RenameDrop)>>,
+    /// The next rename from this path answers a dropped session's error after
+    /// someone else reconnected it, once.
+    stale_error_at_rename_of: Mutex<Option<(PathBuf, RenameDrop)>>,
     /// Drop the session around the next delete of this path, once.
     drop_at_delete_of: Mutex<Option<(PathBuf, RenameDrop)>>,
     /// The next delete of this path answers a dropped session's error after
@@ -160,6 +165,8 @@ impl OutageVolume {
             drop_at_rename: Mutex::new(None),
             stale_error_at_rename: Mutex::new(None),
             drop_at_rename_onto: Mutex::new(None),
+            drop_at_rename_of: Mutex::new(None),
+            stale_error_at_rename_of: Mutex::new(None),
             drop_at_delete_of: Mutex::new(None),
             stale_error_at_delete_of: Mutex::new(None),
             drop_at_stat_of: Mutex::new(None),
@@ -270,6 +277,20 @@ impl OutageVolume {
     /// whichever rename number that is in a concurrent window.
     pub(crate) fn drop_at_rename_onto(&self, to: &Path, side: RenameDrop) {
         *self.drop_at_rename_onto.lock_ignore_poison() = Some((to.to_path_buf(), side));
+    }
+
+    /// The session drops (and the server goes away) around the next rename
+    /// FROM `from`, wherever to, on the given side of it: a swap's move of the
+    /// original aside, onto a fresh scratch name a test can't name ahead.
+    pub(crate) fn drop_at_rename_of(&self, from: &Path, side: RenameDrop) {
+        *self.drop_at_rename_of.lock_ignore_poison() = Some((from.to_path_buf(), side));
+    }
+
+    /// The next rename from `from` answers the error of a session that dropped
+    /// under it (on the given side), arriving only after someone else had
+    /// already reconnected: the volume reads live on the next generation.
+    pub(crate) fn stale_error_at_rename_of(&self, from: &Path, side: RenameDrop) {
+        *self.stale_error_at_rename_of.lock_ignore_poison() = Some((from.to_path_buf(), side));
     }
 
     /// The session drops (and the server goes away) around the next delete of
@@ -562,6 +583,23 @@ impl Volume for OutageVolume {
             if let Some((at, side)) = stale
                 && at == n
             {
+                self.gate()?;
+                if side == RenameDrop::AfterTheServerPerformsIt {
+                    self.inner.rename(from, to, force).await?;
+                }
+                self.go_away();
+                self.reconnected_elsewhere();
+                return Err(VolumeError::DeviceDisconnected("the session is down".to_owned()));
+            }
+            if let Some(side) = armed_for(&self.drop_at_rename_of, from) {
+                if side == RenameDrop::AfterTheServerPerformsIt {
+                    self.gate()?;
+                    self.inner.rename(from, to, force).await?;
+                }
+                self.go_away();
+                self.gate()?;
+            }
+            if let Some(side) = armed_for(&self.stale_error_at_rename_of, from) {
                 self.gate()?;
                 if side == RenameDrop::AfterTheServerPerformsIt {
                     self.inner.rename(from, to, force).await?;

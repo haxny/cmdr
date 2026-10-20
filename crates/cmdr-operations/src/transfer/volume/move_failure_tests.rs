@@ -19,12 +19,12 @@ use crate::testing::TestOperations;
 use crate::types::{ConflictResolution, PermissionRefusal, PermissionSide};
 use cmdr_fs::volume::{InMemoryVolume, VolumeError};
 
-/// Cross-volume MOVE, file→file Overwrite, streaming write SUCCEEDS but the
-/// finalize rename FAILS. The move path has no dest partial-cleanup, so the
-/// temp (holding the only complete copy of the new data after finalize deleted
-/// the original) must survive. The source must also stay (the move never
-/// completed). Regression guard so a future "clean up the temp on move error"
-/// refactor can't reintroduce the data-loss hole.
+/// Cross-volume MOVE, file→file Overwrite, streaming write SUCCEEDS but every
+/// rename of the landing FAILS. The swap moves the original aside before the
+/// temp takes its name, so a refused rename moved nothing: the destination
+/// keeps the user's old file, and the new data survives where it came from,
+/// since the move never completed. Regression guard so a future "clean up on
+/// move error" refactor can't lose either side.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_preserves_new_data_on_finalize_failure() {
     let engine = TestOperations::new();
@@ -59,30 +59,21 @@ async fn cross_volume_move_preserves_new_data_on_finalize_failure() {
 
     assert!(result.is_err(), "a finalize-rename failure must surface as an error");
 
-    // The NEW data must survive somewhere on dest (orig slot or a temp sibling).
-    let entries = dest_inner.list_directory(Path::new("/"), None).await.unwrap();
-    let mut found_new = false;
-    for e in &entries {
-        if let Ok(mut s) = dest_inner.open_read_stream(&PathBuf::from(&e.path)).await {
-            let mut buf = Vec::new();
-            while let Some(Ok(chunk)) = s.next_chunk().await {
-                buf.extend_from_slice(&chunk);
-            }
-            if buf == b"NEW" {
-                found_new = true;
-                break;
-            }
+    async fn read(volume: &dyn Volume, path: &str) -> Option<Vec<u8>> {
+        let mut stream = volume.open_read_stream(Path::new(path)).await.ok()?;
+        let mut buf = Vec::new();
+        while let Some(Ok(chunk)) = stream.next_chunk().await {
+            buf.extend_from_slice(&chunk);
         }
+        Some(buf)
     }
-    assert!(
-        found_new,
-        "new data must survive on dest after a move finalize failure; entries: {:?}",
-        entries.iter().map(|e| &e.name).collect::<Vec<_>>()
-    );
-    // The source must remain, since the move did not complete.
-    assert!(
-        source.exists(Path::new("/f.txt")).await,
-        "source must stay when the move's finalize fails"
+    // Nothing was replaced: the user's old file is whole at its name.
+    assert_eq!(read(dest_inner.as_ref(), "/f.txt").await.as_deref(), Some(&b"OLD"[..]));
+    // And the new data is whole at the source, since the move did not complete.
+    assert_eq!(
+        read(source.as_ref(), "/f.txt").await.as_deref(),
+        Some(&b"NEW"[..]),
+        "source must stay when the move's landing fails"
     );
 }
 

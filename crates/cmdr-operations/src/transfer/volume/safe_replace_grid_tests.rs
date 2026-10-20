@@ -95,7 +95,8 @@ impl Site {
         }
     }
 
-    /// Where the rescue puts the new bytes when the swap's rename is refused.
+    /// Where the rescue puts the new bytes when the swap's landing is refused
+    /// and the original can't go back either.
     fn recovered(self) -> &'static str {
         match self {
             Site::Serial | Site::Concurrent | Site::Move => "/dest/notes (recovered).txt",
@@ -132,11 +133,14 @@ enum Arm {
     /// in-memory source, the destination's first write for the extract (whose
     /// archive order puts `notes.txt` first).
     WriteFails,
-    /// The destination refuses `delete(orig)`, and the original stays.
-    DeleteOfOrigRefused,
-    /// The destination refuses the rename onto `orig` (the delete before it
-    /// went through); the rescue's rename elsewhere forwards.
+    /// The destination refuses to move `orig` aside, and the original stays.
+    MoveAsideRefused,
+    /// The destination refuses the temp's rename onto `orig` (the move aside
+    /// before it went through); putting the original back forwards.
     RenameOntoOrigRefused,
+    /// The destination's `orig` takes nothing once the original went aside:
+    /// neither the temp nor the original going back.
+    OrigTakesNothing,
 }
 
 fn refusal(what: &str) -> VolumeError {
@@ -184,14 +188,20 @@ async fn run(site: Site, arm: Arm) -> Ran {
         dest_inner.create_file(Path::new("/dest/keep.txt"), KEEP).await.unwrap();
     }
     dest_inner.create_file(Path::new(site.orig()), OLD).await.unwrap();
+    if let Arm::OrigTakesNothing = arm {
+        dest_inner.set_rename_to_failing(Path::new(site.orig()));
+    }
     let mut dest = FaultyVolume::wrapping(Arc::clone(&dest_inner));
     dest = match (arm, site) {
         (Arm::WriteFails, Site::Extract) => {
             dest.failing_call(FaultyOp::WriteFromStream, 1, refusal("simulated write refusal"))
         }
-        (Arm::DeleteOfOrigRefused, _) => {
-            dest.failing_call_at(FaultyOp::Delete, site.orig(), 1, refusal("simulated delete refusal"))
-        }
+        (Arm::MoveAsideRefused, _) => dest.failing_call_at(
+            FaultyOp::RenameFrom,
+            site.orig(),
+            1,
+            refusal("simulated move-aside refusal"),
+        ),
         (Arm::RenameOntoOrigRefused, _) => {
             dest.failing_call_at(FaultyOp::Rename, site.orig(), 1, refusal("simulated rename refusal"))
         }
@@ -556,17 +566,17 @@ async fn a_failed_write_leaves_the_original_and_no_temp_at_every_site() {
     }
 }
 
-/// The destination refuses `delete(orig)` and keeps it: the original is
+/// The destination refuses to move `orig` aside and keeps it: the original is
 /// untouched, the temp is taken away at once, and the refusal arrives typed,
 /// naming the original.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_refused_delete_of_the_original_keeps_it_and_takes_the_temp_away_at_every_site() {
+async fn a_refused_move_aside_of_the_original_keeps_it_and_takes_the_temp_away_at_every_site() {
     for site in Site::ALL {
-        let ran = run(site, Arm::DeleteOfOrigRefused).await;
+        let ran = run(site, Arm::MoveAsideRefused).await;
         let label = ran.label();
         assert!(
-            ran.dest.fault_fired(FaultyOp::Delete),
-            "{label}: the delete fault fired"
+            ran.dest.fault_fired(FaultyOp::RenameFrom),
+            "{label}: the move-aside fault fired"
         );
         match &ran.result {
             Err(WriteOperationError::PermissionDenied { path, .. }) => {
@@ -584,11 +594,11 @@ async fn a_refused_delete_of_the_original_keeps_it_and_takes_the_temp_away_at_ev
     }
 }
 
-/// The delete of the original went through and the rename onto its name was
-/// refused: the new bytes leave temp space for ` (recovered)`, and the failure
-/// names where they went.
+/// The original went aside and the temp's rename onto its name was refused:
+/// the original goes back to its name, the temp goes, and the refusal arrives
+/// typed. Nothing was replaced, so the op stays rollbackable.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_refused_rename_after_the_delete_rescues_the_new_bytes_at_every_site() {
+async fn a_refused_landing_puts_the_original_back_at_every_site() {
     for site in Site::ALL {
         let ran = run(site, Arm::RenameOntoOrigRefused).await;
         let label = ran.label();
@@ -597,32 +607,72 @@ async fn a_refused_rename_after_the_delete_rescues_the_new_bytes_at_every_site()
             "{label}: the rename fault fired"
         );
         match &ran.result {
+            Err(WriteOperationError::PermissionDenied { path, .. }) => {
+                assert_eq!(path, site.orig(), "{label}: the refusal names the original");
+            }
+            other => panic!("{label}: the refusal arrives typed, got {other:?}"),
+        }
+        assert_eq!(
+            ran.dest_file(site.orig()).await.as_deref(),
+            Some(OLD),
+            "{label}: the original is back at its name"
+        );
+        assert_eq!(ran.temps_left().await, Vec::<String>::new(), "{label}: no temp left");
+        if let Site::Move = site {
+            assert!(ran.source_still_holds_the_file().await, "{label}: the source stays");
+        }
+        ran.assert_rollbackable_while_the_original_survives(true);
+        ran.assert_safe(false).await;
+    }
+}
+
+/// The original went aside, and its name takes neither the temp nor the
+/// original going back: the new bytes leave temp space for ` (recovered)` and
+/// the failure names where they went, and ❗ the original stays whole at its
+/// aside (recorded, for the volume's next sweep to put back).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_name_that_takes_nothing_rescues_the_new_bytes_and_keeps_the_original_aside_at_every_site() {
+    for site in Site::ALL {
+        let ran = run(site, Arm::OrigTakesNothing).await;
+        let label = ran.label();
+        match &ran.result {
             Err(WriteOperationError::NewDataKeptAt { path, kept_at, .. }) => {
                 assert_eq!(path, site.orig(), "{label}");
                 assert_eq!(kept_at, site.recovered(), "{label}: the failure names the rescue");
             }
             other => panic!("{label}: the failure names where the new bytes went, got {other:?}"),
         }
-        assert_eq!(ran.dest_file(site.orig()).await, None, "{label}: the original is gone");
         assert_eq!(
             ran.dest_file(site.recovered()).await.as_deref(),
             Some(NEW),
             "{label}: the rescue holds the new bytes"
         );
+        let dir = Path::new(site.orig()).parent().expect("a parent");
+        let asides: Vec<PathBuf> = ran
+            .dest_inner
+            .list_directory(dir, None)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|entry| PathBuf::from(entry.path))
+            .filter(|path| path.to_string_lossy().contains(".cmdr-temp-"))
+            .collect();
+        let [aside] = asides.as_slice() else {
+            panic!("{label}: ❗ exactly one aside holds the original: {asides:?}");
+        };
+        assert_eq!(read_all(&*ran.dest_inner, aside).await.as_deref(), Some(OLD), "{label}");
         assert_eq!(ran.temps_left().await, Vec::<String>::new(), "{label}: no temp left");
         if let Site::Move = site {
             assert!(ran.source_still_holds_the_file().await, "{label}: the source stays");
         }
-        ran.assert_rollbackable_while_the_original_survives(false);
-        ran.assert_safe(false).await;
     }
 }
 
 // ── A task dropped mid-swap ─────────────────────────────────────────────────
 
 /// A destination that holds the rename onto `held_onto` forever, after saying
-/// it got there: the swap's `delete(orig)` went through, and the task sits
-/// between it and the rename.
+/// it got there: the swap's move aside went through, and the task sits
+/// between it and the landing.
 struct HoldsTheSwapRename {
     inner: Arc<InMemoryVolume>,
     held_onto: PathBuf,
@@ -694,16 +744,15 @@ impl Volume for FailsOnceTheSwapIsHeld {
 /// The destination volume id the dropped-swap cell records its landing under.
 const LEDGER_VOLUME_ID: &str = "safe-replace-grid-nas";
 
-/// ❗ A top-level concurrent safe-replace task sits between `delete(orig)` and
-/// its rename when a sibling fails, and its rename never answers, so the
-/// failure drain's deadline drops it. From that delete on, the temp is the
-/// destination's only copy of the file, so no cleanup may take it: it's no
-/// driver-side partial (the name the drivers know is the user's original), it
-/// left the operation's in-flight temps when it became a landing, and the
-/// persisted ledger holds it as one. The failure still names the sibling, and
-/// the next launch finishes the landing.
+/// ❗ A top-level concurrent safe-replace task sits between its move aside and
+/// its landing when a sibling fails, and the landing never answers, so the
+/// failure drain's deadline drops it. The user's original is whole at its
+/// aside, and the persisted ledger holds that aside (a `FileAside` at the new
+/// file's size) for the volume's next sweep: the temp is a spare copy any
+/// cleanup may take, since the source still holds the new bytes. The failure
+/// still names the sibling, and the next launch puts the original back.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land() {
+async fn a_concurrent_task_dropped_mid_swap_keeps_the_original_for_the_sweep_to_put_back() {
     let _drain = super::copy::wedge_test_support::CancelDrainGuard::set(Duration::from_millis(150));
     let dir = TestDir::new("safe-replace-grid-dropped-swap");
     let data_dir = dir.join("data");
@@ -759,11 +808,11 @@ async fn a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land
     .await
     .expect("the driver drops the held task instead of waiting on it");
 
-    let (temp, held) = dest
+    let (_, held) = dest
         .held_temp
         .lock_ignore_poison()
         .take()
-        .expect("the swap reached its held rename");
+        .expect("the swap reached its held landing");
     assert_eq!(
         held.as_deref(),
         Some(NEW),
@@ -781,25 +830,31 @@ async fn a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land
     assert_eq!(
         read_all(&*dest_inner, Path::new("/dest/notes.txt")).await,
         None,
-        "the swap's delete went through"
+        "the swap's move aside went through"
     );
-    assert_eq!(
-        read_all(&*dest_inner, &temp).await.as_deref(),
-        Some(NEW),
-        "❗ the destination's only copy survives the post-loop's cleanup"
-    );
-    assert!(
-        state.in_flight_temps.lock_ignore_poison().is_empty(),
-        "the landing is no removable temp of ours"
-    );
-    let landing_recorded = Ledger::replay_log(&data_dir).iter().any(|record| {
+    let asides: Vec<PathBuf> = dest_inner
+        .list_directory(Path::new("/dest"), None)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|entry| PathBuf::from(entry.path))
+        .filter(|path| path.to_string_lossy().contains(".cmdr-temp-"))
+        .collect();
+    let [aside] = asides.as_slice() else {
+        panic!("❗ exactly one aside holds the original: {asides:?}");
+    };
+    assert_eq!(read_all(&*dest_inner, aside).await.as_deref(), Some(OLD));
+    let aside_recorded = Ledger::replay_log(&data_dir).iter().any(|record| {
         matches!(record, Record::Tracked(TrackedItem {
-            kind: ItemKind::Landing { destination, expected_size },
+            kind: ItemKind::FileAside { destination, expected_size },
             path,
             ..
-        }) if *path == temp && destination == Path::new("/dest/notes.txt") && *expected_size == NEW.len() as u64)
+        }) if path == aside && destination == Path::new("/dest/notes.txt") && *expected_size == NEW.len() as u64)
     });
-    assert!(landing_recorded, "the persisted ledger holds the temp as a landing");
+    assert!(
+        aside_recorded,
+        "the persisted ledger holds the aside, at the new file's size"
+    );
 
     ledger.die();
     let next_app = TestOperations::new();
@@ -809,10 +864,10 @@ async fn a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land
     let tally = Ledger::for_test().launch_in(&data_dir, &next_app).wait();
     assert_eq!(
         read_all(&*dest_inner, Path::new("/dest/notes.txt")).await.as_deref(),
-        Some(NEW),
-        "the next launch lands the new bytes at the original's name: {tally:?}"
+        Some(OLD),
+        "the next launch puts the original back at its name: {tally:?}"
     );
-    assert_eq!(read_all(&*dest_inner, &temp).await, None, "and the temp is gone");
+    assert_eq!(read_all(&*dest_inner, aside).await, None, "and the aside is gone");
     assert_eq!(
         read_all(&*source_inner, Path::new("/notes.txt")).await.as_deref(),
         Some(NEW),

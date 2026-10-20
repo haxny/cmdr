@@ -314,8 +314,12 @@ pub enum FaultyOp {
     CreateFile,
     /// `delete` and `delete_with_cancel`.
     Delete,
-    /// `rename`.
+    /// `rename`, matched by its DESTINATION path (`failing_call_at`).
     Rename,
+    /// `rename`, matched by its SOURCE path: the call that moves a file away
+    /// from `at`, wherever to (a swap's move aside, whose destination is a
+    /// fresh scratch name).
+    RenameFrom,
     /// `open_read_stream` and `open_read_stream_with_hint`.
     OpenReadStream,
     /// The Nth stream this volume opens fails its FIRST read: the open
@@ -581,7 +585,10 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         to: &'a Path,
         force: bool,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::Rename, to) {
+        match self
+            .fault_for(FaultyOp::RenameFrom, from)
+            .or_else(|| self.fault_for(FaultyOp::Rename, to))
+        {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.rename(from, to, force),
         }

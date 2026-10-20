@@ -748,7 +748,7 @@ mod log_writer;
 
 #[path = "in_flight_landing.rs"]
 mod landing;
-pub(super) use landing::{NotOnDisk, back_to_temp, hold_for_landing};
+pub(super) use landing::{NotOnDisk, back_to_temp, hold_aside, hold_for_landing};
 
 #[path = "in_flight_records.rs"]
 mod records;

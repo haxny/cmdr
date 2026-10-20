@@ -299,9 +299,14 @@ async fn a_write_over_an_original_is_never_turned_into_a_single_shot() {
 
     assert_eq!(writes.len(), 1, "one write; got {writes:?}");
     assert!(is_temp(&writes[0]), "the write goes to a temp; got {writes:?}");
+    let [(moved, aside), landed] = renames.as_slice() else {
+        panic!("the original moves aside, then the temp lands; got {renames:?}");
+    };
+    assert_eq!(moved, Path::new("/notes.txt"));
+    assert!(aside.to_string_lossy().contains(".cmdr-temp-"), "{aside:?}");
     assert_eq!(
-        renames,
-        vec![(writes[0].clone(), PathBuf::from("/notes.txt"))],
+        landed,
+        &(writes[0].clone(), PathBuf::from("/notes.txt")),
         "and its landing renames it onto the original's name; got {renames:?}"
     );
 }

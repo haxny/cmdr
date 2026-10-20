@@ -71,6 +71,24 @@ impl Ledger {
             .collect()
     }
 
+    /// The asides a swap recorded (`ItemKind::FileAside`) and hasn't retired.
+    pub(crate) fn recorded_asides(&self) -> Vec<std::path::PathBuf> {
+        self.store()
+            .recorded
+            .iter()
+            .filter(|record| {
+                matches!(
+                    record,
+                    Record::Tracked(super::TrackedItem {
+                        kind: super::ItemKind::FileAside { .. },
+                        ..
+                    })
+                )
+            })
+            .map(|record| record.path().to_path_buf())
+            .collect()
+    }
+
     /// Parks this ledger's writer thread until the returned sender is dropped,
     /// so a test can see what a caller does while its line is still queued.
     pub(crate) fn hold_writer(&self) -> std::sync::mpsc::Sender<()> {

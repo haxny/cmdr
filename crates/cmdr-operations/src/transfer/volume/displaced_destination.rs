@@ -1,19 +1,23 @@
 //! The destination an Overwrite is replacing, held aside until whatever replaces
 //! it has landed.
 //!
-//! Two shapes reach it. A same-volume move replaces by RENAMING, so the new
+//! Three shapes reach it. A same-volume move replaces by RENAMING, so the new
 //! bytes need no temp and the only thing at risk is the entry being replaced;
-//! each such aside settles the moment its one rename answers. A cross-type
-//! Overwrite (a folder landing on a file, or a file on a folder) can't stage
-//! the new side the way a file→file one does (`WriteStaging::StageOverOriginal`),
-//! because a folder lands leaf by leaf over the rest of the operation. Those
-//! asides go to the operation's [`DisplacedLedger`] and settle when it ends.
-//! The local-FS twin is `crates/cmdr-operations/src/overwrite.rs::DisplacedEntry`.
+//! each such aside settles the moment its one rename answers. A file→file
+//! Overwrite's landing (`WriteStaging::StageOverOriginal`, on a destination
+//! without a one-step replace) sets the original aside for the staged temp to
+//! take its name, and settles it the moment the temp lands
+//! ([`DisplacedDestination::hold_for_swap`], driven by
+//! `staged_write_landing.rs`). A cross-type Overwrite (a folder landing on a
+//! file, or a file on a folder) lands leaf by leaf over the rest of the
+//! operation, so those asides go to the operation's [`DisplacedLedger`] and
+//! settle when it ends. The local-FS twin is
+//! `crates/cmdr-operations/src/overwrite.rs::DisplacedEntry`.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use super::super::super::in_flight_temps::{self, ItemKind, RecordHome, TrackedRecord};
+use super::super::super::in_flight_temps::{self, ItemKind, NotOnDisk, RecordHome, TrackedRecord};
 use super::super::super::state::WriteOperationState;
 use super::super::super::types::RecoveredOriginal;
 use super::super::recovered_name::rescue_out_of_temp_space;
@@ -211,15 +215,48 @@ fn retire(state: &Arc<WriteOperationState>, record: Option<&TrackedRecord>) {
 }
 
 impl DisplacedDestination {
+    /// Records where a file→file Overwrite's landing is about to set the user's
+    /// original at `original` aside, for a replacement of `replacement_size`
+    /// bytes: on disk before this resolves (`in_flight_temps::hold_aside`), so
+    /// a crash after the rename aside leaves a record the sweep settles. The
+    /// caller does the rename, classifying its answer the way the rest of its
+    /// landing does (`staged_write_landing.rs`).
+    ///
+    /// `home` is the staged write's own ledger home: a remote zip edit's
+    /// operation names no single destination volume, so it can't come from the
+    /// state. ❗ [`NotOnDisk`] means the record isn't on disk, and the original
+    /// must ❌ not be renamed.
+    pub(crate) async fn hold_for_swap(
+        state: &Arc<WriteOperationState>,
+        home: Option<RecordHome>,
+        original: &Path,
+        replacement_size: u64,
+    ) -> Result<Self, NotOnDisk> {
+        let aside = StagingTemp::mint_aside(original, uuid::Uuid::new_v4(), state.liveness_token());
+        let record = in_flight_temps::hold_aside(state, home, aside.path(), original, replacement_size).await?;
+        Ok(Self {
+            aside,
+            original: original.to_path_buf(),
+            is_directory: false,
+            record,
+            state: Arc::clone(state),
+        })
+    }
+
+    /// Where the original goes (or went).
+    pub(crate) fn aside_path(&self) -> &Path {
+        self.aside.path()
+    }
+
     /// Nothing was set aside after all: its record goes, so nothing is claimed
     /// to be on disk that isn't.
-    fn forget(self) {
+    pub(crate) fn forget(self) {
         retire(&self.state, self.record.as_ref());
     }
 
     /// Whether it was set aside can't be told while the share is out: the
     /// record waits for the share's next arrival, whose sweep settles it.
-    fn keep_for_arrival(self) {
+    pub(crate) fn keep_for_arrival(self) {
         if let Some(record) = self.record {
             in_flight_temps::keep_for_arrival(&self.state, record);
         }
@@ -251,6 +288,40 @@ impl DisplacedDestination {
                     in_flight_temps::keep_for_arrival(&self.state, record);
                 }
             }
+        }
+    }
+
+    /// The replacement couldn't take the name, so the user's file goes back to
+    /// it: one rename, classified as [`restore`](Self::restore) classifies it,
+    /// but with no rescue. `Some(self)` when it couldn't go back: the aside
+    /// keeps the user's file and its record, for the caller to hand to the
+    /// volume's next sweep, which puts it back once the name is free (or keeps
+    /// it beside whatever took the name). A swap's landing wants exactly that:
+    /// its new bytes leave temp space under a ` (recovered)` name, and the
+    /// original, still recognizable as the aside, goes home later on its own.
+    #[must_use = "an original that couldn't go back must be kept for the volume's next sweep"]
+    pub(crate) async fn put_back(self, volume: &Arc<dyn Volume>) -> Option<Self> {
+        let back = match volume.rename(self.aside.path(), &self.original, false).await {
+            Ok(()) => true,
+            Err(cut_off) if cut_off.transport_fault().is_some() => matches!(
+                volume.get_metadata(self.aside.path()).await,
+                Err(VolumeError::NotFound(_))
+            ),
+            Err(e) => {
+                log::warn!(
+                    target: "copy",
+                    "couldn't put {} back at {}: {e}",
+                    LogPrivate::path(self.aside.path()),
+                    LogPrivate::path(&self.original), e = LogError(&e)
+                );
+                false
+            }
+        };
+        if back {
+            retire(&self.state, self.record.as_ref());
+            None
+        } else {
+            Some(self)
         }
     }
 

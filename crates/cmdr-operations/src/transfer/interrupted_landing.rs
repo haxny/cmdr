@@ -13,12 +13,13 @@
 //! step the transport cut off (`staged_write::LandingError::CutOff`), and
 //! `CutOffLanding::resume` settles it from what the destination shows.
 //!
-//! **A temp still whole is landed again, ❌ never streamed again.** After a
-//! swap's `delete(orig)` went through, the temp is the only copy at the
-//! destination, so the settle picks up where the cut left off: the rename alone
-//! once the name is empty (a file someone put there meanwhile makes it refuse,
-//! and is never deleted), the clearing delete again while the name is still
-//! taken.
+//! **A temp still whole is landed again, ❌ never streamed again.** The settle
+//! picks up where the cut left off: after a claimed name's clearing delete went
+//! through (the temp is then the only copy at the destination), the rename
+//! alone once the name is empty (a file someone put there meanwhile makes it
+//! refuse, and is never deleted), the clearing delete again while the name is
+//! still taken; after a swap's move aside went through, the rename alone, and
+//! the move again when the aside isn't there.
 //!
 //! **The proof a gone temp was ours.** The temp is a `.cmdr-tmp-<uuid>` name
 //! this operation minted, and only two things ever take it away: our landing
@@ -34,10 +35,11 @@
 //! - `final_path` holds what we wrote, so nothing replaced it while the share
 //!   was away: a file of exactly our size for a rename-first landing, which
 //!   cleared nothing; ❗ exactly the source's bytes, compared in full
-//!   ([`holds_the_source`]), once the way may have been cleared, since a swap
-//!   whose temp someone removed leaves the user's OLD file at the name, maybe at
-//!   the same size. With no source to compare against (a one-pass extract), a
-//!   gone temp after a cleared way never counts as landed.
+//!   ([`holds_the_source`]), once the way may have been cleared or the
+//!   original moved, since a swap whose temp someone removed can leave the
+//!   user's OLD file at the name, maybe at the same size. With no source to
+//!   compare against (a one-pass extract), a gone temp after a cleared way or
+//!   a move aside never counts as landed.
 //!
 //! Anything short of that (a stat that fails, a size that differs, a folder at
 //! the name) is NOT proof, and the file runs again the way it did before: a

@@ -16,10 +16,12 @@ parallel load). The lead made these calls; they're yours to confirm or overturn:
 1. **A Cancel never waits on a dropped share**, and a failed op takes the same shape: it's reported at once, cleanup
    finishes in the background (one dial, 20 s), and what's left goes to the ledger and is swept when the share
    reconnects.
-2. **Bytes whose way was already cleared are finished, not rolled back.** A swap a Cancel, give-up, or drop cut off
-   after the original's delete keeps the new bytes recorded as a landing, and the next sweep that reaches the share puts
-   them at the name (possibly a launch later). On SMB and local disks this window doesn't exist: the swap is one atomic
-   replacing rename, so a give-up leaves the original whole.
+2. **An Overwrite never empties the name of the only copy.** On SMB and local disks the swap is one atomic replacing
+   rename, so a give-up leaves the original whole. Everywhere else (MTP, SFTP, WebDAV, ADB) the original is renamed
+   aside under a ledger record, the new file renamed in, and the aside deleted last: a Cancel, give-up, drop, or crash
+   at any step puts the original back when the share answers, else the next sweep that reaches the share does (possibly
+   a launch later). Bytes whose way was already cleared (a claimed name's clearing delete) are still finished, not
+   rolled back.
 3. **A delete STOPS when an entry changed while the share was away** (`ChangedWhileDisconnected`) rather than skipping
    it: someone is working in that tree right now, and a delete has no rollback.
 4. **Accepted residual risk**: a byte-identical file someone saved at the name during an outage is claimed as ours (an
@@ -874,8 +876,21 @@ recording changes.
   `supports_atomic_replace_rename` (local disks, SMB): `staged_write_landing.rs::replace_in_one_step`, cut off as
   `CutOffAt::ReplacingRename` and settled like a first rename except that a gone temp proves the landing only on the
   source's bytes. No delete, no landing record, no `(recovered)` path; a give-up leaves the original whole. MTP and
-  every other backend keep delete-then-rename. Cells: `staged_write_tests.rs`, `swap_outage_tests.rs` and
+  every other backend land through an aside (next bullet). Cells: `staged_write_tests.rs`, `swap_outage_tests.rs` and
   `remote_outage_tests.rs` (the `InOneStep` cells).
+- Every other backend's swap landing is recorded aside-first (`staged_write_landing_aside.rs::swap_through_an_aside`):
+  the original renamed aside under an `ItemKind::FileAside` record (`DisplacedDestination::hold_for_swap` →
+  `in_flight_temps::hold_aside`, on disk before the move, failing closed), the temp renamed onto its name, the aside
+  deleted last. Each step classifies before acting (`CutOffAt::{SettingAside, RenameOntoAside}`); the settle asks the
+  aside or the temp; a refused landing puts the original back (`DisplacedDestination::put_back`), and only when it can't
+  go back is the temp rescued; anything left goes to the volume's next arrival, whose sweep restores or retires the
+  aside per record. The temp stays a `Temp` (never the only copy), and the sweep settles a `Landing` before a
+  `FileAside` (`ItemKind`'s variant order). `main`'s separate archive aside code (#513's `swap_into_place`,
+  `restore_orphaned_asides`) is gone: the remote zip edit takes this landing, and its crash-after-every-step cell
+  (`remote_tests.rs::a_crash_after_any_step_of_the_swap_loses_no_archive`, four cuts) holds main's intent at every cut:
+  a whole archive at the name after the sweep, nothing left aside or in temp space. Cells: `staged_write_tests.rs`,
+  `swap_landing_tests.rs`, `safe_replace_grid_tests.rs`, `swap_outage_tests.rs`, `remote_tests.rs`,
+  `remote_outage_tests.rs`.
 
 ### 11. Close-out soak (S)
 
@@ -911,15 +926,16 @@ fixed or filed as issues.
 - **Staging**: no byte-incomplete file ever wears a final name; only single-shot or whole-publish skips staging, ❌
   never smallness. A landing clears a name only the caller claimed (`LandingName`); `AlreadyExists` alone earns the
   delete.
-- **Committed data**: a temp is in `in_flight_temps` exactly while it's a removable copy of ours. Once the way may be
-  cleared it's re-recorded as `Landing` (on disk before the clearing delete goes out), named by no driver-side partial
-  list (`in_flight_partials`, `last_dest_cell`), ❌ never swept, reaped, or discarded, and a failure rescues it out of
-  temp space (` (recovered)`) or leaves it for the sweep that finishes its landing. A rescue or discard follows a
-  classified refusal or a given-up wait, ❌ never a raw transport error.
-- **Safe-replace order**: the original survives until a complete temp exists; one replacing rename only where
-  `supports_atomic_replace_rename` says it's one step, else delete-then-rename, ❌ never `rename(force)` on MTP.
-  `write_path` always names the file the user ends up with; ❌ no layer above `StagedWrite` sees a temp-shaped
-  destination.
+- **Committed data**: a temp is in `in_flight_temps` exactly while it's a removable copy of ours. Once a claimed name's
+  way may be cleared it's re-recorded as `Landing` (on disk before the clearing delete goes out), named by no
+  driver-side partial list (`in_flight_partials`, `last_dest_cell`), ❌ never swept, reaped, or discarded, and a failure
+  rescues it out of temp space (` (recovered)`) or leaves it for the sweep that finishes its landing. A rescue or
+  discard follows a classified refusal or a given-up wait, ❌ never a raw transport error.
+- **Safe-replace order**: the original survives until a complete temp exists, and stays whole under its name or its
+  recorded aside until the new bytes are whole at the name; one replacing rename only where
+  `supports_atomic_replace_rename` says it's one step, else aside-first (the `FileAside` record on disk before the move,
+  the aside deleted last), ❌ never `rename(force)` there, ❌ never a delete of the original. `write_path` always names
+  the file the user ends up with; ❌ no layer above `StagedWrite` sees a temp-shaped destination.
 - **Outage waits**: bounded (budget, `MAX_OUTAGES_PER_ITEM`, per-attempt timeout), cancel-at-once, pausable, shared per
   lane, ❌ only for re-runnable calls. A generation bump is proof of a stale error only when the volume reads live, and
   a stale error ❌ never moves a newer session's state.

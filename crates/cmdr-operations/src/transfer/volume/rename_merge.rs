@@ -372,11 +372,10 @@ async fn resolve_child(
 
 /// Applies a resolved child decision via renames (the same-volume move never
 /// streams bytes): Skip leaves both sides; Proceed renames the source onto the
-/// resolved path. A file→file safe-replace collapses to delete-then-rename —
-/// `rename(force=false)` can't replace an existing dest, and MTP's
-/// `rename(force=true)` wouldn't delete it either, so we delete the original
-/// first and rename straight onto the now-absent slot, mirroring the top-level
-/// same-volume overwrite shape.
+/// resolved path. A file→file safe-replace sets the original ASIDE and renames
+/// onto the freed slot — `rename(force=false)` can't replace an existing dest,
+/// and MTP's `rename(force=true)` wouldn't delete it either — mirroring the
+/// top-level same-volume overwrite shape.
 async fn apply_child_decision(
     ctx: &RenameMergeCtx<'_>,
     entry: &FileEntry,
@@ -443,10 +442,10 @@ async fn apply_child_decision(
         return rename_replacing(ctx, child_source, &write_path, displaced).await;
     }
 
-    // File child. For a file→file safe-replace (Overwrite), delete the original
-    // first then rename onto it (atomic-ish; the rename is the commit). For
-    // Rename / a fresh path, rename straight across — clearing a reserved
-    // placeholder first.
+    // File child. For a file→file safe-replace (Overwrite), set the original
+    // aside, then rename onto its name (the rename is the commit). For Rename /
+    // a fresh path, rename straight across — clearing a reserved placeholder
+    // first.
     let (target, displaced) = match replace {
         // Overwrite: `orig` is the existing dest, and the name has to be free
         // before the source can be renamed onto it (`rename(force=false)` can't

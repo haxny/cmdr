@@ -65,7 +65,47 @@ pub(crate) async fn hold_for_landing(
     Ok(Some(landing))
 }
 
-/// A landing record that didn't reach the ledger's log ([`hold_for_landing`]).
+/// Records `aside` as the place a file→file Overwrite is about to rename the
+/// user's original at `destination` to, so a replacement of `expected_size`
+/// bytes can take its name: an [`ItemKind::FileAside`], written before this
+/// resolves. From the rename on, the aside is the only copy of the original
+/// until the replacement is whole at the name, so the sweep must know what it
+/// is: it puts it back to an empty name, removes it once the name holds a file
+/// of exactly `expected_size`, and keeps it under a ` (recovered)` name
+/// otherwise.
+///
+/// ❗ [`NotOnDisk`] exactly as [`hold_for_landing`] answers it, and the caller
+/// must ❌ not rename the original aside: a crash after that rename would leave
+/// the user's file on a scratch name nothing records. `Ok(None)` for a `home`
+/// of `None` on a ledger that keeps nothing on disk anyway.
+pub(crate) async fn hold_aside(
+    state: &WriteOperationState,
+    home: Option<RecordHome>,
+    aside: &Path,
+    destination: &Path,
+    expected_size: u64,
+) -> Result<Option<TrackedRecord>, NotOnDisk> {
+    let Some(home) = home else {
+        return if Ledger::of(state).store().keeps_a_log {
+            Err(NotOnDisk)
+        } else {
+            Ok(None)
+        };
+    };
+    let kind = ItemKind::FileAside {
+        destination: destination.to_path_buf(),
+        expected_size,
+    };
+    let (record, on_disk) = track_in(state, home, kind, aside).await;
+    if on_disk == OnDisk::Missing {
+        Ledger::of(state).retire_record(&record.record);
+        return Err(NotOnDisk);
+    }
+    Ok(Some(record))
+}
+
+/// A record that didn't reach the ledger's log ([`hold_for_landing`],
+/// [`hold_aside`]).
 #[derive(Debug)]
 pub(crate) struct NotOnDisk;
 

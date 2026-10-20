@@ -161,6 +161,15 @@ pub(crate) struct TrackedItem {
 ///
 /// ❗ Every `destination` here is stored in the same path space as its item's
 /// own path, because an aside is always a sibling of what it displaced.
+///
+/// ❗ **The variant order is the sweep's order** (a volume's records come out of
+/// a `BTreeSet`, and `TrackedItem` orders by kind first): a [`Landing`] settles
+/// before the [`FileAside`] its swap left, so a crash that left both (the
+/// original aside, the new bytes rescued onto a landing) finishes the landing,
+/// and the aside's rule then sees the replacement whole at the name.
+///
+/// [`Landing`]: ItemKind::Landing
+/// [`FileAside`]: ItemKind::FileAside
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub(crate) enum ItemKind {
@@ -179,9 +188,12 @@ pub(crate) enum ItemKind {
         /// bytes we wrote from anything else wearing the name.
         expected_size: u64,
     },
-    /// The file `overwrite::stage_and_land_file` renamed aside so a replacement
-    /// could take its name, with the size that replacement was to end up at.
-    /// The only kind whose destination can be checked against a number.
+    /// The file `overwrite::stage_and_land_file`, or a cross-volume swap on a
+    /// destination without a one-step replace
+    /// (`transfer/staged_write_landing_aside.rs`), renamed aside so a
+    /// replacement could take its name, with the size that replacement was to
+    /// end up at. The only kind whose destination can be checked against a
+    /// number.
     FileAside {
         destination: PathBuf,
         /// The complete replacement's size in bytes, so the sweep can tell a

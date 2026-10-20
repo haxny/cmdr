@@ -2,13 +2,14 @@
 //! the five sites a safe-replace lands (both drivers, a deep merge child, a
 //! cross-volume move, and a one-pass extract), through the real pipeline.
 //!
-//! From the moment the swap's `delete(orig)` goes through, the temp is the
-//! destination's only copy of the file. So a drop at the delete or at the
-//! rename after it waits for the share and SETTLES what happened before acting:
-//! a whole temp lands without the file streaming again, a gone temp counts as
-//! landed only when the name holds exactly the source's bytes, and a wait that
-//! ends without the share keeps the new bytes, recorded as a landing for the
-//! next sweep that reaches it, ❌ never cleaned as a partial.
+//! The swap moves `orig` aside, renames the temp onto its name, and deletes the
+//! aside last, so the original is whole at one of its two names at every
+//! moment. A drop at the move aside or at the rename after it waits for the
+//! share and SETTLES what happened before acting: a whole temp lands without
+//! the file streaming again, a gone temp counts as landed only when the name
+//! holds exactly the source's bytes, and a wait that ends without the share
+//! leaves the original at its aside, recorded for the share's next arrival,
+//! whose sweep puts it back.
 //!
 //! On a share whose forced rename replaces a file in one step (SMB's
 //! `ReplaceIfExists`), the swap is that one rename: the name never goes empty,
@@ -99,21 +100,21 @@ impl Site {
 /// Where the share drops inside the swap.
 #[derive(Clone, Copy, Debug)]
 enum Cut {
-    /// `delete(orig)` never reaches the server.
-    DeleteUnsent,
-    /// The server deleted `orig`; the reply is lost.
-    DeleteUnanswered,
-    /// The delete went through; the rename after it never reaches the server.
-    /// On a share that replaces in one step there's no delete: the replacing
-    /// rename never reaches the server.
+    /// The move of `orig` aside never reaches the server.
+    AsideUnsent,
+    /// The server moved `orig` aside; the reply is lost.
+    AsideUnanswered,
+    /// The move aside went through; the rename onto `orig` never reaches the
+    /// server. On a share that replaces in one step there's no move aside: the
+    /// replacing rename never reaches the server.
     RenameUnsent,
-    /// The delete went through; the server renamed the temp onto `orig`, and
-    /// the reply is lost. (On a one-step share: the replacing rename.)
+    /// The move aside went through; the server renamed the temp onto `orig`,
+    /// and the reply is lost. (On a one-step share: the replacing rename.)
     RenameUnanswered,
-    /// `delete(orig)` answers the error of a session someone else already
+    /// The move aside answers the error of a session someone else already
     /// replaced: the share reads live on a newer generation (it never reached
     /// the server).
-    StaleDeleteError,
+    StaleAsideError,
 }
 
 /// What happens while the copy waits for the share.
@@ -180,11 +181,11 @@ async fn run_on(site: Site, cut: Cut, meanwhile: Meanwhile, replace: Replace) ->
     }
     let orig = Path::new(site.orig());
     match cut {
-        Cut::DeleteUnsent => nas.drop_at_delete_of(orig, RenameDrop::BeforeTheServerSeesIt),
-        Cut::DeleteUnanswered => nas.drop_at_delete_of(orig, RenameDrop::AfterTheServerPerformsIt),
+        Cut::AsideUnsent => nas.drop_at_rename_of(orig, RenameDrop::BeforeTheServerSeesIt),
+        Cut::AsideUnanswered => nas.drop_at_rename_of(orig, RenameDrop::AfterTheServerPerformsIt),
         Cut::RenameUnsent => nas.drop_at_rename_onto(orig, RenameDrop::BeforeTheServerSeesIt),
         Cut::RenameUnanswered => nas.drop_at_rename_onto(orig, RenameDrop::AfterTheServerPerformsIt),
-        Cut::StaleDeleteError => nas.stale_error_at_delete_of(orig, RenameDrop::BeforeTheServerSeesIt),
+        Cut::StaleAsideError => nas.stale_error_at_rename_of(orig, RenameDrop::BeforeTheServerSeesIt),
     }
 
     let (source, source_inner, sources, archive) = if let Site::Extract = site {
@@ -328,6 +329,18 @@ fn act_once_it_waits(
     })
 }
 
+/// Every `.cmdr-temp-*` aside in `folder`.
+async fn asides_in(volume: &InMemoryVolume, folder: &str) -> Vec<PathBuf> {
+    volume
+        .list_directory(Path::new(folder), None)
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|entry| entry.name.contains(".cmdr-temp-"))
+        .map(|entry| PathBuf::from(entry.path))
+        .collect()
+}
+
 /// Every `.cmdr-tmp-*` in `folder`.
 async fn temps_in(volume: &InMemoryVolume, folder: &str) -> Vec<PathBuf> {
     volume
@@ -396,6 +409,11 @@ impl Ran {
         );
         assert_eq!(self.temps().await, Vec::<PathBuf>::new(), "{label}: no temp left");
         assert_eq!(
+            asides_in(&self.dest_inner, self.site.folder()).await,
+            Vec::<PathBuf>::new(),
+            "{label}: no aside left"
+        );
+        assert_eq!(
             self.ledger.recorded_landings(),
             Vec::<PathBuf>::new(),
             "{label}: no landing left recorded"
@@ -418,35 +436,28 @@ impl Ran {
         );
     }
 
-    /// The new bytes are on a temp at the destination, recorded as a landing:
-    /// the next sweep that reaches the share finishes it. (A sibling's
-    /// unfinished write in the concurrent window can leave a temp of its own
-    /// that the dead share wouldn't take back: the cleanup's to report.)
-    async fn assert_kept_as_a_landing(&self) -> PathBuf {
+    /// The original is whole at its aside, its name empty, nothing recorded as
+    /// a landing: the share's next arrival puts it back. Answers the aside.
+    async fn assert_original_kept_aside(&self) -> PathBuf {
         let label = self.label();
-        let landing_temp = format!("{}.cmdr-tmp-", self.site.orig());
-        let temps: Vec<PathBuf> = self
-            .temps()
-            .await
-            .into_iter()
-            .filter(|temp| temp.to_string_lossy().starts_with(&landing_temp))
-            .collect();
-        let [temp] = temps.as_slice() else {
-            panic!("{label}: exactly one temp holds the new bytes, got {temps:?}");
+        assert_eq!(self.orig().await, None, "{label}: the original left its name");
+        let asides = asides_in(&self.dest_inner, self.site.folder()).await;
+        let [aside] = asides.as_slice() else {
+            panic!("{label}: exactly one aside holds the original, got {asides:?}");
         };
         assert_eq!(
-            read_all(&*self.dest_inner, temp).await.as_deref(),
-            Some(NEW),
-            "{label}: ❗ the only copy survives"
+            read_all(&*self.dest_inner, aside).await.as_deref(),
+            Some(OLD),
+            "{label}: ❗ the original survives, whole"
         );
         assert_eq!(
             self.ledger.recorded_landings(),
-            vec![temp.clone()],
-            "{label}: recorded as a landing"
+            Vec::<PathBuf>::new(),
+            "{label}: no landing: the new bytes were never the only copy"
         );
         assert!(
-            !self.state.in_flight_temps.lock_ignore_poison().contains(temp),
-            "{label}: and no removable temp of ours"
+            self.state.kept_landings.lock_ignore_poison().is_empty(),
+            "{label}: and the stop names no unfinished landing"
         );
         if let Site::Move = self.site {
             assert!(
@@ -454,7 +465,27 @@ impl Ran {
                 "{label}: a failed move keeps its source"
             );
         }
-        temp.clone()
+        aside.clone()
+    }
+
+    /// The share comes back and the registry announces it: the arrival sweep
+    /// puts the original back at its name.
+    async fn assert_the_arrival_puts_the_original_back(&self, aside: &Path) {
+        let label = self.label();
+        self.nas.reconnected_elsewhere();
+        self.engine
+            .volumes()
+            .register(NAS_ID, Arc::clone(&self.nas) as Arc<dyn Volume>);
+        wait_until_async(WAIT, "the arrival sweep to settle the aside's record", || {
+            !self.ledger.live_paths().iter().any(|path| path == aside)
+        })
+        .await;
+        assert!(!self.dest_inner.exists(aside).await, "{label}: and the aside is gone");
+        assert_eq!(
+            self.orig().await.as_deref(),
+            Some(OLD),
+            "{label}: the arrival sweep puts the original back at its name"
+        );
     }
 
     async fn source_still_holds_the_file(&self) -> bool {
@@ -502,37 +533,36 @@ impl Ran {
 
 // ── The cells ───────────────────────────────────────────────────────────────
 
-/// (a) The drop hits `delete(orig)` before the server sees it: once the share
-/// is back, the original is still in the way, so the landing clears it again
-/// and lands.
+/// (a) The drop hits the move of `orig` aside before the server sees it: once
+/// the share is back, the original is still at its name, so the swap moves it
+/// aside again and lands.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_drop_before_the_originals_delete_waits_and_lands_at_every_site() {
+async fn a_drop_before_the_original_moves_aside_waits_and_lands_at_every_site() {
     for site in Site::ALL {
-        let ran = run(site, Cut::DeleteUnsent, Meanwhile::ComesBack).await;
+        let ran = run(site, Cut::AsideUnsent, Meanwhile::ComesBack).await;
         assert!(ran.nas.reconnect_attempts() > 0, "{}: the share dropped", ran.label());
         ran.assert_landed().await;
         ran.assert_streamed_once();
     }
 }
 
-/// (b) The server deleted `orig` and the drop swallowed the reply: the temp is
-/// the only copy, and once the share is back the rename alone finishes the
-/// landing, ❌ without streaming the file again or parking it under
-/// ` (recovered)`.
+/// (b) The server moved `orig` aside and the drop swallowed the reply: once
+/// the share is back, the aside is there, so the rename alone lands the temp,
+/// ❌ without streaming the file again or parking it under ` (recovered)`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_delete_whose_reply_was_lost_resumes_the_landing_without_streaming_again_at_every_site() {
+async fn a_move_aside_whose_reply_was_lost_resumes_the_landing_without_streaming_again_at_every_site() {
     for site in Site::ALL {
-        let ran = run(site, Cut::DeleteUnanswered, Meanwhile::ComesBack).await;
+        let ran = run(site, Cut::AsideUnanswered, Meanwhile::ComesBack).await;
         assert!(ran.nas.reconnect_attempts() > 0, "{}: the share dropped", ran.label());
         ran.assert_landed().await;
         ran.assert_streamed_once();
     }
 }
 
-/// (c) The delete went through and the drop hits the rename after it: once the
-/// share is back, the rename lands it.
+/// (c) The move aside went through and the drop hits the rename after it:
+/// once the share is back, the rename lands it and the aside goes.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_drop_at_the_rename_after_the_delete_resumes_and_lands_at_every_site() {
+async fn a_drop_at_the_rename_after_the_move_aside_resumes_and_lands_at_every_site() {
     for site in Site::ALL {
         let ran = run(site, Cut::RenameUnsent, Meanwhile::ComesBack).await;
         assert!(ran.nas.reconnect_attempts() > 0, "{}: the share dropped", ran.label());
@@ -541,10 +571,11 @@ async fn a_drop_at_the_rename_after_the_delete_resumes_and_lands_at_every_site()
     }
 }
 
-/// The server performed the rename after the delete and the reply was lost:
-/// the temp is gone and the name holds exactly the source's bytes, so the file
-/// counts as landed. ❗ A one-pass extract has no source to compare against, so
-/// it never claims the file: it reports, and the file is there anyway.
+/// The server performed the rename after the move aside and the reply was
+/// lost: the temp is gone and the name holds exactly the source's bytes, so the
+/// file counts as landed and the aside goes. ❗ A one-pass extract has no source
+/// to compare against, so it never claims the file: it reports, the file is
+/// there anyway, and the aside stays recorded for the next sweep.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rename_whose_reply_was_lost_counts_as_landed_only_on_the_sources_bytes() {
     for site in Site::ALL {
@@ -570,34 +601,29 @@ async fn a_rename_whose_reply_was_lost_counts_as_landed_only_on_the_sources_byte
     }
 }
 
-/// (d) The outage outlasts the budget after the delete went through: the new
-/// bytes stay on the destination, the failure names where they are, and the
-/// landing record stays for the next sweep that reaches the share. ❌ Never
-/// cleaned as a partial.
+/// (d) The outage outlasts the budget after the move aside: the original is
+/// whole at its aside, recorded, and the share's next arrival puts it back.
+/// The new bytes were never the only copy (the source holds them), so nothing
+/// is kept as a landing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn an_outage_that_outlasts_the_wait_after_the_delete_keeps_the_new_bytes_at_every_site() {
+async fn an_outage_that_outlasts_the_wait_after_the_move_aside_keeps_the_original_for_the_arrival_sweep_at_every_site()
+{
     for site in Site::ALL {
         let ran = run(site, Cut::RenameUnsent, Meanwhile::StaysGone).await;
         let label = ran.label();
-        assert_eq!(ran.orig().await, None, "{label}: the delete went through");
-        let temp = ran.assert_kept_as_a_landing().await;
         // In the concurrent window a sibling can meet the dead share first,
         // and the first failure is the operation's.
         if site != Site::Concurrent {
-            match &ran.result {
-                Err(WriteOperationError::NewDataKeptAt { path, kept_at, .. }) => {
-                    assert_eq!(path, site.orig(), "{label}");
-                    assert_eq!(
-                        Path::new(kept_at),
-                        temp,
-                        "{label}: the failure names where the new bytes are"
-                    );
-                }
-                other => panic!("{label}: the failure names where the new bytes went, got {other:?}"),
-            }
+            assert!(
+                matches!(ran.result, Err(WriteOperationError::ServerConnectionLost { .. })),
+                "{label}: the failure says it was the connection, got {:?}",
+                ran.result
+            );
         } else {
             assert!(ran.result.is_err(), "{label}: the op fails");
         }
+        let aside = ran.assert_original_kept_aside().await;
+        ran.assert_the_arrival_puts_the_original_back(&aside).await;
     }
 }
 
@@ -608,7 +634,7 @@ async fn an_outage_that_outlasts_the_wait_after_the_delete_keeps_the_new_bytes_a
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_temp_gone_with_the_old_bytes_at_the_name_is_not_landed_at_every_site() {
     for site in Site::ALL {
-        let ran = run(site, Cut::DeleteUnsent, Meanwhile::TempRemovedThenBack).await;
+        let ran = run(site, Cut::AsideUnsent, Meanwhile::TempRemovedThenBack).await;
         let label = ran.label();
         if site.streams_again() {
             ran.assert_landed().await;
@@ -624,14 +650,14 @@ async fn a_temp_gone_with_the_old_bytes_at_the_name_is_not_landed_at_every_site(
     }
 }
 
-/// (f) A stale transport error on `delete(orig)` while the share already reads
-/// live on a newer generation: no discard and no refused-delete stat on the
-/// fresh session (which would read the name as taken and throw the temp
-/// away); the swap re-runs from the delete, at once, with nothing to dial.
+/// (f) A stale transport error on the move aside while the share already
+/// reads live on a newer generation: no discard and no refused-move stat on
+/// the fresh session; the swap re-runs from the move aside, at once, with
+/// nothing to dial.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_stale_error_on_the_originals_delete_re_runs_the_swap_at_every_site() {
+async fn a_stale_error_on_the_move_aside_re_runs_the_swap_at_every_site() {
     for site in Site::ALL {
-        let ran = run(site, Cut::StaleDeleteError, Meanwhile::ComesBack).await;
+        let ran = run(site, Cut::StaleAsideError, Meanwhile::ComesBack).await;
         assert_eq!(ran.nas.reconnect_attempts(), 0, "{}: nothing to dial", ran.label());
         assert!(ran.nas.generation() > 0, "{}: the session was replaced", ran.label());
         ran.assert_landed().await;
@@ -685,35 +711,21 @@ async fn a_stale_error_on_a_claimed_names_delete_keeps_the_temp_and_its_resume_l
     assert_eq!(temps_in(&inner, "/").await, Vec::<PathBuf>::new(), "no temp left");
 }
 
-/// (g) A Cancel during the wait after the delete went through: the cancel is
-/// reported as one, the new bytes stay on their temp recorded as a landing,
-/// and the share's next arrival lands them at the original's name.
+/// (g) A Cancel during the wait after the move aside went through: the cancel
+/// is reported as one, the original stays whole at its aside, recorded, and the
+/// share's next arrival puts it back at its name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_cancel_during_the_wait_after_the_delete_leaves_the_landing_for_the_arrival_sweep_at_every_site() {
+async fn a_cancel_during_the_wait_after_the_move_aside_leaves_the_original_for_the_arrival_sweep_at_every_site() {
     for site in Site::ALL {
-        let ran = run(site, Cut::DeleteUnanswered, Meanwhile::Cancel).await;
+        let ran = run(site, Cut::AsideUnanswered, Meanwhile::Cancel).await;
         let label = ran.label();
         assert!(
             matches!(ran.result, Err(WriteOperationError::Cancelled { .. })),
             "{label}: a cancel is reported as one, got {:?}",
             ran.result
         );
-        let temp = ran.assert_kept_as_a_landing().await;
-
-        ran.nas.reconnected_elsewhere();
-        ran.engine
-            .volumes()
-            .register(NAS_ID, Arc::clone(&ran.nas) as Arc<dyn Volume>);
-        wait_until_async(WAIT, "the arrival sweep to settle the landing", || {
-            ran.ledger.recorded_landings().is_empty()
-        })
-        .await;
-        assert_eq!(
-            ran.orig().await.as_deref(),
-            Some(NEW),
-            "{label}: the arrival sweep lands the new bytes at the original's name"
-        );
-        assert!(!ran.dest_inner.exists(&temp).await, "{label}: and the temp is gone");
+        let aside = ran.assert_original_kept_aside().await;
+        ran.assert_the_arrival_puts_the_original_back(&aside).await;
     }
 }
 
@@ -763,8 +775,8 @@ async fn a_one_step_replace_whose_reply_was_lost_counts_as_landed_only_on_the_so
 
 /// ❗ The point of the one-step replace: an outage that outlasts the wait at it
 /// leaves the user's ORIGINAL whole at its name, with nothing recorded as a
-/// landing, where delete-then-rename would have left the name empty and the new
-/// bytes on a temp for the next sweep.
+/// landing or set aside, where the aside swap would have left the original at
+/// its aside for the next sweep to put back.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_outage_that_outlasts_the_wait_at_a_one_step_replace_leaves_the_original_whole_at_every_site() {
     for site in Site::ALL {

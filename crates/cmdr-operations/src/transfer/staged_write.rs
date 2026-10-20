@@ -15,7 +15,8 @@
 //! original ([`Replaces::Swap`]), and the write stages as
 //! [`WriteStaging::StageOverOriginal`] and lands through the same landing as
 //! any other: one replacing rename where the destination has one, else
-//! delete-first. So the temp has one owner, and `write_path` names the
+//! through an aside (the original renamed aside, the temp onto its name, the
+//! aside deleted last). So the temp has one owner, and `write_path` names the
 //! file the user gets on every path. A write the DESTINATION lands in one
 //! indivisible shot is
 //! [`WriteStaging::SingleShot`] and needs no temp: there is no moment at which
@@ -217,13 +218,14 @@ impl StagedWrite {
     }
 
     /// Begins a file→file Overwrite of `final_path`, the user's file on
-    /// `dest_volume`, staged and landed delete-first like any other
+    /// `dest_volume`, staged and landed like any other
     /// ([`WriteStaging::StageOverOriginal`]), for a caller outside the transfer
     /// engine whose operation writes to more than one volume: a remote zip edit
     /// pulls the archive into a local scratch and pushes the edited one back, so
     /// the operation names no single destination. The temp is recorded in
-    /// `dest_volume_id`'s path space, which is what lets a landing it cuts off
-    /// be held, kept for the volume's next arrival, and finished by its sweep.
+    /// `dest_volume_id`'s path space, and so is the original's aside, which is
+    /// what lets a swap it cuts off be kept for the volume's next arrival and
+    /// settled by its sweep.
     pub(crate) fn begin_over_original(
         state: &Arc<WriteOperationState>,
         dest_volume: &dyn Volume,
@@ -334,10 +336,10 @@ impl StagedWrite {
     ///
     /// A [`WriteStaging::StageOverOriginal`] write lands here too
     /// ([`LandingName::ReplacesOriginal`]): in one replacing rename where the
-    /// destination has one, else delete-first, sharing the cleared-way rules:
-    /// recorded as a landing before the original's delete goes out, a refused
-    /// delete checked with one stat, a refused rename after it rescued out of
-    /// temp space.
+    /// destination has one, else through an aside: the original renamed aside
+    /// under a record on disk (`in_flight_temps::hold_aside`), the temp renamed
+    /// onto its name, the aside deleted last. A refused move aside is checked
+    /// with one stat, and a refused landing puts the original back.
     ///
     /// `size` is the byte count the write confirmed. A landing that clears the
     /// way records the temp at that size (`ItemKind::Landing::expected_size`),
@@ -484,8 +486,9 @@ pub(crate) enum Replaces {
     Nothing,
     /// A file→file Overwrite by SAFE-REPLACE: the write stages on a temp
     /// sibling of the original ([`WriteStaging::StageOverOriginal`]), and its
-    /// landing deletes the original, then renames the temp onto its name. The
-    /// original survives the whole write.
+    /// landing replaces the original in one step, or sets it aside, renames the
+    /// temp onto its name, and deletes the aside last. The original survives
+    /// the whole write, and the landing until the new bytes are at its name.
     Swap,
     /// A file→file Overwrite on a destination that publishes every write whole
     /// (`Volume::publishes_writes_whole`, an object store): the write goes to
@@ -513,7 +516,7 @@ impl Replaces {
 }
 
 /// The staging every call site derives the same way: a swap over an original
-/// ([`Replaces::Swap`]) stages delete-first, an in-place replace on a
+/// ([`Replaces::Swap`]) stages over the original, an in-place replace on a
 /// whole-publishing destination ([`Replaces::InPlace`]) writes the final name
 /// over, and anything else stages by whose name it is.
 ///
@@ -526,8 +529,7 @@ impl Replaces {
 /// `InPlace` answers `SingleShot(ClaimedByTheCaller)` here rather than waiting
 /// for [`resolve_staging`]: the resolver chose it on the same whole-publish
 /// answer, and the write must never fall back to a staged landing, whose
-/// delete-then-rename would put the original at risk the in-place write exists
-/// to avoid.
+/// aside and renames are the round trips the in-place write exists to avoid.
 pub(super) fn staging_for(replaces: &Replaces, landing: LandingName) -> WriteStaging {
     match (replaces, landing) {
         (Replaces::Swap, _) | (Replaces::Nothing, LandingName::ReplacesOriginal) => WriteStaging::StageOverOriginal,

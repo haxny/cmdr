@@ -158,12 +158,13 @@ impl Volume for CallLog {
     }
 }
 
-/// ❗ On a backend whose forced rename isn't one atomic step, a swap lands
-/// DELETE-FIRST: the original is known to be in the way, so a rename-first
-/// attempt would only cost a refused round trip. And ❌ never `rename(force)`,
-/// which on MTP can leave a duplicate beside the original.
+/// ❗ On a backend whose forced rename isn't one atomic step, a swap moves the
+/// original ASIDE first, lands the temp on the name it vacated, and deletes the
+/// aside last: the original is whole at one of its names at every moment. And
+/// ❌ never `rename(force)`, which on MTP can leave a duplicate beside the
+/// original and on SFTP may delete it in a step of its own.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_swap_lands_delete_first_and_never_renames_with_force() {
+async fn a_swap_moves_the_original_aside_first_and_never_renames_with_force() {
     let engine = TestOperations::new();
     let state = state(&engine);
     let (inner, log) = CallLog::over_an_original(false).await;
@@ -174,15 +175,28 @@ async fn a_swap_lands_delete_first_and_never_renames_with_force() {
     inner.create_file(&temp, b"NEW").await.unwrap();
     staged.commit(&dest, 3).await.expect("the swap lands");
 
+    let calls = log.calls.lock_ignore_poison().clone();
+    let Some(Call::Rename { to: aside, .. }) = calls.first() else {
+        panic!("the original moves first: {calls:?}");
+    };
+    assert!(
+        aside.to_string_lossy().contains(".cmdr-temp-"),
+        "onto an aside name no stale-temp reap takes: {aside:?}"
+    );
     assert_eq!(
-        *log.calls.lock_ignore_poison(),
+        calls,
         vec![
-            Call::Delete(PathBuf::from("/notes.txt")),
+            Call::Rename {
+                from: PathBuf::from("/notes.txt"),
+                to: aside.clone(),
+                force: false,
+            },
             Call::Rename {
                 from: temp.clone(),
                 to: PathBuf::from("/notes.txt"),
                 force: false,
             },
+            Call::Delete(aside.clone()),
         ],
     );
     assert_eq!(
@@ -191,6 +205,7 @@ async fn a_swap_lands_delete_first_and_never_renames_with_force() {
         "the new bytes replaced the original"
     );
     assert!(!inner.exists(&temp).await);
+    assert!(!inner.exists(aside).await, "and the aside is gone");
     assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
 }
 
@@ -930,19 +945,36 @@ async fn swap_over(state: &Arc<WriteOperationState>) -> (Arc<InMemoryVolume>, Ar
     (inner, dest, staged)
 }
 
-/// Asserts a swap refused before it cleared anything: the original is whole at
-/// its name, and nothing is recorded as a landing.
+/// Every aside (`.cmdr-temp-*`) in `folder`.
+async fn asides_in(volume: &InMemoryVolume, folder: &str) -> Vec<PathBuf> {
+    volume
+        .list_directory(Path::new(folder), None)
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|entry| entry.name.contains(cmdr_fs::staging::STAGING_ASIDE_MARKER))
+        .map(|entry| PathBuf::from(entry.path))
+        .collect()
+}
+
+/// Asserts a swap refused before it moved anything: the original is whole at
+/// its name, nothing went aside, and nothing is left recorded.
 async fn assert_refused_with_the_original_in_place(
     inner: &InMemoryVolume,
     ledger: &Ledger,
     landed: Result<(), FinalizeFailure>,
 ) {
-    let failure = landed.expect_err("❗ a landing record that never reached the disk must not clear the way");
+    let failure = landed.expect_err("❗ an aside record that never reached the disk must not move the original");
     assert_eq!(size_of(inner, "/notes.txt").await, Some(3), "the original survives");
     assert_eq!(
-        ledger.recorded_landings(),
+        asides_in(inner, "/").await,
         Vec::<PathBuf>::new(),
-        "and no landing is left recorded"
+        "and never went aside"
+    );
+    assert_eq!(
+        (ledger.recorded_landings(), ledger.recorded_asides()),
+        (Vec::<PathBuf>::new(), Vec::<PathBuf>::new()),
+        "and nothing is left recorded"
     );
     // Typed, so the dialog says the original stayed: nothing was cleared, so
     // nothing was rescued, and ❌ no sentence comes from the backend.
@@ -954,11 +986,11 @@ async fn assert_refused_with_the_original_in_place(
 }
 
 /// ❗ The ledger's writer is gone (it panicked, or the log was closed), so the
-/// landing record can't reach the disk. A crash after the delete would leave
-/// the only copy of the new bytes on a temp no record protects, so the swap
-/// refuses with nothing cleared.
+/// aside record can't reach the disk. A crash after the move aside would leave
+/// the user's original on a scratch name no record points back from, so the
+/// swap refuses with nothing moved.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_swap_whose_landing_record_has_no_writer_leaves_the_original_in_place() {
+async fn a_swap_whose_aside_record_has_no_writer_leaves_the_original_in_place() {
     let dir = cmdr_fs::testing::TestDir::new("staged-write-landing-no-writer");
     let data_dir = dir.join("data");
     std::fs::create_dir_all(&data_dir).unwrap();
@@ -976,7 +1008,7 @@ async fn a_swap_whose_landing_record_has_no_writer_leaves_the_original_in_place(
 /// The same refusal when the log is there but won't take the line (a full or
 /// read-only data disk): only a record the log wrote counts.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_swap_whose_landing_record_the_log_refused_leaves_the_original_in_place() {
+async fn a_swap_whose_aside_record_the_log_refused_leaves_the_original_in_place() {
     let dir = cmdr_fs::testing::TestDir::new("staged-write-landing-log-refused");
     let data_dir = dir.join("data");
     std::fs::create_dir_all(&data_dir).unwrap();
@@ -991,10 +1023,10 @@ async fn a_swap_whose_landing_record_the_log_refused_leaves_the_original_in_plac
 }
 
 /// An operation that never named its destination volume has no path space to
-/// record the landing in. On a ledger that keeps a log, that's a record that
-/// can't reach the disk, so the swap refuses with nothing cleared.
+/// record the aside in. On a ledger that keeps a log, that's a record that
+/// can't reach the disk, so the swap refuses with nothing moved.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_swap_with_no_path_space_for_its_landing_record_leaves_the_original_in_place() {
+async fn a_swap_with_no_path_space_for_its_aside_record_leaves_the_original_in_place() {
     let dir = cmdr_fs::testing::TestDir::new("staged-write-landing-no-home");
     let data_dir = dir.join("data");
     std::fs::create_dir_all(&data_dir).unwrap();

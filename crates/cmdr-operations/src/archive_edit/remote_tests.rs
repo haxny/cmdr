@@ -558,8 +558,18 @@ async fn sweep_transfer_temps(parent: &dyn Volume) {
     }
 }
 
-/// Neither the edit nor anything else can take the archive's name: the edit
-/// moves to a ` (recovered)` name the error names, ❌ never left in temp space.
+/// The aside the swap left in `/device`, if any.
+async fn aside_in_device(parent: &dyn Volume) -> Option<PathBuf> {
+    names_in(parent, "/device")
+        .await
+        .into_iter()
+        .find(|name| name.contains(".cmdr-temp-"))
+        .map(|name| Path::new("/device").join(name))
+}
+
+/// Neither the edit nor the original can take the archive's name: the edit
+/// moves to a ` (recovered)` name the error names, ❌ never left in temp space,
+/// and the original stays findable under a name of its own.
 #[tokio::test]
 async fn a_name_that_refuses_both_the_edit_and_the_original_keeps_both_findable() {
     let archive_path = PathBuf::from("/device/bundle.zip");
@@ -578,6 +588,16 @@ async fn a_name_that_refuses_both_the_edit_and_the_original_keeps_both_findable(
     );
     let edit = read_remote_zip(inner.as_ref(), Path::new(&kept_at)).await;
     assert!(edit.contains_key("added.txt"), "the edited archive, whole");
+    let originals: Vec<PathBuf> = {
+        let mut found = Vec::new();
+        for at in archives_holding(inner.as_ref(), "keep.txt").await {
+            if !read_remote_zip(inner.as_ref(), &at).await.contains_key("added.txt") {
+                found.push(at);
+            }
+        }
+        found
+    };
+    assert_eq!(originals.len(), 1, "❗ the original stays findable: {originals:?}");
     let names = names_in(inner.as_ref(), "/device").await;
     assert!(
         !names.iter().any(|n| n.contains(".cmdr-tmp-")),
@@ -585,41 +605,46 @@ async fn a_name_that_refuses_both_the_edit_and_the_original_keeps_both_findable(
     );
 }
 
-/// The landing rename is refused after the way was cleared: the edit is kept
-/// under a ` (recovered)` name the error names.
+/// The edit can't take the name, but the original goes back to it: the edit
+/// simply didn't happen, and nothing is left beside the original.
 #[tokio::test]
-async fn a_landing_that_fails_keeps_the_edit_findable() {
+async fn a_landing_that_fails_puts_the_original_back() {
     let archive_path = PathBuf::from("/device/bundle.zip");
     let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
-        .failing_call(FaultyOp::Rename, 1, VolumeError::NotConnected("a hiccup".into()))
+        .failing_call(FaultyOp::Rename, 2, VolumeError::NotConnected("a hiccup".into()))
         .arc();
 
     let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
 
     assert!(parent.fault_fired(FaultyOp::Rename), "the landing rename failed");
-    let Err(super::EditError::Op(WriteOperationError::NewDataKeptAt { kept_at, .. })) = result else {
-        panic!("the error must say where the edited archive is");
-    };
     assert!(
-        read_remote_zip(parent.as_ref(), Path::new(&kept_at))
-            .await
-            .contains_key("added.txt")
+        matches!(result, Err(super::EditError::Op(ref e)) if !matches!(e, WriteOperationError::NewDataKeptAt { .. })),
+        "a plain refusal: the original is back"
+    );
+    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
+    assert!(
+        back.contains_key("keep.txt") && !back.contains_key("added.txt"),
+        "the original, at its name"
+    );
+    assert_eq!(
+        names_in(parent.as_ref(), "/device").await,
+        ["bundle.zip"],
+        "no temp, no aside"
     );
 }
 
-/// The swap's first step on the original is refused and the original is still
-/// there: the edit didn't happen, the original keeps its bytes, and the spare
-/// temp goes.
+/// The move aside is refused and the original is still there: the edit didn't
+/// happen, the original keeps its bytes, and the spare temp goes.
 #[tokio::test]
-async fn a_refused_first_step_on_the_original_leaves_it_whole_and_takes_the_temp_away() {
+async fn a_refused_move_aside_leaves_the_original_whole_and_takes_the_temp_away() {
     let archive_path = PathBuf::from("/device/bundle.zip");
     let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
-        .failing_call(FaultyOp::Delete, 1, VolumeError::NotConnected("busy".into()))
+        .failing_call(FaultyOp::Rename, 1, VolumeError::NotConnected("busy".into()))
         .arc();
 
     let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
 
-    assert!(parent.fault_fired(FaultyOp::Delete), "the swap's step was refused");
+    assert!(parent.fault_fired(FaultyOp::Rename), "the move aside was refused");
     assert!(
         matches!(result, Err(super::EditError::Op(ref e)) if !matches!(e, WriteOperationError::NewDataKeptAt { .. })),
         "a plain refusal: nothing moved"
@@ -629,23 +654,51 @@ async fn a_refused_first_step_on_the_original_leaves_it_whole_and_takes_the_temp
         back.contains_key("keep.txt") && !back.contains_key("added.txt"),
         "the original, untouched"
     );
-    assert_eq!(names_in(parent.as_ref(), "/device").await, ["bundle.zip"], "no temp");
+    assert_eq!(
+        names_in(parent.as_ref(), "/device").await,
+        ["bundle.zip"],
+        "no temp, no aside"
+    );
+}
+
+/// The edit landed but its old version couldn't be deleted: the edit is in
+/// place and the old version stays beside it under a name no stale-temp sweep
+/// takes, recorded so the volume's next sweep can remove it once it sees the
+/// edit whole at the name.
+#[tokio::test]
+async fn an_aside_that_wont_delete_stays_beside_the_landed_edit() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
+        .failing_call(FaultyOp::Delete, 1, VolumeError::NotConnected("busy".into()))
+        .arc();
+
+    assert!(
+        add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone())
+            .await
+            .is_ok()
+    );
+
+    assert!(parent.fault_fired(FaultyOp::Delete), "the aside delete was refused");
+    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
+    assert!(back.contains_key("added.txt"), "the edit is in place");
+    let aside = aside_in_device(parent.as_ref()).await.expect("the old version stays");
+    assert!(read_remote_zip(parent.as_ref(), &aside).await.contains_key("keep.txt"));
 }
 
 /// A crash after each step of the swap (modelled as the device going silent:
 /// every call after the cut fails, so nothing more reaches it), then the next
 /// launch's ledger sweep, then the harshest stale-temp sweep, then the next
 /// remote zip edit in that folder. At every cut a complete archive is at the
-/// archive's name, ❗ no version anyone had is lost, and nothing is left in
-/// temp space.
+/// archive's name, ❗ the original is never lost before the edit is whole at
+/// the name, and nothing is left in temp space or aside.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_crash_after_any_step_of_the_swap_loses_no_archive() {
     use crate::in_flight_temps::Ledger;
 
     let archive_path = PathBuf::from("/device/bundle.zip");
     let sibling = PathBuf::from("/device/other.zip");
-    // Mutating calls in order: upload, delete the original, landing rename.
-    for cut in 1..=3 {
+    // Mutating calls in order: upload, move aside, landing, delete the aside.
+    for cut in 1..=4 {
         let dir = cmdr_fs::testing::TestDir::new(&format!("remote-swap-crash-{cut}"));
         let data_dir = dir.join("data");
         std::fs::create_dir_all(&data_dir).expect("data dir");
@@ -663,11 +716,17 @@ async fn a_crash_after_any_step_of_the_swap_loses_no_archive() {
             .expect("seed the sibling zip");
         let dying = Arc::new(GoesSilentAfter::new(Arc::clone(&inner), cut));
 
-        // Only a cut after the landing has the edit in place to report.
+        // Success once the edit took its name, whatever happens to the aside.
         let landed = add_edit_on(dying as Arc<dyn Volume>, archive_path.clone(), state)
             .await
             .is_ok();
-        assert_eq!(landed, cut == 3, "cut {cut}: success only once the edit took its name");
+        assert_eq!(landed, cut >= 3, "cut {cut}: success only once the edit took its name");
+        if cut == 2 {
+            assert!(
+                !inner.exists(&archive_path).await && aside_in_device(inner.as_ref()).await.is_some(),
+                "cut 2: the original is aside, its name empty"
+            );
+        }
 
         // The process dies, and the next one launches with the device back.
         ledger.die();
@@ -689,27 +748,20 @@ async fn a_crash_after_any_step_of_the_swap_loses_no_archive() {
             back.contains_key("keep.txt"),
             "cut {cut}: a whole archive at the name: {tally:?}"
         );
+        // Cut 2 left the original aside and the edit on its temp, recorded as
+        // a landing (the edit reported it kept there): the sweep finishes that
+        // landing and, with the edit whole at the name, removes the aside.
         assert_eq!(
             back.contains_key("added.txt"),
             cut >= 2,
-            "cut {cut}: the edit lands once the original's delete went through"
+            "cut {cut}: the right version at the name"
         );
-        if cut == 1 {
-            let edits: Vec<PathBuf> = archives_holding(inner.as_ref(), "added.txt")
-                .await
-                .into_iter()
-                .filter(|at| *at != sibling)
-                .collect();
-            assert_eq!(
-                edits.len(),
-                1,
-                "cut 1: ❗ the edit survives beside the original: {edits:?}"
-            );
-        }
         let names = names_in(inner.as_ref(), "/device").await;
         assert!(
-            !names.iter().any(|n| n.contains(".cmdr-tmp-")),
-            "cut {cut}: nothing left in temp space: {names:?}"
+            !names
+                .iter()
+                .any(|n| n.contains(".cmdr-tmp-") || n.contains(".cmdr-temp-")),
+            "cut {cut}: nothing left in temp space or aside: {names:?}"
         );
         drop(engine);
     }

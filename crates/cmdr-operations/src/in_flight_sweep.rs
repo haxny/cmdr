@@ -135,6 +135,8 @@ pub(super) fn on_volume_arrival(ledger: &Ledger, host: &Arc<EngineHost>, volume_
 async fn on_volume(ledger: &Ledger, host: &EngineHost, volume_id: &str, records: Vec<Record>) -> SweepTally {
     let mut tally = SweepTally::default();
     let records = without_superseded_temps(ledger, records);
+    // ❗ In the set's order: a landing before the aside its swap left
+    // (`in_flight_records.rs::ItemKind`).
     for record in &records {
         settle_and_record(ledger, host, record, &mut tally).await;
     }

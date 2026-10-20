@@ -1,13 +1,14 @@
 //! A remote zip edit whose share drops: at the pull, at the upload, and at
 //! each step of the swap that replaces the archive.
 //!
-//! From the moment the swap's delete of the archive goes through, the uploaded
-//! temp is the share's only copy of it. So a drop waits for the share and
-//! SETTLES what happened before acting: a whole temp lands without uploading
-//! again, a gone temp counts as landed only when the archive holds exactly the
-//! edited bytes, and a wait that ends without the share keeps the new bytes,
-//! recorded as a landing for the next sweep that reaches it, ❌ never thrown
-//! away. A drop before the swap leaves the original as it was.
+//! The swap moves the archive aside, renames the uploaded temp onto its name,
+//! and deletes the aside last, so the archive is whole at one of its names at
+//! every moment. A drop waits for the share and SETTLES what happened before
+//! acting: a whole temp lands without uploading again, a gone temp counts as
+//! landed only when the archive holds exactly the edited bytes, and a wait that
+//! ends without the share leaves the original at its aside, recorded for the
+//! share's next arrival, whose sweep puts it back. A drop before the swap leaves
+//! the original as it was.
 
 use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
@@ -60,17 +61,18 @@ enum Cut {
     PullOpen,
     /// The upload of the edited archive.
     Upload,
-    /// The swap's delete of the archive never reaches the server.
-    DeleteUnsent,
-    /// The server deleted the archive; the reply is lost.
-    DeleteUnanswered,
-    /// The delete went through; the rename after it never reaches the server.
+    /// The swap's move of the archive aside never reaches the server.
+    AsideUnsent,
+    /// The server moved the archive aside; the reply is lost.
+    AsideUnanswered,
+    /// The move aside went through; the rename after it never reaches the
+    /// server.
     RenameUnsent,
     /// The server renamed the temp onto the archive; the reply is lost.
     RenameUnanswered,
-    /// The delete answers the error of a session someone else already
+    /// The move aside answers the error of a session someone else already
     /// replaced (it never reached the server).
-    StaleDeleteError,
+    StaleAsideError,
 }
 
 /// What happens while the edit waits for the share.
@@ -118,11 +120,11 @@ async fn run_on(cut: Cut, meanwhile: Meanwhile, replace: Replace) -> Ran {
     match cut {
         Cut::PullOpen => nas.drop_at_open(0),
         Cut::Upload => nas.drop_at_write(0),
-        Cut::DeleteUnsent => nas.drop_at_delete_of(archive, RenameDrop::BeforeTheServerSeesIt),
-        Cut::DeleteUnanswered => nas.drop_at_delete_of(archive, RenameDrop::AfterTheServerPerformsIt),
+        Cut::AsideUnsent => nas.drop_at_rename_of(archive, RenameDrop::BeforeTheServerSeesIt),
+        Cut::AsideUnanswered => nas.drop_at_rename_of(archive, RenameDrop::AfterTheServerPerformsIt),
         Cut::RenameUnsent => nas.drop_at_rename_onto(archive, RenameDrop::BeforeTheServerSeesIt),
         Cut::RenameUnanswered => nas.drop_at_rename_onto(archive, RenameDrop::AfterTheServerPerformsIt),
-        Cut::StaleDeleteError => nas.stale_error_at_delete_of(archive, RenameDrop::BeforeTheServerSeesIt),
+        Cut::StaleAsideError => nas.stale_error_at_rename_of(archive, RenameDrop::BeforeTheServerSeesIt),
     }
     let ledger = Ledger::for_test();
     let budget = match meanwhile {
@@ -147,7 +149,7 @@ async fn run_on(cut: Cut, meanwhile: Meanwhile, replace: Replace) -> Ran {
         let engine = crate::Operations::clone(&engine);
         let op_id = op.id().to_owned();
         tokio::spawn(async move {
-            if matches!(cut, Cut::StaleDeleteError) {
+            if matches!(cut, Cut::StaleAsideError) {
                 return;
             }
             wait_until_async(WAIT, "the edit to wait for the share", || {
@@ -267,6 +269,11 @@ impl Ran {
             self.names().await
         );
         assert_eq!(self.temps().await, Vec::<PathBuf>::new(), "{label}: no temp left");
+        assert!(
+            !self.names().await.iter().any(|name| name.contains(".cmdr-temp-")),
+            "{label}: no aside left: {:?}",
+            self.names().await
+        );
         assert_eq!(
             self.ledger.recorded_landings(),
             Vec::<PathBuf>::new(),
@@ -315,8 +322,8 @@ async fn a_drop_at_the_upload_waits_and_uploads_again() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_drop_inside_the_swap_waits_and_lands_without_uploading_again() {
     for cut in [
-        Cut::DeleteUnsent,
-        Cut::DeleteUnanswered,
+        Cut::AsideUnsent,
+        Cut::AsideUnanswered,
         Cut::RenameUnsent,
         Cut::RenameUnanswered,
     ] {
@@ -332,11 +339,11 @@ async fn a_drop_inside_the_swap_waits_and_lands_without_uploading_again() {
     }
 }
 
-/// A stale transport error on the swap's delete, while the share already reads
-/// live on a newer session: ❌ no discard; the swap runs again and lands.
+/// A stale transport error on the swap's move aside, while the share already
+/// reads live on a newer session: ❌ no discard; the swap runs again and lands.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_stale_error_on_the_swaps_delete_runs_the_swap_again() {
-    let ran = run(Cut::StaleDeleteError, Meanwhile::ComesBack).await;
+async fn a_stale_error_on_the_swaps_move_aside_runs_the_swap_again() {
+    let ran = run(Cut::StaleAsideError, Meanwhile::ComesBack).await;
     ran.assert_landed().await;
     assert_eq!(ran.uploads(), 1, "the temp was never thrown away");
 }
@@ -362,58 +369,69 @@ async fn a_share_that_stays_gone_at_the_upload_reports_the_lost_connection() {
     ran.assert_original_intact().await;
 }
 
-/// The share stays gone after the swap deleted the archive: the uploaded temp
-/// is the only copy, so it stays, recorded as a landing the next sweep that
-/// reaches the share finishes, and the error says where the new bytes are.
+/// The archive went aside and its original is all the share has of it, whole.
+/// Answers the aside, recorded for the share's next arrival.
+async fn assert_original_kept_aside(ran: &Ran) -> PathBuf {
+    let label = &ran.label;
+    let asides: Vec<PathBuf> = ran
+        .names()
+        .await
+        .into_iter()
+        .filter(|name| name.contains(".cmdr-temp-"))
+        .map(|name| Path::new("/share").join(name))
+        .collect();
+    let [aside] = asides.as_slice() else {
+        panic!("{label}: exactly one aside holds the original archive, got {asides:?}");
+    };
+    assert_eq!(
+        read_all(&*ran.inner, aside).await,
+        Some(original_zip()),
+        "{label}: ❗ the original survives, whole"
+    );
+    assert!(
+        ran.ledger.pending_paths().contains(aside),
+        "{label}: recorded for the share's next arrival"
+    );
+    assert_eq!(
+        ran.ledger.recorded_landings(),
+        Vec::<PathBuf>::new(),
+        "{label}: no landing: the edit was never the only copy of anything"
+    );
+    aside.clone()
+}
+
+/// The share stays gone after the swap moved the archive aside: the edit stops
+/// with "Lost the connection to {server}", and the original archive is whole at
+/// its aside, recorded, for the share's next arrival to put back.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_share_that_stays_gone_after_the_delete_keeps_the_new_archive_as_a_landing() {
+async fn a_share_that_stays_gone_after_the_move_aside_keeps_the_original_for_its_return() {
     let ran = run(Cut::RenameUnsent, Meanwhile::StaysGone).await;
     ran.assert_the_share_dropped();
     assert!(
         matches!(
             &ran.result,
-            Err(EditError::Op(WriteOperationError::NewDataKeptAt { .. }))
+            Err(EditError::Op(WriteOperationError::ServerConnectionLost { .. }))
         ),
-        "the error says where the new archive is"
+        "the error says it was the connection"
     );
     ran.nas.become_reachable();
-    let temps = ran.temps().await;
-    let [temp] = temps.as_slice() else {
-        panic!("exactly one temp holds the edited archive, got {temps:?}");
-    };
-    assert_eq!(
-        read_all(&*ran.inner, temp).await.map(|bytes| entry_names(&bytes)),
-        Some(vec!["added.txt".to_owned(), "keep.txt".to_owned()]),
-        "❗ the only copy survives"
-    );
-    assert_eq!(
-        ran.ledger.recorded_landings(),
-        vec![temp.clone()],
-        "recorded as a landing"
-    );
-    assert!(
-        !ran.state.in_flight_temps.lock_ignore_poison().contains(temp),
-        "and no removable temp of ours"
-    );
+    assert_original_kept_aside(&ran).await;
 }
 
-/// A Cancel while the swap waits after the delete: the uploaded temp stays,
-/// recorded as a landing, ❌ never cleaned.
+/// A Cancel while the swap waits after the move aside: reported as the cancel
+/// it is, the original archive whole at its aside, recorded, ❌ never cleaned.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_cancel_while_the_swap_waits_after_the_delete_keeps_the_landing() {
+async fn a_cancel_while_the_swap_waits_after_the_move_aside_keeps_the_original() {
     let ran = run(Cut::RenameUnsent, Meanwhile::Cancel).await;
     assert!(
         matches!(ran.result, Err(EditError::Cancelled)),
         "reported as the cancel it is"
     );
     ran.nas.become_reachable();
-    let temps = ran.temps().await;
-    assert_eq!(temps.len(), 1, "the edited archive stays on its temp: {temps:?}");
-    assert_eq!(ran.ledger.recorded_landings(), temps, "recorded as a landing");
-    assert_eq!(
-        *ran.state.kept_landings.lock_ignore_poison(),
-        vec![PathBuf::from(ARCHIVE)],
-        "and the stop names the archive it's on its way to, for `write-cancelled`"
+    assert_original_kept_aside(&ran).await;
+    assert!(
+        ran.state.kept_landings.lock_ignore_poison().is_empty(),
+        "and the stop names no unfinished landing"
     );
 }
 

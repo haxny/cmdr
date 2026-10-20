@@ -968,18 +968,20 @@ mid-stream failure (network drop, USB yank, cancel) leaves the user with neither
 staging (`../staged_write.rs`, `WriteStaging::StageOverOriginal`): the streaming writer lands bytes in a
 `<name>.cmdr-tmp-<uuid>` sibling the `StagedWrite` mints and records like any other, and only after the temp is fully
 written does its landing replace `orig` (which survived the whole write): one replacing rename where the destination has
-one, else delete `orig` and `rename(temp, orig, force=false)`. So the temp has ONE owner, every write site
-(`copy_serial.rs`, `copy_concurrent_task.rs`, `merge.rs`, `move_cross.rs`, `sequential_extract.rs`, and the server-side
-copy) gets the same landing, and `write_path` names the file the user ends up with: ❌ no layer above `StagedWrite` sees
-a temp-shaped destination. On a failure BEFORE the landing the original is untouched and the write's own `abandon` (or,
-for a dropped task, `cleanup.rs::clean_abandoned_staged_writes`) removes the temp; on a failure INSIDE it the original
-may be gone, so the temp is recorded as a landing and rescued to a ` (recovered)` name instead (below). The shared rules
-of that cleared-way landing: `../DETAILS.md` § "File writes are staged".
+one, else `orig` renamed aside under a record, `rename(temp, orig, force=false)`, and the aside deleted last. So the
+temp has ONE owner, every write site (`copy_serial.rs`, `copy_concurrent_task.rs`, `merge.rs`, `move_cross.rs`,
+`sequential_extract.rs`, and the server-side copy) gets the same landing, and `write_path` names the file the user ends
+up with: ❌ no layer above `StagedWrite` sees a temp-shaped destination. On a failure BEFORE the landing the original is
+untouched and the write's own `abandon` (or, for a dropped task, `cleanup.rs::clean_abandoned_staged_writes`) removes
+the temp; on a failure INSIDE it the original goes back to its name, and only when it can't is the temp rescued to a
+` (recovered)` name (below), the original kept at its recorded aside for the volume's next sweep. The shared rules:
+`../DETAILS.md` § "File writes are staged".
 
 - **Why `rename(force=true)` only where it's one step:** only a backend that declares `supports_atomic_replace_rename`
   (local disks, SMB's `ReplaceIfExists`) replaces the file in one call; MTP's `rename(force=true)` does NOT delete an
-  existing destination and can create a duplicate, so everywhere else the landing deletes `orig` first. The two shapes,
-  the landing record, and the refused delete: `../DETAILS.md` § "File writes are staged".
+  existing destination and can create a duplicate, and SFTP's may delete first in a step of its own, so everywhere else
+  the landing sets `orig` aside first. The two shapes, the aside record, and the refused move aside: `../DETAILS.md` §
+  "File writes are staged".
 - **Threading:** `resolve_volume_conflict` / `apply_volume_conflict_resolution` return `Option<ResolvedConflict>`. The
   write sites derive the staging from `replaces` (`staging_for`), so the swap happens inside `copy_single_path` (or the
   extract's write), and a site records the landed name, which IS the original, in `copied_paths` / the milestone / the
@@ -987,23 +989,23 @@ of that cleared-way landing: `../DETAILS.md` § "File writes are staged".
   deletes the source unless the dest is fully in place. A destination that publishes every write whole takes the
   Overwrite in place instead (`Replaces::InPlace`, § "Whole-publish destinations").
 - **The post-write temp is committed data, NOT a cleanable partial, and it does not STAY a temp.** A rename refused
-  after the delete went through leaves the temp as the ONLY copy, so the landing rescues it to
-  `<name> (recovered)<.ext>` (the rule: `../DETAILS.md` § "File writes are staged"). ❗ **Getting it out of
-  `.cmdr-tmp-*` space is a data-safety act, not tidiness**: `cleanup.rs::reap_stale_transfer_temps` matches on the
-  `.cmdr-tmp-` marker plus an age and runs at the start of every copy and every volume move into that directory, sparing
-  only what the in-flight ledger records. Only `AlreadyExists` earns another candidate: the rename has already failed
-  once, so a dead link would fail identically under eight names and only add eight timeouts. When no rename lands at
-  all, the bytes stay under the temp name, still recorded as a landing, and the failure reports THAT path. ❗ No
-  driver-side partial list ever names the temp or the original (`failed_write_leaves_ours_at` answers `false` for
-  `StageOverOriginal`), so the partial-cleanup contract ("delete partials on error") can't reach either: a concurrent
-  task DROPPED between `delete(orig)` and the rename (the driver breaking on a sibling's failure) leaves its temp on
-  disk, recorded as a landing, for the sweep that finishes the landing. Pinned by `swap_landing_tests.rs` (the rescue,
-  the reap that can no longer reach it, the taken-name series, both give-up shapes, and the three delete answers),
+  after the original went aside and couldn't go back leaves the temp as the only copy of the new bytes at the name, so
+  the landing rescues it to `<name> (recovered)<.ext>` (the rule: `../DETAILS.md` § "File writes are staged"). ❗
+  **Getting it out of `.cmdr-tmp-*` space is a data-safety act, not tidiness**: `cleanup.rs::reap_stale_transfer_temps`
+  matches on the `.cmdr-tmp-` marker plus an age and runs at the start of every copy and every volume move into that
+  directory, sparing only what the in-flight ledger records. Only `AlreadyExists` earns another candidate: the rename
+  has already failed once, so a dead link would fail identically under eight names and only add eight timeouts. When no
+  rename lands at all, the bytes stay under the temp name, still recorded as a landing, and the failure reports THAT
+  path. ❗ No driver-side partial list ever names the temp or the original (`failed_write_leaves_ours_at` answers
+  `false` for `StageOverOriginal`), so the partial-cleanup contract ("delete partials on error") can't reach either: a
+  concurrent task DROPPED between the move aside and the rename (the driver breaking on a sibling's failure) leaves the
+  original at its recorded aside for the sweep that puts it back. Pinned by `swap_landing_tests.rs` (the rescue, the
+  reap that can no longer reach it, the taken-name series, both give-up shapes, and the three move-aside answers),
   `copy_crashsafe_tests.rs::{cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure, cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failure}`,
   and `move_failure_tests.rs::cross_volume_move_preserves_new_data_on_finalize_failure`; all five landing sites answer
-  the same four outcomes (lands, write fails, delete refused, rename refused after the delete), and when each stops
-  being rollbackable, in `safe_replace_grid_tests.rs`, whose
-  `a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land` pins the dropped task.
+  the same outcomes (lands, write fails, move aside refused, landing refused with the original put back, neither name
+  taking anything), and when each stops being rollbackable, in `safe_replace_grid_tests.rs`, whose
+  `a_concurrent_task_dropped_mid_swap_keeps_the_original_for_the_sweep_to_put_back` pins the dropped task.
 - **A swap rides out an outage** at all five sites: `stream_pipe_file`'s runner for four plus the server-side copy's
   landing, and `sequential_extract.rs::land_member` for the extract (which can't stream a member again). The settle and
   its proofs: `../DETAILS.md` § "A landing the drop cut off". Pinned at every site by `swap_outage_tests.rs`.
