@@ -72,7 +72,7 @@
             })
             .catch((e: unknown) => {
                 if (id !== sessionId) return
-                log.warn('Formatting the Markdown document didn’t work: {error}', { error: String(e) })
+                log.warn('Formatting the Markdown document didn’t work: {error}', { error: e })
                 loadState = 'error'
             })
     })
@@ -81,7 +81,7 @@
         try {
             await viewerAllowRemoteImages(sessionId)
         } catch (e) {
-            log.warn('Allowing remote images didn’t work: {error}', { error: String(e) })
+            log.warn('Allowing remote images didn’t work: {error}', { error: e })
             return
         }
         remoteImagesLoaded = true
