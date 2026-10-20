@@ -301,7 +301,7 @@ impl Volume for SftpVolume {
                     Err(e) => {
                         log::warn!(
                             "SftpVolume::apply_metadata: {} keeps the server's date, not the source's: {e}",
-                            path.display()
+                            cmdr_fs::log_private::LogPrivate::path(path)
                         );
                         ClassOutcome::Refused
                     }

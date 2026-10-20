@@ -12,6 +12,7 @@
 //! `DETAILS.md` the lifecycles and the decisions.
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Retirement;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
@@ -453,9 +454,9 @@ impl SmbVolume {
                 log::warn!(
                     target: "smb_reroot",
                     "{}: not promoting to {} — this mount sits at '{}' inside the share and nothing recorded where that root sits",
-                    self.inner.share_name,
-                    new_root.display(),
-                    self.share_root
+                    LogPrivate::volume(&self.inner.share_name),
+                    LogPrivate::dir_path(new_root),
+                    LogPrivate::dir_path(&self.share_root)
                 );
                 return None;
             }

@@ -1309,8 +1309,11 @@ exports the override. The full container list: `apps/desktop/test/smb-servers/RE
 
 ## Diagnostic privacy
 
-SMB watcher and operation-failure diagnostics debug-escape identities under typed keys (literal wrapper quotes would let
-a share's own quote or newline escape the redactor's field) and log `error_kind=` (`smb2::ErrorKind`), `nt_status=`
-(`smb2::Error::status`), and the backend's `Display` whole in `detail=`. Reports redact and cap that field, scrubbing
-the line's own `share=` from it: `apps/desktop/src-tauri/src/redact/DETAILS.md` § "External-text fields". Error mapping
-still receives the original `smb2::Error`.
+Every log line marks its share (`LogPrivate::volume`), share-relative or mount path (`file_path` / `dir_path`, `path`
+where the site can't tell), and account by kind with `cmdr_fs::log_private::LogPrivate`, under its typed key (`{:?}`, so
+a share's own quote or newline can't escape the field). The slow-call line is a `Display` (`slow_calls::SlowCallLine`)
+so its marked share never becomes a `String`. Operation failures log `error_kind=` (`smb2::ErrorKind`), `nt_status=`
+(`smb2::Error::status`), and the backend's `Display` whole in `detail=`, marking the operation's path in it. Reports
+redact and cap that field, scrubbing the line's own `share=` from it: `apps/desktop/src-tauri/src/redact/DETAILS.md` §
+"External-text fields". Error mapping still receives the original `smb2::Error`. `smb2`'s own lines key and quote every
+path, share, name, host, and user, so reports keep its DEBUG (`apps/desktop/src-tauri/src/logging/provenance.rs`).

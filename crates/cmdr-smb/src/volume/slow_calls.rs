@@ -10,10 +10,12 @@
 //! reader needs to place it, and the path is what a bundle shouldn't carry.
 
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::log_rollup::LogRollup;
 
 /// A metadata call that takes longer than this is the server holding it: a
@@ -40,7 +42,7 @@ impl SlowCallLog {
 
     /// The line to log for `op` on `share` having taken `elapsed`, or `None`
     /// when it was quick or folds into a later line.
-    pub(super) fn line_at(&self, share: &str, op: &str, elapsed: Duration, now: Instant) -> Option<String> {
+    pub(super) fn line_at(&self, share: &str, op: &str, elapsed: Duration, now: Instant) -> Option<SlowCallLine> {
         if elapsed < SLOW_CALL {
             return None;
         }
@@ -57,22 +59,58 @@ impl SlowCallLog {
             (batch, slowest)
         };
 
-        let took = elapsed.as_millis();
-        Some(if batch.is_rolled_up() {
-            format!(
+        Some(SlowCallLine {
+            share: share.to_string(),
+            op: op.to_string(),
+            took: elapsed,
+            rollup: batch.is_rolled_up().then_some(Rollup {
+                count: batch.count,
+                over: batch.elapsed,
+                slowest,
+            }),
+        })
+    }
+}
+
+/// One slow-call `warn` line. A `Display` rather than a `String`, so the share
+/// goes out marked (`LogPrivate`) and the marked text never becomes data.
+#[derive(Debug, PartialEq)]
+pub(super) struct SlowCallLine {
+    share: String,
+    op: String,
+    took: Duration,
+    /// Set when the line stands for every stall since the last one.
+    rollup: Option<Rollup>,
+}
+
+#[derive(Debug, PartialEq)]
+struct Rollup {
+    count: u64,
+    over: Duration,
+    slowest: Duration,
+}
+
+impl fmt::Display for SlowCallLine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let share = LogPrivate::volume(&self.share);
+        let op = &self.op;
+        let took = self.took.as_millis();
+        match &self.rollup {
+            Some(rollup) => write!(
+                f,
                 "SMB metadata calls were slow: share={share:?} ×{} over {} s in {}s, slowest {} ms, latest {op} {took} ms. \
                  The server held them; check its load (a busy NAS does this under heavy writes)",
-                batch.count,
+                rollup.count,
                 SLOW_CALL.as_secs(),
-                batch.elapsed.as_secs(),
-                slowest.as_millis(),
-            )
-        } else {
-            format!(
+                rollup.over.as_secs(),
+                rollup.slowest.as_millis(),
+            ),
+            None => write!(
+                f,
                 "SMB metadata call was slow: share={share:?} {op} took {took} ms. \
                  The server held it; check its load (a busy NAS does this under heavy writes)"
-            )
-        })
+            ),
+        }
     }
 }
 

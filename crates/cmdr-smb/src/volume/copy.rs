@@ -24,6 +24,7 @@ use std::ops::ControlFlow;
 use std::path::Path;
 use std::pin::Pin;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{MutationEvent, ServerCopyProgress, Volume, VolumeError};
 use log::debug;
 use smb2::client::Connection;
@@ -59,8 +60,10 @@ impl SmbVolume {
         let smb_from = self.to_smb_path(from)?;
         let smb_to = self.to_smb_path(to)?;
         debug!(
-            "SmbVolume::copy_on_server: share={:?}, from={smb_from:?}, to={smb_to:?}",
-            self.inner.share_name
+            "SmbVolume::copy_on_server: share={:?}, from={:?}, to={:?}",
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::file_path(&smb_from),
+            LogPrivate::file_path(&smb_to)
         );
         let SessionLease {
             tree,
@@ -148,7 +151,7 @@ impl SmbVolume {
             {
                 log::warn!(
                     "SmbVolume::copy_on_server: path={:?} keeps the server's date, not the source's: {e}",
-                    copy.smb_to
+                    LogPrivate::file_path(&copy.smb_to)
                 );
             }
         }
@@ -245,8 +248,9 @@ impl SmbVolume {
         match result {
             Err(e) if e.kind() == smb2::ErrorKind::Unsupported => {
                 debug!(
+                    // allowed-log-private: `op_name` is the volume method's name, not a user value
                     "SmbVolume::{op_name}(share={:?}): the server has no server-side copy ({:?}); the caller streams instead",
-                    self.inner.share_name,
+                    LogPrivate::volume(&self.inner.share_name),
                     e.status()
                 );
                 Err(VolumeError::NotSupported)

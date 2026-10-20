@@ -15,6 +15,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{StreamLength, StreamWritten, VolumeError, VolumeReadStream};
 use log::debug;
 use reqwest::Method;
@@ -72,7 +73,10 @@ impl WebdavVolume {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .push(id.clone());
         let destination = uploads.destination(target);
-        debug!("WebdavVolume::write_from_stream: {target} in chunks via uploads/{id}");
+        debug!(
+            "WebdavVolume::write_from_stream: {target} in chunks via uploads/{id}",
+            target = LogPrivate::file_path(&target)
+        );
         let mkcol = client
             .request(method("MKCOL"), uploads.session(&id))
             .header("Destination", destination.as_str())

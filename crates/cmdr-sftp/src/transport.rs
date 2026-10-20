@@ -986,7 +986,8 @@ impl Handler for TrustHandler {
             self.port,
             &key,
         );
-        log::debug!(target: "volume", "sftp host key for {}:{} is {decision:?}", self.host, self.port);
+        let peer = cmdr_fs::log_private::LogPrivate::host(&self.host);
+        log::debug!(target: "volume", "sftp host key for {peer}:{} is {decision:?}", self.port);
         *self.seen.lock_ignore_poison() = Some((key, decision));
         Ok(decision == HostKeyDecision::Trusted)
     }

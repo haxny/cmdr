@@ -10,6 +10,7 @@ use super::mapping::{directory_entry_to_file_entry, filetime_to_unix_secs, fs_in
 use super::session::SessionLease;
 use super::{SmbVolume, slow_calls};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ListingProgress, SpaceInfo, VolumeError};
 use log::{debug, trace};
 use smb2::client::{Connection, Tree};
@@ -120,7 +121,9 @@ impl SmbVolume {
         // `RUST_LOG=cmdr_smb::volume=trace` when chasing a listing bug.
         trace!(
             "SmbVolume::list_directory: share={:?}, input={:?}, smb_path={:?}",
-            self.inner.share_name, path, smb_path
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::dir_path(path),
+            LogPrivate::dir_path(&smb_path)
         );
 
         let start = std::time::Instant::now();
@@ -154,7 +157,9 @@ impl SmbVolume {
 
         debug!(
             "SmbVolume::get_metadata: share={:?}, input={:?}, smb_path={:?}",
-            self.inner.share_name, path, smb_path
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::path(path),
+            LogPrivate::path(&smb_path)
         );
 
         // For root, synthesize a directory entry
@@ -189,7 +194,7 @@ impl SmbVolume {
             {
                 debug!(
                     "SmbVolume::get_metadata(share={:?}): {e}; asking again in {delay:?}",
-                    self.inner.share_name
+                    LogPrivate::volume(&self.inner.share_name)
                 );
                 tokio::time::sleep(*delay).await;
                 continue;
@@ -270,12 +275,15 @@ impl SmbVolume {
             if batch.is_rolled_up() {
                 debug!(
                     "SmbVolume::get_space_info: share={:?} ×{} in {}s",
-                    self.inner.share_name,
+                    LogPrivate::volume(&self.inner.share_name),
                     batch.count,
                     batch.elapsed.as_secs()
                 );
             } else {
-                debug!("SmbVolume::get_space_info: share={:?}", self.inner.share_name);
+                debug!(
+                    "SmbVolume::get_space_info: share={:?}",
+                    LogPrivate::volume(&self.inner.share_name)
+                );
             }
         }
 

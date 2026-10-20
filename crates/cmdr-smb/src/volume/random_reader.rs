@@ -7,6 +7,7 @@ use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{VolumeError, VolumeRandomReader};
 use log::debug;
 use smb2::client::stream::FileReader;
@@ -44,8 +45,9 @@ fn map_reader_error(
 ) -> VolumeError {
     share.note_smb_error(generation, &e);
     debug!(
-        "SmbRandomReader::{op}(volume={:?}, path={display_path:?}): {e}",
-        share.volume_id
+        "SmbRandomReader::{op}(volume={:?}, path={:?}): {e}",
+        share.volume_id, // allowed-log-private: a volume id; the report's ID keys tokenize it in their own domain
+        LogPrivate::file_path(display_path)
     );
     map_smb_error(e, display_path)
 }
@@ -94,7 +96,8 @@ impl SmbVolume {
         let smb_path = self.to_smb_path(path)?;
         debug!(
             "SmbVolume::open_random_reader: share={:?}, path={:?}",
-            self.inner.share_name, smb_path
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::file_path(&smb_path)
         );
         let SessionLease { tree, conn, generation } = self.clone_session().await?;
         let reader = self.handle_smb_result(

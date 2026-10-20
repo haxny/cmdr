@@ -27,6 +27,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::mkdir_all::{self, LeadsTo, MakesDirectories};
 use cmdr_fs::volume::patching::{PatchSource, patch_created, patch_deleted, patch_modified, patch_renamed};
@@ -51,7 +52,11 @@ impl SftpVolume {
     pub(super) async fn create_file_impl(&self, path: &Path, content: &[u8]) -> Result<(), VolumeError> {
         let remote = self.to_remote_path(path)?;
         let session = self.clone_session().await?;
-        debug!("SftpVolume::create_file: {remote}, size={}", content.len());
+        debug!(
+            "SftpVolume::create_file: {remote}, size={}",
+            content.len(),
+            remote = LogPrivate::file_path(&remote)
+        );
 
         let opened = session
             .sftp()
@@ -92,7 +97,10 @@ impl SftpVolume {
     pub(super) async fn create_directory_impl(&self, path: &Path) -> Result<(), VolumeError> {
         let remote = self.to_remote_path(path)?;
         let session = self.clone_session().await?;
-        debug!("SftpVolume::create_directory: {remote}");
+        debug!(
+            "SftpVolume::create_directory: {remote}",
+            remote = LogPrivate::dir_path(&remote)
+        );
 
         self.create_one_directory(&session, &remote).await?;
         patch_created(self, path).await;
@@ -108,7 +116,7 @@ impl SftpVolume {
     /// on every copy. The honesty contract on the answer, and why a `Created` we
     /// aren't sure of is an overwrite: `cmdr_fs::volume::mkdir_all`.
     pub(super) async fn create_directory_all_impl(&self, path: &Path) -> Result<DirectoryCreation, VolumeError> {
-        debug!("SftpVolume::create_directory_all: {}", path.display());
+        debug!("SftpVolume::create_directory_all: {}", LogPrivate::dir_path(path));
         let made = mkdir_all::create_directory_all(self, path).await?;
         if let Some(created) = made.shallowest_created {
             patch_created(self, &created).await;
@@ -128,7 +136,7 @@ impl SftpVolume {
             raw_os_error: None,
         })?;
         let session = self.clone_session().await?;
-        debug!("SftpVolume::set_modified: {remote}");
+        debug!("SftpVolume::set_modified: {remote}", remote = LogPrivate::path(&remote));
 
         let attrs = MetaDataBuilder::new().time(stamp, stamp).create();
         session
@@ -149,7 +157,7 @@ impl SftpVolume {
     pub(super) async fn delete_impl(&self, path: &Path) -> Result<(), VolumeError> {
         let remote = self.to_remote_path(path)?;
         let session = self.clone_session().await?;
-        debug!("SftpVolume::delete: {remote}");
+        debug!("SftpVolume::delete: {remote}", remote = LogPrivate::path(&remote));
 
         // `SSH_FXP_REMOVE` first, so a bulk delete of files spends one round trip
         // each rather than a stat plus a remove. A directory refuses it, and the
@@ -194,7 +202,11 @@ impl SftpVolume {
         let remote_from = self.to_remote_path(from)?;
         let remote_to = self.to_remote_path(to)?;
         let session = self.clone_session().await?;
-        debug!("SftpVolume::rename: {remote_from} → {remote_to}, force={force}");
+        debug!(
+            "SftpVolume::rename: {remote_from} → {remote_to}, force={force}",
+            remote_from = LogPrivate::path(&remote_from),
+            remote_to = LogPrivate::path(&remote_to)
+        );
 
         if force {
             self.rename_over(&session, &remote_from, &remote_to).await?;

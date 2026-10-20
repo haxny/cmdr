@@ -19,6 +19,7 @@
 
 use std::time::Duration;
 
+use cmdr_fs::log_private::LogPrivate;
 use log::warn;
 
 use super::upload::{Progress, WriteTarget};
@@ -201,7 +202,7 @@ impl S3Volume {
         warn!(
             target: "volume",
             "s3: the answer to a write of {} never came, but the server published it whole",
-            target.remote
+            LogPrivate::file_path(target.remote)
         );
         self.remember_written(target, head);
         let _ = progress.at(size);
@@ -246,16 +247,16 @@ impl S3VolumeInner {
             return CutOff::Landed(head);
         }
         if !head.object_length().is_some_and(|kept| kept < size) {
-            warn!(target: "volume", "s3: left {remote} alone: it holds a cut-off upload's token, but its length doesn't show it short");
+            warn!(target: "volume", "s3: left {remote} alone: it holds a cut-off upload's token, but its length doesn't show it short", remote = LogPrivate::file_path(remote));
             return CutOff::Clear;
         }
         match self.delete_key(client, bucket, key, remote).await {
             Ok(()) => {
-                warn!(target: "volume", "s3: the server kept a cut-off upload of {remote}; removed it");
+                warn!(target: "volume", "s3: the server kept a cut-off upload of {remote}; removed it", remote = LogPrivate::file_path(remote));
                 CutOff::Clear
             }
             Err(e) => {
-                warn!(target: "volume", "s3: the server kept a cut-off upload of {remote} and removing it failed: {e}");
+                warn!(target: "volume", "s3: the server kept a cut-off upload of {remote} and removing it failed: {e}", remote = LogPrivate::file_path(remote));
                 CutOff::Unsettled
             }
         }

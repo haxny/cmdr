@@ -17,6 +17,7 @@ use super::{SmbVolume, foreground_yield};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport, Unblock, UserFlags};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{
     BatchScanResult, ConnectionLiveness, CopyScanResult, LaneKey, MutationEvent, ScanBoundary, ScanConflict,
     ServerCopyProgress, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume,
@@ -221,8 +222,8 @@ impl Volume for SmbVolume {
         self.mount_root_gone.store(true, Ordering::Relaxed);
         debug!(
             "SmbVolume share={:?}: the mount at path={:?} is gone; still browsing over smb2, but its paths are no longer OS-openable",
-            self.inner.share_name,
-            self.mount_path.display()
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::dir_path(&self.mount_path)
         );
     }
 
@@ -498,7 +499,8 @@ impl Volume for SmbVolume {
 
             debug!(
                 "SmbVolume::open_read_stream: share={:?}, path={:?}",
-                self.inner.share_name, smb_path
+                LogPrivate::volume(&self.inner.share_name),
+                LogPrivate::file_path(&smb_path)
             );
 
             let stream = self.open_smb_download_stream(&smb_path).await?;
@@ -548,7 +550,9 @@ impl Volume for SmbVolume {
                 if fits_one_compound_read(conn.quick_read_limit(), size) {
                     debug!(
                         "SmbVolume::open_read_stream_with_hint: share={:?}, path={:?}, size={}; using compound fast-path",
-                        self.inner.share_name, smb_path, size
+                        LogPrivate::volume(&self.inner.share_name),
+                        LogPrivate::file_path(&smb_path),
+                        size
                     );
                     // The date rides on the frame's own CREATE response.
                     let read_result = tree
@@ -599,7 +603,8 @@ impl Volume for SmbVolume {
 
             debug!(
                 "SmbVolume::open_read_stream_with_hint: share={:?}, path={:?}; using streaming path",
-                self.inner.share_name, smb_path
+                LogPrivate::volume(&self.inner.share_name),
+                LogPrivate::file_path(&smb_path)
             );
             let stream = self.open_smb_download_stream(&smb_path).await?;
             Ok(Box::new(stream) as Box<dyn VolumeReadStream>)
@@ -629,7 +634,10 @@ impl Volume for SmbVolume {
             let smb_path = self.to_smb_path(path)?;
             debug!(
                 "SmbVolume::read_range: share={:?}, path={:?}, offset={}, len={}",
-                self.inner.share_name, smb_path, offset, len
+                LogPrivate::volume(&self.inner.share_name),
+                LogPrivate::file_path(&smb_path),
+                offset,
+                len
             );
 
             // One open -> one positioned read -> close per call. `smb2::FileReader`
@@ -783,7 +791,7 @@ impl Volume for SmbVolume {
         self.inner.stop_watcher();
         debug!(
             "SmbVolume share={:?}: superseded by a newer instance; session left up for in-flight work",
-            self.inner.share_name
+            LogPrivate::volume(&self.inner.share_name)
         );
     }
 
@@ -807,7 +815,7 @@ impl Volume for SmbVolume {
             let _ = cancel_tx.send(());
             debug!(
                 "SmbVolume cleanup share={:?}: watcher cancel sent",
-                self.inner.share_name
+                LogPrivate::volume(&self.inner.share_name)
             );
         }
 
@@ -834,7 +842,7 @@ impl Volume for SmbVolume {
 
         debug!(
             "SmbVolume cleanup share={:?}: smb2 session dropped",
-            self.inner.share_name
+            LogPrivate::volume(&self.inner.share_name)
         );
     }
 }

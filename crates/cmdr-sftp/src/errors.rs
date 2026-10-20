@@ -8,6 +8,7 @@
 use log::debug;
 
 use cmdr_fs::log_detail::LogDetail;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::VolumeError;
 use openssh_sftp_client::Error as SftpError;
 use openssh_sftp_client::error::SftpErrorKind;
@@ -188,7 +189,8 @@ fn classify(kind: SftpErrorKind, message: &str, path: &str) -> VolumeError {
             debug!(
                 "SFTP path={path:?}: source=backend, backend=sftp, error_kind=no_such_file, sftp_status={}, detail={:?}",
                 sftp_status_code(kind),
-                LogDetail(message)
+                LogDetail(message).marking(&[LogPrivate::path(path)]),
+                path = LogPrivate::path(path)
             );
             VolumeError::NotFound(path.to_string())
         }
@@ -196,7 +198,8 @@ fn classify(kind: SftpErrorKind, message: &str, path: &str) -> VolumeError {
             debug!(
                 "SFTP path={path:?}: source=backend, backend=sftp, error_kind=permission_denied, sftp_status={}, detail={:?}",
                 sftp_status_code(kind),
-                LogDetail(message)
+                LogDetail(message).marking(&[LogPrivate::path(path)]),
+                path = LogPrivate::path(path)
             );
             VolumeError::PermissionDenied {
                 path: path.to_string(),

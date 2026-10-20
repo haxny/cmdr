@@ -37,6 +37,7 @@
 
 use std::path::Path;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{DirectoryCreation, EntryKind, StreamLength, VolumeError, WriteMode};
 use log::debug;
 
@@ -62,7 +63,11 @@ impl AdbVolume {
     /// (`writes.rs` § "The two accepted TOCTOU windows").
     pub(super) async fn create_file_impl(&self, path: &Path, content: &[u8]) -> Result<(), VolumeError> {
         let device = self.to_device_path(path)?;
-        debug!("AdbVolume::create_file: {device}, size={}", content.len());
+        debug!(
+            "AdbVolume::create_file: {device}, size={}",
+            content.len(),
+            device = LogPrivate::file_path(&device)
+        );
         if self.occupant(&device).await? != WhatIsThere::Nothing {
             return Err(VolumeError::AlreadyExists(device));
         }
@@ -83,7 +88,10 @@ impl AdbVolume {
     /// `create_directory_errors_on_existing_dir` answer `false`.
     pub(super) async fn create_directory_impl(&self, path: &Path) -> Result<(), VolumeError> {
         let device = self.to_device_path(path)?;
-        debug!("AdbVolume::create_directory: {device}");
+        debug!(
+            "AdbVolume::create_directory: {device}",
+            device = LogPrivate::dir_path(&device)
+        );
         self.shell_verb(&["mkdir", "-p", &device], &device).await?;
         self.notify_created(path).await;
         Ok(())
@@ -144,7 +152,7 @@ impl AdbVolume {
     /// parent's delete fail, and that refusal carries `ENOTEMPTY`.
     pub(super) async fn delete_impl(&self, path: &Path) -> Result<(), VolumeError> {
         let device = self.to_device_path(path)?;
-        debug!("AdbVolume::delete: {device}");
+        debug!("AdbVolume::delete: {device}", device = LogPrivate::path(&device));
         // `entry_kind_impl`, ❌ never the following `probe`: a link to a folder
         // goes as the link it is (`rm -f`). Followed, `rmdir` refuses the link and
         // the target's contents come back as `ENOTEMPTY`.
@@ -181,7 +189,11 @@ impl AdbVolume {
     pub(super) async fn rename_impl(&self, from: &Path, to: &Path, force: bool) -> Result<(), VolumeError> {
         let device_from = self.to_device_path(from)?;
         let device_to = self.to_device_path(to)?;
-        debug!("AdbVolume::rename: {device_from} → {device_to}, force={force}");
+        debug!(
+            "AdbVolume::rename: {device_from} → {device_to}, force={force}",
+            device_from = LogPrivate::path(&device_from),
+            device_to = LogPrivate::path(&device_to)
+        );
         let found = self.occupant(&device_to).await?;
         if !force && found != WhatIsThere::Nothing {
             return Err(VolumeError::AlreadyExists(device_to));
@@ -261,7 +273,10 @@ impl AdbVolume {
             };
         }
         let message = String::from_utf8_lossy(stderr).trim().to_string();
-        debug!("AdbVolume: a shell verb on {path} failed: {message}");
+        debug!(
+            "AdbVolume: a shell verb on {path} failed: {message}",
+            path = LogPrivate::path(path)
+        );
         VolumeError::IoError {
             message,
             raw_os_error: None,

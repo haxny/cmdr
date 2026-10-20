@@ -19,6 +19,7 @@ use super::{MountAnchor, SmbVolumeInner};
 use cmdr_fs::archive_format::has_supported_archive_extension;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::indexing::WatchGap;
 use cmdr_fs::volume::{DirectoryChange, SelfHandle, Volume};
@@ -175,7 +176,7 @@ async fn process_event_batch_with<Stat, StatFuture>(
             debug!(
                 "smb_watcher: {} events for path={:?}, emitting FullRefresh",
                 events.len(),
-                parent_path.display()
+                LogPrivate::dir_path(parent_path)
             );
             listings.directory_changed(volume_id, parent_path, DirectoryChange::FullRefresh);
             continue;
@@ -201,7 +202,7 @@ async fn process_event_batch_with<Stat, StatFuture>(
                         None => {
                             debug!(
                                 "smb_watcher: couldn't stat added file path={:?}, skipping",
-                                entry_path.display()
+                                LogPrivate::path(&entry_path)
                             );
                         }
                     }
@@ -220,7 +221,7 @@ async fn process_event_batch_with<Stat, StatFuture>(
                         None => {
                             debug!(
                                 "smb_watcher: couldn't stat modified file path={:?}, skipping",
-                                entry_path.display()
+                                LogPrivate::path(&entry_path)
                             );
                         }
                     }
@@ -355,7 +356,7 @@ pub(super) async fn run_smb_watcher(
         Err(e) => {
             warn!(
                 "smb_watcher share={:?}: backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?} during connect",
-                share_name,
+                LogPrivate::volume(&share_name),
                 e.kind(),
                 e.status(),
                 cmdr_fs::log_detail::LogDetail(&e.to_string())
@@ -369,7 +370,7 @@ pub(super) async fn run_smb_watcher(
         Err(e) => {
             warn!(
                 "smb_watcher share={:?}: backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?} during tree connect",
-                share_name,
+                LogPrivate::volume(&share_name),
                 e.kind(),
                 e.status(),
                 cmdr_fs::log_detail::LogDetail(&e.to_string())
@@ -385,13 +386,16 @@ pub(super) async fn run_smb_watcher(
     // arrive while we process the previous batch don't fall in a re-arm gap.
     let mut watcher = match client.watch(&tree, "", true).await {
         Ok(w) => {
-            info!("smb_watcher share={share_name:?}: connected, starting watch");
+            info!(
+                "smb_watcher share={:?}: connected, starting watch",
+                LogPrivate::volume(&share_name)
+            );
             w
         }
         Err(e) => {
             warn!(
                 "smb_watcher share={:?}: backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?} during watch start",
-                share_name,
+                LogPrivate::volume(&share_name),
                 e.kind(),
                 e.status(),
                 cmdr_fs::log_detail::LogDetail(&e.to_string())
@@ -405,9 +409,9 @@ pub(super) async fn run_smb_watcher(
         let events_result = tokio::select! {
             result = watcher.next_events() => result,
             _ = &mut cancel_rx => {
-                debug!("smb_watcher(share={:?}): cancelled, closing watcher", share_name);
+                debug!("smb_watcher(share={:?}): cancelled, closing watcher", LogPrivate::volume(&share_name));
                 if let Err(e) = watcher.close().await {
-                    debug!("smb_watcher(share={:?}): error closing watcher: {}", share_name, e);
+                    debug!("smb_watcher(share={:?}): error closing watcher: {}", LogPrivate::volume(&share_name), e);
                 }
                 return;
             }
@@ -469,9 +473,9 @@ pub(super) async fn run_smb_watcher(
                         _ = &mut cancel_rx => {
                             // Process what we have, then exit
                             process_event_batch(&host, events_by_dir, &volume_id, &share, &anchor).await;
-                            debug!("smb_watcher(share={:?}): cancelled during debounce, closing", share_name);
+                            debug!("smb_watcher(share={:?}): cancelled during debounce, closing", LogPrivate::volume(&share_name));
                             if let Err(e) = watcher.close().await {
-                                debug!("smb_watcher(share={:?}): error closing watcher: {}", share_name, e);
+                                debug!("smb_watcher(share={:?}): error closing watcher: {}", LogPrivate::volume(&share_name), e);
                             }
                             return;
                         }
@@ -503,7 +507,7 @@ pub(super) async fn run_smb_watcher(
                 let total_events: usize = events_by_dir.values().map(|v| v.len()).sum();
                 debug!(
                     "smb_watcher(share={:?}): processing {} event(s) across {} dir(s)",
-                    share_name,
+                    LogPrivate::volume(&share_name),
                     total_events,
                     events_by_dir.len()
                 );
@@ -521,7 +525,7 @@ pub(super) async fn run_smb_watcher(
                 if is_enum_dir {
                     debug!(
                         "smb_watcher(share={:?}): STATUS_NOTIFY_ENUM_DIR, emitting FullRefresh for share root",
-                        share_name
+                        LogPrivate::volume(&share_name)
                     );
                     host.listings()
                         .directory_changed(&volume_id, &anchor.mount_path, DirectoryChange::FullRefresh);
@@ -546,7 +550,8 @@ pub(super) async fn run_smb_watcher(
                 // session.
                 warn!(
                     "smb_watcher(share={:?}): next_events failed: {} — bailing, SmbVolume reconnect will respawn",
-                    share_name, e
+                    LogPrivate::volume(&share_name),
+                    e
                 );
                 // Index freshness: the live watch broke, so a Fresh index can no
                 // longer be trusted. Flip it Stale (the `WatcherDied` freshness

@@ -2,6 +2,7 @@
 //! asking whether an identity may open one share.
 
 use crate::volume::SmbConnectionParams;
+use cmdr_fs::log_private::LogPrivate;
 use log::debug;
 use smb2::{ClientConfig, SmbClient};
 use std::time::Duration;
@@ -107,7 +108,11 @@ pub async fn try_list_shares_authenticated(
     timeout: Duration,
 ) -> Result<Vec<smb2::ShareInfo>, smb2::Error> {
     let addr = build_addr(hostname, ip_address, port);
-    debug!("try_list_shares_authenticated: addr={}, user={:?}", addr, username);
+    debug!(
+        "try_list_shares_authenticated: addr={}, user={:?}",
+        addr,
+        LogPrivate::user(username)
+    );
 
     let config = ClientConfig {
         addr,
@@ -170,7 +175,8 @@ pub async fn try_open_share(params: &SmbConnectionParams, timeout: Duration) -> 
     if let Err(e) = client.disconnect_share(&tree).await {
         debug!(
             "try_open_share: tree disconnect from share={:?} didn't go through: {}",
-            params.share_name, e
+            LogPrivate::volume(&params.share_name),
+            e
         );
     }
     Ok(())

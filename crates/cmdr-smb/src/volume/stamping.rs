@@ -1,6 +1,7 @@
 //! What a streamed write stamps on what it wrote beyond the bytes (the dates
 //! and Hidden, in one `FILE_BASIC_INFORMATION`), and what it reports of that.
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataReport, UserFlags};
 use cmdr_fs::volume::{StreamWritten, VolumeError};
 use log::warn;
@@ -79,7 +80,10 @@ impl SmbVolume {
                 .handle_smb_result("write_from_stream(stamp)", smb_path, ran_on, Err(e))
                 .map(|()| true),
             Err(e) => {
-                warn!("SmbVolume::write_from_stream: path={smb_path:?} keeps the server's date, not the source's: {e}");
+                warn!(
+                    "SmbVolume::write_from_stream: path={:?} keeps the server's date, not the source's: {e}",
+                    LogPrivate::file_path(smb_path)
+                );
                 Ok(false)
             }
         }

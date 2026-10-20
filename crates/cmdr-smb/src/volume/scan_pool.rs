@@ -55,6 +55,7 @@ use super::session::build_session;
 use super::state::{ConnectionState, ends_the_session};
 use super::{SmbConnectionParams, SmbVolume};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{Volume, VolumeError, VolumeReadStream};
 use smb2::SmbClient;
 use smb2::client::tree::Tree;
@@ -470,7 +471,8 @@ impl SmbVolume {
                     }
                     Err(ListingStop::Smb(e)) if is_pool_member_dead(&e) => {
                         log::debug!(
-                            "smb scan pool: member {idx} died listing smb_path={smb_path:?} ({e}); retrying on a sibling"
+                            "smb scan pool: member {idx} died listing smb_path={:?} ({e}); retrying on a sibling",
+                            LogPrivate::dir_path(&smb_path)
                         );
                         pool.mark_member_dead(idx);
                         continue;
@@ -554,7 +556,8 @@ impl SmbVolume {
                         Ok(_) => break, // ⇒ streaming serves today's bytes
                         Err(e) if is_pool_member_dead(&e) => {
                             log::debug!(
-                                "smb scan pool: member {idx} died reading smb_path={smb_path:?} ({e}); retrying on a sibling"
+                                "smb scan pool: member {idx} died reading smb_path={:?} ({e}); retrying on a sibling",
+                                LogPrivate::file_path(&smb_path)
                             );
                             pool.mark_member_dead(idx);
                             continue;

@@ -17,6 +17,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use crate::errors::AdbConnectError;
 use crate::transport::AdbConnection;
@@ -68,7 +69,7 @@ pub fn set_adb_binary_override(path: Option<PathBuf>) {
         return;
     }
     match &path {
-        Some(p) => info!("adb binary set to {}", p.display()),
+        Some(p) => info!("adb binary set to {}", LogPrivate::file_path(p)),
         None => debug!("adb binary back to the platform search"),
     }
     *slot = path;
@@ -177,7 +178,10 @@ impl AdbEndpoint {
 
 /// Runs `adb -P <port> start-server` to completion. `true` on a zero exit.
 async fn start_server(binary: PathBuf, port: u16) -> bool {
-    info!("adb server not running; starting it via {}", binary.display());
+    info!(
+        "adb server not running; starting it via {}",
+        LogPrivate::file_path(&binary)
+    );
     let run = tokio::process::Command::new(&binary)
         .arg("-P")
         .arg(port.to_string())

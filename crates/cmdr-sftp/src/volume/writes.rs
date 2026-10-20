@@ -33,6 +33,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{
     CarriedMetadata, ClassOutcome, MetadataClasses, MetadataReport, default_file_mode, routed_mode,
 };
@@ -221,7 +222,10 @@ impl SftpVolume {
         // operation on the one channel, which is exactly the concurrency the
         // channel exists to provide.
         let session = self.clone_session().await?;
-        debug!("SftpVolume::write_from_stream: {remote}, length={length:?}");
+        debug!(
+            "SftpVolume::write_from_stream: {remote}, length={length:?}",
+            remote = LogPrivate::file_path(&remote)
+        );
 
         // `CreateOrReplace` truncates: the transfer layer's staging name, which a
         // retried attempt writes onto after its predecessor. `CreateNew` is
@@ -363,7 +367,8 @@ impl SftpVolume {
             };
             debug!(
                 "SftpVolume::write_from_stream: couldn't remove path={remote:?}: source=backend, backend=sftp, operation=remove_partial, sftp_status={status}, detail={:?}",
-                cmdr_fs::log_detail::LogDetail(&e.to_string())
+                cmdr_fs::log_detail::LogDetail(&e.to_string()),
+                remote = LogPrivate::file_path(&remote)
             );
         }
     }
@@ -388,7 +393,8 @@ async fn narrow_while_streaming(file: &mut File, remote: &str, mode: u32) {
     if let Err(e) = file.set_permissions(Permissions::from(mode as u16)).await {
         warn!(
             "SftpVolume::write_from_stream: path={remote:?} streams under the server's default mode, not {mode:o}: source=backend, backend=sftp, operation=fsetstat, detail={:?}",
-            cmdr_fs::log_detail::LogDetail(&e.to_string())
+            cmdr_fs::log_detail::LogDetail(&e.to_string()),
+            remote = LogPrivate::file_path(&remote)
         );
     }
 }
@@ -426,7 +432,10 @@ pub(super) async fn keep_source_attrs(
             }
             // Before 1970 or past 2106: outside what SFTP v3's `u32` can say.
             Err(e) => {
-                warn!("SftpVolume::keep_source_attrs: can't express the source date of {remote:?} in SFTP v3: {e}");
+                warn!(
+                    "SftpVolume::keep_source_attrs: can't express the source date of {remote:?} in SFTP v3: {e}",
+                    remote = LogPrivate::file_path(&remote)
+                );
             }
         }
     }
@@ -449,7 +458,8 @@ pub(super) async fn keep_source_attrs(
         };
         warn!(
             "SftpVolume::keep_source_attrs: couldn't keep the source date and mode on path={remote:?}: source=backend, backend=sftp, operation=setstat, sftp_status={status}, detail={:?}",
-            cmdr_fs::log_detail::LogDetail(&e.to_string())
+            cmdr_fs::log_detail::LogDetail(&e.to_string()),
+            remote = LogPrivate::file_path(&remote)
         );
         return MetadataReport::uniform(&carried, modified_at, ClassOutcome::Refused);
     }

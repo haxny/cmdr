@@ -10,6 +10,7 @@
 use std::ops::ControlFlow;
 use std::path::Path;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, default_file_mode, routed_mode};
 use cmdr_fs::staging::temp_sibling_name;
 use cmdr_fs::volume::{
@@ -145,7 +146,8 @@ impl AdbVolume {
             debug!(
                 "AdbVolume::read_range: dd exited {} for {device}: {}",
                 outcome.exit_code,
-                outcome.stderr_text().trim()
+                outcome.stderr_text().trim(),
+                device = LogPrivate::file_path(&device)
             );
             return Err(VolumeError::IoError {
                 message: format!("device-side range read exited {}", outcome.exit_code),
@@ -182,7 +184,11 @@ impl AdbVolume {
     ) -> Result<StreamWritten, VolumeError> {
         let device = self.to_device_path(dest)?;
         let staging = staging_name_for(&device);
-        debug!("AdbVolume::write_from_stream: {device} via {staging}, length={length:?}");
+        debug!(
+            "AdbVolume::write_from_stream: {device} via {staging}, length={length:?}",
+            device = LogPrivate::file_path(&device),
+            staging = LogPrivate::file_path(&staging)
+        );
 
         let mut session = self.open_sync(&device).await?;
         let pumped = self
@@ -263,7 +269,10 @@ impl AdbVolume {
     /// replace the error that caused it.
     async fn remove_partial(&self, staging: &str) {
         if let Err(e) = crate::shell::run(&self.inner.endpoint, &self.inner.serial, &["rm", "-f", staging]).await {
-            debug!("AdbVolume::write_from_stream: couldn't remove the partial {staging}: {e:?}");
+            debug!(
+                "AdbVolume::write_from_stream: couldn't remove the partial {staging}: {e:?}",
+                staging = LogPrivate::file_path(&staging)
+            );
         }
     }
 }
@@ -306,7 +315,7 @@ async fn produce(
         let next = tokio::select! {
             biased;
             _ = &mut cancel_rx => {
-                debug!("AdbVolume::open_read_stream({device}): cancelled");
+                debug!("AdbVolume::open_read_stream({device}): cancelled", device = LogPrivate::file_path(&device));
                 break;
             }
             next = session.recv_chunk() => next,

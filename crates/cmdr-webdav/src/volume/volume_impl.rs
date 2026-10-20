@@ -9,6 +9,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataCaps, MetadataClasses, MetadataReport};
 use cmdr_fs::volume::http_session::HttpBackend;
 use cmdr_fs::volume::patching;
@@ -158,14 +159,14 @@ impl Volume for WebdavVolume {
                 Ok(false) => {
                     log::warn!(
                         "WebdavVolume::apply_metadata: the server refused the dates of {}",
-                        path.display()
+                        LogPrivate::path(path)
                     );
                     ClassOutcome::Refused
                 }
                 Err(e) => {
                     log::warn!(
                         "WebdavVolume::apply_metadata: {} keeps the server's dates, not the source's: {e}",
-                        path.display()
+                        LogPrivate::path(path)
                     );
                     ClassOutcome::Refused
                 }

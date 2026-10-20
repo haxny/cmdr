@@ -13,6 +13,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use bytes::Bytes;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::liveness::Liveness;
 use cmdr_fs::volume::tls::has_tls_refusal;
@@ -257,7 +258,7 @@ impl S3Client {
             let operation = operation_of(request);
             // Which request went where, in order, for a cell attributing its
             // counts (`RUST_LOG=s3_sent=trace`).
-            log::trace!(target: "s3_sent", "{operation} {} {:?}", request.path, request.query);
+            log::trace!(target: "s3_sent", "{operation} {} {:?}", LogPrivate::path(&request.path), request.query);
             *self
                 .sent
                 .lock()
@@ -542,7 +543,7 @@ impl S3Client {
     /// error BODY tells a wrong secret (`SignatureDoesNotMatch`) from a key
     /// without rights. A HEAD has no body to say which.
     pub(crate) async fn probe(&self, bucket: Option<&str>) -> Result<(), S3ConnectError> {
-        debug!(target: "volume", "s3 probe: ListBuckets on {}", self.profile.endpoint_host);
+        debug!(target: "volume", "s3 probe: ListBuckets on {}", LogPrivate::host(&self.profile.endpoint_host));
         let listed = self
             .exchange(ops::list_buckets(&self.profile, None), REQUEST_BUDGET)
             .await
@@ -630,7 +631,8 @@ pub(crate) fn map_transport_error(err: &reqwest::Error, volume_id: &str, path: &
     if err.is_connect() || err.is_request() {
         debug!(
             "S3 path={path:?}: source=backend, backend=s3, error_kind=disconnected, detail={:?}",
-            cmdr_fs::log_detail::LogDetail(&err.to_string())
+            cmdr_fs::log_detail::LogDetail(&err.to_string()),
+            path = LogPrivate::path(path)
         );
         return VolumeError::DeviceDisconnected(volume_id.to_string());
     }

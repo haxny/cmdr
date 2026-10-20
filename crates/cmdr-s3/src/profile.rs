@@ -446,7 +446,7 @@ impl ProviderProfile {
             log::info!(
                 "S3 ({:?}, {}): {op:?} refused its conditional header; using check-then-write for this session",
                 self.kind,
-                self.endpoint_host
+                cmdr_fs::log_private::LogPrivate::host(&self.endpoint_host)
             );
         }
         first

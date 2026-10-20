@@ -19,6 +19,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
 use bytes::Bytes;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{VolumeError, VolumeReadStream};
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
@@ -157,7 +158,7 @@ impl PartJob {
                         debug!(
                             target: "volume",
                             "s3: set part {} of {} aside for a pause; it goes again on resume",
-                            self.number, self.remote
+                            self.number, LogPrivate::file_path(&self.remote)
                         );
                         attempt -= 1;
                         continue;
@@ -172,7 +173,7 @@ impl PartJob {
             warn!(
                 target: "volume",
                 "s3: part {} of {} failed (attempt {attempt}): {failure}; again in {wait:?}",
-                self.number, self.remote
+                self.number, LogPrivate::file_path(&self.remote)
             );
             tokio::select! {
                 () = self.stop.cancelled() => return Err(VolumeError::Cancelled(self.volume_id.clone())),
@@ -321,7 +322,7 @@ impl S3Volume {
             .map_err(|_| VolumeError::NotFound(target.remote.to_string()))?;
         let answer = self.ask(client, request, target.remote).await?;
         let initiated = parse_initiate_multipart(&answer.text()).map_err(|e| body_error(&e, target.remote))?;
-        debug!(target: "volume", "s3 multipart upload started for {}", target.remote);
+        debug!(target: "volume", "s3 multipart upload started for {}", LogPrivate::file_path(&target.remote));
         Ok(initiated.upload_id)
     }
 
@@ -566,7 +567,7 @@ pub(super) async fn abort_upload(client: &S3Client, ledger: &UploadLedger, uploa
                 answer.status.is_success() || S3Error::from_response(answer.status, &answer.text()).is_not_found()
             }
             Err(e) => {
-                debug!(target: "volume", "s3: aborting an upload of {} didn't reach the server: {e}", upload.key);
+                debug!(target: "volume", "s3: aborting an upload of {} didn't reach the server: {e}", LogPrivate::file_path(&upload.key));
                 false
             }
         };
@@ -575,7 +576,7 @@ pub(super) async fn abort_upload(client: &S3Client, ledger: &UploadLedger, uploa
             return true;
         }
     }
-    warn!(target: "volume", "s3: couldn't abort the upload of {}; the next connect tries again", upload.key);
+    warn!(target: "volume", "s3: couldn't abort the upload of {}; the next connect tries again", LogPrivate::file_path(&upload.key));
     ledger.abandoned(upload);
     false
 }

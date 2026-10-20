@@ -29,6 +29,7 @@ use std::time::{Duration, SystemTime};
 
 use bytes::Bytes;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses, MetadataReport};
 use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::staging::temp_sibling_name;
@@ -206,7 +207,8 @@ impl UploadDates {
             // Not a failure: a server without the ownCloud extension (plain
             // `mod_dav`) has no way to store a date, and keeps its own.
             debug!(
-                "WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-Mtime, so it keeps its own date"
+                "WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-Mtime, so it keeps its own date",
+                target = LogPrivate::file_path(&target)
             );
         }
         if self.created_at.is_none() {
@@ -219,7 +221,8 @@ impl UploadDates {
             // didn't take this one: the write's report carries it to the loss
             // note.
             log::warn!(
-                "WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-CTime, so it keeps its own creation date"
+                "WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-CTime, so it keeps its own creation date",
+                target = LogPrivate::file_path(&target)
             );
             ClassOutcome::Refused
         }
@@ -283,12 +286,19 @@ impl WebdavVolume {
         let client = self.clone_client().await?;
         match mode {
             WriteMode::CreateOrReplace => {
-                debug!("WebdavVolume::write_from_stream: {remote}");
+                debug!(
+                    "WebdavVolume::write_from_stream: {remote}",
+                    remote = LogPrivate::file_path(&remote)
+                );
                 self.put_streaming(&client, &remote, size, stream, on_progress).await
             }
             WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder => {
                 let temp = staging_sibling(&remote);
-                debug!("WebdavVolume::write_from_stream: {remote} via {temp}");
+                debug!(
+                    "WebdavVolume::write_from_stream: {remote} via {temp}",
+                    remote = LogPrivate::file_path(&remote),
+                    temp = LogPrivate::file_path(&temp)
+                );
                 let written = self.put_streaming(&client, &temp, size, stream, on_progress).await?;
                 let request = client
                     .request(method("MOVE"), client.url_for(&temp, false))

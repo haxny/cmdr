@@ -381,7 +381,8 @@ pub async fn approve_host_key(
     if presented.algorithm != algorithm || presented.fingerprint != fingerprint {
         log::warn!(
             target: "volume",
-            "an sftp host-key approval named a key {server}:{port} no longer presents; recording nothing"
+            "an sftp host-key approval named a key {server}:{port} no longer presents; recording nothing",
+            server = cmdr_fs::log_private::LogPrivate::host(server)
         );
         return Ok(HostKeyApproval::Superseded(HostKeyPrompt {
             host: server.to_string(),

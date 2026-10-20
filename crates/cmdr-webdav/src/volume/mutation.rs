@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::pluralize::pluralize_with;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::mkdir_all::{self, LeadsTo, MakesDirectories};
@@ -79,7 +80,7 @@ impl WebdavVolume {
             return Ok(false);
         }
         let client = self.clone_client().await?;
-        debug!("WebdavVolume::set_dates: {remote}");
+        debug!("WebdavVolume::set_dates: {remote}", remote = LogPrivate::path(&remote));
         let applied = match client
             .proppatch(client.url_for(&remote, true), &props)
             .await
@@ -152,7 +153,11 @@ impl WebdavVolume {
                 Err(e) => return Err(e),
             }
         }
-        debug!("WebdavVolume::rename: {remote_from} -> {remote_to} (force={force})");
+        debug!(
+            "WebdavVolume::rename: {remote_from} -> {remote_to} (force={force})",
+            remote_from = LogPrivate::path(&remote_from),
+            remote_to = LogPrivate::path(&remote_to)
+        );
         let request = client
             .request(method("MOVE"), client.url_for(&remote_from, is_collection))
             .header("Destination", client.url_for(&remote_to, is_collection).as_str())

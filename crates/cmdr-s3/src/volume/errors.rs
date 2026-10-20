@@ -4,6 +4,7 @@
 //! way `S3Error`'s own predicates do. The text that rides in an `IoError` is a
 //! log diagnostic, never shown.
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::VolumeError;
 use log::debug;
 
@@ -22,26 +23,38 @@ use crate::error::{S3Error, S3ErrorCode};
 /// the volume's sign-in path is where a person does.
 pub(crate) fn map_s3_error(error: &S3Error, path: &str) -> VolumeError {
     if error.is_not_found() {
-        debug!("S3 path={path:?}: backend=s3, error_kind=not_found, code={error}");
+        debug!(
+            "S3 path={path:?}: backend=s3, error_kind=not_found, code={error}",
+            path = LogPrivate::path(path)
+        );
         return VolumeError::NotFound(path.to_string());
     }
     // A no-overwrite precondition (`If-None-Match: *`, R2's copy header), the
     // only kind Cmdr sends: the name is taken and what's there stayed.
     if error.is_precondition_failed() {
-        debug!("S3 path={path:?}: backend=s3, error_kind=already_exists, code={error}");
+        debug!(
+            "S3 path={path:?}: backend=s3, error_kind=already_exists, code={error}",
+            path = LogPrivate::path(path)
+        );
         return VolumeError::AlreadyExists(path.to_string());
     }
     // An archived object (Glacier Flexible Retrieval, Deep Archive, an
     // Intelligent-Tiering archive tier) until it's restored: typed, because a
     // retry can only meet it again and the fix is a restore, not new keys.
     if error.code == S3ErrorCode::InvalidObjectState {
-        debug!("S3 path={path:?}: backend=s3, error_kind=cold_storage, code={error}");
+        debug!(
+            "S3 path={path:?}: backend=s3, error_kind=cold_storage, code={error}",
+            path = LogPrivate::path(path)
+        );
         return VolumeError::ColdStorage(path.to_string());
     }
     // GCS refuses a name it can't store (a CR or LF) with `400
     // InvalidObjectName`: the fix is another name, so a retry is no use.
     if error.code == S3ErrorCode::InvalidObjectName {
-        debug!("S3 path={path:?}: backend=s3, error_kind=invalid_name, code={error}");
+        debug!(
+            "S3 path={path:?}: backend=s3, error_kind=invalid_name, code={error}",
+            path = LogPrivate::path(path)
+        );
         return VolumeError::InvalidName(error.to_string());
     }
     if error.is_not_implemented() || error.status == http::StatusCode::METHOD_NOT_ALLOWED {
@@ -55,7 +68,10 @@ pub(crate) fn map_s3_error(error: &S3Error, path: &str) -> VolumeError {
             _ => false,
         };
     if refused {
-        debug!("S3 path={path:?}: backend=s3, error_kind=permission_denied, code={error}");
+        debug!(
+            "S3 path={path:?}: backend=s3, error_kind=permission_denied, code={error}",
+            path = LogPrivate::path(path)
+        );
         return VolumeError::PermissionDenied {
             path: path.to_string(),
             raw_os_error: None,

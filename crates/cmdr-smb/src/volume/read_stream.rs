@@ -7,6 +7,7 @@
 use super::SmbVolume;
 use super::mapping::{map_smb_error, user_flags_of};
 use super::session::SessionLease;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, UserFlags};
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, VolumeError, VolumeReadStream};
 use log::{debug, warn};
@@ -189,7 +190,9 @@ impl SmbVolume {
                     share.note_smb_error(generation, &e);
                     warn!(
                         "SmbVolume::download(share={:?}, path={:?}): {}",
-                        share_name, smb_path_owned, e
+                        LogPrivate::volume(&share_name),
+                        LogPrivate::file_path(&smb_path_owned),
+                        e
                     );
                     let _ = opened_tx.send(Err(map_smb_error(e, &display_path)));
                     return;
@@ -218,7 +221,9 @@ impl SmbVolume {
                     _ = &mut cancel_rx => {
                         debug!(
                             "SmbVolume::download(share={:?}, path={:?}): cancelled after {} bytes",
-                            share_name, smb_path_owned, download.bytes_received()
+                            LogPrivate::volume(&share_name),
+                            LogPrivate::file_path(&smb_path_owned),
+                            download.bytes_received()
                         );
                         break;
                     }
@@ -239,7 +244,9 @@ impl SmbVolume {
                             share.note_smb_error(generation, &e);
                             warn!(
                                 "SmbVolume::download(share={:?}, path={:?}): chunk error: {}",
-                                share_name, smb_path_owned, e
+                                LogPrivate::volume(&share_name),
+                                LogPrivate::file_path(&smb_path_owned),
+                                e
                             );
                             let _ = chunk_tx.send(Err(map_smb_error(e, &display_path))).await;
                             break;
@@ -261,7 +268,9 @@ impl SmbVolume {
                 share.note_smb_error(generation, &e);
                 debug!(
                     "SmbVolume::download(share={:?}, path={:?}): CLOSE after the last byte: {}",
-                    share_name, smb_path_owned, e
+                    LogPrivate::volume(&share_name),
+                    LogPrivate::file_path(&smb_path_owned),
+                    e
                 );
             }
             // `download` drops here. After the last byte its handle is closed

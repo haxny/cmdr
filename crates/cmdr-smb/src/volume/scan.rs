@@ -7,6 +7,7 @@ use super::SmbVolume;
 use super::mapping::{filetime_to_unix_secs, map_smb_error};
 use super::session::SessionLease;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::scan_walk::{conflicts_against, fold_batch};
 use cmdr_fs::volume::{BatchScanResult, CopyScanResult, ScanBoundary, ScanConflict, SourceItemInfo, VolumeError};
 use log::{debug, warn};
@@ -122,7 +123,8 @@ impl SmbVolume {
 
             debug!(
                 "SmbVolume::scan_for_copy: share={:?}, path={:?}",
-                self.inner.share_name, smb_path
+                LogPrivate::volume(&self.inner.share_name),
+                LogPrivate::path(&smb_path)
             );
 
             // Nothing to report to and nobody to answer to: the single-path
@@ -240,7 +242,7 @@ impl SmbVolume {
                 if !leftover_indices.is_empty() {
                     debug!(
                         "SmbVolume::scan_for_copy_batch: share={:?}, oracle resolved {}/{} paths; pipelining stats for {}",
-                        self.inner.share_name,
+                        LogPrivate::volume(&self.inner.share_name),
                         paths.len() - leftover_indices.len(),
                         paths.len(),
                         leftover_indices.len()
@@ -275,7 +277,7 @@ impl SmbVolume {
 
             debug!(
                 "SmbVolume::scan_for_copy_batch: share={:?}, {} paths leftover for pipelined stats (oracle handled {})",
-                self.inner.share_name,
+                LogPrivate::volume(&self.inner.share_name),
                 smb_paths.len(),
                 paths.len() - smb_paths.len()
             );
@@ -372,7 +374,7 @@ impl SmbVolume {
                         let ends = self.inner.note_smb_error(generation, &e);
                         warn!(
                             "SmbVolume::scan_for_copy_batch(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}, ends_the_session={ends}",
-                            self.inner.share_name,
+                            LogPrivate::volume(&self.inner.share_name),
                             kind,
                             e.status(),
                             cmdr_fs::log_detail::LogDetail(&e.to_string())

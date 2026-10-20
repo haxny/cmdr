@@ -17,6 +17,7 @@
 use super::SmbVolume;
 use super::session::SessionLease;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::VolumeError;
 use log::debug;
 use smb2::types::status::NtStatus;
@@ -237,7 +238,10 @@ impl SmbVolume {
                 ComponentMatch::Folded(stored) => {
                     debug!(
                         "SmbVolume::find_stored_spelling(share={:?}): {:?} in {:?} is stored as {:?}",
-                        self.inner.share_name, wanted, parent, stored
+                        LogPrivate::volume(&self.inner.share_name),
+                        LogPrivate::name(wanted),
+                        LogPrivate::dir_path(&parent),
+                        LogPrivate::name(&stored)
                     );
                     self.inner.spellings.remember(&parent, wanted, &stored);
                     comps[index] = stored;

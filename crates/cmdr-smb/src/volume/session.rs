@@ -5,6 +5,7 @@
 use super::mapping::map_smb_error;
 use super::state::{ConnectionState, SessionGeneration};
 use super::{SmbConnectionParams, SmbVolume};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::credentials::StoredCredentials;
@@ -85,14 +86,14 @@ impl SmbVolume {
         log::trace!(
             "client-mutex: waiting ticket={} caller=clone_session share={:?}",
             ticket,
-            self.inner.share_name
+            LogPrivate::volume(&self.inner.share_name)
         );
         let lease = {
             let mut guard = self.inner.session.lock().await;
             log::trace!(
                 "client-mutex: acquired ticket={} caller=clone_session share={:?} waited={:?}",
                 ticket,
-                self.inner.share_name,
+                LogPrivate::volume(&self.inner.share_name),
                 start.elapsed()
             );
             let acquired_at = std::time::Instant::now();
@@ -154,11 +155,11 @@ impl SmbVolume {
             // reconnect, the notice's Reconnect) builds a fresh, freshly signed one.
             warn!(
                 "SmbVolume::{}(share={:?}): source=backend, backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}; the session is lost",
-                op_name,
-                self.inner.share_name,
+                op_name, // allowed-log-private: the volume method's name, not a user value
+                LogPrivate::volume(&self.inner.share_name),
                 kind,
                 e.status(),
-                cmdr_fs::log_detail::LogDetail(&e.to_string())
+                cmdr_fs::log_detail::LogDetail(&e.to_string()).marking(&[LogPrivate::path(smb_path)])
             );
         } else if matches!(
             kind,
@@ -173,20 +174,20 @@ impl SmbVolume {
             //   path
             debug!(
                 "SmbVolume::{}(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}",
-                op_name,
-                self.inner.share_name,
+                op_name, // allowed-log-private: the volume method's name, not a user value
+                LogPrivate::volume(&self.inner.share_name),
                 kind,
                 e.status(),
-                cmdr_fs::log_detail::LogDetail(&e.to_string())
+                cmdr_fs::log_detail::LogDetail(&e.to_string()).marking(&[LogPrivate::path(smb_path)])
             );
         } else {
             warn!(
                 "SmbVolume::{}(share={:?}): backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}",
-                op_name,
-                self.inner.share_name,
+                op_name, // allowed-log-private: the volume method's name, not a user value
+                LogPrivate::volume(&self.inner.share_name),
                 kind,
                 e.status(),
-                cmdr_fs::log_detail::LogDetail(&e.to_string())
+                cmdr_fs::log_detail::LogDetail(&e.to_string()).marking(&[LogPrivate::path(smb_path)])
             );
         }
 

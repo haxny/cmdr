@@ -38,6 +38,7 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use log::warn;
 use percent_encoding::percent_decode_str;
 use tokio::sync::Notify;
@@ -410,7 +411,11 @@ impl UploadLedger {
             .and_then(|()| std::fs::OpenOptions::new().create(true).append(true).open(log))
             .and_then(|mut file| file.write_all(line(op, record).as_bytes()));
         if let Err(e) = written {
-            warn!(target: "volume", "s3: couldn't record a write in {}: {e}", log.display());
+            warn!(
+                target: "volume",
+                "s3: couldn't record a write in {}: {e}",
+                LogPrivate::file_path(log)
+            );
         }
     }
 }
@@ -446,7 +451,11 @@ fn replay(log: &std::path::Path) -> Vec<Record> {
     for raw in text.lines() {
         let Some((opens, record)) = parse_line(raw) else {
             if !raw.is_empty() {
-                warn!(target: "volume", "s3: skipping an unreadable line in {}", log.display());
+                warn!(
+                    target: "volume",
+                    "s3: skipping an unreadable line in {}",
+                    LogPrivate::file_path(log)
+                );
             }
             continue;
         };
@@ -505,7 +514,7 @@ fn compact(log: &std::path::Path, open: &[Record]) {
     let text: String = open.iter().map(|record| line('+', record)).collect();
     let rewritten = std::fs::write(&temp, text).and_then(|()| std::fs::rename(&temp, log));
     if let Err(e) = rewritten {
-        warn!(target: "volume", "s3: couldn't rewrite {}: {e}", log.display());
+        warn!(target: "volume", "s3: couldn't rewrite {}: {e}", LogPrivate::file_path(log));
     }
 }
 

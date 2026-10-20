@@ -27,6 +27,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeError, WriteMode};
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
@@ -482,7 +483,7 @@ impl S3Volume {
                     && error.is_precondition_failed()
                     && self.source_moved_on(client, from, conditional).await
                 {
-                    warn!(target: "volume", "s3: {} changed since its HEAD; nothing was copied", from.remote);
+                    warn!(target: "volume", "s3: {} changed since its HEAD; nothing was copied", LogPrivate::file_path(&from.remote));
                     return Err(VolumeError::SourceChanged(from.remote.to_string()));
                 }
                 let failure = map_s3_error(&error, to_remote);
@@ -544,7 +545,7 @@ impl S3Volume {
         warn!(
             target: "volume",
             "s3: the answer to a copy into {} never came, but the server applied it",
-            target.remote
+            LogPrivate::file_path(&target.remote)
         );
         self.remember_written(target, &head);
         let _ = progress.advanced(size, size);
@@ -598,7 +599,7 @@ impl S3Volume {
                         warn!(
                             target: "volume",
                             "s3: the answer to a copy into {} never came, but the server completed it",
-                            target.remote
+                            LogPrivate::file_path(&target.remote)
                         );
                         self.remember_written(target, &head);
                         return Ok(plan.total);
@@ -616,7 +617,7 @@ impl S3Volume {
                 debug!(
                     target: "volume",
                     "s3 copied {} bytes to {} in {} parts",
-                    plan.total, target.remote, plan.part_count
+                    plan.total, LogPrivate::file_path(&target.remote), plan.part_count
                 );
                 Ok(plan.total)
             }
@@ -658,7 +659,7 @@ impl S3Volume {
         if unchanged {
             return Ok(());
         }
-        warn!(target: "volume", "s3: {} changed during a copy; nothing was published", from.remote);
+        warn!(target: "volume", "s3: {} changed during a copy; nothing was published", LogPrivate::file_path(&from.remote));
         Err(VolumeError::SourceChanged(from.remote.to_string()))
     }
 

@@ -34,6 +34,7 @@ use std::time::Duration;
 use bytes::Bytes;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::MetadataClasses;
 use cmdr_fs::volume::patching::patch_created;
 use cmdr_fs::volume::{StreamLength, StreamWriteProgress, StreamWritten, VolumeError, VolumeReadStream, WriteMode};
@@ -206,7 +207,7 @@ impl S3Volume {
             mode,
             metadata: &metadata,
         };
-        debug!(target: "volume", "s3 write {remote} ({shape:?}, {mode:?})");
+        debug!(target: "volume", "s3 write {remote} ({shape:?}, {mode:?})", remote = LogPrivate::file_path(&remote));
         // ❗ A PUT this server might publish short must not land on the
         // original: an overwrite goes as a multipart upload, which publishes
         // nothing until its completion (`DETAILS.md` § "Overwrites in parts").
@@ -414,7 +415,7 @@ impl S3Volume {
                     }
                     let error = match (interrupted, halted.get()) {
                         (Some(Err(_)), Some(Halt::SetAside)) => {
-                            debug!(target: "volume", "s3: set {} aside for a pause; it goes again on resume", target.remote);
+                            debug!(target: "volume", "s3: set {} aside for a pause; it goes again on resume", LogPrivate::file_path(&target.remote));
                             set_aside = true;
                             continue;
                         }
@@ -439,7 +440,7 @@ impl S3Volume {
                     && let Some(wait) = retry_after(faults + 1)
                 {
                     faults += 1;
-                    debug!(target: "volume", "s3: {} answered {error}; sending it again in {wait:?}", target.remote);
+                    debug!(target: "volume", "s3: {} answered {error}; sending it again in {wait:?}", LogPrivate::file_path(&target.remote));
                     tokio::time::sleep(wait).await;
                     if let Some(head) = self.landed_whole(client, target, size).await {
                         settle(&mut record);
@@ -534,12 +535,12 @@ impl S3Volume {
                 warn!(
                     target: "volume",
                     "s3: another writer's object took {} right after ours landed; theirs stays",
-                    target.remote
+                    LogPrivate::file_path(&target.remote)
                 );
                 Err(VolumeError::AlreadyExists(target.remote.to_string()))
             }
             Landing::ReplacedAfterUs => {
-                warn!(target: "volume", "s3: a newer write replaced {} right after ours", target.remote);
+                warn!(target: "volume", "s3: a newer write replaced {} right after ours", LogPrivate::file_path(&target.remote));
                 Ok(())
             }
             Landing::Vanished => Err(VolumeError::IoError {

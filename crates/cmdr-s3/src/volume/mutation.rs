@@ -23,6 +23,7 @@
 use std::path::{Path, PathBuf};
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::mkdir_all::{self, LeadsTo, MakesDirectories};
 use cmdr_fs::volume::patching::{PatchSource, patch_created, patch_deleted, patch_renamed};
@@ -147,7 +148,7 @@ impl S3Volume {
             .await
             .map_err(|e| crate::transport::map_exchange_error(&e, self.volume_id(), remote))?;
         if answer.status.is_success() {
-            debug!(target: "volume", "s3 folder marker written for {remote}");
+            debug!(target: "volume", "s3 folder marker written for {remote}", remote = LogPrivate::dir_path(&remote));
             return Ok(());
         }
         let error = S3Error::from_response(answer.status, &answer.text());
@@ -342,7 +343,7 @@ impl S3Volume {
         match judge_landing(size, copied.etag.as_deref(), landed.as_ref(), mode) {
             Landing::Verified => {}
             Landing::TakenAfterUs => {
-                warn!(target: "volume", "s3: another writer took {remote_to} during a rename; the source stays");
+                warn!(target: "volume", "s3: another writer took {remote_to} during a rename; the source stays", remote_to = LogPrivate::path(&remote_to));
                 return Err(VolumeError::AlreadyExists(remote_to));
             }
             other => {
@@ -353,7 +354,7 @@ impl S3Volume {
             }
         }
         if let Err(e) = self.delete_key(&client, from_bucket, from_key, &remote_from).await {
-            warn!(target: "volume", "s3: {remote_from} was copied to {remote_to} but its delete failed: {e}");
+            warn!(target: "volume", "s3: {remote_from} was copied to {remote_to} but its delete failed: {e}", remote_from = LogPrivate::path(&remote_from), remote_to = LogPrivate::path(&remote_to));
             return Err(e);
         }
         self.forget_beside_folder(&remote_from);

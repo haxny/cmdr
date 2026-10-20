@@ -26,6 +26,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::CarriedMetadata;
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, VolumeError};
 use futures_util::StreamExt;
@@ -380,7 +381,7 @@ async fn produce_stream(
         let next = tokio::select! {
             biased;
             _ = &mut cancel_rx => {
-                debug!("SftpVolume::open_read_stream({remote}): cancelled, bytes delivered: {delivered}");
+                debug!("SftpVolume::open_read_stream({remote}): cancelled, bytes delivered: {delivered}", remote = LogPrivate::file_path(&remote));
                 return;
             }
             next = window.next_chunk() => next,

@@ -11,6 +11,7 @@
 use super::SmbVolume;
 use super::session::SessionLease;
 use super::state::SessionGeneration;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{MutationEvent, Volume, VolumeError};
 use log::{debug, warn};
 use std::path::Path;
@@ -24,7 +25,8 @@ impl SmbVolume {
 
         debug!(
             "SmbVolume::create_file: share={:?}, path={:?}",
-            self.inner.share_name, smb_path
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::file_path(&smb_path)
         );
 
         {
@@ -55,7 +57,8 @@ impl SmbVolume {
 
         debug!(
             "SmbVolume::create_directory: share={:?}, path={:?}",
-            self.inner.share_name, smb_path
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::dir_path(&smb_path)
         );
 
         {
@@ -81,7 +84,8 @@ impl SmbVolume {
 
         debug!(
             "SmbVolume::set_times: share={:?}, path={:?}",
-            self.inner.share_name, smb_path
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::path(&smb_path)
         );
 
         {
@@ -113,7 +117,8 @@ impl SmbVolume {
 
         debug!(
             "SmbVolume::delete: share={:?}, path={:?}",
-            self.inner.share_name, smb_path
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::path(&smb_path)
         );
 
         // Try delete_file first (one round-trip). If the path is a directory,
@@ -165,7 +170,10 @@ impl SmbVolume {
 
         debug!(
             "SmbVolume::rename: share={:?}, from={:?}, to={:?}, force={}",
-            self.inner.share_name, smb_from, smb_to, force
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::path(&smb_from),
+            LogPrivate::path(&smb_to),
+            force
         );
 
         if force {
@@ -392,7 +400,7 @@ impl SmbVolume {
                     Err(e) => {
                         warn!(
                             "SmbVolume::notify_mutation: couldn't stat path={:?}: {}",
-                            entry_path.display(),
+                            LogPrivate::path(&entry_path),
                             e
                         );
                     }
@@ -417,7 +425,7 @@ impl SmbVolume {
                     Err(e) => {
                         warn!(
                             "SmbVolume::notify_mutation: couldn't stat renamed entry path={:?}: {}",
-                            new_path.display(),
+                            LogPrivate::path(&new_path),
                             e
                         );
                     }

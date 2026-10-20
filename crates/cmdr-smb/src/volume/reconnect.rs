@@ -7,6 +7,7 @@ use super::session::{MainSession, build_session, refresh_credentials_from_store,
 use super::state::{ConnectionState, SessionGeneration};
 use super::{SmbConnectionParams, SmbVolumeInner};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::SelfHandle;
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::events::VolumeConnection;
@@ -147,7 +148,7 @@ impl SmbVolumeInner {
         if self.connection_state() == ConnectionState::Direct {
             debug!(
                 "SmbVolumeInner::attempt_reconnect(share={:?}): already Direct, skipping",
-                self.share_name
+                LogPrivate::volume(&self.share_name)
             );
             return Ok(None);
         }
@@ -165,7 +166,7 @@ impl SmbVolumeInner {
         let params_snapshot = { self.params.read().await.clone() };
         info!(
             "SmbVolumeInner::attempt_reconnect(share={:?}): trying with cached credentials",
-            self.share_name
+            LogPrivate::volume(&self.share_name)
         );
 
         let first_attempt = build_session(&params_snapshot).await;
@@ -175,7 +176,7 @@ impl SmbVolumeInner {
                 // Cached creds may be stale. Re-pull from the secret store and retry once.
                 info!(
                     "SmbVolumeInner::attempt_reconnect(share={:?}): cached credentials rejected, re-pulling from secret store",
-                    self.share_name
+                    LogPrivate::volume(&self.share_name)
                 );
                 match refresh_credentials_from_store(&self.host, &params_snapshot).await {
                     Some(refreshed)
@@ -193,7 +194,8 @@ impl SmbVolumeInner {
                             Err(e2) => {
                                 warn!(
                                     "SmbVolumeInner::attempt_reconnect(share={:?}): refreshed credentials also failed: {}",
-                                    self.share_name, e2
+                                    LogPrivate::volume(&self.share_name),
+                                    e2
                                 );
                                 // The password on the server changed and what we have
                                 // saved no longer works. Tell the FE so it shows a
@@ -207,7 +209,7 @@ impl SmbVolumeInner {
                         // No fresh creds available, or they're identical to the cached ones.
                         warn!(
                             "SmbVolumeInner::attempt_reconnect(share={:?}): no fresh credentials available; giving up on this attempt",
-                            self.share_name
+                            LogPrivate::volume(&self.share_name)
                         );
                         self.emit_state_change_for_id(credentials_refusal_state(&err));
                         return Err(map_smb_error(err, &share_root));
@@ -217,7 +219,8 @@ impl SmbVolumeInner {
             Err(e) => {
                 warn!(
                     "SmbVolumeInner::attempt_reconnect(share={:?}): connect failed: {}",
-                    self.share_name, e
+                    LogPrivate::volume(&self.share_name),
+                    e
                 );
                 return Err(map_smb_error(e, &share_root));
             }
@@ -273,7 +276,7 @@ impl SmbVolumeInner {
 
         info!(
             "SmbVolumeInner::attempt_reconnect(share={:?}): success",
-            self.share_name
+            LogPrivate::volume(&self.share_name)
         );
         Ok(Some(connected_with))
     }
@@ -302,7 +305,7 @@ impl SmbVolumeInner {
             // Non-fatal: the session is up; only the "silent next time" guarantee is lost.
             warn!(
                 "SmbVolumeInner::reconnect_with_credentials(share={:?}): the secret store didn't take the credentials; this session still came up",
-                self.share_name
+                LogPrivate::volume(&self.share_name)
             );
         }
         Ok(SignedIn::after(&sign_in, kept))

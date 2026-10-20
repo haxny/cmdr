@@ -8,6 +8,7 @@
 use super::SmbVolume;
 use super::session::SessionLease;
 use super::stamping::{source_times, stamped};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::MetadataClasses;
 use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::volume::{MutationEvent, StreamLength, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode};
@@ -195,7 +196,8 @@ impl SmbVolume {
 
             debug!(
                 "SmbVolume::write_from_stream: share={:?}, path={:?}, length={length:?}",
-                self.inner.share_name, smb_path
+                LogPrivate::volume(&self.inner.share_name),
+                LogPrivate::file_path(&smb_path)
             );
 
             // Acquire a cloned session once, up front. Both the compound

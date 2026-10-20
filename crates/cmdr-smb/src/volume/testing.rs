@@ -20,6 +20,7 @@
 use std::path::Path;
 use std::sync::atomic::Ordering;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::{Volume, VolumeReadStream};
 
@@ -228,21 +229,33 @@ pub async fn cleanup_test_prefix(vol: &SmbVolume, mount_path: &Path, unique_pref
                 let abs = dir_abs.join(&entry.name);
                 let rel = rel_of(&abs);
                 if !rel.starts_with(TEST_PREFIX_ROOT) {
-                    log::warn!("cleanup_test_prefix: refusing to delete {rel} (outside prefix)");
+                    log::warn!(
+                        "cleanup_test_prefix: refusing to delete {} (outside prefix)",
+                        LogPrivate::path(&rel)
+                    );
                     continue;
                 }
                 if let Err(e) = vol.delete(&abs).await {
-                    log::warn!("cleanup_test_prefix: failed to delete {rel}: {e:?}");
+                    log::warn!(
+                        "cleanup_test_prefix: failed to delete {}: {e:?}",
+                        LogPrivate::path(&rel)
+                    );
                 }
             }
         }
-        Err(e) => log::warn!("cleanup_test_prefix: list_directory failed for {dir_abs:?}: {e:?}"),
+        Err(e) => log::warn!(
+            "cleanup_test_prefix: list_directory failed for {:?}: {e:?}",
+            LogPrivate::dir_path(&dir_abs)
+        ),
     }
     let rel_dir = rel_of(&dir_abs);
     if rel_dir.starts_with(TEST_PREFIX_ROOT)
         && let Err(e) = vol.delete(&dir_abs).await
     {
-        log::warn!("cleanup_test_prefix: failed to delete prefix dir {rel_dir}: {e:?}");
+        log::warn!(
+            "cleanup_test_prefix: failed to delete prefix dir {}: {e:?}",
+            LogPrivate::dir_path(&rel_dir)
+        );
     }
 }
 

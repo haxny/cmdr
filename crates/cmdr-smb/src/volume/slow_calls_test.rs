@@ -22,10 +22,14 @@ fn the_first_stall_on_a_share_is_logged_at_once() {
     let log = SlowCallLog::new();
     let line = log
         .line_at(SHARE, "get_metadata", ms(3_210), Instant::now())
-        .expect("a 3.2 s stat is worth a line");
+        .expect("a 3.2 s stat is worth a line")
+        .to_string();
     assert!(line.contains("get_metadata"), "{line}");
-    // Quoted, so the report redactor sees the share as an identity field.
-    assert!(line.contains(r#"share="naspi""#), "{line}");
+    // Marked as a volume label inside its quotes, so the report hashes it whole.
+    assert!(
+        line.contains(&format!("share={:?}", LogPrivate::volume(SHARE))),
+        "{line}"
+    );
     assert!(line.contains("3210 ms"), "{line}");
 }
 
@@ -44,7 +48,8 @@ fn a_run_of_stalls_rolls_up_and_names_the_slowest() {
 
     let line = log
         .line_at(SHARE, "is_directory", ms(1_100), start + ms(61_000))
-        .expect("a minute on, the rollup speaks");
+        .expect("a minute on, the rollup speaks")
+        .to_string();
     assert!(line.contains("×3"), "three stalls since the last line: {line}");
     assert!(line.contains("slowest 6000 ms"), "{line}");
 }
