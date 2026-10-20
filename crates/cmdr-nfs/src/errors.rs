@@ -50,10 +50,6 @@ pub enum NfsConnectError {
 /// ❗ **`path` is the payload, ❌ not context.** `NotFound`, `PermissionDenied`,
 /// and `AlreadyExists` carry the path the user acted on, never server text:
 /// the transfer layer renders it as a filename.
-#[allow(
-    dead_code,
-    reason = "the protocol layer lands before the volume that calls it; drop this once the volume is wired"
-)]
 pub(crate) fn map_nfs_error(err: &NfsError, path: &str) -> VolumeError {
     match err {
         NfsError::Status(status) => map_nfs_status(*status, path),
@@ -64,10 +60,6 @@ pub(crate) fn map_nfs_error(err: &NfsError, path: &str) -> VolumeError {
 
 /// `nfsstat3` → `VolumeError`, by number. `JUKEBOX` reaching here has already
 /// been retried three times.
-#[allow(
-    dead_code,
-    reason = "the protocol layer lands before the volume that calls it; drop this once the volume is wired"
-)]
 pub(crate) fn map_nfs_status(status: NfsStat3, path: &str) -> VolumeError {
     let located = || path.to_string();
     match status {
@@ -113,10 +105,6 @@ pub(crate) fn map_nfs_status(status: NfsStat3, path: &str) -> VolumeError {
 }
 
 /// A call that never got an `nfsstat3` → `VolumeError`.
-#[allow(
-    dead_code,
-    reason = "the protocol layer lands before the volume that calls it; drop this once the volume is wired"
-)]
 pub(crate) fn map_call_error(err: &CallError, path: &str) -> VolumeError {
     match err {
         // A transport fault the reconnect cycle recovers from: retiring is the
@@ -143,10 +131,6 @@ pub(crate) fn map_call_error(err: &CallError, path: &str) -> VolumeError {
     }
 }
 
-#[allow(
-    dead_code,
-    reason = "the protocol layer lands before the volume that calls it; drop this once the volume is wired"
-)]
 fn io_error(message: &str, errno: i32) -> VolumeError {
     VolumeError::IoError {
         message: message.to_string(),

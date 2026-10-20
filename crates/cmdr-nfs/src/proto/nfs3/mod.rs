@@ -27,10 +27,6 @@ use crate::xdr::{Decoder, Encoder, XdrError};
 mod listing;
 mod types;
 
-#[allow(
-    unused_imports,
-    reason = "what the volume's listing will name; drop this once the volume is wired"
-)]
 pub(crate) use listing::{ListedEntry, ListingEvent};
 pub(crate) use types::*;
 
