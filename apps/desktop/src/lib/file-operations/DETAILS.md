@@ -70,6 +70,9 @@ Umbrella-level files:
 - `decision-keys.ts`: the fixed letter keys that answer the clash prompt and the transfer error dialog (each button
   shows its letter through `Button`'s `keyHint`) (§ "Letter keys on decision prompts"). `test-button-label.ts` is the
   tests' way to read such a button's label without its chip.
+- `leftover-notice-bridge.ts`: words the engine-wide `leftovers-kept` event, one toast per kind (a move's staging folder
+  kept on a drive, an unfinished landing kept under a ` (recovered)` name). BE: `crates/cmdr-operations/DETAILS.md` §
+  "What the sweep does with each kind".
 
 ## S3 cost line
 

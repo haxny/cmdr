@@ -271,8 +271,9 @@ walk every entry. ❌ Don't force it to `PartiallyRolledBack` — the frontend r
 the completeness wording (`someDeleted`, never `doneDeleting`) and the `success` level whenever `staged_leftovers` is
 non-empty, and it prints its lines OUTSIDE the reason list, which sits under "Cmdr skips anything it isn't sure about".
 
-The three volume emit sites all attach it — the copy's Rollback branch, the copy's plain-Stop branch, and the
-cross-volume move's cancel — so a leftover speaks even where there is no reversal at all to report.
+The volume emit sites all attach it (the copy's Rollback branch, the copy's plain-Stop branch, the cross-volume move's
+cancel, and an archive edit's or compress's cancel, `../archive_edit/engine.rs::EditLeftovers`, for a landing its stop
+kept), so a leftover speaks even where there is no reversal at all to report.
 
 `originals_still_in_place` is the third, an `OriginalsStillInPlace { count }` set at exactly one site:
 `move_op/cross_fs.rs`'s phase-4 cancel. It counts the user's own originals, not Cmdr's leavings, and it is the one place
@@ -1053,8 +1054,9 @@ all; see `../delete/CLAUDE.md`.
 **Decision**: a cross-volume file write streams into a `.cmdr-tmp-<uuid>` sibling and is renamed onto its final name
 only after its last byte, whether or not a conflict made it a safe-replace, unless the write is structurally incapable
 of leaving a partial there (`volume/DETAILS.md` § "The single-shot exemption"). `staged_write.rs` owns it (its landing,
-`land` and the ledger hand-off, in `staged_write_landing.rs`); `stream_pipe_file` and the sequential extractor are the
-two write sites.
+`land` and the ledger hand-off, in `staged_write_landing.rs`; the generated-file publishes in
+`staged_write_publish.rs`). Its write sites: `stream_pipe_file`, the sequential extractor, and the server-side copy
+here, plus a fresh compress and a remote zip edit's swap in `../archive_edit/`.
 
 **Why**: the conflict layer only staged a file→file Overwrite. A NEW file has no conflict, so it streamed straight to
 the destination path — and a transfer killed mid-stream left a truncated file wearing the user's real filename, which is
@@ -1146,10 +1148,10 @@ the spot. The bytes are complete by then, the destination name is now EMPTY, and
 which a real name keeps out of every sweep's reach for good, recorded or not.
 `recovered_name.rs::rescue_out_of_temp_space` renames it to `<name> (recovered)<.ext>` and the failure carries that path
 as `FinalizeFailure::aftermath` (`LandingAftermath::NewDataKeptAt`), a claimed name's landing and a swap's alike;
-`stream_pipe_file` and `sequential_extract` label it with the DESTINATION (`at_source_or_rescued_dest`), since a rescued
-file is one the user can't find on their own. A failure whose `delete` didn't succeed rescues nothing and reports
-nothing: the destination still holds whatever was in the way (§ "A landing that fails with nothing cleared takes its
-temp away" below). Pinned by
+`stream_pipe_file` and `sequential_extract` label it with the DESTINATION (`PathedVolumeError::from_landing`), since a
+rescued file is one the user can't find on their own. A failure whose `delete` didn't succeed rescues nothing and
+reports nothing: the destination still holds whatever was in the way (§ "A landing that fails with nothing cleared takes
+its temp away" below). Pinned by
 `staged_write.rs::a_landing_that_cleared_the_way_and_then_could_not_rename_rescues_the_new_bytes`.
 
 ❗ **And only for a name the CALLER claimed** (`LandingName`). `AlreadyExists` says something is in the way; only the
@@ -1393,8 +1395,8 @@ serial drivers parks between files (after the `is_cancelled` check). But a singl
 is one source: gating only at the loop top would let it stream to completion while the UI shows "Paused" (the confirmed
 bug). The fix is `transfer/checkpoint_stream.rs`'s `CheckpointStream`, a `VolumeReadStream` decorator
 `volume::stream_pipe`'s `stream_pipe_file` wraps the source stream in. Its `next_chunk()` runs a between-chunk
-checkpoint once per chunk before delegating: (1) `pause_gate.wait_while_paused_async(&intent)` parks while paused
-(returns the instant cancel is observed — cancellation wins), then (2) `tokio::task::yield_now()` so a long transfer
+checkpoint once per chunk before delegating: (1) `state.park_while_paused()` parks while paused (it returns the instant
+the work stops, a cancel or a failure drain, so stopping wins), then (2) `tokio::task::yield_now()` so a long transfer
 doesn't starve foreground tasks (listings, navigation, progress) on the runtime.
 
 **Why a stream decorator, not a new trait param.** The per-chunk progress callback (`on_progress`) is sync
@@ -1426,22 +1428,21 @@ checkpoint, answers the same way. Every other wrapper forwards its inner stream'
 now, MTP included. An MTP read is a sequence of bounded ~8 MiB windows (`mtp/connection` § "Bounded-window reads");
 between windows nothing is in flight and the one-per-device PTP session is free, so a paused MTP copy that simply stops
 starting the next window leaves the phone listable/navigable without releasing anything. `CheckpointStream` parks on
-`pause_gate.wait_while_paused_async` and, on resume, the next `next_chunk` reads the next window from the current offset
-— no `cancel_and_release`, no reopen-at-offset. The wrapper tracks `bytes_yielded` (== the destination temp's length);
-since parking leaves the offset alone, the next window reads `[bytes_yielded, …)` with no gap or overlap, and the
+`state.park_while_paused()` and, on resume, the next `next_chunk` reads the next window from the current offset — no
+`cancel_and_release`, no reopen-at-offset. The wrapper tracks `bytes_yielded` (== the destination temp's length); since
+parking leaves the offset alone, the next window reads `[bytes_yielded, …)` with no gap or overlap, and the
 destination's `write_from_stream` (and its safe-replace temp+rename) sees one continuous chunk stream. A cancel observed
 while parked lets the next chunk flow through to `on_progress`, so the cancel/cleanup contract is the park-in-place
 contract. Pinned by `volume::strategy::tests::paused_mtp_copy_parks_in_place_then_resumes_byte_exact` (pause freezes
 mid-file, never releases the source, resumes byte-exact with a single open at offset 0),
 `paused_mtp_copy_cancel_while_paused_keeps_no_partial`, and `unpaused_mtp_copy_streams_straight_through`.
 
-**No release/reopen machinery.** This bounded-window model deliberately has NO `cancel_and_release`/reopen path — that
-obsolete "release the held session, reopen at the offset" machinery (the old `CheckpointReopen`/`ensure_open`) is gone,
-because there is no held session to release between windows. `Volume::pause_releases_read_stream()` is now `false` for
-every backend (kept only as a trait extension point), and `Volume::open_read_stream_at_offset` keeps its offset
-parameter (MTP implements it correctly) but the copy path only ever calls it with `offset == 0` via `open_read_stream`.
-The bounded-window read itself lives in `mtp/connection` (it needs `mtp-rs`'s `Storage::download_partial_64`, in
-`mtp-rs` 0.21.0 — the minimum `apps/desktop/src-tauri/Cargo.toml` pins).
+**No release/reopen machinery.** This bounded-window model has NO `cancel_and_release`/reopen path, because there is no
+held session to release between windows. `Volume::pause_releases_read_stream()` is `false` for every backend (kept only
+as a trait extension point), and `Volume::open_read_stream_at_offset` keeps its offset parameter (MTP implements it
+correctly) but the copy path only ever calls it with `offset == 0` via `open_read_stream`. The bounded-window read
+itself lives in `mtp/connection` (it needs `mtp-rs`'s `Storage::download_partial_64`, in `mtp-rs` 0.21.0 — the minimum
+`apps/desktop/src-tauri/Cargo.toml` pins).
 
 ### Foreground auto-yield (navigate the phone DURING a transfer, no pause)
 
@@ -1898,7 +1899,8 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
   ridden out at most `MAX_OUTAGES_PER_ITEM` (3) times per item.
 - **Cancelable at once.** Every await races `stop_work`, a reconnect attempt included; a cancel during the wait is
   reported as the cancel it is. A sibling's failure ends the wait the same way (the failure drain), and once the work
-  has stopped a failure starts no wait at all.
+  has stopped a transport fault starts no wait at all and reads as the stop (`Cancelled`): a call the share cut off
+  while the operation was stopping otherwise reached the person as "Lost the connection" after they clicked Cancel.
 - **No single attempt holds the wait.** Each `attempt_reconnect` gets `OutagePolicy::attempt_timeout` (15 s, under the
   cadence's 30 s step); one that hasn't returned is dropped and counts as still down, and the next tick dials afresh.
   Without it, one SMB handshake that never returned held a copy for the whole budget after the NAS was back (`#406`).
@@ -1974,7 +1976,9 @@ again:
   begins with a volume already gone (a Retry while the NAS is still down) waits before its first step rather than
   failing on it. It announces the wait itself (no probe is registered yet). Only a cancel stops the transfer there;
   every other ending carries on, and a volume still gone fails the first step exactly as before.
-
+- Every rename aside (`volume/displaced_destination.rs::displace_destination`, a cross-type Overwrite's and a fresh
+  compress's displaced publish): the rename the transport cut off is settled by one stat of the aside after the wait
+  (`volume/DETAILS.md`, the aside bullets).
 - Outside the transfer engine, the archive edits take the same wait and settle: a remote zip edit's pull, upload, and
   swap (a `StageOverOriginal` landing), and a fresh compress's production, upload, validation, and publish
   (`../archive_edit/DETAILS.md` § "Remote edit: the data-safety contract" and § Compress).
@@ -1983,9 +1987,13 @@ again:
   (`volume/folder_metadata.rs`, through `wait_after_shortfall`, since a backend reports a drop under `apply_metadata` as
   a refused class rather than an error). Both: `volume/DETAILS.md`.
 
-**Not covered, deliberately.** The pre-flight SCAN of a big tree (its own walker, its own failure path), trash, and the
-local engines. Each would fail on an outage as it always did. A volume delete has its own wait, which re-checks each
-entry against its walk before deleting again (`../delete/DETAILS.md` § "Waiting out a dropped share").
+**Not covered, deliberately.** The pre-flight SCAN of a big tree (its own walker, its own failure path), trash, the
+local engines, the instant ops (rename, new folder, new file), and a same-volume move's renames past the start gate
+(`volume/move_same.rs`, `volume/rename_merge.rs`: a rename the drop cut off can't be told from one the server refused
+without a settle of its own). Each fails on an outage as it always did. A volume delete has its own wait, which
+re-checks each entry against its walk before deleting again (`../delete/DETAILS.md` § "Waiting out a dropped share"),
+and an archive edit's planning walk is listed in `../archive_edit/DETAILS.md` § "The driver, op by op" (its compress
+bullet).
 
 **A landing the drop cut off (`interrupted_landing.rs`, `staged_write_landing.rs::CutOffLanding`).** A rename or a
 delete whose reply never arrives may have happened or not: the drop can come before the server saw it, or after it
@@ -2228,7 +2236,7 @@ time. So the staged `.cmdr-tmp-*` stays registered in both `in_flight_temps` led
 (`Operations::claim_ledger`) removes it, with no age gate, off the launch thread.
 `volume::cleanup::clean_abandoned_staged_writes` stands down for the same reason, and so does a background cleanup pass
 already running (`leftover_cleanup.rs`, stopped by the quit too). Nothing is ever left at a real name, because the write
-was staged — which is what Q1 bought.
+was staged.
 
 **Why the two phases it races are the source open and the write, and no others.** They are `TaskPhase::OpeningSource`
 and `Streaming`, the same two the stall watchdog considers abortable, and for the same reason: every other await on the

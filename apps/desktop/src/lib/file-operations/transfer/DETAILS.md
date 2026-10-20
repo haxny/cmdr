@@ -522,9 +522,10 @@ copy/move:
   (a fresh empty zip has no entries, and two sources in one folder can't share a name).
 - **Auto-confirm never silently overwrites (data-safety gate).** For the MCP `compress {autoConfirm}` path,
   `handleConfirm(isAuto=true)` proceeds unattended ONLY when the target doesn't already exist; if it does, it clears
-  `confirmed` and leaves the dialog open for the user to decide. The MCP tool's composed ack
-  (`GenerationAdvancedOrSoftDialog`) honestly reflects both outcomes — see
-  `apps/desktop/src-tauri/src/mcp/executor/ack.rs`. Don't refactor this gate away.
+  `confirmed` and leaves the dialog open for the user to decide. The MCP tool's start round trip
+  (`mcp_await_operation_start`: the FE replies with the spawned `operationId`, or without one when the dialog stayed
+  open) honestly reflects both outcomes; see `execute_compress` in
+  `apps/desktop/src-tauri/src/mcp/executor/file_ops.rs`. Don't refactor this gate away.
 - **Confirm routes to `compressFiles`**, not `copyBetweenVolumes` (`transfer-dispatch.ts::dispatchCompress`). One
   command handles local and (later) remote sources; the scan preview still runs for the Size bar.
 - **A compression-level slider shows in compress mode only** (`CompressLevelControl.svelte`, below the scan tallies). It
@@ -861,13 +862,18 @@ that.
 ## What it says when a server's connection was lost
 
 `server_connection_lost` is the backend's outage verdict (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Waiting
-out a volume that went away"): a transfer to or from a server (SMB, SFTP, WebDAV, S3) waited for it and gave up, or
-couldn't wait at all. The connection is the cause, so the title names the server ("Lost the connection to {volumeName}")
-and the file is context, by its last path segment (the full path is in the technical details). `gaveUpAfterSecs` picks
-the sentence: a number words the wait through `formatDuration`, `null` (a sign-in needed, or a link that kept dropping)
-says the connection dropped. The verb comes from the operation type, never the error; only copy and move reach it today.
-Retry stays on, for once the server is back. ❌ Nothing here infers "server" from a path: a phone or a local drive never
-gets this variant and keeps `device_disconnected`.
+out a volume that went away"): an operation on a server (SMB, SFTP, WebDAV, S3) waited for it and gave up, or couldn't
+wait at all. The connection is the cause, so the title names the server ("Lost the connection to {volumeName}") and the
+file is context, by its last path segment (the full path is in the technical details). `gaveUpAfterSecs` picks the
+sentence: a number words the wait through `formatDuration`, `null` (a sign-in needed, or a link that kept dropping) says
+the connection dropped. The verb comes from the operation type, never the error: copy, move, delete, compress, and an
+archive edit each have one (`transfer-error-volume-gone.ts`). Retry stays on, for once the server is back. ❌ Nothing
+here infers "server" from a path: a phone or a local drive never gets this variant and keeps `device_disconnected`.
+
+Two neighbors of the outage verdict, both `needs_action`: `changed_while_disconnected` (only a delete builds it: when
+the share came back, a file no longer matched what the walk listed, so the delete left it and stopped;
+`transfer-error-volume-gone.ts`) and `landing_not_recorded` (Cmdr refused to clear the way because its note of the
+replace couldn't be saved, so the file stays; `transfer-error-messages.ts`).
 
 ## Copy anyway
 

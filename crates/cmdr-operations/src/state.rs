@@ -402,7 +402,7 @@ impl WriteOperationState {
     ///
     /// This twin parks the calling blocking-pool thread; an async driver calls
     /// [`stop_or_park_async`](Self::stop_or_park_async) instead. A caller whose
-    /// reading of "stop" isn't `is_cancelled` (a reversal, a detached scan
+    /// reading of "stop" isn't `work_stopped` (a reversal, a detached scan
     /// preview) drives [`PauseGate`]'s `*_until` helpers directly and names its
     /// own predicate.
     pub fn stop_or_park_sync(&self) -> bool {

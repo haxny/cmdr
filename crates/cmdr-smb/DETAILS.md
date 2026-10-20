@@ -869,13 +869,12 @@ absolute path somewhere else entirely.
 
 **Decision**: `map_smb_error` maps `ErrorKind::InvalidName` to its own `VolumeError::InvalidName`, never the `IoError`
 catch-all **Why**: `STATUS_OBJECT_NAME_INVALID` means the server refused the NAME, so it never looked for the file and
-the identical request can only fail the identical way. As an `IoError` it inherited the wrong behavior twice over:
-`retry.rs::is_retryable` would have burned the full backoff re-sending a hopeless write, and the dialog would have
-offered "couldn't copy the file" plus a Retry button instead of the one thing that works (rename it). The typed variant
-carries end to end: `friendly_error::kinds::invalid_name` on the listing path (`NeedsAction`, ❌ no retry hint) and
-`WriteOperationError::InvalidName` on the write path, which names the failing file so a 5,000-item transfer says WHICH
-one to rename. smb2 ≥ 0.18 maps the characters SMB2 forbids outright (`"`, `*`, `:`, `<`, `>`, `?`, `\`, `|`, control
-characters, trailing space or period) into the Unicode private-use area, so those copy through fine
+the identical request can only fail the identical way. As an `IoError` it inherited the wrong behavior: the dialog would
+have offered "couldn't copy the file" plus a Retry button instead of the one thing that works (rename it). The typed
+variant carries end to end: `friendly_error::kinds::invalid_name` on the listing path (`NeedsAction`, ❌ no retry hint)
+and `WriteOperationError::InvalidName` on the write path, which names the failing file so a 5,000-item transfer says
+WHICH one to rename. smb2 ≥ 0.18 maps the characters SMB2 forbids outright (`"`, `*`, `:`, `<`, `>`, `?`, `\`, `|`,
+control characters, trailing space or period) into the Unicode private-use area, so those copy through fine
 (`forbidden_chars_integration_test.rs`); what still reaches this arm is a reserved Windows device name (`CON`, `NUL`,
 `LPT1`), a name past the server's own length limit, or a character its filesystem can't store. The status is also in
 smb2's table now, so the technical-details line reads `STATUS_OBJECT_NAME_INVALID` rather than bare `0xC0000033`.
@@ -983,8 +982,8 @@ watchdog ACTS".
 
 **The numbers stay as they are, and the case for widening them is closed.** The base deadline no longer has to be sized
 for the slowest healthy case, because the ECHO stretch already covers a connection that is alive but busy; and a breach
-that does land reaches `retry.rs::is_retryable` as a typed retryable error, so a per-file retry on a rebuilt session
-absorbs it as a blip rather than a failed file. Nothing measured says the defaults hurt.
+that does land reaches the per-file retry as a typed transport fault (`VolumeError::transport_fault`), so a retry on a
+rebuilt session absorbs it as a blip rather than a failed file. Nothing measured says the defaults hurt.
 
 **Read `sent_age` before drawing any conclusion from a stall.** `None` means the request never reached the wire, so the
 server has not been asked yet and none of the deadlines above are even running; a `Some` age is the only number that

@@ -348,8 +348,8 @@ of those sites was decided one at a time on one question: **can a wrong `false` 
   through it renames the target's children out).
 - **`crates/cmdr-operations/src/rename.rs`'s probe — LEFT ALONE, with a comment saying why.** It feeds the journal
   snapshot's entry type only. A wrong value mislabels an undo entry and reaches no destructive branch.
-- **`delete/volume_walker.rs`'s no-preview probe** is the same family and is decided in `../../delete/DETAILS.md` §
-  "What each branch does with a missing or wrong fact".
+- **`delete/volume_walker.rs`'s no-preview probe** (`top_level_entry`) is the same family and is decided in
+  `../../delete/DETAILS.md` § "What each branch does with a missing or wrong fact".
 - **The two dest-inside-source guards — LEFT ALONE, deliberately.** `copy.rs` and `move_same.rs` each spell the probe
   `matches!(volume.is_directory(source).await, Ok(true))`, so an unanswerable stat means the guard doesn't fire. That's
   the safe direction here: the guard refuses a runaway (§ "Dest-inside-source guard on the same volume"), it deletes
@@ -977,49 +977,37 @@ for a dropped task, `cleanup.rs::clean_abandoned_staged_writes`) removes the tem
 may be gone, so the temp is recorded as a landing and rescued to a ` (recovered)` name instead (below). The shared rules
 of that cleared-way landing: `../DETAILS.md` § "File writes are staged".
 
-- **Why `rename(force=true)` only where it's one step:** a backend that declares `supports_atomic_replace_rename` (local
-  disks, SMB's `ReplaceIfExists`) swaps the file in under the name in one call, so the name never goes empty and the
-  landing takes it. Everywhere else force isn't safe: MTP's `rename(force=true)` does NOT delete an existing
-  destination, it can create a duplicate, so the landing deletes `orig` first and renames into the now-absent slot.
-  There is a tiny window between that delete and the rename where neither name resolves, but the complete new data lives
-  in the temp throughout, recorded as a landing before the delete goes out, so a crash there leaves a temp the next
-  sweep lands rather than data loss. If the `delete(orig)` is refused with the original still there, the landing takes
-  its spare temp away and reports the refusal typed, with no rescue: nothing was lost. The shapes and their outage
-  settle: `../DETAILS.md` § "File writes are staged".
+- **Why `rename(force=true)` only where it's one step:** only a backend that declares `supports_atomic_replace_rename`
+  (local disks, SMB's `ReplaceIfExists`) replaces the file in one call; MTP's `rename(force=true)` does NOT delete an
+  existing destination and can create a duplicate, so everywhere else the landing deletes `orig` first. The two shapes,
+  the landing record, and the refused delete: `../DETAILS.md` § "File writes are staged".
 - **Threading:** `resolve_volume_conflict` / `apply_volume_conflict_resolution` return `Option<ResolvedConflict>`. The
   write sites derive the staging from `replaces` (`staging_for`), so the swap happens inside `copy_single_path` (or the
   extract's write), and a site records the landed name, which IS the original, in `copied_paths` / the milestone / the
   journal. The cross-volume move's source sweep runs only after `copy_single_path` returned `Ok`, so a move never
   deletes the source unless the dest is fully in place. A destination that publishes every write whole takes the
   Overwrite in place instead (`Replaces::InPlace`, § "Whole-publish destinations").
-- **The post-write temp is committed data, NOT a cleanable partial, and it does not STAY a temp.** If the rename fails
-  after the delete succeeded (a disconnect at that instant), the temp holds the ONLY complete copy of the new data and
-  the original is gone. So the landing immediately renames it out of temp space, to `<name> (recovered)<.ext>`
-  (continuing the house ` (N)` series if that name is taken), and returns a `FinalizeFailure` naming where the bytes
-  are. ❗ **Getting it out of `.cmdr-tmp-*` space is a data-safety act, not tidiness**:
-  `cleanup.rs::reap_stale_transfer_temps` matches on the `.cmdr-tmp-` marker plus an age and runs at the start of every
-  copy and every volume move into that directory, sparing only what the in-flight ledger records. Only `AlreadyExists`
-  earns another candidate: the rename has already failed once, so a dead link would fail identically under eight names
-  and only add eight timeouts. When no rename lands at all, the bytes stay under the temp name, still recorded as a
-  landing, and the failure reports THAT path. ❗ No driver-side partial list ever names the temp or the original
-  (`failed_write_leaves_ours_at` answers `false` for `StageOverOriginal`), so the partial-cleanup contract ("delete
-  partials on error") can't reach either: a concurrent task DROPPED between `delete(orig)` and the rename (the driver
-  breaking on a sibling's failure) leaves its temp on disk, recorded as a landing, for the sweep that finishes the
-  landing. Pinned by `swap_landing_tests.rs` (the rescue, the reap that can no longer reach it, the taken-name series,
-  both give-up shapes, and the three delete answers),
+- **The post-write temp is committed data, NOT a cleanable partial, and it does not STAY a temp.** A rename refused
+  after the delete went through leaves the temp as the ONLY copy, so the landing rescues it to
+  `<name> (recovered)<.ext>` (the rule: `../DETAILS.md` § "File writes are staged"). ❗ **Getting it out of
+  `.cmdr-tmp-*` space is a data-safety act, not tidiness**: `cleanup.rs::reap_stale_transfer_temps` matches on the
+  `.cmdr-tmp-` marker plus an age and runs at the start of every copy and every volume move into that directory, sparing
+  only what the in-flight ledger records. Only `AlreadyExists` earns another candidate: the rename has already failed
+  once, so a dead link would fail identically under eight names and only add eight timeouts. When no rename lands at
+  all, the bytes stay under the temp name, still recorded as a landing, and the failure reports THAT path. ❗ No
+  driver-side partial list ever names the temp or the original (`failed_write_leaves_ours_at` answers `false` for
+  `StageOverOriginal`), so the partial-cleanup contract ("delete partials on error") can't reach either: a concurrent
+  task DROPPED between `delete(orig)` and the rename (the driver breaking on a sibling's failure) leaves its temp on
+  disk, recorded as a landing, for the sweep that finishes the landing. Pinned by `swap_landing_tests.rs` (the rescue,
+  the reap that can no longer reach it, the taken-name series, both give-up shapes, and the three delete answers),
   `copy_crashsafe_tests.rs::{cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure, cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failure}`,
   and `move_failure_tests.rs::cross_volume_move_preserves_new_data_on_finalize_failure`; all five landing sites answer
   the same four outcomes (lands, write fails, delete refused, rename refused after the delete), and when each stops
   being rollbackable, in `safe_replace_grid_tests.rs`, whose
   `a_concurrent_task_dropped_mid_swap_keeps_its_temp_for_the_sweep_to_land` pins the dropped task.
-- **A swap rides out an outage, and settles before it acts.** A transport fault on `delete(orig)` or on the rename after
-  it cuts the landing off: no refused-delete stat, no discard, no rescue on whatever session answers next. Once the
-  share is back, the swap is settled from what the destination shows: a whole temp lands without the file streaming
-  again (the rename alone once `orig` is gone, ❌ never another delete), and a gone temp counts as landed only when
-  `orig` holds exactly the source's bytes. A wait that ends without the share keeps the new bytes recorded as a landing
-  for the next sweep that reaches it. All five sites get it: `stream_pipe_file`'s runner for four (and the server-side
-  copy's landing), `sequential_extract.rs::land_member` for the extract, which can't stream a member again. The rules
-  and their proofs: `../DETAILS.md` § "A landing the drop cut off". Pinned at every site by `swap_outage_tests.rs`.
+- **A swap rides out an outage** at all five sites: `stream_pipe_file`'s runner for four plus the server-side copy's
+  landing, and `sequential_extract.rs::land_member` for the extract (which can't stream a member again). The settle and
+  its proofs: `../DETAILS.md` § "A landing the drop cut off". Pinned at every site by `swap_outage_tests.rs`.
 - **A cross-type Overwrite renames the destination ASIDE and holds it until the operation ends.** A type swap can't
   stage the new side the way file→file does: a folder replacing a file appears the moment its walk starts and fills in
   leaf by leaf over the rest of the operation, and any leaf can fail or be cancelled. Deleting the destination first
@@ -1793,21 +1781,13 @@ it yet.
 
 ## A volume that goes away mid-transfer
 
-The engine waits for a share that dropped off the network rather than failing on it, through `../volume_outage.rs`
-(`../DETAILS.md` § "Waiting out a volume that went away" owns the why and the guarantees). Where this directory asks:
-
-- **`stream_pipe.rs::stream_pipe_file`**: the source open, the write, and any landing step the transport cut off (a
-  swap's included), all through the runner's one fault decision (`FileRun::on_fault`). After the wait, a cut-off landing
-  is settled first and a whole temp lands without streaming again; otherwise the file runs again from its first byte
-  with a fresh set of attempts, its failed attempt's temp cleared once the share can hear the delete.
-- **`merge.rs`'s level prepare** (the create, the destination listing, the source listing), **every driver's top-level
-  destination probe** (`landing.rs::name_at_destination` for the serial drivers,
-  `copy_concurrent_source.rs::existing_dest_entry` for the window), and **the conflict resolver's destination probe**
-  (`conflict.rs::resolve_dest_is_directory`), each through `through_outages`, since each is safe to run twice.
-- **The start gate**, `preflight.rs::wait_for_gone_volumes`, first thing in `copy.rs`, `move_cross.rs`, and
-  `move_same.rs`: a transfer that begins with its volume already gone waits before its first step.
-
-Pinned end to end by `copy_outage_tests.rs`, over `../outage_volume_test_support.rs`'s `OutageVolume`.
+The engine waits for a share that dropped rather than failing on it (`../volume_outage.rs`). Every call site, and why
+only there: `../DETAILS.md` § "Waiting out a volume that went away", its "Where it's asked" list. The per-site detail
+lives with each site here: the swap's settle and the rename aside (the safe-replace and cross-type Overwrite bullets),
+the source sweep ("Cross-volume move source-delete" right after them), and folder dates (§ "Copies keep the source's
+metadata"). Pinned end to end by `copy_outage_tests.rs`, `move_outage_tests.rs`, `swap_outage_tests.rs`,
+`displaced_destination_tests.rs`, and `folder_metadata_tests.rs`, over `../outage_volume_test_support.rs`'s
+`OutageVolume`.
 
 ## Pause in the volume walks
 
@@ -1840,13 +1820,12 @@ The serial drivers (`drive_transfer_serial_{sync,async}`) ask `stop_or_park_{syn
 so local copy/move, the cross-volume _serial_ path, and delete all honor pause between files; the cross-volume serial
 path additionally parks between chunks (see above).
 
-**The concurrent copy path is deliberately NOT gated for mid-batch pause.** `copy_volumes_with_progress`'s concurrent
-path (several files in flight at once) has no single "between files" boundary to park at, so it does **not** honor
-mid-batch pause: its per-chunk progress callback (`LeafProgress::on_chunk`) stays **cancel-only** (it breaks on
-`is_cancelled`, ignores `paused`). A pause on a concurrent-path op takes effect once the in-flight batch drains to the
-next admission point. (Threading the `CheckpointStream` checkpoint into the concurrent path too is possible — each
-in-flight file already streams through `stream_pipe_file` — but isn't wired yet; the admission-point framing is the
-current contract.) Pinned by `transfer_driver::tests::concurrent_per_file_callback_is_cancel_only_not_pause_aware`.
+**The concurrent copy path parks between chunks, not between files.** Its window has no single between-files boundary,
+and its per-file `on_progress` callback stays stop-only (`LeafProgress::on_chunk` breaks on `work_stopped`, ignores
+`paused`). Each in-flight file streams through `stream_pipe_file`, so it parks at its next chunk via `CheckpointStream`,
+and the spawn loop starts nothing new while every in-flight file is parked. The contract: `../../../DETAILS.md` § "Pause
+/ resume". Pinned by `transfer_driver::concurrent_tests::concurrent_per_file_callback_is_cancel_only_not_pause_aware`
+and `copy_failure_drain_tests.rs::a_failure_while_paused_wakes_the_parked_siblings_to_stop`.
 
 ## Overwrite isn't reversible
 

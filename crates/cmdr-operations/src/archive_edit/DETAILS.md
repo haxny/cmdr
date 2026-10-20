@@ -309,15 +309,16 @@ reaped, fresh spared, other-archive ignored, delete-failure doesn't fail the edi
   the destination, then abandons the stage and makes the archive again into a fresh one; the spool route makes the spool
   again after a source drop, and uploads the same spool again after a destination drop, ❌ without making the archive
   again. A validation read the share dropped is checked again the same way (`validate_stage` hands back the volume's own
-  error). ❗ Every publish mode classifies before acting: a publish rename the transport cut off may have been
-  performed, so it's settled once the share is back (`CutOffLanding` for a new archive, `CutOffPublish` in
-  `../transfer/staged_write_publish.rs` for both replace modes): a whole temp publishes without making the archive
-  again, a temp gone with the archive at the size written is published, and anything else puts the original back and
-  runs again. Deleting the temp on any rename error had reported a failure for an archive the server had published. A
-  wait that ends without the share says "Lost the connection to {server}" (`ServerConnectionLost`), unless an original
-  set aside couldn't go back (`OriginalsKeptAside` outranks). The displaced publish's own rename aside waits and settles
-  too (`../transfer/volume/displaced_destination.rs::displace_destination`). Pinned by `fresh_compress_outage_tests.rs`.
-  Not covered: the planning walk (like a copy's pre-flight scan, its own failure path).
+  error). ❗ Every publish mode classifies before acting (the loop: `fresh_publish.rs`): a publish rename the transport
+  cut off may have been performed, so it's settled once the share is back (`CutOffLanding` for a new archive,
+  `CutOffPublish` in `../transfer/staged_write_publish.rs` for both replace modes): a whole temp publishes without
+  making the archive again, a temp gone with the archive at the size written is published, and anything else puts the
+  original back and runs again. Deleting the temp on any rename error had reported a failure for an archive the server
+  had published. A wait that ends without the share says "Lost the connection to {server}" (`ServerConnectionLost`),
+  unless an original set aside couldn't go back (`OriginalsKeptAside` outranks). The displaced publish's own rename
+  aside waits and settles too (`../transfer/volume/displaced_destination.rs::displace_destination`). Pinned by
+  `fresh_compress_outage_tests.rs`. Not covered: the planning walk (like a copy's pre-flight scan, its own failure
+  path).
 
   Progress has two unrelated byte axes. `Compressing` counts uncompressed source bytes/entries. The last source tick
   becomes indeterminate `FinishingCompression` before ZIP close, count reconciliation, validation, and local

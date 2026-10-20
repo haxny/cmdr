@@ -11,8 +11,9 @@ are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cm
   resolution.
 - Per-shape routes: `copy_into.rs` (transfer routing, plus the remote-source pull), `move_out.rs`, and `compress.rs`.
   Fresh creation uses `fresh_plan.rs` (sources/identity), `fresh_compress.rs` (managed driver), `fresh_zip.rs` (bounded
-  producer), `fresh_pipeline.rs` (its run and join), `fresh_rows.rs` (its transfer-tree rows), and `fresh_validate.rs`
-  (pre-publish checks). Create and rename routes: with their instant ops, `../create.rs` and `../rename.rs`.
+  producer), `fresh_pipeline.rs` (run, join), `fresh_publish.rs` (publish, settle), `fresh_rows.rs` (its transfer-tree
+  rows), and `fresh_validate.rs` (pre-publish checks). Create and rename routes: with their instant ops, `../create.rs`
+  and `../rename.rs`.
 
 ## Must-knows
 
@@ -20,8 +21,8 @@ are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cm
   marks that drive busy. A `create` / `rename` returns an operation id, ❌ not a path.
 - **Every existing-archive apply site runs through `engine::run_managed_edit`**, ❌ never a bare
   `spawn_blocking(mutator::apply(...))`. Fresh compression never enters the mutator.
-- **❌ No in-place remote edit.** A remote parent (direct SMB / MTP) goes pull → apply locally → upload to a temp name →
-  swap, and the remote ORIGINAL keeps its bytes until that final swap, a staged write's swap landing
+- **❌ No in-place remote edit.** A remote parent goes pull → apply locally → upload to a temp name → swap, and the
+  remote ORIGINAL keeps its bytes until that final swap, a staged write's swap landing
   (`StagedWrite::begin_over_original`), ❌ never its own delete/rename. Keep the order and every early exit's cleanup.
   DETAILS § "Remote edit: the data-safety contract".
 - **A dropped share is WAITED for** at every remote step, compress too; a cut-off landing or publish SETTLES first.

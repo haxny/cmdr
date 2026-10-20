@@ -391,9 +391,12 @@ two dev CLIs and the vendored fork are ordinary members.
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
   reason mapping, provider detection over 18 providers), `InMemoryVolume`, File Provider domain detection (the index
   scanner's "is this a domain root?" and the sync badge's "is any ancestor one?"), thread QoS, process-memory readers,
-  poison-free locking, and `ChildName`, the proof that a name a backend listed is one plain path component, which every
-  cross-volume join takes (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Listed names are untrusted"). The
-  app re-exports all of it from the original paths. See `crates/cmdr-fs/CLAUDE.md`
+  poison-free locking, `ChildName`, the proof that a name a backend listed is one plain path component, which every
+  cross-volume join takes (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Listed names are untrusted"), and
+  the connection-loss vocabulary (`VolumeError::transport_fault`, `Volume::connection_generation`, `ConnectionCell`,
+  `ConnectionReporter`, and `http_session`, the HTTP backends' shared lifecycle; `crates/cmdr-fs/DETAILS.md` § "Three
+  questions a remote volume gets asked"). The app re-exports all of it from the original paths. See
+  `crates/cmdr-fs/CLAUDE.md`
   - `src/volume/host/`: the seams a storage backend reaches its host through — pane listings, the runtime handle, typed
     connection events, credentials, index notification, settings, user activity, analytics. What a backend crate is
     written against; the app answers them from `apps/desktop/src-tauri/src/volume_host.rs`. See
@@ -433,12 +436,19 @@ two dev CLIs and the vendored fork are ordinary members.
   - `src/host/`: the seams the host answers (volumes, engine-wide facts, own writes, the drive index, pacing, name
     order) and the runtime every op spawns on. See `crates/cmdr-operations/src/host/CLAUDE.md`
   - `src/transfer/`: copy + move pipelines: conflict resolution, the transfer driver, platform copies (`copyfile(3)` /
-    `copy_file_range(2)` / chunked); `src/transfer/volume/` is the cross-volume (Local ↔ MTP ↔ SMB ↔ archive) engine
-    behind a facade module
+    `copy_file_range(2)` / chunked); `src/transfer/volume/` is the cross-volume engine (across every volume backend)
+    behind a facade module; `volume_outage.rs` waits out a server that dropped (§ "Waiting out a volume that went away"
+    in `crates/cmdr-operations/src/transfer/DETAILS.md`), `staged_write*.rs` stages every cross-volume write and lands
+    it, settling a landing an outage cut off (§ "File writes are staged", § "A landing the drop cut off"), and
+    `leftover_cleanup.rs` finishes a stopped transfer's cleanup in the background
+  - `src/in_flight_*.rs`: the persisted leftover ledger (temps, landings, asides, staging folders) and its sweep at
+    launch and on a volume's arrival or reconnect. See `crates/cmdr-operations/DETAILS.md` § "What the sweep does with
+    each kind"
   - `src/metadata_losses.rs`: the loss note, per-class counters of what a destination couldn't keep, read off each
     backend's `MetadataCaps`. The metadata contract every copy path holds:
     `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata"
-  - `src/delete/`: delete walker, trash, oracle-aware delete semantics
+  - `src/delete/`: delete walkers (local, volume, and the volume walker's outage wait), trash, oracle-aware delete
+    semantics
 - `crates/cmdr-http/`: the one door every HTTP client is built through (`client_builder()`), and the proxy routing
   behind it: loopback and link-local always direct, then the `*_PROXY` variables, then macOS's own verdict per URL
   (manual proxy, bypass list, PAC, WPAD). The app, `cmdr-webdav`, and `cmdr-s3` all build on it, and `clippy.toml`

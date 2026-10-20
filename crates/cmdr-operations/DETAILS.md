@@ -1669,14 +1669,15 @@ mid-`Copying`).
   flag and opens the operation's human-wait clock; `resume()` clears the flag, closes the clock, and wakes both waiters;
   `wake()` wakes both WITHOUT clearing the flag (the cancel path uses it) but DOES close the clock — the operation is
   winding down, so nobody is being waited on any more, and a clock left open would make the rollback that follows
-  measure no rate at all. `wait_while_paused_sync(&intent)` / `wait_while_paused_async(&intent).await` park while
-  `paused && !cancelled` and return immediately on cancel; ordinary loops reach them through `stop_or_park_*` below
-  rather than calling them directly.
+  measure no rate at all. `wait_while_paused_sync(&intent)` parks while `paused && !cancelled`; the
+  `*_until(&should_stop)` pair (sync and async) parks while paused and the caller's predicate is false. Ordinary loops
+  reach them through `stop_or_park_*` below (which stop on `work_stopped`, so a failure drain stops them too), and a
+  mid-file checkpoint through `park_while_paused`.
 - **One question per boundary: `WriteOperationState::stop_or_park_sync()` / `stop_or_park_async()`.** `true` means stop,
   `false` means carry on with the next item. It owns the whole contract, so no loop can spell it wrong: cancel is read
   FIRST (a stopping op never parks, and nothing destructive runs between the two reads), only a live op parks, and the
   intent is re-read after the wake, so a cancel landing WHILE parked is answered at that same boundary instead of one
-  item later. A caller whose reading of "stop" ISN'T `is_cancelled` — a reversal running under `RollingBack`
+  item later. A caller whose reading of "stop" ISN'T `work_stopped` — a reversal running under `RollingBack`
   (`WindDown`), the history reversal (`rollback.rs`), a detached scan preview watching its own flag — drives
   `PauseGate`'s `*_until` helpers instead and names its own predicate.
 - **Gate placement: exactly where the loop already observes cancel, and only there** ([The park](#the-park) has the
@@ -1717,13 +1718,12 @@ mid-`Copying`).
   The fold is `impl FromIterator<PauseOutcome> for PauseAllOutcome`, which is what makes it testable without touching
   the process-global manager (`manager::tests::a_sweep_counts_every_outcome_it_collected`); ❌ never drive a real
   `pause_all()` from a test, it would park a sibling test's operation.
-- **Concurrent copy path.** `copy_volumes_with_progress`'s concurrent path has no single between-files boundary, and its
-  per-file `on_progress` callback stays cancel-only (pinned by
-  `transfer_driver::tests::concurrent_per_file_callback_is_cancel_only_not_pause_aware`). But its in-flight files stream
-  through the shared `stream_pipe_file`, so each parks between chunks via `CheckpointStream` when paused; the admission
-  loop adds no new files while everyone is parked, so the batch effectively halts. Serial paths (local copy/move,
-  cross-volume serial, delete) honor pause between files; the cross-volume paths additionally park between chunks. See
-  `src/transfer/volume/DETAILS.md` § "Pause and the concurrent copy path".
+- **Concurrent copy path.** `copy_volumes_with_progress`'s concurrent path has no single between-files boundary, and its per-file `on_progress` callback stays cancel-only (pinned by
+  `transfer_driver::concurrent_tests::concurrent_per_file_callback_is_cancel_only_not_pause_aware`). But its in-flight
+  files stream through the shared `stream_pipe_file`, so each parks between chunks via `CheckpointStream` when paused;
+  the admission loop adds no new files while everyone is parked, so the batch effectively halts. Serial paths (local
+  copy/move, cross-volume serial, delete) honor pause between files; the cross-volume paths additionally park between
+  chunks. See `src/transfer/volume/DETAILS.md` § "Pause and the concurrent copy path".
 - **Accepted resource asymmetry** (principle 5): `wait_while_paused_sync` parks the op's `spawn_blocking` pool thread
   for the whole pause — the same thing the deferred-start design avoids for _queued_ ops. A paused Running op
   legitimately holds its lane and is rarer than queued ops, so v1 accepts this; many simultaneously-paused local ops
@@ -1764,9 +1764,9 @@ transfer/delete ops.
   mid-`op.await`**; the async volume path can also panic. Either exit MUST still free the record AND unregister the busy
   status — else the eject guard sticks ON forever (the volume can never be ejected again) and a phantom `Running` row
   lingers. An `InstantTaskGuard` held across the `op.await` guarantees this: its `Drop` calls `free_and_remove` (record
-  removal + `StatusCache::unregister` → `recompute_and_emit_busy_volumes`) and re-emits `operations-changed`. The happy
-  path calls `free_and_remove` + `emit_changed` explicitly, then `guard.disarm()`s so the Drop is a no-op. No admission
-  pass on completion (instant ops reserve no lanes, so nothing waits on them). Pinned by
+  removal + `StatusCache::unregister` → `recompute_and_report_busy_volumes`) and re-emits `operations-changed`. The
+  happy path calls `free_and_remove` + `emit_changed` explicitly, then `guard.disarm()`s so the Drop is a no-op. No
+  admission pass on completion (instant ops reserve no lanes, so nothing waits on them). Pinned by
   `manager::tests::run_instant_releases_busy_and_record_when_{dropped_midflight,op_panics}`.
 - **No `WriteOperationState`.** Instant ops have no intent/pause/conflict oneshot, so `run_instant` inserts none.
   Consequence: `cancel_operation` on an instant op is a safe no-op — `cancel_if_queued` is false for a Running op, then
@@ -2091,8 +2091,8 @@ directory's own size and mtime move with every child write, so binding a propose
 yesterday's directory mtime would refuse it after any build — while `(device, inode)` plus "still a directory" is a real
 identity worth holding it to. Two variants also make the two reasons a field could be empty impossible to confuse: "it's
 a folder, so there are no bytes" and "the backend didn't report a size" are different facts, and an `Option<u64>` doing
-both jobs is the same anti-pattern as `PerSource`'s empty `Vec` (§ "Key patterns", the `scan_sources_internal`
-decision). A directory that became a file mismatches on the variant alone.
+both jobs is the same anti-pattern as `per_path`'s empty `Vec` (§ "Key patterns", the `scan_sources_internal` decision).
+A directory that became a file mismatches on the variant alone.
 
 **Decision: the EXPECTATION picks the namespace a source is checked in, not the call site.** **Why**: one entry point
 can take two routes. `copy_between_volumes` hands a both-local transfer to `copy_files_start` and everything else to the
@@ -2104,10 +2104,10 @@ expectation is settleable anywhere, while a `Remote` one needs the backend that 
 drops it rather than guessing.
 
 **The pre-flight runs INSIDE the operation's own task, not at approval.** `retain_bound_sources` (local, sync),
-`retain_bound_sources_remote` (Volume-backed, async), and `retain_bound_sources_with_sizes` (trash, whose `item_sizes`
-is positional against the sources and has to be filtered in lockstep) sit at the top of the four starters' handlers,
-after admission. The whole point of a fingerprint is to close the window between checking and acting; checking at
-approval and acting an hour later would reopen it as wide as it goes.
+`retain_bound_sources_on` (Volume-backed, async), and `retain_bound_sources_with_sizes` (trash, whose `item_sizes` is
+positional against the sources and has to be filtered in lockstep) sit at the top of the four starters' handlers, after
+admission. The whole point of a fingerprint is to close the window between checking and acting; checking at approval and
+acting an hour later would reopen it as wide as it goes.
 
 - **Binding is all-or-nothing.** A source the binding doesn't name is dropped, not waved through: a caller that supplies
   a partial map has a bug, and guessing "probably fine" means acting on a file nobody reviewed. A caller that wants no
@@ -2317,8 +2317,8 @@ indexing, and the panic-safe unregister paths below cover both signals. Don't ad
   (a download from a phone is as corruptible as an upload to it). The manager's `on_settled` / `ManagedTaskGuard` Drop
   unregisters on every exit (including panic), so a finished or panicking op can't leave a volume stuck busy.
 - The busy set is the union of every Running op's `volume_ids` **∪ external registrations**, minus `root` (never
-  ejectable). `recompute_and_emit_busy_volumes` fires `volumes-busy-changed` only when membership changes — progress
-  ticks don't churn it (the cache's last-reported set; pinned through a `cfg(test)` emit counter by
+  ejectable). `status_cache.rs::recompute_and_report_busy_volumes` reports `volumes-busy-changed` only when membership
+  changes — progress ticks don't churn it (the cache's last-reported set; pinned through a `cfg(test)` emit counter by
   `status_cache_tests::volumes_busy_changed_fires_once_per_distinct_change`, on an engine of its own). Every
   transfer-gauge start has exactly one finish on success, cancel, error, a panicking handler, and the panic net
   (`status_cache_tests::every_transfer_start_has_exactly_one_finish_however_the_op_ends`). Membership-by-union means two
@@ -2449,9 +2449,9 @@ never an `AppHandle`. Each command builds `Arc::new(TauriEventSink::new(app))` o
 no Tauri sink at all. This lets the full pipeline (multi-file copy, cancellation, conflict resolution, progress, the
 managed spawn path, and settle) run end-to-end under a `CollectorEventSink` with no Tauri runtime — see
 `tests.rs::injected_sink_receives_complete_and_settled_for_local_copy` and the trash unit tests
-(`delete/trash.rs::tests::trash_*_via_sink`). `state.emit_progress_via_sink` is the only progress-emit method —
-`emit_progress_via_app` is gone. The write-error safety-net arms in each deferred also route through
-`sink.emit_error(...)` rather than a string-named `app.emit("write-error", ...)`.
+(`delete/trash.rs::tests::trash_*_via_sink`). `state.emit_progress_via_sink` is the only progress-emit method. The
+write-error safety-net arms in each deferred also route through `sink.emit_error(...)` rather than a string-named
+`app.emit("write-error", ...)`.
 
 **Decision**: Scan preview reuses watched listings (the "fresh-listing oracle"). **Why**: Pre-flight scans for copy/move
 on MTP (and to a lesser degree SMB and big local trees) used to duplicate work the backend already had in the listing
@@ -2615,7 +2615,7 @@ mutation-testing gaps that have since been pinned. New transitions or new cancel
 
 1. **Drive the state machine through the public interface in tests.** A direct `state.intent().set_for_test(...)`
    bypasses the validation guard and effectively dead-tests it. Pattern to copy:
-   `state.rs::tests::test_cancel_via_public_path`.
+   `state_tests.rs::cancel_write_operation_flips_backend_cancel_to_stopped`.
 2. **Cover both the happy path and the cancel-during-X race** for any new write-side operation. The Cancel-copy bug was
    specifically the `Ok(())` arm of the loop not re-checking intent.
 3. **Add at least one E2E test** for user-visible flows (transfer dialogs, conflict policies); use `dispatchMenuCommand`
@@ -2728,9 +2728,10 @@ defensive rather than reachable. Pinned by `a_skipped_row_is_logged_but_never_of
 ## What the sweep does with each kind
 
 The persisted ledger records four shapes of thing, and exactly one of them is disposable. The rules run from two places
-— the engine's ledger claim at launch, and the volume registry's arrival announcement — on the claiming engine's host,
-and ❗ they must stay ONE set: a leftover on a USB stick meets whichever happens first, so rules that drifted apart
-would make its fate depend on whether the drive was plugged in at launch.
+— the engine's ledger claim at launch, and the volume registry's arrival announcement (a registration, or a registered
+volume reconnecting in place) — on the claiming engine's host, and ❗ they must stay ONE set: a leftover on a USB stick
+meets whichever happens first, so rules that drifted apart would make its fate depend on whether the drive was plugged
+in at launch.
 
 - **A temp** (`.cmdr-tmp-*`) holds bytes on their way in. Nothing else has them, so a leftover is garbage and goes. A
   local one that refuses its `unlink` is cleared (`uchg`, ACL) and retried once (`Surface::remove_temp`): an APFS clone
@@ -2793,7 +2794,8 @@ into a cycle `module-cycles` reports.
 **Why the kinded records got their own op bytes** (`A`/`a`) rather than widening the `+` line: a build without them
 skips an op byte it doesn't know and truncates the log at launch, so a rollback FORGETS these records. A widened `+`
 would have been read by that build as a temp, and a temp is the one kind it removes on sight — which is exactly the
-aside it must never touch. `is_one_of_ours` stopped accepting `.cmdr-temp-` for a plain removal for the same reason.
+aside it must never touch. `in_flight_sweep.rs::name_matches_kind` holds each kind to its own name shape, so a `Temp`
+record never matches a `.cmdr-temp-` aside, for the same reason.
 
 **The notice.** A kept staging folder raises `leftovers-kept` (drive name + `KeptLeftover::StagingFolder`) as an
 engine-wide fact (`EngineEvents::leftovers_kept`); the sweep belongs to no operation and has no event sink. A

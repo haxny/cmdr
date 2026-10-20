@@ -1,6 +1,6 @@
 # Cross-volume transfer (copy + move)
 
-Copy and move across backends (Local, MTP, SMB, archive). File map: `DETAILS.md` § Files. Shared: `../CLAUDE.md`.
+Copy and move across every volume backend. File map: `DETAILS.md` § Files. Shared: `../CLAUDE.md`.
 
 - **A facade: outside code reaches it only as `transfer::volume::<item>`**; a new caller re-exports from `mod.rs`, ❌
   never widens a submodule.

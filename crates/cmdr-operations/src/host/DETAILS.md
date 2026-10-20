@@ -86,14 +86,14 @@ inside it names the app's accessor.
   pane; this is the backend's line for Ask Cmdr, MCP, and any later caller. `FakeVolumes::route` lets a test serve a
   prefix through a route (`routed_writes_tests.rs`).
 - **Engine-wide facts go through `EngineEvents`**: operations changed, busy volumes changed, a transfer started /
-  finished on volumes (indexing priority), staging leftovers kept, an instant mutation settled (analytics, as an
-  `InstantMutationFact` of categories only), an error report, and the scan bridge's scanning-phase `write-progress` (one
-  op's event, but the preview's worker that produces it holds no op's sink). Per-op events stay on `OperationEventSink`.
-  Every method is required and returns at once, and is called with no engine lock held, with one exception: the busy set
-  reports under its dedupe lock, so a stale set can never land last (`host/events.rs`). (The per-op sink has the one
-  other: a transfer's progress emits under its ledger's `sent` lock, for the same reason;
-  `transfer/transfer_driver/progress.rs::LeafProgressLedger::emit`.) **Decision: one seam for every engine-wide fact**,
-  as `cmdr-index` routes its own through one `EventSink`. The instant-op analytics go here too, not through
+  finished on volumes (indexing priority), leftovers the sweep kept (a move's staging folder, or an unfinished landing
+  kept under a ` (recovered)` name), an instant mutation settled (analytics, as an `InstantMutationFact` of categories
+  only), an error report, and the scan bridge's scanning-phase `write-progress` (one op's event, but the preview's
+  worker that produces it holds no op's sink). Per-op events stay on `OperationEventSink`. Every method is required and
+  returns at once, and is called with no engine lock held, with one exception: the busy set reports under its dedupe
+  lock, so a stale set can never land last (`host/events.rs`). (The per-op sink has the one other: a transfer's progress
+  emits under its ledger's `sent` lock, for the same reason; `transfer/transfer_driver/progress.rs::LeafProgressLedger::emit`.)
+  **Decision: one seam for every engine-wide fact**, as `cmdr-index` routes its own through one `EventSink`. The instant-op analytics go here too, not through
   `VolumeHost::analytics()`: that seam's `&[(&str, &str)]` pairs are for backend counters, and the count bucket and
   property types are app policy.
 - **Error reports are typed facts** (`host/error_report.rs`): the engine never calls `log_error!` (the app's macro, at

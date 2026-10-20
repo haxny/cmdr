@@ -1,6 +1,7 @@
 # Delete + trash
 
-A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, SMB, oracle-aware), and OS-native trash.
+A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (every backend, oracle-aware), and OS-native
+trash.
 
 `../../CLAUDE.md` holds the shared `WriteOperationState`, `OperationIntent`, cancel, ETA, and settle contracts;
 `../transfer/CLAUDE.md` is the copy + move parallel. Frontend counterpart:
