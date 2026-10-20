@@ -52,6 +52,10 @@ Read this before adding, wiping, or reorganizing a spec.
   time, keep a greedy regex fallback, and ratchet log sites over by crate. Issue:
   [#491](https://github.com/vdavid/cmdr/issues/491).
 
+- `restic-volume-plan.md`: **Browsing a restic backup on macOS needs macFUSE or guessed restore paths.** A read-only
+  `ResticVolume` over any volume Cmdr reaches, routed like the git portal with a `Browse snapshots` overlay row, the
+  shared unlock dialog plus Keychain, and copy-out. Issue: [#422](https://github.com/vdavid/cmdr/issues/422).
+
 ## Wiping a shipped spec
 
 The wipe is a one-way door for the working tree, so it runs in this order, one spec at a time:
