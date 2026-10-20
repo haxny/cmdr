@@ -207,9 +207,9 @@ provider-egress question and `CLOUD_AI_CONSENT_VERSION` are unchanged by this ti
   `overwrite_smaller` | `overwrite_older`, optional `applyToAll`). Answers ONE name clash a running
   operation is parked on, the state a person reaches by leaving the transfer dialog on "Ask for each" and clicking Skip
   on one file. See § "Answering one clash" below for how it's reached, what it returns, and why the id is required.
-- Archives (1): `unlock_archive` (`archivePath` + `password`). Answers the encrypted-archive password
-  prompt, the other modal state a hand used to be the only way to drive. See § "Answering the archive password" below
-  for the discovery block, the two modes, and why it may store a password but never start the write.
+- Locked containers (1): `unlock` (`path` + `password`). Answers the password prompt of an encrypted archive or a
+  locked restic repo, the other modal state a hand used to be the only way to drive. See § "Answering the password
+  prompt" below for the discovery block, the two modes, and why it may hand over a password but never start the write.
 - Favorites (1): `favorites` (`action` = `add` | `rename` | `remove` | `reorder`; `path` (+ optional `name`) for add, `id` for rename/remove, `name` for rename, `orderedIds` (the COMPLETE new ordering) for reorder). A thin adapter over `commands::favorites` (`add_favorite` / `rename_favorite` / `remove_favorite` / `reorder_favorites`), which persist `favorites.json` and re-emit `volumes-changed` themselves, so the switcher refreshes live — no FE dispatch, no invented ack (the `indexing` precedent). `add` maps the gate's two refusals to `invalid_params` with words naming the rule: `NotAPlace` (favorites point at folders on disks, shares, servers, and phones) and `PlaceNotConnected` (connect first; the gate only favorites a folder it has seen live). `reorder` is a pass-through of the full ordering (a `(id, position)` shape would force the MCP layer to re-implement splicing). Discover ids in `cmdr://state` `favorites:`.
 - Eject (1): `eject` (`volumeId`). A thin adapter over `file_system::volume::eject::eject` — parity with the one-click Eject button, and it detaches every kind that button does: a disk or disk image ejects, an SMB share unmounts, a phone disconnects, and an SFTP or WebDAV connection closes while the server stays SAVED (forgetting it is `remove_manual_server`, a different act). Named `eject` although the frontend says "detach" internally: it's a shipped tool name, and renaming it would break scripts. The backend refuses honestly (surfaced as errors, not false OKs) while a write op reads from or writes to the volume (`EjectError::Busy`) and for a volume that can't be detached at all. A call for a volume whose eject is still running (from the UI or another call) joins it and answers with that eject's result, never a second teardown.
   - **Both answers are typed.** Success returns `{ "outcome": <EjectOutcome>, "volumeId", "message" }`, so an agent learns WHICH teardown ran (`deviceDisconnected`, `remoteDisconnected`, `unmounted`, `diskEjected`, `alreadyGone`) rather than parsing a sentence. Every refusal sets `data.outcome` to that `EjectError` variant's own serde tag, plus `holders` on `unmountRefused`, `provider` on `deviceDisconnectRefused`, and `step` on `notResponding`. The tool's tags and the wire type are pinned to each other by `executor/eject_test.rs`, not by discipline.
@@ -240,7 +240,7 @@ The loop, all MCP: `copy` → `dialog confirm transfer-confirmation` with **`onC
 
 ❌ Never branch on the message; branch on `outcome` / `data.outcome`. `stop` is rejected as a resolution (it's the policy that raises the question). Gate `Always`: this answers, with no dialog, a question that was put to the user, and `overwrite` destroys a file — the same bypass the token guards for `dialog confirm`. Proven end to end by `apps/desktop/test/e2e-playwright/mcp-conflicts.spec.ts`, which drives a Stop-mode clash entirely through MCP, answers one file, and shows the second clash surviving the first one's answer.
 
-#### Answering the archive password (`unlock_archive`)
+#### Answering the password prompt (`unlock`)
 
 **The other state only a hand could drive.** An encrypted archive raises a password prompt, and until this tool the
 prompt was IPC-only: `cmdr://state` showed a bare `- type: archive-password` with no archive named and no way to answer,
@@ -250,19 +250,27 @@ back.
 
 **Discovery is the `dialogs:` entry** (`resources/mod.rs::format_archive_password_dialog`), fed by a mirror the frontend
 pushes as it raises the prompt (`mcp/archive_password.rs`, `ArchivePasswordPromptStore`; cleared on dismissal and on
-`register_known_dialogs`, since a webview reload never fires the dismiss half). It carries `archive`, `archivePath` (the
-string an answer must echo back), `mode`, `wrongAttempt`, `answerWith`, and for a transfer the `settledOperationId`.
-`wrongAttempt` is what makes the loop closeable from outside: storing a password proves nothing about it, so the
-observable that a stored one was just REJECTED is the whole feedback signal.
+`register_known_dialogs`, since a webview reload never fires the dismiss half). It carries `container` (`archive` |
+`resticRepo`, supplied by the frontend), `name`, `path` (the string an answer must echo back), `mode`, `wrongAttempt`,
+`answerWith`, and for a transfer the `settledOperationId`. `wrongAttempt` is what makes the loop closeable from outside
+for an archive: storing a password proves nothing about it, so the observable that a stored one was just REJECTED is the
+whole feedback signal.
+
+**The container's own answer decides the reply.** The tool goes through the same unlock seam as the dialog
+(`commands::file_system::unlock_within` → `Volume::as_password_locked`), whose typed `UnlockOutcome` it reports: an
+archive answers `stored` (unchecked, `verified: false`), a repo checks first and answers `unlocked` (`verified: true`)
+or `wrongPassword`, which the tool returns as `outcome: "wrong_password"` with nothing kept and the prompt left up (no
+event, no ack). A container it couldn't ask is a typed refusal (`not_locked`, `timed_out`, `unreachable`). An agent's
+unlock always passes `remember: false`: saving to the Keychain is the person's call.
 
 **The two modes are genuinely different events, and the reply says which.**
 
 - `browse` → `outcome: "retrying_listing"`. Re-listing is a READ, so unlocking completes it exactly as it does for a
-  person: the pane lists the archive, or the prompt comes back with `wrongAttempt: true`.
-- `transfer` → `outcome: "password_stored"`. The password is stored and **nothing is running**. Extracting means
+  person: the pane lists the contents, or (for an archive) the prompt comes back with `wrongAttempt: true`.
+- `transfer` → `outcome: "password_stored"`. The password is held and **nothing is running**. Extracting means
   running `copy` / `move` again.
 
-**❌ `unlock_archive` must never start a write. This is the whole design constraint.** A person's submit re-dispatches
+**❌ `unlock` must never start a write. This is the whole design constraint.** A person's submit re-dispatches
 the parked copy for them; the agent path settles it instead (`archive-password-flow.svelte.ts::supplyStoredPassword` →
 `settleBirthOperation`, ❌ never `redispatchBirthOperation`). Two reasons it isn't merely conservative: that re-dispatch
 is a genuinely NEW operation — the backend already settled the old one, because `retain_failure` excludes
@@ -272,8 +280,8 @@ started from inside an unlock would be the one write on this surface reaching di
 (it re-scans against birth context captured before the prompt, so a pane that moved meanwhile aims it at the wrong
 place — `file-explorer/pane/DETAILS.md` § "Birth context"); a fresh `copy` reads current pane state.
 
-**The secret's whole path is JSON param → `commands::file_system::store_archive_password` → the archive volume's
-`Zeroizing` slot.** It never enters the prompt mirror, never renders in a resource, never appears in a log line, and is
+**The secret's whole path is JSON param → `commands::file_system::unlock_within` → the container's
+`PasswordLocked::unlock`.** It never enters the prompt mirror, never renders in a resource, never appears in a log line, and is
 never echoed in the reply (pinned by a test). The frontend is then told to do its follow-up by the ordinary
 `mcp-confirm-dialog` event with no payload beyond the type, so the password never crosses into the webview at all —
 which is also why the frontend arm asserts that it calls neither `setArchivePassword` nor `clearArchivePassword`.
@@ -318,11 +326,11 @@ values through `Deref`. Why this is a type and not a rule: § Authentication.
 
 ### Archive-password prompt (`archive_password.rs`)
 
-`ArchivePasswordPromptStore`: one slot holding what the encrypted-archive password prompt is ASKING (archive name, the
+`ArchivePasswordPromptStore`: one slot holding what the password prompt is ASKING (the container kind, its name, the
 path an answer must name, the parent volume id, `browse` / `transfer`, `wrongAttempt`, and the settled operation id).
 Pushed by the frontend flow as it raises and dismisses the prompt, and cleared by `register_known_dialogs` alongside the
 open-dialog list, since a webview reload never fires the dismiss half. ❌ The password itself never reaches this store —
-it goes straight to the archive volume. § "Answering the archive password" has the whole contract.
+it goes straight to the container. § "Answering the password prompt" has the whole contract.
 
 ### State stores
 

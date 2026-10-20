@@ -131,7 +131,7 @@ export function createProgrammaticConfirm(deps: ProgrammaticConfirmDeps) {
         // the dialog itself (it's the one operation nothing undoes), typed.
         return verdictFor(await press(options))
       } else if (dialogType === 'archive-password' && deps.isArchivePasswordOpen()) {
-        // The `unlock_archive` tool already stored the password on the backend;
+        // The `unlock` tool already stored the password on the backend;
         // this is the follow-up. ⚠️ It settles a transfer rather than
         // re-dispatching it — see `supplyStoredPassword`.
         deps.supplyStoredPassword()

@@ -9,12 +9,12 @@
  * the blind spot a conflict-resolution wedge lived in for months.
  *
  * The whole loop is MCP: hit the prompt → read WHICH archive is asking and in
- * which mode → `unlock_archive` → watch a wrong password come back as
+ * which mode → `unlock` → watch a wrong password come back as
  * `wrongAttempt: true` → unlock for real.
  *
  * And the boundary, which is the other half of this spec: **an agent may supply
  * the password, but it may never be the thing that starts the write.** A person
- * typing the password gets the copy re-dispatched for them; `unlock_archive`
+ * typing the password gets the copy re-dispatched for them; `unlock`
  * deliberately does not, so extraction is gated exactly like any other copy. The
  * two `expect`s that prove it are marked as such below.
  *
@@ -55,8 +55,8 @@ test.setTimeout(waitBudget(90_000))
 
 /** The `archive-password` block `cmdr://state` renders under `dialogs:`. */
 interface PasswordPrompt {
-  archive: string
-  archivePath: string
+  name: string
+  path: string
   mode: string
   wrongAttempt: boolean
 }
@@ -83,7 +83,7 @@ test.afterEach(async ({ tauriPage }) => {
   await tauriPage.evaluate(`(async function() {
     for (const archivePath of ${JSON.stringify(archivePaths)}) {
       try {
-        await window.__TAURI_INTERNALS__.invoke('clear_archive_password', { parentVolumeId: 'root', archivePath });
+        await window.__TAURI_INTERNALS__.invoke('forget_container_password', { parentVolumeId: 'root', path: archivePath });
       } catch (e) {}
     }
   })()`)
@@ -112,20 +112,20 @@ test.describe('MCP archive password', () => {
     // 2. The prompt is READABLE. Without this an agent sees a bare
     //    `- type: archive-password` and can't tell what is being asked.
     const first = await waitForPasswordPrompt()
-    expect(first.archive).toBe(LOCKED_7Z)
+    expect(first.name).toBe(LOCKED_7Z)
     expect(first.mode).toBe('browse')
     expect(first.wrongAttempt).toBe(false)
 
     // 3. A wrong password is not silently swallowed: the prompt comes back
     //    saying so, which is the only thing that makes the loop closeable.
-    const rejected = await unlockArchive(first.archivePath, WRONG_PASSWORD)
+    const rejected = await unlock(first.path, WRONG_PASSWORD)
     expect(rejected.outcome).toBe('retrying_listing')
     const retry = await waitForPasswordPrompt({ wrongAttempt: true })
-    expect(retry.archive).toBe(LOCKED_7Z)
+    expect(retry.name).toBe(LOCKED_7Z)
 
     // 4. The real password gets in. Browsing is a READ, so unlocking completes
     //    it: no separate approval, and the pane lists the archive.
-    const unlocked = await unlockArchive(retry.archivePath, PASSWORD)
+    const unlocked = await unlock(retry.path, PASSWORD)
     expect(unlocked.outcome).toBe('retrying_listing')
     await expect
       .poll(async () => (await mcpReadResource('cmdr://state?include=panes')).includes(INNER_FILE), {
@@ -148,7 +148,7 @@ test.describe('MCP archive password', () => {
     await mcpCall('dialog', { action: 'confirm', type: 'transfer-confirmation' })
 
     const prompt = await waitForPasswordPrompt()
-    expect(prompt.archive).toBe(ENCRYPTED_ZIP)
+    expect(prompt.name).toBe(ENCRYPTED_ZIP)
     expect(prompt.mode).toBe('transfer')
 
     // 2. While the prompt is up, starting a file operation is refused, naming
@@ -158,15 +158,15 @@ test.describe('MCP archive password', () => {
 
     // 3. Answering with the WRONG archive is refused, not applied to whatever
     //    happens to be asking. The prompt must be NAMED, like a conflictId is.
-    const misaimed = await mcpCallRaw('unlock_archive', {
-      archivePath: path.join(fixtureRoot, 'left', 'sample.zip'),
+    const misaimed = await mcpCallRaw('unlock', {
+      path: path.join(fixtureRoot, 'left', 'sample.zip'),
       password: PASSWORD,
     })
-    expect(misaimed.error?.data?.outcome).toBe('different_archive')
+    expect(misaimed.error?.data?.outcome).toBe('different_container')
 
     // 4. The password lands. The copy that hit the prompt is already settled
     //    (a password failure settles it), so nothing is unparked.
-    const stored = await unlockArchive(prompt.archivePath, PASSWORD)
+    const stored = await unlock(prompt.path, PASSWORD)
     expect(stored.outcome).toBe('password_stored')
 
     // 5. ⭐ THE BOUNDARY. Supplying the password did NOT start a write. A
@@ -220,14 +220,14 @@ function parsePasswordPrompt(stateYaml: string): PasswordPrompt | null {
   const lines = stateYaml.split('\n')
   const blockAt = lines.findIndex((l) => l.includes('- type: archive-password'))
   if (blockAt === -1) return null
-  const archive = findWithin(lines, blockAt, /^\s+archive: "(.*)"/)
-  const archivePath = findWithin(lines, blockAt, /^\s+archivePath: "(.*)"/)
+  const name = findWithin(lines, blockAt, /^\s+name: "(.*)"/)
+  const promptPath = findWithin(lines, blockAt, /^\s+path: "(.*)"/)
   const mode = findWithin(lines, blockAt, /^\s+mode: (\S+)/)
   const wrongAttempt = findWithin(lines, blockAt, /^\s+wrongAttempt: (\S+)/)
-  if (archive === undefined || archivePath === undefined || mode === undefined || wrongAttempt === undefined) {
+  if (name === undefined || promptPath === undefined || mode === undefined || wrongAttempt === undefined) {
     return null
   }
-  return { archive, archivePath, mode, wrongAttempt: wrongAttempt === 'true' }
+  return { name, path: promptPath, mode, wrongAttempt: wrongAttempt === 'true' }
 }
 
 /** First capture of `pattern` in the handful of lines after `from`. */
@@ -241,10 +241,10 @@ function findWithin(lines: string[], from: number, pattern: RegExp): string | un
 
 interface UnlockResult {
   outcome: string
-  archive: string
+  name: string
 }
 
 /** Answers the prompt and parses the tool's typed result. */
-async function unlockArchive(archivePath: string, password: string): Promise<UnlockResult> {
-  return JSON.parse(await mcpCall('unlock_archive', { archivePath, password })) as UnlockResult
+async function unlock(promptPath: string, password: string): Promise<UnlockResult> {
+  return JSON.parse(await mcpCall('unlock', { path: promptPath, password })) as UnlockResult
 }

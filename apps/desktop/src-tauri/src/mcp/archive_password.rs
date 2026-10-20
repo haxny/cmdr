@@ -1,7 +1,8 @@
-//! What the encrypted-archive password prompt is asking, mirrored for MCP.
+//! What the password prompt is asking, mirrored for MCP. One prompt serves
+//! every locked container (an encrypted archive, a restic repo).
 //!
 //! The prompt lives in the frontend (`archive-password-flow.svelte.ts`), which
-//! is the only place that knows WHICH archive raised it, in which of the two
+//! is the only place that knows WHICH container raised it, in which of the two
 //! flows, and whether a stored password was just rejected. `SoftDialogTracker`
 //! carries the id and nothing else, so without this mirror an agent reads a bare
 //! `- type: archive-password` in `cmdr://state` and can neither name the archive
@@ -9,15 +10,38 @@
 //! months.
 //!
 //! ❌ **The password itself never comes here.** This store holds the QUESTION,
-//! never the answer: `unlock_archive` hands the secret straight to the archive
-//! volume's `Zeroizing` slot (`commands::file_system::archive`), so nothing a
-//! resource renders has ever seen it.
+//! never the answer: `unlock` hands the secret straight to the container
+//! (`commands::file_system::unlock`), so nothing a resource renders has ever
+//! seen it.
 
 use crate::ignore_poison::RwLockIgnorePoison;
 use serde::{Deserialize, Serialize};
 use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::{AppHandle, Manager};
+
+/// What kind of container the prompt is for. Supplied by the frontend, which
+/// classifies a pane's kind from its path, and rendered in `cmdr://state` so an
+/// agent knows what it is answering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum LockedContainer {
+    /// An encrypted archive: the password is stored and checked on the next read.
+    Archive,
+    /// A restic backup repo: the password is checked before the unlock answers.
+    ResticRepo,
+}
+
+impl LockedContainer {
+    /// The kind's own wire name, from its serde representation, so the token an
+    /// agent reads can't drift from the one the frontend sends over IPC.
+    pub fn token(self) -> &'static str {
+        match self {
+            LockedContainer::Archive => "archive",
+            LockedContainer::ResticRepo => "resticRepo",
+        }
+    }
+}
 
 /// Which flow raised the prompt. The two are genuinely different situations for
 /// a caller: unlocking a browse completes it (a listing is a read), while
@@ -56,6 +80,7 @@ pub struct ArchivePasswordPrompt {
     /// The drive the archive lives on. Supplied by the frontend and never by a
     /// caller: an answer names the archive, and the backend supplies the rest.
     pub parent_volume_id: String,
+    pub container: LockedContainer,
     pub mode: ArchivePromptMode,
     /// Whether a stored password was just rejected. The only thing that makes
     /// the loop closeable from outside: an agent can tell a rejected attempt
@@ -89,7 +114,7 @@ impl ArchivePasswordPromptStore {
     /// Bumped by every raise AND every dismissal, so a caller can tell that the
     /// frontend acted on its unlock without guessing which way it went.
     ///
-    /// ⚠️ This, not "the dialog closed", is `unlock_archive`'s ack. A browse
+    /// ⚠️ This, not "the dialog closed", is `unlock`'s ack. A browse
     /// unlock takes the prompt down and re-lists, and a wrong password puts the
     /// prompt straight back up — fast enough that the dialog may never unmount,
     /// so `SoftDialogDisappeared` can wait out its whole budget on a flow that
@@ -136,6 +161,7 @@ mod tests {
             archive_name: "photos.zip".to_string(),
             archive_path: "/tmp/photos.zip".to_string(),
             parent_volume_id: "drive-1".to_string(),
+            container: LockedContainer::Archive,
             mode,
             wrong_attempt,
             operation_id: None,
@@ -169,7 +195,7 @@ mod tests {
 
     #[test]
     fn the_generation_moves_on_a_raise_and_on_a_dismissal_alike() {
-        // `unlock_archive` acks on this. A browse unlock re-lists at once, and a
+        // `unlock` acks on this. A browse unlock re-lists at once, and a
         // wrong password puts the prompt straight back up — sometimes without
         // the dialog ever unmounting, which is why "the dialog closed" is not a
         // usable ack and this is.
@@ -188,6 +214,14 @@ mod tests {
             store.generation() > raised + 1,
             "a re-prompt for the same archive moves it too"
         );
+    }
+
+    #[test]
+    fn every_container_token_matches_its_serde_name() {
+        for container in [LockedContainer::Archive, LockedContainer::ResticRepo] {
+            let serde_name = serde_json::to_value(container).expect("the container serializes");
+            assert_eq!(serde_name.as_str(), Some(container.token()), "for {container:?}");
+        }
     }
 
     #[test]

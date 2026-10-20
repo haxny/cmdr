@@ -191,7 +191,7 @@ fn extract_viewer_path<R: Runtime>(window: &WebviewWindow<R>) -> Option<String> 
 /// thing that says whether the last answer was wrong.
 ///
 /// ❌ The password is never here. This block carries the QUESTION; the answer
-/// goes straight to the archive volume through `unlock_archive`.
+/// goes straight to the archive or repo through `unlock`.
 ///
 /// `mode` is what a reader has to branch on: unlocking a `browse` finishes it
 /// (a listing is a read), while unlocking a `transfer` stores the password and
@@ -199,8 +199,9 @@ fn extract_viewer_path<R: Runtime>(window: &WebviewWindow<R>) -> Option<String> 
 /// means starting a copy again, through the gate every copy goes through.
 pub(crate) fn format_archive_password_dialog(prompt: &crate::mcp::archive_password::ArchivePasswordPrompt) -> String {
     let mut yaml = String::from("  - type: archive-password\n");
-    yaml.push_str(&format!("    archive: {:?}\n", prompt.archive_name));
-    yaml.push_str(&format!("    archivePath: {:?}\n", prompt.archive_path));
+    yaml.push_str(&format!("    container: {}\n", prompt.container.token()));
+    yaml.push_str(&format!("    name: {:?}\n", prompt.archive_name));
+    yaml.push_str(&format!("    path: {:?}\n", prompt.archive_path));
     yaml.push_str(&format!("    mode: {}\n", prompt.mode.token()));
     yaml.push_str(&format!("    wrongAttempt: {}\n", prompt.wrong_attempt));
     if let Some(operation_id) = &prompt.operation_id {
@@ -208,7 +209,7 @@ pub(crate) fn format_archive_password_dialog(prompt: &crate::mcp::archive_passwo
         // not a row you'll find under `operations:`.
         yaml.push_str(&format!("    settledOperationId: {}\n", operation_id));
     }
-    yaml.push_str("    answerWith: unlock_archive\n");
+    yaml.push_str("    answerWith: unlock\n");
     // Trailing newline is added by the caller, which joins entries with one.
     yaml.pop();
     yaml

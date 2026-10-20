@@ -15,7 +15,7 @@
  *
  * Two entry points answer the prompt, and only one of them re-dispatches:
  * `handleSubmit` is a person typing, `supplyStoredPassword` is the MCP
- * `unlock_archive` tool. See that method for why an agent must not start the
+ * `unlock` tool. See that method for why an agent must not start the
  * write. Whatever raises or clears the prompt also mirrors it to the backend
  * (`showPrompt` / `hidePrompt`), which is what lets `cmdr://state` name the
  * archive at all.
@@ -64,7 +64,7 @@ export function createArchivePasswordFlow(deps: ArchivePasswordFlowDeps) {
   }
 
   /** Raises the prompt and mirrors WHAT IT ASKS to the backend, so `cmdr://state`
-   *  names the archive and `unlock_archive` has something to answer. The two go
+   *  names the archive and `unlock` has something to answer. The two go
    *  together: a prompt on screen that nothing outside can see is exactly the
    *  blind spot this flow used to be. ❌ The password is not part of the mirror. */
   function showPrompt(props: ArchivePasswordPropsData, operationId: string | null): void {
@@ -74,6 +74,7 @@ export function createArchivePasswordFlow(deps: ArchivePasswordFlowDeps) {
       archiveName: props.archiveName,
       archivePath: props.archivePath,
       parentVolumeId: props.parentVolumeId,
+      container: 'archive',
       mode: props.mode,
       wrongAttempt: props.wrongAttempt,
       operationId,
@@ -188,7 +189,7 @@ export function createArchivePasswordFlow(deps: ArchivePasswordFlowDeps) {
     },
 
     /**
-     * The MCP `unlock_archive` tool supplied the password. The backend already
+     * The MCP `unlock` tool supplied the password. The backend already
      * stored it, so all that is left is the mode's follow-up.
      *
      * **The one difference from `handleSubmit`, and the reason this is a separate

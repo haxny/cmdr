@@ -67,7 +67,7 @@ export interface McpTabMoveArgs {
 
 /**
  * Dialog kind an MCP tool can confirm. The first two come from `dialog confirm`;
- * `archive-password` comes from `unlock_archive`, which stores the password on
+ * `archive-password` comes from `unlock`, which stores the password on
  * the backend first and then confirms the prompt to trigger the follow-up.
  */
 export type ConfirmDialogType = 'transfer-confirmation' | 'delete-confirmation' | 'archive-password'

@@ -224,8 +224,8 @@ whose metadata is itself encrypted, so even BROWSING needs the password (below).
 password lifetime and the typed frontend signal.
 
 **Password-on-volume = remember-for-this-archive.** `ArchiveVolume` holds an interior-mutable
-`password: Mutex<Option<Zeroizing<String>>>` (`Zeroizing` wipes it on drop). `set_password` / `clear_password` are the
-`set_archive_password` / `clear_archive_password` IPC commands' targets; `password_snapshot` clones it into the blocking
+`password: Mutex<Option<Zeroizing<String>>>` (`Zeroizing` wipes it on drop). `set_password` / `clear_password` are what
+the host's unlock seam (`PasswordLocked`, answering `Stored`) calls; `password_snapshot` clones it into the blocking
 read closure. Because `VolumeManager::resolve` mints ONE `ArchiveVolume` per archive and LRU-caches it (cap 16), that
 instance's lifetime IS "remember for this archive". **LRU eviction forgets the password**: a re-minted instance starts
 empty, so the frontend re-prompts (pinned by `volume_test`'s LRU-semantic test). A wrong password never persists —
@@ -243,7 +243,7 @@ password to read its metadata; zip and content-encrypted 7z ignore it at parse).
 - The EXTRACT path (a copy whose source is inside the archive) for any encrypted archive — riding
   `WriteOperationError::ArchiveNeedsPassword { path, wrong_attempt }` (mapped in
   `crates/cmdr-operations/src/transfer/volume/copy.rs`'s `map_volume_error`), so the frontend dispatches its password
-  dialog and, after `set_archive_password`, retries the copy.
+  dialog and, after `unlock_container`, retries the copy.
 - The BROWSE/listing path for a HEADER-encrypted 7z (even listing fails) —
   `crates/cmdr-fs/src/volume/friendly_error/volume_error.rs` maps `NeedsPassword` to
   `ListingErrorReason::ArchiveNeedsPassword { wrong_attempt }` (NOT the unreadable-archive reason), and

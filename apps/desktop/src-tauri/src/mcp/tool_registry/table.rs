@@ -11,8 +11,8 @@ use serde_json::Value;
 use super::{Access, Consumer, Tool, schemas, tool_available_to, validate_params};
 use crate::mcp::executor::{ToolError, ToolResult};
 use crate::mcp::executor::{
-    app, archive_password, async_tools, conflicts, cpu, dialogs, downloads, eject, favorites, file_ops, image_facts,
-    indexing, memory, multi_rename, nav, operation_log, photos, queue, quit, search, tags, view,
+    app, async_tools, conflicts, cpu, dialogs, downloads, eject, favorites, file_ops, image_facts, indexing, memory,
+    multi_rename, nav, operation_log, photos, queue, quit, search, tags, unlock, view,
 };
 
 mcp_tools! {
@@ -301,14 +301,15 @@ mcp_tools! {
         access: Access::Write,
         run: params_only conflicts::execute_resolve_conflict
     },
-    "unlock_archive" => {
-        desc: "Answer the archive-password prompt in cmdr://state, naming its archivePath. \
-               browse mode: it re-lists and you're in. transfer mode: it stores the password ONLY, since \
+    "unlock" => {
+        desc: "Answer the password prompt for a locked archive or backup repo in cmdr://state, naming its path. \
+               A repo checks the password first: wrong_password means nothing was kept. \
+               browse mode: it re-lists and you're in. transfer mode: it hands over the password ONLY, since \
                supplying one never starts a write; run copy or move again to extract.",
-        schema: schemas::unlock_archive_schema(),
+        schema: schemas::unlock_schema(),
         consumers: &[Consumer::AiClient],
         access: Access::Write,
-        run: app_params archive_password::execute_unlock_archive
+        run: app_params unlock::execute_unlock
     },
 
     // ── Favorites ───────────────────────────────────────────────────────────

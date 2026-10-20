@@ -493,7 +493,7 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
             message,
         },
         // Extracting from a password-protected archive: a typed signal the FE
-        // prompts on (then retries via `set_archive_password`), never a generic
+        // prompts on (then retries via `unlock_container`), never a generic
         // read error.
         VolumeError::NeedsPassword { wrong_attempt } => WriteOperationError::ArchiveNeedsPassword {
             path: context_path.to_string(),

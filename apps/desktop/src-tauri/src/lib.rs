@@ -743,7 +743,7 @@ pub fn run() {
             app.manage(mcp::SoftDialogTracker::new());
 
             // What the encrypted-archive password prompt is asking, so `cmdr://state`
-            // can name the archive and `unlock_archive` can answer it.
+            // can name the archive and `unlock` can answer it.
             app.manage(mcp::ArchivePasswordPromptStore::new());
 
             // Start MCP server for AI agent integration

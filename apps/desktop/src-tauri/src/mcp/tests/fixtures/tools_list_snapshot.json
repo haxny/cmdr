@@ -1040,25 +1040,25 @@
       "name": "resolve_conflict"
     },
     {
-      "description": "Answer the archive-password prompt in cmdr://state, naming its archivePath. browse mode: it re-lists and you're in. transfer mode: it stores the password ONLY, since supplying one never starts a write; run copy or move again to extract.",
+      "description": "Answer the password prompt for a locked archive or backup repo in cmdr://state, naming its path. A repo checks the password first: wrong_password means nothing was kept. browse mode: it re-lists and you're in. transfer mode: it hands over the password ONLY, since supplying one never starts a write; run copy or move again to extract.",
       "inputSchema": {
         "properties": {
-          "archivePath": {
-            "description": "Which archive you're answering, copied verbatim from the archivePath on the archive-password entry in cmdr://state dialogs. Required: another surface may have answered the prompt you read and a different archive may be asking now.",
+          "password": {
+            "description": "The password to try. Handed to the archive or repo only, never echoed back, never rendered in cmdr://state, never logged, and never saved to the Keychain.",
             "type": "string"
           },
-          "password": {
-            "description": "The password to try. Stored on the archive only, never echoed back, never rendered in cmdr://state, never logged.",
+          "path": {
+            "description": "Which locked archive or backup repo you're answering, copied verbatim from the path on the archive-password entry in cmdr://state dialogs. Required: another surface may have answered the prompt you read and a different one may be asking now.",
             "type": "string"
           }
         },
         "required": [
-          "archivePath",
+          "path",
           "password"
         ],
         "type": "object"
       },
-      "name": "unlock_archive"
+      "name": "unlock"
     },
     {
       "description": "Manage the user's favorites (the bookmarked folders the favorites menu lists). add: path (+ optional name). rename: id + name. remove: id. reorder: orderedIds, the COMPLETE new ordering. Discover ids in cmdr://state favorites.",

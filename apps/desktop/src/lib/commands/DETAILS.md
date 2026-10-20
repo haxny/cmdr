@@ -69,9 +69,9 @@ The per-pane MCP commands route through `mcp-listeners.ts` (a transport adapter,
 adapter validate-parses each raw payload into these arg shapes before dispatching. They're all `showInPalette: false`.
 
 `ConfirmDialogType` covers `transfer-confirmation` and `delete-confirmation` from the MCP `dialog confirm` tool, plus
-`archive-password` from `unlock_archive`, which stores the password on the backend first and then confirms the prompt to
-trigger the frontend's follow-up. Reusing `dialog.confirm` for that third one is deliberate: it's the existing
-"programmatically answer an open dialog" seam, so the tool needs no command id of its own.
+`archive-password` from `unlock`, which stores the password on the backend first and then confirms the prompt to trigger
+the frontend's follow-up. Reusing `dialog.confirm` for that third one is deliberate: it's the existing "programmatically
+answer an open dialog" seam, so the tool needs no command id of its own.
 
 `CommandScope` is a union of string literals: `'App'`, `'Main window'`, `'Main window/File list'`,
 `'Main window/Brief mode'`, `'Main window/Full mode'`, `'Main window/Servers'`, `'Main window/Places'`,

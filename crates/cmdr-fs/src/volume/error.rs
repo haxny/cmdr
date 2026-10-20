@@ -188,7 +188,7 @@ pub enum VolumeError {
     /// password has been tried and `true` when the supplied one was rejected, so
     /// the frontend can prompt afresh vs. say "that password didn't work". The
     /// archive backend raises this; the frontend supplies a per-archive password
-    /// via `set_archive_password` and retries. Carries no path — the failing path
+    /// via `unlock_container` and retries. Carries no path — the failing path
     /// is the one the caller was reading.
     NeedsPassword {
         /// `false` when no password has been tried yet, `true` when the supplied

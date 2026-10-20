@@ -6,8 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
-    setArchivePassword: vi.fn(),
-    clearArchivePassword: vi.fn(),
+    unlockContainer: vi.fn(),
+    forgetContainerPassword: vi.fn(),
     notifyArchivePasswordPrompt: vi.fn(),
     notifyArchivePasswordDismissed: vi.fn(),
   },
@@ -26,15 +26,15 @@ describe('setArchivePassword wrapper', () => {
     vi.clearAllMocks()
   })
 
-  it('forwards the volume id, archive path, and password', async () => {
-    vi.mocked(commands.setArchivePassword).mockResolvedValueOnce({ status: 'ok', data: null })
+  it('forwards the volume id, archive path, and password, remembering nothing', async () => {
+    vi.mocked(commands.unlockContainer).mockResolvedValueOnce({ status: 'ok', data: 'stored' })
     await setArchivePassword('root', '/a/secret.zip/inner/x.pdf', 'hunter2')
-    expect(commands.setArchivePassword).toHaveBeenCalledWith('root', '/a/secret.zip/inner/x.pdf', 'hunter2')
+    expect(commands.unlockContainer).toHaveBeenCalledWith('root', '/a/secret.zip/inner/x.pdf', 'hunter2', false)
   })
 
-  it('throws the backend message on an error result', async () => {
-    vi.mocked(commands.setArchivePassword).mockResolvedValueOnce({ status: 'error', error: 'not an archive' })
-    await expect(setArchivePassword('root', '/a/plain.txt', 'x')).rejects.toThrow('not an archive')
+  it('throws the typed reason on an error result', async () => {
+    vi.mocked(commands.unlockContainer).mockResolvedValueOnce({ status: 'error', error: { type: 'notLocked' } })
+    await expect(setArchivePassword('root', '/a/plain.txt', 'x')).rejects.toThrow('notLocked')
   })
 })
 
@@ -44,14 +44,17 @@ describe('clearArchivePassword wrapper', () => {
   })
 
   it('forwards the volume id and archive path', async () => {
-    vi.mocked(commands.clearArchivePassword).mockResolvedValueOnce({ status: 'ok', data: null })
+    vi.mocked(commands.forgetContainerPassword).mockResolvedValueOnce({ status: 'ok', data: null })
     await clearArchivePassword('root', '/a/secret.zip')
-    expect(commands.clearArchivePassword).toHaveBeenCalledWith('root', '/a/secret.zip')
+    expect(commands.forgetContainerPassword).toHaveBeenCalledWith('root', '/a/secret.zip')
   })
 
-  it('throws the backend message on an error result', async () => {
-    vi.mocked(commands.clearArchivePassword).mockResolvedValueOnce({ status: 'error', error: 'gone' })
-    await expect(clearArchivePassword('root', '/a/secret.zip')).rejects.toThrow('gone')
+  it('throws the typed reason on an error result', async () => {
+    vi.mocked(commands.forgetContainerPassword).mockResolvedValueOnce({
+      status: 'error',
+      error: { type: 'volumeNotFound', volumeId: 'root' },
+    })
+    await expect(clearArchivePassword('root', '/a/secret.zip')).rejects.toThrow('volumeNotFound')
   })
 })
 
@@ -68,6 +71,7 @@ describe('archive-password prompt mirror', () => {
       archiveName: 'secret.zip',
       archivePath: '/a/secret.zip/inner/x.pdf',
       parentVolumeId: 'root',
+      container: 'archive' as const,
       mode: 'transfer' as const,
       wrongAttempt: true,
       operationId: 'op-3',

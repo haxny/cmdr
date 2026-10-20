@@ -529,6 +529,12 @@ new folder that "timed out" and then appeared, ERR-AREUV). Those commands use `d
 The `blocking_*` helpers already have this property for free: they wrap `spawn_blocking`, so their timeout races a join
 handle too, and the blocking closure is never interrupted.
 
+**The one deliberate drop: an unlock.** `unlock_container` (`file_system/unlock.rs`) drops the container's unlock
+future on its 30 s budget or its cancel token, because detaching would be the bug here: a detached repo
+unlock finishes behind the reply and keeps the password, and saves it to the Keychain, after the person was told it
+didn't. It's safe because `PasswordLocked::unlock` is cancel-safe by contract (`crates/cmdr-fs/src/volume/password_locked.rs`):
+the slow part runs on the blocking pool, which a drop never interrupts, and state is committed only after it returns.
+
 ### An optional leg gets a sub-budget, never the whole deadline
 
 When a command has one leg that MUST answer and another whose failure it treats as non-fatal, the optional leg runs on

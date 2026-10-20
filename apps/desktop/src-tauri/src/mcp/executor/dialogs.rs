@@ -547,10 +547,10 @@ async fn execute_dialog_confirm<R: Runtime>(
         // its way out, so there is nothing left to observe. See `quit.rs`.
         "quit-confirmation" => super::quit::confirm_quit(),
         // Confirming this one means supplying a password, which needs a value
-        // this tool has nowhere to put. `unlock_archive` is the whole answer.
+        // this tool has nowhere to put. `unlock` is the whole answer.
         "archive-password" => Err(ToolError::invalid_params(
-            "The archive-password prompt is answered with the unlock_archive tool, which takes the password. \
-             Read cmdr://state dialogs for the archive it's asking about; dialog close cancels it instead.",
+            "The archive-password prompt is answered with the unlock tool, which takes the password. \
+             Read cmdr://state dialogs for the archive or repo it's asking about; dialog close cancels it instead.",
         )),
         _ => Err(ToolError::invalid_params(format!(
             "Cannot confirm dialog type '{}'. Only 'transfer-confirmation', 'delete-confirmation', and 'quit-confirmation' support confirm.",

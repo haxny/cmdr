@@ -316,7 +316,7 @@ fn test_map_volume_error_invalid_name() {
 fn test_map_volume_error_needs_password() {
     // Extracting from a password-protected archive must become the typed
     // `ArchiveNeedsPassword` (carrying the wrong-attempt flag) so the FE prompts
-    // and retries via `set_archive_password`, never a generic read error.
+    // and retries via `unlock_container`, never a generic read error.
     let fresh = map_volume_error(
         "/ctx",
         PathRole::Source,

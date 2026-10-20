@@ -1,0 +1,232 @@
+//! The unlock commands over a scripted locked volume: each typed outcome comes
+//! back as the volume answered it, a cancel or a timeout keeps nothing, and a
+//! path that leads into nothing locked is a typed refusal.
+
+use std::future::Future;
+use std::path::Path;
+use std::pin::Pin;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use crate::IgnorePoison;
+use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::volume::{InMemoryVolume, ListingProgress, PasswordLocked, UnlockOutcome, Volume, VolumeError};
+use cmdr_fs::entry::FileEntry;
+
+use super::{UnlockError, forget_container_password, unlock_container, unlock_within};
+
+/// How the stub answers an unlock.
+#[derive(Clone, Copy)]
+enum Script {
+    /// Answers at once with this outcome.
+    Answer(UnlockOutcome),
+    /// Never answers: a repo open on a NAS that went quiet.
+    Hang,
+    /// The container couldn't be asked.
+    Gone,
+}
+
+/// A locked container that keeps what a real one would: the password on a
+/// non-wrong outcome, and whether it was told to remember it.
+struct LockedStub {
+    inner: InMemoryVolume,
+    script: Script,
+    kept: Mutex<Option<(String, bool)>>,
+}
+
+impl LockedStub {
+    fn new(script: Script) -> Self {
+        Self {
+            inner: InMemoryVolume::new("Locked"),
+            script,
+            kept: Mutex::new(None),
+        }
+    }
+
+    fn kept(&self) -> Option<(String, bool)> {
+        self.kept.lock_ignore_poison().clone()
+    }
+}
+
+impl PasswordLocked for LockedStub {
+    fn unlock<'a>(
+        &'a self,
+        password: String,
+        remember: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<UnlockOutcome, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            match self.script {
+                Script::Answer(outcome) => {
+                    if outcome != UnlockOutcome::WrongPassword {
+                        *self.kept.lock_ignore_poison() = Some((password, remember));
+                    }
+                    Ok(outcome)
+                }
+                Script::Hang => {
+                    std::future::pending::<()>().await;
+                    unreachable!("a pending future never resolves")
+                }
+                Script::Gone => Err(VolumeError::DeviceDisconnected("the NAS left".to_string())),
+            }
+        })
+    }
+
+    fn forget_password(&self) {
+        *self.kept.lock_ignore_poison() = None;
+    }
+}
+
+impl Volume for LockedStub {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn root(&self) -> &Path {
+        self.inner.root()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_password_locked(&self) -> Option<&dyn PasswordLocked> {
+        Some(self)
+    }
+
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        self.inner.list_directory(path, on_progress)
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        self.inner.get_metadata(path)
+    }
+}
+
+/// Registers `volume` under a fresh id and hands the id back. Unregister when done.
+fn register(volume: Arc<dyn Volume>) -> String {
+    let id = format!("unlock-test-{}", uuid::Uuid::new_v4());
+    get_volume_manager().register(&id, volume);
+    id
+}
+
+async fn unlock(id: &str, password: &str, remember: bool) -> Result<UnlockOutcome, UnlockError> {
+    unlock_container(id.to_string(), "/repo".to_string(), password.to_string(), remember).await
+}
+
+#[tokio::test]
+async fn each_outcome_comes_back_as_the_container_answered() {
+    for outcome in [
+        UnlockOutcome::Stored,
+        UnlockOutcome::Unlocked,
+        UnlockOutcome::WrongPassword,
+    ] {
+        let stub = Arc::new(LockedStub::new(Script::Answer(outcome)));
+        let id = register(stub.clone());
+        let answer = unlock(&id, "hunter2", true).await;
+        get_volume_manager().unregister(&id);
+
+        assert!(matches!(answer, Ok(answered) if answered == outcome), "{answer:?}");
+        let kept = stub.kept();
+        if outcome == UnlockOutcome::WrongPassword {
+            assert_eq!(kept, None, "a wrong password keeps nothing");
+        } else {
+            assert_eq!(kept, Some(("hunter2".to_string(), true)), "for {outcome:?}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn remember_reaches_the_container_as_given() {
+    let stub = Arc::new(LockedStub::new(Script::Answer(UnlockOutcome::Unlocked)));
+    let id = register(stub.clone());
+    let answer = unlock(&id, "hunter2", false).await;
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Ok(UnlockOutcome::Unlocked)), "{answer:?}");
+    assert_eq!(stub.kept(), Some(("hunter2".to_string(), false)));
+}
+
+#[tokio::test]
+async fn a_path_into_nothing_locked_is_a_typed_refusal() {
+    let id = register(Arc::new(InMemoryVolume::new("Plain")));
+    let answer = unlock(&id, "hunter2", true).await;
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Err(UnlockError::NotLocked)), "{answer:?}");
+}
+
+#[tokio::test]
+async fn an_unregistered_volume_is_a_typed_refusal() {
+    let answer = unlock("unlock-test-nobody", "hunter2", true).await;
+    assert!(matches!(answer, Err(UnlockError::VolumeNotFound { .. })), "{answer:?}");
+}
+
+#[tokio::test]
+async fn a_container_that_cannot_be_asked_says_why_without_the_password() {
+    let id = register(Arc::new(LockedStub::new(Script::Gone)));
+    let answer = unlock(&id, "hunter2", true).await;
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Err(UnlockError::Volume { .. })), "{answer:?}");
+    assert!(!format!("{answer:?}").contains("hunter2"));
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_unlock_past_its_budget_times_out_and_keeps_nothing() {
+    let stub = Arc::new(LockedStub::new(Script::Hang));
+    let id = register(stub.clone());
+    let cancel = tokio_util::sync::CancellationToken::new();
+    let answer = unlock_within(
+        &id,
+        Path::new("/repo"),
+        "hunter2".to_string(),
+        true,
+        &cancel,
+        Duration::from_secs(30),
+    )
+    .await;
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Err(UnlockError::TimedOut)), "{answer:?}");
+    assert_eq!(stub.kept(), None);
+}
+
+#[tokio::test]
+async fn a_cancelled_unlock_answers_cancelled_and_keeps_nothing() {
+    let stub = Arc::new(LockedStub::new(Script::Hang));
+    let id = register(stub.clone());
+    let cancel = tokio_util::sync::CancellationToken::new();
+
+    let unlocking = unlock_within(
+        &id,
+        Path::new("/repo"),
+        "hunter2".to_string(),
+        true,
+        &cancel,
+        Duration::from_secs(30),
+    );
+    let (answer, ()) = tokio::join!(unlocking, async { cancel.cancel() });
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Err(UnlockError::Cancelled)), "{answer:?}");
+    assert_eq!(stub.kept(), None, "a cancelled unlock caches nothing and saves nothing");
+}
+
+#[tokio::test]
+async fn forgetting_drops_what_the_container_kept() {
+    let stub = Arc::new(LockedStub::new(Script::Answer(UnlockOutcome::Stored)));
+    let id = register(stub.clone());
+    unlock(&id, "hunter2", false).await.unwrap();
+    let answer = forget_container_password(id.clone(), "/repo".to_string()).await;
+    get_volume_manager().unregister(&id);
+
+    assert!(answer.is_ok(), "{answer:?}");
+    assert_eq!(stub.kept(), None);
+}

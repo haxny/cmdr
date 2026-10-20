@@ -51,9 +51,10 @@ commands, and notable non-obvious placements.
 - **`app-state.ts`**: MCP pane state, dialog open/close tracking, menu context, view settings, `showMainWindow`,
   child-window rect persistence (`get/setChildWindowRect`), `updateMenuAccelerator`.
 - **`archive.ts`**: the encrypted-archive password: `setArchivePassword` / `clearArchivePassword` (the secret's only
-  path out of the frontend), plus `notifyArchivePasswordPrompt` / `notifyArchivePasswordDismissed`, which mirror what
-  the prompt is ASKING so `cmdr://state` can name the archive and the MCP `unlock_archive` tool can answer it. ❌ The
-  password is never part of that mirror.
+  path out of the frontend, over the container-neutral `unlockContainer` / `forgetContainerPassword` commands), plus
+  `notifyArchivePasswordPrompt` / `notifyArchivePasswordDismissed`, which mirror what the prompt is ASKING so
+  `cmdr://state` can name the archive and the MCP `unlock` tool can answer it. ❌ The password is never part of that
+  mirror.
 - **`write-operations.ts`**: copy/move/delete, conflict resolution, scan preview. (Size/duration formatting moved to
   `#lib/units`.)
 - **`rename.ts`**: `checkRenamePermission`, `checkRenameValidity`, `renameFile`, `moveToTrash`.

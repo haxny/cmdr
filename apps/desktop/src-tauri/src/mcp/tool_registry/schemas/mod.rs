@@ -7,7 +7,6 @@
 
 use serde_json::{Value, json};
 
-mod archive;
 mod async_tools;
 mod cpu;
 mod dialogs;
@@ -22,9 +21,9 @@ mod operation_log;
 mod queue;
 mod search;
 mod settings;
+mod unlock;
 mod view;
 
-pub use archive::*;
 pub use async_tools::*;
 pub use cpu::*;
 pub use dialogs::*;
@@ -39,6 +38,7 @@ pub use operation_log::*;
 pub use queue::*;
 pub use search::*;
 pub use settings::*;
+pub use unlock::*;
 pub use view::*;
 
 /// The empty input schema shared by every no-parameter tool.

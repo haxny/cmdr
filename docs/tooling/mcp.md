@@ -208,17 +208,18 @@ flows:
 ```bash
 ./scripts/mcp-call.sh --read-resource 'cmdr://state?include=dialogs'
 #   - type: archive-password
-#     archive: "photos.zip"
-#     archivePath: "/Users/…/photos.zip/holiday.raw"
+#     container: archive
+#     name: "photos.zip"
+#     path: "/Users/…/photos.zip/holiday.raw"
 #     mode: transfer
 #     wrongAttempt: false
 #     settledOperationId: op-7
-#     answerWith: unlock_archive
+#     answerWith: unlock
 
-./scripts/mcp-call.sh unlock_archive '{"archivePath":"/Users/…/photos.zip/holiday.raw","password":"hunter2"}'
+./scripts/mcp-call.sh unlock '{"path":"/Users/…/photos.zip/holiday.raw","password":"hunter2"}'
 ```
 
-Copy `archivePath` back verbatim: the tool refuses (`data.outcome: "different_archive"`) rather than answering whatever
+Copy `path` back verbatim: the tool refuses (`data.outcome: "different_container"`) rather than answering whatever
 happens to be asking, since another surface may have answered the prompt you read. `no_password_prompt` means nothing is
 asking. Route the tool through the authenticated `./scripts/mcp-call.sh`.
 

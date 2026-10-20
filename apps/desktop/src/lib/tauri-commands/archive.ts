@@ -4,7 +4,9 @@
 // forgotten on restart or eviction). The frontend calls `setArchivePassword`
 // after prompting, then retries the copy/move so the extract path can decrypt.
 //
-// Backend: `apps/desktop/src-tauri/src/commands/file_system/archive.rs`.
+// Backend: the container-neutral unlock seam,
+// `apps/desktop/src-tauri/src/commands/file_system/unlock.rs`. An archive only
+// stores the password, so its `stored` outcome needs no handling here.
 
 import { commands, type ArchivePasswordPrompt } from '#lib/ipc/bindings.js'
 
@@ -20,8 +22,9 @@ export type { ArchivePasswordPrompt }
  * an extract).
  */
 export async function setArchivePassword(parentVolumeId: string, archivePath: string, password: string): Promise<void> {
-  const res = await commands.setArchivePassword(parentVolumeId, archivePath, password)
-  if (res.status === 'error') throw new Error(res.error)
+  // An archive keeps nothing outside this session, so `remember` is moot.
+  const res = await commands.unlockContainer(parentVolumeId, archivePath, password, false)
+  if (res.status === 'error') throw new Error(res.error.type)
 }
 
 /**
@@ -29,13 +32,13 @@ export async function setArchivePassword(parentVolumeId: string, archivePath: st
  * the frontend is resetting state). A no-op when nothing was stored.
  */
 export async function clearArchivePassword(parentVolumeId: string, archivePath: string): Promise<void> {
-  const res = await commands.clearArchivePassword(parentVolumeId, archivePath)
-  if (res.status === 'error') throw new Error(res.error)
+  const res = await commands.forgetContainerPassword(parentVolumeId, archivePath)
+  if (res.status === 'error') throw new Error(res.error.type)
 }
 
 /**
  * Mirrors what the password prompt is ASKING to the backend, so `cmdr://state`
- * can name the archive and the `unlock_archive` tool can answer it. Without this
+ * can name the archive and the `unlock` tool can answer it. Without this
  * an agent reads a bare `- type: archive-password` and has nothing to act on.
  *
  * ❌ The password never rides this call: it carries the question, never the

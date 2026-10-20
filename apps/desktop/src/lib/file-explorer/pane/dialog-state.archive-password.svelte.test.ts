@@ -267,6 +267,7 @@ describe('archive-password mirror for cmdr://state', () => {
       archiveName: 'secret.zip',
       archivePath: '/Users/me/secret.zip/inner/report.pdf',
       parentVolumeId: 'root',
+      container: 'archive',
       mode: 'transfer',
       wrongAttempt: true,
       operationId: null,

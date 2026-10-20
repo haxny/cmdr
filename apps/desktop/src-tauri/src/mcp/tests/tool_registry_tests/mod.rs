@@ -57,7 +57,7 @@ const EXPECTED_TOOL_NAMES: &[&str] = &[
     "indexing",
     "queue",
     "resolve_conflict",
-    "unlock_archive",
+    "unlock",
     "favorites",
     "connect_to_server",
     "remove_manual_server",

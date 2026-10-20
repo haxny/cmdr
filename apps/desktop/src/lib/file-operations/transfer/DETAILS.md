@@ -352,7 +352,7 @@ error dialog.
   the write-error already settled the op) so the same operation can be re-dispatched. The archive lives on the source
   pane's volume (an archive pane keeps its parent drive's `volumeId`), so
   `parentVolumeId = transferProgressProps. sourceVolumeId`; `archivePath` is the errored source `path`
-  (`set_archive_password` accepts the archive file OR any inner path). The prompt names the archive via
+  (`unlock_container` accepts the archive file OR any inner path). The prompt names the archive via
   `archiveNameFromPath` (the leftmost archive-boundary segment).
 - **Submit → store then re-dispatch.** `handleArchivePasswordSubmit` calls `setArchivePassword`, then re-shows the
   progress dialog with the same props but `previewId: null` — the first dispatch consumed the scan preview, so the retry
@@ -361,10 +361,10 @@ error dialog.
   carried-over id would silently downgrade to a full re-walk. A wrong password makes the backend raise
   `archive_needs_password` again with `wrongAttempt: true`, so the interception fires a second time and the dialog
   re-prompts (its distinct copy, empty field via a fresh mount).
-- **An agent's unlock stores but never starts.** The MCP `unlock_archive` tool routes to `supplyStoredPassword` instead
-  of `handleArchivePasswordSubmit`, and ❌ never re-dispatches: it settles the transfer, and the agent runs `copy` /
-  `move` again so extraction goes through the same gate as every other write. `pane/DETAILS.md` § "Only a PERSON's
-  submit re-dispatches".
+- **An agent's unlock stores but never starts.** The MCP `unlock` tool routes to `supplyStoredPassword` instead of
+  `handleArchivePasswordSubmit`, and ❌ never re-dispatches: it settles the transfer, and the agent runs `copy` / `move`
+  again so extraction goes through the same gate as every other write. `pane/DETAILS.md` § "Only a PERSON's submit
+  re-dispatches".
 - **Mid-transfer wrong password.** ZipCrypto's open-time check false-accepts ~1/256, caught later at end-of-stream CRC,
   so a `wrongAttempt: true` error can arrive AFTER progress started. The interception is in the running-op error path,
   so this is handled the same as an up-front rejection — no separate pre-flight branch.

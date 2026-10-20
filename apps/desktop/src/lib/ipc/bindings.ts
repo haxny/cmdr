@@ -694,22 +694,24 @@ export const commands = {
   ) =>
     typedError<MutationReply, MutationError>(__TAURI_INVOKE('create_file', { volumeId, parentPath, name, initiator })),
   /**
-   *  Stores `password` for the archive at `archive_path` on `parent_volume_id`,
-   *  overwriting any previous one (so a fresh attempt replaces a rejected password).
+   *  Tries `password` on the container at `path` on `parent_volume_id`, keeping
+   *  it on success and saving it to the Keychain when `remember` is set and the
+   *  container keeps such a thing (an archive ignores `remember`).
    *
-   *  `archive_path` may be the archive file itself OR any path inside it — both
-   *  resolve to the same `ArchiveVolume`, so the frontend can pass whichever it has
-   *  in hand (the `.zip` path when prompting on a browse, an inner source path when
-   *  prompting on an extract).
+   *  `path` may be the container itself OR any path inside it: both resolve to
+   *  the same volume, so the frontend passes whichever it has in hand.
    */
-  setArchivePassword: (parentVolumeId: string, archivePath: string, password: string) =>
-    typedError<null, string>(__TAURI_INVOKE('set_archive_password', { parentVolumeId, archivePath, password })),
+  unlockContainer: (parentVolumeId: string, path: string, password: string, remember: boolean) =>
+    typedError<UnlockOutcome, UnlockError>(
+      __TAURI_INVOKE('unlock_container', { parentVolumeId, path, password, remember }),
+    ),
   /**
-   *  Forgets any stored password for the archive (the user cancelled the prompt, or
-   *  the frontend is resetting state).
+   *  Forgets the password the container at `path` holds in memory (the person
+   *  cancelled the prompt, or the frontend is resetting state). A no-op when it
+   *  holds none.
    */
-  clearArchivePassword: (parentVolumeId: string, archivePath: string) =>
-    typedError<null, string>(__TAURI_INVOKE('clear_archive_password', { parentVolumeId, archivePath })),
+  forgetContainerPassword: (parentVolumeId: string, path: string) =>
+    typedError<null, UnlockError>(__TAURI_INVOKE('forget_container_password', { parentVolumeId, path })),
   /**
    *  Logs a frontend benchmark event to stderr (unified timeline with Rust events).
    *  Only logs if RUSTY_COMMANDER_BENCHMARK=1 is set.
@@ -5937,6 +5939,7 @@ export type ArchivePasswordPrompt = {
    *  caller: an answer names the archive, and the backend supplies the rest.
    */
   parentVolumeId: string
+  container: LockedContainer
   mode: ArchivePromptMode
   /**
    *  Whether a stored password was just rejected. The only thing that makes
@@ -10999,6 +11002,17 @@ export type LocationInfo = {
    */
   mountAccount: string | null
 }
+
+/**
+ *  What kind of container the prompt is for. Supplied by the frontend, which
+ *  classifies a pane's kind from its path, and rendered in `cmdr://state` so an
+ *  agent knows what it is answering.
+ */
+export type LockedContainer =
+  // An encrypted archive: the password is stored and checked on the next read.
+  | 'archive'
+  // A restic backup repo: the password is checked before the unlock answers.
+  | 'resticRepo'
 
 /**
  *  The Locked items a move left where they were, for one calm line beside its
@@ -17736,6 +17750,51 @@ export type UndoReport = {
   skipped: number
 }
 
+/**
+ *  Why an unlock or a forget didn't reach a container. A wrong password is
+ *  never here: it's `Ok(UnlockOutcome::WrongPassword)`.
+ */
+export type UnlockError =
+  // `volume_id` isn't registered (an unmount race).
+  | {
+      type: 'volumeNotFound'
+      // The id that no longer resolves.
+      volumeId: string
+    }
+  /**
+   *  The path leads into nothing password-locked (a since-changed path, or a
+   *  programming error).
+   */
+  | { type: 'notLocked' }
+  // The container couldn't be asked (its disk went away mid-unlock).
+  | {
+      type: 'volume'
+      // What the volume answered.
+      error: VolumeError
+    }
+  // The unlock outran its budget. Nothing was kept.
+  | { type: 'timedOut' }
+  // The caller called it off. Nothing was kept.
+  | { type: 'cancelled' }
+
+/**
+ *  What an unlock attempt did with the password.
+ *
+ *  The three differ in what a caller may conclude: only `Unlocked` proves the
+ *  password right, `Stored` proves nothing until the next read, and
+ *  `WrongPassword` kept nothing.
+ */
+export type UnlockOutcome =
+  /**
+   *  Kept without checking it (an archive): the next read decrypts, or fails
+   *  with `VolumeError::NeedsPassword { wrong_attempt: true }`.
+   */
+  | 'stored'
+  // Checked and kept: the container opened with it.
+  | 'unlocked'
+  // Checked and refused. Nothing was kept or saved.
+  | 'wrongPassword'
+
 // What an [`FavoriteReach::Unplugged`] favorite is waiting for.
 export type UnpluggedKind =
   // A local drive (or a non-SMB network mount) that isn't mounted.
@@ -18657,7 +18716,7 @@ export type VolumeError =
    *  password has been tried and `true` when the supplied one was rejected, so
    *  the frontend can prompt afresh vs. say "that password didn't work". The
    *  archive backend raises this; the frontend supplies a per-archive password
-   *  via `set_archive_password` and retries. Carries no path — the failing path
+   *  via `unlock_container` and retries. Carries no path — the failing path
    *  is the one the caller was reading.
    */
   | {
@@ -19682,7 +19741,7 @@ export type WriteOperationError =
    *  a copy/move source is inside an encrypted archive: `wrong_attempt` is
    *  `true` when the stored password was rejected (so the FE re-prompts rather
    *  than prompting fresh). The FE sets a per-archive password via
-   *  `set_archive_password` and retries the operation.
+   *  `unlock_container` and retries the operation.
    */
   | { type: 'archive_needs_password'; path: string; wrongAttempt: boolean }
   /**

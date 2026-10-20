@@ -1,4 +1,4 @@
-use crate::mcp::archive_password::{ArchivePasswordPrompt, ArchivePromptMode};
+use crate::mcp::archive_password::{ArchivePasswordPrompt, ArchivePromptMode, LockedContainer};
 use crate::mcp::dialog_state::KnownDialog;
 use crate::mcp::resources::{format_archive_password_dialog, format_available_dialogs_yaml, get_all_resources};
 
@@ -37,6 +37,7 @@ fn prompt(mode: ArchivePromptMode, wrong_attempt: bool) -> ArchivePasswordPrompt
         archive_name: "photos.zip".to_string(),
         archive_path: "/tmp/left/photos.zip/holiday.raw".to_string(),
         parent_volume_id: "drive-1".to_string(),
+        container: LockedContainer::Archive,
         mode,
         wrong_attempt,
         operation_id: Some("op-7".to_string()),
@@ -50,17 +51,25 @@ fn the_archive_password_entry_carries_everything_an_answer_needs() {
     let yaml = format_archive_password_dialog(&prompt(ArchivePromptMode::Transfer, false));
 
     assert!(yaml.contains("- type: archive-password"), "{yaml}");
-    assert!(yaml.contains("archive: \"photos.zip\""), "{yaml}");
-    assert!(
-        yaml.contains("archivePath: \"/tmp/left/photos.zip/holiday.raw\""),
-        "{yaml}"
-    );
+    assert!(yaml.contains("container: archive"), "{yaml}");
+    assert!(yaml.contains("name: \"photos.zip\""), "{yaml}");
+    assert!(yaml.contains("path: \"/tmp/left/photos.zip/holiday.raw\""), "{yaml}");
     assert!(yaml.contains("mode: transfer"), "{yaml}");
     assert!(yaml.contains("wrongAttempt: false"), "{yaml}");
     // The operation is already settled, so the name says so rather than
     // inviting a `queue` call that would find nothing.
     assert!(yaml.contains("settledOperationId: op-7"), "{yaml}");
-    assert!(yaml.contains("answerWith: unlock_archive"), "{yaml}");
+    assert!(yaml.lines().any(|line| line.trim() == "answerWith: unlock"), "{yaml}");
+}
+
+#[test]
+fn a_locked_backup_repo_says_so() {
+    // The same prompt answers a restic repo; an agent needs to know which it is
+    // before it words anything about "the archive".
+    let mut repo = prompt(ArchivePromptMode::Browse, false);
+    repo.container = LockedContainer::ResticRepo;
+    let yaml = format_archive_password_dialog(&repo);
+    assert!(yaml.contains("container: resticRepo"), "{yaml}");
 }
 
 #[test]

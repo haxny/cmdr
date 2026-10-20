@@ -113,7 +113,7 @@ pub enum AckSignal {
     /// The archive-password prompt mirror moved past `from`: the frontend either
     /// took the prompt down or put a new one up.
     ///
-    /// `unlock_archive`'s ack, and ❌ not `SoftDialogDisappeared`: a browse
+    /// `unlock`'s ack, and ❌ not `SoftDialogDisappeared`: a browse
     /// unlock re-lists immediately, so a wrong password can raise the prompt
     /// again before the dialog ever unmounts, and a "closed" wait would then time
     /// out on a flow that worked perfectly.
