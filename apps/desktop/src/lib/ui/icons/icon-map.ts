@@ -36,6 +36,7 @@ import IconGitFork from '~icons/lucide/git-fork'
 import IconGlobe from '~icons/lucide/globe'
 import IconGripVertical from '~icons/lucide/grip-vertical'
 import IconHeart from '~icons/lucide/heart'
+import IconHistory from '~icons/lucide/history'
 import IconHourglass from '~icons/lucide/hourglass'
 import IconInfo from '~icons/lucide/info'
 import IconKey from '~icons/lucide/key'
@@ -127,6 +128,7 @@ export const ICON_COMPONENTS = {
   globe: IconGlobe,
   'grip-vertical': IconGripVertical,
   heart: IconHeart,
+  history: IconHistory,
   hourglass: IconHourglass,
   info: IconInfo,
   key: IconKey,

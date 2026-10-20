@@ -145,6 +145,8 @@ async fn the_overlay_row_confirms_the_repo_without_a_listing() {
     assert_eq!(row.name, VIRTUAL_ENTRY_NAME);
     assert_eq!(PathBuf::from(&row.path), Path::new(REPO).join(VIRTUAL_ENTRY_NAME));
     assert!(row.is_directory && !row.is_symlink);
+    // The frontend draws its own glyph for this reserved id, never an OS folder icon.
+    assert_eq!(row.icon_id, "restic:snapshots");
     assert!(hub.confirm_repo("nas", &parent, Path::new(REPO)).await);
     assert_eq!(parent.listings(), 0);
 }

@@ -15,5 +15,8 @@ real files keep the drive's row.
   so `../pane/has-parent.ts::effectiveVolumeRootFor` uses the drive's mount for every routed kind.
 - **Not favoritable, not shareable, no editor** (`kindCanBeFavorited`, `rowIsOsVisible`): nothing in the view is on
   disk. The `Browse snapshots` row itself counts as inside the view.
+- **The `Browse snapshots` row's icon** is Lucide `history`, drawn by `../selection/FileIcon.svelte` for the reserved
+  `restic:snapshots` icon id the `cmdr-restic` hub puts on the row (`OVERLAY_ROW_ICON_ID`), the same way the git
+  portal's `git:*` ids get their glyphs. It inherits the row's text color.
 - **Open terminal here** opens the repo folder (`#lib/open-terminal/terminal-target.ts`), the nearest folder on disk,
   and never the `Browse snapshots` row under the cursor.

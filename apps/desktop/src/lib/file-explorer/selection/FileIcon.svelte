@@ -93,12 +93,21 @@
                 return 'git-fork'
         }
     })
+
+    // A restic repo's `Browse snapshots` row: a way into the backup's history,
+    // so it reads as that rather than as one more folder. The id is the
+    // `cmdr-restic` hub's (`OVERLAY_ROW_ICON_ID`).
+    const isResticIcon = $derived(file.iconId === 'restic:snapshots')
 </script>
 
 <span class="icon-wrapper" class:is-dimmed={dimmed}>
     {#if isGitIcon}
         <span class="git-icon">
             <Icon name={gitIconName} size={16} />
+        </span>
+    {:else if isResticIcon}
+        <span class="restic-icon">
+            <Icon name="history" size={16} />
         </span>
     {:else if iconUrl}
         <img class="icon" class:gold-folder={recolorToGold} src={iconUrl} alt="" width="16" height="16" />
@@ -180,6 +189,15 @@
         align-items: center;
         justify-content: center;
         color: var(--color-git-portal-text);
+    }
+
+    /* Inherits the row's text color, so it follows selection and dimming like the name. */
+    .restic-icon {
+        display: inline-flex;
+        width: var(--spacing-icon-size);
+        height: var(--spacing-icon-size);
+        align-items: center;
+        justify-content: center;
     }
 
     .symlink-badge {

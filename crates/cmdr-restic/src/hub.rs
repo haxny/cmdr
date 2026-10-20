@@ -23,6 +23,11 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 use zeroize::Zeroizing;
 
+/// The overlay row's icon key: a reserved id the frontend draws as its own
+/// glyph (`FileIcon.svelte`), like the git portal's `git:`-prefixed ones, so
+/// the row reads as a way into the backup, ❗ not a plain folder.
+const OVERLAY_ROW_ICON_ID: &str = "restic:snapshots";
+
 /// The timings and caps the hub runs on. Tests shorten them; the host never
 /// does. The sizes come from a real NAS repo (`docs/notes/restic/open-cost.md`).
 #[derive(Debug, Clone, Copy)]
@@ -178,6 +183,7 @@ impl ResticRepos {
         let path = repo_root.join(VIRTUAL_ENTRY_NAME);
         FileEntry {
             extended_metadata_loaded: true,
+            icon_id: OVERLAY_ROW_ICON_ID.to_string(),
             ..FileEntry::new(
                 VIRTUAL_ENTRY_NAME.to_string(),
                 path.to_string_lossy().into_owned(),

@@ -46,6 +46,7 @@
         'grip-vertical': 'Drag handle on a waiting operation row in the operation queue, which drags it to another place in line.',
         globe: 'Network volume marker in the volume breadcrumb (volume row and placeholder).',
         heart: 'The "Like Cmdr on AlternativeTo" row of the onboarding open-beta checklist.',
+        history: 'The "Browse snapshots" row a restic backup repository shows in its folder.',
         hourglass:
             'Pending recursive-size indicator in the file lists and selection info, and the drive-indexing status indicator.',
         info: 'Restricted-path marker in the volume breadcrumb and file lists, and the info banner in the transfer error dialog.',
