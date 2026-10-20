@@ -23,6 +23,9 @@ const pathOnlyTypes = new Set<WriteOperationError['type']>([
   'delete_pending',
   'destination_not_writable',
   'destination_full',
+  'landing_not_recorded',
+  'source_in_cold_storage',
+  'source_changed',
 ])
 
 /** Error types where technical details include path + error message. */
