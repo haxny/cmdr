@@ -239,10 +239,17 @@ impl CheckpointStream {
         // Park between windows while paused (returns the moment the work stops). Pause
         // is park-in-place for every backend: a bounded-window read holds nothing
         // between windows, so there's no scarce resource to release.
-        if self.state.pause_gate.is_paused() {
+        // ❗ Put the phase back after the park: `parked(pause)` exempts a task
+        // from the stall abort, so a label left over from a pause that ended
+        // would shield a task that wedged later.
+        let parking = self.state.pause_gate.is_paused();
+        if parking {
             set_task_phase(TaskPhase::ParkedPause);
         }
         self.state.park_while_paused().await;
+        if parking {
+            set_task_phase(TaskPhase::Streaming);
+        }
 
         // Foreground auto-yield: when a foreground op (listing / nav on the phone)
         // is pending on the source device, don't start the next window until it

@@ -19,7 +19,7 @@ use crate::test_support::placeholder_conflict;
 use crate::testing::TestOperations;
 use crate::types::{LeftoversKeptEvent, OperationsChanged};
 use crate::types::{WriteOperationType, WriteProgressEvent};
-use cmdr_fs::volume::{ConnectionLiveness, Volume};
+use cmdr_fs::volume::{ConnectionLiveness, Volume, VolumeReadStream};
 
 /// A probe whose stall-abort window is `window` AND whose connection is proven
 /// dead, so a test can drive the watchdog past the window in a handful of
@@ -451,6 +451,54 @@ fn a_paused_transfer_reports_paused_not_stuck() {
     let activity = probe.activity();
     assert_eq!(activity.waiting_on, TransferWaitReason::Paused);
     assert_eq!(activity.still_for_seconds, 0, "a pause is not time spent stalled");
+}
+
+/// A read that parked on a pause reads as streaming again once it's resumed,
+/// ❌ never still `parked(pause)`: that label exempts a task from the stall
+/// abort, so a task that wedged after a Resume could never be ended, and a dump
+/// would blame a pause that was over (seen in the `flaky`-share soak's dump).
+#[tokio::test]
+async fn a_read_resumed_from_a_pause_reads_as_streaming_again() {
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-resumed");
+    let state = Arc::clone(guard.state());
+    let probe = probe_for(guard.id(), &state);
+    let task = probe.begin_task(TaskRow::source(0), TaskRole::File, "/src/a", "/dst/a");
+    let volume: Arc<dyn Volume> = Arc::new(cmdr_fs::volume::InMemoryVolume::new("Source"));
+    volume
+        .create_file(Path::new("/a"), b"some bytes")
+        .await
+        .expect("a source file");
+    let inner = volume.open_read_stream(Path::new("/a")).await.expect("its stream");
+    let mut stream = super::super::checkpoint_stream::CheckpointStream::new(
+        inner,
+        Arc::clone(&state),
+        Arc::clone(&volume),
+        Arc::clone(&volume),
+        Duration::from_millis(1),
+        0,
+        Duration::from_millis(1),
+        false,
+    );
+    state.pause_gate.pause();
+
+    let phase_after_the_read = CURRENT_TASK_PROBE
+        .scope(task.probe(), async {
+            let read = async {
+                stream.next_chunk().await;
+                current_task_phase()
+            };
+            let resume = async {
+                cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the read to park on the pause", || {
+                    current_task_phase() == Some(TaskPhase::ParkedPause)
+                })
+                .await;
+                state.pause_gate.resume();
+            };
+            tokio::join!(read, resume).0
+        })
+        .await;
+    assert_eq!(phase_after_the_read, Some(TaskPhase::Streaming));
 }
 
 /// A TOP-LEVEL conflict prompt is resolved on the DRIVER, so no task carries
