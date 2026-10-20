@@ -76,31 +76,39 @@ The remote ORIGINAL is byte-for-byte untouched until the very last swap:
    (`create_directory_errors_on_existing_dir()` true — SMB, local), existing-archive mutation first asks its
    force-rename operation to replace the name; a backend may implement that as multiple protocol operations. On refusal
    it falls back to delete-then-rename. A backend that ALLOWS same-name siblings (MTP, flag false) goes STRAIGHT to
-   delete-then-rename — a rename onto the live name would DUPLICATE, not replace. The delete-then-rename path has
-   exactly ONE crash window (between the delete and the rename): the NEW, fully-uploaded data survives under the temp
-   name — never lost, only briefly misnamed.
+   delete-then-rename — a rename onto the live name would DUPLICATE, not replace. It lands the way the transfer engine's
+   `transfer/volume/finalize.rs` does, because the transfer engine's stale-temp sweep
+   (`transfer/volume/cleanup.rs::reap_stale_transfer_temps`) deletes ANY `.cmdr-tmp-*` an hour old at the start of the
+   next copy into the folder, so a temp name is no place for the only copy. A replacing rename that errors is followed
+   by a stat of the temp (gone means it landed; deleting the original then would delete the edit); a refused delete by
+   `what_a_refused_delete_left` (still there: the spare temp goes, the original stays whole); and a rename that fails
+   after the delete by `rescue_out_of_temp_space`, a ` (recovered)` name reported as `NewDataKeptAt`. Gotcha/Why: the
+   swap used to report a bare error naming the temp, and the sweep deleted the whole archive an hour later. One window
+   stays open: a crash or force quit between the delete and the rename leaves the edit under its temp name, in that
+   sweep's reach.
 
 A cancel at ANY point before the swap completes leaves the remote original intact (the local scratch dir and any partial
 remote temp are cleaned up — a RAII `ScratchDir` and the upload's on-error delete). Pinned by `remote_tests`
-(round-trip, cancel-before-swap-leaves-the-original, and the sibling-allowing delete-then-rename swap), plus live-remote
-integration proofs that drive `pull_apply_upload_swap` against a REAL backend: the backend-blind scenarios in
-`network_archive_test_support.rs` (edit, cancel before the swap, routing detection, extract-out, copy-into, compress),
-which `smb_archive_integration_test.rs`, `sftp_archive_integration_test.rs`, and `webdav_archive_integration_test.rs`
-drive, and `mtp_archive_test` under the `virtual-mtp` feature
+(round-trip, cancel-before-swap-leaves-the-original, the sibling-allowing delete-then-rename swap, and the three
+half-way swaps: a rename failing after the delete, a replacing rename that landed despite its error, and a refused
+delete), plus live-remote integration proofs that drive `pull_apply_upload_swap` against a REAL backend: the
+backend-blind scenarios in `network_archive_test_support.rs` (edit, cancel before the swap, routing detection,
+extract-out, copy-into, compress), which `smb_archive_integration_test.rs`, `sftp_archive_integration_test.rs`, and
+`webdav_archive_integration_test.rs` drive, and `mtp_archive_test` under the `virtual-mtp` feature
 (`virtual_mtp_archive_browses_and_extracts_via_read_range` +
 `virtual_mtp_remote_zip_edit_deletes_an_entry_through_the_device`, exercising the MTP delete-then-rename swap). Cost:
 O(archive) network per edit (the pull), documented and accepted — there is no remote random-access WRITE adapter (that's
 only a future in-place-append optimization). Remote backends don't carry the archive file's mode/mtime/xattr across the
 rewrite the way local `copyfile` does; the upload mints a fresh remote object.
 
-**Stale upload-temp reaping.** A crash or kill in the swap's ONE window (between the upload finishing and the swap
-committing) can leave the fully-uploaded temp on the remote under its `<archive>.cmdr-tmp-<uuid>` name. It's harmless
-(the original is intact and the temp holds the NEW bytes), but untidy. `pull_apply_upload_swap` reaps it at the start of
-the next edit of the SAME remote archive — the mirror of the local mutator's `reap_sibling_temps` — via a single
-`list_directory` of the archive's parent, deleting siblings that match this archive's own temp shape. Best-effort and
-non-blocking (a listing/delete failure is logged at debug, never fails or delays the edit); one round-trip, nothing on
-the read path. Pinned by the four `remote_edit_*` reap tests in `remote_tests` (stale-same-archive reaped, fresh spared,
-other-archive ignored, delete-failure doesn't fail the edit).
+**Stale upload-temp reaping.** A crash or kill between the upload finishing and the swap starting can leave the
+fully-uploaded temp on the remote under its `<archive>.cmdr-tmp-<uuid>` name. It's harmless (the original is intact and
+the temp holds the NEW bytes), but untidy. `pull_apply_upload_swap` reaps it at the start of the next edit of the SAME
+remote archive — the mirror of the local mutator's `reap_sibling_temps` — via a single `list_directory` of the archive's
+parent, deleting siblings that match this archive's own temp shape. Best-effort and non-blocking (a listing/delete
+failure is logged at debug, never fails or delays the edit); one round-trip, nothing on the read path. Pinned by the
+four `remote_edit_*` reap tests in `remote_tests` (stale-same-archive reaped, fresh spared, other-archive ignored,
+delete-failure doesn't fail the edit).
 
 - **Decision — age-gate the remote reap at 24 h (`REMOTE_TEMP_REAP_MIN_AGE`); the local reap has no threshold.** The
   local reap deletes every matching sibling unconditionally because edits of one archive serialize on the parent lane,

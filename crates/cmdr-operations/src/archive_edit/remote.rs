@@ -21,12 +21,18 @@
 //!   (`foo.zip.cmdr-tmp-<uuid>`); the original keeps its name and bytes.
 //! - **Swap** is the only step that changes the original. It prefers an atomic
 //!   rename-overwrite where the backend supports it (SMB with `ReplaceIfExists`),
-//!   and otherwise deletes the original then renames the temp into place. That
-//!   delete-then-rename leaves exactly ONE crash window (between the delete and
-//!   the rename): the NEW, fully-uploaded data survives under the temp name — it
-//!   is never lost, only briefly misnamed. MTP always takes this path (it has no
-//!   rename-overwrite and allows same-name siblings, so a rename onto a live name
-//!   would DUPLICATE, not replace).
+//!   and otherwise deletes the original then renames the temp into place. MTP
+//!   always takes this path (it has no rename-overwrite and allows same-name
+//!   siblings, so a rename onto a live name would DUPLICATE, not replace).
+//!
+//! ❗ A `.cmdr-tmp-*` name is NOT a safe place for the only copy: the transfer
+//! engine's sweep deletes any an hour old at the start of the next copy into the
+//! folder. So a swap whose rename fails after the delete moves the edited archive
+//! to a ` (recovered)` name and reports it (`NewDataKeptAt`); see
+//! [`swap_into_place`]. One window stays open: a crash or force quit between the
+//! delete and the rename leaves the edited archive under its temp name, where
+//! that sweep can reach it an hour later. Only a backend with an atomic replace
+//! closes it.
 //!
 //! A cancel at ANY point before the swap completes leaves the remote original
 //! intact (the local temp and any partial remote temp are cleaned up). Pinned by
@@ -41,6 +47,9 @@ use tokio::io::AsyncWriteExt;
 
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::WriteOperationState;
+use super::super::transfer::recovered_name::{
+    AfterARefusedDelete, discard_unplaced_temp, rescue_out_of_temp_space, what_a_refused_delete_left,
+};
 use super::super::types::WriteOperationError;
 use super::edit_error::EditError;
 use cmdr_fs::volume::{Volume, VolumeError, WriteMode};
@@ -143,6 +152,11 @@ where
 /// `.cmdr-tmp-<uuid>` sibling, then swap it into place. The remote target keeps its
 /// old bytes until the swap, so a cancel/fault before the swap leaves it untouched
 /// with no torn file. This is `pull_apply_upload_swap`'s commit.
+///
+/// ❗ Once the upload is complete the temp is committed data, so only the
+/// pre-swap cancel below may delete it. A failed swap has already put it
+/// wherever it belongs (`swap_into_place`), and its error says where; a caller
+/// must not clean up after it.
 pub(super) async fn place_local_file(
     parent: &dyn Volume,
     local_file: &Path,
@@ -281,6 +295,21 @@ async fn upload_archive(
 
 /// Swaps the uploaded temp into the original's place — the ONLY step that changes
 /// the remote original. See the module-level data-safety contract.
+///
+/// The same landing as the transfer engine's `finalize::finalize_safe_replace`,
+/// because the same sweep (`cleanup.rs::reap_stale_transfer_temps`, any
+/// `.cmdr-tmp-*` an hour old, at the start of every copy into the folder) would
+/// otherwise delete an archive left under its temp name:
+///
+/// - A replacing rename that answers an error may still have landed (a lost
+///   response), so the temp is checked before anything is deleted. Gone means
+///   the swap happened; deleting the original then would delete the edit.
+/// - A delete that answers an error is checked with one stat
+///   (`what_a_refused_delete_left`): still there means nothing changed, so the
+///   spare temp goes and the original stays whole; gone means the way is clear.
+/// - A rename that fails once the original is gone leaves the temp as the only
+///   copy, so it's moved to a ` (recovered)` name no sweep matches and the
+///   error says where (`NewDataKeptAt`).
 async fn swap_into_place(parent: &dyn Volume, remote_temp: &Path, archive_path: &Path) -> Result<(), EditError> {
     // Prefer an ATOMIC rename-overwrite where the backend rejects a same-name
     // collision (SMB, local FS): if the server supports `ReplaceIfExists` the
@@ -288,24 +317,45 @@ async fn swap_into_place(parent: &dyn Volume, remote_temp: &Path, archive_path: 
     // through to delete-then-rename. A backend that ALLOWS same-name siblings
     // (MTP) must NOT attempt this — a rename onto the live name would duplicate,
     // not replace — so it goes straight to delete-then-rename.
-    if parent.create_directory_errors_on_existing_dir() && parent.rename(remote_temp, archive_path, true).await.is_ok()
-    {
-        return Ok(());
+    if parent.create_directory_errors_on_existing_dir() {
+        let Err(replace_err) = parent.rename(remote_temp, archive_path, true).await else {
+            return Ok(());
+        };
+        match parent.get_metadata(remote_temp).await {
+            Ok(_) => {}
+            Err(VolumeError::NotFound(_)) => {
+                log::info!(target: "archive_remote_edit", "the replacing rename of {} answered {replace_err}, but its temp is gone, so it landed", archive_path.display());
+                return Ok(());
+            }
+            // Can't tell whether it landed, so nothing gets deleted. If it
+            // didn't, the original is intact and the temp is a spare copy.
+            Err(_) => return Err(EditError::Op(to_write_error(archive_path, &replace_err))),
+        }
     }
 
-    // Delete-then-rename. Tolerate a MISSING original: `place_local_file` can publish
-    // a brand-new target on MTP, which allows same-name siblings. Any OTHER delete fault is real. The crash window (between
-    // the two) leaves the NEW, fully-uploaded data under the temp name: recoverable,
-    // never lost.
+    // Delete-then-rename. Tolerate a MISSING original: `place_local_file` can
+    // publish a brand-new target on MTP, which allows same-name siblings.
     match parent.delete(archive_path).await {
-        Ok(()) => {}
-        Err(VolumeError::NotFound(_)) => {}
-        Err(err) => return Err(EditError::Op(to_write_error(archive_path, &err))),
+        Ok(()) | Err(VolumeError::NotFound(_)) => {}
+        Err(err) => match what_a_refused_delete_left(parent, archive_path).await {
+            AfterARefusedDelete::Gone => {}
+            AfterARefusedDelete::StillThere => {
+                discard_unplaced_temp(parent, remote_temp).await;
+                return Err(EditError::Op(to_write_error(archive_path, &err)));
+            }
+            // The temp stays: if the original IS gone, it's the only copy.
+            AfterARefusedDelete::Unknown => return Err(EditError::Op(to_write_error(archive_path, &err))),
+        },
     }
-    parent
-        .rename(remote_temp, archive_path, false)
-        .await
-        .map_err(vol_op(remote_temp))?;
+    if let Err(err) = parent.rename(remote_temp, archive_path, false).await {
+        let kept_at = rescue_out_of_temp_space(parent, remote_temp, archive_path).await;
+        log::warn!(target: "archive_remote_edit", "{} is gone and the edited archive couldn't take its name, so it is at {} now: {err}", archive_path.display(), kept_at.display());
+        return Err(EditError::Op(WriteOperationError::NewDataKeptAt {
+            path: archive_path.display().to_string(),
+            kept_at: kept_at.display().to_string(),
+            message: err.to_string(),
+        }));
+    }
     Ok(())
 }
 

@@ -111,7 +111,7 @@ async fn landed_before_the_drop(
 /// held. With the way cleared, the temp is the only copy of the new bytes, and
 /// `land` has already moved it out of temp space.
 async fn clear_unlanded_temp(state: &WriteOperationState, dest_volume: &Arc<dyn Volume>, temp: &Path) {
-    if discard_unplaced_temp(dest_volume, temp).await {
+    if discard_unplaced_temp(dest_volume.as_ref(), temp).await {
         in_flight_temps::deregister(state, temp, dest_home(state));
     }
 }

@@ -87,7 +87,7 @@ async fn swap_into_place(dest_volume: &Arc<dyn Volume>, temp: &Path, orig: &Path
         Err(VolumeError::NotFound(_)) => {
             // Already gone; the rename below will land the new data anyway.
         }
-        Err(e) => match what_a_refused_delete_left(dest_volume, orig).await {
+        Err(e) => match what_a_refused_delete_left(dest_volume.as_ref(), orig).await {
             // The delete went through despite its answer: the way is clear, so
             // the swap goes on. Stopping here would leave neither file.
             AfterARefusedDelete::Gone => {}
@@ -96,7 +96,7 @@ async fn swap_into_place(dest_volume: &Arc<dyn Volume>, temp: &Path, orig: &Path
                 // temp is a complete copy of bytes the source still holds, and
                 // it's ours: take it away now rather than leave it in the
                 // user's folder until the hourly reap.
-                let discarded = discard_unplaced_temp(dest_volume, temp).await;
+                let discarded = discard_unplaced_temp(dest_volume.as_ref(), temp).await;
                 log::warn!(
                     "finalize_safe_replace: couldn't delete the original {}, so the destination still holds it (temp {} {}): {}",
                     orig.display(),
@@ -124,7 +124,7 @@ async fn swap_into_place(dest_volume: &Arc<dyn Volume>, temp: &Path, orig: &Path
     match dest_volume.rename(temp, orig, false).await {
         Ok(()) => Ok(()),
         Err(error) => {
-            let new_data_at = rescue_out_of_temp_space(dest_volume, temp, orig).await;
+            let new_data_at = rescue_out_of_temp_space(dest_volume.as_ref(), temp, orig).await;
             log::warn!(
                 "finalize_safe_replace: the original {} is gone and the new data couldn't take its name, so it is at {} now: {}",
                 orig.display(),

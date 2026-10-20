@@ -187,7 +187,7 @@ impl DisplacedDestination {
                     self.aside.path().display(),
                     self.original.display()
                 );
-                let kept_at = rescue_out_of_temp_space(volume, self.aside.path(), &self.original).await;
+                let kept_at = rescue_out_of_temp_space(volume.as_ref(), self.aside.path(), &self.original).await;
                 // The rescue either gave the bytes a real name or left them on
                 // the aside. Still on the aside means the sweep is the next one
                 // to try, so the record stays.

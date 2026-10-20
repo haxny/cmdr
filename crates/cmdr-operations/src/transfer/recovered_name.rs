@@ -16,12 +16,12 @@
 //! [`what_a_refused_delete_left`] is how a landing whose delete answered an
 //! error finds out which of the two situations it is in.
 //!
-//! It sits at `transfer/` level rather than inside `volume/` because BOTH
-//! landings reach it: `volume::finalize::finalize_safe_replace` (a cross-volume
-//! file→file Overwrite) and `staged_write::land` (any staged write).
+//! It sits at `transfer/` level rather than inside `volume/` because every
+//! landing reaches it: `volume::finalize::finalize_safe_replace` (a cross-volume
+//! file→file Overwrite), `staged_write::land` (any staged write), and
+//! `archive_edit::remote::swap_into_place` (a remote zip edit's swap).
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use super::super::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -74,11 +74,7 @@ impl From<VolumeError> for FinalizeFailure {
 /// would fail identically under every candidate: walking eight of them would add
 /// eight timeouts to an error path the user is waiting on. A name that is merely
 /// TAKEN is the one answer a different name fixes.
-pub(in crate::transfer) async fn rescue_out_of_temp_space(
-    dest_volume: &Arc<dyn Volume>,
-    temp: &Path,
-    orig: &Path,
-) -> PathBuf {
+pub(crate) async fn rescue_out_of_temp_space(dest_volume: &dyn Volume, temp: &Path, orig: &Path) -> PathBuf {
     let recovered = recovered_sibling(orig);
     match dest_volume.rename(temp, &recovered, false).await {
         Ok(()) => return recovered,
@@ -107,7 +103,7 @@ pub(in crate::transfer) async fn rescue_out_of_temp_space(
 /// whether the name is still taken. One stat can, and it runs only on this
 /// failure path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(in crate::transfer) enum AfterARefusedDelete {
+pub(crate) enum AfterARefusedDelete {
     /// The name is still taken: the delete really didn't happen, nothing was
     /// cleared, and the temp is a spare copy of bytes the source still holds.
     StillThere,
@@ -120,10 +116,7 @@ pub(in crate::transfer) enum AfterARefusedDelete {
     Unknown,
 }
 
-pub(in crate::transfer) async fn what_a_refused_delete_left(
-    dest_volume: &Arc<dyn Volume>,
-    path: &Path,
-) -> AfterARefusedDelete {
+pub(crate) async fn what_a_refused_delete_left(dest_volume: &dyn Volume, path: &Path) -> AfterARefusedDelete {
     match dest_volume.get_metadata(path).await {
         Ok(_) => AfterARefusedDelete::StillThere,
         Err(VolumeError::NotFound(_)) => AfterARefusedDelete::Gone,
@@ -152,7 +145,7 @@ pub(in crate::transfer) async fn what_a_refused_delete_left(
 /// the sweeps: the operation's abandoned-write sweep if the temp is still
 /// registered, and `cleanup.rs::reap_stale_transfer_temps` on the next transfer
 /// into that folder once it is an hour old.
-pub(in crate::transfer) async fn discard_unplaced_temp(dest_volume: &Arc<dyn Volume>, temp: &Path) -> bool {
+pub(crate) async fn discard_unplaced_temp(dest_volume: &dyn Volume, temp: &Path) -> bool {
     match dest_volume.delete(temp).await {
         Ok(()) | Err(VolumeError::NotFound(_)) => true,
         Err(e) => {

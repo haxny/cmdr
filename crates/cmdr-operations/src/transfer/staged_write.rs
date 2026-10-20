@@ -516,7 +516,7 @@ async fn land(
     release: &(dyn Fn() + Sync),
 ) -> Result<(), FinalizeFailure> {
     let discard = || async {
-        if discard_unplaced_temp(dest_volume, temp).await {
+        if discard_unplaced_temp(dest_volume.as_ref(), temp).await {
             release();
         }
     };
@@ -544,13 +544,13 @@ async fn land(
     release();
     let way_is_clear = match dest_volume.delete(final_path).await {
         Ok(()) | Err(VolumeError::NotFound(_)) => true,
-        Err(_) => match what_a_refused_delete_left(dest_volume, final_path).await {
+        Err(_) => match what_a_refused_delete_left(dest_volume.as_ref(), final_path).await {
             AfterARefusedDelete::Gone => true,
             // Couldn't clear the way, so nothing was lost: the destination still
             // holds whatever was in the way, the temp is a spare copy, and the
             // rename error is the one to report.
             AfterARefusedDelete::StillThere => {
-                discard_unplaced_temp(dest_volume, temp).await;
+                discard_unplaced_temp(dest_volume.as_ref(), temp).await;
                 false
             }
             AfterARefusedDelete::Unknown => false,
@@ -568,7 +568,7 @@ async fn land(
         // it out of temp space and report where it went. Same act, same
         // reason, as `finalize::finalize_safe_replace`'s.
         Err(error) => Err(FinalizeFailure {
-            new_data_at: Some(rescue_out_of_temp_space(dest_volume, temp, final_path).await),
+            new_data_at: Some(rescue_out_of_temp_space(dest_volume.as_ref(), temp, final_path).await),
             error,
         }),
     }

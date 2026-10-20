@@ -11,16 +11,20 @@
 //! live in the integration suites.
 
 use std::collections::HashMap;
+use std::future::Future;
 use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::super::state::{OperationIntent, WriteOperationState};
 use super::super::super::testing::TestOperations;
+use super::super::super::transfer::volume::{FaultyOp, FaultyVolume};
+use super::super::super::types::WriteOperationError;
 use super::pull_apply_upload_swap;
 use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset, MutationHooks};
-use cmdr_fs::volume::{InMemoryVolume, Volume};
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
 /// A no-op `MutationHooks`: the mutator never pauses/cancels in these tests, so
 /// every trait method keeps its default.
@@ -127,6 +131,11 @@ async fn seed_temp(parent: &InMemoryVolume, temp_path: &Path, modified_at_secs: 
 /// Returns whether the edit committed (the error type isn't `Debug`, so callers
 /// assert on the boolean rather than `.expect()`ing).
 async fn run_add_edit(parent: Arc<dyn Volume>, archive_path: PathBuf) -> bool {
+    add_edit(parent, archive_path).await.is_ok()
+}
+
+/// [`run_add_edit`], answering the orchestration's own result.
+async fn add_edit(parent: Arc<dyn Volume>, archive_path: PathBuf) -> Result<(), super::EditError> {
     pull_apply_upload_swap(
         parent,
         archive_path,
@@ -142,7 +151,6 @@ async fn run_add_edit(parent: Arc<dyn Volume>, archive_path: PathBuf) -> bool {
         },
     )
     .await
-    .is_ok()
 }
 
 #[tokio::test]
@@ -375,4 +383,167 @@ async fn remote_edit_swaps_via_delete_then_rename_on_a_sibling_allowing_backend(
         !names.iter().any(|n| n.contains(".cmdr-tmp-")),
         "no leftover upload temp, got: {names:?}"
     );
+}
+
+// ---- A swap that goes wrong half-way ----------------------------------------
+//
+// The transfer engine's stale-temp sweep deletes any `.cmdr-tmp-*` an hour old
+// at the start of the next copy into that folder, so a swap must never leave the
+// only copy of the archive under its temp name.
+
+/// A phone-like parent (always delete-then-rename) seeded with `bundle.zip`.
+async fn sibling_allowing_parent(archive_path: &Path) -> Arc<InMemoryVolume> {
+    let parent = InMemoryVolume::new("Remote-MTP").with_sibling_duplicates_allowed();
+    parent.create_directory(Path::new("/device")).await.expect("seed dir");
+    parent
+        .create_file(archive_path, &build_zip(&[("keep.txt", b"keep me")]))
+        .await
+        .expect("seed zip");
+    Arc::new(parent)
+}
+
+/// The original is deleted and the temp then can't take its name: the edited
+/// archive moves to a ` (recovered)` name no sweep matches, and the error says
+/// where it is.
+#[tokio::test]
+async fn a_rename_that_fails_after_the_delete_keeps_the_archive_under_a_findable_name() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
+        .failing_call(
+            FaultyOp::Rename,
+            1,
+            VolumeError::NotConnected("the phone stopped answering".into()),
+        )
+        .arc();
+
+    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+
+    assert!(parent.fault_fired(FaultyOp::Rename), "the swap's rename failed");
+    let Err(super::EditError::Op(WriteOperationError::NewDataKeptAt { path, kept_at, .. })) = result else {
+        panic!("the error must say where the edited archive is");
+    };
+    assert_eq!(path, "/device/bundle.zip");
+    assert!(
+        !kept_at.contains(".cmdr-tmp-"),
+        "the archive must not keep a name the stale-temp sweep deletes: {kept_at}"
+    );
+    let back = read_remote_zip(parent.as_ref(), Path::new(&kept_at)).await;
+    assert!(
+        back.contains_key("keep.txt") && back.contains_key("added.txt"),
+        "the edited archive, whole"
+    );
+    let names = sibling_names(parent.as_ref(), &archive_path).await;
+    assert!(
+        !names.iter().any(|n| n.contains(".cmdr-tmp-")),
+        "nothing left in temp space, got: {names:?}"
+    );
+}
+
+/// The replacing rename lands on the server but its answer is an error. The temp
+/// is gone, so the swap happened: the fallback must not delete the archive that
+/// now holds the edit.
+#[tokio::test]
+async fn a_replacing_rename_that_landed_despite_its_error_keeps_the_edit() {
+    let archive_path = PathBuf::from("/share/bundle.zip");
+    let inner = InMemoryVolume::new("Remote");
+    inner.create_directory(Path::new("/share")).await.expect("seed dir");
+    inner
+        .create_file(&archive_path, &build_zip(&[("keep.txt", b"keep me")]))
+        .await
+        .expect("seed zip");
+    let parent = Arc::new(RenameLandsButErrs { inner: Arc::new(inner) });
+
+    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+
+    assert!(result.is_ok(), "the rename landed, so the edit committed");
+    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
+    assert!(
+        back.contains_key("keep.txt") && back.contains_key("added.txt"),
+        "the edit is in place"
+    );
+    let names = sibling_names(parent.as_ref(), &archive_path).await;
+    assert!(
+        !names.iter().any(|n| n.contains(".cmdr-tmp-")),
+        "no leftover upload temp, got: {names:?}"
+    );
+}
+
+/// The delete of the original is refused and the original is still there: the
+/// edit didn't happen, the original keeps its bytes, and the spare temp goes.
+#[tokio::test]
+async fn a_refused_delete_of_the_original_leaves_it_whole_and_takes_the_temp_away() {
+    let archive_path = PathBuf::from("/device/bundle.zip");
+    let parent = FaultyVolume::wrapping(sibling_allowing_parent(&archive_path).await)
+        .failing_call(FaultyOp::Delete, 1, VolumeError::NotConnected("busy".into()))
+        .arc();
+
+    let result = add_edit(parent.clone() as Arc<dyn Volume>, archive_path.clone()).await;
+
+    assert!(parent.fault_fired(FaultyOp::Delete), "the delete was refused");
+    assert!(
+        matches!(result, Err(super::EditError::Op(ref e)) if !matches!(e, WriteOperationError::NewDataKeptAt { .. })),
+        "a plain refusal: nothing moved"
+    );
+    let back = read_remote_zip(parent.as_ref(), &archive_path).await;
+    assert!(
+        back.contains_key("keep.txt") && !back.contains_key("added.txt"),
+        "the original, untouched"
+    );
+    let names = sibling_names(parent.as_ref(), &archive_path).await;
+    assert!(
+        !names.iter().any(|n| n.contains(".cmdr-tmp-")),
+        "the unplaced temp is taken away, got: {names:?}"
+    );
+}
+
+/// A parent whose replacing rename APPLIES and still answers an error, the way a
+/// lost response looks over a network share.
+struct RenameLandsButErrs {
+    inner: Arc<InMemoryVolume>,
+}
+
+impl Volume for RenameLandsButErrs {
+    crate::forward_volume_methods!(
+        inner => name,
+        root,
+        lane_key,
+        list_directory,
+        get_metadata,
+        exists,
+        is_directory,
+        create_file,
+        create_directory,
+        create_directory_all,
+        delete,
+        open_read_stream,
+        write_from_stream,
+        local_path,
+        supports_streaming,
+        supports_local_fs_access,
+        operations_are_local,
+        create_directory_errors_on_existing_dir,
+        supports_unknown_length_writes,
+        write_is_single_shot,
+        publishes_writes_whole,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn rename<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        force: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            self.inner.rename(from, to, force).await?;
+            if force {
+                Err(VolumeError::NotConnected("the reply got lost".into()))
+            } else {
+                Ok(())
+            }
+        })
+    }
 }
