@@ -62,10 +62,10 @@ Directories answer `IsADirectory`; symlinks and special files `NotSupported`.
 
 Copies address files by path, so `latest` rebinding mid-copy would mix two snapshots in one restore, silently. The hub
 pins which snapshot `latest` shows (`LatestPin`) and moves it only on a root refresh, and only when nothing has touched
-`latest/…` for the quiet period (30 s): a listing, a stat, a stream open, or any chunk of a stream opened there. The pin
-also moves at once when its snapshot is gone from the repo (a prune), since there's nothing left to show. A dated folder
-is the exact pin; `latest` is the convenience. With several hosts in one repo, `latest` is still the newest snapshot
-overall.
+`latest/…` for the quiet period (30 s): a listing, a stat, a stream open, or any chunk of a stream opened there. Listing
+the root only shows the `latest` row and doesn't count, so refreshing to see a new backup moves it. The pin also moves
+at once when its snapshot is gone from the repo (a prune), since there's nothing left to show. A dated folder is the
+exact pin; `latest` is the convenience. With several hosts in one repo, `latest` is still the newest snapshot overall.
 
 ## The hub (`hub.rs`)
 

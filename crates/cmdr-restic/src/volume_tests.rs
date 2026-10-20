@@ -432,6 +432,20 @@ async fn read_parent(parent: &InMemoryVolume, path: &Path) -> Vec<u8> {
 
 // ── `latest` ───────────────────────────────────────────────────────────────
 
+/// Listing the root only SHOWS `latest`; it reads nothing under it. Someone
+/// pressing refresh to see a new backup must see `latest` move.
+#[tokio::test(flavor = "multi_thread")]
+async fn refreshing_the_root_alone_never_holds_latest_back() {
+    let browse = Browse::new().await;
+    browse.volume.list_directory(&view(), None).await.expect("lists");
+
+    std::fs::write(browse.source.join("a.txt"), b"second").expect("change the source");
+    browse.backup_again(1_792_000_000).await;
+    let entries = browse.volume.list_directory(&view(), None).await.expect("refreshes");
+
+    assert_eq!(named(&entries, "latest").modified_at, Some(1_792_000_000));
+}
+
 /// ❗ A copy addresses files by path. If a root refresh rebound `latest` in the
 /// middle of one, the restore would mix two snapshots, silently. While anything
 /// reads under `latest/`, it stays where it was.

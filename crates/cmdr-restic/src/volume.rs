@@ -159,7 +159,7 @@ impl ResticVolume {
             .iter()
             .map(|s| snapshot_row(&s.folder_name, &self.root.join(&s.folder_name), s))
             .collect();
-        if let Some(latest) = self.slot.latest_in(list) {
+        if let Some(latest) = self.slot.latest_shown(list) {
             rows.push(snapshot_row(
                 LATEST_FOLDER_NAME,
                 &self.root.join(LATEST_FOLDER_NAME),

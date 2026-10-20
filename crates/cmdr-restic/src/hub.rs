@@ -369,12 +369,18 @@ impl RepoSlot {
             .ok_or(VolumeError::NeedsPassword { wrong_attempt: false })
     }
 
-    /// The snapshot the `latest` folder shows, in `list`, and a note that
-    /// something just read under it.
+    /// The snapshot the `latest` folder shows, in `list`, for a path under
+    /// `latest/`: a read there, which holds `latest` in place.
     pub(crate) fn latest_in<'l>(&self, list: &'l SnapshotList) -> Option<&'l Snapshot> {
-        let mut pin = lock(&self.latest);
-        pin.touch();
-        list.by_id(pin.id.as_deref()?)
+        self.touch_latest();
+        self.latest_shown(list)
+    }
+
+    /// The snapshot the `latest` row shows, in `list`, without counting as a
+    /// read: listing the root only shows `latest`, and a person refreshing to
+    /// see a new backup must see it move.
+    pub(crate) fn latest_shown<'l>(&self, list: &'l SnapshotList) -> Option<&'l Snapshot> {
+        list.by_id(lock(&self.latest).id.as_deref()?)
     }
 
     /// Notes that something read under `latest/` just now, which holds it in
