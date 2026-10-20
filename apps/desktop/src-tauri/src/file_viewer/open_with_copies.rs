@@ -34,6 +34,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use cmdr_fs::log_private::LogPrivate;
 use serde::{Deserialize, Serialize};
 
 /// The record's name inside a launch folder. Dot-led and Cmdr-prefixed, so no pulled
@@ -100,7 +101,7 @@ pub(super) fn record_pull(copy: &Path) {
         std::fs::write(folder.join(RECORD_NAME), json).map_err(|e| e.to_string())
     })();
     if let Err(e) = result {
-        log::debug!(target: "cmdr_lib::file_viewer", "no pull record for {}, so it'll be kept: {e}", copy.display());
+        log::debug!(target: "cmdr_lib::file_viewer", "no pull record for {}, so it'll be kept: {e}", LogPrivate::path(&copy));
     }
 }
 
@@ -151,7 +152,7 @@ pub(super) fn reap_launch_folders(
             continue;
         }
         if let Err(e) = std::fs::remove_dir_all(&folder) {
-            log::debug!(target: "cmdr_lib::file_viewer", "couldn't remove open-with copy {}: {e}", folder.display());
+            log::debug!(target: "cmdr_lib::file_viewer", "couldn't remove open-with copy {}: {e}", LogPrivate::path(&folder));
         }
     }
 }
@@ -182,14 +183,14 @@ fn trash_contents(folder: &Path, trash: &dyn Fn(&Path) -> Result<(), String>) ->
             Ok(()) => log::warn!(
                 target: "cmdr_lib::file_viewer",
                 "an app changed an open-with copy, so it went to the Trash instead of being removed: {}",
-                item.display()
+                LogPrivate::path(&item)
             ),
             Err(e) => {
                 all_trashed = false;
                 log::warn!(
                     target: "cmdr_lib::file_viewer",
                     "an app changed an open-with copy and the Trash refused it, so it stays for the next launch: {}: {e}",
-                    item.display()
+                    LogPrivate::path(&item)
                 );
             }
         }
@@ -246,7 +247,7 @@ pub(super) fn sweep_launch_folders(
             continue;
         }
         if let Err(e) = std::fs::remove_dir_all(&folder) {
-            log::debug!(target: "cmdr_lib::file_viewer", "couldn't sweep open-with copy {}: {e}", folder.display());
+            log::debug!(target: "cmdr_lib::file_viewer", "couldn't sweep open-with copy {}: {e}", LogPrivate::path(&folder));
         }
     }
 }

@@ -344,7 +344,7 @@ pub(super) fn launch_paths_in(paths: &[PathBuf], dir: &Path, cap: u64) -> Result
             Err(refused) => {
                 for folder in &copy_folders {
                     if let Err(e) = std::fs::remove_dir_all(folder) {
-                        log::debug!(target: "cmdr_lib::file_viewer", "couldn't remove unlaunched copy {}: {e}", folder.display());
+                        log::debug!(target: "cmdr_lib::file_viewer", "couldn't remove unlaunched copy {}: {e}", LogPrivate::path(folder));
                     }
                 }
                 return Err(refused);
