@@ -34,6 +34,8 @@ struct PausableSource {
     signal: Arc<TestScanStop>,
     pause_at_end: bool,
     left: usize,
+    /// Says the source raised its pause.
+    raised: Arc<Notify>,
 }
 
 impl PausableSource {
@@ -43,7 +45,16 @@ impl PausableSource {
             inner: BytesSource::new(bytes),
             signal: Arc::clone(signal),
             pause_at_end,
+            raised: Arc::default(),
         }
+    }
+
+    /// Notified once the source has raised its pause. ❗ A cell awaits it
+    /// before it watches for stillness and resumes: on a loaded machine the
+    /// write can still be reading when the watch ends, and a Resume that lands
+    /// before the pause leaves the pause standing with nobody to lift it.
+    fn pause_raised(&self) -> Arc<Notify> {
+        Arc::clone(&self.raised)
     }
 }
 
@@ -55,6 +66,7 @@ impl VolumeReadStream for PausableSource {
                 self.left -= bytes.len();
                 if self.left == 0 && self.pause_at_end {
                     self.signal.pause();
+                    self.raised.notify_one();
                 }
             }
             piece
@@ -170,8 +182,10 @@ async fn parts_wait_while_paused_and_finish_on_resume() {
     let bytes = pattern(20 * MIB);
     let signal = TestScanStop::new();
     let source = PausableSource::new(bytes.clone(), &signal, true);
+    let raised = source.pause_raised();
     let write = start_write(&volume, "parts.bin", source, None, Arc::default());
 
+    raised.notified().await;
     assert_stands_still(&s3, &write, "four parts read and paused").await;
     assert!(s3.object("parts.bin").is_none(), "nothing is published while paused");
 
@@ -229,8 +243,10 @@ async fn a_put_waits_while_paused_and_lands_on_resume() {
     let bytes = pattern(3 * MIB);
     let signal = TestScanStop::new();
     let source = PausableSource::new(bytes.clone(), &signal, true);
+    let raised = source.pause_raised();
     let write = start_write(&volume, "one.bin", source, None, Arc::default());
 
+    raised.notified().await;
     assert_stands_still(&s3, &write, "one PUT read and paused").await;
     assert!(s3.object("one.bin").is_none(), "nothing is published while paused");
 
@@ -282,9 +298,11 @@ async fn a_cancel_while_paused_ends_the_upload_and_leaves_nothing() {
     volume.set_part_floor(5 * MIB as u64);
     let signal = TestScanStop::new();
     let source = PausableSource::new(pattern(20 * MIB), &signal, true);
+    let raised = source.pause_raised();
     let cancel = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let write = start_write(&volume, "parts.bin", source, None, Arc::clone(&cancel));
 
+    raised.notified().await;
     assert_stands_still(&s3, &write, "paused before the cancel").await;
     cancel.store(true, std::sync::atomic::Ordering::SeqCst);
     signal.stop();
