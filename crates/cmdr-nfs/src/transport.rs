@@ -543,6 +543,12 @@ impl RpcConnection {
         }
     }
 
+    /// The silence evidence this connection feeds on every byte. A session
+    /// that watches the same server shares it, so one ladder decides.
+    pub(crate) fn liveness(&self) -> &Arc<Liveness> {
+        &self.shared.liveness
+    }
+
     /// What came of asking for a reserved source port.
     pub(crate) fn reserved_port(&self) -> ReservedPort {
         self.shared.reserved_port
