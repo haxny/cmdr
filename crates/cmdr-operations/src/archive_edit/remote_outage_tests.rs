@@ -1,0 +1,457 @@
+//! A remote zip edit whose share drops: at the pull, at the upload, and at
+//! each step of the swap that replaces the archive.
+//!
+//! From the moment the swap's delete of the archive goes through, the uploaded
+//! temp is the share's only copy of it. So a drop waits for the share and
+//! SETTLES what happened before acting: a whole temp lands without uploading
+//! again, a gone temp counts as landed only when the archive holds exactly the
+//! edited bytes, and a wait that ends without the share keeps the new bytes,
+//! recorded as a landing for the next sweep that reaches it, ❌ never thrown
+//! away. A drop before the swap leaves the original as it was.
+
+use std::io::{Cursor, Write};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
+
+use super::{EditError, pull_apply_upload_swap};
+use crate::in_flight_temps::Ledger;
+use crate::outage_slot::OutagePolicy;
+use crate::state::WriteOperationState;
+use crate::testing::TestOperations;
+use crate::transfer::outage_volume_test_support::{OutageVolume, RenameDrop};
+use crate::transfer::volume::{FaultyOp, FaultyVolume};
+use crate::types::WriteOperationError;
+use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset, MutationHooks};
+use cmdr_fs::ignore_poison::IgnorePoison as _;
+use cmdr_fs::testing::wait_until_async;
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
+
+const NAS_ID: &str = "zip-edit-nas";
+const ARCHIVE: &str = "/share/bundle.zip";
+const WAIT: Duration = Duration::from_secs(10);
+const CADENCE: &[Duration] = &[Duration::from_millis(10), Duration::from_millis(20)];
+
+struct NoHooks;
+impl MutationHooks for NoHooks {}
+
+fn build_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut cursor = Cursor::new(Vec::new());
+    {
+        let mut writer = zip::ZipWriter::new(&mut cursor);
+        let options = zip::write::SimpleFileOptions::default();
+        for (name, contents) in entries {
+            writer.start_file(*name, options).expect("start file");
+            writer.write_all(contents).expect("write entry");
+        }
+        writer.finish().expect("finish zip");
+    }
+    cursor.into_inner()
+}
+
+fn original_zip() -> Vec<u8> {
+    build_zip(&[("keep.txt", b"keep me")])
+}
+
+/// Where the share drops.
+#[derive(Clone, Copy, Debug)]
+enum Cut {
+    /// Opening the archive for the pull.
+    PullOpen,
+    /// The upload of the edited archive.
+    Upload,
+    /// The swap's delete of the archive never reaches the server.
+    DeleteUnsent,
+    /// The server deleted the archive; the reply is lost.
+    DeleteUnanswered,
+    /// The delete went through; the rename after it never reaches the server.
+    RenameUnsent,
+    /// The server renamed the temp onto the archive; the reply is lost.
+    RenameUnanswered,
+    /// The delete answers the error of a session someone else already
+    /// replaced (it never reached the server).
+    StaleDeleteError,
+}
+
+/// What happens while the edit waits for the share.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Meanwhile {
+    ComesBack,
+    Cancel,
+    StaysGone,
+}
+
+struct Ran {
+    label: String,
+    result: Result<(), EditError>,
+    nas: Arc<OutageVolume>,
+    inner: Arc<InMemoryVolume>,
+    ledger: Ledger,
+    state: Arc<WriteOperationState>,
+}
+
+async fn run(cut: Cut, meanwhile: Meanwhile) -> Ran {
+    let label = format!("{cut:?}/{meanwhile:?}");
+    let engine = TestOperations::new();
+    let inner = Arc::new(InMemoryVolume::new("Naspolya"));
+    inner.create_directory(Path::new("/share")).await.unwrap();
+    inner.create_file(Path::new(ARCHIVE), &original_zip()).await.unwrap();
+    let nas = OutageVolume::wrap(Arc::clone(&inner), &format!("zip-edit-{label}"));
+    let archive = Path::new(ARCHIVE);
+    match cut {
+        Cut::PullOpen => nas.drop_at_open(0),
+        Cut::Upload => nas.drop_at_write(0),
+        Cut::DeleteUnsent => nas.drop_at_delete_of(archive, RenameDrop::BeforeTheServerSeesIt),
+        Cut::DeleteUnanswered => nas.drop_at_delete_of(archive, RenameDrop::AfterTheServerPerformsIt),
+        Cut::RenameUnsent => nas.drop_at_rename_onto(archive, RenameDrop::BeforeTheServerSeesIt),
+        Cut::RenameUnanswered => nas.drop_at_rename_onto(archive, RenameDrop::AfterTheServerPerformsIt),
+        Cut::StaleDeleteError => nas.stale_error_at_delete_of(archive, RenameDrop::BeforeTheServerSeesIt),
+    }
+    let ledger = Ledger::for_test();
+    let budget = match meanwhile {
+        Meanwhile::StaysGone => Duration::from_millis(200),
+        _ => Duration::from_secs(30),
+    };
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_in_flight_ledger(ledger.clone())
+            .with_outage_policy(OutagePolicy {
+                budget,
+                cadence: CADENCE,
+                poll_every: Duration::from_millis(5),
+                attempt_timeout: Duration::from_secs(1),
+            }),
+    );
+    let op = engine.register_state(&format!("op-{label}"), Arc::clone(&state));
+    let during = {
+        let state = Arc::clone(&state);
+        let nas = Arc::clone(&nas);
+        let engine = crate::Operations::clone(&engine);
+        let op_id = op.id().to_owned();
+        tokio::spawn(async move {
+            if matches!(cut, Cut::StaleDeleteError) {
+                return;
+            }
+            wait_until_async(WAIT, "the edit to wait for the share", || {
+                state.outage.waiting_for().is_some()
+            })
+            .await;
+            match meanwhile {
+                Meanwhile::ComesBack => nas.become_reachable(),
+                Meanwhile::Cancel => engine.cancel_write_operation(&op_id, false),
+                Meanwhile::StaysGone => {}
+            }
+        })
+    };
+    let result = tokio::time::timeout(
+        Duration::from_secs(30),
+        pull_apply_upload_swap(
+            Arc::clone(&nas) as Arc<dyn Volume>,
+            NAS_ID,
+            PathBuf::from(ARCHIVE),
+            Arc::clone(&state),
+            None,
+            |working: &Path| -> Result<(), EditError> {
+                let changeset = Changeset {
+                    adds: vec![AddEntry {
+                        inner_path: "added.txt".to_string(),
+                        source: AddSource::Bytes(b"fresh bytes".to_vec()),
+                    }],
+                    ..Default::default()
+                };
+                mutator::apply(working, &changeset, &NoHooks).expect("local mutator apply");
+                Ok(())
+            },
+        ),
+    )
+    .await
+    .expect("the edit ends, one way or the other");
+    during.abort();
+    Ran {
+        label,
+        result,
+        nas,
+        inner,
+        ledger,
+        state,
+    }
+}
+
+async fn read_all(volume: &dyn Volume, path: &Path) -> Option<Vec<u8>> {
+    let mut stream = volume.open_read_stream(path).await.ok()?;
+    let mut buf = Vec::new();
+    while let Some(chunk) = stream.next_chunk().await {
+        buf.extend_from_slice(&chunk.ok()?);
+    }
+    Some(buf)
+}
+
+fn entry_names(bytes: &[u8]) -> Vec<String> {
+    let archive = zip::ZipArchive::new(Cursor::new(bytes.to_vec())).expect("the archive parses");
+    let mut names: Vec<String> = archive
+        .file_names()
+        .map(|name| name.expect("a decodable name").into_owned())
+        .collect();
+    names.sort();
+    names
+}
+
+impl Ran {
+    async fn names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .inner
+            .list_directory(Path::new("/share"), None)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|entry| entry.name)
+            .collect();
+        names.sort();
+        names
+    }
+
+    async fn temps(&self) -> Vec<PathBuf> {
+        self.names()
+            .await
+            .into_iter()
+            .filter(|name| name.contains(".cmdr-tmp-"))
+            .map(|name| Path::new("/share").join(name))
+            .collect()
+    }
+
+    async fn archive_entries(&self) -> Option<Vec<String>> {
+        read_all(&*self.inner, Path::new(ARCHIVE))
+            .await
+            .map(|bytes| entry_names(&bytes))
+    }
+
+    fn assert_the_share_dropped(&self) {
+        assert!(
+            self.nas.reconnect_attempts() > 0,
+            "{}: the share dropped and the edit dialed it",
+            self.label
+        );
+    }
+
+    /// The edit landed: the edited archive at its name, nothing rescued, no
+    /// temp left, and no landing left recorded.
+    async fn assert_landed(&self) {
+        let label = &self.label;
+        assert!(self.result.is_ok(), "{label}: the edit lands");
+        assert_eq!(
+            self.archive_entries().await,
+            Some(vec!["added.txt".to_owned(), "keep.txt".to_owned()]),
+            "{label}: the edited archive at its name"
+        );
+        assert!(
+            !self.names().await.iter().any(|name| name.contains("(recovered)")),
+            "{label}: nothing rescued: {:?}",
+            self.names().await
+        );
+        assert_eq!(self.temps().await, Vec::<PathBuf>::new(), "{label}: no temp left");
+        assert_eq!(
+            self.ledger.recorded_landings(),
+            Vec::<PathBuf>::new(),
+            "{label}: no landing left recorded"
+        );
+    }
+
+    /// The original archive, byte for byte, and no temp beside it.
+    async fn assert_original_intact(&self) {
+        assert_eq!(
+            read_all(&*self.inner, Path::new(ARCHIVE)).await,
+            Some(original_zip()),
+            "{}: the original archive is untouched",
+            self.label
+        );
+    }
+
+    fn uploads(&self) -> usize {
+        self.nas.writes_for(Path::new(ARCHIVE))
+    }
+}
+
+/// The share drops as the pull opens the archive: once it's back, the edit
+/// pulls it again and lands.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_drop_at_the_pull_waits_and_pulls_again() {
+    let ran = run(Cut::PullOpen, Meanwhile::ComesBack).await;
+    ran.assert_the_share_dropped();
+    ran.assert_landed().await;
+    assert_eq!(ran.uploads(), 1, "one upload");
+}
+
+/// The share drops as the upload starts: once it's back, the edit uploads the
+/// edited copy again from its local scratch and lands.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_drop_at_the_upload_waits_and_uploads_again() {
+    let ran = run(Cut::Upload, Meanwhile::ComesBack).await;
+    ran.assert_the_share_dropped();
+    ran.assert_landed().await;
+    assert_eq!(ran.uploads(), 2, "the upload ran again once the share was back");
+}
+
+/// Every step of the swap a drop can hit: once the share is back, the swap
+/// settles what the server did and lands the uploaded temp, ❌ without
+/// uploading again or parking it under ` (recovered)`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_drop_inside_the_swap_waits_and_lands_without_uploading_again() {
+    for cut in [
+        Cut::DeleteUnsent,
+        Cut::DeleteUnanswered,
+        Cut::RenameUnsent,
+        Cut::RenameUnanswered,
+    ] {
+        let ran = run(cut, Meanwhile::ComesBack).await;
+        ran.assert_the_share_dropped();
+        ran.assert_landed().await;
+        assert_eq!(
+            ran.uploads(),
+            1,
+            "{}: ❗ a whole temp lands without uploading again",
+            ran.label
+        );
+    }
+}
+
+/// A stale transport error on the swap's delete, while the share already reads
+/// live on a newer session: ❌ no discard; the swap runs again and lands.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_stale_error_on_the_swaps_delete_runs_the_swap_again() {
+    let ran = run(Cut::StaleDeleteError, Meanwhile::ComesBack).await;
+    ran.assert_landed().await;
+    assert_eq!(ran.uploads(), 1, "the temp was never thrown away");
+}
+
+/// The share stays gone at the upload: the edit stops with "Lost the connection
+/// to {server}", and the original archive is untouched.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_share_that_stays_gone_at_the_upload_reports_the_lost_connection() {
+    let ran = run(Cut::Upload, Meanwhile::StaysGone).await;
+    ran.assert_the_share_dropped();
+    match &ran.result {
+        Err(EditError::Op(WriteOperationError::ServerConnectionLost {
+            volume_name,
+            gave_up_after_secs,
+            ..
+        })) => {
+            assert_eq!(volume_name, "Naspolya");
+            assert!(gave_up_after_secs.is_some(), "it waited before stopping");
+        }
+        _ => panic!("expected ServerConnectionLost"),
+    }
+    ran.nas.become_reachable();
+    ran.assert_original_intact().await;
+}
+
+/// The share stays gone after the swap deleted the archive: the uploaded temp
+/// is the only copy, so it stays, recorded as a landing the next sweep that
+/// reaches the share finishes, and the error says where the new bytes are.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_share_that_stays_gone_after_the_delete_keeps_the_new_archive_as_a_landing() {
+    let ran = run(Cut::RenameUnsent, Meanwhile::StaysGone).await;
+    ran.assert_the_share_dropped();
+    assert!(
+        matches!(
+            &ran.result,
+            Err(EditError::Op(WriteOperationError::NewDataKeptAt { .. }))
+        ),
+        "the error says where the new archive is"
+    );
+    ran.nas.become_reachable();
+    let temps = ran.temps().await;
+    let [temp] = temps.as_slice() else {
+        panic!("exactly one temp holds the edited archive, got {temps:?}");
+    };
+    assert_eq!(
+        read_all(&*ran.inner, temp).await.map(|bytes| entry_names(&bytes)),
+        Some(vec!["added.txt".to_owned(), "keep.txt".to_owned()]),
+        "❗ the only copy survives"
+    );
+    assert_eq!(
+        ran.ledger.recorded_landings(),
+        vec![temp.clone()],
+        "recorded as a landing"
+    );
+    assert!(
+        !ran.state.in_flight_temps.lock_ignore_poison().contains(temp),
+        "and no removable temp of ours"
+    );
+}
+
+/// A Cancel while the swap waits after the delete: the uploaded temp stays,
+/// recorded as a landing, ❌ never cleaned.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cancel_while_the_swap_waits_after_the_delete_keeps_the_landing() {
+    let ran = run(Cut::RenameUnsent, Meanwhile::Cancel).await;
+    assert!(
+        matches!(ran.result, Err(EditError::Cancelled)),
+        "reported as the cancel it is"
+    );
+    ran.nas.become_reachable();
+    let temps = ran.temps().await;
+    assert_eq!(temps.len(), 1, "the edited archive stays on its temp: {temps:?}");
+    assert_eq!(ran.ledger.recorded_landings(), temps, "recorded as a landing");
+}
+
+/// A Cancel while the upload waits: the original is untouched.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cancel_while_the_upload_waits_leaves_the_original() {
+    let ran = run(Cut::Upload, Meanwhile::Cancel).await;
+    assert!(
+        matches!(ran.result, Err(EditError::Cancelled)),
+        "reported as the cancel it is"
+    );
+    ran.nas.become_reachable();
+    ran.assert_original_intact().await;
+}
+
+/// A refusal (no outage) at the upload still fails at once, with the original
+/// untouched.
+#[tokio::test]
+async fn a_refused_upload_fails_at_once() {
+    let inner = Arc::new(InMemoryVolume::new("Remote"));
+    inner.create_directory(Path::new("/share")).await.unwrap();
+    inner.create_file(Path::new(ARCHIVE), &original_zip()).await.unwrap();
+    let faulty = FaultyVolume::wrapping(Arc::clone(&inner))
+        .failing_call(
+            FaultyOp::WriteFromStream,
+            1,
+            VolumeError::PermissionDenied {
+                path: ARCHIVE.to_owned(),
+                raw_os_error: None,
+            },
+        )
+        .arc();
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(50)));
+    let result = pull_apply_upload_swap(
+        Arc::clone(&faulty) as Arc<dyn Volume>,
+        NAS_ID,
+        PathBuf::from(ARCHIVE),
+        state,
+        None,
+        |working: &Path| -> Result<(), EditError> {
+            let changeset = Changeset {
+                deletes: vec!["keep.txt".to_string()],
+                ..Default::default()
+            };
+            mutator::apply(working, &changeset, &NoHooks).expect("local mutator apply");
+            Ok(())
+        },
+    )
+    .await;
+    assert!(
+        faulty.fault_fired(FaultyOp::WriteFromStream),
+        "the refusal reached the upload"
+    );
+    assert!(
+        matches!(result, Err(EditError::Op(WriteOperationError::PermissionDenied { .. }))),
+        "the refusal is reported as itself"
+    );
+    assert_eq!(
+        read_all(&*inner, Path::new(ARCHIVE)).await,
+        Some(original_zip()),
+        "the original is untouched"
+    );
+}

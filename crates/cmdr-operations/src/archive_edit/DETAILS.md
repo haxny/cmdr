@@ -68,57 +68,63 @@ The remote ORIGINAL is byte-for-byte untouched until the very last swap:
 2. **Apply** runs the closure on the local copy — the mutator's temp+rename commits onto the scratch file. A
    cancel/fault leaves the scratch file as the pulled original; nothing remote changed.
 3. **Upload** streams the edited copy to a NEW remote name (`foo.zip.cmdr-tmp-<uuid>`) via `write_from_stream`; the
-   original keeps its name and bytes. A cancel/fault deletes the partial temp best-effort. Every edit route hands
-   `run_managed_edit` its `MutatorHooks::remote_progress_observer`, so the upload reports its own `Transferring` axis
-   over the rewritten archive's bytes, then indeterminate `FinishingTransfer` through close and swap, under the op's own
-   type (the pull stays silent).
-4. **Swap** is the ONLY step that changes the original. Where the backend promises an ATOMIC replace
-   (`supports_atomic_replace_rename()`, today SMB's one `ReplaceIfExists` SET_INFO), the swap is one forced rename; on
-   refusal it falls back to the ASIDE swap. Every other backend goes STRAIGHT to the aside swap. Gotcha/Why: the gate
-   used to be `create_directory_errors_on_existing_dir()`, which let SFTP (a forced rename without
-   `posix-rename@openssh.com` deletes the destination first), WebDAV, and ADB hand the replace to a backend that may
-   clear the name in a step of its own, the exact window this contract closes. MTP must never force-rename onto the live
-   name either: it allows same-name siblings, so that would DUPLICATE, not replace. The aside swap renames the original
-   to `foo.zip.cmdr-temp-<uuid>` (the house aside name, `StagingTemp::mint_aside`, hidden from the pane only while the
-   swap holds it), renames the temp into place, then deletes the aside. Why: the transfer engine's stale-temp sweep
-   (`transfer/volume/cleanup.rs::reap_stale_transfer_temps`) deletes ANY `.cmdr-tmp-*` an hour old at the start of the
-   next copy into the folder, and never matches `.cmdr-temp-`, so a crash after any step leaves a complete archive under
-   a name nothing reaps: the original at its name, then the original aside (the edit at the temp), then the edit at its
-   name with the original aside. Gotcha/Why: the swap used to DELETE the original first, so a crash or a failed rename
-   left the only copy under the temp name, and the sweep deleted the whole archive an hour later. Faults that answer are
-   handled like an Overwrite's swap (`transfer/staged_write_landing.rs`): a rename that errors is followed by a stat of the temp (gone means it
-   landed); a refused move aside by `what_a_refused_delete_left` (still there: the spare temp goes); a failed landing
-   puts the original back, or, if even that fails, rescues the edit to a ` (recovered)` name reported as
-   `NewDataKeptAt`, the original staying aside. RECOVERY: the start of the next remote edit in that folder
-   (`reap_remote_temps`'s listing) runs `restore_orphaned_asides`, which renames an aside back when its original's name
-   is empty and NEVER deletes one: beside a taken name it's an old version, left visible for a person. It skips an aside
-   a live operation holds, one whose name may have been shortened to fit (it no longer says the original's name), and
-   every aside of an original more than one claims (two crashed swaps with no edit in the folder between: no name says
-   which is newer, so a person picks). Known gap: nothing restores on OPEN, so until another zip in the folder is edited
-   the user sees the aside, not the archive.
+   original keeps its name and bytes. The temp is a staged write's, recorded in the in-flight ledger; a cancel/fault
+   abandons it, which removes the partial. Every edit route hands `run_managed_edit` its
+   `MutatorHooks::remote_progress_observer`, so the upload reports its own `Transferring` axis over the rewritten
+   archive's bytes, then indeterminate `FinishingTransfer` through close and swap, under the op's own type (the pull
+   stays silent).
+4. **Swap** is the ONLY step that changes the original: a staged write's swap landing
+   (`StagedWrite::begin_over_original`, the copy engine's file→file Overwrite, `WriteStaging::StageOverOriginal`): the
+   temp is re-recorded as a `Landing` (on disk before anything is cleared; when the ledger can't confirm it, nothing
+   is), then the original is deleted and the temp renamed onto its name, ❌ never a rename onto a live name (MTP allows
+   same-name siblings, so that would DUPLICATE). From the delete on, the temp may be the only copy: a refused rename
+   rescues it out of temp space (` (recovered)`, `NewDataKeptAt`), and a crash leaves the `Landing` record, whose sweep
+   finishes the landing. The rules are `../transfer/DETAILS.md` § "File writes are staged"; ❌ no copy of them here.
 
-A cancel at ANY point before the swap completes leaves the remote original intact (the local scratch dir and any partial
-remote temp are cleaned up — a RAII `ScratchDir` and the upload's on-error delete). Pinned by `remote_tests`
-(round-trip, cancel-before-swap-leaves-the-original, the sibling-allowing delete-then-rename swap, and the three
-half-way swaps and `a_crash_after_any_step_of_the_swap_loses_no_archive`, a cut after each step followed by the sweep
-and the next touch), plus live-remote integration proofs that drive `pull_apply_upload_swap` against a REAL backend: the
-backend-blind scenarios in `network_archive_test_support.rs` (edit, cancel before the swap, routing detection,
-extract-out, copy-into, compress), which `smb_archive_integration_test.rs`, `sftp_archive_integration_test.rs`, and
-`webdav_archive_integration_test.rs` drive, and `mtp_archive_test` under the `virtual-mtp` feature
+- **Decision: delete-then-rename on every backend, SMB included**, which gives up SMB's one-step `ReplaceIfExists`
+  rename. Why: one landing function owns every swap (the copy engine's file Overwrite lands the same way), so the remote
+  edit inherits its `Landing` record, its refusal rules, and its outage settle instead of keeping a third copy of them.
+  The window between the delete and the rename is what the record covers: a crash there is finished by the sweep.
+
+**The swap's ledger home is the parent's id** (`pull_apply_upload_swap`'s `parent_volume_id`). An archive edit's state
+names no destination volume (a move out extracts onto one volume and rewrites the archive on another), so the swap names
+its own, and a swap whose record has no home fails closed with nothing cleared.
+
+**A dropped share is waited for at every remote step** (`outage_wait.rs`, the copy's wait from
+`../transfer/volume_outage.rs`, one outage cap for the edit): the pull runs again (it rewrites the local copy from its
+first byte), an upload runs again from the local copy into a fresh temp (the partial goes after the wait, when the
+delete can reach the share), and a swap step the transport cut off is settled once the share is back
+(`CutOffLanding::resume`, the archive compared in full against the local copy): a whole temp lands without uploading
+again, a gone temp counts as landed only when the archive holds exactly the edited bytes, and anything else uploads
+again. A wait that ends without the share gives the swap up under the refusal rules (rescue, or the temp kept recorded
+as a landing) and says "Lost the connection to {server}" (`ServerConnectionLost`), unless the landing's own outcome
+(`NewDataKeptAt`) outranks it; a Cancel reads as the cancel it is. Pinned by `remote_outage_tests.rs` (a drop at the
+pull, the upload, and each step of the swap, a stale error on the delete, a share that stays gone before and after the
+delete, a Cancel in either wait, and a refusal that fails at once).
+
+A cancel at ANY point before the swap's delete leaves the remote original intact (the local scratch dir and any partial
+remote temp are cleaned up: a RAII `ScratchDir` and the staged write's abandon). Pinned by `remote_tests` (round-trip,
+cancel-before-swap-leaves-the-original, and the sibling-allowing delete-then-rename swap), plus live-remote integration
+proofs that drive `pull_apply_upload_swap` against a REAL backend: the backend-blind scenarios in
+`network_archive_test_support.rs` (edit, cancel before the swap, routing detection, extract-out, copy-into, compress),
+which `smb_archive_integration_test.rs`, `sftp_archive_integration_test.rs`, and `webdav_archive_integration_test.rs`
+drive, and `mtp_archive_test` under the `virtual-mtp` feature
 (`virtual_mtp_archive_browses_and_extracts_via_read_range` +
 `virtual_mtp_remote_zip_edit_deletes_an_entry_through_the_device`, exercising the MTP delete-then-rename swap). Cost:
 O(archive) network per edit (the pull), documented and accepted — there is no remote random-access WRITE adapter (that's
 only a future in-place-append optimization). Remote backends don't carry the archive file's mode/mtime/xattr across the
 rewrite the way local `copyfile` does; the upload mints a fresh remote object.
 
-**Stale upload-temp reaping.** A crash or kill between the upload finishing and the swap starting can leave the
+**Stale upload-temp reaping.** A crash or kill between the upload finishing and the swap's delete can leave the
 fully-uploaded temp on the remote under its `<archive>.cmdr-tmp-<uuid>` name. It's harmless (the original is intact and
 the temp holds the NEW bytes), but untidy. `pull_apply_upload_swap` reaps it at the start of the next edit of the SAME
 remote archive — the mirror of the local mutator's `reap_sibling_temps` — via a single `list_directory` of the archive's
-parent, deleting siblings that match this archive's own temp shape. Best-effort and non-blocking (a listing/delete
-failure is logged at debug, never fails or delays the edit); one round-trip, nothing on the read path. Pinned by the
-four `remote_edit_*` reap tests in `remote_tests` (stale-same-archive reaped, fresh spared, other-archive ignored,
-delete-failure doesn't fail the edit).
+parent, deleting siblings that match this archive's own temp shape. ❗ It skips every temp the in-flight ledger records
+for the parent (`in_flight_temps::is_recorded_on`, as the transfer's reap does): a recorded temp is a live upload of
+ours, or a swap a crash or an outage cut off after the delete, whose temp is the archive's ONLY copy until the sweep
+lands it. Best-effort and non-blocking (a listing/delete failure is logged at debug, never fails or delays the edit);
+one round-trip, nothing on the read path. Pinned by the `remote_edit_*` reap tests in `remote_tests` (stale-same-archive
+reaped, fresh spared, other-archive ignored, delete-failure doesn't fail the edit, a recorded year-old temp spared).
 
 - **Decision — age-gate the remote reap at 24 h (`REMOTE_TEMP_REAP_MIN_AGE`); the local reap has no threshold.** The
   local reap deletes every matching sibling unconditionally because edits of one archive serialize on the parent lane,
@@ -294,6 +300,23 @@ delete-failure doesn't fail the edit).
   and remain live until landing, deletion, or rescue settles. No sole good copy remains in reapable temp space. After
   publication, the driver notifies the final archive path (never the hidden stage) and journals that same target.
 
+  **A dropped share is waited for** (the copy's wait, `../transfer/volume_outage.rs`, one outage cap per compress). The
+  producer can't resume mid-stream, so the plan is replayable: its entries keep a remote source as a path
+  (`fresh_plan.rs::PlannedSource`), and every run bridges its own feeds (`FreshPlan::bridged`) under its own
+  cancellation source, which a pipeline that stopped has requested for itself. The direct route waits on the source and
+  the destination, then abandons the stage and makes the archive again into a fresh one; the spool route makes the spool
+  again after a source drop, and uploads the same spool again after a destination drop, ❌ without making the archive
+  again. A validation read the share dropped is checked again the same way (`validate_stage` hands back the volume's own
+  error). ❗ Every publish mode classifies before acting: a publish rename the transport cut off may have been
+  performed, so it's settled once the share is back (`CutOffLanding` for a new archive, `CutOffPublish` in
+  `../transfer/staged_write_publish.rs` for both replace modes): a whole temp publishes without making the archive
+  again, a temp gone with the archive at the size written is published, and anything else puts the original back and
+  runs again. Deleting the temp on any rename error had reported a failure for an archive the server had published. A
+  wait that ends without the share says "Lost the connection to {server}" (`ServerConnectionLost`), unless an original
+  set aside couldn't go back (`OriginalsKeptAside` outranks). Pinned by `fresh_compress_outage_tests.rs`. Not covered:
+  the planning walk (like a copy's pre-flight scan, its own failure path), and the displaced publish's own rename aside,
+  whose transport fault still fails at once.
+
   Progress has two unrelated byte axes. `Compressing` counts uncompressed source bytes/entries. The last source tick
   becomes indeterminate `FinishingCompression` before ZIP close, count reconciliation, validation, and local
   publication. Fallback upload starts a fresh `Transferring` axis over completed-ZIP bytes, switches to indeterminate
@@ -378,20 +401,13 @@ delete-failure doesn't fail the edit).
   both kinds named. `conflicts.rs::resolve_effective` routes every arm through the shared
   `../conflict.rs::resolution_for_clash`, which the local-FS and cross-volume engines answer with too; the conditional
   variants stay refused whoever asked, having no honest question to ask here anyway (a directory node carries no size
-  and no mtime). Pinned by `copy_into_tests.rs::a_blanket_overwrite_never_replaces_an_archive_directory_with_a_file`.
-  **The mirror direction, a source FOLDER meeting a same-named archive FILE, is the same clash**
-  (`copy_into_plan.rs::plan_dir`, `IncomingItem::Directory` into `resolve_effective`). Gotcha/Why: it used to skip the
-  folder's `mkdir` and add its children under the file's name, and every reader (Cmdr's index, `unzip`) drops an entry
-  whose parent is a file, so a move "landed" the files invisibly and then deleted the source. Now a blanket policy skips
-  the folder and its whole subtree (counted, so a move keeps its source), Rename lands it at a free ` (n)` name with its
-  children following, and only an Overwrite answered on the prompt for that shape deletes the file and adds the folder.
-  Pinned by `copy_into_clash_tests.rs`, nested cell included. The mutator refuses the shape as a backstop
-  (`MutationError::EntryUnderFile`, `crates/cmdr-archive/src/mutation/DETAILS.md`). An unreadable entry in a walked
-  source folder counts as skipped too, for the same move-keeps-source reason. **The Stop policy prompts interactively**
-  (`build_copy_into_changeset_interactive`): the op is registered so `resolve_write_conflict(op_id)` can reach the
-  oneshot, and each FILE collision (and each folder meeting a file) emits a `write-conflict` and blocks on the answer,
-  reusing the pure `ApplyToAll` latch
-  - the oneshot plumbing (store the sender BEFORE the emit). Dir-vs-dir collisions merge silently — they never prompt
+  and no mtime). The mirror direction never consults the policy at all: a source DIRECTORY meeting a same-named FILE
+  entry just skips its `mkdir` and adds its children under the name. Pinned by
+  `copy_into_tests.rs::a_blanket_overwrite_never_replaces_an_archive_directory_with_a_file`. **The Stop policy prompts
+  interactively** (`build_copy_into_changeset_interactive`): the op is registered so `resolve_write_conflict(op_id)` can
+  reach the oneshot, and each FILE collision emits a `write-conflict` and blocks on the answer, reusing the pure
+  `ApplyToAll` latch
+  - the oneshot plumbing (store the sender BEFORE the emit). Dir-vs-dir collisions merge silently — only files prompt
     (the app-wide rule). A cancel during a pending prompt drops the sender → the planner bails → the archive is
     untouched. Every Skip (a conflict resolved to Skip, a conditional policy that declines to overwrite, or an
     unrepresentable entry) increments the plan's `skipped_count`, which gates the move-source deletion and surfaces as

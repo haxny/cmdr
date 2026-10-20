@@ -182,14 +182,21 @@ pub(super) async fn a_remote_zip_edit_deletes_an_entry_on_the_server(remote: Arc
     let zip_path = seed_zip(remote.as_ref(), &dir).await;
 
     let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(50)));
-    let result = pull_apply_upload_swap(Arc::clone(&remote), zip_path.clone(), state, None, |working: &Path| {
-        let changeset = Changeset {
-            deletes: vec!["dir/drop.txt".to_string()],
-            ..Default::default()
-        };
-        mutator::apply(working, &changeset, &NoHooks).expect("local mutator apply");
-        Ok::<(), EditError>(())
-    })
+    let result = pull_apply_upload_swap(
+        Arc::clone(&remote),
+        "zip-edit",
+        zip_path.clone(),
+        state,
+        None,
+        |working: &Path| {
+            let changeset = Changeset {
+                deletes: vec!["dir/drop.txt".to_string()],
+                ..Default::default()
+            };
+            mutator::apply(working, &changeset, &NoHooks).expect("local mutator apply");
+            Ok::<(), EditError>(())
+        },
+    )
     .await;
     assert!(result.is_ok(), "a remote zip edit should commit");
 
@@ -214,6 +221,7 @@ pub(super) async fn a_cancel_before_the_swap_keeps_the_original_zip(remote: Arc<
     let cancel = Arc::clone(&state);
     let result = pull_apply_upload_swap(
         Arc::clone(&remote),
+        "zip-edit",
         zip_path.clone(),
         state,
         None,

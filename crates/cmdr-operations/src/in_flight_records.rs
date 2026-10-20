@@ -325,6 +325,19 @@ impl RecordHome {
     }
 }
 
+/// The path space a cross-volume operation's staged partials live in: the
+/// DESTINATION volume's, since a staged temp is a sibling of the file being
+/// written (`transfer/staged_write.rs`).
+///
+/// `None` when the operation didn't name that volume, which every volume
+/// copy/move deferred does and only a bare test state doesn't. The persisted
+/// ledger then skips the path rather than guessing at a path space (see
+/// `in_flight_temps::track_temp`); the operation's own in-memory ledger still
+/// carries it, and that one deletes through the volume handle it already holds.
+pub(crate) fn dest_home(state: &WriteOperationState) -> Option<RecordHome> {
+    state.dest_volume_id().map(RecordHome::volume_space)
+}
+
 /// Where a LOCAL-filesystem path this operation writes belongs in the ledger.
 ///
 /// A path under the transfer's destination volume, when that volume isn't the

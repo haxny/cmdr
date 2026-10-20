@@ -282,7 +282,7 @@ async fn a_selected_macosx_folder_is_skipped_and_a_local_folder_is_its_own_sourc
         vec!["docs/"]
     );
     assert_eq!(plan.skipped, 1);
-    assert!(matches!(&plan.entries[0].source, FreshZipSource::Local(path) if path.ends_with("docs")));
+    assert!(matches!(&plan.entries[0].source, PlannedSource::Local(path) if path.ends_with("docs")));
 }
 
 /// A source whose listings come back backwards, the way an SMB or MTP

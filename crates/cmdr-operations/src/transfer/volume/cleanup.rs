@@ -24,7 +24,6 @@ use super::super::super::types::{
 };
 use super::super::super::unblocked_removal::{NodeKind, RemovalRefused, delete_clearing_blockers};
 use super::super::leftover_cleanup::{LeftBehind, finish_in_background};
-use super::super::staged_write::dest_home;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -363,7 +362,7 @@ async fn remove_what_a_live_destination_takes(
             // holds, and reporting it would send the user hunting for a file
             // that isn't there.
             Ok(Ok(()) | Err(VolumeError::NotFound(_))) => {
-                in_flight_temps::retire_temp(state, dest_home(state), &temp);
+                in_flight_temps::retire_temp(state, in_flight_temps::dest_home(state), &temp);
             }
             Ok(Err(error)) if error.transport_fault().is_some() => left.out.push(temp),
             Ok(Err(error)) => {

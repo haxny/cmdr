@@ -768,21 +768,22 @@ wait, as `source_sweep.rs` already does.
 
 #### 10b. Delete (S–M)
 
-`crates/cmdr-operations/src/delete/walker.rs` (now `volume_walker.rs`): each per-item delete; a `NotFound` on a re-run after a wait counts as
-deleted (ONLY after a wait: a first-try `NotFound` keeps today's meaning). Its terminal transport fault maps to
-`ServerConnectionLost` (milestone 7's verdict). **Landmines**: a re-run never escalates to recursive, and ❗ re-checks
-the entry against what the walk listed (kind, size) before deleting again, since another client may have put a different
-file at that path during the outage (mismatch → leave it and report).
+`crates/cmdr-operations/src/delete/walker.rs` (now `volume_walker.rs`): each per-item delete; a `NotFound` on a re-run
+after a wait counts as deleted (ONLY after a wait: a first-try `NotFound` keeps today's meaning). Its terminal transport
+fault maps to `ServerConnectionLost` (milestone 7's verdict). **Landmines**: a re-run never escalates to recursive, and
+❗ re-checks the entry against what the walk listed (kind, size) before deleting again, since another client may have
+put a different file at that path during the outage (mismatch → leave it and report).
 
 **Status: done.** As built (for the milestones after it):
 
 - The volume walker moved to `delete/volume_walker.rs` (the file-length allowlist's own split plan); the wait is
   `delete/outage.rs`. The walk's reads (type probe, listings) go through `through_outages`; each delete, file AND
   folder, runs `outage::delete_entry`'s own loop (`wait_after_failure` + `StartedOn`), ❌ never `through_outages`.
-- "Leave it and report" STOPS the delete with a new IPC variant, `WriteOperationError::ChangedWhileDisconnected { path,
-  volume_name }` (a delete has no rollback, and a changed entry says someone is working in that tree right now). The
-  re-check compares `EntryKind` and, for a file, the size; a size the walk never learned fails closed. A top-level file
-  the walk only probed gets one `get_metadata` during the walk, on a session volume only.
+- "Leave it and report" STOPS the delete with a new IPC variant,
+  `WriteOperationError::ChangedWhileDisconnected { path, volume_name }` (a delete has no rollback, and a changed entry
+  says someone is working in that tree right now). The re-check compares `EntryKind` and, for a file, the size; a size
+  the walk never learned fails closed. A top-level file the walk only probed gets one `get_metadata` during the walk, on
+  a session volume only.
 - A batch (`delete_files`, S3): a file it couldn't delete enters its own loop with the batch's error in hand.
 - The folder pass keeps its silence for a non-transport refusal, but a transport fault that ends it is reported now (it
   read as complete before).
@@ -805,6 +806,34 @@ failure for a published archive. Give them classify-before-acting too: on a tran
 gone and the archive at its expected size → published). Terminal fault → `ServerConnectionLost`. **Landmine**:
 `reap_remote_temps` (`remote.rs` ~330) is a second name+age reaper; give it 5b's ledger skip if the temp's name or
 recording changes.
+
+**Status: done.** As built (for the milestones after it):
+
+- The remote swap IS a `StageOverOriginal` landing: `StagedWrite::begin_over_original(state, volume, final, volume_id)`,
+  committed and, when cut off, waited for and settled with the local working copy as the byte-compare source. A
+  `RunAgain` uploads the local copy again. It gave up SMB's one-step `ReplaceIfExists` rename for delete-then-rename
+  (the copy's file Overwrite does the same). An archive edit's state names no destination volume (a move out writes
+  two), so a `StagedWrite` now carries its ledger home (`home_volume`), and `pull_apply_upload_swap` takes the parent's
+  id; a missing home fails closed.
+- The swap's `original_replaced` journal note would have worded an archive edit's refusal as an overwrite's; the remote
+  edit notes `ZipEditUnsupported` first (first note wins).
+- `archive_edit/outage_wait.rs` is the archive side's one wait: `StepError::{Fault { error, otherwise }, Ended}`,
+  `wait_out`, `rerun_through_outages`, and the landing/publish failure mapping (through `map_failure_after_wait`).
+- The compress plan is replayable (`fresh_plan.rs::PlannedSource`, `FreshPlan::bridged`), each run with its own
+  cancellation source (`fresh_pipeline.rs::ProducerRuns`); the direct route makes the archive again after a wait, the
+  spool route uploads the spool again. `produce_into` returns `PipelineEnd`, whose `source_fault` keeps a remote
+  source's typed error (the producer's own only words it). `validate_stage` hands back the volume's error.
+- The two replace publishes moved to `transfer/staged_write_publish.rs`, take the size, and return
+  `PublishError::{Failed(PublishFailure), CutOff(CutOffPublish)}`; `CutOffPublish::resume` answers `Republished`.
+  `commit_without_a_wait` is test-only now. The publish loop is `archive_edit/fresh_publish.rs`.
+- `reap_remote_temps` skips what the ledger records (`is_recorded_on`).
+- Not covered, and why: the compress's planning walk (a pre-flight scan's twin); the displaced publish's own rename
+  aside (`displace_destination`), whose transport fault still fails at once, and which retires its `VolumeAside` record
+  on that error even though the server may have performed the rename (a follow-up for `displaced_destination.rs`, shared
+  with the cross-type aside); an archive edit's `write-cancelled` doesn't name a landing a Cancel kept
+  (`state.kept_landings` is filled, `emit_archive_terminal` doesn't read it).
+- Cells: `archive_edit/remote_outage_tests.rs`, `archive_edit/fresh_compress_outage_tests.rs`, the reap and journal
+  cells in `remote_tests.rs`. No live Docker cell (the plan asked none for this milestone).
 
 ### 11. Close-out soak (S)
 

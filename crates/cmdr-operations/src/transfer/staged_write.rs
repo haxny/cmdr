@@ -46,6 +46,7 @@ use std::sync::Arc;
 use super::super::host::Announced;
 use super::super::in_flight_temps::{self, RecordHome};
 use super::super::state::WriteOperationState;
+#[cfg(test)]
 use super::recovered_name::FinalizeFailure;
 use super::transfer_probe::{TaskPhase, set_task_phase};
 use cmdr_fs::staging::StagingTemp;
@@ -168,6 +169,11 @@ pub(crate) struct StagedWrite {
     /// failed attempt leaves there is ours to clear before the next one
     /// ([`abandon_attempt`](Self::abandon_attempt)).
     unstaged: bool,
+    /// The volume whose path space the temp is recorded in: the operation's
+    /// destination (`in_flight_temps::dest_home`), or the one a caller
+    /// writing to more than one volume names
+    /// ([`begin_over_original`](Self::begin_over_original)).
+    home_volume: Option<String>,
     state: Arc<WriteOperationState>,
 }
 
@@ -206,15 +212,50 @@ impl StagedWrite {
         staged
     }
 
+    /// Begins a file→file Overwrite of `final_path`, the user's file on
+    /// `dest_volume`, staged and landed delete-first like any other
+    /// ([`WriteStaging::StageOverOriginal`]), for a caller outside the transfer
+    /// engine whose operation writes to more than one volume: a remote zip edit
+    /// pulls the archive into a local scratch and pushes the edited one back, so
+    /// the operation names no single destination. The temp is recorded in
+    /// `dest_volume_id`'s path space, which is what lets a landing it cuts off
+    /// be held, kept for the volume's next arrival, and finished by its sweep.
+    pub(crate) fn begin_over_original(
+        state: &Arc<WriteOperationState>,
+        dest_volume: &dyn Volume,
+        final_path: Announced<'_>,
+        dest_volume_id: &str,
+    ) -> Self {
+        let staged = Self::begin_recorded_in(
+            state,
+            final_path.path(),
+            WriteStaging::StageOverOriginal,
+            Some(dest_volume_id.to_owned()),
+        );
+        state.scope().host().announce_on(dest_volume, staged.target());
+        staged
+    }
+
     /// [`Self::begin`] with nothing announced.
     fn begin_unannounced(state: &Arc<WriteOperationState>, final_path: &Path, staging: WriteStaging) -> Self {
+        Self::begin_recorded_in(state, final_path, staging, state.dest_volume_id().map(str::to_owned))
+    }
+
+    /// [`Self::begin_unannounced`], recording the temp in `home_volume`'s path
+    /// space.
+    fn begin_recorded_in(
+        state: &Arc<WriteOperationState>,
+        final_path: &Path,
+        staging: WriteStaging,
+        home_volume: Option<String>,
+    ) -> Self {
         let temp = match staging {
             WriteStaging::Stage
             | WriteStaging::StageInFreshFolder
             | WriteStaging::StageOntoClaimedName
             | WriteStaging::StageOverOriginal => {
                 let staged = StagingTemp::mint(final_path, state.liveness_token());
-                in_flight_temps::track_temp(state, dest_home(state), staged.path());
+                in_flight_temps::track_temp(state, home_of(home_volume.as_deref()), staged.path());
                 Some(staged)
             }
             // Straight to the final name: no intermediate state to track, and
@@ -246,6 +287,7 @@ impl StagedWrite {
                 | WriteStaging::Unstaged => WriteMode::CreateOrReplace,
             },
             unstaged: matches!(staging, WriteStaging::Unstaged),
+            home_volume,
             state: Arc::clone(state),
         }
     }
@@ -270,7 +312,7 @@ impl StagedWrite {
     /// retried attempt writes over its predecessor), a final name the caller
     /// claimed, whose `O_EXCL` placeholder sits at the name and must be written
     /// over, or an unstaged write's own earlier attempt.
-    pub(super) fn write_mode(&self) -> WriteMode {
+    pub(crate) fn write_mode(&self) -> WriteMode {
         self.write_mode
     }
 
@@ -301,8 +343,7 @@ impl StagedWrite {
     /// ❗ A step that fails on the transport cuts the landing off
     /// ([`LandingError::CutOff`]) rather than acting on a guess: the caller
     /// waits for the destination and then resumes or gives up
-    /// ([`CutOffLanding`]). A caller with no wait to offer takes
-    /// [`commit_without_a_wait`](Self::commit_without_a_wait).
+    /// ([`CutOffLanding`]).
     ///
     /// `Failed` with `VolumeError::NotSupported` means this destination can't
     /// rename (or delete), so it can't stage at all; the caller may fall back to
@@ -319,14 +360,22 @@ impl StagedWrite {
         set_task_phase(TaskPhase::Finalizing);
         land(
             dest_volume,
-            Landing::new(&self.state, temp, &self.final_path, self.landing, size),
+            Landing::new(
+                &self.state,
+                temp,
+                &self.final_path,
+                self.landing,
+                size,
+                self.home_volume.clone(),
+            ),
         )
         .await
     }
 
-    /// [`commit`](Self::commit) for a caller with no outage wait to offer: a
-    /// landing the transport cut off gives up at once, under the refusal rules
-    /// (`CutOffLanding::give_up`).
+    /// [`commit`](Self::commit) with no outage wait, for a cell about the
+    /// landing alone: a landing the transport cut off gives up at once, under
+    /// the refusal rules (`CutOffLanding::give_up`).
+    #[cfg(test)]
     pub(crate) async fn commit_without_a_wait(
         self,
         dest_volume: &Arc<dyn Volume>,
@@ -336,89 +385,6 @@ impl StagedWrite {
             Ok(()) => Ok(()),
             Err(LandingError::Failed(failure)) => Err(failure),
             Err(LandingError::CutOff(cut_off)) => cut_off.give_up(dest_volume).await,
-        }
-    }
-
-    /// Atomically replaces the final name with a completed generated file.
-    ///
-    /// Fresh ZIP creation uses this only on backends whose rename-with-force is
-    /// one atomic replacement primitive (local POSIX). The original is
-    /// therefore never removed in a separate operation. A refusal leaves the
-    /// original intact and abandons the staged bytes; an ambiguous reply may
-    /// have landed the new file, but cleanup still names only the distinct temp.
-    pub(crate) async fn commit_atomic_replace(mut self, dest_volume: &Arc<dyn Volume>) -> Result<(), VolumeError> {
-        let Some(temp) = self.temp.take() else {
-            return Err(VolumeError::NotSupported);
-        };
-        match dest_volume.rename(temp.path(), &self.final_path, true).await {
-            Ok(()) => {
-                self.retire_temp(temp.path());
-                Ok(())
-            }
-            Err(error) => {
-                if dest_volume.delete(temp.path()).await.is_ok() {
-                    self.retire_temp(temp.path());
-                }
-                Err(error)
-            }
-        }
-    }
-
-    /// Publishes on a backend without atomic replacement while keeping the old
-    /// destination recoverable under a tracked aside. This is the MTP-safe
-    /// fallback: the old file is restored if the final rename refuses, and is
-    /// discarded only after the new file has its final name.
-    pub(crate) async fn commit_with_displaced_original(
-        mut self,
-        dest_volume: &Arc<dyn Volume>,
-    ) -> Result<(), super::super::types::WriteOperationError> {
-        let Some(temp) = self.temp.take() else {
-            return Err(super::super::types::WriteOperationError::WriteError {
-                path: self.final_path.display().to_string(),
-                message: "generated output was not staged".to_string(),
-            });
-        };
-        let displaced =
-            match super::volume::displace_destination(&self.state, dest_volume, &self.final_path, false).await {
-                Ok(displaced) => displaced,
-                Err(error) => {
-                    if dest_volume.delete(temp.path()).await.is_ok() {
-                        self.retire_temp(temp.path());
-                    }
-                    return Err(error.into_write_error());
-                }
-            };
-        match dest_volume.rename(temp.path(), &self.final_path, false).await {
-            Ok(()) => {
-                self.retire_temp(temp.path());
-                if let Some(displaced) = displaced {
-                    displaced.discard(dest_volume).await;
-                }
-                Ok(())
-            }
-            Err(error) => {
-                let recovered = match displaced {
-                    Some(displaced) => displaced
-                        .restore(dest_volume)
-                        .await
-                        .map(|kept_at| vec![super::super::types::RecoveredOriginal::new(&self.final_path, &kept_at)]),
-                    None => None,
-                };
-                if dest_volume.delete(temp.path()).await.is_ok() {
-                    self.retire_temp(temp.path());
-                }
-                let cause = super::super::types::WriteOperationError::WriteError {
-                    path: self.final_path.display().to_string(),
-                    message: error.to_string(),
-                };
-                Err(match recovered {
-                    Some(recovered) => super::super::types::WriteOperationError::OriginalsKeptAside {
-                        cause: Box::new(cause),
-                        recovered,
-                    },
-                    None => cause,
-                })
-            }
         }
     }
 
@@ -486,20 +452,13 @@ impl StagedWrite {
     }
 
     fn retire_temp(&self, temp: &Path) {
-        in_flight_temps::retire_temp(&self.state, dest_home(&self.state), temp);
+        in_flight_temps::retire_temp(&self.state, home_of(self.home_volume.as_deref()), temp);
     }
 }
 
-/// The path space this operation's staged partials live in: the DESTINATION
-/// volume's, since a staged temp is a sibling of the file being written.
-///
-/// `None` when the operation didn't name that volume, which every volume
-/// copy/move deferred does and only a bare test state doesn't. The persisted
-/// ledger then skips the path rather than guessing at a path space (see
-/// `in_flight_temps::track_temp`); the operation's own in-memory ledger still
-/// carries it, and that one deletes through the volume handle it already holds.
-pub(super) fn dest_home(state: &WriteOperationState) -> Option<RecordHome> {
-    state.dest_volume_id().map(RecordHome::volume_space)
+/// The path space a staged write that names `home_volume` records its temp in.
+fn home_of(home_volume: Option<&str>) -> Option<RecordHome> {
+    home_volume.map(RecordHome::volume_space)
 }
 
 /// What one resolved write does to a FILE already holding the destination name,
@@ -658,6 +617,10 @@ pub(super) fn resolve_staging(requested: WriteStaging, lands_whole: bool) -> Wri
 mod landing;
 pub(crate) use landing::{CutOffLanding, LandingError, LandingSource, Resumed};
 use landing::{Landing, land};
+
+#[path = "staged_write_publish.rs"]
+mod publish;
+pub(crate) use publish::{CutOffPublish, PublishError, PublishFailure, Republished};
 
 #[cfg(test)]
 impl LandingError {

@@ -19,25 +19,24 @@
 //! - **Apply** rewrites only the LOCAL temp (the mutator's own temp+rename).
 //! - **Upload** streams the edited temp to a NEW remote name
 //!   (`foo.zip.cmdr-tmp-<uuid>`); the original keeps its name and bytes.
-//! - **Swap** is the only step that changes the original. It prefers an atomic
-//!   rename-overwrite where the backend supports it (SMB with `ReplaceIfExists`),
-//!   and otherwise renames the original ASIDE (`foo.zip.cmdr-temp-<uuid>`),
-//!   renames the temp into place, then deletes the aside. MTP always takes this
-//!   path (it has no rename-overwrite and allows same-name siblings, so a rename
-//!   onto a live name would DUPLICATE, not replace).
+//! - **Swap** is the only step that changes the original. It's a staged
+//!   write's swap landing (`StagedWrite::begin_over_original`, the copy
+//!   engine's file→file Overwrite): delete the original, then rename the temp
+//!   into place, ❌ never a rename onto a live name (MTP would DUPLICATE). From
+//!   the delete on, the uploaded temp may be the only copy, so it's recorded as
+//!   a landing first and ❌ never thrown away: a failed rename rescues it out of
+//!   temp space, and a crash leaves it for the sweep that finishes the landing.
 //!
-//! ❗ A `.cmdr-tmp-*` name is NOT a safe place for the only copy: the transfer
-//! engine's sweep deletes any an hour old at the start of the next copy into the
-//! folder. The aside shape is what keeps a complete archive under a name that
-//! sweep never matches after a crash at ANY step, and the next remote edit in
-//! the folder puts an orphaned original back; see [`swap_into_place`] and
-//! [`restore_orphaned_asides`].
+//! **A dropped share is waited for** (`transfer/volume_outage.rs`), at every
+//! step: the pull runs again, the upload runs again from the local copy, and a
+//! swap step the transport cut off settles what the server did once the share
+//! is back (`CutOffLanding`), comparing the archive against the local copy.
+//! A wait that gives up says "Lost the connection to {server}".
 //!
-//! A cancel at ANY point before the swap completes leaves the remote original
+//! A cancel at ANY point before the swap's delete leaves the remote original
 //! intact (the local temp and any partial remote temp are cleaned up). Pinned by
-//! `remote_tests`.
+//! `remote_tests` and `remote_outage_tests`.
 
-use std::collections::{HashMap, HashSet};
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -45,16 +44,20 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::io::AsyncWriteExt;
 
+use super::super::in_flight_temps;
+use super::super::journal;
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::WriteOperationState;
-use super::super::transfer::recovered_name::{
-    AfterARefusedDelete, discard_unplaced_temp, rescue_out_of_temp_space, what_a_refused_delete_left,
-};
+use super::super::transfer::StagedWrite;
+use super::super::transfer::staged_write::{LandingError, LandingSource, Resumed};
+use super::super::transfer::volume::PathRole;
+use super::super::transfer::volume_outage::{OutageEnd, StartedOn, lost_connection, wait_after_failure};
 use super::super::types::WriteOperationError;
 use super::edit_error::EditError;
-use cmdr_fs::entry::FileEntry;
-use cmdr_fs::volume::{Volume, VolumeError, WriteMode};
+use super::outage_wait::{Next, StepError, landing_failure, rerun_through_outages, wait_out};
+use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
+use cmdr_operation_log::types::NotRollbackableReason;
 
 #[derive(Debug, Clone, Copy)]
 pub enum RemoteCommitProgress {
@@ -65,12 +68,10 @@ pub enum RemoteCommitProgress {
 pub(crate) type RemoteProgressObserver = Arc<dyn Fn(RemoteCommitProgress) + Send + Sync>;
 
 /// `foo.zip` uploads as the same-directory sibling `foo.zip.cmdr-tmp-<uuid>`, the
-/// app-wide scratch name (shortened when it wouldn't fit). The same module names
-/// the upload and the prefix that matches stale leftovers, so the two can't drift.
-use cmdr_fs::staging::{
-    MAX_SCRATCH_NAME_BYTES, STAGING_ASIDE_MARKER, StagingTemp, is_staging_temp_in_flight, temp_sibling_path,
-    temp_sibling_prefix,
-};
+/// app-wide scratch name (shortened when it wouldn't fit), minted by the staged
+/// write. The same module names the prefix that matches stale leftovers, so the
+/// two can't drift.
+use cmdr_fs::staging::temp_sibling_prefix;
 
 /// The minimum age a remote `<archive>.cmdr-tmp-*` leftover must reach before the
 /// next edit of the same archive reaps it. Deliberately generous: unlike the LOCAL
@@ -95,10 +96,16 @@ const REMOTE_TEMP_REAP_MIN_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 /// The closure runs on the blocking pool (it decompresses/compresses/fsyncs); the
 /// pull, upload, and swap are async I/O against the parent volume.
 ///
+/// `parent_volume_id` is the parent's registered id: the swap records its temp
+/// in that volume's path space (`StagedWrite::begin_over_original`), which is
+/// what keeps a swap a crash or an outage cut off finishable by the volume's
+/// next sweep.
+///
 /// `pub(crate)` so the live-SMB and MTP integration suites can drive it directly
 /// against a real remote volume.
 pub async fn pull_apply_upload_swap<T, F>(
     parent: Arc<dyn Volume>,
+    parent_volume_id: &str,
     archive_path: PathBuf,
     state: Arc<WriteOperationState>,
     progress: Option<RemoteProgressObserver>,
@@ -116,7 +123,7 @@ where
     // upload and its swap. Mirrors the local mutator's start-of-edit sibling reap,
     // but age-gated (see `reap_remote_temps`). Best-effort and non-blocking: it
     // never fails or delays the edit.
-    reap_remote_temps(parent.as_ref(), &archive_path).await;
+    reap_remote_temps(&state, parent.as_ref(), parent_volume_id, &archive_path).await;
 
     // A private local scratch dir; its `Drop` removes the working copy however we
     // leave this function (success, error, or cancel).
@@ -124,7 +131,11 @@ where
     let working = scratch.path().join("archive.zip");
 
     // 1) Pull the remote `.zip` to the local working copy (streamed, cancelable).
-    pull_archive(parent.as_ref(), &archive_path, &working, &state).await?;
+    //    A read, so a dropped share is waited for and the pull runs again.
+    rerun_through_outages(&state, &[&parent], &archive_path, || {
+        pull_archive(parent.as_ref(), &archive_path, &working, &state)
+    })
+    .await?;
 
     // 2) Plan + apply on the local working copy. The mutator's temp+rename commits
     //    the edit onto `working`; a cancel/fault leaves `working` as the pulled
@@ -146,7 +157,15 @@ where
 
     // 3+4) Upload the edited local copy under a remote TEMP name, then swap it into
     //       place — the only step that touches the original. See `place_local_file`.
-    place_local_file(parent.as_ref(), &working, &archive_path, &state, progress.as_ref()).await?;
+    place_local_file(
+        &parent,
+        parent_volume_id,
+        &working,
+        &archive_path,
+        &state,
+        progress.as_ref(),
+    )
+    .await?;
 
     Ok(value)
 }
@@ -157,89 +176,124 @@ where
 /// old bytes until the swap, so a cancel/fault before the swap leaves it untouched
 /// with no torn file. This is `pull_apply_upload_swap`'s commit.
 ///
-/// ❗ Once the upload is complete the temp is committed data, so only the
-/// pre-swap cancel below may delete it. A failed swap has already put it
-/// wherever it belongs (`swap_into_place`), and its error says where; a caller
-/// must not clean up after it.
-pub(super) async fn place_local_file(
-    parent: &dyn Volume,
+/// A dropped share is waited for: an upload it cut off runs again from the local
+/// file, and a swap step it cut off is settled against the local file once the
+/// share is back ([`swap_into_place`]). One outage cap covers both, as for one
+/// file of a copy.
+async fn place_local_file(
+    parent: &Arc<dyn Volume>,
+    parent_volume_id: &str,
     local_file: &Path,
     remote_path: &Path,
-    state: &WriteOperationState,
+    state: &Arc<WriteOperationState>,
     progress: Option<&RemoteProgressObserver>,
 ) -> Result<(), EditError> {
-    // A fresh uuid each edit, so a leftover from a crashed prior edit (an
-    // abandoned upload; the original is intact) is never mistaken for this one.
-    let remote_temp = temp_sibling_path(remote_path);
-    upload_archive(parent, local_file, &remote_temp, state, progress).await?;
-    // A user can cancel while the backend closes the completed upload, after
-    // its final progress callback but before publication. The temp is ours;
-    // remove it and leave the target untouched instead of turning that cancel
-    // into a successful swap.
-    if state.intent().is_cancelled() {
-        let _ = parent.delete(&remote_temp).await;
-        return Err(EditError::Cancelled);
+    let size = std::fs::metadata(local_file)
+        .map_err(|e| io_op(&local_file.display().to_string(), &e.to_string()))?
+        .len();
+    // A `LocalPosixVolume` gives us a streaming reader over the local working file
+    // (the same primitive the cross-volume copy engine uses for a local source),
+    // and is what a settled swap compares the remote archive against.
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "archive-upload",
+        "/",
+        state.scope().host().volume_host().clone(),
+    ));
+    let volumes = [parent];
+    let mut outages = 0;
+    loop {
+        if state.intent().is_cancelled() {
+            return Err(EditError::Cancelled);
+        }
+        // A fresh uuid each attempt, so a leftover from a crashed prior edit (an
+        // abandoned upload; the original is intact) is never mistaken for this one.
+        let target = state.scope().host().announce_on(parent.as_ref(), remote_path);
+        let staged = StagedWrite::begin_over_original(state, parent.as_ref(), target, parent_volume_id);
+        let started_on = StartedOn::now(&volumes);
+        if let Err(failed) =
+            upload_archive(parent, &local, local_file, size, &staged, remote_path, state, progress).await
+        {
+            let next = wait_out(state, failed, &volumes, &started_on, &mut outages, remote_path).await;
+            // The partial upload goes once the share can take the delete, so
+            // after the wait; one it can't take stays recorded for the sweep.
+            staged.abandon(parent).await;
+            match next {
+                Next::Again => continue,
+                Next::Stop(ended) => return Err(ended),
+            }
+        }
+        // A user can cancel while the backend closes the completed upload, after
+        // its final progress callback but before publication. The temp is ours;
+        // remove it and leave the target untouched instead of turning that cancel
+        // into a successful swap.
+        if state.intent().is_cancelled() {
+            staged.abandon(parent).await;
+            return Err(EditError::Cancelled);
+        }
+        // An archive edit is never rollbackable, for its own reason. Noted
+        // first, it's the one the journal keeps: the swap's delete of the
+        // original notes `Overwrote`, which would word the refusal as a copy's.
+        journal::note_not_rollbackable(state.scope(), NotRollbackableReason::ZipEditUnsupported);
+        let source = LandingSource {
+            volume: &local,
+            path: local_file,
+        };
+        match swap_into_place(parent, staged, size, source, remote_path, state, &mut outages).await {
+            Swapped::Landed => return Ok(()),
+            Swapped::UploadAgain => continue,
+            Swapped::Ended(ended) => return Err(ended),
+        }
     }
-    swap_into_place(parent, &remote_temp, remote_path).await?;
-    Ok(())
 }
 
 /// Streams the remote `.zip` to a local file, checking cancel between chunks.
 /// Nothing remote is written. `fsync`s the local copy so the subsequent parse
-/// sees complete bytes even under memory pressure.
+/// sees complete bytes even under memory pressure. Truncates the local file
+/// first, so a pull that runs again after an outage starts clean.
 async fn pull_archive(
     parent: &dyn Volume,
     remote_path: &Path,
     local_working: &Path,
     state: &WriteOperationState,
-) -> Result<(), EditError> {
-    let mut stream = parent
-        .open_read_stream(remote_path)
-        .await
-        .map_err(vol_op(remote_path))?;
-    let mut file = tokio::fs::File::create(local_working)
-        .await
-        .map_err(|e| io_op(&local_working.display().to_string(), &e.to_string()))?;
+) -> Result<(), StepError> {
+    let local_error = |e: std::io::Error| StepError::Ended(io_op(&local_working.display().to_string(), &e.to_string()));
+    let remote_error = |e: VolumeError| StepError::at(remote_path, PathRole::Source, e);
+    let mut stream = parent.open_read_stream(remote_path).await.map_err(remote_error)?;
+    let mut file = tokio::fs::File::create(local_working).await.map_err(local_error)?;
 
     while let Some(chunk) = stream.next_chunk().await {
         if state.intent().is_cancelled() {
-            return Err(EditError::Cancelled);
+            return Err(StepError::Ended(EditError::Cancelled));
         }
-        let chunk = chunk.map_err(vol_op(remote_path))?;
-        file.write_all(&chunk)
-            .await
-            .map_err(|e| io_op(&local_working.display().to_string(), &e.to_string()))?;
+        let chunk = chunk.map_err(remote_error)?;
+        file.write_all(&chunk).await.map_err(local_error)?;
     }
-    file.flush()
-        .await
-        .map_err(|e| io_op(&local_working.display().to_string(), &e.to_string()))?;
-    file.sync_all()
-        .await
-        .map_err(|e| io_op(&local_working.display().to_string(), &e.to_string()))?;
+    file.flush().await.map_err(local_error)?;
+    file.sync_all().await.map_err(local_error)?;
     Ok(())
 }
 
-/// Uploads the edited local copy to `remote_temp` via `write_from_stream`
-/// (streamed, never whole-buffered). On cancel or any fault, the partial remote
-/// temp is deleted best-effort so no debris lingers at the user's destination.
+/// Uploads the edited local copy to the staged write's temp via
+/// `write_from_stream` (streamed, never whole-buffered). The caller abandons
+/// the staged write on any failure, which removes the partial.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one upload: both ends, the staged write, its size, the path it reports, and its progress"
+)]
 async fn upload_archive(
-    parent: &dyn Volume,
+    parent: &Arc<dyn Volume>,
+    local: &Arc<dyn Volume>,
     local_working: &Path,
-    remote_temp: &Path,
+    size: u64,
+    staged: &StagedWrite,
+    remote_path: &Path,
     state: &WriteOperationState,
     progress_observer: Option<&RemoteProgressObserver>,
-) -> Result<(), EditError> {
-    let size = std::fs::metadata(local_working)
-        .map_err(|e| io_op(&local_working.display().to_string(), &e.to_string()))?
-        .len();
-
-    // A `LocalPosixVolume` gives us a streaming reader over the local working file
-    // (the same primitive the cross-volume copy engine uses for a local source).
-    let local = LocalPosixVolume::local_folder("archive-upload", "/", state.scope().host().volume_host().clone());
+) -> Result<(), StepError> {
     let stream = local
         .open_read_stream(local_working)
         .await
-        .map_err(vol_op(local_working))?;
+        .map_err(|e| StepError::Ended(io_op(&local_working.display().to_string(), &e.to_string())))?;
 
     if let Some(observer) = progress_observer {
         observer(RemoteCommitProgress::Transferring {
@@ -267,11 +321,10 @@ async fn upload_archive(
         }
     };
 
-    // `remote_temp` is a `.cmdr-tmp-*` we just minted, so it's ours to replace.
     match parent
         .write_from_stream(
-            remote_temp,
-            WriteMode::CreateOrReplace,
+            staged.target(),
+            staged.write_mode(),
             cmdr_fs::volume::StreamLength::Known(size),
             stream,
             &progress,
@@ -284,119 +337,64 @@ async fn upload_archive(
             }
             Ok(())
         }
-        Err(err) => {
-            // Remove the partial upload so the user's remote dir isn't left with a
-            // stray `.cmdr-tmp-*` (harmless — the original is intact — but tidy).
-            let _ = parent.delete(remote_temp).await;
-            if state.intent().is_cancelled() {
-                Err(EditError::Cancelled)
-            } else {
-                Err(EditError::Op(to_write_error(remote_temp, &err)))
-            }
-        }
+        Err(_) if state.intent().is_cancelled() => Err(StepError::Ended(EditError::Cancelled)),
+        Err(err) => Err(StepError::at(remote_path, PathRole::Destination, err)),
     }
 }
 
-/// Swaps the uploaded temp into the original's place — the ONLY step that changes
-/// the remote original. See the module-level data-safety contract.
-///
-/// Where the backend has no atomic replace, the original goes ASIDE first
-/// (`<name>.cmdr-temp-<uuid>`, the house aside name), the temp takes its name,
-/// and only then is the aside deleted. The transfer engine's stale-temp sweep
-/// (`cleanup.rs::reap_stale_transfer_temps`, any `.cmdr-tmp-*` an hour old, at
-/// the start of every copy into the folder) never matches an aside, so a crash
-/// after ANY step leaves a complete archive under a name nothing reaps:
-///
-/// - after the upload: the original at its name (the temp is a spare copy);
-/// - after the move aside: the original at the aside, the edit at the temp;
-/// - after the landing: the edit at its name, the original at the aside, which
-///   stays until someone deletes it (`restore_orphaned_asides` never reaps one).
-///
-/// The next remote edit in that folder puts an aside whose original name is
-/// empty back (`restore_orphaned_asides`). Faults that answer get the same
-/// handling as the transfer engine's Overwrite swap (`staged_write_landing.rs`):
-///
-/// - A rename that answers an error may still have landed (a lost response), so
-///   the temp is checked first. Gone means the swap happened.
-/// - A refused move aside is checked with one stat (`what_a_refused_delete_left`):
-///   still there means nothing changed, so the spare temp goes.
-/// - A landing that fails puts the original back. If even that fails, the edit
-///   moves to a ` (recovered)` name and the error says where (`NewDataKeptAt`),
-///   with the original still at its aside.
-async fn swap_into_place(parent: &dyn Volume, remote_temp: &Path, archive_path: &Path) -> Result<(), EditError> {
-    // Take the one-step replace ONLY where the backend promises it's atomic
-    // (SMB's `ReplaceIfExists`). ❌ Never on a plain `create_directory_errors_on_existing_dir`:
-    // a forced rename may clear the destination in a step of its own (SFTP
-    // without `posix-rename@openssh.com`), and a crash between its two halves
-    // leaves the edit as the only copy, under a name the sweep deletes. MTP
-    // (same-name siblings, so a rename onto the live name would duplicate)
-    // never promises it either. Everything else takes the aside swap.
-    if parent.supports_atomic_replace_rename() {
-        let Err(replace_err) = parent.rename(remote_temp, archive_path, true).await else {
-            return Ok(());
-        };
-        match temp_is_gone(parent, remote_temp).await {
-            Some(true) => {
-                log::info!(target: "archive_remote_edit", "the replacing rename of {} answered {replace_err}, but its temp is gone, so it landed", archive_path.display());
-                return Ok(());
-            }
-            Some(false) => {}
-            // Can't tell whether it landed, so nothing moves. If it didn't, the
-            // original is intact and the temp is a spare copy.
-            None => return Err(EditError::Op(to_write_error(archive_path, &replace_err))),
-        }
-    }
+/// What the swap came to.
+enum Swapped {
+    /// The edited archive is at its name.
+    Landed,
+    /// Nothing proves the swap landed and no whole temp is left to land: upload
+    /// the local copy again.
+    UploadAgain,
+    Ended(EditError),
+}
 
-    // Registered for the swap's length, so the pane hides it while it's ours
-    // and shows it the moment this returns or the process dies.
-    let aside = StagingTemp::mint_aside(archive_path, uuid::Uuid::new_v4(), None);
-    // Tolerate a MISSING original: `place_local_file` can publish a brand-new
-    // target on MTP, which allows same-name siblings.
-    let has_aside = match parent.rename(archive_path, aside.path(), false).await {
-        Ok(()) => true,
-        Err(VolumeError::NotFound(_)) => false,
-        // The answer isn't the act: ask whether the name is still taken.
-        Err(err) => match what_a_refused_delete_left(parent, archive_path).await {
-            AfterARefusedDelete::Gone => parent.get_metadata(aside.path()).await.is_ok(),
-            AfterARefusedDelete::StillThere => {
-                discard_unplaced_temp(parent, remote_temp).await;
-                return Err(EditError::Op(to_write_error(archive_path, &err)));
-            }
-            AfterARefusedDelete::Unknown => return Err(EditError::Op(to_write_error(archive_path, &err))),
-        },
+/// Swaps the uploaded temp into the original's place, the ONLY step that
+/// changes the remote original: the staged write's swap landing (delete the
+/// original, then rename the temp onto its name; see the module docs).
+///
+/// A step the transport cut off waits for the share, then settles what the
+/// server did (`CutOffLanding::resume`, the bytes compared against the local
+/// copy, `source`) and lands what's left. A wait that ends without the share
+/// gives the landing up under the refusal rules: from the delete on, the temp
+/// is rescued out of temp space or kept recorded as a landing, ❌ never thrown
+/// away.
+async fn swap_into_place(
+    parent: &Arc<dyn Volume>,
+    staged: StagedWrite,
+    size: u64,
+    source: LandingSource<'_>,
+    archive_path: &Path,
+    state: &Arc<WriteOperationState>,
+    outages: &mut u32,
+) -> Swapped {
+    let volumes = [parent];
+    let mut started_on = StartedOn::now(&volumes);
+    let mut cut_off = match staged.commit(parent, size).await {
+        Ok(()) => return Swapped::Landed,
+        Err(LandingError::Failed(failure)) => return Swapped::Ended(landing_failure(archive_path, failure, None)),
+        Err(LandingError::CutOff(cut_off)) => cut_off,
     };
-
-    if let Err(err) = parent.rename(remote_temp, archive_path, false).await
-        && temp_is_gone(parent, remote_temp).await != Some(true)
-    {
-        if has_aside && parent.rename(aside.path(), archive_path, false).await.is_ok() {
-            // The original is back in place, so the edit simply didn't happen.
-            discard_unplaced_temp(parent, remote_temp).await;
-            return Err(EditError::Op(to_write_error(archive_path, &err)));
+    loop {
+        let ended = wait_after_failure(state, cut_off.error(), &volumes, &started_on, outages).await;
+        if ended != OutageEnd::Back {
+            let lost = lost_connection(ended, cut_off.error(), &volumes);
+            return match cut_off.give_up(parent).await {
+                Ok(()) => Swapped::Landed,
+                Err(_) if ended == OutageEnd::Cancelled => Swapped::Ended(EditError::Cancelled),
+                Err(failure) => Swapped::Ended(landing_failure(archive_path, failure, lost)),
+            };
         }
-        let kept_at = rescue_out_of_temp_space(parent, remote_temp, archive_path).await;
-        log::warn!(target: "archive_remote_edit", "the edited archive couldn't take the name {}, so it is at {} now (any old version at {}): {err}", archive_path.display(), kept_at.display(), aside.path().display());
-        return Err(EditError::Op(WriteOperationError::NewDataKeptAt {
-            path: archive_path.display().to_string(),
-            kept_at: kept_at.display().to_string(),
-            message: err.to_string(),
-        }));
-    }
-
-    if has_aside && let Err(err) = parent.delete(aside.path()).await {
-        // The edit is in place; the old version stays visible beside it.
-        log::warn!(target: "archive_remote_edit", "the edit of {} landed, but its old version stays at {}: {err}", archive_path.display(), aside.path().display());
-    }
-    Ok(())
-}
-
-/// Whether a temp a rename answered an error about is gone, which means the
-/// rename landed after all. `None` when the stat can't say.
-async fn temp_is_gone(parent: &dyn Volume, remote_temp: &Path) -> Option<bool> {
-    match parent.get_metadata(remote_temp).await {
-        Ok(_) => Some(false),
-        Err(VolumeError::NotFound(_)) => Some(true),
-        Err(_) => None,
+        started_on = StartedOn::now(&volumes);
+        match cut_off.resume(parent, Some(source)).await {
+            Resumed::Landed => return Swapped::Landed,
+            Resumed::RunAgain(_) => return Swapped::UploadAgain,
+            Resumed::Failed(failure) => return Swapped::Ended(landing_failure(archive_path, failure, None)),
+            Resumed::CutOff(again) => cut_off = again,
+        }
     }
 }
 
@@ -404,7 +402,7 @@ async fn temp_is_gone(parent: &dyn Volume, remote_temp: &Path) -> Option<bool> {
 /// and its swap (a `<archive>.cmdr-tmp-*` sibling holding the fully-uploaded new
 /// bytes under a temp name — harmless, but untidy). Runs at the start of the next
 /// edit of the SAME remote archive, the mirror of the local mutator's
-/// `reap_sibling_temps`, but with two remote-specific guards:
+/// `reap_sibling_temps`, but with three remote-specific guards:
 ///
 /// - **One round-trip.** A single `list_directory` of the archive's parent, then a
 ///   `delete` per stale match. Nothing on the read path, no polling.
@@ -412,16 +410,22 @@ async fn temp_is_gone(parent: &dyn Volume, remote_temp: &Path) -> Option<bool> {
 ///   removed, so a live upload from another Cmdr instance (same temp-name shape, a
 ///   fresh mtime) is never deleted mid-flight. An entry with no reported mtime is
 ///   treated as fresh and spared.
+/// - **❌ Never a temp the in-flight ledger records** for this volume: a
+///   recorded temp is a live upload of ours, or a swap a crash or an outage cut
+///   off after the original's delete, whose temp is the archive's ONLY copy
+///   until the volume's sweep lands it.
 ///
 /// Matches ONLY this archive's own temp shape (`<archive-name>.cmdr-tmp-…`, files
 /// only), so a sibling archive's temps and unrelated files are untouched.
 ///
-/// The same listing also puts back any original a crashed swap left aside in
-/// that folder (`restore_orphaned_asides`), for this archive or any other.
-///
 /// Best-effort throughout: a listing or delete failure is logged at debug and
 /// never fails or delays the user's edit.
-async fn reap_remote_temps(parent: &dyn Volume, archive_path: &Path) {
+async fn reap_remote_temps(
+    state: &WriteOperationState,
+    parent: &dyn Volume,
+    parent_volume_id: &str,
+    archive_path: &Path,
+) {
     let (Some(dir), Some(file_name)) = (archive_path.parent(), archive_path.file_name()) else {
         return;
     };
@@ -435,7 +439,6 @@ async fn reap_remote_temps(parent: &dyn Volume, archive_path: &Path) {
             return;
         }
     };
-    restore_orphaned_asides(parent, dir, &entries).await;
 
     let now_secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -452,84 +455,13 @@ async fn reap_remote_temps(parent: &dyn Volume, archive_path: &Path) {
         let old_enough = entry
             .modified_at
             .is_some_and(|modified| now_secs.saturating_sub(modified) >= min_age_secs);
-        if !old_enough {
+        let temp_path = dir.join(&entry.name);
+        if !old_enough || in_flight_temps::is_recorded_on(state, parent_volume_id, parent.root(), &temp_path) {
             continue;
         }
-        let temp_path = dir.join(&entry.name);
         if let Err(err) = parent.delete(&temp_path).await {
             log::debug!(target: "archive_remote_edit", "couldn't reap remote temp {}: {err}", temp_path.display());
         }
-    }
-}
-
-/// How far under [`MAX_SCRATCH_NAME_BYTES`] an aside's name must stay for its
-/// original's name to be read back whole. The mint shortens a name that won't
-/// fit by whole grapheme clusters, so a shortened one ends up to one cluster
-/// under the cap; 32 bytes clears any cluster a real name carries.
-const ASIDE_NAME_SLACK_BYTES: usize = 32;
-
-/// Puts back every original a crashed swap left aside in `dir`: an
-/// `<original>.cmdr-temp-<uuid>` file whose original name is empty is renamed
-/// back to it. Never deletes one: an aside whose original name is taken (a swap
-/// that landed and then couldn't delete it, or a file someone made since) stays
-/// where it is, visible, for a person to decide about.
-///
-/// Skipped too: an aside a live operation in this process holds (the pane
-/// hides those), one whose name may have been shortened to fit, which no
-/// longer says the original's name, and every aside of an original that more
-/// than one claims (two crashed swaps with no edit in the folder between
-/// them): nothing in the names says which is the newer version. All stay
-/// visible.
-///
-/// A swap by ANOTHER Cmdr instance, caught between its move aside and its
-/// landing, would get its original put back. That costs no data: its landing
-/// then finds the name taken, and it rescues its edit to a ` (recovered)` name.
-async fn restore_orphaned_asides(parent: &dyn Volume, dir: &Path, entries: &[FileEntry]) {
-    let taken: HashSet<&str> = entries.iter().map(|entry| entry.name.as_str()).collect();
-    let asides: Vec<(&str, &str)> = entries
-        .iter()
-        .filter(|entry| !entry.is_directory && !is_staging_temp_in_flight(&entry.name))
-        .filter_map(|entry| aside_original_name(&entry.name).map(|original| (entry.name.as_str(), original)))
-        .collect();
-    let mut claims: HashMap<&str, usize> = HashMap::new();
-    for (_, original) in &asides {
-        *claims.entry(original).or_default() += 1;
-    }
-    for (name, original) in asides {
-        let aside = dir.join(name);
-        if taken.contains(original) {
-            log::info!(target: "archive_remote_edit", "keeping {}: {original} is there too, so it's an old version, not a lost one", aside.display());
-            continue;
-        }
-        if claims[original] > 1 {
-            log::info!(target: "archive_remote_edit", "keeping {}: more than one old version of {original} is aside, so a person picks", aside.display());
-            continue;
-        }
-        match parent.rename(&aside, &dir.join(original), false).await {
-            Ok(()) => {
-                log::info!(target: "archive_remote_edit", "put {original} back from {}, which a crashed edit left aside", aside.display())
-            }
-            Err(err) => log::debug!(target: "archive_remote_edit", "couldn't put {} back: {err}", aside.display()),
-        }
-    }
-}
-
-/// The original's name an aside's own name carries, when it carries it whole:
-/// `<original>.cmdr-temp-<hyphenated uuid>`, clear of the length cap.
-fn aside_original_name(name: &str) -> Option<&str> {
-    let (original, uuid) = name.rsplit_once(STAGING_ASIDE_MARKER)?;
-    let whole = name.len() + ASIDE_NAME_SLACK_BYTES <= MAX_SCRATCH_NAME_BYTES;
-    (whole && !original.is_empty() && uuid.len() == 36 && uuid::Uuid::try_parse(uuid).is_ok()).then_some(original)
-}
-
-fn vol_op(path: &Path) -> impl Fn(VolumeError) -> EditError + '_ {
-    move |err| EditError::Op(to_write_error(path, &err))
-}
-
-fn to_write_error(path: &Path, err: &VolumeError) -> WriteOperationError {
-    WriteOperationError::IoError {
-        path: path.display().to_string(),
-        message: err.to_string(),
     }
 }
 
@@ -540,6 +472,9 @@ fn io_op(path: &str, message: &str) -> EditError {
     })
 }
 
+#[cfg(test)]
+#[path = "remote_outage_tests.rs"]
+mod remote_outage_tests;
 #[cfg(test)]
 #[path = "remote_tests.rs"]
 mod remote_tests;

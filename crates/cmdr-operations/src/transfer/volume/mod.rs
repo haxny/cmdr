@@ -52,7 +52,7 @@ mod transfer_error;
 // `volume/`; add a re-export rather than widening a submodule's visibility.
 // The cross-volume starters are `Operations` methods.
 pub use copy::copy_volumes_with_progress;
-pub(crate) use displaced_destination::displace_destination;
+pub(crate) use displaced_destination::{DisplacedDestination, displace_destination};
 /// The cross-volume copy body, reused as the extract phase of an out-of-zip
 /// move (`archive_edit`).
 pub(crate) use item_identity::is_the_same_item;

@@ -16,15 +16,17 @@ use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
 use super::super::summary::volume_items;
 use super::super::transfer::StagedWrite;
+use super::super::transfer::volume_outage::StartedOn;
 use super::super::transfer_tree::{TreeLanding, TreeOrder, from_archive_plan};
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal};
-use super::fresh_pipeline::{continue_unless, produce_into};
+use super::fresh_pipeline::{ProducerRuns, continue_unless, operation_cancelled, pipeline_failure, volume_write_error};
 use super::fresh_plan::{FreshPlan, PlanProgress, plan_sources, validate_aliases};
+use super::fresh_publish::{Published, Target, publish_stage};
 use super::fresh_rows::CompressRows;
 use super::fresh_validate::{ExpectedIndex, check_entry_names, validate_stage};
-use super::fresh_zip::{FreshZipCancellation, FreshZipError, FreshZipProgressObserver};
+use super::outage_wait::{Next, StepError, wait_out};
 use cmdr_fs::volume::{
     BackendKind, LaneKey, MutationEvent, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
     WriteMode,
@@ -363,8 +365,6 @@ async fn run(
         None,
         true,
     );
-    let total_entries = plan.entries.len();
-    let total_bytes = plan.source_bytes;
     let direct = matches!(
         dest_volume.backend_kind(),
         BackendKind::Local | BackendKind::Smb | BackendKind::Sftp | BackendKind::Adb
@@ -372,142 +372,118 @@ async fn run(
     if !direct {
         hooks.number_steps_as_zip_then_upload();
     }
+    let runs = ProducerRuns {
+        state: Arc::clone(&state),
+        hooks: Arc::clone(&hooks),
+        rows: Arc::new(rows),
+        total_entries: plan.entries.len(),
+        total_bytes: plan.source_bytes,
+        level: compression_level,
+    };
     MutationHooks::on_progress(
         &*hooks,
         MutationProgress {
-            entries_total: total_entries,
-            entries_changed: total_entries,
-            bytes_total: total_bytes,
+            entries_total: runs.total_entries,
+            entries_changed: runs.total_entries,
+            bytes_total: runs.total_bytes,
             ..Default::default()
         },
     );
-    let hooks_for_progress = Arc::clone(&hooks);
-    let state_for_progress = Arc::clone(&state);
-    let state_for_wake = Arc::clone(&state);
-    // One source for every stop: the op's tier-1 cancel plus the pipeline's own
-    // internal requests. ❌ Never race a write against it; it reaches the backend
-    // through the write callback, so the backend removes its own partial.
-    let cancellation = FreshZipCancellation::for_operation(
-        &state.backend_cancel,
-        Some(Arc::new(move || state_for_wake.pause_gate.wake())),
-    );
-    let cancellation_for_progress = cancellation.clone();
-    let progress: FreshZipProgressObserver = Arc::new(move |tick| {
-        rows.on_tick(tick);
-        MutationHooks::on_progress(
-            &*hooks_for_progress,
-            MutationProgress {
-                entries_done: tick.entries_done,
-                entries_total: total_entries,
-                entries_changed: total_entries,
-                bytes_done: tick.source_bytes_done,
-                bytes_total: total_bytes,
-            },
-        );
-        state_for_progress
-            .pause_gate
-            .wait_while_paused_sync_until(&|| cancellation_for_progress.is_requested());
-        cancellation_for_progress.is_requested()
-    });
 
-    let skipped = plan.skipped;
-    if direct {
-        produce_direct(
-            plan,
-            dest_volume,
-            archive_path,
-            replace_existing,
-            state,
-            compression_level,
-            progress,
-            cancellation,
-        )
-        .await?;
-    } else {
-        produce_via_spool(
-            plan,
-            dest_volume,
-            archive_path,
-            replace_existing,
-            state,
-            hooks,
-            compression_level,
-            progress,
-            cancellation,
-        )
-        .await?;
-    }
-    Ok(skipped)
-}
-
-#[allow(
-    clippy::too_many_arguments,
-    reason = "direct generation joins one producer to one staged destination and carries its lifecycle controls"
-)]
-async fn produce_direct(
-    plan: FreshPlan,
-    dest_volume: Arc<dyn Volume>,
-    archive_path: PathBuf,
-    replace_existing: bool,
-    state: Arc<WriteOperationState>,
-    level: Option<i64>,
-    progress: FreshZipProgressObserver,
-    cancellation: FreshZipCancellation,
-) -> Result<(), EditError> {
-    let expected = ExpectedIndex::of_plan(&plan);
-    let stage = begin_stage(&state, dest_volume.as_ref(), &archive_path, replace_existing);
-    let stage_path = stage.target().to_path_buf();
-    let (written, produced) = produce_into(
-        &state.scope().host().runtime(),
-        plan,
-        Arc::clone(&dest_volume),
-        stage_path.clone(),
-        level,
-        progress,
-        cancellation,
-    )
-    .await;
-    let (written, produced) = match (written, produced) {
-        (Ok(written), Ok(produced)) => (written, produced),
-        (write, producer) => {
-            stage.abandon(&dest_volume).await;
-            return Err(prefer_pipeline_error(
-                write,
-                producer,
-                &stage_path,
-                operation_cancelled(&state),
-            ));
-        }
+    let target = Target {
+        volume: dest_volume,
+        archive_path,
+        replace_existing,
     };
-    if let Err(error) = validate_stage(&dest_volume, &stage_path, written, produced, &expected).await {
-        stage.abandon(&dest_volume).await;
-        return Err(error);
+    if direct {
+        produce_direct(&plan, &target, &state, &runs).await?;
+    } else {
+        produce_via_spool(&plan, &target, &state, &hooks, &runs).await?;
     }
-    if state.stop_or_park_async().await {
-        stage.abandon(&dest_volume).await;
-        return Err(EditError::Cancelled);
-    }
-    publish_stage(stage, &dest_volume, &archive_path, replace_existing, written).await?;
-    Ok(())
+    Ok(plan.skipped)
 }
 
-#[allow(
-    clippy::too_many_arguments,
-    reason = "fallback shares the direct producer controls and additionally reports its staged upload axis"
-)]
-async fn produce_via_spool(
-    plan: FreshPlan,
-    dest_volume: Arc<dyn Volume>,
-    archive_path: PathBuf,
-    replace_existing: bool,
-    state: Arc<WriteOperationState>,
-    hooks: Arc<MutatorHooks>,
-    level: Option<i64>,
-    progress: FreshZipProgressObserver,
-    cancellation: FreshZipCancellation,
+/// Generates the archive straight into a tracked stage on the destination,
+/// validates it there, and publishes it.
+///
+/// A dropped share (the destination, or a remote source) is waited for: the
+/// producer can't resume mid-stream, so once the share is back the stage goes
+/// and the plan runs again into a fresh one. A publish the drop cut off settles
+/// first ([`publish_stage`]), and runs the plan again only when nothing proves
+/// it published.
+async fn produce_direct(
+    plan: &FreshPlan,
+    target: &Target,
+    state: &Arc<WriteOperationState>,
+    runs: &ProducerRuns,
 ) -> Result<(), EditError> {
-    let expected = ExpectedIndex::of_plan(&plan);
-    let scratch = ScratchDir::new("cmdr-fresh-zip").map_err(|error| io_write_error(&archive_path, error))?;
+    let expected = ExpectedIndex::of_plan(plan);
+    let dest_volume = &target.volume;
+    let volumes = [&plan.source_volume, dest_volume];
+    let mut outages = 0;
+    loop {
+        let started_on = StartedOn::now(&volumes);
+        let stage = begin_stage(
+            state,
+            dest_volume.as_ref(),
+            &target.archive_path,
+            target.replace_existing,
+        );
+        let stage_path = stage.target().to_path_buf();
+        let end = runs
+            .produce_into(plan, Arc::clone(dest_volume), stage_path.clone())
+            .await;
+        let checked = match (&end.written, &end.produced) {
+            (Ok(written), Ok(produced)) => {
+                let written = *written;
+                validate_stage(dest_volume, &stage_path, written, *produced, &expected)
+                    .await
+                    .map(|()| written)
+            }
+            _ => Err(pipeline_failure(end, &stage_path, state)),
+        };
+        let written = match checked {
+            Ok(written) => written,
+            Err(failed) => {
+                let next = wait_out(state, failed, &volumes, &started_on, &mut outages, &target.archive_path).await;
+                // The stage goes once the share can take the delete, so after
+                // the wait; one it can't take stays recorded for the sweep.
+                stage.abandon(dest_volume).await;
+                match next {
+                    Next::Again => continue,
+                    Next::Stop(ended) => return Err(ended),
+                }
+            }
+        };
+        if state.stop_or_park_async().await {
+            stage.abandon(dest_volume).await;
+            return Err(EditError::Cancelled);
+        }
+        match publish_stage(stage, target, written, state, &mut outages).await {
+            Published::Yes => return Ok(()),
+            Published::RunAgain => continue,
+            Published::Ended(ended) => return Err(ended),
+        }
+    }
+}
+
+/// Generates the archive into a private local spool, validates it there, then
+/// uploads it to a tracked stage on the destination, validates that, and
+/// publishes it.
+///
+/// A dropped remote source re-runs the plan into the spool. A dropped
+/// destination uploads the spool again once it's back, ❌ without producing
+/// the archive again; a publish the drop cut off settles first.
+async fn produce_via_spool(
+    plan: &FreshPlan,
+    target: &Target,
+    state: &Arc<WriteOperationState>,
+    hooks: &Arc<MutatorHooks>,
+    runs: &ProducerRuns,
+) -> Result<(), EditError> {
+    let expected = ExpectedIndex::of_plan(plan);
+    let archive_path = &target.archive_path;
+    let scratch = ScratchDir::new("cmdr-fresh-zip").map_err(|error| io_write_error(archive_path, error))?;
     let spool_path = PathBuf::from("archive.zip");
     let spool_full = scratch.path().join(&spool_path);
     let spool_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
@@ -515,39 +491,107 @@ async fn produce_via_spool(
         scratch.path().to_path_buf(),
         state.scope().host().volume_host().clone(),
     ));
-    let (written, produced) = produce_into(
-        &state.scope().host().runtime(),
-        plan,
-        Arc::clone(&spool_volume),
-        spool_path.clone(),
-        level,
-        progress,
-        cancellation.clone(),
-    )
-    .await;
-    let (written, produced) = match (written, produced) {
-        (Ok(written), Ok(produced)) => (written, produced),
-        (write, producer) => {
-            return Err(prefer_pipeline_error(
-                write,
-                producer,
-                &spool_full,
-                operation_cancelled(&state),
-            ));
+    let source_volumes = [&plan.source_volume];
+    let mut outages = 0;
+    let produced = loop {
+        let started_on = StartedOn::now(&source_volumes);
+        // A run after an outage starts on an empty spool: the producer writes
+        // it `CreateNew`.
+        if let Err(error) = std::fs::remove_file(&spool_full)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            return Err(io_write_error(&spool_full, error));
+        }
+        let end = runs
+            .produce_into(plan, Arc::clone(&spool_volume), spool_path.clone())
+            .await;
+        let failed = match (&end.written, &end.produced) {
+            (Ok(written), Ok(produced)) => {
+                match validate_stage(&spool_volume, &spool_path, *written, *produced, &expected).await {
+                    Ok(()) => break *produced,
+                    Err(failed) => failed,
+                }
+            }
+            _ => pipeline_failure(end, &spool_full, state),
+        };
+        match wait_out(state, failed, &source_volumes, &started_on, &mut outages, archive_path).await {
+            Next::Again => {}
+            Next::Stop(ended) => return Err(ended),
         }
     };
-    validate_stage(&spool_volume, &spool_path, written, produced, &expected).await?;
 
-    let stage = begin_stage(&state, dest_volume.as_ref(), &archive_path, replace_existing);
-    let stage_path = stage.target().to_path_buf();
-    let stream = spool_volume
-        .open_read_stream(&spool_path)
+    let dest_volume = &target.volume;
+    let dest_volumes = [dest_volume];
+    loop {
+        let started_on = StartedOn::now(&dest_volumes);
+        let stage = begin_stage(state, dest_volume.as_ref(), archive_path, target.replace_existing);
+        let stage_path = stage.target().to_path_buf();
+        let checked = match upload_spool(
+            &spool_volume,
+            &spool_full,
+            &spool_path,
+            &stage,
+            dest_volume,
+            produced,
+            state,
+            hooks,
+            runs,
+        )
         .await
-        .map_err(|error| volume_read_error(&spool_full, error))?;
+        {
+            Ok(uploaded) => validate_stage(dest_volume, &stage_path, uploaded, produced, &expected)
+                .await
+                .map(|()| uploaded),
+            Err(failed) => Err(failed),
+        };
+        let uploaded = match checked {
+            Ok(uploaded) => uploaded,
+            Err(failed) => {
+                let next = wait_out(state, failed, &dest_volumes, &started_on, &mut outages, archive_path).await;
+                stage.abandon(dest_volume).await;
+                match next {
+                    Next::Again => continue,
+                    Next::Stop(ended) => return Err(ended),
+                }
+            }
+        };
+        if state.stop_or_park_async().await {
+            stage.abandon(dest_volume).await;
+            return Err(EditError::Cancelled);
+        }
+        match publish_stage(stage, target, uploaded, state, &mut outages).await {
+            Published::Yes => return Ok(()),
+            Published::RunAgain => continue,
+            Published::Ended(ended) => return Err(ended),
+        }
+    }
+}
+
+/// Uploads the validated spool to the stage on its known-length axis.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one upload of the spool: both ends, the stage, its size, and the progress it reports"
+)]
+async fn upload_spool(
+    spool_volume: &Arc<dyn Volume>,
+    spool_full: &Path,
+    spool_path: &Path,
+    stage: &StagedWrite,
+    dest_volume: &Arc<dyn Volume>,
+    produced: u64,
+    state: &Arc<WriteOperationState>,
+    hooks: &Arc<MutatorHooks>,
+    runs: &ProducerRuns,
+) -> Result<u64, StepError> {
+    let stream = spool_volume
+        .open_read_stream(spool_path)
+        .await
+        .map_err(|error| StepError::Ended(volume_read_error(spool_full, error)))?;
     let stream: Box<dyn VolumeReadStream> = Box::new(PausableSpoolStream {
         inner: stream,
-        state: Arc::clone(&state),
+        state: Arc::clone(state),
     });
+    let cancellation = runs.cancellation();
     let transfer_observer = hooks.remote_progress_observer();
     transfer_observer(super::remote::RemoteCommitProgress::Transferring {
         bytes_done: 0,
@@ -564,38 +608,26 @@ async fn produce_via_spool(
         }
         continue_unless(&cancellation)
     };
-    let uploaded = dest_volume
+    let stage_path = stage.target();
+    match dest_volume
         .write_from_stream(
-            &stage_path,
+            stage_path,
             WriteMode::CreateNew,
             StreamLength::Known(produced),
             stream,
             &callback,
         )
-        .await;
-    let uploaded = match uploaded {
-        Ok(written) => written.bytes,
-        Err(error) => {
-            stage.abandon(&dest_volume).await;
-            // Classify without parking: a paused op whose upload failed reports
-            // that failure now, not after someone presses Resume.
-            if operation_cancelled(&state) {
-                return Err(EditError::Cancelled);
-            }
-            return Err(volume_write_error(&stage_path, error));
+        .await
+    {
+        Ok(written) => {
+            transfer_observer(super::remote::RemoteCommitProgress::Finishing);
+            Ok(written.bytes)
         }
-    };
-    transfer_observer(super::remote::RemoteCommitProgress::Finishing);
-    if let Err(error) = validate_stage(&dest_volume, &stage_path, uploaded, produced, &expected).await {
-        stage.abandon(&dest_volume).await;
-        return Err(error);
+        // Classify without parking: a paused op whose upload failed reports
+        // that failure now, not after someone presses Resume.
+        Err(_) if operation_cancelled(state) => Err(StepError::Ended(EditError::Cancelled)),
+        Err(error) => Err(StepError::fault(error.clone(), volume_write_error(stage_path, error))),
     }
-    if state.stop_or_park_async().await {
-        stage.abandon(&dest_volume).await;
-        return Err(EditError::Cancelled);
-    }
-    publish_stage(stage, &dest_volume, &archive_path, replace_existing, uploaded).await?;
-    Ok(())
 }
 
 /// Stages the archive on its destination, announcing the archive and its temp
@@ -610,88 +642,8 @@ fn begin_stage(
     StagedWrite::begin_generated(state, dest_volume, archive, replace_existing)
 }
 
-async fn publish_stage(
-    stage: StagedWrite,
-    dest_volume: &Arc<dyn Volume>,
-    archive_path: &Path,
-    replace_existing: bool,
-    // The archive's size, as the validation just confirmed it.
-    size: u64,
-) -> Result<(), EditError> {
-    if !replace_existing {
-        stage
-            .commit_without_a_wait(dest_volume, size)
-            .await
-            .map_err(|failure| {
-                EditError::Op(super::super::transfer::volume::map_finalize_failure(
-                    archive_path,
-                    failure,
-                ))
-            })?;
-    } else if dest_volume.supports_atomic_replace_rename() {
-        stage
-            .commit_atomic_replace(dest_volume)
-            .await
-            .map_err(|error| volume_write_error(archive_path, error))?;
-    } else {
-        stage
-            .commit_with_displaced_original(dest_volume)
-            .await
-            .map_err(EditError::Op)?;
-    }
-    Ok(())
-}
-
-/// Whether a PERSON (or the quit gate) stopped this op, as opposed to the
-/// pipeline stopping itself. Only this makes a failure read as a cancel.
-fn operation_cancelled(state: &WriteOperationState) -> bool {
-    state.intent().is_cancelled()
-}
-
-/// Names the CAUSAL failure of a pipeline that didn't finish. A genuine producer
-/// failure (source read, ZIP, count drift) wins, then a genuine destination
-/// failure. What's left is derivative: one side stopped because the other did.
-/// That reads as a cancel only when the operation itself was cancelled; a writer
-/// that quit early on its own is a write failure, never a silent user cancel.
-fn prefer_pipeline_error(
-    writer: Result<u64, VolumeError>,
-    producer: Result<u64, FreshZipError>,
-    path: &Path,
-    operation_cancelled: bool,
-) -> EditError {
-    let derivative = |error: &FreshZipError| matches!(error, FreshZipError::Cancelled | FreshZipError::OutputClosed);
-    match (writer, producer) {
-        (_, Err(error)) if !derivative(&error) => fresh_error(path, error),
-        (Err(error), _) if !matches!(error, VolumeError::Cancelled(_)) => volume_write_error(path, error),
-        _ if operation_cancelled => EditError::Cancelled,
-        _ => EditError::Op(WriteOperationError::WriteError {
-            path: path.display().to_string(),
-            message: "the ZIP pipeline stopped before the archive was complete".to_string(),
-        }),
-    }
-}
-
-fn fresh_error(path: &Path, error: FreshZipError) -> EditError {
-    match error {
-        FreshZipError::Source { entry, message } => {
-            EditError::Op(WriteOperationError::ReadError { path: entry, message })
-        }
-        other => EditError::Op(WriteOperationError::WriteError {
-            path: path.display().to_string(),
-            message: format!("{other:?}"),
-        }),
-    }
-}
-
 fn volume_read_error(path: &Path, error: VolumeError) -> EditError {
     EditError::Op(WriteOperationError::ReadError {
-        path: path.display().to_string(),
-        message: error.to_string(),
-    })
-}
-
-fn volume_write_error(path: &Path, error: VolumeError) -> EditError {
-    EditError::Op(WriteOperationError::WriteError {
         path: path.display().to_string(),
         message: error.to_string(),
     })
@@ -704,6 +656,9 @@ fn io_write_error(path: &Path, error: std::io::Error) -> EditError {
     ))
 }
 
+#[cfg(test)]
+#[path = "fresh_compress_outage_tests.rs"]
+mod outage_tests;
 #[cfg(test)]
 #[path = "fresh_compress_tests.rs"]
 mod tests;

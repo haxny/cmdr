@@ -52,10 +52,12 @@ mod engine;
 mod fresh_compress;
 mod fresh_pipeline;
 mod fresh_plan;
+mod fresh_publish;
 mod fresh_rows;
 mod fresh_validate;
 mod fresh_zip;
 mod move_out;
+mod outage_wait;
 mod remote;
 mod routing;
 

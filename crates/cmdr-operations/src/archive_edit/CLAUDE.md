@@ -7,11 +7,12 @@ are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cm
 
 - `routing.rs`: inner-path helpers, the tar/7z write guard, and duplicate pre-check.
 - `driver.rs`: managed lifecycle and delete routing. `engine.rs`: local/remote dispatch; `remote.rs`: pull, apply,
-  upload, swap. `edit_error.rs`: shared error leaf. `conflicts.rs`: archive-index resolution.
-- Per-shape routes: `copy_into.rs` (routing, remote pull) + `copy_into_plan.rs`, `move_out.rs`, `compress.rs`. Fresh
-  creation uses `fresh_plan.rs` (sources/identity), `fresh_compress.rs` (managed driver), `fresh_zip.rs` (bounded
+  upload, swap; `outage_wait.rs`: their outage wait. `edit_error.rs`: shared error leaf. `conflicts.rs`: archive-index
+  resolution.
+- Per-shape routes: `copy_into.rs` (transfer routing, plus the remote-source pull), `move_out.rs`, and `compress.rs`.
+  Fresh creation uses `fresh_plan.rs` (sources/identity), `fresh_compress.rs` (managed driver), `fresh_zip.rs` (bounded
   producer), `fresh_pipeline.rs` (its run and join), `fresh_rows.rs` (its transfer-tree rows), and `fresh_validate.rs`
-  (pre-publish checks). Create and rename routes live with their instant ops in `../create.rs` and `../rename.rs`.
+  (pre-publish checks). Create and rename routes: with their instant ops, `../create.rs` and `../rename.rs`.
 
 ## Must-knows
 
@@ -20,12 +21,12 @@ are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cm
 - **Every existing-archive apply site runs through `engine::run_managed_edit`**, ❌ never a bare
   `spawn_blocking(mutator::apply(...))`. Fresh compression never enters the mutator.
 - **❌ No in-place remote edit.** A remote parent (direct SMB / MTP) goes pull → apply locally → upload to a temp name →
-  swap, and the remote ORIGINAL keeps its bytes until that final swap. Keep the four steps in that order and keep the
-  cleanup on every early exit; only `supports_atomic_replace_rename()` earns a one-rename swap. DETAILS § "Remote edit:
-  the data-safety contract".
+  swap, and the remote ORIGINAL keeps its bytes until that final swap, a staged write's swap landing
+  (`StagedWrite::begin_over_original`), ❌ never its own delete/rename. Keep the order and every early exit's cleanup.
+  DETAILS § "Remote edit: the data-safety contract".
+- **A dropped share is WAITED for** at every remote step, compress too; a cut-off landing or publish SETTLES first.
 - **Routing detection must be PARENT-AWARE**: the seams call the async `OperationVolumes::path_is_inside_archive` /
-  `path_crosses_archive_boundary`, ❌ never the sync `std::fs`-only predicates, which answer FALSE for an `smb://` /
-  `mtp://` path and drop the write onto the parent volume.
+  `path_crosses_archive_boundary`, ❌ never the sync `std::fs`-only predicates (FALSE for an `smb://` / `mtp://` path).
 - **Fresh compression is seedless and publish-last**: reserve source + destination lanes, stream into a tracked stage,
   reconcile writer/producer/stat counts, parse it through `ArchiveVolume`, then publish. Local, SMB, SFTP, and ADB
   generate direct; WebDAV and MTP spool locally. DETAILS § Compress.
@@ -42,9 +43,8 @@ are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cm
   `deletes_spare_hidden` so entries the reader hid stay. The deep `skipped_file_count` fold keeps the count honest.
 - **Unrepresentable entries (symlinks, fifos, devices, broken links) are SKIPPED, never lost**, and any skip suppresses
   a move's source deletion. Every skip increments `skipped_count` and surfaces as `files_skipped`.
-- **Conflicts are planned INSIDE the op**, against the working copy `run_managed_edit` hands the closure — planning up
-  front would break a remote edit. Stop prompts per file and per folder meeting a file (dir-over-dir merges), sender
-  stored BEFORE the emit.
+- **Conflicts are planned INSIDE the op**, against the working copy `run_managed_edit` hands the closure (a remote
+  edit's is the pull). Stop-mode prompts per FILE (dirs merge silently), storing the sender BEFORE the emit.
 - **The terminal `files_processed` is `MutationProgress::entries_changed`**, ❌ not `entries_total`: deleting one file
   from a 3-entry zip reports 1.
 - **Compression level comes from `behavior.archiveCompressionLevel`**: fresh creation passes it to `new_stream`;

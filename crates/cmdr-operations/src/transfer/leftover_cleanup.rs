@@ -50,7 +50,6 @@ use tokio_util::task::TaskTracker;
 
 use super::super::in_flight_temps;
 use super::super::state::WriteOperationState;
-use super::staged_write::dest_home;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ConnectionState, Volume, VolumeError};
 
@@ -154,7 +153,7 @@ async fn run(volume: Arc<dyn Volume>, state: Arc<WriteOperationState>, left: Lef
         LogPrivate::volume(volume.name()),
     );
     for temp in &remaining {
-        in_flight_temps::keep_temp_for_arrival(&state, dest_home(&state), temp);
+        in_flight_temps::keep_temp_for_arrival(&state, in_flight_temps::dest_home(&state), temp);
     }
 }
 
@@ -174,7 +173,7 @@ async fn take_away(volume: &Arc<dyn Volume>, state: &Arc<WriteOperationState>, l
         }
         match tokio::time::timeout(state.outage_policy.attempt_timeout, volume.delete(&temp)).await {
             Ok(Ok(()) | Err(VolumeError::NotFound(_))) => {
-                in_flight_temps::retire_temp(state, dest_home(state), &temp);
+                in_flight_temps::retire_temp(state, in_flight_temps::dest_home(state), &temp);
             }
             Ok(Err(error)) => {
                 log::debug!(

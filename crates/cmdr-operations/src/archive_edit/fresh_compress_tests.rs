@@ -3,8 +3,9 @@
 use std::ops::ControlFlow;
 
 use super::*;
-use crate::archive_edit::fresh_plan::FreshPlan;
-use crate::archive_edit::fresh_zip::{FreshZipEntry, FreshZipSource};
+use crate::archive_edit::fresh_pipeline::produce_into;
+use crate::archive_edit::fresh_plan::{FreshPlan, PlannedEntry, PlannedSource};
+use crate::archive_edit::fresh_zip::{FreshZipCancellation, FreshZipProgressObserver};
 use crate::event_sinks::CollectorEventSink;
 use crate::testing::TestOperations;
 use crate::types::{ArchiveNameRefusal, WriteOperationPhase};
@@ -103,15 +104,14 @@ async fn backend_refusal_unblocks_a_producer_parked_by_pause() {
     });
     let plan = FreshPlan {
         source_volume: Arc::new(InMemoryVolume::new("source")),
-        entries: vec![FreshZipEntry {
+        entries: vec![PlannedEntry {
             name: "one.txt".to_string(),
-            source: FreshZipSource::Bytes(b"one".to_vec()),
+            source: PlannedSource::Bytes(b"one".to_vec()),
             size: 3,
             is_directory: false,
             modified: None,
             unix_mode: None,
         }],
-        remote_feeds: Vec::new(),
         source_bytes: 3,
         skipped: 0,
     };
@@ -124,7 +124,7 @@ async fn backend_refusal_unblocks_a_producer_parked_by_pause() {
         Duration::from_millis(250),
         produce_into(
             &state.scope().host().runtime(),
-            plan,
+            &plan,
             destination,
             PathBuf::from("archive.zip"),
             None,
@@ -778,16 +778,15 @@ fn plan_of(names: &[&str]) -> FreshPlan {
         source_volume: Arc::new(InMemoryVolume::new("source")),
         entries: names
             .iter()
-            .map(|name| FreshZipEntry {
+            .map(|name| PlannedEntry {
                 name: (*name).to_string(),
-                source: FreshZipSource::Bytes(Vec::new()),
+                source: PlannedSource::Bytes(Vec::new()),
                 size: 0,
                 is_directory: name.ends_with('/'),
                 modified: None,
                 unix_mode: None,
             })
             .collect(),
-        remote_feeds: Vec::new(),
         source_bytes: 0,
         skipped: 0,
     }

@@ -1080,7 +1080,10 @@ whose volume declares `supports_atomic_replace_rename()` lands it with one force
 `commit_with_displaced_original`: move the old destination to the existing tracked `DisplacedDestination`, land without
 force, discard the aside on success, or restore it on refusal. If restoration also refuses, the shared rescue gives the
 original a stable ` (recovered)` name and the typed failure names it; the sole good copy never remains under a reapable
-`.cmdr-tmp-*` name.
+`.cmdr-tmp-*` name. Both live in `staged_write_publish.rs` and ❗ classify before acting, as the landing does: a publish
+rename the transport cut off is settled once the destination is back (`CutOffPublish::resume`: a whole temp is renamed
+again, a gone temp with the name at the written size is published), ❌ never answered by deleting the temp, which had
+reported a failure for an archive the server had published.
 
 **Landing** (`staged_write::land`) renames FIRST and only clears the final name if that rename said something is in the
 way: it usually isn't, and a speculative delete would burn one extra round trip per file. The name can still be taken (a
@@ -1316,7 +1319,8 @@ resolve against the local filesystem and act on there.
 
 Both engines write KINDED records; the plain `+` line is only what an earlier build's log holds, still replayed and
 swept. The cross-volume `staged_write.rs` records its temps (and their landings) volume-space homed, naming the volume
-from `WriteOperationState::dest_volume_id()` (the destination half of `journal_volumes`). The local `overwrite.rs` and
+from `WriteOperationState::dest_volume_id()` (the destination half of `journal_volumes`), or the one a caller writing to
+more than one volume names (`StagedWrite::begin_over_original`, a remote zip edit's swap). The local `overwrite.rs` and
 `move_op/cross_fs.rs` take their home from `in_flight_temps::home_for` — the operation's typed destination side
 (`transfer_sides.rs`), ❌ never a prefix match against the mount table. The three homes and why the local-mount /
 volume-namespace split can't be derived: `crates/cmdr-operations/DETAILS.md` § "What the sweep does with each kind".
@@ -1953,6 +1957,9 @@ again:
   failing on it. It announces the wait itself (no probe is registered yet). Only a cancel stops the transfer there;
   every other ending carries on, and a volume still gone fails the first step exactly as before.
 
+- Outside the transfer engine, the archive edits take the same wait and settle: a remote zip edit's pull, upload, and
+  swap (a `StageOverOriginal` landing), and a fresh compress's production, upload, validation, and publish
+  (`../archive_edit/DETAILS.md` § "Remote edit: the data-safety contract" and § Compress).
 - After the copy: a cross-volume move's source sweep (`volume/source_sweep.rs::sweep_carried_source`, whole, through
   `through_outages`: every run re-lists and re-stamps before it deletes), and each folder's date stamp
   (`volume/folder_metadata.rs`, through `wait_after_shortfall`, since a backend reports a drop under `apply_metadata` as

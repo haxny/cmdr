@@ -752,7 +752,7 @@ pub(super) use landing::{NotOnDisk, back_to_temp, hold_for_landing};
 #[path = "in_flight_records.rs"]
 mod records;
 use records::{ItemHome, home_for};
-pub(super) use records::{ItemKind, Record, RecordHome, RecordedTemp, TrackedItem, TrackedRecord};
+pub(super) use records::{ItemKind, Record, RecordHome, RecordedTemp, TrackedItem, TrackedRecord, dest_home};
 #[cfg(test)]
 pub(super) use records::{TempHome, VolumeTemp};
 

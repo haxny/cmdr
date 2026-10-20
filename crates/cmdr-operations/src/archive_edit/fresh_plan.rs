@@ -21,12 +21,73 @@ pub(super) struct RemoteFeed {
     pub(super) feeder: RemoteZipFeeder,
 }
 
+/// The frozen plan of one compress: every entry, in the order the zip is
+/// written in. It can be run more than once: the compress makes the archive
+/// again after a dropped share (`fresh_compress.rs`), and each run gets its
+/// own remote feeds ([`bridged`](Self::bridged)).
 pub(super) struct FreshPlan {
     pub(super) source_volume: Arc<dyn Volume>,
-    pub(super) entries: Vec<FreshZipEntry>,
-    pub(super) remote_feeds: Vec<RemoteFeed>,
+    pub(super) entries: Vec<PlannedEntry>,
     pub(super) source_bytes: u64,
     pub(super) skipped: usize,
+}
+
+/// One entry of the plan: the producer's `FreshZipEntry`, with a source that
+/// can be read again.
+#[derive(Debug, Clone)]
+pub(super) struct PlannedEntry {
+    pub(super) name: String,
+    pub(super) source: PlannedSource,
+    pub(super) size: u64,
+    pub(super) is_directory: bool,
+    pub(super) modified: Option<std::time::SystemTime>,
+    pub(super) unix_mode: Option<u32>,
+}
+
+/// Where a planned entry's bytes come from. Unlike the producer's
+/// `FreshZipSource`, whose remote half is a live channel to one feed, a remote
+/// source here is only its path on the plan's source volume.
+#[derive(Debug, Clone)]
+pub(super) enum PlannedSource {
+    /// A local file, or for a directory entry the local folder whose xattrs
+    /// its sidecar carries.
+    Local(PathBuf),
+    Bytes(Vec<u8>),
+    /// A file on the plan's (remote) source volume.
+    Remote(PathBuf),
+}
+
+impl FreshPlan {
+    /// One producer run of the plan: its entries for `produce`, each remote one
+    /// bridged to a fresh feed that reads it from the source volume.
+    pub(super) fn bridged(&self) -> (Vec<FreshZipEntry>, Vec<RemoteFeed>) {
+        let mut feeds = Vec::new();
+        let entries = self
+            .entries
+            .iter()
+            .map(|entry| FreshZipEntry {
+                name: entry.name.clone(),
+                source: match &entry.source {
+                    PlannedSource::Local(path) => FreshZipSource::Local(path.clone()),
+                    PlannedSource::Bytes(bytes) => FreshZipSource::Bytes(bytes.clone()),
+                    PlannedSource::Remote(path) => {
+                        let (feeder, remote) = remote_source_bridge();
+                        feeds.push(RemoteFeed {
+                            path: path.clone(),
+                            entry_name: entry.name.clone(),
+                            feeder,
+                        });
+                        FreshZipSource::Remote(remote)
+                    }
+                },
+                size: entry.size,
+                is_directory: entry.is_directory,
+                modified: entry.modified,
+                unix_mode: entry.unix_mode,
+            })
+            .collect();
+        (entries, feeds)
+    }
 }
 
 /// How far the planning walk has got: what it has found so far and the
@@ -100,8 +161,7 @@ async fn plan_sources_with_context(
     conflict_context: Option<PlanConflictContext<'_>>,
     on_progress: Option<PlanProgressObserver<'_>>,
 ) -> Result<FreshPlan, EditError> {
-    let mut entries: Vec<FreshZipEntry> = Vec::new();
-    let mut remote_feeds: Vec<RemoteFeed> = Vec::new();
+    let mut entries: Vec<PlannedEntry> = Vec::new();
     let mut source_bytes = 0u64;
     let (tops, mut skipped) = settle_tops(source, source_paths, conflict, state, conflict_context).await?;
     // Found-so-far tallies for the scan readout only.
@@ -129,14 +189,14 @@ async fn plan_sources_with_context(
                 .then_some(meta.permissions)
                 .filter(|mode| *mode != 0);
             if meta.is_directory {
-                entries.push(FreshZipEntry {
+                entries.push(PlannedEntry {
                     name: format!("{}/", inner.trim_end_matches('/')),
                     // A local folder is its entry's source only for its xattrs,
                     // which the producer writes as a sidecar; no bytes.
                     source: local_root.as_ref().map_or_else(
-                        || FreshZipSource::Bytes(Vec::new()),
+                        || PlannedSource::Bytes(Vec::new()),
                         |root| {
-                            FreshZipSource::Local(if path.is_absolute() {
+                            PlannedSource::Local(if path.is_absolute() {
                                 path.clone()
                             } else {
                                 root.join(&path)
@@ -171,21 +231,15 @@ async fn plan_sources_with_context(
                 })?;
                 source_bytes = source_bytes.saturating_add(size);
                 let entry_source = if let Some(root) = &local_root {
-                    FreshZipSource::Local(if path.is_absolute() {
+                    PlannedSource::Local(if path.is_absolute() {
                         path.clone()
                     } else {
                         root.join(&path)
                     })
                 } else {
-                    let (feeder, remote) = remote_source_bridge();
-                    remote_feeds.push(RemoteFeed {
-                        path: path.clone(),
-                        entry_name: inner.clone(),
-                        feeder,
-                    });
-                    FreshZipSource::Remote(remote)
+                    PlannedSource::Remote(path.clone())
                 };
-                entries.push(FreshZipEntry {
+                entries.push(PlannedEntry {
                     name: inner,
                     source: entry_source,
                     size,
@@ -201,7 +255,6 @@ async fn plan_sources_with_context(
     Ok(FreshPlan {
         source_volume: Arc::clone(source),
         entries,
-        remote_feeds,
         source_bytes,
         skipped,
     })

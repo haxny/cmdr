@@ -116,7 +116,15 @@ where
     }
 
     let parent = parent.expect("is_remote is only true when the parent is registered");
-    pull_apply_upload_swap(parent, archive_path, state, Some(remote_progress), plan_and_apply).await
+    pull_apply_upload_swap(
+        parent,
+        parent_volume_id,
+        archive_path,
+        state,
+        Some(remote_progress),
+        plan_and_apply,
+    )
+    .await
 }
 
 /// Maps a mutator failure onto the typed `WriteOperationError` the FE renders.

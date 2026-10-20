@@ -13,6 +13,7 @@ use cmdr_fs::volume::host::VolumeHost;
 use super::super::types::{ArchiveNameRefusal, WriteOperationError};
 use super::edit_error::EditError;
 use super::fresh_plan::FreshPlan;
+use super::outage_wait::StepError;
 use cmdr_fs::volume::{Volume, VolumeError};
 
 /// What a staged ZIP must read back as: every planned entry at the path the
@@ -134,25 +135,28 @@ fn collision(entry: &str, other: &str, archive_path: &str) -> WriteOperationErro
     }
 }
 
+/// Checks a staged ZIP before it may be published. A read the volume refused
+/// comes back as the volume's own error (`StepError::Fault`), so the caller
+/// can wait out a dropped share and check again; a mismatch ends the compress.
 pub(super) async fn validate_stage(
     volume: &Arc<dyn Volume>,
     path: &Path,
     writer_bytes: u64,
     producer_bytes: u64,
     expected: &ExpectedIndex,
-) -> Result<(), EditError> {
+) -> Result<(), StepError> {
     let meta = volume
         .get_metadata(path)
         .await
-        .map_err(|error| volume_read_error(path, error))?;
+        .map_err(|error| unreadable(path, error))?;
     let stat_bytes = meta.size.unwrap_or(u64::MAX);
     if writer_bytes != producer_bytes || stat_bytes != producer_bytes {
-        return Err(EditError::Op(WriteOperationError::WriteError {
+        return Err(StepError::Ended(EditError::Op(WriteOperationError::WriteError {
             path: path.display().to_string(),
             message: format!(
                 "ZIP byte counts disagree (producer {producer_bytes}, writer {writer_bytes}, destination {stat_bytes})"
             ),
-        }));
+        })));
     }
     let reader_path = volume
         .supports_local_fs_access()
@@ -168,19 +172,22 @@ pub(super) async fn validate_stage(
         ArchiveFormat::Zip,
         VolumeHost::detached(),
     );
-    let index = archive.index().await.map_err(|error| volume_read_error(path, error))?;
+    let index = archive.index().await.map_err(|error| unreadable(path, error))?;
     if expected.quarantined > 0 || ExpectedIndex::of_index(&index) != *expected {
-        return Err(EditError::Op(WriteOperationError::WriteError {
+        return Err(StepError::Ended(EditError::Op(WriteOperationError::WriteError {
             path: path.display().to_string(),
             message: "the staged ZIP did not read back as the planned entries".to_string(),
-        }));
+        })));
     }
     Ok(())
 }
 
-fn volume_read_error(path: &Path, error: VolumeError) -> EditError {
-    EditError::Op(WriteOperationError::ReadError {
+/// A read of the stage the volume refused: a fault an outage wait judges,
+/// reported as a read failure of the stage otherwise.
+fn unreadable(path: &Path, error: VolumeError) -> StepError {
+    let otherwise = EditError::Op(WriteOperationError::ReadError {
         path: path.display().to_string(),
         message: error.to_string(),
-    })
+    });
+    StepError::fault(error, otherwise)
 }

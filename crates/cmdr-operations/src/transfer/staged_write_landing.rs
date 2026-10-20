@@ -15,7 +15,7 @@ use super::super::recovered_name::{
     AfterARefusedDelete, FinalizeFailure, LandingAftermath, discard_unplaced_temp, rescue_out_of_temp_space,
     what_a_refused_delete_left,
 };
-use super::{LandingName, dest_home};
+use super::{LandingName, home_of};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::staging::StagingTemp;
@@ -54,6 +54,9 @@ pub(super) struct Landing {
     name: LandingName,
     /// The byte count the write confirmed: what a whole temp holds.
     size: u64,
+    /// The volume whose path space the temp is recorded in (the staged
+    /// write's).
+    home_volume: Option<String>,
     recorded: Recorded,
     /// Set by every discard of the temp this landing asks for: a temp gone
     /// from the destination is proof of a landing only when nothing of ours
@@ -81,6 +84,7 @@ impl Landing {
         final_path: &Path,
         name: LandingName,
         size: u64,
+        home_volume: Option<String>,
     ) -> Self {
         Self {
             state: Arc::clone(state),
@@ -88,6 +92,7 @@ impl Landing {
             final_path: final_path.to_path_buf(),
             name,
             size,
+            home_volume,
             recorded: Recorded::Temp,
             discard_asked: false,
         }
@@ -97,10 +102,14 @@ impl Landing {
         self.temp.path()
     }
 
+    fn home(&self) -> Option<in_flight_temps::RecordHome> {
+        home_of(self.home_volume.as_deref())
+    }
+
     /// The temp stopped being anything of ours: it landed, or it's gone.
     fn settled(&mut self) {
         match std::mem::replace(&mut self.recorded, Recorded::Settled) {
-            Recorded::Temp => in_flight_temps::retire_temp(&self.state, dest_home(&self.state), self.temp.path()),
+            Recorded::Temp => in_flight_temps::retire_temp(&self.state, self.home(), self.temp.path()),
             Recorded::Landing(Some(record)) => in_flight_temps::retire(&self.state, &record),
             Recorded::Landing(None) | Recorded::Settled => {}
         }
@@ -113,14 +122,9 @@ impl Landing {
         if !matches!(self.recorded, Recorded::Temp) {
             return true;
         }
-        let held = in_flight_temps::hold_for_landing(
-            &self.state,
-            dest_home(&self.state),
-            self.temp.path(),
-            &self.final_path,
-            self.size,
-        )
-        .await;
+        let held =
+            in_flight_temps::hold_for_landing(&self.state, self.home(), self.temp.path(), &self.final_path, self.size)
+                .await;
         match held {
             Ok(record) => {
                 self.recorded = Recorded::Landing(record);
@@ -148,7 +152,7 @@ impl Landing {
     /// landing record goes) for the sweeps to remove.
     fn landing_back_to_temp(&mut self) {
         if let Recorded::Landing(held) = std::mem::replace(&mut self.recorded, Recorded::Temp) {
-            in_flight_temps::back_to_temp(&self.state, dest_home(&self.state), self.temp.path(), held);
+            in_flight_temps::back_to_temp(&self.state, self.home(), self.temp.path(), held);
         }
     }
 
@@ -654,7 +658,7 @@ async fn resume_with_a_whole_temp(dest_volume: &Arc<dyn Volume>, landing: Landin
 }
 
 /// Whether `final_path` holds a file of exactly `size` bytes.
-async fn holds_our_size(dest_volume: &Arc<dyn Volume>, final_path: &Path, size: u64) -> bool {
+pub(super) async fn holds_our_size(dest_volume: &Arc<dyn Volume>, final_path: &Path, size: u64) -> bool {
     matches!(
         dest_volume.get_metadata(final_path).await,
         Ok(entry) if !entry.is_directory && !entry.is_symlink && entry.size == Some(size)

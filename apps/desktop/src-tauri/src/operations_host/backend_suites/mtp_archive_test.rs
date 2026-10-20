@@ -146,6 +146,7 @@ async fn virtual_mtp_remote_zip_edit_deletes_an_entry_through_the_device() {
     let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(50)));
     let result = pull_apply_upload_swap(
         Arc::clone(&vol) as Arc<dyn Volume>,
+        "virtual-mtp",
         archive_path.clone(),
         state,
         None,

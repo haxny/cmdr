@@ -42,7 +42,8 @@ async fn land_unrecorded(
         .and_then(|entry| entry.size)
         .unwrap_or(0);
     let temp = StagingTemp::adopt(temp.to_path_buf(), state.liveness_token());
-    match land(dest, Landing::new(&state, temp, final_path, landing, size)).await {
+    let home_volume = state.dest_volume_id().map(str::to_owned);
+    match land(dest, Landing::new(&state, temp, final_path, landing, size, home_volume)).await {
         Ok(()) => Ok(()),
         Err(LandingError::Failed(failure)) => Err(failure),
         Err(LandingError::CutOff(cut_off)) => cut_off.give_up(dest).await,
@@ -577,7 +578,7 @@ async fn a_refused_displacement_preserves_the_original_and_cleans_the_generated_
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
 
-    let outcome = staged.commit_with_displaced_original(&dest).await;
+    let outcome = staged.commit_with_displaced_original(&dest, 3).await;
 
     assert!(outcome.is_err());
     assert_eq!(size_of(&inner, "/notes.txt").await, Some(15));
