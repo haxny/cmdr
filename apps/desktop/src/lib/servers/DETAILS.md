@@ -445,6 +445,12 @@ things count as evidence, and nothing else: a scheme or a pasted `ssh` line (it 
 well-known port on an address with no scheme (22, 139, 445, 80, 443). ❌ An account, a path, or a bare host is not
 evidence: `user@host` fits all three protocols. The warning never blocks Connect.
 
+❗ **A WebDAV address over plain `http` earns its own sentence** (`servers.sheet.webdavCleartext`, #540): Basic auth
+rides every request, so the password crosses the network readable. `webdavAddressIsCleartext` reads the base URL the
+form would dial, so an address with no scheme (which dials `https`) never warns. Shown under the address in add and edit
+mode (after a protocol mismatch, which outranks it), and under the address header when signing back in, so it's on
+screen before the first secret leaves. It never blocks either.
+
 A port or path the address's scheme named for a DIFFERENT protocol is dropped (`sftp://nas:2222/srv` with WebDAV
 selected dials `https://nas`), while one typed with no scheme belongs to whichever protocol is selected. The account the
 address carried fills the username either way; the path fills the SFTP root only when SFTP is selected, and the sheet

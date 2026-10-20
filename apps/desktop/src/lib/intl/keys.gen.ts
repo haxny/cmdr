@@ -3475,6 +3475,7 @@ export type MessageKey =
   | 'servers.sheet.useAgent'
   | 'servers.sheet.username'
   | 'servers.sheet.usernamePlaceholder'
+  | 'servers.sheet.webdavCleartext'
   | 'settings.adb.browse'
   | 'settings.adb.install.intro'
   | 'settings.adb.pathPlaceholder'

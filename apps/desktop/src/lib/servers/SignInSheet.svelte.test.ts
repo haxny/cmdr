@@ -1106,3 +1106,62 @@ describe('SignInSheet: a refusal and the address that earned it', () => {
     expect(document.body.textContent).not.toContain('typo.local')
   })
 })
+
+/**
+ * ❗ A WebDAV address over plain `http` sends the password readable on every request (#540).
+ * The sheet says so before the first secret leaves: when adding, and when signing back in.
+ */
+describe('SignInSheet: a WebDAV address without encryption', () => {
+  const attempt = (): Promise<SignInAttemptOutcome> => Promise.resolve({ kind: 'handed_off' })
+  const CLEARTEXT = 'isn’t encrypted'
+
+  it('warns under the address while adding, and not for an https one', async () => {
+    await renderSheet({ mode: 'add', attempt })
+    await pickProtocol('WebDAV')
+    const address = document.body.querySelector<HTMLInputElement>('#server-address') as HTMLInputElement
+
+    typeInto(address, 'http://nas.local:5005')
+    await tick()
+    expect(document.body.querySelector('#server-address-warning')?.textContent).toContain(CLEARTEXT)
+    expect(address.getAttribute('aria-describedby')).toBe('server-address-warning')
+
+    typeInto(address, 'https://nas.local:5006')
+    await tick()
+    expect(document.body.querySelector('#server-address-warning')).toBeNull()
+
+    // No scheme reads as https, so it needs no warning either.
+    typeInto(address, 'nas.local')
+    await tick()
+    expect(document.body.querySelector('#server-address-warning')).toBeNull()
+  })
+
+  it('says nothing about encryption for another protocol', async () => {
+    await renderSheet({ mode: 'add', attempt })
+    await pickProtocol('SFTP')
+    typeInto(document.body.querySelector<HTMLInputElement>('#server-address') as HTMLInputElement, 'nas.local')
+    await tick()
+    expect(document.body.textContent).not.toContain(CLEARTEXT)
+  })
+
+  it('warns before signing back in to an http server', async () => {
+    await renderSheet({
+      mode: 'sign-in',
+      remembered: false,
+      endpoint: { ...endpoint, protocol: 'webdav', address: 'http://nas.local:5005' },
+      shape: { kind: 'password' },
+      attempt,
+    })
+    expect(document.body.textContent).toContain(CLEARTEXT)
+  })
+
+  it('stays quiet signing back in to an https server', async () => {
+    await renderSheet({
+      mode: 'sign-in',
+      remembered: false,
+      endpoint: { ...endpoint, protocol: 'webdav', address: 'https://nas.local:5006' },
+      shape: { kind: 'password' },
+      attempt,
+    })
+    expect(document.body.textContent).not.toContain(CLEARTEXT)
+  })
+})

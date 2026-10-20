@@ -546,6 +546,10 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "description": "Warning under the address field in the \"Add server\" form, shown while the user types an address that looks like it's for WebDAV (for example it starts with https://) but a different protocol is selected in the SMB / SFTP / WebDAV picker right above the field. Nothing changes on its own; the user decides. “WebDAV” is a protocol name; keep it as-is."
   },
+  "servers.sheet.webdavCleartext": "This address isn’t encrypted, so anyone on your network can read the password Cmdr sends. Use an https address if your server has one.",
+  "@servers.sheet.webdavCleartext": {
+    "description": "Warning shown in the server sheet for a WebDAV server whose address starts with http:// (not https://): under the address field while adding or editing the server, and under the server's address when signing back in to it. Plain http sends the password readable to anyone on the same network (shared Wi-Fi, for example) with every request. Nothing is blocked; the user decides. Keep \"https\" as-is: it's the part of the address to change. Avoid the words \"error\" and \"failed\"."
+  },
   "servers.sheet.accountLocked": "The protocol and the account are what name this server. To use another account, add it as a new server.",
   "@servers.sheet.accountLocked": {
     "description": "Under the greyed-out Username field when the user is EDITING a saved SFTP or WebDAV server, explaining why the protocol (the SMB / SFTP / WebDAV / S3 picker) and the account can't be changed there, and what to do instead. The address above them CAN be changed, so don't say it can't. “Add” refers to adding a server from the Servers list."

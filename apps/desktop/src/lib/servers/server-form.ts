@@ -302,6 +302,16 @@ export function formFromSmbHost(server: SavedServer): ServerForm {
   }
 }
 
+/**
+ * Whether a WebDAV server at `address` gets its password in the clear: the base URL it dials is
+ * plain `http`, and Basic auth rides every request (#540). Read off the same base URL a WebDAV
+ * form dials, so an address with no scheme (which dials `https`) isn't one.
+ */
+export function webdavAddressIsCleartext(address: string): boolean {
+  const parsed = parseServerAddress(address)
+  return parsed.kind === 'parsed' && webdavBaseUrl(parsed).startsWith('http:')
+}
+
 /** Whether the address means `protocol` or names no protocol at all, so its port and path are this protocol's. */
 function speaksOrNamesNone(parsed: Extract<ParsedAddress, { kind: 'parsed' }>, protocol: ServerProtocol): boolean {
   return parsed.protocol === undefined || parsed.protocol === protocol

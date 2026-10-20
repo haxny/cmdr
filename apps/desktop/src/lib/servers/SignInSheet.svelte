@@ -50,6 +50,7 @@
         smbAddressFrom,
         type ServerForm,
         hostWithPort,
+        webdavAddressIsCleartext,
     } from './server-form'
     import { readEjectAndSaveOutcome, readSavedServerOutcome, type SaveOutcome } from './server-outcomes'
     import { ejectTechnicalDetail, renderEjectError } from '#lib/file-explorer/navigation/eject-error-messages.js'
@@ -312,16 +313,30 @@
      * The sentence under the address when it looks like another protocol than
      * the one selected. ❗ A warning and nothing more: the toggle stays where the
      * person put it, and Connect dials what it says (cmdr-reports#8). Add mode
-     * only, since edit mode locks both.
+     * only, since edit mode locks the protocol.
+     *
+     * Then, in add and edit mode, a WebDAV address over plain `http`: its password
+     * crosses the network readable (#540), so the sheet says so before it's sent.
      */
     const addressWarning = $derived.by(() => {
-        if (request.mode !== 'add') return undefined
-        const looksLike = addressLooksLike(form.address, form.protocol)
-        if (looksLike === 'smb') return tString('servers.sheet.addressLooksLikeSmb')
-        if (looksLike === 'sftp') return tString('servers.sheet.addressLooksLikeSftp')
-        if (looksLike === 'webdav') return tString('servers.sheet.addressLooksLikeWebdav')
+        if (request.mode === 'add') {
+            const looksLike = addressLooksLike(form.address, form.protocol)
+            if (looksLike === 'smb') return tString('servers.sheet.addressLooksLikeSmb')
+            if (looksLike === 'sftp') return tString('servers.sheet.addressLooksLikeSftp')
+            if (looksLike === 'webdav') return tString('servers.sheet.addressLooksLikeWebdav')
+        }
+        if (request.mode !== 'sign-in' && form.protocol === 'webdav' && webdavAddressIsCleartext(form.address)) {
+            return tString('servers.sheet.webdavCleartext')
+        }
         return undefined
     })
+
+    /** Sign-in mode's half of the same warning: the saved address an http server signs back in to. */
+    const signInCleartextWarning = $derived(
+        request.mode === 'sign-in' &&
+            request.endpoint.protocol === 'webdav' &&
+            webdavAddressIsCleartext(request.endpoint.address),
+    )
 
     const refusalText = $derived(refusal ? wordConnectRefusal(refusal, refusalSubject) : undefined)
     const refusalWhere = $derived(refusal ? refusalField(refusal) : null)
@@ -900,6 +915,9 @@
             <p class="form-refusal" role="alert">{refusalText}</p>
         {:else if request.mode === 'sign-in' && shape}
             <p class="endpoint-header">{request.endpoint.address}</p>
+            {#if signInCleartextWarning}
+                <p class="cleartext-warning" role="status">{tString('servers.sheet.webdavCleartext')}</p>
+            {/if}
             <SignInCredentialFields
                 {shape}
                 accountLabel={request.endpoint.username ?? request.endpoint.address}
@@ -1033,6 +1051,13 @@
         margin: 0 0 var(--spacing-lg);
         color: var(--color-text-secondary);
         overflow-wrap: anywhere;
+    }
+
+    /* `ServerFormFields`' `.field-warning` look, between the address and the fields. */
+    .cleartext-warning {
+        margin: calc(-1 * var(--spacing-md)) 0 var(--spacing-lg);
+        font-size: var(--font-size-sm);
+        color: var(--color-warning-text);
     }
 
     .form-refusal {
