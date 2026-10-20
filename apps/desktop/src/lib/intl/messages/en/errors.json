@@ -2832,7 +2832,7 @@
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
   "@errors.write.mountedVolumeInside.message.move": {
-    "description": "Body of the error dialog for a move onto another drive of a folder that holds a mounted drive (or of the mounted drive itself). A move onto another drive copies, then deletes the originals, so it would have moved the drive's files off it. Plain text. Says the move was refused up front, so nothing was moved. \"Server\" means a network share (for example a NAS).",
+    "description": "Body of the error dialog for a move of a folder that holds a mounted drive (or of the mounted drive itself) onto another drive or into a zip archive. Either move copies, then deletes the originals, so it would have moved the drive's files off it. Plain text. Says the move was refused up front, so nothing was moved. \"Server\" means a network share (for example a NAS).",
     "placeholders": {
       "mountPoint": {
         "description": "The full path of the folder where the drive is mounted, inserted verbatim. Do not translate or reformat it."
@@ -2842,7 +2842,7 @@
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
   "@errors.write.mountedVolumeInside.suggestion.move": {
-    "description": "Recovery suggestion for a move that reached a mounted drive. Plain text. \"Eject\" is the macOS verb for disconnecting a drive or server safely (Finder's Eject). The second sentence is for someone who wanted the drive's files moved: they can open the drive and move them from there.",
+    "description": "Recovery suggestion for a move (onto another drive or into a zip archive) that reached a mounted drive. Plain text. \"Eject\" is the macOS verb for disconnecting a drive or server safely (Finder's Eject). The second sentence is for someone who wanted the drive's files moved: they can open the drive and move them from there.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },

@@ -16,7 +16,7 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 2897 / 4673 keys have a screenshot (62%):** 1595 direct (34%) and 1302 representative (28%). 1587 remain
+**Total: 2899 / 4675 keys have a screenshot (62%):** 1595 direct (34%) and 1304 representative (28%). 1587 remain
 uncoupled, and 189 are native surfaces a webview capture cannot reach.
 
 | Area            | Direct | Representative | Uncoupled | Native | Total | Any % |
@@ -30,7 +30,7 @@ uncoupled, and 189 are native surfaces a webview capture cannot reach.
 | crashReporter   |     12 |             11 |         0 |      0 |    23 |  100% |
 | downloads       |     10 |              5 |        21 |      0 |    36 |   42% |
 | errorReporter   |     16 |              0 |        42 |      0 |    58 |   28% |
-| errors          |    116 |            470 |         0 |      0 |   586 |  100% |
+| errors          |    116 |            472 |         0 |      0 |   588 |  100% |
 | feedback        |      7 |              5 |         1 |      0 |    13 |   92% |
 | fileExplorer    |    122 |             66 |       316 |      0 |   504 |   37% |
 | fileOperations  |    124 |             73 |       109 |      0 |   306 |   64% |
