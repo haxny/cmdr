@@ -38,6 +38,11 @@ error, or a tool result. No error-string matching in production code.
   password and the opened repo in one step with no await between, and check the token before `keep_password`.
 - **Confidence**: high for the Keychain-after-cancel path (the `spawn_blocking` is plain in `secret_store.rs`); high for
   the lock-wait window.
+- **Status**: Fixed in `50f01c2ff3`. `PasswordLocked::unlock` no longer saves: it commits the password (and the opened
+  repo, without waiting on another open's lock) with no await before the answer. The Keychain write moved to a new
+  `remember_password`, which `unlock_within` calls only after an `Unlocked` nobody cancelled, awaited to the end outside
+  the cancel and the budget; a Cancel landing as the unlock answers makes the container forget the password. Cells in
+  `lifecycle_tests.rs` and `unlock_test.rs`.
 
 ## Medium
 
@@ -56,6 +61,10 @@ error, or a tool result. No error-string matching in production code.
   refuse a straddling batch with a typed refusal, or have the frontend drop overlay rows from a mixed selection the way
   delete already refuses (`first_routed` over all sources).
 - **Confidence**: high on the backend shape; medium on the exact frontend sort order.
+- **Status**: Fixed in the frontend by restic-frontend-7 in `b9cc45b177`: Select all and invert leave out overlay rows
+  (restic's and git's), so the common flow never builds a mixed batch. The backend backstop (a hand-picked mixed
+  selection, an agent) waits on a decision about its typed refusal: no existing `WriteOperationError` words a straddling
+  copy honestly.
 
 ### 3. Bare future drops on the parent volume, which the house rules forbid for device backends
 
@@ -70,6 +79,10 @@ error, or a tool result. No error-string matching in production code.
 - **Fix**: `cmdr_fs::deadline` (detaches) for the confirm, and detach the `index_files` listing on cancel the way
   `prefetch` detaches its reads (spawn it, stop awaiting the handle).
 - **Confidence**: high that the futures are dropped; the wedge itself is the documented MTP behavior, not reproduced.
+- **Status**: Fixed in `3fa2a0f5b8`. The confirm listing runs on its own task and the deadline only stops the wait
+  (detached); the index load's `index/` listing detaches on a cancel the same way. Cells:
+  `a_slow_confirm_detaches_its_listing_and_remembers_undecided_briefly`,
+  `a_cancel_during_the_index_listing_lets_the_listing_finish`.
 
 ### 4. A confirm that can't decide fails OPEN on write seams
 
@@ -84,6 +97,9 @@ error, or a tool result. No error-string matching in production code.
 - **Fix**: give `confirm_repo` a three-way answer (`Repo`, `NotARepo`, `Unknown`). Reads may pass through on `Unknown`;
   `route_serving` (and the other write gates) refuse on `Unknown` with the typed unreachable refusal.
 - **Confidence**: high on the code path; the trigger needs a slow or failing parent at the wrong moment.
+- **Status**: Fixed in `3fa2a0f5b8` + `c71f47165b`. `confirm_repo` answers `Option<bool>` (`None` undecided, remembered
+  5 s); `resolve` marks an undecided passthrough `ResolvedVolume::unconfirmed`, and `route_serving` fails closed on it.
+  Cell: `a_write_refuses_when_the_route_cant_decide` (app `restic_guard_tests.rs`).
 
 ### 5. A repo deleted or replaced in place keeps serving its old opened repo until restart
 
@@ -99,6 +115,9 @@ error, or a tool result. No error-string matching in production code.
   re-opens; bind the cached open to the repo's config id (`repo.config().id`) and re-open when it changes; answer
   `NotFound` when `config` is gone.
 - **Confidence**: medium (the decrypt failure on a replaced repo is inferred from rustic's key handling, not run).
+- **Status**: Fixed in `cbd8de0928`. A refresh that can't decrypt drops the cached open and the index and opens once
+  more; no snapshots and no `config` answers `NotFound` and drops the memo's yes. Binding to the config id wasn't
+  needed: the retry heals a replaced repo on the first listing. Cells in `lifecycle_tests.rs`.
 
 ## Low
 
@@ -110,6 +129,9 @@ derivations on a blocking thread that the 30 s budget can't stop; each retry fro
 index load opens again. Invariant 15 holds per derivation, not per attempt. Fix: cap the summed cost across offered keys
 (and, say, at most two keys above rustic's default cost).
 
+- **Status**: Fixed in `2f70699c71`: the offered keys' summed cost is capped at four times the per-key ceiling
+  (`MAX_TOTAL_SCRYPT_COST`).
+
 ### 7. Key-file and index prefetch reads trust the listing's size
 
 `backend.rs:125-130` skips a key file only when the LISTING says it's over 64 KiB, then reads it with no bound
@@ -118,12 +140,19 @@ backend that reports no size (`size: None` becomes 0) lets a crafted multi-GB ke
 is checked. Fix: pass `stop_after: Some(MAX_KEY_FILE_BYTES + 1)` and skip on overflow; cap `read_one` at the listed size
 plus slack.
 
+- **Status**: Fixed in `2f70699c71`: a key file is read with a 64 KiB bound whatever the listing says; the prefetch
+  holds each index file only up to its listed size plus 64 KiB (or the budget when sizeless) and lets rustic read one
+  that runs past.
+
 ### 8. A 0.5 GB index is freed while holding the slot's std mutex, on an async worker
 
 `crates/cmdr-restic/src/index_slot.rs:161` (`drop_when_idle`), `:134` (`evict_indexes`), `:91` (replacing `ready`):
 `index.ready = None` drops the last `Arc<IndexedRepo>` (2.4M entries plus the 32 MB blob cache) under
 `lock(&slot.index)` inside a runtime task. Every listing of that repo blocks on the lock meanwhile, and the worker
 stalls for the deallocation. Fix: `take()` the `Ready` under the lock and drop it after, on `spawn_blocking`.
+
+- **Status**: Fixed in `2f70699c71`: every place an index leaves its slot `take()`s it and frees it on the blocking pool
+  (`index_slot::free_off_the_runtime`). No cell: a drop's length isn't observable from a test.
 
 ### 9. `latest` is pinned by a 30 s window, not by the reads that need it
 
@@ -133,6 +162,12 @@ pane, an agent) rebind `latest`; the copy's remaining files then come from the n
 plan forbids. Needs a new backup plus a root listing inside that gap. Fix: hold a counted pin for the life of any stream
 or scan opened via `latest`, and rebind only at zero.
 
+- **Status**: Not fixed, on purpose. A pin held by the read stream would cover a copy parked mid-file, but not the gap
+  BETWEEN files where a copy parks on a name-clash prompt, which is the likelier trigger; the honest fix is an
+  operation-scoped pin from the copy engine (`cmdr-operations`), which belongs with the copy-out work. The remaining
+  risk needs a new backup plus a root refresh inside a 30 s pause; a dated folder is the exact pin. Worth a follow-up
+  issue.
+
 ### 10. Confirming lists a whole candidate folder, and a timeout isn't remembered
 
 `hub.rs:153`: the confirm is a full `list_directory` of the folder holding `Browse snapshots`, uncapped (unlike the
@@ -140,6 +175,9 @@ overlay's and the local guard's 32-entry cap). A real `Browse snapshots` folder 
 share pays up to the 5 s deadline on EVERY `resolve` under it, since a timeout memoizes nothing (rule 2's hot-path
 budget). Fix: memoize `Unknown` briefly for reads (see finding 4), and treat a listing past `MAX_REPO_ROOT_ENTRIES` as
 "not a repo".
+
+- **Status**: Fixed in `3fa2a0f5b8`: an undecided confirm is remembered for 5 s, and `is_restic_repo` answers a listing
+  of more than 32 entries as not a repo on its length alone.
 
 ### 11. Held SMB pack readers outlive the browse by the index's lifetime
 
@@ -149,6 +187,9 @@ file stays delete-pending until its last handle closes, so removing the repo's `
 right after browsing can answer "folder not empty". Invariant 5 says the real files stay deletable. Fix: close held
 readers after a short idle (seconds), independent of the index.
 
+- **Status**: Fixed in `9e7ecef742`: held readers close once none was used for 5 s (`READER_IDLE`), independent of the
+  index.
+
 ### 12. English detail strings ride typed errors out of the crate
 
 `repo.rs:46-49` and `:202-205`, `index_load.rs:357-360`: `Unreadable { detail }` (rustic's `display_log`) and "the
@@ -156,12 +197,20 @@ blocking worker stopped: …" / "an index read stopped: …" become `VolumeError
 not copy, but `IoError.message` is what the frontend's technical-details line shows. Rule 3 asks for typed answers; fine
 if the frontend never renders `message` outside technical details, worth a check in milestone 7.
 
+- **Status**: Not changed. `IoError.message` is the technical-details line, the house shape for diagnostics every
+  backend uses, and the frontend words the typed error itself; replacing rustic's `display_log` with a typed reason
+  would drop the only detail a bug report has. Worth a check in the frontend that `message` never renders outside
+  technical details.
+
 ### 13. Root refreshes aren't single-flight
 
 `hub.rs:384-413`: every root listing refreshes, and two concurrent ones (a stalled listing's second attempt, two panes)
 each read `snapshots/` and each rebind `latest`. Cheap at nine snapshots; a repo with thousands of snapshots on SMB pays
 twice, and rustic's `update_all_snapshots` reads them on the global rayon pool. Fix: share an in-flight refresh per
 slot.
+
+- **Status**: Fixed in `7bd10b0074`: one refresh per repo at a time, and a caller that asked while one ran takes its
+  list.
 
 ## Checked and holding
 
