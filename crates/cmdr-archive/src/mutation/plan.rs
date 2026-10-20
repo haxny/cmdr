@@ -10,7 +10,7 @@ use std::path::Path;
 use zip::ZipArchive;
 use zip::read::ZipFile;
 
-use super::mutator::{Changeset, MutationError, sidecar_entry_name};
+use super::changeset::{Changeset, MutationError};
 use crate::apple_double;
 
 /// One original entry kept in the rewrite, with its post-edit name.
@@ -215,7 +215,7 @@ fn with_sidecar_deletes(changeset: &Changeset) -> Vec<String> {
         deletes.push(item.to_string());
         if !item.is_empty() && !apple_double::is_in_macosx_folder(item) {
             deletes.push(format!("{}/{item}", apple_double::MACOSX_FOLDER));
-            deletes.push(sidecar_entry_name(item));
+            deletes.push(apple_double::sidecar_entry_name(item));
         }
     }
     let written = changeset
@@ -223,7 +223,7 @@ fn with_sidecar_deletes(changeset: &Changeset) -> Vec<String> {
         .iter()
         .map(|add| add.inner_path.as_str())
         .chain(changeset.mkdir_sources.keys().map(String::as_str));
-    deletes.extend(written.map(sidecar_entry_name));
+    deletes.extend(written.map(apple_double::sidecar_entry_name));
     deletes
 }
 
@@ -239,7 +239,10 @@ fn with_sidecar_renames(renames: &[(String, String)]) -> Vec<(String, String)> {
         }
         let folder = apple_double::MACOSX_FOLDER;
         out.push((format!("{folder}/{from}"), format!("{folder}/{to}")));
-        out.push((sidecar_entry_name(from), sidecar_entry_name(to)));
+        out.push((
+            apple_double::sidecar_entry_name(from),
+            apple_double::sidecar_entry_name(to),
+        ));
     }
     out
 }

@@ -8,5 +8,6 @@
 //! never append-in-place, the encrypted-entry refusal, metadata preservation, the
 //! leftover policy) in [`DETAILS.md`](DETAILS.md).
 
+mod changeset;
 pub mod mutator;
 mod plan;

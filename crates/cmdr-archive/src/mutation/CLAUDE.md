@@ -2,8 +2,8 @@
 
 `ArchiveMutator::apply(archive_path, changeset, hooks)` — the zip-only write side, safe-overwrite by temp+rename.
 `Volume`-free and manager-free like the [read core](../read/CLAUDE.md): the write-ops `ArchiveEditOperation` driver
-wraps it with the real event sink, pause gate, and cancel intent. `mutator.rs` is the write; `plan.rs` decides which
-original entries an edit keeps, and under what name.
+wraps it with the real event sink, pause gate, and cancel intent. `mutator.rs` is the write; `changeset.rs` the request
+and error types both speak; `plan.rs` decides which original entries an edit keeps, and under what name.
 
 ## Must-knows
 
