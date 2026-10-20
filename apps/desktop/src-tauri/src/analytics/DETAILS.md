@@ -224,6 +224,7 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
 - `sftp_connected` (backend, `crates/cmdr-sftp/src/volume/mod.rs`): no host/account/port/path props.
 - `webdav_connected` (backend, `crates/cmdr-webdav/src/volume/mod.rs` `connect_webdav_volume`): no host/account/port/path
   props.
+- `nfs_connected` (backend, `crates/cmdr-nfs/src/volume/mod.rs` `connect_nfs_volume`): no host/export/uid/path props.
 - `s3_connected` (backend, `crates/cmdr-s3/src/volume/mod.rs` `connect_s3_volume`): one prop, `provider` (`aws`, `r2`,
   `b2`, `wasabi`, `hetzner`, `gcs`, `digitalocean`, `other`: `S3Provider::kind_name`), a fixed preset name. No endpoint, key, bucket, or region.
   The connection events go through the `AnalyticsSink` seam rather than `capture` directly, since the backend crates

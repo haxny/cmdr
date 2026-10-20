@@ -30,15 +30,16 @@ with `/` under it, so the paths the volume speaks are export-relative. No accoun
 ## Connecting
 
 `connect_nfs_volume(name, params, host, cancel)` takes what the person picked or typed and resolves the real export
-first (`discovery::resolve_export`: longest match against `EXPORT`, or `MNT` on ever-shorter prefixes when listing is
+first (the dial's split, § "The dial": longest match against `EXPORT`, or `MNT` on ever-shorter prefixes when listing is
 refused); the rest of a typed path becomes the start folder when none was given. So the caller learns the id from the
-returned volume (`NfsVolume::volume_id`) and saves its resolved `NfsVolume::params`. Until the client lands, every dial
-answers `NfsConnectError::Transport`.
+returned volume (`NfsVolume::volume_id`) and saves its resolved `NfsVolume::params`. A cancel at any point closes what
+the attempt opened and answers `Cancelled`.
 
 `list_exports` answers the canonical export paths, or `ListingRefused` when the server won't list them to this client (a
 typed export may still mount). `guess_identity` takes this Mac's identity as its fallback and answers it as
 `NfsIdentitySource::ThisMac` when nothing at the export root has a non-zero owner; otherwise `MostCommonOwner` (the most
-common non-zero owner among the root's entries) or `RootOwner` (the root's own).
+common non-zero owner among the root's entries, ties to the lower uid) or `RootOwner` (the root's own, which is also the
+answer when a squashed probe is refused the listing).
 
 ## The protocol layer
 
@@ -80,8 +81,8 @@ and needs a license allowlist change).
 `dial.rs`: resolve (IPv4 and IPv6, each address in order) → portmap `GETPORT` for MOUNT v3 and NFS v3 over TCP (an
 explicit port skips the NFS lookup; MOUNT always comes from portmap) → `EXPORT` and `MNT` → `FSINFO` and `GETATTR` on
 the root, under a 15 s budget with 5 s per connect. It answers `MountedExport` (the client, the addresses and credential
-a redial needs, the resolved split, the root, `FsInfo`); `connect_nfs` redials NFS alone (no new `MNT`: the root handle
-outlives the connection), `unmount` is best-effort `UMNT`.
+a redial needs, the resolved split, the root, `FsInfo`); `connect_nfs` dials NFS alone, `unmount` is best-effort `UMNT`.
+The volume redials through the whole `mount` (§ "The volume").
 
 - **The split**: the longest listed export the typed path is at or under; a listing with none that fits is
   `ExportNotFound`. Only when `EXPORT` is refused does `MNT` walk ever-shorter prefixes, and a refusal on the walk moves
@@ -96,6 +97,70 @@ outlives the connection), `unmount` is best-effort `UMNT`.
   `dial_fixture_test::capture_knfsd_replies_as_decoding_fixtures` with `NFS_CAPTURE_DIR` set, and decoded to the last
   byte in `src/proto/knfsd_replies_test.rs`.
 
+## The volume
+
+`NfsVolume` is WebDAV's shape (`{ name, root, inner }`, `sharing_connection` sharing `inner`) over
+`cmdr_fs::volume::http_session`, with one RPC connection as the session's client (`reconnect.rs`'s `NfsClient`: the
+`Nfs3Client`, the export's root handle, `FsInfo`, the `NULL` probe, and where `UMNT` goes).
+
+- **No secret.** `credential_key` is `None`, so the lifecycle dials unattended with nothing and never reads the store;
+  every redial refusal is `DialRefusal::Transient` (a refused export on a REDIAL keeps backing off), so the volume never
+  rests in `NeedsCredentials`, and `sign_in_prompt` is `Nothing`.
+- **One ladder.** `SessionClient::liveness` is the transport's own `Liveness`, and the session takes NFS's 5/5/2 timings
+  (`HttpSession::with_silence_timings`): whichever watch starts first runs, so both must agree. A silent server is
+  `DeviceDisconnected` 15 s in, every waiting call at once (`fake_volume_test.rs`, paused clock).
+- **A redial is a whole dial** (`Dialer`, portmap through `GETATTR`), ❌ not `connect_nfs` alone: a restarted server may
+  have moved its ports, and a stale root needs a fresh `MNT` anyway. The handle cache is cleared on each.
+- **`on_unmount`** ends the session (the connection closes when the last call riding it ends) and sends `UMNT`, best
+  effort, from the target the last dial recorded.
+- **`Dialer`** is the one way in, first connect and redial alike: `over_tcp` in production, `fake_nfs.rs`'s
+  `duplex_dialer` for paused-clock cells.
+
+### Handles
+
+`handles.rs`. A walk from the root handle, LOOKUP per component, with a bounded cache (8,192 folders, the older half
+forgotten at once) of FOLDER handles under their REAL path. Files are looked up fresh every time: their attributes are
+the length and date the caller wants.
+
+- **Links**: a link in the middle of a path is always followed; at the end per `Follow` (`Never` for `entry_kind`,
+  `IfInside` for `get_metadata`, which answers the link itself when it can't go, `Always` for open and list, where it
+  can't go is `NotSupported`). Only a relative target that stays inside the export is followed (`paths::follow_link`,
+  checked per `..`), at most 40 hops. Listings show a link as a link (SFTP's shape).
+- **`STALE`** on a cached handle forgets it and its subtree and walks once more uncached; a second is `NotFound`. A
+  stale ROOT is `DeviceDisconnected`, so the lifecycle redials (a fresh `MNT`).
+- **A handle that moved without going stale** (another client renamed its folder) is caught by
+  `NfsVolume::dir_for_mutation`: each cached folder carries its parent's `(mtime, ctime)` from the LOOKUP that found it,
+  and one pipelined round of `GETATTR`s on the chain must match every one; the first level that moved is forgotten and
+  re-LOOKUPed. A folder only a LISTING found (`HandleCache::offer`) has no stamp and so always re-LOOKUPs for a
+  mutation. `HandleCache::note_dir_changed` moves the stamps our own mutation's `wcc_data` vouches for.
+
+### Listings and reads
+
+- **Listings**: `list_dir` pages of `dtpref` clamped to 8–128 KiB (about 600 entries each), `on_progress` per page, a
+  child folder's handle offered to the cache. A name that isn't UTF-8 is counted and left out (one `debug!`). A pane's
+  listing goes through `list_for_pane`, the poller's cue; a scan lists through `list_directory_impl` and never starts
+  it.
+- **The read window** (`streams.rs`): SFTP's `ChunkWindow` over positioned READs of `rtpref` within `rtmax` and 1 MiB,
+  depth 8 (SFTP's measured optimum; re-measure on a NAS). A short answer is re-asked from where it stopped; only `eof`
+  or an empty answer ends a chunk. The length is the fresh LOOKUP's `size` (always present in `fattr3`, so `Known`).
+  `read_range` and `open_read_stream_at_offset` run the same window. 200 MiB off the knfsd fixture streams at about 76
+  MB/s in a debug build over loopback (2026-10-20, `fixture_test.rs`).
+- **Space** is `FSSTAT` on the root (`abytes` is this identity's room, used is total minus free), polled every 5 s.
+  `write_access_at` is one `ACCESS` asking `MODIFY | EXTEND`: `EXTEND` granted is `Writable`, anything else
+  `Unwritable { Unexplained }` (a read-only export and a refused permission look the same), a failure `Unknown`.
+
+### Which side a test lives on
+
+- `fake_nfs.rs` (in-process, over TCP or `tokio::io::duplex`): listings over both READDIR shapes, the cache rules, the
+  window under reordered and short READs, links, the redial, the silence ladder on a paused clock. Its knobs for the
+  write and outage cells: `rotate_verifier`, `answer_writes_short`, `touch`, `drop_one_reply`, `go_silent`,
+  `reset_mid_reply`, `refuse_dials`, `require_reserved_port`, `refuse_readdirplus`, and `calls(procedure)`.
+- `fixture_test.rs` (`#[ignore]`d, the knfsd fixture): the seeded tree byte-exact, 200 MiB streamed, `read_range`,
+  links, the split, a missing export, `/secure` refused through a published port and accepted on the Linux direct path,
+  `list_exports`, `guess_identity` answering 1000.
+- `volume::testing` (`testing` feature, also re-exported at the root): the fixture's server, params, and
+  `connect_insecure`, for the app's suites.
+
 ## The public surface is capped
 
 Every module is private, so all 10 promises arrive as root re-exports (`cmdr-git`'s shape), and both other buckets are
@@ -103,5 +168,5 @@ zero: `NfsServer`, `NfsIdentity`, `NfsConnectionParams`, `NfsConnectError`, `Nfs
 `list_exports`, `guess_identity`, `NfsIdentityGuess`, and `NfsIdentitySource`. The app needs each one: the params to
 dial and save a place, the error to map onto `ServerConnectOutcome`, the volume to register and to edit live
 (`sharing_connection`, `set_auto_reconnect`), and the two discovery calls for the add form. `index-crate-isolation` is
-pinned at exactly 10 / 0 / 0 (measured 2026-10-20). A `testing` module for the app's Docker suites raises the module
-count, with its reason.
+pinned at exactly 10 / 0 / 0 (measured 2026-10-20). `volume::testing` rides the root as `testing` only under the
+`testing` feature, for the app's Docker suites.
