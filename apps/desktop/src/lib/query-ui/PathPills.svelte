@@ -135,6 +135,9 @@
     let resizeObserver: ResizeObserver | undefined
     let cancelStableMeasure: (() => void) | undefined
     let mounted = false
+    // Plain `let`, read after an await: a row recycled while pretext loads must not
+    // schedule a re-measure its `onDestroy` already ran past (nothing would cancel it).
+    let destroyed = false
     $effect(() => {
         if (!container || mounted) return
         mounted = true
@@ -146,7 +149,7 @@
         resizeObserver.observe(el)
         void tick().then(async () => {
             const pretext = await loadPretext().catch(() => null)
-            if (!pretext) return
+            if (!pretext || destroyed) return
             measureWidth = createPretextMeasure(readFont(el), pretext)
             containerWidth = el.clientWidth
             // The initial `el.clientWidth` read above can land BEFORE the parent
@@ -167,6 +170,7 @@
     })
 
     onDestroy(() => {
+        destroyed = true
         resizeObserver?.disconnect()
         cancelStableMeasure?.()
         document.removeEventListener('mousedown', handleTooltipMouseDown, true)

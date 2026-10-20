@@ -125,6 +125,13 @@ FILE: `docs/testing.md` § "What a test actually costs").
 On a shared, busy host, `CMDR_TEST_WORKERS=4 pnpm check svelte-tests` caps desktop Vitest concurrency without changing
 the suite or its deadlines. Unset, Vitest uses its normal worker count. Supply a positive integer.
 
+Every component a test mounts is unmounted after that test (`src/test-setup.ts` wraps svelte's `mount` / `unmount`), so
+a spec needn't clean up its own mounts, and one that does still works: unmounting what the cleanup already took down is
+a no-op. Left mounted, a component's timers outlived the file and asked for a frame after happy-dom had removed its
+globals (`ReferenceError: requestAnimationFrame is not defined`, an unhandled error that failed CI at random). The
+cleanup can't reach work a component schedules from an `await` it never checks: after any `await` in a lifecycle hook,
+bail out if the component is gone (`PathPills.svelte`'s `destroyed` flag).
+
 ### `installIpcMock()`: IPC contract test harness
 
 In `apps/desktop/src/lib/ipc/test-helpers.ts`. Thin wrapper around Tauri's `@tauri-apps/api/mocks::mockIPC`. Returns a

@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
-import { mount, tick } from 'svelte'
+import { mount, tick, unmount } from 'svelte'
 import PathPills from './PathPills.svelte'
+import { scheduleStableWidthMeasure } from './path-pills-layout'
+
+vi.mock('./path-pills-layout', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./path-pills-layout')>()
+  return { ...actual, scheduleStableWidthMeasure: vi.fn(actual.scheduleStableWidthMeasure) }
+})
 
 function renderPills(path: string, onPick: (p: string) => void = () => {}) {
   const target = document.createElement('div')
@@ -134,6 +140,21 @@ describe('PathPills', () => {
     await tick()
     const strip = target.querySelector('.path-pills') as HTMLElement
     expect(strip.getAttribute('aria-label')).toBe('/Users/dave/code')
+    target.remove()
+  })
+
+  it('schedules no re-measure when it unmounts while the measurer is still loading', async () => {
+    // Regression: the measurer loads asynchronously, and its continuation scheduled an
+    // animation frame its `onDestroy` had already run past, so nothing cancelled it. In
+    // tests that frame could land after the DOM environment was gone.
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const instance = mount(PathPills, { target, props: { path: '/Users/dave/code', onPick: () => {} } })
+    await tick()
+    vi.mocked(scheduleStableWidthMeasure).mockClear()
+    await unmount(instance)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(scheduleStableWidthMeasure).not.toHaveBeenCalled()
     target.remove()
   })
 

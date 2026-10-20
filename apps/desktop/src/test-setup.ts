@@ -3,8 +3,50 @@
  * Polyfills browser APIs not available in jsdom.
  */
 
-import { vi } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { TestResizeObserver } from '#lib/test-layout.js'
+
+// Every component a test mounts is unmounted once that test ends, whether or not the
+// test does it. A component left mounted keeps its timers, effects, and frame loops
+// running past its test and past the file, after the DOM environment has removed its
+// globals: FilePane's status announcer, firing 750 ms on, asked for a frame from a dead
+// environment (`ReferenceError: requestAnimationFrame is not defined`, an unhandled
+// error that failed CI at random). Unmounting runs each component's own teardown, which
+// cancels that work.
+//
+// `unmount` is wrapped too. A component this cleanup took down is a no-op to unmount
+// again, so a test that clears its leftovers at the START of the next test (several do)
+// doesn't trip Svelte's double-unmount warning; any other double unmount still warns.
+const componentLifetimes = vi.hoisted(() => ({
+  mounted: new Set<Record<string, unknown>>(),
+  cleanedUp: new WeakSet<Record<string, unknown>>(),
+  unmount: null as null | ((component: Record<string, unknown>) => Promise<void>),
+}))
+vi.mock('svelte', async (importOriginal) => {
+  const svelte = await importOriginal<typeof import('svelte')>()
+  componentLifetimes.unmount = svelte.unmount
+  const mount = ((component, options) => {
+    const instance = svelte.mount(component, options)
+    componentLifetimes.mounted.add(instance)
+    return instance
+  }) as typeof svelte.mount
+  const unmount = ((component, options) => {
+    if (componentLifetimes.cleanedUp.has(component)) return Promise.resolve()
+    componentLifetimes.mounted.delete(component)
+    return svelte.unmount(component, options)
+  }) as typeof svelte.unmount
+  return { ...svelte, mount, unmount }
+})
+afterEach(async () => {
+  const { mounted, cleanedUp, unmount } = componentLifetimes
+  // Re-check membership: unmounting a parent also unmounts the roots it mounted itself
+  // (an Ark `Portal`'s content), which drops them from the set mid-loop.
+  for (const component of [...mounted]) {
+    if (!mounted.delete(component)) continue
+    cleanedUp.add(component)
+    await unmount?.(component)
+  }
+})
 
 // ResizeObserver is not available in the test DOM. This one lets components
 // that use it mount, and stays silent until a test drives a resize through

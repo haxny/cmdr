@@ -52,9 +52,11 @@ vi.mock('#lib/settings/index.js', async (importOriginal) => {
 // `StepFda.svelte` would return null and leave us nothing to assert against. Pretend
 // we're on macOS for these tests; Linux flow is enforced by the wizard's resume rule,
 // not by the step body, and the resume-rule unit tests live in onboarding-state.test.ts.
+// The Linux case at the bottom flips `platform.isMac` for its one test.
+const platform = vi.hoisted(() => ({ isMac: true }))
 vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
-  return { ...actual, isMacOS: () => true }
+  return { ...actual, isMacOS: () => platform.isMac }
 })
 
 function mountStep() {
@@ -280,48 +282,33 @@ describe('StepFda', () => {
   })
 })
 
-// Linux: StepFda renders nothing and the poller never runs. The macOS-pinning `isMacOS`
-// mock above can't be undone per-test, so this Linux case lives in its own file-level
-// `describe` with a fresh module graph (`vi.resetModules()` + a Linux re-mock + dynamic
-// re-import of the component and state).
+// Linux: StepFda renders nothing and the poller never runs.
 describe('StepFda on Linux', () => {
+  beforeEach(() => {
+    platform.isMac = false
+    closeWizard()
+    resetForTesting()
+    openWizard('first-launch')
+    setStep1Variant('first-ask')
+    checkFullDiskAccessQuiet.mockClear()
+    checkFullDiskAccessQuiet.mockResolvedValue(true)
+  })
+
+  afterEach(() => {
+    platform.isMac = true
+    closeWizard()
+    resetForTesting()
+  })
+
   it('renders nothing and never polls', async () => {
-    vi.resetModules()
-    vi.doMock('#lib/shortcuts/key-capture.js', async (importOriginal) => {
-      const actual = await importOriginal<Record<string, unknown>>()
-      return { ...actual, isMacOS: () => false }
-    })
-    const linuxQuietProbe = vi.fn<() => Promise<boolean>>(() => Promise.resolve(true))
-    vi.doMock('#lib/tauri-commands/index.js', () => ({
-      checkFullDiskAccess: () => Promise.resolve(false),
-      checkFullDiskAccessQuiet: () => linuxQuietProbe(),
-      getMacosMajorVersion: () => Promise.resolve(0),
-      openPrivacySettings: () => Promise.resolve(),
-      startIndexingAfterFdaDecision: () => Promise.resolve(),
-      openExternalUrl: () => Promise.resolve(),
-    }))
-
-    const { mount: mountFresh, unmount: unmountFresh, tick: tickFresh } = await import('svelte')
-    const { default: LinuxStepFda } = await import('./StepFda.svelte')
-    const stateMod = await import('./onboarding-state.svelte')
-    stateMod.closeWizard()
-    stateMod.resetForTesting()
-    stateMod.openWizard('first-launch')
-    stateMod.setStep1Variant('first-ask')
-
-    const target = document.createElement('div')
-    document.body.appendChild(target)
-    const instance = mountFresh(LinuxStepFda, { target, props: {} })
-    await tickFresh()
+    const { target, instance } = mountStep()
+    await tick()
     for (let i = 0; i < 10; i++) await Promise.resolve()
 
     expect(target.textContent.trim()).toBe('')
-    expect(linuxQuietProbe).not.toHaveBeenCalled()
+    expect(checkFullDiskAccessQuiet).not.toHaveBeenCalled()
 
-    await unmountFresh(instance)
+    await unmount(instance)
     target.remove()
-    vi.doUnmock('#lib/shortcuts/key-capture.js')
-    vi.doUnmock('#lib/tauri-commands/index.js')
-    vi.resetModules()
   })
 })
