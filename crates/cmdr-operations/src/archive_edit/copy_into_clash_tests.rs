@@ -204,3 +204,93 @@ async fn stop_prompts_for_the_folder_and_an_answered_overwrite_replaces_the_file
     assert_eq!(read_entry(&archive, "notes/b.txt").as_deref(), Some(b"bbb".as_slice()));
     assert_eq!(skipped, 0);
 }
+
+/// A MOVE whose folder-over-file clash is answered Overwrite lands the folder
+/// in the file's place and then removes the moved source, like any move.
+#[tokio::test]
+async fn an_answered_overwrite_on_a_move_lands_the_folder_and_removes_the_source() {
+    let engine = TestOperations::new();
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let archive = tmp.path().join("a.zip");
+    write_multi_zip(&archive, &[("notes", b"the file"), ("keep.txt", b"k")]);
+    let src_root = tmp.path().join("src");
+    notes_folder(&src_root);
+
+    let events = run_into(&engine, &archive, &src_root, "notes", ConflictResolution::Stop, true).await;
+    wait_until_async(Duration::from_secs(5), "the write-conflict event", || {
+        !events.conflicts.lock_ignore_poison().is_empty()
+    })
+    .await;
+    let (op_id, conflict_id) = {
+        let conflicts = events.conflicts.lock_ignore_poison();
+        (conflicts[0].operation_id.clone(), conflicts[0].conflict_id)
+    };
+    engine.resolve_write_conflict(&op_id, conflict_id, ConflictResolution::Overwrite, false);
+    assert_eq!(wait_complete(&events).await, 0);
+
+    assert_eq!(read_entry(&archive, "notes"), None, "the file is replaced");
+    assert_eq!(read_entry(&archive, "notes/a.txt").as_deref(), Some(b"aaa".as_slice()));
+    assert_eq!(read_entry(&archive, "notes/b.txt").as_deref(), Some(b"bbb".as_slice()));
+    assert_eq!(read_entry(&archive, "keep.txt").as_deref(), Some(b"k".as_slice()));
+    assert!(!src_root.join("notes").exists(), "the move removes what it moved");
+}
+
+/// Two sources in one batch: a FILE `notes` and a FOLDER `notes`, neither in the
+/// archive yet. The zip can't hold both, so the mutator refuses the whole edit:
+/// the archive keeps its bytes, nothing is written, and the move keeps both
+/// sources.
+#[tokio::test]
+async fn a_file_and_a_folder_of_one_name_in_one_move_are_refused_whole() {
+    use cmdr_local::LocalPosixVolume;
+
+    let engine = TestOperations::new();
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let archive = tmp.path().join("a.zip");
+    write_multi_zip(&archive, &[("keep.txt", b"k")]);
+    let before = std::fs::read(&archive).expect("read the archive");
+    let src_root = tmp.path().join("src");
+    std::fs::create_dir_all(src_root.join("f")).expect("mkdir f");
+    std::fs::write(src_root.join("f/notes"), b"the file").expect("w file");
+    notes_folder(&src_root.join("d"));
+
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "src",
+        src_root.clone(),
+        crate::host::testing::pane_order_host(),
+    ));
+    let events = Arc::new(CollectorEventSink::new());
+    engine
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("f/notes"), PathBuf::from("d/notes")],
+            archive.clone(),
+            unique_lane_id(),
+            ConflictResolution::Skip,
+            0,
+            true,
+            None,
+            None,
+        )
+        .await
+        .expect("start copy-into");
+    wait_until_async(Duration::from_secs(5), "the write-error event", || {
+        !events.errors.lock_ignore_poison().is_empty()
+    })
+    .await;
+
+    assert!(
+        matches!(
+            events.errors.lock_ignore_poison()[0].error,
+            WriteOperationError::ArchiveEntryUnderFile { .. }
+        ),
+        "a typed refusal"
+    );
+    assert_eq!(
+        std::fs::read(&archive).expect("reread"),
+        before,
+        "the archive is untouched"
+    );
+    assert!(src_root.join("f/notes").exists(), "the file source stays");
+    assert!(src_root.join("d/notes/a.txt").exists(), "the folder source stays");
+}
