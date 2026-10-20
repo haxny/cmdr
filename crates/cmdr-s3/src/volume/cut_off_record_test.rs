@@ -105,3 +105,32 @@ async fn the_sweep_leaves_an_object_that_is_whole_or_not_ours() {
     assert_eq!(s3.object("theirs.bin").map(|stored| stored.len), Some(LEN / 3));
     assert!(volume.inner.ledger.unsettled_puts(&theirs.account).is_empty());
 }
+
+/// ❗ **Only a body PROVABLY short is ours to delete** (#522/#545): a HEAD with
+/// no length can't show it's short, and one LONGER than the PUT sent is a
+/// later write by a client that kept our `x-amz-meta-*` token on overwrite.
+/// Either may be a whole user file, so both stay, and the record is let go.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_sweep_leaves_an_object_longer_than_the_put_sent() {
+    let s3 = FakeS3::start(Duration::ZERO).await;
+    let volume = other_provider(&s3, "unproven.example");
+    let longer = leave_cut_off(&s3, &volume, "longer.bin", "token-kept", LEN * 2);
+
+    volume.sweep_unfinished_uploads().await;
+
+    assert_eq!(s3.object("longer.bin").map(|stored| stored.len), Some(LEN * 2));
+    assert!(volume.inner.ledger.unsettled_puts(&longer.account).is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_sweep_leaves_an_object_whose_head_has_no_length() {
+    let s3 = FakeS3::start(Duration::ZERO).await;
+    let volume = other_provider(&s3, "lengthless.example");
+    let lengthless = leave_cut_off(&s3, &volume, "lengthless.bin", "token-lengthless", LEN / 3);
+    s3.answer_heads_without_length();
+
+    volume.sweep_unfinished_uploads().await;
+
+    assert_eq!(s3.object("lengthless.bin").map(|stored| stored.len), Some(LEN / 3));
+    assert!(volume.inner.ledger.unsettled_puts(&lengthless.account).is_empty());
+}

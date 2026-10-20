@@ -22,7 +22,7 @@
 //!   answers about one in several hundred, before or after storing it;
 //! - [`FakeS3::answer_gets_without_length`]: it answers an object GET with no
 //!   `content-length` (the way a proxy that strips it does), optionally cut
-//!   off partway.
+//!   off partway, and [`FakeS3::answer_heads_without_length`] a HEAD likewise.
 //!
 //! It speaks path style over plain HTTP, one request per connection, and
 //! knows HEAD, PUT, DELETE, `ListObjectsV2`, and the multipart calls. A cell
@@ -98,6 +98,8 @@ struct World {
     fault_puts_after_commit: bool,
     /// How an object GET is answered; `None` refuses it (`501`).
     gets: Option<GetBodies>,
+    /// Whether an object HEAD leaves out `content-length`.
+    heads_without_length: bool,
 }
 
 /// An object GET's answer: close-delimited, with no `content-length`, and
@@ -178,6 +180,12 @@ impl FakeS3 {
     /// `content-length`, and only the first `cut_after` of them when set.
     pub(super) fn answer_gets_without_length(&self, cut_after: Option<usize>) {
         self.world.lock_ignore_poison().gets = Some(GetBodies { cut_after });
+    }
+
+    /// From now on, an object HEAD answers with no `content-length`, the way a
+    /// proxy that strips it does.
+    pub(super) fn answer_heads_without_length(&self) {
+        self.world.lock_ignore_poison().heads_without_length = true;
     }
 
     /// How many `DeleteObjects` requests reached the store (throttled ones
@@ -529,8 +537,12 @@ async fn answer(
         },
         ("HEAD", Some(key), None) => match head_then_maybe_replace(world, &key) {
             Some(stored) => format!(
-                "HTTP/1.1 200 OK\r\ncontent-length: {}\r\netag: {}\r\nlast-modified: Fri, 02 Oct 2026 10:00:00 GMT\r\n{}connection: close\r\n\r\n",
-                stored.len,
+                "HTTP/1.1 200 OK\r\n{}etag: {}\r\nlast-modified: Fri, 02 Oct 2026 10:00:00 GMT\r\n{}connection: close\r\n\r\n",
+                if world.lock_ignore_poison().heads_without_length {
+                    String::new()
+                } else {
+                    format!("content-length: {}\r\n", stored.len)
+                },
                 stored.etag,
                 stored.meta.iter().map(|m| format!("{m}\r\n")).collect::<String>()
             ),

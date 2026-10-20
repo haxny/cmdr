@@ -480,13 +480,16 @@ holds nothing until the request's last byte, yet a multipart upload spans many r
   `Content-Length`: VersityGW stores whatever arrived before the connection dropped (fixture README). Every PUT carries
   a token of its own (`x-amz-meta-cmdr-write`, `metadata::write_token`), and a PUT that was cancelled or cut off HEADs
   its key (again after 150 and 300 ms, since the server stores the body only once it notices the drop) and deletes the
-  object ONLY when it carries that token AND is short (`cut_off.rs::settle_cut_off_put`): anything else there is the
-  original or another writer's. ❗ Ours at the full size is the write having LANDED (the server published, then the link
-  died before the answer), so the write reports it as written; deleting it there lost the original and the new bytes
-  alike on an overwrite. A failed `CompleteMultipartUpload` asks `landed_whole` (one HEAD, never a delete) before
-  calling the write failed (`late_cancel_test.rs`, a fake that commits and then hangs up). That covers a write to a FREE
-  name; an overwrite of an existing object on a provider not trusted to refuse a short body never goes as a PUT at all
-  (§ "Overwrites in parts"). The token is visible as user metadata and harmless to other tools.
+  object ONLY when it carries that token AND its HEAD shows a length SHORTER than the PUT sent
+  (`cut_off.rs::settle_cut_off_put`): anything else there is the original or another writer's. ❗ A HEAD with no length,
+  or a longer one (a client that kept our `x-amz-meta-*` token on overwrite), is left alone and the record let go: it
+  may be a whole user file, and losing the cleanup costs far less than that delete (#522/#545). ❗ Ours at the full size
+  is the write having LANDED (the server published, then the link died before the answer), so the write reports it as
+  written; deleting it there lost the original and the new bytes alike on an overwrite. A failed
+  `CompleteMultipartUpload` asks `landed_whole` (one HEAD, never a delete) before calling the write failed
+  (`late_cancel_test.rs`, a fake that commits and then hangs up). That covers a write to a FREE name; an overwrite of an
+  existing object on a provider not trusted to refuse a short body never goes as a PUT at all (§ "Overwrites in parts").
+  The token is visible as user metadata and harmless to other tools.
 - ❗ **A cut-off PUT the cleanup can't reach stays ON RECORD until settled** (#522). The cleanup's HEAD needs the link
   that just died, and the silence watch (`noting`) drops the write future before it runs at all, so on a provider off
   the `refuses_short_body` allowlist every PUT is recorded in the upload ledger (§ "Unfinished uploads") right before

@@ -5,7 +5,8 @@
 //! dropped, under the user's name (`apps/desktop/test/s3-servers/README.md`).
 //! So every PUT carries a token of its own (`x-amz-meta-cmdr-write`), and a PUT
 //! that was cancelled or cut off removes the object at its key ONLY when that
-//! object carries its token and is short ([`S3Volume::settle_cut_off_put`]).
+//! object carries its token and its HEAD shows it shorter than what the PUT
+//! sent ([`S3Volume::settle_cut_off_put`]); no length, or a longer one, is left.
 //! ❗ Ours at the full size means the server published before the link died:
 //! that's the write landing, never a leftover.
 //!
@@ -31,8 +32,8 @@ pub(super) enum CutOff {
     /// Ours, whole: the server published before the link died, so the write
     /// landed. The HEAD that showed it.
     Landed(Answer),
-    /// Nothing of ours is there now: never stored, removed, or the name holds
-    /// someone else's object.
+    /// Nothing of ours to clear: never stored, removed, the name holds someone
+    /// else's object, or one the HEAD can't prove is our short leftover.
     Clear,
     /// Not known yet: the server couldn't be asked, the removal failed, or it
     /// had stored nothing so far. The PUT's record stays (`upload_ledger.rs`).
@@ -216,9 +217,14 @@ impl S3VolumeInner {
     /// - ❗ **Ours, at `size` bytes: the write landed whole.** ❌ Never
     ///   removed: by then it's the only copy of the new bytes, and on an
     ///   overwrite the original is already gone.
-    /// - **Ours, at any other size**: a server keeping a truncated body
-    ///   against S3's contract (VersityGW does), so it's removed.
-    /// - ❌ **Anything else is left alone**: the original, or another writer's.
+    /// - **Ours, provably SHORTER than `size`**: a server keeping a truncated
+    ///   body against S3's contract (VersityGW does), so it's removed.
+    /// - ❌ **Anything else is left alone**: the original, another writer's, and
+    ///   ours where the HEAD can't prove it short (#522/#545). A HEAD with no
+    ///   length shows nothing, and a LONGER body is a later write by a client
+    ///   that kept our `x-amz-meta-*` token on overwrite. Either may be a whole
+    ///   user file, and a delete there is unrecoverable, so the record is let go
+    ///   instead.
     #[allow(
         clippy::too_many_arguments,
         reason = "one object's address (bucket, key, and the path errors name), what's at it, and what the write sent"
@@ -238,6 +244,10 @@ impl S3VolumeInner {
         }
         if is_ours_whole(&head, token, size) {
             return CutOff::Landed(head);
+        }
+        if !head.object_length().is_some_and(|kept| kept < size) {
+            warn!(target: "volume", "s3: left {remote} alone: it holds a cut-off upload's token, but its length doesn't show it short");
+            return CutOff::Clear;
         }
         match self.delete_key(client, bucket, key, remote).await {
             Ok(()) => {
