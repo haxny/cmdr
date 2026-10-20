@@ -1908,6 +1908,7 @@ export type MessageKey =
   | 'fileExplorer.tabs.limitReached'
   | 'fileExplorer.tabs.moveOnlyTabRefused'
   | 'fileExplorer.tabs.movePinnedRefused'
+  | 'fileExplorer.tags.skipped'
   | 'fileExplorer.typeToJump.prefix'
   | 'fileExplorer.unreachable.detailGaveUp'
   | 'fileExplorer.unreachable.detailTimeout'
