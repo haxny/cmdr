@@ -30,6 +30,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, UNIX_EPOCH};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 
 use super::super::super::metadata_losses::FolderLosses;
@@ -303,7 +304,7 @@ async fn stamp_one(dest_volume: &Arc<dyn Volume>, folder: &FilledFolder, carried
         log::warn!(
             target: "transfer",
             "folder metadata: {} keeps some of the copy's own, the destination refused the source's: {report:?}",
-            dest.display()
+            LogPrivate::dir_path(dest)
         );
     }
     Stamped::Answered {

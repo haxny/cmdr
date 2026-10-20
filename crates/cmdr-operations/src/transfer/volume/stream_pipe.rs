@@ -24,6 +24,7 @@ use super::preflight::SourceFileFacts;
 use super::server_side_copy::{ServerSideCopy, try_server_side_copy};
 use super::source_reads::SourceReads;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{Volume, VolumeError};
 
@@ -139,7 +140,11 @@ pub(super) async fn stream_pipe_file(
     on_file_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
     staging: WriteStaging,
 ) -> Result<u64, PathedVolumeError> {
-    log::debug!("stream_pipe_file: {} -> {}", source_path.display(), dest_path.display());
+    log::debug!(
+        "stream_pipe_file: {} -> {}",
+        LogPrivate::file_path(source_path),
+        LogPrivate::file_path(dest_path)
+    );
 
     // Register BOTH halves of the eventual rename with the downloads watcher's
     // ignore set when the destination is local-FS-backed (the only case where
@@ -394,7 +399,7 @@ impl FileRun<'_> {
                     log::info!(
                         target: "copy",
                         "stream_pipe_file: running {} again now that its volume is back",
-                        self.dest_path.display(),
+                        LogPrivate::file_path(self.dest_path),
                     );
                     self.attempt = 1;
                     ControlFlow::Continue(())
@@ -471,7 +476,7 @@ impl FileRun<'_> {
                 target: "copy",
                 "stream_pipe_file: attempt {attempt} of {} for {} failed ({error}); running the file again in {:?}",
                 retry::MAX_ATTEMPTS,
-                dest_path.display(),
+                LogPrivate::file_path(dest_path),
                 retry::backoff_after(attempt),
             );
             note_task_retry();
@@ -505,7 +510,7 @@ impl FileRun<'_> {
             log::warn!(
                 target: "copy",
                 "stream_pipe_file: giving up on {} after {attempt} attempt(s): {error}",
-                dest_path.display(),
+                LogPrivate::file_path(dest_path),
             );
         }
         ControlFlow::Break(Err(source_reads
@@ -526,7 +531,7 @@ async fn remove_unstaged_partial(writing_at_the_final_name: bool, dest_volume: &
         log::debug!(
             target: "copy",
             "stream_pipe_file: couldn't remove the unstaged partial {}: {e}",
-            dest_path.display()
+            LogPrivate::file_path(dest_path)
         );
     }
 }

@@ -17,6 +17,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{CopyScanResult, ScanRecorder};
 
 use super::built;
@@ -440,7 +441,7 @@ fn log_unplaced(path: &Path) {
     log::debug!(
         target: "cmdr_operations",
         "transfer tree: dropped a scanned entry under no selected source: {}",
-        path.display()
+        LogPrivate::path(path)
     );
 }
 

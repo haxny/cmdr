@@ -41,6 +41,7 @@ mod rollback;
 mod scanned_dirs;
 mod single_item;
 
+use cmdr_fs::log_private::LogPrivate;
 pub(super) use folder_metadata::{apply_created_dirs_metadata, dir_dest_path};
 use rollback::rollback_with_progress;
 pub(super) use scanned_dirs::create_scanned_dirs_at_destination;
@@ -116,8 +117,8 @@ fn stop_keeping_displaced_aside(
         log::warn!(
             "copy_files_with_progress: op={} stopped, so the original at {} is kept at {}",
             operation_id,
-            kept.path,
-            kept.kept_at
+            LogPrivate::path(&kept.path),
+            LogPrivate::path(&kept.kept_at)
         );
     }
     recovered
@@ -308,8 +309,8 @@ pub(crate) fn copy_files_with_progress_inner(
         };
         log::info!(
             "copy: {} is already in the destination, duplicating it as {}",
-            source.display(),
-            unique_dest.display()
+            LogPrivate::path(source),
+            LogPrivate::path(&unique_dest)
         );
         dir_remap.insert(default_dest, unique_dest);
         duplicated_sources.insert(source.clone());
@@ -481,7 +482,7 @@ pub(crate) fn copy_files_with_progress_inner(
                 .expect("file_iter aligned with driver iteration over source_paths");
             log::debug!(
                 "copy_files_with_progress: copying file {} ({} bytes)",
-                file_info.path.display(),
+                LogPrivate::file_path(&file_info.path),
                 file_info.size
             );
             // `copy_single_item` bumps `files_done` / `bytes_done` by reference

@@ -12,6 +12,7 @@ use std::path::Path;
 #[cfg(test)]
 use std::sync::atomic::Ordering;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, LandedMetadata, StagedItem, StagedTimes, apply_staged};
 
 use super::super::overwrite::Staged;
@@ -76,8 +77,8 @@ pub(crate) fn chunked_copy_with_metadata(
 ) -> Result<Staged, WriteOperationError> {
     log::debug!(
         "chunked_copy: starting chunked copy from {} to {}",
-        source.display(),
-        dest.display()
+        LogPrivate::file_path(source),
+        LogPrivate::file_path(dest)
     );
 
     let read_error = |e: std::io::Error, what: &str| WriteOperationError::ReadError {
@@ -137,16 +138,16 @@ pub(crate) fn chunked_copy_with_metadata(
     if report.any_refused() {
         log::warn!(
             "chunked_copy: {} took only some of the metadata of {}: {report:?}",
-            dest.display(),
-            source.display()
+            LogPrivate::file_path(dest),
+            LogPrivate::file_path(source)
         );
     }
 
     log::debug!(
         "chunked_copy: completed {} bytes from {} to {}",
         bytes,
-        source.display(),
-        dest.display()
+        LogPrivate::file_path(source),
+        LogPrivate::file_path(dest)
     );
 
     Ok(Staged {

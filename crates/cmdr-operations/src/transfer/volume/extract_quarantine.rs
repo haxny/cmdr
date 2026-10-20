@@ -37,6 +37,7 @@ use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, Xattr};
 use cmdr_fs::volume::ScanStop;
 
@@ -87,7 +88,7 @@ pub(super) async fn quarantine_created_folder(
         log::debug!(
             target: "copy",
             "extract quarantine: couldn't set it on {}; the folder is there either way",
-            created.display(),
+            LogPrivate::dir_path(created),
         );
     }
 }
@@ -200,7 +201,7 @@ fn read_quarantine(archive: &Path) -> Option<Vec<u8>> {
             log::debug!(
                 target: "copy",
                 "extract quarantine: couldn't read it from {} ({e}); extracting without one",
-                archive.display(),
+                LogPrivate::file_path(archive),
             );
             None
         }

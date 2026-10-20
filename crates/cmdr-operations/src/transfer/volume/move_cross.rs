@@ -42,6 +42,7 @@ use super::preflight::{SourceHint, scan_volume_sources, sources_in_tree_order};
 use super::strategy::{copy_single_path, resolve_source_is_directory};
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error, source_not_removed};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
 /// Internal cross-volume move body. Takes a sink for event emission so unit
@@ -310,7 +311,7 @@ pub async fn move_volumes_with_progress(
                 Box::pin(async move {
                     log::debug!(
                         "move_between_volumes: conflict detected at {}",
-                        initial_dest_owned.display()
+                        LogPrivate::path(&initial_dest_owned)
                     );
                     // Parked on a PERSON, unbounded by design and with nothing
                     // else running. A dump that names it has explained the whole
@@ -347,7 +348,7 @@ pub async fn move_volumes_with_progress(
                         None => {
                             log::debug!(
                                 "move_between_volumes: skipping {} due to conflict resolution",
-                                source_path_owned.display()
+                                LogPrivate::path(&source_path_owned)
                             );
                             // Credit the source's byte size so the Size bar
                             // matches the file counter when every source is
@@ -580,10 +581,10 @@ pub async fn move_volumes_with_progress(
                             log::warn!(
                                 target: "move",
                                 "move_between_volumes: copy phase failed for {} on the {:?} (under {} -> {}): {}",
-                                e.path.display(),
+                                LogPrivate::path(&e.path),
                                 e.role,
-                                source_path.display(),
-                                dest_item_path.display(),
+                                LogPrivate::path(&source_path),
+                                LogPrivate::path(&dest_item_path),
                                 e.error
                             );
                             return Err(WriteFailure::from(e).error);
@@ -652,8 +653,8 @@ pub async fn move_volumes_with_progress(
                         log::warn!(
                             target: "move",
                             "move_between_volumes: source delete failed for {} (under {}) after successful copy: {}",
-                            e.path.display(),
-                            source_path.display(),
+                            LogPrivate::path(&e.path),
+                            LogPrivate::path(&source_path),
                             e.error
                         );
                         // ❗ The copy LANDED, so the move didn't fail: say so.

@@ -240,7 +240,12 @@ fn only_a_cross_type_bucket_reports_an_answer_for_that_shape() {
 
 /// The rule in one table. `dest` is only ever logged.
 fn resolved(state: &ApplyToAll, kind: ClashKind, configured: ConflictResolution) -> ConflictResolution {
-    resolution_for_clash(apply_to_all_effective(state, kind), configured, kind, &"dest")
+    resolution_for_clash(
+        apply_to_all_effective(state, kind),
+        configured,
+        kind,
+        LogPrivate::path("dest"),
+    )
 }
 
 #[test]
@@ -291,7 +296,7 @@ fn an_answered_conditional_variant_is_still_refused_across_types() {
                 "{variant:?} cannot ask its own question at a {kind:?} clash"
             );
             assert_eq!(
-                answered_resolution_for_clash(variant, kind, &"dest"),
+                answered_resolution_for_clash(variant, kind, LogPrivate::path("dest")),
                 ConflictResolution::Skip,
                 "{variant:?} answered on the prompt itself is refused the same way"
             );

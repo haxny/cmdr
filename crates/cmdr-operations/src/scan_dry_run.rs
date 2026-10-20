@@ -19,6 +19,7 @@ use super::event_sinks::OperationEventSink;
 use super::state::WriteOperationState;
 use super::types::{ConflictInfo, ScanProgressEvent, WriteOperationError, WriteOperationType};
 use super::validation::is_symlink_loop;
+use cmdr_fs::log_private::LogPrivate;
 // ============================================================================
 // Dry-run scanning (with conflict detection)
 // ============================================================================
@@ -237,7 +238,7 @@ fn dry_run_scan_recursive(
         }
     } else {
         // Skip special files (sockets, FIFOs, char/block devices)
-        log::debug!("dry_run_scan: skipping special file: {}", path.display());
+        log::debug!("dry_run_scan: skipping special file: {}", LogPrivate::path(path));
     }
 
     // Emit progress periodically

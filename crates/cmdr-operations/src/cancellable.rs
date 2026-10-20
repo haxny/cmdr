@@ -14,6 +14,7 @@ use std::time::Duration;
 
 use super::state::WriteOperationState;
 use super::types::WriteOperationError;
+use cmdr_fs::log_private::LogPrivate;
 
 // ============================================================================
 // Background cleanup (detached, best-effort)
@@ -34,7 +35,11 @@ pub(super) fn remove_file_in_background(path: PathBuf) {
     // allowed-discarded-outcome: a detached best-effort cleanup; nothing waits on it, and it logs its own failure.
     spawn_named("cmdr-cleanup", move || {
         if let Err(e) = fs::remove_file(&path) {
-            log::warn!("background cleanup: failed to remove {}: {}", path.display(), e);
+            log::warn!(
+                "background cleanup: failed to remove {}: {}",
+                LogPrivate::file_path(&path),
+                e
+            );
         }
     });
 }
@@ -51,7 +56,11 @@ pub(super) fn remove_staging_tree_in_background(path: PathBuf) {
     // allowed-discarded-outcome: a detached best-effort cleanup; nothing waits on it, and it logs its own failure.
     spawn_named("cmdr-cleanup", move || {
         if let Err(e) = cmdr_fs::metadata::remove_tree_clearing_blockers(&path) {
-            log::warn!("background cleanup: failed to remove {}: {}", path.display(), e);
+            log::warn!(
+                "background cleanup: failed to remove {}: {}",
+                LogPrivate::dir_path(&path),
+                e
+            );
         }
     });
 }

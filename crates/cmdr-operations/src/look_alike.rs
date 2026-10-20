@@ -14,6 +14,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::name_fold::differ_only_in_form;
 
 use cmdr_fs::entry::FileEntry;
@@ -217,7 +218,7 @@ impl<'v> ListedFolders<'v> {
         log::debug!(
             target: "look_alike",
             "answered from a pane's listing of {} ({} entries)",
-            dir.display(),
+            LogPrivate::dir_path(dir),
             entries.len()
         );
         Some(entries)
@@ -235,7 +236,7 @@ impl<'v> ListedFolders<'v> {
         log::debug!(
             target: "look_alike",
             "listed {} ({} entries) in {} ms",
-            dir.display(),
+            LogPrivate::dir_path(dir),
             entries.len(),
             start.elapsed().as_millis()
         );

@@ -40,6 +40,7 @@ use super::preflight::SourceHint;
 use super::strategy::copy_single_path;
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
 /// Everything the serial driver needs from its caller. The `Arc` fields are
@@ -221,7 +222,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                     let source_is_directory_hint = source_hint.map(|h| h.is_directory);
                     log::debug!(
                         "copy_volumes_with_progress: conflict detected at {} (source_is_directory_hint={:?})",
-                        initial_dest_owned.display(),
+                        LogPrivate::path(&initial_dest_owned),
                         source_is_directory_hint,
                     );
                     // The resolver can park on a PERSON for as long as they take
@@ -255,7 +256,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                         None => {
                             log::debug!(
                                 "copy_volumes_with_progress: skipping {} due to conflict resolution",
-                                source_path_owned.display()
+                                LogPrivate::path(&source_path_owned)
                             );
                             // Credit the source's byte size so the size
                             // progress bar matches the file counter when
@@ -360,8 +361,8 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                 Box::pin(async move {
                     log::debug!(
                         "copy_volumes_with_progress: copying {} -> {}",
-                        source_path.display(),
-                        dest_item_path.display()
+                        LogPrivate::path(&source_path),
+                        LogPrivate::path(&dest_item_path)
                     );
 
                     // No hint means UNKNOWN, not "file": a local scan preview

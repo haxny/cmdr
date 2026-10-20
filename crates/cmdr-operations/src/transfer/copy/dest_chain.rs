@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use crate::error_classification::IoResultExt;
 use crate::types::WriteOperationError;
+use cmdr_fs::log_private::LogPrivate;
 
 /// The topmost entry on the way from `root` down to `dir` (inclusive) that
 /// exists and ISN'T a directory in its own right: a file, or a link whatever it
@@ -36,8 +37,8 @@ pub(in crate::transfer) fn leaf_in_the_way(
         // Can't happen: every destination is `root` joined with a relative path.
         log::warn!(
             "leaf_in_the_way: {} isn't under {}, nothing checked",
-            dir.display(),
-            root.display()
+            LogPrivate::dir_path(dir),
+            LogPrivate::dir_path(root)
         );
         return Ok(None);
     };

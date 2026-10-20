@@ -41,6 +41,7 @@ use super::item_identity::is_the_same_item;
 use super::naming::find_unique_volume_name;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::{LogKind, LogPrivate};
 use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
 /// Outcome of resolving a volume conflict.
@@ -133,10 +134,15 @@ pub(super) async fn resolve_volume_conflict(
     // whole subtree. `../DETAILS.md` § "Self-collision (duplicating in place)".
     if is_the_same_item(source_volume, source_path, dest_volume, dest_path) {
         let unique = find_unique_volume_name(dest_volume, dest_path, source_is_directory, &state.claimed_names).await;
+        let kind = if source_is_directory {
+            LogKind::DirPath
+        } else {
+            LogKind::FilePath
+        };
         log::info!(
             "resolve_volume_conflict: {} is already in the destination, duplicating it as {}",
-            source_path.display(),
-            unique.path.display()
+            LogPrivate::new(kind, source_path),
+            LogPrivate::new(kind, &unique.path)
         );
         return Ok(Some(ResolvedConflict {
             write_path: unique.path,
@@ -178,7 +184,7 @@ pub(super) async fn resolve_volume_conflict(
     // replaces a folder with a file or a file with a folder; a plain Overwrite
     // answered for this very shape does. `resolution_for_clash` holds the why.
     let latched = apply_to_all_effective(&apply_to_all.lock_ignore_poison(), kind);
-    let resolution = resolution_for_clash(latched, config.conflict_resolution, kind, &dest_path.display());
+    let resolution = resolution_for_clash(latched, config.conflict_resolution, kind, LogPrivate::path(dest_path));
 
     match resolution {
         ConflictResolution::Stop => {
@@ -213,7 +219,7 @@ pub(super) async fn resolve_volume_conflict(
                 // shape, refused when it is a same-kind policy reaching over.
                 // `Skip` needs no reduction, but running it through keeps the
                 // one path.
-                let saved = saved.at(kind, &dest_path.display());
+                let saved = saved.at(kind, LogPrivate::path(dest_path));
                 let effective = reduce_volume_conditional_resolution(
                     saved,
                     source_volume,
@@ -355,7 +361,8 @@ pub(super) async fn resolve_volume_conflict(
                     // before the conditional reduction, which across types
                     // would be comparing against a directory. Local twin:
                     // `../../conflict.rs`.
-                    let answered = answered_resolution_for_clash(response.resolution, kind, &dest_path.display());
+                    let answered =
+                        answered_resolution_for_clash(response.resolution, kind, LogPrivate::path(dest_path));
                     let effective = reduce_volume_conditional_resolution(
                         answered,
                         source_volume,
@@ -467,8 +474,9 @@ async fn reduce_volume_conditional_resolution(
                 (Some(src), Some(dst)) => {
                     log::info!(
                         target: "conflict_resolution",
+                        // allowed-log-private: `src` and `dst` are byte sizes
                         "OverwriteSmaller (volume): skipping {} — destination not strictly smaller (src={src}, dst={dst})",
-                        dest_path.display()
+                        LogPrivate::path(dest_path)
                     );
                     ConflictResolution::Skip
                 }
@@ -476,7 +484,7 @@ async fn reduce_volume_conditional_resolution(
                     log::info!(
                         target: "conflict_resolution",
                         "OverwriteSmaller (volume): skipping {} — size unknown for source or destination (the volume backend may not surface it)",
-                        dest_path.display()
+                        LogPrivate::path(dest_path)
                     );
                     ConflictResolution::Skip
                 }
@@ -499,7 +507,7 @@ async fn reduce_volume_conditional_resolution(
                     log::info!(
                         target: "conflict_resolution",
                         "OverwriteOlder (volume): skipping {} — destination not strictly older than source",
-                        dest_path.display()
+                        LogPrivate::path(dest_path)
                     );
                     ConflictResolution::Skip
                 }
@@ -507,7 +515,7 @@ async fn reduce_volume_conditional_resolution(
                     log::info!(
                         target: "conflict_resolution",
                         "OverwriteOlder (volume): skipping {} — modified time unknown for source or destination (some SMB servers don't surface it)",
-                        dest_path.display()
+                        LogPrivate::path(dest_path)
                     );
                     ConflictResolution::Skip
                 }

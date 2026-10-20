@@ -43,6 +43,7 @@ use super::rename_merge::{RenameMergeCtx, rename_merge_directory};
 use super::strategy::Replaces;
 use super::transfer_error::{PathRole, map_volume_error};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{EntryKind, RenameWork, Volume, VolumeError};
 use cmdr_operation_log::types::OpKind;
 
@@ -89,9 +90,9 @@ impl crate::Operations {
         log::info!(
             "move_within_same_volume: operation_id={}, volume={}, {} sources, dest={}",
             operation_id,
-            volume.name(),
+            LogPrivate::volume(volume.name()),
             source_paths.len(),
-            dest_path.display()
+            LogPrivate::dir_path(&dest_path)
         );
 
         let progress_interval_ms = config.progress_interval_ms;
@@ -380,7 +381,7 @@ pub async fn move_within_same_volume_with_progress(
     for source in &already_in_place {
         log::info!(
             "move_within_same_volume: {} is already in the destination, nothing to do",
-            source.display()
+            LogPrivate::path(source)
         );
         events.emit_source_item_done(WriteSourceItemDoneEvent {
             operation_id: operation_id.to_string(),
@@ -401,7 +402,7 @@ pub async fn move_within_same_volume_with_progress(
     if moves_by_copy(&volume, source_paths).await? {
         log::info!(
             "move_within_same_volume: volumeName={:?} renames by copy, so op={operation_id} copies then deletes", // allowed-pluralize-noun: `{:?}` is the volume's name, and "renames" is a verb
-            volume.name()
+            LogPrivate::volume(volume.name())
         );
         return super::move_cross::move_volumes_with_progress(
             events,
@@ -547,7 +548,7 @@ pub async fn move_within_same_volume_with_progress(
                 Box::pin(async move {
                     log::debug!(
                         "move_within_same_volume: conflict detected at {}",
-                        initial_dest_owned.display()
+                        LogPrivate::path(&initial_dest_owned)
                     );
                     let source_hint = source_hints.get(&source_path_owned).copied();
                     let source_size_hint = source_hint.and_then(|h| (!h.is_directory).then_some(h.size));
@@ -578,7 +579,7 @@ pub async fn move_within_same_volume_with_progress(
                         None => {
                             log::debug!(
                                 "move_within_same_volume: skipping {} due to conflict resolution",
-                                source_path_owned.display()
+                                LogPrivate::path(&source_path_owned)
                             );
                             // A rename moves no bytes (the byte axis stays at 0),
                             // so a skip credits 0 bytes — the file counter alone

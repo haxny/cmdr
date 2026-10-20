@@ -39,6 +39,7 @@ use super::macos_copy::{CopyProgressContext, copy_single_file_native};
 
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
 use super::super::error_classification::IoResultExt;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::LandedMetadata;
 
 use super::super::host::Announced;
@@ -206,8 +207,8 @@ pub(super) fn copy_file_with_strategy(
     let strategy = select_local_copy_strategy(source, dest.path());
     log::debug!(
         "copy_file_with_strategy: {strategy:?} (src={}, dest={})",
-        source.display(),
-        dest.path().display()
+        LogPrivate::file_path(source),
+        LogPrivate::file_path(dest.path())
     );
     copy_file_using(
         strategy,

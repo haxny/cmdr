@@ -30,6 +30,7 @@ use super::preflight::SourceFileFacts;
 use super::strategy::{LandingName, Replaces, failed_write_leaves_ours_at, resolve_source_is_directory, staging_for};
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError, WriteFailure, map_volume_error};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ChildName, VolumeError};
 
 impl ConcurrentCopy<'_> {
@@ -113,7 +114,7 @@ impl ConcurrentCopy<'_> {
             // ~18 s for 1046 photos on a cold cache.
             log::debug!(
                 "copy_volumes_with_progress: conflict detected at {} (source_is_dir={}, dest_is_dir={})",
-                dest_item_path.display(),
+                LogPrivate::path(&dest_item_path),
                 source_is_dir,
                 dest_meta.is_directory,
             );
@@ -130,7 +131,7 @@ impl ConcurrentCopy<'_> {
                 None => {
                     log::debug!(
                         "copy_volumes_with_progress: skipping {} due to conflict resolution",
-                        source_path.display()
+                        LogPrivate::path(source_path)
                     );
                     self.account_skipped_file(source_path);
                     return Ok(None);
@@ -147,8 +148,8 @@ impl ConcurrentCopy<'_> {
 
         log::debug!(
             "copy_volumes_with_progress: spawning copy {} -> {}",
-            source_path.display(),
-            dest_item_path.display()
+            LogPrivate::path(source_path),
+            LogPrivate::path(&dest_item_path)
         );
 
         // Mark this destination as in-flight so cancel/error can clean it

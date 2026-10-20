@@ -19,6 +19,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 
 use super::super::super::state::WriteOperationState;
@@ -47,7 +48,7 @@ pub(super) async fn put_on(dest: &Arc<dyn Volume>, landed: &Path, set: &CarriedM
         log::warn!(
             target: "transfer",
             "landed flags: {} landed without the source's flags {:?}: {report:?}",
-            landed.display(),
+            LogPrivate::path(landed),
             set.flags
         );
         state.metadata_losses.note_file(MetadataClasses::FLAGS);

@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 use super::super::macos_copy::copy_symlink;
 
 use super::super::chunked_copy::ChunkedCopyProgressFn;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::LandedMetadata;
 
 use super::super::copy_strategy::copy_file_with_strategy;
@@ -332,7 +333,7 @@ pub(in crate::transfer) fn copy_single_item(
                     transaction.record_displaced(displaced);
                     log::debug!(
                         "copy: replaced file with directory at {} (type mismatch overwrite)",
-                        blocking.display()
+                        LogPrivate::dir_path(&blocking)
                     );
                 }
                 Some(resolved) => {
@@ -354,8 +355,8 @@ pub(in crate::transfer) fn copy_single_item(
                     created_dirs.insert(renamed_root.clone());
                     log::debug!(
                         "copy: landing incoming folder at {} (type mismatch rename; existing file {} kept)",
-                        renamed_root.display(),
-                        blocking.display()
+                        LogPrivate::dir_path(&renamed_root),
+                        LogPrivate::file_path(&blocking)
                     );
                     dir_remap.insert(blocking.clone(), renamed_root.clone());
                     // Redirect the current item and recompute its parent.
@@ -574,7 +575,7 @@ pub(in crate::transfer) fn copy_single_item(
         if is_same_file(source, &actual_dest) {
             log::warn!(
                 "copy: skipping {}: source and destination resolve to the same file",
-                source.display()
+                LogPrivate::file_path(source)
             );
             record_file_done(
                 &progress_ctx,

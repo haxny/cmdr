@@ -25,6 +25,7 @@
 use std::path::{Path, PathBuf};
 
 use super::super::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{Volume, VolumeError};
 
 /// What a failed landing leaves behind, and where.
@@ -136,7 +137,7 @@ pub(crate) async fn what_a_refused_delete_left(dest_volume: &dyn Volume, path: &
             log::warn!(
                 target: "copy",
                 "landing: couldn't tell whether {} survived a refused delete ({e}), so the temp stays",
-                path.display()
+                LogPrivate::path(path)
             );
             AfterARefusedDelete::Unknown
         }
@@ -164,7 +165,7 @@ pub(crate) async fn discard_unplaced_temp(dest_volume: &dyn Volume, temp: &Path)
             log::warn!(
                 target: "copy",
                 "landing: couldn't remove the unplaced temp {} ({e}); the stale-temp sweep will",
-                temp.display()
+                LogPrivate::file_path(temp)
             );
             false
         }
@@ -179,7 +180,7 @@ pub(crate) async fn discard_unplaced_temp(dest_volume: &dyn Volume, temp: &Path)
 fn keeps_its_temp_name(temp: &Path) -> PathBuf {
     log::warn!(
         "rescue_out_of_temp_space: couldn't move {} to a real filename, so the new data stays under its temp name",
-        temp.display()
+        LogPrivate::file_path(temp)
     );
     temp.to_path_buf()
 }

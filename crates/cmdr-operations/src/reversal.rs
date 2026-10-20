@@ -27,6 +27,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{RemovalRefusal, remove_dir_clearing_blockers, remove_file_clearing_blockers};
 
 use cmdr_operation_log::rollback::{ItemResult, SkipTally, SnapshotVerdict, verify_snapshot};
@@ -112,7 +113,7 @@ pub(crate) fn recheck_local(file: &WrittenFile) -> Recheck {
             // to delete on a guess.
             log::warn!(
                 "reversal: {} was recorded through a volume backend but is being rechecked locally, leaving it",
-                file.path.display()
+                LogPrivate::path(&file.path)
             );
             Recheck::Skip(SkipReason::UnverifiablePrecondition)
         }
@@ -147,7 +148,7 @@ pub(crate) fn recheck_volume(file: &WrittenFile, live_size: Option<u64>) -> Pres
         WrittenIdentity::LocalFile { .. } | WrittenIdentity::LocalDir { .. } => {
             log::warn!(
                 "reversal: {} was recorded as a local entry but is being rechecked through a volume, leaving it",
-                file.path.display()
+                LogPrivate::path(&file.path)
             );
             PresentRecheck::Skip(SkipReason::UnverifiablePrecondition)
         }
@@ -172,11 +173,14 @@ fn removal_result(removed: Result<(), RemovalRefusal>, path: &Path) -> ItemResul
             ItemResult::Skipped(SkipReason::AlreadyGone)
         }
         Err(RemovalRefusal::Locked) => {
-            log::warn!("reversal: {} wears a lock this process can't clear", path.display());
+            log::warn!(
+                "reversal: {} wears a lock this process can't clear",
+                LogPrivate::file_path(path)
+            );
             ItemResult::Skipped(SkipReason::Locked)
         }
         Err(RemovalRefusal::Io(e)) => {
-            log::warn!("reversal: couldn't remove {}: {e}", path.display());
+            log::warn!("reversal: couldn't remove {}: {e}", LogPrivate::file_path(path));
             ItemResult::Skipped(SkipReason::Failed)
         }
     }

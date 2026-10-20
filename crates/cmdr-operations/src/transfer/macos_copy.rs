@@ -12,6 +12,7 @@ use crate::state::IntentCell;
 
 use crate::WriteOperationError;
 use crate::error_classification::{IoResultExt, classify_copy_io_error};
+use cmdr_fs::log_private::LogPrivate;
 
 // ============================================================================
 // Type aliases for progress callbacks
@@ -349,8 +350,8 @@ pub(crate) fn copy_file_native(
     // Perform the copy
     log::debug!(
         "copyfile: starting copy from {} to {} (flags={:#x})",
-        source.display(),
-        destination.display(),
+        LogPrivate::path(source),
+        LogPrivate::path(destination),
         flags
     );
     // SAFETY: `src_cstring`/`dst_cstring` are live, NUL-terminated C strings held across the call;
@@ -436,12 +437,12 @@ pub(crate) fn copy_symlink(source: &Path, destination: &Path) -> Result<(), Writ
             if report.any_refused() {
                 log::warn!(
                     "copy_symlink: {} took only some of the metadata of {}: {report:?}",
-                    destination.display(),
-                    source.display()
+                    LogPrivate::path(destination),
+                    LogPrivate::path(source)
                 );
             }
         }
-        Err(e) => log::debug!("copy_symlink: couldn't lstat {}: {e}", source.display()),
+        Err(e) => log::debug!("copy_symlink: couldn't lstat {}: {e}", LogPrivate::path(source)),
     }
 
     Ok(())

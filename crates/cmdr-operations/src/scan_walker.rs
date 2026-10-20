@@ -16,6 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use cmdr_fs::apple_double::SidecarRule;
+use cmdr_fs::log_private::LogPrivate;
 
 use super::state::FileInfo;
 use super::validation::is_symlink_loop;
@@ -335,7 +336,7 @@ pub(super) fn walk_dir_recursive<E>(
             }
         }
     } else {
-        log::debug!("scan: skipping special file: {}", path.display());
+        log::debug!("scan: skipping special file: {}", LogPrivate::path(path));
     }
 
     if last_progress_time.elapsed() >= ctx.progress_interval {
@@ -464,7 +465,10 @@ fn walk_cached_entries<E>(
 fn is_left_out<E>(ctx: &WalkContext<'_, E>, dir: &Path, dir_device: u64, name: &OsStr) -> bool {
     let sidecar = ctx.sidecars.is_sidecar(dir, dir_device, name);
     if sidecar {
-        log::trace!("scan: leaving out AppleDouble sidecar {}", dir.join(name).display());
+        log::trace!(
+            "scan: leaving out AppleDouble sidecar {}",
+            LogPrivate::file_path(&dir.join(name))
+        );
     }
     sidecar
 }

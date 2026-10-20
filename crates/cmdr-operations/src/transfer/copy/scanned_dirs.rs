@@ -10,6 +10,7 @@ use super::folder_metadata::{DirMapping, create_dirs_like_their_sources, dir_des
 use crate::ledger::CopyTransaction;
 use crate::state::WriteOperationState;
 use crate::types::WriteOperationError;
+use cmdr_fs::log_private::LogPrivate;
 
 /// Creates destination directories for the scanned source dirs the per-file
 /// loop didn't materialize. The loop creates directories only as FILE parents,
@@ -61,8 +62,8 @@ pub(in crate::transfer) fn create_scanned_dirs_at_destination(
         if let Some(kept) = leaf_in_the_way(destination, &dest, created_dirs)? {
             log::debug!(
                 "copy: not landing {} at or under the kept {}",
-                dest.display(),
-                kept.display()
+                LogPrivate::dir_path(&dest),
+                LogPrivate::path(&kept)
             );
             continue;
         }

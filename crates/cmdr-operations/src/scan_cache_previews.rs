@@ -17,6 +17,7 @@ use tokio::sync::Notify;
 use super::super::types::WriteOperationError;
 use super::{CachedScanResult, ScanCostFacts, ScanResult};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::ScannedFile;
 
 // ============================================================================
@@ -367,8 +368,8 @@ impl ScanPreviews {
                 target: "cmdr_operations",
                 "scan preview {} describes {:?}, but the operation asked for {:?}; ignoring the cache and rescanning",
                 preview_id,
-                cached.sources,
-                requested_sources
+                cached.sources.iter().map(LogPrivate::path).collect::<Vec<_>>(),
+                requested_sources.iter().map(LogPrivate::path).collect::<Vec<_>>()
             );
             return None;
         }

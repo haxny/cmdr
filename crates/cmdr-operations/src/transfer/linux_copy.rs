@@ -11,6 +11,7 @@ use std::os::unix::fs::OpenOptionsExt as _;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, StagedItem, StagedTimes, apply_staged};
 
 use super::super::error_classification::classify_copy_io_error;
@@ -136,16 +137,16 @@ pub(crate) fn copy_single_file_linux(
     if report.any_refused() {
         log::warn!(
             "linux_copy: {} took only some of the metadata of {}: {report:?}",
-            destination.display(),
-            source.display()
+            LogPrivate::file_path(destination),
+            LogPrivate::file_path(source)
         );
     }
 
     log::debug!(
         "linux_copy: copied {} bytes from {} to {}",
         bytes_copied,
-        source.display(),
-        destination.display()
+        LogPrivate::file_path(source),
+        LogPrivate::file_path(destination)
     );
 
     Ok(bytes_copied)

@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::Initiator;
 
@@ -234,8 +235,8 @@ impl Operations {
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
         log::info!(
             "copy_files_start: sources={:?}, destination={:?}, dry_run={}",
-            sources,
-            destination,
+            sources.iter().map(LogPrivate::path).collect::<Vec<_>>(),
+            LogPrivate::dir_path(&destination),
             config.dry_run
         );
 
@@ -304,8 +305,8 @@ impl Operations {
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
         log::info!(
             "move_files_start: sources={:?}, destination={:?}, dry_run={}",
-            sources,
-            destination,
+            sources.iter().map(LogPrivate::path).collect::<Vec<_>>(),
+            LogPrivate::dir_path(&destination),
             config.dry_run
         );
 
@@ -369,7 +370,7 @@ impl Operations {
 
         log::info!(
             "delete_files_start: sources={:?}, volume={}, dry_run={}",
-            sources,
+            sources.iter().map(LogPrivate::path).collect::<Vec<_>>(),
             volume_id_str,
             config.dry_run
         );
@@ -462,7 +463,10 @@ impl Operations {
         initiator: Initiator,
         expected_sources: Option<ExpectedSources>,
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
-        log::info!("trash_files_start: sources={:?}", sources);
+        log::info!(
+            "trash_files_start: sources={:?}",
+            sources.iter().map(LogPrivate::path).collect::<Vec<_>>()
+        );
 
         // ❌ Trash does NOT wait for the confirming dialog's scan preview, and this
         // is the one operation that doesn't. `trashItemAtURL` is atomic per

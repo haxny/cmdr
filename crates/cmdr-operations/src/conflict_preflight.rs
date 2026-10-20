@@ -19,6 +19,7 @@ use tokio::time::Duration;
 
 use cmdr_fs::deadline::{Deadline, timeout_detached_within};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{ScanConflict, Volume, VolumeError};
 
@@ -117,7 +118,7 @@ impl crate::Operations {
             // volume-relative path, which no mount-prefix pattern recognizes.
             "checking {} item(s) against path={:?} on volume {}",
             source_items.len(),
-            dest_path,
+            LogPrivate::dir_path(&dest_path),
             volume_id
         );
 

@@ -34,6 +34,7 @@ use super::super::super::types::{
 // routes to its entry point.
 
 use super::transfer_error::{WriteFailure, write_error_event_from};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::OpKind;
 
@@ -100,8 +101,8 @@ impl crate::Operations {
         if let (Some(src_root), Some(dest_root)) = (source_volume.local_path(), dest_volume.local_path()) {
             log::debug!(
                 "move_between_volumes: both volumes are local, delegating to native move (src={}, dest={})",
-                src_root.display(),
-                dest_root.display()
+                LogPrivate::dir_path(&src_root),
+                LogPrivate::dir_path(&dest_root)
             );
 
             let absolute_sources: Vec<PathBuf> = source_paths.iter().map(|p| src_root.join(p)).collect();
@@ -160,8 +161,8 @@ impl crate::Operations {
         // Cross-volume: copy each file to destination, then delete source
         log::info!(
             "move_between_volumes: cross-volume move, {} -> {}, {} sources",
-            source_volume.name(),
-            dest_volume.name(),
+            LogPrivate::volume(source_volume.name()),
+            LogPrivate::volume(dest_volume.name()),
             source_paths.len()
         );
 

@@ -27,6 +27,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use uuid::Uuid;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{LandedMetadata, Unblock, apply_landed, clear_blockers};
 
 use super::error_classification::classify_io_error;
@@ -299,7 +300,7 @@ where
                 log::debug!(
                     target: "copy",
                     "couldn't remove the replaced original at {}: {e}. It keeps its record.",
-                    aside.path().display()
+                    LogPrivate::file_path(aside.path())
                 );
                 in_flight_temps::keep_for_arrival(state, record);
             }
@@ -320,7 +321,7 @@ where
                 log::warn!(
                     target: "copy",
                     "{} landed without some of its metadata: {report:?}",
-                    dest.display()
+                    LogPrivate::file_path(dest)
                 );
             }
             Ok(Landed {
@@ -364,7 +365,7 @@ fn land_temp_clearing_blockers(
             log::debug!(
                 target: "copy",
                 "{} still refused its landing after clearing its flags and ACL: {retry}",
-                temp.display()
+                LogPrivate::file_path(temp)
             );
             Err(refused)
         }
@@ -391,7 +392,7 @@ fn discard_temp(state: &Arc<WriteOperationState>, temp: &TrackedRecord) {
             log::debug!(
                 target: "copy",
                 "couldn't remove the partial at {}: {e}. It keeps its record.",
-                temp.absolute().display()
+                LogPrivate::file_path(temp.absolute())
             );
             false
         }
@@ -547,7 +548,7 @@ impl DisplacedEntry {
             if candidates.attempts() >= RESCUE_NAME_ATTEMPTS {
                 log::warn!(
                     "DisplacedEntry::keep_as_recovered_sibling: every ` (N)` variant of {} is taken",
-                    recovered.display()
+                    LogPrivate::path(&recovered)
                 );
                 in_flight_temps::keep_for_arrival(&self.state, self.record.clone());
                 return RecoveredOriginal::new(&self.original, self.aside.path());
@@ -573,7 +574,7 @@ impl DisplacedEntry {
                 log::debug!(
                     target: "copy",
                     "couldn't remove the displaced original at {}: {e}. It keeps its record.",
-                    aside.display()
+                    LogPrivate::path(aside)
                 );
                 in_flight_temps::keep_for_arrival(&self.state, self.record.clone());
             }
@@ -781,7 +782,7 @@ fn settle_aside_record(
             log::debug!(
                 target: "copy",
                 "the aside at {} is still there ({e}), so it keeps its record",
-                aside_path.display()
+                LogPrivate::path(aside_path)
             );
             in_flight_temps::keep_for_arrival(state, record);
         }

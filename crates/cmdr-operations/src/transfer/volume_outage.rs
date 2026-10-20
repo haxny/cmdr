@@ -80,6 +80,7 @@ use super::super::state::WriteOperationState;
 use super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::transfer_probe::{TaskPhase, current_task_phase, set_task_phase};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ConnectionState, LaneKey, Volume, VolumeError};
 
 /// How a wait for a volume ended.
@@ -181,7 +182,7 @@ async fn wait_out(
             log::info!(
                 target: "copy",
                 "volume outage: volumeName={:?} was reconnected while the call ran; running it again",
-                volume.name(),
+                LogPrivate::volume(volume.name()),
             );
             back = true;
             continue;
@@ -374,7 +375,8 @@ async fn wait_for_volume(
             // with no pane on it, nothing else would have noticed.
             log::info!(
                 target: "copy",
-                "volume outage: volumeName={name:?} already timed out for work queued before; trying it once"
+                "volume outage: volumeName={name:?} already timed out for work queued before; trying it once",
+                name = LogPrivate::volume(&name)
             );
             return match attempt_once(state, volume, None).await {
                 Attempt::Reconnected => {
@@ -393,6 +395,7 @@ async fn wait_for_volume(
         target: "copy",
         "volume outage: volumeName={name:?} went away; waiting up to {:?} for it to come back",
         deadline.saturating_duration_since(Instant::now()),
+        name = LogPrivate::volume(&name),
     );
     if let Some(announce) = announce {
         announce_wait(state, announce);
@@ -429,6 +432,7 @@ async fn wait_for_volume(
                 target: "copy",
                 "volume outage: volumeName={name:?} didn't come back within {:?}; giving up",
                 now.saturating_duration_since(started),
+                name = LogPrivate::volume(&name),
             );
             return OutageEnd::GaveUp { waited };
         }
@@ -483,6 +487,7 @@ fn came_back(outages: &Outages, lane: &LaneKey, name: &str, started: Instant) ->
         target: "copy",
         "volume outage: volumeName={name:?} is back after {:?}; carrying on",
         started.elapsed(),
+        name = LogPrivate::volume(name),
     );
     OutageEnd::Back
 }
@@ -526,7 +531,7 @@ async fn attempt_once(
                     target: "copy",
                     "volume outage: a reconnect attempt to volumeName={:?} didn't return within {attempt_timeout:?}; \
                      dropping it and trying again on the next tick",
-                    volume.name(),
+                    LogPrivate::volume(volume.name()),
                 );
                 return Attempt::Failed;
             }

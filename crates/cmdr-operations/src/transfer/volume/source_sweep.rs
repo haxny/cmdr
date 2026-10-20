@@ -33,6 +33,7 @@ use super::super::super::state::WriteOperationState;
 use super::super::volume_outage::through_outages;
 use super::transfer_error::{AtPath, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
 /// What a source entry looked like to the move: its size, its mtime, and its
@@ -227,7 +228,7 @@ fn note_outcome(
             log::warn!(
                 target: "move",
                 "source sweep: couldn't remove {}: {:?}",
-                e.path.display(),
+                LogPrivate::path(&e.path),
                 e.error
             );
             *remains = true;

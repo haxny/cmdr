@@ -25,6 +25,7 @@ use super::scan_cache::{FileInfo, ScanResult};
 use super::state::WriteOperationState;
 use super::types::{ConflictResolution, SpaceShortfall, WriteOperationConfig, WriteOperationError};
 use super::validation::is_same_file;
+use cmdr_fs::log_private::LogPrivate;
 
 /// The local copy's free-space pre-flight, skipped when the person chose "Copy
 /// anyway". The space query polls for cancel, so a cancel answers at once even
@@ -264,7 +265,7 @@ pub(super) fn check_copy_space(
             required,
             total_bytes,
             available,
-            destination.display()
+            LogPrivate::dir_path(destination)
         );
         return Ok(());
     }

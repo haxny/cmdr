@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use super::super::ScanCostFacts;
 use super::super::host::EngineHost;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::name_fold::fold_name;
 
 use super::super::look_alike::{ListedFolders, NewEntry, place_new_entry};
@@ -231,7 +232,7 @@ async fn rename_by_move(
     let tally = match volume.tally_subtree(old_path, SMALL_RENAME_FILES).await {
         Ok(tally) => Some(tally),
         Err(e) => {
-            log::debug!(target: "volume", "couldn't count what renaming {} carries: {e}", old_path.display());
+            log::debug!(target: "volume", "couldn't count what renaming {} carries: {e}", LogPrivate::path(old_path));
             None
         }
     };
@@ -390,7 +391,7 @@ async fn found_the_source_itself(
             entries.iter().any(|entry| entry.name == old_name) && !entries.iter().any(|entry| entry.name == new_name)
         }
         Err(e) => {
-            log::debug!(target: "volume", "couldn't list {} to tell a case-only rename: {e}", dir.display());
+            log::debug!(target: "volume", "couldn't list {} to tell a case-only rename: {e}", LogPrivate::dir_path(dir));
             false
         }
     }

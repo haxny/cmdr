@@ -14,6 +14,7 @@ use std::io;
 use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _};
 use std::path::{Path, PathBuf};
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, LandedMetadata, StagedItem, StagedTimes, apply_landed, apply_staged};
 
 use crate::state::WriteOperationState;
@@ -90,7 +91,7 @@ pub(super) fn narrow_like_its_source(dir: &Path, source_dir: &Path) {
     if narrowed != born
         && let Err(e) = fs::set_permissions(dir, fs::Permissions::from_mode(narrowed))
     {
-        log::debug!(target: "transfer", "copy: {} stays {born:o}, not {narrowed:o}: {e}", dir.display());
+        log::debug!(target: "transfer", "copy: {} stays {born:o}, not {narrowed:o}: {e}", LogPrivate::dir_path(dir));
     }
 }
 
@@ -133,7 +134,7 @@ pub(in crate::transfer) fn apply_created_dirs_metadata(
         let meta = match fs::symlink_metadata(dir) {
             Ok(meta) => meta,
             Err(e) => {
-                log::warn!(target: "transfer", "copy: {} keeps the copy's metadata, {} can't be read: {e}", dest.display(), dir.display());
+                log::warn!(target: "transfer", "copy: {} keeps the copy's metadata, {} can't be read: {e}", LogPrivate::dir_path(&dest), LogPrivate::dir_path(dir));
                 continue;
             }
         };
@@ -155,8 +156,8 @@ pub(in crate::transfer) fn apply_created_dirs_metadata(
             log::warn!(
                 target: "transfer",
                 "copy: {} landed without some of {}'s metadata: {staged:?} {landed_report:?}",
-                dest.display(),
-                dir.display()
+                LogPrivate::dir_path(&dest),
+                LogPrivate::dir_path(dir)
             );
         }
     }

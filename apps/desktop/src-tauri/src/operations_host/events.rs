@@ -10,6 +10,7 @@ use tauri::AppHandle;
 use tauri_specta::Event as _;
 
 use super::wire;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_operations::host::{
     AsideAttempt, EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget, OperationErrorReport,
     TreeFailure,
@@ -138,28 +139,28 @@ fn raise(report: OperationErrorReport) {
             AsideAttempt::LandingRestore { original } => crate::log_error!(
                 target: OVERWRITE_TARGET,
                 "stage_and_land_file: failed to restore aside {} -> {}: {}",
-                aside.display(),
-                original.display(),
+                LogPrivate::file_path(&aside),
+                LogPrivate::file_path(&original),
                 error
             ),
             AsideAttempt::DisplacedRestore { original } => crate::log_error!(
                 target: OVERWRITE_TARGET,
                 "DisplacedEntry::restore: failed to put {} back at {}: {}",
-                aside.display(),
-                original.display(),
+                LogPrivate::path(&aside),
+                LogPrivate::path(&original),
                 error
             ),
             AsideAttempt::DirOverwriteRestore { original } => crate::log_error!(
                 target: OVERWRITE_TARGET,
                 "safe_overwrite_dir: failed to restore aside {} -> {}: {}",
-                aside.display(),
-                original.display(),
+                LogPrivate::dir_path(&aside),
+                LogPrivate::dir_path(&original),
                 error
             ),
             AsideAttempt::RecoveredName => crate::log_error!(
                 target: OVERWRITE_TARGET,
                 "DisplacedEntry::keep_as_recovered_sibling: couldn't give {} a real name: {}",
-                aside.display(),
+                LogPrivate::path(&aside),
                 error
             ),
         },

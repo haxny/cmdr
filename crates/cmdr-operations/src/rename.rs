@@ -27,6 +27,7 @@ use super::mutation_error::MutationError;
 use super::routed_writes::{route_serving, routed_mutation_refusal};
 use super::types::{ReadOnlySide, WriteOperationType};
 use cmdr_archive::mutator::Changeset;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{RenameWork, Volume};
 use cmdr_operation_log::types::{Initiator, OpKind};
 
@@ -121,9 +122,9 @@ fn log_rename_refusal(stage: RenameStage, from: &Path, volume_id: &str, error: &
     );
     let stage = stage.label();
     if expected {
-        log::debug!(target: "volume", "{stage} refused on '{volume_id}': {error} ({})", from.display());
+        log::debug!(target: "volume", "{stage} refused on '{volume_id}': {error} ({})", LogPrivate::path(from));
     } else {
-        log::warn!(target: "volume", "{stage} refused on '{volume_id}': {error} ({})", from.display());
+        log::warn!(target: "volume", "{stage} refused on '{volume_id}': {error} ({})", LogPrivate::path(from));
     }
 }
 
@@ -385,7 +386,7 @@ async fn start_rename_as_move(
             log::info!(
                 target: "volume",
                 "rename of {} runs as move {} on '{volume_id}'",
-                from.display(),
+                LogPrivate::path(from),
                 started.operation_id
             );
         })
@@ -611,7 +612,7 @@ impl crate::Operations {
             log::debug!(
                 target: "volume",
                 "rename pre-flight skipped on '{volume_id}': the volume serves its own I/O ({})",
-                path.display()
+                LogPrivate::path(&path)
             );
             return Ok(());
         }

@@ -31,6 +31,7 @@ use super::super::types::{
     SourceItemOutcome, WriteOperationConfig, WriteOperationError, WriteOperationType, WriteSourceItemDoneEvent,
 };
 use super::super::validation::{is_real_directory, is_same_file, is_same_filesystem, path_exists_or_is_symlink};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_operation_log::rollback::ItemResult;
 use cmdr_operation_log::types::SkipReason;
 
@@ -184,7 +185,7 @@ fn recreate_removed_source_dir(dir: &Path) {
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
         Err(e) => log::warn!(
             "move rollback: couldn't recreate the source folder {}, its children stay where they landed: {}",
-            dir.display(),
+            LogPrivate::dir_path(dir),
             e
         ),
     }
@@ -219,8 +220,8 @@ fn restore_moved_item(item: &MovedItem) -> ItemResult {
         } else {
             log::info!(
                 "move rollback: leaving {} where it is, something else now sits at {}",
-                item.landed.path.display(),
-                item.original_source.display()
+                LogPrivate::path(&item.landed.path),
+                LogPrivate::path(&item.original_source)
             );
             return ItemResult::Skipped(SkipReason::RestoreTargetOccupied);
         }
@@ -250,16 +251,16 @@ fn restore_rename(landed: &Path, original_source: &Path, force: bool) -> ItemRes
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
             log::info!(
                 "move rollback: leaving {} where it is, something took {} while the reversal ran",
-                landed.display(),
-                original_source.display()
+                LogPrivate::path(landed),
+                LogPrivate::path(original_source)
             );
             ItemResult::Skipped(SkipReason::RestoreTargetOccupied)
         }
         Err(e) => {
             log::warn!(
                 "move rollback: couldn't rename {} back to {}: {}",
-                landed.display(),
-                original_source.display(),
+                LogPrivate::path(landed),
+                LogPrivate::path(original_source),
                 e
             );
             ItemResult::Skipped(SkipReason::Failed)
@@ -438,7 +439,7 @@ pub(crate) fn move_files_with_progress_inner(
     for source in &already_in_place {
         log::info!(
             "move: {} is already in the destination, nothing to do",
-            source.display()
+            LogPrivate::path(source)
         );
         events.emit_source_item_done(WriteSourceItemDoneEvent {
             operation_id: operation_id.to_string(),

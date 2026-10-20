@@ -24,6 +24,7 @@ use crate::routed_writes::{first_routed, routed_transfer_refusal};
 use crate::source_binding::ExpectedSources;
 use crate::transfer::volume::{PathRole, unregistered_volume_error};
 use crate::types::{ConflictResolution, ReadOnlySide, VolumeCopyConfig, WriteOperationStartResult};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{RenameWork, Volume};
 use cmdr_operation_log::types::Initiator;
 
@@ -136,7 +137,7 @@ impl crate::Operations {
             log::warn!(
                 target: "volume",
                 "bulk rename on '{volume_id}': {} is part of a swap, which a move can't do without merging; it keeps its name",
-                rows[index].source.display()
+                LogPrivate::path(&rows[index].source)
             );
         }
         let expected = ExpectedSources::new(

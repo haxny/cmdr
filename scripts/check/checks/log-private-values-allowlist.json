@@ -1,10 +1,6 @@
 {
   "$comment": "Accepted count of unmarked user values inside log macros per file (a `.display()`, a `.to_string_lossy()`, or an argument or inline capture named like a path or identity), seeded from the state when the check was introduced. A strict ratchet: local runs lower an entry to the current count and drop a file that reaches zero, and raising one or adding a file needs David's OK (scripts/check/checks/DETAILS.md § Allowlist consent). The fix for a file over its number is to wrap the value in `cmdr_fs::log_private::LogPrivate` (or mark foreign text with `LogDetail(text).marking(&[…])`), or to opt out a value that is not the user's with `// allowed-log-private: <reason>`; never to bump the number.",
   "files": {
-    "apps/desktop/src-tauri/src/operations_host/events.rs": {
-      "count": 7,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
     "crates/cmdr-operations/src/archive_edit/copy_into.rs": {
       "count": 2,
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
@@ -13,228 +9,24 @@
       "count": 2,
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     },
-    "crates/cmdr-operations/src/cancellable.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/conflict.rs": {
-      "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/conflict_preflight.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/create.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/delete/trash.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/durability.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/free_space.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/in_flight_claim.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
     "crates/cmdr-operations/src/in_flight_sweep.rs": {
       "count": 13,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/in_flight_sweep_surface.rs": {
-      "count": 11,
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     },
     "crates/cmdr-operations/src/in_flight_temps.rs": {
       "count": 1,
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     },
-    "crates/cmdr-operations/src/local_start.rs": {
-      "count": 6,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/look_alike.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/overwrite.rs": {
-      "count": 7,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/rename.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/rename/bulk/by_move.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/rename/validity.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/reversal.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/scan_cache_previews.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/scan_dry_run.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/scan_preview/volume.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/scan_walker.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/source_binding.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/chunked_copy.rs": {
-      "count": 6,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/copy/dest_chain.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/copy/folder_metadata.rs": {
-      "count": 5,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/copy/mod.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/copy/scanned_dirs.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/copy/single_item.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/copy_strategy.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/linux_copy.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/macos_copy.rs": {
-      "count": 5,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/move_op/cross_fs.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/move_op/mod.rs": {
-      "count": 8,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/recovered_name.rs": {
-      "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
     "crates/cmdr-operations/src/transfer/staged_write.rs": {
       "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/transfer_driver/async_driver.rs": {
-      "count": 1,
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     },
     "crates/cmdr-operations/src/transfer/volume/cleanup.rs": {
       "count": 14,
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     },
-    "crates/cmdr-operations/src/transfer/volume/conflict.rs": {
-      "count": 8,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/copy.rs": {
-      "count": 5,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/copy_concurrent_source.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/copy_serial.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
     "crates/cmdr-operations/src/transfer/volume/displaced_destination.rs": {
       "count": 5,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/extract_quarantine.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/folder_metadata.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/landed_flags.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/move.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/move_cross.rs": {
-      "count": 7,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/move_same.rs": {
-      "count": 6,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/naming.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/server_side_copy.rs": {
-      "count": 6,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/source_sweep.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/stream_pipe.rs": {
-      "count": 6,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume/stream_pipe_steps.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer/volume_outage.rs": {
-      "count": 6,
-      "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
-    },
-    "crates/cmdr-operations/src/transfer_tree/build.rs": {
-      "count": 1,
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     }
   }

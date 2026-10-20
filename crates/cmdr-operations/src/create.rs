@@ -31,6 +31,7 @@ use super::mutation_error::MutationError;
 use super::routed_writes::{route_serving, routed_mutation_refusal};
 use super::types::{ReadOnlySide, WriteOperationType};
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{MutationEvent, Volume};
 
 /// Whether a routed archive add creates a directory entry or an empty file.
@@ -553,7 +554,7 @@ pub(super) fn patch_listings_after_create(
     parent_path: &Path,
 ) {
     let Some(name) = new_path.file_name() else {
-        log::warn!("Created entry has no file name: {}", new_path.display());
+        log::warn!("Created entry has no file name: {}", LogPrivate::path(new_path));
         return;
     };
     cmdr_local::mutation::patch_listing_after_local_mutation(

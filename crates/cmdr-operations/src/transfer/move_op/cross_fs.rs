@@ -18,6 +18,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{LandedMetadata, apply_landed};
 
 use super::super::copy::{
@@ -223,7 +224,7 @@ pub(super) fn move_with_staging(
 
             log::debug!(
                 "move_with_staging: copying file {} ({} bytes) to staging",
-                file_info.path.display(),
+                LogPrivate::file_path(&file_info.path),
                 file_info.size
             );
             // What the original looks like BEFORE the copy reads it, so a save
@@ -599,7 +600,7 @@ pub(super) fn move_with_staging(
                 target: "copy",
                 "move_with_staging: op={} {} landed without some of its metadata: {report:?}",
                 operation_id,
-                landed.display()
+                LogPrivate::path(&landed)
             );
         }
     }
@@ -666,7 +667,7 @@ pub(super) fn move_with_staging(
         log::warn!(
             "move_with_staging: op={} keeps every source, the destination volume '{}' left the mount table",
             operation_id,
-            sides.destination.volume_name
+            LogPrivate::volume(&sides.destination.volume_name)
         );
         let e = WriteOperationError::DeviceDisconnected {
             path: sides.destination.root.display().to_string(),
@@ -711,7 +712,7 @@ pub(super) fn move_with_staging(
             log::warn!(
                 "move_with_staging: op={} left {} in place: {e}",
                 operation_id,
-                staging_dir.display()
+                LogPrivate::dir_path(&staging_dir)
             );
             in_flight_temps::keep_for_arrival(state, staging_record);
         }

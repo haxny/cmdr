@@ -16,6 +16,7 @@ use super::super::types::{
     WriteErrorEvent, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
     WriteSourceItemDoneEvent,
 };
+use cmdr_fs::log_private::LogPrivate;
 
 // ============================================================================
 // Core trash function (reusable by commands/rename.rs and batch trash)
@@ -584,7 +585,7 @@ pub(crate) fn trash_files_with_progress(
             items_total
         );
         for error in &errors {
-            log::warn!("  Failed: {}: {}", error.path.display(), error.message);
+            log::warn!("  Failed: {}: {}", LogPrivate::path(&error.path), error.message);
         }
     }
 

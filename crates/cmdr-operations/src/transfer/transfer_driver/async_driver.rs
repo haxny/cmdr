@@ -10,6 +10,7 @@ use std::time::Instant;
 use crate::event_sinks::OperationEventSink;
 use crate::state::{OperationIntent, WriteOperationState};
 use crate::types::{SourceItemOutcome, WriteOperationError};
+use cmdr_fs::log_private::LogPrivate;
 
 use super::{
     ConflictDecision, ConflictDecisionInput, DriverConfig, FetchFut, NameAtDest, PostLoopIntent, ResolveFut,
@@ -209,7 +210,7 @@ where
             NameAtDest::Taken { path: taken_path, size } => {
                 log::debug!(
                     "drive_transfer_serial_async: conflict detected at {}",
-                    taken_path.display()
+                    LogPrivate::path(&taken_path)
                 );
                 let decision = conflict_resolver(ConflictDecisionInput {
                     source_path,

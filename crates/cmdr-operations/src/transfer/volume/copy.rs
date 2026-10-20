@@ -41,6 +41,7 @@ use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::{LeafProgressLedger, build_pre_skip_set};
 use super::preflight::{scan_volume_sources, sources_in_tree_order};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{DirectoryCreation, SpaceInfo, Volume, VolumeError};
 use cmdr_operation_log::types::OpKind;
 
@@ -154,8 +155,8 @@ impl crate::Operations {
         if let (Some(src_root), Some(dest_root)) = (source_volume.local_path(), dest_volume.local_path()) {
             log::debug!(
                 "copy_between_volumes: both volumes are local, delegating to native copy (src={}, dest={})",
-                src_root.display(),
-                dest_root.display()
+                LogPrivate::dir_path(&src_root),
+                LogPrivate::dir_path(&dest_root)
             );
 
             // Convert relative paths to absolute paths. The dest is ANCHORED, not
@@ -226,7 +227,7 @@ impl crate::Operations {
             source_volume_id,
             dest_volume_id,
             source_paths.len(),
-            dest_path.display()
+            LogPrivate::dir_path(&dest_path)
         );
 
         // The per-leaf record points inside `copy_volumes_with_progress` journal under
@@ -784,7 +785,9 @@ pub async fn copy_volumes_with_progress(
         "copy_volumes_with_progress: {} sources, concurrency={} (src={}, dst={}), path={}, dest dir {}, top-level pre-check from {}",
         source_paths.len(),
         concurrency,
+        // allowed-log-private: a concurrency limit, not a volume
         source_volume.max_concurrent_ops(),
+        // allowed-log-private: a concurrency limit, not a volume
         dest_volume.max_concurrent_ops(),
         if use_concurrent_path {
             "concurrent"

@@ -16,6 +16,7 @@ use super::super::staged_write::{CutOffLanding, LandingError, StagedWrite, Write
 use super::super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
 use super::super::volume_outage::StartedOn;
 use super::transfer_error::hard_abort_error;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeError};
 
 /// Asks the destination to copy the file on the server, from itself or from a
@@ -85,9 +86,9 @@ pub(super) async fn try_server_side_copy(
     log::debug!(
         target: "copy",
         "try_server_side_copy: asking {} to copy {} on the server, into {}",
-        dest_volume.name(),
-        source_path.display(),
-        staged.target().display(),
+        LogPrivate::volume(dest_volume.name()),
+        LogPrivate::file_path(source_path),
+        LogPrivate::file_path(staged.target()),
     );
     let progress = EngineCopyProgress {
         state,
@@ -112,8 +113,8 @@ pub(super) async fn try_server_side_copy(
     log::debug!(
         target: "copy",
         "try_server_side_copy: {} answered for {} after {:?}: {}",
-        dest_volume.name(),
-        dest_path.display(),
+        LogPrivate::volume(dest_volume.name()),
+        LogPrivate::file_path(dest_path),
         started.elapsed(),
         match &outcome {
             Ok(bytes) => format!("done, size {bytes}"),
@@ -152,7 +153,7 @@ pub(super) async fn try_server_side_copy(
             log::debug!(
                 target: "copy",
                 "try_server_side_copy: cleared the stage for {} after {:?}; streaming it instead",
-                dest_path.display(),
+                LogPrivate::file_path(dest_path),
                 started.elapsed(),
             );
             Ok(ServerSideCopy::Streams)

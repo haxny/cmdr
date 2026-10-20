@@ -22,6 +22,7 @@ use super::event_sinks::OperationEventSink;
 use super::queued_sources::{kept_after_queue_local, kept_after_queue_on, local_source_is_gone};
 use super::state::WriteOperationState;
 use super::types::{SourceItemOutcome, WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent};
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
 
 /// Server-owned identity of one source, captured when a caller last looked at it.
@@ -423,7 +424,7 @@ fn announce_skip(events: &dyn OperationEventSink, operation_id: &str, source: &P
     log::info!(
         target: "source_binding",
         "skipping {}: it is no longer the file this operation was approved against",
-        source.display()
+        LogPrivate::path(source)
     );
     events.emit_source_item_done(WriteSourceItemDoneEvent {
         operation_id: operation_id.to_string(),

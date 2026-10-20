@@ -18,6 +18,7 @@ use crate::transfer::volume::source_reads::{self, SourceReads};
 use crate::transfer::volume::transfer_error::{AtPath, PathedVolumeError, hard_abort_error};
 use crate::transfer::volume::{extract_quarantine, landed_flags};
 use crate::transfer::volume_outage::StartedOn;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{StreamWritten, VolumeError, VolumeReadStream};
 
@@ -54,7 +55,7 @@ impl FileRun<'_> {
             self.dest_path,
         )
         .await?;
-        log::info!(target: "copy", "stream_pipe_file: {} was written whole before the reply was lost", self.dest_path.display());
+        log::info!(target: "copy", "stream_pipe_file: {} was written whole before the reply was lost", LogPrivate::file_path(self.dest_path));
         self.state.claimed_names.release_placeholder(self.dest_path);
         // The write's own stamp may be what the drop cut off (SMB stamps a
         // compound write in a later request), so it goes on again by path,
@@ -227,7 +228,7 @@ impl FileRun<'_> {
                     target: "copy",
                     "stream_pipe_file: stopped waiting for the write of {}; the app is shutting down. \
                      Its partial stays registered for the startup sweep.",
-                    dest_path.display(),
+                    LogPrivate::file_path(dest_path),
                 );
                 // ❌ No `staged.abandon` here. The delete would go back through
                 // the connection that just failed to answer, which is a second
@@ -256,7 +257,7 @@ impl FileRun<'_> {
                     log::info!(
                         target: "copy",
                         "stream_pipe_file: {} landed on attempt {} of {}",
-                        dest_path.display(),
+                        LogPrivate::file_path(dest_path),
                         self.attempt,
                         retry::MAX_ATTEMPTS,
                     );
@@ -309,7 +310,7 @@ impl FileRun<'_> {
                 log::warn!(
                     target: "copy",
                     "stream_pipe_file: destination can't land a staged write for {}; falling back to writing at the final name",
-                    dest_path.display()
+                    LogPrivate::file_path(dest_path)
                 );
                 self.staging = WriteStaging::Unstaged;
                 self.writing_at_the_final_name = true;
@@ -361,7 +362,7 @@ impl FileRun<'_> {
                 log::info!(
                     target: "copy",
                     "stream_pipe_file: nothing proves {} landed before the drop ({error}); running it again",
-                    cmdr_fs::log_private::LogPrivate::file_path(self.dest_path),
+                    LogPrivate::file_path(self.dest_path),
                 );
                 Ok(None)
             }

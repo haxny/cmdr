@@ -10,6 +10,7 @@ use std::sync::Arc;
 use super::super::host::{EngineHost, OperationErrorReport};
 use super::log_writer::LogWriter;
 use super::{Ledger, Record, RecordedTemp, STORE_FILENAME, SweepHandle, TrackedItem, append, sweep};
+use cmdr_fs::log_private::LogPrivate;
 
 /// Why [`Operations::claim_ledger`](super::super::Operations::claim_ledger) refused:
 /// this engine already claimed its ledger. A second claim would replay the
@@ -102,7 +103,7 @@ impl Ledger {
                 target: "copy",
                 "couldn't open the in-flight temp ledger at {}: {e}. A copy interrupted this session will \
                  leave its leftovers for the next transfer into that directory to reap.",
-                path.display()
+                LogPrivate::file_path(&path)
             ),
         }
 

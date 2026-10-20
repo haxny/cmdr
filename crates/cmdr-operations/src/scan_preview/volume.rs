@@ -24,6 +24,7 @@ use super::super::types::{
 use super::settle_failed_preview;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{BatchScanResult, CopyScanResult, EntryKind, ScanRecorder, Volume};
 
@@ -333,7 +334,7 @@ pub(crate) async fn run_oracle_aware_batch_scan(
             files = None;
             log::debug!(
                 "scan-preview: oracle hit for parent {} ({} cached entries, {} selected children)",
-                parent.display(),
+                LogPrivate::dir_path(parent),
                 cached_entries.len(),
                 paths_in_group.len()
             );

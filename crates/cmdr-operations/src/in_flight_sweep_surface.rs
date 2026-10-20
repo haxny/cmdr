@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::Outcome;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{RemovalRefusal, remove_file_clearing_blockers};
 use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_local::rename_local_exclusive;
@@ -70,7 +71,7 @@ impl Surface {
                 Ok(_) => Standing::Other,
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => Standing::Missing,
                 Err(e) => {
-                    log::debug!(target: "copy", "couldn't read what's at {}: {e}", path.display());
+                    log::debug!(target: "copy", "couldn't read what's at {}: {e}", LogPrivate::path(path));
                     Standing::Unknown
                 }
             },
@@ -81,7 +82,7 @@ impl Surface {
                 Ok(entry) => entry.size.map_or(Standing::Other, |size| Standing::File { size }),
                 Err(VolumeError::NotFound(_)) => Standing::Missing,
                 Err(e) => {
-                    log::debug!(target: "copy", "couldn't read what's at {}: {e}", path.display());
+                    log::debug!(target: "copy", "couldn't read what's at {}: {e}", LogPrivate::path(path));
                     Standing::Unknown
                 }
             },
@@ -94,7 +95,7 @@ impl Surface {
                 Ok(()) => Removal::Removed,
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => Removal::AlreadyGone,
                 Err(e) => {
-                    log::debug!(target: "copy", "couldn't remove the leftover {}: {e}", path.display());
+                    log::debug!(target: "copy", "couldn't remove the leftover {}: {e}", LogPrivate::file_path(path));
                     Removal::Refused
                 }
             },
@@ -102,7 +103,7 @@ impl Surface {
                 Ok(()) => Removal::Removed,
                 Err(VolumeError::NotFound(_)) => Removal::AlreadyGone,
                 Err(e) => {
-                    log::debug!(target: "copy", "couldn't remove the leftover {}: {e}", path.display());
+                    log::debug!(target: "copy", "couldn't remove the leftover {}: {e}", LogPrivate::file_path(path));
                     Removal::Refused
                 }
             },
@@ -122,7 +123,7 @@ impl Surface {
                 Ok(()) => Removal::Removed,
                 Err(RemovalRefusal::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Removal::AlreadyGone,
                 Err(refusal) => {
-                    log::debug!(target: "copy", "couldn't remove the leftover {}: {refusal:?}", path.display());
+                    log::debug!(target: "copy", "couldn't remove the leftover {}: {refusal:?}", LogPrivate::file_path(path));
                     Removal::Refused
                 }
             },
@@ -141,7 +142,7 @@ impl Surface {
                 Ok(()) => Removal::Removed,
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => Removal::AlreadyGone,
                 Err(e) => {
-                    log::debug!(target: "copy", "leaving the staging folder {}: {e}", path.display());
+                    log::debug!(target: "copy", "leaving the staging folder {}: {e}", LogPrivate::dir_path(path));
                     Removal::Refused
                 }
             },
@@ -149,7 +150,7 @@ impl Surface {
                 log::warn!(
                     target: "copy",
                     "leaving the staging folder {}: only the local filesystem can promise an empty-only removal",
-                    path.display()
+                    LogPrivate::dir_path(path)
                 );
                 Removal::Refused
             }
@@ -168,8 +169,8 @@ impl Surface {
                     log::debug!(
                         target: "copy",
                         "couldn't put {} at {}: {e}",
-                        from.display(),
-                        to.display()
+                        LogPrivate::path(from),
+                        LogPrivate::path(to)
                     );
                     Renaming::Refused
                 }
@@ -183,8 +184,8 @@ impl Surface {
                     log::debug!(
                         target: "copy",
                         "couldn't put {} at {}: {e}",
-                        from.display(),
-                        to.display()
+                        LogPrivate::path(from),
+                        LogPrivate::path(to)
                     );
                     Renaming::Refused
                 }

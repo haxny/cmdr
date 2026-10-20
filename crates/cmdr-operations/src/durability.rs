@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 use super::event_sinks::OperationEventSink;
 use super::state::WriteOperationState;
+use cmdr_fs::log_private::LogPrivate;
 
 /// What a flush couldn't make durable: the path it was syncing and the OS error
 /// number (`None` when the failure carried none).
@@ -92,7 +93,7 @@ pub(super) fn flush_created_destinations(
             log::warn!(
                 target: "write_durability",
                 "flush: couldn't sync the data of {}: {e}",
-                file.display()
+                LogPrivate::file_path(file)
             );
             note_failure(file, &e);
         }
@@ -109,7 +110,7 @@ pub(super) fn flush_created_destinations(
                     log::warn!(
                         target: "write_durability",
                         "flush: the filesystem holding {} doesn't support directory fsync, so its entries count as done for this operation: {e}",
-                        dir.display()
+                        LogPrivate::dir_path(&dir)
                     );
                     #[cfg(test)]
                     test_hook::note_unsupported_warning(&dir);
@@ -119,7 +120,7 @@ pub(super) fn flush_created_destinations(
                 log::warn!(
                     target: "write_durability",
                     "flush: couldn't fsync the directory {}: {e}",
-                    dir.display()
+                    LogPrivate::dir_path(&dir)
                 );
                 note_failure(&dir, &e);
             }
@@ -244,7 +245,7 @@ pub(super) fn flush_touched_directories(
             log::debug!(
                 target: "write_durability",
                 "flush: dir fsync skipped for {}: {e}",
-                dir.display()
+                LogPrivate::dir_path(dir)
             );
         }
     }

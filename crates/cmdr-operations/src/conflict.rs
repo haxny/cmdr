@@ -23,6 +23,7 @@ use super::types::{
     WriteOperationError,
 };
 use super::unique_name::find_unique_name;
+use cmdr_fs::log_private::LogPrivate;
 
 // ============================================================================
 // Apply-to-all state (per-shape latches)
@@ -120,7 +121,7 @@ impl LatchedResolution {
 
     /// This answer, held to what it may enact at `kind`. For the sites that
     /// already have a latch and so never need the configured fallback.
-    pub(super) fn at(self, kind: ClashKind, destination: &dyn std::fmt::Display) -> ConflictResolution {
+    pub(super) fn at(self, kind: ClashKind, destination: LogPrivate<'_>) -> ConflictResolution {
         resolution_for_clash(Some(self), self.resolution, kind, destination)
     }
 }
@@ -252,7 +253,7 @@ pub(super) fn resolution_for_clash(
     latched: Option<LatchedResolution>,
     configured: ConflictResolution,
     kind: ClashKind,
-    destination: &dyn std::fmt::Display,
+    destination: LogPrivate<'_>,
 ) -> ConflictResolution {
     let answered_here = latched.is_some_and(|l| l.answered_for_this_shape);
     let resolution = latched.map_or(configured, |l| l.resolution);
@@ -265,6 +266,7 @@ pub(super) fn resolution_for_clash(
         ConflictResolution::Overwrite | ConflictResolution::OverwriteSmaller | ConflictResolution::OverwriteOlder => {
             log::info!(
                 target: "conflict_resolution",
+                // allowed-log-private: `destination` arrives as a `LogPrivate`
                 "{resolution:?}: skipping {destination}, because a folder and a file can only replace each other on an explicit Overwrite answered for that clash"
             );
             ConflictResolution::Skip
@@ -284,7 +286,7 @@ pub(super) fn resolution_for_clash(
 pub(super) fn answered_resolution_for_clash(
     resolution: ConflictResolution,
     kind: ClashKind,
-    destination: &dyn std::fmt::Display,
+    destination: LogPrivate<'_>,
 ) -> ConflictResolution {
     LatchedResolution::answered_now(resolution).at(kind, destination)
 }
@@ -327,7 +329,7 @@ pub(super) fn resolve_conflict(
     // replaces a folder with a file or a file with a folder; a carry latched on
     // this very shape does, because a person answered for it.
     let latched = apply_to_all_effective(apply_to_all_resolution, kind);
-    let resolution = resolution_for_clash(latched, config.conflict_resolution, kind, &dest_path.display());
+    let resolution = resolution_for_clash(latched, config.conflict_resolution, kind, LogPrivate::path(dest_path));
 
     match resolution {
         ConflictResolution::Stop => {
@@ -426,7 +428,8 @@ pub(super) fn resolve_conflict(
                     // Hold the answer to what it can consent to at this shape,
                     // then reduce conditional variants to Overwrite / Skip
                     // against this file's already-fetched metadata, and apply.
-                    let answered = answered_resolution_for_clash(response.resolution, kind, &dest_path.display());
+                    let answered =
+                        answered_resolution_for_clash(response.resolution, kind, LogPrivate::path(dest_path));
                     let effective = reduce_conditional_resolution(answered, source_meta.as_ref(), dest_meta.as_ref());
                     apply_resolution(effective, dest_path, state.scope().host())
                 }
@@ -478,6 +481,7 @@ fn reduce_conditional_resolution(
                 (Some(src), Some(dst)) => {
                     log::info!(
                         target: "conflict_resolution",
+                        // allowed-log-private: `src` and `dst` are byte sizes
                         "OverwriteSmaller: skipping — destination not strictly smaller (src={src}, dst={dst})"
                     );
                     ConflictResolution::Skip

@@ -20,6 +20,7 @@ use super::super::state::{ConflictResolutionResponse, WriteOperationState};
 use super::super::types::{ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent};
 use super::edit_error::EditError;
 use cmdr_archive::ArchiveIndex;
+use cmdr_fs::log_private::LogPrivate;
 
 /// How a copy/move-into resolves collisions with existing archive entries.
 pub(super) enum ConflictMode<'a> {
@@ -76,7 +77,7 @@ pub(super) fn resolve_effective(
     let inner = clash.inner;
     let kind = ClashKind::of(clash.incoming, Some(clash.destination_is_directory));
     match mode {
-        ConflictMode::Policy(c) => Ok(resolution_for_clash(None, *c, kind, &inner)),
+        ConflictMode::Policy(c) => Ok(resolution_for_clash(None, *c, kind, LogPrivate::path(inner))),
         ConflictMode::Interactive {
             events,
             operation_id,
@@ -84,11 +85,15 @@ pub(super) fn resolve_effective(
             apply_to_all,
         } => {
             if let Some(saved) = apply_to_all_effective(apply_to_all, kind) {
-                return Ok(saved.at(kind, &inner));
+                return Ok(saved.at(kind, LogPrivate::path(inner)));
             }
             let response = prompt_archive_conflict(*events, operation_id, state, index, clash, archive_path)?;
             apply_to_all_record(apply_to_all, kind, response.resolution, response.apply_to_all);
-            Ok(answered_resolution_for_clash(response.resolution, kind, &inner))
+            Ok(answered_resolution_for_clash(
+                response.resolution,
+                kind,
+                LogPrivate::path(inner),
+            ))
         }
     }
 }
