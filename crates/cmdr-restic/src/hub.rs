@@ -6,20 +6,25 @@
 //! A value the host parks once, ❌ never a static: a test builds its own.
 
 use crate::detect::is_restic_repo;
+use crate::index_load::{Load, LoadSpec, PREFETCH_LIMIT, Waiter};
+use crate::index_slot::{IndexSlot, Installed};
 use crate::path::VIRTUAL_ENTRY_NAME;
-use crate::repo::{IndexedRepo, ResticRepo};
+use crate::repo::{IndexedRepo, ResticError, ResticRepo};
 use crate::snapshots::{Snapshot, SnapshotList, snapshot_list_of};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::{Volume, VolumeError};
+use cmdr_fs::volume::secret_store::{self, SignIn};
+use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 use rustic_core::repofile::SnapshotFile;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 use zeroize::Zeroizing;
 
-/// The timings the hub runs on. Tests shorten them; the host never does.
+/// The timings and caps the hub runs on. Tests shorten them; the host never
+/// does. The sizes come from a real NAS repo (`docs/notes/restic/open-cost.md`).
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Tuning {
     /// How long nothing may have read under `latest/` before a root refresh
@@ -31,6 +36,21 @@ pub(crate) struct Tuning {
     /// (and isn't remembered): a wedged share would otherwise hang every path
     /// below it.
     pub(crate) confirm_deadline: Duration,
+    /// How long an index stays loaded with nothing using it. Getting it back
+    /// costs an unlock plus a load (2–4 s on SMB), holding it costs ~0.5 GB.
+    pub(crate) index_idle_drop: Duration,
+    /// How long after its last use an index still counts as in use: the gap
+    /// between one listing of a scan and the next, or between two files of a
+    /// copy, when nothing holds it for a moment.
+    pub(crate) lease_grace: Duration,
+    /// The most repos indexed at once. One index of a 2.4M-blob repo is
+    /// ~0.5–0.65 GB, so one, plus overshoot while every one is in use.
+    pub(crate) max_indexed: usize,
+    /// The most repos opened (unlocked, snapshot list read) at once: a few MB
+    /// each.
+    pub(crate) max_opened: usize,
+    /// The most index bytes a load reads ahead of rustic.
+    pub(crate) prefetch_limit: u64,
 }
 
 impl Default for Tuning {
@@ -39,6 +59,11 @@ impl Default for Tuning {
             latest_quiet: Duration::from_secs(30),
             not_a_repo_for: Duration::from_secs(30),
             confirm_deadline: Duration::from_secs(5),
+            index_idle_drop: Duration::from_secs(5 * 60),
+            lease_grace: Duration::from_secs(2),
+            max_indexed: 1,
+            max_opened: 8,
+            prefetch_limit: PREFETCH_LIMIT,
         }
     }
 }
@@ -48,6 +73,13 @@ impl Default for Tuning {
 /// [`VIRTUAL_ENTRY_NAME`].
 const MAX_CONFIRMATIONS: usize = 1_024;
 
+/// Where a repo's password is filed in the host's credential store. A URL-ish
+/// name no SMB server, SFTP host, or WebDAV URL can spell, so an entry here
+/// never shares a key with a server's sign-in (the app files every service
+/// under one `smb://…` account scheme). The scope is the repo's
+/// [`RepoKey::store_scope`].
+pub(crate) const KEYCHAIN_SERVICE: &str = "restic://";
+
 /// One repo: the volume it's on, by id, and its folder there, spelled as the
 /// path spelled it (❌ no `canonicalize`: that's a `stat`, and on a network
 /// parent a slow one).
@@ -55,6 +87,15 @@ const MAX_CONFIRMATIONS: usize = 1_024;
 pub(crate) struct RepoKey {
     pub(crate) volume_id: String,
     pub(crate) root: PathBuf,
+}
+
+impl RepoKey {
+    /// The repo's account in the credential store: `<volume id>:<repo path>`.
+    /// The same share through an OS mount and through a direct session is two
+    /// volume ids, so two entries.
+    pub(crate) fn store_scope(&self) -> String {
+        format!("{}:{}", self.volume_id, self.root.display())
+    }
 }
 
 /// What the memo knows about a folder.
@@ -73,13 +114,16 @@ enum Confirmation {
 pub struct ResticRepos {
     host: VolumeHost,
     tuning: Tuning,
-    repos: Mutex<HashMap<RepoKey, Arc<RepoSlot>>>,
+    /// Shared with each index load's last step, which evicts other repos'
+    /// indexes past the cap.
+    repos: Arc<Mutex<HashMap<RepoKey, Arc<RepoSlot>>>>,
     confirmations: Mutex<HashMap<RepoKey, Confirmation>>,
 }
 
 impl ResticRepos {
     /// A hub with nothing unlocked and nothing confirmed. Its rustic work runs
-    /// on `host`'s runtime.
+    /// on `host`'s runtime, and it looks a repo's password up in `host`'s
+    /// credential store before asking for one.
     pub fn new(host: VolumeHost) -> Self {
         Self::with_tuning(host, Tuning::default())
     }
@@ -88,7 +132,7 @@ impl ResticRepos {
         Self {
             host,
             tuning,
-            repos: Mutex::new(HashMap::new()),
+            repos: Arc::new(Mutex::new(HashMap::new())),
             confirmations: Mutex::new(HashMap::new()),
         }
     }
@@ -177,9 +221,11 @@ impl ResticRepos {
         Arc::clone(
             repos
                 .entry(key)
-                .or_insert_with_key(|key| Arc::new(RepoSlot::new(key.root.clone()))),
+                .or_insert_with_key(|key| Arc::new(RepoSlot::new(key.clone()))),
         )
     }
+
+    // ── Passwords ──────────────────────────────────────────────────────────
 
     /// Tries `password` on the repo in `slot`, through `parent`: `Ok(true)` when
     /// it unlocks (the password and the opened repo are kept), `Ok(false)` when
@@ -187,43 +233,144 @@ impl ResticRepos {
     ///
     /// Commits only after the open returns, so a caller that drops this future
     /// mid-scrypt leaves no trace.
-    ///
-    /// Reached only through `test_fixtures::unlock` until a `PasswordLocked` seam
-    /// calls it, hence the gate.
-    #[cfg(any(test, feature = "testing"))]
     pub(crate) async fn unlock(
         &self,
         slot: &RepoSlot,
         parent: &Arc<dyn Volume>,
         password: &str,
     ) -> Result<bool, VolumeError> {
-        let opened = ResticRepo::open(Arc::clone(parent), slot.root.clone(), password, None, &self.host).await;
+        let opened = ResticRepo::open(Arc::clone(parent), slot.key.root.clone(), password, None, &self.host).await;
         match opened {
             Ok(repo) => {
                 *lock(&slot.password) = Some(Zeroizing::new(password.to_string()));
+                slot.store_missed.store(false, Ordering::Relaxed);
                 *slot.opened.lock().await = Some(Bound::new(parent, Arc::new(repo)));
+                slot.touch();
+                self.evict_opened(slot);
                 Ok(true)
             }
-            Err(crate::repo::ResticError::WrongPassword) => Ok(false),
-            Err(err) => Err(err.into_volume_error(&slot.root)),
+            Err(ResticError::WrongPassword) => Ok(false),
+            Err(err) => Err(err.into_volume_error(&slot.key.root)),
         }
     }
+
+    /// Files a password that just unlocked `slot`'s repo in the credential store,
+    /// the way the dialog's Remember box asks (`secret_store::keep_signed_in_secret`:
+    /// on saves, off only refreshes an entry already there). ❗ Only after a
+    /// verified unlock. Answers whether the store took it.
+    pub(crate) async fn keep_password(&self, slot: &RepoSlot, password: &str, remember: bool) -> bool {
+        let sign_in = SignIn {
+            username: slot.key.store_scope(),
+            secret: password.to_string(),
+            remember,
+        };
+        secret_store::keep_signed_in_secret(&self.host, KEYCHAIN_SERVICE, &sign_in).await
+    }
+
+    /// The repo's password: the one in memory, else the credential store's
+    /// (asked once per session: a miss is remembered until an unlock), else
+    /// `NeedsPassword`.
+    ///
+    /// The store is asked under the slot's own lookup lock, so concurrent
+    /// listings (and a stalled listing's second attempt) ask it once, and ❌ no
+    /// hub-wide lock is held across a Keychain prompt.
+    async fn password(&self, slot: &RepoSlot) -> Result<Zeroizing<String>, VolumeError> {
+        if let Some(password) = slot.password_in_memory() {
+            return Ok(password);
+        }
+        let _asking = slot.store_lookup.lock().await;
+        if let Some(password) = slot.password_in_memory() {
+            return Ok(password);
+        }
+        if slot.store_missed.load(Ordering::Relaxed) {
+            return Err(VolumeError::NeedsPassword { wrong_attempt: false });
+        }
+        let scope = slot.key.store_scope();
+        match secret_store::stored_secret(&self.host, KEYCHAIN_SERVICE, &scope).await {
+            Some(stored) => {
+                let password = Zeroizing::new(stored.secret);
+                *lock(&slot.password) = Some(password.clone());
+                Ok(password)
+            }
+            None => {
+                slot.store_missed.store(true, Ordering::Relaxed);
+                Err(VolumeError::NeedsPassword { wrong_attempt: false })
+            }
+        }
+    }
+
+    /// The [`VolumeError`] for a failed open of `slot`'s repo. A password that
+    /// stopped working (a stored one, or the repo's keys changed) is forgotten,
+    /// and the store isn't asked again this session: the person types one.
+    fn refused(slot: &RepoSlot, err: ResticError) -> VolumeError {
+        if matches!(err, ResticError::WrongPassword) {
+            *lock(&slot.password) = None;
+            slot.store_missed.store(true, Ordering::Relaxed);
+        }
+        err.into_volume_error(&slot.key.root)
+    }
+
+    // ── The opened repo and its snapshots ──────────────────────────────────
 
     /// The repo opened for the snapshot list, through `parent`: the one already
     /// open, or a fresh open with the slot's password when there's none or it
     /// was opened through a parent since replaced.
     async fn opened(&self, slot: &RepoSlot, parent: &Arc<dyn Volume>) -> Result<Arc<ResticRepo>, VolumeError> {
+        let password = {
+            let opened = slot.opened.lock().await;
+            if let Some(bound) = opened.as_ref().filter(|bound| bound.is_over(parent)) {
+                return Ok(Arc::clone(&bound.value));
+            }
+            drop(opened);
+            self.password(slot).await?
+        };
         let mut opened = slot.opened.lock().await;
         if let Some(bound) = opened.as_ref().filter(|bound| bound.is_over(parent)) {
             return Ok(Arc::clone(&bound.value));
         }
-        let password = slot.password()?;
-        let repo = ResticRepo::open(Arc::clone(parent), slot.root.clone(), &password, None, &self.host)
+        let repo = ResticRepo::open(Arc::clone(parent), slot.key.root.clone(), &password, None, &self.host)
             .await
-            .map_err(|err| err.into_volume_error(&slot.root))?;
+            .map_err(|err| Self::refused(slot, err))?;
         let repo = Arc::new(repo);
         *opened = Some(Bound::new(parent, Arc::clone(&repo)));
+        drop(opened);
+        self.evict_opened(slot);
         Ok(repo)
+    }
+
+    /// Lets go of the least recently used opened repos past
+    /// [`Tuning::max_opened`], keeping `keep`'s. An opened repo in use right now
+    /// (its lock held, or its `Arc` out) stays. Its password and snapshot list
+    /// stay either way: re-opening costs one unlock.
+    fn evict_opened(&self, keep: &RepoSlot) {
+        let mut candidates: Vec<(Instant, Arc<RepoSlot>)> = self
+            .all_slots()
+            .into_iter()
+            .filter(|slot| !std::ptr::eq(slot.as_ref(), keep))
+            .filter(|slot| slot.opened.try_lock().is_ok_and(|opened| opened.is_some()))
+            .map(|slot| (slot.last_used(), slot))
+            .collect();
+        let mut over = (candidates.len() + 1).saturating_sub(self.tuning.max_opened);
+        candidates.sort_by_key(|(used, _)| *used);
+        for (_, slot) in candidates {
+            if over == 0 {
+                break;
+            }
+            let Ok(mut opened) = slot.opened.try_lock() else {
+                continue;
+            };
+            if opened
+                .as_ref()
+                .is_some_and(|bound| Arc::strong_count(&bound.value) == 1)
+            {
+                *opened = None;
+                over -= 1;
+            }
+        }
+    }
+
+    fn all_slots(&self) -> Vec<Arc<RepoSlot>> {
+        lock(&self.repos).values().cloned().collect()
     }
 
     /// The repo's snapshots. `refresh` reads the repo's `snapshots/` again
@@ -240,6 +387,7 @@ impl ResticRepos {
         parent: &Arc<dyn Volume>,
         refresh: bool,
     ) -> Result<Arc<SnapshotList>, VolumeError> {
+        slot.touch();
         // Every stat and listing inside a snapshot comes through here, so the
         // common answer is one `Arc` clone, never a copy of the files.
         let known = lock(&slot.snapshots).as_ref().map(|known| Arc::clone(&known.list));
@@ -254,7 +402,7 @@ impl ResticRepos {
         let files = repo
             .refresh_snapshots(current)
             .await
-            .map_err(|err| err.into_volume_error(&slot.root))?;
+            .map_err(|err| Self::refused(slot, err))?;
         let list = Arc::new(snapshot_list_of(&files));
         lock(&slot.latest).rebind(&list, self.tuning.latest_quiet);
         *lock(&slot.snapshots) = Some(Snapshots {
@@ -264,51 +412,103 @@ impl ResticRepos {
         Ok(list)
     }
 
+    // ── The index ──────────────────────────────────────────────────────────
+
     /// The repo opened and fully indexed, ready to browse `snapshot`'s trees and
     /// read its files. Loaded on first use, and again when `snapshot` is newer
     /// than the loaded index (its trees are in index files the load never read).
     ///
-    /// One load at a time per repo: a second caller waits for the first.
+    /// One load per repo at a time, shared by every caller waiting on it, each
+    /// hearing its progress through `on_progress`. A caller that stops waiting
+    /// (its future dropped: a pane's cancel) leaves the load, and the last one to
+    /// leave cancels it. A reload runs beside the index already loaded, which
+    /// keeps serving until the new one is in.
     pub(crate) async fn indexed(
         &self,
-        slot: &RepoSlot,
+        slot: &Arc<RepoSlot>,
         parent: &Arc<dyn Volume>,
         snapshot: &Snapshot,
+        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
     ) -> Result<Arc<IndexedRepo>, VolumeError> {
-        let mut indexed = slot.indexed.lock().await;
-        if let Some(bound) = indexed
-            .as_ref()
-            .filter(|bound| bound.is_over(parent) && bound.value.covers.contains(&snapshot.id))
-        {
-            return Ok(Arc::clone(&bound.value.repo));
+        slot.touch();
+        if let Some(repo) = lock(&slot.index).serving(parent, snapshot) {
+            return Ok(repo);
         }
+        let password = self.password(slot).await?;
+        let waiter = {
+            let mut index = lock(&slot.index);
+            if let Some(repo) = index.serving(parent, snapshot) {
+                return Ok(repo);
+            }
+            match index.joinable(parent) {
+                Some(waiter) => waiter,
+                None => self.start_load(slot, &mut index, parent, password),
+            }
+        };
+        let outcome = waiter.outcome(on_progress).await;
+        slot.touch();
+        outcome.map_err(|err| Self::refused(slot, err))
+    }
+
+    /// Starts a load of `slot`'s index through `parent` and joins it. Runs under
+    /// the slot's index lock, which it only takes to file the load: the load
+    /// itself runs on its own task.
+    fn start_load(
+        &self,
+        slot: &Arc<RepoSlot>,
+        index: &mut IndexSlot,
+        parent: &Arc<dyn Volume>,
+        password: Zeroizing<String>,
+    ) -> Waiter {
         // Restic writes a backup's index files before its snapshot file, so
         // every snapshot listed now has its trees in the index read next.
-        let covers = lock(&slot.snapshots)
+        let covers: HashSet<String> = lock(&slot.snapshots)
             .as_ref()
             .map(|known| known.list.snapshots().iter().map(|s| s.id.clone()).collect())
             .unwrap_or_default();
-        let password = slot.password()?;
-        let repo = IndexedRepo::open(Arc::clone(parent), slot.root.clone(), &password, None, &self.host)
-            .await
-            .map_err(|err| err.into_volume_error(&slot.root))?;
-        let repo = Arc::new(repo);
-        *indexed = Some(Bound::new(
-            parent,
-            Indexed {
-                repo: Arc::clone(&repo),
-                covers,
-            },
-        ));
-        Ok(repo)
+        index.generation += 1;
+        let generation = index.generation;
+        let spec = LoadSpec {
+            parent: Arc::clone(parent),
+            root: slot.key.root.clone(),
+            password,
+            runtime: self.host.runtime(),
+            prefetch_limit: self.tuning.prefetch_limit,
+        };
+        let installed = Installed {
+            slot: Arc::downgrade(slot),
+            repos: Arc::downgrade(&self.repos),
+            parent: Arc::clone(parent),
+            covers,
+            generation,
+            tuning: self.tuning,
+            runtime: self.host.runtime(),
+        };
+        let load = Load::start(spec, move |outcome| installed.finish(outcome));
+        let waiter = load
+            .join()
+            .expect("a load that just started has nobody to have cancelled it");
+        index.loading = Some(load);
+        waiter
+    }
+
+    /// How many callers wait on `slot`'s load in flight.
+    #[cfg(test)]
+    pub(crate) fn load_waiters(slot: &RepoSlot) -> usize {
+        lock(&slot.index).loading.as_ref().map_or(0, |load| load.waiters())
+    }
+
+    /// Whether `slot`'s index is loaded right now.
+    #[cfg(test)]
+    pub(crate) fn is_indexed(slot: &RepoSlot) -> bool {
+        lock(&slot.index).ready.is_some()
     }
 
     /// How many writes rustic tried through the repos open right now (every one
     /// refused).
     #[cfg(test)]
     pub(crate) fn write_attempts(&self) -> usize {
-        let slots: Vec<Arc<RepoSlot>> = lock(&self.repos).values().cloned().collect();
-        slots
+        self.all_slots()
             .iter()
             .map(|slot| {
                 let opened = slot
@@ -316,11 +516,10 @@ impl ResticRepos {
                     .try_lock()
                     .ok()
                     .and_then(|o| o.as_ref().map(|b| b.value.backend.write_attempts()));
-                let indexed = slot
-                    .indexed
-                    .try_lock()
-                    .ok()
-                    .and_then(|i| i.as_ref().map(|b| b.value.repo.backend.write_attempts()));
+                let indexed = lock(&slot.index)
+                    .ready
+                    .as_ref()
+                    .map(|ready| ready.repo.backend.write_attempts());
                 opened.unwrap_or(0) + indexed.unwrap_or(0)
             })
             .sum()
@@ -342,36 +541,57 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 
 /// Everything the hub keeps about one repo.
 ///
-/// The two async mutexes are per repo, ❌ never the hub's: holding one across an
-/// open or an index load keeps a second caller for the SAME repo from starting
-/// another, and no other repo waits on it.
+/// The async mutexes are per repo, ❌ never the hub's: holding one across an
+/// open or a Keychain lookup keeps a second caller for the SAME repo from
+/// starting another, and no other repo waits on it.
 pub(crate) struct RepoSlot {
-    root: PathBuf,
-    /// The password that last unlocked it. Wiped on drop.
+    key: RepoKey,
+    /// The password that last unlocked it (or came from the store). Wiped on drop.
     password: Mutex<Option<Zeroizing<String>>>,
+    /// The credential store had nothing (or a password that stopped working):
+    /// not asked again until an unlock.
+    store_missed: AtomicBool,
+    /// Held while the credential store is asked, so it's asked once.
+    store_lookup: tokio::sync::Mutex<()>,
     opened: tokio::sync::Mutex<Option<Bound<Arc<ResticRepo>>>>,
-    indexed: tokio::sync::Mutex<Option<Bound<Indexed>>>,
+    pub(crate) index: Mutex<IndexSlot>,
     snapshots: Mutex<Option<Snapshots>>,
     latest: Mutex<LatestPin>,
+    /// When anything last listed, stat'ed, or opened something in this repo.
+    last_used: Mutex<Instant>,
 }
 
 impl RepoSlot {
-    fn new(root: PathBuf) -> Self {
+    fn new(key: RepoKey) -> Self {
         Self {
-            root,
+            key,
             password: Mutex::new(None),
+            store_missed: AtomicBool::new(false),
+            store_lookup: tokio::sync::Mutex::new(()),
             opened: tokio::sync::Mutex::new(None),
-            indexed: tokio::sync::Mutex::new(None),
+            index: Mutex::new(IndexSlot::default()),
             snapshots: Mutex::new(None),
             latest: Mutex::new(LatestPin::default()),
+            last_used: Mutex::new(Instant::now()),
         }
     }
 
-    /// A copy of the password, or `NeedsPassword` when nothing unlocked it yet.
-    fn password(&self) -> Result<Zeroizing<String>, VolumeError> {
-        lock(&self.password)
-            .clone()
-            .ok_or(VolumeError::NeedsPassword { wrong_attempt: false })
+    fn password_in_memory(&self) -> Option<Zeroizing<String>> {
+        lock(&self.password).clone()
+    }
+
+    /// Forgets the password held in memory (the person cancelled the prompt).
+    /// The credential store's entry, the opened repo, and the index stay.
+    pub(crate) fn forget_password(&self) {
+        *lock(&self.password) = None;
+    }
+
+    pub(crate) fn touch(&self) {
+        *lock(&self.last_used) = Instant::now();
+    }
+
+    pub(crate) fn last_used(&self) -> Instant {
+        *lock(&self.last_used)
     }
 
     /// The snapshot the `latest` folder shows, in `list`, for a path under
@@ -416,12 +636,6 @@ impl<T> Bound<T> {
     }
 }
 
-/// A loaded index, and the snapshots whose trees it holds for sure.
-struct Indexed {
-    repo: Arc<IndexedRepo>,
-    covers: HashSet<String>,
-}
-
 /// The snapshot list read last: rustic's files (handed back on a refresh, so
 /// only new ones are read) and the named list built from them.
 struct Snapshots {
@@ -456,3 +670,7 @@ impl LatestPin {
 #[cfg(test)]
 #[path = "hub_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "lifecycle_tests.rs"]
+mod lifecycle_tests;

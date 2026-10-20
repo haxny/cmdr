@@ -37,6 +37,8 @@ use {cmdr_local as _, cmdr_smb as _};
 mod backend;
 mod detect;
 mod hub;
+mod index_load;
+mod index_slot;
 mod path;
 mod read_stream;
 mod repo;

@@ -159,11 +159,11 @@ impl FixtureRepo {
     }
 }
 
-/// Tries `password` on the repo `volume` views, the way the host's unlock will:
+/// Tries `password` on the repo `volume` views, the way the host's unlock does:
 /// `true` when it unlocks (the hub keeps it), `false` when it's wrong.
 ///
-/// The door for tests that need an unlocked view before the host's unlock flow
-/// exists around them.
+/// The door for tests that need an unlocked view without going through the
+/// credential store (`PasswordLocked::unlock` files the password there).
 pub async fn unlock(volume: &ResticVolume, password: &str) -> bool {
     volume.unlock(password).await.expect("the repo answers")
 }

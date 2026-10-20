@@ -7,6 +7,7 @@
 //! the runtime's own workers: rustic is only ever driven from `spawn_blocking`
 //! (`repo.rs`). Same bridge as `cmdr-archive`'s `VolumeByteSource`.
 
+use crate::index_load::IndexFeed;
 use bytes::Bytes;
 use cmdr_fs::volume::{Volume, VolumeError, VolumeRandomReader};
 use rustic_core::repofile::KeyFile;
@@ -28,6 +29,9 @@ pub(crate) struct VolumeBackend {
     write_attempts: AtomicUsize,
     /// Packs held open for positioned reads (see [`HeldReaders`]).
     held: Mutex<HeldReaders>,
+    /// During an index load: the index files read ahead, the load's cancel,
+    /// and its byte tally (`index_load.rs`). `None` on every other repo.
+    index_feed: Option<Arc<IndexFeed>>,
 }
 
 impl VolumeBackend {
@@ -38,7 +42,15 @@ impl VolumeBackend {
             handle,
             write_attempts: AtomicUsize::new(0),
             held: Mutex::new(HeldReaders::default()),
+            index_feed: None,
         }
+    }
+
+    /// The adapter an index load opens its repo through: index files come from
+    /// `feed` when it read them ahead, and are counted into it when it didn't.
+    pub(crate) fn with_index_feed(mut self, feed: Arc<IndexFeed>) -> Self {
+        self.index_feed = Some(feed);
+        self
     }
 
     /// How many write calls rustic made (all refused).
@@ -344,6 +356,20 @@ impl ReadBackend for VolumeBackend {
     }
 
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
+        if tpe == FileType::Index
+            && let Some(feed) = &self.index_feed
+        {
+            if let Some(bytes) = feed.take(id) {
+                return Ok(bytes);
+            }
+            // Every waiter left: a new read is a NAS round trip for nobody.
+            if feed.is_cancelled() {
+                return Err(backend_error(VolumeError::Cancelled(self.root.display().to_string())));
+            }
+            let bytes = self.read_stream(&self.path_of(tpe, id), None).map_err(backend_error)?;
+            feed.note_read(bytes.len());
+            return Ok(Bytes::from(bytes));
+        }
         self.read_stream(&self.path_of(tpe, id), None)
             .map(Bytes::from)
             .map_err(backend_error)

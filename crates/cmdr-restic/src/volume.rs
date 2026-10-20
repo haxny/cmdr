@@ -24,8 +24,8 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::MetadataCaps;
 use cmdr_fs::volume::scan_walk::{self, ScanSource, Walking};
 use cmdr_fs::volume::{
-    BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, ScanBoundary, SpaceInfo, Volume,
-    VolumeError, VolumeReadStream,
+    BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, PasswordLocked, ScanBoundary,
+    SpaceInfo, UnlockOutcome, Volume, VolumeError, VolumeReadStream,
 };
 use rustic_core::repofile::Node;
 use std::ffi::OsString;
@@ -35,6 +35,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::{Duration, UNIX_EPOCH};
 use tokio_util::sync::CancellationToken;
+use zeroize::Zeroizing;
 
 /// The most folder listings a background walk keeps in flight here. Each one
 /// below a snapshot is a tree blob read from the parent, so a copy's pre-scan of
@@ -77,10 +78,16 @@ impl ResticVolume {
         }
     }
 
-    /// Tries `password` on the repo (see [`ResticRepos::unlock`]).
+    /// Tries `password` on the repo (see [`ResticRepos::unlock`]), saving nothing.
     #[cfg(any(test, feature = "testing"))]
     pub(crate) async fn unlock(&self, password: &str) -> Result<bool, VolumeError> {
         self.hub.unlock(&self.slot, &self.parent, password).await
+    }
+
+    /// The hub's slot for this repo, for a test that looks inside it.
+    #[cfg(test)]
+    pub(crate) fn slot_for_tests(&self) -> Arc<RepoSlot> {
+        Arc::clone(&self.slot)
     }
 
     /// `path` as an absolute path under the root, the way rows report it.
@@ -110,8 +117,14 @@ impl ResticVolume {
         })
     }
 
-    async fn indexed(&self, snapshot: &Snapshot) -> Result<Arc<IndexedRepo>, VolumeError> {
-        self.hub.indexed(&self.slot, &self.parent, snapshot).await
+    /// The indexed repo for `snapshot`, waiting on (or starting) its load, with
+    /// the load's progress handed to `on_progress`.
+    async fn indexed(
+        &self,
+        snapshot: &Snapshot,
+        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
+    ) -> Result<Arc<IndexedRepo>, VolumeError> {
+        self.hub.indexed(&self.slot, &self.parent, snapshot, on_progress).await
     }
 
     /// Runs `work` on the blocking pool: every rustic call below reads through
@@ -129,7 +142,11 @@ impl ResticVolume {
             .map_err(|err| worker_crashed(err).into_volume_error(path))?
     }
 
-    async fn list(&self, path: &Path) -> Result<Vec<FileEntry>, VolumeError> {
+    async fn list(
+        &self,
+        path: &Path,
+        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
+    ) -> Result<Vec<FileEntry>, VolumeError> {
         let dir = self.absolute(path);
         match self.classify(path)? {
             VirtualPath::Root => {
@@ -138,7 +155,7 @@ impl ResticVolume {
             }
             VirtualPath::Snapshot(which, inner) => {
                 let resolved = self.resolve(&which, path, false).await?;
-                let repo = self.indexed(&resolved.snapshot).await?;
+                let repo = self.indexed(&resolved.snapshot, on_progress).await?;
                 let tree_root = resolved.snapshot.tree;
                 let at = dir.clone();
                 let tree = self
@@ -178,7 +195,7 @@ impl ResticVolume {
         path: &Path,
     ) -> Result<(Node, Arc<IndexedRepo>, Resolved), VolumeError> {
         let resolved = self.resolve(which, path, false).await?;
-        let repo = self.indexed(&resolved.snapshot).await?;
+        let repo = self.indexed(&resolved.snapshot, None).await?;
         let (task_repo, tree_root, at) = (Arc::clone(&repo), resolved.snapshot.tree, self.absolute(path));
         let node = self
             .blocking(path, move || node_at(&task_repo, tree_root, &inner, &at))
@@ -315,7 +332,7 @@ impl Volume for ResticVolume {
         cancel: Option<&'a CancellationToken>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
-            let listing = self.list(path);
+            let listing = self.list(path, on_progress);
             let entries = match cancel {
                 Some(token) => tokio::select! {
                     biased;
@@ -333,6 +350,10 @@ impl Volume for ResticVolume {
 
     fn max_concurrent_scan_listings(&self) -> usize {
         MAX_CONCURRENT_SCAN_LISTINGS
+    }
+
+    fn as_password_locked(&self) -> Option<&dyn PasswordLocked> {
+        Some(self)
     }
 
     fn get_metadata<'a>(
@@ -476,6 +497,37 @@ impl Volume for ResticVolume {
     /// again.
     fn can_watch_listings(&self) -> bool {
         false
+    }
+}
+
+/// A repo's password is checked before the dialog closes: `unlock` opens the
+/// repo with it (the ~0.5 s scrypt, on the blocking pool) and answers
+/// `Unlocked` or `WrongPassword`, never `Stored`.
+impl PasswordLocked for ResticVolume {
+    /// Opens the repo with `password`, keeps it in the hub, and files it in the
+    /// credential store per `remember` (only after it unlocked). A wrong one
+    /// keeps and saves nothing. Dropped mid-open, nothing is kept or saved; the
+    /// hub commits after the open returns.
+    fn unlock<'a>(
+        &'a self,
+        password: String,
+        remember: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<UnlockOutcome, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            let password = Zeroizing::new(password);
+            if !self.hub.unlock(&self.slot, &self.parent, &password).await? {
+                return Ok(UnlockOutcome::WrongPassword);
+            }
+            // allowed-discarded-outcome: the unlock stands whether or not the
+            // store kept the password (a Deny on the Keychain prompt), and
+            // `UnlockOutcome` has no way to say so yet; the next launch asks.
+            let _kept = self.hub.keep_password(&self.slot, &password, remember).await;
+            Ok(UnlockOutcome::Unlocked)
+        })
+    }
+
+    fn forget_password(&self) {
+        self.slot.forget_password();
     }
 }
 

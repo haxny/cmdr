@@ -61,7 +61,7 @@ fn options(cache_dir: Option<PathBuf>) -> RepositoryOptions {
 }
 
 /// Opens and unlocks the repo behind `backend`. Runs on the blocking thread.
-fn open_blocking(
+pub(crate) fn open_blocking(
     backend: &Arc<VolumeBackend>,
     password: &str,
     cache_dir: Option<PathBuf>,
@@ -159,27 +159,11 @@ const _: fn() = || {
 };
 
 impl IndexedRepo {
-    /// Opens the repo afresh with `password` and loads its full index, both on
-    /// one blocking thread. Reads every index file through the parent.
-    pub(crate) async fn open(
-        parent: Arc<dyn Volume>,
-        root: PathBuf,
-        password: &str,
-        cache_dir: Option<PathBuf>,
-        host: &VolumeHost,
-    ) -> Result<Self, ResticError> {
-        let runtime = host.runtime();
-        let backend = Arc::new(VolumeBackend::new(parent, root, runtime.clone()));
-        let password = Zeroizing::new(password.to_string());
-        let task_backend = Arc::clone(&backend);
-        let repo = runtime
-            .spawn_blocking(move || {
-                open_blocking(&task_backend, &password, cache_dir)?
-                    .to_indexed()
-                    .map_err(|err| classify(&err, &task_backend))
-            })
-            .await
-            .map_err(worker_crashed)??;
+    /// Loads the full index of `open`, the repo opened through `backend`. Runs
+    /// on the blocking thread; reads every index file rustic doesn't get from
+    /// the load's feed (`index_load.rs`).
+    pub(crate) fn index(open: Repository<OpenStatus>, backend: Arc<VolumeBackend>) -> Result<Self, ResticError> {
+        let repo = open.to_indexed().map_err(|err| classify(&err, &backend))?;
         Ok(Self { repo, backend })
     }
 

@@ -374,6 +374,33 @@ mod tests {
         ));
     }
 
+    /// A restic repo's password is filed under the service `restic://`
+    /// (`cmdr-restic`'s `KEYCHAIN_SERVICE`; the two must match), scoped
+    /// `<volume id>:<repo path>`. ❗ No server name folds onto that service, so an
+    /// SMB server called `restic` keeps its own entry beside a repo's, and
+    /// forgetting that server's passwords never takes a backup's.
+    #[test]
+    fn a_restic_repo_entry_never_shares_a_key_with_an_smb_server() {
+        let _secrets = crate::test_support::isolate_secrets();
+        let repo_scope = "smb-naspi:/Volumes/naspi/backups/m3-restic";
+        save_credentials("restic://", Some(repo_scope), repo_scope, "repo-password").expect("saved");
+        save_credentials("restic", None, "ada", "smb-password").expect("saved");
+        save_credentials("restic", Some(repo_scope), "ada", "share-password").expect("saved");
+
+        assert_ne!(
+            make_account_name("restic://", Some(repo_scope)),
+            make_account_name("restic", Some(repo_scope))
+        );
+        forget_server_credentials(&["restic".to_string()], &[repo_scope.to_string()]).expect("forgot");
+
+        assert_eq!(
+            get_credentials("restic://", Some(repo_scope))
+                .expect("the repo's password survives")
+                .password,
+            "repo-password"
+        );
+    }
+
     #[test]
     fn test_make_account_name_server_only() {
         let account = make_account_name("TEST_SERVER", None);

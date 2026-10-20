@@ -75,21 +75,79 @@ dropping a volume loses nothing.
 
 - **Slots**, one per repo, keyed by `(volume id, repo root)` exactly as spelled (❌ no `canonicalize`: it's a `stat`,
   and on a network parent a slow one). A slot is never dropped, so its password outlives the volumes over it. It holds
-  the password (`Zeroizing`), the opened repo for the snapshot list, the indexed repo, the snapshot list, and the
-  `latest` pin.
-- **Locks**: std mutexes for quick state, never held across an `.await`. Two per-repo tokio mutexes (opened, indexed)
-  are held across an open or an index load, so a second caller for the SAME repo waits instead of starting another; no
-  other repo waits on them, and ❌ no hub-wide lock is held across scrypt or a parent read.
+  the password (`Zeroizing`), the credential-store miss memo, the opened repo for the snapshot list, the index (serving
+  and loading), the snapshot list, the `latest` pin, and when it was last used.
+- **Locks**: std mutexes for quick state, never held across an `.await`. Per-repo tokio mutexes (the opened repo, the
+  credential-store lookup) are held across an open or a Keychain read, so a second caller for the SAME repo waits
+  instead of starting another; no other repo waits on them, and ❌ no hub-wide lock is held across scrypt, a Keychain
+  call, or a parent read. The index load runs on its own task and is shared through `index_load::Load`, never a lock.
 - **A replaced parent re-opens.** An SMB share reconnecting replaces the parent `Arc` under the same volume id. Each
-  opened value remembers the parent it was opened through (`Bound`, compared by `Arc` address), and a call arriving with
-  a different parent opens again; the password survives.
-- **The index** loads on the first tree access: a fresh open with the slot's password, then `to_indexed()` (the full
-  index, since reads need `IndexedFull`), on one blocking thread. It records which snapshots it covers (those listed
-  before the load: restic writes a backup's index files before its snapshot file). A snapshot outside that set (a backup
-  made since) loads the index again; readers holding the old `Arc` finish on it.
-- **Unlock** (`ResticRepos::unlock`): opens the repo with the password and keeps both only after the open returns, so a
-  caller dropping the future mid-scrypt leaves no trace. A wrong password keeps nothing. Reached through
-  `test_fixtures::unlock` until a `PasswordLocked` implementation calls it, hence its `testing` gate.
+  opened value (and each load) remembers the parent it was opened through (compared by `Arc` address), and a call
+  arriving with a different parent opens again; the password survives.
+
+Sizing comes from David's NAS repo (`docs/notes/restic/open-cost.md`: 2.4M blobs, 112 MB of index files, ~0.5–0.65 GB of
+RSS per loaded index, unlock ~0.5 s, load 2.5–4.3 s over direct SMB). `Tuning` holds every number below; tests shorten
+them, the host never does.
+
+### The index lifecycle (`hub.rs`, `index_load.rs`)
+
+- **Full index only** (`to_indexed`): reads need `IndexedFull`, and upgrading from `to_indexed_ids` later is a second
+  full read plus an unlock. The index is its own open of the repo, since `to_indexed` consumes the open one.
+- **One load per repo**, shared by every caller (two panes, a stat, a stalled listing's second attempt). A caller waits
+  as an `index_load::Waiter`; dropping it is leaving, and the last waiter to leave a load that hasn't finished cancels
+  it. That's the only signal there is: the listing engine never aborts a read, a cancelled pane DETACHES it, and
+  `ResticVolume::list_directory_with_cancel` races the pane's token and drops its future, waiter included. A caller
+  arriving after a cancel starts a fresh load. Joining and leaving share one lock, so nobody joins a load the last
+  waiter just cancelled.
+- **The prefetch.** rustic's own load reads every index file in parallel on rayon's GLOBAL pool (16 blocked workers on
+  an M3 Max for the whole load; Cmdr's search and icons share that pool), can't be cancelled, and counts files. So the
+  load lists `index/` itself, reads the files on the async runtime four at a time, checking the cancel between chunks,
+  while the unlock's scrypt runs beside it; then rustic builds the index from those bytes (the adapter serves them
+  through an `IndexFeed`, handing each one over so its memory goes as rustic takes it). A cancel answers at once; reads
+  in flight are DETACHED and stop at their next chunk, ❌ never aborted (a read dropped inside a device transaction can
+  wedge a phone). Past 256 MiB of index files (`PREFETCH_LIMIT`) holding them costs too much: rustic reads them itself
+  and the feed counts them and refuses new reads once cancelled, so search and icons stall for that load. The build
+  itself (decrypt and parse, ~0.3 s for 112 MB warm) isn't cancellable.
+- **Honest progress**: `ListingPhase::LoadingIndex { done_bytes, total_bytes, done_files, total_files }` from the index
+  files' listing and the bytes actually read, ❌ never rustic's file count. Each waiter forwards it to its listing's
+  `on_progress` at most every 100 ms. A moving phase is what keeps the listing engine's stall watch quiet
+  (`crates/cmdr-listing/DETAILS.md` § "Stalled listings").
+- **Coverage and reloads.** A load records the snapshots listed when it started (restic writes a backup's index files
+  before its snapshot file). A snapshot outside that set (a backup made since) loads again, beside the index serving,
+  which keeps serving until the new one is in; readers holding the old `Arc` finish on it. Memory doubles for the swap.
+- **The cap: one indexed repo** (`max_indexed`). Installing an index lets go of the least recently used other ones, ❌
+  never one in use: an `Arc` held outside the slot (an open read stream, a listing in flight) or used within the last 2
+  s (`lease_grace`, the gap between a scan's listings or a copy's files). With every one in use the cap is overshot.
+  Eviction drops the index only: the password, the opened repo, and the snapshot list stay, so coming back reloads
+  silently. A cap by count, not bytes: estimate an index at ~5x its `index/` folder.
+- **Idle drop after five minutes** unused (`index_idle_drop`), unless a read stream still holds it. Getting it back is
+  an unlock plus a load, which the progress phase covers.
+- **Opened repos** (unlocked, snapshot list read, a few MB each) are capped at eight (`max_opened`), least recently used
+  first, never one in use.
+- No log lines: the crate has no logger dependency, and nothing here needs one more than the typed answers it gives.
+
+### Passwords and the credential store
+
+- **Lookup before prompting.** A call with no password in memory asks the host's credential store once (through
+  `cmdr_fs::volume::secret_store`, ❌ never `host.credentials()` directly: a Keychain prompt on the async runtime
+  freezes every volume), under the slot's lookup lock. A miss is remembered for the session, so every listing, stall
+  retry, and pane doesn't ask again; an unlock clears it.
+- **Filed as** service `restic://` (`KEYCHAIN_SERVICE`, which no SMB server, SFTP host, or WebDAV URL can spell: the app
+  files every service under one `smb://…` account scheme, pinned by
+  `a_restic_repo_entry_never_shares_a_key_with_an_smb_server` in the app's `network/keychain.rs`), scope and username
+  `<volume id>:<repo path>`. The same share through an OS mount and through a direct session is two volume ids, so two
+  entries.
+- **Unlock** (`PasswordLocked::unlock` on `ResticVolume`, over `ResticRepos::unlock`): opens the repo with the password
+  (scrypt on the blocking pool) and keeps the password and the opened repo only after the open returns, so a dialog's
+  Cancel (the host dropping the future) mid-scrypt keeps and saves nothing. Answers `Unlocked` or `WrongPassword`, never
+  `Stored`. Then files it per `remember` (`keep_signed_in_secret`: on saves, off only refreshes an entry already there
+  and never seeds one). A wrong password keeps and files nothing. `forget_password` clears the in-memory copy only.
+- **A password that stopped working** (a stale stored one, or the repo's keys changed) is forgotten from memory, the
+  store isn't asked again this session, and the call answers `NeedsPassword { wrong_attempt: true }`. `CredentialStore`
+  has no delete, so a wrong stored entry is overwritten by the next remembered unlock.
+- Cmdr's own copies of a password live in `Zeroizing` slots. rustic's `Credentials::password` makes a plain `String` for
+  the open, `SignIn` carries one to the store, and the app's Keychain adapter caches what it reads in a process static;
+  none of those is ours to wipe.
 
 ### Is this folder a repo?
 
@@ -156,9 +214,9 @@ price of not pinning a core.
 blocking task carries is a `Zeroizing<String>`; rustic's `Credentials` makes its own plain copy, which we can't avoid.
 `refresh_snapshots(current)` is `update_all_snapshots`.
 
-`IndexedRepo::open` is a separate open plus `to_indexed()`, on one blocking thread, because `to_indexed` consumes the
-open repo and `OpenStatus` isn't `Clone`. A compile-time assertion pins `Repository<IndexedFullStatus>` as
-`Send + Sync`, which concurrent reads through one `Arc<IndexedRepo>` rely on.
+`IndexedRepo::index` is `to_indexed()` on a separate open (the index load's, § "The index lifecycle"), because
+`to_indexed` consumes the open repo and `OpenStatus` isn't `Clone`. A compile-time assertion pins
+`Repository<IndexedFullStatus>` as `Send + Sync`, which concurrent reads through one `Arc<IndexedRepo>` rely on.
 
 `cache_dir: None` sets `no_cache`; `Some(dir)` lets rustic cache snapshot and index files there (never in the repo). The
 hub always passes `None`: on the NAS repo, rustic's cache made the first walk 2.5–8 times slower, added 240 MB of RSS,
@@ -234,13 +292,12 @@ unlocked view.
 
 ## What the next layers build on
 
-- **The unlock seam**: implement `PasswordLocked` on `ResticVolume` over `ResticRepos::unlock` (then drop its `testing`
-  gate), plus Keychain through `cmdr_fs::volume::secret_store`.
-- **The index lifecycle**: today the per-repo `indexed` mutex is the single flight, and a cancelled waiter just drops
-  its future (the load runs on). Byte-honest progress, cancel of the load itself, the memory cap and idle drop, and the
-  rest replace that; the dependencies they need (`tokio` `sync` and `time`, `tokio-util`) are already here. Sizing from
-  the NAS measurement: one indexed repo at a time, about eight unlocked, index RAM about five times the `index/`
-  folder's size, idle drop after five minutes.
+- **The unlock**: the host reaches it through `Volume::as_password_locked`, like an archive's. It must build the hub
+  with the app's credential store in its `VolumeHost`, or lookups always miss.
+- **Index progress**: a listing into a snapshot reports `ListingPhase::LoadingIndex` ticks with zero entries; the pane
+  words them (and shouldn't render "Loaded 0 files" for one).
+- **Copy-out** holds the index through its read streams; a whole-snapshot pre-scan goes through `list_directory` per
+  folder, which joins the same load.
 - **The host route** calls `restic_route`, then `confirm_repo` (or `serves_confirmed` on a sync seam), and builds a
   `ResticVolume` over the parked hub. The overlay calls `is_restic_repo` on the entries, then `overlay_row`.
 - `ResticVolume::backend_kind` keeps the trait's `Local` default until `cmdr-fs` gains a restic kind; the host's matches

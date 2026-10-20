@@ -6,8 +6,10 @@ English a user reads.
 
 ## Module map
 
-- `volume.rs`: `ResticVolume`, the view at `<repo>/Browse snapshots`. `hub.rs`: `ResticRepos`, the shared state
-  (passwords, opened repos, indexes, snapshot lists, `latest`, the is-it-a-repo memo).
+- `volume.rs`: `ResticVolume`, the view at `<repo>/Browse snapshots`, and its `PasswordLocked` unlock. `hub.rs`:
+  `ResticRepos`, the shared state (passwords, opened repos, indexes, snapshot lists, `latest`, the is-it-a-repo memo).
+  `index_load.rs`: the shared, cancellable index load and its byte progress; `index_slot.rs`: the index the hub keeps
+  (cap, idle drop).
 - `path.rs` (`restic_route`, the classifier), `snapshots.rs` (naming, `latest`), `tree.rs` (nodes to rows),
   `read_stream.rs`, `repo.rs` (open, index, typed errors), `backend.rs` (rustic's storage over the parent, packs through
   held readers), `detect.rs`.
@@ -27,6 +29,12 @@ English a user reads.
 - **`latest` doesn't move while anything reads under it**: copies address files by path. DETAILS § "`latest`".
 - **`to_indexed` consumes the open repo**, so the index is its own open (`IndexedRepo`), ❌ never pried out of the
   snapshot list's `ResticRepo`.
+- **One index load per repo, cancelled by the LAST waiter leaving** (a dropped future: the pane's token is the only
+  signal). ❌ Never abort a prefetch read; detach it. Progress is real bytes. DETAILS § "The index lifecycle".
+- **❌ Never evict an index in use** (an `Arc` held outside the slot, or used within `lease_grace`); eviction and the
+  idle drop take the index only, ❌ never the password.
+- **Passwords go through `secret_store`**, asked once per session (a miss is memoized), filed only after a verified
+  unlock. ❌ No hub-wide lock across scrypt, a Keychain call, or a parent read.
 - **Mode is `& 0o777` of Go's `os.FileMode`**, ❌ never the raw value. Names go through `Node::name()`.
 - **A hostile repo can't reach scrypt**: the adapter caps key count and cost before rustic lists a key.
 - **The heavy state is the hub's**, keyed by `(volume id, repo root)` as spelled; ❌ no `canonicalize`, ❌ no static.

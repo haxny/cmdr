@@ -139,9 +139,18 @@ async fn reading_a_tree_uses_ranged_reads_of_the_pack_never_the_whole_pack() {
     let snapshot = repo.refresh_snapshots(Vec::new()).await.expect("snapshots").remove(0);
     assert!(parent.read_range_log().is_empty(), "opening and listing read no pack");
     let parent_dyn: Arc<dyn Volume> = Arc::clone(&parent) as Arc<dyn Volume>;
-    let indexed = IndexedRepo::open(parent_dyn, PathBuf::from(ROOT), PASSWORD, None, &VolumeHost::detached())
-        .await
-        .expect("index loads");
+    let backend = Arc::new(crate::backend::VolumeBackend::new(
+        parent_dyn,
+        PathBuf::from(ROOT),
+        tokio::runtime::Handle::current(),
+    ));
+    let indexed = tokio::task::spawn_blocking(move || {
+        let open = super::open_blocking(&backend, PASSWORD, None)?;
+        IndexedRepo::index(open, backend)
+    })
+    .await
+    .expect("blocking task")
+    .expect("index loads");
     let indexed = Arc::new(indexed);
     let reader = Arc::clone(&indexed);
     tokio::task::spawn_blocking(move || {
