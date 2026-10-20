@@ -22,6 +22,7 @@ use super::super::types::{
     WriteOperationError,
 };
 use super::settle_failed_preview;
+use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{BatchScanResult, CopyScanResult, EntryKind, ScanRecorder, Volume};
@@ -537,13 +538,20 @@ pub(crate) async fn run_oracle_aware_batch_scan(
 /// What `source` is per a pane's watcher-fresh listing of its parent, with no
 /// I/O, a link reported AS a link (`EntryKind::of`). `None` when no pane vouches
 /// for the parent or the listing doesn't hold the name: ask the volume then.
-pub(crate) fn kind_in_parent_listing(listings: &dyn ListingHost, volume_id: &str, source: &Path) -> Option<EntryKind> {
+fn kind_in_parent_listing(listings: &dyn ListingHost, volume_id: &str, source: &Path) -> Option<EntryKind> {
+    entry_in_parent_listing(listings, volume_id, source).map(|entry| EntryKind::of(&entry))
+}
+
+/// `source`'s whole entry in a pane's watcher-fresh listing of its parent, for
+/// a caller that needs more than its kind (a delete's outage re-check reads its
+/// size). Same `None` as [`kind_in_parent_listing`].
+pub(crate) fn entry_in_parent_listing(listings: &dyn ListingHost, volume_id: &str, source: &Path) -> Option<FileEntry> {
     let entries = listings.authoritative_listing(volume_id, source.parent()?)?;
     let name = source.file_name()?;
     entries
         .iter()
         .find(|entry| Path::new(&entry.path).file_name() == Some(name))
-        .map(EntryKind::of)
+        .cloned()
 }
 
 /// Recounts every selected LINK the backend's batch scan walked as a folder

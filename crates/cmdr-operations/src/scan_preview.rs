@@ -62,7 +62,7 @@ mod volume;
 pub(super) use local::run_scan_preview;
 #[cfg(test)]
 pub(super) use volume::count_selected_links_as_links;
-pub(super) use volume::kind_in_parent_listing;
+pub(super) use volume::entry_in_parent_listing;
 #[cfg(test)]
 pub(super) use volume::run_oracle_aware_batch_scan;
 pub(super) use volume::run_volume_scan_preview;

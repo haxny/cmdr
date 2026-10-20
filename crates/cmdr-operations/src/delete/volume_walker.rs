@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use super::super::event_sinks::OperationEventSink;
-use super::super::scan_preview::kind_in_parent_listing;
+use super::super::scan_preview::entry_in_parent_listing;
 use super::super::state::WriteOperationState;
 use super::super::transfer::volume_outage::StartedOn;
 use super::super::types::{
@@ -78,8 +78,9 @@ impl VolumeScanTracker {
 /// an [`EntryKind::Directory`] is listed and descended. A listing sets
 /// `is_directory` on a link to a folder (panes want it to navigate like one), and
 /// some backends' `is_directory` follows the link, so neither may decide a
-/// descent: `kind_hint` is an [`EntryKind`], read off an entry with
-/// [`EntryKind::of`] or asked of [`Volume::entry_kind`].
+/// descent: `hint` carries an [`EntryKind`], read off an entry with
+/// [`EntryKind::of`] or asked of [`Volume::entry_kind`], plus the size a
+/// listing already told (the outage re-check reads it, so nothing stats again).
 ///
 /// Emits scan progress two ways:
 /// 1. **Per-entry** via `list_directory`'s `on_progress` callback, so the FE sees the tally climb
@@ -101,7 +102,7 @@ async fn scan_volume_recursive(
     volume: &Arc<dyn Volume>,
     volume_id: &str,
     path: &Path,
-    kind_hint: Option<EntryKind>,
+    hint: Option<Listed>,
     entries: &mut Vec<VolumeDeleteEntry>,
     total_bytes: &mut u64,
     seen_inodes: &mut std::collections::HashSet<u64>,
@@ -123,8 +124,8 @@ async fn scan_volume_recursive(
     // one, probe (`top_level_entry`, a read, so safe to re-run after an
     // outage), which on MTP lists the parent dir, so we avoid it whenever the
     // oracle can answer.
-    let probed = match kind_hint {
-        Some(kind) => Listed { kind, size: None },
+    let probed = match hint {
+        Some(listed) => listed,
         None => read_through_outages(volume, state, || top_level_entry(volume.as_ref(), path))
             .await
             .map_err(|stop| stop.into_error(path))?,
@@ -225,7 +226,10 @@ async fn scan_volume_recursive(
                     volume,
                     volume_id,
                     &child_path,
-                    Some(EntryKind::Directory),
+                    Some(Listed {
+                        kind: EntryKind::Directory,
+                        size: None,
+                    }),
                     entries,
                     total_bytes,
                     seen_inodes,
@@ -329,6 +333,18 @@ async fn scan_volume_recursive(
     }
 
     Ok(())
+}
+
+/// What `source` is per a pane's listing of its parent (`entry_in_parent_listing`):
+/// its kind, link-aware, and a file's size, with no I/O.
+fn listed_in_parent_listing(state: &WriteOperationState, volume_id: &str, source: &Path) -> Option<Listed> {
+    entry_in_parent_listing(state.scope().host().listings(), volume_id, source).map(|entry| {
+        let kind = EntryKind::of(&entry);
+        Listed {
+            kind,
+            size: if kind == EntryKind::File { entry.size } else { None },
+        }
+    })
 }
 
 /// What a top-level entry is, with a link reported AS a link, in ONE request:
@@ -533,7 +549,7 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                         &volume,
                         volume_id,
                         source,
-                        kind_in_parent_listing(state.scope().host().listings(), volume_id, source),
+                        listed_in_parent_listing(state, volume_id, source),
                         &mut entries,
                         &mut total_bytes,
                         &mut seen_inodes,
@@ -553,7 +569,7 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                     //
                     // ❌ Don't "fix" the `None` here into a default. It looks
                     // like the bug this module's guardrails are about and is the
-                    // opposite: forwarding `kind_hint: None` is what makes
+                    // opposite: forwarding `hint: None` is what makes
                     // `scan_volume_recursive` PROPAGATE a failed probe
                     // (`map_err(...)?`) instead of guessing. A `Some(File)`
                     // here would be the guess.
@@ -613,10 +629,11 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
     } else {
         for source in sources {
             // Oracle-first parent lookup: if the parent's listing is watched
-            // (open in some pane), take the entry's kind from there instead of
-            // calling `volume.entry_kind`, which on MTP lists the parent. Falls
-            // through to the trait probe when the oracle can't answer.
-            let parent_hint = kind_in_parent_listing(state.scope().host().listings(), volume_id, source);
+            // (open in some pane), take the entry's kind and size from there
+            // instead of probing the volume, which on MTP lists the parent and
+            // on S3 costs a HEAD the cost estimate never counted. Falls through
+            // to the trait probe when the oracle can't answer.
+            let parent_hint = listed_in_parent_listing(state, volume_id, source);
 
             // Hand the hint (or the lack of one) straight to the walker: it
             // resolves an absent hint with a PROPAGATING probe and handles both

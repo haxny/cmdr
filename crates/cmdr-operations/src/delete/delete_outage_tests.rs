@@ -454,6 +454,62 @@ async fn a_selected_file_costs_one_stat_that_also_proves_it_for_a_re_run() {
     );
 }
 
+/// [`CountingStats`] with its listings watched, so a pane's listing answers.
+struct WatchedCountingStats {
+    inner: CountingStats,
+}
+
+impl Volume for WatchedCountingStats {
+    crate::forward_volume_methods!(inner =>
+        name, root, lane_key, connection_state, connection_generation, attempt_reconnect,
+        list_directory, exists, delete, get_metadata, is_directory,
+    );
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn backend_kind(&self) -> BackendKind {
+        BackendKind::S3
+    }
+    fn listing_watch_coverage(&self, _path: &Path) -> cmdr_fs::volume::WatchCoverage {
+        cmdr_fs::volume::WatchCoverage::EveryWriter
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_selected_file_its_pane_listing_describes_costs_no_stat() {
+    let panes = crate::host::testing::PaneListings::new();
+    let engine = TestOperations::seeing(&panes);
+    let state = outage_state(&engine, WAIT);
+    let (inner, nas) = nas("delete-pane-hint").await;
+    let watched = Arc::new(WatchedCountingStats {
+        inner: CountingStats {
+            inner: Arc::clone(&nas),
+            stats: std::sync::atomic::AtomicUsize::new(0),
+        },
+    });
+    let volume_id = "delete-pane-hint";
+    engine.volumes().register(volume_id, watched.clone() as Arc<dyn Volume>);
+    panes.show_volume(volume_id, watched.clone() as Arc<dyn Volume>);
+    let mut listed = cmdr_fs::entry::FileEntry::new("b.txt".to_string(), "/dir/b.txt".to_string(), false, false);
+    listed.size = Some(4);
+    let _listing = cmdr_listing::testing::TestListing::new()
+        .volume(volume_id)
+        .path("/dir")
+        .entries(vec![listed])
+        .sequence(1)
+        .insert(panes.panes(), "delete-pane-hint");
+
+    let run = delete(&engine, volume_id, &state, watched.clone(), &["/dir/b.txt"]).await;
+
+    assert!(run.result.is_ok(), "{:?}", run.result);
+    assert!(!exists(&inner, "/dir/b.txt").await);
+    assert_eq!(
+        watched.inner.stats.load(std::sync::atomic::Ordering::SeqCst),
+        0,
+        "the pane's listing carries the kind AND the size: no request to learn either"
+    );
+}
+
 /// An object store's double: the share above, deleting files in batches.
 struct Batching {
     inner: Arc<OutageVolume>,
