@@ -16,7 +16,7 @@ use super::super::types::{
 };
 use super::outage::{EntryStop, Listed, delete_entry, read_through_outages};
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::{EntryKind, Volume};
+use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
 /// Entry collected during the volume scan phase. `progress_bytes` is the
 /// progress contribution: equals the size for the first occurrence of an inode
@@ -120,15 +120,16 @@ async fn scan_volume_recursive(
 
     // Resolve what `path` is. Prefer the caller's hint (a pane's listing of the
     // parent at the top level, the parent's `FileEntry` in recursion). Without
-    // one, ask the volume's link-aware `entry_kind` (a read, so safe to re-run
-    // after an outage), which on MTP lists the parent dir, so we avoid it
-    // whenever the oracle can answer.
-    let kind = match kind_hint {
-        Some(kind) => kind,
-        None => read_through_outages(volume, state, || volume.entry_kind(path))
+    // one, probe (`top_level_entry`, a read, so safe to re-run after an
+    // outage), which on MTP lists the parent dir, so we avoid it whenever the
+    // oracle can answer.
+    let probed = match kind_hint {
+        Some(kind) => Listed { kind, size: None },
+        None => read_through_outages(volume, state, || top_level_entry(volume.as_ref(), path))
             .await
             .map_err(|stop| stop.into_error(path))?,
     };
+    let kind = probed.kind;
 
     if kind == EntryKind::Directory {
         super::super::mount_boundary::refuse_a_volume_mount_point(&**volume, path, state).await?;
@@ -292,7 +293,7 @@ async fn scan_volume_recursive(
             path: path.to_path_buf(),
             progress_bytes: 0,
             is_dir: false,
-            listed: listed_top_level_file(volume.as_ref(), path).await,
+            listed: listed_top_level(volume.as_ref(), path, probed).await,
         });
     }
 
@@ -330,25 +331,40 @@ async fn scan_volume_recursive(
     Ok(())
 }
 
-/// What a top-level file the walk only probed for its type is, for a delete
-/// re-run after an outage to check against. One `get_metadata`, and only on a
-/// volume with a session: no other volume is ever waited for, so nothing would
-/// read it. Best effort: an unanswered stat leaves the size unknown, and a
-/// re-run then leaves the file rather than delete it unproven.
-async fn listed_top_level_file(volume: &dyn Volume, path: &Path) -> Listed {
-    let unknown = Listed {
-        kind: EntryKind::File,
-        size: None,
-    };
-    if volume.connection_state().is_none() {
-        return unknown;
+/// What a top-level entry is, with a link reported AS a link, in ONE request:
+/// `entry_kind` on a backend that can hold links ([`BackendKind::has_symlinks`]),
+/// where a following stat would call a link to a folder a folder (#505).
+/// Elsewhere a plain `get_metadata` (what `entry_kind` asks there anyway), whose
+/// size also serves a re-run's re-check (`outage.rs`), so an object store spends
+/// one HEAD per selected file, the one its cost estimate counts.
+///
+/// [`BackendKind::has_symlinks`]: cmdr_fs::volume::BackendKind::has_symlinks
+async fn top_level_entry(volume: &dyn Volume, path: &Path) -> Result<Listed, VolumeError> {
+    if volume.backend_kind().has_symlinks() {
+        return volume.entry_kind(path).await.map(|kind| Listed { kind, size: None });
+    }
+    volume.get_metadata(path).await.map(|entry| Listed {
+        kind: EntryKind::of(&entry),
+        size: if entry.is_directory { None } else { entry.size },
+    })
+}
+
+/// What a top-level file or link is, for a delete re-run after an outage to
+/// check against: what the walk learned of it (`probed`), plus a file's size
+/// when the walk didn't learn it, by one `get_metadata`, and only on a volume
+/// with a session: no other volume is ever waited for, so nothing would read
+/// it. Best effort: an unanswered stat leaves the size unknown, and a re-run
+/// then leaves the file rather than delete it unproven.
+async fn listed_top_level(volume: &dyn Volume, path: &Path, probed: Listed) -> Listed {
+    if probed.kind != EntryKind::File || probed.size.is_some() || volume.connection_state().is_none() {
+        return probed;
     }
     match volume.get_metadata(path).await {
         Ok(entry) => Listed {
             kind: EntryKind::of(&entry),
             size: entry.size,
         },
-        Err(_) => unknown,
+        Err(_) => probed,
     }
 }
 

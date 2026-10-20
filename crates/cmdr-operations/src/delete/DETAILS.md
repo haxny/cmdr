@@ -27,7 +27,9 @@ no per-object request).
 The volume walker descends only what is a directory AS ITSELF, so a link to a folder is one entry, deleted with one
 `Volume::delete` of the link. Every place a kind comes from is link-aware: a child's `EntryKind::of` (the listing's
 `is_symlink` beats its `is_directory`), a top-level source's entry in a pane's watcher-fresh parent listing
-(`scan_preview::kind_in_parent_listing`, no I/O), and otherwise `Volume::entry_kind`. A cached preview's "directory" is
+(`scan_preview::kind_in_parent_listing`, no I/O), and otherwise `volume_walker.rs::top_level_entry`: `Volume::entry_kind`
+on a backend that can hold links (`BackendKind::has_symlinks`), a plain `get_metadata` elsewhere (what `entry_kind` asks
+there anyway, and its size serves the outage re-check). A cached preview's "directory" is
 never taken on its word: the backend's batch scan follows a selected link (a cross-volume copy streams what a link
 points at), so the walker re-asks the parent listing or `entry_kind`, one probe per top-level folder with a cold parent.
 A delete-purpose preview recounts a selected link as one leaf (`count_selected_links_as_links`), so the dialog's count
@@ -81,8 +83,10 @@ A volume delete on a server (SMB, SFTP, WebDAV, S3) or a phone over ADB waits fo
 - **A batch** (`delete_files`, S3) is one call, so its answer for a file the drop cut off goes into that file's loop as
   an error already in hand (with the batch's `StartedOn`), which starts at the wait.
 - **The size the re-check needs** comes from the listing, or from the scan preview for a top-level file. A top-level
-  file with neither (no preview, so the walker only probed its type) gets one `get_metadata` during the walk, only on a
-  volume with a session (`connection_state` answers): no other volume is ever waited for.
+  file with neither takes it from the walk's own probe on a backend without links (one `get_metadata`, so an object store
+  spends one HEAD per selected file, the one its cost estimate counts). Where links exist the probe is an `entry_kind`
+  with no size, so a file there gets one more `get_metadata`, only on a volume with a session (`connection_state`
+  answers): no other volume is ever waited for. Pinned by `a_selected_file_costs_one_stat_that_also_proves_it_for_a_re_run`.
 - **A folder's delete** keeps its best-effort silence for a refusal (it still holds a file the delete couldn't take),
   but an outage that ends it is reported: before, the folder pass swallowed it and the delete read as complete.
 - **The terminal error names the server**: `outage::EntryStop` / `ReadStop` carry what the wait learned

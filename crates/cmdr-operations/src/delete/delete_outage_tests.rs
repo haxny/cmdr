@@ -399,6 +399,61 @@ async fn a_first_try_not_found_keeps_failing_the_delete() {
     assert_eq!(nas.reconnect_attempts(), 0);
 }
 
+/// The share above, counting every stat-shaped request it answers: an object
+/// store pays one HEAD for each (`cmdr-s3`'s cost estimate counts them).
+struct CountingStats {
+    inner: Arc<OutageVolume>,
+    stats: std::sync::atomic::AtomicUsize,
+}
+
+impl Volume for CountingStats {
+    crate::forward_volume_methods!(inner =>
+        name, root, lane_key, connection_state, connection_generation, attempt_reconnect,
+        list_directory, exists, delete,
+    );
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn backend_kind(&self) -> BackendKind {
+        BackendKind::S3
+    }
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>> {
+        self.stats.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.inner.get_metadata(path)
+    }
+    fn is_directory<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
+        self.stats.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.inner.is_directory(path)
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_selected_file_costs_one_stat_that_also_proves_it_for_a_re_run() {
+    let engine = TestOperations::new();
+    let state = outage_state(&engine, WAIT);
+    let (inner, nas) = nas("delete-one-stat").await;
+    let counting = Arc::new(CountingStats {
+        inner: Arc::clone(&nas),
+        stats: std::sync::atomic::AtomicUsize::new(0),
+    });
+
+    let run = delete(&engine, "delete-one-stat", &state, counting.clone(), &["/dir/b.txt"]).await;
+
+    assert!(run.result.is_ok(), "{:?}", run.result);
+    assert!(!exists(&inner, "/dir/b.txt").await);
+    assert_eq!(
+        counting.stats.load(std::sync::atomic::Ordering::SeqCst),
+        1,
+        "the type probe's own stat carries the size: no second request per file"
+    );
+}
+
 /// An object store's double: the share above, deleting files in batches.
 struct Batching {
     inner: Arc<OutageVolume>,

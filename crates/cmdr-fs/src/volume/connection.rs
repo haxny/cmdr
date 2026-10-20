@@ -248,6 +248,24 @@ impl BackendKind {
             Self::Local | Self::Mtp | Self::Adb | Self::Archive | Self::GitPortal => false,
         }
     }
+
+    /// Whether this backend can hold symbolic links, so a walker that recurses
+    /// must ask [`Volume::entry_kind`](super::Volume::entry_kind) before it
+    /// descends, even where a cached answer says "folder" (a scan preview's top
+    /// stat follows links). `false` only where no link can exist at all: there
+    /// the extra probe buys nothing, and on MTP it costs a parent listing.
+    ///
+    /// Exhaustive on purpose: a new backend doesn't compile until it answers.
+    /// When in doubt, `true`.
+    #[must_use]
+    pub fn has_symlinks(self) -> bool {
+        match self {
+            Self::Local | Self::Sftp | Self::Adb | Self::Archive => true,
+            // SMB reports no links (a reparse point reads as what it is), and
+            // WebDAV, S3, MTP, and the `.git` trees have none.
+            Self::Smb | Self::Webdav | Self::S3 | Self::Mtp | Self::GitPortal => false,
+        }
+    }
 }
 
 /// What a "Sign in" affordance on a volume asks a person for: the FORM the sheet
