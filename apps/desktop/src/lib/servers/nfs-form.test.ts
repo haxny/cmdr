@@ -136,8 +136,10 @@ describe('serverTargetFrom: NFS', () => {
 })
 
 describe('nameFallbackOf: NFS', () => {
-  it("reads as the classic `host:/export` spelling, the backend's stand-in label", () => {
-    expect(nameFallbackOf(nfsForm('nfs://nas.local/Public'))).toBe('nas.local:/Public')
+  it('names the SERVER by its host, as `nfs_known_places::server_label` does, whatever the export', () => {
+    // The Name field names the server; each export reads as its own path under it.
+    expect(nameFallbackOf(nfsForm('nfs://nas.local/Public'))).toBe('nas.local')
+    expect(nameFallbackOf(nfsForm('nfs://nas.local:15481/insecure'))).toBe('nas.local')
     expect(nameFallbackOf(nfsForm('nfs://nas.local'))).toBe('nas.local')
   })
 })

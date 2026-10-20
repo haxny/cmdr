@@ -313,11 +313,9 @@ export function nameFallbackOf(form: ServerForm, saved: readonly SavedServer[] =
     const named = savedSmbHostOf(form, saved)
     return named?.nameSource === 'user' ? named.displayName : smbLabelOf(parsed)
   }
-  if (form.protocol === 'nfs') {
-    // NFS's classic `host:/export` spelling (`showmount`'s, `mount`'s): the place is the export.
-    const exportPath = form.nfs.exportPath.trim()
-    return exportPath === '' ? parsed.host : `${parsed.host}:${exportPath}`
-  }
+  // The Name names an NFS SERVER, which goes by its host (`nfs_known_places::server_label`);
+  // each export reads as its own path under it, so the export is in no name.
+  if (form.protocol === 'nfs') return parsed.host
   const username = form.username.trim()
   return username === '' ? parsed.host : `${username}@${parsed.host}`
 }
