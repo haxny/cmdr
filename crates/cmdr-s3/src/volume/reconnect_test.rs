@@ -68,7 +68,7 @@ async fn a_sign_in_that_does_not_connect_leaves_the_store_alone() {
         let host = VolumeHost::builder()
             .credentials(Arc::clone(&store) as Arc<dyn CredentialStore>)
             .build();
-        let volume = super::test_support::make_test_volume_with(Some("cmdr-test"), host);
+        let volume = make_test_volume_with(Some("cmdr-test"), host);
         // Filed after the volume exists, since the store key is the volume's own.
         let service = volume.inner.params().credential_service();
         store

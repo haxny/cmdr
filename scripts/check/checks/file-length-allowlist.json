@@ -8,6 +8,10 @@
     "scripts/check/checks/registry.go": "append-only check registry (one CheckDefinition entry per check); line count tracks the number of checks, not splittable logic"
   },
   "files": {
+    "crates/cmdr-s3/src/volume/server_copy.rs": {
+      "lines": 800,
+      "reason": "One cohesive job: the server-side copy (one `CopyObject`, or an `UploadPartCopy` multipart with its retry window and abort). It reached the limit when its log lines started marking every key by kind (one value per line); splitting the retry window from the part sender would cut the one loop that owns both."
+    },
     "apps/desktop/src-tauri/src/ai/client.rs": {
       "lines": 800,
       "reason": "TODO: two seams sit beside the request path and only share imports with it. Move the policy-guarded HTTP client (`policy_guarded_http_client`, `policy_guarded_redirects`, `follow_allowed_hop`, `remote_destination`, `remote_endpoint`, `parse_endpoint`) into `client_policy.rs`, and the provider-error mapping (`AiError` with its `Display`, `ai_error_for_status`, `provider_error_detail`, `map_genai_error`) into `client_errors.rs`, about 140 lines out together. What stays is `AiBackend`, the three `chat_completion*` entry points, the model-specific option tweaks, and the response logging, which is what callers mean by the AI client."

@@ -327,12 +327,8 @@ impl SmbVolume {
                             // data loss.
                             delete_partial().await;
                         }
-                        let written = self.handle_smb_result(
-                            "write_from_stream(compound)",
-                            &smb_path,
-                            generation,
-                            write_result,
-                        )?;
+                        let written =
+                            self.handle_smb_result("write_from_stream(compound)", &smb_path, generation, write_result)?;
                         // The frame's CLOSE already stamped the server's own
                         // dates, so these go by path, after it. A refusal
                         // keeps the server's; a lost connection fails the

@@ -50,9 +50,8 @@ Copy and move across every volume backend. File map: `DETAILS.md` § Files. Shar
 - **ONE `FileWindow` per operation** (`merge_ctx.rs::MergeCtx`), taken by every merge leaf and top-level FILE task
   (width 1 keeps MTP serial), ❌ never per level or source. A walker ❌ never recurses holding a permit, awaits without
   polling its leaves (`LeafPool::drive`: one may hold the share's reconnect), or returns undrained.
-- **A failure carries its path AND side** (`transfer_error.rs::PathedVolumeError`): `at_source` / `at_destination` by
-  which volume's call failed, ❌ never above the frame that knows the item. Source streams go through
-  `source_reads::watch` (side and length), ❌ never bare. § "Naming the item that failed".
+- **A failure carries its path AND side** (`transfer_error.rs::PathedVolumeError`), set where the item is known. Source
+  streams go through `source_reads::watch`, ❌ never bare. § "Naming the item that failed".
 - **Two test traps**: a `*_tests.rs` here is a `#[path]` CHILD (`super::` one level shallower), and a `FaultyVolume`
   cell must **assert `fault_fired(op)`**.
 

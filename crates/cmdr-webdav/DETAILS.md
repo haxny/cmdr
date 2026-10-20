@@ -376,7 +376,7 @@ what is this backend's own: the PROPFIND probe, and its refusals mapped (`Authen
 `AuthMethodUnsupported` spend the unattended try; `NeedsCredentials` asks a person without spending it).
 `attempt_reconnect` probes now; `reconnect_with_credentials(SignIn)` requires the volume's own username (another account
 is another volume: `NotSupported`), then signs in through the shared lifecycle, which files the secret only once it
-connected (crates/cmdr-fs/DETAILS.md § "The HTTP backends' connection lifecycle", #530). `UnattendedReconnect` is `SwitchOff`, `NoStoredSecret`, or `Possible`. `sign_in_prompt` is always
+connected (#530). `UnattendedReconnect` is `SwitchOff`, `NoStoredSecret`, or `Possible`. `sign_in_prompt` is always
 `SignInShape::Password`, so the sheet renders one field under a read-only username.
 
 ## Bounded bodies
