@@ -312,8 +312,9 @@ destinations".
 3. **TransferErrorDialog** (error display)
    - Renders entirely from the typed `WriteOperationError` (`WriteErrorEvent` carries no prose): title, message, and
      suggestion via `getUserFriendlyMessage` / `FallbackErrorContent`; category + retry classification via
-     `getErrorDisplayMeta` (both in `transfer-error-messages.ts`; the details block in `transfer-error-details.ts`). All
-     words live on the FE.
+     `getErrorDisplayMeta` (both in `transfer-error-messages.ts`, which hands a refused zip edit to
+     `archive-edit-error-messages.ts`; the raw `errors.write.*` lookup is `write-error-catalog.ts`; the details block in
+     `transfer-error-details.ts`). All words live on the FE.
    - Container colors and icon vary by category: error-bg + CircleAlert (`serious`), warning-bg + TriangleAlert
      (`transient`), neutral secondary-bg + Info (`needs_action`).
    - "Retry" button shows when `category === 'transient'` or the variant's `retryHint` is true, AND there's something to

@@ -29,24 +29,9 @@ import { isMacOS } from '#lib/shortcuts/key-capture.js'
 import { getEffectiveShortcuts, toDisplayShortcut } from '#lib/shortcuts/index.js'
 import { colorizeSize } from '#lib/file-explorer/selection/selection-info-utils.js'
 import { escapeHtml } from '#lib/tooltip/tooltip.js'
-import { getMessage } from '#lib/intl/messages.svelte.js'
-import type { MessageKey } from '#lib/intl/keys.gen.js'
 import { formatByteSizeTiered } from '#lib/units/index.js'
-
-/** Substitutes `{token}` placeholders in a catalog value with runtime strings. */
-function interpolate(template: string, params: Record<string, string> = {}): string {
-  let out = template
-  for (const [name, value] of Object.entries(params)) {
-    out = out.replaceAll(`{${name}}`, value)
-  }
-  return out
-}
-
-/** Raw catalog lookup for an `errors.write.*` key (no ICU). */
-function w(key: string, params?: Record<string, string>): string {
-  const value = getMessage(`errors.write.${key}` as MessageKey)
-  return params ? interpolate(value, params) : value
-}
+import { archiveEditMessage } from './archive-edit-error-messages.js'
+import { w } from './write-error-catalog.js'
 
 export interface FriendlyErrorMessage {
   /** Short title for the error */
@@ -591,52 +576,14 @@ function fieldDrivenMessage(error: WriteOperationError): FriendlyErrorMessage | 
         message: w('destinationNotAFolder.message', { path: escapeHtml(error.path) }),
         suggestion: w('destinationNotAFolder.suggestion'),
       }
+    case 'archive_entry_name_refused':
+    case 'archive_entry_names_collide':
+    case 'archive_duplicate_entry_name':
+    case 'archive_encrypted_entry':
+      return archiveEditMessage(error)
     // STATUS_DELETE_PENDING: the file is marked for deletion on the server but an
     // open handle is keeping it alive. Transient: retry-after-a-moment. Named,
     // because a move involves two files and "this file" didn't say which.
-    // A zip entry the archive reader would hide. Named, because one entry deep
-    // in a selected folder is the whole problem, and the reason picks the
-    // sentence since each one needs a different picture of what's wrong.
-    case 'archive_entry_name_refused':
-      return {
-        title: w('archiveEntryNameRefused.title'),
-        message: w(`archiveEntryNameRefused.message.${error.reason}`, { entry: escapeHtml(error.entry) }),
-        suggestion: w('archiveEntryNameRefused.suggestion'),
-      }
-    // Both names, plus where they'd meet: the backslash look-alike is the usual
-    // cause, and neither name alone shows the clash.
-    case 'archive_entry_names_collide':
-      return {
-        title: w('archiveEntryNamesCollide.title'),
-        message: w('archiveEntryNamesCollide.message', {
-          entry: escapeHtml(error.entry),
-          other: escapeHtml(error.other),
-          archivePath: escapeHtml(error.archivePath),
-        }),
-        suggestion: w('archiveEntryNamesCollide.suggestion'),
-      }
-    // Both the zip and the shared name: the name alone doesn't say which zip,
-    // and Cmdr's own listing shows only one of the two. The name is null when
-    // Cmdr's reader couldn't parse the zip, so a sentence without it stands in.
-    case 'archive_duplicate_entry_name':
-      return {
-        title: w('archiveDuplicateEntryName.title'),
-        message:
-          error.name === null
-            ? w('archiveDuplicateEntryName.messageUnnamed', { path: escapeHtml(error.path) })
-            : w('archiveDuplicateEntryName.message', { name: escapeHtml(error.name), path: escapeHtml(error.path) }),
-        suggestion: w('archiveDuplicateEntryName.suggestion'),
-      }
-    // Named, because the protected entry is rarely the one the user touched.
-    case 'archive_encrypted_entry':
-      return {
-        title: w('archiveEncryptedEntry.title'),
-        message: w('archiveEncryptedEntry.message', {
-          name: escapeHtml(error.name),
-          path: escapeHtml(error.path),
-        }),
-        suggestion: w('archiveEncryptedEntry.suggestion'),
-      }
     case 'delete_pending':
       return {
         title: w('deletePending.title'),
