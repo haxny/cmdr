@@ -1,7 +1,8 @@
 /**
  * What the transfer error dialog says when a volume went away mid-transfer: a drive
  * or device that left (`device_disconnected`), and a server whose connection was
- * lost (`server_connection_lost`). Both are about where the person's files are and
+ * lost (`server_connection_lost`), plus what a delete that waited one out left alone
+ * (`changed_while_disconnected`). All are about where the person's files are and
  * what to check, so they live together, split out of `transfer-error-messages.ts`.
  * DETAILS § "What the error dialog says when a drive was pulled" and § "What it says
  * when a server's connection was lost".
@@ -14,8 +15,9 @@ import { formatDuration, seconds } from '#lib/units/index.js'
 import { w, type FriendlyErrorMessage } from './transfer-error-catalog'
 
 /**
- * The two outcomes of a volume that went away mid-transfer: a drive or device that
- * left, and a server whose connection was lost. `getUserFriendlyMessage` asks it before
+ * The outcomes of a volume that went away mid-transfer: a drive or device that
+ * left, a server whose connection was lost, and a file a delete found changed once
+ * the connection was back. `getUserFriendlyMessage` asks it before
  * its own switch. `null` means "not one of mine".
  */
 export function volumeGoneMessage(
@@ -28,6 +30,16 @@ export function volumeGoneMessage(
       return deviceDisconnectedMessage(error, operationType, progressAtStop)
     case 'server_connection_lost':
       return serverConnectionLostMessage(error, operationType)
+    // Only a delete builds it: the file is the point here, so it's named in the title.
+    case 'changed_while_disconnected':
+      return {
+        title: w('changedWhileDisconnected.title'),
+        message: w('changedWhileDisconnected.message', {
+          volumeName: escapeHtml(error.volumeName),
+          fileName: escapeHtml(lastPathSegment(error.path)),
+        }),
+        suggestion: w('changedWhileDisconnected.suggestion'),
+      }
     default:
       return null
   }
@@ -75,6 +87,13 @@ function deviceDisconnectedMessage(
   return { title, message: w(`deviceDisconnected.message.${operationType}`), suggestion }
 }
 
+/** The operations that have their own "lost the connection" sentences, by the verb their keys use. */
+const SERVER_CONNECTION_LOST_VERBS: Partial<Record<TransferOperationType, 'copy' | 'move' | 'delete'>> = {
+  copy: 'copy',
+  move: 'move',
+  delete: 'delete',
+}
+
 /**
  * The sentence for a server whose connection ended a transfer.
  *
@@ -83,13 +102,13 @@ function deviceDisconnectedMessage(
  * wait decided it from typed facts, ❌ nothing here infers "server" from a path.
  * `gaveUpAfterSecs` picks between "Cmdr waited this long, then stopped" and "it
  * dropped" (no wait this time: a sign-in needed, or a link that kept dropping).
- * Only copy and move reach it for now, so any other operation reads as a copy.
+ * The verb follows the operation; one with no sentence of its own reads as a copy.
  */
 function serverConnectionLostMessage(
   error: Extract<WriteOperationError, { type: 'server_connection_lost' }>,
   operationType: TransferOperationType,
 ): FriendlyErrorMessage {
-  const verb = operationType === 'move' ? 'move' : 'copy'
+  const verb = SERVER_CONNECTION_LOST_VERBS[operationType] ?? 'copy'
   const volumeName = escapeHtml(error.volumeName)
   const fileName = escapeHtml(lastPathSegment(error.path))
   const message =

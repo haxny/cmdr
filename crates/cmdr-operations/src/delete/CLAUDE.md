@@ -11,6 +11,9 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
 - **`walker.rs`** (local) and **`volume_walker.rs`** (any `Volume`), both taking `&dyn OperationEventSink`;
   `../local_start.rs` routes by `volume_id`. The volume walker asks `Listings::authoritative_listing` before every
   `list_directory` and batches files per `Volume::delete_batch_size`. DETAILS § "Volume-delete internals".
+- **`outage.rs`**: waits out a dropped share. ❗ A re-run re-checks the entry against its walk (kind, size); a mismatch
+  stops the delete (`ChangedWhileDisconnected`), and `NotFound` means deleted ONLY after a wait. ❌ Never
+  `through_outages` around a delete. DETAILS § "Waiting out a dropped share".
 - **`trash.rs`**: `move_to_trash_sync()` (macOS `trashItemAtURL`; Linux `trash` crate; reused by
   `trash_single_journaled`), `trash_files_with_progress()` (batch, per-item progress, cancel), and
   `trash_dir_for_path()` (❌ keep its ancestor walk, DETAILS § Where a trash is). Refusals are a typed `MutationError`,
@@ -43,8 +46,7 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
   an evicted file DOWNLOADS it first. ❌ Never route on the folder alone (an ordinary Dropbox file trashes fine; routing
   it is data loss), ❌ never on the refusal (two `NSError` codes, non-deterministic), ❌ never on "no trash here", ❌
   not a volume question; only a provider we know by name, all-or-nothing. A FOLDER is answered by the scan preview's
-  walk (`OnlineOnlyWatch`): ❌ no second walk, none for a plain-file selection. `TrashRefused.online_only` keeps the
-  Full Disk Access advice off an evicted file. DETAILS.
+  walk (`OnlineOnlyWatch`), ❌ no second walk. DETAILS.
 - **A refusal carries a typed `TrashRefusalKind`, read from the `NSError` DOMAIN + CODE**, ❌ never its localized words
   (`error-string-match` forbids it). A failed batch is `WriteOperationError::TrashRefused`, ❌ not an `IoError` (one
   flattened sentence leaves the dialog only "try again"), reporting `strongest_refusal`, ❌ not the most common one.

@@ -246,6 +246,24 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       gaveUpAfterSecs: 900,
     },
   },
+  'server_connection_lost-delete': {
+    operationType: 'delete',
+    error: {
+      type: 'server_connection_lost',
+      path: '/Volumes/naspi/photos/2019/DSC01142.arw',
+      volumeName: 'Naspolya',
+      gaveUpAfterSecs: 900,
+    },
+  },
+  // A delete that waited out the NAS and found someone else's file at a path it listed.
+  changed_while_disconnected: {
+    operationType: 'delete',
+    error: {
+      type: 'changed_while_disconnected',
+      path: '/Volumes/naspi/photos/2019/DSC01143.arw',
+      volumeName: 'Naspolya',
+    },
+  },
   read_error: {
     operationType: 'copy',
     error: {

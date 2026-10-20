@@ -768,11 +768,27 @@ wait, as `source_sweep.rs` already does.
 
 #### 10b. Delete (S–M)
 
-`crates/cmdr-operations/src/delete/walker.rs`: each per-item delete; a `NotFound` on a re-run after a wait counts as
+`crates/cmdr-operations/src/delete/walker.rs` (now `volume_walker.rs`): each per-item delete; a `NotFound` on a re-run after a wait counts as
 deleted (ONLY after a wait: a first-try `NotFound` keeps today's meaning). Its terminal transport fault maps to
 `ServerConnectionLost` (milestone 7's verdict). **Landmines**: a re-run never escalates to recursive, and ❗ re-checks
 the entry against what the walk listed (kind, size) before deleting again, since another client may have put a different
 file at that path during the outage (mismatch → leave it and report).
+
+**Status: done.** As built (for the milestones after it):
+
+- The volume walker moved to `delete/volume_walker.rs` (the file-length allowlist's own split plan); the wait is
+  `delete/outage.rs`. The walk's reads (type probe, listings) go through `through_outages`; each delete, file AND
+  folder, runs `outage::delete_entry`'s own loop (`wait_after_failure` + `StartedOn`), ❌ never `through_outages`.
+- "Leave it and report" STOPS the delete with a new IPC variant, `WriteOperationError::ChangedWhileDisconnected { path,
+  volume_name }` (a delete has no rollback, and a changed entry says someone is working in that tree right now). The
+  re-check compares `EntryKind` and, for a file, the size; a size the walk never learned fails closed. A top-level file
+  the walk only probed gets one `get_metadata` during the walk, on a session volume only.
+- A batch (`delete_files`, S3): a file it couldn't delete enters its own loop with the batch's error in hand.
+- The folder pass keeps its silence for a non-transport refusal, but a transport fault that ends it is reported now (it
+  read as complete before).
+- `transfer::volume::map_failure_after_wait` (shared with 10c) maps the stop; FE: `serverConnectionLost.*.delete` keys
+  and `changedWhileDisconnected.*` (DRAFT copy, English only, for David).
+- Cells: `delete/delete_outage_tests.rs`. No live Docker cell (the plan asked none for this milestone).
 
 #### 10c. Archive edits (M)
 

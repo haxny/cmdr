@@ -236,6 +236,10 @@ export type WriteOperationError =
   // wait this time (a sign-in needed, or a link that kept dropping). A phone or a
   // local drive never gets this one: it stays `device_disconnected`.
   | { type: 'server_connection_lost'; path: string; volumeName: string; gaveUpAfterSecs: number | null }
+  // A delete waited out a dropped connection, and the item it was about to delete again
+  // wasn't the one its walk listed (another kind or size): someone else's file. The delete
+  // left it and stopped. Delete only.
+  | { type: 'changed_while_disconnected'; path: string; volumeName: string }
   // A server reply on a signed session carried a bad or missing signature, so Cmdr refused
   // it and stopped. `message` is the backend's diagnostic, for the technical details only.
   | { type: 'reply_signature_refused'; path: string; message: string }

@@ -405,6 +405,19 @@ pub enum WriteOperationError {
         /// a file that had already ridden out its share of outages).
         gave_up_after_secs: Option<u64>,
     },
+    /// A delete waited out a dropped connection, and the item it was about to
+    /// delete again no longer matches what its walk listed (another kind, or
+    /// another size): someone put a different file there meanwhile. The delete
+    /// left it and stopped; everything it deleted before stays deleted.
+    ///
+    /// ❗ Only `delete/outage.rs`'s re-check builds it, from the listed kind and
+    /// size against a fresh stat, ❌ never a guess: a delete has no rollback.
+    ChangedWhileDisconnected {
+        path: String,
+        /// The volume whose connection dropped, named as it was when the
+        /// delete stopped.
+        volume_name: String,
+    },
     /// A server's reply on a signed session carried a bad or missing signature, so Cmdr refused
     /// it and stopped (`VolumeError::SignatureInvalid`, SMB-only today). Its own variant so the
     /// stopped state can say so: it's a possible sign of tampering between the Mac and the
@@ -590,6 +603,7 @@ macro_rules! item_path_of {
             | WriteOperationError::DestinationFull { path }
             | WriteOperationError::ConnectionInterrupted { path }
             | WriteOperationError::ServerConnectionLost { path, .. }
+            | WriteOperationError::ChangedWhileDisconnected { path, .. }
             | WriteOperationError::ReplySignatureRefused { path, .. }
             | WriteOperationError::FileLocked { path }
             | WriteOperationError::MoveNotConfirmed { path, .. }

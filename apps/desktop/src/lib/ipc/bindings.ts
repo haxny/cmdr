@@ -19335,6 +19335,24 @@ export type WriteOperationError =
       gaveUpAfterSecs: number | null
     }
   /**
+   *  A delete waited out a dropped connection, and the item it was about to
+   *  delete again no longer matches what its walk listed (another kind, or
+   *  another size): someone put a different file there meanwhile. The delete
+   *  left it and stopped; everything it deleted before stays deleted.
+   *
+   *  ❗ Only `delete/outage.rs`'s re-check builds it, from the listed kind and
+   *  size against a fresh stat, ❌ never a guess: a delete has no rollback.
+   */
+  | {
+      type: 'changed_while_disconnected'
+      path: string
+      /**
+       *  The volume whose connection dropped, named as it was when the
+       *  delete stopped.
+       */
+      volumeName: string
+    }
+  /**
    *  A server's reply on a signed session carried a bad or missing signature, so Cmdr refused
    *  it and stopped (`VolumeError::SignatureInvalid`, SMB-only today). Its own variant so the
    *  stopped state can say so: it's a possible sign of tampering between the Mac and the

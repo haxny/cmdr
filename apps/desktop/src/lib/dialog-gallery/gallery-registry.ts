@@ -247,6 +247,8 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       { id: 'trash_not_supported', label: 'Trash not supported' },
       { id: 'connection_interrupted', label: 'Connection interrupted' },
       { id: 'server_connection_lost', label: 'Lost the connection to a server' },
+      { id: 'server_connection_lost-delete', label: 'Lost the connection to a server (delete)' },
+      { id: 'changed_while_disconnected', label: 'Delete left a file that changed while disconnected' },
       { id: 'read_error', label: 'Read error' },
       { id: 'write_error', label: 'Write error' },
       { id: 'name_too_long', label: 'Name too long' },

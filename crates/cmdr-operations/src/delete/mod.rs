@@ -9,6 +9,7 @@
 //! oracle-aware fast path, trash, and the volume-delete preview-reuse path.
 
 pub(crate) mod cloud_trash;
+mod outage;
 pub(crate) mod trash;
 mod volume_start;
 mod volume_walker;
@@ -42,6 +43,9 @@ pub async fn delete_volume_files_for_test(
 mod delete_cancel_tests;
 #[cfg(test)]
 mod delete_integration_test;
+/// A delete on a share that drops mid-delete waits for it, re-checking each entry.
+#[cfg(test)]
+mod delete_outage_tests;
 #[cfg(test)]
 mod delete_volume_reuse_tests;
 #[cfg(test)]

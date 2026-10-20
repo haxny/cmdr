@@ -138,8 +138,10 @@ async fn a_moves_source_sweep_deletes_its_folders_as_folders() {
     let volume: Arc<dyn Volume> = spy.clone();
     let carried = stamp_source(&volume, Path::new("/d")).await.expect("the walk stamps");
     assert!(matches!(carried, CarriedSource::Folder(_)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(0)));
 
     sweep_carried_source(
+        &state,
         &volume,
         Path::new("/d"),
         &carried,

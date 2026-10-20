@@ -9,25 +9,27 @@ use std::time::{Duration, Instant};
 use super::super::event_sinks::OperationEventSink;
 use super::super::scan_preview::kind_in_parent_listing;
 use super::super::state::WriteOperationState;
-use super::super::transfer::volume::{PathRole, map_volume_error};
+use super::super::transfer::volume_outage::StartedOn;
 use super::super::types::{
     CancelRollback, DryRunResult, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig, WriteOperationError,
     WriteOperationPhase, WriteOperationType, WriteProgressEvent,
 };
+use super::outage::{EntryStop, Listed, delete_entry, read_through_outages};
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
+use cmdr_fs::volume::{EntryKind, Volume};
 
-/// Entry collected during the volume scan phase. We don't carry the raw
-/// `size` because the delete pipeline only ever needs the progress
-/// contribution: equals `size` for the first occurrence of an inode in the
-/// scan, `0` for hardlink dupes. Mirrors `FileInfo::progress_bytes` on the
-/// local-FS walker. Volume backends without inode info (MTP, SMB) populate
-/// this as `size` for every entry — they never produce hardlinks, so no
-/// dedup happens and the count is correct.
+/// Entry collected during the volume scan phase. `progress_bytes` is the
+/// progress contribution: equals the size for the first occurrence of an inode
+/// in the scan, `0` for hardlink dupes. Mirrors `FileInfo::progress_bytes` on
+/// the local-FS walker. Volume backends without inode info (MTP, SMB) populate
+/// this as the size for every entry — they never produce hardlinks, so no
+/// dedup happens and the count is correct. `listed` is what a delete re-run
+/// after an outage must still find at `path` (`outage.rs`).
 struct VolumeDeleteEntry {
     path: PathBuf,
     progress_bytes: u64,
     is_dir: bool,
+    listed: Listed,
 }
 
 /// Tracks the running tally across the whole recursive scan so the per-entry
@@ -96,7 +98,7 @@ impl VolumeScanTracker {
     reason = "Matches the parameter pattern of other write operation functions"
 )]
 async fn scan_volume_recursive(
-    volume: &dyn Volume,
+    volume: &Arc<dyn Volume>,
     volume_id: &str,
     path: &Path,
     kind_hint: Option<EntryKind>,
@@ -118,18 +120,18 @@ async fn scan_volume_recursive(
 
     // Resolve what `path` is. Prefer the caller's hint (a pane's listing of the
     // parent at the top level, the parent's `FileEntry` in recursion). Without
-    // one, ask the volume's link-aware `entry_kind`, which on MTP lists the
-    // parent dir, so we avoid it whenever the oracle can answer.
+    // one, ask the volume's link-aware `entry_kind` (a read, so safe to re-run
+    // after an outage), which on MTP lists the parent dir, so we avoid it
+    // whenever the oracle can answer.
     let kind = match kind_hint {
         Some(kind) => kind,
-        None => volume
-            .entry_kind(path)
+        None => read_through_outages(volume, state, || volume.entry_kind(path))
             .await
-            .map_err(|e| map_volume_error(&path.display().to_string(), PathRole::Source, e))?,
+            .map_err(|stop| stop.into_error(path))?,
     };
 
     if kind == EntryKind::Directory {
-        super::super::mount_boundary::refuse_a_volume_mount_point(volume, path, state).await?;
+        super::super::mount_boundary::refuse_a_volume_mount_point(&**volume, path, state).await?;
 
         // Snapshot the cumulative tallies BEFORE the (potentially slow) listing
         // call. The per-entry callback shows `files_before + loaded_count` so the
@@ -201,10 +203,11 @@ async fn scan_volume_recursive(
                 on_progress(tally);
                 cached
             }
-            None => volume
-                .list_directory_with_cancel(path, Some(&on_progress), Some(&state.backend_cancel))
-                .await
-                .map_err(|e| map_volume_error(&path.display().to_string(), PathRole::Source, e))?,
+            None => read_through_outages(volume, state, || {
+                volume.list_directory_with_cancel(path, Some(&on_progress), Some(&state.backend_cancel))
+            })
+            .await
+            .map_err(|stop| stop.into_error(path))?,
         };
 
         // Recurse into children first. list_directory returns FileEntry with size,
@@ -262,6 +265,10 @@ async fn scan_volume_recursive(
                     path: child_path,
                     progress_bytes,
                     is_dir: false,
+                    listed: Listed {
+                        kind: EntryKind::of(child),
+                        size: child.size,
+                    },
                 });
             }
         }
@@ -272,6 +279,10 @@ async fn scan_volume_recursive(
             path: path.to_path_buf(),
             progress_bytes: 0,
             is_dir: true,
+            listed: Listed {
+                kind: EntryKind::Directory,
+                size: None,
+            },
         });
     } else {
         // Top-level file or link without listing context: size unknown, use 0.
@@ -281,6 +292,7 @@ async fn scan_volume_recursive(
             path: path.to_path_buf(),
             progress_bytes: 0,
             is_dir: false,
+            listed: listed_top_level_file(volume.as_ref(), path).await,
         });
     }
 
@@ -316,6 +328,64 @@ async fn scan_volume_recursive(
     }
 
     Ok(())
+}
+
+/// What a top-level file the walk only probed for its type is, for a delete
+/// re-run after an outage to check against. One `get_metadata`, and only on a
+/// volume with a session: no other volume is ever waited for, so nothing would
+/// read it. Best effort: an unanswered stat leaves the size unknown, and a
+/// re-run then leaves the file rather than delete it unproven.
+async fn listed_top_level_file(volume: &dyn Volume, path: &Path) -> Listed {
+    let unknown = Listed {
+        kind: EntryKind::File,
+        size: None,
+    };
+    if volume.connection_state().is_none() {
+        return unknown;
+    }
+    match volume.get_metadata(path).await {
+        Ok(entry) => Listed {
+            kind: EntryKind::of(&entry),
+            size: entry.size,
+        },
+        Err(_) => unknown,
+    }
+}
+
+/// Deletes `batch` in one `delete_files` call, then takes each file the call
+/// couldn't delete into its own outage loop (`outage::delete_entry`), starting
+/// at the wait: a file the drop cut off is re-checked and deleted once the
+/// share is back. After the first failure for good, the rest keep the batch's
+/// own answer: the delete ends there anyway.
+async fn delete_batch(
+    volume: &Arc<dyn Volume>,
+    state: &Arc<WriteOperationState>,
+    batch: &[&VolumeDeleteEntry],
+) -> Vec<Result<(), EntryStop>> {
+    let paths: Vec<PathBuf> = batch.iter().map(|entry| entry.path.clone()).collect();
+    let started_on = StartedOn::now(&[volume]);
+    let answers = volume.delete_files(&paths).await;
+    let mut results = Vec::with_capacity(batch.len());
+    let mut stopped = false;
+    for (entry, answer) in batch.iter().zip(answers) {
+        let result = match answer {
+            Ok(()) => Ok(()),
+            Err(error) if stopped => Err(EntryStop::Failed { error, lost: None }),
+            Err(error) => {
+                delete_entry(
+                    volume,
+                    state,
+                    &entry.path,
+                    entry.listed,
+                    Some((error, started_on.clone())),
+                )
+                .await
+            }
+        };
+        stopped |= result.is_err();
+        results.push(result);
+    }
+    results
 }
 
 /// Emits `write-cancelled` when `result` is `Err(Cancelled)`. Use this after
@@ -427,6 +497,10 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                         path: source.to_path_buf(),
                         progress_bytes: size,
                         is_dir: false,
+                        listed: Listed {
+                            kind: EntryKind::File,
+                            size: Some(size),
+                        },
                     });
                 }
                 Some(_) => {
@@ -440,7 +514,7 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                     // listing answers link-aware with no I/O; failing that, the
                     // walker asks `entry_kind`.
                     let result = scan_volume_recursive(
-                        &*volume,
+                        &volume,
                         volume_id,
                         source,
                         kind_in_parent_listing(state.scope().host().listings(), volume_id, source),
@@ -468,7 +542,7 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                     // (`map_err(...)?`) instead of guessing. A `Some(File)`
                     // here would be the guess.
                     let result = scan_volume_recursive(
-                        &*volume,
+                        &volume,
                         volume_id,
                         source,
                         None,
@@ -540,7 +614,7 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
             // fact nobody established. A source that can't be stat'd fails that
             // item instead, which is the honest outcome and cheap to retry.
             let result = scan_volume_recursive(
-                &*volume,
+                &volume,
                 volume_id,
                 source,
                 parent_hint,
@@ -627,19 +701,12 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
             tokio::time::sleep(pause).await;
         }
 
-        let results: Vec<Result<(), VolumeError>> = match batch_size {
-            Some(_) => {
-                let paths: Vec<PathBuf> = batch.iter().map(|entry| entry.path.clone()).collect();
-                volume.delete_files(&paths).await
-            }
+        let results = match batch_size {
+            Some(_) => delete_batch(&volume, state, batch).await,
             None => {
                 let mut one = Vec::with_capacity(batch.len());
                 for entry in batch {
-                    one.push(
-                        volume
-                            .delete_with_cancel(&entry.path, Some(&state.backend_cancel))
-                            .await,
-                    );
+                    one.push(delete_entry(&volume, state, &entry.path, entry.listed, None).await);
                 }
                 one
             }
@@ -652,14 +719,14 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
         for (entry, result) in batch.iter().zip(results) {
             match result {
                 Ok(()) => {}
-                // Cancel landed mid-iteration (during the throttle sleep or
-                // inside delete_with_cancel itself). The top-of-loop cancel
-                // check only catches cancels that land between iterations;
-                // without this arm, the `?` propagation would surface as a
-                // Cancelled error with no `write-cancelled` event, breaking the
-                // settle contract (see the module CLAUDE.md § "Settle
-                // contract").
-                Err(VolumeError::Cancelled(_)) => {
+                // Cancel landed mid-iteration (during the throttle sleep, an
+                // outage wait, or inside delete_with_cancel itself). The
+                // top-of-loop cancel check only catches cancels that land
+                // between iterations; without this arm, the `?` propagation
+                // would surface as a Cancelled error with no `write-cancelled`
+                // event, breaking the settle contract (see the module
+                // CLAUDE.md § "Settle contract").
+                Err(EntryStop::Cancelled) => {
                     events.emit_cancelled(WriteCancelledEvent {
                         operation_id: operation_id.to_string(),
                         operation_type: WriteOperationType::Delete,
@@ -670,9 +737,9 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                         message: "Operation cancelled by user".to_string(),
                     });
                 }
-                Err(e) => {
+                Err(stop) => {
                     if first_failure.is_none() {
-                        first_failure = Some(map_volume_error(&entry.path.display().to_string(), PathRole::Source, e));
+                        first_failure = Some(stop.into_error(&entry.path, volume.as_ref()));
                     }
                     continue;
                 }
@@ -749,11 +816,27 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
             });
         }
 
-        // Best-effort directory removal (may fail if not empty due to partial
-        // delete). ❗ As a folder: on an object store a markerless folder is
-        // gone with its last child, and a plain delete would take the file of
-        // its name instead.
-        let _ = volume.delete_directory(&entry.path, Some(&state.backend_cancel)).await;
+        match delete_entry(&volume, state, &entry.path, entry.listed, None).await {
+            Ok(()) => {}
+            Err(EntryStop::Cancelled) => {
+                events.emit_cancelled(WriteCancelledEvent {
+                    operation_id: operation_id.to_string(),
+                    operation_type: WriteOperationType::Delete,
+                    files_processed: files_done,
+                    rollback: CancelRollback::none(),
+                });
+                return Err(WriteOperationError::Cancelled {
+                    message: "Operation cancelled by user".to_string(),
+                });
+            }
+            // Best effort, as it always was: a folder still holding something
+            // the delete couldn't take refuses, and stays.
+            Err(EntryStop::Failed { error, lost: None }) if error.transport_fault().is_none() => {}
+            // An outage that ended it, or a folder someone else swapped for
+            // something else meanwhile: reported, ❌ never swallowed into a
+            // delete that reads as complete.
+            Err(stop) => return Err(stop.into_error(&entry.path, volume.as_ref())),
+        }
     }
 
     // Emit completion

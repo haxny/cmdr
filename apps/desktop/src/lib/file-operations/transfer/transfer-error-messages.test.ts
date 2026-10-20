@@ -272,6 +272,8 @@ describe('getUserFriendlyMessage', () => {
       it('follows the operation’s verb', () => {
         expect(getUserFriendlyMessage(gaveUp, 'move').message).toContain('moving DSC09241.arw')
         expect(getUserFriendlyMessage(gaveUp, 'move').suggestion).toContain('finished moving')
+        expect(getUserFriendlyMessage(gaveUp, 'delete').message).toContain('deleting DSC09241.arw')
+        expect(getUserFriendlyMessage(gaveUp, 'delete').suggestion).toContain('already deleted are gone')
       })
 
       it('says the connection dropped when Cmdr could not wait for it', () => {
@@ -944,6 +946,12 @@ describe('getErrorDisplayMeta', () => {
       retryHint: false,
     },
     { error: { type: 'destination_full', path: '/p' }, category: 'needs_action', retryHint: false },
+    // No Retry: the delete stopped at someone else's file on purpose.
+    {
+      error: { type: 'changed_while_disconnected', path: '/p', volumeName: 'NAS' },
+      category: 'needs_action',
+      retryHint: false,
+    },
     // No Retry: the same reply would be refused again, and the backend never retries it either.
     {
       error: { type: 'reply_signature_refused', path: '/p', message: 'refused' },

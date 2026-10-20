@@ -1958,8 +1958,9 @@ again:
   (`volume/folder_metadata.rs`, through `wait_after_shortfall`, since a backend reports a drop under `apply_metadata` as
   a refused class rather than an error). Both: `volume/DETAILS.md`.
 
-**Not covered, deliberately.** The pre-flight SCAN of a big tree (its own walker, its own failure path), delete and
-trash, and the local engines. Each would fail on an outage as it always did.
+**Not covered, deliberately.** The pre-flight SCAN of a big tree (its own walker, its own failure path), trash, and the
+local engines. Each would fail on an outage as it always did. A volume delete has its own wait, which re-checks each
+entry against its walk before deleting again (`../delete/DETAILS.md` § "Waiting out a dropped share").
 
 **A landing the drop cut off (`interrupted_landing.rs`, `staged_write_landing.rs::CutOffLanding`).** A rename or a
 delete whose reply never arrives may have happened or not: the drop can come before the server saw it, or after it

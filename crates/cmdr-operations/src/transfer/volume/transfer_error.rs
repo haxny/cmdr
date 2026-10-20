@@ -86,6 +86,19 @@ pub(crate) fn map_finalize_failure(dest_path: &Path, failure: FinalizeFailure) -
     WriteFailure::from(PathedVolumeError::from_landing(failure, dest_path)).error
 }
 
+/// Turns a failure at `path`, on `role`'s volume, into the typed error the user
+/// reads, for a caller outside the transfer engine whose outage wait ended the
+/// work (the volume delete). What the wait learned about the connection
+/// (`lost`) outranks the errno, exactly as for a transfer.
+pub(crate) fn map_failure_after_wait(
+    path: &Path,
+    role: PathRole,
+    error: VolumeError,
+    lost: Option<LostConnection>,
+) -> WriteOperationError {
+    WriteFailure::from(PathedVolumeError::new(role, path, error).with_lost_connection(lost)).error
+}
+
 /// A `VolumeError` plus the path that actually produced it, and which side's
 /// call that was.
 ///

@@ -610,6 +610,41 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'server_connection_lost (delete, gave up)',
+    error: { type: 'server_connection_lost', path: '/nas/photos/a.jpg', volumeName: 'Naspolya', gaveUpAfterSecs: 900 },
+    op: 'delete',
+    expected: {
+      title: 'Lost the connection to Naspolya',
+      message: `Cmdr waited ${fifteenMinutes} for Naspolya to come back, then stopped. It was deleting a.jpg.`,
+      suggestion:
+        'Check that the server is on and your network is up, then try again. Files Cmdr already deleted are gone.',
+    },
+  },
+  {
+    name: 'server_connection_lost (delete, dropped)',
+    error: { type: 'server_connection_lost', path: '/nas/photos/a.jpg', volumeName: 'Naspolya', gaveUpAfterSecs: null },
+    op: 'delete',
+    expected: {
+      title: 'Lost the connection to Naspolya',
+      message: 'The connection to Naspolya dropped while Cmdr was deleting a.jpg.',
+      suggestion:
+        'Check that the server is on and your network is up, then try again. Files Cmdr already deleted are gone.',
+    },
+  },
+  {
+    // A delete that waited out the drop and found someone else's file at a path it listed.
+    name: 'changed_while_disconnected',
+    error: { type: 'changed_while_disconnected', path: '/nas/photos/a.jpg', volumeName: 'Naspolya' },
+    op: 'delete',
+    expected: {
+      title: 'Cmdr left a changed file alone',
+      message:
+        'The connection to Naspolya dropped during the delete. When it came back, a.jpg wasn’t the file Cmdr had listed, so Cmdr left it and stopped.',
+      suggestion:
+        'Check what’s there now, then delete again if you still want it gone. Files Cmdr deleted before it are gone.',
+    },
+  },
+  {
     // A server reply refused for its signature has its own stopped state (#457), never the
     // generic "couldn't finish" one.
     name: 'reply_signature_refused',

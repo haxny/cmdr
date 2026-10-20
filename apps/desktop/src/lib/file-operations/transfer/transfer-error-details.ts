@@ -140,6 +140,9 @@ function driveDetailLines(error: WriteOperationError): string[] | null {
       `Waited: ${error.gaveUpAfterSecs === null ? 'no' : `${String(error.gaveUpAfterSecs)} s`}`,
     ]
   }
+  if (error.type === 'changed_while_disconnected') {
+    return [`Path: ${error.path}`, `Volume: ${error.volumeName}`]
+  }
   if (error.type === 'move_not_confirmed') {
     const lines = [`Path: ${error.path}`]
     if (error.errno !== null) lines.push(`Errno: ${String(error.errno)}`)

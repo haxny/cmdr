@@ -70,7 +70,7 @@ pub(crate) use strategy::pull_path_to_local;
 pub(crate) use transfer_error::unregistered_volume_error;
 /// The one place a `VolumeError` becomes a typed `WriteOperationError`; the
 /// delete walker maps its own volume failures through it too.
-pub(crate) use transfer_error::{PathRole, map_finalize_failure, map_volume_error};
+pub(crate) use transfer_error::{PathRole, map_failure_after_wait, map_finalize_failure, map_volume_error};
 
 // Driven directly by the SMB/MTP integration suites and the volume-journal
 // capture tests, which bypass the Tauri command layer.

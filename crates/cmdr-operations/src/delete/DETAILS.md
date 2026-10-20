@@ -60,6 +60,35 @@ Pinned on a real APFS image mounted inside a test folder (`real_image.rs`, the d
 for the folder and for the mount point, the delete preview (caches nothing), and the volume walker. Regression anchor:
 #507.
 
+## Waiting out a dropped share
+
+A volume delete on a server (SMB, SFTP, WebDAV, S3) or a phone over ADB waits for a dropped session the way a copy does
+(`../transfer/volume_outage.rs`: bounded, cancelable at once, pausable, shared per lane), in `outage.rs`:
+
+- **The walk's reads** (the type probe, each listing) are safe to run twice, so they go through `through_outages` as
+  they are.
+- **Each delete, file or folder, waits on its own loop** (`outage::delete_entry`), because a delete isn't safe to run
+  twice blind: the drop may have swallowed the reply of a delete that went through, and during the outage another client
+  may have put a different file at that path. So every attempt after a wait first re-checks the entry against what the
+  walk listed (`Listed`: its `EntryKind`, and a file's size). Gone means done: the cut-off delete went through, and it
+  counts as deleted. ❗ Only after a wait: a first try's `NotFound` fails the delete as it always did. Another kind,
+  another size, or a size the walk never learned means someone else's file: it stays, and the delete stops on
+  `WriteOperationError::ChangedWhileDisconnected` (stopping rather than carrying on, since the evidence says someone is
+  changing that tree right now, and a delete has no rollback). The same entry is deleted again with the same
+  non-recursive `delete`, ❌ never a recursive one.
+- **A batch** (`delete_files`, S3) is one call, so its answer for a file the drop cut off goes into that file's loop as
+  an error already in hand (with the batch's `StartedOn`), which starts at the wait.
+- **The size the re-check needs** comes from the listing, or from the scan preview for a top-level file. A top-level
+  file with neither (no preview, so the walker only probed its type) gets one `get_metadata` during the walk, only on a
+  volume with a session (`connection_state` answers): no other volume is ever waited for.
+- **A folder's delete** keeps its best-effort silence for a refusal (it still holds a file the delete couldn't take),
+  but an outage that ends it is reported: before, the folder pass swallowed it and the delete read as complete.
+- **The terminal error names the server**: `outage::EntryStop` / `ReadStop` carry what the wait learned
+  (`LostConnection`) to `transfer::volume::map_failure_after_wait`, so the person reads "Lost the connection to
+  {server}" (`ServerConnectionLost`, the delete's own verb in the FE), the file as context only.
+
+Pinned by `delete_outage_tests.rs`.
+
 ## The volume delete's own lifecycle
 
 `volume_start.rs::start_volume_delete` registers the op with the manager and hands it a deferred async start;

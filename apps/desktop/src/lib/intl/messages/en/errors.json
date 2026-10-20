@@ -1967,6 +1967,30 @@
   "errors.write.serverConnectionLost.message.dropped.move": "The connection to {volumeName} dropped while Cmdr was moving {fileName}.",
   "errors.write.serverConnectionLost.suggestion.copy": "Check that the server is on and your network is up, then try again. Files that finished copying are already there.",
   "errors.write.serverConnectionLost.suggestion.move": "Check that the server is on and your network is up, then try again. Files that finished moving are already there.",
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr waited {duration} for {volumeName} to come back, then stopped. It was deleting {fileName}.",
+  "errors.write.serverConnectionLost.message.dropped.delete": "The connection to {volumeName} dropped while Cmdr was deleting {fileName}.",
+  "errors.write.serverConnectionLost.suggestion.delete": "Check that the server is on and your network is up, then try again. Files Cmdr already deleted are gone.",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "description": "Body of the delete error dialog when Cmdr waited a while for a dropped network server to come back, then stopped the (permanent) delete. Plain text. The literals {duration} (an already-formatted length of time, like \"15m\"), {volumeName} (the server's name), and {fileName} (the file the delete was on when it stopped) are do-not-translate placeholders. The connection is the cause; the file is only context."
+  },
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "description": "Body of the delete error dialog when the connection to a network server dropped and Cmdr couldn't wait for it this time (the server needs a sign-in, or the connection kept dropping). Plain text. The literals {volumeName} (the server's name) and {fileName} (the file the delete was on) are do-not-translate placeholders."
+  },
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "description": "What to do after a permanent delete stopped because a network server's connection was lost: check the server and the network, then try again. The second sentence says plainly that the files the delete already removed are gone (a delete can't be undone). Plain text."
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr left a changed file alone",
+  "errors.write.changedWhileDisconnected.message": "The connection to {volumeName} dropped during the delete. When it came back, {fileName} wasn’t the file Cmdr had listed, so Cmdr left it and stopped.",
+  "errors.write.changedWhileDisconnected.suggestion": "Check what’s there now, then delete again if you still want it gone. Files Cmdr deleted before it are gone.",
+  "@errors.write.changedWhileDisconnected.title": {
+    "description": "Title of the delete error dialog when a permanent delete waited out a dropped connection to a server or phone, then found that a file it was about to delete had been replaced by a different one (by another person or app) in the meantime, so it didn't delete it and stopped. Short. Plain text."
+  },
+  "@errors.write.changedWhileDisconnected.message": {
+    "description": "Body of that delete error dialog. Plain text. The literals {volumeName} (the server's or phone's name) and {fileName} (the file Cmdr left alone) are do-not-translate placeholders. Cmdr compared the file with what it saw before the connection dropped, and it no longer matched."
+  },
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "description": "What to do after that delete stopped: look at the file that's there now, and run the delete again if it should still go. The second sentence says plainly that the files the delete already removed are gone (a delete can't be undone). Plain text."
+  },
   "@errors.write.serverConnectionLost.title": {
     "description": "Title of the copy/move error dialog when the connection to a network server (a NAS or file server reached over SMB, SFTP, WebDAV, or S3) ended the operation. Short. Plain text. The literal {volumeName} is a do-not-translate placeholder, replaced at runtime with the server's name as the sidebar shows it."
   },

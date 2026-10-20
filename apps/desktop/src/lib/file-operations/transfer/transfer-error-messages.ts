@@ -181,6 +181,9 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   // Retry: once the server is back, the same transfer picks up where the files
   // that already landed leave off. It needs the person to check the server first.
   server_connection_lost: { category: 'needs_action', retryHint: true },
+  // No Retry: the delete stopped on purpose, at a file someone else put there. The
+  // person looks first, then deletes again if they still want it gone.
+  changed_while_disconnected: { category: 'needs_action', retryHint: false },
   delete_pending: { category: 'transient', retryHint: true },
   // No Retry: the file stays archived until someone restores it, which Cmdr
   // can't do yet, so the identical request can only meet it again.
