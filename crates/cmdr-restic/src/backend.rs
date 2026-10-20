@@ -14,7 +14,8 @@ use rustic_core::repofile::KeyFile;
 use rustic_core::{BytesList, ErrorKind, FileType, Id, ReadBackend, RusticError, RusticResult, WriteBackend};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
+use std::time::{Duration, Instant};
 use tokio::runtime::Handle;
 
 /// Reads a restic repo's files through the volume it lives on, and refuses every
@@ -27,8 +28,11 @@ pub(crate) struct VolumeBackend {
     /// How many writes rustic tried. Every one is refused; the count is what lets
     /// a test pin "browsing never even tries to write".
     write_attempts: AtomicUsize,
-    /// Packs held open for positioned reads (see [`HeldReaders`]).
-    held: Mutex<HeldReaders>,
+    /// Packs held open for positioned reads (see [`HeldReaders`]). Shared with
+    /// the sweep that closes them once idle.
+    held: Arc<Mutex<HeldReaders>>,
+    /// How long the held readers may sit unused before they close.
+    reader_idle: Duration,
     /// During an index load: the index files read ahead, the load's cancel,
     /// and its byte tally (`index_load.rs`). `None` on every other repo.
     index_feed: Option<Arc<IndexFeed>>,
@@ -41,7 +45,8 @@ impl VolumeBackend {
             root,
             handle,
             write_attempts: AtomicUsize::new(0),
-            held: Mutex::new(HeldReaders::default()),
+            held: Arc::new(Mutex::new(HeldReaders::default())),
+            reader_idle: READER_IDLE,
             index_feed: None,
         }
     }
@@ -50,6 +55,13 @@ impl VolumeBackend {
     /// `feed` when it read them ahead, and are counted into it when it didn't.
     pub(crate) fn with_index_feed(mut self, feed: Arc<IndexFeed>) -> Self {
         self.index_feed = Some(feed);
+        self
+    }
+
+    /// The same adapter with a shorter reader idle, for a test that waits for it.
+    #[cfg(test)]
+    pub(crate) fn with_reader_idle(mut self, idle: Duration) -> Self {
+        self.reader_idle = idle;
         self
     }
 
@@ -180,6 +192,7 @@ impl VolumeBackend {
                 return Ok(None);
             }
             if let Some(reader) = held.take(path) {
+                self.note_reader_use(&mut held);
                 return Ok(Some(reader));
             }
         }
@@ -199,18 +212,70 @@ impl VolumeBackend {
         let mut held = lock(&self.held);
         let reader = held.take(path).unwrap_or(opened);
         held.put(path, Arc::clone(&reader));
+        self.note_reader_use(&mut held);
         Ok(Some(reader))
+    }
+
+    /// Marks the held readers used just now, and starts the sweep that closes
+    /// them once they've sat idle for `reader_idle`, unless one runs already.
+    fn note_reader_use(&self, held: &mut HeldReaders) {
+        held.last_used = Instant::now();
+        if !held.sweeping {
+            held.sweeping = true;
+            drop(
+                self.handle
+                    .spawn(close_when_idle(Arc::downgrade(&self.held), self.reader_idle)),
+            );
+        }
+    }
+}
+
+/// Closes every held reader once none was used for `idle`, then ends; the next
+/// read starts a new sweep. ❗ Independent of the index's own idle drop: a held
+/// handle keeps a deleted file delete-pending on Samba and Windows, so a repo's
+/// `data/` couldn't be removed for minutes after browsing.
+async fn close_when_idle(held: Weak<Mutex<HeldReaders>>, idle: Duration) {
+    let mut wait = idle;
+    loop {
+        tokio::time::sleep(wait).await;
+        let Some(held) = held.upgrade() else { return };
+        let mut readers = lock(&held);
+        let idle_for = readers.last_used.elapsed();
+        if idle_for < idle {
+            wait = idle - idle_for;
+            continue;
+        }
+        readers.sweeping = false;
+        let closing = std::mem::take(&mut readers.readers);
+        drop(readers);
+        // Each closes on drop, as its last user lets go.
+        drop(closing);
+        return;
     }
 }
 
 /// Packs held open for positioned reads, least recently used first, at most
 /// [`MAX_HELD_READERS`]. Dropping the adapter (the repo going away) drops them
 /// all, and each closes as its last user lets go ([`HeldReader`]'s `Drop`).
-#[derive(Default)]
 struct HeldReaders {
     readers: Vec<(PathBuf, Arc<HeldReader>)>,
     /// The parent answered `NotSupported`: every pack read is a `read_range`.
     unsupported: bool,
+    /// When a held reader was last taken or put.
+    last_used: Instant,
+    /// A sweep that closes idle readers is running.
+    sweeping: bool,
+}
+
+impl Default for HeldReaders {
+    fn default() -> Self {
+        Self {
+            readers: Vec::new(),
+            unsupported: false,
+            last_used: Instant::now(),
+            sweeping: false,
+        }
+    }
 }
 
 impl HeldReaders {
@@ -274,6 +339,11 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 /// person or machine); a password typed into a crafted one with thousands would
 /// otherwise cost a second of scrypt per key.
 pub(crate) const MAX_KEYS: usize = 32;
+
+/// How long held pack readers may sit unused before they close: long enough to
+/// span the gaps of a browse or a copy, short enough that deleting the repo's
+/// files right after browsing doesn't meet a delete-pending file.
+const READER_IDLE: Duration = Duration::from_secs(5);
 
 /// The most packs held open for positioned reads. A tree walk or a file read
 /// touches a few packs at a time; a handful more keeps a copy's working set open

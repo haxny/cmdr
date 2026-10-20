@@ -209,10 +209,12 @@ Reads:
   least recently used let go first: on SMB a `read_range` is open + read + close, about 14 ms per tree read on David's
   NAS against one round trip through a held handle (`docs/notes/restic/open-cost.md`). Packs never change once written,
   so a held handle never goes stale. Each `HeldReader` closes itself on drop, on the runtime, so dropping the repo (or
-  evicting a reader mid-read) closes every handle once its last read ends. A parent without readers (`NotSupported`,
-  asked once) gets one `read_range` per window. A parent without `read_range` (`NotSupported`) falls back to streaming
-  from the start and cutting the window out; correct, not cheap. A window that comes back short is an error, so a pack
-  truncated under us fails loudly instead of feeding rustic short bytes.
+  evicting a reader mid-read) closes every handle once its last read ends. The held readers also close once none was
+  used for 5 s (`READER_IDLE`), whatever the index does: a held handle keeps a deleted file delete-pending on Samba and
+  Windows, so removing the repo's `data/` right after browsing would otherwise answer "folder not empty". A parent
+  without readers (`NotSupported`, asked once) gets one `read_range` per window. A parent without `read_range`
+  (`NotSupported`) falls back to streaming from the start and cutting the window out; correct, not cheap. A window that
+  comes back short is an error, so a pack truncated under us fails loudly instead of feeding rustic short bytes.
 
 Writes: `create`, `write_bytes`, and `remove` all refuse and count the attempt (`write_attempts`, test-only), so a test
 can pin that browsing never even tries.

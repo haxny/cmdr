@@ -396,6 +396,38 @@ async fn add_packs(parent: &InMemoryVolume, count: usize) -> Vec<Id> {
 /// ❗ A pack is read at many offsets (one tree, one blob each). Over SMB a
 /// `read_range` is open + read + close, ~14 ms a call, so the adapter opens a
 /// pack once and reads it through the held handle from then on.
+/// ❗ A held handle keeps a deleted file delete-pending on Samba and Windows, so
+/// removing the repo's `data/` right after browsing would answer "folder not
+/// empty". The handles close after a short idle, whatever the index does.
+#[tokio::test(flavor = "multi_thread")]
+async fn held_readers_close_after_a_short_idle() {
+    let memory = layout_volume(InMemoryVolume::new("parent")).await;
+    let parent = ReaderParent::over(Arc::clone(&memory));
+    let be = Arc::new(
+        VolumeBackend::new(
+            Arc::clone(&parent) as Arc<dyn Volume>,
+            PathBuf::from(ROOT),
+            tokio::runtime::Handle::current(),
+        )
+        .with_reader_idle(Duration::from_millis(100)),
+    );
+    let reading = Arc::clone(&be);
+
+    blocking(move || {
+        reading
+            .read_partial(FileType::Pack, &id(PACK_A), false, 0, 1)
+            .expect("read")
+    })
+    .await;
+
+    let closes = Arc::clone(&parent.closes);
+    wait_until_async(Duration::from_secs(5), "the idle reader is closed", || {
+        closes.load(Ordering::SeqCst) == 1
+    })
+    .await;
+    drop(be);
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn a_pack_is_opened_once_for_many_reads() {
     let memory = layout_volume(InMemoryVolume::new("parent")).await;
