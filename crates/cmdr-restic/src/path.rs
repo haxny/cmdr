@@ -8,30 +8,11 @@ use crate::snapshots::{LATEST_FOLDER_NAME, SHORT_ID_LEN};
 use std::ffi::OsString;
 use std::path::{Component, Path};
 
-/// The name of the folder a pane shows inside a repo, and the path component
-/// every snapshot path runs through: `<repo>/Browse snapshots/latest/…`.
-///
-/// A path component, so it stays English in every locale: history, favorites,
-/// and the agent all address paths, and a translated name would move them when
-/// the language changes.
-pub const VIRTUAL_ENTRY_NAME: &str = "Browse snapshots";
-
-/// The repo folder a path would browse into, if it runs through the view: the
-/// folder holding its first [`VIRTUAL_ENTRY_NAME`] component.
-///
-/// Lexical only, so it's a candidate, ❗ not a verdict: a real folder of that
-/// name outside a repo answers too. The host confirms the candidate through
-/// `ResticRepos::confirm_repo` before it routes.
-pub fn restic_route(path: &Path) -> Option<std::path::PathBuf> {
-    let mut root = std::path::PathBuf::new();
-    for component in path.components() {
-        if component.as_os_str() == VIRTUAL_ENTRY_NAME {
-            return Some(root);
-        }
-        root.push(component);
-    }
-    None
-}
+// The lexical naming lives in `cmdr-fs`, so the listing engine and the write
+// guards can ask it without linking `rustic_core`; one definition, re-exported.
+// A host confirms `restic_route`'s candidate through
+// `ResticRepos::confirm_repo` before it routes.
+pub use cmdr_fs::restic_view::{VIRTUAL_ENTRY_NAME, restic_route};
 
 /// Which snapshot a folder name inside the view stands for.
 #[derive(Debug, Clone, PartialEq, Eq)]

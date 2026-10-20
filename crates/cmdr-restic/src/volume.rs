@@ -24,8 +24,8 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::MetadataCaps;
 use cmdr_fs::volume::scan_walk::{self, ScanSource, Walking};
 use cmdr_fs::volume::{
-    BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, PasswordLocked, ScanBoundary,
-    SpaceInfo, UnlockOutcome, Volume, VolumeError, VolumeReadStream,
+    BackendKind, BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, PasswordLocked,
+    ScanBoundary, SpaceInfo, UnlockOutcome, Volume, VolumeError, VolumeReadStream,
 };
 use rustic_core::repofile::Node;
 use std::ffi::OsString;
@@ -296,6 +296,12 @@ impl Volume for ResticVolume {
     /// answers it. The registry id carries which repo this is.
     fn name(&self) -> &str {
         VIRTUAL_ENTRY_NAME
+    }
+
+    /// Its own kind, ❌ never the trait's `Local` default: favorites, the error
+    /// report, and the index would otherwise treat a snapshot as a local disk.
+    fn backend_kind(&self) -> BackendKind {
+        BackendKind::Restic
     }
 
     fn root(&self) -> &Path {

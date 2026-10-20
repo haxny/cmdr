@@ -300,8 +300,9 @@ unlocked view.
   folder, which joins the same load.
 - **The host route** calls `restic_route`, then `confirm_repo` (or `serves_confirmed` on a sync seam), and builds a
   `ResticVolume` over the parked hub. The overlay calls `is_restic_repo` on the entries, then `overlay_row`.
-- `ResticVolume::backend_kind` keeps the trait's `Local` default until `cmdr-fs` gains a restic kind; the host's matches
-  on `BackendKind` (favorites, the error report, the stall watch, the index) need one.
+- `ResticVolume::backend_kind` is `BackendKind::Restic`, so the host's matches (favorites, the error report, the stall
+  watch, the index) never read a snapshot as a local disk. `VIRTUAL_ENTRY_NAME` and `restic_route` are defined in
+  `cmdr_fs::restic_view` (the listing engine asks them without linking rustic) and re-exported here.
 
 ## Against 0.13.0
 
