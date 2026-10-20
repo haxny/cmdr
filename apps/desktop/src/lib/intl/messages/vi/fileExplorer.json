@@ -1417,6 +1417,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "Đã có thư mục trùng tên này",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "“{name}” đã tồn tại trong thư mục này. Bạn muốn làm gì?",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1440,6 +1444,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "Ghi đè và chuyển tệp cũ vào thùng rác",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Ghi đè và chuyển thư mục cũ vào thùng rác",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "Ghi đè và xóa tệp cũ",
   "@fileExplorer.renameConflict.overwriteDelete": {

@@ -215,6 +215,10 @@
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "6328b51"
   },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Sobrescribir y mover la carpeta antigua al basurero",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "5b5a708"
+  },
   "fileExplorer.quickLookHint.spaceSelects": "En Cmdr, <space></space> selecciona de forma predeterminada el archivo bajo el cursor.",
   "@fileExplorer.quickLookHint.spaceSelects": {
     "sourceHash": "f72c0b6"

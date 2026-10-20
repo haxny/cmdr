@@ -99,6 +99,14 @@
   "@stateRecovery.localAi.title": {
     "sourceHash": "7d4a0cb"
   },
+  "stateRecovery.credentials.title": "Cmdr n’a pas pu lire vos mots de passe et clés enregistrés, il repart donc à zéro",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "Cela arrive après un passage à un nouvel ordinateur. Cmdr vous redemandera chaque mot de passe la prochaine fois qu’il en aura besoin.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
   "stateRecovery.keptCopy": "Cmdr a conservé l’ancien fichier sous {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

@@ -428,6 +428,10 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
+  "servers.sheet.webdavCleartext": "Cette adresse n’est pas chiffrée, donc n’importe qui sur votre réseau peut lire le mot de passe que Cmdr envoie. Utilisez une adresse https si votre serveur en a une.",
+  "@servers.sheet.webdavCleartext": {
+    "sourceHash": "5057191"
+  },
   "servers.sheet.accountLocked": "Le protocole et le compte identifient ce serveur. Pour utiliser un autre compte, ajoutez-le comme nouveau serveur.",
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"

@@ -431,6 +431,10 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
+  "servers.sheet.webdavCleartext": "Dit adres is niet versleuteld, dus iedereen op je netwerk kan het wachtwoord lezen dat Cmdr verstuurt. Gebruik een https-adres als je server er een heeft.",
+  "@servers.sheet.webdavCleartext": {
+    "sourceHash": "5057191"
+  },
   "servers.sheet.accountLocked": "Het protocol en het account bepalen welke server dit is. Wil je een ander account gebruiken, voeg het dan toe als nieuwe server.",
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"

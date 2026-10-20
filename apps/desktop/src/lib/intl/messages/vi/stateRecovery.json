@@ -99,6 +99,14 @@
   "@stateRecovery.localAi.title": {
     "sourceHash": "7d4a0cb"
   },
+  "stateRecovery.credentials.title": "Cmdr không đọc được mật khẩu và khóa đã lưu của bạn, nên Cmdr bắt đầu lại từ đầu",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "Điều này xảy ra sau khi chuyển sang máy tính mới. Cmdr sẽ hỏi lại từng mật khẩu ở lần tiếp theo cần đến.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
   "stateRecovery.keptCopy": "Cmdr đã giữ tệp cũ tại {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

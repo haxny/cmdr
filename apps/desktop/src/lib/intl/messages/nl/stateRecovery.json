@@ -99,6 +99,14 @@
   "@stateRecovery.localAi.title": {
     "sourceHash": "7d4a0cb"
   },
+  "stateRecovery.credentials.title": "Cmdr kon je opgeslagen wachtwoorden en sleutels niet lezen, dus Cmdr begint opnieuw",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "Dit gebeurt na een overstap naar een nieuwe computer. Cmdr vraagt elk wachtwoord opnieuw zodra het weer nodig is.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
   "stateRecovery.keptCopy": "Cmdr heeft het oude bestand bewaard in {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

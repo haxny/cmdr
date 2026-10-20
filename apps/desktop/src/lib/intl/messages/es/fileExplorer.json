@@ -1418,6 +1418,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "Ya existe una carpeta con este nombre",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "“{name}” ya existe en esta carpeta. ¿Qué quieres hacer?",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1441,6 +1445,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "Sobrescribir y mover el antiguo a la papelera",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Sobrescribir y mover la carpeta antigua a la papelera",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "Sobrescribir y eliminar el archivo antiguo",
   "@fileExplorer.renameConflict.overwriteDelete": {

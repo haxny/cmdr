@@ -2028,9 +2028,10 @@
     "distinct": ["copy", "transfer", "move-to-trash"],
     "en": "move",
     "match": ["move", "moves", "moving", "moved"],
-    "note": "\"Move to left column\" and \"moves down\" (cursor movement) are not this concept, and neither is a saved server moving to a new address.",
+    "note": "\"Move to left column\" and \"moves down\" (cursor movement) are not this concept, and neither is a saved server moving to a new address or the user moving to a new computer.",
     "notMatch": [
       "move down",
+      "move to a new computer",
       "move to left column",
       "move to right column",
       "move to trash",

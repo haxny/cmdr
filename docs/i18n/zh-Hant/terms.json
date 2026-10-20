@@ -1217,6 +1217,13 @@
     "forms": "the Western encoding group → 西歐 (tentative, unattested)",
     "sources": "AP TextEdit (純文字編碼：, TW = HK), TC, DC"
   },
+  "encrypted": {
+    "accept": ["加了密"],
+    "chosen": "加密",
+    "confidence": "high",
+    "forms": "state → 已加密 (Finder's Encrypted); not encrypted in prose → 沒有加密",
+    "sources": "AP-TW Finder (Encrypted → 已加密, Encryption: → 加密：), Nautilus zh_TW (加密), the catalog's 加密卷宗"
+  },
   "endpoint": {
     "chosen": "端點",
     "confidence": "high",

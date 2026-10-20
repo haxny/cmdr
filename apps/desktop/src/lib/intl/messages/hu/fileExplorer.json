@@ -1415,6 +1415,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "Már létezik ilyen nevű mappa",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "„{name}” már létezik ebben a mappában. Mit szeretnél tenni?",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1438,6 +1442,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "Felülírás, és a régi fájl Kukába helyezése",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Felülírás, és a régi mappa Kukába helyezése",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "Felülírás, és a régi fájl törlése",
   "@fileExplorer.renameConflict.overwriteDelete": {

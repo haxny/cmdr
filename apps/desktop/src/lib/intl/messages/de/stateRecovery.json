@@ -99,6 +99,14 @@
   "@stateRecovery.localAi.title": {
     "sourceHash": "7d4a0cb"
   },
+  "stateRecovery.credentials.title": "Cmdr konnte deine gespeicherten Passwörter und Schlüssel nicht lesen, deshalb startet Cmdr von vorn",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "Das passiert nach einem Umzug auf einen neuen Computer. Cmdr fragt nach jedem Passwort noch einmal, wenn es das nächste Mal gebraucht wird.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
   "stateRecovery.keptCopy": "Cmdr hat die alte Datei unter „{path}“ aufbewahrt.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

@@ -427,6 +427,10 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
+  "servers.sheet.webdavCleartext": "Этот адрес не зашифрован, поэтому кто угодно в вашей сети может прочитать пароль, который отправляет Cmdr. Используйте адрес https, если он есть у вашего сервера.",
+  "@servers.sheet.webdavCleartext": {
+    "sourceHash": "5057191"
+  },
   "servers.sheet.accountLocked": "Протокол и учетная запись определяют этот сервер. Чтобы использовать другую учетную запись, добавьте ее как новый сервер.",
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"

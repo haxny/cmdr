@@ -99,6 +99,14 @@
   "@stateRecovery.localAi.title": {
     "sourceHash": "7d4a0cb"
   },
+  "stateRecovery.credentials.title": "Cmdr 無法讀取你已儲存的密碼和金鑰，所以重新開始",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "換到新電腦後就會這樣。Cmdr 下次需要某個密碼時，會再問你一次。",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
   "stateRecovery.keptCopy": "Cmdr 已把舊檔案保留在 {path}。",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

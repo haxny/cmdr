@@ -1420,6 +1420,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "Já existe uma pasta com este nome",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "“{name}” já existe nesta pasta. O que você gostaria de fazer?",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1443,6 +1447,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "Substituir e mover o antigo para o Lixo",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Substituir e mover a pasta antiga para o Lixo",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "Substituir e apagar o arquivo antigo",
   "@fileExplorer.renameConflict.overwriteDelete": {

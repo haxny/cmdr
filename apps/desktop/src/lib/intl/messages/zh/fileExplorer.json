@@ -1413,6 +1413,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "已存在同名文件夹",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "这个文件夹里已经有“{name}”了。你想怎么做？",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1436,6 +1440,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "覆盖并将旧文件移到废纸篓",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "覆盖并将旧文件夹移到废纸篓",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "覆盖并彻底删除旧文件",
   "@fileExplorer.renameConflict.overwriteDelete": {

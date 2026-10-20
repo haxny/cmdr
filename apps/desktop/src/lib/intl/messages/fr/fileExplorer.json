@@ -1419,6 +1419,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "Un dossier portant ce nom existe déjà",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "« {name} » existe déjà dans ce dossier. Que souhaitez-vous faire ?",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1442,6 +1446,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "Écraser et mettre l’ancien fichier à la corbeille",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Écraser et mettre l’ancien dossier à la corbeille",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "Écraser et supprimer l’ancien fichier",
   "@fileExplorer.renameConflict.overwriteDelete": {

@@ -427,6 +427,10 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
+  "servers.sheet.webdavCleartext": "這個位址沒有加密，所以你網路上的任何人都能讀到 Cmdr 傳送的密碼。如果你的伺服器有 https 位址，就改用它。",
+  "@servers.sheet.webdavCleartext": {
+    "sourceHash": "5057191"
+  },
   "servers.sheet.accountLocked": "通訊協定和帳號決定了這是哪個伺服器。要改用其他帳號，就把它加入成新的伺服器。",
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"

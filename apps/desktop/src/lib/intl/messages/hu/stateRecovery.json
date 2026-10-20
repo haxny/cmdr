@@ -99,6 +99,14 @@
   "@stateRecovery.localAi.title": {
     "sourceHash": "7d4a0cb"
   },
+  "stateRecovery.credentials.title": "A Cmdr nem tudta beolvasni a mentett jelszavaidat és kulcsaidat, ezért tiszta lappal indul",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "Ez akkor fordul elő, ha új számítógépre költözöl. A Cmdr minden jelszót újra elkér, amikor legközelebb szüksége lesz rá.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
   "stateRecovery.keptCopy": "A Cmdr megtartotta a régi fájlt itt: {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

@@ -428,6 +428,10 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
+  "servers.sheet.webdavCleartext": "Den här adressen är inte krypterad, så vem som helst i ditt nätverk kan läsa lösenordet som Cmdr skickar. Använd en https-adress om din server har en.",
+  "@servers.sheet.webdavCleartext": {
+    "sourceHash": "5057191"
+  },
   "servers.sheet.accountLocked": "Protokollet och kontot är det som identifierar den här servern. Lägg till det som en ny server om du vill använda ett annat konto.",
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"

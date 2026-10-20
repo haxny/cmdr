@@ -1415,6 +1415,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "En mapp med det här namnet finns redan",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "”{name}” finns redan i den här mappen. Vad vill du göra?",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1438,6 +1442,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "Skriv över och flytta gamla filen till papperskorgen",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Skriv över och flytta gamla mappen till papperskorgen",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "Skriv över och radera gamla filen",
   "@fileExplorer.renameConflict.overwriteDelete": {

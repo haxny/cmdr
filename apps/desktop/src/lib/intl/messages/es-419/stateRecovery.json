@@ -35,6 +35,14 @@
   "@stateRecovery.operationLog.title": {
     "sourceHash": "2dc4b55"
   },
+  "stateRecovery.credentials.title": "Cmdr no pudo leer tus contraseñas y claves guardadas, así que empieza de cero",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "0f2d1fa"
+  },
+  "stateRecovery.credentials.body": "Esto pasa después de cambiar a una computadora nueva. Cmdr te volverá a pedir cada contraseña la próxima vez que la necesite.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "cf16e70"
+  },
   "stateRecovery.chatHistory.title": "Cmdr no pudo leer tus chats de Ask Cmdr, así que empiezan de cero",
   "@stateRecovery.chatHistory.title": {
     "sourceHash": "9c4f949"

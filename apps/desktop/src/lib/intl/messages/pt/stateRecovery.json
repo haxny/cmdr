@@ -99,6 +99,14 @@
   "@stateRecovery.localAi.title": {
     "sourceHash": "7d4a0cb"
   },
+  "stateRecovery.credentials.title": "O Cmdr não conseguiu ler suas senhas e chaves salvas, então ele começa do zero",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "Isso acontece depois de mudar para um computador novo. O Cmdr vai pedir cada senha de novo na próxima vez que precisar dela.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
   "stateRecovery.keptCopy": "O Cmdr manteve o arquivo antigo em {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

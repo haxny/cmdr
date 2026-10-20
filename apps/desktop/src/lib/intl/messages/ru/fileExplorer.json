@@ -1414,6 +1414,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "Папка с таким именем уже существует",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "«{name}» уже существует в этой папке. Что сделать?",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1437,6 +1441,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "Заменить, отправив старый файл в Корзину",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Заменить, отправив старую папку в Корзину",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "Заменить, удалив старый файл",
   "@fileExplorer.renameConflict.overwriteDelete": {

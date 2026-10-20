@@ -1423,6 +1423,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "Er bestaat al een map met deze naam",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "‘{name}’ bestaat al in deze map. Wat wil je doen?",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1446,6 +1450,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "Overschrijf en verplaats oud bestand naar prullenmand",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "Overschrijf en verplaats oude map naar prullenmand",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "Overschrijf en verwijder oud bestand",
   "@fileExplorer.renameConflict.overwriteDelete": {

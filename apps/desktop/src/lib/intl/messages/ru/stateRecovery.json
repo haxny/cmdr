@@ -99,6 +99,14 @@
   "@stateRecovery.localAi.title": {
     "sourceHash": "7d4a0cb"
   },
+  "stateRecovery.credentials.title": "Cmdr не удалось прочитать ваши сохраненные пароли и ключи, поэтому Cmdr начинает заново",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "Так бывает после переезда на новый компьютер. Cmdr снова запросит каждый пароль, как только он понадобится.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
   "stateRecovery.keptCopy": "Cmdr оставил старый файл здесь: {path}.",
   "@stateRecovery.keptCopy": {
     "sourceHash": "634e87d"

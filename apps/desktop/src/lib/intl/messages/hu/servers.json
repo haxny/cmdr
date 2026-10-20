@@ -427,6 +427,10 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
+  "servers.sheet.webdavCleartext": "Ez a cím nem titkosított, így a hálózatodon bárki elolvashatja a jelszót, amit a Cmdr elküld. Használj https-címet, ha a szerverednek van ilyen.",
+  "@servers.sheet.webdavCleartext": {
+    "sourceHash": "5057191"
+  },
   "servers.sheet.accountLocked": "A protokoll és a fiók azonosítja ezt a szervert. Másik fiók használatához add hozzá új szerverként.",
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"

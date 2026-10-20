@@ -1413,6 +1413,10 @@
   "@fileExplorer.renameConflict.title": {
     "sourceHash": "92ae292"
   },
+  "fileExplorer.renameConflict.titleFolder": "已經有同名的資料夾了",
+  "@fileExplorer.renameConflict.titleFolder": {
+    "sourceHash": "f49da17"
+  },
   "fileExplorer.renameConflict.description": "這個資料夾裡已經有「{name}」。你想怎麼做？",
   "@fileExplorer.renameConflict.description": {
     "sourceHash": "e3f2532"
@@ -1436,6 +1440,10 @@
   "fileExplorer.renameConflict.overwriteTrash": "覆寫並把舊檔案移至垃圾桶",
   "@fileExplorer.renameConflict.overwriteTrash": {
     "sourceHash": "e0192f6"
+  },
+  "fileExplorer.renameConflict.overwriteTrashFolder": "覆寫並把舊資料夾移至垃圾桶",
+  "@fileExplorer.renameConflict.overwriteTrashFolder": {
+    "sourceHash": "7f94bfa"
   },
   "fileExplorer.renameConflict.overwriteDelete": "覆寫並永久刪除舊檔案",
   "@fileExplorer.renameConflict.overwriteDelete": {

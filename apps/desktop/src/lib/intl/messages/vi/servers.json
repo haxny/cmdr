@@ -427,6 +427,10 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
+  "servers.sheet.webdavCleartext": "Địa chỉ này không được mã hóa, nên bất kỳ ai trong mạng của bạn cũng có thể đọc mật khẩu mà Cmdr gửi đi. Hãy dùng địa chỉ https nếu máy chủ của bạn có.",
+  "@servers.sheet.webdavCleartext": {
+    "sourceHash": "5057191"
+  },
   "servers.sheet.accountLocked": "Giao thức và tài khoản là những gì xác định máy chủ này. Để dùng một tài khoản khác, hãy thêm tài khoản đó thành một máy chủ mới.",
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"
