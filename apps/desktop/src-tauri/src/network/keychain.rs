@@ -275,6 +275,24 @@ pub fn has_credentials(server: &str, share: Option<&str>) -> bool {
     get_credentials(server, share).is_ok()
 }
 
+/// Whether a sign-in to `share` finds a password: its own entry, else the
+/// server's, the order the backend reads them in.
+///
+/// ❗ Both count (#530): a check of the server's alone showed Remember off on a
+/// share that signs in with its own.
+pub fn has_share_credentials(server: &str, share: &str) -> bool {
+    has_credentials(server, Some(share)) || has_credentials(server, None)
+}
+
+/// Forgets every password a sign-in to `share` would find (its own entry and
+/// the server's), answering whether there was one.
+///
+/// ❗ Both go (#530): the share's own is read first, so leaving it signs the
+/// share in as if nothing was forgotten.
+pub fn forget_share_credentials(server: &str, share: &str) -> bool {
+    forget_server_credentials(&[server.to_string()], &[share.to_string()]).is_ok_and(|gone| gone > 0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

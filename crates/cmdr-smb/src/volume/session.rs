@@ -247,16 +247,18 @@ pub(super) async fn refresh_credentials_from_store(
 /// After a sign-in WORKED, files the credentials that connected the way its
 /// Remember box asks (#530).
 ///
-/// - **Remember on**: an empty store gets this share's OWN entry (a checked box
-///   is a promise), ❌ never a server-level one other shares would fall back to.
-/// - **Remember off**: refreshes only, ❌ never seeds. No entry means the person
-///   turned Remember off (the sheet forgets before it dials), and writing one
-///   anyway put back the password they had just told Cmdr to forget.
+/// - **Remember on**: an empty store gets the SERVER's entry (a checked box is a
+///   promise), the one every sign-in sheet writes and "Forget saved password"
+///   takes back.
+/// - **Remember off**: refreshes an entry that's there, ❌ never creates one. No
+///   entry means the person turned Remember off (the sheet forgets before it
+///   dials), and writing one anyway put back the password they had just told
+///   Cmdr to forget.
 ///
 /// The entry is the one [`refresh_credentials_from_store`] reads: the share's
 /// own, else the server's. ❗ A server entry holding ANOTHER account is left
-/// alone and this share gets its own instead: every other share on the server
-/// signs in with that one.
+/// alone: every other share on the server signs in with that one, so Remember
+/// on files this share its own instead.
 ///
 /// The reads and the write ride ONE blocking task, so a store that prompts asks
 /// once. Answers whether the store took it; `false` costs only "silent next
@@ -279,10 +281,10 @@ pub(super) async fn refresh_remembered_credentials(
             Some(share.as_str())
         } else {
             match store.credentials(&server, None) {
-                None if remember => Some(share.as_str()),
-                None => return Ok(()),
                 Some(wide) if wide.username == stored.username => None,
-                Some(_) => Some(share.as_str()),
+                None if remember => None,
+                Some(_) if remember => Some(share.as_str()),
+                None | Some(_) => return Ok(()),
             }
         };
         store.save_credentials(&server, scope, &stored)

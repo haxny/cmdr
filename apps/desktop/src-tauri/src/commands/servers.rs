@@ -520,7 +520,7 @@ pub async fn has_server_secret(id: String) -> bool {
         SavedEntry::S3(entry) => super::s3::has_s3_credentials(entry.provider, entry.access_key_id).await,
         SavedEntry::Smb(row) => {
             cmdr_fs::deadline::blocking_with_timeout(std::time::Duration::from_secs(15), false, move || {
-                crate::network::keychain::has_credentials(&row.server_name, None)
+                crate::network::keychain::has_share_credentials(&row.server_name, &row.share_name)
             })
             .await
         }
@@ -550,10 +550,11 @@ pub async fn forget_server_secret(id: String) -> bool {
         SavedEntry::S3(entry) => super::s3::delete_s3_credentials(entry.provider, entry.access_key_id)
             .await
             .is_ok(),
-        // SMB keeps one password per HOST, which is what a share's sign-in wrote.
+        // SMB keeps one password per HOST, plus a share's own beside another
+        // account's: both go.
         SavedEntry::Smb(row) => {
             cmdr_fs::deadline::blocking_with_timeout(std::time::Duration::from_secs(15), false, move || {
-                crate::network::keychain::delete_credentials(&row.server_name, None).is_ok()
+                crate::network::keychain::forget_share_credentials(&row.server_name, &row.share_name)
             })
             .await
         }

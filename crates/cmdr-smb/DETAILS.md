@@ -226,10 +226,13 @@ reconnect manager listens for this event and runs a per-volume backoff cycle (ti
    (`SignIn::remember`) says (`session::refresh_remembered_credentials`), so the next reconnect is silent. If the new
    creds are also wrong, it re-emits `needs_credentials` — a bad retry re-prompts rather than dead-ending.
    - **Which entry**: the one `refresh_credentials_from_store` reads (the share's own, else the server's), with the
-     credentials that actually connected. ❗ A server-level entry for ANOTHER account stays, and this share gets its
-     own: every other share on the server signs in with it.
-   - **An empty store**: Remember on seeds the SHARE's own entry, ❌ never a server-level one other shares fall back to.
-     Remember off writes nothing (the sheet forgot the entry before it dialed).
+     credentials that actually connected. ❗ A server-level entry for ANOTHER account stays: every other share on the
+     server signs in with it, so Remember on files this share its own entry instead.
+   - **Remember off refreshes, ❌ never creates.** An empty store, or a server entry for another account, gets nothing
+     (the sheet forgot the entry before it dialed). Remember on seeds the SERVER's entry in an empty store.
+   - **Why the server's** (#530): it's what every sign-in sheet writes, and what "Forget saved password" and Remember
+     off take back. A share-scoped seed outlived both and, read first, came back on every sign-in. The app's
+     `has_server_secret` / `forget_server_secret` cover a share's own entry too.
    - **Why dial first** (#530): writing before the dial let a typo replace the server-level password every share falls
      back to, and wrote one back even with Remember off.
 

@@ -370,16 +370,16 @@ async fn a_working_sign_in_refreshes_the_server_entry_it_reads_for_the_same_acco
     assert_eq!(secret_at(&store, Some("TestShare")), None);
 }
 
-/// ❗ Another account on this share never replaces the server-level entry every
-/// other share on the server signs in with.
+/// ❗ Another account with Remember off writes nothing: a share entry made here
+/// is one the person never asked for (#530).
 #[tokio::test]
-async fn a_working_sign_in_as_another_account_files_the_share_its_own_entry() {
+async fn a_working_sign_in_as_another_account_with_remember_off_writes_nothing() {
     let store = Arc::new(InMemoryCredentials::new().with_entry("127.0.0.1", None, "ada", "ada-pw"));
 
     assert!(refresh_remembered_credentials(&host_over(&store), &connected_as("grace", "grace-pw"), false).await);
 
     assert_eq!(secret_at(&store, None), held("ada", "ada-pw"));
-    assert_eq!(secret_at(&store, Some("TestShare")), held("grace", "grace-pw"));
+    assert_eq!(secret_at(&store, Some("TestShare")), None);
 }
 
 /// ❌ Remember off never seeds: the sheet forgot the entry before it dialed.
@@ -393,20 +393,22 @@ async fn a_working_sign_in_with_remember_off_never_seeds_an_empty_store() {
     assert_eq!(secret_at(&store, Some("TestShare")), None);
 }
 
-/// ❗ A checked Remember box is a promise: an empty store gets this share's own
-/// entry, ❌ never a server-level one other shares would fall back to.
+/// ❗ A checked Remember box is a promise: an empty store gets the SERVER's
+/// entry, the one every sign-in sheet writes and "Forget saved password" takes
+/// back (#530).
 #[tokio::test]
-async fn a_working_sign_in_with_remember_on_seeds_the_shares_own_entry() {
+async fn a_working_sign_in_with_remember_on_seeds_the_server_entry() {
     let store = Arc::new(InMemoryCredentials::new());
 
     assert!(refresh_remembered_credentials(&host_over(&store), &connected_as("ada", "new"), true).await);
 
-    assert_eq!(secret_at(&store, Some("TestShare")), held("ada", "new"));
-    assert_eq!(secret_at(&store, None), None);
+    assert_eq!(secret_at(&store, None), held("ada", "new"));
+    assert_eq!(secret_at(&store, Some("TestShare")), None);
 }
 
-/// Remember on changes nothing about WHICH entry: another account's server-level
-/// entry still stays put.
+/// ❗ With Remember on, another account on this share still never replaces the
+/// server-level entry every other share on the server signs in with: the share
+/// gets its own.
 #[tokio::test]
 async fn a_working_sign_in_with_remember_on_as_another_account_still_files_the_share_its_own() {
     let store = Arc::new(InMemoryCredentials::new().with_entry("127.0.0.1", None, "ada", "ada-pw"));

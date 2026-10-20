@@ -775,6 +775,29 @@ async fn an_unsaved_id_has_no_remembered_secret() {
     assert!(!has_server_secret("sftp-nothing-was-ever-saved-here".to_string()).await);
 }
 
+/// ❗ **A share's own Keychain entry is a remembered secret too** (#530): the
+/// sign-in that connected reads it first, so a check that missed it showed
+/// Remember off while it signed in, and a forget that missed it left it to come
+/// back on every reconnect.
+#[tokio::test]
+async fn an_smb_shares_own_entry_is_remembered_and_forgotten_with_the_servers() {
+    let _secrets = crate::test_support::isolate_secrets();
+    let server = "192.0.2.75";
+    let row = share_row(server, "Ledger", Some("grace"), Some("smb-ledger-530"));
+    known_shares::remember_share(row.clone());
+    crate::network::keychain::save_credentials(server, Some("Ledger"), "grace", "grace-pw").expect("saved");
+
+    assert!(has_server_secret("smb-ledger-530".to_string()).await);
+    assert!(forget_server_secret("smb-ledger-530".to_string()).await);
+
+    assert!(matches!(
+        crate::network::keychain::get_credentials(server, Some("Ledger")),
+        Err(crate::network::keychain::KeychainError::NotFound(_))
+    ));
+    assert!(!has_server_secret("smb-ledger-530".to_string()).await);
+    known_shares::forget_rows(&[row]);
+}
+
 /// A saved share row, as a mount through Cmdr files it.
 fn share_row(
     server_name: &str,
