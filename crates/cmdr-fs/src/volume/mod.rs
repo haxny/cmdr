@@ -905,11 +905,13 @@ pub trait Volume: Send + Sync {
     /// gave up on an auth failure (a password changed on the server). The implementation
     /// runs the normal reconnect with them and, ❗ only once that connected, files them the way
     /// `sign_in.remember` asks (`secret_store::keep_signed_in_secret`, #530), so the next
-    /// reconnect is silent. Default `Err(NotSupported)`; SMB, SFTP, WebDAV, and S3 override it.
+    /// reconnect is silent. Answers `SignedIn`, which says when a checked Remember box was refused
+    /// by the store, so the sheet can say so while the connection stays up. Default
+    /// `Err(NotSupported)`; SMB, SFTP, WebDAV, and S3 override it.
     fn reconnect_with_credentials<'a>(
         &'a self,
         _sign_in: secret_store::SignIn,
-    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<secret_store::SignedIn, VolumeError>> + Send + 'a>> {
         Box::pin(async { Err(VolumeError::NotSupported) })
     }
 

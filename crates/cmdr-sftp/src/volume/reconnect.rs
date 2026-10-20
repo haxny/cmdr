@@ -38,7 +38,7 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use cmdr_fs::volume::secret_store::{self, SignIn};
+use cmdr_fs::volume::secret_store::{self, SignIn, SignedIn};
 use cmdr_fs::volume::{SelfHandle, VolumeError};
 use log::{debug, info, warn};
 use tokio_util::sync::CancellationToken;
@@ -172,7 +172,7 @@ impl SftpVolumeInner {
     /// see different files under the same paths and carry different volume ids
     /// (`sftp_volume_id(host, port, username)`), so signing in as another one
     /// means opening another volume rather than mending this one.
-    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<(), VolumeError> {
+    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<SignedIn, VolumeError> {
         if sign_in.username != self.params().username {
             return Err(VolumeError::NotSupported);
         }
@@ -205,9 +205,10 @@ impl SftpVolumeInner {
                 if let Rebuilt::Dialed(rung) = rebuilt
                     && rung_took_the_secret(rung)
                 {
-                    self.keep_signed_in_secret(&sign_in).await;
+                    let kept = self.keep_signed_in_secret(&sign_in).await;
+                    return Ok(SignedIn::after(&sign_in, kept));
                 }
-                Ok(())
+                Ok(SignedIn::NOTHING_FILED)
             }
         }
     }
@@ -431,7 +432,7 @@ impl SftpVolumeInner {
     /// ❌ never the dial on its own.
     ///
     /// A refusal is non-fatal: only the "silent next time" guarantee is lost.
-    async fn keep_signed_in_secret(&self, sign_in: &SignIn) {
+    async fn keep_signed_in_secret(&self, sign_in: &SignIn) -> bool {
         let took = secret_store::keep_signed_in_secret(&self.host, &self.params().credential_service(), sign_in).await;
         if !took {
             warn!(
@@ -440,6 +441,7 @@ impl SftpVolumeInner {
                 self.volume_id
             );
         }
+        took
     }
 }
 

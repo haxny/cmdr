@@ -73,6 +73,32 @@ pub struct SignIn {
     pub remember: bool,
 }
 
+/// How a sign-in that CONNECTED left its secret. ❗ The connection stands either
+/// way; this is only what the person has to be told.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SignedIn {
+    /// The Remember box was on and the store wouldn't keep the secret (Deny on
+    /// the Keychain prompt, a locked keychain, no secret service), so the next
+    /// reconnect asks again unless the person tries once more.
+    pub remember_refused: bool,
+}
+
+impl SignedIn {
+    /// The answer for `sign_in` once the store said whether it `kept` the
+    /// secret. Only a checked box can be refused: with it off there was no
+    /// promise to break.
+    pub fn after(sign_in: &SignIn, kept: bool) -> Self {
+        Self {
+            remember_refused: sign_in.remember && !kept,
+        }
+    }
+
+    /// A sign-in that found a live session and wrote nothing.
+    pub const NOTHING_FILED: Self = Self {
+        remember_refused: false,
+    };
+}
+
 /// Files the secret a sign-in CONNECTED with, the way the Remember box asks.
 ///
 /// - **On**: saved, seeding an empty store; a checked box is a promise.

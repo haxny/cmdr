@@ -484,7 +484,7 @@ impl Volume for SftpVolume {
     fn reconnect_with_credentials<'a>(
         &'a self,
         sign_in: cmdr_fs::volume::secret_store::SignIn,
-    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::secret_store::SignedIn, VolumeError>> + Send + 'a>> {
         Box::pin(self.inner.do_reconnect_with_credentials(sign_in))
     }
 

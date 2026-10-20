@@ -47,6 +47,15 @@ async fn remember_off_keeps_a_remembered_secret_current() {
     assert_eq!(held(&store), Some("new".to_string()));
 }
 
+/// ❗ A store that won't keep a checked box's secret is something the person is
+/// told (the sheet's `secret_not_stored`); with the box off nothing was promised.
+#[test]
+fn only_a_checked_box_can_be_refused() {
+    assert!(SignedIn::after(&sign_in("s", true), false).remember_refused);
+    assert!(!SignedIn::after(&sign_in("s", true), true).remember_refused);
+    assert!(!SignedIn::after(&sign_in("s", false), false).remember_refused);
+}
+
 /// ❌ Remember off never seeds: the sheet forgot the entry before it dialed.
 #[tokio::test]
 async fn remember_off_leaves_an_empty_store_empty() {

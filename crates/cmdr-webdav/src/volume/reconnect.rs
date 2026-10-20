@@ -23,7 +23,7 @@ use std::time::Duration;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::host::credentials::StoredCredentials;
-use cmdr_fs::volume::secret_store::{self, SignIn};
+use cmdr_fs::volume::secret_store::{self, SignIn, SignedIn};
 use cmdr_fs::volume::{SelfHandle, VolumeError};
 use log::{debug, info, warn};
 use tokio_util::sync::CancellationToken;
@@ -135,7 +135,7 @@ impl WebdavVolumeInner {
 
     /// The attended variant. `username` must be the account this volume IS:
     /// another account is another volume, so it answers `NotSupported`.
-    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<(), VolumeError> {
+    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<SignedIn, VolumeError> {
         if sign_in.username != self.params().username {
             return Err(VolumeError::NotSupported);
         }
@@ -146,8 +146,8 @@ impl WebdavVolumeInner {
         // ❗ Written only once the typed secret WORKED (#530): a typo written
         // before the dial replaced the one that did. An attended rebuild always
         // dials, so `Ok` here means this secret was accepted.
-        self.keep_signed_in_secret(&sign_in).await;
-        Ok(())
+        let kept = self.keep_signed_in_secret(&sign_in).await;
+        Ok(SignedIn::after(&sign_in, kept))
     }
 
     /// One rebuild attempt, under the single-flight lock. `offered` is a secret
@@ -279,7 +279,7 @@ impl WebdavVolumeInner {
     /// Files the secret a sign-in connected with, the way its Remember box asks
     /// (`secret_store::keep_signed_in_secret`): on saves it, off only refreshes
     /// an entry still there.
-    async fn keep_signed_in_secret(&self, sign_in: &SignIn) {
+    async fn keep_signed_in_secret(&self, sign_in: &SignIn) -> bool {
         let took = secret_store::keep_signed_in_secret(&self.host, &self.params().credential_service(), sign_in).await;
         if !took {
             warn!(
@@ -288,6 +288,7 @@ impl WebdavVolumeInner {
                 self.volume_id
             );
         }
+        took
     }
 }
 

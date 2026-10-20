@@ -361,8 +361,10 @@ token is the only sane state, and a revoked token surfaces as `needs_sign_in` be
   this account (missing, a file, or refused). They name the host.
 - `save_unconfirmed`: a save to a connected place that the server didn't confirm in time. Names the host and says
   nothing was saved.
-- `secret_not_stored`: sign-in mode, Remember went on and the Keychain wouldn't store the password, so no round ran.
-  Says how to sign in without storing it. ❌ Not `authentication_rejected`: no server was asked anything.
+- `secret_not_stored`: sign-in mode, the Remember box was on and the Keychain wouldn't store the password AFTER the
+  round connected (the backend's typed `SignedInReply.rememberRefused`, #530). The connection stands: the sheet stays
+  open on this line under the password, and leaving it closes as `connected`. Says how to sign in without storing it. ❌
+  Not `authentication_rejected`: no server was asked anything.
 - `saved_secret_not_updated`: edit mode, the settings saved and the password write didn't. Says the changes are saved,
   so nobody re-saves an edit that landed.
 - `address_taken`: edit mode, the new address is another saved server's. Under `address`, naming that server

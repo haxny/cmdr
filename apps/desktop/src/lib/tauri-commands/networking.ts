@@ -12,6 +12,7 @@ import type {
   MountResult,
   NetworkHostContextAction,
   SignInShape,
+  SignedInReply,
   SmbCredentials,
   SmbFellBackToOsMount,
   SmbOsMountNoticeWithdrawn,
@@ -477,17 +478,20 @@ export async function reconnectVolume(volumeId: string): Promise<void> {
  * Whether the USERNAME may change is the backend's call, not this wrapper's:
  * `getVolumeSignInState` is what tells the sheet which shape to render.
  *
- * Resolves on success; a refusal throws a `ReconnectFailure` carrying the typed
- * `ReconnectError`, which `asReconnectError` gets back.
+ * Resolves on success with `rememberRefused` set when the box was on and the
+ * Keychain wouldn't keep the password (the connection stands either way); a
+ * refusal throws a `ReconnectFailure` carrying the typed `ReconnectError`, which
+ * `asReconnectError` gets back.
  */
 export async function reconnectVolumeWithCredentials(
   volumeId: string,
   username: string,
   password: string,
   remember: boolean,
-): Promise<void> {
+): Promise<SignedInReply> {
   const res = await commands.reconnectVolumeWithCredentials(volumeId, username, password, remember)
   if (res.status === 'error') throwReconnectError(res.error)
+  return res.data
 }
 
 /**

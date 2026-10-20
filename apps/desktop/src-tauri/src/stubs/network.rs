@@ -426,6 +426,13 @@ pub async fn reconnect_volume(_volume_id: String) -> Result<(), String> {
     Err("Direct SMB connection not supported on this platform".to_string())
 }
 
+/// What a sign-in that connected has to tell the person (mirrors the real command's type).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SignedInReply {
+    pub remember_refused: bool,
+}
+
 /// Reconnects an SMB volume with credentials (stub: returns error).
 #[tauri::command]
 #[specta::specta]
@@ -434,7 +441,7 @@ pub async fn reconnect_volume_with_credentials(
     _username: String,
     _password: String,
     _remember: bool,
-) -> Result<(), String> {
+) -> Result<SignedInReply, String> {
     Err("Direct SMB connection not supported on this platform".to_string())
 }
 

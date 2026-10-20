@@ -169,6 +169,57 @@ async fn a_sign_in_that_connects_files_the_secret_the_way_remember_asks() {
     }
 }
 
+/// A store that answers reads and refuses every write: Deny on the Keychain
+/// prompt, a locked keychain.
+struct RefusesWrites(InMemoryCredentials);
+
+impl CredentialStore for RefusesWrites {
+    fn credentials(
+        &self,
+        service: &str,
+        scope: Option<&str>,
+    ) -> Option<cmdr_fs::volume::host::credentials::StoredCredentials> {
+        self.0.credentials(service, scope)
+    }
+
+    fn save_credentials(
+        &self,
+        _service: &str,
+        _scope: Option<&str>,
+        _credentials: &cmdr_fs::volume::host::credentials::StoredCredentials,
+    ) -> Result<(), cmdr_fs::volume::host::credentials::CredentialsNotStored> {
+        Err(cmdr_fs::volume::host::credentials::CredentialsNotStored)
+    }
+}
+
+/// ❗ **A checked box the store refused is said out loud**, and the connection
+/// stays up: the sheet shows `secret_not_stored` from `remember_refused`.
+#[tokio::test]
+async fn a_refused_remember_is_reported_while_the_connection_stands() {
+    let server = FakeDav::start().await;
+    let service = server.credential_service();
+    let store = RefusesWrites(InMemoryCredentials::new().with_entry(&service, Some("ada"), "ada", "dial-me-in"));
+    let (volume, _events) = server.connected_with(Arc::new(store)).await;
+
+    let sign_in = |remember| cmdr_fs::volume::secret_store::SignIn {
+        username: "ada".to_string(),
+        secret: "typed".to_string(),
+        remember,
+    };
+    let refused = volume
+        .reconnect_with_credentials(sign_in(true))
+        .await
+        .expect("the connection came up");
+    assert!(refused.remember_refused);
+    assert_eq!(volume.connection_state(), Some(ConnectionState::Direct));
+
+    let unchecked = volume
+        .reconnect_with_credentials(sign_in(false))
+        .await
+        .expect("the connection came up");
+    assert!(!unchecked.remember_refused, "no box, no promise to break");
+}
+
 // ── Against the fixture ──────────────────────────────────────────────
 
 /// ❗ **The switch off leaves a perfectly reachable server alone.**

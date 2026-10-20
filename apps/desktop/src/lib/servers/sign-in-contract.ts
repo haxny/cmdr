@@ -103,7 +103,11 @@ export type SignInSubmission =
  * sentence has nowhere to put one.
  */
 export type SignInAttemptOutcome =
-  | { kind: 'connected'; volumeId: string }
+  /**
+   * `rememberRefused`: the Remember box was on and the Keychain wouldn't keep the
+   * secret (#530). The connection stands, and the sheet says `secret_not_stored`.
+   */
+  | { kind: 'connected'; volumeId: string; rememberRefused?: true }
   /**
    * The caller took it from here and the sheet closes with nothing more to say.
    *

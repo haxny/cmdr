@@ -271,7 +271,7 @@ describe('why the sheet opened', () => {
 
 describe('a REGISTERED place whose session wants a credential', () => {
   it('mends it and ❌ never dials', async () => {
-    ipc.mock('reconnect_volume_with_credentials', () => null)
+    ipc.mock('reconnect_volume_with_credentials', () => ({ rememberRefused: false }))
     const seam = openSignInForPlace({ volumeId: VOLUME_ID, registered: true })
     const request = await parkedRequest()
 
@@ -470,7 +470,7 @@ describe('the Remember box in sign-in mode', () => {
   it('forgets the stored secret the moment the box goes OFF, and saves nothing', async () => {
     ipc.mock('has_server_secret', () => true)
     ipc.mock('forget_server_secret', () => true)
-    ipc.mock('reconnect_volume_with_credentials', () => null)
+    ipc.mock('reconnect_volume_with_credentials', () => ({ rememberRefused: false }))
     const seam = openSignInForPlace({ volumeId: VOLUME_ID, registered: true })
     const request = await parkedRequest()
 
@@ -495,7 +495,7 @@ describe('the Remember box in sign-in mode', () => {
     // ❗ #530: a secret written before the dial is a typo on the record the moment the
     // dial fails. The backend seeds or refreshes the store only once the mend went
     // through (`secret_store::keep_signed_in_secret`).
-    ipc.mock('reconnect_volume_with_credentials', () => null)
+    ipc.mock('reconnect_volume_with_credentials', () => ({ rememberRefused: false }))
     const seam = openSignInForPlace({ volumeId: VOLUME_ID, registered: true })
     const request = await parkedRequest()
 
@@ -517,9 +517,26 @@ describe('the Remember box in sign-in mode', () => {
     await seam
   })
 
+  it('carries a Keychain that refused the checked box out of a mend that connected', async () => {
+    // ❗ The connection stands; the sheet still has to say the password wasn't kept.
+    ipc.mock('reconnect_volume_with_credentials', () => ({ rememberRefused: true }))
+    const seam = openSignInForPlace({ volumeId: VOLUME_ID, registered: true })
+    const request = await parkedRequest()
+
+    const outcome = await attemptOf(request)({
+      mode: 'sign-in',
+      secret: { secret: 'hunter2', remember: true },
+      username: null,
+    })
+    expect(outcome).toEqual({ kind: 'connected', volumeId: VOLUME_ID, rememberRefused: true })
+
+    closeSignInSheet({ kind: 'connected', volumeId: VOLUME_ID })
+    await seam
+  })
+
   it('writes nothing at all when the box is left where it started', async () => {
     ipc.mock('has_server_secret', () => true)
-    ipc.mock('reconnect_volume_with_credentials', () => null)
+    ipc.mock('reconnect_volume_with_credentials', () => ({ rememberRefused: false }))
     const seam = openSignInForPlace({ volumeId: VOLUME_ID, registered: true })
     const request = await parkedRequest()
 

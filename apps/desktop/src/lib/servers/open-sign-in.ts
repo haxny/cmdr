@@ -423,13 +423,15 @@ function mendAttempt(volumeId: string, endpoint: SignInEndpoint): SignInAttempt 
     // read-only, and the account the volume already has is the one to send.
     const username = submission.username ?? endpoint.username ?? ''
     try {
-      await reconnectVolumeWithCredentials(
+      const reply = await reconnectVolumeWithCredentials(
         volumeId,
         username,
         submission.secret?.secret ?? '',
         submission.secret?.remember ?? false,
       )
-      return { kind: 'connected', volumeId }
+      return reply.rememberRefused
+        ? { kind: 'connected', volumeId, rememberRefused: true }
+        : { kind: 'connected', volumeId }
     } catch (e) {
       return { kind: 'refused', refusal: mendRefusal(e) }
     }

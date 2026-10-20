@@ -622,6 +622,15 @@ pub async fn reconnect_volume(volume_id: String) -> Result<(), ReconnectError> {
     volume.attempt_reconnect().await.map_err(ReconnectError::from)
 }
 
+/// What a sign-in that connected has to tell the person (`cmdr_fs::volume::secret_store::SignedIn`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SignedInReply {
+    /// The Remember box was on and the Keychain wouldn't keep the password. The
+    /// connection stands; the sheet says `secret_not_stored`.
+    pub remember_refused: bool,
+}
+
 /// Reconnects a volume with freshly-entered credentials.
 ///
 /// ❗ Backend-neutral, like [`reconnect_volume`]. Invoked by the "Sign in"
@@ -644,7 +653,7 @@ pub async fn reconnect_volume_with_credentials(
     username: String,
     password: String,
     remember: bool,
-) -> Result<(), ReconnectError> {
+) -> Result<SignedInReply, ReconnectError> {
     use crate::file_system::volume::manager::get_volume_manager;
 
     let volume = get_volume_manager()
@@ -660,6 +669,9 @@ pub async fn reconnect_volume_with_credentials(
             remember,
         })
         .await
+        .map(|signed_in| SignedInReply {
+            remember_refused: signed_in.remember_refused,
+        })
         .map_err(ReconnectError::from)
 }
 

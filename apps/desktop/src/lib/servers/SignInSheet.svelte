@@ -112,6 +112,11 @@
     /** The running "Eject and save"'s attempt id, which the sheet's Cancel calls off; `null` when none runs. */
     let ejectAttempt = $state<string | null>(null)
     /**
+     * The volume a round connected while the Keychain refused its checked Remember box (#530).
+     * The sheet stays open on `secret_not_stored`, and leaving it reports this connection.
+     */
+    let connectedUnremembered = $state<string | null>(null)
+    /**
      * Edit mode: the id the place has since a save that landed, which differs from the one the
      * sheet opened on once the save moved its address. Plain, not `$state`: nothing renders it.
      */
@@ -490,7 +495,8 @@
      */
     function cancel() {
         if (ejectAttempt) void cancelServerConnect(ejectAttempt)
-        close({ kind: 'cancelled' })
+        // ❗ A round that connected already happened: leaving says so, ❌ never "cancelled".
+        close(connectedUnremembered ? { kind: 'connected', volumeId: connectedUnremembered } : { kind: 'cancelled' })
     }
 
     /**
@@ -595,6 +601,13 @@
     async function applyOutcome(outcome: SignInAttemptOutcome) {
         switch (outcome.kind) {
             case 'connected':
+                if (outcome.rememberRefused) {
+                    // The connection stands, but the checked box couldn't be kept: say so
+                    // rather than close as if it had (Cmdr's honest feedback).
+                    connectedUnremembered = outcome.volumeId
+                    await refuse('secret_not_stored')
+                    return
+                }
                 close({ kind: 'connected', volumeId: outcome.volumeId })
                 return
             case 'handed_off':

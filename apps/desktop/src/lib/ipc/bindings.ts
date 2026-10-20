@@ -4261,7 +4261,7 @@ export const commands = {
    *  `VolumeError::NotSupported`.
    */
   reconnectVolumeWithCredentials: (volumeId: string, username: string, password: string, remember: boolean) =>
-    typedError<null, ReconnectError>(
+    typedError<SignedInReply, ReconnectError>(
       __TAURI_INVOKE('reconnect_volume_with_credentials', { volumeId, username, password, remember }),
     ),
   /**
@@ -16064,6 +16064,15 @@ export type SignatureCheck =
   | 'minisign'
   // The bundle's Apple code signature against Cmdr's Developer ID.
   | 'code_signature'
+
+// What a sign-in that connected has to tell the person (`cmdr_fs::volume::secret_store::SignedIn`).
+export type SignedInReply = {
+  /**
+   *  The Remember box was on and the Keychain wouldn't keep the password. The
+   *  connection stands; the sheet says `secret_not_stored`.
+   */
+  rememberRefused: boolean
+}
 
 export type SigningInfoDto = {
   active: boolean

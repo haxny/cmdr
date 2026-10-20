@@ -259,6 +259,36 @@ describe('SignInSheet: a refusal', () => {
   })
 })
 
+/** ❗ #530: a connection that came up while the Keychain refused the checked box is said out loud. */
+describe('SignInSheet: connected, but the password was not kept', () => {
+  it('stays open on the notice under the password, and closes as connected', async () => {
+    const attempt = (): Promise<SignInAttemptOutcome> =>
+      Promise.resolve({ kind: 'connected', volumeId: 'v', rememberRefused: true })
+    const { done } = await renderSheet({
+      mode: 'sign-in',
+      remembered: true,
+      endpoint,
+      shape: { kind: 'password' },
+      attempt,
+    })
+
+    typeInto(document.body.querySelector<HTMLInputElement>('#sign-in-secret') as HTMLInputElement, 'hunter2')
+    await tick()
+    buttonSaying('Sign in').click()
+    await flush()
+
+    expect(done).toEqual([])
+    expect(document.body.querySelector('#sign-in-secret-refusal')?.textContent).toContain(
+      'couldn’t store this password',
+    )
+
+    // ❗ The volume IS connected, so leaving the sheet says so rather than "cancelled".
+    buttonSaying('Cancel').click()
+    await flush()
+    expect(done).toEqual([{ kind: 'connected', volumeId: 'v' }])
+  })
+})
+
 describe('SignInSheet: the host-key step', () => {
   it('starts over on the key the server really presents when the approval is superseded', async () => {
     const { approveSftpHostKey } = await import('#lib/tauri-commands/index.js')

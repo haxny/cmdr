@@ -10,7 +10,7 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::SelfHandle;
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::events::VolumeConnection;
-use cmdr_fs::volume::secret_store::SignIn;
+use cmdr_fs::volume::secret_store::{SignIn, SignedIn};
 use log::{debug, info, warn};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
@@ -279,23 +279,25 @@ impl SmbVolumeInner {
     ///
     /// ❗ Dial first, write after (#530): writing first let a typo replace the password that
     /// worked for every share on the server, and wrote one back even with Remember off.
-    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<(), VolumeError> {
+    pub(super) async fn do_reconnect_with_credentials(&self, sign_in: SignIn) -> Result<SignedIn, VolumeError> {
         {
             let mut params_w = self.params.write().await;
-            params_w.username = sign_in.username;
-            params_w.password = sign_in.secret;
+            params_w.username = sign_in.username.clone();
+            params_w.password = sign_in.secret.clone();
         }
         // `None`: a session was already live, so nothing proved these credentials.
-        if let Some(connected_with) = self.reconnect_once().await?
-            && !refresh_remembered_credentials(&self.host, &connected_with, sign_in.remember).await
-        {
+        let Some(connected_with) = self.reconnect_once().await? else {
+            return Ok(SignedIn::NOTHING_FILED);
+        };
+        let kept = refresh_remembered_credentials(&self.host, &connected_with, sign_in.remember).await;
+        if !kept {
             // Non-fatal: the session is up; only the "silent next time" guarantee is lost.
             warn!(
                 "SmbVolumeInner::reconnect_with_credentials(share={:?}): the secret store didn't take the credentials; this session still came up",
                 self.share_name
             );
         }
-        Ok(())
+        Ok(SignedIn::after(&sign_in, kept))
     }
 }
 
