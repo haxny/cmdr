@@ -593,8 +593,9 @@ pub fn get_lines(
         "get_lines: session={}, backend_type={:?}, target={:?}, count={}",
         session_id,
         backend_type,
+        // allowed-log-private: a seek target (a row or byte), not a path
         target,
-        count // allowed-log-private: a seek target (a row or byte), not a path
+        count
     );
 
     backend.get_lines(&target, count, cancel)
