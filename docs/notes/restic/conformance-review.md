@@ -1,5 +1,7 @@
 # Restic volume: adversarial conformance review
 
+Round two (the feed, forget, metadata, the watcher, and the transfer hold): `docs/notes/restic/review-round-2.md`.
+
 Review of the committed restic work (#422) against `docs/specs/restic-volume-plan.md` § "Loud rules" and § "Invariants
 register". Scope: `git diff main...HEAD` at `8c13cab9ca` (crate `cmdr-restic`, the unlock seam and dialog, routing,
 overlay, guards, walkers, index lifecycle, Keychain). Uncommitted work (frontend kind and progress, copy-out e2e) was
