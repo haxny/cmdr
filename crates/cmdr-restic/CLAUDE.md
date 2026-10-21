@@ -10,7 +10,7 @@ English a user reads. The app's half: `apps/desktop/src-tauri/src/file_system/re
   `ResticRepos`, the shared state (passwords, opened repos, snapshot lists, `latest`, the is-it-a-repo memo);
   `index_load.rs` (the shared, cancellable index load) and the hub's child `index_slot.rs` (cap, idle drop) hold its
   indexes; `index_feed.rs` is the leaf the load fills and the adapter reads, so neither names the other. The hub's other
-  child, `latest_pin.rs`, decides when `latest` may move.
+  children: `latest_pin.rs` decides when `latest` may move, `passwords.rs` unlocks, files, forgets, and looks up.
 - `path.rs` (re-exports `cmdr_fs::restic_view`, classifies paths in the view), `snapshots.rs`, `tree.rs`,
   `read_stream.rs`, `repo.rs` (open, index, typed errors), `backend.rs` (rustic's storage over the parent), `detect.rs`.
 - `test_fixtures.rs` (`testing` only): real v1 and v2 repos built with rustic, plus an unlock door.
@@ -30,6 +30,8 @@ English a user reads. The app's half: `apps/desktop/src-tauri/src/file_system/re
 - **❌ Never evict an index in use**; eviction and the idle drop take the index only, ❌ never the password.
 - **Passwords go through `secret_store`**, filed only by `remember_password` after a verified unlock nobody cancelled.
   ❌ No hub-wide lock across scrypt, a Keychain call, or a parent read.
+- **A forget wins**: anything that installs repo state (password, opened repo, snapshots, index) commits only while
+  `RepoSlot::forgets` is unchanged since it started. ❌ Never add an install site without that check.
 - **Mode is `& 0o777` of Go's `os.FileMode`**; names go through `Node::name()`, ❌ never the raw field.
 - **A hostile repo can't reach scrypt**: the adapter caps key count, size, and summed cost first.
 - **The heavy state is the hub's**, keyed by `(volume id, repo root)` as spelled; ❌ no `canonicalize`, ❌ no static.

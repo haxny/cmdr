@@ -217,13 +217,20 @@ as long as it stays loaded; `docs/notes/restic/open-cost.md` § "Streaming the i
   `PasswordLocked::remember_password`, which the host runs only after an `Unlocked` nobody cancelled
   (`keep_signed_in_secret`: on saves, off only refreshes an entry already there and never seeds one). A wrong password
   keeps and files nothing. `forget_password` clears the in-memory copy only (a cancelled prompt).
-- **Forgetting the saved password** (`PasswordLocked::forget_saved_password`, over `ResticRepos::forget_saved_password`;
-  the person's "Forget backup password") locks the repo again: under the slot's lookup lock it drops the in-memory
-  password, marks the store missed for the session, and drops the opened repo (awaiting its lock, ❌ never `try_lock`:
-  an open in flight would leave its repo behind), the index, and the snapshot list, then deletes the store entry. Why
-  all of them: each one serves reads without asking (a cached list and index answer every path inside a snapshot), so
-  dropping only the password left the repo open. Answers `StoreKeptIt` when the store refused the delete; the repo is
-  locked for the session either way.
+- **Forgetting the saved password** (`PasswordLocked::forget_saved_password`, over `ResticRepos::forget_saved_password`
+  in `passwords.rs`; the person's "Forget backup password") locks the repo again: it bumps the slot's forget count
+  (`RepoSlot::forgets`), drops the in-memory password, marks the store missed for the session, drops the opened repo,
+  the index, and the snapshot list, cancels an index load in flight, then deletes the store entry. Why all of them: each
+  one serves reads without asking (a cached list and index answer every path inside a snapshot), so dropping only the
+  password left the repo open. Answers `StoreKeptIt` when the store refused the delete; the repo is locked for the
+  session either way.
+- **A forget wins over work that started before it.** An open, a snapshot refresh, an index load, a store read, and an
+  unlock each capture the forget count before their first await and commit only while it's unchanged (the password and
+  the snapshot list check it under their own lock, so a forget can't land between check and commit; an opened repo
+  carries its count and is never served across a forget). So the forget waits on none of them, ❌ never an open's lock:
+  an open wedged on a dead NAS would hang the forget, with the Keychain entry still there. An unlock the forget overtook
+  answers `Cancelled` and keeps nothing; `keep_password` files only while the slot still holds that password, and takes
+  the entry back out if a forget lands during the write.
 - **A password that stopped working** (a stale stored one, or the repo's keys changed) is forgotten from memory, the
   store isn't asked again this session, and the call answers `NeedsPassword { wrong_attempt: true }`. The stored entry
   stays until the next remembered unlock overwrites it, or the person forgets it.

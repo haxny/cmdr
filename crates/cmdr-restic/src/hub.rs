@@ -12,13 +12,12 @@ use crate::repo::{IndexedRepo, ResticError, ResticRepo};
 use crate::snapshots::{Snapshot, SnapshotList, snapshot_list_of};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::secret_store::{self, SignIn};
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 use index_slot::{IndexSlot, Installed, free_off_the_runtime};
 use rustic_core::repofile::SnapshotFile;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 use zeroize::Zeroizing;
@@ -258,139 +257,35 @@ impl ResticRepos {
         )
     }
 
-    // ── Passwords ──────────────────────────────────────────────────────────
-
-    /// Tries `password` on the repo in `slot`, through `parent`: `Ok(true)` when
-    /// it unlocks (the password and the opened repo are kept), `Ok(false)` when
-    /// it doesn't (nothing is kept). `Err` when the repo couldn't be asked.
-    ///
-    /// Commits only after the open returns, the password and the opened repo in
-    /// one step with no await between them and the answer, so a caller dropping
-    /// this future either kept nothing or already holds the answer. The opened
-    /// repo is kept only when no other open holds the slot's lock (that one
-    /// keeps its own), ❌ never waited for.
-    pub(crate) async fn unlock(
-        &self,
-        slot: &RepoSlot,
-        parent: &Arc<dyn Volume>,
-        password: &str,
-    ) -> Result<bool, VolumeError> {
-        let opened = ResticRepo::open(Arc::clone(parent), slot.key.root.clone(), password, None, &self.host).await;
-        match opened {
-            Ok(repo) => {
-                *lock(&slot.password) = Some(Zeroizing::new(password.to_string()));
-                slot.store_missed.store(false, Ordering::Relaxed);
-                if let Ok(mut opened) = slot.opened.try_lock() {
-                    *opened = Some(Bound::new(parent, Arc::new(repo)));
-                }
-                slot.touch();
-                self.evict_opened(slot);
-                Ok(true)
-            }
-            Err(ResticError::WrongPassword) => Ok(false),
-            Err(err) => Err(err.into_volume_error(&slot.key.root)),
-        }
-    }
-
-    /// Files a password that just unlocked `slot`'s repo in the credential store,
-    /// the way the dialog's Remember box asks (`secret_store::keep_signed_in_secret`:
-    /// on saves, off only refreshes an entry already there). ❗ Only after a
-    /// verified unlock. Answers whether the store took it.
-    pub(crate) async fn keep_password(&self, slot: &RepoSlot, password: &str, remember: bool) -> bool {
-        let sign_in = SignIn {
-            username: slot.key.store_scope(),
-            secret: password.to_string(),
-            remember,
-        };
-        secret_store::keep_signed_in_secret(&self.host, KEYCHAIN_SERVICE, &sign_in).await
-    }
-
-    /// Locks `slot`'s repo again, as the person asked: the password goes from
-    /// memory and from the credential store, and the opened repo, the snapshot
-    /// list, and the index go with it, since each would otherwise keep serving
-    /// reads without asking. The store isn't asked again this session. Answers
-    /// whether the store let go of its copy; the repo is locked either way.
-    ///
-    /// Runs under the slot's lookup lock, so a listing reading the store right
-    /// now can't put the password back behind the forget.
-    pub(crate) async fn forget_saved_password(&self, slot: &RepoSlot) -> bool {
-        let _asking = slot.store_lookup.lock().await;
-        *lock(&slot.password) = None;
-        slot.store_missed.store(true, Ordering::Relaxed);
-        // Awaited, ❌ not `try_lock`: an open in flight holds it, and would
-        // otherwise leave its repo behind for the next listing to use.
-        *slot.opened.lock().await = None;
-        slot.drop_opened_repo(&self.host.runtime());
-        *lock(&slot.snapshots) = None;
-        secret_store::forget_stored_secret(&self.host, KEYCHAIN_SERVICE, &slot.key.store_scope()).await
-    }
-
-    /// The repo's password: the one in memory, else the credential store's
-    /// (asked once per session: a miss is remembered until an unlock), else
-    /// `NeedsPassword`.
-    ///
-    /// The store is asked under the slot's own lookup lock, so concurrent
-    /// listings (and a stalled listing's second attempt) ask it once, and ❌ no
-    /// hub-wide lock is held across a Keychain prompt.
-    async fn password(&self, slot: &RepoSlot) -> Result<Zeroizing<String>, VolumeError> {
-        if let Some(password) = slot.password_in_memory() {
-            return Ok(password);
-        }
-        let _asking = slot.store_lookup.lock().await;
-        if let Some(password) = slot.password_in_memory() {
-            return Ok(password);
-        }
-        if slot.store_missed.load(Ordering::Relaxed) {
-            return Err(VolumeError::NeedsPassword { wrong_attempt: false });
-        }
-        let scope = slot.key.store_scope();
-        match secret_store::stored_secret(&self.host, KEYCHAIN_SERVICE, &scope).await {
-            Some(stored) => {
-                let password = Zeroizing::new(stored.secret);
-                *lock(&slot.password) = Some(password.clone());
-                Ok(password)
-            }
-            None => {
-                slot.store_missed.store(true, Ordering::Relaxed);
-                Err(VolumeError::NeedsPassword { wrong_attempt: false })
-            }
-        }
-    }
-
-    /// The [`VolumeError`] for a failed open of `slot`'s repo. A password that
-    /// stopped working (a stored one, or the repo's keys changed) is forgotten,
-    /// and the store isn't asked again this session: the person types one.
-    fn refused(slot: &RepoSlot, err: ResticError) -> VolumeError {
-        if matches!(err, ResticError::WrongPassword) {
-            *lock(&slot.password) = None;
-            slot.store_missed.store(true, Ordering::Relaxed);
-        }
-        err.into_volume_error(&slot.key.root)
-    }
-
     // ── The opened repo and its snapshots ──────────────────────────────────
 
     /// The repo opened for the snapshot list, through `parent`: the one already
     /// open, or a fresh open with the slot's password when there's none or it
     /// was opened through a parent since replaced.
     async fn opened(&self, slot: &RepoSlot, parent: &Arc<dyn Volume>) -> Result<Arc<ResticRepo>, VolumeError> {
+        let forgets = slot.forgets();
+        let current = |bound: &&Bound<Arc<ResticRepo>>| bound.is_over(parent) && bound.forgets == slot.forgets();
         let password = {
             let opened = slot.opened.lock().await;
-            if let Some(bound) = opened.as_ref().filter(|bound| bound.is_over(parent)) {
+            if let Some(bound) = opened.as_ref().filter(current) {
                 return Ok(Arc::clone(&bound.value));
             }
             drop(opened);
             self.password(slot).await?
         };
         let mut opened = slot.opened.lock().await;
-        if let Some(bound) = opened.as_ref().filter(|bound| bound.is_over(parent)) {
+        if let Some(bound) = opened.as_ref().filter(current) {
             return Ok(Arc::clone(&bound.value));
         }
         let repo = ResticRepo::open(Arc::clone(parent), slot.key.root.clone(), &password, None, &self.host)
             .await
             .map_err(|err| Self::refused(slot, err))?;
+        if slot.forgets() != forgets {
+            // The person forgot the password while this opened: keep nothing.
+            return Err(VolumeError::NeedsPassword { wrong_attempt: false });
+        }
         let repo = Arc::new(repo);
-        *opened = Some(Bound::new(parent, Arc::clone(&repo)));
+        *opened = Some(Bound::new(parent, Arc::clone(&repo), forgets));
         drop(opened);
         self.evict_opened(slot);
         Ok(repo)
@@ -467,6 +362,7 @@ impl ResticRepos {
         if let Some(list) = fresh {
             return Ok(list);
         }
+        let forgets = slot.forgets();
         let repo = self.opened(slot, parent).await?;
         let current = lock(&slot.snapshots)
             .as_ref()
@@ -499,7 +395,11 @@ impl ResticRepos {
         let list = Arc::new(snapshot_list_of(&files));
         let held = slot.is_held_for_transfer();
         lock(&slot.latest).rebind(&list, self.tuning.latest_quiet, held);
-        *lock(&slot.snapshots) = Some(Snapshots {
+        let mut known = lock(&slot.snapshots);
+        if slot.forgets() != forgets {
+            return Err(VolumeError::NeedsPassword { wrong_attempt: false });
+        }
+        *known = Some(Snapshots {
             files,
             list: Arc::clone(&list),
             read_at: started,
@@ -529,6 +429,7 @@ impl ResticRepos {
         if let Some(repo) = lock(&slot.index).serving(parent, snapshot) {
             return Ok(repo);
         }
+        let forgets = slot.forgets();
         let password = self.password(slot).await?;
         let waiter = {
             let mut index = lock(&slot.index);
@@ -537,7 +438,7 @@ impl ResticRepos {
             }
             match index.joinable(parent) {
                 Some(waiter) => waiter,
-                None => self.start_load(slot, &mut index, parent, password),
+                None => self.start_load(slot, &mut index, parent, password, forgets),
             }
         };
         let outcome = waiter.outcome(on_progress).await;
@@ -554,6 +455,7 @@ impl ResticRepos {
         index: &mut IndexSlot,
         parent: &Arc<dyn Volume>,
         password: Zeroizing<String>,
+        forgets: u64,
     ) -> Waiter {
         // Restic writes a backup's index files before its snapshot file, so
         // every snapshot listed now has its trees in the index read next.
@@ -576,6 +478,7 @@ impl ResticRepos {
             parent: Arc::clone(parent),
             covers,
             generation,
+            forgets,
             tuning: self.tuning,
             runtime: self.host.runtime(),
         };
@@ -665,6 +568,8 @@ pub(crate) struct RepoSlot {
     latest: Mutex<LatestPin>,
     /// When anything last listed, stat'ed, or opened something in this repo.
     last_used: Mutex<Instant>,
+    /// How many times the person forgot its password ([`Self::forgets`]).
+    forgets: AtomicU64,
 }
 
 impl RepoSlot {
@@ -680,7 +585,16 @@ impl RepoSlot {
             snapshots: Mutex::new(None),
             latest: Mutex::new(LatestPin::default()),
             last_used: Mutex::new(Instant::now()),
+            forgets: AtomicU64::new(0),
         }
+    }
+
+    /// How many times the person forgot this repo's password. Work that read
+    /// it before a forget (an open, a refresh, an index load, a store read, an
+    /// unlock) commits only while it's unchanged, so the forget wins over
+    /// anything started before it.
+    pub(crate) fn forgets(&self) -> u64 {
+        self.forgets.load(Ordering::SeqCst)
     }
 
     fn password_in_memory(&self) -> Option<Zeroizing<String>> {
@@ -738,13 +652,17 @@ impl RepoSlot {
 struct Bound<T> {
     parent: Arc<dyn Volume>,
     value: T,
+    /// The slot's forget count when it was made: one made before a forget is
+    /// never served after it.
+    forgets: u64,
 }
 
 impl<T> Bound<T> {
-    fn new(parent: &Arc<dyn Volume>, value: T) -> Self {
+    fn new(parent: &Arc<dyn Volume>, value: T, forgets: u64) -> Self {
         Self {
             parent: Arc::clone(parent),
             value,
+            forgets,
         }
     }
 
@@ -773,6 +691,11 @@ mod index_slot;
 #[path = "latest_pin.rs"]
 mod latest_pin;
 use latest_pin::LatestPin;
+
+// Unlocking, filing, forgetting, and looking up a repo's password. A child, so
+// it reads the slot's own state.
+#[path = "passwords.rs"]
+mod passwords;
 
 #[cfg(test)]
 #[path = "hub_tests.rs"]

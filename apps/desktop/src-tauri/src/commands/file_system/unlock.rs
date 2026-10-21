@@ -159,6 +159,9 @@ pub async fn forget_container_password(parent_volume_id: String, path: String) -
 /// person asked: in memory, in the Keychain, and in anything opened with it, so
 /// the next read asks again. Answers whether the Keychain let go of its copy;
 /// the container is locked for this session either way.
+///
+/// Within the unlock's budget, detached rather than dropped past it: a Keychain
+/// call that hangs answers `TimedOut` and the forget still runs to its end.
 #[tauri::command]
 #[specta::specta]
 pub async fn forget_saved_container_password(
@@ -166,8 +169,24 @@ pub async fn forget_saved_container_password(
     path: String,
 ) -> Result<PasswordForgotten, UnlockError> {
     let volume = resolve(&parent_volume_id, Path::new(&path)).await?;
-    let locked = volume.as_password_locked().ok_or(UnlockError::NotLocked)?;
-    Ok(locked.forget_saved_password().await)
+    if volume.as_password_locked().is_none() {
+        return Err(UnlockError::NotLocked);
+    }
+    cmdr_fs::deadline::timeout_detached_typed(
+        UNLOCK_BUDGET,
+        || UnlockError::TimedOut,
+        |crashed| UnlockError::Volume {
+            error: VolumeError::IoError {
+                message: format!("the forget stopped: {crashed}").into(),
+                raw_os_error: None,
+            },
+        },
+        async move {
+            let locked = volume.as_password_locked().ok_or(UnlockError::NotLocked)?;
+            Ok(locked.forget_saved_password().await)
+        },
+    )
+    .await
 }
 
 /// The unlock itself, without the IPC wrapper, so the MCP `unlock` tool puts a

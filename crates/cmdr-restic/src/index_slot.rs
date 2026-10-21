@@ -66,6 +66,9 @@ pub(crate) struct Installed {
     pub(crate) parent: Arc<dyn Volume>,
     pub(crate) covers: HashSet<String>,
     pub(crate) generation: u64,
+    /// The slot's forget count when the load started: a forget since installs
+    /// nothing (`RepoSlot::forgets`).
+    pub(crate) forgets: u64,
     pub(crate) tuning: Tuning,
     pub(crate) runtime: Handle,
 }
@@ -85,6 +88,9 @@ impl Installed {
                 index.loading = None;
             }
             let Ok(repo) = outcome else { return };
+            if slot.forgets() != self.forgets {
+                return;
+            }
             if index
                 .ready
                 .as_ref()

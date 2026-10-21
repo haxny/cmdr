@@ -103,6 +103,12 @@ impl Load {
         load
     }
 
+    /// Cancels it whoever still waits: the person forgot the repo's password,
+    /// so nobody may have its index. Waiters hear `Cancelled`.
+    pub(crate) fn cancel_now(&self) {
+        self.cancel.cancel();
+    }
+
     /// Whether this load reads through `parent` (a replaced parent starts anew).
     pub(crate) fn is_over(&self, parent: &Arc<dyn Volume>) -> bool {
         std::ptr::addr_eq(Arc::as_ptr(&self.parent), Arc::as_ptr(parent))

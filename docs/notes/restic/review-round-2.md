@@ -65,6 +65,14 @@ hub's locks.
   `unlock`, `opened`, `snapshots`, `start_load` into `Installed`) and commits only if it's unchanged. The forget also
   takes `index.loading` and cancels it. Bound the IPC with the unlock seam's budget.
 - **Confidence**: medium-high on (1)–(3) from the code; (4) needs two actors. The hang follows from the lock order.
+- **Status**: fixed as proposed, with a forget count on the slot (`RepoSlot::forgets`) that the open, the refresh, the
+  index load (via `Installed`), the store read, and the unlock check before committing; the forget no longer takes
+  `store_lookup` or awaits `opened`, cancels `index.loading`, and `keep_password` files only while the slot still holds
+  that password. The app's `forget_saved_container_password` answers within the unlock budget, detached past it. Cells:
+  `a_forget_answers_at_once_and_an_open_in_flight_keeps_nothing`,
+  `a_forget_cancels_an_index_load_in_flight_and_it_installs_nothing`,
+  `an_unlock_in_flight_during_a_forget_keeps_and_files_nothing` (each red before). The passwords half of `hub.rs` moved
+  to its child `passwords.rs`.
 
 ### 3. A direct SMB share's watcher re-lists on any change in any folder above the repo, which contradicts the doc
 
