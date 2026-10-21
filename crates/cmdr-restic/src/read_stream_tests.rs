@@ -17,21 +17,25 @@ const ROOT: &str = "/share/repo";
 /// The read-ahead this file pins, spelled out so a change to `READ_AHEAD`
 /// shows up here as a decision rather than passing quietly.
 const AHEAD_PINNED: usize = 4;
-/// Many chunks, so the stream has somewhere to read ahead to.
-const SIZE: usize = 12 * 1024 * 1024;
+/// More chunks than the read-ahead window plus the one handed out, so the
+/// stream has somewhere to read ahead to. ❗ No bigger than that: the fixture
+/// backs this file up in a debug build, and at 12 MiB the suite under load
+/// pushed these cells past their deadline.
+const SIZE: usize = (AHEAD_PINNED + 2) * super::CHUNK_SIZE;
 
 /// Deterministic, incompressible bytes, so the backup chunks the same way on
-/// every run.
+/// every run. Eight bytes per xorshift step keeps it cheap in a debug build.
 fn noise() -> Vec<u8> {
     let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
-    (0..SIZE)
-        .map(|_| {
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            state.to_le_bytes()[0]
-        })
-        .collect()
+    let mut bytes = Vec::with_capacity(SIZE);
+    while bytes.len() < SIZE {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        bytes.extend_from_slice(&state.to_le_bytes());
+    }
+    bytes.truncate(SIZE);
+    bytes
 }
 
 /// A repo holding `big.bin` on a remote-style parent, unlocked, and the file's
