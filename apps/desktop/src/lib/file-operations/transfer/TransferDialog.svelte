@@ -979,12 +979,12 @@
             {namedFolderHint}
             {hasTypeMismatchConflict}
             policy={conflictPolicy}
-            onPick={(policy) => {
+            onPick={(policy: ConflictResolution) => {
                 conflictPolicy = policy
                 conflictPolicySource = 'picked'
             }}
             remember={rememberConflictChoice}
-            onRememberChange={(remember) => {
+            onRememberChange={(remember: boolean) => {
                 rememberConflictChoice = remember
             }}
             {rememberedOverwriteReach}
