@@ -523,11 +523,11 @@
   "@settings.fileOperations.defaultConflictPolicy.label": {
     "sourceHash": "8824317"
   },
-  "settings.fileOperations.defaultConflictPolicy.description": "L’option sélectionnée à l’ouverture de la boîte de dialogue de copie et de déplacement. Si vous en choisissez une autre et confirmez, elle est mémorisée ici.",
+  "settings.fileOperations.defaultConflictPolicy.description": "L’option sélectionnée à l’ouverture de la boîte de dialogue de copie et de déplacement. Pour la modifier, cochez « Mémoriser ce choix » dans cette boîte de dialogue.",
   "@settings.fileOperations.defaultConflictPolicy.description": {
-    "sourceHash": "2bfdf68"
+    "sourceHash": "d3193e5"
   },
-  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "settings.fileOperations.defaultConflictPolicy.keywords": "conflit, collision, doublon, même nom, existe déjà, remplacer, écraser, ignorer, sauter, demander, par défaut, se souvenir, mémoriser",
   "@settings.fileOperations.defaultConflictPolicy.keywords": {
     "sourceHash": "00e5bca"
   },

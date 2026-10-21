@@ -401,15 +401,15 @@
   "@fileOperations.transferDialog.rememberedOverwriteNote": {
     "sourceHash": "7456023"
   },
-  "fileOperations.transferDialog.rememberChoice": "Remember this choice",
+  "fileOperations.transferDialog.rememberChoice": "Diese Auswahl merken",
   "@fileOperations.transferDialog.rememberChoice": {
     "sourceHash": "4208548"
   },
-  "fileOperations.transferDialog.rememberChoiceInfoLabel": "More about “Remember this choice”",
+  "fileOperations.transferDialog.rememberChoiceInfoLabel": "Mehr über „Diese Auswahl merken“",
   "@fileOperations.transferDialog.rememberChoiceInfoLabel": {
     "sourceHash": "30496d1"
   },
-  "fileOperations.transferDialog.rememberChoiceHelp": "Cmdr starts on this choice next time, and you can change it in Settings. If it overwrites files, you’ll see a warning first.",
+  "fileOperations.transferDialog.rememberChoiceHelp": "Cmdr wählt diese Option beim nächsten Mal vor, und du kannst sie in den Einstellungen ändern. Überschreibt die Option Dateien, siehst du vorher eine Warnung.",
   "@fileOperations.transferDialog.rememberChoiceHelp": {
     "sourceHash": "c26d762"
   },

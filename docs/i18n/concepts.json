@@ -535,7 +535,8 @@
       "check the details",
       "worth checking",
       "check your provider",
-      "check your inbox"
+      "check your inbox",
+      "check “remember this choice"
     ],
     "sense": "Verifying something (conflicts before a copy, whether a file changed, the drive index for changes, a key's fingerprint)."
   },

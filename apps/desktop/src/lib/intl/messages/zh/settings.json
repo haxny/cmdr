@@ -522,11 +522,11 @@
   "@settings.fileOperations.defaultConflictPolicy.label": {
     "sourceHash": "8824317"
   },
-  "settings.fileOperations.defaultConflictPolicy.description": "拷贝和移动对话框打开时默认选中的选项。在对话框中换一个并确认，就会记到这里。",
+  "settings.fileOperations.defaultConflictPolicy.description": "拷贝和移动对话框打开时默认选中的选项。要更改它，请在对话框中勾选“记住这个选项”。",
   "@settings.fileOperations.defaultConflictPolicy.description": {
-    "sourceHash": "2bfdf68"
+    "sourceHash": "d3193e5"
   },
-  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "settings.fileOperations.defaultConflictPolicy.keywords": "冲突、重名、同名、重复、已存在、替换、跳过、询问、默认、记住、保存",
   "@settings.fileOperations.defaultConflictPolicy.keywords": {
     "sourceHash": "00e5bca"
   },

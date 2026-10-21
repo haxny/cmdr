@@ -518,3 +518,9 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   the hidden-setting “Internal:” prefix; add `mac-manager` and `internal-setting` concepts. (all)
 - The brief's “No concept yet” lists `getcmdr` and `com` from the domain `getcmdr.com`; the extractor could skip
   domains. (all)
+- `settings.fileOperations.defaultConflictPolicy.description`: "Check “Remember this choice”" (ticking a checkbox)
+  tripped `check` (verifying); added "check “remember this choice" to its `notMatch`. A `tick-checkbox` concept (Check /
+  Uncheck a box) would catch every future instance at once. (all)
+- `learn-more` has no ruling in de, es, fr, hu, nl, pt, sv, vi, zh, yet each locale already ships the "More about “X”"
+  frame in `servers.sheet.autoReconnectInfoLabel` and `onboarding.moreAbout`; the `*InfoLabel` keys mirrored those.
+  Promote that shipped frame to a ruling per locale. (all but ru, zh-Hant)

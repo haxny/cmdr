@@ -523,11 +523,11 @@
   "@settings.fileOperations.defaultConflictPolicy.label": {
     "sourceHash": "8824317"
   },
-  "settings.fileOperations.defaultConflictPolicy.description": "A opção com que a caixa de diálogo de copiar e mover abre. Escolha outra lá e confirme, e ela fica salva aqui.",
+  "settings.fileOperations.defaultConflictPolicy.description": "A opção com que a caixa de diálogo de copiar e mover abre. Para mudá-la, marque “Lembrar esta opção” nessa caixa de diálogo.",
   "@settings.fileOperations.defaultConflictPolicy.description": {
-    "sourceHash": "2bfdf68"
+    "sourceHash": "d3193e5"
   },
-  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "settings.fileOperations.defaultConflictPolicy.keywords": "conflito, colisão, duplicado, repetido, mesmo nome, já existe, trocar, sobrescrever, pular, ignorar, perguntar, padrão, salvar, lembrar",
   "@settings.fileOperations.defaultConflictPolicy.keywords": {
     "sourceHash": "00e5bca"
   },

@@ -400,15 +400,15 @@
   "@fileOperations.transferDialog.rememberedOverwriteNote": {
     "sourceHash": "7456023"
   },
-  "fileOperations.transferDialog.rememberChoice": "Remember this choice",
+  "fileOperations.transferDialog.rememberChoice": "Запомнить этот выбор",
   "@fileOperations.transferDialog.rememberChoice": {
     "sourceHash": "4208548"
   },
-  "fileOperations.transferDialog.rememberChoiceInfoLabel": "More about “Remember this choice”",
+  "fileOperations.transferDialog.rememberChoiceInfoLabel": "Подробнее о параметре «Запомнить этот выбор»",
   "@fileOperations.transferDialog.rememberChoiceInfoLabel": {
     "sourceHash": "30496d1"
   },
-  "fileOperations.transferDialog.rememberChoiceHelp": "Cmdr starts on this choice next time, and you can change it in Settings. If it overwrites files, you’ll see a warning first.",
+  "fileOperations.transferDialog.rememberChoiceHelp": "В следующий раз Cmdr начнет с этого варианта, а изменить его можно в настройках. Если этот вариант перезаписывает файлы, сначала появится предупреждение.",
   "@fileOperations.transferDialog.rememberChoiceHelp": {
     "sourceHash": "c26d762"
   },

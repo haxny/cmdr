@@ -522,11 +522,11 @@
   "@settings.fileOperations.defaultConflictPolicy.label": {
     "sourceHash": "8824317"
   },
-  "settings.fileOperations.defaultConflictPolicy.description": "複製和移動對話方塊開啟時預先選好的選項。在那裡換一個並確認後，就會記到這裡。",
+  "settings.fileOperations.defaultConflictPolicy.description": "複製和移動對話方塊開啟時預先選好的選項。要更改的話，請在那裡勾選「記住這個選項」。",
   "@settings.fileOperations.defaultConflictPolicy.description": {
-    "sourceHash": "2bfdf68"
+    "sourceHash": "d3193e5"
   },
-  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "settings.fileOperations.defaultConflictPolicy.keywords": "衝突, 重名, 同名, 重複, 已存在, 取代, 略過, 詢問, 預設, 記住, 儲存",
   "@settings.fileOperations.defaultConflictPolicy.keywords": {
     "sourceHash": "00e5bca"
   },

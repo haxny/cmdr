@@ -399,15 +399,15 @@
   "@fileOperations.transferDialog.rememberedOverwriteNote": {
     "sourceHash": "7456023"
   },
-  "fileOperations.transferDialog.rememberChoice": "Remember this choice",
+  "fileOperations.transferDialog.rememberChoice": "记住这个选项",
   "@fileOperations.transferDialog.rememberChoice": {
     "sourceHash": "4208548"
   },
-  "fileOperations.transferDialog.rememberChoiceInfoLabel": "More about “Remember this choice”",
+  "fileOperations.transferDialog.rememberChoiceInfoLabel": "进一步了解“记住这个选项”",
   "@fileOperations.transferDialog.rememberChoiceInfoLabel": {
     "sourceHash": "30496d1"
   },
-  "fileOperations.transferDialog.rememberChoiceHelp": "Cmdr starts on this choice next time, and you can change it in Settings. If it overwrites files, you’ll see a warning first.",
+  "fileOperations.transferDialog.rememberChoiceHelp": "下次 Cmdr 会默认选中这个选项，你可以在“设置”中更改。如果这个选项会覆盖文件，你会先看到警告。",
   "@fileOperations.transferDialog.rememberChoiceHelp": {
     "sourceHash": "c26d762"
   },

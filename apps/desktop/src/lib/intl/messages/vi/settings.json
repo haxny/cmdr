@@ -520,11 +520,11 @@
   "@settings.fileOperations.defaultConflictPolicy.label": {
     "sourceHash": "8824317"
   },
-  "settings.fileOperations.defaultConflictPolicy.description": "Lựa chọn mà hộp thoại sao chép và di chuyển dùng khi mở. Nếu bạn chọn cái khác ở đó rồi xác nhận, lựa chọn đó sẽ được ghi nhớ ở đây.",
+  "settings.fileOperations.defaultConflictPolicy.description": "Lựa chọn mà hộp thoại sao chép và di chuyển dùng khi mở. Để thay đổi, hãy đánh dấu “Ghi nhớ lựa chọn này” trong hộp thoại đó.",
   "@settings.fileOperations.defaultConflictPolicy.description": {
-    "sourceHash": "2bfdf68"
+    "sourceHash": "d3193e5"
   },
-  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "settings.fileOperations.defaultConflictPolicy.keywords": "xung đột, trùng tên, trùng lặp, đã có, thay thế, bỏ qua, hỏi, mặc định, lưu, nhớ",
   "@settings.fileOperations.defaultConflictPolicy.keywords": {
     "sourceHash": "00e5bca"
   },

@@ -2139,7 +2139,7 @@
     "sources": "catalog"
   },
   "overwrite": {
-    "accept": ["skriva över", "skrivs över", "skrivit över", "skrivas över", "överskrivning"],
+    "accept": ["skriva över", "skriver över", "skrivs över", "skrivit över", "skrivas över", "överskrivning"],
     "chosen": "skriv över",
     "confidence": "high",
     "forms": "button Skriv över; a warning badge takes the noun (överskrivning!)",

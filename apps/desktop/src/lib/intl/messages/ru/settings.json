@@ -520,11 +520,11 @@
   "@settings.fileOperations.defaultConflictPolicy.label": {
     "sourceHash": "8824317"
   },
-  "settings.fileOperations.defaultConflictPolicy.description": "Вариант, который выбран при открытии диалога копирования и перемещения. Если выбрать там другой и подтвердить, он сохранится здесь.",
+  "settings.fileOperations.defaultConflictPolicy.description": "Вариант, который выбран при открытии диалога копирования и перемещения. Чтобы изменить его, отметьте там «Запомнить этот выбор».",
   "@settings.fileOperations.defaultConflictPolicy.description": {
-    "sourceHash": "2bfdf68"
+    "sourceHash": "d3193e5"
   },
-  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "settings.fileOperations.defaultConflictPolicy.keywords": "конфликт, совпадение, дубликат, одинаковое имя, то же имя, уже есть, заменить, замена, пропустить, спрашивать, по умолчанию, запомнить",
   "@settings.fileOperations.defaultConflictPolicy.keywords": {
     "sourceHash": "00e5bca"
   },

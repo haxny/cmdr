@@ -524,11 +524,11 @@
   "@settings.fileOperations.defaultConflictPolicy.label": {
     "sourceHash": "8824317"
   },
-  "settings.fileOperations.defaultConflictPolicy.description": "De keuze waarmee het venster voor kopiëren en verplaatsen opent. Kies daar een andere en bevestig, dan wordt die hier onthouden.",
+  "settings.fileOperations.defaultConflictPolicy.description": "De keuze waarmee het venster voor kopiëren en verplaatsen opent. Vink daar ‘Deze keuze onthouden’ aan om die te wijzigen.",
   "@settings.fileOperations.defaultConflictPolicy.description": {
-    "sourceHash": "2bfdf68"
+    "sourceHash": "d3193e5"
   },
-  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, botsing, dubbel, duplicaat, zelfde naam, bestaat al, vervangen, overslaan, vragen, standaard, opslaan, onthouden",
   "@settings.fileOperations.defaultConflictPolicy.keywords": {
     "sourceHash": "00e5bca"
   },

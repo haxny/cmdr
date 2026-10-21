@@ -522,11 +522,11 @@
   "@settings.fileOperations.defaultConflictPolicy.label": {
     "sourceHash": "8824317"
   },
-  "settings.fileOperations.defaultConflictPolicy.description": "A másolás és áthelyezés párbeszédablaka ezzel a választással nyílik meg. Ha ott mást választasz, és megerősíted, itt az marad meg.",
+  "settings.fileOperations.defaultConflictPolicy.description": "A másolás és áthelyezés párbeszédablaka ezzel a választással nyílik meg. Ha módosítanád, jelöld be ott a „Választás megjegyzése” jelölőnégyzetet.",
   "@settings.fileOperations.defaultConflictPolicy.description": {
-    "sourceHash": "2bfdf68"
+    "sourceHash": "d3193e5"
   },
-  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "settings.fileOperations.defaultConflictPolicy.keywords": "ütközés, duplikátum, azonos név, ugyanaz a név, már létezik, csere, lecserélés, kihagyás, kérdezés, alapértelmezett, megjegyez, emlékszik",
   "@settings.fileOperations.defaultConflictPolicy.keywords": {
     "sourceHash": "00e5bca"
   },
