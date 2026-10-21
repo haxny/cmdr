@@ -1490,6 +1490,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
+  "settings.updates.unwritableNoticeVersion.label": "Última versão do aviso “não dá para instalar aqui”",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "sourceHash": "ae6ee0b"
+  },
+  "settings.updates.unwritableNoticeVersion.description": "Interno: guarda a última versão de atualização que o Cmdr avisou não conseguir instalar aqui, para que cada versão tenha um só aviso. Oculto da interface.",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "sourceHash": "8301fb4"
+  },
   "settings.analytics.enabled.label": "Enviar estatísticas de uso",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"

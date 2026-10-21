@@ -996,7 +996,7 @@
   },
   "download": {
     "chosen": "descargar",
-    "accept": ["descarg"],
+    "accept": ["descarg", "descárg"],
     "forms": "Descargando…; the folder Descargas",
     "confidence": "high",
     "sources": "macOS (Descargas, Descargando)"

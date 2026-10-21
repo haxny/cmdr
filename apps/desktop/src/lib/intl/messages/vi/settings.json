@@ -1486,6 +1486,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
+  "settings.updates.unwritableNoticeVersion.label": "Phiên bản gần nhất trong thông báo “không thể cài đặt ở đây”",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "sourceHash": "ae6ee0b"
+  },
+  "settings.updates.unwritableNoticeVersion.description": "Nội bộ: phiên bản cập nhật gần nhất mà Cmdr đã báo là không cài đặt ở đây được, để mỗi phiên bản chỉ có một thông báo. Ẩn khỏi giao diện.",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "sourceHash": "8301fb4"
+  },
   "settings.analytics.enabled.label": "Gửi thống kê sử dụng",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"

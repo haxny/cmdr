@@ -1489,6 +1489,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
+  "settings.updates.unwritableNoticeVersion.label": "Az „itt nem telepíthető” értesítés legutóbbi verziója",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "sourceHash": "ae6ee0b"
+  },
+  "settings.updates.unwritableNoticeVersion.description": "Belső: az a frissítési verzió, amelyről a Cmdr legutóbb jelezte, hogy itt nem tudja telepíteni, így minden verzióról csak egy értesítés jelenik meg. Rejtve a felülettől.",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "sourceHash": "8301fb4"
+  },
   "settings.analytics.enabled.label": "Használati statisztika küldése",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"

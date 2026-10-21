@@ -1492,6 +1492,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
+  "settings.updates.unwritableNoticeVersion.label": "Zuletzt genannte Version im Hinweis „Lässt sich hier nicht installieren“",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "sourceHash": "ae6ee0b"
+  },
+  "settings.updates.unwritableNoticeVersion.description": "Intern: die Update-Version, bei der Cmdr dir zuletzt gesagt hat, dass es sie hier nicht installieren kann, damit jede Version nur einen Hinweis bekommt. In der Oberfläche ausgeblendet.",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "sourceHash": "8301fb4"
+  },
   "settings.analytics.enabled.label": "Nutzungsstatistiken senden",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"

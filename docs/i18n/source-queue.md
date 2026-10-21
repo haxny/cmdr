@@ -512,3 +512,9 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   `git-tag`, which fits (both are command-line labels), so locales followed their git-tag ruling. Consider widening
   `git-tag`'s sense, or a `label-tag` concept. (vi took `tag` over its Finder-tag `thẻ`; de, nl, and pt record a
   `sameAsSourceJustification` for the loanword)
+- `updates.unwritable.adminHeadline` says “is ready” while `standardHeadline` and both `updates.status.unwritable*` say
+  “is out” for the same event; elsewhere “ready” means downloaded (`updates.toast.ready`). Use “is out” here too. (all)
+- “whoever manages this Mac” now recurs (`main.dockPinNudge.managedDock`, `updates.unwritable.standardDetail`), as does
+  the hidden-setting “Internal:” prefix; add `mac-manager` and `internal-setting` concepts. (all)
+- The brief's “No concept yet” lists `getcmdr` and `com` from the domain `getcmdr.com`; the extractor could skip
+  domains. (all)

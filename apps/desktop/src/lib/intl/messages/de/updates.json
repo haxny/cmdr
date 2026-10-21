@@ -56,6 +56,22 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
+  "updates.unwritable.adminHeadline": "Cmdr {version} ist bereit, aber Cmdr kann es nicht selbst installieren",
+  "@updates.unwritable.adminHeadline": {
+    "sourceHash": "a0c72ea"
+  },
+  "updates.unwritable.adminDetail": "{path} gehört einem anderen Konto. Lade für das Update Cmdr von <website>getcmdr.com</website> herunter und zieh es in den Ordner „Programme“. macOS fragt dann nach deinem Passwort.",
+  "@updates.unwritable.adminDetail": {
+    "sourceHash": "66ecdd2"
+  },
+  "updates.unwritable.standardHeadline": "Cmdr {version} ist erschienen",
+  "@updates.unwritable.standardHeadline": {
+    "sourceHash": "02ffda7"
+  },
+  "updates.unwritable.standardDetail": "Dein Konto kann Cmdr auf diesem Mac nicht aktualisieren. Bitte dein IT-Team oder die Person, die diesen Mac verwaltet, Cmdr zu aktualisieren.",
+  "@updates.unwritable.standardDetail": {
+    "sourceHash": "d3148ea"
+  },
   "updates.moveToApplicationsDialog.title": "Bewege Cmdr in deinen Ordner „Programme“",
   "@updates.moveToApplicationsDialog.title": {
     "sourceHash": "97f87a0"
@@ -99,6 +115,14 @@
   "updates.status.heldByPolicy": "Cmdr {available} ist erschienen, aber deine Organisation hält diesen Mac bei {ceiling} oder einer früheren Version.",
   "@updates.status.heldByPolicy": {
     "sourceHash": "5c9b196"
+  },
+  "updates.status.unwritableAdmin": "Cmdr {version} ist erschienen, aber Cmdr kann es nicht selbst installieren. Lade es von getcmdr.com herunter und zieh es in den Ordner „Programme“.",
+  "@updates.status.unwritableAdmin": {
+    "sourceHash": "9524e82"
+  },
+  "updates.status.unwritableStandard": "Cmdr {version} ist erschienen, aber dein Konto kann Cmdr auf diesem Mac nicht aktualisieren.",
+  "@updates.status.unwritableStandard": {
+    "sourceHash": "64ce45c"
   },
   "updates.status.ready": "Update v{next} bereit. Zum Anwenden neu starten.",
   "@updates.status.ready": {

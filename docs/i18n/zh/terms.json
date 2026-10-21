@@ -1026,6 +1026,13 @@
     "forms": "the thing downloaded 下载内容; the Downloads folder “下载”文件夹",
     "sources": "macOS"
   },
+  "drag": {
+    "accept": ["拖"],
+    "chosen": "拖动",
+    "confidence": "high",
+    "forms": "a drag the user is told to do → 拖动 (拖动可重新排序, 向右拖动); drag X into a place → 拖到 (把它拖到“应用程序”文件夹); drag and drop → 拖放",
+    "sources": "catalog (拖动 in fileExplorer.navigation.favoriteTooltip and settings.mediaIndex.importanceThreshold.previewNone; 拖到 in updates.moveToApplicationsDialog.howTo); macOS zh AppKit (拖移 ×10, 拖到 ×5): the catalog outranks the pile for which of two correct forms"
+  },
   "drive": {
     "accept": ["磁盘"],
     "chosen": "驱动器",

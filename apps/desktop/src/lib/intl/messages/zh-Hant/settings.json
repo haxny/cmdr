@@ -1488,6 +1488,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
+  "settings.updates.unwritableNoticeVersion.label": "上次「無法在這裡安裝」提示的版本",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "sourceHash": "ae6ee0b"
+  },
+  "settings.updates.unwritableNoticeVersion.description": "內部：Cmdr 上次告訴你無法在這裡安裝的更新版本，讓每個版本只提示一次。對介面隱藏。",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "sourceHash": "8301fb4"
+  },
   "settings.analytics.enabled.label": "傳送使用統計",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"

@@ -56,6 +56,22 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
+  "updates.unwritable.adminHeadline": "Cmdr {version} är klar, men Cmdr kan inte installera den själv",
+  "@updates.unwritable.adminHeadline": {
+    "sourceHash": "a0c72ea"
+  },
+  "updates.unwritable.adminDetail": "{path} tillhör ett annat konto. Uppdatera genom att hämta Cmdr från <website>getcmdr.com</website> och dra appen till mappen Appar. macOS frågar efter ditt lösenord.",
+  "@updates.unwritable.adminDetail": {
+    "sourceHash": "66ecdd2"
+  },
+  "updates.unwritable.standardHeadline": "Cmdr {version} finns nu",
+  "@updates.unwritable.standardHeadline": {
+    "sourceHash": "02ffda7"
+  },
+  "updates.unwritable.standardDetail": "Ditt konto kan inte uppdatera Cmdr på den här Macen. Be din IT-avdelning, eller den som hanterar den här Macen, att uppdatera Cmdr.",
+  "@updates.unwritable.standardDetail": {
+    "sourceHash": "d3148ea"
+  },
   "updates.moveToApplicationsDialog.title": "Flytta Cmdr till mappen Appar",
   "@updates.moveToApplicationsDialog.title": {
     "sourceHash": "97f87a0"
@@ -99,6 +115,14 @@
   "updates.status.heldByPolicy": "Cmdr {available} finns nu, men din organisation håller den här Macen på {ceiling} eller tidigare.",
   "@updates.status.heldByPolicy": {
     "sourceHash": "5c9b196"
+  },
+  "updates.status.unwritableAdmin": "Cmdr {version} finns nu, men Cmdr kan inte installera den själv. Hämta appen från getcmdr.com och dra den till mappen Appar.",
+  "@updates.status.unwritableAdmin": {
+    "sourceHash": "9524e82"
+  },
+  "updates.status.unwritableStandard": "Cmdr {version} finns nu, men ditt konto kan inte uppdatera Cmdr på den här Macen.",
+  "@updates.status.unwritableStandard": {
+    "sourceHash": "64ce45c"
   },
   "updates.status.ready": "Uppdatering v{next} är klar. Starta om för att tillämpa.",
   "@updates.status.ready": {

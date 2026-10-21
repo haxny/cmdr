@@ -2907,6 +2907,13 @@
       "onboarding.stepAi.table.searchWith": "A quoted example prompt, rendered as natural speech (friss prezentációim)."
     }
   },
+  "ready": {
+    "accept": ["kész"],
+    "chosen": "készen áll",
+    "confidence": "high",
+    "forms": "X is ready → Készen áll a Cmdr {version}, Az AI készen áll; a short update status → Kész (Kész a Cmdr új verziója, updates.toast.ready); ready for use → használatra kész; not yet ready → még nem áll készen",
+    "sources": "catalog (ai.toast.readyTitle, fileExplorer.selectionInfo.sizeNotReadyAriaLabel, onboarding.stepOptional.title)"
+  },
   "reclaim": {
     "chosen": "felszabadítás",
     "accept": ["felszabadít", "felszabadul", "szabadít", "szabadul"],

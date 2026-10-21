@@ -56,6 +56,22 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
+  "updates.unwritable.adminHeadline": "Cmdr {version} 已就绪，但 Cmdr 无法自行安装",
+  "@updates.unwritable.adminHeadline": {
+    "sourceHash": "a0c72ea"
+  },
+  "updates.unwritable.adminDetail": "{path} 属于另一个账户。要更新，请从 <website>getcmdr.com</website> 下载 Cmdr，再把它拖到“应用程序”文件夹。macOS 会问你要密码。",
+  "@updates.unwritable.adminDetail": {
+    "sourceHash": "66ecdd2"
+  },
+  "updates.unwritable.standardHeadline": "Cmdr {version} 已推出",
+  "@updates.unwritable.standardHeadline": {
+    "sourceHash": "02ffda7"
+  },
+  "updates.unwritable.standardDetail": "你的账户无法在这台 Mac 上更新 Cmdr。请你的 IT 团队或管理这台 Mac 的人来更新。",
+  "@updates.unwritable.standardDetail": {
+    "sourceHash": "d3148ea"
+  },
   "updates.moveToApplicationsDialog.title": "把 Cmdr 移到你的“应用程序”文件夹",
   "@updates.moveToApplicationsDialog.title": {
     "sourceHash": "97f87a0"
@@ -99,6 +115,14 @@
   "updates.status.heldByPolicy": "Cmdr {available} 已推出，但你的组织把这台 Mac 限制在 {ceiling} 或更早的版本。",
   "@updates.status.heldByPolicy": {
     "sourceHash": "5c9b196"
+  },
+  "updates.status.unwritableAdmin": "Cmdr {version} 已推出，但 Cmdr 无法自行安装。请从 getcmdr.com 下载，再把它拖到“应用程序”文件夹。",
+  "@updates.status.unwritableAdmin": {
+    "sourceHash": "9524e82"
+  },
+  "updates.status.unwritableStandard": "Cmdr {version} 已推出，但你的账户无法在这台 Mac 上更新 Cmdr。",
+  "@updates.status.unwritableStandard": {
+    "sourceHash": "64ce45c"
   },
   "updates.status.ready": "更新 v{next} 已就绪。重新启动以应用。",
   "@updates.status.ready": {

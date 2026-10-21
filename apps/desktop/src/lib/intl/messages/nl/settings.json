@@ -1492,6 +1492,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
+  "settings.updates.unwritableNoticeVersion.label": "Laatste versie van de melding ‘kan hier niet installeren’",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "sourceHash": "ae6ee0b"
+  },
+  "settings.updates.unwritableNoticeVersion.description": "Intern: de updateversie waarvan Cmdr je het laatst heeft gemeld dat Cmdr die hier niet kan installeren, zodat elke versie maar één melding krijgt. Verborgen in de interface.",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "sourceHash": "8301fb4"
+  },
   "settings.analytics.enabled.label": "Gebruiksstatistieken versturen",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"

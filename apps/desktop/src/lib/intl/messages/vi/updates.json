@@ -56,6 +56,22 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
+  "updates.unwritable.adminHeadline": "Cmdr {version} đã sẵn sàng, nhưng Cmdr không thể tự cài đặt",
+  "@updates.unwritable.adminHeadline": {
+    "sourceHash": "a0c72ea"
+  },
+  "updates.unwritable.adminDetail": "{path} thuộc về một tài khoản khác. Để cập nhật, hãy tải về Cmdr từ <website>getcmdr.com</website> rồi kéo vào thư mục Ứng dụng. macOS sẽ hỏi mật khẩu của bạn.",
+  "@updates.unwritable.adminDetail": {
+    "sourceHash": "66ecdd2"
+  },
+  "updates.unwritable.standardHeadline": "Đã có Cmdr {version}",
+  "@updates.unwritable.standardHeadline": {
+    "sourceHash": "02ffda7"
+  },
+  "updates.unwritable.standardDetail": "Tài khoản của bạn không cập nhật được Cmdr trên máy Mac này. Hãy nhờ bộ phận IT, hoặc người quản lý máy Mac này, cập nhật giúp bạn.",
+  "@updates.unwritable.standardDetail": {
+    "sourceHash": "d3148ea"
+  },
   "updates.moveToApplicationsDialog.title": "Chuyển Cmdr vào thư mục Ứng dụng",
   "@updates.moveToApplicationsDialog.title": {
     "sourceHash": "97f87a0"
@@ -99,6 +115,14 @@
   "updates.status.heldByPolicy": "Đã có Cmdr {available}, nhưng tổ chức của bạn giữ máy Mac này ở phiên bản {ceiling} hoặc cũ hơn.",
   "@updates.status.heldByPolicy": {
     "sourceHash": "5c9b196"
+  },
+  "updates.status.unwritableAdmin": "Đã có Cmdr {version}, nhưng Cmdr không thể tự cài đặt. Hãy tải về từ getcmdr.com rồi kéo vào thư mục Ứng dụng.",
+  "@updates.status.unwritableAdmin": {
+    "sourceHash": "9524e82"
+  },
+  "updates.status.unwritableStandard": "Đã có Cmdr {version}, nhưng tài khoản của bạn không cập nhật được Cmdr trên máy Mac này.",
+  "@updates.status.unwritableStandard": {
+    "sourceHash": "64ce45c"
   },
   "updates.status.ready": "Bản cập nhật v{next} đã sẵn sàng. Khởi động lại để áp dụng.",
   "@updates.status.ready": {

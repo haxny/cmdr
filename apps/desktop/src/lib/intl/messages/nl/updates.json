@@ -57,6 +57,22 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
+  "updates.unwritable.adminHeadline": "Cmdr {version} staat klaar, maar Cmdr kan de update niet zelf installeren",
+  "@updates.unwritable.adminHeadline": {
+    "sourceHash": "a0c72ea"
+  },
+  "updates.unwritable.adminDetail": "{path} is van een ander account. Download Cmdr van <website>getcmdr.com</website> en sleep het naar de map ‘Apps’ om bij te werken. macOS vraagt dan om je wachtwoord.",
+  "@updates.unwritable.adminDetail": {
+    "sourceHash": "66ecdd2"
+  },
+  "updates.unwritable.standardHeadline": "Cmdr {version} is verschenen",
+  "@updates.unwritable.standardHeadline": {
+    "sourceHash": "02ffda7"
+  },
+  "updates.unwritable.standardDetail": "Je account kan Cmdr op deze Mac niet bijwerken. Vraag je IT-team, of wie deze Mac beheert, om Cmdr bij te werken.",
+  "@updates.unwritable.standardDetail": {
+    "sourceHash": "d3148ea"
+  },
   "updates.moveToApplicationsDialog.title": "Verplaats Cmdr naar de map ‘Apps’",
   "@updates.moveToApplicationsDialog.title": {
     "sourceHash": "97f87a0"
@@ -100,6 +116,14 @@
   "updates.status.heldByPolicy": "Cmdr {available} is verschenen, maar je organisatie houdt deze Mac op {ceiling} of een eerdere versie.",
   "@updates.status.heldByPolicy": {
     "sourceHash": "5c9b196"
+  },
+  "updates.status.unwritableAdmin": "Cmdr {version} is verschenen, maar Cmdr kan de update niet zelf installeren. Download Cmdr van getcmdr.com en sleep het naar de map ‘Apps’.",
+  "@updates.status.unwritableAdmin": {
+    "sourceHash": "9524e82"
+  },
+  "updates.status.unwritableStandard": "Cmdr {version} is verschenen, maar je account kan Cmdr op deze Mac niet bijwerken.",
+  "@updates.status.unwritableStandard": {
+    "sourceHash": "64ce45c"
   },
   "updates.status.ready": "Update v{next} klaar. Herstart om toe te passen.",
   "@updates.status.ready": {

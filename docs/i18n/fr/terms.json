@@ -2489,6 +2489,13 @@
     "confidence": "high",
     "sources": "macOS Finder (« Cet emplacement est en lecture seule. »)"
   },
+  "ready": {
+    "accept": ["prête", "prêts"],
+    "chosen": "prêt",
+    "confidence": "high",
+    "forms": "agrees with the thing that is ready, never the reader: Cmdr {version} est prêt, IA prête, Index prêt, La commande « cmdr » est prête",
+    "sources": "catalog (ai.toast.readyTitle, queryUi.empty.indexReady, main.cliCommand.installed)"
+  },
   "reclaim": {
     "accept": ["libérez", "libère", "libéré"],
     "chosen": "libérer",

@@ -1486,6 +1486,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
+  "settings.updates.unwritableNoticeVersion.label": "Последняя версия в уведомлении «нельзя установить здесь»",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "sourceHash": "ae6ee0b"
+  },
+  "settings.updates.unwritableNoticeVersion.description": "Внутренний параметр: последняя версия обновления, о которой Cmdr сообщил, что не может установить ее здесь, чтобы по каждой версии было только одно уведомление. Скрыт в интерфейсе.",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "sourceHash": "8301fb4"
+  },
   "settings.analytics.enabled.label": "Отправлять статистику использования",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"

@@ -1491,6 +1491,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
+  "settings.updates.unwritableNoticeVersion.label": "Senaste version i aviseringen ”kan inte installeras här”",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "sourceHash": "ae6ee0b"
+  },
+  "settings.updates.unwritableNoticeVersion.description": "Internt: den uppdateringsversion som Cmdr senast meddelade att Cmdr inte kan installera här, så att varje version bara får en avisering. Dold i gränssnittet.",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "sourceHash": "8301fb4"
+  },
   "settings.analytics.enabled.label": "Skicka användningsstatistik",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"

@@ -56,6 +56,22 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
+  "updates.unwritable.adminHeadline": "Cmdr {version} готов, но Cmdr не может установить его сам",
+  "@updates.unwritable.adminHeadline": {
+    "sourceHash": "a0c72ea"
+  },
+  "updates.unwritable.adminDetail": "{path} принадлежит другой учетной записи. Чтобы обновиться, загрузите Cmdr с <website>getcmdr.com</website> и перетяните его в папку «Программы». macOS запросит ваш пароль.",
+  "@updates.unwritable.adminDetail": {
+    "sourceHash": "66ecdd2"
+  },
+  "updates.unwritable.standardHeadline": "Вышла версия Cmdr {version}",
+  "@updates.unwritable.standardHeadline": {
+    "sourceHash": "02ffda7"
+  },
+  "updates.unwritable.standardDetail": "Ваша учетная запись не может обновить Cmdr на этом Mac. Попросите ваш ИТ-отдел или того, кто управляет этим Mac, обновить Cmdr.",
+  "@updates.unwritable.standardDetail": {
+    "sourceHash": "d3148ea"
+  },
   "updates.moveToApplicationsDialog.title": "Переместите Cmdr в папку «Программы»",
   "@updates.moveToApplicationsDialog.title": {
     "sourceHash": "97f87a0"
@@ -99,6 +115,14 @@
   "updates.status.heldByPolicy": "Вышла версия Cmdr {available}, но ваша организация разрешает на этом Mac версии не новее {ceiling}.",
   "@updates.status.heldByPolicy": {
     "sourceHash": "5c9b196"
+  },
+  "updates.status.unwritableAdmin": "Вышла версия Cmdr {version}, но Cmdr не может установить ее сам. Загрузите ее с getcmdr.com и перетяните в папку «Программы».",
+  "@updates.status.unwritableAdmin": {
+    "sourceHash": "9524e82"
+  },
+  "updates.status.unwritableStandard": "Вышла версия Cmdr {version}, но ваша учетная запись не может обновить Cmdr на этом Mac.",
+  "@updates.status.unwritableStandard": {
+    "sourceHash": "64ce45c"
   },
   "updates.status.ready": "Обновление v{next} готово. Перезапустите, чтобы применить.",
   "@updates.status.ready": {

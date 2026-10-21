@@ -1494,6 +1494,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "sourceHash": "d8677e1"
   },
+  "settings.updates.unwritableNoticeVersion.label": "Dernière version de l’avis « installation impossible ici »",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "sourceHash": "ae6ee0b"
+  },
+  "settings.updates.unwritableNoticeVersion.description": "Interne : indique la dernière version de mise à jour que Cmdr vous a signalée comme impossible à installer ici, afin de n’afficher qu’un avis par version. Masqué dans l’interface.",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "sourceHash": "8301fb4"
+  },
   "settings.analytics.enabled.label": "Envoyer des statistiques d’usage",
   "@settings.analytics.enabled.label": {
     "sourceHash": "89b309e"
