@@ -41,10 +41,11 @@ const baseEntry = {
 
 const mounted: Array<{ instance: ReturnType<typeof mount>; target: HTMLElement }> = []
 
-function render(component: typeof FileIcon | typeof Icon, props: Record<string, unknown>): HTMLElement {
+// `unknown`, so `FileIcon` and `Icon` both fit: their union reads as a duplicate to
+// type-aware ESLint and as two prop shapes to svelte-check, which reject it either way.
+function render(component: unknown, props: Record<string, unknown>): HTMLElement {
   const target = document.createElement('div')
   document.body.appendChild(target)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- both components take plain props
   const instance = mount(component as never, { target, props: props as never })
   flushSync()
   mounted.push({ instance, target })

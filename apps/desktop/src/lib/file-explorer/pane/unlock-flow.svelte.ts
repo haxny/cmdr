@@ -179,7 +179,9 @@ export function createUnlockFlow(deps: UnlockFlowDeps) {
     // Cancelled, answered over MCP, or swept while it ran: not ours to act on.
     if (pendingUnlockId !== unlockId) return
     pendingUnlockId = null
-    const current = promptProps ?? pw
+    // TypeScript narrows `promptProps` from the assignment before the `await`, but a
+    // sweep or an MCP answer can clear it while the check runs, so keep the fallback.
+    const current = (promptProps as UnlockPromptPropsData | null) ?? pw
 
     if (outcome === 'unlocked' || outcome === 'stored') {
       log.info('Backup unlocked: {path}', { path: pw.path })

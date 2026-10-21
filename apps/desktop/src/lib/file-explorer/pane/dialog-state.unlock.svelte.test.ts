@@ -446,7 +446,7 @@ describe('restic repo browse unlock', () => {
       path: `${REPO_VIEW}/latest`,
       password: 'hunter2',
       remember: true,
-      unlockId: expect.any(String),
+      unlockId: expect.any(String) as string,
     })
     // ⭐ Verify before close: nothing closes or re-lists on the strength of a guess.
     expect(dialogs.showUnlockDialog).toBe(true)
