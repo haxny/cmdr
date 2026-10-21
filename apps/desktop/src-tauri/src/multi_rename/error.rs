@@ -50,6 +50,8 @@ pub enum ReadOnlyPlace {
     Archive,
     /// One of a repo's virtual `.git` trees, or a `.git/` listing's category row.
     GitPortal,
+    /// A restic repo's `Browse snapshots` row, or anything inside its snapshots.
+    ResticSnapshots,
 }
 
 impl From<cmdr_fs::volume::RoutedKind> for ReadOnlyPlace {
@@ -57,6 +59,7 @@ impl From<cmdr_fs::volume::RoutedKind> for ReadOnlyPlace {
         match kind {
             cmdr_fs::volume::RoutedKind::Archive => Self::Archive,
             cmdr_fs::volume::RoutedKind::GitPortal => Self::GitPortal,
+            cmdr_fs::volume::RoutedKind::Restic => Self::ResticSnapshots,
         }
     }
 }

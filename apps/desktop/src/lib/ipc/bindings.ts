@@ -13785,6 +13785,8 @@ export type ReadOnlyPlace =
   | 'archive'
   // One of a repo's virtual `.git` trees, or a `.git/` listing's category row.
   | 'gitPortal'
+  // A restic repo's `Browse snapshots` row, or anything inside its snapshots.
+  | 'resticSnapshots'
 
 /**
  *  Which half of a transfer refused the write, for [`WriteOperationError::ReadOnlyDevice`].
