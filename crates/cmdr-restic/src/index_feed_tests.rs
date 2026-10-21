@@ -115,3 +115,16 @@ fn a_waiting_decoder_hears_a_failed_read() {
         Err(cmdr_fs::volume::VolumeError::DeviceDisconnected(_))
     ));
 }
+
+/// ❗ A read reserves its buffer from the listing before a byte arrives. A
+/// hostile or broken listing (an object store's size field) must not make it
+/// ask for more than the window: past `isize::MAX` that panics, and a huge
+/// valid size can abort the whole app on a failed allocation.
+#[test]
+fn a_read_never_reserves_more_than_the_window_whatever_the_listing_says() {
+    let (feed, _seen) = feed(&[(1, u64::MAX / 2)], 1 << 20);
+
+    let start = feed.next_read().expect("reads ahead into an empty window");
+
+    assert_eq!(start.reserve, 1 << 20);
+}

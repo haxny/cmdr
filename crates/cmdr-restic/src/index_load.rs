@@ -326,7 +326,7 @@ async fn read_one(
     feed: Arc<IndexFeed>,
 ) -> Result<(), VolumeError> {
     let mut stream = parent.open_read_stream(&path).await?;
-    let mut bytes = Vec::with_capacity(usize::try_from(start.listed).unwrap_or(0));
+    let mut bytes = Vec::with_capacity(usize::try_from(start.reserve).unwrap_or(0));
     while let Some(chunk) = stream.next_chunk().await {
         let chunk = chunk?;
         if feed.add_chunk(start.index, chunk.len()) == Keep::Stop {

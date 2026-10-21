@@ -35,8 +35,11 @@ const CAP_SLACK: u64 = 64 * 1024;
 pub(crate) struct Start {
     pub(crate) index: usize,
     pub(crate) id: Id,
-    /// Its listed size (0 when the listing gave none), to size the buffer.
-    pub(crate) listed: u64,
+    /// What to reserve for its bytes before any arrive: its listed size, but
+    /// never more than the window, so a hostile or broken listing (a size
+    /// field near `u64::MAX`) can't make one read ask for an allocation that
+    /// aborts the app. The buffer grows past it as bytes really arrive.
+    pub(crate) reserve: u64,
 }
 
 /// What a read does after the chunk it just got.
@@ -288,7 +291,11 @@ impl IndexFeed {
         state.committed += counted;
         state.slots[index] = Slot::Reading { counted, got: 0, asked };
         let (id, listed) = self.files[index];
-        Start { index, id, listed }
+        Start {
+            index,
+            id,
+            reserve: listed.min(self.window),
+        }
     }
 
     /// `bytes` more of file `index` arrived.

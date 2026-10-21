@@ -390,8 +390,9 @@ unlocked view.
   app's credential store in its `VolumeHost`, or lookups always miss.
 - **Index progress**: a listing into a snapshot reports `ListingPhase::LoadingIndex` ticks with zero entries, which the
   pane words as bytes over a bar (`apps/desktop/src/lib/file-explorer/restic/DETAILS.md` § "Index progress").
-- **Copy-out** holds the index through its read streams; a whole-snapshot pre-scan goes through `list_directory` per
-  folder, which joins the same load.
+- **Copy-out** holds the index for its whole run through its transfer hold, paused or not (§ "The index lifecycle", "A
+  transfer's hold"), and through its read streams; a whole-snapshot pre-scan goes through `list_directory` per folder,
+  which joins the same load.
 - **The host route** calls `restic_route`, then `confirm_repo` (or `serves_confirmed` on a sync seam), and builds a
   `ResticVolume` over the parked hub. The overlay calls `is_restic_repo` on the entries, then `overlay_row`, whose row
   carries the reserved `restic:snapshots` icon id (`OVERLAY_ROW_ICON_ID`) the frontend draws and recognizes it by. Both:

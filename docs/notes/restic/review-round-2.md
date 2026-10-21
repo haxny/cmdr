@@ -113,6 +113,9 @@ typed); a huge but valid size can fail the allocation, which aborts the process.
 prefetch by the listed size plus slack, so this is the same trust in a new place. Fix: reserve `min(listed, window)` and
 let the `Vec` grow. Confidence: medium (whether the allocation aborts depends on the allocator and the size).
 
+Status: fixed as proposed. `Start::reserve` is the listed size capped at the window, and the buffer grows as bytes
+arrive; pinned by `a_read_never_reserves_more_than_the_window_whatever_the_listing_says`.
+
 ### 6. A re-list task that outlives its watch can steer the next watch on the same repo
 
 `apps/desktop/src-tauri/src/file_system/restic/snapshot_watch.rs:343-355`: the loop looks the watch up by key, not
@@ -144,6 +147,8 @@ Confidence: high on the behavior; whether it's worth fixing is a product call.
 `crates/cmdr-restic/DETAILS.md:388`: "Copy-out holds the index through its read streams". It also holds it through the
 transfer hold for its whole run, paused or not (§ "The index lifecycle" in the same file says so). Point the line at
 that bullet.
+
+Status: fixed; the line points at the transfer's hold.
 
 ## Info
 
