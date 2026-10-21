@@ -35,8 +35,9 @@ path stays the caller's path.
   on `latest` too; the frontend words them. Every root listing re-reads `snapshots/` (rustic's `update_all_snapshots`:
   only new files are read, deleted ones drop), so a re-list shows a new backup: a manual refresh, or the app's watch on
   the parent's `snapshots/` re-listing an open root pane (`apps/desktop/src-tauri/src/file_system/restic/DETAILS.md` §
-  "A new backup reaches an open pane"). Refreshes are one at a time per repo, and a listing that asked while one ran
-  takes its list rather than read `snapshots/` again.
+  "A new backup reaches an open pane"). Refreshes are one at a time per repo. A listing takes the list of a refresh that
+  STARTED after it asked (`Snapshots::read_at` is the start), so the ones that asked while a refresh ran share the next
+  one; ❌ never the running one's, which may have listed `snapshots/` before the backup they're asking about landed.
 - **A snapshot folder** holds that snapshot's tree. Restic snapshots of a Mac start at `/`, so the tree under a folder
   is `Users/…`; it's shown as-is.
 - **Read-only by construction**: `is_writable` false, every mutation at the trait's `NotSupported` default, and
@@ -94,9 +95,9 @@ the root only shows the `latest` row and doesn't count, so refreshing to see a n
 while a transfer holds the repo (§ "The index lifecycle", "A transfer's hold"): a copy paused between files, or
 mid-file, reads nothing, and the snapshot watch would otherwise move `latest` under it with nobody pressing refresh, so
 its remaining files would come from a newer snapshot. A copy out of a dated folder freezes `latest` too, which is
-harmless. The pin also moves
-at once when its snapshot is gone from the repo (a prune), since there's nothing left to show. A dated folder is the
-exact pin; `latest` is the convenience. With several hosts in one repo, `latest` is still the newest snapshot overall.
+harmless. The pin also moves at once when its snapshot is gone from the repo (a prune), since there's nothing left to
+show. A dated folder is the exact pin; `latest` is the convenience. With several hosts in one repo, `latest` is still
+the newest snapshot overall.
 
 ## The hub (`hub.rs`)
 

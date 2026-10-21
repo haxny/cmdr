@@ -452,11 +452,14 @@ impl ResticRepos {
         if let Some(list) = known.filter(|_| !refresh) {
             return Ok(list);
         }
-        // One refresh at a time per repo: a caller that asked while another
-        // refresh ran takes that one's list instead of reading `snapshots/` (and
-        // rebinding `latest`) again.
+        // One refresh at a time per repo: a caller takes the list of a refresh
+        // that STARTED after it asked instead of reading `snapshots/` (and
+        // rebinding `latest`) again. ❗ Started, not finished: a refresh already
+        // running when the caller asked may have listed `snapshots/` before the
+        // backup the caller is asking about landed (the app's snapshot watch).
         let asked = Instant::now();
         let _refreshing = slot.refreshing.lock().await;
+        let started = Instant::now();
         let fresh = lock(&slot.snapshots)
             .as_ref()
             .filter(|known| known.read_at > asked)
@@ -499,7 +502,7 @@ impl ResticRepos {
         *lock(&slot.snapshots) = Some(Snapshots {
             files,
             list: Arc::clone(&list),
-            read_at: Instant::now(),
+            read_at: started,
         });
         Ok(list)
     }
@@ -755,7 +758,8 @@ impl<T> Bound<T> {
 struct Snapshots {
     files: Vec<SnapshotFile>,
     list: Arc<SnapshotList>,
-    /// When the refresh that read it finished.
+    /// When the refresh that read it STARTED (took the refresh lock), so only
+    /// a caller that asked before then may share it.
     read_at: Instant,
 }
 

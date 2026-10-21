@@ -99,7 +99,10 @@ holds, and the watch's re-list takes the older list. The cause is that `read_at`
 Stamping it when the refresh BEGINS (before `opened()`) makes "reuse a list only if its refresh started after I asked"
 exact, inside the hub, with no change to the capped surface. Cost: a caller that asked while a refresh ran runs one more
 after it (later waiters still share that one). The doc's "needs a new hub method on the capped surface" is wrong.
-Confidence: high.
+Confidence: high. Status: fixed as proposed. `read_at` is stamped when the refresh takes the lock; the app DETAILS'
+known-gap note is gone. Cells: `a_snapshot_landing_during_a_refresh_shows_in_the_listing_that_asked_after` (a refresh
+held inside its read of a new snapshot file, a backup landing after its listing, the re-list showing it) and
+`root_listings_that_ask_during_a_refresh_share_the_next_one` (three listings, two reads).
 
 ### 5. An index read reserves its listed size up front
 
@@ -115,9 +118,9 @@ let the `Vec` grow. Confidence: medium (whether the allocation aborts depends on
 `apps/desktop/src-tauri/src/file_system/restic/snapshot_watch.rs:343-355`: the loop looks the watch up by key, not
 epoch. If the last pane closes during a re-list and a new pane re-arms the same repo, the old task clears the new
 watch's `refreshing` (two re-lists at once) or consumes its `again`. Nothing is lost (it re-lists in that case), so it's
-a duplicate re-list at worst. Fix: carry the epoch into the task and stop on a mismatch. Confidence: high.
-Status: fixed as proposed (the task captures its watch's epoch and returns on a mismatch). No cell: reaching it takes a
-close and a re-arm inside one re-list, and the worst case was a duplicate re-list.
+a duplicate re-list at worst. Fix: carry the epoch into the task and stop on a mismatch. Confidence: high. Status: fixed
+as proposed (the task captures its watch's epoch and returns on a mismatch). No cell: reaching it takes a close and a
+re-arm inside one re-list, and the worst case was a duplicate re-list.
 
 ### 7. A wedged parent leaves a rustic pool behind per abandoned refresh
 

@@ -58,6 +58,10 @@ struct ScriptedParent {
     /// another) the same way.
     list_gate: watch::Receiver<bool>,
     gated_dir: &'static str,
+    /// Holds reads of the files IN `gated_dir` (other than `index`, which `gate`
+    /// holds), counting how many start.
+    file_gate: watch::Receiver<bool>,
+    gated_files_started: AtomicUsize,
     /// Lists `index/` with no sizes, as a backend that can't report them does.
     hide_index_sizes: bool,
     index_read_delay: Duration,
@@ -143,6 +147,15 @@ impl Volume for ScriptedParent {
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             if !Self::is_index_file(path) {
+                if path
+                    .parent()
+                    .and_then(Path::file_name)
+                    .is_some_and(|dir| dir == self.gated_dir)
+                {
+                    self.gated_files_started.fetch_add(1, Ordering::SeqCst);
+                    let mut gate = self.file_gate.clone();
+                    let _ = gate.wait_for(|open| *open).await;
+                }
                 return self.inner.open_read_stream(path).await;
             }
             self.index_reads.fetch_add(1, Ordering::SeqCst);
@@ -165,6 +178,7 @@ struct Rig {
     parent: Arc<ScriptedParent>,
     gate: watch::Sender<bool>,
     list_gate: watch::Sender<bool>,
+    file_gate: watch::Sender<bool>,
     hub: Arc<ResticRepos>,
     volume: Arc<ResticVolume>,
     index_files: usize,
@@ -221,11 +235,14 @@ impl Rig {
             .collect();
         let (gate, gate_rx) = watch::channel(options.gate_open);
         let (list_gate, list_gate_rx) = watch::channel(options.list_gate_open);
+        let (file_gate, file_gate_rx) = watch::channel(true);
         let parent = Arc::new(ScriptedParent {
             inner,
             gate: gate_rx,
             list_gate: list_gate_rx,
             gated_dir: options.gated_dir,
+            file_gate: file_gate_rx,
+            gated_files_started: AtomicUsize::new(0),
             hide_index_sizes: options.hide_index_sizes,
             index_read_delay: options.index_read_delay,
             index_reads: AtomicUsize::new(0),
@@ -243,6 +260,7 @@ impl Rig {
             parent,
             gate,
             list_gate,
+            file_gate,
             hub,
             index_files: index.len(),
             index_bytes: index.iter().map(|(_, bytes)| bytes.len() as u64).sum(),
@@ -678,11 +696,12 @@ async fn a_new_snapshot_reloads_the_index_while_an_old_reader_finishes() {
     assert_eq!(rest, vec![7u8; 3 * 1024 * 1024]);
 }
 
-/// Two root listings at once (two panes, a stalled listing's second attempt)
-/// share one refresh of the snapshot list: `snapshots/` is read once, and
-/// `latest` rebinds once.
+/// Root listings that ask while a refresh runs (two panes, a stalled listing's
+/// second attempt) share ONE refresh after it: `snapshots/` is read twice for
+/// three listings, never once per listing. They don't take the running one's
+/// list, which may predate what they asked about.
 #[tokio::test(flavor = "multi_thread")]
-async fn concurrent_root_listings_share_one_snapshot_refresh() {
+async fn root_listings_that_ask_during_a_refresh_share_the_next_one() {
     let rig = Rig::new(RigOptions {
         list_gate_open: false,
         gated_dir: "snapshots",
@@ -698,15 +717,63 @@ async fn concurrent_root_listings_share_one_snapshot_refresh() {
     })
     .await;
     let second = spawn_listing(&rig.volume, view(ROOT), None);
+    let third = spawn_listing(&rig.volume, view(ROOT), None);
     rig.list_gate.send_replace(true);
 
-    let (first, second) = (first.await.expect("task"), second.await.expect("task"));
+    let (first, second, third) = (
+        first.await.expect("task"),
+        second.await.expect("task"),
+        third.await.expect("task"),
+    );
     assert_eq!(first.expect("lists").len(), second.expect("lists").len());
+    assert!(third.is_ok());
     assert_eq!(
         parent.gated_listings_started.load(Ordering::SeqCst),
-        before + 1,
-        "one read of snapshots/ for both"
+        before + 2,
+        "the running read, then one shared by the two that asked during it"
     );
+}
+
+/// The watch's race (#626): a backup lands while a refresh is already listing
+/// `snapshots/`, and the watch's re-list asks during it. Taking the running
+/// refresh's list would miss the backup until the next change; the re-list
+/// reads again and shows it.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_snapshot_landing_during_a_refresh_shows_in_the_listing_that_asked_after() {
+    let rig = Rig::new(RigOptions {
+        gated_dir: "snapshots",
+        ..RigOptions::default()
+    })
+    .await;
+    let parent = Arc::clone(&rig.parent);
+    let before = parent.gated_files_started.load(Ordering::SeqCst);
+
+    // The running refresh has one new snapshot file to read, and stands inside
+    // that read: it has listed `snapshots/` already.
+    rig.fixture.add_snapshot(at(1_798_000_000), "laptop");
+    rig.fixture.write_into(rig.parent.inner.as_ref(), Path::new(ROOT)).await;
+    rig.file_gate.send_replace(false);
+    let running = spawn_listing(&rig.volume, view(ROOT), None);
+    wait_until_async(WITHIN, "the running refresh reads a new snapshot file", || {
+        parent.gated_files_started.load(Ordering::SeqCst) > before
+    })
+    .await;
+
+    // A backup lands after that listing, and the watch's re-list asks.
+    rig.fixture.add_snapshot(at(1_799_000_000), "laptop");
+    rig.fixture.write_into(rig.parent.inner.as_ref(), Path::new(ROOT)).await;
+    let slot = rig.volume.slot_for_tests();
+    let landed = std::time::Instant::now();
+    let asked_after = spawn_listing(&rig.volume, view(ROOT), None);
+    wait_until_async(WITHIN, "the re-list asks for the snapshots", || {
+        slot.last_used() > landed
+    })
+    .await;
+    rig.file_gate.send_replace(true);
+
+    let old = running.await.expect("task").expect("lists");
+    let new = asked_after.await.expect("task").expect("lists");
+    assert_eq!(new.len(), old.len() + 1, "the backup that landed shows");
 }
 
 // ── The repo changing under the view ───────────────────────────────────────

@@ -57,10 +57,6 @@ index files, so by the time the folder shows, everything it names is on the pare
   folder appears and `latest` stays put. It then moves on the next root re-list after the copy goes quiet: the next
   backup, or a manual refresh. A later reader of the new snapshot reloads the index on its own (§ "Coverage and
   reloads" there).
-- **Known gap**: the hub shares a refresh already in flight with a caller that asks during it. When a manual refresh
-  started listing `snapshots/` just BEFORE the new file landed and is still running when the watch fires, the watch's
-  re-list takes that older list, and the backup shows on the next change or refresh. Closing it needs the hub to tell
-  "asked after a change" from "asked during a refresh", which is a new hub method on the capped surface.
 - Cells: `snapshot_watch_tests.rs` (a scripted event re-lists the root with the new folder, the same event during a read
   under `latest` leaves `latest` alone, two panes share one watch that goes with the last, the composer's report
   re-lists, only a change in `snapshots/` or an overflow above it counts, a burst is one re-list, and which listings
