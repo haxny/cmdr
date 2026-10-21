@@ -1,5 +1,5 @@
 /**
- * Copy and a11y tests for `UpdateUnwritableToastContent.svelte`: the notice for an update this user can't write into
+ * Tier 3 a11y + copy tests for `UpdateUnwritableToastContent.svelte`: the notice for an update this user can't write into
  * the bundle. What it SAYS is the feature, and it says two different things: an administrator can replace the app
  * themselves, anyone else has to ask.
  */
