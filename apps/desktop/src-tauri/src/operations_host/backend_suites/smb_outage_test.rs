@@ -550,6 +550,14 @@ struct FlakyShare {
 /// fixture's 5 s halves, so no down half goes unseen.
 const PROBE_EVERY: Duration = Duration::from_millis(100);
 
+/// The longest one look may take before it reads as down. Shorter than the
+/// fixture's 5 s up half: a reconnect whose handshake hangs on a Samba that's
+/// still starting otherwise runs to smb2's 10 s deadline, the watch misses the
+/// whole up half, and a cell waiting [`ONE_CYCLE`] for the next down times out
+/// (seen on loaded CI runners, 2026-10-21). The next look starts a fresh
+/// handshake, which a Samba that's up answers at once.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+
 /// The longest the fixture takes to go away and come back: one whole cycle,
 /// plus slack for a loaded runner's Samba start.
 const ONE_CYCLE: Duration = Duration::from_secs(15);
@@ -562,16 +570,19 @@ impl FlakyShare {
         let (cell, is_up, went_down) = (Arc::clone(&volume), Arc::clone(&up), Arc::clone(&downs));
         let watch = tokio::spawn(async move {
             loop {
-                let answers = match cell.get() {
-                    Some(share) => Self::answers(share).await,
-                    None => match connect_flaky(VolumeHost::detached()).await {
-                        Some(share) => {
-                            let _ = cell.set(Arc::new(share));
-                            true
-                        }
-                        None => false,
-                    },
+                let look = async {
+                    match cell.get() {
+                        Some(share) => Self::answers(share).await,
+                        None => match connect_flaky(VolumeHost::detached()).await {
+                            Some(share) => {
+                                let _ = cell.set(Arc::new(share));
+                                true
+                            }
+                            None => false,
+                        },
+                    }
                 };
+                let answers = tokio::time::timeout(PROBE_TIMEOUT, look).await.unwrap_or(false);
                 if is_up.swap(answers, Ordering::SeqCst) && !answers {
                     went_down.fetch_add(1, Ordering::SeqCst);
                 }
