@@ -200,6 +200,16 @@ rust-cache carries `~/.cargo/bin`, so that multi-minute build runs only on a col
 Why one job: a split-out tests job saved ~5 min of wall time, but the account runs at most five macOS jobs at once, and
 with several PRs in flight the second macOS job per run queued for longer than that (§ Build caching, Critical path).
 
+On `main` pushes the job joins one job-level concurrency group shared across runs (`macos-lane-main`,
+`cancel-in-progress: false`): one runs, the newest waits, and a newer push replaces the waiting one. Each `main` commit
+checks a superset of the one before it, and a burst of unverified lands used to queue a ~40 min macOS run each against
+the account's five-job cap. PRs and dispatches (the release gate's `run_all`) get a group of their own (the run ID), so
+nothing replaces them. The replaced job reads `cancelled`, which `ci-ok` counts as covered (§ Branch protection). The
+group is job-level because the workflow-level one must stay per-run (§ Triggers and concurrency), and GitHub allows
+`concurrency` on a job that calls a reusable workflow (docs: "Supported keywords for jobs that call a reusable
+workflow", checked 2026-10-21). `warm-rust-macos-cache` stays out of the group: it runs only when the lane skipped, and
+mostly hits the cache and exits.
+
 - **Required.** It's in `ci-ok`'s `needs`, so a red macOS job fails the run, `ci-ok`, and both release gates. Its first
   run (2026-10-06) failed on two tests that assumed David's Mac (a malloc zone macOS 26 doesn't register, a tight
   watchdog margin); the second was green, and it was promoted then.
@@ -291,9 +301,14 @@ through `CODEQL_EXTRACTOR_RUST_OPTION_*` env vars.
 ## Branch protection
 
 `ci-ok` is the single required status check, and `main`'s ruleset names it by its check-run name, **`CI OK`** (❌ don't
-rename the job's `name:`). It needs every job in `ci.yml` except `deploy-website` (a post-land deploy), `changes`
-included, and passes only when each result is `success` or `skipped` and `changes` is `success`. A lane skipped by
-change detection passes; a failed `changes`, which skips every lane, is red.
+rename the job's `name:`). It needs every job in `ci.yml` except the post-land ones (`deploy-website` and the `warm-*`
+cache jobs), `changes` included, and passes only when each result is `success` or `skipped` and `changes` is `success`.
+A lane skipped by change detection passes; a failed `changes`, which skips every lane, is red.
+
+One exception: on a `main` push, a `cancelled` `desktop-rust-macos` passes when `main` has moved past the commit (the
+current head differs from it and `compare/{sha}...{head}` reads `ahead`), because a newer push replaced it in the lane's
+shared group (§ macOS lane). The gate logs the head that covers it. Any other event, any other cancelled job, or a
+failed lookup stays red.
 
 It must report on EVERY run, because GitHub counts a skipped required check as passing and a missing one waits forever:
 
@@ -314,7 +329,8 @@ verified in run 38431502003, 2026-10-13: "Fetching list of changed files for PR#
 `ci.yml` and `codeql.yml` share one `concurrency` shape: a PR's new push cancels its older run, while `main` pushes and
 dispatches each get their own group (the run ID). A shared group with `cancel-in-progress: false` still isn't safe for
 `main`: GitHub cancels a QUEUED run when a newer one joins the group, which would drop a deploy or leave a release
-commit without its run. `gradle-wrapper.yml` runs on PRs only when they touch the wrapper.
+commit without its run. That cancel is exactly what the macOS lane wants on `main`, so it has a job-level group of its
+own there (§ macOS lane). `gradle-wrapper.yml` runs on PRs only when they touch the wrapper.
 
 ### Landing doesn't re-run the suite
 

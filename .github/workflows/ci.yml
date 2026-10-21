@@ -515,10 +515,19 @@ jobs:
   # Required: in `ci-ok`'s `needs`, so a red macOS job fails the run and both release gates.
   # `docs/tooling/ci.md` § macOS lane. The lane's steps live in `macos-lane.yml`, which
   # `land.yml` calls too.
+  #
+  # On `main` pushes the lane shares one job-level group across runs: one runs, the newest
+  # waits, and a newer push replaces the waiting one, because each `main` commit checks a
+  # superset of the one before it and a burst of lands used to queue a ~40 min macOS run each.
+  # `ci-ok` counts that replaced (cancelled) job as covered. PRs and dispatches (the release
+  # gate's `run_all`) keep a group of their own (the run ID), so this never cancels them.
   desktop-rust-macos:
     name: Desktop (Rust, macOS)
     needs: changes
     if: inputs.run_all || needs.changes.outputs.rust == 'true'
+    concurrency:
+      group: macos-lane-${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'main' || github.run_id }}
+      cancel-in-progress: false
     uses: ./.github/workflows/macos-lane.yml
 
   # ===========================================
@@ -1534,6 +1543,9 @@ jobs:
   # - `always()`, not `!cancelled()`, so a cancelled run reports red instead of skipped.
   # - Only `success` and `skipped` pass. A lane skipped by change detection is fine; `changes`
   #   itself never legitimately skips, so it must be `success`.
+  # - One exception: on a `main` push, a `cancelled` `desktop-rust-macos` passes when `main`
+  #   has moved past this commit, because a newer push replaced it in the lane's shared group
+  #   and that run checks this code too. Any failed lookup keeps it red.
   # `docs/tooling/ci.md` § Branch protection.
   ci-ok:
     name: CI OK
@@ -1559,8 +1571,27 @@ jobs:
       - name: Check all jobs passed
         env:
           NEEDS: ${{ toJSON(needs) }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
         run: |
-          bad=$(jq -r 'to_entries[] | select(.value.result != "success" and .value.result != "skipped") | "\(.key): \(.value.result)"' <<<"$NEEDS")
+          covered=false
+          if [[ "$EVENT" == "push" && "$REF" == "refs/heads/main" &&
+            "$(jq -r '."desktop-rust-macos".result' <<<"$NEEDS")" == "cancelled" ]]; then
+            if head=$(gh api "repos/$REPO/commits/main" --jq .sha) && [[ -n "$head" && "$head" != "$SHA" ]] &&
+              status=$(gh api "repos/$REPO/compare/$SHA...$head" --jq .status) && [[ "$status" == "ahead" ]]; then
+              covered=true
+              echo "desktop-rust-macos was replaced by a newer main push's macOS run; main is at $head, which descends from $SHA."
+            else
+              echo "desktop-rust-macos was cancelled, and main hasn't verifiably moved past $SHA, so it counts as red."
+            fi
+          fi
+          bad=$(jq -r --argjson covered "$covered" 'to_entries[]
+            | select(.value.result != "success" and .value.result != "skipped")
+            | select(($covered and .key == "desktop-rust-macos" and .value.result == "cancelled") | not)
+            | "\(.key): \(.value.result)"' <<<"$NEEDS")
           if [[ -n "$bad" ]]; then
             echo "These jobs didn't pass:"
             echo "$bad"
