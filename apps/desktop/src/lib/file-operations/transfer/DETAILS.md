@@ -356,9 +356,16 @@ deliberately carries no container field, so every archive mapping site stays unt
 - **A repo verifies before the dialog closes.** Submit calls `unlockContainer` with the "Remember in Keychain" choice
   (on by default) and a fresh `unlockId`; the dialog stays up with the field and Unlock disabled and a spinner (its
   `role="status"` label says it's checking), and Cancel stays live. `unlocked` closes and follows up exactly like an
-  archive's submit (browse re-lists, transfer re-dispatches); `wrongPassword` re-arms it in place (retry copy, the
-  `rejections` bump empties the field); a refusal that never reached the repo (`timedOut`, `volume`, ...) keeps the
-  password and shows the couldn't-reach note, since it says nothing about the password.
+  archive's submit (browse re-lists, transfer re-dispatches); `wrongPassword` re-arms it in place: the `rejections` bump
+  keeps the password but selects it, and says so again (below). A refusal that never reached the repo (`timedOut`,
+  `volume`, ...) keeps the password and shows the couldn't-reach note, since it says nothing about the password.
+- **A refusal is said AT the field, every time** (`UnlockDialog.svelte`, both containers). The title turns to the retry
+  title, the body stays put, and the retry message renders under the field as a `role="alert"` note the field points at
+  (`aria-invalid` via `TextInput`'s `invalid`, `aria-describedby`); focus returns with the text selected, and the field
+  shakes once. Why each refusal re-says it: a swap of the copy above the field went unnoticed in QA, and a SECOND
+  refusal changed nothing at all. So the note is `{#key rejections}` (a fresh alert node is what a screen reader
+  re-announces), and the shake alternates two identical keyframes by the count's parity (only a changed animation name
+  restarts one), inside `@media (prefers-reduced-motion: no-preference)`, so Reduce motion never shakes.
 - **Cancel mid-check closes at once.** `handleCancel` sends `cancelContainerUnlock(unlockId)` and only then
   `forgetContainerPassword`, in that order: a check finishing between a forget and a later cancel would keep the
   password behind the forget. A check whose id the flow no longer holds (cancelled, answered over MCP, swept) is ignored
@@ -380,7 +387,7 @@ deliberately carries no container field, so every archive mapping site stays unt
   rather than tidy: the retry is a NEW operation, and the backend refuses a second claim on one preview, so a
   carried-over id would silently downgrade to a full re-walk. A wrong password makes the backend raise
   `archive_needs_password` again with `wrongAttempt: true`, so the interception fires a second time and the dialog
-  re-prompts (its distinct copy, empty field via a fresh mount).
+  re-prompts (fresh mount: retry title, the note under an empty field, one shake).
 - **An agent's unlock stores but never starts.** The MCP `unlock` tool routes to `supplyStoredPassword` instead of
   `handleUnlockSubmit`, and ❌ never re-dispatches: it settles the transfer, and the agent runs `copy` / `move` again so
   extraction goes through the same gate as every other write. `pane/DETAILS.md` § "Only a PERSON's submit

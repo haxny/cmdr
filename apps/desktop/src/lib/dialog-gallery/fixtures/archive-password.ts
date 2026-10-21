@@ -21,7 +21,9 @@ export interface ArchivePasswordFixture {
 /**
  * Keyed by the `archive-password` entry's state ids in `gallery-registry.ts`.
  * Each container has its own title and body copy, and the first prompt and the
- * re-prompt differ again, so every pair needs reviewing. A repo adds the
+ * re-prompt differ again, so every pair needs reviewing. A re-prompt opens on a
+ * refusal: the title changes, a note sits under the red-ringed field, and the
+ * field shakes once (not under Reduce motion). A repo adds the
  * Keychain checkbox, the busy state while it checks the password, and the note
  * for a check that couldn't reach it.
  */

@@ -143,9 +143,9 @@ describe('UnlockDialog, archive: wrong-attempt re-prompt', () => {
     await settle()
 
     expect(target.querySelector('#unlock-title')?.textContent).toBe('That didn’t work')
-    const message = target.querySelector('#unlock-message')?.textContent ?? ''
-    expect(message).toContain('didn’t unlock')
-    expect(message).toContain('photos.zip')
+    // The body still says what this is; the note under the field says what went wrong.
+    expect(target.querySelector('#unlock-message')?.textContent).toContain('password-protected')
+    expect(wrongNote(target)?.textContent).toContain('didn’t unlock')
 
     expect(passwordInput(target).value).toBe('')
   })
@@ -208,7 +208,7 @@ describe('UnlockDialog, restic repo', () => {
     expect(onCancel).toHaveBeenCalledOnce()
   })
 
-  it('clears the field when the repo refuses the password, and keeps it when the repo was unreachable', async () => {
+  it('keeps the password through an unreachable check, and selects it after a refusal so typing replaces it', async () => {
     const props = $state(repoProps())
     mount(UnlockDialog, { target, props })
     await settle()
@@ -222,18 +222,100 @@ describe('UnlockDialog, restic repo', () => {
     await settle()
     expect(passwordInput(target).value).toBe('wrong-one')
     expect(target.querySelector('#unlock-unreachable')?.textContent).toContain('try again')
+    expect(wrongNote(target)).toBeNull()
 
-    // The next check runs and the repo refuses it: the field empties for a new try.
-    props.checking = true
-    props.unreachable = false
-    await tick()
-    props.checking = false
-    props.wrongAttempt = true
-    props.rejections = 1
-    await settle()
-    expect(passwordInput(target).value).toBe('')
+    // The next check runs and the repo refuses it.
+    await refuse(props)
+    const input = passwordInput(target)
+    expect(input.value).toBe('wrong-one')
+    expect(document.activeElement).toBe(input)
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 'wrong-one'.length])
     expect(target.querySelector('#unlock-title')?.textContent).toBe('That didn’t work')
     expect(target.querySelector('#unlock-unreachable')).toBeNull()
-    expect(document.activeElement).toBe(passwordInput(target))
+  })
+})
+
+/** Runs one check that the repo refuses, the way the unlock flow drives the props: `rejections` is the new count. */
+async function refuse(props: DialogProps, rejections = 1): Promise<void> {
+  props.checking = true
+  props.unreachable = false
+  await tick()
+  props.checking = false
+  props.wrongAttempt = true
+  props.rejections = rejections
+  await settle()
+}
+
+function wrongNote(target: HTMLElement): HTMLElement | null {
+  return target.querySelector<HTMLElement>('#unlock-wrong')
+}
+
+function shakeClass(target: HTMLElement): string | undefined {
+  const group = passwordInput(target).closest('.input-group')
+  return [...(group?.classList ?? [])].find((name) => name.startsWith('shake-'))
+}
+
+describe('UnlockDialog, a refused password', () => {
+  it('says so right under the field, wired to it for screen readers', async () => {
+    const props = $state(repoProps())
+    mount(UnlockDialog, { target, props })
+    await settle()
+    expect(wrongNote(target)).toBeNull()
+    expect(passwordInput(target).getAttribute('aria-invalid')).toBeNull()
+
+    await type(target, 'nope')
+    await refuse(props)
+
+    const note = wrongNote(target)
+    expect(note?.getAttribute('role')).toBe('alert')
+    expect(note?.textContent).toContain('didn’t unlock')
+    expect(note?.textContent).toContain('m3-restic')
+    const input = passwordInput(target)
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(input.getAttribute('aria-describedby')).toBe('unlock-wrong')
+    // The note sits under the field, not up in the body copy.
+    expect(input.closest('.input-group')?.contains(note ?? null)).toBe(true)
+  })
+
+  it('announces and shakes again on every refusal, so a second miss never looks like nothing happened', async () => {
+    const props = $state(repoProps())
+    mount(UnlockDialog, { target, props })
+    await settle()
+    expect(shakeClass(target)).toBeUndefined()
+
+    await type(target, 'nope')
+    await refuse(props)
+    const firstNote = wrongNote(target)
+    const firstShake = shakeClass(target)
+    expect(firstShake).toBeDefined()
+
+    await refuse(props, 2)
+    // A fresh alert node is what makes a screen reader speak it again.
+    expect(wrongNote(target)).not.toBeNull()
+    expect(wrongNote(target)).not.toBe(firstNote)
+    // A different animation name is what restarts the shake.
+    expect(shakeClass(target)).toBeDefined()
+    expect(shakeClass(target)).not.toBe(firstShake)
+  })
+
+  it('hides the note while the next check runs', async () => {
+    const props = $state(repoProps())
+    mount(UnlockDialog, { target, props })
+    await settle()
+    await type(target, 'nope')
+    await refuse(props)
+
+    props.checking = true
+    await tick()
+    expect(wrongNote(target)).toBeNull()
+  })
+
+  it('gives an archive re-prompt the same note, invalid field, and shake', async () => {
+    mount(UnlockDialog, { target, props: archiveProps({ wrongAttempt: true }) })
+    await settle()
+
+    expect(wrongNote(target)?.textContent).toContain('photos.zip')
+    expect(passwordInput(target).getAttribute('aria-invalid')).toBe('true')
+    expect(shakeClass(target)).toBeDefined()
   })
 })

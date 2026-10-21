@@ -21,7 +21,7 @@
         checking?: boolean
         /** The last check couldn't reach the repo, so the password may well be right: say so, keep it. */
         unreachable?: boolean
-        /** How many times the repo refused a password in this prompt. A bump empties the field. */
+        /** How many times the repo refused a password in this prompt. Each bump says so again: note, shake, selected field. */
         rejections?: number
         /** Called with the entered password (and the Keychain choice) when the user confirms. */
         onSubmit: (answer: { password: string; remember: boolean }) => void
@@ -64,26 +64,35 @@
 
     const copy = $derived(COPY[container])
     const titleKey = $derived(wrongAttempt ? copy.retryTitle : copy.title)
-    const messageKey = $derived(wrongAttempt ? copy.retryMessage : copy.message)
+    /** The refusal, said under the field where the eyes are, not by swapping the body copy above it. */
+    const showWrongNote = $derived(wrongAttempt && !checking && !unreachable)
     const inputAriaKey: MessageKey = $derived(
         isRepo ? 'fileOperations.resticPassword.inputAria' : 'fileOperations.archivePassword.inputAria',
     )
     const canSubmit = $derived(password.length > 0 && !checking)
 
-    // A refused password empties the field for the next try. A check that
-    // couldn't reach the repo leaves it: that password may well be right.
+    // Each refusal shakes the field once: the count's parity picks one of two
+    // identical keyframes, since only a changed animation name restarts one. A
+    // re-prompt that opens on a refusal (an archive's) shakes on arrival.
+    // `prefers-reduced-motion` turns the shake off in CSS.
+    let shakes = $state(untrack(() => (wrongAttempt ? 1 : 0)))
     let seenRejections = untrack(() => rejections)
     $effect(() => {
         if (rejections === seenRejections) return
         seenRejections = rejections
-        password = ''
+        shakes += 1
     })
 
     // Focus the field on open and whenever a check ends with the prompt still up
-    // (disabling the field during the check took focus away from it).
+    // (disabling the field during the check took focus away from it), with its
+    // text selected: after a refusal, typing replaces the password, and a
+    // check that couldn't reach the repo leaves one that may well be right.
     $effect(() => {
         if (checking) return
-        void tick().then(() => passwordInputRef?.focus())
+        void tick().then(() => {
+            passwordInputRef?.focus()
+            passwordInputRef?.select()
+        })
     })
 
     function handleSubmit() {
@@ -111,14 +120,16 @@
 
     <div class="dialog-body" aria-busy={checking}>
         <p id="unlock-message" class="subtitle">
-            <Trans key={messageKey} params={{ name }} snippets={{ archive: containerName, repo: containerName }} />
+            <Trans key={copy.message} params={{ name }} snippets={{ archive: containerName, repo: containerName }} />
         </p>
 
-        <div class="input-group">
+        <div class="input-group" class:shake-a={shakes % 2 === 1} class:shake-b={shakes > 0 && shakes % 2 === 0}>
             <TextInput
                 bind:inputElement={passwordInputRef}
                 bind:value={password}
                 type="password"
+                invalid={showWrongNote}
+                aria-describedby={showWrongNote ? 'unlock-wrong' : undefined}
                 ariaLabel={tString(inputAriaKey)}
                 spellcheck={false}
                 autocomplete="off"
@@ -128,6 +139,18 @@
                 disabled={checking}
                 onkeydown={handleInputKeydown}
             />
+            {#if showWrongNote}
+                <!-- Keyed on the count: a fresh alert node is what makes a screen reader say it again. -->
+                {#key rejections}
+                    <p id="unlock-wrong" class="wrong-note" role="alert">
+                        <Trans
+                            key={copy.retryMessage}
+                            params={{ name }}
+                            snippets={{ archive: containerName, repo: containerName }}
+                        />
+                    </p>
+                {/key}
+            {/if}
         </div>
 
         {#if isRepo}
@@ -174,6 +197,48 @@
 
     .input-group {
         margin-bottom: var(--spacing-lg);
+    }
+
+    .wrong-note {
+        margin: var(--spacing-sm) 0 0;
+        font-size: var(--font-size-sm);
+        color: var(--color-error);
+    }
+
+    .wrong-note .container-name {
+        color: inherit;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .shake-a {
+            animation: shake-a 0.32s ease-in-out;
+        }
+
+        .shake-b {
+            animation: shake-b 0.32s ease-in-out;
+        }
+
+        @keyframes shake-a {
+            20%,
+            60% {
+                transform: translateX(-6px);
+            }
+            40%,
+            80% {
+                transform: translateX(6px);
+            }
+        }
+
+        @keyframes shake-b {
+            20%,
+            60% {
+                transform: translateX(-6px);
+            }
+            40%,
+            80% {
+                transform: translateX(6px);
+            }
+        }
     }
 
     .remember {

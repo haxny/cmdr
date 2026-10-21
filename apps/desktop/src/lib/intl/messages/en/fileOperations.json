@@ -2026,7 +2026,7 @@
 
   "fileOperations.archivePassword.message": "<archive>{name}</archive> is password-protected. Enter its password to unlock it.",
   "@fileOperations.archivePassword.message": {
-    "description": "Body of the archive-password dialog, shown the first time. Names the archive being unlocked. <archive> wraps the archive filename, which is styled (bold); keep the tag around the name only. \"unlock\" pairs with the Unlock button.",
+    "description": "Body of the archive-password dialog, shown on every attempt (a wrong password adds a note under the field instead of changing this). Names the archive being unlocked. <archive> wraps the archive filename, which is styled (bold); keep the tag around the name only. \"unlock\" pairs with the Unlock button.",
     "placeholders": {
       "name": "the archive filename, e.g. photos.zip"
     },
@@ -2035,7 +2035,7 @@
 
   "fileOperations.archivePassword.retryMessage": "That password didn’t unlock <archive>{name}</archive>. Give it another go.",
   "@fileOperations.archivePassword.retryMessage": {
-    "description": "Body of the archive-password dialog after a rejected password, asking the user to try again. Friendly and encouraging, not scolding. Avoid the words \"error\" and \"failed\". <archive> wraps the archive filename, which is styled (bold); keep the tag around the name only.",
+    "description": "Short note right under the password field of the archive-password dialog after a rejected password, asking the user to try again. Shown in red and read out by screen readers; the field above still holds focus. Friendly and encouraging, not scolding. Avoid the words \"error\" and \"failed\". <archive> wraps the archive filename, which is styled (bold); keep the tag around the name only.",
     "placeholders": {
       "name": "the archive filename, e.g. photos.zip"
     },
@@ -2072,7 +2072,7 @@
 
   "fileOperations.resticPassword.message": "<repo>{name}</repo> is a restic backup. Enter its password to browse its snapshots.",
   "@fileOperations.resticPassword.message": {
-    "description": "Body of the backup-password dialog, shown the first time. Names the backup folder being unlocked. <repo> wraps the folder name, which is styled (bold); keep the tag around the name only. Keep \"restic\" as is: it’s the name of the backup tool. \"snapshots\" = the dated backups inside the repository, one per backup run.",
+    "description": "Body of the backup-password dialog, shown on every attempt (a wrong password adds a note under the field instead of changing this). Names the backup folder being unlocked. <repo> wraps the folder name, which is styled (bold); keep the tag around the name only. Keep \"restic\" as is: it’s the name of the backup tool. \"snapshots\" = the dated backups inside the repository, one per backup run.",
     "placeholders": {
       "name": "the backup repository’s folder name, e.g. m3-macbook-restic"
     }
@@ -2080,7 +2080,7 @@
 
   "fileOperations.resticPassword.retryMessage": "That password didn’t unlock <repo>{name}</repo>. Give it another go.",
   "@fileOperations.resticPassword.retryMessage": {
-    "description": "Body of the backup-password dialog after a password didn’t open the backup, asking the user to try again. Friendly and encouraging, not scolding. Avoid the words \"error\" and \"failed\". <repo> wraps the backup folder name, which is styled (bold); keep the tag around the name only.",
+    "description": "Short note right under the password field of the backup-password dialog after a password didn’t open the backup, asking the user to try again. Shown in red and read out by screen readers; the field above keeps the password, selected, so typing replaces it. Friendly and encouraging, not scolding. Avoid the words \"error\" and \"failed\". <repo> wraps the backup folder name, which is styled (bold); keep the tag around the name only.",
     "placeholders": {
       "name": "the backup repository’s folder name, e.g. m3-macbook-restic"
     }
