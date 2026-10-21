@@ -32,8 +32,9 @@ test.describe('Changelog', () => {
     await page.goto('/changelog')
     const body = (await page.textContent('body')) ?? ''
 
-    // A raw URL anywhere in the visible text means a link was rendered as text.
-    expect(body).not.toContain('https://github.com/vdavid/cmdr/commit/')
+    // A raw URL anywhere in the visible text means a link was rendered as text. Any owner
+    // matches, so the guard keeps guarding if the repo moves to the `getcmdr` org (#476).
+    expect(body).not.toMatch(/https:\/\/github\.com\/[A-Za-z0-9-]+\/cmdr\/commit\//)
     // Prose that merely ends in a parenthetical must survive untouched.
     expect(body).toContain('(~40x speed-up!)')
   })
