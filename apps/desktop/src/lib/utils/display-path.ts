@@ -13,6 +13,7 @@
 const PICK = '\u0000'
 
 /** NUL plus a decimal id, then a `/` or the end: exactly what a pick looks like. */
+// eslint-disable-next-line no-control-regex -- the NUL is the pick marker this matches, on purpose
 const PICK_AT_START = /^\u0000\d+(?=\/|$)/
 
 /**
