@@ -27,7 +27,7 @@ async function render(blocker: 'notWritableAdminUser' | 'notWritableStandardUser
 describe('UpdateUnwritableToastContent', () => {
   it('tells an administrator to download the app again and drag it in, naming the real path', async () => {
     const target = await render('notWritableAdminUser')
-    expect(target.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(target.textContent.replace(/\s+/g, ' ').trim()).toBe(
       'Cmdr 0.54.0 is ready, but Cmdr can’t install it itself ' +
         '/Applications/Cmdr.app belongs to another account. To update, download Cmdr from getcmdr.com and drag it into Applications. macOS will ask for your password.',
     )
@@ -35,7 +35,7 @@ describe('UpdateUnwritableToastContent', () => {
 
   it('opens getcmdr.com from the link', async () => {
     const target = await render('notWritableAdminUser')
-    const link = [...target.querySelectorAll('a, button')].find((el) => el.textContent?.trim() === 'getcmdr.com')
+    const link = [...target.querySelectorAll('a, button')].find((el) => el.textContent.trim() === 'getcmdr.com')
     expect(link).toBeDefined()
     ;(link as HTMLElement).click()
     expect(openExternalUrlMock).toHaveBeenCalledWith('https://getcmdr.com')
@@ -43,7 +43,7 @@ describe('UpdateUnwritableToastContent', () => {
 
   it('tells a standard user to ask whoever manages the Mac', async () => {
     const target = await render('notWritableStandardUser')
-    expect(target.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(target.textContent.replace(/\s+/g, ' ').trim()).toBe(
       'Cmdr 0.54.0 is out ' +
         'Your account can’t update Cmdr on this Mac. Ask your IT team, or whoever manages this Mac, to update it.',
     )
