@@ -142,6 +142,12 @@ pressing refresh) builds another. Threads pile up for as long as the parent hang
 starved instead, so this is better than before, not worse. Fix if it matters: build the refresh pool once per hub (not a
 static), sized as now. Confidence: medium.
 
+Status: not fixed, on purpose. The pile-up lasts only while the parent hangs, and only one refresh per trigger: the
+watch now re-lists once per burst (finding 3's fix) and a person presses refresh by hand. The threads come back when the
+parent answers or its session is declared dead (smb2 does that on its own). A pool shared per hub would bound the
+threads, but a healthy refresh, or another repo's, would then queue behind the hung one, which trades a few idle threads
+for a frozen root listing.
+
 ### 8. Forgetting through one route leaves the other route's Keychain entry
 
 `crates/cmdr-restic/src/hub.rs:106-108` (`store_scope` is `<volume id>:<repo path>`), `:325`. The same repo through an
@@ -149,6 +155,9 @@ OS mount and through a direct SMB session is two entries (documented). "Forget b
 pane's route and toasts "forgotten"; the next launch through the other route still unlocks silently. Fix: say which
 connection in the toast, or have the forget also drop the sibling slot's entry when the host knows both spellings.
 Confidence: high on the behavior; whether it's worth fixing is a product call.
+
+Status: left for David, as a product call: naming the connection in the toast, or forgetting the sibling route's entry
+too, changes what the person is told or what gets deleted.
 
 ### 9. A doc line predates the hold
 
@@ -165,6 +174,8 @@ Status: fixed; the line points at the transfer's hold.
 `crates/cmdr-restic/src/index_slot.rs:168` and `:198`. This is the design (#629), and the overshoot is documented. Worth
 knowing for a memory report: a copy left paused overnight, plus browsing a second repo, holds two indexes (1–3.6 GB on
 the sizes in `docs/notes/restic/open-cost.md`) until the copy settles.
+
+Status: by design (#629), documented in `crates/cmdr-restic/DETAILS.md` § "The index lifecycle"; no change.
 
 ## Checked and holding
 
