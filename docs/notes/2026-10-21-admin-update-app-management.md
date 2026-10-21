@@ -59,6 +59,22 @@ changes that. Cmdr writing its own bundle passes (same team), which is why every
 So on macOS 13+ the escalation could never succeed. On 10.15–12 (no App Management) it probably would have, but only for
 a root-owned bundle, which comes almost only from the `.pkg`. That's an MDM install, whose IT pushes packages anyway.
 
+## Proof that the replacement doesn't break updates
+
+Run on the M1, 2026-10-21, against production's genuine 0.54.0 release, with no updater key needed. The branch was built
+as an ad-hoc-signed aarch64 release at version 0.53.99:
+`pnpm build --target aarch64-apple-darwin --bundles app --config '{"version":"0.53.99","bundle":{"createUpdaterArtifacts":false,"macOS":{"signingIdentity":"-"}}}'`,
+with `Cargo.toml`'s version lowered uncommitted. Two copies ran as the real prod install, each after deleting
+`update-check.json` so the startup check was due:
+
+- **A copy this user can't write** (every folder under `Contents/` `chmod 555`, the same `EACCES` a root-owned bundle
+  gives): `Update available: 0.53.99 -> 0.54.0`, then `This user can't write into …/Contents, which the update needs`
+  and `not writable by this user, who is an administrator`. No download, no `osascript`, no password prompt. The notice
+  was held, correctly, because the ad-hoc identity has no Full Disk Access, so onboarding's FDA step was on screen.
+- **A user-owned copy**: downloaded the real `Cmdr_0.54.0_aarch64.app.tar.gz` (53,371,990 bytes), `Signature verified`,
+  passed the Developer ID check, `Update installed successfully`. The bundle then passed
+  `codesign --verify --deep --strict` (team `83H6YAQMNP`) and relaunched as `app_version=0.54.0`.
+
 ## What would make root-owned installs update
 
 A privileged helper inside `Cmdr.app`, signed by Cmdr's team (`83H6YAQMNP`), started through Authorization Services or
