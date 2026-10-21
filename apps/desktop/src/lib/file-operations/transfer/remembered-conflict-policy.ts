@@ -1,14 +1,20 @@
 /**
  * The copy/move dialog's remembered "files already exist" choice.
  *
- * The dialog opens its policy radios on `fileOperations.defaultConflictPolicy`
- * and writes a person's confirmed pick back, so a Total Commander habit ("always
- * overwrite older") sticks. Three rules keep that from costing anyone files:
+ * The dialog opens its policy radios on `fileOperations.defaultConflictPolicy`,
+ * and a "Remember this choice" box under them saves the confirmed choice there,
+ * so a Total Commander habit ("always overwrite older") sticks once a person asks
+ * for it. One setting holds it all: the box starts ticked exactly when a choice
+ * other than `stop` (ask later) is saved, and an unticked confirm saves `stop`.
+ * Four rules keep that from costing anyone files:
  *
+ * - Nothing becomes a default without the tick: a plain pick only applies to
+ *   this transfer.
  * - A REMEMBERED policy only goes out while its radios are on screen. Before the
  *   conflict check answers, when it couldn't run, or when nothing clashes, the
- *   person never saw it, so the confirm asks per file (`stop`) instead.
- * - Only a person's pick is written. A policy an MCP caller named (`autoConfirm`,
+ *   person never saw it, so the confirm asks per file (`stop`) instead, and the
+ *   box, off screen too, saves nothing.
+ * - Only a person's confirm writes. A policy an MCP caller named (`autoConfirm`,
  *   `dialog confirm`) is the agent's, not the person's habit.
  * - A remembered policy that overwrites wears a note until the person picks.
  *
@@ -53,20 +59,31 @@ export function dispatchedConflictPolicy(state: {
   return state.source === 'remembered' && !state.choiceVisible ? 'stop' : state.policy
 }
 
+/** Whether "Remember this choice" starts ticked: a saved choice other than asking later. */
+export function rememberStartsTicked(saved: DefaultConflictPolicy): boolean {
+  return saved !== 'stop'
+}
+
 /**
- * Saves a person's confirmed pick as the new default. Writes nothing for a
- * remembered or MCP-named policy, for compress (it has no conflict choice), or
- * when the pick already matches, so sparse persistence never pins the default.
- * A managed-policy lock refuses the write inside `setSetting`.
+ * Saves what a person's confirm leaves as the default: the selected policy under
+ * a ticked "Remember this choice", else `stop`. Writes nothing for an MCP-named
+ * policy, for compress (it has no conflict choice), while the radios and the box
+ * are off screen, or when the outcome already matches, so sparse persistence
+ * never pins the default. A managed-policy lock refuses the write inside
+ * `setSetting`.
  */
 export function rememberConflictPolicy(choice: {
   policy: ConflictResolution
   source: ConflictPolicySource
+  /** The "Remember this choice" box. Hidden on `stop`, where either answer saves `stop`. */
+  remember: boolean
+  choiceVisible: boolean
   operationType: TransferOperationType
 }): void {
-  if (choice.source !== 'picked' || choice.operationType === 'compress') return
-  if (!isRememberable(choice.policy) || choice.policy === readRememberedConflictPolicy()) return
-  setSetting(REMEMBERED_CONFLICT_POLICY_SETTING, choice.policy)
+  if (choice.source === 'explicit' || choice.operationType === 'compress' || !choice.choiceVisible) return
+  const saved = choice.remember ? choice.policy : 'stop'
+  if (!isRememberable(saved) || saved === readRememberedConflictPolicy()) return
+  setSetting(REMEMBERED_CONFLICT_POLICY_SETTING, saved)
 }
 
 /** Which files a remembered overwriting policy replaces, the note's `reach`. */

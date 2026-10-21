@@ -1,17 +1,21 @@
 <script lang="ts">
     /**
      * The copy/move dialog's "files already exist" block: the "couldn't find out"
-     * notice, or the card with the merge and clash lines, the policy radios, the
-     * remembered-overwrite note, and the mixed-type guardrail.
+     * notice, or the card with the merge and clash lines, the policy radios with
+     * their "Remember this choice" box, the remembered-overwrite note, and the
+     * mixed-type guardrail.
      *
      * Presentational: the dialog owns the conflict check and every policy rule
-     * (`remembered-conflict-policy.ts`); a pick goes back through `onPick`.
-     * Kept out of `TransferDialog.svelte`, which keeps the confirm path.
+     * (`remembered-conflict-policy.ts`); a pick goes back through `onPick`, the
+     * box through `onRememberChange`. Kept out of `TransferDialog.svelte`, which
+     * keeps the confirm path.
      */
     import type { ConflictResolution } from '#lib/file-explorer/types.js'
     import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
     import RadioGroup, { type RadioItem } from '#lib/ui/RadioGroup.svelte'
     import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import InfoTip from '#lib/ui/InfoTip.svelte'
     import Icon from '#lib/ui/Icon.svelte'
     import { t, tString } from '#lib/intl/messages.svelte.js'
     import type { OverwriteNoteReach } from './remembered-conflict-policy'
@@ -29,6 +33,9 @@
         policy: ConflictResolution
         /** The person picked a radio. */
         onPick: (policy: ConflictResolution) => void
+        /** The "Remember this choice" box: a confirm saves the selected policy as the default. */
+        remember: boolean
+        onRememberChange: (remember: boolean) => void
         /** Set while the radios sit on a remembered policy that overwrites. */
         rememberedOverwriteReach: OverwriteNoteReach | null
     }
@@ -42,6 +49,8 @@
         hasTypeMismatchConflict,
         policy,
         onPick,
+        remember,
+        onRememberChange,
         rememberedOverwriteReach,
     }: Props = $props()
 
@@ -131,6 +140,20 @@
                 columns={3}
                 ariaDescribedBy={rememberedOverwriteReach ? 'transfer-remembered-overwrite' : undefined}
             />
+            <!-- Hidden, not disabled, on "Ask later": remembering "ask" is what an
+             unticked box already saves, so there's nothing to choose. -->
+            {#if policy !== 'stop'}
+                <div class="remember-choice">
+                    <Checkbox checked={remember} onCheckedChange={onRememberChange}>
+                        {tString('fileOperations.transferDialog.rememberChoice')}
+                    </Checkbox>
+                    <!-- Beside the box, ❌ never inside its label: a click on the glyph would flip it. -->
+                    <InfoTip
+                        label={tString('fileOperations.transferDialog.rememberChoiceInfoLabel')}
+                        text={tString('fileOperations.transferDialog.rememberChoiceHelp')}
+                    />
+                </div>
+            {/if}
             <!-- The dialog opened on a saved policy that overwrites: say so in words
              beside the warning tint, so nobody overwrites without noticing. Gone
              once the person picks anything. -->
@@ -260,5 +283,17 @@
     .conflict-policy {
         display: flex;
         flex-direction: column;
+    }
+
+    /* The box and its info glyph on one line under the radios. `flex-start` keeps
+       the box at its own width, so the empty card space beside it isn't a click
+       target. */
+    .remember-choice {
+        display: flex;
+        align-items: center;
+        align-self: flex-start;
+        gap: var(--spacing-xs);
+        margin-top: var(--spacing-sm);
+        font-size: var(--font-size-sm);
     }
 </style>

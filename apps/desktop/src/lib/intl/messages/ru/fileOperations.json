@@ -400,6 +400,18 @@
   "@fileOperations.transferDialog.rememberedOverwriteNote": {
     "sourceHash": "7456023"
   },
+  "fileOperations.transferDialog.rememberChoice": "Remember this choice",
+  "@fileOperations.transferDialog.rememberChoice": {
+    "sourceHash": "4208548"
+  },
+  "fileOperations.transferDialog.rememberChoiceInfoLabel": "More about “Remember this choice”",
+  "@fileOperations.transferDialog.rememberChoiceInfoLabel": {
+    "sourceHash": "30496d1"
+  },
+  "fileOperations.transferDialog.rememberChoiceHelp": "Cmdr starts on this choice next time, and you can change it in Settings. If it overwrites files, you’ll see a warning first.",
+  "@fileOperations.transferDialog.rememberChoiceHelp": {
+    "sourceHash": "c26d762"
+  },
   "fileOperations.transferDialog.typeMismatchWarning": "В некоторых конфликтах файл и папка имеют одинаковое имя. Замена затронет объекты другого типа, включая все содержимое папки.",
   "@fileOperations.transferDialog.typeMismatchWarning": {
     "sourceHash": "76f1ab1"

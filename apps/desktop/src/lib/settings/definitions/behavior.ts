@@ -185,8 +185,9 @@ export const behaviorSettings: SettingDefinitionSource[] = [
   },
   {
     // FE-owned: `TransferDialog` opens its "files already exist" radios on this
-    // and writes a person's confirmed pick back (`file-operations/transfer/
-    // remembered-conflict-policy.ts`). The options mirror the dialog's radios.
+    // and saves a confirmed choice here when "Remember this choice" is ticked
+    // (`file-operations/transfer/remembered-conflict-policy.ts`). The options
+    // mirror the dialog's radios.
     id: 'fileOperations.defaultConflictPolicy',
     section: ['Behavior', 'Navigation & file ops'],
     cardKey: 'settings.navigationAndFileOps.card.fileOperations',

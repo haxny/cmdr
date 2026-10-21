@@ -649,16 +649,25 @@ to the boolean.
 ### The remembered conflict policy
 
 The "files already exist" radios open on `fileOperations.defaultConflictPolicy` (Settings > Behavior > Navigation & file
-ops, default "Ask for each"), and a person's confirmed pick becomes its new value, the Total Commander habit of setting
-"overwrite older" once. The rules live in `remembered-conflict-policy.ts`, keyed on where the dialog's policy came from
-(`ConflictPolicySource`: `remembered`, `picked`, or `explicit`):
+ops, default "Ask later" = `stop`), the Total Commander habit of setting "overwrite older" once. A person opts in
+explicitly: a "Remember this choice" checkbox (with an `InfoTip`) sits right under the radios in
+`TransferConflictsSection.svelte`. The rules live in `remembered-conflict-policy.ts`, keyed on where the dialog's policy
+came from (`ConflictPolicySource`: `remembered`, `picked`, or `explicit`):
 
-- **Written on confirm, never on pick.** A pick the person then cancels changes nothing; the write happens as the
-  confirm builds its payload. It's skipped when the pick equals the saved value, so sparse persistence never pins the
-  default (`lib/settings/DETAILS.md` § Sparse persistence), and for compress, which has no conflict choice. An MDM lock
-  refuses it inside `setSetting`.
+- **One setting, and the box is derived from it.** It starts ticked exactly when the saved policy isn't `stop`
+  (`rememberStartsTicked`). A confirm saves the selected policy when it's ticked and `stop` when it isn't, so unticking
+  is how a person forgets a saved choice. Decision/why: a second boolean ("remember on/off") beside the policy could
+  disagree with it; with one value, "nothing saved" and "ask later" are the same state.
+- **Hidden, not disabled, on "Ask later".** Ticked or not, a confirm there saves `stop`, so there's nothing to choose.
+  Gotcha: confirming on "Ask later" therefore forgets a saved choice too.
+- **A plain pick is for this transfer only.** Picking a radio never changes the default without the tick. Decision/why:
+  saving every confirmed pick silently would turn an "overwrite" picked once into a habit nobody chose.
+- **Written on confirm, never on tick.** Copy, Move, Background, and F2 save; Cancel saves nothing, and neither does a
+  confirm while the radios (so the box) are off screen. It's skipped when the outcome equals the saved value, so sparse
+  persistence never pins the default (`lib/settings/DETAILS.md` § Sparse persistence), and for compress, which has no
+  conflict choice. An MDM lock refuses it inside `setSetting`.
 - **MCP neither reads nor writes it.** `autoConfirm` opens on its named policy (or `stop`) without reading the setting,
-  and a `dialog confirm` marks its policy `explicit`, even over a person's earlier pick: an agent's choice is not the
+  and a `dialog confirm` marks its policy `explicit`, even over a person's ticked box: an agent's choice is not the
   person's habit.
 - **A remembered policy goes out only while its radios are on screen** (`conflictChoiceVisible`). Still checking,
   "couldn't find out", or no clash at all: the confirm sends `stop` instead. Decision/why: a saved `overwrite` the
@@ -670,8 +679,8 @@ ops, default "Ask for each"), and a person's confirmed pick becomes its new valu
   which files it replaces, and the radio group's `aria-describedby` points at it. It's gone once the person picks
   anything, including another overwriting option, since that's no longer an unnoticed carry-over.
 
-E2E specs share one app per shard, so a spec that picks a policy would leak it into the next; the conflict-family specs
-reset it through `resetRememberedConflictPolicy` (`test/e2e-playwright/conflict-helpers.ts`).
+E2E specs share one app per shard, so a saved policy would leak into the next spec; the conflict-family specs reset it
+through `resetRememberedConflictPolicy` (`test/e2e-playwright/conflict-helpers.ts`).
 
 ### The confirm dispatches without waiting for the conflict check
 

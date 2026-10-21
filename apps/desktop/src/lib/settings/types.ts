@@ -297,7 +297,7 @@ export type PasteClipboardAsFileMode = 'doNothing' | 'createFile' | 'createFileA
 /**
  * The policy the copy/move dialog's "files already exist" radios start on: the
  * dialog's own five choices, spelled as the wire `ConflictResolution` values
- * (`stop` = ask for each). `rename` stays out: the dialog doesn't offer it upfront.
+ * (`stop` = ask later). `rename` stays out: the dialog doesn't offer it upfront.
  */
 export type DefaultConflictPolicy = 'stop' | 'skip' | 'overwrite' | 'overwrite_smaller' | 'overwrite_older'
 export type DirectorySortMode = 'likeFiles' | 'alwaysByName'

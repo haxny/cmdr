@@ -2,7 +2,8 @@
  * Tier 3 a11y tests for the presentational pieces the transfer dialogs and toasts
  * compose: the compression controls, the direction arrow, the scan-phase body,
  * the variant-derived error copy, the cancelled-rollback summary, the
- * progress dialog's Rollback button, and its stalled-transfer notice.
+ * progress dialog's Rollback button, its stalled-transfer notice, and the setup
+ * dialog's "files already exist" block.
  *
  * One file per component would cost about five times as much: `svelte-tests`
  * charges per test FILE, not per test (`docs/testing.md` § "What a test actually
@@ -65,6 +66,7 @@ import ScanPhaseBody from './ScanPhaseBody.svelte'
 import CancelRollbackToastContent from './CancelRollbackToastContent.svelte'
 import TransferRollbackControls from './TransferRollbackControls.svelte'
 import TransferStallNotice from './TransferStallNotice.svelte'
+import TransferConflictsSection from './TransferConflictsSection.svelte'
 import type { TransferRollback } from './transfer-rollback.svelte'
 
 /** A fresh container, appended to the document and ready to mount into. */
@@ -429,6 +431,42 @@ describe('TransferStallNotice a11y', () => {
       target,
       props: { stall: { stillForSeconds: 42, reason, inFlight }, operationType: 'copy' },
     })
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+})
+
+/**
+ * `TransferConflictsSection.svelte`: the setup dialog's "files already exist"
+ * block. Audited with everything in the card at once (a clash, a merge, the
+ * "Remember this choice" box with its info tip, the remembered-overwrite note,
+ * and the mixed-type guardrail), plus the "couldn't find out" notice.
+ */
+describe('TransferConflictsSection a11y', () => {
+  const base = {
+    conflictCheckUnknown: false,
+    choiceVisible: true,
+    totalConflictCount: 3,
+    mergeFolderCount: 2,
+    namedFolderHint: null,
+    hasTypeMismatchConflict: true,
+    policy: 'overwrite' as const,
+    onPick: () => {},
+    remember: true,
+    onRememberChange: () => {},
+    rememberedOverwriteReach: 'all' as const,
+  }
+
+  it('the full card has no a11y violations', async () => {
+    const target = container()
+    mount(TransferConflictsSection, { target, props: base })
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+
+  it('the “couldn’t find out” notice has no a11y violations', async () => {
+    const target = container()
+    mount(TransferConflictsSection, { target, props: { ...base, conflictCheckUnknown: true, choiceVisible: false } })
     await tick()
     await expectNoA11yViolations(target)
   })

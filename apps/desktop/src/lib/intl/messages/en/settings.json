@@ -629,9 +629,9 @@
   "@settings.fileOperations.defaultConflictPolicy.label": {
     "description": "Label for the picker choosing which option the copy and move dialog starts on when files with the same names are already at the destination. In Settings > Behavior > Navigation & file ops > File operations."
   },
-  "settings.fileOperations.defaultConflictPolicy.description": "The choice the copy and move dialog starts on. Pick a different one there and confirm, and it’s remembered here.",
+  "settings.fileOperations.defaultConflictPolicy.description": "The choice the copy and move dialog starts on. Check “Remember this choice” there to change it.",
   "@settings.fileOperations.defaultConflictPolicy.description": {
-    "description": "Help text for the 'When files already exist' setting. Explains that the copy/move (F5/F6) dialog opens on this choice, and that confirming a copy or move with a different choice in the dialog updates this setting."
+    "description": "Help text for the 'When files already exist' setting. Explains that the copy/move (F5/F6) dialog opens on this choice, and that the dialog's 'Remember this choice' checkbox (fileOperations.transferDialog.rememberChoice) also sets it. Quote that checkbox label exactly as translated."
   },
   "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
   "@settings.fileOperations.defaultConflictPolicy.keywords": {
@@ -639,28 +639,23 @@
   },
   "settings.fileOperations.defaultConflictPolicy.opt.skip": "Skip",
   "@settings.fileOperations.defaultConflictPolicy.opt.skip": {
-    "description": "Option of the 'When files already exist' setting: leave every clashing file at the destination untouched. Must match the copy dialog's radio for a single clash, 'Skip' (fileOperations.transferDialog.policySkip, its one-clash form).",
-    "screenshot": "settings-behavior-navigation-and-file-ops.png"
+    "description": "Option of the 'When files already exist' setting: leave every clashing file at the destination untouched. Must match the copy dialog's radio for a single clash, 'Skip' (fileOperations.transferDialog.policySkip, its one-clash form)."
   },
   "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Overwrite",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwrite": {
-    "description": "Option of the 'When files already exist' setting: replace every clashing file at the destination. Must match the copy dialog's radio for a single clash, 'Overwrite' (fileOperations.transferDialog.policyOverwrite, its one-clash form).",
-    "screenshot": "settings-behavior-navigation-and-file-ops.png"
+    "description": "Option of the 'When files already exist' setting: replace every clashing file at the destination. Must match the copy dialog's radio for a single clash, 'Overwrite' (fileOperations.transferDialog.policyOverwrite, its one-clash form)."
   },
   "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Overwrite if smaller",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": {
-    "description": "Option of the 'When files already exist' setting: replace a clashing file only when the one already at the destination is smaller. Must match the copy dialog's radio for a single clash, 'Overwrite if smaller' (fileOperations.transferDialog.policyOverwriteSmaller, its one-clash form).",
-    "screenshot": "settings-behavior-navigation-and-file-ops.png"
+    "description": "Option of the 'When files already exist' setting: replace a clashing file only when the one already at the destination is smaller. Must match the copy dialog's radio for a single clash, 'Overwrite if smaller' (fileOperations.transferDialog.policyOverwriteSmaller, its one-clash form)."
   },
   "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Overwrite if older",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": {
-    "description": "Option of the 'When files already exist' setting: replace a clashing file only when the one already at the destination is older. Must match the copy dialog's radio for a single clash, 'Overwrite if older' (fileOperations.transferDialog.policyOverwriteOlder, its one-clash form).",
-    "screenshot": "settings-behavior-navigation-and-file-ops.png"
+    "description": "Option of the 'When files already exist' setting: replace a clashing file only when the one already at the destination is older. Must match the copy dialog's radio for a single clash, 'Overwrite if older' (fileOperations.transferDialog.policyOverwriteOlder, its one-clash form)."
   },
   "settings.fileOperations.defaultConflictPolicy.opt.stop": "Ask later",
   "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
-    "description": "Option of the 'When files already exist' setting: decide per clashing file during the copy or move. This is the default. Must match the copy dialog's radio for a single clash, 'Ask later' (fileOperations.transferDialog.policyStop, its one-clash form).",
-    "screenshot": "settings-behavior-navigation-and-file-ops.png"
+    "description": "Option of the 'When files already exist' setting: decide per clashing file during the copy or move. This is the default. Must match the copy dialog's radio for a single clash, 'Ask later' (fileOperations.transferDialog.policyStop, its one-clash form)."
   },
   "settings.archives.card.archives": "Archives",
   "@settings.archives.card.archives": {

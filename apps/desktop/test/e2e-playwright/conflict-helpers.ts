@@ -321,12 +321,12 @@ export async function waitForConflictCheck(tauriPage: PageLike): Promise<void> {
 
 /**
  * Puts the transfer dialog's remembered "files already exist" choice back on
- * "Ask for each". The dialog writes a confirmed pick to
+ * "Ask later" (`stop`). A confirm with "Remember this choice" ticked writes
  * `fileOperations.defaultConflictPolicy`, and every spec in a shard shares one
- * app, so a spec that picks Overwrite would otherwise leave the next one's
- * dialog opening on it. Call it from the `beforeEach` of any spec that confirms
- * a transfer which can clash, and from the `afterEach` of any spec that picks a
- * policy, so the pick doesn't leak into the specs after it.
+ * app, so a saved Overwrite (a spec that ticks the box, or one that died before
+ * its cleanup) would otherwise leave the next spec's dialog opening on it. Call
+ * it from the `beforeEach` of any spec that confirms a transfer which can clash,
+ * and from the `afterEach` of any spec that picks a policy.
  */
 export async function resetRememberedConflictPolicy(tauriPage: PageLike): Promise<void> {
   await ensureMcpClient(tauriPage)

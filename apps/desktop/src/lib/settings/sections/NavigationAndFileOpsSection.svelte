@@ -9,7 +9,7 @@
      *      ⌘V does with non-file clipboard content, the switch that skips the
      *      copy/move/trash confirmations, and the copy/move dialog's starting "files
      *      already exist" choice (`fileOperations.defaultConflictPolicy`, which the
-     *      dialog also writes back). The conflict-preview and progress tuning settings live in
+     *      dialog's "Remember this choice" box also sets). The conflict-preview and progress tuning settings live in
      *      Advanced (their single home); this page holds only its own settings,
      *      never a mirror.
      *   3. **Text editor** — which app F4 opens files in (`TextEditorSelect`).

@@ -7,8 +7,8 @@ Copy (F5), move (F6), compress (⌥F5): setup, conflict scan, progress, errors. 
 
 - `TransferDialog.svelte` is the setup shell, `TransferProgressDialog.svelte` the execution shell; each sits over its
   own `transfer-*-state.svelte.ts`.
-- `transfer-dispatch.ts` is birth: which command a confirmed operation routes to, and `startTransferOperation`, the one
-  start every route shares. The rest: DETAILS § File map.
+- `transfer-dispatch.ts` is birth: which command a confirmed operation routes to, and `startTransferOperation`, shared
+  by every route. The rest: DETAILS § File map.
 
 ## Must-knows
 
@@ -25,10 +25,9 @@ Copy (F5), move (F6), compress (⌥F5): setup, conflict scan, progress, errors. 
   scheme-path refusal stays SEPARATE and BEFORE the shared guard.
 - **Single Copy/Move names its leaf; a trailing slash means "into"**. Forward `destinationName`. DETAILS § "Single-item
   destinations".
-- **Batch, revision-checked selection reads** (`get_selection_snapshot` / `get_selection_entries`), ❌ never per index
-  (50k files: 5-10 s vs ~1 ms).
+- **Batch, revision-checked selection reads** (`get_selection_snapshot` / `get_selection_entries`), ❌ never per index.
 - **Speed, ETA, and bars are backend-owned and SHARED with the queue window** (`../TransferProgressReadout.svelte`): ❌
-  no second rate here.
+  no second rate.
 - **A stall drops the ETA and says why** (`transfer-stall.ts`): the BACKEND classifies, this side owns the threshold. ❌
   Never infer a stall from event timing: a wedge emits no events. DETAILS § "The stalled-transfer notice".
 - **A cancel's reversal drains its bar to zero, so the TOAST says what actually stayed** (`cancel-rollback-toast.ts`,
@@ -46,7 +45,7 @@ Copy (F5), move (F6), compress (⌥F5): setup, conflict scan, progress, errors. 
   in `../../file-explorer/pane/confirmation-skip.ts`.
 - **Compress swaps the conflict-policy UI for a dest-exists overwrite check**; its MCP auto-confirm ❌ never silently
   overwrites.
-- **Radios open on the saved policy; only a person's confirm saves it**, ❌ never MCP. DETAILS § "The remembered
+- **Only a confirm saves the remembered policy, per "Remember this choice"**; ❌ never MCP. DETAILS § "The remembered
   conflict policy".
 - **ONE map from an MCP `onConflict` name to a policy** (`conflict-policy.ts`), and ONE confirm path: `dialog confirm`
   presses `handleConfirm` via `registerConfirmer`. ❌ Never a second map (an unmapped name silently becomes `skip`) or a

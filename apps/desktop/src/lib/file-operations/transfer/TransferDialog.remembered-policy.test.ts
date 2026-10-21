@@ -1,8 +1,9 @@
 /**
  * `TransferDialog`'s remembered "files already exist" choice, end to end through
- * the component: it opens on `fileOperations.defaultConflictPolicy`, a person's
- * confirmed pick becomes the new value, MCP paths neither read nor write it, and
- * a remembered overwriting policy is flagged in words. The rules themselves are
+ * the component: it opens on `fileOperations.defaultConflictPolicy`, a confirm
+ * saves the pick only under a ticked "Remember this choice" (and forgets it when
+ * unticked), MCP paths neither read nor write it, and a remembered overwriting
+ * policy is flagged in words. The rules themselves are
  * unit-tested in `remembered-conflict-policy.test.ts`.
  */
 
@@ -126,6 +127,10 @@ function checkedPolicy(target: HTMLElement): string | null {
   return target.querySelector<HTMLInputElement>('.conflict-policy input[type="radio"]:checked')?.value ?? null
 }
 
+function rememberBox(target: HTMLElement): HTMLInputElement | null {
+  return target.querySelector<HTMLInputElement>('.remember-choice input[type="checkbox"]')
+}
+
 function note(target: HTMLElement): HTMLElement | null {
   return target.querySelector('.remembered-overwrite-note')
 }
@@ -207,10 +212,43 @@ describe('TransferDialog opens on the remembered policy', () => {
   })
 })
 
-describe('TransferDialog remembers a confirmed pick', () => {
-  it('writes the new pick when the person confirms', async () => {
+describe('TransferDialog’s “Remember this choice” box', () => {
+  it('starts unticked, and hidden while “Ask later” is selected', async () => {
+    const { target } = await mountWithClash()
+    expect(checkedPolicy(target)).toBe('stop')
+    expect(rememberBox(target)).toBeNull()
+    radio(target, 'skip').click()
+    await tick()
+    expect(rememberBox(target)?.checked).toBe(false)
+  })
+
+  it('starts ticked when a choice is saved', async () => {
+    settingsState.policy = 'overwrite_older'
+    const { target } = await mountWithClash()
+    expect(rememberBox(target)?.checked).toBe(true)
+  })
+
+  it('hides again (rather than disabling) once the person picks “Ask later”', async () => {
+    settingsState.policy = 'skip'
+    const { target } = await mountWithClash()
+    radio(target, 'stop').click()
+    await tick()
+    expect(rememberBox(target)).toBeNull()
+  })
+
+  it('carries an info tip beside it, outside its label', async () => {
+    settingsState.policy = 'skip'
+    const { target } = await mountWithClash()
+    const tip = target.querySelector('.remember-choice button[aria-label]')
+    expect(tip).not.toBeNull()
+    expect(tip?.closest('label')).toBeNull()
+  })
+
+  it('saves the pick when the person ticks it and confirms', async () => {
     const { target, sent } = await mountWithClash()
     radio(target, 'overwrite_older').click()
+    await tick()
+    rememberBox(target)?.click()
     await tick()
     confirmButton(target).click()
     await flushMicrotasks()
@@ -219,10 +257,44 @@ describe('TransferDialog remembers a confirmed pick', () => {
     expect(setSettingMock).toHaveBeenCalledWith(POLICY_SETTING, 'overwrite_older')
   })
 
-  it('writes nothing when the person picks and then cancels', async () => {
+  it('saves nothing when the person picks without ticking it', async () => {
+    const { target, sent } = await mountWithClash()
+    radio(target, 'overwrite').click()
+    await tick()
+    confirmButton(target).click()
+    await flushMicrotasks()
+    expect(sent()).toBe('overwrite')
+    expect(setSettingMock).not.toHaveBeenCalled()
+  })
+
+  it('forgets the saved choice when the person unticks it and confirms', async () => {
+    settingsState.policy = 'skip'
+    const { target, sent } = await mountWithClash()
+    rememberBox(target)?.click()
+    await tick()
+    confirmButton(target).click()
+    await flushMicrotasks()
+    expect(sent()).toBe('skip')
+    expect(setSettingMock).toHaveBeenCalledWith(POLICY_SETTING, 'stop')
+  })
+
+  it('saves on a Background start too', async () => {
+    const { target } = await mountWithClash()
+    radio(target, 'skip').click()
+    await tick()
+    rememberBox(target)?.click()
+    await tick()
+    target.querySelector<HTMLButtonElement>('button[aria-keyshortcuts="F2"]')?.click()
+    await flushMicrotasks()
+    expect(setSettingMock).toHaveBeenCalledWith(POLICY_SETTING, 'skip')
+  })
+
+  it('saves nothing when the person ticks it and then cancels', async () => {
     const onCancel = vi.fn()
     const { target } = await mountWithClash({ onCancel })
     radio(target, 'overwrite').click()
+    await tick()
+    rememberBox(target)?.click()
     await tick()
     cancelButton(target).click()
     await flushMicrotasks()
@@ -230,7 +302,7 @@ describe('TransferDialog remembers a confirmed pick', () => {
     expect(setSettingMock).not.toHaveBeenCalled()
   })
 
-  it('writes nothing when the pick lands back on the saved choice', async () => {
+  it('saves nothing when the confirm lands on the saved choice', async () => {
     settingsState.policy = 'skip'
     const { target } = await mountWithClash()
     radio(target, 'overwrite').click()
@@ -259,7 +331,7 @@ describe('TransferDialog MCP paths keep their own policy', () => {
     expect(setSettingMock).not.toHaveBeenCalled()
   })
 
-  it('a `dialog confirm` sends the agent’s policy and writes nothing, even over a person’s pick', async () => {
+  it('a `dialog confirm` sends the agent’s policy and writes nothing, even over a person’s ticked pick', async () => {
     const confirmer: { press: TransferConfirmer | null } = { press: null }
     const { target, sent } = await mountWithClash({
       registerConfirmer: (confirm) => {
@@ -269,7 +341,9 @@ describe('TransferDialog MCP paths keep their own policy', () => {
     })
     radio(target, 'skip').click()
     await tick()
-    confirmer.press?.('overwrite_smaller')
+    rememberBox(target)?.click()
+    await tick()
+    void confirmer.press?.('overwrite_smaller')
     await flushMicrotasks()
     expect(sent()).toBe('overwrite_smaller')
     expect(setSettingMock).not.toHaveBeenCalled()

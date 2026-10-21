@@ -20,6 +20,7 @@
         overwriteNoteReach,
         readRememberedConflictPolicy,
         rememberConflictPolicy,
+        rememberStartsTicked,
         type ConflictPolicySource,
     } from './remembered-conflict-policy'
     import CompressLevelControl from './CompressLevelControl.svelte'
@@ -193,10 +194,13 @@
     // else the person's saved one (`remembered-conflict-policy.ts`). The MCP map is
     // shared with the `dialog confirm` path (`conflict-policy.ts`); the two used
     // to keep private copies that had drifted on the conditional names.
+    const savedConflictPolicy = autoConfirm ? null : readRememberedConflictPolicy()
     let conflictPolicy = $state<ConflictResolution>(
-        autoConfirm ? (conflictPolicyFromMcpName(autoConfirmOnConflict) ?? 'stop') : readRememberedConflictPolicy(),
+        savedConflictPolicy ?? conflictPolicyFromMcpName(autoConfirmOnConflict) ?? 'stop',
     )
     let conflictPolicySource = $state<ConflictPolicySource>(autoConfirm ? 'explicit' : 'remembered')
+    // "Remember this choice": ticked when a choice is saved; a confirm saves by it.
+    let rememberConflictChoice = $state(savedConflictPolicy !== null && rememberStartsTicked(savedConflictPolicy))
 
     // Filter to only actual volumes (not favorites)
     const actualVolumes = $derived(volumes.filter((v) => v.category !== 'favorite' && v.category !== 'network'))
@@ -621,11 +625,13 @@
         return isAuto && dispatchPolicy === 'skip'
     }
 
-    /** The policy this confirm sends, saving a person's pick as the new default on the way. */
+    /** The policy this confirm sends, saving the default "Remember this choice" asks for on the way. */
     function commitConflictPolicy(): ConflictResolution {
         rememberConflictPolicy({
             policy: conflictPolicy,
             source: conflictPolicySource,
+            remember: rememberConflictChoice,
+            choiceVisible: conflictChoiceVisible,
             operationType: activeOperationType,
         })
         return dispatchPolicy
@@ -976,6 +982,10 @@
             onPick={(policy) => {
                 conflictPolicy = policy
                 conflictPolicySource = 'picked'
+            }}
+            remember={rememberConflictChoice}
+            onRememberChange={(remember) => {
+                rememberConflictChoice = remember
             }}
             {rememberedOverwriteReach}
         />
