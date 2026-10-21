@@ -192,13 +192,12 @@ export const behaviorSettings: SettingDefinitionSource[] = [
     cardKey: 'settings.navigationAndFileOps.card.fileOperations',
     labelKey: 'settings.fileOperations.defaultConflictPolicy.label',
     descriptionKey: 'settings.fileOperations.defaultConflictPolicy.description',
-    keywords: ['conflict', 'clash', 'exists', 'overwrite', 'replace', 'skip', 'ask', 'copy', 'move', 'remember'],
+    keywordsKey: 'settings.fileOperations.defaultConflictPolicy.keywords',
     type: 'enum',
     default: 'stop',
     component: 'select',
     constraints: {
       options: [
-        { value: 'stop', labelKey: 'settings.fileOperations.defaultConflictPolicy.opt.stop' },
         { value: 'skip', labelKey: 'settings.fileOperations.defaultConflictPolicy.opt.skip' },
         { value: 'overwrite', labelKey: 'settings.fileOperations.defaultConflictPolicy.opt.overwrite' },
         {
@@ -206,6 +205,7 @@ export const behaviorSettings: SettingDefinitionSource[] = [
           labelKey: 'settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller',
         },
         { value: 'overwrite_older', labelKey: 'settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder' },
+        { value: 'stop', labelKey: 'settings.fileOperations.defaultConflictPolicy.opt.stop' },
       ],
     },
   },

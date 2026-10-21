@@ -526,25 +526,29 @@
   "@settings.fileOperations.defaultConflictPolicy.description": {
     "sourceHash": "2bfdf68"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Kérdezz mindegyiknél",
-  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
-    "sourceHash": "4302843"
+  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "@settings.fileOperations.defaultConflictPolicy.keywords": {
+    "sourceHash": "00e5bca"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Összes átugrása",
+  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Átugrás",
   "@settings.fileOperations.defaultConflictPolicy.opt.skip": {
-    "sourceHash": "5fc4280"
+    "sourceHash": "28d0359"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Összes felülírása",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Felülírás",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwrite": {
-    "sourceHash": "4662d17"
+    "sourceHash": "b24963e"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Összes kisebb felülírása",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Felülírás, ha kisebb",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": {
-    "sourceHash": "2c9bbed"
+    "sourceHash": "0473dc5"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Összes régebbi felülírása",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Felülírás, ha régebbi",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": {
-    "sourceHash": "b07b06a"
+    "sourceHash": "6c111a2"
+  },
+  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Kérdezz később",
+  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
+    "sourceHash": "5d74b49"
   },
   "settings.archives.card.archives": "Archívumok",
   "@settings.archives.card.archives": {

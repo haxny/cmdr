@@ -10,7 +10,7 @@ import {
   buildSectionTree,
 } from './settings-registry'
 import { searchSettings, clearSearchIndex } from './settings-search'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 describe('settingsRegistry', () => {
   it('should have at least one setting defined', () => {
@@ -615,9 +615,9 @@ describe('fileOperations.pasteClipboardAsFile', () => {
 
 describe('fileOperations.defaultConflictPolicy', () => {
   const id = 'fileOperations.defaultConflictPolicy'
-  const policies = ['stop', 'skip', 'overwrite', 'overwrite_smaller', 'overwrite_older']
+  const policies = ['skip', 'overwrite', 'overwrite_smaller', 'overwrite_older', 'stop']
 
-  it('registers a select in Behavior > Navigation & file ops, defaulting to asking for each', () => {
+  it('registers a select in Behavior > Navigation & file ops, defaulting to asking later', () => {
     const def = getSettingDefinition(id)
     expect(def?.type).toBe('enum')
     expect(def?.default).toBe('stop')
@@ -628,13 +628,13 @@ describe('fileOperations.defaultConflictPolicy', () => {
   it('offers the copy dialog’s five choices, in its order, with its words', () => {
     const options = getSettingDefinition(id)?.constraints?.options ?? []
     expect(options.map((o) => o.value)).toEqual(policies)
-    // The plural ("several clashes") wording of each dialog radio.
+    // The single-clash wording of each dialog radio.
     expect(options.map((o) => o.label)).toEqual([
-      tString('fileOperations.transferDialog.policyStop', { count: 2 }),
-      tString('fileOperations.transferDialog.policySkip', { count: 2 }),
-      tString('fileOperations.transferDialog.policyOverwrite', { count: 2 }),
-      tString('fileOperations.transferDialog.policyOverwriteSmaller', { count: 2 }),
-      tString('fileOperations.transferDialog.policyOverwriteOlder', { count: 2 }),
+      tString('fileOperations.transferDialog.policySkip', { count: 1 }),
+      tString('fileOperations.transferDialog.policyOverwrite', { count: 1 }),
+      tString('fileOperations.transferDialog.policyOverwriteSmaller', { count: 1 }),
+      tString('fileOperations.transferDialog.policyOverwriteOlder', { count: 1 }),
+      tString('fileOperations.transferDialog.policyStop', { count: 1 }),
     ])
   })
 

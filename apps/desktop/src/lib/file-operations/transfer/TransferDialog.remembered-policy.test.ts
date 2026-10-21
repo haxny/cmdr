@@ -9,9 +9,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import TransferDialog from './TransferDialog.svelte'
-import type { VolumeConflictInfo } from '$lib/tauri-commands'
-import type { ConflictResolution } from '$lib/file-explorer/types'
-import type { TransferConfirmPayload, TransferConfirmer } from '$lib/file-explorer/pane/dialog-props'
+import type { VolumeConflictInfo } from '#lib/tauri-commands/index.js'
+import type { ConflictResolution } from '#lib/file-explorer/types.js'
+import type { TransferConfirmPayload, TransferConfirmer } from '#lib/file-explorer/pane/dialog-props.js'
 
 const POLICY_SETTING = 'fileOperations.defaultConflictPolicy'
 
@@ -25,7 +25,7 @@ vi.mock('@tauri-apps/api/path', () => ({
   homeDir: () => Promise.resolve('/Users/test'),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   estimateOperationCost: vi.fn(() => Promise.resolve([])),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -46,7 +46,7 @@ vi.mock('$lib/tauri-commands', () => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => getSettingMock(id),
   setSetting: (id: string, value: unknown) => {
     setSettingMock(id, value)
@@ -59,7 +59,7 @@ vi.mock('$lib/settings', () => ({
   })),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }],
 }))
 
@@ -95,8 +95,6 @@ function mountDialog(opts: MountOpts = {}): HTMLDivElement {
       fileCount: 1,
       folderCount: 0,
       sourceFolderPath: '/Users/test',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
       destVolumeId: 'root',
       autoConfirm: opts.autoConfirm ?? false,

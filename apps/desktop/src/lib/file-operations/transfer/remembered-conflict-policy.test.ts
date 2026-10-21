@@ -6,12 +6,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { DefaultConflictPolicy } from '$lib/settings'
+import type { DefaultConflictPolicy } from '#lib/settings/index.js'
 
 const stored: { value: unknown } = { value: 'stop' }
 const setSettingMock = vi.fn<(id: string, value: unknown) => void>()
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: () => stored.value,
   setSetting: (id: string, value: unknown) => {
     setSettingMock(id, value)

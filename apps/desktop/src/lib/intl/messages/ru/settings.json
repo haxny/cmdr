@@ -524,25 +524,29 @@
   "@settings.fileOperations.defaultConflictPolicy.description": {
     "sourceHash": "2bfdf68"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Спрашивать каждый раз",
-  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
-    "sourceHash": "4302843"
+  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "@settings.fileOperations.defaultConflictPolicy.keywords": {
+    "sourceHash": "00e5bca"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Пропустить все",
+  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Пропустить",
   "@settings.fileOperations.defaultConflictPolicy.opt.skip": {
-    "sourceHash": "5fc4280"
+    "sourceHash": "28d0359"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Заменить все",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Заменить",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwrite": {
-    "sourceHash": "4662d17"
+    "sourceHash": "b24963e"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Заменить все меньшего размера",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Заменить, если меньше",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": {
-    "sourceHash": "2c9bbed"
+    "sourceHash": "0473dc5"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Заменить все более старые",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Заменить, если более старый",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": {
-    "sourceHash": "b07b06a"
+    "sourceHash": "6c111a2"
+  },
+  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Спросить позже",
+  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
+    "sourceHash": "5d74b49"
   },
   "settings.archives.card.archives": "Архивы",
   "@settings.archives.card.archives": {

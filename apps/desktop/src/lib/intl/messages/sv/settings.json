@@ -528,25 +528,29 @@
   "@settings.fileOperations.defaultConflictPolicy.description": {
     "sourceHash": "2bfdf68"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Fråga för varje",
-  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
-    "sourceHash": "4302843"
+  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "@settings.fileOperations.defaultConflictPolicy.keywords": {
+    "sourceHash": "00e5bca"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Hoppa över alla",
+  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Hoppa över",
   "@settings.fileOperations.defaultConflictPolicy.opt.skip": {
-    "sourceHash": "5fc4280"
+    "sourceHash": "28d0359"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Skriv över alla",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Skriv över",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwrite": {
-    "sourceHash": "4662d17"
+    "sourceHash": "b24963e"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Skriv över alla mindre",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Skriv över om mindre",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": {
-    "sourceHash": "2c9bbed"
+    "sourceHash": "0473dc5"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Skriv över alla äldre",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Skriv över om äldre",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": {
-    "sourceHash": "b07b06a"
+    "sourceHash": "6c111a2"
+  },
+  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Fråga senare",
+  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
+    "sourceHash": "5d74b49"
   },
   "settings.archives.card.archives": "Arkiv",
   "@settings.archives.card.archives": {

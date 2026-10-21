@@ -362,6 +362,14 @@
       {
         "source": "View",
         "reason": "The menu bar's View menu is Apple's own zh-CN title `显示`; F3 and the context-menu item open the file in the viewer, which is `查看`."
+      },
+      {
+        "source": "Overwrite",
+        "reason": "`覆盖` answers ONE clash (`fileOperations.transferProgress.conflictOverwrite`); the Settings option `settings.fileOperations.defaultConflictPolicy.opt.overwrite` is a standing policy and reuses the copy dialog radio `fileOperations.transferDialog.policyOverwrite`, whose Chinese has no one-clash form, so both say `全部覆盖`."
+      },
+      {
+        "source": "Skip",
+        "reason": "`跳过` answers ONE clash (`fileOperations.transferProgress.conflictSkip`); the Settings option `settings.fileOperations.defaultConflictPolicy.opt.skip` is a standing policy and reuses the copy dialog radio `fileOperations.transferDialog.policySkip`, whose Chinese has no one-clash form, so both say `全部跳过`."
       }
     ],
     "zh-Hant": [
@@ -412,6 +420,14 @@
       {
         "source": "{count, plural, one {file} other {files}}",
         "reason": "The status-bar selection summary drops the measure word (`{檔案}`) because it composes as `3 / 10 檔案` with a `/` connector already separating the numbers; the delete and transfer scan stats render a bare tally and need it (`{個檔案}`). Same word, two grammatical frames."
+      },
+      {
+        "source": "Overwrite",
+        "reason": "`覆寫` answers ONE clash (`fileOperations.transferProgress.conflictOverwrite`); the Settings option `settings.fileOperations.defaultConflictPolicy.opt.overwrite` is a standing policy and reuses the copy dialog radio `fileOperations.transferDialog.policyOverwrite`, whose Chinese has no one-clash form, so both say `全部覆寫`."
+      },
+      {
+        "source": "Skip",
+        "reason": "`略過` answers ONE clash (`fileOperations.transferProgress.conflictSkip`); the Settings option `settings.fileOperations.defaultConflictPolicy.opt.skip` is a standing policy and reuses the copy dialog radio `fileOperations.transferDialog.policySkip`, whose Chinese has no one-clash form, so both say `全部略過`."
       }
     ],
     "ru": [

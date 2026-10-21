@@ -362,8 +362,6 @@ describe('TransferDialog a11y', () => {
         fileCount: 1,
         folderCount: 0,
         sourceFolderPath: '/Users/test',
-        sortColumn: 'name',
-        sortOrder: 'ascending',
         sourceVolumeId: 'root',
         destVolumeId: 'root',
         onConfirm: () => {},

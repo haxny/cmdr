@@ -527,25 +527,29 @@
   "@settings.fileOperations.defaultConflictPolicy.description": {
     "sourceHash": "2bfdf68"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Preguntar en cada caso",
-  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
-    "sourceHash": "4302843"
+  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "@settings.fileOperations.defaultConflictPolicy.keywords": {
+    "sourceHash": "00e5bca"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Omitir todo",
+  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Omitir",
   "@settings.fileOperations.defaultConflictPolicy.opt.skip": {
-    "sourceHash": "5fc4280"
+    "sourceHash": "28d0359"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Sobrescribir todo",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Sobrescribir",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwrite": {
-    "sourceHash": "4662d17"
+    "sourceHash": "b24963e"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Sobrescribir todos los menores",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Sobrescribir si es menor",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": {
-    "sourceHash": "2c9bbed"
+    "sourceHash": "0473dc5"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Sobrescribir todos los más antiguos",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Sobrescribir si es más antiguo",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": {
-    "sourceHash": "b07b06a"
+    "sourceHash": "6c111a2"
+  },
+  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Preguntar más tarde",
+  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
+    "sourceHash": "5d74b49"
   },
   "settings.archives.card.archives": "Archivos comprimidos",
   "@settings.archives.card.archives": {

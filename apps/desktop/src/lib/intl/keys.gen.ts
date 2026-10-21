@@ -3973,6 +3973,7 @@ export type MessageKey =
   | 'settings.fileOperations.allowFileExtensionChanges.opt.no'
   | 'settings.fileOperations.allowFileExtensionChanges.opt.yes'
   | 'settings.fileOperations.defaultConflictPolicy.description'
+  | 'settings.fileOperations.defaultConflictPolicy.keywords'
   | 'settings.fileOperations.defaultConflictPolicy.label'
   | 'settings.fileOperations.defaultConflictPolicy.opt.overwrite'
   | 'settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder'

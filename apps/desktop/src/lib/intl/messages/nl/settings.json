@@ -528,25 +528,29 @@
   "@settings.fileOperations.defaultConflictPolicy.description": {
     "sourceHash": "2bfdf68"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Vraag voor elk",
-  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
-    "sourceHash": "4302843"
+  "settings.fileOperations.defaultConflictPolicy.keywords": "conflict, clash, exists, duplicate, same name, replace, overwrite, skip, ask, copy, move, remember, default",
+  "@settings.fileOperations.defaultConflictPolicy.keywords": {
+    "sourceHash": "00e5bca"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Sla alles over",
+  "settings.fileOperations.defaultConflictPolicy.opt.skip": "Sla over",
   "@settings.fileOperations.defaultConflictPolicy.opt.skip": {
-    "sourceHash": "5fc4280"
+    "sourceHash": "28d0359"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Overschrijf alles",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwrite": "Overschrijf",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwrite": {
-    "sourceHash": "4662d17"
+    "sourceHash": "b24963e"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Overschrijf alles kleiner",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": "Overschrijf indien kleiner",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteSmaller": {
-    "sourceHash": "2c9bbed"
+    "sourceHash": "0473dc5"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Overschrijf alles ouder",
+  "settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": "Overschrijf indien ouder",
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": {
-    "sourceHash": "b07b06a"
+    "sourceHash": "6c111a2"
+  },
+  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Vraag later",
+  "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
+    "sourceHash": "5d74b49"
   },
   "settings.archives.card.archives": "Archieven",
   "@settings.archives.card.archives": {

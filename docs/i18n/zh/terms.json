@@ -1795,6 +1795,7 @@
     "confidence": "high",
     "exceptions": {
       "fileOperations.transferDialog.policyStop": "\"Ask later\" (a conflict policy) is rendered 逐个询问 (ask for each), not the Later button.",
+      "settings.fileOperations.defaultConflictPolicy.opt.stop": "The same conflict policy as fileOperations.transferDialog.policyStop, reusing its 逐个询问 so Settings and the dialog say the same thing.",
       "onboarding.stepAi.bannerBody.denied": "\"change all of this later\" is an adverb (以后), not the Later button.",
       "onboarding.stepAi.cloudConsentOffNote": "\"do that later\" is an adverb (之后), not the Later button.",
       "onboarding.stepAi.off.help": "\"turn it on later\" is an adverb (以后), not the Later button.",

@@ -15,8 +15,8 @@
  * Why each rule: `DETAILS.md` § "The remembered conflict policy".
  */
 
-import { getSetting, setSetting, type DefaultConflictPolicy } from '$lib/settings'
-import type { ConflictResolution, TransferOperationType } from '$lib/file-explorer/types'
+import { getSetting, setSetting, type DefaultConflictPolicy } from '#lib/settings/index.js'
+import type { ConflictResolution, TransferOperationType } from '#lib/file-explorer/types.js'
 
 export const REMEMBERED_CONFLICT_POLICY_SETTING = 'fileOperations.defaultConflictPolicy'
 

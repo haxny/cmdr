@@ -391,7 +391,10 @@
     ],
     "confidence": "high",
     "sources": "macOS live Mail MainMenu (Ask → Спрашивать), Podcasts (Always Ask → Спрашивать всегда); DC (Ask;Overwrite;Skip → Спрашивать;Перезаписывать;Пропускать); Dolphin (Always ask → Всегда спрашивать)",
-    "decision": "Option labels"
+    "decision": "Option labels",
+    "exceptions": {
+      "settings.fileOperations.defaultConflictPolicy.opt.stop": "Reuses the one-clash wording of the dialog radio fileOperations.transferDialog.policyStop (Спросить позже), so Settings and the dialog name the choice identically."
+    }
   },
   "ask-cmdr": {
     "chosen": "Ask Cmdr",
