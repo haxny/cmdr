@@ -23,6 +23,44 @@ whose real entries must stay editable and deletable, so the view can't be a volu
 - An incremental watcher `Added` doesn't re-run overlays, so a repo created by `restic init` under an open pane shows
   its row on the next full read (navigation or refresh). Acceptable; no hook for it.
 
+## A new backup reaches an open pane
+
+The view answers `can_watch_listings` false (its paths are on no disk), so the listing watch never arms on it.
+`snapshot_watch.rs` watches the repo's REAL `snapshots/` on the parent instead, and re-lists every open pane on the
+view's root when a file there appears or goes (#626). restic writes a backup's snapshot file last, after its packs and
+index files, so by the time the folder shows, everything it names is on the parent.
+
+- **Arming follows the listing**, the git portal's shape (`file_system/git/DETAILS.md` § "Who arms the repo watcher"):
+  the observer takes a hold on `(volume id, repo folder)` when a listing of `<repo>/Browse snapshots` opens and gives it
+  back on close; the last hold drops the watch. Only the root arms (`repo_a_listing_watches`: a routed view's path, the
+  repo the hub's memo confirmed, zero I/O): a snapshot's tree never changes. A locked repo's root never lands in the
+  listing cache, so it arms only once the unlock re-lists it. The stream arms on the blocking pool and is kept only if
+  the same watch (its `epoch`) is still there, so a pane leaving mid-arm leaks nothing.
+- **Which parents update live** (verified in code, 2026-10-21):
+  - The local disk, and an OS-mounted share, through a `notify` stream of ours on `<repo>/snapshots` (non-recursive,
+    300 ms debounce, `Access` events ignored so our own read of the new file can't loop on Linux). On an OS-mounted
+    share FSEvents sees only this Mac's writes: a backup another machine makes shows on the next refresh.
+  - A direct SMB share, through its own share-wide CHANGE_NOTIFY watcher, which reports every change to the composer
+    (`listing_host::directory_changed`); the composer hands it here, and a change in a watched repo's `snapshots/` (or an
+    overflow report on a folder above it) triggers the re-list. No stream of ours.
+  - Everything else (SFTP, WebDAV, S3, ADB, MTP) has no watcher reporting arbitrary folders, so its pane shows a new
+    backup on the next manual refresh. ❌ No polling.
+- **The re-list is the manual refresh**: `Listings::refresh` on each open root listing, which re-reads `snapshots/` in
+  the hub (`crates/cmdr-restic/DETAILS.md` § "The view"). One re-list at a time per repo; a change during one runs one
+  more after it.
+- **`latest` follows the hub's rule, untouched here** (`crates/cmdr-restic/DETAILS.md` § "`latest`"): a re-list moves it
+  to the new backup only when nothing has read under `latest/` for 30 s. During a copy out of `latest` the new dated
+  folder appears and `latest` stays put. It then moves on the next root re-list after the copy goes quiet: the next
+  backup, or a manual refresh. A later reader of the new snapshot reloads the index on its own (§ "Coverage and
+  reloads" there).
+- **Known gap**: the hub shares a refresh already in flight with a caller that asks during it. When a manual refresh
+  started listing `snapshots/` just BEFORE the new file landed and is still running when the watch fires, the watch's
+  re-list takes that older list, and the backup shows on the next change or refresh. Closing it needs the hub to tell
+  "asked after a change" from "asked during a refresh", which is a new hub method on the capped surface.
+- Cells: `snapshot_watch_tests.rs` (a scripted event re-lists the root with the new folder, the same event during a read
+  under `latest` leaves `latest` alone, two panes share one watch that goes with the last, the composer's report
+  re-lists, and which listings arm).
+
 ## The route's order: leftmost confirmed boundary wins
 
 Three routes can claim a path, and they nest both ways: a `.zip` or a `.git/branches` inside a restic snapshot is

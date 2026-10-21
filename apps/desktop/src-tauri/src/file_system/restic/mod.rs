@@ -12,10 +12,13 @@
 //! names restic, so the repo's real files stay ordinary files.
 
 pub mod overlay;
+pub mod snapshot_watch;
 pub mod wiring;
 
 #[cfg(test)]
 mod overlay_tests;
+#[cfg(test)]
+mod snapshot_watch_tests;
 #[cfg(test)]
 pub(crate) mod test_repo;
 #[cfg(test)]

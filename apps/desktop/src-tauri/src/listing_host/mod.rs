@@ -18,7 +18,8 @@
 //! - overlays: the git portal's `.git/` rows (`file_system::git::overlay`), then
 //!   the restic repo's `Browse snapshots` row (`file_system::restic::overlay`)
 //! - observers, in this order: the change watch (`file_system::watcher`), git
-//!   arming (`file_system::git::arming`), then index sizes
+//!   arming (`file_system::git::arming`), the restic snapshot watch
+//!   (`file_system::restic::snapshot_watch`), then index sizes
 //!   (`listing_index_sizes`)
 //!
 //! The other direction lives here too: [`backends::AppListings`] answers a
@@ -86,7 +87,7 @@ pub fn install(app: &AppHandle) {
 }
 
 /// The app's observers, in the order every listing open and close reaches them.
-fn observers() -> [Arc<dyn ListingObserver>; 3] {
+fn observers() -> [Arc<dyn ListingObserver>; 4] {
     [
         // FIRST: arms a listing's change watch on open and disarms it on close,
         // after the cache removal like every observer.
@@ -94,6 +95,9 @@ fn observers() -> [Arc<dyn ListingObserver>; 3] {
         // Keeps a repo's `.git/*` watcher armed for as long as a pane shows one
         // of its virtual listings, so a lone `branches/` pane stays live.
         crate::file_system::git::arming::observer(),
+        // Keeps a restic repo's `snapshots/` watched for as long as a pane shows
+        // its `Browse snapshots` root, so a new backup appears there.
+        crate::file_system::restic::snapshot_watch::observer(),
         // Routes the index's folder-size updates to the listings they touch.
         crate::listing_index_sizes::observer(),
     ]
@@ -134,8 +138,9 @@ fn builder(events: Arc<dyn ListingEvents>) -> ListingsBuilder {
 /// The engine the test binary shares, since nothing there calls [`install`]:
 /// events dropped, the fallback runtime, every app answer (the tests list
 /// through the real volume registry, index, lease, language, and mount table),
-/// the git portal's and restic's overlays, and the change watch and git arming
-/// observers, so a listing behaves in tests as it does in the app. Index sizes stay out (its
+/// the git portal's and restic's overlays, and the change watch, git arming,
+/// and restic snapshot watch observers, so a listing behaves in tests as it
+/// does in the app. Index sizes stay out (its
 /// worker needs an `AppHandle`); last comes the lifecycle probe the app's
 /// ordering cells read (`tests/support.rs`).
 #[cfg(test)]
@@ -145,6 +150,7 @@ fn test_listings() -> Listings {
         .overlay(crate::file_system::restic::overlay::overlay())
         .observer(crate::file_system::watcher::observer())
         .observer(crate::file_system::git::arming::observer())
+        .observer(crate::file_system::restic::snapshot_watch::observer())
         .observer(tests::support::lifecycle_probe())
         .build()
 }
@@ -169,7 +175,10 @@ pub(crate) fn engine_reporting_to(events: Arc<dyn ListingEvents>) -> Listings {
 ///    for `root` and any non-indexed volume.
 /// 2. The cloud badge, which caches per directory, so this is how it learns a
 ///    file it has an answer for moved on. One hash lookup, hit or miss.
-/// 3. The panes (`Listings::directory_changed`).
+/// 3. A restic repo's `Browse snapshots` panes, when the change is in that
+///    repo's `snapshots/` (a direct SMB share's watcher reports a backup this
+///    way). One hash lookup, and nothing at all while no such pane is open.
+/// 4. The panes (`Listings::directory_changed`).
 ///
 /// The coupling is one-directional: listing → indexer, never the reverse.
 pub(crate) fn directory_changed(volume_id: &str, parent_path: &Path, change: DirectoryChange) {
@@ -178,6 +187,8 @@ pub(crate) fn directory_changed(volume_id: &str, parent_path: &Path, change: Dir
 
     #[cfg(target_os = "macos")]
     crate::file_system::sync_status::invalidate_dir(parent_path);
+
+    crate::file_system::restic::snapshot_watch::directory_changed(volume_id, parent_path);
 
     listings().directory_changed(volume_id, parent_path, change);
 }

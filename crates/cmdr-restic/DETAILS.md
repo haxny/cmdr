@@ -33,8 +33,10 @@ path stays the caller's path.
   the latter) is the summary's `total_bytes_processed`, or none for a snapshot without a summary (restic before 0.17).
   `restic_meta` carries the host, tags, and paths the snapshot recorded (sorted, as rustic's `StringList` keeps them),
   on `latest` too; the frontend words them. Every root listing re-reads `snapshots/` (rustic's `update_all_snapshots`:
-  only new files are read, deleted ones drop), so a manual refresh shows a new backup. Refreshes are one at a time per
-  repo, and a listing that asked while one ran takes its list rather than read `snapshots/` again.
+  only new files are read, deleted ones drop), so a re-list shows a new backup: a manual refresh, or the app's watch on
+  the parent's `snapshots/` re-listing an open root pane (`apps/desktop/src-tauri/src/file_system/restic/DETAILS.md` §
+  "A new backup reaches an open pane"). Refreshes are one at a time per repo, and a listing that asked while one ran
+  takes its list rather than read `snapshots/` again.
 - **A snapshot folder** holds that snapshot's tree. Restic snapshots of a Mac start at `/`, so the tree under a folder
   is `Users/…`; it's shown as-is.
 - **Read-only by construction**: `is_writable` false, every mutation at the trait's `NotSupported` default, and

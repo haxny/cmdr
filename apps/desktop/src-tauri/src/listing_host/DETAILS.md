@@ -63,7 +63,11 @@ own creates), and the rename command. It tells each subsystem that keeps a copy,
    open; and writing it before the panes' enrich means the enrich (and the `DirsUpdated` the writer emits) see the
    just-written sizes. A no-op for `root` and any non-indexed volume.
 2. **The cloud badge** (`sync_status::invalidate_dir`, macOS), which caches per directory. One hash lookup.
-3. **The panes** (`Listings::directory_changed`).
+3. **The restic snapshot watch** (`file_system::restic::snapshot_watch::directory_changed`): a change in a watched
+   repo's `snapshots/` re-lists its `Browse snapshots` panes, which is how a direct SMB share's watcher shows a new
+   backup. Returns at once while no such pane is open (`file_system/restic/DETAILS.md` § "A new backup reaches an open
+   pane").
+4. **The panes** (`Listings::directory_changed`).
 
 The coupling is one-directional: listing → indexer, never the reverse. The archive content watch's
 `refresh_archive_listings` deliberately skips the composer: an archive-inner path isn't a real filesystem path
@@ -72,7 +76,7 @@ The coupling is one-directional: listing → indexer, never the reverse. The arc
 ## The observers
 
 Registered in this order by `install` (the list is `observers()` in `mod.rs`, pinned by
-`adapters_test.rs::the_app_installs_its_observers_watch_then_git_portal_then_index_sizes`), and called in it on every
+`adapters_test.rs::the_app_installs_its_observers_watch_then_git_portal_then_restic_then_index_sizes`), and called in it on every
 open and close (after the cache removal on close):
 
 1. **The FSEvents change watch** (`file_system::watcher::observer()`): arms through `start_watching_detached` only when
@@ -80,7 +84,10 @@ open and close (after the cache removal on close):
    finds no listing to patch. Why the arm is detached: `file_system/DETAILS.md` § "Arming a listing watch is detached".
 2. **Git arming** (`file_system::git::arming::observer()`): keeps a repo's `.git/*` watcher armed while a pane shows one
    of its virtual listings, which FSEvents can't watch (`file_system/git/DETAILS.md` § "Who arms the repo watcher").
-3. **Index sizes** (`listing_index_sizes::observer()`): routes the index's folder-size updates to the listings they
+3. **The restic snapshot watch** (`file_system::restic::snapshot_watch::observer()`): keeps a repo's real `snapshots/`
+   watched while a pane shows its `Browse snapshots` root (`file_system/restic/DETAILS.md` § "A new backup reaches an
+   open pane").
+4. **Index sizes** (`listing_index_sizes::observer()`): routes the index's folder-size updates to the listings they
    touch, keyed on `OpenedListing`'s volume id and stored spelling, checking `still_open()` before keeping a record.
 
 ## Tests
@@ -93,8 +100,8 @@ MTP spelling, the git overlay's refresh, and the SMB-upgrade respell. The engine
 own in `crates/cmdr-listing/`.
 
 The test binary shares ONE engine, `test_listings()`: events dropped, the fallback runtime, every app answer (so tests
-list through the real registry, index, lease, language, and mount table), the git overlay, the change watch and git
-arming observers, and a lifecycle probe last (`tests/support.rs`). Index sizes stay out, since its worker needs an
+list through the real registry, index, lease, language, and mount table), the git overlay, the change watch, git
+arming, and restic snapshot watch observers, and a lifecycle probe last (`tests/support.rs`). Index sizes stay out, since its worker needs an
 `AppHandle`. Because it's shared, cells keep unique ids (`TestListing` derives one from `cmdr_fs::testing::unique_test_id`)
 and `TestListingGuard` ends its listing on drop. `engine_reporting_to(events)` builds an app-wired engine of a cell's
 own, with no observers, for a cell that reads what the engine reported.

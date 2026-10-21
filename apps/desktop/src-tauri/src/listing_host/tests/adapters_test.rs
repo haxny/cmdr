@@ -63,14 +63,15 @@ fn the_app_index_leaves_a_volume_it_never_indexed_alone() {
 }
 
 /// The engine calls observers in registration order, and the app's depend on it:
-/// the change watch first, so it disarms before the git portal or the index-size
-/// router hears a close, then the git portal, then index sizes.
+/// the change watch first, so it disarms before the git portal, the restic
+/// snapshot watch, or the index-size router hears a close, then the two virtual
+/// views' watches, then index sizes.
 #[test]
-fn the_app_installs_its_observers_watch_then_git_portal_then_index_sizes() {
+fn the_app_installs_its_observers_watch_then_git_portal_then_restic_then_index_sizes() {
     let ids: Vec<&str> = crate::listing_host::observers()
         .iter()
         .map(|observer| observer.id())
         .collect();
 
-    assert_eq!(ids, vec!["fs-watcher", "git-portal", "index-sizes"]);
+    assert_eq!(ids, vec!["fs-watcher", "git-portal", "restic-snapshots", "index-sizes"]);
 }

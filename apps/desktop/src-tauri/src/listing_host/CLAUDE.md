@@ -11,7 +11,8 @@ engine at the top of `setup()`; `listings()` hands it out.
   so capturing `index()` there would win its `OnceLock` with an unconfigured index.
 - **A read before `install` is loud** (`log_error!`, a separate detached engine), so the slot stays free. Only the test
   binary builds its engine on first read (`test_listings`).
-- **Observer order is a contract**: the change watch, git arming, index sizes. § "The observers".
+- **Observer order is a contract**: the change watch, git arming, the restic snapshot watch, index sizes. § "The
+  observers".
 - **Wire payloads and every word the user sees live in `events.rs`**, names and derives fixed so `bindings.ts` doesn't
   move. The engine reports facts; this module owns the policy on them.
 - **App-side tests share ONE engine**, so they keep unique ids (`TestListing` derives one); a cell that reads reports
