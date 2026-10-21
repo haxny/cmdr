@@ -393,7 +393,8 @@ export function t(key: MessageKey, params?: TranslationParams): TranslationResul
  */
 function asShown(result: TranslationResult): TranslationResult {
   if (typeof result === 'string') return displayPath(result)
-  return result.map((part) => (typeof part === 'string' ? displayPath(part) : part))
+  if (!Array.isArray(result)) return result
+  return result.map((part: unknown) => (typeof part === 'string' ? displayPath(part) : part))
 }
 
 /**
