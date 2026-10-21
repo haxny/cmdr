@@ -72,7 +72,7 @@ the next section.
   over IPC), `firmlinks.rs` (`normalize_path`; the index and the app's watchers have to agree on it), `file_provider.rs`
   (the cloud-domain marker), `filesystem_kind.rs`, `path_locations.rs` (how many PLACES a set of directories amounts
   to), `path_hash.rs` (the fixed 64-bit folder-path hash two resident maps key on instead of the path: search's
-  importance weights and the media coverage score cache), `git_meta` (what a git portal row's Size cell states),
+  importance weights and the media coverage score cache), `git_meta` (what a git portal row's Size cell states), `restic_meta` (a restic snapshot row's host, tags, and paths),
   `name_fold.rs` (the ONE "same name, spelled another way" key: NFC + lowercase, shared by share IDs, transfer conflict
   buckets, the SMB spelling resolve, and cursor placement; beside it `normalize_for_comparison`, the local filesystem's
   own key, which the drive index stores and the write engine matches sources under), `log_rollup`, `log_private` +
@@ -513,7 +513,8 @@ The API contract says this crate emits no user-facing strings. Two things look l
   UI: `PhaseRecord.trigger` renders in the developer debug panel, which is diagnostics, not product copy. Anyone
   grepping `String` in this crate and concluding the bar was abandoned should read this paragraph first.
 - **`git_meta`** (`src/git_meta.rs`) looks like the second, and isn't: `FileEntry::git_meta` is a typed `GitEntryMeta`
-  that states a fact, and the host words the Size column from its own catalog.
+  that states a fact, and the host words the Size column from its own catalog. `restic_meta` (`src/restic_meta.rs`) is
+  the same shape: a snapshot row's host, tags, and paths as data, worded by the host.
 
 ## Marked log values (`log_private`, `log_detail`, `log_error`)
 

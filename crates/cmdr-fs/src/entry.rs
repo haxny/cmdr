@@ -233,6 +233,10 @@ pub struct FileEntry {
     /// cross-category Size sorting is meaningless, and that's an honest
     /// tradeoff. `None` on every non-portal entry.
     pub git_meta: Option<crate::git_meta::GitEntryMeta>,
+    /// What a restic snapshot's folder row (a dated one, or `latest`) says about
+    /// its backup: the host it ran on, its tags, and the paths it saved. Facts
+    /// only; the frontend words them. `None` on every other entry.
+    pub restic_meta: Option<crate::restic_meta::ResticSnapshotMeta>,
     /// `true` for a file whose bytes sit in a cold storage class and can't be
     /// read until someone restores them: S3 Glacier Flexible Retrieval or Deep
     /// Archive, from the listing's `StorageClass`. The pane shows it as
@@ -278,6 +282,7 @@ impl FileEntry {
             recursive_size_stale: None,
             redirect_to_path: None,
             git_meta: None,
+            restic_meta: None,
             in_cold_storage: false,
         }
     }

@@ -1,4 +1,5 @@
 use super::{LATEST_FOLDER_NAME, RawSnapshot, snapshot_list};
+use cmdr_fs::restic_meta::ResticSnapshotMeta;
 use rustic_core::jiff::Timestamp;
 use rustic_core::jiff::tz::TimeZone;
 use rustic_core::{Id, TreeId};
@@ -11,6 +12,11 @@ fn raw(id_hex: &str, time: &str) -> RawSnapshot {
         // Any tree will do for naming; reusing the id keeps each one distinct.
         tree: TreeId::from(id),
         size: None,
+        meta: ResticSnapshotMeta {
+            hostname: "m3".to_string(),
+            tags: Vec::new(),
+            paths: Vec::new(),
+        },
     }
 }
 

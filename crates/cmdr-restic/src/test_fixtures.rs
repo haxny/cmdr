@@ -18,7 +18,7 @@ use rustic_core::repofile::ConfigFile;
 use rustic_core::{
     BackupOptions, BytesList, ConfigOptions, Credentials, FileType, Id, IndexedIdsStatus, KeyOptions, OpenStatus,
     PathList, ReadBackend, Repository, RepositoryBackends, RepositoryOptions, RusticResult, SnapshotOptions,
-    WriteBackend,
+    StringList, WriteBackend,
 };
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -76,11 +76,19 @@ impl FixtureRepo {
     /// at `time` on `hostname`. Enough for anything that only reads the snapshot
     /// list.
     pub fn add_snapshot(&self, time: SystemTime, hostname: &str) {
+        self.add_tagged_snapshot(time, hostname, &[], &[]);
+    }
+
+    /// [`add_snapshot`](Self::add_snapshot), recording `tags` and the backed-up
+    /// `paths` too.
+    pub fn add_tagged_snapshot(&self, time: SystemTime, hostname: &str, tags: &[&str], paths: &[&str]) {
         let mut snapshot = SnapshotOptions::default()
             .to_snapshot()
             .expect("default snapshot options are valid");
         snapshot.time = zoned(time);
         snapshot.hostname = hostname.to_string();
+        snapshot.tags = string_list(tags);
+        snapshot.paths = string_list(paths);
         // No summary, as restic before 0.17 wrote them (rustic would otherwise
         // add an all-zero one).
         snapshot.summary = None;
@@ -173,6 +181,14 @@ fn new_repository(backend: &Arc<MemoryBackend>) -> Repository<()> {
     options.no_cache = true;
     let backend: Arc<dyn WriteBackend> = Arc::clone(backend) as Arc<dyn WriteBackend>;
     Repository::new(&options, &RepositoryBackends::new(backend, None)).expect("a memory backend makes a repository")
+}
+
+fn string_list(items: &[&str]) -> StringList {
+    let mut list = StringList::default();
+    for item in items {
+        list.add((*item).to_string());
+    }
+    list
 }
 
 fn zoned(time: SystemTime) -> rustic_core::jiff::Zoned {

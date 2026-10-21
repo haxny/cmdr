@@ -204,6 +204,8 @@ async fn the_view_lists_one_folder_per_snapshot_plus_latest() {
         "got {:?}",
         entries[0].size
     );
+    // A folder's Size cell reads `recursive_size`, so the row carries both.
+    assert_eq!(entries[0].recursive_size, entries[0].size);
     for entry in &entries {
         assert_eq!(Path::new(&entry.path), view().join(&entry.name));
     }
@@ -221,6 +223,56 @@ async fn a_snapshot_without_a_summary_lists_without_a_size() {
 
     let entries = volume.list_directory(&view(), None).await.expect("lists");
     assert!(entries.iter().all(|e| e.size.is_none()), "{entries:?}");
+}
+
+/// The host, tags, and paths a snapshot records ride on its row as facts, on
+/// the dated folder and on `latest` alike, from a listing and a stat both.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_snapshot_row_carries_its_host_tags_and_paths() {
+    let fixture = FixtureRepo::init(PASSWORD);
+    fixture.add_tagged_snapshot(at(1_791_000_000), "m3", &["daily"], &["/Users/david"]);
+    fixture.add_tagged_snapshot(
+        at(1_792_000_000),
+        "naspolya",
+        &["weekly", "nas"],
+        &["/share/photos", "/share/docs"],
+    );
+    let parent = Arc::new(InMemoryVolume::new("naspi"));
+    fixture.write_into(parent.as_ref(), Path::new(ROOT)).await;
+    let hub = Arc::new(ResticRepos::new(VolumeHost::detached()));
+    let volume = view_over(&hub, &parent);
+    assert!(test_fixtures::unlock(&volume, PASSWORD).await);
+
+    let entries = volume.list_directory(&view(), None).await.expect("lists");
+
+    let older = entries[0]
+        .restic_meta
+        .as_ref()
+        .expect("a dated row carries its snapshot's facts");
+    assert_eq!(older.hostname, "m3");
+    assert_eq!(older.tags, vec!["daily"]);
+    assert_eq!(older.paths, vec!["/Users/david"]);
+    let newer = entries[1].restic_meta.as_ref().expect("every dated row does");
+    assert_eq!(newer.hostname, "naspolya");
+    assert_eq!(newer.tags, vec!["nas", "weekly"], "sorted");
+    assert_eq!(newer.paths, vec!["/share/docs", "/share/photos"], "sorted");
+    assert_eq!(
+        named(&entries, "latest").restic_meta.as_ref(),
+        Some(newer),
+        "latest states the snapshot it shows"
+    );
+
+    let stat = volume
+        .get_metadata(&view().join(&entries[0].name))
+        .await
+        .expect("stats");
+    assert_eq!(
+        stat.restic_meta.as_ref(),
+        Some(older),
+        "a stat says what the listing says"
+    );
+    let root = volume.get_metadata(&view()).await.expect("stats the view");
+    assert_eq!(root.restic_meta, None, "the view itself is no snapshot");
 }
 
 /// ❗ The time in a folder name is local time, so a saved path made in another

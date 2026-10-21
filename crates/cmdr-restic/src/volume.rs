@@ -274,7 +274,8 @@ impl ResticVolume {
     }
 }
 
-/// A snapshot's folder row: dated by the backup, sized by what it processed.
+/// A snapshot's folder row: dated by the backup, sized by what it processed,
+/// and stating the host, tags, and paths it recorded.
 fn snapshot_row(name: &str, path: &Path, snapshot: &Snapshot) -> FileEntry {
     let modified_at = snapshot
         .time
@@ -283,6 +284,9 @@ fn snapshot_row(name: &str, path: &Path, snapshot: &Snapshot) -> FileEntry {
         .map(|since| since.as_secs());
     FileEntry {
         size: snapshot.size,
+        // A folder's Size cell reads its recursive size.
+        recursive_size: snapshot.size,
+        restic_meta: Some(snapshot.meta.clone()),
         modified_at,
         extended_metadata_loaded: true,
         ..FileEntry::new(name.to_string(), path.to_string_lossy().into_owned(), true, false)

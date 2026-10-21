@@ -35,8 +35,8 @@ paths (`crate::file_system::volume::VolumeError`); other crates use `cmdr_fs::�
   only before the process's first connection (`desktop-rust-sqlite-open-direct` enforces it). ❌ Nor unlink a database
   by hand: `delete_database` retires threads' cached connections.
 - **Nothing here produces user-facing prose**: errors carry typed reasons and structured params, the frontend renders
-  every word, and `FileEntry.git_meta` states a FACT, ❌ never a sentence. DETAILS § The one place prose is produced
-  here.
+  every word, and `FileEntry.git_meta` / `restic_meta` state FACTS, ❌ never a sentence. DETAILS § The one place prose
+  is produced here.
 - **A test needing a real removable volume uses `testing::disk_images` (macOS), ❌ never its own `hdiutil` or `diskutil`
   call**, a physical disk, or a new FAT/exFAT image: its runner is the guarded one. DETAILS § "`testing::disk_images`".
 - **Log a user value as `LogPrivate`, a path-carrying error as `LogError(&e)`.** ❌ Never a `String` of either, and ❌

@@ -1,5 +1,6 @@
 //! A repo's snapshots as folders: one per snapshot, plus `latest`.
 
+use cmdr_fs::restic_meta::ResticSnapshotMeta;
 use rustic_core::jiff::Timestamp;
 use rustic_core::jiff::tz::TimeZone;
 use rustic_core::repofile::SnapshotFile;
@@ -26,6 +27,8 @@ pub(crate) struct Snapshot {
     /// The bytes the backup processed, from the snapshot's summary. `None` for a
     /// snapshot without one (restic before 0.17 wrote none), ❌ never a made-up 0.
     pub(crate) size: Option<u64>,
+    /// The host, tags, and paths the backup recorded, for its row to state.
+    pub(crate) meta: ResticSnapshotMeta,
     /// Its folder name: local time plus the short id, for example
     /// `2026-10-12 21.00.03 (a1b2c3d4)`. Unique within its list, one valid path
     /// component, and sorting by it sorts by time.
@@ -72,6 +75,7 @@ pub(crate) struct RawSnapshot {
     pub(crate) time: Timestamp,
     pub(crate) tree: TreeId,
     pub(crate) size: Option<u64>,
+    pub(crate) meta: ResticSnapshotMeta,
 }
 
 impl From<&SnapshotFile> for RawSnapshot {
@@ -81,6 +85,11 @@ impl From<&SnapshotFile> for RawSnapshot {
             time: file.time.timestamp(),
             tree: file.tree,
             size: file.summary.as_ref().map(|summary| summary.total_bytes_processed),
+            meta: ResticSnapshotMeta {
+                hostname: file.hostname.clone(),
+                tags: file.tags.iter().cloned().collect(),
+                paths: file.paths.iter().cloned().collect(),
+            },
         }
     }
 }
@@ -118,6 +127,7 @@ pub(crate) fn snapshot_list(mut raw: Vec<RawSnapshot>, tz: &TimeZone) -> Snapsho
                 time: SystemTime::from(s.time),
                 tree: s.tree,
                 size: s.size,
+                meta: s.meta,
             }
         })
         .collect();
