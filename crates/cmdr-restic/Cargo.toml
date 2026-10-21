@@ -41,6 +41,10 @@ tokio-util = { version = "0.7.18", default-features = false }
 # Reads a key file's plaintext scrypt cost before rustic sees it (the adapter's
 # hostile-repo guard). Already in the graph through rustic_core.
 serde_json = "1"
+# The small pool rustic decodes a repo's index on (`index_load.rs`), so a load
+# never parks rayon's global one, which the app's search and icons share.
+# Already in the graph through rustic_core; the same version the app pins.
+rayon = "1.11.0"
 # Wipes every copy of a password the crate holds (the hub's slots, the blocking
 # open task's), on drop.
 zeroize = "1.9.0"

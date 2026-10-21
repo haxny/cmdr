@@ -4,15 +4,15 @@
 //! rustic's own load reads every index file in parallel on rayon's GLOBAL pool,
 //! each read a pool worker blocked in our adapter for a whole NAS round trip
 //! (Cmdr's search and icons share that pool), it can't be cancelled, and its
-//! progress counts files. So the load reads the index files itself first, on the
-//! async runtime, a few at a time, counting bytes and checking the cancel between
-//! chunks; then rustic builds the index from those bytes in memory (the adapter
-//! serves them through an [`IndexFeed`]). Above [`PREFETCH_LIMIT`] the bytes would
-//! cost too much to hold, so rustic reads the files itself and the feed only
-//! counts them and refuses new reads once cancelled.
+//! progress counts files. So the load reads the index files itself, on the async
+//! runtime, counting bytes and checking the cancel between chunks, and streams
+//! them to rustic through an [`IndexFeed`]: a bounded window, each file's bytes
+//! dropped the moment rustic takes them, so the memory on top of rustic's own
+//! stays the same at any index size. rustic decodes them on a small pool of the
+//! load's own ([`INDEX_THREADS`]), never the global one.
 
 use crate::backend::VolumeBackend;
-use crate::index_feed::IndexFeed;
+use crate::index_feed::{IndexFeed, Keep, Start};
 use crate::repo::{IndexedRepo, ResticError, open_blocking, worker_crashed};
 use bytes::Bytes;
 use cmdr_fs::volume::{ListingPhase, ListingProgress, Volume, VolumeError};
@@ -26,19 +26,23 @@ use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 use zeroize::Zeroizing;
 
-/// How many index files the prefetch reads at once. rustic's own load keeps one
-/// per core in flight (16 on an M3 Max); four keep a NAS busy without crowding
-/// out the browsing the load is for.
-const PREFETCH_CONCURRENCY: usize = 4;
+/// The most index bytes a load reads ahead of rustic: a handful of restic's
+/// index files (~2.5 MB each on David's NAS repo), enough to keep four reads
+/// busy while rustic decodes, and the same at any index size.
+pub(crate) const WINDOW: u64 = 16 * 1024 * 1024;
 
-/// The most index bytes the prefetch holds for the length of a load. 112 MB of
-/// index files on a 2.4M-blob repo sit on top of a ~560 MB peak rustic reaches
-/// anyway (`docs/notes/restic/open-cost.md`); past this, rustic streams them.
-pub(crate) const PREFETCH_LIMIT: u64 = 256 * 1024 * 1024;
+/// The threads of the pool rustic decodes the index on: one collects what the
+/// others decode (rustic's `stream_list` parks it on a channel), so
+/// [`INDEX_DECODERS`] decode at once.
+const INDEX_THREADS: usize = INDEX_DECODERS + 1;
 
-/// How far past its listed size an index file may run before the prefetch lets
-/// go of it.
-const CAP_SLACK: u64 = 64 * 1024;
+/// How many index files rustic decodes at once, each one waiting on the feed
+/// for at most one file.
+const INDEX_DECODERS: usize = 4;
+
+/// What the load's pool threads are called (a thread list in a sample, or a
+/// test, tells them from rayon's global pool by it).
+const INDEX_THREAD_PREFIX: &str = "restic-index";
 
 /// The longest a waiter goes between two progress ticks it forwards, so a pane
 /// hears a few a second rather than one per chunk read.
@@ -54,8 +58,8 @@ pub(crate) struct LoadSpec {
     pub(crate) root: PathBuf,
     pub(crate) password: Zeroizing<String>,
     pub(crate) runtime: Handle,
-    /// The most index bytes to read ahead of rustic ([`PREFETCH_LIMIT`]).
-    pub(crate) prefetch_limit: u64,
+    /// The most index bytes to read ahead of rustic ([`WINDOW`]).
+    pub(crate) window: u64,
 }
 
 /// One index load in flight, shared by every listing waiting on it.
@@ -195,8 +199,8 @@ impl Waiter {
     }
 }
 
-/// The load itself: list `index/`, read the files ahead of rustic (when small
-/// enough) while the repo opens beside it, then build the index.
+/// The load itself: list `index/`, open the repo while the first files stream
+/// in, then let rustic build the index from the feed on the load's own pool.
 async fn run(
     spec: LoadSpec,
     cancel: CancellationToken,
@@ -215,48 +219,56 @@ async fn run(
         () = cancel.cancelled() => return Err(cancelled(&index_dir)),
         files = listing => files.map_err(worker_crashed)?.map_err(ResticError::Volume)?,
     };
-    let total_bytes: u64 = files.iter().map(|(_, size)| size).sum();
-    let feed = Arc::new(IndexFeed::new(
-        cancel.clone(),
-        total_bytes,
-        u32::try_from(files.len()).unwrap_or(u32::MAX),
-        progress,
-    ));
+    let feed = Arc::new(IndexFeed::new(files, spec.window, cancel.clone(), progress));
     let backend = Arc::new(
         VolumeBackend::new(Arc::clone(&spec.parent), spec.root.clone(), spec.runtime.clone())
             .with_index_feed(Arc::clone(&feed)),
     );
-    // The unlock (scrypt, about half a second) runs beside the prefetch.
-    let opening = {
+    // The reads stream into the feed on their own task the whole load long,
+    // the first ones beside the unlock's scrypt (about half a second).
+    drop(spec.runtime.spawn(stream_files(
+        Arc::clone(&spec.parent),
+        index_dir.clone(),
+        Arc::clone(&feed),
+        spec.runtime.clone(),
+    )));
+    let build = async {
+        let opening = {
+            let backend = Arc::clone(&backend);
+            let password = spec.password;
+            spec.runtime
+                .spawn_blocking(move || open_blocking(&backend, &password, None))
+        };
+        let open = opening.await.map_err(worker_crashed)??;
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(INDEX_THREADS)
+            .thread_name(|i| format!("{INDEX_THREAD_PREFIX}-{i}"))
+            .build()
+            .map_err(|err| ResticError::Unreadable {
+                detail: format!("the index pool didn't start: {err}"),
+            })?;
         let backend = Arc::clone(&backend);
-        let password = spec.password;
+        // `install` runs rustic's load ON the pool, so the `rayon::spawn` and the
+        // parallel iteration inside it land on this pool, not the global one.
         spec.runtime
-            .spawn_blocking(move || open_blocking(&backend, &password, None))
+            .spawn_blocking(move || pool.install(|| IndexedRepo::index(open, backend)))
+            .await
+            .map_err(worker_crashed)?
     };
-    if total_bytes <= spec.prefetch_limit {
-        prefetch(
-            &spec.parent,
-            &index_dir,
-            &files,
-            spec.prefetch_limit,
-            &feed,
-            &spec.runtime,
-        )
-        .await
-        .map_err(ResticError::Volume)?;
+    // A cancel answers at once. The blocking open or build is detached: a
+    // decoder waiting on the feed hears `Cancelled` and rustic winds down.
+    let built = tokio::select! {
+        biased;
+        () = cancel.cancelled() => Err(cancelled(&index_dir)),
+        built = build => built,
+    };
+    // Built, failed, or cancelled: nothing more is read, and anything rustic
+    // didn't take goes.
+    match &built {
+        Ok(_) => feed.step_aside(),
+        Err(_) => feed.close(),
     }
-    let open = opening.await.map_err(worker_crashed)??;
-    if cancel.is_cancelled() {
-        return Err(cancelled(&index_dir));
-    }
-    let indexed = spec
-        .runtime
-        .spawn_blocking(move || IndexedRepo::index(open, backend))
-        .await
-        .map_err(worker_crashed)?;
-    // Anything rustic didn't ask for (a file gone between the two listings).
-    feed.clear();
-    indexed
+    built
 }
 
 /// The index files in `dir`, by id, with their sizes. A missing folder is an
@@ -274,81 +286,77 @@ async fn index_files(parent: &dyn Volume, dir: &Path) -> Result<Vec<(Id, u64)>, 
         .collect())
 }
 
-/// Reads every index file into `feed`, [`PREFETCH_CONCURRENCY`] at a time.
+/// Reads the index files into `feed` as it lets them start, until every one
+/// reached rustic's side or the load ended.
 ///
-/// A cancel answers at once, and each read in flight stops at its next chunk.
+/// A cancel stops it at once, and each read in flight stops at its next chunk.
 /// ❌ Never aborted mid-read: a read dropped inside a device transaction (a repo
-/// on a phone) can wedge the device, so the reads are detached, not aborted.
-async fn prefetch(
-    parent: &Arc<dyn Volume>,
-    dir: &Path,
-    files: &[(Id, u64)],
-    budget: u64,
-    feed: &Arc<IndexFeed>,
-    runtime: &Handle,
-) -> Result<(), VolumeError> {
-    // A file is held up to its listed size plus some slack, or the whole budget
-    // when the listing gave no size.
-    let cap_of = move |listed: u64| if listed > 0 { listed + CAP_SLACK } else { budget };
-    let mut pending = files.iter().map(|(id, listed)| (*id, cap_of(*listed)));
+/// on a phone) can wedge the device, so the reads are detached, not aborted. A
+/// failed read fails the load: the decoder waiting hears it.
+async fn stream_files(parent: Arc<dyn Volume>, dir: PathBuf, feed: Arc<IndexFeed>, runtime: Handle) {
     let mut running = JoinSet::new();
     loop {
-        while running.len() < PREFETCH_CONCURRENCY {
-            let Some((id, cap)) = pending.next() else { break };
-            let read = read_one(Arc::clone(parent), dir.join(&*id.to_hex()), id, cap, Arc::clone(feed));
-            running.spawn_on(read, runtime);
+        while let Some(start) = feed.next_read() {
+            let read = read_one(
+                Arc::clone(&parent),
+                dir.join(&*start.id.to_hex()),
+                start,
+                Arc::clone(&feed),
+            );
+            running.spawn_on(read, &runtime);
         }
-        let next = tokio::select! {
+        if feed.is_done() {
+            running.detach_all();
+            return;
+        }
+        let failed = tokio::select! {
             biased;
             () = feed.cancel().cancelled() => {
                 running.detach_all();
-                return Err(VolumeError::Cancelled(dir.display().to_string().into()));
+                feed.close();
+                return;
             }
-            next = running.join_next() => next,
-        };
-        let failed = match next {
-            None => return Ok(()),
-            Some(Ok(Ok(()))) => continue,
-            Some(Ok(Err(err))) => err,
-            Some(Err(crashed)) => VolumeError::IoError {
-                message: format!("an index read stopped: {crashed}").into(),
-                raw_os_error: None,
+            Some(next) = running.join_next() => match next {
+                Ok(Ok(())) => continue,
+                Ok(Err(err)) => err,
+                Err(crashed) => VolumeError::IoError {
+                    message: format!("an index read stopped: {crashed}").into(),
+                    raw_os_error: None,
+                },
             },
+            () = feed.startable() => continue,
         };
         running.detach_all();
-        return Err(failed);
+        feed.fail(failed);
+        return;
     }
 }
 
 /// Reads one index file whole into `feed`, counting each chunk as it lands.
-///
-/// Holds at most `cap` bytes: past it, the file is let go of (rustic reads it
-/// itself), so a listing that under-reports sizes (or reports none) never makes
-/// the prefetch hold more than it budgeted.
+/// Stops early when the feed says so (the load ended, or a read ahead ran past
+/// what the window gave it).
 async fn read_one(
     parent: Arc<dyn Volume>,
     path: PathBuf,
-    id: Id,
-    cap: u64,
+    start: Start,
     feed: Arc<IndexFeed>,
 ) -> Result<(), VolumeError> {
     let mut stream = parent.open_read_stream(&path).await?;
-    let mut bytes = Vec::new();
+    let mut bytes = Vec::with_capacity(usize::try_from(start.listed).unwrap_or(0));
     while let Some(chunk) = stream.next_chunk().await {
-        if feed.is_cancelled() {
-            return Err(VolumeError::Cancelled(path.display().to_string().into()));
-        }
         let chunk = chunk?;
-        feed.add_bytes(chunk.len());
-        bytes.extend_from_slice(&chunk);
-        if bytes.len() as u64 > cap {
+        if feed.add_chunk(start.index, chunk.len()) == Keep::Stop {
             return Ok(());
         }
+        bytes.extend_from_slice(&chunk);
     }
-    feed.put(id, Bytes::from(bytes));
-    feed.file_done();
+    feed.deliver(start.index, Bytes::from(bytes));
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "index_load_tests.rs"]
+mod tests;
 
 fn cancelled(path: &Path) -> ResticError {
     ResticError::Volume(VolumeError::Cancelled(path.display().to_string().into()))

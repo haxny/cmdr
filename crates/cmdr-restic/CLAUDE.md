@@ -24,6 +24,8 @@ English a user reads. The app's half: `apps/desktop/src-tauri/src/file_system/re
 - **`to_indexed` consumes the open repo**, so the index is its own open (`IndexedRepo`).
 - **One index load per repo, cancelled by the LAST waiter leaving** (a dropped future). ❌ Never abort a parent read;
   detach it (a dropped device transaction wedges a phone). Progress is real bytes.
+- **Index files stream through `IndexFeed`'s bounded window at every size**, and rustic decodes them inside the load's
+  own pool (`pool.install`). ❌ Never let rustic read or decode them on rayon's global pool: search and icons stall.
 - **❌ Never evict an index in use**; eviction and the idle drop take the index only, ❌ never the password.
 - **Passwords go through `secret_store`**, filed only by `remember_password` after a verified unlock nobody cancelled.
   ❌ No hub-wide lock across scrypt, a Keychain call, or a parent read.

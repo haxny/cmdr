@@ -6,7 +6,7 @@
 //! A value the host parks once, ❌ never a static: a test builds its own.
 
 use crate::detect::is_restic_repo;
-use crate::index_load::{Load, LoadSpec, PREFETCH_LIMIT, Waiter};
+use crate::index_load::{Load, LoadSpec, WINDOW, Waiter};
 use crate::path::VIRTUAL_ENTRY_NAME;
 use crate::repo::{IndexedRepo, ResticError, ResticRepo};
 use crate::snapshots::{Snapshot, SnapshotList, snapshot_list_of};
@@ -59,7 +59,7 @@ pub(crate) struct Tuning {
     /// each.
     pub(crate) max_opened: usize,
     /// The most index bytes a load reads ahead of rustic.
-    pub(crate) prefetch_limit: u64,
+    pub(crate) index_window: u64,
 }
 
 impl Default for Tuning {
@@ -73,7 +73,7 @@ impl Default for Tuning {
             lease_grace: Duration::from_secs(2),
             max_indexed: 1,
             max_opened: 8,
-            prefetch_limit: PREFETCH_LIMIT,
+            index_window: WINDOW,
         }
     }
 }
@@ -564,7 +564,7 @@ impl ResticRepos {
             root: slot.key.root.clone(),
             password,
             runtime: self.host.runtime(),
-            prefetch_limit: self.tuning.prefetch_limit,
+            window: self.tuning.index_window,
         };
         let installed = Installed {
             slot: Arc::downgrade(slot),

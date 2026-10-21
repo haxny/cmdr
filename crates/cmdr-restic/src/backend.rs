@@ -7,7 +7,7 @@
 //! the runtime's own workers: rustic is only ever driven from `spawn_blocking`
 //! (`repo.rs`). Same bridge as `cmdr-archive`'s `VolumeByteSource`.
 
-use crate::index_feed::IndexFeed;
+use crate::index_feed::{IndexFeed, Taken};
 use bytes::Bytes;
 use cmdr_fs::volume::{Volume, VolumeError, VolumeRandomReader};
 use rustic_core::repofile::KeyFile;
@@ -51,11 +51,17 @@ impl VolumeBackend {
         }
     }
 
-    /// The adapter an index load opens its repo through: index files come from
-    /// `feed` when it read them ahead, and are counted into it when it didn't.
+    /// The adapter an index load opens its repo through: rustic lists and takes
+    /// the index files from `feed`.
     pub(crate) fn with_index_feed(mut self, feed: Arc<IndexFeed>) -> Self {
         self.index_feed = Some(feed);
         self
+    }
+
+    /// The load's feed, when this adapter is an index load's.
+    #[cfg(test)]
+    pub(crate) fn index_feed(&self) -> Option<&Arc<IndexFeed>> {
+        self.index_feed.as_ref()
     }
 
     /// The same adapter with a shorter reader idle, for a test that waits for it.
@@ -445,6 +451,11 @@ impl ReadBackend for VolumeBackend {
                 Ok(packs)
             }
             FileType::Key => self.tolerable_keys(self.list_ids_in(&self.root.join(tpe.dirname()))?),
+            // During an index load, the load's own listing: rustic asks for
+            // exactly the files the feed streams, and `index/` is listed once.
+            FileType::Index if let Some(feed) = self.index_feed.as_ref().filter(|feed| !feed.has_stepped_aside()) => {
+                Ok(feed.listing())
+            }
             FileType::Index | FileType::Snapshot => self.list_ids_in(&self.root.join(tpe.dirname())),
         }
     }
@@ -453,18 +464,14 @@ impl ReadBackend for VolumeBackend {
         if tpe == FileType::Index
             && let Some(feed) = &self.index_feed
         {
-            if let Some(bytes) = feed.take(id) {
-                return Ok(bytes);
+            match feed.take(id).map_err(backend_error)? {
+                Taken::Bytes(bytes) => return Ok(bytes),
+                Taken::NotFed => {
+                    let bytes = self.read_stream(&self.path_of(tpe, id), None).map_err(backend_error)?;
+                    feed.note_read(bytes.len());
+                    return Ok(Bytes::from(bytes));
+                }
             }
-            // Every waiter left: a new read is a NAS round trip for nobody.
-            if feed.is_cancelled() {
-                return Err(backend_error(VolumeError::Cancelled(
-                    self.root.display().to_string().into(),
-                )));
-            }
-            let bytes = self.read_stream(&self.path_of(tpe, id), None).map_err(backend_error)?;
-            feed.note_read(bytes.len());
-            return Ok(Bytes::from(bytes));
         }
         self.read_stream(&self.path_of(tpe, id), None)
             .map(Bytes::from)

@@ -2,16 +2,19 @@
 //! volume. Dev-only evidence for `docs/notes/restic/open-cost.md`; never shipped.
 //!
 //! ```sh
-//! RESTIC_PASSWORD="$(secret NAME)" /usr/bin/time -l \
+//! RESTIC_PASSWORD_COMMAND='secret NAME' /usr/bin/time -l \
 //!   cargo run --release -p cmdr-restic --example open_cost -- mount ids /Volumes/naspi/backups/repo
 //! ```
 //!
 //! - Via: `mount` (a `LocalPosixVolume` over the OS mount) or `smb` (a direct
 //!   `cmdr-smb` session; needs `SMB_SERVER`, `SMB_SHARE`, `SMB_USER`, and
-//!   `SMB_PASSWORD`, and the repo path is then relative to the share root).
+//!   `SMB_PASSWORD` or `SMB_PASSWORD_COMMAND`; the repo path is then relative
+//!   to the share root).
 //! - Phase: `snapshots` (open + snapshot list + repo file counts), `ids`
 //!   (`to_indexed_ids` + a three-level tree walk), `full` (`to_indexed` + a
-//!   100 MiB file read), `cache` (`ids` with rustic's cache in `PROBE_CACHE_DIR`).
+//!   100 MiB file read), `cache` (`ids` with rustic's cache in `PROBE_CACHE_DIR`),
+//!   `load` (the crate's own index load, through `ResticRepos` and a
+//!   `ResticVolume`, the way a pane entering `latest` runs it).
 //!
 //! `PROBE_HELD_READERS=1` reads packs through held-open readers, as the crate's
 //! adapter does, instead of one `read_range` each. In `full`, the file read
@@ -19,15 +22,23 @@
 //! of them in flight (default 1).
 //!
 //! One phase per process, so `/usr/bin/time -l`'s peak RSS belongs to it alone.
+//! Every phase ends by printing peak RSS and STEADY RSS: what the process holds
+//! once the phase's transient buffers are gone (after a short settle), which is
+//! what a loaded index costs for as long as it stays loaded. `load` also prints
+//! how long a job queued on rayon's global pool waited to start during the load
+//! (Cmdr's search and icons share that pool).
 //! Reads only: every write the repo sees is refused and counted. The password
-//! comes from `RESTIC_PASSWORD` and is never printed.
+//! comes from `RESTIC_PASSWORD`, or from the output of `RESTIC_PASSWORD_COMMAND`
+//! (as restic reads it), and is never printed; the SMB one likewise from
+//! `SMB_PASSWORD` or `SMB_PASSWORD_COMMAND`.
 
 #![allow(clippy::print_stdout, reason = "a measurement harness prints its measurements")]
 
 use bytes::Bytes;
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::{MountClass, Volume, VolumeError, VolumeRandomReader};
+use cmdr_fs::volume::{ListingPhase, ListingProgress, MountClass, Volume, VolumeError, VolumeRandomReader};
 use cmdr_local::LocalPosixVolume;
+use cmdr_restic::{ResticRepos, ResticVolume, VIRTUAL_ENTRY_NAME};
 use cmdr_smb::volume::{MountAnchor, SmbConnectionParams, connect_smb_volume};
 use rustic_core::repofile::{Node, NodeType};
 use rustic_core::{
@@ -36,9 +47,9 @@ use rustic_core::{
 };
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::runtime::{Handle, Runtime};
 
 const FILE_TYPES: [FileType; 5] = [
@@ -262,6 +273,24 @@ fn env(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| panic!("{name} isn't set"))
 }
 
+/// A secret from `name`, or from the output of the command in `<name>_COMMAND`
+/// (run through `sh -c`, its trailing newline dropped), so it never has to sit
+/// on a command line.
+fn secret_env(name: &str) -> zeroize::Zeroizing<String> {
+    if let Ok(value) = std::env::var(name) {
+        return zeroize::Zeroizing::new(value);
+    }
+    let command = env(&format!("{name}_COMMAND"));
+    let output = std::process::Command::new("sh")
+        .args(["-c", &command])
+        .stderr(std::process::Stdio::inherit())
+        .output()
+        .expect("runs the password command");
+    assert!(output.status.success(), "{name}_COMMAND didn't answer");
+    let value = String::from_utf8(output.stdout).expect("a UTF-8 secret");
+    zeroize::Zeroizing::new(value.trim_end_matches('\n').to_string())
+}
+
 fn env_or(name: &str, default: usize) -> usize {
     std::env::var(name).map_or(default, |value| {
         value.parse().unwrap_or_else(|_| panic!("{name} isn't a number"))
@@ -278,8 +307,9 @@ fn build_parent(via: &str, rt: &Runtime, host: VolumeHost, repo: &str) -> (Arc<d
             // A made-up anchor, so nothing can reach the OS mount by accident.
             let anchor = PathBuf::from("/cmdr-probe-smb");
             let (server, share) = (env("SMB_SERVER"), env("SMB_SHARE"));
-            let password = env("SMB_PASSWORD");
-            let params = SmbConnectionParams::new(&server, &share, 445, Some(&env("SMB_USER")), Some(&password));
+            let password = secret_env("SMB_PASSWORD");
+            let params =
+                SmbConnectionParams::new(&server, &share, 445, Some(&env("SMB_USER")), Some(password.as_str()));
             let id = cmdr_fs::volume::smb_volume_id(&server, 445, &share);
             let start = Instant::now();
             let volume = rt
@@ -386,11 +416,15 @@ fn read_file<S: IndexedFull + Sync>(repo: &Repository<S>, node: &Node, total: us
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let [via, phase, repo_path] = args.as_slice() else {
-        panic!("usage: open_cost <mount|smb> <snapshots|ids|full|cache> <repo path>");
+        panic!("usage: open_cost <mount|smb> <snapshots|ids|full|cache|load> <repo path>");
     };
     let rt = Runtime::new().expect("runtime");
     let host = VolumeHost::builder().runtime(rt.handle().clone()).build();
-    let (parent, root) = build_parent(via, &rt, host, repo_path);
+    let (parent, root) = build_parent(via, &rt, host.clone(), repo_path);
+    if phase == "load" {
+        crate_load(&rt, host, parent, root);
+        return;
+    }
     let backend = Arc::new(CountingBackend {
         parent,
         root,
@@ -409,7 +443,7 @@ fn main() {
     } else {
         options.no_cache = true;
     }
-    let password = zeroize::Zeroizing::new(env("RESTIC_PASSWORD"));
+    let password = secret_env("RESTIC_PASSWORD");
     let backends = RepositoryBackends::new(Arc::clone(&backend) as _, None);
 
     let start = Instant::now();
@@ -478,4 +512,116 @@ fn main() {
         }
         other => panic!("unknown phase {other:?}"),
     }
+    report_rss();
+}
+
+/// The crate's own index load, as a pane entering `latest` runs it: unlock, then
+/// list `<repo>/Browse snapshots/latest`, which waits on the shared load.
+fn crate_load(rt: &Runtime, host: VolumeHost, parent: Arc<dyn Volume>, root: PathBuf) {
+    let hub = Arc::new(ResticRepos::new(host));
+    let volume = ResticVolume::new(Arc::clone(&hub), "probe", parent, root.clone());
+    let password = secret_env("RESTIC_PASSWORD");
+    let start = Instant::now();
+    assert!(
+        rt.block_on(cmdr_restic::test_fixtures::unlock(&volume, password.as_str())),
+        "the password unlocks the repo"
+    );
+    drop(password);
+    println!("unlock (scrypt + key + config + snapshot list): {}", secs(start));
+    print_rss("after unlock");
+
+    let last_phase: Mutex<Option<ListingPhase>> = Mutex::new(None);
+    let on_progress = |p: ListingProgress| {
+        if let Some(phase) = p.phase {
+            *lock(&last_phase) = Some(phase);
+        }
+    };
+    let sampler = GlobalPoolSampler::start();
+    let start = Instant::now();
+    let entries = rt
+        .block_on(volume.list_directory(&root.join(VIRTUAL_ENTRY_NAME).join("latest"), Some(&on_progress)))
+        .expect("lists latest");
+    println!("index load + list latest: {} entries in {}", entries.len(), secs(start));
+    sampler.stop_and_report();
+    if let Some(ListingPhase::LoadingIndex {
+        done_bytes,
+        total_bytes,
+        done_files,
+        total_files,
+    }) = *lock(&last_phase)
+    {
+        println!("last progress: {done_bytes}/{total_bytes} bytes, {done_files}/{total_files} files");
+    }
+    // The hub and the volume stay alive, so the index stays loaded through the
+    // steady reading.
+    report_rss();
+    drop(volume);
+    drop(hub);
+}
+
+/// Queues a tiny job on rayon's global pool every 10 ms and books how long each
+/// waited to start: a pool whose workers are all blocked shows up as long waits.
+struct GlobalPoolSampler {
+    stop: Arc<AtomicBool>,
+    thread: std::thread::JoinHandle<(usize, Duration)>,
+}
+
+impl GlobalPoolSampler {
+    fn start() -> Self {
+        let stop = Arc::new(AtomicBool::new(false));
+        let thread_stop = Arc::clone(&stop);
+        let thread = std::thread::spawn(move || {
+            let (mut samples, mut worst) = (0, Duration::ZERO);
+            while !thread_stop.load(Ordering::Relaxed) {
+                let queued = Instant::now();
+                let (tx, rx) = std::sync::mpsc::channel();
+                rayon::spawn(move || tx.send(queued.elapsed()).unwrap_or_default());
+                let waited = rx.recv().unwrap_or_default();
+                samples += 1;
+                worst = worst.max(waited);
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            (samples, worst)
+        });
+        Self { stop, thread }
+    }
+
+    fn stop_and_report(self) {
+        self.stop.store(true, Ordering::Relaxed);
+        let (samples, worst) = self.thread.join().expect("the sampler");
+        println!(
+            "rayon global pool during the load: {samples} jobs, longest wait to start {:.1} ms",
+            worst.as_secs_f64() * 1e3
+        );
+    }
+}
+
+/// Peak RSS so far, and RSS once the phase's transient buffers had a moment to
+/// go (freed memory the allocator keeps still counts, as it would in the app).
+/// Also `phys_footprint`, what macOS keys memory pressure on and Activity
+/// Monitor shows: it leaves out freed pages the allocator handed back as
+/// reusable.
+fn report_rss() {
+    print_rss("right after");
+    std::thread::sleep(Duration::from_secs(3));
+    print_rss("steady (3 s later)");
+}
+
+fn print_rss(label: &str) {
+    #[cfg(target_os = "macos")]
+    if let (Some(rss), Some(vm)) = (
+        cmdr_fs::process_memory::query_basic_info(),
+        cmdr_fs::process_memory::query_task_vm_info(),
+    ) {
+        let mb = |bytes: u64| bytes as f64 / 1e6;
+        println!(
+            "RSS {label}: {:.0} MB (peak so far {:.0} MB); footprint {:.0} MB (peak {:.0} MB)",
+            mb(rss.resident_size),
+            mb(rss.resident_size_max),
+            mb(vm.phys_footprint),
+            mb(vm.phys_footprint_peak.unwrap_or(0))
+        );
+    }
+    #[cfg(not(target_os = "macos"))]
+    println!("RSS {label}: not measured off macOS");
 }

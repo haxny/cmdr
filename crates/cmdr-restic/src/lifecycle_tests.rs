@@ -450,16 +450,17 @@ async fn a_load_reports_its_bytes_as_it_reads() {
     );
 }
 
-/// Past the prefetch limit, rustic reads the index files itself; the load still
-/// counts their bytes and still lands.
+/// An index many times the window still loads through the feed, each file read
+/// once, with its bytes counted: ❌ no size past which rustic reads the files
+/// itself on rayon's global pool.
 #[tokio::test(flavor = "multi_thread")]
-async fn an_index_too_big_to_prefetch_is_streamed_and_still_counted() {
+async fn an_index_bigger_than_the_window_loads_reading_each_file_once() {
     let rig = Rig::new(RigOptions {
         tuning: Tuning {
-            prefetch_limit: 0,
+            index_window: 1,
             ..Tuning::default()
         },
-        index_read_delay: Duration::from_millis(150),
+        index_read_delay: Duration::from_millis(50),
         ..RigOptions::default()
     })
     .await;
@@ -479,17 +480,17 @@ async fn an_index_too_big_to_prefetch_is_streamed_and_still_counted() {
     let Some(ListingPhase::LoadingIndex { done_bytes, .. }) = *last.lock().expect("no poison in a test") else {
         panic!("the load reported its phase");
     };
-    assert!(done_bytes > 0, "rustic's own reads are counted");
+    assert!(done_bytes > 0, "the reads are counted");
 }
 
-/// ❗ The prefetch decides how much to hold from the listing's sizes, and a
-/// backend that reports none lists every index file as 0 bytes. A file read past
-/// the budget isn't held: the prefetch lets go of it and rustic reads it itself.
+/// ❗ A backend that reports no sizes lists every index file as 0 bytes. The
+/// window then counts each file read ahead as the whole window, so it reads
+/// ahead one at a time, and still reads each file once.
 #[tokio::test(flavor = "multi_thread")]
-async fn the_prefetch_holds_no_more_than_its_budget_when_sizes_are_hidden() {
+async fn an_index_listed_without_sizes_loads_reading_each_file_once() {
     let rig = Rig::new(RigOptions {
         tuning: Tuning {
-            prefetch_limit: 1,
+            index_window: 1,
             ..Tuning::default()
         },
         hide_index_sizes: true,
@@ -499,11 +500,7 @@ async fn the_prefetch_holds_no_more_than_its_budget_when_sizes_are_hidden() {
 
     rig.volume.list_directory(&latest(ROOT), None).await.expect("lists");
 
-    assert_eq!(
-        rig.parent.index_reads(),
-        2 * rig.index_files,
-        "each file was let go of by the prefetch, then read by rustic"
-    );
+    assert_eq!(rig.parent.index_reads(), rig.index_files);
 }
 
 // ── Memory: the cap, the idle drop, and what they never take ───────────────

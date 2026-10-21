@@ -77,9 +77,8 @@ Baseline, `restic` 0.19.1 CLI over the mount, `--no-lock --no-cache`:
   snapshot list and the folder names. Getting it back costs an unlock (~0.5 s, password from Keychain, since rustic
   can't re-open from the master key) plus a load (~2–4 s on SMB, under a second on a warm mount), which the progress
   phase covers. Holding ~0.5 GB idle for longer isn't worth that.
-- **(e) Prefetch is fine at this size.** 112 MB of index files held during the load sits on top of a ~560 MB peak that
-  rustic reaches anyway, and rustic already keeps 16 in flight. Allow the prefetch below ~256 MB of `index/` and let
-  rustic stream above it.
+- **(e) Stream the index files, at every size.** Holding them all past ~256 MB of `index/` costs too much, and letting
+  rustic read them parks rayon's global pool; § "Streaming the index load" has what replaced both.
 
 Two findings for the volume milestones:
 
@@ -88,7 +87,7 @@ Two findings for the volume milestones:
   to 8, least recently used let go first); § "Held pack readers" has the before and after. Copy-out should still read
   several blobs ahead in parallel.
 - **The index load blocks all 16 rayon workers** for 2–5 s on SMB, as the plan's landmine predicted. Search and icons
-  share that pool, so the load should run while nothing else needs it, or rustic's fan-out should be fenced.
+  share that pool. The load now runs rustic on a pool of its own; § "Streaming the index load".
 
 ## Held pack readers
 
@@ -122,6 +121,29 @@ and four-ahead runs were each repeated.
 
 So the read stream keeps four 1 MiB windows in flight: at most 4 MiB held per stream, and a copy's Cancel detaches at
 most four reads.
+
+## Streaming the index load
+
+The crate's own index load (#630), measured with the probe's `load` phase: a `ResticRepos` hub and a `ResticVolume` over
+the parent, an unlock, then a listing of `<repo>/Browse snapshots/latest`, which waits on the load the way a pane does.
+Same Mac, NAS, repo, and release build, 2026-10-21; the repo had grown to 49 index files, 119,443,774 bytes. Before is
+`56dd11f457` (every index file read ahead and held, rustic decoding on rayon's global pool); after streams them through
+the 16 MiB window to five `restic-index-*` threads. Before and after ran interleaved.
+
+- **Steady RSS** (3 s after the load, the index still loaded; `phys_footprint` within ~20 MB of it): SMB before 518,
+  593, 628, 630, 630, 653 MB; after 395, 595, 599 MB. Mount before 624, 625, 628, 630, 656, 667 MB; after 581, 585, 592,
+  619, 620, 623 MB. About 5x the index files, either way.
+- **Peak RSS** matched steady within a few MB in every run but two (SMB before: 625 peak against 518 steady, 633 against
+  593). The peak is rustic's own, at the end of the build, after the old prefetch had already handed its bytes over. So
+  on this repo streaming saves ~30–40 MB of steady RSS (fewer freed buffers left in the allocator) rather than lowering
+  a peak; what it removes is holding the whole `index/` at once, which grows with the repo (~300 MB on a 6 TB one).
+- **Load time** (index load + listing): SMB before 3.50, 3.84, 5.69, 6.21, 6.71, 6.96 s; after 4.67, 6.06, 6.46 s (the
+  NAS was slower this day than on 2026-10-20). Warm mount before 0.79, 0.79, 0.93, 0.95 s; after 1.03, 1.06 s: the cost
+  of decoding on four threads instead of 16. The first mount run after SMB runs is colder (2.6–3.9 s either way) and
+  isn't comparable.
+- **rayon's global pool during the load** (a sampler queues an empty job every 10 ms and books its wait to start):
+  before 130–313 ms longest wait in every run, the pool's 16 workers all inside rustic's load; after 0.2–12.5 ms.
+- Unlock 0.46–0.60 s and 43–45 MB of RSS after it, either way.
 
 ## Draft #422 comment (not posted)
 
