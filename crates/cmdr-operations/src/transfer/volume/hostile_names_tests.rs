@@ -212,46 +212,58 @@ async fn a_copy_never_merges_through_a_destination_link() {
 }
 
 /// The other half: one listing names a FILE (standing in for a source link,
-/// which no backend recreates as a link) and a FOLDER the same. The folder
-/// lands on the name the file took in a level this copy made, so nothing can
-/// lead it outside.
+/// which no backend recreates as a link) and a FOLDER the same. The second
+/// meets the first as an ordinary clash in a level this copy made
+/// (`repeated_name_tests.rs`), so under every policy nothing can lead it outside.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_with_a_file_and_folder_listed_under_one_name_stays_inside() {
+    use crate::types::ConflictResolution;
+
     let engine = TestOperations::new();
-    let source = InMemoryVolume::new("Phone").with_space_info(10_000_000, 10_000_000);
-    source.create_directory(Path::new("/album")).await.unwrap();
-    source.create_file(Path::new("/album/link"), b"LINK").await.unwrap();
-    source.set_reported_name(Path::new("/album/link"), "a");
-    source.create_directory(Path::new("/album/a")).await.unwrap();
-    source.create_file(Path::new("/album/a/x"), b"EVIL").await.unwrap();
-    let source: Arc<dyn Volume> = Arc::new(source);
+    for policy in [
+        ConflictResolution::Skip,
+        ConflictResolution::Overwrite,
+        ConflictResolution::Rename,
+        ConflictResolution::OverwriteSmaller,
+    ] {
+        let source = InMemoryVolume::new("Phone").with_space_info(10_000_000, 10_000_000);
+        source.create_directory(Path::new("/album")).await.unwrap();
+        source.create_file(Path::new("/album/link"), b"LINK").await.unwrap();
+        source.set_reported_name(Path::new("/album/link"), "a");
+        source.create_directory(Path::new("/album/a")).await.unwrap();
+        source.create_file(Path::new("/album/a/x"), b"EVIL").await.unwrap();
+        let source: Arc<dyn Volume> = Arc::new(source);
 
-    let dest_dir = TempDir::new().unwrap();
-    std::fs::create_dir(dest_dir.path().join("inbox")).unwrap();
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
-        "Dest",
-        dest_dir.path().to_path_buf(),
-        crate::host::testing::pane_order_host(),
-    ));
+        let dest_dir = TempDir::new().unwrap();
+        std::fs::create_dir(dest_dir.path().join("inbox")).unwrap();
+        let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+            "Dest",
+            dest_dir.path().to_path_buf(),
+            crate::host::testing::pane_order_host(),
+        ));
 
-    let _ = copy_volumes_with_progress(
-        Arc::new(CollectorEventSink::new()),
-        "file-and-dir-one-name",
-        &make_state(&engine),
-        source,
-        &[PathBuf::from("/album")],
-        dest,
-        Path::new("/inbox"),
-        &config(),
-    )
-    .await;
+        let _ = copy_volumes_with_progress(
+            Arc::new(CollectorEventSink::new()),
+            "file-and-dir-one-name",
+            &make_state(&engine),
+            source,
+            &[PathBuf::from("/album")],
+            dest,
+            Path::new("/inbox"),
+            &VolumeCopyConfig {
+                conflict_resolution: policy,
+                ..config()
+            },
+        )
+        .await;
 
-    for file in files_under(dest_dir.path()) {
-        assert!(
-            file.starts_with("inbox/album"),
-            "{} landed outside the copied folder",
-            file.display()
-        );
+        for file in files_under(dest_dir.path()) {
+            assert!(
+                file.starts_with("inbox/album"),
+                "{policy:?}: {} landed outside the copied folder",
+                file.display()
+            );
+        }
     }
 }
 

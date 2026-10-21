@@ -803,6 +803,20 @@ item the way any unusable name does.
   a link already at the destination, under every policy) and a drag-out cell in
   `apps/desktop/src-tauri/src/native_drag/fulfillment_test.rs`.
 
+### A source listing one name twice
+
+A phone or camera can hold two items with one name in a folder (MTP lists each under its own row path,
+`crates/cmdr-mtp/src/connection/DETAILS.md` § "Same-named siblings"), and an archive can hold one path twice. The merge
+walk counts every name in a level it created as free by proof (`LandingName::FreeInFreshFolder`), which a repeated name
+breaks: the second item goes for the name the first just took.
+
+- **A repeat is an ordinary clash.** `merge_level` remembers each name it handed out in the level. A name it meets again
+  drains the leaves in flight (so the first item has landed), probes the destination afresh (`DestFolder::Unlisted`,
+  never the level's index or "created by us"), and lands as `ExpectedFree` at most. The probe finds the first item, so
+  the conflict policy (or a prompt) settles the second, like a clash with anything the user had.
+- **Two same-named rows SELECTED** need nothing extra: the top-level driver probes each source's name itself.
+- Pinned by `repeated_name_tests.rs` (Rename lands both, Skip lands one).
+
 ### A source is listed as a source
 
 Every walk that reads a SOURCE folder lists it through `Volume::list_directory_as_source`, never `list_directory`: the

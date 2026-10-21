@@ -23,6 +23,7 @@
 //! `safety_oracle.rs`, never fresh inline asserts. See `CLAUDE.md` § Merge and
 //! conflicts, and `DETAILS.md` § "Scan-as-you-merge".
 
+use std::collections::HashSet;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -627,6 +628,11 @@ async fn merge_level<'a>(
         }),
     );
 
+    // The names this level has handed out so far. A source can list one name
+    // twice (two same-named items on a phone or camera, a zip holding a path
+    // twice), and the second can't take the level's answer: the first is
+    // landing on that name (`DETAILS.md` § "A source listing one name twice").
+    let mut names_seen: HashSet<&str> = HashSet::with_capacity(entries.len());
     for entry in &entries {
         // The cooperative boundary, per entry. The walk's own work (listings,
         // destination creation, a conflict decision per child) never passes
@@ -637,10 +643,17 @@ async fn merge_level<'a>(
         }
 
         let child_source = PathBuf::from(&entry.path);
+        // A repeat waits for what's in flight to land, then asks the destination
+        // afresh, so the earlier item is an ordinary clash for it.
+        let repeat = !names_seen.insert(entry.name.as_str());
+        if repeat {
+            pool.drain().await;
+        }
         // The level listing settles almost every child: a byte-exact hit, a
         // look-alike (taken, in ITS spelling), or a name nothing folds onto. Only
         // a case-only match costs a probe, and on an ordinary tree none does.
         let dest_folder = match dest_index.as_ref() {
+            _ if repeat => DestFolder::Unlisted,
             Some(index) => DestFolder::Listed(index),
             None => DestFolder::CreatedByUs,
         };
@@ -722,7 +735,7 @@ async fn merge_level<'a>(
         // about to take is one we believe FREE, and ❗ in a level this walk made,
         // free by proof (`LandingName::free`). A resolver decision below is what
         // turns that into a claim (`staged_write.rs::LandingName`).
-        let mut landing = LandingName::free(level_made_here);
+        let mut landing = LandingName::free(level_made_here && !repeat);
         // Nothing has reserved anything for this child either, until a `Rename`
         // resolution below says otherwise.
         let mut reserved_placeholder = false;

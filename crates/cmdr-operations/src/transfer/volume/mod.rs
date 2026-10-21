@@ -212,3 +212,6 @@ mod rename_merge_symlink_tests;
 mod rename_merge_tests;
 #[cfg(test)]
 mod rename_merge_walk_tests;
+/// A source listing one name twice: the second item is a clash for the policy.
+#[cfg(test)]
+mod repeated_name_tests;
