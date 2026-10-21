@@ -30,18 +30,20 @@ prepare_release_commit() {
 
   # Check for uncommitted changes. The release-prep edits are allowed through and get included in
   # the release commit: the changelog, the roadmap (content in roadmap.ts, layout in roadmap.astro),
-  # the feature-status source of truth, and the security advisory list (its new entry names this
+  # the feature-status source of truth (plus the features page, which needs a card for every new
+  # feature id or it fails the build), and the security advisory list (its new entry names this
   # version, which the `desktop-security-advisories` check only accepts once the bump below lands).
   # See docs/guides/releasing.md § The release procedure for the steps that produce them.
   local exclude=(
     ':!CHANGELOG.md'
     ':!feature-status.json'
+    ':!apps/website/src/pages/features.astro'
     ':!apps/website/src/lib/roadmap.ts'
     ':!apps/website/src/pages/roadmap.astro'
     ':!apps/desktop/src-tauri/resources/security-advisories.json'
   )
   if ! git diff --quiet -- "${exclude[@]}" || ! git diff --staged --quiet -- "${exclude[@]}"; then
-    echo "Error: Working tree has uncommitted changes (other than the changelog, roadmap, feature status, and security advisory list). Commit or stash them first."
+    echo "Error: Working tree has uncommitted changes (other than the changelog, roadmap, feature status and its page, and security advisory list). Commit or stash them first."
     exit 1
   fi
 
@@ -58,7 +60,7 @@ prepare_release_commit() {
   done < <(mount | awk -F' on ' '/\/Volumes\/Cmdr/ { sub(/ \(.*$/, "", $2); print $2 }')
 
   # Stage allowed files so the pull below carries them along
-  git add CHANGELOG.md feature-status.json apps/website/src/lib/roadmap.ts apps/website/src/pages/roadmap.astro apps/desktop/src-tauri/resources/security-advisories.json 2>/dev/null || true
+  git add CHANGELOG.md feature-status.json apps/website/src/pages/features.astro apps/website/src/lib/roadmap.ts apps/website/src/pages/roadmap.astro apps/desktop/src-tauri/resources/security-advisories.json 2>/dev/null || true
 
   # Local `main` mirrors `origin/main`, so this only ever fast-forwards. A local commit on `main`
   # makes the CI gate below refuse: it belongs on a branch, landed through `pnpm land`.
@@ -143,6 +145,7 @@ prepare_release_commit() {
     CHANGELOG.md \
     LICENSE \
     feature-status.json \
+    apps/website/src/pages/features.astro \
     apps/website/src/lib/roadmap.ts \
     apps/website/src/pages/roadmap.astro \
     apps/desktop/src-tauri/resources/security-advisories.json \
