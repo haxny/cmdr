@@ -105,12 +105,14 @@ answered 403 after CI was green, and that land was lost. So:
 
 Decision: `land` rebases onto `origin/main` once, before the first push. When `main` moves while CI runs, it doesn't
 rebase and wait again: `nextLandPath` picks `gh pr merge <n> --admin --rebase --match-head-commit <green sha>`, GitHub
-rebases the PR onto the current `main`, and the CI run on every `main` push (`push: branches: [main]` in `ci.yml`)
-checks the result. It prints that it did, with a link to `main`'s CI runs, and doesn't wait for them.
+rebases the PR onto the current `main`, and `main`'s push run recognizes the merge of a green head and skips the suite
+(`docs/tooling/ci.md` § Landing doesn't re-run the suite). It prints that it did, with a link to `main`'s CI runs, and
+doesn't wait for them.
 
 Why: with many sessions landing at once, each land that saw `main` move rebased and re-ran CI (25–35 min), which moved
 nobody forward. On 2026-10-20 eight-plus PRs went green two or three times each and none landed. Big teams accept the
-same trade: patches that passed CI on a slightly older base, with the rare semantic clash caught on `main` right after.
+same trade: patches that passed CI on a slightly older base. A rare semantic clash between two such PRs surfaces on the
+next PR's run (it tests the PR merged with the current `main`) and on the release gate's full run, not on `main`'s own.
 The guarantee that stays: `--admin` only bypasses the approval ruleset, the CI ruleset has no bypass and `strict` is
 off, so GitHub still demands `CI OK` green on the PR's head SHA, and `--match-head-commit` pins that head.
 
@@ -124,8 +126,7 @@ off, so GitHub still demands `CI OK` green on the PR's head SHA, and `--match-he
 - **A re-run after a GitHub rebase merge finishes**: the branch's SHAs aren't on `main`, but
   `git cherry origin/main HEAD` lists only `-` lines (every patch is upstream), so `readState` reports it landed.
   `remove-worktree.sh` asks the same question before tearing a worktree down.
-- **The fast-forward still wins when it can**: it keeps SHAs identical and lets `main`'s CI skip the suite, which a
-  rebase merge's fresh SHAs can't.
+- **The fast-forward still wins when it can**: it keeps SHAs identical, so `main` gets exactly the commits CI tested.
 
 Exception: a branch carrying a merge commit (a contributor's PR record, `docs/guides/handling-prs.md`; a release
 merge-back, `docs/guides/releasing.md`) is never rebased, by `land` or by GitHub, since a plain rebase flattens the

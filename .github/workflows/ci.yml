@@ -54,10 +54,14 @@ jobs:
     permissions:
       contents: read # check out the code
       checks: read # look up this commit's `CI OK` from its PR run
-    # A landed commit already passed every lane on its PR (`pnpm land` fast-forwards, so the SHA
-    # is the same), so a `main` push that finds a green `CI OK` on its SHA sets `verified` and
-    # every lane output reads `false`: the lanes skip, `CI OK` reports green, and the post-land
-    # jobs still run off the raw `*-changed` filter. `ci-coverage` keeps every lane on this gate.
+      pull-requests: read # find the PR a GitHub rebase merge came from
+    # A landed commit already passed every lane on its PR. `pnpm land` either fast-forwards (same
+    # SHA, so its PR run's green `CI OK` is on it) or has GitHub rebase-merge a green PR onto a
+    # moved `main` (new SHAs; the PR's head carries the green `CI OK`). Either way the push sets
+    # `verified` and every lane output reads `false`: the lanes skip, `CI OK` reports green, and
+    # the post-land jobs still run off the raw `*-changed` filter. A semantic clash between two
+    # PRs that each passed alone surfaces on the next PR's run (it tests the PR merged with the
+    # current `main`) and on the release gate's full run. `ci-coverage` keeps every lane on this gate.
     outputs:
       verified: ${{ steps.verified.outputs.verified }}
       rust: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.rust || 'false' }}
@@ -75,8 +79,13 @@ jobs:
 
       # Push events only: a dispatch (the release gate's `run_all`) always runs in full. Only a
       # completed, successful `CI OK` from GitHub Actions counts; this run's own is still pending.
+      # Verified means a green `CI OK` on this SHA itself (fast-forward), or this SHA is the
+      # `merge_commit_sha` of a merged PR into `main` whose head has one (GitHub rebase or squash
+      # merge). Keying on the push's head SHA is enough: a rebase merge pushes all the PR's
+      # commits at once, `github.sha` is the last, and GitHub reports exactly that one as the
+      # merge commit, so the earlier replayed commits never need a verdict of their own.
       # An API hiccup falls back to a full run, never to a skip.
-      - name: Look for a green CI OK on this commit
+      - name: Look for a green CI OK on this commit or its PR's head
         id: verified
         if: github.event_name == 'push'
         env:
@@ -84,17 +93,37 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
         run: |
-          if ! count=$(gh api "repos/$REPO/commits/$SHA/check-runs?check_name=CI%20OK&filter=all" \
-            --jq '[.check_runs[] | select(.app.slug == "github-actions" and .conclusion == "success")] | length'); then
+          green_ci_ok() {
+            gh api "repos/$REPO/commits/$1/check-runs?check_name=CI%20OK&filter=all" \
+              --jq '[.check_runs[] | select(.app.slug == "github-actions" and .conclusion == "success")] | length'
+          }
+          if ! count=$(green_ci_ok "$SHA"); then
             echo "::warning::Couldn't look up CI OK for $SHA; running every lane."
             count=0
           fi
           if [[ "$count" -gt 0 ]]; then
             echo "verified=true" >>"$GITHUB_OUTPUT"
             echo "$SHA already has a green CI OK (its PR run), so the lanes skip."
-          else
-            echo "No green CI OK on $SHA yet; running the lanes."
+            exit 0
           fi
+          if ! pr=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq \
+            "[.[] | select(.merged_at != null and .base.ref == \"main\" and .merge_commit_sha == \"$SHA\")][0] // empty | \"\(.number) \(.head.sha)\""); then
+            echo "::warning::Couldn't look up the PR behind $SHA; running every lane."
+            pr=""
+          fi
+          if [[ -n "$pr" ]]; then
+            read -r pr_number head_sha <<<"$pr"
+            if ! count=$(green_ci_ok "$head_sha"); then
+              echo "::warning::Couldn't look up CI OK for PR #$pr_number's head $head_sha; running every lane."
+              count=0
+            fi
+            if [[ "$count" -gt 0 ]]; then
+              echo "verified=true" >>"$GITHUB_OUTPUT"
+              echo "$SHA is GitHub's merge of PR #$pr_number, whose head $head_sha has a green CI OK, so the lanes skip."
+              exit 0
+            fi
+          fi
+          echo "No green CI OK on $SHA or on the head of a PR it merged; running the lanes."
 
       # Filter design rules (the `ci-coverage` check validates the non-glob paths exist):
       # - A filter must cover every path its job's checks read, not just the obvious app dir.

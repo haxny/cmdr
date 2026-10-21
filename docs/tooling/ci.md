@@ -318,16 +318,32 @@ commit without its run. `gradle-wrapper.yml` runs on PRs only when they touch th
 
 ### Landing doesn't re-run the suite
 
-`pnpm land` fast-forwards `main`, so the landed SHA is the one whose PR run already went green. On a `push`, `changes`
-looks up that SHA's check runs (`checks: read`); a completed, successful `CI OK` from GitHub Actions sets its `verified`
-output, every lane output reads `false`, and `hygiene` skips too. `CI OK` then reports green on the push in about a
-minute, and `deploy-website` runs off the raw `website-changed` filter. A commit that reaches `main` any other way (a
-Renovate merge GitHub rebases into a new SHA, an admin push) has no green `CI OK` and runs in full; so does a failed
-lookup. (Verified on the first real land, run 39137865939, 2026-10-18: every lane skipped.)
+A landed commit already went green on its PR, and on a `push` the `changes` job's `verified` step recognizes it two
+ways:
+
+1. **Fast-forward** (`pnpm land` when `main` didn't move): the pushed SHA is the PR's head, so its own check runs
+   (`checks: read`) carry a completed, successful `CI OK` from GitHub Actions.
+2. **GitHub rebase or squash merge** (`pnpm land` when `main` moved, or a PR merged on GitHub): the SHAs are new, so the
+   step asks `repos/{repo}/commits/{sha}/pulls` (`pull-requests: read`) for a merged PR into `main` whose
+   `merge_commit_sha` is exactly the pushed SHA, then requires that same green `CI OK` on the PR's `head.sha`. It logs
+   the PR and head it trusted. For a rebase merge, `merge_commit_sha` is the last replayed commit, which is the push's
+   `github.sha` (verified on PR #642, six commits, and #644, four commits: `merge_commit_sha` was the tip of each on
+   `main`, 2026-10-21).
+
+Either way `verified` is set, every lane output reads `false`, and `hygiene` skips too. `CI OK` then reports green on
+the push in about a minute, and `deploy-website` runs off the raw `website-changed` filter. Anything else (an admin
+push, a PR whose head never went green, an earlier commit of a replayed series) runs in full; so does any failed lookup.
+(Verified on the first real land, run 39137865939, 2026-10-18: every lane skipped.)
 
 - **Dispatches always run in full**, so the release gate's `run_all` run (`scripts/release-ci-gate.sh`) is unaffected:
   the lookup is push-only.
-- **Trust**: it trusts any `CI OK` from GitHub Actions on the SHA, which is exactly what ruleset B trusts when it lets
-  the push land.
+- **Trust**: it trusts a `CI OK` from GitHub Actions on the SHA or on the merged PR's head, which is exactly what
+  ruleset B trusts when it lets the push or the merge land. Fork PRs need no special case: their head still needs our
+  own green `CI OK`.
+- **The accepted gap**: a rebase merge puts the PR's patches on a `main` its run never saw, so a semantic clash between
+  two PRs that each passed alone (no textual conflict) isn't caught on `main`. The next PR's run catches it, because a
+  `pull_request` run tests `refs/pull/N/merge` (the PR merged with the current `main`), and so does the release gate's
+  full run. David chose this (2026-10-21): re-running the suite after every rebase merge cost 255 macOS minutes for six
+  lands in one night, more than all PR runs together, and the macOS runners are the bottleneck.
 - `ci-coverage` rule 5 keeps it whole: every lane's `if:` reads `needs.changes.outputs`, and every filter-derived
   `changes` output is gated on `steps.verified` (outputs named `*-changed` are the raw filter, for deploys).

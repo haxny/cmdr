@@ -24,9 +24,9 @@ only way commits reach `main`: nobody, admin included, lands a SHA without a gre
 ## Must-knows
 
 - **A green head lands one of two ways.** Still on top of `origin/main`: `git push origin <sha>:main`, SHAs identical.
-  `main` moved while CI ran: `gh pr merge --admin --rebase --match-head-commit <sha>`, and CI on `main` catches the rare
-  semantic clash. Either way the CI ruleset demands `CI OK` green on the head (`DETAILS.md` § Decision: merge a green PR
-  onto a moved `main`).
+  `main` moved while CI ran: `gh pr merge --admin --rebase --match-head-commit <sha>`. Either way the CI ruleset demands
+  `CI OK` green on the head, and `main`'s CI trusts it and skips the suite; the next PR's run catches a rare semantic
+  clash (`DETAILS.md` § Decision: merge a green PR onto a moved `main`).
 - **Re-run it at any stage.** A red CI prints the failed jobs and `gh run rerun <id> --failed`. Only when GitHub can't
   rebase the green PR (a conflict) does it rebase here and run CI again, eight runs at most. A branch GitHub already
   rebased onto `main` counts as landed (`git cherry`).
@@ -34,8 +34,8 @@ only way commits reach `main`: nobody, admin included, lands a SHA without a gre
   GitHub: when `main` moved, it stops and names the manual fix, since a plain rebase flattens the merge.
 - **It never overwrites commits only origin's branch has** (another machine, GitHub's "Update branch"): it stops and
   says how to bring them in. Keep the bare lease plus `--force-if-includes` (`DETAILS.md` § Gotcha: the branch push).
-- ❌ **Don't use the PR page's merge button.** `pnpm land` is the way to land: it picks the fast-forward when it can (a
-  verified `main` push skips the suite), handles merge-commit branches, syncs local `main`, and tidies the branch.
+- ❌ **Don't use the PR page's merge button.** `pnpm land` is the way to land: it picks the fast-forward when it can
+  (the SHAs CI tested), handles merge-commit branches, syncs local `main`, and tidies the branch.
 - **A newer push cancels the PR's running CI** (`cancel-in-progress` in `ci.yml`), so a watcher follows the newest run.
 - **The landing push uses `--no-verify`.** CI passed on that exact SHA, and a pre-push hook that adds a commit would
   land something CI never saw.
