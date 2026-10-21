@@ -999,6 +999,7 @@ export {
   downloadUpdate,
   installUpdate,
   recordUpdateCheck,
+  updateBundlePath,
   updateCheckDueIn,
   updateWriteBlocker,
 } from './updates'

@@ -5197,11 +5197,13 @@ export const commands = {
    *  The frontend asks after a check finds an update and before the download starts. Skipping the
    *  download is the point: an install that can't write its own bundle would otherwise pull ~63 MB
    *  and rewrite nothing, once per poll interval, for as long as the app runs. It also gives the
-   *  user a reason for a failure they'd otherwise never see, since neither arrangement can be fixed
-   *  from inside the app.
+   *  user a reason for a failure they'd otherwise never see, since no blocker can be fixed from
+   *  inside the app.
    *
    *  Returns `None` outside a `.app` bundle too: there's no bundle to classify, and the check gate
-   *  (`skip_reason`) has already stopped that process from getting here.
+   *  (`skip_reason`) has already stopped that process from getting here. A classification that
+   *  doesn't finish in [`CLASSIFY_TIMEOUT`] (a stalled mount under the bundle) answers `None` as
+   *  well: the installer runs the same check again before writing anything.
    */
   updateWriteBlocker: () =>
     typedError<
@@ -5212,9 +5214,25 @@ export const commands = {
       | 'translocated'
       // The bundle lives on a read-only volume, which in practice means a `.dmg` still mounted.
       | 'readOnlyVolume'
+      /**
+       *  This user can't write into the bundle (it belongs to another account, typically `root`), and
+       *  they're an administrator: Finder can replace the app after their password.
+       */
+      | 'notWritableAdminUser'
+      /**
+       *  This user can't write into the bundle and isn't an administrator (or we couldn't tell): only
+       *  whoever manages this Mac can update it.
+       */
+      | 'notWritableStandardUser'
       | null,
       string
     >(__TAURI_INVOKE('update_write_blocker')),
+  /**
+   *  The running bundle's path, for the notice that asks someone to replace it ("`/Applications/Cmdr.app`
+   *  belongs to another account"), so it names the real folder and app name. `None` outside a bundle.
+   *  No filesystem access: it walks up from the executable's own path.
+   */
+  updateBundlePath: () => __TAURI_INVOKE<string | null>('update_bundle_path'),
   /**
    *  Downloads the update the last check offered and verifies its minisign signature. Takes no URL:
    *  the backend fetches only what it offered, so a bypassed frontend can't stage anything else.
@@ -6396,11 +6414,12 @@ export type BulkRenameStarted = {
 export type BulkRenameWarning = 'extensionChanged' | 'cycle'
 
 /**
- *  Why this install can't apply an update, when the reason is where the bundle SITS rather than
- *  anything about the update itself.
+ *  Why this install can't apply an update, when the reason is where the bundle SITS or who owns it,
+ *  rather than anything about the update itself.
  *
- *  Both variants ask the same thing of the user (move Cmdr into Applications), and they're kept
- *  apart so the log and the `update_check` event can say which arrangement produced the number.
+ *  The first two ask the user to move Cmdr into Applications; the last two to replace it (or have it
+ *  replaced). They're kept apart so the log and the `update_check` event can say which arrangement
+ *  produced the number.
  */
 export type BundleWriteBlocker =
   /**
@@ -6410,6 +6429,16 @@ export type BundleWriteBlocker =
   | 'translocated'
   // The bundle lives on a read-only volume, which in practice means a `.dmg` still mounted.
   | 'readOnlyVolume'
+  /**
+   *  This user can't write into the bundle (it belongs to another account, typically `root`), and
+   *  they're an administrator: Finder can replace the app after their password.
+   */
+  | 'notWritableAdminUser'
+  /**
+   *  This user can't write into the bundle and isn't an administrator (or we couldn't tell): only
+   *  whoever manages this Mac can update it.
+   */
+  | 'notWritableStandardUser'
 
 /**
  *  What the reversal after a cancel managed to undo, and what it left alone.
@@ -18025,6 +18054,12 @@ export type UpdateInstallError =
    *  that isn't a Cmdr release (or the release itself is broken): log it at error.
    */
   | { type: 'untrustedCodeSignature'; detail: string }
+  /**
+   *  This install can't write its own bundle (`BundleWriteBlocker`), caught by the installer's own
+   *  pre-flight check or by a write the sync was refused. The same answer `update_write_blocker`
+   *  gives, so the frontend raises the same notice. Not a failure: ❌ never log it at error.
+   */
+  | { type: 'unwritable'; blocker: BundleWriteBlocker }
   // The install ran and didn't finish.
   | { type: 'failed'; detail: string }
 

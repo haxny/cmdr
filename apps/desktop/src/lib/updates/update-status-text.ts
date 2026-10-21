@@ -7,12 +7,13 @@
  */
 import { tString } from '#lib/intl/messages.svelte.js'
 import { describeServerRequestFailure, serverRequestLogLevel } from '#lib/error-messages/server-request.js'
-import type { ManagedUpdateOutcome, UpdateFailure } from './update-state.svelte'
+import type { ManagedUpdateOutcome, UnwritableUpdate, UpdateFailure } from './update-state.svelte'
 
 export interface UpdateStatusReadable {
   status: 'idle' | 'checking' | 'downloading' | 'installing' | 'ready'
   failure: UpdateFailure | null
   managed: ManagedUpdateOutcome | null
+  unwritable: UnwritableUpdate | null
   previousVersion: string | null
   nextVersion: string | null
 }
@@ -27,6 +28,13 @@ function describeManagedOutcome(managed: ManagedUpdateOutcome): string {
   }
 }
 
+/** The sentence for an update this user can't write into the bundle: replace it by hand, or ask. */
+function describeUnwritableUpdate({ version, blocker }: UnwritableUpdate): string {
+  return blocker === 'notWritableAdminUser'
+    ? tString('updates.status.unwritableAdmin', { version })
+    : tString('updates.status.unwritableStandard', { version })
+}
+
 export function formatUpdateStatus(state: UpdateStatusReadable): string | null {
   if (state.failure !== null) return null
 
@@ -36,6 +44,7 @@ export function formatUpdateStatus(state: UpdateStatusReadable): string | null {
   switch (state.status) {
     case 'idle':
       if (state.managed !== null) return describeManagedOutcome(state.managed)
+      if (state.unwritable !== null) return describeUnwritableUpdate(state.unwritable)
       // Two sub-cases share idle. If we just finished a successful check (we have a previousVersion
       // and no nextVersion), say "no updates found". Before any check has run, say nothing.
       if (state.previousVersion !== null && state.nextVersion === null) {

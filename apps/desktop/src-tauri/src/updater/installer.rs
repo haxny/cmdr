@@ -4,24 +4,23 @@
 //! (Full Disk Access) permissions intact across updates.
 
 use std::collections::HashSet;
-use std::ffi::OsString;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_update_trust::{CodeSignatureRefusal, extract_tarball};
 
 use super::UpdateInstallError;
 use super::advisories::{self, SecurityNotice};
+use super::bundle_location::{self, BundleWriteBlocker};
 
 /// Error type for the sync pipeline (`sync_bundle` + its inner helpers).
 ///
-/// Carries both a formatted user-facing `message` and the original
-/// `io::ErrorKind` so the caller can decide to escalate to admin privileges
-/// on `PermissionDenied` without resorting to substring-matching the
-/// formatted text. Pre-fix the helpers stringified `io::Error` at every
+/// Carries both a formatted log `message` and the original `io::ErrorKind`
+/// so the caller can tell a permission refusal (`sync_failure`) from a broken
+/// install without substring-matching the formatted text. Pre-fix the helpers
+/// stringified `io::Error` at every
 /// boundary and the caller substring-matched English `"Permission denied"` /
 /// `"Operation not permitted"`, which silently failed on localized macOS.
 #[derive(Debug)]
@@ -52,10 +51,8 @@ impl SyncError {
         matches!(self.kind, io::ErrorKind::PermissionDenied)
     }
 
-    /// A read-only mount refuses root as flatly as it refuses the user, so this is the one write
-    /// failure where escalating to admin is guaranteed to buy nothing. Kept apart from
-    /// [`Self::is_permission_denied`] so the caller can say so instead of raising a prompt the
-    /// user can only cancel.
+    /// Kept apart from [`Self::is_permission_denied`] so the notice can name the read-only volume
+    /// (move Cmdr) rather than the account (replace Cmdr).
     fn is_read_only(&self) -> bool {
         matches!(self.kind, io::ErrorKind::ReadOnlyFilesystem)
     }
@@ -101,11 +98,9 @@ pub fn install(
     // destination unwritable is work nobody gets anything for. The frontend gates on the same
     // classification one step earlier; this arm is what keeps a direct caller honest.
     let bundle_path = running_bundle()?;
-    if let Some(blocker) = super::bundle_location::classify(&bundle_path) {
-        return Err(UpdateInstallError::from(format!(
-            "Cmdr is {blocker}, so it can't write the update into {}. It needs to be moved to Applications.",
-            bundle_path.display()
-        )));
+    if let Some(blocker) = bundle_location::classify(&bundle_path) {
+        log::info!("Not installing: {} is {blocker}", LogPrivate::dir_path(&bundle_path));
+        return Err(UpdateInstallError::Unwritable { blocker });
     }
 
     let staging_owned = staging_dir();
@@ -144,23 +139,8 @@ pub fn install(
         return Err("Staged app missing Contents/ directory".to_string().into());
     }
 
-    // Try direct sync first; escalate to admin privileges if permission denied
-    match sync_bundle(&staged_contents, &bundle_contents) {
-        Ok(()) => {}
-        Err(e) if e.is_read_only() => {
-            // The pre-flight classification missed it (a read-only mount nested inside the bundle,
-            // say). Escalating would only cost the user an admin prompt they can't win.
-            return Err(UpdateInstallError::from(format!(
-                "Cmdr is running from a read-only spot, so it can't write the update into {}. It needs to be moved to Applications. ({e})",
-                bundle_path.display()
-            )));
-        }
-        Err(e) if e.is_permission_denied() => {
-            log::info!("Direct write denied, escalating with admin privileges");
-            sync_with_admin_privileges(&staged_contents, &bundle_contents)?;
-        }
-        Err(e) => return Err(e.to_string().into()),
-    }
+    sync_bundle(&staged_contents, &bundle_contents)
+        .map_err(|e| sync_failure(e, bundle_location::not_writable_for_this_user))?;
 
     // Touch the .app bundle to trigger LaunchServices refresh
     touch_bundle(&bundle_path);
@@ -439,44 +419,23 @@ fn remove_empty_dirs(dir: &Path) {
     }
 }
 
-/// AppleScript that reads two positional arguments and feeds them through
-/// `quoted form of` before splicing into the shell command. This is the only safe way
-/// to forward filesystem paths into `do shell script` — interpolating the paths into
-/// the script text leaves them open to shell-injection (a `'` in any ancestor folder
-/// name escapes the single-quote wrapping and the rest of the path runs as root).
-const ADMIN_SYNC_SCRIPT: &str = "on run argv\n\
-    set src to item 1 of argv\n\
-    set dst to item 2 of argv\n\
-    do shell script \"rsync -a --delete \" & quoted form of src & \" \" & quoted form of dst with administrator privileges\n\
-end run";
-
-/// Builds the argv passed to `osascript`. Split out from [`sync_with_admin_privileges`]
-/// so it can be unit-tested without invoking the auth dialog.
-fn build_admin_sync_argv(staged_contents: &Path, bundle_contents: &Path) -> Vec<OsString> {
-    let mut src: OsString = staged_contents.as_os_str().to_os_string();
-    src.push("/"); // trailing slash for rsync
-    let mut dst: OsString = bundle_contents.as_os_str().to_os_string();
-    dst.push("/");
-    vec!["-e".into(), ADMIN_SYNC_SCRIPT.into(), src, dst]
-}
-
-/// Performs the file sync using `osascript` with admin privileges.
-/// Uses `rsync -a --delete` because it's the simplest way to express the full sync in a
-/// single shell command that macOS's `do shell script` can execute.
-fn sync_with_admin_privileges(staged_contents: &Path, bundle_contents: &Path) -> Result<(), String> {
-    let argv = build_admin_sync_argv(staged_contents, bundle_contents);
-
-    let output = Command::new("osascript")
-        .args(&argv)
-        .output()
-        .map_err(|e| format!("Couldn't run osascript: {e}"))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Admin sync didn't succeed: {stderr}"));
-    }
-
-    Ok(())
+/// What a sync that didn't finish tells the frontend.
+///
+/// A write refused on permissions or a read-only mount is the same "can't install it here" answer
+/// the pre-flight `bundle_location::classify` gives, reached when the probe missed it (a nested
+/// mount, a file flag). ❌ No escalation: on macOS 13+ App Management refuses an admin-run helper
+/// too, so a password prompt would only end in the same refusal (`DETAILS.md` § A bundle that
+/// can't be written). `not_writable` asks the admin question only when it's needed.
+fn sync_failure(e: SyncError, not_writable: impl Fn() -> BundleWriteBlocker) -> UpdateInstallError {
+    let blocker = if e.is_read_only() {
+        BundleWriteBlocker::ReadOnlyVolume
+    } else if e.is_permission_denied() {
+        not_writable()
+    } else {
+        return e.to_string().into();
+    };
+    log::info!("The sync was refused ({e}), so this install can't write its own bundle: {blocker}");
+    UpdateInstallError::Unwritable { blocker }
 }
 
 /// Touches the `.app` bundle directory to update its modification time.

@@ -930,6 +930,7 @@ macro_rules! ipc_command_manifest {
                 typed: [
                     crate::updater::check_for_update,
                     crate::updater::update_write_blocker,
+                    crate::updater::update_bundle_path,
                     crate::updater::download_update,
                     crate::updater::install_update,
                 ]

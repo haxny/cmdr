@@ -8,6 +8,22 @@
 import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
 import type { SecurityNotice, ServerRequestError, UpdateCheckOutcome } from '#lib/ipc/bindings.js'
 
+/** The blockers about WHERE the bundle sits: the "move Cmdr to Applications" dialog's. */
+export type LocationBlocker = Extract<BundleWriteBlocker, 'translocated' | 'readOnlyVolume'>
+
+/** The blockers about WHO may write the bundle: the unwritable-bundle toast's. */
+export type PermissionBlocker = Exclude<BundleWriteBlocker, LocationBlocker>
+
+export function isPermissionBlocker(blocker: BundleWriteBlocker): blocker is PermissionBlocker {
+  return blocker === 'notWritableAdminUser' || blocker === 'notWritableStandardUser'
+}
+
+/** An update this install found but can't write into its own bundle, and why. */
+export interface UnwritableUpdate {
+  version: string
+  blocker: PermissionBlocker
+}
+
 /** The update the last check found and staged. The backend keeps where it came from; the frontend needs the version. */
 export interface UpdateInfo {
   version: string
@@ -44,6 +60,12 @@ export interface UpdateState {
   failure: UpdateFailure | null
   /** The organization's answer to the last check, or `null`. Cleared when a check starts. */
   managed: ManagedUpdateOutcome | null
+  /**
+   * An update the last check found that this user can't write into the bundle (a root-owned `.pkg` install), or
+   * `null`. A terminal phase like `managed`, ❌ not a failure: Settings words it from the catalog. Cleared when a check
+   * starts.
+   */
+  unwritable: UnwritableUpdate | null
   /** Version the user is currently running. Set when `checking` starts. */
   previousVersion: string | null
   /** Version we're moving to. Set when an update is found. Cleared on `idle`. */
@@ -61,6 +83,7 @@ export const updateState = $state<UpdateState>({
   update: null,
   failure: null,
   managed: null,
+  unwritable: null,
   previousVersion: null,
   nextVersion: null,
   securityNotice: null,
@@ -73,4 +96,4 @@ export const updateState = $state<UpdateState>({
  * it's the one thing we can do for an install that will never finish one. `+layout.svelte` mounts
  * the dialog off this, and `updater.svelte.ts` raises it.
  */
-export const updateBlockerNotice = $state<{ blocker: BundleWriteBlocker | null }>({ blocker: null })
+export const updateBlockerNotice = $state<{ blocker: LocationBlocker | null }>({ blocker: null })

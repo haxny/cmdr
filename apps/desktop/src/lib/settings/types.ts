@@ -504,6 +504,8 @@ export interface SettingsValues {
   'whatsNew.showOnUpdate': boolean
   /** Hidden: the version we last showed the user in the "What's new" popup (`''` = never stamped). */
   'whatsNew.lastSeenVersion': string
+  /** Hidden: the update version the "can't install it here" notice last named (`''` = never shown). */
+  'updates.unwritableNoticeVersion': string
 
   // Analytics (beta usage stats + optional contact email)
   'analytics.enabled': boolean

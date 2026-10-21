@@ -2,11 +2,11 @@
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import Button from '#lib/ui/Button.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
-    import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
+    import type { LocationBlocker } from './update-state.svelte'
 
     interface Props {
         /** Which arrangement is keeping the update out of the bundle. */
-        blocker: BundleWriteBlocker
+        blocker: LocationBlocker
         /** Called when the dialog is closed. */
         onClose: () => void
     }

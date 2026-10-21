@@ -33,6 +33,10 @@ use tauri::State;
 const MANIFEST_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const MANIFEST_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// How long `update_write_blocker` waits on the bundle's `statfs` and folder walk. Milliseconds on a
+/// local disk; the bound is for a bundle on a mount that stopped answering.
+const CLASSIFY_TIMEOUT: Duration = Duration::from_secs(5);
+
 // Per-call timeouts for the tarball download. No overall `timeout` here: a 60+ MB
 // download on a slow connection can legitimately take minutes. `read_timeout` bounds
 // "no bytes received in N seconds" instead, which catches mid-download stalls without
@@ -287,25 +291,38 @@ async fn fetch_manifest(url: &str) -> Result<manifest::UpdateManifest, crate::se
 /// The frontend asks after a check finds an update and before the download starts. Skipping the
 /// download is the point: an install that can't write its own bundle would otherwise pull ~63 MB
 /// and rewrite nothing, once per poll interval, for as long as the app runs. It also gives the
-/// user a reason for a failure they'd otherwise never see, since neither arrangement can be fixed
-/// from inside the app.
+/// user a reason for a failure they'd otherwise never see, since no blocker can be fixed from
+/// inside the app.
 ///
 /// Returns `None` outside a `.app` bundle too: there's no bundle to classify, and the check gate
-/// (`skip_reason`) has already stopped that process from getting here.
+/// (`skip_reason`) has already stopped that process from getting here. A classification that
+/// doesn't finish in [`CLASSIFY_TIMEOUT`] (a stalled mount under the bundle) answers `None` as
+/// well: the installer runs the same check again before writing anything.
 #[tauri::command]
 #[specta::specta]
 pub async fn update_write_blocker() -> Result<Option<BundleWriteBlocker>, String> {
     let Ok(bundle) = installer::running_bundle() else {
         return Ok(None);
     };
-    let blocker = bundle_location::classify(&bundle);
+    let probe = bundle.clone();
+    let blocker =
+        cmdr_fs::deadline::blocking_with_timeout(CLASSIFY_TIMEOUT, None, move || bundle_location::classify(&probe))
+            .await;
     if let Some(reason) = blocker {
-        log::warn!(
-            "Can't install updates into {}: {reason}. The user needs to move Cmdr to Applications.",
-            LogPrivate::dir_path(&bundle)
-        );
+        log::warn!("Can't install updates into {}: {reason}", LogPrivate::dir_path(&bundle));
     }
     Ok(blocker)
+}
+
+/// The running bundle's path, for the notice that asks someone to replace it ("`/Applications/Cmdr.app`
+/// belongs to another account"), so it names the real folder and app name. `None` outside a bundle.
+/// No filesystem access: it walks up from the executable's own path.
+#[tauri::command]
+#[specta::specta]
+pub fn update_bundle_path() -> Option<String> {
+    installer::running_bundle()
+        .ok()
+        .map(|bundle| bundle.to_string_lossy().into_owned())
 }
 
 /// Why a tarball download didn't leave a verified file behind. The frontend picks the log level
@@ -453,6 +470,10 @@ pub enum UpdateInstallError {
     /// its archive passed minisign. Nothing was written. Means the updater key signed something
     /// that isn't a Cmdr release (or the release itself is broken): log it at error.
     UntrustedCodeSignature { detail: String },
+    /// This install can't write its own bundle (`BundleWriteBlocker`), caught by the installer's own
+    /// pre-flight check or by a write the sync was refused. The same answer `update_write_blocker`
+    /// gives, so the frontend raises the same notice. Not a failure: ❌ never log it at error.
+    Unwritable { blocker: BundleWriteBlocker },
     /// The install ran and didn't finish.
     Failed { detail: String },
 }

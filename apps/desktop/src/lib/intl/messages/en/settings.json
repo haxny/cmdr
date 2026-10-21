@@ -1764,6 +1764,14 @@
   "@settings.whatsNew.lastSeenVersion.description": {
     "description": "Internal help text for the last-seen-version flag (not user-facing). “What’s new” is the Cmdr popup name; translate consistently with the what's-new copy elsewhere. The apostrophe is curly (U+2019)."
   },
+  "settings.updates.unwritableNoticeVersion.label": "Last version of the “can’t install it here” notice",
+  "@settings.updates.unwritableNoticeVersion.label": {
+    "description": "Internal, hidden-from-UI label for the stored version the updater last named in its notice that Cmdr can’t install an update into this Mac’s copy of the app. Surfaces only in settings search. The apostrophes are curly (U+2019)."
+  },
+  "settings.updates.unwritableNoticeVersion.description": "Internal: the update version Cmdr last told you it can’t install here, so each version gets one notice. Hidden from the UI.",
+  "@settings.updates.unwritableNoticeVersion.description": {
+    "description": "Internal help text for the hidden stamp behind the updater’s “can’t install it here” notice (not user-facing). The apostrophe is curly (U+2019)."
+  },
   "settings.analytics.enabled.label": "Send usage stats",
   "@settings.analytics.enabled.label": {
     "description": "Label for the usage-stats opt-in toggle. In Settings > Updates & privacy. \"stats\" = statistics.",

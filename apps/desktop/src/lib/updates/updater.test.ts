@@ -203,6 +203,7 @@ describe('formatUpdateStatus', () => {
         status: 'checking',
         failure: null,
         managed: null,
+        unwritable: null,
         previousVersion: '1.2.3',
         nextVersion: null,
       }),
@@ -211,13 +212,27 @@ describe('formatUpdateStatus', () => {
 
   it('returns no-updates string for idle after a successful check', () => {
     expect(
-      formatUpdateStatus({ status: 'idle', failure: null, managed: null, previousVersion: '1.2.3', nextVersion: null }),
+      formatUpdateStatus({
+        status: 'idle',
+        failure: null,
+        managed: null,
+        unwritable: null,
+        previousVersion: '1.2.3',
+        nextVersion: null,
+      }),
     ).toBe('No updates found. Current version: v1.2.3')
   })
 
   it('returns empty string for idle before any check has run', () => {
     expect(
-      formatUpdateStatus({ status: 'idle', failure: null, managed: null, previousVersion: null, nextVersion: null }),
+      formatUpdateStatus({
+        status: 'idle',
+        failure: null,
+        managed: null,
+        unwritable: null,
+        previousVersion: null,
+        nextVersion: null,
+      }),
     ).toBe('')
   })
 
@@ -227,6 +242,7 @@ describe('formatUpdateStatus', () => {
         status: 'downloading',
         failure: null,
         managed: null,
+        unwritable: null,
         previousVersion: '1.2.3',
         nextVersion: '1.3.0',
       }),
@@ -239,6 +255,7 @@ describe('formatUpdateStatus', () => {
         status: 'installing',
         failure: null,
         managed: null,
+        unwritable: null,
         previousVersion: '1.2.3',
         nextVersion: '1.3.0',
       }),
@@ -251,6 +268,7 @@ describe('formatUpdateStatus', () => {
         status: 'idle',
         failure: { phase: 'install' },
         managed: null,
+        unwritable: null,
         previousVersion: '1.2.3',
         nextVersion: null,
       }),

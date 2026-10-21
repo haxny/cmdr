@@ -10,14 +10,14 @@ import { describe, it, vi, expect } from 'vitest'
 import { mount, tick } from 'svelte'
 import MoveToApplicationsDialog from './MoveToApplicationsDialog.svelte'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
-import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
+import type { LocationBlocker } from './update-state.svelte'
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-async function mountDialog(blocker: BundleWriteBlocker, onClose = vi.fn()): Promise<HTMLElement> {
+async function mountDialog(blocker: LocationBlocker, onClose = vi.fn()): Promise<HTMLElement> {
   const target = document.createElement('div')
   document.body.appendChild(target)
   mount(MoveToApplicationsDialog, { target, props: { blocker, onClose } })

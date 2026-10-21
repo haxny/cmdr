@@ -55,6 +55,10 @@ export type UpdateCheckFailure =
   | 'translocated'
   /** The bundle sits on a read-only volume, in practice a mounted disk image. */
   | 'read_only_volume'
+  /** This user can't write the bundle (a root-owned `.pkg` install, say), and is an administrator. */
+  | 'not_writable_admin_user'
+  /** This user can't write the bundle and isn't an administrator (or we couldn't tell). */
+  | 'not_writable_standard_user'
 
 /**
  * What set this check going: `startup`, `poll`, `auto_check_on` (the `updates.autoCheck` switch or the onboarding
@@ -98,5 +102,14 @@ export function reportUpdateCheck(report: UpdateCheckReport): void {
 /** The blocker's analytics token. Separate from the IPC spelling so a rename of one can't
  * silently split one number into two on the dashboard. */
 export function blockerFailure(blocker: BundleWriteBlocker): UpdateCheckFailure {
-  return blocker === 'translocated' ? 'translocated' : 'read_only_volume'
+  switch (blocker) {
+    case 'translocated':
+      return 'translocated'
+    case 'readOnlyVolume':
+      return 'read_only_volume'
+    case 'notWritableAdminUser':
+      return 'not_writable_admin_user'
+    case 'notWritableStandardUser':
+      return 'not_writable_standard_user'
+  }
 }

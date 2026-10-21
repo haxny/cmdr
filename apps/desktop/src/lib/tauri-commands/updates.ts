@@ -29,6 +29,14 @@ export async function updateWriteBlocker(): Promise<BundleWriteBlocker | null> {
 }
 
 /**
+ * The running `.app` bundle's path, or `null` outside one. The unwritable-bundle notice names it, so the person reads
+ * the real folder and app name.
+ */
+export async function updateBundlePath(): Promise<string | null> {
+  return commands.updateBundlePath()
+}
+
+/**
  * Fetches `latest.json` and answers what it found, with the organization's policy applied (the backend decides; a
  * managed outcome is an answer, not a failure). `trigger` tells the backend whether this is a background check. A check
  * that doesn't land throws a `ServerRequestFailure`, which the updater words and logs at the level it earns.

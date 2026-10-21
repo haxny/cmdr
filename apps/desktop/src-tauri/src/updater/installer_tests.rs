@@ -71,7 +71,7 @@ fn sync_error_classifies_permission_denied_by_io_kind_not_message() {
     // Regression for the medium-severity audit finding: pre-fix the
     // installer substring-matched English `"Permission denied"` and
     // `"Operation not permitted"`, so localized macOS systems never
-    // reached the admin-escalation arm and updates silently failed.
+    // reached the permission arm and updates silently failed.
     // The typed variant must trigger regardless of message wording.
     let err = SyncError::from_io(
         || "Couldn't copy /a -> /b".to_string(),
@@ -87,48 +87,73 @@ fn sync_error_classifies_permission_denied_by_io_kind_not_message() {
     };
     assert!(localized_message_err.is_permission_denied());
 
-    // Other I/O failures must NOT escalate.
+    // Other I/O failures aren't permission refusals.
     let other = SyncError::from_io(|| "Couldn't copy".to_string(), io::Error::from(io::ErrorKind::NotFound));
     assert!(!other.is_permission_denied());
 }
 
+/// The safety net under the pre-flight probe: a write refused on permissions mid-sync is the same
+/// "can't install it here" notice the probe would have raised, ❌ never an admin prompt (on macOS
+/// 13+ App Management refuses that one too) and ❌ never a failure that files an error report.
 #[test]
-fn build_admin_sync_argv_keeps_malicious_dest_as_single_argument() {
-    // Bundle path with an embedded single quote and a shell metacharacter sequence
-    // that would inject a command if the path were splatted into the script text.
-    let staged = Path::new("/private/tmp/cmdr-update-staging-default/Cmdr.app/Contents");
-    let dest = Path::new("/Applications/Don't '; touch /tmp/pwned; '.app/Contents");
-
-    let argv = build_admin_sync_argv(staged, dest);
-
-    assert_eq!(argv[0], "-e", "first arg must be the -e flag");
-    assert_eq!(argv[1], ADMIN_SYNC_SCRIPT, "second arg must be the constant script");
-    // The malicious dest stays a single argv entry; nothing from the path leaks into
-    // the script template, so `quoted form of` (inside the script) handles the quote
-    // safely at runtime.
+fn a_permission_refusal_during_the_sync_is_the_unwritable_notice() {
+    let err = SyncError::from_io(
+        || "Couldn't rename /a -> /b".to_string(),
+        io::Error::from(io::ErrorKind::PermissionDenied),
+    );
     assert_eq!(
-        argv[3].to_string_lossy(),
-        "/Applications/Don't '; touch /tmp/pwned; '.app/Contents/"
-    );
-    // Script template must NOT mention the dest path; it must reference positional args only.
-    assert!(
-        !ADMIN_SYNC_SCRIPT.contains("pwned") && !ADMIN_SYNC_SCRIPT.contains("Don't"),
-        "script template must be a constant, not built from path strings"
-    );
-    // And it MUST use AppleScript's own quoter (defense against future edits).
-    assert!(
-        ADMIN_SYNC_SCRIPT.contains("quoted form of"),
-        "script must pass paths through `quoted form of` before shelling out"
+        sync_failure(err, || BundleWriteBlocker::NotWritableStandardUser),
+        UpdateInstallError::Unwritable {
+            blocker: BundleWriteBlocker::NotWritableStandardUser
+        }
     );
 }
 
 #[test]
-fn build_admin_sync_argv_appends_trailing_slash_for_rsync() {
-    let staged = Path::new("/tmp/staged/Contents");
-    let dest = Path::new("/Applications/Cmdr.app/Contents");
-    let argv = build_admin_sync_argv(staged, dest);
-    assert!(argv[2].to_string_lossy().ends_with("/Contents/"));
-    assert!(argv[3].to_string_lossy().ends_with("/Contents/"));
+fn a_read_only_refusal_during_the_sync_names_the_read_only_volume() {
+    let err = SyncError::from_io(
+        || "Couldn't rename /a -> /b".to_string(),
+        io::Error::from(io::ErrorKind::ReadOnlyFilesystem),
+    );
+    assert_eq!(
+        sync_failure(err, || BundleWriteBlocker::NotWritableAdminUser),
+        UpdateInstallError::Unwritable {
+            blocker: BundleWriteBlocker::ReadOnlyVolume
+        }
+    );
+}
+
+#[test]
+fn any_other_sync_failure_stays_a_failure() {
+    let err = SyncError::from_io(|| "Couldn't copy".to_string(), io::Error::from(io::ErrorKind::NotFound));
+    assert!(matches!(
+        sync_failure(err, || BundleWriteBlocker::NotWritableAdminUser),
+        UpdateInstallError::Failed { .. }
+    ));
+}
+
+/// The real syscalls, end to end: syncing into a bundle folder this user can't write surfaces as
+/// `PermissionDenied`, which is what routes it to the notice above.
+#[test]
+fn syncing_into_a_folder_the_user_cant_write_is_refused_on_permissions() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let staged = tempfile::tempdir().unwrap();
+    let installed = tempfile::tempdir().unwrap();
+    for root in [staged.path(), installed.path()] {
+        fs::create_dir_all(root.join("MacOS")).unwrap();
+    }
+    fs::write(staged.path().join("MacOS/Cmdr"), "new").unwrap();
+    fs::write(installed.path().join("MacOS/Cmdr"), "old").unwrap();
+    let locked = installed.path().join("MacOS");
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o555)).unwrap();
+
+    let result = sync_bundle(staged.path(), installed.path());
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+
+    let err = result.expect_err("a read-only folder must refuse the sync");
+    assert!(err.is_permission_denied(), "expected PermissionDenied, got {err}");
+    assert_eq!(fs::read_to_string(locked.join("Cmdr")).unwrap(), "old");
 }
 
 /// A staged `Cmdr.app` whose `Info.plist` names `version` (`None`: no version key).

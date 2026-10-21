@@ -5,11 +5,11 @@
  * and each value renders a different first paragraph, so both get a state.
  */
 
-import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
+import type { LocationBlocker } from '#lib/updates/update-state.svelte.js'
 
 /** Props of `MoveToApplicationsDialog.svelte`, minus its callback. */
 export interface MoveToApplicationsFixture {
-  blocker: BundleWriteBlocker
+  blocker: LocationBlocker
 }
 
 /** Keyed by the `move-to-applications` entry's state ids in `gallery-registry.ts`. */

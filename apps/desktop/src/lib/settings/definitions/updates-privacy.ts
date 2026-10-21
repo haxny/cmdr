@@ -6,6 +6,8 @@
  * renders on the Advanced page): it's a hidden state flag colocated with the
  * `whatsNew.showOnUpdate` setting it pairs with, and its authored position in the
  * registry is preserved so the full array order stays byte-for-byte identical.
+ * `updates.unwritableNoticeVersion` is the same kind of hidden stamp, for the
+ * updater's "can't install it here" notice.
  */
 
 import type { SettingDefinitionSource } from '../types'
@@ -41,6 +43,16 @@ export const updatesPrivacySettings: SettingDefinitionSource[] = [
     section: ['Advanced'],
     labelKey: 'settings.whatsNew.lastSeenVersion.label',
     descriptionKey: 'settings.whatsNew.lastSeenVersion.description',
+    type: 'string',
+    default: '',
+    component: 'text-input',
+    hidden: true,
+  },
+  {
+    id: 'updates.unwritableNoticeVersion',
+    section: ['Advanced'],
+    labelKey: 'settings.updates.unwritableNoticeVersion.label',
+    descriptionKey: 'settings.updates.unwritableNoticeVersion.description',
     type: 'string',
     default: '',
     component: 'text-input',
