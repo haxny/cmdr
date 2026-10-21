@@ -268,9 +268,21 @@ row two's file (#523).
   patches can't tell a twin from its sibling.
 - **A copy keeps both.** The second twin meets the first as a clash, settled by the conflict policy:
   `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A source listing one name twice".
-- **Known edges**: a row path shows its NUL wherever the frontend prints a path (an error naming a twin, a twin folder's
-  breadcrumb), and `Path::parent` of a twin in engine code (the transfer tree's common root, bulk rename's same-folder
-  check) sees the pick as a folder. None of them reaches the wrong object.
+- **The grammar is backend-blind** (`cmdr_fs::twin_path`): `folder_of`, `unpicked`, and `shown`, so engine code steps
+  over a pick without knowing MTP. `twins.rs` adds only that the id is an object handle.
+- **A destination never carries a pick.** A new name built as `Path::parent(row).join(new)` means `folder/new`:
+  `MtpVolume`'s `rename`, `create_directory`, and `write_from_stream` take `twin_path::unpicked` of it before the
+  no-clobber check, and so does a bulk rename's start (`cmdr-operations/src/rename/bulk.rs`), which compares rows by
+  `folder_of` (a twin and its plain destination are one folder, never a cross-folder rename). The transfer tree hangs a
+  twin off its real folder too (`transfer_tree/build.rs`).
+- **❌ A pick never reaches a person.** `twin_path::shown` (Rust) and `displayPath`
+  (`apps/desktop/src/lib/utils/display-path.ts`, the same rule) take every pick out of text holding a path, at the few
+  places a path becomes something read, copied, or sent: `McpResponse::into_shown` (every MCP reply),
+  `redact::display_line` (the terminal and Help > View debug log; the file keeps it for reports), the transfer tree's
+  labels, and on the frontend `t()` (every catalog sentence's params), `esc()` (every error-copy param),
+  `copyToClipboard` (all copied text), the breadcrumb readout, and the copied-path toast. A breadcrumb click below a
+  twin folder still reaches that twin (`breadcrumb-navigation.ts::realInnerPrefix`). A new surface printing a raw path
+  goes through one of these, or calls the formatter itself.
 
 Pinned by `connection/same_name_test.rs` and `volume/twins_test.rs` on the virtual device (backed by a real folder,
 which can't hold twins, so `testing::make_twins` has one object answer to another's name through

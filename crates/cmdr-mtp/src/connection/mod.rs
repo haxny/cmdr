@@ -339,7 +339,8 @@ impl MtpConnectionManager {
 
     /// Test-only: from now on the device reports object `handle` as `name`, and
     /// every cached listing of the device is dropped so the next one asks it.
-    #[cfg(any(test, feature = "testing"))]
+    /// Its one caller, `testing::make_twins`, needs a virtual device too.
+    #[cfg(all(feature = "virtual-device", any(test, feature = "testing")))]
     pub(crate) async fn report_object_as_for_test(&self, device_id: &str, handle: mtp_rs::ObjectHandle, name: &str) {
         use cmdr_fs::ignore_poison::RwLockIgnorePoison;
         self.reported_names

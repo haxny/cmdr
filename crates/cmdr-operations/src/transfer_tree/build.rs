@@ -302,11 +302,16 @@ impl PathTree {
     }
 }
 
-/// A source's top-level row label: its path relative to the selection's root.
+/// A source's top-level row label: its path relative to the selection's root,
+/// as a person reads it (a twin's pick taken out, `cmdr_fs::twin_path::shown`).
 fn source_label<'a>(root: &Path, source: &'a Path) -> std::borrow::Cow<'a, str> {
-    match source.strip_prefix(root) {
+    let label = match source.strip_prefix(root) {
         Ok(relative) if !relative.as_os_str().is_empty() => relative.to_string_lossy(),
         _ => source.to_string_lossy(),
+    };
+    match label {
+        std::borrow::Cow::Borrowed(text) => cmdr_fs::twin_path::shown(text),
+        std::borrow::Cow::Owned(text) => std::borrow::Cow::Owned(cmdr_fs::twin_path::shown(&text).into_owned()),
     }
 }
 
@@ -337,9 +342,12 @@ pub(crate) fn sort_sources(sources: &mut [PathBuf], is_folder: impl Fn(&Path) ->
     }
 }
 
-/// The deepest folder every source sits in.
+/// The deepest folder every source sits in. A twin's row path sits in the
+/// folder past its pick (`cmdr_fs::twin_path::folder_of`).
 fn common_ancestor(sources: &[PathBuf]) -> PathBuf {
-    let mut parents = sources.iter().map(|source| source.parent().unwrap_or(source));
+    let mut parents = sources
+        .iter()
+        .map(|source| cmdr_fs::twin_path::folder_of(source).unwrap_or(source));
     let Some(first) = parents.next() else {
         return PathBuf::new();
     };

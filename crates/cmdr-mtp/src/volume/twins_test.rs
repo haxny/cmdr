@@ -134,3 +134,30 @@ async fn deleting_a_twin_row_through_the_volume_deletes_that_object() {
 
     device.teardown(test_connection_manager()).await;
 }
+
+/// ❗ A destination built as `Path::parent(row).join(new)` carries the twin's
+/// pick, and must still see a name the folder holds: else the no-clobber check
+/// reads it as free and the device adds a second item under that name.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_rename_spelled_under_a_twins_pick_still_sees_a_taken_name() {
+    let _guard = device_lock().await;
+    let (device, volume, _notes, report) = twins_on_a_volume().await;
+    volume
+        .create_directory(Path::new("/Documents/taken"))
+        .await
+        .expect("making the clashing folder");
+    let under_the_pick = Path::new(&report.path)
+        .parent()
+        .expect("a row has a parent")
+        .join("taken");
+
+    let outcome = volume.rename(Path::new(&report.path), &under_the_pick, false).await;
+
+    assert!(
+        matches!(&outcome, Err(VolumeError::AlreadyExists(_))),
+        "the name is taken, got {outcome:?}"
+    );
+    assert_eq!(on_disk(&device, "report.txt").as_deref(), Some(REPORT), "nothing moved");
+
+    device.teardown(test_connection_manager()).await;
+}

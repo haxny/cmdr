@@ -98,6 +98,27 @@ fn sources_under_different_parents_hang_off_their_common_ancestor_as_relative_la
     );
 }
 
+/// ❗ Regression anchor (#523): a twin's row path carries a pick before its
+/// name (`cmdr_fs::twin_path`), and `Path::parent` answered the pick, so the
+/// tree hung off it and a row read `␀2/IMG_1.JPG`. The root is the real folder
+/// and every label reads as the plain name.
+#[test]
+fn twin_sources_hang_off_their_real_folder_under_their_plain_names() {
+    let twin = |id| {
+        PathBuf::from("/DCIM")
+            .join(cmdr_fs::twin_path::pick_segment(id))
+            .join("IMG_1.JPG")
+    };
+    let recorder = TreeRecorder::new(&[twin(1), twin(2), PathBuf::from("/DCIM/notes.txt")], english());
+    recorder.file(&twin(1), 1);
+    recorder.file(&twin(2), 2);
+    recorder.file(Path::new("/DCIM/notes.txt"), 3);
+
+    let model = recorder.finish().expect("the tree builds");
+
+    assert_eq!(outline(&model), vec!["IMG_1.JPG 1 B", "IMG_1.JPG 2 B", "notes.txt 3 B"]);
+}
+
 /// The order a driver takes its sources in is the order their rows list in:
 /// folders first, then by the label each row shows, which for sources under
 /// different parents is the path below their common ancestor.

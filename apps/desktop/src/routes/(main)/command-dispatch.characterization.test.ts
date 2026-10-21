@@ -369,6 +369,18 @@ describe('characterization — entry-under-cursor arms', () => {
     })
   })
 
+  // A same-named twin's row path carries a NUL pick: the toast confirming the
+  // copy shows the plain path (the clipboard writer strips its own copy).
+  it('file.copyPath → the copied-path toast shows a twin’s plain path', async () => {
+    const explorer = makeExplorerSpy()
+    explorer.getPathToCopyUnderCursor.mockReturnValue('/DCIM/\u00004242/IMG_1.JPG')
+    await handleCommandExecute('file.copyPath', makeCtx(explorer))
+    expect(addToast).toHaveBeenCalledWith(
+      CopiedPathToastContent,
+      expect.objectContaining({ props: { path: '/DCIM/IMG_1.JPG' } }),
+    )
+  })
+
   it('file.copyPath → no-op when no row is under the cursor', async () => {
     const explorer = makeExplorerSpy()
     explorer.getPathToCopyUnderCursor.mockReturnValue(null)

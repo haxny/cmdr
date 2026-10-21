@@ -12,11 +12,15 @@
  */
 
 import { escapeMarkdown } from './markdown-escape'
+import { displayPath } from '#lib/utils/display-path.js'
 import { systemStrings } from '#lib/system-strings.svelte.js'
 
-/** Escape an untrusted runtime param for safe insertion into a markdown template. */
+/**
+ * Escape an untrusted runtime param for safe insertion into a markdown template.
+ * A path in it reads with a same-named twin's pick taken out (`displayPath`).
+ */
 export function esc(value: string): string {
-  return escapeMarkdown(value)
+  return escapeMarkdown(displayPath(value))
 }
 
 /**

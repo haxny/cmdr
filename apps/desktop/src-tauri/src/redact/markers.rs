@@ -299,10 +299,9 @@ pub(crate) fn display_line(line: &str) -> Cow<'_, str> {
         };
         match closer {
             Some(closer) => {
-                push_for_display(
-                    &mut out,
-                    &decode(&line[marker.end..markers[closer].start], marker.depth),
-                );
+                // A same-named twin's pick never reaches a reader (`cmdr_fs::twin_path`).
+                let value = decode(&line[marker.end..markers[closer].start], marker.depth);
+                push_for_display(&mut out, &cmdr_fs::twin_path::shown(&value));
                 pos = markers[closer].end;
                 next = closer + 1;
             }

@@ -78,6 +78,40 @@ impl McpResponse {
             }),
         }
     }
+
+    /// This response as it leaves for the client: every string in it, a path
+    /// or text holding one, reads with a same-named twin's pick taken out
+    /// (`cmdr_fs::twin_path::shown`). The one place every reply passes, so no
+    /// resource or tool has to remember it; a twin is then addressed by its
+    /// plain path, which a path-only call refuses as ambiguous.
+    pub fn into_shown(mut self) -> Self {
+        if let Some(result) = self.result.as_mut() {
+            show_strings(result);
+        }
+        if let Some(error) = self.error.as_mut() {
+            if let std::borrow::Cow::Owned(message) = cmdr_fs::twin_path::shown(&error.message) {
+                error.message = message;
+            }
+            if let Some(data) = error.data.as_mut() {
+                show_strings(data);
+            }
+        }
+        self
+    }
+}
+
+/// Every string in `value`, nested ones too, with a twin's pick taken out.
+fn show_strings(value: &mut Value) {
+    match value {
+        Value::String(text) => {
+            if let std::borrow::Cow::Owned(shown) = cmdr_fs::twin_path::shown(text) {
+                *text = shown;
+            }
+        }
+        Value::Array(items) => items.iter_mut().for_each(show_strings),
+        Value::Object(fields) => fields.values_mut().for_each(show_strings),
+        _ => {}
+    }
 }
 
 /// Server capabilities returned during initialization.
@@ -152,6 +186,25 @@ impl Default for ServerCapabilities {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    /// ❗ A same-named twin's row path carries a NUL pick (`cmdr_fs::twin_path`):
+    /// no reply shows it, in a result's text, nested JSON, or an error.
+    #[test]
+    fn a_reply_shows_a_twin_row_path_as_its_plain_path() {
+        let twin = format!("/DCIM/{}/IMG_1.JPG", cmdr_fs::twin_path::pick_segment(4242));
+        let reply = McpResponse::success(
+            Some(json!(1)),
+            json!({"content": [{"type": "text", "text": format!("cursor: {twin}")}], "paths": [twin]}),
+        )
+        .into_shown();
+        let refusal = McpResponse::error(Some(json!(2)), INVALID_PARAMS, format!("can't open {twin}")).into_shown();
+
+        assert_eq!(
+            serde_json::to_value(&reply).expect("serializes")["result"],
+            json!({"content": [{"type": "text", "text": "cursor: /DCIM/IMG_1.JPG"}], "paths": ["/DCIM/IMG_1.JPG"]})
+        );
+        assert_eq!(refusal.error.expect("an error").message, "can't open /DCIM/IMG_1.JPG");
+    }
 
     #[test]
     fn test_parse_request() {

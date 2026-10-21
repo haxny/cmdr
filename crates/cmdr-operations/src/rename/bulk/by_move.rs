@@ -25,6 +25,7 @@ use crate::source_binding::ExpectedSources;
 use crate::transfer::volume::{PathRole, unregistered_volume_error};
 use crate::types::{ConflictResolution, ReadOnlySide, VolumeCopyConfig, WriteOperationStartResult};
 use cmdr_fs::log_private::LogPrivate;
+use cmdr_fs::twin_path;
 use cmdr_fs::volume::{RenameWork, Volume};
 use cmdr_operation_log::types::Initiator;
 
@@ -124,11 +125,18 @@ impl crate::Operations {
         rows: Vec<BulkRenameRow>,
         initiator: Initiator,
     ) -> Result<RenamesStarted, RenameStartError> {
-        if rows.iter().any(|row| row.source.parent() != row.destination.parent()) {
+        if rows
+            .iter()
+            .any(|row| twin_path::folder_of(&row.source) != twin_path::folder_of(&row.destination))
+        {
             return Err(RenameStartError::NotInOneFolder);
         }
         let rows = spelled_destinations(volume, rows);
-        let Some(parent) = rows.first().and_then(|row| row.source.parent()).map(Path::to_path_buf) else {
+        let Some(parent) = rows
+            .first()
+            .and_then(|row| twin_path::folder_of(&row.source))
+            .map(Path::to_path_buf)
+        else {
             return Err(RenameStartError::NothingToRename);
         };
         let (renames, left_out) = move_order(&rows);

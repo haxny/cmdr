@@ -76,6 +76,24 @@ describe('enrichBreadcrumbSegments', () => {
     expect(segs[2].target).toBeNull() // current folder
   })
 
+  // A same-named twin folder's row path carries a NUL pick: the breadcrumb shows
+  // the plain path (`breadcrumbDisplayPath`), and a click on an ancestor below the
+  // twin still goes to THAT twin, never to the name both share.
+  it('keeps a twin folder’s pick in the targets of a plain-reading MTP breadcrumb', () => {
+    const twin = 'mtp://0-5/65537/DCIM/\u00004242/Trip'
+    const ctx: BreadcrumbNavContext = {
+      volumeId: 'mtp-0-5:65537',
+      volumePath: 'mtp://0-5/65537',
+      currentPath: `${twin}/Day 1`,
+      userHomePath: '/Users/dave',
+      isSearchResults: false,
+    }
+    const segs = enrich('/DCIM/Trip/Day 1', ctx)
+    expect(segs[1].target).toBe('mtp://0-5/65537/DCIM')
+    expect(segs[2].target).toBe(twin)
+    expect(segs[2].displayPath).not.toContain('\u0000')
+  })
+
   it('reconstructs ADB paths from the parsed serial (device root is the first target)', () => {
     const ctx: BreadcrumbNavContext = {
       volumeId: 'adb-pixel-7-a1b2c3d',

@@ -77,9 +77,11 @@ the next section.
   field, and `LoggedText` for our own; `log_error`, the `LogError` a path-carrying error logs through, `error_detail`,
   the message field that keeps its cause typed for it, and `log_json`, a value's JSON with its fields marked; § "Marked
   log values"), `tcc_paths`, `ignore_poison`, `pluralize`, `tilde` (`expand_tilde`, for a path a person typed on THIS
-  machine), `byte_size` (`format_size`, the IEC byte count log lines and model-facing answers read), `thread_qos`,
-  `thread_cpu`, `process_cpu/`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a keep-alive pool of `Utility`-QoS
-  threads, so background work that comes in streams, like index walks, reuses threads instead of creating one per job).
+  machine), `twin_path` (a same-named twin's row path: `folder_of` past its pick, and `shown`, the one rule that takes a
+  pick out of anything a person reads; `crates/cmdr-mtp/src/connection/DETAILS.md` § "Same-named siblings"), `byte_size`
+  (`format_size`, the IEC byte count log lines and model-facing answers read), `thread_qos`, `thread_cpu`,
+  `process_cpu/`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a keep-alive pool of `Utility`-QoS threads, so
+  background work that comes in streams, like index walks, reuses threads instead of creating one per job).
 - `mapped_file_faults/`: the SIGBUS recovery that turns a read of a mapped file whose disk went away into zeros, and the
   generation a reader checks to distrust what it read meanwhile. § "Mapped-file faults".
 - `testing/`: behind the `testing` feature. `TestDir`, the two waits, and `unique_test_id` (a pid-and-counter key for a

@@ -16,6 +16,7 @@ import { getAdbDisplayPath } from '#lib/adb/adb-path-utils.js'
 import { boundShortcuts } from '#lib/shortcuts/index.js'
 import { isVolumeEjectable } from '../navigation/eject-predicate'
 import type { VolumeChangePayload } from './types'
+import { displayPath } from '#lib/utils/display-path.js'
 
 export interface BreadcrumbDisplayPathInput {
   currentPath: string
@@ -42,11 +43,18 @@ export interface BreadcrumbDisplayPathInput {
  * § "Search-specific UI behavior".
  */
 export function breadcrumbDisplayPath(input: BreadcrumbDisplayPathInput): string {
-  const { currentPath, volumeId, volumePath, userHomePath } = input
-
   if (input.isSearchResultsView) {
     return input.searchLabel ?? 'Search'
   }
+  // A same-named twin folder's pick never shows (`displayPath`); clicking a
+  // segment still reaches that twin (`breadcrumb-navigation.ts`).
+  return displayPath(volumeDisplayPath(input))
+}
+
+/** The path readout for a real folder, before a twin's pick is taken out. */
+function volumeDisplayPath(input: BreadcrumbDisplayPathInput): string {
+  const { currentPath, volumeId, volumePath, userHomePath } = input
+
   const scheme = volumeScheme(volumeId)
   if (scheme === 'mtp') return getMtpDisplayPath(currentPath)
   if (scheme === 'adb') return getAdbDisplayPath(currentPath)

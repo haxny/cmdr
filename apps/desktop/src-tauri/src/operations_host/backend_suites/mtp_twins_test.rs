@@ -107,3 +107,115 @@ async fn copying_both_selected_twin_rows_off_a_device_keeps_both() {
 
     teardown(device).await;
 }
+
+/// Bulk-renames `rows` (source row path, destination) on `volume` through the
+/// app's engine and waits for it to settle; answers how many rows it skipped.
+async fn bulk_rename(volume: Arc<dyn Volume>, rows: Vec<(PathBuf, PathBuf)>) -> usize {
+    use cmdr_fs::ignore_poison::IgnorePoison;
+    use cmdr_operation_log::types::Initiator;
+    use cmdr_operations::testing::CollectorEventSink;
+    use cmdr_operations::{BulkRenameRow, SourceFingerprint};
+
+    let registered = super::network_safety_test_support::Registered::new(&volume, "mtp-twins-rename");
+    let mut bulk_rows = Vec::new();
+    for (source, destination) in rows {
+        bulk_rows.push(BulkRenameRow {
+            row_id: bulk_rows.len().to_string(),
+            expected_fingerprint: SourceFingerprint::capture_remote(volume.as_ref(), &source)
+                .await
+                .expect("a twin row fingerprints as its own file"),
+            source,
+            destination,
+        });
+    }
+    let events = Arc::new(CollectorEventSink::new());
+    cmdr_operations::testing::start_bulk_rename(
+        app_engine(),
+        events.clone() as Arc<dyn cmdr_operations::OperationEventSink>,
+        registered.id.clone(),
+        bulk_rows,
+        Initiator::User,
+    )
+    .expect("a rename of a twin in its own folder starts");
+    crate::test_support::wait_until_async(std::time::Duration::from_secs(10), "the bulk rename to settle", || {
+        !events.settled.lock_ignore_poison().is_empty()
+    })
+    .await;
+    let skipped = events
+        .complete
+        .lock_ignore_poison()
+        .first()
+        .map_or(0, |complete| complete.files_skipped);
+    registered.leave();
+    skipped
+}
+
+/// The rows `/Documents` lists under `notes.txt`: `(the real notes.txt's, report.txt's)`.
+async fn twin_rows(volume: &dyn Volume, handles: (u64, u64)) -> (PathBuf, PathBuf) {
+    let entries = volume
+        .list_directory(Path::new("/Documents"), None)
+        .await
+        .expect("listing Documents should succeed");
+    let row = |handle| {
+        entries
+            .iter()
+            .find(|entry| entry.inode == Some(handle))
+            .map(|entry| PathBuf::from(&entry.path))
+            .expect("each twin lists as its own row")
+    };
+    (row(handles.0), row(handles.1))
+}
+
+fn on_disk(device: &crate::mtp::test_support::ConnectedDevice, name: &str) -> Option<String> {
+    std::fs::read_to_string(device.root().join("internal/Documents").join(name)).ok()
+}
+
+/// ❗ A twin's row path and its plain destination are ONE folder: the start
+/// compared `Path::parent`s and refused the batch as a cross-folder rename.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_bulk_rename_of_a_twin_row_renames_that_file_in_its_own_folder() {
+    let _guard = device_lock().await;
+    let device = connect_virtual_device().await;
+    let volume: Arc<dyn Volume> = Arc::new(volume_for(&device, None).await);
+    let handles = make_twins(&device, "/Documents", "notes.txt", "report.txt").await;
+    let (_notes, report) = twin_rows(volume.as_ref(), handles).await;
+
+    let skipped = bulk_rename(
+        Arc::clone(&volume),
+        vec![(report, PathBuf::from("/Documents/report-2.txt"))],
+    )
+    .await;
+
+    assert_eq!(skipped, 0);
+    assert_eq!(on_disk(&device, "report-2.txt").as_deref(), Some(REPORT));
+    assert_eq!(
+        on_disk(&device, "notes.txt").as_deref(),
+        Some(NOTES),
+        "the other twin is untouched"
+    );
+
+    teardown(device).await;
+}
+
+/// ❗ A destination spelled under the twin's pick still meets the folder's
+/// names: a taken one is skipped, never a second item under that name.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_bulk_rename_onto_a_taken_name_under_a_twins_pick_is_skipped() {
+    let _guard = device_lock().await;
+    let device = connect_virtual_device().await;
+    let volume: Arc<dyn Volume> = Arc::new(volume_for(&device, None).await);
+    let handles = make_twins(&device, "/Documents", "notes.txt", "report.txt").await;
+    volume
+        .create_directory(Path::new("/Documents/taken"))
+        .await
+        .expect("making the clashing folder");
+    let (_notes, report) = twin_rows(volume.as_ref(), handles).await;
+    let under_the_pick = report.parent().expect("a row has a parent").join("taken");
+
+    let skipped = bulk_rename(Arc::clone(&volume), vec![(report, under_the_pick)]).await;
+
+    assert_eq!(skipped, 1, "the name is taken");
+    assert_eq!(on_disk(&device, "report.txt").as_deref(), Some(REPORT), "nothing moved");
+
+    teardown(device).await;
+}

@@ -29,6 +29,7 @@ import { openGetInfoOrExplain } from '#lib/file-explorer/pane/get-info-open.js'
 import { resolveTerminalFolder } from '#lib/open-terminal/terminal-target.js'
 import { openTerminalHereForFolder } from '#lib/open-terminal/open-terminal-here.js'
 import { tString } from '#lib/intl/messages.svelte.js'
+import { displayPath } from '#lib/utils/display-path.js'
 import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
 import { extractFilename } from '#lib/file-explorer/operations/selection-adjustment.js'
 import { trackEvent } from '#lib/tauri-commands/index.js'
@@ -79,7 +80,7 @@ async function copyPathAndAnnounce(path: string): Promise<void> {
   await copyToClipboard(path)
   addToast(CopiedPathToastContent, {
     level: 'info',
-    props: { path },
+    props: { path: displayPath(path) },
     widthPx: COPIED_PATH_TOAST_WIDTH_PX,
     toastGroup: 'copied-path',
     maxInGroup: 1,

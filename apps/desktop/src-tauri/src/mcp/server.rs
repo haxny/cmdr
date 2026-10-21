@@ -696,6 +696,7 @@ async fn handle_mcp_post<R: Runtime>(
 
     // 8. Process the request
     let (response, new_session_id) = process_request(&state, request, &client_version).await;
+    let response = response.into_shown();
 
     // 9. Build response (SSE or JSON based on Accept header)
     if use_sse {

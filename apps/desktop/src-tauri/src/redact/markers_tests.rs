@@ -570,3 +570,13 @@ fn a_typed_value_never_passes_the_readers_scratch_chars_through() {
         assert!(!out.chars().any(|c| RESERVED.contains(&c)), "{out:?}");
     }
 }
+
+/// ❗ A same-named twin's row path carries a NUL pick (`cmdr_fs::twin_path`): the
+/// log a person reads shows its plain path, never the NUL and the handle.
+#[test]
+fn a_twin_row_path_reads_as_its_plain_path_in_the_shown_log() {
+    let twin = format!("/DCIM/{}/IMG_1.JPG", cmdr_fs::twin_path::pick_segment(4242));
+    let line = format!("deleting {}", span(LogKind::FilePath, &twin));
+
+    assert_eq!(display_line(&line), "deleting /DCIM/IMG_1.JPG");
+}

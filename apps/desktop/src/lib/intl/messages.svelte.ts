@@ -32,6 +32,7 @@ import { getUiLocale, setUiLocaleOverride } from './locale'
 import { inheritableAncestors } from './locale-inheritance'
 import { setDocumentLanguage } from './document-language'
 import type { MessageKey } from './keys.gen'
+import { displayPath } from '#lib/utils/display-path.js'
 
 const BASE_LOCALE = 'en'
 
@@ -382,7 +383,17 @@ export function t(key: MessageKey, params?: TranslationParams): TranslationResul
   localeVersion
   if (__CMDR_E2E_BUILD__ && captureActive) recordCapturedKey(key)
   const locale = getUiLocale()
-  return getCompiled(locale, key).format(params)
+  return asShown(getCompiled(locale, key).format(params))
+}
+
+/**
+ * A formatted message as a person reads it: a same-named twin's pick taken out of
+ * any path a param carried (`#lib/utils/display-path`). Catalog text never holds
+ * a NUL, so this only ever touches what a param put there.
+ */
+function asShown(result: TranslationResult): TranslationResult {
+  if (typeof result === 'string') return displayPath(result)
+  return result.map((part) => (typeof part === 'string' ? displayPath(part) : part))
 }
 
 /**
@@ -404,7 +415,7 @@ export function tString(key: MessageKey, params?: TranslationParams): string {
  * reactive: markup always wants the UI locale, through `t()`.
  */
 export function tStringIn(locale: string, key: MessageKey, params?: TranslationParams): string {
-  const result = getCompiled(locale, key).format(params)
+  const result = asShown(getCompiled(locale, key).format(params))
   if (typeof result !== 'string') {
     throw new Error(`Message "${key}" produced rich-text output; use <Trans> or t() and read the array`)
   }

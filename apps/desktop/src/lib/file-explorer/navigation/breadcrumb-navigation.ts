@@ -50,6 +50,24 @@ function innerPath(segments: PathSegment[], index: number): string {
     .join('/')
 }
 
+/**
+ * The first `index` folders of the REAL inner path `realInner`, when it holds a
+ * same-named twin's pick (`#lib/utils/display-path`), else `null`. The display
+ * shows the twin's plain name, but a click must reach THAT twin, so each pick
+ * travels with the name it precedes.
+ */
+function realInnerPrefix(realInner: string, index: number): string | null {
+  if (!realInner.includes('\u0000')) return null
+  const kept: string[] = []
+  let names = 0
+  for (const segment of realInner.split('/')) {
+    if (names === index) break
+    kept.push(segment)
+    if (!segment.startsWith('\u0000')) names += 1
+  }
+  return kept.join('/')
+}
+
 /** The real navigation target for clicking segment `index`, or `null` if not navigable. */
 function targetFor(segments: PathSegment[], index: number, ctx: BreadcrumbNavContext): string | null {
   if (ctx.isSearchResults) return null
@@ -58,7 +76,11 @@ function targetFor(segments: PathSegment[], index: number, ctx: BreadcrumbNavCon
   if (scheme === 'mtp') {
     const parsed = parseMtpPath(ctx.currentPath)
     if (!parsed) return null
-    return constructMtpPath(parsed.deviceId, parsed.storageId, innerPath(segments, index))
+    return constructMtpPath(
+      parsed.deviceId,
+      parsed.storageId,
+      realInnerPrefix(parsed.path, index) ?? innerPath(segments, index),
+    )
   }
 
   if (scheme === 'adb') {

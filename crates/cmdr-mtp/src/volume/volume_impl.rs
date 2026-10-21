@@ -328,6 +328,9 @@ impl Volume for MtpVolume {
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
         Box::pin(async move {
+            // A new name: a pick on it means nothing (see `rename`).
+            let path = cmdr_fs::twin_path::unpicked(path);
+            let path = path.as_ref();
             let Some(parent) = twins::folder_of(path) else {
                 return Err(VolumeError::IoError {
                     message: "Cannot create root directory".into(),
@@ -414,6 +417,11 @@ impl Volume for MtpVolume {
             // writers, so that would read as a guarantee it isn't. Reasoning and
             // the cell that pins the refusal: `backends/DETAILS.md` § "MTP's
             // no-clobber rename is check-then-act".
+            // A destination is a NEW name in its folder, so a twin's pick on it
+            // (`Path::parent` of a row, joined with the new name) means nothing:
+            // the check and the rename both take the plain spelling.
+            let to = cmdr_fs::twin_path::unpicked(to);
+            let to = to.as_ref();
             if !force && self.exists(to).await {
                 return Err(VolumeError::AlreadyExists(to.display().to_string()));
             }
@@ -737,6 +745,9 @@ impl Volume for MtpVolume {
                     expected_length: StreamLength::Known(size),
                 })
             };
+            // A new name: a pick on it means nothing (see `rename`).
+            let dest = cmdr_fs::twin_path::unpicked(dest);
+            let dest = dest.as_ref();
             if mode.refuses_occupied() && self.exists(dest).await {
                 return Err(VolumeError::AlreadyExists(dest.display().to_string()));
             }

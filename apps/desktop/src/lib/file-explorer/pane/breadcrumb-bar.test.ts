@@ -53,6 +53,22 @@ describe('breadcrumbDisplayPath', () => {
     ).toBe('~/Documents')
   })
 
+  // A same-named twin folder's row path carries a NUL pick: the readout shows the
+  // plain path, whatever volume form produced it.
+  it('shows a twin folder’s path without its pick', () => {
+    mtp.getMtpDisplayPath.mockImplementation((path: string) => path.replace('mtp://0-5/65537', ''))
+    expect(
+      breadcrumbDisplayPath({
+        currentPath: 'mtp://0-5/65537/DCIM/\u00004242/Trip',
+        volumeId: 'mtp-0-5:65537',
+        volumePath: 'mtp://0-5/65537',
+        userHomePath: '/Users/test',
+        isSearchResultsView: false,
+        searchLabel: undefined,
+      }),
+    ).toBe('/DCIM/Trip')
+  })
+
   it('shows a bare `~` at the home folder itself', () => {
     expect(
       breadcrumbDisplayPath({

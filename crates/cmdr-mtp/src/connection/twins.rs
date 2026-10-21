@@ -3,71 +3,41 @@
 //! PTP lets a folder hold two objects with the same name (a camera merging card
 //! folders after a counter wrap, an e-reader's own object database, Android's
 //! MTP index gone stale), so a name alone can't say which one a row means. A
-//! listing gives each twin's row its own path instead: a PICK segment, `␀` (NUL)
-//! plus the object's handle, sits right before the shared name:
-//! `/DCIM/␀4242/IMG_1.JPG`. The leaf stays the real name, so a copy names its
-//! destination after it and a walk below a twin folder builds relative paths
-//! from it; only "the folder holding this" has to step over the pick, which is
-//! [`folder_of`].
-//!
-//! NUL because no real name can hold one: Android's names are Linux names (any
-//! byte but `/` and NUL) and PTP's strings are NUL-terminated UCS-2, so a pick
-//! can't be mistaken for, or collide with, a folder the device holds.
+//! listing gives each twin's row its own path instead: a pick segment carrying
+//! the object's handle sits right before the shared name,
+//! `/DCIM/␀4242/IMG_1.JPG`. The grammar (and the rule that a pick never reaches
+//! a person) is `cmdr_fs::twin_path`'s; what's here is that the id is an MTP
+//! object handle.
 
+use cmdr_fs::twin_path;
 use mtp_rs::ObjectHandle;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
-/// What starts a pick segment.
-const PICK: char = '\0';
+pub(crate) use cmdr_fs::twin_path::folder_of;
 
 /// The row path of `handle`, one of several objects in `folder` named `name`.
 pub(super) fn picked(folder: &Path, handle: ObjectHandle, name: &OsStr) -> PathBuf {
-    folder.join(format!("{PICK}{}", handle.0)).join(name)
-}
-
-/// The handle a pick segment names, or `None` for an ordinary segment.
-fn pick_of(segment: &OsStr) -> Option<ObjectHandle> {
-    let digits = segment.to_str()?.strip_prefix(PICK)?;
-    digits.parse().ok().map(ObjectHandle)
-}
-
-/// Whether `path`'s last segment is a pick: a twin's row path minus its name.
-fn ends_in_pick(path: &Path) -> bool {
-    path.file_name().is_some_and(|segment| pick_of(segment).is_some())
-}
-
-/// The folder holding `path`'s object: its parent, stepping over a pick. `None`
-/// for a root, like [`Path::parent`].
-pub(crate) fn folder_of(path: &Path) -> Option<&Path> {
-    let parent = path.parent()?;
-    if ends_in_pick(parent) {
-        parent.parent()
-    } else {
-        Some(parent)
-    }
+    folder.join(twin_path::pick_segment(handle.0)).join(name)
 }
 
 /// The folder `parent` names when a caller hands over a twin's row path minus
 /// its name (`Path::parent` of a row path), else `None`. A change reported "in"
 /// such a parent is a change to a twin, in the folder this returns.
 pub(crate) fn picked_folder(parent: &Path) -> Option<&Path> {
-    if ends_in_pick(parent) { parent.parent() } else { None }
+    parent.file_name().and_then(twin_path::pick_id).and(parent.parent())
 }
 
 /// The handle `path` picks for its own object, when it's a twin's row path.
 /// A pick further up names an ancestor, which this doesn't report.
 pub(crate) fn pick_in(path: &Path) -> Option<ObjectHandle> {
-    path.parent().and_then(Path::file_name).and_then(pick_of)
+    twin_path::own_pick(path).map(ObjectHandle)
 }
 
 /// `path` without its own pick: the path every one of its twins shares. An
 /// ordinary path comes back as it is.
 pub(super) fn shared_path(path: &Path) -> PathBuf {
-    match (pick_in(path), folder_of(path), path.file_name()) {
-        (Some(_), Some(folder), Some(name)) => folder.join(name),
-        _ => path.to_path_buf(),
-    }
+    twin_path::unpicked(path).into_owned()
 }
 
 /// Gives each twin in one folder's listing its own row path, in the entries
@@ -104,50 +74,5 @@ pub(super) fn give_twins_their_own_paths(
         let own = picked(folder, *handle, name);
         entry.path = own.to_string_lossy().into_owned();
         *path = own;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_twin_row_keeps_its_name_and_its_folder() {
-        let row = picked(Path::new("/DCIM"), ObjectHandle(42), OsStr::new("IMG_1.JPG"));
-
-        assert_eq!(row.file_name(), Some(OsStr::new("IMG_1.JPG")));
-        assert_eq!(folder_of(&row), Some(Path::new("/DCIM")));
-        assert_eq!(pick_in(&row), Some(ObjectHandle(42)));
-        assert_eq!(shared_path(&row), PathBuf::from("/DCIM/IMG_1.JPG"));
-        assert_eq!(
-            picked_folder(row.parent().expect("a row has a parent")),
-            Some(Path::new("/DCIM"))
-        );
-    }
-
-    #[test]
-    fn a_row_inside_a_twin_folder_is_an_ordinary_child_of_that_folder() {
-        let twin_folder = picked(Path::new("/DCIM"), ObjectHandle(7), OsStr::new("Trip"));
-        let child = twin_folder.join("a.jpg");
-
-        assert_eq!(folder_of(&child), Some(twin_folder.as_path()));
-        assert_eq!(pick_in(&child), None, "the pick names the folder, not the child");
-        assert_eq!(shared_path(&child), child);
-        assert_eq!(picked_folder(&twin_folder), None);
-    }
-
-    #[test]
-    fn an_ordinary_path_has_no_pick() {
-        assert_eq!(folder_of(Path::new("/DCIM/IMG_1.JPG")), Some(Path::new("/DCIM")));
-        assert_eq!(folder_of(Path::new("/IMG_1.JPG")), Some(Path::new("/")));
-        assert_eq!(folder_of(Path::new("/")), None);
-        assert_eq!(pick_in(Path::new("/DCIM/IMG_1.JPG")), None);
-        assert_eq!(picked_folder(Path::new("/DCIM")), None);
-    }
-
-    #[test]
-    fn a_relative_row_path_steps_over_its_pick_too() {
-        let row = picked(Path::new(""), ObjectHandle(3), OsStr::new("IMG_1.JPG"));
-        assert_eq!(folder_of(&row), Some(Path::new("")));
     }
 }

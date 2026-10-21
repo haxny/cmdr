@@ -142,6 +142,15 @@ describe('t() resolution', () => {
     _setLocaleForTests('en-US')
     expect(tString('transfer.split.clean', { verb: 'copy', phrase: '2 files' })).toBe('Copied 2 files.')
   })
+
+  // A same-named twin's row path carries a NUL pick (`#lib/utils/display-path`);
+  // no sentence a person reads shows it.
+  it('shows a twin row path in a param as its plain path', () => {
+    _setLocaleForTests('en-US')
+    expect(tString('fileOperations.delete.fromPath', { path: '/DCIM/\u00004242/IMG_1.JPG' })).toBe(
+      'From: /DCIM/IMG_1.JPG',
+    )
+  })
 })
 
 describe('the script boundary in the fallback chain', () => {

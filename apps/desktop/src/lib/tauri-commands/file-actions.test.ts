@@ -16,10 +16,27 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn() }))
 
 import { commands } from '#lib/ipc/bindings.js'
-import { asOpenInEditorError, listTextEditors, openInEditor, OpenInEditorFailure } from './file-actions'
+import { invoke } from '@tauri-apps/api/core'
+import {
+  asOpenInEditorError,
+  copyToClipboard,
+  listTextEditors,
+  openInEditor,
+  OpenInEditorFailure,
+} from './file-actions'
 
 beforeEach(() => {
   vi.clearAllMocks()
+})
+
+describe('copyToClipboard', () => {
+  // A same-named twin's row path carries a NUL pick (`#lib/utils/display-path`):
+  // what lands on the clipboard is the plain path a person can paste.
+  it('copies a twin row path as its plain path', async () => {
+    await copyToClipboard('/DCIM/\u00004242/IMG_1.JPG')
+
+    expect(invoke).toHaveBeenCalledExactlyOnceWith('copy_to_clipboard', { text: '/DCIM/IMG_1.JPG' })
+  })
 })
 
 describe('openInEditor', () => {

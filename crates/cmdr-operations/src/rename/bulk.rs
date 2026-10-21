@@ -25,6 +25,7 @@ use super::super::types::{
     CancelRollback, SourceItemOutcome, WriteCancelledEvent, WriteCompleteEvent, WriteOperationError,
     WriteOperationStartResult, WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
+use cmdr_fs::twin_path;
 use cmdr_fs::volume::{LaneKey, Volume};
 use cmdr_local::rename_local_exclusive;
 use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind, OperationId};
@@ -114,7 +115,20 @@ impl crate::Operations {
         if rows.is_empty() {
             return Err(RenameStartError::NothingToRename);
         }
-        if rows.iter().any(|row| row.source.parent() != row.destination.parent()) {
+        // A destination is a NEW name in its folder, so a same-named twin's pick on
+        // it (`Path::parent` of the row, joined) means nothing; and a twin's row
+        // sits in the folder past its pick (`cmdr_fs::twin_path`).
+        let rows: Vec<BulkRenameRow> = rows
+            .into_iter()
+            .map(|row| BulkRenameRow {
+                destination: twin_path::unpicked(&row.destination).into_owned(),
+                ..row
+            })
+            .collect();
+        if rows
+            .iter()
+            .any(|row| twin_path::folder_of(&row.source) != twin_path::folder_of(&row.destination))
+        {
             return Err(RenameStartError::NotInOneFolder);
         }
 
@@ -659,7 +673,7 @@ async fn restore_remote_cycle(
 }
 
 fn unique_temporary_path(source: &Path, row_id: &str) -> Option<PathBuf> {
-    let parent = source.parent()?;
+    let parent = twin_path::folder_of(source)?;
     for _ in 0..16 {
         let candidate = parent.join(format!(".cmdr-bulk-rename-{row_id}-{}", Uuid::new_v4()));
         if std::fs::symlink_metadata(&candidate).is_err() {
@@ -670,7 +684,7 @@ fn unique_temporary_path(source: &Path, row_id: &str) -> Option<PathBuf> {
 }
 
 async fn unique_remote_temporary_path(volume: &dyn Volume, source: &Path, row_id: &str) -> Option<PathBuf> {
-    let parent = source.parent()?;
+    let parent = twin_path::folder_of(source)?;
     for _ in 0..16 {
         let candidate = parent.join(format!(".cmdr-bulk-rename-{row_id}-{}", Uuid::new_v4()));
         if volume.get_metadata(&candidate).await.is_err() {
