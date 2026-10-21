@@ -288,12 +288,14 @@ impl BackendKind {
             // § "Junctions and symlinks", #613). A Windows share does mark its
             // junctions, but nothing tells the two servers apart up front.
             Self::Smb => false,
-            // Each lists from an `lstat` or the link's own record, and the
-            // link-free ones have nothing to mark.
+            // Each lists from an `lstat` or the link's own record (restic: the
+            // snapshot tree's symlink node), and the link-free ones have nothing
+            // to mark.
             Self::Local
             | Self::Sftp
             | Self::Adb
             | Self::Archive
+            | Self::Restic
             | Self::Webdav
             | Self::S3
             | Self::Mtp
