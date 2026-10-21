@@ -62,6 +62,10 @@
         "reason": "`Buscar` is the action (dialog title, run button); the Settings sidebar section is a topic, a noun: `Búsqueda`. `Buscar` there would read as a command."
       },
       {
+        "source": "Trust and connect",
+        "reason": "`Confiar en la clave y conectar` trusts an SSH host key (`servers.hostKey.trustAndConnect`); `Confiar en el certificado y conectar` trusts a WebDAV TLS certificate (`servers.certificate.trustAndConnect`). The English leaves the object implicit, Spanish names it, and the two nouns differ in gender, so one shared label would read wrong in one of the prompts."
+      },
+      {
         "source": "View",
         "reason": "The menu bar's View menu is Apple's own Spanish title `Visualización` (Finder); F3 and the File-menu item are the action `Ver`."
       }
@@ -268,12 +272,12 @@
         "reason": "`Kontrollerar` verifies something you already have (an API key, a license); `Söker` looks for something that may exist (`updates.status.checking`), matching the update family's `Sök efter uppdateringar`. See `docs/i18n/sv/terms.json` `check`."
       },
       {
-        "source": "File",
-        "reason": "The menu bar's File menu is Apple's own Swedish title `Arkiv` (Finder, AppKit); the suggested-ops column names an ordinary file, `Fil`."
-      },
-      {
         "source": "Copied",
         "reason": "Agreement, not drift: the copy-to-clipboard confirmations (`Kopierat`) are neuter, about text (det är kopierat); the Git column's `fileExplorer.git.status.copied` describes a file (en fil), so it takes the common-gender `Kopierad`, like its siblings `Ändrad`, `Tillagd`, `Raderad` and git's own sv `kopierad:`."
+      },
+      {
+        "source": "File",
+        "reason": "The menu bar's File menu is Apple's own Swedish title `Arkiv` (Finder, AppKit); the suggested-ops column names an ordinary file, `Fil`."
       },
       {
         "source": "Modified",
@@ -286,6 +290,10 @@
       {
         "source": "Select",
         "reason": "`Markera` marks files (the menu-bar Select menu, macOS Markera allt); `Välj` picks an option, which is what a dropdown placeholder asks for."
+      },
+      {
+        "source": "Trust and connect",
+        "reason": "`Lita på nyckeln och anslut` trusts an SSH host key (`servers.hostKey.trustAndConnect`); `Lita på certifikatet och anslut` trusts a WebDAV TLS certificate (`servers.certificate.trustAndConnect`). The English leaves the object implicit, Swedish names it, so each prompt names its own object."
       },
       {
         "source": "View",
