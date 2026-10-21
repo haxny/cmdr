@@ -556,6 +556,44 @@ async fn latest_moves_on_once_nothing_reads_under_it() {
     assert_eq!(read_all(&browse.volume, &dir.join("a.txt")).await, b"second");
 }
 
+/// ❗ A copy out of `latest/` paused past the quiet period reads nothing (no
+/// stream between files, none advancing mid-file), so only its transfer hold
+/// says it's still there. While held, a refresh (a person's, or the snapshot
+/// watch's) leaves `latest` alone: the rest of the copy must come from the same
+/// snapshot. Once the copy settles, the next refresh moves it.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_paused_copy_out_of_latest_keeps_it_until_the_copy_settles() {
+    let browse = Browse::with_tuning(Tuning {
+        latest_quiet: Duration::ZERO,
+        ..Tuning::default()
+    })
+    .await;
+    let dir = browse.source_in("latest").await;
+    let hold = browse.volume.hold_for_transfer().expect("a repo holds for a transfer");
+    assert_eq!(read_all(&browse.volume, &dir.join("a.txt")).await, b"hello");
+
+    std::fs::write(browse.source.join("a.txt"), b"second").expect("change the source");
+    browse.backup_again(1_792_000_000).await;
+    browse
+        .volume
+        .list_directory(&view(), None)
+        .await
+        .expect("refreshes the root");
+    assert_eq!(
+        read_all(&browse.volume, &dir.join("a.txt")).await,
+        b"hello",
+        "the paused copy's next file still comes from the first snapshot"
+    );
+
+    drop(hold);
+    browse
+        .volume
+        .list_directory(&view(), None)
+        .await
+        .expect("refreshes the root");
+    assert_eq!(read_all(&browse.volume, &dir.join("a.txt")).await, b"second");
+}
+
 // ── The parent ─────────────────────────────────────────────────────────────
 
 /// An SMB share reconnecting replaces the parent under the same volume id. The

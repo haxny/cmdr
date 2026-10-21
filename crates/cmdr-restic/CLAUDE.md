@@ -9,7 +9,8 @@ English a user reads. The app's half: `apps/desktop/src-tauri/src/file_system/re
 - `volume.rs`: `ResticVolume`, the view at `<repo>/Browse snapshots`, and its `PasswordLocked` unlock. `hub.rs`:
   `ResticRepos`, the shared state (passwords, opened repos, snapshot lists, `latest`, the is-it-a-repo memo);
   `index_load.rs` (the shared, cancellable index load) and the hub's child `index_slot.rs` (cap, idle drop) hold its
-  indexes; `index_feed.rs` is the leaf the load fills and the adapter reads, so neither names the other.
+  indexes; `index_feed.rs` is the leaf the load fills and the adapter reads, so neither names the other. The hub's other
+  child, `latest_pin.rs`, decides when `latest` may move.
 - `path.rs` (re-exports `cmdr_fs::restic_view`, classifies paths in the view), `snapshots.rs`, `tree.rs`,
   `read_stream.rs`, `repo.rs` (open, index, typed errors), `backend.rs` (rustic's storage over the parent), `detect.rs`.
 - `test_fixtures.rs` (`testing` only): real v1 and v2 repos built with rustic, plus an unlock door.

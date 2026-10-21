@@ -90,7 +90,11 @@ leaves the index load), so a Cancel lands inside a listing that waits on the loa
 Copies address files by path, so `latest` rebinding mid-copy would mix two snapshots in one restore, silently. The hub
 pins which snapshot `latest` shows (`LatestPin`) and moves it only on a root refresh, and only when nothing has touched
 `latest/…` for the quiet period (30 s): a listing, a stat, a stream open, or any chunk of a stream opened there. Listing
-the root only shows the `latest` row and doesn't count, so refreshing to see a new backup moves it. The pin also moves
+the root only shows the `latest` row and doesn't count, so refreshing to see a new backup moves it. Nor does it move
+while a transfer holds the repo (§ "The index lifecycle", "A transfer's hold"): a copy paused between files, or
+mid-file, reads nothing, and the snapshot watch would otherwise move `latest` under it with nobody pressing refresh, so
+its remaining files would come from a newer snapshot. A copy out of a dated folder freezes `latest` too, which is
+harmless. The pin also moves
 at once when its snapshot is gone from the repo (a prune), since there's nothing left to show. A dated folder is the
 exact pin; `latest` is the convenience. With several hosts in one repo, `latest` is still the newest snapshot overall.
 

@@ -34,6 +34,8 @@ hub's locks.
   `latest_quiet` shortened.
 - **Confidence**: high. The cell that pins "leaves `latest` alone" opens a stream inside the quiet period; nothing
   covers a pause.
+- **Status**: fixed as proposed. `LatestPin::rebind` moves `latest` only when its snapshot is gone while
+  `RepoSlot::is_held_for_transfer`; pinned by `a_paused_copy_out_of_latest_keeps_it_until_the_copy_settles`.
 
 ## Medium
 

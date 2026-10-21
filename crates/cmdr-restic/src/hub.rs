@@ -494,7 +494,8 @@ impl ResticRepos {
             return Err(VolumeError::NotFound(slot.key.root.display().to_string()));
         }
         let list = Arc::new(snapshot_list_of(&files));
-        lock(&slot.latest).rebind(&list, self.tuning.latest_quiet);
+        let held = slot.is_held_for_transfer();
+        lock(&slot.latest).rebind(&list, self.tuning.latest_quiet, held);
         *lock(&slot.snapshots) = Some(Snapshots {
             files,
             list: Arc::clone(&list),
@@ -718,7 +719,7 @@ impl RepoSlot {
     /// read: listing the root only shows `latest`, and a person refreshing to
     /// see a new backup must see it move.
     pub(crate) fn latest_shown<'l>(&self, list: &'l SnapshotList) -> Option<&'l Snapshot> {
-        list.by_id(lock(&self.latest).id.as_deref()?)
+        list.by_id(lock(&self.latest).id()?)
     }
 
     /// Notes that something read under `latest/` just now, which holds it in
@@ -758,35 +759,16 @@ struct Snapshots {
     read_at: Instant,
 }
 
-/// Which snapshot `latest` shows, and when something last read under it.
-#[derive(Default)]
-struct LatestPin {
-    id: Option<String>,
-    touched: Option<Instant>,
-}
-
-impl LatestPin {
-    fn touch(&mut self) {
-        self.touched = Some(Instant::now());
-    }
-
-    /// After a refresh: moves to `list`'s newest snapshot when nothing has
-    /// pinned it, nothing read under it for `quiet`, or its snapshot is gone.
-    fn rebind(&mut self, list: &SnapshotList, quiet: Duration) {
-        let newest = list.latest().map(|s| s.id.clone());
-        let idle = self.touched.is_none_or(|at| at.elapsed() >= quiet);
-        let gone = self.id.as_deref().is_none_or(|id| list.by_id(id).is_none());
-        if idle || gone {
-            self.id = newest;
-        }
-    }
-}
-
 // The index the hub keeps (install, cap, idle drop). A child, not a sibling:
 // it reads the slot's own state, and a sibling would weld the two modules into
 // a cycle (`module-cycles`).
 #[path = "index_slot.rs"]
 mod index_slot;
+
+// Which snapshot `latest` shows. A child, like `index_slot`.
+#[path = "latest_pin.rs"]
+mod latest_pin;
+use latest_pin::LatestPin;
 
 #[cfg(test)]
 #[path = "hub_tests.rs"]

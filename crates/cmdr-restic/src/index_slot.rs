@@ -126,6 +126,12 @@ impl RepoSlot {
         lock(&self.index).transfer_holds += 1;
         TransferHold::new(HeldForTransfer(Arc::clone(self)))
     }
+
+    /// Whether a transfer reading from the repo holds it right now: `latest`
+    /// stays put while one does (`LatestPin::rebind`).
+    pub(crate) fn is_held_for_transfer(&self) -> bool {
+        lock(&self.index).transfer_holds > 0
+    }
 }
 
 /// One transfer's hold on a repo's index; dropping it lets go.
