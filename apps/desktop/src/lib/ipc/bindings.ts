@@ -290,6 +290,12 @@ export const commands = {
          */
         gitMeta: GitEntryMeta | null
         /**
+         *  What a restic snapshot's folder row (a dated one, or `latest`) says about
+         *  its backup: the host it ran on, its tags, and the paths it saved. Facts
+         *  only; the frontend words them. `None` on every other entry.
+         */
+        resticMeta: ResticSnapshotMeta | null
+        /**
          *  `true` for a file whose bytes sit in a cold storage class and can't be
          *  read until someone restores them: S3 Glacier Flexible Retrieval or Deep
          *  Archive, from the listing's `StorageClass`. The pane shows it as
@@ -451,6 +457,12 @@ export const commands = {
          *  tradeoff. `None` on every non-portal entry.
          */
         gitMeta: GitEntryMeta | null
+        /**
+         *  What a restic snapshot's folder row (a dated one, or `latest`) says about
+         *  its backup: the host it ran on, its tags, and the paths it saved. Facts
+         *  only; the frontend words them. `None` on every other entry.
+         */
+        resticMeta: ResticSnapshotMeta | null
         /**
          *  `true` for a file whose bytes sit in a cold storage class and can't be
          *  read until someone restores them: S3 Glacier Flexible Retrieval or Deep
@@ -714,6 +726,16 @@ export const commands = {
    */
   forgetContainerPassword: (parentVolumeId: string, path: string) =>
     typedError<null, UnlockError>(__TAURI_INVOKE('forget_container_password', { parentVolumeId, path })),
+  /**
+   *  Forgets the password of the container at `path` everywhere it's kept, as the
+   *  person asked: in memory, in the Keychain, and in anything opened with it, so
+   *  the next read asks again. Answers whether the Keychain let go of its copy;
+   *  the container is locked for this session either way.
+   */
+  forgetSavedContainerPassword: (parentVolumeId: string, path: string) =>
+    typedError<PasswordForgotten, UnlockError>(
+      __TAURI_INVOKE('forget_saved_container_password', { parentVolumeId, path }),
+    ),
   /**
    *  Drops the unlock the caller named: it answers `Cancelled` and keeps nothing,
    *  saving nothing to the Keychain. A no-op for an unlock that already answered;
@@ -8679,6 +8701,12 @@ export type FileEntry = {
    */
   gitMeta: GitEntryMeta | null
   /**
+   *  What a restic snapshot's folder row (a dated one, or `latest`) says about
+   *  its backup: the host it ran on, its tags, and the paths it saved. Facts
+   *  only; the frontend words them. `None` on every other entry.
+   */
+  resticMeta: ResticSnapshotMeta | null
+  /**
    *  `true` for a file whose bytes sit in a cold storage class and can't be
    *  read until someone restores them: S3 Glacier Flexible Retrieval or Deep
    *  Archive, from the listing's `StorageClass`. The pane shows it as
@@ -13201,6 +13229,19 @@ export type ParsedScope = {
 }
 
 /**
+ *  What forgetting a saved password did. Either way the container is locked
+ *  again for this session; the two differ only in what the next launch does.
+ */
+export type PasswordForgotten =
+  // Gone from memory and from the credential store (or the store held none).
+  | 'everywhere'
+  /**
+   *  Gone from memory, but the credential store refused to drop its copy (a
+   *  locked keychain, a denied prompt), so the next launch still finds it.
+   */
+  | 'storeKeptIt'
+
+/**
  *  What `paste_clipboard_as_file` answers within its reply deadline. A refusal
  *  inside the deadline is the command's `Err(MutationError)`. Same contract as
  *  `MutationReply` (`crates/cmdr-operations/src/mutation_reply.rs`), with the created
@@ -14159,6 +14200,25 @@ export type ResortResult = {
    *  None if no selected_indices were provided.
    */
   newSelectedIndices: number[] | null
+}
+
+/**
+ *  The backup facts a restic snapshot records, for its folder row (the dated
+ *  one and `latest` alike).
+ */
+export type ResticSnapshotMeta = {
+  /**
+   *  The machine the backup ran on, as restic recorded it. Empty when the
+   *  snapshot recorded none.
+   */
+  hostname: string
+  // The snapshot's tags, sorted. Empty when it has none.
+  tags: string[]
+  /**
+   *  The paths the backup was asked to save, sorted, as the backed-up machine
+   *  spelled them.
+   */
+  paths: string[]
 }
 
 export type RestrictedPathsChangedPayload = {

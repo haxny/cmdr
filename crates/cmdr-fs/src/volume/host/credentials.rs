@@ -32,6 +32,12 @@ pub struct StoredCredentials {
 #[derive(Debug)]
 pub struct CredentialsNotStored;
 
+/// The store declined to drop an entry (a locked keychain, a denied prompt).
+///
+/// An entry that was never there is NOT this: forgetting nothing succeeds.
+#[derive(Debug)]
+pub struct CredentialsNotForgotten;
+
 /// Stored credentials, scoped by service and optionally narrower.
 ///
 /// `service` is the thing being authenticated against, in whatever form the
@@ -68,6 +74,12 @@ pub trait CredentialStore: Send + Sync {
         scope: Option<&str>,
         credentials: &StoredCredentials,
     ) -> Result<(), CredentialsNotStored>;
+
+    /// Drops what's stored for `service` (and `scope`, when given), so the next
+    /// lookup misses. Nothing stored is `Ok`.
+    ///
+    /// **May block**, same as [`credentials`](Self::credentials).
+    fn forget_credentials(&self, service: &str, scope: Option<&str>) -> Result<(), CredentialsNotForgotten>;
 }
 
 /// There's no secret store: nothing is remembered and nothing can be recalled.
@@ -89,6 +101,10 @@ impl CredentialStore for NoCredentials {
     ) -> Result<(), CredentialsNotStored> {
         Err(CredentialsNotStored)
     }
+
+    fn forget_credentials(&self, _service: &str, _scope: Option<&str>) -> Result<(), CredentialsNotForgotten> {
+        Ok(())
+    }
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -99,7 +115,7 @@ mod in_memory {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
-    use super::{CredentialStore, CredentialsNotStored, StoredCredentials};
+    use super::{CredentialStore, CredentialsNotForgotten, CredentialsNotStored, StoredCredentials};
     use crate::ignore_poison::IgnorePoison;
 
     /// A [`CredentialStore`] in a `HashMap`, so a
@@ -153,6 +169,11 @@ mod in_memory {
             self.entries
                 .lock_ignore_poison()
                 .insert((service.to_string(), scope.map(str::to_string)), credentials.clone());
+            Ok(())
+        }
+
+        fn forget_credentials(&self, service: &str, scope: Option<&str>) -> Result<(), CredentialsNotForgotten> {
+            self.forget(service, scope);
             Ok(())
         }
     }

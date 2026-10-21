@@ -8,6 +8,7 @@ do. Backend: `apps/desktop/src-tauri/src/file_system/restic/CLAUDE.md` (the rout
 
 - `path-detection.ts`: `isVirtualResticPath`, `resticRepoRoot`, `resticViewComponentIndex`, and
   `RESTIC_VIEW_FOLDER_NAME`. Pure and lexical.
+- `forget-password.ts`: the "Forget backup password" command (DETAILS § "Forgetting a saved password").
 - The pane's `restic` capability row lives in `../pane/volume-capabilities.ts`; the unlock dialog in
   `../pane/unlock-flow.svelte.ts`.
 

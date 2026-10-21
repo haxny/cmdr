@@ -194,6 +194,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'cloud.openInGoogleDrive': 'Open in Google Drive',
   'cloud.copyGoogleDriveLink': 'Copy Google Drive link',
   'cloud.askGemini': 'Ask Gemini',
+  'restic.forgetPassword': 'Forget backup password',
   'tags.toggleGrey': 'Toggle gray tag',
   'tags.toggleGreen': 'Toggle green tag',
   'tags.togglePurple': 'Toggle purple tag',
@@ -284,6 +285,8 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
   'cloud.openInGoogleDrive': 'Opens the selected item on the Google Drive website, where sharing lives',
   'cloud.copyGoogleDriveLink': 'Copies the web address of the selected item, ready to paste into a message',
   'cloud.askGemini': 'Opens Google Drive’s Gemini assistant with the selected file as its subject',
+  'restic.forgetPassword':
+    'Removes the saved password of the restic backup you’re in from Keychain, and locks the backup again',
   'file.copyShareLink': 'Copies a link anyone can open to download the file for seven days',
   'file.copyShareLinkOneDay': 'Copies a link anyone can open to download the file for one day',
   'file.copyShareLinkOneHour': 'Copies a link anyone can open to download the file for one hour',

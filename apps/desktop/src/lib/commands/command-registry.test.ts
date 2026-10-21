@@ -119,6 +119,7 @@ const EXPECTED_PALETTE_IDS: readonly CommandId[] = [
   'file.copyShareLinkOneDay',
   'file.copyShareLinkOneHour',
   'file.contextMenu',
+  'restic.forgetPassword',
   'selection.toggle',
   'selection.toggleAndDown',
   'selection.selectAll',

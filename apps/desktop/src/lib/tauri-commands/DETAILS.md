@@ -53,7 +53,8 @@ commands, and notable non-obvious placements.
 - **`unlock.ts`**: the password for a locked container (an encrypted archive, a restic repo), the secret's only path out
   of the frontend. `unlockContainer` answers the typed `UnlockOutcome` or throws an `UnlockFailure` (a
   `TypedFailure<UnlockError>`), and takes an `unlockId` that `cancelContainerUnlock` drops it by; `setArchivePassword`
-  is the archive's store-unchecked shorthand over it, `forgetContainerPassword` the forget. Plus
+  is the archive's store-unchecked shorthand over it, `forgetContainerPassword` the in-memory forget (a cancelled
+  prompt), `forgetSavedContainerPassword` the forget everywhere, Keychain included (answers `PasswordForgotten`). Plus
   `notifyArchivePasswordPrompt` / `notifyArchivePasswordDismissed`, which mirror what the prompt is ASKING so
   `cmdr://state` can name the container and the MCP `unlock` tool can answer it. ❌ The password is never part of that
   mirror.

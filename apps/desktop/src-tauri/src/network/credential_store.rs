@@ -10,7 +10,9 @@
 //! means the server-wide entry, which is what a sign-in saves so one password
 //! covers every share.
 
-use cmdr_fs::volume::host::credentials::{CredentialStore, CredentialsNotStored, StoredCredentials};
+use cmdr_fs::volume::host::credentials::{
+    CredentialStore, CredentialsNotForgotten, CredentialsNotStored, StoredCredentials,
+};
 
 use super::keychain;
 
@@ -48,6 +50,17 @@ impl CredentialStore for KeychainCredentials {
             log::warn!(target: "volume", "the secret store wouldn't keep credentials: server={service:?}, source=secret_store, operation=set, error_kind={}, detail={:?}", e.kind(), cmdr_fs::log_detail::LogDetail(&e.to_string()));
             CredentialsNotStored
         })
+    }
+
+    fn forget_credentials(&self, service: &str, scope: Option<&str>) -> Result<(), CredentialsNotForgotten> {
+        match keychain::delete_credentials(service, scope) {
+            Ok(()) | Err(keychain::KeychainError::NotFound(_)) => Ok(()),
+            Err(e) => {
+                // Same reason as a refused save: the seam carries only "it stayed".
+                log::warn!(target: "volume", "the secret store wouldn't forget credentials: server={service:?}, source=secret_store, operation=delete, error_kind={}, detail={:?}", e.kind(), cmdr_fs::log_detail::LogDetail(&e.to_string()));
+                Err(CredentialsNotForgotten)
+            }
+        }
     }
 }
 
@@ -103,6 +116,25 @@ mod tests {
             "narrow"
         );
         assert_eq!(KeychainCredentials.credentials(server, None).unwrap().username, "wide");
+    }
+
+    /// A forgotten entry reads as a miss, and forgetting one that isn't there
+    /// isn't a refusal.
+    #[test]
+    fn a_forgotten_entry_is_gone_and_forgetting_nothing_succeeds() {
+        let _secrets = isolate_secrets();
+        let server = "credential-store-forget.local";
+        KeychainCredentials
+            .save_credentials(server, Some("repo"), &creds("repo", "pa55"))
+            .expect("the test store always accepts");
+
+        KeychainCredentials
+            .forget_credentials(server, Some("repo"))
+            .expect("forgets");
+        assert!(KeychainCredentials.credentials(server, Some("repo")).is_none());
+        KeychainCredentials
+            .forget_credentials(server, Some("repo"))
+            .expect("nothing left to forget is fine");
     }
 
     /// Nothing stored reads as `None`, not as an error a backend has to classify.

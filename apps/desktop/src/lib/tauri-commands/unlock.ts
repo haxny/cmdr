@@ -10,10 +10,16 @@
 // Backend: the container-neutral unlock seam,
 // `apps/desktop/src-tauri/src/commands/file_system/unlock.rs`.
 
-import { commands, type ArchivePasswordPrompt, type UnlockError, type UnlockOutcome } from '#lib/ipc/bindings.js'
+import {
+  commands,
+  type ArchivePasswordPrompt,
+  type PasswordForgotten,
+  type UnlockError,
+  type UnlockOutcome,
+} from '#lib/ipc/bindings.js'
 import { TypedFailure } from '#lib/ipc/typed-failure.js'
 
-export type { ArchivePasswordPrompt, UnlockError, UnlockOutcome }
+export type { ArchivePasswordPrompt, PasswordForgotten, UnlockError, UnlockOutcome }
 
 /** An unlock or a forget that didn't reach a container, with the backend's typed reason. */
 export class UnlockFailure extends TypedFailure<UnlockError> {
@@ -80,6 +86,18 @@ export async function setArchivePassword(parentVolumeId: string, archivePath: st
 export async function forgetContainerPassword(parentVolumeId: string, path: string): Promise<void> {
   const res = await commands.forgetContainerPassword(parentVolumeId, path)
   if (res.status === 'error') throw new UnlockFailure(res.error)
+}
+
+/**
+ * Forgets the container's password everywhere it's kept, as the person asked:
+ * in memory, in the Keychain, and in anything opened with it, so the next read
+ * asks again. Answers whether the Keychain let go of its copy; the container
+ * is locked for this session either way.
+ */
+export async function forgetSavedContainerPassword(parentVolumeId: string, path: string): Promise<PasswordForgotten> {
+  const res = await commands.forgetSavedContainerPassword(parentVolumeId, path)
+  if (res.status === 'error') throw new UnlockFailure(res.error)
+  return res.data
 }
 
 /**

@@ -34,7 +34,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::IgnorePoison;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{UnlockOutcome, Volume, VolumeError};
+use crate::file_system::volume::{PasswordForgotten, UnlockOutcome, Volume, VolumeError};
 
 /// How long an unlock may take. Covers a repo's key derivation plus its open
 /// over a slow NAS; an archive answers at once.
@@ -153,6 +153,21 @@ pub async fn forget_container_password(parent_volume_id: String, path: String) -
         .ok_or(UnlockError::NotLocked)?
         .forget_password();
     Ok(())
+}
+
+/// Forgets the password of the container at `path` everywhere it's kept, as the
+/// person asked: in memory, in the Keychain, and in anything opened with it, so
+/// the next read asks again. Answers whether the Keychain let go of its copy;
+/// the container is locked for this session either way.
+#[tauri::command]
+#[specta::specta]
+pub async fn forget_saved_container_password(
+    parent_volume_id: String,
+    path: String,
+) -> Result<PasswordForgotten, UnlockError> {
+    let volume = resolve(&parent_volume_id, Path::new(&path)).await?;
+    let locked = volume.as_password_locked().ok_or(UnlockError::NotLocked)?;
+    Ok(locked.forget_saved_password().await)
 }
 
 /// The unlock itself, without the IPC wrapper, so the MCP `unlock` tool puts a

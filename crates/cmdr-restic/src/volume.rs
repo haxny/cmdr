@@ -24,8 +24,8 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::MetadataCaps;
 use cmdr_fs::volume::scan_walk::{self, ScanSource, Walking};
 use cmdr_fs::volume::{
-    BackendKind, BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, PasswordLocked,
-    ScanBoundary, SpaceInfo, UnlockOutcome, Volume, VolumeError, VolumeReadStream,
+    BackendKind, BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, PasswordForgotten,
+    PasswordLocked, ScanBoundary, SpaceInfo, UnlockOutcome, Volume, VolumeError, VolumeReadStream,
 };
 use rustic_core::repofile::Node;
 use std::ffi::OsString;
@@ -550,6 +550,18 @@ impl PasswordLocked for ResticVolume {
 
     fn forget_password(&self) {
         self.slot.forget_password();
+    }
+
+    /// Forgets the password in the hub and the credential store, and drops what
+    /// was opened with it (`ResticRepos::forget_saved_password`).
+    fn forget_saved_password<'a>(&'a self) -> Pin<Box<dyn Future<Output = PasswordForgotten> + Send + 'a>> {
+        Box::pin(async move {
+            if self.hub.forget_saved_password(&self.slot).await {
+                PasswordForgotten::Everywhere
+            } else {
+                PasswordForgotten::StoreKeptIt
+            }
+        })
     }
 }
 

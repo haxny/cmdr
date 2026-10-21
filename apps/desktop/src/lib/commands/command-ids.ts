@@ -257,6 +257,9 @@ export const COMMAND_IDS = [
   'cloud.openInGoogleDrive',
   'cloud.copyGoogleDriveLink',
   'cloud.askGemini',
+  // A restic backup: the one the focused pane is in, or whose `Browse snapshots`
+  // row is under the cursor.
+  'restic.forgetPassword',
 
   // Finder tag colors (macOS): toggle a system color tag on the focused selection.
   // No default shortcut; the user can bind one. The context-menu circles route

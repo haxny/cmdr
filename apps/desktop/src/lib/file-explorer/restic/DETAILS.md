@@ -24,6 +24,17 @@ real files keep the drive's row.
   `restic:snapshots` icon id the `cmdr-restic` hub puts on the row (`OVERLAY_ROW_ICON_ID`), the same way the git
   portal's `git:*` ids get their glyphs. It inherits the row's text color.
 
+## Forgetting a saved password
+
+"Forget backup password" (`restic.forgetPassword`, palette only; `forget-password.ts`) acts on the repo the focused pane
+is inside, else the one whose `Browse snapshots` row is under the cursor, and otherwise says how to pick one. It calls
+`forgetSavedContainerPassword` on `<repo>/Browse snapshots`, which locks the repo in the backend (password, opened repo,
+index, and snapshot list all go: `crates/cmdr-restic/DETAILS.md` § "Passwords and the credential store"). Every pane
+inside that repo's view then walks back to the repo folder with its cursor on `Browse snapshots` (only the focused pane
+takes focus), so the next Enter raises the unlock prompt instead of a pane failing its next read. The toast says whether
+Keychain let go (`storeKeptIt` is a warning: locked for this session, found again next launch). Not on MCP: the `unlock`
+tool answers a prompt and an agent never saves a password, so there's nothing for one to forget.
+
 ## Index progress
 
 Every folder inside a snapshot needs the repo's index first, which on a NAS takes seconds. The backend reports it as a

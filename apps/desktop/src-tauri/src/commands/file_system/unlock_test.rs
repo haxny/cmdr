@@ -10,11 +10,14 @@ use std::time::Duration;
 
 use crate::IgnorePoison;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{InMemoryVolume, ListingProgress, PasswordLocked, UnlockOutcome, Volume, VolumeError};
+use crate::file_system::volume::{
+    InMemoryVolume, ListingProgress, PasswordForgotten, PasswordLocked, UnlockOutcome, Volume, VolumeError,
+};
 use cmdr_fs::entry::FileEntry;
 
 use super::{
-    UnlockError, cancel_container_unlock, forget_container_password, in_flight_unlocks, unlock_container, unlock_within,
+    UnlockError, cancel_container_unlock, forget_container_password, forget_saved_container_password,
+    in_flight_unlocks, unlock_container, unlock_within,
 };
 
 /// How the stub answers an unlock.
@@ -95,6 +98,16 @@ impl PasswordLocked for LockedStub {
 
     fn forget_password(&self) {
         *self.kept.lock_ignore_poison() = None;
+    }
+
+    /// Forgets everywhere, and answers that the store kept its copy, so a test
+    /// sees the volume's answer come back untouched.
+    fn forget_saved_password<'a>(&'a self) -> Pin<Box<dyn Future<Output = PasswordForgotten> + Send + 'a>> {
+        Box::pin(async move {
+            *self.kept.lock_ignore_poison() = None;
+            *self.filed.lock_ignore_poison() = None;
+            PasswordForgotten::StoreKeptIt
+        })
     }
 }
 
@@ -290,6 +303,28 @@ async fn forgetting_drops_what_the_container_kept() {
 
     assert!(answer.is_ok(), "{answer:?}");
     assert_eq!(stub.kept(), None);
+}
+
+#[tokio::test]
+async fn forgetting_the_saved_password_drops_it_everywhere_and_says_what_the_store_did() {
+    let stub = Arc::new(LockedStub::new(Script::Answer(UnlockOutcome::Unlocked)));
+    let id = register(stub.clone());
+    unlock(&id, "hunter2", true).await.unwrap();
+    let answer = forget_saved_container_password(id.clone(), "/repo".to_string()).await;
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Ok(PasswordForgotten::StoreKeptIt)), "{answer:?}");
+    assert_eq!(stub.kept(), None);
+    assert_eq!(stub.filed(), None);
+}
+
+#[tokio::test]
+async fn forgetting_a_saved_password_where_nothing_is_locked_is_a_typed_refusal() {
+    let id = register(Arc::new(InMemoryVolume::new("Plain")));
+    let answer = forget_saved_container_password(id.clone(), "/repo".to_string()).await;
+    get_volume_manager().unregister(&id);
+
+    assert!(matches!(answer, Err(UnlockError::NotLocked)), "{answer:?}");
 }
 
 #[tokio::test]

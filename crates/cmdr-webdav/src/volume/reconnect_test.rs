@@ -191,6 +191,14 @@ impl CredentialStore for RefusesWrites {
     ) -> Result<(), cmdr_fs::volume::host::credentials::CredentialsNotStored> {
         Err(cmdr_fs::volume::host::credentials::CredentialsNotStored)
     }
+
+    fn forget_credentials(
+        &self,
+        service: &str,
+        scope: Option<&str>,
+    ) -> Result<(), cmdr_fs::volume::host::credentials::CredentialsNotForgotten> {
+        self.0.forget_credentials(service, scope)
+    }
 }
 
 /// ❗ **A checked box the store refused is said out loud**, and the connection

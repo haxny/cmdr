@@ -176,10 +176,17 @@ QNAP TS-464, 2026-10-20). `Tuning` holds every number below; tests shorten them,
   keeps nothing. Answers `Unlocked` or `WrongPassword`, never `Stored`. Filing is a separate step,
   `PasswordLocked::remember_password`, which the host runs only after an `Unlocked` nobody cancelled
   (`keep_signed_in_secret`: on saves, off only refreshes an entry already there and never seeds one). A wrong password
-  keeps and files nothing. `forget_password` clears the in-memory copy only.
+  keeps and files nothing. `forget_password` clears the in-memory copy only (a cancelled prompt).
+- **Forgetting the saved password** (`PasswordLocked::forget_saved_password`, over `ResticRepos::forget_saved_password`;
+  the person's "Forget backup password") locks the repo again: under the slot's lookup lock it drops the in-memory
+  password, marks the store missed for the session, and drops the opened repo (awaiting its lock, ❌ never `try_lock`:
+  an open in flight would leave its repo behind), the index, and the snapshot list, then deletes the store entry. Why
+  all of them: each one serves reads without asking (a cached list and index answer every path inside a snapshot), so
+  dropping only the password left the repo open. Answers `StoreKeptIt` when the store refused the delete; the repo is
+  locked for the session either way.
 - **A password that stopped working** (a stale stored one, or the repo's keys changed) is forgotten from memory, the
-  store isn't asked again this session, and the call answers `NeedsPassword { wrong_attempt: true }`. `CredentialStore`
-  has no delete, so a wrong stored entry is overwritten by the next remembered unlock.
+  store isn't asked again this session, and the call answers `NeedsPassword { wrong_attempt: true }`. The stored entry
+  stays until the next remembered unlock overwrites it, or the person forgets it.
 - Cmdr's own copies of a password live in `Zeroizing` slots. rustic's `Credentials::password` makes a plain `String` for
   the open, `SignIn` carries one to the store, and the app's Keychain adapter caches what it reads in a process static;
   none of those is ours to wipe.

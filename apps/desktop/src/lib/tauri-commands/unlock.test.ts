@@ -8,6 +8,7 @@ vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     unlockContainer: vi.fn(),
     forgetContainerPassword: vi.fn(),
+    forgetSavedContainerPassword: vi.fn(),
     cancelContainerUnlock: vi.fn(),
     notifyArchivePasswordPrompt: vi.fn(),
     notifyArchivePasswordDismissed: vi.fn(),
@@ -21,6 +22,7 @@ import {
   unlockContainer,
   cancelContainerUnlock,
   forgetContainerPassword,
+  forgetSavedContainerPassword,
   UnlockFailure,
   notifyArchivePasswordPrompt,
   notifyArchivePasswordDismissed,
@@ -99,6 +101,24 @@ describe('forgetContainerPassword wrapper', () => {
     })
     const thrown: unknown = await forgetContainerPassword('root', '/a/secret.zip').catch((e: unknown) => e)
     expect(failureOf(UnlockFailure, thrown)).toEqual({ type: 'volumeNotFound', volumeId: 'root' })
+  })
+})
+
+describe('forgetSavedContainerPassword wrapper', () => {
+  it('forwards the volume id and path, and answers what the Keychain did', async () => {
+    vi.mocked(commands.forgetSavedContainerPassword).mockResolvedValueOnce({ status: 'ok', data: 'storeKeptIt' })
+    const answer = await forgetSavedContainerPassword('root', '/b/repo/Browse snapshots')
+    expect(answer).toBe('storeKeptIt')
+    expect(commands.forgetSavedContainerPassword).toHaveBeenCalledWith('root', '/b/repo/Browse snapshots')
+  })
+
+  it('throws the typed reason on an error result', async () => {
+    vi.mocked(commands.forgetSavedContainerPassword).mockResolvedValueOnce({
+      status: 'error',
+      error: { type: 'notLocked' },
+    })
+    const thrown: unknown = await forgetSavedContainerPassword('root', '/b').catch((e: unknown) => e)
+    expect(failureOf(UnlockFailure, thrown)).toEqual({ type: 'notLocked' })
   })
 })
 

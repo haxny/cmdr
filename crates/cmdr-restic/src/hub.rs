@@ -305,6 +305,26 @@ impl ResticRepos {
         secret_store::keep_signed_in_secret(&self.host, KEYCHAIN_SERVICE, &sign_in).await
     }
 
+    /// Locks `slot`'s repo again, as the person asked: the password goes from
+    /// memory and from the credential store, and the opened repo, the snapshot
+    /// list, and the index go with it, since each would otherwise keep serving
+    /// reads without asking. The store isn't asked again this session. Answers
+    /// whether the store let go of its copy; the repo is locked either way.
+    ///
+    /// Runs under the slot's lookup lock, so a listing reading the store right
+    /// now can't put the password back behind the forget.
+    pub(crate) async fn forget_saved_password(&self, slot: &RepoSlot) -> bool {
+        let _asking = slot.store_lookup.lock().await;
+        *lock(&slot.password) = None;
+        slot.store_missed.store(true, Ordering::Relaxed);
+        // Awaited, ❌ not `try_lock`: an open in flight holds it, and would
+        // otherwise leave its repo behind for the next listing to use.
+        *slot.opened.lock().await = None;
+        slot.drop_opened_repo(&self.host.runtime());
+        *lock(&slot.snapshots) = None;
+        secret_store::forget_stored_secret(&self.host, KEYCHAIN_SERVICE, &slot.key.store_scope()).await
+    }
+
     /// The repo's password: the one in memory, else the credential store's
     /// (asked once per session: a miss is remembered until an unlock), else
     /// `NeedsPassword`.

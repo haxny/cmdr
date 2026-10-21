@@ -87,6 +87,20 @@ fn a_forgotten_offer_saves_through_to_the_real_store() {
     );
 }
 
+/// A forget through the wrapper takes the offer for that key AND the stored
+/// entry: an offer left behind would go on answering after the person forgot.
+#[test]
+fn forgetting_through_the_wrapper_takes_the_offer_and_the_stored_entry() {
+    let inner = Arc::new(InMemoryCredentials::new().with_entry(SERVICE, Some(ACCOUNT), ACCOUNT, "stored"));
+    let wrapper = OneShotCredentials::new(inner.clone(), SERVICE, Some(ACCOUNT), offered());
+
+    wrapper
+        .forget_credentials(SERVICE, Some(ACCOUNT))
+        .expect("the in-memory store forgets");
+    assert!(wrapper.credentials(SERVICE, Some(ACCOUNT)).is_none());
+    assert!(inner.credentials(SERVICE, Some(ACCOUNT)).is_none());
+}
+
 /// ❗ **The offer ends with the attempt.** The volume the dial built keeps the
 /// host it was dialed with, so the wrapper outlives the attempt; forgetting the
 /// secret is what makes "not remembered" true for the reconnect that comes

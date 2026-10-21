@@ -11,10 +11,11 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::{TestDir, wait_until_async};
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::credentials::{
-    CredentialStore, CredentialsNotStored, InMemoryCredentials, StoredCredentials,
+    CredentialStore, CredentialsNotForgotten, CredentialsNotStored, InMemoryCredentials, StoredCredentials,
 };
 use cmdr_fs::volume::{
-    InMemoryVolume, ListingPhase, ListingProgress, UnlockOutcome, Volume, VolumeError, VolumeReadStream,
+    InMemoryVolume, ListingPhase, ListingProgress, PasswordForgotten, UnlockOutcome, Volume, VolumeError,
+    VolumeReadStream,
 };
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -755,6 +756,10 @@ impl CredentialStore for CountingStore {
     ) -> Result<(), CredentialsNotStored> {
         self.inner.save_credentials(service, scope, credentials)
     }
+
+    fn forget_credentials(&self, service: &str, scope: Option<&str>) -> Result<(), CredentialsNotForgotten> {
+        self.inner.forget_credentials(service, scope)
+    }
 }
 
 async fn locked_rig(store: Arc<dyn CredentialStore>) -> Rig {
@@ -886,6 +891,85 @@ async fn an_unlock_dropped_while_another_open_runs_keeps_nothing() {
         "the unlock commits without waiting on the other open, so no drop can land between keeping and answering: {answered:?}"
     );
     assert!(rig.volume.list_directory(&view(ROOT), None).await.is_ok());
+}
+
+/// ❗ Forgetting the saved password locks the repo again EVERYWHERE: the store
+/// entry goes, and so do the password, the opened repo, the cached snapshot list,
+/// and the index, any of which would otherwise keep serving listings inside a
+/// snapshot without asking. The next unlock opens it as before.
+#[tokio::test(flavor = "multi_thread")]
+async fn forgetting_the_saved_password_locks_the_repo_until_the_next_unlock() {
+    let store =
+        Arc::new(InMemoryCredentials::new().with_entry(KEYCHAIN_SERVICE, Some(&scope(ROOT)), &scope(ROOT), PASSWORD));
+    let rig = locked_rig(Arc::clone(&store) as Arc<dyn CredentialStore>).await;
+    let file = find_file(&rig.volume, latest(ROOT), "a.txt").await;
+    let inside = file.parent().expect("a folder inside the snapshot").to_path_buf();
+    let locked = rig.volume.as_password_locked().expect("a repo is password-locked");
+
+    assert_eq!(locked.forget_saved_password().await, PasswordForgotten::Everywhere);
+
+    assert!(
+        store.credentials(KEYCHAIN_SERVICE, Some(&scope(ROOT))).is_none(),
+        "the store entry is gone"
+    );
+    for path in [view(ROOT), inside.clone()] {
+        let listing = rig.volume.list_directory(&path, None).await;
+        assert!(
+            matches!(listing, Err(VolumeError::NeedsPassword { wrong_attempt: false })),
+            "{} asks again: {listing:?}",
+            path.display()
+        );
+    }
+
+    let outcome = locked.unlock(PASSWORD.to_string()).await.expect("asks the repo");
+    assert_eq!(outcome, UnlockOutcome::Unlocked);
+    assert!(rig.volume.list_directory(&inside, None).await.is_ok());
+}
+
+/// A store that won't let go still leaves the repo locked for this session, and
+/// says the store kept its copy.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_store_that_refuses_to_forget_still_locks_the_repo() {
+    let store = Arc::new(RefusesToForget(InMemoryCredentials::new().with_entry(
+        KEYCHAIN_SERVICE,
+        Some(&scope(ROOT)),
+        &scope(ROOT),
+        PASSWORD,
+    )));
+    let rig = locked_rig(Arc::clone(&store) as Arc<dyn CredentialStore>).await;
+    rig.volume
+        .list_directory(&view(ROOT), None)
+        .await
+        .expect("opens with the stored password");
+    let locked = rig.volume.as_password_locked().expect("a repo is password-locked");
+
+    assert_eq!(locked.forget_saved_password().await, PasswordForgotten::StoreKeptIt);
+    assert!(matches!(
+        rig.volume.list_directory(&view(ROOT), None).await,
+        Err(VolumeError::NeedsPassword { wrong_attempt: false })
+    ));
+}
+
+/// A store whose delete always says no (a locked keychain).
+struct RefusesToForget(InMemoryCredentials);
+
+impl CredentialStore for RefusesToForget {
+    fn credentials(&self, service: &str, scope: Option<&str>) -> Option<StoredCredentials> {
+        self.0.credentials(service, scope)
+    }
+
+    fn save_credentials(
+        &self,
+        service: &str,
+        scope: Option<&str>,
+        credentials: &StoredCredentials,
+    ) -> Result<(), CredentialsNotStored> {
+        self.0.save_credentials(service, scope, credentials)
+    }
+
+    fn forget_credentials(&self, _service: &str, _scope: Option<&str>) -> Result<(), CredentialsNotForgotten> {
+        Err(CredentialsNotForgotten)
+    }
 }
 
 /// Zero writes, still: a load, a listing, and a read through a scripted parent.

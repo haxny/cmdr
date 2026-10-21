@@ -19,7 +19,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::host::credentials::{CredentialStore, CredentialsNotStored, StoredCredentials};
+use cmdr_fs::volume::host::credentials::{
+    CredentialStore, CredentialsNotForgotten, CredentialsNotStored, StoredCredentials,
+};
 use cmdr_fs::volume::host::events::{RecordingVolumeEvents, VolumeConnection, VolumeEventSink};
 use cmdr_fs::volume::host::host_keys::InMemoryHostKeys;
 use cmdr_fs::volume::{SignInShape, Volume};
@@ -116,6 +118,13 @@ impl CredentialStore for CountingCredentials {
         self.entries
             .lock_ignore_poison()
             .insert((service.to_string(), scope.map(str::to_string)), credentials.clone());
+        Ok(())
+    }
+
+    fn forget_credentials(&self, service: &str, scope: Option<&str>) -> Result<(), CredentialsNotForgotten> {
+        self.entries
+            .lock_ignore_poison()
+            .remove(&(service.to_string(), scope.map(str::to_string)));
         Ok(())
     }
 }

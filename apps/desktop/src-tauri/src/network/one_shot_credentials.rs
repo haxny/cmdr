@@ -21,7 +21,9 @@ use std::sync::{Arc, Mutex};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::host::credentials::{CredentialStore, CredentialsNotStored, StoredCredentials};
+use cmdr_fs::volume::host::credentials::{
+    CredentialStore, CredentialsNotForgotten, CredentialsNotStored, StoredCredentials,
+};
 
 /// A secret a person just typed, and what they asked us to do with it.
 ///
@@ -143,6 +145,21 @@ impl CredentialStore for OneShotCredentials {
         // in and remember" on this volume isn't refused for how it was opened.
         self.inner.save_credentials(service, scope, credentials)
     }
+
+    fn forget_credentials(&self, service: &str, scope: Option<&str>) -> Result<(), CredentialsNotForgotten> {
+        // An offer for the same key would otherwise go on answering after the
+        // forget, and a forget means nothing answers.
+        {
+            let mut offer = self.offer.lock_ignore_poison();
+            if offer
+                .as_ref()
+                .is_some_and(|offer| offer.service == service && offer.scope.as_deref() == scope)
+            {
+                *offer = None;
+            }
+        }
+        self.inner.forget_credentials(service, scope)
+    }
 }
 
 /// Holds an offer open. Dropping it forgets the secret.
@@ -190,6 +207,10 @@ impl CredentialStore for HostCredentials {
         credentials: &StoredCredentials,
     ) -> Result<(), CredentialsNotStored> {
         self.0.credentials().save_credentials(service, scope, credentials)
+    }
+
+    fn forget_credentials(&self, service: &str, scope: Option<&str>) -> Result<(), CredentialsNotForgotten> {
+        self.0.credentials().forget_credentials(service, scope)
     }
 }
 

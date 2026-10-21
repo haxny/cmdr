@@ -35,6 +35,7 @@ import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.
 import { extractFilename } from '#lib/file-explorer/operations/selection-adjustment.js'
 import { trackEvent } from '#lib/tauri-commands/index.js'
 import { editServerInView } from '#lib/file-explorer/network/servers-hub-actions.js'
+import { forgetResticPassword } from '#lib/file-explorer/restic/forget-password.js'
 import type { CommandArgs } from '#lib/commands/index.js'
 import { detached } from './detached'
 import { confirmDialogForMcp } from '../mcp-dialog-confirm'
@@ -412,4 +413,9 @@ export const fileHandlers = {
         addToast(tString('commands.handler.googleDriveOpenFailed', { detail: String(e) }), { level: 'error' })
       }
     }),
+
+  'restic.forgetPassword': ({ explorerRef }) => {
+    if (!explorerRef) return
+    detached(forgetResticPassword(explorerRef))
+  },
 } satisfies Partial<CommandHandlerRecord>

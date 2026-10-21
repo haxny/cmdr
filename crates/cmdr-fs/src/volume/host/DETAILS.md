@@ -167,6 +167,11 @@ creates one only when the Remember box is on: the server's, or the share's own b
 `(service, scope)` generalizes that pair: `(hostname, share)` for SMB, `("host:port", username)` for SFTP, and
 `(endpoint, bucket)` for S3. `secret` rather than `password` because S3's is an access key.
 
+`forget_credentials` drops one entry (⇐ `network::keychain::delete_credentials`); nothing stored is `Ok`, and only a
+store that refuses is `CredentialsNotForgotten`. Its one caller today is a restic repo's "Forget backup password",
+through `secret_store::forget_stored_secret`. The one-shot wrapper drops a matching offer too, or the offer would go on
+answering after the forget.
+
 `VolumeHost::with_credentials` is the one seam with a per-dial override, and it exists so a connect can answer its own
 credential without the store ever holding it: the app wraps its real store for one attempt
 (`apps/desktop/src-tauri/src/network/one_shot_credentials.rs`). ❗ Rebuilding a host from `builder()` instead would

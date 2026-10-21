@@ -535,8 +535,10 @@ unlock finishes behind the reply and keeps the password after the person was tol
 `PasswordLocked::unlock` is cancel-safe by contract (`crates/cmdr-fs/src/volume/password_locked.rs`): the slow part runs
 on the blocking pool, which a drop never interrupts, and state is committed only after it returns, with no await
 before the answer. The Keychain save is NOT part of the unlock: `unlock_within` calls `remember_password` only after an
-`Unlocked` answer nobody cancelled, awaited to the end (a store write can't be taken back), and a Cancel that lands as
-the unlock answers makes the container forget the password instead.
+`Unlocked` answer nobody cancelled, awaited to the end (a store write lands in the person's Keychain), and a Cancel that
+lands as the unlock answers makes the container forget the password instead. `forget_container_password` is that
+in-memory forget (the dialog's Cancel); `forget_saved_container_password` is the person's "forget it everywhere"
+(`PasswordLocked::forget_saved_password`), answering the typed `PasswordForgotten`.
 
 The dialog's Cancel reaches the token by name: the frontend picks an `unlock_id` per check and hands it to both
 `unlock_container` and `cancel_container_unlock`, which share a small in-flight registry in the same file. Two IPC calls

@@ -56,6 +56,22 @@ fn only_a_checked_box_can_be_refused() {
     assert!(!SignedIn::after(&sign_in("s", false), false).remember_refused);
 }
 
+/// Forgetting takes the entry out of the store, and a store with nothing in it
+/// has nothing to refuse.
+#[tokio::test]
+async fn forgetting_takes_the_entry_and_an_empty_store_answers_yes() {
+    let store = Arc::new(InMemoryCredentials::new().with_entry(SERVICE, Some("ada"), "ada", "old"));
+    assert!(forget_stored_secret(&host_over(&store), SERVICE, "ada").await);
+    assert_eq!(held(&store), None);
+    assert!(forget_stored_secret(&host_over(&store), SERVICE, "ada").await);
+}
+
+/// No store at all forgets trivially: nothing could have been kept there.
+#[tokio::test]
+async fn a_host_with_no_store_has_nothing_to_forget() {
+    assert!(forget_stored_secret(&VolumeHost::detached(), SERVICE, "ada").await);
+}
+
 /// ❌ Remember off never seeds: the sheet forgot the entry before it dialed.
 #[tokio::test]
 async fn remember_off_leaves_an_empty_store_empty() {

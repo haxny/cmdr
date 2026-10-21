@@ -26,6 +26,18 @@ pub async fn has_stored_secret(host: &VolumeHost, service: &str, username: &str)
     stored_secret(host, service, username).await.is_some()
 }
 
+/// Drops the account's stored secret, answering whether the store let it go
+/// (nothing stored counts as gone). Callers that hold the secret in memory drop
+/// that copy themselves, whatever this answers.
+pub async fn forget_stored_secret(host: &VolumeHost, service: &str, username: &str) -> bool {
+    let host = host.clone();
+    let service = service.to_string();
+    let scope = username.to_string();
+    let forgotten =
+        tokio::task::spawn_blocking(move || host.credentials().forget_credentials(&service, Some(&scope))).await;
+    matches!(forgotten, Ok(Ok(())))
+}
+
 /// Brings a REMEMBERED secret up to date with the one the user just typed.
 ///
 /// ❗ Call it only once that secret CONNECTED. Called before the dial, a typo

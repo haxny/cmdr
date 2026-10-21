@@ -516,6 +516,16 @@ export const fileListCommands: CommandSource[] = [
     whileDialogOpen: BLOCKED_BY_DIALOGS,
     descriptionKey: 'commands.cloudAskGemini.description',
   },
+  {
+    // The way to drop a backup's remembered password (`#lib/file-explorer/restic/forget-password.ts`).
+    id: 'restic.forgetPassword',
+    nameKey: 'commands.resticForgetPassword.label',
+    scope: 'Main window/File list',
+    showInPalette: true,
+    shortcuts: [],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    descriptionKey: 'commands.resticForgetPassword.description',
+  },
 
   // ============================================================================
   // File list - Finder tag colors (macOS). Toggle a system color tag on the

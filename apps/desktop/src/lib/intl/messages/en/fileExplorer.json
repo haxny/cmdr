@@ -1260,6 +1260,31 @@
       "paths": "the paths, already joined into a list, for example \"/Users/david, /etc\" (never translated)"
     }
   },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr forgot the password for {name}. You’ll be asked for it next time you open it.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "description": "Success toast after the user ran the “Forget backup password” command on a restic backup (a folder of encrypted backups made with the restic tool). Cmdr removed the password it had saved in the macOS Keychain and locked the backup again, so opening it asks for the password. Keep \"Cmdr\" as is (the app’s name).",
+    "placeholders": {
+      "name": "the backup folder’s name, for example \"m3-macbook-restic\" (never translated)"
+    }
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr locked {name} for now, but Keychain kept its saved password. To remove it for good, delete it in Keychain Access.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "description": "Warning toast after the user ran the “Forget backup password” command on a restic backup, when macOS wouldn’t let Cmdr delete the saved password (a locked keychain, or the user said no to a system prompt). The backup is locked until Cmdr restarts, but the next launch will find the password again. Use the names macOS uses in your language for its password store (Apple calls it \"Keychain\") and for its \"Keychain Access\" app. Avoid the words \"error\" and \"failed\".",
+    "placeholders": {
+      "name": "the backup folder’s name, for example \"m3-macbook-restic\" (never translated)"
+    }
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr couldn’t reach {name} just now, so its password stays saved. Try again in a moment.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "description": "Warning toast after the user ran the “Forget backup password” command on a restic backup, when Cmdr couldn’t get to the backup (for example its network drive dropped). Nothing changed: the password is still saved. Avoid the words \"error\" and \"failed\". Keep \"Cmdr\" as is (the app’s name).",
+    "placeholders": {
+      "name": "the backup folder’s name, for example \"m3-macbook-restic\" (never translated)"
+    }
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "To forget a backup’s password, open the backup first, or put the cursor on its “Browse snapshots” folder.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "description": "Info toast when the user runs the “Forget backup password” command while the focused pane isn’t inside a restic backup and the cursor isn’t on one’s snapshot folder, so Cmdr doesn’t know which backup they mean. “Browse snapshots” is the exact name of a folder Cmdr shows inside every restic backup; keep it in English, exactly as written, inside your language’s quotation marks."
+  },
   "fileExplorer.archive.useTransferToCopyOut": "To copy files out of an archive, use F5 to copy or F6 to move.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "description": "Info toast when the user presses the system-clipboard copy or cut shortcut (Cmd+C / Cmd+X) inside an archive. The system clipboard can’t carry archive-inner paths, so it points them at the F5 (copy) and F6 (move) transfer keys instead. F5 and F6 are keyboard key names; keep them as-is."

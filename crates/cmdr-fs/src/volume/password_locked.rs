@@ -59,8 +59,8 @@ pub trait PasswordLocked: Send + Sync {
     /// files nothing (a container that keeps no store entry, like an archive).
     ///
     /// ❗ The host calls it only AFTER the unlock answered and nobody cancelled,
-    /// and awaits it to the end: a store write can't be taken back (the store has
-    /// no delete), so it must never run for an unlock the person called off.
+    /// and awaits it to the end: a store write lands in the person's Keychain,
+    /// so it must never run for an unlock the person called off.
     fn remember_password<'a>(
         &'a self,
         password: String,
@@ -73,4 +73,27 @@ pub trait PasswordLocked: Send + Sync {
     /// Forgets the password this container holds in memory (the person
     /// cancelled the prompt). A no-op when it holds none.
     fn forget_password(&self);
+
+    /// Forgets the password everywhere it's kept (the person asked to): in
+    /// memory, in the credential store, and in anything opened with it, so the
+    /// next read asks again. The default forgets the in-memory copy, all a
+    /// container that keeps no store entry (an archive) has.
+    fn forget_saved_password<'a>(&'a self) -> Pin<Box<dyn Future<Output = PasswordForgotten> + Send + 'a>> {
+        Box::pin(async move {
+            self.forget_password();
+            PasswordForgotten::Everywhere
+        })
+    }
+}
+
+/// What forgetting a saved password did. Either way the container is locked
+/// again for this session; the two differ only in what the next launch does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum PasswordForgotten {
+    /// Gone from memory and from the credential store (or the store held none).
+    Everywhere,
+    /// Gone from memory, but the credential store refused to drop its copy (a
+    /// locked keychain, a denied prompt), so the next launch still finds it.
+    StoreKeptIt,
 }

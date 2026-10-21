@@ -1012,6 +1012,14 @@
   "@commands.cloudAskGemini.description": {
     "description": "Longer help text for the \"Ask Gemini\" command, shown as a secondary line in the command palette."
   },
+  "commands.resticForgetPassword.label": "Forget backup password",
+  "@commands.resticForgetPassword.label": {
+    "description": "Command name that removes a restic backup’s saved password from the macOS Keychain and locks the backup again, so opening it asks for the password. Acts on the backup the user is browsing, or whose snapshots folder is under the cursor. \"backup\" = a restic backup repository, a folder of encrypted backups. VERB phrase, imperative. Appears in the command palette."
+  },
+  "commands.resticForgetPassword.description": "Removes the saved password of the restic backup you’re in from Keychain, and locks the backup again",
+  "@commands.resticForgetPassword.description": {
+    "description": "Longer help text for the \"Forget backup password\" command, shown as a secondary line in the command palette. Use the name macOS uses for its password store in your language (Apple calls it \"Keychain\"). Keep \"restic\" as is: it’s the name of the backup tool."
+  },
   "commands.fileCopyShareLink.label": "Copy share link (seven days)",
   "@commands.fileCopyShareLink.label": {
     "description": "Command name that copies a share link to the selected file in an S3 bucket (cloud storage), valid for seven days. A share link is a web address anyone can open to download that one file, without signing in, until it expires. It copies a link, not the file. Appears in the command palette, only while the focused pane is on a bucket.",
