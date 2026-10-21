@@ -180,6 +180,7 @@ async fn pipe(
         WriteStaging::Stage,
     )
     .await
+    .map(|piped| piped.bytes)
 }
 
 /// Two paths on one server: the server copies, and no byte reaches Cmdr.
@@ -426,7 +427,7 @@ impl Volume for StorePlace {
         to: &'a Path,
         mode: WriteMode,
         progress: &'a dyn ServerCopyProgress,
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             let Some(peer) = self.same_account_peer(source) else {
                 return Err(VolumeError::NotSupported);
@@ -443,7 +444,6 @@ impl Volume for StorePlace {
                     progress.advanced(written.bytes_written, size)
                 })
                 .await
-                .map(|written| written.bytes)
         })
     }
 }
@@ -613,7 +613,7 @@ impl Volume for PlainDest {
         to: &'a Path,
         mode: WriteMode,
         progress: &'a dyn ServerCopyProgress,
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.offered.fetch_add(1, Ordering::SeqCst);
         self.inner.copy_on_server(source, from, to, mode, progress)
     }

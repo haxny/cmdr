@@ -30,7 +30,7 @@ use std::time::{Duration, SystemTime};
 use cmdr_fs::error_detail::ErrorDetail;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
-use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeError, WriteMode};
+use cmdr_fs::volume::{ServerCopyProgress, StreamWritten, Volume, VolumeError, WriteMode};
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 use log::{debug, warn};
@@ -39,7 +39,7 @@ use super::S3Volume;
 use super::errors::map_s3_error;
 use super::multipart_upload::{abort_upload, upload_refusal};
 use super::paths::{Target, target_of};
-use super::query::{body_error, stored_mtime};
+use super::query::{body_error, landed_modified, stored_mtime};
 use super::upload::{WriteTarget, overwrite_for, retry_after};
 use super::writes::{normalize_etag, refuse_unstorable};
 use crate::error::{S3Error, S3ErrorCode};
@@ -305,7 +305,7 @@ impl S3Volume {
         to: &Path,
         mode: WriteMode,
         progress: &dyn ServerCopyProgress,
-    ) -> Result<u64, VolumeError> {
+    ) -> Result<StreamWritten, VolumeError> {
         let Some(peer) = self.same_account_peer(source) else {
             return Err(VolumeError::NotSupported);
         };
@@ -344,8 +344,12 @@ impl S3Volume {
             remote: &from_remote,
             object: &object,
         };
+        // Every copy restates the source's date (`SourceObject::restated`), so
+        // that's the date a HEAD of the copy answers.
+        let landed = landed_modified(object.mtime);
         self.copy_key(&client, &copy_from, to_bucket, to_key, &to_remote, mode, progress)
             .await
+            .map(|bytes| StreamWritten::nothing_refused(bytes).landed_at(landed))
     }
 
     /// Copies one object to `to_key` in `to_bucket`, whole or in parts by

@@ -15,6 +15,8 @@
 use std::fs::Metadata;
 use std::path::{Path, PathBuf};
 
+use cmdr_fs::volume::LandedModified;
+
 use super::overwrite::DisplacedEntry;
 use super::types::RecoveredOriginal;
 
@@ -30,6 +32,12 @@ pub(crate) struct WrittenFile {
     /// reversal has to recognize before renaming it back.
     pub(crate) path: PathBuf,
     pub(crate) identity: WrittenIdentity,
+    /// The landed modified time the write reported for `path`
+    /// ([`LandedModified`]), which the operation log records instead of reading
+    /// it back (`journal::LandedTimes`). ❗ The journal's, never the in-flight
+    /// reversal's: that one rechecks [`Self::identity`] alone (see
+    /// [`WrittenIdentity`] for why no mtime goes there).
+    pub(crate) landed_modified: LandedModified,
 }
 
 impl WrittenFile {
@@ -38,7 +46,11 @@ impl WrittenFile {
     /// lands [`WrittenIdentity::Unverifiable`].
     pub(crate) fn local(path: PathBuf) -> Self {
         let identity = WrittenIdentity::at_local_path(&path);
-        Self { path, identity }
+        Self {
+            path,
+            identity,
+            landed_modified: LandedModified::Unknown,
+        }
     }
 
     /// A local entry whose metadata the caller already holds — the same snapshot
@@ -49,6 +61,7 @@ impl WrittenFile {
         Self {
             path,
             identity: WrittenIdentity::of_stat(meta),
+            landed_modified: LandedModified::Unknown,
         }
     }
 
@@ -58,7 +71,15 @@ impl WrittenFile {
         Self {
             path,
             identity: WrittenIdentity::VolumeFile { size },
+            landed_modified: LandedModified::Unknown,
         }
+    }
+
+    /// The same file, with the landed modified time its write reported.
+    #[must_use]
+    pub(crate) fn landed_at(mut self, landed: LandedModified) -> Self {
+        self.landed_modified = landed;
+        self
     }
 }
 

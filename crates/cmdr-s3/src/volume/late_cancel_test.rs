@@ -228,6 +228,7 @@ async fn copy_in_parts(s3: &FakeS3) -> Result<u64, VolumeError> {
             &Straight,
         )
         .await
+        .map(|written| written.bytes)
 }
 
 /// ❗ The link dies right after the server completed a server-side copy in

@@ -228,8 +228,12 @@ impl CreatedPaths {
             .map(|ledger| std::mem::take(&mut *ledger.lock_ignore_poison()))
             .unwrap_or_default()
     }
-    pub(super) fn record_file(&self, path: PathBuf, size: u64) {
-        self.files.lock_ignore_poison().push(WrittenFile::volume(path, size));
+    /// Notes a file the copy landed at `path`, with the landed modified time
+    /// its write reported (`LandedModified::Unknown` when it reported none).
+    pub(super) fn record_file(&self, path: PathBuf, size: u64, landed: cmdr_fs::volume::LandedModified) {
+        self.files
+            .lock_ignore_poison()
+            .push(WrittenFile::volume(path, size).landed_at(landed));
     }
 
     pub(super) fn record_dir(&self, path: PathBuf) {

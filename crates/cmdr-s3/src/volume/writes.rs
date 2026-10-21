@@ -46,6 +46,7 @@ use super::S3Volume;
 use super::cut_off::{CutOff, settle};
 use super::errors::map_s3_error;
 use super::paths::{Target, target_of};
+use super::query::landed_modified;
 use super::upload::{
     PROGRESS_TICK, PartReader, Progress, ShortStream, WriteTarget, overwrite_for, retry_after, size_mismatch,
 };
@@ -240,7 +241,10 @@ impl S3Volume {
                     .await
             }
         };
-        written.map(StreamWritten::nothing_refused)
+        // The date it stored is the one a HEAD answers, so an undo's recheck
+        // finds what the operation log records (`query::landed_modified`).
+        let landed = landed_modified(metadata.mtime);
+        written.map(|bytes| StreamWritten::nothing_refused(bytes).landed_at(landed))
     }
 
     /// Whether a write that would go as one PUT has to go as a multipart

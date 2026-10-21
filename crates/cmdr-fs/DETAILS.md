@@ -832,6 +832,13 @@ everywhere, which is the point.
   SFTP, and the in-memory double green, WebDAV's both on Nextcloud (Apache stores no date, so it runs the read half),
   and the read half by archive. The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the
   source's metadata".
+- `assert_landed_time_agrees_with_get_metadata` — the landed modified time the operation log records for a copied file
+  is the one `get_metadata` (the undo's recheck) answers: the write's own report (`StreamWritten::landed_at`,
+  `LandedModified`) when it gives one, else the file's row in its folder's listing. S3's listing shows the upload time,
+  so its write reports (#651). Run wherever the date cells run, Nextcloud included; the in-memory double runs it plain,
+  S3-shaped (`with_listing_upload_time` plus `with_landed_times_reported`), and broken, to show it catches a listing
+  that disagrees with nothing reported. The contract: `crates/cmdr-operation-log/DETAILS.md` § "What a volume leaf's
+  snapshot carries".
 
 `InMemoryVolume`, `LocalPosixVolume`, `AdbVolume`, and the Docker-gated `SmbVolume`, `SftpVolume`, and `WebdavVolume`
 run every one (InMemory's writability cell sits in `capabilities_test.rs`, next to the predicate it speaks for).

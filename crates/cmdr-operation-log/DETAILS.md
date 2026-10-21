@@ -830,21 +830,37 @@ rollback reverses the whole tree rather than skipping its contents. The byte cou
 returns what it piped, off a size hint the walker's `list_directory` already paid for, and `CreatedPaths` carries a
 `WrittenFile` per destination (`crates/cmdr-operations/src/ledger.rs`) so it rides through to the row (`journal.rs`).
 
-**Each leaf also records the landed file's OWN mtime, read back from the destination** (`journal::LandedTimes` in
+**Each leaf also records the landed file's OWN mtime** (`journal::LandedTimes` and `record_volume_transfer_source` in
 `crates/cmdr-operations/src/journal.rs`). Size alone passed a file edited in place at the same length (a VM disk image,
 a SQLite database, a re-saved document), and undoing the copy deleted it with the user's edits (#519).
 
-- **The destination's own time, ❌ never the source's.** A destination that doesn't keep the source's date (S3, WebDAV,
-  an Android phone over MTP) would differ from a read-time capture on every leaf, flipping each one to `Drift`, which
-  reads to the user as "you changed this file" and refuses. The read-back goes through the same `Volume` the reversal
-  rechecks with, so both sides see one clock at one precision.
-- **Bounded per source, never per file.** The write path returns no landed time (`StreamWritten` carries bytes and
-  refusals), so this reads it back: one `get_metadata` for a FILE source, one `list_directory` per destination folder
-  for a DIRECTORY source, on every backend. A listed name is only matched against the files the source wrote, never
-  joined onto a path. Only a journaling transfer reads anything back.
-- **A stopped or failed source reads nothing back** (a stop never waits on the share), so its rows keep the size-only
-  check; so does a file the read-back can't place (a listing that failed, a name the listing spells differently), a
-  symlink, and a backend that reports no mtime (`None`, which `verify_snapshot` skips over).
+- **The destination's own time, ❌ never the source's.** A destination that doesn't keep the source's date (WebDAV on
+  Apache, an Android phone over MTP) would differ from a read-time capture on every leaf, flipping each one to `Drift`,
+  which reads to the user as "you changed this file" and refuses.
+- **❗ The contract: what a row records is what the undo's recheck reads**, `Volume::get_metadata`. Two sources keep it.
+  The write's own report comes first: a backend that knows the time `get_metadata` will answer returns it on
+  `StreamWritten::landed_at` (`LandedModified::Known`), it rides the leaf's `WrittenFile::landed_modified`, and nothing
+  is read back. Otherwise the time is read back: one `get_metadata` for a FILE source, and for a DIRECTORY source one
+  `list_directory` per destination folder holding a file whose write reported nothing. A listing agreeing with
+  `get_metadata` is the backend's half of the contract, held by
+  `cmdr_fs::volume::conformance::assert_landed_time_agrees_with_get_metadata` on every backend.
+- **Why the write reports, on S3 (#651).** A listing's `LastModified` is the upload time; a HEAD answers the source's
+  own date the copy stored in `x-amz-meta-mtime`. Reading a folder copy's times from a listing made every file `Drift`
+  whose source wasn't saved seconds before the upload, so the undo reversed nothing (failing safe: it deleted nothing
+  either). A HEAD per file would agree but bills a request each, so the upload reports the date it sent instead
+  (`crates/cmdr-s3/DETAILS.md` § "Dates"), and an S3 folder copy reads nothing back. Every other backend's listing and
+  `get_metadata` come off the same server answer (verified 2026-10-21 by the conformance cell on local, SMB, SFTP,
+  WebDAV on Nextcloud, MTP's virtual device, ADB's fake, and S3 on VersityGW and Garage), so they report `Unknown`.
+- **A report holds only for the name the write went to.** A staged write's time is its temp's, and the landing rename
+  isn't promised to keep it, so the engine keeps a report only when the write's target was the final name
+  (`stream_pipe::landed_at_final_name`); a landing settled after the fact (a lost reply, a cut-off rename) reports
+  `Unknown` too.
+- **Bounded per source, never per file.** A listed name is only matched against the files the source wrote, never joined
+  onto a path. Only a journaling transfer reads anything back.
+- **A stopped or failed source reads nothing back** (a stop never waits on the share), so its rows keep what the writes
+  reported, else the size-only check; so does a file the read-back can't place (a listing that failed, a name the
+  listing spells differently), a symlink, and a backend that reports no mtime (`None`, which `verify_snapshot` skips
+  over).
 - `verify_snapshot` is flat over the row: every recorded field must verify, and at least one must, with no
   inner-versus-top-level branch. Local-FS leaves record the preserved source mtime, which their write path keeps.
 - The in-flight reversals (`crates/cmdr-operations/src/reversal.rs`) keep the size-only volume recheck: their ledger
@@ -852,7 +868,10 @@ a SQLite database, a re-saved document), and undoing the copy deleted it with th
   and they run seconds after the write, not days.
 
 Pinned by `crates/cmdr-operations/src/journal_capture_volume_tests.rs` (`a_serial_…`, `a_concurrent_…`, the cross-volume
-move, and `undoing_a_volume_copy_keeps_a_file_edited_since_at_the_same_length`).
+move, `undoing_a_volume_copy_keeps_a_file_edited_since_at_the_same_length`, and the S3-shaped double's
+`…_store_listing_upload_times_…` and `an_interrupted_folder_copy_records_the_landed_times_its_writes_reported`), and end
+to end by `s3_engine_integration_test.rs::s3_integration_a_finished_copy_onto_a_bucket_rolls_back_*`, whose tree is
+dated days back so the listing and the HEAD can't coincide.
 
 **Remaining gap, one path**: a cross-volume MOVE interrupted mid-directory journals nothing for the children it already
 finished. Unlike the copy's, those aren't a completed unit of work — the source sweep runs per top-level source after

@@ -65,7 +65,8 @@ pub(crate) async fn move_file_across_volumes(
     // `WriteStaging::Stage` means `LandingName::ExpectedFree`, and a landing that
     // expected a free name never clears anything, so it never rescues anything
     // either: `new_data_at` is `None` on every failure this call can produce.
-    .map_err(|f| f.error)?;
+    .map_err(|f| f.error)?
+    .bytes;
     source_volume.delete(source_path).await?;
     Ok(bytes)
 }

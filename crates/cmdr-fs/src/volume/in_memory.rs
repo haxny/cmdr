@@ -10,7 +10,9 @@
 
 #[cfg(doc)]
 use super::Volume; // the knobs' docs link the trait methods each one bends
-use super::{BackendKind, ConnectionState, IndexWalk, NodeIdentity, SpaceInfo, StreamWritten, VolumeError};
+use super::{
+    BackendKind, ConnectionState, IndexWalk, LandedModified, NodeIdentity, SpaceInfo, StreamWritten, VolumeError,
+};
 use crate::entry::FileEntry;
 use crate::ignore_poison::IgnorePoison;
 use crate::ignore_poison::RwLockIgnorePoison;
@@ -190,6 +192,16 @@ pub struct InMemoryVolume {
     index_walk_overrides: Vec<(PathBuf, IndexWalk)>,
     /// Live [`Volume::hold_for_transfer`] holds, when counting (`transfer_holds.rs`).
     transfer_holds: Option<std::sync::Arc<std::sync::atomic::AtomicUsize>>,
+    /// What [`Volume::list_directory`] reports as every FILE's modified time,
+    /// whatever [`Volume::get_metadata`] answers: an object store's upload
+    /// time. `None` (the default) lists the stored time. Set via
+    /// [`Self::with_listing_upload_time`].
+    listing_upload_secs: Option<u64>,
+    /// Whether `write_from_stream` reports the landed file's modified time
+    /// ([`StreamWritten::landed_at`]). Default `false`, the answer of a
+    /// backend whose listing agrees with `get_metadata`. Set via
+    /// [`Self::with_landed_times_reported`].
+    reports_landed_times: bool,
     /// Raw errno to inject on the next `list_directory` call. Cleared after use.
     #[cfg(feature = "playwright-e2e")]
     injected_error: std::sync::Mutex<Option<i32>>,
@@ -227,9 +239,31 @@ impl InMemoryVolume {
             write_refuses: MetadataClasses::NONE,
             index_walk_overrides: Vec::new(),
             transfer_holds: None,
+            listing_upload_secs: None,
+            reports_landed_times: false,
             #[cfg(feature = "playwright-e2e")]
             injected_error: std::sync::Mutex::new(None),
         }
+    }
+
+    /// Makes [`Volume::list_directory`] report `secs` as every file's modified
+    /// time while [`Volume::get_metadata`] keeps answering the stored one, the
+    /// way S3 lists `LastModified` (the upload) and HEADs `x-amz-meta-mtime`
+    /// (the source's own date). Pair it with
+    /// [`with_landed_times_reported`](Self::with_landed_times_reported) for a
+    /// double that keeps the contract the way S3 does, or leave that off for
+    /// one that breaks it.
+    pub fn with_listing_upload_time(mut self, secs: u64) -> Self {
+        self.listing_upload_secs = Some(secs);
+        self
+    }
+
+    /// Makes `write_from_stream` report each landed file's modified time
+    /// ([`StreamWritten::landed_at`]), exactly as [`Volume::get_metadata`]
+    /// answers it right after.
+    pub fn with_landed_times_reported(mut self) -> Self {
+        self.reports_landed_times = true;
+        self
     }
 
     /// Makes [`Volume::connection_state`] report `state`, so this volume passes
@@ -273,10 +307,27 @@ impl InMemoryVolume {
 
     /// What a write of `bytes` reports: every class of `carried` in
     /// [`Self::with_write_refusing`]'s set refused.
-    fn written(&self, bytes: u64, carried: &CarriedMetadata, modified: Option<std::time::SystemTime>) -> StreamWritten {
+    /// With [`Self::with_landed_times_reported`], it also reports `dest`'s
+    /// stored modified time, the one `get_metadata` answers.
+    fn written(
+        &self,
+        dest: &Path,
+        bytes: u64,
+        carried: &CarriedMetadata,
+        modified: Option<std::time::SystemTime>,
+    ) -> StreamWritten {
         let refused = carried.clone().restricted_to(self.write_refuses);
         let report = MetadataReport::uniform(&refused, None, ClassOutcome::Refused);
-        StreamWritten::with_report(bytes, &report, carried, modified)
+        let written = StreamWritten::with_report(bytes, &report, carried, modified);
+        if !self.reports_landed_times {
+            return written;
+        }
+        let stored = self
+            .entries
+            .read_ignore_poison()
+            .get(&self.normalize(dest))
+            .and_then(|entry| entry.metadata.modified_at);
+        written.landed_at(LandedModified::Known(stored))
     }
 
     /// Makes [`Volume::index_walk`] answer `walk` for the directory at `dir`,

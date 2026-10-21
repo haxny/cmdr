@@ -155,6 +155,11 @@ async fn a_copy_keeps_the_source_date_per_the_shared_contract() {
     )
     .await;
     cmdr_fs::volume::conformance::assert_read_stream_reports_the_listed_date(&volume, dated).await;
+    cmdr_fs::volume::conformance::assert_landed_time_agrees_with_get_metadata(
+        &volume,
+        Path::new("/Documents/landed.txt"),
+    )
+    .await;
 
     device.teardown(test_connection_manager()).await;
 }

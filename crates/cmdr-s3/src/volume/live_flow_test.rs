@@ -56,6 +56,7 @@ async fn copy(volume: &S3Volume, from: &str, to: &str) -> Result<u64, VolumeErro
             &Silent,
         )
         .await
+        .map(|written| written.bytes)
 }
 
 /// Writes, then reads back and compares: the finding for one upload.

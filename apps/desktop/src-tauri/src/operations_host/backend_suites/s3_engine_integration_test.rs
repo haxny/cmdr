@@ -248,8 +248,18 @@ fn local_tree(label: &str) -> LocalTree {
         .into_iter()
         .map(|name| (name, self_describing_bytes(256 * 1024, name)))
         .collect();
+    // ❗ Last saved days ago, like any real file: a copy stores that date on each
+    // object while a listing shows the upload time, and a tree saved
+    // milliseconds before its upload hid that the two differ (#651).
+    let saved = std::time::SystemTime::now() - Duration::from_secs(3 * 86_400);
     for (name, bytes) in &files {
-        std::fs::write(dir.join("tree").join(name), bytes).expect("seeding the local tree");
+        let path = dir.join("tree").join(name);
+        std::fs::write(&path, bytes).expect("seeding the local tree");
+        std::fs::File::options()
+            .write(true)
+            .open(&path)
+            .and_then(|file| file.set_modified(saved))
+            .expect("dating the local tree");
     }
     let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Local",

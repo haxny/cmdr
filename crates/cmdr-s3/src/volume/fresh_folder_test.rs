@@ -74,7 +74,7 @@ async fn a_server_copy_into_a_fresh_folder_sends_no_head_at_its_destination() {
                 &Straight,
             )
             .await;
-        assert!(matches!(copied, Ok(100)), "{copied:?}");
+        assert!(matches!(copied, Ok(StreamWritten { bytes: 100, .. })), "{copied:?}");
     }
 
     // HEAD before, the copy, verifying HEAD; then the copy alone: the

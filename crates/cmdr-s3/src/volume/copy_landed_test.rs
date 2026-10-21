@@ -12,7 +12,7 @@ use std::ops::ControlFlow;
 use std::pin::Pin;
 use std::time::Duration;
 
-use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeError, WriteMode};
+use cmdr_fs::volume::{LandedModified, ServerCopyProgress, StreamWritten, Volume, VolumeError, WriteMode};
 
 use super::fake_s3::FakeS3;
 use crate::metadata::{MTIME_HEADER, WRITE_TOKEN_HEADER};
@@ -51,7 +51,7 @@ async fn a_one_request_copy_whose_answer_never_comes_reports_the_copy_it_publish
         .await;
 
     assert_eq!(s3.object("dst.txt").map(|s| s.len), Some(1_000), "the copy landed");
-    assert!(matches!(outcome, Ok(1_000)), "{outcome:?}");
+    assert!(matches!(outcome, Ok(StreamWritten { bytes: 1_000, .. })), "{outcome:?}");
 }
 
 /// The token that proves the landing costs nothing on the happy path: the
@@ -73,7 +73,19 @@ async fn a_one_request_copy_keeps_the_sources_date_beside_its_own_token() {
         )
         .await;
 
-    assert!(matches!(outcome, Ok(10)), "{outcome:?}");
+    assert!(matches!(outcome, Ok(StreamWritten { bytes: 10, .. })), "{outcome:?}");
+    // And reports that date as the landed one, the date a HEAD of the copy
+    // answers (#651).
+    let headed = volume
+        .get_metadata(&volume.root().join("dst.txt"))
+        .await
+        .expect("the copy is there")
+        .modified_at;
+    assert_eq!(headed, Some(1_354_040_105));
+    assert_eq!(
+        outcome.map(|written| written.landed_modified()).ok(),
+        Some(LandedModified::Known(headed))
+    );
     let meta = s3.object("dst.txt").expect("copied").meta;
     let lowered: Vec<String> = meta.iter().map(|line| line.to_ascii_lowercase()).collect();
     assert!(

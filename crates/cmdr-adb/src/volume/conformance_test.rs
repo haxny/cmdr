@@ -332,6 +332,8 @@ async fn a_copy_keeps_the_source_date() {
     conformance::assert_write_from_stream_keeps_the_source_date(volume.as_ref(), &dated, std::time::Duration::ZERO)
         .await;
     conformance::assert_read_stream_reports_the_listed_date(volume.as_ref(), &dated).await;
+    conformance::assert_landed_time_agrees_with_get_metadata(volume.as_ref(), &fixture_path("/sdcard/landed.txt"))
+        .await;
 }
 
 /// The same promise over the v1 verbs, whose `STAT` carries the mtime as a u32
@@ -345,6 +347,8 @@ async fn a_copy_keeps_the_source_date_over_the_v1_verbs() {
     conformance::assert_write_from_stream_keeps_the_source_date(volume.as_ref(), &dated, std::time::Duration::ZERO)
         .await;
     conformance::assert_read_stream_reports_the_listed_date(volume.as_ref(), &dated).await;
+    conformance::assert_landed_time_agrees_with_get_metadata(volume.as_ref(), &fixture_path("/sdcard/landed.txt"))
+        .await;
 }
 
 async fn drain(stream: &mut dyn VolumeReadStream) -> Vec<u8> {

@@ -137,7 +137,7 @@ pub(super) fn plan(
             .iter()
             .for_each(|file| both.copy_on_server_fresh(file.size));
         selected_files.iter().for_each(|file| both.copy_on_server(file.size));
-        read_back_landed(both, &selected_files, &nested_files, facts);
+        read_back_landed(both, &selected_files);
         // The copy replaces each one in a single request.
         for overwrite in overwrites {
             both.replace_object(overwrite.replaced.size, overwrite.replaced.modified_at);
@@ -151,7 +151,7 @@ pub(super) fn plan(
             open_destination(destination, operation, false, facts);
             nested_files.iter().for_each(|file| destination.upload_fresh(file.size));
             selected_files.iter().for_each(|file| destination.upload(file.size));
-            read_back_landed(destination, &selected_files, &nested_files, facts);
+            read_back_landed(destination, &selected_files);
             for overwrite in overwrites {
                 destination.replace_object(overwrite.replaced.size, overwrite.replaced.modified_at);
                 destination.upload_over(overwrite.incoming_size);
@@ -197,15 +197,11 @@ fn open_destination(work: &mut Workload, operation: CostedOperation, same_accoun
 
 /// The landed files' own modified times, read back for the operation log once
 /// each selected item lands (`cmdr-operations`' `journal::LandedTimes`): a HEAD per
-/// selected file, and a listing of each destination folder the selected folders'
-/// files landed in, taken to be every folder made (as [`listing_pages`] does) plus
-/// a page per thousand files. Counted with recording on, the default; with it off,
-/// nothing is read back.
-fn read_back_landed(work: &mut Workload, selected: &[ScannedFile], nested: &[ScannedFile], facts: &ScanCostFacts) {
+/// selected file. A file inside a selected folder costs nothing: its upload or
+/// server copy reports the date it stored, so no folder is listed for it.
+/// Counted with recording on, the default; with it off, nothing is read back.
+fn read_back_landed(work: &mut Workload, selected: &[ScannedFile]) {
     selected.iter().for_each(|_| work.read_back_landed_file());
-    if !nested.is_empty() {
-        (0..facts.dirs + nested.len() / 1_000).for_each(|_| work.read_back_landed_folder());
-    }
 }
 
 /// The selected files (each matched by size, in order) apart from the files

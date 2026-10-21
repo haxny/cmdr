@@ -114,9 +114,32 @@ pub struct StreamWriteProgress {
     pub expected_length: StreamLength,
 }
 
-/// What a [`Volume::write_from_stream`](super::Volume::write_from_stream) that
-/// succeeded did: the bytes it wrote, and what of the source's metadata the
-/// destination refused on the way.
+/// The modified time [`Volume::get_metadata`](super::Volume::get_metadata)
+/// answers for a file a write just landed, when the write knows it without
+/// asking.
+///
+/// The operation log records each copied file's landed time so an undo can tell
+/// an untouched copy from one edited since, and the undo rechecks it with
+/// `get_metadata`. A backend whose listing reports a DIFFERENT time than
+/// `get_metadata` (S3: a listing's `LastModified` is the upload, a HEAD's
+/// `x-amz-meta-mtime` is the source's own date) would have every folder copy
+/// read as edited, so it reports the time here and nothing is read back.
+/// The contract, both halves: `conformance::assert_landed_time_agrees_with_get_metadata`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LandedModified {
+    /// The write doesn't know. A caller that needs the time reads it back, and
+    /// a listing of the file's folder must then agree with `get_metadata`.
+    Unknown,
+    /// `get_metadata` of the written path answers exactly this `modified_at`
+    /// (`None` included) until something else changes the file.
+    Known(Option<u64>),
+}
+
+/// What a [`Volume::write_from_stream`](super::Volume::write_from_stream) or a
+/// [`Volume::copy_on_server`](super::Volume::copy_on_server) that succeeded
+/// did: the bytes it wrote, what of the source's metadata the destination
+/// refused on the way, and the landed file's modified time when the write knows
+/// it ([`LandedModified`]).
 ///
 /// The refusals are already narrowed to what the source had worth keeping
 /// ([`CarriedMetadata::worth_keeping`]), so a caller counts them as they are:
@@ -126,6 +149,7 @@ pub struct StreamWritten {
     /// Bytes written.
     pub bytes: u64,
     refused: MetadataClasses,
+    landed_modified: LandedModified,
 }
 
 impl StreamWritten {
@@ -136,7 +160,24 @@ impl StreamWritten {
         Self {
             bytes,
             refused: MetadataClasses::NONE,
+            landed_modified: LandedModified::Unknown,
         }
+    }
+
+    /// The same write, reporting the landed file's modified time. Only a time
+    /// `get_metadata` will answer exactly: a guess is worse than
+    /// [`LandedModified::Unknown`], because the undo would see drift on a file
+    /// nobody touched and keep it.
+    #[must_use]
+    pub const fn landed_at(mut self, landed: LandedModified) -> Self {
+        self.landed_modified = landed;
+        self
+    }
+
+    /// The landed file's modified time as `get_metadata` answers it, when the
+    /// write knows ([`LandedModified`]).
+    pub const fn landed_modified(&self) -> LandedModified {
+        self.landed_modified
     }
 
     /// `bytes` written, and `report` saying what became of `carried` (and the
@@ -153,6 +194,7 @@ impl StreamWritten {
             refused: report
                 .refused_classes()
                 .intersection(carried.worth_keeping(modified, crate::metadata::default_file_mode())),
+            landed_modified: LandedModified::Unknown,
         }
     }
 

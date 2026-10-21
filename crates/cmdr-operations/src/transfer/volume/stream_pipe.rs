@@ -27,7 +27,7 @@ use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
-use cmdr_fs::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{LandedModified, StreamWritten, Volume, VolumeError};
 
 #[path = "stream_pipe_steps.rs"]
 mod steps;
@@ -102,6 +102,39 @@ fn auto_yield_tuning() -> (Duration, u64, Duration) {
     )
 }
 
+/// A file [`stream_pipe_file`] landed at its final name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct PipedFile {
+    /// The bytes it holds.
+    pub(super) bytes: u64,
+    /// Its modified time as `get_metadata` answers it, when the write that
+    /// landed it reported one for the final name ([`landed_at_final_name`]).
+    /// A landing settled after the fact (a lost reply, a cut-off rename) is
+    /// `Unknown`: the operation log reads those back.
+    pub(super) landed: LandedModified,
+}
+
+impl PipedFile {
+    /// `bytes` landed, with no landed time reported.
+    pub(super) const fn unreported(bytes: u64) -> Self {
+        Self {
+            bytes,
+            landed: LandedModified::Unknown,
+        }
+    }
+}
+
+/// The landed time `written` reported, for the file at `final_name`: it holds
+/// only when the write went to that name. A staged write's time is its temp's,
+/// and the landing rename after it isn't promised to keep it.
+pub(super) fn landed_at_final_name(written: &StreamWritten, wrote_to: &Path, final_name: &Path) -> LandedModified {
+    if wrote_to == final_name {
+        written.landed_modified()
+    } else {
+        LandedModified::Unknown
+    }
+}
+
 /// Streams one file from source to destination via `open_read_stream` /
 /// `write_from_stream`. Per-chunk progress and cancellation are enforced by
 /// the destination's `write_from_stream` implementation, which calls
@@ -140,7 +173,7 @@ pub(super) async fn stream_pipe_file(
     state: &Arc<WriteOperationState>,
     on_file_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
     staging: WriteStaging,
-) -> Result<u64, PathedVolumeError> {
+) -> Result<PipedFile, PathedVolumeError> {
     log::debug!(
         "stream_pipe_file: {} -> {}",
         LogPrivate::file_path(source_path),
@@ -169,10 +202,10 @@ pub(super) async fn stream_pipe_file(
     .await
     .map_err(|f| PathedVolumeError::from_landing(f, dest_path))?
     {
-        ServerSideCopy::Landed(bytes) => {
+        ServerSideCopy::Landed(piped) => {
             // Landed, so a ` (N)` placeholder at the name is filled, not ours to take back.
             state.claimed_names.release_placeholder(dest_path);
-            return Ok(bytes);
+            return Ok(piped);
         }
         ServerSideCopy::Streams => None,
         ServerSideCopy::LandingCutOff {
@@ -335,14 +368,13 @@ impl Fault {
 }
 
 impl FileRun<'_> {
-    /// One pass over the checkpoints, in order. `Ok` is the landed file's byte
-    /// count.
-    async fn checkpoints(&mut self) -> Result<u64, Stop> {
+    /// One pass over the checkpoints, in order. `Ok` is the landed file.
+    async fn checkpoints(&mut self) -> Result<PipedFile, Stop> {
         if let Some(bytes) = self.settle_unanswered_create().await? {
-            return Ok(bytes);
+            return Ok(PipedFile::unreported(bytes));
         }
-        if let Some(bytes) = self.resume_landing().await? {
-            return Ok(bytes);
+        if let Some(piped) = self.resume_landing().await? {
+            return Ok(piped);
         }
         let opened = self.open_source().await?;
         let written = self.write(opened).await?;
@@ -355,7 +387,7 @@ impl FileRun<'_> {
     /// step's checkpoint or end the file. `Continue` runs the file again. A
     /// file that ends on a server whose connection is gone carries that
     /// (`volume_outage::lost_connection`), so the person hears the cause.
-    async fn on_fault(&mut self, fault: Fault) -> ControlFlow<Result<u64, PathedVolumeError>> {
+    async fn on_fault(&mut self, fault: Fault) -> ControlFlow<Result<PipedFile, PathedVolumeError>> {
         let volumes = [self.source_volume, self.dest_volume];
         let ended = wait_after_failure(
             self.state,
@@ -461,7 +493,7 @@ impl FileRun<'_> {
         landing: LandingToResume,
         stopped: bool,
         lost: Option<LostConnection>,
-    ) -> ControlFlow<Result<u64, PathedVolumeError>> {
+    ) -> ControlFlow<Result<PipedFile, PathedVolumeError>> {
         let LandingToResume {
             cut_off,
             bytes,
@@ -470,7 +502,9 @@ impl FileRun<'_> {
         } = landing;
         set_task_phase(TaskPhase::Finalizing);
         match cut_off.give_up(self.dest_volume).await {
-            Ok(()) => ControlFlow::Break(Ok(self.landed(bytes, lost_metadata, &after_landing).await)),
+            Ok(()) => ControlFlow::Break(Ok(self
+                .landed(PipedFile::unreported(bytes), lost_metadata, &after_landing)
+                .await)),
             Err(_) if stopped => ControlFlow::Break(Err(volume_outage::cancelled()).at_destination(self.dest_path)),
             Err(failure) => ControlFlow::Break(Err(
                 PathedVolumeError::from_landing(failure, self.dest_path).with_lost_connection(lost)
@@ -488,7 +522,7 @@ impl FileRun<'_> {
         staged: StagedWrite,
         source_reads: SourceReads,
         lost: Option<LostConnection>,
-    ) -> ControlFlow<Result<u64, PathedVolumeError>> {
+    ) -> ControlFlow<Result<PipedFile, PathedVolumeError>> {
         let (dest_volume, dest_path, attempt) = (self.dest_volume, self.dest_path, self.attempt);
         if retry::should_retry(&error, attempt, self.state) {
             // The staged bytes are a partial of an attempt we're abandoning;

@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use super::{Fault, FileRun, LandingToResume, Stop, auto_yield_tuning};
+use super::{Fault, FileRun, LandingToResume, PipedFile, Stop, auto_yield_tuning};
 use crate::metadata_losses;
 use crate::transfer::checkpoint_stream::CheckpointStream;
 use crate::transfer::interrupted_landing::{create_went_unanswered, settle_unanswered_create};
@@ -300,7 +300,7 @@ impl FileRun<'_> {
     ///
     /// ❌ Not raced against tier 2: a task wedged here is ended by the driver's
     /// drain deadline rather than by an abort mid-rename.
-    pub(super) async fn land(&mut self, written: Written) -> Result<u64, Stop> {
+    pub(super) async fn land(&mut self, written: Written) -> Result<PipedFile, Stop> {
         let (dest_volume, dest_path) = (self.dest_volume, self.dest_path);
         let Written {
             staged,
@@ -309,10 +309,14 @@ impl FileRun<'_> {
             after_landing,
         } = written;
         let bytes = written.bytes;
+        let piped = PipedFile {
+            bytes,
+            landed: super::landed_at_final_name(&written, staged.target(), dest_path),
+        };
         let lost = lost.union(written.refused());
         let started_on = StartedOn::now(&[self.source_volume, dest_volume]);
         match staged.commit(dest_volume, bytes).await {
-            Ok(()) => Ok(self.landed(bytes, lost, &after_landing).await),
+            Ok(()) => Ok(self.landed(piped, lost, &after_landing).await),
             Err(LandingError::Failed(FinalizeFailure {
                 error: VolumeError::NotSupported,
                 ..
@@ -354,7 +358,7 @@ impl FileRun<'_> {
     /// cut-off step did and lands what's left, ❌ without streaming the file
     /// again while its temp is whole (`staged_write::CutOffLanding::resume`).
     /// `Some` once the file is at its name; `None` runs the file again.
-    pub(super) async fn resume_landing(&mut self) -> Result<Option<u64>, Stop> {
+    pub(super) async fn resume_landing(&mut self) -> Result<Option<PipedFile>, Stop> {
         let Some(LandingToResume {
             cut_off,
             bytes,
@@ -371,7 +375,9 @@ impl FileRun<'_> {
             path: self.source_path,
         };
         match cut_off.resume(self.dest_volume, Some(source)).await {
-            Resumed::Landed => Ok(Some(self.landed(bytes, lost, &after_landing).await)),
+            Resumed::Landed => Ok(Some(
+                self.landed(PipedFile::unreported(bytes), lost, &after_landing).await,
+            )),
             Resumed::RunAgain(error) => {
                 log::info!(
                     target: "copy",
@@ -395,13 +401,20 @@ impl FileRun<'_> {
     }
 
     /// The file has its final name: what every landing that got there owes it.
-    pub(super) async fn landed(&self, bytes: u64, lost: MetadataClasses, after_landing: &CarriedMetadata) -> u64 {
+    /// The flags it puts on keep the date (`apply_metadata` with no modified
+    /// time), so `piped`'s landed time still holds after.
+    pub(super) async fn landed(
+        &self,
+        piped: PipedFile,
+        lost: MetadataClasses,
+        after_landing: &CarriedMetadata,
+    ) -> PipedFile {
         // Landed, so a ` (N)` placeholder at the name is filled, not ours to
         // take back (`naming.rs::take_back_unfilled_reservations`).
         self.state.claimed_names.release_placeholder(self.dest_path);
         self.state.metadata_losses.note_file(lost);
         landed_flags::put_on(self.dest_volume, self.dest_path, after_landing, self.state).await;
-        bytes
+        piped
     }
 }
 

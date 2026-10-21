@@ -332,6 +332,29 @@ async fn a_copy_keeps_the_source_date_per_the_shared_contract() {
     conformance::assert_read_stream_reports_the_listed_date(&volume, Path::new("/dated.txt")).await;
 }
 
+/// The landed time an undo rechecks agrees with what the operation log records,
+/// both the way most backends keep it (a listing that agrees with
+/// `get_metadata`) and the way S3 does (a listing of upload times, the write
+/// reporting the landed time).
+#[tokio::test]
+async fn the_landed_time_agrees_with_get_metadata_per_the_shared_contract() {
+    conformance::assert_landed_time_agrees_with_get_metadata(&InMemoryVolume::new("Test"), Path::new("/landed.txt"))
+        .await;
+    let object_store = InMemoryVolume::new("Bucket")
+        .with_listing_upload_time(conformance::SOURCE_DATE_SECS + 86_400)
+        .with_landed_times_reported();
+    conformance::assert_landed_time_agrees_with_get_metadata(&object_store, Path::new("/landed.txt")).await;
+}
+
+/// The cell catches the backend #651 was: a listing of upload times and a write
+/// that reports nothing.
+#[tokio::test]
+#[should_panic(expected = "the listing must agree with get_metadata")]
+async fn the_landed_time_contract_catches_a_listing_that_disagrees_unreported() {
+    let volume = InMemoryVolume::new("Bucket").with_listing_upload_time(conformance::SOURCE_DATE_SECS + 86_400);
+    conformance::assert_landed_time_agrees_with_get_metadata(&volume, Path::new("/landed.txt")).await;
+}
+
 /// And dates a folder, so an engine test can see a copied folder keep its date.
 #[tokio::test]
 async fn apply_metadata_honors_the_shared_folder_date_contract() {

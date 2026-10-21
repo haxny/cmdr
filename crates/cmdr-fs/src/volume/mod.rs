@@ -1949,6 +1949,13 @@ pub trait Volume: Send + Sync {
     /// [`StreamWritten::with_report`] from the apply's report, or
     /// [`StreamWritten::nothing_refused`] when nothing applied here can be
     /// refused alone. The copy's loss note counts the refusals.
+    ///
+    /// A backend whose listing reports a different modified time than
+    /// [`get_metadata`](Self::get_metadata) MUST report the landed one
+    /// ([`StreamWritten::landed_at`], [`LandedModified`]): the operation log
+    /// reads a copied folder's times back from a listing otherwise, and the
+    /// undo, rechecking with `get_metadata`, would keep every file as edited.
+    /// Enforced by `conformance::assert_landed_time_agrees_with_get_metadata`.
     fn write_from_stream<'a>(
         &'a self,
         dest: &'a Path,
@@ -2019,6 +2026,10 @@ pub trait Volume: Send + Sync {
     /// through `progress`, and the backend removes its partial before
     /// answering [`VolumeError::Cancelled`].
     ///
+    /// Returns what [`write_from_stream`](Self::write_from_stream) returns: the
+    /// bytes copied, and the landed file's modified time when the backend knows
+    /// it ([`StreamWritten::landed_at`]).
+    ///
     /// `NotSupported` means "stream it instead", never a failure. Default:
     /// [`copy_within`](Self::copy_within) when
     /// [`may_copy_on_server_from`](Self::may_copy_on_server_from) holds and
@@ -2031,13 +2042,14 @@ pub trait Volume: Send + Sync {
         to: &'a Path,
         mode: WriteMode,
         progress: &'a dyn ServerCopyProgress,
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             if mode.refuses_occupied() || !self.may_copy_on_server_from(source) {
                 return Err(VolumeError::NotSupported);
             }
             self.copy_within(from, to, &|done, total| progress.advanced(done, total))
                 .await
+                .map(StreamWritten::nothing_refused)
         })
     }
 

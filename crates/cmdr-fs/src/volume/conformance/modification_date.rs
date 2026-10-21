@@ -13,7 +13,7 @@ use std::pin::Pin;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
-use crate::volume::{StreamLength, Volume, VolumeError, VolumeReadStream, WriteMode};
+use crate::volume::{LandedModified, StreamLength, Volume, VolumeError, VolumeReadStream, WriteMode};
 
 /// The date [`assert_write_from_stream_keeps_the_source_date`] hands its
 /// destination, in Unix seconds: 2021-01-29 08:30:15 UTC.
@@ -89,6 +89,74 @@ pub async fn assert_write_from_stream_keeps_the_source_date(volume: &dyn Volume,
         "a copy onto {} must keep the source's date (Unix {SOURCE_DATE_SECS}, 2021-01-29 08:30:15 UTC); it lists {listed}, {off_by} s off, so the destination stamped its own",
         dest.display()
     );
+}
+
+/// The landed modified time the operation log records for a copied file is the
+/// one [`Volume::get_metadata`] answers, which is what an undo rechecks.
+///
+/// Streams a dated file into `dest` (which must not exist; its folder must),
+/// then holds whichever source the log would record from to `get_metadata`'s
+/// answer: the write's own report when it gives one
+/// ([`LandedModified::Known`](crate::volume::LandedModified::Known)), else the
+/// listing of `dest`'s folder, the one read a folder copy's files are read back
+/// with (`cmdr-operations`' `journal::LandedTimes`).
+///
+/// **Why this one is worth a shared assertion.** The two reads look like the
+/// same question, and on S3 they aren't: a listing's `LastModified` is the
+/// upload, a HEAD's `x-amz-meta-mtime` the source's own date. Every undo of a
+/// folder copy onto a bucket skipped every file as edited since, and reversed
+/// nothing (#651). Nothing but a test that asks both reads catches it.
+pub async fn assert_landed_time_agrees_with_get_metadata(volume: &dyn Volume, dest: &Path) {
+    assert!(
+        !volume.exists(dest).await,
+        "fixture precondition: {} must not exist yet",
+        dest.display()
+    );
+    let content = b"a file whose landed date an undo rechecks\n".to_vec();
+    let length = content.len() as u64;
+    let written = volume
+        .write_from_stream(
+            dest,
+            WriteMode::CreateNew,
+            StreamLength::Known(length),
+            Box::new(DatedSource::new(content)),
+            &|_| std::ops::ControlFlow::Continue(()),
+        )
+        .await
+        .unwrap_or_else(|e| panic!("the dated write onto {} must land, got {e:?}", dest.display()));
+    let rechecked = volume
+        .get_metadata(dest)
+        .await
+        .unwrap_or_else(|e| panic!("{} must be stattable after the write, got {e:?}", dest.display()))
+        .modified_at;
+
+    match written.landed_modified() {
+        LandedModified::Known(reported) => assert_eq!(
+            reported,
+            rechecked,
+            "the write onto {} reported a landed modified time that get_metadata doesn't answer",
+            dest.display()
+        ),
+        LandedModified::Unknown => {
+            let (Some(folder), Some(name)) = (dest.parent(), dest.file_name()) else {
+                panic!("fixture precondition: {} must name a file in a folder", dest.display());
+            };
+            let listed = volume
+                .list_directory(folder, None)
+                .await
+                .unwrap_or_else(|e| panic!("{} must be listable, got {e:?}", folder.display()))
+                .into_iter()
+                .find(|entry| std::ffi::OsStr::new(&entry.name) == name)
+                .unwrap_or_else(|| panic!("the listing of {} must show {name:?}", folder.display()))
+                .modified_at;
+            assert_eq!(
+                listed,
+                rechecked,
+                "the write onto {} reports no landed time, so a folder copy reads it back from a listing, and the listing must agree with get_metadata; a backend whose two reads differ reports the time on the write (`StreamWritten::landed_at`)",
+                dest.display()
+            );
+        }
+    }
 }
 
 /// The read stream of `path` reports the date `volume` lists for it.

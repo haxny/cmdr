@@ -184,7 +184,8 @@ async fn the_file_row_reads_shares_and_copies_its_own_bytes(service: FixtureServ
             &Steady,
         )
         .await
-        .expect(FIXTURE);
+        .expect(FIXTURE)
+        .bytes;
     assert_eq!(copied, FILE_BYTES.len() as u64, "{}", service.key);
     assert_eq!(
         read_back(&s.volume, &s.at("copy.txt")).await,

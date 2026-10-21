@@ -322,7 +322,8 @@ async fn copy_leaf<'a>(
         created.record_skip(child_source, 0);
         return Ok(0);
     }
-    let bytes = streamed?;
+    let piped = streamed?;
+    let bytes = piped.bytes;
     // The file landed at `write_dest`, the original's own name for an
     // overwrite (a swap's landing ran inside the write). A landed overwrite's
     // row says so; a swap that failed after its delete has already told the
@@ -331,7 +332,7 @@ async fn copy_leaf<'a>(
     if replaces.overwrites() {
         created.record_overwrite();
     }
-    created.record_file(write_dest, bytes);
+    created.record_file(write_dest, bytes, piped.landed);
     leaf.complete(bytes);
     Ok(bytes)
 }

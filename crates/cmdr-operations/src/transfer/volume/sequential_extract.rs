@@ -30,6 +30,7 @@ use super::folder_metadata::{FolderMetadata, SourceFolderDates};
 use super::merge::copy_directory_streaming;
 use super::merge_ctx::{CreatedPaths, MergeCtx};
 use super::strategy::{LandingName, Replaces, resolve_staging, staging_for};
+use super::stream_pipe::landed_at_final_name;
 use super::transfer_error::{AtPath, PathedVolumeError};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -191,6 +192,7 @@ pub(super) async fn extract_sequential_subtree(
                 return Err(source_reads.label(e, &file.source_path, &planned.dest_path));
             }
         };
+        let landed = landed_at_final_name(&written, staged.target(), &planned.dest_path);
         land_member(state, dest_volume, staged, written.bytes, &planned.dest_path).await?;
         // Landed, so the ` (N)` placeholder the plan pass reserved here is filled.
         // Every one this pass never reaches (a failure, a cancel between members)
@@ -208,7 +210,7 @@ pub(super) async fn extract_sequential_subtree(
         if planned.replaces.overwrites() {
             created.record_overwrite();
         }
-        created.record_file(planned.dest_path, bytes);
+        created.record_file(planned.dest_path, bytes, landed);
         total_bytes += bytes;
         leaf.complete(bytes);
     }

@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::CarriedMetadata;
-use cmdr_fs::volume::{ListingProgress, VolumeError};
+use cmdr_fs::volume::{LandedModified, ListingProgress, VolumeError};
 use tokio_util::sync::CancellationToken;
 
 use super::errors::map_s3_error;
@@ -18,7 +18,7 @@ use super::listing::{Child, FILE_SUFFIX, can_hold_keys, children_of, settle};
 use super::paths::{Holder, Resolved, Target, child_of, target_of};
 use super::{S3Volume, S3VolumeInner};
 use crate::error::S3Error;
-use crate::metadata::{BTIME_HEADER, MODE_HEADER, MTIME_HEADER, parse_btime, parse_mode, parse_mtime};
+use crate::metadata::{BTIME_HEADER, MODE_HEADER, MTIME_HEADER, format_mtime, parse_btime, parse_mode, parse_mtime};
 use crate::ops::{self, ListObjectsParams};
 use crate::request::S3Request;
 use crate::transport::{Answer, QUERY_BUDGET, S3Client, map_exchange_error};
@@ -295,6 +295,19 @@ pub(super) fn carried_from_headers(btime: Option<&str>, mode: Option<&str>) -> C
 /// else `Last-Modified`, in Unix seconds.
 pub(super) fn modified_from_head(mtime: Option<&str>, last_modified: Option<&str>) -> Option<u64> {
     stored_mtime(mtime, last_modified).and_then(unix_secs)
+}
+
+/// What [`modified_from_head`] will answer for an object a write stored `sent`
+/// on as its `x-amz-meta-mtime`: the HEAD parses back exactly what went out
+/// ([`format_mtime`]), so the write reports it and the operation log reads
+/// nothing back. ❗ Never the listing's `LastModified`, the upload time, which
+/// an undo's HEAD recheck wouldn't find (#651). A write that sent no date
+/// leaves the HEAD on `Last-Modified`, which only the server knows: `Unknown`.
+pub(super) fn landed_modified(sent: Option<SystemTime>) -> LandedModified {
+    match sent {
+        Some(at) => LandedModified::Known(modified_from_head(Some(&format_mtime(at)), None)),
+        None => LandedModified::Unknown,
+    }
 }
 
 /// An object's date from its HEAD or GET headers, at full precision:

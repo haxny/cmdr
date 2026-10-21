@@ -103,7 +103,8 @@ full reversal from history, where they choose it with the whole picture in front
 Three ledgers say what an operation currently has at the destination, and each one feeds a reversal that deletes or
 renames back: `CopyTransaction` (local copy, `state.rs`), `MoveTransaction` (local move, `move_op/mod.rs`), and the
 volume path's `copied_paths` (`volume/copy.rs`, fed from `CreatedPaths.files`). They share one vocabulary, `ledger.rs`'s
-`WrittenFile`: a destination path plus the identity it landed with.
+`WrittenFile`: a destination path plus the identity it landed with. (It also carries the landed modified time a write
+reported, `landed_modified`, which only the operation log reads; the reversals here never do.)
 
 **Why an identity at all.** A reversal acts destructively at a path the operation may have written hours ago. A bare
 path can only answer "is something here", and "something is here" is what deletes the file a sync client, another app,

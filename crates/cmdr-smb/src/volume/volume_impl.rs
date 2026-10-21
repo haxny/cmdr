@@ -453,12 +453,14 @@ impl Volume for SmbVolume {
         to: &'a Path,
         mode: WriteMode,
         progress: &'a dyn ServerCopyProgress,
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             if mode.refuses_occupied() || !self.may_copy_on_server_from(source) {
                 return Err(VolumeError::NotSupported);
             }
-            self.copy_on_server_impl(from, to, progress).await
+            self.copy_on_server_impl(from, to, progress)
+                .await
+                .map(StreamWritten::nothing_refused)
         })
     }
 

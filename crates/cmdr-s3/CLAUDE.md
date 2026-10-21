@@ -14,14 +14,15 @@ bucket, or an account root listing them). Plan: `docs/specs/s3-support-plan.md`.
   `cut_off.rs`, `multipart_upload.rs` (+ the sweep), `upload.rs` (their shared types), `server_copy.rs`, `batch.rs`,
   `mutation.rs`, `paths.rs`, `reconnect.rs` (`http_session` hooks); `testing.rs` + `testing/` (fixtures, `S3Target`),
   `live_*` (real accounts).
-- `cost/`: the price table (`s3-prices.json`, byte-identical to `apps/api-server`'s), `Workload` (requests counted the
-  way the write paths send them), `Estimate`. ❗ A write path's request count changes → update its `Workload` method.
+- `cost/`: the price table (`s3-prices.json`, byte-identical to `apps/api-server`'s), `Workload` (requests as the write
+  paths send them), `Estimate`. ❗ A write path's request count changes → update its `Workload` method.
 
 ## Must-knows
 
 - ❌ **Never classify by `<Message>`.** `<Code>` plus the status; a bodyless answer (every HEAD) by status alone.
 - ❗ **`reqwest` stays in `transport/`**; every request goes through it inside `noting` (operations detect liveness).
 - ❗ **Every request costs the user money.** ❌ No HEAD per child, no watcher, no space poll, no index.
+- ❗ **A write reports the date its HEAD answers** (`query::landed_modified`), ❌ never a listing's upload time (#651).
 - ❗ **A wrong secret is ambiguous**: Garage answers `AccessDenied`, so only `SignatureDoesNotMatch` /
   `InvalidAccessKeyId` (or R2's 401) are `KeysRejected`.
 - ❌ **No `.timeout()` on a GET or an upload, never a buffered body** beyond one part. A 200 to a ranged GET is skipped
@@ -39,8 +40,8 @@ bucket, or an account root listing them). Plan: `docs/specs/s3-support-plan.md`.
   never `RemoteRoot` directly, or the folder row reaches the file.
 - ❗ **`delete` is one node** (`ENOTEMPTY` under a folder); `delete_directory` ❌ never reaches a same-named object.
   **`rename` moves one small file**; a folder or a bigger object is `RenameWork::CopyThenDelete`, the engine's job.
-- ❗ **An overwrite of an existing object off the `refuses_short_body` allowlist goes as a multipart upload**, even one
-  part: VersityGW publishes a cut-off PUT, which would lose the original.
+- ❗ **An overwrite off the `refuses_short_body` allowlist goes multipart**, even one part: VersityGW publishes a
+  cut-off PUT, losing the original.
 - ❗ **Server-side copy stays within one account**, matched on the concrete `S3Volume`, ❌ never a path. GCS has no
   `UploadPartCopy`: one `CopyObject` there.
 - ❗ **No checksum headers; equal-size parts** (R2); a short tail follows the provider's `ShortTail`. Streamed bodies
@@ -48,5 +49,4 @@ bucket, or an account root listing them). Plan: `docs/specs/s3-support-plan.md`.
 - ❌ **One unattended auth attempt, never a loop.**
 - ❗ **A share link is a credential**: `cmdr_fs::volume::ShareLink`, ❌ never logged, never across IPC.
 
-Decisions and evidence: `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or
-advising.
+Decisions and evidence: `DETAILS.md`; read it before any non-trivial work here.

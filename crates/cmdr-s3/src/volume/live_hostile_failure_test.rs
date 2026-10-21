@@ -170,7 +170,7 @@ async fn live_hostile_cancel_server_copies() {
             let atomic_late = !client.profile().copies_in_parts && n > 0 && n < 4;
             if atomic_late {
                 m.check(
-                    outcome.as_ref().ok() == Some(&size) && published == Some(size),
+                    outcome.as_ref().ok().map(|written| written.bytes) == Some(size) && published == Some(size),
                     &format!("cancel a server copy {what} (one atomic request here)"),
                     format!("{outcome:?}, published: {published:?}"),
                 );

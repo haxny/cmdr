@@ -97,9 +97,9 @@ fn an_upload_to_aws_is_a_put_and_a_head_per_file_and_folder() {
     // verifying HEADs (no no-overwrite HEAD: the folders are fresh). The
     // folders: two marker PUTs, four HEADs, six LISTs. Readying the
     // destination: three LISTs; probing the selected folder's name: a HEAD and
-    // a LIST; reading the landed times back: a LIST per folder plus one per
-    // thousand files (3). PUT-class: 1,002 PUTs + 13 LISTs; HEADs: 1,005.
-    close(totals(&planned)[0], 1_015.0 * 5e-6 + 1_005.0 * 4e-7);
+    // a LIST. Reading the landed times back costs nothing: each PUT reports the
+    // date it stored. PUT-class: 1,002 PUTs + 10 LISTs; HEADs: 1,005.
+    close(totals(&planned)[0], 1_012.0 * 5e-6 + 1_005.0 * 4e-7);
 }
 
 #[test]
@@ -124,14 +124,14 @@ fn a_move_within_one_aws_account_copies_on_the_server_and_deletes_the_source() {
     let planned = plan(CostedOperation::Move, sides, &facts(&[(MIB, None)], 1), &[]);
     // One workload: the account is billed once. LISTs: the scan's stat (1)
     // and its listing plus the walk's (2), readying the destination (3) and
-    // checking the move (3), the name probe (1), making the folder (3), the
-    // sweep's two and the emptied folder's capped one (3), reading the landed
-    // time back (1): 17. HEADs: the stat, the probe, two making the folder, the
-    // copy's source (no no-overwrite or verifying HEAD in a fresh folder), the
-    // sweep's: 6. Plus one `CopyObject` and the marker's PUT; the deletes are
-    // free.
+    // checking the move (3), the name probe (1), making the folder (3), and the
+    // sweep's two and the emptied folder's capped one (3): 16. The copy reports
+    // its landed time, so nothing is listed to read it back. HEADs: the stat,
+    // the probe, two making the folder, the copy's source (no no-overwrite or
+    // verifying HEAD in a fresh folder), the sweep's: 6. Plus one `CopyObject`
+    // and the marker's PUT; the deletes are free.
     assert_eq!(planned.len(), 1);
-    close(totals(&planned)[0], 19.0 * 5e-6 + 6.0 * 4e-7);
+    close(totals(&planned)[0], 18.0 * 5e-6 + 6.0 * 4e-7);
 }
 
 #[test]

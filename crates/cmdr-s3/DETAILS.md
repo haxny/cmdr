@@ -107,6 +107,14 @@ keys and the rights. `integration_test.rs` pins both servers' answers.
   `Last-Modified` (the upload time). ❗ **A listing shows `LastModified`**: `ListObjectsV2` carries no user metadata,
   and a HEAD per child to fetch it would cost a request per file. So a file Cmdr or rclone uploaded shows its upload
   time in the pane and its own mtime in Get info. Decision: cost over consistency, because every request is billed.
+- **A write reports the date its HEAD will answer** (`query::landed_modified`, on `StreamWritten::landed_at`): the
+  `x-amz-meta-mtime` it sent, parsed back the way a HEAD parses it, for an upload and for a server-side copy (which
+  restates the source's date). The operation log records it for each copied file, and an undo rechecks with a HEAD, so
+  the two agree with no request at all. ❗ The listing's `LastModified` would not: every file of a folder copy then read
+  as edited since, and its undo reversed nothing (#651). A write that sent no date reports `Unknown` (the HEAD falls
+  back to `Last-Modified`, which only the server knows), and the log lists that folder instead. Pinned by
+  `query_test.rs::a_write_reports_the_date_its_head_will_answer`, `copy_landed_test.rs`, and the shared
+  `conformance::assert_landed_time_agrees_with_get_metadata` on both fixtures.
 - **Errors** (`src/volume/errors.rs`): not found (`NoSuchKey`, `NoSuchBucket`, a bodyless 404) is `NotFound(path)`; a
   refusal (`AccessDenied`, keys that stopped working, a bodyless 403, any 401) is `PermissionDenied { path }`; an
   archived object (`InvalidObjectState`) is `ColdStorage(path)`; `NotImplemented` / 405 is `NotSupported`; the rest is

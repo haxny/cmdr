@@ -76,6 +76,7 @@ async fn copy(
     volume
         .copy_on_server(source, &at(source, from), &at(volume, to), mode, watch)
         .await
+        .map(|written| written.bytes)
 }
 
 async fn a_small_object_copies_in_one_request_keeping_its_date(service: FixtureService) {

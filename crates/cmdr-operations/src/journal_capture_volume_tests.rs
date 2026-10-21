@@ -346,10 +346,15 @@ struct VolumeLoop {
 
 impl VolumeLoop {
     fn new(op_id: &str) -> Self {
+        Self::onto(op_id, InMemoryVolume::new("Dst"))
+    }
+
+    /// [`Self::new`], copying onto `dest` (given room to write into).
+    fn onto(op_id: &str, dest: InMemoryVolume) -> Self {
         let (engine, log) = journaled();
 
         let source = in_memory("Src");
-        let dest = in_memory("Dst");
+        let dest = Arc::new(dest.with_space_info(1_000_000, 900_000));
         let vm = FakeVolumes::default();
         vm.register("smb-src", Arc::clone(&source) as Arc<dyn Volume>);
         vm.register("smb-dst", Arc::clone(&dest) as Arc<dyn Volume>);
@@ -376,6 +381,12 @@ impl VolumeLoop {
             .create_file(std::path::Path::new(path), contents)
             .await
             .unwrap_or_else(|e| panic!("seed {path}: {e:?}"));
+    }
+
+    /// [`Self::put`], last modified at `secs`, like a file not saved this minute.
+    async fn put_dated(&self, path: &str, contents: &[u8], secs: u64) {
+        self.put(path, contents).await;
+        self.source.set_modified_at(std::path::Path::new(path), Some(secs));
     }
 
     /// Run the real cross-volume copy body to completion, bracketed by the
@@ -799,4 +810,82 @@ async fn undoing_a_volume_copy_keeps_a_file_edited_since_at_the_same_length() {
         vec!["/album/disk.img", "/notes.db"],
         "both edited files survive the undo"
     );
+}
+
+/// When the files were last saved, and when the store says they were uploaded:
+/// days apart, like any file not saved seconds before its copy.
+const SAVED_SECS: u64 = 1_700_000_000;
+const UPLOADED_SECS: u64 = SAVED_SECS + 3 * 86_400;
+
+/// A destination shaped like S3: each write publishes whole at its final name,
+/// its listing reports each object's upload time while `get_metadata` (a HEAD)
+/// answers the source's own date the copy stored, and its write reports that
+/// landed date.
+fn object_store() -> InMemoryVolume {
+    InMemoryVolume::new("Bucket")
+        .with_whole_publish()
+        .with_listing_upload_time(UPLOADED_SECS)
+        .with_landed_times_reported()
+}
+
+/// #651: the rows of a folder copy recorded the listing's upload time, the undo
+/// rechecked with `get_metadata` and found the source's date, and every file
+/// skipped as edited since: the undo reversed nothing. The rows record what the
+/// write reported, the time the recheck reads.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn undoing_a_folder_copy_onto_a_store_listing_upload_times_reverses_every_file() {
+    let fixture = VolumeLoop::onto("op-vol-upload-listing", object_store());
+    fixture.mkdir("/album").await;
+    fixture.mkdir("/album/inner").await;
+    fixture.put_dated("/album/one.txt", b"first", SAVED_SECS).await;
+    fixture.put_dated("/album/inner/two.txt", b"second", SAVED_SECS).await;
+    fixture.put_dated("/loose.txt", b"loose", SAVED_SECS).await;
+
+    fixture.copy(&["/album", "/loose.txt"]).await;
+    assert_file_rows_carry_their_landed_mtime(fixture.log.db(), &fixture.op_id, &*fixture.dest, 3).await;
+
+    let report = fixture.rollback().await;
+    assert_eq!(report.skipped, 0, "nothing was edited since the copy: {report:?}");
+    assert_eq!(
+        fixture.dest_files_under("/").await,
+        Vec::<String>::new(),
+        "every copied file is gone"
+    );
+}
+
+/// The concurrent driver's half of the same claim.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_concurrent_folder_copy_onto_a_store_listing_upload_times_records_the_rechecked_time() {
+    let fixture = VolumeLoop::onto("op-vol-upload-listing-concurrent", object_store());
+    for album in ["/a", "/b", "/c"] {
+        fixture.mkdir(album).await;
+        fixture.put_dated(&format!("{album}/f.txt"), b"bytes", SAVED_SECS).await;
+    }
+
+    fixture.copy(&["/a", "/b", "/c"]).await;
+
+    assert_file_rows_carry_their_landed_mtime(fixture.log.db(), &fixture.op_id, &*fixture.dest, 3).await;
+}
+
+/// A stopped folder copy reads nothing back (a stop never waits on the share),
+/// so its finished children's rows carry the time their writes reported, which
+/// costs nothing.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_interrupted_folder_copy_records_the_landed_times_its_writes_reported() {
+    let fixture = VolumeLoop::onto("op-vol-upload-listing-stopped", object_store());
+    fixture.mkdir("/album").await;
+    for i in 0..4 {
+        fixture
+            .put_dated(&format!("/album/f{i}.bin"), &vec![b'x'; 200_000], SAVED_SECS)
+            .await;
+    }
+
+    fixture.copy_stopping_after_children(&["/album"], 1).await;
+
+    let survivors = fixture.dest_files_under("/album").await;
+    assert!(
+        !survivors.is_empty(),
+        "the fixture must leave at least one finished child behind"
+    );
+    assert_file_rows_carry_their_landed_mtime(fixture.log.db(), &fixture.op_id, &*fixture.dest, survivors.len()).await;
 }

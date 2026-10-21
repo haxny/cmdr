@@ -1187,8 +1187,9 @@ symlinks + out-of-order entries, and cancel-between-members).
 Duplicating a file inside one remote volume used to pull every byte down the link and push it straight back up. A
 protocol that can copy for itself (SFTP's `copy-data`, S3's `CopyObject`) skips both halves, so `stream_pipe_file` asks
 `Volume::copy_on_server(source, from, to, mode, progress)` before it opens a stream (`server_side_copy.rs`'s
-`try_server_side_copy`). It's also the byte path of a same-volume move whose renames copy (§ "A same-volume move whose
-renames copy").
+`try_server_side_copy`). It answers what a streamed write does (`StreamWritten`), so a backend reports the copy's landed
+modified time the same way (`crates/cmdr-operation-log/DETAILS.md` § "What a volume leaf's snapshot carries"). It's also
+the byte path of a same-volume move whose renames copy (§ "A same-volume move whose renames copy").
 
 **Which sources a backend copies from is the BACKEND's decision**, from `source`'s concrete type and identity: the trait
 default answers only for the very same instance (through `copy_within`, so SFTP and ADB are unchanged), and S3 copies

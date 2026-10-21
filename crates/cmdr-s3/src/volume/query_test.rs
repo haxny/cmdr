@@ -2,7 +2,12 @@
 
 use super::super::listing::children_of;
 use super::super::test_support::make_test_volume;
-use super::{cold_from_head, modified_from_head, stored_mtime};
+use std::time::{Duration, UNIX_EPOCH};
+
+use cmdr_fs::volume::LandedModified;
+
+use super::{cold_from_head, landed_modified, modified_from_head, stored_mtime};
+use crate::metadata::format_mtime;
 use crate::xml::parse_list_objects;
 
 /// One `ListObjectsV2` page with an object in every storage class that
@@ -64,6 +69,23 @@ fn the_sources_mtime_wins_over_the_upload_time() {
     );
 }
 
+/// #651: a write reports the date a HEAD of its object will answer (the one an
+/// undo rechecks), parsed back from the very header it sent: a sub-second date,
+/// a whole one, and one before 1970 that a HEAD shows as no date at all.
+#[test]
+fn a_write_reports_the_date_its_head_will_answer() {
+    for sent in [
+        UNIX_EPOCH + Duration::new(1_611_909_015, 250_000_000),
+        UNIX_EPOCH + Duration::from_secs(1_354_040_105),
+        UNIX_EPOCH - Duration::from_secs(86_400),
+    ] {
+        let head = modified_from_head(Some(&format_mtime(sent)), Some(LAST_MODIFIED));
+        assert_eq!(landed_modified(Some(sent)), LandedModified::Known(head), "{sent:?}");
+    }
+    // No date sent: the HEAD answers the upload time, which only the server knows.
+    assert_eq!(landed_modified(None), LandedModified::Unknown);
+}
+
 #[test]
 fn without_an_mtime_the_upload_time_shows() {
     assert_eq!(modified_from_head(None, Some(LAST_MODIFIED)), Some(LAST_MODIFIED_SECS));
@@ -87,7 +109,7 @@ fn no_date_at_all_is_no_date() {
 fn an_object_answer_carries_its_stored_mtime_to_the_nanosecond() {
     // What a read stream hands a copy's destination: the source's own date,
     // sub-second part included, so S3 → S3 keeps it exactly.
-    let exact = std::time::UNIX_EPOCH + std::time::Duration::new(1_354_040_105, 123_456_789);
+    let exact = UNIX_EPOCH + Duration::new(1_354_040_105, 123_456_789);
     assert_eq!(
         stored_mtime(Some("1354040105.123456789"), Some("Wed, 01 Oct 2026 10:00:00 GMT")),
         Some(exact)
@@ -95,7 +117,7 @@ fn an_object_answer_carries_its_stored_mtime_to_the_nanosecond() {
     // No mtime metadata: the upload time is the only date the object has.
     assert_eq!(
         stored_mtime(None, Some("Wed, 28 Nov 2012 18:15:05 GMT")),
-        Some(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_354_126_505))
+        Some(UNIX_EPOCH + Duration::from_secs(1_354_126_505))
     );
     assert_eq!(stored_mtime(Some("not a time"), None), None);
 }

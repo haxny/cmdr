@@ -386,7 +386,7 @@ impl Volume for S3Volume {
         to: &'a Path,
         mode: WriteMode,
         progress: &'a dyn ServerCopyProgress,
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(self.noting(self.copy_on_server_impl(source, from, to, mode, progress)))
     }
 

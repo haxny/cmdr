@@ -133,6 +133,14 @@ impl Volume for InMemoryVolume {
                     parent == target_dir
                 })
                 .map(|(_, entry)| entry.metadata.clone())
+                .map(|mut listed| {
+                    if let Some(upload) = self.listing_upload_secs
+                        && !listed.is_directory
+                    {
+                        listed.modified_at = Some(upload);
+                    }
+                    listed
+                })
                 .collect();
 
             // Sort: directories first, then alphabetically
@@ -717,7 +725,7 @@ impl Volume for InMemoryVolume {
             if !kept.is_empty() {
                 self.set_carried_metadata(dest, kept);
             }
-            Ok(self.written(bytes_written, &carried, stream.modified_at()))
+            Ok(self.written(dest, bytes_written, &carried, stream.modified_at()))
         })
     }
 

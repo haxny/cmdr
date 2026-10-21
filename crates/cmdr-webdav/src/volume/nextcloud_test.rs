@@ -546,6 +546,7 @@ async fn nextcloud_a_copy_keeps_the_source_date() {
 
     cmdr_fs::volume::conformance::assert_write_from_stream_keeps_the_source_date(&volume, &dated, Duration::ZERO).await;
     cmdr_fs::volume::conformance::assert_read_stream_reports_the_listed_date(&volume, &dated).await;
+    cmdr_fs::volume::conformance::assert_landed_time_agrees_with_get_metadata(&volume, &dir.join("landed.txt")).await;
 
     clean(&volume, &dir).await;
 }

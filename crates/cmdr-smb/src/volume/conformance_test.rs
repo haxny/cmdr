@@ -238,6 +238,11 @@ async fn smb_integration_a_copy_keeps_the_source_date_per_the_shared_contract() 
     )
     .await;
     cmdr_fs::volume::conformance::assert_read_stream_reports_the_listed_date(smb_vol.as_ref(), Path::new(&dated)).await;
+    cmdr_fs::volume::conformance::assert_landed_time_agrees_with_get_metadata(
+        smb_vol.as_ref(),
+        Path::new(&format!("{base}/landed.txt")),
+    )
+    .await;
 
     ensure_clean(&smb_vol, &base).await;
 }

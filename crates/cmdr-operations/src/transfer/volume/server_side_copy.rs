@@ -15,6 +15,7 @@ use super::super::recovered_name::FinalizeFailure;
 use super::super::staged_write::{CutOffLanding, LandingError, StagedWrite, WriteStaging, resolve_staging};
 use super::super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
 use super::super::volume_outage::StartedOn;
+use super::stream_pipe::{PipedFile, landed_at_final_name};
 use super::transfer_error::hard_abort_error;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
@@ -112,12 +113,13 @@ pub(super) async fn try_server_side_copy(
         ) => result,
     };
     match &outcome {
-        Ok(bytes) => log::debug!(
+        Ok(written) => log::debug!(
             target: "copy",
             "try_server_side_copy: {} answered for {} after {:?}: done, size {bytes}",
             LogPrivate::volume(dest_volume.name()),
             LogPrivate::file_path(dest_path),
             started.elapsed(),
+            bytes = written.bytes,
         ),
         Err(e) => log::debug!(
             target: "copy",
@@ -130,10 +132,15 @@ pub(super) async fn try_server_side_copy(
     }
 
     match outcome {
-        Ok(bytes) => {
+        Ok(written) => {
+            let bytes = written.bytes;
+            let piped = PipedFile {
+                bytes,
+                landed: landed_at_final_name(&written, staged.target(), dest_path),
+            };
             let started_on = StartedOn::now(&[source_volume, dest_volume]);
             match staged.commit(dest_volume, bytes).await {
-                Ok(()) => Ok(ServerSideCopy::Landed(bytes)),
+                Ok(()) => Ok(ServerSideCopy::Landed(piped)),
                 Err(LandingError::Failed(failure)) => Err(failure),
                 Err(LandingError::CutOff(cut_off)) => Ok(ServerSideCopy::LandingCutOff {
                     cut_off,
@@ -171,7 +178,7 @@ pub(super) async fn try_server_side_copy(
 /// How a server-side copy attempt came out, short of a failure.
 pub(super) enum ServerSideCopy {
     /// The server copied the file and it has its final name.
-    Landed(u64),
+    Landed(PipedFile),
     /// Do it the ordinary way: stream it.
     Streams,
     /// The server copied all `bytes` and the landing was cut off on the

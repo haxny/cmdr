@@ -160,6 +160,7 @@ async fn a_copy_keeps_the_source_date_per_the_shared_contract() {
     )
     .await;
     cmdr_fs::volume::conformance::assert_read_stream_reports_the_listed_date(&volume, Path::new("dated.txt")).await;
+    cmdr_fs::volume::conformance::assert_landed_time_agrees_with_get_metadata(&volume, Path::new("landed.txt")).await;
 }
 
 /// A copy onto local disk dates the folders it created, once their contents
