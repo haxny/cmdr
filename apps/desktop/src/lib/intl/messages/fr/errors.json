@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "Voici ce que vous pouvez essayer :\n- Sur l’appareil lui-même, renommez-les afin que chacun ait son propre nom\n- Ensuite, rouvrez ce dossier",
+  "errors.listing.duplicateName.suggestion": "Voici ce que vous pouvez essayer :\n- Ouvrez le dossier qui les contient et choisissez dans la liste celui que vous voulez\n- Ou renommez l’un d’eux afin que chacun ait son propre nom",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "Lecture du dossier impossible",
   "@errors.listing.ioSerious.title": {
@@ -2165,9 +2165,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "« {path} » désigne plusieurs éléments sur l’appareil : Cmdr n’en a donc choisi aucun. Sur l’appareil lui-même, renommez-les afin que chacun ait son propre nom, puis réessayez.",
+  "errors.volume.duplicateName": "« {path} » désigne plusieurs éléments sur l’appareil : Cmdr n’en a donc choisi aucun. Choisissez celui que vous voulez dans son dossier, ou renommez-en un afin que chacun ait son propre nom.",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "Cmdr a perdu la trace du dossier de destination sur l’appareil. Ouvrez-le à nouveau, puis réessayez.",
   "@errors.volume.staleDestinationHandle": {

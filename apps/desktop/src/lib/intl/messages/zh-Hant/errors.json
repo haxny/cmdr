@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "可以這樣試試：\n- 直接在裝置上幫它們改名，讓每一項都有自己的名稱\n- 然後重新開啟這個資料夾",
+  "errors.listing.duplicateName.suggestion": "可以這樣試試：\n- 開啟它們所在的資料夾，從列表中選出你要的那一項\n- 或者幫其中一項改名，讓每一項都有自己的名稱",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "無法讀取這個資料夾",
   "@errors.listing.ioSerious.title": {
@@ -2165,9 +2165,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "裝置上有不只一個項目對應到「{path}」，所以 Cmdr 沒有替你選。請直接在裝置上幫它們改名，讓每一項都有自己的名稱，然後再試一次。",
+  "errors.volume.duplicateName": "裝置上有不只一個項目對應到「{path}」，所以 Cmdr 沒有替你選。請到它所在的資料夾裡選出你要的那一項，或者幫其中一項改名，讓每一項都有自己的名稱。",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "Cmdr 跟丟了裝置上的目標資料夾。請再進去一次，然後重試。",
   "@errors.volume.staleDestinationHandle": {

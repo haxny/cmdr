@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "可以这样试试：\n- 直接在设备上给它们改名，让每一项都有自己的名称\n- 然后重新打开这个文件夹",
+  "errors.listing.duplicateName.suggestion": "可以这样试试：\n- 打开它们所在的文件夹，从列表里选出你要的那一项\n- 或者给其中一项改名，让每一项都有自己的名称",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "无法读取这个文件夹",
   "@errors.listing.ioSerious.title": {
@@ -2164,9 +2164,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "设备上有不止一个项目对应“{path}”，所以 Cmdr 没有替你挑选。请直接在设备上给它们改名，让每一项都有自己的名称，然后再试一次。",
+  "errors.volume.duplicateName": "设备上有不止一个项目对应“{path}”，所以 Cmdr 没有替你挑选。请到它所在的文件夹里选出你要的那一项，或者给其中一项改名，让每一项都有自己的名称。",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "Cmdr 跟丢了设备上的目标文件夹。请再次进入这个文件夹，然后重试。",
   "@errors.volume.staleDestinationHandle": {

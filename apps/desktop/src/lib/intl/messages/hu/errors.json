@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "Ezeket próbálhatod:\n- Magán az eszközön nevezd át őket úgy, hogy mindegyiknek saját neve legyen\n- Utána nyisd meg újra ezt a mappát",
+  "errors.listing.duplicateName.suggestion": "Ezeket próbálhatod:\n- Nyisd meg a mappát, amelyben vannak, és válaszd ki a listából azt, amelyikre gondolsz\n- Vagy nevezd át az egyiket, hogy mindegyiknek saját neve legyen",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "Nem sikerült beolvasni ezt a mappát",
   "@errors.listing.ioSerious.title": {
@@ -2165,9 +2165,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "Ez az útvonal több elemet is jelöl az eszközön: „{path}”, ezért a Cmdr nem választott. Magán az eszközön nevezd át őket úgy, hogy mindegyiknek saját neve legyen, majd próbáld újra.",
+  "errors.volume.duplicateName": "Ez az útvonal több elemet is jelöl az eszközön: „{path}”, ezért a Cmdr nem választott. Válaszd ki a mappájában azt, amelyikre gondolsz, vagy nevezd át az egyiket, hogy mindegyiknek saját neve legyen.",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "A Cmdr már nem találja a célmappát az eszközön. Nyisd meg még egyszer, majd próbáld újra.",
   "@errors.volume.staleDestinationHandle": {

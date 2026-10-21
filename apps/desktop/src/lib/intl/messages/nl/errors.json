@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "Dit kun je proberen:\n- Wijzig op het apparaat zelf de namen, zodat elk onderdeel een eigen naam heeft\n- Open deze map daarna opnieuw",
+  "errors.listing.duplicateName.suggestion": "Dit kun je proberen:\n- Open de map waarin ze staan en kies in de lijst het onderdeel dat je bedoelt\n- Of wijzig de naam van een van de onderdelen, zodat elk een eigen naam heeft",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "Kon deze map niet lezen",
   "@errors.listing.ioSerious.title": {
@@ -2165,9 +2165,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "‘{path}’ verwijst naar meer dan één onderdeel op het apparaat, dus Cmdr heeft er geen gekozen. Wijzig op het apparaat zelf de namen, zodat elk onderdeel een eigen naam heeft, en probeer het opnieuw.",
+  "errors.volume.duplicateName": "‘{path}’ verwijst naar meer dan één onderdeel op het apparaat, dus Cmdr heeft er geen gekozen. Kies het onderdeel dat je bedoelt in de map waarin het staat, of wijzig de naam van een van de onderdelen, zodat elk een eigen naam heeft.",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "Cmdr is de doelmap op het apparaat kwijtgeraakt. Open hem opnieuw en probeer het dan nog eens.",
   "@errors.volume.staleDestinationHandle": {

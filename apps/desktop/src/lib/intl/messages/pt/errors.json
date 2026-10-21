@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "Veja o que tentar:\n- No próprio dispositivo, renomeie os itens para que cada um tenha um nome próprio\n- Depois abra esta pasta de novo",
+  "errors.listing.duplicateName.suggestion": "Veja o que tentar:\n- Abra a pasta com esses itens e escolha na lista o item que você quer\n- Ou renomeie um deles para que cada um tenha um nome próprio",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "Não foi possível ler esta pasta",
   "@errors.listing.ioSerious.title": {
@@ -2165,9 +2165,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "“{path}” corresponde a mais de um item no dispositivo, então o Cmdr não escolheu nenhum. No próprio dispositivo, renomeie os itens para que cada um tenha um nome próprio e tente de novo.",
+  "errors.volume.duplicateName": "“{path}” corresponde a mais de um item no dispositivo, então o Cmdr não escolheu nenhum. Escolha o item que você quer na pasta onde ele está ou renomeie um deles para que cada um tenha um nome próprio.",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "O Cmdr perdeu a referência da pasta de destino no dispositivo. Abra a pasta de novo e tente outra vez.",
   "@errors.volume.staleDestinationHandle": {

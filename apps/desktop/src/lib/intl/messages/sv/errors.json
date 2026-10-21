@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "Så här kan du prova:\n- Byt namn på dem direkt på enheten så att vart och ett får ett eget namn\n- Öppna sedan den här mappen igen",
+  "errors.listing.duplicateName.suggestion": "Så här kan du prova:\n- Öppna mappen där de ligger och välj det du menar i listan\n- Eller byt namn på ett av dem så att vart och ett får ett eget namn",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "Det gick inte att läsa den här mappen",
   "@errors.listing.ioSerious.title": {
@@ -2165,9 +2165,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "”{path}” pekar på mer än ett objekt på enheten, så Cmdr valde inget. Byt namn på dem direkt på enheten så att vart och ett får ett eget namn, och försök sedan igen.",
+  "errors.volume.duplicateName": "”{path}” pekar på mer än ett objekt på enheten, så Cmdr valde inget. Välj det du menar i mappen där det ligger eller byt namn på ett av dem så att vart och ett får ett eget namn.",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "Cmdr tappade koll på målmappen på enheten. Öppna den igen och försök på nytt.",
   "@errors.volume.staleDestinationHandle": {

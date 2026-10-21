@@ -727,9 +727,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "a91758d"
   },
-  "errors.volume.duplicateName": "“{path}” corresponde a más de un elemento del dispositivo, así que Cmdr no eligió ninguno. En el propio dispositivo, renómbralos para que cada uno tenga su propio nombre, y luego inténtalo de nuevo.",
+  "errors.volume.duplicateName": "“{path}” corresponde a más de un elemento del dispositivo, así que Cmdr no eligió ninguno. Elige el que buscas en su carpeta o renombra uno para que cada uno tenga su propio nombre.",
   "@errors.volume.duplicateName": {
-    "sourceHash": "1053c6e"
+    "sourceHash": "0d75532"
   },
   "errors.volume.staleDestinationHandle": "Cmdr perdió la pista de la carpeta de destino en el dispositivo. Ábrela de nuevo y vuelve a intentarlo.",
   "@errors.volume.staleDestinationHandle": {

@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "Das kannst du versuchen:\n- Benenne die Objekte direkt auf dem Gerät um, sodass jedes einen eigenen Namen hat\n- Öffne diesen Ordner danach noch einmal",
+  "errors.listing.duplicateName.suggestion": "Das kannst du versuchen:\n- Öffne den Ordner, in dem sie liegen, und wähle in der Liste das Objekt aus, das du meinst\n- Oder benenne eines davon um, sodass jedes einen eigenen Namen hat",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "Dieser Ordner ließ sich nicht lesen",
   "@errors.listing.ioSerious.title": {
@@ -2165,9 +2165,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "Unter „{path}“ gibt es auf dem Gerät mehr als ein Objekt, deshalb hat Cmdr keines ausgewählt. Benenne die Objekte direkt auf dem Gerät um, sodass jedes einen eigenen Namen hat, und versuche es dann noch einmal.",
+  "errors.volume.duplicateName": "Unter „{path}“ gibt es auf dem Gerät mehr als ein Objekt, deshalb hat Cmdr keines ausgewählt. Wähle das Objekt, das du meinst, in seinem Ordner aus, oder benenne eines um, sodass jedes einen eigenen Namen hat.",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "Cmdr hat den Zielordner auf dem Gerät aus den Augen verloren. Öffne ihn noch einmal und versuche es dann erneut.",
   "@errors.volume.staleDestinationHandle": {

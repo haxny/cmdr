@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "Esto es lo que puedes probar:\n- En el propio dispositivo, renómbralos para que cada uno tenga su propio nombre\n- Luego vuelve a abrir esta carpeta",
+  "errors.listing.duplicateName.suggestion": "Esto es lo que puedes probar:\n- Abre la carpeta que los contiene y elige en la lista el que buscas\n- O renombra uno de ellos para que cada uno tenga su propio nombre",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "No se ha podido leer esta carpeta",
   "@errors.listing.ioSerious.title": {
@@ -2165,9 +2165,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "“{path}” corresponde a más de un elemento del dispositivo, así que Cmdr no ha elegido ninguno. En el propio dispositivo, renómbralos para que cada uno tenga su propio nombre, y luego inténtalo de nuevo.",
+  "errors.volume.duplicateName": "“{path}” corresponde a más de un elemento del dispositivo, así que Cmdr no ha elegido ninguno. Elige el que buscas en su carpeta o renombra uno para que cada uno tenga su propio nombre.",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "Cmdr ha perdido la pista de la carpeta de destino en el dispositivo. Ábrela de nuevo y vuelve a intentarlo.",
   "@errors.volume.staleDestinationHandle": {

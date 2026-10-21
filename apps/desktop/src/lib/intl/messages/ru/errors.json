@@ -679,9 +679,9 @@
   "@errors.listing.duplicateName.explanation": {
     "sourceHash": "cea78b8"
   },
-  "errors.listing.duplicateName.suggestion": "Что можно сделать:\n- Переименуйте объекты на самом устройстве, чтобы у каждого было свое имя\n- Затем снова откройте эту папку",
+  "errors.listing.duplicateName.suggestion": "Что можно сделать:\n- Откройте папку, где они лежат, и выберите в списке нужный объект\n- Или переименуйте один из них, чтобы у каждого было свое имя",
   "@errors.listing.duplicateName.suggestion": {
-    "sourceHash": "92daf88"
+    "sourceHash": "1059be1"
   },
   "errors.listing.ioSerious.title": "Не удалось прочитать папку",
   "@errors.listing.ioSerious.title": {
@@ -2165,9 +2165,9 @@
   "@errors.volume.ambiguousName": {
     "sourceHash": "0f0e74d"
   },
-  "errors.volume.duplicateName": "На устройстве несколько объектов соответствуют «{path}», поэтому Cmdr ничего не выбрал. Переименуйте объекты на самом устройстве, чтобы у каждого было свое имя, и повторите попытку.",
+  "errors.volume.duplicateName": "На устройстве несколько объектов соответствуют «{path}», поэтому Cmdr ничего не выбрал. Выберите нужный объект в его папке или переименуйте один из них, чтобы у каждого было свое имя.",
   "@errors.volume.duplicateName": {
-    "sourceHash": "cda05a9"
+    "sourceHash": "c68223a"
   },
   "errors.volume.staleDestinationHandle": "Cmdr потерял связь с целевой папкой на устройстве. Откройте папку снова и повторите попытку.",
   "@errors.volume.staleDestinationHandle": {
