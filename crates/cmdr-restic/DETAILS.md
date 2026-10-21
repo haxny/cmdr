@@ -162,14 +162,20 @@ never does.
 - **Coverage and reloads.** A load records the snapshots listed when it started (restic writes a backup's index files
   before its snapshot file). A snapshot outside that set (a backup made since) loads again, beside the index serving,
   which keeps serving until the new one is in; readers holding the old `Arc` finish on it. Memory doubles for the swap.
+- **A transfer's hold** (`Volume::hold_for_transfer` → `RepoSlot::hold_for_transfer`): a copy, move, or compress reading
+  from the repo takes one when it starts running and drops it when it settles
+  (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A transfer holds its source for its whole run"). While any
+  is held the index is in use, so a copy paused between files (no read stream open) keeps it past the idle drop and
+  another repo's load (#629). It counts on the slot, not the index, so an index loaded later is kept too; letting go
+  counts as a use, so the idle clock starts when the transfer ends.
 - **The cap: one indexed repo** (`max_indexed`). Installing an index lets go of the least recently used other ones, ❌
-  never one in use: an `Arc` held outside the slot (an open read stream, a listing in flight) or used within the last 2
-  s (`lease_grace`, the gap between a scan's listings or a copy's files). With every one in use the cap is overshot.
-  Eviction drops the index only: the password, the opened repo, and the snapshot list stay, so coming back reloads
-  silently. A cap by count, not bytes: estimate an index at ~5x its `index/` folder, steady (§ "Why one index and eight
-  opened repos").
-- **Idle drop after five minutes** unused (`index_idle_drop`), unless a read stream still holds it. Getting it back is
-  an unlock plus a load, which the progress phase covers.
+  never one in use: an `Arc` held outside the slot (an open read stream, a listing in flight), a transfer's hold, or
+  used within the last 2 s (`lease_grace`, the gap between a scan's listings). With every one in use the cap is
+  overshot. Eviction drops the index only: the password, the opened repo, and the snapshot list stay, so coming back
+  reloads silently. A cap by count, not bytes: estimate an index at ~5x its `index/` folder, steady (§ "Why one index
+  and eight opened repos").
+- **Idle drop after five minutes** unused (`index_idle_drop`), unless a read stream or a transfer still holds it.
+  Getting it back is an unlock plus a load, which the progress phase covers.
 - **An index is freed on the blocking pool**, ❌ never under the slot's lock or on an async worker: the last `Arc` of a
   2.4M-blob index plus its blob cache takes a while to deallocate (`hub::index_slot::free_off_the_runtime`).
 - **Opened repos** (unlocked, snapshot list read, a few MB each) are capped at eight (`max_opened`), least recently used

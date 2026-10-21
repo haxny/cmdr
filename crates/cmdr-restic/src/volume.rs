@@ -25,7 +25,7 @@ use cmdr_fs::metadata::MetadataCaps;
 use cmdr_fs::volume::scan_walk::{self, ScanSource, Walking};
 use cmdr_fs::volume::{
     BackendKind, BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, PasswordForgotten,
-    PasswordLocked, ScanBoundary, SpaceInfo, UnlockOutcome, Volume, VolumeError, VolumeReadStream,
+    PasswordLocked, ScanBoundary, SpaceInfo, TransferHold, UnlockOutcome, Volume, VolumeError, VolumeReadStream,
 };
 use rustic_core::repofile::Node;
 use std::ffi::OsString;
@@ -462,6 +462,12 @@ impl Volume for ResticVolume {
     /// volume that holds the repo. See [`Volume::routes_over_a_parent`].
     fn routes_over_a_parent(&self) -> bool {
         true
+    }
+
+    /// Keeps the repo's index loaded for a transfer reading from it, paused or
+    /// not (`RepoSlot::hold_for_transfer`).
+    fn hold_for_transfer(&self) -> Option<TransferHold> {
+        Some(self.slot.hold_for_transfer())
     }
 
     /// `None`: a snapshot path has no counterpart on disk.

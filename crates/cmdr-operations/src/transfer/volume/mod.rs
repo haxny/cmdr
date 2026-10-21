@@ -182,6 +182,8 @@ mod copy_sidecar_tests;
 #[cfg(test)]
 mod metadata_loss_tests;
 
+#[cfg(test)]
+mod copy_hold_tests;
 /// A selected local link copied to another volume lands as what it points at.
 #[cfg(test)]
 mod copy_selected_link_tests;

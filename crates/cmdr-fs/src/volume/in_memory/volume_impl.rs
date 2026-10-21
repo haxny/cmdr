@@ -765,6 +765,10 @@ impl Volume for InMemoryVolume {
         self.routes_over_a_parent
     }
 
+    fn hold_for_transfer(&self) -> Option<crate::volume::TransferHold> {
+        self.transfer_hold()
+    }
+
     fn supports_local_fs_access(&self) -> bool {
         self.local_fs_access
     }

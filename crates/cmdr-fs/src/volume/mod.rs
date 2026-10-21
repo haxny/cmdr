@@ -1718,6 +1718,17 @@ pub trait Volume: Send + Sync {
         false
     }
 
+    /// Keeps what reading this volume needs warm for as long as the answer
+    /// lives: a transfer reading from this volume takes one when it starts
+    /// running and drops it when it settles, so a pause between files can't
+    /// let the volume give up what the next file needs (a restic repo's
+    /// index, which otherwise goes after five idle minutes or for another
+    /// repo's). Taking and dropping it does no I/O. `None` (the default):
+    /// nothing to keep.
+    fn hold_for_transfer(&self) -> Option<TransferHold> {
+        None
+    }
+
     /// Whether a running transfer reading from this volume should AUTO-YIELD to
     /// foreground device work mid-copy (don't start the next read window while
     /// foreground work is pending; resume from the current offset once it drains),
@@ -2133,6 +2144,7 @@ pub mod secret_store;
 pub mod server_side;
 pub mod share_link;
 pub mod tls;
+mod transfer_hold;
 mod transport_fault;
 mod types;
 mod usb_speed;
@@ -2187,6 +2199,7 @@ pub use scan_outages::{ScanOutages, ScanReadJudge, ScanReadNext};
 pub use scan_recorder::ScanRecorder;
 pub use scan_stop::{ScanStop, ScanStopSignal};
 pub use scan_walk::{ScanSource, Walking, conflicts_against, fold_batch, scan_conflicts, scan_one, scan_trees};
+pub use transfer_hold::TransferHold;
 pub use transport_fault::{TransportFault, is_transport_errno};
 pub use types::*;
 pub use usb_speed::UsbSpeed;

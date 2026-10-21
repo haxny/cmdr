@@ -193,6 +193,9 @@ pub(super) async fn start(
                 WriteOperationType::Compress,
                 settle_volume,
             );
+            // What the source keeps warm for this transfer, held until it settles
+            // (`Volume::hold_for_transfer`).
+            let _source_hold = source_volume.hold_for_transfer();
 
             if super::super::scan_bridge::await_claimed_preview(
                 &ops,

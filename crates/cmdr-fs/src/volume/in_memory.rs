@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+mod transfer_holds;
 mod volume_impl;
 
 /// Entry in the in-memory file system.
@@ -187,6 +188,8 @@ pub struct InMemoryVolume {
     /// [`with_index_walk`](Self::with_index_walk), by directory path. Any other
     /// directory keeps the trait's default.
     index_walk_overrides: Vec<(PathBuf, IndexWalk)>,
+    /// Live [`Volume::hold_for_transfer`] holds, when counting (`transfer_holds.rs`).
+    transfer_holds: Option<std::sync::Arc<std::sync::atomic::AtomicUsize>>,
     /// Raw errno to inject on the next `list_directory` call. Cleared after use.
     #[cfg(feature = "playwright-e2e")]
     injected_error: std::sync::Mutex<Option<i32>>,
@@ -223,6 +226,7 @@ impl InMemoryVolume {
             metadata_caps: Self::REFERENCE_CAPS,
             write_refuses: MetadataClasses::NONE,
             index_walk_overrides: Vec::new(),
+            transfer_holds: None,
             #[cfg(feature = "playwright-e2e")]
             injected_error: std::sync::Mutex::new(None),
         }

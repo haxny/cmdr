@@ -409,6 +409,9 @@ impl crate::Operations {
                 let settle_volume = (parent_volume_id != "root").then(|| parent_volume_id.clone());
                 let _settled =
                     WriteSettledGuard::new(Arc::clone(&events), op_id.to_string(), operation_type, settle_volume);
+                // What the source keeps warm for this transfer, held until it settles
+                // (`Volume::hold_for_transfer`).
+                let _source_hold = source_volume.hold_for_transfer();
 
                 // Wait out the confirming dialog's scan. The changeset planner
                 // walks the sources itself, so this buys serialization rather than

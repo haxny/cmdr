@@ -1830,6 +1830,15 @@ and the spawn loop starts nothing new while every in-flight file is parked. The 
 / resume". Pinned by `transfer_driver::concurrent_tests::concurrent_per_file_callback_is_cancel_only_not_pause_aware`
 and `copy_failure_drain_tests.rs::a_failure_while_paused_wakes_the_parked_siblings_to_stop`.
 
+## A transfer holds its source for its whole run
+
+Every managed body that reads a source volume (cross-volume copy and move, copy into a zip, fresh compress) takes
+`source_volume.hold_for_transfer()` once it starts running and keeps it as a local until the body ends, so it's released
+when the op settles however it settles, and with the task if the task is dropped. A paused transfer holds no read stream
+between files, so this is the one signal that it still needs the source warm: a restic repo keeps its index loaded on it
+(#629; `crates/cmdr-restic/DETAILS.md` § "The index lifecycle"). A queued op holds nothing; most volumes answer `None`.
+Taking and dropping a hold does no I/O, so it's MTP- and outage-safe. Pinned by `copy_hold_tests.rs`.
+
 ## Overwrite isn't reversible
 
 **Decision**: Overwrite does NOT keep a backup of the replaced original. Rollback removes the files the operation

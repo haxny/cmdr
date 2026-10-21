@@ -323,6 +323,10 @@ impl crate::Operations {
                     WriteOperationType::Copy,
                     Some(source_volume_name),
                 );
+                // What the source keeps warm for this copy (a restic repo's index),
+                // held through every pause and dropped with this body when the copy
+                // settles, however it settles (`Volume::hold_for_transfer`).
+                let _source_hold = source_volume.hold_for_transfer();
 
                 // Wait out the confirming dialog's scan before journaling or
                 // touching either device; see `cmdr_operations::start_write_operation`.

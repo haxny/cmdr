@@ -565,6 +565,46 @@ async fn an_index_in_use_is_never_evicted() {
     drop(stream);
 }
 
+/// ❗ A copy out of a repo holds its index for the whole transfer (#629): paused
+/// between files it holds no read stream, and the idle drop or another repo's
+/// load would otherwise take the index, so the next file paid a reload. Let go
+/// of when the transfer settles (its hold dropped), the index goes idle as usual.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_transfer_hold_keeps_the_index_past_the_idle_drop_and_another_repos_load() {
+    let rig = Rig::new(RigOptions {
+        tuning: Tuning {
+            index_idle_drop: Duration::from_millis(200),
+            ..tight_tuning()
+        },
+        second_repo: true,
+        ..RigOptions::default()
+    })
+    .await;
+    let other = view_of(&rig.hub, &rig.parent, OTHER_ROOT);
+    assert!(test_fixtures::unlock(&other, PASSWORD).await);
+    rig.volume.list_directory(&latest(ROOT), None).await.expect("lists");
+    let slot = rig.volume.slot_for_tests();
+
+    let hold = rig
+        .volume
+        .hold_for_transfer()
+        .expect("a repo keeps its index for a transfer reading from it");
+    // allowed-test-sleep: the idle period IS the subject: a copy paused this long
+    // between files, holding no read stream
+    tokio::time::sleep(Duration::from_millis(600)).await;
+    other.list_directory(&latest(OTHER_ROOT), None).await.expect("lists");
+
+    assert!(
+        ResticRepos::is_indexed(&slot),
+        "held past the idle drop and past the other repo's load"
+    );
+    drop(hold);
+    wait_until_async(WITHIN, "the settled transfer's index goes idle", || {
+        !ResticRepos::is_indexed(&slot)
+    })
+    .await;
+}
+
 /// An index nobody used for the idle period goes; the password stays, so the
 /// next listing reloads without asking.
 #[tokio::test(flavor = "multi_thread")]

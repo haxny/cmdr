@@ -225,6 +225,9 @@ impl crate::Operations {
                     WriteOperationType::Move,
                     Some(source_volume_name),
                 );
+                // What the source keeps warm for this transfer, held until it settles
+                // (`Volume::hold_for_transfer`).
+                let _source_hold = source_volume.hold_for_transfer();
 
                 // Wait out the confirming dialog's scan before journaling or
                 // touching either device; see `cmdr_operations::start_write_operation`.

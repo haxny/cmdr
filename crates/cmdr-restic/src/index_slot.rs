@@ -6,7 +6,7 @@ use super::{RepoKey, RepoSlot, Tuning};
 use crate::index_load::{Load, Waiter};
 use crate::repo::{IndexedRepo, ResticError};
 use crate::snapshots::Snapshot;
-use cmdr_fs::volume::Volume;
+use cmdr_fs::volume::{TransferHold, Volume};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::{Duration, Instant};
@@ -22,6 +22,9 @@ pub(crate) struct IndexSlot {
     /// Counts loads started, so a load's result and its idle drop know whether
     /// a newer one replaced them.
     pub(crate) generation: u64,
+    /// Transfers reading from the repo right now ([`RepoSlot::hold_for_transfer`]):
+    /// while any is, the index is in use, paused between files or not.
+    transfer_holds: usize,
 }
 
 impl IndexSlot {
@@ -111,9 +114,35 @@ impl Installed {
     }
 }
 
+impl RepoSlot {
+    /// Keeps this repo's index loaded for as long as the answer lives: a
+    /// transfer reading from the repo takes it when it starts running and drops
+    /// it when it settles, so neither the idle drop nor another repo's load
+    /// takes the index while a copy is paused between files (it holds no read
+    /// stream then). Holds the slot, never the index itself, so an index not
+    /// loaded yet is kept once it is. Releasing counts as a use, so the idle
+    /// drop's clock starts when the transfer ends.
+    pub(crate) fn hold_for_transfer(self: &Arc<Self>) -> TransferHold {
+        lock(&self.index).transfer_holds += 1;
+        TransferHold::new(HeldForTransfer(Arc::clone(self)))
+    }
+}
+
+/// One transfer's hold on a repo's index; dropping it lets go.
+struct HeldForTransfer(Arc<RepoSlot>);
+
+impl Drop for HeldForTransfer {
+    fn drop(&mut self) {
+        let mut index = lock(&self.0.index);
+        index.transfer_holds = index.transfer_holds.saturating_sub(1);
+        drop(index);
+        self.0.touch();
+    }
+}
+
 /// Lets go of the least recently used indexes past [`Tuning::max_indexed`],
 /// keeping `keep`'s. ❌ Never one in use (an open read stream, a listing, a
-/// scan between two listings): a copy out of a repo a third browsed repo
+/// scan between two listings, a transfer's hold): a copy out of a repo a third browsed repo
 /// evicted would pay a re-open plus a full reload mid-copy. With every one in
 /// use, the cap is overshot. The password, the opened repo, and the
 /// snapshot list stay.
@@ -136,10 +165,11 @@ fn evict_indexes(
             return;
         }
         let mut index = lock(&slot.index);
-        if index
-            .ready
-            .as_ref()
-            .is_some_and(|ready| !in_use(slot, ready, tuning.lease_grace))
+        if index.transfer_holds == 0
+            && index
+                .ready
+                .as_ref()
+                .is_some_and(|ready| !in_use(slot, ready, tuning.lease_grace))
         {
             let gone = index.ready.take();
             drop(index);
@@ -165,8 +195,9 @@ async fn drop_when_idle(slot: Weak<RepoSlot>, generation: u64, tuning: Tuning, r
             wait = tuning.index_idle_drop - idle_for;
             continue;
         }
-        if Arc::strong_count(&ready.repo) > 1 {
-            // A read stream still holds it, however idle the panes are.
+        if Arc::strong_count(&ready.repo) > 1 || index.transfer_holds > 0 {
+            // A read stream or a transfer still holds it, however idle the
+            // panes are.
             wait = tuning.index_idle_drop;
             continue;
         }
