@@ -27,15 +27,16 @@
         size="sm"
     />{/snippet}
 
-<!-- Named by what it shows ("4 servers Press ⌘R or click here to refresh"), ❌ no `aria-label`: one
-     would have to hold every visible word, count and hint, to pass WCAG 2.5.3 (label in name). -->
+<!-- Named by what it shows ("4 servers, Press ⌘R or click here to refresh"), ❌ no `aria-label`: one
+     would have to hold every visible word, count and hint, to pass WCAG 2.5.3 (label in name). The
+     hidden comma only gives a screen reader a pause between the count and the hint. -->
 <button class="hub-status-bar" onclick={onRefresh}>
     <span class="status-text"
         >{tString('servers.hub.rowCount', {
             count: serverCount,
             countText: formatInteger(serverCount),
         })}</span
-    >
+    ><span class="sr-only">,</span>
     <span class="refresh-hint"><Trans key="fileExplorer.network.browser.refreshHint" {snippets} /></span>
 </button>
 

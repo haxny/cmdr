@@ -304,6 +304,15 @@ describe('ServersHubStatusBar a11y', () => {
     await tick()
     await expectNoA11yViolations(target)
   })
+
+  it('a screen reader pauses between the server count and the refresh hint', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(ServersHubStatusBar, { target, props: { serverCount: 4, onRefresh: () => {} } })
+    await tick()
+    const name = target.querySelector('button')?.textContent?.replace(/\s+/g, ' ') ?? ''
+    expect(name).toMatch(/servers, Press/)
+  })
 })
 
 describe('SmbOsMountFallbackToastContent a11y', () => {
