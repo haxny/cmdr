@@ -4,17 +4,25 @@ The spec and the research behind it: GitHub issue #422. This crate holds the sto
 detection, and the read-only view (`ResticVolume` over the shared `ResticRepos` hub). The host route, the listing
 overlay, the unlock UI, and copy-out live in the app.
 
-Written against `rustic_core` 0.13.0 (default features off). The issue was researched on 0.12.0; what moved is in §
-"Against 0.13.0". An adversarial review against the design's invariants, and each finding's fix:
-`docs/notes/restic/conformance-review.md`.
+Written against `rustic_core` 0.13.0 (default features off). The issue was researched on 0.12.0; what that source says
+and what moved is in § "rustic_core 0.13.0 facts". The guardrails the whole feature keeps, app side included: §
+"Invariants". An adversarial review against them, and each finding's fix: `docs/notes/restic/conformance-review.md`.
 
 ## Decisions
 
 - **The row's name is `Browse snapshots`, in every locale.** **Why:** it's a PATH component (history, favorites, MCP,
   and the agent address paths), so a translated one would move every path when the language changes, like git's
-  `branches`. It sorts first among a repo's lowercase folders and can't clash with the real `snapshots/`. The name and
-  the lexical split live in `cmdr_fs::restic_view`.
-- **No settings toggle** (git has `showVirtualGitPortal`). **Why:** having a repo is the opt-in.
+  `branches`. A display name over an English path would need a field `FileEntry` doesn't have, touching sorting, quick
+  search, type-to-jump, and rename for one row. Everything else the feature says (the dialog, errors, progress) goes
+  through the i18n catalog. It sorts first among a repo's lowercase folders and can't clash with the real `snapshots/`.
+  The name and the lexical split live in `cmdr_fs::restic_view`.
+- **No settings toggle** (git has `showVirtualGitPortal`). **Why:** having a repo is the opt-in. Add one only if someone
+  asks.
+- **The hub owns the heavy state, not the volume** (§ "The hub"). **Why:** the routing LRU evicts views freely, and an
+  evicted view must never take a 600 MB index or a password with it.
+- **`max_concurrent_ops` stays at the trait's default of 1.** Concurrent `read_file_at` on one indexed repo is sound
+  (`Send + Sync`, § "Opening a repo"); the limit is the parent's throughput, which the stream's read-ahead already uses
+  (§ "Reads"). Raise it only with a measurement showing a parallel copy beats that.
 - **The password ask stays `VolumeError::NeedsPassword { wrong_attempt }`, with no container field.** **Why:** the
   frontend tells a repo from an archive by the path it already classifies, so no archive mapping site changes
   (`apps/desktop/src/lib/file-operations/transfer/DETAILS.md` § "The unlock prompt").
@@ -66,8 +74,8 @@ path stays the caller's path.
   sit at other positions, which this drops on purpose (a restore shouldn't recreate setuid binaries). No mode recorded
   is `0`, the "no permission concept" sentinel.
 - **Kinds**: symlinks are rows with `is_symlink`, ❌ never followed; devices, fifos, and sockets are non-directory rows
-  with size 0. Owner and group are the user and group names the node recorded. Dates are whole Unix seconds; a date
-  before 1970 is left out.
+  with size 0. Hard links are separate nodes, so they list and copy as separate files. Owner and group are the user and
+  group names the node recorded. Dates are whole Unix seconds; a date before 1970 is left out.
 - **Odd names** pass through as stored (NFD, double spaces, 255 bytes). A name that isn't UTF-8 (a Linux machine's
   backup) lists lossily, the way `LocalPosixVolume` lists one (`to_string_lossy`). The lossy name then finds nothing
   (`NotFound`), and when a real sibling's stored name IS that lossy spelling, the lookup answers `AmbiguousName` rather
@@ -411,9 +419,12 @@ unlocked view.
   watch, the index) never read a snapshot as a local disk. `VIRTUAL_ENTRY_NAME` and `restic_route` are defined in
   `cmdr_fs::restic_view` (the listing engine asks them without linking rustic) and re-exported here.
 
-## Against 0.13.0
+## rustic_core 0.13.0 facts
 
-What differs from the issue's 0.12.0 research, read from the 0.13.0 source:
+Read from `~/.cargo/registry/src/*/rustic_core-0.13.0/src/` (2026-10-20). Each one shaped a design above; re-check them
+on a bump.
+
+What differs from the issue's 0.12.0 research:
 
 - `WriteBackend::write_bytes` takes a `BytesList`, not `Bytes`.
 - `FileType` has no `Lock` variant (only `Config`, `Index`, `Key`, `Snapshot`, `Pack`), so there's nothing to map to
@@ -422,6 +433,25 @@ What differs from the issue's 0.12.0 research, read from the 0.13.0 source:
 - `Repository<OpenStatus>` isn't `Clone`.
 - `SnapshotOptions::to_snapshot` fills an all-zero summary; restic before 0.17 wrote none.
 - MSRV 1.91; new to the lockfile against 0.12.0's list: `itertools` 0.15 (a third major next to 0.13 and 0.14).
+
+What the design leans on:
+
+- **State transitions consume the repo**: `to_indexed(self)`, `to_indexed_ids(self)`, and `drop_index(self)` take
+  `self`, so a failed or cancelled load drops its open with it. There's no public way to get the decrypted master key
+  back out for a cheap re-open (`OpenStatus`'s key is `pub(super)`), so every fresh open is another scrypt.
+- **`to_indexed_ids` keeps every tree blob**, so `get_tree` works under it, but `open_file` / `read_file_at` need
+  `IndexedFull`, and there's no in-place upgrade (`drop_index` + `to_indexed` reads every index file again).
+- **`IndexedFull` carries a 32 MB blob cache** (`quick_cache`, `constants::WEIGHT_CAPACITY`) per indexed repo, on top of
+  the index; the measured steady RSS in § "Why one index and eight opened repos" includes it.
+- **rustic's progress counts files, not bytes** (`stream_list` calls `set_length(files)` and `inc(1)`), and the
+  `ProgressBars` factory is fixed per `Repository` at `new_with_progress`, not per call.
+- **No retry inside rustic_core for backend reads**: `backon` only retries a warm-up command's spawn (rustic's `warm_up`
+  module). A refused read ends a load at once.
+- **`update_all_snapshots(current)`** lists `snapshots/`, keeps the known ones, fetches only new files, and drops the
+  deleted ones.
+- **Panics**: `GlobalIndex::into_index`, reached by `drop_data_from_index` / `into_indexed_tree`, sleeps 100 ms and then
+  `expect`s. ❌ Don't call those transitions. Any panic inside `spawn_blocking` comes back as a `JoinError` (§ "Typed
+  errors").
 
 ## The public surface is capped
 
@@ -435,3 +465,37 @@ exactly what it exposes. Each has a caller in the host:
 
 `test_fixtures` is `testing`-gated and counts apart. Opening, the snapshot list, trees, and the adapter stay
 crate-private: the volume that needs them lives here.
+
+## Invariants
+
+The feature's guardrails, crate and app together, numbered so reviews can cite them
+(`docs/notes/restic/conformance-review.md`). Each line points at where its mechanism is described.
+
+1. Browsing never writes to the repo: zero `WriteBackend` calls, no lock files, pinned by the adapter's write counter (§
+   "The storage adapter").
+2. No `stat` or listing on the hot path: the route's gate is lexical, the overlay reads the entries in hand, and the
+   confirm is memoized, so a miss costs one bounded listing per repo (§ "Is this folder a repo?").
+3. The `Browse snapshots` row reaches a PANE and nothing else; no volume listing holds it
+   (`crates/cmdr-listing/src/host/DETAILS.md` § "Overlays").
+4. No walker but a pane and a selection-driven, cancelable scan enters the view
+   (`apps/desktop/src-tauri/src/file_system/restic/DETAILS.md` § "What each walker sees").
+5. The repo's real files are ordinary files: listable, copyable, deletable, indexable, with no guard.
+6. Every mutation inside the view is refused with a typed read-only refusal, on every seam, the ones that bypass
+   `resolve` included; a move out is refused before anything is copied (the app's DETAILS § "Write guards").
+7. The leftmost CONFIRMED route boundary wins across git, restic, and archive routes; an unconfirmed candidate hands
+   over to the next (`apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "Resolving a path: the three routes").
+8. Every `rustic_core` call runs on the blocking pool; every long one (unlock, index load, file read) is cancelable, and
+   a cancelled unlock keeps and files nothing. No hub-wide lock is held across scrypt, a Keychain call, or a read.
+9. One index load per repo at a time, shared by its waiters (the engine's stall retries included), with progress in real
+   bytes that keeps the stall watch quiet (§ "The index lifecycle").
+10. Memory is capped by the hub's cap and idle drop, which never take an index in use; the routing LRU bounds
+    registrations only and never drops a password or an index.
+11. Cmdr's own copies of a password live only in the hub's `Zeroizing` slots, never in a log, a mirror, an error, or a
+    tool result; the store is written only after a verified unlock nobody cancelled (§ "Passwords and the credential
+    store").
+12. A snapshot folder resolves by its short id; the time prefix is display. `latest` doesn't move while anything reads
+    under it (§ "`latest`").
+13. The crate names no `tauri` / `cmdr`, words nothing a user reads, and never matches on error text.
+14. One dialog, one unlock seam (`PasswordLocked`), and one MCP tool (`unlock`) serve every locked container.
+15. A crafted repo can't exhaust memory or CPU through its key files: count, size, and summed scrypt cost are capped
+    before rustic sees them (§ "Hostile repos").

@@ -1,8 +1,8 @@
 # What opening a real restic repo costs
 
-Evidence for the restic volume's index lifecycle (#422, `docs/specs/restic-volume-plan.md` § "1. Measure on David's NAS
-repo"). Measured with `crates/cmdr-restic/examples/open_cost.rs`, which drives `rustic_core` directly through a counting
-copy of the crate's storage adapter (every write refused and counted: zero across every run).
+Evidence for the restic volume's index lifecycle (#422). The decisions it fed live in `crates/cmdr-restic/DETAILS.md` §
+"The index lifecycle". Measured with `crates/cmdr-restic/examples/open_cost.rs`, which drives `rustic_core` directly
+through a counting copy of the crate's storage adapter (every write refused and counted: zero across every run).
 
 ## Setup
 
@@ -86,8 +86,9 @@ Two findings for the volume milestones:
   the ~14 ms per tree and the serial ~20 MB/s copy-out. The adapter now holds `open_random_reader` handles per pack (up
   to 8, least recently used let go first); § "Held pack readers" has the before and after. Copy-out should still read
   several blobs ahead in parallel.
-- **The index load blocks all 16 rayon workers** for 2–5 s on SMB, as the plan's landmine predicted. Search and icons
-  share that pool. The load now runs rustic on a pool of its own; § "Streaming the index load".
+- **The index load blocks all 16 rayon workers** for 2–5 s on SMB, as rustic's source predicted
+  (`crates/cmdr-restic/DETAILS.md` § "rustic_core 0.13.0 facts"). Search and icons share that pool. The load now runs
+  rustic on a pool of its own; § "Streaming the index load".
 
 ## Held pack readers
 

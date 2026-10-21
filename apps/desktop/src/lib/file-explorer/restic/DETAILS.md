@@ -20,6 +20,8 @@ real files keep the drive's row.
 - **Select all and invert leave the `Browse snapshots` row out**, like `..` and the git portal's category rows
   (`../pane/overlay-rows.ts`, one predicate: a reserved view icon id in a pane that isn't inside a view). "Select all,
   copy" in a repo folder means the repo's real files; picking the row on its own still restores through the view.
+- **A session restored inside a view with no saved password** raises the unlock prompt at launch. Accepted, with no
+  special case: Cancel leaves the pane on the listing error that names the backup.
 - **The `Browse snapshots` row's icon** is Lucide `history`, drawn by `../selection/FileIcon.svelte` for the reserved
   `restic:snapshots` icon id the `cmdr-restic` hub puts on the row (`OVERLAY_ROW_ICON_ID`), the same way the git
   portal's `git:*` ids get their glyphs. It inherits the row's text color.

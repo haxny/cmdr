@@ -2,11 +2,11 @@
 
 Round two (the feed, forget, metadata, the watcher, and the transfer hold): `docs/notes/restic/review-round-2.md`.
 
-Review of the committed restic work (#422) against `docs/specs/restic-volume-plan.md` § "Loud rules" and § "Invariants
-register". Scope: `git diff main...HEAD` at `8c13cab9ca` (crate `cmdr-restic`, the unlock seam and dialog, routing,
-overlay, guards, walkers, index lifecycle, Keychain). Uncommitted work (frontend kind and progress, copy-out e2e) was
-out of scope. Method: read every path named below; rustic facts checked against `rustic_core-0.13.0` and the `smb2`
-source. 2026-10-20.
+Review of the committed restic work (#422) against the feature's invariants, now `crates/cmdr-restic/DETAILS.md` §
+"Invariants" (they were drafted in `docs/specs/restic-volume-plan.md`). Scope: `git diff main...HEAD` at `8c13cab9ca`
+(crate `cmdr-restic`, the unlock seam and dialog, routing, overlay, guards, walkers, index lifecycle, Keychain).
+Uncommitted work (frontend kind and progress, copy-out e2e) was out of scope. Method: read every path named below;
+rustic facts checked against `rustic_core-0.13.0` and the `smb2` source. 2026-10-20.
 
 Summary: one high, four medium, eight low. No path to a write against the repo was found (the adapter refuses every
 `WriteBackend` call, and every write seam that knows git now knows restic). No password reaches a log, a mirror, an
@@ -176,7 +176,7 @@ or scan opened via `latest`, and rebind only at zero.
 
 `hub.rs:153`: the confirm is a full `list_directory` of the folder holding `Browse snapshots`, uncapped (unlike the
 overlay's and the local guard's 32-entry cap). A real `Browse snapshots` folder inside a 100k-entry folder on a slow
-share pays up to the 5 s deadline on EVERY `resolve` under it, since a timeout memoizes nothing (rule 2's hot-path
+share pays up to the 5 s deadline on EVERY `resolve` under it, since a timeout memoizes nothing (invariant 2's hot-path
 budget). Fix: memoize `Unknown` briefly for reads (see finding 4), and treat a listing past `MAX_REPO_ROOT_ENTRIES` as
 "not a repo".
 
@@ -198,8 +198,8 @@ readers after a short idle (seconds), independent of the index.
 
 `repo.rs:46-49` and `:202-205`, `index_load.rs:357-360`: `Unreadable { detail }` (rustic's `display_log`) and "the
 blocking worker stopped: …" / "an index read stopped: …" become `VolumeError::IoError { message }`. They're diagnostics,
-not copy, but `IoError.message` is what the frontend's technical-details line shows. Rule 3 asks for typed answers; fine
-if the frontend never renders `message` outside technical details, worth a check in the frontend.
+not copy, but `IoError.message` is what the frontend's technical-details line shows. Invariant 13 asks for typed
+answers; fine if the frontend never renders `message` outside technical details, worth a check in the frontend.
 
 - **Status**: Not changed. `IoError.message` is the technical-details line, the house shape for diagnostics every
   backend uses, and the frontend words the typed error itself; replacing rustic's `display_log` with a typed reason

@@ -62,16 +62,17 @@ index files, so by the time the folder shows, everything it names is on the pare
   re-lists, only a change in `snapshots/` or an overflow above it counts, a burst is one re-list, and which listings
   arm).
 
-## The route's order: leftmost confirmed boundary wins
+## The route's order
 
-Three routes can claim a path, and they nest both ways: a `.zip` or a `.git/branches` inside a restic snapshot is
-backed-up data, and a restic repo inside a git snapshot is the portal's. `routing.rs` collects every lexical boundary
-(the `.git` before a category, each `Browse snapshots` component, the first archive-named component), tries them left
-to right, and takes the first one that confirms. An unconfirmed one (a real folder named `photos.zip`, a non-repo
-`Browse snapshots`, the portal switched off) hands over to the next, so a repo inside a real folder named
-`backups.zip/` still browses. Cells: `apps/desktop/src-tauri/src/file_system/volume/manager/restic_routing_tests.rs`.
+The leftmost CONFIRMED boundary wins across git, restic, and archive routes; the rule and its why live in
+`apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "Resolving a path: the three routes". Cells:
+`apps/desktop/src-tauri/src/file_system/volume/manager/restic_routing_tests.rs`.
 
-A view is never a restic parent: a repo backed up inside a snapshot stays bytes in it, on both seams.
+- **A non-repo passes through.** A real folder named `Browse snapshots` outside a repo resolves to the parent, which is
+  stricter than git (its route answers `NotFound` for a `.git` that isn't a repo). Restic can afford the confirm
+  because it's memoized; git's is free because it's lexical.
+- **A view is never a restic parent**: the overlay never applies on a routed volume, so a repo backed up inside a
+  snapshot (or zipped in an archive) stays bytes in it, on both seams.
 
 ## A replaced parent gets a new view
 
