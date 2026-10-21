@@ -108,6 +108,9 @@ live here:
   the conflict body, which replaces that row. `../DETAILS.md` § "Rollback asks first".
 - **`TransferStallNotice.svelte`** is the stalled-transfer card at the foot of the progress dialog (§ "The
   stalled-transfer notice").
+- **`TransferConflictsSection.svelte` is the setup dialog's "files already exist" block** ("couldn't find out", the
+  merge and clash lines, the policy radios, and their notes). Presentational: `TransferDialog.svelte` owns the conflict
+  check and the policy rules (§ "The remembered conflict policy") and hears each pick through `onPick`.
 - **`ScanPhaseBody.svelte` is shared by the progress dialog and the queue row** (`comfortable` and `compact` densities),
   so a change to it lands on both surfaces.
 - **`transfer-complete-toast.ts::composeTransferCompleteToast` splits TOP-LEVEL items by type only** ("Moved 1 file and

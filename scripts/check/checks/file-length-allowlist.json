@@ -106,7 +106,7 @@
     },
     "apps/desktop/src/lib/file-operations/transfer/TransferDialog.svelte": {
       "lines": 1208,
-      "reason": "TODO: Script 680 / markup 282 / style 246, with the script already orchestration only (`transfer-scan-state.svelte.ts`, `transfer-conflict-check.svelte.ts`, `transfer-dest-exists.svelte.ts`, and `transfer-dialog-logic.ts` hold the logic). Two presentational blocks can follow the `ScanPhaseBody.svelte` and `CompressEstimateLine.svelte` precedent in the same directory: a `TransferScanTallies.svelte` for the `.scan-stats` row plus the `scan.scanFailure` retry notice (about 45 markup and 50 style), and a `TransferConflictsSection.svelte` for the `isCheckingConflicts` to `conflictCheckUnknown` to merge-info, summary, `RadioGroup`, and type-mismatch chain (about 70 markup and 55 style). That is roughly 220 lines out, leaving `handleConfirm` and `handleCancel`, whose dense rationale comments are the part of this file worth protecting."
+      "reason": "TODO: the script is orchestration only (`transfer-scan-state.svelte.ts`, `transfer-conflict-check.svelte.ts`, `transfer-dest-exists.svelte.ts`, and `transfer-dialog-logic.ts` hold the logic), and the conflicts block already lives in `TransferConflictsSection.svelte`. One presentational block can still follow the `ScanPhaseBody.svelte` and `CompressEstimateLine.svelte` precedent: a `TransferScanTallies.svelte` for the `.scan-stats` row plus the `scan.scanFailure` retry notice (about 45 markup and 50 style). That leaves `handleConfirm` and `handleCancel`, whose dense rationale comments are the part of this file worth protecting."
     },
     "apps/desktop/src/lib/file-operations/transfer/transfer-error-messages.parity.test.ts": {
       "lines": 1218,

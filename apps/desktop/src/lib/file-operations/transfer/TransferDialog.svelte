@@ -23,6 +23,7 @@
         type ConflictPolicySource,
     } from './remembered-conflict-policy'
     import CompressLevelControl from './CompressLevelControl.svelte'
+    import TransferConflictsSection from './TransferConflictsSection.svelte'
     import CompressEstimateLine from './CompressEstimateLine.svelte'
     import S3CostLine from '../S3CostLine.svelte'
     import { costRequestFor } from '../s3-cost-line'
@@ -30,7 +31,6 @@
     import TextInput from '#lib/ui/TextInput.svelte'
     import Button from '#lib/ui/Button.svelte'
     import Select, { type SelectItem } from '#lib/ui/Select.svelte'
-    import RadioGroup, { type RadioItem } from '#lib/ui/RadioGroup.svelte'
     import ToggleGroup, { type ToggleGroupOption } from '#lib/ui/ToggleGroup.svelte'
     import SectionCard from '#lib/ui/SectionCard.svelte'
     import {
@@ -145,15 +145,6 @@
         { value: 'move', label: tString('fileOperations.transferDialog.toggleMove') },
         { value: 'compress', label: tString('fileOperations.transferDialog.toggleCompress') },
     ])
-
-    // The file-conflict policy radios, `{#each}`-rendered; `as const` keeps the values and label keys literal.
-    const conflictPolicies = [
-        { value: 'skip', labelKey: 'fileOperations.transferDialog.policySkip' },
-        { value: 'overwrite', labelKey: 'fileOperations.transferDialog.policyOverwrite' },
-        { value: 'overwrite_smaller', labelKey: 'fileOperations.transferDialog.policyOverwriteSmaller' },
-        { value: 'overwrite_older', labelKey: 'fileOperations.transferDialog.policyOverwriteOlder' },
-        { value: 'stop', labelKey: 'fileOperations.transferDialog.policyStop' },
-    ] as const
 
     // Compute initial volume-relative path. Can't use $derived selectedVolume here (not yet available),
     // so look up the volume path directly from the props.
@@ -303,8 +294,10 @@
     // A single item about to take an existing folder's name almost always means
     // a pasted folder path meant "into it". Its own name there is a plain merge.
     const sourceName = $derived(getFolderName(sourcePaths[0] ?? ''))
-    const showNamedFolderHint = $derived(
-        conflicts.namedTargetIsFolder && namedTarget !== null && namedTarget.name !== sourceName,
+    const namedFolderHint = $derived(
+        conflicts.namedTargetIsFolder && namedTarget !== null && namedTarget.name !== sourceName
+            ? { target: namedTarget.name, name: sourceName }
+            : null,
     )
     const hasTypeMismatchConflict = $derived(conflicts.hasTypeMismatchConflict)
     const isCheckingConflicts = $derived(conflicts.isCheckingConflicts)
@@ -332,22 +325,6 @@
         const timer = setTimeout(() => { showConflictSpinner = true; }, 100)
         return () => { clearTimeout(timer); }
     })
-
-    // File-conflict policy options for `RadioGroup`. With known clashes the label
-    // pluralizes on their count ("Skip" vs "Skip all"). With merges alone nobody knows
-    // how many files inside clash (the check is top-level only), so the labels claim no
-    // count: "Skip all" of zero read as skipping the folders.
-    const conflictPolicyItems = $derived<RadioItem[]>(
-        conflictPolicies.map((policy) => ({
-            value: policy.value,
-            label:
-                totalConflictCount > 0
-                    ? tString(policy.labelKey, { count: totalConflictCount })
-                    : policy.value === 'stop'
-                      ? tString('fileOperations.transferDialog.policyAskEach')
-                      : tString(policy.labelKey, { count: 1 }),
-        })),
-    )
 
     const dialogTitle = $derived(generateTitle(activeOperationType, fileCount, folderCount))
     const showHardlinkNote = $derived(
@@ -988,104 +965,20 @@
             </p>
         {/if}
 
-        <!-- Conflicts section -->
-        {#if conflicts.conflictCheckUnknown}
-            <!-- The check couldn't run. Rendering nothing here would show exactly
-                 what a clean destination shows, and the user is about to make a
-                 decision about their own files on the strength of it. -->
-            <p class="conflicts-unknown" role="status">
-                <span class="conflicts-unknown-icon" aria-hidden="true">
-                    <Icon name="triangle-alert" size={16} />
-                </span>
-                <span>{tString('fileOperations.transferDialog.conflictsUnknown')}</span>
-            </p>
-        {:else if conflictChoiceVisible}
-            <!-- A card, not a full-bleed band: it's one more block in the dialog's column,
-             so it obeys the same inset as the fields above it. Warning-toned only when a
-             known clash can overwrite something; merges alone are a neutral heads-up. -->
-            <SectionCard tone={totalConflictCount > 0 ? 'warning' : 'neutral'}>
-                {#if showNamedFolderHint && namedTarget}
-                    <p class="named-folder-hint">
-                        {tString('fileOperations.transferDialog.namedFolderHint', {
-                            target: namedTarget.name,
-                            name: sourceName,
-                        })}
-                    </p>
-                {/if}
-                <!-- Folder merges are informational, never a question: same-named
-                 folders always merge silently. Surfaced so a user who didn't
-                 expect a same-named folder at the dest gets a visible cue. -->
-                {#if mergeFolderCount > 0}
-                    <p class="merge-info">
-                        {mergeFolderCount === 1
-                            ? tString('fileOperations.transferDialog.mergeInfoSingle')
-                            : tString('fileOperations.transferDialog.mergeInfoMany', {
-                                  countText: formatNumber(mergeFolderCount),
-                                  count: mergeFolderCount,
-                              })}
-                    </p>
-                {/if}
-                {#if totalConflictCount > 0}
-                    <p class="conflicts-summary">
-                        {t('fileOperations.transferDialog.conflictsSummary', {
-                            countText: String(totalConflictCount),
-                            count: totalConflictCount,
-                        })}
-                    </p>
-                {:else}
-                    <!-- Merges alone: say the radios are about files INSIDE the merged
-                     folders, or "Skip" reads as skipping the folders. -->
-                    <p class="merge-question">
-                        {t('fileOperations.transferDialog.mergeQuestion', { count: mergeFolderCount })}
-                    </p>
-                {/if}
-                <!-- The file policy radios show whenever there's a file conflict OR
-                 a folder merge: a merge can surface file clashes mid-operation
-                 the upfront check can't see, and the radios pre-answer them. -->
-                <div class="conflict-policy">
-                    <RadioGroup
-                        items={conflictPolicyItems}
-                        value={conflictPolicy}
-                        onValueChange={(v) => {
-                            conflictPolicy = v as ConflictResolution
-                            conflictPolicySource = 'picked'
-                        }}
-                        columns={3}
-                        ariaDescribedBy={rememberedOverwriteReach ? 'transfer-remembered-overwrite' : undefined}
-                    />
-                    <!-- The dialog opened on a saved policy that overwrites: say so in words
-                     beside the warning tint, so nobody overwrites without noticing. Gone
-                     once the person picks anything. -->
-                    {#if rememberedOverwriteReach}
-                        <p class="remembered-overwrite-note" id="transfer-remembered-overwrite">
-                            <span class="remembered-overwrite-icon" aria-hidden="true">
-                                <Icon name="triangle-alert" size={16} />
-                            </span>
-                            <span>
-                                {tString('fileOperations.transferDialog.rememberedOverwriteNote', {
-                                    reach: rememberedOverwriteReach,
-                                })}
-                            </span>
-                        </p>
-                    {/if}
-                </div>
-
-                <!-- Cross-type guardrail: when a clash mixes a file and a same-named
-                 folder, "Overwrite all" replaces items of a different type and
-                 deletes folder contents. The per-file dialog already warns on
-                 this; the bulk path must not be quieter. -->
-                {#if hasTypeMismatchConflict && conflictPolicy === 'overwrite'}
-                    <p class="conflict-warning" role="alert">
-                        <span class="conflict-warning-icon" aria-hidden="true">
-                            <Icon name="triangle-alert" size={16} />
-                        </span>
-                        <span>
-                            {tString('fileOperations.transferDialog.typeMismatchWarning')}
-                        </span>
-                    </p>
-                {/if}
-            </SectionCard>
-        {/if}
+        <TransferConflictsSection
+            conflictCheckUnknown={conflicts.conflictCheckUnknown}
+            choiceVisible={conflictChoiceVisible}
+            {totalConflictCount}
+            {mergeFolderCount}
+            {namedFolderHint}
+            {hasTypeMismatchConflict}
+            policy={conflictPolicy}
+            onPick={(policy) => {
+                conflictPolicy = policy
+                conflictPolicySource = 'picked'
+            }}
+            {rememberedOverwriteReach}
+        />
     </div>
 
     {#snippet footer()}
@@ -1263,11 +1156,9 @@
         align-items: center;
     }
 
-    /* Both "couldn't find out" notices: one row, warning-toned text on the
-       dialog's own background (they're a caveat about a number above them, not a
-       card of their own). */
-    .scan-unavailable,
-    .conflicts-unknown {
+    /* "Couldn't count": one row, warning-toned text on the dialog's own background
+       (a caveat about the number above it, not a card of its own). */
+    .scan-unavailable {
         display: flex;
         align-items: center;
         gap: var(--spacing-sm);
@@ -1276,8 +1167,7 @@
         color: var(--color-warning-text);
     }
 
-    .scan-unavailable-icon,
-    .conflicts-unknown-icon {
+    .scan-unavailable-icon {
         display: inline-flex;
         flex: 0 0 auto;
         color: var(--color-warning-text);
@@ -1298,84 +1188,6 @@
         display: inline-flex;
         align-items: center;
         gap: var(--spacing-sm);
-    }
-
-    /* The question the card asks. Plain text color: the card's warning tint already
-       carries the "pay attention" signal, and coloring the sentence too made it read
-       as an error rather than a choice to make. */
-    .conflicts-summary,
-    .merge-question {
-        margin: 0 0 var(--spacing-md);
-        font-size: var(--font-size-md);
-        color: var(--color-text-primary);
-        font-weight: 500;
-    }
-
-    /* Folder-merge info line: neutral, not a warning. Folders always merge, so
-       this is a heads-up, not a question. */
-    .named-folder-hint,
-    .merge-info {
-        margin: 0 0 var(--spacing-md);
-        font-size: var(--font-size-sm);
-        color: var(--color-text-secondary);
-    }
-
-    /* Cross-type "Overwrite all" guardrail. Mirrors the per-file dialog's red
-       warning (icon + sentence in a tinted block) to flag the destructive swap
-       before the user confirms a bulk overwrite across mixed types. */
-    .conflict-warning {
-        display: flex;
-        align-items: flex-start;
-        gap: var(--spacing-sm);
-        margin: var(--spacing-md) 0 0;
-        padding: var(--spacing-sm) var(--spacing-md);
-        background: var(--color-error-bg);
-        color: var(--color-error-text);
-        border: 1px solid var(--color-error-border);
-        border-radius: var(--radius-md);
-        font-size: var(--font-size-sm);
-    }
-
-    .conflict-warning-icon {
-        flex-shrink: 0;
-        display: inline-flex;
-        align-items: center;
-        color: var(--color-error-text);
-        margin-top: 1px;
-    }
-
-    /* A saved overwriting policy, flagged under the radios. Warning text with an
-       icon and a warning rule on the dialog's own background, so it stands apart
-       from the card's softer tint and doesn't rely on color alone. */
-    .remembered-overwrite-note {
-        display: flex;
-        align-items: flex-start;
-        gap: var(--spacing-sm);
-        margin: var(--spacing-sm) 0 0;
-        padding: var(--spacing-sm) var(--spacing-md);
-        background: var(--color-bg-primary);
-        color: var(--color-warning-text);
-        border: 1px solid var(--color-warning);
-        border-radius: var(--radius-md);
-        font-size: var(--font-size-sm);
-        font-weight: 500;
-    }
-
-    .remembered-overwrite-icon {
-        flex-shrink: 0;
-        display: inline-flex;
-        align-items: center;
-        color: var(--color-warning-text);
-        margin-top: 1px;
-    }
-
-    /* Wrapper hook for the policy radios (E2E + component tests target
-       `.conflict-policy`); `RadioGroup` owns the option layout (`columns={3}`, so the
-       five options fill the card as 3 + 2). The column flex stretches the group to
-       full width, which is what gives those three columns something to divide. */
-    .conflict-policy {
-        display: flex;
-        flex-direction: column;
     }
 
     /* Compress-only block: stacks its two children with the dialog body's rhythm,
