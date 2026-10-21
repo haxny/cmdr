@@ -1,6 +1,6 @@
 name: macOS lane
 
-# The macOS lane, called by `ci.yml` (`desktop-rust-macos`) and `land.yml`. Cmdr ships on macOS,
+# The macOS lane, called by `ci.yml` (`desktop-rust-macos`). Cmdr ships on macOS,
 # but every other CI job runs on ubuntu, so the code under `cfg(target_os = "macos")` (FSEvents,
 # AppKit, DiskArbitration, File Provider, TCC, the `cmdr-fsevent-stream` member) gets compiled,
 # linted, and tested only here. Why it lives in its own file, what it runs, and what it leaves

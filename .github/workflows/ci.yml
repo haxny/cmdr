@@ -513,8 +513,7 @@ jobs:
   # - The Docker fixture lanes: GitHub's macOS runners have no Docker.
   #
   # Required: in `ci-ok`'s `needs`, so a red macOS job fails the run and both release gates.
-  # `docs/tooling/ci.md` § macOS lane. The lane's steps live in `macos-lane.yml`, which
-  # `land.yml` calls too.
+  # `docs/tooling/ci.md` § macOS lane. The lane's steps live in `macos-lane.yml`.
   #
   # On `main` pushes the lane shares one job-level group across runs: one runs, the newest
   # waits, and a newer push replaces the waiting one, because each `main` commit checks a
