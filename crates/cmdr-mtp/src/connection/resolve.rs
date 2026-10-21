@@ -10,7 +10,7 @@ use std::pin::Pin;
 
 use super::cache::Cached;
 use super::errors::MtpConnectionError;
-use super::{MtpConnectionManager, normalize_mtp_path};
+use super::{MtpConnectionManager, normalize_mtp_path, twins};
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 
@@ -35,7 +35,14 @@ impl MtpConnectionManager {
         // Ancestors root-first, excluding `dir` itself: ["/", "/a", ...] up to
         // and including `parent(dir)`. Listing `parent(dir)` refreshes `dir`'s
         // own handle.
-        let mut ancestors: Vec<PathBuf> = dir.ancestors().skip(1).map(Path::to_path_buf).collect();
+        // A twin's pick segment names no folder of its own, so it's stepped over:
+        // listing the folder above it refreshes the twin's handle.
+        let mut ancestors: Vec<PathBuf> = dir
+            .ancestors()
+            .skip(1)
+            .filter(|ancestor| twins::picked_folder(ancestor).is_none())
+            .map(Path::to_path_buf)
+            .collect();
         ancestors.reverse();
         for ancestor in ancestors {
             self.invalidate_listing_cache(device_id, storage_id, &ancestor).await;
@@ -94,7 +101,10 @@ impl MtpConnectionManager {
                 return Ok(handle);
             }
 
-            let parent = path.parent().unwrap_or(Path::new("/")).to_string_lossy().to_string();
+            let parent = twins::folder_of(&path)
+                .unwrap_or(Path::new("/"))
+                .to_string_lossy()
+                .to_string();
             debug!(
                 "MTP resolve: {} isn't cached on {device_id}:{storage_id}, listing {} to find it",
                 LogPrivate::path(&path),
@@ -131,7 +141,7 @@ impl MtpConnectionManager {
                 storage_cache.remove_path(path);
             }
         }
-        if let Some(parent) = path.parent() {
+        if let Some(parent) = twins::folder_of(path) {
             self.invalidate_listing_cache(device_id, storage_id, parent).await;
         }
     }

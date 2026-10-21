@@ -36,6 +36,12 @@ pub(crate) async fn volume_for(device: &ConnectedDevice, primed: Option<&str>) -
     testing::volume_for(super::connection_manager(), device, primed).await
 }
 
+/// Gives `folder` two items named `name`, the second being `other` on disk.
+/// Shadows the crate's [`cmdr_mtp::testing::make_twins`].
+pub(crate) async fn make_twins(device: &ConnectedDevice, folder: &str, name: &str, other: &str) -> (u64, u64) {
+    testing::make_twins(super::connection_manager(), device, folder, name, other).await
+}
+
 /// Disconnects the device from the app's manager AND unregisters it.
 pub(crate) async fn teardown(device: ConnectedDevice) {
     device.teardown(super::connection_manager()).await;

@@ -54,6 +54,9 @@ mod mtp_archive_test;
 // "A copy keeps the source's date" onto and off a virtual MTP device.
 #[cfg(all(any(target_os = "macos", target_os = "linux"), feature = "virtual-mtp"))]
 mod mtp_dates_test;
+// Two same-named items in a device folder, copied off: both land.
+#[cfg(all(any(target_os = "macos", target_os = "linux"), feature = "virtual-mtp"))]
+mod mtp_twins_test;
 // A same-volume rename-merge's Skip against a device-shaped backend, which is
 // the one that could quietly stop refusing to delete a non-empty folder.
 #[cfg(feature = "virtual-mtp")]

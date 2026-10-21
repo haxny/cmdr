@@ -815,7 +815,8 @@ breaks: the second item goes for the name the first just took.
   never the level's index or "created by us"), and lands as `ExpectedFree` at most. The probe finds the first item, so
   the conflict policy (or a prompt) settles the second, like a clash with anything the user had.
 - **Two same-named rows SELECTED** need nothing extra: the top-level driver probes each source's name itself.
-- Pinned by `repeated_name_tests.rs` (Rename lands both, Skip lands one).
+- Pinned by `repeated_name_tests.rs` (Rename lands both, Skip lands one) and app-side by
+  `operations_host/backend_suites/mtp_twins_test.rs` on a virtual MTP device.
 
 ### A source is listed as a source
 

@@ -142,3 +142,36 @@ pub async fn volume_for(
     }
     volume
 }
+
+/// Gives `folder` two items named `name`: from now on the device reports the
+/// object at `folder/other` under `name` too, the way a camera or phone holding
+/// two same-named files lists them. Returns `(name's handle, other's)`, the
+/// `inode` each row carries, so a cell can tell the twins apart.
+///
+/// The virtual device is backed by a real folder, which can't hold two files
+/// with one name, so the second one keeps its own name on disk: a cell tells
+/// which object an op reached by which backing file changed.
+pub async fn make_twins(
+    manager: &Arc<MtpConnectionManager>,
+    device: &ConnectedDevice,
+    folder: &str,
+    name: &str,
+    other: &str,
+) -> (u64, u64) {
+    let entries = manager
+        .list_directory(&device.id, device.storage_id, folder)
+        .await
+        .unwrap_or_else(|error| panic!("listing {folder}: {error:?}"));
+    let handle_of = |wanted: &str| {
+        entries
+            .iter()
+            .find(|entry| entry.name == wanted)
+            .and_then(|entry| entry.inode)
+            .unwrap_or_else(|| panic!("no {wanted} in {folder}"))
+    };
+    let (first, second) = (handle_of(name), handle_of(other));
+    manager
+        .report_object_as_for_test(&device.id, mtp_rs::ObjectHandle(second), name)
+        .await;
+    (first, second)
+}

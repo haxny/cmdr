@@ -123,7 +123,7 @@ to build on (verified on `mtp-rs` 0.32.0, source read, 2026-09-02). A same-direc
 `[handle, storage_id, parent]`; neither takes an overwrite or exclusive flag, and PTP's response-code enum has no
 collision code to read one out of (`StoreFull`, `AccessDenied`, `InvalidParameter`, and no `ObjectAlreadyExists`). The
 protocol also permits two siblings with the same name, so a device asked to collide doesn't refuse: it complies, and the
-user ends up with a duplicate, which Cmdr then refuses to address (`src/connection/DETAILS.md` § "Same-named siblings").
+user ends up with a duplicate, which Cmdr then lists as two rows (`src/connection/DETAILS.md` § "Same-named siblings").
 ❌ Don't reach for a lock or a retry loop here. Cmdr isn't the only writer — the phone's own apps and MTP's other
 clients mutate the same storage — so a lock this side would buy nothing and read like a guarantee.
 
@@ -199,6 +199,8 @@ test lives on" states in full. Both sides drive the same virtual device through 
 - `volume/read_range_test.rs` — both read paths, sharing one fixture: the DIRECT `read_range` (a ranged read costs one
   device operation, not three) and the WINDOWED `open_read_stream` the copy engine and native drag-out go through.
 - `volume/streams_test.rs` — the `VolumeReadStream` → chunk-stream adapter, with no device behind it.
+- `volume/twins_test.rs` and `connection/same_name_test.rs` — two same-named items in one folder, through the `Volume`
+  surface and the session layer. `testing::make_twins` makes them (`src/connection/DETAILS.md` § "Same-named siblings").
 - `volume/host_seam_test.rs` — the PACE of what this backend tells the listing seam, which no type can hold: one call
   per mutation, none per directory entry. It seeds 40 files, then walks them with a listing, a stat, a stream, a ranged
   read, and both scans, asserting `RecordingListings::change_count` doesn't move.
@@ -213,8 +215,9 @@ test lives on" states in full. Both sides drive the same virtual device through 
 asserts on rather than beside the backend: `mtp/volume_wiring_test.rs` (that `volume_wiring` really registers, and that
 the attach runs inline on the connecting thread), `file_system/volume/mtp_scan_oracle_tests.rs` (the app's fresh-listing
 oracle), `operations_host/backend_suites/mtp_archive_test.rs` (archive routing, which this crate knows nothing about),
-and `operations_host/backend_suites/rename_merge_mtp_tests.rs` (the transfer pipeline). The delete pipeline's MTP cells
-are the engine's own, in `crates/cmdr-operations/src/delete/volume_cancel_tests.rs`.
+`operations_host/backend_suites/rename_merge_mtp_tests.rs` (the transfer pipeline), and
+`operations_host/backend_suites/mtp_twins_test.rs` (a copy off a device keeps both same-named items). The delete
+pipeline's MTP cells are the engine's own, in `crates/cmdr-operations/src/delete/volume_cancel_tests.rs`.
 
 Two consequences that bit during the extraction:
 

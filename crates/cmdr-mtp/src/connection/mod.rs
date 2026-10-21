@@ -50,6 +50,7 @@ mod stale_handle_test;
 /// The manager and the recording registrar this crate's own device cells drive.
 #[cfg(test)]
 pub(crate) mod testing;
+pub(crate) mod twins;
 /// What an upload leaves on the device when its source stops early.
 #[cfg(all(test, feature = "virtual-device"))]
 mod upload_test;
@@ -267,6 +268,12 @@ pub struct MtpConnectionManager {
     /// and the work has nothing left to do, which is a log line and never a
     /// panic.
     self_ref: Weak<Self>,
+    /// Test-only: the name a cell has a device report for one of its objects,
+    /// keyed by device and handle. The virtual device is backed by a real
+    /// folder, which can't hold two same-named files, so a cell makes twins by
+    /// having one object answer to another's name (`testing::make_twins`).
+    #[cfg(any(test, feature = "testing"))]
+    reported_names: RwLock<HashMap<(String, mtp_rs::ObjectHandle), String>>,
 }
 
 /// Acquires the device lock with a timeout.
@@ -306,7 +313,39 @@ impl MtpConnectionManager {
             recovering: std::sync::Mutex::new(std::collections::HashSet::new()),
             enabled: std::sync::atomic::AtomicBool::new(true),
             self_ref: self_ref.clone(),
+            #[cfg(any(test, feature = "testing"))]
+            reported_names: RwLock::new(HashMap::new()),
         })
+    }
+
+    /// `info` as the device reported it, renamed when a test gave the object
+    /// another name (`reported_names`). Every `ObjectInfo` a listing or a
+    /// mutation's check reads passes through here; a no-op outside test builds.
+    fn as_reported(&self, device_id: &str, info: &mut mtp_rs::ObjectInfo) {
+        #[cfg(any(test, feature = "testing"))]
+        {
+            use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+            if let Some(name) = self
+                .reported_names
+                .read_ignore_poison()
+                .get(&(device_id.to_string(), info.handle))
+            {
+                info.filename = name.clone();
+            }
+        }
+        #[cfg(not(any(test, feature = "testing")))]
+        let _ = (device_id, info);
+    }
+
+    /// Test-only: from now on the device reports object `handle` as `name`, and
+    /// every cached listing of the device is dropped so the next one asks it.
+    #[cfg(any(test, feature = "testing"))]
+    pub(crate) async fn report_object_as_for_test(&self, device_id: &str, handle: mtp_rs::ObjectHandle, name: &str) {
+        use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+        self.reported_names
+            .write_ignore_poison()
+            .insert((device_id.to_string(), handle), name.to_string());
+        self.clear_listing_caches_for_device(device_id).await;
     }
 
     /// The seams this layer reaches the app through.
@@ -506,6 +545,16 @@ impl MtpConnectionManager {
 
         // Wrap device in Arc for shared access
         let device_arc = Arc::new(Mutex::new(device));
+
+        // A fresh session forgets the names a test had the last one report: every
+        // virtual device gets one device id, and handles restart with each.
+        #[cfg(any(test, feature = "testing"))]
+        {
+            use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+            self.reported_names
+                .write_ignore_poison()
+                .retain(|(id, _), _| id != device_id);
+        }
 
         // Store in registry
         {
@@ -887,28 +936,6 @@ impl MtpConnectionManager {
             .entry(storage_id)
             .or_default()
             .insert(path.to_path_buf(), handle);
-    }
-
-    /// Test-only: records `listed` as a complete listing of `parent`, the way
-    /// `finalize_listing` does. The virtual device is backed by a real folder, so
-    /// it can't hold two same-named siblings; a cell hands their listing in here.
-    #[cfg(all(test, feature = "virtual-device"))]
-    pub(crate) async fn record_listing_for_test(
-        &self,
-        device_id: &str,
-        storage_id: u32,
-        parent: &Path,
-        listed: Vec<(PathBuf, mtp_rs::ObjectHandle)>,
-    ) {
-        let devices = self.devices.lock().await;
-        let entry = devices.get(device_id).expect("a connected device");
-        entry
-            .path_cache
-            .write()
-            .expect("an unpoisoned path cache")
-            .entry(storage_id)
-            .or_default()
-            .record_listing(parent, listed);
     }
 
     /// Test-only: how many `GetStorageInfo` round trips the bounded-read path has

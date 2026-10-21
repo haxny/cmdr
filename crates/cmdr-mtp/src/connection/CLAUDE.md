@@ -8,9 +8,9 @@ The MTP session layer: opens devices, owns the per-device tokio task, exposes ty
 - Session: `mod.rs` (the manager, connect/disconnect, `map_device_error`), `errors.rs`, `scheduler.rs`
   (`DevicePriorityGate`), `cache.rs` (path ↔ handle + 5 s-TTL listing caches, `EventDebouncer`), `events.rs`
   (`MtpDeviceEvents`), `volume_registrar.rs`, `session_reset.rs`.
-- Ops: `directory_ops.rs` (listings), `resolve.rs` (path → handle), `bulk_ops.rs` (copy pre-scan), `handle_resolver.rs`
-  (handle → path), `event_loop.rs` (per-device poll, feeding the pane AND the index), `file_ops.rs` (windowed and ranged
-  reads, uploads), `mutation_ops.rs` (delete, create, rename, move).
+- Ops: `directory_ops.rs` (listings), `twins.rs` (same-named rows), `resolve.rs` (path → handle), `bulk_ops.rs` (copy
+  pre-scan), `handle_resolver.rs` (handle → path), `event_loop.rs` (per-device poll, feeding pane AND index),
+  `file_ops.rs` (reads, uploads), `mutation_ops.rs` (delete, create, rename, move).
 
 ## Must-knows
 
@@ -29,8 +29,9 @@ The MTP session layer: opens devices, owns the per-device tokio task, exposes ty
 - **The caches lie in specific ways.** `resolve_path_to_handle()` heals a miss by re-listing parents, else answers a
   typed `ObjectNotFound`; ❌ never call it holding the device lock. `PathHandleCache` is bidirectional: write via
   `insert` / `remove_path` / `record_listing`, ❌ never `path_to_handle`. A destructive op checks the handle's
-  `ObjectInfo` against the path first (`mutation_ops.rs` module docs). A name two siblings share resolves to
-  `AmbiguousName`, ❌ never to a twin. `ListingCache`'s 5 s TTL survives mutations; invalidate for read-after-write.
+  `ObjectInfo` against the path first (`mutation_ops.rs` module docs). Twins get a row path each; a path's folder is
+  `twins::folder_of`, ❌ never `Path::parent`; the shared name alone is `AmbiguousName`. `ListingCache`'s 5 s TTL
+  survives mutations; invalidate for read-after-write.
 - **A batch copy scan shares its `ScanBoundary` with `bulk_ops.rs`**, consulting the stop per entry and BEFORE each
   child listing. Plain `scan_for_copy` uses a silent boundary. Selected-source progress: `../../DETAILS.md`.
 - **A suppressed event must win `EventDebouncer::claim_trailing` before re-emitting**: one per burst, never one per

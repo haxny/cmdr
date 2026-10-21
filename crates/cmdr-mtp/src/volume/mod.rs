@@ -42,6 +42,9 @@ mod read_range_test;
 /// The `VolumeReadStream` → chunk-stream adapter, with no device behind it.
 #[cfg(test)]
 mod streams_test;
+/// A folder holding two items with one name, through the `Volume` surface.
+#[cfg(all(test, feature = "virtual-device"))]
+mod twins_test;
 /// What this volume declares about itself, and the watch-coverage gate.
 #[cfg(all(test, feature = "virtual-device"))]
 mod volume_impl_test;

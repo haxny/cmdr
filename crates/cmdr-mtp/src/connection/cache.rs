@@ -10,6 +10,8 @@ use std::time::{Duration, Instant};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
+use super::twins;
+
 /// Cache mapping virtual paths to MTP object handles, and back.
 ///
 /// Both directions are populated together (see [`insert`](Self::insert)) at the
@@ -25,11 +27,13 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 /// ([`record_listing`](Self::record_listing)) and a removed folder takes its
 /// subtree with it, without a scan of every cached path.
 ///
-/// ❗ PTP lets a folder hold two siblings with the same name, and both list with
-/// the same path. Such a path gets NO forward entry: it's `same_named`, and
-/// [`lookup`](Self::lookup) answers [`Cached::SameNamed`] so every path-addressed
-/// op refuses it instead of picking a twin (`connection/DETAILS.md` § "Same-named
-/// siblings").
+/// ❗ PTP lets a folder hold two siblings with the same name. Each twin's row
+/// carries its own path (`twins.rs`), cached like any other; the name they
+/// share gets NO forward entry: it's `same_named`, and [`lookup`](Self::lookup)
+/// answers [`Cached::SameNamed`] so a path-only op refuses it instead of
+/// picking a twin (`connection/DETAILS.md` § "Same-named siblings"). Children
+/// are indexed under [`twins::folder_of`], so a twin's row sits in its real
+/// folder.
 #[derive(Default)]
 pub(super) struct PathHandleCache {
     /// Maps virtual path -> MTP object handle.
@@ -40,8 +44,8 @@ pub(super) struct PathHandleCache {
     pub(super) handle_to_path: HashMap<ObjectHandle, PathBuf>,
     /// Maps a folder's path -> the cached paths directly inside it.
     children: HashMap<PathBuf, HashSet<PathBuf>>,
-    /// Maps a path more than one sibling answered to in its folder's last
-    /// listing -> their handles.
+    /// Maps a name more than one sibling answered to in its folder's last
+    /// listing (the path they share) -> their handles.
     same_named: HashMap<PathBuf, Vec<ObjectHandle>>,
 }
 
@@ -56,11 +60,19 @@ pub(super) enum Cached {
 
 impl PathHandleCache {
     /// What the cache holds for `path`, if anything.
+    ///
+    /// A twin's row path whose twin has since gone (renamed, deleted) still
+    /// reaches its object while the name it shared now resolves to that very
+    /// handle, so a row a pane hasn't re-read yet keeps working.
     pub(super) fn lookup(&self, path: &Path) -> Option<Cached> {
         if self.same_named.contains_key(path) {
             return Some(Cached::SameNamed);
         }
-        self.path_to_handle.get(path).copied().map(Cached::Handle)
+        if let Some(handle) = self.path_to_handle.get(path) {
+            return Some(Cached::Handle(*handle));
+        }
+        let pick = twins::pick_in(path)?;
+        (self.path_to_handle.get(&twins::shared_path(path)) == Some(&pick)).then_some(Cached::Handle(pick))
     }
 
     /// Records a `(path, handle)` pair in both directions.
@@ -73,7 +85,7 @@ impl PathHandleCache {
         if self.same_named.contains_key(&path) || self.path_to_handle.get(&path).is_some_and(|old| *old != handle) {
             self.remove_path(&path);
         }
-        if let Some(parent) = path.parent() {
+        if let Some(parent) = twins::folder_of(&path) {
             self.children
                 .entry(parent.to_path_buf())
                 .or_default()
@@ -106,7 +118,7 @@ impl PathHandleCache {
                 self.handle_to_path.remove(&twin);
             }
         }
-        if let Some(parent) = path.parent()
+        if let Some(parent) = twins::folder_of(path)
             && let Some(siblings) = self.children.get_mut(parent)
         {
             siblings.remove(path);
@@ -120,7 +132,8 @@ impl PathHandleCache {
     /// end of every cached child it doesn't (with that child's subtree), so a
     /// name the folder no longer holds can't resolve to a handle the device may
     /// since have given to another object. A name more than one child answers
-    /// to is recorded as same-named, resolving to none of them.
+    /// to is recorded as same-named, resolving to none of them; a twin's own row
+    /// path (`twins.rs`) resolves to its object, and marks the name it shares.
     pub(super) fn record_listing(&mut self, parent: &Path, listed: Vec<(PathBuf, ObjectHandle)>) {
         let fresh: HashSet<&Path> = listed.iter().map(|(path, _)| path.as_path()).collect();
         let gone: Vec<PathBuf> = self
@@ -138,7 +151,11 @@ impl PathHandleCache {
             self.remove_path(&path);
         }
         let mut by_path: HashMap<PathBuf, Vec<ObjectHandle>> = HashMap::with_capacity(listed.len());
+        let mut twins_by_name: HashMap<PathBuf, Vec<ObjectHandle>> = HashMap::new();
         for (path, handle) in listed {
+            if twins::pick_in(&path).is_some() {
+                twins_by_name.entry(twins::shared_path(&path)).or_default().push(handle);
+            }
             by_path.entry(path).or_default().push(handle);
         }
         for (path, handles) in by_path {
@@ -147,13 +164,30 @@ impl PathHandleCache {
                 _ => self.record_same_named(path, handles),
             }
         }
+        for (shared, handles) in twins_by_name {
+            self.mark_shared(shared, handles);
+        }
+    }
+
+    /// Records `shared` as the name `handles` share, each already cached under
+    /// its own row path: no forward entry, nothing cached beneath it, and the
+    /// twins' reverse entries left pointing at their rows.
+    fn mark_shared(&mut self, shared: PathBuf, handles: Vec<ObjectHandle>) {
+        self.remove_path(&shared);
+        if let Some(parent) = twins::folder_of(&shared) {
+            self.children
+                .entry(parent.to_path_buf())
+                .or_default()
+                .insert(shared.clone());
+        }
+        self.same_named.insert(shared, handles);
     }
 
     /// Records `path` as a name all of `handles` answer to: no forward entry,
     /// a reverse entry per twin, and nothing cached beneath it.
     fn record_same_named(&mut self, path: PathBuf, handles: Vec<ObjectHandle>) {
         self.remove_path(&path);
-        if let Some(parent) = path.parent() {
+        if let Some(parent) = twins::folder_of(&path) {
             self.children
                 .entry(parent.to_path_buf())
                 .or_default()
@@ -297,6 +331,7 @@ impl EventDebouncer {
 
 #[cfg(test)]
 mod path_handle_cache_tests {
+    use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
 
     use mtp_rs::ObjectHandle;
@@ -378,6 +413,37 @@ mod path_handle_cache_tests {
             "a listing without the name ends it"
         );
         assert!(!cache.handle_to_path.contains_key(&ObjectHandle(3)));
+    }
+
+    /// ❗ Regression anchor (#523): each twin's row reaches its own object, and
+    /// the name they share, given alone, reaches neither.
+    #[test]
+    fn each_twin_row_resolves_to_its_own_object_and_the_shared_name_to_neither() {
+        let row = |handle| super::twins::picked(Path::new("/"), ObjectHandle(handle), OsStr::new("IMG_1.JPG"));
+        let mut cache = PathHandleCache::default();
+        cache.record_listing(
+            Path::new("/"),
+            vec![(row(1), ObjectHandle(1)), (row(2), ObjectHandle(2))],
+        );
+
+        assert_eq!(cache.lookup(&row(1)), Some(Cached::Handle(ObjectHandle(1))));
+        assert_eq!(cache.lookup(&row(2)), Some(Cached::Handle(ObjectHandle(2))));
+        assert_eq!(cache.lookup(Path::new("/IMG_1.JPG")), Some(Cached::SameNamed));
+        assert_eq!(
+            cache.handle_to_path.get(&ObjectHandle(1)),
+            Some(&row(1)),
+            "an event for a twin finds its own row"
+        );
+
+        // Twin one is renamed away: row two still reaches its object, which the
+        // name alone now names too, and row one reaches nothing.
+        cache.record_listing(Path::new("/"), vec![at("/IMG_1.JPG", 2), at("/IMG_2.JPG", 1)]);
+        assert_eq!(cache.lookup(&row(2)), Some(Cached::Handle(ObjectHandle(2))));
+        assert_eq!(cache.lookup(&row(1)), None);
+        assert_eq!(
+            cache.lookup(Path::new("/IMG_1.JPG")),
+            Some(Cached::Handle(ObjectHandle(2)))
+        );
     }
 
     #[test]

@@ -18,7 +18,7 @@ use std::future::Future;
 use std::path::Path;
 
 use super::errors::MtpConnectionError;
-use super::{MtpConnectionManager, MtpObjectInfo, acquire_device_lock, normalize_mtp_path};
+use super::{MtpConnectionManager, MtpObjectInfo, acquire_device_lock, normalize_mtp_path, twins};
 use cmdr_fs::log_private::LogPrivate;
 
 /// What one attempt at a path-addressed mutation found.
@@ -147,7 +147,7 @@ impl MtpConnectionManager {
         }
 
         // Invalidate the parent directory's listing cache
-        if let Some(parent) = object_path_normalized.parent() {
+        if let Some(parent) = twins::folder_of(&object_path_normalized) {
             self.invalidate_listing_cache(device_id, storage_id, parent).await;
         }
 
@@ -317,7 +317,10 @@ impl MtpConnectionManager {
     ) -> Result<(ObjectHandle, ObjectHandle), MtpConnectionError> {
         let object = self.resolve_path_to_handle(device_id, storage_id, object_path).await?;
         let path = normalize_mtp_path(object_path);
-        let parent = path.parent().unwrap_or(Path::new("/")).to_string_lossy().into_owned();
+        let parent = twins::folder_of(&path)
+            .unwrap_or(Path::new("/"))
+            .to_string_lossy()
+            .into_owned();
         let parent = self.resolve_path_to_handle(device_id, storage_id, &parent).await?;
         Ok((object, parent))
     }
@@ -333,11 +336,12 @@ impl MtpConnectionManager {
         object_path: &str,
         parent: ObjectHandle,
     ) -> Result<Option<ObjectInfo>, MtpConnectionError> {
-        let info = match storage.get_object_info(handle).await {
+        let mut info = match storage.get_object_info(handle).await {
             Ok(info) => info,
             Err(e) if e.is_stale_handle() => return Ok(None),
             Err(e) => return Err(self.map_device_error(e, device_id)),
         };
+        self.as_reported(device_id, &mut info);
         let path = normalize_mtp_path(object_path);
         Ok(is_the_object_at(&info, &path, parent).then_some(info))
     }
@@ -462,7 +466,7 @@ impl MtpConnectionManager {
 
         // Update path cache
         let old_path = normalize_mtp_path(object_path);
-        let parent = old_path.parent().unwrap_or(Path::new("/"));
+        let parent = twins::folder_of(&old_path).unwrap_or(Path::new("/"));
         let new_path = parent.join(new_name);
         let new_path_str = new_path.to_string_lossy().to_string();
 
@@ -588,7 +592,7 @@ impl MtpConnectionManager {
                 }
 
                 // Invalidate listing cache for both old and new parent directories
-                let old_parent = old_path.parent().unwrap_or(Path::new("/"));
+                let old_parent = twins::folder_of(&old_path).unwrap_or(Path::new("/"));
                 self.invalidate_listing_cache(device_id, storage_id, old_parent).await;
                 let new_parent = normalize_mtp_path(new_parent_path);
                 self.invalidate_listing_cache(device_id, storage_id, &new_parent).await;

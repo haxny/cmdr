@@ -240,27 +240,41 @@ Pinned by `connection/stale_handle_test.rs` (a planted stale entry; the virtual 
 
 ## Same-named siblings
 
-PTP lets a folder hold two objects with the same name (a camera card, a phone app writing twice), and both rows list
-with the same path. A path-keyed cache used to keep the LAST twin, so a copy of the folder read the second twin twice
-and never the first, and deleting row one deleted row two's file.
+PTP lets a folder hold two objects with the same name: a file is a database record keyed by a handle, and the name is
+only a property. Seen on cameras merging card folders (`100CANON` + `101CANON`) after a counter wrap, devices keeping
+their own object database (e-readers, GPS watches), and Android when its MTP index goes stale. A path-keyed cache once
+kept the LAST twin, so a copy of the folder read the second twin twice and never the first, and deleting row one deleted
+row two's file (#523).
 
-- **The name resolves to neither.** `PathHandleCache::record_listing` records a name more than one child answers to as
-  `same_named` (no forward entry, a reverse entry per twin so a change event still finds the folder, nothing cached
-  beneath it). `resolve_path_to_handle` answers `MtpConnectionError::AmbiguousName` for it, so every path-addressed op
-  refuses (read, delete, rename, move, list) and touches nothing. `MtpVolume` maps it to `VolumeError::DuplicateName`,
-  handled everywhere like SMB's look-alike `AmbiguousName` but its own variant, so the person reads the device's cause
-  and fix (rename one on the device) rather than "spelled differently on the server"; a transfer reports it on the
-  source as a refusal of that item.
-- **It lasts until a listing names one.** The next listing of the folder that has the name once makes it an ordinary
-  entry; one without it drops it. A `Tree` delete still clears both twins: it caches each child's handle right before
-  recursing into it.
-- **Open product decision**: the twins are still unaddressable from Cmdr. Making each row its own object needs the
-  handle in the row's identity (for example a disambiguated path that every op and the transfer engine accept), which
-  touches how such rows are named, shown, and copied. The refusal's wording is SMB's ("on the server", "spelled
-  differently"), which reads off for a phone.
+- **Each twin's row carries its own object.** `finalize_listing` (every listing path ends there) gives each twin a row
+  path with a PICK segment before the name: NUL plus the handle, `/DCIM/␀4242/IMG_1.JPG` (`twins.rs`). `name` stays the
+  shared name, and the leaf of the path is the real name, so a copy names its destination after it and a walk below a
+  twin folder builds relative paths from it. NUL because no real name can hold one (Android names are Linux names, PTP
+  strings are NUL-terminated), so a pick never collides with a folder the device holds.
+- **"The folder holding this" steps over the pick**: `twins::folder_of`, ❌ never `Path::parent`, at every site that
+  lists, invalidates, or verifies a path's folder (resolver heal, mutations' parent check, the batch scan's grouping,
+  `MtpVolume::get_metadata`, uploads, the event loop's affected dir). A child of a twin folder is an ordinary child of
+  that row path.
+- **The cache holds both.** `PathHandleCache::record_listing` caches each row path like any other path (its reverse
+  entry points at the row, so an event finds it), and marks the shared name `same_named` (no forward entry, nothing
+  beneath it). A row path whose twin has since gone still reaches its object while the shared name now resolves to that
+  very handle, so a row a pane hasn't re-read yet keeps working.
+- **Only the name alone is refused.** A path with no row behind it (an MCP call, a typed path) that names the shared
+  name answers `MtpConnectionError::AmbiguousName` and touches nothing. `MtpVolume` maps it to
+  `VolumeError::DuplicateName`, its own variant (not SMB's look-alike `AmbiguousName`) so the person reads the device's
+  cause, and `MtpVolume::exists` counts it as taken, so a no-clobber rename or upload can't add a third.
+- **A twin's change re-reads its folder.** `MtpVolume::notify_mutation` given a row path minus its name (what
+  `Path::parent` of a row path yields) reports `FullRefresh` on the real folder: the by-name `Removed` / `Renamed`
+  patches can't tell a twin from its sibling.
+- **A copy keeps both.** The second twin meets the first as a clash, settled by the conflict policy:
+  `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A source listing one name twice".
+- **Known edges**: a row path shows its NUL wherever the frontend prints a path (an error naming a twin, a twin folder's
+  breadcrumb), and `Path::parent` of a twin in engine code (the transfer tree's common root, bulk rename's same-folder
+  check) sees the pick as a folder. None of them reaches the wrong object.
 
-Pinned by `connection/same_name_test.rs` (the virtual device is backed by a real folder, which can't hold twins, so the
-cell records the twin listing itself) and `cache.rs`'s `path_handle_cache_tests`.
+Pinned by `connection/same_name_test.rs` and `volume/twins_test.rs` on the virtual device (backed by a real folder,
+which can't hold twins, so `testing::make_twins` has one object answer to another's name through
+`MtpConnectionManager::as_reported`), plus `cache.rs`'s `path_handle_cache_tests` and `twins.rs`'s own cells.
 
 ## Queued listings share the one that finished (`fresh_cached_listing`)
 

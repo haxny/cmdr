@@ -5,7 +5,7 @@ use std::path::Path;
 use log::debug;
 
 use super::errors::MtpConnectionError;
-use super::{MtpConnectionManager, normalize_mtp_path};
+use super::{MtpConnectionManager, normalize_mtp_path, twins};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
@@ -226,15 +226,15 @@ impl MtpConnectionManager {
     /// Returns Some(CopyScanResult) if path is a file, None otherwise.
     async fn try_scan_as_file(&self, device_id: &str, storage_id: u32, path: &str) -> Option<CopyScanResult> {
         let path_buf = normalize_mtp_path(path);
-        let parent = path_buf.parent()?;
-        let name = path_buf.file_name()?.to_str()?;
+        let parent = twins::folder_of(&path_buf)?;
 
         let parent_entries = self
             .list_directory(device_id, storage_id, &parent.to_string_lossy())
             .await
             .ok()?;
 
-        let entry = parent_entries.iter().find(|e| e.name == name)?;
+        // By path, not name: a twin's row path is the one entry that's its object.
+        let entry = parent_entries.iter().find(|e| Path::new(&e.path) == path_buf)?;
 
         if entry.is_directory {
             // It's a directory, not a file. Let caller handle it.

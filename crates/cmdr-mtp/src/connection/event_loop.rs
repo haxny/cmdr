@@ -13,7 +13,7 @@ use tokio::sync::{Mutex, broadcast};
 use mtp_rs::ObjectHandle;
 
 use super::cache::{EVENT_DEBOUNCE_MS, EventDebouncer};
-use super::{MtpConnectionManager, normalize_mtp_path};
+use super::{MtpConnectionManager, normalize_mtp_path, twins};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::DirectoryChange;
@@ -250,9 +250,8 @@ impl MtpConnectionManager {
                         // The directory that changed is the object's parent (the
                         // folder whose listing shows it). A root-level object's
                         // parent is the storage root, "/".
-                        let affected_dir = object_path
-                            .parent()
-                            .map_or_else(|| PathBuf::from("/"), Path::to_path_buf);
+                        let affected_dir =
+                            twins::folder_of(&object_path).map_or_else(|| PathBuf::from("/"), Path::to_path_buf);
                         if manager.refresh_directory(&device_id, storage_id, &affected_dir) {
                             // A pane shows that directory and its re-read is under
                             // way; done.

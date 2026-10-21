@@ -6,7 +6,7 @@ use super::MtpVolume;
 use super::cancel::MtpCancelBridge;
 use super::mapping::map_mtp_error;
 use super::streams::{MtpReadStream, mtp_read_window, volume_read_stream_to_chunk_stream};
-use crate::connection::{MtpConnectionError, MtpDeleteScope, UploadedFile};
+use crate::connection::{MtpConnectionError, MtpDeleteScope, UploadedFile, twins};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
@@ -152,7 +152,7 @@ impl Volume for MtpVolume {
                 ));
             }
 
-            let Some(parent) = path.parent() else {
+            let Some(parent) = twins::folder_of(path) else {
                 return Ok(FileEntry::new(
                     self.name.clone(),
                     self.root.display().to_string(),
@@ -166,10 +166,32 @@ impl Volume for MtpVolume {
             };
 
             let entries = self.list_directory(parent, None).await?;
-            entries
-                .into_iter()
-                .find(|e| e.name == name)
-                .ok_or_else(|| VolumeError::NotFound(path.display().to_string()))
+            // A twin's row path picks its object by handle; a plain name two
+            // items share names neither (`connection/twins.rs`).
+            if let Some(pick) = twins::pick_in(path) {
+                return entries
+                    .into_iter()
+                    .find(|e| e.name == name && e.inode == Some(pick.0))
+                    .ok_or_else(|| VolumeError::NotFound(path.display().to_string()));
+            }
+            let mut named = entries.into_iter().filter(|e| e.name == name);
+            match (named.next(), named.next()) {
+                (Some(entry), None) => Ok(entry),
+                (Some(_), Some(_)) => Err(VolumeError::DuplicateName(path.display().to_string())),
+                (None, _) => Err(VolumeError::NotFound(path.display().to_string())),
+            }
+        })
+    }
+
+    /// A name two items share is TAKEN: the default (`get_metadata(..).is_ok()`)
+    /// would read its `DuplicateName` as free, and a no-clobber rename or upload
+    /// onto it would add a third.
+    fn exists<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
+        Box::pin(async move {
+            matches!(
+                self.get_metadata(path).await,
+                Ok(_) | Err(VolumeError::DuplicateName(_))
+            )
         })
     }
 
@@ -228,6 +250,13 @@ impl Volume for MtpVolume {
             use cmdr_fs::volume::DirectoryChange;
 
             let listings = self.manager.host().listings();
+            // A change "in" a twin's row path minus its name is a change to a
+            // twin: the by-name patches below can't tell it from its sibling, so
+            // the folder is re-read instead.
+            if let Some(folder) = twins::picked_folder(parent_path) {
+                listings.directory_changed(&self.volume_id, &self.to_url_path(folder), DirectoryChange::FullRefresh);
+                return;
+            }
             // Normalize once so every branch (incl. get_metadata's parent
             // lookup) sees the canonical absolute MTP URL. Callers happily
             // hand us either form depending on which layer they came from.
@@ -299,7 +328,7 @@ impl Volume for MtpVolume {
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
         Box::pin(async move {
-            let Some(parent) = path.parent() else {
+            let Some(parent) = twins::folder_of(path) else {
                 return Err(VolumeError::IoError {
                     message: "Cannot create root directory".into(),
                     raw_os_error: None,
@@ -355,6 +384,8 @@ impl Volume for MtpVolume {
                 .await
                 .map_err(map_mtp_error)?;
 
+            // A twin's row path hands its pick to `notify_mutation` as the parent,
+            // which re-reads the folder rather than dropping a row by name.
             if let (Some(parent), Some(name)) = (path.parent(), path.file_name()) {
                 self.notify_mutation(
                     &self.volume_id,
@@ -390,8 +421,8 @@ impl Volume for MtpVolume {
             let from_mtp = self.to_mtp_path(from);
             let to_mtp = self.to_mtp_path(to);
 
-            let from_parent = Path::new(&from_mtp).parent().unwrap_or(Path::new(""));
-            let to_parent = Path::new(&to_mtp).parent().unwrap_or(Path::new(""));
+            let from_parent = twins::folder_of(Path::new(&from_mtp)).unwrap_or(Path::new(""));
+            let to_parent = twins::folder_of(Path::new(&to_mtp)).unwrap_or(Path::new(""));
             let same_parent = from_parent == to_parent;
 
             let from_name = Path::new(&from_mtp)
@@ -709,7 +740,7 @@ impl Volume for MtpVolume {
             if mode.refuses_occupied() && self.exists(dest).await {
                 return Err(VolumeError::AlreadyExists(dest.display().to_string()));
             }
-            let dest_folder = dest.parent().map(|p| self.to_mtp_path(p)).unwrap_or_default();
+            let dest_folder = twins::folder_of(dest).map(|p| self.to_mtp_path(p)).unwrap_or_default();
             let filename = dest
                 .file_name()
                 .and_then(|n| n.to_str())
@@ -744,7 +775,7 @@ impl Volume for MtpVolume {
             // unreliable for self-mutations (many devices emit no events at
             // all), so without this the cache would only catch up on the
             // next manual refresh.
-            if let Some(parent) = dest.parent() {
+            if let Some(parent) = twins::folder_of(dest) {
                 self.notify_mutation(&self.volume_id, parent, MutationEvent::Created(filename))
                     .await;
             }

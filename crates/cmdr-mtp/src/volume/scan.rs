@@ -9,6 +9,7 @@
 
 use super::MtpVolume;
 use super::mapping::map_mtp_error;
+use crate::connection::twins;
 use cmdr_fs::volume::scan_walk::conflicts_against;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, ScanBoundary, ScanConflict, SourceItemInfo, Volume, VolumeError,
@@ -114,12 +115,12 @@ impl MtpVolume {
             }
             let mut groups: std::collections::HashMap<PathBuf, ParentGroup<'a>> = std::collections::HashMap::new();
             for path in paths {
-                let original_parent = path.parent().unwrap_or(Path::new("")).to_path_buf();
+                // The folder holding it, stepping over a twin's pick
+                // (`connection/twins.rs`).
+                let original_parent = twins::folder_of(path).unwrap_or(Path::new("")).to_path_buf();
                 let entry = groups.entry(original_parent.clone()).or_insert_with(|| {
                     let mtp_path = self.to_mtp_path(path);
-                    let mtp_path_buf = PathBuf::from(&mtp_path);
-                    let mtp_parent = mtp_path_buf
-                        .parent()
+                    let mtp_parent = twins::folder_of(Path::new(&mtp_path))
                         .map(|p| p.to_string_lossy().to_string())
                         .unwrap_or_default();
                     ParentGroup {
@@ -186,20 +187,20 @@ impl MtpVolume {
                     None => self.list_directory(Path::new(&group.mtp_parent), None).await?,
                 };
 
-                // Index entries by name so each child lookup is O(1). A naive
+                // Index entries by path so each child lookup is O(1). A naive
                 // `entries.iter().find(...)` per child is O(n) and the outer
                 // loop is also O(n), so 15k photos in /DCIM/Camera turned a
                 // single parent listing into ~225M string comparisons (~10 s
-                // stall in the scan preview).
-                let entries_by_name: std::collections::HashMap<&str, &FileEntry> =
-                    entries.iter().map(|e| (e.name.as_str(), e)).collect();
+                // stall in the scan preview). By path, not name: a twin's row
+                // path is the one entry that's its object.
+                let entries_by_path: std::collections::HashMap<&Path, &FileEntry> =
+                    entries.iter().map(|e| (Path::new(e.path.as_str()), e)).collect();
 
                 for child_path in &group.children {
                     boundary.check().await?;
-                    let mtp_path = self.to_mtp_path(child_path);
-                    let name = Path::new(&mtp_path).file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    let listed_as = Path::new("/").join(self.to_mtp_path(child_path));
 
-                    if let Some(entry) = entries_by_name.get(name).copied() {
+                    if let Some(entry) = entries_by_path.get(listed_as.as_path()).copied() {
                         if entry.is_directory {
                             let mut scan = self.scan_subtree_with_stop(child_path, boundary).await?;
                             // The parent listing in hand carries the folder's

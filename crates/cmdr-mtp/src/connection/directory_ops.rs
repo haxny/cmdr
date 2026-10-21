@@ -11,7 +11,7 @@ use super::errors::MtpConnectionError;
 use super::events::MtpDeviceEvent;
 use super::{
     MtpConnectionManager, MtpDisconnectReason, acquire_device_lock, convert_mtp_datetime, get_mtp_icon_id,
-    normalize_mtp_path,
+    normalize_mtp_path, twins,
 };
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::log_error::LogError;
@@ -267,7 +267,8 @@ impl MtpConnectionManager {
             let mut done = false;
             for _ in 0..SCAN_METADATA_BATCH {
                 match listing.next().await {
-                    Some(Ok(ListingItem::Object(info))) => {
+                    Some(Ok(ListingItem::Object(mut info))) => {
+                        self.as_reported(device_id, &mut info);
                         let (entry, cache_update) = entry_for_object(&parent_path, &info);
                         entries.push(entry);
                         cache_updates.push(cache_update);
@@ -419,7 +420,7 @@ impl MtpConnectionManager {
             parent_opt, // allowed-log-private: an MTP object handle (a number), not a name
             cancel.is_some()
         );
-        let object_infos = match storage.list_objects_with_cancel(parent_opt, cancel).await {
+        let mut object_infos = match storage.list_objects_with_cancel(parent_opt, cancel).await {
             Ok(infos) => infos,
             Err(e) => {
                 let mapped_err = self.map_device_error(e, device_id);
@@ -441,6 +442,9 @@ impl MtpConnectionManager {
             usb_io_start.elapsed()
         );
 
+        for info in &mut object_infos {
+            self.as_reported(device_id, info);
+        }
         let (entries, cache_updates) = convert_object_infos(&parent_path, &object_infos);
 
         // Release device lock before updating cache
@@ -559,7 +563,7 @@ impl MtpConnectionManager {
         let mut tally = cmdr_fs::volume::ListingProgress::default();
 
         while let Some(result) = listing.next().await {
-            let info = match result {
+            let mut info = match result {
                 Ok(ListingItem::Object(info)) => info,
                 Ok(ListingItem::Skipped(skipped)) => {
                     // The device listed this handle and then wouldn't describe it.
@@ -580,6 +584,7 @@ impl MtpConnectionManager {
                 }
             };
 
+            self.as_reported(device_id, &mut info);
             let (entry, cache_update) = entry_for_object(&parent_path, &info);
             let is_dir = entry.is_directory;
             entries.push(entry);
@@ -682,9 +687,13 @@ impl MtpConnectionManager {
         storage_id: u32,
         parent_path: PathBuf,
         mut entries: Vec<FileEntry>,
-        cache_updates: Vec<(PathBuf, ObjectHandle)>,
+        mut cache_updates: Vec<(PathBuf, ObjectHandle)>,
         call_start: Instant,
     ) -> Vec<FileEntry> {
+        // Same-named siblings get a row path each, so every op on a row reaches
+        // that row's object (`twins.rs`).
+        twins::give_twins_their_own_paths(&parent_path, &mut entries, &mut cache_updates);
+
         // Update path cache
         let cache_update_start = Instant::now();
         #[cfg(any(test, feature = "testing"))]
