@@ -188,7 +188,7 @@ pub(crate) fn directory_changed(volume_id: &str, parent_path: &Path, change: Dir
     #[cfg(target_os = "macos")]
     crate::file_system::sync_status::invalidate_dir(parent_path);
 
-    crate::file_system::restic::snapshot_watch::directory_changed(volume_id, parent_path);
+    crate::file_system::restic::snapshot_watch::directory_changed(volume_id, parent_path, &change);
 
     listings().directory_changed(volume_id, parent_path, change);
 }

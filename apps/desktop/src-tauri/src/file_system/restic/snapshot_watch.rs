@@ -31,7 +31,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 
 use cmdr_fs::restic_view::{VIRTUAL_ENTRY_NAME, restic_route_candidates};
-use cmdr_fs::volume::{BackendKind, Volume};
+use cmdr_fs::volume::{BackendKind, DirectoryChange, Volume};
 use cmdr_listing::ListingId;
 use cmdr_listing::host::{ListingObserver, OpenedListing};
 use notify_debouncer_full::notify::{self, RecommendedWatcher, RecursiveMode, event::EventKind};
@@ -73,6 +73,11 @@ struct Watch {
     /// A re-list is running; a change during it runs one more after.
     refreshing: bool,
     again: bool,
+    /// Changes this watch acted on, and re-lists it ran: what the cells count.
+    #[cfg(test)]
+    heard: usize,
+    #[cfg(test)]
+    relists: usize,
 }
 
 /// What keeps a watch delivering: the OS stream, which disarms when dropped.
@@ -156,7 +161,14 @@ pub(crate) fn repo_a_listing_watches(volume_id: &str, volume: &dyn Volume, path:
 /// The host's composer heard a change on `volume_id`: re-list the snapshots
 /// panes of a watched repo whose `snapshots/` it was in. One lock and a short
 /// scan of the watched repos (a handful at most), per change, never per entry.
-pub(crate) fn directory_changed(volume_id: &str, parent_path: &Path) {
+///
+/// ❗ Only a change IN `snapshots/` counts, plus an overflow (`FullRefresh`)
+/// reported on it or a folder above it, which may hide a new snapshot. A direct
+/// SMB share reports every change on the share, so counting changes beside the
+/// repo (restic's own `data/` and `index/` writes, a busy folder next door)
+/// would re-read `snapshots/` back to back: polling at network speed.
+pub(crate) fn directory_changed(volume_id: &str, parent_path: &Path, change: &DirectoryChange) {
+    let overflow = matches!(change, DirectoryChange::FullRefresh);
     let key = {
         let state = STATE.lock_ignore_poison();
         if state.watches.is_empty() {
@@ -165,9 +177,14 @@ pub(crate) fn directory_changed(volume_id: &str, parent_path: &Path) {
         state
             .watches
             .keys()
-            // A share watcher that overflowed reports its batch as one change on a
-            // folder above, which may hold the new snapshot too.
-            .find(|key| key.volume_id == volume_id && key.snapshots_dir().starts_with(parent_path))
+            .find(|key| {
+                key.volume_id == volume_id
+                    && if overflow {
+                        key.snapshots_dir().starts_with(parent_path)
+                    } else {
+                        key.snapshots_dir() == parent_path
+                    }
+            })
             .cloned()
     };
     if let Some(key) = key {
@@ -198,6 +215,10 @@ fn hold(listing_id: &str, key: RepoKey) {
                     stream: None,
                     refreshing: false,
                     again: false,
+                    #[cfg(test)]
+                    heard: 0,
+                    #[cfg(test)]
+                    relists: 0,
                 },
             );
             Some(epoch)
@@ -322,31 +343,51 @@ fn arm_notify_stream(key: &RepoKey) -> Option<Debouncer<RecommendedWatcher, NoCa
     Some(debouncer)
 }
 
-/// Something changed in `key`'s `snapshots/`: re-list its open snapshots roots.
-/// One re-list at a time per repo; a change during one runs one more after it,
-/// so the last change is always read and a burst costs two re-lists at most.
+/// Something changed in `key`'s `snapshots/`: re-list its open snapshots roots
+/// once the burst settles ([`DEBOUNCE`]). One re-list at a time per repo; a
+/// change during one runs one more after it, so the last change is always read.
+/// The task belongs to one watch (its `epoch`) and stops once that watch goes.
 fn snapshots_changed(key: &RepoKey) {
-    {
+    let epoch = {
         let mut state = STATE.lock_ignore_poison();
         let Some(watch) = state.watches.get_mut(key) else {
             return;
         };
+        #[cfg(test)]
+        {
+            watch.heard += 1;
+        }
         if watch.refreshing {
             watch.again = true;
             return;
         }
         watch.refreshing = true;
-    }
+        watch.epoch
+    };
     let key = key.clone();
     // `tauri::async_runtime`: this runs on notify's own thread, which has no
     // Tokio runtime.
     tauri::async_runtime::spawn(async move {
+        // Let the burst settle (restic's temp file and its rename, a `forget` of
+        // many), then fold what arrived meanwhile into the first re-list.
+        tokio::time::sleep(DEBOUNCE).await;
+        if let Some(watch) = STATE.lock_ignore_poison().watches.get_mut(&key)
+            && watch.epoch == epoch
+        {
+            watch.again = false;
+        }
         loop {
             relist_roots(&key).await;
             let mut state = STATE.lock_ignore_poison();
-            let Some(watch) = state.watches.get_mut(&key) else {
+            // A watch on the same repo armed after this one went (a pane closed
+            // and another opened mid re-list) runs its own re-lists.
+            let Some(watch) = state.watches.get_mut(&key).filter(|watch| watch.epoch == epoch) else {
                 return;
             };
+            #[cfg(test)]
+            {
+                watch.relists += 1;
+            }
             if !watch.again {
                 watch.refreshing = false;
                 return;
@@ -372,10 +413,41 @@ async fn relist_roots(key: &RepoKey) {
 /// Whether a pane keeps `repo_root` on `volume_id` watched.
 #[cfg(test)]
 pub(crate) fn is_watching(volume_id: &str, repo_root: &Path) -> bool {
-    STATE.lock_ignore_poison().watches.contains_key(&RepoKey {
+    read_watch(volume_id, repo_root, |_| ()).is_some()
+}
+
+/// Whether `repo_root`'s watch has its stream armed (the arm is detached, so it
+/// lands a moment after the watch itself).
+#[cfg(test)]
+pub(crate) fn has_stream(volume_id: &str, repo_root: &Path) -> bool {
+    read_watch(volume_id, repo_root, |watch| watch.stream.is_some()).unwrap_or(false)
+}
+
+/// How many changes `repo_root`'s watch acted on.
+#[cfg(test)]
+pub(crate) fn changes_heard(volume_id: &str, repo_root: &Path) -> usize {
+    read_watch(volume_id, repo_root, |watch| watch.heard).unwrap_or(0)
+}
+
+/// How many re-lists `repo_root`'s watch ran.
+#[cfg(test)]
+pub(crate) fn relists(volume_id: &str, repo_root: &Path) -> usize {
+    read_watch(volume_id, repo_root, |watch| watch.relists).unwrap_or(0)
+}
+
+/// Whether `repo_root`'s watch has a re-list running or waiting.
+#[cfg(test)]
+pub(crate) fn is_relisting(volume_id: &str, repo_root: &Path) -> bool {
+    read_watch(volume_id, repo_root, |watch| watch.refreshing).unwrap_or(false)
+}
+
+#[cfg(test)]
+fn read_watch<T>(volume_id: &str, repo_root: &Path, read: impl FnOnce(&Watch) -> T) -> Option<T> {
+    let key = RepoKey {
         volume_id: volume_id.to_string(),
         repo_root: repo_root.to_path_buf(),
-    })
+    };
+    STATE.lock_ignore_poison().watches.get(&key).map(read)
 }
 
 /// Fires the scripted stream of `repo_root`'s watch, as a new snapshot file

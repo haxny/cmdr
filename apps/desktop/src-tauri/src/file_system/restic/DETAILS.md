@@ -41,13 +41,17 @@ index files, so by the time the folder shows, everything it names is on the pare
     300 ms debounce, `Access` events ignored so our own read of the new file can't loop on Linux). On an OS-mounted
     share FSEvents sees only this Mac's writes: a backup another machine makes shows on the next refresh.
   - A direct SMB share, through its own share-wide CHANGE_NOTIFY watcher, which reports every change to the composer
-    (`listing_host::directory_changed`); the composer hands it here, and a change in a watched repo's `snapshots/` (or an
-    overflow report on a folder above it) triggers the re-list. No stream of ours.
+    (`listing_host::directory_changed`); the composer hands it here with the change. Only a change whose folder IS a
+    watched repo's `snapshots/` counts, plus a `FullRefresh` (the watcher's overflow) on it or a folder above it. ❌
+    Never widen that to "any change above": the share reports restic's own `data/` and `index/` writes and every save
+    beside the repo, and each would re-read `snapshots/`, which is polling at network speed. No stream of ours.
   - Everything else (SFTP, WebDAV, S3, ADB, MTP) has no watcher reporting arbitrary folders, so its pane shows a new
     backup on the next manual refresh. ❌ No polling.
 - **The re-list is the manual refresh**: `Listings::refresh` on each open root listing, which re-reads `snapshots/` in
-  the hub (`crates/cmdr-restic/DETAILS.md` § "The view"). One re-list at a time per repo; a change during one runs one
-  more after it.
+  the hub (`crates/cmdr-restic/DETAILS.md` § "The view"). It starts 300 ms after the first change, so a burst (restic's
+  temp file and its rename, a `forget` of many) is one re-list, on either source. One re-list at a time per repo; a
+  change during one runs one more after it. The task belongs to its watch's `epoch` and stops once that watch goes, so a
+  pane closing and another opening mid re-list never shares one task's bookkeeping.
 - **`latest` follows the hub's rule, untouched here** (`crates/cmdr-restic/DETAILS.md` § "`latest`"): a re-list moves it
   to the new backup only when nothing has read under `latest/` for 30 s. During a copy out of `latest` the new dated
   folder appears and `latest` stays put. It then moves on the next root re-list after the copy goes quiet: the next
@@ -59,7 +63,8 @@ index files, so by the time the folder shows, everything it names is on the pare
   "asked after a change" from "asked during a refresh", which is a new hub method on the capped surface.
 - Cells: `snapshot_watch_tests.rs` (a scripted event re-lists the root with the new folder, the same event during a read
   under `latest` leaves `latest` alone, two panes share one watch that goes with the last, the composer's report
-  re-lists, and which listings arm).
+  re-lists, only a change in `snapshots/` or an overflow above it counts, a burst is one re-list, and which listings
+  arm).
 
 ## The route's order: leftmost confirmed boundary wins
 

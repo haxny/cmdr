@@ -81,6 +81,10 @@ hub's locks.
   changes, and the prefix only for `FullRefresh`. A short debounce on this path, like the `notify` one's 300 ms, would
   also fold the temp-then-rename pair into one re-list.
 - **Confidence**: high on the code; medium on how often a given NAS reports folder-time changes on the parent.
+- **Status**: fixed as proposed. The composer passes the change; an entry change counts only when its folder IS
+  `snapshots/`, and only a `FullRefresh` counts from a folder above. Every re-list now waits 300 ms for the burst to
+  settle, on both sources. Cells: `only_a_change_in_snapshots_or_an_overflow_above_it_counts` (200 unrelated reports,
+  zero heard) and `a_burst_in_snapshots_relists_once` (20 changes, one re-list).
 
 ## Low
 
@@ -110,6 +114,8 @@ let the `Vec` grow. Confidence: medium (whether the allocation aborts depends on
 epoch. If the last pane closes during a re-list and a new pane re-arms the same repo, the old task clears the new
 watch's `refreshing` (two re-lists at once) or consumes its `again`. Nothing is lost (it re-lists in that case), so it's
 a duplicate re-list at worst. Fix: carry the epoch into the task and stop on a mismatch. Confidence: high.
+Status: fixed as proposed (the task captures its watch's epoch and returns on a mismatch). No cell: reaching it takes a
+close and a re-arm inside one re-list, and the worst case was a duplicate re-list.
 
 ### 7. A wedged parent leaves a rustic pool behind per abandoned refresh
 

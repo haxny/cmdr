@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use cmdr_fs::entry::FileEntry;
 use cmdr_fs::restic_view::VIRTUAL_ENTRY_NAME;
 use cmdr_fs::volume::{DirectoryChange, UnlockOutcome, Volume};
 use cmdr_listing::ListingId;
@@ -125,8 +126,11 @@ impl Repo {
     }
 
     async fn watch_settles_at(&self, watching: bool) {
+        // Watching means its stream is armed too: the arm is detached, and a
+        // scripted event before it lands would reach nothing.
         wait_until_async(Duration::from_secs(5), "the repo's snapshot watch settles", || {
             snapshot_watch::is_watching(&self.volume_id, &self.repo) == watching
+                && snapshot_watch::has_stream(&self.volume_id, &self.repo) == watching
         })
         .await;
     }
@@ -292,5 +296,107 @@ async fn only_a_pane_on_the_snapshots_root_arms_a_watch() {
         None,
         "a real folder named like the row is the parent's, not a view"
     );
+    repo.drop_it();
+}
+
+/// A change reported through the composer, as a share's own watcher reports it.
+fn report(volume_id: &str, parent: &Path, change: DirectoryChange) {
+    crate::listing_host::directory_changed(volume_id, parent, change);
+}
+
+fn entry_in(parent: &Path, name: &str, is_dir: bool) -> FileEntry {
+    FileEntry::new(
+        name.to_string(),
+        parent.join(name).to_string_lossy().into_owned(),
+        is_dir,
+        false,
+    )
+}
+
+/// A direct SMB share reports every change on the share, so a busy folder
+/// beside the repo, restic writing its packs and index, or a save at the share
+/// root must not re-read `snapshots/`: that would be polling at network speed.
+/// Only a change IN `snapshots/`, or an overflow reported on a folder above it,
+/// counts.
+#[tokio::test]
+async fn only_a_change_in_snapshots_or_an_overflow_above_it_counts() {
+    let repo = Repo::build("restic-live-unrelated").await;
+    let pane = repo.open(&repo.view_root()).await;
+    repo.watch_settles_at(true).await;
+    let beside = repo.repo.parent().expect("the repo has a parent folder");
+    let data = repo.repo.join("data");
+
+    for i in 0..50 {
+        report(
+            &repo.volume_id,
+            &repo.repo,
+            DirectoryChange::Modified(entry_in(&repo.repo, "index", true)),
+        );
+        report(
+            &repo.volume_id,
+            &data,
+            DirectoryChange::Added(entry_in(&data, "ab", true)),
+        );
+        let note = format!("notes-{i}.txt");
+        report(
+            &repo.volume_id,
+            beside,
+            DirectoryChange::Added(entry_in(beside, &note, false)),
+        );
+        report(&repo.volume_id, beside, DirectoryChange::Removed(note));
+    }
+    assert_eq!(
+        snapshot_watch::changes_heard(&repo.volume_id, &repo.repo),
+        0,
+        "nothing in `snapshots/` changed"
+    );
+
+    report(&repo.volume_id, beside, DirectoryChange::FullRefresh);
+    assert_eq!(
+        snapshot_watch::changes_heard(&repo.volume_id, &repo.repo),
+        1,
+        "an overflow above the repo may hide a new snapshot"
+    );
+    let snapshots = repo.repo.join("snapshots");
+    report(
+        &repo.volume_id,
+        &snapshots,
+        DirectoryChange::Added(entry_in(&snapshots, "f00d", false)),
+    );
+    assert_eq!(snapshot_watch::changes_heard(&repo.volume_id, &repo.repo), 2);
+
+    listings().end(&pane);
+    repo.watch_settles_at(false).await;
+    repo.drop_it();
+}
+
+/// A burst in `snapshots/` (restic's temp file and its rename, a `forget` of
+/// many) settles into one re-list.
+#[tokio::test]
+async fn a_burst_in_snapshots_relists_once() {
+    let repo = Repo::build("restic-live-burst").await;
+    let pane = repo.open(&repo.view_root()).await;
+    repo.watch_settles_at(true).await;
+
+    repo.back_up_again().await;
+    let snapshots = repo.repo.join("snapshots");
+    for i in 0..20 {
+        let name = format!("tmp-{i}");
+        report(
+            &repo.volume_id,
+            &snapshots,
+            DirectoryChange::Added(entry_in(&snapshots, &name, false)),
+        );
+    }
+
+    shows_dated_folders(&pane, 2).await;
+    wait_until_async(Duration::from_secs(5), "the re-list settles", || {
+        !snapshot_watch::is_relisting(&repo.volume_id, &repo.repo)
+    })
+    .await;
+    assert_eq!(snapshot_watch::relists(&repo.volume_id, &repo.repo), 1);
+
+    listings().end(&pane);
+    repo.watch_settles_at(false).await;
     repo.drop_it();
 }
