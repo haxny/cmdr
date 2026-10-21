@@ -97,7 +97,7 @@ pub async fn assert_write_from_stream_keeps_the_source_date(volume: &dyn Volume,
 /// Streams a dated file into `dest` (which must not exist; its folder must),
 /// then holds whichever source the log would record from to `get_metadata`'s
 /// answer: the write's own report when it gives one
-/// ([`LandedModified::Known`](crate::volume::LandedModified::Known)), else the
+/// ([`LandedModified::Known`]), else the
 /// listing of `dest`'s folder, the one read a folder copy's files are read back
 /// with (`cmdr-operations`' `journal::LandedTimes`).
 ///
