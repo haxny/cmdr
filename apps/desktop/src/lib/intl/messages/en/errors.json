@@ -1026,9 +1026,9 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.listing.duplicateName.suggestion": "Here’s what to try:\n- On the device itself, rename them so each one has its own name\n- Then open this folder again",
+  "errors.listing.duplicateName.suggestion": "Here’s what to try:\n- Open the folder that holds them and pick the one you mean from the list\n- Or rename one of them so each has its own name",
   "@errors.listing.duplicateName.suggestion": {
-    "description": "Recovery suggestion for a path that names several same-named items on a phone or camera. Markdown bullet list. \"On the device itself\" means on the phone or in the camera's own menus, since Cmdr can't tell them apart to rename one.",
+    "description": "Recovery suggestion for a path that names several same-named items on a phone or camera. Markdown bullet list. Cmdr lists each of the same-named items as its own row in the folder, so picking a row there reaches exactly that item, and renaming one of them (in Cmdr or on the device) ends the clash for good.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
@@ -3332,9 +3332,9 @@
     "screenshot": "mkdir-confirmation-too-long.png",
     "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
   },
-  "errors.volume.duplicateName": "“{path}” names more than one item on the device, so Cmdr didn’t pick one. On the device itself, rename them so each one has its own name, then try again.",
+  "errors.volume.duplicateName": "“{path}” names more than one item on the device, so Cmdr didn’t pick one. Pick the one you mean in its folder, or rename one so each has its own name.",
   "@errors.volume.duplicateName": {
-    "description": "Shown when a path on a connected phone or camera (over USB) names two or more items with exactly the same name in one folder, which these devices allow, so Cmdr refused to guess which one was meant. \"On the device itself\" means on the phone or in the camera's own menus. The literal `{path}` is a do-not-translate placeholder replaced at runtime with the path. Inline one-line message in a brief toast or under a name field. Plain text, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
+    "description": "Shown when a path on a connected phone or camera (over USB) names two or more items with exactly the same name in one folder, which these devices allow, so Cmdr refused to guess which one was meant. \"Pick the one you mean in its folder\" means open that folder in Cmdr, where each same-named item has its own row. The literal `{path}` is a do-not-translate placeholder replaced at runtime with the path. Inline one-line message in a brief toast or under a name field. Plain text, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "mkdir-confirmation-too-long.png",
     "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
   },
