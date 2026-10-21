@@ -15,7 +15,7 @@ use super::super::recovered_name::FinalizeFailure;
 use super::super::staged_write::{CutOffLanding, LandingError, StagedWrite, WriteStaging, resolve_staging};
 use super::super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
 use super::super::volume_outage::StartedOn;
-use super::stream_pipe::{PipedFile, landed_at_final_name};
+use super::piped_file::{PipedFile, landed_at_final_name};
 use super::transfer_error::hard_abort_error;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;

@@ -38,6 +38,7 @@ mod move_cross;
 mod move_file;
 mod move_same;
 mod naming;
+mod piped_file;
 mod preflight;
 mod rename_merge;
 mod scan_wait;

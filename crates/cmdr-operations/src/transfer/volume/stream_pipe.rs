@@ -20,6 +20,7 @@ use super::super::transfer_probe::{TaskPhase, note_task_retry, set_task_phase};
 use super::super::volume_outage::{
     self, LostConnection, OutageEnd, OutageFailure, StartedOn, lost_connection, wait_after_failure,
 };
+use super::piped_file::PipedFile;
 use super::preflight::SourceFileFacts;
 use super::server_side_copy::{ServerSideCopy, try_server_side_copy};
 use super::source_reads::SourceReads;
@@ -27,7 +28,7 @@ use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
-use cmdr_fs::volume::{LandedModified, StreamWritten, Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 #[path = "stream_pipe_steps.rs"]
 mod steps;
@@ -100,39 +101,6 @@ fn auto_yield_tuning() -> (Duration, u64, Duration) {
         MIN_PROGRESS_FLOOR_BYTES,
         DEST_FOREGROUND_YIELD_HARD_CAP,
     )
-}
-
-/// A file [`stream_pipe_file`] landed at its final name.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct PipedFile {
-    /// The bytes it holds.
-    pub(super) bytes: u64,
-    /// Its modified time as `get_metadata` answers it, when the write that
-    /// landed it reported one for the final name ([`landed_at_final_name`]).
-    /// A landing settled after the fact (a lost reply, a cut-off rename) is
-    /// `Unknown`: the operation log reads those back.
-    pub(super) landed: LandedModified,
-}
-
-impl PipedFile {
-    /// `bytes` landed, with no landed time reported.
-    pub(super) const fn unreported(bytes: u64) -> Self {
-        Self {
-            bytes,
-            landed: LandedModified::Unknown,
-        }
-    }
-}
-
-/// The landed time `written` reported, for the file at `final_name`: it holds
-/// only when the write went to that name. A staged write's time is its temp's,
-/// and the landing rename after it isn't promised to keep it.
-pub(super) fn landed_at_final_name(written: &StreamWritten, wrote_to: &Path, final_name: &Path) -> LandedModified {
-    if wrote_to == final_name {
-        written.landed_modified()
-    } else {
-        LandedModified::Unknown
-    }
 }
 
 /// Streams one file from source to destination via `open_read_stream` /

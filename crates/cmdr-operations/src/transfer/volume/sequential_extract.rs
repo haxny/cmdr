@@ -29,8 +29,8 @@ use super::super::volume_outage::{self, OutageEnd, OutageFailure, StartedOn, los
 use super::folder_metadata::{FolderMetadata, SourceFolderDates};
 use super::merge::copy_directory_streaming;
 use super::merge_ctx::{CreatedPaths, MergeCtx};
+use super::piped_file::landed_at_final_name;
 use super::strategy::{LandingName, Replaces, resolve_staging, staging_for};
-use super::stream_pipe::landed_at_final_name;
 use super::transfer_error::{AtPath, PathedVolumeError};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{Volume, VolumeError};

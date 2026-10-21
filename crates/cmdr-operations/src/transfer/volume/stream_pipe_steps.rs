@@ -14,6 +14,7 @@ use crate::transfer::recovered_name::FinalizeFailure;
 use crate::transfer::retry;
 use crate::transfer::staged_write::{LandingError, LandingSource, Resumed, StagedWrite, WriteStaging, resolve_staging};
 use crate::transfer::transfer_probe::{TaskPhase, arm_current_task_stall_abort, set_task_bytes, set_task_phase};
+use crate::transfer::volume::piped_file::landed_at_final_name;
 use crate::transfer::volume::source_reads::{self, SourceReads};
 use crate::transfer::volume::transfer_error::{AtPath, PathedVolumeError, hard_abort_error};
 use crate::transfer::volume::{extract_quarantine, landed_flags};
@@ -311,7 +312,7 @@ impl FileRun<'_> {
         let bytes = written.bytes;
         let piped = PipedFile {
             bytes,
-            landed: super::landed_at_final_name(&written, staged.target(), dest_path),
+            landed: landed_at_final_name(&written, staged.target(), dest_path),
         };
         let lost = lost.union(written.refused());
         let started_on = StartedOn::now(&[self.source_volume, dest_volume]);
