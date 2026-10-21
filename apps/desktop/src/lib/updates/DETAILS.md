@@ -202,15 +202,30 @@ how the backend tells a background check from a person asking.
 ## When the bundle can't be written
 
 macOS only. Once a check finds a build worth installing, `runMacUpdateFlow` asks `update_write_blocker` whether this
-install can write into its own `.app`. Two arrangements say no: App Translocation (Cmdr opened straight from where it
-was downloaded) and a read-only volume (a `.dmg` still mounted). The classification and its rationale live next to the
-code that does it, `src-tauri/src/updater/DETAILS.md` § A bundle that can't be written.
+install can write into its own `.app`. Three arrangements say no: App Translocation (Cmdr opened straight from where it
+was downloaded), a read-only volume (a `.dmg` still mounted), and a bundle this user can't write (a root-owned `.pkg`
+install). The classification, and why no admin prompt can fix the last one, live next to the code that does it,
+`src-tauri/src/updater/DETAILS.md` § A bundle that can't be written.
 
-A blocker takes `finishCheckWithUnwritableBundle`, which skips the download and raises `MoveToApplicationsDialog`
-through the `updateBlockerNotice` singleton. The manifest check itself keeps running on the poll: it's what keeps the
-install counted as active on the dashboard, and it costs a few hundred bytes rather than ~63 MB.
+A blocker takes `finishCheckWithUnwritableBundle`, which skips the download, reports `outcome: 'blocked'` with the
+blocker's token, and hands the notice to `blocker-notices.ts`. So does an install refused with the typed `unwritable`
+failure (the installer's own check, or a write the sync was refused), ❌ never `finishCheckWithFailure`: it's an answer,
+not a breakage, so no failure copy and no error report. The manifest check itself keeps running on the poll: it's what
+keeps the install counted as active on the dashboard, and it costs a few hundred bytes rather than ~63 MB.
 
-Three rules shape the nudge:
+The blocker picks the notice:
+
+- **Where the bundle sits** (`LocationBlocker`: translocated, read-only volume) → `MoveToApplicationsDialog`, through
+  the `updateBlockerNotice` singleton. Rules below.
+- **Who may write it** (`PermissionBlocker`) → `UpdateUnwritableToastContent`, a persistent warn toast
+  (`id: 'update-unwritable'`). An administrator reads "download Cmdr from getcmdr.com and drag it into Applications.
+  macOS will ask for your password", naming the real bundle (`update_bundle_path`); anyone else reads "ask your IT team,
+  or whoever manages this Mac". It says this once per offered VERSION, across relaunches, stamped in the hidden
+  `updates.unwritableNoticeVersion` setting when the toast actually shows: the person can't fix it from inside Cmdr, so
+  a toast per launch would nag, while a newer release is worth one more. `updateState.unwritable` carries the same
+  answer to Settings > Updates (`formatUpdateStatus`), cleared when the next check starts.
+
+Three rules shape the move nudge:
 
 - **A failed classification is not a blocker.** `readWriteBlocker()` swallows the IPC failure and answers `null`.
   Treating a hiccup as "can't update" would stop updates that would have worked; the worst a false negative costs is one
@@ -218,8 +233,10 @@ Three rules shape the nudge:
 - **Once per session.** The answer can't change until the user moves the app, so a modal per poll interval would be its
   own problem. `moveNudgeShown` latches; the next launch asks again.
 - **It waits out onboarding rather than stacking on it.** A fresh download opened from `~/Downloads` is exactly what
-  macOS translocates, so this population meets the nudge on their FIRST launch. `pendingMoveNudge` holds it, and
-  `notifyOnboardingComplete` / `setOnboardingShowing(false)` flush it, the same way the restart toast is re-attempted.
+  macOS translocates, so this population meets the nudge on their FIRST launch. `pendingMoveNudge` holds it (and
+  `pendingUnwritableNotice` the toast), and `notifyOnboardingComplete` / `setOnboardingShowing(false)` flush both
+  through `flushPendingBlockerNotices`, the same way the restart toast is re-attempted. The updater owns the onboarding
+  gate and passes it in, so `blocker-notices.ts` keeps no onboarding state of its own.
 
 **Cmdr does not move itself**, and the reason is cost, not risk. Every step of a self-move was measured on macOS 26.5.2
 and each one works: `docs/notes/self-move-to-applications-2026-08-25.md`. Two results are worth carrying here because

@@ -19,11 +19,16 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
   The deletion pass removes anything in the destination not in the source, then cleans empty directories bottom-up.
 - **Minisign verification before writing the tarball to disk.** Ensures integrity and authenticity; the public keys
   (main and backup, § Two updater keys) are compiled into the binary. Both keys and signatures use base64(minisign-text-format), matching Tauri's convention.
-- **Privilege escalation via `osascript` with `rsync -a --delete`.** When installed in `/Applications` (root-owned),
-  direct writes fail; `osascript`'s `do shell script … with administrator privileges` shows the native auth dialog.
-  `rsync` expresses the full sync (copy + delete stale) in one shell command. Only triggers when direct writes are
-  denied, so users running from `~/Applications` or a dev build won't see the dialog. A `.pkg` install is always
-  `root:wheel`, so it always takes this path; why that's accepted: `docs/guides/releasing.md` § The installer package.
+- **No privilege escalation: a bundle this user can't write gets a notice, never an admin prompt.** An admin-run helper
+  can't write a notarized app on macOS 13+: App Management (`kTCCServiceSystemPolicyAppBundles`) lets only code signed
+  by the app's own team (or a process the user granted App Management or Full Disk Access) modify it, and
+  `do shell script … with administrator privileges` runs through Apple's `authtrampoline`, which TCC holds responsible
+  and refuses without even asking. Root doesn't help. The `osascript` + `rsync` escalation this replaces prompted for a
+  password on every background check and then failed `EPERM` (verified on macOS 27.0.1, TCC log on the M1,
+  2026-10-20; `docs/notes/2026-10-21-admin-update-app-management.md`). Cmdr writing its OWN bundle is same-team, which
+  is why every user-owned install updates. A `.pkg` install is `root:wheel`, so it never self-updates: IT pushes each
+  new package (`docs/guides/releasing.md` § The installer package). Making root-owned installs update would take a
+  privileged helper signed by Cmdr's team (what Sparkle 2 does); not built, since `.pkg` installs are MDM-managed.
 - **Atomic rename instead of in-place `fs::copy`.** (Inode / code-signing-cache rationale is in `CLAUDE.md`.)
 - **Per-instance staging dir: `<tmp>/cmdr-update-staging-{CMDR_INSTANCE_ID}`**, `…-default` for production with no env
   var set, so a main-clone and a worktree `Cmdr` never share one path.
@@ -164,31 +169,43 @@ Fixture: `testdata/fixture.pub` and `payload.txt.sig` come from a throwaway key 
 
 ## A bundle that can't be written
 
-Two macOS arrangements make the running `.app` unwritable, and the app can't fix either from inside:
+Three arrangements make the running `.app` unwritable, and the app can't fix any of them from inside:
 
 - **App Translocation.** Opening Cmdr straight from where it was downloaded makes Gatekeeper run it from a randomized
   read-only mount under `/private/var/folders/…/AppTranslocation/`, rather than from its real path.
 - **A mounted disk image.** The `.dmg` is still open and the app was launched from inside it.
+- **A bundle this user can't write.** In practice a `.pkg` install (`root:wheel`), as MDM tools deploy it.
 
-Both fail writes with `EROFS`, which is `io::ErrorKind::ReadOnlyFilesystem`, NOT `PermissionDenied`. That matters twice
-over: the escalate-to-admin arm never fired for them (so the install hard-failed with nothing said), and escalating
-would not have helped anyway, since a read-only mount refuses root too. The signature is an install that keeps sending
-update checks and never changes version, which is exactly the straggler shape the update dashboard couldn't explain.
+The first two fail writes with `EROFS` (`io::ErrorKind::ReadOnlyFilesystem`), and a read-only mount refuses root too.
+The third fails `EACCES`, and admin rights don't fix it either (§ Key decisions, no privilege escalation). All three
+share a signature: an install that keeps sending update checks and never changes version, the straggler shape the
+update dashboard couldn't explain.
 
-`bundle_location::classify` answers with a `BundleWriteBlocker`, using two probes:
+`bundle_location::classify` answers with a `BundleWriteBlocker`, using three probes in this order:
 
 - `SecTranslocateIsTranslocatedURL` (Security.framework, macOS 10.12+) for the translocation case. The alternative,
   testing the path for `/AppTranslocation/`, is a private layout Apple never promised and whose break we'd never notice.
 - `statfs`'s `MNT_RDONLY` as the catch-all, which covers a disk image, a read-only share, and translocation itself.
+- `access(W_OK)` on every folder under `Contents/`. Folders only: the sync replaces a file with a temp file plus
+  `rename()`, which needs the folder writable, never the file. Symlinks aren't followed (the sync replaces a link, it
+  doesn't write through one), and the bundle folder itself is skipped (the install only touches its mtime, and a
+  failure there is a warn). It blocks only on a definite `EACCES`. The answer splits on `mbr_check_membership` against
+  the `admin` group: `NotWritableAdminUser` (Finder can replace the app after their password) or
+  `NotWritableStandardUser` (only whoever manages the Mac can). An unknown membership reads as standard, whose copy is
+  true for anyone. Verified on a real root-owned `/Applications/Cmdr.app` (blocked at `Contents`) and a user-owned copy
+  of the same bundle (no blocker), macOS 27.0.1, 2026-10-21.
 
-Translocation is reported in preference to the read-only volume it implies, so the log names the outer cause. Every
-failure path answers "no blocker": a false negative costs a doomed download, while a false positive would stop updates
-that would have worked.
+Translocation is reported in preference to the read-only volume it implies, so the log names the outer cause, and both
+before permissions, since a read-only mount refuses whoever owns the bundle. Every failure path answers "no blocker": a
+false negative costs a doomed download, while a false positive would stop updates that would have worked.
 
-Two callers gate on it. The frontend asks (`update_write_blocker`) once a check finds an update and before the
-download, which is what stops an install pulling ~63 MB it can't apply once per poll interval forever, and raises the
-"move Cmdr to Applications" dialog instead. `installer::install` asks again before extracting, so a direct caller can't
-skip the gate; and `sync_bundle`'s `ReadOnlyFilesystem` arm answers the nested case without raising an admin prompt.
+Two callers gate on it. The frontend asks (`update_write_blocker`, under a 5 s `blocking_with_timeout` that also answers
+"no blocker") once a check finds an update and before the download, which is what stops an install pulling ~63 MB it
+can't apply once per poll interval forever, and raises the right notice instead (`apps/desktop/src/lib/updates/DETAILS.md`
+§ When the bundle can't be written). `installer::install` asks again before extracting, so a direct caller can't skip the
+gate, and answers `UpdateInstallError::Unwritable { blocker }`. `installer::sync_failure` maps a refusal the probe missed
+(a nested mount, a file flag) onto the same variant: `ReadOnlyFilesystem` to `ReadOnlyVolume`, `PermissionDenied` to the
+permission blocker. Neither is a failure, so neither files an error report.
 
 ## Dependencies
 

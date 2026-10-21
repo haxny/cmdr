@@ -302,8 +302,10 @@ const toc = [
         </li>
         <li>
             <strong>Updates on a managed Mac</strong>: when Cmdr sits in an <code>/Applications</code> folder the user
-            can't write to, as after a package install, its updater asks for an administrator password. Where users
-            aren't administrators, set <code>DisableUpdates</code> and push each new version from your MDM instead.
+            can't write to, as after a package install, it can't update itself. It never asks for a password: it
+            tells the user once per new version to ask their IT team (or, for an administrator, to download and drag
+            in the new version). Push each new version from your MDM, and set <code>DisableUpdates</code> to skip
+            that notice.
         </li>
         <li>
             <strong>Full Disk Access</strong>: upload the
@@ -504,7 +506,7 @@ const toc = [
             signature against a public key built into the app, before writing anything to disk. It only installs a
             version newer than the one running, so an attacker can't force a downgrade. macOS checks the Apple
             signature again when the app starts. If the app is in an <code>/Applications</code> folder the user can't
-            write to, the update asks for an administrator password.
+            write to, it downloads nothing and says how to update by hand instead.
         </li>
         <li>
             <strong>Turning updates off</strong>: per user in Settings &gt; Updates &amp; privacy. IT can turn them

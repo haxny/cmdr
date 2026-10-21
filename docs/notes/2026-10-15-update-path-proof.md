@@ -126,7 +126,8 @@ only the environment. The code-signature check is independent of which key signe
 ## Not tested
 
 - **The `/Applications` install** (root-owned, so the sync escalates through an `osascript` admin prompt): needs a
-  person to type a password. Every run here used `~/Applications`.
+  person to type a password. Every run here used `~/Applications`. Answered since: on macOS 13+ that escalation can't
+  succeed, and it's gone (`docs/notes/2026-10-21-admin-update-app-management.md`).
 - **The restart toast's `relaunch()`**: each relaunch was a quit plus `open`, since the prod build has no MCP server to
   click it with. The installed bundle is what both launch.
 - **The x64 and universal archives in an installed app**: only arm64 hardware was available. They passed the gate,

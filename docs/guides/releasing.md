@@ -956,12 +956,14 @@ can ship an update to every installed Cmdr, for good. The installer certificate 
 admin or a user runs it, and the certificate is revocable like the application one that already signs in CI. Moving it
 to the laptop would add a second signing round trip to every release for no reduction in reach.
 
-**The updater on a pkg install.** The app lands in `/Applications` owned by root, so the in-app updater can't write it
-and asks for an administrator password (`apps/desktop/src-tauri/src/updater/DETAILS.md`, the `osascript` escalation).
-Decided 2026-10-07: keep `root:wheel` and no postinstall script. That's the norm for `/Applications` and what a security
-review expects, and a `chown` to the console user would let any process running as that user rewrite an app that may
-hold Full Disk Access. Managed Macs whose users aren't admins should set `DisableUpdates` (`/trust#mdm`) and push each
-new pkg from the MDM; the trust page says so.
+**The updater on a pkg install.** The app lands in `/Applications` owned by root, so the in-app updater can't write it,
+and no admin password would help (App Management refuses an admin-run helper on macOS 13+). It skips the download and
+tells the user once per version: an administrator to download and drag in the new version, anyone else to ask their IT
+team (`apps/desktop/src-tauri/src/updater/DETAILS.md` § A bundle that can't be written). Decided 2026-10-07: keep
+`root:wheel` and no postinstall script. That's the norm for `/Applications` and what a security review expects, and a
+`chown` to the console user would let any process running as that user rewrite an app that may hold Full Disk Access.
+Managed Macs get each new version as a pkg pushed from the MDM, and setting `DisableUpdates` or `MaxUpdateVersion`
+(`/trust#mdm`) also silences the per-release notice; the trust page says so.
 
 **Testing the packaging locally**: `./scripts/build-pkg.sh` packages `/Applications/Cmdr.app` unsigned into a temp dir
 (or `--app <path> --out <dir>`). It never installs: `installer` needs root, and a test install would replace the real

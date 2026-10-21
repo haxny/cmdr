@@ -12,8 +12,10 @@ Frontend auto-update checker, restart toast, and the manual "Check for updates" 
 - `update-download-failure.ts` / `update-install-failure.ts`: the typed download and install failures that pick the log
   level and spot a policy refusal (`DETAILS.md`).
 - `UpdateToastContent.svelte` (`id: 'update'`, persistent) is the restart prompt; `UpdateCheckToastContent.svelte`
-  (`id: 'update-check'`, 10 s) the menu-triggered phase status; `MoveToApplicationsDialog.svelte` the nudge for a bundle
-  that can't be written.
+  (`id: 'update-check'`, 10 s) the menu-triggered phase status.
+- `blocker-notices.ts`: what an install that can't write its bundle hears. `MoveToApplicationsDialog.svelte` for where
+  it sits (translocated, read-only volume), `UpdateUnwritableToastContent.svelte` (`id: 'update-unwritable'`, persistent
+  warn, once per version) for who may write it (a root-owned `.pkg` install).
 
 ## Must-knows
 
@@ -21,8 +23,8 @@ Frontend auto-update checker, restart toast, and the manual "Check for updates" 
   enforced here.
 - **Branch on `isMacOS()`, ❌ never `navigator.platform`.** macOS runs three custom commands; everywhere else the Tauri
   plugin's fused `downloadAndInstall()`.
-- **Nothing may show during onboarding.** Only `showUpdateToast()` calls `addToast`, gated by the pure
-  `shouldShowUpdateToast()`; ❌ never `addToast` directly.
+- **Nothing may show during onboarding.** Only `showUpdateToast()` (gated by the pure `shouldShowUpdateToast()`) and
+  `raiseBlockerNotice()` (handed the same gate as `screenFree()`) raise anything; ❌ never `addToast` directly.
 - **`checkForUpdates()` ❌ never returns early on `ready`.** That guard let installs sit 25-38 days on a build newer
   releases had passed; only `supersedesStagedUpdate` may overwrite a staged one.
 - **"Later" can't silence the restart prompt, and the toast's second line is why it needn't.** ❌ Don't shorten the 24 h
@@ -30,7 +32,8 @@ Frontend auto-update checker, restart toast, and the manual "Check for updates" 
   version row's `role="img"` label.
 - **The security variant reads `updateState.securityNotice`**, the install's own answer from the signed staged bundle;
   ❌ never derive it from the manifest or the release notes. `DETAILS.md` § The security variant.
-- **A bundle that can't be written never downloads**, but a FAILED classification is ❌ not permission to update.
+- **A bundle that can't be written never downloads, and never prompts for a password**; a FAILED classification is ❌
+  not permission to update, and an install refused as `unwritable` is ❌ not a failure (no error report).
 - **Every exit of `checkForUpdates()` fires one `update_check` event**, with the phase read off `updateState.status`, ❌
   never off the error message. `trigger` is defaultless, so a new call site has to pick its own bucket.
 - **The background check is throttled by the backend** (`updateCheckDueIn` / `recordUpdateCheck`, persisted across

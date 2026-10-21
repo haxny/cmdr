@@ -13,8 +13,8 @@ plugin from the frontend.
 - `signature.rs`: minisign verification against the main and backup updater keys.
 - `security_events.rs`: the security event log's updater events (`../security_log/CLAUDE.md`).
 - Code-signature check and tarball extraction: `crates/cmdr-update-trust/CLAUDE.md` (shared with the release gate).
-- `installer.rs`: tarball extraction, sync into the running bundle, privilege escalation. `running_bundle()` is
-  crate-visible for `crate::install_location` (the Dock pin and the reveal handler).
+- `installer.rs`: tarball extraction, sync into the running bundle, and what a refused sync answers. `running_bundle()`
+  is crate-visible for `crate::install_location` (the Dock pin and the reveal handler).
 - `advisories.rs`: the `SecurityNotice` an install answers, from the staged bundle's list.
 
 ## Must-knows
@@ -22,15 +22,14 @@ plugin from the frontend.
 - **Sync into the bundle, never replace the `.app` directory**, because the per-file atomic rename below needs a bundle
   to sync into. ❌ NOT because replacing loses the FDA grant: it doesn't (measured; `DETAILS.md`).
 - **Per-file writes use atomic rename (temp + `rename()`), not in-place `fs::copy`.** The kernel code-signing cache keys
-  on inode, so a same-inode copy dies with `SIGKILL (Code Signature Invalid)` on launch. `rsync -a` (the admin path)
-  already renames.
+  on inode, so a same-inode copy dies with `SIGKILL (Code Signature Invalid)` on launch.
 - **Staging dir is per-instance** (`installer::staging_dir`, keyed on `CMDR_INSTANCE_ID`). A shared one makes
   concurrent `Cmdr` processes (main + a worktree) race and trip `ENOTEMPTY`.
 - **Only a real user's production install may check** (`skip_reason`). ❌ Never keep a second copy of
   `crate::prod_instance::NON_PROD_ENV_VARS` here. `DETAILS.md` § Who may check.
-- **A read-only bundle is EROFS, not EPERM, and no amount of admin fixes it.** App Translocation and a mounted `.dmg`
-  refuse root too. `installer::install` and the frontend both gate on `bundle_location::classify` BEFORE the download,
-  ❌ never by escalating (an auth dialog the user can only cancel). `DETAILS.md` § A bundle that can't be written.
+- **❌ Never escalate to admin**: App Management (macOS 13+) refuses an admin-run helper anyway. An unwritable bundle
+  answers `bundle_location::classify` BEFORE the download, a refused sync `UpdateInstallError::Unwritable`. The probe
+  leans "writable": a false block stops working updates. `DETAILS.md` § A bundle that can't be written.
 - **Minisign (main or offline backup key) on the archive, AND Cmdr's Developer ID on the bundle.**
   `vet_staged_bundle` refuses a bundle not code-signed by team `83H6YAQMNP` (`UntrustedCodeSignature`) before reading
   it; ❌ nothing may skip that, tests inject it. The backup pubkey lives only in `updater-backup.pub`, also read by
@@ -49,5 +48,5 @@ plugin from the frontend.
 - **Manifest fetch is bounded** (10 s connect, 30 s overall); download and install are untimed. The check and the
   download ride `server_request::send` (`Egress::UpdateCheck`, `UpdateDownload`).
 
-Sync order, deletion pass, signatures, privilege escalation, who may check, and the managed policy: `DETAILS.md`. Read
-it before any non-trivial work here.
+Sync order, deletion pass, signatures, why there's no privilege escalation, who may check, and the managed policy:
+`DETAILS.md`. Read it before any non-trivial work here.
