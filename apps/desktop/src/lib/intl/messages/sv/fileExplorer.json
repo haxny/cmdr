@@ -841,6 +841,34 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "Säkerhetskopierad från {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, one {Tagg} other {Taggar}}: {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9"
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, one {Säkerhetskopierad sökväg} other {Säkerhetskopierade sökvägar}}: {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr glömde lösenordet för {name}. Cmdr frågar efter det nästa gång du öppnar säkerhetskopian.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr har låst {name} tills vidare, men det sparade lösenordet finns kvar i nyckelringen. Om du vill ta bort det för gott raderar du det i Nyckelhanterare.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr kunde inte nå {name} just nu, så lösenordet är fortfarande sparat. Försök igen om en stund.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Om du vill glömma lösenordet för en säkerhetskopia öppnar du först säkerhetskopian, eller ställer markören på dess mapp ”Browse snapshots”.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Om du vill kopiera ut filer ur ett arkiv använder du F5 för att kopiera eller F6 för att flytta.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

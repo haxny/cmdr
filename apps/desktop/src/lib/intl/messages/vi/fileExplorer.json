@@ -841,6 +841,35 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "Sao lưu từ {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, other {Tag}}: {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9",
+    "sameAsSourceJustification": "Loanword: Vietnamese keeps tag Latin and lowercase-uninflected for git and restic tags (docs/i18n/vi/terms.json, git-tag: Vietnamese git material keeps tag); thẻ is the Finder color tag. Vietnamese has no plural, so the one branch reads like English."
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, other {Đường dẫn đã sao lưu}}: {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr đã quên mật khẩu của {name}. Lần tới khi bạn mở bản sao lưu, Cmdr sẽ hỏi lại mật khẩu.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr đã tạm khóa {name}, nhưng mật khẩu đã lưu vẫn còn trong chuỗi khóa. Để gỡ bỏ hẳn mật khẩu, hãy xóa nó trong Truy cập chuỗi khóa.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr không thể truy cập {name} lúc này, nên mật khẩu vẫn được lưu. Hãy thử lại sau giây lát.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Để quên mật khẩu của một bản sao lưu, hãy mở bản sao lưu đó trước, hoặc đặt con trỏ vào thư mục “Browse snapshots” của bản sao lưu.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Để sao chép tệp ra khỏi một tệp nén, hãy dùng F5 để sao chép hoặc F6 để di chuyển.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

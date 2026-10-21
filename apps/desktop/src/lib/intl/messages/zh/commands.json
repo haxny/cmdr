@@ -840,6 +840,14 @@
   "@commands.cloudAskGemini.description": {
     "sourceHash": "37d4e7c"
   },
+  "commands.resticForgetPassword.label": "清除备份密码",
+  "@commands.resticForgetPassword.label": {
+    "sourceHash": "8065fcb"
+  },
+  "commands.resticForgetPassword.description": "从钥匙串中移除你所在的 restic 备份保存的密码，并重新锁定这个备份",
+  "@commands.resticForgetPassword.description": {
+    "sourceHash": "e51ac69"
+  },
   "commands.fileCopyShareLink.label": "拷贝共享链接（7 天）",
   "@commands.fileCopyShareLink.label": {
     "sourceHash": "314bee8"

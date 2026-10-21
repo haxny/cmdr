@@ -1568,6 +1568,13 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR (^0 itens)"
   },
+  "just-now": {
+    "accept": ["agora", "neste momento"],
+    "chosen": "agora mesmo",
+    "confidence": "high",
+    "forms": "the relative-time label → agora mesmo; couldn't X just now (at the moment) → não conseguiu X agora / neste momento",
+    "sources": "catalog (queryUi.age.justNow, main.cliCommand.unavailable, fileOperations.resticPassword.unreachable)"
+  },
   "keep": {
     "chosen": "Manter",
     "accept": ["mant"],

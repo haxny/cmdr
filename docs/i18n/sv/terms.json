@@ -1668,6 +1668,13 @@
     "forms": "neuter, plural unchanged; the fallback head noun for a counted *Text with no plural selector",
     "sources": "macOS Finder/CoreTypes (Objekt, markerade objekt)"
   },
+  "just-now": {
+    "accept": ["just nu"],
+    "chosen": "nyss",
+    "confidence": "high",
+    "forms": "the relative-time label → nyss; couldn't X just now (at the moment) → … kunde inte X just nu / Det gick inte att X just nu",
+    "sources": "catalog (queryUi.age.justNow, main.cliCommand.unavailable, settings.mediaIndex.clip.deleteFailed)"
+  },
   "keep": {
     "chosen": "behåll",
     "confidence": "high",

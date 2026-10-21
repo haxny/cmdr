@@ -361,6 +361,19 @@
     "sources": "macOS (Synchronisierung im Hintergrund); Total Commander de (Im &Hintergrund laden); Double Commander de (Im Hintergrund ausführen)",
     "note": "fileOperations.backgroundStart.background (Im Hintergrund) must stay a verbatim substring of backgroundAria (Im Hintergrund starten)."
   },
+  "backup": {
+    "accept": ["Backups"],
+    "avoid": [
+      {
+        "form": "Sicherung",
+        "why": "macOS German says Backup throughout Time Machine; the catalog's sichern / gesichert is the Save button's word"
+      }
+    ],
+    "chosen": "Backup",
+    "confidence": "high",
+    "forms": "neuter (das Backup, dieses Backup, des Backups); compounds hyphenate (Backup-Passwort, Backup-Index); a restic backup → ein restic-Backup; a snapshot row's host → Backup von {host}",
+    "sources": "macOS Finder de (Time Machine-Backup, Alle Backups von „^1“ löschen, Backup-Snapshot); catalog (fileOperations.resticPassword.inputAria Backup-Passwort)"
+  },
   "badge": {
     "accept": ["Statussymbole", "Hinweis"],
     "avoid": [

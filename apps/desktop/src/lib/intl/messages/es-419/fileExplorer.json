@@ -203,6 +203,26 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "4771151"
   },
+  "fileExplorer.restic.snapshot.host": "Respaldo de {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "9bb9b0c"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr olvidó la contraseña de {name}. Te la pedirá la próxima vez que abras el respaldo.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "b6fcb36"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr bloqueó {name} por ahora, pero la contraseña guardada sigue en el Llavero. Para quitarla del todo, elimínala en Acceso a Llaveros.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "b5eb207"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr no pudo acceder a {name} ahora mismo, así que la contraseña sigue guardada. Inténtalo de nuevo en un momento.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "a84f6f0"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Para olvidar la contraseña de un respaldo, ábrelo primero o pon el cursor en su carpeta “Browse snapshots”.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "85ebe5e"
+  },
   "fileExplorer.openWith.readOnlyCopy": "{count, plural, one {{appName} abrió una copia de solo lectura de {fileName}. Los cambios que guardes ahí no llegarán al original.} many {{appName} abrió copias de solo lectura de {countText} archivos. Los cambios que guardes ahí no llegarán a los originales.} other {{appName} abrió copias de solo lectura de {countText} archivos. Los cambios que guardes ahí no llegarán a los originales.}}",
   "@fileExplorer.openWith.readOnlyCopy": {
     "sourceHash": "f436270"

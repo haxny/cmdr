@@ -841,6 +841,35 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "Backup von {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, one {Tag} other {Tags}}: {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9",
+    "sameAsSourceJustification": "Loanword: German names restic and git tags with the loanword Tag (pl. Tags), as the termbase rules for git tags (docs/i18n/de/terms.json, git-tag) and the catalog ships it (menu.tag.rowLabel “Tags”), so the label is byte-identical to English."
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, one {Gesicherter Pfad} other {Gesicherte Pfade}}: {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr hat das Passwort für {name} vergessen. Wenn du das Backup das nächste Mal öffnest, fragt Cmdr wieder danach.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr hat {name} vorerst gesperrt, aber das gespeicherte Passwort ist noch im Schlüsselbund. Um es endgültig zu entfernen, lösche es in der Schlüsselbundverwaltung.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr konnte {name} gerade nicht erreichen, deshalb bleibt das Passwort gespeichert. Versuche es gleich noch einmal.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Um das Passwort eines Backups zu vergessen, öffne zuerst das Backup oder setze den Cursor auf seinen Ordner „Browse snapshots“.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Um Dateien aus einem Archiv zu kopieren, verwende F5 zum Kopieren oder F6 zum Bewegen.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

@@ -840,6 +840,34 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "Biztonsági mentés innen: {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, one {Címke} other {Címkék}}: {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9"
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, one {Mentett útvonal} other {Mentett útvonalak}}: {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "A Cmdr elfelejtette ennek a biztonsági mentésnek a jelszavát: {name}. Amikor legközelebb megnyitod, újra elkéri.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "A Cmdr egyelőre lezárta ezt a biztonsági mentést: {name}, de a mentett jelszó a kulcskarikában maradt. Ha végleg el akarod távolítani, töröld a Kulcskarika-elérés appban.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "A Cmdr most nem érte el ezt: {name}, így a jelszó mentve marad. Próbáld újra egy pillanat múlva.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Ha egy biztonsági mentés jelszavát szeretnéd elfelejteni, előbb nyisd meg a biztonsági mentést, vagy állítsd a kurzort a „Browse snapshots” mappájára.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Ha fájlokat szeretnél kimásolni egy archívumból, használd az F5-öt másoláshoz vagy az F6-ot áthelyezéshez.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

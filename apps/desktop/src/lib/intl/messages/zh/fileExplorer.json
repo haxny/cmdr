@@ -839,6 +839,34 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "备份自 {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, other {标签}}：{tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9"
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, other {备份的路径}}：{paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr 已清除 {name} 的密码。下次打开这个备份时，Cmdr 会再向你要密码。",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr 暂时锁定了 {name}，但保存的密码还留在钥匙串里。要彻底移除，就到“钥匙串访问”里把它删除。",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr 暂时无法访问 {name}，所以密码仍然保存着。请稍后再试。",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "要清除一个备份的密码，请先打开这个备份，或者把光标移到它的“Browse snapshots”文件夹上。",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "要把文件从压缩文件里拷贝出来，请用 F5 拷贝或 F6 移动。",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

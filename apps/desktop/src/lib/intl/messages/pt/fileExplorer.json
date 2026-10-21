@@ -841,6 +841,35 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "Backup de {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, one {Tag} many {Tags} other {Tags}}: {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9",
+    "sameAsSourceJustification": "Loanword: pt-BR keeps tag (pl. tags) for git-style tags (docs/i18n/pt/terms.json, git-tag: Pro Git pt-BR), and restic tags are the same command-line labels, so every branch reads like English."
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, one {Caminho no backup} many {Caminhos no backup} other {Caminhos no backup}}: {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "O Cmdr esqueceu a senha de {name}. Na próxima vez que você abrir o backup, o Cmdr vai pedir a senha de novo.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "O Cmdr bloqueou {name} por enquanto, mas a senha salva continua no Acesso às Chaves. Para remover a senha de vez, apague-a no Acesso às Chaves.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "O Cmdr não conseguiu acessar {name} agora, então a senha continua salva. Tente novamente em instantes.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Para esquecer a senha de um backup, abra o backup primeiro ou coloque o cursor na pasta “Browse snapshots” dele.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Para copiar arquivos de dentro de um arquivo compactado, use F5 para copiar ou F6 para mover.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

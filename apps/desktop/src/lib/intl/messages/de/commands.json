@@ -840,6 +840,14 @@
   "@commands.cloudAskGemini.description": {
     "sourceHash": "37d4e7c"
   },
+  "commands.resticForgetPassword.label": "Backup-Passwort vergessen",
+  "@commands.resticForgetPassword.label": {
+    "sourceHash": "8065fcb"
+  },
+  "commands.resticForgetPassword.description": "Entfernt das gespeicherte Passwort des restic-Backups, in dem du gerade bist, aus dem Schlüsselbund und sperrt das Backup wieder",
+  "@commands.resticForgetPassword.description": {
+    "sourceHash": "e51ac69"
+  },
   "commands.fileCopyShareLink.label": "Freigabelink kopieren (sieben Tage)",
   "@commands.fileCopyShareLink.label": {
     "sourceHash": "314bee8"

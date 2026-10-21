@@ -841,6 +841,34 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "Sauvegardé depuis {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, one {Étiquette} many {Étiquettes} other {Étiquettes}} : {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9"
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, one {Chemin sauvegardé} many {Chemins sauvegardés} other {Chemins sauvegardés}} : {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr a oublié le mot de passe de {name}. Cmdr vous le redemandera à la prochaine ouverture de la sauvegarde.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr a verrouillé {name} pour l’instant, mais le mot de passe enregistré est resté dans le trousseau. Pour le retirer définitivement, supprimez-le dans Trousseaux d’accès.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr n’a pas pu joindre {name} à l’instant, le mot de passe reste donc enregistré. Réessayez dans un moment.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Pour oublier le mot de passe d’une sauvegarde, ouvrez d’abord la sauvegarde, ou placez le curseur sur son dossier « Browse snapshots ».",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Pour copier des fichiers hors d’une archive, utilisez F5 pour copier ou F6 pour déplacer.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

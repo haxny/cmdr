@@ -841,6 +841,34 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "Copia de seguridad de {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, one {Etiqueta} many {Etiquetas} other {Etiquetas}}: {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9"
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, one {Ruta incluida} many {Rutas incluidas} other {Rutas incluidas}}: {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr ha olvidado la contraseña de {name}. Te la pedirá la próxima vez que abras la copia de seguridad.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr ha bloqueado {name} por ahora, pero la contraseña guardada sigue en el Llavero. Para quitarla del todo, elimínala en Acceso a Llaveros.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr no ha podido acceder a {name} ahora mismo, así que la contraseña sigue guardada. Inténtalo de nuevo en un momento.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Para olvidar la contraseña de una copia de seguridad, ábrela primero o pon el cursor en su carpeta “Browse snapshots”.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Para copiar archivos fuera de un archivo comprimido, usa F5 para copiar o F6 para mover.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

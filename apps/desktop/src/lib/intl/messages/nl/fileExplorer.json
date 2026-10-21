@@ -843,6 +843,35 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "Back-up van {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, one {Tag} other {Tags}}: {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9",
+    "sameAsSourceJustification": "Loanword: Dutch keeps tag (pl. tags) for git and restic tags (docs/i18n/nl/terms.json, git-tag: MS terminology and Pro Git nl), and the catalog ships Tags for Finder tags too (menu.tag.rowLabel), so the label is byte-identical to English."
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, one {Pad in de back-up} other {Paden in de back-up}}: {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr is het wachtwoord voor {name} vergeten. De volgende keer dat je de back-up opent, vraagt Cmdr er weer om.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr heeft {name} voorlopig vergrendeld, maar het opgeslagen wachtwoord staat nog in Sleutelhanger. Wil je het voorgoed kwijt, verwijder het dan in Sleutelhangertoegang.",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr kon {name} zojuist niet bereiken, dus het wachtwoord blijft opgeslagen. Probeer het zo meteen opnieuw.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Om het wachtwoord van een back-up te vergeten, open je eerst de back-up of zet je de cursor op de map ‘Browse snapshots’ erin.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Om bestanden uit een archief te halen, gebruik je F5 om te kopiëren of F6 om te verplaatsen.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

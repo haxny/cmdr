@@ -840,6 +840,34 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "Резервная копия с компьютера {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, one {Тег} few {Теги} many {Теги} other {Теги}}: {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9"
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, one {Путь в резервной копии} few {Пути в резервной копии} many {Пути в резервной копии} other {Пути в резервной копии}}: {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr забыл пароль резервной копии {name}. Когда вы откроете ее в следующий раз, Cmdr снова попросит пароль.",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr пока заблокировал резервную копию {name}, но сохраненный пароль остался в Связке ключей. Чтобы избавиться от него навсегда, удалите его в приложении «Связка ключей».",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Сейчас Cmdr не удалось получить доступ к резервной копии {name}, поэтому пароль остается сохраненным. Попробуйте еще раз чуть позже.",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "Чтобы забыть пароль резервной копии, сначала откройте ее или поставьте курсор на папку «Browse snapshots» внутри нее.",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "Для копирования файлов из архива используйте F5, для перемещения — F6.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

@@ -202,5 +202,13 @@
   "commands.queueCancelOrDismiss.label": "Cancelar la operación o descartar la que no se pudo completar",
   "@commands.queueCancelOrDismiss.label": {
     "sourceHash": "5312456"
+  },
+  "commands.resticForgetPassword.label": "Olvidar la contraseña del respaldo",
+  "@commands.resticForgetPassword.label": {
+    "sourceHash": "b241432"
+  },
+  "commands.resticForgetPassword.description": "Quita del Llavero la contraseña guardada del respaldo de restic en el que estás y vuelve a bloquearlo",
+  "@commands.resticForgetPassword.description": {
+    "sourceHash": "3ad0182"
   }
 }

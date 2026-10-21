@@ -839,6 +839,34 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "sourceHash": "b3674bd"
   },
+  "fileExplorer.restic.snapshot.host": "備份自 {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "sourceHash": "eecc25c"
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, other {標籤}}：{tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "sourceHash": "4c868f9"
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, other {備份的路徑}}：{paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "sourceHash": "c90db90"
+  },
+  "fileExplorer.restic.forgetPassword.forgotten": "Cmdr 已忘記 {name} 的密碼。下次你開啟這個備份時，Cmdr 會再向你要密碼。",
+  "@fileExplorer.restic.forgetPassword.forgotten": {
+    "sourceHash": "bd4ac8e"
+  },
+  "fileExplorer.restic.forgetPassword.keychainKeptIt": "Cmdr 暫時鎖定了 {name}，但鑰匙圈裡還留著已儲存的密碼。要徹底移除，請到「鑰匙圈存取」裡把它刪掉。",
+  "@fileExplorer.restic.forgetPassword.keychainKeptIt": {
+    "sourceHash": "56adfb0"
+  },
+  "fileExplorer.restic.forgetPassword.unreachable": "Cmdr 剛剛連不上 {name}，所以密碼仍然儲存著。稍後再試一次吧。",
+  "@fileExplorer.restic.forgetPassword.unreachable": {
+    "sourceHash": "bce4808"
+  },
+  "fileExplorer.restic.forgetPassword.noBackup": "要忘記某個備份的密碼，請先開啟這個備份，或把游標移到它的「Browse snapshots」資料夾上。",
+  "@fileExplorer.restic.forgetPassword.noBackup": {
+    "sourceHash": "50d7aff"
+  },
   "fileExplorer.archive.useTransferToCopyOut": "要把檔案從壓縮檔裡複製出來，請用 F5 複製或 F6 移動。",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"

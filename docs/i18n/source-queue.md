@@ -494,10 +494,21 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   `concepts.json` with fr `sauvegarde`. Also widen `snapshot`'s sense, which names only git and APFS, to cover a restic
   backup run. nl ruled `back-up` and `momentopname`, per Finder. es ruled `copia de seguridad` and `instantánea`, per
   Finder's `la instantánea de las copias de seguridad`; es-419 forks it to `respaldo`, which flips the gender. pt ruled
-  `backup` (macOS's `backups do Time Machine`) and `instantâneo`.)
+  `backup` (macOS's `backups do Time Machine`) and `instantâneo`. de ruled `Backup`, per Finder's Time Machine strings.)
 - `errors.volume.noContent`: "a link" means a symlink but tripped `link` (hyperlink); added "a link or a special file"
   to its `notMatch`. Saying "a symbolic link" in the English would fix it at the source. (de, zh, ru, sv, vi, zh-Hant:
   used `符號連結`; nl used `koppeling`, macOS's word; es used `enlace`, which reads naturally as a file-system link
   here; pt used `link simbólico`)
 - `fileOperations.resticPassword.unreachable`: "couldn't check the password just now" tripped `just-now` (the
   relative-time label) but means "at the moment"; added "just now. make" to its `notMatch`. (sv, vi)
+- `fileExplorer.restic.forgetPassword.*`: three English-sense trips, each fixed with a `notMatch` in every locale at
+  once: the literal folder name “Browse snapshots” tripped `browse` and `snapshot`; "Cmdr locked {name}" (locking a
+  backup again) tripped `locked`, the Finder Locked flag; "remove it for good" (a Keychain entry) tripped
+  `delete-permanently`, whose sense is deleting files without the trash. A `lock` concept (re-locking a backup or
+  archive, the opposite of `unlock`) would give that verb a ruling of its own. (all)
+- `fileExplorer.restic.forgetPassword.noBackup`: the description says to keep “Browse snapshots” in English; confirm
+  that folder's name is never localized, or the quoted label goes stale the day it is. (all)
+- `fileExplorer.restic.snapshot.tags`: no concept for a restic tag (a user-chosen label on a backup run); it matched
+  `git-tag`, which fits (both are command-line labels), so locales followed their git-tag ruling. Consider widening
+  `git-tag`'s sense, or a `label-tag` concept. (vi took `tag` over its Finder-tag `thẻ`; de, nl, and pt record a
+  `sameAsSourceJustification` for the loanword)

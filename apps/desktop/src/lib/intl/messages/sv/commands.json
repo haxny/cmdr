@@ -840,6 +840,14 @@
   "@commands.cloudAskGemini.description": {
     "sourceHash": "37d4e7c"
   },
+  "commands.resticForgetPassword.label": "Glöm säkerhetskopians lösenord",
+  "@commands.resticForgetPassword.label": {
+    "sourceHash": "8065fcb"
+  },
+  "commands.resticForgetPassword.description": "Tar bort det sparade lösenordet för restic-säkerhetskopian du är i från nyckelringen och låser säkerhetskopian igen",
+  "@commands.resticForgetPassword.description": {
+    "sourceHash": "e51ac69"
+  },
   "commands.fileCopyShareLink.label": "Kopiera delningslänk (sju dagar)",
   "@commands.fileCopyShareLink.label": {
     "sourceHash": "314bee8"

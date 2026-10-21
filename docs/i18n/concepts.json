@@ -392,7 +392,7 @@
     "en": "browse",
     "match": ["browse", "browsing", "browses"],
     "note": "\"What you're browsing\" (whatever the pane shows) is the plain looking-at sense and may take a view verb.",
-    "notMatch": ["browse and vote", "browse the library"],
+    "notMatch": ["browse and vote", "browse the library", "browse snapshots"],
     "sense": "Moving through folders to look at what is there, including stepping into an archive, bundle, phone, or git ref and listing it like a folder."
   },
   "browse-file-picker": {
@@ -887,7 +887,7 @@
     "distinct": ["delete", "move-to-trash"],
     "en": "delete permanently",
     "match": ["permanently", "for good", "delete permanently"],
-    "notMatch": ["warning for good", "reminder for good"],
+    "notMatch": ["warning for good", "reminder for good", "remove it for good"],
     "sense": "Deleting without the trash, so the files can't be restored."
   },
   "deny": {
@@ -1919,7 +1919,7 @@
     "en": "locked",
     "match": ["locked", "unlock the file"],
     "note": "Apple localizes the checkbox label; quote it the way the user's Finder shows it.",
-    "notMatch": ["index is locked", "stay locked until"],
+    "notMatch": ["index is locked", "stay locked until", "cmdr locked"],
     "sense": "The macOS Locked flag on a file (the Get Info checkbox) and removing it."
   },
   "log": {
@@ -3174,6 +3174,7 @@
     "distinct": ["git-commit"],
     "en": "snapshot",
     "match": ["snapshot", "snapshots"],
+    "notMatch": ["browse snapshots"],
     "sense": "A frozen point-in-time copy: a git commit seen as a folder, or an APFS snapshot folder search skips."
   },
   "software": {

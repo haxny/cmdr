@@ -840,6 +840,14 @@
   "@commands.cloudAskGemini.description": {
     "sourceHash": "37d4e7c"
   },
+  "commands.resticForgetPassword.label": "Забыть пароль резервной копии",
+  "@commands.resticForgetPassword.label": {
+    "sourceHash": "8065fcb"
+  },
+  "commands.resticForgetPassword.description": "Удалить из Связки ключей сохраненный пароль резервной копии restic, в которой вы находитесь, и снова заблокировать эту резервную копию",
+  "@commands.resticForgetPassword.description": {
+    "sourceHash": "e51ac69"
+  },
   "commands.fileCopyShareLink.label": "Скопировать публичную ссылку (семь дней)",
   "@commands.fileCopyShareLink.label": {
     "sourceHash": "314bee8"
