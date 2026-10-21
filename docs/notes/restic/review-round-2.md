@@ -142,11 +142,14 @@ pressing refresh) builds another. Threads pile up for as long as the parent hang
 starved instead, so this is better than before, not worse. Fix if it matters: build the refresh pool once per hub (not a
 static), sized as now. Confidence: medium.
 
-Status: not fixed, on purpose. The pile-up lasts only while the parent hangs, and only one refresh per trigger: the
-watch now re-lists once per burst (finding 3's fix) and a person presses refresh by hand. The threads come back when the
-parent answers or its session is declared dead (smb2 does that on its own). A pool shared per hub would bound the
-threads, but a healthy refresh, or another repo's, would then queue behind the hung one, which trades a few idle threads
-for a frozen root listing.
+Status: fixed with a cap per repo rather than a shared pool (which would make a healthy refresh, or another repo's,
+queue behind a hung one): `ResticRepo::refresh_snapshots`'s blocking work holds a one-slot permit until it ends, so a
+refresh after a cancelled stuck one waits for it instead of building another pool. A hung parent costs one stuck refresh
+per repo. Pinned by `a_refresh_after_a_cancelled_stuck_one_waits_for_it_instead_of_piling_up` (red before: eight reads
+against four). watch now re-lists once per burst (finding 3's fix) and a person presses refresh by hand. The threads
+come back when the parent answers or its session is declared dead (smb2 does that on its own). A pool shared per hub
+would bound the threads, but a healthy refresh, or another repo's, would then queue behind the hung one, which trades a
+few idle threads for a frozen root listing.
 
 ### 8. Forgetting through one route leaves the other route's Keychain entry
 

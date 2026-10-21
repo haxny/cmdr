@@ -776,6 +776,47 @@ async fn a_snapshot_landing_during_a_refresh_shows_in_the_listing_that_asked_aft
     assert_eq!(new.len(), old.len() + 1, "the backup that landed shows");
 }
 
+/// ❗ A refresh stuck in a parent read that never returns keeps its threads
+/// (rustic's pool plus a blocking one) until the read ends. A pane's cancel
+/// releases the listing, ❌ never that work, so the next refresh (the watch, a
+/// person pressing refresh) waits for it rather than build another pool:
+/// a hung NAS costs one stuck refresh per repo, not one per attempt.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_refresh_after_a_cancelled_stuck_one_waits_for_it_instead_of_piling_up() {
+    let rig = Rig::new(RigOptions {
+        gated_dir: "snapshots",
+        ..RigOptions::default()
+    })
+    .await;
+    let parent = Arc::clone(&rig.parent);
+    rig.file_gate.send_replace(false);
+    let cancel = CancellationToken::new();
+    let stuck = spawn_listing(&rig.volume, view(ROOT), Some(cancel.clone()));
+    wait_until_async(WITHIN, "the refresh is stuck reading snapshot files", || {
+        parent.gated_files_started.load(Ordering::SeqCst) > 0
+    })
+    .await;
+    // allowed-test-sleep: lets rustic's pool start every read it will, so the
+    // count below is the stuck refresh's whole fan-out
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    let stuck_reads = parent.gated_files_started.load(Ordering::SeqCst);
+    cancel.cancel();
+    assert!(matches!(stuck.await.expect("task"), Err(VolumeError::Cancelled(_))));
+
+    let next = spawn_listing(&rig.volume, view(ROOT), None);
+    // allowed-test-sleep: proving an absence; the next refresh must NOT start
+    // reads of its own while the stuck one holds its threads
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(
+        parent.gated_files_started.load(Ordering::SeqCst),
+        stuck_reads,
+        "no second pool reading beside the stuck one"
+    );
+
+    rig.file_gate.send_replace(true);
+    assert!(next.await.expect("task").is_ok(), "it runs once the stuck one ends");
+}
+
 // ── The repo changing under the view ───────────────────────────────────────
 
 impl Rig {

@@ -37,7 +37,10 @@ path stays the caller's path.
   the parent's `snapshots/` re-listing an open root pane (`apps/desktop/src-tauri/src/file_system/restic/DETAILS.md` §
   "A new backup reaches an open pane"). Refreshes are one at a time per repo. A listing takes the list of a refresh that
   STARTED after it asked (`Snapshots::read_at` is the start), so the ones that asked while a refresh ran share the next
-  one; ❌ never the running one's, which may have listed `snapshots/` before the backup they're asking about landed.
+  one; ❌ never the running one's, which may have listed `snapshots/` before the backup they're asking about landed. One
+  at a time down to the blocking work: a refresh whose pane cancelled still holds the repo's refresh permit until its
+  rustic read ends (`ResticRepo::refresh_snapshots`), so one stuck on a hung parent makes the next wait instead of
+  building a second pool beside it.
 - **A snapshot folder** holds that snapshot's tree. Restic snapshots of a Mac start at `/`, so the tree under a folder
   is `Users/…`; it's shown as-is.
 - **Read-only by construction**: `is_writable` false, every mutation at the trait's `NotSupported` default, and

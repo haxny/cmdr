@@ -16,6 +16,7 @@ use rustic_core::{
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::runtime::Handle;
+use tokio::sync::Semaphore;
 use zeroize::Zeroizing;
 
 /// The threads of the pool a rustic call that fans out runs on
@@ -108,6 +109,8 @@ pub(crate) struct ResticRepo {
     repo: Arc<Repository<OpenStatus>>,
     pub(crate) backend: Arc<VolumeBackend>,
     runtime: Handle,
+    /// One snapshot refresh's blocking work at a time ([`Self::refresh_snapshots`]).
+    refreshing: Arc<Semaphore>,
 }
 
 impl ResticRepo {
@@ -137,6 +140,7 @@ impl ResticRepo {
             repo: Arc::new(repo),
             backend,
             runtime,
+            refreshing: Arc::new(Semaphore::new(1)),
         })
     }
 
@@ -145,11 +149,25 @@ impl ResticRepo {
     /// gone from the repo. Pass an empty `current` for a first read. Never reads
     /// the index. rustic reads the new files in parallel, so on its own pool
     /// ([`on_own_pool`]).
+    ///
+    /// ❗ The blocking work holds a permit until it ENDS, ❌ never just until its
+    /// caller stops waiting: a refresh stuck in a parent read that never returns
+    /// keeps its threads (rustic's pool plus a blocking one), and a pane's cancel
+    /// releases only the caller. So the next refresh waits for it (cancellably)
+    /// rather than build another pool beside it, and a hung parent costs one
+    /// stuck refresh per repo, not one per attempt.
     pub(crate) async fn refresh_snapshots(&self, current: Vec<SnapshotFile>) -> Result<Vec<SnapshotFile>, ResticError> {
         let repo = Arc::clone(&self.repo);
         let backend = Arc::clone(&self.backend);
+        let permit = Arc::clone(&self.refreshing)
+            .acquire_owned()
+            .await
+            .map_err(|closed| ResticError::Unreadable {
+                detail: format!("the refresh permit closed: {closed}"),
+            })?;
         self.runtime
             .spawn_blocking(move || {
+                let _one_at_a_time = permit;
                 on_own_pool(|| {
                     repo.update_all_snapshots(current)
                         .map_err(|err| classify(&err, &backend))
