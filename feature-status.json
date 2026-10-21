@@ -78,13 +78,19 @@
       "id": "webdav",
       "name": "WebDAV servers",
       "status": "alpha",
-      "note": "Open Nextcloud, ownCloud, Synology, and other WebDAV servers like folders, with a root and start folder and passwords in your Keychain. Not yet tested against many real-world servers."
+      "note": "Open Nextcloud, ownCloud, Synology, and other WebDAV servers like folders, with a root and start folder, passwords in your Keychain, and a NAS's self-signed certificate trusted on first use. Not yet tested against many real-world servers."
     },
     {
       "id": "s3",
       "name": "S3 storage",
       "status": "alpha",
       "note": "Browse, copy, move, rename, and delete in buckets on AWS, R2, B2, Wasabi, Hetzner, Google Cloud Storage, Spaces, or any S3-compatible server, with cost estimates at list prices and share links. Tested live on all seven providers, but brand new."
+    },
+    {
+      "id": "restic-backups",
+      "name": "Restic backups",
+      "status": "alpha",
+      "note": "Open a restic backup on any drive or server and browse its snapshots like folders, read-only, then copy files out to restore them. The password stays in your Keychain. Brand new and tested on one real NAS repo."
     },
     {
       "id": "git-browser",
@@ -120,13 +126,13 @@
       "id": "file-operations",
       "name": "File operations",
       "status": "stable",
-      "note": "Copy, move, delete, rename, and new folders with a live file tree of progress, conflict handling, rollback, a background queue that works with mouse+keyboard, and parallel processing when possible. A drive pulled mid-transfer keeps every original, a NAS that drops off gets waited for, and copies keep dates, tags, and permissions wherever the destination can store them. The most-tested code in the app."
+      "note": "Copy, move, delete, rename, and new folders with a live file tree of progress, conflict handling, rollback, a background queue that works with mouse+keyboard, and parallel processing when possible. A drive pulled mid-transfer keeps every original, a NAS that drops off gets waited for (copies, moves, deletes, and zip edits alike), and copies keep dates, tags, and permissions wherever the destination can store them. The most-tested code in the app."
     },
     {
       "id": "file-viewer",
       "name": "File viewer",
       "status": "stable",
-      "note": "Opens even 10+ GB files instantly in Text, Binary, Hex, and Media modes, with search, word wrap, and support for single lines of any length."
+      "note": "Opens even 10+ GB files instantly in Text, Binary, Hex, and Media modes, shows Markdown formatted with working links, and has search, word wrap, and support for single lines of any length."
     },
     {
       "id": "tabs",

@@ -230,12 +230,7 @@ export const roadmapSections: RoadmapSection[] = [
             description: 'See how big folders are, sort by size.',
             done: true,
           },
-          {
-            date: '(Feb 25)',
-            title: 'Add tabs',
-            description: 'For easy switching between folders.',
-            done: true,
-          },
+          { date: '(Feb 25)', title: 'Add tabs', description: 'For easy switching between folders.', done: true },
           {
             date: '(Feb 27)',
             title: 'Add move and delete',
@@ -722,6 +717,19 @@ export const roadmapSections: RoadmapSection[] = [
             date: '(Oct 16)',
             title: 'Local security log',
             description: 'With alerts on any monkey business recognized, and one-click data wipe.',
+            done: true,
+          },
+          {
+            date: '(Oct 19)',
+            title: 'Markdown viewer',
+            description: 'Markdown files open formatted, with images and links you can follow.',
+            done: true,
+          },
+          {
+            date: '(Oct 21)',
+            title: 'Restic backups',
+            description: 'Browse backup snapshots like folders, and copy files out to restore them.',
+            icon: 'history',
             done: true,
           },
         ],

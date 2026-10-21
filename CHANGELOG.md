@@ -5,6 +5,147 @@ This file holds all notable changes to Cmdr over time.
 The format is based on [keep a changelog](https://keepachangelog.com/en/1.1.0/), and we use
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [0.55.0] - 2026-10-22
+
+A ton of good things! Some of the main ones:
+
+- Restic backups: Browse your backup snapshots like folders. (Read-only)
+- SMB: operations now wait for a shaky server to recover, then they continue and clean up properly in the end.
+- Markdown files open formatted in the viewer, with working links.
+- Huge data-safety sweep: I fixed dozens of rare ways an operation could lose or damage files.
+
+### Added
+
+- Browse restic backups on any drive: open a repo's "Browse snapshots" row, unlock it once, then browse each snapshot or
+  `latest` read-only and copy files out to restore them, with the backed-up machine, size, tags, and paths on each
+  snapshot, new backups appearing live, and "Forget backup password" in the command palette (906d32240, 5f38c068b,
+  296e99ebd, 5fb3229bf, b1e3b1df6, f236b9ce4, 3250e4bbf, f4e345ff8, 1a16f5a68, be0c08fbd, 8b968cc46, ccd016ef8,
+  eb6c33aa4, 650539697, b439ca373, c330c4816, eb3942481, 5d7abbdc2, 8688a1441, 4099074a7, 8b382213b, 5f943426a,
+  c93269d04, f98fc17a6, d626db135, 365f0f82c, 4d33affb5, 34da5a391, 7a395fe68, 02481bda4, 27a2fe3c5, 8e9621499,
+  d594e28c8, 0c43420f8, 2dd96f867, 9aa1c3acb, 3d1cc1179, e4a2eb4f6, d69b69d18, 235ea0b28, bc8a84a84, d759e2c44,
+  48e16a08d, 374925964, 7938905da, 24c2ab922, 8c6bd6ec8, e2655f50a, b18f536d0)
+- Open Markdown files formatted in the viewer, with pictures from any drive, web images on request, and links you can
+  follow with Back and Forward (c790f6187, 0eae53cb6, 3e553d090, 7883921d9, 768e37ff1)
+- Remember your "files already exist" choice in the copy and move dialog with a "Remember this choice" box, contributed
+  by Jiri Slovacek (5ffbb3e59, b8fde51ba, fad047b2a, 9691a9b98, 097aebf83)
+- Cancel a running transfer with Escape and pause it with Space (bf6a0f3bc, 55a5f6b73, e1abeb99c)
+- Say "Lost the connection to {server}" when a server outage ends a copy, move, delete, compress, or zip edit
+  (d7f30b1f1, 8901bb7a9, 9579e724c, 4e5ebf79a, f779a3c64)
+- Trust a NAS's self-signed WebDAV certificate on first use, like an SFTP host key, and manage it in Settings
+  (1b1160c88)
+- Send the past five hours of redacted logs with feedback, through an opt-in box, and include five hours in error
+  reports too (5f0a7ff25, 492faa8fe, 2f05d10f7, 404cea436)
+- Ask once before moving Locked items: move them still Locked, or leave them where they are (3db40bad1, 4442916de,
+  b9f8e19f2)
+- Cancel a share mount stuck waiting on macOS, and get the command that restarts its stuck sign-in helper (208106ac0,
+  5baad85e9, 6af4ce29d, b220ada44, 7b1986e82)
+- Show what went wrong when a window crashes, with Send error report and Reload, instead of a bare "500" (340360b28,
+  c8e2d21e5, 1e715841b, fec62e226)
+- Let agents pattern-rename files with the Multi-Rename Tool's settings, as a preview or a proposal you approve
+  (6d3d14b2e)
+
+### Changed
+
+- Ride out a dropped server in every copy, move, delete, compress, and zip edit: Cmdr waits, finishes, and removes its
+  temp files once the server is back (055da46b1, 7ced23017, 07fce04d6, 05d83ea11, 1cce884a2, 47775faa4, 189012e3a,
+  41cdf9886, 52a45dd22, d790d4e80, 9d9ee286b, 285937d6e, 927660e94)
+- Search Settings, the command palette, and keyboard shortcuts in any language and script, accents optional, including
+  everyday words like "colour" or "basurero" (2c753187e, d67330530, 24988ff15, 256082e1c, 196d9e600, 2ed6723e2,
+  50ebdae75, ac7f35c8b, d4611e300)
+- Edit zips that hold password-protected entries: they stay intact and still open with their password (6b6109def)
+- Say a wrong archive or backup password right under the field, every time (aa7a7053f)
+- Say why Rollback is off for an operation (e0fae29b3)
+- Show a partly indexed folder's size as "at least" in the replace and delete dialogs (916c09630)
+
+### Fixed
+
+- Fix deleting a folder on an external drive, phone, server, or Windows or Samba share also deleting what its symlinks
+  and junctions point to (46d326c4b, 066a31e8f, 8ba693f78, 80be9d487, c48974561, 25903c944, 8572bde29)
+- Fix a delete, Overwrite, or move of a folder emptying a drive mounted inside it: Cmdr now refuses (1b84ba55b,
+  4abcee602, 641d51476, c5cb00a8a, df7174d09)
+- Fix an Overwrite cut off by a crash or a dropped share able to lose both the original and the new file (a2b2b0092,
+  1dead42a5, 71317eebc, 0bba82b75, 1416cc37f, 1820b562a, 0119c7bca, 43ad6da10, 2eb58642f)
+- Fix a file that changed size mid-copy, or an upload cut off by a network drop, landing truncated under its real name
+  (2f78bf7c1, e88b60f17, 03d743765, a2ce8ed4f, 05281521b, 8ec2db707)
+- Fix delete, copy, drag, F3, F4, tags, and other actions sometimes hitting the neighboring file right after the folder
+  changed, a quick filter, or a sort (305525364, 0c60d9997, 14205d073, 6c3ea8482, 68f832169, 29c2696fd)
+- Fix Copy or Move sometimes doing nothing when pressed right after a folder changed (58706dacc)
+- Fix copies failing after a server reconnects, or on a broken pipe, instead of waiting for it (60622ca47, e16379e6c,
+  86cf522d8, bd7ac273f, 1d9884911, d2a1e9faa, 15fe1fa92)
+- Fix a failed or canceled copy leaving half-written files on a share, or deleting a file someone saved at its name
+  meanwhile (5ee115cbc, 0ad03da1d, 170dbd17d, f645e89fa)
+- Fix a copy hanging, even through Cancel, after you answered a folder merge question (12ed4684c, 6054233d8, 09391261e,
+  5b744d1fc)
+- Fix copying small files to older Samba NASes dropping the connection (6bf93dcdd)
+- Fix undo deleting the only copy left or a file edited since, or acting on the wrong item in case-sensitive folders or
+  the Trash (a442da10d, fdd290566, ad814ae34, 9dc544223, ebbd69108, c26b795e8, 37b632b03, 92bad4971)
+- Fix settings, shortcuts, favorites, histories, saved servers, and trusted SSH hosts getting wiped when Cmdr couldn't
+  read their file at launch (881176c6d, 7a74e20c6, 6833eb4f7, 5591fb26f, 2599576fa, 0d065b6a2)
+- Fix a paid license showing as unpaid after a damaged license file was reset (2a3f1f34e)
+- Fix a setting or shortcut changed in one window reverting when another window saves (1a21e83c1, f836df282)
+- Fix editing a zip garbling older Japanese, Chinese, or Russian file names, dropping its comment or self-extractor
+  part, or opening an encrypted entry as its neighbor (60003e0f5, 192398204, 70e597177, 2842e5719, e1928762f, 5f147ce65,
+  864cdcafb)
+- Fix moving folders into or out of a zip losing files, and a failed zip edit on a phone or server leaving the archive
+  under a temp name (0ec2a5b73, d217dcf78, 43bd2697c, 5d0f8f99b, c4a0457c4, 30367c130)
+- Fix phones and cameras mixing up same-named files, or acting on the wrong file after reconnecting (c149f5020,
+  526ad6366, f8b941702, cc0f3e2da, 4f7b285a2, 90d6ecf6d)
+- Fix renaming onto a folder's name on WebDAV or Android deleting or burying that folder (790e1624d, 2c030b2ab,
+  5df045d8e)
+- Fix a WebDAV folder delete taking a file another app dropped into it at that moment (4e2e7f071, 323be1453)
+- Fix a long pause failing a WebDAV upload (a91c9346b)
+- Fix S3 deleting a same-named file beside a folder on delete, move, or undo, and unfinished uploads staying billed
+  after an address change (aecb8e8f5, c46ae2e62, 259835d85)
+- Fix a mistyped password at server sign-in replacing the saved one, and Remember not saving the one that connected
+  (e9a46a0d0, 09211f37f, 14d9d2527, 02525fd64)
+- Fix Linux without a keyring refusing to save passwords after moving to a new machine (8232efac5, 6fcea50d4)
+- Fix Cmdr crashing when a drive or share disappears while it reads a file there (f73c1da9c, e2beb45fa, f2f6a7bab)
+- Fix ejecting a drive failing while Cmdr had a git repo on it open (f0c753728, 4a288cb99)
+- Fix a drive index rebuild crashing Cmdr (6ff850fb3)
+- Fix the drive index freezing, rebuilding after a rename, missing some changes, or keeping stray entries from copies to
+  phones and shares (16df0ecec, a45f98d37, d2ecae90d, 3e8241049, 40aefa432, d28487069, ab88a2d95)
+- Fix the app freezing on a language switch or when the main window gains focus (0a23c9122)
+- Fix updates on an install Cmdr can't write to asking for an admin password on every check: Cmdr now says once how to
+  update (a7b282d1c, 15dd7fa10)
+- Fix edits to an "Open with" copy of a file in a zip getting deleted at the next launch: they go to the Trash now
+  (3eaebc73f, 39819ee59, f10e805d3, c337a1578)
+- Fix the viewer's "Save as file" replacing unreadable characters with "�" (202ae19cd, 2f5271628, fd415c672)
+- Fix toggling a color tag wiping a file's other Finder tags when Cmdr couldn't read them (304f9872f)
+- Fix renaming or writing inside a repo's `.git` view reaching git's real folders, and "Open terminal here" there
+  opening a missing path (545748435, b78f4b3e1, 1337252b2)
+- Fix "Ask about selection" attaching the wrong or only the visible files (c3a0ca76c, a32bbe41c)
+- Fix the delete dialog failing to open for same-named files picked from search results (58aaad220)
+- Fix the files/s rate showing wild numbers on big-file moves (9c83dbe32)
+- Fix Cmdr's launch stopping any process that mentioned its AI server's path, like a `tail -f` of its log (5c63e7f55)
+- Fix VoiceOver and Voice Control missing some button names and reading the rename field as part of its row (d565214b8,
+  a7b318620, 0a6198468)
+
+### Security
+
+- Hide every path, name, server, and account in error reports exactly, by marking each one where it's logged (8c4a5c53f,
+  9d874dae5, b60b94977, 15568f365, 858727b80, 889e1928e, 2d14d419d, d81dcf244, ffbd99a63, 08b958d2b, f414e3564,
+  8b730beed, 5436b6e53, 210e851d5, c7429383f, 0b7405a11, 2192bfed2, 5514dd0b5, 50af2d49f, 9c80b78d4, 873440aac,
+  b98325781, e03215e8c, d38d0dfa0, 5ae1fcfcc, 30a64e0c2, 8bf5b5a53, ee5371562, e14b05fdc)
+- Keep usage stats and crash reports off when the settings file can't be read (df5f916f5, fdbffdfca)
+- Refuse an SFTP host key marked revoked in known_hosts (5bbc6291d)
+- Make "Forget saved password" and an unchecked Remember really forget an SMB share's password (9e74a92c4)
+- Warn before a WebDAV server on an http address gets your password, and try https on the same host first (9d7e92d22,
+  f946c4118, a74eb49af)
+- Keep image search from following a symlink into an excluded folder (1488c5897)
+- Keep Multi-rename's results file in a private folder on shared Linux machines (fe9e94c2b, ec797164e)
+- Stop the MCP log resource from revealing whether a path appears in the log (4fe77b514)
+- Update the TLS and zip libraries for upstream security fixes (0246c7b34, 40fa7518e)
+
+### Non-app
+
+- Land every change on `main` only through a green CI run, releases included (ffe8ff239, 614753b7a, 6d49ece51,
+  e7cb3bc58, bd2912437, 56d515592, f26b7211c)
+- Run a second data-safety hunt outside the transfer engines: 44 verified defects filed, most fixed in this release
+  (9ad1e1e2c)
+- Fail the check on any log line that prints a user path, name, or server unmarked (c779da067)
+- Move to Rust 1.99.1 and Tauri 2.12.4 (96c491f1d, 7f3909d41)
+- Prepare for moving the repo to the `getcmdr` GitHub org (83a413dee, 4f3216abf, 6d4fae362)
+
 ## [0.54.0] - 2026-10-18
 
 Smaller things this time:
