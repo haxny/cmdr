@@ -731,6 +731,9 @@ export const commands = {
    *  person asked: in memory, in the Keychain, and in anything opened with it, so
    *  the next read asks again. Answers whether the Keychain let go of its copy;
    *  the container is locked for this session either way.
+   *
+   *  Within the unlock's budget, detached rather than dropped past it: a Keychain
+   *  call that hangs answers `TimedOut` and the forget still runs to its end.
    */
   forgetSavedContainerPassword: (parentVolumeId: string, path: string) =>
     typedError<PasswordForgotten, UnlockError>(
