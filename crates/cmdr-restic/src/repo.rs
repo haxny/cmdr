@@ -18,6 +18,34 @@ use std::sync::Arc;
 use tokio::runtime::Handle;
 use zeroize::Zeroizing;
 
+/// The threads of the pool a rustic call that fans out runs on
+/// ([`on_own_pool`]). rustic's `stream_list` parks one on the channel it
+/// drains, so four read and decode at once.
+pub(crate) const RUSTIC_POOL_THREADS: usize = 5;
+
+/// What those threads are called, so a sample or a test tells them from
+/// rayon's global pool.
+pub(crate) const RUSTIC_POOL_PREFIX: &str = "restic-rustic";
+
+/// Runs `work`, a rustic call, inside a small pool of its own, built for it and
+/// gone with it. rustic 0.13.0 fans out on whatever pool it runs in:
+/// `stream_list` (the index load, a snapshot refresh) does `rayon::spawn` plus
+/// `into_par_iter`, each a pool worker blocked in our adapter for a NAS round
+/// trip, and the index's `into_index` does a parallel sort. From a plain
+/// blocking thread that's rayon's GLOBAL pool, which Cmdr's search and icons
+/// share. `install` puts all of it here instead. Blocks: run it on the blocking
+/// pool.
+pub(crate) fn on_own_pool<T: Send>(work: impl FnOnce() -> Result<T, ResticError> + Send) -> Result<T, ResticError> {
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(RUSTIC_POOL_THREADS)
+        .thread_name(|i| format!("{RUSTIC_POOL_PREFIX}-{i}"))
+        .build()
+        .map_err(|err| ResticError::Unreadable {
+            detail: format!("rustic's pool didn't start: {err}"),
+        })?;
+    pool.install(work)
+}
+
 /// Why a repo couldn't be opened or read. Typed, so the host words each one.
 #[derive(Debug, Clone)]
 pub(crate) enum ResticError {
@@ -115,14 +143,17 @@ impl ResticRepo {
     /// Every snapshot in the repo, given the ones already known: rustic keeps
     /// those, reads only the snapshot files it hasn't seen, and drops the ones
     /// gone from the repo. Pass an empty `current` for a first read. Never reads
-    /// the index.
+    /// the index. rustic reads the new files in parallel, so on its own pool
+    /// ([`on_own_pool`]).
     pub(crate) async fn refresh_snapshots(&self, current: Vec<SnapshotFile>) -> Result<Vec<SnapshotFile>, ResticError> {
         let repo = Arc::clone(&self.repo);
         let backend = Arc::clone(&self.backend);
         self.runtime
             .spawn_blocking(move || {
-                repo.update_all_snapshots(current)
-                    .map_err(|err| classify(&err, &backend))
+                on_own_pool(|| {
+                    repo.update_all_snapshots(current)
+                        .map_err(|err| classify(&err, &backend))
+                })
             })
             .await
             .map_err(worker_crashed)?

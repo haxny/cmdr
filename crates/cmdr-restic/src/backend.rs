@@ -28,6 +28,9 @@ pub(crate) struct VolumeBackend {
     /// How many writes rustic tried. Every one is refused; the count is what lets
     /// a test pin "browsing never even tries to write".
     write_attempts: AtomicUsize,
+    /// The thread each whole-file read ran on, by file type.
+    #[cfg(test)]
+    read_threads: Mutex<Vec<(FileType, String)>>,
     /// Packs held open for positioned reads (see [`HeldReaders`]). Shared with
     /// the sweep that closes them once idle.
     held: Arc<Mutex<HeldReaders>>,
@@ -45,6 +48,8 @@ impl VolumeBackend {
             root,
             handle,
             write_attempts: AtomicUsize::new(0),
+            #[cfg(test)]
+            read_threads: Mutex::new(Vec::new()),
             held: Arc::new(Mutex::new(HeldReaders::default())),
             reader_idle: READER_IDLE,
             index_feed: None,
@@ -69,6 +74,16 @@ impl VolumeBackend {
     pub(crate) fn with_reader_idle(mut self, idle: Duration) -> Self {
         self.reader_idle = idle;
         self
+    }
+
+    /// The thread each whole-file read of type `tpe` ran on.
+    #[cfg(test)]
+    pub(crate) fn read_threads(&self, tpe: FileType) -> Vec<String> {
+        lock(&self.read_threads)
+            .iter()
+            .filter(|(read, _)| *read == tpe)
+            .map(|(_, thread)| thread.clone())
+            .collect()
     }
 
     /// How many write calls rustic made (all refused).
@@ -461,6 +476,8 @@ impl ReadBackend for VolumeBackend {
     }
 
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
+        #[cfg(test)]
+        lock(&self.read_threads).push((tpe, std::thread::current().name().unwrap_or_default().to_string()));
         if tpe == FileType::Index
             && let Some(feed) = &self.index_feed
         {

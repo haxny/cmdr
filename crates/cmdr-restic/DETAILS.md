@@ -129,28 +129,30 @@ never does.
   `ResticVolume::list_directory_with_cancel` races the pane's token and drops its future, waiter included. A caller
   arriving after a cancel starts a fresh load. Joining and leaving share one lock, so nobody joins a load the last
   waiter just cancelled.
-- **Streaming the index files.** rustic's own load reads every index file in parallel on rayon's GLOBAL pool (16
-  blocked workers on an M3 Max for the whole load; Cmdr's search and icons share that pool), can't be cancelled, and
-  counts files. So the load lists `index/` itself and reads the files on the async runtime, checking the cancel between
-  chunks, starting while the unlock's scrypt runs. They stream to rustic through an `IndexFeed`, a bounded window
-  (`WINDOW`, 16 MiB): the adapter answers rustic's `list_with_size(Index)` with the load's listing, and each
-  `read_full(Index)` takes that file from the feed, blocking its decoder until it's in, so the bytes go the moment
-  rustic has them. A cancel answers at once; reads in flight are DETACHED and stop at their next chunk, ❌ never aborted
-  (a read dropped inside a device transaction can wedge a phone), and a decoder waiting on the feed hears `Cancelled`.
-  The same path serves every index size: ❌ no cutoff where rustic reads the files itself.
+- **Streaming the index files.** rustic's own load reads every index file in parallel on rayon's GLOBAL pool (16 blocked
+  workers on an M3 Max for the whole load; Cmdr's search and icons share that pool), can't be cancelled, and counts
+  files. So the load lists `index/` itself and reads the files on the async runtime, checking the cancel between chunks,
+  starting while the unlock's scrypt runs. They stream to rustic through an `IndexFeed`, a bounded window (`WINDOW`, 16
+  MiB): the adapter answers rustic's `list_with_size(Index)` with the load's listing, and each `read_full(Index)` takes
+  that file from the feed, blocking its decoder until it's in, so the bytes go the moment rustic has them. A cancel
+  answers at once; reads in flight are DETACHED and stop at their next chunk, ❌ never aborted (a read dropped inside a
+  device transaction can wedge a phone), and a decoder waiting on the feed hears `Cancelled`. The same path serves every
+  index size: ❌ no cutoff where rustic reads the files itself.
 - **What the window reads ahead.** rustic's decoders each walk a contiguous run of the listing, starting wherever rayon
   split it, so the feed reads, in order: a file a decoder waits on (always, window or not), the file after each one
   asked for, then the listing in order. Reading ahead stops at four files in flight (`READS_AHEAD`) or when the window
   is full (a file counts at its listed size, the whole window when the listing gave none, and what arrived once it's
   in). So it holds at most the window plus one file per decoder. A file read ahead that runs past its listed size plus
   64 KiB is let go of (its bytes taken back off the progress) and read again only when a decoder asks.
-- **rustic decodes on the load's own pool.** In 0.13.0, `to_indexed` → `GlobalIndex::new` → `stream_all` →
-  `stream_list` does `rayon::spawn` + `into_par_iter` over the index files (read, decrypt, decompress, parse JSON each),
-  feeding a zero-capacity channel the caller drains; `into_index` then `par_sort`s the entries. All of that lands on
-  whatever pool the caller runs in, the global one from a plain blocking thread. So the build runs inside
-  `pool.install` on a pool of five `restic-index-*` threads (`INDEX_THREADS`: one parks on the channel, four decode),
-  built per load and gone with it. The build itself (decrypt and parse) isn't cancellable; on a warm mount it costs
-  ~0.25 s more than on 16 threads (1.03–1.06 s against 0.79 s for 119 MB), and nothing on the network.
+- **rustic decodes on the load's own pool.** In 0.13.0, `to_indexed` → `GlobalIndex::new` → `stream_all` → `stream_list`
+  does `rayon::spawn` + `into_par_iter` over the index files (read, decrypt, decompress, parse JSON each), feeding a
+  zero-capacity channel the caller drains; `into_index` then `par_sort`s the entries. All of that lands on whatever pool
+  the caller runs in, the global one from a plain blocking thread. So the build runs inside `repo::on_own_pool`:
+  `pool.install` on five `restic-rustic-*` threads (`RUSTIC_POOL_THREADS`: one parks on the channel, four decode), built
+  for the call and gone with it. A snapshot refresh (`update_all_snapshots`, the same `stream_list` over `snapshots/`)
+  runs there too; nothing else this crate calls fans out. The build itself (decrypt and parse) isn't cancellable; on a
+  warm mount it costs ~0.25 s more than on 16 threads (1.03–1.06 s against 0.79 s for 119 MB), and nothing on the
+  network.
 - **Honest progress**: `ListingPhase::LoadingIndex { done_bytes, total_bytes, done_files, total_files }` from the index
   files' listing and the bytes actually read, ❌ never rustic's file count. Each waiter forwards it to its listing's
   `on_progress` at most every 100 ms. A moving phase is what keeps the listing engine's stall watch quiet
@@ -162,8 +164,8 @@ never does.
   never one in use: an `Arc` held outside the slot (an open read stream, a listing in flight) or used within the last 2
   s (`lease_grace`, the gap between a scan's listings or a copy's files). With every one in use the cap is overshot.
   Eviction drops the index only: the password, the opened repo, and the snapshot list stay, so coming back reloads
-  silently. A cap by count, not bytes: estimate an index at ~5x its `index/` folder, steady (§ "Why one index and
-  eight opened repos").
+  silently. A cap by count, not bytes: estimate an index at ~5x its `index/` folder, steady (§ "Why one index and eight
+  opened repos").
 - **Idle drop after five minutes** unused (`index_idle_drop`), unless a read stream still holds it. Getting it back is
   an unlock plus a load, which the progress phase covers.
 - **An index is freed on the blocking pool**, ❌ never under the slot's lock or on an async worker: the last `Arc` of a
@@ -181,8 +183,8 @@ as long as it stays loaded; `docs/notes/restic/open-cost.md` § "Streaming the i
   within a few MB, because the peak is rustic's own, at the end of the build; the streamed feed adds nothing above it.
   David's 6 TB NAS repo (likely 250–350 MB of index files) would hold ~1.3–1.8 GB, and a coverage reload doubles that
   for the swap. Two at once is past what a file manager should hold, so the cap stays one.
-- **An opened repo is a few MB** (the whole process is 43–45 MB after an unlock, runtime and all), so eight cost
-  nothing worth capping lower, and they're what make coming back to a repo skip scrypt.
+- **An opened repo is a few MB** (the whole process is 43–45 MB after an unlock, runtime and all), so eight cost nothing
+  worth capping lower, and they're what make coming back to a repo skip scrypt.
 
 ### Passwords and the credential store
 

@@ -113,7 +113,9 @@ async fn rustic_decodes_the_index_on_the_loads_own_pool() {
     let threads = indexed.backend.index_feed().expect("the load's feed").serving_threads();
     assert!(!threads.is_empty());
     assert!(
-        threads.iter().all(|name| name.starts_with(super::INDEX_THREAD_PREFIX)),
+        threads
+            .iter()
+            .all(|name| name.starts_with(crate::repo::RUSTIC_POOL_PREFIX)),
         "every file was served to a thread of the load's pool: {threads:?}"
     );
 }

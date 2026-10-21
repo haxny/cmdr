@@ -168,3 +168,26 @@ async fn reading_a_tree_uses_ranged_reads_of_the_pack_never_the_whole_pack() {
     );
     assert_eq!(repo.backend.write_attempts() + indexed.backend.write_attempts(), 0);
 }
+
+/// ❗ rustic reads snapshot files in parallel (`stream_list`: `rayon::spawn` plus
+/// `into_par_iter`) on whatever pool it runs in. A refresh runs on a small pool
+/// of its own, so a slow NAS never parks rayon's global pool (search and icons)
+/// for a root listing.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_snapshot_refresh_reads_on_its_own_pool() {
+    let fixture = FixtureRepo::init(PASSWORD);
+    for hour in 0..6 {
+        fixture.add_snapshot(at(1_791_000_000 + hour * 3_600), "m3");
+    }
+    let parent = parent_with(&fixture, InMemoryVolume::new("nas")).await;
+    let repo = open(&parent, PASSWORD).await.expect("opens");
+
+    repo.refresh_snapshots(Vec::new()).await.expect("lists snapshots");
+
+    let threads = repo.backend.read_threads(rustic_core::FileType::Snapshot);
+    assert_eq!(threads.len(), 6);
+    assert!(
+        threads.iter().all(|name| name.starts_with(super::RUSTIC_POOL_PREFIX)),
+        "every snapshot file was read on the refresh's own pool: {threads:?}"
+    );
+}

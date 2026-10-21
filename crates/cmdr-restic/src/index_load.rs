@@ -9,11 +9,11 @@
 //! them to rustic through an [`IndexFeed`]: a bounded window, each file's bytes
 //! dropped the moment rustic takes them, so the memory on top of rustic's own
 //! stays the same at any index size. rustic decodes them on a small pool of the
-//! load's own ([`INDEX_THREADS`]), never the global one.
+//! load's own (`repo::on_own_pool`), never the global one.
 
 use crate::backend::VolumeBackend;
 use crate::index_feed::{IndexFeed, Keep, Start};
-use crate::repo::{IndexedRepo, ResticError, open_blocking, worker_crashed};
+use crate::repo::{IndexedRepo, ResticError, on_own_pool, open_blocking, worker_crashed};
 use bytes::Bytes;
 use cmdr_fs::volume::{ListingPhase, ListingProgress, Volume, VolumeError};
 use rustic_core::{FileType, Id};
@@ -31,18 +31,11 @@ use zeroize::Zeroizing;
 /// busy while rustic decodes, and the same at any index size.
 pub(crate) const WINDOW: u64 = 16 * 1024 * 1024;
 
-/// The threads of the pool rustic decodes the index on: one collects what the
-/// others decode (rustic's `stream_list` parks it on a channel), so
-/// [`INDEX_DECODERS`] decode at once.
-const INDEX_THREADS: usize = INDEX_DECODERS + 1;
-
-/// How many index files rustic decodes at once, each one waiting on the feed
-/// for at most one file.
-const INDEX_DECODERS: usize = 4;
-
-/// What the load's pool threads are called (a thread list in a sample, or a
-/// test, tells them from rayon's global pool by it).
-const INDEX_THREAD_PREFIX: &str = "restic-index";
+/// How many index files rustic decodes at once on the load's pool, each one
+/// waiting on the feed for at most one file: one of the pool's threads parks
+/// on the channel the others feed.
+#[cfg(test)]
+const INDEX_DECODERS: usize = crate::repo::RUSTIC_POOL_THREADS - 1;
 
 /// The longest a waiter goes between two progress ticks it forwards, so a pane
 /// hears a few a second rather than one per chunk read.
@@ -240,18 +233,9 @@ async fn run(
                 .spawn_blocking(move || open_blocking(&backend, &password, None))
         };
         let open = opening.await.map_err(worker_crashed)??;
-        let pool = rayon::ThreadPoolBuilder::new()
-            .num_threads(INDEX_THREADS)
-            .thread_name(|i| format!("{INDEX_THREAD_PREFIX}-{i}"))
-            .build()
-            .map_err(|err| ResticError::Unreadable {
-                detail: format!("the index pool didn't start: {err}"),
-            })?;
         let backend = Arc::clone(&backend);
-        // `install` runs rustic's load ON the pool, so the `rayon::spawn` and the
-        // parallel iteration inside it land on this pool, not the global one.
         spec.runtime
-            .spawn_blocking(move || pool.install(|| IndexedRepo::index(open, backend)))
+            .spawn_blocking(move || on_own_pool(|| IndexedRepo::index(open, backend)))
             .await
             .map_err(worker_crashed)?
     };
