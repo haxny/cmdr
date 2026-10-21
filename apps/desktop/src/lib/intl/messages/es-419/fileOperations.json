@@ -281,6 +281,6 @@
   },
   "fileOperations.transferDialog.rememberChoiceHelp": "La próxima vez, Cmdr empieza con esta opción, y puedes cambiarla en Configuración. Si sobrescribe archivos, verás un aviso antes.",
   "@fileOperations.transferDialog.rememberChoiceHelp": {
-    "sourceHash": "c26d762"
+    "sourceHash": "f743019"
   }
 }
