@@ -125,6 +125,17 @@ describe('computeFullListColumnWidths', () => {
     expect(long.ext).toBeGreaterThan(short.ext)
   })
 
+  it('measures a restic snapshot row’s hostname, the text its Ext cell shows', () => {
+    _setMeasureForTests(fakeMeasure)
+    const folder = { name: '2026-10-12 21.00.03 (a1b2c3d4)', isDirectory: true }
+    const bare = computeFullListColumnWidths({ ...baseArgs, entries: [entry(folder)] })
+    const snapshot = computeFullListColumnWidths({
+      ...baseArgs,
+      entries: [entry({ ...folder, resticMeta: { hostname: 'naspolya', tags: [], paths: [] } })],
+    })
+    expect(snapshot.ext).toBeGreaterThan(bare.ext)
+  })
+
   it('caps the ext column so a pathological extension cannot dominate the row', () => {
     _setMeasureForTests(fakeMeasure)
     const longExt = 'extension-extension-extension-extension-extension'

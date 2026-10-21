@@ -11,6 +11,8 @@ import {
   getNameColumnText,
   pickSizeDisplay,
   isHiddenRowDimmed,
+  extCellText,
+  wordResticSnapshot,
 } from './full-list-utils'
 import type { SizeDisplayPick } from './full-list-utils'
 import type { FileEntry } from '../types'
@@ -313,5 +315,52 @@ describe('isHiddenRowDimmed', () => {
     // stacking the hidden-dim color on top would fade toward the contrast
     // floor that opacity treatment already skirts. Restricted wins.
     expect(isHiddenRowDimmed({ isHidden: true }, { ...noExclusions, isRestricted: true })).toBe(false)
+  })
+})
+
+describe('restic snapshot rows', () => {
+  function snapshotRow(meta: FileEntry['resticMeta']): FileEntry {
+    return {
+      name: '2026-10-12 21.00.03 (a1b2c3d4)',
+      path: '/repo/Browse snapshots/2026-10-12 21.00.03 (a1b2c3d4)',
+      isDirectory: true,
+      isSymlink: false,
+      permissions: 0o755,
+      owner: '',
+      group: '',
+      iconId: 'dir',
+      extendedMetadataLoaded: true,
+      resticMeta: meta,
+    }
+  }
+
+  it('shows the hostname in the Ext cell, which a folder otherwise leaves empty', () => {
+    expect(extCellText(snapshotRow({ hostname: 'naspolya', tags: [], paths: [] }))).toBe('naspolya')
+    expect(extCellText(snapshotRow({ hostname: '', tags: [], paths: [] }))).toBe('')
+  })
+
+  it('keeps every other row’s Ext cell its extension', () => {
+    expect(extCellText({ ...snapshotRow(undefined), name: 'photo.jpg', isDirectory: false })).toBe('jpg')
+    expect(extCellText(snapshotRow(undefined))).toBe('')
+  })
+
+  it('words the host, tags, and paths one line each', () => {
+    const tooltip = wordResticSnapshot({
+      hostname: 'm3',
+      tags: ['daily', 'home'],
+      paths: ['/Users/david', '/etc'],
+    })
+    expect(tooltip).toBe('Backed up from m3\nTags: daily, home\nBacked-up paths: /Users/david, /etc')
+  })
+
+  it('picks the singular noun for one tag or one path', () => {
+    expect(wordResticSnapshot({ hostname: 'm3', tags: ['daily'], paths: ['/Users/david'] })).toBe(
+      'Backed up from m3\nTag: daily\nBacked-up path: /Users/david',
+    )
+  })
+
+  it('leaves out a line the snapshot has nothing for', () => {
+    expect(wordResticSnapshot({ hostname: 'm3', tags: [], paths: [] })).toBe('Backed up from m3')
+    expect(wordResticSnapshot({ hostname: '', tags: ['daily'], paths: [] })).toBe('Tag: daily')
   })
 })

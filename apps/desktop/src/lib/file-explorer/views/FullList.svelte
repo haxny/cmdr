@@ -52,7 +52,8 @@
         isDirSizeUpdating,
         LOWER_BOUND_GLYPH,
         hasSizeMismatch,
-        getDisplayExtension,
+        extCellText,
+        wordResticSnapshot,
         getNameColumnText,
         pickSizeDisplay,
         isHiddenRowDimmed,
@@ -823,6 +824,7 @@
                     {@const sizeTriads = displaySize != null ? formatSizeForDisplay(displaySize, sizeFormatOpts) : undefined}
                     {@const gitStatus = gitColumnVisible ? gitColumn.statusFor(file) : null}
                     {@const markRun = markRunEdges(globalIndex, selectedIndices)}
+                    {@const snapshotTooltip = file.resticMeta != null ? wordResticSnapshot(file.resticMeta) : undefined}
                     <div
                         {...fileRowAttributes({
                             listId,
@@ -834,6 +836,7 @@
                                 syncStatus: syncStatusMap[file.path],
                                 isRestricted: fileIsRestricted,
                                 details: {
+                                    host: showExtensionInName ? undefined : file.resticMeta?.hostname,
                                     size: rowSizeText({
                                         override: sizeOverride.override,
                                         triads: sizeTriads,
@@ -892,6 +895,7 @@
                                         preferBreakAt: file.name.includes('/') ? '/' : '.',
                                         startRatio: 0.7,
                                         tooltipWhenTruncated: true,
+                                        tooltip: snapshotTooltip !== undefined ? `${file.name}\n\n${snapshotTooltip}` : undefined,
                                     }}
                                 ></span>{#if fileIsRestricted}<StatusGlyph
                                     name="info"
@@ -919,8 +923,9 @@
                                     class="col-ext"
                                     class:is-hidden={rowIsHiddenDimmed}
                                     use:useShortenMiddle={{
-                                        text: getDisplayExtension(file.name, file.isDirectory),
+                                        text: extCellText(file),
                                         tooltipWhenTruncated: true,
+                                        tooltip: snapshotTooltip,
                                     }}
                                 ></span>
                             {/if}

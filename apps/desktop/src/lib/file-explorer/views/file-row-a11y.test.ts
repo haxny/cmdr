@@ -100,6 +100,17 @@ describe('fileRowName', () => {
   })
 })
 
+describe('fileRowName for a restic snapshot row', () => {
+  // The Ext cell shows the snapshot's hostname between the name and the size, so the name
+  // says it there too (WCAG 2.5.3), with the words around it in parentheses.
+  it('says the host after the name, before the size', () => {
+    const snapshot = entry({ name: '2026-10-12 21.00.03 (a1b2c3d4)', isDirectory: true })
+    expect(fileRowName({ entry: snapshot, details: { host: 'naspolya', size: '1 KB' } })).toBe(
+      '2026-10-12 21.00.03 (a1b2c3d4) (folder), (Backed up from) naspolya, 1 KB',
+    )
+  })
+})
+
 describe('rowSizeText', () => {
   const triads = [
     { value: '1', tierClass: 'size-kb' },

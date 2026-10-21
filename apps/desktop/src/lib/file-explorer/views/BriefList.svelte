@@ -46,7 +46,13 @@
         provisionalColumnWidth,
     } from './brief-column-widths.svelte'
     import { getDirStatsBatch } from '#lib/tauri-commands/index.js'
-    import { buildDirSizeTooltip, hasSizeMismatch, isDirSizeUpdating, isHiddenRowDimmed } from './full-list-utils'
+    import {
+        buildDirSizeTooltip,
+        hasSizeMismatch,
+        isDirSizeUpdating,
+        isHiddenRowDimmed,
+        wordResticSnapshot,
+    } from './full-list-utils'
     import {
         getRowHeight,
         getSizeMismatchWarning,
@@ -879,8 +885,22 @@
     // Colored Finder-tag dots after the name (default on). Gates render + enrich.
     const showTags = $derived(getShowTags())
 
-    /** Build tooltip for a directory entry showing recursive size info. */
+    /**
+     * Build tooltip for a directory entry showing recursive size info, under a
+     * restic snapshot row's host, tags, and paths (Brief has no Ext cell to show
+     * the host in, so the hover is where they live).
+     */
     function buildDirTooltip(file: FileEntry): string | { html: string } | undefined {
+        const sizeTip = buildDirSizeOnlyTooltip(file)
+        if (file.resticMeta == null) return sizeTip
+        const snapshotTip = wordResticSnapshot(file.resticMeta)
+        if (snapshotTip === '') return sizeTip
+        if (!sizeTip) return snapshotTip
+        const sizeHtml = typeof sizeTip === 'object' ? sizeTip.html : escapeHtml(sizeTip)
+        return { html: `${escapeHtml(snapshotTip).replaceAll('\n', '<br>')}<br><br>${sizeHtml}` }
+    }
+
+    function buildDirSizeOnlyTooltip(file: FileEntry): string | { html: string } | undefined {
         if (!file.isDirectory) return undefined
         const base = buildDirSizeTooltip(
             file.recursiveSize,

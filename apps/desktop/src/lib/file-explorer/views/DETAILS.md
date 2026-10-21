@@ -682,3 +682,18 @@ which is why it lives here rather than in the backend.
 
 ❌ Never let the width measurer word a cell itself. It calls `wordGitMeta`, so a copy edit or a locale switch can't move
 the rendered text and the measured text apart.
+
+## Wording a restic snapshot row
+
+A snapshot folder's name carries only its time and short id, so the backend ships the backup's host, tags, and paths as
+facts on `FileEntry.resticMeta` (`ResticSnapshotMeta`), on the dated rows and `latest` alike.
+
+- **The host shows in the Ext cell**, through `extCellText` (`full-list-utils.ts`), which the renderer and the measurer
+  both call. **Decision/Why**: a folder's Ext cell is otherwise empty, and with several machines backing up to one repo
+  the host is what tells two snapshots apart at a glance. The Size cell already holds the snapshot's real size, so this
+  differs from git's choice of the Size cell. The cell is capped and middle-truncated like any extension.
+- **`wordResticSnapshot` words all three** (`fileExplorer.restic.snapshot.*`), one line each, a line left out when the
+  snapshot recorded nothing for it. Full hovers it on the Ext cell and on the name (name, blank line, facts, so a
+  `showExtensionInName` user still reaches it); Brief, with no Ext cell, puts it above the folder's size tooltip.
+- **The row's accessible name says the host** right after the name, as "(Backed up from) naspolya" (WCAG 2.5.3: the Ext
+  cell is visible text), and only while the Ext column shows.

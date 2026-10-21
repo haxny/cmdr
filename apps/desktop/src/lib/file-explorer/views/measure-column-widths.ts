@@ -20,7 +20,7 @@ import type { DirStats } from './file-list-utils'
 import {
   getDirSizeDisplayState,
   LOWER_BOUND_GLYPH,
-  getDisplayExtension,
+  extCellText,
   getDisplaySize,
   hasSizeMismatch,
   wordGitMeta,
@@ -400,7 +400,7 @@ function foldEntries(
 ): { extMax: number; sizeMax: number; sizeIconSuffixMax: number; dateMax: number } {
   let { extMax, sizeMax, sizeIconSuffixMax, dateMax } = ctx
   for (const entry of entries) {
-    const ext = getDisplayExtension(entry.name, entry.isDirectory)
+    const ext = extCellText(entry)
     if (ext) {
       const w = Math.min(ctx.measure(ext), ctx.extCap)
       if (w > extMax) extMax = w

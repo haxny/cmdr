@@ -10,7 +10,8 @@ import { colorizeSize, formatNumber, formatSizeTriads } from '../selection/selec
 import { bytesLabel, type TieredSize } from '#lib/units/byte-size.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
-import type { GitCountKind, GitEntryMeta } from '#lib/ipc/bindings.js'
+import type { GitCountKind, GitEntryMeta, ResticSnapshotMeta } from '#lib/ipc/bindings.js'
+import { formatUnitList } from '#lib/intl/list-format.js'
 
 /** Layout constants for Full mode */
 export const FULL_LIST_ROW_HEIGHT = 20
@@ -62,6 +63,39 @@ export function getDisplayName(name: string, isDirectory: boolean): string {
  */
 export function getNameColumnText(name: string, isDirectory: boolean, showExtensionInName: boolean): string {
   return showExtensionInName ? name : getDisplayName(name, isDirectory)
+}
+
+/**
+ * What the Ext cell renders for one row: the extension, except on a restic
+ * snapshot row, a folder whose Ext cell would be empty, where it names the
+ * machine the backup ran on. The renderer and the measurer both call this.
+ */
+export function extCellText(entry: FileEntry): string {
+  if (entry.resticMeta != null) return entry.resticMeta.hostname
+  return getDisplayExtension(entry.name, entry.isDirectory)
+}
+
+/**
+ * Words a restic snapshot row's facts as its tooltip: the host, the tags, and
+ * the backed-up paths, one line each (the house tooltip keeps line breaks), and
+ * a line left out when the snapshot recorded nothing for it.
+ */
+export function wordResticSnapshot(meta: ResticSnapshotMeta): string {
+  const lines: string[] = []
+  if (meta.hostname !== '') {
+    lines.push(tString('fileExplorer.restic.snapshot.host', { host: meta.hostname }))
+  }
+  if (meta.tags.length > 0) {
+    lines.push(
+      tString('fileExplorer.restic.snapshot.tags', { count: meta.tags.length, tags: formatUnitList(meta.tags) }),
+    )
+  }
+  if (meta.paths.length > 0) {
+    lines.push(
+      tString('fileExplorer.restic.snapshot.paths', { count: meta.paths.length, paths: formatUnitList(meta.paths) }),
+    )
+  }
+  return lines.join('\n')
 }
 
 // ============================================================================

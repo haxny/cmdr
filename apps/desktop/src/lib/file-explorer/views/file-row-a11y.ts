@@ -67,7 +67,7 @@ export interface FileRowNameInput {
    * The Full view's cells, as the row already formatted them. An empty or missing value is
    * left out (a folder whose size isn't known yet says no size).
    */
-  details?: { size?: string; modified?: string; gitStatus?: string }
+  details?: { host?: string; size?: string; modified?: string; gitStatus?: string }
 }
 
 /**
@@ -77,7 +77,8 @@ export interface FileRowNameInput {
  * so none of it is visible text, and "in git" keeps it from echoing the date's "modified".
  * `..` says "Parent folder" in place of its name, then its cells like any row, its size as
  * "(this folder) 36,860": that cell shows the CURRENT folder's total, and bare after "Parent
- * folder" it sounded like the parent's.
+ * folder" it sounded like the parent's. A restic snapshot row's Ext cell shows the host its
+ * backup ran on, so the name says "(Backed up from) naspolya" right after the row's own name.
  *
  * It's set as the option's `aria-label`, which replaces the name the row's content would give,
  * so every badge that speaks through content (`FileIcon`'s sync badge, the restricted and
@@ -96,6 +97,7 @@ export function fileRowName({ entry, syncStatus, isRestricted = false, details }
     parent
       ? tString('fileExplorer.list.parentRowName')
       : withAside(entry.name, rowAsides(entry, syncStatus, isRestricted)),
+    details?.host ? asideAround('fileExplorer.restic.snapshot.host', details.host) : '',
     parent && size !== '' ? asideAround('fileExplorer.list.parentRowSize', size) : size,
     details?.modified ? asideAround('fileExplorer.list.rowModified', details.modified) : '',
     details?.gitStatus ? tString('fileExplorer.list.rowGitStatus', { status: details.gitStatus }) : '',
@@ -122,15 +124,21 @@ function withAside(text: string, asides: string[]): string {
 /** Stands in for the visible value while its phrase is split, so a translation may put it anywhere. */
 const VALUE_SLOT = '\u0000'
 
+/** Each phrase {@link asideAround} splits, and the param its visible value fills. */
+const ASIDE_SLOTS = {
+  'fileExplorer.list.rowModified': 'date',
+  'fileExplorer.list.parentRowSize': 'size',
+  'fileExplorer.restic.snapshot.host': 'host',
+} as const satisfies Partial<Record<MessageKey, string>>
+
 /**
  * A catalog phrase around a visible cell value, with the phrase's own words in parentheses:
  * "modified {date}" gives "(modified) 2026-10-14 10:30", "this folder {size}" gives "(this
  * folder) 36,860". The value is on the row; the words aren't. The phrase stays whole for
  * translators, whatever side of the value their language puts the words on.
  */
-function asideAround(key: 'fileExplorer.list.rowModified' | 'fileExplorer.list.parentRowSize', value: string): string {
-  const slot = key === 'fileExplorer.list.rowModified' ? { date: VALUE_SLOT } : { size: VALUE_SLOT }
-  return tString(key, slot)
+function asideAround(key: keyof typeof ASIDE_SLOTS, value: string): string {
+  return tString(key, { [ASIDE_SLOTS[key]]: VALUE_SLOT })
     .split(VALUE_SLOT)
     .map((words) => words.trim())
     .map((words) => (words === '' ? '' : `(${words})`))

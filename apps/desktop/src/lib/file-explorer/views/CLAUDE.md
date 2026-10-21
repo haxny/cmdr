@@ -20,12 +20,12 @@ edge would fake an end).
   freezes.
 - **`hasParent = true` makes UI indices 1-based**: index 0 is the `..` entry (not in backend cache), so
   `cache_index = ui_index - 1`. Forgetting it lands the cursor one row off.
-- **The renderer and the measurer are ONE contract; change both or neither.** `getDirSizeDisplayState` and `wordGitMeta`
-  (`full-list-utils.ts`) are each the single source for a cell's text, reached by the renderer through `pickSizeDisplay`
-  and by `measure-column-widths.ts` directly. Same for `listing.showExtensionInName` (drops the Ext track AND returns
-  `ext: 0`), the `tabularize` call that models `tabular-nums` canvas can't measure, and `HEADER_CHROME_ACTIVE/INACTIVE`
-  mirroring `SortableHeader`'s gap + caret. Re-inline any of them and text and width drift. `getDirSizeDisplayState`'s
-  `updating` arg is PER ROW (`isSizeUpdating(entry)`), ❌ never a per-volume flag.
+- **The renderer and the measurer are ONE contract; change both or neither.** `getDirSizeDisplayState`, `wordGitMeta`,
+  and `extCellText` (`full-list-utils.ts`) are each the single source for a cell's text, reached by the renderer through
+  `pickSizeDisplay` and by `measure-column-widths.ts` directly. Same for `listing.showExtensionInName` (drops the Ext
+  track AND returns `ext: 0`), the `tabularize` call that models `tabular-nums` canvas can't measure, and
+  `HEADER_CHROME_ACTIVE/INACTIVE` mirroring `SortableHeader`'s gap + caret. Re-inline any of them and text and width
+  drift. `getDirSizeDisplayState`'s `updating` arg is PER ROW (`isSizeUpdating(entry)`), ❌ never a per-volume flag.
 - **`FullList`'s column header is a SIBLING ABOVE the scroll container**, paying the measured scrollbar width back as
   right padding. ❌ Don't move it in, and ❌ don't reintroduce a header-height shift between `scrollTop` and the spacer
   offset: the clamp then hides row 0, the `..` cursor.

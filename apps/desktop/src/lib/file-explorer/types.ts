@@ -4,6 +4,7 @@ import type {
   FavoriteTarget,
   GitEntryMeta,
   ListingErrorReason,
+  ResticSnapshotMeta,
   TagRef,
 } from '#lib/ipc/bindings.js'
 
@@ -97,6 +98,13 @@ export interface FileEntry {
    * meaningless on purpose.
    */
   gitMeta?: GitEntryMeta
+  /**
+   * What a restic snapshot's folder row (a dated one, or `latest`) says about
+   * its backup, as facts: the host, the tags, and the backed-up paths.
+   * `extCellText` shows the host in the Ext cell and `wordResticSnapshot` words
+   * all three for the row's tooltip (both in `views/full-list-utils.ts`).
+   */
+  resticMeta?: ResticSnapshotMeta
   /**
    * The file's bytes sit in cold storage (S3 Glacier Flexible Retrieval or Deep
    * Archive) and can't be read until someone restores them. The row shows an

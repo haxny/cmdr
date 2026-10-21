@@ -10,7 +10,8 @@ do. Backend: `apps/desktop/src-tauri/src/file_system/restic/CLAUDE.md` (the rout
   `RESTIC_VIEW_FOLDER_NAME`. Pure and lexical.
 - `forget-password.ts`: the "Forget backup password" command (DETAILS § "Forgetting a saved password").
 - The pane's `restic` capability row lives in `../pane/volume-capabilities.ts`; the unlock dialog in
-  `../pane/unlock-flow.svelte.ts`.
+  `../pane/unlock-flow.svelte.ts`. A snapshot row's host, tags, and paths are worded in `../views/full-list-utils.ts`
+  (`../views/DETAILS.md` § "Wording a restic snapshot row").
 
 ## Must-knows
 
