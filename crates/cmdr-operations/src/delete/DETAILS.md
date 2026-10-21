@@ -34,10 +34,19 @@ cached preview's "directory" is never taken on its word: the backend's batch sca
 cross-volume copy streams what a link points at), so the walker re-asks the parent listing or `entry_kind`, one probe
 per top-level folder with a cold parent. A delete-purpose preview recounts a selected link as one leaf
 (`count_selected_links_as_links`), so the dialog's count describes the delete, but the walker's own answer is what
-protects the target. Pinned by `volume_symlink_tests.rs` (nested link, link-following backend, pane-listed parent, cold
-preview, preview count), `link_delete_tests.rs` (the same over a real `LocalPosixVolume`), and the backends' half by the
-conformance cell `assert_delete_of_a_link_to_a_folder_removes_the_link_alone` (local, ADB, SFTP). Regression anchor:
-#505 (a nested `data -> ~/Photos` link on an external drive took `~/Photos`).
+protects the target.
+
+A child's `EntryKind::of` is only as good as the listing under it. Where a listing can list a link as the folder it
+points to (`BackendKind::listings_mark_links` is `false`: SMB, since Samba never marks a Unix symlink), the walker asks
+`Volume::entry_kind` of every listed folder before descending it, ONE round trip per folder (SMB's is a bare compound
+stat), and a link it names is a leaf like any other. A cached listing (`authoritative_listing`) is the same listing, so
+it gets the same probe. Regression anchor: #613 (deleting a folder on a Samba share that held a symlink to another
+folder in the share deleted that folder's files).
+
+Pinned by `volume_symlink_tests.rs` (nested link, link-following backend, a listing that hides the link, pane-listed
+parent, cold preview, preview count), `link_delete_tests.rs` (the same over a real `LocalPosixVolume`), and the
+backends' half by the conformance cell `assert_delete_of_a_link_to_a_folder_removes_the_link_alone` (local, ADB, SFTP).
+Regression anchor: #505 (a nested `data -> ~/Photos` link on an external drive took `~/Photos`).
 
 ## A mount is a wall
 

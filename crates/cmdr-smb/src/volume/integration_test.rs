@@ -254,15 +254,6 @@ async fn smb_integration_a_cancelled_listing_stops_between_batches() {
     ensure_clean(&vol, &dir).await;
 }
 
-/// `(requests_sent, compound_requests_sent)` on the volume's main connection.
-async fn request_counts(vol: &SmbVolume) -> (u64, u64) {
-    let d = vol.diagnostics().await.expect("a connected volume has diagnostics");
-    (
-        d.primary.metrics.requests_sent,
-        d.primary.metrics.compound_requests_sent,
-    )
-}
-
 /// A forced rename over a file is ONE compound frame (CREATE + SET_INFO with
 /// `ReplaceIfExists` + CLOSE) on the wire: the server swaps the file in under the name, so
 /// the destination never goes missing the way it does between a delete and a

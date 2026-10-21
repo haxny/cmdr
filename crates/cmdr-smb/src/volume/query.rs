@@ -12,7 +12,7 @@ use super::session::SessionLease;
 use super::{SmbVolume, slow_calls};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::log_private::LogPrivate;
-use cmdr_fs::volume::{ListingProgress, SpaceInfo, VolumeError};
+use cmdr_fs::volume::{EntryKind, ListingProgress, SpaceInfo, VolumeError};
 use log::{debug, trace};
 use smb2::client::{Connection, Tree};
 use std::path::Path;
@@ -259,6 +259,36 @@ impl SmbVolume {
         };
 
         Ok(info.is_directory)
+    }
+
+    /// One bare `stat` round trip, the link itself when it's a link
+    /// (`FileInfo::is_link`). ❌ Not `stat_through_link`: a link is the whole
+    /// answer here, and following one costs two more round trips. The delete
+    /// walk asks this of every folder before it descends, since Samba's listings
+    /// never mark a link (`DETAILS.md` § "Junctions and symlinks").
+    pub(super) async fn entry_kind_impl(&self, path: &Path) -> Result<EntryKind, VolumeError> {
+        let smb_path = self.to_smb_path(path)?;
+        if smb_path.is_empty() {
+            return Ok(EntryKind::Directory);
+        }
+
+        let start = std::time::Instant::now();
+        let SessionLease {
+            tree,
+            mut conn,
+            generation,
+        } = self.clone_session().await?;
+        let r = tree.stat(&mut conn, &smb_path).await;
+        slow_calls::note(&self.inner.share_name, "entry_kind", start.elapsed());
+        let info = self.handle_smb_result("entry_kind", &smb_path, generation, r)?;
+
+        Ok(if info.is_link() {
+            EntryKind::Symlink
+        } else if info.is_directory {
+            EntryKind::Directory
+        } else {
+            EntryKind::File
+        })
     }
 
     /// The share's own free/total, polled by whichever pane is showing it.

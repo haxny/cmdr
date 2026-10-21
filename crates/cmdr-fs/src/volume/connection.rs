@@ -268,6 +268,35 @@ impl BackendKind {
             Self::Webdav | Self::S3 | Self::Mtp | Self::GitPortal => false,
         }
     }
+
+    /// Whether this backend's listings mark every link (`FileEntry::is_symlink`),
+    /// so a walker may take a listed folder at its word. `false` where a link
+    /// can list as the folder it points to: a walker that would act through a
+    /// folder (a delete) must ask [`Volume::entry_kind`](super::Volume::entry_kind)
+    /// of each one before it descends, one round trip per folder.
+    ///
+    /// Exhaustive on purpose: a new backend doesn't compile until it answers.
+    /// When in doubt, `false`.
+    #[must_use]
+    pub fn listings_mark_links(self) -> bool {
+        match self {
+            // Samba lists a Unix symlink as what it points to, on every version,
+            // while a stat reports it on 4.23+ (`crates/cmdr-smb/DETAILS.md`
+            // § "Junctions and symlinks", #613). A Windows share does mark its
+            // junctions, but nothing tells the two servers apart up front.
+            Self::Smb => false,
+            // Each lists from an `lstat` or the link's own record, and the
+            // link-free ones have nothing to mark.
+            Self::Local
+            | Self::Sftp
+            | Self::Adb
+            | Self::Archive
+            | Self::Webdav
+            | Self::S3
+            | Self::Mtp
+            | Self::GitPortal => true,
+        }
+    }
 }
 
 /// What a "Sign in" affordance on a volume asks a person for: the FORM the sheet

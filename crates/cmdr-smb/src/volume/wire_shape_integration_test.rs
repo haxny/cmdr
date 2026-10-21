@@ -28,15 +28,6 @@ use super::test_support::*;
 use super::*;
 use cmdr_fs::volume::{StreamLength, WriteMode};
 
-/// `(requests_sent, compound_requests_sent)` on the volume's main connection.
-async fn request_counts(vol: &SmbVolume) -> (u64, u64) {
-    let d = vol.diagnostics().await.expect("a connected volume has diagnostics");
-    (
-        d.primary.metrics.requests_sent,
-        d.primary.metrics.compound_requests_sent,
-    )
-}
-
 // ── The hinted read: one sized frame ───────────────────────────
 
 /// A hinted read of a small file has to leave as ONE compound frame

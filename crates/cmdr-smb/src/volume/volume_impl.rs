@@ -19,7 +19,7 @@ use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, Metadata
 
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{
-    BatchScanResult, ConnectionLiveness, CopyScanResult, LaneKey, MutationEvent, ScanBoundary, ScanConflict,
+    BatchScanResult, ConnectionLiveness, CopyScanResult, EntryKind, LaneKey, MutationEvent, ScanBoundary, ScanConflict,
     ServerCopyProgress, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume,
     VolumeError, VolumeRandomReader, VolumeReadStream, WatchCoverage, WriteMode,
 };
@@ -173,6 +173,17 @@ impl Volume for SmbVolume {
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
         Box::pin(self.is_directory_impl(path))
+    }
+
+    /// A bare `stat`, one round trip: the trait default goes through
+    /// `get_metadata`, which follows a link the server calls a non-directory
+    /// (two more round trips) and builds a whole `FileEntry`. The delete walk
+    /// asks this of every folder it would descend (§ "Junctions and symlinks").
+    fn entry_kind<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<EntryKind, VolumeError>> + Send + 'a>> {
+        Box::pin(self.entry_kind_impl(path))
     }
 
     fn can_watch_listings(&self) -> bool {

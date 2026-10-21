@@ -934,15 +934,21 @@ delete that descended into a junction deleted the target's files, a folder tree 
 [smb2's Samba note](https://github.com/vdavid/smb2/blob/main/docs/notes/samba-symlinks-and-reparse-points.md), same
 date):
 
-- **Listings never mark a Unix symlink**, on any version: it lists as what it points to. So a delete of a FOLDER that
-  holds a symlink to another folder still descends it and deletes the target's files through it, if that target sits
-  inside the share (`wide links = no`, the default, keeps it there). Open gap: closing it on 4.23+ needs an `entry_kind`
-  stat per folder before the walker descends, a round trip per folder that 4.20 can't answer anyway.
+- **Listings never mark a Unix symlink**, on any version: it lists as what it points to. A delete of a FOLDER that held
+  a symlink to another folder in the share descended it and deleted the target's files (#613). So
+  `BackendKind::Smb.listings_mark_links()` is `false`, and the volume delete walk asks `entry_kind` of every listed
+  folder before descending it (`crates/cmdr-operations/src/delete/DETAILS.md` § "A link is a leaf"). SMB's `entry_kind`
+  is a bare `stat` (`query.rs::entry_kind_impl`), ❌ never `stat_through_link`: ONE compound frame per folder, `(1, 5)`,
+  link or not, where following a link would add two. A Windows share pays it too, since nothing tells the servers apart
+  up front. The move's source sweep and `remove_tree` already asked `entry_kind` of every folder.
 - **4.23 honors `FILE_OPEN_REPARSE_POINT`**: a `stat` reports the link (`ReparseTag::SYMLINK`), so a SELECTED symlink is
   a leaf and deleting it removes the link alone. That stat calls every symlink a non-directory sized by its link text
   (six bytes for `-> target`), so a copy streamed a selected folder symlink as a file and its READ failed with
   `STATUS_INVALID_DEVICE_REQUEST`; `stat_through_link` resolves it to its target.
 - **4.20 ignores the flag**: a stat follows the link, and deleting a link deletes its target, whatever the client sends.
+  Known gap, accepted for now: on 4.20 neither the per-folder `entry_kind` nor `delete_link` sees the link, so deleting
+  a folder that holds a symlink to another folder in the share still deletes that folder's files. Closing it would mean
+  detecting the old server and refusing a recursive delete that might cross a link nobody can see (#613, option b).
 
 **Windows** follows MS-SMB2 § 2.2.13 and MS-FSCC § 2.1.2.1 (spec-based, not run against a Windows server, 2026-10-20).
 No fixture serves a junction.
@@ -1370,8 +1376,8 @@ Which side each one lives on, and why: § "Which side a test lives on" above.
     away), the single-shot write promise the transfer layer skips `.cmdr-tmp-*` staging on (the wire proof and the
     `write_is_single_shot` predicate behind it, kept together, and where that promise stops: one upload chunk on a cold
     connection, what a measured uplink moves in 250 ms after, with a staged write over it streaming and a promised one
-    still `(2, 9)`), the copy-slot clamp, and a delete's one frame (§ "Junctions and symlinks"). It owns
-    `request_counts`, the diagnostics-metric reader those frame assertions run on. **Every cell here asserts on the PAIR
+    still `(2, 9)`), the copy-slot clamp, and a delete's one frame (§ "Junctions and symlinks"). Its frame assertions
+    read `test_support.rs::request_counts`, the diagnostics-metric reader. **Every cell here asserts on the PAIR
     `(compound_requests_sent, requests_sent)`, because `requests_sent` alone reads like a frame count and is not one**:
     smb2 ticks it once per sub-op of a chain (`allocate_msg_id` is the funnel every send path goes through), while
     `compound_requests_sent` counts the chain, and `execute_compound` hands the whole chain to one `send_and_count`. So
@@ -1384,8 +1390,8 @@ Which side each one lives on, and why: § "Which side a test lives on" above.
     here because its subject is the credit window of § "Copy concurrency and the credit window", which the sized read
     and the slot clamp are the two halves of.
 - `links_integration_test.rs` — a Unix symlink made inside the guest container (`run_in_the_guest_container`): a stat
-  reports it, deleting it leaves its target, a selected folder symlink scans and reads as its folder, and Samba's
-  listing doesn't mark it (§ "Junctions and symlinks").
+  reports it, deleting it leaves its target, a selected folder symlink scans and reads as its folder, Samba's listing
+  doesn't mark it, and `entry_kind` names it in one frame (§ "Junctions and symlinks").
 - `conformance_test.rs` — the `cmdr_fs::volume::conformance` promises, answered by a real server rather than an
   in-process double (SMB has none): `STATUS_DIRECTORY_NOT_EMPTY`, `STATUS_OBJECT_NAME_COLLISION`,
   `STATUS_OBJECT_NAME_NOT_FOUND`. That last one is the conflict scan's: `scan_for_conflicts_impl` keeps its own

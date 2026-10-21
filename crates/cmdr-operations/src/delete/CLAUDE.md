@@ -33,7 +33,8 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume walker (every backen
 - **A `preview_id` alone authorizes nothing.** The LOCAL walker deletes `scan_result.files` as is, so bind with
   `take_cached_delete_scan` (sources AND a delete-purpose walk); ❌ never skip it.
 - **A symlink is a LEAF to the volume walker**: descend only an `EntryKind::Directory` (`EntryKind::of`,
-  `Volume::entry_kind`), ❌ never `is_directory` or a preview's word (both follow links). DETAILS § "A link is a leaf".
+  `Volume::entry_kind`), ❌ never `is_directory` or a preview's word (both follow links); ❌ nor a listing that hides
+  links (`listings_mark_links`). DETAILS § "A link is a leaf".
 - **A delete reaching a mount point refuses WHOLE, up front** (`MountedVolumeInside`), in both walkers and the delete
   preview, and again right before deleting. DETAILS § "A mount is a wall".
 - **❌ Never resolve a top-level source's type with `.unwrap_or(false)`.** Hand the `Option` to `scan_volume_recursive`,

@@ -214,9 +214,17 @@ pub(super) async fn scan_volume_recursive(
         // the recursive call doesn't re-probe (avoids another parent listing on
         // MTP). `EntryKind::of`, ❌ never `child.is_directory`: that's true for a
         // link to a folder, and descending it deletes the folder it points at.
+        // Where a listing can list a link as a folder (Samba, #613), each folder
+        // is asked `entry_kind` before the walk descends it.
+        let listings_mark_links = volume.backend_kind().listings_mark_links();
         for child in &children {
             let child_path = PathBuf::from(&child.path);
-            let child_kind = EntryKind::of(child);
+            let mut child_kind = EntryKind::of(child);
+            if child_kind == EntryKind::Directory && !listings_mark_links {
+                child_kind = read_through_outages(volume, state, || volume.entry_kind(&child_path))
+                    .await
+                    .map_err(|stop| stop.into_error(&child_path))?;
+            }
             if child_kind == EntryKind::Directory {
                 Box::pin(scan_volume_recursive(
                     volume,
@@ -267,7 +275,7 @@ pub(super) async fn scan_volume_recursive(
                     progress_bytes,
                     is_dir: false,
                     listed: Listed {
-                        kind: EntryKind::of(child),
+                        kind: child_kind,
                         size: child.size,
                     },
                 });

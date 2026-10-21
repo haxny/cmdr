@@ -5,7 +5,8 @@
 //!
 //! The rig is a real `LocalPosixVolume` over a tempdir (real links), behind a
 //! wrapper that can answer `is_directory` the way a link-FOLLOWING backend does
-//! (ADB, SFTP) and can let a pane's listing vouch for a folder.
+//! (ADB, SFTP), can list a link as the folder it points to the way a Samba
+//! share does (#613), and can let a pane's listing vouch for a folder.
 
 #![cfg(unix)]
 
@@ -13,7 +14,7 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::time::Duration;
 
 use super::super::event_sinks::CollectorEventSink;
@@ -25,7 +26,8 @@ use super::super::types::WriteOperationConfig;
 use super::volume_walker::delete_volume_files_with_progress_inner;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{
-    BatchScanResult, CopyScanResult, EntryKind, ListingProgress, ScanBoundary, Volume, VolumeError, WatchCoverage,
+    BackendKind, BatchScanResult, CopyScanResult, EntryKind, ListingProgress, ScanBoundary, Volume, VolumeError,
+    WatchCoverage,
 };
 use cmdr_listing::testing::{TestListing, TestListingGuard};
 use cmdr_local::LocalPosixVolume;
@@ -33,11 +35,15 @@ use tempfile::TempDir;
 
 /// A `LocalPosixVolume` that can answer `is_directory` by FOLLOWING a link (the
 /// trait default over `get_metadata`, as ADB and SFTP do) and can report every
-/// listing as watcher-fresh, so a pane's cached listing answers for it.
+/// listing as watcher-fresh, so a pane's cached listing answers for it. With
+/// `hides_links` it plays a Samba share: an SMB volume whose listings never mark
+/// a link, while its `entry_kind` (a stat) does.
 struct LinkRig {
     inner: LocalPosixVolume,
     follows_links: bool,
     watched: bool,
+    hides_links: bool,
+    entry_kind_calls: AtomicUsize,
 }
 
 impl Volume for LinkRig {
@@ -50,12 +56,27 @@ impl Volume for LinkRig {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    fn backend_kind(&self) -> BackendKind {
+        if self.hides_links {
+            BackendKind::Smb
+        } else {
+            BackendKind::Local
+        }
+    }
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
         on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
-        self.inner.list_directory(path, on_progress)
+        Box::pin(async move {
+            let mut entries = self.inner.list_directory(path, on_progress).await?;
+            if self.hides_links {
+                for entry in &mut entries {
+                    entry.is_symlink = false;
+                }
+            }
+            Ok(entries)
+        })
     }
     fn get_metadata<'a>(
         &'a self,
@@ -84,6 +105,7 @@ impl Volume for LinkRig {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<EntryKind, VolumeError>> + Send + 'a>> {
+        self.entry_kind_calls.fetch_add(1, Ordering::Relaxed);
         self.inner.entry_kind(path)
     }
     fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
@@ -134,6 +156,15 @@ impl Tree {
     }
 
     fn volume(&self, follows_links: bool, watched: bool) -> Arc<LinkRig> {
+        self.rig(follows_links, watched, false)
+    }
+
+    /// A Samba share's shape: SMB, listings that never mark a link.
+    fn samba_volume(&self) -> Arc<LinkRig> {
+        self.rig(false, false, true)
+    }
+
+    fn rig(&self, follows_links: bool, watched: bool, hides_links: bool) -> Arc<LinkRig> {
         Arc::new(LinkRig {
             inner: LocalPosixVolume::local_folder(
                 "V",
@@ -142,6 +173,8 @@ impl Tree {
             ),
             follows_links,
             watched,
+            hides_links,
+            entry_kind_calls: AtomicUsize::new(0),
         })
     }
 
@@ -234,6 +267,36 @@ async fn a_folder_link_inside_a_deleted_folder_goes_as_a_link_and_its_target_sta
 
     tree.assert_target_intact();
     assert!(!tree.root().join("dir").exists(), "the selected folder goes");
+}
+
+/// Samba lists a link as the folder it points to (#613), so the walk can't
+/// trust a listing's word for any folder there: it stats each one before it
+/// descends, ONE `entry_kind` per folder.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_folder_link_a_listing_hides_inside_a_deleted_folder_goes_as_a_link_and_its_target_stays() {
+    let tree = Tree::plant();
+    std::fs::create_dir_all(tree.root().join("dir/sub")).expect("sub");
+    std::fs::write(tree.root().join("dir/sub/deep.txt"), b"DEEP").expect("deep");
+    let engine = TestOperations::new();
+    let vid = unique("samba");
+    let volume = tree.samba_volume();
+    engine.volumes().register(&vid, volume.clone() as Arc<dyn Volume>);
+    let listed = volume.list_directory(Path::new("dir"), None).await.expect("list");
+    let link = listed.iter().find(|e| e.name == "link").expect("listed");
+    assert!(
+        link.is_directory && !link.is_symlink,
+        "precondition: the listing calls the link a plain folder"
+    );
+
+    delete(&engine, volume.clone(), &vid, &[PathBuf::from("dir")], None).await;
+
+    tree.assert_target_intact();
+    assert!(!tree.root().join("dir").exists(), "the selected folder goes");
+    assert_eq!(
+        volume.entry_kind_calls.load(Ordering::Relaxed),
+        3,
+        "one stat for the selected folder, then one per folder it lists (`sub`, `link`)"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

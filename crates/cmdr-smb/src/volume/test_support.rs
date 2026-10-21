@@ -112,6 +112,17 @@ pub(super) async fn drain(mut stream: Box<dyn VolumeReadStream>) -> Vec<u8> {
     out
 }
 
+/// `(requests_sent, compound_requests_sent)` on the volume's main connection:
+/// sub-ops, then frames. Shared by every suite that counts what a call cost on
+/// the wire (`DETAILS.md` § "The suites" says why a frame assertion needs both).
+pub(super) async fn request_counts(vol: &SmbVolume) -> (u64, u64) {
+    let d = vol.diagnostics().await.expect("a connected volume has diagnostics");
+    (
+        d.primary.metrics.requests_sent,
+        d.primary.metrics.compound_requests_sent,
+    )
+}
+
 /// Runs `command` inside the guest fixture container, as root, against the
 /// share's disk at `/shares/public`: the one way to make what a client can't
 /// (an aged date, a Unix symlink). Panics naming what couldn't be run.

@@ -3,9 +3,9 @@
 //!
 //! The fixture's Samba (4.23.8 on `alpine:3.24`) honors `FILE_OPEN_REPARSE_POINT`,
 //! so a `stat` reports the link and a delete removes the link alone. Its
-//! listings never mark one, which is the gap `DETAILS.md` § "Junctions and
-//! symlinks" records. A Windows junction has no fixture; its half is pinned by
-//! the mapping cells in `mapping_test.rs`.
+//! listings never mark one, so a delete walk asks `entry_kind` of each folder
+//! (`DETAILS.md` § "Junctions and symlinks"). A Windows junction has no fixture;
+//! its half is pinned by the mapping cells in `mapping_test.rs`.
 //!
 //! Every test here is `#[ignore]`d so default runs skip it. Start the containers
 //! with `apps/desktop/test/smb-servers/start.sh`, then run
@@ -61,7 +61,7 @@ async fn smb_integration_deleting_a_symlink_leaves_its_target() {
 /// Samba lists a symlink as what it points to, with no reparse bit, so a walk
 /// can't tell it from a folder by its listing. If this starts failing, Samba
 /// marks links in listings now: update `DETAILS.md` § "Junctions and symlinks",
-/// whose open gap this is.
+/// and `BackendKind::listings_mark_links` may be able to say `true` for SMB.
 #[tokio::test]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_samba_lists_a_symlink_as_its_target() {
@@ -74,6 +74,42 @@ async fn smb_integration_samba_lists_a_symlink_as_its_target() {
     let listed = |name: &str| entries.iter().find(|e| e.name == name).expect("listed");
     assert!(listed("dirlink").is_directory && !listed("dirlink").is_symlink);
     assert!(!listed("filelink").is_directory && !listed("filelink").is_symlink);
+
+    for link in ["dirlink", "filelink"] {
+        vol.delete(Path::new(&format!("{dir}/{link}"))).await.unwrap();
+    }
+    ensure_clean(&vol, &dir).await;
+}
+
+/// What a delete walk asks of every folder it lists before descending it,
+/// because the listing can't tell a link from a folder (the cell above, #613):
+/// `entry_kind` names the link, the real folder, and the file, each in ONE
+/// frame, the cost the walk pays per folder. Five sub-ops: CREATE, three
+/// QUERY_INFOs (the last the reparse tag), CLOSE.
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_entry_kind_names_a_listed_folder_link_in_one_frame() {
+    let vol = make_docker_volume().await;
+    let dir = test_dir_name();
+    ensure_clean(&vol, &dir).await;
+    seed_links(&vol, &dir).await;
+
+    for (name, kind) in [
+        ("dirlink", EntryKind::Symlink),
+        ("filelink", EntryKind::Symlink),
+        ("target", EntryKind::Directory),
+        ("target/keep.txt", EntryKind::File),
+    ] {
+        let path = format!("{dir}/{name}");
+        let (requests_before, frames_before) = request_counts(&vol).await;
+        assert_eq!(vol.entry_kind(Path::new(&path)).await.unwrap(), kind, "{name}");
+        let (requests_after, frames_after) = request_counts(&vol).await;
+        assert_eq!(
+            (frames_after - frames_before, requests_after - requests_before),
+            (1, 5),
+            "{name}: one compound stat, nothing following the link"
+        );
+    }
 
     for link in ["dirlink", "filelink"] {
         vol.delete(Path::new(&format!("{dir}/{link}"))).await.unwrap();
