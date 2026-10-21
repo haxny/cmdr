@@ -1237,6 +1237,29 @@
   "@fileExplorer.restic.useTransferToCopyOut": {
     "description": "Info toast when the user presses the system-clipboard copy or cut shortcut (Cmd+C / Cmd+X) inside a restic backup, where Cmdr shows a backup repository’s snapshots as read-only folders. Those files live packed inside the backup and have no path the system clipboard can carry, so it points the user at the F5 (copy) transfer key instead. Moving out of a backup isn’t possible, so only F5 is named. F5 is a keyboard key name; keep it as-is. The sibling of fileExplorer.git.useTransferToCopyOut."
   },
+  "fileExplorer.restic.snapshot.host": "Backed up from {host}",
+  "@fileExplorer.restic.snapshot.host": {
+    "description": "First line of the hover tooltip on a snapshot folder inside a restic backup, where Cmdr shows each backup run (a “snapshot”) as a read-only folder named by its date. Names the computer the backup ran on. Screen readers also hear it after the folder’s name, with “{host}” read from the row, so the phrase must read naturally right before the computer’s name.",
+    "placeholders": {
+      "host": "the computer’s network name as the backup recorded it, for example \"Davids-MacBook-Pro\" (a name, never translated)"
+    }
+  },
+  "fileExplorer.restic.snapshot.tags": "{count, plural, one {Tag} other {Tags}}: {tags}",
+  "@fileExplorer.restic.snapshot.tags": {
+    "description": "A line of the hover tooltip on a snapshot folder inside a restic backup, listing the labels the user gave that backup run (restic calls them tags). Left out when the snapshot has none.",
+    "placeholders": {
+      "count": "how many tags, only to pick the singular or plural noun",
+      "tags": "the tags, already joined into a list, for example \"daily, laptop\" (user-chosen labels, never translated)"
+    }
+  },
+  "fileExplorer.restic.snapshot.paths": "{count, plural, one {Backed-up path} other {Backed-up paths}}: {paths}",
+  "@fileExplorer.restic.snapshot.paths": {
+    "description": "A line of the hover tooltip on a snapshot folder inside a restic backup, listing the folders (or files) the backup was asked to save, as paths on the computer it ran on. Left out when the snapshot recorded none.",
+    "placeholders": {
+      "count": "how many paths, only to pick the singular or plural noun",
+      "paths": "the paths, already joined into a list, for example \"/Users/david, /etc\" (never translated)"
+    }
+  },
   "fileExplorer.archive.useTransferToCopyOut": "To copy files out of an archive, use F5 to copy or F6 to move.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "description": "Info toast when the user presses the system-clipboard copy or cut shortcut (Cmd+C / Cmd+X) inside an archive. The system clipboard can’t carry archive-inner paths, so it points them at the F5 (copy) and F6 (move) transfer keys instead. F5 and F6 are keyboard key names; keep them as-is."
