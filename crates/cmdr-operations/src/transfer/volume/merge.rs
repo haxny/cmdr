@@ -579,8 +579,11 @@ async fn merge_level<'a>(
 
                     // A level we created ourselves holds nothing, so there is no index to
                     // build and no name to look up: `None` is the answer for every child.
+                    // A link the destination listing hid is marked, so nothing merges
+                    // into it (`crate::hidden_links`); a source link is carried.
                     let dest_index = if level_pre_existed {
-                        Some(DestNameIndex::build(dest_volume.list_directory(dest_path, None).await?))
+                        let listed = crate::hidden_links::list_marking_hidden_links(dest_volume.as_ref(), dest_path);
+                        Some(DestNameIndex::build(listed.await?))
                     } else {
                         None
                     };

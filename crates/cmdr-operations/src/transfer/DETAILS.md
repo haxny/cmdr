@@ -730,6 +730,17 @@ the backend's business, and an ADB phone's or an SFTP server's does. So `move_sa
 `cleanup.rs::remove_tree` all ask `entry_kind`. `remove_tree` is the one that loses data when it gets this wrong: every
 cross-volume move's source sweep runs through it, and recursing through a link deletes the target's files.
 
+**A listing that hides links is fixed up before anything reads it** (#613). A Samba share lists a Unix symlink as the
+folder it points to, with no `is_symlink` (`BackendKind::listings_mark_links` is `false` for SMB), so
+`merges_as_a_directory` alone would merge through it. `crate::hidden_links::list_marking_hidden_links` asks `entry_kind`
+of every listed folder there and sets `is_symlink` on the links, ONE round trip per folder, none on any other backend.
+It runs on every level the rename-merge lists (`rename_merge.rs::volume_list`: source, destination, and the case-fold
+re-list) and on a pre-existing DESTINATION level of the copy merge (`merge.rs`), never on a copy's source listing, which
+follows a link by design (below). `top_level_move_hints` gives a listed folder there no hint, so the move asks
+`entry_kind`, and a pane's parent listing (`scan_preview::entry_in_parent_listing`) can't vouch for one either. The
+source sweep and `remove_tree` already asked `entry_kind` of every folder. Pinned by
+`volume/hidden_link_backend_tests.rs`.
+
 **A cross-volume transfer materializes a link; it doesn't keep it.** The streaming engines (`copy_serial.rs`,
 `copy_concurrent*.rs`, `move_cross.rs`) take the scan's answer, so a link to a folder copies as the folder it points at,
 at every depth, and meets a same-named destination folder as a merge. That's deliberate: SMB, MTP, and WebDAV

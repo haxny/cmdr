@@ -182,7 +182,7 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                         &volume,
                         volume_id,
                         source,
-                        listed_in_parent_listing(state, volume_id, source),
+                        listed_in_parent_listing(state, volume.as_ref(), volume_id, source),
                         &mut entries,
                         &mut total_bytes,
                         &mut seen_inodes,
@@ -266,7 +266,7 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
             // instead of probing the volume, which on MTP lists the parent and
             // on S3 costs a HEAD the cost estimate never counted. Falls through
             // to the trait probe when the oracle can't answer.
-            let parent_hint = listed_in_parent_listing(state, volume_id, source);
+            let parent_hint = listed_in_parent_listing(state, volume.as_ref(), volume_id, source);
 
             // Hand the hint (or the lack of one) straight to the walker: it
             // resolves an absent hint with a PROPAGATING probe and handles both

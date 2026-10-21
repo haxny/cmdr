@@ -182,6 +182,9 @@ mod metadata_loss_tests;
 /// A selected local link copied to another volume lands as what it points at.
 #[cfg(test)]
 mod copy_selected_link_tests;
+/// The same rule on a backend whose listings never mark a link (Samba, #613).
+#[cfg(test)]
+mod hidden_link_backend_tests;
 /// A listed name that isn't one plain path component (`../x`, `/x`) never
 /// lands outside the destination.
 #[cfg(test)]

@@ -537,7 +537,13 @@ pub(super) async fn top_level_move_hints(
         let by_name: HashMap<&str, &cmdr_fs::entry::FileEntry> = entries.iter().map(|e| (e.name.as_str(), e)).collect();
         for path in paths {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-            if let Some(entry) = by_name.get(name) {
+            // A folder the listing can't vouch for (a Samba share lists a link
+            // as one) gets no hint, so the move asks `entry_kind` of it
+            // (`crate::hidden_links`, #613).
+            if let Some(entry) = by_name
+                .get(name)
+                .filter(|entry| !crate::hidden_links::listed_folder_may_be_a_link(volume.as_ref(), entry))
+            {
                 let is_directory = super::rename_merge::merges_as_a_directory(entry);
                 let size = if is_directory { 0 } else { entry.size.unwrap_or(0) };
                 source_hints.insert(

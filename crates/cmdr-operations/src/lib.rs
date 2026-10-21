@@ -69,6 +69,7 @@ mod handle;
 // Two engines share nothing.
 #[cfg(test)]
 mod handle_tests;
+mod hidden_links;
 pub mod host;
 mod human_wait;
 mod in_flight_temps;

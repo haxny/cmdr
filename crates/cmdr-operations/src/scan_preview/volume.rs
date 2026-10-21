@@ -546,19 +546,32 @@ pub(crate) async fn run_oracle_aware_batch_scan(
 /// What `source` is per a pane's watcher-fresh listing of its parent, with no
 /// I/O, a link reported AS a link (`EntryKind::of`). `None` when no pane vouches
 /// for the parent or the listing doesn't hold the name: ask the volume then.
-fn kind_in_parent_listing(listings: &dyn ListingHost, volume_id: &str, source: &Path) -> Option<EntryKind> {
-    entry_in_parent_listing(listings, volume_id, source).map(|entry| EntryKind::of(&entry))
+fn kind_in_parent_listing(
+    listings: &dyn ListingHost,
+    volume: &dyn Volume,
+    volume_id: &str,
+    source: &Path,
+) -> Option<EntryKind> {
+    entry_in_parent_listing(listings, volume, volume_id, source).map(|entry| EntryKind::of(&entry))
 }
 
 /// `source`'s whole entry in a pane's watcher-fresh listing of its parent, for
 /// a caller that needs more than its kind (a delete's outage re-check reads its
-/// size). Same `None` as [`kind_in_parent_listing`].
-pub(crate) fn entry_in_parent_listing(listings: &dyn ListingHost, volume_id: &str, source: &Path) -> Option<FileEntry> {
+/// size). Same `None` as [`kind_in_parent_listing`], and `None` for a folder on
+/// a backend whose listing may call a link one (a Samba share,
+/// `crate::hidden_links`): no listing vouches for that.
+pub(crate) fn entry_in_parent_listing(
+    listings: &dyn ListingHost,
+    volume: &dyn Volume,
+    volume_id: &str,
+    source: &Path,
+) -> Option<FileEntry> {
     let entries = listings.authoritative_listing(volume_id, source.parent()?)?;
     let name = source.file_name()?;
     entries
         .iter()
         .find(|entry| Path::new(&entry.path).file_name() == Some(name))
+        .filter(|entry| !crate::hidden_links::listed_folder_may_be_a_link(volume, entry))
         .cloned()
 }
 
@@ -578,7 +591,7 @@ pub(crate) async fn count_selected_links_as_links(
         if !scan.top_level_is_directory {
             continue;
         }
-        let kind = match kind_in_parent_listing(listings, volume_id, source) {
+        let kind = match kind_in_parent_listing(listings, volume, volume_id, source) {
             Some(kind) => Some(kind),
             None => volume.entry_kind(source).await.ok(),
         };

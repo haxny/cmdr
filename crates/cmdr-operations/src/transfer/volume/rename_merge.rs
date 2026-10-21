@@ -530,9 +530,12 @@ async fn rename_replacing(
 /// Lists a directory on the volume, mapping the error through the shared
 /// `map_volume_error` (which preserves the typed `Cancelled` variant so the
 /// post-loop reclassifies cancellation rather than reporting a transport error).
+///
+/// Every level the merge reads, source or destination, comes through here, so
+/// a link the backend's listing called a folder is marked before
+/// [`merges_as_a_directory`] reads it (`crate::hidden_links`, #613).
 async fn volume_list(volume: &Arc<dyn Volume>, path: &Path) -> Result<Vec<FileEntry>, WriteOperationError> {
-    volume
-        .list_directory(path, None)
+    crate::hidden_links::list_marking_hidden_links(volume.as_ref(), path)
         .await
         .map_err(|e| map_rename_error(path, e))
 }

@@ -940,7 +940,9 @@ date):
   folder before descending it (`crates/cmdr-operations/src/delete/DETAILS.md` § "A link is a leaf"). SMB's `entry_kind`
   is a bare `stat` (`query.rs::entry_kind_impl`), ❌ never `stat_through_link`: ONE compound frame per folder, `(1, 5)`,
   link or not, where following a link would add two. A Windows share pays it too, since nothing tells the servers apart
-  up front. The move's source sweep and `remove_tree` already asked `entry_kind` of every folder.
+  up front. Every merge that reads a listing (a same-volume move's rename-merge, a copy onto the share) marks such links
+  first (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Symlinks are opaque to a move"); the move's source sweep
+  and `remove_tree` already asked `entry_kind` of every folder.
 - **4.23 honors `FILE_OPEN_REPARSE_POINT`**: a `stat` reports the link (`ReparseTag::SYMLINK`), so a SELECTED symlink is
   a leaf and deleting it removes the link alone. That stat calls every symlink a non-directory sized by its link text
   (six bytes for `-> target`), so a copy streamed a selected folder symlink as a file and its READ failed with

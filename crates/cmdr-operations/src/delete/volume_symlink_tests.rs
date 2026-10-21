@@ -331,6 +331,66 @@ async fn a_selected_folder_link_whose_parent_a_pane_shows_goes_as_a_link() {
     tree.assert_link_gone();
 }
 
+/// A pane's listing of a Samba share calls a selected link a plain folder, so
+/// it can't vouch for a folder there: the walker asks `entry_kind` instead.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_selected_folder_link_a_pane_lists_as_a_folder_goes_as_a_link() {
+    let tree = Tree::plant();
+    let panes = PaneListings::new();
+    let engine = TestOperations::seeing(&panes);
+    let vid = unique("hidden_parent_oracle");
+    let volume = tree.rig(false, true, true);
+    engine.volumes().register(&vid, volume.clone() as Arc<dyn Volume>);
+    panes.show_volume(&vid, volume.clone() as Arc<dyn Volume>);
+    let _listing = pane_shows_hidden_link(&panes, &volume, &vid, "dir").await;
+
+    delete(&engine, volume, &vid, &[tree.root().join("dir/link")], None).await;
+
+    tree.assert_target_intact();
+    tree.assert_link_gone();
+}
+
+/// The delete dialog's count over the same pane: the selected link is one item.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_delete_preview_counts_a_selected_link_a_pane_lists_as_a_folder_as_one_leaf() {
+    let tree = Tree::plant();
+    let panes = PaneListings::new();
+    let vid = unique("hidden_preview_count");
+    let volume = tree.rig(false, true, true);
+    panes.show_volume(&vid, volume.clone() as Arc<dyn Volume>);
+    let _listing = pane_shows_hidden_link(&panes, &volume, &vid, "dir").await;
+    let sources = vec![tree.root().join("dir/link")];
+    let mut batch = volume.scan_for_copy_batch(&sources).await.expect("scan");
+
+    count_selected_links_as_links(panes.as_ref(), volume.as_ref(), &vid, &mut batch).await;
+
+    let (_, link) = &batch.per_path[0];
+    assert!(!link.top_level_is_directory, "a link isn't a folder to a delete");
+    assert_eq!((link.file_count, link.dir_count, link.total_bytes), (1, 0, 0));
+}
+
+/// [`pane_shows`] for a rig whose listings hide links.
+#[must_use = "bind the guard; dropping it immediately removes the listing"]
+async fn pane_shows_hidden_link(
+    panes: &PaneListings,
+    volume: &LinkRig,
+    volume_id: &str,
+    parent: &str,
+) -> TestListingGuard {
+    let entries = volume.list_directory(Path::new(parent), None).await.expect("list");
+    let link = entries.iter().find(|e| e.name == "link").expect("listed");
+    assert!(
+        link.is_directory && !link.is_symlink,
+        "precondition: the pane lists the link as a plain folder"
+    );
+    TestListing::new()
+        .volume(volume_id)
+        .path(volume.inner.root().join(parent))
+        .entries(entries)
+        .sequence(1)
+        .insert(panes.panes(), "listing")
+}
+
 /// A preview from the backend's own batch scan, which follows a selected link
 /// (a copy's preflight needs that), so it says "directory" for the link.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

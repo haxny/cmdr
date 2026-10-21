@@ -341,8 +341,13 @@ pub(super) async fn scan_volume_recursive(
 
 /// What `source` is per a pane's listing of its parent (`entry_in_parent_listing`):
 /// its kind, link-aware, and a file's size, with no I/O.
-pub(super) fn listed_in_parent_listing(state: &WriteOperationState, volume_id: &str, source: &Path) -> Option<Listed> {
-    entry_in_parent_listing(state.scope().host().listings(), volume_id, source).map(|entry| {
+pub(super) fn listed_in_parent_listing(
+    state: &WriteOperationState,
+    volume: &dyn Volume,
+    volume_id: &str,
+    source: &Path,
+) -> Option<Listed> {
+    entry_in_parent_listing(state.scope().host().listings(), volume, volume_id, source).map(|entry| {
         let kind = EntryKind::of(&entry);
         Listed {
             kind,

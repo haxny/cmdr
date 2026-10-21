@@ -40,8 +40,10 @@ A child's `EntryKind::of` is only as good as the listing under it. Where a listi
 points to (`BackendKind::listings_mark_links` is `false`: SMB, since Samba never marks a Unix symlink), the walker asks
 `Volume::entry_kind` of every listed folder before descending it, ONE round trip per folder (SMB's is a bare compound
 stat), and a link it names is a leaf like any other. A cached listing (`authoritative_listing`) is the same listing, so
-it gets the same probe. Regression anchor: #613 (deleting a folder on a Samba share that held a symlink to another
-folder in the share deleted that folder's files).
+it gets the same probe, and a pane's parent listing gives a selected folder there no hint
+(`scan_preview::entry_in_parent_listing` answers `None`, so `entry_kind` decides, for the walk and the preview count).
+Regression anchor: #613 (deleting a folder on a Samba share that held a symlink to another folder in the share deleted
+that folder's files).
 
 Pinned by `volume_symlink_tests.rs` (nested link, link-following backend, a listing that hides the link, pane-listed
 parent, cold preview, preview count), `link_delete_tests.rs` (the same over a real `LocalPosixVolume`), and the
