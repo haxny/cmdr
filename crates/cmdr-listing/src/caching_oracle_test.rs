@@ -207,3 +207,31 @@ fn try_get_authoritative_listing_reflects_flip_to_unwatched() {
             .is_none()
     );
 }
+
+/// A poller asks which directories a volume's panes show: each once however
+/// many panes show it, nothing from another volume, and nothing once the last
+/// pane on it closes.
+#[test]
+fn open_listing_paths_answers_each_shown_directory_on_the_volume_once() {
+    let engine = TestEngine::new();
+    let vid = unique("paths_vid");
+    let other = unique("paths_other");
+
+    let first = insert_listing_with_sequence(&engine, "paths-1", &vid, "/shown/a", vec![], 0);
+    let second = insert_listing_with_sequence(&engine, "paths-2", &vid, "/shown/a", vec![], 0);
+    let third = insert_listing_with_sequence(&engine, "paths-3", &vid, "/shown/b", vec![], 0);
+    let elsewhere = insert_listing_with_sequence(&engine, "paths-4", &other, "/shown/c", vec![], 0);
+
+    assert_eq!(
+        engine.open_listing_paths(&vid),
+        [Path::new("/shown/a"), Path::new("/shown/b")],
+        "two panes on one directory answer once, and another volume's pane not at all"
+    );
+
+    drop((first, second, third));
+    assert!(
+        engine.open_listing_paths(&vid).is_empty(),
+        "a closed pane leaves nothing to poll"
+    );
+    drop(elsewhere);
+}

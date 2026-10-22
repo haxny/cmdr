@@ -48,6 +48,10 @@ fn a_detached_host_answers_every_seam() {
         host.listings().volumes_with_open_listings("vol").is_empty(),
         "no pane is open, so a targeted refresh has nothing to aim at"
     );
+    assert!(
+        host.listings().open_listing_paths("vol").is_empty(),
+        "no pane is open, so a poller has nothing to ask about"
+    );
     host.indexing().watch_gap("vol", WatchGap::WatcherStopped);
     host.indexing().resume_after_reconnect("vol");
     host.indexing().device_object_changed("device", 42);

@@ -11,7 +11,7 @@
 //! [`FullRefresh`](DirectoryChange::FullRefresh), not 250 000 calls.
 
 use std::future::Future;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
 use crate::entry::FileEntry;
@@ -65,6 +65,20 @@ pub trait ListingHost: Send + Sync {
     /// means nothing is open, so there is nothing to aim a targeted refresh at —
     /// ❌ never read it as "the device is gone".
     fn volumes_with_open_listings(&self, volume_id_prefix: &str) -> Vec<String>;
+
+    /// The directories on `volume_id` a pane is currently showing, each once,
+    /// in the spelling the volume keys listings under (`Volume::listing_path`).
+    ///
+    /// For a backend with nothing to subscribe to, which has to ASK about each
+    /// shown directory to notice a change (NFSv3 has no change notification, so
+    /// its poller sends one `GETATTR` per directory here per tick). An empty
+    /// answer means nothing is shown, so there is nothing to ask about. Order is
+    /// unspecified.
+    ///
+    /// The default answers nothing, the right answer for a host with no panes.
+    fn open_listing_paths(&self, _volume_id: &str) -> Vec<PathBuf> {
+        Vec::new()
+    }
 
     /// The archive file at `archive_path` on `volume_id` changed, so re-read
     /// every open pane at or INSIDE it.
@@ -164,6 +178,7 @@ mod recording {
         changes: Mutex<Vec<(String, PathBuf, DirectoryChange)>>,
         watched: Mutex<Vec<(String, PathBuf, Vec<FileEntry>)>>,
         open_volumes: Mutex<Vec<String>>,
+        open_paths: Mutex<Vec<(String, PathBuf)>>,
         authoritative_lookups: AtomicUsize,
         archive_refreshes: Mutex<Vec<(String, PathBuf)>>,
         local_coverage: Mutex<Vec<(PathBuf, WatchCoverage)>>,
@@ -217,6 +232,25 @@ mod recording {
             self
         }
 
+        /// A pane opens on `path` on `volume_id`: one of the answers to
+        /// [`open_listing_paths`](super::ListingHost::open_listing_paths) from
+        /// now on. Takes `&self` so a cell can open and close panes while a
+        /// backend runs.
+        pub fn open_path(&self, volume_id: &str, path: impl Into<PathBuf>) {
+            let path = path.into();
+            let mut open = self.open_paths.lock_ignore_poison();
+            if !open.iter().any(|(vid, shown)| vid == volume_id && *shown == path) {
+                open.push((volume_id.to_string(), path));
+            }
+        }
+
+        /// The pane on `path` on `volume_id` closes, or moves elsewhere.
+        pub fn close_path(&self, volume_id: &str, path: &Path) {
+            self.open_paths
+                .lock_ignore_poison()
+                .retain(|(vid, shown)| !(vid == volume_id && shown == path));
+        }
+
         /// Every change reported so far, in order.
         pub fn changes(&self) -> Vec<(String, PathBuf, DirectoryChange)> {
             self.changes.lock_ignore_poison().clone()
@@ -261,6 +295,15 @@ mod recording {
                 .iter()
                 .filter(|id| id.starts_with(volume_id_prefix))
                 .cloned()
+                .collect()
+        }
+
+        fn open_listing_paths(&self, volume_id: &str) -> Vec<PathBuf> {
+            self.open_paths
+                .lock_ignore_poison()
+                .iter()
+                .filter(|(vid, _)| vid == volume_id)
+                .map(|(_, path)| path.clone())
                 .collect()
         }
 

@@ -344,11 +344,15 @@ var surfaceGuardedCrates = []struct {
 		// `RowSpan` and `OnNoMatch` are named argument types that replaced
 		// confusable positional `usize` / `bool` pairs on `file_range` and
 		// `set_name_filter_guarded`.
+		//
+		// 47th method, 2026-10-22: `open_listing_paths`, for the NFS poller (one
+		// GETATTR per shown directory). A typed question, ❌ not a fold into
+		// `summaries`, whose triage snapshot isn't a contract to poll against.
 		Name:       "cmdr-listing",
 		HandleType: "Listings",
 		Ceilings: surfaceCeilings{
 			RootPromises:   35,
-			HandleMethods:  46,
+			HandleMethods:  47,
 			PublicModules:  1,
 			SubsystemItems: 20,
 		},

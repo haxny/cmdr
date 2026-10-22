@@ -2,7 +2,7 @@
 //!
 //! A storage backend can't reach the listing engine from its own crate, so it
 //! asks through `cmdr_fs::volume::host::listings::ListingHost` and this is what
-//! the app installs. The oracle, the open-listing question, the archive refresh,
+//! the app installs. The oracle, the open-listing questions, the archive refresh,
 //! and the name order are the engine's own answers; `directory_changed` goes
 //! through the composer (index, badges, then panes) and the local watch coverage
 //! through the FSEvents watcher, which is why the app answers this seam itself
@@ -14,7 +14,7 @@
 //! into a quadratic sweep.
 
 use std::future::Future;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
 use cmdr_fs::volume::host::listings::ListingHost;
@@ -37,6 +37,10 @@ impl ListingHost for AppListings {
 
     fn volumes_with_open_listings(&self, volume_id_prefix: &str) -> Vec<String> {
         super::listings().volume_ids_with_listings(volume_id_prefix)
+    }
+
+    fn open_listing_paths(&self, volume_id: &str) -> Vec<PathBuf> {
+        super::listings().open_listing_paths(volume_id)
     }
 
     fn refresh_archive_listings<'a>(
@@ -217,6 +221,41 @@ mod tests {
             AppListings.volumes_with_open_listings(&device).is_empty(),
             "a closed pane leaves nothing to aim a targeted refresh at"
         );
+    }
+
+    /// A poller asks which directories a volume's panes show, through the real
+    /// engine: each once however many panes show it, never another volume's,
+    /// and nothing once the last pane closes.
+    #[test]
+    fn open_listing_paths_answer_each_shown_directory_once_from_the_real_cache() {
+        let volume_id = unique_test_id("listing-host-paths");
+        let other = unique_test_id("listing-host-paths-other");
+        let shown = |vid: &str, path: &str, tag: &str| {
+            TestListing::new()
+                .volume(vid)
+                .path(path)
+                .entries(Vec::new())
+                .insert(crate::listing_host::listings(), tag)
+        };
+        let first = shown(&volume_id, "/host/paths/a", "listing-host-paths-1");
+        let second = shown(&volume_id, "/host/paths/a", "listing-host-paths-2");
+        let third = shown(&volume_id, "/host/paths/b", "listing-host-paths-3");
+        let elsewhere = shown(&other, "/host/paths/c", "listing-host-paths-4");
+
+        let mut open = AppListings.open_listing_paths(&volume_id);
+        open.sort();
+        assert_eq!(
+            open,
+            [PathBuf::from("/host/paths/a"), PathBuf::from("/host/paths/b")],
+            "two panes on one directory answer once, and another volume's pane not at all"
+        );
+
+        drop((first, second, third));
+        assert!(
+            AppListings.open_listing_paths(&volume_id).is_empty(),
+            "a closed pane leaves nothing to poll"
+        );
+        drop(elsewhere);
     }
 
     /// The archive refresh re-reads every open listing at or inside the path it's

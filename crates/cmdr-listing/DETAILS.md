@@ -533,12 +533,12 @@ at `i` GOES. Applying the un-inverted permutation scrambles the whole listing wi
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 35 root promises, 46 `Listings` methods, one public module (`host`), and 20
+`index-crate-isolation` holds this crate to 35 root promises, 47 `Listings` methods, one public module (`host`), and 20
 public items inside it. The numbers are exactly what the crate exposes, with no headroom, so an addition has to be
 argued for. Everything counted exists for a named caller:
 
 - **The handle and its vocabulary** (root): `Listings`, `ListingsBuilder` (the constructors, `builder` and `detached`,
-  are two of the 46 methods), `ListingId`, `ListingRequest`, and the `host` module.
+  are two of the 47 methods), `ListingId`, `ListingRequest`, and the `host` module.
 - **Named arguments** (root): `PaneMarks` (a pane's cursor and selection, for `resort`, `set_include_hidden`, and
   `set_name_filter_guarded`), `RowSpan` (`file_range`'s start and count), and `OnNoMatch` (the quick filter's refusal).
   Each replaces a confusable positional `usize` or `bool` pair; the IPC commands keep their wire params and build them
@@ -553,8 +553,10 @@ argued for. Everything counted exists for a named caller:
   `observe_children`, `refresh` / `begin_read` / `refresh_from_entries` with `RefreshOutcome` and `ReadTicket`,
   `refresh_archive_listings`, `respell_on_volume`, `apply_tags`, `update_index_sizes` / `refresh_index_sizes` with
   `IndexSizes`, and the diff vocabulary the events seam carries (`DirectoryDiffBatch`, `DiffChange`, `DiffChangeType`).
-- **Lookups and the fresh-listing oracle** (write-operation walkers, MCP, multi-rename, the index-size worker): the nine
-  oracle methods (`authoritative_listing` through `summaries`) and `ListingSummary`.
+- **Lookups and the fresh-listing oracle** (write-operation walkers, MCP, multi-rename, the index-size worker, the NFS
+  poller): the ten oracle methods (`authoritative_listing` through `summaries`) and `ListingSummary`.
+  `open_listing_paths` is the NFS poller's: the directories one volume's panes show, a typed question rather than a read
+  of the `summaries` triage snapshot.
 - **Sorting outside a listing** (search results, the local reader): `SortColumn`, `SortOrder`, `DirectorySortMode`,
   `SortableEntry`, `entry_comparator`, `sort_entries`, `NameCollator`, and `Listings::collator`.
 - **Housekeeping**: `start_orphan_reaper`, `flush_pending_diffs` (the `playwright-e2e` feature only), and

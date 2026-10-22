@@ -54,6 +54,12 @@ impl Listings {
         self.inner.volume_ids_with_listings(prefix)
     }
 
+    /// The distinct directories some listing on `volume_id` shows, each once,
+    /// in the volume's own spelling.
+    pub fn open_listing_paths(&self, volume_id: &str) -> Vec<PathBuf> {
+        self.inner.listing_paths_on_volume(volume_id)
+    }
+
     /// Owned copies of `id`'s folder rows (non-symlink directories) named in
     /// `names`, in listing order: the rows the index holds sizes for. Doesn't
     /// count as the pane using the listing.

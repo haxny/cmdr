@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 #[cfg(test)]
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 #[cfg(test)]
 use uuid::Uuid;
@@ -694,5 +695,26 @@ impl Inner {
         ids.sort_unstable();
         ids.dedup();
         ids
+    }
+
+    /// The distinct directories some listing on `volume_id` shows, in the
+    /// volume's own spelling (`ListingPath`), sorted.
+    ///
+    /// What a backend with nothing to subscribe to polls: one question per
+    /// directory a pane shows. Paths only, so nothing clones an open
+    /// directory's entries to answer it.
+    pub(crate) fn listing_paths_on_volume(&self, volume_id: &str) -> Vec<PathBuf> {
+        // Recover rather than answer empty, for the reason above: an empty
+        // answer reads as "nothing is shown", which stops the poller.
+        let cache = self.cache.read_ignore_poison();
+
+        let mut paths: Vec<PathBuf> = cache
+            .values()
+            .filter(|listing| listing.volume_id == volume_id)
+            .map(|listing| listing.path.as_path().to_path_buf())
+            .collect();
+        paths.sort_unstable();
+        paths.dedup();
+        paths
     }
 }
