@@ -13,9 +13,6 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
    pick: (a) pay it (every entry always carries Opened), or (b) read Opened only for a listing whose effective sort is
    Opened, plus the visible range for tooltips (Opened then shows in a tooltip once the row has been on screen). The
    plan assumes (a) until the note says otherwise.
-2. **View > Sort by has no checkmarks today** (`menu_bar.rs:319-326` are plain items). The requirements say the menu
-   keeps the REQUESTED column checked. Add radio-style checks to the whole submenu as part of this effort, or leave the
-   menu bar unchecked and let only the header's Sort by menu show a check? The plan assumes the latter.
 
 ## Loud rules (every executor)
 
@@ -135,24 +132,52 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
   of scope.
 - **The Full header's Sort by menu is a NATIVE popup** (muda), like every row, tab, and breadcrumb menu: OS-native,
   VoiceOver-ready, keyboard-anchored through `MenuAnchor`. Items: Date modified, Date created, Date added, Last opened,
-  the requested one checked. A pick on a NEW column sorts by it at its default order; picking the checked one does
-  nothing. The pick returns as a typed event carrying the PANE, because a right-click on the unfocused pane's header
-  must sort that pane (the `menu-sort` path only knows the focused one).
+  the requested one checked (none in a search pane's relevance order). A pick on a NEW column sorts by it at its default
+  order; picking the checked one does nothing. The pick returns as a typed event carrying the PANE, because a
+  right-click on the unfocused pane's header must sort that pane (the `menu-sort` path only knows the focused one).
+  Right-click on EITHER view's header opens it at the pointer, so the two views behave alike; only Full gets the
+  chevron, since Brief already shows a button per date.
+- **View > Sort by gets checkmarks** on the whole submenu (columns and order), showing the focused pane's REQUESTED
+  sort, kept in step on focus change, tab change, pane swap, and every sort change. Same `CheckMenuItem` + FE push shape
+  as the per-pane view-mode items (`update_view_mode_menu`, `commands/menu_state.rs:83`; `pushViewMenuState`,
+  `pane/pane-accessors.svelte.ts:125`). § M5b.
 - **Full date header click** calls `handleSortChange(pane, column)` with `column` = the requested sort when it's a date
   (Modified, Created, Added, Opened), else `modified`. In a fallback that toggles the requested column's order, which is
   also the effective one's, so the click visibly flips the rows and the requested column survives.
 - **The fallback is discoverable on three channels**, none of them tooltip-only:
   - The Full date header shows an `info` `StatusGlyph` after its label, and the requested column's Brief header button
-    carries the same glyph. Its label (VoiceOver) and tooltip read the fallback copy.
+    carries the same glyph. The glyph sits INSIDE the `SortableHeader` button (a new optional `fallbackNote` prop),
+    `aria-hidden`, with `tooltip={null}`: the button's `aria-label` replaces its content's name anyway, so the button
+    carries the note in both its name and its tooltip (note above the command name), and two tooltips don't stack.
   - A user-initiated sort that lands in a fallback raises an info toast for the pane (`addToastForPane`, the
-    `refusesSizeSort` shape) and announces through `FilePaneAPI.announce`. Navigating into an unsupporting volume with a
-    date sort already requested stays quiet apart from the glyph: a toast on every folder change is noise.
-  - The header's accessible name says it (§ M8).
+    `refusesSizeSort` shape, `pane/sort-operations.ts:99`). ❌ No extra `FilePaneAPI.announce`: the toast stack already
+    speaks through its own polite live region (`ui/toast/ToastContainer.vsr.svelte.test.ts`), so a second message would
+    read twice. Navigating into an unsupporting volume with a date sort already requested stays quiet apart from the
+    glyph: a toast on every folder change is noise.
+  - The header's accessible name says it (§ M9).
   - Draft copy (David reviews): "This location doesn’t record when items were added, so Cmdr sorts by date modified
-    here." One key per date (`fileExplorer.sortFallback.created|added|opened`).
+    here." One key per date (`fileExplorer.sortFallback.created|added|opened`), used by the toast, the glyph's tooltip,
+    and the header name.
 - **Labels**: column headers `Added`, `Opened` (short, like `Created`); tooltip lines `Created`, `Date added`,
   `Last opened`, `Last modified` (Finder's words); menu items `Date added`, `Last opened`. The `lastMoved` key is
-  REPLACED by a new `fileExplorer.dateTooltip.dateAdded` key so every locale re-translates it.
+  REPLACED by a new `fileExplorer.dateTooltip.dateAdded` key so every locale re-translates it; delete `lastMoved` from
+  `en` AND every locale file in the same commit (deleting isn't translating), or `desktop-message-keys-unused` fails.
+- **Every new key**, English only, each with an `@key` description saying where it shows and how short it must be
+  (native menu keys also say which menu, since no screenshot can show one: `docs/guides/i18n.md`):
+  - `fileExplorer.columns.added` / `.opened` (header labels, both views; "Keep it short", like `columns.created`, whose
+    description, "(Brief view)", now also covers Full).
+  - `fileExplorer.columns.dateSortMenu` (the chevron's name and tooltip, draft "Choose a date to sort by").
+  - `fileExplorer.columns.sortStateFallback` (`{state} ({fallback})`, the header name in a fallback, so translators own
+    the join; § M9).
+  - `fileExplorer.dateTooltip.dateAdded`, `fileExplorer.dateTooltip.displayedLabel` (`{label} (displayed)`: a wrapper,
+    ❌ never a bare ` (displayed)` suffix concatenated in code, so a language can put the word first).
+  - `fileExplorer.list.rowCreated` / `.rowAdded` / `.rowOpened` (`created {date}` …, `ASIDE_SLOTS` phrases).
+  - `fileExplorer.sortFallback.created` / `.added` / `.opened`.
+  - `menu.sort.dateAdded`, `menu.sort.lastOpened` (native: View > Sort by AND the header popup), then
+    `pnpm intl:native-strings` (from `apps/desktop/`; `desktop-native-strings-fresh` fails on a stale table).
+  - `commands.sortByAdded.label` / `commands.sortByOpened.label` ("Sort by date added", "Sort by last opened"), plus
+    `command-registry.parity.test.ts:97`'s English table.
+  - Copy rules: sentence case, no "error"/"failed", no em dashes, curly apostrophes as the catalog uses.
 - **Watcher and refresh**: added time changes only when an item lands in a folder, which the watcher already sees as a
   new entry, so a re-stat carries it. Last opened is an xattr write by LaunchServices; whether that reaches Cmdr's
   watcher as a modify is to be VERIFIED (M3), not assumed. Acceptable outcome if it doesn't: a stale Opened until the
@@ -334,8 +359,9 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
   - MCP: `pane-mcp-sync.svelte.ts` `sortFieldMap` gains the two; pane state adds the effective column when it differs
     (for example `sortFallback: "modified"`), rendered in `panes.rs`; rows gain `created`, `added`, `opened` ISO strings
     when present. `mcp-listeners.ts` `parseSortColumn` accepts them.
-  - Fallback toast + announce on a user-initiated sort (§ Decisions), in `sort-operations.ts`'s `install`, comparing the
-    result's `effectiveSortBy` with the requested column. Copy keys `fileExplorer.sortFallback.*`.
+  - Fallback toast on a user-initiated sort (§ Decisions; the toast's live region is the announcement), in
+    `sort-operations.ts`'s `install`, comparing the result's `effectiveSortBy` with the requested column. Copy keys
+    `fileExplorer.sortFallback.*`.
 - **Intentions**: keyboard and MCP reach the new sorts end to end; the FE has the one piece of state every display
   surface derives from.
 - **Landmines**:
@@ -352,6 +378,46 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
   tests.
 - **DONE**: gates incl. clippy.
 
+### M5b: View > Sort by checkmarks
+
+- **Scope**:
+  - `menu_spec.rs`: a new `CheckRole::Sort(SortCheck)` (`Column(..)` per sort column, `Order(Ascending|Descending)`);
+    the Sort by rows in `menu_bar.rs:319-326` become `check(...)` rows, accelerators unchanged (⌘3–⌘6 stay on Name,
+    Extension, Date modified, Size).
+  - ❗ Name, Extension, Date modified, and Size are TRACKED (rebindable): `update_menu_item_accelerator`
+    (`accelerators.rs:233`) removes the item and reinserts a fresh plain `MenuItem` (`:255`), and `MenuItemEntry.item`
+    is a `MenuItem<R>` (`mod.rs:337`). As is, the first rebind would silently turn a check item back into a plain one.
+    Make `MenuItemEntry.item` hold either kind (Tauri's `MenuItemKind<R>` or a two-variant enum) so the swap recreates
+    the SAME kind and copies `is_checked()`; `apply_menu_item_states` (`item_states.rs:205-213`) keeps greying it. Keep
+    `CheckSpec` carrying the tracking the four items need.
+  - `MenuState` gains the focused pane's requested sort (`Option<(SortColumn, SortOrder)>`; `None` = a search pane in
+    relevance order: no column checked). `sync_sort_check_states` sets every sort item's check from it, finding each
+    handle by id at call time (`sort_submenu.get(id)`, verify the Tauri 2.12 API) so a rebind's replacement is never a
+    stale handle. ❌ No second handle store beside `items`.
+  - A typed `update_sort_menu(sort: Option<{ column: SortColumn, order: SortOrder }>)` command in
+    `commands/menu_state.rs` beside `update_view_mode_menu`, typed (❌ no string parsing like that one's `"full"`).
+  - Click: muda has ALREADY toggled the clicked item when `on_menu_event` hears of it (`menu_handlers.rs:276`), so the
+    sort arm (`menu_handlers.rs:464-475`) calls `sync_sort_check_states` FIRST (undoing the toggle; also the
+    refused-over-dialog path), then emits `MenuSort` as today. The check moves when the FE's sort lands and re-pushes.
+  - The FE push: ONE `$effect` in a new `pane/sort-menu-sync.svelte.ts` (`DualPaneExplorer` / `FilePane` are at their
+    size cap) deriving the focused pane's requested `{ sortBy, sortOrder }` (the active tab's, or the snapshot store's
+    for a search pane) and pushing on change, deduped. One derivation covers focus, tab switch, swap, palette, menu,
+    header, and MCP sorts; ❌ no push call sprinkled per path. A fallback never moves it (invariant 2).
+  - A language rebuild (`rebuild.rs:40-48`) builds a fresh bar: seed the sort checks from `MenuState`, as it already
+    does for show hidden.
+- **Intentions**: the menu bar always shows what the focused pane ASKED for, through one state and one writer.
+- **Landmines**:
+  - The SF Symbol icons (`macos_appkit.rs:237`) and display accelerators are re-applied after an accelerator swap
+    (`settings.rs:374-376`); keep that for the check kind too. Check that AppKit draws the checkmark beside an item that
+    also has an image.
+  - Mnemonics (`mnemonics.rs`) are per submenu; adding Added and Opened shifts Linux letters. The menu bar snapshot
+    shows it.
+- **Test plan**: `menu_bar_test.rs` snapshot (rows read `check`, both platforms); a pure `sort_check_states(state)` →
+  `[(id, bool)]` cell per column, order, and `None`; Vitest for `sort-menu-sync` (pushes on focus change, tab switch,
+  sort change, swap; one push per distinct value; a fallback pushes the requested column). Live: rebind ⌘3, then check
+  Name stays a checked check item (David's QA list, since muda panics off the main thread in tests).
+- **DONE**: gates incl. clippy; `pnpm intl:native-strings` if labels moved.
+
 ### M6: the displayed date in Full mode
 
 - **Scope**:
@@ -363,8 +429,11 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
     when the requested sort is a date), and the measurer (`measure-column-widths.ts:324,429`) all read it. The header's
     width includes the label of the SHOWN date, the chevron (M7), and the fallback glyph.
   - New Full date-cell tooltip and the reworked `buildDateTooltip`: every date the entry carries (in the order Created,
-    Date added, Last opened, Last modified), the displayed one suffixed by a new i18n'd ` (displayed)` key. Replace
-    `lastMoved` with `dateAdded` (§ Decisions).
+    Date added, Last opened, Last modified; a date the entry lacks, or its volume doesn't claim, has no line), the
+    displayed one's label wrapped in `displayedLabel` (§ Decisions). Today's shape stays: `{label}: {segments}` lines
+    joined by `<br>`, each date's age-tier spans from `renderSegments` (`selection-info-utils.ts:147-162`); run the
+    translated labels through `escapeHtml` (`tooltip.ts:231`), since the tooltip renders `html`. Replace `lastMoved`
+    with `dateAdded` (§ Decisions).
   - Full rows' accessible name: `details.modified` becomes `details.date: { column, text }` with one aside phrase per
     column (`rowModified` plus new `rowCreated`, `rowAdded`, `rowOpened`) in `ASIDE_SLOTS`.
   - The fallback glyph on the Full date header (§ Decisions).
@@ -384,16 +453,28 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
 - **Test plan**: `displayed-date.test.ts` (every column, fallback cases); measurer cells proving the width grows for a
   longer shown label and includes the glyph; tooltip ordering and suffix; `file-row-a11y.test.ts` phrases per column; a
   `mountFullList()` cell rendering Added cells under an Added effective sort.
-- **DONE**: gates.
+- **DONE**: gates. Then hand David a screenshot-ready state (a pane sorted by Added on APFS, and one on a FAT image in
+  the fallback, light and dark) for the header label, glyph, and column width; ❌ the agent doesn't judge the layout
+  itself.
 
 ### M7: Full header Sort by menu and click semantics
 
 - **Scope**: `show_date_sort_menu(window, pane, requested, anchor)` in `src-tauri/src/commands/menu.rs` with its builder
   in `src-tauri/src/menu/` (check items, requested checked, `menu.sort.*` labels incl. new `dateAdded` / `lastOpened`),
   a typed `DateSortMenuPick { pane, column }` event from `on_menu_event`, and the FE listener calling the pick semantics
-  (§ Decisions). Right-click anywhere on the Full header opens it at the pointer; a chevron button inside the date
-  header opens it anchored under itself (Enter / Space), and it's part of the pane-chrome toolbar walk. Header click
-  semantics (§ Decisions).
+  (§ Decisions). Right-click anywhere on either view's `.header-row` opens it at the pointer (no anchor). In Full, a
+  chevron button beside the date header opens it anchored under itself (`MenuAnchor { x: rect.left, y: rect.bottom }`,
+  viewport CSS px) on click, Enter, or Space. Header click semantics (§ Decisions).
+  - The chevron: a `<button type="button">` with `aria-haspopup="menu"`, `aria-expanded` true while the show command is
+    in flight (the popup blocks in Rust until it closes, `tab-operations.ts:205-207`), `<Icon name="chevron-down">`
+    `aria-hidden`, name and tooltip `fileExplorer.columns.dateSortMenu`. `FieldHistoryChevron.svelte` is the house
+    precedent for the look. ❌ No `tabindex`: it's a `button`, so it joins the header toolbar's ←/→ walk on its own
+    (`CONTROL_SELECTOR`, `pane-chrome.ts`), right after the date header in DOM order.
+  - It handles Enter / Space in `keydown` with `preventDefault`, as `SortableHeader` does
+    (`SortableHeader.svelte:83-88`): a synthesized click would bubble to the pane's `onclick` and pull focus back to the
+    list, and the next press should find focus still on the chevron.
+  - Both share the date track in a wrapper span, like `.header-name-ext` (`FullListHeader.svelte:70-90`), so the grid
+    keeps its columns.
 - **Intentions**: the mouse reaches every date sort in Full mode without leaving the header, and the keyboard reaches
   the same menu.
 - **Landmines**:
@@ -405,34 +486,51 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
   - `SortableHeader` is a `<button>`; the chevron is a sibling button, ❌ not nested.
   - A search-results pane's header cycles a third click to relevance (`clearsSortLabel`); the date header there must
     keep that.
-- **Test plan**: Rust menu builder test (items, check state); Vitest for the click column choice (requested date,
-  fallback, non-date sort) and the pick handler; one Playwright cell for right-click → pick → order, only if no unit
-  test reaches the native menu round trip.
+  - ❗ The popup's item ids must differ from the bar's `SORT_BY_*_ID`: `on_menu_event` routes popup clicks through the
+    same handler, and a bar id would sort the FOCUSED pane through `menu-sort`. Give them their own ids carrying the
+    pane and column, parsed into `DateSortMenuPick`.
+  - The date column is right-aligned (`align="right"`, label at the right edge, caret to its left); where the chevron
+    sits (left of the caret, or right of the label, pushing the label off the cells' edge) is a visual call. Build the
+    left-of-caret version and hand David a screenshot-ready state.
+- **Test plan**: Rust menu builder test (items, check state, ids distinct from the bar's); Vitest for the click column
+  choice (requested date, fallback, non-date sort), the pick handler (sorts the event's pane, ignores the checked
+  column), the chevron's keydown (opens with an anchor, no click bubbles, focus stays), `aria-expanded`, and the
+  pane-chrome walk reaching the chevron; one Playwright cell for right-click → pick → order, only if no unit test
+  reaches the native menu round trip.
 - **DONE**: gates incl. clippy; `desktop-e2e-playwright` if a cell was added.
 
 ### M8: Brief mode and SelectionInfo
 
 - **Scope**: Brief header gets Added and Opened `SortableHeader`s after Created (`BriefList.svelte:991-998`), with the
   fallback glyph on the requested one in a fallback; SelectionInfo's date (`SelectionInfo.svelte:207`) and tooltip read
-  `displayed-date.ts`; drop the dead `currentDirModifiedAt` prop; Brief rows' accessible name gains the displayed date
-  (the same `details.date`, after the name).
-- **Intentions**: Brief shows and announces the same date Full would.
+  `displayed-date.ts`; drop the dead `currentDirModifiedAt` prop. Brief rows' accessible name stays name-only, as today
+  (`BriefList.svelte:1059-1063` passes no `details`): a Brief row shows no cells, and the date reaches VoiceOver through
+  SelectionInfo, whose date line is visible text.
+- **Intentions**: Brief shows the same date Full would.
 - **Landmines**:
-  - Seven `flex: 1` buttons in a 25%-wide pane ellipsize. Check the narrowest pane at 100% and the largest text size; if
-    labels become unreadable, propose a fix to David (screenshot) rather than shrinking type.
+  - Seven `flex: 1` buttons (`BriefList.svelte:1196`) in a 25%-wide pane ellipsize, and the glyph must not: give it
+    `flex-shrink: 0` beside the ellipsizing `.label`. ❌ Don't judge it from the agent's own render: hand David a
+    screenshot-ready state (narrowest pane, 100% and the largest text size, English and German, whose labels run
+    longest) and let him pick any fix.
   - Nothing visible in Brief may wait on the width IPC (`views/CLAUDE.md`).
   - SelectionInfo's display mode derives from props (`selection/CLAUDE.md`); pass `effectiveSortBy`, ❌ no mode prop.
-- **Test plan**: `SelectionInfo` cells (Added shown under an Added sort, Modified in a fallback with the glyph);
-  `BriefList.a11y.test.ts` row names; header button presence and order.
+- **Test plan**: `SelectionInfo` cells (Added shown under an Added sort, Modified in a fallback with the glyph); header
+  button presence and order.
 - **DONE**: gates.
 
 ### M9: VoiceOver pass and docs
 
 - **Scope**:
-  - Header accessible names: the Full date header says the shown date and its sort state ("Added, sorted descending");
-    in a fallback, the requested column's name says it's sorted by date modified here (extend `columns.sortState` or add
-    a fallback variant). The chevron's name ("Choose a date to sort by", draft). Run the existing a11y suites
-    (`*.a11y.test.ts`) and add cells for the fallback names.
+  - Header accessible names, each starting with the visible label (WCAG 2.5.3, `SortableHeader.svelte:63-70`):
+    - Sorted, no fallback: `columns.sortState` as today, "Added, sorted descending".
+    - Not sorted: "Opened, not sorted" (today's `other` arm).
+    - Fallback: `columns.sortStateFallback` around the state and the date's `sortFallback.*` sentence. Full: "Modified,
+      sorted descending (This location doesn’t record …)", the label being the SHOWN date. Brief: the requested button,
+      "Added, sorted descending (…)".
+    - The chevron: "Choose a date to sort by" (draft), with `aria-haspopup="menu"` so VoiceOver says "menu button".
+  - Run the existing a11y suites (`*.a11y.test.ts`, `full-list.a11y.test.ts`, `file-row-a11y.test.ts`) and add cells for
+    every name above, plus a `@guidepup/virtual-screen-reader` cell that the fallback toast is spoken once.
+  - Listening check for David (VoiceOver): the date header walk, the chevron's menu, and a fallback sort.
   - Docs: `cmdr-local/DETAILS.md` (the lister, supported dates, the xattr), `cmdr-listing/DETAILS.md` (effective sort,
     the Opened watcher finding), `cmdr-fs/DETAILS.md` (the matrix), `views/` and `selection/` C+D.md (the displayed-date
     rule as a must-know), `docs/notes/file-metadata-tiers.md` (Added and Opened are no longer deferred),
@@ -447,9 +545,9 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
 ## Invariants register
 
 1. The shown date is computed in exactly one place, `displayedDateColumn`, and every surface (Full cell, Full header
-   label and width, Brief SelectionInfo, both tooltips' ` (displayed)` marker, both views' row names) reads it.
-2. The requested sort is never mutated by a fallback: pane state, persistence, View > Sort by, command state, the header
-   menu's check, and MCP's `sort` show the requested column.
+   label and width, Brief SelectionInfo, both tooltips' ` (displayed)` marker, Full rows' names) reads it.
+2. The requested sort is never mutated by a fallback: pane state, persistence, View > Sort by's checkmarks, command
+   state, the header menu's check, and MCP's `sort` show the requested column.
 3. Every row ordering in `cmdr-listing` and `sort_search_results` goes through `EffectiveSort::resolve`; the type makes
    a bypass a compile error.
 4. `CachedListing` stores requested + supported dates, never a derived effective column.
