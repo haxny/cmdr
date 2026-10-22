@@ -64,7 +64,10 @@ container is broken is `Io` (the row says it can't read it); a refusal comes bac
   `mdat` (32- and 64-bit sizes, size 0 to the end, a `moof` ends the walk). `taken`: Apple's
   `com.apple.quicktime.creationdate` in `moov/meta` (`keys` + `ilst`) keeps the wall time as written, offset ignored;
   else `mvhd`'s creation time (seconds since 1904 UTC) on this machine's clock. `com.apple.quicktime.make` / `.model`
-  fill `make` / `model`. A video `lofty` can't parse (a QuickTime file with no `ftyp`) keeps its date.
+  fill `make` / `model`. A video `lofty` can't parse (a QuickTime file with no `ftyp`), or whose tags run past the byte
+  budget (`TooLarge`), keeps its date; only `Cancelled` and `TimedOut` end the read. The other readers are single-pass:
+  a refusal there has no earlier facts to keep (and keeping a half-walked MKV's `DateUTC` could hide the `DATE_RECORDED`
+  its `Tags` would have given).
 - **MKV / WebM / MKA** (`ebml.rs`): the EBML header, `Segment`, then its children in order up to the first `Cluster`;
   `SeekHead` targets (`Info`, `Tags`, further seek heads; at most 16 jumps) cover what sits past the clusters, which are
   never read. An unknown-size `Segment` runs to the end of the file; any other unknown size ends the walk.

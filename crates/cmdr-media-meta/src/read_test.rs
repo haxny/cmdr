@@ -135,6 +135,67 @@ impl Seek for Refusing {
     }
 }
 
+/// A reader that refuses with `refusal` inside `refused` and answers elsewhere,
+/// as a block reader whose budget runs out partway does.
+struct RefusingIn {
+    bytes: Cursor<Vec<u8>>,
+    refused: std::ops::Range<u64>,
+    refusal: ReadError,
+}
+
+impl Read for RefusingIn {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let pos = self.bytes.position();
+        if self.refused.contains(&pos) {
+            return Err(self.refusal.clone().into_io());
+        }
+        let room = if pos < self.refused.start {
+            self.refused.start - pos
+        } else {
+            u64::MAX
+        };
+        let len = buf.len().min(usize::try_from(room).unwrap_or(usize::MAX));
+        self.bytes.read(&mut buf[..len])
+    }
+}
+
+impl Seek for RefusingIn {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        self.bytes.seek(pos)
+    }
+}
+
+#[test]
+fn a_video_whose_tags_run_past_the_budget_keeps_its_date() {
+    let utc = at(2026, 7, 14, 6, 0, 0);
+    let movie = concat(&[
+        &ftyp(b"isom"),
+        &atom(b"moov", &mvhd_v0(u32::try_from(mac_seconds(utc)).unwrap())),
+        &atom(b"mdat", &[0; 32]),
+    ]);
+    let mut tag = lofty::tag::Tag::new(TagType::Mp4Ilst);
+    lofty::tag::Accessor::set_title(&mut tag, "Holiday".to_owned());
+    let bytes = tagged(movie, &tag, WriteOptions::default());
+    // The box walk reads `udta`'s header; lofty's tag pass reads into its body.
+    let udta = bytes.windows(4).position(|w| w == b"udta").unwrap();
+    let udta_size = u32::from_be_bytes(bytes[udta - 4..udta].try_into().unwrap());
+    let body = udta as u64 + 4;
+    let refused = |refusal: ReadError| {
+        let mut reader = RefusingIn {
+            bytes: Cursor::new(bytes.clone()),
+            refused: body..body + u64::from(udta_size) - 8,
+            refusal,
+        };
+        read_media_in(&mut reader, "IMG_0001.MOV", &two_hours_ahead)
+    };
+    let facts = refused(ReadError::TooLarge).expect("the date the box walk found stands");
+    assert_eq!(facts.taken, Some(at(2026, 7, 14, 8, 0, 0)));
+    assert_eq!(facts.title, None);
+    for refusal in [ReadError::Cancelled, ReadError::TimedOut] {
+        assert_eq!(refused(refusal.clone()), Err(refusal));
+    }
+}
+
 #[test]
 fn a_refusal_comes_back_as_itself_from_every_reader() {
     for refusal in [ReadError::Cancelled, ReadError::TimedOut, ReadError::TooLarge] {

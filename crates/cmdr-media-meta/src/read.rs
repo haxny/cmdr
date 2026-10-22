@@ -80,14 +80,15 @@ pub(crate) fn read_media_in<R: Read + Seek>(
         Format::Audio => read_tags(reader, file_name),
         Format::Mp4Video => {
             let mut facts = isobmff::read_video(reader, to_local).map_err(ReadError::from_io)?;
-            // A video's tags are a bonus: a MOV lofty can't parse still has its date.
+            // A video's tags are a bonus: a MOV lofty can't parse, or whose tags
+            // run past the byte budget, still has its date. Only a stopped read
+            // (cancelled or out of time) ends it.
             match read_tags(reader, file_name) {
                 Ok(tags) => merge_tags(&mut facts, tags),
-                Err(ReadError::Io(text)) => {
-                    log::debug!(target: "cmdr_media_meta::read", "No tags in a video: {text}");
+                Err(stopped @ (ReadError::Cancelled | ReadError::TimedOut)) => return Err(stopped),
+                Err(skipped) => {
+                    log::debug!(target: "cmdr_media_meta::read", "No tags in a video: {skipped:?}");
                 }
-                Err(ReadError::NotSupported) => {}
-                Err(refusal) => return Err(refusal),
             }
             Ok(facts)
         }
