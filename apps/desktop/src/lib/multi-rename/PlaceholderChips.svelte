@@ -146,4 +146,17 @@
     .placeholders > :global(.chip) {
         flex: 1 1 auto;
     }
+
+    /* `media ▾` is a word, and a translation can be three times as long ("đa phương tiện ▾"): it
+       stops growing the chip column (which would squeeze the masks) and ends in an ellipsis. Its
+       accessible name and tooltip still say it all. */
+    .placeholders > :global(.chip-filter) {
+        max-width: 8em;
+    }
+
+    .placeholders > :global(.chip-filter .chip-label) {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
 </style>
