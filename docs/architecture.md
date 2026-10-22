@@ -381,11 +381,12 @@ All under `apps/desktop/src-tauri/src/`.
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
 `cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-http`, `cmdr-listing`,
-`cmdr-collation`, `cmdr-local`, `cmdr-media-meta`, `cmdr-operation-log`, `cmdr-operations`, and `cmdr-update-trust` carry no `tauri`
-dependency and no reach into the app; `index-crate-isolation` enforces that against the `cargo metadata` graph, and caps
-the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`,
-`cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-listing`, `cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, and
-`cmdr-operations` at the numbers their audits landed on. The two dev CLIs and the vendored fork are ordinary members.
+`cmdr-collation`, `cmdr-local`, `cmdr-media-meta`, `cmdr-operation-log`, `cmdr-operations`, and `cmdr-update-trust`
+carry no `tauri` dependency and no reach into the app; `index-crate-isolation` enforces that against the
+`cargo metadata` graph, and caps the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
+`cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-listing`, `cmdr-collation`,
+`cmdr-local`, `cmdr-operation-log`, and `cmdr-operations` at the numbers their audits landed on. The two dev CLIs and
+the vendored fork are ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →

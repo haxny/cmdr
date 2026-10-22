@@ -208,6 +208,7 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `NFS-rechten`, and no pile catalog names the NFS noun. Confirm Dutch NAS users say `export`.
 - `bevoorrechte poort` and the quoted `Verbindingen van niet-bevoorrechte poorten toestaan` come from Synology's nl KB
   (kb.synology.com/nl-nl, 2026-10-22), not from DSM's UI strings themselves.
+
 ## Mediavelden in Wijzig meerdere namen (`multiRename.mediaField.*`, `multiRename.mediaPicker.none*`)
 
 - `Richting` (orientation) follows Spotlight's `schema.strings`; Dolphin says `Oriëntatie`, which a photographer may
