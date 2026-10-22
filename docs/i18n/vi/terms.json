@@ -1544,6 +1544,12 @@
     "forms": "indexing → lập chỉ mục; indexed → đã lập chỉ mục; re-index → lập chỉ mục lại; indexing pass → lượt quét",
     "sources": "macOS (chỉ mục, Đang cập nhật chỉ mục, Đã lập chỉ mục), MS terminology"
   },
+  "info": {
+    "chosen": "thông tin",
+    "confidence": "high",
+    "forms": "a photo's information → thông tin ảnh; a song's own information → thông tin riêng của bài hát",
+    "sources": "macOS Music (Info → Thông tin), Photos IPXMain (information → thông tin); Dolphin (Information → Thông tin)"
+  },
   "input-source": {
     "chosen": "nguồn nhập",
     "confidence": "tentative",
@@ -2986,8 +2992,8 @@
     "chosen": "thẻ",
     "confidence": "high",
     "decision": "Rà soát trôi thuật ngữ toàn catalog",
-    "forms": "tag colors Đỏ, Cam, Vàng, Lục, Lam, Tía, Xám (Cyan → Xanh ngọc)",
-    "sources": "macOS Finder (Thẻ…, Thêm thẻ…, TG_COLOR_*)"
+    "forms": "tag colors Đỏ, Cam, Vàng, Lục, Lam, Tía, Xám (Cyan → Xanh ngọc); a song's or video's metadata tags (ID3, MP4) are thẻ too (Đang đọc thẻ, Không đọc được thẻ)",
+    "sources": "macOS Finder (Thẻ…, Thêm thẻ…, TG_COLOR_*); macOS Music ConvertID3 (ID3 tag version → Phiên bản thẻ ID3)"
   },
   "tail": {
     "accept": ["bám theo"],
@@ -3230,6 +3236,18 @@
     "chosen": "phiên bản",
     "confidence": "high",
     "sources": "macOS Finder/AppKit (version → phiên bản)"
+  },
+  "video": {
+    "avoid": [
+      {
+        "form": "phim",
+        "why": "Dolphin's word reads as a movie; macOS Photos keeps video"
+      }
+    ],
+    "chosen": "video",
+    "confidence": "high",
+    "forms": "Photos and videos → Ảnh và video; shot a video → quay video",
+    "sources": "macOS Photos IPXMain and PhotosUICore (Video/Videos → Video)"
   },
   "viewer": {
     "avoid": [

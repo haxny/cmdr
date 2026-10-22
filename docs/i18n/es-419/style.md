@@ -87,6 +87,8 @@ with `plutil`, 236,620 strings that exist in `en`, `es`, and `es_419` (2026-09-2
   doesn't fork.
 - **OK button → `OK`**: AppKit's and Finder's `OK` read `Aceptar` in es and `OK` in es-419 (`Aceptar` 788 / 308, `OK`
   257 / 580). Only the three bare `OK` buttons fork; a quoted macOS dialog button keeps its own text.
+- **video → `video`** (no accent): Finder and Photos write `Vídeo(s)` in es and `Video(s)` in es_419 (pile plus live
+  `.loctable`, macOS 27.0.1, 2026-10-22).
 - **cost → `costo`** (`coste` 8 / 0, `costo` 0 / 17); **take a photo → `tomar`** (`hacer una foto` 54 / 0,
   `tomar una foto` 3 / 60).
 - **a place → `lugar`**: `otro sitio` 10 / 0, `otro lugar` 0 / 9 (`a su lugar`, `desde cualquier lugar`,

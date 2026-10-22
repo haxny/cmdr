@@ -644,6 +644,10 @@
   "@commands.multiRenameReplaceWholeName.label": {
     "sourceHash": "016c572"
   },
+  "commands.multiRenameInsertField.label": "插入照片、视频或音乐字段",
+  "@commands.multiRenameInsertField.label": {
+    "sourceHash": "4b9e9de"
+  },
   "commands.multiRenameUndoRename.label": "撤销上一次批量重命名",
   "@commands.multiRenameUndoRename.label": {
     "sourceHash": "e5a0975"

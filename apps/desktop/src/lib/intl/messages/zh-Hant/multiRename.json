@@ -23,6 +23,14 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
+  "multiRename.mediaButton": "媒體 ▾",
+  "@multiRename.mediaButton": {
+    "sourceHash": "fb69ec3"
+  },
+  "multiRename.mediaButtonName": "媒體欄位",
+  "@multiRename.mediaButtonName": {
+    "sourceHash": "7f448e6"
+  },
   "multiRename.search": "搜尋",
   "@multiRename.search": {
     "sourceHash": "6ea8f74"
@@ -199,6 +207,10 @@
   "@multiRename.preview": {
     "sourceHash": "324b134"
   },
+  "multiRename.readingTags": "正在讀取標籤：{readText} / {totalText}",
+  "@multiRename.readingTags": {
+    "sourceHash": "a15c17f"
+  },
   "multiRename.oldName": "舊名稱",
   "@multiRename.oldName": {
     "sourceHash": "f192b20"
@@ -267,6 +279,10 @@
   "@multiRename.summary": {
     "sourceHash": "ca7be9b"
   },
+  "multiRename.summaryReading": "{ready, plural, other {# 個要重新命名}} · {unchanged, plural, other {# 個不變}} · <problemsToggle>{problems, plural, other {# 個有問題}}</problemsToggle> · {reading, plural, other {# 個還在讀取}}",
+  "@multiRename.summaryReading": {
+    "sourceHash": "4c73b60"
+  },
   "multiRename.cancel": "取消",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
@@ -331,6 +347,26 @@
   "@multiRename.rename": {
     "sourceHash": "9789ca5"
   },
+  "multiRename.starting": "即將開始⋯",
+  "@multiRename.starting": {
+    "sourceHash": "bbe5fc3"
+  },
+  "multiRename.renameWaitsTooltip": "有些檔案的標籤還在讀取。重新命名會等它們讀完再開始。",
+  "@multiRename.renameWaitsTooltip": {
+    "sourceHash": "208afe0"
+  },
+  "multiRename.startingTooltip": "所有檔案的標籤都讀完後，就會開始重新命名。再按一下就能取消。",
+  "@multiRename.startingTooltip": {
+    "sourceHash": "bbeb76e"
+  },
+  "multiRename.queuedAnnounce": "標籤讀完後就會開始重新命名",
+  "@multiRename.queuedAnnounce": {
+    "sourceHash": "7c11af5"
+  },
+  "multiRename.queueCanceled": "已取消重新命名",
+  "@multiRename.queueCanceled": {
+    "sourceHash": "cdd1d0e"
+  },
   "multiRename.started": "{count, plural, other {正在重新命名 # 個檔案}}。要還原的話，可以到「操作記錄」裡按「復原」。",
   "@multiRename.started": {
     "sourceHash": "55b4878"
@@ -362,6 +398,223 @@
   "multiRename.reason.missing": "開啟「多檔重新命名」之後，這個檔案被移動或刪除了，所以略過它。",
   "@multiRename.reason.missing": {
     "sourceHash": "8697aa3"
+  },
+  "multiRename.status.reading": "正在讀取⋯",
+  "@multiRename.status.reading": {
+    "sourceHash": "874bfa5"
+  },
+  "multiRename.status.noValue": "缺少「{field}」",
+  "@multiRename.status.noValue": {
+    "sourceHash": "619464f"
+  },
+  "multiRename.reason.noValue": "這個檔案沒有「{field}」的值，所以保留原本的名稱。",
+  "@multiRename.reason.noValue": {
+    "sourceHash": "25d9a0f"
+  },
+  "multiRename.reason.noDate": "這個檔案沒有「{field}」的值，所以保留原本的名稱。預留位置的編輯器可以改用檔案上次更改的日期。",
+  "@multiRename.reason.noDate": {
+    "sourceHash": "239bc84"
+  },
+  "multiRename.status.unreadable": "無法讀取標籤",
+  "@multiRename.status.unreadable": {
+    "sourceHash": "fe6ad18"
+  },
+  "multiRename.reason.unreadable": "「多檔重新命名」無法讀取這個檔案的標籤或照片資訊，所以沒有「{field}」的值，這個檔案保留原本的名稱。",
+  "@multiRename.reason.unreadable": {
+    "sourceHash": "099ce1f"
+  },
+  "multiRename.mediaField.exifTaken": "拍攝日期",
+  "@multiRename.mediaField.exifTaken": {
+    "sourceHash": "a2f4fe8"
+  },
+  "multiRename.mediaField.exifCamera": "相機",
+  "@multiRename.mediaField.exifCamera": {
+    "sourceHash": "03494b0"
+  },
+  "multiRename.mediaField.exifMake": "相機製造商",
+  "@multiRename.mediaField.exifMake": {
+    "sourceHash": "78929e9"
+  },
+  "multiRename.mediaField.exifModel": "相機型號",
+  "@multiRename.mediaField.exifModel": {
+    "sourceHash": "ddbfabf"
+  },
+  "multiRename.mediaField.exifLens": "鏡頭",
+  "@multiRename.mediaField.exifLens": {
+    "sourceHash": "4317a99"
+  },
+  "multiRename.mediaField.exifIso": "ISO",
+  "@multiRename.mediaField.exifIso": {
+    "sourceHash": "6dc87bf",
+    "sameAsSourceJustification": "“ISO” is the international name of the light-sensitivity standard; Taiwanese camera UIs and the catalog itself (settings.appearance.dateTimeFormat.opt.iso “ISO 8601”) keep it Latin, and the @key description asks to keep it."
+  },
+  "multiRename.mediaField.exifFocal": "焦距（mm）",
+  "@multiRename.mediaField.exifFocal": {
+    "sourceHash": "6a87ca3"
+  },
+  "multiRename.mediaField.exifWidth": "寬度（像素）",
+  "@multiRename.mediaField.exifWidth": {
+    "sourceHash": "7929f0d"
+  },
+  "multiRename.mediaField.exifHeight": "高度（像素）",
+  "@multiRename.mediaField.exifHeight": {
+    "sourceHash": "37d0cb6"
+  },
+  "multiRename.mediaField.exifOrientation": "方向",
+  "@multiRename.mediaField.exifOrientation": {
+    "sourceHash": "e3d1124"
+  },
+  "multiRename.mediaField.tagTitle": "標題",
+  "@multiRename.mediaField.tagTitle": {
+    "sourceHash": "7e8cd20"
+  },
+  "multiRename.mediaField.tagArtist": "演出者",
+  "@multiRename.mediaField.tagArtist": {
+    "sourceHash": "1d3981b"
+  },
+  "multiRename.mediaField.tagAlbumArtist": "專輯演出者",
+  "@multiRename.mediaField.tagAlbumArtist": {
+    "sourceHash": "334ae82"
+  },
+  "multiRename.mediaField.tagAlbum": "專輯",
+  "@multiRename.mediaField.tagAlbum": {
+    "sourceHash": "f05e840"
+  },
+  "multiRename.mediaField.tagTrack": "曲目編號",
+  "@multiRename.mediaField.tagTrack": {
+    "sourceHash": "de8de0b"
+  },
+  "multiRename.mediaField.tagDisc": "光碟編號",
+  "@multiRename.mediaField.tagDisc": {
+    "sourceHash": "0fd0aef"
+  },
+  "multiRename.mediaField.tagYear": "年份",
+  "@multiRename.mediaField.tagYear": {
+    "sourceHash": "89f6832"
+  },
+  "multiRename.mediaField.tagGenre": "類型",
+  "@multiRename.mediaField.tagGenre": {
+    "sourceHash": "6da795a"
+  },
+  "multiRename.mediaField.tagComment": "註解",
+  "@multiRename.mediaField.tagComment": {
+    "sourceHash": "44f5e3f"
+  },
+  "multiRename.mediaPicker.title": "插入欄位",
+  "@multiRename.mediaPicker.title": {
+    "sourceHash": "b722b94"
+  },
+  "multiRename.mediaPicker.filter": "篩選欄位",
+  "@multiRename.mediaPicker.filter": {
+    "sourceHash": "184a51b"
+  },
+  "multiRename.mediaPicker.photos": "照片和影片（EXIF）",
+  "@multiRename.mediaPicker.photos": {
+    "sourceHash": "b41c23d"
+  },
+  "multiRename.mediaPicker.music": "音樂（ID3、MP4、FLAC⋯）",
+  "@multiRename.mediaPicker.music": {
+    "sourceHash": "357e580"
+  },
+  "multiRename.mediaPicker.none": "這些檔案都沒有",
+  "@multiRename.mediaPicker.none": {
+    "sourceHash": "9d56c00"
+  },
+  "multiRename.mediaPicker.noneYet": "目前還沒有",
+  "@multiRename.mediaPicker.noneYet": {
+    "sourceHash": "35c2dfa"
+  },
+  "multiRename.mediaPicker.noMatch": "沒有符合「{filter}」的欄位",
+  "@multiRename.mediaPicker.noMatch": {
+    "sourceHash": "2003efb"
+  },
+  "multiRename.mediaPicker.inserted": "已插入「{field}」",
+  "@multiRename.mediaPicker.inserted": {
+    "sourceHash": "d5f2afb"
+  },
+  "multiRename.mediaPicker.insertedMark": "已插入",
+  "@multiRename.mediaPicker.insertedMark": {
+    "sourceHash": "e8dd664"
+  },
+  "multiRename.mediaEditor.marker": "編輯欄位",
+  "@multiRename.mediaEditor.marker": {
+    "sourceHash": "652e08e"
+  },
+  "multiRename.mediaEditor.title": "欄位",
+  "@multiRename.mediaEditor.title": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.mediaEditor.format": "格式",
+  "@multiRename.mediaEditor.format": {
+    "sourceHash": "2f34366"
+  },
+  "multiRename.mediaEditor.dateHint": "Y、M、D 代表日期，h、m、s 代表時間，中間可以用 - . _ 或空格隔開。留空就用完整的日期和時間。",
+  "@multiRename.mediaEditor.dateHint": {
+    "sourceHash": "88e6818"
+  },
+  "multiRename.mediaEditor.presets": "常用格式",
+  "@multiRename.mediaEditor.presets": {
+    "sourceHash": "0998319"
+  },
+  "multiRename.mediaEditor.preset.dateTime": "日期和時間",
+  "@multiRename.mediaEditor.preset.dateTime": {
+    "sourceHash": "a079c3b"
+  },
+  "multiRename.mediaEditor.preset.date": "日期",
+  "@multiRename.mediaEditor.preset.date": {
+    "sourceHash": "99c40ab"
+  },
+  "multiRename.mediaEditor.preset.time": "時間",
+  "@multiRename.mediaEditor.preset.time": {
+    "sourceHash": "33b9347"
+  },
+  "multiRename.mediaEditor.preset.compact": "緊湊",
+  "@multiRename.mediaEditor.preset.compact": {
+    "sourceHash": "9945264"
+  },
+  "multiRename.mediaEditor.digits": "位數",
+  "@multiRename.mediaEditor.digits": {
+    "sourceHash": "9cd500d"
+  },
+  "multiRename.mediaEditor.digitsHint": "前面補零，例如填 2 會得到 03。留空就保留原本的數字。",
+  "@multiRename.mediaEditor.digitsHint": {
+    "sourceHash": "793a729"
+  },
+  "multiRename.mediaEditor.characters": "字元",
+  "@multiRename.mediaEditor.characters": {
+    "sourceHash": "6fac39e"
+  },
+  "multiRename.mediaEditor.charactersHint": "例如 1-10 取前十個，-3- 取最後三個。留空就取全部。",
+  "@multiRename.mediaEditor.charactersHint": {
+    "sourceHash": "dcc206f"
+  },
+  "multiRename.mediaEditor.fallback": "檔案沒有這個日期時：改用它上次更改的日期",
+  "@multiRename.mediaEditor.fallback": {
+    "sourceHash": "8978898"
+  },
+  "multiRename.mediaEditor.usesModified": "{count, plural, other {{countText} 個檔案改用上次更改的日期}}",
+  "@multiRename.mediaEditor.usesModified": {
+    "sourceHash": "588993a"
+  },
+  "multiRename.mediaEditor.missing": "{count, plural, other {{countText} 個檔案沒有這個值，會保留原本的名稱}}",
+  "@multiRename.mediaEditor.missing": {
+    "sourceHash": "6356576"
+  },
+  "multiRename.mediaEditor.stillReading": "{count, plural, other {{countText} 個檔案還在讀取}}",
+  "@multiRename.mediaEditor.stillReading": {
+    "sourceHash": "44bea1c"
+  },
+  "multiRename.mediaEditor.gap.reading": "正在讀取⋯",
+  "@multiRename.mediaEditor.gap.reading": {
+    "sourceHash": "6ab8da1"
+  },
+  "multiRename.mediaEditor.gap.noValue": "無",
+  "@multiRename.mediaEditor.gap.noValue": {
+    "sourceHash": "140bedb"
+  },
+  "multiRename.mediaEditor.gap.unreadable": "無法讀取",
+  "@multiRename.mediaEditor.gap.unreadable": {
+    "sourceHash": "f6daf78"
   },
   "multiRename.reason.empty": "新名稱是空的。",
   "@multiRename.reason.empty": {
@@ -442,6 +695,30 @@
   "multiRename.placeholderHelp.time": "檔案上次更改的時間：時、分、秒",
   "@multiRename.placeholderHelp.time": {
     "sourceHash": "69c80a0"
+  },
+  "multiRename.placeholderHelp.media": "照片、影片或歌曲本身的資訊：EXIF、ID3、MP4、FLAC、Ogg 等",
+  "@multiRename.placeholderHelp.media": {
+    "sourceHash": "b7ba607"
+  },
+  "multiRename.placeholderHelp.mediaTaken": "照片或影片的拍攝日期",
+  "@multiRename.placeholderHelp.mediaTaken": {
+    "sourceHash": "b0eea95"
+  },
+  "multiRename.placeholderHelp.mediaFallback": "沒有拍攝日期的檔案改用上次更改的日期",
+  "@multiRename.placeholderHelp.mediaFallback": {
+    "sourceHash": "292616f"
+  },
+  "multiRename.placeholderHelp.mediaCamera": "相機的製造商和型號",
+  "@multiRename.placeholderHelp.mediaCamera": {
+    "sourceHash": "9da2073"
+  },
+  "multiRename.placeholderHelp.mediaSong": "歌曲的曲目編號、演出者和標題",
+  "@multiRename.placeholderHelp.mediaSong": {
+    "sourceHash": "f1a8bf1"
+  },
+  "multiRename.placeholderHelp.mediaHint": "按一下就能從所有欄位中挑選，每個欄位都會顯示它在你檔案上的值。",
+  "@multiRename.placeholderHelp.mediaHint": {
+    "sourceHash": "8f7db2f"
   },
   "multiRename.placeholderHelp.oneChar": "只取第 {at} 個字元",
   "@multiRename.placeholderHelp.oneChar": {

@@ -534,3 +534,6 @@ Total Commander zh-CN labels: `批量重命名`, mask `名称规则` (TC `重命
 
 - Range editor: `起点` / `终点` (a position, not the counter's `起始值`); ordinals `第 # 个` / `倒数第 # 个`, `=1` →
   `最后一个`.
+- Media fields (`multiRename.mediaField.*`): music names follow Music.app zh_CN (`艺人`, `专辑艺人`, `音轨编号`,
+  `光盘编号`, `类型`, `注释`), photo ones Photos/Spotlight (`拍摄日期`, `镜头`, `焦距`, `方向`); a field is TC's `字段`,
+  the button `媒体` (DC `媒体类型`). Camera model is `型号`, never the AI `模型`.

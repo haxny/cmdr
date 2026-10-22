@@ -324,3 +324,6 @@ Over TC `Uitgebreid hernoemen` (Finder `Wijzig naam van ^0 onderdelen…`). TC `
 - `multiRename.rangeEditor.*`: ordinals `#e` (CLDR nl ordinal is `other` only); counted from the end →
   `#e vanaf het einde` (TC `Meet het eerste teken vanaf het einde`), never `#e-laatste`; edges `Begin`/`Einde` (counter:
   `Beginnummer`).
+- `multiRename.mediaField.*`: Spotlight's `nl.lproj/schema.strings` names (`Opnamedatum`, `Tracknummer`, `Richting`,
+  `Opmerking`), except focal length → `Brandpuntsafstand` (Apple's `Scherptediepte` is depth of field; its own ShortName
+  says `brandpuntsafstand`); song → `nummer`; file metadata → `gegevens`; date format → `notatie`.

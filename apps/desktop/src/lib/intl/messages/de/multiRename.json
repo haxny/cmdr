@@ -23,6 +23,14 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
+  "multiRename.mediaButton": "Medien ▾",
+  "@multiRename.mediaButton": {
+    "sourceHash": "fb69ec3"
+  },
+  "multiRename.mediaButtonName": "Medienfelder",
+  "@multiRename.mediaButtonName": {
+    "sourceHash": "7f448e6"
+  },
   "multiRename.search": "Suchen nach",
   "@multiRename.search": {
     "sourceHash": "6ea8f74"
@@ -199,6 +207,10 @@
   "@multiRename.preview": {
     "sourceHash": "324b134"
   },
+  "multiRename.readingTags": "Tags werden gelesen: {readText} von {totalText}",
+  "@multiRename.readingTags": {
+    "sourceHash": "a15c17f"
+  },
   "multiRename.oldName": "Alter Name",
   "@multiRename.oldName": {
     "sourceHash": "f192b20"
@@ -268,6 +280,10 @@
   "@multiRename.summary": {
     "sourceHash": "ca7be9b"
   },
+  "multiRename.summaryReading": "{ready, plural, one {# umzubenennen} other {# umzubenennen}} · {unchanged, plural, one {# unverändert} other {# unverändert}} · <problemsToggle>{problems, plural, one {# Problem} other {# Probleme}}</problemsToggle> · {reading, plural, one {# wird noch gelesen} other {# werden noch gelesen}}",
+  "@multiRename.summaryReading": {
+    "sourceHash": "4c73b60"
+  },
   "multiRename.cancel": "Abbrechen",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
@@ -332,6 +348,26 @@
   "@multiRename.rename": {
     "sourceHash": "9789ca5"
   },
+  "multiRename.starting": "Wird gestartet …",
+  "@multiRename.starting": {
+    "sourceHash": "bbe5fc3"
+  },
+  "multiRename.renameWaitsTooltip": "Die Tags einiger Dateien werden noch gelesen. Das Umbenennen wartet darauf und startet dann.",
+  "@multiRename.renameWaitsTooltip": {
+    "sourceHash": "208afe0"
+  },
+  "multiRename.startingTooltip": "Das Umbenennen startet, sobald die Tags aller Dateien gelesen sind. Zum Abbrechen erneut klicken.",
+  "@multiRename.startingTooltip": {
+    "sourceHash": "bbeb76e"
+  },
+  "multiRename.queuedAnnounce": "Das Umbenennen startet, sobald die Tags gelesen sind",
+  "@multiRename.queuedAnnounce": {
+    "sourceHash": "7c11af5"
+  },
+  "multiRename.queueCanceled": "Umbenennen abgebrochen",
+  "@multiRename.queueCanceled": {
+    "sourceHash": "cdd1d0e"
+  },
   "multiRename.started": "{count, plural, one {# Datei wird umbenannt} other {# Dateien werden umbenannt}}. Mit „Rollback“ im Vorgangsprotokoll kannst du das Umbenennen rückgängig machen.",
   "@multiRename.started": {
     "sourceHash": "55b4878"
@@ -363,6 +399,226 @@
   "multiRename.reason.missing": "Diese Datei wurde bewegt oder gelöscht, nachdem „Mehrfach umbenennen“ geöffnet wurde, daher wird sie ausgelassen.",
   "@multiRename.reason.missing": {
     "sourceHash": "8697aa3"
+  },
+  "multiRename.status.reading": "Wird gelesen …",
+  "@multiRename.status.reading": {
+    "sourceHash": "874bfa5"
+  },
+  "multiRename.status.noValue": "{field} fehlt",
+  "@multiRename.status.noValue": {
+    "sourceHash": "619464f"
+  },
+  "multiRename.reason.noValue": "Diese Datei hat keinen Wert für „{field}“, daher behält die Datei ihren Namen.",
+  "@multiRename.reason.noValue": {
+    "sourceHash": "25d9a0f"
+  },
+  "multiRename.reason.noDate": "Diese Datei hat keinen Wert für „{field}“, daher behält die Datei ihren Namen. Der Editor des Platzhalters kann stattdessen das Datum nehmen, an dem die Datei zuletzt geändert wurde.",
+  "@multiRename.reason.noDate": {
+    "sourceHash": "239bc84"
+  },
+  "multiRename.status.unreadable": "Tags nicht lesbar",
+  "@multiRename.status.unreadable": {
+    "sourceHash": "fe6ad18"
+  },
+  "multiRename.reason.unreadable": "„Mehrfach umbenennen“ konnte die Tags oder Fotoangaben dieser Datei nicht lesen, daher hat die Datei keinen Wert für „{field}“ und behält ihren Namen.",
+  "@multiRename.reason.unreadable": {
+    "sourceHash": "099ce1f"
+  },
+  "multiRename.mediaField.exifTaken": "Aufnahmedatum",
+  "@multiRename.mediaField.exifTaken": {
+    "sourceHash": "a2f4fe8"
+  },
+  "multiRename.mediaField.exifCamera": "Kamera",
+  "@multiRename.mediaField.exifCamera": {
+    "sourceHash": "03494b0"
+  },
+  "multiRename.mediaField.exifMake": "Kamerahersteller",
+  "@multiRename.mediaField.exifMake": {
+    "sourceHash": "78929e9"
+  },
+  "multiRename.mediaField.exifModel": "Kameramodell",
+  "@multiRename.mediaField.exifModel": {
+    "sourceHash": "ddbfabf"
+  },
+  "multiRename.mediaField.exifLens": "Objektiv",
+  "@multiRename.mediaField.exifLens": {
+    "sourceHash": "4317a99"
+  },
+  "multiRename.mediaField.exifIso": "ISO",
+  "@multiRename.mediaField.exifIso": {
+    "sourceHash": "6dc87bf",
+    "sameAsSourceJustification": "ISO is the international name of the speed setting; Nautilus (ISO-Empfindlichkeit) and Thunar (ISO-Geschw.) keep ISO."
+  },
+  "multiRename.mediaField.exifFocal": "Brennweite (mm)",
+  "@multiRename.mediaField.exifFocal": {
+    "sourceHash": "6a87ca3"
+  },
+  "multiRename.mediaField.exifWidth": "Breite (Pixel)",
+  "@multiRename.mediaField.exifWidth": {
+    "sourceHash": "7929f0d"
+  },
+  "multiRename.mediaField.exifHeight": "Höhe (Pixel)",
+  "@multiRename.mediaField.exifHeight": {
+    "sourceHash": "37d0cb6"
+  },
+  "multiRename.mediaField.exifOrientation": "Ausrichtung",
+  "@multiRename.mediaField.exifOrientation": {
+    "sourceHash": "e3d1124"
+  },
+  "multiRename.mediaField.tagTitle": "Titel",
+  "@multiRename.mediaField.tagTitle": {
+    "sourceHash": "7e8cd20"
+  },
+  "multiRename.mediaField.tagArtist": "Interpret",
+  "@multiRename.mediaField.tagArtist": {
+    "sourceHash": "1d3981b"
+  },
+  "multiRename.mediaField.tagAlbumArtist": "Albuminterpret",
+  "@multiRename.mediaField.tagAlbumArtist": {
+    "sourceHash": "334ae82"
+  },
+  "multiRename.mediaField.tagAlbum": "Album",
+  "@multiRename.mediaField.tagAlbum": {
+    "sourceHash": "f05e840",
+    "sameAsSourceJustification": "Album is the German word too, same spelling; Nautilus and Dolphin both write Album."
+  },
+  "multiRename.mediaField.tagTrack": "Titelnummer",
+  "@multiRename.mediaField.tagTrack": {
+    "sourceHash": "de8de0b"
+  },
+  "multiRename.mediaField.tagDisc": "CD-Nummer",
+  "@multiRename.mediaField.tagDisc": {
+    "sourceHash": "0fd0aef"
+  },
+  "multiRename.mediaField.tagYear": "Jahr",
+  "@multiRename.mediaField.tagYear": {
+    "sourceHash": "89f6832"
+  },
+  "multiRename.mediaField.tagGenre": "Genre",
+  "@multiRename.mediaField.tagGenre": {
+    "sourceHash": "6da795a",
+    "sameAsSourceJustification": "Genre is the German word too, same spelling; Dolphin writes Genre."
+  },
+  "multiRename.mediaField.tagComment": "Kommentar",
+  "@multiRename.mediaField.tagComment": {
+    "sourceHash": "44f5e3f"
+  },
+  "multiRename.mediaPicker.title": "Feld einfügen",
+  "@multiRename.mediaPicker.title": {
+    "sourceHash": "b722b94"
+  },
+  "multiRename.mediaPicker.filter": "Felder filtern",
+  "@multiRename.mediaPicker.filter": {
+    "sourceHash": "184a51b"
+  },
+  "multiRename.mediaPicker.photos": "Fotos und Videos (EXIF)",
+  "@multiRename.mediaPicker.photos": {
+    "sourceHash": "b41c23d"
+  },
+  "multiRename.mediaPicker.music": "Musik (ID3, MP4, FLAC …)",
+  "@multiRename.mediaPicker.music": {
+    "sourceHash": "357e580"
+  },
+  "multiRename.mediaPicker.none": "in keiner dieser Dateien",
+  "@multiRename.mediaPicker.none": {
+    "sourceHash": "9d56c00"
+  },
+  "multiRename.mediaPicker.noneYet": "bisher in keiner Datei",
+  "@multiRename.mediaPicker.noneYet": {
+    "sourceHash": "35c2dfa"
+  },
+  "multiRename.mediaPicker.noMatch": "Kein Feld passt zu „{filter}“",
+  "@multiRename.mediaPicker.noMatch": {
+    "sourceHash": "2003efb"
+  },
+  "multiRename.mediaPicker.inserted": "{field} eingefügt",
+  "@multiRename.mediaPicker.inserted": {
+    "sourceHash": "d5f2afb"
+  },
+  "multiRename.mediaPicker.insertedMark": "eingefügt",
+  "@multiRename.mediaPicker.insertedMark": {
+    "sourceHash": "e8dd664"
+  },
+  "multiRename.mediaEditor.marker": "Feld bearbeiten",
+  "@multiRename.mediaEditor.marker": {
+    "sourceHash": "652e08e"
+  },
+  "multiRename.mediaEditor.title": "Feld",
+  "@multiRename.mediaEditor.title": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.mediaEditor.format": "Format",
+  "@multiRename.mediaEditor.format": {
+    "sourceHash": "2f34366",
+    "sameAsSourceJustification": "Format is the German word too, same spelling; the de termbase rules format → Format."
+  },
+  "multiRename.mediaEditor.dateHint": "Y, M und D für das Datum, h, m und s für die Uhrzeit, dazwischen - . _ oder Leerzeichen. Leer für Datum und Uhrzeit.",
+  "@multiRename.mediaEditor.dateHint": {
+    "sourceHash": "88e6818"
+  },
+  "multiRename.mediaEditor.presets": "Gängige Formate",
+  "@multiRename.mediaEditor.presets": {
+    "sourceHash": "0998319"
+  },
+  "multiRename.mediaEditor.preset.dateTime": "Datum und Uhrzeit",
+  "@multiRename.mediaEditor.preset.dateTime": {
+    "sourceHash": "a079c3b"
+  },
+  "multiRename.mediaEditor.preset.date": "Datum",
+  "@multiRename.mediaEditor.preset.date": {
+    "sourceHash": "99c40ab"
+  },
+  "multiRename.mediaEditor.preset.time": "Uhrzeit",
+  "@multiRename.mediaEditor.preset.time": {
+    "sourceHash": "33b9347"
+  },
+  "multiRename.mediaEditor.preset.compact": "Kompakt",
+  "@multiRename.mediaEditor.preset.compact": {
+    "sourceHash": "9945264"
+  },
+  "multiRename.mediaEditor.digits": "Stellen",
+  "@multiRename.mediaEditor.digits": {
+    "sourceHash": "9cd500d"
+  },
+  "multiRename.mediaEditor.digitsHint": "Füllt mit führenden Nullen auf, 2 ergibt also 03. Leer für die Zahl, wie sie ist.",
+  "@multiRename.mediaEditor.digitsHint": {
+    "sourceHash": "793a729"
+  },
+  "multiRename.mediaEditor.characters": "Zeichen",
+  "@multiRename.mediaEditor.characters": {
+    "sourceHash": "6fac39e"
+  },
+  "multiRename.mediaEditor.charactersHint": "Etwa 1-10 für die ersten zehn oder -3- für die letzten drei. Leer für alles.",
+  "@multiRename.mediaEditor.charactersHint": {
+    "sourceHash": "dcc206f"
+  },
+  "multiRename.mediaEditor.fallback": "Wenn einer Datei das Datum fehlt: Datum der letzten Änderung verwenden",
+  "@multiRename.mediaEditor.fallback": {
+    "sourceHash": "8978898"
+  },
+  "multiRename.mediaEditor.usesModified": "{count, plural, one {{countText} Datei verwendet das Datum ihrer letzten Änderung} other {{countText} Dateien verwenden das Datum ihrer letzten Änderung}}",
+  "@multiRename.mediaEditor.usesModified": {
+    "sourceHash": "588993a"
+  },
+  "multiRename.mediaEditor.missing": "{count, plural, one {{countText} Datei hat dieses Feld nicht und behält ihren Namen} other {{countText} Dateien haben dieses Feld nicht und behalten ihre Namen}}",
+  "@multiRename.mediaEditor.missing": {
+    "sourceHash": "6356576"
+  },
+  "multiRename.mediaEditor.stillReading": "{count, plural, one {{countText} Datei wird noch gelesen} other {{countText} Dateien werden noch gelesen}}",
+  "@multiRename.mediaEditor.stillReading": {
+    "sourceHash": "44bea1c"
+  },
+  "multiRename.mediaEditor.gap.reading": "wird gelesen …",
+  "@multiRename.mediaEditor.gap.reading": {
+    "sourceHash": "6ab8da1"
+  },
+  "multiRename.mediaEditor.gap.noValue": "kein Wert",
+  "@multiRename.mediaEditor.gap.noValue": {
+    "sourceHash": "140bedb"
+  },
+  "multiRename.mediaEditor.gap.unreadable": "nicht lesbar",
+  "@multiRename.mediaEditor.gap.unreadable": {
+    "sourceHash": "f6daf78"
   },
   "multiRename.reason.empty": "Der neue Name ist leer.",
   "@multiRename.reason.empty": {
@@ -443,6 +699,30 @@
   "multiRename.placeholderHelp.time": "Die Uhrzeit, zu der die Datei zuletzt geändert wurde: Stunden, Minuten und Sekunden",
   "@multiRename.placeholderHelp.time": {
     "sourceHash": "69c80a0"
+  },
+  "multiRename.placeholderHelp.media": "Die eigenen Angaben eines Fotos, Videos oder Songs: EXIF, ID3, MP4, FLAC, Ogg und mehr",
+  "@multiRename.placeholderHelp.media": {
+    "sourceHash": "b7ba607"
+  },
+  "multiRename.placeholderHelp.mediaTaken": "Das Datum, an dem ein Foto oder Video aufgenommen wurde",
+  "@multiRename.placeholderHelp.mediaTaken": {
+    "sourceHash": "b0eea95"
+  },
+  "multiRename.placeholderHelp.mediaFallback": "Mit dem Datum, an dem die Datei zuletzt geändert wurde, falls sie keines hat",
+  "@multiRename.placeholderHelp.mediaFallback": {
+    "sourceHash": "292616f"
+  },
+  "multiRename.placeholderHelp.mediaCamera": "Hersteller und Modell der Kamera",
+  "@multiRename.placeholderHelp.mediaCamera": {
+    "sourceHash": "9da2073"
+  },
+  "multiRename.placeholderHelp.mediaSong": "Titelnummer, Interpret und Titel eines Songs",
+  "@multiRename.placeholderHelp.mediaSong": {
+    "sourceHash": "f1a8bf1"
+  },
+  "multiRename.placeholderHelp.mediaHint": "Klicken, um aus allen Feldern auszuwählen, jeweils mit dem Wert bei deinen Dateien.",
+  "@multiRename.placeholderHelp.mediaHint": {
+    "sourceHash": "8f7db2f"
   },
   "multiRename.placeholderHelp.oneChar": "Nur Zeichen {at}",
   "@multiRename.placeholderHelp.oneChar": {

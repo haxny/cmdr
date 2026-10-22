@@ -23,6 +23,14 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
+  "multiRename.mediaButton": "multimedia ▾",
+  "@multiRename.mediaButton": {
+    "sourceHash": "fb69ec3"
+  },
+  "multiRename.mediaButtonName": "Campos multimedia",
+  "@multiRename.mediaButtonName": {
+    "sourceHash": "7f448e6"
+  },
   "multiRename.search": "Buscar",
   "@multiRename.search": {
     "sourceHash": "6ea8f74"
@@ -199,6 +207,10 @@
   "@multiRename.preview": {
     "sourceHash": "324b134"
   },
+  "multiRename.readingTags": "Leyendo etiquetas: {readText} de {totalText}",
+  "@multiRename.readingTags": {
+    "sourceHash": "a15c17f"
+  },
   "multiRename.oldName": "Nombre anterior",
   "@multiRename.oldName": {
     "sourceHash": "f192b20"
@@ -267,6 +279,10 @@
   "@multiRename.summary": {
     "sourceHash": "ca7be9b"
   },
+  "multiRename.summaryReading": "{ready, plural, one {# para renombrar} many {# para renombrar} other {# para renombrar}} · {unchanged, plural, one {# sin cambios} many {# sin cambios} other {# sin cambios}} · <problemsToggle>{problems, plural, one {# problema} many {# problemas} other {# problemas}}</problemsToggle> · {reading, plural, one {# aún por leer} many {# aún por leer} other {# aún por leer}}",
+  "@multiRename.summaryReading": {
+    "sourceHash": "4c73b60"
+  },
   "multiRename.cancel": "Cancelar",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
@@ -331,6 +347,26 @@
   "@multiRename.rename": {
     "sourceHash": "9789ca5"
   },
+  "multiRename.starting": "Iniciando…",
+  "@multiRename.starting": {
+    "sourceHash": "bbe5fc3"
+  },
+  "multiRename.renameWaitsTooltip": "Aún se están leyendo las etiquetas de algunos archivos. El cambio de nombre espera a que terminen y luego empieza.",
+  "@multiRename.renameWaitsTooltip": {
+    "sourceHash": "208afe0"
+  },
+  "multiRename.startingTooltip": "El cambio de nombre empieza en cuanto se lean las etiquetas de todos los archivos. Vuelve a hacer clic para cancelar.",
+  "@multiRename.startingTooltip": {
+    "sourceHash": "bbeb76e"
+  },
+  "multiRename.queuedAnnounce": "El cambio de nombre empezará en cuanto se lean las etiquetas",
+  "@multiRename.queuedAnnounce": {
+    "sourceHash": "7c11af5"
+  },
+  "multiRename.queueCanceled": "Cambio de nombre cancelado",
+  "@multiRename.queueCanceled": {
+    "sourceHash": "cdd1d0e"
+  },
   "multiRename.started": "{count, plural, one {Renombrando # archivo} many {Renombrando # archivos} other {Renombrando # archivos}}. Puedes revertirlo desde el registro de operaciones.",
   "@multiRename.started": {
     "sourceHash": "55b4878"
@@ -362,6 +398,223 @@
   "multiRename.reason.missing": "Este archivo se ha movido o eliminado después de abrir “Renombrado múltiple”, así que queda fuera.",
   "@multiRename.reason.missing": {
     "sourceHash": "8697aa3"
+  },
+  "multiRename.status.reading": "Leyendo…",
+  "@multiRename.status.reading": {
+    "sourceHash": "874bfa5"
+  },
+  "multiRename.status.noValue": "Falta {field}",
+  "@multiRename.status.noValue": {
+    "sourceHash": "619464f"
+  },
+  "multiRename.reason.noValue": "Este archivo no tiene valor de “{field}”, así que conserva su nombre.",
+  "@multiRename.reason.noValue": {
+    "sourceHash": "25d9a0f"
+  },
+  "multiRename.reason.noDate": "Este archivo no tiene valor de “{field}”, así que conserva su nombre. El editor del marcador puede usar en su lugar la fecha de la última modificación del archivo.",
+  "@multiRename.reason.noDate": {
+    "sourceHash": "239bc84"
+  },
+  "multiRename.status.unreadable": "No se pueden leer las etiquetas",
+  "@multiRename.status.unreadable": {
+    "sourceHash": "fe6ad18"
+  },
+  "multiRename.reason.unreadable": "“Renombrado múltiple” no ha podido leer las etiquetas ni la información de foto de este archivo, así que no tiene valor de “{field}” y conserva su nombre.",
+  "@multiRename.reason.unreadable": {
+    "sourceHash": "099ce1f"
+  },
+  "multiRename.mediaField.exifTaken": "Fecha de captura",
+  "@multiRename.mediaField.exifTaken": {
+    "sourceHash": "a2f4fe8"
+  },
+  "multiRename.mediaField.exifCamera": "Cámara",
+  "@multiRename.mediaField.exifCamera": {
+    "sourceHash": "03494b0"
+  },
+  "multiRename.mediaField.exifMake": "Marca de la cámara",
+  "@multiRename.mediaField.exifMake": {
+    "sourceHash": "78929e9"
+  },
+  "multiRename.mediaField.exifModel": "Modelo de la cámara",
+  "@multiRename.mediaField.exifModel": {
+    "sourceHash": "ddbfabf"
+  },
+  "multiRename.mediaField.exifLens": "Lente",
+  "@multiRename.mediaField.exifLens": {
+    "sourceHash": "4317a99"
+  },
+  "multiRename.mediaField.exifIso": "ISO",
+  "@multiRename.mediaField.exifIso": {
+    "sourceHash": "6dc87bf",
+    "sameAsSourceJustification": "ISO is the film-speed standard's name; macOS es writes it as is (Spotlight's kMDItemISOSpeed → “Velocidad ISO”, macOS 27.0.1)."
+  },
+  "multiRename.mediaField.exifFocal": "Distancia focal (mm)",
+  "@multiRename.mediaField.exifFocal": {
+    "sourceHash": "6a87ca3"
+  },
+  "multiRename.mediaField.exifWidth": "Anchura (píxeles)",
+  "@multiRename.mediaField.exifWidth": {
+    "sourceHash": "7929f0d"
+  },
+  "multiRename.mediaField.exifHeight": "Altura (píxeles)",
+  "@multiRename.mediaField.exifHeight": {
+    "sourceHash": "37d0cb6"
+  },
+  "multiRename.mediaField.exifOrientation": "Orientación",
+  "@multiRename.mediaField.exifOrientation": {
+    "sourceHash": "e3d1124"
+  },
+  "multiRename.mediaField.tagTitle": "Título",
+  "@multiRename.mediaField.tagTitle": {
+    "sourceHash": "7e8cd20"
+  },
+  "multiRename.mediaField.tagArtist": "Artista",
+  "@multiRename.mediaField.tagArtist": {
+    "sourceHash": "1d3981b"
+  },
+  "multiRename.mediaField.tagAlbumArtist": "Artista del álbum",
+  "@multiRename.mediaField.tagAlbumArtist": {
+    "sourceHash": "334ae82"
+  },
+  "multiRename.mediaField.tagAlbum": "Álbum",
+  "@multiRename.mediaField.tagAlbum": {
+    "sourceHash": "f05e840"
+  },
+  "multiRename.mediaField.tagTrack": "Número de pista",
+  "@multiRename.mediaField.tagTrack": {
+    "sourceHash": "de8de0b"
+  },
+  "multiRename.mediaField.tagDisc": "Número de disco",
+  "@multiRename.mediaField.tagDisc": {
+    "sourceHash": "0fd0aef"
+  },
+  "multiRename.mediaField.tagYear": "Año",
+  "@multiRename.mediaField.tagYear": {
+    "sourceHash": "89f6832"
+  },
+  "multiRename.mediaField.tagGenre": "Género",
+  "@multiRename.mediaField.tagGenre": {
+    "sourceHash": "6da795a"
+  },
+  "multiRename.mediaField.tagComment": "Comentario",
+  "@multiRename.mediaField.tagComment": {
+    "sourceHash": "44f5e3f"
+  },
+  "multiRename.mediaPicker.title": "Insertar un campo",
+  "@multiRename.mediaPicker.title": {
+    "sourceHash": "b722b94"
+  },
+  "multiRename.mediaPicker.filter": "Filtrar campos",
+  "@multiRename.mediaPicker.filter": {
+    "sourceHash": "184a51b"
+  },
+  "multiRename.mediaPicker.photos": "Fotos y vídeos (EXIF)",
+  "@multiRename.mediaPicker.photos": {
+    "sourceHash": "b41c23d"
+  },
+  "multiRename.mediaPicker.music": "Música (ID3, MP4, FLAC…)",
+  "@multiRename.mediaPicker.music": {
+    "sourceHash": "357e580"
+  },
+  "multiRename.mediaPicker.none": "en ningún archivo",
+  "@multiRename.mediaPicker.none": {
+    "sourceHash": "9d56c00"
+  },
+  "multiRename.mediaPicker.noneYet": "en ninguno hasta ahora",
+  "@multiRename.mediaPicker.noneYet": {
+    "sourceHash": "35c2dfa"
+  },
+  "multiRename.mediaPicker.noMatch": "Ningún campo coincide con “{filter}”",
+  "@multiRename.mediaPicker.noMatch": {
+    "sourceHash": "2003efb"
+  },
+  "multiRename.mediaPicker.inserted": "Se ha insertado {field}",
+  "@multiRename.mediaPicker.inserted": {
+    "sourceHash": "d5f2afb"
+  },
+  "multiRename.mediaPicker.insertedMark": "ya en la máscara",
+  "@multiRename.mediaPicker.insertedMark": {
+    "sourceHash": "e8dd664"
+  },
+  "multiRename.mediaEditor.marker": "Editar el campo",
+  "@multiRename.mediaEditor.marker": {
+    "sourceHash": "652e08e"
+  },
+  "multiRename.mediaEditor.title": "Campo",
+  "@multiRename.mediaEditor.title": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.mediaEditor.format": "Formato",
+  "@multiRename.mediaEditor.format": {
+    "sourceHash": "2f34366"
+  },
+  "multiRename.mediaEditor.dateHint": "Y, M y D para la fecha, y h, m y s para la hora, separadas por - . _ o espacios. Déjalo vacío para tener la fecha y la hora.",
+  "@multiRename.mediaEditor.dateHint": {
+    "sourceHash": "88e6818"
+  },
+  "multiRename.mediaEditor.presets": "Formatos habituales",
+  "@multiRename.mediaEditor.presets": {
+    "sourceHash": "0998319"
+  },
+  "multiRename.mediaEditor.preset.dateTime": "Fecha y hora",
+  "@multiRename.mediaEditor.preset.dateTime": {
+    "sourceHash": "a079c3b"
+  },
+  "multiRename.mediaEditor.preset.date": "Fecha",
+  "@multiRename.mediaEditor.preset.date": {
+    "sourceHash": "99c40ab"
+  },
+  "multiRename.mediaEditor.preset.time": "Hora",
+  "@multiRename.mediaEditor.preset.time": {
+    "sourceHash": "33b9347"
+  },
+  "multiRename.mediaEditor.preset.compact": "Compacto",
+  "@multiRename.mediaEditor.preset.compact": {
+    "sourceHash": "9945264"
+  },
+  "multiRename.mediaEditor.digits": "Dígitos",
+  "@multiRename.mediaEditor.digits": {
+    "sourceHash": "9cd500d"
+  },
+  "multiRename.mediaEditor.digitsHint": "Rellena con ceros a la izquierda: 2 da 03. Déjalo vacío para tener el número tal cual.",
+  "@multiRename.mediaEditor.digitsHint": {
+    "sourceHash": "793a729"
+  },
+  "multiRename.mediaEditor.characters": "Caracteres",
+  "@multiRename.mediaEditor.characters": {
+    "sourceHash": "6fac39e"
+  },
+  "multiRename.mediaEditor.charactersHint": "Por ejemplo, 1-10 para los diez primeros o -3- para los tres últimos. Déjalo vacío para tenerlo entero.",
+  "@multiRename.mediaEditor.charactersHint": {
+    "sourceHash": "dcc206f"
+  },
+  "multiRename.mediaEditor.fallback": "Si un archivo no la tiene: usar la fecha de su última modificación",
+  "@multiRename.mediaEditor.fallback": {
+    "sourceHash": "8978898"
+  },
+  "multiRename.mediaEditor.usesModified": "{count, plural, one {{countText} archivo usa la fecha de su última modificación} many {{countText} archivos usan la fecha de su última modificación} other {{countText} archivos usan la fecha de su última modificación}}",
+  "@multiRename.mediaEditor.usesModified": {
+    "sourceHash": "588993a"
+  },
+  "multiRename.mediaEditor.missing": "{count, plural, one {{countText} archivo no lo tiene y conserva su nombre} many {{countText} archivos no lo tienen y conservan su nombre} other {{countText} archivos no lo tienen y conservan su nombre}}",
+  "@multiRename.mediaEditor.missing": {
+    "sourceHash": "6356576"
+  },
+  "multiRename.mediaEditor.stillReading": "{count, plural, one {Aún se está leyendo {countText} archivo} many {Aún se están leyendo {countText} archivos} other {Aún se están leyendo {countText} archivos}}",
+  "@multiRename.mediaEditor.stillReading": {
+    "sourceHash": "44bea1c"
+  },
+  "multiRename.mediaEditor.gap.reading": "leyendo…",
+  "@multiRename.mediaEditor.gap.reading": {
+    "sourceHash": "6ab8da1"
+  },
+  "multiRename.mediaEditor.gap.noValue": "ninguno",
+  "@multiRename.mediaEditor.gap.noValue": {
+    "sourceHash": "140bedb"
+  },
+  "multiRename.mediaEditor.gap.unreadable": "no se puede leer",
+  "@multiRename.mediaEditor.gap.unreadable": {
+    "sourceHash": "f6daf78"
   },
   "multiRename.reason.empty": "El nombre nuevo está vacío.",
   "@multiRename.reason.empty": {
@@ -442,6 +695,30 @@
   "multiRename.placeholderHelp.time": "La hora de la última modificación del archivo: horas, minutos y segundos",
   "@multiRename.placeholderHelp.time": {
     "sourceHash": "69c80a0"
+  },
+  "multiRename.placeholderHelp.media": "La información propia de una foto, un vídeo o una canción: EXIF, ID3, MP4, FLAC, Ogg y más",
+  "@multiRename.placeholderHelp.media": {
+    "sourceHash": "b7ba607"
+  },
+  "multiRename.placeholderHelp.mediaTaken": "La fecha en que se hizo una foto o un vídeo",
+  "@multiRename.placeholderHelp.mediaTaken": {
+    "sourceHash": "b0eea95"
+  },
+  "multiRename.placeholderHelp.mediaFallback": "Con la fecha de la última modificación en los archivos que no la tengan",
+  "@multiRename.placeholderHelp.mediaFallback": {
+    "sourceHash": "292616f"
+  },
+  "multiRename.placeholderHelp.mediaCamera": "La marca y el modelo de la cámara",
+  "@multiRename.placeholderHelp.mediaCamera": {
+    "sourceHash": "9da2073"
+  },
+  "multiRename.placeholderHelp.mediaSong": "El número de pista, el artista y el título de una canción",
+  "@multiRename.placeholderHelp.mediaSong": {
+    "sourceHash": "f1a8bf1"
+  },
+  "multiRename.placeholderHelp.mediaHint": "Haz clic para elegir entre todos los campos, cada uno con su valor en tus archivos.",
+  "@multiRename.placeholderHelp.mediaHint": {
+    "sourceHash": "8f7db2f"
   },
   "multiRename.placeholderHelp.oneChar": "Solo el carácter {at}",
   "@multiRename.placeholderHelp.oneChar": {

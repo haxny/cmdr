@@ -1647,6 +1647,13 @@
     "forms": "verb indexeren, participle geïndexeerd; drive index → Schijfindex; user-facing prose names the feature as a nominalized verb (het indexeren van schijven, het indexeren van afbeeldingen); terse slots take the compound (schijfindexering, achtergrondindexering); the toggle label Schijf indexeren is quoted verbatim only in a navigation path",
     "sources": "standard NL; KDE Dolphin (File Indexing → Indexeren van bestanden), MS (content indexing → inhoudsindexering)"
   },
+  "info": {
+    "accept": ["informatie", "gegevens"],
+    "chosen": "info",
+    "confidence": "high",
+    "forms": "short labels keep info (diagnostische info, git-info); information stored in a file (EXIF, tags) → gegevens (fotogegevens, cameragegevens, de eigen gegevens van een foto)",
+    "sources": "catalog (Kopieer diagnostische info, git-info); KDE Dolphin (Information → Informatie); macOS Metadata schema.strings nl uses gegevens-style nouns for file metadata"
+  },
   "input-source": {
     "chosen": "invoerbron",
     "confidence": "high",
@@ -3484,6 +3491,13 @@
     "confidence": "high",
     "forms": "app version → appversie (closed); macOS-versie (hyphen after the brand); a released copy → uitgebrachte versie",
     "sources": "MS (version → versie)"
+  },
+  "video": {
+    "accept": ["video''s", "video's", "video-"],
+    "chosen": "video",
+    "confidence": "high",
+    "forms": "pl. video''s (ICU-doubled apostrophe); in a coordinated compound video- (foto-, video- of muziekveld)",
+    "sources": "macOS Metadata schema.strings nl (Videobitsnelheid, de video in het medium); KDE Dolphin and GNOME Nautilus (Video → Video)"
   },
   "viewer": {
     "accept": ["Weergavevenster"],

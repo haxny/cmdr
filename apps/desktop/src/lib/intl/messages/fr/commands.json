@@ -644,6 +644,10 @@
   "@commands.multiRenameReplaceWholeName.label": {
     "sourceHash": "016c572"
   },
+  "commands.multiRenameInsertField.label": "Insérer un champ de photo, de vidéo ou de musique",
+  "@commands.multiRenameInsertField.label": {
+    "sourceHash": "4b9e9de"
+  },
   "commands.multiRenameUndoRename.label": "Annuler le dernier renommage par lot",
   "@commands.multiRenameUndoRename.label": {
     "sourceHash": "e5a0975"

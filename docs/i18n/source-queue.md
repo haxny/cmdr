@@ -13,6 +13,11 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   (de)
 - `sync-locale-keys.ts` reads a quoted string of `--restamp` args as a second locale and dies on `ENAMETOOLONG`; it
   should refuse an invalid tag. (sv)
+- The `tag` concept means a Finder color tag only, yet 6 multi-rename keys use "tags" for a file's ID3/MP4 metadata. Add
+  a `media-tag` concept (distinct from `tag`) so rulings can split. (es, fr, pt)
+- `multiRename.status.noValue` ("{field} missing") and `mediaPicker.insertedMark` ("inserted", read after a field's
+  name) need a participle agreeing with a field name of unknown gender; describe the colon form as fine. (es, fr, pt)
+
 - The two `changedDisclosure` keys (host key, certificate): same English ("I’ve checked it") on two nouns, so de and fr
   dropped the pronoun. Name the object in English, or accept it. ("Trust and connect" is allowlisted for es and sv.)
   (de, fr)
@@ -539,3 +544,28 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `fileOperations.transferProgress.undo`: “Undo” here reverses a whole finished operation (with confirmation), a fourth
   sense beside text undo, Put Back, and an AI rename run. Say so in the `undo` concept’s sense so locales with split
   words (nl `Herstel` / `Zet terug` / `Ongedaan maken`) pick deliberately. (all)
+- `multiRename.mediaEditor.dateHint` / `.digitsHint` / `.charactersHint`: “Empty for the date and time” reads as a noun
+  phrase; “Leave empty for …” would say the action. `multiRename.renameWaitsTooltip`'s description says “a photo or
+  music field” but the keys cover video too. The `tag` concept (Finder color tag) matches these metadata “tags”; a
+  `media-tag` concept with its own sense would keep the two apart. (nl, ru, de, zh-Hant, sv, pt, zh, hu, vi)
+- The `text-editor` concept matched “The placeholder’s editor” in `multiRename.reason.noDate` (the field's popup, not
+  the F4 app); its `notMatch` now carries “placeholder’s editor”. (vi)
+- `multiRename.mediaEditor.digitsHint`: “so 2 gives 03” leaves the input number implicit (two digits turn track 3 into
+  03); “so 2 turns 3 into 03” would say both. (hu)
+- `multiRename.starting` (“Starting…”, a rename queued until tags are read) shares its English with
+  `ai.local.statusStarting` (a server booting), so locales that say “launching” for the server split the term and need
+  an allowlist entry; “Waiting to start…” or “Starts soon…” would say what the button does. (zh-Hant; zh kept the
+  server's `正在启动…` for consistency, though `即将开始…` would be more honest; vi likewise kept `Đang khởi động…` over
+  the more honest `Đang chờ bắt đầu…`)
+- `multiRename.mediaButton` asks for lowercase “like the placeholders”, but the placeholders are bracket codes, not
+  words; a language that capitalizes nouns (de) can't follow it without breaking grammar. Say whether lowercase is
+  load-bearing. Its aria sibling `mediaButtonName` invites a compound (de `Medienfelder`) that contains the label only
+  as a substring; say whether WCAG 2.5.3 containment needs a whole word. (de; sv's compound form `Mediefält` doesn't
+  contain `media` at all, so sv wrote `Fält för media`)
+- `multiRename.mediaEditor.preset.compact` (“Compact” date format) shares its English with
+  `settings.appearance.uiDensity.opt.compact`, so a gendered language's adjective agrees with a different implied noun
+  and trips `term-consistency`; a `@key.agreesWith`-style hint or distinct English (“Compact date”) would spare each
+  locale an allowlist entry. (ru)
+- The `model` concept (an AI model) matches `multiRename.mediaField.exifModel` (“Camera model”) and
+  `multiRename.placeholderHelp.mediaCamera` (“maker and model”), a device model; add “camera model” and “maker and
+  model” to its `notMatch`, or a `device-model` concept. (zh: `型号`, never the AI `模型`)

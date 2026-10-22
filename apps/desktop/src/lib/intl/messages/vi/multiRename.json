@@ -23,6 +23,14 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
+  "multiRename.mediaButton": "đa phương tiện ▾",
+  "@multiRename.mediaButton": {
+    "sourceHash": "fb69ec3"
+  },
+  "multiRename.mediaButtonName": "Trường đa phương tiện",
+  "@multiRename.mediaButtonName": {
+    "sourceHash": "7f448e6"
+  },
   "multiRename.search": "Tìm kiếm",
   "@multiRename.search": {
     "sourceHash": "6ea8f74"
@@ -199,6 +207,10 @@
   "@multiRename.preview": {
     "sourceHash": "324b134"
   },
+  "multiRename.readingTags": "Đang đọc thẻ: {readText} trên {totalText}",
+  "@multiRename.readingTags": {
+    "sourceHash": "a15c17f"
+  },
   "multiRename.oldName": "Tên cũ",
   "@multiRename.oldName": {
     "sourceHash": "f192b20"
@@ -267,6 +279,10 @@
   "@multiRename.summary": {
     "sourceHash": "ca7be9b"
   },
+  "multiRename.summaryReading": "{ready, plural, other {# sẵn sàng đổi tên}} · {unchanged, plural, other {# không đổi}} · <problemsToggle>{problems, plural, other {# có vấn đề}}</problemsToggle> · {reading, plural, other {# vẫn đang đọc}}",
+  "@multiRename.summaryReading": {
+    "sourceHash": "4c73b60"
+  },
   "multiRename.cancel": "Hủy",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
@@ -331,6 +347,26 @@
   "@multiRename.rename": {
     "sourceHash": "9789ca5"
   },
+  "multiRename.starting": "Đang khởi động…",
+  "@multiRename.starting": {
+    "sourceHash": "bbe5fc3"
+  },
+  "multiRename.renameWaitsTooltip": "Thẻ của một số tệp vẫn đang được đọc. Đổi tên sẽ chờ đọc xong rồi mới bắt đầu.",
+  "@multiRename.renameWaitsTooltip": {
+    "sourceHash": "208afe0"
+  },
+  "multiRename.startingTooltip": "Việc đổi tên sẽ bắt đầu khi đã đọc xong thẻ của mọi tệp. Bấm lần nữa để hủy.",
+  "@multiRename.startingTooltip": {
+    "sourceHash": "bbeb76e"
+  },
+  "multiRename.queuedAnnounce": "Việc đổi tên sẽ bắt đầu khi đã đọc xong thẻ",
+  "@multiRename.queuedAnnounce": {
+    "sourceHash": "7c11af5"
+  },
+  "multiRename.queueCanceled": "Đã hủy đổi tên",
+  "@multiRename.queueCanceled": {
+    "sourceHash": "cdd1d0e"
+  },
   "multiRename.started": "{count, plural, other {Đang đổi tên # tệp}}. Bạn có thể hoàn tác trong nhật ký thao tác.",
   "@multiRename.started": {
     "sourceHash": "55b4878"
@@ -362,6 +398,224 @@
   "multiRename.reason.missing": "Tệp này đã bị di chuyển hoặc xóa sau khi mở “Đổi tên hàng loạt”, nên được bỏ qua.",
   "@multiRename.reason.missing": {
     "sourceHash": "8697aa3"
+  },
+  "multiRename.status.reading": "Đang đọc…",
+  "@multiRename.status.reading": {
+    "sourceHash": "874bfa5"
+  },
+  "multiRename.status.noValue": "Thiếu {field}",
+  "@multiRename.status.noValue": {
+    "sourceHash": "619464f"
+  },
+  "multiRename.reason.noValue": "Tệp này không có giá trị “{field}”, nên giữ nguyên tên.",
+  "@multiRename.reason.noValue": {
+    "sourceHash": "25d9a0f"
+  },
+  "multiRename.reason.noDate": "Tệp này không có giá trị “{field}”, nên giữ nguyên tên. Bảng chỉnh sửa của phần giữ chỗ có thể dùng ngày tệp được sửa đổi lần cuối để thay thế.",
+  "@multiRename.reason.noDate": {
+    "sourceHash": "239bc84"
+  },
+  "multiRename.status.unreadable": "Không đọc được thẻ",
+  "@multiRename.status.unreadable": {
+    "sourceHash": "fe6ad18"
+  },
+  "multiRename.reason.unreadable": "“Đổi tên hàng loạt” không đọc được thẻ hoặc thông tin ảnh của tệp này, nên tệp không có giá trị “{field}” và giữ nguyên tên.",
+  "@multiRename.reason.unreadable": {
+    "sourceHash": "099ce1f"
+  },
+  "multiRename.mediaField.exifTaken": "Ngày chụp",
+  "@multiRename.mediaField.exifTaken": {
+    "sourceHash": "a2f4fe8"
+  },
+  "multiRename.mediaField.exifCamera": "Máy ảnh",
+  "@multiRename.mediaField.exifCamera": {
+    "sourceHash": "03494b0"
+  },
+  "multiRename.mediaField.exifMake": "Nhãn hiệu máy ảnh",
+  "@multiRename.mediaField.exifMake": {
+    "sourceHash": "78929e9"
+  },
+  "multiRename.mediaField.exifModel": "Kiểu máy ảnh",
+  "@multiRename.mediaField.exifModel": {
+    "sourceHash": "ddbfabf"
+  },
+  "multiRename.mediaField.exifLens": "Ống kính",
+  "@multiRename.mediaField.exifLens": {
+    "sourceHash": "4317a99"
+  },
+  "multiRename.mediaField.exifIso": "ISO",
+  "@multiRename.mediaField.exifIso": {
+    "sourceHash": "6dc87bf",
+    "sameAsSourceJustification": "ISO is the standard name; macOS Photos vi keeps ISO (IPXPrintCaptionOptions)."
+  },
+  "multiRename.mediaField.exifFocal": "Tiêu cự (mm)",
+  "@multiRename.mediaField.exifFocal": {
+    "sourceHash": "6a87ca3"
+  },
+  "multiRename.mediaField.exifWidth": "Chiều rộng (điểm ảnh)",
+  "@multiRename.mediaField.exifWidth": {
+    "sourceHash": "7929f0d"
+  },
+  "multiRename.mediaField.exifHeight": "Chiều cao (điểm ảnh)",
+  "@multiRename.mediaField.exifHeight": {
+    "sourceHash": "37d0cb6"
+  },
+  "multiRename.mediaField.exifOrientation": "Hướng",
+  "@multiRename.mediaField.exifOrientation": {
+    "sourceHash": "e3d1124"
+  },
+  "multiRename.mediaField.tagTitle": "Tiêu đề",
+  "@multiRename.mediaField.tagTitle": {
+    "sourceHash": "7e8cd20"
+  },
+  "multiRename.mediaField.tagArtist": "Nghệ sĩ",
+  "@multiRename.mediaField.tagArtist": {
+    "sourceHash": "1d3981b"
+  },
+  "multiRename.mediaField.tagAlbumArtist": "Nghệ sĩ của album",
+  "@multiRename.mediaField.tagAlbumArtist": {
+    "sourceHash": "334ae82"
+  },
+  "multiRename.mediaField.tagAlbum": "Album",
+  "@multiRename.mediaField.tagAlbum": {
+    "sourceHash": "f05e840",
+    "sameAsSourceJustification": "macOS Photos and Music vi keep Album (IPXMain)."
+  },
+  "multiRename.mediaField.tagTrack": "Số bản nhạc",
+  "@multiRename.mediaField.tagTrack": {
+    "sourceHash": "de8de0b"
+  },
+  "multiRename.mediaField.tagDisc": "Số đĩa",
+  "@multiRename.mediaField.tagDisc": {
+    "sourceHash": "0fd0aef"
+  },
+  "multiRename.mediaField.tagYear": "Năm",
+  "@multiRename.mediaField.tagYear": {
+    "sourceHash": "89f6832"
+  },
+  "multiRename.mediaField.tagGenre": "Thể loại",
+  "@multiRename.mediaField.tagGenre": {
+    "sourceHash": "6da795a"
+  },
+  "multiRename.mediaField.tagComment": "Nhận xét",
+  "@multiRename.mediaField.tagComment": {
+    "sourceHash": "44f5e3f"
+  },
+  "multiRename.mediaPicker.title": "Chèn một trường",
+  "@multiRename.mediaPicker.title": {
+    "sourceHash": "b722b94"
+  },
+  "multiRename.mediaPicker.filter": "Lọc trường",
+  "@multiRename.mediaPicker.filter": {
+    "sourceHash": "184a51b"
+  },
+  "multiRename.mediaPicker.photos": "Ảnh và video (EXIF)",
+  "@multiRename.mediaPicker.photos": {
+    "sourceHash": "b41c23d"
+  },
+  "multiRename.mediaPicker.music": "Nhạc (ID3, MP4, FLAC…)",
+  "@multiRename.mediaPicker.music": {
+    "sourceHash": "357e580"
+  },
+  "multiRename.mediaPicker.none": "không có trong các tệp này",
+  "@multiRename.mediaPicker.none": {
+    "sourceHash": "9d56c00"
+  },
+  "multiRename.mediaPicker.noneYet": "đến giờ chưa có",
+  "@multiRename.mediaPicker.noneYet": {
+    "sourceHash": "35c2dfa"
+  },
+  "multiRename.mediaPicker.noMatch": "Không có trường nào khớp với “{filter}”",
+  "@multiRename.mediaPicker.noMatch": {
+    "sourceHash": "2003efb"
+  },
+  "multiRename.mediaPicker.inserted": "Đã chèn {field}",
+  "@multiRename.mediaPicker.inserted": {
+    "sourceHash": "d5f2afb"
+  },
+  "multiRename.mediaPicker.insertedMark": "đã chèn",
+  "@multiRename.mediaPicker.insertedMark": {
+    "sourceHash": "e8dd664"
+  },
+  "multiRename.mediaEditor.marker": "Sửa trường",
+  "@multiRename.mediaEditor.marker": {
+    "sourceHash": "652e08e"
+  },
+  "multiRename.mediaEditor.title": "Trường",
+  "@multiRename.mediaEditor.title": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.mediaEditor.format": "Định dạng",
+  "@multiRename.mediaEditor.format": {
+    "sourceHash": "2f34366"
+  },
+  "multiRename.mediaEditor.dateHint": "Y, M và D cho ngày, h, m và s cho giờ, ngăn cách bằng - . _ hoặc dấu cách. Để trống để lấy cả ngày và giờ.",
+  "@multiRename.mediaEditor.dateHint": {
+    "sourceHash": "88e6818"
+  },
+  "multiRename.mediaEditor.presets": "Định dạng thường dùng",
+  "@multiRename.mediaEditor.presets": {
+    "sourceHash": "0998319"
+  },
+  "multiRename.mediaEditor.preset.dateTime": "Ngày và giờ",
+  "@multiRename.mediaEditor.preset.dateTime": {
+    "sourceHash": "a079c3b"
+  },
+  "multiRename.mediaEditor.preset.date": "Ngày",
+  "@multiRename.mediaEditor.preset.date": {
+    "sourceHash": "99c40ab"
+  },
+  "multiRename.mediaEditor.preset.time": "Giờ",
+  "@multiRename.mediaEditor.preset.time": {
+    "sourceHash": "33b9347"
+  },
+  "multiRename.mediaEditor.preset.compact": "Gọn",
+  "@multiRename.mediaEditor.preset.compact": {
+    "sourceHash": "9945264"
+  },
+  "multiRename.mediaEditor.digits": "Số chữ số",
+  "@multiRename.mediaEditor.digits": {
+    "sourceHash": "9cd500d"
+  },
+  "multiRename.mediaEditor.digitsHint": "Thêm số 0 ở đầu, nên 2 cho ra 03. Để trống để giữ nguyên con số.",
+  "@multiRename.mediaEditor.digitsHint": {
+    "sourceHash": "793a729"
+  },
+  "multiRename.mediaEditor.characters": "Ký tự",
+  "@multiRename.mediaEditor.characters": {
+    "sourceHash": "6fac39e"
+  },
+  "multiRename.mediaEditor.charactersHint": "Ví dụ 1-10 để lấy 10 ký tự đầu, hoặc -3- để lấy ba ký tự cuối. Để trống để lấy toàn bộ.",
+  "@multiRename.mediaEditor.charactersHint": {
+    "sourceHash": "dcc206f"
+  },
+  "multiRename.mediaEditor.fallback": "Khi tệp không có: dùng ngày tệp được sửa đổi lần cuối",
+  "@multiRename.mediaEditor.fallback": {
+    "sourceHash": "8978898"
+  },
+  "multiRename.mediaEditor.usesModified": "{count, plural, other {{countText} tệp dùng ngày được sửa đổi lần cuối}}",
+  "@multiRename.mediaEditor.usesModified": {
+    "sourceHash": "588993a"
+  },
+  "multiRename.mediaEditor.missing": "{count, plural, other {{countText} tệp không có và giữ nguyên tên}}",
+  "@multiRename.mediaEditor.missing": {
+    "sourceHash": "6356576"
+  },
+  "multiRename.mediaEditor.stillReading": "{count, plural, other {{countText} tệp vẫn đang được đọc}}",
+  "@multiRename.mediaEditor.stillReading": {
+    "sourceHash": "44bea1c"
+  },
+  "multiRename.mediaEditor.gap.reading": "đang đọc…",
+  "@multiRename.mediaEditor.gap.reading": {
+    "sourceHash": "6ab8da1"
+  },
+  "multiRename.mediaEditor.gap.noValue": "không có",
+  "@multiRename.mediaEditor.gap.noValue": {
+    "sourceHash": "140bedb"
+  },
+  "multiRename.mediaEditor.gap.unreadable": "không đọc được",
+  "@multiRename.mediaEditor.gap.unreadable": {
+    "sourceHash": "f6daf78"
   },
   "multiRename.reason.empty": "Tên mới đang trống.",
   "@multiRename.reason.empty": {
@@ -442,6 +696,30 @@
   "multiRename.placeholderHelp.time": "Thời điểm tệp được sửa đổi lần cuối: giờ, phút và giây",
   "@multiRename.placeholderHelp.time": {
     "sourceHash": "69c80a0"
+  },
+  "multiRename.placeholderHelp.media": "Thông tin riêng của ảnh, video hoặc bài hát: EXIF, ID3, MP4, FLAC, Ogg và nhiều định dạng khác",
+  "@multiRename.placeholderHelp.media": {
+    "sourceHash": "b7ba607"
+  },
+  "multiRename.placeholderHelp.mediaTaken": "Ngày chụp ảnh hoặc quay video",
+  "@multiRename.placeholderHelp.mediaTaken": {
+    "sourceHash": "b0eea95"
+  },
+  "multiRename.placeholderHelp.mediaFallback": "Với tệp không có ngày đó, dùng ngày tệp được sửa đổi lần cuối",
+  "@multiRename.placeholderHelp.mediaFallback": {
+    "sourceHash": "292616f"
+  },
+  "multiRename.placeholderHelp.mediaCamera": "Nhãn hiệu và kiểu máy ảnh",
+  "@multiRename.placeholderHelp.mediaCamera": {
+    "sourceHash": "9da2073"
+  },
+  "multiRename.placeholderHelp.mediaSong": "Số bản nhạc, nghệ sĩ và tiêu đề của một bài hát",
+  "@multiRename.placeholderHelp.mediaSong": {
+    "sourceHash": "f1a8bf1"
+  },
+  "multiRename.placeholderHelp.mediaHint": "Bấm để chọn từ mọi trường, kèm giá trị của từng trường trên các tệp của bạn.",
+  "@multiRename.placeholderHelp.mediaHint": {
+    "sourceHash": "8f7db2f"
   },
   "multiRename.placeholderHelp.oneChar": "Chỉ ký tự thứ {at}",
   "@multiRename.placeholderHelp.oneChar": {

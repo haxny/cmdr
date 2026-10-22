@@ -23,6 +23,14 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
+  "multiRename.mediaButton": "média ▾",
+  "@multiRename.mediaButton": {
+    "sourceHash": "fb69ec3"
+  },
+  "multiRename.mediaButtonName": "Médiamezők",
+  "@multiRename.mediaButtonName": {
+    "sourceHash": "7f448e6"
+  },
   "multiRename.search": "Keresés",
   "@multiRename.search": {
     "sourceHash": "6ea8f74"
@@ -199,6 +207,10 @@
   "@multiRename.preview": {
     "sourceHash": "324b134"
   },
+  "multiRename.readingTags": "Címkék beolvasása: {readText} / {totalText}",
+  "@multiRename.readingTags": {
+    "sourceHash": "a15c17f"
+  },
   "multiRename.oldName": "Régi név",
   "@multiRename.oldName": {
     "sourceHash": "f192b20"
@@ -267,6 +279,10 @@
   "@multiRename.summary": {
     "sourceHash": "ca7be9b"
   },
+  "multiRename.summaryReading": "{ready, plural, one {# átnevezendő} other {# átnevezendő}} · {unchanged, plural, one {# változatlan} other {# változatlan}} · <problemsToggle>{problems, plural, one {# probléma} other {# probléma}}</problemsToggle> · {reading, plural, one {# még beolvasás alatt} other {# még beolvasás alatt}}",
+  "@multiRename.summaryReading": {
+    "sourceHash": "4c73b60"
+  },
   "multiRename.cancel": "Mégsem",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
@@ -331,6 +347,26 @@
   "@multiRename.rename": {
     "sourceHash": "9789ca5"
   },
+  "multiRename.starting": "Indítás…",
+  "@multiRename.starting": {
+    "sourceHash": "bbe5fc3"
+  },
+  "multiRename.renameWaitsTooltip": "Néhány fájl címkéinek beolvasása még folyamatban van. Az átnevezés megvárja, aztán elindul.",
+  "@multiRename.renameWaitsTooltip": {
+    "sourceHash": "208afe0"
+  },
+  "multiRename.startingTooltip": "Az átnevezés akkor indul, amikor már minden fájl címkéit beolvasta. Kattints újra a megszakításhoz.",
+  "@multiRename.startingTooltip": {
+    "sourceHash": "bbeb76e"
+  },
+  "multiRename.queuedAnnounce": "Az átnevezés a címkék beolvasása után indul",
+  "@multiRename.queuedAnnounce": {
+    "sourceHash": "7c11af5"
+  },
+  "multiRename.queueCanceled": "Átnevezés megszakítva",
+  "@multiRename.queueCanceled": {
+    "sourceHash": "cdd1d0e"
+  },
   "multiRename.started": "{count, plural, one {# fájl átnevezése folyamatban van} other {# fájl átnevezése folyamatban van}}. Visszagörgetni a műveletnaplóban tudod.",
   "@multiRename.started": {
     "sourceHash": "55b4878"
@@ -362,6 +398,224 @@
   "multiRename.reason.missing": "Ezt a fájlt áthelyezték vagy törölték a Csoportos átnevezés megnyitása után, ezért kimarad.",
   "@multiRename.reason.missing": {
     "sourceHash": "8697aa3"
+  },
+  "multiRename.status.reading": "Beolvasás…",
+  "@multiRename.status.reading": {
+    "sourceHash": "874bfa5"
+  },
+  "multiRename.status.noValue": "Hiányzik: {field}",
+  "@multiRename.status.noValue": {
+    "sourceHash": "619464f"
+  },
+  "multiRename.reason.noValue": "Ennek a fájlnak nincs „{field}” értéke, ezért megtartja a nevét.",
+  "@multiRename.reason.noValue": {
+    "sourceHash": "25d9a0f"
+  },
+  "multiRename.reason.noDate": "Ennek a fájlnak nincs „{field}” értéke, ezért megtartja a nevét. A helyőrző szerkesztőjében helyette a fájl utolsó módosításának dátuma is használható.",
+  "@multiRename.reason.noDate": {
+    "sourceHash": "239bc84"
+  },
+  "multiRename.status.unreadable": "Nem sikerült beolvasni a címkéket",
+  "@multiRename.status.unreadable": {
+    "sourceHash": "fe6ad18"
+  },
+  "multiRename.reason.unreadable": "A Csoportos átnevezés nem tudta beolvasni ennek a fájlnak a címkéit vagy fotóadatait, ezért nincs „{field}” értéke, és megtartja a nevét.",
+  "@multiRename.reason.unreadable": {
+    "sourceHash": "099ce1f"
+  },
+  "multiRename.mediaField.exifTaken": "Felvétel dátuma",
+  "@multiRename.mediaField.exifTaken": {
+    "sourceHash": "a2f4fe8"
+  },
+  "multiRename.mediaField.exifCamera": "Kamera",
+  "@multiRename.mediaField.exifCamera": {
+    "sourceHash": "03494b0"
+  },
+  "multiRename.mediaField.exifMake": "Kamera gyártója",
+  "@multiRename.mediaField.exifMake": {
+    "sourceHash": "78929e9"
+  },
+  "multiRename.mediaField.exifModel": "Kameramodell",
+  "@multiRename.mediaField.exifModel": {
+    "sourceHash": "ddbfabf"
+  },
+  "multiRename.mediaField.exifLens": "Objektív",
+  "@multiRename.mediaField.exifLens": {
+    "sourceHash": "4317a99"
+  },
+  "multiRename.mediaField.exifIso": "ISO",
+  "@multiRename.mediaField.exifIso": {
+    "sourceHash": "6dc87bf",
+    "sameAsSourceJustification": "Az ISO a fényérzékenység nemzetközi jelölése, a magyar fotós szaknyelv is így írja; a @key leírása is kéri, hogy maradjon."
+  },
+  "multiRename.mediaField.exifFocal": "Gyújtótávolság (mm)",
+  "@multiRename.mediaField.exifFocal": {
+    "sourceHash": "6a87ca3"
+  },
+  "multiRename.mediaField.exifWidth": "Szélesség (képpont)",
+  "@multiRename.mediaField.exifWidth": {
+    "sourceHash": "7929f0d"
+  },
+  "multiRename.mediaField.exifHeight": "Magasság (képpont)",
+  "@multiRename.mediaField.exifHeight": {
+    "sourceHash": "37d0cb6"
+  },
+  "multiRename.mediaField.exifOrientation": "Tájolás",
+  "@multiRename.mediaField.exifOrientation": {
+    "sourceHash": "e3d1124"
+  },
+  "multiRename.mediaField.tagTitle": "Cím",
+  "@multiRename.mediaField.tagTitle": {
+    "sourceHash": "7e8cd20"
+  },
+  "multiRename.mediaField.tagArtist": "Előadó",
+  "@multiRename.mediaField.tagArtist": {
+    "sourceHash": "1d3981b"
+  },
+  "multiRename.mediaField.tagAlbumArtist": "Album előadója",
+  "@multiRename.mediaField.tagAlbumArtist": {
+    "sourceHash": "334ae82"
+  },
+  "multiRename.mediaField.tagAlbum": "Album",
+  "@multiRename.mediaField.tagAlbum": {
+    "sourceHash": "f05e840",
+    "sameAsSourceJustification": "Az „album” magyar szó is, a zenei címkék mezőneve így szerepel (KDE Dolphin és GNOME Nautilus hu: Album)."
+  },
+  "multiRename.mediaField.tagTrack": "Szám sorszáma",
+  "@multiRename.mediaField.tagTrack": {
+    "sourceHash": "de8de0b"
+  },
+  "multiRename.mediaField.tagDisc": "Lemez sorszáma",
+  "@multiRename.mediaField.tagDisc": {
+    "sourceHash": "0fd0aef"
+  },
+  "multiRename.mediaField.tagYear": "Év",
+  "@multiRename.mediaField.tagYear": {
+    "sourceHash": "89f6832"
+  },
+  "multiRename.mediaField.tagGenre": "Műfaj",
+  "@multiRename.mediaField.tagGenre": {
+    "sourceHash": "6da795a"
+  },
+  "multiRename.mediaField.tagComment": "Megjegyzés",
+  "@multiRename.mediaField.tagComment": {
+    "sourceHash": "44f5e3f"
+  },
+  "multiRename.mediaPicker.title": "Mező beszúrása",
+  "@multiRename.mediaPicker.title": {
+    "sourceHash": "b722b94"
+  },
+  "multiRename.mediaPicker.filter": "Mezők szűrése",
+  "@multiRename.mediaPicker.filter": {
+    "sourceHash": "184a51b"
+  },
+  "multiRename.mediaPicker.photos": "Fotók és videók (EXIF)",
+  "@multiRename.mediaPicker.photos": {
+    "sourceHash": "b41c23d"
+  },
+  "multiRename.mediaPicker.music": "Zene (ID3, MP4, FLAC…)",
+  "@multiRename.mediaPicker.music": {
+    "sourceHash": "357e580"
+  },
+  "multiRename.mediaPicker.none": "ezekben a fájlokban nincs",
+  "@multiRename.mediaPicker.none": {
+    "sourceHash": "9d56c00"
+  },
+  "multiRename.mediaPicker.noneYet": "eddig nincs",
+  "@multiRename.mediaPicker.noneYet": {
+    "sourceHash": "35c2dfa"
+  },
+  "multiRename.mediaPicker.noMatch": "Nincs ennek megfelelő mező: „{filter}”",
+  "@multiRename.mediaPicker.noMatch": {
+    "sourceHash": "2003efb"
+  },
+  "multiRename.mediaPicker.inserted": "Beszúrva: {field}",
+  "@multiRename.mediaPicker.inserted": {
+    "sourceHash": "d5f2afb"
+  },
+  "multiRename.mediaPicker.insertedMark": "beszúrva",
+  "@multiRename.mediaPicker.insertedMark": {
+    "sourceHash": "e8dd664"
+  },
+  "multiRename.mediaEditor.marker": "Mező szerkesztése",
+  "@multiRename.mediaEditor.marker": {
+    "sourceHash": "652e08e"
+  },
+  "multiRename.mediaEditor.title": "Mező",
+  "@multiRename.mediaEditor.title": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.mediaEditor.format": "Formátum",
+  "@multiRename.mediaEditor.format": {
+    "sourceHash": "2f34366"
+  },
+  "multiRename.mediaEditor.dateHint": "Y, M és D a dátumhoz, h, m és s az időhöz, köztük - . _ vagy szóköz állhat. Üresen hagyva a dátum és az idő.",
+  "@multiRename.mediaEditor.dateHint": {
+    "sourceHash": "88e6818"
+  },
+  "multiRename.mediaEditor.presets": "Gyakori formátumok",
+  "@multiRename.mediaEditor.presets": {
+    "sourceHash": "0998319"
+  },
+  "multiRename.mediaEditor.preset.dateTime": "Dátum és idő",
+  "@multiRename.mediaEditor.preset.dateTime": {
+    "sourceHash": "a079c3b"
+  },
+  "multiRename.mediaEditor.preset.date": "Dátum",
+  "@multiRename.mediaEditor.preset.date": {
+    "sourceHash": "99c40ab"
+  },
+  "multiRename.mediaEditor.preset.time": "Idő",
+  "@multiRename.mediaEditor.preset.time": {
+    "sourceHash": "33b9347"
+  },
+  "multiRename.mediaEditor.preset.compact": "Kompakt",
+  "@multiRename.mediaEditor.preset.compact": {
+    "sourceHash": "9945264"
+  },
+  "multiRename.mediaEditor.digits": "Számjegyek",
+  "@multiRename.mediaEditor.digits": {
+    "sourceHash": "9cd500d"
+  },
+  "multiRename.mediaEditor.digitsHint": "Elöl nullákkal egészíti ki, így 2 esetén 03 lesz. Üresen hagyva a szám változatlan marad.",
+  "@multiRename.mediaEditor.digitsHint": {
+    "sourceHash": "793a729"
+  },
+  "multiRename.mediaEditor.characters": "Karakterek",
+  "@multiRename.mediaEditor.characters": {
+    "sourceHash": "6fac39e"
+  },
+  "multiRename.mediaEditor.charactersHint": "Például 1-10 az első tízhez vagy -3- az utolsó háromhoz. Üresen hagyva az egész.",
+  "@multiRename.mediaEditor.charactersHint": {
+    "sourceHash": "dcc206f"
+  },
+  "multiRename.mediaEditor.fallback": "Ha egy fájlnál nincs ilyen: az utolsó módosítás dátumának használata",
+  "@multiRename.mediaEditor.fallback": {
+    "sourceHash": "8978898"
+  },
+  "multiRename.mediaEditor.usesModified": "{count, plural, one {{countText} fájl az utolsó módosítás dátumát használja} other {{countText} fájl az utolsó módosítás dátumát használja}}",
+  "@multiRename.mediaEditor.usesModified": {
+    "sourceHash": "588993a"
+  },
+  "multiRename.mediaEditor.missing": "{count, plural, one {{countText} fájlnál nincs ilyen, ezért megtartja a nevét} other {{countText} fájlnál nincs ilyen, ezért megtartják a nevüket}}",
+  "@multiRename.mediaEditor.missing": {
+    "sourceHash": "6356576"
+  },
+  "multiRename.mediaEditor.stillReading": "{count, plural, one {{countText} fájl beolvasása még folyamatban van} other {{countText} fájl beolvasása még folyamatban van}}",
+  "@multiRename.mediaEditor.stillReading": {
+    "sourceHash": "44bea1c"
+  },
+  "multiRename.mediaEditor.gap.reading": "beolvasás…",
+  "@multiRename.mediaEditor.gap.reading": {
+    "sourceHash": "6ab8da1"
+  },
+  "multiRename.mediaEditor.gap.noValue": "nincs",
+  "@multiRename.mediaEditor.gap.noValue": {
+    "sourceHash": "140bedb"
+  },
+  "multiRename.mediaEditor.gap.unreadable": "nem olvasható",
+  "@multiRename.mediaEditor.gap.unreadable": {
+    "sourceHash": "f6daf78"
   },
   "multiRename.reason.empty": "Az új név üres.",
   "@multiRename.reason.empty": {
@@ -442,6 +696,30 @@
   "multiRename.placeholderHelp.time": "A fájl utolsó módosításának időpontja: óra, perc és másodperc",
   "@multiRename.placeholderHelp.time": {
     "sourceHash": "69c80a0"
+  },
+  "multiRename.placeholderHelp.media": "Egy fotó, videó vagy zeneszám saját adatai: EXIF, ID3, MP4, FLAC, Ogg és még több",
+  "@multiRename.placeholderHelp.media": {
+    "sourceHash": "b7ba607"
+  },
+  "multiRename.placeholderHelp.mediaTaken": "Egy fotó vagy videó felvételének dátuma",
+  "@multiRename.placeholderHelp.mediaTaken": {
+    "sourceHash": "b0eea95"
+  },
+  "multiRename.placeholderHelp.mediaFallback": "Ahol nincs ilyen, ott a fájl utolsó módosításának dátumával",
+  "@multiRename.placeholderHelp.mediaFallback": {
+    "sourceHash": "292616f"
+  },
+  "multiRename.placeholderHelp.mediaCamera": "A kamera gyártója és modellje",
+  "@multiRename.placeholderHelp.mediaCamera": {
+    "sourceHash": "9da2073"
+  },
+  "multiRename.placeholderHelp.mediaSong": "Egy zeneszám sorszáma, előadója és címe",
+  "@multiRename.placeholderHelp.mediaSong": {
+    "sourceHash": "f1a8bf1"
+  },
+  "multiRename.placeholderHelp.mediaHint": "Kattints, és válassz bármelyik mezőből; mindegyik mellett látod az értékét a fájljaidon.",
+  "@multiRename.placeholderHelp.mediaHint": {
+    "sourceHash": "8f7db2f"
   },
   "multiRename.placeholderHelp.oneChar": "Csak egy karakter, ezen a helyen: {at}",
   "@multiRename.placeholderHelp.oneChar": {

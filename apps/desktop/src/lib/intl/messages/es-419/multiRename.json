@@ -78,5 +78,25 @@
   "multiRename.error.couldntWriteNames": "No se pudo escribir la lista de nombres. Comprueba que tu disco de arranque tiene espacio libre.",
   "@multiRename.error.couldntWriteNames": {
     "sourceHash": "2057912"
+  },
+  "multiRename.mediaPicker.photos": "Fotos y videos (EXIF)",
+  "@multiRename.mediaPicker.photos": {
+    "sourceHash": "e33d2a9"
+  },
+  "multiRename.placeholderHelp.media": "La información propia de una foto, un video o una canción: EXIF, ID3, MP4, FLAC, Ogg y más",
+  "@multiRename.placeholderHelp.media": {
+    "sourceHash": "4be70df"
+  },
+  "multiRename.placeholderHelp.mediaTaken": "La fecha en que se tomó una foto o se grabó un video",
+  "@multiRename.placeholderHelp.mediaTaken": {
+    "sourceHash": "02b012e"
+  },
+  "multiRename.reason.unreadable": "“Renombrado múltiple” no pudo leer las etiquetas ni la información de foto de este archivo, así que no tiene valor de “{field}” y conserva su nombre.",
+  "@multiRename.reason.unreadable": {
+    "sourceHash": "2d690e5"
+  },
+  "multiRename.mediaPicker.inserted": "Se insertó {field}",
+  "@multiRename.mediaPicker.inserted": {
+    "sourceHash": "e4cccec"
   }
 }

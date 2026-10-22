@@ -83,3 +83,7 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   `Parte da sua seleção está dentro de uma visualização` is understandable, or suggest a clearer noun. Also confirm
   `search.coverage.declined`'s `pastas de snapshot` (APFS) should stay, or align to `instantâneo` like the restic
   strings.
+- **Media fields in Multi-rename** (`multiRename.mediaPicker.insertedMark`, `multiRename.*Tags*`): a field's name has
+  either gender (`Data de captura`, `Título`), so `inserted` after it became `já na máscara`; confirm it reads right
+  after the name, or suggest better. Music and photo metadata `tags` stay `tags` (as in `tags ID3`) so they never read
+  as the Finder's `etiquetas`; confirm.

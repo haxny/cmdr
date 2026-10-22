@@ -644,6 +644,10 @@
   "@commands.multiRenameReplaceWholeName.label": {
     "sourceHash": "016c572"
   },
+  "commands.multiRenameInsertField.label": "Fotó-, videó- vagy zenemező beszúrása",
+  "@commands.multiRenameInsertField.label": {
+    "sourceHash": "4b9e9de"
+  },
   "commands.multiRenameUndoRename.label": "Utolsó csoportos átnevezés visszavonása",
   "@commands.multiRenameUndoRename.label": {
     "sourceHash": "e5a0975"

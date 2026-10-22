@@ -1736,6 +1736,12 @@
     "confidence": "high",
     "sources": "MS terminology (IP 地址); KDE Dolphin (smb://[IP 地址]); catalog fileExplorer.network.browser.tooltip.resolving"
   },
+  "info": {
+    "chosen": "信息",
+    "confidence": "high",
+    "forms": "a photo's camera details 照片信息 / 相机信息; a field a file lacks → 没有“{field}”信息",
+    "sources": "macOS Photos IPXMain (Info 信息, No camera information 无相机信息); Spotlight schema kMDItemInformation 影片信息 (macOS 26, 2026-10-22); catalog (21 × 信息, 0 × 资讯)"
+  },
   "item": {
     "accept": ["这一项", "那一项"],
     "chosen": "项目",
@@ -3528,6 +3534,12 @@
     "chosen": "版本",
     "confidence": "high",
     "sources": "standard"
+  },
+  "video": {
+    "chosen": "视频",
+    "confidence": "high",
+    "forms": "photos and videos 照片和视频",
+    "sources": "macOS Photos IPXMain (Video 视频, Add Photos and Videos 添加照片和视频); Spotlight schema kMDItemVideoBitRate 视频位速率 (macOS 26, 2026-10-22)"
   },
   "viewer": {
     "chosen": "查看器",

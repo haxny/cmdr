@@ -2486,6 +2486,13 @@
     "forms": "a status or failure toast → 無法完成; Cmdr didn’t finish looking → 沒有找完; the log status → 未完成",
     "sources": "catalog queue.row.status, queue.failureToast.*; style.md 無法 + verb"
   },
+  "none": {
+    "accept": ["沒有"],
+    "chosen": "無",
+    "confidence": "high",
+    "forms": "a picker option or a value slot → 無 (shortcuts → （無）); in a sentence or a lowercase value note → 沒有 (這些檔案都沒有, 目前還沒有)",
+    "sources": "catalog settings.appearance.sizeColors.opt.none, shortcuts.section.noneShortcut; MS none → 無"
+  },
   "not-found": {
     "accept": ["沒能找到"],
     "chosen": "找不到",

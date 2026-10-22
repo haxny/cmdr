@@ -1705,6 +1705,13 @@
     "forms": "noun index; the act indexation; verb indexer; drive indexing in prose → l’indexation (bare); the setting label Indexation du disque",
     "sources": "MS terminology FRA; macOS Finder (Mise à jour de l'index des tags)"
   },
+  "info": {
+    "accept": ["infos", "information"],
+    "chosen": "informations",
+    "confidence": "high",
+    "forms": "plural noun (les informations); a photo’s information → les informations photo; a file’s own information → les informations propres à …",
+    "sources": "macOS Finder (Lire les informations)"
+  },
   "input-source": {
     "chosen": "source de saisie",
     "confidence": "high",
@@ -3598,6 +3605,13 @@
     },
     "forms": "X and up → X et les versions plus récentes; SMB 2 or later → SMB 2 ou ultérieur; released copy → version publiée",
     "sources": "macOS AppKit; SystemSettings (OS X %@ ou ultérieur)"
+  },
+  "video": {
+    "accept": ["vidéos"],
+    "chosen": "vidéo",
+    "confidence": "high",
+    "forms": "feminine (une vidéo, d’une vidéo); photos and videos → Photos et vidéos",
+    "sources": "macOS (« ^1 » veut vous envoyer une vidéo.); Nautilus, Dolphin (Vidéos, Fichiers vidéo)"
   },
   "viewer": {
     "avoid": [

@@ -1545,6 +1545,13 @@
     "confidence": "high",
     "sources": "standard tech pt-BR"
   },
+  "info": {
+    "chosen": "informações",
+    "accept": ["informaç"],
+    "forms": "a photo's information → as informações da foto; plural in pt-BR where English says info",
+    "confidence": "high",
+    "sources": "macOS Photos pt-BR (Info → Informações, No lens information → Sem informações de lente); Nautilus and Dolphin pt-BR (informações da imagem)"
+  },
   "input-source": {
     "chosen": "fontes de entrada",
     "accept": ["fonte de entrada"],
@@ -2998,6 +3005,14 @@
         "why": "the pt-PT Finder"
       }
     ],
+    "exceptions": {
+      "multiRename.queuedAnnounce": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags (as tags ID3), so the two never read as one thing.",
+      "multiRename.readingTags": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags.",
+      "multiRename.reason.unreadable": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags.",
+      "multiRename.renameWaitsTooltip": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags.",
+      "multiRename.startingTooltip": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags.",
+      "multiRename.status.unreadable": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags."
+    },
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR (TG5, TG6)"
   },
@@ -3235,6 +3250,12 @@
     "accept": ["versões"],
     "confidence": "high",
     "sources": "MS terminology pt-BR"
+  },
+  "video": {
+    "chosen": "vídeo",
+    "accept": ["vídeos"],
+    "confidence": "confirmed",
+    "sources": "macOS Photos pt-BR (Video → Vídeo, photos and videos → fotos e vídeos); Nautilus and Dolphin pt-BR (Vídeos, Arquivos de vídeo)"
   },
   "viewer": {
     "chosen": "Visualizador",

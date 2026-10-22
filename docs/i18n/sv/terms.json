@@ -1633,6 +1633,14 @@
     "forms": "indexera, indexering, passive indexeras; re-index → indexera om; drive index → enhetsindex(et), drive indexing → enhetsindexering (never indexering av enhet)",
     "sources": "MS terminology; KDE Dolphin (Filindexering)"
   },
+  "info": {
+    "accept": ["info"],
+    "chosen": "information",
+    "confidence": "high",
+    "forms": "compounds close up: licensinformation, versionsinformation, bildinformation (a photo's EXIF in prose); Get Info stays Apple's Visa info",
+    "proseAccept": ["uppgifter"],
+    "sources": "KDE Dolphin (Information); macOS (Visa info); catalog (Licensinformation, Kopiera diagnostikinformation)"
+  },
   "input-source": {
     "chosen": "inmatningskälla",
     "confidence": "tentative",
@@ -3379,6 +3387,18 @@
     "confidence": "high",
     "forms": "build → version (utvecklings- och testversioner)",
     "sources": "MS terminology"
+  },
+  "video": {
+    "avoid": [
+      {
+        "form": "film",
+        "why": "Nautilus's word, but it reads as a movie; a phone clip is a video"
+      }
+    ],
+    "chosen": "video",
+    "confidence": "high",
+    "forms": "plural videor (Bilder och videor); compounds hyphenate in a list (bild-, video- eller musikfält)",
+    "sources": "macOS AppKit (NSTouchBarCommunicationVideoTemplate: video); KDE Dolphin (Video)"
   },
   "viewer": {
     "chosen": "förhandsvisning",

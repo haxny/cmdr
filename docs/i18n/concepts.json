@@ -2012,7 +2012,7 @@
   "model": {
     "en": "model",
     "match": ["model", "models"],
-    "notMatch": ["model context protocol"],
+    "notMatch": ["model context protocol", "camera model", "maker and model"],
     "sense": "An AI model (local or cloud)."
   },
   "model-library": {
@@ -3439,6 +3439,7 @@
     "distinct": ["edit"],
     "en": "text editor",
     "match": ["text editor", "editor"],
+    "notMatch": ["placeholder’s editor"],
     "sense": "The app that opens a file for editing (F4)."
   },
   "theme": {

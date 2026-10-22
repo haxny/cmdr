@@ -87,6 +87,12 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **Placeholder tooltips** (`multiRename.placeholderHelp.*`), set without the pile: caret → `textmarkören` (the cursor
   ruling's viewer form) and hover → `håll pekaren över`; the [C] value → `Ett nummer` (not `löpnummer`); time of day →
   `klockslaget`, since `Hela tiden` would read as "all the time"; leading zeros → `inledande nollor`.
+- **Media fields** (`multiRename.mediaField.*`, `multiRename.mediaButtonName`): `Tagningsdatum` (Date taken) is coined,
+  since Dolphin's `Fotograferad datum` is clumsy and `foto` is avoided, and it must cover videos too; `Kameramärke`
+  follows Nautilus's Camera Brand; `Fält för media` keeps the visible `media` for aria containment (`Mediefält` wouldn't
+  contain it). Confirm against the live Swedish Photos and Music apps.
+- **Empty-value notes** (`multiRename.mediaPicker.none` / `.noneYet`, `multiRename.mediaEditor.gap.noValue`): the picker
+  says `saknas i de här filerna` / `saknas än så länge`, the editor's gap the ruled `ingen`; confirm the mix reads fine.
 - **Transfer tree counts** (`fileOperations.transferTree.failedCount`/`.state.failed`): the tight count says
   `{countText} gick inte` (as `askCmdr.decision.result`), the row marker the longer `Gick inte att slutföra` (as
   `operationLog.status.failed`); confirm the bare `3 gick inte` reads clearly after `· 2 överhoppade`.

@@ -1762,6 +1762,13 @@
     "forms": "noun Index / Indizierung; drive indexing → Laufwerksindizierung; image indexing → Bildindizierung; stays unindexed → wird … nicht indiziert; re-index → neu indizieren",
     "sources": "macOS de (Indiziert); MS terminology (indizieren/Indizierung)"
   },
+  "info": {
+    "accept": ["Info", "Infos", "Angaben"],
+    "chosen": "Informationen",
+    "confidence": "tentative",
+    "note": "Information stored inside a file (EXIF, tags) is metadata, so it takes the -angaben pattern like Dateiangaben: a photo's information → Fotoangaben, a file's own information → die eigenen Angaben.",
+    "sources": "Dolphin (Information → Informationen); the -angaben compounds follow the catalog's Dateiangaben and Kameraangaben"
+  },
   "input-source": {
     "chosen": "Eingabequelle",
     "confidence": "high",
@@ -2137,6 +2144,13 @@
     "chosen": "Neuer Ordner",
     "confidence": "high",
     "sources": "macOS Finder (Neuer Ordner)"
+  },
+  "none": {
+    "accept": ["keiner", "kein Wert", "in keiner"],
+    "chosen": "Keine",
+    "confidence": "high",
+    "forms": "picker option → Keine (settings.*.opt.none); a missing value standing where a value would → kein Wert; none in these files → in keiner dieser Dateien",
+    "sources": "Dolphin, Nautilus, Thunar (None → Keine); catalog settings.appearance.sizeColors.opt.none"
   },
   "not-finished": {
     "accept": ["abschließen", "beendet", "fertig"],
@@ -3539,6 +3553,13 @@
     },
     "forms": "SMB version → SMB-Version; a release → veröffentlichte Version",
     "sources": "macOS"
+  },
+  "video": {
+    "accept": ["Videos", "Video-"],
+    "chosen": "Video",
+    "confidence": "high",
+    "forms": "photos and videos → Fotos und Videos; in a coordinated compound → Foto-, Video- oder Musikfeld",
+    "sources": "Dolphin, Nautilus (Video)"
   },
   "viewer": {
     "avoid": [

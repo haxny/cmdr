@@ -23,6 +23,15 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
+  "multiRename.mediaButton": "media ▾",
+  "@multiRename.mediaButton": {
+    "sourceHash": "fb69ec3",
+    "sameAsSourceJustification": "Dutch uses the same word: media is Dutch (macOS Metadata schema.strings nl: \"Titel van een set media\"); lowercase and ▾ mirror the placeholder buttons."
+  },
+  "multiRename.mediaButtonName": "Mediavelden",
+  "@multiRename.mediaButtonName": {
+    "sourceHash": "7f448e6"
+  },
   "multiRename.search": "Zoek naar",
   "@multiRename.search": {
     "sourceHash": "6ea8f74"
@@ -199,6 +208,10 @@
   "@multiRename.preview": {
     "sourceHash": "324b134"
   },
+  "multiRename.readingTags": "Tags lezen: {readText} van {totalText}",
+  "@multiRename.readingTags": {
+    "sourceHash": "a15c17f"
+  },
   "multiRename.oldName": "Oude naam",
   "@multiRename.oldName": {
     "sourceHash": "f192b20"
@@ -268,6 +281,10 @@
   "@multiRename.summary": {
     "sourceHash": "ca7be9b"
   },
+  "multiRename.summaryReading": "{ready, plural, one {# naamwijziging} other {# naamwijzigingen}} · {unchanged, plural, one {# ongewijzigd} other {# ongewijzigd}} · <problemsToggle>{problems, plural, one {# probleem} other {# problemen}}</problemsToggle> · {reading, plural, one {# wordt nog gelezen} other {# worden nog gelezen}}",
+  "@multiRename.summaryReading": {
+    "sourceHash": "4c73b60"
+  },
   "multiRename.cancel": "Annuleer",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
@@ -332,6 +349,26 @@
   "@multiRename.rename": {
     "sourceHash": "9789ca5"
   },
+  "multiRename.starting": "Starten…",
+  "@multiRename.starting": {
+    "sourceHash": "bbe5fc3"
+  },
+  "multiRename.renameWaitsTooltip": "De tags van sommige bestanden worden nog gelezen. De naamwijziging wacht daarop en begint dan.",
+  "@multiRename.renameWaitsTooltip": {
+    "sourceHash": "208afe0"
+  },
+  "multiRename.startingTooltip": "De naamwijziging begint zodra de tags van alle bestanden gelezen zijn. Klik nogmaals om te annuleren.",
+  "@multiRename.startingTooltip": {
+    "sourceHash": "bbeb76e"
+  },
+  "multiRename.queuedAnnounce": "De naamwijziging begint zodra de tags gelezen zijn",
+  "@multiRename.queuedAnnounce": {
+    "sourceHash": "7c11af5"
+  },
+  "multiRename.queueCanceled": "Naamwijziging geannuleerd",
+  "@multiRename.queueCanceled": {
+    "sourceHash": "cdd1d0e"
+  },
   "multiRename.started": "{count, plural, one {Naam van # bestand wordt gewijzigd} other {Namen van # bestanden worden gewijzigd}}. Terugdraaien kan in het bewerkingenlogboek.",
   "@multiRename.started": {
     "sourceHash": "55b4878"
@@ -363,6 +400,228 @@
   "multiRename.reason.missing": "Dit bestand is verplaatst of verwijderd nadat ‘Wijzig meerdere namen’ werd geopend, dus het wordt overgeslagen.",
   "@multiRename.reason.missing": {
     "sourceHash": "8697aa3"
+  },
+  "multiRename.status.reading": "Lezen…",
+  "@multiRename.status.reading": {
+    "sourceHash": "874bfa5"
+  },
+  "multiRename.status.noValue": "{field} ontbreekt",
+  "@multiRename.status.noValue": {
+    "sourceHash": "619464f"
+  },
+  "multiRename.reason.noValue": "Dit bestand heeft geen waarde voor ‘{field}’, dus het behoudt zijn naam.",
+  "@multiRename.reason.noValue": {
+    "sourceHash": "25d9a0f"
+  },
+  "multiRename.reason.noDate": "Dit bestand heeft geen waarde voor ‘{field}’, dus het behoudt zijn naam. De editor van de plaatshouder kan in plaats daarvan de datum gebruiken waarop het bestand voor het laatst is gewijzigd.",
+  "@multiRename.reason.noDate": {
+    "sourceHash": "239bc84"
+  },
+  "multiRename.status.unreadable": "Kan tags niet lezen",
+  "@multiRename.status.unreadable": {
+    "sourceHash": "fe6ad18"
+  },
+  "multiRename.reason.unreadable": "‘Wijzig meerdere namen’ kon de tags of fotogegevens van dit bestand niet lezen, dus het heeft geen waarde voor ‘{field}’ en behoudt zijn naam.",
+  "@multiRename.reason.unreadable": {
+    "sourceHash": "099ce1f"
+  },
+  "multiRename.mediaField.exifTaken": "Opnamedatum",
+  "@multiRename.mediaField.exifTaken": {
+    "sourceHash": "a2f4fe8"
+  },
+  "multiRename.mediaField.exifCamera": "Camera",
+  "@multiRename.mediaField.exifCamera": {
+    "sourceHash": "03494b0",
+    "sameAsSourceJustification": "Dutch noun is \"camera\": macOS Metadata schema.strings nl (\"de camera toen de foto werd gemaakt\"); nl term ruling camera."
+  },
+  "multiRename.mediaField.exifMake": "Cameramerk",
+  "@multiRename.mediaField.exifMake": {
+    "sourceHash": "78929e9"
+  },
+  "multiRename.mediaField.exifModel": "Cameramodel",
+  "@multiRename.mediaField.exifModel": {
+    "sourceHash": "ddbfabf"
+  },
+  "multiRename.mediaField.exifLens": "Lens",
+  "@multiRename.mediaField.exifLens": {
+    "sourceHash": "4317a99",
+    "sameAsSourceJustification": "Dutch noun is \"lens\": macOS Metadata schema.strings nl kMDItemLensModel → \"Lensmodel\"."
+  },
+  "multiRename.mediaField.exifIso": "ISO",
+  "@multiRename.mediaField.exifIso": {
+    "sourceHash": "6dc87bf",
+    "sameAsSourceJustification": "ISO is the standard name; macOS Metadata schema.strings nl kMDItemISOSpeed → \"ISO-snelheid\"."
+  },
+  "multiRename.mediaField.exifFocal": "Brandpuntsafstand (mm)",
+  "@multiRename.mediaField.exifFocal": {
+    "sourceHash": "6a87ca3"
+  },
+  "multiRename.mediaField.exifWidth": "Breedte (pixels)",
+  "@multiRename.mediaField.exifWidth": {
+    "sourceHash": "7929f0d"
+  },
+  "multiRename.mediaField.exifHeight": "Hoogte (pixels)",
+  "@multiRename.mediaField.exifHeight": {
+    "sourceHash": "37d0cb6"
+  },
+  "multiRename.mediaField.exifOrientation": "Richting",
+  "@multiRename.mediaField.exifOrientation": {
+    "sourceHash": "e3d1124"
+  },
+  "multiRename.mediaField.tagTitle": "Titel",
+  "@multiRename.mediaField.tagTitle": {
+    "sourceHash": "7e8cd20"
+  },
+  "multiRename.mediaField.tagArtist": "Artiest",
+  "@multiRename.mediaField.tagArtist": {
+    "sourceHash": "1d3981b"
+  },
+  "multiRename.mediaField.tagAlbumArtist": "Albumartiest",
+  "@multiRename.mediaField.tagAlbumArtist": {
+    "sourceHash": "334ae82"
+  },
+  "multiRename.mediaField.tagAlbum": "Album",
+  "@multiRename.mediaField.tagAlbum": {
+    "sourceHash": "f05e840",
+    "sameAsSourceJustification": "macOS Metadata schema.strings nl kMDItemAlbum → \"Album\"."
+  },
+  "multiRename.mediaField.tagTrack": "Tracknummer",
+  "@multiRename.mediaField.tagTrack": {
+    "sourceHash": "de8de0b"
+  },
+  "multiRename.mediaField.tagDisc": "Schijfnummer",
+  "@multiRename.mediaField.tagDisc": {
+    "sourceHash": "0fd0aef"
+  },
+  "multiRename.mediaField.tagYear": "Jaar",
+  "@multiRename.mediaField.tagYear": {
+    "sourceHash": "89f6832"
+  },
+  "multiRename.mediaField.tagGenre": "Genre",
+  "@multiRename.mediaField.tagGenre": {
+    "sourceHash": "6da795a",
+    "sameAsSourceJustification": "macOS Metadata schema.strings nl kMDItemGenre → \"Genre\"."
+  },
+  "multiRename.mediaField.tagComment": "Opmerking",
+  "@multiRename.mediaField.tagComment": {
+    "sourceHash": "44f5e3f"
+  },
+  "multiRename.mediaPicker.title": "Voeg een veld in",
+  "@multiRename.mediaPicker.title": {
+    "sourceHash": "b722b94"
+  },
+  "multiRename.mediaPicker.filter": "Filter velden",
+  "@multiRename.mediaPicker.filter": {
+    "sourceHash": "184a51b"
+  },
+  "multiRename.mediaPicker.photos": "Foto''s en video''s (EXIF)",
+  "@multiRename.mediaPicker.photos": {
+    "sourceHash": "b41c23d"
+  },
+  "multiRename.mediaPicker.music": "Muziek (ID3, MP4, FLAC…)",
+  "@multiRename.mediaPicker.music": {
+    "sourceHash": "357e580"
+  },
+  "multiRename.mediaPicker.none": "niet in deze bestanden",
+  "@multiRename.mediaPicker.none": {
+    "sourceHash": "9d56c00"
+  },
+  "multiRename.mediaPicker.noneYet": "tot nu toe nergens",
+  "@multiRename.mediaPicker.noneYet": {
+    "sourceHash": "35c2dfa"
+  },
+  "multiRename.mediaPicker.noMatch": "Geen veld komt overeen met ‘{filter}’",
+  "@multiRename.mediaPicker.noMatch": {
+    "sourceHash": "2003efb"
+  },
+  "multiRename.mediaPicker.inserted": "{field} ingevoegd",
+  "@multiRename.mediaPicker.inserted": {
+    "sourceHash": "d5f2afb"
+  },
+  "multiRename.mediaPicker.insertedMark": "ingevoegd",
+  "@multiRename.mediaPicker.insertedMark": {
+    "sourceHash": "e8dd664"
+  },
+  "multiRename.mediaEditor.marker": "Bewerk veld",
+  "@multiRename.mediaEditor.marker": {
+    "sourceHash": "652e08e"
+  },
+  "multiRename.mediaEditor.title": "Veld",
+  "@multiRename.mediaEditor.title": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.mediaEditor.format": "Notatie",
+  "@multiRename.mediaEditor.format": {
+    "sourceHash": "2f34366"
+  },
+  "multiRename.mediaEditor.dateHint": "Y, M en D voor de datum, h, m en s voor de tijd, met - . _ of spaties ertussen. Laat leeg voor datum en tijd.",
+  "@multiRename.mediaEditor.dateHint": {
+    "sourceHash": "88e6818"
+  },
+  "multiRename.mediaEditor.presets": "Veelgebruikte notaties",
+  "@multiRename.mediaEditor.presets": {
+    "sourceHash": "0998319"
+  },
+  "multiRename.mediaEditor.preset.dateTime": "Datum en tijd",
+  "@multiRename.mediaEditor.preset.dateTime": {
+    "sourceHash": "a079c3b"
+  },
+  "multiRename.mediaEditor.preset.date": "Datum",
+  "@multiRename.mediaEditor.preset.date": {
+    "sourceHash": "99c40ab"
+  },
+  "multiRename.mediaEditor.preset.time": "Tijd",
+  "@multiRename.mediaEditor.preset.time": {
+    "sourceHash": "33b9347"
+  },
+  "multiRename.mediaEditor.preset.compact": "Compact",
+  "@multiRename.mediaEditor.preset.compact": {
+    "sourceHash": "9945264",
+    "sameAsSourceJustification": "Dutch adjective is \"compact\"; byte-identical to the shipped settings.appearance.uiDensity.opt.compact."
+  },
+  "multiRename.mediaEditor.digits": "Cijfers",
+  "@multiRename.mediaEditor.digits": {
+    "sourceHash": "9cd500d"
+  },
+  "multiRename.mediaEditor.digitsHint": "Vult aan met voorloopnullen, dus 2 geeft 03. Laat leeg voor het getal zoals het is.",
+  "@multiRename.mediaEditor.digitsHint": {
+    "sourceHash": "793a729"
+  },
+  "multiRename.mediaEditor.characters": "Tekens",
+  "@multiRename.mediaEditor.characters": {
+    "sourceHash": "6fac39e"
+  },
+  "multiRename.mediaEditor.charactersHint": "Bijvoorbeeld 1-10 voor de eerste tien, of -3- voor de laatste drie. Laat leeg voor alles.",
+  "@multiRename.mediaEditor.charactersHint": {
+    "sourceHash": "dcc206f"
+  },
+  "multiRename.mediaEditor.fallback": "Als een bestand er geen heeft: de datum van de laatste wijziging gebruiken",
+  "@multiRename.mediaEditor.fallback": {
+    "sourceHash": "8978898"
+  },
+  "multiRename.mediaEditor.usesModified": "{count, plural, one {{countText} bestand gebruikt de datum van de laatste wijziging} other {{countText} bestanden gebruiken de datum van de laatste wijziging}}",
+  "@multiRename.mediaEditor.usesModified": {
+    "sourceHash": "588993a"
+  },
+  "multiRename.mediaEditor.missing": "{count, plural, one {{countText} bestand heeft er geen en behoudt zijn naam} other {{countText} bestanden hebben er geen en behouden hun naam}}",
+  "@multiRename.mediaEditor.missing": {
+    "sourceHash": "6356576"
+  },
+  "multiRename.mediaEditor.stillReading": "{count, plural, one {{countText} bestand wordt nog gelezen} other {{countText} bestanden worden nog gelezen}}",
+  "@multiRename.mediaEditor.stillReading": {
+    "sourceHash": "44bea1c"
+  },
+  "multiRename.mediaEditor.gap.reading": "lezen…",
+  "@multiRename.mediaEditor.gap.reading": {
+    "sourceHash": "6ab8da1"
+  },
+  "multiRename.mediaEditor.gap.noValue": "geen",
+  "@multiRename.mediaEditor.gap.noValue": {
+    "sourceHash": "140bedb"
+  },
+  "multiRename.mediaEditor.gap.unreadable": "onleesbaar",
+  "@multiRename.mediaEditor.gap.unreadable": {
+    "sourceHash": "f6daf78"
   },
   "multiRename.reason.empty": "De nieuwe naam is leeg.",
   "@multiRename.reason.empty": {
@@ -443,6 +702,30 @@
   "multiRename.placeholderHelp.time": "Het tijdstip waarop het bestand voor het laatst is gewijzigd: uur, minuten en seconden",
   "@multiRename.placeholderHelp.time": {
     "sourceHash": "69c80a0"
+  },
+  "multiRename.placeholderHelp.media": "De eigen gegevens van een foto, video of nummer: EXIF, ID3, MP4, FLAC, Ogg en meer",
+  "@multiRename.placeholderHelp.media": {
+    "sourceHash": "b7ba607"
+  },
+  "multiRename.placeholderHelp.mediaTaken": "De datum waarop een foto of video is gemaakt",
+  "@multiRename.placeholderHelp.mediaTaken": {
+    "sourceHash": "b0eea95"
+  },
+  "multiRename.placeholderHelp.mediaFallback": "Met de datum van de laatste wijziging voor een bestand zonder opnamedatum",
+  "@multiRename.placeholderHelp.mediaFallback": {
+    "sourceHash": "292616f"
+  },
+  "multiRename.placeholderHelp.mediaCamera": "Het merk en model van de camera",
+  "@multiRename.placeholderHelp.mediaCamera": {
+    "sourceHash": "9da2073"
+  },
+  "multiRename.placeholderHelp.mediaSong": "Het tracknummer, de artiest en de titel van een nummer",
+  "@multiRename.placeholderHelp.mediaSong": {
+    "sourceHash": "f1a8bf1"
+  },
+  "multiRename.placeholderHelp.mediaHint": "Klik om uit alle velden te kiezen, elk met zijn waarde op je bestanden.",
+  "@multiRename.placeholderHelp.mediaHint": {
+    "sourceHash": "8f7db2f"
   },
   "multiRename.placeholderHelp.oneChar": "Alleen teken {at}",
   "@multiRename.placeholderHelp.oneChar": {

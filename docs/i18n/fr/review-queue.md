@@ -89,6 +89,10 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   caret in `counterEditHint` (picked over `curseur`, which names the file-list cursor here; the reference pile wasn’t
   available to confirm Apple’s form); `Le caractère {at} seul` (no ordinal available); `Activé` / `Désactivé` as the
   on/off row labels (masculine, matching the shipped `Désactivé`, though the implied noun is `option`).
+- **Multi-rename media fields** (`multiRename.mediaField.*`, `mediaPicker.*`, `mediaEditor.*`): `tags` for music and
+  video tags (the `tag` ruling is the Finder sense, but `tags ID3` is everyday French); `Marque de l’appareil photo`
+  over the pile’s `Fabricant`; `média ▾` for the button; `{field} : aucune valeur` and `Champ inséré : {field}`, and
+  `dans le masque` for `insertedMark`, all phrased so no participle agrees with a field name of unknown gender.
 - **Transfer tree row states** (`fileOperations.transferTree.state.*`, `failedCount`): `Non terminé` /
   `{n} non terminés` for a file that couldn’t be transferred (reuses `operationLog.outcome.failed`; does it read as "not
   attempted yet"?); `Compression` stays bare to match `transferProgress.stageCompressing`, while the siblings say

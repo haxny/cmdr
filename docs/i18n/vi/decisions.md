@@ -514,3 +514,8 @@ Server dialog (`NetAuthAgent.app`).
   takes a folder path). No pile source; `tentative`, in the review queue.
 - The NAS switch “Allow connections from non-privileged ports” stays English (no vi NAS UI to quote); `insecure` is the
   literal option name.
+
+## Trường đa phương tiện (`multiRename.mediaField.*`, `multiRename.mediaPicker.*`, `multiRename.mediaEditor.*`)
+
+- Field names copy macOS Photos/Music vi (`Ngày chụp`, `Kiểu máy ảnh`, `Số bản nhạc`); make → `Nhãn hiệu máy ảnh`
+  (Photos `Nhãn hiệu thiết bị`); field → `trường` (MS); media → `đa phương tiện` over AppKit's bare `phương tiện`.

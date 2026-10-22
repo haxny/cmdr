@@ -210,5 +210,9 @@
   "commands.resticForgetPassword.description": "Quita del Llavero la contraseña guardada del respaldo de restic en el que estás y vuelve a bloquearlo",
   "@commands.resticForgetPassword.description": {
     "sourceHash": "3ad0182"
+  },
+  "commands.multiRenameInsertField.label": "Insertar un campo de foto, video o música",
+  "@commands.multiRenameInsertField.label": {
+    "sourceHash": "827d9b0"
   }
 }

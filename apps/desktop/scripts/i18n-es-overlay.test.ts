@@ -49,6 +49,7 @@ const SPAIN_ONLY: readonly { term: string; pattern: RegExp; except?: readonly st
   { term: 'pulsar → presionar', pattern: /(?<!\p{L})p[uú]ls(?!\p{L}*ión)/iu },
   { term: 'pulsación → tecla presionada', pattern: /(?<!\p{L})pulsación/iu },
   { term: 'ordenador → computadora', pattern: /(?<!\p{L})ordenador/iu },
+  { term: 'vídeo → video', pattern: /(?<!\p{L})vídeos?(?!\p{L})/iu },
   { term: 'coste → costo', pattern: /(?<!\p{L})costes?(?!\p{L})/iu },
   { term: 'merece la pena → vale la pena', pattern: /merezca la pena|merece la pena/iu },
   { term: 'por omisión → predeterminado', pattern: /por omisión/iu },

@@ -2026,6 +2026,13 @@
     "sources": "ms (index → index); Total Commander (2050 nincs indexelve); catalog",
     "decision": "A meghajtó indexelésének kikapcsolása"
   },
+  "info": {
+    "chosen": "információ",
+    "accept": ["infó", "adat"],
+    "forms": "a photo's own information → egy fotó saját adatai; photo information → fotóadatok; file info (viewer status bar) → Fájladatok",
+    "confidence": "high",
+    "sources": "ms (information → információ, infó); catalog (kameraadatok for a photo's EXIF block)"
+  },
   "input-source": {
     "chosen": "beviteli forrás",
     "forms": "input source switching → beviteli forrás váltása",
@@ -3894,6 +3901,12 @@
     "forms": "Safari 15.4 or later → Safari 15.4-es vagy újabb verzió; macOS 12 and up → macOS 12 és az annál újabb; released copy → kiadott verzió; a file's new version → változat",
     "confidence": "high",
     "sources": "ms; catalog"
+  },
+  "video": {
+    "chosen": "videó",
+    "forms": "videók; compound prefix → videó- (Fotó-, videó- vagy zenemező)",
+    "confidence": "high",
+    "sources": "KDE Dolphin (Video → Videó); GNOME Nautilus (Videókodek); Xfce Thunar (Video Files → Videófájlok)"
   },
   "viewer": {
     "chosen": "megjelenítő",

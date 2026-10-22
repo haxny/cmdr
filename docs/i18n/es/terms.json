@@ -1679,6 +1679,13 @@
     "sources": "MS terminology (indexación de contenido, índice)",
     "decision": "La indexación de unidades apagada"
   },
+  "info": {
+    "chosen": "información",
+    "accept": ["informaci"],
+    "forms": "a photo's information → la información de foto; a file's own information → la información propia",
+    "confidence": "high",
+    "sources": "macOS Finder (Obtener información, Más información); Spotlight schema"
+  },
   "input-source": {
     "chosen": "fuente de entrada",
     "confidence": "tentative",
@@ -3431,6 +3438,19 @@
     "confidence": "high",
     "sources": "MS terminology; macOS SystemSettings (… o posterior)",
     "decision": "Avisos de macOS y WebKit antiguos"
+  },
+  "video": {
+    "chosen": "vídeo",
+    "accept": ["vídeos"],
+    "forms": "es-419 forks it to video (no accent)",
+    "avoid": [
+      {
+        "form": "video",
+        "why": "Latin American spelling; macOS es writes Vídeo(s), es_419 Video(s)"
+      }
+    ],
+    "confidence": "high",
+    "sources": "macOS Finder + Photos (Vídeos / es_419 Videos), pile and live .loctable, macOS 27.0.1"
   },
   "viewer": {
     "chosen": "Visor",

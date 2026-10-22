@@ -10,5 +10,9 @@
   "multiRename.preset.normalizeUnicode": "Normalise Unicode",
   "@multiRename.preset.normalizeUnicode": {
     "sourceHash": "6e1c97e"
+  },
+  "multiRename.queueCanceled": "Rename cancelled",
+  "@multiRename.queueCanceled": {
+    "sourceHash": "cdd1d0e"
   }
 }

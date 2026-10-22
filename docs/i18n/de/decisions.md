@@ -679,3 +679,8 @@ Apple's `Dock.app` `DockMenus.strings` supplies almost every phrase (`KEEP_IN_DO
 
 - `Anfang`/`Ende` mit `Von vorn`/`Von hinten` statt „Ende: Vom Ende“; `#. von hinten` statt „3.-letzte“; take →
   `übernehmen`; Zeilen umordnen → `nach vorn/hinten rücken` wie `menu.queue.moveUp`.
+
+## Medienfelder (`multiRename.media*`)
+
+- `Feld` (TC `Pluginfelder`); names per Nautilus/Thunar; artist → `Interpret` (MS) over `Künstler`;
+  `hat dieses Feld nicht` dodges a gendered `keine(s)`.

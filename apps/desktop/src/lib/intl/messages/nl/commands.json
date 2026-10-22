@@ -646,6 +646,10 @@
   "@commands.multiRenameReplaceWholeName.label": {
     "sourceHash": "016c572"
   },
+  "commands.multiRenameInsertField.label": "Voeg een foto-, video- of muziekveld in",
+  "@commands.multiRenameInsertField.label": {
+    "sourceHash": "4b9e9de"
+  },
   "commands.multiRenameUndoRename.label": "Maak laatste wijziging van meerdere namen ongedaan",
   "@commands.multiRenameUndoRename.label": {
     "sourceHash": "e5a0975"
