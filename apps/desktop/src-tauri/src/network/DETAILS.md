@@ -234,9 +234,10 @@ also never expose the password.
 
 ### A listing names each share once
 
-Gotcha: a server can list one share name twice (a macOS file server did, on an authenticated listing), and the
-frontend's share list keys its rows on the name, so the repeat crashed the window with Svelte's `each_key_duplicate`
-(cmdr-reports#81). Why the backend owns it: every fresh listing, smb2 or a CLI fallback, leaves `smb_client::list_shares`
+Gotcha: a server can list one share name twice, and the frontend's share list (`PlacesBrowser.svelte`) keys its rows on
+the name, so the repeat crashed the window with Svelte's `each_key_duplicate` (cmdr-reports#81: a Mac on macOS 27,
+authenticated listing, 6 disk shares; verified on 0.55.0 by rebuilding its frontend and mapping all three crash stacks
+to that `{#each}`, 2026-10-23). Why the backend owns it: every fresh listing, smb2 or a CLI fallback, leaves `smb_client::list_shares`
 through `with_unique_share_names` before it's cached, keeping the first of the names that fold together (NFC,
 case-insensitive, the fold `smb_volume_id` keys a share by). Pinned by
 `smb_client_test.rs::a_share_the_server_lists_twice_reaches_the_pane_once`.
