@@ -94,14 +94,14 @@ impl Calls {
 struct Gate(Arc<(Mutex<bool>, Condvar)>);
 
 impl Gate {
+    /// Waits for `open`, at most `WAIT`: a test that fails before opening its gate
+    /// must not leave a blocking read that the runtime's shutdown waits on forever.
     fn wait(&self) {
         let (open, opened) = &*self.0;
-        let mut is_open = open.lock_ignore_poison();
-        while !*is_open {
-            is_open = opened
-                .wait(is_open)
-                .expect("the gate's lock isn't poisoned: nothing panics holding it");
-        }
+        let is_open = open.lock_ignore_poison();
+        let _ = opened
+            .wait_timeout_while(is_open, WAIT, |is_open| !*is_open)
+            .expect("the gate's lock isn't poisoned: nothing panics holding it");
     }
 
     fn open(&self) {

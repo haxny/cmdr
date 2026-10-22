@@ -592,6 +592,42 @@ mod tests {
         }
     }
 
+    fn row(status: RowStatus) -> PreviewRow {
+        PreviewRow {
+            row: 0,
+            old_name: "a.jpg".to_string(),
+            new_name: "a.jpg".to_string(),
+            status,
+            icon_id: None,
+            is_directory: false,
+            edited: false,
+        }
+    }
+
+    #[test]
+    fn rows_still_reading_count_as_reading_and_never_as_problems() {
+        let field = cmdr_media_meta::MediaField::ExifTaken;
+        let rows = [
+            row(RowStatus::Ready),
+            row(RowStatus::Unchanged),
+            row(RowStatus::Reading),
+            row(RowStatus::Reading),
+            row(RowStatus::NoValue { field }),
+            row(RowStatus::Unreadable { field }),
+            row(RowStatus::Missing),
+        ];
+
+        assert_eq!(
+            PreviewCounts::of(&rows),
+            PreviewCounts {
+                ready: 1,
+                unchanged: 1,
+                problems: 3,
+                reading: 2,
+            }
+        );
+    }
+
     #[test]
     fn an_evicted_session_stops_its_media_read() {
         let now = Instant::now();

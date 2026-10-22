@@ -51,13 +51,6 @@ impl FieldText {
     }
 }
 
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the session's field samples and overview read these; drop this once they do"
-    )
-)]
 impl MediaToken {
     /// The media field `inner` (a placeholder's text between its brackets)
     /// spells, or `None` for any other placeholder or none.
@@ -77,6 +70,8 @@ impl MediaToken {
         }
     }
 
+    /// The field it names; only the grammar tests ask.
+    #[cfg(test)]
     pub fn field(&self) -> MediaField {
         self.field
     }
