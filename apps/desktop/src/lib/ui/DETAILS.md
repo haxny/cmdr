@@ -1374,7 +1374,7 @@ Centralized toast notifications with stacking, levels, and two dismissal modes.
 - **Container** (`ToastContainer.svelte`): Mounted once in `(main)/+layout.svelte`, always (empty while no toast is up).
   Fixed top-right, stacks vertically, with the two live regions beside it. Reads "Keep notifications until I close
   them".
-- **Item** (`ToastItem.svelte`): Frame (a `role="group"` named by what it says), level icon, age label, close button,
+- **Item** (`ToastItem.svelte`): Frame (a `role="group"` named by what it says), level icon, close button, age label,
   auto-dismiss timer for transient toasts.
 - **Speech** (`toast-speech.ts`), **keyboard reach** (`toast-focus.ts`), and **placement** (`toast-placement.ts`): the
   sections below.
@@ -1605,20 +1605,25 @@ the start, side by side and outside the stack: a polite one for `default` / `inf
 
 `Tab` is the pane switch in the main window, so nothing could reach a toast's buttons (Undo trash) from the keyboard.
 "Move focus to the notifications" (`app.focusNotifications`, ⌃F6 on macOS like "Move focus to the floating window", ⌘⇧F6
-elsewhere, in the palette) puts focus on the newest toast's frame, which speaks its text as the group's name. Then:
+elsewhere, in the palette) moves focus into the stack. Then:
 
-- ↑ / ↓ (and ← / →) walk every toast, newest first, and each one's buttons; Home and End jump to the ends. The walk
-  claims those keys. Enter and Space stay with the focused button: `toastStackOwnsKey` keeps them from the command
-  dispatcher (`routes/(main)/global-keydown.ts`), the way pane chrome keeps its keys. `Tab` stays the pane switch and
-  modifier shortcuts still run.
+- **Where it lands**: the first control that isn't a close button, newest toast first (Undo, not ×). Only when no toast
+  has anything but its close button does it land on the newest toast's ×.
+- **The walk**: ↑ / ↓ (and ← / →), `Tab` / `⇧Tab` cycle every toast's controls, newest toast first, and wrap around at
+  both ends; Home and End jump to the ends. Focus stays in the stack, the way it does in a dialog, until Escape or the
+  last toast closes. The walk claims those keys, and `toastStackOwnsKey` keeps them plus Enter and Space from the
+  command dispatcher (`routes/(main)/global-keydown.ts`), so Enter presses the focused button and Tab doesn't switch
+  panes. Modifier shortcuts still run, and a click elsewhere still leaves.
+- **Order within a toast**: the close button first, then the actions. It's pinned to the top-right corner, on the first
+  line, so DOM order (which both the walk and VoiceOver's own navigation follow) matches reading order (WCAG 2.4.3).
+- **Frames are no stops.** The toast's text reaches a screen reader as the name of the `role="group"` its buttons sit
+  in, and every toast has at least its ×. ❗ Never give a frame a `tabindex`: WebKit makes ANY element with one
+  mouse-focusable, so a click on a toast's text would pull focus off the file list.
 - Escape returns focus where the command found it (`captureFocusOrigin`), or home when that element is gone (the
   palette's input, when the command ran from the palette).
-- Closing the focused toast carries the walk on at the newest toast left, or leaves the stack once none is. A pointer
-  user's close still returns focus the way it always did (below).
+- Closing the focused toast carries the walk on where a fresh ⌃F6 would land, or leaves the stack once no toast is left.
+  A pointer user's close still returns focus the way it always did (above).
 - With no toast up, the command says "No notifications" through the polite region and moves nothing.
-- ❗ A frame is focusable only while the walk is on it: its `tabindex="-1"` is set right before focus and dropped on
-  blur. WebKit makes ANY element with a `tabindex` mouse-focusable, so a permanent one would let a click on a toast's
-  text pull focus off the file list.
 - The focus watchdog counts `[data-toast-stack]` as a keyboard home, and `restoreFocus` leaves focus there (the palette
   runs the command before it unmounts and restores).
 

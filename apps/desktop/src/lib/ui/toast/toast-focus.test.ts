@@ -1,7 +1,7 @@
 /**
  * Reaching the toasts from the keyboard: "Move focus to the notifications" lands on the newest
- * toast, the arrows walk every toast and its buttons, Enter and Space stay with the focused
- * button, and Escape goes back where focus came from.
+ * toast's first action, the arrows and Tab cycle every toast's buttons (close button first),
+ * Enter and Space stay with the focused button, and Escape goes back where focus came from.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -36,16 +36,21 @@ async function setup(): Promise<{ target: HTMLElement; origin: HTMLButtonElement
   return { target, origin }
 }
 
-/** What has focus, the way a person would name it. */
+/**
+ * What has focus, the way a person would name it: a close button as `× <its toast's text>`,
+ * any other control by its text.
+ */
 function focused(): string {
   const active = document.activeElement
   if (!(active instanceof HTMLElement)) return ''
-  if (active.classList.contains('toast')) return `toast: ${active.getAttribute('aria-label') ?? ''}`
+  if (active.classList.contains('toast-close')) {
+    return `× ${active.closest('[data-toast-frame]')?.getAttribute('aria-label') ?? ''}`
+  }
   return active.getAttribute('aria-label') ?? active.textContent.trim()
 }
 
-function press(key: string): KeyboardEvent {
-  const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+function press(key: string, { shift = false }: { shift?: boolean } = {}): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', { key, shiftKey: shift, bubbles: true, cancelable: true })
   document.activeElement?.dispatchEvent(event)
   return event
 }
@@ -56,17 +61,58 @@ async function settle(): Promise<void> {
   await tick()
 }
 
+/** An older plain toast under a newer one with an action of its own. */
+async function twoToasts(): Promise<void> {
+  addToast('Copied 3 files.', { dismissal: 'persistent' })
+  addToast(ToastIdFixture, { id: 'newest', dismissal: 'persistent' })
+  await tick()
+}
+
 describe('Move focus to the notifications', () => {
-  it('lands on the newest toast, named by what it says', async () => {
+  it("lands on the newest toast's first action, not its close button", async () => {
+    await setup()
+    await twoToasts()
+
+    expect(focusNewestToast()).toBe(true)
+
+    expect(focused()).toBe('Dismiss notification')
+    expect(document.activeElement?.classList.contains('toast-close')).toBe(false)
+  })
+
+  it("lands on an older toast's action when the newest one has only its close button", async () => {
+    await setup()
+    addToast(ToastIdFixture, { id: 'older', dismissal: 'persistent' })
+    addToast('Moved 2 files to the trash.', { dismissal: 'persistent' })
+    await tick()
+
+    focusNewestToast()
+
+    expect(focused()).toBe('Dismiss notification')
+    expect(document.activeElement?.closest('[data-toast-frame]')?.textContent).toContain('older')
+  })
+
+  it("lands on the newest toast's close button when no toast has anything else", async () => {
     await setup()
     addToast('Copied 3 files.', { dismissal: 'persistent' })
     addToast('Moved 2 files to the trash.', { dismissal: 'persistent' })
     await tick()
 
-    expect(focusNewestToast()).toBe(true)
+    focusNewestToast()
 
-    expect(focused()).toBe('toast: Moved 2 files to the trash.')
-    expect(document.activeElement?.getAttribute('role')).toBe('group')
+    expect(focused()).toBe('× Moved 2 files to the trash.')
+  })
+
+  it('never focuses a toast frame', async () => {
+    await setup()
+    addToast('Copied 3 files.', { dismissal: 'persistent' })
+    await tick()
+
+    focusNewestToast()
+    expect(document.activeElement?.getAttribute('role')).not.toBe('group')
+    press('ArrowDown')
+
+    expect(document.activeElement?.getAttribute('role')).not.toBe('group')
+    expect(document.querySelector('[data-toast-frame][tabindex]')).toBeNull()
   })
 
   it('says there is nothing to reach when no toast is up, and leaves focus alone', async () => {
@@ -98,28 +144,53 @@ describe('Move focus to the notifications', () => {
 })
 
 describe('walking the toasts', () => {
-  it('↓ walks from the newest toast through its buttons to the older ones, and ↑ walks back', async () => {
+  it('↓ cycles every toast, newest first and its close button first, and wraps around', async () => {
     await setup()
-    addToast('Copied 3 files.', { dismissal: 'persistent' })
-    addToast(ToastIdFixture, { id: 'newest', dismissal: 'persistent' })
-    await tick()
+    await twoToasts()
     focusNewestToast()
 
     const walk: string[] = [focused()]
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       press('ArrowDown')
       walk.push(focused())
     }
     expect(walk).toEqual([
-      expect.stringMatching(/^toast: /),
       'Dismiss notification',
-      'Dismiss notification',
-      'toast: Copied 3 files.',
+      '× Copied 3 files.',
+      expect.stringMatching(/^× /),
       'Dismiss notification',
     ])
+  })
+
+  it('↑ walks back, wrapping from the first stop to the last', async () => {
+    await setup()
+    await twoToasts()
+    focusNewestToast()
 
     press('ArrowUp')
-    expect(focused()).toBe('toast: Copied 3 files.')
+    expect(focused()).toMatch(/^× /)
+    expect(focused()).not.toBe('× Copied 3 files.')
+
+    press('ArrowUp')
+    expect(focused()).toBe('× Copied 3 files.')
+  })
+
+  it('Tab walks like ↓ and Shift+Tab like ↑, and both stay in the toasts', async () => {
+    await setup()
+    await twoToasts()
+    focusNewestToast()
+
+    const tab = press('Tab')
+    expect(tab.defaultPrevented).toBe(true)
+    expect(focused()).toBe('× Copied 3 files.')
+
+    press('Tab')
+    expect(focused()).toMatch(/^× /)
+    expect(focused()).not.toBe('× Copied 3 files.')
+
+    const shiftTab = press('Tab', { shift: true })
+    expect(shiftTab.defaultPrevented).toBe(true)
+    expect(focused()).toBe('× Copied 3 files.')
   })
 
   it('claims the arrow keys it acts on, so no pane command runs behind them', async () => {
@@ -131,16 +202,16 @@ describe('walking the toasts', () => {
     expect(press('ArrowDown').defaultPrevented).toBe(true)
   })
 
-  it('keeps Enter and Space for the focused button, away from the command dispatcher', async () => {
+  it('keeps Enter, Space, and Tab from the command dispatcher', async () => {
     await setup()
     addToast('Copied 3 files.', { dismissal: 'persistent' })
     await tick()
     focusNewestToast()
-    press('ArrowDown')
 
     expect(toastStackOwnsKey('Enter')).toBe(true)
     expect(toastStackOwnsKey('Space')).toBe(true)
-    expect(toastStackOwnsKey('Tab')).toBe(false)
+    expect(toastStackOwnsKey('Tab')).toBe(true)
+    expect(toastStackOwnsKey('⇧Tab')).toBe(true)
     expect(toastStackOwnsKey('⌘C')).toBe(false)
   })
 
@@ -150,6 +221,7 @@ describe('walking the toasts', () => {
     await tick()
 
     expect(toastStackOwnsKey('Enter')).toBe(false)
+    expect(toastStackOwnsKey('Tab')).toBe(false)
   })
 })
 
@@ -159,7 +231,6 @@ describe('leaving the toasts', () => {
     addToast('Copied 3 files.', { dismissal: 'persistent' })
     await tick()
     focusNewestToast()
-    press('ArrowDown')
 
     const escape = press('Escape')
 
@@ -167,18 +238,17 @@ describe('leaving the toasts', () => {
     expect(document.activeElement).toBe(origin)
   })
 
-  it('closing the focused toast moves focus to the newest one left', async () => {
+  it('closing the focused toast moves focus into the toasts left', async () => {
     await setup()
     addToast('Copied 3 files.', { dismissal: 'persistent' })
     addToast('Moved 2 files to the trash.', { dismissal: 'persistent' })
     await tick()
     focusNewestToast()
-    press('ArrowDown')
 
     ;(document.activeElement as HTMLButtonElement).click()
     await settle()
 
-    expect(focused()).toBe('toast: Copied 3 files.')
+    expect(focused()).toBe('× Copied 3 files.')
   })
 
   it('closing the last focused toast goes back where focus came from', async () => {
@@ -186,7 +256,6 @@ describe('leaving the toasts', () => {
     addToast('Copied 3 files.', { dismissal: 'persistent' })
     await tick()
     focusNewestToast()
-    press('ArrowDown')
 
     ;(document.activeElement as HTMLButtonElement).click()
     await settle()

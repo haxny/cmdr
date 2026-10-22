@@ -179,9 +179,16 @@ describe('resolveGlobalKeyAction', () => {
 
     /**
      * A button in a toast (reached with "Move focus to the notifications", `toast-focus.ts`)
-     * keeps the same keys: Enter on Undo presses Undo, it doesn't open the cursor row.
+     * keeps the same keys, plus Tab, which walks the toasts there: Enter on Undo presses Undo,
+     * it doesn't open the cursor row, and Tab doesn't switch panes.
      */
-    it.each(CHROME_KEYS)('%s resolves for the button with a toast button focused', (_name, init, expected) => {
+    const TOAST_KEYS: [string, KeyboardEventInit, unknown][] = CHROME_KEYS.map(([name, init, expected]) => [
+      name,
+      init,
+      init.key === 'Tab' ? IGNORE : expected,
+    ])
+
+    it.each(TOAST_KEYS)('%s resolves for the button with a toast button focused', (_name, init, expected) => {
       const stack = document.createElement('div')
       const button = document.createElement('button')
       stack.appendChild(button)

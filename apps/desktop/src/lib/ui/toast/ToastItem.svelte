@@ -313,6 +313,37 @@
     onfocusout={handleFocusOut}
 >
     <ToastLevelIcon {level} />
+    <!-- Before the content though pinned to the corner: focus order follows reading order, and it
+         reads on the first line, above any action row (`toast-focus.ts` walks in DOM order). -->
+    <button
+        class="toast-close"
+        onclick={() => {
+            onUserDismiss(id)
+        }}
+        use:tooltip={closeTooltip}
+        aria-label={tString('ui.toast.dismissAria')}
+    >
+        {#if dismissal === 'transient'}
+            {#key ringRun}
+                <svg
+                    class="toast-timer"
+                    data-state={ringRunning ? 'running' : 'paused'}
+                    viewBox="0 0 22 22"
+                    aria-hidden="true"
+                >
+                    <circle
+                        cx="11"
+                        cy="11"
+                        r={RING_RADIUS}
+                        style:stroke-dasharray="{RING_CIRCUMFERENCE}px"
+                        style:stroke-dashoffset="{RING_CIRCUMFERENCE * (1 - ringFrom)}px"
+                        style:animation-duration="{ringMs}ms"
+                    />
+                </svg>
+            {/key}
+        {/if}
+        <Icon name="x" size={10} />
+    </button>
     <div class="toast-main">
         <div class="toast-content" bind:this={contentElement}>
             <!-- The corner, floated so the body's first line wraps around the age label and the
@@ -349,35 +380,6 @@
             {/if}
         </div>
     </div>
-    <button
-        class="toast-close"
-        onclick={() => {
-            onUserDismiss(id)
-        }}
-        use:tooltip={closeTooltip}
-        aria-label={tString('ui.toast.dismissAria')}
-    >
-        {#if dismissal === 'transient'}
-            {#key ringRun}
-                <svg
-                    class="toast-timer"
-                    data-state={ringRunning ? 'running' : 'paused'}
-                    viewBox="0 0 22 22"
-                    aria-hidden="true"
-                >
-                    <circle
-                        cx="11"
-                        cy="11"
-                        r={RING_RADIUS}
-                        style:stroke-dasharray="{RING_CIRCUMFERENCE}px"
-                        style:stroke-dashoffset="{RING_CIRCUMFERENCE * (1 - ringFrom)}px"
-                        style:animation-duration="{ringMs}ms"
-                    />
-                </svg>
-            {/key}
-        {/if}
-        <Icon name="x" size={10} />
-    </button>
 </div>
 
 <style>

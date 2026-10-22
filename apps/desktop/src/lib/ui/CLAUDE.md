@@ -51,6 +51,6 @@ Reusable components (Ark UI backs the complex ones); silent-breakage rules only.
     `NumberInput` in sync). `.text-field` / `.text-field-control` are a selector contract, and `TextInput` is one-way
     `value` + `oninput`, never an internal `bind:value`.
   - Toasts: level by feedback kind; a full persistent stack drops new ones; pane-local transients need
-    `addToastForPane(pane, …)`. ❌ Frames: no live region, no permanent `tabindex`.
+    `addToastForPane(pane, …)`. ❌ Frames: no live region, no `tabindex`.
 
 Catalogs, prop tables, and remaining component traps: `DETAILS.md`. Read it before any non-trivial work here.

@@ -1,17 +1,17 @@
 /**
- * Reaching the toasts from the keyboard, without giving up `Tab` (the pane switch).
+ * Reaching the toasts from the keyboard, where `Tab` is otherwise the pane switch.
  *
  * "Move focus to the notifications" (`app.focusNotifications`, ⌃F6 like macOS's "Move focus
- * to the floating window") puts focus on the newest toast's frame, a `role="group"` named by
- * what the toast says. From there the arrows walk every toast, newest first, and each one's
- * buttons; Home and End jump to the ends. Enter and Space stay with the focused button
- * (`toastStackOwnsKey` keeps them from the command dispatcher), and Escape goes back where
- * focus came from. Closing the focused toast moves on to the newest one left, or back out
- * once none is.
+ * to the floating window") puts focus on the newest toast's first action: its first control
+ * that isn't the close button, else an older toast's, else the newest toast's close button.
+ * From there the arrows, Tab, and Shift+Tab cycle every toast's controls, newest first, and
+ * wrap around, so focus stays on the toasts until Escape (back where focus came from) or the
+ * last one closes. Home and End jump to the ends. Enter and Space stay with the focused button
+ * (`toastStackOwnsKey` keeps them, and Tab, from the command dispatcher). Closing the focused
+ * toast moves on to the toasts left, or back out once none is.
  *
- * A frame is focusable only while the walk is on it: its `tabindex` comes and goes with
- * focus, because WebKit makes any element with a `tabindex` mouse-focusable, and a click on a
- * toast's text must not pull focus off the file list.
+ * Frames are no stops: a toast's text reaches a screen reader as the name of the group its
+ * buttons sit in, and every toast has at least its close button.
  */
 
 import { captureFocusOrigin, focusHome, restoreFocus, type FocusOrigin } from '../focus-restore'
@@ -25,10 +25,11 @@ export interface ToastStackHandle {
 }
 
 const FRAME_SELECTOR = '[data-toast-frame]'
-/** What the walk visits inside a toast, after its frame. */
+/** What the walk visits inside a toast, in DOM order: the close button first, then the actions. */
 const CONTROL_SELECTOR = 'button:not(:disabled), a[href]'
+const CLOSE_SELECTOR = '.toast-close'
 /** The keys focus in the stack keeps from the command dispatcher, as `formatKeyCombo` spells them. */
-const OWN_KEYS = new Set(['Enter', 'Space', '↑', '↓', '←', '→', 'Home', 'End'])
+const OWN_KEYS = new Set(['Enter', 'Space', 'Tab', '⇧Tab', '↑', '↓', '←', '→', 'Home', 'End'])
 
 let stack: ToastStackHandle | null = null
 /** Where focus was when the command brought it here; null while the walk isn't on. */
@@ -54,41 +55,38 @@ export function toastStackOwnsKey(combo: string): boolean {
   return OWN_KEYS.has(combo) && isInToastStack(document.activeElement)
 }
 
-/** Every place the walk stops, top to bottom: each toast's frame, then its controls. Newest first. */
+/** Every place the walk stops, top to bottom: each toast's controls, newest toast first. */
 function stops(): HTMLElement[] {
   const element = stack?.element()
   if (!element) return []
   const frames = Array.from(element.querySelectorAll<HTMLElement>(FRAME_SELECTOR)).reverse()
-  return frames.flatMap((frame) => [frame, ...Array.from(frame.querySelectorAll<HTMLElement>(CONTROL_SELECTOR))])
+  return frames.flatMap((frame) => Array.from(frame.querySelectorAll<HTMLElement>(CONTROL_SELECTOR)))
+}
+
+/** Where the walk starts: the first action that isn't a close button, else the newest close button. */
+function entryStop(): HTMLElement | undefined {
+  const all = stops()
+  return all.find((stop) => !stop.matches(CLOSE_SELECTOR)) ?? all.at(0)
 }
 
 function focusStop(stop: HTMLElement): void {
-  if (stop.matches(FRAME_SELECTOR)) {
-    stop.setAttribute('tabindex', '-1')
-    stop.addEventListener(
-      'blur',
-      () => {
-        stop.removeAttribute('tabindex')
-      },
-      { once: true },
-    )
-  }
   stop.focus({ preventScroll: true })
 }
 
 /**
- * Moves focus to the newest toast. Says "No notifications" and leaves focus alone when no
- * toast is up. False when there was nothing to focus.
+ * Moves focus to the toasts (see the module comment for where it lands). Says "No
+ * notifications" and leaves focus alone when no toast is up. False when there was nothing to
+ * focus.
  */
 export function focusNewestToast(): boolean {
-  const newest = stops().at(0)
-  if (!newest) {
+  const entry = entryStop()
+  if (!entry) {
     stack?.announce(tString('ui.toast.noneToFocus'))
     return false
   }
   if (!isInToastStack(document.activeElement)) origin = captureFocusOrigin()
   walking = true
-  focusStop(newest)
+  focusStop(entry)
   return true
 }
 
@@ -107,8 +105,8 @@ export function leaveToasts(): void {
 }
 
 /**
- * The stack's keydown: the arrows, Home, and End walk the toasts, Escape leaves. Enter and
- * Space fall through to the focused button.
+ * The stack's keydown: the arrows, Tab, Home, and End walk the toasts, Escape leaves. Enter
+ * and Space fall through to the focused button.
  */
 export function handleToastStackKeydown(event: KeyboardEvent): void {
   if (event.metaKey || event.ctrlKey || event.altKey) return
@@ -119,21 +117,27 @@ export function handleToastStackKeydown(event: KeyboardEvent): void {
   }
   const all = stops()
   const at = all.findIndex((stop) => stop === document.activeElement)
-  const next = nextStop(event.key, at, all.length)
+  const next = nextStop(event, at, all.length)
   if (next === null) return
   claimKey(event)
   const target = all.at(next)
   if (target) focusStop(target)
 }
 
-function nextStop(key: string, at: number, count: number): number | null {
-  switch (key) {
+function nextStop(event: KeyboardEvent, at: number, count: number): number | null {
+  if (count === 0) return null
+  // Off every stop (a component toast's own focusable that isn't a button), the walk picks up at an end.
+  const forward = at < 0 ? 0 : (at + 1) % count
+  const back = at < 0 ? count - 1 : (at - 1 + count) % count
+  switch (event.key) {
+    case 'Tab':
+      return event.shiftKey ? back : forward
     case 'ArrowDown':
     case 'ArrowRight':
-      return Math.min(at + 1, count - 1)
+      return forward
     case 'ArrowUp':
     case 'ArrowLeft':
-      return Math.max(at - 1, 0)
+      return back
     case 'Home':
       return 0
     case 'End':
@@ -153,14 +157,14 @@ export function handleToastStackFocusOut(event: FocusEvent): void {
 }
 
 /**
- * After a toast holding focus closed and focus fell to `<body>`: carry on the walk at the
- * newest toast left, or leave the stack when it's empty. False when no walk was on, so the
- * toast puts focus back its own way (a pointer user's click).
+ * After a toast holding focus closed and focus fell to `<body>`: carry on the walk in the
+ * toasts left, or leave the stack when it's empty. False when no walk was on, so the toast
+ * puts focus back its own way (a pointer user's click).
  */
 export function continueWalkAfterClose(): boolean {
   if (!walking) return false
-  const newest = stops().at(0)
-  if (newest) focusStop(newest)
+  const entry = entryStop()
+  if (entry) focusStop(entry)
   else leaveToasts()
   return true
 }
