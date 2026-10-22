@@ -326,56 +326,46 @@ check.
     `latest.json`). If it goes red, fix in the background and surface it when convenient; it doesn't block the shipped
     release.
 12. **After the release run succeeds (in `local` mode: after `release-finish.sh` reports the finishing run green),
-    verify the public surface**:
-    - `gh release view vX.Y.Z --json assets,tagName,publishedAt`: confirm the three DMGs are attached
-      (`Cmdr_X.Y.Z_aarch64.dmg`, `_x64.dmg`, `_universal.dmg`) and their sizes look reasonable. Once the installer
-      certificate is set up, `Cmdr_X.Y.Z_universal.pkg` too; until then the `pkg` job skips with a notice (§ The
-      installer package).
-    - Wait ~30 seconds for the website auto-deploy, then `curl -s https://getcmdr.com/latest.json | jq -r .version` and
-      confirm it says `X.Y.Z`. Still the old version after ~2 minutes means the deploy webhook may have failed silently:
-      tell the user (the fix is re-triggering the website-deploy workflow via `workflow_dispatch`), but don't block
-      release success on it, since the GitHub release is what users download.
-    - Confirm the updater payload behind that manifest resolves for all three platform keys:
-      `curl -s https://getcmdr.com/latest.json | jq -r '.platforms[].url' | sort -u | xargs -I{} curl -sIL -o /dev/null -w '%{http_code} {}\n' {}`
-      should print `200` three times. The workflow spells these `.app.tar.gz` names out by hand in two places (the
-      `sign` job's upload and `publish`), so a naming drift between them surfaces here and nowhere else until installs
-      stop updating.
-    - Confirm the `attest` job went green (in `local` mode, in both the tag push's run and the finishing run) and the
-      three `.cdx.json` SBOMs are among the assets, then download one DMG and run both `gh attestation verify` commands
-      in § Provenance and SBOM attestations. A red `attest` or `sbom` job doesn't block release success: see § "The
-      attest or sbom job failed".
-    - **Stop the website dev server** started in step 5, once these checks pass: the deployed site has replaced it.
-      `lsof -ti tcp:4829 -sTCP:LISTEN | xargs kill` (its `--ignore-lock` hides it from `astro dev stop`).
+    verify the public surface** with `./scripts/release-evidence.sh verify X.Y.Z` (about a minute; what it checks:
+    `scripts/release-evidence/main.go`). It stops at the first thing wrong and says what:
+    - **A missing or tiny asset**: the three DMGs, the three `.app.tar.gz` and their `.sig`, `latest.json`,
+      `checksums.txt`, the three `.cdx.json` SBOMs, `Cmdr_X.Y.Z.intoto.jsonl`, and `Cmdr_X.Y.Z_universal.pkg`. A release
+      that shipped without the pkg on purpose (§ The installer package) takes `-no-pkg`.
+    - **`getcmdr.com/latest.json` still on the old version** after its two-minute wait: the deploy webhook may have
+      failed silently. Tell the user (the fix is re-triggering the website-deploy workflow via `workflow_dispatch`), but
+      don't block release success on it, since the GitHub release is what users download.
+    - **An updater archive URL that doesn't name this release's file or doesn't answer 200**: the workflow spells these
+      `.app.tar.gz` names out by hand in two places (the `sign` job's upload and `publish`), so a naming drift between
+      them surfaces here and nowhere else until installs stop updating.
+    - **A red `attest` job** (in `local` mode it checks both the tag push's run and the finishing run) **or a failed
+      `gh attestation verify`** on the Apple Silicon DMG (both commands in § Provenance and SBOM attestations, pinned to
+      the tag's commit). Neither blocks release success: see § "The attest or sbom job failed".
+    - **No green full CI run or CodeQL run** behind the release (step 13 says which runs it looks for). The release gate
+      should have left both, so this means the tag skipped the gate.
+
+    Once it passes, **stop the website dev server** started in step 5: the deployed site has replaced it.
+    `lsof -ti tcp:4829 -sTCP:LISTEN | xargs kill` (its `--ignore-lock` hides it from `astro dev stop`).
+
 13. **Record the release evidence** (EU Cyber Resilience Act, Annex VII 6 and 8). The technical file keeps each
     release's evidence for 10 years, and GitHub drops run logs and artifacts after 90 days, so every release saves its
-    own. Add the evidence sub-bullets under the release log line from step 1 (the note's header defines each one), then
-    copy the files below to the company's archive. The release log note names the archive folder and how agents reach
-    it. ❌ No archive host, share, or path in this repo.
-    - **Find the runs.** `SHA=$(git rev-parse vX.Y.Z^)`: the commit the CI gate passed, the parent of the
-      `chore(release)` commit (or `vX.Y.Z` itself when `land` rebased it, which `release.sh`'s last gate line names).
-      Then the full CI run,
-      `gh run list -R vdavid/cmdr --workflow ci.yml --commit "$SHA" --event workflow_dispatch --status success --json databaseId,conclusion`,
-      the CodeQL run (`--workflow codeql.yml --commit "$SHA"`), and the release runs,
-      `gh run list -R vdavid/cmdr --workflow release.yml --branch vX.Y.Z --json databaseId,event,conclusion` (two in
-      `local` mode: the tag push and the dispatch).
-    - **Collect** into a fresh scratch folder named `vX.Y.Z`:
-      - The release assets that make up the evidence:
-        `gh release download vX.Y.Z -R vdavid/cmdr -D <dir> -p '*.cdx.json' -p '*.intoto.jsonl' -p checksums.txt -p latest.json`.
-      - For the CI run and each release run:
-        `gh run view <id> -R vdavid/cmdr --json jobs > <dir>/<workflow>-<id>-jobs.json` and
-        `gh run view <id> -R vdavid/cmdr --log | gzip > <dir>/<workflow>-<id>-log.txt.gz` (a full CI log is about 3 MB,
-        330 KB gzipped).
-      - The CodeQL results, one SARIF per language: list the analyses with
-        `gh api 'repos/vdavid/cmdr/code-scanning/analyses?tool_name=CodeQL&per_page=100' --jq ".[] | select(.commit_sha==\"$SHA\") | .id"`
-        (the API has no commit filter, hence the `select`), then
-        `gh api -H 'Accept: application/sarif+json' repos/vdavid/cmdr/code-scanning/analyses/<id> > <dir>/codeql-<id>.sarif`
-        for each.
-      - Step 12's `gh attestation verify` output, saved as `attestation-verify.txt`.
-    - **Test counts** for the sub-bullet: each check-runner lane prints `N tests passed`, so
-      `gunzip -c <dir>/ci-<id>-log.txt.gz | grep 'tests passed' | perl -pe 's/\e\[[0-9;]*m//g'` lists them. Say whether
-      the old-macOS smoke test (§ Pre-release smoke test on old macOS) ran for this release.
-    - **Upload** the folder with the `smb2` CLI (`mkdir -p`, then one `put` per file), list it back to confirm every
-      file landed, and write its path in the archive sub-bullet.
+    own. ❌ No archive host, share, or path in this repo: the release log note in the vault (the one step 1 wrote to)
+    names the archive folder and the three environment variables below.
+    - **Run** `./scripts/release-evidence.sh evidence X.Y.Z` with `CMDR_RELEASE_EVIDENCE_ARCHIVE` (the archive folder,
+      `//host/share/path`; `-archive` overrides it), `SMB2_USER`, and `SMB2_PASS_COMMAND` set. Add `-old-macos-smoke`
+      when § Pre-release smoke test on old macOS ran for this release. It runs step 12's checks again, then:
+      - finds the runs: the full (`run_all`) `ci.yml` run on the tagged `chore(release)` commit, else on its parent
+        (where the release gate passed when `release.sh` didn't need a run of its own), the `codeql.yml` run on that
+        same commit, and the `release.yml` runs for the tag (two in `local` mode: the tag push and the dispatch);
+      - collects into a fresh `vX.Y.Z` folder (`-out DIR`, default a temp dir): the SBOMs, the `.intoto.jsonl`,
+        `checksums.txt`, `latest.json`, each run's jobs JSON and gzipped log, one CodeQL SARIF per language, and
+        `attestation-verify.txt`;
+      - uploads it with the `smb2` CLI into `<archive>/vX.Y.Z` and lists it back, size for size. A re-run resumes a
+        partial upload, and it uploads nothing if the folder holds anything else;
+      - prints each test lane's result from the CI log and the release log's evidence sub-bullets.
+    - **Paste the sub-bullets** under the release's line in the release log note, then add the judgment the script
+      can't: what a `warn` test lane means (a confirmed defect, or load flakiness that passed alone), and what the
+      `### Security` section covers. Trim each test lane to its count; the bullet only needs the gist.
+    - `-no-upload` collects without uploading, for a dry look; the NAS copy bullet then says so.
 14. **Minor or major release: offer to refresh the app-directory listings** (skip for patches), per § Refreshing the
     app-directory listings.
 
@@ -905,7 +895,8 @@ Why it's shaped this way:
 - **The public claim is Level 3** on `/trust` and `/trust/development` (verified on v0.51.0, the first release through
   `release-pipeline.yml`, with the `--signer-workflow` check below, 2026-10-08).
 
-Checking a release (step 12 of § The release procedure does this after the run):
+Checking a release (step 12 of § The release procedure runs both through `release-evidence.sh verify`, also pinned to
+the tag and its commit):
 
 ```bash
 gh attestation verify Cmdr_X.Y.Z_aarch64.dmg --repo vdavid/cmdr --format json \

@@ -1,0 +1,170 @@
+[
+  {
+    "verificationResult": {
+      "statement": {
+        "predicateType": "https://slsa.dev/provenance/v1",
+        "subject": [
+          {
+            "name": "Cmdr_0.55.0_aarch64.app.tar.gz",
+            "digest": {
+              "sha256": "88a94e4e3c183a3d443729dd88a2c4427975cb3a643b4205e368a56651e29bdb"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_aarch64.dmg",
+            "digest": {
+              "sha256": "76cfa0ed9e211732900dbd34bb5cc1ce87c3cc8e2684e1a0fab7378694f0d09f"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_aarch64.rust.cdx.json",
+            "digest": {
+              "sha256": "dd78f2476ea3b8b67bdb206fcb22de7b50ac45629d237cbc6e39540dbcc46964"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_frontend.cdx.json",
+            "digest": {
+              "sha256": "308a26892f92f7aed42e67c06e8792ac35192e33e6d177bfc8af8c73f6531b5a"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_universal.app.tar.gz",
+            "digest": {
+              "sha256": "3d5749fdc7ae2951b884c0c667c47bfd0f29955a6752339354fb3c9b95ef34fc"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_universal.dmg",
+            "digest": {
+              "sha256": "d570aeec31b142a59d38ac90b94f082e14bd85a0b9fae5c097b92d4b284f4af1"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_universal.pkg",
+            "digest": {
+              "sha256": "3581d29a33015e9149e1e946c28a39f322b4d768c3f72a5945ae3f6bb0c3c563"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_x64.app.tar.gz",
+            "digest": {
+              "sha256": "42a99fdb10d53eddd9f8d63d3ffeed81ab68b261dce270db9529fed736fe419a"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_x64.dmg",
+            "digest": {
+              "sha256": "1b2b1015f8aabb2a78393da12c9e38896a20fd178a63ac9b9925fa902500d47c"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_x64.rust.cdx.json",
+            "digest": {
+              "sha256": "f9a6df9bdcb92e92311ce2d85f1e3213cdbbaf87c5cbbfc2aa72e092d09af23c"
+            }
+          },
+          {
+            "name": "checksums.txt",
+            "digest": {
+              "sha256": "5ba25fafb28e2ec53afb2af4ffd0040573249d10cc31b634cb52ad48b447ac8e"
+            }
+          },
+          {
+            "name": "latest.json",
+            "digest": {
+              "sha256": "589a701d4f043e3d6a4b4449552647b2be12c419f1c867b22feeb7b50a40c8e8"
+            }
+          }
+        ]
+      },
+      "signature": {
+        "certificate": {
+          "buildSignerURI": "https://github.com/vdavid/cmdr/.github/workflows/release-pipeline.yml@refs/tags/v0.55.0",
+          "sourceRepositoryRef": "refs/tags/v0.55.0",
+          "sourceRepositoryDigest": "6829d88ff5fae2692bfc684c2fe94d3a58389877",
+          "runInvocationURI": "https://github.com/vdavid/cmdr/actions/runs/39698680663/attempts/1",
+          "runnerEnvironment": "github-hosted"
+        }
+      }
+    }
+  },
+  {
+    "verificationResult": {
+      "statement": {
+        "predicateType": "https://slsa.dev/provenance/v1",
+        "subject": [
+          {
+            "name": "Cmdr_0.55.0_aarch64.app.tar.gz",
+            "digest": {
+              "sha256": "88a94e4e3c183a3d443729dd88a2c4427975cb3a643b4205e368a56651e29bdb"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_aarch64.dmg",
+            "digest": {
+              "sha256": "76cfa0ed9e211732900dbd34bb5cc1ce87c3cc8e2684e1a0fab7378694f0d09f"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_aarch64.rust.cdx.json",
+            "digest": {
+              "sha256": "dd78f2476ea3b8b67bdb206fcb22de7b50ac45629d237cbc6e39540dbcc46964"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_frontend.cdx.json",
+            "digest": {
+              "sha256": "308a26892f92f7aed42e67c06e8792ac35192e33e6d177bfc8af8c73f6531b5a"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_universal.app.tar.gz",
+            "digest": {
+              "sha256": "3d5749fdc7ae2951b884c0c667c47bfd0f29955a6752339354fb3c9b95ef34fc"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_universal.dmg",
+            "digest": {
+              "sha256": "d570aeec31b142a59d38ac90b94f082e14bd85a0b9fae5c097b92d4b284f4af1"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_universal.pkg",
+            "digest": {
+              "sha256": "3581d29a33015e9149e1e946c28a39f322b4d768c3f72a5945ae3f6bb0c3c563"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_x64.app.tar.gz",
+            "digest": {
+              "sha256": "42a99fdb10d53eddd9f8d63d3ffeed81ab68b261dce270db9529fed736fe419a"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_x64.dmg",
+            "digest": {
+              "sha256": "1b2b1015f8aabb2a78393da12c9e38896a20fd178a63ac9b9925fa902500d47c"
+            }
+          },
+          {
+            "name": "Cmdr_0.55.0_x64.rust.cdx.json",
+            "digest": {
+              "sha256": "f9a6df9bdcb92e92311ce2d85f1e3213cdbbaf87c5cbbfc2aa72e092d09af23c"
+            }
+          }
+        ]
+      },
+      "signature": {
+        "certificate": {
+          "buildSignerURI": "https://github.com/vdavid/cmdr/.github/workflows/release-pipeline.yml@refs/tags/v0.55.0",
+          "sourceRepositoryRef": "refs/tags/v0.55.0",
+          "sourceRepositoryDigest": "6829d88ff5fae2692bfc684c2fe94d3a58389877",
+          "runInvocationURI": "https://github.com/vdavid/cmdr/actions/runs/39692184518/attempts/1",
+          "runnerEnvironment": "github-hosted"
+        }
+      }
+    }
+  }
+]

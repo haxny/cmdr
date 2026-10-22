@@ -1,0 +1,40 @@
+Desktop (Rust, fixtures)	UNKNOWN STEP	2026-10-21T22:21:34.2413804Z • 🖥️  Desktop: 🦀 Rust / rust-integration-tests... ^[[33mwarn^[[0m (^[[38;5;208m6m58s^[[0m) - ^[[2m1 test failed under load, none failed alone: 1 failed an assertion and passed alone, so it's a race to fix (volume::write_test::create_new_checks_then_writes_and_catches_a_writer_mid_upload_on_garage)^[[0m
+Desktop (Rust, fixtures)	UNKNOWN STEP	2026-10-21T22:21:34.2430481Z 
+Desktop (Rust, fixtures)	UNKNOWN STEP	2026-10-21T22:21:34.2430868Z ^[[33m⏱️  Total runtime: ^[[38;5;208m6m58s^[[0m^[[0m
+Desktop (Rust, fixtures)	UNKNOWN STEP	2026-10-21T22:24:39.9279755Z • 🖥️  Desktop: 🦀 Rust / webdav-nextcloud... ^[[32mOK^[[0m (^[[38;5;208m2m26s^[[0m) - ^[[2m12 sabre/dav cells passed^[[0m
+Desktop (Rust, fixtures)	UNKNOWN STEP	2026-10-21T22:24:39.9280279Z 
+Desktop (Rust, fixtures)	UNKNOWN STEP	2026-10-21T22:24:39.9280721Z ^[[33m⏱️  Total runtime: ^[[38;5;208m2m26s^[[0m^[[0m
+Desktop (Svelte)	UNKNOWN STEP	2026-10-21T22:13:57.1494178Z • 🖥️  Desktop: 🎨 Svelte / bare-poll... ^[[32mOK^[[0m (^[[38;5;22m14ms^[[0m) - ^[[2m165 test files scanned, no bare polling-helper calls^[[0m
+Desktop (Svelte)	UNKNOWN STEP	2026-10-21T22:13:57.1494716Z 
+Desktop (Svelte)	UNKNOWN STEP	2026-10-21T22:13:57.1494953Z ^[[33m⏱️  Total runtime: ^[[38;5;22m15ms^[[0m^[[0m
+Desktop (Svelte)	UNKNOWN STEP	2026-10-21T22:30:19.8917707Z • 🖥️  Desktop: 🎨 Svelte / svelte-tests... ^[[33mwarn^[[0m (^[[38;5;208m14m30s^[[0m)
+Desktop (Svelte)	UNKNOWN STEP	2026-10-21T22:30:19.8921227Z   ^[[2m  17121 tests passed; 1 coverage-allowlist entry look unneeded (coverage ≥ 75%) — remove from coverage-allowlist.json or keep with an updated reason:
+Desktop (Svelte)	UNKNOWN STEP	2026-10-21T22:30:19.8923098Z     file-explorer/selection/FileIcon.svelte (85.4%)^[[0m
+Desktop (Rust)	UNKNOWN STEP	2026-10-21T22:18:10.7701524Z • 🖥️  Desktop: 🦀 Rust / clippy... ^[[32mOK^[[0m (^[[38;5;208m1m22s^[[0m) - ^[[2mChecked 20 crates, no warnings^[[0m
+Desktop (Rust)	UNKNOWN STEP	2026-10-21T22:18:10.7702197Z 
+Desktop (Rust)	UNKNOWN STEP	2026-10-21T22:18:10.7702544Z ^[[33m⏱️  Total runtime: ^[[38;5;208m1m22s^[[0m^[[0m
+Desktop (Rust)	UNKNOWN STEP	2026-10-21T22:26:28.6156061Z • 🖥️  Desktop: 🦀 Rust / rust-tests... ^[[33mwarn^[[0m (^[[38;5;208m4m23s^[[0m)
+Desktop (Rust)	UNKNOWN STEP	2026-10-21T22:26:28.6185369Z   ^[[2m  2 tests failed under load, none failed alone: 1 passed alone at the same deadline, so the suite was starving it (indexing::reconcile::reconciler::tests::must_scan_routing::queued_rescans_start_after_active_completes); 1 failed an assertion and passed alone, so it's a race to fix (adb::volume_wiring::volume_wiring_test::a_dial_every_joined_attempt_called_off_leaves_nothing_behind)
+Desktop (Rust)	UNKNOWN STEP	2026-10-21T22:26:28.6187669Z 
+Analytics dashboard	UNKNOWN STEP	2026-10-21T22:13:48.7546089Z • 📊 Analytics dashboard: 🎨 Svelte / dashboard-tests... ^[[32mOK^[[0m (^[[38;5;22m2.62s^[[0m) - ^[[2mAll tests passed^[[0m
+Analytics dashboard	UNKNOWN STEP	2026-10-21T22:13:48.7547044Z 
+Analytics dashboard	UNKNOWN STEP	2026-10-21T22:13:48.7547833Z ^[[33m⏱️  Total runtime: ^[[38;5;22m2.62s^[[0m^[[0m
+Scripts (Go)	UNKNOWN STEP	2026-10-21T22:14:41.9672304Z • 📜 Scripts: 🐹 Go / go-tests... ^[[32mOK^[[0m (^[[38;5;208m23.65s^[[0m) - ^[[2m20 packages passed^[[0m
+Scripts (Go)	UNKNOWN STEP	2026-10-21T22:14:41.9672631Z 
+Scripts (Go)	UNKNOWN STEP	2026-10-21T22:14:41.9672836Z ^[[33m⏱️  Total runtime: ^[[38;5;208m23.65s^[[0m^[[0m
+API server	UNKNOWN STEP	2026-10-21T22:13:33.1827842Z • 🌐 API server: ⸆⸉ TS / api-server-tests... ^[[32mOK^[[0m (^[[33m13.21s^[[0m) - ^[[2mAll tests passed^[[0m
+API server	UNKNOWN STEP	2026-10-21T22:13:33.1828764Z 
+API server	UNKNOWN STEP	2026-10-21T22:13:33.1829024Z ^[[33m⏱️  Total runtime: ^[[33m13.21s^[[0m^[[0m
+Website	UNKNOWN STEP	2026-10-21T22:16:01.1361980Z • 🌐 Website: 🚀 Astro / website-e2e... ^[[32mOK^[[0m (^[[38;5;208m1m52s^[[0m) - ^[[2m89 tests passed^[[0m
+Website	UNKNOWN STEP	2026-10-21T22:16:01.1362478Z 
+Website	UNKNOWN STEP	2026-10-21T22:16:01.1362754Z ^[[33m⏱️  Total runtime: ^[[38;5;208m1m52s^[[0m^[[0m
+Desktop (Rust, macOS) / Clippy, rustdoc, tests, module cycles	UNKNOWN STEP	2026-10-21T22:16:35.1013380Z • 🖥️  Desktop: 🦀 Rust / clippy... ^[[32mOK^[[0m (^[[38;5;208m2m5s^[[0m) - ^[[2mChecked 21 crates, no warnings^[[0m
+Desktop (Rust, macOS) / Clippy, rustdoc, tests, module cycles	UNKNOWN STEP	2026-10-21T22:16:35.1015150Z 
+Desktop (Rust, macOS) / Clippy, rustdoc, tests, module cycles	UNKNOWN STEP	2026-10-21T22:16:35.1020020Z ^[[33m⏱️  Total runtime: ^[[38;5;208m2m5s^[[0m^[[0m
+Desktop (Rust, macOS) / Clippy, rustdoc, tests, module cycles	UNKNOWN STEP	2026-10-21T22:29:29.6579790Z • 🖥️  Desktop: 🦀 Rust / rust-tests... ^[[32mOK^[[0m (^[[38;5;208m11m38s^[[0m)
+Desktop (Rust, macOS) / Clippy, rustdoc, tests, module cycles	UNKNOWN STEP	2026-10-21T22:29:29.6583130Z   ^[[2m  13044 tests passed
+Desktop (Rust, macOS) / Clippy, rustdoc, tests, module cycles	UNKNOWN STEP	2026-10-21T22:29:29.6583450Z 
+E2E tests (Playwright, Linux)	UNKNOWN STEP	2026-10-21T22:30:55.5427808Z   40 skipped
+E2E tests (Playwright, Linux)	UNKNOWN STEP	2026-10-21T22:30:55.5428409Z   416 passed (8.7m)
+E2E tests (Playwright, Linux)	UNKNOWN STEP	2026-10-21T22:30:56.5216283Z ^[[0;32m[INFO]^[[0m SMB post-flight: all 4 containers still accepting TCP on :445
+E2E tests (Playwright, Linux)	UNKNOWN STEP	2026-10-21T22:30:56.5217077Z ^[[0;32m[INFO]^[[0m Done!
