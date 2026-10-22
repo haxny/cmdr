@@ -31,6 +31,11 @@ Some notes here are load-bearing rather than historical. Those are grouped below
 
 **Load-bearing for a decision that hasn't been made yet:**
 
+- `getattrlistbulk-listing-benchmarks-2026-10.md` — whether the local listing should move to `getattrlistbulk` for the
+  "Date added" and "Last opened" sorts (#691): 1.4–1.6× faster warm and 2.5–2.7× cold-ish at 100k on APFS with the added
+  date free, slower on smbfs, and the four guards a production lister needs. **Finder's Last opened is not affordable
+  per entry and isn't one xattr**: it's Spotlight's `kMDItemLastUsedDate`. Read it before touching `reading.rs`'s
+  listing loop or wiring either date.
 - `ipc-dead-code-audit.md`: every frontend wrapper and Tauri command nothing called, as of 2026-10-03, with why. **Three
   are missing features, not leftovers** (no way to remove a saved AI key, MCP's "focus settings" does nothing, and
   indexing stops for memory without telling anyone), and three more are product calls. Read it before deleting an unused
