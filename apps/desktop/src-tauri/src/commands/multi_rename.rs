@@ -6,7 +6,7 @@ use tokio::time::Duration;
 
 use crate::multi_rename::error::MultiRenameError;
 use crate::multi_rename::history::{FIELD_HISTORY, FieldHistoryEntry, MAX_FIELD_HISTORY, history_entries};
-use crate::multi_rename::media::{self, FieldSamples, MediaOverview, MediaProgress};
+use crate::multi_rename::media::{FieldSamples, MediaOverview, MediaProgress, MultiRenameMediaProgress, ProgressEmit};
 use crate::multi_rename::plan::{MultiRenameSpec, PreviewRow, RenameExample, render_examples};
 use crate::multi_rename::preset_store::PRESETS;
 use crate::multi_rename::presets::{
@@ -16,20 +16,23 @@ use crate::multi_rename::presets::{
 use crate::multi_rename::run::{MultiRenameStarted, apply};
 use crate::multi_rename::session::{self, MultiRenameOpened, MultiRenamePreview, PreviewFilter, RangeSample, RowMove};
 use cmdr_fs::deadline::{BlockingBudget, blocking_typed_result_with_timeout, timeout_detached_typed};
+use tauri_specta::Event;
 
 /// Opens a session over the pane's selection: `selected_indices` are backend row
 /// numbers in rename order (`None` for every row the pane shows), read at
 /// `expected_sequence`. The files are resolved once, here; `selectionChanged`
-/// when the rows aren't the listing's state any more.
+/// when the rows aren't the listing's state any more. Their media fields start
+/// reading in the background, reported as `MultiRenameMediaProgress`.
 #[tauri::command]
 #[specta::specta]
 pub async fn open_multi_rename(
+    app: tauri::AppHandle,
     listing_id: String,
     include_hidden: bool,
     selected_indices: Option<Vec<usize>>,
     expected_sequence: u64,
 ) -> Result<MultiRenameOpened, MultiRenameError> {
-    blocking_typed_result_with_timeout(
+    let opened = blocking_typed_result_with_timeout(
         Duration::from_secs(2),
         || MultiRenameError::TimedOut,
         |detail| MultiRenameError::Internal { detail },
@@ -42,7 +45,14 @@ pub async fn open_multi_rename(
             )
         },
     )
-    .await
+    .await?;
+    let emit: ProgressEmit = Arc::new(move |progress: MultiRenameMediaProgress| {
+        if let Err(e) = progress.emit(&app) {
+            log::warn!(target: "multi_rename::media", "Couldn't send the media read's progress: {e}");
+        }
+    });
+    session::start_media(&opened.session_id, emit)?;
+    Ok(opened)
 }
 
 /// The previews the sheet re-issues on every edit (120 ms apart), which on a
@@ -118,7 +128,7 @@ pub async fn get_multi_rename_range_samples(
 #[tauri::command]
 #[specta::specta]
 pub async fn get_multi_rename_media_progress(session_id: String) -> Result<MediaProgress, MultiRenameError> {
-    media::progress(&session_id)
+    session::media_progress(&session_id)
 }
 
 /// The field picker's overview: the read's progress and each field's example
@@ -126,7 +136,7 @@ pub async fn get_multi_rename_media_progress(session_id: String) -> Result<Media
 #[tauri::command]
 #[specta::specta]
 pub async fn get_multi_rename_media_overview(session_id: String) -> Result<MediaOverview, MultiRenameError> {
-    media::overview(&session_id)
+    session::media_overview(&session_id)
 }
 
 /// The media token editor's examples: the placeholder `token` (its text between
@@ -140,14 +150,16 @@ pub async fn get_multi_rename_field_samples(
     token: String,
     rows: Vec<usize>,
 ) -> Result<FieldSamples, MultiRenameError> {
-    media::field_samples(&session_id, &token, &rows)
+    session::field_samples(&session_id, &token, &rows)
 }
 
-/// Reads the files at `rows` (the ones the sheet shows) next. Fire-and-forget.
+/// Reads the files at `rows` (the ones the sheet shows) next. Fire-and-forget:
+/// a closed session has nothing left to read.
 #[tauri::command]
 #[specta::specta]
 pub async fn prioritize_multi_rename_media(session_id: String, rows: Vec<usize>) {
-    media::prioritize(&session_id, &rows);
+    // The only refusal is a closed session, whose read already stopped.
+    let _ = session::prioritize_media(&session_id, &rows);
 }
 
 /// Each example's new name for the sheet's tooltips, rendered on made-up files

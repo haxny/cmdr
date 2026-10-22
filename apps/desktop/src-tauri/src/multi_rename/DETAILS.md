@@ -174,7 +174,43 @@ answers the sheet.
 - **Rows see media through `RowFacts.media: RowMedia`** (`Reading`, `Read(&MediaFacts)`, `Unreadable`, `NotMedia`).
   `plan::preview` / `preview_names` take a `&dyn MediaLookup`, whose `media(&FileEntry)` answers each row; the entry
   carries size and modification time, so a lookup can tell a file that changed since it was read. `NoMedia` answers
-  `NotMedia` for every row: the MCP tool and the tests pass it, and so does the session until its cache exists.
+  `NotMedia` for every row: the MCP tool and the plan tests pass it. The session passes its cache's `Lookup`.
+- **The cache** (`SessionMedia`, one per session, `Arc`-shared with its loader): each file's `MediaRead` (`Reading`,
+  `Read(Arc<MediaFacts>)`, `Unreadable`, `NotMedia`) with the listing's size and modified time it was read for, the
+  read queue, the files in flight, and running counts for `MediaProgress`. `session::open` seeds it from the listing:
+  a non-folder `is_media_name` file is `Reading` and queued in rename order, everything else `NotMedia`. A session
+  with no media files is `done` from the start and never runs a loader.
+- **The loader** (`SessionMedia::run`, a tokio task): `open_multi_rename` starts it right after the session opens
+  (`session::start_media`, with the command's `AppHandle` as the emitter). It reads up to `MAX_PARALLEL_READS` (8)
+  files at once, each on `spawn_blocking` through `read_media_from` over a `VolumeByteSource` (the volume resolved
+  per file from the volume manager, so a reconnect's new volume is the one read) under one file's budget,
+  `io_budget_for_volume(10 s)`. A reader that panics on a hostile file makes it `Unreadable` (`catch_unwind`); why
+  any read failed is logged at debug, the row only says it couldn't read.
+  - **Order**: rename order, so row 0 first; `prioritize_multi_rename_media` (the rows the sheet shows) moves those
+    files to the front, behind row 0 while it still waits. Files in flight aren't queued twice.
+  - **Progress**: `MultiRenameMediaProgress` at most every 250 ms, plus a final `done: true` when the queue runs dry.
+    `total` counts media files only; an `Unreadable` file counts as read.
+- **Freshness**: a preview's `Lookup` compares each entry's size and modified time with what the file was read for. A
+  mismatch answers `Reading`, and `Lookup::finish` (after the preview, still under the cache's lock) re-queues the
+  file at the front and starts the loader if it was idle. A read that finishes for an older stamp is dropped and
+  queued again, never cached.
+- **Cancel**: `Session`'s `Drop` (close, eviction, idle drop) sets the cache's cancel flag. No new read starts, a read
+  in flight stops at its next block fetch (`VolumeByteSource` checks the flag), the loader exits without a final
+  event, and the cache goes with the last `Arc`.
+- **Locks**: ❌ nothing reads a file under `SESSIONS` or the cache's lock. Callers copy the cache's `Arc` out of
+  `SESSIONS` (`with_session`) and release it first; the cache's lock is held only to store an answer or for one
+  preview's lookups (a preview at 200k rows holds it for its own length, and the loader's stores wait).
+- **Field samples and the overview read the cache, not the latest preview**, so the token editor shows values before
+  any preview uses the token. `field_samples` resolves the token (`MediaToken::resolve`) per file with the modified
+  time the file was read for; `usage` covers every session file. The overview's example is the first file in rename
+  order with a value (`MediaToken::value_text`), and `files_with_it` counts read files that have the field.
+- **What a read costs**: the header blocks a parser touches, 64 KiB at a time, never the cover art, at most 4 MiB a
+  file (`crates/cmdr-media-meta/DETAILS.md` § The byte source).
+- **Why the queued Rename lives in the frontend**: apply's proof (`(session, preview)` ready rows equal the preview's)
+  stays untouched, and the queue is UI state that a close already ends. A backend queue would need its own cancel and
+  a way to report back to a sheet. `prepare` refusing `StillReading` is the backend's safety net.
+- Tests: `media_test.rs` (a stand-in reader: order, throttled progress, freshness, cancel on close, a panicking
+  reader, samples, `StillReading`), `session.rs`'s eviction test.
 - **Statuses**: `RowStatus::Reading` (not a problem, not ready; `PreviewCounts.reading`), `NoValue { field }`, and
   `Unreadable { field }` (problems). A placeholder's own miss is a `FieldGap` (`Reading`, `NoValue`, `Unreadable`, each
   naming the `MediaField`), which crosses IPC in `FieldSample`.

@@ -24,10 +24,11 @@ use crate::ignore_poison::IgnorePoison;
 use cmdr_listing::{ListingId, ListingLookupError};
 
 use super::error::MultiRenameError;
-use super::mask::{MaskError, RangeToken, RowFacts, RowMedia};
+use super::mask::{MaskError, MediaToken, RangeToken, RowFacts, RowMedia};
+use super::media::{FieldSamples, Loader, MediaOverview, MediaProgress, ProgressEmit, SessionMedia};
 use super::names_file::{self, Written};
 use super::plan::{
-    Compiled, MultiRenameSpec, NameEdits, NoMedia, PreviewRow, RowStatus, SpecError, folder_names, preview_names,
+    Compiled, MultiRenameSpec, NameEdits, PreviewRow, RowStatus, SpecError, folder_names, preview_names,
 };
 
 /// How many sessions live at once. A sheet is modal, so more than one or two is
@@ -125,6 +126,15 @@ struct Session {
     next_preview: u64,
     latest: Option<Arc<StoredPreview>>,
     last_used: Instant,
+    /// What the files' EXIF and tags say, read in the background.
+    media: Arc<SessionMedia>,
+}
+
+/// A session that goes (closed, evicted) stops its media read.
+impl Drop for Session {
+    fn drop(&mut self) {
+        self.media.cancel();
+    }
 }
 
 static SESSIONS: LazyLock<Mutex<HashMap<String, Session>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -154,8 +164,10 @@ pub(crate) fn open(
             },
         })?;
     let (volume_id, dir) = listings.location(&id).ok_or_else(gone)?;
+    let entries = listings.entries(&id).map_err(|_| gone())?;
     let count = names.len();
     let session_id = format!("multi-rename-{}", NEXT_SESSION.fetch_add(1, Ordering::Relaxed));
+    let media = Arc::new(SessionMedia::seed(&session_id, dir.clone(), &names, &entries));
     let mut sessions = SESSIONS.lock_ignore_poison();
     evict_to(&mut sessions, Instant::now(), MAX_SESSIONS);
     sessions.insert(
@@ -170,9 +182,70 @@ pub(crate) fn open(
             next_preview: 1,
             latest: None,
             last_used: Instant::now(),
+            media,
         },
     );
     Ok(MultiRenameOpened { session_id, count })
+}
+
+/// Starts reading the session's media files in the background, reporting
+/// through `emit`. Call it on the async executor, once the session is open.
+pub(crate) fn start_media(session_id: &str, emit: ProgressEmit) -> Result<(), MultiRenameError> {
+    let (media, volume_id) = with_session(session_id, |s| (Arc::clone(&s.media), s.volume_id.clone()))?;
+    media.start(Loader::for_volume(volume_id, emit));
+    Ok(())
+}
+
+/// [`start_media`] with any loader: a test's reader and emitter.
+#[cfg(test)]
+pub(crate) fn start_media_with(session_id: &str, loader: Loader) -> Result<(), MultiRenameError> {
+    with_session(session_id, |s| Arc::clone(&s.media))?.start(loader);
+    Ok(())
+}
+
+/// How far the session's media read got.
+pub(crate) fn media_progress(session_id: &str) -> Result<MediaProgress, MultiRenameError> {
+    Ok(with_session(session_id, |s| Arc::clone(&s.media))?.progress())
+}
+
+/// The field picker's overview: each field's example from the first file in
+/// rename order that has it.
+pub(crate) fn media_overview(session_id: &str) -> Result<MediaOverview, MultiRenameError> {
+    let (media, names) = with_session(session_id, |s| (Arc::clone(&s.media), Arc::clone(&s.names)))?;
+    Ok(media.overview(&names))
+}
+
+/// The media placeholder `token` (its text between the brackets,
+/// `=exif.taken:d`) rendered alone on the session's files at `rows` (at most
+/// `MAX_RANGE_SAMPLES`; a row past the end is left out), and how all the
+/// session's files fare with it. Reads the media cache, so it answers before any
+/// preview uses the token. A token that isn't a media field is a spec error,
+/// worded like the mask's own.
+pub(crate) fn field_samples(session_id: &str, token: &str, rows: &[usize]) -> Result<FieldSamples, MultiRenameError> {
+    let parsed = MediaToken::parse(token).ok_or_else(|| MultiRenameError::Spec {
+        error: SpecError::NameMask {
+            error: MaskError::Unknown {
+                placeholder: token.to_string(),
+            },
+        },
+    })?;
+    let (media, names) = with_session(session_id, |s| (Arc::clone(&s.media), Arc::clone(&s.names)))?;
+    let rows: Vec<usize> = rows
+        .iter()
+        .copied()
+        .filter(|&row| row < names.len())
+        .take(MAX_RANGE_SAMPLES)
+        .collect();
+    Ok(media.field_samples(&parsed, &names, &rows))
+}
+
+/// Reads the session's files at `rows` (the ones the sheet shows) next, after
+/// the first file in rename order. Rows past the end are ignored.
+pub(crate) fn prioritize_media(session_id: &str, rows: &[usize]) -> Result<(), MultiRenameError> {
+    let (media, names) = with_session(session_id, |s| (Arc::clone(&s.media), Arc::clone(&s.names)))?;
+    let wanted = rows.iter().filter_map(|&row| names.get(row)).map(String::as_str);
+    media.prioritize(names.first().map(String::as_str), wanted);
+    Ok(())
 }
 
 /// Drops idle sessions, then the least recently used until one more fits under `cap`.
@@ -203,6 +276,7 @@ struct Inputs {
     dir: PathBuf,
     names: Arc<[String]>,
     edits: Arc<NameEdits>,
+    media: Arc<SessionMedia>,
 }
 
 fn with_session<R>(session_id: &str, f: impl FnOnce(&mut Session) -> R) -> Result<R, MultiRenameError> {
@@ -213,21 +287,18 @@ fn with_session<R>(session_id: &str, f: impl FnOnce(&mut Session) -> R) -> Resul
 }
 
 /// Every row of `names`' preview against the folder as the listing holds it now,
-/// with the Results names in `edits`.
+/// with the Results names in `edits` and the media facts read so far. A file
+/// that changed since it was read previews as `Reading` and is read again.
 fn compute(inputs: &Inputs, compiled: &Compiled, edits: &NameEdits) -> Result<Vec<PreviewRow>, MultiRenameError> {
     let siblings = crate::listing_host::listings()
         .entries(&ListingId::new(inputs.listing_id.clone()))
         .map_err(|_| MultiRenameError::Gone {
             listing_id: inputs.listing_id.clone(),
         })?;
-    Ok(preview_names(
-        compiled,
-        &inputs.dir,
-        &inputs.names,
-        &siblings,
-        edits,
-        &NoMedia,
-    ))
+    let media = inputs.media.lookup();
+    let rows = preview_names(compiled, &inputs.dir, &inputs.names, &siblings, edits, &media);
+    media.finish();
+    Ok(rows)
 }
 
 /// The sheet's live preview of `spec` over the session's files. Stores it as the
@@ -270,6 +341,7 @@ fn inputs_of(s: &Session) -> Inputs {
         dir: s.dir.clone(),
         names: Arc::clone(&s.names),
         edits: Arc::clone(&s.edits),
+        media: Arc::clone(&s.media),
     }
 }
 
@@ -423,14 +495,17 @@ pub(crate) struct Prepared {
 }
 
 /// Recomputes preview `preview_id`'s spec against the folder as it is now and
-/// requires its ready rows to be EXACTLY the ones that preview showed.
+/// requires its ready rows to be EXACTLY the ones that preview showed. Refuses
+/// with `StillReading` while a row's media fields are being read: the sheet's
+/// queued Rename waits for the preview after the read.
 pub(crate) fn prepare(session_id: &str, preview_id: u64) -> Result<Prepared, MultiRenameError> {
     let (seen, inputs) = stored(session_id, preview_id)?;
     let compiled = Compiled::new(&seen.spec).map_err(|error| MultiRenameError::Spec { error })?;
-    let ready: Vec<PreviewRow> = compute(&inputs, &compiled, &seen.edits)?
-        .into_iter()
-        .filter(|row| row.status.is_ready())
-        .collect();
+    let rows = compute(&inputs, &compiled, &seen.edits)?;
+    if rows.iter().any(|row| matches!(row.status, RowStatus::Reading)) {
+        return Err(MultiRenameError::StillReading);
+    }
+    let ready: Vec<PreviewRow> = rows.into_iter().filter(|row| row.status.is_ready()).collect();
     let shown = seen.rows.iter().filter(|row| row.status.is_ready());
     if !ready.iter().eq(shown) {
         return Err(MultiRenameError::PreviewOutOfDate);
@@ -513,7 +588,22 @@ mod tests {
             next_preview: 1,
             latest: None,
             last_used,
+            media: Arc::new(SessionMedia::seed("", PathBuf::new(), &[], &[])),
         }
+    }
+
+    #[test]
+    fn an_evicted_session_stops_its_media_read() {
+        let now = Instant::now();
+        let evicted = session(now - Duration::from_secs(60));
+        let kept = session(now);
+        let (evicted_media, kept_media) = (Arc::clone(&evicted.media), Arc::clone(&kept.media));
+        let mut sessions = HashMap::from([("evicted".to_string(), evicted), ("kept".to_string(), kept)]);
+
+        evict_to(&mut sessions, now, 2);
+
+        assert!(evicted_media.is_cancelled());
+        assert!(!kept_media.is_cancelled());
     }
 
     #[test]

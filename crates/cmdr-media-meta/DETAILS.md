@@ -112,6 +112,10 @@ verified 2026-10-22). So `read_media_from` first maps them to holes:
   (`timeout_detached_within`): on a timeout the transfer finishes on its own, which keeps an MTP transaction whole.
   `VolumeError::NotSupported` maps to `ReadError::NotSupported`; any other volume error is logged there (marked, at
   debug) and becomes a pathless `Io`.
+- **No fallback without positioned reads**: a volume whose `read_range` answers `NotSupported` makes the file
+  `NotSupported` (unreadable). **Why**: every volume Multi-Rename opens on implements it (local `pread`, SMB, MTP
+  `GetPartialObject64`, SFTP, ADB, S3 range GET, WebDAV, restic), and the sheet refuses archives, the `.git` portal, and
+  restic snapshots before it opens, so a prefix-stream fallback would be dead code.
 - Tests: `source_test.rs`, over a recording in-memory source, `InMemoryVolume`, and `cmdr_fs::testing::WedgedVolume`
   (never answers) for the timeout.
 

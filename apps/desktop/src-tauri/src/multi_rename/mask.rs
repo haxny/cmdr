@@ -67,13 +67,6 @@ pub struct RowFacts<'a> {
 
 /// A row's media facts, as the session's cache has them now.
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the session's media cache builds the others; drop this once it does"
-    )
-)]
 pub enum RowMedia<'a> {
     /// Still being read: a value may yet come.
     Reading,

@@ -9,27 +9,28 @@ sheet is `src/lib/multi-rename/`.
   `mask/media_token.rs` the `[=tag.track:2]` fields. Pure.
 - `transform.rs` search & replace, the case step, Greek to Latin, `remove_diacritics`. Pure.
 - `transliterate.rs` Greek to Latin (ELOT 743). Pure.
-- `plan.rs` the preview over a folder's entries: each row's new name and status; `render_examples` runs the sheet's
-  tooltip examples (made-up files) through the same `Compiled::render`. Pure.
+- `plan.rs` the preview over a folder's entries: each row's new name and status; `render_examples` renders the sheet's
+  tooltip examples with the same `Compiled::render`. Pure.
 - `session.rs` one sheet's files in rename order (`move_row`), its latest preview, paging, and Results names.
-- `names_file.rs` Results (⌥⏎): the preview as `old<TAB>new` lines, and the user's edits merged back by old name.
-- `run.rs` apply: proves the ready rows against the preview shown, then runs `start_renames` (Ask Cmdr's executor).
-- `media.rs` the `[=source.field]` fields' IPC and progress event, over `crates/cmdr-media-meta`.
-- `error.rs` `MultiRenameError`, shared so `session` and `run` don't import each other.
+- `names_file.rs` Results (⌥⏎): the preview as `old<TAB>new` lines; edits merge back by old name.
+- `run.rs` apply: proves the ready rows against the preview shown, then runs `start_renames`.
+- `media.rs` each file's EXIF and tags, cached per session and read in the background (`crates/cmdr-media-meta`).
+- `error.rs` `MultiRenameError`, shared by `session` and `run`.
 - `history.rs` the text fields' history on `crate::recents`.
-- `presets.rs` named presets in the user's order, as pure ops on the list (`save_in`, `rename_in`, …).
+- `presets.rs` named presets in the user's order, as pure list ops (`save_in`, …).
   `LAST_SPEC` keeps the last sheet's settings. `preset_store.rs` (their file, `PRESETS`) builds on it.
 
 ## Must-knows
 
 - **The selection becomes file names ONCE, when the sheet opens** (`session::open`, under the listing's sequence
   guard). ❌ Never map row numbers through the live listing again: a file appearing while the sheet is open shifts the
-  rows, and the preview and Start would rename files the user never picked. A session file that's gone is `Missing`.
+  rows, and Start would rename files the user never picked. A session file that's gone is `Missing`.
 - **Names stay in the backend.** The sheet gets counts and the page of rows it draws; apply takes `(session, preview)`
   ids, recomputes, and refuses with `PreviewOutOfDate` unless its ready rows are EXACTLY that preview's.
-- **A Results name is matched by its OLD name, never its line**, and goes through every status check. The session
-  reads back only the file it wrote; a stored preview keeps the edits it showed, so apply renames with exactly those.
+- **A Results name is matched by its OLD name, never its line**, and passes every status check. The session
+  reads back only the file it wrote, and apply renames with the edits its preview showed.
 - **Sessions are bounded** (`MAX_SESSIONS`, idle eviction on open).
+- **❌ No file read under `SESSIONS` or the media cache's lock**; `Session`'s `Drop` stops the loader.
 - **`a|b` → `x|y` replaces in ONE pass** (`Replacement::Pairs`): `a|b` → `b|c` turns `a` into `b`, `one|two` →
   `two|one` swaps. ❌ Never chain the pairs: that's how `a` became `c`.
 - **TC's order is fixed**: mask, then search & replace, case, Greek to Latin, diacritics, and Normalize Unicode last.
@@ -40,11 +41,10 @@ sheet is `src/lib/multi-rename/`.
 - **Frontend grammars mirror `mask.rs`** (`*_token_vectors.json`; change them there first); only `bounds` says
   what a range takes.
 - **The counter's settings live in the mask** (`[C10+5:3]`); a bare `[C]` counts 1, 2, 3, unpadded. Old presets'
-  sheet-wide counter fields fold into the masks on load (`presets.rs`). Its width is capped (`MAX_COUNTER_DIGITS`) and
-  its arithmetic saturates.
+  counter fields fold into the masks on load. Its width is capped (`MAX_COUNTER_DIGITS`); its arithmetic saturates.
 - **A preset's number is its place**: a new one goes last; save-over, rename, and update keep it. ❌ Not on
   `crate::recents`, whose `add` moves an entry to the top.
-- **Statuses compare folded names** (`name_fold`, as the Mac does): a name held by a file that stays is `TargetExists`,
-  one a batch row leaves is free, and a block cascades through a worklist, so a long chain stays linear.
+- **Statuses compare folded names** (`name_fold`, as the Mac does): a name a staying file holds is `TargetExists`,
+  one a batch row leaves is free; a block cascades through a worklist, so a long chain stays linear.
 
 Decisions and the TC semantics in detail: `DETAILS.md`.

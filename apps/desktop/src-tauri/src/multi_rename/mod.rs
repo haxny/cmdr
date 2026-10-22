@@ -18,6 +18,8 @@ mod history_test;
 #[cfg(test)]
 mod mask_test;
 #[cfg(test)]
+mod media_test;
+#[cfg(test)]
 mod names_file_test;
 #[cfg(test)]
 mod plan_test;
