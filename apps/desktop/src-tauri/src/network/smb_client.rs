@@ -95,7 +95,8 @@ pub async fn list_shares(
     let timeout = Duration::from_millis(timeout_ms.unwrap_or(DEFAULT_LIST_SHARES_TIMEOUT_MS));
 
     // Try to list shares
-    let result = list_shares_uncached(hostname, ip_address, port, credentials, guest, timeout).await?;
+    let result =
+        with_unique_share_names(list_shares_uncached(hostname, ip_address, port, credentials, guest, timeout).await?);
 
     // Cache successful result with configurable TTL
     let ttl = cache_ttl_ms.unwrap_or(DEFAULT_CACHE_TTL_MS);
@@ -331,6 +332,31 @@ async fn list_authenticated(
             message: format!("Timeout after {}s", outer_timeout.as_secs()),
         }),
     }
+}
+
+/// The listing with each share once: the first of the names that fold together
+/// (NFC, case-insensitive, the fold `smb_volume_id` keys a share by), in the
+/// server's order.
+///
+/// ❗ A server CAN list one name twice (a macOS file server did, cmdr-reports#81),
+/// and the share list keys its rows on the name, so a repeat crashed the window
+/// with Svelte's `each_key_duplicate`. Every fresh listing (smb2 or a CLI
+/// fallback) passes here before it's cached or answered.
+fn with_unique_share_names(mut result: ShareListResult) -> ShareListResult {
+    use unicode_normalization::UnicodeNormalization;
+
+    let before = result.shares.len();
+    let mut seen = std::collections::HashSet::new();
+    result
+        .shares
+        .retain(|share| seen.insert(share.name.nfc().flat_map(char::to_lowercase).collect::<String>()));
+    if result.shares.len() < before {
+        debug!(
+            "Dropped {} share(s) the server listed under a name it already gave",
+            before - result.shares.len()
+        );
+    }
+    result
 }
 
 /// smb2's shares in Cmdr's `ShareInfo` shape, as a fresh listing.

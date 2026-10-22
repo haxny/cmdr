@@ -78,3 +78,51 @@ async fn an_account_listing_in_the_cache_still_answers_a_host_that_wants_one() {
     assert!(answer.from_cache);
     assert_eq!(answer.auth_mode, AuthMode::CredsRequired);
 }
+
+fn share(name: &str, comment: &str) -> cmdr_smb::ShareInfo {
+    cmdr_smb::ShareInfo {
+        name: name.to_string(),
+        is_disk: true,
+        comment: Some(comment.to_string()),
+    }
+}
+
+/// ❗ **A share the server lists twice reaches the pane once** (cmdr-reports#81,
+/// ERR-6JV77). A macOS file server answered an authenticated `NetShareEnum` with
+/// one name twice, and the share list keys its rows on the name, so Svelte threw
+/// `each_key_duplicate` and the whole window crashed on every open of that host.
+/// The name is the share's identity, folded the way `smb_volume_id` folds it (NFC,
+/// case-insensitive, as a tree connect reads it), so the first spelling wins and
+/// the order stays the server's.
+#[test]
+fn a_share_the_server_lists_twice_reaches_the_pane_once() {
+    let listed = ShareListResult {
+        shares: vec![
+            share("Projects", "first"),
+            share("Public", ""),
+            share("Projects", "second"),
+            share("projects", "case differs"),
+            share("Cafe\u{301}", "decomposed"),
+            share("Caf\u{e9}", "composed"),
+        ],
+        auth_mode: AuthMode::CredsRequired,
+        from_cache: false,
+    };
+
+    let answer = with_unique_share_names(listed);
+
+    let names: Vec<(&str, Option<&str>)> = answer
+        .shares
+        .iter()
+        .map(|s| (s.name.as_str(), s.comment.as_deref()))
+        .collect();
+    assert_eq!(
+        names,
+        vec![
+            ("Projects", Some("first")),
+            ("Public", Some("")),
+            ("Cafe\u{301}", Some("decomposed")),
+        ]
+    );
+    assert_eq!(answer.auth_mode, AuthMode::CredsRequired);
+}

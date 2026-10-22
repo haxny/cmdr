@@ -232,6 +232,15 @@ only ever builds passwordless `//host` / `//host:port` URLs, used by the guest (
 old URL-embedded-password leak is closed. The primary macOS mount path (`NetFSMountURLSync`) and smb2 share enumeration
 also never expose the password.
 
+### A listing names each share once
+
+Gotcha: a server can list one share name twice (a macOS file server did, on an authenticated listing), and the
+frontend's share list keys its rows on the name, so the repeat crashed the window with Svelte's `each_key_duplicate`
+(cmdr-reports#81). Why the backend owns it: every fresh listing, smb2 or a CLI fallback, leaves `smb_client::list_shares`
+through `with_unique_share_names` before it's cached, keeping the first of the names that fold together (NFC,
+case-insensitive, the fold `smb_volume_id` keys a share by). Pinned by
+`smb_client_test.rs::a_share_the_server_lists_twice_reaches_the_pane_once`.
+
 ### No persistent connection pool
 
 smb2 connections are lightweight (one `SmbClient` per connection) and created on-demand. Caching is at the share list level (30s TTL), not TCP connection level.
