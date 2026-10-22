@@ -257,6 +257,12 @@
      which is what keeps the X equidistant from the top and right edges. */
   --radius-toast: 12px;
   --spacing-toast: 14px;
+  /* The widest a toast's `ToastActions` row may ask to be before it wraps: the window, less
+     the toast stack's gutters (`ToastContainer`) and the frame's padding, 1px borders, 28px
+     level icon, and icon gap (`ToastItem`). Resolved where it's used, so `100vw` tracks the window. */
+  --spacing-toast-actions-max: calc(
+    100vw - 2 * var(--spacing-lg) - 2 * var(--spacing-toast) - 2px - 28px - var(--spacing-md)
+  );
   /* Toasts are glass too (the `--color-toast-*-bg` tints mixed toward transparent, then
      blurred), but with a higher floor than a menu: a toast holds a paragraph of text over a
      busy file list, and native notifications stay fairly opaque even on the clearest

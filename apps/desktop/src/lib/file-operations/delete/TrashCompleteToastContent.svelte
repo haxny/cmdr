@@ -15,6 +15,7 @@
      * delete dialog is where permanent is chosen (Shift flips it in place).
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { runTrashUndo } from './trash-undo'
@@ -69,7 +70,7 @@
 
 <div class="toast-body">
     <span class="message">{message}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={handleGoToTrash}>
             {tString('fileOperations.trash.goToTrashAction')}
         </Button>
@@ -78,7 +79,7 @@
                 {tString('fileOperations.trash.undoAction')}
             </Button>
         {/if}
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -90,12 +91,4 @@
         color: var(--color-text-primary);
     }
 
-    /* Undo sits rightmost, where the eye lands last and the pointer travels least:
-       it's the action this toast exists for. */
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-xs);
-        margin-top: var(--spacing-sm);
-    }
 </style>

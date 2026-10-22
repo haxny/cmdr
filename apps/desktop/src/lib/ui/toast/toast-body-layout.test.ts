@@ -139,4 +139,29 @@ describe('toast body layout contract', () => {
       }
     }
   })
+
+  // A hand-rolled flex row let its buttons shrink, and the frame's `overflow-wrap: anywhere` then
+  // broke Swedish labels mid-word ("Inställninga / r…"). `ToastActions` keeps every row on one
+  // line and widens the toast instead. A snippet's buttons render into whichever body takes the
+  // snippet, so that body's own row is what holds them.
+  it.each(bodyFiles)('%s puts its buttons in a ToastActions row', (file) => {
+    const ast = parse(readFileSync(file, 'utf8'), { modern: true })
+    for (const loose of looseActions(ast.fragment, false)) {
+      expect.fail(`${file}: <${loose}> sits outside <ToastActions>`)
+    }
+  })
 })
+
+const ACTION_COMPONENTS = new Set(['Button', 'ReportOffer'])
+
+/** The action components under `node` with no `ToastActions` (or snippet) between them and the root. */
+function looseActions(node: unknown, contained: boolean): string[] {
+  if (Array.isArray(node)) return node.flatMap((child) => looseActions(child, contained))
+  if (typeof node !== 'object' || node === null) return []
+  const { type, name } = node as AstNode
+  if (type === 'Component' && name !== undefined && ACTION_COMPONENTS.has(name) && !contained) return [name]
+  const inside = contained || type === 'SnippetBlock' || (type === 'Component' && name === 'ToastActions')
+  return Object.entries(node)
+    .filter(([key]) => key !== 'attributes' && key !== 'metadata')
+    .flatMap(([, child]) => looseActions(child, inside))
+}

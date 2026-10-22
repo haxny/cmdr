@@ -7,17 +7,18 @@
      * the ask without a word (`src-tauri/src/file_system/get_info.rs`).
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { openAutomationSettings } from '#lib/tauri-commands/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
 </script>
 
 <div class="content">
     <span class="message">{tString('commands.handler.getInfo.automationOff')}</span>
-    <div class="actions">
+    <ToastActions>
         <Button variant="primary" size="mini" onclick={() => void openAutomationSettings()}>
             {tString('commands.handler.getInfo.openAutomationSettings')}
         </Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -27,11 +28,5 @@
 
     .message {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: calc(var(--spacing-xs) + var(--spacing-xxs));
     }
 </style>

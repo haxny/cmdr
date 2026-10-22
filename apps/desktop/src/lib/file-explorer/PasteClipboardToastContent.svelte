@@ -1,6 +1,7 @@
 <script lang="ts">
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { openSettingsWindow } from '#lib/settings/settings-window.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { pastedAsFileMessage } from './pane/paste-clipboard-as-file-message'
@@ -23,11 +24,11 @@
 
 <div class="content">
     <span class="message">{pastedAsFileMessage(kind, filename)}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={handleOpenSettings}
             >{tString('fileExplorer.clipboard.pastedAsFileSettings')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -37,12 +38,5 @@
 
     .message {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

@@ -106,7 +106,7 @@ describe('UpdateToastContent', () => {
     // edit to the component; the elements, attributes, and copy are what must not.
     const markup = target.innerHTML.replace(/svelte-[a-z0-9]+/g, 'svelte-HASH').replaceAll('<!---->', '')
     expect(markup).toMatchInlineSnapshot(
-      `"<div><span class="update-headline svelte-HASH">A new version of Cmdr is ready.</span> <span class="update-detail svelte-HASH">Restart now, or you’ll get it the next time you open Cmdr.</span> <span class="update-versions svelte-HASH" role="img" aria-label="Updating from version 0.28.3 to version 0.29.0">v0.28.3 → v0.29.0</span> <div class="update-actions svelte-HASH"><button type="button" class="btn btn-secondary btn-mini svelte-HASH">Later</button> <button type="button" class="btn btn-primary btn-mini svelte-HASH">Restart now</button></div></div>"`,
+      `"<div><span class="update-headline svelte-HASH">A new version of Cmdr is ready.</span> <span class="update-detail svelte-HASH">Restart now, or you’ll get it the next time you open Cmdr.</span> <span class="update-versions svelte-HASH" role="img" aria-label="Updating from version 0.28.3 to version 0.29.0">v0.28.3 → v0.29.0</span> <div class="toast-actions svelte-HASH"><button type="button" class="btn btn-secondary btn-mini svelte-HASH">Later</button> <button type="button" class="btn btn-primary btn-mini svelte-HASH">Restart now</button></div></div>"`,
     )
   })
 

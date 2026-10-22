@@ -666,12 +666,17 @@ covered. Covered by `tooltip.test.ts` § hoverable; its `afterEach` presses a ke
 
 Variants: `primary` | `secondary` (default) | `danger`. Sizes: `regular` (default) | `mini`.
 
+**A label never wraps.** Every `.btn` sets `white-space: nowrap` and resets `overflow-wrap` to `normal`, so a squeezed
+button grows instead, the way a macOS button does, and its container decides where it goes (a dialog footer, a toast's
+`ToastActions` row). The reset matters inside a toast, whose inherited `overflow-wrap: anywhere` gives a label a
+one-character minimum width: a squeezed Swedish row broke "Inställninga / r…" mid-word.
+
 **The key that presses it: `keyHint`.** A fixed key (`keyHint="F2"`) or a command's live binding
 (`keyHint={{ commandId: 'nav.back' }}`, which draws nothing while the command has no binding). The button then lays out
-as a flex row: the content in `.btn-label`, the chip in `.btn-key-hint`, both centered on the cross axis, with
-`white-space: nowrap` so a squeezed button grows instead of wrapping. The slot is `aria-hidden` (read into the name, the
-key garbles it: "Skip S"), so put the key on `aria-keyshortcuts` in ARIA's spelling (`"Alt+C"`, `"S Enter"` for a button
-Enter also presses); the prop doesn't derive it, since a display glyph (`⌥C`, `⏎`) isn't ARIA's form.
+as a flex row: the content in `.btn-label`, the chip in `.btn-key-hint`, both centered on the cross axis, and the chip
+never wraps under the label (see above). The slot is `aria-hidden` (read into the name, the key garbles it: "Skip S"),
+so put the key on `aria-keyshortcuts` in ARIA's spelling (`"Alt+C"`, `"S Enter"` for a button Enter also presses); the
+prop doesn't derive it, since a display glyph (`⌥C`, `⏎`) isn't ARIA's form.
 
 - **Why a prop, ❌ not a chip in `children`**: an inline chip flows with the text, so `vertical-align` puts it on the
   text's baseline (it read low, the F2 on Background), and a narrow button wrapped it under the label (the clash
@@ -1389,9 +1394,9 @@ every toast body keeps this contract:
   into, so the whole body would sit narrowed beside the corner. `toast-body-layout.test.ts` enforces it for every
   `*ToastContent.svelte` / `*ToastBody.svelte`, which is why a component passed to `addToast` keeps that suffix.
 - **The frame stacks the root's rows.** Each row is a block `--spacing-xs` below the previous one (zero-specificity
-  rules in `ToastItem`). A row that sets its own `margin-top` sets its whole distance from the row above, so the usual
-  buttons row says `--spacing-lg`. Rows below the first can be flex (a buttons row, the downloads lesson); keep the
-  first row plain text with any glyph inline, so its lines wrap around the corner.
+  rules in `ToastItem`). A row that sets its own `margin-top` sets its whole distance from the row above, so the
+  `ToastActions` row says `--spacing-md`. Rows below the first can be flex (a buttons row, the downloads lesson); keep
+  the first row plain text with any glyph inline, so its lines wrap around the corner.
 - **The corner counts toward a toast's width only beside inline text.** A toast sizes to its content, and browsers leave
   a float out of a BLOCK sibling's max-content width, so a short string in a block row got a box as narrow as its text
   and broke mid-word around the corner ("Copie / d 1 / file.", verified in Playwright WebKit 26.6 and Chromium,
@@ -1402,6 +1407,13 @@ every toast body keeps this contract:
   rich markup (chips, links, `<Trans>` sentences, buttons) that it can't lay out, while a float costs no JS at all.
 - **A long unbroken run breaks inside the box.** `.toast-content` sets `overflow-wrap: anywhere`, inherited by every
   body: a toast naming an S3 account by its `<access key id>@<account id>` label once ran far past the right edge.
+- **The toast widens for its buttons; text never widens it.** `ToastActions` is `width: max-content`, so its one-line
+  width is also its minimum, and `.toast` sets `min-width: min-content`, which beats its 360px `max-width` (and an
+  inline `widthPx`). So a toast whose labels don't fit in 360px grows leftward until they do. Text can't drive this:
+  `overflow-wrap: anywhere` gives it a near-zero minimum. The row's width is capped by `--spacing-toast-actions-max`
+  (the window less the stack's gutters and the frame's chrome, an `app.css` token); only past that does the row wrap,
+  moving whole buttons down. Why: a squeezed hand-rolled row broke a Swedish toast's labels mid-word ("Inställninga /
+  r…", 2026-10-22), and fixing labels per toast per language doesn't scale.
 
 Age label: once a toast has been up a minute, "2m ago" / "1h ago" sits on the content's first line. Decisions:
 
@@ -1457,10 +1469,12 @@ but nothing changed" outcomes (those are `info`); don't pick `info` for in-progr
 don't pick `warn` when an op actually failed (that's `error`); don't pick `error` for soft refusals like "tab limit
 reached" (that's `warn`).
 
-Toast action buttons use `Button` mini primitives in a right-aligned `.actions` row (`justify-content: flex-end`,
-`gap: var(--spacing-sm)`, `margin-top: var(--spacing-lg)`), with the default action at the far right (macOS
-default-button-bottom-right convention) and the alternative to its left. Don't hand-roll bespoke `<button>`s in toast
-content components. `DownloadToastContent` is the reference.
+Toast action buttons use `Button` mini primitives inside `ToastActions` (`toast/ToastActions.svelte`), the one
+right-aligned action row every toast shares (the frame's own "Send error report…" too), with the default action at the
+far right (macOS default-button-bottom-right convention) and the alternative to its left. `toast-body-layout.test.ts`
+fails a `Button` or `ReportOffer` in a toast body outside one; a snippet's buttons count as held by the body that
+renders the snippet. Don't hand-roll bespoke `<button>`s in toast content components. `DownloadToastContent` is the
+reference.
 
 Pick the variant by what you want the user to do, not by button position:
 
@@ -1524,14 +1538,14 @@ FIRST toast's `originPane` (consistent with its partial replace of other fields)
   the global cap (5) is silently clamped by the global cap kicking in second.
 - `widthPx?: number`: per-toast max-width override (default 360). For a toast whose content needs more room (the
   downloads toast carries a keyboard illustration, so it opts into 432). The container is right-aligned
-  (`align-items: flex-end`) and its own `max-width` (440) caps the widest opt-in, so a wider toast just extends leftward
-  while default-width toasts keep hugging the screen edge. Plumbed `ToastOptions` → `Toast` → `ToastContainer` →
-  `ToastItem` (inline `max-width`).
+  (`align-items: flex-end`) and its own `max-width` only keeps a gutter from the window's left edge, so a wider toast
+  extends leftward while default-width toasts keep hugging the screen edge. Plumbed `ToastOptions` → `Toast` →
+  `ToastContainer` → `ToastItem` (inline `max-width`).
 - `report?: ReportIncident | false`: what the toast's "Send error report…" reports (`#lib/error-reporter/DETAILS.md` §
   Report offers). The store resolves it into `Toast.report`: an explicit incident wins (any level, so a slowness toast
   can offer one too); `false` means none; left out, an `error` STRING toast offers one with its own text as the note,
   and every other toast offers none. The frame renders `ReportOffer` under string content and hands a component the
-  incident as its `report` prop, which the component places in its own `.actions` row with `onOpen` dismissing the
+  incident as its `report` prop, which the component places in its own `ToastActions` row with `onOpen` dismissing the
   toast. `addToast`'s options are typed per content (`ToastOptionsFor`): a component toast at `error` level must pass
   `report` (`ComponentToastOptions`), because the frame can't word a note for content it can't read. That's the gap this
   closes: a component error toast used to offer nothing, silently. A toast about error reporting itself (the "Couldn't

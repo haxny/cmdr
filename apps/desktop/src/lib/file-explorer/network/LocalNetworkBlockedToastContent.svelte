@@ -8,6 +8,7 @@
      * would leave the person hunting for the pane.
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
     import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
     import { dismissToast } from '#lib/ui/toast/index.js'
@@ -27,7 +28,7 @@
 
 <div class="content">
     <span class="message">{directConnectionUnavailableMessage('blockedByThisMac', server)}</span>
-    <div class="actions">
+    <ToastActions>
         {#if report}
             <ReportOffer
                 incident={report}
@@ -40,7 +41,7 @@
         <Button variant="primary" size="mini" onclick={() => void openLocalNetworkSettings()}>
             {openLocalNetworkSettingsLabel()}
         </Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -51,12 +52,5 @@
     .message {
         color: var(--color-text-primary);
         overflow-wrap: anywhere;
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: calc(var(--spacing-xs) + var(--spacing-xxs));
     }
 </style>

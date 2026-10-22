@@ -9,6 +9,7 @@
      * `reveal-activation-notice.ts` decides whether it appears at all.
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { openSettingsToRevealHandler } from './reveal-settings-link'
 </script>
@@ -16,11 +17,11 @@
 <div class="content">
     <strong class="title">{tString('main.revealActivation.title')}</strong>
     <span class="body">{tString('main.revealActivation.body')}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={() => void openSettingsToRevealHandler()}>
             {tString('main.revealActivation.openSettings')}
         </Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -35,11 +36,5 @@
 
     .body {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: calc(var(--spacing-xs) + var(--spacing-xxs));
     }
 </style>

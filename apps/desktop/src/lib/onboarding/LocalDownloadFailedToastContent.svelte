@@ -6,6 +6,7 @@
      * Download button lives.
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { getAppLogger } from '#lib/logging/logger.js'
@@ -30,11 +31,11 @@
 <div class="content">
     <strong class="title">{tString('onboarding.localDownloadFailed.title')}</strong>
     <span class="body">{tString('onboarding.localDownloadFailed.body')}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="primary" onclick={handleOpenSettings}>
             {tString('onboarding.localDownloadFailed.openSettings')}
         </Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -51,11 +52,5 @@
 
     .body {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: calc(var(--spacing-xs) + var(--spacing-xxs));
     }
 </style>

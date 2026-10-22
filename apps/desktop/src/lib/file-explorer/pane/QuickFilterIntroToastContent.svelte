@@ -5,6 +5,7 @@
      * otherwise. The frame's own × dismisses it, so the third button is "Got it".
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { QUICK_FILTER_INTRO_TOAST_ID, openTypingModeSettings, switchToJumpMode } from './quick-filter-intro-actions'
@@ -15,7 +16,7 @@
     <span class="body">{tString('fileExplorer.quickFilter.intro.body')}</span>
     <span class="body"><strong>{tString('fileExplorer.quickFilter.intro.escape')}</strong></span>
     <span class="body">{tString('fileExplorer.quickFilter.intro.jumpNote')}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={switchToJumpMode}>
             {tString('fileExplorer.quickFilter.intro.switchToJump')}
         </Button>
@@ -37,7 +38,7 @@
         >
             {tString('fileExplorer.quickFilter.intro.gotIt')}
         </Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -58,12 +59,5 @@
 
     .title {
         font-weight: 600;
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-md);
     }
 </style>

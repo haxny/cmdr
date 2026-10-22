@@ -9,6 +9,7 @@
      */
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { openSettingsToTextEditor } from './text-editor-setting'
 
@@ -33,7 +34,7 @@
 
 <div class="content">
     <span class="message">{message}</span>
-    <div class="actions">
+    <ToastActions>
         {#if showDismiss}
             <Button size="mini" variant="secondary" onclick={handleDismiss}
                 >{tString('fileExplorer.edit.dismiss')}</Button
@@ -44,7 +45,7 @@
             variant={showDismiss ? 'primary' : 'secondary'}
             onclick={() => void handleOpenSettings()}>{tString('fileExplorer.edit.openSettings')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -54,12 +55,5 @@
 
     .message {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

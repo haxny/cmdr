@@ -1,5 +1,6 @@
 <script lang="ts">
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { getAiState, handleCancel, handleGotIt } from './ai-state.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
 
@@ -27,16 +28,16 @@
         {:else}
             <span class="ai-progress-text">{tString('ai.toast.startingDownload')}</span>
         {/if}
-        <div class="ai-actions">
+        <ToastActions>
             <Button variant="secondary" size="mini" onclick={() => void handleCancel()}>{tString('ai.toast.cancel')}</Button>
-        </div>
+        </ToastActions>
     {:else if aiState.notificationState === 'installing'}
         <span class="ai-title">{tString('ai.toast.installingTitle')}</span>
         <span class="ai-description">{tString('ai.toast.installingDescription')}</span>
     {:else if aiState.notificationState === 'ready'}
         <span class="ai-title">{tString('ai.toast.readyTitle')}</span>
         <span class="ai-description">{tString('ai.toast.readyDescription')}</span>
-        <div class="ai-actions">
+        <ToastActions>
             <Button
                 variant="primary"
                 size="mini"
@@ -44,7 +45,7 @@
                     handleGotIt()
                 }}>{tString('ai.toast.gotIt')}</Button
             >
-        </div>
+        </ToastActions>
     {:else if aiState.notificationState === 'starting'}
         <span class="ai-title">{tString('ai.toast.startingTitle')}</span>
         <span class="ai-description">{tString('ai.toast.startingDescription')}</span>
@@ -83,12 +84,5 @@
         background: var(--color-accent);
         border-radius: var(--radius-xs);
         transition: width var(--transition-slow);
-    }
-
-    .ai-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-md);
     }
 </style>

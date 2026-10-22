@@ -7,6 +7,7 @@
      * choice and runs the picked action, then self-dismisses.
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
 
@@ -44,7 +45,7 @@
 <div>
     <span class="title">{tString('indexing.firstConnect.title', { name: volumeName })}</span>
     <p class="body">{tString('indexing.firstConnect.body')}</p>
-    <div class="actions">
+    <ToastActions>
         <Button variant="primary" size="mini" onclick={enable}>
             {tString('indexing.firstConnect.enable')}
         </Button>
@@ -54,7 +55,7 @@
         <Button variant="secondary" size="mini" onclick={silenceAll}>
             {tString('indexing.firstConnect.silenceAll')}
         </Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -66,12 +67,5 @@
     .body {
         color: var(--color-text-secondary);
         font-size: var(--font-size-sm);
-    }
-
-    .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--spacing-xs);
-        margin-top: calc(var(--spacing-xs) + var(--spacing-xxs));
     }
 </style>

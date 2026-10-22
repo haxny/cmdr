@@ -128,7 +128,12 @@
     /* Fully-rounded ends (capsule), the shape macOS gives an alert's action buttons.
        `--radius-full` rather than a percentage: a percentage curves against the box
        and would go oval on a wide button. */
+    /* A label never wraps, the way a macOS button's doesn't: the button grows instead, and
+       its container decides where it goes (a toast widens, `ToastActions`). `overflow-wrap`
+       resets an inherited `anywhere`, which would otherwise let a label break mid-word. */
     .btn {
+        white-space: nowrap;
+        overflow-wrap: normal;
         font-weight: 500;
         line-height: var(--font-line-height-normal);
         border-radius: var(--radius-full);
@@ -162,7 +167,6 @@
         align-items: center;
         justify-content: center;
         gap: var(--spacing-sm);
-        white-space: nowrap;
     }
 
     .btn-label,

@@ -16,6 +16,7 @@
     import type { Snippet } from 'svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import LinkButton from '#lib/ui/LinkButton.svelte'
     import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import Trans from '#lib/intl/Trans.svelte'
@@ -69,11 +70,11 @@
     <p class="settings-line">
         <Trans key="fileExplorer.quickLookHint.configurable" snippets={{ settingsLink }} />
     </p>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={handleDontShowAgain}
             >{tString('fileExplorer.quickLookHint.dontShowAgain')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -87,12 +88,5 @@
 
     .settings-line {
         margin-top: var(--spacing-sm);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

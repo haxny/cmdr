@@ -11,6 +11,7 @@
      */
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { setSetting } from '#lib/settings/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
 
@@ -33,7 +34,7 @@
 <div class="content">
     <strong class="title">{tString('fileExplorer.doubleClickHint.title')}</strong>
     <span class="body">{tString('fileExplorer.doubleClickHint.body')}</span>
-    <div class="actions">
+    <ToastActions>
         <span class="prompt">{tString('fileExplorer.doubleClickHint.dontLikeIt')}</span>
         <Button size="mini" variant="secondary" onclick={handleNeverAgain}
             >{tString('fileExplorer.doubleClickHint.neverAgain')}</Button
@@ -41,7 +42,7 @@
         <Button size="mini" variant="primary" onclick={handleILikeIt}
             >{tString('fileExplorer.doubleClickHint.iLikeIt')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -56,14 +57,6 @@
 
     .body {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-md);
     }
 
     .prompt {

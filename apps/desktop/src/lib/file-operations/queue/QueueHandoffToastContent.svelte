@@ -7,6 +7,7 @@
      * says it all.
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { openQueueWindow } from '#lib/file-operations/queue/queue-window.js'
@@ -28,19 +29,13 @@
 
 <div class="toast-body">
     <span>{message}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={showQueue}>{tString('queue.handoffToast.action')}</Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
     .toast-body {
         font-size: var(--font-size-sm);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: var(--spacing-sm);
     }
 </style>

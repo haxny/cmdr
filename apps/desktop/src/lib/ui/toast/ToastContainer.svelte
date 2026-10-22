@@ -139,14 +139,14 @@
         z-index: var(--z-notification);
         display: flex;
         flex-direction: column-reverse;
-        /* Right-align so a per-toast `widthPx` (wider than the default 360) extends
-           leftward while narrower toasts keep hugging the screen edge. The max-width
-           gives the widest opt-in toast room; each ToastItem still caps itself at 360
-           by default. */
+        /* Right-align so a wider toast (a per-toast `widthPx`, or one grown to fit its action
+           row) extends leftward while narrower toasts keep hugging the screen edge. Each
+           ToastItem caps itself at 360 by default; the stack only keeps the same gutter on the
+           left as on the right, which `--spacing-toast-actions-max` (`app.css`) mirrors. */
         align-items: flex-end;
         /* Room for each toast's shadow to fall before the next one starts. */
         gap: var(--spacing-md);
-        max-width: 440px;
+        max-width: calc(100vw - 2 * var(--spacing-lg));
         pointer-events: none;
     }
 

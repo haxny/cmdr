@@ -10,6 +10,7 @@
      */
     import type { Snippet } from 'svelte'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { openQueueWindow } from '#lib/file-operations/queue/queue-window.js'
@@ -37,7 +38,7 @@
 <div class="toast-body">
     <span class="title">{title}</span>
     {@render children?.()}
-    <div class="actions">
+    <ToastActions>
         {#if report}
             <ReportOffer
                 incident={report}
@@ -48,7 +49,7 @@
             />
         {/if}
         <Button size="mini" variant="secondary" onclick={showInQueue}>{tString('queue.failureToast.action')}</Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -59,12 +60,5 @@
     .title {
         color: var(--color-text-primary);
         font-weight: 600;
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-sm);
     }
 </style>

@@ -18,6 +18,7 @@
     import { onMount } from 'svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { lowSpaceFigures } from './figures'
     import { onVolumeSpaceChanged } from '#lib/tauri-commands/index.js'
     import { setLowDiskSpaceNotificationsMode, openSettingsToLowDiskSpace } from './notifications-mode'
@@ -78,11 +79,11 @@
     <span class="message">
         {tString('lowDiskSpace.toast.message', figures)}
     </span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={() => void handleDisable()}
             >{tString('lowDiskSpace.toast.disable')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -92,12 +93,5 @@
 
     .message {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

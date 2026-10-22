@@ -17,6 +17,7 @@
      */
     import type { Snippet } from 'svelte'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import Trans from '#lib/intl/Trans.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { dismissToast } from '#lib/ui/toast/index.js'
@@ -80,7 +81,7 @@
         {/if}
     </span>
     {#if retryable}
-        <div class="actions">
+        <ToastActions>
             {#if blockedServer !== undefined}
                 <Button variant="primary" size="mini" onclick={() => void openLocalNetworkSettings()}>
                     {openLocalNetworkSettingsLabel()}
@@ -94,7 +95,7 @@
             >
                 {tString('fileExplorer.network.osMountFallback.retry')}
             </Button>
-        </div>
+        </ToastActions>
     {/if}
 </div>
 
@@ -106,12 +107,5 @@
     .message {
         color: var(--color-text-primary);
         overflow-wrap: anywhere;
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-xs);
-        margin-top: calc(var(--spacing-xs) + var(--spacing-xxs));
     }
 </style>

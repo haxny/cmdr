@@ -4,6 +4,7 @@
     import { HOVER_LEAVE_GRACE_MS } from './toast-store.svelte'
     import { formatToastAge, msUntilToastAgeChanges } from './toast-age'
     import ToastLevelIcon from './ToastLevelIcon.svelte'
+    import ToastActions from './ToastActions.svelte'
     import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
     import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
@@ -329,7 +330,7 @@
                      its text and broke mid-word around the corner ("Copie / d 1 / file."). -->
                 <span class="toast-message">{content}</span>
                 {#if report}
-                    <div class="toast-actions">
+                    <ToastActions>
                         <ReportOffer
                             incident={report}
                             size="mini"
@@ -337,7 +338,7 @@
                                 onUserDismiss(id)
                             }}
                         />
-                    </div>
+                    </ToastActions>
                 {/if}
             {:else}
                 {@const ContentComponent = content}
@@ -387,6 +388,10 @@
         align-items: flex-start;
         gap: var(--spacing-md);
         max-width: 360px;
+        /* Wins over `max-width` (and an inline `widthPx`): a `ToastActions` row's one-line width is
+           its minimum, so a toast whose buttons don't fit grows leftward until they do. Text can't
+           push it, since `overflow-wrap: anywhere` gives text a near-zero minimum. */
+        min-width: min-content;
         padding: var(--spacing-toast);
         /* Glass: the level's tint, partly see-through and blurred (`app.css` § Toasts). Each
            level only swaps `--color-toast-bg`. */
@@ -478,13 +483,6 @@
 
     .toast-message {
         color: var(--color-text-primary);
-    }
-
-    .toast-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-md);
     }
 
     /* Pinned the same distance from the top and right edges, centered on the first text line. */

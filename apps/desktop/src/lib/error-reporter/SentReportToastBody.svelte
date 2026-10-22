@@ -1,4 +1,5 @@
 <script lang="ts">
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     /**
      * The shared body of the two "a report went out" toasts: an optional title, one
      * sentence ending in the report id badge, and a right-aligned pair of mini buttons.
@@ -29,9 +30,9 @@
         {message}
         <span class="id-badge">{reportId}</span>
     </div>
-    <div class="actions">
+    <ToastActions>
         {@render actions()}
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -56,12 +57,5 @@
         padding: 0 var(--spacing-xs);
         border-radius: var(--radius-sm);
         white-space: nowrap;
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

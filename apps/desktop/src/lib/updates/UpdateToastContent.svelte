@@ -2,6 +2,7 @@
     import { relaunch } from '@tauri-apps/plugin-process'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import LinkButton from '#lib/ui/LinkButton.svelte'
     import { openExternalUrl } from '#lib/tauri-commands/index.js'
     import { getAppLogger } from '#lib/logging/logger.js'
@@ -74,10 +75,10 @@
             {tString('updates.toast.versionChange', versions)}
         </span>
     {/if}
-    <div class="update-actions">
+    <ToastActions>
         <Button variant="secondary" size="mini" onclick={handleDismiss}>{tString('updates.toast.later')}</Button>
         <Button variant="primary" size="mini" onclick={handleRestart}>{tString('updates.toast.restart')}</Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -101,12 +102,5 @@
         color: var(--color-text-secondary);
         /* Version numbers line up under each other across re-renders instead of jittering. */
         font-variant-numeric: tabular-nums;
-    }
-
-    .update-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-md);
     }
 </style>

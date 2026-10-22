@@ -8,6 +8,7 @@
      * strings still re-render on a live language switch.
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
 
     interface Props {
         /** The question, one line. */
@@ -31,10 +32,10 @@
     <strong class="title">{title}</strong>
     <span class="body">{body}</span>
     <span class="body">{note}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={onDecline}>{declineLabel}</Button>
         <Button size="mini" variant="primary" onclick={onAccept}>{acceptLabel}</Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -49,12 +50,5 @@
 
     .body {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-md);
     }
 </style>

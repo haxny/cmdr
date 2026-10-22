@@ -1,6 +1,7 @@
 <script lang="ts">
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import Checkbox from '#lib/ui/Checkbox.svelte'
     import { setSetting } from '#lib/settings/index.js'
     import { isMacOS } from '#lib/shortcuts/key-capture.js'
@@ -46,10 +47,10 @@
     <div class="dont-show-again">
         <Checkbox bind:checked={dontShowAgain}>{tString('mtp.connectedToast.dontShowAgain')}</Checkbox>
     </div>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={handleDisableMtp}>{tString('mtp.connectedToast.disableMtp')}</Button>
         <Button size="mini" variant="primary" onclick={handleOk}>{tString('mtp.connectedToast.ok')}</Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -72,12 +73,5 @@
     .dont-show-again :global(.checkbox-label) {
         font-size: var(--font-size-xs);
         color: var(--color-text-tertiary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

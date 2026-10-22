@@ -10,6 +10,7 @@
      * WHY — and that half matters, because nobody asked for any of this.
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import Icon from '#lib/ui/Icon.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -55,7 +56,7 @@
         <span class="glyph" aria-hidden="true"><Icon name="bot" size={15} /></span>
         {title}
     </span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={review}>{tString('askCmdr.wakeToast.action')}</Button>
         <button
             type="button"
@@ -67,7 +68,7 @@
         >
             {tString('askCmdr.wakeToast.openThread')}
         </button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -75,12 +76,6 @@
         display: inline-flex;
         vertical-align: text-bottom;
         color: var(--color-text-secondary);
-    }
-
-    .actions {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-sm);
     }
 
     /* A link-shaped second action, so it reads as the quieter of the two. `--color-accent-text`

@@ -11,6 +11,7 @@
      */
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { openSettingsToTerminalApp } from './terminal-app-setting'
 
@@ -32,14 +33,14 @@
 
 <div class="content">
     <span class="message">{tString('commands.handler.openTerminalHere.hint')}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={handleDismiss}
             >{tString('commands.handler.openTerminalHere.dismiss')}</Button
         >
         <Button size="mini" variant="primary" onclick={() => void handleOpenSettings()}
             >{tString('commands.handler.openTerminalHere.openSettings')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -49,12 +50,5 @@
 
     .message {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

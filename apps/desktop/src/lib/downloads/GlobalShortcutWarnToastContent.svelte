@@ -15,6 +15,7 @@
      */
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { setGlobalGoToLatestShortcut } from '#lib/tauri-commands/index.js'
     import { setGlobalGoToLatestEnabled } from './global-shortcut-setting'
     import { getAppLogger } from '#lib/logging/logger.js'
@@ -55,10 +56,10 @@
 
 <div class="content">
     <span class="message">{tString('downloads.warnToast.message', { binding })}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={handleTurnOff}>{tString('downloads.warnToast.turnOff')}</Button>
         <Button size="mini" variant="primary" onclick={handleKeepOn}>{tString('downloads.warnToast.keepOn')}</Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -68,12 +69,5 @@
 
     .message {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

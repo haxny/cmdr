@@ -12,6 +12,7 @@
      * sends the reader looking for something they can't find.
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { getMessage, tString } from '#lib/intl/messages.svelte.js'
 
@@ -30,7 +31,7 @@
 <div class="content">
     <strong class="title">{tString('servers.pinHint.title')}</strong>
     <span class="body">{body}</span>
-    <div class="actions">
+    <ToastActions>
         <Button
             size="mini"
             variant="primary"
@@ -38,7 +39,7 @@
                 dismissToast(toastId)
             }}>{tString('servers.pinHint.gotIt')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -53,11 +54,5 @@
 
     .body {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: var(--spacing-md);
     }
 </style>

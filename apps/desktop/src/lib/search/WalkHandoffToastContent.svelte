@@ -11,6 +11,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import Spinner from '#lib/ui/Spinner.svelte'
     import { getWalkHandoff, reopenHandedOffSearch, stopHandedOffWalk } from './walk-handoff-state.svelte'
 
@@ -40,14 +41,14 @@
             <span>{tString('search.walkHandoff.running', { label: handoff.label })}</span>
         </span>
         <span class="counts">{counts}</span>
-        <div class="actions">
+        <ToastActions>
             <Button variant="primary" size="mini" onclick={reopenHandedOffSearch}>
                 {tString('search.walkHandoff.reopen')}
             </Button>
             <Button variant="secondary" size="mini" onclick={stopHandedOffWalk}>
                 {tString('search.walkHandoff.stop')}
             </Button>
-        </div>
+        </ToastActions>
     </div>
 {/if}
 
@@ -68,11 +69,5 @@
     .counts {
         color: var(--color-text-secondary);
         font-size: var(--font-size-xs);
-    }
-
-    .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--spacing-xs);
     }
 </style>

@@ -17,6 +17,7 @@
     import Size from '#lib/ui/Size.svelte'
     import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { getAppLogger } from '#lib/logging/logger.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
@@ -282,12 +283,12 @@
         {/if}
     {/if}
 
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={handleStopShowing}
             >{tString('downloads.toast.stopShowing')}</Button
         >
         <Button size="mini" variant="primary" onclick={handleJumpButton}>{tString('downloads.toast.jumpToFile')}</Button>
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -387,12 +388,4 @@
         max-width: 320px;
     }
 
-    /* Right-aligned button row, primary at the far right per the macOS
-       default-button-bottom-right convention. */
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
-    }
 </style>

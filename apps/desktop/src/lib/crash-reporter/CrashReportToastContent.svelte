@@ -12,6 +12,7 @@
      */
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { openSettingsWindow } from '#lib/settings/settings-window.js'
     import { t, tString } from '#lib/intl/messages.svelte.js'
     import { crashSentToastKey } from './crash-copy'
@@ -80,7 +81,7 @@
             {tString('crashReporter.sentToast.logNotSent', { reason: logNotSentReason })}
         </p>
     {/if}
-    <div class="actions">
+    <ToastActions>
         {#if offerOpen}
             <Button size="mini" variant="secondary" disabled={sendingLog} onclick={handleSendLog}>
                 {sendingLog
@@ -91,7 +92,7 @@
         <Button size="mini" variant="secondary" onclick={handleOpenSettings}
             >{tString('crashReporter.sentToast.changeSettings')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -113,13 +114,5 @@
         margin: var(--spacing-sm) 0 0;
         color: var(--color-error);
         font-size: var(--font-size-xs);
-    }
-
-    .actions {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

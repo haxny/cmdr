@@ -59,7 +59,7 @@ describe('WakeStagedToastContent', () => {
 
   it('Review opens the suggestions and gets out of the way', () => {
     render()
-    target.querySelector<HTMLButtonElement>('.actions button')?.click()
+    target.querySelector<HTMLButtonElement>('.toast-actions button')?.click()
     expect(openSuggestedOps).toHaveBeenCalledOnce()
     expect(dismissToast).toHaveBeenCalledWith('toast-1')
   })

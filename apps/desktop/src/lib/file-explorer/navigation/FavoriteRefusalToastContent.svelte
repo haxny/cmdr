@@ -6,6 +6,7 @@
      * decides both the words and the action (`favorite-reach.ts`); this only renders them.
      */
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
 
     interface Props {
@@ -23,7 +24,7 @@
 <div class="content">
     <span class="body">{message}</span>
     {#if actionLabel}
-        <div class="actions">
+        <ToastActions>
             <Button
                 size="mini"
                 variant="secondary"
@@ -32,7 +33,7 @@
                     onAction()
                 }}>{actionLabel}</Button
             >
-        </div>
+        </ToastActions>
     {/if}
 </div>
 
@@ -43,11 +44,5 @@
 
     .body {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: calc(var(--spacing-xs) + var(--spacing-xxs));
     }
 </style>

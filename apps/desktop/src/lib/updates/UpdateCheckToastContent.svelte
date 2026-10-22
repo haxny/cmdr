@@ -1,4 +1,5 @@
 <script lang="ts">
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { updateState } from './update-state.svelte'
     import { describeUpdateFailure, formatUpdateStatus, updateFailureOffersReport } from './update-status-text'
     import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
@@ -12,10 +13,10 @@
     {#if failureText !== null}
         <span class="message">{failureText}</span>
         {#if offersReport}
-            <div class="actions">
+            <ToastActions>
                 <!-- The note is the sentence the toast showed; the raw detail is already in the log the report bundles. -->
                 <ReportOffer incident={{ kind: 'message', from: 'updateFailure', text: failureText }} size="mini" />
-            </div>
+            </ToastActions>
         {/if}
     {:else}
         <span class="message">{statusText}</span>
@@ -26,12 +27,5 @@
     .content {
         font-size: var(--font-size-sm);
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

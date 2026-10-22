@@ -11,6 +11,7 @@
     import type { AccessNotice } from '#lib/ipc/bindings.js'
     import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -118,7 +119,7 @@
             {tString('securityNotices.count', { count, countText: formatInteger(count) })}
         </span>
     {/if}
-    <div class="notice-actions">
+    <ToastActions>
         {#if notice.kind === 'mcpForeignOrigin'}
             <Button
                 variant="secondary"
@@ -160,7 +161,7 @@
                 {tString('securityNotices.updateNotGenuine.openWebsite')}
             </Button>
         {/if}
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -180,12 +181,5 @@
         font-size: var(--font-size-xs);
         color: var(--color-text-secondary);
         font-variant-numeric: tabular-nums;
-    }
-
-    .notice-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-md);
     }
 </style>

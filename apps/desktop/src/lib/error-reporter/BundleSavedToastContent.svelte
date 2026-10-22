@@ -1,6 +1,7 @@
 <script lang="ts">
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { showInFinder } from '#lib/tauri-commands/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -27,14 +28,14 @@
 <div class="content">
     <span class="message">{tString('errorReporter.bundleSavedToast.message')}</span>
     <span class="path" use:tooltip={{ text: path, overflowOnly: true }}>{path}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={handleDismiss}
             >{tString('errorReporter.bundleSavedToast.dismiss')}</Button
         >
         <Button size="mini" variant="primary" onclick={handleReveal}
             >{tString('errorReporter.bundleSavedToast.reveal')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -54,12 +55,5 @@
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 320px;
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>

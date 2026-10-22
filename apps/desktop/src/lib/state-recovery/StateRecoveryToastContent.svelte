@@ -7,6 +7,7 @@
      */
     import type { StateFile, StateRecovery } from '#lib/ipc/bindings.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { getAppLogger } from '#lib/logging/logger.js'
@@ -109,7 +110,7 @@
     {#if recovery.keptCopy}
         <span class="notice-detail notice-path">{tString('stateRecovery.keptCopy', { path: recovery.keptCopy })}</span>
     {/if}
-    <div class="notice-actions">
+    <ToastActions>
         <Button
             variant="secondary"
             size="mini"
@@ -129,7 +130,7 @@
                 {target.label}
             </Button>
         {/if}
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -149,12 +150,5 @@
     .notice-path {
         overflow-wrap: anywhere;
         user-select: text;
-    }
-
-    .notice-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-md);
     }
 </style>

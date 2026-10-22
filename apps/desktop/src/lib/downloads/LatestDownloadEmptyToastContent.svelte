@@ -7,6 +7,7 @@
      */
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
@@ -35,12 +36,12 @@
 
 <div class="content">
     <span class="message">{tString('downloads.empty.message')}</span>
-    <div class="actions">
+    <ToastActions>
         <Button size="mini" variant="secondary" onclick={handleDismiss}>{tString('downloads.empty.dismiss')}</Button>
         <Button size="mini" variant="primary" onclick={handleGoToDownloads}
             >{tString('downloads.empty.goToDownloads')}</Button
         >
-    </div>
+    </ToastActions>
 </div>
 
 <style>
@@ -50,12 +51,5 @@
 
     .message {
         color: var(--color-text-primary);
-    }
-
-    .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-lg);
     }
 </style>
