@@ -72,6 +72,15 @@ script, Vite plugin, and crate `build.rs`, and the 2026-10-15 incident tabletop 
   `v0.52.1-pipelinetest.1` test tag (run 38755716207, 2026-10-15): every job green, the three bundles Developer ID
   signed, notarized, and stapled, and an installed app updated itself to one
   (`docs/notes/2026-10-15-update-path-proof.md`).
+- **The `lipo`'d universal app matches a one-step universal build** (Tauri CLI 2.12.3, `v0.55.1-pipelinetest.2`, run
+  39741595209, 2026-10-22). Tauri's universal build is `lipo -create` of the two arch binaries into
+  `target/universal-apple-darwin/release/Cmdr`
+  ([`desktop.rs`'s `build`](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.12.3/crates/tauri-cli/src/interface/rust/desktop.rs)),
+  and nothing else in the CLI or bundler special-cases the universal target. Against v0.55.0's universal app: identical
+  file tree and modes, identical updater-archive listing, `Info.plist` differing only in the version, and every
+  llama-server file byte-identical once its signature is stripped. Each slice of the universal binary is byte-identical
+  to that arch's own app binary, signatures stripped. `codesign --verify --deep --strict` and `spctl` passed (Notarized
+  Developer ID).
 
 ## The release gate
 
