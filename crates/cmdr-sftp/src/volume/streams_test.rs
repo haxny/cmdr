@@ -13,7 +13,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use super::{ChunkWindow, PositionedRead};
+use super::{ChunkWindow, PositionedRead, chunk_window};
 use cmdr_fs::volume::{StreamLength, VolumeError};
 
 /// The bytes every cell reads, shared with the Docker suites so the two sides
@@ -115,7 +115,7 @@ async fn chunks_land_in_file_order_however_they_complete() {
     // window over a real link does whenever one request is unlucky.
     let data = self_describing(8 * 1024);
     let server = ScriptedServer::new(data.clone()).yielding(|offset| 8 - (offset as usize / 1024));
-    let mut window = ChunkWindow::new(server.clone(), 0, data.len() as u64, 8, 1024);
+    let mut window = chunk_window(server.clone(), 0, data.len() as u64, 8, 1024);
 
     let read = drain(&mut window).await;
 
@@ -134,7 +134,7 @@ async fn a_short_answer_is_filled_rather_than_skipped() {
     // less than it was asked for must leave neither a hole nor a duplicate.
     let data = self_describing(20 * 1024);
     let server = ScriptedServer::new(data.clone()).answering_at_most(100);
-    let mut window = ChunkWindow::new(server, 0, data.len() as u64, 4, 4096);
+    let mut window = chunk_window(server, 0, data.len() as u64, 4, 4096);
 
     let read = drain(&mut window).await;
 
@@ -148,7 +148,7 @@ async fn a_file_that_ends_early_reports_what_exists() {
     // the server has 3 000. ❌ Never invent the difference.
     let data = self_describing(3_000);
     let server = ScriptedServer::new(data.clone());
-    let mut window = ChunkWindow::new(server, 0, 10_000, 4, 1024);
+    let mut window = chunk_window(server, 0, 10_000, 4, 1024);
 
     let read = drain(&mut window).await;
 
@@ -158,7 +158,7 @@ async fn a_file_that_ends_early_reports_what_exists() {
 #[tokio::test]
 async fn an_empty_file_yields_nothing_and_ends() {
     let server = ScriptedServer::new(Vec::new());
-    let mut window = ChunkWindow::new(server, 0, 0, 4, 1024);
+    let mut window = chunk_window(server, 0, 0, 4, 1024);
 
     assert!(window.next_chunk().await.is_none());
 }
@@ -169,7 +169,7 @@ async fn a_range_that_starts_mid_file_reads_only_that_range() {
     // tail, and reading one byte before or after it is a wrong answer.
     let data = self_describing(8 * 1024);
     let server = ScriptedServer::new(data.clone());
-    let mut window = ChunkWindow::new(server, 5_000, 6_500, 4, 1024);
+    let mut window = chunk_window(server, 5_000, 6_500, 4, 1024);
 
     let read = drain(&mut window).await;
 
@@ -185,7 +185,7 @@ async fn the_window_keeps_its_whole_depth_in_flight() {
     // Every read yields once, so the window has a chance to fill before any of
     // them answers.
     let server = ScriptedServer::new(data.clone()).yielding(|_| 1);
-    let mut window = ChunkWindow::new(server.clone(), 0, data.len() as u64, 8, 1024);
+    let mut window = chunk_window(server.clone(), 0, data.len() as u64, 8, 1024);
 
     let read = drain(&mut window).await;
 
@@ -227,7 +227,7 @@ fn a_missing_fstat_size_is_an_unknown_length() {
 async fn a_file_of_unknown_size_is_read_to_its_end() {
     let data = self_describing(5 * 1024 + 7);
     let server = ScriptedServer::new(data.clone());
-    let mut window = ChunkWindow::new(server, 0, opened(None).read_end(), 4, 1024);
+    let mut window = chunk_window(server, 0, opened(None).read_end(), 4, 1024);
 
     let read = drain(&mut window).await;
 

@@ -19,7 +19,6 @@
 //! `DETAILS.md` § "The read window" carries the measurements and the depth they
 //! set.
 
-use std::cmp::min;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::pin::Pin;
@@ -28,9 +27,8 @@ use std::time::SystemTime;
 
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::CarriedMetadata;
+use cmdr_fs::volume::read_window::ReadWindow;
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, VolumeError};
-use futures_util::StreamExt;
-use futures_util::stream::FuturesOrdered;
 use log::debug;
 use openssh_sftp_client::file::File;
 use tokio::io::AsyncSeek;
@@ -196,50 +194,28 @@ async fn read_chunk<S: PositionedRead>(reader: &mut S, offset: u64, len: usize) 
     Ok(ChunkRead { bytes, at_eof: false })
 }
 
-/// `depth` chunk reads in flight over `[start, end)`, handed back in FILE order
-/// however they complete.
-///
-/// `FuturesOrdered` is the whole trick: it polls every pushed future at once and
-/// yields them in the order they were pushed, so the window's out-of-order
-/// completions become an in-order stream with no reassembly buffer to keep.
-pub(super) struct ChunkWindow<S: PositionedRead> {
+/// The window every read here runs: `cmdr_fs`'s in-order fan-out, each chunk
+/// filled by [`read_chunk`] (`cmdr_fs::volume::read_window` says why
+/// `FuturesOrdered` needs no reassembly buffer).
+pub(super) type ChunkWindow<S> = ReadWindow<S, Result<ChunkRead, VolumeError>>;
+
+/// A window over `[start, end)`, reading `chunk` bytes at a time with `depth`
+/// reads in flight, handed back in FILE order however they complete.
+pub(super) fn chunk_window<S: PositionedRead>(
     reader: S,
-    next_offset: u64,
+    start: u64,
     end: u64,
     depth: usize,
     chunk: usize,
-    #[allow(
-        clippy::type_complexity,
-        reason = "boxing the read future is what makes the window a nameable type; one allocation per 255 KiB"
-    )]
-    in_flight: FuturesOrdered<Pin<Box<dyn Future<Output = Result<ChunkRead, VolumeError>> + Send>>>,
-}
-
-impl<S: PositionedRead> ChunkWindow<S> {
-    /// A window over `[start, end)`, reading `chunk` bytes at a time.
-    pub(super) fn new(reader: S, start: u64, end: u64, depth: usize, chunk: usize) -> Self {
-        Self {
-            reader,
-            next_offset: start,
-            end,
-            depth: depth.max(1),
-            chunk: chunk.max(1),
-            in_flight: FuturesOrdered::new(),
-        }
-    }
-
-    /// The next chunk in file order, or `None` once the range is covered.
-    pub(super) async fn next_chunk(&mut self) -> Option<Result<ChunkRead, VolumeError>> {
-        while self.in_flight.len() < self.depth && self.next_offset < self.end {
-            let offset = self.next_offset;
-            let len = min(self.chunk as u64, self.end - offset) as usize;
-            let mut reader = self.reader.clone();
-            self.in_flight
-                .push_back(Box::pin(async move { read_chunk(&mut reader, offset, len).await }));
-            self.next_offset += len as u64;
-        }
-        self.in_flight.next().await
-    }
+) -> ChunkWindow<S> {
+    ReadWindow::new(
+        reader,
+        |mut reader, offset, len| Box::pin(async move { read_chunk(&mut reader, offset, len).await }),
+        start,
+        end,
+        depth,
+        chunk,
+    )
 }
 
 impl SftpVolume {
@@ -301,7 +277,7 @@ impl SftpVolume {
 
         let end = offset.saturating_add(len as u64);
         let handle = RemoteFile::new(file, Arc::from(remote.as_str()));
-        let mut window = ChunkWindow::new(handle, offset, end, READ_WINDOW_DEPTH, CHUNK_BYTES);
+        let mut window = chunk_window(handle, offset, end, READ_WINDOW_DEPTH, CHUNK_BYTES);
         let mut out = Vec::with_capacity(len);
         while let Some(chunk) = window.next_chunk().await {
             let chunk = chunk?;
@@ -376,7 +352,7 @@ async fn produce_stream(
     // draining the channel and parking each answer in its response arena, so a
     // slow consumer costs `depth` buffered chunks and never blocks the SSH
     // connection the other operations share.
-    let mut window = ChunkWindow::new(sizing, delivered, end, depth, CHUNK_BYTES);
+    let mut window = chunk_window(sizing, delivered, end, depth, CHUNK_BYTES);
     loop {
         let next = tokio::select! {
             biased;

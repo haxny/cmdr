@@ -171,11 +171,11 @@ the length and date the caller wants.
   child folder's handle offered to the cache. A name that isn't UTF-8 is counted and left out (one `debug!`). A pane's
   listing goes through `list_for_pane`, the poller's cue; a scan lists through `list_directory_impl` and never starts
   it.
-- **The read window** (`streams.rs`): SFTP's `ChunkWindow` over positioned READs of `rtpref` within `rtmax` and 1 MiB,
-  depth 8 (SFTP's measured optimum; re-measure on a NAS). A short answer is re-asked from where it stopped; only `eof`
-  or an empty answer ends a chunk. The length is the fresh LOOKUP's `size` (always present in `fattr3`, so `Known`).
-  `read_range` and `open_read_stream_at_offset` run the same window. 200 MiB off the knfsd fixture streams at about 76
-  MB/s in a debug build over loopback (2026-10-20, `fixture_test.rs`).
+- **The read window** (`streams.rs`): `cmdr_fs`'s `ReadWindow` (shared with SFTP) over positioned READs of `rtpref`
+  within `rtmax` and 1 MiB, depth 8 (SFTP's measured optimum; re-measure on a NAS). A short answer is re-asked from
+  where it stopped; only `eof` or an empty answer ends a chunk. The length is the fresh LOOKUP's `size` (always present
+  in `fattr3`, so `Known`). `read_range` and `open_read_stream_at_offset` run the same window. 200 MiB off the knfsd
+  fixture streams at about 76 MB/s in a debug build over loopback (2026-10-20, `fixture_test.rs`).
 - **Space** is `FSSTAT` on the root (`abytes` is this identity's room, used is total minus free), polled every 5 s.
   `write_access_at` is one `ACCESS` asking `MODIFY | EXTEND`: `EXTEND` granted is `Writable`, anything else
   `Unwritable { Unexplained }` (a read-only export and a refused permission look the same), a failure `Unknown`.

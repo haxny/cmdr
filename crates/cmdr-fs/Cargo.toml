@@ -117,6 +117,9 @@ tempfile = { version = "3", optional = true }
 # than in either consumer. `default-features = false` keeps it to `tokio_util::sync`,
 # which is all any layer uses.
 tokio-util = { version = "0.7.18", default-features = false }
+# `FuturesOrdered`, the in-order fan-out under `volume::read_window`. Same
+# version every network backend already pulls.
+futures-util = "0.3"
 # The global allocator where `cmdr_mimalloc` holds (`process_memory::GLOBAL_ALLOC`,
 # which the app's `main.rs` installs). Optional here for the `mimalloc` feature,
 # and a plain dependency on Linux below, where it's the default.

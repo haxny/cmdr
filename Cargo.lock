@@ -1701,6 +1701,7 @@ dependencies = [
  "blake3",
  "dirs 7.0.0",
  "exacl",
+ "futures-util",
  "libc",
  "libmimalloc-sys",
  "log",

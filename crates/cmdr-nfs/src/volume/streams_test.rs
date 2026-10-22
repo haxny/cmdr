@@ -54,7 +54,7 @@ async fn out_of_order_completions_come_back_in_file_order() {
         short: usize::MAX,
         backwards: true,
     };
-    let mut window = ChunkWindow::new(reader, 0, data.len() as u64, 8, 1024);
+    let mut window = chunk_window(reader, 0, data.len() as u64, 8, 1024);
     assert!(drain(&mut window).await == *data);
 }
 
@@ -66,7 +66,7 @@ async fn a_short_answer_mid_file_is_asked_again_from_where_it_stopped() {
         short: 333,
         backwards: false,
     };
-    let mut window = ChunkWindow::new(reader, 0, data.len() as u64, 4, 4096);
+    let mut window = chunk_window(reader, 0, data.len() as u64, 4, 4096);
     assert!(drain(&mut window).await == *data);
 }
 
@@ -79,7 +79,7 @@ async fn a_file_that_shrank_ends_where_the_server_says() {
         backwards: false,
     };
     // The open said 10,000 bytes; the file now holds 2,500.
-    let mut window = ChunkWindow::new(reader, 0, 10_000, 4, 1024);
+    let mut window = chunk_window(reader, 0, 10_000, 4, 1024);
     assert!(drain(&mut window).await == *data);
 }
 

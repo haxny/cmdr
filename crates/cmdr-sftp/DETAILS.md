@@ -54,9 +54,10 @@ file order, which measures 7× that on the same link.
 - `total_size` crosses a oneshot **before the constructor returns**, so a caller's first progress tick is honest.
 - Dropping the stream cancels the producer. Both signals work on their own: the cancel oneshot fires from `Drop`, and
   the closed channel stops the next `send`.
-- `ChunkWindow` is generic over a `PositionedRead` seam, so reassembly is unit-tested against a double that short-reads
-  and answers backwards on purpose. `RemoteFile` is the only production implementation, and `FuturesOrdered` is what
-  turns out-of-order completions into an in-order stream with no reassembly buffer to keep.
+- `ChunkWindow` is `cmdr_fs::volume::read_window::ReadWindow` (the in-order fan-out NFS runs too) filled by this crate's
+  `read_chunk`, generic over a `PositionedRead` seam, so reassembly is unit-tested against a double that short-reads and
+  answers backwards on purpose. `RemoteFile` is the only production implementation, and `FuturesOrdered` is what turns
+  out-of-order completions into an in-order stream with no reassembly buffer to keep.
 
 **The open costs two round trips, not three.** The `fstat` and the FIRST chunk read go out together, so a small file —
 the folder-copy case, and the one that multiplies by ten thousand — is open plus one round trip. Reading past the end of

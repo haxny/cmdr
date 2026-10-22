@@ -996,8 +996,9 @@ tag's resident bytes, because the VM tags can't say which zone a page belongs to
 
 ## Bodies a backend gets for free
 
-A backend whose only tools are a stat and a listing (SFTP, WebDAV) writes almost no `Volume` body of its own. Four
-modules under `volume/` carry the arithmetic, each behind a trait the backend implements in a handful of lines:
+A backend whose only tools are a stat and a listing (SFTP, WebDAV) writes almost no `Volume` body of its own. Five
+modules under `volume/` carry the arithmetic, each behind a trait or a function the backend supplies in a handful of
+lines:
 
 - **`scan_walk.rs`** (`ScanSource`: `scan_stat` + `scan_list`) answers `scan_for_copy`, `scan_for_copy_batch`, and
   `scan_for_conflicts`. A backend whose operations bill per object answers `keeps_files` true (S3), and `scan_trees`
@@ -1028,6 +1029,10 @@ modules under `volume/` carry the arithmetic, each behind a trait the backend im
   `remember_sign_in` runs that same filing ❌ without a dial, for the sheet's "Try again" after a refused save: a second
   sign-in finds an SFTP or SMB session live, dials nothing, and so files nothing (#603). Each backend reaches one filing
   helper from both paths, so the two can't drift.
+- **`read_window.rs`** (`ReadWindow`) keeps `depth` positioned chunk reads in flight over one byte range and hands them
+  back in file order (`FuturesOrdered`), for a backend whose protocol names an offset on every read (SFTP, NFS). It owns
+  only the offsets and the depth; filling a chunk is the backend's `read` fn, since every protocol says "end of file"
+  differently. `crates/cmdr-sftp/DETAILS.md` § "The read window" has the depth curve.
 
 SMB and MTP keep their own cache-aware batch scans (their watchers back the `authoritative_listing` shortcut) and borrow
 only the pure halves, `conflicts_against` and `fold_batch`, so every backend hands a conflict dialog the same shape and

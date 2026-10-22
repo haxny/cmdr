@@ -2143,6 +2143,7 @@ mod node_identity;
 mod password_locked;
 pub mod patching;
 mod read_stream;
+pub mod read_window;
 pub mod remote_paths;
 mod retirement;
 mod root_echo;
@@ -2235,6 +2236,8 @@ mod in_memory_test;
 mod listing_progress_test;
 #[cfg(test)]
 mod password_locked_test;
+#[cfg(test)]
+mod read_window_test;
 #[cfg(test)]
 mod retirement_test;
 #[cfg(test)]

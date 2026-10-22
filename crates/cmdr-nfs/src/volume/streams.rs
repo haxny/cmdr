@@ -15,15 +15,12 @@
 //! running read isn't chased; one that shrank reports what exists, since `eof`
 //! ends the window wherever it lands.
 
-use std::cmp::min;
 use std::path::Path;
-use std::pin::Pin;
 
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::CarriedMetadata;
+use cmdr_fs::volume::read_window::ReadWindow;
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, VolumeError};
-use futures_util::StreamExt;
-use futures_util::stream::FuturesOrdered;
 use log::debug;
 
 use super::NfsVolume;
@@ -100,44 +97,27 @@ async fn read_chunk<S: PositionedRead>(reader: S, offset: u64, len: usize) -> Re
     }
 }
 
+/// The window every read here runs: `cmdr_fs`'s in-order fan-out, each chunk
+/// filled by [`read_chunk`].
+pub(super) type ChunkWindow<S> = ReadWindow<S, Result<ChunkRead, VolumeError>>;
+
 /// `depth` chunk reads in flight over `[start, end)`, handed back in FILE order
-/// however they complete (`FuturesOrdered`).
-pub(super) struct ChunkWindow<S: PositionedRead> {
+/// however they complete.
+pub(super) fn chunk_window<S: PositionedRead>(
     reader: S,
-    next_offset: u64,
+    start: u64,
     end: u64,
     depth: usize,
     chunk: usize,
-    #[allow(
-        clippy::type_complexity,
-        reason = "boxing the read future is what makes the window a nameable type; one allocation per chunk"
-    )]
-    in_flight: FuturesOrdered<Pin<Box<dyn Future<Output = Result<ChunkRead, VolumeError>> + Send>>>,
-}
-
-impl<S: PositionedRead> ChunkWindow<S> {
-    pub(super) fn new(reader: S, start: u64, end: u64, depth: usize, chunk: usize) -> Self {
-        Self {
-            reader,
-            next_offset: start,
-            end,
-            depth: depth.max(1),
-            chunk: chunk.max(1),
-            in_flight: FuturesOrdered::new(),
-        }
-    }
-
-    /// The next chunk in file order, or `None` once the range is covered.
-    pub(super) async fn next_chunk(&mut self) -> Option<Result<ChunkRead, VolumeError>> {
-        while self.in_flight.len() < self.depth && self.next_offset < self.end {
-            let offset = self.next_offset;
-            let len = min(self.chunk as u64, self.end - offset) as usize;
-            let reader = self.reader.clone();
-            self.in_flight.push_back(Box::pin(read_chunk(reader, offset, len)));
-            self.next_offset += len as u64;
-        }
-        self.in_flight.next().await
-    }
+) -> ChunkWindow<S> {
+    ReadWindow::new(
+        reader,
+        |reader, offset, len| Box::pin(read_chunk(reader, offset, len)),
+        start,
+        end,
+        depth,
+        chunk,
+    )
 }
 
 /// What the open learned before the first byte.
@@ -190,7 +170,7 @@ impl NfsVolume {
         // ❌ Never `tokio::spawn`: a backend inherits whatever runtime it's
         // called on, and some callers are OS threads with none.
         self.inner.host.runtime().spawn(produce_stream(
-            ChunkWindow::new(opened.file, offset, size, READ_WINDOW_DEPTH, opened.chunk),
+            chunk_window(opened.file, offset, size, READ_WINDOW_DEPTH, opened.chunk),
             chunk_tx,
             cancel_rx,
         ));
@@ -211,7 +191,7 @@ impl NfsVolume {
     pub(super) async fn read_range_impl(&self, path: &Path, offset: u64, len: usize) -> Result<Vec<u8>, VolumeError> {
         let opened = self.open_file(path).await?;
         let end = offset.saturating_add(len as u64).min(opened.attrs.size.max(offset));
-        let mut window = ChunkWindow::new(opened.file, offset, end, READ_WINDOW_DEPTH, opened.chunk);
+        let mut window = chunk_window(opened.file, offset, end, READ_WINDOW_DEPTH, opened.chunk);
         let mut out = Vec::with_capacity(len.min((end - offset) as usize));
         while let Some(chunk) = window.next_chunk().await {
             let chunk = chunk?;
@@ -240,7 +220,7 @@ async fn produce_stream(
                 debug!(
                     target: "nfs",
                     "the read of {} was cancelled after {delivered} bytes", // allowed-pluralize-noun: a log line's byte count, read by a person debugging.
-                    LogPrivate::file_path(&*window.reader.remote)
+                    LogPrivate::file_path(&*window.reader().remote)
                 );
                 return;
             }
