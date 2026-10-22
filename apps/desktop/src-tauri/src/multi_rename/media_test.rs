@@ -327,6 +327,37 @@ fn title_mask() -> MultiRenameSpec {
     }
 }
 
+/// A preview the user saw fully read never turns into a queued wait: a file that
+/// changed under it is the folder changing, so apply asks for a fresh look.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_file_changing_under_a_fully_read_preview_makes_it_out_of_date_not_still_reading() {
+    let (dir, listing) = folder("media-changed-under", &["song.mp3"], &[]);
+    let session = open(listing.id(), true, None, 0).expect("the session opens");
+    let (events, calls) = (Events::default(), Calls::default());
+    start_media_with(
+        &session.session_id,
+        loader(8, &events, &calls, |_| Ok(titled("Harder"))),
+    )
+    .expect("the read starts");
+    read_through(&session.session_id).await;
+    let shown = preview_session(&session.session_id, &title_mask()).expect("a preview");
+    assert_eq!(shown.counts.ready, 1);
+
+    change_file(&listing, &dir, "song.mp3", b"a re-tagged song");
+    let refused = apply(
+        Arc::new(CollectorEventSink::new()),
+        session.session_id.clone(),
+        shown.preview_id,
+    )
+    .await;
+
+    assert!(
+        matches!(refused, Err(MultiRenameError::PreviewOutOfDate)),
+        "{refused:?}"
+    );
+    close(&session.session_id);
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rename_waits_while_a_row_is_still_reading() {
     let (_dir, listing) = folder("media-still-reading", &["song.mp3"], &[]);

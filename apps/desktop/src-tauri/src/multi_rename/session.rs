@@ -495,15 +495,23 @@ pub(crate) struct Prepared {
 }
 
 /// Recomputes preview `preview_id`'s spec against the folder as it is now and
-/// requires its ready rows to be EXACTLY the ones that preview showed. Refuses
-/// with `StillReading` while a row's media fields are being read: the sheet's
-/// queued Rename waits for the preview after the read.
+/// requires its ready rows to be EXACTLY the ones that preview showed. While a
+/// row's media fields are being read it refuses with `StillReading`, so the
+/// sheet's queued Rename waits for the preview after the read, but only when
+/// that preview was itself still reading. A fully read preview whose files
+/// changed since is `PreviewOutOfDate`: ❌ never let it queue, or the rename
+/// would run names the user never saw.
 pub(crate) fn prepare(session_id: &str, preview_id: u64) -> Result<Prepared, MultiRenameError> {
     let (seen, inputs) = stored(session_id, preview_id)?;
     let compiled = Compiled::new(&seen.spec).map_err(|error| MultiRenameError::Spec { error })?;
     let rows = compute(&inputs, &compiled, &seen.edits)?;
-    if rows.iter().any(|row| matches!(row.status, RowStatus::Reading)) {
-        return Err(MultiRenameError::StillReading);
+    let reading = |rows: &[PreviewRow]| rows.iter().any(|row| matches!(row.status, RowStatus::Reading));
+    if reading(&rows) {
+        return Err(if reading(&seen.rows) {
+            MultiRenameError::StillReading
+        } else {
+            MultiRenameError::PreviewOutOfDate
+        });
     }
     let ready: Vec<PreviewRow> = rows.into_iter().filter(|row| row.status.is_ready()).collect();
     let shown = seen.rows.iter().filter(|row| row.status.is_ready());
