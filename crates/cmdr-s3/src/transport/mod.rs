@@ -589,6 +589,7 @@ fn operation_of(request: &S3Request) -> &'static str {
         Method::GET if request.bucket.is_none() => "ListBuckets",
         Method::GET if has("uploads") => "ListMultipartUploads",
         Method::GET if has("list-type") => "ListObjectsV2",
+        Method::GET if has("uploadId") => "ListParts",
         Method::GET => "GetObject",
         Method::HEAD if key.is_empty() => "HeadBucket",
         Method::HEAD => "HeadObject",

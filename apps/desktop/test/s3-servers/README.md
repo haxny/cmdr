@@ -113,7 +113,10 @@ Observed by hand with `curl --aws-sigv4` and a small Go SigV4 signer against Ver
 - A `PutObject` to a key while a multipart upload of that key is in flight: ❗ **Garage ends the upload** (the next
   `UploadPart` or `CompleteMultipartUpload` answers 404 `NoSuchUpload`); VersityGW keeps it, and completing it replaces
   the object just put. Observed through `cmdr-s3`'s `write_test.rs` (`…catches_a_writer_mid_upload`, both servers) on
-  2026-10-01; `crates/cmdr-s3/DETAILS.md` § "No-overwrite writes" has what Cmdr does with it.
+  2026-10-01; `crates/cmdr-s3/DETAILS.md` § "No-overwrite writes" has what Cmdr does with it. ❗ Garage answers that
+  `UploadPart`'s 404 before reading the body and drops the connection, so a client still sending the part often gets a
+  broken pipe instead of the answer (1 of 5 `curl` sends of a 64 MiB part without `Expect: 100-continue`, Garage v2.4.1,
+  2026-10-22). `ListParts` on the upload ID then answers 404 `NoSuchUpload` reliably, on both servers.
 - `DeleteObjects` with `Content-MD5`: 200 on both, and a key that never existed comes back under `<Deleted>`, as on AWS.
   Garage also adds a `<VersionId>` and `<DeleteMarkerVersionId>` to each entry on an unversioned bucket. Past 1,000
   keys, two requests clear 1,005 on both (`cmdr-s3`'s `batch_test.rs`, 2026-10-01).

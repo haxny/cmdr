@@ -350,6 +350,8 @@ mod copy_test;
 #[cfg(test)]
 mod cut_off_record_test;
 #[cfg(test)]
+mod ended_upload_test;
+#[cfg(test)]
 mod fake_s3;
 #[cfg(test)]
 mod folder_delete_test;

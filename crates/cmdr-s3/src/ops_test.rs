@@ -259,6 +259,13 @@ fn multipart_upload_runs_create_part_complete_and_abort() {
         abort.url().as_str(),
         "https://photos.s3.us-east-1.amazonaws.com/big.iso?uploadId=u%2F1"
     );
+
+    let parts = list_parts(&profile, "photos", "big.iso", "u/1").unwrap();
+    assert_eq!(parts.method, Method::GET);
+    assert_eq!(
+        parts.url().as_str(),
+        "https://photos.s3.us-east-1.amazonaws.com/big.iso?max-parts=1&uploadId=u%2F1"
+    );
 }
 
 #[test]

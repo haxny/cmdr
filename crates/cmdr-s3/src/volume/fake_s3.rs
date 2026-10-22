@@ -20,6 +20,8 @@
 //!   counts every body byte as it arrives ([`FakeS3::body_bytes`]);
 //! - [`FakeS3::fault_puts`]: it answers a PUT `500 InternalError`, the way B2
 //!   answers about one in several hundred, before or after storing it;
+//! - [`FakeS3::taken_before_next_part`]: another writer's PUT ends a multipart
+//!   upload mid-way, and its parts lose their answer to a reset (Garage);
 //! - [`FakeS3::answer_gets_without_length`]: it answers an object GET with no
 //!   `content-length` (the way a proxy that strips it does), optionally cut
 //!   off partway, and [`FakeS3::answer_heads_without_length`] a HEAD likewise.
@@ -100,6 +102,12 @@ struct World {
     gets: Option<GetBodies>,
     /// Whether an object HEAD leaves out `content-length`.
     heads_without_length: bool,
+    /// The next `UploadPart` of this key finds another writer's object put
+    /// there first, which ends its upload ([`FakeS3::taken_before_next_part`]).
+    taken_before_next_part: Option<String>,
+    /// Upload IDs another writer's PUT ended: each part sent to one is dropped
+    /// unanswered.
+    ended_uploads: Vec<String>,
 }
 
 /// An object GET's answer: close-delimited, with no `content-length`, and
@@ -186,6 +194,15 @@ impl FakeS3 {
     /// proxy that strips it does.
     pub(super) fn answer_heads_without_length(&self) {
         self.world.lock_ignore_poison().heads_without_length = true;
+    }
+
+    /// Garage's clash with another writer: just before the next `UploadPart`
+    /// of `key`, another writer puts an object there, which ends the upload,
+    /// and from then on every part of it loses its answer to a reset (Garage
+    /// answers `NoSuchUpload` before reading the body and drops the
+    /// connection, `apps/desktop/test/s3-servers/README.md`).
+    pub(super) fn taken_before_next_part(&self, key: &str) {
+        self.world.lock_ignore_poison().taken_before_next_part = Some(key.to_string());
     }
 
     /// How many `DeleteObjects` requests reached the store (throttled ones
@@ -375,8 +392,34 @@ async fn answer(
     }
     let upload_id = param(query, "uploadId");
     let response = match (method.as_str(), key, upload_id) {
-        ("PUT", Some(_), Some(id)) if body_len == length => {
+        ("PUT", Some(key), Some(id)) if body_len == length => {
             let mut world = world.lock_ignore_poison();
+            if world.taken_before_next_part.as_deref() == Some(key.as_str()) {
+                world.taken_before_next_part = None;
+                world.writes += 1;
+                let etag = format!("\"theirs{}\"", world.writes);
+                world.objects.insert(
+                    key.clone(),
+                    Stored {
+                        len: 6,
+                        etag,
+                        meta: Vec::new(),
+                    },
+                );
+                let ended: Vec<String> = world
+                    .uploads
+                    .iter()
+                    .filter(|(_, upload)| upload.key == key)
+                    .map(|(id, _)| id.clone())
+                    .collect();
+                for ended_id in ended {
+                    world.uploads.remove(&ended_id);
+                    world.ended_uploads.push(ended_id);
+                }
+            }
+            if world.ended_uploads.contains(&id) {
+                return None;
+            }
             let number: u32 = param(query, "partNumber").and_then(|n| n.parse().ok()).unwrap_or(0);
             // `UploadPartCopy`: the part is the source range, not a body.
             let copied = header(head, "x-amz-copy-source").map(|_| {
@@ -533,6 +576,13 @@ async fn answer(
         }
         ("DELETE", Some(_), Some(id)) => match world.lock_ignore_poison().uploads.remove(&id) {
             Some(_) => "HTTP/1.1 204 No Content\r\nconnection: close\r\n\r\n".into(),
+            None => error("404 Not Found", "NoSuchUpload"),
+        },
+        // `ListParts`, answered with no parts: only whether the upload exists.
+        ("GET", Some(key), Some(id)) => match world.lock_ignore_poison().uploads.get(&id) {
+            Some(_) => ok_xml(&format!(
+                "<ListPartsResult><Bucket>{BUCKET}</Bucket><Key>{key}</Key><UploadId>{id}</UploadId><IsTruncated>false</IsTruncated></ListPartsResult>"
+            )),
             None => error("404 Not Found", "NoSuchUpload"),
         },
         ("HEAD", Some(key), None) => match head_then_maybe_replace(world, &key) {

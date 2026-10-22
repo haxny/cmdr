@@ -261,6 +261,19 @@ pub(crate) fn abort_multipart_upload(
     Ok(at(profile, Method::DELETE, bucket, Some(key))?.query("uploadId", upload_id))
 }
 
+/// `ListParts` of one upload, a page of one part: asked only for whether the
+/// upload still exists (`NoSuchUpload` when it doesn't).
+pub(crate) fn list_parts(
+    profile: &ProviderProfile,
+    bucket: &str,
+    key: &str,
+    upload_id: &str,
+) -> Result<S3Request, BuildError> {
+    Ok(at(profile, Method::GET, bucket, Some(key))?
+        .query("uploadId", upload_id)
+        .query("max-parts", "1"))
+}
+
 /// `ListMultipartUploads` under `prefix`, resuming after the markers a
 /// previous page returned.
 pub(crate) fn list_multipart_uploads(

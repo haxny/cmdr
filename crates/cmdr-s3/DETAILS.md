@@ -621,7 +621,12 @@ for that operation right now. Making the flag part of the return type is what ke
   `a_folder_of_1005_objects_renames_through_the_engine` (at most one HEAD per object).
 - **Garage ends an upload when another write replaces its object** (`NoSuchUpload` on the next part or the completion;
   `apps/desktop/test/s3-servers/README.md`). Under `CreateNew` that's read as the name being taken, after a HEAD
-  confirms it, ❌ never as the destination "not found".
+  confirms it, ❌ never as the destination "not found". ❗ Garage refuses such a part before reading its body and drops
+  the connection, so the client often gets a reset, not the 404. A part cut off mid-flight therefore asks `ListParts`
+  (`multipart_upload.rs::upload_exists`) before going again: an explicit `NoSuchUpload` is the upload ended, anything
+  else retries as before. Without it, all four attempts reset and a clash came out as `DeviceDisconnected` (CI, three
+  runs on 2026-10-20 and 2026-10-21; pinned by `ended_upload_test.rs` over `fake_s3.rs`). Costs one request per cut-off
+  part, ❌ never on the happy path.
 - **`create_file`** (New File) also refuses a name a FOLDER holds: an object beside a same-named prefix would hide under
   the folder in every listing. `write_from_stream` leaves that check to the engine's destination pre-check, which reads
   the listing anyway, to save a request per file.

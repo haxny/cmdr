@@ -89,13 +89,29 @@ struct PartJob {
 /// caller to look for that clash.
 pub(super) fn upload_refusal(error: &S3Error, remote: &str, gone: &AtomicBool) -> VolumeError {
     if error.code == S3ErrorCode::NoSuchUpload {
-        gone.store(true, Ordering::Relaxed);
-        return VolumeError::IoError {
-            message: ErrorDetail::path_then(remote, ": the server ended the upload before it completed"),
-            raw_os_error: None,
-        };
+        return upload_ended(remote, gone);
     }
     map_s3_error(error, remote)
+}
+
+/// The upload is gone on the server: flags `gone` for the caller and says so.
+fn upload_ended(remote: &str, gone: &AtomicBool) -> VolumeError {
+    gone.store(true, Ordering::Relaxed);
+    VolumeError::IoError {
+        message: ErrorDetail::path_then(remote, ": the server ended the upload before it completed"),
+        raw_os_error: None,
+    }
+}
+
+/// Whether the server still has upload `upload_id` (`ListParts`), `None` when
+/// it couldn't say. Only an explicit `NoSuchUpload` is `Some(false)`.
+async fn upload_exists(client: &S3Client, bucket: &str, key: &str, upload_id: &str) -> Option<bool> {
+    let request = ops::list_parts(client.profile(), bucket, key, upload_id).ok()?;
+    let answer = client.exchange(request, QUERY_BUDGET).await.ok()?;
+    if answer.status.is_success() {
+        return Some(true);
+    }
+    (S3Error::from_response(answer.status, &answer.text()).code == S3ErrorCode::NoSuchUpload).then_some(false)
 }
 
 impl PartJob {
@@ -172,7 +188,21 @@ impl PartJob {
                         continue;
                     }
                     Some(Halt::Stopped) => return Err(VolumeError::Cancelled(self.volume_id.clone().into())),
-                    None => map_exchange_error(&e, &self.volume_id, &self.remote),
+                    None => {
+                        // ❗ A server can refuse a part before reading its
+                        // body and drop the connection, and the reset then
+                        // eats its `NoSuchUpload` (Garage, when another write
+                        // ended the upload). So a part cut off mid-flight asks
+                        // whether the upload is still there before going again.
+                        let exists = tokio::select! {
+                            () = self.stop.cancelled() => return Err(VolumeError::Cancelled(self.volume_id.clone().into())),
+                            exists = upload_exists(&self.client, &self.bucket, &self.key, &self.upload_id) => exists,
+                        };
+                        if exists == Some(false) {
+                            return Err(upload_ended(&self.remote, &self.gone));
+                        }
+                        map_exchange_error(&e, &self.volume_id, &self.remote)
+                    }
                 },
             };
             let Some(wait) = retry_after(attempt) else {
