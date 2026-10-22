@@ -121,7 +121,6 @@ export function insertField({
   token: string
   after: Inserted | null
 }): Inserted {
-  const follows =
-    after !== null && after.mask === mask && after.caret === caret && !mask.slice(0, caret ?? 0).endsWith(' ')
+  const follows = after !== null && after.mask === mask && after.caret === caret && !mask.slice(0, caret).endsWith(' ')
   return insertAtCaret(mask, follows ? ` ${token}` : token, caret)
 }

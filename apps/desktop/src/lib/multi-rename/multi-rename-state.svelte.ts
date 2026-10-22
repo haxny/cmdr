@@ -249,6 +249,8 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
   let mediaTimer: ReturnType<typeof setTimeout> | null = null
   let unlistenMedia: UnlistenFn | null = null
   let disposed = false
+  // Read through a call after an await: TypeScript keeps a plain `disposed` read narrowed to its pre-await value.
+  const isDisposed = (): boolean => disposed
   // The queued Rename's resolve; `queued` mirrors it for the button.
   let queue: ((started: MultiRenameStarted | null) => void) | null = null
   let queued = $state(false)
@@ -491,7 +493,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     unlistenMedia = unlisten
     // For a read that began before the subscription; an event that came meanwhile is newer.
     const answer = await getMultiRenameMediaProgress(sessionId)
-    if (answer.ok && media === null && !disposed) media = answer.value
+    if (answer.ok && media === null && !isDisposed()) media = answer.value
   }
 
   /** The files at the list's window are read next, while the read goes on. */

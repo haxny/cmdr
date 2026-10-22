@@ -135,7 +135,7 @@ describe('the media field editor', () => {
     const m = await mountField('[=exif.taken]')
     await open(m, 5)
     const date = [...document.querySelectorAll<HTMLButtonElement>('.media-editor button')].find(
-      (b) => b.textContent?.trim() === 'Date',
+      (b) => b.textContent.trim() === 'Date',
     )
     date?.click()
     await settle()
@@ -159,7 +159,7 @@ describe('the media field editor', () => {
     const m = await mountField('[=exif.taken:d]')
     await open(m, 5)
     const rows = [...document.querySelectorAll('.media-editor li')]
-    expect(rows.map((r) => r.textContent?.trim())).toEqual(['2026-07-14', 'none', 'reading…'])
+    expect(rows.map((r) => r.textContent.trim())).toEqual(['2026-07-14', 'none', 'reading…'])
     expect(rows[1].getAttribute('aria-current')).toBe('true')
   })
 
