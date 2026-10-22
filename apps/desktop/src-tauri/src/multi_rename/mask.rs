@@ -322,6 +322,11 @@ impl Mask {
         Ok(Self(tokens))
     }
 
+    /// Whether it reads any file's EXIF or tags (`[=source.field]`).
+    pub fn uses_media(&self) -> bool {
+        self.0.iter().any(|token| matches!(token, Token::Media(_)))
+    }
+
     /// The mask's text for `row`, or the first media field it has no text for.
     /// A field still being read wins over every other gap: its value may yet come.
     pub fn render(&self, row: &RowFacts<'_>) -> Result<String, FieldGap> {

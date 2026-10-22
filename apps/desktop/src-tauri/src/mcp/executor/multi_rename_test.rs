@@ -84,6 +84,29 @@ fn bad_params_are_refused_with_the_field_named() {
     parse_request(&json!({ "names": "a.jpg" })).expect_err("names must be an array");
 }
 
+/// The tool has no session to read EXIF and tags, so a media field would read as "no
+/// value" (or quietly as the modified date) on every row: it's refused, typed.
+#[test]
+fn a_mask_with_media_fields_is_refused_as_needing_the_sheet() {
+    for spec in [
+        json!({ "nameMask": "[=exif.taken|modified:YMD] [N]" }),
+        json!({ "extensionMask": "[=tag.genre]" }),
+    ] {
+        let request = parse_request(&spec).expect("valid params");
+        let err = compile(&request.spec).err().expect("refused");
+        assert_eq!(
+            err.data,
+            Some(json!({ "specError": { "type": "mediaFieldsNeedTheSheet" } })),
+            "{spec}"
+        );
+    }
+    let request = parse_request(&json!({ "nameMask": "[N] [C:2]" })).expect("valid params");
+    assert!(compile(&request.spec).is_ok(), "no media field, no refusal");
+    let request = parse_request(&json!({ "nameMask": "[N" })).expect("valid params");
+    let err = compile(&request.spec).err().expect("a bad mask");
+    assert_eq!(err.data.expect("typed")["specError"]["type"], "nameMask");
+}
+
 /// Paging a proposal would silently propose a slice, so it's refused.
 #[test]
 fn paging_params_beside_a_proposal_are_refused() {

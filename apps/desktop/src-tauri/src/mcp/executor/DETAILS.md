@@ -90,6 +90,10 @@ Depth for the MCP tool-execution layer. `CLAUDE.md` holds the must-knows.
   sheet knob is an optional param under `MultiRenameSpec`'s own camelCase name (a test pins the schema declares each).
   Files come from `resolve_pane_target_paths` (`names`, else the selection, else the cursor item); the preview is the
   sheet's own `multi_rename::plan::preview_names` against the pane's cached listing, so a status here is the sheet's.
+  It has no session to read EXIF and tags, so a mask with a `[=source.field]` is refused as
+  `data.specError: { type: 'mediaFieldsNeedTheSheet' }` (`compile`). **Why:** previewed with `NoMedia`, every row would
+  read as having no value, or `|modified` would quietly put the modified date where the user expects a capture date.
+  The alternative, reading the files inline, is David's open call.
   `dryRun` (default true) pages the rows with `start` / `limit` (max 200, then `fit_to_result_budget`) and an
   `all` / `problems` filter, with counts over every row. `dryRun: false` stages ONLY the ready rows as one rename group
   on the suggested-ops spine (`agent::suggested_ops::propose`, no conversation), each op carrying its listing size,

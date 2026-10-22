@@ -174,7 +174,8 @@ answers the sheet.
 - **Rows see media through `RowFacts.media: RowMedia`** (`Reading`, `Read(&MediaFacts)`, `Unreadable`, `NotMedia`).
   `plan::preview` / `preview_names` take a `&dyn MediaLookup`, whose `media(&FileEntry)` answers each row; the entry
   carries size and modification time, so a lookup can tell a file that changed since it was read. `NoMedia` answers
-  `NotMedia` for every row: the MCP tool and the plan tests pass it. The session passes its cache's `Lookup`.
+  `NotMedia` for every row: the MCP tool (which refuses media masks first, `Compiled::uses_media`) and the plan tests
+  pass it. The session passes its cache's `Lookup`.
 - **The cache** (`SessionMedia`, one per session, `Arc`-shared with its loader): each file's `MediaRead` (`Reading`,
   `Read(Arc<MediaFacts>)`, `Unreadable`, `NotMedia`) with the listing's size and modified time it was read for, the
   read queue, the files in flight, and running counts for `MediaProgress`. `session::open` seeds it from the listing:

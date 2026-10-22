@@ -296,6 +296,32 @@ fn spec_error(error: crate::multi_rename::plan::SpecError) -> ToolError {
         .with_data(json!({ "specError": data }))
 }
 
+/// Why the tool refuses a spec the sheet would take, in `data.specError` beside the
+/// sheet's own `SpecError`s.
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+enum ToolSpecRefusal {
+    /// A mask uses `[=source.field]`. Only the sheet reads files' EXIF and tags;
+    /// here every row would read as having none, or quietly take the modified date.
+    MediaFieldsNeedTheSheet,
+}
+
+/// `spec`, compiled for a preview with no media read behind it: a mask with media
+/// fields is refused rather than previewed wrong.
+fn compile(spec: &MultiRenameSpec) -> Result<Compiled, ToolError> {
+    let compiled = Compiled::new(spec).map_err(spec_error)?;
+    if compiled.uses_media() {
+        let data = serde_json::to_value(ToolSpecRefusal::MediaFieldsNeedTheSheet).unwrap_or(Value::Null);
+        return Err(ToolError::invalid_params(
+            "Media fields like [=exif.taken] or [=tag.artist] need the Multi-rename sheet, which reads each file's EXIF \
+             and tags; this tool can't. Ask the user to open the sheet (⌃M), or use a mask without them. See \
+             data.specError.",
+        )
+        .with_data(json!({ "specError": data })));
+    }
+    Ok(compiled)
+}
+
 pub async fn execute_multi_rename<R: Runtime>(app: &AppHandle<R>, params: &Value) -> ToolResult {
     let request = parse_request(params)?;
     let (_pane, state) = target_pane_state(app, params)?;
@@ -317,7 +343,7 @@ pub async fn execute_multi_rename<R: Runtime>(app: &AppHandle<R>, params: &Value
     let siblings = crate::listing_host::listings()
         .cached_entries(&volume_id, &folder)
         .ok_or_else(|| ToolError::internal("The pane's listing isn't available yet"))?;
-    let compiled = Compiled::new(&request.spec).map_err(spec_error)?;
+    let compiled = compile(&request.spec)?;
 
     // A mask and a regex per row: off the async worker for a big folder.
     let (rows, siblings) = tokio::task::spawn_blocking({

@@ -224,6 +224,11 @@ impl Compiled {
         })
     }
 
+    /// Whether either mask reads files' EXIF or tags, which only a session's media read answers.
+    pub(crate) fn uses_media(&self) -> bool {
+        self.name_mask.uses_media() || self.extension_mask.uses_media()
+    }
+
     /// The new full name for `entry` at `position` in the rename order, with its media facts.
     fn new_name(
         &self,

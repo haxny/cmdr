@@ -1,5 +1,5 @@
 {
-  "$comment": "Shared test vectors for the media field placeholder `[=source.field|modified:format]` (`mask.rs` `media_token()`), read by the Rust parser's test and by the frontend's `media-token.test.ts`, so the two grammars can't drift. `maxDigits` is `MAX_COUNTER_DIGITS`. `fields` lists every field: its mask `name`, its IPC `wire` name (`MediaField`'s camelCase variant), and its `kind`, which decides the format it takes. Each `valid` entry is a whole token and what it parses to: the field's mask name, whether it falls back to the modified date (`|modified`, date fields only), and its `format`: `null` for none, `{ kind: 'date', text }` with the date letters as typed, `{ kind: 'digits', digits }` for a number, or `{ kind: 'range', range }` for text, `range` as `range_token_vectors.json` writes one. `minimal` is the frontend's rewrite of the same token: the Rust test checks it renders the same. Each `invalid` entry is a token the mask parser rejects as an unknown placeholder. Keep every number within ±2^53 so JavaScript reads it exactly.",
+  "$comment": "Shared test vectors for the media field placeholder `[=source.field|modified:format]` (`mask/media_token.rs` `media()`), read by the Rust parser's test and by the frontend's `media-token.test.ts`, so the two grammars can't drift. `maxDigits` is `MAX_COUNTER_DIGITS`. `fields` lists every field: its mask `name`, its IPC `wire` name (`MediaField`'s camelCase variant), and its `kind`, which decides the format it takes. Each `valid` entry is a whole token and what it parses to: the field's mask name, whether it falls back to the modified date (`|modified`, date fields only), and its `format`: `null` for none, `{ kind: 'date', text }` with the date letters as typed, `{ kind: 'digits', digits }` for a number, or `{ kind: 'range', range }` for text, `range` as `range_token_vectors.json` writes one. `minimal` is the frontend's rewrite of the same token: the Rust test checks it renders the same. Each `invalid` entry is a token the mask parser rejects as an unknown placeholder. Keep every number within ±2^53 so JavaScript reads it exactly.",
   "maxDigits": 64,
   "fields": [
     { "name": "exif.taken", "wire": "exifTaken", "kind": "date" },
@@ -87,6 +87,12 @@
     "[=tag.artist:x]",
     "[=tag.artist:N2]",
     "[=tag.artist:2-x]",
-    "[=tag.artist:d]"
+    "[=tag.artist:d]",
+    "[=tag.track:4294967296]",
+    "[=tag.track: 2]",
+    "[=tag.track:٣]",
+    "[=tag.artist:2:3]",
+    "[=exif.taken|modified:]",
+    "[=exif.taken:Y|M]"
   ]
 }
