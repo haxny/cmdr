@@ -41,15 +41,25 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
 ## The code today (fresh look, 2026-10-22)
 
 - **Sort columns**: `SortColumn { Name, Extension, Size, Modified, Created }` (`crates/cmdr-listing/src/sorting.rs:18`),
-  mirrored by hand in `apps/desktop/src/lib/file-explorer/types.ts:416`, `lib/commands/types.ts:45`, and `bindings.ts`.
-  Default orders: `types.ts:422`. Persisted parse: `lib/app-status-store.ts:141`.
+  mirrored by hand in `apps/desktop/src/lib/file-explorer/types.ts:416`, `lib/commands/types.ts:45`,
+  `routes/(main)/explorer-api.ts:173,176` (inline unions), and `bindings.ts`. Default orders: `types.ts:422`. Persisted
+  parse: `lib/app-status-store.ts:141`.
 - **One comparator**: `entry_comparator` (`sorting.rs:220`) over `SortableEntry` (`sorting.rs:74`), implemented by
   `FileEntry`, the private `Keyed`, and `SearchSortRow` (`src-tauri/src/commands/search.rs:369`, modified only;
   `created_at` answers `None`).
 - **Sort sites** that read a column: `streaming.rs:340` (first read), `operations.rs:94` (test seam),
-  `operations.rs:524` (resort, which writes `listing.sort_by` at `:525`), `pipeline.rs:65`, `mutate.rs:43,188`,
-  `reread.rs:185`, `refresh.rs:202`, `caching.rs:80,121` (the listings handed to refresh). `CachedListing::sort_by`
-  (`cached_listing.rs:125`) is one field, so requested and effective are the same thing today.
+  `operations.rs:524` (resort, which writes `listing.sort_by` at `:525`), `pipeline.rs:65`, `mutate.rs:43,188`, and
+  `reread.rs:182-188`. That last one is `update_listing_entries`, THE landing step of every full re-read: `reread.rs`
+  `refresh`, the watcher's `notify_full_refresh_locked` (`refresh.rs:139`), a backend's handed-over entries, and the
+  backend-swap respell (`foreign_path.rs:180-209`, which re-resolves the volume). It sorts by `listing.sort_by` under
+  the cache lock. The `(listing_id, sort_by, …)` tuples from `caching.rs:61-80,103-121` and `refresh.rs:190-205` are
+  dead weight: every consumer destructures `(listing_id, ..)` (`caching.rs:171-205`, `refresh.rs:178`,
+  `foreign_path.rs:139`). `CachedListing::sort_by` (`cached_listing.rs:125`) is one field, so requested and effective
+  are the same thing today.
+- **`ResortResult`** (`operations.rs:451`) answers both `resort_listing` and `set_listing_include_hidden`
+  (`operations.rs:148`); the FE applies both through `applyRowResult` (`hidden-files-resync.ts` too).
+- **`DirectoryDiffBatch`** (`diff.rs:126`) carries rows only; `publish_changes` (`cached_listing.rs:460`) publishes
+  nothing when the diff is empty.
 - **`FileEntry`** (`crates/cmdr-fs/src/entry.rs:118`) already has `added_at`, `opened_at`, and
   `extended_metadata_loaded`, plus an `ExtendedMetadata` struct (`entry.rs:414`). All dead in production:
   - `reading.rs::list_directory` (`:61-100`) is `testing`-gated and is the only filler; `get_extended_metadata_batch`
@@ -63,7 +73,7 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
   at a volume root, `inode` only for hardlinked files, `permissions = st_mode` (type bits included), physical size
   `st_blocks * 512`. `get_single_entry` (`:273`) is the single-path twin the watcher's re-stat, `mutation.rs`, and
   `create.rs` use.
-- **Change detection ignores every date but mtime**: `diff.rs:247` (`is_entry_modified`) and `mutate.rs:197-199`
+- **Change detection ignores every date but mtime**: `diff.rs:248` (`is_entry_modified`) and `mutate.rs:197-199`
   (`sort_relevant_changed`). So today a Created sort doesn't re-place a row whose `created_at` changed. Same for the new
   columns unless fixed.
 - **Frontend date surfaces**:
@@ -94,25 +104,32 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
 - **Effective sort is computed in the backend, at sort time.** Why: the listing cache, the watcher's sorted inserts,
   re-reads, search snapshots, and MCP all have to agree on row order, and the cache is the one place that orders rows
   ("smart backend, thin frontend"). The FE reads the result: `effectiveSortBy` rides on `listing-complete`,
-  `ResortResult`, and `sort_search_results`'s answer.
+  `ResortResult`, `sort_search_results`'s answer, and (when a re-read moves it) the `DirectoryDiffBatch` that lands the
+  re-sorted rows. `listing-complete` is also what puts the glyph up on navigating into an unsupporting volume while
+  already sorted by a date, so the FE never needs the volume's dates before a listing lands.
 - **`EffectiveSort` is a type, not a convention.** `entry_comparator` and `sort_entries` take an `EffectiveSort`
   (column + order + dir mode) whose only constructor is `EffectiveSort::resolve(requested, order, dir_mode, supported)`.
   Rule: if `requested` is Created / Added / Opened and `supported` lacks it, the column is Modified; otherwise it's
   `requested`. A sort site that forgets the fallback then doesn't compile.
 - **`CachedListing` keeps the requested column plus the volume's `SupportedDates`**, captured from the RESOLVED volume
   at read time (so a routed archive declares its own). `effective()` derives the column; ❌ no stored effective field to
-  drift.
+  drift. The dates travel on `Prepared` from `prepare(ReadBy::Volume { .. })`, so the first read and every re-read
+  (including the respell after a smbfs mount is swapped for direct SMB) refresh them in ONE place,
+  `update_listing_entries`. `ReadBy::StdFs` and handed-over entries carry none and keep the listing's.
 - **`supported_dates` is a `Volume` predicate, not a `VolumeCapabilities` field.** The engine is its only reader (the FE
-  learns the effective column from the listing), and `capabilities.rs` says unread fields drift. Signature
-  `fn supported_dates(&self, path: &Path) -> SupportedDates`, default `SupportedDates::NONE` (Modified only), so a new
-  backend can't claim a date it never fills; the conformance assertion catches a backend that fills one it didn't claim.
-  The path parameter exists because the root volume can list a directory on another filesystem; backends other than
-  local ignore it.
+  learns the effective column from the listing), and `capabilities.rs` says unread fields drift. Signature: async like
+  the trait's other per-path methods (`Pin<Box<dyn Future<Output = SupportedDates> + Send + '_>>`, path in), default
+  `SupportedDates::NONE` (Modified only), so a new backend can't claim a date it never fills; the conformance assertion
+  catches a backend that fills one it didn't claim. The path parameter exists because the root volume can list a
+  directory on another filesystem; backends other than local ignore it. Async because the local probe is a syscall on
+  the listed directory and a smbfs mount can stall it: it runs in `spawn_blocking` beside the listing, the way the
+  sidecar probe does (`local_posix/scan.rs:164-178`), ❌ never on an async worker or under the cache lock.
 - **Local volumes ask the filesystem**: `getattrlist(ATTR_VOL_ATTRIBUTES)` on the listed directory, checking
   `validattr.commonattr` for `ATTR_CMN_CRTIME` and `ATTR_CMN_ADDEDTIME`, cached per `fsid`. Opened is supported where
   Added is (APFS, HFS+): those keep xattrs natively; on FAT/exFAT an xattr is an AppleDouble `._` sidecar and per-entry
-  reads there are too costly. Linux: Created when `statx` birth time is available on the root probe, never Added or
-  Opened. `FilesystemKind` is the test oracle, ❌ not the decider.
+  reads there are too costly. Linux: Created when `statx` returns a birth time for the listed directory, never Added or
+  Opened. Precedent for a per-device probe: `cmdr_fs::apple_double::volume_keeps_sidecars`. `FilesystemKind` is the test
+  oracle, ❌ not the decider.
 - **Search results support Modified only.** `SearchSortRow` comes from the index, which stores no creation, added, or
   opened time. A search pane asked for Added falls back like any volume, with the same hint. Extending the index is out
   of scope.
@@ -251,43 +268,64 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
   - `EffectiveSort` + `resolve` (§ Decisions); `entry_comparator` and `sort_entries` take it. Every sort site listed in
     § "The code today" goes through it.
   - `CachedListing` stores `supported_dates` (from the resolved volume, at `streaming.rs:331` and the test seam at
-    `operations.rs:88`) and exposes `effective()`. A full re-read that re-resolves a volume refreshes it; if that moves
-    the effective column, the listing resorts and the FE hears it (same event as a resort; find the existing re-read
-    notification and extend it rather than adding a channel).
+    `operations.rs:88`) and exposes `effective()`. `Prepared` carries the read's dates (§ Decisions) and
+    `update_listing_entries` (`reread.rs:156`) writes them before it sorts. When that moves the effective column, the
+    batch it publishes carries `effective_sort_by: Some(column)` (new optional field on `DirectoryDiffBatch`,
+    `diff.rs:126`), and it publishes that batch even when the row diff is empty (`publish_changes` skips empty diffs
+    today), or a one-row folder never tells the FE its displayed date moved. Coalescing keeps the last `Some`.
+  - Drop the dead sort fields from the `(listing_id, sort_by, …)` tuples (§ "The code today"): `CachedListing` is the
+    only holder of sort state, so nothing can hand a resolved column around to be persisted.
   - `ListingCompleteEvent` (`listing_host/events.rs:52`) and `ResortResult` (`operations.rs:451`) gain
-    `effective_sort_by: SortColumn`.
-  - `is_entry_modified` (`diff.rs:247`) and `sort_relevant_changed` (`mutate.rs:197`) include `created_at`, `added_at`,
-    `opened_at`. Make `sort_relevant_changed` ask "did the EFFECTIVE column's key change" (plus kind), so it can't fall
-    behind the enum again.
+    `effective_sort_by: SortColumn`. `ResortResult` is also `set_listing_include_hidden`'s answer (`operations.rs:148`):
+    fill it from `listing.effective()` there too.
+  - `is_entry_modified` (`diff.rs:248`) includes `created_at`, `added_at`, `opened_at` regardless of the sort: the
+    tooltip shows every date, so a row whose Opened moved needs its Modify.
+  - Replace `sort_relevant_changed` (`mutate.rs:197-199`) with `sort_key_changed(old, new, &EffectiveSort)` in
+    `sorting.rs`, beside `compare_by_column`, reading the same `SortableEntry` accessors the comparator reads for that
+    column, plus `is_directory`. For Size that includes `known_dir_size` (`recursive_size` + `recursive_size_complete`),
+    which today's predicate misses: a directory whose recursive size moved under a LikeFiles or Mixed Size sort stays
+    put. A false positive costs a harmless re-place; a false negative is a misplaced row, so when unsure answer true.
+    Its one caller is `update_entry_sorted`, reached from `notify_modified` (`caching.rs:270`) and `observe_children`
+    (`reread.rs:254`).
   - `sort_search_results` (`search.rs:424`) resolves with `SupportedDates::NONE` and answers
     `{ order, effectiveSortBy }`.
   - MCP backend: `view.rs:76` and the schema accept `added`, `opened`; regenerate the tools fixture.
-  - `pnpm bindings:regen`, and the FE compiles: extend both `SortColumn` unions, `defaultSortOrders` (descending for
-    both), `parseSortColumn`, and give the FE call sites a placeholder only where the compiler forces one (M5 owns
-    them).
+  - `pnpm bindings:regen`, and the FE compiles: extend both `SortColumn` unions and `explorer-api.ts:173,176`,
+    `defaultSortOrders` (descending for both), `parseSortColumn`, and give the FE call sites a placeholder only where
+    the compiler forces one (M5 owns them).
 - **Intentions**: rows are always in the effective order everywhere (cache, inserts, diffs, search, MCP), and the
   requested column is what's stored and echoed.
 - **Landmines**:
   - `operations.rs:525` writes `listing.sort_by = sort_by`: that must stay the REQUESTED column.
-  - `caching.rs:61-80,111-121` and `refresh.rs` hand `(listing_id, sort_by, …)` tuples around: pass the listing's
-    requested column and supported dates (or an `EffectiveSort`), ❌ never a pre-resolved column that then gets
-    persisted somewhere.
+  - Only `effective()` feeds a comparator; `listing.sort_by` read directly anywhere but the echo to the FE is the bug
+    this type exists to stop. `rg 'listing.sort_by'` after the change should show only the resort write and the echo.
   - `update_entry_sorted` resolves the index BEFORE `entries_mut` (`cmdr-listing/CLAUDE.md`); don't reorder while
     editing the predicate.
   - A sort change bumps the FE's `cacheGeneration` (`cmdr-listing/CLAUDE.md`); an effective-only change must too.
   - Flip M1's `update_entry_sorted` anchor: a `created_at` change under a Created sort now re-places the row.
 - **Test plan** (red → green): `resolve` truth table; a listing on an `InMemoryVolume` without Added, requested Added,
   orders by mtime and reports `effective_sort_by = Modified` while `sort_by` stays Added; resort to Name and back;
-  `update_entry_sorted` under Added re-places on an `added_at` change; diff reports an `opened_at` change; search sort
+  `update_entry_sorted` under Added re-places on an `added_at` change; a directory's `recursive_size` change re-places
+  it under a LikeFiles Size sort; diff reports an `opened_at` change; a re-read whose volume now claims Added (swap the
+  `InMemoryVolume` between reads) publishes a batch with `effective_sort_by` even for a one-row listing; search sort
   with Added answers Modified's order and says so; MCP `sort` accepts `added`.
 - **DONE**: gates incl. clippy.
 
 ### M5: frontend plumbing, commands, and menus
 
 - **Scope**:
-  - Pane state gains `effectiveSortBy`, swapped in atomically with the rows it describes: from
-    `listing-loader.ts::handleListingComplete`, `applyRowResult` (resort), and the snapshot store's sort result. ❌ Not
-    persisted. Expose it on `FilePaneAPI` for MCP.
+  - Pane state gains `effectiveSortBy`, swapped in atomically with the rows it describes, from every place the pane's
+    row space changes hands:
+    - `listing-loader.ts::handleListingComplete`, in the synchronous step beside `setTotalCount` (`:659`), before its
+      first `await` (`findFileIndex`, `:666`).
+    - `applyRowResult` (`pane/types.ts:221`), which serves both resort and the hidden-files toggle.
+    - The pane's `directory-diff` handler, from a batch's `effectiveSortBy` when present, applied with that batch.
+    - `getSwapState` / `adoptListing` (`listing-loader.ts:810-835`): a pane swap trades listings with no backend call,
+      so the effective column travels in `SwapState` with them.
+    - The snapshot store: `sortSnapshot` (`search/snapshot-sort.svelte.ts:106-110`) stores the answer's
+      `effectiveSortBy` beside `sort` in `applySnapshotSort`. A snapshot in relevance order (`sort === null`) has no
+      effective column, and the displayed date is Modified.
+    - ❌ Not persisted. Expose it on `FilePaneAPI` for MCP.
   - Commands `sort.byAdded`, `sort.byOpened`: `COMMAND_IDS`, `command-registry.ts` / `commands/sources/main-window.ts`,
     `sort-handlers.ts`, `SortableHeader.svelte:48` map, `listener-setup.ts:262` map, Rust `SORT_BY_ADDED_ID` /
     `SORT_BY_OPENED_ID` (`command_map.rs`, unmapped like Created, extend the test at `:700-707`), `menu_bar.rs` items
@@ -308,15 +346,19 @@ plan adds `Added` and `Opened` sort columns beside `Created`, a single "displaye
   - `DualPaneExplorer.svelte` / `FilePane.svelte` are at their size cap: new logic goes in a `*.svelte.ts` / `*.ts`
     helper.
 - **Test plan**: Vitest for the sort-operations fallback toast (fires on user sort, silent on navigation), the listener
-  map, and the MCP state line; Rust menu snapshot and command map tests.
+  map, and the MCP state line; invariant 2 in a fallback (requested Added, effective Modified): a swap, a tab's
+  persisted `sortBy`, the next `resortListing` call, and MCP's `sort` all carry Added, and `adoptListing` installs the
+  partner's effective column; a diff batch with `effectiveSortBy` updates the pane; Rust menu snapshot and command map
+  tests.
 - **DONE**: gates incl. clippy.
 
 ### M6: the displayed date in Full mode
 
 - **Scope**:
-  - New `apps/desktop/src/lib/file-explorer/displayed-date.ts`: `displayedDateColumn(effectiveSortBy)`,
-    `dateOf(entry, column)`, the header label key, the tooltip label key, and the a11y phrase key per date column. Pure,
-    fully tested. Add it to `file-explorer/CLAUDE.md`'s map.
+  - New `apps/desktop/src/lib/file-explorer/displayed-date.ts`: `displayedDateColumn(effectiveSortBy)` (taking
+    `SortColumn | null`, null being a search pane in relevance order), `dateOf(entry, column)`, the header label key,
+    the tooltip label key, and the a11y phrase key per date column. Pure, fully tested. Add it to
+    `file-explorer/CLAUDE.md`'s map.
   - Full cells (`FullList.svelte:813`), header label (`FullListHeader.svelte:126-135`, still a `SortableHeader`, active
     when the requested sort is a date), and the measurer (`measure-column-widths.ts:324,429`) all read it. The header's
     width includes the label of the SHOWN date, the chevron (M7), and the fallback glyph.
