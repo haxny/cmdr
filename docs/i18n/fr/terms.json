@@ -3577,7 +3577,7 @@
   "user": {
     "chosen": "utilisateur",
     "confidence": "high",
-    "forms": "user ID (Unix uid) → ID utilisateur, group ID → ID de groupe (MS FRA identifiant utilisateur, UID); the ID treated as nobody → un utilisateur anonyme; a person in prose → name the object or vous, never a gendered role noun",
+    "forms": "user ID (Unix uid) → ID utilisateur, group ID → ID de groupe (MS FRA identifiant utilisateur, UID); give user ID 0 no rights → n’accorder aucun droit à l’ID utilisateur 0; a person in prose → name the object or vous, never a gendered role noun",
     "sources": "MS terminology FRA (user → utilisateur; user ID → identifiant utilisateur / UID); catalog (compte utilisateur, nom d’utilisateur)"
   },
   "username": {

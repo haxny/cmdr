@@ -672,7 +672,6 @@ Apple's `Dock.app` `DockMenus.strings` supplies almost every phrase (`KEEP_IN_DO
 - `servers.refusal.reservedPortRequired` quotes Synology DSM de's switch
   `Verbindungen von nicht-privilegierten Ports zulassen` (dropping „(Ports über 1024)“ like the English); its `zulassen`
   is a quoted label, so the `allow` ruling yields.
-- „Act as user ID“ → `Zugriff als Benutzer-ID` (`Als … handeln` is stilted); open in `review-queue.md`.
 - A pronoun after `Freigabe` never reaches back past `Liste` or `Option` (both feminine): repeat the noun or take the
   article (`gib den Pfad ein`).
 

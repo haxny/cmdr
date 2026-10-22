@@ -3355,7 +3355,7 @@
     "accept": ["användaren", "användar-ID"],
     "chosen": "användare",
     "confidence": "high",
-    "forms": "användaren, användare; user ID → användar-ID, group ID → grupp-ID (hyphen after the acronym); the NFS uid field → Agera som användar-ID",
+    "forms": "användaren, användare; user ID → användar-ID, group ID → grupp-ID (hyphen after the acronym)",
     "sources": "MS terminology (user ID → användar-ID, group identifier → grupp-ID); catalog (användaren, användare)"
   },
   "username": {

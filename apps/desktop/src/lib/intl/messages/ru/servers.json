@@ -509,7 +509,7 @@
   },
   "servers.sheet.nfsUid": "ID пользователя",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "ID группы",
   "@servers.sheet.nfsGid": {
@@ -531,9 +531,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "Большинство серверов приравнивают ID пользователя 0 к пользователю без прав.",
+  "servers.sheet.nfsUidZeroWarning": "Большинство серверов не дают ID пользователя 0 никаких прав.",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "Папка, с которой открывается общая папка. Оставьте пустым, чтобы открывать саму общую папку.",
   "@servers.sheet.nfsStartFolderHelp": {

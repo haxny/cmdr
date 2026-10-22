@@ -509,9 +509,9 @@
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Agera som användar-ID",
+  "servers.sheet.nfsUid": "Användar-ID",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "Grupp-ID",
   "@servers.sheet.nfsGid": {
@@ -533,9 +533,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "De flesta servrar behandlar användar-ID 0 som ingen användare alls.",
+  "servers.sheet.nfsUidZeroWarning": "De flesta servrar ger användar-ID 0 inga behörigheter.",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "Mappen exporten öppnas i. Lämna fältet tomt för att öppna själva exporten.",
   "@servers.sheet.nfsStartFolderHelp": {

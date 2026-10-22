@@ -507,9 +507,9 @@
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Dùng ID người dùng",
+  "servers.sheet.nfsUid": "ID người dùng",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "ID nhóm",
   "@servers.sheet.nfsGid": {
@@ -531,9 +531,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "Hầu hết máy chủ coi ID người dùng 0 là một tài khoản không có quyền gì.",
+  "servers.sheet.nfsUidZeroWarning": "Hầu hết máy chủ không cấp quyền gì cho ID người dùng 0.",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "Thư mục hiện ra đầu tiên khi bạn mở thư mục chia sẻ. Để trống để mở chính thư mục chia sẻ.",
   "@servers.sheet.nfsStartFolderHelp": {

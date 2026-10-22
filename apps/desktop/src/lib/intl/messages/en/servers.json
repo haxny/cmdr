@@ -415,7 +415,7 @@
   },
   "servers.refusal.reservedPortRequired": "{host} only accepts connections from a privileged port, which Cmdr can’t open here. Turn on the export’s “insecure” option on the server (some NAS apps call it “Allow connections from non-privileged ports”), then try again.",
   "@servers.refusal.reservedPortRequired": {
-    "description": "Under the Export field when the NFS export only accepts requests from a privileged network port (below 1024) and Cmdr couldn’t use one. “insecure” is the literal name of the NFS export option, keep it in English inside the quotes; the second quoted name is how some NAS apps label the same switch, translate it the way those apps do. “Cmdr” is the product name.",
+    "description": "Under the Export field when the NFS export only accepts requests from a privileged network port (below 1024) and Cmdr couldn’t use one. “insecure” is the literal name of the NFS export option, keep it in English inside the quotes; the second quoted name is how some NAS apps label the same switch, translate it the way those apps do, and keep it in English if no NAS app you can find has your language. “Cmdr” is the product name.",
     "placeholders": {
       "host": "the NFS server’s hostname or address, like \"nas.local\""
     }
@@ -596,7 +596,7 @@
   },
   "servers.sheet.addressHelpNfs": "A hostname, or an address like nfs://nas.local/share or nas.local:/share.",
   "@servers.sheet.addressHelpNfs": {
-    "description": "One line under the address field while NFS is the selected protocol, telling the user what they can type or paste. Keep the two example addresses as-is."
+    "description": "One line under the address field while NFS is the selected protocol, telling the user what they can type or paste. Keep the two example addresses as-is: the “share” inside them is part of each address, a path on the server, not the word for an SMB share."
   },
   "servers.sheet.addressLooksLikeSmb": "This looks like an SMB address. Pick SMB above if that’s what you meant.",
   "@servers.sheet.addressLooksLikeSmb": {
@@ -659,7 +659,7 @@
       "host": "the NFS server’s hostname or address, like \"nas.local\""
     }
   },
-  "servers.sheet.nfsUid": "Act as user ID",
+  "servers.sheet.nfsUid": "User ID",
   "@servers.sheet.nfsUid": {
     "description": "Label of a number field in the NFS add form: the numeric user ID (a Unix uid, like 1000) Cmdr uses for every request to the server, which decides what the user may open there. Keep it short; it sits beside the Group ID field."
   },
@@ -683,9 +683,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "description": "One line under the user ID and group ID fields in the NFS add form, when Cmdr filled them in with the user’s own IDs on this Mac because it couldn’t tell who owns the files on the server."
   },
-  "servers.sheet.nfsUidZeroWarning": "Most servers treat user ID 0 as nobody.",
+  "servers.sheet.nfsUidZeroWarning": "Most servers give user ID 0 no rights.",
   "@servers.sheet.nfsUidZeroWarning": {
-    "description": "Warning under the user ID field in the NFS add form when the user typed 0 (the administrator’s ID): most NFS servers map it to an account with no rights. It doesn’t block anything."
+    "description": "Warning under the user ID field in the NFS add form when the user typed 0 (the administrator’s ID): most NFS servers map it to an account with no rights (root squashing), so it opens less, not more. It doesn’t block anything."
   },
   "servers.sheet.nfsStartFolderHelp": "Where the export opens. Leave it empty to open the export itself.",
   "@servers.sheet.nfsStartFolderHelp": {

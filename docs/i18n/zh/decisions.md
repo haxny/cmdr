@@ -528,8 +528,7 @@ Total Commander zh-CN labels: `批量重命名`, mask `名称规则` (TC `重命
 
 - Export `共享文件夹` (Synology DSM zh-CN) over `导出` (a data-export button); the port switch quotes Synology's
   `允许来自非特权端口的连接`.
-- uid/gid `用户 ID` / `群组 ID` (Finder Get Info's 用户/群组; `分组` is rows); uid 0 "as nobody" `匿名用户` (the NFS
-  anonymous account).
+- uid/gid `用户 ID` / `群组 ID` (Finder Get Info's 用户/群组; `分组` is rows).
 
 ## Range editor (`multiRename.rangeEditor.*`)
 

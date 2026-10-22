@@ -510,7 +510,7 @@
   },
   "servers.sheet.nfsUid": "ID utilisateur",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "ID de groupe",
   "@servers.sheet.nfsGid": {
@@ -532,9 +532,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "La plupart des serveurs traitent l’ID utilisateur 0 comme un utilisateur anonyme.",
+  "servers.sheet.nfsUidZeroWarning": "La plupart des serveurs n’accordent aucun droit à l’ID utilisateur 0.",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "Le partage s’ouvre dans ce dossier. Laissez ce champ vide pour ouvrir le partage lui-même.",
   "@servers.sheet.nfsStartFolderHelp": {

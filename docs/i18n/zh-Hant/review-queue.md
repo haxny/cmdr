@@ -75,6 +75,3 @@ worth keeping).
   rendered, dodging the disk sense of `格式化`.
 - **`共享資料夾` for an NFS export** (`servers.sheet.nfsExport` and every `nfs*` / `refusal.export*` key): shares the
   SMB share's word, so the two protocols' folders read alike; Synology DSM zh-TW says `共用資料夾`, MS/Linux `匯出`.
-  **`以使用者 ID 存取`** (`servers.sheet.nfsUid`): "Act as user ID", composed; bare `使用者 ID` is the fallback.
-  **`沒有任何權限的使用者`** (`servers.sheet.nfsUidZeroWarning`): "nobody" rendered by meaning, not the literal account
-  name.

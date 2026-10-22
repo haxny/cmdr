@@ -306,7 +306,7 @@ Terms live in `terms.json`, voice and mechanics in `style.md`, open questions in
 - `Mapp på servern` (❌ `fjärrmapp`). `Lämna fältet tomt`: `Lämna den tom` after `Mappen …` means an empty folder.
 - `ditt konto får läsa den`; the `*NotFound` siblings share a frame. `accountLocked` says `identifierar` (the sheet has
   a `Namn` field). `Öppna servern igen för att försöka på nytt` names the noun.
-- NFS export → `export` (`exporten`), as Swedish NAS guides write it.
+- NFS export → `export` (`exporten`), like Swedish NAS guides.
 
 ## Pinned servers, trusted host keys, Android settings rows (`menu.network.*`, `servers.pinHint.*`, `settings.servers.*`, `settings.adb.*`, `settings.fileOperations.adb*`)
 

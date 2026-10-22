@@ -509,7 +509,7 @@
   },
   "servers.sheet.nfsUid": "Felhasználóazonosító",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "Csoportazonosító",
   "@servers.sheet.nfsGid": {
@@ -531,9 +531,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "A legtöbb szerver a 0-s felhasználóazonosítót senkiként kezeli.",
+  "servers.sheet.nfsUidZeroWarning": "A legtöbb szerver semmilyen jogot nem ad a 0-s felhasználóazonosítónak.",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "Ebben a mappában nyílik meg a megosztás. Hagyd üresen, hogy maga a megosztás nyíljon meg.",
   "@servers.sheet.nfsStartFolderHelp": {

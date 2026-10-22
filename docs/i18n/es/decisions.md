@@ -88,7 +88,7 @@ Status and help lines say `foto`; feature and label names keep `imagen` (English
 
 ## Revisar los cambios de nombre (`askCmdr.renameReview.*`, `askCmdr.tool.imageFacts.*`, `askCmdr.tool.searchPhotos.*`, `askCmdr.tool.proposeRenamePlan.*`)
 
-`Nombre actual` / `Nombre nuevo` stay a parallel pair (as `suggestedOps.columnNewName`, `editName`). `Permitir todos` /
+`Nombre actual` / `Nombre nuevo` stay parallel (as `suggestedOps.columnNewName`, `editName`). `Permitir todos` /
 `Denegar todos` agree with `los cambios de nombre`.
 
 ## La indexación de imágenes (`fileExplorer.imageIndex.*`, `settings.mediaIndex.scope.*`, `settings.mediaIndex.chosenFolders.*`, `settings.mediaIndex.showFileStatusIcons.*`, `settings.mediaIndex.progressSummary.title`)

@@ -48,7 +48,7 @@ pub enum NfsIdentitySourceWire {
     ThisMac,
 }
 
-/// The uid and gid the add form fills "Act as user ID" and "Group ID" with.
+/// The uid and gid the add form fills "User ID" and "Group ID" with.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GuessedNfsIdentity {

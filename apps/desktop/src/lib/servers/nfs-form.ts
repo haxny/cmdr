@@ -21,7 +21,7 @@ import { parseServerPath } from './server-path-utils'
 export interface NfsFormFields {
   /** The export as picked from the list or typed, possibly with a folder under it. */
   exportPath: string
-  /** "Act as user ID", as typed: `parseNfsId` reads it. */
+  /** "User ID", as typed: `parseNfsId` reads it. */
   uid: string
   /** "Group ID", as typed. */
   gid: string

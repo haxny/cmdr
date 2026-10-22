@@ -9318,7 +9318,7 @@ export type GoToPathResolution =
   // Defensive: the input was empty or couldn't be turned into a path.
   | { kind: 'invalid'; reason: string }
 
-// The uid and gid the add form fills "Act as user ID" and "Group ID" with.
+// The uid and gid the add form fills "User ID" and "Group ID" with.
 export type GuessedNfsIdentity = {
   // The user id.
   uid: number

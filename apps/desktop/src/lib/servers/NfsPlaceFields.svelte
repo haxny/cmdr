@@ -9,7 +9,7 @@
      * refused listing keeps the export typeable, and a typed uid is never overwritten.
      *
      * ❗ **No password and no Remember box.** `AUTH_SYS` carries a uid, not a secret,
-     * so "Act as user ID" is a setting of the place, ❌ not its identity.
+     * so "User ID" is a setting of the place, ❌ not its identity.
      */
     import { untrack } from 'svelte'
     import Combobox, { type ComboboxItem } from '#lib/ui/Combobox.svelte'

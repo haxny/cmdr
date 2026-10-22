@@ -219,7 +219,7 @@ grammar in `style.md`, open questions in `review-queue.md`.
 
 ### NFS exports (`servers.sheet.nfs*`, `servers.refusal.export*`/`reservedPortRequired`)
 
-- export → `exportação` (IBM and Oracle pt-BR) over `compartilhamento`, which stays SMB's. The owner lines say
+- export → `exportação` (IBM, Oracle pt-BR) over `compartilhamento`, which stays SMB's. The owner lines say
   `a quem pertencem os arquivos`, dodging `dono`. The server's own settings are `configurações de NFS do servidor`.
 
 ## Reconnect and key-only sign-in (`servers.paneState.*`)

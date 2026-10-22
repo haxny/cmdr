@@ -507,9 +507,9 @@
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Actuar como ID de usuario",
+  "servers.sheet.nfsUid": "ID de usuario",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "ID de grupo",
   "@servers.sheet.nfsGid": {
@@ -531,9 +531,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "La mayoría de los servidores tratan el ID de usuario 0 como si no fuera nadie.",
+  "servers.sheet.nfsUidZeroWarning": "La mayoría de los servidores no dan ningún permiso al ID de usuario 0.",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "Dónde se abre la exportación. Déjalo vacío y se abrirá la propia exportación.",
   "@servers.sheet.nfsStartFolderHelp": {

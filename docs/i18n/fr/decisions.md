@@ -341,7 +341,7 @@ and the top traps live in `style.md`; don't repeat them here.
 - export → `partage` (tentative) over `export`: Synology's and QNAP's French UIs say `dossier partagé`, and `export`
   reads as `exportation`. Never `ses partages` after `{host}`: `la liste des partages`.
 - The `insecure` switch's NAS label → `Permettre les connexions à partir des ports non privilégiés` (Synology DSM FR).
-  `ID utilisateur` / `ID de groupe`; "Guessed" → `Déduits` (agrees with the IDs); uid 0 → `un utilisateur anonyme`.
+  `ID utilisateur` / `ID de groupe`; "Guessed" → `Déduits` (agrees with the IDs).
 
 ## Le Dock, le Finder et Aller au dossier (`menu.dock.*`, `main.dockPinNudge.*`, `settings.behavior.dockPinNudgeOfferedAt.*`, `main.revealNudge.*`, `main.revealActivation.*`, `settings.behavior.reveal*`, `menu.go.goToPath`, `goToPath.dialog.*`, `commands.navGoToPath.label`)
 

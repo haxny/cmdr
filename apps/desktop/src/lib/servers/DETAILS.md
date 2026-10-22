@@ -580,11 +580,11 @@ asks for the export and the identity to act as instead (`NfsPlaceFields.svelte`,
 - ❗ **The export field may hold more than the export.** A typed `/share/Public/photos` can't say where `/share/Public`
   ends (QNAP nests `/share` and `/share/Public`), so it goes whole, and the backend splits it against the server's
   export list, the rest becoming the start folder (`crates/cmdr-nfs/DETAILS.md` § "Connecting").
-- **"Act as user ID" and "Group ID"**, filled with a guess once an export is picked (600 ms, `guess_nfs_identity`): the
-  most common non-zero owner of the export root's entries, else the root's own owner, else this Mac's ids. A line under
-  them says which (`servers.sheet.nfsIdentity*`). Typing into either makes both the person's, and no later guess
-  overwrites them. A typed `0` earns a warning (most servers squash root to nobody), ❌ never a block: on a
-  `no_root_squash` export it's what someone means. Connect stays disabled until the export and both ids read.
+- **"User ID" and "Group ID"**, filled with a guess once an export is picked (600 ms, `guess_nfs_identity`): the most
+  common non-zero owner of the export root's entries, else the root's own owner, else this Mac's ids. A line under them
+  says which (`servers.sheet.nfsIdentity*`). Typing into either makes both the person's, and no later guess overwrites
+  them. A typed `0` earns a warning (most servers squash root to nobody), ❌ never a block: on a `no_root_squash` export
+  it's what someone means. Connect stays disabled until the export and both ids read.
 - **Advanced** holds the start folder (export-relative) and "Reconnect automatically".
 - **Edit mode** locks the address and the export, since host, port, and export are the place
   (`servers.sheet.identityLockedNfs`); the uid, gid, start folder, name, and switch stay editable, and a changed uid

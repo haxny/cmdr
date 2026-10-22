@@ -101,10 +101,8 @@ item once settled, and record the outcome in `terms.json` or `decisions.md`.
   no Keychain Access strings, and Apple's help may say `объект связки ключей`. Which does Russian Keychain Access show?
 - **Data wipe headings** (`settings.dataWipe.goesHeading`, `.staysHeading`): `Что будет удалено` / `Что останется` for
   "What goes" / "What stays". Natural pair, or would `Что удалится` read lighter?
-- **NFS export and identity fields** (`servers.sheet.nfsExport`, `servers.sheet.nfsUid`,
-  `servers.sheet.nfsUidZeroWarning`): an NFS export is `общая папка`, as Synology DSM ru says, so it shares a word with
-  SMB shares; the uid label `ID пользователя` drops "Act as". Would NFS users rather see `экспорт` and `UID`, or
-  `От имени пользователя (UID)`?
+- **NFS export** (`servers.sheet.nfsExport`): an NFS export is `общая папка`, as Synology DSM ru says, so it shares a
+  word with SMB shares. Would NFS users rather see `экспорт`?
 
 ## Terms
 

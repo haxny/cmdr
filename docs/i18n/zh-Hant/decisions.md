@@ -135,7 +135,7 @@ one thing was the bug.
   quote the server (`登入「{name}」`). Add anyway `仍要加入` (Apple `仍要儲存`), quoted in `addAnywayHelp`. Optional
   `選填` (`可選` = a step).
 - NFS export `共享資料夾` (Synology `共用資料夾`), ❌ `匯出`. Privileged port `特殊權限連接埠`; the NAS option quotes
-  Synology's `「允許來自非特殊權限之連接埠的連線」`. `使用者 ID` / `群組 ID`; Act as user ID `以使用者 ID 存取`.
+  Synology's `「允許來自非特殊權限之連接埠的連線」`. `使用者 ID` / `群組 ID`.
 
 ## Reconnecting and the nothing-to-ask line (`servers.paneState.reconnecting`, `servers.paneState.signedOutNothingToAsk`)
 

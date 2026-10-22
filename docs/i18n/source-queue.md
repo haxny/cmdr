@@ -7,17 +7,10 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
-- `servers.sheet.nfsUid`: "Act as user ID" won't pair with "Group ID" in a short label; fr, hu, ru, zh dropped "Act as".
-  Say whether a bare "User ID" is fine, or change the English. (all)
-- `servers.sheet.nfsUidZeroWarning`: "as nobody" reads as the Unix `nobody` account or as "no one"; every locale
-  translated the meaning. The description should say which. (all)
-- `servers.sheet.addressHelpNfs`: the literal `share` in the example addresses tripped `network-share` everywhere, each
-  locale adding an exception. Say so in the description, or have the matcher skip URLs. (all)
 - `servers.sheet.nfsExportsEmptyList`: one string covers "the server listed none" and "not asked yet"; split the key if
   the two should read differently. (hu, nl, ru, vi)
-- `servers.refusal.reservedPortRequired`: "translate the NAS label the way those apps do" fails where no NAS app has the
-  language; say "keep the English then", and consider Synology/QNAP strings in the pile. Proposed: a quoted third-party
-  label is exempt from avoid-lists. (de, hu, vi)
+- Proposed: a quoted third-party label (a NAS switch name) is exempt from avoid-lists, since quoting it exactly wins.
+  (de)
 - `sync-locale-keys.ts` reads a quoted string of `--restamp` args as a second locale and dies on `ENAMETOOLONG`; it
   should refuse an invalid tag. (sv)
 - The two `changedDisclosure` keys (host key, certificate): same English ("I’ve checked it") on two nouns, so de and fr

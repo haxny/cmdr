@@ -507,9 +507,9 @@
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "以使用者 ID 存取",
+  "servers.sheet.nfsUid": "使用者 ID",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "群組 ID",
   "@servers.sheet.nfsGid": {
@@ -531,9 +531,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "大多數伺服器會把使用者 ID 0 當成沒有任何權限的使用者。",
+  "servers.sheet.nfsUidZeroWarning": "大多數伺服器不會給使用者 ID 0 任何權限。",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "開啟這個共享資料夾時，會從這個資料夾開始。留空的話，就會開啟共享資料夾本身。",
   "@servers.sheet.nfsStartFolderHelp": {

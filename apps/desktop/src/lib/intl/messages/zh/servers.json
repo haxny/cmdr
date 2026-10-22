@@ -509,7 +509,7 @@
   },
   "servers.sheet.nfsUid": "用户 ID",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "群组 ID",
   "@servers.sheet.nfsGid": {
@@ -531,9 +531,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "大多数服务器会把用户 ID 0 当作匿名用户。",
+  "servers.sheet.nfsUidZeroWarning": "大多数服务器不给用户 ID 0 任何权限。",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "打开这个共享文件夹时进入的文件夹。留空则打开共享文件夹本身。",
   "@servers.sheet.nfsStartFolderHelp": {

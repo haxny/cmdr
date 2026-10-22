@@ -116,7 +116,7 @@ describe('NfsPlaceFields', () => {
 
   it('warns about user ID 0 without blocking anything', async () => {
     await render({ uid: '0', gid: '0', identityFromGuess: false })
-    expect(document.body.textContent).toContain('Most servers treat user ID 0 as nobody.')
+    expect(document.body.textContent).toContain('Most servers give user ID 0 no rights.')
   })
 
   it('puts a refusal under the export, and asks nothing in edit mode', async () => {

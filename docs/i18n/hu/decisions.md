@@ -542,7 +542,7 @@ Quoted when named; verb `engedélyezd a felhő-AI-t`. `oldalpanel` (tentative). 
 
 - export → `megosztás` (tentative): Hungarian NAS apps and admins say `megosztott mappa` / `NFS megosztás` (MS shared
   folder → `megosztott mappa`); ❌ not `export` (MS knows only the data-export verb `exportál`).
-- `Felhasználóazonosító` / `Csoportazonosító` (MS); "Act as" drops from the label for width.
+- `Felhasználóazonosító` / `Csoportazonosító` (MS).
 - `{host}` leads bare; "its exports" avoids a possessive back to it (`nem sorolja fel, milyen megosztásokat kínál`).
 
 ## MDM (`*.managed.*`, `*managedOff`, `updates.status.heldByPolicy`, `errors.serverRequest.blockedByPolicy`)

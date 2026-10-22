@@ -512,9 +512,9 @@
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Als gebruikers-ID optreden",
+  "servers.sheet.nfsUid": "Gebruikers-ID",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "Groeps-ID",
   "@servers.sheet.nfsGid": {
@@ -536,9 +536,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "De meeste servers behandelen gebruikers-ID 0 als niemand.",
+  "servers.sheet.nfsUidZeroWarning": "De meeste servers geven gebruikers-ID 0 geen rechten.",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "De map waarin de export opent. Laat dit leeg om de export zelf te openen.",
   "@servers.sheet.nfsStartFolderHelp": {

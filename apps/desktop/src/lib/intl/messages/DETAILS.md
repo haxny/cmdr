@@ -112,6 +112,10 @@ The shape:
   - **A fragment / concatenation key** (a sentence part assembled at runtime, e.g. `*Part` keys): the description MUST
     name the `*Join` key that assembles it (today `fileOperations.shared.andJoin`), so the translator knows word order
     is owned by the join key and translates the fragment to read naturally once joined.
+  - **A literal technical name in the prose** (an account like `nobody`, an option like `insecure`, a command): the
+    description MUST say whether to keep it as-is or translate what it means. Translators do what the note says: on
+    2026-10-22 all 11 kept the quoted `insecure` the note named, and all 11 translated "as nobody", which no note
+    covered, by meaning. Better still, keep jargon out of the English when the meaning reads as well.
 - `placeholders`: an ARB-style map giving each placeholder a PLAIN-LANGUAGE meaning plus an example value, in the
   translator's terms ("number of files", "the folder name"), never the ICU mechanics ("raw integer for plural
   selection"). Include it whenever a message has placeholders; omit it for static strings. This is what lets a

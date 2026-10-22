@@ -509,9 +509,9 @@
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Zugriff als Benutzer-ID",
+  "servers.sheet.nfsUid": "Benutzer-ID",
   "@servers.sheet.nfsUid": {
-    "sourceHash": "f77edc9"
+    "sourceHash": "7967e08"
   },
   "servers.sheet.nfsGid": "Gruppen-ID",
   "@servers.sheet.nfsGid": {
@@ -533,9 +533,9 @@
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "Für die meisten Server ist die Benutzer-ID 0 niemand.",
+  "servers.sheet.nfsUidZeroWarning": "Die meisten Server geben der Benutzer-ID 0 keine Rechte.",
   "@servers.sheet.nfsUidZeroWarning": {
-    "sourceHash": "aa24d3f"
+    "sourceHash": "fd65947"
   },
   "servers.sheet.nfsStartFolderHelp": "In diesem Ordner öffnet sich die Freigabe. Leer lassen, um die Freigabe selbst zu öffnen.",
   "@servers.sheet.nfsStartFolderHelp": {

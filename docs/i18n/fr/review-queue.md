@@ -45,8 +45,6 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **NFS export → `partage`** (tentative, `servers.sheet.nfsExport` and the `nfsExports*` / `export*` family): follows
   the NAS apps’ `dossier partagé`; French sysadmin docs also say `un export NFS`. Is `partage` clear enough beside the
   SMB `partage`, or should the field say `Export`?
-- **Act as user ID → `ID utilisateur`** (`servers.sheet.nfsUid`): drops “Act as” to stay short beside `ID de groupe`;
-  the help line under both fields carries the meaning.
 
 ## Phrasing
 
