@@ -2,20 +2,28 @@
 
 - **Keyboard-first**: the name mask has focus on open; Tab walks the fields; Enter in a text field starts (TC's Start!),
   a button or menu keeps its own Enter; ⌘⏎ (`multiRename.rename`, the chip on the Rename button) starts from anywhere, a
-  checkbox or the preview included; Esc closes. The placeholder buttons (house `Chip`s, `variant="insert"`,
-  `size="field"`, mono) insert at the name mask's caret.
+  checkbox or the preview included; Esc closes. The placeholder buttons (`PlaceholderChips.svelte`: house `Chip`s,
+  `variant="insert"`, `size="field"`, mono) insert at the name mask's caret; the last one, `media ▾` (⌘⌥X), opens the
+  field picker (§ Media picker).
 - **Placeholder tooltips**: each button's tooltip (`PlaceholderTip`, adopted as the house tooltip's `contentEl`, so it
   shows on hover AND keyboard focus and is the button's `aria-describedby`) gives the meaning, an example on the sample
   file, a few other forms from `mask.rs` with their examples, and for a range the part it takes in bold with what the
   field keeps around it quiet. The lead line names what the example ran on: `Beach day.jpg`, its path with the two
-  folders above it (`[P]`), the date and time (`[YMD]`, `[hms]`), or "the first three files" (a counter, whose numbers
-  come from `counterSamples`, no engine call). The `[N]`, `[E]`, and `[P]` tooltips end on how to open the range editor
+  folders above it (`[P]`), the date and time (`[YMD]`), or "the first three files" (a counter, whose numbers come from
+  `counterSamples`, no engine call). The `[N]`, `[E]`, and `[P]` tooltips end on how to open the range editor
   (`rangeEditHint`), the counter's on its editor (`counterEditHint`). § Tooltip examples.
+  - **`[YMD]` carries the time's forms too** (`[hms]`, `[t]`, `[hm]`): the row has no room for an `[hms]` button beside
+    `media ▾`; the time stays a keystroke, a tooltip, and the "Date and time" preset away. David's call (#657).
+  - **`media ▾`'s tooltip** (`MEDIA_HELP`, `example: 'none'`, so no lead line) names the formats outright (EXIF, ID3,
+    MP4, FLAC, Ogg), so someone looking for "EXIF" finds it, and shows four forms on the engine's made-up media facts
+    (`plan.rs`'s `EXAMPLE_MEDIA`): the date taken, its `|modified` fallback, the camera, and a song mask.
 - **The list's heading slot** (`.message-line`): one line tall above the preview, so nothing coming or going moves the
-  list. An error wins it (ellipsis, overflow tooltip), then Results' notice, else a "Preview" label styled like the
-  field labels (`multiRename.preview`, the same key that names the table). Both live regions (`role="alert"` for the
-  error, `role="status"` for the notice) stay mounted, empty when quiet, so a message arriving is announced; the label
-  is `aria-hidden` because the table already carries the name (`ColumnList` takes an `ariaLabel`, no `labelledby`).
+  list. An error wins it (ellipsis, overflow tooltip), then Results' notice, then "Reading tags: 340 of 2,000" while a
+  mask uses a media field and the read isn't done, else a "Preview" label styled like the field labels
+  (`multiRename.preview`, the same key that names the table). Both live regions (`role="alert"` for the error,
+  `role="status"` for the notice) stay mounted, empty when quiet, so a message arriving is announced; the label is
+  `aria-hidden` because the table already carries the name (`ColumnList` takes an `ariaLabel`, no `labelledby`). The
+  reading line is plain text, not a live region: it ticks several times a second.
 - **Stale preview**: under a spec error the last good preview stays, dimmed with the house disabled opacity (0.5) under
   an `is-unavailable` class, and so does the footer's summary of it. The class names it as inactive content, the WCAG
   1.4.3 case the contrast checker exempts (`scripts/check-a11y-contrast/README.md` § Opacity); both fade with
@@ -54,14 +62,19 @@
 - **Status glyphs** (`row-status.ts`): one glyph per problem kind (invalid name, duplicate, name taken, gone) in a
   `StatusGlyph`, its short label the accessible name and the full reason the tooltip, in the error color. Ready and
   unchanged rows show nothing and carry screen-reader-only text, so a screen-reader user still hears every row's status.
+  A row still reading shows a quiet "Reading…" where its new name goes (`aria-hidden`; the status cell says it to screen
+  readers), never the error color: it isn't a problem and clears by itself. A missing or unreadable media field names
+  the field in its label and reason (`statusWords` words the nested field key), and a missing date's reason points at
+  the token editor's `|modified` fallback (`multiRename.reason.noDate`).
 - **Problems only**: the "N problems" in the footer's summary (`multiRename.summary`, a `Trans` `<problemsToggle>` tag)
   is a `LinkButton` with `aria-pressed`: pressed, the state lists the problem rows alone, paged by the backend
   (`get_multi_rename_preview_rows` with `PreviewFilter::Problems`, offsets counted among the problems), so a 200k-row
   preview never ships to find its problems. The preview's first page is every row's, so in this mode a new preview pages
   its rows in rather than showing it. With no problems it's plain text, and a preview with none (or a lost preview)
   switches the list back to every row.
-- **Start** calls `applyMultiRename`; the page shows a toast and closes the sheet. The operation is in the queue, and
-  the operation log's Undo reverses it.
+- **Rename** calls `applyMultiRename`; the page shows a toast and closes the sheet. The operation is in the queue, and
+  the operation log's Undo reverses it. While a mask's media fields are still being read it queues instead (§ Media
+  fields).
 - **Undo rename** (⌘⌥Z, `multiRename.undoRename`): a started run becomes the session's last run (`last-run.svelte.ts`,
   module state that outlives the sheet, not persisted), so the flow is rename, look at the pane, ⌃M, ⌘⌥Z. It calls
   `rollbackOperation`, as the operation log's Roll back does; the page toasts `multiRename.undoStarted` and closes the
@@ -148,12 +161,13 @@
   search & replace, case, Greek to Latin, diacritics, then the Unicode form), a `--spacing-lg` gap between them. The
   first two share one grid (`.field-grid`: two shared field columns and one `auto` chip column), so their edges line up:
   the name mask (grows) and the extension mask (140 px) span the field columns, so Extension ends where Replace with
-  does, with the placeholder chips right of them; then Search for, Replace with, and the search option chips. The chip
-  groups share the last column, right edges level; both are house `Chip`s at `size="field"`, as tall as the text boxes,
-  with the same padding. Each group spans the column like a segmented bar: one `--spacing-xs` gap, and each chip grows
-  from its label's width by an equal share of the spare room (`flex: 1 1 auto`; equal widths would let `Chip`'s field
-  `min-width` clip `[YMD]`), so both rows start and end on the same edges. Then Letter case, Greek to Latin, Remove
-  diacritics, and Normalize Unicode (`WHOLE_NAME_TOGGLES`), each with its dim key chip. Each `Checkbox` sits in a
+  does, with the placeholder chips right of them (`[N]` `[E]` `[P]` `[C]` `[YMD]` `media ▾`, the last a filter-variant
+  chip in the system face, `aria-haspopup="dialog"`); then Search for, Replace with, and the search option chips. The
+  chip groups share the last column, right edges level; both are house `Chip`s at `size="field"`, as tall as the text
+  boxes, with the same padding. Each group spans the column like a segmented bar: one `--spacing-xs` gap, and each chip
+  grows from its label's width by an equal share of the spare room (`flex: 1 1 auto`; equal widths would let `Chip`'s
+  field `min-width` clip `[YMD]`), so both rows start and end on the same edges. Then Letter case, Greek to Latin,
+  Remove diacritics, and Normalize Unicode (`WHOLE_NAME_TOGGLES`), each with its dim key chip. Each `Checkbox` sits in a
   wrapper span, since it renders more than one element.
 - **Minimum width** (`MIN_WIDTH_PX`, 880 px, under the app window's 950 px floor): the grid and the footer's four
   buttons still fit; the footer's buttons sit in one non-shrinking `.footer-actions`, so at the floor with Undo rename
@@ -169,19 +183,94 @@
 - **Option keys**: ⌘⌥U opens Letter case (focus + click on its `.select-trigger`, `Select`'s stable class, so the menu
   opens on the checked row as a click would), and ⌘⌥ G/N/P/I/F/E/R/W flip Greek to Latin, Remove diacritics, Normalize
   Unicode (P for precomposed, the form it renames to), Match case, First match only, Include extension, Regular
-  expression, and Replace whole name. Fixed-key registry commands in `Main window/Multi-rename`
-  (`sources/file-list.ts`), so Settings and the Help window list them and `registry-conflicts.test.ts` guards the
-  defaults. The sheet's keydown asks `optionKeyOf` → `eventMatchesCommand` and claims the key.
+  expression, and Replace whole name; ⌘⌥X (`multiRename.insertField`, X as in EXIF) opens or closes the field picker.
+  Fixed-key registry commands in `Main window/Multi-rename` (`sources/multi-rename.ts`), so Settings and the Help window
+  list them and `registry-conflicts.test.ts` guards the defaults. The sheet's keydown asks `optionKeyOf` →
+  `eventMatchesCommand` (⌘⌥X through `SHEET_COMMANDS`) and claims the key.
   - ⌥ composes a character in `key` (`®`, `ƒ`, `∑`, or `Dead`), so the match runs on the key position:
     `physicalKeyCombo` names a letter by `code` while ⌘ / ⌃ is held (`lib/shortcuts/DETAILS.md` § Key capture). Verified
     in unit and component tests with US-layout events; a real keypress in the running app isn't verified (the MCP driver
     sends synthetic events).
-  - None of U/G/N/P/I/F/E/R/W with ⌘⌥ is a Cmdr command or a native menu accelerator (`menu_bar.rs` holds ⌘⌥
-    C/O/T/V/Q/L/A, the registry adds H, and macOS takes ⌘⌥D for the Dock; checked 2026-10-10), so no menu command needs
-    claiming.
+  - None of U/G/N/P/I/F/E/R/W/X with ⌘⌥ is a Cmdr command or a native menu accelerator (`menu_bar.rs` holds ⌘⌥
+    C/O/T/V/Q/L/A, the registry adds H, macOS takes ⌘⌥D for the Dock and ⌘⌥M for minimize-all; checked 2026-10-22), so
+    no menu command needs claiming. B, J, K, S, and Y are still free.
   - Letter case's and the whole-name toggles' keys show as a dim `ShortcutChip` (`commandId`, not clickable: the keys
     can't be rebound) beside the option, `aria-hidden`: decoration for sighted users, the same keys listed in the Help
     window. A search chip shows its key in its tooltip.
+
+## Media fields
+
+The session reads its files' EXIF and tags in the background from the moment it opens (the backend's side:
+`src-tauri/src/multi_rename/DETAILS.md` § Media fields). The sheet's side, all in `multi-rename-state.svelte.ts`:
+
+- **Progress**: the state subscribes to `multi-rename-media-progress` (filtered by session id) and asks
+  `get_multi_rename_media_progress` once, for a read that began before the subscription (an event that came meanwhile
+  wins). `media` is `{ read, total, done }`; `total` counts media files only.
+- **Rows in view first**: the list's `onRangeChange` asks `prioritize_multi_rename_media` for the window's rows (their
+  session places, so the problems view sends `PreviewRow.row`), deduped, until the read is done.
+- **Previews as reads land**: only while a mask uses a media field (`usesMediaFields`), at most every `MEDIA_REFRESH_MS`
+  (500 ms, trailing), and at once on `done`. Such a preview is `quiet`: it doesn't count as `pending`, so Rename and
+  Results don't flicker off twice a second while nothing was edited.
+- **Counts**: `PreviewCounts.reading` rows are neither ready nor problems; `total` adds them (they're listed), and the
+  footer switches to `multiRename.summaryReading` while there are any.
+- **The queued Rename** (David's spec, #657): `waitsForMedia` is "a mask uses a media field, and some value can still
+  come" (rows still reading, or a read that isn't done). Then `apply()` doesn't call the backend: it queues (`queued`,
+  the button reads "Starting…", its tooltip says it waits and that a second click cancels, and the press is announced)
+  and returns a promise that resolves later. On each preview that lands, once `waitsForMedia` is false, the queued run
+  goes through the same `startRename` a fresh press uses, on that preview, so the skipped problems and the post-run
+  report are the normal ones, and the first press's promise resolves with the operation (the sheet's toast and close
+  follow). A second press, any edit (`schedule` cancels, so every field and preset change does; `moveCursorRow` too), or
+  closing resolves it with `null`. Once launching it can't be cancelled: the rename is on its way.
+  - **Decision/Why: the queue lives in the frontend.** Apply's proof (the backend renames only if it computes exactly
+    the preview's ready rows) stays untouched, and closing the sheet already ends the queue; a backend queue would need
+    its own cancel and a way to report back to a sheet.
+  - **Safety net**: the backend's `prepare` refuses with `stillReading` when its preview still has `Reading` rows; the
+    state treats that as "stay queued" (no error line) and retries on the next preview.
+  - Without a media field in the masks, Rename never waits, whatever the read is doing; with every value in, it renames
+    at once. The button may change width with "Starting…".
+
+## Media picker
+
+`MediaFieldPicker.svelte`, opened by `media ▾` or ⌘⌥X (`PlaceholderChips.togglePicker`).
+
+- **Shape**: a solid `Popover` (it portals nowhere, so it stays inside the sheet's focus trap) with a filter `TextInput`
+  (`role="combobox"`, `aria-activedescendant` through `createDeferredActiveDescendant`, so VoiceOver reads the option)
+  over a `listbox` of two `group`s, named by their headings ("Photos and videos (EXIF)", "Music (ID3, MP4, FLAC…)": the
+  formats are named so a search for them finds the right group). The visible headings are `aria-hidden` (the group's
+  `aria-label` carries the words), so the listbox holds only options.
+- **Data**: `tool.mediaOverview()` (`get_multi_rename_media_overview`) on open and again on each progress step while
+  open, a counter dropping an overtaken answer. Each field shows its value from the first file in rename order that has
+  it, or a dimmed "none so far" while reading and "none in these files" once done. The group more files have comes first
+  (photos on a tie); within a group, `MediaField` order (`pickerGroups`, pure, in `media-fields.ts`).
+- **Filter**: case-insensitive, on the field's words, its mask name (`exif.iso`), and its group's heading (so "music" or
+  "EXIF" lists a whole group). One word does it, which is what frees Space for inserting.
+- **Keys**: focus stays in the filter box. ↑/↓ move the active option; Space and a click insert and keep the picker
+  open; Enter inserts and closes back to the mask; Esc closes back to the mask (claimed, so the sheet stays open); Tab /
+  ⇧Tab close and move to the control after / before the button (computed among the sheet's tabbables: the popover's trap
+  would otherwise wrap inside it). Every handled key is claimed, so Enter never renames.
+- **Inserting** (`PlaceholderChips.pick` → `insertField`): `[=source.field]` at the name mask's caret, the caret moved
+  after it without taking focus, so the next pick lands after. A pick right after the last one (mask and caret unchanged
+  since) gets a space first: `[=tag.artist] [=tag.title]`. Picked fields carry a ✓ (and "inserted" for screen readers)
+  until the picker closes; each pick is announced ("Inserted Artist") through the sheet's `LiveAnnouncer`, which lives
+  inside the modal so VoiceOver hears it.
+
+## Media token editor
+
+`MediaTokenEditor.svelte`, the `MASK_TOKEN_KINDS` entry for `[=…]` (`media-token.ts`'s `mediaKind`), so the ▾ marker
+("Edit field") and the caret / hover / ↓ opening rules are `MaskInput`'s (§ Mask input).
+
+- **Format by kind**: a date's letters in a mono box (empty = the date and time), plus Date and time / Date / Time /
+  Compact presets in a `ToggleGroup` (fed settled `$state`, as § Range editor explains); a number's digits; a text's
+  characters as a range (`1-10`, `-3-`). A typed format the grammar doesn't take yet stays in the box and writes nothing
+  (`parseMediaToken` decides); leaving the box shows the token's own format again.
+- **Fallback** (date fields only): "When a file has none: use the date it was last changed" writes `|modified`.
+- **How it fares**: `get_multi_rename_field_samples` (through the sheet's sample source, `range-sample-source.ts`)
+  answers the token alone on the cursor's file and its neighbors (`sampleRows`) plus `usage`; the editor says how many
+  files take the fallback, how many have none (with no fallback), and how many are still reading, and lists each
+  sample's text, or "none" / "can't read" in the warning color, or "reading…" quiet, the cursor's row set apart
+  (`aria-current`). It asks again on each token change and each new preview (reads landing move `sampleRows`).
+- **Keys**: the format box is the first stop; Enter, or ↑ from it, goes back to the mask (claimed); Escape is the
+  `Popover`'s.
 
 ## Tooltip examples
 
@@ -230,7 +319,7 @@
   does (§ Range editor). Both are claimed, so the sheet's Enter-starts never sees them. Escape is the `Popover`'s, which
   stops it before the sheet closes. All three put focus back in the field with the caret after the token (Escape through
   the anchor span's `onfocus`); a click elsewhere closes the editor and leaves focus where it landed.
-- **Markers**: an absolutely placed ▾ `<button tabindex="-1">` ("Edit counter", "Choose characters",
+- **Markers**: an absolutely placed ▾ `<button tabindex="-1">` ("Edit counter", "Choose characters", "Edit field",
   `aria-haspopup="dialog"`) centered under each token, measured with a canvas in the input's computed font, net of
   `scrollLeft`; one scrolled out of view isn't drawn. Mousedown is prevented, so a click never moves focus out of the
   field. Re-measured on mask change, input scroll, resize, and `selectionchange` (the caret can scroll the input).
