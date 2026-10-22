@@ -5,8 +5,10 @@ needs the date for EVERY entry, so the question is what each date costs across a
 `list_directory_core` to `getattrlistbulk` pays for itself. It builds on `reanchor-cost-spike.md` (the index walker's
 `getattrlistbulk` numbers); this note measures the LISTING, with the full `FileEntry` built.
 
-Measured 2026-10-22 with `crates/cmdr-local/examples/listing_bench/` (prototype lister in `bulk.rs`, harness in
-`main.rs`).
+Measured 2026-10-22 with `crates/cmdr-local/examples/listing_bench/`, first against a prototype lister, then against the
+shipped one (§ "Production lister"). The harness now runs production's listers (`reading::list_directory_with`, bulk or
+`read_dir` forced), so every number here is re-runnable against shipped code. The production lister's design:
+`crates/cmdr-local/DETAILS.md` § "Two listers, one entry".
 
 ## Verdicts
 
@@ -66,10 +68,15 @@ the `sort_listing` call.
 cargo build --release -p cmdr-local --example listing_bench
 B=target/release/examples/listing_bench
 $B gen /private/tmp/lb/f100000 100000
-$B parity /private/tmp/lb/f100000 / /Volumes /usr/bin
-$B bench /private/tmp/lb/f100000 7 current,bulk,bulk_xattr,current_added   # add ,nsurl for today's NSURL path
+$B parity /private/tmp/lb/f100000 / /Volumes /usr/bin /private/var/db
+$B bench /private/tmp/lb/f100000 7 current,bulk,readdir,bulk_xattr   # add ,nsurl for the NSURL path
 $B volcaps / /Volumes/<some mount>
 ```
+
+Methods now: `current` is production (bulk on APFS and HFS+), `bulk` and `readdir` force a lister, and `readdir` on APFS
+includes one `getattrlist(ATTR_CMN_ADDEDTIME)` per entry (what the old `current_added` measured). The numbers above the
+"Production lister" section came from the prototype and the pre-bulk `current`; to compare against the pre-bulk lister,
+build the example at a commit before the bulk lister landed.
 
 ## Parity
 
@@ -141,6 +148,26 @@ Edge cases, with what each lister does:
 3. **Re-stat mount points and firmlinks** (rule above).
 4. **Validate by returned bit**, never by offset (rule above), and keep a parser test per filesystem shape: an
    unsupported attribute in the middle of the requested set is the case that broke.
+
+## Production lister
+
+Re-run against the shipped lister (commit `fc1f736ceb`), same machine and method as above, 2026-10-22, load average 2–3.
+The "before" column is the pre-bulk production lister, from a release build of this example taken just before that
+commit, run back to back on the same fixture.
+
+- **100k fixture, warm** (100,620 entries, 7 rounds): production 160.4 ms (1.59 µs/entry) · bulk forced 158.8 ms ·
+  `read_dir` forced 477.8 ms (4.75 µs/entry: `lstat` plus one `getattrlist` for the added date, the fallback's cost) ·
+  before 228.1 ms (2.27 µs/entry). So 1.42× faster than before, with `added_at` on every entry. The prototype measured
+  149.1 ms in the same run; the shipped lister's ~7% extra is the progress tally and the trust checks per record.
+- **100k cold-ish** (fresh fixture, fresh process, one pass, one round each): production 167.6 ms · before 252.4 ms
+  (1.5×). The lighter load here makes both far quicker than the cold-ish rounds above, so read the ratio, not the
+  absolutes.
+- **Parity** (`listing_bench parity`, production bulk vs production `read_dir`, every field, `added_at` included): zero
+  differences on the 100k fixture, `/`, `/Volumes`, `/usr/bin`, `/Applications`, `/System/Library/Frameworks`,
+  `~/Library`, `~/Downloads`, and `/System/Volumes/Data`. `/private/var/db`: zero differences plus one sandbox `EPERM`
+  entry, the intended difference (bulk lists it as the folder it is, `read_dir` as a minimal row). `added_at` agreed
+  with a per-path `getattrlist` on every entry except that one (whose `getattrlist` gets `EPERM` too). At `/` and
+  `/System/Volumes/Data`, one entry has no added date on either lister.
 
 ## Last opened is not one xattr
 

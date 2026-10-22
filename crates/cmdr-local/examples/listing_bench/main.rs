@@ -1,7 +1,8 @@
-//! Prices moving the local listing to `getattrlistbulk`, and what "Date added"
-//! and Finder's "Last opened" cost per entry. Dev-only evidence for
-//! `docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md`; never shipped.
-//! macOS only.
+//! Prices the local listers against each other, and what Finder's "Last opened"
+//! would cost per entry. Runs production's listers (`reading::list_directory_with`,
+//! `testing`-gated, on for this dev target), so the numbers in
+//! `docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md` stay re-runnable
+//! against shipped code. Dev-only; macOS only.
 //!
 //! ```sh
 //! cargo run --release -p cmdr-local --example listing_bench -- gen <dir> 100000
@@ -12,11 +13,13 @@
 //! ```
 //!
 //! Methods (`bench`'s third argument, comma-separated; default: the first four):
-//! - `current`: `reading::list_directory_core`, what production runs.
-//! - `bulk`: the `getattrlistbulk` prototype, same fields plus `added_at`.
+//! - `current`: `reading::list_directory_core`, what production runs (bulk on
+//!   APFS and HFS+, `read_dir` elsewhere).
+//! - `bulk`: the bulk lister forced.
+//! - `readdir`: the `read_dir` lister forced, which on APFS and HFS+ adds one
+//!   `getattrlist(ATTR_CMN_ADDEDTIME)` per entry (the fallback's cost).
 //! - `bulk_xattr`: `bulk` plus one `getxattr(com.apple.lastuseddate#PS)` per file.
-//! - `current_added`: `current` plus one `getattrlist(ATTR_CMN_ADDEDTIME)` per entry.
-//! - `nsurl`: `reading::list_directory`, the NSURL per-file enrichment the app has today.
+//! - `nsurl`: `reading::list_directory`, the NSURL per-file enrichment.
 //!
 //! `bench` interleaves methods round-robin (one warm-up round, then `runs`
 //! rounds) so none of them gets a systematically warmer cache, and reports the
@@ -52,13 +55,12 @@ mod macos {
     use std::path::{Path, PathBuf};
     use std::time::{Duration, Instant};
 
+    use cmdr_fs::attr_buf::{Attr, Request};
     use cmdr_fs::entry::FileEntry;
     use cmdr_fs::volume::host::listings::RecordingListings;
-    use cmdr_local::reading;
+    use cmdr_local::reading::{self, Lister};
 
-    use super::bulk::{self, BulkOptions};
-
-    const DEFAULT_BUF: usize = 128 * 1024;
+    use super::bulk;
 
     pub fn main() {
         let args: Vec<String> = std::env::args().skip(1).collect();
@@ -70,9 +72,7 @@ mod macos {
             "gen" => generate(Path::new(&args[1]), args[2].parse().expect("file count")),
             "bench" => {
                 let runs = args.get(2).map_or(7, |r| r.parse().expect("runs"));
-                let methods = args
-                    .get(3)
-                    .map_or("current,bulk,bulk_xattr,current_added", String::as_str);
+                let methods = args.get(3).map_or("current,bulk,readdir,bulk_xattr", String::as_str);
                 bench(Path::new(&args[1]), runs, methods);
             }
             "parity" => {
@@ -86,35 +86,21 @@ mod macos {
                 }
             }
             "vanish" => vanish(Path::new(&args[1])),
-            "dump" => bulk::dump(Path::new(&args[1]), 4).expect("dump"),
             other => panic!("unknown command {other}"),
-        }
-    }
-
-    fn buf_bytes() -> usize {
-        std::env::var("BULK_BUF_KIB")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .map_or(DEFAULT_BUF, |k| k * 1024)
-    }
-
-    fn opts(added_time: bool, last_used_xattr: bool) -> BulkOptions {
-        BulkOptions {
-            added_time,
-            last_used_xattr,
-            buf_bytes: buf_bytes(),
         }
     }
 
     fn run_method(method: &str, dir: &Path, host: &RecordingListings) -> Vec<FileEntry> {
         match method {
             "current" => reading::list_directory_core(dir, host).expect("current"),
-            "bulk" => bulk::list(dir, host, opts(true, false)).expect("bulk"),
-            "bulk_xattr" => bulk::list(dir, host, opts(true, true)).expect("bulk_xattr"),
-            "current_added" => {
-                let mut entries = reading::list_directory_core(dir, host).expect("current");
+            "bulk" => reading::list_directory_with(dir, false, host, Lister::Bulk).expect("bulk"),
+            "readdir" => reading::list_directory_with(dir, false, host, Lister::ReadDir).expect("readdir"),
+            "bulk_xattr" => {
+                let mut entries = reading::list_directory_with(dir, false, host, Lister::Bulk).expect("bulk");
                 for entry in &mut entries {
-                    entry.added_at = bulk::added_time_by_path(Path::new(&entry.path));
+                    if !entry.is_directory && !entry.is_symlink {
+                        entry.opened_at = bulk::read_last_used(Path::new(&entry.path));
+                    }
                 }
                 entries
             }
@@ -164,11 +150,7 @@ mod macos {
                 }
             }
         }
-        println!(
-            "dir={} entries={count} runs={runs} buf={}KiB",
-            dir.display(),
-            buf_bytes() / 1024
-        );
+        println!("dir={} entries={count} runs={runs}", dir.display());
         for (i, method) in methods.iter().enumerate() {
             let (fw, fc) = first[i].expect("warm-up ran");
             if runs == 0 {
@@ -193,76 +175,78 @@ mod macos {
         }
     }
 
-    /// Diffs the bulk prototype against the current lister, field for field,
-    /// with the two new dates set aside (they're checked separately: `added_at`
-    /// against a per-path `getattrlist`).
+    /// Diffs production's bulk lister against its `read_dir` lister, every field
+    /// (`added_at` included: both fill it on a bulk-eligible folder), and checks
+    /// the added date against an independent per-path `getattrlist`. A sandbox
+    /// `EPERM` entry (a minimal row from `read_dir`, the real entry from bulk) is
+    /// the one intended difference and is counted apart.
     fn parity(dir: &Path) {
         let host = RecordingListings::new();
-        let current = match reading::list_directory_core(dir, &host) {
-            Ok(e) => e,
-            Err(e) => {
-                println!("{}: current failed: {e}", dir.display());
+        let list = |lister| reading::list_directory_with(dir, false, &host, lister);
+        let (read_dir, bulk) = match (list(Lister::ReadDir), list(Lister::Bulk)) {
+            (Ok(r), Ok(b)) => (r, b),
+            (r, b) => {
+                println!(
+                    "{}: read_dir {:?}, bulk {:?}",
+                    dir.display(),
+                    r.map(|v| v.len()),
+                    b.map(|v| v.len())
+                );
                 return;
             }
         };
-        let bulk = match bulk::list(dir, &host, opts(true, true)) {
-            Ok(e) => e,
-            Err(e) => {
-                println!("{}: bulk failed: {e} (current listed {})", dir.display(), current.len());
-                return;
-            }
-        };
-        let by_name = |v: &[FileEntry]| {
-            let mut m: Vec<FileEntry> = v.to_vec();
-            m.sort_by(|a, b| a.name.cmp(&b.name));
-            m
-        };
-        let (c, b) = (by_name(&current), by_name(&bulk));
         let mut diffs = 0;
+        let mut eperm = 0;
         let mut added_some = 0;
         let mut added_mismatch = 0;
-        let mut opened_some = 0;
-        if c.len() != b.len() {
-            println!("{}: COUNT current={} bulk={}", dir.display(), c.len(), b.len());
+        if read_dir.len() != bulk.len() {
+            println!(
+                "{}: COUNT read_dir={} bulk={}",
+                dir.display(),
+                read_dir.len(),
+                bulk.len()
+            );
         }
-        let bulk_names: std::collections::HashMap<&str, &FileEntry> = b.iter().map(|e| (e.name.as_str(), e)).collect();
-        for ce in &c {
-            let Some(be) = bulk_names.get(ce.name.as_str()) else {
-                println!("  only in current: {}", ce.name);
+        let bulk_names: std::collections::HashMap<&str, &FileEntry> =
+            bulk.iter().map(|e| (e.name.as_str(), e)).collect();
+        for re in &read_dir {
+            let Some(be) = bulk_names.get(re.name.as_str()) else {
+                println!("  only in read_dir: {}", re.name);
                 diffs += 1;
                 continue;
             };
             if be.added_at.is_some() {
                 added_some += 1;
             }
-            if be.opened_at.is_some() {
-                opened_some += 1;
-            }
-            if be.added_at != bulk::added_time_by_path(Path::new(&ce.path)) {
+            if be.added_at != reading::added_at_by_path(Path::new(&re.path)) {
                 added_mismatch += 1;
             }
-            let mut stripped = (*be).clone();
-            stripped.added_at = None;
-            stripped.opened_at = None;
-            let (cs, bs) = (format!("{ce:?}"), format!("{stripped:?}"));
-            if cs != bs {
-                diffs += 1;
-                if diffs <= 8 {
-                    let fields: Vec<String> = cs
-                        .split(", ")
-                        .zip(bs.split(", "))
-                        .filter(|(a, b)| a != b)
-                        .map(|(a, b)| format!("{a} vs {b}"))
-                        .collect();
-                    println!("  DIFF {} (current vs bulk): {}", ce.name, fields.join("; "));
-                }
+            let (rs, bs) = (format!("{re:?}"), format!("{be:?}"));
+            if rs == bs {
+                continue;
+            }
+            let sandboxed = re.modified_at.is_none()
+                && re.owner.is_empty()
+                && fs::symlink_metadata(&re.path).err().and_then(|e| e.raw_os_error()) == Some(libc::EPERM);
+            if sandboxed {
+                eperm += 1;
+                continue;
+            }
+            diffs += 1;
+            if diffs <= 8 {
+                let fields: Vec<String> = rs
+                    .split(", ")
+                    .zip(bs.split(", "))
+                    .filter(|(a, b)| a != b)
+                    .map(|(a, b)| format!("{a} vs {b}"))
+                    .collect();
+                println!("  DIFF {} (read_dir vs bulk): {}", re.name, fields.join("; "));
             }
         }
         println!(
-            "{}: {} entries, {diffs} differing, added_at set on {added_some} ({added_mismatch} disagree with per-path getattrlist), lastuseddate xattr on {opened_some}, {} mount/firmlink re-stats",
+            "{}: {} entries, {diffs} differing, {eperm} sandbox EPERM (expected), added_at set on {added_some} ({added_mismatch} disagree with per-path getattrlist)",
             dir.display(),
-            c.len(),
-            bulk::FALLBACKS.swap(0, std::sync::atomic::Ordering::Relaxed),
+            read_dir.len(),
         );
     }
 
@@ -293,15 +277,7 @@ mod macos {
         // SAFETY: valid NUL-terminated path.
         let fd = unsafe { libc::open(c_path.as_ptr(), libc::O_RDONLY | libc::O_DIRECTORY) };
         assert!(fd >= 0, "open");
-        let mut al = libc::attrlist {
-            bitmapcount: libc::ATTR_BIT_MAP_COUNT,
-            reserved: 0,
-            commonattr: libc::ATTR_CMN_RETURNED_ATTRS | libc::ATTR_CMN_NAME | 0x2000_0000,
-            volattr: 0,
-            dirattr: 0,
-            fileattr: 0,
-            forkattr: 0,
-        };
+        let mut al = Request::new(&[Attr::Name, Attr::Error]).attrlist();
         let mut buf = vec![0u64; 512];
         let mut total = 0;
         let mut calls = 0;
