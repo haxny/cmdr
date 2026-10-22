@@ -75,6 +75,10 @@
   "@stateRecovery.s3Places.title": {
     "sourceHash": "6957175"
   },
+  "stateRecovery.nfsPlaces.title": "Cmdr couldn’t read all your saved NFS places, so some may be missing",
+  "@stateRecovery.nfsPlaces.title": {
+    "sourceHash": "f045d38"
+  },
   "stateRecovery.sftpServers.title": "Cmdr 無法讀取你儲存的所有 SFTP 伺服器，所以可能少了一些",
   "@stateRecovery.sftpServers.title": {
     "sourceHash": "f4426dd"
