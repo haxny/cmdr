@@ -25,6 +25,8 @@ mod source;
 mod types;
 
 #[cfg(test)]
+mod source_test;
+#[cfg(test)]
 mod types_test;
 
 pub use read::read_media;

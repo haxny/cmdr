@@ -36,6 +36,25 @@ Parsers (`exif`, `lofty`) see only `Read + Seek`, so the block reader's typed re
 `ReadError::into_io` wraps one in a private payload type, and `ReadError::from_io` downcasts it back. Any other
 `io::Error` becomes `Io(text)`, whose text is for the log only. The round trip is typed, ❌ never a message match.
 
+## The byte source
+
+- `BlockReader` fetches 64 KiB blocks on demand and keeps the eight most recently used. A header walk is one or two
+  round trips on a NAS, and a parser's back-and-forth between a header and a few boxes stays in the kept blocks.
+- **Budget**: every fetched byte counts against `MAX_FETCHED_BYTES_PER_FILE` (4 MiB, 64 blocks); a fetch that would pass
+  it is `TooLarge`. A kept block costs nothing to read again.
+- **Holes** (`with_holes`, any order, overlaps merged) read as zeros and are never fetched: a block wholly inside one is
+  never asked for, and a block that straddles one serves real bytes only up to the hole's start. Cover art is a hole, so
+  an MP3 with a 3 MB cover costs its header blocks, not 3 MB.
+- **Short answers** are asked again for the rest; an empty answer is the end of the file. A file that shrank since the
+  listing ends where its bytes do, without an error.
+- `VolumeByteSource::read_at` checks the cancel flag and the deadline before each round trip, so a closed sheet or a
+  spent budget stops at the next block. The `read_range` runs detached under what's left of the deadline
+  (`timeout_detached_within`): on a timeout the transfer finishes on its own, which keeps an MTP transaction whole.
+  `VolumeError::NotSupported` maps to `ReadError::NotSupported`; any other volume error is logged there (marked, at
+  debug) and becomes a pathless `Io`.
+- Tests: `source_test.rs`, over a recording in-memory source, `InMemoryVolume`, and `cmdr_fs::testing::WedgedVolume`
+  (never answers) for the timeout.
+
 ## Dependencies
 
 - `kamadak-exif` 0.6.1 (as `exif`), the version the app already pins.

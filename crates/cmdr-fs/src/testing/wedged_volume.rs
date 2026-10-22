@@ -82,6 +82,15 @@ impl Volume for WedgedVolume {
         never_answers!()
     }
 
+    fn read_range<'a>(
+        &'a self,
+        _path: &'a Path,
+        _offset: u64,
+        _len: usize,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, VolumeError>> + Send + 'a>> {
+        never_answers!()
+    }
+
     fn scan_for_copy<'a>(
         &'a self,
         _path: &'a Path,
