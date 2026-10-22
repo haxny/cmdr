@@ -219,7 +219,7 @@ inflection.
 
 - **原生菜单跟随 Finder 的用词，而不是目录里的旧用词。**
   macOS 有对应项时以它为准（`显示`、`上层文件夹`、`个人`、`显示简介`）。唯一有意保留的分歧是 Apple 的「访达」，Cmdr 仍写
-  `Finder`。证据与例外见 `decisions.md` 里的「原生菜单」一节。
+  `Finder`。证据与例外：`decisions.md` § Native menus.
 - **Click is `点按`, not `点击`.** macOS `zh-CN` uses `点按` exclusively (0 occurrences of `点击` across Finder, AppKit,
   and SystemSettings, verified against the reference pile, 2026-08-21), and onboarding writes
   `点按下方的 <strong>…</strong>`. The catalog carries no single-click `点击`, the noun included (`每一次点按…`). The
@@ -234,8 +234,7 @@ inflection.
   `menu.*` exactly (Help = `帮助`), so a copy edit can't drift the two apart.
 - **`查看` is "look at the contents", `显示` is the View menu.** macOS `zh-CN` splits them, and so does the catalog:
   `menu.bar.view` = `显示` (change the view), while reading a report, a file, or an info panel is `查看`. Picking the
-  wrong one makes a button sound like a view-mode switch. Evidence: `decisions.md` §
-  "给已发送的错误报告补充备注（`errorReporter.amend.*`、`errorReporter.amendedToast.message`、`errorReporter.autoSentToast.viewOrAddNotes`）".
+  wrong one makes a button sound like a view-mode switch. Evidence: `decisions.md` § Error-report notes.
 - **No letter case; the sentence-case rule is moot for Chinese text.** Han characters are unicameral. Just keep Latin
   brand words (Cmdr, macOS) as-is.
 - **Each script is its own pass.** Never machine-convert Simplified↔Traditional (one-to-many mappings + divergent
@@ -245,21 +244,21 @@ inflection.
   renders its bulleted reasons this way, with a bare `{name}` (no `“…”`, unlike prose strings) and a full-width colon.
   Break the shape only for a reason that is NOT a deliberate choice (the `failed.*` arms, where the drive turned the
   undo down). Some of these keys carry byte-identical English across families, so `desktop-i18n-term-consistency`
-  requires identical values; per-key evidence and the pairs that are locked together: `decisions.md`
-  § 回滚结束后的提示条.
+  requires identical values; per-key evidence and the pairs that are locked together: `decisions.md` § Rollback-done
+  notice.
 - **`Ask Cmdr` names the chat PANEL; everywhere else the subject is `Cmdr`, and in the Suggested ops dialog it's `AI`.**
   Follow the English exactly: keep `Ask Cmdr` where it's the panel's own name (its title, the View-menu item, the
   palette command, the settings section, the on/off copy) and where a sentence points at that settings section
   (`Ask Cmdr 设置`, `Ask Cmdr 部分`); write bare `Cmdr` when the sentence describes what the AI does; write `AI` in the
   four `suggestedOps.*` strings, which have to stay distinguishable from the neighbouring `Cmdr 掌握的信息`. ❗ Don't
   "restore" `Ask Cmdr` as a sentence subject: that's the exact regression a copy sweep once had to undo. Per-key
-  evidence: `decisions.md` § "AI 文案改写：主语从 “Ask Cmdr” 换成".
+  evidence: `decisions.md` § AI subject.
 - **Quotation marks:** this catalog quotes filenames with `“…”`, following macOS zh-CN. Traditional uses corner brackets
   instead, which is one more reason a converted catalog reads wrong; its rule is in `../zh-Hant/style.md`.
 - **Ask Cmdr tool-line labels are a `正在…` / `已…` pair, with `查看` for reading contents.** Every
   `askCmdr.tool.*.doing` opens with `正在` and its `.done` twin with `已`, on the same verb phrase (`正在查看文件内容` /
   `已查看文件内容`). Reading what's inside something is `查看…内容` (or `读取` for the photo facts tool); keep `显示`
-  for the View menu. Per-term evidence: `decisions.md` § Ask Cmdr inspect-file consent.
+  for the View menu. Per-term evidence: `decisions.md` § Inspect-file consent.
 - **Android over ADB: translate the Android-side feature names, keep the command names Latin.** A Chinese Android phone
   shows `开发者选项 > USB 调试`, so `USB debugging` is `USB 调试` and `platform tools` is `平台工具`, while the tool and
   command names (`ADB`, `adb`, `Android SDK`, `Homebrew`) stay Latin, matching Google's own zh-CN docs. Same rule as
@@ -273,7 +272,7 @@ inflection.
   marker with full-width parens and no space, and never invent a second marker: the two states have to read as one item.
 - **A table column heading that holds a date or time carries the time noun.** Apple's Chinese column headings are
   `上次打开日期`, `上次使用时间`, `修改日期`, so "Last used" over a date column is `上次使用时间`, not the bare
-  `上次使用` (which Apple uses mid-sentence). Evidence: the `decisions.md` section on the servers hub.
+  `上次使用` (which Apple uses mid-sentence). Evidence: `decisions.md` § Servers hub.
 - **Status labels are `已…` adjectives, unless the user didn't cause the state.** `已连接` / `已保存` / `已退出登录`
   read as one set in a Status column. A state the app merely observed takes a plain verb phrase instead (`在附近发现`),
   because `已…` would make it sound like an action that just finished.
@@ -294,8 +293,7 @@ inflection.
   26.6.2, 25G83, 2026-09-09). Cmdr's whole `menu.app.*` and `menu.dock.*` block follows that: `关于 Cmdr`, `隐藏 Cmdr`,
   `退出 Cmdr`, `打开 Cmdr`, with a space before the Latin brand.
 - **A progress heading is `正在…`, and the reconnect one is `正在重新连接到 {name}…`.** It shares the sentence shape of
-  `正在连接到 {name}…`, so first connect and auto-reconnect read as two states of one thing. Evidence in `decisions.md`
-  § 自动重连的面板标题.
+  `正在连接到 {name}…`, so first connect and auto-reconnect read as two states of one thing.
 - **An inline `<field></field>` is a text box sitting mid-sentence, so put it where Chinese wants the object and keep
   the sentence reading as one line.** `onboarding.stepBeta.checklist.email` renders an input plus its Save button inside
   the sentence, so the words before and after it have to hold together around a box:

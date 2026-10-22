@@ -215,9 +215,9 @@ Two mechanics that bite in Portuguese specifically:
   `disconnectFailedToast`), então cada valor é uma oração completa, começa com maiúscula e cabe em uma ou duas frases
   curtas. `timedOut` não pode soar como falha. Evidência: `decisions.md` § Eject and disconnect refusals.
 - **As recusas que NOMEIAM quem segura o disco repetem o molde da genérica.** `unmountRefusedByApp` /`ByApps` e
-  `unmountRefused` são uma família só (`<sujeito> ainda está usando este disco. <ação>, depois ejete-o de novo.`);
-  `{app}` abre a frase sem artigo e sem aspas, `outros apps` é item final de lista (o `e` vem do `Intl.ListFormat`,
-  nunca da string), e o `BySystem` troca o verbo de propósito (`trabalhando com`), porque lá não há nada para fechar.
+  `unmountRefused` são uma família só (`<sujeito> ainda está com arquivos abertos lá. <ação>, depois tente de novo.`,
+  nunca `este disco` nem `ejete-o`, porque o aviso também serve para compartilhamento e celular); `{app}` abre a frase
+  sem artigo e sem aspas, e `outros apps` é item final de lista (o `e` vem do `Intl.ListFormat`, nunca da string).
   Evidência: `decisions.md` § Eject and disconnect refusals.
 - **Um relatório já enviado recebe uma NOTA, nunca um segundo envio.** As chaves de `errorReporter.amend.*` falam do
   mesmo relatório (`e isso entra no mesmo relatório que a equipe já tem`), a caixa continua sendo uma **nota** (o termo

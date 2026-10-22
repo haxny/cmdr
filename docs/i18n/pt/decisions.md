@@ -1,425 +1,294 @@
 # pt decisions
 
-Distilled rulings behind `terms.json`: "X over Y because Z", each citing the keys it shaped. The chosen forms live in
-`terms.json`; this file keeps only the non-obvious why that defends a ruling against a well-meant "fix". Voice and
-grammar rules: `style.md`. Open questions: `review-queue.md`. Sources: the Brazilian pile (`_ignored/i18n/pt-BR/`) or
-the installed macOS `pt_BR.lproj` bundles.
+The non-obvious why behind `terms.json` rulings, citing the keys each shaped. Forms live in `terms.json`, voice and
+grammar in `style.md`, open questions in `review-queue.md`.
 
 ## The bare `pt` pile is European (`settings.archives.compressionLevel.description`, `fileOperations.transferDialog.compressLevelCaption`)
 
-- `_ignored/i18n/pt/` is pt-PT; mining it once shipped `ficheiros` and `demoram mais tempo a comprimir`. Mine `pt-BR/`,
-  and re-check any ruling whose sources name the bare `pt` pile.
+- Mining `_ignored/i18n/pt/` once shipped `ficheiros` and `demoram mais tempo a comprimir`. Re-check any ruling whose
+  sources name it.
 
-## Apagar, never Excluir (`fileOperations.delete.*`, `commands.fileDelete*`, `ai.local.delete*`, `settings.mediaIndex.clip.delete*`, `settings.mediaIndex.reclaim.*`, `transfer.delete`)
+## Apagar, never Excluir (`fileOperations.delete.*`, `commands.fileDelete*`, `ai.local.delete*`, `settings.mediaIndex.*`, `transfer.delete`)
 
-- `Apagar` over `Excluir` because macOS Finder pt-BR has zero `Excluir`. One verb for files AND stored data (the AI
-  model, index entries): a split once left `Excluir modelo de IA?` over an `Apagar` button.
-- The noun is `apagamento` (`queue.empty.body`); it's what keeps `exclusão` out. `excluir` survives only for exclude
-  (`queryUi.scope.hint`, excluded folders).
+- Finder pt-BR has zero `Excluir`. A files-vs-data split once left `Excluir modelo de IA?` over an `Apagar` button. The
+  noun `apagamento` (`queue.empty.body`) keeps `exclusão` out.
 
-## `drive` is always `disco` (`errors.listing.*`, `errors.provider.pCloudFuse.*`, `fileExplorer.unreachable.detailTimeout`)
+## `drive` is always `disco` (`errors.listing.*`, `errors.provider.pCloudFuse.*`, `fileExplorer.unreachable.*`)
 
-- `disco` over MS `unidade` and the loan `drive` because Finder says `Discos externos`, `Discos rígidos`; `unidade` is
-  only the physical mechanism there. Network drive → `disco de rede`, never `unidade de rede` / `drive de rede`.
-- Only brand names (iCloud Drive), the `{drive}` placeholder, and key names keep `drive`. `pCloud's virtual drive` →
-  `disco virtual do pCloud`: a common noun after the brand.
+- Finder says `Discos externos`; its `unidade` is only the physical mechanism. `disco virtual do pCloud`: a common noun
+  after the brand.
 
-## Parent folder (`commands.navParent.label`, `settings.behavior.doubleClickPaneNavigatesToParent.*`, `fileExplorer.doubleClickHint.body`, `errors.listing.notFound.suggestion`)
+## Parent folder (`commands.navParent.label`, `settings.behavior.doubleClickPane*`, `fileExplorer.doubleClickHint.body`)
 
-- `pasta superior` kept although the pile favors `pasta pai`: switching forks menu, settings, and toasts, so it's a
-  whole-catalog migration or nothing (review queue). `pasta principal` is the wrong meaning.
-- The top of a volume is `a pasta raiz de um volume`, never `pasta superior` (that's one level up).
+- `pasta superior` over the pile's `pasta pai`: switching is a whole-catalog migration or nothing (review queue).
+  `pasta principal` means something else; a volume's top is `a pasta raiz de um volume`.
 
-## Go to folder (`menu.go.goToPath`, `commands.navGoToPath.label`, `goToPath.dialog.title`/`confirm`)
+## Go to folder (`menu.go.goToPath`, `commands.navGoToPath.label`, `goToPath.dialog.*`)
 
-- `Ir para pasta` (Finder N83, sentence-cased) for menu and title: Finder's dialog says `Ir Para a Pasta`, but one
-  command keeps one name (`i18n-term-consistency`). The button "Go" → `Ir`, Finder's own (`FR24`) and the Go menu's.
+- `Ir para pasta` (Finder N83) for menu and title alike, though Finder's dialog says `Ir Para a Pasta`: one command, one
+  name. Go → `Ir` (`FR24`).
 
-## Archives (`settings.archives.*`, `fileExplorer.archiveEnterMenu.*`, `fileExplorer.readOnly.archiveTitle`/`archiveMessage`, `fileOperations.archivePassword.*`, `queue.row.label`)
+## Archives (`settings.archives.*`, `fileExplorer.archiveEnterMenu.*`, `fileExplorer.readOnly.*`, `fileOperations.archivePassword.*`)
 
-- `arquivo compactado` because bare `arquivo` means file; the double `arquivo` when both co-occur reads fine, keep it.
-  When the format is named, the plain `arquivo zip` (`fileExplorer.readOnly.archiveMessage`), and
-  `fileOperations.transferDialog.pathErrorNotZip` says `nome do arquivo compactado` so it doesn't ask for a file name.
-- Browse → `Navegar`, contrasting `Abrir` in one segmented control, so the two must differ. App bundle →
-  `pacote de aplicativo`; `settings.archives.ooxml.*` keeps bare `pacotes` so the row stays wider than the bundles card.
-- Compress → `Comprimir` / `Comprimindo`; compression level → `Nível de compressão`.
+- A double `arquivo` (file + `arquivo compactado`) reads fine; a named format is plain `arquivo zip`. `pathErrorNotZip`
+  says `nome do arquivo compactado` so it doesn't ask for a file name.
+- Browse → `Navegar`, beside `Abrir` in one segmented control. `settings.archives.ooxml.*` keeps bare `pacotes` so the
+  row stays wider than the bundles card. Compress → `Comprimir`; level → `Nível de compressão`.
 
-## Settings sections and transfer dialog (`settings.section.*`, `fileOperations.transferDialog.*`, `fileOperations.shared.scanningTooltip`)
+## Settings sections and transfer dialog (`settings.section.*`, `fileOperations.transferDialog.*`, `fileOperations.transferProgress.stall*`)
 
-- Pre-transfer counting → `Analisar` / `Analisando`; the drive-index walk → `varredura` (§ Drive scan). Never swap them.
-- `fileOperations.transferDialog.sourceGroupTitle`/`targetGroupTitle` → `De` / `Para` (Total and Double Commander pt-BR
-  ship this pair); `origem` / `destino` stay for the controls.
-- Copy noun `cópia`, move noun `movimentação`; progress arms are gerunds (`Renomeando`, `Criando pasta`), never the
-  pt-PT `A criar`.
+- `sourceGroupTitle`/`targetGroupTitle` → `De` / `Para` (Total and Double Commander pt-BR); `origem` / `destino` stay
+  for the controls. Copy noun `cópia`, move noun `movimentação`.
+- `Sem progresso há {duration}` (`há`, not `por` / `durante`). `parou de avançar` over `travou` (a crash) or bare
+  `parou` (ended). `O arquivo de registro` keeps the log file apart from the `registro de operações` feature.
 
-## Operation queue (`queue.*`, `commands.queueShow.*`, `fileOperations.transferProgress.queue*`/`backgroundedToast`)
+## Operation queue (`queue.*`, `commands.queueShow.*`, `fileOperations.transferProgress.queue*`)
 
-- `Fila de operações` over `Fila de transferências` because the queue also holds deletes, renames, and creations;
-  `transferência` stays the narrow word for one copy or move in flight. It sits beside `Registro de operações` in the
-  View menu and shares its head noun on purpose: rename both or neither.
-- `operação` is feminine like `transferência`, so `desta`, `ela`, and `selecionadas` agree unchanged.
+- `Fila de operações` because the queue also holds deletes, renames, and creations. It shares its head noun with
+  `Registro de operações` in the View menu: rename both or neither.
 
-## Queue chip, dismiss, and failure notices (`queue.row.dismiss*`, `queue.toolbar.dismissAll`, `queue.failureToast.*`, `queue.chip.*`)
+## Queue chip, dismiss, and failure notices (`queue.row.dismiss*`, `queue.failureToast.*`, `queue.chip.*`)
 
-- Dismiss → `Dispensar`, never MS `Ignorar`: `Ignorar` is this catalog's Skip, two rows away. Not `Descartar` either.
-- `Não foi possível concluir` + the action noun (Finder's own frame); the `other` arm equals the `queue.row.status`
-  failed arm, so toast, row, and chip match. In `queue.failureToast.summary` the house phrase sits OUTSIDE the plural so
-  only the noun branches.
-- `queue.chip.ariaLabel` spells `por cento`; the visible tooltip keeps `{percentText}%` tight. The chip's time-left
-  reuses `fileOperations.transferProgress.etaRemaining`; don't derive a second phrasing.
+- `Dispensar` over `Ignorar` (this catalog's Skip, two rows away) and `Descartar`.
+- `Não foi possível concluir` + action noun (Finder); the `other` arm equals `queue.row.status`'s failed arm. In
+  `failureToast.summary` it sits OUTSIDE the plural so only the noun branches.
+- `queue.chip.ariaLabel` spells `por cento`; the tooltip keeps `{percentText}%`. Time left reuses
+  `fileOperations.transferProgress.etaRemaining`.
 
-## Background button (`fileOperations.transferProgress.background/backgroundAria`)
+## Background button (`fileOperations.transferProgress.background*`)
 
-- `Em segundo plano` over bare `Segundo plano` because the prepositional phrase reads as a command; the noun would title
-  a section. Never `2º plano` or the wallpaper senses. The aria contains the label as `em segundo plano`.
-
-## Stalled transfer (`fileOperations.transferProgress.close`/`stall*`)
-
-- `Sem progresso há {duration}`: `há` is how pt-BR says an elapsed stretch up to now; not `por` / `durante`.
-- `A transferência parou de avançar` over `travou` (reads as a crash) or bare `parou` (reads as ended).
-- `O arquivo de registro tem os detalhes`: `arquivo de` separates the log file from the `registro de operações` feature.
+- `Em segundo plano` reads as a command; bare `Segundo plano` would title a section. Never `2º plano`.
 
 ## Quit gate (`main.quit.*`)
 
-- `Encerrar` (Finder and `commands.appQuit.label`). `Continuar trabalhando` over `Cancelar`, which would read as
-  cancelling the operations, and over any postpone phrase, since the countdown is gone for good.
-- `em andamento` over `em execução` (Finder's own quit sentence). `é interrompido onde está` over `para onde está`,
-  which garden-paths on `para`. The `encerr-` and `gravado` repetitions are deliberate: each is its concept's sourced
-  term.
+- `Continuar trabalhando` over `Cancelar` (would cancel the operations) and any postpone phrase (the countdown is gone).
+- `em andamento` (Finder's quit sentence) over `em execução`. `é interrompido onde está` over `para onde está`, which
+  garden-paths. The `encerr-` and `gravado` repeats are deliberate.
 
 ## Operation log (`operationLog.*`, `commands.logOperationLog.*`)
 
-- log → `registro` across the catalog (changelog, log files). Rollback → `Reverter`; the participle agrees with its
-  subject: `Revertida` (the operation) vs `Revertido` (an item). Never unify them.
-- Status words match `queue.row.status` exactly; `Não foi possível concluir` avoids a bare `Falhou`.
+- log → `registro` everywhere (changelog, log files). `Revertida` (the operation) vs `Revertido` (an item) agree with
+  different subjects; never unify. Status words copy `queue.row.status`.
 
-## Rollback confirm and finish (`fileOperations.rollbackConfirm.*`, `operationLog.dialog.finishRollBack`, `operationLog.rollback.partiallyRolledBackNotice`, `queue.row.statusAwaitingAnswer`/`awaitingAnswerTooltip`, `queue.row.reversalInFolder`)
+## Rollback confirm and finish (`fileOperations.rollbackConfirm.*`, `operationLog.dialog.finishRollBack`, `queue.row.statusAwaitingAnswer`)
 
-- `Precisa de resposta` over DC's `Aguardando resposta`, which starts like the `queued` arm the `@key` must not echo.
-- `Manter os arquivos` over `Mantê-los`: the previous sentence talks about REPLACED files, so the pronoun could point
-  wrong. `Concluir a reversão` pairs with `iniciar a reversão`; `Para concluir` was refused because it first reads as
-  "in conclusion". `percorrer` over `revisar`, which is Review.
-- `in {folder}` → `em {folder}`: no article, no quotes, so any name fits.
+- `Precisa de resposta` over `Aguardando resposta`, which echoes the `queued` arm.
+- `Manter os arquivos` over `Mantê-los`: the prior sentence names REPLACED files. `Concluir a reversão` pairs with
+  `iniciar a reversão`; `Para concluir` reads as "in conclusion". `percorrer`, since `revisar` is Review. `em {folder}`.
 
-## Rollback outcome notice (`fileOperations.cancelRollback.*`, `fileOperations.rollbackConfirm.body`)
+## Rollback outcome notice (`fileOperations.cancelRollback.*`, `fileOperations.cancelRollback.stagedLeftover.*`, `fileOperations.leftovers.*`)
 
-- Reason lines use `{name} ficou como está: <motivo>.` (copied from `askCmdr.renameUndo.skipReason.*`): the ITEM is the
-  subject, so nothing agrees with `{name}` and no `você` is implied. `spotTaken` swaps to `ficou onde está` because it's
-  about place.
-- `mudou depois que o Cmdr colocou lá`: the brand carries the reason, and the null object avoids a gendered clitic.
-- Headlines write `O Cmdr` / `A reversão` because a bare `Apagou…` reads as `você apagou`.
-- put back has three verbs, and the `@key` asking for one is wrong for pt: `colocar de volta` (out of the Trash),
-  `restaurar` (an old NAME, `askCmdr.renameUndo.*`), `levar de volta` (a rollback moving files home). ❌ Don't flatten.
-- `removed` and `deleted` both → `apagar`: `Remover` is taking an entry off a list.
+- Reason lines: `{name} ficou como está: <motivo>.` (from `askCmdr.renameUndo.skipReason.*`); `spotTaken` says
+  `ficou onde está`. `mudou depois que o Cmdr colocou lá`: the null object dodges a gendered clitic.
+- The three put-back verbs (`style.md`) beat the `@key` asking for one. `removed` and `deleted` both → `apagar`;
+  `Remover` takes an entry off a list.
+- `na próxima vez que se conectar lá`, never a time. `stagingFolderKept` guards the USER's files: never suggest deleting
+  the folder. `deixou tudo onde está`; `no lugar` means "instead" here.
 
-## Staged leftovers (`fileOperations.cancelRollback.stagedLeftover.*`, `fileOperations.leftovers.stagingFolderKept`)
+## Rename and create refusals (`errors.mutation.*`, `errors.volume.*`, `fileExplorer.rename.*`, `fileOperations.newEntry.*`, `fileOperations.validation.nameNotUsable`)
 
-- Retry: `na próxima vez que se conectar lá`, never a time.
-- `stagingFolderKept` guards the USER's files: never suggest deleting the folder. `deixou tudo onde está`: `tudo` avoids
-  a clitic; not `no lugar`, which means "instead" in this catalog.
-
-## Rename chain and slow rename (`fileExplorer.rename.chainKeptOriginalNameAndOthers`, `fileExplorer.rename.stillRenaming*`, `fileOperations.newEntry.stillCreating`, `fileOperations.validation.nameNotUsable`)
-
-- `e outros {N} itens` with `outros` BEFORE the numeral, Finder's order (`MR201_V3`), over Nautilus' `{N} outros`.
-- Still-running toasts take the act as subject (`A criação de “X”`), never `“X” está sendo criado`: X may be a folder.
-- `nameNotUsable` has no final period: it's composed into `{reason}`.
-
-## Rename and create refusals (`errors.mutation.*`, `errors.volume.*`)
-
-- `timedOut` isn't a failure: `ainda pode ser concluída`, never `não foi possível`. `deviceSessionReset` isn't a
-  disconnect: never `desconecte`.
-- `perdeu a referência`, never `perdeu o controle` (reads as "lost control"). `O macOS se recusou a mover`: pt-BR
-  proclisis with `se`, and `recusar` over `não permitiu`, which reads as a permission problem.
-- `Obter Informações` keeps Apple's capitals when a string names the panel. `a alteração` is the requested change,
-  distinct from `as mudanças` in the file system.
+- `deviceSessionReset` isn't a disconnect: never `desconecte`. `perdeu a referência`, never `perdeu o controle`.
+  `O macOS se recusou a mover` over `não permitiu` (reads as permissions). `a alteração` (the request) vs `as mudanças`
+  (in the file system).
+- `e outros {N} itens`, Finder's order (`MR201_V3`). Still-running toasts take the act as subject (`A criação de “X”`):
+  X may be a folder. `nameNotUsable` has no final period, as it's composed into `{reason}`.
 
 ## Eject and disconnect refusals (`errors.eject.*`)
 
-- Each value follows a colon in `fileExplorer.pane.ejectFailedToast` / `disconnectFailedToast`, so it's a full sentence
-  with a capital. `timedOut` says `ainda pode ser concluída sozinha`, never a failure.
-- Either wrapper may concern a share or a phone, so the refusals share
+- Each value follows a colon in `fileExplorer.pane.ejectFailedToast` / `disconnectFailedToast`: a full, capitalized
+  sentence. Either may concern a share or a phone, so the frame is
   `<sujeito> ainda está com arquivos abertos lá. <ação>, depois tente de novo.`, never `este disco` or `ejete-o`.
-  `{app}` opens bare (a name like `mds_stores` isn't an app, so no `O app`); `Feche-os` points at `arquivos`. The aside
-  keeps `O Cmdr` as subject, never `Não temos`. `outros apps` is a list's last item: the `e` comes from
-  `Intl.ListFormat`, never the string.
-- A disk image is `ainda está montada`, which points at ejecting it.
+- `{app}` opens bare (`mds_stores` isn't an app); `Feche-os` points at `arquivos`. A disk image `ainda está montada`.
 
-## Trash buttons and refusals (`fileOperations.trash.*`, `commands.fileGoToTrash.*`, `errors.mutation.trash*`, `errors.write.trashRefused.title`)
+## Trash buttons and refusals (`fileOperations.trash.*`, `commands.fileGoToTrash.*`, `errors.write.trashRefused.*`, `fileOperations.delete.cloudOnlineOnly*`)
 
-- Undo → `Desfazer`; put back → `colocar de volta` (Finder `N153.1`). `Este disco não tem Lixo.` states a fact.
-- `errors.write.trashRefused.*`: `{count} dos itens que você escolheu` needs no plural. Never suggest retrying (a
-  permission refusal repeats).
-- `commands.editUndoTrash.label` = `menu.edit.undoTrash` = `Desfazer mover para o Lixo`: Finder's `Desfazer` + action
-  (`ME14`, `RN2`, `MT9`).
+- `colocar de volta` is Finder `N153.1`; `Este disco não tem Lixo.` states a fact.
+- `trashRefused`: `{count} dos itens que você escolheu` needs no plural; never suggest retrying.
+  `Desfazer mover para o Lixo` in command and menu (Finder `ME14`, `RN2`, `MT9`).
+- Four mandatory facts: the Trash would download first, so only deleting the WHOLE selection is offered, no copy stays
+  in the Trash (don't soften it), and the ways out. `“Apagar”` equals `fileOperations.delete.confirmDelete`.
 
-## Online-only delete warning (`fileOperations.delete.cloudOnlineOnlyMixedWarning`, `fileOperations.delete.cloudOnlineOnlyAllWarning`, `fileOperations.delete.cloudOnlineOnlyHandedBack`)
+## Crash dialog (`crashReporter.dialog.*`, `settings.updates.crashReports.*`)
 
-- Four facts are mandatory: the Trash would download first, so only deleting the WHOLE selection is offered, no copy
-  stays in the Trash (don't soften it), and the listed ways out. The quoted `“Apagar”` equals
-  `fileOperations.delete.confirmDelete`.
+- `continuou funcionando` over `continuou rodando`, which echoes `rodando em segundo plano`. `unknown` says neither
+  `encerrou` nor `continuou`. The settings label keeps `Enviar relatórios de falha` (a name).
 
-## Crash dialog (`crashReporter.dialog.body.ended`/`keptRunning`/`unknown`, `settings.updates.crashReports.description`)
+## Report notes (`errorReporter.amend*`, `errorReporter.autoSentToast.*`)
 
-- `keptRunning` and `unknown` must not say `falha`, `encerrou`, `parou`, or `travou`: nothing crashed.
-  `O Cmdr teve um problema`, and the report loses `de falha`.
-- `continuou funcionando` over `continuou rodando`, which would echo `rodando em segundo plano` and imply the app went
-  to the background. `unknown` stays true either way: no `encerrou`, no `continuou`.
-- The settings label keeps `Enviar relatórios de falha` (a name); its description covers both cases.
+- `nota` over MS `observação`: the two dialogs share one box. View buttons → `Ver X` (`Visualizar` is the menu);
+  `Ver por quê` (`askCmdr.wakeToast.openThread`), since bare `porquê` would need an article.
 
-## Report notes (`errorReporter.amend.*`, `errorReporter.amendedToast.message`, `errorReporter.autoSentToast.viewOrAddNotes`)
+## Selection dialog (`selection.*`, `menu.select.*`, `commands.selectionSelectSameKind.*`, `menu.context.selection`)
 
-- `nota`, the send dialog's word, over MS `observação`: the two dialogs share one box. `entra no mesmo relatório` says
-  outright that nothing is sent twice.
-- `Ver X` for View buttons; `Visualizar` is the View menu. `Ver por quê` (`askCmdr.wakeToast.openThread`):
-  sentence-final `por quê`; a bare `porquê` would need an article.
+- `Desmarcar` (Finder `Desmarcar Tudo`), never pt-PT `Desselecionar`, identical across menu, palette, settings, and
+  title. Hints start with the button's exact text.
+- kind → `Tipo` (Finder). `menu.context.selection` is the noun `Seleção`. `com a extensão *.{extension}`.
 
-## Selection dialog (`selection.*`)
+## One thing, one name (`queryUi.*`, `viewer.search.*`, `viewer.saveAs.*`)
 
-- Deselect → `Desmarcar` (Finder pt-BR `Desmarcar Tudo`), never pt-PT `Desselecionar`. The menu, the palette, the
-  settings description, and the dialog title all name it the same way; a mismatch was the bug.
-- Hints start with the button's exact text, so button and hint read as one sentence.
-
-## One thing, one name (`queryUi.scope.toggle.caseSensitive`, `viewer.search.*`, `queryUi.results.scan*`, `transfer.delete`, `fileOperations.transferDialog.pathErrorNotZip`)
-
-- Catalog-wide: trash `Lixo` never `Lixeira`; Reset `Restaurar` (Finder) with `redefinir` only for zoom; error report
-  `relatório de problema`; search is the `busca` family, viewer included; `dir` is always `pasta`; the drive scan is
-  `varredura`.
-- Agreement is grammar, not drift; never unify `Ambos` / `Ambas`, `Revertida` / `Revertido`, `Modificado` /
-  `Modificados`. Noun vs verb: `Pré-visualização` vs `Pré-visualizar`, `Busca` (a section) vs `Buscar`.
-- `Tentar novamente` on buttons (Finder), `tente de novo` in prose. ❌ Never sweep `de novo` → `novamente`.
-- `Em execução` (a running server) vs `Em andamento` (a task); `memória` (RAM) vs `anotações` (Ask Cmdr's memory).
-- `viewer.saveAs.defaultName` is `selecao` without the cedilla on purpose: it's a default file name.
+- Reset → `Restaurar` (Finder), `redefinir` only for zoom; error report → `relatório de problema`; `dir` → `pasta`.
+- Agreement isn't drift: keep `Ambos` / `Ambas`, `Modificado` / `Modificados`. `Pré-visualização` vs `Pré-visualizar`,
+  `Busca` (a section) vs `Buscar`. `Em execução` (a server) vs `Em andamento` (a task); `memória` (RAM) vs `anotações`
+  (Ask Cmdr's memory). ❌ Never sweep `de novo` → `novamente`.
+- `viewer.saveAs.defaultName` is `selecao` without the cedilla: a default file name.
 
 ## Native menus (`menu.*`, `licensing.windowTitle.*`, `main.instanceLock.*`)
 
-- Terms come from Finder pt-BR, capitals don't: Finder title-cases (`Nova Pasta`), Cmdr uses sentence case
-  (`Nova pasta…`).
-- Cut is `Cortar` in `menu.edit.cut` (Finder's menu bar) and `Recortar` elsewhere (MS; Finder's own `QK5`); review
-  queue. Changelog → `Registro de alterações` to keep the `log → registro` family over MS `Log de alterações`.
-- A busy item is its idle sibling byte for byte plus ` (ocupado)`, invariable because it describes the server or disk.
-- `Remover` on a tag (`menu.tag.removeNamed`): removing a tag deletes nothing. `Apagar` is reserved for files.
+- Cut → `Cortar` in `menu.edit.cut` (Finder's menu bar), `Recortar` elsewhere (MS, Finder `QK5`); review queue.
+  Changelog → `Registro de alterações` over MS `Log de alterações`. `Remover` a tag: it deletes nothing.
 
 ## Dock icon menu (`menu.dock.*`)
 
-- Dock.app's `pt_BR.lproj/DockMenus.strings` is the Tier 1 source and isn't in the pile: `Abrir Cmdr`, no article or
-  quotes, like `Ocultar %@`; the quoted form `Abrir “%@”` is for FILES.
-- `menu.dock.locationInParent` stays `{name} ({parent})`: AppKit's `%@ (%@)` is unchanged in Apple's `pt` (`ja` and `ar`
-  adapt it). `menu.dock.searchFiles` equals `menu.edit.searchFiles`.
+- Source: Dock.app `pt_BR.lproj/DockMenus.strings` (not in the pile). `menu.dock.searchFiles` equals
+  `menu.edit.searchFiles`.
 
-## Dock pin nudge (`main.dockPinNudge.*`, `settings.behavior.dockPinNudgeOfferedAt.*`)
+## Dock pin nudge (`main.dockPinNudge.*`, `settings.behavior.dockPin*`)
 
-- `Dock`, `Finder` stay English (Finder `Adicionar ao Dock`); Applications → `pasta Aplicativos`. The accept button
-  copies Apple's `Adicionar ao Dock`, not the `fixar` pair.
-- `Não precisa` over `Não, obrigado` (agrees with the speaker's gender), `Agora não` (promises a next time that never
-  comes), and `Não, valeu` (too slangy).
-- Outcome lines never sound like failure: `addedButDockDidNotRestart` says the icon IS in place.
-- `há alguns dias`, never a number: the threshold can change.
+- The accept button copies Apple's `Adicionar ao Dock`, not `fixar`. `Não precisa` also beats `Não, valeu` (slangy).
+  `addedButDockDidNotRestart` says the icon IS in place. `há alguns dias`: the threshold can change.
 
-## Show in Finder offer (`main.revealNudge.*`, `main.revealActivation.*`, `settings.behavior.reveal*`)
+## Show in Finder offer (`main.reveal*`, `settings.behavior.reveal*`)
 
-- `“Mostrar no Finder”` in curly quotes, identical wherever the command is named. `há um tempo`, never a number. The
-  first-time notice explains; it never apologizes.
+- `“Mostrar no Finder”` quoted, identical wherever named. `há um tempo`, never a number; explain, never apologize.
 
-## macOS pane names, Apple menu items, and the example email (`settings.updates.emailPlaceholder`, `askCmdr.renameUndo.undone`/`.partial`, `menu.app.showAll`/`hideOthers`)
+## macOS pane names, Apple menu items, and the example email (`settings.updates.emailPlaceholder`, `askCmdr.renameUndo.*`, `menu.app.*`)
 
-- `{system_settings}`, `{privacy_and_security}`, `{files_and_folders}` resolve at runtime, so ❌ never contract a
-  preposition with them (`nos {system_settings}`): use `em {system_settings}`.
-- `Conta Apple` (not `Conta da Apple`), `Geral`, `Itens de Início de Sessão e Extensões` (not the old short name), from
-  the macOS bundles.
-- `askCmdr.renameUndo.undone` names the object (`O nome anterior de … foi restaurado`), whole sentence inside the
-  plural.
+- From the macOS bundles: `Conta Apple` (not `da Apple`), `Geral`, `Itens de Início de Sessão e Extensões`.
+- `askCmdr.renameUndo.undone` names the object (`O nome anterior de … foi restaurado`), whole sentence in the plural.
 
-## Ask Cmdr names only the chat panel (`askCmdr.wake*`, `settings.askCmdr.proactive.description`, `ai.cloudConsent.askCmdr.*`)
+## Ask Cmdr names only the chat panel (`askCmdr.wake*`, `settings.askCmdr.*`, `ai.cloudConsent.askCmdr.*`)
 
-- `Ask Cmdr` survives only where the English keeps it; prose about the AI says `O Cmdr` or `a IA`. Read the current
-  English, never the key's history.
-- `chat` (noun), `conversar` (to chat), and `conversa` (conversation) each follow their own key's English.
+- `chat`, `conversar`, `conversa` each follow their own key's English.
 
 ## Bulk-rename review (`askCmdr.renameReview.*`, `askCmdr.tool.proposeRenamePlan.*`)
 
-- Allow / Deny → `Permitir` / `Negar` over `Recusar`, because it's an approval gate, not an invitation. `Permitir tudo`
-  / `Negar tudo`: `tudo` dodges agreement with `renomeações`.
-- Overwrite badge → `(substituição!)`, a noun like its sibling badges; `(substituir!)` would read as a button.
-- The cycle tooltip says `trocar os nomes desses arquivos entre si`: `girar` reads as rotating images.
+- `Permitir` / `Negar` over `Recusar`: an approval gate. `Permitir tudo` dodges agreement with `renomeações`.
+- Overwrite badge `(substituição!)`, a noun like its siblings. `trocar os nomes desses arquivos entre si`: `girar` reads
+  as rotating images.
 
-## What Ask Cmdr reads inside files (`askCmdr.tool.inspectFile.*`, `ai.cloudConsent.askCmdr.item.contents`, `ai.cloudConsent.askCmdr.contentsRule`)
+## What Ask Cmdr reads inside files (`askCmdr.tool.inspectFile.*`, `ai.cloudConsent.askCmdr.*`)
 
-- No sentence may promise that no content leaves: the rule says `nunca envia arquivos inteiros, fotos ou miniaturas` and
-  `uma parte limitada`. `detalhes da câmera`, never `metadados` / `dados EXIF`: the English avoids jargon.
-- `onde ela foi tirada` in the rule, because `localização de uma foto` alone can read as the file path.
+- `detalhes da câmera`, never `metadados` / `dados EXIF`. `onde ela foi tirada`, since `localização` alone reads as the
+  path.
 
 ## Cloud AI consent (`ai.cloudConsent.*`, `askCmdr.gate.*`)
 
-- Sentences citing the switch quote its label after `Ative`: `Ative “Permitir IA na nuvem”`. `Permita a IA na nuvem`
-  wouldn't reproduce the label. `serviço` (this family) and `provedor` (`ai.cloudConsent.askCmdr.*`) follow the English.
+- `Ative “Permitir IA na nuvem”` reproduces the label; `Permita a IA` wouldn't. `serviço` (this family) vs `provedor`
+  (`ai.cloudConsent.askCmdr.*`) follow the English.
 
 ## AI provider setup (`onboarding.cloudSetup.*`)
 
-- endpoint → `ponto de extremidade` (MS; Apple is silent). The label and its caption changed together, since a loanword
-  label over a native caption reads as two fields.
-- `then` in a two-step instruction stays `e depois`: the order is the information.
+- endpoint → `ponto de extremidade` (MS; Apple is silent); label and caption changed together. `e depois` keeps the
+  order.
 
-## Image index (`fileExplorer.imageIndex.*`, `settings.mediaIndex.*`, `search.imageResults.*`, `askCmdr.tool.imageFacts/searchPhotos.*`)
+## Image index (`fileExplorer.imageIndex.*`, `settings.mediaIndex.*`, `search.imageResults.*`, `askCmdr.tool.imageFacts*`)
 
-- The feature is `busca de imagens` / `busca por descrição`, never `pesquisa`; `pesquisável` stays as an item's
-  adjective. badge → `selo` over `distintivo` (police badge) and `emblema` (heraldic).
-- File tooltips agree with feminine `imagem` (`Indexada`, `Modificada`). An indexing pass → `rodada`, not `passagem` or
-  `varredura`. Junk → `descartáveis`, since `Lixo` is the Trash.
-- `deixou de acompanhar`, never `perdeu o controle`. `o conteúdo das suas fotos` stays explicit about reading content.
-- Network strings keep `fotos` where the English says photos, `imagens` where it says images. A photo archive is
-  `acervo de fotos`, not `arquivo`.
+- `busca de imagens` / `busca por descrição`; `pesquisável` stays an item's adjective. badge → `selo` over `distintivo`
+  (police) and `emblema` (heraldry).
+- Tooltips agree with `imagem` (`Indexada`). A pass → `rodada`. Junk → `descartáveis` (`Lixo` is the Trash).
+  `deixou de acompanhar`. `fotos` vs `imagens` follow the English; a photo archive is `acervo de fotos`.
 
-## Drive scan (`indexing.run.*`, `indexing.step.*`, `indexing.enrich.queued`, `settings.mediaIndex.importanceThreshold.waitingForDriveIndex`)
+## Drive scan (`indexing.*`, `fileExplorer.navigation.driveIndex.*`, `settings.indexing.*`, `errors.write.deviceDisconnected.*`/`moveNotConfirmed.*`)
 
-- The drive walk is `varredura` (`Primeira varredura completa`, `Nova varredura completa`), distinct from the transfer
-  pre-count `Analisar`. `Verificação de mudanças` matches the sibling headers' noun shape.
+- `Primeira varredura completa`, `Nova varredura completa`; `Verificação de mudanças` matches the siblings' noun shape.
+- `Desativado com a indexação` stays short: it renders only under that toggle.
+- Never mention disconnecting: the phone just never reports changes. `atualizado` pairs with `desatualizado`.
+  `os arquivos do celular` over `dele`, which would agree with `{name}`.
+- `O disco {name} está sendo / foi desconectado`; `no disco {volumeName}`, but `para {counterpart}` bare.
+- Sided lines say `disco`, generic ones `dispositivo` (phones and servers too). Don't unify.
+- `moveNotConfirmed` is neither failure nor loss: `Dê uma olhada em`; `então ele manteve…`.
 
-## Master indexing switch (`fileExplorer.navigation.driveIndex.refusedIndexingOff`/`tooltipIndexingOff`/`menuIndexingOffNote`, `settings.indexing.masterOffNote`/`overriddenBadge`)
+## Server pane, sign in, and forget (`servers.*`, `fileExplorer.navigation.connection*`, `fileExplorer.network.*`)
 
-- `ativado` / `desativado` label software; `ligado` / `desligado` is physical power. `Desativado com a indexação` keeps
-  the badge short: it only renders under that toggle.
+- `iniciar sessão` (`iniciar a sessão` in prose). Disconnect a server, never `Ejetar`.
+- `authMethodUnsupported`: `O Cmdr` skips a clumsy `a que`. The forget/remove confirms write the noun
+  (`tira esse servidor` / `compartilhamento` / `host`, `a senha`), never a pronoun on `{name}`.
+- `como {username}` / `como convidado`; the button is `Usar como convidado`. `notConnected` → `Não conectado a {name}`
+  (review queue).
 
-## Phone index stays yellow (`fileExplorer.navigation.driveIndex.tooltipStalePhone`, `indexing.staleDialog.titlePhone`/`bodyPhone`)
+## Server hub (`servers.hub.*`, `commands.servers*`, `shortcuts.scope.*`)
 
-- None may mention disconnecting: the phone just never reports changes. `atualizado`, never `em dia`, pairs with the
-  title's `desatualizado`. `os arquivos do celular` over `dele`, which would agree with `{name}`.
+- `Status` over Apple's `Estado`, matching `licensing.section.labelStatus` (review queue). nearby → `por perto`;
+  `Próximo` means "next". `local network` lowercase; `Rede Local` names the macOS permission.
 
-## Drive leaving or pulled (`fileExplorer.navigation.driveIndex.driveLeaving`, `indexing.needsFreshScan.afterDisconnect`, `errors.write.deviceDisconnected.sided.*`, `errors.write.moveNotConfirmed.*`)
+## Server sheet and host keys (`servers.sheet.*`, `servers.hostKey.*`, `servers.paneState.*`, `goToPath.dialog.*`)
 
-- `O disco {name} está sendo / foi desconectado`: the noun leads so the participle agrees with it. `em` needs an
-  article, so write `no disco {volumeName}` / `no disco {counterpart}`; `para {counterpart}` goes bare.
-- The sided lines say `disco`, the generic ones `dispositivo` (they also cover phones and servers). Don't unify.
-- `moveNotConfirmed` is neither failure nor loss: `Dê uma olhada em`, not `Verifique`; `então ele manteve…` keeps the
-  subject explicit.
+- Browse (file picker) → `Escolher…` (Apple) over `Navegar` (archives), `Explorar`, MS `Procurar…`; allowlisted in
+  `i18n-term-consistency`. passphrase → `frase-senha` (Apple), apart from the account `senha`.
+- `quem cuida do servidor` avoids `o dono`; `A chave do servidor mudou` because `dele` would lean on `{name}`.
 
-## Server pane, sign in, and forget (`servers.*`, `fileExplorer.navigation.connectionTooltip*`/`disconnect*`/`forget*`, `fileExplorer.network.browser.removeHost*`/`hostRemove*`, `fileExplorer.network.share.*`)
+### NFS exports (`servers.sheet.nfs*`, `servers.refusal.export*`/`reservedPortRequired`)
 
-- sign in → `iniciar sessão` (`iniciar a sessão` in prose); signed out → `Sessão encerrada`, which agrees with the
-  session, not the person. Disconnect a server, never `Ejetar`.
-- `servers.refusal.authMethodUnsupported`: subject `O Cmdr` skips a clumsy `a que`.
-- `forgetServerConfirm` / `forgetShareConfirm` / `removeHostConfirm` / `forgetSecretConfirm` write the noun
-  (`tira esse servidor` / `compartilhamento` / `host`, `a senha`), never a pronoun or participle on `{name}`: so
-  `O Cmdr esqueceu {hostName}`, `O Cmdr salvou {name}`, `O Cmdr encontrou {name} por perto`.
-- "as {username}" / "as guest" → `como {username}` / `como convidado`, the `Conectar como convidado` frame; the button
-  is `Usar como convidado`. `notConnected` → `Não conectado a {name}` (why: review queue).
+- export → `exportação` (IBM and Oracle pt-BR) over `compartilhamento`, which stays SMB's. The owner lines say
+  `a quem pertencem os arquivos`, dodging `dono`. The server's own settings are `configurações de NFS do servidor`.
 
-## Server hub (`servers.hub.*`, `commands.servers*`, `fileExplorer.navigation.serverPinnedToast`/`serverUnpinnedToast`/`pinRefusedToast`/`networkVolume`, `shortcuts.scope.servers`/`places`)
+## Reconnect and key-only sign-in (`servers.paneState.*`)
 
-- The row is `Servidores`, its group stays `Rede`: the two coexist on purpose. Places → `Locais` (Finder), not `Lugares`
-  or the SMB-only `Navegador de compartilhamentos`.
-- `Status` over Apple's `Estado`, to match `licensing.section.labelStatus` (review queue). Last used → `Último uso`:
-  Apple's `Última Usada` locks the feminine, Mail's `Usado pela última vez` doesn't fit a column.
-- `Salvo` for an idle saved server: nothing went wrong. nearby → `por perto`, not `Próximo` (means "next" here).
-- `local network` lowercase is the concept; `Rede Local` capitalized is the macOS permission's name.
+- `Abra-o de novo` is safe: `servidor` is the only masculine candidate.
 
-## Server sheet and host keys (`servers.sheet.*`, `servers.hostKey.*`, `servers.paneState.signedOut`/`signIn`/`hostKeyChanged*`, `goToPath.dialog.opensServer`/`addsServer`, `commands.serversConnect.label`)
+## Pin, unpin, and trusted host keys (`menu.network.*`, `servers.pinHint.*`, `settings.servers.*`, `settings.adb.*`)
 
-- Browse (file picker) → `Escolher…` (Apple's `Choose…`), not `Navegar` (archives), `Explorar` (network), or MS
-  `Procurar…`; the split is allowlisted in `i18n-term-consistency`.
-- passphrase → `frase-senha` (Apple), which separates the key file's phrase from the account `senha`.
-- `quem cuida do servidor` for the owner avoids a masculine `o dono`. `A chave do servidor mudou` writes the noun
-  because `dele` would lean on the title's `{name}`.
+- `Fixar` / `Desafixar` (Safari, Notes). `Confiável desde`: `confiar em` doesn't passivize.
+  `Seu grupo Rede está ficando grande` (`grupo longo` isn't Portuguese). ADB status lines write `O Cmdr`.
 
-## Reconnect and key-only sign-in (`servers.paneState.reconnecting`, `.signedOutNothingToAsk`)
+## ADB settings (`settings.fileOperations.adb*`)
 
-- `Reconectando a {name}…`: `a` from the sibling `servers.paneState.connecting`, which alternates in the same spot.
-- `Abra-o de novo`: safe because `servidor` is the only masculine candidate.
-
-## Pin, unpin, and trusted host keys (`menu.network.pinToSwitcher`/`unpin`, `servers.pinHint.*`, `settings.servers.*`, `settings.adb.*`, `settings.section.servers`/`adb`, `settings.summary.servers`/`adb`, `settings.appearance.tintSmb.*`)
-
-- `Fixar` / `Desafixar` (Safari, Notes). `Fixar no seletor` shortens like the English.
-- `Confiável desde` because `confiar em` doesn't passivize (`Confiada em…` is ungrammatical).
-- `Seu grupo Rede está ficando grande`: `grupo longo` isn't Portuguese. The ADB status lines write `O Cmdr`, since a
-  subjectless negative reads as `você não está`.
-
-## ADB settings (`settings.fileOperations.adbEnabled.*`, `settings.fileOperations.adbBinaryPath.*`)
-
-- `Localização do adb` (Finder), `sistema de arquivos` (Disk Utility), `por ADB` like `por USB`. `adb` stays lowercase:
-  it's the command.
+- `Localização do adb` (Finder), `sistema de arquivos` (Disk Utility), `por ADB` like `por USB`; `adb` lowercase (the
+  command).
 
 ## Android over ADB (`adb.*`, `settings.behavior.adbHintDismissed.*`)
 
-- Android's own pt-BR wins on the phone: `depuração USB`, `Permitir`, `toque em`. The ADB hint's `Saiba como` over a
-  bare `Como`, which doesn't read as a link.
-- `Desconectar`, never `Ejetar`: the phone stays on the cable. `Você parou de abrir o seu celular` over `cancelou`,
-  since `Cancelar` is the button.
+- `Saiba como` over bare `Como`, which doesn't read as a link. `Desconectar`, never `Ejetar`: the phone stays cabled.
+  `Você parou de abrir o seu celular` over `cancelou` (`Cancelar` is the button).
 
-## Root and start folder (`servers.sheet.rootFolder*`/`startFolder*`/`nameHelp`, `servers.refusal.startFolderOutsideRoot`/`rootNotFound`/`startFolderNotFound`/`saveUnconfirmed`)
+## Root and start folder (`servers.sheet.rootFolder*`/`startFolder*`, `servers.refusal.*Folder*`/`rootNotFound`)
 
-- `pasta raiz` (never `raíz`) and `pasta inicial`, not `pasta pessoal` / `pasta base` (those are the user's home).
-  `nunca sobe além desta pasta` avoids the pleonasm `sobe acima`.
+- `pasta raiz` (never `raíz`), `pasta inicial`; `pasta pessoal` / `pasta base` are the home folder. `nunca sobe além`
+  avoids `sobe acima`.
 
-## Onboarding (`onboarding.moreAbout`, `onboarding.wizard.stepTooltip`, `onboarding.stepFda.why`/`.ifAllow`, `onboarding.stepAi.*`, `onboarding.stepBeta.checklist.*`/`.signup.*`/`.openBeta`, `onboarding.stepOptional.*.summary`)
+## Onboarding (`onboarding.*`)
 
-- GitHub star: button `Adicionar aos favoritos` (GitHub pt), count `estrelas`, as GitHub shows them.
-- step → `etapa` everywhere in onboarding, never `passo`. `Rede Local` quoted exactly as the macOS privacy row, never
-  `Acesso à rede local`.
-- The four `stepOptional.*.summary` lines have the switch as implied subject and must not wrap: same length or shorter
-  than English. `processo nativo do macOS` over MS `manipulador`, matching the caption behind it.
-- `stepAi.local.tooltip` quotes `stepAi.cloud.label` byte for byte, and the signup status lines name `Salvar`: change
-  them together.
-- `burro` for the deliberately blunt "dumber". `erro de digitação` is the person's typo, not the app's.
+- `Rede Local` quoted as the macOS privacy row, never `Acesso à rede local`. `processo nativo do macOS` over MS
+  `manipulador`, matching its caption.
+- `stepAi.local.tooltip` quotes `stepAi.cloud.label` byte for byte, and the signup lines name `Salvar`: change together.
+- `burro` for the deliberately blunt "dumber". `erro de digitação` is the person's typo.
 
 ## Full disk access badge (`onboarding.fdaBadge.*`)
 
-- The badge is sentence case (`Sem acesso total ao disco`); `Acesso Total ao Disco` stays for strings naming the pane.
-  It equals `onboarding.stepAi.bannerTitle.denied`, and the aria opens with it verbatim.
+- Sentence case `Sem acesso total ao disco`, equal to `onboarding.stepAi.bannerTitle.denied`; the aria opens with it.
 
-## Favorites menu (`commands.favoritesOpen.*`, `commands.favoritesOpenByNumber.label`, `commands.favoritesAdd.description`, `fileExplorer.navigation.favoritesAddCurrent`/`favoritesAlreadyAdded`/`favoritesCantAddHere`, `menu.go.showFavorites`, `shortcuts.scope.favoritesMenu`)
+## Favorites menu (`commands.favorites*`, `fileExplorer.navigation.favorites*`, `menu.go.showFavorites`)
 
-- `favoritos` lowercase as a common noun, `Favoritos` only where the English names the section.
-- `Esta pasta já está nos favoritos` over `já é um favorito`, whose masculine predicate clashes with `pasta`.
-- `pressione`, never `aperte`. `ir até esse favorito` because `ir` needs a destination.
+- `Favoritos` capitalized only where the English names the section. `já está nos favoritos` over `já é um favorito`
+  (clashes with `pasta`). `pressione`, never `aperte`; `ir até esse favorito`.
 
-## Select same kind (`menu.select.sameKind`/`.allFolders`/`.sameExtension`/`.noExtension`, `commands.selectionSelectSameKind.*`, `menu.context.selection`)
+## Viewer fetch pane (`viewer.pull.*`, `viewer.error.*`)
 
-- kind → `Tipo` (Finder). `menu.context.selection` is the NOUN `Seleção` (the submenu's content), not the verb
-  `Selecionar`. `com a extensão *.{extension}` leaves nothing agreeing with the mask.
+- `Obtendo` (Finder) over `Baixando` (a local archive downloads nothing) and `Buscando` (search). Nothing agrees with
+  `{fileName}` or the unit.
 
-## Viewer fetch pane (`viewer.pull.*`, `viewer.error.stoppedResponding`)
+## Mount and share-list failures (`errors.mount.*`, `errors.shareList.*`, `fileExplorer.network.osMountFallback.*`, `fileOperations.transferProgress.lookAlikeHint`, `errors.*.ambiguousName*`)
 
-- Fetching → `Obtendo` (Finder), not `Baixando` (a local archive downloads nothing) or `Buscando` (the viewer's search).
-- `para pré-visualizar` and `até agora` without a pronoun or participle, so nothing agrees with `{fileName}` or the
-  formatted unit.
+- NetAuthAgent.app (not in the pile) is Tier 1: `compartilhamento`, `convidados`. `quando quiser` avoids
+  `pronto/pronta`. `shareNotOnServer` can't be fixed by retrying: no `agora`, no `tente novamente`.
+- Plain words (`parecem iguais`), no `Unicode` or `normalização`. `a pasta superior`; `pasta acima` reads as "listed
+  above".
 
-## Mount and share-list failures (`errors.mount.*`, `errors.shareList.*`, `fileExplorer.network.osMountFallback.*`, `fileExplorer.pane.directConnectionShareNotOnServerToast`)
+## F4 text editor (`settings.behavior.textEditorApp.*`, `fileExplorer.edit.*`)
 
-- NetAuthAgent.app (not in the pile) is Tier 1 for these: `compartilhamento`, `convidados`. `quando quiser` avoids
-  `pronto/pronta`.
-- `Você está conectado` / `continua conectado`: Apple's own unmarked masculine. `4x mais lenta do que`, the multiplier
-  tight.
-- `shareNotOnServer` is the one case where retrying can't help: no `agora`, no `tente novamente`.
+- `Editar arquivos com` takes any app without `no` / `na`; `em {app}` bare.
 
-## Look-alike names (`fileOperations.transferProgress.lookAlikeHint`, `errors.listing.ambiguousName.explanation`, `errors.volume.ambiguousName`)
+## Old macOS and old WebKit (`main.oldMacos.*`, `main.oldWebkit.*`, `main.escapeFullScreenHint.*`, `settings.advanced.exitFullScreenOnEscape*`, `settings.analytics.*`, `settings.updates.emailPrivacyNote`, `onboarding.stepBeta.analytics*`)
 
-- Plain words (`parecem iguais`, `escreve de forma diferente`), no `Unicode` or `normalização`. `armazenar`, never pt-PT
-  `guardar`. `a pasta superior`, since `pasta acima` reads as "listed above".
+- `compatível` over `suportado`; best effort → `faz o que dá`. `Atualização de Software` keeps its capitals.
+- `Esc` (AppKit) over `ESC`. `Este aviso só aparece uma vez`: no `você`, no future.
+- No `anônimas` (a stable random id), ❌ never `pseudônimo` jargon: `um identificador aleatório`, `ligado a`.
 
-## F4 text editor (`settings.behavior.textEditorApp.label`, `settings.behavior.textEditorApp.description`, `settings.navigationAndFileOps.card.textEditor`, `fileExplorer.edit.appMissing`, `fileExplorer.edit.launchRefused`)
+## O original ficou (`errors.write.sourceNotRemoved.*`, `errors.write.permissionDenied.*`, `errors.write.deletePending.*`)
 
-- `Editar arquivos com` because `com` takes any app name without a gendered `no` / `na`; `{app}` goes after `em` bare.
+- `apague o original por conta própria`: `você mesmo` marks the masculine (`tentative`). `para ser apagado`.
 
-## Usage stats (`settings.analytics.enabled.label`/`.description`, `settings.updates.emailPrivacyNote`, `onboarding.stepBeta.analyticsLede`/`.analyticsTitle`)
+## What your organization manages (MDM) (`*.managed.*`, `updates.status.*`)
 
-- No `anônimas` (a stable random id means they never were), and ❌ never `pseudônimo` / `pseudonimizado`: that jargon is
-  exactly what the English avoids. `um identificador aleatório`, `ligado a`.
-
-## Old macOS and old WebKit (`main.oldMacos.*`, `main.oldWebkit.*`)
-
-- `compatível` over the calque `suportado`. best effort → `faz o que dá`, not `melhor esforço` (contract-speak).
-  `Atualização de Software` keeps the pane's capitals.
-
-## Esc and full screen (`main.escapeFullScreenHint.*`, `settings.advanced.exitFullScreenOnEscape*`)
-
-- `Esc` (AppKit's name) over the older `ESC`. `Este aviso só aparece uma vez` makes the notice the subject: no `você`,
-  no future tense.
-
-## O original ficou (`errors.write.sourceNotRemoved.*`, `errors.write.permissionDenied.*.source*`, `errors.write.deletePending.message`)
-
-- `apague o original por conta própria`: `você mesmo` would mark the masculine (`tentative`, nothing in the pile).
-- `deletePending.message` says `para ser apagado`, the `Apagar` family ruled for delete.
-
-## What your organization manages (MDM) (`*.managed.*`, `updates.status.managedOff`/`heldByPolicy`)
-
-- No agreeing participle: `O que sua organização gerencia`, `Só verificação manual`. `*Off` agrees with its row, as
-  macOS Notifications does.
+- `O que sua organização gerencia`, `Só verificação manual`: no agreeing participle. `*Off` agrees with its row (macOS
+  Notifications).

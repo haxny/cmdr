@@ -1,639 +1,326 @@
 # nl decisions
 
-Distilled rulings behind `terms.json`: "X over Y because Z", each heading citing its keys in backticks so
-`pnpm i18n:brief` can pull it. Term rulings live in `terms.json`, typography in `mechanics.json`, voice in `style.md`,
-open questions in `review-queue.md`.
+Distilled rulings behind `terms.json` ("X over Y because Z"), each heading citing its keys so `pnpm i18n:brief` can pull
+it. General rules live in `style.md`, terms in `terms.json`; neither is repeated here.
 
-## Instellingssecties en kaartnamen (`settings.section.*`, `settings.summary.navigationAndFileOps`, `settings.behavior.doubleClickPaneNavigatesToParent.*`)
+## Instellingssecties en kaartnamen (`settings.section.*`, `settings.summary.navigationAndFileOps`, `settings.behavior.doubleClickPaneNavigatesToParent.*`, `settings.appearance.showFunctionKeyBar.label`, `fileExplorer.functionKeyBar.hiddenToast`)
 
-- Section names, identical in every file that cites them: Weergave, Gedrag, Bestandsbewerkingen, Bestandssysteem volgen
-  (tentative), Zoeken, Bestandssystemen, SMB-/netwerkshares, MTP (Android/Kindle/camera's), Weergavevenster (tentative),
-  Ontwikkelaar, Logboek, Updates en privacy, Geavanceerd, Sneltoetsen, Licentie, Kleuren en notaties, Zoom en dichtheid,
-  Bestands- en mapgroottes, Lijst (tentative), Navigatie. "&" → `en`.
-- `settings.section.navigationAndFileOps` → `Navigatie en bewerkingen`: mirrors EN's clipped "ops"; the card keeps
-  `Bestandsbewerkingen`.
-- Double-click the pane background → `Dubbelklik op de paneelachtergrond …`, explained as "de lege ruimte rondom de
-  bestandenlijst".
+- Sections, identical wherever cited: Weergave, Gedrag, Bestandsbewerkingen, Bestandssysteem volgen (tentative), Zoeken,
+  Bestandssystemen, SMB-/netwerkshares, MTP (Android/Kindle/camera's), Weergavevenster (tentative), Ontwikkelaar,
+  Logboek, Updates en privacy, Geavanceerd, Sneltoetsen, Licentie, Kleuren en notaties, Zoom en dichtheid, Bestands- en
+  mapgroottes, Lijst (tentative), Navigatie. "&" → `en`.
+- `Navigatie en bewerkingen` mirrors EN's clipped "ops"; the card keeps `Bestandsbewerkingen`.
+- `de paneelachtergrond`, explained as `de lege ruimte rondom de bestandenlijst`; `functietoetsbalk` everywhere.
 
-## De wachtrijmelding telt mee (`fileOperations.transferProgress.queuedToast`, `.queuedToastCount`)
+## Voortgang van kopiëren en verplaatsen (`transfer.split.*`, `transfer.fileOnly.*`, `fileOperations.transferProgress.titleActive`, `queue.row.label`, `queue.failureToast.title`, `errors.write.filesTooLargeForFilesystem.*`)
 
-The count fragment carries the finite verb (`gaat # bewerking` / `gaan # bewerkingen`) inside
-`Er {countText} deze voor, …`, because the verb agrees with the count. ⚠️ One unit: never re-translate either half
-alone.
+- Participle last (`{phrase} gekopieerd`). Row arms `Bezig met naam wijzigen` / `map aanmaken` / `bestand aanmaken`;
+  `failureToast.title` drops `Bezig met` and appends `niet voltooid`, so the two move together.
+- File size → `te groot` (`te lang` is for names).
 
-## Voortgang en uitkomst van kopiëren en verplaatsen (`transfer.split.*`, `transfer.fileOnly.*`, `fileOperations.transferProgress.titleActive`, `queue.row.label`, `queue.failureToast.title`, `errors.write.filesTooLargeForFilesystem.*`)
+## De bewerkingenwachtrij (`queue.*`, `commands.queueShow.*`, `commands.queueMove*`, `fileOperations.transferProgress.queuedToast`, `.queuedToastCount`, `.background`, `.backgroundAria`)
 
-- `transfer.split.*` put the participle last (`{phrase} gekopieerd`), Dutch word order over EN's leading verb.
-- `queue.row.label` arms: `Bezig met naam wijzigen` / `map aanmaken` / `bestand aanmaken`; `queue.failureToast.title`
-  strips `Bezig met` and appends `niet voltooid`, so the two keys move together.
-- "Too large" for a file size → `te groot` (`te lang` is for names).
-
-## Archieven bladeren en bewerken (`fileExplorer.archiveEnterMenu.*`, `fileExplorer.readOnly.*`, `settings.archives.*`)
-
-- Browsing over opening: `Blader als een map` vs `Open met standaardapp`.
-- Read-only titles close into one compound (`Alleen-lezenarchief`, `Alleen-lezenvolume`, `Alleen-lezenmap`); the
-  predicate stays open (`is alleen-lezen`), and `Alleen-lezen git-portaal` stays open to avoid a double hyphen.
-- "each format" → `elk formaat`; `structuur` is reserved for `archiefstructuur`.
-
-## Klembordinhoud als bestand plakken (`settings.fileOperations.pasteClipboardAsFile.*`, `fileExplorer.clipboard.pastedAsFile*`)
-
-- Toast order follows `clipboard.copied`: `… als {filename} geplakt`.
-- `Klembord-PDF` keeps its hyphen, so the whole compound sits inside each select branch.
-- Radio options are parallel infinitives: `Niets doen`, `Bestand aanmaken`, `Aanmaken en naam wijzigen`.
-
-## Het archiefwachtwoord (`fileOperations.archivePassword.*`, `errors.listing.archiveNeedsPassword.explanation`)
-
-`… is beveiligd met een wachtwoord` (Total/Double Commander), button `Ontgrendelen` (AppKit). The archive is
-`beveiligd`, its contents `vergrendeld` until you `ontgrendelt` it; Finder's Locked flag is a different `beveiligd`.
-
-## Comprimeren (`commands.fileCompress.*`, `fileOperations.transferDialog.*`, `settings.archives.compressionLevel.*`)
-
-`Comprimeer` on every button and title verb. Slider ends `Sneller` (quicker packing) and `Kleiner` (smaller output),
-after Total Commander's "snelste compressie" / "maximale compressie".
-
-## Bewerkingenlogboek (`operationLog.*`, `commands.logOperationLog.*`)
-
-- Rename summary `Naam van {countText} onderdeel gewijzigd` (Finder: "De naam van het onderdeel … gewijzigd").
-- Lifecycle words reuse `queue.row.status`.
-- Initiator You → `Jij` (contrastive, standalone); recorded → `vastgelegd` (tentative); `Niet terug te draaien`.
-- Rollback noun (`rollbackOf`, …) → `Terugdraaibewerking`, not `Terugdraaiing`.
-
-## Ask Cmdr: chat, hulpmiddelen en kosten (`askCmdr.*`, `settings.askCmdr.*`, `commands.askCmdrToggle.*`)
-
-- `askCmdr.tool.*` doing/done pairs: subjectless present for doing (`Controleert wat je bekijkt`), participle-led for
-  done (`Grootste mappen gevonden`), one distinct verb per tool.
-- `askCmdr.error.budgetExhausted` says `limiet`, never "budget".
-- `askCmdr.composer.dropHint` → `Zet hier neer om bij te voegen`.
-
-## Afbeeldingen indexeren en doorzoeken (`settings.mediaIndex.*`, `fileExplorer.imageIndex.*`, `search.imageResults.*`)
-
-- Technical labels say `afbeelding`; warm rows about a photo archive say `foto's`, mirroring EN's split.
-- The feature in prose is `het doorzoeken van afbeeldingen`; the in-progress status is the passive
-  `Afbeeldingen worden geïndexeerd`, because bare `Afbeeldingen indexeren` reads as the Settings label.
-- Card titles `Indexeren inschakelen`, `Mappen om te indexeren` (friendlier than "Te indexeren mappen").
-- Semantic search: `Foto's op beschrijving zoeken`, `zoeken op trefwoord`, `het model voor semantisch zoeken` (no
-  compound).
-
-## Indexeren: runsoorten en resterende tijd (`indexing.run.*`, `indexing.eta.*`, `indexing.enrich.queued`, `settings.mediaIndex.importanceThreshold.waitingForDriveIndex`)
-
-- Run kinds `Eerste volledige scan`, `Volledige herscan` (tentative), `Snelle update`.
-- Hour ETAs lead with `nog` and keep `uur` invariant (`nog 20 uur`).
-- "The drive scan" in prose → `het doorzoeken van de schijf`.
-
-## Naamwijzigingen beoordelen (`askCmdr.renameReview.*`, `askCmdr.renameUndo.*`)
-
-- `askCmdr.renameReview.rename` → `Wijzig # bestandsnaam` / `bestandsnamen`, short enough for the primary button.
-- Rename cycle → `cyclus van naamwijzigingen`; "while rotating" → `terwijl deze bestanden van naam wisselen` (`roteren`
-  reads mechanical).
-- Recent-past events in status prose take the perfect (macOS "is mogelijk verplaatst"), never the simple past.
-
-## Het verwijdervenster: Van, Naar en de prullenmandschakelaar (`fileOperations.delete.trashSwitch`, `.confirmDelete`, `fileOperations.transferDialog.sourceGroupTitle`, `.targetGroupTitle`)
-
-- Switch and confirm button read as one pair: `Naar prullenmand`, as in `transferDialog.titleVerbOnly`.
-- Headings `Van` / `Naar` (Total and Double Commander ship the pair in this dialog); `bron` / `bestemming` stay for the
-  controls.
-
-## Het indexeren van schijven staat uit (`fileExplorer.navigation.driveIndex.refusedIndexingOff`, `.tooltipIndexingOff`, `.tooltipDisabled`, `.menuIndexingOffNote`, `settings.indexing.masterOffNote`, `.overriddenBadge`)
-
-- "Drive indexing" in prose → `het indexeren van schijven`, never the label `Schijf indexeren`, which reads as an
-  imperative and gives `Zet het aan` no antecedent.
-- A navigation path quotes the label verbatim (`Zet het aan bij Indexeren > Schijf indexeren.`).
-- Terse slots compound: `schijfindexering`, `beeldindexering`; `overriddenBadge` → `Uit met schijfindexering`.
-
-## Schijfindex: de wijzigingscontrole (`indexing.run.*`, `fileExplorer.navigation.driveIndex.tooltipCoalesced*`)
-
-`Controleren op wijzigingen` (Nautilus's "controleren op mediawijzigingen"), `Bestandenlijst bijwerken`, and
-`de controle die nu bezig is`, reusing `controle` as the catalog's word for a full check.
-
-## Vastgelopen overdracht: het stall-bericht (`fileOperations.transferProgress.stall*`, `.close`)
-
-- `stallNotice` → `Al {duration} geen voortgang` over `Geen voortgang gedurende …`, which reads bureaucratic.
-- `Wachten tot X reageert` (Finder's clause form); `reageren` stays reserved for a device or share answering.
-- "Has stopped moving" → `komt niet meer vooruit` (tentative) over `ligt stil`, too close to the neighbouring
-  `Gepauzeerd`.
-- `stallLogHint` says `het logbestand`, never `logboek`, which names the Bewerkingenlogboek feature.
-
-## Gekopieerd pad: de klembordbevestiging (`fileExplorer.clipboard.copiedPath`)
-
-`Pad gekopieerd, het staat nu op het klembord:` must read complete without the path, which renders below it on its own
-line.
-
-## Operation queue: de hernoeming van Overdrachtswachtrij (`queue.*`, `commands.queueShow.*`)
-
-- `Bewerkingenwachtrij` over `Bewerkingswachtrij`: it pairs with `Bewerkingenlogboek`; `commands.queueShow.label` is
-  exactly the window name. Row aria says `deze bewerking` (a row can be a delete); `pauseAria` keeps `deze overdracht`.
-- Reordering (`commands.queueMove*`, `queue.reorder.*`): `schuif … naar voren` / `naar achteren` in `de wachtrij`, edges
-  `vooraan` / `achteraan`, over `Verplaats` (F6) and `regel` (text line).
-
-## De voortgangschip en het niet-voltooid-bericht (`queue.chip.*`, `queue.failureToast.*`, `queue.row.dismiss*`, `queue.toolbar.dismissAll`)
-
-- Dismiss → `Sluit` / `Sluit deze bewerking` / `Sluit alles`, over `Wis` (erase) and `Verwijder uit lijst` (leads with
-  the delete verb on a row that may say "Bezig met verwijderen").
-- Failure headline arms reuse the row label minus `Bezig met` plus `niet voltooid`; the count headline pulls the copula
-  into the plural branches.
-- Screen-reader "percent" → `procent`; the visual `%` takes no space.
-- `queue.chip.tooltip` gives the count its own `·` slot, since the trash arm and the `Bezig` fallback take no
-  `van`-object; the ` naar {destination}` clause fits after either.
+- `Bewerkingenwachtrij` pairs with `Bewerkingenlogboek`; `queueShow.label` is the window name. Row aria `deze bewerking`
+  (a row can be a delete); `pauseAria` keeps `deze overdracht`.
+- Reorder `schuif … naar voren` / `naar achteren`, edges `vooraan` / `achteraan`, over `Verplaats` (F6) and `regel`.
+- Dismiss → `Sluit` (… `deze bewerking`, `alles`) over `Wis` and `Verwijder uit lijst` (a delete verb on delete rows).
+- `queuedToastCount` holds the verb (`gaat # bewerking` / `gaan # bewerkingen`) for `Er {countText} deze voor, …`. ⚠️
+  One unit: never re-translate half.
+- Spoken "percent" → `procent`; `chip.tooltip` gives the count its own `·` slot (the trash and `Bezig` arms take no
+  `van`).
+- `Op de achtergrond` over `Achtergrond` (a backdrop) and `Naar achtergrond` (window stacking); its aria
+  `Op de achtergrond laten doorlopen` contains it, so reshape both.
 
 ## Het losse conflictvenster (`fileOperations.operationConflict.*`)
 
-- A destination follows the infinitive (`Bezig met kopiëren naar X`) so the line matches its queue row verbatim;
-  Finder's verb-final `'^1' naar '^2' kopiëren` models only keys without a queue-row sibling.
-- A direct object precedes it (`Bezig met {destination} bewerken`).
-- "until you answer" → `totdat je antwoordt`; never `reageren` (reserved for devices).
+`Bezig met kopiëren naar X` matches the queue row (Finder's verb-final form fits only keys without one); an object goes
+first (`Bezig met {destination} bewerken`); `totdat je antwoordt` (`reageren` is for devices).
 
-## De knop voor een lege wachtrij: "Background" (`fileOperations.transferProgress.background`, `.backgroundAria`)
+## Vastgelopen overdracht (`fileOperations.transferProgress.stall*`, `.close`)
 
-- `Op de achtergrond` over bare `Achtergrond` (macOS uses it only for a backdrop) and `Naar achtergrond` (moving a
-  window behind another); Dutch has no verb "achtergronden".
-- The aria `Op de achtergrond laten doorlopen` starts with the label verbatim; re-shape both together.
+`Al {duration} geen voortgang` over bureaucratic `gedurende`; `Wachten tot X reageert`; `komt niet meer vooruit`
+(tentative) over `ligt stil` (too near `Gepauzeerd`); `het logbestand`, since `logboek` names the feature.
 
-## Het stoppoortje: afsluiten terwijl er nog werk loopt (`main.quit.*`)
+## Stoppen terwijl er werk loopt (`main.quit.*`)
 
-- Title `Stoppen terwijl er nog {countText} bewerkingen worden uitgevoerd?`: Finder's `A17`/`A19` almost word for word;
-  the `one` arm says `een bewerking wordt`, since `1 bewerking` reads like a tally.
-- `opruimen` over `verwijdert`, which reads as more deleting next to "Bezig met verwijderen" rows.
-- `Wat al klaar is, blijft klaar.` over `blijft staan`, which promises the opposite for a delete.
-- `Werk door` (tentative) over `Annuleer` (cancels the operations, the opposite outcome), `Later` (the countdown is
-  deleted), and `Behoud` (keep-this-file).
-- Restart / log out → `herstarten` / `uitloggen` (macOS `Herstart`, `Log uit`), over Windows's `opnieuw opstarten` /
-  `afmelden`.
+- Title after Finder `A17`/`A19`; `one` arm `een bewerking wordt` (`1 bewerking` reads like a tally).
+- `opruimen` over `verwijdert`; `Wat al klaar is, blijft klaar.` over `blijft staan` (wrong for a delete).
+- `Werk door` (tentative) over `Annuleer` (cancels the work), `Later`, and `Behoud` (keep-file); `herstarten` /
+  `uitloggen` (macOS) over `opnieuw opstarten` / `afmelden`.
 
-## Usage stats: "anonieme" dropped, "een willekeurige id" named (`settings.analytics.enabled.label`/`.description`, `settings.updates.emailPrivacyNote`, `onboarding.stepBeta.analyticsLede`/`.analyticsTitle`)
+## Bewerkingenlogboek (`operationLog.*`, `commands.logOperationLog.*`)
 
-- The stats carry a stable random id, so never `anoniem`, and never the jargon `pseudoniem`: `een willekeurige id` (MS),
-  `gekoppeld aan`.
-- Label and onboarding title are one English string, so both read `Gebruiksstatistieken versturen`.
+`Naam van {countText} onderdeel gewijzigd` (Finder); lifecycle words from `queue.row.status`; You → `Jij`; `vastgelegd`
+(tentative); `Niet terug te draaien`; `Terugdraaibewerking` over `Terugdraaiing`.
 
-## De terugdraaibevestiging en de rij die op antwoord wacht (`fileOperations.rollbackConfirm.*`, `queue.row.statusAwaitingAnswer`/`awaitingAnswerTooltip`, `transferProgress.foregroundBusyToast`/`rollbackTooltip`)
+## Terugdraaien (`fileOperations.cancelRollback.*`, `fileOperations.rollbackConfirm.*`, `queue.row.statusAwaitingAnswer`/`awaitingAnswerTooltip`, `queue.row.reversalInFolder`, `transferProgress.foregroundBusyToast`, `fileOperations.transferProgress.rollbackTooltip`/`.rollbackTooltipStopAndMoveBack`/`.rollbackAlreadyLandedTooltip`, `operationLog.dialog.finishRollBack`, `operationLog.rollback.partiallyRolledBackNotice`)
 
-- Row status `Antwoord nodig` over Double Commander's `Wachtend op reactie`, which starts like the queued arm `Wachten`.
-- `rollbackConfirm.rollBack` → `Terugdraaien`, identical to the button that opened it
-  (`transferProgress.conflictRollback`), over the imperative `Draai terug`.
-- `rollbackConfirm.keep` → `Behoud de bestanden`: the object is spelled out, since `ze` could point at the replaced
-  files the body just named.
-- `foregroundBusyToast` never claims the blocker is an operation (`Hier is iets anders open.`).
-
-## De keten-hernoemtoast die meetelt (`fileExplorer.rename.chainKeptOriginalNameAndOthers`)
-
-- `Eén ander bestand` (no `-e` on a neuter noun after `één`, as Finder's `MR101_V2`), then `net als ‘{name}’: {reason}`,
-  so the reason follows the name it explains.
-- Keeps the verb and tense of `chainKeptOriginalName`.
-
-## De onbruikbare naam (`fileOperations.validation.nameNotUsable`)
-
-- `Deze bestandsnaam kan niet worden gebruikt` (Finder `RN31`), with no final period: it's also inserted before
-  `‘{name}’ behoudt zijn naam.`
-
-## Voorgestelde bewerkingen: het venster met wat Ask Cmdr voorstelt (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
-
-- Approve → `Goedkeuren` over macOS's `Accepteer`: the count variant grants permission, it doesn't take something in.
-- Reject → `Weigeren` (Finder's AirDrop pair); infinitive, like the sibling buttons.
-- `Dit kun je niet ongedaan maken` (Finder, verbatim).
-
-## Dupliceer: de opdracht die in dezelfde map kopieert (`commands.fileDuplicate.*`)
-
-`Dupliceer` (Finder `Archief > Dupliceer`, `N154`), imperative like its siblings `Kopieer` and `Verplaats`.
-
-## Native menu's: menubalk, contextmenu's, venstertitels (`menu.*`, `licensing.windowTitle.*`, `main.instanceLock.*`)
-
-- The menu bar is Finder's: `Archief`, `Wijzig`, `Weergave`, `Ga`, `Venster`, `Help`, `Voorzieningen`; Finder Tier 1
-  also gives `Geef snel weer`, `Toon info`, `Bovenliggende map`, `Thuismap`, `Sorteer op`, `Minimaliseer`,
-  `Vergroot/verklein`.
-- Eject → `Werp uit` (Nautilus, Thunar, Double Commander) over macOS's `Verwijder`, which is Cmdr's delete.
-- `Wijzigingenlogboek` (changelog, MS) stays distinct from `Wat is er nieuw`; word wrap → `Tekstterugloop` (MS).
-- Tag row: `Tags`, `Voeg ‘{color}’ toe`, `Verwijder ‘{color}’` (Finder `TG5`/`TG6`); colors
-  `Rood, Oranje, Geel, Groen, Blauw, Paars, Grijs` (`TG_COLOR_*`).
-
-## De terugvalmelding voor de systeem-SMB-verbinding (`fileExplorer.network.osMountFallback.*`)
-
-- `systeemeigen` (MS, native) where the notice introduces the connection; the short `de systeemverbinding`
-  (`smbNativeNote`) where context already says SMB.
-- Speed multipliers `4x zo langzaam als` over `4x langzamer dan`, which leaves open whether the factor applies to the
-  difference (tentative; no pile precedent).
-- `Direct verbinden met X lukte niet`; button `Probeer direct te verbinden`, echoing `Verbind direct`.
-
-## De weigerberichten van naam wijzigen, nieuwe map en nieuw bestand (`errors.mutation.*`, `errors.volume.*`)
-
-- Locked → `beveiligd`, unlock → `de beveiliging opheffen` (Finder `NE17`, `BN43`); System Integrity Protection stays
-  English, as Finder keeps it.
-- A volume's top folder → `de hoofdmap van een volume` (Thunar, Dolphin).
-- `Er staat niets meer op ‘{path}’.` / `Er staat al iets op ‘{path}’.` mirror each other.
-- Destination folder → `doelmap` (Finder), over `bestemmingsmap`.
-- A timeout never reads as done or refused: `de wijziging gaat misschien toch nog door`.
-- A restarted MTP session `heeft zijn verbinding opnieuw gestart`; `losgekoppeld` is reserved for `deviceDisconnected`.
-
-## De twee prullenmandweigeringen (`errors.mutation.trash*`)
-
-- `Dit volume heeft geen prullenmand` follows EN's "has no", unlike the older `errors.write.trashNotSupported.message`.
-- `dus definitief verwijderen is de enige manier`: the nominalized infinitive avoids a pronoun guessing the item's
-  gender.
-- `macOS wilde dit niet naar de prullenmand verplaatsen.`: active voice with `macOS` as subject; bare `dit` stays
-  neutral about what was refused.
-
-## De drie crashdialoog-openingen (`crashReporter.dialog.body.ended`/`.keptRunning`/`.unknown`)
-
-- `.keptRunning` and `.unknown` must never say Cmdr crashed or stopped.
-- `een probleem tegengekomen` (tentative) over Finder's stiff `een fout aangetroffen`.
-- `is gewoon blijven werken` over `doorlopen`, reserved for an operation that keeps running.
-
-## De instellingstekst voor rapporten dekt nu beide gevallen (`settings.updates.crashReports.description`)
-
-The description covers crashes and background problems (`een rapport`, no "crash"); the label stays
-`Crashrapporten versturen`, the setting's name. `appversie` is closed, as in `crashReporter.dialog.privacyNote`.
-
-## Get Info en Beveiligd (macOS-UI-namen die Apple wél vertaalt) (`errors.write.fileLocked.*`, `errors.write.permissionDenied.suggestion.deleteMac`)
-
-- `Toon info` and `Beveiligd` (Finder `InfoWindowGeneralView`, AppKit `AutosaveButton`); `deselecteer ‘Beveiligd’` is
-  Finder's own recovery advice (`NE18`).
-- `Vergrendeld` stays for other locks (the git index lock), never the Finder flag.
-
-## De negen uitwerp- en verbreekzinnen (`errors.eject.*`)
-
-- Each value follows a colon in `fileExplorer.pane.ejectFailedToast` / `.disconnectFailedToast`, so it reads as a
-  continuation and doesn't repeat the wrapper's verb (except `notAnSmbVolume`, as EN does).
-- Never `verwijderbaar` for "removable", although macOS uses it: next to eject it reads as deletable. `notEjectable`
-  says `Deze schijf kun je niet uitwerpen`.
-- `Sluit open bestanden, stop geopende apps` (Finder); `wilde … niet` for "wouldn't"; `koppel het los` for unplug.
-- The catch-all is the same sentence as `errors.mutation.unexpected`.
-
-## De twee knoppen van de prullenmandmelding en de terugzet-familie (`fileOperations.trash.*`, `commands.fileGoToTrash.*`)
-
-- Undo on the trash toast → `Zet terug` (Finder's Put Back, `N153.1`), over `Herstel` (macOS also uses it for Revert and
-  Repair) and `Ongedaan maken` (too long beside the second button). Generic undo elsewhere stays `Ongedaan maken`.
-- `terugzetten` / `teruggezet` for button, progress, and result (Finder `PE130_V2`).
-- "Go to trash" → `Ga naar prullenmand` (Finder's `Ga naar map…` shape), never `Naar prullenmand`, which already means
-  moving to the trash (`delete.trashSwitch`).
-- `undonePartial` puts the verb in the `{skipped}` plural branches (`onderdeel bleef` / `onderdelen bleven`).
-
-## Aanvullen wat al verstuurd is: het notitievenster bij een automatisch foutrapport (`errorReporter.amend.*`, `errorReporter.amendedToast.message`, `errorReporter.autoSentToast.viewOrAddNotes`)
-
-- `Voeg aan rapport toe`: the particle goes last, as AppKit's `Voeg aan begin van knoppenbalk toe`.
-- Window title in the infinitive (`Toevoegen aan je foutrapport`), parallel to `errorReporter.dialog.title`.
-- Note → `notitie` over `bericht`, matching `dialog.noteLabel` so one field has one word.
-- `Bekijk het rapport of voeg notities toe` keeps both halves; `Bekijk of vul het rapport aan` loses the notes.
-
-## Het selectievenster: bestanden selecteren en deselecteren (`selection.*`, `menu.select.*`, `commands.selectionDeselectFiles.label`)
-
-- `Selecteer` / `Deselecteer` (Finder `NE18`, Double Commander) over Microsoft's `selectie opheffen`.
-- `Deselecteer alles` over Finder's `Maak selectie ongedaan`, which takes no object and doesn't rhyme with
-  `Selecteer alles`; the dialog title matches the menu item that opens it.
-- `selection.recent.applyAria` mirrors `search.recent.runAria` (`Pas recente {mode}-selectie toe: {query}`).
-- The key is `Enter`, as in `search.runHint`.
-
-## Eén ding, één naam: de interne driftronde (`queue.row.dismiss`, `menu.edit.undo`, `fileOperations.trash.undoAction`, `askCmdr.renameUndo.*`, `shortcuts.section.filterModified`, `commands.navBack.label`)
-
-The boundaries that look like drift and aren't (register by UI slot and menu-bar titles: `style.md` digest):
-
-- Undo: `Herstel` (⌘Z, Edit menu), `Zet terug` (trash put-back), `Ongedaan maken` (Ask Cmdr rename run).
-- `Vorige` pairs with `Volgende`; `Terug` is a lone back button; `commands.navBack.label` takes Finder's `Ga terug`.
-- Column headers `Aanmaakdatum` / `Bewerkingsdatum`; the date tooltip uses participles (`Laatst gewijzigd`).
-  `shortcuts.section.filterModified` → `Gewijzigd` (changed shortcuts, not a file date).
-- `Actief` (a server runs) vs `Bezig` (a task runs); `Gereed` (status) vs `Klaar` (spoken after a checklist step);
-  `Selecteer` (files) vs `Kies` (an option); `Zoek` (the button) vs `Zoeken` (the feature).
-
-## Wat het Engels over zichzelf rechtzette, en wat dat voor `nl` betekende (`settings.updates.emailPlaceholder`, `common.attachEmailPlaceholder`, `onboarding.stepBeta.emailPlaceholder`, `askCmdr.renameUndo.undone`/`.partial`, `menu.app.showAll`, `menu.app.hideOthers`)
-
-- `askCmdr.renameUndo.undone` names its object (`De oude naam van … is teruggezet`), so the whole sentence sits in the
-  plural branches (`naam`/`namen` and `is`/`zijn` both agree).
-- Panes without a token use Apple's Dutch: `Algemeen`, `Inlogonderdelen en extensies` (not the older `Inloggen`), and
-  `Apple Account` stays English as a pane name (prose: `het juiste Apple-account`).
-- `Toon alles` / `Verberg andere` (Finder `MenuBar.strings`).
-
-## Een half teruggedraaide bewerking afmaken (`operationLog.dialog.finishRollBack`, `operationLog.rollback.partiallyRolledBackNotice`, `fileOperations.rollbackConfirm.titleFinish`/`.finishRollBack`, `queue.row.reversalInFolder`)
-
-- `Voltooi terugdraaien` (Finder `NE108` "Voltooi kopiëren") over `Verder terugdraaien`, which promises no end. ⚠️ Keep
-  `operationLog.dialog.finishRollBack` and `fileOperations.rollbackConfirm.finishRollBack` identical.
-- `queue.row.reversalInFolder` stays `in {folder}`, same as EN and unquoted like its neighbours.
-
-## De terugdraaimelding: wat er weg is, en wat Cmdr met rust liet (`fileOperations.cancelRollback.*`, `rollbackConfirm.body`)
-
-- "Leave alone" → `ongemoeid laten`, shared with `askCmdr.renameUndo.skipReason.*`; never `overgeslagen` (that's
-  Skipped). ⚠️ `reason.folderNotEmpty.named`/`.counted` stay byte-identical to the `skipReason` twins.
-- `{name}` may be a file or a folder, so no reason line uses a pronoun: `daar is iets aan gewijzigd`,
-  `nadat Cmdr er klaar mee was`. `.named` and `.counted` share one reason sentence.
-- `Cmdr kon niet controleren of …`, never `nagaan`, here and in `skipReason.unverifiable.*`.
-- A full rollback leads with `Alles` and puts the count after a colon: Dutch can't put `de` before a numeral. The `one`
-  branch drops the count (`Het onderdeel is teruggezet.`).
-- `verwijderen` (remove) and `terugzetten` (put back) never mix.
-- `stagedLeftover.*`: `onvolledig exemplaar`, `Cmdr ruimt het op`, and the retry
+- "Leave alone" → `ongemoeid laten` (as `askCmdr.renameUndo.skipReason.*`), never `overgeslagen`. ⚠️
+  `reason.folderNotEmpty.named`/`.counted` stay byte-identical to their `skipReason` twins.
+- Reasons take no pronoun (`daar is iets aan gewijzigd`, `nadat Cmdr er klaar mee was`), so `.named` and `.counted`
+  share a sentence; `controleren`, never `nagaan`.
+- `Alles is teruggezet:` + count; `one` arm `Het onderdeel is teruggezet.` A move is put back, never deleted
+  (`Stop en zet elk bestand terug …`); `verwijderen` and `terugzetten` never mix.
+- `stagedLeftover.*`: `onvolledig exemplaar`, `Cmdr ruimt het op`, retry
   `de volgende keer dat het verbinding maakt met de bestemming`, never a time.
+- `Terugdraaien` equals the opening button (`conflictRollback`); `Behoud de bestanden` (`ze` could mean the replaced
+  ones). `Voltooi terugdraaien` (Finder `NE108`) over open-ended `Verder`. ⚠️ Both `finishRollBack` keys identical.
+- `Antwoord nodig` over `Wachtend op reactie` (starts like `Wachten`); `Hier is iets anders open.` (the blocker may not
+  be an operation); `in {folder}` unquoted.
 
-## Het blokkeerscherm bij te oude WebKit (`main.oldWebkit.*`)
+## Prullenmand en terugzetten (`fileOperations.trash.*`, `commands.fileGoToTrash.*`, `fileOperations.delete.trashSwitch`, `.confirmDelete`, `fileOperations.transferDialog.sourceGroupTitle`, `.targetGroupTitle`)
 
-`Software-update` (macOS spelling), `Stop`; `Safari`, `Mac`, and `15.4` stay.
+- `Zet terug` (Finder `N153.1`) over `Herstel` (also Revert, Repair) and `Ongedaan maken` (too long); `terugzetten` /
+  `teruggezet` throughout (`PE130_V2`).
+- `Ga naar prullenmand` goes there; `Naar prullenmand` moves files (switch and confirm button share it).
+- Headings `Van` / `Naar` (Total/Double Commander); `bron` / `bestemming` for controls. `undonePartial` puts the verb in
+  the `{skipped}` branches.
 
-## De melding over een oude macOS (`main.oldMacos.*`)
-
-- Honest and relaxed: `ondersteund`, `X en nieuwer`, "best effort" → `doet het zijn best zonder garanties` (no calque),
-  "look off" → `er raar uitzien`.
-- The last sentence is David in the first person, as `onboarding.stepBeta.greeting`.
-
-## Ask Cmdr looks inside files: the `inspectFile` tool line and the reworded consent screen (`askCmdr.tool.inspectFile.*`, `ai.cloudConsent.askCmdr.item.contents`, `ai.cloudConsent.askCmdr.contentsRule`, `askCmdr.empty.hint`, `settings.askCmdr.intro`)
+## Alleen-online inhoud (`fileOperations.delete.cloudOnlineOnly*`)
 
-- `Kijkt in bestanden` / `In bestanden gekeken` (tentative), in the shape of the sibling tool lines.
-- Thumbnail → `miniatuur`; EXIF → `cameragegevens` (tentative); PDF pages → `PDF-pagina's`; title and author →
-  `titel en auteur` (Microsoft's `functie` is the job sense).
-- `Cmdr verstuurt nooit hele bestanden …`: `hele` replaces the old promise of no contents, which is now false.
-- `tot jij het goedkeurt` / `zonder jouw goedkeuring`: stressed forms mark the contrast.
+The download is a consequence (`Als je die onderdelen naar de prullenmand verplaatst, worden ze eerst gedownload`). Keep
+all four facts (trash downloads, whole-selection delete only, the service keeps its own copy, the ways out).
 
-## De twee tooltips van de Rollback-knop (`fileOperations.transferProgress.rollbackTooltipStopAndMoveBack`, `.rollbackAlreadyLandedTooltip`)
+## Prullenmandweigeringen (`errors.mutation.trash*`, `errors.write.trashRefused.*`, `errors.write.*.title.trash`)
 
-`Stop en zet elk bestand terug dat tot nu toe is verplaatst`, never `verwijderen`: rolling back a move deletes nothing.
+- `Dit volume heeft geen prullenmand`; `dus definitief verwijderen is de enige manier` (no gender guess);
+  `macOS wilde dit niet …`.
+- The five titles share one string: reword all or none. `{count} van de onderdelen die je koos` fits any count.
+- `suggestion.other` names `fileOperations.errorDialog.technicalDetails` and quotes `onboarding.fdaBadge.label`.
 
-## ‘Terminal hier openen’ en de app-keuze (`settings.behavior.openTerminalHereApp.*`, `settings.navigationAndFileOps.card.terminal`)
+## Naam wijzigen en aanmaken geweigerd (`errors.mutation.*`, `errors.volume.*`, `fileOperations.validation.nameNotUsable`, `fileExplorer.rename.chainKeptOriginalNameAndOthers`)
 
-- The generic word and Apple's app are both `terminal` / `Terminal` (Finder `N67`), so the card title is justified as
-  same as EN.
-- The command is `Terminal hier openen` everywhere it's named; `Kies app…` is Finder's own `Choose Application…`
-  (`N137`, confirmed).
+- `de beveiliging opheffen` (Finder `NE17`, `BN43`); `de hoofdmap van een volume`; `doelmap` (Finder) over
+  `bestemmingsmap`. `Er staat niets meer op ‘{path}’.` / `Er staat al iets op ‘{path}’.` mirror each other.
+- A timeout: `de wijziging gaat misschien toch nog door`. MTP restart: `heeft zijn verbinding opnieuw gestart`.
+- `Deze bestandsnaam kan niet worden gebruikt` (Finder `RN31`), no period: it's inserted before
+  `‘{name}’ behoudt zijn naam.` Chain toast: `Eén ander bestand` (Finder `MR101_V2`), `net als ‘{name}’: {reason}`.
 
-## `Sort by relevance`: de tooltip van de zoekresultatenkolom (`fileExplorer.columns.sortByRelevance`)
+## Toon info en Beveiligd (`errors.write.fileLocked.*`, `errors.write.permissionDenied.suggestion.deleteMac`)
 
-`Sorteer op relevantie`: four macOS bundles say `Relevantie`, and the frame matches `Sorteer op naam`.
+`deselecteer ‘Beveiligd’` is Finder's advice (`NE18`); `Vergrendeld` stays for other locks (the git index lock).
 
-## `Documents and packages`: de nieuwe OOXML-rij (`settings.archives.ooxml.*`)
+## Verplaatsen dat niet afkwam (`errors.write.moveNotConfirmed.*`, `fileOperations.leftovers.stagingFolderKept`, `errors.write.sourceNotRemoved.*`, `errors.write.permissionDenied.*.source*`, `errors.write.deletePending.message`)
 
-Bare `pakketten` (Finder `Toon pakketinhoud`) keeps the row broader than the `App-pakketten` card below it, the same
-split EN makes; the frame is that of `settings.archives.zip.description`.
+- Never "failed": `Kon het verplaatsen niet bevestigen` (never `de verplaatsing`);
+  `dus heeft het je originelen laten staan waar ze stonden`; `Kijk even op …`.
+- Files back from an unfinished move are the user's: never suggest deleting the folder. `voltooid` for file operations,
+  `afgerond` for scans; `een verborgen map met de naam {folderName}` (Finder, never `genaamd`).
+- `het origineel staat er nog`, `op beide plekken`.
 
-## De serverhub: verbindingsscherm, verbindingstooltips en de vergeet-bevestigingen (`servers.*`, `fileExplorer.navigation.connectionTooltip*`, `.disconnect*`, `.forget*`)
+## Een schijf die verdwijnt (`errors.write.deviceDisconnected.sided.*`, `indexing.needsFreshScan.afterDisconnect`, `fileExplorer.navigation.driveIndex.driveLeaving`)
 
-- Keychain Access → `Sleutelhangertoegang` (its `InfoPlist.loctable`); Keychain alone → `Sleutelhanger`.
-- `Verbinden met {name}…` (Finder `MN1`), unquoted like EN; server address → `serveradres`.
-- The confirmation title repeats the menu item that opens it (`Vergeet server`, `Vergeet gedeelde map`); the question
-  takes the infinitive-last form (`{name} vergeten?`) with the button `Vergeet`. "Stops listing it" →
-  `haalt … uit de lijst`, and "nothing gets unmounted" → `Cmdr koppelt niets los` (active, the catalog's `loskoppelen`).
-- Account suffix `als {username}` / `als gast` (Apple's `Verbind als gast`); "Use guest" → `Gebruik gasttoegang`
-  (tentative), since a bare `Gebruik gast` reads as using a person.
-- `disconnectBusyTooltip` mirrors `ejectBusyTooltip` word for word.
-- `disconnectPlaceAriaLabel` → `Verbreek de verbinding met {name}`: it starts with the visible `Verbreek`, and Dutch
-  breaks a connection, never a server.
+- End on where the files are, in a main clause (`Je originelen zijn onaangeroerd`); `{done} van {total} bestanden`,
+  never `van de`; `er is niets verloren gegaan` (Apple); `nadat Cmdr er … naartoe had gekopieerd`.
+- In progress `wordt losgekoppeld`, gone `werd losgekoppeld`; `helemaal opnieuw`.
 
-## De serverhub (`servers.hub.*`, `commands.servers*`, `fileExplorer.navigation.server*Toast`, `shortcuts.scope.servers`/`.places`)
+## Uitwerpen (`errors.eject.*`)
 
-- Places heading → `Locaties` (Finder's sidebar heading); column `Type`, never `Soort` (Finder's Kind).
-- Found nearby → `Gevonden in de buurt` (participle first reads as a label, like Finder's `Gedeeld door`; tentative).
-- Host key where EN says only "key" → `de sleutel`, over `hostsleutel`.
-- `Wachten tot je de sleutel controleert`: the user compares a fingerprint, so `controleren` over `bekijken`.
-- `commands.serversTogglePin.label` → `Zet server vast / maak hem los`: an English imperative takes a Dutch imperative,
-  and `hem` is safe because it's the noun `server`, not an insert. The `aan/uit` form answers a different English
-  ("Toggle …").
-- Toasts naming `{name}` avoid pronouns (`De server is nog steeds opgeslagen.`, `waar {name} te zien is`).
+- Values follow the toast's colon: continue, don't repeat its verb (except `notAnSmbVolume`). Catch-all =
+  `errors.mutation.unexpected`.
+- Never `verwijderbaar` (reads as deletable): `Deze schijf kun je niet uitwerpen`.
+  `Sluit open bestanden, stop geopende apps` (Finder); `wilde … niet`; `koppel het los`.
+- Holders: `X heeft daar nog bestanden open.` + `… en probeer het daarna opnieuw.`; `daar`, since it may be a share or a
+  phone. `Sluit ze` points at `bestanden`; `Cmdr heeft geen appnaam`, never `We`.
+- `andere apps`, `nog andere` (`andere processen` reads as a name), `schijfkopie` (repeated), `staat nog open`
+  (tentative); `Wacht een minuutje` (macOS) vs `Wacht even` (Cmdr).
 
-## Het serververbindingsvenster en de sleutelvraag (`servers.sheet.*`, `servers.hostKey.*`, `servers.paneState.signedOut`/`.signIn`/`.hostKeyChanged*`, `goToPath.dialog.opensServer`/`.addsServer`, `commands.serversConnect.label`)
+## Archieven (`fileExplorer.archiveEnterMenu.*`, `fileExplorer.readOnly.*`, `settings.archives.*`, `fileOperations.archivePassword.*`, `errors.listing.archiveNeedsPassword.explanation`, `commands.fileCompress.*`, `fileOperations.transferDialog.*`)
 
-- From macOS bundles: `Voeg server toe`, `Verbind`, `Verbind met server`, `Blader…` (a button, so not Safari's
-  `Bladeren`), `Log in bij {name}` (CloudKit), `Uitgelogd bij {name}`, `Verbind als gast`, `Onthoud in Sleutelhanger`.
-- Passphrase → `wachtzin` (Apple everywhere), never `wachtwoordzin`; `Sleutelwachtzin` tentative.
-- Fingerprint → `vingerafdruk` over the untranslated `fingerprint` in Apple's weakest SSH strings;
-  `Vingerafdruk van de sleutel` (Apple puts the owner after the noun).
-- Remote → `extern` (`Externe map`); `Vertrouw en verbind`; `Verbind automatisch opnieuw`.
-- "Cmdr stopped connecting" → `Cmdr verbindt niet meer met {name}`, present tense: the pane stays until the user acts.
-- `{name}` and `{host}` never take a pronoun: `De sleutel van {host} is gewijzigd`.
-- Coined (tentative): `Sleutelbestand`, `Manier van verbinden` (aria only), `de servereigenaar`.
-- Add buttons: `Voeg toe`, `Voeg toe en open`, `Voeg toch toe`; the help line quotes the last one in ‘…’. Edit hints say
-  `wijzigen` (a form) and `er valt niets te wijzigen`; `addressLocked` shares the frame of `accountLocked`.
+- `Blader als een map` vs `Open met standaardapp`; `elk formaat` (`structuur` is for `archiefstructuur`).
+- `Alleen-lezenarchief` / `-volume` / `-map` close up, `is alleen-lezen` stays open, `Alleen-lezen git-portaal` avoids a
+  double hyphen.
+- `… is beveiligd met een wachtwoord` (Total/Double Commander), `Ontgrendelen` (AppKit); contents are `vergrendeld`.
+- `Comprimeer` everywhere; slider `Sneller` / `Kleiner` (Total Commander). OOXML row: bare `pakketten`, broader than
+  `App-pakketten`, as EN splits.
 
-## Twee paneelregels erbij: automatisch opnieuw verbinden en inloggen met een sleutel (`servers.paneState.reconnecting`, `.signedOutNothingToAsk`)
+## Klembord (`settings.fileOperations.pasteClipboardAsFile.*`, `fileExplorer.clipboard.pastedAsFile*`, `fileExplorer.clipboard.copiedPath`)
 
-- `Opnieuw verbinden met {name}…` (Apple's `Opnieuw verbinden…`, `errors.listing.deviceReconnecting.title`) pairs with
-  `Verbinden met {name}…`; a full sentence says `opnieuw verbinding maken` (the PPP/VPN family).
-- `Open de server opnieuw om het nog eens te proberen.`: the noun is spelled out, since `hem` could point at
-  `de sleutel`.
-- `er valt niets te typen` (tentative): EN says "type", and there's no form left to fill in.
+`… als {filename} geplakt`; `Klembord-PDF` sits whole in each select branch; options `Niets doen`, `Bestand aanmaken`,
+`Aanmaken en naam wijzigen`. `Pad gekopieerd, het staat nu op het klembord:` reads complete without the path below.
 
-## De vastzet-hint, de vertrouwde serversleutels en het ADB-paneel (`menu.network.pinToSwitcher`/`.unpin`, `servers.pinHint.*`, `settings.servers.*`, `settings.adb.*`, `settings.section.servers`/`.adb`, `settings.summary.servers`/`.adb`, `settings.appearance.tintSmb.*`)
+## Schijfindex (`indexing.run.*`, `indexing.eta.*`, `indexing.enrich.queued`, `indexing.staleDialog.titlePhone`/`.bodyPhone`, `settings.mediaIndex.importanceThreshold.waitingForDriveIndex`, `fileExplorer.navigation.driveIndex.*`, `settings.indexing.masterOffNote`, `.overriddenBadge`)
 
-- `Maak vast in volumekiezer` / `Maak los uit volumekiezer`: Apple's own `Maak vast in <plek>` (the particle before the
-  place is Apple's order here, and the pair mirrors it). `vastzetten` and `vast maken` are one verb pair: never
-  `Maak server vast / maak hem los`, which repeats `maak`.
-- `Controleer opnieuw` (Check Again), `Niet gevonden`, `Vergeet`, `Vertrouwde <ding>`, `Blader op <plek>`: all macOS.
-- Host key where EN says "host key" → `serversleutel` (tentative): a settings list needs a noun, and `hostsleutel` was
-  rejected.
-- `Vertrouwd op <datum>`; `Gevonden: {path}` (tentative) dodges choosing `op` or `in` for a path.
-- Quoted labels in `servers.pinHint.body` and `settings.adb.install.intro` use ‘…’ even where EN doesn't quote, as
-  Finder does (`Klik op ‘Ga door’`).
+- `Controleren op wijzigingen` (Nautilus), `Bestandenlijst bijwerken`, `de controle die nu bezig is`.
+- `Eerste volledige scan`, `Volledige herscan` (tentative), `Snelle update`; `nog 20 uur`;
+  `het doorzoeken van de schijf`.
+- Paths quote the label (`Zet het aan bij Indexeren > Schijf indexeren.`); terse slots compound
+  (`Uit met schijfindexering`).
+- Stale phone: `mogelijk verouderd`, `werkt de index bij` (`houdt bij` = keeps a record); never `losgekoppeld`.
 
-## Het telefoonpaneel via ADB (`adb.*`, `settings.behavior.adbHintDismissed.*`)
+## Afbeeldingen indexeren en doorzoeken (`settings.mediaIndex.*`, `fileExplorer.imageIndex.*`, `search.imageResults.*`)
 
-- On the phone, Android's own Dutch wins (AOSP `values-nl/strings.xml`): `USB-foutopsporing` (`SettingsLib`
-  `enable_adb`), `‘Toestaan’` (SystemUI `usb_debugging_allow`), `tik op`, `Zet … aan`, `zet het scherm aan`. The word in
-  Cmdr must be the word on the phone's screen, whatever the `@key` says.
-- `De verbinding tussen Cmdr en je telefoon is verbroken.` keeps `Cmdr` in the sentence (Apple's passive
-  `is verbroken`), since the don't-translate check flags a dropped brand.
-- `Verbreek de verbinding met {name}`, never `Werp {name} uit`: the phone stays on the cable.
-- `aangesloten` for the cable (`adb.connect.deviceGone`), `verbonden` for the logical link.
-- `adb.connect.cancelled` → `Je hebt het openen van je telefoon gestopt.`, over `geannuleerd`, which points at the
-  `Annuleer` button.
-- Never name a diagnosis (no adb server, transport, daemon, or serial number).
+Labels `afbeelding`, warm rows `foto's`, as EN. In prose `het doorzoeken van afbeeldingen`; progress
+`Afbeeldingen worden geïndexeerd` (the infinitive reads as the label). `Indexeren inschakelen`,
+`Mappen om te indexeren`, `Foto's op beschrijving zoeken`, `het model voor semantisch zoeken`.
 
-## De vastgezette serveridentiteit (`servers.sheet.accountLocked`)
+## Ask Cmdr (`askCmdr.*`, `settings.askCmdr.*`, `commands.askCmdrToggle.*`, `ai.cloudConsent.askCmdr.*`)
 
-The hint names the actions as the buttons do (`Vergeet deze server en voeg hem opnieuw toe`), and "are what name this
-server" → `bepalen welke server dit is`, since the form has its own `Naam` field.
+- Tool lines: present while doing (`Kijkt in bestanden`), participle when done (`In bestanden gekeken`, tentative), one
+  verb per tool. `limiet`, never "budget"; `Zet hier neer om bij te voegen`.
+- `miniatuur`, `cameragegevens` (tentative), `PDF-pagina's`, `titel en auteur` (MS `functie` is a job).
+  `nooit hele bestanden` keeps the promise true.
+- `Wijzig # bestandsnaam` fits the button; `cyclus van naamwijzigingen`; `van naam wisselen` over mechanical `roteren`;
+  recent-past status in the perfect.
 
-## De toast als er helemaal geen wachtwoord opgeslagen was (`fileExplorer.navigation.forgetSecretNoneToast`)
+## Voorgestelde bewerkingen (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
 
-`Er was geen opgeslagen wachtwoord voor {name}.`, reusing `opgeslagen wachtwoord` and `voor {name}` from its siblings.
+`Goedkeuren` over macOS `Accepteer` (granting, not receiving); `Weigeren` (Finder AirDrop);
+`Dit kun je niet ongedaan maken` (Finder).
 
-## De herhaalduur, de kop over de hostsleutel en Androids knop Toestaan (`servers.paneState.retryTotalSeconds`, `.retryTotalMinutes`, `.retryKeepsTrying`, `servers.refusal.hostKeyRevoked`)
+## Cloud-AI toestaan (`ai.cloudConsent.label`, `ai.cloudConsent.description`, `askCmdr.gate.cloudOff.body`, `settings.ai.cloudConsent.lockedHint`, `settings.askCmdr.enabled.label`)
 
-- `retryTotal*` are bare building blocks of `retryKeepsTrying` (no preposition, no period).
-- "Cmdr won't connect to {name}" → `Cmdr maakt geen verbinding met {name}`, never `niet meer`, which implies it worked
-  before.
+In a sentence `Sta cloud-AI toe`; `cloud-AI` is a de-word. `Zet Ask Cmdr aan`; the bare name label is justified.
 
-## Het contextmenu van de serverrij: `Open` en `Wijzig server…` (`menu.network.open`, `menu.network.edit`, `commands.serversEdit.label`)
+## Gebruiksstatistieken (`settings.analytics.enabled.label`/`.description`, `settings.updates.emailPrivacyNote`, `onboarding.stepBeta.analyticsLede`/`.analyticsTitle`)
 
-`Open` equals `menu.file.open` (Finder uses one verb for both senses); `Wijzig server…` equals
-`commands.serversEdit.label` byte for byte, since two labels would read as two features.
+A stable random id, so never `anoniem` or `pseudoniem`: `een willekeurige id` (MS), `gekoppeld aan`. Label and title
+share `Gebruiksstatistieken versturen`.
 
-## Function key bar context menu (`settings.appearance.showFunctionKeyBar.label`, `fileExplorer.functionKeyBar.hiddenToast`)
+## Crashrapporten (`crashReporter.dialog.body.ended`/`.keptRunning`/`.unknown`, `settings.updates.crashReports.description`)
 
-Function key bar → `functietoetsbalk`, one name for the setting, the menu item, and the toast.
+`.keptRunning` / `.unknown` never say Cmdr crashed; `een probleem tegengekomen` (tentative) over
+`een fout aangetroffen`; `is gewoon blijven werken`. The description says `een rapport` (crashes and background
+problems).
 
-## Het Dock-aanbod (`main.dockPinNudge.*`, `settings.behavior.dockPinNudgeOfferedAt.*`)
+## Een foutrapport aanvullen (`errorReporter.amend.*`, `errorReporter.amendedToast.message`, `errorReporter.autoSentToast.viewOrAddNotes`)
 
-- `Dock` stays English and takes `het` in a sentence (System Settings' `Toon/verberg het Dock automatisch`), none in a
-  short label.
-- Applications folder → `de map ‘Apps’` (Finder `TL_HELP_APPS`); `Programma's` survives only in `Hulpprogramma's`.
-- `Voeg toe aan Dock` is Apple's verbatim label, the one exception to the particle-last rule.
-- Pin / unpin → `vastzetten` / `losmaken`, the catalog pair, over Apple's `Permanent in Dock` menu label.
-- `een paar dagen`, never a number; `Wie deze Mac beheert, kan dat aanpassen.` stays gender-neutral.
+`Toevoegen aan je foutrapport`; `notitie`, as `dialog.noteLabel`; `Bekijk het rapport of voeg notities toe`.
 
-## Het Dock-menu van Cmdr zelf (`menu.dock.*`)
+## Selecteren (`selection.*`, `menu.select.*`, `commands.selectionDeselectFiles.label`, `commands.selectionSelectSameKind.*`, `menu.context.selection`)
 
-`Dock.app` `DockMenus.strings` is the Tier 1 source: `Open Cmdr` (Dock's `Open`), Finder's `Ga naar map…`,
-`Verbind met server…`, and `Zoek bestanden…` equal to `menu.edit.searchFiles`.
+- `Selecteer` / `Deselecteer` (Finder `NE18`) over `selectie opheffen`; `Deselecteer alles` over Finder's
+  `Maak selectie ongedaan` (no object, no rhyme). The title matches its menu item; the key is `Enter`.
+- `Soort` (Finder); `Selecteer alles met extensie *.{extension}`; `extensie` over `achtervoegsel`; `Selectie` is the
+  noun. Menu/command twins share one string: reword both.
 
-## Het ‘Toon in Finder’-aanbod en de melding bij de eerste keer (`main.revealNudge.*`, `main.revealActivation.*`, `settings.behavior.reveal*`)
+## Eén ding, één naam (`queue.row.dismiss`, `menu.edit.undo`, `fileOperations.trash.undoAction`, `askCmdr.renameUndo.*`, `shortcuts.section.filterModified`, `commands.navBack.label`)
 
-`‘Toon in Finder’` in quotes everywhere, as the settings card writes it; `al een tijdje`, never a number; the first-time
-notice explains and never apologizes.
+Not drift: `Vorige`/`Volgende` vs a lone `Terug` (`navBack` → Finder's `Ga terug`); `Aanmaakdatum`/`Bewerkingsdatum` vs
+tooltip `Laatst gewijzigd` vs `Gewijzigd` (changed shortcuts); `Actief` (server) vs `Bezig` (task); `Gereed` (status) vs
+`Klaar` (after a step); `Selecteer` (files) vs `Kies` (option); `Zoek` (button) vs `Zoeken` (feature).
 
-## De onboarding-herschrijving: de checklist, de stapteller en de vier verdictregels (`onboarding.*`, `settings.revealHandler.notProductionBuild`)
+## Native menu's (`menu.*`, `licensing.windowTitle.*`, `main.instanceLock.*`, `commands.fileDuplicate.*`, `fileExplorer.columns.sortByRelevance`)
 
-- GitHub and AlternativeTo have no Dutch UI, so the buttons the user clicks say `Star` and `Like`:
-  `Geef de repo een star op GitHub`, `Geef Cmdr een like op AlternativeTo`. Never `ster` (a rating) or `vind ik leuk`
-  (Facebook's button). The two rows share one shape; rewrite both or neither.
-- `checklist` over Microsoft's `controlelijst` (inspection); `Onboardingchecklist` closed, like `onboardingopties`.
-- `<field></field>` goes after the particle: `Vul je e-mailadres in <field></field> om …`.
-- `‘Lokaal netwerk’` quotes Apple's pane row verbatim, never the description `Lokale netwerktoegang`.
-- A `…summary` line beside a switch must not wrap: telegram style, cut an adverb or article, never a fact.
-- `mailinglijst` over Microsoft's `adressenlijst` (an admin's distribution list); `superprivé`.
-- Released copy / dev and test builds → `uitgebrachte versie` / `dev- en testbuilds`.
+- Finder also gives `Bovenliggende map`, `Thuismap`, `Sorteer op`, `Minimaliseer`, `Toon alles` / `Verberg andere`,
+  `Dupliceer` (`N154`), `Voeg ‘{color}’ toe` / `Verwijder ‘{color}’` (`TG5`/`TG6`), and
+  `Rood, Oranje, Geel, Groen, Blauw, Paars, Grijs`.
+- `Werp uit` (Nautilus, Thunar, Double Commander) because macOS's `Verwijder` is Cmdr's delete.
+- MS: `Wijzigingenlogboek` (distinct from `Wat is er nieuw`), `Tekstterugloop`. `Apps zoeken…`, `Geen deelopties`,
+  `Sorteer op relevantie`.
 
-## Het weergavevenster haalt een bestand eerst op (`viewer.pull.*`, `viewer.error.stoppedResponding`)
+## Het Dock (`main.dockPinNudge.*`, `settings.behavior.dockPinNudgeOfferedAt.*`, `menu.dock.*`)
 
-`{fileName} ophalen om te bekijken` (Finder `Ophalen…`, MS fetch), `{doneText} van {totalText}`, `tot nu toe`; "stopped
-arriving" avoids the stall formula `komt niet meer vooruit`, since the viewer shows no transfer.
+`vastzetten` / `losmaken` over `Permanent in Dock`; `een paar dagen`; `Wie deze Mac beheert, kan dat aanpassen.` Dock
+menu from `DockMenus.strings`: `Open Cmdr`, `Ga naar map…`, `Verbind met server…`, `Zoek bestanden…`.
 
-## De verouderde index van een telefoon via ADB (`fileExplorer.navigation.driveIndex.tooltipStalePhone`, `indexing.staleDialog.titlePhone`/`.bodyPhone`)
+## Het Toon in Finder-aanbod (`main.revealNudge.*`, `main.revealActivation.*`, `settings.behavior.reveal*`)
 
-- Inherit the drive siblings' words (`mogelijk verouderd`, `werkt de index bij`); never `losgekoppeld`, the phone is
-  still on the cable.
-- `werkt … bij` over `houdt … bij`, which means "keeps a record" (`settings.operationLog.intro`).
-- The dialog repeats `Cmdr` where `zijn` could point at `{name}`.
+`‘Toon in Finder’` quoted; `al een tijdje`; the notice explains, never apologizes.
 
-## Hoofdmap en beginmap van een opgeslagen server (`servers.sheet.rootFolder*`, `servers.sheet.startFolder*`, `servers.refusal.*`)
+## Oude WebKit en oude macOS (`main.oldWebkit.*`, `main.oldMacos.*`)
 
-- Root folder → `hoofdmap` (MS, Dolphin) over `rootmap`, `hoofddirectory`, and `Externe map`, which lacks the ceiling
-  sense.
-- Start folder → `beginmap` (tentative, after Double Commander's `Beginpad`) over `startmap` (Windows's Start menu).
-- `hem mag lezen`: `mag` because it's a permission refusal.
-
-## Waarom een gedeelde map niet aankoppelt of de lijst niet laadt (`errors.mount.*`, `errors.shareList.*`, `servers.refusal.accountNotPermitted`)
-
-- In the pane, share → `gedeelde map`, matching its title; `netwerkshare` stays for "isn't a network share".
-- Guests → `gasten` (NetAuthAgent); a server's power: `Controleer of de server aanstaat`.
-- `{server}` and `{share}` take no pronoun; the sentence repeats the noun.
-- Same English, same Dutch across `errors.mount.*` and `errors.shareList.*` twins.
-
-## F4 and its text editor (`settings.behavior.textEditorApp.label`, `settings.behavior.textEditorApp.description`, `settings.navigationAndFileOps.card.textEditor`, `fileExplorer.edit.appMissing`, `fileExplorer.edit.launchRefused`)
-
-- Text editor → `teksteditor` (MS), the kind of app, never Apple's TextEdit; `standaardeditor` as in
-  `commands.fileEdit.label`.
-- `Bewerk bestanden in {app}`, no article before `{app}`; the rest mirrors the terminal card's keys.
-
-## A drive leaving mid-request (`fileExplorer.navigation.driveIndex.driveLeaving`)
-
-In progress → `wordt losgekoppeld`; already gone → `werd losgekoppeld` (the next two sections). Don't swap them.
-
-## A drive unplugged mid-index (`indexing.needsFreshScan.afterDisconnect`)
-
-`werd losgekoppeld`, like `indexing.staleDialog.body`; "starts from scratch" → `helemaal opnieuw`.
-
-## A drive pulled mid-transfer (`errors.write.deviceDisconnected.sided.*`)
-
-- Every value ends on where the files are, never on what went wrong: `Je originelen zijn onaangeroerd`,
-  `De rest staat nog op de schijf.`, in a main clause so the reassurance isn't buried after a `nadat` clause.
-- `{done} van {total} bestanden`, never `van de`; `er is niets verloren gegaan` (Apple's `verloren gaan`).
-- `{volumeName}` and `{counterpart}` take no article and no pronoun: `nadat Cmdr er … naartoe had gekopieerd`.
-
-## A move that could not be confirmed (`errors.write.moveNotConfirmed.*`)
-
-- Never say the move failed: title `Kon het verplaatsen niet bevestigen`, `het verplaatsen` over `de verplaatsing`
-  (never a UI form).
-- `dus heeft het je originelen laten staan waar ze stonden`: active voice shows Cmdr protected them.
-- "Have a look" → `Kijk even op …`, lighter than `Controleer`.
-
-## Files a drive brings back from a move that never finished (`fileOperations.leftovers.stagingFolderKept`)
-
-- Never suggest the folder may go: these are the user's files (unlike `cancelRollback.stagedLeftover.*`, Cmdr's own).
-- `waarvan het verplaatsen niet is voltooid`; `voltooid` for file operations, `afgerond` for scans and replies.
-- `heeft ze allemaal laten staan`; `een verborgen map met de naam {folderName}` (Finder's `met de naam`, never
-  `genaamd`).
-
-## Het favorietenmenu (`commands.favoritesOpen.label`/`.description`, `commands.favoritesOpenByNumber.label`, `commands.favoritesAdd.description`, `fileExplorer.navigation.favoritesAddCurrent`/`.favoritesAlreadyAdded`/`.favoritesCantAddHere`, `menu.go.showFavorites`, `shortcuts.scope.favoritesMenu`)
-
-- `favorietenmenu` closed; `Toon favorieten` in both the Go menu and the palette (byte-identical twins).
-- The `0` row has one key, `Voeg huidige map aan favorieten toe` (particle last); the shortcut list quotes it.
-- A favorite's `nummer` identifies it; the key you press is a `cijfer`.
-- `Deze map staat al in je favorieten`; `favoritesCantAddHere` gives the reason after a colon with
-  `verwijzen naar mappen op`; "shares" → `netwerkshares`, as `gedeelde mappen` would repeat `mappen`.
-
-## Wie de schijf vasthoudt: de zes geweigerde-uitwerpzinnen (`errors.eject.unmountRefusedBy*`, `.otherApps`, `.otherProcesses`)
-
-- One skeleton for the family: `X heeft daar nog bestanden open.` + `… en probeer het daarna opnieuw.` Either wrapper
-  may concern a share or a phone, so `daar`, never `deze schijf` or `werp hem uit`. The name leads without an article (a
-  process name is a proper noun).
-- ❌ No pronoun back to `{app}`: `Sluit ze` points at `bestanden`. The aside keeps Cmdr as subject
-  (`Cmdr heeft geen appnaam`), never `We`.
-- `andere apps` (never `programma's`), `nog andere` (`andere processen` reads as a name); `Intl.ListFormat` joins.
-- Disk image → `schijfkopie`, repeated as a noun since `schijf` is also a de-word.
-- `staat nog open` (tentative) keeps EN's everyday "open" over the technical `gekoppeld`.
-- `Wacht een minuutje` (macOS) vs `Wacht even` (Cmdr), as EN distinguishes.
-
-## Select all of the same kind (`menu.select.sameKind`/`.allFolders`/`.sameExtension`/`.noExtension`, `commands.selectionSelectSameKind.*`, `menu.context.selection`)
-
-- Kind → `Soort` (Finder's sort criterion); `Selecteer alles met extensie *.{extension}` puts the mask where nothing
-  agrees with it; `extensie` over Double Commander's `achtervoegsel`.
-- `menu.context.selection` is the noun `Selectie`, never the verb `Selecteer` (`menu.bar.select`).
-- Each `menu.select.*` / `commands.selectionSelectSameKind.*` pair shares one English string; reword both or neither.
-
-## The title-bar full-disk-access badge (`onboarding.fdaBadge.*`, `onboarding.stepAi.bannerTitle.denied`)
-
-- `Geen volledige schijftoegang` is System Settings' own row (`ALL_FILES`); `bannerTitle.denied` shares the string.
-- The aria opens with the label verbatim; reword both together.
-- "Files macOS keeps to itself" → `bestanden die macOS voor zichzelf houdt`, ❌ never a macOS feature name.
-
-## The trash refusal dialog (`errors.write.trashRefused.*`, `errors.write.fallback.title.trash`, `errors.write.ioError.title.trash`, `errors.write.readError.title.trash`, `errors.write.writeError.title.trash`)
-
-- The five titles share one English string; reword all or none.
-- No plural here, so `{count} van de onderdelen die je koos` reads right at any count.
-- `suggestion.other` names `fileOperations.errorDialog.technicalDetails` verbatim; the badge text quotes
-  `onboarding.fdaBadge.label` in ‘…’.
-
-## De waarschuwing voor alleen-online inhoud (`fileOperations.delete.cloudOnlineOnlyMixedWarning` / `fileOperations.delete.cloudOnlineOnlyAllWarning` / `fileOperations.delete.cloudOnlineOnlyHandedBack`)
-
-- The download is a consequence, not something the move does:
-  `Als je die onderdelen naar de prullenmand verplaatst, worden ze eerst gedownload`.
-- Keep all four facts (trash would download, only whole-selection delete, no copy in the trash but the service keeps its
-  own, the ways out); ‘Verwijder’ equals `fileOperations.delete.confirmDelete`.
-
-## Als de server zegt dat die gedeelde map er niet is (`fileExplorer.network.osMountFallback.shareNotOnServer`, `fileExplorer.pane.directConnectionShareNotOnServerToast`)
-
-Retrying can't help, so nothing sounds temporary: `Dit lost zichzelf niet op`, no `nu`, no `probeer het opnieuw`. `die`
-points at `deze gedeelde map`, since `hij` floats between two de-words.
-
-## Namen die er hetzelfde uitzien (`fileOperations.transferProgress.lookAlikeHint`, `errors.listing.ambiguousName.title`, `errors.volume.ambiguousName`, `ai.secretError.keychainBody`)
-
-- Item → `onderdeel` even for a Keychain Access item (its own `Alle onderdelen`); `item` stays only for non-files
-  (`menu-item`, `stash-item`, recent-list entries).
-- `de server slaat ze anders op` over `spellen`, which reads oddly for a server.
-- A button name as a subject: `Met ‘Overschrijf’ vervang je …`.
-
-## De schakelaar ‘Cloud-AI toestaan’ en de toestanden waarin cloud-AI uit staat (`ai.cloudConsent.label`, `ai.cloudConsent.description`, `askCmdr.gate.cloudOff.body`, `settings.ai.cloudConsent.lockedHint`, `settings.askCmdr.enabled.label`)
-
-- `Cloud-AI toestaan` (the `<object> toestaan` label shape), conjugated in a sentence: `Sta cloud-AI toe`.
-- `cloud-AI` is a de-word: refer back with `die` or repeat it.
-- `Zet Ask Cmdr aan`; `settings.askCmdr.enabled.label` is the bare product name, justified as same as EN.
+`Software-update`, `Stop`; `ondersteund`, `X en nieuwer`, `doet het zijn best zonder garanties`, `er raar uitzien`; the
+last line is David speaking.
 
 ## Escape en de schermvullende weergave (`main.escapeFullScreenHint.*`, `settings.advanced.exitFullScreenOnEscape*`)
 
-`schermvullende weergave` (AppKit); the switch `Schermvullende weergave uitschakelen met Escape` takes Apple's
-`uitschakelen` for Exit, and the notice reuses it byte-identically.
+`Schermvullende weergave uitschakelen met Escape` (AppKit's `uitschakelen` for Exit); the notice reuses it verbatim.
 
-## Wachtregels in "Open met" en "Deel" (`menu.context.openWithLoading`, `.shareLoading`, `.shareNone`)
+## Rechtgezet Engels (`askCmdr.renameUndo.undone`/`.partial`, `settings.updates.emailPlaceholder`, `common.attachEmailPlaceholder`, `onboarding.stepBeta.emailPlaceholder`)
 
-`Apps zoeken…` (a progress line in the infinitive), `Geen deelopties` (macOS's empty-menu pattern).
+`undone` names its object, so the whole sentence sits in the plural branches. Panes use Apple's Dutch (`Algemeen`,
+`Inlogonderdelen en extensies`); `Apple Account` stays English as a pane, `Apple-account` in prose.
 
-## Het origineel bleef staan (`errors.write.sourceNotRemoved.*`, `errors.write.permissionDenied.*.source*`, `errors.write.deletePending.message`)
+## Onboarding (`onboarding.*`, `settings.revealHandler.notProductionBuild`)
 
-- `het origineel staat er nog` and `op beide plekken`, like `moveAlreadyLanded`.
+Never `ster` (a rating) or `vind ik leuk` (Facebook); the Star and Like rows share a shape. `checklist` over
+`controlelijst`; `mailinglijst` over `adressenlijst`; `superprivé`; `dev- en testbuilds`; `‘Lokaal netwerk’` is the pane
+row, never `Lokale netwerktoegang`.
+
+## Terminal en teksteditor (`settings.behavior.openTerminalHereApp.*`, `settings.navigationAndFileOps.card.terminal`/`.textEditor`, `settings.behavior.textEditorApp.*`, `fileExplorer.edit.appMissing`/`.launchRefused`)
+
+`terminal` / `Terminal` are one word (Finder `N67`), so the card is justified; `Terminal hier openen` everywhere;
+`Kies app…` (`N137`). `teksteditor` (MS), never TextEdit; `standaardeditor`; `Bewerk bestanden in {app}`.
+
+## Het favorietenmenu (`commands.favorites*`, `fileExplorer.navigation.favorites*`, `menu.go.showFavorites`, `shortcuts.scope.favoritesMenu`)
+
+`favorietenmenu`; `Toon favorieten` twins; `Voeg huidige map aan favorieten toe`. `nummer` names a favorite, `cijfer`
+the key. `favoritesCantAddHere`: reason after a colon, `netwerkshares` (`gedeelde mappen` would repeat `mappen`).
+
+## De badge voor volledige schijftoegang (`onboarding.fdaBadge.*`, `onboarding.stepAi.bannerTitle.denied`)
+
+`Geen volledige schijftoegang` (System Settings `ALL_FILES`), shared by `bannerTitle.denied`;
+`bestanden die macOS voor zichzelf houdt`, ❌ never a feature name.
+
+## Namen die er hetzelfde uitzien (`fileOperations.transferProgress.lookAlikeHint`, `errors.listing.ambiguousName.title`, `errors.volume.ambiguousName`, `ai.secretError.keychainBody`)
+
+`onderdeel` even in Keychain Access (`Alle onderdelen`); `item` only for non-files. `slaat ze anders op` over `spellen`;
+`Met ‘Overschrijf’ vervang je …`.
+
+## Het weergavevenster haalt op (`viewer.pull.*`, `viewer.error.stoppedResponding`)
+
+`{fileName} ophalen om te bekijken` (Finder `Ophalen…`), `tot nu toe`; no `komt niet meer vooruit` (no transfer shown).
+
+## Servers (`servers.*`, `commands.servers*`, `fileExplorer.navigation.server*Toast`, `fileExplorer.navigation.connectionTooltip*`, `.disconnect*`, `.forget*`, `shortcuts.scope.servers`/`.places`, `goToPath.dialog.opensServer`/`.addsServer`, `menu.network.open`/`.edit`)
+
+- macOS: `Verbinden met {name}…` (Finder `MN1`, unquoted), `Verbind als gast`, `Blader…` (not Safari's `Bladeren`),
+  `Log in bij {name}` (CloudKit), `Uitgelogd bij {name}`, `Onthoud in Sleutelhanger`, `Sleutelhangertoegang`.
+- `Locaties` (Finder sidebar); `Type`, never `Soort`; `Gevonden in de buurt` (tentative).
+- `wachtzin` (Apple), never `wachtwoordzin` (`Sleutelwachtzin` tentative); `vingerafdruk`; EN "key" → `de sleutel`,
+  "host key" → `serversleutel` (tentative, over `hostsleutel`).
+- `extern`; `hoofdmap` (MS, Dolphin) over `rootmap`; `beginmap` (tentative, Double Commander `Beginpad`) over `startmap`
+  (Start menu); `mag lezen` for a permission refusal.
+- Forget: title = menu item, `{name} vergeten?`, `Vergeet`; `haalt … uit de lijst`; `Cmdr koppelt niets los`.
+- `Gebruik gasttoegang` (tentative; `Gebruik gast` uses a person); `Verbreek de verbinding met {name}`.
+- `Cmdr verbindt niet meer met {name}` (present: the pane waits) vs `Cmdr maakt geen verbinding met {name}` (never
+  worked). `Opnieuw verbinden met {name}…`; `Open de server opnieuw` (`hem` could mean `de sleutel`);
+  `er valt niets te typen` (tentative); `retryTotal*` are bare blocks.
+- Locked identity: `bepalen welke … dit is` (the form has a `Naam` field), actions named as buttons; `Voeg toch toe`
+  quoted; `er valt niets te wijzigen`. `menu.network.open` = `menu.file.open`; `Wijzig server…` = its command. Coined
+  (tentative): `Sleutelbestand`, `Manier van verbinden`, `de servereigenaar`.
+
+## NFS-exports en ID-velden (`servers.sheet.nfs*`, `servers.refusal.export*`, `servers.refusal.reservedPortRequired`, `servers.refusal.noNfsV3`, `stateRecovery.nfsPlaces.title`)
+
+`export` (tentative loanword) over `gedeelde map`, which would blur it with the SMB share in the same form.
+`bevoorrechte poort` and the quoted switch follow Synology nl; `insecure` stays English. `gebruikers-ID` / `groeps-ID`;
+`Afgeleid van` over `Geraden` (sounds random).
+
+## Vastzetten, serversleutels en ADB-instellingen (`menu.network.pinToSwitcher`/`.unpin`, `servers.pinHint.*`, `settings.servers.*`, `settings.adb.*`, `settings.section.servers`/`.adb`, `settings.summary.servers`/`.adb`, `settings.appearance.tintSmb.*`)
+
+`Maak vast in volumekiezer` (Apple's order); macOS `Controleer opnieuw`, `Niet gevonden`, `Vertrouwde <ding>`,
+`Blader op <plek>`; `Gevonden: {path}` (tentative) dodges `op` vs `in`; `pinHint.body` and `adb.install.intro` quote
+labels.
+
+## Het telefoonpaneel via ADB (`adb.*`, `settings.behavior.adbHintDismissed.*`)
+
+AOSP: `USB-foutopsporing` (`SettingsLib` `enable_adb`), `‘Toestaan’` (SystemUI `usb_debugging_allow`).
+`De verbinding tussen Cmdr en je telefoon is verbroken.` keeps the brand; `Verbreek`, never `Werp uit` (still cabled);
+`Je hebt het openen van je telefoon gestopt.` over `geannuleerd`; never name a diagnosis.
+
+## Gedeelde mappen die niet aankoppelen (`errors.mount.*`, `errors.shareList.*`, `servers.refusal.accountNotPermitted`, `fileExplorer.network.osMountFallback.shareNotOnServer`, `fileExplorer.pane.directConnectionShareNotOnServerToast`)
+
+`gedeelde map` in the pane, `netwerkshare` for "isn't a network share"; `gasten` (NetAuthAgent);
+`Controleer of de server aanstaat`; twins match. Not on server: `Dit lost zichzelf niet op`, no retry; `die` for
+`deze gedeelde map`.
+
+## SMB-terugval (`fileExplorer.network.osMountFallback.*`)
+
+`systeemeigen` (MS) to introduce, `de systeemverbinding` once SMB is clear; `4x zo langzaam als` (tentative, no pile
+precedent); `Probeer direct te verbinden` echoes `Verbind direct`.
 
 ## S3 (`servers.sheet.s3*`, `servers.refusal.s3*`, `*ShareLink*`, `*.coldStorage*`, `fileOperations.s3Cost.*`)
 
-- MS: `bucket`, `regio`, `toegangssleutel-ID`, `geheime toegangssleutel`, `catalogusprijs`.
-- Share link → `deellink`, never `gedeelde map`.
-- Cold storage: `gearchiveerd`, `koude opslag`; restore → `herstellen` (`terugzetten` is put-back).
+MS `bucket`, `regio`, `toegangssleutel-ID`, `geheime toegangssleutel`, `catalogusprijs`; `deellink`; `gearchiveerd`,
+`koude opslag`; restore → `herstellen` (`terugzetten` is put-back).
 
 ## Wijzig meerdere namen (`multiRename.title`, `commands.fileMultiRename.label`, `menu.file.multiRename`)
 
-- `Wijzig meerdere namen` over TC `Uitgebreid hernoemen` (no `hernoemen`); Finder `Wijzig naam van ^0 onderdelen…`.
-- TC `Vervang door`, `Teller`, `Stapgrootte`, `Cijfers`; MS `Hoofdlettergebruik`; `Opmerking`.
-- `commands.multiRename*.label`: `<label> aan/uit` over `Zet … aan of uit`.
-- `multiRename.placeholderHelp.*`: `tijdstip` (`de hele tijd` means ‘constantly’); caret → `tekstcursor`.
+Over TC `Uitgebreid hernoemen` (Finder `Wijzig naam van ^0 onderdelen…`). TC `Vervang door`, `Teller`, `Stapgrootte`,
+`Cijfers`; MS `Hoofdlettergebruik`; `<label> aan/uit`; `tijdstip` (`de hele tijd` = constantly); `tekstcursor`.
+
+## Range editor (`multiRename.rangeEditor.*`)
+
 - `multiRename.rangeEditor.*`: ordinals `#e` (CLDR nl ordinal is `other` only); counted from the end →
   `#e vanaf het einde` (TC `Meet het eerste teken vanaf het einde`), never `#e-laatste`; edges `Begin`/`Einde` (counter:
   `Beginnummer`).

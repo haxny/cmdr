@@ -514,7 +514,7 @@
   "cloud-ai": {
     "chosen": "AI đám mây",
     "confidence": "high",
-    "decision": "Công tắc \"Cho phép AI đám mây\" và các trạng thái AI đám mây đang tắt",
+    "decision": "Công tắc \"Cho phép AI đám mây\"",
     "forms": "switch label Cho phép AI đám mây; cloud AI is off → AI đám mây đang tắt",
     "sources": "catalog (settings.ai.provider.opt.cloud)"
   },
@@ -632,6 +632,27 @@
     "forms": "Open the X menu → Mở menu X (Mở menu chuột phải, Menu mục ưa thích)",
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → Mở menu); catalog Menu mục ưa thích"
+  },
+  "nfs-export": {
+    "avoid": [
+      {
+        "form": "export",
+        "why": "only admins who know /etc/exports read the English word; the field asks for a folder"
+      },
+      {
+        "form": "mục chia sẻ",
+        "why": "the SMB share's name; an export is picked or typed as a folder path"
+      },
+      {
+        "form": "thư mục xuất",
+        "why": "word-for-word calque that reads as exporting a file"
+      }
+    ],
+    "chosen": "thư mục chia sẻ",
+    "confidence": "tentative",
+    "decision": "Máy chủ NFS",
+    "forms": "field label Thư mục chia sẻ; exports → các thư mục chia sẻ; a folder inside an export → một thư mục bên trong thư mục chia sẻ",
+    "sources": "network-share ruling's accepted “shared folder” form (macOS Finder Thư mục được chia sẻ); no NFS string or vi NAS UI in the pile"
   },
   "pane-divider": {
     "chosen": "thanh phân cách",
@@ -3172,7 +3193,7 @@
     ],
     "chosen": "sử dụng",
     "confidence": "high",
-    "decision": "Usage stats: bỏ \"ẩn danh\", nêu rõ \"một mã định danh ngẫu nhiên\"",
+    "decision": "Usage stats: bỏ \"ẩn danh\"",
     "forms": "usage stats → thống kê sử dụng; token usage → mức sử dụng; Spending → Chi tiêu",
     "sources": "catalog"
   },

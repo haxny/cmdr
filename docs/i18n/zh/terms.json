@@ -62,7 +62,7 @@
     ],
     "chosen": "添加",
     "confidence": "high",
-    "decision": "给已发送的错误报告补充备注",
+    "decision": "Error-report notes",
     "forms": "button 添加到… (添加到报告, 添加到程序坞); favorites and the queue take 加入 (加入个人收藏, 加入队列); \"we've added\" → 新增",
     "sources": "macOS Finder (Add to Dock → 添加到程序坞)"
   },
@@ -88,7 +88,7 @@
     "accept": ["AI"],
     "chosen": "AI 功能",
     "confidence": "high",
-    "decision": "AI 文案改写：主语从 “Ask Cmdr” 换成 `Cmdr` / `AI`",
+    "decision": "AI subject",
     "forms": "AI features → AI 功能 (AI 功能已关闭); the AI as a sentence subject → AI (AI 给出的理由)",
     "note": "Where the English subject is Cmdr, write Cmdr; `suggestedOps.*` keeps AI deliberately to separate the model's claims from Cmdr's facts.",
     "sources": "catalog (settings.ai.tooltipOff)"
@@ -115,7 +115,7 @@
   "allow": {
     "chosen": "允许",
     "confidence": "confirmed",
-    "decision": "“允许使用云端 AI”开关，以及云端 AI 关闭时的提示",
+    "decision": "Cloud AI consent",
     "exceptions": {
       "search.coverage.denied": "\"Wasn't allowed to look inside\" is a permission refusal, rendered 没有权限查看 like the rest of the permission copy.",
       "errors.write.trashRefused.message.folderNotWritable": "English sense: “isn’t allowed to change” is a file-system permission, not granting consent, so it takes 没有权限"
@@ -181,7 +181,7 @@
   "app-bundle": {
     "chosen": "应用程序包",
     "confidence": "high",
-    "decision": "`Documents and packages`：新增的 OOXML 行",
+    "decision": "OOXML row",
     "note": "Generic \"bundle\" next to \"archive\" is also 应用程序包; a Linux or npm package is 软件包 / 包.",
     "sources": "macOS (应用程序 + 显示包内容)"
   },
@@ -231,7 +231,7 @@
     ],
     "chosen": "批准",
     "confidence": "high",
-    "decision": "建议的操作：Ask Cmdr 提议内容的对话框",
+    "decision": "Suggested ops dialog",
     "sources": "general"
   },
   "archive": {
@@ -274,7 +274,7 @@
   "ask-cmdr": {
     "chosen": "Ask Cmdr",
     "confidence": "confirmed",
-    "decision": "AI 文案改写：主语从 “Ask Cmdr” 换成 `Cmdr` / `AI`",
+    "decision": "AI subject",
     "note": "Only the chat panel's own name (title, View menu, palette command, settings section) and pointers at that section (Ask Cmdr 设置); a sentence about what the AI does takes Cmdr.",
     "sources": "product name"
   },
@@ -312,7 +312,7 @@
     ],
     "chosen": "返回",
     "confidence": "confirmed",
-    "decision": "故意保留的分界（英文一词多义，中文必须分开）",
+    "decision": "Deliberate splits",
     "exceptions": {
       "multiRename.undoTooltip": "English-sense: \"back to their old names\" restores names, nothing navigates; the accepted rename form 改回 carries it."
     },
@@ -334,7 +334,7 @@
     ],
     "chosen": "后台",
     "confidence": "high",
-    "decision": "Empty-queue state of the progress dialog's F2 button",
+    "decision": "Progress dialog F2 button",
     "forms": "在后台运行 / 在后台继续运行; the F2 button's empty-queue label 后台运行; its aria 让它继续在后台运行 (the label must stay a verbatim substring)",
     "sources": "Total Commander; MS terminology",
     "note": "fileOperations.backgroundStart.background (后台运行) must stay a verbatim substring of backgroundAria (在后台运行这项操作)."
@@ -571,7 +571,7 @@
   "cloud-ai": {
     "chosen": "云端 AI",
     "confidence": "high",
-    "decision": "“允许使用云端 AI”开关，以及云端 AI 关闭时的提示",
+    "decision": "Cloud AI consent",
     "forms": "toggle 允许使用云端 AI; state 云端 AI 已关闭",
     "sources": "catalog (settings.ai.provider.opt.cloud)"
   },
@@ -667,7 +667,7 @@
   "confirm": {
     "chosen": "确认",
     "confidence": "confirmed",
-    "decision": "名称不可用 + 重命名链计数",
+    "decision": "Unusable name + rename chain",
     "forms": "\"couldn't confirm X\" → 无法确认 X 是否已… (a hedge, never a failure)",
     "sources": "MS terminology"
   },
@@ -680,7 +680,7 @@
     "accept": ["连入", "连到", "联网"],
     "chosen": "连接",
     "confidence": "confirmed",
-    "decision": "服务器面板与卷切换器里的服务器行",
+    "decision": "Server rows",
     "exceptions": {
       "errors.eject.volumeNotFound": "\"isn't connected any more\" reads as the plain 已经断开了 (already disconnected).",
       "errors.listing.deviceDisconnected.explanation": "\"drops its connection\" is rendered with the spoken 掉线 (went offline)."
@@ -704,6 +704,19 @@
     "forms": "X menu → X菜单, tight (个人收藏菜单, 预置菜单); context menu → 右键菜单; a named menu in prose → “帮助”菜单",
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → 打开菜单); catalog 个人收藏菜单, 右键菜单"
+  },
+  "nfs-export": {
+    "avoid": [
+      {
+        "form": "导出",
+        "why": "reads as exporting data; a field labelled 导出 looks like an Export button"
+      }
+    ],
+    "chosen": "共享文件夹",
+    "decision": "NFS export",
+    "confidence": "high",
+    "forms": "field label 共享文件夹; this export 这个共享文件夹; the folder inside one 共享文件夹里面的文件夹; Synology's port switch quoted verbatim “允许来自非特权端口的连接”",
+    "sources": "Synology DSM zh-CN help (指派 NFS 权限: NFS rules live on a 共享文件夹; 允许来自非特权端口的连接), kb.synology.cn, 2026-10-22; the English @key descriptions gloss export as “shared folders”"
   },
   "pane-divider": {
     "accept": ["分隔条"],
@@ -762,7 +775,7 @@
     ],
     "chosen": "拷贝",
     "confidence": "confirmed",
-    "decision": "复制（Duplicate）：在同一文件夹内拷贝的命令",
+    "decision": "Duplicate",
     "forms": "F5 and the clipboard: 拷贝 (已拷贝, 拷贝到剪贴板); a noun copy (a duplicate file) → 副本",
     "sources": "macOS Finder"
   },
@@ -783,7 +796,7 @@
     "accept": ["崩溃"],
     "chosen": "崩溃报告",
     "confidence": "high",
-    "decision": "崩溃对话框与崩溃报告设置",
+    "decision": "Crash dialog",
     "forms": "the setting label 发送崩溃报告; a report that may not be a crash → 一份报告",
     "sources": "macOS/MS"
   },
@@ -860,7 +873,7 @@
     "accept": ["删掉", "Delete"],
     "chosen": "删除",
     "confidence": "confirmed",
-    "decision": "回滚结束后的提示条",
+    "decision": "Rollback-done notice",
     "forms": "button 删除; spoken prose 删掉; the Delete key stays Latin; rollback and leftovers delete (删除), never 移除",
     "sources": "macOS"
   },
@@ -967,7 +980,7 @@
     ],
     "chosen": "关闭",
     "confidence": "confirmed",
-    "decision": "收敛掉的真漂移",
+    "decision": "Converged drift",
     "forms": "Dismiss all → 全部关闭; row aria 关闭这项操作的记录",
     "sources": "macOS (Dismiss Popover → 关闭弹出窗口)"
   },
@@ -980,7 +993,7 @@
     ],
     "chosen": "程序坞",
     "confidence": "confirmed",
-    "decision": "程序坞邀请",
+    "decision": "Dock nudge + menu",
     "forms": "Add to Dock → 添加到程序坞; Keep in Dock (a question) → 留在程序坞里",
     "sources": "macOS Finder N169.13"
   },
@@ -999,7 +1012,7 @@
     "accept": ["完成"],
     "chosen": "已完成",
     "confidence": "high",
-    "decision": "故意保留的分界（英文一词多义，中文必须分开）",
+    "decision": "Deliberate splits",
     "forms": "lifecycle status 已完成; the word a screen reader announces after a checklist step 完成",
     "sources": "macOS"
   },
@@ -1044,7 +1057,7 @@
   "duplicate": {
     "chosen": "复制",
     "confidence": "high",
-    "decision": "复制（Duplicate）：在同一文件夹内拷贝的命令",
+    "decision": "Duplicate",
     "note": "复制 is Duplicate, 拷贝 is Copy: Finder's own pair, so the two commands side by side don't clash.",
     "sources": "macOS Finder (File > 复制)"
   },
@@ -1157,7 +1170,7 @@
     "accept": ["例如", "比如"],
     "chosen": "示例",
     "confidence": "high",
-    "decision": "收敛掉的真漂移",
+    "decision": "Converged drift",
     "forms": "the full word Example: → 示例：; the abbreviation e.g. → 例如 / 比如",
     "sources": "Nautilus; Dolphin"
   },
@@ -1217,7 +1230,7 @@
     ],
     "chosen": "个人收藏",
     "confidence": "confirmed",
-    "decision": "个人收藏菜单",
+    "decision": "Favorites menu",
     "forms": "the menu 个人收藏菜单; counted 项 (查看 {count} 项个人收藏); Add current folder to favorites → 把当前文件夹加入个人收藏",
     "sources": "macOS Finder FI10"
   },
@@ -1281,7 +1294,7 @@
     ],
     "chosen": "Finder",
     "confidence": "high",
-    "decision": "原生菜单：菜单栏、右键菜单、窗口标题",
+    "decision": "Native menus",
     "note": "Apple's zh-CN calls it 访达, but the whole catalog writes Latin Finder; switching means changing every string at once.",
     "sources": "deliberate: catalog keeps Latin Finder (Apple says 访达)"
   },
@@ -1482,7 +1495,7 @@
     "accept": ["应用内", "App 内", "系统级"],
     "chosen": "全局",
     "confidence": "high",
-    "decision": "故意保留的分界（英文一词多义，中文必须分开）",
+    "decision": "Deliberate splits",
     "forms": "global shortcut 全局快捷键; in-app 应用内, or App 内 when set beside macOS; system-wide 系统级",
     "sources": "standard"
   },
@@ -1496,7 +1509,7 @@
     ],
     "chosen": "返回",
     "confidence": "confirmed",
-    "decision": "收敛掉的真漂移",
+    "decision": "Converged drift",
     "forms": "Back / Forward → 返回 / 前进",
     "sources": "macOS Finder (Back/Forward → 返回/前进)"
   },
@@ -1549,7 +1562,7 @@
     ],
     "chosen": "客人",
     "confidence": "high",
-    "decision": "添加服务器的模态表单、SSH 主机密钥确认、前往路径的预览行",
+    "decision": "Add-server sheet + host key",
     "forms": "Connect as guest → 以客人身份连接; status 客人; Use guest (switch back) → 改用客人身份; the account suffix pair 身份：客人 / 身份：{username}; \"doesn't show shares to guests\" → 不向客人显示共享",
     "sources": "macOS zh-CN (NetAuthAgent GUEST, LoginUIKit, AppKit NSUserGuest)"
   },
@@ -1614,7 +1627,7 @@
     "accept": ["密钥"],
     "chosen": "主机密钥",
     "confidence": "high",
-    "decision": "添加服务器的模态表单、SSH 主机密钥确认、前往路径的预览行",
+    "decision": "Add-server sheet + host key",
     "forms": "titles and status labels write the full 主机密钥; a second mention in the same sentence shortens to 密钥; Trusted host keys 受信任的主机密钥; Trust the new key 信任新密钥",
     "sources": "macOS OpenSSH prompt"
   },
@@ -1811,7 +1824,7 @@
     "accept": ["留在", "保留了"],
     "chosen": "保持原样",
     "confidence": "high",
-    "decision": "回滚结束后的提示条",
+    "decision": "Rollback-done notice",
     "forms": "skip-reason bullets: 保留了 {name}：原因。 (bare {name}, full-width colon); a summary 其余的保持原样",
     "sources": "catalog"
   },
@@ -1891,7 +1904,7 @@
     "accept": ["锁定"],
     "chosen": "已锁定",
     "confidence": "confirmed",
-    "decision": "重命名/新建被拒绝时的一行提示",
+    "decision": "Rename/create refusals",
     "forms": "the Finder checkbox quoted “已锁定”; unlock it via 显示简介 > 取消勾选“已锁定”",
     "sources": "macOS Finder AXNODE1"
   },
@@ -1907,7 +1920,7 @@
   "look-inside": {
     "chosen": "查看",
     "confidence": "high",
-    "decision": "Ask Cmdr inspect-file consent + tool labels",
+    "decision": "Inspect-file consent",
     "forms": "tool line 正在查看文件内容 / 已查看文件内容; prose 只有在你问到某个文件时才会查看它的内容",
     "sources": "macOS NE57"
   },
@@ -1959,7 +1972,7 @@
     "accept": ["更改"],
     "chosen": "修改",
     "confidence": "confirmed",
-    "decision": "故意保留的分界（英文一词多义，中文必须分开）",
+    "decision": "Deliberate splits",
     "forms": "the date column and filters 修改日期; the keyboard-shortcuts filter (user-changed) 已修改, and its tooltip 已从默认值更改",
     "sources": "macOS Finder"
   },
@@ -2038,7 +2051,7 @@
     ],
     "chosen": "内建",
     "confidence": "high",
-    "decision": "系统连接回退通知",
+    "decision": "OS-mount fallback notice",
     "forms": "first mention macOS 内建的 SMB 网络连接; later the short 系统连接",
     "sources": "macOS Finder/AppKit"
   },
@@ -2072,7 +2085,7 @@
   "network-share": {
     "chosen": "共享",
     "confidence": "confirmed",
-    "decision": "服务器明确说没有这个共享",
+    "decision": "Share not on server",
     "exceptions": {
       "servers.sheet.addressHelpNfs": "\"share\" here is a literal path segment inside the example addresses, kept verbatim.",
       "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the saved report on), not an SMB share: 自己发给别人."
@@ -2172,7 +2185,7 @@
   "online-only": {
     "chosen": "仅存在云端",
     "confidence": "high",
-    "decision": "仅存云端内容的删除警告条",
+    "decision": "Cloud-only delete warning",
     "forms": "仅存在云端",
     "proseAccept": ["只在云端"],
     "sources": "Finder wording for evicted files"
@@ -2389,7 +2402,7 @@
     "accept": ["Android"],
     "chosen": "手机",
     "confidence": "high",
-    "decision": "Android（ADB）手机的窗格状态、卷切换器提示与那条一行提示",
+    "decision": "ADB phone states",
     "forms": "classifier 部 (这部手机, per AOSP zh-CN), unlike 这台服务器 / 这台 Mac; platform and brand names (Android, Kindle) stay Latin; Android platform tools → Android 平台工具 (Google zh-CN docs); adb / ADB, Android SDK, and Homebrew stay Latin",
     "sources": "AOSP zh-CN"
   },
@@ -2409,7 +2422,7 @@
     ],
     "chosen": "固定",
     "confidence": "high",
-    "decision": "固定/取消固定的右键项与一次性提示、可信主机密钥页、Android（ADB）设置页",
+    "decision": "Pin, trusted keys, ADB settings",
     "forms": "Pin tab 固定标签页; Pin to switcher 固定到宗卷选择器, Unpin from switcher 从宗卷选择器中取消固定; a command pair hugs its slash (固定/取消固定服务器)",
     "sources": "Safari (固定标签页)"
   },
@@ -2491,7 +2504,7 @@
     ],
     "chosen": "放回",
     "confidence": "high",
-    "decision": "废纸篓提示条：撤销与前往废纸篓",
+    "decision": "Trash toast",
     "exceptions": {
       "askCmdr.renameUndo.unavailable": "Undoing an AI rename restores old names (恢复); 放回 means files really moving back from the trash."
     },
@@ -2584,7 +2597,7 @@
     "accept": ["重新连", "重连"],
     "chosen": "重新连接",
     "confidence": "confirmed",
-    "decision": "自动重连的面板标题 + 无需输入的退出登录说明",
+    "decision": "Reconnect + nothing-to-ask",
     "forms": "Reconnecting to X… → 正在重新连接到 {name}…; Reconnect automatically 自动重新连接",
     "sources": "macOS"
   },
@@ -2608,7 +2621,7 @@
   "regex": {
     "chosen": "正则",
     "confidence": "high",
-    "decision": "故意保留的分界（英文一词多义，中文必须分开）",
+    "decision": "Deliberate splits",
     "forms": "tight mode chips 正则; tooltips and accessible names spell out 正则表达式",
     "sources": "KDE; Double Commander"
   },
@@ -2726,7 +2739,7 @@
   "respond": {
     "chosen": "响应",
     "confidence": "high",
-    "decision": "传输停滞提示 / stalled-transfer notice",
+    "decision": "Stalled-transfer notice",
     "forms": "waiting for X to respond 正在等待…响应; didn't answer in time 没能及时响应; isn't responding 没有响应",
     "sources": "macOS AppKit; Total Commander"
   },
@@ -2789,7 +2802,7 @@
     ],
     "chosen": "复查",
     "confidence": "high",
-    "decision": "状态角落的两条 AI 提示与“复查”这个动词",
+    "decision": "Review verb",
     "exceptions": {
       "commands.cmdrOpenOnboarding.description": "\"review or change setup options\" means looking them over (回顾), not the approval gate.",
       "onboarding.stepAi.table.renameWith": "\"review and apply\" means checking a pattern before applying it (检查), not the approval gate.",
@@ -2805,7 +2818,7 @@
   "rollback": {
     "chosen": "回滚",
     "confidence": "high",
-    "decision": "完成中断的回滚",
+    "decision": "Finish rollback",
     "forms": "Roll back 回滚; rolling back 正在回滚; Partly rolled back 已部分回滚; Finish rolling back 完成回滚; Roll this operation back? 要回滚这项操作吗？",
     "note": "回滚 is the whole operation's action; undoing a single file says 撤销…的改动.",
     "sources": "MS terminology"
@@ -2820,7 +2833,7 @@
     ],
     "chosen": "根文件夹",
     "confidence": "high",
-    "decision": "服务器表单的根文件夹与起始文件夹",
+    "decision": "Root and start folder",
     "forms": "a saved server's ceiling 根文件夹; the start folder 起始文件夹; a volume's own top level 顶层文件夹",
     "sources": "MS terminology; Total Commander"
   },
@@ -2834,7 +2847,7 @@
     "accept": ["运行", "进行"],
     "chosen": "进行中",
     "confidence": "high",
-    "decision": "故意保留的分界（英文一词多义，中文必须分开）",
+    "decision": "Deliberate splits",
     "exceptions": {
       "queryUi.results.scanning": "\"Scan in progress\" collapses to the progress form 正在扫描.",
       "queryUi.results.scanningWithCount": "\"Scan in progress\" collapses to the progress form 正在扫描.",
@@ -2862,7 +2875,7 @@
   "scan": {
     "chosen": "扫描",
     "confidence": "high",
-    "decision": "故意保留的分界（英文一词多义，中文必须分开）",
+    "decision": "Deliberate splits",
     "forms": "in progress 正在扫描…; a step name 扫描; rescan 重新扫描",
     "sources": "macOS Finder"
   },
@@ -2933,7 +2946,7 @@
   "see": {
     "chosen": "查看",
     "confidence": "high",
-    "decision": "故意保留的分界（英文一词多义，中文必须分开）",
+    "decision": "Deliberate splits",
     "exceptions": {
       "askCmdr.wakeToast.openThread": "\"See why\" is a quiet link, the spoken 看看原因.",
       "menu.bar.view": "The menu bar's View menu is Apple's own title 显示, not the F3 view command."
@@ -2945,7 +2958,7 @@
     "accept": ["选中", "所选", "已选", "全选", "反选"],
     "chosen": "选择",
     "confidence": "high",
-    "decision": "选择/取消选择文件对话框",
+    "decision": "Select/deselect dialog",
     "exceptions": {
       "viewer.saveAs.defaultName": "A default file name base, kept as the ASCII `selection` so it stays filename-safe."
     },
@@ -3138,7 +3151,7 @@
     "accept": ["源"],
     "chosen": "来源",
     "confidence": "high",
-    "decision": "Delete-dialog trash switch + transfer From/To group headings",
+    "decision": "Trash switch + From/To headings",
     "forms": "the transfer heading and sentences 来源; a rename's source file 源文件",
     "sources": "Total Commander"
   },
@@ -3169,7 +3182,7 @@
     "accept": ["停下"],
     "chosen": "停止",
     "confidence": "confirmed",
-    "decision": "等待回答的队列行 + 回滚确认框",
+    "decision": "Awaiting-answer row + rollback confirm",
     "forms": "the rollback tooltip's stop 停止 (never 取消); you stopped opening your phone 你停止了打开手机",
     "sources": "macOS AppKit"
   },
@@ -3449,7 +3462,7 @@
     "accept": ["连不上", "无法访问", "连到"],
     "chosen": "无法连接",
     "confidence": "high",
-    "decision": "故意保留的分界（英文一词多义，中文必须分开）",
+    "decision": "Deliberate splits",
     "exceptions": {
       "licensing.error.network": "\"couldn't reach the license server this time\" reads 这次没能连接到 (didn't manage to connect)."
     },
@@ -3485,7 +3498,7 @@
     "accept": ["使用统计", "花费", "使用情况", "占用"],
     "chosen": "用量",
     "confidence": "high",
-    "decision": "使用统计：去掉“匿名”，写明“一个随机标识符”",
+    "decision": "Usage stats",
     "forms": "a chat's token usage 用量; the spending section 花费; app usage stats 使用统计; memory or disk usage 占用 / 使用情况",
     "sources": "MS terminology"
   },
@@ -3616,7 +3629,7 @@
     ],
     "chosen": "worktree",
     "confidence": "high",
-    "decision": "git 的 worktree",
+    "decision": "git worktree",
     "forms": "git's worktree stays verbatim (个关联 worktree)",
     "sources": "git term"
   },

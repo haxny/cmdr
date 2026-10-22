@@ -232,7 +232,7 @@ grammatical gender; article and adjective must agree with the counted noun in ev
   `hacer una foto`; `tomar` is the `es-419` form.
 - **A "last X" column takes a NOUN phrase, not a participle.** macOS `es` names its date columns `Última apertura` (Last
   Opened) and `Fecha de modificación`, and the catalog already settled `Modified` → `Modificación`. So `Last used` →
-  `Último uso`, not `Usado por última vez`. Evidence: `decisions.md` § La tabla del hub de servidores.
+  `Último uso`, not `Usado por última vez`. Evidence: `decisions.md` § Servidores.
 - **A command that toggles in both directions spells both verbs with `o`, never a slash.** English writes "Pin / unpin
   server" and "Toggle pin tab"; Spanish writes `Fijar o desfijar el servidor`, matching `commands.tabTogglePin.label`
   and the macOS `es` pattern `Activar o desactivar …`. The slash is an English shorthand, not a Spanish command-palette
@@ -248,7 +248,7 @@ grammatical gender; article and adjective must agree with the counted noun in ev
   `Conectándose a X…` y `Reconnecting to X…` → `Reconectándose a X…`, frente a `Connecting…` → `Conectando…` a secas. Lo
   fija Finder (`MN1`) y lo mantiene el par `servers.paneState.connecting` / `.reconnecting`, que el usuario ve en el
   mismo panel. macOS reparte el prefijo `re-` entre `Conectando de nuevo…` y `Reconectando…`, así que la elección entre
-  ellos la decide el paralelismo interno, no la fuente. Evidence: `decisions.md` § Las dos líneas nuevas del panel.
+  ellos la decide el paralelismo interno, no la fuente. Evidence: `decisions.md` § Servidores.
 - **Pulsar un botón es `hacer clic en`, no `pulsar`.** macOS `es` escribe `haz clic` 44 veces frente a 2 de `pulsa`
   (grep sobre Finder + AppKit + SystemSettings, 2026-09-09), y el catálogo ya lo sigue
   (`fileExplorer.breadcrumb.navigateTooltip`). Un inglés coloquial tipo «hit Save again» se traduce igual:

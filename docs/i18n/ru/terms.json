@@ -3163,6 +3163,25 @@
     "confidence": "high",
     "sources": "macOS AppKit NSLocalSavePanel/NSRemoteSavePanel 100026 New Folder → «Новая папка»; Finder «Новая папка»; Double Commander and Thunar"
   },
+  "nfs-export": {
+    "chosen": "общая папка",
+    "accept": ["общая папка", "общей папк", "общую папку", "общие папки", "общих пап", "общими папк", "общим папкам"],
+    "forms": "field label → «Общая папка»; exports listed → общие папки; path of an export → путь к общей папке; the export itself → сама общая папка",
+    "avoid": [
+      {
+        "form": "экспорт",
+        "why": "reads as the act of exporting; MS has only the verb экспортировать, and Synology DSM ru never names an export that way"
+      },
+      {
+        "form": "общий ресурс",
+        "why": "Windows networking phrasing, already avoided for SMB shares"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "Synology DSM ru help «Назначение прав доступа NFS» (an NFS export is a «общая папка» with «Права доступа NFS», kb.synology.com/ru-ru, 2026-10-22); pile: no noun (MS export → экспортировать, Nautilus «Сетевая файловая система (NFS)»)",
+    "note": "Same word as network-share, as Synology uses for both; the NFS form and the server type keep them apart. Open for a native reviewer in review-queue.md.",
+    "decision": "NFS export"
+  },
   "none": {
     "chosen": "Нет",
     "avoid": [

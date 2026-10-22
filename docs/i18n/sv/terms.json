@@ -1997,6 +1997,24 @@
     "confidence": "high",
     "sources": "macOS Finder (Ny mapp)"
   },
+  "nfs-export": {
+    "accept": ["exporten", "exporter", "exporterna", "exportens"],
+    "avoid": [
+      {
+        "form": "delad mapp (for an NFS export)",
+        "why": "delad mapp is the SMB share; the NFS form names an export, and the two sit side by side in the Servers list"
+      },
+      {
+        "form": "exportera / exportmapp",
+        "why": "exportera is exporting a file; exportmapp is unattested in Swedish NAS writing"
+      }
+    ],
+    "chosen": "export",
+    "confidence": "tentative",
+    "decision": "Server hub: connect sheet",
+    "forms": "en-word: en export, exporten, exporter, exporterna; field label Export; compound NFS-export",
+    "sources": "Swedish Synology / TrueNAS guides (NFS-exporten, NFS-export: zmanda.com/sv, tech-insider.org/sv, web search 2026-10-22); MS terminology has only the verb; no NAS UI in the pile"
+  },
   "none": {
     "chosen": "ingen",
     "confidence": "high",

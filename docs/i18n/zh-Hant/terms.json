@@ -2461,6 +2461,24 @@
     "confidence": "high",
     "sources": "AP-HK, TC"
   },
+  "nfs-export": {
+    "avoid": [
+      {
+        "form": "匯出",
+        "why": "MS/Linux's word reads as exporting data (the File > Export sense); no home NAS UI shows it"
+      },
+      {
+        "form": "共用資料夾",
+        "why": "Synology's spelling of the same idea; the catalog's share word is 共享資料夾, and one catalog keeps one form"
+      }
+    ],
+    "chosen": "共享資料夾",
+    "confidence": "tentative",
+    "decision": "Server sheet and host key",
+    "forms": "the field label → 共享資料夾; a folder inside an export → 共享資料夾裡的資料夾; the export's own folder → 共享資料夾本身",
+    "note": "Same word as network-share (SMB): the protocols never meet in one sentence, and both are what a home user calls a NAS's shared folder. Native review queued in review-queue.md.",
+    "sources": "Synology DSM zh-TW NFS help 為共用資料夾指派 NFS 權限 (kb.synology.com, 2026-10-22); catalog network-share 共享資料夾"
+  },
   "not-finished": {
     "accept": ["沒有完成", "沒能", "沒有找完", "沒有跑完", "沒有寫完", "未完成"],
     "chosen": "無法完成",

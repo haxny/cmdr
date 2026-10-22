@@ -2112,6 +2112,20 @@
     "forms": "network share → Netzwerkfreigabe; SMB share → SMB-Freigabe; Connect directly → Direkt verbinden",
     "sources": "macOS (Freigabe, Bildschirmfreigabe); NetAuthAgent EINFO_NO_SHARE"
   },
+  "nfs-export": {
+    "accept": ["Freigaben", "NFS-Freigabe"],
+    "avoid": [
+      {
+        "form": "Export",
+        "why": "reads as exporting a file; German NAS apps and Linux docs call an NFS export a Freigabe"
+      }
+    ],
+    "chosen": "Freigabe",
+    "confidence": "high",
+    "decision": "NFS-Server: Freigaben, Benutzer-ID und die Absagen",
+    "forms": "the Export field → Freigabe; in prose NFS-Freigabe where the protocol needs naming; a pronoun after it never reaches past a nearer feminine Liste or Option",
+    "sources": "Synology Knowledge Center de (NFS-Berechtigungen, freigegebene Ordner über NFS), retrieved 2026-10-22; German Synology and Kodi forums (NFS-Freigabe); shares the SMB word Freigabe (network-share)"
+  },
   "new-file": {
     "accept": ["Datei erstellen", "Datei wird erstellt", "erstellen"],
     "chosen": "Neue Datei",

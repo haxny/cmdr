@@ -192,7 +192,7 @@
     ],
     "confidence": "high",
     "sources": "Double Commander (Várakozás felhasználói válaszra); catalog (operationConflict.pausedNote)",
-    "decision": "Visszagörgetés-megerősítő + a válaszra váró sor állapota"
+    "decision": "Visszagörgetés-megerősítő"
   },
   "api-key": {
     "chosen": "API-kulcs",
@@ -445,7 +445,7 @@
     "forms": "a greyed-out menu item → the base label + ` (foglalt)`, the base label unchanged letter for letter (Kiadás ({name}) (foglalt), Leválasztás (foglalt)); a provider or system that's busy → elfoglalt",
     "confidence": "high",
     "sources": "ms (foglalt, the line-busy sense); catalog (menu.volume.*Busy)",
-    "decision": "busy: a kiszürkített menüpontok jelölője"
+    "decision": "busy"
   },
   "byte": {
     "chosen": "bájt",
@@ -614,7 +614,7 @@
     "confidence": "high",
     "sources": "ms (checklist → ellenőrzőlista)",
     "note": "The checklist rows are informal imperatives (Csillagozd meg a repót a GitHubon), not nominal labels: one row has to be a sentence around an inline field.",
-    "decision": "A bevezető átírt lépései: ellenőrzőlista, lépésbuborék, összefoglalók"
+    "decision": "A bevezető átírt lépései"
   },
   "chip": {
     "chosen": "címke",
@@ -688,7 +688,7 @@
     "forms": "switch Felhő-AI engedélyezése; in a sentence a felhő-AI, accusative felhő-AI-t (engedélyezd a felhő-AI-t); compound felhő-AI-szolgáltatás",
     "confidence": "high",
     "sources": "catalog (settings.ai.provider.opt.cloud, settings.ai.cloudProvider.description)",
-    "decision": "A „Felhő-AI engedélyezése” kapcsoló és a kikapcsolt felhő-AI állapotai"
+    "decision": "A „Felhő-AI engedélyezése” kapcsoló"
   },
   "cloud-provider": {
     "chosen": "felhőszolgáltató",
@@ -816,7 +816,7 @@
     "confidence": "high",
     "sources": "macOS Finder (N84 Kapcsolódás szerverre…, MN1 Kapcsolódás ide: ^0…); AppKit SavePanel (Connected = Kapcsolódva); Home (Csatlakozás…)",
     "note": "The two stems are a deliberate split: the pane title keeps Apple's kapcsolód-, the sheet's button and its siblings keep csatlakoz- because Connect is shared with fileExplorer.network.connect.",
-    "decision": "A szerverlap, az SSH-kulcs jóváhagyása és a Go-to-path előnézete"
+    "decision": "A szerverlap"
   },
   "link": {
     "chosen": "link",
@@ -908,7 +908,7 @@
     "forms": "crash → összeomlás; quit unexpectedly → váratlanul bezárult; the Settings label → Összeomlás-jelentések küldése; a report that must not claim a crash → jelentés (Elküldöd a jelentést?)",
     "confidence": "high",
     "sources": "ms (crash → összeomlás, report → jelentés); macOS CrashReporterSupport (probléma family)",
-    "decision": "Ha a Cmdr nem állt le: az összeomlásjelentő két új nyitómondata"
+    "decision": "Ha a Cmdr nem állt le"
   },
   "create": {
     "chosen": "létrehozás",
@@ -1043,7 +1043,7 @@
     ],
     "confidence": "high",
     "sources": "macOS 26.6.2 Finder MenuBar.strings (300488.title Kijelölés törlése), 2026-08-29",
-    "decision": "Kijelölés és a kijelölés törlése: a Select / Deselect párbeszéd"
+    "decision": "Kijelölés törlése"
   },
   "desktop": {
     "chosen": "Asztal",
@@ -1406,7 +1406,7 @@
     ],
     "confidence": "high",
     "sources": "catalog (viewer.loading = Betöltés…)",
-    "decision": "A megjelenítő betölti a telefonon, szerveren vagy archívumban lévő fájlt"
+    "decision": "A megjelenítő betöltése"
   },
   "file": {
     "chosen": "fájl",
@@ -1497,7 +1497,7 @@
     ],
     "confidence": "high",
     "sources": "macOS BluetoothUIServer (Forget = Elfelejtés)",
-    "decision": "A szerverközpont: kapcsolódási állapotok, elutasítások, elfelejtés"
+    "decision": "A szerverközpont: kapcsolódás"
   },
   "format": {
     "chosen": "formátum",
@@ -1558,7 +1558,7 @@
     "forms": "the window → a Finder Infó megjelenítése ablaka; in prose → válaszd az Infó megjelenítése parancsot (article az)",
     "confidence": "high",
     "sources": "macOS 26.5.2 Finder (Localizable Get Info, MenuBar 300801.title, N165, TL22, NE18), 2026-08-23",
-    "decision": "A macOS-panelnevek magyarul: `Infó megjelenítése` és `Zárolt`"
+    "decision": "A macOS-panelnevek magyarul"
   },
   "git-branch": {
     "chosen": "ág",
@@ -2124,7 +2124,7 @@
     ],
     "confidence": "high",
     "sources": "macOS Security.prefPane Localizable.loctable (Last Used = Utolsó használat)",
-    "decision": "A szerverközpont táblázata és a kötetváltó rögzítése"
+    "decision": "A szerverközpont táblázata"
   },
   "later": {
     "chosen": "Később",
@@ -2258,7 +2258,7 @@
     "forms": "prose → belenéz (egy fájlba csak akkor néz bele, ha arról kérdezed); the tool pair → Fájlok átnézése / Fájlok átnézve",
     "confidence": "tentative",
     "sources": "catalog (search.coverage.denied)",
-    "decision": "Belenézés a fájlokba: az `inspect_file` eszköz és a hozzájárulási képernyő új ígérete"
+    "decision": "Belenézés a fájlokba"
   },
   "mailing-list": {
     "chosen": "levelezőlista",
@@ -2437,6 +2437,24 @@
     "confidence": "high",
     "sources": "macOS; GNOME"
   },
+  "nfs-export": {
+    "chosen": "megosztás",
+    "accept": ["megoszt"],
+    "forms": "the Export field label → Megosztás; a folder inside an export → egy megosztáson belüli mappa; the export’s path → a megosztás útvonala; No exports listed → Nincs megosztás a listán",
+    "avoid": [
+      {
+        "form": "export",
+        "why": "admin jargon a Hungarian NAS UI doesn’t show; Synology and QNAP name the thing a shared folder"
+      },
+      {
+        "form": "exportál",
+        "why": "Microsoft knows it only as exporting data to another format"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "ms (shared folder → megosztott mappa; export → exportál, the data-export sense only); Hungarian admin usage (NFS megosztás); no pile source names an NFS export",
+    "decision": "NFS"
+  },
   "none": {
     "chosen": "nincs",
     "forms": "(none) → (nincs)",
@@ -2531,7 +2549,7 @@
     "exceptions": {
       "errors.write.cancelled.message.trash": "The move to trash operation was canceled → A Kukába helyezést megszakítottad: the action noun names the operation."
     },
-    "decision": "A műveleti sor: a Transfer queue átnevezése"
+    "decision": "A műveleti sor"
   },
   "operation-log": {
     "chosen": "Műveletnapló",
@@ -2560,7 +2578,7 @@
     ],
     "confidence": "high",
     "sources": "Double Commander (Queue = Sor, New queue = Új sor); ms (print queue → nyomtatási sor)",
-    "decision": "A műveleti sor: a Transfer queue átnevezése",
+    "decision": "A műveleti sor",
     "note": "fileOperations.backgroundStart.queue (Sorba) must stay a verbatim substring of queueAria (Küldés a műveleti sorba)."
   },
   "options": {
@@ -2802,7 +2820,7 @@
       "errors.listing.symlinkLoopErrno.suggestion": "which link is the problem → melyik link okozza a hurkot: names what the link does wrong.",
       "fileExplorer.navigation.driveIndex.tooltipFailed": "a problem saving the index → nem sikerült elmenteni: the house couldn't form."
     },
-    "decision": "Ha a Cmdr nem állt le: az összeomlásjelentő két új nyitómondata"
+    "decision": "Ha a Cmdr nem állt le"
   },
   "process": {
     "chosen": "folyamat",
@@ -2845,7 +2863,7 @@
     ],
     "confidence": "high",
     "sources": "macOS Finder (PE130 …visszahelyezése nem sikerült; the menu command is Visszatevés)",
-    "decision": "A Kuka-értesítés két gombja és a visszavonás családja"
+    "decision": "A Kuka-értesítés"
   },
   "query": {
     "chosen": "lekérdezés",
@@ -2948,7 +2966,7 @@
     ],
     "confidence": "high",
     "sources": "catalog (errors.listing.deviceReconnecting.title); macOS DisplaysSettingsIntentsExtension (Automatikus újracsatlakozás)",
-    "decision": "Az automatikus újracsatlakozás és a kulcsos bejelentkezés panelsora"
+    "decision": "Az automatikus újracsatlakozás"
   },
   "redact": {
     "chosen": "kitakarás",
@@ -3832,7 +3850,7 @@
     ],
     "confidence": "high",
     "sources": "ms (usage → felhasználás, spending → kiadás)",
-    "decision": "Usage stats: \"névtelen\" dropped, \"egy véletlenszerű azonosító\" named"
+    "decision": "Usage stats"
   },
   "usb-debugging": {
     "chosen": "USB-hibakeresés",

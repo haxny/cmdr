@@ -190,8 +190,7 @@ covers large/compact-notation values (e.g. "2 millions"). Write the branches the
 - **❌ Jamais d’article défini devant `{countText}`.** L’anglais écrit sans broncher « the {countText} items », y
   compris quand la branche `one` donne « the 1 item » ; « les 1 élément » est simplement faux. Quand la source marque la
   totalité par `the`, portez-la par `tout` et sortez le nombre de la portée de l’article : « Cmdr a supprimé tout ce
-  qu’il avait écrit : {countText} éléments. » Exemple travaillé : `decisions.md` § La notification après un retour en
-  arrière interrompu.
+  qu’il avait écrit : {countText} éléments. » Exemple travaillé : `decisions.md` § Retour en arrière.
 - Write `many` identical to `other` unless the message really formats compact/large values: plain integers never select
   `many`, but parity and the plural check both want the branch. This is what the whole `fr` set does.
 
@@ -201,8 +200,7 @@ covers large/compact-notation values (e.g. "2 millions"). Write the branches the
   l’emporte (`Présentation`, `Départ`, `Réduire/agrandir`, `Coup d’œil`), parce que l’utilisateur voit la barre de menus
   de Cmdr à côté de celle du Finder. Preuves et exceptions : `decisions.md` § Menus natifs. Le menu du Dock suit la même
   règle : « Aller au dossier… » et « Se connecter au serveur… » sont copiés du menu Aller du Finder, et « Connexion au
-  serveur » (le titre de la fenêtre chez Apple) n’est jamais un libellé de commande. Preuves : `decisions.md` § Le menu
-  du Dock.
+  serveur » (le titre de la fenêtre chez Apple) n’est jamais un libellé de commande. Preuves : `decisions.md` § Le Dock.
 - **Accents on capitals are mandatory.** "État", "Éjecter", "À propos", "Écraser", never strip the accent on a capital
   (see Decision points → Capitalization). macOS French keeps them.
 - **Punctuation spacing**: a no-break space (U+00A0) before `: ; ! ? %`, the character macOS French uses there
@@ -226,7 +224,7 @@ covers large/compact-notation values (e.g. "2 millions"). Write the branches the
   participle): this is the same discipline as the gender rule above.
 - **Speed multipliers spell out "fois".** English UI writes `4x` / `100x`; French prose writes "4 fois plus lente",
   "parfois 100 fois". Keep the digit, drop the `x`: the bare `x` form reads as English marketing copy. See
-  `decisions.md` § Notification de repli sur le montage macOS.
+  `decisions.md` § Réseau : connexion, identification et partages.
 - **« Couldn’t <do X>: {error} » se rend par « <Nom verbal> impossible : {error} ».** Moule figé du catalogue, qui évite
   « erreur » / « échec » tout en restant court : « Préparation de l’aperçu impossible : », « Envoi du rapport d’incident
   impossible : », « Enregistrement du lot impossible : », « Ajout de votre note impossible : ». Nom verbal +
@@ -242,8 +240,8 @@ covers large/compact-notation values (e.g. "2 millions"). Write the branches the
   affiche : ne les traduisez pas. Détails : `decisions.md` § Les noms de sous-fenêtres viennent du Mac de la personne.
 - **« appareil photo » + « photo » dans la même proposition : passer par l’incise `pour une photo, …`.** « les détails
   de l’appareil photo d’une photo » colle deux `photo` ; on écrit
-  `…, et, pour une photo, les détails de l’appareil photo et la localisation`. Termes et preuves : `decisions.md` § Ce
-  qu’Ask Cmdr lit à l’intérieur d’un fichier.
+  `…, et, pour une photo, les détails de l’appareil photo et la localisation`. Termes et preuves : `decisions.md` § IA
+  dans le cloud et lecture des fichiers.
 - **La ligne Android (ADB) des réglages.** `settings.fileOperations.adbEnabled.*` et `adbBinaryPath.*` suivent le moule
   déjà en place pour MTP : le libellé décrit la fonction ("Accès aux fichiers Android via ADB", comme "Prise en charge
   Android/Kindle/appareil photo"), la description commence à la troisième personne quand elle décrit ce que fait
@@ -261,13 +259,13 @@ covers large/compact-notation values (e.g. "2 millions"). Write the branches the
   `Pin / unpin server` devient « Épingler ou désépingler le serveur », sur le moule de `commands.tabTogglePin.label` («
   Épingler ou désépingler l’onglet »). Les deux se lisent côte à côte dans la palette de commandes : une barre oblique
   chez l’une et « ou » chez l’autre ferait croire à deux commandes de nature différente. Preuves : `decisions.md` § Le
-  hub des serveurs : la table.
+  hub des serveurs : la table et le panneau.
 - **La fenêtre de réglages de Cmdr, c’est « les Réglages » ; « Réglages Système » nomme l’app d’Apple.** Un lien du type
   « Turn it on in Settings » se rend par « Activez-la dans les Réglages », comme
   `fileExplorer.navigation.driveIndex.tooltipIndexingOff` déjà livrée.
 - **`Reconnexion` est le nom d’état, `reconnecter` le verbe.** `Reconnecting to {name}…` suit exactement le moule du
-  voisin `Connexion à {name}…` : « Reconnexion à {name}… ». Preuves Apple et pièges : `decisions.md` § Le panneau de
-  reconnexion.
+  voisin `Connexion à {name}…` : « Reconnexion à {name}… ». Preuves Apple et pièges : `decisions.md` § Le hub des
+  serveurs : la table.
 - **Un constat « il n’y a rien à faire » se rend par `…, il n’y a donc rien à <verbe>.`** Moule déjà livré par
   `errors.eject.*` (« … il n’y a donc rien à éjecter. ») et repris par `servers.paneState.signedOutNothingToAsk` (« … il
   n’y a donc rien à saisir. »). Ni excuse ni « erreur » : c’est un constat. Le verbe pour remplir un champ est `saisir`
@@ -293,8 +291,7 @@ covers large/compact-notation values (e.g. "2 millions"). Write the branches the
 - **Le verbe d’un bouton tiers vient de l’interface française de cet éditeur, quand elle existe.** GitHub localise la
   sienne et dit « Ajouter une étoile » ; on la reprend. Quand l’éditeur ne localise pas du tout (AlternativeTo, dont le
   bouton dit « Like » à tout le monde), il n’y a pas de terme à citer : on prend le verbe français standard de ce geste
-  et on marque le choix `tentative`. Preuves : `decisions.md` § La prise en main : l’assistant, l’étape IA et la liste
-  de contrôle.
+  et on marque le choix `tentative`. Preuves : `decisions.md` § La prise en main.
 
 ## Open questions
 

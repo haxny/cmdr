@@ -104,7 +104,7 @@ so don't copy that pattern.
   - When the English button is a verb Dutch has no verb for (English "Background" as an act; there is no
     `achtergronden`), don't fall back to the bare noun, which reads as a label: use the prepositional or directional
     phrase the catalog already uses for the concept ("Op de achtergrond", like the settled "Naar prullenmand"). See
-    `decisions.md` § De knop voor een lege wachtrij.
+    `decisions.md` § De bewerkingenwachtrij.
   - **A separable verb keeps its particle at the END of the label**, however far that pushes it: "Add to report" →
     `Voeg aan rapport toe`, not the English-ordered "Voeg toe aan rapport". macOS does exactly this ("Voeg aan begin van
     knoppenbalk toe", "Voeg het lettertype aan de stijl toe", verified in `nl/macOS/AppKit`, 2026-08-28). Same for
@@ -176,12 +176,12 @@ second half is now a normal plural with a real verb
 - **Speed multipliers**: write them as digits plus `x` and the equality shape, `4x zo langzaam als …` /
   `4x zo snel als …`, not `4x langzamer dan`, which leaves open whether the factor applies to the difference or the
   whole. The Microsoft style guide prescribes digits for units and percentages; the shape itself has no pile precedent,
-  so it's a judgment call (see `decisions.md` § De terugvalmelding voor de systeem-SMB-verbinding).
+  so it's a judgment call (see `decisions.md` § SMB-terugval).
 - **An uncontrolled `{name}` NEVER takes a pronoun.** The name can be a file (`het`) or a folder (`de`), so any pronoun
   is wrong half the time. Reach for the pronominal adverb, which works for both genders AND both numbers:
   `daar is iets aan gewijzigd`, `daar staat nu iets in`, `nadat Cmdr er klaar mee was`. Bonus: with no pronoun left, a
   `.named` and a `.counted` sibling can share one sentence, and the counted one keeps a single `plural` block instead of
-  three. Worked example: `decisions.md` § De terugdraaimelding.
+  three. Worked example: `decisions.md` § Terugdraaien.
 - **Totality before a count**: completeness first, the number in an apposition after a colon:
   `Alles is teruggezet: {countText} onderdelen.`
 - **The volume switcher is `de volumekiezer`** in every string; the old coinage `wisselaar` stays unused.
@@ -208,12 +208,11 @@ second half is now a normal plural with a real verb
   unpin server") keeps the slash and the imperative: `Zet server vast / maak hem los`. The two `aan/uit` commands answer
   a different English (`Toggle pin tab`, `Toggle hidden files`), which Dutch renders as `<object> <infinitive> aan/uit`;
   an English imperative takes a Dutch imperative, as all four sibling `servers.*` commands and both menu pin items
-  already do. Confidence: high. Evidence: `decisions.md` § De serverhub.
+  already do. Confidence: high.
 - **`vastzetten` en `vast maken` zijn één werkwoordpaar, geen twee.** Beide dragen hetzelfde partikel, en het hele
   catalogus-cluster staat op `vast` / `los`: `Maak tabblad vast` / `Maak tabblad los`, `Maak vast in volumekiezer` /
   `Maak los`, `Tabblad vastzetten aan/uit`, `Vastgezet`, `Zet server vast / maak hem los`. ❌ Veeg ze dus niet samen op
-  één licht werkwoord: `Maak server vast / maak hem los` herhaalt `maak` in één label. Confidence: high. Bewijs:
-  `decisions.md` § De vastzet-hint.
+  één licht werkwoord: `Maak server vast / maak hem los` herhaalt `maak` in één label. Confidence: high.
 - **"USB debugging" → `USB-foutopsporing`, settled.** It is what a Dutch Android phone shows, sourced straight from AOSP
   (`SettingsLib` `enable_adb`), and the English `@key.description` now asks for exactly that: the phrase the way the
   vendor's localized Android renders it. The `adb.*` pass reuses the same rendering. Confidence: high.
@@ -233,11 +232,11 @@ second half is now a normal plural with a real verb
 - **`Dock` blijft Engels en krijgt het lidwoord `het`.** Apple laat het lidwoord weg in korte labels
   (`Voeg toe aan Dock`, `Verwijder uit Dock`), maar zet het er in een zin wél bij (`Toon/verberg het Dock automatisch`,
   Systeeminstellingen). Kies op de vorm: label zonder, zin met. De bezittelijke vorm `je Dock` mag waar het Engels
-  `your Dock` zegt. Bewijs: `decisions.md` § Het Dock-aanbod.
+  `your Dock` zegt.
 - **Voor een item in Cmdrs Dock-menu is `Dock.app` `nl.lproj/DockMenus.strings` de Tier-1-bron**, naast Finders
   `MenuBar.strings`. Het bestand draagt het hele Nederlandse Dock-menu op leesbare sleutels (`OPEN`, `HIDE`, `QUIT`,
   `SHOW_ALL_WINDOWS`, `KEEP_IN_DOCK`), dus een label dat het Dock zelf al kent, schrijf je niet zelf. Bewijs:
-  `decisions.md` § Het Dock-menu van Cmdr zelf.
+  `decisions.md` § Het Dock.
 - **De map Applications heet in het Nederlandse macOS `Apps`, niet `Programma's`.** Finder gebruikt `Apps` in de
   navigatiekolom, het Ga-menu en de knopbaltip `Ga naar de map ‘Apps’`; `Programma's` leeft alleen nog in
   `Hulpprogramma's`. Schrijf `de map ‘Apps’`, met de enkele krulaanhalingstekens die deze gids voorschrijft.
@@ -246,14 +245,14 @@ second half is now a normal plural with a real verb
   gebruiker daar aanklikt heten `Star` en `Like`. Cmdr schrijft `Geef de repo een star op GitHub` en
   `Geef Cmdr een like op AlternativeTo`: het leenwoord blijft, het Nederlands draagt alleen het werkwoord. Zoek dus
   eerst uit óf het platform je taal spreekt, voordat je "gebruik de term van het platform" toepast. Bewijs:
-  `decisions.md` § De onboarding-herschrijving.
+  `decisions.md` § Onboarding.
 - **Een `…summary`-regel naast een schakelaar mag niet omlopen**, dus die erft de terminologie van zijn lange
   `…desc`-buur maar niet diens zinsbouw: benoem in telegramstijl de kosten en de baten, en houd de regel rond de lengte
   van het Engels. Wordt het langer, snoei dan een bijwoord of een lidwoord weg, nooit een van de feiten.
 - **Een `{app}`-achtige procesnaam staat vooraan zonder lidwoord, en krijgt nooit een voornaamwoord.** Een naam die Cmdr
   uit een draaiend proces leest, is een eigennaam, dus `{app} gebruikt deze schijf nog` (geen `de`/`het`), en het
   Engelse „anything **it** has open" wordt een plaatsbijwoord: `Sluit alles wat daar openstaat`. Dezelfde reden als bij
-  een ongecontroleerde `{name}`: het geslacht van de naam is onbekend. Bewijs: `decisions.md` § Wie de schijf vasthoudt.
+  een ongecontroleerde `{name}`: het geslacht van de naam is onbekend. Bewijs: `decisions.md` § Uitwerpen.
 - **Een leeg inline-vakje (`<field></field>`) hoort achter het scheidbare partikel**, niet ertussenin:
   `Vul je e-mailadres in <field></field> om …`. Het partikel hoort bij zijn werkwoord; het vakje komt daarna, op
   dezelfde plek als in het Engels.

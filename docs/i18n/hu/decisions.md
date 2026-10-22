@@ -1,793 +1,557 @@
 # hu decisions
 
 Distilled rulings behind `terms.json`: "X over Y because Z", one entry per topic, edited in place. `pnpm i18n:brief`
-pulls a section when its heading cites a batch key, so every heading cites its keys in backticks. Rulings live in
-`terms.json`, voice in `style.md`, open questions in `review-queue.md`.
+pulls a section when its heading cites a batch key, so every heading cites its keys in backticks. Term choices, their
+avoid-lists, and sources live in `terms.json`; this file keeps what a term ruling can't hold (sentence frames,
+placeholder handling, family alignment). Voice is in `style.md`, open questions in `review-queue.md`.
 
-## A macOS-vs-Windows hasadások: Kuka, szerver, Mégsem, könyvjelző
+## A macOS-vs-Windows hasadások
 
-Where macOS and Microsoft split, macOS wins, because Finder users see its word: `Kuka` over `Lomtár` (MS reserves it for
-the Windows Recycle Bin), `szerver` over `kiszolgáló`, `Mégsem` over `Mégse`. Bookmark → `könyvjelző` (tentative); the
-favorites list stays `kedvenc`.
+macOS wins because Finder users see its word: `Kuka` over `Lomtár` (MS reserves it for the Recycle Bin), `szerver` over
+`kiszolgáló`, `Mégsem` over `Mégse`. Bookmark → `könyvjelző` (tentative); favorites stay `kedvenc`.
 
 ## A Beállítások szakaszai (`settings.section.*`)
 
-- Quote a section name verbatim wherever another string names it (`settings.section.*` is the source).
-- A Settings path in a sentence never takes a suffix: `itt: Beállítások > AI`; the separator glyph mirrors English per
-  key.
-- Option values: Wilting = `Hervadás`, Smart = `Okos`, Personal = `Személyes (ingyenes)`.
+Quote a section name verbatim from `settings.section.*`. Wilting `Hervadás`, Smart `Okos`, Personal
+`Személyes (ingyenes)`.
 
 ## A kötetválasztó csoportcímei (`fileExplorer.navigation.group*`)
 
-The Network group stays `Hálózat` and its Servers row `Szerverek`; don't collapse the two.
+The Network group stays `Hálózat`, its Servers row `Szerverek`; don't collapse them.
 
-## Gép vagy gazdagép: a host két regisztere (`fileExplorer.network.*`, `commands.networkSelectHost.*`, `errors.listing.host*`)
+## Gép vagy gazdagép (`fileExplorer.network.*`, `commands.networkSelectHost.*`, `errors.listing.host*`)
 
-The network browser says `gép` (`Gépnév`, `Hálózati gép`), connection-failure prose `gazdagép`; the split is deliberate.
-`kiszolgáló` in `errors.json` is the participle "serving", not the noun server.
+The network browser says `gép`, connection-failure prose `gazdagép`, deliberately. `kiszolgáló` in `errors.json` is the
+participle "serving".
 
 ## Git-szavak (`errors.git.*`, `fileExplorer.git.*`, `settings.fileExplorer.git.*`)
 
-`git`, `worktree`, `commit`, `blob` stay verbatim, repo → `repó`. `munkafa` is only the generic working tree
-(`errors.git.bareRepo`, `blobTooLarge`, `gitDirPermissionDenied`); every linked checkout is `worktree`
-(`worktree-eket`). Bare repo `csupasz repó`, dirty `piszkos állapot` (tentative).
+`munkafa` is only the generic working tree (`errors.git.bareRepo`, `blobTooLarge`, `gitDirPermissionDenied`); a linked
+checkout is `worktree` (`worktree-eket`). Bare `csupasz repó`, dirty `piszkos állapot` (tentative).
 
 ## Relatív időcímkék (`fileExplorer.*.ago*`)
 
-Terse chips: `{count} p/ó/n/h/hó/é ezelőtt`, just now `most`; ETA `mp` / `p`, roughly `kb.`.
+`{count} p/ó/n/h/hó/é ezelőtt`, just now `most`; ETA `mp` / `p`, roughly `kb.`.
 
-## A kereszt-fájlos egyeztetés
+## Egyeztetés több fájlon át
 
-Catalog-wide: `Modified` → `Módosítva`; `Don't show again` → `Ne jelenjen meg többé`; `Example:` → `Példa:` (never
-`Például:`, that's "for example"); `Something went wrong` → `Valami nem sikerült`. A failed update check is whole
-sentences, no `Hiba:` / `Probléma:` prefix (`updates.failure.check`).
+`Don't show again` → `Ne jelenjen meg többé`. A failed update check is whole sentences, no `Hiba:` / `Probléma:` prefix
+(`updates.failure.check`).
 
-## A státuszcellák és a buborékok hangja (`queue.row.status`, `operationLog.status.*`, `fileExplorer.status.*`)
+## Státuszcellák (`queue.row.status`, `operationLog.status.*`, `fileExplorer.status.*`)
 
-- Row states: `Várakozik`, `Fut`, `Szüneteltetve`, `Kész`, `Megszakítva`, failed `Nem sikerült befejezni`; the log's
-  Didn't finish `Nem fejeződött be`.
-- Fallback cells say `Probléma`, never `Hiba` (the `@key` asks for the friendlier word).
-- The Queue button that backgrounds a transfer = `Sorba` (Double Commander's `Várakozási sorba helyez`, shortened).
+The log's Didn't finish → `Nem fejeződött be`; fallback cells `Probléma` (the `@key` asks). The backgrounding Queue
+button `Sorba` (DC `Várakozási sorba helyez`, shortened).
 
-## Az átviteli ICU-többesszámok (`transfer.*`)
+## Átviteli többesszámok (`transfer.*`)
 
-`{verb, select, …}` opens with `Másolás` / `Áthelyezés` and uses `másolva` / `áthelyezve` inline; the `{phrase}`
-fragment sits after a colon (`Másolva: {phrase}.`) so it stands alone. `transfer.fileOnly.mixedMove`'s was/were
-collapses to `volt`.
+`{verb, select, …}` opens with `Másolás` / `Áthelyezés`, inline `másolva` / `áthelyezve`; `{phrase}` follows a colon
+(`Másolva: {phrase}.`). `transfer.fileOnly.mixedMove`'s was/were → `volt`.
 
-## A dupla kattintás a panel hátterén (`settings.behavior.doubleClickPaneNavigatesToParent.*`, `fileExplorer.doubleClickHint.*`)
+## Dupla kattintás a panel hátterén (`*doubleClick*`)
 
-`szülőmappa` over Finder's `tartalmazó mappa` because the catalog uses it everywhere (`commands.navParent.label`, six
-`errors.json` suggestions); switching is one whole-catalog migration, never piecemeal. Never do this again =
-`Soha többé` (tentative).
+`szülőmappa` over Finder's `tartalmazó mappa`: the catalog uses it everywhere, and switching is one whole-catalog
+migration, never piecemeal. `Soha többé` (tentative).
 
-## A FAT32-korlát üzenetei (`errors.write.filesTooLargeForFilesystem.*`, `fileOperations.errorDialog.tooLargeAndMore`, `errors.listing.notSupportedErrno.suggestion`)
+## FAT32-korlát (`errors.write.filesTooLargeForFilesystem.*`, `tooLargeAndMore`, `errors.listing.notSupportedErrno.suggestion`)
 
-`{maxSize} méretnél nagyobb`, `4 GiB vagy annál nagyobb méretű`: suffix the base noun (a unit's vowel is unsafe). `%`
-reads `százalék`, so `{size}%-ra` stays.
+`{maxSize} méretnél nagyobb`: suffix the base noun (a unit's vowel is unsafe). `%` reads `százalék`, so `{size}%-ra`
+stays.
 
-## A célmappa még nem létezik (`fileOperations.transferDialog.targetWillBeCreatedCopy`/`…Move`)
+## A célmappa még nem létezik (`fileOperations.transferDialog.targetWillBeCreated*`)
 
-`Ez a mappa még nem létezik.` (TC and DC say `nem létezik`), then one literal sentence per key, no ICU select.
+`Ez a mappa még nem létezik.` (TC, DC), then one literal sentence per key, no ICU select.
 
 ## Archívumok böngészése (`settings.archives.*`, `errors.listing.archive*`, `fileOperations.delete.archiveWarning*`)
 
-Cells nominal (`Böngészés` / `Megnyitás` / `Rákérdezés`). `Konfigurálás…` over `Beállítás…` so the menu item doesn't
-collide with `Beállítások`.
+Cells nominal (`Böngészés` / `Megnyitás` / `Rákérdezés`). `Konfigurálás…` over `Beállítás…`, which collides with
+`Beállítások`.
 
-## A vágólap beillesztése fájlként (`settings.fileOperations.pasteClipboardAsFile.*`, `fileExplorer.clipboard.pastedAsFile`)
+## Vágólap beillesztése fájlként (`*pasteClipboardAsFile.*`, `fileExplorer.clipboard.pastedAsFile`)
 
-The toast's branch words carry the possessive (`{kind, select, image {képe} pdf {PDF-je} other {szövege}}`) and the
-filename follows a colon.
+The branch words carry the possessive (`{kind, select, image {képe} pdf {PDF-je} other {szövege}}`); the filename
+follows a colon.
 
 ## A Műveletnapló (`operationLog.*`, `commands.logOperationLog.*`)
 
-- `Műveletnapló` names the dialog and its Settings card alike. Roll back → `visszagörgetés` (the transfer dialog's
-  engine word); `settings.operationLog.intro` says `visszavonhatod` because its English says undo.
-- Provenance: You `Te`, Agent `Ágens`, AI client `AI-kliens`.
+One name for the dialog and its Settings card. `settings.operationLog.intro` says `visszavonhatod` because its English
+says undo. Provenance: `Te`, `Ágens`, `AI-kliens`.
 
-## Ask Cmdr: helyőrzők, címek, eszközsorok (`askCmdr.*`, `settings.askCmdr.*`, `commands.askCmdrToggle.*`)
+## Ask Cmdr (`askCmdr.*`, `settings.askCmdr.*`, `commands.askCmdrToggle.*`)
 
-- Input placeholders are nominal (`Kérdés a fájljaidról…`); a standalone welcome is a `te` imperative
-  (`Beszélgess a Cmdrrel a fájljaidról`).
-- Tool chips pair a verbal noun (doing) with a `-va/-ve` participle (done) on one object. `searchPhotos` =
-  `A fotóid átvizsgálása`, because `X keresése` reads as searching FOR the photos.
-- `{provider}` arrives localized from `settings.ai.provider.opt.*`.
+Placeholders nominal (`Kérdés a fájljaidról…`), a standalone welcome a `te` imperative. Tool chips: verbal noun
+(doing) + `-va/-ve` (done) on one object; `searchPhotos` → `A fotóid átvizsgálása` (`X keresése` reads as searching FOR
+the photos). `{provider}` arrives localized.
 
-## Hálózati meghajtók képindexelése (`settings.mediaIndex.networkVolumes.*`, `search.imageResults.networkOff`/`.paused`)
+## Hálózati képindexelés (`settings.mediaIndex.networkVolumes.*`, `search.imageResults.network*`/`.paused`)
 
-- Mirror English: section labels `kép`, per-drive user strings `fotó`.
-- always index → `Ez a meghajtó mindig legyen indexelve`: `mindig` + a bare verbal noun is ungrammatical.
-- `{name}` is a bare possessor, never suffixed: `{name} fotóinak indexelése`.
+Section labels `kép`, per-drive strings `fotó`, as English. `Ez a meghajtó mindig legyen indexelve` (`mindig` + bare
+verbal noun is ungrammatical). `{name} fotóinak indexelése`.
 
-## Tömeges átnevezés, képindex-hatókör, Ask Cmdr-eszközök (`askCmdr.renameReview.*`, `settings.mediaIndex.excludedFolders.*`, `fileExplorer.imageIndex.*`)
+## Kizárás a képindexből (`askCmdr.renameReview.*`, `settings.mediaIndex.excludedFolders.*`, `fileExplorer.imageIndex.*`)
 
-excluded → `kizár` / `kizárva` over `kihagy`, because `kihagyva` is the transfer's skipped outcome. Next pass →
-`a következő átvizsgálás`.
+excluded → `kizár` over `kihagy` (`kihagyva` is the transfer's skipped). Next pass → `a következő átvizsgálás`.
 
-## A képindex jelvényei (`fileExplorer.imageIndex.file.*`/`.folder.*`/`.drive.*`, `settings.mediaIndex.showFileStatusIcons.*`)
+## A képindex jelvényei (`fileExplorer.imageIndex.*`, `settings.mediaIndex.showFileStatusIcons.*`)
 
-- `file.failed` → `Nem sikerült indexelni`, never Finder's `Hiba`. `file.excluded` → `Nem szerepel a képkeresésben`,
-  over `kizárva`, which would claim a user's choice.
-- Count-of-count uses the slash: `{doneText} / {totalText} kép indexelve`. "All N images" is
-  `Az összes kép ({totalText})`, so no article touches the number.
+`Nem sikerült indexelni`, never Finder's `Hiba`; `file.excluded` → `Nem szerepel a képkeresésben` (`kizárva` would claim
+a user choice). `{doneText} / {totalText} kép indexelve`; `Az összes kép ({totalText})`.
 
-## A képindexelés beállításainak átrendezése (`settings.mediaIndex.*`, `fileExplorer.imageIndex.file.indexing`)
+## Képindex-beállítások (`settings.mediaIndex.*`, `fileExplorer.imageIndex.file.indexing`)
 
-By description → `leírás alapján`. The delete-model body dodges suffixing `{size}` with `Ezzel felszabadul {size}`.
+`leírás alapján`; `Ezzel felszabadul {size}` keeps `{size}` unsuffixed.
 
-## A törlés kapcsolója és a Forrás / Cél fejlécek (`fileOperations.delete.trashSwitch`/`.confirmDelete`, `fileOperations.transferDialog.sourceGroupTitle`/`targetGroupTitle`)
+## Forrás / Cél (`fileOperations.delete.trashSwitch`/`.confirmDelete`, `fileOperations.transferDialog.*GroupTitle`)
 
-From / To headings → `Forrás` / `Cél` (TC `662`/`663`, DC; matches `Célkötet`), over `Innen` / `Ide`, which dangle as
-headings. `Innen:` stays the inline label before a scan-phase source path.
+From / To headings → `Forrás` / `Cél` (TC `662`/`663`, DC) over `Innen` / `Ide`, which dangle; `Innen:` stays the inline
+scan-phase label.
 
-## A meghajtó indexelésének kikapcsolása (`fileExplorer.navigation.driveIndex.*IndexingOff*`, `settings.indexing.masterOffNote`/`.overriddenBadge`)
+## A meghajtó indexelésének kikapcsolása (`*IndexingOff*`, `settings.indexing.masterOffNote`/`.overriddenBadge`)
 
-- The feature is `(a) meghajtó indexelése`, never `meghajtó-indexelés`; the bare `indexelés` is the per-drive short
-  form.
-- picks up where it left off → `ott folytatja majd, ahol abbahagyta` (`ott … ahol` is the correlative pair).
-- `overriddenBadge` → `Az indexeléssel együtt ki`: `együtt` forces the comitative reading in 25 characters.
+`(a) meghajtó indexelése`, never `meghajtó-indexelés`; bare `indexelés` per drive.
+`ott folytatja majd, ahol abbahagyta`. `Az indexeléssel együtt ki` (`együtt` forces the comitative in 25 chars).
 
-## Meghajtóindex: a változásellenőrző futás (`indexing.run.changeCheck`, `indexing.step.updateFileList`, `fileExplorer.navigation.driveIndex.tooltipCoalesced*`)
+## Változásellenőrzés (`indexing.run.changeCheck`, `indexing.step.updateFileList`, `*tooltipCoalesced*`)
 
-`Változások ellenőrzése` and `Fájllista frissítése` match the sibling run headers; a full check is `átvizsgálás`.
+`Változások ellenőrzése`, `Fájllista frissítése` (sibling run headers); a full check is `átvizsgálás`.
 
-## A megtorpant átvitel értesítése (`fileOperations.transferProgress.stall*`, `fileOperations.transferProgress.close`)
+## A megtorpant átvitel értesítése (`fileOperations.transferProgress.stall*`/`.close`)
 
-- No progress for {duration} → `{duration} óta nincs előrehaladás`: `{duration}` is unlocalized (`45s`), so it only
-  stands before a postposition. `előrehaladás` is the catalog's progress noun.
-- Waiting for X → `Várakozás a cél/forrás válaszára`, naming the sides with the dialog's own `Cél` / `Forrás`; over
-  `nem reagál`, which reads as a fault.
-- The transfer has stopped moving → `Az átvitel megállt` (tentative), over `leállt` (reads as ended).
-- partly written → `lehet, hogy már részben ki van írva`, over the bureaucratic `kiírásra került`.
-- `transferProgress.close` = `Bezárás` beside `Mégsem`: one closes the window, the other stops the operation.
+`{duration} óta nincs előrehaladás`. `Várakozás a cél/forrás válaszára` (the dialog's sides) over `nem reagál` (a
+fault). `Az átvitel megállt` (tentative) over `leállt` (ended). `részben ki van írva` over `kiírásra került`. `close` =
+`Bezárás` beside `Mégsem`: window vs operation.
 
-## Másolt útvonal: a vágólap-visszajelzés (`fileExplorer.clipboard.copiedPath`)
+## Másolt útvonal (`fileExplorer.clipboard.copiedPath`)
 
-The path renders on its own line below, so the sentence ends in a colon and stands alone:
-`Útvonal másolva, most már a vágólapon van:`.
+The path renders on its own line: `Útvonal másolva, most már a vágólapon van:`.
 
-## A műveleti sor: a Transfer queue átnevezése (`queue.*`, `commands.queueShow.*`, `fileOperations.transferProgress.queue*`)
+## A műveleti sor (`queue.*`, `commands.queueShow.*`, `fileOperations.transferProgress.queue*`)
 
-- Operation queue → `Műveleti sor`, beside `Műveletnapló`: one head noun `művelet` for the View-menu pair.
-- Never the compound `Műveletsor`: Microsoft assigns it to task flow / restore sequence (a sequence of steps). Not
-  `várakozási sor` either: long for a window title.
-- `műveleti` starts with a consonant, so `a műveleti sorba` / `sorban`, never `az`.
+`Műveleti sor` pairs with `Műveletnapló` (one head noun for the View-menu pair); consonant-initial, so
+`a műveleti sorba`.
 
-## A sarokchip és a befejezetlen műveletek értesítése (`queue.chip.*`, `queue.failureToast.*`, `queue.row.dismiss*`, `queue.toolbar.dismissAll`)
+## Sarokchip, elvetés (`queue.chip.*`, `queue.failureToast.*`, `queue.row.dismiss*`, `queue.toolbar.dismissAll`)
 
-- dismiss → `Elvetés` (button), `Mindet elveti` (toolbar, finite like `Mindet szünetelteti`),
-  `Ennek a műveletnek az elvetése` (aria). Over the pile's `Bezárás`, which is the catalog's Close and would make
-  Dismiss look like closing a window.
-- couldn't finish X → `Nem sikerült befejezni` + the action in the accusative, verb first in all nine `select` arms, so
-  the toast and the row word one event the same way.
-- Screen-reader percent → `{percentText} százalék`, unsuffixed; the visual tooltip keeps `42%`.
+Toolbar `Mindet elveti` (finite like `Mindet szünetelteti`), aria `Ennek a műveletnek az elvetése`.
+`Nem sikerült befejezni` + accusative, verb first in all nine arms, so toast and row agree. Screen-reader
+`{percentText} százalék`; the tooltip keeps `42%`.
 
 ### `queue.chip.tooltip`: the dot-separated fact line
 
-`{label}` arrives as a verbal noun (`Másolás`), so `Másolás 214 elem` can't continue it: every optional clause carries
-its own `·` inside its branch, and the line is a flat fact list (like `ai.toast.progress`). Destination is
-` · ide: {destination}` (macOS `Áthelyezés ide: %@`), never a suffix on the folder name. `{detail}` arrives already in
-Hungarian.
+`{label}` arrives as a verbal noun, so each optional clause carries its own `·` inside its branch (like
+`ai.toast.progress`). ` · ide: {destination}` (macOS `Áthelyezés ide: %@`). `{detail}` arrives in Hungarian.
 
-## Az önálló ütközési kérdés (`fileOperations.operationConflict.*`)
+## Ütközési kérdés (`fileOperations.operationConflict.*`)
 
-- `context`: copy/move take `Másolás ide: {destination}`, the Working arm `Folyamatban itt: {destination}`, tracking
-  English's to/in split. Editing an archive → `{destination} szerkesztése`: the possessor slot needs no suffix and no
-  article.
-- `pausedNote` → `Minden más szüneteltetve van, amíg nem válaszolsz.`, over `szünetel`, so the prompt and the row share
-  the word `szüneteltetve`.
+`Másolás ide: {destination}`, Working `Folyamatban itt: {destination}`; an archive `{destination} szerkesztése`.
+`pausedNote` says `szüneteltetve van`, the row's word.
 
-## A progress-párbeszéd gombja üres sornál (`fileOperations.transferProgress.background`, `.backgroundAria`)
+## A progress-párbeszéd gombja üres sornál (`fileOperations.transferProgress.background*`)
 
-- Background → `Háttérben` (Total Commander `4004`, right next to `Sorba állít`). Not `Háttérbe`: `háttérbe helyez`
-  means "sideline", the opposite promise. Not `Háttér`: that's the backdrop.
-- The aria reuses `Hagyd futni a háttérben` from `queueTooltip`, and `Háttérben` ⊂ it for WCAG 2.5.3.
+The aria `Hagyd futni a háttérben` (from `queueTooltip`) contains `Háttérben` (WCAG 2.5.3).
 
 ## A kilépési kapu (`main.quit.*`)
 
-- Quit now → `Kilépés most` (the `<Noun> most` shape is macOS), over `Kilépés mindenképp`, which answers a refusal.
-- Running in prose → `folyamatban van` (macOS's own quit-blocked sentence); the heading `Még folyamatban` is verbless
-  because `Még fut` / `Még futnak` break at one or many rows. The `Fut` status cell stays: two registers, like macOS.
-- Keep working → `Munka folytatása` (tentative), over `Mégsem`, which next to running operations reads as "cancel them",
-  and over `Később`, since the countdown is deleted, not deferred.
-- in {n} seconds → `{secondsText} másodperc múlva`: the postposition keeps the placeholder bare.
-- clears away → `eltávolít` over `törli`: the sentence reassures, so it must not flash "deletes a file".
+Quit now → `Kilépés most` (macOS `<Noun> most`). Prose `folyamatban van` (macOS's quit-blocked sentence); the heading
+`Még folyamatban` is verbless since `Még fut/futnak` breaks between one and many; the `Fut` cell stays. Keep working →
+`Munka folytatása` (tentative), also over `Később`: the countdown is deleted, not deferred.
+`{secondsText} másodperc múlva`; `eltávolít` over `törli` (it reassures).
 
-## Usage stats: "névtelen" dropped, "egy véletlenszerű azonosító" named (`settings.analytics.enabled.label`/`.description`, `settings.updates.emailPrivacyNote`, `onboarding.stepBeta.analyticsLede`/`.analyticsTitle`)
+## Usage stats (`settings.analytics.enabled.*`, `settings.updates.emailPrivacyNote`, `onboarding.stepBeta.analytics*`)
 
-usage stats → `használati statisztika`, a random id → `egy véletlenszerű azonosító`. ❌ Never `álnevesített` /
-`pszeudonim`: the English stays everyday on purpose. `Mac` + a possessive suffix takes a hyphen: `Mac-eden`.
+`használati statisztika`, `egy véletlenszerű azonosító`.
 
-## Visszagörgetés-megerősítő + a válaszra váró sor állapota (`fileOperations.rollbackConfirm.*`, `queue.row.statusAwaitingAnswer`/`awaitingAnswerTooltip`, `transferProgress.foregroundBusyToast`/`rollbackTooltip`)
+## Visszagörgetés-megerősítő (`fileOperations.rollbackConfirm.*`, `queue.row.statusAwaitingAnswer`/`.awaitingAnswerTooltip`, `transferProgress.foregroundBusyToast`/`rollbackTooltip`)
 
-- Needs your answer → `Válaszolnod kell` (tentative), over `Válaszra vár`, which blurs with `Várakozik`, and
-  `Választ kér` (`választ` is also the verb "choose").
-- Keep them → `Fájlok megtartása`: bare `Megtartás` could point at the overwritten files the body just named.
-- `rollbackTooltip` → `Leállítás, és minden eddig kiírt fájl törlése`, over `Megszakítás`, which the `@key` says must
-  not read as a plain Cancel.
-- `foregroundBusyToast` says `Itt valami más van nyitva`: the blocker may not be an operation.
+`Válaszolnod kell` (tentative). Keep them → `Fájlok megtartása` (bare `Megtartás` could point at the overwritten files).
+`rollbackTooltip` → `Leállítás, és minden eddig kiírt fájl törlése` (the `@key`: not a plain Cancel).
+`Itt valami más van nyitva`: the blocker may not be an operation.
 
-## Az átnevezés-láncban nevüket megtartó fájlok számláló buboréka (`fileExplorer.rename.chainKeptOriginalName`/`AndOthers`)
+## Átnevezés-lánc (`fileExplorer.rename.chainKeptOriginalName*`)
 
-`{reason}` stands last after a colon (it may end in its own punctuation): `„{name}” megtartotta a nevét: {reason}`, and
-`{othersText} másik fájl megtartotta a nevét, és „{name}” is: {reason}`. The gapped `is` carries "and so did" and puts
-the named file right before its colon, since `{reason}` covers only that file. `one` spells out `Egy másik fájl`.
+`{reason}` stands last after a colon: `„{name}” megtartotta a nevét: {reason}`;
+`{othersText} másik fájl megtartotta a nevét, és „{name}” is: {reason}` (the gapped `is` puts the named file before the
+colon, since `{reason}` covers only it). `one` → `Egy másik fájl`.
 
-## A fel nem használható név (`fileOperations.validation.nameNotUsable`)
+## Nem használható név (`fileOperations.validation.nameNotUsable`)
 
-- That filename can't be used → `A fájlnév nem használható` / `A mappa neve nem használható` (macOS), no final period:
-  it's embedded in a longer sentence.
+`A fájlnév nem használható` / `A mappa neve nem használható` (macOS), no period: it's embedded.
 
-## Javasolt műveletek: az Ask Cmdr javaslatainak ablaka (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
+## Javasolt műveletek (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
 
-approve → `Jóváhagyás` over macOS's `Elfogadás` (the AirDrop accept); reject → `Elutasítás`.
+reject → `Elutasítás`.
 
-## Megkettőzés: a parancs, amely ugyanabba a mappába másol (`commands.fileDuplicate.*`)
+## Megkettőzés (`commands.fileDuplicate.*`)
 
-duplicate → `Megkettőzés` (Finder `Fájl > Megkettőzés`); the description
-`Másolat készítése a kijelölt fájlokról ugyanabban a mappában`.
+`Megkettőzés` (Finder `Fájl > Megkettőzés`).
 
-## Natív menük: menüsor, helyi menük, ablakcímek (`menu.*`, `licensing.windowTitle.*`, `main.instanceLock.*`)
+## Natív menük (`menu.*`, `licensing.windowTitle.*`, `main.instanceLock.*`)
 
-Finder's wording wins over the catalog's, since the menu bar sits beside Finder's: `Nézet`, `Ugrás`, Home `Saját`,
-Deselect all `Kijelölés törlése`, Zoom `Méretezés`. Mined from `Finder.app/.../hu.lproj` (macOS 26.5.2).
+Finder's wording wins (`Finder.app/.../hu.lproj`, macOS 26.5.2): `Nézet`, `Ugrás`, `Saját`, `Kijelölés törlése`,
+`Méretezés`. `Felnagyítás` / `Lekicsinyítés` (Safari) free `Nagyítás` for the submenu. `Módosítási napló` (apart from
+`Újdonságok`), `Sortörés`, `Megnyitás szerkesztésre` (tentative). `Képek indexelésének tiltása itt` /
+`… engedélyezése itt`. `„{color}” hozzáadása` / `eltávolítása` (Finder `TG5`/`TG6`). `Kilépés a cmdrből` keeps English's
+lowercase; `menu.zoom.percent*`, `menu.view.askCmdr` match English.
 
-- zoom in / out → `Felnagyítás` / `Lekicsinyítés` (Safari), so `Nagyítás` stays free for the submenu title.
-- changelog → `Módosítási napló`, apart from Help > `Újdonságok`; word wrap → `Sortörés`.
-- Edit in editor → `Megnyitás szerkesztésre` (tentative): the literal form repeats one stem.
-- Image-index toggles → `Képek indexelésének tiltása itt` / `… engedélyezése itt`: labels stay nominal, no `te`.
-- Tag row → `„{color}” hozzáadása` / `eltávolítása` (Finder `TG5`/`TG6`); the color name stays unsuffixed.
-- `Kilépés a cmdrből` keeps English's lowercase `cmdr`. `menu.zoom.percent*` and `menu.view.askCmdr` are deliberately
-  identical to English.
+## busy (`menu.volume.*Busy`)
 
-## busy: a kiszürkített menüpontok jelölője (`menu.volume.ejectBusy`, `menu.volume.disconnectBusy`, `menu.volume.forgetServerBusy`, `menu.volume.forgetSavedPasswordBusy`)
+Base label unchanged + ` (foglalt)`; one marker for every busy key.
 
-The busy item is the base label unchanged + ` (foglalt)`. One marker for every busy key; don't invent another.
+## SMB-rendszerkapcsolat (`fileExplorer.network.osMountFallback.*`)
 
-## Rendszerkapcsolatra visszaeső SMB-buborék (`fileExplorer.network.osMountFallback.*`)
+Elsewhere `rendszerkapcsolat`, where English says system connection. `Próbálkozás közvetlen kapcsolattal` (tentative)
+keeps "try": the direct connection already failed once. `smbNativeNote` quotes
+`„Közvetlen kapcsolat a gyorsabb hozzáférésért”`.
 
-- native → `natív` (MS); `beépített` is built-in. Elsewhere the same connection is `rendszerkapcsolat`, because there
-  English says "system connection".
-- Try connecting directly → `Próbálkozás közvetlen kapcsolattal` (tentative): keeps English's "try", since the direct
-  connection already failed once.
-- `transferDialog.smbNativeNote` quotes the menu item's full name, `„Közvetlen kapcsolat a gyorsabb hozzáférésért”`,
-  because that's what the user finds in the volume picker.
+## Átnevezés/létrehozás elutasításai (`errors.mutation.*`, `errors.volume.*`)
 
-## Átnevezés/létrehozás elutasításai: a `errors.mutation.*` és `errors.volume.*` egysoros üzenetek
+- `{path}` in a colon slot (`itt: „{path}”`) or leading bare and quoted (`„{path}” mappa, nem fájl.`).
+- `Oldd fel a zárolását` (Finder `PE13`); SIP `… védelme alatt áll` (no repeated `véd-`). `nem válaszolt időben` over
+  `nem reagál`. `Ez a név nem használható a célhelyen.` (Finder). `Ez a jelszó nem jó.`
+- `timedOut` isn't a failure: `… így a módosítás attól még végbemehet.` `deviceSessionReset` never says unplugged;
+  `deviceDisconnected` → `Megszakadt a kapcsolat az eszközzel`. `A macOS nem engedte ezt a Kukába helyezni.`: a refusal,
+  not `nem sikerült`.
 
-- `{path}` goes in a colon slot (`itt: „{path}”`) or leads bare and quoted (`„{path}” mappa, nem fájl.`), never
-  suffixed.
-- locked → `zárolva van`, unlock → `Oldd fel a zárolását` (Finder `PE13`); SIP → `Rendszerintegritás-védelem`, phrased
-  `… védelme alatt áll` so the `véd-` stem doesn't repeat.
-- didn't answer in time → `nem válaszolt időben`, over `nem reagál` (the fault register).
-- That password didn't work → `Ez a jelszó nem jó.`, over macOS's formal `helytelen` and `hibás` (the `hiba` stem).
-- The destination can't hold that name → `Ez a név nem használható a célhelyen.` (Finder's `név nem használható`).
-- `errors.mutation.timedOut` doesn't call it a failure: `… így a módosítás attól még végbemehet.`
-- `errors.volume.deviceSessionReset` never says unplugged; `deviceDisconnected` (dropped on its own) →
-  `Megszakadt a kapcsolat az eszközzel`, over the user-initiated `leválasztás`.
-- macOS wouldn't move this to the Trash → `A macOS nem engedte ezt a Kukába helyezni.`: a refusal, so not
-  `nem sikerült`.
+## Ha a Cmdr nem állt le (`crashReporter.dialog.body.keptRunning`/`.unknown`)
 
-## Ha a Cmdr nem állt le: az összeomlásjelentő két új nyitómondata (`crashReporter.dialog.body.keptRunning`/`.unknown`)
+`problémába ütközött` (Finder `NE105`'s `-ba ütközik`), not `egy probléma miatt` (needs a verb saying it stopped).
+`és tovább futott`. Never say it stopped (`váratlanul kilépett`, `bezárult`, `összeomlott`); `.unknown` doesn't name the
+background either. `összeomlási` only where there was a crash.
 
-- ran into a problem → `problémába ütközött` (Finder `NE105`'s `-ba ütközik`; Apple's crash dialogs say `probléma`). ❌
-  Not `gondba ütközött`: `gond` has zero hits in the whole pile. Not Apple's `egy probléma miatt`: it demands a verb
-  that says the app stopped.
-- kept running → `és tovább futott` (the catalog's `Tovább fut a háttérben`).
-- These keys must never say it stopped: no `váratlanul kilépett`, `bezárult`, `összeomlott`. `.unknown` doesn't name the
-  background either, since an old report doesn't say whether the app kept running.
-- The title and toast split the same way: `összeomlási` only where there was a crash.
+## Jelentésküldés beállítása (`settings.updates.crashReports.description`)
 
-## A jelentésküldés beállításszövege már mindkét kimenetelre igaz (`settings.updates.crashReports.description`)
+The description uses both dialog verbs (`váratlanul bezárul`, `a háttérben problémába ütközik`); the label stays
+`Összeomlás-jelentések küldése`.
 
-The description covers both outcomes with the dialog's verbs (`váratlanul bezárul`, `a háttérben problémába ütközik`)
-and a bare `egy jelentést`. The label stays `Összeomlás-jelentések küldése`: it's the setting's name.
+## Kiadás és leválasztás (`errors.eject.*`)
 
-## Kiadás és leválasztás: a `errors.eject.*` buboréküzenetek
+Each follows `Nem sikerült kiadni: {volumeName}: {message}`, so it's a sentence after a colon. `használatban van`
+(Finder `NE66`); network share `hálózati megosztás` over `szerverkötet` (the mounted volume). `timedOut`:
+`… de a kiadás magától is befejeződhet.` `unexpected` →
+`A Cmdr problémába ütközött, és nem tudta megállapítani, hogy mi.`, apart from `errors.mutation.unexpected`: after the
+wrapper, `Valami nem sikerült` would repeat itself.
 
-- These follow the wrapper `Nem sikerült kiadni: {volumeName}: {message}`, so each is a sentence after a colon.
-- in use → `használatban van` (Finder `NE66`); removable → `cserélhető` (macOS and MS agree); network share →
-  `hálózati megosztás`, over macOS's `szerverkötet`, which names the mounted volume.
-- `errors.eject.timedOut` isn't a failure: `… de a kiadás magától is befejeződhet.`
-- `errors.eject.unexpected` deliberately differs from the identical-English `errors.mutation.unexpected`:
-  `A Cmdr problémába ütközött, és nem tudta megállapítani, hogy mi.`, because after `Nem sikerült kiadni:` the settled
-  `Valami nem sikerült` would repeat itself.
+## A macOS-panelnevek magyarul (`errors.write.fileLocked.suggestion.mac`, `errors.write.permissionDenied.suggestion.deleteMac`, `errors.listing.*ermission*.suggestion`)
 
-## A macOS-panelnevek magyarul: `Infó megjelenítése` és `Zárolt` (`errors.write.fileLocked.suggestion.mac`, `errors.write.permissionDenied.suggestion.deleteMac`, `errors.listing.noPermissionErrno.suggestion`, `errors.listing.permissionDenied.suggestion`)
+Apple translates them: `„Zárolt”` (quoted, as Apple), `Megosztás és jogok`, `Apple-fiók`, `Általános`,
+`Indítóelemek és bővítmények` (macOS 26.6.2 `.loctable`, 2026-08-30). A menu item is a `parancs`, never a `menü`.
+`{system_settings}`, `{privacy_and_security}`, `{files_and_folders}` take no suffix or article:
+`itt: {system_settings}`.
 
-Apple translates both, so they're Hungarian: Get Info → `Infó megjelenítése`, Locked → `„Zárolt”` (quoted in prose, as
-Apple does), Sharing & Permissions → `Megosztás és jogok` (the running-text form). The labels are Apple's, the sentence
-ours: `vedd ki a „Zárolt” pipát`, never Apple's `szüntesse meg a … kijelöltségét`. A menu item is a `parancs`, never a
-`menü`.
+## A Kuka-értesítés (`fileOperations.trash.*`, `commands.fileGoToTrash.*`)
 
-## A Kuka-értesítés két gombja és a visszavonás családja (`fileOperations.trash.*`, `commands.fileGoToTrash.*`)
+`Ugrás a Kukába` (Finder). `Ezen a meghajtón nincs Kuka.`: a fact, not `nem támogatja`.
 
-- put back (from the Trash) → `visszahelyezés` (Finder `PE130`), over `visszaállítás`, which is the old-name undo.
-- Go to trash → `Ugrás a Kukába` (Finder) on both the button and the palette.
-- This drive doesn't keep a trash → `Ezen a meghajtón nincs Kuka.`: a fact, not the `nem támogatja` error register.
+## A már elküldött jelentés kiegészítése (`errorReporter.amend*`, `errorReporter.autoSentToast.viewOrAddNotes`)
 
-## A már elküldött jelentés kiegészítése (`errorReporter.amend.*`, `errorReporter.amendedToast.message`, `errorReporter.autoSentToast.viewOrAddNotes`)
+note → `megjegyzés` over `jegyzet` (MS: Notes items); `megjegyzést hozzáadni`. `Mi került elküldésre` mirrors
+`Mi kerül elküldésre`: only tense differs.
 
-- The title carries the full noun (`Hozzáadás a hibajelentésedhez`), the button the short one
-  (`Hozzáadás a jelentéshez`), like `dialog.title` / `dialog.send`.
-- note → `megjegyzés`, over `jegyzet` (Microsoft reserves it for Notes items). Add a note → `megjegyzést hozzáadni`,
-  over `megjegyzést fűzni`: the pile knows `fűz` only as append.
-- What was sent → `Mi került elküldésre`, the past of the sibling `Mi kerül elküldésre`: the English differs only in
-  tense, so the pair keeps one shape.
+## Kijelölés törlése (`selection.*`)
 
-## Kijelölés és a kijelölés törlése: a Select / Deselect párbeszéd (`selection.*`)
+`kijelölés törlése` (Finder `300488`) over the orthodox pair's `megszüntetése`. Titles match the menu items
+(`Fájlok kijelölésének törlése`). The tooltip needn't contain the label. `selection.recent.*` twins `queryUi.recent.*`;
+`{query}` ends after a colon.
 
-- deselect → `kijelölés törlése` (Finder `300488`), over the orthodox pair's `megszüntetése`. ❌ Don't bring
-  `megszüntetése` back.
-- Dialog titles `Fájlok kijelölése` / `Fájlok kijelölésének törlése` match the menu items that open them.
-- The tooltip needn't contain the label: the button's name comes from its label key, so WCAG 2.5.3 holds by
-  construction.
-- `selection.recent.*` twins `queryUi.recent.*`; the raw `{query}` sits at the end after a colon.
+## Egy fogalom, egy név
 
-## Belső driftszedés: egy fogalom, egy név
-
-`desktop-i18n-term-consistency` holds one Hungarian form per English value. Settled: Quit Cmdr → `Kilépés a Cmdrből`;
-Connect to server → `Kapcsolódás szerverre` (Finder `N84`, over `szerverhez`); Connected → `Kapcsolódva`, Connecting →
-`Csatlakozás…` (Apple's `SavePanel`); case-sensitive → `Kis- és nagybetűérzékeny`.
+`desktop-i18n-term-consistency` holds one form per English value: `Kilépés a Cmdrből`, `Kapcsolódás szerverre` (Finder
+`N84`), `Kapcsolódva`, Connecting `Csatlakozás…` (`SavePanel`), `Kis- és nagybetűérzékeny`.
 
 ### A határvonalak, amiket NEM szabad elsimítani
 
-- Cancel, put back, and scan split as `style.md` § Digest, top traps, says.
-- **View**: `Nézet` is the menu title, `Megtekintés` the verb that opens the viewer.
-- **Zoom**: `Nagyítás` is text zoom, `Méretezés` the window action.
-- **Select**: `Kijelölés` marks files, `Válassz` is a dropdown placeholder.
-- **Bytes**: `Bájtok` beside `Fájlok`, `Bájt` beside `kB` / `MB`.
-- **Purple**: `Bíbor` is Finder's tag color, `Lila` Cmdr's volume tint.
-- **Rolling back**: `Visszagörgetés…` titles the window, `Visszagörgetés folyamatban` is the log cell.
-- **Send report**: the title asks (`Elküldöd a jelentést?`), the button names (`Jelentés küldése`).
-- **memory**: `memória` is RAM, `jegyzet` Ask Cmdr's memory.
+`Nézet` menu / `Megtekintés` viewer; `Nagyítás` text / `Méretezés` window; `Kijelölés` files / `Válassz` placeholder;
+`Bájtok` beside `Fájlok` / `Bájt` beside `kB`; `Bíbor` Finder tag / `Lila` Cmdr tint; `Visszagörgetés…` window /
+`Visszagörgetés folyamatban` log cell; `Elküldöd a jelentést?` title / `Jelentés küldése` button; `memória` RAM /
+`jegyzet` Ask Cmdr's memory.
 
-## Az angol önellentmondásainak magyar utóélete
+## Az angol önellentmondásai (`askCmdr.renameUndo.undone`/`.partial`, `settings.indexing.enabled.description`, `menu.app.showAll`/`.hideOthers`, `commands.app*.label`)
 
-### A régi NÉV visszaadása mondat megnevezi a tárgyát (`askCmdr.renameUndo.undone`/`.partial`)
+`{countText} fájl régi neve visszaállítva.` (the Trash keeps `visszahelyezve`). `azonnali mappaméretekért`.
+`Összes megjelenítése` / `Többi elrejtése` (Finder `300730` / `300729`).
 
-`{countText} fájl régi neve visszaállítva.`: the possessive names the object, which English now does too; the Trash's
-`fileOperations.trash.undone` keeps `visszahelyezve`.
+## Félbehagyott visszagörgetés (`*finishRollBack`, `operationLog.rollback.partiallyRolledBackNotice`, `*titleFinish`, `queue.row.reversalInFolder`)
 
-### `mappa` az indexelés súgószövegében (`settings.indexing.enabled.description`)
-
-`azonnali mappaméretekért`: the UI word is `mappa`; `könyvtár` is only technical.
-
-### A macOS-panelnevek magyarul, a futásidejű tokenek mellett
-
-- `{system_settings}`, `{privacy_and_security}`, `{files_and_folders}` stay verbatim and never take a suffix or article
-  (`{system_settings}ben` would clash with `Rendszerbeállítások`): use `itt: {system_settings}`.
-- Panels no token covers are Apple's Hungarian: Apple Account → `Apple-fiók`, General → `Általános`, Login Items &
-  Extensions → `Indítóelemek és bővítmények` (macOS 26.6.2, the `.loctable` files, 2026-08-30).
-
-### A natív menüsor két Apple-tétele (`menu.app.showAll`/`.hideOthers`, `commands.appShowAll.label`, `commands.appHideOthers.label`)
-
-`Összes megjelenítése` / `Többi elrejtése` (Finder `MenuBar.strings` `300730` / `300729`).
-
-## Egy félbehagyott visszagörgetés befejezése (`operationLog.dialog.finishRollBack`, `operationLog.rollback.partiallyRolledBackNotice`, `fileOperations.rollbackConfirm.titleFinish`/`.finishRollBack`, `queue.row.reversalInFolder`)
-
-- Finish rolling back → `Visszagörgetés befejezése` (Finder's `Másolás befejezése`); both `finishRollBack` keys stay
-  identical.
-- another pass → `még egy kör` (tentative, no source): everyday, over `átfutás` / `menet`.
-- in {folder} → `itt: {folder}`: the row reads `A létrehozottak törlése itt: Backup`, so the deletion happens inside the
-  folder and no suffix or article touches the name.
+`Visszagörgetés befejezése` (Finder `Másolás befejezése`), identical in both keys. `még egy kör` (tentative) over
+`átfutás` / `menet`. `A létrehozottak törlése itt: {folder}`.
 
 ## A megszakított visszagörgetés eredményértesítése (`fileOperations.cancelRollback.*`, `fileOperations.rollbackConfirm.body`)
 
-- Left X alone → `<alany> változatlan maradt: <indok>.` (the `skipReason.*` frame) in every reason row; the intro keeps
-  `kihagyja`. ❌ Not `békén hagyja` / `érintetlenül hagyja`: zero pile hits.
-- Result rows `visszahelyez`, progress rows `visszavitel` (`visszavíve` doesn't read). Removed → `eltávolítva`, never
-  `törölve`: the notice reassures.
+- `<alany> változatlan maradt: <indok>.` in every reason row (the `skipReason.*` frame); the intro keeps `kihagyja`. ❌
+  Not `békén` / `érintetlenül hagyja` (zero pile hits).
+- Result rows `visszahelyez`, progress rows `visszavitel` (`visszavíve` doesn't read); `eltávolítva`, never `törölve`.
 - Full vs partial lives in the sentence (`A Cmdr mindent eltávolított, amit létrehozott: {countText} elem.` vs
-  `{countText} elem eltávolítva.`); the full `one` branch drops the count.
-- it changed → `módosult` (macOS); check → `ellenőriz`, apart from `megerősít` (confirm).
-- Couldn't undo {name} → `Nem sikerült visszagörgetni: „{name}”.`; `visszavonás` is for an operation.
-- put it there → `odatette` (tentative): true for copy and move alike.
-- A named item leads bare and quoted (`„{name}” változatlan maradt: a mappában már van valami.`).
-- `undoJob` → `Az összes {csomag} visszavonása ({countText})` (macOS `Az összes lemez (^0)`).
+  `{countText} elem eltávolítva.`).
+- `módosult`; `ellenőriz` apart from `megerősít`; `Nem sikerült visszagörgetni: „{name}”.`; `odatette` (tentative).
+  `undoJob` → `Az összes {csomag} visszavonása ({countText})` (macOS `Az összes lemez (^0)`).
 
-### `cancelRollback.stagedLeftover.*` (a Cmdr saját maradéka a célhelyen)
+### `cancelRollback.stagedLeftover.*`
 
-unfinished copy → `hiányos másolat` (macOS `LA33`). The retry is `újra megpróbálja, amikor legközelebb kapcsolódik oda`
-(a reconnect or the next launch), never a time.
+`hiányos másolat` (macOS `LA33`); `újra megpróbálja, amikor legközelebb kapcsolódik oda`, never a time.
 
-## A túl régi WebKit blokkoló képernyője (`main.oldWebkit.*`)
+## Régi WebKit (`main.oldWebkit.*`)
 
-Software Update → `Szoftverfrissítés`; `Safari 15.4-es vagy újabb verzió` (a digit takes a hyphenated suffix).
+`Szoftverfrissítés`; `Safari 15.4-es vagy újabb verzió`.
 
-## A régi macOS értesítése (`main.oldMacos.*`)
+## Régi macOS (`main.oldMacos.*`)
 
-X and up → `X és az annál újabb`; look off → `félremehet`, something broken → `valami elromlottnak tűnik` (both keep out
-of the `hiba` register). The last sentence is David speaking, `te`.
+`félremehet`, `valami elromlottnak tűnik` (out of the `hiba` register). The last sentence is David, `te`.
 
-## Belenézés a fájlokba: az `inspect_file` eszköz és a hozzájárulási képernyő új ígérete (`askCmdr.tool.inspectFile.*`, `ai.cloudConsent.askCmdr.item.contents`, `ai.cloudConsent.askCmdr.contentsRule`)
+## Belenézés a fájlokba (`askCmdr.tool.inspectFile.*`, `ai.cloudConsent.askCmdr.*`)
 
-- thumbnail → `bélyegkép` (Finder) over MS's `miniatűr`; camera details → `kameraadatok`, not `EXIF` (lay reader).
-- where a photo was taken → `hol készült` in a sentence, `készítési helye` in a list (tentative).
-- A PDF page is `oldal`, never `lap` (that's tab): `PDF-oldalak`.
-- what's inside an archive → `az archívumban lévő fájlok listája`, over `az archívum tartalma`, which would clash with
-  the screen's promise that whole files never leave.
-- look inside → `belenéz` in prose; the chip pair is `Fájlok átnézése` / `Fájlok átnézve` (tentative), because `belenéz`
-  has no stative `-va/-ve` form and `átvizsgálás` belongs to `searchPhotos`.
-- limited part → `egy korlátozott részét`, over `egy kis részét`: English promises a limit, not a size.
+`kameraadatok`, not `EXIF`. `hol készült` / `készítési helye` (tentative). `az archívumban lévő fájlok listája` over
+`az archívum tartalma` (would clash with "whole files never leave"). Prose `belenéz`; chips `Fájlok átnézése` /
+`Fájlok átnézve` (tentative): `belenéz` has no `-va/-ve`, `átvizsgálás` is `searchPhotos`'. `egy korlátozott részét`:
+English promises a limit, not a size.
 
-## A Rollback gomb két buboréksúgója (`fileOperations.transferProgress.rollbackTooltipStopAndMoveBack`, `.rollbackAlreadyLandedTooltip`)
+## A Rollback gomb súgói (`*rollbackTooltipStopAndMoveBack`, `*rollbackAlreadyLandedTooltip`)
 
-`Leállítás, és minden eddig áthelyezett fájl visszahelyezése`, in the sibling `rollbackTooltip`'s frame. ❌ Not
-`törlés`: rolling a move back deletes nothing.
+`Leállítás, és minden eddig áthelyezett fájl visszahelyezése`; ❌ not `törlés`: a move rollback deletes nothing.
 
-## A „Terminál megnyitása itt” és az appválasztója (`settings.behavior.openTerminalHereApp.*`, `settings.navigationAndFileOps.card.terminal`)
+## Terminál megnyitása itt (`settings.behavior.openTerminalHereApp.*`, `settings.navigationAndFileOps.card.terminal`)
 
-The app kind is `terminál` (MS), Apple's app stays `Terminal` (`a Terminalban`, Finder `N67`). Open terminal here →
-`Terminál megnyitása itt`; Choose an app… → `App kiválasztása…` (the catalog says `app` throughout).
+The kind is `terminál`, Apple's app `Terminal` (`a Terminalban`, Finder `N67`). `App kiválasztása…`.
 
-## `Sort by relevance`: a találati oszlop elemleírása (`fileExplorer.columns.sortByRelevance`)
+## Sort by relevance (`fileExplorer.columns.sortByRelevance`)
 
-relevance → `relevancia` (tentative, Apple's WorkflowKit sort order), over `Fontosság` / `Találati pontosság`, which
-name neighboring ideas.
+`relevancia` (tentative) over `Fontosság` / `Találati pontosság` (neighboring ideas).
 
-## `Documents and packages`: az új OOXML-sor (`settings.archives.ooxml.*`)
+## Documents and packages (`settings.archives.ooxml.*`)
 
-`Dokumentumok és csomagok`: bare `csomagok` stays wider than the `Alkalmazáscsomagok` card below, as English splits
-packages from app bundles. The description keeps its siblings' frame, `Mit tesz az Enter egy … fájlon.`
+Bare `csomagok` stays wider than `Alkalmazáscsomagok`, as English splits them. Frame `Mit tesz az Enter egy … fájlon.`
 
-## A szerverközpont: kapcsolódási állapotok, elutasítások, elfelejtés (`servers.*`, `fileExplorer.navigation.connectionTooltip*`/`.disconnect*`/`.forget*`)
+## A szerverközpont: kapcsolódás (`servers.*`, `fileExplorer.navigation.connectionTooltip*`/`.disconnect*`/`.forget*`)
 
-- Connecting to {name}… → `Kapcsolódás ide: {name}…` (Finder `MN1`, verbatim). Quote only where English quotes.
-  `{name} on {server}` → `{name} ezen a szerveren: {server}` (`errors.mount.shareNotFound`'s frame).
-- The server pane's buttons are dialog buttons: `Mégsem`, not the running-op `Megszakítás`, even
-  `servers.paneState.cancel` stopping a mount (Finder's connect wait says `Mégsem`).
-- host key → `{host} kulcsa`: the possessive lands on `kulcs`. Trust as a statement → `megbízhatónak tekint`; ❌ never
-  `elfogad` (hides the trust decision).
-- compromised → `kompromittált` (tentative), over `visszavont` (revoked, administrative).
-- Keychain Access → `Kulcskarika-elérés` (the live bundle, over the support site's `Kulcskarika-hozzáférés`); the store
-  is `kulcskarika`.
-- Open X to Y → a `-hoz/-hez` purpose noun (`a kapcsolódáshoz`), never a `hogy` clause.
-- Forget questions put the type first, the name after a colon: `Elfelejted ezt a szervert: „{name}”?`,
-  `Elfelejted a mentett jelszót ehhez: „{name}”?`. The network browser's host keeps `gép` and its unquoted `{hostName}`
-  (`Elfelejted ezt a gépet: {hostName}?`); Nothing gets unmounted → `Semmit nem csatol le`.
-- `{name} leválasztása` is the aria, like `{name} kiadása`.
-- The account suffix pair shares `-ként`: `{username} felhasználóként` / `vendégként` (the base noun carries the case).
-  Sign in as… → `Bejelentkezés másként…` (Apple's `Mentés másként` shape); Use guest → `Váltás vendégre`.
-- X Anyway → `Hozzáadás mindenképp` (AppKit `Mentés mindenképp`).
-- Not connected (a chosen state, not a failure) → `Nem kapcsolódik: {name}` (AppKit's `Not Connected` state, colon
-  slot); ❌ not the failed listing's `Nincs csatlakoztatva`.
-- Optional (a field) → `Nem kötelező` (Microsoft); an optional STEP stays `választható`.
+- `Kapcsolódás ide: {name}…` (Finder `MN1`); quote only where English does. `{name} ezen a szerveren: {server}`.
+- Pane buttons are dialog buttons: `Mégsem`, even `servers.paneState.cancel` (Finder's connect wait).
+- `{host} kulcsa`; trust statement `megbízhatónak tekint`, ❌ never `elfogad` (hides the decision).
+- Open X to Y → a `-hoz/-hez` purpose noun (`a kapcsolódáshoz`), never `hogy`.
+- `Elfelejted ezt a szervert: „{name}”?`; the browser keeps `gép` and unquoted `{hostName}`. `Semmit nem csatol le`.
+  Aria `{name} leválasztása`.
+- `{username} felhasználóként` / `vendégként`; `Bejelentkezés másként…` (`Mentés másként`); `Váltás vendégre`;
+  `Hozzáadás mindenképp` (AppKit).
+- Not connected (chosen) → `Nem kapcsolódik: {name}` (AppKit), ❌ not `Nincs csatlakoztatva`. Optional field
+  `Nem kötelező` (MS); an optional step `választható`.
 
-## A szerverközpont táblázata és a kötetváltó rögzítése (`servers.hub.*`, `commands.servers*`, `fileExplorer.navigation.server*Toast`/`.pinRefusedToast`/`.networkVolume`, `shortcuts.scope.servers`/`.places`)
+## A szerverközpont táblázata (`servers.hub.*`, `commands.servers*`, `fileExplorer.navigation.server*Toast`/`.pinRefusedToast`/`.networkVolume`, `shortcuts.scope.servers`/`.places`)
 
-- Places → `Helyek`, over `Megosztásböngésző` (can't hold storage buckets).
-- Address column → `Cím` (the table is already about servers).
-- Last used → `Utolsó használat` (macOS `Security.prefPane`), over the file list's unsourced `Utoljára használva`.
-- Found nearby → `A közelben felfedezve` (IOBluetoothUI).
-- Pin / unpin → `Szerver rögzítése / rögzítés feloldása` (Notes), ❌ not `megszüntetése`.
-- volume switcher → `kötetválasztó`: one Hungarian name for English's two.
-- The pin toasts put `{name}` bare in subject position: `{name} mostantól ott van a kötetválasztódban.`
-- `Mac` takes `Macet` (161 macOS hits); `NAS-t`. Empty state `Még nincs szerver`.
+Address column `Cím`. Found nearby → `A közelben felfedezve` (IOBluetoothUI). `Szerver rögzítése / rögzítés feloldása`
+(Notes); `kötetválasztó` for both English names; `{name} mostantól ott van a kötetválasztódban.` `Macet` (161 macOS
+hits), `NAS-t`.
 
-## A szerverlap, az SSH-kulcs jóváhagyása és a Go-to-path előnézete (`servers.sheet.*`, `servers.hostKey.*`, `servers.paneState.signedOut`/`.signIn`/`.hostKeyChanged*`, `goToPath.dialog.opensServer`/`.addsServer`, `commands.serversConnect.label`)
+## A szerverlap (`servers.sheet.*`, `servers.hostKey.*`, `servers.paneState.signedOut`/`.signIn`/`.hostKeyChanged*`, `goToPath.dialog.*Server`, `commands.serversConnect.label`)
 
-- Trust (the button) → `Beállítás megbízhatóként` (UsersGroups); statements keep `megbízhatónak tekint`.
-- man in the middle → `valami beékelődött közéd és a szerver közé`: Apple's stem, our sentence, no attack named.
-- ⚠️ Deliberate split: the pane line is `Kapcsolódás ide: {name}…`, but the sheet's Connect button and everything on the
-  sheet use `csatlakoz-`, because `Connect` = `Csatlakozás` is forced by `fileExplorer.network.connect` and the button
-  rewrites itself to `Csatlakozás…`. Don't sweep them together.
-- Remember in Keychain → `Megjegyzés a kulcskarikában`, with no `jelszó` object: SFTP may save a key passphrase.
-- Key passphrase → `Kulcsjelmondat` (`jelmondat` sets it apart from `Jelszó`).
-- `Kijelentkezve innen: {name}` over `Kijelentkeztél…`: the panel's three lines stay one nominal family.
-- I've checked it → `Ellenőriztem`: the user's own words, first person.
-- `ssh`, `ssh-agent` take `az` (esz-esz-há): `Az ssh-agent használata`; `Nextcloud-cím` is hyphenated.
+- Trust button `Beállítás megbízhatóként` (UsersGroups). `valami beékelődött közéd és a szerver közé` (Apple's stem, no
+  attack named).
+- ⚠️ The pane line keeps `kapcsolód-`, the sheet `csatlakoz-`: `Csatlakozás` is forced by
+  `fileExplorer.network.connect`, and the button becomes `Csatlakozás…`. Don't sweep them together.
+- `Megjegyzés a kulcskarikában`, no `jelszó` (SFTP may save a passphrase); `Kulcsjelmondat`.
+- `Kijelentkezve innen: {name}` keeps the pane lines nominal; `Ellenőriztem`. `az ssh-agent` (esz-esz-há);
+  `Nextcloud-cím`.
 
-## Az automatikus újracsatlakozás és a kulcsos bejelentkezés panelsora (`servers.paneState.reconnecting`, `.signedOutNothingToAsk`)
+## Az automatikus újracsatlakozás (`servers.paneState.reconnecting`, `.signedOutNothingToAsk`)
 
-- reconnect → `újracsatlakozás`, over macOS's `újrakapcsolódás`: the shipped family uses it, and two siblings on the
-  same screen already do. A stem switch within one view is worse than across views.
-- `Újracsatlakozás ide: {name}…`: the frame comes from the pane lines, the stem from the family.
-- `Ez a szerver jelszó helyett kulcsot használ a bejelentkezéshez…`: the server stays the subject, like its siblings.
-- Open it again to retry → `Nyisd meg újra a kapcsolódáshoz.`: `újra` already carries the retry.
+`Újracsatlakozás ide: {name}…`: the frame from the pane lines, the stem from the family. The server stays subject
+(`Ez a szerver jelszó helyett kulcsot használ…`). `Nyisd meg újra a kapcsolódáshoz.`
 
-## A rögzítési tipp, a megbízható szerverkulcsok lapja és az ADB-állapotsor (`menu.network.pinToSwitcher`/`.unpin`, `servers.pinHint.*`, `settings.servers.*`, `settings.adb.*`, `settings.section.servers`/`.adb`, `settings.summary.servers`/`.adb`, `settings.behavior.serversPinHintSeen.*`, `settings.appearance.tintSmb.*`)
+## Rögzítési tipp, szerverkulcsok, ADB-állapot (`menu.network.pinToSwitcher`/`.unpin`, `servers.pinHint.*`, `settings.servers.*`, `settings.adb.*`, `settings.section.servers`/`.adb`, `settings.summary.servers`/`.adb`, `settings.behavior.serversPinHintSeen.*`, `settings.appearance.tintSmb.*`)
 
-- Unpin → `Rögzítés feloldása` (Notes), ❌ not `Rögzítés megszüntetése`. Pin to switcher → `Rögzítés a kötetválasztóban`
-  (WorkflowUI's `Rögzítés a menüsoron` shape).
-- The hint title is possessive, `Kezd hosszúra nyúlni a Hálózat csoportod`: neutral, not a warning.
-- The hint body names the command after a colon: `futtasd a parancspalettából ezt a parancsot: „{command}”`.
-- host key as a head noun → `szerverkulcs` (`Megbízható szerverkulcsok`), ❌ not `hosztkulcs`: the catalog says
-  `szerver` to users.
-- The date label Trusted → `Megbízhatóként jelölve` (SecurityInterface): `megbízhatónak tekint` has no `-va/-ve` form
-  that works before a date. ❌ Not `Jóváhagyva`: it loses the trust decision.
-- Re-check → `Újraellenőrzés` (one word fits the mini button).
-- watch → `figyel`, with `A Cmdr` as the subject: a subjectless third person dangles under a bare `Állapot` label.
-- `settings.summary.servers` states, never negates (`…; ez az oldal csak a kulcsokról szól.`), keeping clear of the "Y,
-  not X" shape.
+`Rögzítés a kötetválasztóban` (WorkflowUI `Rögzítés a menüsoron`). `Kezd hosszúra nyúlni a Hálózat csoportod` (neutral);
+`ezt a parancsot: „{command}”`. Trusted date label `Megbízhatóként jelölve` (SecurityInterface), ❌ not `Jóváhagyva`.
+`Újraellenőrzés`. watch → `figyel` with `A Cmdr` as subject. `settings.summary.servers` states, never negates.
 
-## Az Android-telefon panelüzenetei, elemleírásai és a hibakeresés-tipp (`adb.connect.*`, `adb.readiness.*`, `adb.hint.*`, `adb.disconnect*`, `settings.behavior.adbHintDismissed.*`)
+## Android-telefon (`adb.*`, `settings.behavior.adbHintDismissed.*`)
 
-- Allow (Android's own button) → `„Engedélyezés”` (AOSP `usb_debugging_allow`), quoted with a `gomb` head noun:
-  `koppints az „Engedélyezés” gombra`. The name is known and vowel-initial, so `az` is right.
-- USB debugging → `USB-hibakeresés` (our hyphen, per AkH); `az Android platform tools csomag` carries the suffix on the
-  base noun; the tooling is `Android-fejlesztőeszközök`, never bare `Android-eszköz` (that's a device).
-- How (the hint link) → `Hogyan?` (tentative, no Tier-1 hit), over `Bővebben`, which is Learn more.
-- Disconnect aria = the server's `{name} leválasztása`, never `kiadás`: the phone stays on the cable.
-- reseat the cable → `húzd ki és dugd vissza a kábelt` (`errors.provider.macDroid.transient`).
-- You stopped opening your phone → `Leállítottad a telefonod megnyitását.`, the `leállít` stem of
-  `search.coverage.walk.cancelled`, never `Mégsem`'s: the sentence reports, it doesn't name the button.
+`koppints az „Engedélyezés” gombra` (AOSP). `az Android platform tools csomag`; `Android-fejlesztőeszközök`, never
+`Android-eszköz`. `Hogyan?` (tentative) over `Bővebben` (Learn more). `húzd ki és dugd vissza a kábelt`;
+`Leállítottad a telefonod megnyitását.` (`leállít`, as `search.coverage.walk.cancelled`).
 
-## A zárolt szerveridentitás (`servers.sheet.accountLocked`)
+## Zárolt szerveridentitás (`servers.sheet.accountLocked`)
 
-The hint uses the buttons' own verbs (`elfelejt`, `hozzáad`), since a synonym sends the reader to a menu item that
-doesn't exist. are what name this server → `azonosítja ezt a szervert`: the form has its own `Név` field.
+The hint uses the buttons' own verbs (`elfelejt`, `hozzáad`); `azonosítja ezt a szervert` (the form has its own `Név`
+field).
 
-## Időtartam-helyőrző mellé kell a névutó (`servers.paneState.retryKeepsTrying`)
+## Időtartam és névutó (`servers.paneState.retryKeepsTrying`)
 
-A bare `{duration}` reads as a subject ("2 minutes keeps trying"), so a duration always takes a postposition (`ideig`,
-`alatt`, `múlva`). Before `ideig` the value takes `-nyi`: `Összesen {duration} ideig…` with `2 percnyi` from
-`retryTotalMinutes`, since `2 perc ideig` is wrong.
+A bare `{duration}` reads as a subject, so it takes a postposition; before `ideig`, `-nyi` (`2 percnyi`).
 
-## A toast, amikor nem is volt mentett jelszó (`fileExplorer.navigation.forgetSecretNoneToast`)
+## Nem volt mentett jelszó (`fileExplorer.navigation.forgetSecretNoneToast`)
 
-`Nem volt mentett jelszó ehhez: „{name}”.`: the sibling `Mentett jelszó elfelejtése` wording, the name after a colon,
-and no `nem sikerült` or `hiba`, because nothing went wrong.
+`Nem volt mentett jelszó ehhez: „{name}”.`: nothing went wrong.
 
-## Az újrapróbálkozás hossza, a gazdakulcs-fejléc és az Android Engedélyezés gombja (`servers.paneState.retryTotalSeconds`/`.retryTotalMinutes`, `servers.hostKey.*`, `adb.connect.unauthorized`)
+## Újrapróbálkozás hossza (`servers.paneState.retryTotal*`, `servers.hostKey.*`, `adb.connect.unauthorized`)
 
-- `{seconds}` / `{minutes}` only pick the plural branch; both branches read the same (`60 másodpercnyi`).
-- Cmdr won't connect to {name} → `A Cmdr nem kapcsolódik ide: {name}`: present tense, a standing refusal.
+Both plural branches read the same (`60 másodpercnyi`). `A Cmdr nem kapcsolódik ide: {name}`: present, a standing
+refusal.
 
-## A szerversor helyi menüje: `Megnyitás` és `Szerver szerkesztése…` (`menu.network.open`, `menu.network.edit`)
+## A szerversor helyi menüje (`menu.network.open`, `menu.network.edit`)
 
-Open → `Megnyitás`, like `menu.file.open` (Finder uses one verb for both senses). Edit server… is byte-identical to
-`commands.serversEdit.label`: both open one sheet, and `i18n-terms` holds the pair.
+`Megnyitás` like `menu.file.open`; Edit server… byte-identical to `commands.serversEdit.label`.
 
-## A funkcióbillentyű-sáv helyi menüje (`fileExplorer.functionKeyBar.hiddenToast`)
+## Funkcióbillentyű-sáv (`fileExplorer.functionKeyBar.hiddenToast`)
 
-function key bar → `funkcióbillentyű-sáv`, as `settings.appearance.showFunctionKeyBar.label`.
+`funkcióbillentyű-sáv`, as `settings.appearance.showFunctionKeyBar.label`.
 
 ## A Dockba kerülés egyszeri ajánlata (`main.dockPinNudge.*`, `settings.behavior.dockPinNudgeOfferedAt.*`)
 
-The `Dock` / `Finder` suffixes and `Alkalmazások` (never `Programok`) live in `style.md`.
-
-### A többi eldöntött szó
-
-- configuration profile → `konfigurációs profil` (MS; macOS has no hit).
-- No, thanks → `Nem, köszönöm` (tentative), over `Most nem`, which promises "maybe later": Cmdr never asks again.
-- Yes, … → `Igen, kerüljön a Dockomba`: the subjunctive names no actor, where `tedd` would address Cmdr.
-
-### Mondatszintű döntések
-
-- The title carries macOS's Keep in Dock: `Maradjon a Cmdr a Dockodban?`.
-- None of the four outcomes is an error message: `A Cmdr most nem került be a Dockba.`
-- `addedButDockDidNotRestart` → `… a helyén van, csak a Dock nem töltődött újra.`: `csak` says one detail is missing,
-  where `de` would suggest the pin failed.
-- `managedDock` → `Ezen az tud változtatni, aki ezt a Macet felügyeli.`, blaming no one.
+`Nem, köszönöm` (tentative) over `Most nem` ("maybe later"; Cmdr never asks again). `Igen, kerüljön a Dockomba`: the
+subjunctive names no actor. `Maradjon a Cmdr a Dockodban?` (macOS Keep in Dock). No outcome is an error:
+`A Cmdr most nem került be a Dockba.`; `… csak a Dock nem töltődött újra.` (`de` would suggest failure); `managedDock`
+blames no one.
 
 ## A Dock helyi menüje (`menu.dock.*`)
 
-Mined live from `/System/Library/CoreServices/Dock.app/Contents/Resources/hu.lproj/DockMenus.strings`
-(`plutil -convert json`; the pile lacks the Dock; macOS 26.6.2, 2026-09-09), since that's the very menu these items
-join.
+Mined live from `Dock.app/Contents/Resources/hu.lproj/DockMenus.strings` (`plutil -convert json`; not in the pile; macOS
+26.6.2, 2026-09-09): bare name + nominal action, no article (`Cmdr megnyitása`, `%@ elrejtése`). `Ugrás mappához…`
+(Finder `261`), ❌ not `Ugrás útvonalra…` (`menu.go.goToPath`). `{name} ({parent})` as English (Finder `^0 (^1)`).
 
-- Open Cmdr → `Cmdr megnyitása`: the Dock's app pattern is a bare name + a nominal action, no article (`%@ elrejtése`).
-- Go to folder… → `Ugrás mappához…` (Finder `261`), ❌ not `Ugrás útvonalra…`, which is `menu.go.goToPath`'s different
-  English.
-- `{name} ({parent})` stays as English (Finder `^0 (^1)`), with a `sameAsSourceJustification`.
+## Megjelenítés a Finderben (`main.reveal*`, `settings.behavior.reveal*`)
 
-## A „Megjelenítés a Finderben” ajánlat és az első találat értesítése (`main.revealNudge.*`, `main.revealActivation.*`, `settings.behavior.reveal*`)
+`„Megjelenítés a Finderben”`, quoted as the Settings card names it; `már egy ideje`, ❌ never a number. The notice never
+apologizes.
 
-Show in Finder → `„Megjelenítés a Finderben”`, quoted, as the Settings card names it. for a while now → `már egy ideje`,
-❌ never a number. The first-hit notice explains, never apologizes.
+## A bevezető átírt lépései (`onboarding.*`)
 
-## A bevezető átírt lépései: ellenőrzőlista, lépésbuborék, összefoglalók (`onboarding.*`)
+- `kedvel` (MS), ❌ not `lájkol`. ❌ Not `adattár` / `tároló`. `ellenőrzőlista`, `levelezőlista`, `jelvény`.
+  `Bővebben: {topic}` (macOS). typo → `elgépel` (tentative): `nem gépelted-e el`.
+- `a <code>brew install cmdr</code> parancsot`; `Lépés: {step}/{total}`. `Helyi hálózat` (`LOCAL_NETWORK`), ❌ not
+  `… elérése`.
+- `stepOptional.*.summary` stay within English's length; `openBeta` and `feedbackIntro` share a frame; `local.tooltip`
+  quotes `stepAi.cloud.label` (change together). `butább` (the `@key` asks). `kiadott verzió`,
+  `fejlesztői és tesztbuildek`, over `példány`.
 
-### Az eldöntött szavak
+## A megjelenítő betöltése (`viewer.pull.*`, `viewer.error.stoppedResponding`)
 
-- star → `csillagoz`, like → `kedvel` (Microsoft's verb senses): GitHub and AlternativeTo ship no Hungarian UI, so no
-  Tier-1 answer exists. ❌ Not `lájkol` (MS knows `lájk` only as a noun).
-- repo → `repó`, ❌ not `adattár` / `tároló`. checklist → `ellenőrzőlista`, mailing list → `levelezőlista`, badge →
-  `jelvény`.
-- More about {topic} → `Bővebben: {topic}` (macOS ships `Bővebben:`), since `{topic}` can't take `-ról`.
-- typo → the verb `elgépel` (tentative): `nem gépelted-e el`.
+The name after a colon. `{doneText} / {totalText}` (Foundation `Progress`), `Eddig {doneText}`,
+`A fájl betöltése megállt.`
 
-### Mondatszintű döntések
+## A telefon elavult indexe (`*StalePhone`, `indexing.staleDialog.*Phone`)
 
-- Checklist rows are `te` imperatives (`Csillagozd meg a repót a GitHubon`): `checklist.email` must be a sentence around
-  its field, and a mixed form shows inside one list.
-- `az AlternativeTo oldalán`: the name's final `o` isn't a Hungarian `o`, so a base noun carries the suffix.
-- A known literal gets the real article: `a <code>brew install cmdr</code> parancsot`.
-- The step counter is `Lépés: {step}/{total}`: no article or suffix touches either number.
-- Local Network → `Helyi hálózat`, Apple's label verbatim (`SecurityPrivacyExtension`, `LOCAL_NETWORK`), ❌ not
-  `Helyi hálózat elérése`, which the user won't find.
-- The four `stepOptional.*.summary` lines stay within English's length, reusing their `desc` words.
-- `openBeta` and `feedbackIntro` keep one frame and differ only where English does (fix vs spot bugs).
-- `local.tooltip` quotes `stepAi.cloud.label` verbatim (`Igen, szeretnék AI-t`); change them together.
-- dumber → `butább`, deliberately blunt, as the `@key` asks.
-- Acronyms take a hyphenated suffix by pronunciation: `RAM-ot`, `CPU-t`, `LLM-edet`, `AI-t`.
-- released copy → `kiadott verzió`, dev and test builds → `fejlesztői és tesztbuildek`, over `példány` (a running
-  instance).
+`telefon`, ❌ not `okostelefon` / `eszköz`; the drive siblings' words; `{name} nem szól a Cmdrnek`.
 
-## A megjelenítő betölti a telefonon, szerveren vagy archívumban lévő fájlt (`viewer.pull.*`, `viewer.error.stoppedResponding`)
+## A szerver gyökérmappája és kezdőmappája (`servers.sheet.rootFolder*`/`.startFolder*`/`.nameHelp`, `servers.refusal.startFolderOutsideRoot`/`.rootNotFound`/`.startFolderNotFound`/`.saveUnconfirmed`)
 
-- Fetching → `Betöltés`, the viewer's own verb, ❌ not Finder's `Begyűjtés` (metadata) or `Letöltés` (nothing is
-  downloaded from an archive). The title puts the name after a colon.
-- {done} of {total} → `{doneText} / {totalText}` (Foundation `Progress`); so far → `Eddig {doneText}`.
-- stopped arriving → `A fájl betöltése megállt.`
+`kezdőmappa` (tentative) over TC's `induló mappa`: one word, paired with `gyökérmappa`. account and host →
+`a fiók és a cím` (the field is `Cím`).
 
-## A telefon elavult indexe (`fileExplorer.navigation.driveIndex.tooltipStalePhone`, `indexing.staleDialog.titlePhone`/`.bodyPhone`)
+## Megosztás csatolása, megosztáslista (`errors.mount.*`, `errors.shareList.*`)
 
-phone → `telefon`, ❌ not `okostelefon` or `eszköz` (that's device). The family reuses its drive siblings' words; the
-phone's name leads its sentence bare, unquoted (`{name} nem szól a Cmdrnek`).
+`A Cmdr nem tudta elérni ezt a szervert: „{server}”.`; as subject, bare (`„{server}” vendégeknek nem mutatja meg…`);
+`„{share}” (szerver: „{server}”)`. Share connect `csatlakoz-`; `ez a számítógép` (also shows on Linux);
+`Valami nem sikerült, miközben a Cmdr …`. `disztribúció` (tentative); `az smbclient`; `a gvfs-smb csomagját`. Identical
+English stays identical across both families.
 
-## A szerver gyökérmappája és kezdőmappája (`servers.sheet.rootFolder`/`.rootFolderHelp`/`.startFolder`/`.startFolderHelp`/`.nameHelp`, `servers.refusal.startFolderOutsideRoot`/`.rootNotFound`/`.startFolderNotFound`/`.saveUnconfirmed`)
+## F4 és a szövegszerkesztő (`settings.behavior.textEditorApp.*`, `*card.textEditor`, `fileExplorer.edit.*`)
 
-- root folder → `gyökérmappa` (MS, Thunar, DC), ❌ not `gyökérkönyvtár`.
-- start folder → `kezdőmappa` (tentative), over TC's `induló mappa`: one word, paired with `gyökérmappa`. ❌ Never
-  `saját mappa`, which is Home.
-- account and host → `a fiók és a cím`, ❌ not `gép`: the sheet's field is `Cím`.
+`Szerkesztésre használt app` (tentative): a label can't run on into an unknown app name.
+`a fájl ebben nyílt meg: {app}`.
 
-## Miért nem csatolható egy megosztás, és miért nem töltődik be a megosztáslista (`errors.mount.*`, `errors.shareList.*`)
+## Leválasztódó meghajtó (`*driveLeaving`, `indexing.needsFreshScan.afterDisconnect`, `errors.write.deviceDisconnected.sided.*`)
 
-- Name the type, then quote the name after a colon: `A Cmdr nem tudta elérni ezt a szervert: „{server}”.`; a name as
-  subject leads bare (`„{server}” vendégeknek nem mutatja meg…`); the share with its server →
-  `„{share}” (szerver: „{server}”)`.
-- connect to a share → `csatlakoz-` (the title above it), while the pane line keeps `kapcsolódás`.
-- this computer → `ez a számítógép`, not `Mac`: these also show on Linux.
-- Something went wrong → `Valami nem sikerült, miközben a Cmdr …`.
-- distribution → `disztribúció` (tentative); `az smbclient`; `a gvfs-smb csomagját`.
-- Identical English stays identical (`hostUnreachable`, `authFailed` in both families).
-
-## F4 and its text editor (`settings.behavior.textEditorApp.label`, `settings.behavior.textEditorApp.description`, `settings.navigationAndFileOps.card.textEditor`, `fileExplorer.edit.appMissing`, `fileExplorer.edit.launchRefused`)
-
-text editor → `szövegszerkesztő` (the app kind). Edit files in [app] → `Szerkesztésre használt app` (tentative), since a
-label can't run on into an unknown app name. `{app}` never takes a suffix: `a fájl ebben nyílt meg: {app}`.
-
-## A drive leaving mid-request (`fileExplorer.navigation.driveIndex.driveLeaving`)
-
-`{name} leválasztása folyamatban van`: the possessor slot keeps the name bare.
-
-## A drive unplugged mid-index (`indexing.needsFreshScan.afterDisconnect`)
-
-was disconnected → `leválasztódott` (tentative mediopassive), agentless like English.
-
-## A drive pulled mid-transfer (`errors.write.deviceDisconnected.sided.*`)
-
-- `{volumeName} leválasztódott`: the mediopassive keeps the name bare, where `{volumeName}-t leválasztották` would need
-  a suffix. The `leválasztás` side of the split, because a drive left the mount table (the sibling keys).
-- {done} of {total} files → `{total} fájlból {done} fájlt`: the suffix lands on `fájl`.
-- to / on {counterpart} → `ide: {counterpart}` / `itt van: {counterpart}`.
-- nothing is lost → `semmi sem veszett el`, over the alarming `nincs adatvesztés`.
+`{name} leválasztása folyamatban van`; `leválasztódott` (tentative): agentless and name-bare (over
+`{volumeName}-t leválasztották`), `leválasztás` because the drive left the mount table. `{total} fájlból {done} fájlt`;
+`ide: {counterpart}` / `itt van: {counterpart}`; `semmi sem veszett el` over `nincs adatvesztés`.
 
 ## A move that could not be confirmed (`errors.write.moveNotConfirmed.*`)
 
-- confirm (make sure it was written) → `ellenőrizni`, ❌ not `megerősíteni`, which reads as the user should have
-  approved.
-- were saved on {volumeName} → `kiíródtak-e ide: {volumeName}`.
-- Your originals haven't moved → `Az eredetiek nem mozdultak el.`, deliberately apart from the line above's
-  `a helyükön hagyta`, as English varies too.
+`ellenőrizni`, ❌ not `megerősíteni` (reads as user approval). `kiíródtak-e ide: {volumeName}`.
+`Az eredetiek nem mozdultak el.`, apart from `a helyükön hagyta`, as English varies.
 
-## A visszadugott meghajtón maradt áthelyezési munkamappa (`fileOperations.leftovers.stagingFolderKept`)
+## Maradék munkamappa (`fileOperations.leftovers.stagingFolderKept`)
 
-The notice never suggests deleting: these may be the only copies. Its one actionable fact is that the folder is hidden.
+Never suggest deleting (they may be the only copies); the actionable fact is that the folder is hidden. `félbemaradt`
+(tentative), also ❌ not `hiányos` (a half-written file). `találta` over `bukkant rá` / `megtalálta` (implies
+searching). `ezen a meghajtón: {volumeName}`; `egy rejtett, „{folderName}” nevű mappában` (Finder `„^0” nevű elem`):
+quoted so the 45-char id can be found, `rejtett` first so it isn't lost.
 
-- unfinished (an operation) → `félbemaradt` (tentative). ❌ Not `befejezetlen` (accounting only in the pile), not
-  `félbeszakadt` (reserved for interrupted, implies a cause), not `hiányos` (a half-written file, `stagedLeftover`).
-- found → `találta`, over `bukkant rá` (absent from the catalog) and `megtalálta` (implies Cmdr searched).
-- The drive goes in a colon slot (`ezen a meghajtón: {volumeName}`); the folder in
-  `egy rejtett, „{folderName}” nevű mappában` (Finder's `„^0” nevű elem`), where `egy` agrees with nothing. Quoted,
-  because the 45-character id must be found in Finder; `rejtett` comes first so it isn't lost behind the id.
+## A kedvencek menüje (`commands.favorites*`, `fileExplorer.navigation.favorites*`, `menu.go.showFavorites`, `shortcuts.scope.favoritesMenu`)
 
-## A kedvencek menüje (`commands.favoritesOpen.*`, `commands.favoritesOpenByNumber.label`, `commands.favoritesAdd.description`, `fileExplorer.navigation.favoritesAddCurrent`, `fileExplorer.navigation.favoritesAlreadyAdded`, `fileExplorer.navigation.favoritesCantAddHere`, `menu.go.showFavorites`, `shortcuts.scope.favoritesMenu`)
+❌ Never `könyvjelző`. Title `Kedvencek menü` (like `Apple menü`), prose `a kedvencek menüje`. disk → `lemez`.
+`favoritesCantAddHere`: `…lemezeken, megosztásokon, szervereken és telefonokon lévő mappák` (`lévő` over
+`-ra/-re mutat`, a symlink reading). `Ez a mappa már a kedvencek között van`.
 
-- The list stays `kedvenc` / `Kedvencek`, ❌ never `könyvjelző`.
-- favorites menu: the title is appositive `Kedvencek menü` (like `Apple menü`), prose the possessive
-  `a kedvencek menüje`. Deliberate: a table label isn't a sentence.
-- Show favorites → `Kedvencek megjelenítése` (Finder's `X megjelenítése`).
-- disk here → `lemez`, since English says disk.
-- `favoritesCantAddHere` → `…: a kedvencek lemezeken, megosztásokon, szervereken és telefonokon lévő mappák`, paired
-  with its sibling's subject; a plain `lévő` locative over a `-ra/-re mutat` "points at", which reads as a symlink.
-- already a favorite → `Ez a mappa már a kedvencek között van`: `között` names the list the user is looking at.
+## Ki fogja a meghajtót (`errors.eject.unmountRefusedBy*`, `errors.eject.other*`)
 
-## Az elutasított kiadás megnevezi, KI fogja a meghajtót (`errors.eject.unmountRefusedBy*`, `errors.eject.otherApps`/`.otherProcesses`)
+- Skeleton `X még nyitva tart ott fájlokat.` + `…, majd próbáld újra.`, active, over Apple's passive
+  `által használatban van`; `ott`, never `ezt a meghajtót` (a share or phone may be meant).
+- `{app}` leads bare, unquoted; `{apps}` takes a plural verb (`tartanak`), `Zárd be őket` points at `fájlokat`;
+  `A Cmdr nem ismeri…`, never `nem ismerjük`.
+- `egyéb alkalmazások` (Thunar) over `más`; `egyéb folyamatok`; `lemezkép`; `még nyitva van` over `csatolva van`;
+  `Maga a Cmdr`; `küldj jelentést`, never `hibajelentést`. `Várj egy percet` (system) vs `Várj egy pillanatot` (Cmdr).
+  `Egy {process} nevű folyamat…`; the plural lists after a colon.
 
-- Every key keeps the family skeleton `X még nyitva tart ott fájlokat.` + `…, majd próbáld újra.`, active like English,
-  over Apple's passive `által használatban van`. Either wrapper may concern a share or a phone, so `ott`, never
-  `ezt a meghajtót` or `add ki újra`.
-- `{app}` leads bare, unquoted: its first sound is unknown, so no article. `{apps}` (a list) also takes none, plus a
-  plural verb (`még nyitva tartanak`); `Zárd be őket` points at `fájlokat`. The aside keeps Cmdr as subject
-  (`A Cmdr nem ismeri…`), never `nem ismerjük`.
-- other apps → `egyéb alkalmazások` (Thunar), over `más` (a different kind); others → `egyéb folyamatok`.
-- disk image → `lemezkép`; is still open → `még nyitva van`, over `csatolva van`.
-- Cmdr itself → `Maga a Cmdr`; send a report → `küldj jelentést`, never `hibajelentést`.
-- `Várj egy percet` (system) vs `Várj egy pillanatot` (Cmdr) follows English's minute vs moment.
-- `Egy {process} nevű folyamat…` names the type; the plural lists after a colon so the numeral keeps a singular verb.
+## Azonos fajta kijelölése (`menu.select.*`, `commands.selectionSelectSameKind.*`, `menu.context.selection`)
 
-## Select all of the same kind (`menu.select.sameKind`/`.allFolders`/`.sameExtension`/`.noExtension`, `commands.selectionSelectSameKind.*`, `menu.context.selection`)
-
-- kind → `Fajta` (Finder's Kind sort).
-- Select all with extension → `Összes *.{extension} fájl kijelölése` (DC, TC): the mask stands as an attribute, so no
-  suffix hangs on it.
-- The four label twins share their English, so each menu / command pair stays identical.
+`Fajta` (Finder's Kind). `Összes *.{extension} fájl kijelölése` (DC, TC). Menu / command twins stay identical.
 
 ## The title-bar full-disk-access badge (`onboarding.fdaBadge.*`, `onboarding.stepAi.bannerTitle.denied`)
 
-- The badge NAMES the setting, so it uses Apple's row: `Nincs teljes hozzáférés a lemezhez`. `bannerTitle.denied` shares
-  its English, so the two stay identical.
-- The aria opens with the label verbatim, which carries WCAG 2.5.3; the second sentence's `-ről` form wouldn't.
-- Running prose may say `teljes lemezhozzáférés` (names vs prose).
-- "files macOS keeps to itself" stays plain, ❌ never a macOS feature name.
+The badge names Apple's row `Nincs teljes hozzáférés a lemezhez`, identical in `bannerTitle.denied`. The aria opens with
+the label (WCAG 2.5.3). Prose may say `teljes lemezhozzáférés`.
 
-## The trash refusal dialog (`errors.write.trashRefused.title` + its `message.*` / `suggestion.*` siblings)
+## Kuka-elutasítás (`errors.write.trashRefused.*`)
 
-- The title shares its English with four `*.title.trash` keys, so all five stay identical.
-- No plural machinery: `a kiválasztott elemek közül {count} darab…` reads right at 1 and 7.
-- `Shift+F8` takes no suffix: `A Shift+F8 billentyűparanccsal viszont …`.
+The title matches four `*.title.trash` keys. `a kiválasztott elemek közül {count} darab…` reads right at 1 and 7.
+`A Shift+F8 billentyűparanccsal viszont …`.
 
-## A csak online tartalom figyelmeztetése (`fileOperations.delete.cloudOnlineOnlyMixedWarning` / `fileOperations.delete.cloudOnlineOnlyAllWarning` / `fileOperations.delete.cloudOnlineOnlyHandedBack`)
+## Csak online tartalom (`fileOperations.delete.cloudOnlineOnly*`)
 
-Keep all four facts: the Trash would download the files; so Cmdr offers deleting the whole selection; no copy stays in
-the Trash, but the service keeps one (❌ never "it goes to the Trash anyway"); the named ways out. The quoted `„Törlés”`
-is `fileOperations.delete.confirmDelete` verbatim. Tentative wording throughout.
+Keep all four facts: the Trash would download them; so Cmdr offers deleting the whole selection; no copy in the Trash
+but the service keeps one (❌ never "it goes to the Trash anyway"); the ways out. `„Törlés”` quotes `confirmDelete`.
+Tentative.
 
-## Amikor a szerver szerint nincs is ilyen megosztás (`fileExplorer.network.osMountFallback.shareNotOnServer`, `fileExplorer.pane.directConnectionShareNotOnServerToast`)
+## Nincs ilyen megosztás (`*shareNotOnServer*`, `*ShareNotOnServer*`)
 
-- Retrying can't help, so there's no `most` or `próbáld újra`, unlike the siblings.
-- `A szerver szerint ugyanis nincs ilyen nevű megosztás.` is its own sentence: the settled opener ends on the name after
-  a colon, so no clause can follow; `ugyanis` carries "because".
-- The short toast says `{server} szerint`: the postposition leaves the name bare.
-- a lot slower → `sokkal lassabb`: no multiplier, since English gives none.
+No `most` or `próbáld újra` (retrying can't help). `A szerver szerint ugyanis nincs ilyen nevű megosztás.` stands alone
+(the opener ends on a colon slot). Toast `{server} szerint`; `sokkal lassabb`, no multiplier.
 
-## Egyformának látszó nevek a szerveren (`fileOperations.transferProgress.lookAlikeHint`, `errors.listing.ambiguousName.explanation`, `errors.listing.ambiguousName.suggestion`, `errors.volume.ambiguousName`)
+## Egyformának látszó nevek (`*lookAlikeHint`, `errors.listing.ambiguousName.*`, `errors.volume.ambiguousName`)
 
-- spelled differently → `eltérő írásmóddal tárolja őket` (tentative), on both surfaces; ❌ never `Unicode` or
-  `normalizálás`: the `@key` asks for everyday words.
-- matches (a path) → `illik`, over DC's `illeszkedik`.
-- The path goes after a colon: `illik erre az útvonalra: {path}`.
-- One `hogy` per sentence: `Legközelebb elkerülheted, ha az egyiket átnevezed úgy, hogy…`.
+`eltérő írásmóddal tárolja őket` (tentative), ❌ never `Unicode` / `normalizálás`. `illik` over DC's `illeszkedik`:
+`illik erre az útvonalra: {path}`. One `hogy` per sentence.
 
-## A „Felhő-AI engedélyezése” kapcsoló és a kikapcsolt felhő-AI állapotai (`ai.cloudConsent.label`, `ai.cloudConsent.description`, `askCmdr.gate.cloudOff.body`, `settings.ai.cloudConsent.lockedHint`, `settings.askCmdr.enabled.label`)
+## A „Felhő-AI engedélyezése” kapcsoló (`ai.cloudConsent.label`/`.description`, `askCmdr.gate.cloudOff.body`, `settings.ai.cloudConsent.lockedHint`, `settings.askCmdr.enabled.label`)
 
-Allow cloud AI → `Felhő-AI engedélyezése` (quoted when named); as a verb `engedélyezd a felhő-AI-t`. side panel →
-`oldalpanel` (tentative). Brands stay bare: `Az Ollama, az LM Studio … esetében`. `Ask Cmdr-csevegések` is hyphenated.
+Quoted when named; verb `engedélyezd a felhő-AI-t`. `oldalpanel` (tentative). `Az Ollama, az LM Studio … esetében`;
+`Ask Cmdr-csevegések`.
 
-## Kilépés a teljes képernyőből az Escape billentyűvel (`main.escapeFullScreenHint.*`, `settings.advanced.exitFullScreenOnEscape*`)
+## Teljes képernyő és Escape (`main.escapeFullScreenHint.*`, `settings.advanced.exitFullScreenOnEscape*`)
 
-- full screen (the window state) → `teljes képernyős mód` (AppKit `Kilépés a teljes képernyős módból`), ❌ not bare
-  `teljes képernyő`, which macOS uses for Entire Screen.
-- Escape takes a base noun, `az Escape billentyűvel`: its final `e` is silent, so a suffix would need a hyphen.
+`az Escape billentyűvel`.
 
-## A „Megnyitás ezzel” és a „Megosztás” almenü helyőrző sorai (`menu.context.openWithLoading`, `.shareLoading`, `.shareNone`)
+## Almenü-helyőrzők (`menu.context.openWithLoading`, `.shareLoading`, `.shareNone`)
 
-Finding apps… → `Appok keresése…`; share options → `megosztási lehetőségek` (tentative), over `beállítás` (settings); No
-share options → `Nincs megosztási lehetőség`.
+`Appok keresése…`; `megosztási lehetőségek` (tentative) over `beállítás`; `Nincs megosztási lehetőség`.
 
-## Az áthelyezés, amelynek eredetije a helyén maradt (`errors.write.sourceNotRemoved.*`, `errors.write.permissionDenied.*.source*`, `errors.write.deletePending.message`)
+## Visszamaradt eredeti (`errors.write.sourceNotRemoved.*`, `errors.write.permissionDenied.*.source*`, `errors.write.deletePending.message`)
 
-- Bare placeholders in colon frames: `Minden megérkezett ide: {landedAt}`, `az eredetit innen: {path}`.
-- `engedély` over `jogosultság`, like the informal `permissionDenied.message.*` siblings.
+`Minden megérkezett ide: {landedAt}`, `az eredetit innen: {path}`; `engedély` over `jogosultság`, like
+`permissionDenied.message.*`.
 
-## Archívumban lévő fájl „Megnyitás ezzel” toastjai (`fileExplorer.openWith.copyRefused.*`)
+## Archívumfájl megnyitása ezzel (`fileExplorer.openWith.copyRefused.*`)
 
-- `{appName}` takes the menu's colon frame (`nem nyitható meg ezzel: {appName}`): a `-ban/-ben` or `a/az` on a runtime
-  app name would be a guess. "Couldn't X" takes the possessor slot (`„{fileName}” kicsomagolása … nem sikerült`).
+`nem nyitható meg ezzel: {appName}`; `„{fileName}” kicsomagolása … nem sikerült`.
 
 ## S3 (`servers.sheet.s3*`, `servers.refusal.*`, `servers.hub.*Account*`, `errors.*.coldStorage*`, `*shareLink*`)
 
-- bucket stays `bucket`, front suffixes (`bucketet`, `bucketben`): no console ships Hungarian, tech prose writes
-  `S3 bucketbe`; MS `gyűjtő` is another sense.
-- secret access key → `titkos hozzáférési kulcs`; region → `régió` (both MS).
-- cold-storage archived → `archiválva van`, restore → `visszaállít`, console → `konzol`.
-- share link → `Megosztási link` (macOS `Link másolása`); the submenu stays nominal: `Lejárat hét nap múlva`.
+`bucket` with front suffixes: no console ships Hungarian, and tech prose writes `S3 bucketbe`.
+`titkos hozzáférési kulcs`, `régió` (MS); `archiválva van`, `visszaállít`, `konzol`. `Megosztási link` (macOS
+`Link másolása`); the submenu stays nominal: `Lejárat hét nap múlva`.
 
-## Szervezeti kezelés, MDM (`*.managed.*`, `*managedOff`, `updates.status.heldByPolicy`, `errors.serverRequest.blockedByPolicy`)
+## NFS (`*nfs*`, `*Nfs*`, `servers.refusal.export*`, `servers.refusal.reservedPortRequired`)
 
-- manage → `kezel` (ms): `A szervezeted kezeli`; IT team → `IT-csapat`, the shipped `errors.*` form; the card's Off →
-  `Ki`, a switch state that agrees with no label.
-- `{ceiling}` sits in a colon slot (`legfeljebb ezt a verziót engedi: {ceiling}`): a version's article can't be known.
+- export → `megosztás` (tentative): Hungarian NAS apps and admins say `megosztott mappa` / `NFS megosztás` (MS shared
+  folder → `megosztott mappa`); ❌ not `export` (MS knows only the data-export verb `exportál`).
+- `Felhasználóazonosító` / `Csoportazonosító` (MS); "Act as" drops from the label for width.
+- `{host}` leads bare; "its exports" avoids a possessive back to it (`nem sorolja fel, milyen megosztásokat kínál`).
+
+## MDM (`*.managed.*`, `*managedOff`, `updates.status.heldByPolicy`, `errors.serverRequest.blockedByPolicy`)
+
+`A szervezeted kezeli` (MS `kezel`); `IT-csapat`; Off → `Ki`. `legfeljebb ezt a verziót engedi: {ceiling}`.
 
 ## Csoportos átnevezés súgói (`multiRename.placeholderHelp.*`, `multiRename.searchOptionHelp.*`)
 
-- Positions sit in a colon slot (`ezen a helyen: {at}`), the example file after `esetén` or before `nevű`, the date
-  before `időpontban`: none of them can take an article or suffix. On/Off → `Be` / `Ki` (the switch states).
+`ezen a helyen: {at}`, the example file after `esetén` or before `nevű`, the date before `időpontban`. `Be` / `Ki`.
 
 ## A karaktertartomány-szerkesztő (`multiRename.rangeEditor.*`)
 
@@ -796,5 +560,5 @@ share options → `Nincs megosztási lehetőség`.
 
 ## Az átvitel élő fájlfája (`fileOperations.transferTree.*`)
 
-- "X of Y" aria → `X kész ennyiből: Y`: a size can't take `-ból/-ből`, so a colon slot, and the file count shares it.
-  Follow → `Követés` (the viewer's tail toggle); row states reuse the queue and log words (`Másolás`, `Kihagyva`).
+"X of Y" aria → `X kész ennyiből: Y` (a size can't take `-ból/-ből`). `Követés` (the viewer's tail toggle); rows reuse
+queue and log words.

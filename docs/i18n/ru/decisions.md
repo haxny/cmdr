@@ -1,421 +1,311 @@
 # ru decisions
 
-Distilled rulings behind `terms.json`: "X over Y because Z", one entry per topic, edited in place. `pnpm i18n:brief`
-pulls a section when its heading cites a batch key, so every heading cites its keys in backticks. Term rulings live in
-`terms.json`, voice and typography in `style.md`, open questions in `review-queue.md`.
+Distilled rulings behind `terms.json`: "X over Y because Z", edited in place. `pnpm i18n:brief` pulls a section whose
+heading cites a batch key (exact or `*` wildcard), so every heading cites its keys in backticks.
 
 ## Lowercase вы
 
-Lowercase `вы` / `вас` / `ваш` over Apple's capitalized `Вы` (129 `Вы`, 112 `Вам` / `Вас`, zero lowercase in the macOS
-ru pile): the capital is letter-writing etiquette; Microsoft's Russian style guide, Google, and Yandex write lowercase,
-and it fits Cmdr's lighter voice.
+Over Apple's `Вы` (129 `Вы`, 0 lowercase in macOS ru): letter etiquette; MS, Google, and Yandex write lowercase.
 
 ## `е` over `ё`
 
-`е` everywhere: live macOS 27 ru writes zero `ё`, and a mixed catalog looks careless. Where `все` / `всё` is ambiguous,
-recast the sentence (`Все изображения проиндексированы`).
+macOS 27 ru writes zero `ё`; recast an ambiguous `все` / `всё`.
 
-## Selection: выделение over выбор (`menu.bar.select`, `menu.select.*`, `menu.context.selection`, `menu.context.toggleSelection`, `commands.selection*`, `selection.*`, `fileExplorer.selectionInfo.*`, `settings.selection.*`)
+## Selection: выделение over выбор (`*elect*`, `commands.queue*`)
 
-Product-owner call: marking files is Total Commander's `выделение` / `Выделить` / `Снять выделение` /
-`Инвертировать выделение` (TC/DC `Снять выделение` ×9 vs macOS `Отменить выбор` ×2 in the pile; Nautilus, Dolphin, MS
-agree). Picking an option, volume, or server stays `выбрать`; cursor moves name the file (`commands.navDown.label`
-`Следующий файл`).
+Product-owner call: TC's `Выделить` / `Снять выделение` / `Инвертировать выделение` (TC/DC ×9 vs macOS `Отменить выбор`
+×2; Nautilus, Dolphin, MS agree). Picking an option, volume, server, or queue row (`queue.row.selectAria`,
+`queue.toolbar.*Selected*`, `Выбрано: #`) stays `выбрать`; cursor moves name the file (`Следующий файл`). Remembered
+selections (`selection.recent.*`) are `недавние выделения` (`выборов` reads as elections, `выборка` as a DB sample);
+quote their dialogs by title.
 
-## Ticking queue rows: выбрать (`queue.row.selectAria`, `queue.toolbar.*Selected*`, `commands.queue{Extend,ToggleSelected,SelectAll}*`)
+## Terminal: Терминал (`*erminal*`, `errors.listing.*.suggestion`, `mtp.ptpcameradDialog.*`, `*macFuse.serious`, `*gitDirPermissionDenied.suggestion`)
 
-Checking operation queue rows is choosing list items, not marking files: `Выбрать эту операцию`, `Выбрано: #`.
+Product-owner call: macOS 27 (Finder N67 `Открыть в Терминале`), inflected, unquoted; commands stay English code spans.
 
-## Remembered selections (`selection.recent.*`, `settings.selection.recentSelections.maxCount.label`/`.description`)
+## Ask Cmdr stays verbatim (`*skCmdr*`)
 
-`недавние выделения` over `недавние выборы` / `выборки`: `выборов` reads as "elections" and `выборка` as a database
-sample. Quote the dialogs by their titles (`selection.dialog.title.add`/`.remove`).
+A product name; `Спросить Cmdr` blurs into the ask verb. Masculine, never inflects; a head noun takes the case.
 
-## Terminal: Терминал over Terminal (`errors.listing.*.suggestion`, `mtp.ptpcameradDialog.*`, `commands.handler.openTerminalHere.*`, `errors.provider.macFuse.serious`, `errors.git.gitDirPermissionDenied.suggestion`)
+## Full Disk Access: row label vs prose (`*Fda*`, `*fda*`, `*FullDiskAccess`)
 
-Product-owner call: live macOS 27 Terminal.app is `Терминал` (Finder N67 `Открыть в Терминале`), inflected and unquoted
-(`В Терминале выполните …`). The commands themselves stay English in code spans.
-
-## Ask Cmdr stays verbatim (`askCmdr.title`, `menu.view.askCmdr`, `settings.section.askCmdr`, `commands.askCmdrToggle.label`, `askCmdr.gate.off.*`, `askCmdr.error.askCmdrOff`, `ai.cloudConsent.askCmdr.title`)
-
-`Ask Cmdr` over `Спросить Cmdr`: a product name, verbatim in every locale, and a Russian verb blurs into the
-ask-question verb. Like other Latin product names it takes masculine agreement (`Ask Cmdr выключен`) and never inflects;
-a head noun carries the case where one is needed (`в настройках Ask Cmdr`, `панель Ask Cmdr`).
-
-## Full Disk Access: row label vs prose (`onboarding.stepFda.*`, `downloads.fda.message`, `common.downloadsFdaHint`, `search.coverage.setUpFullDiskAccess`, `onboarding.fdaBadge.*`, `askCmdr.wake.needsFullDiskAccess`)
-
-Where the user must find the Privacy row, quote it as macOS 27 shows it: `Доступ к диску` (SecurityPrivacyExtension
-`ALL_FILES`, 26A428). Prose says `полный доступ к диску` (Apple's own ALL_FILES_QUIT_* prose and search terms). ❌ Not
-`Доступ ко всему диску`: an older macOS label.
+The row is `Доступ к диску` (SecurityPrivacyExtension `ALL_FILES`, 26A428); prose `полный доступ к диску` (Apple's
+ALL_FILES_QUIT_*). ❌ `Доступ ко всему диску`: an older label.
 
 ## Quit & Reopen: Перезапустить (`onboarding.stepFda.step3`)
 
-Quote `«Перезапустить»`, the Russian TCC button (SecurityPrivacyExtension `QUIT_APP`, macOS 27 26A428); the
-back-translated `Завершить и открыть заново` sends the user hunting for a button that doesn't exist.
+The TCC button (`QUIT_APP`, 26A428); a back-translated `Завершить и открыть заново` names no real button.
 
-## Click and double-click: нажать over щелкнуть (`settings.behavior.doubleClickPaneNavigatesToParent.*`, `fileExplorer.doubleClickHint.*`, `fileExplorer.network.browser.tooltip.*`, `viewer.binaryWarning.body`, `fileExplorer.breadcrumb.navigateTooltip`)
+## Click and double-click: нажать over щелкнуть (`*oubleClick*`, `fileExplorer.network.browser.tooltip.*`, `viewer.binaryWarning.body`, `*navigateTooltip`)
 
-macOS says `нажать` (Finder MR20 `Нажмите «Отменить»`, AppKit `Нажать для выбора`; zero `Щелкните` in the pile), so
-click → `нажмите`, double-click → `дважды нажмите` / `двойное нажатие`.
+macOS (Finder MR20 `Нажмите «Отменить»`, AppKit `Нажать для выбора`, zero `Щелкните`): `нажмите`, `дважды нажмите` /
+`двойное нажатие`. MS's `щелкнуть` passes the check but isn't the default; one verb per catalog.
 
-## Full and brief view: Подробный / Краткий режим (`menu.view.fullView`, `menu.view.briefView`, `commands.viewFullMode.label`, `commands.viewBriefMode.label`, `shortcuts.scope.fullMode`, `settings.appearance.card.briefMode`, `settings.listing.stripedRows.description`)
+## Full and brief view: Подробный / Краткий режим (`menu.view.*View`, `commands.view*Mode.label`, `*fullMode`, `*briefMode`, `*stripedRows.description`)
 
-`Подробный режим` over `Полный режим`: Total Commander pairs 301 `Краткий режим` with 302 `Подробный режим`, DC says
-`Подробный`, and `полный` reads as "complete". Command labels name the mode (`Подробный режим`), not `Переключить на …`.
+TC pairs 301 `Краткий` with 302 `Подробный`, DC agrees; `полный` reads as complete. Commands name the mode, no
+`Переключить на …`.
 
-## No «ошибка» in error copy (`askCmdr.error.provider`, `ai.cloud.genericError`, `onboarding.cloudSetup.status.genericError`, `licensing.error.generic`, `ai.translateError.serverError.title`, `askCmdr.decision.result`, `fileExplorer.navigation.driveIndex.tooltipFailed`, `fileExplorer.network.browser.status.error`)
+## No «ошибка» in error copy (`*enericError*`, `*.error.generic`, `askCmdr.error.provider`, `*serverError.title`, `askCmdr.decision.result`, `*tooltipFailed`, `*status.error`)
 
-`Что-то пошло не так` (Nautilus) over `Произошла ошибка`; `возникла проблема`, `не выполнено: {failedText}`, a status
-cell `Проблема`, "hit a snag" `Что-то помешало Cmdr…`. `Не удалось` stays for "Couldn't".
+Mapping in `style.md`; extra forms: status cell `Проблема`, "hit a snag" `Что-то помешало Cmdr…`, `Не удалось` for
+"Couldn't" (macOS ru's own).
 
-## Cmdr couldn't: Cmdr не удалось (`fileExplorer.navigation.*RefusedToast`, `fileExplorer.navigation.driveIndex.refusedUpgradeFailed`, `fileExplorer.edit.launchRefused`, `errors.*`)
+## Cmdr couldn't: Cmdr не удалось (`*RefusedToast`, `*refusedUpgradeFailed`, `*launchRefused`, `errors.*`)
 
-"Cmdr couldn't X" → `Cmdr не удалось X` (35 keys), over `Cmdr не смог X` (13): the impersonal reads as macOS's own
-`Finder не удается` and genders nothing. Where the sentence already has Cmdr acting in the past, masculine is fine
-(`Cmdr успел`).
+35 keys over `Cmdr не смог` (13): reads as macOS's `Finder не удается`, genders nothing. Past masculine where Cmdr
+already acts (`Cmdr успел`).
 
-## Try again: button question vs suggestion (`viewer.error.readFailed`, `viewer.copy.*`, `viewer.saveAs.*`, `operationLog.dialog.loadError`)
+## AI provider: поставщик over провайдер (`*rovider*`, `ai.translateError.*`, `askCmdr.error.*`, `*pickerTitle`)
 
-Beside a Retry button, "Try again?" → `Попробовать еще раз?` (the infinitive question points at the button); with no
-button, `Попробуйте еще раз.` / `Попробуйте еще раз чуть позже.` ❌ Not the stock
-`Повторите попытку через некоторое время`.
+MS keeps `провайдер` for internet providers, `поставщик (услуг)` for a service company; macOS Home and Font Book agree.
+A vendor's billing page is `личный кабинет`.
 
-## AI provider: поставщик over провайдер (`settings.ai.provider.label`, `settings.section.aiProvider`, `settings.ai.providerAria`, `askCmdr.error.*`, `ai.translateError.*`, `onboarding.stepAi.cloud.pickerTitle`, `settings.askCmdr.provider.*`)
+## Advanced: Дополнения (`*dvanced*`, `ai.cloudConsent.logsNote`, `*settingsLine`)
 
-MS keeps `провайдер` for an internet provider and says `поставщик (услуг)` for a company providing a service; macOS Home
-and Font Book agree. de, hu, and sv took MS's word too. A vendor's billing page is `личный кабинет`.
+Every Apple tab says it (Finder 261.label, Mail, VPN); `Расширенные` is Windows, `Дополнительно` an adverb. Prose:
+`дополнительные настройки`.
 
-## Advanced: Дополнения (`settings.section.advanced`, `servers.sheet.advanced`, `settings.advanced.resetAllConfirm`/`.resetAllConfirmTitle`, `ai.cloudConsent.logsNote`, `main.escapeFullScreenHint.settingsLine`)
+## Delete permanently: безвозвратно (`*eletePermanently*`, `*permanentlyLabel`)
 
-Every Apple settings tab and sheet group says `Дополнения` (Finder 261.label, Mail, VPN); `Расширенные` is the Windows
-form, and `Дополнительно` is an adverb. Prose and confirm dialogs say `дополнительные настройки`.
+Over Finder's `Удалить немедленно` (timing, not permanence); the F-key word `Безвозвратно` matches the command.
 
-## Delete permanently: безвозвратно (`menu.file.deletePermanently`, `commands.fileDeletePermanently.label`, `fileExplorer.functionKeyBar.permanentlyLabel`/`.deletePermanentlyAction`)
+## Custom: Пользовательский / Настроить… (`*ustom*`)
 
-`Удалить безвозвратно` over Finder's `Удалить немедленно`: Finder's Delete Immediately stresses timing, Cmdr's English
-says permanently, and the F-key bar's one word (`Безвозвратно`) must match the command.
+macOS 27: `Настроить` 52×, `Пользовательский` 21×, `Свой` 0. Opens an editor → `Настроить…`; a stored value →
+`пользовательский`.
 
-## Custom: Пользовательский / Настроить… (`settings.control.customOption`, `settings.control.customPrefix`, `settings.network.timeoutMode.opt.custom`, `settings.appearance.dateTimeFormat.opt.custom`, `queryUi.*.customCell`)
+## Apple silicon: Mac с чипом Apple (`*clip.notSupported`, `*ocalDisabled`, `*localTooltip`, `ai.local.notInstalled`, `*parallelism.description`)
 
-macOS 27 renders Custom as `Настроить` 52× and `Пользовательский` 21×, `Свой` never. An option that opens an editor is
-`Настроить…`; a stored custom value is `пользовательский`.
+Apple's form (iPhone Mirroring, Rosetta): `Нужен Mac с чипом Apple`.
 
-## Apple silicon: Mac с чипом Apple (`settings.mediaIndex.clip.notSupported`, `settings.ai.tooltipLocalDisabled`, `onboarding.stepAi.localTooltip`, `ai.local.notInstalled`, `settings.mediaIndex.parallelism.description`)
+## Option labels and toggles: standing behavior (`settings.archives.opt.*`, `*.opt.neither`, `*.opt.smart`, `*GoToLatestShortcut.enabled.label`, `settings.behavior.*App.label`)
 
-Apple localizes it (iPhone Mirroring and Rosetta strings): `Нужен Mac с чипом Apple`, not `Требуется Apple silicon`.
+- Imperfective (`Просматривать` / `Открывать` / `Спрашивать`, Mail, DC); `Выключено` over a dangling `Ни один`; Smart →
+  `Оптимально` beside `Автоматически`.
+- A switch named after a command keeps it byte for byte (`Перейти к последней загрузке`).
+- A label read into a dropdown is a noun (`Редактор файлов`), or `Редактировать файлы в Как в системе (TextEdit)`.
 
-## Option labels and toggles: standing behavior (`settings.archives.opt.*`, `settings.behavior.fileSystemWatching.downloadsNotifications.opt.neither`, `settings.listing.sizeDisplay.opt.smart`)
+## Host: хост over узел (`commands.network*`, `commands.shareBack.label`, `fileExplorer.network.*`)
 
-An option names a standing behavior, so imperfective: `Просматривать` / `Открывать` / `Спрашивать` (Mail, DC);
-`Открывать` differs from the `Открыть` command on purpose. `Выключено` over the dangling `Ни один`; Smart →
-`Оптимально`, an adverb like its sibling `Автоматически`.
+macOS (DirectoryBinding Хост, ssh `подлинность хоста`); MS's `узел` gave one panel two words.
 
-## A switch named after a command keeps its name (`settings.behavior.fileSystemWatching.globalGoToLatestShortcut.enabled.label`, `settings.fileSystemWatching.globalShortcutHint`)
+## Network share: общая папка over общий ресурс (`*hareSelectShare*`, `*NetworkShares`, `fileExplorer.network.share.*`, `errors.shareList.*`, `*forgetShare`)
 
-The switch names the shortcut, so it matches `commands.downloadsGoToLatest.label` byte for byte
-(`Перейти к последней загрузке`), even though an infinitive on a switch reads a little like a button.
+macOS Sharing `Общие папки`, MS `общая папка`; `общий ресурс` is Windows. Prose may say `сетевая папка`; mounted is
+`том`.
 
-## A label continued by a dropdown becomes a noun (`settings.behavior.textEditorApp.label`, `settings.behavior.openTerminalHereApp.label`)
+## Locked: Защита (`*ileLocked*`, `*deleteMac`, `*notPermitted`)
 
-`Редактор файлов`, `Терминал для команды «Открыть терминал здесь»`: a verb label read into the value breaks once the
-dropdown shows `Как в системе (…)` (`Редактировать файлы в Как в системе (TextEdit)`).
+Finder's checkbox `Защита`, command `Снять защиту`; `Разблокируйте` would name a second thing. Phone, keychain, and
+archive unlocks keep `разблокировать`.
 
-## Host: хост over узел (`commands.networkSelectHost.label`, `commands.networkRefresh.label`, `commands.shareBack.label`, `fileExplorer.network.browser.*`, `fileExplorer.network.share.noSharesMessage`)
+## Incoming item: Входящий over Новый (`fileOperations.transferProgress.new*Label`)
 
-macOS says `хост` (DirectoryBinding Host → Хост, ssh `подлинность хоста`); MS's `узел` made one panel use two words for
-one thing. Hostname → `имя хоста`.
+`Входящий файл:` beside `Существующий файл:`, since `Новый файл` / `Новая папка` are create commands.
 
-## Network share: общая папка over общий ресурс (`commands.shareSelectShare.label`, `settings.section.smbNetworkShares`, `fileExplorer.network.share.*`, `errors.shareList.*`, `servers.hub.forgetShare`)
+## Home folder: папка пользователя, menu Личное (`*.home`, `*Home`)
 
-macOS's Sharing pane says `Общие папки`, MS `общая папка`; `общий ресурс` is Windows phrasing. Prose may say
-`сетевая папка`; the mounted thing stays `том`.
-
-## Locked: Защита over заблокирован (`errors.write.fileLocked.*`, `errors.mutation.fileLocked`, `errors.write.permissionDenied.suggestion.deleteMac`, `errors.write.trashRefused.suggestion.notPermitted`)
-
-Finder's Get Info checkbox is `Защита` and its command `Снять защиту`; `Разблокируйте файл` then
-`снимите флажок «Защита»` names two things. Phone, keychain, and archive unlocks keep `разблокировать`.
-
-## Incoming item: Входящий over Новый (`fileOperations.transferProgress.newLabel`/`.newFileLabel`/`.newFolderLabel`)
-
-`Входящее:` / `Входящий файл:` / `Входящая папка:` beside `Существующий файл:`, because `Новый файл` and `Новая папка`
-are the names of Cmdr's create commands.
-
-## Home folder: папка пользователя, menu Личное (`commands.navGoHome.label`, `menu.go.home`, `fileExplorer.errorPane.goHome`, `fileExplorer.unreachable.openHome`, `indexing.phase.home`)
-
-Finder's two forms: the Go menu item `Личное` (Finder 253.title), prose `папка пользователя` (TL_HELP_HOME).
-`личная папка` and `домашняя папка` are blends Finder never uses.
+Finder 253.title `Личное`, TL_HELP_HOME `папка пользователя`; never `личная` / `домашняя папка`.
 
 ## Drag: перетянуть (`settings.advanced.dragThreshold.label`, `askCmdr.composer.dropHint`)
 
-macOS AppKit and Finder say `перетяните` / `перетягивание`; `перетащить` is the Windows word and passes in prose only.
-"Drop to attach", shown mid-drag, is `Отпустите, чтобы прикрепить`.
+AppKit and Finder; `перетащить` (Windows) is prose-only. Drop to attach → `Отпустите, чтобы прикрепить`.
 
-## Extract: распаковать over извлечь (`askCmdr.decision.verbExtract`, `errors.write.archiveEntryNameRefused.message.parentTraversal`)
+## Extract: распаковать (`*verbExtract`, `*parentTraversal`)
 
-`извлечь` is Finder's Eject verb, so archive extraction says `распаковать` / `распаковка`.
+`извлечь` is Eject.
 
-## Dismiss: Закрыть vs Скрыть (`ui.toast.dismissAria`, `crashReporter.dialog.dismiss`, `errorReporter.sentToast.dismiss`, `downloads.fda.dismiss`, `lowDiskSpace.toast.closeTooltip`, `viewer.reloadToast.dismissTooltip`, `queue.row.dismiss*`, `queue.toolbar.dismissAll`, `adb.hint.dismiss`)
+## Dismiss: Закрыть vs Скрыть (`*ismiss*`, `*closeTooltip`)
 
-A toast, notice, or dialog → `Закрыть` (macOS ControlCenter, NotificationCenter); a finished queue row or a one-time
-hint put away for good → `Скрыть`. ❌ `Отклонить` reads as reject, `Пропустить` as skip.
+Toast, notice, dialog → `Закрыть` (ControlCenter, NotificationCenter); a done queue row or one-time hint → `Скрыть`. ❌
+`Отклонить` (reject), `Пропустить` (skip).
 
-## Remove from a list: name the list (`settings.mediaIndex.chosenFolders.remove`/`.removeAria`, `menu.volume.removeFavorite`, `askCmdr.attachment.remove`, `shortcuts.section.removeFromOther`)
+## Remove from a list: name the list (`*emove*`)
 
-Russian macOS uses `Удалить` for both deleting and removing from a list (`Удалить из бокового меню`), so always name the
-list after `из`, or use `Убрать` / `исключить` where the list is implied. A bare `Удалить` reads as deleting files.
+macOS `Удалить` covers both (`Удалить из бокового меню`), so name the list or use `Убрать` / `исключить`.
 
-## Technical details: Технические подробности (`fileExplorer.errorPane.technicalDetails`, `fileOperations.errorDialog.technicalDetails`, `commands.errorPaneToggleTechnicalDetails.label`, `errors.write.trashRefused.suggestion.other`, `errors.write.readError.suggestion`, `errors.write.fallback.suggestion`)
+## Technical details: Технические подробности (`*echnicalDetails*`, `*trashRefused.suggestion.other`, `*readError.suggestion`, `*fallback.suggestion`)
 
-The disclosure label is the words the suggestions point at (`проверьте технические подробности ниже`), so
-`Технические подробности` over `Технические сведения` (Nautilus `Показать подробности`).
+The label is what suggestions point at (`проверьте технические подробности ниже`); Nautilus `подробности`.
 
-## Log: журнал over протокол (`settings.advanced.logLlmCalls.label`, `crashReporter.sentToast.sendLog`, `operationLog.*`)
+## Log: журнал over протокол (`*logLlmCalls.label`, `*sendLog`, `operationLog.*`)
 
-macOS (`Журналы`) and MS agree; TC/DC's `протокол` collides with the network protocol (`servers.sheet.protocolLegend`).
-`История` is the history concept, not a log.
+macOS `Журналы`, MS agree; TC/DC `протокол` collides with the network protocol. `История` is history.
 
-## Permission: права доступа vs разрешение (`errors.listing.noPermissionErrno.title`, `errors.write.permissionDenied.*`)
+## Permission: права доступа vs разрешение (`*ermissionDenied*`, `*noPermissionErrno.title`)
 
-File rights are `права доступа` (Finder's `Общий доступ и права доступа`); a macOS privacy grant is `разрешение` (System
-Settings). Don't swap them.
+File rights `права доступа` (Finder); a macOS privacy grant `разрешение`.
 
 ## Minimize: Убрать в Dock (`menu.window.minimize`)
 
-Finder and AppKit's Window menu; `Свернуть` is the Windows taskbar verb.
+Finder and AppKit; `Свернуть` is Windows.
 
-## Onboarding: Знакомство с приложением (`menu.app.onboarding`, `onboarding.stepBeta.checklist.title`)
+## Onboarding: Знакомство с приложением (`menu.app.onboarding`, `*checklist.title`)
 
-Over `Начальная настройка`, which would sit beside `Настройки…` in the app menu and read as the same thing. Prose may
-say `первоначальная настройка`.
+`Начальная настройка` would read as `Настройки…` beside it. Prose may say `первоначальная настройка`.
 
 ## Model library: библиотека моделей (`onboarding.cloudSetup.step.ollamaModel`)
 
-Over `каталог`, which in TC-lineage Russian means a folder.
+`каталог` means a folder in TC Russian.
 
 ## Git words (`errors.git.*`, `fileExplorer.git.*`, `settings.fileExplorer.git.*`)
 
-`worktree` stays verbatim (as de, hu) and is masculine (`связанный worktree`); `рабочее дерево` is only the generic
-working tree, so a bare repo is `репозиторий без рабочего дерева`. Dirty → `незафиксированные изменения`; commit →
-`коммит`, branch → `ветка`; checkout → Pro Git ru's `извлечь` (`Извлечена ветка «{branch}»`).
+`worktree` verbatim, masculine; `рабочее дерево` only generic (`репозиторий без рабочего дерева`). Dirty →
+`незафиксированные изменения`, commit `коммит`, branch `ветка`, checkout Pro Git's `извлечь`. Detached HEAD
+(`fileExplorer.git.tooltip.worktreeDetached`) → `Отсоединенный HEAD: {id}`; pill `(нет ветки)`.
 
-## Detached HEAD (`fileExplorer.git.tooltip.worktreeDetached`)
+## Toggle: name both states (`commands.selectionToggle*`, `commands.sortToggleOrder.label`, `commands.tagsToggle*`)
 
-`Отсоединенный HEAD: {id}` over the literal `Отсоединено на {id}`; pill: git's `(нет ветки)`.
-
-## Toggle: name both states (`commands.selectionToggle.label`, `commands.selectionToggleAndDown.label`, `commands.sortToggleOrder.label`, `commands.tagsToggle*`)
-
-`Изменить выбор` reads as "change your choice". Name both states like macOS (`Выделить или снять выделение`) or use
-`Переключить` (`Переключить порядок сортировки`).
+`Изменить выбор` reads "change your choice": `Выделить или снять выделение` or `Переключить …`.
 
 ## Stalled transfer: замерла (`fileOperations.transferProgress.stall*`, `viewer.error.stoppedResponding`)
 
-`Передача замерла` over `остановилась` (that's stop, and a stalled transfer is alive) and `зависла` (an app hang). "No
-progress for {duration}" → `Без прогресса уже {duration}`.
+Over `остановилась` (stop) and `зависла` (app hang). No progress → `Без прогресса уже {duration}`.
 
-## Share menu: Поделиться (`menu.context.shareNone`, `menu.context.shareLoading`)
+## Share menu: Поделиться (`menu.context.share*`)
 
-The macOS Share menu is `Поделиться`; `отправка` is the send concept. Empty state → `Нечем поделиться`.
+macOS's menu; empty → `Нечем поделиться`.
 
-## Folder walk: сканирование (`viewer.search.stopTooltip`, `search.walkHandoff.counts`, `search.walkHandoff.finished`)
+## Folder walk: сканирование (`viewer.search.stopTooltip`, `search.walkHandoff.*`)
 
-A live folder walk is `сканирование` / `просканирована`, not `просмотр` (the viewer) or `проверена` (a check). A running
-count says so: `Пока найдено …`.
+Not `просмотр` (viewer) or `проверена` (check); a running count `Пока найдено …`.
 
 ## Running: Работает vs Выполняется (`ai.local.statusRunning`, `operationLog.status.running`)
 
-A server that is up `работает`; an operation in progress `выполняется`.
+A server `работает`, an operation `выполняется`.
 
-## Status: состояние over статус (`fileExplorer.navigation.driveIndex.ariaLabel`, `indexing.status.ariaLabel`)
+## Status: состояние (`fileExplorer.navigation.driveIndex.ariaLabel`, `indexing.status.ariaLabel`)
 
-macOS labels say `Состояние`; `статус` reads as social standing in a label.
+macOS labels; `статус` reads as social standing.
 
-## One Просмотр, scoped in prose (`viewer.window.fallbackTitle`, `menu.file.view`, `commands.fileView.label`, `settings.viewer.showTextCursor.description`, `settings.viewer.wordWrap.description`, `settings.appearance.datePreviewLabel`)
+## One Просмотр, scoped in prose (`viewer.window.fallbackTitle`, `*ileView*`, `settings.viewer.*.description`, `*PreviewLabel`, `*QuickLook.other*`, `*viewAs*`)
 
-Russian merges viewer, View, and Preview (TC F3 `Просмотр`, Finder Preview → `Просмотр`). Prose disambiguates with
-`окно просмотра` (never `просмотрщик`); the View menu is `Вид`; a sample line is `Пример:`. Two palette commands never
-share a name: non-macOS Preview (`commands.fileQuickLook.other.label`) is `Предпросмотр`, beside `Просмотр` for View.
+TC F3 and Finder Preview are both `Просмотр`; prose `окно просмотра`, View menu `Вид`, sample `Пример:`. Non-macOS
+Preview is `Предпросмотр` so two commands never share a name. View as → `Показать как текст` (a verb keeps `как`
+nominative).
 
-## View as: Показать как (`viewer.toolbar.viewMode.viewAsText`/`.viewAsImage`/`.viewAsPdf`)
+## Service: служба vs сервис (`settings.advanced.serviceResolveTimeout.*`)
 
-`Показать как текст` over `Просмотр как текста`: `как` takes the case of what it compares, so a verb keeps the
-nominative/accusative natural.
-
-## Service: служба vs сервис (`settings.advanced.serviceResolveTimeout.label`/`.description`)
-
-System network services (Bonjour) are `службы`; online services are `сервисы`.
+Bonjour network services `службы`; online services `сервисы`.
 
 ## Roll back: откатить, even in prose (`operationLog.rollback.*`, `commands.operationLog.*`)
 
-`Отменить` is taken by Undo and Cancel, so a rollback is `Откатить` / `откат` on buttons and in prose alike.
+`Отменить` is Undo and Cancel.
 
 ## Undo and Cancel are both Отменить (`menu.edit.undo`, `fileOperations.trash.undoAction`)
 
-Russian macOS does exactly this; context separates them. Putting trashed files back is `Восстановить` / `Вернуть`.
+As Russian macOS. Putting trashed files back → `Восстановить` / `Вернуть`.
 
 ## Sidebar vs side panel (`settings.askCmdr.enabled.description`)
 
-Finder's sidebar is `боковое меню`, so the Ask Cmdr side panel is `боковая панель` without a clash.
+Finder's sidebar is `боковое меню`, so Ask Cmdr's is `боковая панель`.
 
-## Left alone: Оставлено как есть over Без изменений (`fileOperations.cancelRollback.reason.*`, `askCmdr.renameUndo.skipReason.*`, `askCmdr.renameUndo.skipped`)
+## Left alone: Оставлено как есть (`fileOperations.cancelRollback.reason.*`, `askCmdr.renameUndo.skip*`)
 
-`Без изменений: {name}. Объект изменился…` contradicts itself, and `пропустить` is held for skip. Say
-`Оставлено как есть: {name}.`, then the reason; a folder names its head noun (`Папка {name} оставлена как есть.`).
+`Без изменений: {name}. Объект изменился…` contradicts itself; `пропустить` is skip. Folder:
+`Папка {name} оставлена как есть.`
 
-## Staged leftovers: retry on the next connection (`fileOperations.cancelRollback.stagedLeftover.*`)
+## Staged leftovers (`fileOperations.cancelRollback.stagedLeftover.*`)
 
-`попробует еще раз, когда в следующий раз подключится туда`, never a time; `туда` also replaces `к тому {volumeName}`.
+`попробует еще раз, когда в следующий раз подключится туда`: no time, and `туда` avoids `к тому {volumeName}`.
 
-## Trash refusals don't say часть (`errors.write.trashRefused.message.*`)
+## Hedges and totals stay honest (`errors.write.trashRefused.message.*`, `errors.write.insufficientSpace.*`)
 
-The count can be the whole selection, so `часть выбранных объектов` can be false. Use a counted label:
-`macOS не переместила в Корзину выбранные объекты (не перемещено: {count})`.
+The count can be all of them: `не переместила в Корзину выбранные объекты (не перемещено: {count})`, ❌ `часть`. Space
+is an estimate: `Возможно, … недостаточно места`, `Может потребоваться до {required}`, ❌ `только`; keep all three
+ideas.
 
-## Insufficient space keeps its hedge (`errors.write.insufficientSpace.*`)
+## Counts without a plural param (`queue.chip.ariaLabel`, `*TimeoutUnit`, `queryUi.age.*`, `transfer.fileOnly.*`, `*chatMemoryChanged`)
 
-The English is an estimate ("may", "up to"): `Возможно, в целевом месте недостаточно места`,
-`Может потребоваться до {required}`. ❌ No alarmist `только`; keep all three ideas of the suggestion.
+Counted label colon, a unit fitting every number (`сек.`, `Б`, `байт`), or a real plural: chat memory got an ICU plural
+on `{tokens}` (`16 384 токена`).
 
-## Counts without a plural param (`queue.chip.ariaLabel`, `settings.network.customTimeoutUnit`, `queryUi.age.years`, `transfer.fileOnly.*`)
+## Fragments fit their hosts (`indexing.*eta*`, `indexing.*Eta`, `*readOnlyDevice*`, `search.coverage.*`)
 
-A noun or participle after a pre-formatted number can't agree (`1 процентов`, `1 секунд`, `5 байты`). Use a counted
-label colon (`готово {percentText} %`, `Скопировано: {n}, пропущено: {m}`), a unit that fits every number (`сек.`, `Б`,
-`байт`), or a real plural.
-
-## Chat memory size (`askCmdr.event.chatMemoryChanged`)
-
-An ICU plural on `{tokens}` (`16 384 токена`), since the English's `{tokens, number}` plus a fixed noun can't agree.
-
-## ETA fragments start lowercase (`indexing.eta.*`, `indexing.scan.etaRough`, `indexing.progress.percentEta`, `indexing.overall.eta`)
-
-Hosts embed `осталось …` mid-line (`95 %, осталось 8 с`), so every ETA fragment is lowercase; "roughly" goes after:
-`{eta} (примерно)`.
-
-## Fallback names must fit their hosts (`errors.write.readOnlyDevice.*`, `search.coverage.unnamedDrive`, `search.coverage.uncovered.*`, `search.coverage.toast.*`)
-
-A host with a type noun plus a noun-phrase fallback doubles it (`диск этот диск`). Every drive host says `диск {drive}`,
-so the fallback is the postpositive `без названия`. The read-only lines use a colon frame,
-`{deviceName}: доступ только для чтения.`, because the value can be a device, an archive, or a `.git` history.
+ETAs are lowercase, "roughly" after (`{eta} (примерно)`). Drive hosts say `диск {drive}`, so the fallback is
+`без названия`; read-only lines use `{deviceName}: доступ только для чтения.` (a device, archive, or `.git` history).
 
 ## Disconnect mid-transfer (`errors.write.deviceDisconnected.sided.*`)
 
-Counts as `(скопировано: {done} из {total})`, since `из {total} файлов` breaks at 1 in a raw string; the other drive is
-`на том {counterpart}` (`том` is the same in the accusative, so the name stays bare).
+`(скопировано: {done} из {total})` (raw string, no plural); `на том {counterpart}` (accusative = nominative).
 
 ## Cloud folders: active voice (`errors.provider.*`)
 
-`Этой папкой управляет **{name}**` over the calqued passive `Эта папка управляется сервисом **{name}**`; the active
-keeps `{name}` nominative.
+`Этой папкой управляет **{name}**`, keeping `{name}` nominative.
 
-## Managed by the organization (`settings.managed.*`, `ai.translateError.managed.title`, `updates.status.managedOff`)
+## Managed by the organization (`*anaged*`)
 
-"Your organization manages X" → `<X in the instrumental> управляет ваша организация` (`Этим параметром управляет …`):
-fronting the object stops the indeclinable `ИИ` reading as the subject. The card title is
-`Под управлением вашей организации`.
-
-## IT team: ИТ-отдел (`ai.translateError.managed.body`, `ai.managed.hostNotAllowed`, `askCmdr.error.managedByOrganization`)
-
-The everyday word for an employer's or school's IT staff; MS's `ИТ-службы` reads institutional. "Can tell you" →
+Front the object (`Этим параметром управляет ваша организация`) so indeclinable `ИИ` isn't read as the subject; card
+`Под управлением вашей организации`. IT staff → `ИТ-отдел` (MS `ИТ-службы` reads institutional):
 `В вашем ИТ-отделе подскажут, …`.
 
-## Retry durations (`servers.paneState.retryKeepsTrying`, `servers.paneState.retryTotalSeconds`/`.retryTotalMinutes`)
+## Servers (`servers.paneState.*`, `*autoReconnect*`, `*needsStoredSecret`, `*editNearbyHint`, `*addedToast`, `*timedOut`, `*.timeout`)
 
-`Всего попытки продлятся {duration}.` with accusative branches (`# минуту / минуты / минут`), over
-`в течение {duration}`, which needs a genitive the nominative branches can't give.
+- Retry: `Всего попытки продлятся {duration}.` with accusative branches; `в течение` needs a genitive.
+- `Автоматически подключаться снова`: `Подключаться автоматически` reads as at startup.
+- `Сервер {name}`, not `Объект` / `Хост`; `Сервер «{server}» не ответил вовремя` (the noun carries the masculine). SSH
+  keeps `ключ хоста`.
 
-## Reconnect, not connect at startup (`servers.sheet.autoReconnect`, `servers.sheet.autoReconnectInfoLabel`, `servers.sheet.needsStoredSecret`)
+## Busy marker: (занято) (`menu.volume.*Busy`)
 
-`Автоматически подключаться снова` over `Подключаться автоматически`, which reads as "connect at startup", the exact
-misreading the label exists to prevent. Quoted copies follow.
+The neuter state word after the unchanged label, on all four.
 
-## Known servers are named сервер (`servers.hub.editNearbyHint`, `servers.sheet.addedToast`, `servers.refusal.timedOut`, `servers.paneState.connecting`, `servers.paneState.placeOnServer`)
+## Size unit symbols: Cyrillic (`common.sizeUnit.*`, `*fileSizeFormat.*`, `*refuseBody`)
 
-The type is known, so `Сервер {name}`, not the robotic `Объект {name}` or `Хост {host}`. SSH keeps `ключ хоста`. The
-status column's `Подключено` beside masculine `Сохранен` is an open question (`review-queue.md`).
+Finder SP22–SP27. IEC `КиБ`…`ПиБ` (Dolphin, MS); SI `кБ`, lowercase per GOST 8.417 (`К` reads as 1024).
 
-## Busy marker: (занято) (`menu.volume.ejectBusy`, `menu.volume.disconnectBusy`, `menu.volume.forgetServerBusy`, `menu.volume.forgetSavedPasswordBusy`)
+## Space key: Пробел (`settings.*suppress*.description`, `*spaceSelects`)
 
-The `busy` ruling's neuter state word, appended to the unchanged base label, the same marker on all four.
+macOS ru names it so (`⇧Пробел`).
 
-## Size unit symbols: Cyrillic (`common.sizeUnit.*`, `settings.appearance.fileSizeFormat.*`, `viewer.copyDialog.refuseBody`)
+## Global shortcut marker (`*globalShortcutHint`, `downloads.shortcutRow.*`, `*modifiedTooltip`)
 
-Cyrillic, as Finder (SP22–SP27). Binary: IEC `КиБ`…`ПиБ` (Dolphin, MS). SI: `кБ`, `МБ`…`ПБ`; lowercase `к` as GOST 8.417
-reads `К` as 1024.
+`(глобальное)` everywhere, card `Глобальные сочетания`, so hint and list quote each other. Modified →
+`Отличается от значения по умолчанию` (`Изменено значение…` says the default changed).
 
-## Space key: Пробел (`settings.fileExplorer.suppressQuickLookHint.description`, `settings.fileViewer.suppressBinaryWarning.description`, `fileExplorer.quickLookHint.spaceSelects`)
+## Don't assign a chore (`updates.toast.readyDetail`, `suggestedOps.reversibleDeleteWritten`)
 
-macOS ru names the space bar `Пробел`, so `⇧Пробел`; `Enter`, `Escape`, and `Tab` stay Latin keycaps.
+`…или просто откройте Cmdr в следующий раз: обновление установится само.`; `Отмена удалит созданные файлы`, ❌
+`Для отмены удалите…` (deleting by hand).
 
-## Global shortcut marker (`settings.fileSystemWatching.globalShortcutHint`, `downloads.shortcutRow.commandName`, `downloads.shortcutRow.scopeTitle`)
+## Two transfer-time plurals (`transfer.fileOnly.allDone`, `transfer.*DuringMove`)
 
-The marker is `(глобальное)` everywhere (an implied `сочетание`, the `global` ruling's form), and the card title names
-its noun: `Глобальные сочетания`. One form, so the hint and the shortcut list quote each other exactly.
-
-## Modified-from-default tooltip (`shortcuts.section.modifiedTooltip`, `downloads.shortcutRow.modifiedTooltip`)
-
-`Отличается от значения по умолчанию` over `Изменено значение по умолчанию`, which says the default itself changed.
-
-## The update needs no action (`updates.toast.readyDetail`)
-
-`Перезапустите сейчас или просто откройте Cmdr в следующий раз: обновление установится само.` over
-`… или получите обновление …`, which reads as a second chore.
-
-## Reversible delete marker (`suggestedOps.reversibleDeleteWritten`)
-
-`Отмена удалит созданные файлы` over `Для отмены удалите созданные файлы`, which tells the user to delete files by hand.
-
-## Two transfer-time plurals (`transfer.fileOnly.allDone`, `transfer.appearedDuringMove`, `transfer.changedDuringMove`)
-
-One tense in every branch (`появился … и остался там` / `появилось … и они остались там`), never `остается` in one
-branch and `осталось` in another; one folder is `в папке {folderName}`, never `Исходные папки: {folderName}`.
+One tense per branch set; one folder is `в папке {folderName}`, ❌ `Исходные папки: {folderName}`.
 
 ## Search result wording (`search.imageResults.similarTo`, `search.walkHandoff.*`)
 
-A heading of similar images is `Похожие на {name}`, not `Похоже на` ("seems like"); results name the query in quotes
-(`По запросу «{label}»`) over the calque `для {label}`.
+`Похожие на {name}` (`Похоже на` = seems like); `По запросу «{label}»` over `для {label}`.
 
-## Eject toasts: the holders lead (`errors.eject.unmountRefusedByApps`, `errors.eject.unmountRefusedByProcesses`, `errors.eject.unmountRefused`, `errors.eject.busy`)
+## Eject toasts: the holders lead (`errors.eject.*`, `fileExplorer.navigation.eject*VolumeAriaLabel`)
 
-`{apps} еще держат там файлы открытыми.`: the list is the subject in the present tense, so no gender and no doubled
-`Приложения … и другие приложения`. `busy` covers copy, move, and delete: `Cmdr еще работает с файлами на нем`.
+`{apps} еще держат там файлы открытыми.` (present, no gender, no doubled `приложения`); busy →
+`Cmdr еще работает с файлами на нем`. Labels quote the volume: `Извлечь «{name}»`.
 
-## Timeout server lines (`errors.mount.timeout`, `errors.shareList.timeout`)
+## Keychain apps (`ai.secretError.key*Body`, `servers.refusal.certificateUntrusted`)
 
-`Сервер «{server}» не ответил вовремя` over `Cmdr ожидал, но «{server}» не ответил`: the type noun carries the
-masculine, and `ожидал` has no object.
-
-## Keychain apps (`ai.secretError.keychainBody`, `ai.secretError.keyringBody`, `servers.refusal.certificateUntrusted`)
-
-Name the app with a head noun (`Откройте приложение «Связка ключей»`); two Linux apps are two quoted names
-(`«Пароли» или «Связки ключей»`), never one slashed name.
+`Откройте приложение «Связка ключей»`; two Linux apps are two quoted names, never slashed.
 
 ## Download vs load in memory (`ai.toast.downloadingTitle`, `ai.local.downloadModel`, `ai.toast.startingDescription`)
 
-Names keep macOS's `Загрузить` / `Загрузка`; where one surface speaks of both fetching and loading a model, prose says
-`скачать` / `скачивание` for the fetch and `загрузка в память` for the load.
+Names keep `Загрузить`; prose with both senses: `скачать` for the fetch, `загрузка в память` for the load.
 
 ## Operation context names the folder (`fileOperations.operationConflict.context`)
 
-`{destination}` is a folder name, so `Копирование в папку {destination}`: the head noun takes the case, no colon crutch.
+`Копирование в папку {destination}`.
 
-## Regex and Hex in chips (`queryUi.mode.regex.label`, `queryUi.recent.mode.regex`, `queryUi.ai.patternLabel.regex`, `viewer.search.regex`, `viewer.toolbar.viewMode.hex`)
+## Regex and Hex in chips (`*.regex*`, `*.hex`)
 
-Chips, toggles, and row labels say `Regex` and `Hex`, since every description asks for short and `Регулярное выражение`
-is 20 characters; prose and placeholders keep `регулярное выражение`.
-
-## Eject labels quote the volume (`fileExplorer.navigation.ejectVolumeAriaLabel`, `fileExplorer.navigation.ejectingVolumeAriaLabel`)
-
-`Извлечь «{name}»`, as Finder ru writes it: the quotes let a Cyrillic name (`Флешка`) stay nominative.
+Short slots say `Regex` / `Hex` (`Регулярное выражение` is 20 characters); prose keeps `регулярное выражение`.
 
 ## Open with and Reopen closed tab (`menu.context.openWith`, `menu.tab.reopenClosedTab`, `commands.tabReopen.label`)
 
-`Открыть в приложении` is live Finder's label (300795.title), so not `в программе`; `Открыть закрытую вкладку` is
-Chrome's Russian label as is.
+`Открыть в приложении` (Finder 300795.title); `Открыть закрытую вкладку` (Chrome ru).
 
-## Example email: name@example.com (`common.attachEmailPlaceholder`, `settings.updates.emailPlaceholder`, `onboarding.stepBeta.emailPlaceholder`)
+## Example email (`*mailPlaceholder`)
 
-A Latin `name@` over the literal `вы@example.com`: a Cyrillic local part isn't something anyone types into an email
-field.
+`name@example.com`: nobody types a Cyrillic local part.
 
-## NFS export is `общая папка` (`servers.sheet.nfsExport`)
+## NFS export is `общая папка` (`servers.*xport*`, `*LockedNfs`, `*nfsStartFolderHelp`)
 
 Over `экспорт` (reads as exporting), as Synology DSM ru says (kb.synology.com/ru-ru, 2026-10-22).

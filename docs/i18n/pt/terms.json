@@ -1078,7 +1078,7 @@
     ],
     "confidence": "confirmed",
     "sources": "macOS pt-BR AppKit FunctionKeyNames (Escape → Esc), macOS 27.0 26A428, 2026-09-23",
-    "decision": "Esc and full screen"
+    "decision": "Old macOS and old WebKit"
   },
   "estimate": {
     "chosen": "estimativa",
@@ -1248,7 +1248,7 @@
     "chosen": "tela cheia",
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR (FV20 Sair da Tela Cheia)",
-    "decision": "Esc and full screen"
+    "decision": "Old macOS and old WebKit"
   },
   "full-view": {
     "chosen": "visualização completa",
@@ -1608,7 +1608,7 @@
     "chosen": "Tipo",
     "confidence": "high",
     "sources": "macOS Finder pt-BR ArrangeByMenu (Kind → Tipo)",
-    "decision": "Select same kind"
+    "decision": "Selection dialog"
   },
   "later": {
     "chosen": "mais tarde",
