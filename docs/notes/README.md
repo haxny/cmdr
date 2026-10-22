@@ -24,6 +24,11 @@ Some notes here are load-bearing rather than historical. Those are grouped below
 - `smb2-030-qa-2026-10-14.md` — what the `smb2` 0.30.0 upgrade changed for a share user, how to see each change, and the
   four proposals it didn't build (streamed rows, resumable uploads, atomic landing, rename detection).
 
+**Runbooks for a one-off operation**, deleted once it's done:
+
+- `github-org-move.md`: moving the repo from `vdavid/cmdr` to the `getcmdr` org (#476): the swap script, what only David
+  can click, the transfer-day order, and how to verify or reverse the move.
+
 **Load-bearing for a decision that hasn't been made yet:**
 
 - `ipc-dead-code-audit.md`: every frontend wrapper and Tauri command nothing called, as of 2026-10-03, with why. **Three

@@ -1,0 +1,131 @@
+# Moving the repo to the `getcmdr` GitHub org: runbook
+
+The transfer-day runbook for #476 (`vdavid/cmdr` to `getcmdr/cmdr`). The audit behind it (what moves, what breaks,
+what's identity-bound) is in the issue. Delete this note once the move is done and verified.
+
+## What's ready
+
+- **v0.55.0 accepts both names** (#481): the advisory link allowlist and its Go check, the changelog commit-URL guards,
+  and `release-finish`, `pnpm land`, `release-ci-gate.sh`, `release.sh`, and `release-evidence` ask `gh repo view` for
+  the name. Pre-move app versions vet advisory links with their own allowlist, so keep writing advisory URLs as
+  `vdavid/cmdr` (they redirect) until builds before v0.55.0 age out.
+- **The swap is a script, re-run on transfer day**: `./scripts/org-move.sh -cutoff vX.Y.Z [-dry-run] [-v]`. The policy
+  is `scripts/org-move/rules.go`: the file types it rewrites, the paths it leaves alone (each with a reason), the
+  mentions it keeps wherever they appear, and hand-written edits a rename can't express. It's idempotent, prints every
+  change and every kept mention by reason, and exits 1 on a mention no rule covers or an edit whose anchor is gone.
+- **The `worktree-org-move-swap-v2` branch is a preview** of the script's output (2026-10-22, `-cutoff v0.55.0`, 116
+  files) for review. ❌ Don't rebase or land it: `main` moves too fast. Regenerate on the day.
+- **What the swap rewrites**: `github.com/vdavid/cmdr`, `git@github.com:vdavid/cmdr`, `repos/vdavid/cmdr`,
+  `-R`/`--repo vdavid/cmdr`, bare `vdavid/cmdr` and `vdavid/cmdr#N`, and the runner service name
+  `actions.runner.vdavid-cmdr.*`.
+- **What it leaves alone**: `CHANGELOG.md`, blog posts, `docs/notes/` (this note included), the hackathon record,
+  `apps/website/public/latest.json` (the next release rewrites it), the advisory link allowlist and its Go mirror, the
+  release and landing tools (they resolve the name), local paths (`~/projects-git/vdavid/cmdr`), every advisory link
+  (`.../security/advisories/GHSA-...`), the pre-v0.51.0 `release.yml` signer, and other repos (`cmdr-reports`,
+  `cmdr-fsevent-stream`, `vdavid/tap` and `homebrew-tap`, `smb2`, `mtp-rs`, David's `github.com/vdavid` profile).
+- **The hand-written edits**: `/trust`, `/trust/development`, `docs/guides/releasing.md`, and the attest job's comment
+  in `release-pipeline.yml` show both attestation repos, naming the `-cutoff` release as the last one built under
+  `vdavid/cmdr`. The release guide gains the "keep advisory links on the old name" line. Comments that said "if the repo
+  moves" switch to past tense.
+- **Decision: issue refs like `vdavid/cmdr#605` swap** in live code and docs. **Why**: both forms redirect, but a bare
+  `#605` is ambiguous next to `cmdr-reports` and `smb2`, and a swapped tree makes every later `git grep vdavid/cmdr` hit
+  a deliberate one. Dated notes and the changelog keep theirs.
+- **Gotcha: the swap can't go green before the transfer.** The website's Docker build fetches `latest.json` from
+  `github.com/getcmdr/cmdr/releases`, which 404s until the repo lives there (`docker-build` failed that way on the
+  preview, 2026-10-22).
+
+## Before the day
+
+1. **David: org settings** at github.com/organizations/getcmdr/settings. Already set (checked via the API, 2026-10-22):
+   Free plan, 2FA required, base permission Read. Still to confirm (the API needs `admin:org`): Actions "allow all"
+   (matching the repo), default workflow permissions "read", fine-grained PATs allowed, GitHub CLI approved if OAuth app
+   restrictions are on. Optional: verify `getcmdr.com` (an agent can add the DNS TXT record via the Cloudflare API).
+2. **David: install the GitHub Apps on the org**, scoped to `cmdr`, before the transfer so there's no gap: Renovate
+   (also a bypass actor on the `main: PR with approval` ruleset, integration 2740), GitGuardian, Claude, and Lighthouse
+   CI. Confirm the full list at github.com/settings/installations (the API can't enumerate it).
+3. **Agent: collect the CRA evidence of the last pre-move release** (`./scripts/release-evidence.sh verify` and
+   `evidence`, `docs/guides/releasing.md` steps 12 and 13) if it isn't done. After the move the script resolves
+   `getcmdr/cmdr` and checks attestations and `latest.json` URLs against it, so a pre-move release fails there. (Unlike
+   `release-finish`, it has no `-signer-workflow` override yet.)
+4. **Agent: export the live rulesets** as a backup:
+   `gh api repos/vdavid/cmdr/rulesets/<id> > <scratch>/ruleset-<id>.json` for each id in
+   `gh api repos/vdavid/cmdr/rulesets`. Four today: `Release tags (v*)`, `main: CI OK required`,
+   `main: PR with approval`, `main: no force-push or deletion`. Only the middle two live in `.github/rulesets/`.
+5. **Pick the day**: a quiet evening right after a release, so no release straddles the move.
+
+## Transfer-day order
+
+1. **Pause the agents and the land queue.** No `pnpm land` running, nothing about to land:
+   `gh pr list -R vdavid/cmdr --state open` and `gh run list -R vdavid/cmdr --status in_progress` show only what you
+   expect. A `pnpm land` already running resolved the old name at start; let it finish or stop it.
+2. **No release in flight.** `gh run list -R vdavid/cmdr --workflow release.yml --limit 5` all completed,
+   `gh release list -R vdavid/cmdr --limit 3` shows no draft, and the latest tag is on `origin/main` (its merge-back
+   landed). In `local` signing mode a release's finishing run re-attests the published release, which would mix names on
+   one release.
+3. **Note the cutoff**: `CUTOFF=$(gh release view -R vdavid/cmdr --json tagName -q .tagName)`.
+4. **David: transfer.** `vdavid/cmdr` > Settings > Danger zone > Transfer > `getcmdr`, keep the name `cmdr`. ❗ Never
+   create a new `vdavid/cmdr` while the repo lives in the org: a new repo at the old name takes over the path, and every
+   redirect (web, API, git remotes, links in shipped app versions) breaks. A repo transfer doesn't retire the old name,
+   so nothing protects it but this rule.
+5. **Agent: verify what carried over.** `gh api repos/getcmdr/cmdr/rulesets` (the four above),
+   `gh api repos/getcmdr/cmdr/environments` (`release`, `copilot`), `gh secret list -R getcmdr/cmdr` (nine) and
+   `--env release` (eight Apple secrets), `gh variable list -R getcmdr/cmdr` (`RELEASE_UPDATE_SIGNING`),
+   `gh api repos/getcmdr/cmdr/hooks` (`https://api.getcmdr.com/webhook/github`, `issues`), private vulnerability
+   reporting, secret scanning, and push protection. Missing rulesets: `pnpm land rulesets -apply` for the two in
+   `.github/rulesets/`, the backup JSON for the other two.
+6. **Agent: update the remotes.** Both laptops: `git remote set-url origin git@github.com:getcmdr/cmdr.git` and
+   `gh repo set-default getcmdr/cmdr` in the main clone (worktrees share it). The M1's clone. `/opt/cmdr` on the Hetzner
+   box (`https://github.com/getcmdr/cmdr.git`, as the `deploy-cmdr` user). All keep working through the redirect; update
+   them anyway.
+7. **Credentials.** David issues a fine-grained PAT for the M1 with `getcmdr` as resource owner (a fine-grained PAT has
+   one owner, so the `vdavid` one sees nothing in the org, and failures look like plain 404s); an agent stores it as
+   `GH_TOKEN` in the M1's sops store. David regenerates `LHCI_GITHUB_APP_TOKEN` for the org install of Lighthouse CI; an
+   agent sets it with `gh secret set LHCI_GITHUB_APP_TOKEN -R getcmdr/cmdr`.
+8. **Agent: run the swap on fresh `main` and land it.**
+   - `WT=$(~/.claude/scripts/new-worktree.sh org-move-swap)`, then in it `./scripts/org-move.sh -cutoff "$CUTOFF"`. It
+     must exit 0. Read its "Kept on the old name" section, and fix `rules.go` for anything new that's misfiled.
+   - Commit the output, run `pnpm check oxfmt` (rewraps lines that grew) and commit that too, then run the lanes the
+     swap touches:
+     `pnpm check website api-server dashboard go desktop-svelte-eslint desktop-svelte-check desktop-svelte-tests desktop-rust-rustfmt desktop-rust-clippy`
+     (Rust comments change). `docker-build` passes now.
+   - Re-run `./scripts/org-move.sh -cutoff "$CUTOFF" -dry-run`: "Would swap 0", every edit "already applied".
+   - `git grep vdavid/cmdr -- ':!docs/notes/' ':!CHANGELOG.md'` lists only what the "Kept" section explains.
+   - `pnpm land`. It's the first push under the org: watch CI, both `main` rulesets, Renovate, GitGuardian, and the
+     website deploy webhook fire.
+9. **Resume the agents.** A session that cached the old name in a running `pnpm land` restarts it.
+
+## Verification checklist
+
+- `curl -sI https://github.com/vdavid/cmdr` answers `301` to `getcmdr/cmdr`, and
+  `gh api repos/vdavid/cmdr -q .full_name` says `getcmdr/cmdr`.
+- `git ls-remote https://github.com/vdavid/cmdr HEAD` works (old clones and remotes).
+- `gh attestation verify <a v0.55.0 asset> --repo vdavid/cmdr --signer-workflow vdavid/cmdr/.github/workflows/release-pipeline.yml`
+  still passes. Expected through the API redirect, never tested before the move.
+- `https://getcmdr.com/download/latest/aarch64` and `https://api.getcmdr.com/update-check/0.54.0?arch=aarch64` still
+  resolve to working assets, before and after the swap deploys the api-server.
+- A test issue on `getcmdr/cmdr` reaches the backlog board through the webhook; close it after.
+- The website header, footer, `/trust` (both names and the cutoff), and the star count; the dashboard's star and release
+  sections.
+- Scorecard: `gh workflow run scorecard.yml -R getcmdr/cmdr` republishes now (history restarts at the new URL), then the
+  README badge and `https://scorecard.dev/viewer/?uri=github.com/getcmdr/cmdr` show a score.
+- Renovate and GitGuardian report on the swap's PR; `pnpm land` printed `getcmdr/cmdr`.
+
+## After the move
+
+- **Outside the repo**: the vault notes naming `vdavid/cmdr` (priority: the CRA technical file, the security policy,
+  `github-backlog-project.md`), the `infra` repo's Hetzner and M1 docs, and the report-triage role's defaults (its clone
+  URL). David edits the external listings (MacUpdate, AlternativeTo) from `brand/listings/`.
+- **The next release, with David**: `release-finish` resolves `getcmdr/cmdr`, attests, and verifies under it; check the
+  tap bump and `release-evidence.sh verify`.
+- **Later, if wanted**: a merge queue for landing (needs a `merge_group:` trigger in `ci.yml` first, or required checks
+  never report on queue entries). `cmdr-reports`, the backlog board, and the Homebrew tap stay under `vdavid` (the
+  audit's recommendation).
+
+## If it's ever reversed
+
+- Transfer it back to `vdavid` under the same name: a transfer doesn't retire `vdavid/cmdr`, so the name is free to take
+  back. Revert the swap's commits with a normal land, then run this runbook's chores in reverse (remotes, PATs, apps).
+- Keep the empty `getcmdr` org, so nobody takes `getcmdr/cmdr` and breaks the redirects from it.
+- Attestations from releases built in the org name `getcmdr/cmdr` for good, so `/trust` would list both names the other
+  way round.
+- ❌ Never create a new `vdavid/cmdr` while the repo lives in the org.
