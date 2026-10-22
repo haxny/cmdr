@@ -36,7 +36,11 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
 - Strip milestone tags from code, comments, test names, and docs before each commit
   (`docs/guides/multi-agent-refactors.md`).
 - Gates per milestone: `pnpm check --fast && pnpm check svelte-tests-related`, plus `pnpm check clippy` when Rust moved.
-  Run commands in the foreground only.
+  Run commands in the foreground only. `--fast` runs no Rust tests, so a Rust milestone also runs its own new and
+  touched tests by name (`cargo nextest run -p <crate> <filter>`, `docs/tooling/testing.md`); CI runs `rust-tests`, the
+  Linux and macOS jobs, and the Docker lanes. Named extras where a milestone needs them: `bindings-fresh` (never in CI,
+  ❗ run it whenever `bindings.ts` moves), `message-keys-unused` after adding or deleting a key, `disk-images` for
+  real-image cells (macOS only, never in CI), `clippy-linux` when `cfg(target_os)` gating moved.
 
 ## The code today (fresh look, 2026-10-22)
 
@@ -256,7 +260,9 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     fallback), and it runs as a normal user on Linux CI too.
   - macOS only: listing `/` (firmlinks: `Users`, `Applications`, `Library`, …) and the parent of a
     `testing::disk_images` mount point both equal `get_single_entry` per entry. Bulk reports what these COVER; the cells
-    catch a missed re-stat.
+    catch a missed re-stat. The mount-point cell is a real-image test: `#[ignore]`d in its own `real_image` module,
+    registered in `diskImageLaneTestAtoms` and the `disk-image` nextest group (`scripts/check/checks/DETAILS.md` § "The
+    disk-image lane"). Add an HFS+ image cell beside it (the harness makes HFS+), so M2b's bulk path runs on real HFS+.
   - Write the helper so M2b can run every cell against both listers (a lister parameter, defaulting to today's).
   - A sandbox `EPERM` entry is an intended difference (§ Decisions): if a cell lists one (any listing under
     `/private/var/db`), it expects today's minimal row from `read_dir` and the real entry from bulk, per lister. ❌ No
@@ -272,11 +278,14 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - Owner names come from a process-wide cache (`entry.rs:14`); compare names, ❌ never assume uid strings.
   - The fields write paths act on are `is_symlink`, `is_directory`, `inode`, `size`, and `name` (§ "The code today",
     "Who reads a local listing's fields"): every one needs a cell that goes red when perturbed, not only a JSON diff.
-  - A test needing FAT or exFAT uses `testing::disk_images` (macOS), ❌ never its own `hdiutil` (`cmdr-fs/CLAUDE.md`).
-    Add one FAT32 or exFAT image cell: it's the fallback path M2b must keep.
+  - ❌ No FAT or exFAT image cell, and never an own `hdiutil`: an FSKit `msdos` unmount kernel-panicked a Mac, so the
+    harness makes only APFS and HFS+ (`cmdr-fs/DETAILS.md` § "`testing::disk_images`"). The `read_dir` path a FAT volume
+    takes is covered by running every cell through `Lister::ReadDir` (M2b) and by Linux CI; a real exFAT stick is on
+    David's QA list.
   - Gate macOS-only cells with `#[cfg(target_os = "macos")]`; the suite runs on Linux CI too.
 - **Test plan**: these ARE the tests. All green on today's code; each verified red against a perturbed field.
-- **DONE**: suites green, `pnpm check --fast`, `pnpm check clippy`. Committed alone.
+- **DONE**: the new cells green by name, `pnpm check disk-images`, the gates incl. clippy and `clippy-linux`. Committed
+  alone.
 
 ### M2a: one attribute-buffer decoder in `cmdr-fs`
 
@@ -403,12 +412,13 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     `entry_from_lstat`), a hint-less `lstat` failure and a `BadRecord` (→ `read_dir` restart, no merged entries).
   - The `0444` dir takes the runtime fallback and yields M1's minimal rows.
   - `added_at` is set for a fresh file and changes after a `rename` into another folder; `get_single_entry` matches the
-    listing's `added_at`, mount points and `/`'s firmlinks included; a FAT or exFAT image goes through `read_dir` with
-    `added_at: None`.
+    listing's `added_at`, mount points and `/`'s firmlinks included.
+  - A `bulk_eligible` truth table over `f_fstypename` (`apfs`, `hfs` → bulk; `smbfs`, `exfat`, `msdos`, `nfs`, an
+    unknown name → `read_dir`): the only automated proof that FAT and smbfs stay on `read_dir`.
   - Rerun `listing_bench parity` (zero differences) and `bench` at 100k against production; append both to the note.
-- **DONE**: as M1, plus the note updated, and the lister's part of `cmdr-local/CLAUDE.md` + `DETAILS.md` (the two
-  listers, how one is picked, the never-drop rule as a must-know, the TCC and dataless notes). `macos_metadata.rs` and
-  `reading::list_directory`'s enrichment stay until M3.
+- **DONE**: as M1 (M1's real-image cells now run both listers), plus the note updated, and the lister's part of
+  `cmdr-local/CLAUDE.md` + `DETAILS.md` (the two listers, how one is picked, the never-drop rule as a must-know, the TCC
+  and dataless notes). `macos_metadata.rs` and `reading::list_directory`'s enrichment stay until M3.
 
 ### M3: `SupportedDates` across every volume, and the two-phase leftovers removed
 
@@ -437,8 +447,10 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     `SmbVolume` that replaces it may answer differently. M4 makes the re-read refresh the dates (§ Decisions).
   - Removing a `FileEntry` field changes `bindings.ts`: `pnpm bindings:regen`.
 - **Test plan**: conformance assertion red first against a deliberately lying `InMemoryVolume`; per-backend declaration
-  cells where a backend has a mapping test already.
-- **DONE**: gates incl. clippy;
+  cells where a backend has a mapping test already. SMB, SFTP, WebDAV, S3, and NFS conformance cells are `#[ignore]`d
+  Docker cells: the default lane never runs them, so run `pnpm check rust-integration-tests` once (or count CI's run),
+  ❌ never call them green from `rust-tests`.
+- **DONE**: gates incl. clippy, `bindings-fresh`;
   `rg -n 'extended_metadata|extendedMetadata|ExtendedMetadata|macos_metadata|opened_at|openedAt'` empty, the
   `listing_bench` example included (drop its `nsurl` method, `main.rs:121`, and its `opened_at` handling,
   `main.rs:238-246`; its xattr probe returns a bare value).
@@ -492,7 +504,7 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   it under a LikeFiles Size sort; diff reports an `added_at` change; a re-read whose volume now claims Added (swap the
   `InMemoryVolume` between reads) publishes a batch with `effective_sort_by` even for a one-row listing; search sort
   with Added answers Modified's order and says so; MCP `sort` accepts `added`.
-- **DONE**: gates incl. clippy.
+- **DONE**: gates incl. clippy, `bindings-fresh`.
 
 ### M5: frontend plumbing, commands, and menus
 
@@ -534,7 +546,7 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   persisted `sortBy`, the next `resortListing` call, and MCP's `sort` all carry Added, and `adoptListing` installs the
   partner's effective column; a diff batch with `effectiveSortBy` updates the pane; Rust menu snapshot and command map
   tests.
-- **DONE**: gates incl. clippy.
+- **DONE**: gates incl. clippy, `message-keys-unused`.
 
 ### M5b: View > Sort by checkmarks
 
@@ -615,9 +627,9 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
 - **Test plan**: `displayed-date.test.ts` (every column, fallback cases); measurer cells proving the width grows for a
   longer shown label and includes the glyph; tooltip ordering and suffix; `file-row-a11y.test.ts` phrases per column; a
   `mountFullList()` cell rendering Added cells under an Added effective sort.
-- **DONE**: gates. Then hand David a screenshot-ready state (a pane sorted by Added on APFS, and one on a FAT image in
-  the fallback, light and dark) for the header label, glyph, and column width; ❌ the agent doesn't judge the layout
-  itself.
+- **DONE**: gates, `message-keys-unused` (the `lastMoved` deletion). Then hand David a screenshot-ready state (a pane
+  sorted by Added on APFS, and one inside a zip archive in the fallback, light and dark) for the header label, glyph,
+  and column width; ❌ the agent doesn't judge the layout itself.
 
 ### M7: Full header Sort by menu and click semantics
 
@@ -658,9 +670,11 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
 - **Test plan**: Rust menu builder test (items, check state, ids distinct from the bar's); a measurer cell whose width
   grows by the chevron's constant; Vitest for the click column choice (requested date, fallback, non-date sort), the
   pick handler (sorts the event's pane, ignores the checked column), the chevron's keydown (opens with an anchor, no
-  click bubbles, focus stays), `aria-expanded`, and the pane-chrome walk reaching the chevron; one Playwright cell for
-  right-click → pick → order, only if no unit test reaches the native menu round trip.
-- **DONE**: gates incl. clippy; `desktop-e2e-playwright` if a cell was added.
+  click bubbles, focus stays), `aria-expanded`, and the pane-chrome walk reaching the chevron. ❌ No Playwright cell for
+  the popup: native menus can't be automated (`docs/guides/testing/manual-checklist.md`), so the round trip is on
+  David's QA list.
+- **DONE**: gates incl. clippy, `message-keys-unused`, and `desktop-e2e-playwright` (`pane-controls.spec.ts` walks the
+  header row the chevron joins).
 
 ### M8: Brief mode and SelectionInfo
 
@@ -697,8 +711,9 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - Docs: `cmdr-local/DETAILS.md` (supported dates; M2b wrote the lister part), `cmdr-listing/DETAILS.md` (effective
     sort), `cmdr-fs/DETAILS.md` (the matrix), `views/` and `selection/` C+D.md (the displayed-date rule as a must-know),
     `docs/notes/file-metadata-tiers.md` (Added is no longer deferred; last-use stays deferred, #694),
-    `src-tauri/src/menu/DETAILS.md` (sort items, the header menu). Then wipe-readiness: this spec's durable intent lives
-    beside the code.
+    `src-tauri/src/menu/DETAILS.md` (sort items, the header menu), and the native-menu items of § "David's QA list" in
+    `docs/guides/testing/manual-checklist.md`, so pre-release passes keep checking them. Then wipe-readiness: this
+    spec's durable intent lives beside the code.
 - **Intentions**: nothing essential lives only in a tooltip; the next agent finds every rule beside the code.
 - **Landmines**: `claude-md-length` (600-word alarm), `docs-reachable`, `docs-dead-links`; describe current state, ❌ no
   milestone tags.
@@ -722,8 +737,26 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   `claude-created` issue, ❌ don't change it silently in this refactor.
 - **Test plan**: the dual-run cell is the red guard (perturb one `attr_buf` offset by hand: it must fail);
   `cmdr-index`'s walker and reconcile suites green unedited.
-- **DONE**: gates incl. clippy; `walker/DETAILS.md`'s bulk-reader parse section points at `cmdr-fs` for the layout.
-  Landable and revertible alone; the date sorts never wait on it.
+- **DONE**: gates incl. clippy, `disk-images` (the index's vanish pin reads real APFS and HFS+ images through this
+  reader); `walker/DETAILS.md`'s bulk-reader parse section points at `cmdr-fs` for the layout. Landable and revertible
+  alone; the date sorts never wait on it.
+
+## David's QA list (end of effort)
+
+Hand these over as ready states (fresh dev build, fixtures in place); the agent judges none of them.
+
+1. The original report: a real `~/Downloads` sorted by Added, then a fresh download with an old mtime (`curl -R -O`)
+   lands on top.
+2. TCC: Desktop, Documents, Downloads, and iCloud Drive in a fresh dev build, granted and not (M2b). One evicted iCloud
+   file stays `dataless` after a listing, if one is at hand.
+3. Fallbacks no CI can reach: an exFAT or FAT USB stick, an smbfs mount then its upgrade to direct SMB (the glyph
+   follows the re-read), a zip archive, and a search pane. Glyph, toast, and order each time.
+4. Visuals: the Full header label, glyph, and width (M6), the chevron's placement (M7), and Brief's narrowest pane at
+   100% and the largest text size, English and German (M8), light and dark.
+5. Native menus: View > Sort by checkmarks follow focus, tab switch, and pane swap; after rebinding ⌘3, Name is still a
+   checked check item; the checkmark draws beside an item's icon; the header popup from right-click in both views and
+   from the chevron by keyboard; a right-click on the unfocused pane's header sorts that pane.
+6. VoiceOver: the date header walk, the chevron read as a menu button, and a fallback sort's toast spoken once.
 
 ## Invariants register
 
