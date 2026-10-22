@@ -54,9 +54,9 @@
     })
 
     // On open and on each step of the read while open; a newer ask overtakes an older answer.
+    const overviewAsk = $derived(open ? { progress } : null)
     $effect(() => {
-        if (!open) return
-        void progress
+        if (overviewAsk === null) return
         const mine = ++asked
         void loadOverview().then((answer) => {
             if (mine === asked && answer !== null) overview = answer
