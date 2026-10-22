@@ -189,19 +189,50 @@ takes the user's name only through the landing rename.
 - **Metadata caps**: a file's and a folder's mode and a folder's date. No `CREATED` (v3 has none) and no `XATTRS`
   (dropped, ❌ no `._` sidecars), so the copy's loss note names them. `apply_metadata` takes a fresh handle by LOOKUP.
 
+### Polling for changes
+
+`poll.rs`, the one exception to "subscribe, don't poll": NFSv3 has no change notification. **Decision: one `GETATTR` per
+directory a pane shows, every 3 s, and a `FullRefresh` only when its `(mtime, ctime)` moved.** Why: 3 s feels live, a
+`GETATTR` is about 100 bytes each way, and a NAS answers it from its inode cache. `listing_watch_coverage` stays `None`:
+a change that comes and goes inside a tick is missed, so a poll can't vouch for a pre-flight.
+
+- **What's shown** is `ListingHost::open_listing_paths(volume_id)`, an in-memory read of the listing store. With nothing
+  shown, nothing is sent, and the poller stops after one quiet tick; a pane's listing (`list_for_pane`, ❌ never a
+  scan's) starts it again, and so does a connect, since panes may already show an id a redial replaced.
+- **The baseline is the listing's own stamp**: `Nfs3Client::list_dir` answers the folder's attributes from its FIRST
+  page, so a change between the listing and the next tick is a change, and one during a later page re-lists.
+- ❗ **Only while `Connected`**, ❌ never a `GETATTR` on top of the backoff. The round runs through `noting`, so a poll
+  that finds the server gone is the detector when nobody else is asking.
+- The handle comes from the cache the listing filled, so a steady tick costs no `LOOKUP`; a `STALE` one is looked up
+  once more, and a folder gone from under its name is reported once. A change for a directory the store no longer shows
+  after the round is dropped.
+
+### Coming back
+
+The lifecycle is `http_session`'s (§ "The volume"); what NFS adds is pinned in `reconnect_test.rs` and
+`connection_drop_test.rs`. A refused redial is transient at every step, so the volume rests in `Disconnected`, ❌ never
+`NeedsCredentials`; the switch off dials nothing unattended, and `attempt_reconnect` answers `NotSupported`. A call in
+flight on a replaced connection finishes there (the connection closes when its last call ends), and only the new
+`connection_generation` reads as the volume's state, which is what the transfer engine's outage wait keys on. A start
+folder edited on a connected place moves the live params (`NfsVolume::set_start_folder`), so the next redial and every
+`params()` reader see it at once.
+
 ### Which side a test lives on
 
 - `fake_nfs.rs` (in-process, over TCP or `tokio::io::duplex`): listings over both READDIR shapes, the cache rules, the
   window under reordered and short READs, links, the redial, the silence ladder on a paused clock, and the write side
-  (`writes_test.rs`, `mutation_test.rs`). Its knobs (`fake_nfs/knobs.rs`): `rotate_verifier` and
-  `rotate_verifier_on(procedure, nth)`, `answer_writes_short`, `set_write_max`, `refuse_next(procedure, status)`,
-  `touch`, `drop_one_reply`, `go_silent`, `reset_mid_reply`, `refuse_dials`, `require_reserved_port`,
-  `refuse_readdirplus`; and what a cell reads back: `calls(procedure)`, `call_log`, `last_create`, `largest_write`.
+  (`writes_test.rs`, `mutation_test.rs`), the poller (`poll_test.rs`), and the reconnect policy (`reconnect_test.rs`).
+  Its knobs (`fake_nfs/knobs.rs`): `rotate_verifier` and `rotate_verifier_on(procedure, nth)`, `answer_writes_short`,
+  `set_write_max`, `refuse_next(procedure, status)`, `touch`, `drop_one_reply`, `go_silent`, `reset_mid_reply`,
+  `refuse_dials`, `require_reserved_port`, `refuse_readdirplus`; and what a cell reads back: `calls(procedure)`,
+  `call_log`, `last_create`, `largest_write`.
 - `conformance_test.rs` (`#[ignore]`d, `/insecure`): every applicable `cmdr_fs::volume::conformance` cell, plus a 9 MiB
   `UNSTABLE` round trip. The link cells don't run: this backend makes no links.
 - `fixture_test.rs` (`#[ignore]`d, the knfsd fixture): the seeded tree byte-exact, 200 MiB streamed, `read_range`,
   links, the split, a missing export, `/secure` refused through a published port and accepted on the Linux direct path,
   `list_exports`, `guess_identity` answering 1000.
+- `connection_drop_test.rs` (`#[ignore]`d, the knfsd fixture through a `TcpProxy` on its NFS port): refused and silent
+  drops, recovery on its own, and the switch off.
 - `volume::testing` (`testing` feature, also re-exported at the root): the fixture's server, params, `connect_insecure`,
   `scratch_dir`, and `clean_deep`, for the app's suites (`nfs_transfer_*` in
   `apps/desktop/src-tauri/src/operations_host/backend_suites/`).
@@ -212,6 +243,6 @@ Every module is private, so all 10 promises arrive as root re-exports (`cmdr-git
 zero: `NfsServer`, `NfsIdentity`, `NfsConnectionParams`, `NfsConnectError`, `NfsVolume`, `connect_nfs_volume`,
 `list_exports`, `guess_identity`, `NfsIdentityGuess`, and `NfsIdentitySource`. The app needs each one: the params to
 dial and save a place, the error to map onto `ServerConnectOutcome`, the volume to register and to edit live
-(`sharing_connection`, `set_auto_reconnect`), and the two discovery calls for the add form. `index-crate-isolation` is
-pinned at exactly 10 / 0 / 0 (measured 2026-10-20). `volume::testing` rides the root as `testing` only under the
-`testing` feature, for the app's Docker suites.
+(`sharing_connection`, `set_auto_reconnect`, `set_start_folder`), and the two discovery calls for the add form.
+`index-crate-isolation` is pinned at exactly 10 / 0 / 0 (measured 2026-10-20). `volume::testing` rides the root as
+`testing` only under the `testing` feature, for the app's Docker suites.

@@ -92,6 +92,9 @@ most entangled one, with archive, MTP, and local POSIX checked for anything SMB 
 - `volumes_with_open_listings` ⇐ `Listings::volume_ids_with_listings`. For a DEVICE backend, one level above the volumes
   it serves: an MTP phone's event names a bare PTP handle, and resolving it costs a round trip per storage, so the
   backend asks which storages a pane is showing and searches only those.
+- `open_listing_paths` ⇐ `Listings::open_listing_paths`. For a backend with nothing to subscribe to: NFSv3's poller
+  sends one `GETATTR` per directory this answers, per tick, and nothing when it answers empty. Defaults to empty, so
+  every host without panes needs no change.
 - `local_watch_coverage` ⇐ `Listings::listings_for_local_path` + `watcher::coverage_for_listings`. Only the local
   backend asks: it doesn't know its own volume id, so it asks by absolute path, once per directory a walker visits. A
   pure in-memory read; the coverage was decided when the watch was armed.
