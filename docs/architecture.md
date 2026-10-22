@@ -27,8 +27,8 @@ All under `apps/desktop/src/lib/`.
   `apps/desktop/src/lib/security-notices/CLAUDE.md`
 - `state-recovery/`: the toast that says Cmdr couldn't read one of its own state files and started it fresh, naming
   where the old copy went; drains the backend's queue. See `apps/desktop/src/lib/state-recovery/CLAUDE.md`
-- `servers/`: Remote places the app dials (SFTP, WebDAV, S3): the `sftp://user@host:port/path` spelling, the connect
-  flow that picks its move by the volume's standing, the ONE sign-in sheet every credential ask in the app opens
+- `servers/`: Remote places the app dials (SFTP, WebDAV, S3, NFS): the `sftp://user@host:port/path` spelling, the
+  connect flow that picks its move by the volume's standing, the ONE sign-in sheet every credential ask in the app opens
   (`SignInSheet.svelte`, add / sign-in / edit), the address parser behind add mode, the words for a connect that
   stopped, and which server the palette's server commands act on. See `apps/desktop/src/lib/servers/CLAUDE.md`
 - `file-explorer/git/`: Git browser frontend: breadcrumb chip, status columns, reactive `RepoInfo` store, git portal
@@ -171,10 +171,10 @@ All under `apps/desktop/src-tauri/src/`.
   bounded scan and classification behind "which app is still using this drive" (`file_system/volume/DETAILS.md` §
   "Eject")
 - `file_system/volume/backends/`: what a caller reaching a backend from the app still has to know. Every backend is a
-  crate (`cmdr-local`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`,
-  `cmdr-git`), imported by crate name at its call sites, and each one's app-side tests sit beside the app code they
-  assert on. What stays app-side is what needs the app: archive routing and the archive LRU, SMB's mount and upgrade
-  passes, and edit / transfer driving
+  crate (`cmdr-local`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`, `cmdr-adb`,
+  `cmdr-mtp`, `cmdr-git`), imported by crate name at its call sites, and each one's app-side tests sit beside the app
+  code they assert on. What stays app-side is what needs the app: archive routing and the archive LRU, SMB's mount and
+  upgrade passes, and edit / transfer driving
 - `file_system/git/`: the app's two git seams, the `.git/` listing overlay and the wiring (the parked portal, the
   toggle, `volume_holds_real_repos`, and the `git-state-changed` event). The route itself sits with the registry in
   `file_system/volume/manager/git_routing.rs`; everything a repository answers, typed git-error classification
@@ -494,9 +494,15 @@ the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cm
   `apps/desktop/src-tauri/src/s3_costs/CLAUDE.md`. The plan: `docs/specs/s3-support-plan.md`. Decisions:
   `crates/cmdr-s3/DETAILS.md`; guardrails: `crates/cmdr-s3/CLAUDE.md`. Its Docker servers:
   `apps/desktop/test/s3-servers/README.md`.
-- `crates/cmdr-nfs/`: everything Cmdr says to an NFSv3 server, through our own user-space client, so a `secure` export
-  opens without root or an OS mount: an `NfsVolume` per export, plus the add form's export listing and uid guess. Being
-  built out from `docs/specs/nfs-support-plan.md`; guardrails: `crates/cmdr-nfs/CLAUDE.md`.
+- `crates/cmdr-nfs/`: everything Cmdr says to an NFSv3 server (QNAP, Synology, TrueNAS, any Linux `knfsd`), through our
+  own user-space client, so a `secure` export opens without root or an OS mount. Our own XDR codec and ONC RPC transport
+  (pipelined calls, a reserved source port, the silence ladder), MOUNT and portmap, and an `NfsVolume` per export:
+  listings, windowed reads, `UNSTABLE` writes vouched for by `COMMIT`, claim-then-rename, folders, delete, and
+  reconnect, with no secret anywhere (`AUTH_SYS` sends a uid and a gid, a setting of the place). Change detection is the
+  one poll in the app: a `GETATTR` per folder a pane shows, every 3 s. The app keeps the place list and the connect
+  wiring (`apps/desktop/src-tauri/src/network/nfs_*.rs`) plus the add form's two questions (`commands/nfs.rs`: the
+  export list and the uid guess). Decisions: `crates/cmdr-nfs/DETAILS.md`; guardrails: `crates/cmdr-nfs/CLAUDE.md`. Its
+  Docker server: `apps/desktop/test/nfs-servers/README.md`.
 - `crates/cmdr-adb/`: everything Cmdr says to an Android device over ADB. `AdbVolume` per attached device, rooted at the
   device's real `/`, spoken to the ADB server on loopback (the sync service for stat, list, and transfers, `shell,v2`
   for the verbs it lacks, `host:track-devices` for hotplug), with a typed errno-based error policy and a fake ADB server

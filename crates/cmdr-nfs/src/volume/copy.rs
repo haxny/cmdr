@@ -11,7 +11,7 @@
 //!   `ATTR_ACMODTIME` does: the source's own atime isn't carried.
 //! - ❗ v3 has no creation date, so `CREATED` stays out of the caps, and xattrs
 //!   are dropped with the copy's loss note saying so (no AppleDouble `._`
-//!   sidecars). The plan's § "Product decisions".
+//!   sidecars). `crates/cmdr-nfs/DETAILS.md` § "Mutations".
 
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};

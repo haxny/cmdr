@@ -33,8 +33,8 @@ use crate::errors::map_nfs_error;
 use crate::proto::nfs3::{Fattr3, FileHandle, FileType, FsInfo, Nfs3Client, NfsError};
 use crate::transport::MAX_PAYLOAD;
 
-/// How many READs one stream keeps in flight. SFTP's measured optimum, the
-/// starting point the plan names; to be re-measured against a NAS.
+/// How many READs one stream keeps in flight. SFTP's measured optimum, taken
+/// as the starting point; to be re-measured against a NAS.
 pub(super) const READ_WINDOW_DEPTH: usize = 8;
 
 /// Chunks buffered between the producer and the consumer. Peak memory per

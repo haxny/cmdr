@@ -234,15 +234,13 @@ var surfaceGuardedCrates = []struct {
 		},
 	},
 	{
-		// Measured 2026-10-20, at the crate's first landing (the stubbed surface
-		// the parallel milestones code against), and set to exactly that. The
-		// WebDAV shape, minus the unattended-reconnect answer (an NFS place has no
-		// secret, so it never waits on one), plus what an export needs: the
-		// server it's on (`NfsServer`), who it acts as (`NfsIdentity`), and the
-		// add form's two questions before a place exists (`list_exports`,
-		// `guess_identity`, `NfsIdentityGuess`, `NfsIdentitySource`). EVERY module
-		// is private, so all ten promises arrive as root re-exports (`cmdr-git`'s
-		// shape).
+		// Measured 2026-10-20 and set to exactly that. The WebDAV shape, minus
+		// the unattended-reconnect answer (an NFS place has no secret, so it
+		// never waits on one), plus what an export needs: the server it's on
+		// (`NfsServer`), who it acts as (`NfsIdentity`), and the add form's two
+		// questions before a place exists (`list_exports`, `guess_identity`,
+		// `NfsIdentityGuess`, `NfsIdentitySource`). EVERY module is private, so
+		// all ten promises arrive as root re-exports (`cmdr-git`'s shape).
 		// Item-by-item: `crates/cmdr-nfs/DETAILS.md` § "The public surface is
 		// capped".
 		Name: "cmdr-nfs",

@@ -69,10 +69,10 @@ it so. Both live on named volumes, ❌ never the image layer: knfsd refuses to e
 
 ## Why knfsd
 
-The plan's first candidate was unfs3, a user-space server that needs no privilege. It's a partial stand-in for a NAS
-(read in its source, `nfs.c`, `mount.c`, `unfsd.8` on `master`, 2026-10-20): it answers READDIRPLUS with
-`NFS3ERR_NOTSUPP`, checks `secure` on MNT only, and ignores everything but the mode in CREATE's attributes. knfsd is the
-real thing, so it's the only server here. The READDIR fallback is `fake_nfs.rs`'s job.
+unfs3, a user-space server that needs no privilege, was the other candidate. It's a partial stand-in for a NAS (read in
+its source, `nfs.c`, `mount.c`, `unfsd.8` on `master`, 2026-10-20): it answers READDIRPLUS with `NFS3ERR_NOTSUPP`,
+checks `secure` on MNT only, and ignores everything but the mode in CREATE's attributes. knfsd is the real thing, so
+it's the only server here. The READDIR fallback is `fake_nfs.rs`'s job.
 
 What it costs, and why it's paid:
 

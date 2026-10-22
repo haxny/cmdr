@@ -336,40 +336,40 @@ Everything below is optional per the trait (methods default to `Err(NotSupported
 
 At-a-glance view of which capabilities each current volume opts into. Use this when picking a reference implementation for your new volume.
 
-| Capability | Local | MTP | SMB | InMemory | Archive | S3 |
-| --- | --- | --- | --- | --- | --- | --- |
-| `list_directory` / metadata | yes | yes | yes | yes | yes | yes |
-| Mutations (create/delete/rename) | yes | yes | yes | yes | no: read-only (mutation planned) | yes: folder markers, one-node delete, small-file rename by copy |
-| `rename_work` | `OneCall` (default) | `OneCall` (default) | `OneCall` (default) | `OneCall`, or `CopyThenDelete` (knob: `with_renames_by_copy`) | `OneCall` (default; renames refused) | `CopyThenDelete` for a folder or an object past 64 MiB |
-| `delete_files` | default (one by one) | default | default | default, batch sizes recorded | default | yes: `DeleteObjects`, 1,000 keys a request |
-| `copy_on_server` | default (`copy_within`: none) | default | yes: copychunk within one share | default | default | yes: within one account, across buckets unless the provider forbids it |
-| `supports_export` | yes | yes | yes | yes | yes | yes |
-| `supports_streaming` | yes | yes | yes | yes | yes | yes |
-| `supports_unknown_length_writes` | yes | no | yes | no | no | yes: multipart, or one PUT for a short stream |
-| `publishes_writes_whole` | no | no | no | no (knob: `with_whole_publish`) | no | yes: PUT and multipart completion |
-| `supports_atomic_replace_rename` | yes | no | yes: `ReplaceIfExists` | no | no | no |
-| `open_read_stream` | yes: spawn_blocking | yes: owned download | yes: channel-backed | yes: in-memory | yes: core `ArchiveEntryReader` | yes: ranged GET, body pulled per chunk |
-| `read_range` | yes: `pread` | yes: `GetPartialObject64` | yes: positioned READ | no | no | yes: ranged GET |
-| `supports_share_links` | no | no | no | no | no | yes: presigned GET, signed offline |
-| `renames_can_copy` | no | no | no | no (knob: `with_renames_by_copy`) | no | yes: a folder, or an object past the part floor |
-| `write_from_stream` | yes: spawn_blocking | yes: streaming | yes: streaming | yes: in-memory | no (mutation planned) | yes: final key, one streamed PUT or a multipart upload |
-| `can_watch_listings` | yes: FSEvents/inotify | no (own USB watcher) | no (own smb2 CHANGE_NOTIFY watcher) | no | no (own content watch on the `.zip`) | no (S3 has no change feed a client holds) |
-| `listing_watch_coverage` | path-level (WATCHER_MANAGER); `ThisMachineOnly` on a network mount | volume-level `EveryWriter` (device connected) | volume-level `EveryWriter` (watcher + Direct) | `None` (default) | `EveryWriter` while the content watch lives | `None` (default) |
-| `supports_local_fs_access` | yes (default) | no | no | no | no (inner paths) | no |
-| `paths_are_os_visible` | yes (inherited) | no (inherited) | yes: OVERRIDE while its mount lives | no (inherited) | no (inherited) | no (inherited) |
-| `local_path` | yes: `Some(root)` | `None` | `None` | `None` | `None` | `None` |
-| `notify_mutation` | default (std::fs) | yes: MTP `get_metadata` | yes: smb2 `get_metadata` | yes: in-memory | n/a (read-only) | yes: the write's own verifying HEAD, else a stat |
-| `create_directory_errors_on_existing_dir` | yes (default) | no (protocol allows dup names) | yes (default) | yes (default) | n/a (read-only) | yes: checked before the marker is written |
-| `scanner` / `watcher` (indexing) | yes / yes | no | no | no | no | no (every request costs money) |
-| `rerooted` | yes: new instance | `None` (device-anchored) | yes: new instance, shared session; `None` for an unrecorded root when anchored inside the share | `None` (default) | `None` (inner paths) | `None` (default) |
-| `on_unmount` | default | default | yes: drops smb2 session | default | default | yes: drops the client |
-| `on_superseded` | default | default | yes: retires id, keeps session | default | default | yes: retires id, keeps client |
-| `connection_state` | `None` | `None` | yes | `None` | `None` | yes |
-| `backend_kind` | `Local` (default) | `Mtp` | `Smb` | `Archive` | `GitPortal` | `S3` |
-| `space_poll_interval` | 2 s (default) | 5 s | 5 s | `None` | `None` | `None` |
-| `lane_key` / `get_space_info` | mount root / statvfs+NSURL | device serial / device | server+share / smb2 | root or override / configured | **parent's** / **parent's** | account (endpoint + key id) / `NotSupported` |
-| `max_concurrent_ops` | 4..=16 (core-based) | 1 (USB bulk serial) | `network.smbConcurrency` | 32 | 1 (initial cap) | 4 (constant) |
-| `operations_are_local` | yes: `true` | `false` | `false` | yes: `true` | `false` | `false` |
+| Capability | Local | MTP | SMB | InMemory | Archive | S3 | NFS |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `list_directory` / metadata | yes | yes | yes | yes | yes | yes | yes: READDIRPLUS (READDIR + LOOKUP fallback) |
+| Mutations (create/delete/rename) | yes | yes | yes | yes | no: read-only (mutation planned) | yes: folder markers, one-node delete, small-file rename by copy | yes: claim-then-rename, never-recursive delete |
+| `rename_work` | `OneCall` (default) | `OneCall` (default) | `OneCall` (default) | `OneCall`, or `CopyThenDelete` (knob: `with_renames_by_copy`) | `OneCall` (default; renames refused) | `CopyThenDelete` for a folder or an object past 64 MiB | `OneCall` (default) |
+| `delete_files` | default (one by one) | default | default | default, batch sizes recorded | default | yes: `DeleteObjects`, 1,000 keys a request | default |
+| `copy_on_server` | default (`copy_within`: none) | default | yes: copychunk within one share | default | default | yes: within one account, across buckets unless the provider forbids it | default (v3 has none) |
+| `supports_export` | yes | yes | yes | yes | yes | yes | yes |
+| `supports_streaming` | yes | yes | yes | yes | yes | yes | yes |
+| `supports_unknown_length_writes` | yes | no | yes | no | no | yes: multipart, or one PUT for a short stream | no |
+| `publishes_writes_whole` | no | no | no | no (knob: `with_whole_publish`) | no | yes: PUT and multipart completion | no |
+| `supports_atomic_replace_rename` | yes | no | yes: `ReplaceIfExists` | no | no | no | yes: one `RENAME` |
+| `open_read_stream` | yes: spawn_blocking | yes: owned download | yes: channel-backed | yes: in-memory | yes: core `ArchiveEntryReader` | yes: ranged GET, body pulled per chunk | yes: windowed positioned READs, depth 8 |
+| `read_range` | yes: `pread` | yes: `GetPartialObject64` | yes: positioned READ | no | no | yes: ranged GET | yes: the same window |
+| `supports_share_links` | no | no | no | no | no | yes: presigned GET, signed offline | no |
+| `renames_can_copy` | no | no | no | no (knob: `with_renames_by_copy`) | no | yes: a folder, or an object past the part floor | no |
+| `write_from_stream` | yes: spawn_blocking | yes: streaming | yes: streaming | yes: in-memory | no (mutation planned) | yes: final key, one streamed PUT or a multipart upload | yes: `UNSTABLE` WRITE spans, each vouched for by a `COMMIT` |
+| `can_watch_listings` | yes: FSEvents/inotify | no (own USB watcher) | no (own smb2 CHANGE_NOTIFY watcher) | no | no (own content watch on the `.zip`) | no (S3 has no change feed a client holds) | no (polls: one `GETATTR` per shown folder every 3 s) |
+| `listing_watch_coverage` | path-level (WATCHER_MANAGER); `ThisMachineOnly` on a network mount | volume-level `EveryWriter` (device connected) | volume-level `EveryWriter` (watcher + Direct) | `None` (default) | `EveryWriter` while the content watch lives | `None` (default) | `None` (default; a poll can't vouch for a pre-flight) |
+| `supports_local_fs_access` | yes (default) | no | no | no | no (inner paths) | no | no |
+| `paths_are_os_visible` | yes (inherited) | no (inherited) | yes: OVERRIDE while its mount lives | no (inherited) | no (inherited) | no (inherited) | no (inherited) |
+| `local_path` | yes: `Some(root)` | `None` | `None` | `None` | `None` | `None` | `None` |
+| `notify_mutation` | default (std::fs) | yes: MTP `get_metadata` | yes: smb2 `get_metadata` | yes: in-memory | n/a (read-only) | yes: the write's own verifying HEAD, else a stat | yes: the shared `PatchSource` patcher, one stat |
+| `create_directory_errors_on_existing_dir` | yes (default) | no (protocol allows dup names) | yes (default) | yes (default) | n/a (read-only) | yes: checked before the marker is written | yes: `MKDIR`'s `EXIST` |
+| `scanner` / `watcher` (indexing) | yes / yes | no | no | no | no | no (every request costs money) | no |
+| `rerooted` | yes: new instance | `None` (device-anchored) | yes: new instance, shared session; `None` for an unrecorded root when anchored inside the share | `None` (default) | `None` (inner paths) | `None` (default) | `None` (default) |
+| `on_unmount` | default | default | yes: drops smb2 session | default | default | yes: drops the client | yes: ends the session, `UMNT` best effort |
+| `on_superseded` | default | default | yes: retires id, keeps session | default | default | yes: retires id, keeps client | yes: retires id, keeps connection |
+| `connection_state` | `None` | `None` | yes | `None` | `None` | yes | yes |
+| `backend_kind` | `Local` (default) | `Mtp` | `Smb` | `Archive` | `GitPortal` | `S3` | `Nfs` |
+| `space_poll_interval` | 2 s (default) | 5 s | 5 s | `None` | `None` | `None` | 5 s |
+| `lane_key` / `get_space_info` | mount root / statvfs+NSURL | device serial / device | server+share / smb2 | root or override / configured | **parent's** / **parent's** | account (endpoint + key id) / `NotSupported` | server (host + canonical port) / `FSSTAT` |
+| `max_concurrent_ops` | 4..=16 (core-based) | 1 (USB bulk serial) | `network.smbConcurrency` | 32 | 1 (initial cap) | 4 (constant) | 4 (constant) |
+| `operations_are_local` | yes: `true` | `false` | `false` | yes: `true` | `false` | `false` | `false` |
 
 Legend: `yes` = implemented, `no` = opted out (default or explicitly), ⚠️ = implemented but suboptimal (memory-heavy or otherwise worth revisiting).
 
@@ -377,6 +377,10 @@ Legend: `yes` = implemented, `no` = opted out (default or explicitly), ⚠️ = 
 writes (to the final key: `publishes_writes_whole`), copies on the server within the account, and mints share links
 (`crates/cmdr-s3/CLAUDE.md`). A folder or a big object renames by copy (`rename_work`). Its `lane_key` is the ACCOUNT,
 since every bucket under one key shares the endpoint's request budget.
+
+`NfsVolume` is one export on an NFSv3 server, through Cmdr's own user-space client (`crates/cmdr-nfs/CLAUDE.md`). Its
+`lane_key` is the SERVER, since two exports on one NAS share its disks and its link. It has no change notification to
+subscribe to, so it is the one backend that polls, and only the folders panes show (`ListingHost::open_listing_paths`).
 
 `ArchiveVolume` is the read-only zip backend (`crates/cmdr-archive/CLAUDE.md`); its `lane_key` and
 `get_space_info` uniquely delegate to a **parent** volume (the volume storing the `.zip`), so archive work shares the

@@ -1,43 +1,39 @@
 # cmdr-nfs
 
 The NFSv3 backend: our own user-space client (ONC RPC over TCP, MOUNT, NFS) and a `Volume` per export, so a `secure`
-export opens from an unprivileged process with no OS mount. Same lifecycle shape as `crates/cmdr-webdav`, minus the
-secret. The plan it's built from: `docs/specs/nfs-support-plan.md`.
+export opens from an unprivileged process with no OS mount. WebDAV's lifecycle (`crates/cmdr-webdav`), minus the secret.
 
 ## Module map
 
-- `params.rs`: `NfsServer` (host, port, the fixture's portmap port override), `NfsIdentity` (uid, gid),
-  `NfsConnectionParams` (the place: server, canonical export, identity, start folder, auto-reconnect).
-- `errors.rs`: `NfsConnectError`, every variant from a number the server sent; `nfsstat3` and call failures →
-  `VolumeError` with the path.
-- `xdr.rs` (bounded codec), `transport.rs` (`RpcConnection`: pipelined calls, reserved port, silence ladder), `proto/`
-  (`rpc`, `portmap`, `mount`, `nfs3`'s typed `Nfs3Client`), `dial.rs` (resolve → portmap → split + `MNT` → NFS
-  connection). DETAILS § "The protocol layer".
-- `volume/`: `mod.rs` (`NfsVolume`, `connect_nfs_volume`), `reconnect.rs` (the `http_session` client, no secret),
-  `handles.rs` (paths → handles), `query.rs`, `streams.rs` (the read window), `discovery.rs`, `volume_impl.rs`;
-  `writes.rs`, `mutation.rs`, `copy.rs`, `poll.rs` are the write and polling sides. `fake_nfs.rs`: the in-process
-  server. DETAILS § "The volume".
+- `params.rs` (`NfsServer`, `NfsIdentity`, `NfsConnectionParams`), `errors.rs` (every variant from a number the server
+  sent).
+- `xdr.rs` (bounded codec), `transport.rs` (`RpcConnection`), `proto/` (`rpc`, `portmap`, `mount`, `nfs3`'s
+  `Nfs3Client`), `dial.rs` (resolve → portmap → split + `MNT`).
+- `volume/`: `NfsVolume` and `connect_nfs_volume` (`mod.rs`), `handles.rs`, `streams.rs`, `writes.rs`, `mutation.rs`,
+  `copy.rs`, `poll.rs`, `reconnect.rs`; `fake_nfs.rs` is the in-process server.
 
 ## Must-knows
 
-- ❗ **v3 and `AUTH_SYS` only.** No v4, no Kerberos, no NLM, no UDP. A server without v3 is `NoNfsV3`, ❌ never a
-  fallback.
-- ❌ **Never classify by message.** `nfsstat3`, `mountstat3`, and the RPC stats map by number; the `String` in a variant
-  is a log-only diagnostic.
-- ❗ **Identity is `(host, canonical port, export)`**, minted only by `cmdr_fs::volume::nfs_volume_id` and
-  `nfs_app_root` through `NfsConnectionParams`. The uid and gid are a SETTING: ❌ never in an id or a path. The port is
-  the one the address named, else 2049, ❌ never what portmap answered.
-- ❗ **The app path carries the export as ONE escaped segment** (`nfs://nas:2049/volume1%2Fdata/photos`), so a path
-  alone names its volume. `cmdr_fs::volume::remote_paths` owns the grammar; `server-path-utils.ts` mirrors it.
+- ❗ **v3 and `AUTH_SYS` only.** A server without v3 is `NoNfsV3`, ❌ never a fallback.
+- ❌ **Never classify by message.** `nfsstat3`, `mountstat3`, and the RPC stats map by number; a variant's `String` is
+  log-only.
+- ❗ **Identity is `(host, canonical port, export)`**, minted only by `cmdr_fs::volume::nfs_volume_id` / `nfs_app_root`.
+  The port is the one the address named, else 2049, ❌ never portmap's answer. The uid and gid are a SETTING, ❌ never
+  in an id or a path.
+- ❗ **The app path carries the export as ONE escaped segment** (`nfs://nas:2049/volume1%2Fdata/photos`).
+  `cmdr_fs::volume::remote_paths` owns the grammar; `server-path-utils.ts` mirrors it.
 - ❗ **`connect_nfs_volume` resolves the export/folder split.** Register under the returned volume's `volume_id()` and
   save its `params()`, ❌ never the id of what was passed in.
 - ❗ **Cancel a call by dropping it**: the XID is forgotten, ❌ never the connection. Only `transport.rs` and `rpc.rs`
-  touch bytes; a stuck call is resent only when its `Procedure` is `Repeat::Safe`.
+  touch bytes; only a `Repeat::Safe` procedure is ever resent.
 - ❗ **Every wire-touching delegator wraps itself in `noting`**, and a dial answers only `DialRefusal::Transient`: no
-  secret means no credential states.
-- ❗ **Only real folders are cached, by their real path; a mutation goes through `dir_for_mutation`** (the parent chain
-  proven by `GETATTR` stamps), ❌ never a leaf's cached handle. DETAILS § "Handles".
-- ❌ **No `tauri`, no user-facing words** (`index-crate-isolation`). The public surface is capped: DETAILS § "The public
-  surface is capped".
+  secret, so no credential states.
+- ❗ **A mutation goes through `dir_for_mutation`** (the parent chain proven by `GETATTR` stamps), by
+  `dir handle + name`, ❌ never a leaf's cached handle.
+- ❗ **Nothing is reported written that a COMMIT didn't vouch for**, and a `force = false` rename claims the name first.
+  `write_is_single_shot` stays `false`: the engine stages.
+- ❗ **The poller sends nothing unless `Connected` and a pane shows the folder.**
+- ❌ **No `tauri`, no user-facing words** (`index-crate-isolation`); the public surface is capped at 10.
 
-Decisions and the surface audit: `DETAILS.md`.
+Decisions, the protocol rules, the write and rename paths, polling, and the test map: `DETAILS.md`. Read it before any
+non-trivial work here: editing, planning, reorganizing, or advising.

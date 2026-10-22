@@ -1,7 +1,8 @@
 # cmdr-nfs details
 
-Must-knows and the module map: `CLAUDE.md`. This file carries the decisions. The full design is
-`docs/specs/nfs-support-plan.md`.
+Read this before any non-trivial work here: editing, planning, reorganizing, or advising. Must-knows and the module map:
+`CLAUDE.md`. Where the design came from: `docs/specs/nfs-support-plan.md` (issue
+[#304](https://github.com/vdavid/cmdr/issues/304)).
 
 ## The model
 
@@ -41,10 +42,28 @@ typed export may still mount). `guess_identity` takes this Mac's identity as its
 common non-zero owner among the root's entries, ties to the lower uid) or `RootOwner` (the root's own, which is also the
 answer when a squashed probe is refused the listing).
 
+## The dependency decision
+
+**Decision (revisit in review): our own XDR types and codec, ❌ not `nfs3_types`.** Checked on crates.io's and GitHub's
+APIs, 2026-10-20: `Vaiz/nfs3` (`nfs3_types` 0.5.2, `nfs3_macros` 0.5.0, `nfs3_client` 0.9.0) is alive but thin (25
+stars, one maintainer, last push 2026-07-25). Why not take it:
+
+- **Its decoder allocates what the wire says**: `Opaque::unpack` does `vec![0u8; len]` from a server-sent `u32` before
+  reading a byte (read in its 0.5.2 source), so a hostile server can ask for 4 GiB per field. It also copies every READ
+  payload into an owned `Vec`, where `xdr.rs` hands out a `Bytes` slice of the record.
+- **`cargo deny` refuses it**: it's Unlicense, which `deny.toml`'s `[licenses].allow` doesn't list, and loosening that
+  needs David's OK.
+- **What it would save** is about 1,100 lines of type definitions plus MOUNT and portmap, mechanical against RFC 1813,
+  RFC 5531, and RFC 1833. The Unlicense is a public-domain dedication, so its definitions and test vectors may be read
+  as a cross-check with nothing owed.
+
+Fallback if our codec ever fights us: allow `Unlicense` and take `nfs3_types` for the type definitions only, decoding
+from a length-capped record and keeping `transport.rs` either way. `nfs3_client` is out regardless: one request in
+flight (upstream #29), undefined state after a failed reply (#157), IP literals only (#154), IPv4 only (#153).
+
 ## The protocol layer
 
-Our own ONC RPC client, no dependency (the plan's § "The dependency decision": `nfs3_types` allocates what the wire says
-and needs a license allowlist change).
+Our own ONC RPC client, no dependency (§ "The dependency decision").
 
 - **`xdr.rs`**: a `Decoder` over one received record (`Bytes`). Every length is checked against the field's limit and
   then against what's left before anything is sliced; opaque data (a READ payload) is a zero-copy slice. An array count
@@ -75,6 +94,18 @@ and needs a license allowlist change).
   LOOKUP left out, `BAD_COOKIE` restarting (signalled as `ListingEvent::Restarted`) up to three times.
 - **Why 20 s**: it sits well inside the 60 s metadata budget, so a GETATTR, LOOKUP, or READDIRPLUS whose reply was
   dropped is resent and answered instead of timing out (`transport_test.rs` pins it on a paused clock).
+- **`AUTH_SYS`** carries a stamp, this Mac's host name (at most 255 bytes), the uid, the gid, and `gids = [gid]` (RFC
+  5531 caps the list at 16 and the body at 400 bytes). A person's other groups aren't sent, so a file readable only
+  through a secondary group answers `PermissionDenied`. `root_squash` and `all_squash` are the server's business: no
+  detection, and a refusal reads as `PermissionDenied` with the path.
+- **Decision (revisit in review): the timeouts.** A 5 s TCP connect per address and 15 s for the whole dial; the silence
+  ladder at 5 s quiet, 5 s per probe, two probes (gone after 15 s, against the 30 s the other backends allow); 60 s on
+  metadata and mutations; none on READ and WRITE as a whole, where silence is the signal (WebDAV's rule). Why: #304 asks
+  for a friendly error in seconds, an RPC server answers `NULL` from its RPC layer even when busy, and a stopped `nfsd`
+  on a live host answers at once with a TCP reset, so a short ladder has no false alarms to fear.
+- **Why the reserved port works without root**: macOS lets an unprivileged process bind below 1024 (#304 dialed from
+  port 811 as uid 501). `SO_REUSEADDR` is on because a reconnect inside `TIME_WAIT` would otherwise exhaust the range,
+  and portmap and the probe dial ephemeral so a ladder probing every 5 s doesn't burn it.
 
 ## The dial
 
@@ -233,9 +264,22 @@ folder edited on a connected place moves the live params (`NfsVolume::set_start_
   `list_exports`, `guess_identity` answering 1000.
 - `connection_drop_test.rs` (`#[ignore]`d, the knfsd fixture through a `TcpProxy` on its NFS port): refused and silent
   drops, recovery on its own, and the switch off.
+- **The fixture** is real knfsd in Docker (`apps/desktop/test/nfs-servers/README.md`). Its `rpc.nfsd` and `rpc.mountd`
+  listen on the very numbers the host publishes, so a `GETPORT` answer means something on the host and a cell only moves
+  `portmap_port` (§ "The portmap port trick" there). `/secure` can only be refused from macOS, since every path OrbStack
+  offers rewrites the source port; the accepting half runs on Linux CI against the container's IP (the measurement: §
+  "Reaching /secure" there).
 - `volume::testing` (`testing` feature, also re-exported at the root): the fixture's server, params, `connect_insecure`,
   `scratch_dir`, and `clean_deep`, for the app's suites (`nfs_transfer_*` in
   `apps/desktop/src-tauri/src/operations_host/backend_suites/`).
+
+## Not built
+
+Deliberately out, so a reader doesn't take the gap for a bug: NFSv4, Kerberos, NLM locks, NFS over UDP, and WebNFS
+public handles; Bonjour discovery of NFS servers (the hub says so in one line instead); `._` sidecars, read or written;
+a link whose target is absolute or leaves the export (shown as a link, opening it is `NotSupported`); background
+indexing and thumbnails past what `read_range` gives; server-side copy (v3 has none); `MKNOD`, `LINK`, and `SYMLINK`;
+and a fuzz target for the decoder (the `webdav_propfind` pattern would fit).
 
 ## The public surface is capped
 

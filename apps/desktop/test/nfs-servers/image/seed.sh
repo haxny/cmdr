@@ -37,8 +37,8 @@ ln -s "photos/2024 summer/beach.txt" "$root/link-inside"
 ln -s "/etc/hostname" "$root/link-outside"
 
 # 0xE9 is `é` in latin-1 and isn't valid UTF-8 on its own. Listed nowhere,
-# counted, per the plan's non-UTF-8 decision. Kept in its own folder so the
-# root listing stays all-UTF-8.
+# counted (`crates/cmdr-nfs/DETAILS.md` § "Listings and reads"). Kept in its
+# own folder so the root listing stays all-UTF-8.
 python3 -c "open(b'$root/oddnames/caf\xe9.txt', 'w').write('latin-1')"
 printf 'ok\n' > "$root/oddnames/fine.txt"
 

@@ -4,7 +4,7 @@ Pull-tier docs for `src-tauri/src/network/`: architecture, flows, and decision r
 non-trivial work here. Must-know invariants and gotchas live in `CLAUDE.md`.
 
 Discover, browse, and mount SMB network shares on macOS and Linux, and hold the saved-server stores, the connect
-wiring, and the one-shot credential seam that SFTP and WebDAV share. Why SMB's auth flow is shaped the way it is:
+wiring, and the one-shot credential seam that SFTP, WebDAV, S3, and NFS share. Why SMB's auth flow is shaped the way it is:
 `docs/notes/smb-auth-flow-redesign.md`.
 
 Frontend counterpart: `apps/desktop/src/lib/file-explorer/network/CLAUDE.md` for the network browser, share picker,
@@ -1046,6 +1046,34 @@ gives each account the name of its most recently connected named place.
 ❗ **`cancel_connect` on an id nobody is running answers `false`** rather than raising: a click landing just after a
 connect finished is ordinary. And a `Cancelled` outcome never reaches `register` or `remember`, so a cancelled connect
 leaves no volume, no saved server, and no secret.
+
+### The NFS twin, a place per export, and no secret
+
+`nfs_known_places.rs` is the S3 store's shape (`nfs_known_places.json`): one entry per EXPORT, each its own volume with
+its own id (`cmdr_fs::volume::nfs_volume_id`, from host, the canonical port, and the export), pin, start folder, and
+switch, found by that id. The name is the SERVER's (one `KnownNfsServer` record per named host plus port, written by
+`adopt_typed_name`, the S3 account rule), and an export reads as its own path. `commands/servers/nfs_places.rs` groups
+the exports back under one hub row per server, whose id is its root export's place id.
+
+- **Decision (revisit in review): the uid and gid live in the entry, in plain JSON, ❌ not the Keychain.** `AUTH_SYS`
+  sends them with every call and proves nothing, so they're a preference like SMB's username, and a Keychain prompt in
+  front of a non-secret is friction. They're a SETTING of the place, ❌ not its identity, so fixing a typo later keeps
+  the id, the tabs, and the favorites.
+- **The id comes from what the dial RESOLVED.** `nfs_volume_wiring.rs` is WebDAV's three steps (dial, register retiring
+  the incumbent, remember), but `cmdr_nfs::connect_nfs_volume` splits a typed `/share/Public/photos` into the real
+  export and a start folder first, so the wiring registers under the returned volume's id and remembers its params.
+- **An edit to a connected place**: the name, the start folder, and the switch ride the live connection
+  (`live_server_edit.rs`, below). A changed uid or gid is a NEW connection, since every call's credential carries them:
+  it dials its own, confirms the start folder through it, and replaces the live volume through
+  `install_retiring_incumbent`, so transfers on the old connection finish there. A refusal at any step moves nothing.
+- **No address move.** The host, port, and export ARE the place, so `commands/servers/saves.rs` answers an edit naming
+  another one `AccountChanged`; `server_move.rs` only calls off and drops NFS dials to the old ids.
+- **No sign-in, anywhere.** The volume's `sign_in_prompt` is `Nothing`, and `commands/volume_sign_in.rs` answers
+  `Nothing` for a saved export that isn't connected (its fallback would be `Password`). Refusals are typed
+  (`NfsConnection`: `ExportNotFound`, `ExportRefused`, `ReservedPortRequired`, `NoNfsV3`, `TimedOut`, `Unreachable`), and
+  the frontend words each one (`apps/desktop/src/lib/servers/DETAILS.md` § "NFS in add mode").
+- **`manual_servers.rs` stays SMB-only**: an `nfs://` from Go to path or ⌘K opens the add sheet on NFS, which dials
+  through `connect_server`.
 
 ### Moving a pin takes its own writer
 

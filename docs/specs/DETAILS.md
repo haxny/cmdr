@@ -21,8 +21,10 @@ Read this before adding, wiping, or reorganizing a spec.
   backend with its own SigV4 layer, account → bucket places, server-side copies, and a rename capability so a folder
   rename on S3 runs as a real move. Issue: [#119](https://github.com/vdavid/cmdr/issues/119).
 - `nfs-support-plan.md`: **A stock NAS NFS export won't mount on a Mac without `sudo`, and Cmdr refuses `nfs://`.** Our
-  own user-space NFSv3 client in `crates/cmdr-nfs`, a reserved source port without root, pipelined reads and writes, and
-  polling for changes. Issue: [#304](https://github.com/vdavid/cmdr/issues/304).
+  own user-space NFSv3 client in `crates/cmdr-nfs`, a reserved source port without root, pipelined reads and
+  COMMIT-vouched writes, claim-then-rename, and polling for changes. Built; its decisions already live in
+  `crates/cmdr-nfs/DETAILS.md`, so it's ready to wipe once it lands. Open: the QNAP manual pass. Issue:
+  [#304](https://github.com/vdavid/cmdr/issues/304).
 - `elevated-file-operations.md`: **A user couldn't move root-owned files out of a folder their macOS user can't change,
   and had to finish with `sudo`.** An out-of-process native alert, a 24-hour Cmdr admin right, and a tiny on-demand root
   helper. Issues: [#107](https://github.com/vdavid/cmdr/issues/107), [#280](https://github.com/vdavid/cmdr/issues/280).

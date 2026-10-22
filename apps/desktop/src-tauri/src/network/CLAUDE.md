@@ -1,17 +1,16 @@
 # Network support
 
-The app-side half of SMB, plus the saved-server stores and connect wiring SFTP, WebDAV, and S3 share. Protocol layers:
-`crates/cmdr-smb/`, `crates/cmdr-sftp/`, `crates/cmdr-webdav/`, `crates/cmdr-s3/`. Frontend: `apps/desktop/src/lib/servers/CLAUDE.md`
-and `apps/desktop/src/lib/file-explorer/network/CLAUDE.md`.
+The app-side half of SMB, plus the saved-server stores and connect wiring SFTP, WebDAV, S3, and NFS share. Protocol
+layers: `crates/cmdr-smb/`, `crates/cmdr-sftp/`, `crates/cmdr-webdav/`, `crates/cmdr-s3/`, `crates/cmdr-nfs/`.
+Frontend: `apps/desktop/src/lib/servers/CLAUDE.md` and `apps/desktop/src/lib/file-explorer/network/CLAUDE.md`.
 
 ## Module map
 
 SMB (discovery, share listing with CLI fallbacks, mounting through `mod.rs::mount_share`, OS-mount → direct upgrade at
-launch, on mount, and on pane open),
-SFTP, WebDAV, and S3 (host keys, a saved-server store each, ❗ one entry per PLACE for S3, a `*_volume_wiring.rs` that
-dials and registers), and their
-shared seams (`connect_wiring.rs`, `server_list_file.rs`, `saved_server_fields.rs`, `one_shot_credentials.rs`,
-`credential_store.rs`). Every typed event: `events.rs`.
+launch, on mount, and on pane open), SFTP, WebDAV, S3, and NFS (host keys, a saved-server store each, ❗ one entry per
+PLACE for S3 and NFS, a `*_volume_wiring.rs` that dials and registers), and their shared seams (`connect_wiring.rs`,
+`server_list_file.rs`, `saved_server_fields.rs`, `one_shot_credentials.rs`, `credential_store.rs`). Every typed event:
+`events.rs`.
 
 ## Must-knows
 
@@ -50,9 +49,8 @@ shared seams (`connect_wiring.rs`, `server_list_file.rs`, `saved_server_fields.r
   (`note_found_under_portless`). ❌ Never delete a port-less key blind: it's also the 445 server's key.
 - **Saved-server lists: `server_list_file::{read, save}`, `lenient_entries` fields**, ❌ never `unwrap_or_default`.
 - **Only Cmdr's own mounts (and a favorite on an unsaved share) save an SMB share** (`smb_saved_shares.rs`), keyed by
-  server + share, ❌ never by account,
-  with the id the mount reported. An upgrade or watcher writing one invents history (`DETAILS.md` § "Saved
-  SMB shares").
+  server + share with the id the mount reported, ❌ never by account. An upgrade or watcher writing one invents history
+  (`DETAILS.md` § "Saved SMB shares").
 
-Architecture, flows, decisions, per-server switches, and smaller gotchas (ports, loopback, mDNS):
-`DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or advising.
+Architecture, flows, and decisions: `DETAILS.md`. Read it before any non-trivial work here: editing, planning,
+reorganizing, or advising.

@@ -1,20 +1,21 @@
 # Servers: details
 
 Depth for `CLAUDE.md`; read this before any non-trivial work here. Backend contracts: `crates/cmdr-sftp/DETAILS.md`,
-`crates/cmdr-webdav/DETAILS.md`, and `apps/desktop/src-tauri/src/server_volumes.rs`.
+`crates/cmdr-webdav/DETAILS.md`, `crates/cmdr-nfs/DETAILS.md`, and `apps/desktop/src-tauri/src/server_volumes.rs`.
 
 ## The model: account, place, pin
 
 Three levels. Every rule in this file is a consequence of them.
 
 1. **Account**: an endpoint plus an identity. An SMB host, an SFTP `user@host:port`, a WebDAV URL plus a username, an S3
-   endpoint plus an access key ID, later a Google account. It owns the credential, the trust (host keys, certificates,
-   refresh tokens), and the auto-reconnect switch. Saved, and never itself navigable.
+   endpoint plus an access key ID, an NFS server (host plus port, no identity: the uid is a setting of each export),
+   later a Google account. It owns the credential, the trust (host keys, certificates, refresh tokens), and the
+   auto-reconnect switch. Saved, and never itself navigable.
 2. **Place**: the mountable thing under an account. An SMB share, an SFTP or WebDAV root, an S3 bucket or the account
-   root that lists the buckets, later a shared drive. A place becomes a `VolumeInfo`, and it is what tabs, favorites,
-   and paths point at. SFTP and WebDAV have exactly one place per account; SMB and S3 have many, which is why the SMB
-   host → shares step is the general shape rather than an oddity (`../file-explorer/network/DETAILS.md` § "The pure
-   modules beside it" has the hub's account → places rows).
+   root that lists the buckets, an NFS export, later a shared drive. A place becomes a `VolumeInfo`, and it is what
+   tabs, favorites, and paths point at. SFTP and WebDAV have exactly one place per account; SMB, S3, and NFS have many,
+   which is why the SMB host → shares step is the general shape rather than an oddity
+   (`../file-explorer/network/DETAILS.md` § "The pure modules beside it" has the hub's account → places rows).
 3. **Pin**: whether a place shows in the volume switcher.
 
 ❗ **Why three levels and not "a server is a volume".** A server is not plugged in, and nothing else reminds a person it
@@ -46,11 +47,12 @@ scrolls past their own disks. The pin IS the cap, and the user holds it.
 An SFTP place's app-facing paths are `sftp://<user>@<host>:<port>/<server path>`; a WebDAV place's are
 `webdav://<user>@<host>:<port>/<remote path>`; an S3 place's are the ACCOUNT's,
 `s3://<access key id>@<host>:<port>/ <bucket>/<key>`, with a bucket place rooted at `…/<bucket>` and the account root at
-`…/`. `server-path-utils.ts` is the frontend's reader and writer; the Rust twin is
+`…/`; an NFS place's are `nfs://<host>:<port>/<export segment>/<path>`, with no account (§ "NFS in add mode" has the
+segment). `server-path-utils.ts` is the frontend's reader and writer; the Rust twin is
 `cmdr_fs::volume::remote_paths::RemoteRoot` (translation both ways) over the prefix `sftp_app_root` / `webdav_app_root`
-/ `s3_app_root` mints. ❗ The account root's trailing `/` is why containment goes through `isUnderServerRoot`, the twin
-of Rust's `cmdr_fs::volume::app_paths::path_is_under` (root trimmed first): a bare `${root}/` prefix refused every
-bucket under it.
+/ `s3_app_root` / `nfs_app_root` mints. ❗ The account root's trailing `/` is why containment goes through
+`isUnderServerRoot`, the twin of Rust's `cmdr_fs::volume::app_paths::path_is_under` (root trimmed first): a bare
+`${root}/` prefix refused every bucket under it.
 
 **Why a scheme and not a hint.** `commands/volumes.rs::resolve_path_to_volume` falls through to the mount table, which
 on both platforms walks up to `/` and answers the LOCAL root for any absolute path it doesn't recognize. So a
@@ -405,6 +407,12 @@ token is the only sane state, and a revoked token surfaces as `needs_sign_in` be
 - `s3_field_malformed` and `endpoint_malformed`: add mode's own checks before any round trip
   (`s3-form.ts::s3FieldProblem`, the mirror of the backend's `invalid_url` for S3): a region, location, or account ID
   outside `a–z 0–9 -`, and an Other endpoint that isn't `http(s)://host[:port]`.
+- `export_not_found` (NFS): the server has no export at that path. Under `export`, naming the host.
+- `export_refused` (NFS): the server turned this Mac away from the export (its allowed-clients list or its rules). Under
+  `export`, since picking another export is the way past it.
+- `reserved_port_required` (NFS): a `secure` export (the Linux default) wants a privileged source port and this process
+  couldn't bind one. Under `export`, and it names the fix, the export's `insecure` option, ❌ not anything in the form.
+- `no_nfs_v3` (NFS): the server offers no NFSv3 over TCP, the one version Cmdr speaks. Under `address`.
 - **An S3 subject says "secret access key" where the others say "password"**: `RefusalSubject.protocol === 's3'` swaps
   the five password sentences for their `servers.refusal.s3*` twins (`S3_REFUSAL_KEYS`), since an S3 account has no
   password.
@@ -437,11 +445,12 @@ showed no word at all.
 
 ## Add mode, protocol first
 
-The form reads top to bottom: the SMB / SFTP / WebDAV / S3 toggle, the address (S3: § "S3 in add mode"), the name, then
-the protocol's own fields and Advanced. ❗ **Only the person moves the toggle, and it alone decides what gets dialed**
-(`serverTargetFrom` for SFTP, WebDAV, and S3, `smbAddressFrom` for SMB's hand-off). Typing into the address used to flip
-it: `sven@192.168.0.153`, typed for an SMB NAS, read as SFTP and dialed SSH on port 22 without anyone clicking SFTP, and
-the host key the Mac already trusted turned that into a quiet SSH session the user objected to (cmdr-reports#8).
+The form reads top to bottom: the SMB / SFTP / WebDAV / S3 / NFS toggle, the address (S3: § "S3 in add mode"), the name,
+then the protocol's own fields and Advanced. ❗ **Only the person moves the toggle, and it alone decides what gets
+dialed** (`serverTargetFrom` for SFTP, WebDAV, S3, and NFS, `smbAddressFrom` for SMB's hand-off). Typing into the
+address used to flip it: `sven@192.168.0.153`, typed for an SMB NAS, read as SFTP and dialed SSH on port 22 without
+anyone clicking SFTP, and the host key the Mac already trusted turned that into a quiet SSH session the user objected to
+(cmdr-reports#8).
 
 What the address says still earns a sentence: `addressLooksLike` answers which protocol it looks like when that isn't
 the selected one, and the sheet shows it under the field (`servers.sheet.addressLooksLike*`, `role="status"`). Two
@@ -494,7 +503,7 @@ folders.
 ❗ **Two honest buttons, and both check before saving** (cmdr-reports#6: the sheet said "Add server" and its one button
 connected). The title stays "Add server". The primary, and Enter, is **"Add and open"**; beside it is **"Add"**. Each
 submission carries an `AddIntent`, and `open-sign-in.ts::attemptAdd` runs the same check for both: a TCP probe for SMB
-(`connect_to_server`), the real connect for SFTP and WebDAV, because a typo saved silently is found only later,
+(`connect_to_server`), the real connect for every other protocol, because a typo saved silently is found only later,
 somewhere else. Only "Add and open" moves a pane:
 
 - **"Add and open" lands a pane on the new place**, through `openAddServerSheet`'s `onConnected` (the place's volume id
@@ -553,6 +562,39 @@ then an optional Bucket. Its model is `s3-form.ts`, held under `ServerForm.s3`; 
   the sheet on S3 with the key, the preset its host names (else Other on `https://host[:port]`), and the bucket filled.
 - **Add anyway** saves through `updateSavedServer`, plus `saveS3Credentials` (the ACCOUNT's secret, shared by every
   bucket under the key) when Remember is on.
+
+### NFS in add mode
+
+❗ **No password, no Remember box, no username.** `AUTH_SYS` carries a uid and a gid and proves nothing, so the form
+asks for the export and the identity to act as instead (`NfsPlaceFields.svelte`, its model in `nfs-form.ts`, held under
+`ServerForm.nfs`). An address's `user@` fills nothing.
+
+- **The address** is a host, `nfs://host[:port]/export`, or the classic `host:/export` that `mount` and `showmount`
+  print (`address-parser.ts` splits at the first `/`, so it's the same text). No port means the server's portmapper says
+  where NFS listens, and the place's id and app path carry 2049 either way (`nfsAppRoot`, the twin of
+  `cmdr_fs::volume::nfs_app_root`). An address with a path fills the export field.
+- **The export**: a `Combobox` the server's own list fills once the address sits still (500 ms), through
+  `nfs-discovery.svelte.ts` (`list_nfs_exports`). ❗ Neither ask is a gate: a refused or unreachable listing says so in
+  a line and leaves the field typeable, since a typed export may still mount. ❗ Each answer is checked against the
+  latest ask and dropped when the typing moved past it, so a list for `nas` never lands on `nas.local`.
+- ❗ **The export field may hold more than the export.** A typed `/share/Public/photos` can't say where `/share/Public`
+  ends (QNAP nests `/share` and `/share/Public`), so it goes whole, and the backend splits it against the server's
+  export list, the rest becoming the start folder (`crates/cmdr-nfs/DETAILS.md` § "Connecting").
+- **"Act as user ID" and "Group ID"**, filled with a guess once an export is picked (600 ms, `guess_nfs_identity`): the
+  most common non-zero owner of the export root's entries, else the root's own owner, else this Mac's ids. A line under
+  them says which (`servers.sheet.nfsIdentity*`). Typing into either makes both the person's, and no later guess
+  overwrites them. A typed `0` earns a warning (most servers squash root to nobody), ❌ never a block: on a
+  `no_root_squash` export it's what someone means. Connect stays disabled until the export and both ids read.
+- **Advanced** holds the start folder (export-relative) and "Reconnect automatically".
+- **Edit mode** locks the address and the export, since host, port, and export are the place
+  (`servers.sheet.identityLockedNfs`); the uid, gid, start folder, name, and switch stay editable, and a changed uid
+  redials (`src-tauri/src/network/DETAILS.md` § "The NFS twin, a place per export, and no secret").
+- ❗ **A typed `nfs://nas/volume1/data/photos` is an ADDRESS, ❌ not an app path.** Go to path and ⌘K hand it to the
+  sheet as a prefill; only Cmdr's own spelling, whose export segment carries an escape (`%2F`), navigates or prefills
+  the export exactly (`nfsFieldsFromAppPath`). Read as an app path, the unescaped one would name export `/volume1`.
+- **The hub's line**: NFS servers don't announce themselves, so `ServersHub.svelte` shows one muted line under its list
+  whose link opens this sheet already on NFS. Decision (revisit in review): no Bonjour browse and no port probing of
+  known hosts.
 
 ## Saved SMB shares
 
