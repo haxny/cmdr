@@ -389,6 +389,11 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     discard every bulk entry and list again through `read_dir` from scratch. ❌ Never resume after `EINTR` (the man page
     doesn't say a retry can't skip a batch), ❌ never merge bulk and `read_dir` entries, ❌ never return a partial
     `Vec`.
+  - ❗ **`added_at` never depends on which path ran.** On a bulk-eligible directory, the `read_dir` re-list and
+    `entry_from_lstat` fill `added_at` with one `getattrlist(ATTR_CMN_ADDEDTIME)` per entry, decoded through `attr_buf`
+    (the same call `get_single_entry` makes). It costs ~3.5–3.9 µs per entry (the benchmark note's "current +
+    getattrlist" row), paid only on these rare paths, so an Added sort never sees a hole that a stream hiccup made. Not
+    bulk-eligible (smbfs, FAT, and so on): no `added_at`, as the volume's `supported_dates` says.
 - **Edge cases, decided**:
   - A name vanishing mid-enumeration drops out (the next call returns 0, measured), where today a vanished name between
     `readdir` and `lstat` becomes a minimal row. The watcher's event reconciles either way; no write path depends on it.
@@ -407,7 +412,8 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - Sandbox `EPERM` entries list as what they are (§ Decisions). Bulk's record is valid there, so no fallback fires;
     `listing_bench parity` reports these as the one expected difference class (today's side a minimal row whose `lstat`
     got `EPERM`), counted apart from real differences, which must stay zero.
-- **Test plan**: M1's cells green on BOTH listers through `list_directory_with`. New red-then-green cells:
+- **Test plan**: M1's cells green on BOTH listers through `list_directory_with`, with `added_at` in the parity helper
+  for both (the `read_dir` path fills it on a bulk-eligible directory, above). New red-then-green cells:
   - Record-to-entry cells over M2a's built records: an `ATTR_CMN_ERROR` record and a missing required bit (→
     `entry_from_lstat`), a hint-less `lstat` failure and a `BadRecord` (→ `read_dir` restart, no merged entries).
   - The `0444` dir takes the runtime fallback and yields M1's minimal rows.
@@ -598,10 +604,11 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     when the requested sort is a date), and the measurer (`measure-column-widths.ts:324,429`) all read it. The header's
     width includes the label of the SHOWN date and the fallback glyph; M7 adds the chevron's width with the chevron.
   - New Full date-cell tooltip and the reworked `buildDateTooltip`: every date the entry carries (in the order Created,
-    Date added, Last modified; a date the entry lacks, or its volume doesn't claim, has no line), the displayed one's
-    label wrapped in `displayedLabel` (§ Decisions). Today's shape stays: `{label}: {segments}` lines joined by `<br>`,
-    each date's age-tier spans from `renderSegments` (`selection-info-utils.ts:147-162`); run the translated labels
-    through `escapeHtml` (`tooltip.ts:231`), since the tooltip renders `html`. Replace `lastMoved` with `dateAdded` (§
+    Date added, Last modified; a date the entry lacks has no line, and the conformance rule means an unclaimed date is
+    always lacking, so ❌ no `supported_dates` plumbing to the FE), the displayed one's label wrapped in
+    `displayedLabel` (§ Decisions). Today's shape stays: `{label}: {segments}` lines joined by `<br>`, each date's
+    age-tier spans from `renderSegments` (`selection-info-utils.ts:147-162`); run the translated labels through
+    `escapeHtml` (`tooltip.ts:231`), since the tooltip renders `html`. Replace `lastMoved` with `dateAdded` (§
     Decisions).
   - Full rows' accessible name: `details.modified` becomes `details.date: { column, text }` with one aside phrase per
     column (`rowModified` plus new `rowCreated`, `rowAdded`) in `ASIDE_SLOTS`.
@@ -770,7 +777,7 @@ Hand these over as ready states (fresh dev build, fixtures in place); the agent 
 5. A backend fills a date only when `supported_dates` claims it (conformance-pinned); `supported_dates` defaults to
    Modified only.
 6. A local re-stat (`get_single_entry`) yields the same `FileEntry` a listing does, field for field, on either lister
-   (M1's parity helper; the one exception is `/.hidden`, § "The code today").
+   (M1's parity helper; the one exception is `/.hidden`, § "The code today"). `added_at` holds on both listers.
 7. A change to any date the effective sort reads re-places the row and emits a diff.
 8. The Full date column's measured width covers the shown label, the chevron, the fallback glyph, and the shown cells.
 9. Leaving an unsupporting volume restores the requested order with no extra state: nothing was ever changed.
