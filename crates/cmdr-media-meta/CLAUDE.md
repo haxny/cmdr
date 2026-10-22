@@ -9,8 +9,9 @@ answering every field (`MediaFacts`). Pure parsing over `Read + Seek`, plus a by
 
 - `types.rs`: the vocabulary. `MediaField` (`name` / `parse` / `kind` / `source`, `ALL`), `MediaFacts::get`,
   `MediaValue`, `ReadError` (with its `io::Error` round trip), `is_media_name`.
-- `read.rs`: `read_media`, dispatching by extension to `exif`, `lofty`, `isobmff.rs` (MP4/MOV dates), and `ebml.rs`
-  (MKV/WebM dates and tags). `holes.rs` maps cover art a tag parser would read only to skip.
+- `read.rs`: `read_media` (any `Read + Seek`) and `read_media_from` (a `ByteSource`, cover art holed), dispatching by
+  extension to `photo.rs` (EXIF), `lofty` (tags), `isobmff.rs` (MP4/MOV dates), and `ebml.rs` (MKV/WebM). `holes.rs`
+  maps cover art a tag parser would read only to skip; `clock.rs` turns container UTC into local time; `bytes.rs` reads.
 - `source.rs`: `ByteSource`, `VolumeByteSource` (the async bridge), `BlockReader` (64 KiB blocks, byte budget, holes).
 
 ## Must-knows
@@ -24,6 +25,12 @@ answering every field (`MediaFacts`). Pure parsing over `Read + Seek`, plus a by
 - **Every read is bounded**: `MAX_FETCHED_BYTES_PER_FILE` (`TooLarge`), the caller's `Deadline` (`TimedOut`), and its
   cancel flag (`Cancelled`). A reader raises them through `Read` as `ReadError::into_io` and gets them back with
   `ReadError::from_io`, never by matching message text.
+- **Read a volume's file with `read_media_from`**, ❌ not `read_media` over a bare `BlockReader`: only it runs the
+  cover-art pre-pass, without which an MP3's 3 MB cover is fetched.
+- **No walker reads media payloads**: `mdat`, clusters, JPEG scans, and PNG `IDAT`s are seeked past, never read.
+  `kamadak-exif`'s own container code reads them, so it runs on HEIF only (`DETAILS.md` § The readers).
+- **Dates are local wall-clock time.** Written wall times (EXIF, Apple's creation date, `DATE_RECORDED`) stay as
+  written; container UTC (`mvhd`, `DateUTC`) goes through `clock.rs`'s injected `ToLocal`.
 - **CR3 and RAF count as media but no reader takes them**: they read as `NotSupported` (an honest "can't read"), never
   as a photo without a date.
 

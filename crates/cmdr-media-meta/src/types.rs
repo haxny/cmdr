@@ -334,6 +334,28 @@ impl ReadError {
             None => Self::Io(error.to_string()),
         }
     }
+
+    /// The `ReadError` carried anywhere in `error`'s source chain (a parser
+    /// wrapping the byte source's refusal in its own error), or `Io` with the
+    /// chain's text.
+    pub(crate) fn from_error(error: &(dyn std::error::Error + 'static)) -> Self {
+        let mut text = Vec::new();
+        let mut next = Some(error);
+        while let Some(current) = next {
+            let carried = current.downcast_ref::<Carried>().or_else(|| {
+                current
+                    .downcast_ref::<std::io::Error>()
+                    .and_then(|io| io.get_ref())
+                    .and_then(|inner| inner.downcast_ref::<Carried>())
+            });
+            if let Some(Carried(carried)) = carried {
+                return carried.clone();
+            }
+            text.push(current.to_string());
+            next = current.source();
+        }
+        Self::Io(text.join(": "))
+    }
 }
 
 /// The extensions [`is_media_name`] takes, lowercase. CR3 and RAF are here

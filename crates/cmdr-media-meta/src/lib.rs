@@ -17,18 +17,33 @@
 //!
 //! Module map and must-knows: `CLAUDE.md`; formats and costs: `DETAILS.md`.
 
+mod bytes;
+mod clock;
 mod ebml;
 mod holes;
 mod isobmff;
+mod photo;
 mod read;
 mod source;
 mod types;
 
 #[cfg(test)]
+mod ebml_test;
+#[cfg(test)]
+mod holes_test;
+#[cfg(test)]
+mod isobmff_test;
+#[cfg(test)]
+mod photo_test;
+#[cfg(test)]
+mod read_test;
+#[cfg(test)]
 mod source_test;
+#[cfg(test)]
+mod test_fixtures;
 #[cfg(test)]
 mod types_test;
 
-pub use read::read_media;
+pub use read::{read_media, read_media_from};
 pub use source::{BlockReader, ByteSource, MAX_FETCHED_BYTES_PER_FILE, VolumeByteSource};
 pub use types::{FieldKind, MediaFacts, MediaField, MediaSource, MediaValue, ReadError, is_media_name};
