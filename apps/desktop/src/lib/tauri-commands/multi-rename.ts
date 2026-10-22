@@ -1,12 +1,23 @@
-// Multi-Rename Tool (⌃M): the session, its preview pages, apply, Results, presets, the last settings, and the
-// fields' history. The work and the file names are the backend's (`src-tauri/src/multi_rename/`); these are
+// Multi-Rename Tool (⌃M): the session, its preview pages, the read of its files' EXIF and tags, apply, Results,
+// presets, the last settings, and the fields' history. The work and the file names are the backend's (`src-tauri/src/multi_rename/`); these are
 // pass-throughs.
 
+import { type UnlistenFn } from '@tauri-apps/api/event'
 import {
   commands,
+  events,
+  type FieldGap,
   type FieldHistoryEntry,
+  type FieldSample,
+  type FieldSamples,
+  type FieldUsage,
   type HistoryField,
+  type MediaField,
+  type MediaFieldOverview,
+  type MediaOverview,
+  type MediaProgress,
   type MultiRenameError,
+  type MultiRenameMediaProgress,
   type MultiRenameLastSettings,
   type MultiRenameOpened,
   type MultiRenamePreset,
@@ -25,9 +36,18 @@ import {
 import { PresetSaveFailure } from '#lib/multi-rename/preset-save-refusal.js'
 
 export type {
+  FieldGap,
   FieldHistoryEntry,
+  FieldSample,
+  FieldSamples,
+  FieldUsage,
   HistoryField,
+  MediaField,
+  MediaFieldOverview,
+  MediaOverview,
+  MediaProgress,
   MultiRenameError,
+  MultiRenameMediaProgress,
   MultiRenameLastSettings,
   MultiRenameOpened,
   MultiRenamePreset,
@@ -113,6 +133,40 @@ export async function getMultiRenameRangeSamples(
   rows: number[],
 ): Promise<MultiRenameResult<RangeSample[]>> {
   return result(await commands.getMultiRenameRangeSamples(sessionId, token, rows))
+}
+
+/** How far the session's read of its files' EXIF and tags got. */
+export async function getMultiRenameMediaProgress(sessionId: string): Promise<MultiRenameResult<MediaProgress>> {
+  return result(await commands.getMultiRenameMediaProgress(sessionId))
+}
+
+/** The field picker's overview: how far the read got, and each field's example value from the session's files. */
+export async function getMultiRenameMediaOverview(sessionId: string): Promise<MultiRenameResult<MediaOverview>> {
+  return result(await commands.getMultiRenameMediaOverview(sessionId))
+}
+
+/**
+ * The media placeholder `token` (its text between the brackets, `=exif.taken:d`) rendered alone on
+ * the session files at `rows`, and how many files have it, fall back, miss it, or are still reading.
+ */
+export async function getMultiRenameFieldSamples(
+  sessionId: string,
+  token: string,
+  rows: number[],
+): Promise<MultiRenameResult<FieldSamples>> {
+  return result(await commands.getMultiRenameFieldSamples(sessionId, token, rows))
+}
+
+/** Reads the files at `rows` (the ones the list shows) next. Fire-and-forget. */
+export async function prioritizeMultiRenameMedia(sessionId: string, rows: number[]): Promise<void> {
+  await commands.prioritizeMultiRenameMedia(sessionId, rows)
+}
+
+/** A session's read of its files' EXIF and tags moved on: at most every 250 ms, plus a last one with `done`. */
+export function onMultiRenameMediaProgress(handler: (progress: MultiRenameMediaProgress) => void): Promise<UnlistenFn> {
+  return events.multiRenameMediaProgress.listen((event) => {
+    handler(event.payload)
+  })
 }
 
 /**

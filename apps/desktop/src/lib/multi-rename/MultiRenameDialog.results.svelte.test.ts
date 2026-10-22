@@ -29,6 +29,9 @@ const ipc = vi.hoisted(() => ({
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
+  getMultiRenameMediaProgress: vi.fn(() => Promise.resolve({ ok: true, value: { read: 0, total: 0, done: true } })),
+  onMultiRenameMediaProgress: vi.fn(() => Promise.resolve(() => {})),
+  prioritizeMultiRenameMedia: vi.fn(() => Promise.resolve()),
   ...ipc,
 }))
 
@@ -39,8 +42,16 @@ function row(oldName: string, newName: string, edited = false) {
   return { row: 0, oldName, newName, status: { type: 'ready' }, iconId: null, isDirectory: false, edited }
 }
 
-const PREVIEW = { previewId: 4, counts: { ready: 1, unchanged: 0, problems: 0 }, rows: [row('a.txt', 'a-1.txt')] }
-const EDITED = { previewId: 5, counts: { ready: 1, unchanged: 0, problems: 0 }, rows: [row('a.txt', 'ay.txt', true)] }
+const PREVIEW = {
+  previewId: 4,
+  counts: { ready: 1, unchanged: 0, problems: 0, reading: 0 },
+  rows: [row('a.txt', 'a-1.txt')],
+}
+const EDITED = {
+  previewId: 5,
+  counts: { ready: 1, unchanged: 0, problems: 0, reading: 0 },
+  rows: [row('a.txt', 'ay.txt', true)],
+}
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 4; i++) {

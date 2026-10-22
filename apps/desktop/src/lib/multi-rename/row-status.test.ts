@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { RowStatus } from '#lib/ipc/bindings.js'
-import { rowStatusView } from './row-status'
+import { rowStatusView, statusWords } from './row-status'
 
 const PROBLEMS: RowStatus[] = [
   { type: 'invalidName', reason: { type: 'empty' } },
@@ -39,5 +39,31 @@ describe('rowStatusView', () => {
     expect(slash.glyph).toBe(rowStatusView({ type: 'invalidName', reason: { type: 'empty' } }).glyph)
     expect(slash.label.params).toEqual({ character: '/' })
     expect(slash.reason?.params).toEqual({ character: '/' })
+  })
+
+  it('names the media field a row misses, and offers the fallback for a date', () => {
+    const artist = rowStatusView({ type: 'noValue', field: 'tagArtist' })
+    expect(artist.label.params).toEqual({ field: { key: 'multiRename.mediaField.tagArtist' } })
+    expect(artist.reason).toEqual({
+      key: 'multiRename.reason.noValue',
+      params: { field: { key: 'multiRename.mediaField.tagArtist' } },
+    })
+    expect(rowStatusView({ type: 'noValue', field: 'exifTaken' }).reason?.key).toBe('multiRename.reason.noDate')
+    expect(rowStatusView({ type: 'unreadable', field: 'exifCamera' }).reason?.params).toEqual({
+      field: { key: 'multiRename.mediaField.exifCamera' },
+    })
+  })
+})
+
+describe('statusWords', () => {
+  it('words a message, its field param in words of its own', () => {
+    const words = (key: string, params?: Record<string, string>) => `${key}(${JSON.stringify(params ?? {})})`
+    expect(
+      statusWords(
+        { key: 'multiRename.status.noValue', params: { field: { key: 'multiRename.mediaField.tagArtist' } } },
+        words,
+      ),
+    ).toBe('multiRename.status.noValue({"field":"multiRename.mediaField.tagArtist({})"})')
+    expect(statusWords({ key: 'multiRename.status.ready' }, words)).toBe('multiRename.status.ready({})')
   })
 })

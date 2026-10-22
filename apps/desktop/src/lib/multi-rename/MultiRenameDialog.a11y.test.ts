@@ -29,6 +29,9 @@ const { previewMultiRename, getMultiRenameLastSettings, getMultiRenameHistory } 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
+  getMultiRenameMediaProgress: vi.fn(() => Promise.resolve({ ok: true, value: { read: 0, total: 0, done: true } })),
+  onMultiRenameMediaProgress: vi.fn(() => Promise.resolve(() => {})),
+  prioritizeMultiRenameMedia: vi.fn(() => Promise.resolve()),
   previewMultiRename,
   getMultiRenamePreviewRows: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
   getMultiRenameRangeSamples: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
@@ -83,7 +86,7 @@ describe('MultiRenameDialog a11y', () => {
   it('with a preview of mixed rows has no violations', async () => {
     previewMultiRename.mockResolvedValue({
       ok: true,
-      value: { previewId: 1, counts: { ready: 1, unchanged: 1, problems: 3 }, rows: ROWS },
+      value: { previewId: 1, counts: { ready: 1, unchanged: 1, problems: 3, reading: 0 }, rows: ROWS },
     })
     await expectNoA11yViolations(await mountSheet())
   })
@@ -99,7 +102,7 @@ describe('MultiRenameDialog a11y', () => {
   it('with every whole-name option on and Undo rename offered has no violations', async () => {
     previewMultiRename.mockResolvedValue({
       ok: true,
-      value: { previewId: 1, counts: { ready: 1, unchanged: 1, problems: 3 }, rows: ROWS },
+      value: { previewId: 1, counts: { ready: 1, unchanged: 1, problems: 3, reading: 0 }, rows: ROWS },
     })
     getMultiRenameLastSettings.mockResolvedValueOnce({
       spec: { ...DEFAULT_SPEC, greekToLatin: true, removeDiacritics: true, normalizeUnicode: true },
@@ -114,7 +117,7 @@ describe('MultiRenameDialog a11y', () => {
     const edited = [{ ...ROWS[0], edited: true }, ...ROWS.slice(1)]
     previewMultiRename.mockResolvedValue({
       ok: true,
-      value: { previewId: 1, counts: { ready: 1, unchanged: 1, problems: 3 }, rows: edited },
+      value: { previewId: 1, counts: { ready: 1, unchanged: 1, problems: 3, reading: 0 }, rows: edited },
     })
     const root = await mountSheet()
     root
@@ -134,7 +137,7 @@ describe('MultiRenameDialog a11y', () => {
   it('with the history chevrons and a field’s list open has no violations', async () => {
     previewMultiRename.mockResolvedValue({
       ok: true,
-      value: { previewId: 1, counts: { ready: 1, unchanged: 1, problems: 3 }, rows: ROWS },
+      value: { previewId: 1, counts: { ready: 1, unchanged: 1, problems: 3, reading: 0 }, rows: ROWS },
     })
     getMultiRenameHistory.mockResolvedValueOnce([
       { id: '1', field: 'nameMask', value: '[N]_[C]' },

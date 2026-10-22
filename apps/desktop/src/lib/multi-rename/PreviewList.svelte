@@ -29,7 +29,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import type { PreviewRow, RowMove } from '#lib/tauri-commands/index.js'
-    import { rowStatusView, type StatusMessage } from './row-status'
+    import { rowStatusView, statusWords, type StatusMessage } from './row-status'
 
     interface Props {
         rows: ColumnListWindowedSource<PreviewRow>
@@ -116,7 +116,7 @@
     ])
 
     function words(message: StatusMessage): string {
-        return tString(message.key, message.params)
+        return statusWords(message, tString)
     }
 
     function iconUrl(iconId: string | null): string | undefined {
@@ -175,11 +175,16 @@
 {/snippet}
 
 {#snippet newNameCell({ row }: ColumnListCellContext<PreviewRow>)}
-    <span
+    {#if row.status.type === 'reading'}
+        <!-- No name yet: its fields are still being read. The status cell says so to screen readers. -->
+        <span class="name-text reading" aria-hidden="true">{tString('multiRename.status.reading')}</span>
+    {:else}
+        <span
         class="name-text"
         class:unchanged={row.status.type === 'unchanged'}
         use:useShortenMiddle={{ text: row.newName, preferBreakAt: '.', startRatio: 0.7, tooltipWhenTruncated: true }}
-    ></span>
+        ></span>
+    {/if}
 {/snippet}
 
 <!-- A problem shows its glyph, named by its label and explained by its tooltip; a ready or
@@ -247,7 +252,8 @@
         white-space: nowrap;
     }
 
-    .name-text.unchanged {
+    .name-text.unchanged,
+    .name-text.reading {
         color: var(--color-text-quiet);
         font-weight: normal;
     }

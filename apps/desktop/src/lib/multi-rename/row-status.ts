@@ -6,13 +6,30 @@
  */
 
 import type { MessageKey } from '#lib/intl/keys.gen.js'
-import type { RowStatus } from '#lib/ipc/bindings.js'
+import type { MediaField, RowStatus } from '#lib/ipc/bindings.js'
 import type { IconName } from '#lib/ui/icons/icon-map.js'
+import { MEDIA_FIELD_LABELS } from './media-fields'
+import { MEDIA_FIELDS } from './media-token'
 
 export interface StatusMessage {
   key: MessageKey
-  params?: Record<string, string>
+  /** A param is text, or a message of its own (a media field's name), worded first. */
+  params?: Record<string, string | { key: MessageKey }>
 }
+
+/** `message` in words: `words` is the catalog lookup (`tString`). */
+export function statusWords(
+  message: StatusMessage,
+  words: (key: MessageKey, params?: Record<string, string>) => string,
+): string {
+  if (!message.params) return words(message.key)
+  const params = Object.fromEntries(
+    Object.entries(message.params).map(([name, value]) => [name, typeof value === 'string' ? value : words(value.key)]),
+  )
+  return words(message.key, params)
+}
+
+const fieldParams = (field: MediaField): StatusMessage['params'] => ({ field: { key: MEDIA_FIELD_LABELS[field] } })
 
 export interface RowStatusView {
   /** Anything but ready or unchanged: the row won't be renamed, and says why. */
@@ -52,13 +69,18 @@ export function rowStatusView(status: RowStatus): RowStatusView {
     // Still reading may yet turn ready: quiet, like ready and unchanged.
     case 'reading':
       return { isProblem: false, glyph: null, label: { key: 'multiRename.status.reading' }, reason: null }
-    case 'noValue':
-      return problem('circle-alert', { key: 'multiRename.status.noValue' }, { key: 'multiRename.reason.noValue' })
+    case 'noValue': {
+      const params = fieldParams(status.field)
+      // A date can fall back to the modified date: the reason says where.
+      const reason =
+        MEDIA_FIELDS[status.field].kind === 'date' ? 'multiRename.reason.noDate' : 'multiRename.reason.noValue'
+      return problem('circle-alert', { key: 'multiRename.status.noValue', params }, { key: reason, params })
+    }
     case 'unreadable':
       return problem(
         'triangle-alert',
         { key: 'multiRename.status.unreadable' },
-        { key: 'multiRename.reason.unreadable' },
+        { key: 'multiRename.reason.unreadable', params: fieldParams(status.field) },
       )
     case 'invalidName': {
       const reason = status.reason

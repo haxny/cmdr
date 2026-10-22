@@ -25,10 +25,13 @@ const ipc = vi.hoisted(() => ({
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
+  getMultiRenameMediaProgress: vi.fn(() => Promise.resolve({ ok: true, value: { read: 0, total: 0, done: true } })),
+  onMultiRenameMediaProgress: vi.fn(() => Promise.resolve(() => {})),
+  prioritizeMultiRenameMedia: vi.fn(() => Promise.resolve()),
   ...ipc,
 }))
 
-const PREVIEW = { previewId: 1, counts: { ready: 0, unchanged: 0, problems: 0 }, rows: [] }
+const PREVIEW = { previewId: 1, counts: { ready: 0, unchanged: 0, problems: 0, reading: 0 }, rows: [] }
 
 const HISTORY = [
   { id: '1', field: 'search', value: 'IMG' },

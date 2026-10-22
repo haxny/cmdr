@@ -19,6 +19,12 @@
  * on its row (`PreviewRow.row`) across previews: with every row listed a row's index IS
  * its `row`; among the problems it's found again in the first page that lands. ⇧↑ / ⇧↓
  * move the cursor row in the session's rename order (`moveCursorRow`), one at a time.
+ *
+ * The session reads its files' EXIF and tags in the background from the moment it opens.
+ * The state follows that read (`media`), asks for the rows in view first, and, while a mask
+ * uses a media field, previews again as reads land. A Rename pressed before the read is done
+ * waits for it (`queued`) and then runs on the final preview; a second press or any edit
+ * cancels it.
  */
 
 import {
@@ -26,19 +32,24 @@ import {
   clearMultiRenameNames,
   deleteMultiRenamePreset,
   getMultiRenameLastSettings,
+  getMultiRenameMediaProgress,
   getMultiRenamePresets,
   getMultiRenamePreviewRows,
   getMultiRenameRangeSamples,
   moveMultiRenamePreset,
   moveMultiRenameRow,
+  onMultiRenameMediaProgress,
   previewMultiRename,
+  prioritizeMultiRenameMedia,
   readMultiRenameNames,
   renameMultiRenamePreset,
   saveMultiRenameLastSettings,
   saveMultiRenamePreset,
   updateMultiRenamePreset,
   writeMultiRenameNames,
+  type MediaProgress,
   type MultiRenameError,
+  type MultiRenameMediaProgress,
   type MultiRenamePreset,
   type MultiRenameSpec,
   type MultiRenameStarted,
@@ -52,9 +63,14 @@ import {
 import type { ColumnListWindowedSource } from '#lib/ui/column-list-types.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { SvelteMap } from 'svelte/reactivity'
+import type { UnlistenFn } from '@tauri-apps/api/event'
 import { DEFAULT_SPEC, PRESET_SEEDS, specsEqual } from './spec'
+import { usesMediaFields } from './media-token'
 
 export const PREVIEW_DELAY_MS = 120
+
+/** While reads land, the preview reruns at most this often (the backend reports every 250 ms). */
+export const MEDIA_REFRESH_MS = 500
 
 /** The most rows one page request asks for (the backend's `MAX_PAGE`). */
 const PAGE_LIMIT = 1000
@@ -171,8 +187,20 @@ export interface MultiRenameState {
   readNames: () => Promise<MultiRenameError | null>
   /** Drops the typed names: every row follows the settings again. */
   clearNames: () => Promise<void>
-  /** Starts the rename. Resolves with the operation, or `null` when it didn't start (`applyError` says why). */
+  /**
+   * Rename. Resolves with the operation, or `null` when it didn't start (`applyError` says why).
+   * While `waitsForMedia`, it queues instead: it resolves once the read is done and the rename of
+   * the final preview started, or with `null` when cancelled (a second call, any edit, or closing).
+   */
   apply: () => Promise<MultiRenameStarted | null>
+  /** How far the session's read of its files' EXIF and tags got; `null` until known. */
+  readonly media: MediaProgress | null
+  /** A mask uses a media field (`[=exif.taken]`, …). */
+  readonly usesMedia: boolean
+  /** Rename would wait for the read: a mask uses a media field, and some file's fields are still on their way. */
+  readonly waitsForMedia: boolean
+  /** A Rename is waiting for the read ("Starting…"). */
+  readonly queued: boolean
   dispose: () => void
 }
 
@@ -204,8 +232,22 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
   let fetching: string | null = null
   // An edit made before the last settings arrive wins over them.
   let touched = false
+  let media = $state.raw<MediaProgress | null>(null)
+  let mediaTimer: ReturnType<typeof setTimeout> | null = null
+  let unlistenMedia: UnlistenFn | null = null
+  let disposed = false
+  // The queued Rename's resolve; `queued` mirrors it for the button.
+  let queue: ((started: MultiRenameStarted | null) => void) | null = null
+  let queued = $state(false)
+  // The queued Rename is on its way to the backend: too late to cancel.
+  let launching = false
+  let prioritized = ''
 
-  const totalOf = (c: PreviewCounts): number => c.ready + c.unchanged + c.problems
+  const totalOf = (c: PreviewCounts): number => c.ready + c.unchanged + c.problems + c.reading
+  const usesMedia = (): boolean => usesMediaFields(spec.nameMask) || usesMediaFields(spec.extensionMask)
+  // Rows still reading, or a read that isn't done: a value may still come for some file.
+  const waitsForMedia = (): boolean =>
+    usesMedia() && (counts.reading > 0 || (media !== null && media.total > 0 && !media.done))
   const filterOf = (): PreviewFilter => (problemsOnly ? 'problems' : 'all')
   const listed = (): number => (problemsOnly ? counts.problems : totalOf(counts))
   const cursorIndex = (): number => (listed() === 0 ? -1 : Math.max(0, Math.min(cursor, listed() - 1)))
@@ -236,14 +278,18 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
   // Read from the list, so a renamed, updated, or deleted preset is followed with no syncing.
   const loadedSpec = $derived(loadedId === null ? undefined : specOf(loadedId))
 
-  async function refresh(): Promise<void> {
+  /**
+   * Previews the spec. A `quiet` one (reads landed, the spec didn't change) isn't `pending`, so
+   * Rename and Results stay usable while the read goes on.
+   */
+  async function refresh({ quiet = false }: { quiet?: boolean } = {}): Promise<void> {
     const asked = ++generation
-    waiting++
+    if (!quiet) waiting++
     let answer
     try {
       answer = await previewMultiRename(sessionId, $state.snapshot(spec))
     } finally {
-      waiting--
+      if (!quiet) waiting--
     }
     if (asked !== generation) return
     if (answer.ok) {
@@ -260,6 +306,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
       rows = problemsOnly ? new SvelteMap() : new SvelteMap(answer.value.rows.map((row) => [row.row, row]))
       error = null
       show(shown)
+      runQueued()
     } else {
       // A spec problem keeps the last good preview on screen under the error.
       error = answer.error
@@ -323,7 +370,105 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     return answer.value
   }
 
+  /** Renames preview `previewId`'s ready rows; `'stillReading'` when the backend found a file still being read. */
+  async function startRename(): Promise<MultiRenameStarted | 'stillReading' | null> {
+    const id = previewId
+    if (applying || waiting > 0 || id === null) return null
+    applying = true
+    try {
+      // The preview the user saw: the backend renames only if it still computes exactly its ready rows.
+      const answer = await applyMultiRename(sessionId, id)
+      if (answer.ok) return answer.value
+      if (answer.error.type === 'stillReading') return 'stillReading'
+      applyError = answer.error
+      // The folder moved under the preview: show it as it is now.
+      if (answer.error.type === 'previewOutOfDate') void refresh()
+      return null
+    } finally {
+      applying = false
+    }
+  }
+
+  function enqueue(): Promise<MultiRenameStarted | null> {
+    return new Promise((resolve) => {
+      queue = resolve
+      queued = true
+    })
+  }
+
+  /** A second press, any edit, or closing: the queued Rename won't run. Too late once it's launching. */
+  function cancelQueue(): void {
+    if (launching) return
+    const resolve = queue
+    queue = null
+    queued = false
+    resolve?.(null)
+  }
+
+  /** On each preview that lands: once no value can still come, the queued Rename runs on it, as a fresh press would. */
+  function runQueued(): void {
+    const resolve = queue
+    if (resolve === null || launching || waitsForMedia()) return
+    launching = true
+    void startRename()
+      .then((outcome) => {
+        // A file still being read after all: stay queued for the next preview.
+        if (outcome === 'stillReading') return
+        queue = null
+        queued = false
+        resolve(outcome)
+      })
+      .finally(() => {
+        launching = false
+      })
+  }
+
+  function onMediaProgress(progress: MultiRenameMediaProgress): void {
+    if (progress.sessionId !== sessionId || disposed) return
+    media = { read: progress.read, total: progress.total, done: progress.done }
+    // Rows only change with the reads when a mask names a field.
+    if (!usesMedia()) return
+    if (progress.done) {
+      if (mediaTimer !== null) clearTimeout(mediaTimer)
+      mediaTimer = null
+      void refresh({ quiet: true })
+      return
+    }
+    mediaTimer ??= setTimeout(() => {
+      mediaTimer = null
+      void refresh({ quiet: true })
+    }, MEDIA_REFRESH_MS)
+  }
+
+  async function followMedia(): Promise<void> {
+    const unlisten = await onMultiRenameMediaProgress(onMediaProgress)
+    if (disposed) {
+      unlisten()
+      return
+    }
+    unlistenMedia = unlisten
+    // For a read that began before the subscription; an event that came meanwhile is newer.
+    const answer = await getMultiRenameMediaProgress(sessionId)
+    if (answer.ok && media === null && !disposed) media = answer.value
+  }
+
+  /** The files at the list's window are read next, while the read goes on. */
+  function prioritizeShown({ start, end }: RowWindow): void {
+    if (media !== null && (media.done || media.total === 0)) return
+    const last = Math.min(end, listed())
+    const inView: number[] = []
+    for (let index = start; index < last; index++) {
+      const place = problemsOnly ? rows.get(index)?.row : index
+      if (place !== undefined) inView.push(place)
+    }
+    const key = inView.join(',')
+    if (inView.length === 0 || key === prioritized) return
+    prioritized = key
+    void prioritizeMultiRenameMedia(sessionId, inView)
+  }
+
   function schedule(): void {
+    cancelQueue()
     applyError = null
     if (timer === null) waiting++
     else clearTimeout(timer)
@@ -349,6 +494,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     await refresh()
   }
   void start()
+  void followMedia()
 
   return {
     get spec() {
@@ -370,6 +516,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
       getRow: (index) => rows.get(index),
       onRangeChange: (range) => {
         show(range)
+        prioritizeShown(range)
       },
     },
     get error() {
@@ -400,6 +547,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
       return cursorRow()
     },
     moveCursorRow(direction) {
+      cancelQueue()
       // Pending from the key on, so a Start right after it waits for the new order's preview.
       waiting++
       const next = moving
@@ -512,23 +660,33 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
       schedule()
     },
     async apply() {
-      const id = previewId
-      if (applying || waiting > 0 || id === null) return null
-      applying = true
-      try {
-        // The preview the user saw: the backend renames only if it still computes exactly its ready rows.
-        const answer = await applyMultiRename(sessionId, id)
-        if (answer.ok) return answer.value
-        applyError = answer.error
-        // The folder moved under the preview: show it as it is now.
-        if (answer.error.type === 'previewOutOfDate') void refresh()
+      if (queue !== null) {
+        cancelQueue()
         return null
-      } finally {
-        applying = false
       }
+      if (waitsForMedia()) return enqueue()
+      const outcome = await startRename()
+      // The backend found a file still being read: wait for it, as a press during the read does.
+      return outcome === 'stillReading' ? enqueue() : outcome
+    },
+    get media() {
+      return media
+    },
+    get usesMedia() {
+      return usesMedia()
+    },
+    get waitsForMedia() {
+      return waitsForMedia()
+    },
+    get queued() {
+      return queued
     },
     dispose() {
+      disposed = true
       if (timer !== null) clearTimeout(timer)
+      if (mediaTimer !== null) clearTimeout(mediaTimer)
+      unlistenMedia?.()
+      cancelQueue()
       generation++
     },
   }

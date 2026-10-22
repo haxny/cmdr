@@ -11,8 +11,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import MultiRenameDialog from './MultiRenameDialog.svelte'
 import { runMenuClaim } from '#lib/commands/menu-claims.js'
+import * as commands from '#lib/tauri-commands/index.js'
 import type { RenameExample } from '#lib/tauri-commands/index.js'
 import { MARK_END, MARK_START } from './rename-examples'
+import { DEFAULT_SPEC } from './spec'
 import { setLastMultiRenameRun } from './last-run.svelte'
 import { RollbackRefusalFailure } from '#lib/operation-log/rollback-refusal.js'
 import { PresetSaveFailure } from './preset-save-refusal'
@@ -42,12 +44,15 @@ vi.mock('#lib/operation-log/recording.js', () => ({ isOperationLogRecording: () 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
+  getMultiRenameMediaProgress: vi.fn(() => Promise.resolve({ ok: true, value: { read: 0, total: 0, done: true } })),
+  onMultiRenameMediaProgress: vi.fn(() => Promise.resolve(() => {})),
+  prioritizeMultiRenameMedia: vi.fn(() => Promise.resolve()),
   ...ipc,
 }))
 
 const READY = {
   previewId: 1,
-  counts: { ready: 1, unchanged: 0, problems: 0 },
+  counts: { ready: 1, unchanged: 0, problems: 0, reading: 0 },
   rows: [
     { row: 0, oldName: 'Ž.pdf', newName: 'Z.pdf', status: { type: 'ready' }, iconId: 'ext:pdf', isDirectory: false },
   ],
@@ -305,6 +310,54 @@ describe('MultiRenameDialog', () => {
     expect(onApplied).toHaveBeenCalledWith(started)
   })
 
+  describe('while the tags are still being read', () => {
+    beforeEach(() => {
+      ipc.getMultiRenameLastSettings.mockResolvedValue({
+        spec: { ...DEFAULT_SPEC, nameMask: '[=exif.taken:d] [N]' },
+        presetId: null,
+      })
+      vi.mocked(commands.getMultiRenameMediaProgress).mockResolvedValue({
+        ok: true,
+        value: { read: 340, total: 2000, done: false },
+      })
+      ipc.previewMultiRename.mockResolvedValue({
+        ok: true,
+        value: { ...READY, counts: { ready: 1, unchanged: 0, problems: 0, reading: 1999 } },
+      })
+      ipc.getMultiRenamePreviewRows.mockImplementation((_s: string, _p: number, offset: number, limit: number) =>
+        Promise.resolve({
+          ok: true,
+          value: Array.from({ length: limit }, (_, i) => ({
+            ...READY.rows[0],
+            row: offset + i,
+            status: { type: 'reading' },
+          })),
+        }),
+      )
+    })
+
+    it('says how far the read got above the list, and counts the rows still reading', async () => {
+      const root = await mountSheet()
+      expect(root.querySelector('.message-line')?.textContent).toContain('Reading tags: 340 of 2,000')
+      expect(root.querySelector('.counts')?.textContent).toContain('1,999 still reading')
+    })
+
+    it('queues Rename as “Starting…”, and a second press cancels it', async () => {
+      const root = await mountSheet()
+      const rename = root.querySelector<HTMLButtonElement>('button.btn-primary')
+      if (!rename) throw new Error('no Rename button')
+      rename.click()
+      await settle()
+      expect(rename.textContent).toContain('Starting…')
+      expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+
+      rename.click()
+      await settle()
+      expect(rename.textContent).not.toContain('Starting…')
+      expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+    })
+  })
+
   describe('rename key', () => {
     // `formatKeyCombo` emits ⌘-form modifiers only when `isMacOS()` is true, and happy-dom reports a Linux UA.
     const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')
@@ -338,7 +391,7 @@ describe('MultiRenameDialog', () => {
   describe('preview list', () => {
     const MIXED = {
       previewId: 3,
-      counts: { ready: 1, unchanged: 0, problems: 2 },
+      counts: { ready: 1, unchanged: 0, problems: 2, reading: 0 },
       rows: [
         {
           row: 0,

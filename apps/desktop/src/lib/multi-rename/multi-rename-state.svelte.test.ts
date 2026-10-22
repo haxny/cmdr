@@ -22,6 +22,9 @@ const { ipc } = vi.hoisted(() => ({
     moveMultiRenamePreset: vi.fn(),
     getMultiRenameLastSettings: vi.fn(),
     saveMultiRenameLastSettings: vi.fn(),
+    getMultiRenameMediaProgress: vi.fn(),
+    onMultiRenameMediaProgress: vi.fn(),
+    prioritizeMultiRenameMedia: vi.fn(),
   },
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
@@ -40,7 +43,7 @@ const row = (index: number, oldName: string, newName: string, type = 'ready') =>
 /** A preview answer: `rows` is the first page, `total` the whole preview's row count. */
 function preview(previewId: number, rows: ReturnType<typeof row>[], total = rows.length) {
   const ready = rows.filter((r) => r.status.type === 'ready').length
-  return { ok: true, value: { previewId, counts: { ready, unchanged: total - ready, problems: 0 }, rows } }
+  return { ok: true, value: { previewId, counts: { ready, unchanged: total - ready, problems: 0, reading: 0 }, rows } }
 }
 
 async function settle(): Promise<void> {
@@ -55,6 +58,9 @@ describe('createMultiRenameState', () => {
     ipc.getMultiRenamePresets.mockResolvedValue([])
     ipc.getMultiRenameLastSettings.mockResolvedValue(null)
     ipc.saveMultiRenameLastSettings.mockResolvedValue(undefined)
+    ipc.getMultiRenameMediaProgress.mockResolvedValue({ ok: true, value: { read: 0, total: 0, done: true } })
+    ipc.onMultiRenameMediaProgress.mockResolvedValue(() => {})
+    ipc.prioritizeMultiRenameMedia.mockResolvedValue(undefined)
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -155,7 +161,7 @@ describe('createMultiRenameState', () => {
     const first = [row(0, 'a', 'b'), row(1, 'c', 'd', 'duplicate'), row(2, 'e', 'f', 'targetExists')]
     ipc.previewMultiRename.mockResolvedValue({
       ok: true,
-      value: { previewId: 7, counts: { ready: 1, unchanged: 0, problems: 2 }, rows: first },
+      value: { previewId: 7, counts: { ready: 1, unchanged: 0, problems: 2, reading: 0 }, rows: first },
     })
     ipc.getMultiRenamePreviewRows.mockImplementation(
       (_s: string, _p: number, offset: number, limit: number, filter: string) =>
@@ -189,7 +195,7 @@ describe('createMultiRenameState', () => {
     const first = [row(0, 'a', 'b'), row(1, 'c', 'd', 'duplicate')]
     ipc.previewMultiRename.mockResolvedValue({
       ok: true,
-      value: { previewId: 7, counts: { ready: 1, unchanged: 0, problems: 1 }, rows: first },
+      value: { previewId: 7, counts: { ready: 1, unchanged: 0, problems: 1, reading: 0 }, rows: first },
     })
     ipc.getMultiRenamePreviewRows.mockImplementation(() => Promise.resolve({ ok: true, value: [first[1]] }))
     const tool = createMultiRenameState('S')
@@ -200,7 +206,7 @@ describe('createMultiRenameState', () => {
 
     ipc.previewMultiRename.mockResolvedValue({
       ok: true,
-      value: { previewId: 8, counts: { ready: 1, unchanged: 0, problems: 1 }, rows: first },
+      value: { previewId: 8, counts: { ready: 1, unchanged: 0, problems: 1, reading: 0 }, rows: first },
     })
     tool.update({ nameMask: '[N]x' })
     await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
@@ -215,7 +221,7 @@ describe('createMultiRenameState', () => {
     const first = [row(0, 'a', 'b'), row(1, 'c', 'd', 'duplicate')]
     ipc.previewMultiRename.mockResolvedValue({
       ok: true,
-      value: { previewId: 7, counts: { ready: 1, unchanged: 0, problems: 1 }, rows: first },
+      value: { previewId: 7, counts: { ready: 1, unchanged: 0, problems: 1, reading: 0 }, rows: first },
     })
     ipc.getMultiRenamePreviewRows.mockImplementation(() => Promise.resolve({ ok: true, value: [first[1]] }))
     const tool = createMultiRenameState('S')
@@ -226,7 +232,7 @@ describe('createMultiRenameState', () => {
     const fixed = [row(0, 'a', 'b'), row(1, 'c', 'e')]
     ipc.previewMultiRename.mockResolvedValue({
       ok: true,
-      value: { previewId: 8, counts: { ready: 2, unchanged: 0, problems: 0 }, rows: fixed },
+      value: { previewId: 8, counts: { ready: 2, unchanged: 0, problems: 0, reading: 0 }, rows: fixed },
     })
     tool.update({ nameMask: '[N]x' })
     await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
@@ -324,7 +330,7 @@ describe('createMultiRenameState', () => {
       const rows = [row(0, 'a', 'b'), row(1, 'c', 'd', 'duplicate'), row(2, 'e', 'f'), row(3, 'g', 'h', 'targetExists')]
       ipc.previewMultiRename.mockResolvedValue({
         ok: true,
-        value: { previewId: 7, counts: { ready: 2, unchanged: 0, problems: 2 }, rows },
+        value: { previewId: 7, counts: { ready: 2, unchanged: 0, problems: 2, reading: 0 }, rows },
       })
       const problems = [rows[1], rows[3]]
       ipc.getMultiRenamePreviewRows.mockImplementation(
@@ -358,7 +364,7 @@ describe('createMultiRenameState', () => {
       let problems = rows
       ipc.previewMultiRename.mockResolvedValue({
         ok: true,
-        value: { previewId: 7, counts: { ready: 0, unchanged: 0, problems: 3 }, rows },
+        value: { previewId: 7, counts: { ready: 0, unchanged: 0, problems: 3, reading: 0 }, rows },
       })
       ipc.getMultiRenamePreviewRows.mockImplementation((_s: string, _p: number, offset: number, limit: number) =>
         Promise.resolve({ ok: true, value: problems.slice(offset, offset + limit) }),
@@ -375,7 +381,7 @@ describe('createMultiRenameState', () => {
       problems = [rows[1], rows[2]]
       ipc.previewMultiRename.mockResolvedValue({
         ok: true,
-        value: { previewId: 8, counts: { ready: 1, unchanged: 0, problems: 2 }, rows },
+        value: { previewId: 8, counts: { ready: 1, unchanged: 0, problems: 2, reading: 0 }, rows },
       })
       tool.update({ nameMask: '[N]x' })
       await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
@@ -423,7 +429,7 @@ describe('createMultiRenameState', () => {
     it('answers null at either end, and asks nothing while listing the problems alone', async () => {
       ipc.previewMultiRename.mockResolvedValue({
         ok: true,
-        value: { previewId: 1, counts: { ready: 4, unchanged: 0, problems: 1 }, rows: five },
+        value: { previewId: 1, counts: { ready: 4, unchanged: 0, problems: 1, reading: 0 }, rows: five },
       })
       ipc.getMultiRenamePreviewRows.mockResolvedValue({ ok: true, value: [five[4]] })
       ipc.moveMultiRenameRow.mockResolvedValue({ ok: true, value: 0 })
@@ -730,6 +736,178 @@ describe('createMultiRenameState', () => {
       expect(tool.presets.map((p) => p.id)).toEqual(['p2'])
       tool.dispose()
     })
+  })
+})
+
+describe('createMultiRenameState with media fields', () => {
+  type Progress = { sessionId: string; read: number; total: number; done: boolean }
+  let emit: (progress: Progress) => void = () => {}
+  const MEDIA_MASK = '[=exif.taken:d] [N]'
+  const started = { operationId: 'op1', renaming: 2, swapsLeftOut: 0 }
+
+  /** A preview answer with `reading` rows still being read. */
+  function counted(previewId: number, ready: number, reading: number) {
+    return { ok: true, value: { previewId, counts: { ready, unchanged: 0, problems: 0, reading }, rows: [] } }
+  }
+
+  /** A sheet whose masks use a media field, over files still being read. */
+  async function readingSheet() {
+    ipc.getMultiRenameLastSettings.mockResolvedValue({
+      spec: { ...DEFAULT_SPEC, nameMask: MEDIA_MASK },
+      presetId: null,
+    })
+    ipc.getMultiRenameMediaProgress.mockResolvedValue({ ok: true, value: { read: 1, total: 3, done: false } })
+    ipc.previewMultiRename.mockResolvedValue(counted(1, 1, 2))
+    const tool = createMultiRenameState('S')
+    await settle()
+    return tool
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    ipc.previewMultiRename.mockResolvedValue(preview(1, [row(0, 'a.txt', 'a.txt', 'unchanged')]))
+    ipc.getMultiRenamePresets.mockResolvedValue([])
+    ipc.getMultiRenameLastSettings.mockResolvedValue(null)
+    ipc.getMultiRenameMediaProgress.mockResolvedValue({ ok: true, value: { read: 0, total: 0, done: true } })
+    ipc.onMultiRenameMediaProgress.mockImplementation((handler: (progress: Progress) => void) => {
+      emit = handler
+      return Promise.resolve(() => {})
+    })
+    ipc.prioritizeMultiRenameMedia.mockResolvedValue(undefined)
+    ipc.getMultiRenamePreviewRows.mockImplementation((_s: string, _p: number, offset: number, limit: number) =>
+      Promise.resolve({ ok: true, value: Array.from({ length: limit }, (_, i) => row(offset + i, 'a', 'b')) }),
+    )
+    ipc.applyMultiRename.mockResolvedValue({ ok: true, value: started })
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('counts the rows still reading among the listed ones', async () => {
+    const tool = await readingSheet()
+    expect(tool.total).toBe(3)
+    expect(tool.media).toEqual({ read: 1, total: 3, done: false })
+    tool.dispose()
+  })
+
+  it('queues Rename while the read the masks use goes on, and runs it on the final preview', async () => {
+    const tool = await readingSheet()
+    expect(tool.waitsForMedia).toBe(true)
+    let result: unknown = 'not yet'
+    void tool.apply().then((r) => (result = r))
+    await settle()
+    expect(tool.queued).toBe(true)
+    expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+
+    ipc.previewMultiRename.mockResolvedValue(counted(2, 3, 0))
+    emit({ sessionId: 'S', read: 3, total: 3, done: true })
+    await settle()
+
+    expect(ipc.applyMultiRename).toHaveBeenCalledWith('S', 2)
+    expect(result).toEqual(started)
+    expect(tool.queued).toBe(false)
+    tool.dispose()
+  })
+
+  it('a second press cancels the queue', async () => {
+    const tool = await readingSheet()
+    const first = tool.apply()
+    await settle()
+    expect(await tool.apply()).toBeNull()
+    expect(await first).toBeNull()
+    expect(tool.queued).toBe(false)
+
+    ipc.previewMultiRename.mockResolvedValue(counted(2, 3, 0))
+    emit({ sessionId: 'S', read: 3, total: 3, done: true })
+    await settle()
+    expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+    tool.dispose()
+  })
+
+  it('any edit cancels the queue', async () => {
+    const tool = await readingSheet()
+    const first = tool.apply()
+    await settle()
+    tool.update({ caseSensitive: true })
+    expect(await first).toBeNull()
+    expect(tool.queued).toBe(false)
+    tool.dispose()
+  })
+
+  it('renames at once when the masks use no media field, or the read is done', async () => {
+    ipc.getMultiRenameMediaProgress.mockResolvedValue({ ok: true, value: { read: 1, total: 3, done: false } })
+    const plain = createMultiRenameState('S')
+    await settle()
+    expect(plain.waitsForMedia).toBe(false)
+    expect(await plain.apply()).toEqual(started)
+    plain.dispose()
+
+    ipc.getMultiRenameLastSettings.mockResolvedValue({
+      spec: { ...DEFAULT_SPEC, nameMask: MEDIA_MASK },
+      presetId: null,
+    })
+    ipc.getMultiRenameMediaProgress.mockResolvedValue({ ok: true, value: { read: 3, total: 3, done: true } })
+    ipc.previewMultiRename.mockResolvedValue(counted(4, 3, 0))
+    const done = createMultiRenameState('S')
+    await settle()
+    expect(done.waitsForMedia).toBe(false)
+    expect(await done.apply()).toEqual(started)
+    done.dispose()
+  })
+
+  it('stays queued when the backend says a file is still being read', async () => {
+    ipc.getMultiRenameLastSettings.mockResolvedValue({
+      spec: { ...DEFAULT_SPEC, nameMask: MEDIA_MASK },
+      presetId: null,
+    })
+    ipc.getMultiRenameMediaProgress.mockResolvedValue({ ok: true, value: { read: 3, total: 3, done: true } })
+    ipc.previewMultiRename.mockResolvedValue(counted(1, 3, 0))
+    const tool = createMultiRenameState('S')
+    await settle()
+    ipc.applyMultiRename.mockResolvedValueOnce({ ok: false, error: { type: 'stillReading' } })
+    let result: unknown = 'not yet'
+    void tool.apply().then((r) => (result = r))
+    await settle()
+    expect(tool.queued).toBe(true)
+    expect(tool.applyError).toBeNull()
+    expect(result).toBe('not yet')
+
+    ipc.previewMultiRename.mockResolvedValue(counted(2, 3, 0))
+    emit({ sessionId: 'S', read: 3, total: 3, done: true })
+    await settle()
+    expect(ipc.applyMultiRename).toHaveBeenLastCalledWith('S', 2)
+    expect(result).toEqual(started)
+    tool.dispose()
+  })
+
+  it('previews again as reads land, at most twice a second, only while a mask uses a field', async () => {
+    const tool = await readingSheet()
+    expect(ipc.previewMultiRename).toHaveBeenCalledTimes(1)
+    emit({ sessionId: 'S', read: 2, total: 3, done: false })
+    emit({ sessionId: 'S', read: 2, total: 3, done: false })
+    emit({ sessionId: 'OTHER', read: 9, total: 9, done: true })
+    await vi.advanceTimersByTimeAsync(499)
+    expect(ipc.previewMultiRename).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(ipc.previewMultiRename).toHaveBeenCalledTimes(2)
+    expect(tool.pending).toBe(false)
+
+    tool.update({ nameMask: '[N]' })
+    await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
+    expect(ipc.previewMultiRename).toHaveBeenCalledTimes(3)
+    emit({ sessionId: 'S', read: 3, total: 3, done: true })
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(ipc.previewMultiRename).toHaveBeenCalledTimes(3)
+    expect(tool.media?.done).toBe(true)
+    tool.dispose()
+  })
+
+  it('asks for the rows the list shows to be read next', async () => {
+    const tool = await readingSheet()
+    tool.source.onRangeChange?.({ start: 0, end: 3 })
+    expect(ipc.prioritizeMultiRenameMedia).toHaveBeenCalledWith('S', [0, 1, 2])
+    tool.dispose()
   })
 })
 

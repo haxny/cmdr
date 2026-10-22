@@ -13,9 +13,15 @@ import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   previewMultiRename: vi.fn(() =>
-    Promise.resolve({ ok: true, value: { previewId: 1, counts: { ready: 0, unchanged: 0, problems: 0 }, rows: [] } }),
+    Promise.resolve({
+      ok: true,
+      value: { previewId: 1, counts: { ready: 0, unchanged: 0, problems: 0, reading: 0 }, rows: [] },
+    }),
   ),
   getMultiRenamePreviewRows: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
+  getMultiRenameMediaProgress: vi.fn(() => Promise.resolve({ ok: true, value: { read: 0, total: 0, done: true } })),
+  onMultiRenameMediaProgress: vi.fn(() => Promise.resolve(() => {})),
+  prioritizeMultiRenameMedia: vi.fn(() => Promise.resolve()),
   getMultiRenameRangeSamples: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
   applyMultiRename: vi.fn(),
   getMultiRenamePresets: vi.fn(() =>

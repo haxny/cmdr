@@ -29,6 +29,10 @@
   "@multiRename.insertPlaceholder": {
     "description": "Accessible name of the row of buttons that insert a placeholder such as [N] or [C] into the name mask at the caret."
   },
+  "multiRename.mediaButton": "media ▾",
+  "@multiRename.mediaButton": {
+    "description": "Label of the button after the placeholder buttons ([N], [E], [P], [C], [YMD]) that opens the field picker: photo, video, and music information (date taken, camera, artist, title, …) to put in the new name. Lowercase like the placeholders beside it; keep the ▾ (it says the button opens a list). Keep it short: the row is tight."
+  },
   "multiRename.search": "Search for",
   "@multiRename.search": {
     "description": "Label of the search field of the rename tool's search & replace. Supports * and ? wildcards and a|b|c lists."
@@ -210,6 +214,14 @@
   "@multiRename.preview": {
     "description": "Heading above the table that previews every file’s old and new name, styled like the field labels (“Name mask”, “Search for”), and the table’s accessible name. An error or a status line takes its place while one shows."
   },
+  "multiRename.readingTags": "Reading tags: {readText} of {totalText}",
+  "@multiRename.readingTags": {
+    "description": "Shown above the Multi-rename preview while Cmdr reads the photo, video, and music files' tags (date taken, artist, and so on) that the new names use. Counts files.",
+    "placeholders": {
+      "readText": "how many files were read, formatted",
+      "totalText": "how many photo, video, and music files there are, formatted"
+    }
+  },
   "multiRename.oldName": "Old name",
   "@multiRename.oldName": {
     "description": "Preview table column: the file's current name."
@@ -283,6 +295,16 @@
       "problems": "how many files can’t be renamed (invalid name, duplicate, name taken, gone)"
     }
   },
+  "multiRename.summaryReading": "{ready, plural, one {# to rename} other {# to rename}} · {unchanged, plural, one {# unchanged} other {# unchanged}} · <problemsToggle>{problems, plural, one {# problem} other {# problems}}</problemsToggle> · {reading, plural, one {# still reading} other {# still reading}}",
+  "@multiRename.summaryReading": {
+    "description": "Footer summary of the Multi-rename preview while some files' tags are still being read: multiRename.summary plus how many files' new names wait for their tags. Keep the <problemsToggle> tags around the problem count, as in multiRename.summary.",
+    "placeholders": {
+      "ready": "how many files get a new name",
+      "unchanged": "how many files keep their name",
+      "problems": "how many files can’t be renamed",
+      "reading": "how many files' tags are still being read"
+    }
+  },
   "multiRename.cancel": "Cancel",
   "@multiRename.cancel": {
     "description": "Button that closes the tool without renaming."
@@ -351,6 +373,26 @@
   "@multiRename.rename": {
     "description": "Primary button that renames the files that are ready. {count} is how many."
   },
+  "multiRename.starting": "Starting…",
+  "@multiRename.starting": {
+    "description": "The Rename button's label while a rename waits for the files' tags to be read: it starts on its own once they are. Pressing the button again cancels the wait."
+  },
+  "multiRename.renameWaitsTooltip": "Some files’ tags are still being read. Rename waits for them, then starts.",
+  "@multiRename.renameWaitsTooltip": {
+    "description": "Tooltip on the Rename button while the name uses a photo or music field (like the date taken) and Cmdr is still reading those from the files."
+  },
+  "multiRename.startingTooltip": "The rename starts once every file’s tags are read. Click again to cancel.",
+  "@multiRename.startingTooltip": {
+    "description": "Tooltip on the Rename button while it reads “Starting…” (multiRename.starting): the rename waits for the files' tags, and a second click cancels it."
+  },
+  "multiRename.queuedAnnounce": "Rename starts once the tags are read",
+  "@multiRename.queuedAnnounce": {
+    "description": "Spoken by screen readers when Rename was pressed while the files' tags are still being read: the rename waits and starts on its own."
+  },
+  "multiRename.queueCanceled": "Rename canceled",
+  "@multiRename.queueCanceled": {
+    "description": "Spoken by screen readers when a rename that was waiting for the files' tags was canceled (Rename pressed again, or a field changed)."
+  },
   "multiRename.started": "{count, plural, one {Renaming # file} other {Renaming # files}}. You can roll it back from the operation log.",
   "@multiRename.started": {
     "description": "Toast after Rename starts. {count} is how many files. The operation log is the window listing past operations, where Undo is. \"Roll back\" is the button's name in the operation log (operationLog.dialog.rollBack): use the same words."
@@ -387,21 +429,155 @@
   "@multiRename.status.reading": {
     "description": "Quiet preview note on a row whose photo, video, or music file is still being read for its date taken or tags, so its new name may still change. Not a problem; it clears by itself."
   },
-  "multiRename.status.noValue": "Field missing",
+  "multiRename.status.noValue": "{field} missing",
   "@multiRename.status.noValue": {
-    "description": "Short preview note: the file has no value for a field the name mask uses (like the date a photo was taken, or a song's artist), so it can't be renamed."
+    "description": "Short preview note: the file has no value for a field the name mask uses, so it can't be renamed. {field} is the field's name, like “Date taken” or “Artist” (multiRename.mediaField.*).",
+    "placeholders": {
+      "field": "the field's name, like Date taken or Artist"
+    }
   },
-  "multiRename.reason.noValue": "This file doesn’t have a field the name uses, so it keeps its name.",
+  "multiRename.reason.noValue": "This file has no “{field}” value, so it keeps its name.",
   "@multiRename.reason.noValue": {
-    "description": "Tooltip on the preview's \"field missing\" symbol: the full reason behind multiRename.status.noValue. A field is a piece of the file's own information, like the date a photo was taken or a song's artist."
+    "description": "Tooltip on the preview's \"field missing\" symbol: the full reason behind multiRename.status.noValue. A field is a piece of the file's own information, like the date a photo was taken or a song's artist.",
+    "placeholders": {
+      "field": "the field's name, like Artist or Camera"
+    }
+  },
+  "multiRename.reason.noDate": "This file has no “{field}” value, so it keeps its name. The placeholder’s editor can use the date the file was last changed instead.",
+  "@multiRename.reason.noDate": {
+    "description": "Tooltip on the preview's \"field missing\" symbol for a date field (like the date a photo was taken). The placeholder's editor opens from the placeholder in the name mask; it has a choice to fall back to the file's last-changed date.",
+    "placeholders": {
+      "field": "the date field's name, like Date taken"
+    }
   },
   "multiRename.status.unreadable": "Can’t read tags",
   "@multiRename.status.unreadable": {
     "description": "Short preview note: Cmdr couldn't read the file's tags or photo information (EXIF), which a field in the name mask needs, so it can't be renamed."
   },
-  "multiRename.reason.unreadable": "Multi-rename couldn’t read this file’s tags or photo information, so it keeps its name.",
+  "multiRename.reason.unreadable": "Multi-rename couldn’t read this file’s tags or photo information, so it has no “{field}” value and keeps its name.",
   "@multiRename.reason.unreadable": {
-    "description": "Tooltip on the preview's \"can't read tags\" symbol: the full reason behind multiRename.status.unreadable. \"Multi-rename\" is the tool's name; match multiRename.title. Tags are a music or video file's artist, title, and so on; photo information is a photo's date taken, camera, and so on."
+    "description": "Tooltip on the preview's \"can't read tags\" symbol: the full reason behind multiRename.status.unreadable. \"Multi-rename\" is the tool's name; match multiRename.title. Tags are a music or video file's artist, title, and so on; photo information is a photo's date taken, camera, and so on.",
+    "placeholders": {
+      "field": "the field's name, like Date taken or Artist"
+    }
+  },
+  "multiRename.mediaField.exifTaken": "Date taken",
+  "@multiRename.mediaField.exifTaken": {
+    "description": "Name of a field Multi-rename can put in a file name: the date and time a photo or video was taken, from its EXIF or video metadata. Shown in the field picker, in reasons (“This file has no “Date taken” value”), and in the field's editor."
+  },
+  "multiRename.mediaField.exifCamera": "Camera",
+  "@multiRename.mediaField.exifCamera": {
+    "description": "Name of a photo field Multi-rename can put in a file name: the camera's maker and model together, like “Apple iPhone 15 Pro”."
+  },
+  "multiRename.mediaField.exifMake": "Camera maker",
+  "@multiRename.mediaField.exifMake": {
+    "description": "Name of a photo field Multi-rename can put in a file name: the company that made the camera, like “Canon”."
+  },
+  "multiRename.mediaField.exifModel": "Camera model",
+  "@multiRename.mediaField.exifModel": {
+    "description": "Name of a photo field Multi-rename can put in a file name: the camera's model, like “EOS R6”."
+  },
+  "multiRename.mediaField.exifLens": "Lens",
+  "@multiRename.mediaField.exifLens": {
+    "description": "Name of a photo field Multi-rename can put in a file name: the lens the photo was taken with."
+  },
+  "multiRename.mediaField.exifIso": "ISO",
+  "@multiRename.mediaField.exifIso": {
+    "description": "Name of a photo field Multi-rename can put in a file name: the ISO speed (light sensitivity) setting, a number like 400. Keep “ISO” as is in most languages."
+  },
+  "multiRename.mediaField.exifFocal": "Focal length (mm)",
+  "@multiRename.mediaField.exifFocal": {
+    "description": "Name of a photo field Multi-rename can put in a file name: the lens's focal length in whole millimeters, like 24."
+  },
+  "multiRename.mediaField.exifWidth": "Width (pixels)",
+  "@multiRename.mediaField.exifWidth": {
+    "description": "Name of a photo field Multi-rename can put in a file name: the image's width in pixels."
+  },
+  "multiRename.mediaField.exifHeight": "Height (pixels)",
+  "@multiRename.mediaField.exifHeight": {
+    "description": "Name of a photo field Multi-rename can put in a file name: the image's height in pixels."
+  },
+  "multiRename.mediaField.exifOrientation": "Orientation",
+  "@multiRename.mediaField.exifOrientation": {
+    "description": "Name of a photo field Multi-rename can put in a file name: the EXIF orientation, a number from 1 to 8 saying how the photo is rotated."
+  },
+  "multiRename.mediaField.tagTitle": "Title",
+  "@multiRename.mediaField.tagTitle": {
+    "description": "Name of a music field Multi-rename can put in a file name: the song's title, from the file's tags."
+  },
+  "multiRename.mediaField.tagArtist": "Artist",
+  "@multiRename.mediaField.tagArtist": {
+    "description": "Name of a music field Multi-rename can put in a file name: the song's artist, from the file's tags."
+  },
+  "multiRename.mediaField.tagAlbumArtist": "Album artist",
+  "@multiRename.mediaField.tagAlbumArtist": {
+    "description": "Name of a music field Multi-rename can put in a file name: the album's artist (which can differ from a song's own artist on a compilation)."
+  },
+  "multiRename.mediaField.tagAlbum": "Album",
+  "@multiRename.mediaField.tagAlbum": {
+    "description": "Name of a music field Multi-rename can put in a file name: the album's name."
+  },
+  "multiRename.mediaField.tagTrack": "Track number",
+  "@multiRename.mediaField.tagTrack": {
+    "description": "Name of a music field Multi-rename can put in a file name: the song's number on its album."
+  },
+  "multiRename.mediaField.tagDisc": "Disc number",
+  "@multiRename.mediaField.tagDisc": {
+    "description": "Name of a music field Multi-rename can put in a file name: which disc of a multi-disc album the song is on."
+  },
+  "multiRename.mediaField.tagYear": "Year",
+  "@multiRename.mediaField.tagYear": {
+    "description": "Name of a music field Multi-rename can put in a file name: the year the song or album came out."
+  },
+  "multiRename.mediaField.tagGenre": "Genre",
+  "@multiRename.mediaField.tagGenre": {
+    "description": "Name of a music field Multi-rename can put in a file name: the song's genre, like “Electronic”."
+  },
+  "multiRename.mediaField.tagComment": "Comment",
+  "@multiRename.mediaField.tagComment": {
+    "description": "Name of a music field Multi-rename can put in a file name: the free-text comment in the file's tags."
+  },
+  "multiRename.mediaPicker.title": "Insert a field",
+  "@multiRename.mediaPicker.title": {
+    "description": "Accessible name of the Multi-rename field picker, a small popup listing the photo, video, and music fields (date taken, camera, artist, title, …) that can go into the new name. Also the accessible name of the button that opens it."
+  },
+  "multiRename.mediaPicker.filter": "Filter fields",
+  "@multiRename.mediaPicker.filter": {
+    "description": "Placeholder and accessible name of the field picker's filter box: typing narrows the list of fields."
+  },
+  "multiRename.mediaPicker.photos": "Photos and videos (EXIF)",
+  "@multiRename.mediaPicker.photos": {
+    "description": "Heading of the field picker's group of photo and video fields. Keep “EXIF” as is: it's the name of the photo metadata format, and people search for it."
+  },
+  "multiRename.mediaPicker.music": "Music (ID3, MP4, FLAC…)",
+  "@multiRename.mediaPicker.music": {
+    "description": "Heading of the field picker's group of music fields. Keep “ID3”, “MP4”, and “FLAC” as is: they're the tag formats' names, and people search for them."
+  },
+  "multiRename.mediaPicker.none": "none in these files",
+  "@multiRename.mediaPicker.none": {
+    "description": "Dimmed note in the field picker, where a field's example value would be: none of the files being renamed has this field. Lowercase: it sits beside the field's name like a value."
+  },
+  "multiRename.mediaPicker.noneYet": "none so far",
+  "@multiRename.mediaPicker.noneYet": {
+    "description": "Dimmed note in the field picker, where a field's example value would be: none of the files read so far has this field, while Cmdr is still reading the rest. Lowercase: it sits beside the field's name like a value."
+  },
+  "multiRename.mediaPicker.noMatch": "No field matches “{filter}”",
+  "@multiRename.mediaPicker.noMatch": {
+    "description": "Shown in the field picker when the text typed in its filter box matches no field.",
+    "placeholders": {
+      "filter": "what the user typed in the filter box"
+    }
+  },
+  "multiRename.mediaPicker.inserted": "Inserted {field}",
+  "@multiRename.mediaPicker.inserted": {
+    "description": "Spoken by screen readers after the field picker put a field into the name mask. The picker stays open for more.",
+    "placeholders": {
+      "field": "the field's name, like Date taken"
+    }
+  },
+  "multiRename.mediaPicker.insertedMark": "inserted",
+  "@multiRename.mediaPicker.insertedMark": {
+    "description": "Screen-reader text after a field's name in the field picker, for a field already put into the name mask while the picker was open (shown as a check mark). Lowercase: read right after the name."
   },
   "multiRename.reason.empty": "The new name is empty.",
   "@multiRename.reason.empty": {

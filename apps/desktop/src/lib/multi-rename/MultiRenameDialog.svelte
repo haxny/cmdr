@@ -22,6 +22,7 @@
     import Chip from '#lib/ui/Chip.svelte'
     import Checkbox from '#lib/ui/Checkbox.svelte'
     import LinkButton from '#lib/ui/LinkButton.svelte'
+    import LiveAnnouncer from '#lib/ui/LiveAnnouncer.svelte'
     import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import Select from '#lib/ui/Select.svelte'
     import TextInput from '#lib/ui/TextInput.svelte'
@@ -40,8 +41,9 @@
     import { claimMenuCommand } from '#lib/commands/menu-claims.js'
     import { getBadgeStatus } from '#lib/feature-status.js'
     import { getAppLogger } from '#lib/logging/logger.js'
-    import type { MultiRenameError, MultiRenameOpened, MultiRenameStarted } from '#lib/tauri-commands/index.js'
-    import type { CaseChange, HistoryField, SpecError } from '#lib/ipc/bindings.js'
+    import type { MultiRenameOpened, MultiRenameStarted } from '#lib/tauri-commands/index.js'
+    import type { CaseChange, HistoryField } from '#lib/ipc/bindings.js'
+    import { errorText } from './error-text'
     import { createMultiRenameState } from './multi-rename-state.svelte'
     import MaskInput from './MaskInput.svelte'
     import { provideRangeSampleSource } from './range-sample-source'
@@ -116,6 +118,7 @@
     /** Holds the Letter case `Select`, so ⌘⌥U can open it through its trigger. */
     let caseField = $state<HTMLElement>()
     let presetsControl = $state<PresetsControlApi>()
+    let announcer: { announce: (message: string) => void } | undefined = $state()
 
     /** Each placeholder button's tooltip body, which the tooltip adopts on show. */
     const tipContent = $state<Partial<Record<string, HTMLDivElement>>>({})
@@ -150,7 +153,26 @@
     const undoShortcut = $derived(getFirstShortcutReactive('multiRename.undoRename'))
     const resultsShortcut = $derived(getFirstShortcutReactive('multiRename.results'))
 
-    const canStart = $derived(tool.counts.ready > 0 && tool.error === null && !tool.pending && !tool.applying)
+    /**
+     * Rename goes with ready rows, or queues while a mask's media fields are still being read. A
+     * queued one stays pressable: a second press cancels it.
+     */
+    const canStart = $derived(
+        tool.queued ||
+            ((tool.counts.ready > 0 || tool.waitsForMedia) && tool.error === null && !tool.pending && !tool.applying),
+    )
+    /** Why Rename waits, on its tooltip: it would queue, or it's queued. */
+    const renameTip = $derived(
+        tool.queued
+            ? tString('multiRename.startingTooltip')
+            : tool.waitsForMedia
+              ? tString('multiRename.renameWaitsTooltip')
+              : null,
+    )
+    /** The media read the masks wait on, for the list's heading slot; `null` once it's done or unused. */
+    const readingTags = $derived(
+        tool.usesMedia && tool.media !== null && !tool.media.done && tool.media.total > 0 ? tool.media : null,
+    )
     /** Results writes what the preview shows, so it waits for the same settled preview Start does. */
     const canResults = $derived(tool.error === null && !tool.pending && !tool.applying)
     const shownError = $derived(tool.error ?? tool.applyError ?? results.error)
@@ -210,7 +232,12 @@
 
     async function start(): Promise<void> {
         if (!canStart) return
-        const started = await tool.apply()
+        const wasQueued = tool.queued
+        const run = tool.apply()
+        // A press that queues or cancels changes only the button's words: say it.
+        if (tool.queued) announcer?.announce(tString('multiRename.queuedAnnounce'))
+        else if (wasQueued) announcer?.announce(tString('multiRename.queueCanceled'))
+        const started = await run
         if (started) {
             // With the operation log off this run isn't journaled, and undoing an older one would
             // leave this one's names in place, so nothing is offered.
@@ -289,50 +316,6 @@
         if (!(e.target instanceof HTMLInputElement) || e.target.type === 'checkbox') return
         e.preventDefault()
         void start()
-    }
-
-    function specErrorText(error: SpecError): string {
-        if (error.type === 'badRegex') return tString('multiRename.error.badRegex')
-        return error.error.type === 'unclosed'
-            ? tString('multiRename.error.unclosed')
-            : tString('multiRename.error.unknown', { placeholder: error.error.placeholder })
-    }
-
-    function readOnlyText(place: Extract<MultiRenameError, { type: 'readOnly' }>['place']): string {
-        if (place === 'gitPortal') return tString('fileExplorer.readOnly.gitPortalMessage')
-        if (place === 'resticSnapshots') return tString('fileExplorer.readOnly.resticMessage')
-        return tString('multiRename.error.readOnly')
-    }
-
-    function errorText(error: MultiRenameError): string {
-        switch (error.type) {
-            case 'spec':
-                return specErrorText(error.error)
-            case 'gone':
-            case 'sessionClosed':
-                return tString('multiRename.error.gone')
-            case 'selectionChanged':
-                return tString('multiRename.selectionChanged')
-            case 'nothingToRename':
-                return tString('multiRename.error.nothingToRename')
-            case 'notConnected':
-                return tString('multiRename.error.notConnected')
-            case 'previewOutOfDate':
-            // A queued rename waits on it rather than showing it; worded like a stale preview otherwise.
-            case 'stillReading':
-                return tString('multiRename.error.previewOutOfDate')
-            case 'readOnly':
-                return readOnlyText(error.place)
-            case 'timedOut':
-                return tString('multiRename.error.timedOut')
-            case 'couldntWriteNames':
-                return tString('multiRename.error.couldntWriteNames')
-            case 'namesFileGone':
-                return tString('multiRename.results.gone')
-            case 'couldntStart':
-            case 'internal':
-                return tString('multiRename.error.couldntStart')
-        }
     }
 </script>
 
@@ -524,7 +507,17 @@
                 {/if}
             </p>
             {#if !shownMessage && !showResultsNotice}
-                <span class="label preview-label" aria-hidden="true">{tString('multiRename.preview')}</span>
+                {#if readingTags}
+                    <!-- Plain text, not a live region: it ticks several times a second. -->
+                    <span class="label preview-label">
+                        {tString('multiRename.readingTags', {
+                            readText: formatInteger(readingTags.read),
+                            totalText: formatInteger(readingTags.total),
+                        })}
+                    </span>
+                {:else}
+                    <span class="label preview-label" aria-hidden="true">{tString('multiRename.preview')}</span>
+                {/if}
             {/if}
         </div>
 
@@ -538,6 +531,8 @@
 
         <!-- Inside the dialog, so it portals into the modal's layer (above the scrim, inside its focus trap). -->
         <Menu menu={fieldHistory.menu} ariaLabel={tString('multiRename.history')} minWidth={240} />
+        <!-- Inside the modal, so screen readers hear it: what Rename and the field picker did. -->
+        <LiveAnnouncer bind:this={announcer} />
     </div>
 
     {#snippet footerLeading()}
@@ -545,8 +540,13 @@
             <PresetsControl bind:this={presetsControl} {tool} />
             <span class="counts" class:is-unavailable={previewStale} role="status">
                 <Trans
-                    key="multiRename.summary"
-                    params={{ ready: tool.counts.ready, unchanged: tool.counts.unchanged, problems: tool.counts.problems }}
+                    key={tool.counts.reading > 0 ? 'multiRename.summaryReading' : 'multiRename.summary'}
+                    params={{
+                        ready: tool.counts.ready,
+                        unchanged: tool.counts.unchanged,
+                        problems: tool.counts.problems,
+                        reading: tool.counts.reading,
+                    }}
                     snippets={{ problemsToggle }}
                 />
             </span>
@@ -576,13 +576,15 @@
                 {tString('multiRename.results')}
             </Button>
             <Button onclick={onClose}>{tString('multiRename.cancel')}</Button>
+            <!-- "Starting…" while it waits for the tags; its width may change with the words. -->
             <Button
                 variant="primary"
                 onclick={() => { void start() }}
                 disabled={!canStart}
                 keyHint={{ commandId: 'multiRename.rename' }}
+                tooltipContent={renameTip === null ? undefined : { text: renameTip }}
             >
-                {tString('multiRename.rename', { count: tool.counts.ready })}
+                {tool.queued ? tString('multiRename.starting') : tString('multiRename.rename', { count: tool.counts.ready })}
             </Button>
         </span>
     {/snippet}
