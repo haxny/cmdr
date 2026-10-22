@@ -193,7 +193,7 @@ room").
 - **The scenarios are backend-blind and live in `network_*_test_support.rs`.** Everything they touch is `dyn Volume`,
   taken as `(remote: Arc<dyn Volume>, dir: PathBuf)` (a live volume plus a scratch dir it owns and removes), so a claim
   proved against one backend is proved in the same words against the others and the suites can't drift. Each backend
-  file connects its own fixture (`sftp_test_support::fixture`, `smb_test_support::fixture`, `webdav_test_support::fixture`) and
+  file connects its own fixture (`sftp_test_support::fixture`, `smb_test_support::fixture`, `webdav_test_support::fixture`, `nfs_test_support::fixture`) and
   delegates. Six files, by what they prove:
   - `network_transfer_test_support.rs`: the byte path (below).
   - `network_semantics_test_support.rs`: merges under Skip / Overwrite / Rename / OverwriteSmaller, a move-merge that
@@ -222,6 +222,9 @@ room").
   cell, whose guard is a staged landing S3 never makes. Its scenarios take a `cmdr_s3::volume::testing::S3Target`, so
   `s3_live_engine_test.rs` runs the same bodies against real accounts by hand (`live-engine.sh`; each scenario's waits
   stretch to ten minutes under `CMDR_S3_LIVE=1`, `network_transfer_test_support::budget`).
+  NFS drives the transfer, semantics, safety, and move-drift scenarios against the knfsd fixture's `/insecure`
+  (`nfs_transfer_*`), plus cells of its own: a paused upload resuming, a file's mode kept, and the loss note naming
+  xattrs (no `._` sidecar). It skips the link cells (the backend makes no links) and the dialog-address ones.
   SFTP also points the same-server move and copy, the inline rename, and the remote zip edit at
   `sftp-fixture-noposixrename`, where the server can't copy for itself and a rename has no atomic replace. WebDAV points
   the zip browse at `webdav-fixture-norange`, whose whole-file answer to every ranged GET is what a zip reader's many
@@ -246,8 +249,8 @@ room").
   driver runs it: the pre-existing-folder scenario there holds the per-name probe (`landing::top_level_precheck`),
   never the concurrent driver's skip on a `Created` answer. The ADB cells need nextest's process per test: the device
   list they register phones in is process-wide (`adb/device_provider.rs`), so plain threaded `cargo test` fails them.
-- **❗ The cells themselves must stay in the backend files, on the `webdav_integration_` / `sftp_integration_` / `smb_integration_` name
-  prefix.** The integration lane selects the app crate's Docker cells by NAME (`scripts/check/checks/fixture-lane-coverage.go`,
+- **❗ The cells themselves must stay in the backend files, on the `webdav_integration_` / `sftp_integration_` / `smb_integration_` / `nfs_integration_`
+  name prefix.** The integration lane selects the app crate's Docker cells by NAME (`scripts/check/checks/fixture-lane-coverage.go`,
   enforced by `desktop-fixture-lane-coverage`), so a scenario promoted to a `#[tokio::test]` in the shared file would
   compile, look like coverage, and never run anywhere.
 - **What the shared scenarios pin**: a nested directory tree lands intact in both directions (structure and bytes, as
