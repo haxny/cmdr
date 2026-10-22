@@ -34,7 +34,7 @@ jobs:
   # It also verifies that the tag itself was signed by a release key trusted in
   # `.github/release-signers`, so every shipped tag carries independently verifiable provenance
   # and a release cannot accidentally go out unsigned. This runs in seconds and gates `compile`,
-  # so a bad push costs nothing: no three parallel 90-minute macOS builds, and no assets
+  # so a bad push costs nothing: no parallel 90-minute macOS builds, and no assets
   # overwritten on an old release.
   guard:
     name: Verify this release tag
@@ -273,12 +273,15 @@ jobs:
     # as before: `macos-26` is arm64, as `macos-latest` already was.
     runs-on: macos-26
     # Generous because a hosted runner is ephemeral: every job pays a cold ~1000-crate Tauri
-    # compile (the self-hosted runner's warm cargo cache made 30 minutes plenty). The three arch
+    # compile (the self-hosted runner's warm cargo cache made 30 minutes plenty). The two arch
     # jobs run in PARALLEL here rather than queueing on one machine, so wall-clock is one cold
-    # build, not three.
+    # build, not two.
     timeout-minutes: 90
     permissions:
       contents: read
+    # No universal compile: its `sign` job joins these two binaries with `lipo -create`, which is
+    # all `tauri build --target universal-apple-darwin` does after compiling both arches (one after
+    # the other, so it was the release's slowest job).
     strategy:
       fail-fast: false
       matrix:
@@ -287,8 +290,6 @@ jobs:
             arch: aarch64
           - target: x86_64-apple-darwin
             arch: x86_64
-          - target: universal-apple-darwin
-            arch: universal
 
     steps:
       - name: Checkout code
@@ -377,16 +378,20 @@ jobs:
       matrix:
         include:
           # `asset-arch` is the arch as Tauri's bundler spells it in file names (`x64`, never
-          # `x86_64`), which every asset name downstream relies on.
+          # `x86_64`), which every asset name downstream relies on. `slices` names the
+          # `compiled-*` artifacts the job takes; the universal app is both.
           - target: aarch64-apple-darwin
             arch: aarch64
             asset-arch: aarch64
+            slices: aarch64
           - target: x86_64-apple-darwin
             arch: x86_64
             asset-arch: x64
+            slices: x86_64
           - target: universal-apple-darwin
             arch: universal
             asset-arch: universal
+            slices: aarch64 x86_64
 
     steps:
       - name: Checkout code
@@ -405,37 +410,65 @@ jobs:
         # npm tree lands on disk without running. Only the Tauri CLI from it ever runs here.
         run: pnpm install --frozen-lockfile --ignore-scripts --filter @cmdr/desktop
 
-      - name: Fetch the compiled binary
+      # Each into its own folder: `download-artifact` puts a lone artifact straight into `path`.
+      - name: Fetch the compiled aarch64 binary
+        if: contains(matrix.slices, 'aarch64')
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: compiled-${{ matrix.arch }}
-          path: ${{ runner.temp }}/compiled
+          name: compiled-aarch64
+          path: ${{ runner.temp }}/compiled/aarch64
 
+      - name: Fetch the compiled x86_64 binary
+        if: contains(matrix.slices, 'x86_64')
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: compiled-x86_64
+          path: ${{ runner.temp }}/compiled/x86_64
+
+      # The universal binary is `lipo -create` of the two, in the order and with the output path
+      # `tauri build --target universal-apple-darwin` uses (Tauri CLI 2.12.3,
+      # `crates/tauri-cli/src/interface/rust/desktop.rs`), so `tauri bundle` gets what a one-step
+      # universal build would have handed it. `lipo` is Apple's, so no build code runs here.
       - name: Put the binary where the bundler looks
         env:
           TARGET: ${{ matrix.target }}
-          ARCH: ${{ matrix.arch }}
+          SLICES: ${{ matrix.slices }}
         run: |
           set -euo pipefail
-          # The artifact comes from a job that ran third-party code, so take exactly one regular
-          # file from it and nothing else. An artifact doesn't keep the executable bit.
-          DIR="$RUNNER_TEMP/compiled"
-          if [ "$(ls -A "$DIR")" != Cmdr ] || [ -L "$DIR/Cmdr" ] || [ ! -f "$DIR/Cmdr" ]; then
-            echo "::error::The compiled-$ARCH artifact should hold one file, Cmdr. It holds: $(ls -lA "$DIR")"
-            exit 1
-          fi
-          case "$ARCH" in
-            aarch64) WANT=arm64 ;;
-            x86_64) WANT=x86_64 ;;
-            universal) WANT="x86_64 arm64" ;;
-          esac
-          GOT="$(lipo -archs "$DIR/Cmdr")"
-          if [ "$GOT" != "$WANT" ]; then
-            echo "::error::The compiled-$ARCH binary is built for '$GOT', expected '$WANT'."
-            exit 1
-          fi
+          INPUTS=()
+          for slice in $SLICES; do
+            # The artifact comes from a job that ran third-party code, so take exactly one regular
+            # file from it and nothing else. An artifact doesn't keep the executable bit.
+            DIR="$RUNNER_TEMP/compiled/$slice"
+            if [ "$(ls -A "$DIR")" != Cmdr ] || [ -L "$DIR/Cmdr" ] || [ ! -f "$DIR/Cmdr" ]; then
+              echo "::error::The compiled-$slice artifact should hold one file, Cmdr. It holds: $(ls -lA "$DIR")"
+              exit 1
+            fi
+            case "$slice" in
+              aarch64) WANT=arm64 ;;
+              x86_64) WANT=x86_64 ;;
+            esac
+            GOT="$(lipo -archs "$DIR/Cmdr")"
+            if [ "$GOT" != "$WANT" ]; then
+              echo "::error::The compiled-$slice binary is built for '$GOT', expected '$WANT'."
+              exit 1
+            fi
+            INPUTS+=("$DIR/Cmdr")
+          done
+          OUT="target/$TARGET/release/Cmdr"
           mkdir -p "target/$TARGET/release"
-          install -m 755 "$DIR/Cmdr" "target/$TARGET/release/Cmdr"
+          if [ "${#INPUTS[@]}" = 1 ]; then
+            install -m 755 "${INPUTS[0]}" "$OUT"
+          else
+            lipo -create -output "$OUT" "${INPUTS[@]}"
+            chmod 755 "$OUT"
+            GOT="$(lipo -archs "$OUT")"
+            if [ "$GOT" != "x86_64 arm64" ]; then
+              echo "::error::The universal binary is built for '$GOT', expected 'x86_64 arm64'."
+              exit 1
+            fi
+          fi
+          echo "$OUT: $(lipo -archs "$OUT")"
 
       - name: Fetch llama-server
         # Downloads and checks the pinned archive against its SHA-256; `compile` did the same for

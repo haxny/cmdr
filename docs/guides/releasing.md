@@ -34,19 +34,24 @@ each value comes from: the vault note `projects/Cmdr/workflow/Cmdr signing keys.
 ## How a release build is split
 
 Each arch builds in two jobs of `release-pipeline.yml`, so no third-party build code runs where the signing material is.
-Compiling runs every npm install script, Vite plugin, and crate `build.rs`, and the 2026-10-15 incident tabletop found
-all of that sharing one `tauri-action` step with every signing secret.
+Two `compile` jobs (aarch64, x86_64) feed three `sign` jobs (aarch64, x64, universal). Compiling runs every npm install
+script, Vite plugin, and crate `build.rs`, and the 2026-10-15 incident tabletop found all of that sharing one
+`tauri-action` step with every signing secret.
 
 - **`compile`** has no environment, a read-only token, and no credential left in `.git/config`. It installs the npm
   packages, then runs `pnpm tauri build --no-bundle`: `beforeBuildCommand` (the llama-server fetch and the Vite build),
   then cargo, stopping before the bundler, the only part of `tauri build` that signs. It hands on one file,
   `target/<triple>/release/Cmdr`, as the `compiled-<arch>` artifact.
-- **`sign`** (`environment: release`) starts on a fresh runner once all three `compile` jobs are green. It takes exactly
-  that one regular file and checks its `lipo -archs`, installs the Tauri CLI with `pnpm install --ignore-scripts`, and
-  fetches llama-server again (pinned by SHA-256). Only then does it set up the signing keychain and the notarization
-  key, sign the llama-server binaries (`download-llama-server.go sign`, since the bundler signs the app but not the
-  resources it copies in), and run `tauri bundle`, which bundles, signs, notarizes, staples, and updater-signs. It
-  deletes the signing material, runs the macOS floor checks on the bundled binary, and uploads.
+- **`sign`** (`environment: release`) starts on a fresh runner once both `compile` jobs are green. It takes exactly that
+  one regular file per arch and checks its `lipo -archs`. The universal job takes both and joins them with
+  `lipo -create` into `target/universal-apple-darwin/release/Cmdr`, which is all
+  `tauri build --target universal-apple-darwin` does after compiling both arches one after the other (that third compile
+  was the release's critical path, 52 min in v0.55.0's run against 33 for aarch64). Then it installs the Tauri CLI with
+  `pnpm install --ignore-scripts`, and fetches llama-server again (pinned by SHA-256). Only then does it set up the
+  signing keychain and the notarization key, sign the llama-server binaries (`download-llama-server.go sign`, since the
+  bundler signs the app but not the resources it copies in), and run `tauri bundle`, which bundles, signs, notarizes,
+  staples, and updater-signs. It deletes the signing material, runs the macOS floor checks on the bundled binary, and
+  uploads.
 - **Why two jobs, not two steps**: code from one step can leave a process or a patched tool behind on its runner and
   read a later step's environment or keychain. A new job is a new machine.
 - **What still runs next to the secrets**: the Tauri CLI (it's the signer), pnpm and node to start it, Go running our
@@ -314,9 +319,8 @@ check.
      map to § `release-finish.sh` stopped. The laptop has to stay on until it ends, so tell the user that instead of the
      "laptop is free" note in step 10.
 9. **Confirm the build started**: wait ~30 seconds, then run `gh run view <release-run-id> --json jobs` and check the
-   `Compile (...)` jobs. On GitHub-hosted runners all three should be `in_progress` together; the three
-   `Sign and notarize (...)` jobs start once all of them are green. Self-hosted: see § Keep the Mac awake during the
-   build.
+   `Compile (...)` jobs. On GitHub-hosted runners both should be `in_progress` together; the three
+   `Sign and notarize (...)` jobs start once both are green. Self-hosted: see § Keep the Mac awake during the build.
 10. **Monitor the build.** Tell the user their laptop is free (the build runs on GitHub's hardware). Poll `gh run view`
     every few minutes in the background and report progress (which jobs are done, which are still running). Report when
     all jobs complete; if one fails, show the failure details and advise how to fix it. Suggest the user also track it
@@ -605,7 +609,7 @@ registered, and nothing needs one.
   self-hosted Mac also has to stay awake for the whole build, or every in-flight job dies with
   `The self-hosted runner lost communication with the server`.
 - **What hosted costs**: every job is ephemeral, so each pays a cold ~1000-crate Tauri compile instead of reusing a warm
-  cargo cache. Partly offset by the three arch jobs running in parallel rather than queueing on one machine, so
+  cargo cache. Partly offset by the two arch compiles running in parallel rather than queueing on one machine, so
   wall-clock is roughly one cold build.
 - **What hosted needs that self-hosted didn't**: mise's action cache left on (there's no local tool dir to persist).
 - **Hosted is also what makes the build split hold**: every job gets a fresh machine, so nothing `compile` ran can be
@@ -735,13 +739,12 @@ screen LOOKS, which no test can judge.
 and the laptop can close with no effect on the release. Everything below applies only if a self-hosted runner is ever
 set up again.
 
-How a self-hosted build looks from the outside: exactly one `Compile (...)` job goes `in_progress` and the other two
-stay `queued` (one machine, serialized), at ~5 min each for aarch64 and x86_64 and ~7 min for universal on a warm cache,
-so the user keeps the laptop open for ~15 minutes. If all three are still `queued` after ~30 s, the runner is down:
-confirm with `launchctl list | grep cmdr` (look for `actions.runner.vdavid-cmdr.*`) and restart with
-`cd ~/actions-runner && ./svc.sh start`, falling back to `launchctl bootout` + `bootstrap` if `svc.sh` errors with "Load
-failed: 5: Input/output error". Queued jobs pick up automatically once the runner reports in; no re-trigger or re-tag
-needed.
+How a self-hosted build looks from the outside: exactly one `Compile (...)` job goes `in_progress` and the other stays
+`queued` (one machine, serialized), at ~5 min each on a warm cache, so the user keeps the laptop open for the whole
+build. If both are still `queued` after ~30 s, the runner is down: confirm with `launchctl list | grep cmdr` (look for
+`actions.runner.vdavid-cmdr.*`) and restart with `cd ~/actions-runner && ./svc.sh start`, falling back to
+`launchctl bootout` + `bootstrap` if `svc.sh` errors with "Load failed: 5: Input/output error". Queued jobs pick up
+automatically once the runner reports in; no re-trigger or re-tag needed.
 
 A self-hosted runner would live on this Mac. If the machine sleeps (even briefly, or just the display), GitHub Actions
 drops the runner connection and every in-flight matrix job fails with
