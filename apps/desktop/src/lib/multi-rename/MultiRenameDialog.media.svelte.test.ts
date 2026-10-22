@@ -223,6 +223,19 @@ describe('the media field picker', () => {
     ).toBeTruthy()
   })
 
+  it('Space types into a filter that has text, so a phrase like “album a” filters', async () => {
+    const root = await mountSheet()
+    const mask = nameMask(root)
+    await openPicker(root)
+    filterBox().value = 'album'
+    filterBox().dispatchEvent(new Event('input', { bubbles: true }))
+    await settle()
+    const space = press(filterBox(), ' ')
+    await settle()
+    expect(space.defaultPrevented).toBe(false)
+    expect(mask.value).toBe('[N]')
+  })
+
   it('says when no field matches the filter', async () => {
     const root = await mountSheet()
     await openPicker(root)

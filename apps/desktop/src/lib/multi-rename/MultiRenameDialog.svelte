@@ -155,11 +155,13 @@
 
     /**
      * Rename goes with ready rows, or queues while a mask's media fields are still being read. A
-     * queued one stays pressable: a second press cancels it.
+     * queued one stays pressable (a second press cancels it) until it's launching: then it's too
+     * late to cancel, so the button rests, still reading "Starting…".
      */
     const canStart = $derived(
-        tool.queued ||
-            ((tool.counts.ready > 0 || tool.waitsForMedia) && tool.error === null && !tool.pending && !tool.applying),
+        tool.queued
+            ? !tool.launching
+            : (tool.counts.ready > 0 || tool.waitsForMedia) && tool.error === null && !tool.pending && !tool.applying,
     )
     /** Why Rename waits, on its tooltip: it would queue, or it's queued. */
     const renameTip = $derived(

@@ -746,6 +746,9 @@ describe('createMultiRenameState with media fields', () => {
   let emit: (progress: Progress) => void = () => {}
   const MEDIA_MASK = '[=exif.taken:d] [N]'
   const started = { operationId: 'op1', renaming: 2, swapsLeftOut: 0 }
+  const emitDone = (): void => {
+    emit({ sessionId: 'S', read: 3, total: 3, done: true })
+  }
 
   /** A preview answer with `reading` rows still being read. */
   function counted(previewId: number, ready: number, reading: number) {
@@ -879,6 +882,85 @@ describe('createMultiRenameState with media fields', () => {
     emit({ sessionId: 'S', read: 3, total: 3, done: true })
     await settle()
     expect(ipc.applyMultiRename).toHaveBeenLastCalledWith('S', 2)
+    expect(result).toEqual(started)
+    tool.dispose()
+  })
+
+  it('an edit during a press cancels the queue a late `stillReading` would make', async () => {
+    const tool = await readingSheet()
+    ipc.getMultiRenameMediaProgress.mockResolvedValue({ ok: true, value: { read: 3, total: 3, done: true } })
+    // Every value in: the press goes to the backend at once.
+    ipc.previewMultiRename.mockResolvedValue(counted(2, 3, 0))
+    emitDone()
+    await settle()
+    let answer: (v: unknown) => void = () => {}
+    ipc.applyMultiRename.mockReturnValueOnce(new Promise((r) => (answer = r)))
+    const press = tool.apply()
+    await settle()
+    tool.update({ nameMask: '[=exif.taken:d] x' })
+    answer({ ok: false, error: { type: 'stillReading' } })
+    expect(await press).toBeNull()
+    expect(tool.queued).toBe(false)
+    await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
+    expect(ipc.applyMultiRename).toHaveBeenCalledTimes(1)
+    tool.dispose()
+  })
+
+  it('an edit during the queued launch cancels a `stillReading` retry', async () => {
+    const tool = await readingSheet()
+    const press = tool.apply()
+    await settle()
+    let answer: (v: unknown) => void = () => {}
+    ipc.applyMultiRename.mockReturnValueOnce(new Promise((r) => (answer = r)))
+    ipc.previewMultiRename.mockResolvedValue(counted(2, 3, 0))
+    emitDone()
+    await settle()
+    expect(tool.launching).toBe(true)
+    tool.update({ nameMask: '[=exif.taken:d] x' })
+    answer({ ok: false, error: { type: 'stillReading' } })
+    expect(await press).toBeNull()
+    expect(tool.queued).toBe(false)
+    await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
+    expect(ipc.applyMultiRename).toHaveBeenCalledTimes(1)
+    tool.dispose()
+  })
+
+  it('a failed preview while queued ends the queue, and the error line says why', async () => {
+    const tool = await readingSheet()
+    const press = tool.apply()
+    await settle()
+    ipc.previewMultiRename.mockResolvedValue({ ok: false, error: { type: 'sessionClosed' } })
+    emitDone()
+    expect(await press).toBeNull()
+    expect(tool.queued).toBe(false)
+    expect(tool.error?.type).toBe('sessionClosed')
+    expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+    tool.dispose()
+  })
+
+  it('a press during the first load stays queued until a preview it can run lands', async () => {
+    ipc.getMultiRenameLastSettings.mockResolvedValue({
+      spec: { ...DEFAULT_SPEC, nameMask: MEDIA_MASK },
+      presetId: null,
+    })
+    ipc.getMultiRenameMediaProgress.mockResolvedValue({ ok: true, value: { read: 1, total: 3, done: false } })
+    let first: (v: unknown) => void = () => {}
+    ipc.previewMultiRename.mockReturnValueOnce(new Promise((r) => (first = r)))
+    const tool = createMultiRenameState('S')
+    await settle()
+    let result: unknown = 'not yet'
+    void tool.apply().then((r) => (result = r))
+    await settle()
+    expect(tool.queued).toBe(true)
+    // A quiet preview lands while the first is still out: nothing to run on yet.
+    ipc.previewMultiRename.mockResolvedValue(counted(2, 3, 0))
+    emitDone()
+    await settle()
+    expect(tool.queued).toBe(true)
+    expect(result).toBe('not yet')
+    first(counted(1, 1, 2))
+    await settle()
+    expect(ipc.applyMultiRename).toHaveBeenCalledWith('S', 2)
     expect(result).toEqual(started)
     tool.dispose()
   })

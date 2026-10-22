@@ -4,7 +4,7 @@
      * fields, in two groups (the one more of the files have first), each with its value from the
      * first file that has it, or a dimmed "none in these files". Focus stays in the filter box;
      * ↑/↓ move the active field (`aria-activedescendant`). It stays open for several picks: a click
-     * or Space picks and keeps it open, Enter picks and closes, Esc closes, Tab / ⇧Tab close and
+     * or Space (with an empty filter; otherwise Space types) picks and keeps it open, Enter picks and closes, Esc closes, Tab / ⇧Tab close and
      * move on. A field picked while it's open carries a ✓. The sheet does the inserting and the
      * announcing (`onPick`), and puts focus where `onClose` says.
      */
@@ -83,11 +83,15 @@
                 claimKey(e)
                 move(e.key === 'ArrowDown' ? 1 : -1)
                 return
-            case 'Enter':
             case ' ':
-                // Space picks too: the filter matches single words, so it never needs one.
+                // Space picks only from an empty filter; once there's text it types, so "album a" filters.
+                if (filter !== '') return
                 claimKey(e)
-                if (active !== null) onPick(active, e.key === 'Enter')
+                if (active !== null) onPick(active, false)
+                return
+            case 'Enter':
+                claimKey(e)
+                if (active !== null) onPick(active, true)
                 return
             case 'Escape':
                 claimKey(e)

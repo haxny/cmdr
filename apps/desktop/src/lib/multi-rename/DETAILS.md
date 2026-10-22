@@ -220,12 +220,21 @@ The session reads its files' EXIF and tags in the background from the moment it 
   goes through the same `startRename` a fresh press uses, on that preview, so the skipped problems and the post-run
   report are the normal ones, and the first press's promise resolves with the operation (the sheet's toast and close
   follow). A second press, any edit (`schedule` cancels, so every field and preset change does; `moveCursorRow` too), or
-  closing resolves it with `null`. Once launching it can't be cancelled: the rename is on its way.
+  closing resolves it with `null`.
+  - **Edits win in every window**: each cancel bumps `edits`, so a press still out at the backend that comes back
+    `stillReading` queues only if no edit came since (else it resolves `null`: no press was made for the edited spec).
+    Once launching, the rename may already be on its way, so it can't be stopped; an edit then sets `cancelRequested`,
+    and a `stillReading` answer ends the queue instead of retrying. While launching the button rests (disabled, still
+    "Starting…"), so a press there neither cancels nor announces.
+  - **Never hangs, never vanishes**: a preview error other than a spec error (a timeout, a closed session, which sends
+    no more progress) ends the queue with `null`, the error line saying why. With no preview to run on yet (the first
+    one, or one still out, `waiting > 0`), the queue stays put; a superseded preview's return re-checks it.
   - **Decision/Why: the queue lives in the frontend.** Apply's proof (the backend renames only if it computes exactly
     the preview's ready rows) stays untouched, and closing the sheet already ends the queue; a backend queue would need
     its own cancel and a way to report back to a sheet.
-  - **Safety net**: the backend's `prepare` refuses with `stillReading` when its preview still has `Reading` rows; the
-    state treats that as "stay queued" (no error line) and retries on the next preview.
+  - **Safety net**: a press made mid-read that the backend still finds reading comes back `stillReading`; the state
+    treats that as "stay queued" (no error line) and retries on the next preview. A complete preview whose recompute
+    finds `Reading` rows answers `previewOutOfDate` instead, so a press never auto-runs a preview nobody saw.
   - Without a media field in the masks, Rename never waits, whatever the read is doing; with every value in, it renames
     at once. The button may change width with "Starting…".
 
@@ -243,11 +252,12 @@ The session reads its files' EXIF and tags in the background from the moment it 
   it, or a dimmed "none so far" while reading and "none in these files" once done. The group more files have comes first
   (photos on a tie); within a group, `MediaField` order (`pickerGroups`, pure, in `media-fields.ts`).
 - **Filter**: case-insensitive, on the field's words, its mask name (`exif.iso`), and its group's heading (so "music" or
-  "EXIF" lists a whole group). One word does it, which is what frees Space for inserting.
-- **Keys**: focus stays in the filter box. ↑/↓ move the active option; Space and a click insert and keep the picker
-  open; Enter inserts and closes back to the mask; Esc closes back to the mask (claimed, so the sheet stays open); Tab /
-  ⇧Tab close and move to the control after / before the button (computed among the sheet's tabbables: the popover's trap
-  would otherwise wrap inside it). Every handled key is claimed, so Enter never renames.
+  "EXIF" lists a whole group).
+- **Keys**: focus stays in the filter box. ↑/↓ move the active option; a click inserts and keeps the picker open, and so
+  does Space while the filter is empty (with text in it Space types, so "album a" filters multi-word labels); Enter
+  inserts and closes back to the mask; Esc closes back to the mask (claimed, so the sheet stays open); Tab / ⇧Tab close
+  and move to the control after / before the button (computed among the sheet's tabbables: the popover's trap would
+  otherwise wrap inside it). Every handled key is claimed, so Enter never renames.
 - **Inserting** (`PlaceholderChips.pick` → `insertField`): `[=source.field]` at the name mask's caret, the caret moved
   after it without taking focus, so the next pick lands after. A pick right after the last one (mask and caret unchanged
   since) gets a space first: `[=tag.artist] [=tag.title]`. Picked fields carry a ✓ (and "inserted" for screen readers)

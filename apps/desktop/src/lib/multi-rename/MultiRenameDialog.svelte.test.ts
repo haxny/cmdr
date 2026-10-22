@@ -356,6 +356,29 @@ describe('MultiRenameDialog', () => {
       expect(rename.textContent).not.toContain('Starting…')
       expect(ipc.applyMultiRename).not.toHaveBeenCalled()
     })
+
+    it('can’t be pressed once the queued rename is on its way: too late to cancel', async () => {
+      let progress: (p: unknown) => void = () => {}
+      vi.mocked(commands.onMultiRenameMediaProgress).mockImplementationOnce((handler) => {
+        progress = handler as (p: unknown) => void
+        return Promise.resolve(() => {})
+      })
+      const root = await mountSheet()
+      const rename = root.querySelector<HTMLButtonElement>('button.btn-primary')
+      if (!rename) throw new Error('no Rename button')
+      rename.click()
+      await settle()
+      ipc.applyMultiRename.mockReturnValue(new Promise(() => {}))
+      ipc.previewMultiRename.mockResolvedValue({
+        ok: true,
+        value: { ...READY, previewId: 2, counts: { ready: 2000, unchanged: 0, problems: 0, reading: 0 } },
+      })
+      progress({ sessionId: 'S', read: 2000, total: 2000, done: true })
+      await settle()
+      expect(ipc.applyMultiRename).toHaveBeenCalledWith('S', 2)
+      expect(rename.textContent).toContain('Starting…')
+      expect(rename.disabled).toBe(true)
+    })
   })
 
   describe('rename key', () => {

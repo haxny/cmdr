@@ -205,6 +205,8 @@ export interface MultiRenameState {
   readonly waitsForMedia: boolean
   /** A Rename is waiting for the read ("Starting…"). */
   readonly queued: boolean
+  /** The queued Rename is on its way to the backend: too late to cancel. */
+  readonly launching: boolean
   /** The field picker's overview: each field's example from the session's files; `null` when it can't say. */
   mediaOverview: () => Promise<MediaOverview | null>
   /**
@@ -251,7 +253,11 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
   let queue: ((started: MultiRenameStarted | null) => void) | null = null
   let queued = $state(false)
   // The queued Rename is on its way to the backend: too late to cancel.
-  let launching = false
+  let launching = $state(false)
+  // An edit came while launching: a `stillReading` answer ends the queue rather than retrying.
+  let cancelRequested = false
+  // Bumped by every edit and cancel, so a press can tell one came while it waited on the backend.
+  let edits = 0
   let prioritized = ''
 
   const totalOf = (c: PreviewCounts): number => c.ready + c.unchanged + c.problems + c.reading
@@ -302,7 +308,11 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     } finally {
       if (!quiet) waiting--
     }
-    if (asked !== generation) return
+    if (asked !== generation) {
+      // A newer preview landed while this one was out; with this one no longer pending, it may be the one to run on.
+      runQueued()
+      return
+    }
     if (answer.ok) {
       keepCursorRow()
       previewId = answer.value.previewId
@@ -326,6 +336,9 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
         counts = NO_COUNTS
         problemsOnly = false
         rows = new SvelteMap()
+        // No preview to run on, and maybe no session (a closed one sends no more progress): the
+        // queued Rename ends here, with the error line saying why, never hanging on "Starting…".
+        if (!launching) dropQueue()
       }
     }
   }
@@ -407,27 +420,45 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     })
   }
 
-  /** A second press, any edit, or closing: the queued Rename won't run. Too late once it's launching. */
-  function cancelQueue(): void {
-    if (launching) return
+  /** Ends the queue, resolving its press with `null`. */
+  function dropQueue(): void {
     const resolve = queue
     queue = null
     queued = false
     resolve?.(null)
   }
 
-  /** On each preview that lands: once no value can still come, the queued Rename runs on it, as a fresh press would. */
+  /**
+   * A second press, any edit, or closing: the queued Rename won't run. Counted in `edits`, so a
+   * press still waiting on the backend knows an edit came after it. A launching one can't be
+   * stopped (the rename may be on its way), but it won't retry after a `stillReading`.
+   */
+  function cancelQueue(): void {
+    edits++
+    if (launching) {
+      cancelRequested = true
+      return
+    }
+    dropQueue()
+  }
+
+  /**
+   * On each preview that lands: once no value can still come, the queued Rename runs on it, as a
+   * fresh press would. With no preview to run on yet (the first one, or an edit's, still out), it
+   * stays queued for the next.
+   */
   function runQueued(): void {
     const resolve = queue
-    if (resolve === null || launching || waitsForMedia()) return
+    if (resolve === null || launching || waiting > 0 || previewId === null || waitsForMedia()) return
     launching = true
+    cancelRequested = false
     void startRename()
       .then((outcome) => {
-        // A file still being read after all: stay queued for the next preview.
-        if (outcome === 'stillReading') return
+        // A file still being read after all: stay queued for the next preview, unless an edit came meanwhile.
+        if (outcome === 'stillReading' && !cancelRequested) return
         queue = null
         queued = false
-        resolve(outcome)
+        resolve(outcome === 'stillReading' ? null : outcome)
       })
       .finally(() => {
         launching = false
@@ -676,9 +707,12 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
         return null
       }
       if (waitsForMedia()) return enqueue()
+      const pressedAt = edits
       const outcome = await startRename()
-      // The backend found a file still being read: wait for it, as a press during the read does.
-      return outcome === 'stillReading' ? enqueue() : outcome
+      if (outcome !== 'stillReading') return outcome
+      // The backend found a file still being read: wait for it, as a press during the read does,
+      // unless an edit came while the press was out (no press was made for the edited spec).
+      return pressedAt === edits ? enqueue() : null
     },
     get media() {
       return media
@@ -691,6 +725,9 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     },
     get queued() {
       return queued
+    },
+    get launching() {
+      return launching
     },
     async mediaOverview() {
       const answer = await getMultiRenameMediaOverview(sessionId)
