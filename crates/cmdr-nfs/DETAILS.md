@@ -149,17 +149,62 @@ the length and date the caller wants.
   `write_access_at` is one `ACCESS` asking `MODIFY | EXTEND`: `EXTEND` granted is `Writable`, anything else
   `Unwritable { Unexplained }` (a read-only export and a refused permission look the same), a failure `Unknown`.
 
+### Writes
+
+`writes.rs`. The engine stages every write (`write_is_single_shot` stays `false`), so a write lands on its temp and
+takes the user's name only through the landing rename.
+
+- **Spans.** The source goes out in 8 MiB spans (`COMMIT_EVERY`) of `UNSTABLE` WRITEs, 8 in flight, each of `wtpref`
+  within `wtmax` and the record cap; each span ends in a COMMIT and stays in memory until that COMMIT is good, since a
+  resend needs it. Decision (revisit in review) on the 8 MiB: it bounds both the memory per upload and the bytes a
+  server restart can cost. `FILE_SYNC` replaces `UNSTABLE` when `FSINFO` reports no write sizes at all.
+- **The verifier.** The reference is the first verifier this file's WRITEs answered. A span whose `UNSTABLE` WRITEs
+  disagree, or whose verifier or COMMIT isn't the reference, is resent whole with the new verifier as the reference; the
+  second change fails the write (`EIO`). A span answered all `FILE_SYNC` / `DATA_SYNC` needs no COMMIT. So nothing is
+  reported written that a COMMIT didn't vouch for (RFC 1813 § 3.3.21).
+- **Short and empty WRITEs.** The rest goes again from the offset the server answered; a WRITE that takes nothing fails
+  rather than spins.
+- **The CREATE carries the mode alone**: `GUARDED` for a name that must be free (`create_file`, `CreateNew`),
+  `UNCHECKED` with size 0 for the engine's own temp. The file streams as `0600`; the source's date (as mtime and atime)
+  and its mode, folded by `routed_mode`, go on in one SETATTR after the last COMMIT (`copy.rs`). Why after: a WRITE
+  bumps the mtime, and the landing rename touches only the `ctime`.
+- **Every failure removes the partial**, cancel and a byte count that disagrees with the declared length included,
+  through `remove_if_ours`: a LOOKUP first, and the REMOVE only while the name still holds the `fileid` this write made.
+
+### Mutations
+
+`mutation.rs`. Every one acts in a folder `dir_for_mutation` just proved (§ "Handles"), by `dir handle + name`.
+
+- **Rename without clobbering.** v3 `RENAME` replaces, so `force = false` LOOKUPs the target (taken by another file:
+  `AlreadyExists`, no call sent), then claims the name with `CREATE GUARDED` or, for a folder, `MKDIR`, and `RENAME`s
+  onto the empty claim. A failed rename removes the claim only while it's still the claim's `fileid` (a `RENAME` whose
+  reply never came may have landed, and the name then holds the user's file); a claim that can't be removed is an
+  `IoError` naming its path. A target that is the source itself (same `fileid` and `fsid`) claims nothing.
+  `force = true` is one `RENAME`, atomic, and a folder only ever replaces an empty one.
+- **Delete** is `REMOVE` or `RMDIR` by a fresh LOOKUP's own attributes, so a link goes as the link; ❌ never recursive.
+- **After a success**, the reply's `wcc_data` refreshes the folder's cached stamps, and a folder that moved or went is
+  forgotten with its subtree: its handle would still answer, for the new place.
+- **Folders**: `MKDIR` with this Mac's default folder mode; `create_directory_all` is the shared leaf-first walk. A walk
+  through a file names the FILE (`NotADirectory`), the thing to move aside.
+- **Metadata caps**: a file's and a folder's mode and a folder's date. No `CREATED` (v3 has none) and no `XATTRS`
+  (dropped, ❌ no `._` sidecars), so the copy's loss note names them. `apply_metadata` takes a fresh handle by LOOKUP.
+
 ### Which side a test lives on
 
 - `fake_nfs.rs` (in-process, over TCP or `tokio::io::duplex`): listings over both READDIR shapes, the cache rules, the
-  window under reordered and short READs, links, the redial, the silence ladder on a paused clock. Its knobs for the
-  write and outage cells: `rotate_verifier`, `answer_writes_short`, `touch`, `drop_one_reply`, `go_silent`,
-  `reset_mid_reply`, `refuse_dials`, `require_reserved_port`, `refuse_readdirplus`, and `calls(procedure)`.
+  window under reordered and short READs, links, the redial, the silence ladder on a paused clock, and the write side
+  (`writes_test.rs`, `mutation_test.rs`). Its knobs (`fake_nfs/knobs.rs`): `rotate_verifier` and
+  `rotate_verifier_on(procedure, nth)`, `answer_writes_short`, `set_write_max`, `refuse_next(procedure, status)`,
+  `touch`, `drop_one_reply`, `go_silent`, `reset_mid_reply`, `refuse_dials`, `require_reserved_port`,
+  `refuse_readdirplus`; and what a cell reads back: `calls(procedure)`, `call_log`, `last_create`, `largest_write`.
+- `conformance_test.rs` (`#[ignore]`d, `/insecure`): every applicable `cmdr_fs::volume::conformance` cell, plus a 9 MiB
+  `UNSTABLE` round trip. The link cells don't run: this backend makes no links.
 - `fixture_test.rs` (`#[ignore]`d, the knfsd fixture): the seeded tree byte-exact, 200 MiB streamed, `read_range`,
   links, the split, a missing export, `/secure` refused through a published port and accepted on the Linux direct path,
   `list_exports`, `guess_identity` answering 1000.
-- `volume::testing` (`testing` feature, also re-exported at the root): the fixture's server, params, and
-  `connect_insecure`, for the app's suites.
+- `volume::testing` (`testing` feature, also re-exported at the root): the fixture's server, params, `connect_insecure`,
+  `scratch_dir`, and `clean_deep`, for the app's suites (`nfs_transfer_*` in
+  `apps/desktop/src-tauri/src/operations_host/backend_suites/`).
 
 ## The public surface is capped
 
