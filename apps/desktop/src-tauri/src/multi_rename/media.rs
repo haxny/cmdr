@@ -2,10 +2,10 @@
 //! the background and cached for the session's life, and what the sheet asks of
 //! that cache (progress, the picker's overview, a token's samples).
 //!
-//! `session.rs` owns one [`SessionMedia`] per session and hands it to every
-//! preview as the [`MediaLookup`]. ❌ Nothing here takes `SESSIONS`, and no file
-//! is read under any lock: the loader reads on blocking threads and takes the
-//! cache's own lock only to store an answer.
+//! `session.rs` owns one [`SessionMedia`] per session and hands every preview a
+//! copy of it as the [`MediaLookup`]. ❌ Nothing here takes `SESSIONS`, no file is
+//! read under any lock, and the cache's own lock is held only for short steps:
+//! storing an answer, copying the cache out, or resolving a few sample rows.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -35,8 +35,12 @@ const LOG_TARGET: &str = "multi_rename::media";
 /// parallel; MTP serializes inside its own backend, so no per-volume tuning.
 pub(crate) const MAX_PARALLEL_READS: usize = 8;
 
-/// The least time between two progress events; the last one (`done`) always goes.
+/// The least time between two progress events; a run's last one always goes.
 const PROGRESS_EVERY: Duration = Duration::from_millis(250);
+
+/// How many reads in a row may time out or fail on I/O before the loader takes
+/// the volume for dead and marks every file left `Unreadable`.
+const GIVE_UP_AFTER_FAILURES: usize = 3;
 
 /// One file's read budget on a local disk; a volume with a live session gets
 /// more (`io_budget_for_volume`).
@@ -145,16 +149,27 @@ pub(crate) struct Loader {
     pub emit: ProgressEmit,
     /// How many files at once.
     pub parallel: usize,
+    /// Whether the volume went away (unregistered or not connected): the loader
+    /// asks before each read and gives up on every file left when it has.
+    pub volume_gone: VolumeGone,
 }
+
+/// Whether a session's volume can no longer answer.
+pub(crate) type VolumeGone = Arc<dyn Fn() -> bool + Send + Sync>;
 
 impl Loader {
     /// Reads files on the volume `volume_id` (resolved per file, so a reconnect's
     /// new volume is the one read) and reports through `emit`.
     pub(crate) fn for_volume(volume_id: String, emit: ProgressEmit) -> Self {
         Self {
-            reader: volume_reader(volume_id),
+            reader: volume_reader(volume_id.clone()),
             emit,
             parallel: MAX_PARALLEL_READS,
+            volume_gone: Arc::new(move || {
+                crate::file_system::volume::manager::get_volume_manager()
+                    .get(&volume_id)
+                    .is_none_or(|volume| volume.connection_state().is_some_and(|state| !state.is_live()))
+            }),
         }
     }
 }
@@ -230,22 +245,27 @@ impl MediaRead {
 }
 
 /// One file in the cache.
+#[derive(Clone)]
 struct Cached {
     is_directory: bool,
     stamp: Stamp,
     state: MediaRead,
 }
 
-/// The cache and the loader's bookkeeping, behind one lock.
+/// The cache and the loader's bookkeeping, behind one lock. ❗ Held only for
+/// short steps: a preview works on a copy ([`SessionMedia::lookup`]), and the
+/// overview and a token's usage copy out what they need first.
 struct Inner {
-    files: HashMap<String, Cached>,
+    files: HashMap<Arc<str>, Cached>,
     /// Files waiting to be read, the next one first.
-    queue: VecDeque<String>,
+    queue: VecDeque<Arc<str>>,
     /// Files a reader holds now.
-    in_flight: HashSet<String>,
+    in_flight: HashSet<Arc<str>>,
     /// Media files, and how many of them are no longer `Reading`.
     total: usize,
     read: usize,
+    /// Bumped on every change to `files`, so a remembered usage knows it's stale.
+    generation: u64,
     /// Set by `start`; a loader can only run once it's there.
     loader: Option<(Arc<Loader>, tokio::runtime::Handle)>,
     running: bool,
@@ -262,6 +282,7 @@ impl Inner {
         self.total = self.total + usize::from(now.is_media()) - usize::from(was.is_media());
         let done = |state: &MediaRead| state.is_media() && !state.is_reading();
         self.read = self.read + usize::from(done(now)) - usize::from(done(&was));
+        self.generation += 1;
     }
 
     fn progress(&self) -> MediaProgress {
@@ -272,6 +293,10 @@ impl Inner {
         }
     }
 
+    fn is_waiting(&self, name: &str) -> bool {
+        self.files.get(name).is_some_and(|c| c.state.is_reading()) && !self.in_flight.contains(name)
+    }
+
     /// The next file to read, marked in flight; `None` when there's none or the
     /// session is going.
     fn next_job(&mut self, dir: &Path, cancel: &Arc<AtomicBool>) -> Option<FileJob> {
@@ -279,24 +304,44 @@ impl Inner {
             return None;
         }
         while let Some(name) = self.queue.pop_front() {
-            let Some(cached) = self.files.get(&name) else {
-                continue;
-            };
-            if !cached.state.is_reading() || self.in_flight.contains(&name) {
+            if !self.is_waiting(&name) {
                 continue;
             }
-            let stamp = cached.stamp;
-            self.in_flight.insert(name.clone());
+            let stamp = self.files[&name].stamp;
+            self.in_flight.insert(Arc::clone(&name));
             return Some(FileJob {
-                path: dir.join(&name),
+                path: dir.join(&*name),
                 size: stamp.size.unwrap_or(0),
-                name,
+                name: name.to_string(),
                 cancel: Arc::clone(cancel),
                 stamp,
             });
         }
         None
     }
+
+    /// Marks every file still waiting `Unreadable` and empties the queue; the
+    /// reads in flight finish on their own. Answers how many it marked.
+    fn give_up_waiting(&mut self) -> usize {
+        let queued: Vec<Arc<str>> = self.queue.drain(..).collect();
+        let mut marked = 0;
+        for name in queued {
+            if self.is_waiting(&name) {
+                self.set_state(&name, MediaRead::Unreadable);
+                marked += 1;
+            }
+        }
+        marked
+    }
+}
+
+/// The last usage `field_samples` counted: for which token, at which cache
+/// generation. A keystroke in the token editor that doesn't change the token,
+/// with nothing read since, answers from here instead of walking every file.
+struct RememberedUsage {
+    token: MediaToken,
+    generation: u64,
+    usage: FieldUsage,
 }
 
 /// One session's media: every file's read, the queue, and the loader's state.
@@ -305,6 +350,7 @@ pub(crate) struct SessionMedia {
     dir: PathBuf,
     cancel: Arc<AtomicBool>,
     inner: Mutex<Inner>,
+    usage: Mutex<Option<RememberedUsage>>,
 }
 
 impl SessionMedia {
@@ -321,14 +367,15 @@ impl SessionMedia {
                 // Gone already: the preview shows it `Missing` and never asks.
                 continue;
             };
-            let state = if !entry.is_directory && is_media_name(name) {
-                queue.push_back(name.clone());
+            let name: Arc<str> = Arc::from(name.as_str());
+            let state = if !entry.is_directory && is_media_name(&name) {
+                queue.push_back(Arc::clone(&name));
                 MediaRead::Reading
             } else {
                 MediaRead::NotMedia
             };
             files.insert(
-                name.clone(),
+                name,
                 Cached {
                     is_directory: entry.is_directory,
                     stamp: Stamp::of(entry),
@@ -347,9 +394,11 @@ impl SessionMedia {
                 in_flight: HashSet::new(),
                 total,
                 read: 0,
+                generation: 0,
                 loader: None,
                 running: false,
             }),
+            usage: Mutex::new(None),
         }
     }
 
@@ -398,48 +447,59 @@ impl SessionMedia {
     /// (the first file in rename order) while it's still waiting.
     pub(crate) fn prioritize<'a>(self: &Arc<Self>, first: Option<&'a str>, wanted: impl IntoIterator<Item = &'a str>) {
         let mut inner = self.lock();
-        let mut front: Vec<String> = Vec::new();
-        let mut seen = HashSet::new();
+        let mut front: Vec<Arc<str>> = Vec::new();
+        let mut seen: HashSet<&str> = HashSet::new();
         for name in first.into_iter().chain(wanted) {
-            let waiting =
-                inner.files.get(name).is_some_and(|c| c.state.is_reading()) && !inner.in_flight.contains(name);
-            if waiting && seen.insert(name) {
-                front.push(name.to_string());
+            if inner.is_waiting(name) && seen.insert(name) {
+                front.push(Arc::from(name));
             }
         }
-        inner.queue.retain(|name| !seen.contains(name.as_str()));
+        inner.queue.retain(|name| !seen.contains(&**name));
         for name in front.into_iter().rev() {
             inner.queue.push_front(name);
         }
         self.kick(&mut inner);
     }
 
-    /// The cache as one preview's [`MediaLookup`], locked while the preview runs.
-    /// [`Lookup::finish`] re-queues the files it found changed.
-    pub(crate) fn lookup(self: &Arc<Self>) -> Lookup<'_> {
+    /// A copy of the cache as one preview's [`MediaLookup`], so the preview runs
+    /// without the lock. [`Lookup::finish`] re-queues the files it found changed.
+    pub(crate) fn lookup(self: &Arc<Self>) -> Lookup {
+        let files = self.lock().files.clone();
         Lookup {
-            media: self,
-            inner: self.lock(),
+            media: Arc::clone(self),
+            files,
             changed: RefCell::new(Vec::new()),
         }
     }
 
-    /// The loader: reads queued files, `parallel` at a time, until none is left
-    /// or the session goes, then says it's done.
+    /// The loader: reads queued files, `parallel` at a time, until none is left,
+    /// the session goes, or the volume does, then says how far it got.
+    ///
+    /// A dead volume costs a bounded few reads, never one budget per file: after
+    /// [`GIVE_UP_AFTER_FAILURES`] timeouts or I/O errors in a row, or once the
+    /// volume reports it's gone, every file still waiting is `Unreadable` at once.
+    /// So at most `parallel + GIVE_UP_AFTER_FAILURES - 1` reads time out per run,
+    /// each leaving one detached `read_range` behind (`VolumeByteSource`).
     async fn run(self: Arc<Self>, loader: Arc<Loader>) {
         let mut reads = tokio::task::JoinSet::new();
         let mut last_emit: Option<Instant> = None;
+        let mut failures_in_a_row = 0;
         loop {
             while reads.len() < loader.parallel.max(1) {
+                if (loader.volume_gone)() {
+                    self.give_up("its volume went away");
+                    break;
+                }
                 let Some(job) = self.lock().next_job(&self.dir, &self.cancel) else {
                     break;
                 };
                 let reader = Arc::clone(&loader.reader);
                 reads.spawn_blocking(move || {
                     // A parser that panics on a hostile file makes it unreadable, not the read stuck.
-                    let result = catch_unwind(AssertUnwindSafe(|| reader(&job)))
-                        .unwrap_or_else(|_| Err(ReadError::Io("the reader panicked".to_string())));
-                    (job, result)
+                    match catch_unwind(AssertUnwindSafe(|| reader(&job))) {
+                        Ok(result) => (job, result, false),
+                        Err(_) => (job, Err(ReadError::Io("the reader panicked".to_string())), true),
+                    }
                 });
             }
             let Some(joined) = reads.join_next().await else {
@@ -449,17 +509,37 @@ impl SessionMedia {
                 continue;
             };
             match joined {
-                Ok((job, result)) => self.store(job, result),
+                Ok((job, result, panicked)) => {
+                    // A hostile file is that file's problem; a timeout or an I/O error is the volume's.
+                    let failed = !panicked && matches!(result, Err(ReadError::TimedOut | ReadError::Io(_)));
+                    self.store(job, result);
+                    failures_in_a_row = if failed { failures_in_a_row + 1 } else { 0 };
+                    if failures_in_a_row >= GIVE_UP_AFTER_FAILURES {
+                        self.give_up("its volume keeps failing");
+                    }
+                }
                 // `catch_unwind` above leaves only a runtime shutdown here.
                 Err(error) => log::debug!(target: LOG_TARGET, "a media read didn't come back: {error}"),
             }
             if !self.is_cancelled() && last_emit.is_none_or(|at| at.elapsed() >= PROGRESS_EVERY) {
                 last_emit = Some(Instant::now());
-                self.emit(&loader, false);
+                self.emit(&loader);
             }
         }
         if !self.is_cancelled() {
-            self.emit(&loader, true);
+            self.emit(&loader);
+        }
+    }
+
+    /// Marks every file still waiting `Unreadable` (logged once, with `why`).
+    fn give_up(&self, why: &str) {
+        let marked = self.lock().give_up_waiting();
+        if marked > 0 {
+            log::warn!(
+                target: LOG_TARGET,
+                "Stopped reading media fields: {why}; {} left unread",
+                crate::pluralize::pluralize(marked as u64, "file")
+            );
         }
     }
 
@@ -467,11 +547,7 @@ impl SessionMedia {
     /// when work arrived since the queue last ran dry.
     fn stop_if_idle(&self) -> bool {
         let mut inner = self.lock();
-        let has_work = !self.is_cancelled()
-            && inner
-                .queue
-                .iter()
-                .any(|name| inner.files.get(name).is_some_and(|c| c.state.is_reading()));
+        let has_work = !self.is_cancelled() && inner.queue.iter().any(|name| inner.is_waiting(name));
         if !has_work {
             inner.running = false;
             inner.queue.clear();
@@ -479,13 +555,15 @@ impl SessionMedia {
         !has_work
     }
 
-    fn emit(&self, loader: &Loader, done: bool) {
+    /// Sends the progress as it stands: `done` only when every media file is
+    /// read, so a run ending while another starts never claims it.
+    fn emit(&self, loader: &Loader) {
         let progress = self.progress();
         (loader.emit)(MultiRenameMediaProgress {
             session_id: self.session_id.clone(),
             read: progress.read,
             total: progress.total,
-            done: done || progress.done,
+            done: progress.done,
         });
     }
 
@@ -493,15 +571,17 @@ impl SessionMedia {
     /// again) or the session is going.
     fn store(&self, job: FileJob, result: Result<MediaFacts, ReadError>) {
         let mut inner = self.lock();
-        inner.in_flight.remove(&job.name);
-        let Some(cached) = inner.files.get(&job.name) else {
+        let Some((name, cached)) = inner.files.get_key_value(job.name.as_str()) else {
             return;
         };
-        if !cached.state.is_reading() {
+        let name = Arc::clone(name);
+        let (reading, stamp) = (cached.state.is_reading(), cached.stamp);
+        inner.in_flight.remove(&name);
+        if !reading {
             return;
         }
-        if cached.stamp != job.stamp {
-            inner.queue.push_front(job.name);
+        if stamp != job.stamp {
+            inner.queue.push_front(name);
             return;
         }
         let state = match result {
@@ -516,19 +596,23 @@ impl SessionMedia {
                 MediaRead::Unreadable
             }
         };
-        inner.set_state(&job.name, state);
+        inner.set_state(&name, state);
     }
 
-    /// The picker's overview over the files `names` (in rename order).
+    /// The picker's overview over the files `names` (in rename order). Copies the
+    /// read facts out under the lock, then formats without it.
     pub(crate) fn overview(&self, names: &[String]) -> MediaOverview {
-        let inner = self.lock();
-        let facts: Vec<&MediaFacts> = names
-            .iter()
-            .filter_map(|name| match &inner.files.get(name)?.state {
-                MediaRead::Read(facts) => Some(facts.as_ref()),
-                _ => None,
-            })
-            .collect();
+        let (facts, progress) = {
+            let inner = self.lock();
+            let facts: Vec<Arc<MediaFacts>> = names
+                .iter()
+                .filter_map(|name| match &inner.files.get(name.as_str())?.state {
+                    MediaRead::Read(facts) => Some(Arc::clone(facts)),
+                    _ => None,
+                })
+                .collect();
+            (facts, inner.progress())
+        };
         let fields = MediaField::ALL
             .into_iter()
             .map(|field| {
@@ -540,19 +624,16 @@ impl SessionMedia {
                 }
             })
             .collect();
-        MediaOverview {
-            progress: inner.progress(),
-            fields,
-        }
+        MediaOverview { progress, fields }
     }
 
     /// `token` rendered alone on the files at `rows` of `names` (in rename order;
-    /// a row past the end is left out), and its usage across all of them.
+    /// a row past the end is left out), and its usage across all of them. The
+    /// usage is remembered per token until the cache changes.
     pub(crate) fn field_samples(&self, token: &MediaToken, names: &[String], rows: &[usize]) -> FieldSamples {
-        let inner = self.lock();
         let (parent, grandparent) = folder_names(&self.dir);
-        let resolve = |position: usize, name: &str| -> Result<FieldText, FieldGap> {
-            let cached = inner.files.get(name);
+        let resolve = |files: &HashMap<Arc<str>, Cached>, position: usize, name: &str| {
+            let cached = files.get(name);
             // Composed, as the preview renders it (`plan.rs`).
             let file_name: String = name.nfc().collect();
             token.resolve(&RowFacts {
@@ -565,31 +646,55 @@ impl SessionMedia {
                 media: cached.map_or(RowMedia::NotMedia, |c| c.state.row_media()),
             })
         };
-        let samples = rows
-            .iter()
-            .filter_map(|&row| Some((row, names.get(row)?)))
-            .map(|(row, name)| match resolve(row, name) {
-                Ok(text) => FieldSample {
-                    row,
-                    text: Some(text.into_text()),
-                    gap: None,
-                },
-                Err(gap) => FieldSample {
-                    row,
-                    text: None,
-                    gap: Some(gap),
-                },
-            })
-            .collect();
-        let mut usage = FieldUsage::default();
-        for (position, name) in names.iter().enumerate() {
-            match resolve(position, name) {
-                Ok(FieldText::Value(_)) => usage.with_value += 1,
-                Ok(FieldText::Fallback(_)) => usage.fallback += 1,
-                Err(FieldGap::Reading) => usage.reading += 1,
-                Err(FieldGap::NoValue { .. } | FieldGap::Unreadable { .. }) => usage.missing += 1,
+        // The sample rows are a handful: resolved under the lock, which also says
+        // whether the remembered usage still holds.
+        let (samples, generation) = {
+            let inner = self.lock();
+            let samples = rows
+                .iter()
+                .filter_map(|&row| Some((row, names.get(row)?)))
+                .map(|(row, name)| match resolve(&inner.files, row, name) {
+                    Ok(text) => FieldSample {
+                        row,
+                        text: Some(text.into_text()),
+                        gap: None,
+                    },
+                    Err(gap) => FieldSample {
+                        row,
+                        text: None,
+                        gap: Some(gap),
+                    },
+                })
+                .collect();
+            (samples, inner.generation)
+        };
+        let remembered = self
+            .usage
+            .lock_ignore_poison()
+            .as_ref()
+            .filter(|r| r.generation == generation && r.token == *token)
+            .map(|r| r.usage);
+        let usage = remembered.unwrap_or_else(|| {
+            let (files, generation) = {
+                let inner = self.lock();
+                (inner.files.clone(), inner.generation)
+            };
+            let mut usage = FieldUsage::default();
+            for (position, name) in names.iter().enumerate() {
+                match resolve(&files, position, name) {
+                    Ok(FieldText::Value(_)) => usage.with_value += 1,
+                    Ok(FieldText::Fallback(_)) => usage.fallback += 1,
+                    Err(FieldGap::Reading) => usage.reading += 1,
+                    Err(FieldGap::NoValue { .. } | FieldGap::Unreadable { .. }) => usage.missing += 1,
+                }
             }
-        }
+            *self.usage.lock_ignore_poison() = Some(RememberedUsage {
+                token: token.clone(),
+                generation,
+                usage,
+            });
+            usage
+        });
         FieldSamples { samples, usage }
     }
 }
@@ -600,19 +705,19 @@ fn local_time(unix_seconds: u64) -> Option<NaiveDateTime> {
     Local.timestamp_opt(seconds, 0).single().map(|t| t.naive_local())
 }
 
-/// The cache, locked for one preview. A file whose listing entry no longer
+/// The cache, copied for one preview. A file whose listing entry no longer
 /// matches what was read answers `Reading`, and [`finish`](Self::finish) queues
 /// it again.
-pub(crate) struct Lookup<'a> {
-    media: &'a Arc<SessionMedia>,
-    inner: MutexGuard<'a, Inner>,
+pub(crate) struct Lookup {
+    media: Arc<SessionMedia>,
+    files: HashMap<Arc<str>, Cached>,
     changed: RefCell<Vec<(String, bool, Stamp)>>,
 }
 
-impl MediaLookup for Lookup<'_> {
+impl MediaLookup for Lookup {
     fn media(&self, entry: &FileEntry) -> RowMedia<'_> {
         let stamp = Stamp::of(entry);
-        match self.inner.files.get(&entry.name) {
+        match self.files.get(entry.name.as_str()) {
             Some(cached) if !cached.state.is_media() => RowMedia::NotMedia,
             Some(cached) if cached.stamp == stamp => cached.state.row_media(),
             // Changed since it was read, or new to the cache: read it (again).
@@ -627,24 +732,28 @@ impl MediaLookup for Lookup<'_> {
     }
 }
 
-impl Lookup<'_> {
+impl Lookup {
     /// Ends the preview: the files it found changed are `Reading` again, first in
-    /// the queue, and the loader runs if it was idle.
+    /// the queue, and the loader runs if it was idle. A file another preview
+    /// already re-queued for the same listing facts is left as it is.
     pub(crate) fn finish(self) {
-        let Self {
-            media,
-            mut inner,
-            changed,
-        } = self;
+        let Self { media, changed, .. } = self;
+        let mut inner = media.lock();
         for (name, is_directory, stamp) in changed.into_inner() {
-            inner.files.entry(name.clone()).or_insert(Cached {
+            if inner
+                .files
+                .get(name.as_str())
+                .is_some_and(|c| c.stamp == stamp && c.state.is_media())
+            {
+                continue;
+            }
+            let name: Arc<str> = Arc::from(name);
+            let cached = inner.files.entry(Arc::clone(&name)).or_insert(Cached {
                 is_directory,
                 stamp,
                 state: MediaRead::NotMedia,
             });
-            if let Some(cached) = inner.files.get_mut(&name) {
-                cached.stamp = stamp;
-            }
+            cached.stamp = stamp;
             inner.set_state(&name, MediaRead::Reading);
             inner.queue.push_front(name);
         }

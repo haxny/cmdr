@@ -127,6 +127,7 @@ fn loader(
         }),
         emit: Arc::new(move |progress| events.0.lock_ignore_poison().push(progress)),
         parallel,
+        volume_gone: Arc::new(|| false),
     }
 }
 
@@ -280,6 +281,90 @@ async fn a_file_that_changed_since_it_was_read_reads_again() {
     wait_until_async(WAIT, "the changed file to read again", || calls.count_of("a.jpg") == 2).await;
     read_through(&session.session_id).await;
     assert_eq!(calls.count_of("b.jpg"), 1, "the unchanged file stays read");
+    // Across both runs, an event says done exactly when every media file is read.
+    for event in events.all() {
+        assert_eq!(event.done, event.read == event.total, "{event:?}");
+    }
+    close(&session.session_id);
+}
+
+/// `count` media files, `00.jpg` on.
+fn photos(count: usize) -> Vec<String> {
+    (0..count).map(|i| format!("{i:02}.jpg")).collect()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_volume_that_keeps_timing_out_is_given_up_on_after_three_files() {
+    let files = photos(20);
+    let names: Vec<&str> = files.iter().map(String::as_str).collect();
+    let (_dir, listing) = folder("media-dead-volume", &names, &[]);
+    let session = open(listing.id(), true, None, 0).expect("the session opens");
+    let (events, calls) = (Events::default(), Calls::default());
+
+    start_media_with(
+        &session.session_id,
+        loader(1, &events, &calls, |_| Err(ReadError::TimedOut)),
+    )
+    .expect("the read starts");
+    read_through(&session.session_id).await;
+
+    assert_eq!(calls.names().len(), 3, "{:?}", calls.names());
+    let progress = media_progress(&session.session_id).expect("progress");
+    assert_eq!(
+        (progress.read, progress.total),
+        (20, 20),
+        "the rest are unreadable, not reading"
+    );
+    close(&session.session_id);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_file_that_reads_resets_the_count_of_failures_in_a_row() {
+    let files = photos(10);
+    let names: Vec<&str> = files.iter().map(String::as_str).collect();
+    let (_dir, listing) = folder("media-flaky-volume", &names, &[]);
+    let session = open(listing.id(), true, None, 0).expect("the session opens");
+    let (events, calls) = (Events::default(), Calls::default());
+
+    start_media_with(
+        &session.session_id,
+        loader(1, &events, &calls, |job| match job.name.as_str() {
+            "02.jpg" => Ok(MediaFacts::default()),
+            "00.jpg" | "01.jpg" => Err(ReadError::Io("a dropped packet".to_string())),
+            _ => Err(ReadError::TimedOut),
+        }),
+    )
+    .expect("the read starts");
+    read_through(&session.session_id).await;
+
+    assert_eq!(
+        calls.names(),
+        vec!["00.jpg", "01.jpg", "02.jpg", "03.jpg", "04.jpg", "05.jpg"]
+    );
+    close(&session.session_id);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_volume_that_went_away_reads_nothing_and_every_file_is_unreadable() {
+    let (_dir, listing) = folder("media-gone-volume", &["a.jpg", "b.mp3"], &[]);
+    let session = open(listing.id(), true, None, 0).expect("the session opens");
+    let (events, calls) = (Events::default(), Calls::default());
+    let gone = Loader {
+        volume_gone: Arc::new(|| true),
+        ..loader(8, &events, &calls, |_| Ok(MediaFacts::default()))
+    };
+
+    start_media_with(&session.session_id, gone).expect("the read starts");
+    read_through(&session.session_id).await;
+
+    assert!(calls.names().is_empty());
+    let samples = field_samples(&session.session_id, "=tag.title", &[0]).expect("samples");
+    assert_eq!(
+        samples.samples[0].gap,
+        Some(FieldGap::Unreadable {
+            field: MediaField::TagTitle
+        })
+    );
     close(&session.session_id);
 }
 
@@ -399,6 +484,8 @@ async fn the_preview_uses_what_was_read() {
 async fn field_samples_show_the_token_on_the_rows_asked_and_count_the_whole_session() {
     let (_dir, listing) = folder("media-samples", &["a.mp3", "b.mp3", "c.txt"], &[]);
     let session = open(listing.id(), true, None, 0).expect("the session opens");
+    let before = field_samples(&session.session_id, "=tag.title", &[0]).expect("samples");
+    assert_eq!(before.usage.reading, 2, "asked before the read");
     let (events, calls) = (Events::default(), Calls::default());
     start_media_with(
         &session.session_id,
@@ -443,6 +530,11 @@ fn field_samples_say_reading_before_the_read_and_refuse_other_tokens() {
     let samples = field_samples(&session.session_id, "=tag.title", &[0]).expect("samples");
     assert_eq!(samples.samples[0].gap, Some(FieldGap::Reading));
     assert_eq!(samples.usage.reading, 1);
+    // Asked again with nothing read since: the same answer (from the usage cache).
+    assert_eq!(
+        field_samples(&session.session_id, "=tag.title", &[0]).expect("samples"),
+        samples
+    );
 
     assert!(matches!(
         field_samples(&session.session_id, "N2-5", &[0]),

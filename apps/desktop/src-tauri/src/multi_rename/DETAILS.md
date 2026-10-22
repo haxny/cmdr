@@ -189,21 +189,29 @@ answers the sheet.
   any read failed is logged at debug, the row only says it couldn't read.
   - **Order**: rename order, so row 0 first; `prioritize_multi_rename_media` (the rows the sheet shows) moves those
     files to the front, behind row 0 while it still waits. Files in flight aren't queued twice.
-  - **Progress**: `MultiRenameMediaProgress` at most every 250 ms, plus a final `done: true` when the queue runs dry.
-    `total` counts media files only; an `Unreadable` file counts as read.
+  - **Progress**: `MultiRenameMediaProgress` at most every 250 ms, plus one when a run ends. `done` is computed
+    (`read == total`), never forced: a run that ends while a re-read starts another doesn't claim it. `total` counts
+    media files only; an `Unreadable` file counts as read.
+  - **A dead volume**: after three timeouts or I/O errors in a row (`GIVE_UP_AFTER_FAILURES`; a read that succeeds
+    resets the count, a panicking parser doesn't count), or once the volume is unregistered or not live
+    (`Loader::volume_gone`, asked before each read), every file still waiting is `Unreadable` in one step and the run
+    ends. So a dropped share costs a few reads, not a 10 s budget per file, and at most
+    `parallel + GIVE_UP_AFTER_FAILURES - 1` timed-out reads leave a detached `read_range` behind per run.
 - **Freshness**: a preview's `Lookup` compares each entry's size and modified time with what the file was read for. A
-  mismatch answers `Reading`, and `Lookup::finish` (after the preview, still under the cache's lock) re-queues the
+  mismatch answers `Reading`, and `Lookup::finish` (after the preview, under the cache's lock) re-queues the
   file at the front and starts the loader if it was idle. A read that finishes for an older stamp is dropped and
   queued again, never cached.
 - **Cancel**: `Session`'s `Drop` (close, eviction, idle drop) sets the cache's cancel flag. No new read starts, a read
   in flight stops at its next block fetch (`VolumeByteSource` checks the flag), the loader exits without a final
   event, and the cache goes with the last `Arc`.
 - **Locks**: ❌ nothing reads a file under `SESSIONS` or the cache's lock. Callers copy the cache's `Arc` out of
-  `SESSIONS` (`with_session`) and release it first; the cache's lock is held only to store an answer or for one
-  preview's lookups (a preview at 200k rows holds it for its own length, and the loader's stores wait).
+  `SESSIONS` (`with_session`) and release it first. The cache's lock is held only for short steps: storing an answer,
+  copying the cache out (a preview's `Lookup` is a copy, keyed by `Arc<str>` so it's cheap), or resolving a few sample
+  rows. The overview, field samples, and prioritizing run on blocking threads (`commands/multi_rename.rs`).
 - **Field samples and the overview read the cache, not the latest preview**, so the token editor shows values before
   any preview uses the token. `field_samples` resolves the token (`MediaToken::resolve`) per file with the modified
-  time the file was read for; `usage` covers every session file. The overview's example is the first file in rename
+  time the file was read for; `usage` covers every session file and is remembered per token until the cache changes
+  (a generation counter), so a keystroke that doesn't change the token doesn't walk every file again. The overview's example is the first file in rename
   order with a value (`MediaToken::value_text`), and `files_with_it` counts read files that have the field.
 - **What a read costs**: the header blocks a parser touches, 64 KiB at a time, never the cover art, at most 4 MiB a
   file (`crates/cmdr-media-meta/DETAILS.md` § The byte source).
@@ -211,7 +219,8 @@ answers the sheet.
   stays untouched, and the queue is UI state that a close already ends. A backend queue would need its own cancel and
   a way to report back to a sheet. `prepare` refusing `StillReading` is the backend's safety net.
 - Tests: `media_test.rs` (a stand-in reader: order, throttled progress, freshness, cancel on close, a panicking
-  reader, samples, `StillReading`), `session.rs`'s eviction test.
+  reader, a dead volume, samples, `StillReading` versus `PreviewOutOfDate`), `media_real_test.rs` (real files on the
+  local disk through the real read path), `session.rs`'s eviction test.
 - **Statuses**: `RowStatus::Reading` (not a problem, not ready; `PreviewCounts.reading`), `NoValue { field }`, and
   `Unreadable { field }` (problems). A placeholder's own miss is a `FieldGap` (`Reading`, `NoValue`, `Unreadable`, each
   naming the `MediaField`), which crosses IPC in `FieldSample`.
@@ -221,7 +230,9 @@ answers the sheet.
   `get_multi_rename_field_samples` (the token editor: the token alone on the cursor rows, plus `FieldUsage`), and
   `prioritize_multi_rename_media` (fire-and-forget). Events: `MultiRenameMediaProgress` (`multi-rename-media-progress`).
 - **`MultiRenameError::StillReading`**: apply's safety net while rows still read; the sheet keeps a queued rename
-  waiting on it rather than showing an error.
+  waiting on it rather than showing an error. Only a preview that was itself still reading gets it: when a fully read
+  preview's recompute finds `Reading` rows (a file changed under it), `prepare` answers `PreviewOutOfDate`, since a
+  queue would then run names the user never saw.
 
 ## Presets (`presets.rs`, `preset_store.rs`)
 

@@ -15,7 +15,9 @@ use crate::multi_rename::presets::{
 };
 use crate::multi_rename::run::{MultiRenameStarted, apply};
 use crate::multi_rename::session::{self, MultiRenameOpened, MultiRenamePreview, PreviewFilter, RangeSample, RowMove};
-use cmdr_fs::deadline::{BlockingBudget, blocking_typed_result_with_timeout, timeout_detached_typed};
+use cmdr_fs::deadline::{
+    BlockingBudget, blocking_typed_result_with_timeout, blocking_with_timeout, timeout_detached_typed,
+};
 use tauri_specta::Event;
 
 /// Opens a session over the pane's selection: `selected_indices` are backend row
@@ -136,7 +138,14 @@ pub async fn get_multi_rename_media_progress(session_id: String) -> Result<Media
 #[tauri::command]
 #[specta::specta]
 pub async fn get_multi_rename_media_overview(session_id: String) -> Result<MediaOverview, MultiRenameError> {
-    session::media_overview(&session_id)
+    // Off the async workers: it walks every session file.
+    blocking_typed_result_with_timeout(
+        Duration::from_secs(2),
+        || MultiRenameError::TimedOut,
+        |detail| MultiRenameError::Internal { detail },
+        move || session::media_overview(&session_id),
+    )
+    .await
 }
 
 /// The media token editor's examples: the placeholder `token` (its text between
@@ -150,7 +159,14 @@ pub async fn get_multi_rename_field_samples(
     token: String,
     rows: Vec<usize>,
 ) -> Result<FieldSamples, MultiRenameError> {
-    session::field_samples(&session_id, &token, &rows)
+    // Off the async workers: a usage the cache can't answer walks every session file.
+    blocking_typed_result_with_timeout(
+        Duration::from_secs(2),
+        || MultiRenameError::TimedOut,
+        |detail| MultiRenameError::Internal { detail },
+        move || session::field_samples(&session_id, &token, &rows),
+    )
+    .await
 }
 
 /// Reads the files at `rows` (the ones the sheet shows) next. Fire-and-forget:
@@ -158,8 +174,12 @@ pub async fn get_multi_rename_field_samples(
 #[tauri::command]
 #[specta::specta]
 pub async fn prioritize_multi_rename_media(session_id: String, rows: Vec<usize>) {
-    // The only refusal is a closed session, whose read already stopped.
-    let _ = session::prioritize_media(&session_id, &rows);
+    // Off the async workers: reordering a 200k-file queue isn't free. The only
+    // refusal is a closed session, whose read already stopped.
+    blocking_with_timeout(Duration::from_secs(2), (), move || {
+        let _ = session::prioritize_media(&session_id, &rows);
+    })
+    .await;
 }
 
 /// Each example's new name for the sheet's tooltips, rendered on made-up files
