@@ -49,21 +49,30 @@ impl Nfs3Client {
     ///   time it's looked up is left out: it no longer exists.
     /// - `BAD_COOKIE` restarts from the top (telling `on_event`
     ///   [`ListingEvent::Restarted`]), at most [`LISTING_RESTARTS`] times.
+    ///
+    /// Answers the folder's own attributes as the FIRST page of the listing
+    /// that completed carried them (`None` when the server sent none): a
+    /// change during a later page moves the folder's stamp past this one, so a
+    /// poller comparing against it re-lists rather than missing the change.
     pub(crate) async fn list_dir(
         &self,
         dir: &FileHandle,
         page_bytes: u32,
         mut on_event: impl FnMut(ListingEvent),
-    ) -> Result<(), NfsError> {
+    ) -> Result<Option<Fattr3>, NfsError> {
         let mut plus = true;
         let mut restarts = 0;
         'listing: loop {
             let mut cookie = 0;
             let mut cookieverf = [0u8; 8];
+            let mut folder = None;
             loop {
                 let (entries, next_cookie, next_verf, eof) = if plus {
                     match self.readdirplus(dir, cookie, cookieverf, page_bytes).await {
                         Ok(page) => {
+                            if cookie == 0 {
+                                folder = page.dir_attributes;
+                            }
                             let entries = self.complete_plus(dir, page.entries).await?;
                             (entries, page.next_cookie, page.cookieverf, page.eof)
                         }
@@ -82,6 +91,9 @@ impl Nfs3Client {
                 } else {
                     match self.readdir(dir, cookie, cookieverf, page_bytes).await {
                         Ok(page) => {
+                            if cookie == 0 {
+                                folder = page.dir_attributes;
+                            }
                             let entries = self.complete_plain(dir, page.entries).await?;
                             (entries, page.next_cookie, page.cookieverf, page.eof)
                         }
@@ -97,7 +109,7 @@ impl Nfs3Client {
                     on_event(ListingEvent::Entries(entries));
                 }
                 if eof {
-                    return Ok(());
+                    return Ok(folder);
                 }
                 match next_cookie {
                     Some(next) => cookie = next,

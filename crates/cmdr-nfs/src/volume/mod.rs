@@ -84,6 +84,8 @@ struct NfsVolumeInner {
     dialer: Dialer,
     /// Where `UMNT` goes when the volume leaves, as the last dial mounted it.
     umnt: std::sync::Mutex<Option<UmntTarget>>,
+    /// The change poller for the directories panes show (`poll.rs`).
+    poller: poll::Poller,
     /// Everything this backend asks the app around it.
     host: VolumeHost,
 }
@@ -173,6 +175,7 @@ impl NfsVolume {
                 handles: HandleCache::new(),
                 dialer,
                 umnt: std::sync::Mutex::new(umnt),
+                poller: poll::Poller::default(),
                 host,
             }),
         }
@@ -217,7 +220,11 @@ async fn connect_with(
     saved.auto_reconnect = params.auto_reconnect;
     // PII-free: an NFS export came up. ❌ No host, export, uid, or path crosses.
     host.analytics().record("nfs_connected", &[]);
-    Ok(NfsVolume::assemble(name, saved, client, dialer, host))
+    let volume = NfsVolume::assemble(name, saved, client, dialer, host);
+    // Panes may already show this id (a redial that replaces another
+    // instance); with none, the poller stops a tick later, having sent nothing.
+    volume.inner.start_polling();
+    Ok(volume)
 }
 
 // The suites asserting on this backend's own behavior.

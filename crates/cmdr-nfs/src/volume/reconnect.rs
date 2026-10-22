@@ -241,6 +241,7 @@ impl NfsVolumeInner {
     /// mount table hears `UMNT`, best effort.
     pub(super) fn leave(self: &Arc<Self>) {
         self.unmount();
+        self.stop_polling();
         let Some(target) = self.umnt.lock_ignore_poison().take() else {
             return;
         };

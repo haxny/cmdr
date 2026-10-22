@@ -188,6 +188,44 @@ async fn an_entry_listed_without_a_handle_is_looked_up_and_bad_cookie_restarts_t
     );
 }
 
+/// A poller compares a folder's stamp against what it was when the pane
+/// listed it, so the listing answers the folder's attributes from its FIRST
+/// page: a change during a later page then moves the stamp past it, ❌ never
+/// hides behind it.
+#[tokio::test]
+async fn a_listing_answers_the_folder_attributes_its_first_page_carried() {
+    let nfs = serve(move |call| match call.procedure {
+        17 => {
+            let (cookie, _) = page_args(call);
+            Some(Box::new(move |enc| {
+                status(enc, 0);
+                // The folder as the first page saw it (size 1), then as the
+                // second did (size 2), after a name inside it changed.
+                let size = if cookie == 0 { 1 } else { 2 };
+                post_op_attr(enc, Some(&simple_attrs(FileType::Directory, 5, size)));
+                enc.fixed_opaque(&[1; 8]);
+                enc.bool(true);
+                enc.u64(20);
+                enc.opaque(if cookie == 0 { b"one" } else { b"two" });
+                enc.u64(cookie + 1);
+                post_op_attr(enc, Some(&simple_attrs(FileType::Regular, 1, 1)));
+                post_op_fh(enc, Some(&fh(b"h")));
+                enc.bool(false);
+                enc.bool(cookie != 0);
+            }))
+        }
+        other => panic!("unexpected procedure {other}"),
+    });
+
+    let folder = nfs.list_dir(&fh(DIR), 8192, |_| {}).await.unwrap();
+
+    assert_eq!(
+        folder.map(|attrs| attrs.size),
+        Some(1),
+        "the first page's, ❌ not the last's"
+    );
+}
+
 #[tokio::test]
 async fn a_page_with_no_entries_and_no_end_is_refused_rather_than_asked_forever() {
     let nfs = serve(|_| {

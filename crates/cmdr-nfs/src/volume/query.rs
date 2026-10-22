@@ -11,7 +11,7 @@ use log::debug;
 use tokio_util::sync::CancellationToken;
 
 use super::NfsVolume;
-use super::handles::Follow;
+use super::handles::{Follow, Stamp};
 use super::mapping::{attrs_to_file_entry, entry_kind, fsstat_to_space_info};
 use super::paths::child_of;
 use super::reconnect::NfsClient;
@@ -33,6 +33,9 @@ struct Gathered {
     /// Names that aren't UTF-8: listed nowhere, counted, logged once. A lossy
     /// name would point every later call at bytes that don't exist.
     skipped: usize,
+    /// The folder's own `(mtime, ctime)` as the listing's first page saw it,
+    /// when the server sent it: what the poller compares against.
+    stamp: Option<Stamp>,
 }
 
 impl NfsVolume {
@@ -44,6 +47,17 @@ impl NfsVolume {
         on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
         cancel: Option<&CancellationToken>,
     ) -> Result<Vec<FileEntry>, VolumeError> {
+        Ok(self.list_stamped(path, on_progress, cancel).await?.0)
+    }
+
+    /// [`list_directory_impl`](Self::list_directory_impl), plus the folder's
+    /// stamp as the listing's first page saw it.
+    async fn list_stamped(
+        &self,
+        path: &Path,
+        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
+        cancel: Option<&CancellationToken>,
+    ) -> Result<(Vec<FileEntry>, Option<Stamp>), VolumeError> {
         let remote = self.to_remote_path(path)?;
         let client = self.client().await?;
         let found = self.resolve(&client, &remote, Follow::Always, false).await?;
@@ -70,7 +84,7 @@ impl NfsVolume {
         if gathered.skipped > 0 {
             debug!(target: "nfs", "left {} name(s) that aren't UTF-8 out of a listing", gathered.skipped);
         }
-        Ok(gathered.entries)
+        Ok((gathered.entries, gathered.stamp))
     }
 
     /// A listing a PANE asked for: the poller's cue that something on this
@@ -82,8 +96,8 @@ impl NfsVolume {
         on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
         cancel: Option<&CancellationToken>,
     ) -> Result<Vec<FileEntry>, VolumeError> {
-        let entries = self.list_directory_impl(path, on_progress, cancel).await?;
-        self.listing_opened(path);
+        let (entries, stamp) = self.list_stamped(path, on_progress, cancel).await?;
+        self.listing_opened(path, stamp);
         Ok(entries)
     }
 
@@ -120,7 +134,10 @@ impl NfsVolume {
             },
             None => listing.await,
         };
-        outcome.map(|()| gathered)
+        outcome.map(|folder| Gathered {
+            stamp: folder.map(|attrs| (attrs.mtime, attrs.ctime)),
+            ..gathered
+        })
     }
 
     fn gather(&self, gathered: &mut Gathered, real: &str, remote: &str, entry: ListedEntry) {

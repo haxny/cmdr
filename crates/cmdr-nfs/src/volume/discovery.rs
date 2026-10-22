@@ -75,7 +75,7 @@ pub async fn guess_identity(
         listed = tokio::time::timeout(options.budget, listing) => listed,
     };
     mounted.nfs.connection().close();
-    if !matches!(listed, Ok(Ok(()))) {
+    if !matches!(listed, Ok(Ok(_))) {
         owners.clear();
     }
     let root_owner = NfsIdentity {
