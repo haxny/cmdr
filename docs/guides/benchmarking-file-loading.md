@@ -68,7 +68,7 @@ The shape to expect: `list_directory_start_streaming` returns a `listingId` almo
 behind it, so the interesting gap is between `RETURNING` and `listing-complete received`. A cancelled navigation shows
 one of the `read_directory_with_progress CANCELLED (…)` events instead of `COMPLETE`, naming the point it bailed.
 
-The non-streaming core (`list_directory_core START`, `readdir START/END`, `stat_loop START/END`, `sort START/END`,
+The non-streaming core (`list_directory_core START`, `read_entries START/END` (either lister), `sort START/END`,
 `list_directory_core END`, in `crates/cmdr-local/src/reading.rs`) emits its own events when that path runs. macOS
 extended metadata appears separately as `get_extended_metadata_batch START/END, count`.
 

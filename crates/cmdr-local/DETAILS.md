@@ -75,7 +75,9 @@ app's test build needs, the reach items with `any(test, feature = "testing")` an
   the write engine's transfer and archive move-out suites and the app's ADB suites.
 - `PROGRESS_SAMPLE_INTERVAL` is 1 ms (§ "The local reader").
 - `LocalPosixVolume::with_sidecar_probe`, which the write engine's `copy_sidecar_tests.rs` plays a FAT folder with.
-- `reading::list_directory`, which only the app's test-only `RealFileSystemProvider` calls.
+- `reading::list_directory`, which only the app's test-only `RealFileSystemProvider` calls, and
+  `reading::list_directory_with` / `Lister` / `added_at_by_path`, which force a lister for the parity cells and
+  `examples/listing_bench`.
 
 The first two are `cfg!` branches rather than `#[cfg]` items, so both arms compile in every build and neither leaves
 dead code behind in the other.
@@ -95,14 +97,87 @@ compile, and they change no behavior. (verified with a temporary
 
 ## The local reader
 
-`reading.rs` is the `std::fs` reader: `list_directory_core` (one `read_dir` plus an `lstat` per entry, built into
-`FileEntry`s and sorted by the host's `sort_listing`), `get_single_entry` (one stat), and `get_extended_metadata_batch`.
-`LocalPosixVolume` lists and stats through it, and so do the paths that read a local directory with no volume in hand:
-the app's watcher (its unregistered-volume fallback and its per-entry re-stat) and `tags.rs`. It's the local backend's
-reader, not the listing engine's, which is why it sits here and `cmdr-listing` only sees the `FileEntry`s it returns.
-`mutation.rs` is the other half: `patch_listing_after_local_mutation`, what a successful local mutation means for the
-listing cache (`apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "Mutation notification"). The app's
-`create.rs` sends its instant row for mkdir, mkfile, and paste-as-file through it too.
+`reading.rs` is the local reader: `list_directory_core` (every entry of a folder, built into `FileEntry`s and sorted by
+the host's `sort_listing`), `get_single_entry` (one path), and `get_extended_metadata_batch`. `LocalPosixVolume` lists
+and stats through it, and so do the paths that read a local directory with no volume in hand: the app's watcher (its
+unregistered-volume fallback and its per-entry re-stat) and `tags.rs`. It's the local backend's reader, not the listing
+engine's, which is why it sits here and `cmdr-listing` only sees the `FileEntry`s it returns. `mutation.rs` is the other
+half: `patch_listing_after_local_mutation`, what a successful local mutation means for the listing cache
+(`apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "Mutation notification"). The app's `create.rs` sends its
+instant row for mkdir, mkfile, and paste-as-file through it too.
+
+### Two listers, one entry
+
+- **`read_dir`** (`read_dir_entries`): every name, then one `lstat` per entry, plus one `stat` of a link's target for
+  `is_directory`. Linux, and every macOS filesystem but APFS and HFS+.
+- **`getattrlistbulk`** (`crates/cmdr-local/src/reading/bulk.rs`, macOS): one syscall per 64 KiB batch, every attribute
+  an entry needs plus the added date in each record, decoded through `cmdr_fs::attr_buf` (the one decoder of that
+  layout; `crates/cmdr-fs/DETAILS.md` § "`attr_buf`: the packed attribute layout"). 1.5× faster warm and ~2.5× cold-ish
+  at 100k entries (`docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md`).
+
+**How one is picked.** `bulk::read_entries` opens the folder (`O_DIRECTORY`, the open `opendir` does, so access and TCC
+errors are today's) and asks `fstatfs` on that fd: bulk iff `f_fstypename` is `apfs` or `hfs` (`bulk_eligible`).
+
+- **Decision**: an allowlist of filesystem type names, per listing, no cache. **Why**: speed, not support, is the
+  question. smbfs supports bulk but runs it 2.2× slower (it re-enumerates over the wire where `lstat` hits its attribute
+  cache); exFAT and FAT get it through VFS emulation with nothing gained, and FAT's allocated size reads 0; an unknown
+  filesystem keeps the proven path. `fstatfs` on the open fd is about a microsecond, answers the root volume listing a
+  folder on another filesystem by construction, and can't go stale on a remount that reuses an `fsid`.
+- `only_apfs_and_hfs_take_the_bulk_lister` is the only automated proof that FAT and smbfs stay on `read_dir` (no CI box
+  mounts either, and ❌ no FAT image: an FSKit `msdos` unmount once panicked a Mac).
+
+**One entry builder.** `entry_from_metadata` builds an entry from an `lstat`; `entry_from_lstat` (the `read_dir` path,
+and a doubtful bulk record) and `get_single_entry` both go through it, so the listing and the watcher's re-stat can't
+drift. `minimal_row` is the one shape for an entry nothing could be read about (name, link bit for the icon, nothing
+else). Bulk builds its trusted entries from the record, with the same rules: `is_directory` from a link's target (one
+`stat`), everything else from the link; `permissions = (ACCESSMASK & 0o7777) | type_bits(OBJTYPE)` (APFS's mask already
+carries `S_IFMT`, HFS+'s may not); `physical_size` from `ALLOCSIZE`, which matches `st_blocks * 512` on APFS and HFS+
+(compressed and sparse files included).
+
+**❗ Never drop, invent, or reshape an entry.** Write paths act on this listing's fields: delete stops descending at
+`is_symlink` (a link reported as a plain folder deletes its TARGET's children), hardlink dedup and rollback's
+self-collision check trust `inode`. So the bulk path ends one of three ways:
+
+- Every record trusted: their entries.
+- A record in doubt (`ATTR_CMN_ERROR` set, or a required attribute's returned bit clear: type, mtime, owner, group,
+  mode, flags, file id, a folder's mount status, a non-folder's link count, allocated size, and length): that ONE entry
+  is `entry_from_lstat`, today's answer. If its `lstat` fails too, today's minimal row when an unerrored record still
+  has a valid type (it picks the icon), else the stream is in doubt. Birth and added time are optional: invalid reads
+  `None`, never 0.
+- The stream in doubt (a `BadRecord`, a nameless or untyped unreadable record, `EINTR`, `EACCES`, `ENOTSUP`, `EINVAL`):
+  discard every bulk entry, reset the progress tally, and list again through `read_dir` from scratch. `bulk::Failure`
+  carries no entries, so a partial or merged listing can't be returned. `EACCES` is the common one: a readable but
+  unsearchable (`0444`) folder fails the whole call where `read_dir` lists minimal rows. `EINTR` isn't retried in place:
+  nothing says a resumed call can't skip a batch. Any other errno reaches the caller, as a `read_dir` iteration error
+  does.
+
+**Mount points and firmlinks** come back describing the folder they COVER (the stub's owner, mode, and times). Detected
+by `ATTR_DIR_MOUNTSTATUS & DIR_MNTSTATUS_MNTPOINT` or `SF_FIRMLINK` in the flags, they're built wholly from
+`get_single_entry` (added date included), the minimal row if that fails, ❌ never the stub. At `/`, 9 of 22 entries take
+this path.
+
+**The added date never depends on which lister ran.** On a bulk-eligible folder, the `read_dir` lister (forced, or the
+re-list after a doubtful stream) and a doubtful record fill `added_at` with one `getattrlist(ATTR_CMN_ADDEDTIME)` each
+(`bulk::added_at_by_path`, ~3.5 µs, paid only on those rare paths), and `get_single_entry` does the same when its PARENT
+is bulk-eligible (`statfs` of the path itself would follow a final symlink). Elsewhere, no `added_at`. HFS+ records none
+for a symlink (verified on macOS 27.0.1, `reading_parity_test` on a `testing::disk_images` HFS+ image, 2026-10-22).
+
+**Intended differences from a `read_dir` listing:**
+
+- A sandbox-protected entry (`/private/var/db/...`, where `lstat` gets `EPERM`) lists as what it is from bulk, where
+  `read_dir` shows a dateless "file" minimal row. Opening it still says "no permission".
+- A name that vanishes mid-enumeration drops out (the kernel's next batch omits it), where `read_dir` shows a minimal
+  row for a name that vanished between `readdir` and `lstat`. The watcher's event reconciles either way.
+
+**What's unverified or untested here:**
+
+- TCC (Desktop, Documents, Downloads, iCloud Drive): `open(O_DIRECTORY)` is the gate `opendir` hits, so a denial is the
+  same `EPERM` at open, but neither lister has run under the app's own TCC identity. On David's QA list.
+- Dataless (evicted iCloud) files: every requested attribute is metadata the kernel keeps for an evicted file, and
+  nothing reads content or xattrs, so nothing should materialize. Unverified (no evicted file at hand, 2026-10-22).
+  Enumerating a dataless FOLDER materializes it with either lister.
+- Non-UTF-8 names never reach bulk (APFS and HFS+ refuse them with `EILSEQ`); the name decodes through `to_string_lossy`
+  and the path joins the raw bytes, as `read_dir` does.
 
 **Progress.** The pane's "Loaded N files…" readout needs `on_progress` fed while the stat loop runs (why it matters:
 `crates/cmdr-listing/DETAILS.md` § "Local listing progress"), but the local backend can't take the callback where the
@@ -132,9 +207,9 @@ piece has a different cost: Tier 1 (name, size, dates, permissions) is free from
 symlink target) is ~1 μs and cacheable; Tier 3 (macOS Spotlight/NSURL metadata) costs ~50-100 μs/file; Tier 4 (EXIF,
 PDF) costs 1-100 ms+ and reads file content. The full tier table: `docs/notes/file-metadata-tiers.md`.
 
-macOS extended metadata (`addedAt`, `openedAt`) needs `listxattr()` / `getxattr()` beyond the fast `fs::read_dir()` +
-`metadata()` path. Available via `get_extended_metadata_batch()` but not wired into the streaming path yet. Finder tags
-are deferred too, and `list_directory_core` never reads them: `crates/cmdr-listing/DETAILS.md` § "Finder tags".
+The added date rides with the core listing (§ "Two listers, one entry"). `get_extended_metadata_batch()` (NSURL) isn't
+wired into the streaming path. Finder tags are deferred, and `list_directory_core` never reads them:
+`crates/cmdr-listing/DETAILS.md` § "Finder tags".
 
 ## Local volume space
 
@@ -229,12 +304,16 @@ so nothing a test can set up fails one without failing the other, and only a tra
   assertions in `volume::conformance`".
 - `reading_test.rs`: the reader on its own; the inline `tests` modules in `space.rs`, `live_space.rs`, `mount_table.rs`,
   and `linux_mounts.rs` pin the probes.
-- `reading_parity_test.rs`: what the lister yields today, field for field, each listed entry equal to its
-  `get_single_entry` re-stat (every field, through `Debug`). Each field a write path acts on also gets a cell against
-  `lstat` itself, since parity alone can't see both readers going wrong together. Every cell runs once per entry of its
-  `LISTERS`, so a second lister is proven by adding it there. The one known difference: `/.hidden` at a volume root,
-  which the re-stat never applies. Its `real_image` module (a mount point's parent, the fixture on HFS+) runs in
-  `pnpm check disk-images`.
+- `reading_parity_test.rs`: what the listers yield, field for field, each listed entry equal to its `get_single_entry`
+  re-stat (every field, `added_at` included, through `Debug`). Each field a write path acts on also gets a cell against
+  `lstat` itself, since parity alone can't see both readers going wrong together. Every cell runs once per entry of
+  `LISTERS` (bulk and `read_dir` on macOS, `read_dir` on Linux) through `reading::list_directory_with`. The one known
+  difference: `/.hidden` at a volume root, which the re-stat never applies. Its `real_image` module (a mount point's
+  parent, the fixture on HFS+) runs in `pnpm check disk-images`.
+- `crates/cmdr-local/src/reading/bulk_test.rs`: the bulk lister's own policy over hand-built `attr_buf::Record`s (a
+  doubtful record is its `lstat`, a mount point its re-stat) and a broken stream (a real first batch, then a bad record
+  or an errno, injected through `read_entries_with`'s batch source): the result must equal the `read_dir` listing
+  exactly.
 - **The cells that need the app's real host stay app-side**, in
   `apps/desktop/src-tauri/src/listing_host/tests/local_posix_host_test.rs`: the watch-coverage answer following the real
   FSEvents watcher, the panes' name order, and a mutation reaching the pane through the app's composer. They assert on
@@ -248,8 +327,9 @@ app read of a local disk that doesn't go through a volume:
 
 - **The root**: `LocalPosixVolume`, `rename_local_exclusive` (the engine's landings and the in-flight sweep), and
   `rename_volume_error` (the app's single rename, which names the right path in its error).
-- **`reading`** (`list_directory_core`, `get_single_entry`; `list_directory` is `testing`-gated) and **`mutation`**
-  (`patch_listing_after_local_mutation`): the watcher, `tags.rs`, and `create.rs`'s instant row.
+- **`reading`** (`list_directory_core`, `get_single_entry`; `list_directory`, `list_directory_with`, `Lister`, and
+  `added_at_by_path` are `testing`-gated, the last three for the parity cells and `examples/listing_bench`) and
+  **`mutation`** (`patch_listing_after_local_mutation`): the watcher, `tags.rs`, and `create.rs`'s instant row.
 - **`space`** (`get_space_info_for_path`, `get_volume_space`) and **`live_space`** (`live_volume_space`,
   `expect_space_change`): the index's tier-2 progress, the copy pre-flight, the IPC command, and the space poller.
 - **The mount probes**: `filesystem_kind` (seven, counting `probe_mount_for_path`'s three platform arms), `mount_table`

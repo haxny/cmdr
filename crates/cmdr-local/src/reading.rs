@@ -1,14 +1,21 @@
-//! The local `std::fs` reader: directory reading and `FileEntry` construction.
+//! The local reader: directory reading and `FileEntry` construction.
 //!
 //! Pure I/O functions that read from disk and build `FileEntry` objects. No Tauri
 //! or caching dependencies: the name order comes from the caller's
 //! `ListingHost::sort_listing`. `LocalPosixVolume`, the watcher, `tags.rs`, and
-//! `create.rs` read through it. See `DETAILS.md` § "The local reader".
+//! `create.rs` read through it.
+//!
+//! Two listers build the same entries: `getattrlistbulk` on APFS and HFS+
+//! (`bulk`, macOS), and `read_dir` plus one `lstat` per entry everywhere else.
+//! See `DETAILS.md` § "The local reader".
 
 #![allow(
     dead_code,
     reason = "get_extended_metadata_batch is the second phase of the two-phase loading API, not wired into the streaming path yet"
 )]
+
+#[cfg(target_os = "macos")]
+mod bulk;
 
 use std::collections::HashSet;
 use std::fs;
@@ -107,7 +114,7 @@ pub fn list_directory(path: &Path, listings: &dyn ListingHost) -> Result<Vec<Fil
 /// Use `get_extended_metadata_batch()` to fetch extended metadata later.
 /// `listings` decides the order (`ListingHost::sort_listing`).
 pub fn list_directory_core(path: &Path, listings: &dyn ListingHost) -> Result<Vec<FileEntry>, std::io::Error> {
-    list_directory_core_impl(path, None, false, listings)
+    list_directory_core_impl(path, None, false, listings, Pick::ByFilesystem)
 }
 
 /// Like `list_directory_core`, but publishes a running count into `tally` as it stats.
@@ -128,7 +135,77 @@ pub(crate) fn list_directory_core_with_tally(
     is_volume_root: bool,
     listings: &dyn ListingHost,
 ) -> Result<Vec<FileEntry>, std::io::Error> {
-    list_directory_core_impl(path, Some(tally), is_volume_root, listings)
+    list_directory_core_impl(path, Some(tally), is_volume_root, listings, Pick::ByFilesystem)
+}
+
+/// Which lister a test or the listing benchmark forces, where production picks
+/// by filesystem.
+#[cfg(any(test, feature = "testing"))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Lister {
+    /// `getattrlistbulk`, whatever the filesystem, with every runtime fallback
+    /// production has (a doubtful stream still re-lists through `read_dir`).
+    #[cfg(target_os = "macos")]
+    Bulk,
+    /// `read_dir` plus one `lstat` per entry, what a bulk stream falls back to.
+    ReadDir,
+}
+
+/// Lists `path` through `lister`, as `LocalPosixVolume::list_directory` would
+/// with its choice forced. The parity cells and `examples/listing_bench` run both
+/// listers through this.
+///
+/// # Errors
+///
+/// What the forced lister's listing returns.
+#[cfg(any(test, feature = "testing"))]
+pub fn list_directory_with(
+    path: &Path,
+    is_volume_root: bool,
+    listings: &dyn ListingHost,
+    lister: Lister,
+) -> Result<Vec<FileEntry>, std::io::Error> {
+    list_directory_core_impl(
+        path,
+        Some(&ListingTally::default()),
+        is_volume_root,
+        listings,
+        Pick::Forced(lister),
+    )
+}
+
+/// The added date `get_single_entry` and the `read_dir` lister fill on APFS and
+/// HFS+: one `getattrlist` without following a link. `None` elsewhere.
+#[cfg(any(test, feature = "testing"))]
+pub fn added_at_by_path(path: &Path) -> Option<u64> {
+    #[cfg(target_os = "macos")]
+    return bulk::added_at_by_path(path);
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = path;
+        None
+    }
+}
+
+/// Who decides which lister runs.
+#[derive(Clone, Copy)]
+enum Pick {
+    /// Production: bulk on APFS and HFS+, `read_dir` on everything else.
+    ByFilesystem,
+    /// A test or the benchmark.
+    #[cfg(any(test, feature = "testing"))]
+    Forced(Lister),
+}
+
+/// Whether the entries a listing builds carry the added date.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum AddedAt {
+    /// One `getattrlist` per entry: the listed directory is bulk-eligible, so its
+    /// entries carry an added date whichever lister ran.
+    #[cfg(target_os = "macos")]
+    Fetch,
+    /// The filesystem doesn't record one.
+    Skip,
 }
 
 /// A listing's running entry counts, readable from another thread while the stat loop
@@ -152,6 +229,15 @@ impl ListingTally {
         }
     }
 
+    /// Back to zero, for a listing that discards what it counted and starts over
+    /// (a bulk stream re-listing through `read_dir`), so the readout never
+    /// counts an entry twice.
+    fn reset(&self) {
+        self.files.store(0, Ordering::Relaxed);
+        self.dirs.store(0, Ordering::Relaxed);
+        self.bytes.store(0, Ordering::Relaxed);
+    }
+
     /// Reads the counts as they stand right now. The three fields are loaded
     /// separately, so a snapshot taken mid-stat can be an entry out of step with
     /// itself; that's fine for a progress readout and it never over-counts.
@@ -170,10 +256,10 @@ fn list_directory_core_impl(
     tally: Option<&ListingTally>,
     is_volume_root: bool,
     listings: &dyn ListingHost,
+    pick: Pick,
 ) -> Result<Vec<FileEntry>, std::io::Error> {
     benchmark::log_event("list_directory_core START");
     let overall_start = std::time::Instant::now();
-    let mut entries = Vec::new();
 
     // Read once per listing, never per entry: at a volume root only (see this
     // function's `is_volume_root` doc on the caller side), `/.hidden` names the
@@ -184,40 +270,11 @@ fn list_directory_core_impl(
         HashSet::new()
     };
 
-    benchmark::log_event("readdir START");
+    benchmark::log_event("read_entries START");
     let read_start = std::time::Instant::now();
-    let dir_entries: Vec<_> = fs::read_dir(path)?.collect();
-    let read_dir_time = read_start.elapsed();
-    benchmark::log_event_value("readdir END, count", dir_entries.len());
-
-    benchmark::log_event("stat_loop START");
-    for entry in dir_entries {
-        let entry = entry?;
-        let file_entry = match process_dir_entry(&entry, &dot_hidden_names) {
-            Some(file_entry) => file_entry,
-            None => {
-                // Permission denied or broken symlink: return minimal entry
-                let is_symlink = entry.file_type().map(|ft| ft.is_symlink()).unwrap_or(false);
-                let name = entry.file_name().to_string_lossy().to_string();
-                FileEntry {
-                    icon_id: if is_symlink {
-                        "symlink-broken".to_string()
-                    } else {
-                        "file".to_string()
-                    },
-                    is_hidden: is_hidden_by_name(&name) || dot_hidden_names.contains(&name),
-                    extended_metadata_loaded: true, // Nothing to load for broken entries
-                    ..FileEntry::new(name, entry.path().to_string_lossy().to_string(), false, is_symlink)
-                }
-            }
-        };
-
-        if let Some(tally) = tally {
-            tally.record(&file_entry);
-        }
-        entries.push(file_entry);
-    }
-    benchmark::log_event_value("stat_loop END, entries", entries.len());
+    let mut entries = read_entries(path, &dot_hidden_names, tally, pick)?;
+    let read_time = read_start.elapsed();
+    benchmark::log_event_value("read_entries END, entries", entries.len());
 
     // Sort: directories first, then files, both by name in the panes' order. One
     // seam call per directory, never per entry.
@@ -227,10 +284,10 @@ fn list_directory_core_impl(
 
     let total_time = overall_start.elapsed();
     log::debug!(
-        "list_directory_core: path={}, entries={}, read_dir={}ms, total={}ms",
+        "list_directory_core: path={}, entries={}, read={}ms, total={}ms",
         LogPrivate::dir_path(path),
         entries.len(),
-        read_dir_time.as_millis(),
+        read_time.as_millis(),
         total_time.as_millis()
     );
     if entries.is_empty() {
@@ -266,99 +323,134 @@ fn list_directory_core_impl(
     Ok(entries)
 }
 
+/// Every entry of `path`, unsorted. macOS picks the lister (`bulk::read_entries`).
+#[cfg(target_os = "macos")]
+fn read_entries(
+    path: &Path,
+    dot_hidden: &HashSet<String>,
+    tally: Option<&ListingTally>,
+    pick: Pick,
+) -> std::io::Result<Vec<FileEntry>> {
+    bulk::read_entries(path, dot_hidden, tally, pick)
+}
+
+/// Every entry of `path`, unsorted. Linux has no `getattrlistbulk`, so always
+/// `read_dir`, and no added date.
+#[cfg(not(target_os = "macos"))]
+fn read_entries(
+    path: &Path,
+    dot_hidden: &HashSet<String>,
+    tally: Option<&ListingTally>,
+    pick: Pick,
+) -> std::io::Result<Vec<FileEntry>> {
+    let _ = pick;
+    read_dir_entries(path, dot_hidden, tally, AddedAt::Skip)
+}
+
+/// The `read_dir` lister: every name, then one `lstat` per entry. A name whose
+/// `lstat` fails lists as the minimal row; an iteration error fails the whole
+/// listing.
+fn read_dir_entries(
+    path: &Path,
+    dot_hidden: &HashSet<String>,
+    tally: Option<&ListingTally>,
+    added: AddedAt,
+) -> std::io::Result<Vec<FileEntry>> {
+    let dir_entries: Vec<_> = fs::read_dir(path)?.collect();
+    let mut entries = Vec::with_capacity(dir_entries.len());
+    for entry in dir_entries {
+        let entry = entry?;
+        let entry_path = entry.path();
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let file_entry = entry_from_lstat(&entry_path, name.clone(), dot_hidden, added).unwrap_or_else(|| {
+            // `d_type` still says whether it's a link, which picks the row's icon.
+            let is_symlink = entry.file_type().is_ok_and(|ft| ft.is_symlink());
+            minimal_row(&entry_path, name, is_symlink, dot_hidden)
+        });
+        if let Some(tally) = tally {
+            tally.record(&file_entry);
+        }
+        entries.push(file_entry);
+    }
+    Ok(entries)
+}
+
+/// The entry at `path` from its own `lstat`, or `None` when that `lstat` fails
+/// (the entry vanished, its folder isn't searchable, a sandbox said `EPERM`).
+/// With `AddedAt::Fetch` it also carries the added date.
+pub(crate) fn entry_from_lstat(
+    path: &Path,
+    name: String,
+    dot_hidden: &HashSet<String>,
+    added: AddedAt,
+) -> Option<FileEntry> {
+    let metadata = fs::symlink_metadata(path).ok()?;
+    let entry = entry_from_metadata(path, name, &metadata, dot_hidden);
+    match added {
+        #[cfg(target_os = "macos")]
+        AddedAt::Fetch => Some(FileEntry {
+            added_at: bulk::added_at_by_path(path),
+            ..entry
+        }),
+        AddedAt::Skip => Some(entry),
+    }
+}
+
+/// The row for an entry nothing could be read about: its name, whether it's a
+/// link (from the caller's `d_type` or record type: it picks the
+/// `symlink-broken` icon), and nothing else. No size, no dates, no owner, never a
+/// folder.
+pub(crate) fn minimal_row(path: &Path, name: String, is_symlink: bool, dot_hidden: &HashSet<String>) -> FileEntry {
+    FileEntry {
+        icon_id: if is_symlink {
+            "symlink-broken".to_string()
+        } else {
+            "file".to_string()
+        },
+        is_hidden: is_hidden_by_name(&name) || dot_hidden.contains(&name),
+        extended_metadata_loaded: true, // Nothing to load for broken entries
+        ..FileEntry::new(name, path.to_string_lossy().into_owned(), false, is_symlink)
+    }
+}
+
 /// Gets metadata for a single file or directory path.
 ///
 /// Used when we need metadata for a single path rather than listing
 /// a directory. Useful for symlink target resolution and volume implementations.
+/// Builds the same entry a listing of its folder does (through
+/// `entry_from_metadata`), added date included, except that it never applies a
+/// volume root's `/.hidden`.
 pub fn get_single_entry(path: &Path) -> Result<FileEntry, std::io::Error> {
-    let symlink_meta = fs::symlink_metadata(path)?;
-    let is_symlink = symlink_meta.file_type().is_symlink();
-
-    let target_is_dir = if is_symlink {
-        fs::metadata(path).map(|m| m.is_dir()).unwrap_or(false)
-    } else {
-        false
-    };
-
-    let metadata = &symlink_meta;
-    let is_dir = metadata.is_dir() || target_is_dir;
-
+    let metadata = fs::symlink_metadata(path)?;
     let name = path
         .file_name()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| path.to_string_lossy().to_string());
-
-    let modified = metadata
-        .modified()
-        .ok()
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map(|d| d.as_secs());
-
-    let created = metadata
-        .created()
-        .ok()
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map(|d| d.as_secs());
-
-    let uid = metadata.uid();
-    let gid = metadata.gid();
-    let owner = get_owner_name(uid);
-    let group = get_group_name(gid);
-
-    let physical_size = if metadata.is_file() {
-        Some(metadata.blocks() * 512)
-    } else {
-        None
+    let entry = entry_from_metadata(path, name, &metadata, &HashSet::new());
+    #[cfg(target_os = "macos")]
+    let entry = FileEntry {
+        added_at: bulk::parent_is_bulk_eligible(path)
+            .then(|| bulk::added_at_by_path(path))
+            .flatten(),
+        ..entry
     };
-
-    // `inode` is populated from `st_ino` for files only. Hardlink dedup in
-    // write-op walkers uses this to spot multiple paths pointing at the same
-    // inode. Directories don't share inodes the way files do, so leaving
-    // them `None` keeps the dedup decision file-shaped.
-    let inode = if metadata.is_file() && metadata.nlink() > 1 {
-        Some(metadata.ino())
-    } else {
-        None
-    };
-
-    Ok(FileEntry {
-        size: if metadata.is_file() { Some(metadata.len()) } else { None },
-        physical_size,
-        inode,
-        modified_at: modified,
-        created_at: created,
-        permissions: metadata.permissions().mode(),
-        owner,
-        group,
-        is_hidden: is_hidden_by_name(&name) || has_uf_hidden(metadata),
-        ..FileEntry::new(name, path.to_string_lossy().to_string(), is_dir, is_symlink)
-    })
+    Ok(entry)
 }
 
-/// Process a single directory entry into a FileEntry.
+/// Builds an entry from its `lstat`: everything from the link itself, except
+/// `is_directory`, which follows a link to its target (one extra `stat`).
 ///
-/// `dot_hidden_names` is the listing's `/.hidden` set (empty outside a volume
-/// root; see `read_dot_hidden_names`), asked once per entry here rather than
-/// re-read per entry by the caller.
-///
-/// Returns None if the entry cannot be processed (permissions, etc).
-pub(crate) fn process_dir_entry(entry: &fs::DirEntry, dot_hidden_names: &HashSet<String>) -> Option<FileEntry> {
-    let file_type = entry.file_type().ok()?;
-    let is_symlink = file_type.is_symlink();
-
-    let target_is_dir = if is_symlink {
-        fs::metadata(entry.path()).map(|m| m.is_dir()).unwrap_or(false)
-    } else {
-        false
-    };
-
-    let metadata = if is_symlink {
-        fs::symlink_metadata(entry.path()).ok()?
-    } else {
-        entry.metadata().ok()?
-    };
-
-    let name = entry.file_name().to_string_lossy().to_string();
+/// `dot_hidden` is the listing's `/.hidden` set (empty outside a volume root;
+/// see `read_dot_hidden_names`), asked once per entry here rather than re-read
+/// per entry by the caller. The added date is the caller's to fill.
+pub(crate) fn entry_from_metadata(
+    path: &Path,
+    name: String,
+    metadata: &fs::Metadata,
+    dot_hidden: &HashSet<String>,
+) -> FileEntry {
+    let is_symlink = metadata.file_type().is_symlink();
+    let target_is_dir = is_symlink && fs::metadata(path).is_ok_and(|m| m.is_dir());
     let is_dir = metadata.is_dir() || target_is_dir;
 
     let modified = metadata
@@ -373,38 +465,35 @@ pub(crate) fn process_dir_entry(entry: &fs::DirEntry, dot_hidden_names: &HashSet
         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
         .map(|d| d.as_secs());
 
-    let uid = metadata.uid();
-    let gid = metadata.gid();
-    let owner = get_owner_name(uid);
-    let group = get_group_name(gid);
-
     let physical_size = if metadata.is_file() {
         Some(metadata.blocks() * 512)
     } else {
         None
     };
 
-    // See `get_single_entry`: inode populated for hardlinked files only so
-    // the write-op walkers can dedupe; standalone files and dirs leave it
-    // `None` to keep the dedup loop's fast path branchless.
+    // `inode` is populated from `st_ino` for hardlinked files only. Hardlink
+    // dedup in write-op walkers uses this to spot multiple paths pointing at the
+    // same inode. Directories don't share inodes the way files do, and a
+    // single-link file has nothing to dedupe, so leaving them `None` keeps the
+    // dedup decision file-shaped.
     let inode = if metadata.is_file() && metadata.nlink() > 1 {
         Some(metadata.ino())
     } else {
         None
     };
 
-    Some(FileEntry {
+    FileEntry {
         size: if metadata.is_file() { Some(metadata.len()) } else { None },
         physical_size,
         inode,
         modified_at: modified,
         created_at: created,
         permissions: metadata.permissions().mode(),
-        owner,
-        group,
-        is_hidden: is_hidden_by_name(&name) || has_uf_hidden(&metadata) || dot_hidden_names.contains(&name),
-        ..FileEntry::new(name, entry.path().to_string_lossy().to_string(), is_dir, is_symlink)
-    })
+        owner: get_owner_name(metadata.uid()),
+        group: get_group_name(metadata.gid()),
+        is_hidden: is_hidden_by_name(&name) || has_uf_hidden(metadata) || dot_hidden.contains(&name),
+        ..FileEntry::new(name, path.to_string_lossy().to_string(), is_dir, is_symlink)
+    }
 }
 
 /// Fetches extended metadata for a batch of file paths.

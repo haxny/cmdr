@@ -18,8 +18,9 @@
 //!
 //! Beside the backend:
 //!
-//! - [`reading`]: the `std::fs` reader (one `read_dir`, one `lstat` per entry),
-//!   which the app's watcher and tag code read through too, and [`mutation`],
+//! - [`reading`]: the local reader (`getattrlistbulk` on APFS and HFS+, one
+//!   `read_dir` and an `lstat` per entry elsewhere), which the app's watcher and
+//!   tag code read through too, and [`mutation`],
 //!   what a local mutation means for the listing cache.
 //! - The no-replace rename, [`rename_local_exclusive`]: the one in the app.
 //! - [`space`] and `live_space`: how much room a local volume has.

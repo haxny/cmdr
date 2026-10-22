@@ -1,6 +1,6 @@
 //! Tests for the local reader: `std::fs` listing, single-entry stat, and `FileEntry` construction.
 
-use crate::reading::{get_extended_metadata_batch, get_single_entry, list_directory_core, process_dir_entry};
+use crate::reading::{AddedAt, entry_from_lstat, get_extended_metadata_batch, get_single_entry, list_directory_core};
 use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::host::VolumeHost;
 use std::fs;
@@ -10,7 +10,7 @@ use std::fs;
 // ============================================================================
 
 #[test]
-fn test_list_directory_core_returns_entries_without_extended_metadata() {
+fn test_list_directory_core_returns_core_entries() {
     let temp_dir = TestDir::new("core_test");
 
     let test_file = temp_dir.join("core_test.txt");
@@ -26,9 +26,10 @@ fn test_list_directory_core_returns_entries_without_extended_metadata() {
     assert!(!file_entry.path.is_empty());
     assert!(!file_entry.owner.is_empty());
 
-    // Extended metadata should NOT be loaded
+    // No extended metadata, but the added date comes with the core listing on
+    // APFS (the scratch dir's filesystem), never on Linux.
     assert!(!file_entry.extended_metadata_loaded);
-    assert!(file_entry.added_at.is_none());
+    assert_eq!(file_entry.added_at.is_some(), cfg!(target_os = "macos"));
     assert!(file_entry.opened_at.is_none());
 }
 
@@ -115,21 +116,26 @@ fn test_get_single_entry_nonexistent() {
     assert!(result.is_err());
 }
 
+// ============================================================================
+// Tests for `entry_from_lstat`, the per-entry builder both listers share
+// ============================================================================
+
+/// The entry at `dir/name` through `entry_from_lstat`, outside any volume root.
+fn entry_at(dir: &std::path::Path, name: &str) -> Option<cmdr_fs::entry::FileEntry> {
+    entry_from_lstat(
+        &dir.join(name),
+        name.to_string(),
+        &std::collections::HashSet::new(),
+        AddedAt::Skip,
+    )
+}
+
 #[test]
-fn test_process_dir_entry_returns_file_entry() {
+fn test_entry_from_lstat_returns_file_entry() {
     let temp_dir = TestDir::new("process_entry_test");
+    fs::write(temp_dir.join("process_test.txt"), "test content").unwrap();
 
-    let test_file = temp_dir.join("process_test.txt");
-    fs::write(&test_file, "test content").unwrap();
-
-    // Read directory and get a DirEntry
-    let entries: Vec<_> = fs::read_dir(&temp_dir).unwrap().filter_map(|e| e.ok()).collect();
-    let dir_entry = entries.iter().find(|e| e.file_name() == "process_test.txt").unwrap();
-
-    let file_entry = process_dir_entry(dir_entry, &std::collections::HashSet::new());
-
-    assert!(file_entry.is_some());
-    let entry = file_entry.unwrap();
+    let entry = entry_at(&temp_dir, "process_test.txt").expect("entry reads");
     assert_eq!(entry.name, "process_test.txt");
     assert!(!entry.is_directory);
     assert!(!entry.is_symlink);
@@ -137,23 +143,20 @@ fn test_process_dir_entry_returns_file_entry() {
 }
 
 #[test]
-fn test_process_dir_entry_handles_directory() {
+fn test_entry_from_lstat_handles_directory() {
     let temp_dir = TestDir::new("process_dir_test");
+    fs::create_dir(temp_dir.join("sub_directory")).unwrap();
 
-    let sub_dir = temp_dir.join("sub_directory");
-    fs::create_dir(&sub_dir).unwrap();
-
-    // Read directory and get a DirEntry
-    let entries: Vec<_> = fs::read_dir(&temp_dir).unwrap().filter_map(|e| e.ok()).collect();
-    let dir_entry = entries.iter().find(|e| e.file_name() == "sub_directory").unwrap();
-
-    let file_entry = process_dir_entry(dir_entry, &std::collections::HashSet::new());
-
-    assert!(file_entry.is_some());
-    let entry = file_entry.unwrap();
+    let entry = entry_at(&temp_dir, "sub_directory").expect("entry reads");
     assert_eq!(entry.name, "sub_directory");
     assert!(entry.is_directory);
     assert!(entry.size.is_none());
+}
+
+#[test]
+fn test_entry_from_lstat_is_none_for_a_vanished_entry() {
+    let temp_dir = TestDir::new("process_vanished_test");
+    assert!(entry_at(&temp_dir, "gone.txt").is_none());
 }
 
 // ============================================================================
@@ -161,34 +164,28 @@ fn test_process_dir_entry_handles_directory() {
 // ============================================================================
 
 #[test]
-fn test_process_dir_entry_marks_a_dotfile_hidden() {
+fn test_entry_from_lstat_marks_a_dotfile_hidden() {
     let temp_dir = TestDir::new("dotfile_hidden_test");
     fs::write(temp_dir.join(".secret"), "x").unwrap();
 
-    let entries: Vec<_> = fs::read_dir(&temp_dir).unwrap().filter_map(|e| e.ok()).collect();
-    let dir_entry = entries.iter().find(|e| e.file_name() == ".secret").unwrap();
-
-    let file_entry = process_dir_entry(dir_entry, &std::collections::HashSet::new()).expect("entry reads");
-    assert!(file_entry.is_hidden, "a dotfile must be marked hidden");
+    let entry = entry_at(&temp_dir, ".secret").expect("entry reads");
+    assert!(entry.is_hidden, "a dotfile must be marked hidden");
 }
 
 #[test]
-fn test_process_dir_entry_leaves_an_ordinary_file_visible() {
+fn test_entry_from_lstat_leaves_an_ordinary_file_visible() {
     let temp_dir = TestDir::new("ordinary_not_hidden_test");
     fs::write(temp_dir.join("visible.txt"), "x").unwrap();
 
-    let entries: Vec<_> = fs::read_dir(&temp_dir).unwrap().filter_map(|e| e.ok()).collect();
-    let dir_entry = entries.iter().find(|e| e.file_name() == "visible.txt").unwrap();
-
-    let file_entry = process_dir_entry(dir_entry, &std::collections::HashSet::new()).expect("entry reads");
-    assert!(!file_entry.is_hidden, "an ordinary file must not be marked hidden");
+    let entry = entry_at(&temp_dir, "visible.txt").expect("entry reads");
+    assert!(!entry.is_hidden, "an ordinary file must not be marked hidden");
 }
 
 /// `chflags hidden` sets `UF_HIDDEN` in `st_flags`, and macOS honors it with no
 /// dot in the name at all. `LocalPosixVolume` must too.
 #[cfg(target_os = "macos")]
 #[test]
-fn test_process_dir_entry_honors_uf_hidden_with_no_dot_in_the_name() {
+fn test_entry_from_lstat_honors_uf_hidden_with_no_dot_in_the_name() {
     use std::ffi::CString;
     use std::os::unix::ffi::OsStrExt;
 
@@ -206,15 +203,9 @@ fn test_process_dir_entry_honors_uf_hidden_with_no_dot_in_the_name() {
         "chflags(UF_HIDDEN) must succeed on a file this test just created"
     );
 
-    let entries: Vec<_> = fs::read_dir(&temp_dir).unwrap().filter_map(|e| e.ok()).collect();
-    let dir_entry = entries
-        .iter()
-        .find(|e| e.file_name() == "no_dot_but_hidden.txt")
-        .unwrap();
-
-    let file_entry = process_dir_entry(dir_entry, &std::collections::HashSet::new()).expect("entry reads");
+    let entry = entry_at(&temp_dir, "no_dot_but_hidden.txt").expect("entry reads");
     assert!(
-        file_entry.is_hidden,
+        entry.is_hidden,
         "UF_HIDDEN must mark an entry hidden even though its name carries no dot"
     );
 }

@@ -8,7 +8,8 @@ rename, local volume space, and the mount probes. Tauri-free; the app builds eve
 - **local_posix.rs** (the struct, the rename primitive, the query and mutation half of `impl Volume`), with
   **local_posix/scan.rs** (the copy-scan family) and **local_posix/streams.rs** (bytes in and out). A trait impl can't
   span files, so a moved method stays a one-line delegation to a `pub(super)` inherent body.
-- **reading.rs** (the `std::fs` reader the watcher and `tags.rs` read through too), **mutation.rs** (the listing patch a
+- **reading.rs** (the local reader the watcher and `tags.rs` read through too; `read_dir` + `lstat`) with
+  **reading/bulk.rs** (macOS: the `getattrlistbulk` lister APFS and HFS+ take), **mutation.rs** (the listing patch a
   local mutation sends), **space.rs** + **live_space.rs**, and the OS probes: **filesystem_kind.rs**,
   **mount_table.rs**, **statfs.rs**, **nsurl.rs**, **macos_metadata.rs** (macOS), **linux_mounts.rs** (Linux).
 
@@ -25,8 +26,12 @@ rename, local volume space, and the mount probes. Tauri-free; the app builds eve
   unknown: every cross-volume copy landing on local disk flows through it, and `flush()` alone loses data on eject.
 - **Force-rename is an atomic replacement**, so `supports_atomic_replace_rename()` is true. Network backends whose force
   path deletes first must not inherit that answer.
+- **❗ The two listers yield the same entries, field for field** (`reading_parity_test.rs` runs every cell through
+  both): delete trusts `is_symlink`, hardlink dedup `inode`. A doubtful bulk record re-stats through `entry_from_lstat`,
+  a doubtful stream re-lists through `read_dir` from scratch: ❌ never drop, invent, merge, or return a partial listing.
+  `added_at` is filled on APFS/HFS+ whichever lister ran, and by `get_single_entry`. DETAILS § "The local reader".
 - **`FileEntry::is_hidden` folds in `UF_HIDDEN` and root-only `/.hidden`** on top of the dot check, from data the
-  listing's `lstat` already has (no extra syscall).
+  listing already has (no extra syscall).
 - **Feed `on_progress` in `list_directory`**: the stat loop runs on `spawn_blocking`, so it publishes into a tally the
   async side samples. DETAILS § "The local reader".
 - **A test build answers space from `statvfs`, never NSURL** (#357). Gate test scaffolding on

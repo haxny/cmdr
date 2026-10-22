@@ -23,34 +23,23 @@ use cmdr_fs::entry::{FileEntry, get_group_name, get_owner_name};
 use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::host::VolumeHost;
 
-use crate::reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
+use crate::reading::{Lister, get_single_entry, list_directory_with};
 
 // ============================================================================
 // The lister seam
 // ============================================================================
 
-/// Which directory lister a cell runs.
-#[derive(Debug, Clone, Copy)]
-enum Lister {
-    /// `read_dir` plus one `lstat` per entry.
-    ReadDir,
-}
-
-/// Every lister a cell runs through.
+/// Every lister a cell runs through. Linux has no `getattrlistbulk`.
+#[cfg(target_os = "macos")]
+const LISTERS: &[Lister] = &[Lister::Bulk, Lister::ReadDir];
+#[cfg(not(target_os = "macos"))]
 const LISTERS: &[Lister] = &[Lister::ReadDir];
 
 /// Lists `dir` through `lister` the way `LocalPosixVolume::list_directory` does,
 /// `is_volume_root` deciding whether `/.hidden` is read.
 fn list(lister: Lister, dir: &Path, is_volume_root: bool) -> Vec<FileEntry> {
-    match lister {
-        Lister::ReadDir => list_directory_core_with_tally(
-            dir,
-            &ListingTally::default(),
-            is_volume_root,
-            VolumeHost::detached().listings(),
-        )
-        .unwrap_or_else(|e| panic!("{lister:?} lists {}: {e}", dir.display())),
-    }
+    list_directory_with(dir, is_volume_root, VolumeHost::detached().listings(), lister)
+        .unwrap_or_else(|e| panic!("{lister:?} lists {}: {e}", dir.display()))
 }
 
 fn entry_named<'a>(entries: &'a [FileEntry], name: &str) -> &'a FileEntry {
@@ -469,13 +458,38 @@ fn check_dates(fx: &Fixture, lister: Lister) {
         "{lister:?}: old.txt's birth time"
     );
     for entry in &listed {
-        assert_eq!(entry.added_at, None, "{lister:?}: {} has no added date", entry.name);
+        check_added_at_is_fresh(entry, lister);
         assert_eq!(entry.opened_at, None, "{lister:?}: {} has no opened date", entry.name);
         assert!(
             !entry.extended_metadata_loaded,
             "{lister:?}: {} is a core entry",
             entry.name
         );
+    }
+}
+
+/// The added date of an entry the fixture just made: on macOS (APFS or HFS+, both
+/// record it) a moment ago, whichever lister ran; on Linux, none. "A moment" is
+/// generous: an hour, so a slow CI box can't trip it, which still catches a zero,
+/// a misread slot, or a pre-epoch value.
+///
+/// HFS+ records none for a symlink (verified on macOS 27.0.1, this cell on a
+/// `testing::disk_images` HFS+ image, 2026-10-22), so a link may have none;
+/// whether the two listers agree on it is the re-stat parity cell's job.
+fn check_added_at_is_fresh(entry: &FileEntry, lister: Lister) {
+    let name = &entry.name;
+    if cfg!(target_os = "macos") {
+        let now = secs_since_epoch(Ok(std::time::SystemTime::now())).expect("after 1970");
+        let Some(added) = entry.added_at else {
+            assert!(entry.is_symlink, "{lister:?}: an added date for {name}");
+            return;
+        };
+        assert!(
+            now.saturating_sub(3600) <= added && added <= now + 5,
+            "{lister:?}: {name} was added a moment ago ({added}, now {now})"
+        );
+    } else {
+        assert_eq!(entry.added_at, None, "{lister:?}: {name} has no added date on Linux");
     }
 }
 
@@ -688,6 +702,52 @@ fn dot_hidden_applies_only_to_a_volume_root_listing() {
         !get_single_entry(&hidden_path).expect("re-stat").is_hidden,
         "the re-stat never applies /.hidden"
     );
+}
+
+/// The added date is when an entry landed in its folder: a move into another
+/// folder renews it (and leaves the mtime alone), and the re-stat the watcher
+/// takes of the moved entry carries the same date the listing does.
+#[cfg(target_os = "macos")]
+#[test]
+fn a_move_into_another_folder_renews_the_added_date() {
+    let dir = TestDir::new("parity_added_move");
+    let (from, to) = (dir.join("from"), dir.join("to"));
+    fs::create_dir(&from).expect("from");
+    fs::create_dir(&to).expect("to");
+    fs::write(from.join("moved.txt"), b"x").expect("moved.txt");
+    fs::create_dir(from.join("moved_folder")).expect("moved_folder");
+    let names = ["moved.txt", "moved_folder"];
+
+    let before: Vec<(Lister, Vec<FileEntry>)> = LISTERS.iter().map(|&l| (l, list(l, &from, false))).collect();
+    // allowed-test-sleep: added dates are whole seconds, so the move must land in a later one.
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    for name in names {
+        fs::rename(from.join(name), to.join(name)).expect("move it");
+    }
+
+    for (lister, before) in before {
+        let after = list(lister, &to, false);
+        for name in names {
+            let old = entry_named(&before, name);
+            let new = entry_named(&after, name);
+            let (old_added, new_added) = (
+                old.added_at.expect("an added date before"),
+                new.added_at.expect("an added date after"),
+            );
+            assert!(
+                new_added > old_added,
+                "{lister:?}: a move renews the added date of {name} ({old_added} -> {new_added})"
+            );
+            if name == "moved.txt" {
+                assert_eq!(new.modified_at, old.modified_at, "{lister:?}: a move leaves the mtime");
+            }
+            assert_eq!(
+                get_single_entry(&to.join(name)).expect("re-stat").added_at,
+                Some(new_added),
+                "{lister:?}: the re-stat carries the listing's added date for {name}"
+            );
+        }
+    }
 }
 
 /// APFS refuses a non-UTF-8 name (`EILSEQ`), so this runs on Linux only. The name
