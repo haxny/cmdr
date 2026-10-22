@@ -92,6 +92,12 @@
       "enabled": false
     },
     {
+      "description": "The SMB fixture containers are vendored from smb2's consumer test harness (`apps/desktop/test/smb-servers/.compose/VENDORED.md`), so their tags follow smb2: a bump here would drift from the source and fight the next re-vendor. Only the digest refreshes stay, since the digest pins are ours (a re-vendor keeps them) and they're what keeps the pinned base images patched.",
+      "matchFileNames": ["apps/desktop/test/smb-servers/.compose/**"],
+      "matchUpdateTypes": ["patch", "minor", "major"],
+      "enabled": false
+    },
+    {
       "description": "The fixture compose files name their locally built images (`cmdr-sftp-fixture:latest` and friends); no registry has them.",
       "matchManagers": ["docker-compose"],
       "matchPackageNames": ["/^cmdr-/"],
