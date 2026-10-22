@@ -5,6 +5,7 @@
 use std::path::Path;
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::error_detail::ErrorDetail;
 use cmdr_fs::volume::{EntryKind, ListingProgress, SpaceInfo, UnwritableReason, VolumeError, WriteAccess};
 use log::debug;
 use tokio_util::sync::CancellationToken;
@@ -64,7 +65,7 @@ impl NfsVolume {
             Err(err) => return Err(map_nfs_error(&err, &remote)),
         };
         if cancel.is_some_and(CancellationToken::is_cancelled) {
-            return Err(VolumeError::Cancelled(remote));
+            return Err(VolumeError::Cancelled(ErrorDetail::path(remote)));
         }
         if gathered.skipped > 0 {
             debug!(target: "nfs", "left {} name(s) that aren't UTF-8 out of a listing", gathered.skipped);

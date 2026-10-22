@@ -222,15 +222,17 @@ impl NfsVolumeInner {
     fn redial_failure(&self, err: NfsConnectError) -> VolumeError {
         let id = || self.volume_id.clone();
         match err {
-            NfsConnectError::Cancelled => VolumeError::Cancelled(id()),
-            NfsConnectError::TimedOut => VolumeError::ConnectionTimeout(id()),
+            NfsConnectError::Cancelled => VolumeError::Cancelled(id().into()),
+            NfsConnectError::TimedOut => VolumeError::ConnectionTimeout(id().into()),
             NfsConnectError::ExportNotFound => VolumeError::NotFound(id()),
             NfsConnectError::ExportRefused | NfsConnectError::ReservedPortRequired => VolumeError::PermissionDenied {
                 path: id(),
                 raw_os_error: None,
             },
-            NfsConnectError::Unreachable(why) | NfsConnectError::Transport(why) => VolumeError::DeviceDisconnected(why),
-            NfsConnectError::NoNfsV3 | NfsConnectError::ListingRefused => VolumeError::DeviceDisconnected(id()),
+            NfsConnectError::Unreachable(why) | NfsConnectError::Transport(why) => {
+                VolumeError::DeviceDisconnected(why.into())
+            }
+            NfsConnectError::NoNfsV3 | NfsConnectError::ListingRefused => VolumeError::DeviceDisconnected(id().into()),
         }
     }
 

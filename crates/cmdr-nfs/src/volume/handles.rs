@@ -28,6 +28,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+use cmdr_fs::error_detail::ErrorDetail;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::VolumeError;
 use futures_util::future::join_all;
@@ -304,7 +305,7 @@ impl NfsVolume {
             let moved = match answer {
                 Ok(attrs) => child.as_ref().and_then(|(_, stamp)| *stamp) != Some(stamp_of(&attrs)),
                 Err(NfsError::Status(NfsStat3::Stale)) if level == 0 => {
-                    return Err(VolumeError::DeviceDisconnected(self.inner.volume_id.clone()));
+                    return Err(VolumeError::DeviceDisconnected(self.inner.volume_id.clone().into()));
                 }
                 Err(NfsError::Status(NfsStat3::Stale | NfsStat3::NoEnt)) => true,
                 Err(err) => return Err(map_nfs_error(&err, dir)),
@@ -456,7 +457,7 @@ impl NfsVolume {
     fn root_failure(&self, err: &NfsError, remote: &str) -> VolumeError {
         match err {
             NfsError::Status(NfsStat3::Stale | NfsStat3::BadHandle) => {
-                VolumeError::DeviceDisconnected(self.inner.volume_id.clone())
+                VolumeError::DeviceDisconnected(self.inner.volume_id.clone().into())
             }
             other => map_nfs_error(other, remote),
         }
@@ -466,7 +467,7 @@ impl NfsVolume {
 fn too_many_links(remote: &str) -> VolumeError {
     VolumeError::IoError {
         // allowed-pluralize-noun: `MAX_LINK_HOPS` is 40, never 1.
-        message: format!("{remote} follows more than {MAX_LINK_HOPS} links"),
+        message: ErrorDetail::path_then(remote, format!(" follows more than {MAX_LINK_HOPS} links")),
         raw_os_error: Some(libc::ELOOP),
     }
 }
