@@ -9,6 +9,12 @@ what's identity-bound) is in the issue. Delete this note once the move is done a
   and `release-finish`, `pnpm land`, `release-ci-gate.sh`, `release.sh`, and `release-evidence` ask `gh repo view` for
   the name. Pre-move app versions vet advisory links with their own allowlist, so keep writing advisory URLs as
   `vdavid/cmdr` (they redirect) until builds before v0.55.0 age out.
+- **`release-evidence` checks a release under the repo that built it**, read from the `latest.json` on the release and
+  accepted only if it's the current name or `vdavid/cmdr` (`scripts/release-evidence/builtin.go`). So the last pre-move
+  release still verifies after the move. `release-finish` checks the release in flight, which is never pre-move; its dry
+  runs take `-signer-workflow` for older ones.
+- **All four rulesets live in `.github/rulesets/`**, and `pnpm land rulesets` reported all four matching the live ones
+  (2026-10-22), so `-apply` restores any that don't carry over.
 - **The swap is a script, re-run on transfer day**: `./scripts/org-move.sh -cutoff vX.Y.Z [-dry-run] [-v]`. The policy
   is `scripts/org-move/rules.go`: the file types it rewrites, the paths it leaves alone (each with a reason), the
   mentions it keeps wherever they appear, and hand-written edits a rename can't express. It's idempotent, prints every
@@ -43,15 +49,9 @@ what's identity-bound) is in the issue. Delete this note once the move is done a
 2. **David: install the GitHub Apps on the org**, scoped to `cmdr`, before the transfer so there's no gap: Renovate
    (also a bypass actor on the `main: PR with approval` ruleset, integration 2740), GitGuardian, Claude, and Lighthouse
    CI. Confirm the full list at github.com/settings/installations (the API can't enumerate it).
-3. **Agent: collect the CRA evidence of the last pre-move release** (`./scripts/release-evidence.sh verify` and
-   `evidence`, `docs/guides/releasing.md` steps 12 and 13) if it isn't done. After the move the script resolves
-   `getcmdr/cmdr` and checks attestations and `latest.json` URLs against it, so a pre-move release fails there. (Unlike
-   `release-finish`, it has no `-signer-workflow` override yet.)
-4. **Agent: export the live rulesets** as a backup:
-   `gh api repos/vdavid/cmdr/rulesets/<id> > <scratch>/ruleset-<id>.json` for each id in
-   `gh api repos/vdavid/cmdr/rulesets`. Four today: `Release tags (v*)`, `main: CI OK required`,
-   `main: PR with approval`, `main: no force-push or deletion`. Only the middle two live in `.github/rulesets/`.
-5. **Pick the day**: a quiet evening right after a release, so no release straddles the move.
+3. **Agent: confirm the rulesets still match their files**: `pnpm land rulesets` reports all four as matching. Commit
+   any drift into `.github/rulesets/` first, so the files are what the move restores.
+4. **Pick the day**: a quiet evening right after a release, so no release straddles the move.
 
 ## Transfer-day order
 
@@ -67,12 +67,11 @@ what's identity-bound) is in the issue. Delete this note once the move is done a
    create a new `vdavid/cmdr` while the repo lives in the org: a new repo at the old name takes over the path, and every
    redirect (web, API, git remotes, links in shipped app versions) breaks. A repo transfer doesn't retire the old name,
    so nothing protects it but this rule.
-5. **Agent: verify what carried over.** `gh api repos/getcmdr/cmdr/rulesets` (the four above),
-   `gh api repos/getcmdr/cmdr/environments` (`release`, `copilot`), `gh secret list -R getcmdr/cmdr` (nine) and
-   `--env release` (eight Apple secrets), `gh variable list -R getcmdr/cmdr` (`RELEASE_UPDATE_SIGNING`),
-   `gh api repos/getcmdr/cmdr/hooks` (`https://api.getcmdr.com/webhook/github`, `issues`), private vulnerability
-   reporting, secret scanning, and push protection. Missing rulesets: `pnpm land rulesets -apply` for the two in
-   `.github/rulesets/`, the backup JSON for the other two.
+5. **Agent: verify what carried over.** `pnpm land rulesets` (all four match), `gh api repos/getcmdr/cmdr/environments`
+   (`release`, `copilot`), `gh secret list -R getcmdr/cmdr` (nine) and `--env release` (eight Apple secrets),
+   `gh variable list -R getcmdr/cmdr` (`RELEASE_UPDATE_SIGNING`), `gh api repos/getcmdr/cmdr/hooks`
+   (`https://api.getcmdr.com/webhook/github`, `issues`), private vulnerability reporting, secret scanning, and push
+   protection. Missing or drifted rulesets: `pnpm land rulesets -apply`.
 6. **Agent: update the remotes.** Both laptops: `git remote set-url origin git@github.com:getcmdr/cmdr.git` and
    `gh repo set-default getcmdr/cmdr` in the main clone (worktrees share it). The M1's clone. `/opt/cmdr` on the Hetzner
    box (`https://github.com/getcmdr/cmdr.git`, as the `deploy-cmdr` user). All keep working through the redirect; update
