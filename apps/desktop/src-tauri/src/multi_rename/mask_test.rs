@@ -1,10 +1,23 @@
 //! The rename mask against Total Commander's own examples (help file and wiki).
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
+use cmdr_media_meta::{FieldKind, MediaFacts, MediaField};
 
 use super::mask::{
-    MAX_COUNTER_DIGITS, Mask, MaskError, RangeToken, RowFacts, RowMedia, counter_token, range_token, range_token_bounds,
+    FieldGap, FieldText, MAX_COUNTER_DIGITS, Mask, MaskError, MediaToken, RangeToken, RowFacts, RowMedia,
+    counter_token, media_token_parts, range_token, range_token_bounds,
 };
+
+/// A mask without media fields always renders.
+trait Text {
+    fn text(&self, row: &RowFacts<'_>) -> String;
+}
+
+impl Text for Mask {
+    fn text(&self, row: &RowFacts<'_>) -> String {
+        self.render(row).expect("no media field, so no gap")
+    }
+}
 
 fn facts(name: &str) -> RowFacts<'_> {
     RowFacts {
@@ -20,7 +33,7 @@ fn facts(name: &str) -> RowFacts<'_> {
 
 /// Renders `mask` as the NAME mask of `file` (the extension mask is a separate field).
 fn name(mask: &str, file: &str) -> String {
-    Mask::parse(mask).expect("a valid mask").render(&facts(file))
+    Mask::parse(mask).expect("a valid mask").text(&facts(file))
 }
 
 #[test]
@@ -76,7 +89,7 @@ fn a_folder_has_no_extension() {
         ..facts("archive.2024")
     };
     let mask = Mask::parse("[N]|[E]").expect("valid");
-    assert_eq!(mask.render(&folder), "archive.2024|");
+    assert_eq!(mask.text(&folder), "archive.2024|");
 }
 
 #[test]
@@ -86,16 +99,16 @@ fn a_bare_counter_counts_one_two_three_and_each_counter_has_its_own_settings() {
         position,
         ..facts("a.txt")
     };
-    assert_eq!(mask.render(&row(0)), "1");
-    assert_eq!(mask.render(&row(11)), "12", "no padding to the batch size");
+    assert_eq!(mask.text(&row(0)), "1");
+    assert_eq!(mask.text(&row(11)), "12", "no padding to the batch size");
 
     let inline = Mask::parse("[C10+5:3]").expect("valid");
-    assert_eq!(inline.render(&row(0)), "010");
-    assert_eq!(inline.render(&row(2)), "020");
+    assert_eq!(inline.text(&row(0)), "010");
+    assert_eq!(inline.text(&row(2)), "020");
     let two = Mask::parse("[C]-[C100-10:4]").expect("valid");
-    assert_eq!(two.render(&row(2)), "3-0080");
-    assert_eq!(Mask::parse("[C:2]").expect("valid").render(&row(8)), "09");
-    assert_eq!(Mask::parse("[C100-10]").expect("valid").render(&row(3)), "70");
+    assert_eq!(two.text(&row(2)), "3-0080");
+    assert_eq!(Mask::parse("[C:2]").expect("valid").text(&row(8)), "09");
+    assert_eq!(Mask::parse("[C100-10]").expect("valid").text(&row(3)), "70");
 }
 
 #[test]
@@ -171,9 +184,9 @@ fn an_inline_width_is_capped_and_the_counter_never_overflows() {
         ..facts("a.txt")
     };
     let wide = Mask::parse("[C:4000000000]").expect("valid");
-    assert_eq!(wide.render(&row).len(), 64);
+    assert_eq!(wide.text(&row).len(), 64);
     let huge = Mask::parse("[C9223372036854775807+9223372036854775807]").expect("valid");
-    assert_eq!(huge.render(&row), i64::MAX.to_string());
+    assert_eq!(huge.text(&row), i64::MAX.to_string());
 }
 
 #[test]
@@ -194,7 +207,7 @@ fn a_negative_start_is_followed_by_its_step() {
         position,
         ..facts("a.txt")
     };
-    let render = |mask: &str, position| Mask::parse(mask).expect("valid").render(&row(position));
+    let render = |mask: &str, position| Mask::parse(mask).expect("valid").text(&row(position));
     assert_eq!(render("[C-5+1]", 0), "-5");
     assert_eq!(render("[C-5+1]", 6), "1");
     assert_eq!(render("[C-5-2:3]", 1), "-07");
@@ -231,8 +244,8 @@ fn the_counter_grammar_agrees_with_the_shared_vectors() {
         let (typed, rewritten) = (Mask::parse(token).expect(token), Mask::parse(minimal).expect(minimal));
         for position in [0, 1, 7] {
             assert_eq!(
-                typed.render(&row(position)),
-                rewritten.render(&row(position)),
+                typed.text(&row(position)),
+                rewritten.text(&row(position)),
                 "{token} vs {minimal}"
             );
         }
@@ -271,8 +284,8 @@ fn the_range_grammar_agrees_with_the_shared_vectors() {
         let (typed, rewritten) = (Mask::parse(token).expect(token), Mask::parse(minimal).expect(minimal));
         for file in ["a", "Beach day.jpg", "ABCDEFGHIJKLMNOP.txt", ""] {
             assert_eq!(
-                typed.render(&facts(file)),
-                rewritten.render(&facts(file)),
+                typed.text(&facts(file)),
+                rewritten.text(&facts(file)),
                 "{token} vs {minimal} on {file:?}"
             );
         }
@@ -328,4 +341,255 @@ fn a_range_token_reads_its_field_and_says_which_characters_it_takes() {
     // Another placeholder isn't a range.
     assert_eq!(RangeToken::parse("C"), None);
     assert_eq!(RangeToken::parse("n"), None);
+}
+
+fn at(y: i32, mo: u32, d: u32, h: u32, mi: u32, s: u32) -> Option<NaiveDateTime> {
+    NaiveDate::from_ymd_opt(y, mo, d).and_then(|date| date.and_hms_opt(h, mi, s))
+}
+
+/// A phone photo that's also, improbably, tagged like a song: every kind of field.
+fn media() -> MediaFacts {
+    MediaFacts {
+        taken: at(2026, 7, 14, 9, 5, 30),
+        make: Some("Apple".to_string()),
+        model: Some("iPhone 15 Pro".to_string()),
+        iso: Some(64),
+        width: Some(4032),
+        artist: Some("Daft Punk".to_string()),
+        title: Some("Digital Love".to_string()),
+        track: Some(3),
+        ..MediaFacts::default()
+    }
+}
+
+/// `mask` as a name mask for a file whose media facts are `media` (modified 2026-06-15 23:10:09).
+fn render(mask: &str, media: RowMedia<'_>) -> Result<String, FieldGap> {
+    Mask::parse(mask).expect("a valid mask").render(&RowFacts {
+        media,
+        ..facts("IMG_0042.jpg")
+    })
+}
+
+#[test]
+fn a_date_field_takes_the_date_letters_and_reads_as_date_and_time_without_them() {
+    let photo = media();
+    let read = RowMedia::Read(&photo);
+    assert_eq!(render("[=exif.taken]", read).as_deref(), Ok("2026-07-14 09.05.30"));
+    assert_eq!(render("[=exif.taken:d]", read).as_deref(), Ok("2026-07-14"));
+    assert_eq!(render("[=exif.taken:t]", read).as_deref(), Ok("09.05.30"));
+    assert_eq!(
+        render("[=exif.taken:Y-M-D h.m.s]", read).as_deref(),
+        Ok("2026-07-14 09.05.30")
+    );
+    assert_eq!(
+        render("[=exif.taken:YMD_hms] [N]", read).as_deref(),
+        Ok("20260714_090530 IMG_0042")
+    );
+}
+
+#[test]
+fn a_number_field_pads_to_its_digits_and_never_cuts() {
+    let photo = media();
+    let read = RowMedia::Read(&photo);
+    assert_eq!(render("[=tag.track]", read).as_deref(), Ok("3"));
+    assert_eq!(render("[=tag.track:2]", read).as_deref(), Ok("03"));
+    assert_eq!(render("[=exif.iso:4]", read).as_deref(), Ok("0064"));
+    assert_eq!(render("[=exif.width:2]", read).as_deref(), Ok("4032"));
+}
+
+#[test]
+fn a_text_field_takes_a_range_like_the_name_does() {
+    let photo = media();
+    let read = RowMedia::Read(&photo);
+    assert_eq!(render("[=tag.artist]", read).as_deref(), Ok("Daft Punk"));
+    assert_eq!(render("[=tag.artist:1-4]", read).as_deref(), Ok("Daft"));
+    assert_eq!(render("[=tag.artist:-4-]", read).as_deref(), Ok("Punk"));
+    assert_eq!(
+        render("[=tag.artist:20-30]", read).as_deref(),
+        Ok(""),
+        "past the end is empty"
+    );
+    assert_eq!(render("[=exif.camera]", read).as_deref(), Ok("Apple iPhone 15 Pro"));
+    assert_eq!(
+        render("[=tag.track:2] [=tag.artist] - [=tag.title]", read).as_deref(),
+        Ok("03 Daft Punk - Digital Love")
+    );
+}
+
+#[test]
+fn a_field_goes_through_the_case_switches_like_any_text() {
+    let photo = media();
+    assert_eq!(
+        render("[U][=tag.artist][n] [=tag.title]", RowMedia::Read(&photo)).as_deref(),
+        Ok("DAFT PUNK Digital Love")
+    );
+}
+
+#[test]
+fn a_field_without_a_value_is_a_gap_that_names_it_never_an_empty_string() {
+    let empty = MediaFacts::default();
+    assert_eq!(
+        render("[N] [=exif.taken:d]", RowMedia::Read(&empty)),
+        Err(FieldGap::NoValue {
+            field: MediaField::ExifTaken
+        })
+    );
+    assert_eq!(
+        render("[=tag.artist]", RowMedia::NotMedia),
+        Err(FieldGap::NoValue {
+            field: MediaField::TagArtist
+        }),
+        "a file we don't read has no tags"
+    );
+    assert_eq!(
+        render("[=tag.artist]", RowMedia::Unreadable),
+        Err(FieldGap::Unreadable {
+            field: MediaField::TagArtist
+        })
+    );
+    assert_eq!(render("[=tag.artist]", RowMedia::Reading), Err(FieldGap::Reading));
+}
+
+#[test]
+fn the_first_gap_wins_unless_a_value_is_still_coming() {
+    let photo = MediaFacts {
+        taken: at(2026, 7, 14, 9, 5, 30),
+        ..MediaFacts::default()
+    };
+    assert_eq!(
+        render("[=exif.taken][=tag.title][=tag.album]", RowMedia::Read(&photo)),
+        Err(FieldGap::NoValue {
+            field: MediaField::TagTitle
+        })
+    );
+    assert_eq!(
+        render("[=exif.taken][=tag.title]", RowMedia::Reading),
+        Err(FieldGap::Reading)
+    );
+}
+
+#[test]
+fn modified_stands_in_for_a_missing_date_but_not_for_one_still_being_read() {
+    let empty = MediaFacts::default();
+    let photo = media();
+    let mask = "[=exif.taken|modified:d]";
+    assert_eq!(
+        render(mask, RowMedia::Read(&photo)).as_deref(),
+        Ok("2026-07-14"),
+        "its own date first"
+    );
+    assert_eq!(render(mask, RowMedia::Read(&empty)).as_deref(), Ok("2026-06-15"));
+    assert_eq!(render(mask, RowMedia::NotMedia).as_deref(), Ok("2026-06-15"));
+    assert_eq!(render(mask, RowMedia::Unreadable).as_deref(), Ok("2026-06-15"));
+    assert_eq!(
+        render(mask, RowMedia::Reading),
+        Err(FieldGap::Reading),
+        "its own date may yet come"
+    );
+    assert_eq!(
+        render("[=exif.taken|modified]", RowMedia::NotMedia).as_deref(),
+        Ok("2026-06-15 23.10.09")
+    );
+    let undated = RowFacts {
+        modified: None,
+        media: RowMedia::NotMedia,
+        ..facts("a.txt")
+    };
+    assert_eq!(
+        Mask::parse(mask).expect("valid").render(&undated),
+        Err(FieldGap::NoValue {
+            field: MediaField::ExifTaken
+        })
+    );
+}
+
+#[test]
+fn a_media_token_alone_says_its_text_and_whether_it_fell_back() {
+    let photo = media();
+    let token = MediaToken::parse("=exif.taken|modified:d").expect("a media token");
+    assert_eq!(token.field(), MediaField::ExifTaken);
+    let row = |media| RowFacts {
+        media,
+        ..facts("IMG_0042.jpg")
+    };
+    assert_eq!(
+        token.resolve(&row(RowMedia::Read(&photo))),
+        Ok(FieldText::Value("2026-07-14".to_string()))
+    );
+    assert_eq!(
+        token.resolve(&row(RowMedia::NotMedia)),
+        Ok(FieldText::Fallback("2026-06-15".to_string()))
+    );
+    assert_eq!(token.resolve(&row(RowMedia::Reading)), Err(FieldGap::Reading));
+    // The default format, for the picker's examples.
+    assert_eq!(
+        MediaToken::of(MediaField::ExifTaken).value_text(&photo).as_deref(),
+        Some("2026-07-14 09.05.30")
+    );
+    assert_eq!(
+        MediaToken::of(MediaField::TagTrack).value_text(&photo).as_deref(),
+        Some("3")
+    );
+    assert_eq!(MediaToken::of(MediaField::TagAlbum).value_text(&photo), None);
+    assert_eq!(MediaToken::parse("N2-5"), None);
+    assert_eq!(MediaToken::parse("=exif.nope"), None);
+}
+
+/// The media vectors the frontend's `media-token.ts` is tested against too, so the
+/// two grammars can't drift.
+#[test]
+fn the_media_grammar_agrees_with_the_shared_vectors() {
+    let vectors: serde_json::Value =
+        serde_json::from_str(include_str!("media_token_vectors.json")).expect("the vectors are JSON");
+    assert_eq!(vectors["maxDigits"], u64::from(MAX_COUNTER_DIGITS));
+    let fields: Vec<serde_json::Value> = MediaField::ALL
+        .into_iter()
+        .map(|field| {
+            let kind = match field.kind() {
+                FieldKind::Date => "date",
+                FieldKind::Number => "number",
+                FieldKind::Text => "text",
+            };
+            serde_json::json!({ "name": field.name(), "wire": field, "kind": kind })
+        })
+        .collect();
+    assert_eq!(vectors["fields"], serde_json::Value::Array(fields));
+
+    let photo = media();
+    let sample_media = [
+        RowMedia::Read(&photo),
+        RowMedia::NotMedia,
+        RowMedia::Unreadable,
+        RowMedia::Reading,
+    ];
+    let valid = vectors["valid"].as_array().expect("a valid list");
+    assert!(!valid.is_empty());
+    for vector in valid {
+        let token = vector["token"].as_str().expect("a token");
+        let expected = serde_json::json!({
+            "field": vector["field"],
+            "fallback": vector["fallback"],
+            "format": vector["format"],
+        });
+        assert_eq!(media_token_parts(token), Some(expected), "{token}");
+        // The frontend's minimal rewrite renders the same.
+        let minimal = vector["minimal"].as_str().expect("a minimal form");
+        let (typed, rewritten) = (Mask::parse(token).expect(token), Mask::parse(minimal).expect(minimal));
+        for media in sample_media {
+            let row = RowFacts {
+                media,
+                ..facts("a.jpg")
+            };
+            assert_eq!(typed.render(&row), rewritten.render(&row), "{token} vs {minimal}");
+        }
+    }
+    let invalid = vectors["invalid"].as_array().expect("an invalid list");
+    assert!(!invalid.is_empty());
+    for token in invalid {
+        let token = token.as_str().expect("a token");
+        assert!(
+            matches!(Mask::parse(token), Err(MaskError::Unknown { .. })),
+            "{token} must not parse"
+        );
+    }
 }

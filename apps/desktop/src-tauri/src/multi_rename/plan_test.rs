@@ -3,12 +3,14 @@
 use std::cell::Cell;
 use std::path::Path;
 
+use super::mask::RowMedia;
 use super::plan::{
-    Compiled, FOLDS, InvalidNameReason, MultiRenameSpec, NameEdits, NoMedia, RenameExample, RowStatus, SpecError,
-    preview, preview_names, render_examples,
+    Compiled, FOLDS, InvalidNameReason, MediaLookup, MultiRenameSpec, NameEdits, NoMedia, RenameExample, RowStatus,
+    SpecError, preview, preview_names, render_examples,
 };
 use super::transform::{CaseChange, SEARCH_BUILDS};
 use cmdr_fs::entry::FileEntry;
+use cmdr_media_meta::{MediaFacts, MediaField};
 
 const DIR: &str = "/Users/me/Photos/Holiday 2026";
 
@@ -378,6 +380,139 @@ fn examples_run_search_and_replace_as_a_rename_would() {
             Some("pic pic.jpg".to_string()),
             Some("Photo pic.jpg".to_string()),
             Some("Lisbon.jpg".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn examples_read_the_made_up_files_exif_and_tags() {
+    let name_only = |mask: &str| MultiRenameSpec {
+        extension_mask: String::new(),
+        ..spec(mask)
+    };
+    let out = render_examples(&[
+        example("IMG_0042.jpg", spec("[=exif.taken:d] [N]")),
+        example(
+            "IMG_0042.jpg",
+            name_only("[=exif.camera], [=exif.width]×[=exif.height], ISO [=exif.iso]"),
+        ),
+        example("song.mp3", spec("[=tag.track:2] [=tag.artist] - [=tag.title]")),
+        example("song.mp3", name_only("[=tag.album] ([=tag.year])")),
+        example("song.mp3", spec("[=tag.comment]")),
+    ]);
+    assert_eq!(
+        out,
+        vec![
+            Some("2026-07-14 IMG_0042.jpg".to_string()),
+            Some("Apple iPhone 15 Pro, 4032×3024, ISO 64".to_string()),
+            Some("03 Daft Punk - Digital Love.mp3".to_string()),
+            Some("Discovery (2001)".to_string()),
+            None,
+        ],
+        "a field the example file doesn't have renders no example"
+    );
+}
+
+/// Media facts by file name; a file not listed is `NotMedia`.
+struct MediaByName<'a>(Vec<(&'a str, RowMedia<'a>)>);
+
+impl MediaLookup for MediaByName<'_> {
+    fn media(&self, entry: &FileEntry) -> RowMedia<'_> {
+        self.0
+            .iter()
+            .find(|(name, _)| *name == entry.name)
+            .map_or(RowMedia::NotMedia, |(_, media)| *media)
+    }
+}
+
+fn run_media(spec: &MultiRenameSpec, folder: &[FileEntry], media: &MediaByName<'_>) -> Vec<(String, RowStatus)> {
+    let compiled = Compiled::new(spec).expect("a valid spec");
+    let rows: Vec<(usize, &FileEntry)> = folder.iter().enumerate().collect();
+    preview(&compiled, Path::new(DIR), &rows, folder, &NameEdits::default(), media)
+        .into_iter()
+        .map(|p| (p.new_name, p.status))
+        .collect()
+}
+
+#[test]
+fn a_row_a_media_field_has_no_text_for_keeps_its_name_and_says_why() {
+    let song = MediaFacts {
+        artist: Some("Daft Punk".to_string()),
+        ..MediaFacts::default()
+    };
+    let untitled = MediaFacts::default();
+    let folder = [
+        file("a.mp3"),
+        file("b.mp3"),
+        file("c.mp3"),
+        file("d.mp3"),
+        file("e.txt"),
+    ];
+    let media = MediaByName(vec![
+        ("a.mp3", RowMedia::Read(&song)),
+        ("b.mp3", RowMedia::Read(&untitled)),
+        ("c.mp3", RowMedia::Unreadable),
+        ("d.mp3", RowMedia::Reading),
+    ]);
+    let artist = RowStatus::NoValue {
+        field: MediaField::TagArtist,
+    };
+    assert_eq!(
+        run_media(&spec("[=tag.artist] [N]"), &folder, &media),
+        vec![
+            ("Daft Punk a.mp3".to_string(), RowStatus::Ready),
+            ("b.mp3".to_string(), artist.clone()),
+            (
+                "c.mp3".to_string(),
+                RowStatus::Unreadable {
+                    field: MediaField::TagArtist
+                }
+            ),
+            ("d.mp3".to_string(), RowStatus::Reading),
+            ("e.txt".to_string(), artist.clone()),
+        ]
+    );
+    assert!(artist.is_problem() && !artist.is_ready());
+    assert!(
+        !RowStatus::Reading.is_problem() && !RowStatus::Reading.is_ready(),
+        "a row still reading may yet turn ready: not a problem, not ready"
+    );
+}
+
+#[test]
+fn still_reading_in_either_mask_wins_over_a_missing_value_in_the_other() {
+    let folder = [file("a.mp3")];
+    let media = MediaByName(vec![("a.mp3", RowMedia::Reading)]);
+    let both = MultiRenameSpec {
+        extension_mask: "[=tag.genre]".to_string(),
+        ..spec("[=tag.title]")
+    };
+    assert_eq!(run_media(&both, &folder, &media)[0].1, RowStatus::Reading);
+    let untitled = MediaFacts::default();
+    let media = MediaByName(vec![("a.mp3", RowMedia::Read(&untitled))]);
+    assert_eq!(
+        run_media(&both, &folder, &media)[0].1,
+        RowStatus::NoValue {
+            field: MediaField::TagTitle
+        },
+        "the name mask's gap comes first"
+    );
+}
+
+#[test]
+fn a_row_waiting_on_its_tags_still_holds_its_name() {
+    // `b.mp3` keeps its name while it's read, so `a.mp3` can't take it.
+    let titled_b = MediaFacts {
+        title: Some("b".to_string()),
+        ..MediaFacts::default()
+    };
+    let folder = [file("a.mp3"), file("b.mp3")];
+    let media = MediaByName(vec![("a.mp3", RowMedia::Read(&titled_b)), ("b.mp3", RowMedia::Reading)]);
+    assert_eq!(
+        run_media(&spec("[=tag.title]"), &folder, &media),
+        vec![
+            ("b.mp3".to_string(), RowStatus::TargetExists),
+            ("b.mp3".to_string(), RowStatus::Reading),
         ]
     );
 }

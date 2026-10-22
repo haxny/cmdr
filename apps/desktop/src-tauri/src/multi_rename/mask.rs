@@ -20,15 +20,29 @@
 //!   as slashes).
 //! - `[U]` `[L]` `[F]` `[n]`: upper / lower / first letter of each word / the
 //!   original case, from that point on.
+//! - `[=source.field]` what the file says about itself: its EXIF (`exif.taken`,
+//!   `exif.camera`, …) or media tags (`tag.artist`, `tag.track`, …), the names
+//!   `MediaField::name` knows. A `:format` after it takes what the field's kind
+//!   does: a date the date letters (`[=exif.taken:Y-M-D]`; none reads as `[d] [t]`),
+//!   a number a digit count (`[=tag.track:2]` is `03`), text a range
+//!   (`[=tag.artist:1-10]`). `|modified` before the format stands in the modified
+//!   date for a file without one (`[=exif.taken|modified:d]`, dates only).
 //! - `[[` is a literal `[`; a `]` outside a placeholder is itself.
 //!
 //! Characters are counted, never bytes, and a range past the end is empty
-//! rather than an error.
+//! rather than an error. A media field with no value is no text at all: the row
+//! renders a [`FieldGap`], never an empty string.
 
 use std::fmt::Write as _;
 
 use chrono::{Datelike, NaiveDateTime, Timelike};
 use cmdr_media_meta::{MediaFacts, MediaField};
+
+mod media_token;
+
+#[cfg(test)]
+pub(super) use media_token::media_token_parts;
+pub use media_token::{FieldText, MediaToken};
 
 /// The widest counter: `[C:4000000000]` must not allocate gigabytes per row.
 /// Any name longer than this hits the filesystem's name limit anyway.
@@ -48,15 +62,17 @@ pub struct RowFacts<'a> {
     /// The row's place in the rename order, from 0: what the counter counts.
     pub position: usize,
     /// What the file says about itself, for the `[=source.field]` placeholders.
-    #[expect(dead_code, reason = "the `[=source.field]` render reads it; drop this once it does")]
     pub media: RowMedia<'a>,
 }
 
 /// A row's media facts, as the session's cache has them now.
 #[derive(Debug, Clone, Copy)]
-#[expect(
-    dead_code,
-    reason = "the session's media cache builds the others; drop this once it does"
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "the session's media cache builds the others; drop this once it does"
+    )
 )]
 pub enum RowMedia<'a> {
     /// Still being read: a value may yet come.
@@ -118,6 +134,7 @@ enum Token {
     Field(Field, Range),
     Counter(CounterParts),
     Date(Vec<DatePart>),
+    Media(MediaToken),
     Case(Case),
 }
 
@@ -312,9 +329,11 @@ impl Mask {
         Ok(Self(tokens))
     }
 
-    /// The mask's text for `row`.
-    pub fn render(&self, row: &RowFacts<'_>) -> String {
+    /// The mask's text for `row`, or the first media field it has no text for.
+    /// A field still being read wins over every other gap: its value may yet come.
+    pub fn render(&self, row: &RowFacts<'_>) -> Result<String, FieldGap> {
         let mut out = CaseWriter::default();
+        let mut gap = None;
         for token in &self.0 {
             match token {
                 Token::Literal(text) => out.push(text),
@@ -331,10 +350,17 @@ impl Mask {
                         out.push(&date(&when, parts));
                     }
                 }
+                Token::Media(media) => match media.resolve(row) {
+                    Ok(text) => out.push(&text.into_text()),
+                    Err(FieldGap::Reading) => return Err(FieldGap::Reading),
+                    Err(missing) => {
+                        gap.get_or_insert(missing);
+                    }
+                },
                 Token::Case(case) => out.case = *case,
             }
         }
-        out.text
+        gap.map_or(Ok(out.text), Err)
     }
 }
 
@@ -345,6 +371,9 @@ fn placeholder(inner: &str) -> Result<Token, MaskError> {
     let mut chars = inner.chars();
     let first = chars.next().ok_or_else(unknown)?;
     let rest = chars.as_str();
+    if first == '=' {
+        return media_token::media(rest).map(Token::Media).ok_or_else(unknown);
+    }
     match (first, rest) {
         ('U', "") => return Ok(Token::Case(Case::Upper)),
         ('L', "") => return Ok(Token::Case(Case::Lower)),

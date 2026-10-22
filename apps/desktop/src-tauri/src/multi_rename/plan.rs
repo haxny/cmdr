@@ -16,9 +16,9 @@ use unicode_normalization::UnicodeNormalization;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::validation::{ValidationError, validate_filename};
 
-use cmdr_media_meta::MediaField;
+use cmdr_media_meta::{MediaFacts, MediaField};
 
-use super::mask::{Mask, MaskError, RowFacts, RowMedia};
+use super::mask::{FieldGap, Mask, MaskError, RowFacts, RowMedia};
 use super::transform::{CaseChange, CompiledTransform, Replace, ReplaceError, Transform};
 
 /// Everything the sheet sets.
@@ -225,7 +225,13 @@ impl Compiled {
     }
 
     /// The new full name for `entry` at `position` in the rename order, with its media facts.
-    fn new_name(&self, entry: &FileEntry, dir: &Path, position: usize, media: RowMedia<'_>) -> String {
+    fn new_name(
+        &self,
+        entry: &FileEntry,
+        dir: &Path,
+        position: usize,
+        media: RowMedia<'_>,
+    ) -> Result<String, FieldGap> {
         // Composed, so a range never splits a letter from its accent in a name an
         // SMB share or HFS stores decomposed.
         let file_name: String = entry.name.nfc().collect();
@@ -241,16 +247,20 @@ impl Compiled {
         })
     }
 
-    /// The new full name for a file with these facts.
-    fn render(&self, facts: &RowFacts<'_>) -> String {
-        let name = self.name_mask.render(facts);
-        let extension = self.extension_mask.render(facts);
+    /// The new full name for a file with these facts, or the media field it has
+    /// no text for. Still reading wins over any other gap, in either mask.
+    fn render(&self, facts: &RowFacts<'_>) -> Result<String, FieldGap> {
+        let (name, extension) = match (self.name_mask.render(facts), self.extension_mask.render(facts)) {
+            (Ok(name), Ok(extension)) => (name, extension),
+            (Err(FieldGap::Reading), _) | (_, Err(FieldGap::Reading)) => return Err(FieldGap::Reading),
+            (Err(gap), _) | (_, Err(gap)) => return Err(gap),
+        };
         let (name, extension) = self.transform.apply(&name, &extension);
-        self.finish(if extension.is_empty() {
+        Ok(self.finish(if extension.is_empty() {
             name
         } else {
             format!("{name}.{extension}")
-        })
+        }))
     }
 
     /// The last step every new name takes, a typed one too: composed when the spec normalizes.
@@ -288,27 +298,57 @@ const EXAMPLE_GRANDPARENT: &str = "Trips";
 /// When every example file last changed: 2026-07-14 09:05:30.
 const EXAMPLE_MODIFIED: (i32, u32, u32, u32, u32, u32) = (2026, 7, 14, 9, 5, 30);
 
+/// What every example file says about itself: a phone photo, taken when it was
+/// last changed, that's also tagged like a song, so one file shows every field.
+/// It has no comment.
+fn example_media(taken: Option<NaiveDateTime>) -> MediaFacts {
+    MediaFacts {
+        taken,
+        make: Some("Apple".to_string()),
+        model: Some("iPhone 15 Pro".to_string()),
+        lens: Some("iPhone 15 Pro back triple camera 6.86mm f/1.78".to_string()),
+        iso: Some(64),
+        focal_mm: Some(7),
+        width: Some(4032),
+        height: Some(3024),
+        orientation: Some(1),
+        title: Some("Digital Love".to_string()),
+        artist: Some("Daft Punk".to_string()),
+        album_artist: Some("Daft Punk".to_string()),
+        album: Some("Discovery".to_string()),
+        genre: Some("Electronic".to_string()),
+        comment: None,
+        track: Some(3),
+        disc: Some(1),
+        year: Some(2001),
+    }
+}
+
 /// Each example's new name, exactly as a rename would make it, for a file in
 /// `Trips/Lisbon 2026` last changed 2026-07-14 09:05:30, first in the rename
-/// order. `None` for a spec that doesn't run. Made-up files rather than the
-/// batch's own, so a tooltip never depends on what's selected.
+/// order, with `example_media`'s EXIF and tags. `None` for a spec that doesn't
+/// run, or a media field the file has no value for. Made-up files rather than
+/// the batch's own, so a tooltip never depends on what's selected.
 pub(crate) fn render_examples(examples: &[RenameExample]) -> Vec<Option<String>> {
     let (y, mo, d, h, mi, s) = EXAMPLE_MODIFIED;
     let modified = chrono::NaiveDate::from_ymd_opt(y, mo, d).and_then(|date| date.and_hms_opt(h, mi, s));
+    let media = example_media(modified);
     examples
         .iter()
         .map(|example| {
             let compiled = Compiled::new(&example.spec).ok()?;
             let file_name: String = example.file_name.nfc().collect();
-            Some(compiled.render(&RowFacts {
-                file_name: &file_name,
-                is_directory: false,
-                parent: EXAMPLE_PARENT,
-                grandparent: EXAMPLE_GRANDPARENT,
-                modified,
-                position: 0,
-                media: RowMedia::NotMedia,
-            }))
+            compiled
+                .render(&RowFacts {
+                    file_name: &file_name,
+                    is_directory: false,
+                    parent: EXAMPLE_PARENT,
+                    grandparent: EXAMPLE_GRANDPARENT,
+                    modified,
+                    position: 0,
+                    media: RowMedia::Read(&media),
+                })
+                .ok()
         })
         .collect()
 }
@@ -347,13 +387,20 @@ pub(crate) fn preview(
         .map(|(position, (row, entry))| {
             let typed = edits.get(&entry.name);
             let new_name = match typed {
-                Some(typed) => compiled.finish(typed.to_string()),
+                Some(typed) => Ok(compiled.finish(typed.to_string())),
                 None => compiled.new_name(entry, dir, position, media.media(entry)),
             };
-            let status = match invalid(&new_name) {
-                Some(reason) => RowStatus::InvalidName { reason },
-                None if compiled.same_name(&new_name, &entry.name) => RowStatus::Unchanged,
-                None => RowStatus::Ready,
+            // A row a media field has no text for keeps its name until it does.
+            let (new_name, status) = match new_name {
+                Err(gap) => (entry.name.clone(), gap_status(gap)),
+                Ok(new_name) => {
+                    let status = match invalid(&new_name) {
+                        Some(reason) => RowStatus::InvalidName { reason },
+                        None if compiled.same_name(&new_name, &entry.name) => RowStatus::Unchanged,
+                        None => RowStatus::Ready,
+                    };
+                    (new_name, status)
+                }
             };
             PreviewRow {
                 row: *row,
@@ -502,6 +549,15 @@ fn fold(name: &str) -> String {
 thread_local! {
     /// How many names folded on this thread, so a test proves the statuses stay linear.
     pub(super) static FOLDS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// The status of a row whose mask has no text for a media field.
+fn gap_status(gap: FieldGap) -> RowStatus {
+    match gap {
+        FieldGap::Reading => RowStatus::Reading,
+        FieldGap::NoValue { field } => RowStatus::NoValue { field },
+        FieldGap::Unreadable { field } => RowStatus::Unreadable { field },
+    }
 }
 
 fn invalid(name: &str) -> Option<InvalidNameReason> {

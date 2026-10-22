@@ -1,11 +1,12 @@
 # Multi-Rename Tool
 
-Total Commander's ⌃M renamer: masks with placeholders, search & replace, case, Greek to Latin, diacritics, Unicode
-normalization, a counter, presets, and a live preview. The sheet is `src/lib/multi-rename/`.
+Total Commander's ⌃M renamer: masks, search & replace, the case and character steps, presets, and a live preview. The
+sheet is `src/lib/multi-rename/`.
 
 ## Module map
 
-- `mask.rs` the placeholders (`[N2-5]`, `[C10+5:3]`, `[YMD]`, `[U]`…), parsed once, rendered per row. Pure.
+- `mask.rs` the placeholders (`[N2-5]`, `[C10+5:3]`, `[YMD]`…), parsed once, rendered per row (or a `FieldGap`);
+  `mask/media_token.rs` the `[=tag.track:2]` fields. Pure.
 - `transform.rs` search & replace, the case step, Greek to Latin, `remove_diacritics`. Pure.
 - `transliterate.rs` Greek to Latin (ELOT 743). Pure.
 - `plan.rs` the preview over a folder's entries: each row's new name and status; `render_examples` runs the sheet's

@@ -49,11 +49,33 @@ from PR #386 (Jiri Slovacek): a plain table reads `ευ` as `eu`, which no Greek
   placeholder reads as the name it makes. It must start with a letter, so `[2-5]` and `[-3-]` stay full-name ranges;
   `:` and `/` aren't separators (the slash problem above, and `/` splits paths); `d` and `t` stay whole-placeholder
   only.
-- Case switches `[U]` `[L]` `[F]` `[n]` apply from where they stand.
+- Media fields `[=source.field|modified:format]` (`mask/media_token.rs`, a child of `mask` so it shares the date
+  letters, `range`, `slice`, and `pad`): the file's EXIF or tag value, named by `MediaField::name` (`exif.taken`,
+  `tag.albumartist`; exact, case matters). The format follows the field's kind: a date takes `date_parts`
+  (`[=exif.taken:Y-M-D]`, `:d`, `:t`; none reads as `[d] [t]`), a number a digit count 1–`MAX_COUNTER_DIGITS`, padded
+  like the counter and never cut (`[=tag.track:2]` is `03`), text a range (`[=tag.artist:1-10]`). `|modified` (dates
+  only) comes before the format. An empty suffix, a suffix out of order, or a format the kind doesn't take is
+  `MaskError::Unknown`. **Decision/Why:** `=` is TC's content-plugin shape (`[=plugin.field]`), and no other
+  placeholder starts with it, so no mask that parsed before changes meaning.
+  - **A field with no text is a `FieldGap`, never an empty string**: `Mask::render` answers `Result<String, FieldGap>`.
+    No value (or a file we don't read, folders included) is `NoValue { field }`, a failed read `Unreadable { field }`,
+    a file still being read `Reading`. The first gap wins, except `Reading` wins over any other, in either mask
+    (`Compiled::render`): a value may still come. `plan::preview` turns a gap into the row's status
+    (`Reading` / `NoValue` / `Unreadable`) and keeps the old name as its new one, so the file holds its name in
+    `settle`.
+  - **`|modified` stands in for a file without its own date: no value, `NotMedia`, or `Unreadable`**, but never for one
+    still `Reading`. **Why:** otherwise a row would show the modified date, then flip to the taken one mid-read, and the
+    token editor's "N files use the modified date" would count rows that end up with their own. A file with no
+    modified date either is `NoValue`.
+  - `MediaToken` (`parse`, `of`, `field`, `resolve`, `value_text`) is the placeholder alone, for the session's field
+    samples and the picker's examples: `resolve` says whether the text is the file's own (`FieldText::Value`) or the
+    fallback (`FieldText::Fallback`). The frontend's `media-token.ts` parses and writes the same grammar, tested against
+    `media_token_vectors.json` (which also lists every field's name, IPC name, and kind).
+- Case switches `[U]` `[L]` `[F]` `[n]` apply from where they stand, media fields included.
 - `[[` is a literal `[`.
 
-Not in v1, all planned in #372: `[T4]` EXIF date, alphabetic counters, `[=plugin.field]` / tag fields, `\` to move into
-subfolders (the executor's one-parent rule refuses it today), "next step" chaining, and editing names in an editor.
+Not in v1, all planned in #372: alphabetic counters, `\` to move into subfolders (the executor's one-parent rule refuses
+it today), "next step" chaining, and editing names in an editor.
 
 ## Search & replace (`transform.rs`)
 
