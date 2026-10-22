@@ -2194,6 +2194,18 @@
       "url": "https://github.com/Amanieu/parking_lot"
     },
     {
+      "name": "lofty",
+      "version": "0.25.4",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/Serial-ATA/lofty-rs"
+    },
+    {
+      "name": "lofty_attr",
+      "version": "0.13.0",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/Serial-ATA/lofty-rs"
+    },
+    {
       "name": "log",
       "version": "0.4.34",
       "license": "MIT OR Apache-2.0",
@@ -2690,6 +2702,12 @@
       "version": "2.1.2",
       "license": "MIT",
       "url": "https://github.com/tats-u/rust-oem-cp/"
+    },
+    {
+      "name": "ogg_pager",
+      "version": "0.7.2",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/Serial-ATA/lofty-rs"
     },
     {
       "name": "once_cell",
