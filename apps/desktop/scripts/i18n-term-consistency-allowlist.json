@@ -54,6 +54,10 @@
         "reason": "`Operación cancelada` titles an error pane and names its subject, like its sibling `Operación interrumpida`; `Cancelado` is a lifecycle status in an operation-log cell. See `docs/i18n/es/decisions.md`."
       },
       {
+        "source": "Compact",
+        "reason": "The adjective agrees with what it names: the UI density option is `Compacta` (la densidad), the date-field format button is `Compacto` (el formato)."
+      },
+      {
         "source": "Edit",
         "reason": "The menu bar's Edit menu is Apple's own Spanish title `Edición` (Finder); F4 and the context-menu item are the verb `Editar`. Never replace a menu-bar title with the ordinary word."
       },
@@ -274,6 +278,10 @@
         "reason": "Two senses of one English word, each ruled separately in `docs/i18n/pt/terms.json` (`browse-file-picker`, `browse`). `Escolher…` is the button that opens the system file picker (`servers.sheet.browse`, `settings.adb.browse`), taken from Apple's own `Choose…` → `Escolher…`. `Navegar` is the archives segmented cell (`settings.archives.opt.browse`), which means step inside and list like a folder (macOS Finder VoiceOver, Total Commander pt-BR). Apple never says `Navegar` for picking a file, and the archive sense is never `Escolher`, so one word for both would be wrong on whichever surface lost."
       },
       {
+        "source": "Compact",
+        "reason": "Gender agreement, not drift: `Compacta` agrees with the UI density (`settings.appearance.uiDensity.opt.compact`), `Compacto` with the date format (`multiRename.mediaEditor.preset.compact`, beside `Formatos comuns`)."
+      },
+      {
         "source": "Modified",
         "reason": "Number agreement, not drift: `Modificado` is a file's date column and filter, `Modificados` is the keyboard-shortcuts filter for the shortcuts the user changed (`shortcuts.section.filterModified`)."
       },
@@ -414,6 +422,10 @@
     ],
     "zh-Hant": [
       {
+        "source": "Starting",
+        "reason": "Two different states. `正在啟動⋯` is a service booting up (`ai.local.statusStarting`, the local AI server); `即將開始⋯` is Multi-rename's Rename button while the rename waits for tags to be read and starts on its own (`multiRename.starting`). Nothing is launching there, so `啟動` would misdescribe a queued wait."
+      },
+      {
         "source": "Start",
         "reason": "Two different things in Multi-rename. `起始值` is the counter's first number (`multiRename.counterEditor.start`, beside the step and digits fields); `起點` is the first edge of a character range (`multiRename.rangeEditor.start`, paired with `終點` and the `從開頭算`/`從結尾算` options). A range edge isn't a number, and `起始值` beside `終點` would read as a number field."
       },
@@ -486,6 +498,10 @@
       {
         "source": "Browse",
         "reason": "Обзор opens a file picker; Просмотреть содержимое navigates inside an archive rather than choosing a file."
+      },
+      {
+        "source": "Compact",
+        "reason": "The adjective agrees with its implied noun: UI density is feminine (плотность → Компактная), a date format masculine (формат → Компактный)."
       },
       {
         "source": "Dismiss",
