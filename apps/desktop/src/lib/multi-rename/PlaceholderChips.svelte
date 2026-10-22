@@ -14,7 +14,7 @@
     import { MEDIA_HELP, PLACEHOLDER_HELP } from './placeholder-help'
     import PlaceholderTip from './PlaceholderTip.svelte'
     import MediaFieldPicker from './MediaFieldPicker.svelte'
-    import { MEDIA_FIELD_LABELS, chipWord, fieldToken, insertField, type Inserted, type PickerExit } from './media-fields'
+    import { MEDIA_FIELD_LABELS, fieldToken, insertField, type Inserted, type PickerExit } from './media-fields'
 
     interface Props {
         tool: MultiRenameState
@@ -113,7 +113,7 @@
         bind:chipElement={mediaChip}
         variant="filter"
         size="field"
-        label={chipWord(tString('multiRename.mediaButton'))}
+        label={tString('multiRename.mediaButton')}
         ariaLabel={tString('multiRename.mediaButtonName')}
         isOpen={pickerOpen}
         tooltipContent={{ contentEl: tipContent[MEDIA_HELP.placeholder] }}
@@ -122,7 +122,7 @@
     <!-- The tooltip leads with the chip's whole word, which a long translation may cut. -->
     <PlaceholderTip
         help={MEDIA_HELP}
-        name={chipWord(tString('multiRename.mediaButton'))}
+        name={tString('multiRename.mediaButton')}
         rendered={examples}
         bind:contentEl={tipContent[MEDIA_HELP.placeholder]}
     />

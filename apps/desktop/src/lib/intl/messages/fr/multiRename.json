@@ -24,9 +24,9 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
-  "multiRename.mediaButton": "média ▾",
+  "multiRename.mediaButton": "média",
   "@multiRename.mediaButton": {
-    "sourceHash": "fb69ec3"
+    "sourceHash": "721c952"
   },
   "multiRename.mediaButtonName": "Champs média",
   "@multiRename.mediaButtonName": {

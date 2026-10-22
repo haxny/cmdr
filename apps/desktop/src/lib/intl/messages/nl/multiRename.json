@@ -23,10 +23,10 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
-  "multiRename.mediaButton": "media ▾",
+  "multiRename.mediaButton": "media",
   "@multiRename.mediaButton": {
-    "sourceHash": "fb69ec3",
-    "sameAsSourceJustification": "Dutch uses the same word: media is Dutch (macOS Metadata schema.strings nl: \"Titel van een set media\"); lowercase and ▾ mirror the placeholder buttons."
+    "sourceHash": "721c952",
+    "sameAsSourceJustification": "Dutch uses the same word: media is Dutch (macOS Metadata schema.strings nl: \"Titel van een set media\"); lowercase mirrors the placeholder buttons."
   },
   "multiRename.mediaButtonName": "Mediavelden",
   "@multiRename.mediaButtonName": {

@@ -102,6 +102,5 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   3× the English; fallback `Đứng yên {duration}`), the trash toast pair `Hoàn tác` / `Đi tới thùng rác`, the
   `Xem hoặc thêm ghi chú vào báo cáo` toast button beside `Đổi cài đặt`, and the long online-only warning band
   (`fileOperations.delete.cloudOnlineOnly*Warning`).
-- **Multi-rename media button** (`multiRename.mediaButton` = `đa phương tiện ▾`): about 3× the English `media ▾` in a
-  tight row of bracket buttons; if it clips, the fallback is the loanword `media ▾` (with `Trường media` for the aria
-  sibling).
+- **Multi-rename media button** (`multiRename.mediaButton` = `đa phương tiện`): about 3× the English `media` in a tight
+  row of bracket buttons; if it clips, the fallback is the loanword `media` (with `Trường media` for the aria sibling).

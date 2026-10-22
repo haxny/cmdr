@@ -23,9 +23,9 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
-  "multiRename.mediaButton": "媒體 ▾",
+  "multiRename.mediaButton": "媒體",
   "@multiRename.mediaButton": {
-    "sourceHash": "fb69ec3"
+    "sourceHash": "721c952"
   },
   "multiRename.mediaButtonName": "媒體欄位",
   "@multiRename.mediaButtonName": {

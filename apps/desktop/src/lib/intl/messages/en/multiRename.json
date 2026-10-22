@@ -29,13 +29,13 @@
   "@multiRename.insertPlaceholder": {
     "description": "Accessible name of the row of buttons that insert a placeholder such as [N] or [C] into the name mask at the caret."
   },
-  "multiRename.mediaButton": "media ▾",
+  "multiRename.mediaButton": "media",
   "@multiRename.mediaButton": {
-    "description": "Label of the button after the placeholder buttons ([N], [E], [P], [C], [YMD]) that opens the field picker: photo, video, and music information (date taken, camera, artist, title, …) to put in the new name. Lowercase in English to sit quietly beside the bracket placeholders; follow your language's normal capitalization (a language that capitalizes nouns does so here). Keep the ▾ (it says the button opens a list). Keep it short: the row is tight."
+    "description": "Label of the button after the placeholder buttons ([N], [E], [P], [C], [YMD]) that opens the field picker: photo, video, and music information (date taken, camera, artist, title, …) to put in the new name. Lowercase in English to sit quietly beside the bracket placeholders; follow your language's normal capitalization (a language that capitalizes nouns does so here). Don't add a ▾: the chip draws its own after the word. Keep it short: the row is tight, and a long word is cut off with an ellipsis."
   },
   "multiRename.mediaButtonName": "Media fields",
   "@multiRename.mediaButtonName": {
-    "description": "Accessible name of the “media ▾” button (multiRename.mediaButton), read by screen readers and voice control: it opens the list of photo, video, and music fields. Must contain the button's visible word (multiRename.mediaButton without the ▾), so a voice-control user can say it."
+    "description": "Accessible name of the “media ▾” button (multiRename.mediaButton), read by screen readers and voice control: it opens the list of photo, video, and music fields. Must contain the button's visible word (multiRename.mediaButton), so a voice-control user can say it."
   },
   "multiRename.search": "Search for",
   "@multiRename.search": {

@@ -23,9 +23,9 @@
   "@multiRename.insertPlaceholder": {
     "sourceHash": "f467cda"
   },
-  "multiRename.mediaButton": "media ▾",
+  "multiRename.mediaButton": "media",
   "@multiRename.mediaButton": {
-    "sourceHash": "fb69ec3",
+    "sourceHash": "721c952",
     "sameAsSourceJustification": "media is a Swedish word (SAOL), lowercase like the placeholder buttons beside it"
   },
   "multiRename.mediaButtonName": "Fält för media",

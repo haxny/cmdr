@@ -141,5 +141,5 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
   (`„Widerrufen“ ist gleich bereit …`). Check fit and tone.
 - Media fields (`multiRename.mediaField.*`): artist is `Interpret` / `Albuminterpret` (MS terminology, iTunes) over
   Dolphin/Nautilus `Künstler`; both are masculine field names, so check which a German Music.app user expects.
-  `multiRename.mediaButton` is capitalized `Medien ▾` against the English lowercase (German nouns); check it sits well
+  `multiRename.mediaButton` is capitalized `Medien` against the English lowercase (German nouns); check it sits well
   beside `[N]`, `[YMD]`. `tagDisc` → `CD-Nummer` (iTunes) and `Song` in the tooltips are unverified in the pile.
