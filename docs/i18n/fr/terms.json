@@ -94,6 +94,9 @@
     ],
     "chosen": "Autoriser",
     "confidence": "high",
+    "exceptions": {
+      "servers.refusal.reservedPortRequired": "quotes Synology DSM’s French label for the NFS insecure option verbatim: « Permettre les connexions à partir des ports non privilégiés » (kb.synology.com/fr-fr, file_share_privilege_nfs)"
+    },
     "forms": "button Autoriser; allow all → Tout autoriser; settings label `Autoriser <objet>` (Autoriser l’IA dans le cloud); conjugated in prose (Autorisez-la dans Réglages > IA); Android’s own dialog button is Autoriser, quoted bare",
     "sources": "macOS Finder (\"Autoriser quand même\"); AOSP SystemUI usb_debugging_allow = Autoriser"
   },
@@ -2043,6 +2046,9 @@
     "chosen": "partage",
     "confidence": "high",
     "decision": "Pourquoi un partage ne se monte pas ou sa liste ne se charge pas",
+    "exceptions": {
+      "servers.sheet.addressHelpNfs": "the English share is a literal path in the example addresses (nfs://nas.local/share), kept as-is"
+    },
     "forms": "network share → partage réseau (masculine); SMB share → partage SMB",
     "sources": "macOS (Partage et permissions); NetAuthAgent EINFO_NO_SHARE; MS terminology FRA"
   },
@@ -3549,6 +3555,12 @@
     "decision": "Le téléphone Android : le panneau de connexion, les info-bulles et l'astuce ADB",
     "forms": "capital D only at sentence start or as a switch label; USB always capitals; allow USB debugging (waiting) → votre autorisation de débogage USB",
     "sources": "AOSP SettingsLib fr (enable_adb, clear_adb_keys); developer.android.com/…?hl=fr"
+  },
+  "user": {
+    "chosen": "utilisateur",
+    "confidence": "high",
+    "forms": "user ID (Unix uid) → ID utilisateur, group ID → ID de groupe (MS FRA identifiant utilisateur, UID); the ID treated as nobody → un utilisateur anonyme; a person in prose → name the object or vous, never a gendered role noun",
+    "sources": "MS terminology FRA (user → utilisateur; user ID → identifiant utilisateur / UID); catalog (compte utilisateur, nom d’utilisateur)"
   },
   "username": {
     "chosen": "nom d’utilisateur",

@@ -123,11 +123,11 @@
   "@servers.hub.discoveryOffLink": {
     "sourceHash": "818571b"
   },
-  "servers.hub.nfsHint": "NFS servers don’t announce themselves, so they don’t show up here.",
+  "servers.hub.nfsHint": "Az NFS-szerverek nem hirdetik magukat, ezért itt nem jelennek meg.",
   "@servers.hub.nfsHint": {
     "sourceHash": "40b516d"
   },
-  "servers.hub.nfsHintLink": "Add one with its address",
+  "servers.hub.nfsHintLink": "Adj hozzá egyet a címével",
   "@servers.hub.nfsHintLink": {
     "sourceHash": "0324564"
   },
@@ -299,19 +299,19 @@
   "@servers.refusal.notAnS3Endpoint": {
     "sourceHash": "78557ec"
   },
-  "servers.refusal.exportNotFound": "{host} has no export at that path. Pick one from the list, or check the spelling.",
+  "servers.refusal.exportNotFound": "{host} nem kínál megosztást ezen az útvonalon. Válassz egyet a listából, vagy ellenőrizd, nem gépelted-e el.",
   "@servers.refusal.exportNotFound": {
     "sourceHash": "2ef1ce8"
   },
-  "servers.refusal.exportRefused": "{host} doesn’t let this Mac open that export. Check which computers the export allows in the server’s NFS settings.",
+  "servers.refusal.exportRefused": "{host} nem engedi, hogy ez a Mac megnyissa ezt a megosztást. A szerver NFS-beállításaiban ellenőrizd, mely számítógépeknek engedélyezi a hozzáférést a megosztás.",
   "@servers.refusal.exportRefused": {
     "sourceHash": "0cebd7d"
   },
-  "servers.refusal.reservedPortRequired": "{host} only accepts connections from a privileged port, which Cmdr can’t open here. Turn on the export’s “insecure” option on the server (some NAS apps call it “Allow connections from non-privileged ports”), then try again.",
+  "servers.refusal.reservedPortRequired": "{host} csak privilegizált portról fogad kapcsolatot, ilyet viszont a Cmdr itt nem tud nyitni. Kapcsold be a szerveren a megosztás „insecure” beállítását (egyes NAS-appokban „Kapcsolatok engedélyezése nem privilegizált portokról” a neve), majd próbáld újra.",
   "@servers.refusal.reservedPortRequired": {
     "sourceHash": "ee7b0c7"
   },
-  "servers.refusal.noNfsV3": "{host} doesn’t offer NFS version 3, the version Cmdr speaks.",
+  "servers.refusal.noNfsV3": "{host} nem kínálja az NFS 3-as verzióját, amelyet a Cmdr beszél.",
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
@@ -451,7 +451,7 @@
   "@servers.sheet.addressHelpWebdav": {
     "sourceHash": "a8349b3"
   },
-  "servers.sheet.addressHelpNfs": "A hostname, or an address like nfs://nas.local/share or nas.local:/share.",
+  "servers.sheet.addressHelpNfs": "Egy gépnév vagy egy cím, például nfs://nas.local/share vagy nas.local:/share.",
   "@servers.sheet.addressHelpNfs": {
     "sourceHash": "7970d70"
   },
@@ -467,7 +467,7 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
-  "servers.sheet.addressLooksLikeNfs": "This looks like an NFS address. Pick NFS above if that’s what you meant.",
+  "servers.sheet.addressLooksLikeNfs": "Ez NFS-címnek tűnik. Ha erre gondoltál, fent válaszd az NFS-t.",
   "@servers.sheet.addressLooksLikeNfs": {
     "sourceHash": "1c4d6bb"
   },
@@ -479,63 +479,63 @@
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"
   },
-  "servers.sheet.identityLockedNfs": "The server and the export are what name this place. To open another export, add it as a new server.",
+  "servers.sheet.identityLockedNfs": "A szerver és a megosztás azonosítja ezt a helyet. Másik megosztás megnyitásához add hozzá új szerverként.",
   "@servers.sheet.identityLockedNfs": {
     "sourceHash": "74d1ee7"
   },
-  "servers.sheet.nfsExport": "Export",
+  "servers.sheet.nfsExport": "Megosztás",
   "@servers.sheet.nfsExport": {
     "sourceHash": "3664895"
   },
-  "servers.sheet.nfsExportHelp": "Pick one from the list, or type its path. A folder inside an export works too.",
+  "servers.sheet.nfsExportHelp": "Válassz egyet a listából, vagy írd be az útvonalát. Egy megosztáson belüli mappa is jó.",
   "@servers.sheet.nfsExportHelp": {
     "sourceHash": "87eeba1"
   },
-  "servers.sheet.nfsExportsEmptyList": "No exports listed",
+  "servers.sheet.nfsExportsEmptyList": "Nincs megosztás a listán",
   "@servers.sheet.nfsExportsEmptyList": {
     "sourceHash": "7558a7b"
   },
-  "servers.sheet.nfsExportsNone": "{host} lists no exports for this Mac. Type the export’s path if you know it.",
+  "servers.sheet.nfsExportsNone": "{host} egyetlen megosztást sem sorol fel ennek a Macnek. Ha tudod a megosztás útvonalát, írd be.",
   "@servers.sheet.nfsExportsNone": {
     "sourceHash": "a88c0bf"
   },
-  "servers.sheet.nfsExportsRefused": "{host} doesn’t list its exports. Type the export’s path.",
+  "servers.sheet.nfsExportsRefused": "{host} nem sorolja fel, milyen megosztásokat kínál. Írd be a megosztás útvonalát.",
   "@servers.sheet.nfsExportsRefused": {
     "sourceHash": "5cbd573"
   },
-  "servers.sheet.nfsExportsUnreachable": "Cmdr couldn’t reach {host} to list its exports. You can still type one.",
+  "servers.sheet.nfsExportsUnreachable": "A Cmdr nem tudta lekérni a megosztások listáját, mert nem érte el ezt: {host}. Egyet így is beírhatsz.",
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Act as user ID",
+  "servers.sheet.nfsUid": "Felhasználóazonosító",
   "@servers.sheet.nfsUid": {
     "sourceHash": "f77edc9"
   },
-  "servers.sheet.nfsGid": "Group ID",
+  "servers.sheet.nfsGid": "Csoportazonosító",
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
-  "servers.sheet.nfsIdentityHelp": "The server decides what you can open by these numbers. NFS doesn’t ask for a password.",
+  "servers.sheet.nfsIdentityHelp": "A szerver e számok alapján dönti el, mit nyithatsz meg. Az NFS nem kér jelszót.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"
   },
-  "servers.sheet.nfsIdentityMostCommonOwner": "Guessed from who owns the files in this export.",
+  "servers.sheet.nfsIdentityMostCommonOwner": "Kikövetkeztetve abból, ki a fájlok tulajdonosa ebben a megosztásban.",
   "@servers.sheet.nfsIdentityMostCommonOwner": {
     "sourceHash": "d2b22c2"
   },
-  "servers.sheet.nfsIdentityRootOwner": "Guessed from who owns this export’s folder.",
+  "servers.sheet.nfsIdentityRootOwner": "Kikövetkeztetve abból, ki a megosztás mappájának tulajdonosa.",
   "@servers.sheet.nfsIdentityRootOwner": {
     "sourceHash": "c464fa8"
   },
-  "servers.sheet.nfsIdentityThisMac": "Your IDs on this Mac. Change them if the files on the server belong to someone else.",
+  "servers.sheet.nfsIdentityThisMac": "Az azonosítóid ezen a Macen. Módosítsd őket, ha a szerveren lévő fájlok valaki máshoz tartoznak.",
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "Most servers treat user ID 0 as nobody.",
+  "servers.sheet.nfsUidZeroWarning": "A legtöbb szerver a 0-s felhasználóazonosítót senkiként kezeli.",
   "@servers.sheet.nfsUidZeroWarning": {
     "sourceHash": "aa24d3f"
   },
-  "servers.sheet.nfsStartFolderHelp": "Where the export opens. Leave it empty to open the export itself.",
+  "servers.sheet.nfsStartFolderHelp": "Ebben a mappában nyílik meg a megosztás. Hagyd üresen, hogy maga a megosztás nyíljon meg.",
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
@@ -606,7 +606,8 @@
   },
   "servers.sheet.protocolNfs": "NFS",
   "@servers.sheet.protocolNfs": {
-    "sourceHash": "faac003"
+    "sourceHash": "faac003",
+    "sameAsSourceJustification": "Protokollnév, nem fordítjuk, ahogy a testvérkulcsokat sem (`servers.sheet.protocolSmb` = „SMB”, `servers.sheet.protocolS3` = „S3”); a Microsoft-terminológia is NFS-nek hagyja (network file system → NFS)."
   },
   "servers.sheet.s3Provider": "Szolgáltató",
   "@servers.sheet.s3Provider": {

@@ -122,7 +122,8 @@
     "forms": "Allow all → Alle erlauben; Android's own button → „Erlauben“ (AOSP usb_debugging_allow); switch name Cloud-KI erlauben, as a sentence verb Erlaube … Cloud-KI",
     "sources": "macOS Finder (Allow Anyway → Trotzdem erlauben); AOSP SystemUI de (usb_debugging_allow = Erlauben)",
     "exceptions": {
-      "errors.write.trashRefused.message.folderNotWritable": "English sense: “isn’t allowed to change” is a file-system permission, not granting consent, so it takes dürfen (nicht ändern darf)"
+      "errors.write.trashRefused.message.folderNotWritable": "English sense: “isn’t allowed to change” is a file-system permission, not granting consent, so it takes dürfen (nicht ändern darf)",
+      "servers.refusal.reservedPortRequired": "the quoted switch is Synology DSM de’s own label („Verbindungen von nicht-privilegierten Ports (Ports über 1024) zulassen“, kb.synology.com/de-de NFS-Berechtigungen, 2026-10-22), copied byte for byte; a quoted third-party label wins over the ruling"
     }
   },
   "already-exists": {
@@ -2105,7 +2106,8 @@
     "chosen": "Freigabe",
     "confidence": "high",
     "exceptions": {
-      "errorReporter.dialog.managedOff": "„share it yourself“ is the verb (pass the saved report on), not an SMB share → selbst weitergeben"
+      "errorReporter.dialog.managedOff": "„share it yourself“ is the verb (pass the saved report on), not an SMB share → selbst weitergeben",
+      "servers.sheet.addressHelpNfs": "„share“ is only a path segment inside the example addresses (nfs://nas.local/share), which stay verbatim"
     },
     "forms": "network share → Netzwerkfreigabe; SMB share → SMB-Freigabe; Connect directly → Direkt verbinden",
     "sources": "macOS (Freigabe, Bildschirmfreigabe); NetAuthAgent EINFO_NO_SHARE"
@@ -3486,6 +3488,20 @@
     "decision": "Usage stats: \"anonymous\" dropped, \"a random id\" named",
     "forms": "usage stats → Nutzungsstatistiken (tied to → verknüpft mit, a random id → eine zufällige ID)",
     "sources": "catalog (onboarding.stepBeta.emailNote)"
+  },
+  "user": {
+    "chosen": "Benutzer",
+    "confidence": "high",
+    "exceptions": {
+      "settings.advanced.warningBanner": "a person, rephrased without a personal noun (forms: never a gendered Benutzer/Nutzer for people)",
+      "settings.onboarding.upgradeNudgeShown.description": "a person, rephrased without a personal noun (forms: never a gendered Benutzer/Nutzer for people): an existing user → eine bestehende Installation",
+      "settings.indexing.silencedDrives.description": "„the user“ is implied by the participle (markiert, stummgeschaltet, aktiviert), so no personal noun is needed",
+      "settings.mediaIndex.alwaysIndexFolders.description": "„the user“ is implied by the participle (markiert, stummgeschaltet, aktiviert), so no personal noun is needed",
+      "settings.mediaIndex.alwaysIndexVolumes.description": "„the user“ is implied by the participle (markiert, stummgeschaltet, aktiviert), so no personal noun is needed",
+      "settings.mediaIndex.networkVolumes.description": "„the user“ is implied by the participle (markiert, stummgeschaltet, aktiviert), so no personal noun is needed"
+    },
+    "forms": "user ID → Benutzer-ID, group ID → Gruppen-ID (beside it); a server or macOS account in a compound → Benutzer- (Benutzername, Benutzerkonto); a person → rephrase to du or a neutral noun, never Apple’s Benutzer:in",
+    "sources": "Microsoft terminology (Benutzer-ID 126624, Gruppen-ID 232983); catalog (Benutzername, Benutzerkonto); macOS writes Benutzer:in for people, which the style guide rules out"
   },
   "usb-debugging": {
     "chosen": "USB-Debugging",

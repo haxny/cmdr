@@ -3443,6 +3443,13 @@
     "forms": "debugging → foutopsporing; Turn on USB debugging → Zet USB-foutopsporing aan",
     "sources": "AOSP SettingsLib values-nl enable_adb (fetched 2026-09-07); Safari foutopsporingsmodus"
   },
+  "user": {
+    "accept": ["gebruikers", "gebruikers-ID"],
+    "chosen": "gebruiker",
+    "confidence": "high",
+    "forms": "user ID → gebruikers-ID; group ID → groeps-ID (the catalog writes -ID uppercase in compounds: Referentie-ID, Account-ID)",
+    "sources": "MS terminology DUTCH.tbx (user → gebruiker; user ID → gebruikers-id)"
+  },
   "username": {
     "chosen": "gebruikersnaam",
     "confidence": "high",

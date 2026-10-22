@@ -2440,7 +2440,8 @@
     "confidence": "tentative",
     "decision": "Mount and share-list sentences",
     "exceptions": {
-      "errorReporter.dialog.managedOff": "English \"share it yourself\" is the verb (pass the saved report on), not an SMB share: 分享出去."
+      "errorReporter.dialog.managedOff": "English \"share it yourself\" is the verb (pass the saved report on), not an SMB share: 分享出去.",
+      "servers.sheet.addressHelpNfs": "\"share\" sits only inside the verbatim example addresses (nfs://nas.local/share), which stay Latin."
     },
     "forms": "mounted share → 已裝載的共享資料夾; a share named X → 名為「X」的共享資料夾",
     "sources": "derived from Apple Shared → 已共享 + folder; NetAuthAgent EINFO_NO_SHARE says bare 共享"
@@ -2747,6 +2748,12 @@
     "chosen": "純文字",
     "confidence": "confirmed",
     "sources": "AP Finder + TextEdit (TW = HK), MS, TC"
+  },
+  "port": {
+    "chosen": "連接埠",
+    "confidence": "high",
+    "forms": "USB port → USB 連接埠; a privileged port (below 1024) → 特殊權限連接埠 (Synology DSM's NFS rule wording)",
+    "sources": "MS (id 93737 → 93754, 651347 → 670560); catalog settings.mcp.runningOnPort and 15 other values; Synology DSM zh-TW NFS help 非特殊權限之連接埠 (kb.synology.com, 2026-10-22)"
   },
   "preferences": {
     "chosen": "偏好設定",

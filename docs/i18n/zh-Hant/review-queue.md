@@ -73,3 +73,8 @@ worth keeping).
   (`commands.viewerGoForward.label`): keeps the `往前` ruling but reads a bit stiff; `前往下一份文件` is the fallback.
   **`以排版檢視`** / **`排版`** (`viewer.toolbar.viewMode.viewFormatted`, `viewer.markdown.error`): "formatted" as
   rendered, dodging the disk sense of `格式化`.
+- **`共享資料夾` for an NFS export** (`servers.sheet.nfsExport` and every `nfs*` / `refusal.export*` key): shares the
+  SMB share's word, so the two protocols' folders read alike; Synology DSM zh-TW says `共用資料夾`, MS/Linux `匯出`.
+  **`以使用者 ID 存取`** (`servers.sheet.nfsUid`): "Act as user ID", composed; bare `使用者 ID` is the fallback.
+  **`沒有任何權限的使用者`** (`servers.sheet.nfsUidZeroWarning`): "nobody" rendered by meaning, not the literal account
+  name.

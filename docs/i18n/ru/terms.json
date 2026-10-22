@@ -3136,7 +3136,8 @@
     "proseAccept": ["сетев"],
     "decision": "Network share",
     "exceptions": {
-      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the saved report on), not an SMB share; rendered «передать самостоятельно»."
+      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the saved report on), not an SMB share; rendered «передать самостоятельно».",
+      "servers.sheet.addressHelpNfs": "\"share\" appears only inside the example addresses nfs://nas.local/share and nas.local:/share, which the description says to keep as-is."
     }
   },
   "new-file": {

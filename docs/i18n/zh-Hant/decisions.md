@@ -125,8 +125,7 @@ contrasts packages with app bundles.
 - Servers `伺服器`; Places `位置` (Finder's Locations), ❌ not `地點` (geographic in Freeform and Find My).
 - Last used `上次使用` (AP-HK; Finder's `上次…` shape); Never `從未使用` over bare `永不`, which AP-TW spends on future
   "never" and would read as "never use".
-- Status cells keep `已…` (`已連線`, `已儲存`, `已登出`), plus `在附近找到` and `等你確認主機金鑰`. Signed out is a
-  state, not a failure: no `無法`.
+- Status cells: `style.md` § Notes and decisions. Signed out is a state, not a failure: no `無法`.
 - Pin `釘選` / `取消釘選` (Music, AP-TW = AP-HK). Volume switcher `卷宗切換器` everywhere (`切換器` = switcher).
 - Local network `區域網路` over `本機網路`: the macOS permission dialog the user must find says `區域網路`.
 - A server's classifier `部` (composed on `這部 Mac`; tentative, see `review-queue.md`).
@@ -139,14 +138,14 @@ contrasts packages with app bundles.
 
 - The button `連線`, the command `連接伺服器⋯`: Apple's own split in Finder's Connect to Server dialog.
 - Passphrase `密語` (Apple, many keys), ❌ not `通行密碼`. `金鑰密語`, `金鑰檔案`, `金鑰指紋` over Apple Shortcuts'
-  `密鑰`: this catalog uses `金鑰` alone for cryptographic keys. English "the key" of a server always takes `主機`, or
-  it reads as an API key.
+  `密鑰`. English "the key" of a server always takes `主機`, or it reads as an API key.
 - Owner `擁有者`, ❌ not `管理者` (a home NAS is usually the user's own). Reinstalled `重新安裝過`, not slang `重灌`.
 - Root folder `根資料夾` over TC/MS `根目錄` (user-facing `資料夾`); start folder `起始資料夾`, ❌ not `開始位置` (TC's
   Start in, and `位置` is Places) nor `啟動資料夾` (Windows Startup). Label and every mention match exactly.
 - Won't connect `Cmdr 不會連線到 {name}` (standing refusal, not `停止`); cancelled `{name} 尚未連線` (a state, no
   `無法`). Titles quote the server: `登入「{name}」`. Add anyway `仍要加入` (Apple `仍要儲存`; quoted in
   `addAnywayHelp`). Optional field `選填` (`可選` = a step).
+- NFS export `共享資料夾` (Synology `共用資料夾`), ❌ `匯出`. Privileged port `特殊權限連接埠`. `使用者 ID`.
 
 ## Reconnecting and the nothing-to-ask line (`servers.paneState.reconnecting`, `servers.paneState.signedOutNothingToAsk`)
 

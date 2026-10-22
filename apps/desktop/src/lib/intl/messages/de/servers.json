@@ -125,11 +125,11 @@
   "@servers.hub.discoveryOffLink": {
     "sourceHash": "818571b"
   },
-  "servers.hub.nfsHint": "NFS servers don’t announce themselves, so they don’t show up here.",
+  "servers.hub.nfsHint": "NFS-Server kündigen sich im Netzwerk nicht an, deshalb erscheinen sie hier nicht.",
   "@servers.hub.nfsHint": {
     "sourceHash": "40b516d"
   },
-  "servers.hub.nfsHintLink": "Add one with its address",
+  "servers.hub.nfsHintLink": "Einen über die Adresse hinzufügen",
   "@servers.hub.nfsHintLink": {
     "sourceHash": "0324564"
   },
@@ -301,19 +301,19 @@
   "@servers.refusal.notAnS3Endpoint": {
     "sourceHash": "78557ec"
   },
-  "servers.refusal.exportNotFound": "{host} has no export at that path. Pick one from the list, or check the spelling.",
+  "servers.refusal.exportNotFound": "{host} hat unter diesem Pfad keine Freigabe. Wähle eine aus der Liste aus oder prüfe die Schreibweise.",
   "@servers.refusal.exportNotFound": {
     "sourceHash": "2ef1ce8"
   },
-  "servers.refusal.exportRefused": "{host} doesn’t let this Mac open that export. Check which computers the export allows in the server’s NFS settings.",
+  "servers.refusal.exportRefused": "{host} erlaubt diesem Mac nicht, diese Freigabe zu öffnen. Prüfe in den NFS-Einstellungen des Servers, welche Computer auf die Freigabe zugreifen dürfen.",
   "@servers.refusal.exportRefused": {
     "sourceHash": "0cebd7d"
   },
-  "servers.refusal.reservedPortRequired": "{host} only accepts connections from a privileged port, which Cmdr can’t open here. Turn on the export’s “insecure” option on the server (some NAS apps call it “Allow connections from non-privileged ports”), then try again.",
+  "servers.refusal.reservedPortRequired": "{host} nimmt nur Verbindungen von einem privilegierten Port an, und einen solchen kann Cmdr hier nicht öffnen. Aktiviere auf dem Server die Option „insecure“ der Freigabe (in manchen NAS-Apps heißt die Option „Verbindungen von nicht-privilegierten Ports zulassen“) und versuche es dann erneut.",
   "@servers.refusal.reservedPortRequired": {
     "sourceHash": "ee7b0c7"
   },
-  "servers.refusal.noNfsV3": "{host} doesn’t offer NFS version 3, the version Cmdr speaks.",
+  "servers.refusal.noNfsV3": "{host} bietet NFS-Version 3 nicht an, die Version, die Cmdr spricht.",
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
@@ -453,7 +453,7 @@
   "@servers.sheet.addressHelpWebdav": {
     "sourceHash": "a8349b3"
   },
-  "servers.sheet.addressHelpNfs": "A hostname, or an address like nfs://nas.local/share or nas.local:/share.",
+  "servers.sheet.addressHelpNfs": "Ein Hostname oder eine Adresse wie nfs://nas.local/share oder nas.local:/share.",
   "@servers.sheet.addressHelpNfs": {
     "sourceHash": "7970d70"
   },
@@ -469,7 +469,7 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
-  "servers.sheet.addressLooksLikeNfs": "This looks like an NFS address. Pick NFS above if that’s what you meant.",
+  "servers.sheet.addressLooksLikeNfs": "Das sieht nach einer NFS-Adresse aus. Wähle oben NFS, falls du das gemeint hast.",
   "@servers.sheet.addressLooksLikeNfs": {
     "sourceHash": "1c4d6bb"
   },
@@ -481,63 +481,63 @@
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"
   },
-  "servers.sheet.identityLockedNfs": "The server and the export are what name this place. To open another export, add it as a new server.",
+  "servers.sheet.identityLockedNfs": "Server und Freigabe machen diesen Ort aus. Um eine andere Freigabe zu öffnen, füge sie als neuen Server hinzu.",
   "@servers.sheet.identityLockedNfs": {
     "sourceHash": "74d1ee7"
   },
-  "servers.sheet.nfsExport": "Export",
+  "servers.sheet.nfsExport": "Freigabe",
   "@servers.sheet.nfsExport": {
     "sourceHash": "3664895"
   },
-  "servers.sheet.nfsExportHelp": "Pick one from the list, or type its path. A folder inside an export works too.",
+  "servers.sheet.nfsExportHelp": "Wähle eine Freigabe aus der Liste aus oder gib den Pfad ein. Ein Ordner in einer Freigabe funktioniert auch.",
   "@servers.sheet.nfsExportHelp": {
     "sourceHash": "87eeba1"
   },
-  "servers.sheet.nfsExportsEmptyList": "No exports listed",
+  "servers.sheet.nfsExportsEmptyList": "Keine Freigaben aufgelistet",
   "@servers.sheet.nfsExportsEmptyList": {
     "sourceHash": "7558a7b"
   },
-  "servers.sheet.nfsExportsNone": "{host} lists no exports for this Mac. Type the export’s path if you know it.",
+  "servers.sheet.nfsExportsNone": "{host} listet keine Freigaben für diesen Mac auf. Gib den Pfad der Freigabe ein, wenn du ihn kennst.",
   "@servers.sheet.nfsExportsNone": {
     "sourceHash": "a88c0bf"
   },
-  "servers.sheet.nfsExportsRefused": "{host} doesn’t list its exports. Type the export’s path.",
+  "servers.sheet.nfsExportsRefused": "{host} zeigt keine Liste der Freigaben. Gib den Pfad der Freigabe ein.",
   "@servers.sheet.nfsExportsRefused": {
     "sourceHash": "5cbd573"
   },
-  "servers.sheet.nfsExportsUnreachable": "Cmdr couldn’t reach {host} to list its exports. You can still type one.",
+  "servers.sheet.nfsExportsUnreachable": "Cmdr konnte {host} nicht erreichen, um die Freigaben aufzulisten. Du kannst trotzdem eine eingeben.",
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Act as user ID",
+  "servers.sheet.nfsUid": "Zugriff als Benutzer-ID",
   "@servers.sheet.nfsUid": {
     "sourceHash": "f77edc9"
   },
-  "servers.sheet.nfsGid": "Group ID",
+  "servers.sheet.nfsGid": "Gruppen-ID",
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
-  "servers.sheet.nfsIdentityHelp": "The server decides what you can open by these numbers. NFS doesn’t ask for a password.",
+  "servers.sheet.nfsIdentityHelp": "Anhand dieser Nummern entscheidet der Server, was du öffnen kannst. NFS fragt nicht nach einem Passwort.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"
   },
-  "servers.sheet.nfsIdentityMostCommonOwner": "Guessed from who owns the files in this export.",
+  "servers.sheet.nfsIdentityMostCommonOwner": "Vermutet anhand dessen, wem die Dateien in dieser Freigabe gehören.",
   "@servers.sheet.nfsIdentityMostCommonOwner": {
     "sourceHash": "d2b22c2"
   },
-  "servers.sheet.nfsIdentityRootOwner": "Guessed from who owns this export’s folder.",
+  "servers.sheet.nfsIdentityRootOwner": "Vermutet anhand dessen, wem der Ordner dieser Freigabe gehört.",
   "@servers.sheet.nfsIdentityRootOwner": {
     "sourceHash": "c464fa8"
   },
-  "servers.sheet.nfsIdentityThisMac": "Your IDs on this Mac. Change them if the files on the server belong to someone else.",
+  "servers.sheet.nfsIdentityThisMac": "Deine IDs auf diesem Mac. Ändere sie, wenn die Dateien auf dem Server jemand anderem gehören.",
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "Most servers treat user ID 0 as nobody.",
+  "servers.sheet.nfsUidZeroWarning": "Für die meisten Server ist die Benutzer-ID 0 niemand.",
   "@servers.sheet.nfsUidZeroWarning": {
     "sourceHash": "aa24d3f"
   },
-  "servers.sheet.nfsStartFolderHelp": "Where the export opens. Leave it empty to open the export itself.",
+  "servers.sheet.nfsStartFolderHelp": "In diesem Ordner öffnet sich die Freigabe. Leer lassen, um die Freigabe selbst zu öffnen.",
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
@@ -610,7 +610,8 @@
   },
   "servers.sheet.protocolNfs": "NFS",
   "@servers.sheet.protocolNfs": {
-    "sourceHash": "faac003"
+    "sourceHash": "faac003",
+    "sameAsSourceJustification": "Protokollname, der in jeder Sprache unverändert bleibt; GNOME Nautilus de schreibt ihn genauso („Network File System (NFS)“, nautilus.po) und Synologys deutsche Hilfe ebenso („NFS-Berechtigungen“, kb.synology.com/de-de, 2026-10-22)."
   },
   "servers.sheet.s3Provider": "Anbieter",
   "@servers.sheet.s3Provider": {

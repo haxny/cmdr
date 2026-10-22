@@ -123,11 +123,11 @@
   "@servers.hub.discoveryOffLink": {
     "sourceHash": "818571b"
   },
-  "servers.hub.nfsHint": "NFS servers don’t announce themselves, so they don’t show up here.",
+  "servers.hub.nfsHint": "Los servidores NFS no se anuncian, así que no aparecen aquí.",
   "@servers.hub.nfsHint": {
     "sourceHash": "40b516d"
   },
-  "servers.hub.nfsHintLink": "Add one with its address",
+  "servers.hub.nfsHintLink": "Añade uno con su dirección",
   "@servers.hub.nfsHintLink": {
     "sourceHash": "0324564"
   },
@@ -299,19 +299,19 @@
   "@servers.refusal.notAnS3Endpoint": {
     "sourceHash": "78557ec"
   },
-  "servers.refusal.exportNotFound": "{host} has no export at that path. Pick one from the list, or check the spelling.",
+  "servers.refusal.exportNotFound": "{host} no tiene ninguna exportación en esa ruta. Elige una de la lista o comprueba que la ruta esté bien escrita.",
   "@servers.refusal.exportNotFound": {
     "sourceHash": "2ef1ce8"
   },
-  "servers.refusal.exportRefused": "{host} doesn’t let this Mac open that export. Check which computers the export allows in the server’s NFS settings.",
+  "servers.refusal.exportRefused": "{host} no permite que este Mac abra esa exportación. Comprueba en los ajustes NFS del servidor a qué ordenadores da acceso la exportación.",
   "@servers.refusal.exportRefused": {
     "sourceHash": "0cebd7d"
   },
-  "servers.refusal.reservedPortRequired": "{host} only accepts connections from a privileged port, which Cmdr can’t open here. Turn on the export’s “insecure” option on the server (some NAS apps call it “Allow connections from non-privileged ports”), then try again.",
+  "servers.refusal.reservedPortRequired": "{host} solo acepta conexiones desde un puerto privilegiado, y Cmdr no puede abrir uno aquí. Activa en el servidor la opción “insecure” de la exportación (algunas apps de NAS la llaman “Permitir conexiones desde puertos no privilegiados”) y vuelve a intentarlo.",
   "@servers.refusal.reservedPortRequired": {
     "sourceHash": "ee7b0c7"
   },
-  "servers.refusal.noNfsV3": "{host} doesn’t offer NFS version 3, the version Cmdr speaks.",
+  "servers.refusal.noNfsV3": "{host} no ofrece la versión 3 de NFS, que es la que usa Cmdr.",
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
@@ -451,7 +451,7 @@
   "@servers.sheet.addressHelpWebdav": {
     "sourceHash": "a8349b3"
   },
-  "servers.sheet.addressHelpNfs": "A hostname, or an address like nfs://nas.local/share or nas.local:/share.",
+  "servers.sheet.addressHelpNfs": "Un nombre de host, o una dirección como nfs://nas.local/share o nas.local:/share.",
   "@servers.sheet.addressHelpNfs": {
     "sourceHash": "7970d70"
   },
@@ -467,7 +467,7 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
-  "servers.sheet.addressLooksLikeNfs": "This looks like an NFS address. Pick NFS above if that’s what you meant.",
+  "servers.sheet.addressLooksLikeNfs": "Parece una dirección NFS. Elige NFS arriba si es lo que querías.",
   "@servers.sheet.addressLooksLikeNfs": {
     "sourceHash": "1c4d6bb"
   },
@@ -479,63 +479,63 @@
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"
   },
-  "servers.sheet.identityLockedNfs": "The server and the export are what name this place. To open another export, add it as a new server.",
+  "servers.sheet.identityLockedNfs": "El servidor y la exportación son los que identifican esta ubicación. Para abrir otra exportación, añádela como un servidor nuevo.",
   "@servers.sheet.identityLockedNfs": {
     "sourceHash": "74d1ee7"
   },
-  "servers.sheet.nfsExport": "Export",
+  "servers.sheet.nfsExport": "Exportación",
   "@servers.sheet.nfsExport": {
     "sourceHash": "3664895"
   },
-  "servers.sheet.nfsExportHelp": "Pick one from the list, or type its path. A folder inside an export works too.",
+  "servers.sheet.nfsExportHelp": "Elige una de la lista o escribe su ruta. También sirve una carpeta dentro de una exportación.",
   "@servers.sheet.nfsExportHelp": {
     "sourceHash": "87eeba1"
   },
-  "servers.sheet.nfsExportsEmptyList": "No exports listed",
+  "servers.sheet.nfsExportsEmptyList": "No hay exportaciones en la lista",
   "@servers.sheet.nfsExportsEmptyList": {
     "sourceHash": "7558a7b"
   },
-  "servers.sheet.nfsExportsNone": "{host} lists no exports for this Mac. Type the export’s path if you know it.",
+  "servers.sheet.nfsExportsNone": "En la lista de {host} no hay ninguna exportación para este Mac. Escribe la ruta de la exportación si la sabes.",
   "@servers.sheet.nfsExportsNone": {
     "sourceHash": "a88c0bf"
   },
-  "servers.sheet.nfsExportsRefused": "{host} doesn’t list its exports. Type the export’s path.",
+  "servers.sheet.nfsExportsRefused": "{host} no comparte la lista de exportaciones. Escribe la ruta de la exportación.",
   "@servers.sheet.nfsExportsRefused": {
     "sourceHash": "5cbd573"
   },
-  "servers.sheet.nfsExportsUnreachable": "Cmdr couldn’t reach {host} to list its exports. You can still type one.",
+  "servers.sheet.nfsExportsUnreachable": "Cmdr no ha podido acceder a {host} para ver la lista de exportaciones. Aun así, puedes escribir una.",
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Act as user ID",
+  "servers.sheet.nfsUid": "Actuar como ID de usuario",
   "@servers.sheet.nfsUid": {
     "sourceHash": "f77edc9"
   },
-  "servers.sheet.nfsGid": "Group ID",
+  "servers.sheet.nfsGid": "ID de grupo",
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
-  "servers.sheet.nfsIdentityHelp": "The server decides what you can open by these numbers. NFS doesn’t ask for a password.",
+  "servers.sheet.nfsIdentityHelp": "El servidor decide qué puedes abrir según estos números. NFS no pide contraseña.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"
   },
-  "servers.sheet.nfsIdentityMostCommonOwner": "Guessed from who owns the files in this export.",
+  "servers.sheet.nfsIdentityMostCommonOwner": "Deducidos según a quién pertenecen los archivos de esta exportación.",
   "@servers.sheet.nfsIdentityMostCommonOwner": {
     "sourceHash": "d2b22c2"
   },
-  "servers.sheet.nfsIdentityRootOwner": "Guessed from who owns this export’s folder.",
+  "servers.sheet.nfsIdentityRootOwner": "Deducidos según a quién pertenece la carpeta de esta exportación.",
   "@servers.sheet.nfsIdentityRootOwner": {
     "sourceHash": "c464fa8"
   },
-  "servers.sheet.nfsIdentityThisMac": "Your IDs on this Mac. Change them if the files on the server belong to someone else.",
+  "servers.sheet.nfsIdentityThisMac": "Tus ID en este Mac. Cámbialos si los archivos del servidor pertenecen a otra persona.",
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "Most servers treat user ID 0 as nobody.",
+  "servers.sheet.nfsUidZeroWarning": "La mayoría de los servidores tratan el ID de usuario 0 como si no fuera nadie.",
   "@servers.sheet.nfsUidZeroWarning": {
     "sourceHash": "aa24d3f"
   },
-  "servers.sheet.nfsStartFolderHelp": "Where the export opens. Leave it empty to open the export itself.",
+  "servers.sheet.nfsStartFolderHelp": "Dónde se abre la exportación. Déjalo vacío y se abrirá la propia exportación.",
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
@@ -606,7 +606,8 @@
   },
   "servers.sheet.protocolNfs": "NFS",
   "@servers.sheet.protocolNfs": {
-    "sourceHash": "faac003"
+    "sourceHash": "faac003",
+    "sameAsSourceJustification": "Nombre de protocolo, se mantiene verbatim como SMB o WebDAV (descripción de la clave; Microsoft Terminology: «servidor NFS», «cliente NFS»)."
   },
   "servers.sheet.s3Provider": "Proveedor",
   "@servers.sheet.s3Provider": {

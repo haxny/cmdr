@@ -83,6 +83,9 @@
     "accept": ["được phép"],
     "chosen": "Cho phép",
     "confidence": "high",
+    "exceptions": {
+      "servers.refusal.reservedPortRequired": "The quoted “Allow connections from non-privileged ports” is a NAS app's own English switch label (no vi NAS UI in the pile), kept verbatim so the reader finds it."
+    },
     "forms": "button Cho phép / Cho phép tất cả; Android's own button quoted bare as Cho phép; not allowed → không được phép",
     "sources": "MS terminology (Allow … → Cho phép …), macOS TCC (REQUEST_ACCESS_ALLOW), AOSP usb_debugging_allow = Cho phép"
   },
@@ -1940,6 +1943,7 @@
     "confidence": "high",
     "decision": "Tên tiện ích macOS, mục chia sẻ, liên kết mềm, beta công khai",
     "exceptions": {
+      "servers.sheet.addressHelpNfs": "The word `share` sits inside the example addresses nfs://nas.local/share and nas.local:/share, which the `@key` says to keep as-is.",
       "errorReporter.dialog.managedOff": "English-sense: \"share it yourself\" is the verb (pass a saved report on), so `tự chia sẻ`, not the SMB noun."
     },
     "forms": "a share → mục chia sẻ (also inside Settings); shared folder → thư mục chia sẻ; an S3 share link (a web address, another English sense) → liên kết chia sẻ",
@@ -3183,6 +3187,12 @@
     "confidence": "high",
     "forms": "lowercase in a sentence; Gỡ lỗi qua USB only where the string sends the reader to the switch",
     "sources": "AOSP SettingsLib values-vi enable_adb (Gỡ lỗi qua USB), SystemUI usb_debugging_title"
+  },
+  "user": {
+    "chosen": "người dùng",
+    "confidence": "high",
+    "forms": "user ID → ID người dùng; group ID → ID nhóm",
+    "sources": "MS terminology (user ID, UID → ID người dùng); catalog (settings.json, errors.json)"
   },
   "username": {
     "chosen": "tên người dùng",

@@ -201,3 +201,12 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - Git has no Dutch translation, so `Niet gevolgd` (untracked), `Conflict` (conflicted), and `Type gewijzigd` have no
   Tier-1 source; TortoiseGit nl says `Zonder versiebeheer` and `In conflict`, which read oddly inside `{status} in git`.
   Confirm what Dutch git users say.
+
+## NFS-exports en ID-velden (`servers.sheet.nfs*`, `servers.refusal.export*`, `servers.refusal.reservedPortRequired`)
+
+- `export` (de export, mv. exports) as the loanword for an NFS export: Synology nl calls the thing a `gedeelde map` with
+  `NFS-rechten`, and no pile catalog names the NFS noun. Confirm Dutch NAS users say `export`.
+- `Als gebruikers-ID optreden` for "Act as user ID" follows the infinitive-last label rule but reads stiff;
+  `Optreden als gebruikers-ID` or a bare `Gebruikers-ID` may read better beside `Groeps-ID`.
+- `bevoorrechte poort` and the quoted `Verbindingen van niet-bevoorrechte poorten toestaan` come from Synology's nl KB
+  (kb.synology.com/nl-nl, 2026-10-22), not from DSM's UI strings themselves.

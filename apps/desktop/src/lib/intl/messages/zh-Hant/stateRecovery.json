@@ -75,7 +75,7 @@
   "@stateRecovery.s3Places.title": {
     "sourceHash": "6957175"
   },
-  "stateRecovery.nfsPlaces.title": "Cmdr couldn’t read all your saved NFS places, so some may be missing",
+  "stateRecovery.nfsPlaces.title": "Cmdr 無法讀取你儲存的所有 NFS 位置，所以可能少了一些",
   "@stateRecovery.nfsPlaces.title": {
     "sourceHash": "f045d38"
   },

@@ -124,11 +124,11 @@
   "@servers.hub.discoveryOffLink": {
     "sourceHash": "818571b"
   },
-  "servers.hub.nfsHint": "NFS servers don’t announce themselves, so they don’t show up here.",
+  "servers.hub.nfsHint": "NFS-servrar talar inte om att de finns på nätverket, så de visas inte här.",
   "@servers.hub.nfsHint": {
     "sourceHash": "40b516d"
   },
-  "servers.hub.nfsHintLink": "Add one with its address",
+  "servers.hub.nfsHintLink": "Lägg till en genom att skriva in adressen",
   "@servers.hub.nfsHintLink": {
     "sourceHash": "0324564"
   },
@@ -300,19 +300,19 @@
   "@servers.refusal.notAnS3Endpoint": {
     "sourceHash": "78557ec"
   },
-  "servers.refusal.exportNotFound": "{host} has no export at that path. Pick one from the list, or check the spelling.",
+  "servers.refusal.exportNotFound": "{host} har ingen export på den sökvägen. Välj en i listan eller kontrollera stavningen.",
   "@servers.refusal.exportNotFound": {
     "sourceHash": "2ef1ce8"
   },
-  "servers.refusal.exportRefused": "{host} doesn’t let this Mac open that export. Check which computers the export allows in the server’s NFS settings.",
+  "servers.refusal.exportRefused": "{host} låter inte den här Macen öppna den exporten. Kontrollera i serverns NFS-inställningar vilka datorer exporten tillåter.",
   "@servers.refusal.exportRefused": {
     "sourceHash": "0cebd7d"
   },
-  "servers.refusal.reservedPortRequired": "{host} only accepts connections from a privileged port, which Cmdr can’t open here. Turn on the export’s “insecure” option on the server (some NAS apps call it “Allow connections from non-privileged ports”), then try again.",
+  "servers.refusal.reservedPortRequired": "{host} tar bara emot anslutningar från en privilegierad port, och en sådan kan Cmdr inte öppna här. Slå på alternativet ”insecure” för exporten på servern (vissa NAS-appar kallar det ”Tillåt anslutningar från icke-privilegierade portar”) och försök sedan igen.",
   "@servers.refusal.reservedPortRequired": {
     "sourceHash": "ee7b0c7"
   },
-  "servers.refusal.noNfsV3": "{host} doesn’t offer NFS version 3, the version Cmdr speaks.",
+  "servers.refusal.noNfsV3": "{host} erbjuder inte NFS version 3, den version som Cmdr använder.",
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
@@ -452,7 +452,7 @@
   "@servers.sheet.addressHelpWebdav": {
     "sourceHash": "a8349b3"
   },
-  "servers.sheet.addressHelpNfs": "A hostname, or an address like nfs://nas.local/share or nas.local:/share.",
+  "servers.sheet.addressHelpNfs": "Ett värdnamn, eller en adress som nfs://nas.local/share eller nas.local:/share.",
   "@servers.sheet.addressHelpNfs": {
     "sourceHash": "7970d70"
   },
@@ -468,7 +468,7 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
-  "servers.sheet.addressLooksLikeNfs": "This looks like an NFS address. Pick NFS above if that’s what you meant.",
+  "servers.sheet.addressLooksLikeNfs": "Det här ser ut som en NFS-adress. Välj NFS ovan om det var det du menade.",
   "@servers.sheet.addressLooksLikeNfs": {
     "sourceHash": "1c4d6bb"
   },
@@ -480,63 +480,64 @@
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"
   },
-  "servers.sheet.identityLockedNfs": "The server and the export are what name this place. To open another export, add it as a new server.",
+  "servers.sheet.identityLockedNfs": "Servern och exporten är det som identifierar den här platsen. Om du vill öppna en annan export lägger du till den som en ny server.",
   "@servers.sheet.identityLockedNfs": {
     "sourceHash": "74d1ee7"
   },
   "servers.sheet.nfsExport": "Export",
   "@servers.sheet.nfsExport": {
-    "sourceHash": "3664895"
+    "sourceHash": "3664895",
+    "sameAsSourceJustification": "Swedish NAS writing names an NFS export export (en-word: exporten, exporter), as in NFS-exporten in Swedish Synology and TrueNAS guides (zmanda.com/sv, tech-insider.org/sv, web search 2026-10-22); the field label is the bare noun. Deliberately identical."
   },
-  "servers.sheet.nfsExportHelp": "Pick one from the list, or type its path. A folder inside an export works too.",
+  "servers.sheet.nfsExportHelp": "Välj en i listan eller skriv in sökvägen till den. En mapp inuti en export fungerar också.",
   "@servers.sheet.nfsExportHelp": {
     "sourceHash": "87eeba1"
   },
-  "servers.sheet.nfsExportsEmptyList": "No exports listed",
+  "servers.sheet.nfsExportsEmptyList": "Inga exporter listade",
   "@servers.sheet.nfsExportsEmptyList": {
     "sourceHash": "7558a7b"
   },
-  "servers.sheet.nfsExportsNone": "{host} lists no exports for this Mac. Type the export’s path if you know it.",
+  "servers.sheet.nfsExportsNone": "{host} listar inga exporter för den här Macen. Skriv in sökvägen till exporten om du vet den.",
   "@servers.sheet.nfsExportsNone": {
     "sourceHash": "a88c0bf"
   },
-  "servers.sheet.nfsExportsRefused": "{host} doesn’t list its exports. Type the export’s path.",
+  "servers.sheet.nfsExportsRefused": "{host} listar inte vilka exporter som finns. Skriv in sökvägen till exporten.",
   "@servers.sheet.nfsExportsRefused": {
     "sourceHash": "5cbd573"
   },
-  "servers.sheet.nfsExportsUnreachable": "Cmdr couldn’t reach {host} to list its exports. You can still type one.",
+  "servers.sheet.nfsExportsUnreachable": "Cmdr kunde inte nå {host} för att lista exporterna. Du kan fortfarande skriva in en.",
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Act as user ID",
+  "servers.sheet.nfsUid": "Agera som användar-ID",
   "@servers.sheet.nfsUid": {
     "sourceHash": "f77edc9"
   },
-  "servers.sheet.nfsGid": "Group ID",
+  "servers.sheet.nfsGid": "Grupp-ID",
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
-  "servers.sheet.nfsIdentityHelp": "The server decides what you can open by these numbers. NFS doesn’t ask for a password.",
+  "servers.sheet.nfsIdentityHelp": "Servern avgör utifrån de här numren vad du får öppna. NFS frågar inte efter något lösenord.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"
   },
-  "servers.sheet.nfsIdentityMostCommonOwner": "Guessed from who owns the files in this export.",
+  "servers.sheet.nfsIdentityMostCommonOwner": "En gissning utifrån vem som äger filerna i den här exporten.",
   "@servers.sheet.nfsIdentityMostCommonOwner": {
     "sourceHash": "d2b22c2"
   },
-  "servers.sheet.nfsIdentityRootOwner": "Guessed from who owns this export’s folder.",
+  "servers.sheet.nfsIdentityRootOwner": "En gissning utifrån vem som äger den här exportens mapp.",
   "@servers.sheet.nfsIdentityRootOwner": {
     "sourceHash": "c464fa8"
   },
-  "servers.sheet.nfsIdentityThisMac": "Your IDs on this Mac. Change them if the files on the server belong to someone else.",
+  "servers.sheet.nfsIdentityThisMac": "Dina ID:n på den här Macen. Ändra dem om filerna på servern tillhör någon annan.",
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "Most servers treat user ID 0 as nobody.",
+  "servers.sheet.nfsUidZeroWarning": "De flesta servrar behandlar användar-ID 0 som ingen användare alls.",
   "@servers.sheet.nfsUidZeroWarning": {
     "sourceHash": "aa24d3f"
   },
-  "servers.sheet.nfsStartFolderHelp": "Where the export opens. Leave it empty to open the export itself.",
+  "servers.sheet.nfsStartFolderHelp": "Mappen exporten öppnas i. Lämna fältet tomt för att öppna själva exporten.",
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
@@ -607,7 +608,8 @@
   },
   "servers.sheet.protocolNfs": "NFS",
   "@servers.sheet.protocolNfs": {
-    "sourceHash": "faac003"
+    "sourceHash": "faac003",
+    "sameAsSourceJustification": "NFS is a protocol name and stays verbatim in Swedish, like the sibling protocolSmb / protocolSftp / protocolS3 options; Microsoft sv terminology keeps NFS bare (NFS-server, NFS-klient). Deliberately identical."
   },
   "servers.sheet.s3Provider": "Leverantör",
   "@servers.sheet.s3Provider": {

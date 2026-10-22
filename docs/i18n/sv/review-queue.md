@@ -90,6 +90,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **Transfer tree counts** (`fileOperations.transferTree.failedCount`/`.state.failed`): the tight count says
   `{countText} gick inte` (as `askCmdr.decision.result`), the row marker the longer `Gick inte att slutföra` (as
   `operationLog.status.failed`); confirm the bare `3 gick inte` reads clearly after `· 2 överhoppade`.
+- **NFS strings** (`servers.sheet.nfsUid`, `servers.refusal.reservedPortRequired`): confirm `Agera som användar-ID`
+  reads natural as a field label, and that Synology DSM sv labels the switch
+  `Tillåt anslutningar från icke-privilegierade portar` (not verified against a live DSM).
 
 ## Layout (overflow-check against the pseudolocale)
 

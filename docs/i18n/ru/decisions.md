@@ -56,8 +56,7 @@ back-translated `Завершить и открыть заново` sends the us
 ## Click and double-click: нажать over щелкнуть (`settings.behavior.doubleClickPaneNavigatesToParent.*`, `fileExplorer.doubleClickHint.*`, `fileExplorer.network.browser.tooltip.*`, `viewer.binaryWarning.body`, `fileExplorer.breadcrumb.navigateTooltip`)
 
 macOS says `нажать` (Finder MR20 `Нажмите «Отменить»`, AppKit `Нажать для выбора`; zero `Щелкните` in the pile), so
-click → `нажмите`, double-click → `дважды нажмите` / `двойное нажатие`. MS and the file managers' `щелкнуть` /
-`двойной щелчок` still pass the check but aren't the default; one verb per catalog.
+click → `нажмите`, double-click → `дважды нажмите` / `двойное нажатие`.
 
 ## Full and brief view: Подробный / Краткий режим (`menu.view.fullView`, `menu.view.briefView`, `commands.viewFullMode.label`, `commands.viewBriefMode.label`, `shortcuts.scope.fullMode`, `settings.appearance.card.briefMode`, `settings.listing.stripedRows.description`)
 
@@ -67,8 +66,7 @@ click → `нажмите`, double-click → `дважды нажмите` / `д
 ## No «ошибка» in error copy (`askCmdr.error.provider`, `ai.cloud.genericError`, `onboarding.cloudSetup.status.genericError`, `licensing.error.generic`, `ai.translateError.serverError.title`, `askCmdr.decision.result`, `fileExplorer.navigation.driveIndex.tooltipFailed`, `fileExplorer.network.browser.status.error`)
 
 `Что-то пошло не так` (Nautilus) over `Произошла ошибка`; `возникла проблема`, `не выполнено: {failedText}`, a status
-cell `Проблема`, "hit a snag" `Что-то помешало Cmdr…`. `Не удалось` stays where the English says "Couldn't" (macOS ru's
-rendering). Compounds (`отчет об ошибке`) are fine.
+cell `Проблема`, "hit a snag" `Что-то помешало Cmdr…`. `Не удалось` stays for "Couldn't".
 
 ## Cmdr couldn't: Cmdr не удалось (`fileExplorer.navigation.*RefusedToast`, `fileExplorer.navigation.driveIndex.refusedUpgradeFailed`, `fileExplorer.edit.launchRefused`, `errors.*`)
 
@@ -417,3 +415,7 @@ Chrome's Russian label as is.
 
 A Latin `name@` over the literal `вы@example.com`: a Cyrillic local part isn't something anyone types into an email
 field.
+
+## NFS export is `общая папка` (`servers.sheet.nfsExport`)
+
+Over `экспорт` (reads as exporting), as Synology DSM ru says (kb.synology.com/ru-ru, 2026-10-22).

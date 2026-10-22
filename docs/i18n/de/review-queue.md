@@ -134,3 +134,6 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
 - restic keys: `errors.volume.noContent` coins `Spezialdatei` for a device file or pipe (no pile hit; `Gerätedatei` is
   too narrow); `errors.write.sourcesSpanVolumes.*` renders „view“ as `Ansicht`, which may read as the display mode
   (source-queue entry open). Check both.
+- NFS keys: `servers.sheet.nfsUid` renders „Act as user ID“ as `Zugriff als Benutzer-ID` (a literal `Als … handeln` is
+  stilted); check it reads as a field label beside `Gruppen-ID`. `nfsUidZeroWarning` says
+  `… ist die Benutzer-ID 0 niemand` for the Unix `nobody` mapping; check it doesn't read as nonsense.

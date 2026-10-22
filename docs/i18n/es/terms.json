@@ -1973,7 +1973,8 @@
     "sources": "macOS (recurso compartido), NetAuthAgent (EINFO_NO_SHARES), MS",
     "exceptions": {
       "settings.section.smbNetworkShares": "Settings sidebar title, shortened to SMB/Recursos de red.",
-      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the report on), not a network share: compartirlo tú."
+      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the report on), not a network share: compartirlo tú.",
+      "servers.sheet.addressHelpNfs": "\"share\" sits only inside the example addresses (nfs://nas.local/share), which stay verbatim."
     },
     "decision": "Por qué no se monta un recurso compartido o no carga su lista"
   },
@@ -1988,6 +1989,23 @@
     "accept": ["Crear carpeta", "crear una carpeta", "Creando carpeta", "carpeta nueva", "carpetas nuevas"],
     "confidence": "high",
     "sources": "macOS Finder (Nueva carpeta, Crear una carpeta llamada…)"
+  },
+  "nfs-export": {
+    "chosen": "exportación",
+    "accept": ["exportaciones"],
+    "forms": "field label Exportación; feminine (esa exportación, la propia exportación, añádela)",
+    "confidence": "high",
+    "sources": "QNAP es release notes (exportaciones NFS, 2025-10-24); Spanish NAS press (exportación NFS); Synology es-es KB labels the port switch Permitir conexiones desde puertos no privilegiados",
+    "avoid": [
+      {
+        "form": "recurso compartido",
+        "why": "the SMB share concept; NFS UIs keep the two apart"
+      },
+      {
+        "form": "export",
+        "why": "English left in place; QNAP Spanish translates it"
+      }
+    ]
   },
   "none": {
     "chosen": "Ninguno",
@@ -3381,6 +3399,14 @@
     "confidence": "high",
     "sources": "AOSP SettingsLib values-es enable_adb = Depuración por USB; values-es-rUS identical (2026-09-07)",
     "decision": "El teléfono Android por ADB: el panel de conexión, los avisos del selector y la línea de invitación"
+  },
+  "user": {
+    "chosen": "usuario",
+    "accept": ["usuarios"],
+    "forms": "a Unix uid → ID de usuario; gid → ID de grupo; several IDs → los ID (invariable)",
+    "confidence": "high",
+    "sources": "Microsoft Terminology (user ID → ID de usuario), Nautilus (Establecer ID de usuario, Establecer ID de grupo)",
+    "note": "Names the account or its ID; a person as a role is restructured instead (quien administre este Mac)."
   },
   "username": {
     "chosen": "nombre de usuario",

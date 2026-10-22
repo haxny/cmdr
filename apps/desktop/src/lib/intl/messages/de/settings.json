@@ -1884,7 +1884,7 @@
   "@settings.onboarding.upgradeNudgeShown.label": {
     "sourceHash": "d34a727"
   },
-  "settings.onboarding.upgradeNudgeShown.description": "Intern: erfasst, ob der einmalige Hinweis „Den Menüpunkt Einführung gibt es jetzt“ für einen bestehenden Nutzer nach der Überarbeitung des Assistenten ausgelöst wurde. In der Oberfläche ausgeblendet.",
+  "settings.onboarding.upgradeNudgeShown.description": "Intern: erfasst, ob der einmalige Hinweis „Den Menüpunkt Einführung gibt es jetzt“ bei einer bestehenden Installation nach der Überarbeitung des Assistenten ausgelöst wurde. In der Oberfläche ausgeblendet.",
   "@settings.onboarding.upgradeNudgeShown.description": {
     "sourceHash": "c877371"
   },
@@ -3067,7 +3067,7 @@
   "@settings.mcp.usePortInstead": {
     "sourceHash": "a0d7a0d"
   },
-  "settings.advanced.warningBanner": "Diese Einstellungen sind für fortgeschrittene Nutzer. Falsche Werte können Leistungsprobleme oder unerwartetes Verhalten verursachen.",
+  "settings.advanced.warningBanner": "Diese Einstellungen sind für Fortgeschrittene. Falsche Werte können Leistungsprobleme oder unerwartetes Verhalten verursachen.",
   "@settings.advanced.warningBanner": {
     "sourceHash": "b1dbbf4"
   },

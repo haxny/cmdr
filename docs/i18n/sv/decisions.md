@@ -415,12 +415,12 @@ catalog.
 - Swedish can't leave `lita på` bare, so the buttons name the object (`Lita på nyckeln och anslut`), and "I've checked
   it" → `Jag har kontrollerat nyckeln`: both `nyckeln` and `fingeravtrycket` are in the box.
 - Remote folder → `Mapp på servern`, ❌ not an unattested `fjärrmapp`.
-- try → `prova` (test something); `Försök igen` is reserved for Try again.
 - `Lämna fältet tomt`, ❌ not `Lämna den tom`: after `Mappen …` it would mean an empty folder.
 - `ditt konto får läsa den` (permission) over `kan`. The two `*NotFound` siblings share a frame.
 - `accountLocked` says `identifierar`, ❌ not a "name" verb (the sheet has its own `Namn` field), and uses the button
   verbs `glöm` / `lägg till` verbatim.
 - `Öppna servern igen för att försöka på nytt` names the noun after a sentence ending on `nyckel` / `lösenord`.
+- NFS export → `export` (`exporten`), as Swedish NAS guides write it.
 
 ## Pinned servers, trusted host keys, Android settings rows (`menu.network.*`, `servers.pinHint.*`, `settings.servers.*`, `settings.adb.*`, `settings.fileOperations.adb*`)
 

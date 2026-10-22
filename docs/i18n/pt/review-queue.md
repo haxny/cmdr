@@ -83,3 +83,6 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   `Parte da sua seleção está dentro de uma visualização` is understandable, or suggest a clearer noun. Also confirm
   `search.coverage.declined`'s `pastas de snapshot` (APFS) should stay, or align to `instantâneo` like the restic
   strings.
+- **NFS identity fields** (`servers.sheet.nfsUid`, `.nfsUidZeroWarning`): "Act as user ID" is
+  `Acessar como ID de usuário` (a literal `Agir como` read as a calque); confirm, or suggest a shorter field label. Also
+  confirm `trata o ID de usuário 0 como ninguém` reads as the server mapping uid 0 to the rights-less `nobody` account.

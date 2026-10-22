@@ -37,6 +37,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   Confirm what Hungarian git users say, especially `Konfliktusos` over `Ütközés`.
 - **security advisory → `biztonsági közlemény`** (`updates.toast.readAdvisory`, `whatsNew.securityNotice.*`): no pile
   term; `biztonsági figyelmeztetés` is the alternative.
+- **NFS export → `megosztás`**: no Tier-1 or pile source names an NFS export; `megosztott mappa` (Synology, QNAP) or the
+  jargon `export` are the alternatives. The quoted NAS label in `servers.refusal.reservedPortRequired`
+  (`Kapcsolatok engedélyezése nem privilegizált portokról`) is unverified against a Hungarian NAS UI.
 
 ## Wording
 

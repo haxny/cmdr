@@ -90,6 +90,11 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   virtual folder) became `khu vực chỉ để xem`; `chế độ xem` would read as the display mode, `thư mục ảo` is the
   alternative. Backup snapshots are macOS's `ảnh chụp nhanh`, while the shipped git strings keep the shorter `ảnh chụp`;
   confirm the split reads fine.
+- **NFS export** (`servers.sheet.nfsExport*`, `servers.refusal.export*`, `servers.sheet.identityLockedNfs`,
+  `.nfsIdentity*`, `.nfsStartFolderHelp`): EN “export” became `thư mục chia sẻ` (the `network-share` ruling’s accepted
+  “shared folder” form); the pile has no NFS string and no vi NAS UI. Confirm it beats keeping `export`, which Linux
+  admins may know from `/etc/exports`. The NAS switch “Allow connections from non-privileged ports” stays English in
+  `servers.refusal.reservedPortRequired`; translate it if a vi NAS UI turns up.
 
 ## Layout
 

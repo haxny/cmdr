@@ -90,3 +90,6 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
 - **Mixed-source refusal** (`errors.write.sourcesSpanVolumes.title` / `.suggestion`): English "a view" is rendered
   `只读视图` (bare `视图` reads as a display mode). Confirm a user connects `只读视图` to a backup's snapshots or an
   archive's inside.
+- `servers.sheet.nfsUid` drops "Act as" (`用户 ID`, beside `群组 ID`); a native reader should confirm the help lines
+  below make the identity role clear, and that `匿名用户` reads right for uid 0 "as nobody"
+  (`servers.sheet.nfsUidZeroWarning`).

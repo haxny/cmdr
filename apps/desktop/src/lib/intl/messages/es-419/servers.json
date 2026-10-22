@@ -178,5 +178,21 @@
   "servers.paneState.guestSessionRefusedHint": "Pediste iniciar sesión con tu cuenta, pero el servidor te ofreció una sesión como invitado. Normalmente eso significa que la contraseña no era correcta. Rara vez se debe a que algo esté manipulando la conexión.",
   "@servers.paneState.guestSessionRefusedHint": {
     "sourceHash": "620682a"
+  },
+  "servers.hub.nfsHintLink": "Agrega uno con su dirección",
+  "@servers.hub.nfsHintLink": {
+    "sourceHash": "c927c31"
+  },
+  "servers.sheet.identityLockedNfs": "El servidor y la exportación son los que identifican esta ubicación. Para abrir otra exportación, agrégala como un servidor nuevo.",
+  "@servers.sheet.identityLockedNfs": {
+    "sourceHash": "0e26a0f"
+  },
+  "servers.refusal.exportRefused": "{host} no permite que este Mac abra esa exportación. Revisa en la configuración NFS del servidor a qué computadoras da acceso la exportación.",
+  "@servers.refusal.exportRefused": {
+    "sourceHash": "06de43e"
+  },
+  "servers.sheet.nfsExportsUnreachable": "Cmdr no pudo acceder a {host} para ver la lista de exportaciones. Aun así, puedes escribir una.",
+  "@servers.sheet.nfsExportsUnreachable": {
+    "sourceHash": "ad0aba8"
   }
 }

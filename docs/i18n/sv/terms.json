@@ -51,7 +51,7 @@
     "sources": "macOS (Aktivera), MS terminology"
   },
   "add": {
-    "accept": ["lägger till", "lade till", "lagts till", "lägga till", "tillagd", "lagt till"],
+    "accept": ["lägger till", "lägger du till", "lade till", "lagts till", "lägga till", "tillagd", "lagt till"],
     "avoid": [
       {
         "form": "bifoga (for adding a note to a report)",
@@ -1977,7 +1977,8 @@
     "confidence": "high",
     "decision": "Same concept, different English",
     "exceptions": {
-      "errorReporter.dialog.managedOff": "English share is the verb (pass the saved report on), not an SMB share: skicka den vidare själv."
+      "errorReporter.dialog.managedOff": "English share is the verb (pass the saved report on), not an SMB share: skicka den vidare själv.",
+      "servers.sheet.addressHelpNfs": "share is only the literal path segment of the example addresses (nfs://nas.local/share), which stay verbatim."
     },
     "forms": "delad mapp / delade mappar; -resurs only inside a compound (SMB-/nätverksresurser); the share counter keeps delning / delningar; network shares → delade mappar på nätverket",
     "note": "Apple's NetAuthAgent says Delningspunkten; the catalog keeps delad mapp.",
@@ -3331,6 +3332,13 @@
     "decision": "Android over ADB",
     "forms": "en-word: USB-felsökning aktiverad; Slå på USB-felsökning",
     "sources": "AOSP SettingsLib values-sv enable_adb (read 2026-09-07)"
+  },
+  "user": {
+    "accept": ["användaren", "användar-ID"],
+    "chosen": "användare",
+    "confidence": "high",
+    "forms": "användaren, användare; user ID → användar-ID, group ID → grupp-ID (hyphen after the acronym); the NFS uid field → Agera som användar-ID",
+    "sources": "MS terminology (user ID → användar-ID, group identifier → grupp-ID); catalog (användaren, användare)"
   },
   "username": {
     "chosen": "användarnamn",

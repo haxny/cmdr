@@ -123,11 +123,11 @@
   "@servers.hub.discoveryOffLink": {
     "sourceHash": "818571b"
   },
-  "servers.hub.nfsHint": "NFS servers don’t announce themselves, so they don’t show up here.",
+  "servers.hub.nfsHint": "Máy chủ NFS không tự thông báo trên mạng, nên không xuất hiện ở đây.",
   "@servers.hub.nfsHint": {
     "sourceHash": "40b516d"
   },
-  "servers.hub.nfsHintLink": "Add one with its address",
+  "servers.hub.nfsHintLink": "Thêm một máy chủ bằng địa chỉ",
   "@servers.hub.nfsHintLink": {
     "sourceHash": "0324564"
   },
@@ -299,19 +299,19 @@
   "@servers.refusal.notAnS3Endpoint": {
     "sourceHash": "78557ec"
   },
-  "servers.refusal.exportNotFound": "{host} has no export at that path. Pick one from the list, or check the spelling.",
+  "servers.refusal.exportNotFound": "{host} không có thư mục chia sẻ nào ở đường dẫn đó. Hãy chọn từ danh sách, hoặc kiểm tra lại chính tả.",
   "@servers.refusal.exportNotFound": {
     "sourceHash": "2ef1ce8"
   },
-  "servers.refusal.exportRefused": "{host} doesn’t let this Mac open that export. Check which computers the export allows in the server’s NFS settings.",
+  "servers.refusal.exportRefused": "{host} không cho máy Mac này mở thư mục chia sẻ đó. Hãy kiểm tra xem thư mục chia sẻ cho phép những máy tính nào trong cài đặt NFS của máy chủ.",
   "@servers.refusal.exportRefused": {
     "sourceHash": "0cebd7d"
   },
-  "servers.refusal.reservedPortRequired": "{host} only accepts connections from a privileged port, which Cmdr can’t open here. Turn on the export’s “insecure” option on the server (some NAS apps call it “Allow connections from non-privileged ports”), then try again.",
+  "servers.refusal.reservedPortRequired": "{host} chỉ chấp nhận kết nối từ một cổng đặc quyền, mà Cmdr không mở được ở đây. Hãy bật tùy chọn “insecure” của thư mục chia sẻ trên máy chủ (một số ứng dụng NAS gọi là “Allow connections from non-privileged ports”), rồi thử lại.",
   "@servers.refusal.reservedPortRequired": {
     "sourceHash": "ee7b0c7"
   },
-  "servers.refusal.noNfsV3": "{host} doesn’t offer NFS version 3, the version Cmdr speaks.",
+  "servers.refusal.noNfsV3": "{host} không cung cấp NFS phiên bản 3, phiên bản mà Cmdr dùng.",
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
@@ -451,7 +451,7 @@
   "@servers.sheet.addressHelpWebdav": {
     "sourceHash": "a8349b3"
   },
-  "servers.sheet.addressHelpNfs": "A hostname, or an address like nfs://nas.local/share or nas.local:/share.",
+  "servers.sheet.addressHelpNfs": "Một tên máy chủ, hoặc một địa chỉ như nfs://nas.local/share hoặc nas.local:/share.",
   "@servers.sheet.addressHelpNfs": {
     "sourceHash": "7970d70"
   },
@@ -467,7 +467,7 @@
   "@servers.sheet.addressLooksLikeWebdav": {
     "sourceHash": "a1185f1"
   },
-  "servers.sheet.addressLooksLikeNfs": "This looks like an NFS address. Pick NFS above if that’s what you meant.",
+  "servers.sheet.addressLooksLikeNfs": "Địa chỉ này có vẻ là địa chỉ NFS. Hãy chọn NFS ở trên nếu đó là ý bạn.",
   "@servers.sheet.addressLooksLikeNfs": {
     "sourceHash": "1c4d6bb"
   },
@@ -479,63 +479,63 @@
   "@servers.sheet.accountLocked": {
     "sourceHash": "248d279"
   },
-  "servers.sheet.identityLockedNfs": "The server and the export are what name this place. To open another export, add it as a new server.",
+  "servers.sheet.identityLockedNfs": "Máy chủ và thư mục chia sẻ là những gì xác định vị trí này. Để mở một thư mục chia sẻ khác, hãy thêm thư mục đó thành một máy chủ mới.",
   "@servers.sheet.identityLockedNfs": {
     "sourceHash": "74d1ee7"
   },
-  "servers.sheet.nfsExport": "Export",
+  "servers.sheet.nfsExport": "Thư mục chia sẻ",
   "@servers.sheet.nfsExport": {
     "sourceHash": "3664895"
   },
-  "servers.sheet.nfsExportHelp": "Pick one from the list, or type its path. A folder inside an export works too.",
+  "servers.sheet.nfsExportHelp": "Hãy chọn từ danh sách, hoặc nhập đường dẫn. Một thư mục bên trong thư mục chia sẻ cũng được.",
   "@servers.sheet.nfsExportHelp": {
     "sourceHash": "87eeba1"
   },
-  "servers.sheet.nfsExportsEmptyList": "No exports listed",
+  "servers.sheet.nfsExportsEmptyList": "Không có thư mục chia sẻ nào",
   "@servers.sheet.nfsExportsEmptyList": {
     "sourceHash": "7558a7b"
   },
-  "servers.sheet.nfsExportsNone": "{host} lists no exports for this Mac. Type the export’s path if you know it.",
+  "servers.sheet.nfsExportsNone": "{host} không liệt kê thư mục chia sẻ nào cho máy Mac này. Hãy nhập đường dẫn của thư mục chia sẻ nếu bạn biết.",
   "@servers.sheet.nfsExportsNone": {
     "sourceHash": "a88c0bf"
   },
-  "servers.sheet.nfsExportsRefused": "{host} doesn’t list its exports. Type the export’s path.",
+  "servers.sheet.nfsExportsRefused": "{host} không cho xem danh sách thư mục chia sẻ. Hãy nhập đường dẫn của thư mục chia sẻ.",
   "@servers.sheet.nfsExportsRefused": {
     "sourceHash": "5cbd573"
   },
-  "servers.sheet.nfsExportsUnreachable": "Cmdr couldn’t reach {host} to list its exports. You can still type one.",
+  "servers.sheet.nfsExportsUnreachable": "Cmdr không kết nối được tới {host} để liệt kê các thư mục chia sẻ. Bạn vẫn có thể tự nhập đường dẫn.",
   "@servers.sheet.nfsExportsUnreachable": {
     "sourceHash": "13a51a6"
   },
-  "servers.sheet.nfsUid": "Act as user ID",
+  "servers.sheet.nfsUid": "Dùng ID người dùng",
   "@servers.sheet.nfsUid": {
     "sourceHash": "f77edc9"
   },
-  "servers.sheet.nfsGid": "Group ID",
+  "servers.sheet.nfsGid": "ID nhóm",
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
-  "servers.sheet.nfsIdentityHelp": "The server decides what you can open by these numbers. NFS doesn’t ask for a password.",
+  "servers.sheet.nfsIdentityHelp": "Máy chủ dựa vào các số này để quyết định bạn được mở những gì. NFS không hỏi mật khẩu.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"
   },
-  "servers.sheet.nfsIdentityMostCommonOwner": "Guessed from who owns the files in this export.",
+  "servers.sheet.nfsIdentityMostCommonOwner": "Đoán theo chủ sở hữu các tệp trong thư mục chia sẻ này.",
   "@servers.sheet.nfsIdentityMostCommonOwner": {
     "sourceHash": "d2b22c2"
   },
-  "servers.sheet.nfsIdentityRootOwner": "Guessed from who owns this export’s folder.",
+  "servers.sheet.nfsIdentityRootOwner": "Đoán theo chủ sở hữu của chính thư mục chia sẻ này.",
   "@servers.sheet.nfsIdentityRootOwner": {
     "sourceHash": "c464fa8"
   },
-  "servers.sheet.nfsIdentityThisMac": "Your IDs on this Mac. Change them if the files on the server belong to someone else.",
+  "servers.sheet.nfsIdentityThisMac": "ID của bạn trên máy Mac này. Hãy đổi nếu các tệp trên máy chủ thuộc về người khác.",
   "@servers.sheet.nfsIdentityThisMac": {
     "sourceHash": "8bfbb0d"
   },
-  "servers.sheet.nfsUidZeroWarning": "Most servers treat user ID 0 as nobody.",
+  "servers.sheet.nfsUidZeroWarning": "Hầu hết máy chủ coi ID người dùng 0 là một tài khoản không có quyền gì.",
   "@servers.sheet.nfsUidZeroWarning": {
     "sourceHash": "aa24d3f"
   },
-  "servers.sheet.nfsStartFolderHelp": "Where the export opens. Leave it empty to open the export itself.",
+  "servers.sheet.nfsStartFolderHelp": "Thư mục hiện ra đầu tiên khi bạn mở thư mục chia sẻ. Để trống để mở chính thư mục chia sẻ.",
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
@@ -606,7 +606,8 @@
   },
   "servers.sheet.protocolNfs": "NFS",
   "@servers.sheet.protocolNfs": {
-    "sourceHash": "faac003"
+    "sourceHash": "faac003",
+    "sameAsSourceJustification": "Protocol name NFS; an acronym with no Vietnamese form, kept verbatim like its siblings SMB, SFTP, S3, and WebDAV (the `@key` asks to keep it as-is)."
   },
   "servers.sheet.s3Provider": "Nhà cung cấp",
   "@servers.sheet.s3Provider": {

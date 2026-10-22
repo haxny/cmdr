@@ -296,7 +296,10 @@
     "accept": ["rákérdez", "kérdez", "kéri"],
     "forms": "segmented cell Rákérdezés; or ask each time → vagy rákérdezés minden alkalommal",
     "confidence": "tentative",
-    "sources": "descriptive; nominal form fits a one-cell control"
+    "sources": "descriptive; nominal form fits a one-cell control",
+    "exceptions": {
+      "servers.sheet.nfsIdentityHelp": "English sense: “ask for a password” is requesting one, not asking a question, so it takes kér (nem kér jelszót)"
+    }
   },
   "ask-cmdr": {
     "chosen": "Ask Cmdr",
@@ -2198,7 +2201,7 @@
   },
   "list": {
     "chosen": "lista",
-    "accept": ["listá", "felsorol"],
+    "accept": ["listá", "felsorol", "sorol"],
     "forms": "the Servers list → a Szerverek lista (a Szerverek listában, your → a Szerverek listádban); stops listing it → leveszi a listáról; Cmdr lists X (verb) → a Cmdr felsorolja",
     "confidence": "high",
     "sources": "Microsoft terminology (list → lista); macOS AppKit (méretlista, stíluslista); catalog (fileExplorer.navigation.forgetServerConfirm)"
@@ -2418,7 +2421,8 @@
     "confidence": "high",
     "sources": "ms (network share → hálózati megosztás); macOS NetAuthAgent (EINFO_NO_SHARE)",
     "exceptions": {
-      "errorReporter.dialog.managedOff": "share it yourself is the verb, not an SMB share: magad oszthatod meg (the preverb splits off, so megoszt doesn't match)."
+      "errorReporter.dialog.managedOff": "share it yourself is the verb, not an SMB share: magad oszthatod meg (the preverb splits off, so megoszt doesn't match).",
+      "servers.sheet.addressHelpNfs": "share is the literal path in the example addresses (nfs://nas.local/share), kept verbatim"
     }
   },
   "new-file": {
@@ -3850,6 +3854,13 @@
     ],
     "confidence": "high",
     "sources": "Android hu (SettingsLib enable_adb USB hibakeresés); macOS (hibakeresés)"
+  },
+  "user": {
+    "chosen": "felhasználó",
+    "accept": ["felhasználóazonosító"],
+    "forms": "user ID (a Unix uid) → felhasználóazonosító; group ID → csoportazonosító; user ID 0 → a 0-s felhasználóazonosító",
+    "confidence": "high",
+    "sources": "ms (user ID → felhasználóazonosító); catalog (5× felhasználó)"
   },
   "username": {
     "chosen": "felhasználónév",
