@@ -501,6 +501,9 @@ cmdr-index = { path = "../../../crates/cmdr-index", features = ["testing"] }
 # `cmdr_archive::test_fixtures`.
 cmdr-archive = { path = "../../../crates/cmdr-archive", features = ["testing"] }
 cmdr-listing = { path = "../../../crates/cmdr-listing", features = ["testing"] }
+# `cmdr_media_meta::test_fixtures`: real photos, songs, and movies for Multi-Rename's
+# end-to-end media test.
+cmdr-media-meta = { path = "../../../crates/cmdr-media-meta", features = ["testing"] }
 # A test build of the local backend: space from `statvfs` (#357), the 1 ms
 # progress sampler, and `with_sidecar_probe` / `reading::list_directory`.
 cmdr-local = { path = "../../../crates/cmdr-local", features = ["testing"] }

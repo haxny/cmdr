@@ -11,6 +11,12 @@ publish = false
 [lints]
 workspace = true
 
+[features]
+# "This is a test build." Consumers turn it on through a dev-dependency, which keeps
+# it off in every shipped build. It publishes `test_fixtures`, so the app's tests
+# write real photos, songs, and movies the same way this crate's tests do.
+testing = []
+
 [dependencies]
 # The `Volume` the byte source reads through (`read_range`), its errors, and the
 # `Deadline` a file's read runs under. The only crate below this one.

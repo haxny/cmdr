@@ -127,6 +127,13 @@ verified 2026-10-22). So `read_media_from` first maps them to holes:
 - `serde` + `specta` (pinned `=2.0.0-rc.24`, as `cmdr-fs`): `MediaField` crosses IPC inside the app's row statuses.
 - `tokio` (`rt`) for `Handle::block_on` in the byte source; `cmdr-fs` for `Volume`, `VolumeError`, and `Deadline`.
 
+## Test fixtures
+
+`test_fixtures.rs` builds every fixture in code (EXIF JPEGs via `kamadak-exif`'s writer, tagged audio via lofty, ISOBMFF
+and EBML boxes byte by byte). The `testing` feature publishes it, the way `cmdr-archive` does, so the app's end-to-end
+Multi-Rename test (`apps/desktop/src-tauri/src/multi_rename/media_real_test.rs`) writes real files the same way; only
+dev-dependencies turn it on.
+
 ## Overlap with the agent's EXIF reader
 
 `apps/desktop/src-tauri/src/agent/tools/read/inspect/exif.rs` also reads EXIF, but shapes model-facing strings

@@ -26,7 +26,8 @@ use super::session::{
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, wait_until_async};
 
-const WAIT: Duration = Duration::from_secs(10);
+/// Under nextest's 8 s limit, so a stuck loader fails with the wait's message.
+const WAIT: Duration = Duration::from_secs(5);
 
 /// A scratch folder with `files` and `folders`, and a cached listing showing every row.
 fn folder(tag: &str, files: &[&str], folders: &[&str]) -> (TestDir, TestListingGuard) {

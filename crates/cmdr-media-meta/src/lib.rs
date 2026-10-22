@@ -39,8 +39,11 @@ mod photo_test;
 mod read_test;
 #[cfg(test)]
 mod source_test;
-#[cfg(test)]
-mod test_fixtures;
+/// Byte builders for media files (EXIF JPEGs, tagged audio, ISOBMFF and EBML
+/// boxes). Published under the `testing` feature so the app's own tests build
+/// real files the same way this crate's tests do.
+#[cfg(any(test, feature = "testing"))]
+pub mod test_fixtures;
 #[cfg(test)]
 mod types_test;
 
