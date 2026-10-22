@@ -25,8 +25,11 @@ export interface SyntaxLine extends SyntaxHint {
 export interface PlaceholderHelp {
   placeholder: string
   meaning: MessageKey
-  /** What the example line says it shows: the sample file, it with its folders, three counts, or a date. */
-  example: 'file' | 'folder' | 'counter' | 'date'
+  /**
+   * What the example line says it shows: the sample file, it with its folders, three counts, or a
+   * date; `none` for no example line (its forms carry the examples).
+   */
+  example: 'file' | 'folder' | 'counter' | 'date' | 'none'
   syntax: SyntaxLine[]
   /** A closing line, after the forms. */
   footnote?: MessageKey
@@ -122,23 +125,36 @@ export const PLACEHOLDER_HELP: readonly PlaceholderHelp[] = [
     placeholder: '[YMD]',
     meaning: 'multiRename.placeholderHelp.date',
     example: 'date',
+    // The time's forms too: the row has no room for a `[hms]` button of its own.
     syntax: [
       { mask: '[d]', meaning: 'multiRename.placeholderHelp.isoDate' },
       { mask: '[Y-M-D h.m.s]', meaning: 'multiRename.placeholderHelp.dateSeparators' },
       { mask: '[yMD]', meaning: 'multiRename.placeholderHelp.shortYear' },
       { mask: '[D]', meaning: 'multiRename.placeholderHelp.datePart' },
-    ],
-  },
-  {
-    placeholder: '[hms]',
-    meaning: 'multiRename.placeholderHelp.time',
-    example: 'date',
-    syntax: [
+      { mask: '[hms]', meaning: 'multiRename.placeholderHelp.time' },
       { mask: '[t]', meaning: 'multiRename.placeholderHelp.dottedTime' },
       { mask: '[hm]', meaning: 'multiRename.placeholderHelp.hoursMinutes' },
     ],
   },
 ]
+
+/**
+ * The `media ▾` button's help: what the fields are and which formats they come from, a few forms
+ * with the engine's examples on made-up media facts, and how to see every field. The button opens
+ * the field picker; it inserts no placeholder of its own.
+ */
+export const MEDIA_HELP: PlaceholderHelp = {
+  placeholder: '[=…]',
+  meaning: 'multiRename.placeholderHelp.media',
+  example: 'none',
+  syntax: [
+    { mask: '[=exif.taken:d]', meaning: 'multiRename.placeholderHelp.mediaTaken' },
+    { mask: '[=exif.taken|modified:YMD_hms]', meaning: 'multiRename.placeholderHelp.mediaFallback' },
+    { mask: '[=exif.camera]', meaning: 'multiRename.placeholderHelp.mediaCamera' },
+    { mask: '[=tag.track:2] [=tag.artist] - [=tag.title]', meaning: 'multiRename.placeholderHelp.mediaSong' },
+  ],
+  footnote: 'multiRename.placeholderHelp.mediaHint',
+}
 
 function counterOf(mask: string) {
   return mask.startsWith('[') && mask.endsWith(']') ? counterKind.parse(mask.slice(1, -1)) : null
@@ -162,7 +178,8 @@ export function placeholderExamples(helps: readonly PlaceholderHelp[]): Map<stri
   add(FOLDER_LEAD_MASK)
   add(DATE_LEAD_MASK)
   for (const help of helps) {
-    for (const hint of [{ mask: help.placeholder }, ...help.syntax]) {
+    const lead = help.example === 'none' ? [] : [{ mask: help.placeholder }]
+    for (const hint of [...lead, ...help.syntax]) {
       if (counterOf(hint.mask) === null) add(hintMask(hint))
     }
   }

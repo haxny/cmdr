@@ -14,7 +14,7 @@ import MultiRenameDialog from './MultiRenameDialog.svelte'
 import SearchOptionChips from './SearchOptionChips.svelte'
 import PlaceholderTip from './PlaceholderTip.svelte'
 import { DEFAULT_SPEC } from './spec'
-import { PLACEHOLDER_HELP, hintMask } from './placeholder-help'
+import { MEDIA_HELP, PLACEHOLDER_HELP, hintMask } from './placeholder-help'
 import { MARK_END, MARK_START } from './rename-examples'
 import { searchExampleKey } from './search-option-help'
 import { setLastMultiRenameRun } from './last-run.svelte'
@@ -32,6 +32,19 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   getMultiRenameMediaProgress: vi.fn(() => Promise.resolve({ ok: true, value: { read: 0, total: 0, done: true } })),
   onMultiRenameMediaProgress: vi.fn(() => Promise.resolve(() => {})),
   prioritizeMultiRenameMedia: vi.fn(() => Promise.resolve()),
+  getMultiRenameMediaOverview: vi.fn(() =>
+    Promise.resolve({
+      ok: true,
+      value: {
+        progress: { read: 1, total: 4, done: false },
+        fields: [
+          { field: 'exifTaken', example: '2026-07-14 09.05.30', filesWithIt: 1 },
+          { field: 'exifCamera', example: null, filesWithIt: 0 },
+          { field: 'tagArtist', example: 'Daft Punk', filesWithIt: 1 },
+        ],
+      },
+    }),
+  ),
   previewMultiRename,
   getMultiRenamePreviewRows: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
   getMultiRenameRangeSamples: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
@@ -89,6 +102,36 @@ describe('MultiRenameDialog a11y', () => {
       value: { previewId: 1, counts: { ready: 1, unchanged: 1, problems: 3, reading: 0 }, rows: ROWS },
     })
     await expectNoA11yViolations(await mountSheet())
+  })
+
+  it('with the field picker open, a field picked, and rows still reading has no violations', async () => {
+    previewMultiRename.mockResolvedValue({
+      ok: true,
+      value: {
+        previewId: 1,
+        counts: { ready: 1, unchanged: 1, problems: 3, reading: 1 },
+        rows: [...ROWS, { row: 5, oldName: 'song.mp3', newName: 'song.mp3', status: { type: 'reading' } }],
+      },
+    })
+    const root = await mountSheet()
+    root.querySelector<HTMLButtonElement>('button.chip[aria-haspopup="dialog"]')?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await tick()
+    document.getElementById('media-field-tagArtist')?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await tick()
+    expect(document.querySelector('.ui-popover [role="listbox"]')).not.toBeNull()
+    await expectNoA11yViolations(document.body)
+  })
+
+  it('the media button’s tooltip body has no violations', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const rendered = new Map([[hintMask(MEDIA_HELP.syntax[0]), `${MARK_START}2026-07-14${MARK_END}`]])
+    mount(PlaceholderTip, { target, props: { help: MEDIA_HELP, rendered } })
+    await tick()
+    target.querySelector<HTMLElement>('[hidden]')?.removeAttribute('hidden')
+    await expectNoA11yViolations(target)
   })
 
   it('with a mask error showing has no violations', async () => {

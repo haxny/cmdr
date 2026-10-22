@@ -111,6 +111,16 @@ export const multiRenameCommands: CommandSource[] = [
     fixedKey: true,
   },
   {
+    // The `media ▾` button's field picker. X as in EXIF; ⌘⌥M is macOS's "minimize all".
+    id: 'multiRename.insertField',
+    nameKey: 'commands.multiRenameInsertField.label',
+    scope: 'Main window/Multi-rename',
+    showInPalette: false,
+    shortcuts: ['⌘⌥X'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    fixedKey: true,
+  },
+  {
     // ⌘Z / ⇧⌘Z stay the fields' text undo and redo; ⌥ joins the sheet's option keys.
     id: 'multiRename.undoRename',
     nameKey: 'commands.multiRenameUndoRename.label',

@@ -67,6 +67,7 @@ export type DispatchExemptId =
   | 'multiRename.includeExtension'
   | 'multiRename.regex'
   | 'multiRename.replaceWholeName'
+  | 'multiRename.insertField'
   | 'multiRename.undoRename'
   | 'multiRename.results'
   | 'multiRename.fieldHistory'

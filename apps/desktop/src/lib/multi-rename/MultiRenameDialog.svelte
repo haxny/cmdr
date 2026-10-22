@@ -19,7 +19,6 @@
     import Menu from '#lib/ui/Menu.svelte'
     import StatusBadge from '#lib/ui/StatusBadge.svelte'
     import Button from '#lib/ui/Button.svelte'
-    import Chip from '#lib/ui/Chip.svelte'
     import Checkbox from '#lib/ui/Checkbox.svelte'
     import LinkButton from '#lib/ui/LinkButton.svelte'
     import LiveAnnouncer from '#lib/ui/LiveAnnouncer.svelte'
@@ -52,9 +51,8 @@
     import PresetsControl from './PresetsControl.svelte'
     import FieldHistoryChevron from './FieldHistoryChevron.svelte'
     import PreviewList from './PreviewList.svelte'
-    import { insertAtCaret } from './spec'
-    import { PLACEHOLDER_HELP, placeholderExamples } from './placeholder-help'
-    import PlaceholderTip from './PlaceholderTip.svelte'
+    import { MEDIA_HELP, PLACEHOLDER_HELP, placeholderExamples } from './placeholder-help'
+    import PlaceholderChips from './PlaceholderChips.svelte'
     import { renderExamples } from './rename-examples'
     import { SEARCH_OPTIONS, searchOptionExamples } from './search-option-help'
     import SearchOptionChips from './SearchOptionChips.svelte'
@@ -120,13 +118,15 @@
     let presetsControl = $state<PresetsControlApi>()
     let announcer: { announce: (message: string) => void } | undefined = $state()
 
-    /** Each placeholder button's tooltip body, which the tooltip adopts on show. */
-    const tipContent = $state<Partial<Record<string, HTMLDivElement>>>({})
+    let placeholderChips = $state<{ togglePicker: () => void }>()
     /** Every tooltip's examples, rendered by the engine on made-up files; `null` until they come. */
     let examples = $state.raw<ReadonlyMap<string, string> | null>(null)
 
     async function loadExamples(): Promise<void> {
-        const asked = new Map([...placeholderExamples(PLACEHOLDER_HELP), ...searchOptionExamples(SEARCH_OPTIONS)])
+        const asked = new Map([
+            ...placeholderExamples([...PLACEHOLDER_HELP, MEDIA_HELP]),
+            ...searchOptionExamples(SEARCH_OPTIONS),
+        ])
         examples = await renderExamples(asked)
     }
 
@@ -203,16 +203,6 @@
             log.warn("couldn't remember the multi-rename settings: {reason}", { reason: e })
         })
     })
-
-    function insertPlaceholder(placeholder: string): void {
-        const caret = nameMaskInput?.selectionStart ?? null
-        const next = insertAtCaret(tool.spec.nameMask, placeholder, caret)
-        tool.update({ nameMask: next.mask })
-        queueMicrotask(() => {
-            nameMaskInput?.focus()
-            nameMaskInput?.setSelectionRange(next.caret, next.caret)
-        })
-    }
 
     /** A history pick: the field takes the value (the menu hands focus back to it). */
     function fillFromHistory(field: HistoryField, value: string): void {
@@ -307,6 +297,7 @@
         { id: 'multiRename.results', run: openResults },
         { id: 'multiRename.undoRename', run: () => void undoLastRun() },
         { id: 'multiRename.rename', run: () => void start() },
+        { id: 'multiRename.insertField', run: () => placeholderChips?.togglePicker() },
     ]
 
     function handleKeydown(e: KeyboardEvent): void {
@@ -384,19 +375,13 @@
                         </MaskInput>
                     </label>
                 </div>
-                <div class="placeholders" role="group" aria-label={tString('multiRename.insertPlaceholder')}>
-                    {#each PLACEHOLDER_HELP as help (help.placeholder)}
-                        <Chip
-                            variant="insert"
-                            size="field"
-                            mono
-                            label={help.placeholder}
-                            tooltipContent={{ contentEl: tipContent[help.placeholder] }}
-                            onActivate={() => { insertPlaceholder(help.placeholder) }}
-                        />
-                        <PlaceholderTip {help} rendered={examples} bind:contentEl={tipContent[help.placeholder]} />
-                    {/each}
-                </div>
+                <PlaceholderChips
+                    bind:this={placeholderChips}
+                    {tool}
+                    maskInput={nameMaskInput}
+                    {examples}
+                    announce={(message: string) => { announcer?.announce(message) }}
+                />
                 <label class="field">
                     <span class="label">{tString('multiRename.search')}</span>
                     <TextInput
@@ -644,15 +629,14 @@
     /* Each chip group spans the whole chip column like a segmented bar: the same small gap
        between chips, and each chip grows from its own label's width by an equal share of the
        spare room. Not equal widths: `Chip`'s field size sets a `min-width`, so a basis-0 chip
-       could shrink below `[YMD]` and clip it. Both rows start and end on the same edges. */
-    .placeholders,
+       could shrink below `[YMD]` and clip it. Both rows start and end on the same edges.
+       `PlaceholderChips` styles its own row the same way. */
     .search-options {
         justify-self: stretch;
         display: flex;
         align-items: center;
     }
 
-    .placeholders > :global(.chip),
     .search-options :global(.chip) {
         flex: 1 1 auto;
     }
@@ -682,10 +666,6 @@
     .label {
         font-size: var(--font-size-sm);
         color: var(--color-text-secondary);
-    }
-
-    .placeholders {
-        gap: var(--spacing-xs);
     }
 
     /* One row of whole-name options, each with its key chip beside it. */

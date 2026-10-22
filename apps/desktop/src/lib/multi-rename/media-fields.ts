@@ -97,6 +97,9 @@ export function pickerGroups(
     .filter((group) => group.fields.length > 0)
 }
 
+/** Where focus goes when the picker closes: the name mask, the control after or before the button, or it stays. */
+export type PickerExit = 'mask' | 'forward' | 'backward' | 'none'
+
 /** Where the last pick left the mask: its text and the caret after the token. */
 export interface Inserted {
   mask: string

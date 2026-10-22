@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   DATE_LEAD_MASK,
   FOLDER_LEAD_MASK,
+  MEDIA_HELP,
   PLACEHOLDER_HELP,
   hintMask,
   hintPieces,
@@ -54,6 +55,18 @@ describe('placeholder help', () => {
       `[N1-6]${MARK_START}[N7,3]${MARK_END}[N10-]`,
       `[N1--4]${MARK_START}[N-3,3]${MARK_END}`,
     ])
+  })
+
+  it('has no [hms] button: its forms live in [YMD]’s tooltip', () => {
+    expect(PLACEHOLDER_HELP.map((help) => help.placeholder)).toEqual(['[N]', '[E]', '[P]', '[C]', '[YMD]'])
+    const date = PLACEHOLDER_HELP.find((help) => help.placeholder === '[YMD]')
+    expect(date?.syntax.map((line) => line.mask)).toEqual(expect.arrayContaining(['[hms]', '[t]', '[hm]']))
+  })
+
+  it('asks for the media forms’ examples, never the media button’s own placeholder', () => {
+    const asked = [...placeholderExamples([MEDIA_HELP]).keys()]
+    expect(asked).toContain(hintMask({ mask: '[=exif.taken:d]' }))
+    expect(asked).not.toContain(hintMask({ mask: MEDIA_HELP.placeholder }))
   })
 
   it('has no example for a mask the engine didn’t render', () => {

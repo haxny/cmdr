@@ -23,6 +23,8 @@ const { ipc } = vi.hoisted(() => ({
     getMultiRenameLastSettings: vi.fn(),
     saveMultiRenameLastSettings: vi.fn(),
     getMultiRenameMediaProgress: vi.fn(),
+    getMultiRenameMediaOverview: vi.fn(),
+    getMultiRenameFieldSamples: vi.fn(),
     onMultiRenameMediaProgress: vi.fn(),
     prioritizeMultiRenameMedia: vi.fn(),
   },
@@ -900,6 +902,20 @@ describe('createMultiRenameState with media fields', () => {
     await vi.advanceTimersByTimeAsync(1000)
     expect(ipc.previewMultiRename).toHaveBeenCalledTimes(3)
     expect(tool.media?.done).toBe(true)
+    tool.dispose()
+  })
+
+  it('passes the picker’s overview and the token editor’s samples through, `null` on a refusal', async () => {
+    const overview = { progress: { read: 1, total: 3, done: false }, fields: [] }
+    ipc.getMultiRenameMediaOverview.mockResolvedValueOnce({ ok: true, value: overview })
+    const samples = { samples: [], usage: { withValue: 1, fallback: 0, missing: 0, reading: 2 } }
+    ipc.getMultiRenameFieldSamples.mockResolvedValueOnce({ ok: true, value: samples })
+    const tool = await readingSheet()
+    expect(await tool.mediaOverview()).toEqual(overview)
+    expect(await tool.fieldSamples('=exif.taken', [0, 1])).toEqual(samples)
+    expect(ipc.getMultiRenameFieldSamples).toHaveBeenCalledWith('S', '=exif.taken', [0, 1])
+    ipc.getMultiRenameMediaOverview.mockResolvedValueOnce({ ok: false, error: { type: 'sessionClosed' } })
+    expect(await tool.mediaOverview()).toBeNull()
     tool.dispose()
   })
 

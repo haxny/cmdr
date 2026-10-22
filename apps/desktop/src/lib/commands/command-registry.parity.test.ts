@@ -156,6 +156,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'multiRename.includeExtension': 'Turn Include extension on or off',
   'multiRename.regex': 'Turn Regular expression on or off',
   'multiRename.replaceWholeName': 'Turn Replace whole name on or off',
+  'multiRename.insertField': 'Insert a photo, video, or music field',
   'multiRename.undoRename': 'Undo the last multi-rename',
   'multiRename.results': 'Edit the new names in your text editor',
   'multiRename.fieldHistory': 'Show the field’s earlier values',

@@ -33,6 +33,10 @@
   "@multiRename.mediaButton": {
     "description": "Label of the button after the placeholder buttons ([N], [E], [P], [C], [YMD]) that opens the field picker: photo, video, and music information (date taken, camera, artist, title, …) to put in the new name. Lowercase like the placeholders beside it; keep the ▾ (it says the button opens a list). Keep it short: the row is tight."
   },
+  "multiRename.mediaButtonName": "Media fields",
+  "@multiRename.mediaButtonName": {
+    "description": "Accessible name of the “media ▾” button (multiRename.mediaButton), read by screen readers and voice control: it opens the list of photo, video, and music fields. Must contain the button's visible word (multiRename.mediaButton without the ▾), so a voice-control user can say it."
+  },
   "multiRename.search": "Search for",
   "@multiRename.search": {
     "description": "Label of the search field of the rename tool's search & replace. Supports * and ? wildcards and a|b|c lists."
@@ -663,6 +667,30 @@
   "multiRename.placeholderHelp.time": "The time the file was last changed: hours, minutes, and seconds",
   "@multiRename.placeholderHelp.time": {
     "description": "In the Multi-rename sheet, a tooltip on a placeholder button (such as [N], [E], or [C]) explains what that placeholder puts in the new name, lists a few of its other forms, and shows each with an example on a made-up file (Beach day.jpg, in the folder Trips/Lisbon 2026, last changed 2026-07-14 09:05:30). What the [hms] placeholder stands for (the modification time, as 143207). A noun phrase."
+  },
+  "multiRename.placeholderHelp.media": "A photo’s, video’s, or song’s own information: EXIF, ID3, MP4, FLAC, Ogg, and more",
+  "@multiRename.placeholderHelp.media": {
+    "description": "Head line of the tooltip on the Multi-rename “media ▾” button (multiRename.mediaButton), after the placeholder form [=…]: these placeholders put information stored inside the file (a photo's date taken and camera, a song's artist and title) into the new name. Keep the format names EXIF, ID3, MP4, FLAC, and Ogg as is: people search for them."
+  },
+  "multiRename.placeholderHelp.mediaTaken": "The date a photo or video was taken",
+  "@multiRename.placeholderHelp.mediaTaken": {
+    "description": "In the “media ▾” button's tooltip, beside the form [=exif.taken:d]: what it puts in the name. An example follows."
+  },
+  "multiRename.placeholderHelp.mediaFallback": "With the date the file was last changed for one without it",
+  "@multiRename.placeholderHelp.mediaFallback": {
+    "description": "In the “media ▾” button's tooltip, beside the form [=exif.taken|modified:YMD_hms]: the date taken, and for a file that has none, the date it was last changed instead. An example follows."
+  },
+  "multiRename.placeholderHelp.mediaCamera": "The camera’s maker and model",
+  "@multiRename.placeholderHelp.mediaCamera": {
+    "description": "In the “media ▾” button's tooltip, beside the form [=exif.camera]: what it puts in the name, like “Apple iPhone 15 Pro”. An example follows."
+  },
+  "multiRename.placeholderHelp.mediaSong": "A song’s track number, artist, and title",
+  "@multiRename.placeholderHelp.mediaSong": {
+    "description": "In the “media ▾” button's tooltip, beside the mask [=tag.track:2] [=tag.artist] - [=tag.title]: what it puts in the name, like “03 Daft Punk - Digital Love”. An example follows."
+  },
+  "multiRename.placeholderHelp.mediaHint": "Click to pick from every field, each with its value on your files.",
+  "@multiRename.placeholderHelp.mediaHint": {
+    "description": "Last line of the “media ▾” button's tooltip: clicking the button opens a list of every photo, video, and music field, each showing what it holds in the files being renamed."
   },
   "multiRename.placeholderHelp.oneChar": "Character {at} alone",
   "@multiRename.placeholderHelp.oneChar": {

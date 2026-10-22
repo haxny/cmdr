@@ -31,7 +31,9 @@ import {
   applyMultiRename,
   clearMultiRenameNames,
   deleteMultiRenamePreset,
+  getMultiRenameFieldSamples,
   getMultiRenameLastSettings,
+  getMultiRenameMediaOverview,
   getMultiRenameMediaProgress,
   getMultiRenamePresets,
   getMultiRenamePreviewRows,
@@ -47,6 +49,8 @@ import {
   saveMultiRenamePreset,
   updateMultiRenamePreset,
   writeMultiRenameNames,
+  type FieldSamples,
+  type MediaOverview,
   type MediaProgress,
   type MultiRenameError,
   type MultiRenameMediaProgress,
@@ -201,6 +205,13 @@ export interface MultiRenameState {
   readonly waitsForMedia: boolean
   /** A Rename is waiting for the read ("Starting…"). */
   readonly queued: boolean
+  /** The field picker's overview: each field's example from the session's files; `null` when it can't say. */
+  mediaOverview: () => Promise<MediaOverview | null>
+  /**
+   * The media placeholder `token` (`=exif.taken:d`) alone on the session files at `rows`, and how it
+   * fares across them all; `null` when it can't say.
+   */
+  fieldSamples: (token: string, rows: number[]) => Promise<FieldSamples | null>
   dispose: () => void
 }
 
@@ -680,6 +691,14 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     },
     get queued() {
       return queued
+    },
+    async mediaOverview() {
+      const answer = await getMultiRenameMediaOverview(sessionId)
+      return answer.ok ? answer.value : null
+    },
+    async fieldSamples(token, sampleRowList) {
+      const answer = await getMultiRenameFieldSamples(sessionId, token, sampleRowList)
+      return answer.ok ? answer.value : null
     },
     dispose() {
       disposed = true

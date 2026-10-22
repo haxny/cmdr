@@ -23,7 +23,9 @@
     /* eslint-enable prefer-const */
 
     const known = $derived(rendered ?? new Map<string, string>())
-    const example = $derived(hintPieces({ mask: help.example === 'counter' ? '[C]' : help.placeholder }, known))
+    const example = $derived(
+        help.example === 'none' ? null : hintPieces({ mask: help.example === 'counter' ? '[C]' : help.placeholder }, known),
+    )
     const lead = $derived.by(() => {
         switch (help.example) {
             case 'counter':
@@ -38,6 +40,8 @@
                 const date = known.get(DATE_LEAD_MASK)
                 return date === undefined ? null : tString('multiRename.placeholderHelp.forSampleDate', { date })
             }
+            case 'none':
+                return null
         }
     })
 </script>

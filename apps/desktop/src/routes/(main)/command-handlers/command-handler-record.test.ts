@@ -81,8 +81,8 @@ describe('command handler record completeness', () => {
     }
   })
 
-  it('the exempt tuple is exactly 68 ids, all real CommandIds', () => {
-    expect(DISPATCH_EXEMPT_IDS).toHaveLength(68)
+  it('the exempt tuple is exactly 69 ids, all real CommandIds', () => {
+    expect(DISPATCH_EXEMPT_IDS).toHaveLength(69)
     for (const id of DISPATCH_EXEMPT_IDS) expect(COMMAND_IDS).toContain(id)
   })
 })

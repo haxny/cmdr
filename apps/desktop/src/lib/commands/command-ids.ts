@@ -216,6 +216,7 @@ export const COMMAND_IDS = [
   'multiRename.includeExtension',
   'multiRename.regex',
   'multiRename.replaceWholeName',
+  'multiRename.insertField',
   'multiRename.undoRename',
   'multiRename.results',
   'multiRename.fieldHistory',
