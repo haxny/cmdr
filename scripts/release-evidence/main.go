@@ -44,7 +44,8 @@ import (
 )
 
 // repo is GitHub's current name for this repo (`gh repo view`), set in `main`. Not a constant, so
-// a move to the `getcmdr` org (#476) needs no change here.
+// a move to the `getcmdr` org (#476) needs no change here. A release built before the move still
+// verifies under the name it was built under (`builtin.go`).
 var repo string
 
 const (
@@ -158,7 +159,11 @@ func verify(cfg config, work string) (verified, error) {
 	if err := verifyRelease(cfg); err != nil {
 		return v, err
 	}
-	if err := verifyManifest(cfg); err != nil {
+	built, err := releaseBuiltIn(cfg, work)
+	if err != nil {
+		return v, err
+	}
+	if err := verifyManifest(cfg, built); err != nil {
 		return v, err
 	}
 	tagged, parent, err := taggedCommit(cfg.tag)
@@ -172,8 +177,27 @@ func verify(cfg config, work string) (verified, error) {
 	if v.ci, v.ciRun, v.codeQLRun, err = findCIRuns(tagged, parent); err != nil {
 		return v, err
 	}
-	v.attestation, err = verifyAttestations(cfg, tagged, work)
+	v.attestation, err = verifyAttestations(cfg, built, tagged, work)
 	return v, err
+}
+
+// releaseBuiltIn reads which repo built the release (`builtInRepo`) from the `latest.json` on it.
+func releaseBuiltIn(cfg config, work string) (string, error) {
+	if _, err := output("", "gh", "release", "download", cfg.tag, "-R", repo, "-p", "latest.json", "-D", work, "--clobber"); err != nil {
+		return "", err
+	}
+	body, err := os.ReadFile(filepath.Join(work, "latest.json"))
+	if err != nil {
+		return "", err
+	}
+	built, err := builtInRepo(body, cfg.version, repo)
+	if err != nil {
+		return "", err
+	}
+	if built != repo {
+		ok("built under %s, before the repo moved: its attestations and update URLs name that", built)
+	}
+	return built, nil
 }
 
 func verifyRelease(cfg config) error {
@@ -206,14 +230,15 @@ func verifyRelease(cfg config) error {
 
 var httpClient = &http.Client{Timeout: 60 * time.Second}
 
-func verifyManifest(cfg config) error {
+// verifyManifest checks getcmdr.com/latest.json, whose URLs name the repo that built the release.
+func verifyManifest(cfg config, built string) error {
 	step("Checking %s", manifestURL)
 	deadline := time.Now().Add(cfg.manifestWait)
 	var urls []string
 	for {
 		body, err := fetch(manifestURL)
 		if err == nil {
-			urls, err = checkManifest(body, cfg.version, repo)
+			urls, err = checkManifest(body, cfg.version, built)
 		}
 		if err == nil {
 			break
@@ -364,15 +389,16 @@ func findCIRuns(tagged, parent string) (ciCandidate, workflowRun, workflowRun, e
 }
 
 // verifyAttestations runs both checks in § Provenance and SBOM attestations on the Apple
-// Silicon DMG, pinned like `release-finish.sh` pins them, and returns the record to keep.
-func verifyAttestations(cfg config, commit, work string) (string, error) {
+// Silicon DMG, pinned like `release-finish.sh` pins them to the repo that built the release, and
+// returns the record to keep.
+func verifyAttestations(cfg config, built, commit, work string) (string, error) {
 	dmg := "Cmdr_" + cfg.version + "_aarch64.dmg"
 	step("Verifying %s's attestations", dmg)
 	if _, err := output("", "gh", "release", "download", cfg.tag, "-R", repo, "-p", dmg, "-D", work, "--clobber"); err != nil {
 		return "", err
 	}
-	pinned := []string{"--repo", repo, "--format", "json",
-		"--signer-workflow", repo + "/" + pipelineWorkflow, "--signer-digest", commit,
+	pinned := []string{"--repo", built, "--format", "json",
+		"--signer-workflow", built + "/" + pipelineWorkflow, "--signer-digest", commit,
 		"--source-ref", "refs/tags/" + cfg.tag, "--source-digest", commit, "--deny-self-hosted-runners"}
 	checks := []struct {
 		title, label string
