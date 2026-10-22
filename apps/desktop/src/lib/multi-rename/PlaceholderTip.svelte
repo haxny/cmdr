@@ -12,6 +12,8 @@
 
     interface Props {
         help: PlaceholderHelp
+        /** The button's whole word, as a first line, for a button whose label may be cut (`media ▾`). */
+        name?: string
         /** Each example's text, keyed as asked; `null` until the engine rendered them. */
         rendered: ReadonlyMap<string, string> | null
         /** The element the tooltip adopts. */
@@ -19,7 +21,7 @@
     }
 
     /* eslint-disable prefer-const -- $bindable() requires `let` destructuring */
-    let { help, rendered, contentEl = $bindable() }: Props = $props()
+    let { help, name, rendered, contentEl = $bindable() }: Props = $props()
     /* eslint-enable prefer-const */
 
     const known = $derived(rendered ?? new Map<string, string>())
@@ -48,6 +50,7 @@
 
 <div hidden>
     <div class="placeholder-tip" bind:this={contentEl}>
+        {#if name}<p class="name">{name}</p>{/if}
         <p class="head"><span class="mask">{help.placeholder}</span> {tString(help.meaning)}</p>
         {#if lead !== null && example !== null}
             <p class="lead">
@@ -96,7 +99,8 @@
         font-family: var(--font-mono);
     }
 
-    .head .mask {
+    .head .mask,
+    .name {
         font-weight: 600;
     }
 

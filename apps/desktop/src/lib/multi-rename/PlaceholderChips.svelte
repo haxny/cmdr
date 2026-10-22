@@ -14,7 +14,7 @@
     import { MEDIA_HELP, PLACEHOLDER_HELP } from './placeholder-help'
     import PlaceholderTip from './PlaceholderTip.svelte'
     import MediaFieldPicker from './MediaFieldPicker.svelte'
-    import { MEDIA_FIELD_LABELS, fieldToken, insertField, type Inserted, type PickerExit } from './media-fields'
+    import { MEDIA_FIELD_LABELS, chipWord, fieldToken, insertField, type Inserted, type PickerExit } from './media-fields'
 
     interface Props {
         tool: MultiRenameState
@@ -113,13 +113,19 @@
         bind:chipElement={mediaChip}
         variant="filter"
         size="field"
-        label={tString('multiRename.mediaButton')}
+        label={chipWord(tString('multiRename.mediaButton'))}
         ariaLabel={tString('multiRename.mediaButtonName')}
         isOpen={pickerOpen}
         tooltipContent={{ contentEl: tipContent[MEDIA_HELP.placeholder] }}
         onActivate={togglePicker}
     />
-    <PlaceholderTip help={MEDIA_HELP} rendered={examples} bind:contentEl={tipContent[MEDIA_HELP.placeholder]} />
+    <!-- The tooltip leads with the chip's whole word, which a long translation may cut. -->
+    <PlaceholderTip
+        help={MEDIA_HELP}
+        name={chipWord(tString('multiRename.mediaButton'))}
+        rendered={examples}
+        bind:contentEl={tipContent[MEDIA_HELP.placeholder]}
+    />
 </div>
 {#if mediaChip}
     <MediaFieldPicker
@@ -147,16 +153,24 @@
         flex: 1 1 auto;
     }
 
-    /* `media ▾` is a word, and a translation can be three times as long ("đa phương tiện ▾"): it
-       stops growing the chip column (which would squeeze the masks) and ends in an ellipsis. Its
-       accessible name and tooltip still say it all. */
+    /* `media ▾` is a word, and a translation can be three times as long ("đa phương tiện"): the
+       chip stops growing the chip column (which would squeeze the masks), and its word ends in an
+       ellipsis. The ▾ sits outside the word and never shrinks, so the affordance always shows; the
+       accessible name and the tooltip's first line carry the whole word. */
     .placeholders > :global(.chip-filter) {
         max-width: 8em;
     }
 
     .placeholders > :global(.chip-filter .chip-label) {
+        min-width: 0;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+    }
+
+    /* Decoration with no alt text: the chip's `aria-haspopup` already says it opens a list. */
+    .placeholders > :global(.chip-filter)::after {
+        content: '▾' / '';
+        flex-shrink: 0;
     }
 </style>

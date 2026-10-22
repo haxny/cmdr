@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { MediaField, MediaFieldOverview } from '#lib/ipc/bindings.js'
 import { MEDIA_FIELDS } from './media-token'
-import { MEDIA_FIELD_LABELS, insertField, pickerGroups } from './media-fields'
+import { MEDIA_FIELD_LABELS, chipWord, insertField, pickerGroups } from './media-fields'
 
 const overview = (counts: Partial<Record<MediaField, number>>): MediaFieldOverview[] =>
   (Object.keys(MEDIA_FIELDS) as MediaField[]).map((field) => ({
@@ -49,6 +49,15 @@ describe('pickerGroups', () => {
 
   it('leaves out a group nothing in it matches', () => {
     expect(pickerGroups(overview({}), 'zzz', word)).toEqual([])
+  })
+})
+
+describe('chipWord', () => {
+  it('drops the ▾ the catalog writes, which the chip draws itself, wherever it sits', () => {
+    expect(chipWord('media ▾')).toBe('media')
+    expect(chipWord('đa phương tiện ▾')).toBe('đa phương tiện')
+    expect(chipWord('▾ media')).toBe('media')
+    expect(chipWord('Medien')).toBe('Medien')
   })
 })
 

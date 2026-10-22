@@ -97,6 +97,15 @@ export function pickerGroups(
     .filter((group) => group.fields.length > 0)
 }
 
+/**
+ * The `media ▾` chip's word: its label without the ▾, which the chip draws itself outside the part
+ * that truncates, so a long translation never cuts the affordance. The catalog's label carries the ▾
+ * for translators' context; one that dropped or moved it reads the same.
+ */
+export function chipWord(label: string): string {
+  return label.replaceAll('▾', '').trim()
+}
+
 /** Where focus goes when the picker closes: the name mask, the control after or before the button, or it stays. */
 export type PickerExit = 'mask' | 'forward' | 'backward' | 'none'
 
