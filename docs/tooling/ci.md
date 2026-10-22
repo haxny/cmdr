@@ -157,7 +157,8 @@ silent** (a warning, not a red job):
   crawled rather than stalled (~15 MB in 8 min), so a timeout plus a plain retry against it still failed. The action
   layers:
   - A cache of the ~64 MB of downloaded `.deb`s (`tauri-apt-<ImageOS>-<ImageVersion>-<hash of the action>`), so most
-    runs skip the mirror. A new runner image misses once and re-saves.
+    runs skip the mirror. A new runner image misses once and re-saves. `warm-rust-cache` runs the action on every `main`
+    push, even on a Rust cache hit, because a PR reads only its own and `main`'s caches.
   - A time-boxed download (4 min, then 8), with the second attempt dropping `azure.archive.ubuntu.com` for
     `archive.ubuntu.com`, under a 20-min step cap.
   - apt's own 30-s connection timeout and retries.

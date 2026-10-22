@@ -1081,8 +1081,9 @@ jobs:
           cache-on-failure: true
           save-if: ${{ env.SAVE_RUST_CACHE }}
 
+      # Even on a Rust cache hit: a PR reads only its own and `main`'s caches, so this is what
+      # keeps a `main` entry of the action's `.deb` cache current for every PR's first run.
       - name: Install Tauri dependencies (Linux)
-        if: steps.cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/tauri-linux-deps
         timeout-minutes: 20
 
