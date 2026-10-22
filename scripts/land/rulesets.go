@@ -10,8 +10,7 @@ import (
 
 // rulesets creates or updates the repo's rulesets from `.github/rulesets/*.json`, matching them by
 // name, and leaves alone the ones GitHub already has as the file says (`covers`). Without
-// `-apply` it only says what it would do. Rulesets with no file here (the tag one,
-// "main: no force-push or deletion") are left alone.
+// `-apply` it only says what it would do. A ruleset with no file here is left alone.
 func rulesets(r runner, args []string) error {
 	fs := flag.NewFlagSet("rulesets", flag.ExitOnError)
 	apply := fs.Bool("apply", false, "create or update the rulesets on GitHub (default: only print the plan)")

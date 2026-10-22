@@ -17,7 +17,10 @@ GitHub by name and leaves every other ruleset alone.
   `main`); that costs Scorecard's "up to date before merge". **No bypass actors**: nobody lands red, and `--admin` can't
   skip it. Releases need none either: the pipeline pushes nothing to `main`, and `release.sh` lands its commit through
   `pnpm land -merge` (`docs/guides/releasing.md` § Merging the release back into `main`).
-- Two older ones stay as they are: "main: no force-push or deletion" and "Release tags (v*)".
+- `main-no-force-push.json` ("main: no force-push or deletion"): no bypass, so nobody rewrites or deletes `main`.
+- `release-tags.json` ("Release tags (v*)"): only the repository admin role creates, moves, or deletes a `v*` tag.
+- All four live here so a repo move or a lost setting can be restored with `-apply` (exported from the live rulesets,
+  2026-10-22, where `pnpm land rulesets` reported all four matching).
 - `pnpm land rulesets` compares each file with GitHub's copy and names only the ones that drifted. GitHub answers with
   defaults the files leave out, so a field missing from a file isn't drift.
 
