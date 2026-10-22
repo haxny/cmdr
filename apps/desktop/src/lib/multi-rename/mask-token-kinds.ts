@@ -1,13 +1,15 @@
 /**
  * The placeholder kinds `MaskInput` draws an inline editor for: each kind's grammar (parse and format,
- * pure, in its own module), its editor component, and its words. The counter (`[C…]`) and the ranges
- * (`[N…]` `[E…]` `[P…]` `[G…]`, `[2-5]`); a date kind slots in as one more entry here.
+ * pure, in its own module), its editor component, and its words. The counter (`[C…]`), the ranges
+ * (`[N…]` `[E…]` `[P…]` `[G…]`, `[2-5]`), and the media fields (`[=exif.taken:d]`).
  */
 import type { Component } from 'svelte'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import CounterTokenEditor from './CounterTokenEditor.svelte'
 import RangeTokenEditor from './RangeTokenEditor.svelte'
+import MediaTokenEditor from './MediaTokenEditor.svelte'
 import { counterKind, type Counter } from './counter-token'
+import { mediaKind, type MediaToken } from './media-token'
 import type { MaskTokenGrammar } from './mask-tokens'
 import { rangeKind, type RangeToken } from './range-token'
 
@@ -41,7 +43,14 @@ const rangeTokenKind: MaskTokenKind<RangeToken> = {
   editorLabel: 'multiRename.rangeEditor.title',
 }
 
-export const MASK_TOKEN_KINDS = [counterTokenKind, rangeTokenKind] as const
+const mediaTokenKind: MaskTokenKind<MediaToken> = {
+  ...mediaKind,
+  editor: MediaTokenEditor,
+  markerLabel: 'multiRename.mediaEditor.marker',
+  editorLabel: 'multiRename.mediaEditor.title',
+}
+
+export const MASK_TOKEN_KINDS = [counterTokenKind, rangeTokenKind, mediaTokenKind] as const
 
 /**
  * A kind with its value type let go, for `MaskInput`, which renders whichever kind a token is: TS can't

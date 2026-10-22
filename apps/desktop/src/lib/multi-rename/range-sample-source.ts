@@ -1,10 +1,10 @@
 /**
- * Where the range editor gets its examples: the sheet's state, handed down through Svelte context
- * so `MaskInput` and its token editors stay free of the session. Without one (a field outside the
- * sheet) the editor has no files to show.
+ * Where the range and media editors get their examples: the sheet's state, handed down through
+ * Svelte context so `MaskInput` and its token editors stay free of the session. Without one (a field
+ * outside the sheet) an editor has no files to show.
  */
 import { getContext, setContext } from 'svelte'
-import type { RangeSample } from '#lib/tauri-commands/index.js'
+import type { FieldSamples, RangeSample } from '#lib/tauri-commands/index.js'
 import type { SampleRows } from './multi-rename-state.svelte'
 
 export interface RangeSampleSource {
@@ -12,6 +12,8 @@ export interface RangeSampleSource {
   readonly sampleRows: SampleRows | null
   /** What range `token` (`N2-5`) takes from the files at `rows`, by the engine, or `null` when it can't say. */
   rangeSamples: (token: string, rows: number[]) => Promise<RangeSample[] | null>
+  /** What media `token` (`=exif.taken:d`) gives on the files at `rows`, and how it fares across them all. */
+  fieldSamples: (token: string, rows: number[]) => Promise<FieldSamples | null>
 }
 
 const KEY = Symbol('multi-rename-range-sample-source')

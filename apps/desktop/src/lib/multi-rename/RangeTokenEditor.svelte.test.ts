@@ -44,6 +44,7 @@ function textFor(token: string): string {
 function fakeSource(): RangeSampleSource {
   return {
     sampleRows: { cursor: 0, rows: [0, 1, 2] },
+    fieldSamples: () => Promise.resolve(null),
     rangeSamples: (token) => {
       const taken = TAKEN[token] ?? null
       const samples: RangeSample[] = [

@@ -46,6 +46,7 @@ describe('the range editor open in a mask field a11y', () => {
     document.body.appendChild(root)
     const source = {
       sampleRows: { cursor: 0, rows: [0, 1] },
+      fieldSamples: () => Promise.resolve(null),
       rangeSamples: (token: string) =>
         Promise.resolve([
           { row: 0, text: 'Beach day', taken: token === 'N20' ? null : { first: 0, last: 4 } },

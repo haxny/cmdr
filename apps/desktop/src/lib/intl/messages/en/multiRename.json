@@ -583,6 +583,98 @@
   "@multiRename.mediaPicker.insertedMark": {
     "description": "Screen-reader text after a field's name in the field picker, for a field already put into the name mask while the picker was open (shown as a check mark). Lowercase: read right after the name."
   },
+  "multiRename.mediaEditor.marker": "Edit field",
+  "@multiRename.mediaEditor.marker": {
+    "description": "Accessible name of the small ▾ marker under a photo, video, or music field placeholder (like [=exif.taken:d]) in the Multi-rename name mask: it opens the field's editor."
+  },
+  "multiRename.mediaEditor.title": "Field",
+  "@multiRename.mediaEditor.title": {
+    "description": "Accessible name of the small popup that edits a photo, video, or music field placeholder (like [=exif.taken:d]) in the Multi-rename name mask: its format, and for a date, what to use when a file has none."
+  },
+  "multiRename.mediaEditor.format": "Format",
+  "@multiRename.mediaEditor.format": {
+    "description": "Label of the field editor's text box for a date field's format, written in date letters (like Y-M-D or YMD_hms)."
+  },
+  "multiRename.mediaEditor.dateHint": "Y, M, and D for the date, h, m, and s for the time, with - . _ or spaces between. Empty for the date and time.",
+  "@multiRename.mediaEditor.dateHint": {
+    "description": "Hint under the field editor's date format box. Keep the letters Y, M, D, h, m, s and the characters - . _ as they are: they're the format's syntax."
+  },
+  "multiRename.mediaEditor.presets": "Common formats",
+  "@multiRename.mediaEditor.presets": {
+    "description": "Accessible name of the row of format buttons in a date field's editor (Date and time, Date, Time, Compact)."
+  },
+  "multiRename.mediaEditor.preset.dateTime": "Date and time",
+  "@multiRename.mediaEditor.preset.dateTime": {
+    "description": "A format button in a date field's editor: the whole date and time, like 2026-07-14 09.05.30."
+  },
+  "multiRename.mediaEditor.preset.date": "Date",
+  "@multiRename.mediaEditor.preset.date": {
+    "description": "A format button in a date field's editor: the date alone, like 2026-07-14."
+  },
+  "multiRename.mediaEditor.preset.time": "Time",
+  "@multiRename.mediaEditor.preset.time": {
+    "description": "A format button in a date field's editor: the time alone, like 09.05.30."
+  },
+  "multiRename.mediaEditor.preset.compact": "Compact",
+  "@multiRename.mediaEditor.preset.compact": {
+    "description": "A format button in a date field's editor: the date and time with no separators but one underscore, like 20260714_090530."
+  },
+  "multiRename.mediaEditor.digits": "Digits",
+  "@multiRename.mediaEditor.digits": {
+    "description": "Label of the field editor's box for a number field (like a track number): how many digits, padded with leading zeros."
+  },
+  "multiRename.mediaEditor.digitsHint": "Pads with leading zeros, so 2 gives 03. Empty for the number as it is.",
+  "@multiRename.mediaEditor.digitsHint": {
+    "description": "Hint under the field editor's Digits box for a number field."
+  },
+  "multiRename.mediaEditor.characters": "Characters",
+  "@multiRename.mediaEditor.characters": {
+    "description": "Label of the field editor's box for a text field (like an artist): which characters to take, written as a range like 1-10."
+  },
+  "multiRename.mediaEditor.charactersHint": "Like 1-10 for the first ten, or -3- for the last three. Empty for all of it.",
+  "@multiRename.mediaEditor.charactersHint": {
+    "description": "Hint under the field editor's Characters box for a text field. Keep 1-10 and -3- as they are: they're the range syntax."
+  },
+  "multiRename.mediaEditor.fallback": "When a file has none: use the date it was last changed",
+  "@multiRename.mediaEditor.fallback": {
+    "description": "Checkbox in a date field's editor (like the date a photo was taken): a file without that date gets the date it was last changed instead, so it can still be renamed."
+  },
+  "multiRename.mediaEditor.usesModified": "{count, plural, one {{countText} file uses the date it was last changed} other {{countText} files use the date they were last changed}}",
+  "@multiRename.mediaEditor.usesModified": {
+    "description": "Under the fallback checkbox in a date field's editor, while it's on: how many of the files have no such date and take the date they were last changed instead.",
+    "placeholders": {
+      "count": "how many files, for the plural",
+      "countText": "the same number, formatted"
+    }
+  },
+  "multiRename.mediaEditor.missing": "{count, plural, one {{countText} file has none and keeps its name} other {{countText} files have none and keep their names}}",
+  "@multiRename.mediaEditor.missing": {
+    "description": "In a field's editor: how many of the files lack this field, so they won't be renamed.",
+    "placeholders": {
+      "count": "how many files, for the plural",
+      "countText": "the same number, formatted"
+    }
+  },
+  "multiRename.mediaEditor.stillReading": "{count, plural, one {{countText} file is still being read} other {{countText} files are still being read}}",
+  "@multiRename.mediaEditor.stillReading": {
+    "description": "In a field's editor: how many of the files Cmdr is still reading this information from.",
+    "placeholders": {
+      "count": "how many files, for the plural",
+      "countText": "the same number, formatted"
+    }
+  },
+  "multiRename.mediaEditor.gap.reading": "reading…",
+  "@multiRename.mediaEditor.gap.reading": {
+    "description": "In a field's editor's list of example files: this file is still being read. Lowercase: it stands where the field's value would."
+  },
+  "multiRename.mediaEditor.gap.noValue": "none",
+  "@multiRename.mediaEditor.gap.noValue": {
+    "description": "In a field's editor's list of example files: this file doesn't have the field. Lowercase: it stands where the field's value would."
+  },
+  "multiRename.mediaEditor.gap.unreadable": "can’t read",
+  "@multiRename.mediaEditor.gap.unreadable": {
+    "description": "In a field's editor's list of example files: Cmdr couldn't read this file's tags or photo information. Lowercase: it stands where the field's value would."
+  },
   "multiRename.reason.empty": "The new name is empty.",
   "@multiRename.reason.empty": {
     "description": "Tooltip on the preview's \"not a valid name\" symbol when the masks produce an empty name."
