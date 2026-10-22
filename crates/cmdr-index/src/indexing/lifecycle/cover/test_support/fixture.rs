@@ -89,6 +89,7 @@ impl Fixture {
             flush: FlushOnFinish::default(),
             for_whom,
             work: VolumeWork::linked(caller, &VolumeWork::for_test(&self.volume_id), for_whom.hold_kind()),
+            branches: crate::indexing::watch::branches::live_for(&self.volume_id),
         }
     }
 

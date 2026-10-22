@@ -318,6 +318,8 @@ impl IndexManager {
                 events: Arc::clone(&self.events),
                 freshness: Arc::clone(&self.freshness),
                 work: self.work.child(HoldKind::Phases),
+                // A leaf lock under the registry's, which is what this runs under.
+                branches: crate::indexing::watch::branches::live_for(&self.volume_id),
             },
         })
     }

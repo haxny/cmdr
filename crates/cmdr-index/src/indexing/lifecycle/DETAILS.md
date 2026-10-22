@@ -1056,10 +1056,20 @@ canonical in `../watch/DETAILS.md` § "Watching what a search walked"; what belo
 - **The release is independent of the registry phase**, and the asymmetry with `begin` is deliberate. A walk can only
   START on a `Running` volume (`cover_context_for` hands out a context for no other phase), but it ENDS minutes later,
   possibly inside the `Detached` window `force_scan` / `perform_registry_rescan` publish for the whole of a scan start.
-  So finish reaches the set through `branches::live_for` and only ASKS the manager (when there is one) what to leave
-  behind; routing the release itself through `with_running_manager` left the branch at `walks > 0` for the rest of the
-  session — its events buffered and never promoted, `may_walk` false for that ground, and never absorbed. Anchor:
+  So finish reaches the set directly and only ASKS the manager (when there is one) what to leave behind; routing the
+  release itself through `with_running_manager` left the branch at `walks > 0` for the rest of the session — its events
+  buffered and never promoted, `may_walk` false for that ground, and never absorbed. Anchor:
   `cover::cold_drive_tests::branches::a_walk_that_finishes_while_the_manager_is_detached_still_releases_its_branch`.
+- **A walk and a phase machine finish into the set their INSTANCE had**, ❌ never one looked up by volume id when they
+  end. `CoverContext::branches` and `MachineContext::branches` are taken off the running instance with the writer. A
+  stop cancels both without joining them, so their tail (a walk's release, a completion's collapse) can land after the
+  volume restarted, when `branches::live_for` names the NEW instance's set, or mints the one the teardown just forgot. A
+  drive renamed while its first index finished then came back with its OLD mount point as a branch, and on Linux,
+  inotify refused that watch and the whole watcher with it (#695). A set that isn't current any more
+  (`branches::is_current`) takes the tail harmlessly and writes nothing down. Within one instance the captured set IS
+  the volume's, so the `Detached` window above is unaffected. Anchor:
+  `cover::cold_drive_tests::moves::a_first_index_finishing_after_a_rename_leaves_no_branch_at_the_old_mount_point`,
+  which waits on `phases::exits` for both machines to end.
 - **`ensure_branch_watch` starts the watcher** for a volume that has none — the `WriterOnly` shape, the only one with
   coverage and no watcher. A scanned volume declines it (`branch_watched` says which of the two is up), and `start_scan`
   retires the branch set outright, so a volume is branch-watched or whole-watched and never both.

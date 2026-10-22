@@ -212,6 +212,11 @@ thread holding the registry lock. The window that opens is one the branch is bei
 until the walk ends either way. ❌ Don't unify these by watching the volume root on Linux: it spends the machine's watch
 budget on ground we don't answer for, and fails outright on a big tree.
 
+A branch inotify refuses (a path that's gone) is skipped with a warning, and `start_branches` fails only when it watched
+nothing at all. It used to fail on the first refusal, so one stale branch left every live one unwatched: a drive renamed
+while its first index finished came back with its old mount point in the set, and nothing at the new one was delivered
+again (#695; the stale branch itself is fixed in `../lifecycle/DETAILS.md`).
+
 ## Data flow (live + replay)
 
 ```

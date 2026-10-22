@@ -745,6 +745,7 @@ fn a_listing_of_ground_a_walk_is_covering_writes_nothing() {
             flush: crate::indexing::lifecycle::cover::FlushOnFinish::default(),
             for_whom: crate::indexing::lifecycle::cover::WalkFor::TheIndex,
             work: VolumeWork::for_test(crate::ROOT_VOLUME_ID),
+            branches: crate::indexing::watch::branches::live_for(crate::ROOT_VOLUME_ID),
         },
         vec![fs_root.path().join("claimed").to_string_lossy().into_owned()],
         crate::indexing::read::coverage::CoverageDimension::Listing,

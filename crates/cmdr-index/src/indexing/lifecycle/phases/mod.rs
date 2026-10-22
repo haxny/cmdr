@@ -64,6 +64,7 @@ use crate::indexing::lifecycle::{cover, master};
 use crate::indexing::read::coverage::{CoverageDimension, coverage_for_scope};
 use crate::indexing::scanner::ScanProgress;
 use crate::indexing::store::IndexStore;
+use crate::indexing::watch::branches::BranchWatch;
 use crate::indexing::writer::{AggSource, IndexWriter};
 
 mod completion;
@@ -258,6 +259,11 @@ pub(crate) struct MachineContext {
     /// with everything else under it, and a share of its hold that rides the driver
     /// thread: the drive stays held until the machine's last read returns.
     pub work: VolumeWork,
+    /// The branch set of the instance this machine covers. Its completion collapses
+    /// THIS set, ❌ never one looked up by volume id: a stop cancels the machine
+    /// without joining it, so the collapse can land after the volume restarted
+    /// (#695, `branches::is_current`).
+    pub branches: Arc<BranchWatch>,
 }
 
 /// Start covering a volume, and hand back what the manager holds on to.
@@ -296,6 +302,7 @@ pub(crate) fn start(context: MachineContext) -> PhaseHandle {
         writer: context.writer,
         events: context.events,
         freshness: context.freshness,
+        branches: context.branches,
     };
 
     // Where the user is looking RIGHT NOW, before the first phase reads anything.
@@ -384,6 +391,8 @@ struct Machine {
     writer: IndexWriter,
     events: Arc<dyn EventSink>,
     freshness: Arc<std::sync::Mutex<Option<Freshness>>>,
+    /// See [`MachineContext::branches`].
+    branches: Arc<BranchWatch>,
 }
 
 impl Machine {

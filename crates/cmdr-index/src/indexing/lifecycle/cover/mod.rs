@@ -27,7 +27,7 @@ use crate::indexing::metadata::MetadataSnapshot;
 use crate::indexing::read::coverage::CoverageDimension;
 use crate::indexing::scanner::{CoveredEntry, WalkHeartbeat};
 use crate::indexing::volume::IndexVolumeKind;
-use crate::indexing::watch::branches;
+use crate::indexing::watch::branches::{self, BranchWatch};
 use crate::indexing::writer::IndexWriter;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
@@ -223,6 +223,11 @@ pub(crate) struct CoverContext {
     /// ⚠️ A yield cancels it, which is why it's the walk's alone: handing ground over
     /// must stop this walk and nothing above it.
     pub work: VolumeWork,
+    /// The branch set of the instance this walk runs for, taken with the writer.
+    /// The walk releases its ground into THIS set, ❌ never one looked up by volume
+    /// id when it ends: a stop doesn't join a walk, and by then the id can name a
+    /// restarted instance (#695, `branches::is_current`).
+    pub branches: Arc<BranchWatch>,
 }
 
 /// Who waits for the writer once a walk ends.
@@ -353,7 +358,7 @@ pub(crate) fn start(context: CoverContext, frontier: Vec<String>, dimension: Cov
             let outcome = walk_frontier(&context, claim.mine(), &sender, &walk_cancel, &walk_heartbeat);
             #[cfg(test)]
             finish_gate::arrive(&context.volume_id);
-            release_ground(&context.volume_id, claim);
+            release_ground(&context.volume_id, &context.branches, claim);
             outcome
         })
         .unwrap_or_else(|e| {
@@ -389,8 +394,8 @@ pub(crate) fn start(context: CoverContext, frontier: Vec<String>, dimension: Cov
 /// the claim is a lock-level primitive that tests take and release freely, and a
 /// scan spawning out of a destructor is a side effect nobody reading `Claim` would
 /// expect.
-fn release_ground(volume_id: &str, claim: Claim) {
-    finish_branch_coverage(volume_id, claim.mine());
+fn release_ground(volume_id: &str, branches: &Arc<BranchWatch>, claim: Claim) {
+    finish_branch_coverage(volume_id, branches, claim.mine());
     drop(claim);
     super::rescan_request::run_if_owed(volume_id);
 }

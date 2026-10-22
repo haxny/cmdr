@@ -130,7 +130,7 @@ fn a_walk_that_finishes_while_the_manager_is_detached_still_releases_its_branch(
     let _ = WatchScope::Branches(Arc::clone(&watch)).admit(held);
 
     crate::indexing::lifecycle::state::while_detached_for_test(drive.volume_id, || {
-        finish_branch_coverage(drive.volume_id, &branch);
+        finish_branch_coverage(drive.volume_id, &watch, &branch);
     });
 
     assert!(

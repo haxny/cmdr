@@ -321,8 +321,24 @@ impl DriveWatcher {
             .map_err(|e| WatcherError::StreamCreate(format!("inotify: {e}")))?;
         let watcher = Arc::new(std::sync::Mutex::new(watcher));
 
+        // One branch that's gone (a drive renamed under its index) costs that branch,
+        // ❌ never the others: failing the whole start left every live branch
+        // unwatched for the session (#695). Nothing watched at all is still an error.
+        let mut watched = 0;
+        let mut first_refusal = None;
         for root in roots {
-            watch_one(&watcher, root)?;
+            match watch_one(&watcher, root) {
+                Ok(()) => watched += 1,
+                Err(e) => {
+                    log::warn!("Watcher: skipping a branch inotify refused: {e}");
+                    first_refusal.get_or_insert(e);
+                }
+            }
+        }
+        if watched == 0
+            && let Some(e) = first_refusal
+        {
+            return Err(e);
         }
         // Name the roots, ❌ never just count them. A branch watch covering
         // ground the user isn't working in reads identically to one covering the

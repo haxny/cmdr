@@ -38,7 +38,11 @@ fn a_rescan_refused_under_a_walk_runs_when_the_walk_ends() {
     assert_eq!(drive.scans_started(), 0, "so nothing truncates while the walk writes");
 
     // The walk ends, through the one path `cover::start`'s thread ends one with.
-    release_ground(drive.volume_id, claim);
+    release_ground(
+        drive.volume_id,
+        &crate::indexing::watch::branches::live_for(drive.volume_id),
+        claim,
+    );
 
     cmdr_fs::testing::wait_until(
         std::time::Duration::from_secs(10),
@@ -77,7 +81,11 @@ fn a_remembered_rescan_waits_for_the_last_walk_out() {
 
     // The first walk ends. Run the fire on this thread rather than through the
     // spawn, so the assertion below is about the decision and not about timing.
-    finish_branch_coverage(drive.volume_id, first.mine());
+    finish_branch_coverage(
+        drive.volume_id,
+        &crate::indexing::watch::branches::live_for(drive.volume_id),
+        first.mine(),
+    );
     drop(first);
     crate::indexing::lifecycle::rescan_request::run_owed_now(drive.volume_id);
     assert_eq!(

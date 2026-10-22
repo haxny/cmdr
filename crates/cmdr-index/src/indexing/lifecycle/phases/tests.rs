@@ -125,6 +125,7 @@ impl Tree {
                 &VolumeWork::for_test(&self.volume_id),
                 cover::WalkFor::TheIndex.hold_kind(),
             ),
+            branches: crate::indexing::watch::branches::live_for(&self.volume_id),
         }
     }
 

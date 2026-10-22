@@ -96,6 +96,21 @@ pub(crate) fn live_for(volume_id: &str) -> Arc<BranchWatch> {
     Arc::clone(all.entry(volume_id.to_string()).or_default())
 }
 
+/// Whether `watch` is still the set this volume's live loop reads.
+///
+/// A walk or a phase machine takes its instance's set when it starts and finishes
+/// into THAT one, because a stop cancels them without joining them: their tail can
+/// land after the volume restarted, when [`live_for`] would name the NEW
+/// instance's set, or mint one the teardown just forgot. A set that isn't current
+/// any more has nobody reading it, so a tail writes into it harmlessly and writes
+/// nothing down (#695).
+pub(crate) fn is_current(volume_id: &str, watch: &Arc<BranchWatch>) -> bool {
+    watches()
+        .lock_ignore_poison()
+        .get(volume_id)
+        .is_some_and(|current| Arc::ptr_eq(current, watch))
+}
+
 /// This volume's set, restored from its own database.
 ///
 /// Called once, when a volume whose index a search built comes back up — the

@@ -237,11 +237,16 @@ fn run_the_completion_sequence(machine: &Machine) {
     //    volume root stops being "branch-confined", which is safe at exactly this
     //    moment and no earlier, because the stamp above is what makes a shallow
     //    anchor reconcile in place instead of truncating.
-    branches::live_for(&machine.volume_id).collapse_to(
-        &machine.space.volume_root_string(),
-        &machine.space,
-        &machine.writer,
-    );
+    //
+    //    ⚠️ Into the set this machine's instance had, and only while it's still the
+    //    volume's. A stop cancels the machine without joining it, so this can run
+    //    after the drive was renamed and restarted, and the old mount point as a
+    //    branch in the NEW instance's set is a watch on a path that's gone (#695).
+    if branches::is_current(&machine.volume_id, &machine.branches) {
+        machine
+            .branches
+            .collapse_to(&machine.space.volume_root_string(), &machine.space, &machine.writer);
+    }
 }
 
 /// The totals a later run calibrates its ETA against.

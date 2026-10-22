@@ -20,9 +20,8 @@ every holder arbitrates through. The registry and phase machine are `../CLAUDE.m
 - **A typed disconnect ends the WHOLE frontier, not one root** (`RootOutcome::VolumeGone`): the roots behind it share
   one session, so re-asking buys a dead round trip each. ⚠️ Skipped is not condemned — nothing walks them, so nothing
   marks them and they stay frontier. ❌ Never widen the trigger past `is_terminal_disconnect`.
-- **A walk RELEASES its branch whatever the registry phase** (`finish_branch_coverage` reaches the set directly), ❌
-  never behind `with_running_manager`: a walk ending in a `Detached`/`ShuttingDown` window would hold that ground
-  forever.
+- **A walk RELEASES its branch whatever the registry phase**, into its context's set (#695), ❌ never behind
+  `with_running_manager`: a walk ending in a `Detached`/`ShuttingDown` window would hold that ground forever.
 - **Bootstrap creates the rows a walk needs to START, each at `listed_epoch = 0`; ❌ nothing here claims coverage** —
   the walk earns it, or an ancestor marks a whole tree covered off one walked folder.
 - **A missing `entries` row is NOT only a cold-drive case**: a folder newer than its parent's listing has none. ❌ Don't

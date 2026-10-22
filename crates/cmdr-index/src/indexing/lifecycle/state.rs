@@ -36,15 +36,15 @@
 use cmdr_fs::ignore_poison::IgnorePoison;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::LazyLock;
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, LazyLock};
 
 use super::manager::{BranchWatchStart, IndexManager};
 use super::signals::VolumeSignals;
 use crate::indexing::hold::VolumeWork;
 use crate::indexing::store::{IndexFailure, IndexStore};
 use crate::indexing::volume::{IndexVolumeKind, VolumeId};
-use crate::indexing::watch::branches::{self, AfterWalk};
+use crate::indexing::watch::branches::{self, AfterWalk, BranchWatch};
 
 mod auto_start;
 mod freshness_bridge;
@@ -463,6 +463,9 @@ pub(crate) fn cover_context_for(
                 flush: crate::indexing::lifecycle::cover::FlushOnFinish::default(),
                 for_whom,
                 work: VolumeWork::linked(caller, &instance.work, for_whom.hold_kind()),
+                // This instance's set, so the walk's release lands here even if it
+                // outlives the instance (`branches::is_current`).
+                branches: branches::live_for(volume_id),
             })
         }
         _ => None,
@@ -550,15 +553,24 @@ fn start_the_branch_watch(volume_id: &str, planned: Option<BranchWatchStart>) {
 /// `may_walk` false for that ground permanently, every event for it buffered and
 /// never promoted, and the branch never absorbed. The set lives outside the
 /// registry (`branches::live_for`) precisely so this can't depend on a phase.
-pub(crate) fn finish_branch_coverage(volume_id: &str, paths: &[String]) {
-    let branches = branches::live_for(volume_id);
+///
+/// ⚠️ `branches` is the set the walk BEGAN in, ❌ never one looked up by volume id
+/// here. A stop doesn't join a walk, so one can end after the volume restarted, and
+/// a lookup would then hand it the new instance's set (or mint the one the teardown
+/// just forgot) to release its old-mount-point ground into (#695). A set that isn't
+/// current any more takes the release and asks nobody what to write down.
+pub(crate) fn finish_branch_coverage(volume_id: &str, branches: &Arc<BranchWatch>, paths: &[String]) {
     // What the volume wants remembered is still the manager's answer, when it has
     // one. A volume whose manager is momentarily out of the registry writes nothing
     // more down: `begin_branch_coverage` already recorded this ground, and the
     // rescan that took it out retires the branch set anyway.
     let mut after = AfterWalk::Forget;
     let mut record = None;
-    with_running_manager(volume_id, |mgr| (after, record) = mgr.after_walk());
+    with_running_manager(volume_id, |mgr| {
+        if branches::is_current(volume_id, branches) {
+            (after, record) = mgr.after_walk();
+        }
+    });
     branches.finish_covering(paths, after);
     // Off the registry lock: `persist` hands a meta row to the writer thread, and
     // nothing under this lock may block.
