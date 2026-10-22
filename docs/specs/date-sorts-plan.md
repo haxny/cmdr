@@ -10,13 +10,6 @@ is faster AND brings the added date for free. Tracking issue: [#691](https://git
 source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
 [#694](https://github.com/vdavid/cmdr/issues/694).
 
-## Open questions for David
-
-1. **Sandbox-protected entries change shape.** An entry whose `lstat` gets `EPERM` (`/private/var/db/...`, SIP and
-   sandbox paths) lists today as a dateless "file" row; `getattrlistbulk` returns its real attributes, so it lists as
-   the folder it is. The plan takes bulk's answer (more honest, and opening it still says "no permission"). Say if you'd
-   rather keep today's row.
-
 ## Loud rules (every executor)
 
 - ❗ **The date the UI shows comes from ONE pure function**, `displayedDateColumn(effectiveSortBy)`. ❌ No second
@@ -31,7 +24,10 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
 - ❗ **The local lister never drops, invents, or reshapes an entry.** Every `FileEntry` field but `added_at` stays
   byte-identical to today's (M1's cells), and `is_symlink` above all: delete trusts a local listing's link bit to stop
   descending (`EntryKind::of`, `cmdr-fs/src/volume/entry_kind.rs:26`; `listings_mark_links`), so a link reported as a
-  plain folder deletes its TARGET's children.
+  plain folder deletes its TARGET's children. The only sanctioned differences are the two M2b decides: a name that
+  vanishes mid-enumeration, and sandbox `EPERM` entries (§ Decisions).
+- ❗ **One `getattrlistbulk` record decoder** (`cmdr_fs::attr_buf`, M2a) serves the lister, `get_single_entry`'s added
+  time, and (M10) the index. ❌ No second hand-rolled offset table anywhere.
 - ❗ **The renderer and the measurer stay one contract** (`views/CLAUDE.md`): the Full date column's header label,
   chevron, fallback glyph, and cell text are measured from the same helpers they render from.
 - ❌ Never translate a string you add: English plus a good `@key` description. Native menu strings need
@@ -150,11 +146,14 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   directory on another filesystem; backends other than local ignore it. Async because the local probe is a syscall on
   the listed directory and a smbfs mount can stall it: it runs in `spawn_blocking` beside the listing, the way the
   sidecar probe does (`local_posix/scan.rs:164-178`), ❌ never on an async worker or under the cache lock.
-- **Local volumes ask the filesystem**: `getattrlist(ATTR_VOL_ATTRIBUTES)` on the listed directory, checking
-  `validattr.commonattr` for `ATTR_CMN_CRTIME` and `ATTR_CMN_ADDEDTIME`, cached per `fsid` (measured: APFS and HFS+
-  claim Added; smbfs, exFAT, and FAT32 don't; benchmark note § "Volume support"). Linux: Created when `statx` returns a
-  birth time for the listed directory, never Added. Precedent for a per-device probe:
-  `cmdr_fs::apple_double::volume_keeps_sidecars`. `FilesystemKind` is the test oracle, ❌ not the decider.
+- **Local volumes claim exactly what their lister fills, by construction**: Added iff `bulk_eligible` (one `statfs` of
+  the listed directory, the predicate that picks the lister), Created iff the platform's `lstat` carries a birth time
+  (macOS: always, `st_birthtime`, which is what `process_dir_entry` reads today, `reading.rs:369-373`; Linux: `statx`
+  returned `STATX_BTIME` for the listed directory). Why not ask `getattrlist(ATTR_VOL_ATTRIBUTES)`: a claim that
+  disagrees with the filler either strips a Created date the lister shows today (smbfs, exFAT) or claims an Added it
+  never fills (an unknown filesystem that validates `ADDEDTIME` stays on `read_dir`). The benchmark's `volcaps` agrees
+  on every filesystem measured (APFS and HFS+ validate Added; smbfs, exFAT, and FAT32 don't; note § "Volume support").
+  No `fsid` cache, for the lister's reasons below. `FilesystemKind` is the test oracle, ❌ not the decider.
 - **The local lister picks bulk or `read_dir` per listing, from one `fstatfs` on the directory fd it already opened**:
   bulk when `f_fstypename` is `apfs` or `hfs`, `read_dir` for everything else. Why each alternative loses:
   - A capability probe (`VOL_CAP_INT_ATTRLIST`) says yes for smbfs, where bulk is 2.2× SLOWER (smbfs answers `lstat`
@@ -163,8 +162,26 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - `MNT_LOCAL` alone admits exFAT, FAT, NTFS, and FUSE.
   - A per-`fsid` cache is unnecessary: `fstatfs` on the open fd costs about a microsecond against 150 ms per 100k, it
     answers the root volume listing a directory on another filesystem by construction, and it can't go stale on a
-    remount that reuses an `fsid`. (`supported_dates` keeps its `fsid` cache: its probe is a bigger `getattrlist`.)
+    remount that reuses an `fsid`.
   - Allowlist, not denylist: an unknown filesystem gets today's proven path.
+- **Sandbox-protected entries list as what they are** (David, 2026-10-22). An entry whose `lstat` gets `EPERM`
+  (`/private/var/db/...`, SIP and sandbox paths) lists today as a dateless "file" minimal row; bulk returns its real
+  attributes, so it lists as the folder it is. Why: more complete and more honest, and opening it still says "no
+  permission". An intended difference from today, ❌ not a parity failure.
+- **One record decoder, in `cmdr-fs`, and the index migrates to it in this effort (M10).** The index already has a
+  `getattrlistbulk` parser (`cmdr-index/src/indexing/scanner/walker/bulk_read.rs:210-322`) with a hard-coded offset
+  table for its fixed attribute set (`:215-227`); M2b needs a wider set. Two hand-rolled tables of one packed ABI is how
+  the prototype shipped the returned-vs-requested offset bug, and the index's table is one widened attribute away from
+  it. Both crates already depend on `cmdr-fs`, whose surface is deliberately uncapped as shared vocabulary
+  (`index-crate-isolation-ceilings.go:26-28`), and it has `libc`. So:
+  - `cmdr_fs::attr_buf` (macOS) owns the ABI: a typed request set, offsets derived from the REQUESTED set, validity from
+    the returned set, bounds-checked reads, and a pure `decode_record(&[u8], &Request) -> Result<Record, Bad>` with an
+    `Option` per attribute. Nothing else: no syscall loop, no `FileEntry`, no fallback policy.
+  - Each caller keeps its own loop and policy: the lister's restart-through-`read_dir`, the index's `ReadProgress`
+    publishing and `unusable` count. Those differ for real reasons; the byte layout doesn't.
+  - Index risk, weighed: its reconcile DELETES rows a listing lacks, so a decode regression there loses index rows (a
+    rescan heals it; nothing on disk is touched). That's why it's its own last milestone, characterize-then-convert,
+    landable alone and revertible alone, and the date sorts never wait on it.
 - **Search results support Modified only.** `SearchSortRow` comes from the index, which stores no creation or added
   time. A search pane asked for Added falls back like any volume, with the same hint. Extending the index is out of
   scope.
@@ -216,7 +233,7 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - `commands.sortByAdded.label` ("Sort by date added"), plus `command-registry.parity.test.ts:97`'s English table.
   - Copy rules: sentence case, no "error"/"failed", no em dashes, curly apostrophes as the catalog uses.
 - **Watcher and refresh**: added time changes only when an item lands in a folder, which the watcher already sees as a
-  new entry, so a re-stat carries it: `get_single_entry` fills `added_at` exactly as the listing does (M2). ❌ No
+  new entry, so a re-stat carries it: `get_single_entry` fills `added_at` exactly as the listing does (M2b). ❌ No
   polling.
 - **`..` shows no date**, as today (`createParentEntry` carries none). The dead `currentDirModifiedAt` prop goes.
 
@@ -235,14 +252,17 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   field, so a new field joins automatically: compare serialized JSON), with ONE named exception: `/.hidden` names at a
   volume root, where `get_single_entry` says not hidden (§ "The code today").
   - The minimal row: a `0444` directory (readable, not searchable) lists every name as today's minimal row and
-    `get_single_entry` on a child errors. This is the case `getattrlistbulk` fails whole with `EACCES` (M2's runtime
+    `get_single_entry` on a child errors. This is the case `getattrlistbulk` fails whole with `EACCES` (M2b's runtime
     fallback), and it runs as a normal user on Linux CI too.
   - macOS only: listing `/` (firmlinks: `Users`, `Applications`, `Library`, …) and the parent of a
     `testing::disk_images` mount point both equal `get_single_entry` per entry. Bulk reports what these COVER; the cells
     catch a missed re-stat.
-  - Write the helper so M2 can run every cell against both listers (a lister parameter, defaulting to today's).
+  - Write the helper so M2b can run every cell against both listers (a lister parameter, defaulting to today's).
+  - A sandbox `EPERM` entry is an intended difference (§ Decisions): if a cell lists one (any listing under
+    `/private/var/db`), it expects today's minimal row from `read_dir` and the real entry from bulk, per lister. ❌ No
+    cell treats that difference as a parity failure.
   - Plus a cell in `crates/cmdr-listing/src/sorting_test.rs` pinning Created's `None` arms, and one pinning that
-    `update_entry_sorted` (`mutate.rs:186`) re-places a row only on size, mtime, or kind today (it changes in M4; mark
+    `update_entry_sorted` (`mutate.rs:177`) re-places a row only on size, mtime, or kind today (it changes in M4; mark
     it as the regression anchor M4 flips).
 - **Intentions**: make the `getattrlistbulk` swap provable. Pin reality, not the plan. Every assertion must fail when
   its field is perturbed (try one by hand per category: red first).
@@ -253,49 +273,81 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - The fields write paths act on are `is_symlink`, `is_directory`, `inode`, `size`, and `name` (§ "The code today",
     "Who reads a local listing's fields"): every one needs a cell that goes red when perturbed, not only a JSON diff.
   - A test needing FAT or exFAT uses `testing::disk_images` (macOS), ❌ never its own `hdiutil` (`cmdr-fs/CLAUDE.md`).
-    Add one FAT32 or exFAT image cell: it's the fallback path M2 must keep.
+    Add one FAT32 or exFAT image cell: it's the fallback path M2b must keep.
   - Gate macOS-only cells with `#[cfg(target_os = "macos")]`; the suite runs on Linux CI too.
 - **Test plan**: these ARE the tests. All green on today's code; each verified red against a perturbed field.
 - **DONE**: suites green, `pnpm check --fast`, `pnpm check clippy`. Committed alone.
 
-### M2: the bulk lister on APFS and HFS+
+### M2a: one attribute-buffer decoder in `cmdr-fs`
 
-- **Why it's a go**: measured in `docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md` with the prototype in
-  `crates/cmdr-local/examples/listing_bench/`: at 100k on APFS, 1.4–1.6× faster warm (241 → 156 ms) and 2.5–2.7×
-  cold-ish (750–893 → 274–362 ms), `added_at` included at no marginal cost, zero field differences across 100k fixtures,
-  `/usr/bin`, `/Applications`, `/System/Library/Frameworks`, `~/Library`, HFS+, exFAT, and smbfs once the guards below
-  were in. (The alternative, `read_dir` + one `getattrlist` per entry, costs 2.5× today's listing.)
-- **Scope**: a new private `crates/cmdr-local/src/reading/bulk.rs` (`#[cfg(target_os = "macos")]`), promoted from the
-  prototype's `bulk.rs:135-340` (`list_fd`, `parse_entry`, `to_file_entry`, `type_bits`, the readers) with the fixes
-  below. Linux keeps `read_dir` unchanged.
-  - **Dispatch** in `list_directory_core_impl`: open the directory as an `OwnedFd`
-    (`O_RDONLY | O_DIRECTORY | O_CLOEXEC`), `fstatfs` it, bulk when `f_fstypename` is `apfs` or `hfs`, else today's
-    `read_dir` (§ Decisions). One `bulk_eligible(&statfs)` predicate serves the lister and `get_single_entry`.
-  - **Entry building is shared, not copied**: lift `process_dir_entry`'s body into one
-    `entry_from_lstat(path, name, &dot_hidden)` that also owns the minimal-row rule (`reading.rs:198-210`). The
-    `read_dir` loop, bulk's per-entry fallback, and nothing else call it.
-  - **`get_single_entry`** keeps its `lstat` path and, when `statfs` of the PARENT is bulk-eligible (`statfs` on the
-    path itself follows a final symlink), adds one
-    `getattrlist(ATTR_CMN_RETURNED_ATTRS | ATTR_CMN_ADDEDTIME, FSOPT_NOFOLLOW | FSOPT_PACK_INVAL_ATTRS)` (prototype
-    `added_time_by_path`, `bulk.rs:366-401`; +3.5 µs). The watcher's re-stat then carries the same `added_at` a listing
-    does (invariant 6).
-  - `list_directory_core_with_tally` keeps feeding the tally per entry, from both paths.
-  - **The harness stays, pointed at production**: a `testing`-gated reach item
-    (`reading::list_directory_with(path, listings, Lister::Bulk | Lister::ReadDir)`; testing items don't count against
-    the cap, `cmdr-local/DETAILS.md` § "The public surface is capped") replaces the prototype parser in the example.
-    `listing_bench` keeps `gen`, `parity` (now production bulk vs production `read_dir`), `bench`, `volcaps`, and the
-    per-path probes it prices (`added_time_by_path`, `read_last_used` for #694), so the note's numbers stay re-runnable
-    against shipped code. The example's dev build already has `testing` on (`Cargo.toml:54-56`). Update the note's
-    "Reproducing" and its first paragraph (it calls the code benchmark-only).
-- **Intentions**: Added for every APFS/HFS+ entry at negative cost; everything else byte-identical (M1 green on both
-  listers without edits, apart from `added_at`).
+- **Scope**: new `crates/cmdr-fs/src/attr_buf.rs` (`#[cfg(target_os = "macos")] pub mod attr_buf`), pure, no syscalls
+  beyond what a caller hands it (§ Decisions, "One record decoder"). Promote the decode half of the prototype
+  (`examples/listing_bench/bulk.rs:178-269`: `Raw`, `parse_entry`, the `take_*` readers) into:
+  - `Request`: a typed set of the attributes either caller asks for (`NAME`, `ERROR`, `OBJTYPE`, `CRTIME`, `MODTIME`,
+    `OWNERID`, `GRPID`, `ACCESSMASK`, `FLAGS`, `FILEID`, `ADDEDTIME`, `DIR_MOUNTSTATUS`, `FILE_LINKCOUNT`,
+    `FILE_ALLOCSIZE`, `FILE_DATALENGTH`), building the `libc::attrlist` itself so request and decode can't disagree.
+  - `decode_record(record: &[u8], req: &Request) -> Result<Record<'_>, BadRecord>`: an `Option` per requested attribute
+    (validity from the returned set), the name as raw bytes, `error: u32`. `BadRecord` = the record itself is
+    implausible (length, name out of bounds). `records(buf, n, req)` walks `n` records and stops at the first bad one.
+  - `type_bits(objtype)` and the `VREG`/`VDIR`/`VLNK` constants, so no caller re-declares them.
 - **Landmines** (each bit the prototype; `file:line` is the prototype's fix):
   - **Offsets come from the REQUESTED attribute list, never the returned one** (`bulk.rs:236-256`).
     `FSOPT_PACK_INVAL_ATTRS` packs every requested attribute, an unsupported one as zeros with its returned bit clear;
     walking the returned set shifted later fields by 16 bytes. The returned set decides validity only.
   - `ATTR_CMN_ERROR` packs right after the returned set, before the name (`:217-219`); otherwise bitmap order, so
     `ATTR_FILE_ALLOCSIZE` precedes `ATTR_FILE_DATALENGTH` (`:264-266`). The dir group packs for `VDIR` only, the file
-    group for everything else, symlinks included (`:257-267`).
+    group for everything else, symlinks included (`:257-267`). An errored record's other slots are unspecified: decode
+    the name and `error` only.
+  - Every read is a bounds-checked `get(..)` + `from_ne_bytes` (the kernel packs to 4 bytes, so ❌ no aligned casts, no
+    transmute, no panicking slice index; the index's `read_u32` panics on a short slice, `bulk_read.rs:326-337`). Each
+    record `len >= 24` and inside the buffer.
+  - `#![deny(missing_docs)]` in `cmdr-fs`; module-map line in `cmdr-fs/CLAUDE.md`, the layout rules in its `DETAILS.md`.
+- **Test plan** (red first, over hand-built buffers; port the index's `build_record` helper, `bulk_read.rs:445-468`): an
+  invalid attribute in the MIDDLE of the request (the smbfs and exFAT shape that broke the prototype), a dir record with
+  no file group, a symlink record with one, an `ATTR_CMN_ERROR` record, a missing optional bit (`None`, ❌ never 0), a
+  truncated record and a name past its record (`BadRecord`), the index's exact request decoding to the values its own
+  parser reads today (so M10 starts from proven ground).
+- **DONE**: gates incl. clippy. Nothing calls it yet but tests; that's fine for a `pub` item in `cmdr-fs`.
+
+### M2b: the bulk lister on APFS and HFS+
+
+- **Why it's a go**: measured in `docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md` with the prototype in
+  `crates/cmdr-local/examples/listing_bench/`: at 100k on APFS, 1.4–1.6× faster warm (241 → 156 ms) and 2.5–2.7×
+  cold-ish (750–893 → 274–362 ms), `added_at` included at no marginal cost, zero field differences across 100k fixtures,
+  `/usr/bin`, `/Applications`, `/System/Library/Frameworks`, `~/Library`, HFS+, exFAT, and smbfs once the guards below
+  were in. (The alternative, `read_dir` + one `getattrlist` per entry, costs 2.5× today's listing.)
+- **Scope**: a new private `crates/cmdr-local/src/reading/bulk.rs` (`#[cfg(target_os = "macos")]`): the syscall loop and
+  `Record` → `FileEntry`, promoted from the prototype's `list_fd` and `to_file_entry` (`bulk.rs:135-176,271-325`) over
+  M2a's decoder, with the fixes below. Linux keeps `read_dir` unchanged.
+  - **Dispatch** in `list_directory_core_impl`: open the directory as an `OwnedFd`
+    (`O_RDONLY | O_DIRECTORY | O_CLOEXEC`), `fstatfs` it, bulk when `f_fstypename` is `apfs` or `hfs`, else today's
+    `read_dir` (§ Decisions). One `bulk_eligible(&statfs)` predicate serves the lister and `get_single_entry`.
+  - **Entry building is shared, not copied**: lift `process_dir_entry`'s body (`reading.rs:345-408`) into one
+    `entry_from_metadata(path, name, &lstat_meta, &dot_hidden)`, and put
+    `entry_from_lstat(path, name, symlink_hint: Option<bool>, &dot_hidden)` over it, owning the minimal-row rule
+    (`reading.rs:198-210`, whose icon needs the type `lstat` couldn't give: `read_dir` passes `d_type`, bulk passes
+    `OBJTYPE == VLNK` when valid and unerrored, else `None`). It answers `Err(NeedsRestart)` when `lstat` fails with no
+    hint, and the bulk path then re-lists through `read_dir`, so today's minimal row is never guessed.
+    `get_single_entry` (`reading.rs:273`, today a near-copy of `process_dir_entry`) becomes its own `lstat` +
+    `entry_from_metadata` with an empty `/.hidden` set, so invariant 6 holds by construction, not by parallel
+    maintenance.
+  - **`get_single_entry`**, when `statfs` of the PARENT is bulk-eligible (`statfs` on the path itself follows a final
+    symlink), adds one
+    `getattrlist(ATTR_CMN_RETURNED_ATTRS | ATTR_CMN_ADDEDTIME, FSOPT_NOFOLLOW | FSOPT_PACK_INVAL_ATTRS)` decoded through
+    `attr_buf` (prototype `added_time_by_path`, `bulk.rs:366-401`; +3.5 µs). The watcher's re-stat then carries the same
+    `added_at` a listing does (invariant 6).
+  - **`LocalPosixVolume::supported_dates`** is NOT here; M3 adds it from `bulk_eligible` (§ Decisions).
+  - `list_directory_core_with_tally` keeps feeding the tally per entry, from both paths.
+  - **The harness stays, pointed at production**: a `testing`-gated reach item
+    (`reading::list_directory_with(path, listings, Lister::Bulk | Lister::ReadDir)`; testing items don't count against
+    the cap, `cmdr-local/DETAILS.md` § "The public surface is capped") replaces the prototype parser in the example.
+    `listing_bench` keeps `gen`, `parity` (now production bulk vs production `read_dir`), `bench`, `volcaps`, and the
+    per-path probes it prices (`added_time_by_path`, now production's `attr_buf` call, and `read_last_used` for #694),
+    so the note's numbers stay re-runnable against shipped code. The example's dev build already has `testing` on
+    (`Cargo.toml:54-56`). Update the note's "Reproducing" and its first paragraph (it calls the code benchmark-only).
+- **Intentions**: Added for every APFS/HFS+ entry at negative cost; everything else byte-identical (M1 green on both
+  listers without edits, apart from `added_at`).
+- **Landmines** (each bit the prototype; `file:line` is the prototype's fix; the decode ones are M2a's):
   - **Mount points and firmlinks report the directory they cover** (stub owner, mode, and times). Detect with
     `ATTR_DIR_MOUNTSTATUS & DIR_MNTSTATUS_MNTPOINT` or `ATTR_CMN_FLAGS & SF_FIRMLINK` (`:289-299`) and build those
     entries WHOLLY from `get_single_entry`, `added_at` included (the prototype kept the stub's, which breaks invariant
@@ -311,14 +363,12 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     because `/` has no `/.hidden`.
   - `getattrlistbulk` never follows links: a symlink still gets its one target `stat` for `is_directory` (`:301`), and
     `is_symlink` comes from `VLNK` alone.
-  - Buffer: 64 KiB (measured flat from 16 to 512 KiB), allocated once per listing, reused across calls, `u64`-backed;
-    every read is a bounds-checked `get(..)` + `from_le_bytes` (the kernel packs to 4 bytes, so ❌ no aligned casts, no
-    transmute). Parse exactly `n` records, each `len >= 24` and inside the buffer.
+  - Buffer: 64 KiB (measured flat from 16 to 512 KiB), allocated once per listing, reused across calls, `u64`-backed.
+    Decode exactly `n` records through `attr_buf::records`; a `BadRecord` is a stream failure (below).
   - Every `unsafe` block gets a concrete `// SAFETY:` (`clippy::undocumented_unsafe_blocks`). The fd is an `OwnedFd`, so
     no path forgets `close`.
-  - Precedent: the index's own reader, `cmdr-index/src/indexing/scanner/walker/bulk_read.rs`, follows the same
-    requested-slot rule and degrades a doubtful entry to `symlink_metadata`. Mirror its structure and its
-    `bulk_matches_symlink_metadata` differential test; the crates don't depend on each other, so no sharing here.
+  - Precedent: the index's reader (`bulk_read.rs`) degrades a doubtful entry to `symlink_metadata` and has a
+    `bulk_matches_symlink_metadata` differential test (`:362`); mirror that test's shape for the lister.
 - **Never drop, invent, or reshape an entry** (the loud rule): the bulk path ends in exactly one of three ways.
   - Every record parsed: return them.
   - A record can't be trusted: `ATTR_CMN_ERROR` set, or a REQUIRED attribute's returned bit clear (`OBJTYPE`, `MODTIME`,
@@ -326,10 +376,10 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     `DATALENGTH`): that ONE entry goes through `entry_from_lstat`, which yields today's answer or today's minimal row.
     The prototype's shortcut to a minimal row (`:278-285`) invents a dateless row where `lstat` may succeed. `CRTIME`
     and `ADDEDTIME` are optional: clear means `None`, ❌ never 0.
-  - The stream itself can't be trusted (implausible length, a name past its record, `EINTR`, `EACCES` / `ENOTSUP` /
-    `EINVAL`): discard every bulk entry and list again through `read_dir` from scratch. ❌ Never resume after `EINTR`
-    (the man page doesn't say a retry can't skip a batch), ❌ never merge bulk and `read_dir` entries, ❌ never return a
-    partial `Vec`.
+  - The stream itself can't be trusted (a `BadRecord`, `NeedsRestart`, `EINTR`, `EACCES` / `ENOTSUP` / `EINVAL`):
+    discard every bulk entry and list again through `read_dir` from scratch. ❌ Never resume after `EINTR` (the man page
+    doesn't say a retry can't skip a batch), ❌ never merge bulk and `read_dir` entries, ❌ never return a partial
+    `Vec`.
 - **Edge cases, decided**:
   - A name vanishing mid-enumeration drops out (the next call returns 0, measured), where today a vanished name between
     `readdir` and `lstat` becomes a minimal row. The watcher's event reconciles either way; no write path depends on it.
@@ -345,17 +395,20 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     content or xattr read, so nothing materializes. Enumerating a dataless DIRECTORY materializes it with either lister,
     as today. Verify with one evicted file if at hand (`ls -lO` shows `dataless` before and after a listing), else
     record it as unverified in `cmdr-local/DETAILS.md`.
-  - Sandbox `EPERM` entries list as what they are (open question 1).
+  - Sandbox `EPERM` entries list as what they are (§ Decisions). Bulk's record is valid there, so no fallback fires;
+    `listing_bench parity` reports these as the one expected difference class (today's side a minimal row whose `lstat`
+    got `EPERM`), counted apart from real differences, which must stay zero.
 - **Test plan**: M1's cells green on BOTH listers through `list_directory_with`. New red-then-green cells:
-  - Parser cells over hand-built buffers: an invalid attribute in the MIDDLE of the requested set (the smbfs and exFAT
-    shape that broke the prototype), a dir record with no file group, a symlink record with one, an `ATTR_CMN_ERROR`
-    record, a missing required bit (→ `entry_from_lstat`), a truncated record (→ `read_dir` restart).
+  - Record-to-entry cells over M2a's built records: an `ATTR_CMN_ERROR` record and a missing required bit (→
+    `entry_from_lstat`), a hint-less `lstat` failure and a `BadRecord` (→ `read_dir` restart, no merged entries).
   - The `0444` dir takes the runtime fallback and yields M1's minimal rows.
   - `added_at` is set for a fresh file and changes after a `rename` into another folder; `get_single_entry` matches the
     listing's `added_at`, mount points and `/`'s firmlinks included; a FAT or exFAT image goes through `read_dir` with
     `added_at: None`.
   - Rerun `listing_bench parity` (zero differences) and `bench` at 100k against production; append both to the note.
-- **DONE**: as M1, plus the note updated. `macos_metadata.rs` and `reading::list_directory`'s enrichment stay until M3.
+- **DONE**: as M1, plus the note updated, and the lister's part of `cmdr-local/CLAUDE.md` + `DETAILS.md` (the two
+  listers, how one is picked, the never-drop rule as a must-know, the TCC and dataless notes). `macos_metadata.rs` and
+  `reading::list_directory`'s enrichment stay until M3.
 
 ### M3: `SupportedDates` across every volume, and the two-phase leftovers removed
 
@@ -363,11 +416,12 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - `cmdr-fs`: `SupportedDates { created, added }` (`specta::Type`, `NONE` const), the `Volume::supported_dates`
     predicate (default `NONE`), and a `volume::conformance` assertion: no listed entry carries a date its volume doesn't
     claim. Wire the assertion into every backend's conformance test.
-  - Declare per backend after reading each mapping, ❌ never from memory: local (M2's probe), SMB (`mapping.rs:36,47`
-    fills created), MTP (`directory_ops.rs:897`), S3 (`query.rs:256`), WebDAV (`creationdate`, server-dependent: claim
-    it, entries may still be `None`), git (`tree.rs`, `log.rs`, `virtual_listing.rs` set created, often = mtime: decide
-    and say why), SFTP, NFS, ADB, archive, restic, `InMemoryVolume` (configurable, so tests can play a volume without
-    Added), and the app's mock provider. Record the matrix in `crates/cmdr-fs/DETAILS.md`.
+  - Declare per backend after reading each mapping, ❌ never from memory: local (`bulk_eligible` + birth time, §
+    Decisions; on `spawn_blocking`), SMB (`mapping.rs:36,47` fills created), MTP (`directory_ops.rs:897`), S3
+    (`query.rs:256`), WebDAV (`creationdate`, server-dependent: claim it, entries may still be `None`), git (`tree.rs`,
+    `log.rs`, `virtual_listing.rs` set created, often = mtime: decide and say why), SFTP, NFS, ADB, archive, restic,
+    `InMemoryVolume` (configurable, so tests can play a volume without Added), and the app's mock provider. Record the
+    matrix in `crates/cmdr-fs/DETAILS.md`.
   - Remove `ExtendedMetadata`, `extended_metadata_loaded` and `opened_at` (Rust `FileEntry`, the FE `FileEntry`,
     `bindings.ts`), `get_extended_metadata_batch`, `macos_metadata.rs` (and its `CLAUDE.md` module-map line), the
     `dead_code` allow, the `testing`-only enrichment in `list_directory`, and the `check-type-drift.ts` exemption.
@@ -379,9 +433,8 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - `Volume::capabilities()` is a pure fold and ❌ must not be overridden (`cmdr-fs/CLAUDE.md`); this predicate stays
     out of it on purpose (§ Decisions).
   - `#![deny(missing_docs)]` in `cmdr-fs`.
-  - An un-upgraded SMB share is a `LocalPosixVolume` over smbfs: its probe must answer for smbfs (likely Created only),
-    and the direct `SmbVolume` that replaces it may answer differently. Note where a pane's listing re-resolves the
-    volume (`refresh.rs`, `reread.rs`) for M5.
+  - An un-upgraded SMB share is a `LocalPosixVolume` over smbfs (Created only: not bulk-eligible), and the direct
+    `SmbVolume` that replaces it may answer differently. M4 makes the re-read refresh the dates (§ Decisions).
   - Removing a `FileEntry` field changes `bindings.ts`: `pnpm bindings:regen`.
 - **Test plan**: conformance assertion red first against a deliberately lying `InMemoryVolume`; per-backend declaration
   cells where a backend has a mapping test already.
@@ -531,7 +584,7 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     `file-explorer/CLAUDE.md`'s map.
   - Full cells (`FullList.svelte:813`), header label (`FullListHeader.svelte:126-135`, still a `SortableHeader`, active
     when the requested sort is a date), and the measurer (`measure-column-widths.ts:324,429`) all read it. The header's
-    width includes the label of the SHOWN date, the chevron (M7), and the fallback glyph.
+    width includes the label of the SHOWN date and the fallback glyph; M7 adds the chevron's width with the chevron.
   - New Full date-cell tooltip and the reworked `buildDateTooltip`: every date the entry carries (in the order Created,
     Date added, Last modified; a date the entry lacks, or its volume doesn't claim, has no line), the displayed one's
     label wrapped in `displayedLabel` (§ Decisions). Today's shape stays: `{label}: {segments}` lines joined by `<br>`,
@@ -540,7 +593,12 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     Decisions).
   - Full rows' accessible name: `details.modified` becomes `details.date: { column, text }` with one aside phrase per
     column (`rowModified` plus new `rowCreated`, `rowAdded`) in `ASIDE_SLOTS`.
-  - The fallback glyph on the Full date header (§ Decisions).
+  - The fallback glyph on the Full date header: this milestone adds `SortableHeader`'s `fallbackNote` prop (§
+    Decisions), which M8 reuses in Brief. The note joins the button's tooltip here; its accessible name is M9's.
+  - Keys this milestone first renders: `columns.added`, `dateTooltip.dateAdded` (+ the `lastMoved` deletion),
+    `dateTooltip.displayedLabel`, `list.rowCreated` / `.rowAdded`. Each key lands with the milestone that first renders
+    it (M5: `sortFallback.*`, `menu.sort.dateAdded`, `commands.sortByAdded.label`; M7: `columns.dateSortMenu`; M9:
+    `columns.sortStateFallback`), or `desktop-message-keys-unused` fails.
 - **Intentions**: one rule drives every Full surface, and the column fits whatever it shows.
 - **Landmines**:
   - `HEADER_CHROME_ACTIVE/INACTIVE` mirror `SortableHeader`'s gap + caret (`views/CLAUDE.md`); the chevron and glyph
@@ -578,7 +636,8 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
     (`SortableHeader.svelte:83-88`): a synthesized click would bubble to the pane's `onclick` and pull focus back to the
     list, and the next press should find focus still on the chevron.
   - Both share the date track in a wrapper span, like `.header-name-ext` (`FullListHeader.svelte:70-90`), so the grid
-    keeps its columns.
+    keeps its columns. The measurer adds the chevron's width from a mirrored constant beside `HEADER_CHROME_*`
+    (invariant 8 holds from here on).
 - **Intentions**: the mouse reaches every date sort in Full mode without leaving the header, and the keyboard reaches
   the same menu.
 - **Landmines**:
@@ -596,11 +655,11 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - The date column is right-aligned (`align="right"`, label at the right edge, caret to its left); where the chevron
     sits (left of the caret, or right of the label, pushing the label off the cells' edge) is a visual call. Build the
     left-of-caret version and hand David a screenshot-ready state.
-- **Test plan**: Rust menu builder test (items, check state, ids distinct from the bar's); Vitest for the click column
-  choice (requested date, fallback, non-date sort), the pick handler (sorts the event's pane, ignores the checked
-  column), the chevron's keydown (opens with an anchor, no click bubbles, focus stays), `aria-expanded`, and the
-  pane-chrome walk reaching the chevron; one Playwright cell for right-click → pick → order, only if no unit test
-  reaches the native menu round trip.
+- **Test plan**: Rust menu builder test (items, check state, ids distinct from the bar's); a measurer cell whose width
+  grows by the chevron's constant; Vitest for the click column choice (requested date, fallback, non-date sort), the
+  pick handler (sorts the event's pane, ignores the checked column), the chevron's keydown (opens with an anchor, no
+  click bubbles, focus stays), `aria-expanded`, and the pane-chrome walk reaching the chevron; one Playwright cell for
+  right-click → pick → order, only if no unit test reaches the native menu round trip.
 - **DONE**: gates incl. clippy; `desktop-e2e-playwright` if a cell was added.
 
 ### M8: Brief mode and SelectionInfo
@@ -635,10 +694,9 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   - Run the existing a11y suites (`*.a11y.test.ts`, `full-list.a11y.test.ts`, `file-row-a11y.test.ts`) and add cells for
     every name above, plus a `@guidepup/virtual-screen-reader` cell that the fallback toast is spoken once.
   - Listening check for David (VoiceOver): the date header walk, the chevron's menu, and a fallback sort.
-  - Docs: `cmdr-local/DETAILS.md` and `CLAUDE.md` (the two listers and how one is picked, the never-drop rule as a
-    must-know, supported dates, the unverified TCC/dataless notes; M2 writes the lister part), `cmdr-listing/DETAILS.md`
-    (effective sort), `cmdr-fs/DETAILS.md` (the matrix), `views/` and `selection/` C+D.md (the displayed-date rule as a
-    must-know), `docs/notes/file-metadata-tiers.md` (Added is no longer deferred; last-use stays deferred, #694),
+  - Docs: `cmdr-local/DETAILS.md` (supported dates; M2b wrote the lister part), `cmdr-listing/DETAILS.md` (effective
+    sort), `cmdr-fs/DETAILS.md` (the matrix), `views/` and `selection/` C+D.md (the displayed-date rule as a must-know),
+    `docs/notes/file-metadata-tiers.md` (Added is no longer deferred; last-use stays deferred, #694),
     `src-tauri/src/menu/DETAILS.md` (sort items, the header menu). Then wipe-readiness: this spec's durable intent lives
     beside the code.
 - **Intentions**: nothing essential lives only in a tooltip; the next agent finds every rule beside the code.
@@ -646,6 +704,26 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
   milestone tags.
 - **Test plan**: a11y cells; `pnpm check --fast` covers the doc checks.
 - **DONE**: gates; an adversarial conformance review against the register below.
+
+### M10: the index decodes through `attr_buf`
+
+- **Scope**: `cmdr-index/src/indexing/scanner/walker/bulk_read.rs` requests through `attr_buf::Request` and decodes
+  through `attr_buf::records`; its `parse_entry` offset table (`:210-322`), `AttrList`, the `ATTR_*` / `V*` constants,
+  and the panicking `read_*` helpers (`:326-337`) go. It keeps everything that's index policy: its own syscall loop,
+  `ReadProgress` per batch (`:170`), `stat: None` for a file missing a size attribute, and `unusable` for a record with
+  no name or type. Records after a `BadRecord` in a batch count as `unusable` too (today a zero length silently ends the
+  batch, `:182-184`), so the reconcile re-reads that directory through `read_dir`.
+- **Characterize, then convert** (two commits): first a cell that runs today's `parse_entry` and `attr_buf` over the
+  same real buffers (the `bulk_matches_symlink_metadata` tree, `:362-437`) and asserts identical `RawDirEntry`s, plus
+  the synthetic cells (`:445-551`) unedited; then the swap, with the dual-run cell deleted alongside the old parser.
+- **Landmines**: the walker's must-knows (`walker/CLAUDE.md`: degrade, don't drop; publish per batch; never widen the
+  parse without widening validation). The loop's `EINTR` retry (`:153-157`) stays as is: whether a resumed
+  `getattrlistbulk` can skip a batch matters more here (the reconcile deletes rows a read lacks), so file it as its own
+  `claude-created` issue, ❌ don't change it silently in this refactor.
+- **Test plan**: the dual-run cell is the red guard (perturb one `attr_buf` offset by hand: it must fail);
+  `cmdr-index`'s walker and reconcile suites green unedited.
+- **DONE**: gates incl. clippy; `walker/DETAILS.md`'s bulk-reader parse section points at `cmdr-fs` for the layout.
+  Landable and revertible alone; the date sorts never wait on it.
 
 ## Invariants register
 
@@ -666,3 +744,5 @@ source (Spotlight's `kMDItemLastUsedDate` is). Findings and next steps:
 10. A fallback is announced to VoiceOver and visible without hovering.
 11. The local lister never drops, invents, or reshapes an entry: a doubtful record re-stats through `entry_from_lstat`,
     a doubtful stream re-lists through `read_dir` from scratch, and bulk runs only on APFS and HFS+.
+12. One decoder (`cmdr_fs::attr_buf`) knows the `getattrlistbulk` record layout; local's `supported_dates` claims
+    exactly what its lister fills (`bulk_eligible`, birth time).
