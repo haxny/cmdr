@@ -937,6 +937,11 @@ Apple's guidance (Xcode docs, "Packaging Mac software for distribution", read 20
 Installer identity, notarize the outermost container, staple it. The app inside is already notarized from the DMG build,
 which does no harm.
 
+**Verified through a real MDM.** Fleet pushed `Cmdr_0.55.0_universal.pkg` over a `.pkg`-installed 0.52.0 with Apple's
+`InstallEnterpriseApplication` command: installed in about six seconds with no prompt, the bundle still `root:wheel`,
+`codesign --verify --deep --strict` and `spctl` passing, Full Disk Access intact after relaunch (verified on macOS
+27.0.1, the M1 enrolled in David's Fleet test rig, 2026-10-22). Cmdr wasn't running during the install.
+
 **Skips until the certificate exists.** Without `APPLE_INSTALLER_CERTIFICATE` in the `release` environment, the job logs
 a notice and ends green, and the release ships without a pkg. `publish` and `attest` wait for the job (so
 `checksums.txt` and the provenance cover the pkg) but don't need it to succeed: in `ci` mode a red `pkg` job never holds
