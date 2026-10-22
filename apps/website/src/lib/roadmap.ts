@@ -732,12 +732,6 @@ export const roadmapSections: RoadmapSection[] = [
             icon: 'history',
             done: true,
           },
-          {
-            date: '(Oct 22)',
-            title: 'NFS',
-            description: 'Open QNAP, Synology, TrueNAS, etc. NFS shares. No sudo or OS mount needed.',
-            done: true,
-          },
         ],
       },
     ],
@@ -757,7 +751,7 @@ export const roadmapSections: RoadmapSection[] = [
           {
             date: '(this fall?)',
             title: 'Support more file systems',
-            description: 'SCP, Google Drive, Dropbox, and OneDrive',
+            description: 'SCP, NFS, Google Drive, Dropbox, and OneDrive',
             done: false,
           },
         ],
