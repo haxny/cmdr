@@ -6,11 +6,12 @@ paths (`crate::file_system::volume::VolumeError`); other crates use `cmdr_fs::�
 
 ## Module map
 
-- `volume/`: the `Volume` trait and its types, the ID funnel, the copy-scan seam, the bodies a stat-and-listing backend
-  gets for free, `InMemoryVolume`, `host/` (read `src/volume/host/CLAUDE.md` before writing a backend), and
-  `connection.rs`'s four remote types, whose header says which answers what; ❗ confusing any two is a bug.
+- `volume/`: the `Volume` trait and its types, the ID funnel, the copy-scan seam, the free backend bodies,
+  `InMemoryVolume`, `host/` (read `src/volume/host/CLAUDE.md` before writing a backend), and `connection.rs`'s four
+  remote types, whose header says which answers what; ❗ confusing any two is a bug.
 - Around it: `entry.rs` + `icons/`, `sqlite_util.rs`, `staging.rs`, `metadata/`, `archive_format.rs`, `firmlinks.rs`,
-  and a dozen small leaves. Per-module responsibilities: DETAILS § Module map.
+  `attr_buf.rs` (macOS: THE `getattrlistbulk` record decoder), and a dozen small leaves. Per-module responsibilities:
+  DETAILS § Module map.
 
 ## Must-knows
 

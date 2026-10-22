@@ -87,6 +87,8 @@ the next section.
   log lines and model-facing answers read), `thread_qos`, `thread_cpu`, `process_cpu/`, `process_memory`,
   `utility_pool.rs` (`UtilityPool`, a keep-alive pool of `Utility`-QoS threads, so background work that comes in
   streams, like index walks, reuses threads instead of creating one per job).
+- `attr_buf.rs` (macOS): the packed record decoder every `getattrlist` / `getattrlistbulk` caller shares. § "`attr_buf`:
+  the packed attribute layout".
 - `mapped_file_faults/`: the SIGBUS recovery that turns a read of a mapped file whose disk went away into zeros, and the
   generation a reader checks to distrust what it read meanwhile. § "Mapped-file faults".
 - `testing/`: behind the `testing` feature. `TestDir`, the two waits, and `unique_test_id` (a pid-and-counter key for a
@@ -432,6 +434,38 @@ The same shape bit once more, harmlessly: the `Volume::inject_error` E2E hook is
 feature that lived only on the app. This crate now declares its own, and the app's enables it via
 `cmdr-fs/playwright-e2e`. A feature name that isn't declared in the crate you move code into doesn't error — it warns
 about an "unexpected `cfg` condition value" and takes the false branch forever.
+
+## `attr_buf`: the packed attribute layout
+
+`src/attr_buf.rs`. `getattrlist(2)` and `getattrlistbulk(2)` write records whose offsets depend on what was ASKED for,
+not on what came back, so a parser that hard-codes offsets for one attribute set breaks the moment the set widens. Two
+hand-rolled tables of one packed ABI is how the `getattrlistbulk` listing prototype shipped a shifted-sizes bug. So one
+`Request` (a typed set of `Attr`s) builds the `attrlist` AND drives the decode, and callers never see an offset.
+
+Pure by design: `decode_record` (one record, from the front of a buffer that may be longer, which is the `getattrlist`
+shape) and `records` (a bulk buffer's `count` records, stopping after the first `BadRecord`). No syscall, no
+`FileEntry`, no fallback policy: the local lister and the index's walker each keep their own loop and decide what a
+missing attribute means.
+
+The layout rules, each one a bug a hand-rolled parser had:
+
+- **Offsets come from the REQUESTED set, validity from the returned one.** Every call passes `FSOPT_PACK_INVAL_ATTRS`,
+  which packs every requested attribute, an unsupported one as zeros with its returned bit clear. An invalid attribute
+  reads `None`, ❌ never 0. Walking the returned set instead shifted every later field by 16 bytes on smbfs and exFAT,
+  which don't support the added time.
+- **`ATTR_CMN_ERROR` packs right after the returned set, ahead of the name**; everything else packs in bitmap order,
+  group by group (common, dir, file), so `ATTR_FILE_ALLOCSIZE` precedes `ATTR_FILE_DATALENGTH`.
+- **The dir group packs for a directory only, the file group for every other type**, symlinks included. Without a valid
+  `OBJTYPE` nobody knows which group was packed, so neither is decoded (and a request with a group attribute always asks
+  for the type).
+- **An errored record decodes its name and error only**: what else it packs is unspecified.
+- **Every read is a bounds-checked `from_ne_bytes`**: the kernel packs to 4 bytes, so no aligned cast, no panicking
+  index. A record whose length is under the 24-byte header or past the buffer, whose name points outside it, or whose
+  implied slots run past it is a `BadRecord`, and a bulk caller distrusts the rest of that buffer.
+
+`kernel_records_decode_to_what_lstat_reports` ties the rules to the real ABI (a temp dir on APFS, every field against
+`symlink_metadata`, plus one `getattrlist` by path); the hand-built cells cover the shapes a healthy APFS never
+produces. `ATTR_CMN_ERROR` is declared here because `libc` doesn't carry it.
 
 ## Retiring cached read connections, and deleting a database (`sqlite_util`)
 

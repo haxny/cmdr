@@ -20,6 +20,8 @@
 
 pub mod apple_double;
 pub mod archive_format;
+#[cfg(target_os = "macos")]
+pub mod attr_buf;
 pub mod benchmark;
 pub mod byte_size;
 #[cfg(target_os = "macos")]
