@@ -137,6 +137,14 @@ impl NfsVolume {
         self.inner.set_auto_reconnect(on);
     }
 
+    /// Moves the place's start folder (export-relative, `/photos`; `None` for
+    /// the export itself) on the live volume, and on every instance sharing its
+    /// connection: what [`params`](Self::params) answers from now on, with no
+    /// redial. What saving a start-folder edit to a connected place calls.
+    pub fn set_start_folder(&self, folder: Option<String>) {
+        self.inner.params.write_ignore_poison().start_folder = folder;
+    }
+
     /// The live connection, cloned out from under a short read guard. ❗ Clone
     /// and release: holding the guard across a call would serialize every
     /// other call behind it.

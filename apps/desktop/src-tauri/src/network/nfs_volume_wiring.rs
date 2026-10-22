@@ -79,6 +79,9 @@ pub(crate) trait NfsBackend: Send + Sync {
     fn sharing_connection(&self, volume: &dyn Volume, name: &str) -> Option<Arc<dyn Volume>>;
     /// Moves the live volume's "reconnect automatically" switch.
     fn set_auto_reconnect(&self, volume: &dyn Volume, on: bool);
+    /// Moves the start folder the live volume answers in its params, with no
+    /// redial: what a start-folder edit to a connected place saves.
+    fn set_start_folder(&self, volume: &dyn Volume, folder: Option<String>);
 }
 
 /// `cmdr_nfs` itself.
@@ -112,6 +115,12 @@ impl NfsBackend for CrateNfs {
     fn set_auto_reconnect(&self, volume: &dyn Volume, on: bool) {
         if let Some(nfs) = volume.as_any().downcast_ref::<NfsVolume>() {
             nfs.set_auto_reconnect(on);
+        }
+    }
+
+    fn set_start_folder(&self, volume: &dyn Volume, folder: Option<String>) {
+        if let Some(nfs) = volume.as_any().downcast_ref::<NfsVolume>() {
+            nfs.set_start_folder(folder);
         }
     }
 }
@@ -356,6 +365,9 @@ pub(crate) async fn save_without_connecting_with(
         Err(refusal) => return refusal,
     };
     backend.set_auto_reconnect(&*live, place.auto_reconnect);
+    // The live params are what the next redial and every `params()` reader
+    // see, so the folder moves there too, ❌ not only in the store.
+    backend.set_start_folder(&*live, place.start_folder.clone());
     nfs_known_places::adopt_typed_name(&place, display_name);
     nfs_known_places::remember(place);
     accepted.install(manager);

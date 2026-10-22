@@ -119,6 +119,13 @@ impl NfsBackend for FakeNfs {
     fn set_auto_reconnect(&self, _volume: &dyn Volume, on: bool) {
         self.switched.lock().expect("test lock").push(on);
     }
+
+    fn set_start_folder(&self, volume: &dyn Volume, folder: Option<String>) {
+        let root = volume.root().to_string_lossy().into_owned();
+        if let Some(params) = self.live.lock().expect("test lock").get_mut(&root) {
+            params.start_folder = folder;
+        }
+    }
 }
 
 fn place(host: &str, export: &str) -> KnownNfsPlace {
@@ -424,6 +431,52 @@ async fn a_changed_name_on_an_open_place_shares_its_connection() {
     nfs_known_places::forget(&id);
 }
 
+/// A start-folder edit to a connected place rides its connection, and the live
+/// volume answers the NEW folder in its params from then on: what the next
+/// redial and every caller reading `params()` see, without waiting for a
+/// reconnect.
+#[tokio::test]
+async fn a_changed_start_folder_on_an_open_place_moves_the_live_volume_params() {
+    let backend = FakeNfs::answering([Answer::Resolves {
+        export: "/",
+        folder: None,
+    }]);
+    let id = id_of("start-folder.test", "/");
+    let _ = connect(&backend, "", place("start-folder.test", "/"), "nfs-start-folder").await;
+    let live = get_volume_manager().get(&id).expect("connected");
+    let photos = std::path::Path::new(live.root()).join("photos");
+    live.create_directory(&photos).await.expect("the fake holds the folder");
+
+    let edit = KnownNfsPlace {
+        start_folder: Some("/photos".to_string()),
+        ..place("start-folder.test", "/")
+    };
+    assert_eq!(
+        super::save_without_connecting_with(&backend, edit, "").await,
+        SavedServerOutcome::Saved
+    );
+
+    assert_eq!(backend.dial_count(), 1, "❌ a start-folder change never redials");
+    let live = get_volume_manager().get(&id).expect("still connected");
+    assert_eq!(
+        backend
+            .params_of(&*live)
+            .and_then(|params| params.start_folder)
+            .as_deref(),
+        Some("/photos"),
+        "the live volume answers the folder the place now lands in"
+    );
+    assert_eq!(
+        nfs_known_places::find(&id)
+            .and_then(|saved| saved.start_folder)
+            .as_deref(),
+        Some("/photos")
+    );
+
+    assert!(super::disconnect_with(&backend, &id).await);
+    nfs_known_places::forget(&id);
+}
+
 #[test]
 fn a_server_id_ignores_which_export_it_was_asked_through() {
     let server = NfsServer::new("Server-Id.test", None);
@@ -459,6 +512,10 @@ impl NfsBackend for FixtureNfs {
 
     fn set_auto_reconnect(&self, volume: &dyn Volume, on: bool) {
         super::CrateNfs.set_auto_reconnect(volume, on);
+    }
+
+    fn set_start_folder(&self, volume: &dyn Volume, folder: Option<String>) {
+        super::CrateNfs.set_start_folder(volume, folder);
     }
 }
 
