@@ -28,6 +28,9 @@ pub enum MultiRenameError {
     /// The folder changed since the preview the user started from, or a newer
     /// preview replaced it: re-preview.
     PreviewOutOfDate,
+    /// Some rows' media fields are still being read, so the rename can't run on a
+    /// final preview yet. The sheet keeps a queued rename waiting on it.
+    StillReading,
     /// The folder, or a row in it, is read-only because a route serves it.
     ReadOnly { place: ReadOnlyPlace },
     /// Results couldn't write its names file; `detail` is log text only.

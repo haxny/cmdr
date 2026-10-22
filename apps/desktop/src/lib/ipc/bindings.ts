@@ -1521,6 +1521,31 @@ export const commands = {
       __TAURI_INVOKE('get_multi_rename_range_samples', { sessionId, token, rows }),
     ),
   /**
+   *  How far the session's media read got, for a sheet that subscribed to
+   *  `MultiRenameMediaProgress` after the read began.
+   */
+  getMultiRenameMediaProgress: (sessionId: string) =>
+    typedError<MediaProgress, MultiRenameError>(__TAURI_INVOKE('get_multi_rename_media_progress', { sessionId })),
+  /**
+   *  The field picker's overview: the read's progress and each field's example
+   *  value from the session's files.
+   */
+  getMultiRenameMediaOverview: (sessionId: string) =>
+    typedError<MediaOverview, MultiRenameError>(__TAURI_INVOKE('get_multi_rename_media_overview', { sessionId })),
+  /**
+   *  The media token editor's examples: the placeholder `token` (its text between
+   *  the brackets, `=exif.taken:d`) rendered alone on the session's files at `rows`
+   *  (at most `MAX_RANGE_SAMPLES`), and how many files have, fall back, miss, or are
+   *  still reading it. Reads the session's media cache, not the latest preview.
+   */
+  getMultiRenameFieldSamples: (sessionId: string, token: string, rows: number[]) =>
+    typedError<FieldSamples, MultiRenameError>(
+      __TAURI_INVOKE('get_multi_rename_field_samples', { sessionId, token, rows }),
+    ),
+  // Reads the files at `rows` (the ones the sheet shows) next. Fire-and-forget.
+  prioritizeMultiRenameMedia: (sessionId: string, rows: number[]) =>
+    __TAURI_INVOKE<void>('prioritize_multi_rename_media', { sessionId, rows }),
+  /**
    *  Each example's new name for the sheet's tooltips, rendered on made-up files
    *  by the same engine as the preview; `None` for a spec that doesn't run.
    */
@@ -5400,6 +5425,7 @@ export const events = {
   mtpPtpcameradRestored: makeEvent<MtpPtpcameradRestored>('mtp-ptpcamerad-restored'),
   mtpPtpcameradSuppressed: makeEvent<MtpPtpcameradSuppressed>('mtp-ptpcamerad-suppressed'),
   mtpStorageRemoved: makeEvent<MtpStorageRemoved>('mtp-storage-removed'),
+  multiRenameMediaProgress: makeEvent<MultiRenameMediaProgress>('multi-rename-media-progress'),
   mutationSettled: makeEvent<MutationSettled>('mutation-settled'),
   networkDiscoveryStateChanged: makeEvent<NetworkDiscoveryStateChanged>('network-discovery-state-changed'),
   networkHostContextAction: makeEvent<NetworkHostContextAction>('network-host-context-action'),
@@ -8601,11 +8627,55 @@ export type FavoriteTarget = {
   reach: FavoriteReach
 }
 
+/**
+ *  Why a `[=source.field]` placeholder has no text for a row. Typed, so the
+ *  sheet words it.
+ */
+export type FieldGap =
+  // The file is still being read.
+  | { type: 'reading' }
+  // The file has no value for `field`.
+  | { type: 'noValue'; field: MediaField }
+  // The file couldn't be read, so `field` is unknown.
+  | { type: 'unreadable'; field: MediaField }
+
 // One value a field had when a rename ran.
 export type FieldHistoryEntry = {
   id: string
   field: HistoryField
   value: string
+}
+
+// The placeholder on one row: its text, or why it has none.
+export type FieldSample = {
+  // The file's place in the session (what `PreviewRow::row` names).
+  row: number
+  text: string | null
+  gap: FieldGap | null
+}
+
+/**
+ *  What one `[=source.field…]` placeholder renders alone on the token editor's
+ *  sample rows, and how it fares across the whole session.
+ */
+export type FieldSamples = {
+  samples: FieldSample[]
+  usage: FieldUsage
+}
+
+/**
+ *  How the session's files fare with one placeholder, for "38 files use the
+ *  modified date".
+ */
+export type FieldUsage = {
+  // Files with the field's own value.
+  withValue: number
+  // Files without it that take the `|modified` fallback.
+  fallback: number
+  // Files without it and with no fallback: problem rows.
+  missing: number
+  // Files still being read.
+  reading: number
 }
 
 /**
@@ -11401,6 +11471,62 @@ export type MediaEnrichTerminalReason =
   | { kind: 'failed' }
 
 /**
+ *  One field a mask can name. Its mask name is [`MediaField::name`]
+ *  (`exif.taken`); across IPC it's the camelCase variant (`exifTaken`).
+ */
+export type MediaField =
+  // When the photo or video was taken, local wall-clock time.
+  | 'exifTaken'
+  // Make and model, the make said once.
+  | 'exifCamera'
+  // The camera's maker.
+  | 'exifMake'
+  // The camera's model.
+  | 'exifModel'
+  // The lens.
+  | 'exifLens'
+  // The ISO speed.
+  | 'exifIso'
+  // The focal length, whole millimeters.
+  | 'exifFocal'
+  // The image's width, pixels.
+  | 'exifWidth'
+  // The image's height, pixels.
+  | 'exifHeight'
+  // The EXIF orientation, 1–8.
+  | 'exifOrientation'
+  // The track's title.
+  | 'tagTitle'
+  // The track's artist.
+  | 'tagArtist'
+  // The album's artist.
+  | 'tagAlbumArtist'
+  // The album.
+  | 'tagAlbum'
+  // The track number.
+  | 'tagTrack'
+  // The disc number.
+  | 'tagDisc'
+  // The release year.
+  | 'tagYear'
+  // The genre.
+  | 'tagGenre'
+  // The comment.
+  | 'tagComment'
+
+// One field in the picker.
+export type MediaFieldOverview = {
+  field: MediaField
+  /**
+   *  The field in its default format, from the first file in rename order that
+   *  has it; `None` when no file read so far does.
+   */
+  example: string | null
+  // How many files read so far have it.
+  filesWithIt: number
+}
+
+/**
  *  `media-index-folder-choice`: a folder's "Add to indexed folders" / "Remove from
  *  indexed folders" context-menu item was clicked. Carries the right-clicked folder's
  *  absolute path and the target membership. The FE listens and drives its persist +
@@ -11507,6 +11633,20 @@ export type MediaIndexVolumeState = {
    *  unscored or image indexing is off.
    */
   keptCount: number | null
+}
+
+// What the field picker shows: the read's progress, and each field's example.
+export type MediaOverview = {
+  progress: MediaProgress
+  // Every field, in `MediaField::ALL` order.
+  fields: MediaFieldOverview[]
+}
+
+// How far a session's media read got. `total` counts media files only.
+export type MediaProgress = {
+  read: number
+  total: number
+  done: boolean
 }
 
 // A snapshot of the whole process's memory, from every accountant at once.
@@ -12312,6 +12452,11 @@ export type MultiRenameError =
    *  preview replaced it: re-preview.
    */
   | { type: 'previewOutOfDate' }
+  /**
+   *  Some rows' media fields are still being read, so the rename can't run on a
+   *  final preview yet. The sheet keeps a queued rename waiting on it.
+   */
+  | { type: 'stillReading' }
   // The folder, or a row in it, is read-only because a route serves it.
   | { type: 'readOnly'; place: ReadOnlyPlace }
   // Results couldn't write its names file; `detail` is log text only.
@@ -12334,6 +12479,18 @@ export type MultiRenameError =
 export type MultiRenameLastSettings = {
   spec: MultiRenameSpec
   presetId: string | null
+}
+
+/**
+ *  The `multi-rename-media-progress` event: a session's read moved on. At most
+ *  every 250 ms, plus a final one with `done`. ❗ The struct name kebab-cases to
+ *  the wire event name.
+ */
+export type MultiRenameMediaProgress = {
+  sessionId: string
+  read: number
+  total: number
+  done: boolean
 }
 
 // An open sheet's session.
@@ -13584,8 +13741,13 @@ export type PresetSeed = {
 export type PreviewCounts = {
   ready: number
   unchanged: number
-  // Every other row: a bad or taken name, a duplicate, a file that's gone.
+  /**
+   *  Every other row: a bad or taken name, a duplicate, a file that's gone, a
+   *  media field the file doesn't have.
+   */
   problems: number
+  // Rows whose media fields are still being read: neither ready nor a problem yet.
+  reading: number
 }
 
 /**
@@ -14708,6 +14870,15 @@ export type RowStatus =
    *  `preview` never sees it).
    */
   | { type: 'missing' }
+  /**
+   *  A `[=source.field]` the mask uses is still being read from the file: not
+   *  a problem yet, and not ready.
+   */
+  | { type: 'reading' }
+  // The file has no value for `field`, and the mask names no fallback.
+  | { type: 'noValue'; field: MediaField }
+  // The file couldn't be read, so `field` is unknown.
+  | { type: 'unreadable'; field: MediaField }
 
 /**
  *  How a session shows its rows. Picked at open by the caller that knows what the file is

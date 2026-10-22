@@ -4,8 +4,8 @@ use std::cell::Cell;
 use std::path::Path;
 
 use super::plan::{
-    Compiled, FOLDS, InvalidNameReason, MultiRenameSpec, NameEdits, RenameExample, RowStatus, SpecError, preview,
-    preview_names, render_examples,
+    Compiled, FOLDS, InvalidNameReason, MultiRenameSpec, NameEdits, NoMedia, RenameExample, RowStatus, SpecError,
+    preview, preview_names, render_examples,
 };
 use super::transform::{CaseChange, SEARCH_BUILDS};
 use cmdr_fs::entry::FileEntry;
@@ -45,10 +45,17 @@ fn run(spec: &MultiRenameSpec, folder: &[FileEntry], batch: &[&str]) -> Vec<(Str
         .enumerate()
         .filter(|(_, e)| batch.contains(&e.name.as_str()))
         .collect();
-    preview(&compiled, Path::new(DIR), &rows, folder, &NameEdits::default())
-        .into_iter()
-        .map(|p| (p.new_name, p.status))
-        .collect()
+    preview(
+        &compiled,
+        Path::new(DIR),
+        &rows,
+        folder,
+        &NameEdits::default(),
+        &NoMedia,
+    )
+    .into_iter()
+    .map(|p| (p.new_name, p.status))
+    .collect()
 }
 
 /// The session and the MCP tool both preview by NAME: a name the folder no longer holds is
@@ -61,7 +68,14 @@ fn previewing_by_name_marks_a_gone_file_missing_in_place() {
         .map(|s| (*s).to_string())
         .collect();
     let compiled = Compiled::new(&spec("[C]")).expect("a valid spec");
-    let rows = preview_names(&compiled, Path::new(DIR), &names, &folder, &NameEdits::default());
+    let rows = preview_names(
+        &compiled,
+        Path::new(DIR),
+        &names,
+        &folder,
+        &NameEdits::default(),
+        &NoMedia,
+    );
     let out: Vec<_> = rows.iter().map(|r| (r.row, r.new_name.as_str(), &r.status)).collect();
     assert_eq!(
         out,
@@ -276,7 +290,14 @@ fn a_row_carries_its_file_icon_and_whether_it_is_a_folder() {
     ];
     let compiled = Compiled::new(&spec("[N]")).expect("a valid spec");
     let rows: Vec<(usize, &FileEntry)> = folder.iter().enumerate().collect();
-    let out = preview(&compiled, Path::new(DIR), &rows, &folder, &NameEdits::default());
+    let out = preview(
+        &compiled,
+        Path::new(DIR),
+        &rows,
+        &folder,
+        &NameEdits::default(),
+        &NoMedia,
+    );
     assert_eq!(out[0].icon_id.as_deref(), Some(folder[0].icon_id.as_str()));
     assert!(!out[0].is_directory);
     assert_eq!(out[1].icon_id.as_deref(), Some(folder[1].icon_id.as_str()));
@@ -411,10 +432,17 @@ fn greek_to_latin_runs_through_the_spec() {
 fn run_edited(spec: &MultiRenameSpec, folder: &[FileEntry], edits: &[(&str, &str)]) -> Vec<(String, RowStatus, bool)> {
     let compiled = Compiled::new(spec).expect("a valid spec");
     let rows: Vec<(usize, &FileEntry)> = folder.iter().enumerate().collect();
-    preview(&compiled, Path::new(DIR), &rows, folder, &NameEdits::new(edits))
-        .into_iter()
-        .map(|p| (p.new_name, p.status, p.edited))
-        .collect()
+    preview(
+        &compiled,
+        Path::new(DIR),
+        &rows,
+        folder,
+        &NameEdits::new(edits),
+        &NoMedia,
+    )
+    .into_iter()
+    .map(|p| (p.new_name, p.status, p.edited))
+    .collect()
 }
 
 #[test]

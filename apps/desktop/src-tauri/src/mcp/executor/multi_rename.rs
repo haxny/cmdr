@@ -24,7 +24,7 @@ use tauri::{AppHandle, Manager, Runtime};
 use super::{ToolError, ToolResult, fit_to_result_budget, resolve_pane_target_paths, target_pane_state};
 use crate::agent::AgentDb;
 use crate::agent::store::proposals::{GroupIntent, NewGroup, NewRename, NewSweep, OpSnapshot};
-use crate::multi_rename::plan::{Compiled, MultiRenameSpec, NameEdits, PreviewRow, RowStatus, preview_names};
+use crate::multi_rename::plan::{Compiled, MultiRenameSpec, NameEdits, NoMedia, PreviewRow, RowStatus, preview_names};
 use cmdr_fs::entry::FileEntry;
 
 /// Rows a dry run returns when the caller doesn't say.
@@ -323,7 +323,7 @@ pub async fn execute_multi_rename<R: Runtime>(app: &AppHandle<R>, params: &Value
     let (rows, siblings) = tokio::task::spawn_blocking({
         let folder = folder.clone();
         move || {
-            let rows = preview_names(&compiled, &folder, &names, &siblings, &NameEdits::default());
+            let rows = preview_names(&compiled, &folder, &names, &siblings, &NameEdits::default(), &NoMedia);
             (rows, siblings)
         }
     })

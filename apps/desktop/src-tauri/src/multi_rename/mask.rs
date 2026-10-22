@@ -28,6 +28,7 @@
 use std::fmt::Write as _;
 
 use chrono::{Datelike, NaiveDateTime, Timelike};
+use cmdr_media_meta::{MediaFacts, MediaField};
 
 /// The widest counter: `[C:4000000000]` must not allocate gigabytes per row.
 /// Any name longer than this hits the filesystem's name limit anyway.
@@ -46,6 +47,39 @@ pub struct RowFacts<'a> {
     pub modified: Option<NaiveDateTime>,
     /// The row's place in the rename order, from 0: what the counter counts.
     pub position: usize,
+    /// What the file says about itself, for the `[=source.field]` placeholders.
+    #[expect(dead_code, reason = "the `[=source.field]` render reads it; drop this once it does")]
+    pub media: RowMedia<'a>,
+}
+
+/// A row's media facts, as the session's cache has them now.
+#[derive(Debug, Clone, Copy)]
+#[expect(
+    dead_code,
+    reason = "the session's media cache builds the others; drop this once it does"
+)]
+pub enum RowMedia<'a> {
+    /// Still being read: a value may yet come.
+    Reading,
+    /// Read: every field the file has.
+    Read(&'a MediaFacts),
+    /// The read didn't work (why is in the log).
+    Unreadable,
+    /// A folder, or a file whose type isn't one we read.
+    NotMedia,
+}
+
+/// Why a `[=source.field]` placeholder has no text for a row. Typed, so the
+/// sheet words it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum FieldGap {
+    /// The file is still being read.
+    Reading,
+    /// The file has no value for `field`.
+    NoValue { field: MediaField },
+    /// The file couldn't be read, so `field` is unknown.
+    Unreadable { field: MediaField },
 }
 
 impl<'a> RowFacts<'a> {

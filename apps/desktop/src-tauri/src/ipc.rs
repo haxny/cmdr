@@ -216,6 +216,10 @@ macro_rules! ipc_command_manifest {
                     crate::commands::multi_rename::get_multi_rename_preview_rows,
                     crate::commands::multi_rename::move_multi_rename_row,
                     crate::commands::multi_rename::get_multi_rename_range_samples,
+                    crate::commands::multi_rename::get_multi_rename_media_progress,
+                    crate::commands::multi_rename::get_multi_rename_media_overview,
+                    crate::commands::multi_rename::get_multi_rename_field_samples,
+                    crate::commands::multi_rename::prioritize_multi_rename_media,
                     crate::commands::multi_rename::render_multi_rename_examples,
                     crate::commands::multi_rename::apply_multi_rename,
                     crate::commands::multi_rename::close_multi_rename,
@@ -1306,6 +1310,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             OpenFavorite,
             // The organization's managed policy changed while Cmdr runs (managed_policy/cache.rs).
             ManagedPolicyChanged,
+            // A Multi-Rename session's EXIF and tag read moved on (multi_rename/media.rs).
+            crate::multi_rename::media::MultiRenameMediaProgress,
         ])
 }
 

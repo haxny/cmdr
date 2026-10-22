@@ -383,6 +383,26 @@
   "@multiRename.reason.missing": {
     "description": "Tooltip on the preview's \"gone\" symbol: the full reason behind multiRename.status.missing. \"Multi-rename\" is the tool's name; match multiRename.title."
   },
+  "multiRename.status.reading": "Reading…",
+  "@multiRename.status.reading": {
+    "description": "Quiet preview note on a row whose photo, video, or music file is still being read for its date taken or tags, so its new name may still change. Not a problem; it clears by itself."
+  },
+  "multiRename.status.noValue": "Field missing",
+  "@multiRename.status.noValue": {
+    "description": "Short preview note: the file has no value for a field the name mask uses (like the date a photo was taken, or a song's artist), so it can't be renamed."
+  },
+  "multiRename.reason.noValue": "This file doesn’t have a field the name uses, so it keeps its name.",
+  "@multiRename.reason.noValue": {
+    "description": "Tooltip on the preview's \"field missing\" symbol: the full reason behind multiRename.status.noValue. A field is a piece of the file's own information, like the date a photo was taken or a song's artist."
+  },
+  "multiRename.status.unreadable": "Can’t read tags",
+  "@multiRename.status.unreadable": {
+    "description": "Short preview note: Cmdr couldn't read the file's tags or photo information (EXIF), which a field in the name mask needs, so it can't be renamed."
+  },
+  "multiRename.reason.unreadable": "Multi-rename couldn’t read this file’s tags or photo information, so it keeps its name.",
+  "@multiRename.reason.unreadable": {
+    "description": "Tooltip on the preview's \"can't read tags\" symbol: the full reason behind multiRename.status.unreadable. \"Multi-rename\" is the tool's name; match multiRename.title. Tags are a music or video file's artist, title, and so on; photo information is a photo's date taken, camera, and so on."
+  },
   "multiRename.reason.empty": "The new name is empty.",
   "@multiRename.reason.empty": {
     "description": "Tooltip on the preview's \"not a valid name\" symbol when the masks produce an empty name."

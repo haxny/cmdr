@@ -129,6 +129,9 @@ cmdr-listing = { path = "../../../crates/cmdr-listing" }
 # here rather than through `cmdr-listing`'s re-export, so it never needs the
 # listing engine for one type.
 cmdr-collation = { path = "../../../crates/cmdr-collation" }
+# What photos, videos, and music files say about themselves (EXIF, capture dates,
+# tags), read through any volume, for Multi-Rename's `[=source.field]` placeholders.
+cmdr-media-meta = { path = "../../../crates/cmdr-media-meta" }
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
 tauri-plugin-mcp-bridge = "0.13"

@@ -143,6 +143,27 @@ subfolders (the executor's one-parent rule refuses it today), "next step" chaini
   an agent's dry run shows exactly the statuses the sheet would. The tool needs no session: it previews against the
   pane's cached listing and, for a real run, stages the ready rows as a rename proposal rather than calling `run.rs`.
 
+## Media fields (`media.rs`, `crates/cmdr-media-meta`)
+
+`[=source.field]` placeholders (EXIF, video capture dates, media tags; issue #657). The crate reads files and names the
+fields (`MediaField`, `MediaFacts`; `crates/cmdr-media-meta/CLAUDE.md`); this module caches them per session and
+answers the sheet.
+
+- **Rows see media through `RowFacts.media: RowMedia`** (`Reading`, `Read(&MediaFacts)`, `Unreadable`, `NotMedia`).
+  `plan::preview` / `preview_names` take a `&dyn MediaLookup`, whose `media(&FileEntry)` answers each row; the entry
+  carries size and modification time, so a lookup can tell a file that changed since it was read. `NoMedia` answers
+  `NotMedia` for every row: the MCP tool and the tests pass it, and so does the session until its cache exists.
+- **Statuses**: `RowStatus::Reading` (not a problem, not ready; `PreviewCounts.reading`), `NoValue { field }`, and
+  `Unreadable { field }` (problems). A placeholder's own miss is a `FieldGap` (`Reading`, `NoValue`, `Unreadable`, each
+  naming the `MediaField`), which crosses IPC in `FieldSample`.
+- **`MediaField` crosses IPC as its camelCase variant** (`exifTaken`); the mask writes its dotted name (`exif.taken`).
+- **IPC** (`commands/multi_rename.rs`): `get_multi_rename_media_progress` (for a sheet that subscribed late),
+  `get_multi_rename_media_overview` (the picker: progress plus each field's example and file count),
+  `get_multi_rename_field_samples` (the token editor: the token alone on the cursor rows, plus `FieldUsage`), and
+  `prioritize_multi_rename_media` (fire-and-forget). Events: `MultiRenameMediaProgress` (`multi-rename-media-progress`).
+- **`MultiRenameError::StillReading`**: apply's safety net while rows still read; the sheet keeps a queued rename
+  waiting on it rather than showing an error.
+
 ## Presets (`presets.rs`, `preset_store.rs`)
 
 One list in the user's order, top to bottom, in `multi-rename-presets.json` (`PresetStore`, its one instance the

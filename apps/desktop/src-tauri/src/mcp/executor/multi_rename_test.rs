@@ -18,7 +18,14 @@ fn preview_of(params: Value, folder: &[FileEntry], batch: &[&str]) -> Vec<Previe
     let request = parse_request(&params).expect("valid params");
     let compiled = Compiled::new(&request.spec).expect("spec runs");
     let names: Vec<String> = batch.iter().map(|s| (*s).to_string()).collect();
-    preview_names(&compiled, Path::new(DIR), &names, folder, &NameEdits::default())
+    preview_names(
+        &compiled,
+        Path::new(DIR),
+        &names,
+        folder,
+        &NameEdits::default(),
+        &NoMedia,
+    )
 }
 
 // ── Params ────────────────────────────────────────────────────────────────────

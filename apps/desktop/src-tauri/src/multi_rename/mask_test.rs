@@ -3,7 +3,7 @@
 use chrono::NaiveDate;
 
 use super::mask::{
-    MAX_COUNTER_DIGITS, Mask, MaskError, RangeToken, RowFacts, counter_token, range_token, range_token_bounds,
+    MAX_COUNTER_DIGITS, Mask, MaskError, RangeToken, RowFacts, RowMedia, counter_token, range_token, range_token_bounds,
 };
 
 fn facts(name: &str) -> RowFacts<'_> {
@@ -14,6 +14,7 @@ fn facts(name: &str) -> RowFacts<'_> {
         grandparent: "Photos",
         modified: NaiveDate::from_ymd_opt(2026, 6, 15).and_then(|d| d.and_hms_opt(23, 10, 9)),
         position: 0,
+        media: RowMedia::NotMedia,
     }
 }
 

@@ -62,7 +62,7 @@ const PAGE_LIMIT = 1000
 /** Rows held past this many are dropped when they're far from the window. */
 const HELD_ROWS = 3000
 
-const NO_COUNTS: PreviewCounts = { ready: 0, unchanged: 0, problems: 0 }
+const NO_COUNTS: PreviewCounts = { ready: 0, unchanged: 0, problems: 0, reading: 0 }
 
 /** How the backend tells two preset names apart (`presets.rs`'s `name_key`). */
 const nameKey = (name: string): string => name.trim().toLowerCase()

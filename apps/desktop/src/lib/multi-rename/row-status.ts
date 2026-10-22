@@ -49,6 +49,17 @@ export function rowStatusView(status: RowStatus): RowStatusView {
       return problem('circle-x', { key: 'multiRename.status.targetExists' }, { key: 'multiRename.reason.targetExists' })
     case 'missing':
       return problem('circle-dashed', { key: 'multiRename.status.missing' }, { key: 'multiRename.reason.missing' })
+    // Still reading may yet turn ready: quiet, like ready and unchanged.
+    case 'reading':
+      return { isProblem: false, glyph: null, label: { key: 'multiRename.status.reading' }, reason: null }
+    case 'noValue':
+      return problem('circle-alert', { key: 'multiRename.status.noValue' }, { key: 'multiRename.reason.noValue' })
+    case 'unreadable':
+      return problem(
+        'triangle-alert',
+        { key: 'multiRename.status.unreadable' },
+        { key: 'multiRename.reason.unreadable' },
+      )
     case 'invalidName': {
       const reason = status.reason
       if (reason.type === 'disallowedCharacter') {

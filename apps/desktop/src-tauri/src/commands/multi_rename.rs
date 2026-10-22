@@ -6,6 +6,7 @@ use tokio::time::Duration;
 
 use crate::multi_rename::error::MultiRenameError;
 use crate::multi_rename::history::{FIELD_HISTORY, FieldHistoryEntry, MAX_FIELD_HISTORY, history_entries};
+use crate::multi_rename::media::{self, FieldSamples, MediaOverview, MediaProgress};
 use crate::multi_rename::plan::{MultiRenameSpec, PreviewRow, RenameExample, render_examples};
 use crate::multi_rename::preset_store::PRESETS;
 use crate::multi_rename::presets::{
@@ -110,6 +111,43 @@ pub async fn get_multi_rename_range_samples(
     rows: Vec<usize>,
 ) -> Result<Vec<RangeSample>, MultiRenameError> {
     session::range_samples(&session_id, &token, &rows)
+}
+
+/// How far the session's media read got, for a sheet that subscribed to
+/// `MultiRenameMediaProgress` after the read began.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_multi_rename_media_progress(session_id: String) -> Result<MediaProgress, MultiRenameError> {
+    media::progress(&session_id)
+}
+
+/// The field picker's overview: the read's progress and each field's example
+/// value from the session's files.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_multi_rename_media_overview(session_id: String) -> Result<MediaOverview, MultiRenameError> {
+    media::overview(&session_id)
+}
+
+/// The media token editor's examples: the placeholder `token` (its text between
+/// the brackets, `=exif.taken:d`) rendered alone on the session's files at `rows`
+/// (at most `MAX_RANGE_SAMPLES`), and how many files have, fall back, miss, or are
+/// still reading it. Reads the session's media cache, not the latest preview.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_multi_rename_field_samples(
+    session_id: String,
+    token: String,
+    rows: Vec<usize>,
+) -> Result<FieldSamples, MultiRenameError> {
+    media::field_samples(&session_id, &token, &rows)
+}
+
+/// Reads the files at `rows` (the ones the sheet shows) next. Fire-and-forget.
+#[tauri::command]
+#[specta::specta]
+pub async fn prioritize_multi_rename_media(session_id: String, rows: Vec<usize>) {
+    media::prioritize(&session_id, &rows);
 }
 
 /// Each example's new name for the sheet's tooltips, rendered on made-up files

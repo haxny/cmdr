@@ -24,10 +24,10 @@ use crate::ignore_poison::IgnorePoison;
 use cmdr_listing::{ListingId, ListingLookupError};
 
 use super::error::MultiRenameError;
-use super::mask::{MaskError, RangeToken, RowFacts};
+use super::mask::{MaskError, RangeToken, RowFacts, RowMedia};
 use super::names_file::{self, Written};
 use super::plan::{
-    Compiled, MultiRenameSpec, NameEdits, PreviewRow, RowStatus, SpecError, folder_names, preview_names,
+    Compiled, MultiRenameSpec, NameEdits, NoMedia, PreviewRow, RowStatus, SpecError, folder_names, preview_names,
 };
 
 /// How many sessions live at once. A sheet is modal, so more than one or two is
@@ -60,8 +60,11 @@ pub struct MultiRenameOpened {
 pub struct PreviewCounts {
     pub ready: usize,
     pub unchanged: usize,
-    /// Every other row: a bad or taken name, a duplicate, a file that's gone.
+    /// Every other row: a bad or taken name, a duplicate, a file that's gone, a
+    /// media field the file doesn't have.
     pub problems: usize,
+    /// Rows whose media fields are still being read: neither ready nor a problem yet.
+    pub reading: usize,
 }
 
 impl PreviewCounts {
@@ -71,6 +74,7 @@ impl PreviewCounts {
             match row.status {
                 RowStatus::Ready => counts.ready += 1,
                 RowStatus::Unchanged => counts.unchanged += 1,
+                RowStatus::Reading => counts.reading += 1,
                 _ => counts.problems += 1,
             }
         }
@@ -216,7 +220,14 @@ fn compute(inputs: &Inputs, compiled: &Compiled, edits: &NameEdits) -> Result<Ve
         .map_err(|_| MultiRenameError::Gone {
             listing_id: inputs.listing_id.clone(),
         })?;
-    Ok(preview_names(compiled, &inputs.dir, &inputs.names, &siblings, edits))
+    Ok(preview_names(
+        compiled,
+        &inputs.dir,
+        &inputs.names,
+        &siblings,
+        edits,
+        &NoMedia,
+    ))
 }
 
 /// The sheet's live preview of `spec` over the session's files. Stores it as the
@@ -388,6 +399,7 @@ pub(crate) fn range_samples(
                 grandparent: &grandparent,
                 modified: None,
                 position: shown.row,
+                media: RowMedia::NotMedia,
             };
             let text = range.source(&facts);
             let taken = range

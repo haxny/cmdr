@@ -3,6 +3,7 @@
 pub(crate) mod error;
 pub(crate) mod history;
 pub(crate) mod mask;
+pub(crate) mod media;
 pub(crate) mod names_file;
 pub(crate) mod plan;
 pub(crate) mod preset_store;

@@ -13,8 +13,9 @@ normalization, a counter, presets, and a live preview. The sheet is `src/lib/mul
 - `session.rs` one sheet's files in rename order (`move_row`), its latest preview, paging, and Results names.
 - `names_file.rs` Results (⌥⏎): the preview as `old<TAB>new` lines, and the user's edits merged back by old name.
 - `run.rs` apply: proves the ready rows against the preview shown, then runs `start_renames` (Ask Cmdr's executor).
-- `error.rs` `MultiRenameError`, shared by `session` and `run` so neither imports the other (`module-cycles`).
-- `history.rs` the text fields' history on `crate::recents`, recorded when a rename starts.
+- `media.rs` the `[=source.field]` fields' IPC and progress event, over `crates/cmdr-media-meta`.
+- `error.rs` `MultiRenameError`, shared so `session` and `run` don't import each other.
+- `history.rs` the text fields' history on `crate::recents`.
 - `presets.rs` named presets in the user's order, as pure ops on the list (`save_in`, `rename_in`, …).
   `LAST_SPEC` keeps the last sheet's settings. `preset_store.rs` (their file, `PRESETS`) builds on it.
 

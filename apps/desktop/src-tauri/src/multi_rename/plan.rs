@@ -16,7 +16,9 @@ use unicode_normalization::UnicodeNormalization;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::validation::{ValidationError, validate_filename};
 
-use super::mask::{Mask, MaskError, RowFacts};
+use cmdr_media_meta::MediaField;
+
+use super::mask::{Mask, MaskError, RowFacts, RowMedia};
 use super::transform::{CaseChange, CompiledTransform, Replace, ReplaceError, Transform};
 
 /// Everything the sheet sets.
@@ -90,6 +92,17 @@ pub enum RowStatus {
     /// The file left the folder since the sheet opened (set by `session.rs`;
     /// `preview` never sees it).
     Missing,
+    /// A `[=source.field]` the mask uses is still being read from the file: not
+    /// a problem yet, and not ready.
+    Reading,
+    /// The file has no value for `field`, and the mask names no fallback.
+    NoValue {
+        field: MediaField,
+    },
+    /// The file couldn't be read, so `field` is unknown.
+    Unreadable {
+        field: MediaField,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
@@ -109,9 +122,27 @@ impl RowStatus {
         matches!(self, Self::Ready)
     }
 
-    /// Every status but ready and unchanged: the rows the sheet flags.
+    /// Every status but ready, unchanged, and reading: the rows the sheet flags.
+    /// A row still reading may yet turn ready, so "Problems only" leaves it out.
     pub fn is_problem(&self) -> bool {
-        !matches!(self, Self::Ready | Self::Unchanged)
+        !matches!(self, Self::Ready | Self::Unchanged | Self::Reading)
+    }
+}
+
+/// Each row's media facts, as the session's cache has them while a preview runs.
+pub(crate) trait MediaLookup {
+    /// What `entry`'s file says about itself. The entry carries its size and
+    /// modification time, so a lookup can tell a file that changed since it was read.
+    fn media(&self, entry: &FileEntry) -> RowMedia<'_>;
+}
+
+/// No media facts at all: every row is `NotMedia`. For a preview with no
+/// session cache behind it (the MCP tool, tests).
+pub(crate) struct NoMedia;
+
+impl MediaLookup for NoMedia {
+    fn media(&self, _entry: &FileEntry) -> RowMedia<'_> {
+        RowMedia::NotMedia
     }
 }
 
@@ -193,8 +224,8 @@ impl Compiled {
         })
     }
 
-    /// The new full name for `entry` at `position` in the rename order.
-    fn new_name(&self, entry: &FileEntry, dir: &Path, position: usize) -> String {
+    /// The new full name for `entry` at `position` in the rename order, with its media facts.
+    fn new_name(&self, entry: &FileEntry, dir: &Path, position: usize, media: RowMedia<'_>) -> String {
         // Composed, so a range never splits a letter from its accent in a name an
         // SMB share or HFS stores decomposed.
         let file_name: String = entry.name.nfc().collect();
@@ -206,6 +237,7 @@ impl Compiled {
             grandparent: &grandparent,
             modified: entry.modified_at.and_then(local_time),
             position,
+            media,
         })
     }
 
@@ -275,6 +307,7 @@ pub(crate) fn render_examples(examples: &[RenameExample]) -> Vec<Option<String>>
                 grandparent: EXAMPLE_GRANDPARENT,
                 modified,
                 position: 0,
+                media: RowMedia::NotMedia,
             }))
         })
         .collect()
@@ -299,12 +332,14 @@ fn local_time(unix_seconds: u64) -> Option<NaiveDateTime> {
 /// The preview for `rows` (in rename order) of the folder at `dir`, whose every
 /// entry, hidden ones included, is in `siblings`. A row the user named by hand in
 /// Results (`edits`) takes that name instead of the computed one, and every check.
+/// `media` answers each row's media facts.
 pub(crate) fn preview(
     compiled: &Compiled,
     dir: &Path,
     rows: &[(usize, &FileEntry)],
     siblings: &[FileEntry],
     edits: &NameEdits,
+    media: &dyn MediaLookup,
 ) -> Vec<PreviewRow> {
     let mut preview: Vec<PreviewRow> = rows
         .iter()
@@ -313,7 +348,7 @@ pub(crate) fn preview(
             let typed = edits.get(&entry.name);
             let new_name = match typed {
                 Some(typed) => compiled.finish(typed.to_string()),
-                None => compiled.new_name(entry, dir, position),
+                None => compiled.new_name(entry, dir, position, media.media(entry)),
             };
             let status = match invalid(&new_name) {
                 Some(reason) => RowStatus::InvalidName { reason },
@@ -340,13 +375,14 @@ pub(crate) fn preview(
 /// every entry is in `siblings`: [`preview`] over the names still there, plus a `Missing` row
 /// for each that's gone, in row order. A name matches its entry exactly, as the session that
 /// resolved it from the listing spelled it. Both the sheet's session and the MCP tool run
-/// through here, so they can't disagree about a row.
+/// through here, so they can't disagree about a row; the tool passes [`NoMedia`].
 pub(crate) fn preview_names(
     compiled: &Compiled,
     dir: &Path,
     names: &[String],
     siblings: &[FileEntry],
     edits: &NameEdits,
+    media: &dyn MediaLookup,
 ) -> Vec<PreviewRow> {
     let by_name: HashMap<&str, &FileEntry> = siblings.iter().map(|e| (e.name.as_str(), e)).collect();
     let mut present: Vec<(usize, &FileEntry)> = Vec::with_capacity(names.len());
@@ -357,7 +393,7 @@ pub(crate) fn preview_names(
             None => missing.push(row),
         }
     }
-    let mut previewed = preview(compiled, dir, &present, siblings, edits);
+    let mut previewed = preview(compiled, dir, &present, siblings, edits, media);
     previewed.extend(missing.into_iter().map(|row| PreviewRow {
         row,
         old_name: names[row].clone(),

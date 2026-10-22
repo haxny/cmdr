@@ -7,11 +7,13 @@ const PROBLEMS: RowStatus[] = [
   { type: 'duplicate' },
   { type: 'targetExists' },
   { type: 'missing' },
+  { type: 'noValue', field: 'exifTaken' },
+  { type: 'unreadable', field: 'tagArtist' },
 ]
 
 describe('rowStatusView', () => {
-  it('keeps ready and unchanged rows quiet: no glyph, words for screen readers only', () => {
-    for (const status of [{ type: 'ready' }, { type: 'unchanged' }] satisfies RowStatus[]) {
+  it('keeps ready, unchanged, and reading rows quiet: no glyph, words for screen readers only', () => {
+    for (const status of [{ type: 'ready' }, { type: 'unchanged' }, { type: 'reading' }] satisfies RowStatus[]) {
       const view = rowStatusView(status)
       expect(view.glyph).toBeNull()
       expect(view.isProblem).toBe(false)

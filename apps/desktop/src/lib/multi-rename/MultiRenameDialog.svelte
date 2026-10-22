@@ -318,6 +318,8 @@
             case 'notConnected':
                 return tString('multiRename.error.notConnected')
             case 'previewOutOfDate':
+            // A queued rename waits on it rather than showing it; worded like a stale preview otherwise.
+            case 'stillReading':
                 return tString('multiRename.error.previewOutOfDate')
             case 'readOnly':
                 return readOnlyText(error.place)
