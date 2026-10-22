@@ -2151,6 +2151,12 @@
     "match": ["new folder", "create folder", "create a folder"],
     "sense": "The command that creates a folder (F7)."
   },
+  "nfs-export": {
+    "distinct": ["network-share", "folder"],
+    "en": "export",
+    "match": ["export", "exports"],
+    "sense": "A folder an NFS server shares (one line of its exports list), picked or typed by path in the NFS add form. Distinct from the SMB share and from exporting a file."
+  },
   "none": {
     "en": "None",
     "match": ["=none"],

@@ -1,8 +1,0 @@
-{
-  "nfs-export": {
-    "distinct": ["network-share"],
-    "en": "export",
-    "match": ["export", "exports"],
-    "sense": "A folder an NFS server shares, picked in the NFS add form. Distinct from the SMB share and from exporting a file."
-  }
-}

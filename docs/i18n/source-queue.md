@@ -7,8 +7,6 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
-- No `nfs-export` concept, so every locale coined one (`Freigabe`, `partage`, `megosztás`, `exportación`, `exportação`,
-  shared folder in zh/zh-Hant/ru, `export` in nl/sv). es and pt staged it in `concepts-proposed.json`: promote it. (all)
 - `servers.sheet.nfsUid`: "Act as user ID" won't pair with "Group ID" in a short label; fr, hu, ru, zh dropped "Act as".
   Say whether a bare "User ID" is fine, or change the English. (all)
 - `servers.sheet.nfsUidZeroWarning`: "as nobody" reads as the Unix `nobody` account or as "no one"; every locale
