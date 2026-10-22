@@ -648,6 +648,60 @@ fn test_update_entry_sorted_moved_for_modified_at_change() {
     );
 }
 
+/// Regression anchor: a re-stat re-places a row only when its size, mtime, or
+/// kind changed. Under a Created sort, a new creation time alone patches the row
+/// IN PLACE, leaving it out of order; a kind change moves it. When the date
+/// columns join change detection, the created half of this flips to a move.
+#[test]
+fn test_update_entry_sorted_replaces_only_on_size_mtime_or_kind() {
+    let entry = |name: &str, created: u64| {
+        let mut e = make_entry(name, false, Some(100));
+        e.modified_at = Some(1000);
+        e.created_at = Some(created);
+        e
+    };
+    let engine = TestEngine::new();
+    let listing = insert_test_listing(
+        &engine,
+        "update_created",
+        "/test",
+        SortColumn::Created,
+        SortOrder::Ascending,
+        DirectorySortMode::LikeFiles,
+        vec![entry("first.txt", 1000), entry("second.txt", 2000)],
+    );
+
+    // first.txt is now the newest, but only its creation time moved.
+    let result = listing
+        .engine()
+        .inner
+        .update_entry_sorted(listing.id(), entry("first.txt", 3000));
+    assert_eq!(
+        result,
+        Some(PaneRows {
+            before: Some(0),
+            after: Some(0)
+        }),
+        "a creation-time change alone patches in place"
+    );
+    assert_eq!(listing.entry_names(), ["first.txt", "second.txt"]);
+    assert_eq!(listing.entries()[0].created_at, Some(3000), "the patch landed");
+
+    // A kind change re-places it: folders sort first.
+    let mut as_folder = entry("second.txt", 2000);
+    as_folder.is_directory = true;
+    as_folder.size = None;
+    let result = listing.engine().inner.update_entry_sorted(listing.id(), as_folder);
+    assert_eq!(
+        result,
+        Some(PaneRows {
+            before: Some(1),
+            after: Some(0)
+        }),
+        "a kind change moves the row"
+    );
+}
+
 #[test]
 fn test_update_entry_sorted_returns_none_for_missing_entry() {
     let engine = TestEngine::new();

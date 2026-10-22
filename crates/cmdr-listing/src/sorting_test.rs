@@ -450,6 +450,51 @@ fn test_sort_by_created() {
     assert_eq!(names, vec!["oldest.txt", "middle.txt", "newest.txt"]);
 }
 
+/// A row with no creation time sorts BELOW every dated one ascending (so first),
+/// above them descending (so last), and by name among its kind, flipped with the
+/// order. The `None` arms of the Created column, as they stand.
+#[test]
+fn test_sort_by_created_places_unknown_dates_first_ascending_and_last_descending() {
+    let entry = |name: &str, created: Option<u64>| FileEntry {
+        created_at: created,
+        ..make_entry(name, false, Some(100), Some(1_700_000_000))
+    };
+    let fresh = || {
+        vec![
+            entry("dated_new.txt", Some(1_700_000_002)),
+            entry("undated_b.txt", None),
+            entry("dated_old.txt", Some(1_700_000_001)),
+            entry("undated_a.txt", None),
+        ]
+    };
+
+    let mut ascending = fresh();
+    sort_entries(
+        &mut ascending,
+        SortColumn::Created,
+        SortOrder::Ascending,
+        DirectorySortMode::LikeFiles,
+    );
+    let names: Vec<&str> = ascending.iter().map(|e| e.name.as_str()).collect();
+    assert_eq!(
+        names,
+        ["undated_a.txt", "undated_b.txt", "dated_old.txt", "dated_new.txt"]
+    );
+
+    let mut descending = fresh();
+    sort_entries(
+        &mut descending,
+        SortColumn::Created,
+        SortOrder::Descending,
+        DirectorySortMode::LikeFiles,
+    );
+    let names: Vec<&str> = descending.iter().map(|e| e.name.as_str()).collect();
+    assert_eq!(
+        names,
+        ["dated_new.txt", "dated_old.txt", "undated_b.txt", "undated_a.txt"]
+    );
+}
+
 #[test]
 fn test_dotfiles_sorted_before_regular_files_by_name() {
     let mut entries = vec![

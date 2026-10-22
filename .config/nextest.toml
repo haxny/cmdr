@@ -226,6 +226,16 @@ filter = 'test(mapped_file_faults::real_image::) | test(fault_guard_real_image::
 test-group = 'disk-image'
 slow-timeout = { period = "30s", terminate-after = 1 }
 
+[[profile.default.overrides]]
+# The local lister's real-image cells (`cmdr-local`'s `reading_parity_test::real_image`,
+# macOS-only, `#[ignore]`d): a listing of a mount point's parent on a real APFS image, and the
+# whole field fixture on a real HFS+ one, each equal to its single-path re-stats. Same group
+# and 30 s cap as the harness tests above.
+# allowed-unmatched-nextest-filter: macos-only, hdiutil has no Linux counterpart
+filter = 'test(reading_parity_test::real_image::)'
+test-group = 'disk-image'
+slow-timeout = { period = "30s", terminate-after = 1 }
+
 # SMB stress tests serialize on the shared server (see `smb-stress` group above).
 # The concurrent-streaming one additionally wraps its copy in a 120 s internal
 # `tokio::time::timeout` whose expiry dumps the last 30 `client-mutex:`/`recv:`

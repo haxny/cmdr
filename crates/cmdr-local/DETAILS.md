@@ -229,6 +229,12 @@ so nothing a test can set up fails one without failing the other, and only a tra
   assertions in `volume::conformance`".
 - `reading_test.rs`: the reader on its own; the inline `tests` modules in `space.rs`, `live_space.rs`, `mount_table.rs`,
   and `linux_mounts.rs` pin the probes.
+- `reading_parity_test.rs`: what the lister yields today, field for field, each listed entry equal to its
+  `get_single_entry` re-stat (every field, through `Debug`). Each field a write path acts on also gets a cell against
+  `lstat` itself, since parity alone can't see both readers going wrong together. Every cell runs once per entry of its
+  `LISTERS`, so a second lister is proven by adding it there. The one known difference: `/.hidden` at a volume root,
+  which the re-stat never applies. Its `real_image` module (a mount point's parent, the fixture on HFS+) runs in
+  `pnpm check disk-images`.
 - **The cells that need the app's real host stay app-side**, in
   `apps/desktop/src-tauri/src/listing_host/tests/local_posix_host_test.rs`: the watch-coverage answer following the real
   FSEvents watcher, the panes' name order, and a mutation reaching the pane through the app's composer. They assert on

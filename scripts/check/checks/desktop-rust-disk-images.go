@@ -47,6 +47,7 @@ var diskImageLaneTestAtoms = []string{
 	"cold_drive_tests::moves::real_journal::",
 	"mapped_file_faults::real_image::",
 	"fault_guard_real_image::",
+	"reading_parity_test::real_image::",
 }
 
 // diskImageHandRunTestAtoms are the `disk-image` group's modules this lane
