@@ -128,6 +128,26 @@ async fn a_backend_with_no_secret_can_always_reconnect_unattended_while_its_swit
     assert_eq!(store.reads.load(Ordering::SeqCst), 0);
 }
 
+#[tokio::test]
+async fn a_backend_with_no_secret_refuses_a_sign_in_without_dialing_or_filing_it() {
+    let store = Arc::new(CountingStore::default());
+    let backend = backend(Arc::clone(&store));
+    let sign_in = SignIn {
+        username: String::new(),
+        secret: "hunter2".to_string(),
+        remember: true,
+    };
+
+    let refused = backend.remember_sign_in(sign_in).await;
+
+    assert!(
+        matches!(refused, Err(VolumeError::NotSupported)),
+        "no account to sign in to"
+    );
+    assert!(backend.dialed_with.lock().unwrap().is_empty());
+    assert_eq!(store.reads.load(Ordering::SeqCst), 0);
+}
+
 #[test]
 fn a_session_takes_the_backends_own_silence_ladder() {
     let store = Arc::new(CountingStore::default());

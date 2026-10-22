@@ -1,7 +1,7 @@
 //! The volume sign-in commands: what form a sign-in takes, reconnect, reconnect with
 //! typed credentials, and filing a sign-in that already connected. Backend-neutral
 //! despite two of the names: each asks whatever volume is registered under the id, so
-//! SMB, SFTP, WebDAV, and S3 go through them unchanged, and the frontend never branches
+//! SMB, SFTP, WebDAV, S3, and NFS go through them unchanged, and the frontend never branches
 //! on backend.
 
 use crate::file_system::volume::reconnect_error::ReconnectError;
