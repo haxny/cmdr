@@ -112,8 +112,9 @@ instant row for mkdir, mkfile, and paste-as-file through it too.
   `is_directory`. Linux, and every macOS filesystem but APFS and HFS+.
 - **`getattrlistbulk`** (`crates/cmdr-local/src/reading/bulk.rs`, macOS): one syscall per 64 KiB batch, every attribute
   an entry needs plus the added date in each record, decoded through `cmdr_fs::attr_buf` (the one decoder of that
-  layout; `crates/cmdr-fs/DETAILS.md` § "`attr_buf`: the packed attribute layout"). 1.5× faster warm and ~2.5× cold-ish
-  at 100k entries (`docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md`).
+  layout; `crates/cmdr-fs/DETAILS.md` § "`attr_buf`: the packed attribute layout"). At 100k entries, 1.4× faster warm
+  and 1.5–2.7× cold-ish depending on load (`docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md` § "Production
+  lister").
 
 **How one is picked.** `bulk::read_entries` opens the folder (`O_DIRECTORY`, the open `opendir` does, so access and TCC
 errors are today's) and asks `fstatfs` on that fd: bulk iff `f_fstypename` is `apfs` or `hfs` (`bulk_eligible`).
