@@ -76,8 +76,8 @@ function parseUsize(text: string): number | null {
   return value > U64_MAX ? null : Number(value)
 }
 
-/** `range()` in `mask.rs`, step for step. */
-function parseRange(text: string): Range | null {
+/** `range()` in `mask.rs`, step for step: the range text alone, `2-5` (also a text media field's format). */
+export function parseRange(text: string): Range | null {
   if (text === '') return { kind: 'all' }
   const comma = text.indexOf(',')
   if (comma !== -1) {
