@@ -192,6 +192,49 @@ fn a_rename_between_a_walks_last_row_and_its_release_keeps_the_index() {
     assert!(holds(&drive, PROOF), "and kept what it held");
 }
 
+/// A first index still finishing when a rename restarts the drive leaves the new
+/// instance no branch at the OLD mount point (#695).
+///
+/// A stop cancels the old instance's phase machine without joining it, so its last
+/// walk's release and its completion's collapse land after the restart. Both used
+/// to reach the branch set by volume id, which by then named the NEW instance's
+/// set. A branch at the old root is a watch on a path that's gone: on Linux,
+/// inotify refused it and the whole watcher with it, so nothing at the new root was
+/// delivered again.
+#[test]
+fn a_first_index_finishing_after_a_rename_leaves_no_branch_at_the_old_mount_point() {
+    let drive = ColdDrive::new("cover-move-stale-branch-test");
+    std::fs::create_dir_all(drive.tree.path().join("scope")).expect("dirs");
+    std::fs::write(drive.tree.path().join(PROOF), "x").expect("file");
+    let old_root = drive.tree.path().to_path_buf();
+    let ended_before = crate::indexing::lifecycle::phases::exits::count(drive.volume_id);
+    let gate = finish_gate::arm(drive.volume_id);
+    turn_on(&drive);
+    gate.wait_until_parked();
+
+    let (_new_root, _put_back) = rename_the_drive(&drive);
+    assert!(
+        drive.index.follow_volume_move(drive.volume_id),
+        "the index follows the drive"
+    );
+    gate.release();
+
+    // Both machines have to be done: the old one's tail is what this pins, and the
+    // new one's own collapse has to have landed for the set to be worth reading.
+    cmdr_fs::testing::wait_until(LANDS_WITHIN, "the old and the new phase machine to end", || {
+        crate::indexing::lifecycle::phases::exits::count(drive.volume_id) >= ended_before + 2
+    });
+    let at_the_old_root: Vec<String> = crate::indexing::watch::branches::live_for(drive.volume_id)
+        .branch_paths()
+        .into_iter()
+        .filter(|path| Path::new(path).starts_with(&old_root))
+        .collect();
+    assert!(
+        at_the_old_root.is_empty(),
+        "the restarted index watches nothing at the mount point it left: {at_the_old_root:?}"
+    );
+}
+
 /// Wait for a file created at `root` to land through the watcher: the proof the
 /// index is live there, rather than an `Ok` from the call that put it there.
 fn assert_live_at(drive: &ColdDrive, root: &Path, stem: &str, patience: std::time::Duration) {

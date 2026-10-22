@@ -76,6 +76,8 @@ pub(crate) use completion::HOME_COVERED_AT_KEY;
 pub(crate) use visits::VisitLog;
 
 #[cfg(test)]
+pub(crate) mod exits;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 pub(crate) mod walk_gate;
@@ -322,7 +324,11 @@ pub(crate) fn start(context: MachineContext) -> PhaseHandle {
 
     let spawned = std::thread::Builder::new().name("index-phases".into()).spawn(move || {
         cmdr_fs::thread_qos::set_current_thread_qos(cmdr_fs::thread_qos::QosClass::Utility);
+        #[cfg(test)]
+        let exiting = machine.volume_id.clone();
         machine.run();
+        #[cfg(test)]
+        exits::record(&exiting);
     });
     if let Err(e) = spawned {
         // A machine that can't spawn a thread has a bigger problem than this
