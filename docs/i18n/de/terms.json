@@ -1977,6 +1977,12 @@
     "confidence": "high",
     "sources": "catalog (shortcuts.scope.mainWindow, search.action.showAll.label; 5 uses); Double/Total Commander de (Hauptfenster)"
   },
+  "media-tag": {
+    "chosen": "Tags",
+    "confidence": "high",
+    "note": "Same word as the Finder color tag (`tag`); German has no separate everyday word, and the context (Dateien, lesen) keeps them apart.",
+    "sources": "Double Commander de (MP3-Tags); Total Commander de 5370 (mp3-Tags); shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable)"
+  },
   "memory": {
     "accept": ["RAM", "Notiz"],
     "chosen": "Speicher",

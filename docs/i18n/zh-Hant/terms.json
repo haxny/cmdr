@@ -2276,6 +2276,11 @@
     "forms": "play / pause / mute / volume → 播放 / 暫停 / 靜音 / 音量",
     "sources": "AP AppKit + QuickTime (TW = HK)"
   },
+  "media-tag": {
+    "chosen": "標籤",
+    "confidence": "high",
+    "sources": "Double Commander zh-TW (MP3 標籤); shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable)"
+  },
   "memory": {
     "accept": ["記憶", "筆記", "RAM"],
     "chosen": "記憶體",

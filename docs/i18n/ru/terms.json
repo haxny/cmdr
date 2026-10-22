@@ -2887,6 +2887,12 @@
     "confidence": "high",
     "sources": "macOS AppKit AccessibilityImageDescriptions play → «воспроизвести», pause → «пауза»; macOS live Localizable Play → «Воспроизвести», Mute → «Выключить звук», pause.button Pause → «Пауза»; MS Play → «Воспроизвести»"
   },
+  "media-tag": {
+    "chosen": "теги",
+    "accept": ["тег"],
+    "confidence": "high",
+    "sources": "Double Commander ru (теги mp3); shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable)"
+  },
   "memory": {
     "chosen": "память",
     "accept": ["памят", "ОЗУ", "заметк"],

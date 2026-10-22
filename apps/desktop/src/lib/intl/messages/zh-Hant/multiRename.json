@@ -550,7 +550,7 @@
   },
   "multiRename.mediaEditor.dateHint": "Y、M、D 代表日期，h、m、s 代表時間，中間可以用 - . _ 或空格隔開。留空就用完整的日期和時間。",
   "@multiRename.mediaEditor.dateHint": {
-    "sourceHash": "88e6818"
+    "sourceHash": "11b97ec"
   },
   "multiRename.mediaEditor.presets": "常用格式",
   "@multiRename.mediaEditor.presets": {
@@ -576,9 +576,9 @@
   "@multiRename.mediaEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.mediaEditor.digitsHint": "前面補零，例如填 2 會得到 03。留空就保留原本的數字。",
+  "multiRename.mediaEditor.digitsHint": "前面補零，例如填 2 會把 3 變成 03。留空就保留原本的數字。",
   "@multiRename.mediaEditor.digitsHint": {
-    "sourceHash": "793a729"
+    "sourceHash": "d71b7d7"
   },
   "multiRename.mediaEditor.characters": "字元",
   "@multiRename.mediaEditor.characters": {
@@ -586,7 +586,7 @@
   },
   "multiRename.mediaEditor.charactersHint": "例如 1-10 取前十個，-3- 取最後三個。留空就取全部。",
   "@multiRename.mediaEditor.charactersHint": {
-    "sourceHash": "dcc206f"
+    "sourceHash": "ed8b2a6"
   },
   "multiRename.mediaEditor.fallback": "檔案沒有這個日期時：改用它上次更改的日期",
   "@multiRename.mediaEditor.fallback": {

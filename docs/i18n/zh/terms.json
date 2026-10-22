@@ -1955,6 +1955,11 @@
     "confidence": "high",
     "sources": "MS terminology"
   },
+  "media-tag": {
+    "chosen": "标签",
+    "confidence": "high",
+    "sources": "Double Commander zh-CN (mp3 标签); shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable)"
+  },
   "memory": {
     "accept": ["记忆", "笔记", "RAM"],
     "chosen": "内存",

@@ -551,7 +551,7 @@
   },
   "multiRename.mediaEditor.dateHint": "Y, M e D para a data, h, m e s para a hora, com - . _ ou espaços entre eles. Deixe vazio para a data e a hora.",
   "@multiRename.mediaEditor.dateHint": {
-    "sourceHash": "88e6818"
+    "sourceHash": "11b97ec"
   },
   "multiRename.mediaEditor.presets": "Formatos comuns",
   "@multiRename.mediaEditor.presets": {
@@ -577,9 +577,9 @@
   "@multiRename.mediaEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.mediaEditor.digitsHint": "Completa com zeros à esquerda, então 2 dá 03. Deixe vazio para o número como está.",
+  "multiRename.mediaEditor.digitsHint": "Completa com zeros à esquerda, então com 2 o 3 vira 03. Deixe vazio para o número como está.",
   "@multiRename.mediaEditor.digitsHint": {
-    "sourceHash": "793a729"
+    "sourceHash": "d71b7d7"
   },
   "multiRename.mediaEditor.characters": "Caracteres",
   "@multiRename.mediaEditor.characters": {
@@ -587,7 +587,7 @@
   },
   "multiRename.mediaEditor.charactersHint": "Por exemplo, 1-10 para os dez primeiros ou -3- para os três últimos. Deixe vazio para pegar tudo.",
   "@multiRename.mediaEditor.charactersHint": {
-    "sourceHash": "dcc206f"
+    "sourceHash": "ed8b2a6"
   },
   "multiRename.mediaEditor.fallback": "Quando um arquivo não tiver: usar a data da última alteração",
   "@multiRename.mediaEditor.fallback": {

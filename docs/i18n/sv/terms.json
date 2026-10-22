@@ -1874,6 +1874,12 @@
     "confidence": "high",
     "sources": "MS terminology (neuter)"
   },
+  "media-tag": {
+    "chosen": "taggar",
+    "accept": ["tagg"],
+    "confidence": "high",
+    "sources": "Total Commander sv 5370 (MP3-taggar); shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable)"
+  },
   "memory": {
     "accept": ["anteckning", "RAM"],
     "chosen": "minne",

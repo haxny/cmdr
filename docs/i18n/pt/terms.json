@@ -1739,6 +1739,17 @@
     "confidence": "tentative",
     "sources": "shipped pt catalog"
   },
+  "media-tag": {
+    "chosen": "tags",
+    "confidence": "high",
+    "avoid": [
+      {
+        "form": "etiquetas",
+        "why": "the Finder color tag's word (`tag`); tags (as in tags ID3) keeps the two from reading as one thing"
+      }
+    ],
+    "sources": "shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable); Double Commander pt-BR says etiquetas mp3, which collides with Finder's Etiquetas (TG5, TG6)"
+  },
   "memory": {
     "chosen": "memória",
     "accept": ["anotações", "RAM"],
@@ -3005,14 +3016,6 @@
         "why": "the pt-PT Finder"
       }
     ],
-    "exceptions": {
-      "multiRename.queuedAnnounce": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags (as tags ID3), so the two never read as one thing.",
-      "multiRename.readingTags": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags.",
-      "multiRename.reason.unreadable": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags.",
-      "multiRename.renameWaitsTooltip": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags.",
-      "multiRename.startingTooltip": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags.",
-      "multiRename.status.unreadable": "A media file's ID3/MP4/EXIF metadata, not a Finder color tag: tags."
-    },
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR (TG5, TG6)"
   },

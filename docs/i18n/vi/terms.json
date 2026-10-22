@@ -1848,6 +1848,12 @@
     "confidence": "tentative",
     "sources": "descriptive"
   },
+  "media-tag": {
+    "chosen": "thẻ",
+    "confidence": "tentative",
+    "note": "Total Commander vi 5370 says nhãn mp3; the catalog and the Finder `tag` ruling say thẻ, so a native reviewer may prefer nhãn here.",
+    "sources": "shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable); vi tag ruling (thẻ); Total Commander vi 5370 (nhãn mp3)"
+  },
   "memory": {
     "accept": ["RAM", "ghi chú"],
     "chosen": "bộ nhớ",

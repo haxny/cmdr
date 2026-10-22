@@ -1916,6 +1916,17 @@
     "confidence": "high",
     "sources": "technical term kept (identical to English)"
   },
+  "media-tag": {
+    "chosen": "tags",
+    "confidence": "high",
+    "avoid": [
+      {
+        "form": "etiketten",
+        "why": "Double Commander's mp3-etiketten; the catalog and the Finder `tag` ruling say tag"
+      }
+    ],
+    "sources": "shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable); nl tag ruling (tag)"
+  },
   "memory": {
     "accept": ["notities", "RAM", "notitie"],
     "chosen": "geheugen",

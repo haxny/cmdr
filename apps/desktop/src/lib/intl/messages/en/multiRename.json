@@ -31,7 +31,7 @@
   },
   "multiRename.mediaButton": "media ▾",
   "@multiRename.mediaButton": {
-    "description": "Label of the button after the placeholder buttons ([N], [E], [P], [C], [YMD]) that opens the field picker: photo, video, and music information (date taken, camera, artist, title, …) to put in the new name. Lowercase like the placeholders beside it; keep the ▾ (it says the button opens a list). Keep it short: the row is tight."
+    "description": "Label of the button after the placeholder buttons ([N], [E], [P], [C], [YMD]) that opens the field picker: photo, video, and music information (date taken, camera, artist, title, …) to put in the new name. Lowercase in English to sit quietly beside the bracket placeholders; follow your language's normal capitalization (a language that capitalizes nouns does so here). Keep the ▾ (it says the button opens a list). Keep it short: the row is tight."
   },
   "multiRename.mediaButtonName": "Media fields",
   "@multiRename.mediaButtonName": {
@@ -383,7 +383,7 @@
   },
   "multiRename.renameWaitsTooltip": "Some files’ tags are still being read. Rename waits for them, then starts.",
   "@multiRename.renameWaitsTooltip": {
-    "description": "Tooltip on the Rename button while the name uses a photo or music field (like the date taken) and Cmdr is still reading those from the files."
+    "description": "Tooltip on the Rename button while the name uses a photo, video, or music field (like the date taken) and Cmdr is still reading those from the files."
   },
   "multiRename.startingTooltip": "The rename starts once every file’s tags are read. Click again to cancel.",
   "@multiRename.startingTooltip": {
@@ -435,7 +435,7 @@
   },
   "multiRename.status.noValue": "{field} missing",
   "@multiRename.status.noValue": {
-    "description": "Short preview note: the file has no value for a field the name mask uses, so it can't be renamed. {field} is the field's name, like “Date taken” or “Artist” (multiRename.mediaField.*).",
+    "description": "Short preview note: the file has no value for a field the name mask uses, so it can't be renamed. {field} is the field's name, like “Date taken” or “Artist” (multiRename.mediaField.*), and its grammatical gender varies: if “missing” would have to agree with it, a form like “{field}: no value” is fine.",
     "placeholders": {
       "field": "the field's name, like Date taken or Artist"
     }
@@ -581,7 +581,7 @@
   },
   "multiRename.mediaPicker.insertedMark": "inserted",
   "@multiRename.mediaPicker.insertedMark": {
-    "description": "Screen-reader text after a field's name in the field picker, for a field already put into the name mask while the picker was open (shown as a check mark). Lowercase: read right after the name."
+    "description": "Screen-reader text after a field's name in the field picker, for a field already put into the name mask while the picker was open (shown as a check mark). Lowercase: read right after the name. The field names vary in grammatical gender, so if “inserted” would have to agree with one, a neutral form like “already in the mask” is fine."
   },
   "multiRename.mediaEditor.marker": "Edit field",
   "@multiRename.mediaEditor.marker": {
@@ -595,7 +595,7 @@
   "@multiRename.mediaEditor.format": {
     "description": "Label of the field editor's text box for a date field's format, written in date letters (like Y-M-D or YMD_hms)."
   },
-  "multiRename.mediaEditor.dateHint": "Y, M, and D for the date, h, m, and s for the time, with - . _ or spaces between. Empty for the date and time.",
+  "multiRename.mediaEditor.dateHint": "Y, M, and D for the date, h, m, and s for the time, with - . _ or spaces between. Leave empty for the date and time.",
   "@multiRename.mediaEditor.dateHint": {
     "description": "Hint under the field editor's date format box. Keep the letters Y, M, D, h, m, s and the characters - . _ as they are: they're the format's syntax."
   },
@@ -617,13 +617,13 @@
   },
   "multiRename.mediaEditor.preset.compact": "Compact",
   "@multiRename.mediaEditor.preset.compact": {
-    "description": "A format button in a date field's editor: the date and time with no separators but one underscore, like 20260714_090530."
+    "description": "A format button in a date field's editor: the date and time with no separators but one underscore, like 20260714_090530. It names a date FORMAT (the noun it agrees with), not the UI density option settings.appearance.uiDensity.opt.compact, which shares the English word."
   },
   "multiRename.mediaEditor.digits": "Digits",
   "@multiRename.mediaEditor.digits": {
     "description": "Label of the field editor's box for a number field (like a track number): how many digits, padded with leading zeros."
   },
-  "multiRename.mediaEditor.digitsHint": "Pads with leading zeros, so 2 gives 03. Empty for the number as it is.",
+  "multiRename.mediaEditor.digitsHint": "Pads with leading zeros, so 2 turns 3 into 03. Leave empty for the number as it is.",
   "@multiRename.mediaEditor.digitsHint": {
     "description": "Hint under the field editor's Digits box for a number field."
   },
@@ -631,7 +631,7 @@
   "@multiRename.mediaEditor.characters": {
     "description": "Label of the field editor's box for a text field (like an artist): which characters to take, written as a range like 1-10."
   },
-  "multiRename.mediaEditor.charactersHint": "Like 1-10 for the first ten, or -3- for the last three. Empty for all of it.",
+  "multiRename.mediaEditor.charactersHint": "Like 1-10 for the first ten, or -3- for the last three. Leave empty for all of it.",
   "@multiRename.mediaEditor.charactersHint": {
     "description": "Hint under the field editor's Characters box for a text field. Keep 1-10 and -3- as they are: they're the range syntax."
   },

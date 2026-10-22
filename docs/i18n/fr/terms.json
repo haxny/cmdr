@@ -1929,6 +1929,11 @@
     "confidence": "high",
     "sources": "standard FR technical term"
   },
+  "media-tag": {
+    "chosen": "tags",
+    "confidence": "high",
+    "sources": "Double Commander fr (tags mp3); shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable)"
+  },
   "memory": {
     "accept": ["RAM", "notes"],
     "chosen": "mémoire",

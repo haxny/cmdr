@@ -2288,6 +2288,13 @@
     "confidence": "high",
     "sources": "catalog (settings.section names)"
   },
+  "media-tag": {
+    "chosen": "címke",
+    "accept": ["címk"],
+    "confidence": "high",
+    "note": "Same word as the Finder color tag (`tag`); Hungarian says MP3-címkék for ID3 tags.",
+    "sources": "Double Commander hu (MP3-címkék); Total Commander hu 5370 (mp3 címkék); shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable)"
+  },
   "memory": {
     "chosen": "memória",
     "accept": ["jegyzet", "memóriá", "ram"],

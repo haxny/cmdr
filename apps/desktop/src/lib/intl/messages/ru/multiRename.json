@@ -550,7 +550,7 @@
   },
   "multiRename.mediaEditor.dateHint": "Y, M и D для даты, h, m и s для времени, между ними - . _ или пробел. Оставьте пустым, чтобы получить дату и время.",
   "@multiRename.mediaEditor.dateHint": {
-    "sourceHash": "88e6818"
+    "sourceHash": "11b97ec"
   },
   "multiRename.mediaEditor.presets": "Готовые форматы",
   "@multiRename.mediaEditor.presets": {
@@ -576,9 +576,9 @@
   "@multiRename.mediaEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.mediaEditor.digitsHint": "Дополняет нулями слева: при 2 получится 03. Оставьте пустым, чтобы взять номер как есть.",
+  "multiRename.mediaEditor.digitsHint": "Дополняет нулями слева: при 2 цифрах 3 превратится в 03. Оставьте пустым, чтобы взять номер как есть.",
   "@multiRename.mediaEditor.digitsHint": {
-    "sourceHash": "793a729"
+    "sourceHash": "d71b7d7"
   },
   "multiRename.mediaEditor.characters": "Символы",
   "@multiRename.mediaEditor.characters": {
@@ -586,7 +586,7 @@
   },
   "multiRename.mediaEditor.charactersHint": "Например, 1-10 для первых десяти или -3- для последних трех. Оставьте пустым, чтобы взять все целиком.",
   "@multiRename.mediaEditor.charactersHint": {
-    "sourceHash": "dcc206f"
+    "sourceHash": "ed8b2a6"
   },
   "multiRename.mediaEditor.fallback": "Если у файла нет даты, брать дату изменения",
   "@multiRename.mediaEditor.fallback": {

@@ -556,7 +556,7 @@
   },
   "multiRename.mediaEditor.dateHint": "Y, M en D voor de datum, h, m en s voor de tijd, met - . _ of spaties ertussen. Laat leeg voor datum en tijd.",
   "@multiRename.mediaEditor.dateHint": {
-    "sourceHash": "88e6818"
+    "sourceHash": "11b97ec"
   },
   "multiRename.mediaEditor.presets": "Veelgebruikte notaties",
   "@multiRename.mediaEditor.presets": {
@@ -583,9 +583,9 @@
   "@multiRename.mediaEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.mediaEditor.digitsHint": "Vult aan met voorloopnullen, dus 2 geeft 03. Laat leeg voor het getal zoals het is.",
+  "multiRename.mediaEditor.digitsHint": "Vult aan met voorloopnullen, dus 2 maakt van 3 03. Laat leeg voor het getal zoals het is.",
   "@multiRename.mediaEditor.digitsHint": {
-    "sourceHash": "793a729"
+    "sourceHash": "d71b7d7"
   },
   "multiRename.mediaEditor.characters": "Tekens",
   "@multiRename.mediaEditor.characters": {
@@ -593,7 +593,7 @@
   },
   "multiRename.mediaEditor.charactersHint": "Bijvoorbeeld 1-10 voor de eerste tien, of -3- voor de laatste drie. Laat leeg voor alles.",
   "@multiRename.mediaEditor.charactersHint": {
-    "sourceHash": "dcc206f"
+    "sourceHash": "ed8b2a6"
   },
   "multiRename.mediaEditor.fallback": "Als een bestand er geen heeft: de datum van de laatste wijziging gebruiken",
   "@multiRename.mediaEditor.fallback": {

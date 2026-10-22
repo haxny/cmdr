@@ -550,7 +550,7 @@
   },
   "multiRename.mediaEditor.dateHint": "Y、M、D 表示日期，h、m、s 表示时间，中间用 - . _ 或空格分隔。留空则使用日期和时间。",
   "@multiRename.mediaEditor.dateHint": {
-    "sourceHash": "88e6818"
+    "sourceHash": "11b97ec"
   },
   "multiRename.mediaEditor.presets": "常用格式",
   "@multiRename.mediaEditor.presets": {
@@ -576,9 +576,9 @@
   "@multiRename.mediaEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.mediaEditor.digitsHint": "不够时在前面补零，比如填 2 会得到 03。留空则保留数字原样。",
+  "multiRename.mediaEditor.digitsHint": "不够时在前面补零，比如填 2 会把 3 变成 03。留空则保留数字原样。",
   "@multiRename.mediaEditor.digitsHint": {
-    "sourceHash": "793a729"
+    "sourceHash": "d71b7d7"
   },
   "multiRename.mediaEditor.characters": "字符",
   "@multiRename.mediaEditor.characters": {
@@ -586,7 +586,7 @@
   },
   "multiRename.mediaEditor.charactersHint": "比如 1-10 表示前十个字符，-3- 表示最后三个。留空则取全部。",
   "@multiRename.mediaEditor.charactersHint": {
-    "sourceHash": "dcc206f"
+    "sourceHash": "ed8b2a6"
   },
   "multiRename.mediaEditor.fallback": "文件没有这项日期时：改用它的修改日期",
   "@multiRename.mediaEditor.fallback": {

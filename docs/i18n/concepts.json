@@ -1968,6 +1968,13 @@
     "match": ["play", "mute", "unmute", "playback"],
     "sense": "Playing video or audio in a preview (play, pause, mute, volume)."
   },
+  "media-tag": {
+    "distinct": ["tag", "metadata"],
+    "en": "tags",
+    "match": ["reading tags", "read tags", "file’s tags", "files’ tags", "tags are read"],
+    "sense": "The information stored inside a music, video, or photo file (ID3, MP4, FLAC, and Ogg tags like artist and title, loosely also EXIF), which Multi-rename reads for its media fields.",
+    "note": "Not the Finder color tag (`tag`): where the language has separate words, use the one people say for a song's ID3 tags."
+  },
   "memory": {
     "en": "memory",
     "match": ["memory", "ram"],
@@ -3402,10 +3409,21 @@
     "sense": "A tab in a pane (several folders per pane)."
   },
   "tag": {
-    "distinct": ["tab", "git-tag"],
+    "distinct": ["tab", "git-tag", "media-tag"],
     "en": "tag",
     "match": ["tag", "tags"],
-    "notMatch": ["git tag", "git tags", "branches, tags", "tag tags", "tagged commit"],
+    "notMatch": [
+      "git tag",
+      "git tags",
+      "branches, tags",
+      "tag tags",
+      "tagged commit",
+      "reading tags",
+      "read tags",
+      "file’s tags",
+      "files’ tags",
+      "tags are read"
+    ],
     "sense": "A Finder color tag on a file."
   },
   "tail": {

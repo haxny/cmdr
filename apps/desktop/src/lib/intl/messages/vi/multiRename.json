@@ -551,7 +551,7 @@
   },
   "multiRename.mediaEditor.dateHint": "Y, M và D cho ngày, h, m và s cho giờ, ngăn cách bằng - . _ hoặc dấu cách. Để trống để lấy cả ngày và giờ.",
   "@multiRename.mediaEditor.dateHint": {
-    "sourceHash": "88e6818"
+    "sourceHash": "11b97ec"
   },
   "multiRename.mediaEditor.presets": "Định dạng thường dùng",
   "@multiRename.mediaEditor.presets": {
@@ -577,9 +577,9 @@
   "@multiRename.mediaEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.mediaEditor.digitsHint": "Thêm số 0 ở đầu, nên 2 cho ra 03. Để trống để giữ nguyên con số.",
+  "multiRename.mediaEditor.digitsHint": "Thêm số 0 ở đầu, nên với 2 thì 3 thành 03. Để trống để giữ nguyên con số.",
   "@multiRename.mediaEditor.digitsHint": {
-    "sourceHash": "793a729"
+    "sourceHash": "d71b7d7"
   },
   "multiRename.mediaEditor.characters": "Ký tự",
   "@multiRename.mediaEditor.characters": {
@@ -587,7 +587,7 @@
   },
   "multiRename.mediaEditor.charactersHint": "Ví dụ 1-10 để lấy 10 ký tự đầu, hoặc -3- để lấy ba ký tự cuối. Để trống để lấy toàn bộ.",
   "@multiRename.mediaEditor.charactersHint": {
-    "sourceHash": "dcc206f"
+    "sourceHash": "ed8b2a6"
   },
   "multiRename.mediaEditor.fallback": "Khi tệp không có: dùng ngày tệp được sửa đổi lần cuối",
   "@multiRename.mediaEditor.fallback": {

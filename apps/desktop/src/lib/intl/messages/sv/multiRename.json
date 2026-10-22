@@ -554,9 +554,9 @@
     "sourceHash": "2f34366",
     "sameAsSourceJustification": "Format is the Swedish word (sv terms.json format ruling)"
   },
-  "multiRename.mediaEditor.dateHint": "Y, M och D för datumet, h, m och s för klockslaget, med - . _ eller mellanslag emellan. Tomt ger datum och tid.",
+  "multiRename.mediaEditor.dateHint": "Y, M och D för datumet, h, m och s för klockslaget, med - . _ eller mellanslag emellan. Lämna tomt för datum och tid.",
   "@multiRename.mediaEditor.dateHint": {
-    "sourceHash": "88e6818"
+    "sourceHash": "11b97ec"
   },
   "multiRename.mediaEditor.presets": "Vanliga format",
   "@multiRename.mediaEditor.presets": {
@@ -582,17 +582,17 @@
   "@multiRename.mediaEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.mediaEditor.digitsHint": "Fyller ut med inledande nollor, så 2 ger 03. Tomt ger numret som det är.",
+  "multiRename.mediaEditor.digitsHint": "Fyller ut med inledande nollor, så med 2 blir 3 till 03. Lämna tomt för numret som det är.",
   "@multiRename.mediaEditor.digitsHint": {
-    "sourceHash": "793a729"
+    "sourceHash": "d71b7d7"
   },
   "multiRename.mediaEditor.characters": "Tecken",
   "@multiRename.mediaEditor.characters": {
     "sourceHash": "6fac39e"
   },
-  "multiRename.mediaEditor.charactersHint": "Till exempel 1-10 för de 10 första eller -3- för de tre sista. Tomt ger allt.",
+  "multiRename.mediaEditor.charactersHint": "Till exempel 1-10 för de 10 första eller -3- för de tre sista. Lämna tomt för allt.",
   "@multiRename.mediaEditor.charactersHint": {
-    "sourceHash": "dcc206f"
+    "sourceHash": "ed8b2a6"
   },
   "multiRename.mediaEditor.fallback": "När en fil saknar datumet: använd datumet då den senast ändrades",
   "@multiRename.mediaEditor.fallback": {

@@ -1870,6 +1870,12 @@
     "confidence": "tentative",
     "sources": "standard technical term"
   },
+  "media-tag": {
+    "chosen": "etiquetas",
+    "confidence": "high",
+    "note": "Same word as the Finder color tag (`tag`); Spanish calls a song's ID3 tags etiquetas too.",
+    "sources": "Double Commander es (etiquetas mp3); shipped catalog: the six multiRename media-tag keys (readingTags, renameWaitsTooltip, startingTooltip, queuedAnnounce, status.unreadable, reason.unreadable)"
+  },
   "memory": {
     "chosen": "memoria",
     "accept": ["RAM", "notas"],

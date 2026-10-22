@@ -552,9 +552,9 @@
     "sourceHash": "2f34366",
     "sameAsSourceJustification": "Format is the German word too, same spelling; the de termbase rules format → Format."
   },
-  "multiRename.mediaEditor.dateHint": "Y, M und D für das Datum, h, m und s für die Uhrzeit, dazwischen - . _ oder Leerzeichen. Leer für Datum und Uhrzeit.",
+  "multiRename.mediaEditor.dateHint": "Y, M und D für das Datum, h, m und s für die Uhrzeit, dazwischen - . _ oder Leerzeichen. Leer lassen für Datum und Uhrzeit.",
   "@multiRename.mediaEditor.dateHint": {
-    "sourceHash": "88e6818"
+    "sourceHash": "11b97ec"
   },
   "multiRename.mediaEditor.presets": "Gängige Formate",
   "@multiRename.mediaEditor.presets": {
@@ -580,17 +580,17 @@
   "@multiRename.mediaEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.mediaEditor.digitsHint": "Füllt mit führenden Nullen auf, 2 ergibt also 03. Leer für die Zahl, wie sie ist.",
+  "multiRename.mediaEditor.digitsHint": "Füllt mit führenden Nullen auf, bei 2 wird also aus 3 die 03. Leer lassen für die Zahl, wie sie ist.",
   "@multiRename.mediaEditor.digitsHint": {
-    "sourceHash": "793a729"
+    "sourceHash": "d71b7d7"
   },
   "multiRename.mediaEditor.characters": "Zeichen",
   "@multiRename.mediaEditor.characters": {
     "sourceHash": "6fac39e"
   },
-  "multiRename.mediaEditor.charactersHint": "Etwa 1-10 für die ersten zehn oder -3- für die letzten drei. Leer für alles.",
+  "multiRename.mediaEditor.charactersHint": "Etwa 1-10 für die ersten zehn oder -3- für die letzten drei. Leer lassen für alles.",
   "@multiRename.mediaEditor.charactersHint": {
-    "sourceHash": "dcc206f"
+    "sourceHash": "ed8b2a6"
   },
   "multiRename.mediaEditor.fallback": "Wenn einer Datei das Datum fehlt: Datum der letzten Änderung verwenden",
   "@multiRename.mediaEditor.fallback": {
