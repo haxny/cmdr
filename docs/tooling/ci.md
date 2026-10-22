@@ -152,9 +152,15 @@ silent** (a warning, not a red job):
   `apps/desktop/test/e2e-linux/DETAILS.md` § "CI base image". (The E2E job has no "Free disk space" step: the runner's
   root disk is 145 GB with 107+ GB free, measured on 109 runs in October 2026, and the reclaim cost ~1.6 min a run,
   #557.)
-- **The Linux apt install goes through the `tauri-linux-deps` action** (`.github/actions/`): apt's own 30-s connection
-  timeout and retries, a `timeout` on the download, and a second attempt, under a 20-min step cap. On 2026-10-22 the
-  plain install took up to 38.9 min (usually ~0.5) and ran `desktop-rust-fixtures` out of its 40-min cap.
+- **The Linux apt install goes through the `tauri-linux-deps` action** (`.github/actions/`). On 2026-10-22 the plain
+  install took up to 38.9 min (usually ~0.5) and ran `desktop-rust-fixtures` out of its 40-min cap. The Azure mirror
+  crawled rather than stalled (~15 MB in 8 min), so a timeout plus a plain retry against it still failed. The action
+  layers:
+  - A cache of the ~64 MB of downloaded `.deb`s (`tauri-apt-<ImageOS>-<ImageVersion>-<hash of the action>`), so most
+    runs skip the mirror. A new runner image misses once and re-saves.
+  - A time-boxed download (4 min, then 8), with the second attempt dropping `azure.archive.ubuntu.com` for
+    `archive.ubuntu.com`, under a 20-min step cap.
+  - apt's own 30-s connection timeout and retries.
 - **`slow-checks` dependency-checks**: rust-cache for cargo-udeps's nightly `target/`, plus the same "Free disk space"
   step. Kept alive by the 6-day cron (below).
 

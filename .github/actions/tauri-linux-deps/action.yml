@@ -1,28 +1,67 @@
 name: Install Tauri dependencies (Linux)
 description: >-
-  apt-installs the system libraries the Tauri crates link against, with a timeout and retries so a slow Ubuntu mirror
-  fails fast instead of eating the job.
+  apt-installs the system libraries the Tauri crates link against, from a cache of the downloaded packages when one
+  exists, with a timeout and a mirror switch so a slow Ubuntu mirror fails over instead of eating the job.
 
 # Why: this install is ~0.5 min on a healthy mirror, but on 2026-10-22 it took 2.8, 5.2, 6.6,
 # 19.3, and 38.9 min in five of ~25 runs, and the 38.9 one ran `desktop-rust-fixtures` into its
-# 40-min cap. So apt itself gives up on a stalled connection (`Acquire::http::Timeout`) and
-# retries it, the network part runs under `timeout`, and the whole thing gets a second attempt.
-# Only the download is time-boxed: killing `dpkg` mid-install would leave a broken package state,
-# and installing from the local archive is fast anyway.
+# 40-min cap. The mirror wasn't stalled, it crawled (~15 MB in 8 min), so a plain retry against it
+# timed out again. Hence three layers:
+# - The ~64 MB of `.deb`s are cached, keyed on the runner image version (its preinstalled package
+#   versions decide what apt fetches) and the package list, so most runs never touch a mirror.
+# - The download is time-boxed, and the second attempt drops the Azure mirror for
+#   `archive.ubuntu.com`. Only the download: killing `dpkg` mid-install would leave a broken
+#   package state, and installing from local files is fast anyway.
+# - apt itself gives up on a dead connection after 30 s (`Acquire::http::Timeout`).
 runs:
   using: composite
   steps:
+    # `ImageOS` / `ImageVersion` are runner env vars, which the `env` expression context can't see.
+    - name: Compute the package cache key
+      id: key
+      shell: bash
+      run:
+        echo "key=tauri-apt-${ImageOS:-unknown}-${ImageVersion:-unknown}-${{
+        hashFiles('.github/actions/tauri-linux-deps/action.yml') }}" >>"$GITHUB_OUTPUT"
+
+    - name: Restore the downloaded packages
+      id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/apt-archives
+        key: ${{ steps.key.outputs.key }}
+
     - name: Install Tauri dependencies (Linux)
       shell: bash
+      env:
+        ARCHIVES: ${{ runner.temp }}/apt-archives
       run: |
         packages=(libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libacl1-dev)
-        apt_opts=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+        mkdir -p "$ARCHIVES/partial"
+        apt_opts=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+          -o "Dir::Cache::archives=$ARCHIVES")
+        download_timeouts=(240 480)
         for attempt in 1 2; do
-          if timeout 300 sudo apt-get "${apt_opts[@]}" update &&
-            timeout 480 sudo apt-get "${apt_opts[@]}" install -y --download-only "${packages[@]}"; then
-            sudo apt-get install -y --no-download "${packages[@]}"
+          if [[ $attempt == 2 ]]; then
+            echo "::warning::apt attempt 1 failed or timed out; retrying on archive.ubuntu.com."
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt || true
+          fi
+          if timeout 120 sudo apt-get "${apt_opts[@]}" update &&
+            timeout "${download_timeouts[attempt - 1]}" \
+              sudo apt-get "${apt_opts[@]}" install -y --download-only "${packages[@]}"; then
+            sudo apt-get "${apt_opts[@]}" install -y --no-download "${packages[@]}"
+            # The cache save runs as the runner user, and apt leaves a root-only `partial/`.
+            sudo rm -rf "$ARCHIVES/partial" "$ARCHIVES/lock"
+            sudo chown -R "$(id -u):$(id -g)" "$ARCHIVES"
             exit 0
           fi
-          echo "::warning::apt attempt $attempt failed or timed out."
         done
+        echo "::error::apt couldn't download the Tauri dependencies from either mirror."
         exit 1
+
+    - name: Save the downloaded packages
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/apt-archives
+        key: ${{ steps.restore.outputs.cache-primary-key }}
