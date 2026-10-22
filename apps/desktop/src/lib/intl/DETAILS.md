@@ -228,6 +228,28 @@ path) formats to parts and pads a Han connective (`和`) wherever it meets a Lat
 stays tight (punctuation takes no space), and Japanese is excluded (it runs tight), so the rule keys off the language,
 not the script. The per-locale memo carries the flag, so the common path stays one cached `format()`.
 
+## Catalina has no Intl.ListFormat
+
+On macOS 10.15 `Intl.ListFormat` is `undefined`, whatever Safari the Mac has, so `new Intl.ListFormat(...)` throws
+`undefined is not a constructor`. Every file row's accessible name joins through `formatUnitList`, so a bare constructor
+call crashed the main window at startup there (cmdr-reports#80, ERR-5DKYE, Cmdr 0.55.0 on 10.15.8).
+
+- **Why, when Safari 14.1 "has" it**: JavaScriptCore installs `Intl.ListFormat` only when built against ICU 67+ (66 with
+  Apple's internal SDK): `HAVE_ICU_U_LIST_FORMATTER` in `IntlListFormat.h`, read by `IntlObject::finishCreation`. A
+  Safari update staged onto Catalina brings its own JavaScriptCore but links the OS's `libicucore`, and Catalina ships
+  ICU 64 (`ICU-64260.0.1` in Apple's `distribution-macOS` tag `macos-10156`); Big Sur 11.0.1 ships `ICU-66108`, so it
+  has the constructor. MDN and caniuse don't model this, so a Safari-version linter can't see it (verified from WebKit's
+  `safari-613-branch` source and `apple-oss-distributions/distribution-macOS` `release.json`, 2026-10-22).
+- **The same ICU gate hides, on Catalina**: `Intl.NumberFormat.prototype.formatRange` / `formatRangeToParts` and
+  `Intl.PluralRules.prototype.selectRange` (ICU 68+, so Big Sur lacks them too). Nothing in the app calls them; the one
+  bundled `formatRange` (Ark/Zag) feature-detects. `style: 'unit'` number formatting needs ICU 64, which Catalina meets.
+- **The answer is degrade, not block**: `createListFormat()` is the one door to the constructor and answers `undefined`
+  without it. The "and"/"or" joins and `formatUnitList` then join with the enumeration comma (`、` for zh/ja, `, `
+  otherwise), and narrow durations with a space. A guessed connective would be English in every language, and a comma
+  list keeps every name in order, which is what the eject message, the transfer toast, and the accessible names need.
+- **Guardrail**: `no-restricted-properties` in `apps/desktop/eslint.config.js` bans `Intl.ListFormat` member access
+  outside that door (off in tests). `list-format-fallback.test.ts` deletes the constructor and pins the fallback output.
+
 ## Column measurement
 
 `views/measure-column-widths.ts` shrink-wraps the Size/Modified columns and calls `formatSizeForDisplay` per visible

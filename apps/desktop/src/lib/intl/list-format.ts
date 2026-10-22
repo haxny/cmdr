@@ -15,17 +15,34 @@
  *
  * Memoized per locale for the same reason `number-format.ts` is: constructing an
  * `Intl` formatter costs far more than formatting with one.
+ *
+ * `Intl.ListFormat` can be missing entirely (every Catalina, whatever its Safari),
+ * so nothing here constructs one directly: {@link createListFormat} answers
+ * `undefined` there, and each join falls back to the enumeration comma. Why the
+ * engine lacks it: `DETAILS.md` § Catalina has no Intl.ListFormat.
  */
 
 import { getUiLocale } from './locale'
 
 interface ListJoiner {
-  formatter: Intl.ListFormat
+  /** `undefined` on an engine without `Intl.ListFormat`. */
+  formatter: Intl.ListFormat | undefined
   /** Whether the joins need Han–Latin spacing on top of CLDR's pattern. */
   spacesHan: boolean
 }
 
 type ListType = 'conjunction' | 'disjunction'
+
+/**
+ * A new `Intl.ListFormat`, or `undefined` where the engine has none. The one
+ * place in the app that calls the constructor (`duration-format.ts` comes here too).
+ */
+export function createListFormat(locale: string, options: Intl.ListFormatOptions): Intl.ListFormat | undefined {
+  // The lib types say it always exists; Catalina's JavaScriptCore says otherwise.
+  if (typeof (Intl as { ListFormat?: unknown }).ListFormat !== 'function') return undefined
+  // eslint-disable-next-line no-restricted-properties -- the feature-detected door itself
+  return new Intl.ListFormat(locale, options)
+}
 
 /** Cache of one joiner per UI locale and list type. */
 const listFormatterCache = new Map<string, ListJoiner>()
@@ -37,7 +54,7 @@ function getJoiner(type: ListType): ListJoiner {
   let joiner = listFormatterCache.get(cacheKey)
   if (joiner === undefined) {
     joiner = {
-      formatter: new Intl.ListFormat(locale, { style: 'long', type }),
+      formatter: createListFormat(locale, { style: 'long', type }),
       spacesHan: spacesHanAgainstLatin(locale),
     }
     listFormatterCache.set(cacheKey, joiner)
@@ -87,16 +104,28 @@ function enumerationSeparator(): string {
   const locale = getUiLocale()
   let separator = separatorCache.get(locale)
   if (separator === undefined) {
-    const parts = new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).formatToParts(['a', 'b', 'c'])
-    separator = parts.find((part) => part.type === 'literal')?.value ?? ', '
+    const parts = createListFormat(locale, { style: 'long', type: 'conjunction' })?.formatToParts(['a', 'b', 'c'])
+    separator = parts?.find((part) => part.type === 'literal')?.value ?? fallbackEnumerationSeparator(locale)
     separatorCache.set(locale, separator)
   }
   return separator
 }
 
+/**
+ * CLDR's enumeration comma without `Intl.ListFormat` to ask: the full-width `、`
+ * for Chinese and Japanese, `, ` for every other language we ship.
+ */
+function fallbackEnumerationSeparator(locale: string): string {
+  const language = locale.split('-')[0].toLowerCase()
+  return language === 'zh' || language === 'ja' ? '、' : ', '
+}
+
 function formatList(items: readonly string[], type: ListType): string {
   if (items.length === 0) return ''
   const { formatter, spacesHan } = getJoiner(type)
+  // No "and"/"or" word without CLDR's patterns: a comma list keeps every name, in
+  // order, in any language, where a guessed English connective would not.
+  if (formatter === undefined) return formatUnitList(items)
   if (!spacesHan) return formatter.format(items)
   return formatter
     .formatToParts(items)

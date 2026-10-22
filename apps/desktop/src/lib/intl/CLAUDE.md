@@ -12,9 +12,9 @@ for numbers, sizes, dates.
 - `language-analytics.ts`: language events (shipped tags only), fired off the PICK, never a subscription
   (`src-tauri/src/analytics/DETAILS.md`).
 - `number-format.ts`: memoized `Intl.NumberFormat` factory (`getNumberFormatter`), `formatInteger`, `formatMoney`, and
-  `getGroupSeparator`. `list-format.ts`: memoized `Intl.ListFormat` joins (and, or, unit), UI locale.
-  `sentence-join.ts`: `joinSentences()` (❌ never `.join(' ')`: no space in Chinese). `duration-format.ts`: narrow
-  durations ("8min 12s"), no `Intl.DurationFormat` (too new).
+  `getGroupSeparator`. `list-format.ts`: joins (and, or, unit); `createListFormat`, the sole `Intl.ListFormat` door
+  (Catalina lacks it). `sentence-join.ts`: `joinSentences()` (❌ never `.join(' ')`: no space in Chinese).
+  `duration-format.ts`: narrow durations, no `Intl.DurationFormat`.
 - `locale-inheritance.ts`: which catalog a locale may inherit from (same language AND same script), shared with the i18n
   checks and Rust.
 - `messages.svelte.ts`: the runtime: `t()` (catalog + ICU), `getMessage()` (raw), `setLocale()`, `availableLocales()`,

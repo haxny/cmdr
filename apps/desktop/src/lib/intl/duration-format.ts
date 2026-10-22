@@ -13,6 +13,7 @@
  * sentence around them, the same reasoning `list-format.ts` follows.
  */
 
+import { createListFormat } from './list-format'
 import { getUiLocale } from './locale'
 import { getNumberFormatter } from './number-format'
 
@@ -26,7 +27,8 @@ export interface DurationPart {
 }
 
 const unitFormatterCache = new Map<string, Intl.NumberFormat>()
-const joinerCache = new Map<string, Intl.ListFormat>()
+/** `undefined` per locale on an engine without `Intl.ListFormat` (Catalina). */
+const joinerCache = new Map<string, Intl.ListFormat | undefined>()
 
 function getUnitFormatter(locale: string, unit: DurationUnit): Intl.NumberFormat {
   const key = `${locale} ${unit}`
@@ -38,23 +40,21 @@ function getUnitFormatter(locale: string, unit: DurationUnit): Intl.NumberFormat
   return formatter
 }
 
-function getJoiner(locale: string): Intl.ListFormat {
-  let joiner = joinerCache.get(locale)
-  if (joiner === undefined) {
-    joiner = new Intl.ListFormat(locale, { type: 'unit', style: 'narrow' })
-    joinerCache.set(locale, joiner)
-  }
-  return joiner
+function getJoiner(locale: string): Intl.ListFormat | undefined {
+  if (!joinerCache.has(locale)) joinerCache.set(locale, createListFormat(locale, { type: 'unit', style: 'narrow' }))
+  return joinerCache.get(locale)
 }
 
 /**
  * Formats duration components, largest first, in the UI language's narrow
  * style. The caller decides which components to show (dropping a zero tail,
- * say); this only words them.
+ * say); this only words them. Without `Intl.ListFormat` the units join with a
+ * space, CLDR's narrow pattern for English.
  */
 export function formatNarrowDuration(parts: readonly DurationPart[]): string {
   const locale = getUiLocale()
-  return getJoiner(locale).format(parts.map(({ unit, value }) => getUnitFormatter(locale, unit).format(value)))
+  const worded = parts.map(({ unit, value }) => getUnitFormatter(locale, unit).format(value))
+  return getJoiner(locale)?.format(worded) ?? worded.join(' ')
 }
 
 /** The units a single measured timing can be worded in. */

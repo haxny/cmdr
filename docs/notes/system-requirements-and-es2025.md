@@ -70,6 +70,11 @@ still calls whatever the source calls. `crypto.randomUUID` (15 files), `Object.h
 the `:has()` selector all arrived in Safari 15.4. Nothing lowers those, so 15.4 is the hard floor below which the app
 genuinely cannot work.
 
+**Beside the floors, ICU.** A staged Safari brings its own JavaScriptCore but keeps the OS's ICU, and some `Intl` APIs
+exist only on a newer ICU than Catalina's. So Safari 15.6.1 on Catalina still has no `Intl.ListFormat`, which crashed
+0.55.0's main window there (cmdr-reports#80). The app degrades rather than blocks on this; the ICU gates, the affected
+APIs, and the guardrail are in `apps/desktop/src/lib/intl/DETAILS.md` § Catalina has no Intl.ListFormat.
+
 Together they're why the block screen is an inline ES5 `<script>` in `apps/desktop/src/app.html` that runs before the
 module boot script: a screen shipped inside the bundle is unreachable on exactly the Safari (13.x) that most needs it.
 Its translated copy is spliced in at build time from the message catalogs, so the shell can't drift from what

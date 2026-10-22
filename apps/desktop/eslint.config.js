@@ -358,6 +358,21 @@ export default tseslint.config(
       // formatter. Turned OFF for `*.test.ts` below (tests legitimately
       // construct `Intl.NumberFormat`/`DateTimeFormat` to compute expecteds).
       'cmdr/no-raw-locale-format': 'error',
+      // Catalina's WebKit has no `Intl.ListFormat` (JavaScriptCore installs it only
+      // against ICU 67+), so a bare `new Intl.ListFormat` crashed the main window at
+      // startup (cmdr-reports#80). `createListFormat` in `#lib/intl/list-format` is
+      // the one feature-detected door, with its disable comment. Type positions
+      // (`Intl.ListFormat` as a type) aren't member accesses, so they stay fine.
+      // Turned OFF for `*.test.ts` below. Floor: `src/lib/intl/DETAILS.md`.
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Intl',
+          property: 'ListFormat',
+          message:
+            'Catalina has no `Intl.ListFormat`. Use `createListFormat` (or the joins) from `#lib/intl/list-format`.',
+        },
+      ],
       // One place turns a byte count, a transfer rate, or a duration into text:
       // `#lib/units` (plus `<Size>` for the colored inline form). Four private
       // byte formatters once drifted apart, each hardcoding base 1024 while
@@ -472,6 +487,8 @@ export default tseslint.config(
       '@typescript-eslint/no-dynamic-delete': 'off',
       // Tests construct `Intl.*` formatters to compute expected values, on purpose.
       'cmdr/no-raw-locale-format': 'off',
+      // Tests build `Intl.ListFormat` to compute expecteds, and stub or delete it.
+      'no-restricted-properties': 'off',
       // Tests use literal copy for fixtures and assertions, on purpose.
       'cmdr/no-raw-user-facing-string': 'off',
       // Fixtures legitimately spell out `1024 * 1024` to build expected values.
