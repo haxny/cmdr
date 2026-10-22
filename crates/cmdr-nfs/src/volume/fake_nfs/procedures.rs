@@ -8,7 +8,7 @@ use std::sync::atomic::Ordering;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 
-use super::{Body, FakeNfs, proc, status};
+use super::{Body, CreateSeen, FakeNfs, proc, status};
 use crate::proto::nfs3::{Fattr3, FileHandle, NfsTime};
 use crate::proto::server::{nfs3_wire, success_reply};
 use crate::xdr::{Decoder, Encoder};
@@ -19,8 +19,19 @@ impl FakeNfs {
         reason = "one arm per procedure reads better as one table than split across helpers"
     )]
     pub(super) fn answer_nfs(&self, xid: u32, procedure: u32, args: &mut Decoder) -> Bytes {
-        let mut tree = self.tree.lock_ignore_poison();
         let knobs = &self.knobs;
+        if let Some(refused) = knobs.refuse_next.lock_ignore_poison().remove(&procedure) {
+            return success_reply(xid, |enc| enc.u32(refused));
+        }
+        {
+            let nth = self.calls(procedure);
+            let mut due = knobs.rotate_on.lock_ignore_poison();
+            if let Some(at) = due.iter().position(|&(on, n)| on == procedure && n == nth) {
+                due.remove(at);
+                knobs.verifier.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+        let mut tree = self.tree.lock_ignore_poison();
         let outcome: Result<Results, u32> = (|| {
             let target = tree.node_of(&args.opaque(64).map_err(|_| status::BADHANDLE)?)?;
             match procedure {
@@ -102,6 +113,9 @@ impl FakeNfs {
                     let _count = args.u32().unwrap_or(0);
                     let stable = args.u32().unwrap_or(0);
                     let mut data = args.opaque(usize::MAX).unwrap_or_default().to_vec();
+                    knobs
+                        .largest_write
+                        .fetch_max(u32::try_from(data.len()).unwrap_or(u32::MAX), Ordering::SeqCst);
                     let short = knobs.short_writes.load(Ordering::SeqCst) as usize;
                     if short > 0 {
                         data.truncate(short);
@@ -139,11 +153,25 @@ impl FakeNfs {
                 }
                 proc::CREATE | proc::MKDIR => {
                     let name = args.opaque(255).map_err(|_| status::INVAL)?;
+                    let mut truncate_to = None;
                     let guarded = if procedure == proc::CREATE {
                         let how = args.u32().unwrap_or(0);
+                        let mut seen = CreateSeen {
+                            how,
+                            mode: None,
+                            owner_set: false,
+                            size: None,
+                            times_set: false,
+                        };
                         if how != 2 {
-                            let _ = decode_sattr(args);
+                            let sattr = decode_sattr(args);
+                            seen.mode = sattr.mode;
+                            seen.owner_set = sattr.owner_set;
+                            seen.size = sattr.size;
+                            seen.times_set = sattr.times_set;
+                            truncate_to = sattr.size;
                         }
+                        *knobs.last_create.lock_ignore_poison() = Some(seen);
                         how != 0
                     } else {
                         let _ = decode_sattr(args);
@@ -156,8 +184,10 @@ impl FakeNfs {
                     let id = match tree.child(target, &name) {
                         Some(_) if guarded => return Err(status::EXIST),
                         Some(existing) => {
-                            if let Body::File(data) = &mut tree.nodes.get_mut(&existing).expect("a node").body {
-                                data.clear();
+                            if let (Body::File(data), Some(size)) =
+                                (&mut tree.nodes.get_mut(&existing).expect("a node").body, truncate_to)
+                            {
+                                data.resize(usize::try_from(size).unwrap_or(0), 0);
                             }
                             existing
                         }
@@ -277,10 +307,14 @@ impl FakeNfs {
                 }
                 proc::FSINFO => {
                     let size = knobs.transfer_size.load(Ordering::SeqCst);
+                    let write_max = match knobs.write_max.load(Ordering::SeqCst) {
+                        0 => 1024 * 1024,
+                        bytes => bytes,
+                    };
                     let attrs = tree.attrs(target);
                     Ok(boxed(move |enc: &mut Encoder| {
                         nfs3_wire::post_op_attr(enc, Some(&attrs));
-                        encode_fsinfo(enc, size);
+                        encode_fsinfo(enc, size, write_max);
                     }))
                 }
                 proc::PATHCONF => {
@@ -315,12 +349,13 @@ fn boxed(results: impl FnOnce(&mut Encoder) + 'static) -> Results {
     Box::new(results)
 }
 
-/// What the fake answers FSINFO with, `size` as both preferences.
-fn encode_fsinfo(enc: &mut Encoder, size: u32) {
+/// What the fake answers FSINFO with, `size` as both preferences and
+/// `write_max` as `wtmax`.
+fn encode_fsinfo(enc: &mut Encoder, size: u32, write_max: u32) {
     enc.u32(1024 * 1024);
     enc.u32(size);
     enc.u32(4096);
-    enc.u32(1024 * 1024);
+    enc.u32(write_max);
     enc.u32(size);
     enc.u32(4096);
     enc.u32(size);
@@ -356,10 +391,12 @@ fn wcc(enc: &mut Encoder, before: (u64, NfsTime, NfsTime), after: &Fattr3) {
     nfs3_wire::post_op_attr(enc, Some(after));
 }
 
-/// The parts of a `sattr3` the fake applies.
+/// The parts of a `sattr3` the fake applies, and whether the rest were set.
 struct SetAttrs {
     mode: Option<u32>,
+    owner_set: bool,
     size: Option<u64>,
+    times_set: bool,
     atime: Option<NfsTime>,
     mtime: Option<NfsTime>,
 }
@@ -373,25 +410,32 @@ fn decode_sattr(args: &mut Decoder) -> SetAttrs {
         }
     };
     let mode = flag_u32(args);
-    let _uid = flag_u32(args);
-    let _gid = flag_u32(args);
+    let uid = flag_u32(args);
+    let gid = flag_u32(args);
     let size = if args.bool().unwrap_or(false) {
         args.u64().ok()
     } else {
         None
     };
+    // `(set at all, the client's own value)`.
     let time = |args: &mut Decoder| match args.u32().unwrap_or(0) {
-        2 => Some(NfsTime {
-            seconds: args.u32().unwrap_or(0),
-            nseconds: args.u32().unwrap_or(0),
-        }),
-        _ => None,
+        2 => (
+            true,
+            Some(NfsTime {
+                seconds: args.u32().unwrap_or(0),
+                nseconds: args.u32().unwrap_or(0),
+            }),
+        ),
+        0 => (false, None),
+        _ => (true, None),
     };
-    let atime = time(args);
-    let mtime = time(args);
+    let (atime_set, atime) = time(args);
+    let (mtime_set, mtime) = time(args);
     SetAttrs {
         mode,
+        owner_set: uid.is_some() || gid.is_some(),
         size,
+        times_set: atime_set || mtime_set,
         atime,
         mtime,
     }

@@ -32,7 +32,6 @@ impl NfsVolume {
     /// The app spelling of `path`, for the listing-cache patcher. A refusal is
     /// "no patch to make": a patch is a courtesy, and ❌ must never fail a
     /// mutation that already landed.
-    #[allow(dead_code, reason = "the write side's `PatchSource` answers through it")]
     pub(super) fn display_path_for(&self, path: &Path) -> Option<PathBuf> {
         self.root
             .to_remote_path(path)

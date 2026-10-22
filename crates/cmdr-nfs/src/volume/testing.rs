@@ -91,6 +91,41 @@ pub fn app_path(volume: &NfsVolume, remote: &str) -> PathBuf {
     Path::new(volume.root()).join(remote)
 }
 
+/// A fresh folder of the cell's own at the export's root, already created:
+/// every cell shares the one export, and `nextest` runs them side by side.
+/// `what` names the cell, so a mess left behind says whose it is.
+pub async fn scratch_dir(volume: &NfsVolume, what: &str) -> PathBuf {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_nanos());
+    let dir = app_path(volume, &format!("/scratch-{what}-{}-{nanos}", std::process::id()));
+    volume
+        .create_directory(&dir)
+        .await
+        .unwrap_or_else(|err| panic!("the scratch folder for {what} must be creatable: {err:?}"));
+    dir
+}
+
+/// Removes `path` and everything under it, deepest first, best effort.
+pub fn clean_deep<'a>(
+    volume: &'a NfsVolume,
+    path: &'a Path,
+) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
+    Box::pin(async move {
+        if let Ok(entries) = volume.list_directory(path, None).await {
+            for entry in entries {
+                let child = path.join(&entry.name);
+                if entry.is_directory && !entry.is_symlink {
+                    clean_deep(volume, &child).await;
+                } else {
+                    let _ = volume.delete(&child).await;
+                }
+            }
+        }
+        let _ = volume.delete(path).await;
+    })
+}
+
 /// What `large.bin` holds at `[offset, offset + len)`: every 16-byte line its
 /// own zero-padded number.
 pub fn fixture_large_bytes_at(offset: u64, len: usize) -> Vec<u8> {

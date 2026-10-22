@@ -38,6 +38,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::reconnect::{Dialer, NfsClient, Resolved};
 
+mod knobs;
 mod procedures;
 
 use crate::dial::{DialOptions, credential_for};
@@ -307,6 +308,35 @@ struct Knobs {
     reset_one: AtomicU32,
     /// Every NFS call by procedure number.
     calls: Mutex<HashMap<u32, usize>>,
+    /// Every NFS call's procedure number, in arrival order.
+    log: Mutex<Vec<u32>>,
+    /// `(procedure, nth call)` pairs: the verifier rotates as that call
+    /// arrives, before it's answered.
+    rotate_on: Mutex<Vec<(u32, usize)>>,
+    /// The next call to a procedure answers this `nfsstat3` and changes
+    /// nothing.
+    refuse_next: Mutex<HashMap<u32, u32>>,
+    /// 0: 1 MiB. Otherwise the `wtmax` FSINFO answers.
+    write_max: AtomicU32,
+    /// The most data one WRITE carried.
+    largest_write: AtomicU32,
+    /// What the last CREATE asked for.
+    last_create: Mutex<Option<CreateSeen>>,
+}
+
+/// The shape of one CREATE call, as the fake decoded it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct CreateSeen {
+    /// `createmode3`: 0 UNCHECKED, 1 GUARDED, 2 EXCLUSIVE.
+    pub(super) how: u32,
+    /// The `sattr3` mode, if set.
+    pub(super) mode: Option<u32>,
+    /// Whether the uid or the gid was set.
+    pub(super) owner_set: bool,
+    /// The `sattr3` size, if set.
+    pub(super) size: Option<u64>,
+    /// Whether either time was set.
+    pub(super) times_set: bool,
 }
 
 /// The fake server. Cheap to clone; every clone is the same server.
@@ -462,92 +492,6 @@ impl FakeNfs {
         self.tree.lock_ignore_poison().by_path(path).is_some()
     }
 
-    // ── Knobs ────────────────────────────────────────────────────────
-
-    /// Answers READDIRPLUS with `NFS3ERR_NOTSUPP` (unfs3's shape), so the
-    /// client falls back to READDIR + LOOKUP.
-    pub(super) fn refuse_readdirplus(&self, refuse: bool) {
-        self.knobs.no_readdirplus.store(refuse, Ordering::SeqCst);
-    }
-
-    /// Reads every call and answers none, on every connection, the `NULL`
-    /// probe's fresh one included: a NAS asleep, a cable pulled.
-    pub(super) fn go_silent(&self, silent: bool) {
-        self.knobs.silent.store(silent, Ordering::SeqCst);
-    }
-
-    /// New connections are closed at once (a stopped `nfsd`), through both
-    /// the listener and the duplex dialer.
-    pub(super) fn refuse_dials(&self, refuse: bool) {
-        self.knobs.refuse_dials.store(refuse, Ordering::SeqCst);
-    }
-
-    /// READ replies go out in batches, last first.
-    pub(super) fn reorder_reads(&self, reorder: bool) {
-        self.knobs.reorder_reads.store(reorder, Ordering::SeqCst);
-    }
-
-    /// Refuses a client whose source port is past 1023: `MNT3ERR_ACCES` on
-    /// `MNT`, `NFS3ERR_PERM` on every NFS call but `NULL` (knfsd's shape,
-    /// measured: `apps/desktop/test/nfs-servers/README.md` § "Reaching
-    /// /secure").
-    pub(super) fn require_reserved_port(&self, require: bool) {
-        self.knobs.require_reserved_port.store(require, Ordering::SeqCst);
-    }
-
-    /// Every READ answers at most `bytes` (0: as asked).
-    pub(super) fn answer_reads_short(&self, bytes: u32) {
-        self.knobs.short_reads.store(bytes, Ordering::SeqCst);
-    }
-
-    /// Every WRITE stores and answers at most `bytes` (0: all of it).
-    pub(super) fn answer_writes_short(&self, bytes: u32) {
-        self.knobs.short_writes.store(bytes, Ordering::SeqCst);
-    }
-
-    /// How many entries a listing page holds.
-    pub(super) fn set_page_entries(&self, entries: u32) {
-        self.knobs.page_entries.store(entries.max(1), Ordering::SeqCst);
-    }
-
-    /// The `rtpref` / `wtpref` FSINFO answers.
-    pub(super) fn set_transfer_size(&self, bytes: u32) {
-        self.knobs.transfer_size.store(bytes, Ordering::SeqCst);
-    }
-
-    /// A server reboot as WRITE and COMMIT see it: a new verifier, so data not
-    /// yet committed counts as lost.
-    pub(super) fn rotate_verifier(&self) {
-        self.knobs.verifier.fetch_add(1, Ordering::SeqCst);
-    }
-
-    /// The next reply to NFS procedure `procedure` goes unsent (the call
-    /// itself still happened).
-    pub(super) fn drop_one_reply(&self, procedure: u32) {
-        self.knobs.drop_one.store(procedure + 1, Ordering::SeqCst);
-    }
-
-    /// The next reply to NFS procedure `procedure` is cut halfway, and that
-    /// connection closes.
-    pub(super) fn reset_mid_reply(&self, procedure: u32) {
-        self.knobs.reset_one.store(procedure + 1, Ordering::SeqCst);
-    }
-
-    /// How many NFS calls of `procedure` arrived.
-    pub(super) fn calls(&self, procedure: u32) -> usize {
-        self.knobs
-            .calls
-            .lock_ignore_poison()
-            .get(&procedure)
-            .copied()
-            .unwrap_or(0)
-    }
-
-    /// Every NFS call that arrived, `NULL` included.
-    pub(super) fn total_calls(&self) -> usize {
-        self.knobs.calls.lock_ignore_poison().values().sum()
-    }
-
     // ── The duplex way in ────────────────────────────────────────────
 
     /// A dialer that reaches this fake over an in-memory pipe, with no socket:
@@ -626,6 +570,7 @@ impl FakeNfs {
             let Ok(mut call) = decode_call(record) else { return };
             if call.program == NFS {
                 *self.knobs.calls.lock_ignore_poison().entry(call.procedure).or_default() += 1;
+                self.knobs.log.lock_ignore_poison().push(call.procedure);
             }
             if self.knobs.silent.load(Ordering::SeqCst) {
                 continue;

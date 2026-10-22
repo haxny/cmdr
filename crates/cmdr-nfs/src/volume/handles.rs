@@ -150,7 +150,6 @@ impl HandleCache {
     /// vouch for themselves if, and only if, they held `before`. ❗ A child
     /// holding anything else saw ANOTHER change too, and keeps its old stamp so
     /// the next mutation re-LOOKUPs it.
-    #[allow(dead_code, reason = "the write side's mutations report through it")]
     pub(super) fn note_dir_changed(&self, dir: &str, wcc: &WccData) {
         let (Some(before), Some(after)) = (wcc.before, wcc.after) else {
             return;
@@ -203,6 +202,16 @@ pub(super) struct Found {
     pub(super) attributes: Option<Fattr3>,
     /// The path it was found at with every link followed: what its cache
     /// entries are filed under.
+    pub(super) real: String,
+}
+
+/// The folder a mutation acts in, proven current by
+/// [`NfsVolume::dir_for_mutation`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct MutationDir {
+    /// Its handle, the `dir` half of every `dir handle + name` call.
+    pub(super) handle: FileHandle,
+    /// Its path with every link followed, what the cache files it under.
     pub(super) real: String,
 }
 
@@ -269,16 +278,25 @@ impl NfsVolume {
         }
     }
 
-    /// The handle of the folder `dir` names NOW, for a mutation in it.
+    /// The folder `dir` names NOW, for a mutation in it: its handle and its
+    /// real path (what its cache entries, and `note_dir_changed`, are filed
+    /// under).
     ///
     /// ❗ Resolves, then proves the cached chain to it: one pipelined round of
     /// `GETATTR`s on the root and every ancestor, each checked against the
     /// stamp its child was looked up under. A level that moved is forgotten
     /// with everything under it, and the walk runs again, re-LOOKUPing from
-    /// there.
-    #[allow(dead_code, reason = "the write side's mutations resolve their folder through it")]
-    pub(super) async fn dir_for_mutation(&self, client: &NfsClient, dir: &str) -> Result<FileHandle, VolumeError> {
+    /// there. A `dir` that leads to anything but a folder is `NotADirectory`,
+    /// carrying `dir`: the thing in the way.
+    pub(super) async fn dir_for_mutation(&self, client: &NfsClient, dir: &str) -> Result<MutationDir, VolumeError> {
         let found = self.resolve(client, dir, Follow::Always, false).await?;
+        if found
+            .attributes
+            .as_ref()
+            .is_some_and(|attrs| attrs.file_type != FileType::Directory)
+        {
+            return Err(VolumeError::NotADirectory(dir.to_string()));
+        }
         let real = found.real.clone();
         let parts: Vec<&str> = components(&real).collect();
         let chain: Vec<(String, Option<Cachedish>)> = (1..=parts.len())
@@ -312,10 +330,24 @@ impl NfsVolume {
             };
             if moved {
                 self.inner.handles.forget_subtree(child_path);
-                return Ok(self.resolve(client, dir, Follow::Always, false).await?.handle);
+                let again = self.resolve(client, dir, Follow::Always, false).await?;
+                if again
+                    .attributes
+                    .as_ref()
+                    .is_some_and(|attrs| attrs.file_type != FileType::Directory)
+                {
+                    return Err(VolumeError::NotADirectory(dir.to_string()));
+                }
+                return Ok(MutationDir {
+                    handle: again.handle,
+                    real: again.real,
+                });
             }
         }
-        Ok(found.handle)
+        Ok(MutationDir {
+            handle: found.handle,
+            real,
+        })
     }
 
     /// One walk from the root. `use_cache` false is the retry after a cached
@@ -441,8 +473,10 @@ impl NfsVolume {
                         real: here,
                     });
                 }
+                // ❗ The thing IN THE WAY, ❌ not the path asked for: the frontend
+                // renders this as the file to move aside.
                 if attrs.file_type != FileType::Directory {
-                    return Err(WalkError::Volume(VolumeError::NotADirectory(remote.to_string())));
+                    return Err(WalkError::Volume(VolumeError::NotADirectory(here)));
                 }
                 dir = found.handle;
                 dir_is_cached = false;
