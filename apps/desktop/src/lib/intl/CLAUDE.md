@@ -18,7 +18,8 @@ for numbers, sizes, dates.
 - `locale-inheritance.ts`: which catalog a locale may inherit from (same language AND same script), shared with the i18n
   checks and Rust.
 - `messages.svelte.ts`: the runtime: `t()` (catalog + ICU), `getMessage()` (raw), `setLocale()`, `availableLocales()`,
-  `resolvedCatalogLocale()`, the fallback chain, the locale-version rune. `window-title.svelte.ts`: live window titles.
+  `resolvedCatalogLocale()`, `manifestMessage()`, the fallback chain, catalog loading, the locale-version rune.
+  `startup-catalog.ts`: the catalog a new window starts in. `window-title.svelte.ts`: live window titles.
   `document-language.ts`: the `<html lang>` write. `locale-display-names.ts`: picker row labels. `Trans.svelte`:
   inline-component sentences. `keys.gen.ts`: the generated `MessageKey` union (never hand-edit). `messages/`: the
   catalogs (`messages/CLAUDE.md`).
@@ -29,26 +30,26 @@ for numbers, sizes, dates.
   re-run on a language change. `setLocale()` bumps it, `_setLocaleForTests` doesn't, and `state_referenced_locally` is
   suppressed: `messages.svelte.test.ts`'s reactivity test is the only guard.
 
-- **The resolver loads ALL locale dirs (`messages/*/*.json`) by dir tag, then falls back per key** to `en`.
-  `screenshots/` isn't a locale: exclude it IN THE GLOB, not only at the runtime gate (which still ships and parses 280
-  kB), or it becomes a fake language.
+- **A window holds `en` + its language's catalogs; the rest load on demand** (`scripts/vite-locale-catalogs.ts`).
+  `setLocale()` loads, THEN switches in one step; latest call wins. `test-setup.ts` preloads all; a `vi.resetModules()`
+  test must await. Text from EVERY language: the manifest (`manifestMessage`).
+- **Locale dirs come from the plugin's `listLocales()` alone**, keeping `screenshots/` out. ❌ No second discovery path.
 - **❌ A fallback never crosses a SCRIPT boundary**, so `zh-Hant` skips Simplified `zh` and lands on English. Go through
   `inheritableAncestors()`; the checks and Rust obey the same rule. Regional fallback (`pt-PT` → `pt`) must keep
   working: `DETAILS.md`.
-- **Picker labels take the WHOLE shipped list**: `zh` reads `简体中文` only because `zh-Hant` ships. ❌ Never decorate
-  unconditionally; keep rows distinct.
+- **Picker labels take the WHOLE shipped list** (`zh` is `简体中文` only beside `zh-Hant`). ❌ Never decorate
+  unconditionally.
 - **Both locale answers come from Rust, ❌ never the webview tag**, which drops the region override. Go through
   `pickUiLocale()`; secondary windows call `initWindowLanguageSync()` (`routes/window-route-coverage.test.ts`).
-  `watchSystemLocales()` takes ONE subscriber per window (the first adopts): hang new reactions off it. Depth:
-  `DETAILS.md`, `apps/desktop/src-tauri/src/intl/DETAILS.md`.
+  `watchSystemLocales()` takes ONE subscriber per window: hang new reactions off it. Depth: `DETAILS.md`,
+  `apps/desktop/src-tauri/src/intl/DETAILS.md`.
 - **Error copy uses `getMessage()` (raw), NOT `t()`/ICU**: the pipeline's `{system_settings}` tokens and `esc()` HTML
   entities collide with ICU grammar. Only plural/select sentences go through `t()`.
-- **English apostrophes are `’`; a straight `'` in an ICU value is doubled (`''`)**: `messages/CLAUDE.md`.
 - **`<Trans>` renders tag content via a zero-arg `{#snippet content()}`** (snippets aren't callable:
   `invalid_snippet_arguments`). No `{@html}`, so XSS-safe. An unmatched tag renders NOTHING (`i18n-trans-snippets`
   enforces pairing).
-- **`setLocale()` alone writes `<html lang>`** (`document-language.ts`), with the RESOLVED catalog tag (`ja-JP` → `en`).
-  Every window and live change funnels through it; ❌ no per-window write.
+- **Only the runtime writes `<html lang>`** (`setLocale()` and the startup catalog), with the RESOLVED catalog tag
+  (`ja-JP` → `en`). ❌ No per-window write.
 - **UI copy reads `getUiLocale()`, formatters read `getFormatLocale()`, nothing else resolves a locale.** `setLocale()`
   writes the UI half only: a `hu` pick must NOT move dates or grouping off the OS. Month NAMES are UI language, the
   first-day-of-week beside them formatting.
@@ -59,4 +60,4 @@ for numbers, sizes, dates.
   by (locale, options)**: they run per visible entry in render AND the column fold, so per-call construction regresses
   scroll.
 
-Depth (runtime, ICU split, `'system'`, language vs region, grouping, titles): `DETAILS.md`.
+Depth (runtime, catalog loading, ICU split, `'system'`, language vs region, grouping, titles): `DETAILS.md`.

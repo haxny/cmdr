@@ -20,9 +20,12 @@ resolves user-facing text from JSON catalogs under `messages/<locale>/`, reading
   and must not hit ICU's brace/apostrophe grammar, specifically the error pipeline (`#lib/error-messages` `compose.ts` +
   `expandSystemStrings` + snarkdown). Its `{system_settings}` tokens and `esc()` HTML entities would collide with ICU
   placeholders. Same fallback chain as `t()`, just no `format()`.
-- **`tStringIn(locale, key, params?)`** is `tString` in a locale OTHER than the UI's, down that locale's own chain. A
-  non-reactive snapshot for the rare reader that needs text the user isn't reading: Settings search indexes English as a
-  fallback and the Language label from every catalog (`../settings/DETAILS.md` § Search). ❌ Never for markup.
+- **`tStringIn(locale, key, params?)`** is `tString` in a given locale, down that locale's own chain. A non-reactive
+  snapshot for the rare reader that needs text the user isn't reading: Settings search indexes English as a fallback
+  (`../settings/DETAILS.md` § Search). Only for a language the window holds (§ Loading catalogs on demand). ❌ Never for
+  markup.
+- **`manifestMessage(locale, key)`** reads one of the few keys the manifest carries from EVERY catalog, loaded or not:
+  the Language label in every language, for Settings search.
 - **`uiCatalogLocale()`** is `resolvedCatalogLocale(getUiLocale())` read REACTIVELY (it reads the version rune, like
   `t()`). For a cache keyed by the language on screen: Settings search's index reads it on every search, so a `$derived`
   over a search re-runs on a switch even when it hits the cache and resolves no message.
@@ -44,20 +47,26 @@ a false positive would cost the check the only thing that makes it useful, that 
 
 ### The resolver: per-locale catalogs + fallback chain
 
-At module load, `import.meta.glob(['./messages/*/*.json', '!./messages/screenshots/**'], { eager })` pulls EVERY locale
-dir's catalog files, not just `en`. The dir segment of each glob path is the locale tag (`messages/pt-BR/foo.json` →
-`pt-BR`), and a `BCP47_DIR` regex gate keeps only directories that look like a BCP-47 tag. The dev-only `en-XA/`
-pseudolocale is globbed when present and simply absent in prod (gitignored). The result is `catalogs`: a
-`localeTag → merged metadata-stripped Catalog` map. In every Vite build (dev included) the `@key` metadata is already
-gone before bundling, so it never ships or reaches the heap; the runtime `stripMetadata()` covers Vitest, which skips
-the plugin, and narrows the JSON's types. Canonical: `messages/DETAILS.md` § `@key` metadata schema.
+The catalogs come from a Vite plugin, `scripts/vite-locale-catalogs.ts` (Vitest loads it too), as two virtual modules:
 
-**`screenshots/` is excluded by the glob PATTERN, and the pattern is the load-bearing half.** That dir is a sibling of
-the locale dirs holding translator tooling, and `capture-report.json` alone is ~280 kB. `BCP47_DIR` would reject it
-anyway, but only after the bundler had already shipped and the runtime parsed every byte: it was 4.5% of the whole
-frontend, riding in every silent update, until the negative pattern landed (verified in the emitted chunk, 2026-09-02).
-A runtime gate and a glob exclusion read identically in review, so `messages.svelte.test.ts` pins the pattern itself,
-not just the absence of a fake `screenshots` language.
+- `virtual:cmdr-catalog/<tag>`: every `messages/<tag>/*.json` merged into one object, `@key` metadata stripped at build
+  time (so it never ships or reaches the heap; `messages/DETAILS.md` § `@key` metadata schema). The runtime imports `en`
+  statically; every other tag becomes its own chunk.
+- `virtual:cmdr-locale-manifest`: `shippedLocales`, `manifestMessages` (the `MANIFEST_KEYS` from EVERY catalog; today
+  only the Language label, for Settings search), and one `loaders[tag]` per non-English tag.
+
+`catalogs` in the runtime is `localeTag → Catalog` for what THIS window has loaded. The SHIPPED set (the manifest) is
+what everything else derives from: `availableLocales()`, the fallback chain, and `resolvedCatalogLocale()`. Whether a
+catalog happens to be loaded never shapes a chain, or `zh-Hant` could resolve differently depending on what else is in
+memory.
+
+**Which dirs are locales is `listLocales()`**, the same answer every i18n check uses, narrowed to BCP 47-shaped names.
+That's what keeps `screenshots/` (a sibling holding translator tooling; `capture-report.json` alone is ~280 kB, and it
+was 4.5% of the whole frontend riding in every silent update before it was kept out, verified 2026-09-02) from becoming
+a language or reaching the bundle: a chunk exists only for a tag the manifest names. `vite-locale-catalogs.test.ts` and
+`messages.svelte.test.ts` pin it. The `en-XA/` pseudolocale (gitignored) ships exactly when it's on disk at build time.
+The plugin was chosen over a lazy `import.meta.glob` because a glob makes one chunk per FILE (39 areas × 14 locales), so
+a switch would be dozens of requests and the per-tag merge would move into the runtime.
 
 `resolveRaw(locale, key)` walks a fallback CHAIN, first hit wins: the locale's own catalog, then each ancestor tag it
 may inherit from, then `en` (the base, always present), then the key string itself, so a missing key renders as its own
@@ -78,9 +87,45 @@ different-SCRIPT variant inherits nothing, so it isn't an overlay at all; defini
 `docs/guides/i18n.md` § Overlay catalogs. The exact-locale rung is also exercised by the `_setCatalogForTests` seam (a
 synthetic test-only locale).
 
-`availableLocales()` returns the loaded catalog tags (sorted, `en` first) and drives the Settings > Appearance >
-Language picker, so a newly-added locale dir auto-appears with no code edit. The non-locale `screenshots/` dir never
-shows up there (the same `BCP47_DIR` gate).
+`availableLocales()` returns the shipped tags (sorted, `en` first), whichever are loaded, and drives the Settings >
+Appearance > Language picker, so a newly-added locale dir auto-appears with no code edit.
+
+### Loading catalogs on demand
+
+A window holds English (the per-key fallback, and Settings search's second language) plus the catalogs its language's
+chain reads. Every other catalog is a chunk it loads when asked. Measured in a WKWebView on an M3 Max (2026-10-23,
+`docs/notes/2026-10-23-lazy-catalogs-spike.md`): about 70 ms less module evaluation per window open and about 24 MiB
+less WebContent footprint once settled, against loading all 15; one more catalog on demand takes 7–8 ms.
+
+- **`setLocale()` loads first, switches second.** It loads the new locale's chain (an overlay brings its base: `es-419`
+  loads `es`), then flips the locale, bumps the rune, and writes `<html lang>` in ONE synchronous step (`applyLocale`).
+  Until then the window shows the old language in full: never a frame of English, never half-switched. A switch whose
+  chain is already loaded (English, the current language) is synchronous. **Why**: the alternative (switch first,
+  re-render when the catalog lands) shows English for a frame on every switch.
+- **The latest call wins.** Each call takes a number; a load that lands after a newer call started applies nothing. The
+  picker previews the highlighted row by applying it, so arrowing through it fires a switch per row; this keeps the last
+  row the one that sticks, however the loads land. A chunk that fails to load keeps the old language (logged).
+- **Eviction.** After a switch, shipped catalogs the window no longer reads (English aside) are dropped, so browsing the
+  picker doesn't end with every catalog in memory. Switching back costs one more load.
+- **Startup.** The module waits (top-level await; the build targets Safari 15, which has it) for the catalog the window
+  will most likely speak: the one the last switch in ANY window landed on (`startup-catalog.ts`, in localStorage; every
+  window shares the `tauri://localhost` origin), else the webview's own. The remembered tag also becomes the language
+  (and `<html lang>`) until `appearance.language` applies, so a language picked against the macOS one shows from the
+  first frame. A stale hint (the macOS language changed while Cmdr was closed) costs one more load when the setting
+  applies, and the window shows the hinted language meanwhile, never English unless that's the hint.
+- **Callers.** The main window's `initSettingsApplier()` awaits the startup switch before `settingsReady`, so the panes
+  mount in the right language. Secondary windows' `initWindowLanguageSync()` and every live change fire and forget. The
+  native menu bar (`setUiLanguage`, Rust) moves a few ms before the webview on a switch to an unloaded language.
+- **Text from another language.** `tStringIn(locale)` is only for a language the window holds (English or the UI chain)
+  and throws outside production builds otherwise, since resolving through an unloaded catalog would quietly answer in
+  English. Text needed from EVERY language goes in the manifest: add its key to `MANIFEST_KEYS` and read it with
+  `manifestMessage()`, which walks the chain like `t()`. `searchAllLocales` labels are pinned to the manifest by
+  `settings-search.i18n.test.ts`.
+- **Tests.** `test-setup.ts` loads every catalog and disables eviction, so `setLocale('de')` then `t()` on the next line
+  works (the calls are `void setLocale(…)` for the floating-promise rule). It also forgets the startup hint before the
+  runtime loads and before every test, since Vitest keeps localStorage across files. A test using `vi.resetModules()`
+  gets a fresh runtime holding only English, like a new window, and must await (or `vi.waitFor`) a switch.
+  `lazy-catalogs.svelte.test.ts` covers this section, with `_setCatalogLoaderForTests` to control when a catalog lands.
 
 ### Adding a regional overlay: the plumbing checklist
 
@@ -106,29 +151,28 @@ Nothing outside the desktop app changes: the analytics language events carry `av
 reaches the api-server and dashboard as data. The one path that still truncates is the Linux webview
 (`src-tauri/src/intl/DETAILS.md` § Known gap), where `es-MX` reads `es`.
 
-**The glob is wholesale, and the native strings ride along.** `menu.json` holds the labels only Rust ever draws (the
-menu bar, the window title, the already-running alert), so the frontend loads roughly 55 KB of message values across the
-ten catalogs it will never render (measured over `messages/*/menu.json`, metadata excluded, 2026-08-20). That's an
-accepted cost: one catalog, one `@key` schema, and one set of coverage checks for every string in the app is worth more
-than the bytes, and a translator working one pile beats a translator working two. The tempting fix (split `menu.json`
-out and exclude it from the glob) walks straight into the `screenshots/` gate above, where a glob change that
-misclassifies a directory puts a fake language in the picker, so it needs a real reason rather than a tidiness one.
-(`screenshots/` had one: 280 kB. 55 KB of unrendered menu strings does not.)
+**A catalog chunk is wholesale, and the native strings ride along.** `menu.json` holds the labels only Rust ever draws
+(the menu bar, the window title, the already-running alert), so each loaded catalog carries a few KB of message values
+the frontend never renders (roughly 55 KB across ten catalogs, measured over `messages/*/menu.json`, metadata excluded,
+2026-08-20; a window now holds two catalogs, not all of them). That's an accepted cost: one catalog, one `@key` schema,
+and one set of coverage checks for every string in the app is worth more than the bytes, and a translator working one
+pile beats a translator working two.
 
 ### Reactivity (load-bearing)
 
 A module-level `localeVersion = $state(0)` rune (hence `.svelte.ts`) is a re-render SIGNAL, not a second locale source:
 `getUiLocale()` stays the single source of truth for the VALUE. Every `t()`/`getMessage()` call reads the rune
 UNCONDITIONALLY and FIRST, before any compiled-message cache lookup; otherwise Svelte doesn't track the dependency and a
-markup `{t('key')}` won't re-run on a locale switch. `setLocale(locale)` writes the value into `locale.ts`'s UI-language
-override (leaving the formatters' locale alone) AND bumps the rune AND clears the compiled cache. `_setLocaleForTests`
-writes the value only: use it for non-reactive snapshot tests; use `setLocale()` for reactivity tests. The pattern
-mirrors `system-strings.svelte.ts`. Reactivity holds only inside a reactive context (markup / `$derived`); a `t()` in a
-plain `.ts` computation is a snapshot, which is the right semantics for transient strings (toasts, error copy).
+markup `{t('key')}` won't re-run on a locale switch. `setLocale(locale)`, once its catalogs are loaded, writes the value
+into `locale.ts`'s UI-language override (leaving the formatters' locale alone) AND bumps the rune AND clears the
+compiled cache, in one step. `_setLocaleForTests` writes the value only: use it for non-reactive snapshot tests; use
+`setLocale()` for reactivity tests. The pattern mirrors `system-strings.svelte.ts`. Reactivity holds only inside a
+reactive context (markup / `$derived`); a `t()` in a plain `.ts` computation is a snapshot, which is the right semantics
+for transient strings (toasts, error copy).
 
 No SSR/prerender concern: the app is a pure SPA (`+layout.ts` has `ssr = false`), so route components are never
-server/build-rendered; the catalog merge (a `import.meta.glob` over `messages/*/*.json`) and both locale readers touch
-no `window`.
+server/build-rendered; the catalog modules and both locale readers touch no `window`, and the startup hint's
+localStorage read is wrapped for an environment without it.
 
 ### The ICU-vs-`#lib/intl` formatting split
 
@@ -343,7 +387,7 @@ makes it reactive to a live OS change as well as to a language switch. `settings
 value to the seam through `os-locales.ts`'s `pickUiLocale`: a tag → `setLocale(tag)`, `'system'` → the OS answer
 (below). It runs in `applyAllSettings` at startup (so a persisted choice survives restart) and on every
 `appearance.language` change (live, no Apply button, no restart, no Tauri command: locale is frontend-only). A persisted
-tag with no loaded catalog (e.g. `en-XA` chosen in a dev build, then opened in prod) fails enum validation in the store
+tag with no shipped catalog (e.g. `en-XA` chosen in a dev build, then opened in prod) fails enum validation in the store
 and degrades to the `'system'` default with a warn.
 
 ### Three things the picker deliberately doesn't do
@@ -390,8 +434,10 @@ which is why `locale-inheritance.ts` exists. Why each half is the way it is:
 main window's answer doesn't reach the Settings or Queue window. The main window awaits the answer inside
 `initSettingsApplier` (the fetch is fired BEFORE the settings store is awaited, so the two IPC round-trips overlap
 rather than stack: ❌ no serialized round-trip, and no paint gate — `routes/(main)/show-main-on-mount.ts` records why we
-removed the last one). Secondary windows use `initWindowLanguageSync()` from `#lib/settings/window-settings`, which
-applies the persisted value synchronously and re-applies when the OS answer lands, so nothing gates a first paint.
+removed the last one); it then waits for that switch's catalog before the panes mount. Secondary windows use
+`initWindowLanguageSync()` from `#lib/settings/window-settings`, which applies the persisted value as soon as the
+settings load (synchronously when its catalog is the remembered startup one, else a few ms later) and re-applies when
+the OS answer lands, so nothing gates a first paint.
 
 **A localized window title follows a switch too.** The OS title (title bar, Window menu, what VoiceOver reads for the
 window) is a native `setTitle` write that no re-render reaches, so the opener's constructor title would stay in the

@@ -1,7 +1,7 @@
 # Message catalogs
 
-JSON message catalogs, one file per feature area, under `en/` plus one dir per translated locale. The runtime
-(`#lib/intl/messages.svelte.ts`) merges every `en/*.json` into one map at load. Runtime design and the error-pipeline
+JSON message catalogs, one file per feature area, under `en/` plus one dir per translated locale.
+`apps/desktop/scripts/vite-locale-catalogs.ts` builds one module per locale dir. Runtime and the error-pipeline
 boundary: `../CLAUDE.md`.
 
 ## Layout

@@ -464,10 +464,12 @@ exactly, since one typo in a two-to-five-character term is a different word. The
    keywords, card title, and the English section path. A row matched only through English shows no highlight; that's
    intended. ❌ Not the English description: long common-word sentences make short queries noisy.
 3. **Every language, for the Language setting alone** (`searchAllLocales: true` on `appearance.language`): its label
-   from every catalog plus every locale's own name (`localeDisplayName`: Svenska, Magyar, Русский) and its English name
-   (`localeEnglishName`: Swedish, Hungarian, Russian), so `språk`, `magyar`, or `german` finds it with French on screen,
-   and a new locale joins with no edit. `settings-search.i18n.test.ts` pins Deutsch / Magyar / Nyelv / German across six
-   UI languages. ❌ Not for other settings: their foreign labels would be noise.
+   from every catalog (through the catalog manifest, `manifestMessage`, since a window holds only English and its own
+   catalog; `intl/DETAILS.md` § Loading catalogs on demand) plus every locale's own name (`localeDisplayName`: Svenska,
+   Magyar, Русский) and its English name (`localeEnglishName`: Swedish, Hungarian, Russian), so `språk`, `magyar`, or
+   `german` finds it with French on screen, and a new locale joins with no edit. `settings-search.i18n.test.ts` pins
+   Deutsch / Magyar / Nyelv / German across six UI languages. ❌ Not for other settings: their foreign labels would be
+   noise.
 
 **Keywords live in the catalog; language-neutral tokens in TS.**
 
