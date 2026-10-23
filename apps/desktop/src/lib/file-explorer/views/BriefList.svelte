@@ -3,7 +3,7 @@
     import { dependOn } from '#lib/utils/reactivity.js'
     import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
     import type { FileEntry, SelectPayload, SortColumn, SortOrder, SyncStatus, VisibleRangePayload } from '../types'
-    import type { FileIndexState, FolderCoverage } from '#lib/tauri-commands/index.js'
+    import type { FileIndexState, FolderCoverage, MenuAnchor } from '#lib/tauri-commands/index.js'
     import { calculateVirtualWindowVariable, getScrollToPositionVariable } from './virtual-scroll'
     import { handleNavigationShortcut } from '../navigation/keyboard-shortcuts'
     import { startSelectionDragTracking, type DragFileInfo } from '../drag/drag-drop'
@@ -131,6 +131,8 @@
         onIndexStatusRequest?: (paths: string[]) => void
         onFolderCoverageRequest?: (folderPaths: string[]) => void
         onSortChange?: (column: SortColumn) => void
+        /** Opens the header's Sort by popup (the three dates) at the pointer, on a right-click. */
+        onSortMenu?: (anchor: MenuAnchor | null) => Promise<void>
         onVisibleRangeChange?: (args: VisibleRangePayload) => void
         /** Called when rename input value changes */
         onRenameInput?: (value: string) => void
@@ -186,6 +188,7 @@
         onIndexStatusRequest,
         onFolderCoverageRequest,
         onSortChange,
+        onSortMenu,
         onVisibleRangeChange,
         onRenameInput,
         onRenameSubmit,
@@ -950,8 +953,19 @@
 
 <div class="brief-list-container" class:is-focused={isFocused}>
     <!-- Header row with sort options -->
-    <!-- Pane chrome: ←/→ walk the sort buttons, ↑ goes to the location bar (`pane/pane-chrome.ts`). -->
-    <div class="header-row" role="toolbar" aria-label={tString('fileExplorer.list.sortColumnsAriaLabel')} data-pane-chrome>
+    <!-- Pane chrome: ←/→ walk the sort buttons, ↑ goes to the location bar (`pane/pane-chrome.ts`).
+         A right-click anywhere on it opens the date Sort by popup at the pointer, as in Full view. -->
+    <!-- svelte-ignore a11y_interactive_supports_focus -->
+    <div
+        class="header-row"
+        role="toolbar"
+        aria-label={tString('fileExplorer.list.sortColumnsAriaLabel')}
+        data-pane-chrome
+        oncontextmenu={(e: MouseEvent) => {
+            e.preventDefault()
+            void onSortMenu?.(null)
+        }}
+    >
         <!-- Dead space standing in for the rows' icon cell, the same trick `FullList`'s
              header uses, so "Name" starts exactly above the file names rather than
              above their icons. -->

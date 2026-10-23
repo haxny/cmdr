@@ -19,6 +19,7 @@ import {
   activateWindowMenu,
   onViewModeChanged,
   onMenuSort,
+  onDateSortMenuPick,
   onShowSearchResultInFolder,
   onMediaIndexFolderExclusion,
   onMediaIndexFolderChoice,
@@ -314,6 +315,14 @@ export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<voi
     await onMenuSort((payload) => {
       const command = menuSortToCommand(payload.action, payload.value)
       if (command) void dispatchers.menu(command)
+    }),
+  )
+
+  // A file list header's Sort by popup. Off the `menu-sort` road on purpose: that one sorts
+  // the FOCUSED pane, and a right-click on the other pane's header must sort that one.
+  unlistenFns.push(
+    await onDateSortMenuPick((pick) => {
+      void getExplorer()?.pickSortColumn(pick.pane, pick.column)
     }),
   )
 

@@ -4,6 +4,8 @@
     import { dateHeaderSortColumn, headerLabelKey, type DateColumn } from '../displayed-date'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
+    import type { MenuAnchor } from '#lib/tauri-commands/index.js'
+    import DateSortChevron from './DateSortChevron.svelte'
 
     interface Props {
         /** The row's grid tracks, mirrored from the data rows so columns line up. */
@@ -34,6 +36,11 @@
         /** Passed to the ACTIVE column's header. See `SortableHeader`'s prop. */
         clearsSortLabel?: string
         onSortChange?: (column: SortColumn) => void
+        /**
+         * Opens the Sort by popup (the three dates): at `anchor` from the date chevron, at the
+         * pointer (`null`) on a right-click anywhere on this row. Resolves when it closes.
+         */
+        onSortMenu?: (anchor: MenuAnchor | null) => Promise<void>
     }
 
     const {
@@ -49,15 +56,25 @@
         scrollbarWidth,
         clearsSortLabel,
         onSortChange,
+        onSortMenu,
     }: Props = $props()
 
     const sort = $derived(onSortChange ?? (() => {}))
+    const openSortMenu = (anchor: MenuAnchor | null): Promise<void> => onSortMenu?.(anchor) ?? Promise.resolve()
+
+    function handleContextMenu(e: MouseEvent): void {
+        e.preventDefault()
+        void openSortMenu(null)
+    }
 </script>
 
 <!-- The same sort toolbar as Brief view's: a row of sort buttons that ←/→ walk, with ↑ to
-     the location bar (`pane/pane-chrome.ts`). The Git label between them is plain text. -->
+     the location bar (`pane/pane-chrome.ts`). The Git label between them is plain text. A
+     right-click anywhere on it opens the date Sort by popup at the pointer. -->
+<!-- svelte-ignore a11y_interactive_supports_focus -->
 <div
     class="header-row"
+    oncontextmenu={handleContextMenu}
     role="toolbar"
     aria-label={tString('fileExplorer.list.sortColumnsAriaLabel')}
     data-pane-chrome
@@ -131,18 +148,23 @@
         onClick={sort}
     />
     <!-- One date column: it sorts by (and lights up for) the requested date, and its label
-         names the date its cells show, which is Modified in a fallback. -->
-    <SortableHeader
-        column={dateHeaderSortColumn(sortBy)}
-        {isFocused}
-        {clearsSortLabel}
-        label={tString(headerLabelKey(dateColumn))}
-        fallbackNote={dateFallbackNote}
-        align="right"
-        currentSortColumn={sortBy}
-        currentSortOrder={sortOrder}
-        onClick={sort}
-    />
+         names the date its cells show, which is Modified in a fallback. The Sort by chevron
+         shares its track, left of the caret, and comes first in DOM order so ←/→ walk the
+         row left to right. -->
+    <span class="header-date">
+        <DateSortChevron onOpen={openSortMenu} />
+        <SortableHeader
+            column={dateHeaderSortColumn(sortBy)}
+            {isFocused}
+            {clearsSortLabel}
+            label={tString(headerLabelKey(dateColumn))}
+            fallbackNote={dateFallbackNote}
+            align="right"
+            currentSortColumn={sortBy}
+            currentSortOrder={sortOrder}
+            onClick={sort}
+        />
+    </span>
 </div>
 
 <style>
@@ -210,6 +232,22 @@
 
     .header-name-ext > :global(.sortable-header:last-child) {
         flex: 0 0 auto;
+    }
+
+    /* The date track: the Sort by chevron, then the right-aligned date header. The gap
+       equals the two buttons' negative margins, so their hover backgrounds meet without
+       overlapping. The measurer mirrors chevron + gap (`HEADER_DATE_SORT_CHEVRON`). */
+    .header-date {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 0;
+        gap: var(--spacing-sm);
+    }
+
+    .header-date > :global(.sortable-header) {
+        flex: 0 1 auto;
+        min-width: 0;
     }
 
     .header-git {

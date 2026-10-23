@@ -180,6 +180,14 @@ export interface ExplorerAPI {
     order: 'asc' | 'desc',
     pane: 'left' | 'right',
   ) => Promise<void>
+  /**
+   * A pick from a file list header's Sort by popup, for the pane the menu opened over
+   * (focused or not). Picking the column that pane already asked for does nothing.
+   */
+  pickSortColumn: (
+    pane: 'left' | 'right',
+    column: 'name' | 'extension' | 'size' | 'modified' | 'created' | 'added',
+  ) => Promise<void>
   getFocusedPane: () => 'left' | 'right'
   /**
    * Shifts keyboard focus to `pane`. Same store update the pane-switch paths use,

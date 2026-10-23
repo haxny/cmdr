@@ -40,6 +40,8 @@ window focus context.
   `context_item` vocabulary every popup here shares. A volume switcher row's, a favorite's, and a servers-hub place's
   actions are NOT here: they're the in-app `Menu`'s, one list in
   `apps/desktop/src/lib/file-explorer/navigation/row-menu.ts`.
+- `date_sort_menu.rs`: a file list header's Sort by popup (`build_date_sort_menu`): Date modified, Date created, and
+  Date added as check items, the pane's requested one checked, with its own pane-carrying ids and `DateSortMenuPick`.
 - `queue_row_menu.rs`: a queue row's right-click menu (`build_queue_row_context_menu`), built from the entries the
   queue window lists (`QueueRowMenuEntry`), each item's accelerator looked up by its own COMMAND id
   (`ContextMenuShortcuts::for_command`), since these items have no menu-bar twin in `menu_id_to_command`.
@@ -203,6 +205,11 @@ Exceptions that do NOT use `"execute-command"`:
   `VIEWER_CONTEXT_*` ids, emitting `ViewerContextMenuAction` to the focused viewer (the popup focused it). ❗ Not the
   bar's `VIEWER_EDIT_COPY_ID` / `VIEWER_SELECT_ALL_ID`: those defer to the search box, this pair always acts on the file
   (`src/routes/viewer/DETAILS.md` § Gotchas)
+- **File list header's Sort by popup**: `date_sort_menu_{left|right}_{modified|created|added}` ids
+  (`DateSortMenuPick::from_menu_id`), emitting `DateSortMenuPick { pane, column }` to the main window. ❗ Never the
+  bar's `SORT_BY_*_ID`: those reach `menu-sort`, which sorts the FOCUSED pane, and a right-click on the other pane's
+  header must sort that one. The frontend ignores a pick of the requested (checked) column
+  (`src/lib/file-explorer/views/DETAILS.md`, the date header's Sort by chevron)
 - **Queue row right-click menu**: `queue_row_*` ids (`QueueRowMenuAction::from_menu_id`), emitting
   `QueueRowContextAction` to the `queue` window (both payload types live in `window_events.rs`, the enum's inherent impl
   in `queue_row_menu.rs`, so `window_events` never names `menu`), which runs the pick on the row it opened the menu over

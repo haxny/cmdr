@@ -834,6 +834,9 @@ export type {
 // Tab context menu
 export { showTabContextMenu, onTabContextAction } from './tab'
 
+// A file list header's Sort by popup
+export { showDateSortMenu, onDateSortMenuPick } from './date-sort-menu'
+
 // Function key bar context menu
 export { showFunctionKeyBarContextMenu, onFunctionKeyBarHideRequested } from './function-key-bar'
 

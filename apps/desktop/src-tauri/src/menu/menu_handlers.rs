@@ -449,6 +449,15 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
         return;
     }
 
+    // === A file list header's Sort by popup: emit to the main window with the pane it opened over ===
+    if let Some(pick) = super::DateSortMenuPick::from_menu_id(id) {
+        use tauri_specta::Event as _;
+        if let Err(e) = pick.emit_to(app, "main") {
+            log::warn!(target: "menu", "failed to emit date-sort-menu-pick: {e}");
+        }
+        return;
+    }
+
     // === Viewer Edit > Cut / Paste: forward the native selector to the focused text field ===
     // The viewer's search box, the only editable thing in that window, which is also why
     // `apply_menu_item_states` greys these two out while it doesn't have focus. ❗ Never the

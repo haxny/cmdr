@@ -32,7 +32,7 @@
     import { nextSnapshotSort, sortSnapshot } from '#lib/search/snapshot-sort.svelte.js'
     import { SEARCH_HIT_MENU_FACTS } from '#lib/search/search-hit-menu.js'
     import { capabilitiesForKind } from './volume-capabilities'
-    import { showFileContextMenu } from '#lib/tauri-commands/index.js'
+    import { showFileContextMenu, type MenuAnchor } from '#lib/tauri-commands/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { snapshotBasename, snapshotContextMenuPaths, snapshotContextMenuRows } from './snapshot-context-menu'
     import { sameKindTargetFor } from './select-same-kind'
@@ -65,6 +65,8 @@
         listLabel?: string
         /** The cursor row just landed as the active descendant (passed through). */
         onCursorRowLanded?: () => void
+        /** Opens the header's Sort by popup over this pane (passed through). */
+        onSortMenu?: (anchor: MenuAnchor | null) => Promise<void>
     }
 
     const {
@@ -77,6 +79,7 @@
         onVisibleRangeChange,
         listLabel,
         onCursorRowLanded,
+        onSortMenu,
     }: Props = $props()
 
     /** The snapshot id in `search-results://<id>`. `null` for any other path shape. */
@@ -251,6 +254,7 @@
         {onVisibleRangeChange}
         {listLabel}
         {onCursorRowLanded}
+        {onSortMenu}
         staticEntries={entries}
         onContextMenu={(entry: FileEntry) => {
             // Route through the standard native context menu but ask Rust to

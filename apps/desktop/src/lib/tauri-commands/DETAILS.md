@@ -122,6 +122,8 @@ commands, and notable non-obvious placements.
   rejection arrives as `unknown`: `#lib/ai/local-ai-error.ts` restores it.
 - **`logging.ts`**: `getDebugLogPath`, the log file this session writes (Help > View debug log).
 - **`tab.ts`**: tab context menu: `showTabContextMenu`, `onTabContextAction`.
+- **`date-sort-menu.ts`**: a file list header's date Sort by popup: `showDateSortMenu` (pane, requested column, anchor
+  or `null` for the pointer), `onDateSortMenuPick` (the pick, with the pane it opened over).
 - **`function-key-bar.ts`**: the function key bar's one-item context menu: `showFunctionKeyBarContextMenu`,
   `onFunctionKeyBarHideRequested` (payload-less; the frontend owns the setting write and the toast).
 - **`clipboard-files.ts`**: clipboard file operations: copy/cut files to system clipboard, read/paste, clear cut state.

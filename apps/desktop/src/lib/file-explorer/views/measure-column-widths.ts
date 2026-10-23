@@ -73,6 +73,13 @@ const HEADER_CHROME_INACTIVE = 0
 const HEADER_FALLBACK_GLYPH = 18
 
 /**
+ * The Sort by chevron that shares the date track with its header, always: `DateSortChevron`'s
+ * 12px icon (its padding is canceled by an equal negative margin) plus `.header-date`'s 8px gap.
+ * Mirrors `DateSortChevron.svelte` and `FullListHeader.svelte`; change them together.
+ */
+const HEADER_DATE_SORT_CHEVRON = 20
+
+/**
  * Per-cell measurement safety pad in CSS pixels.
  *
  * Pretext measures via canvas, the file list renders via DOM. On macOS
@@ -336,11 +343,12 @@ export function computeFullListColumnWidths(args: {
   let extMax = measure(tString('fileExplorer.columns.ext')) + chromeFor('extension')
   let sizeMax = measure(tString('fileExplorer.columns.size')) + chromeFor('size')
   // The date header sorts by the requested date (`dateHeaderSortColumn`), so it's active for any
-  // date sort while its label names the date it shows.
+  // date sort while its label names the date it shows. Its Sort by chevron rides in the same track.
   let dateMax =
     measure(tString(headerLabelKey(dateColumn))) +
     chromeFor(dateHeaderSortColumn(sortBy)) +
-    (dateFallbackGlyph ? HEADER_FALLBACK_GLYPH : 0)
+    (dateFallbackGlyph ? HEADER_FALLBACK_GLYPH : 0) +
+    HEADER_DATE_SORT_CHEVRON
 
   // Cap on per-row Ext text width so a single pathological extension can't
   // push the rest of the row off-screen. Compared against the row's text-only

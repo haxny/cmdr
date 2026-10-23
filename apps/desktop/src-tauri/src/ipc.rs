@@ -100,7 +100,9 @@ use crate::downloads::global_shortcut::GlobalShortcutFired;
 use crate::downloads::watcher::DownloadDetectedEvent;
 use crate::error_reporter::auto_dispatcher::ErrorReportAutoSent;
 use crate::file_system::watcher::DirectoryDeletedEvent;
-use crate::menu::{MediaIndexFolderChoice, MediaIndexFolderExclusion, MenuSort, SettingsChanged, ViewModeChanged};
+use crate::menu::{
+    DateSortMenuPick, MediaIndexFolderChoice, MediaIndexFolderExclusion, MenuSort, SettingsChanged, ViewModeChanged,
+};
 use crate::quick_look::{QuickLookClosed, QuickLookKeyEvent};
 use crate::quit::{QuitCalledOff, QuitRequested};
 use crate::restricted_paths::RestrictedPathsChangedPayload;
@@ -282,6 +284,7 @@ macro_rules! ipc_command_manifest {
                     // `window_ordering::{show_main_window, order_window_to_back}`, and
                     // `file_actions::copy_to_clipboard`.
                     crate::commands::menu::show_tab_context_menu,
+                    crate::commands::menu::show_date_sort_menu,
                     crate::commands::menu::show_network_host_context_menu,
                     crate::commands::menu::show_function_key_bar_context_menu,
                     crate::commands::menu::show_viewer_context_menu,
@@ -1295,6 +1298,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             // emit_to(viewer label): how far a viewer's pull into its preview temp got.
             ViewerPullProgress,
             TabContextAction,
+            // emit_to("main"): a date picked from a file list header's Sort by popup, for its pane.
+            DateSortMenuPick,
             FunctionKeyBarHideRequested,
             // emit_to("main"): a tag toggle left unreadable files alone; the FE toasts it.
             TagsSkipped,

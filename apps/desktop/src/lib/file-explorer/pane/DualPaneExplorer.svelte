@@ -1,6 +1,6 @@
 <script lang="ts">
     import { compareDirectories as runCompareDirectories } from './compare-directories'
-    import type { CompareDirectoriesMode } from '#lib/tauri-commands/index.js'
+    import type { CompareDirectoriesMode, MenuAnchor } from '#lib/tauri-commands/index.js'
     import { countFoldersInPane } from './folder-size-count'
     import { onMount, onDestroy, untrack } from 'svelte'
     import FilePane from './FilePane.svelte'
@@ -1050,6 +1050,11 @@
         await sortOps.setSort(column, order, pane)
     }
 
+    /** A header Sort by popup's pick, for the pane it opened over. */
+    export async function pickSortColumn(pane: 'left' | 'right', column: SortColumn) {
+        await sortOps.pickSortColumn(pane, column)
+    }
+
     export function getFocusedPane(): 'left' | 'right' {
         return paneCommands.getFocusedPane()
     }
@@ -1483,6 +1488,7 @@
                         switchVolumeChooserPane(paneId)
                     }}
                     onSortChange={(column: SortColumn) => sortOps.handleSortChange(paneId, column)}
+                    onSortMenu={(anchor: MenuAnchor | null) => sortOps.openDateSortMenu(paneId, anchor)}
                     onNetworkHostChange={(host: NetworkHost | null) => {
                         handleNetworkHostChange(paneId, host)
                     }}

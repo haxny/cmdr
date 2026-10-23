@@ -1453,6 +1453,7 @@ export type MessageKey =
   | 'fileExplorer.clipboard.stillPasting'
   | 'fileExplorer.columns.added'
   | 'fileExplorer.columns.created'
+  | 'fileExplorer.columns.dateSortMenu'
   | 'fileExplorer.columns.ext'
   | 'fileExplorer.columns.git'
   | 'fileExplorer.columns.gitTitle'

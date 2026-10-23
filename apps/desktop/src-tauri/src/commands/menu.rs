@@ -1,5 +1,5 @@
-//! The context-menu popups: file, breadcrumb, parent row, tab, network host, the function key
-//! bar, the viewer's text, and a queue row. (A volume switcher row's and a favorite's actions are the in-app `Menu`'s, not a popup
+//! The context-menu popups: file, breadcrumb, parent row, tab, a file list header's Sort by,
+//! network host, the function key bar, the viewer's text, and a queue row. (A volume switcher row's and a favorite's actions are the in-app `Menu`'s, not a popup
 //! here: `apps/desktop/src/lib/file-explorer/navigation/row-menu.ts`.)
 //!
 //! The pushes that keep the menu BAR in step with the frontend (view mode, hidden files, pin tab,
@@ -13,7 +13,7 @@ use crate::menu::FileContextInfo;
 use crate::menu::context_menu_facts;
 use crate::menu::{
     ContextMenuPaneFacts, ContextMenuShortcuts, DetachWord, MenuState, SameKindTarget, build_breadcrumb_context_menu,
-    build_context_menu, build_function_key_bar_context_menu, build_network_host_context_menu,
+    build_context_menu, build_date_sort_menu, build_function_key_bar_context_menu, build_network_host_context_menu,
     build_parent_row_context_menu, build_queue_row_context_menu, build_tab_context_menu, build_viewer_context_menu,
 };
 use tauri::menu::ContextMenu;
@@ -430,6 +430,22 @@ pub fn show_tab_context_menu(
     menu.popup(window).map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+/// Shows a file list header's Sort by popup over `pane` (fire-and-forget): the three dates, the
+/// `requested` column's checked. At the pointer for a right-click, under the Full date header's
+/// chevron (`anchor`) for its click or key. The pick comes back as `DateSortMenuPick`, carrying
+/// `pane`, from `on_menu_event`, same shape as [`show_tab_context_menu`].
+#[tauri::command]
+#[specta::specta]
+pub fn show_date_sort_menu(
+    window: Window<tauri::Wry>,
+    pane: crate::menu::PaneSide,
+    requested: Option<cmdr_listing::SortColumn>,
+    anchor: Option<MenuAnchor>,
+) -> Result<(), String> {
+    let menu = build_date_sort_menu(window.app_handle(), pane, requested).map_err(|e| e.to_string())?;
+    popup_context_menu(&menu, window, anchor)
 }
 
 /// Shows the function key bar's context menu (fire-and-forget): a single "Hide

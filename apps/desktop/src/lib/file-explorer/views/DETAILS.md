@@ -607,7 +607,19 @@ still lines up with the data cells below. Only gap+caret count toward the track 
 values or the caret size/markup, update the two constants or column widths drift. The values aren't derived from the
 live DOM because pretext measurement runs without a reference element. Everything is computed from the pre-known chrome
 formula. `HEADER_FALLBACK_GLYPH` (18px: 4px gap, `StatusGlyph`'s 2px margin, 12px icon) mirrors the date header's
-fallback glyph the same way.
+fallback glyph the same way, and `HEADER_DATE_SORT_CHEVRON` (20px: `DateSortChevron`'s 12px icon, its padding canceled
+by an equal negative margin, plus `.header-date`'s 8px gap) the Sort by chevron that always shares the date track.
+
+**Decision**: The Full date header carries a Sort by chevron (`DateSortChevron.svelte`), left of the caret in a
+`.header-date` wrapper so the grid keeps its tracks. It opens the native date popup
+(`src-tauri/src/menu/date_sort_menu.rs`) anchored under itself on click, Enter, or Space; a right-click anywhere on
+either view's `.header-row` opens the same popup at the pointer (`onSortMenu(null)`). The chevron comes BEFORE the date
+header in DOM order, so pane chrome's ←/→ walk the row left to right, and it's a plain button (❌ no `tabindex`,
+`pane/DETAILS.md` § Pane chrome). Its Enter / Space open the menu in `keydown` with `preventDefault`, ❌ never a
+synthesized click, which would bubble to the pane and pull focus back to the list. `aria-expanded` holds while the show
+command is in flight (`popup()` blocks in Rust until the menu closes). Opening and picking go through
+`pane/sort-operations.ts` (`openDateSortMenu`, `pickSortColumn`): the menu checks the pane's REQUESTED column, and
+picking it does nothing.
 
 **Decision**: The Full date column shows ONE date, `displayedDateColumn` (`../displayed-date.ts`) of the sort its rows
 were fetched under (`full-list-cache.svelte.ts`'s `rowsSort`, captured with the rows like their `..` row). Cells, the

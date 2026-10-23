@@ -81,7 +81,7 @@ describe('computeFullListColumnWidths', () => {
     // MIN_DATE_WIDTH (70). Floors swallow the pad in the empty-entries case.
     expect(w.ext).toBe(28)
     expect(w.size).toBe(40)
-    expect(w.date).toBe(70)
+    expect(w.date).toBe(78)
   })
 
   it('widens the active sort column to reserve room for the caret', () => {
@@ -214,7 +214,8 @@ describe('computeFullListColumnWidths', () => {
     const rows = [entry({ name: 'a', modifiedAt: 1, addedAt: 2 })]
     const modified = computeFullListColumnWidths({ ...baseArgs, formattedDate, entries: rows })
     const added = computeFullListColumnWidths({ ...baseArgs, formattedDate, entries: rows, dateColumn: 'added' })
-    expect(modified.date).toBe(70)
+    // "Modified" 56 + the chevron's 20 + 2 outgrows the "short" cells.
+    expect(modified.date).toBe(78)
     expect(added.date).toBe('2026-12-31 23:59:59 long'.length * 7 + 2)
   })
 
@@ -234,17 +235,26 @@ describe('computeFullListColumnWidths', () => {
       _setMeasureForTests(fakeMeasure)
       useLongAddedLabel('Added to this folder')
       const shown = { ...baseArgs, entries: [], dateColumn: 'added' as const }
-      // 20 chars × 7 = 140 + 2 px pad; the caret's 12 only while the header is active.
-      expect(computeFullListColumnWidths(shown).date).toBe(142)
-      expect(computeFullListColumnWidths({ ...shown, sortBy: 'added' }).date).toBe(154)
+      // 20 chars × 7 = 140 + the chevron's 20 + 2 px pad; the caret's 12 only while the header is active.
+      expect(computeFullListColumnWidths(shown).date).toBe(162)
+      expect(computeFullListColumnWidths({ ...shown, sortBy: 'added' }).date).toBe(174)
+    })
+
+    // The Sort by chevron shares the date track with the header button, always.
+    it('makes room for the Sort by chevron beside the header', () => {
+      _setMeasureForTests(fakeMeasure)
+      useLongAddedLabel('Added to this folder')
+      // 20 chars × 7 = 140, the chevron's 12 px glyph + 8 px gap = 20, + 2 px pad.
+      const shown = { ...baseArgs, entries: [], sortBy: 'name' as const, dateColumn: 'added' as const }
+      expect(computeFullListColumnWidths(shown).date).toBe(140 + 20 + 2)
     })
 
     it('makes room for the fallback glyph beside the label', () => {
       _setMeasureForTests(fakeMeasure)
-      // Requested Added, rows in Modified: "Modified" 56 + caret 12 + glyph 18 + pad 2.
+      // Requested Added, rows in Modified: "Modified" 56 + caret 12 + chevron 20 + glyph 18 + pad 2.
       const fallback = { ...baseArgs, entries: [], sortBy: 'added' as const, dateColumn: 'modified' as const }
-      expect(computeFullListColumnWidths(fallback).date).toBe(70)
-      expect(computeFullListColumnWidths({ ...fallback, dateFallbackGlyph: true }).date).toBe(88)
+      expect(computeFullListColumnWidths(fallback).date).toBe(90)
+      expect(computeFullListColumnWidths({ ...fallback, dateFallbackGlyph: true }).date).toBe(108)
     })
   })
 

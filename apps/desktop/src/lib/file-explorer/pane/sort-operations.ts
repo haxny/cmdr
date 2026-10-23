@@ -13,7 +13,7 @@
  * the command bodies.
  */
 
-import { resortListing } from '#lib/tauri-commands/index.js'
+import { resortListing, showDateSortMenu, type MenuAnchor } from '#lib/tauri-commands/index.js'
 import { getDirectorySortMode } from '#lib/settings/reactive-settings.svelte.js'
 import { getSnapshot, snapshotIdFromPanePath } from '#lib/search/snapshot-store.svelte.js'
 import { nextSnapshotSort, sortSnapshot } from '#lib/search/snapshot-sort.svelte.js'
@@ -50,6 +50,13 @@ export interface SortOperations {
   setSortColumn: (column: SortColumn, pane?: 'left' | 'right') => void
   /** Sets the sort order for a pane (defaults to focused). Palette entry. */
   setSortOrder: (order: 'asc' | 'desc' | 'toggle', pane?: 'left' | 'right') => void
+  /** Opens the header's native Sort by popup over `pane`, its requested column checked: at
+   *  `anchor` (the chevron), or at the pointer when `null` (a right-click). Resolves when the
+   *  menu closes; the pick comes back through `pickSortColumn`. */
+  openDateSortMenu: (pane: 'left' | 'right', anchor: MenuAnchor | null) => Promise<void>
+  /** A Sort by popup pick: sorts `pane` by `column` at its default order, or does nothing
+   *  when that's the column the pane already asked for (the checked item). */
+  pickSortColumn: (pane: 'left' | 'right', column: SortColumn) => Promise<void>
 }
 
 export function createSortOperations(deps: SortOperationsDeps): SortOperations {
@@ -235,5 +242,30 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
     else void handleSortChange(targetPane, currentColumn)
   }
 
-  return { handleSortChange, resortPaneWithCurrentSort, setSort, setSortColumn, setSortOrder }
+  /** The column `pane` ASKED for: a snapshot pane's own (`null` in its ranked order), else the tab's. */
+  function requestedColumn(pane: 'left' | 'right'): SortColumn | null {
+    const snapshotId = snapshotPaneId(pane)
+    if (snapshotId !== null) return getSnapshot(snapshotId)?.sort?.column ?? null
+    return deps.getPaneSort(pane).sortBy
+  }
+
+  async function openDateSortMenu(pane: 'left' | 'right', anchor: MenuAnchor | null): Promise<void> {
+    await showDateSortMenu(pane, requestedColumn(pane), anchor)
+  }
+
+  async function pickSortColumn(pane: 'left' | 'right', column: SortColumn): Promise<void> {
+    // The checked item: a click would flip the order, which a menu that shows no order can't promise.
+    if (requestedColumn(pane) === column) return
+    await handleSortChange(pane, column)
+  }
+
+  return {
+    handleSortChange,
+    resortPaneWithCurrentSort,
+    setSort,
+    setSortColumn,
+    setSortOrder,
+    openDateSortMenu,
+    pickSortColumn,
+  }
 }

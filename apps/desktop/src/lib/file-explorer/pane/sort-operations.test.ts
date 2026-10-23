@@ -11,7 +11,9 @@ const {
   getSnapshotSpy,
   commitSizeSortLimitSpy,
   addToastForPaneSpy,
+  showDateSortMenuSpy,
 } = vi.hoisted(() => ({
+  showDateSortMenuSpy: vi.fn<(...args: unknown[]) => Promise<void>>(),
   commitSizeSortLimitSpy: vi.fn<(listingId: string) => number | null>(),
   addToastForPaneSpy: vi.fn(),
   resortListingSpy: vi.fn<(...args: unknown[]) => Promise<ResortResult>>(),
@@ -20,7 +22,10 @@ const {
   getSnapshotSpy: vi.fn<() => { sort: { column: SortColumn; order: SortOrder } | null } | undefined>(),
 }))
 
-vi.mock('#lib/tauri-commands/index.js', () => ({ resortListing: resortListingSpy }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
+  resortListing: resortListingSpy,
+  showDateSortMenu: showDateSortMenuSpy,
+}))
 vi.mock('../git/commit-count-fill', () => ({ commitSizeSortLimit: commitSizeSortLimitSpy }))
 vi.mock('#lib/ui/toast/index.js', () => ({ addToastForPane: addToastForPaneSpy }))
 vi.mock('#lib/search/snapshot-sort.svelte.js', async () => {
@@ -434,5 +439,74 @@ describe('createSortOperations', () => {
     await createSortOperations(deps).handleSortChange('left', 'added')
 
     expect(addToastForPaneSpy).toHaveBeenCalledWith('left', ADDED_FALLBACK, expect.objectContaining({ level: 'info' }))
+  })
+
+  // ── The header's Sort by menu ─────────────────────────────────────────────
+  //
+  // Opened over either pane's header, focused or not; the pick names the pane it
+  // opened over, and picking the date already asked for does nothing.
+
+  it('opens the menu for the pane it was asked over, with that pane’s requested column and the anchor', async () => {
+    showDateSortMenuSpy.mockResolvedValue(undefined)
+    const { deps } = makeDeps(makePaneRef(), { sortBy: 'added', sortOrder: 'descending' })
+
+    await createSortOperations(deps).openDateSortMenu('right', { x: 10, y: 20 })
+
+    expect(showDateSortMenuSpy).toHaveBeenCalledWith('right', 'added', { x: 10, y: 20 })
+  })
+
+  it('opens the menu with a snapshot pane’s own column, or none in the ranked order', async () => {
+    showDateSortMenuSpy.mockResolvedValue(undefined)
+    const { deps } = makeDeps(makeSnapshotPaneRef(), { sortBy: 'name', sortOrder: 'ascending' })
+    const ops = createSortOperations(deps)
+
+    getSnapshotSpy.mockReturnValue({ sort: { column: 'created', order: 'ascending' } })
+    await ops.openDateSortMenu('left', null)
+    getSnapshotSpy.mockReturnValue({ sort: null })
+    await ops.openDateSortMenu('left', null)
+
+    expect(showDateSortMenuSpy.mock.calls).toEqual([
+      ['left', 'created', null],
+      ['left', null, null],
+    ])
+  })
+
+  it('sorts the pane a pick names by the new date, at its default order, whichever pane has focus', async () => {
+    const { deps, setPaneSort } = makeDeps(makePaneRef(), { sortBy: 'name', sortOrder: 'ascending' })
+
+    await createSortOperations(deps).pickSortColumn('right', 'added')
+
+    expect(setPaneSort).toHaveBeenCalledWith('right', 'added', 'descending')
+  })
+
+  it('does nothing when the pick is the date the pane already asked for', async () => {
+    const { deps, setPaneSort } = makeDeps(makePaneRef(), { sortBy: 'added', sortOrder: 'ascending' })
+
+    await createSortOperations(deps).pickSortColumn('left', 'added')
+
+    expect(resortListingSpy).not.toHaveBeenCalled()
+    expect(setPaneSort).not.toHaveBeenCalled()
+  })
+
+  // In a fallback the pane still asked for Added, so Added is the checked item.
+  it('does nothing when the pick is the requested date of a sort that fell back', async () => {
+    landsInModified()
+    const { deps } = makeDeps(makePaneRef(), { sortBy: 'added', sortOrder: 'descending' })
+
+    await createSortOperations(deps).pickSortColumn('left', 'added')
+
+    expect(resortListingSpy).not.toHaveBeenCalled()
+  })
+
+  it('sorts a snapshot pane by a picked date, and leaves its checked one alone', async () => {
+    getSnapshotSpy.mockReturnValue({ sort: { column: 'modified', order: 'descending' } })
+    const { deps } = makeDeps(makeSnapshotPaneRef(), { sortBy: 'name', sortOrder: 'ascending' })
+    const ops = createSortOperations(deps)
+
+    await ops.pickSortColumn('left', 'modified')
+    expect(sortSnapshotSpy).not.toHaveBeenCalled()
+
+    await ops.pickSortColumn('left', 'created')
+    expect(sortSnapshotSpy).toHaveBeenCalledWith('sr-7', { column: 'created', order: 'descending' })
   })
 })

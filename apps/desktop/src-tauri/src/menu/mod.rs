@@ -60,6 +60,7 @@ mod context_menu_icons;
 mod context_menu_live;
 #[cfg(target_os = "macos")]
 mod context_menu_slots;
+mod date_sort_menu;
 #[cfg(target_os = "macos")]
 mod display_accelerators;
 mod file_context_menu;
@@ -124,6 +125,7 @@ pub use context_menu_header::{ContextMenuTarget, ContextMenuTargetFacts};
 pub use context_menu_icons::lend_context_menu_icons;
 #[cfg(target_os = "macos")]
 pub use context_menu_live::{late_sink, lend_live_menu, next_generation};
+pub use date_sort_menu::{DateSortMenuPick, PaneSide, build_date_sort_menu};
 // On macOS the command builds its `FileContextInfo` through `context_menu_facts`, never by name.
 #[cfg(not(target_os = "macos"))]
 pub use file_context_menu::FileContextInfo;

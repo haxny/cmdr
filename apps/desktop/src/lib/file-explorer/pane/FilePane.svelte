@@ -15,6 +15,7 @@
         refreshListingIndexSizes,
         type ListingIndexSizesChanged,
         type Location,
+        type MenuAnchor,
         updateMenuContext,
         updateServicesSelection,
     } from '#lib/tauri-commands/index.js'
@@ -163,6 +164,8 @@
          */
         onGoToLocation?: (location: Location) => void
         onSortChange?: (column: SortColumn) => void
+        /** Opens the header's Sort by popup over this pane: at `anchor`, or at the pointer when `null`. */
+        onSortMenu?: (anchor: MenuAnchor | null) => Promise<void>
         onRequestFocus?: () => void
         /** Tab in this pane's open volume switcher hands the switcher to the other pane. */
         onSwitchVolumeChooserPane?: () => void
@@ -228,6 +231,7 @@
         onVolumeChange,
         onGoToLocation,
         onSortChange,
+        onSortMenu,
         onRequestFocus,
         onSwitchVolumeChooserPane,
         onNetworkHostChange,
@@ -2201,6 +2205,7 @@
                     handleSelect({ index, shiftKey: shiftKey ?? false, metaKey: metaKey ?? false })
                 }}
                 onVisibleRangeChange={handleVisibleRangeChange}
+                {onSortMenu}
             />
         {:else if loading && stalled !== null}
             <ListingStalledView
@@ -2259,6 +2264,7 @@
                           onSortChange(column)
                       }
                     : undefined}
+                {onSortMenu}
                 onVisibleRangeChange={handleVisibleRangeChange}
                 onRenameInput={handleRenameInput}
                 onRenameSubmit={handleRenameSubmit}
@@ -2319,6 +2325,7 @@
                           onSortChange(column)
                       }
                     : undefined}
+                {onSortMenu}
                 onVisibleRangeChange={handleVisibleRangeChange}
                 onDragInitiate={clearJumpState}
             />

@@ -1519,6 +1519,10 @@
   "@fileExplorer.columns.added": {
     "description": "File-list column header for the date each item was added to its folder (moved, copied, or downloaded into it), Finder's \"Date Added\". Full view shows it on the date column while the list is sorted by date added. Its rendered text is also measured to size the column. Keep it short, parallel with fileExplorer.columns.created and fileExplorer.columns.modified."
   },
+  "fileExplorer.columns.dateSortMenu": "Choose a date to sort by",
+  "@fileExplorer.columns.dateSortMenu": {
+    "description": "Hover tooltip and screen-reader name of the small down-arrow button beside the date column header in the file list’s full view. Pressing it opens a menu of Date modified, Date created, and Date added, so the list can be sorted by any of them. A full sentence-case phrase; it never shows as visible text, so length isn’t tight."
+  },
   "fileExplorer.columns.sortByRelevance": "Sort by relevance",
   "@fileExplorer.columns.sortByRelevance": {
     "description": "Hover tooltip on the active column header of a search-results pane, where the next click puts the rows back in the search engine’s own best-match-first order. \"Relevance\" is how well a result matches the search."

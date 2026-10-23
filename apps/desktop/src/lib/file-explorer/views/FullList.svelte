@@ -5,7 +5,12 @@
     import { dependOn } from '#lib/utils/reactivity.js'
     import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
     import type { FileEntry, SelectPayload, SortColumn, SortOrder, SyncStatus, VisibleRangePayload } from '../types'
-    import type { FileIndexState, FolderCoverage, ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
+    import type {
+        FileIndexState,
+        FolderCoverage,
+        ListingIndexSizesChanged,
+        MenuAnchor,
+    } from '#lib/tauri-commands/index.js'
     import { calculateVirtualWindow, getScrollToPosition } from './virtual-scroll'
     import { startSelectionDragTracking } from '../drag/drag-drop'
     import {
@@ -148,6 +153,8 @@
         onIndexStatusRequest?: (paths: string[]) => void
         onFolderCoverageRequest?: (folderPaths: string[]) => void
         onSortChange?: (column: SortColumn) => void
+        /** Opens the header's Sort by popup (the three dates): at `anchor`, or at the pointer when `null`. */
+        onSortMenu?: (anchor: MenuAnchor | null) => Promise<void>
         onVisibleRangeChange?: (args: VisibleRangePayload) => void
         /** Called when rename input value changes */
         onRenameInput?: (value: string) => void
@@ -224,6 +231,7 @@
         onIndexStatusRequest,
         onFolderCoverageRequest,
         onSortChange,
+        onSortMenu,
         onVisibleRangeChange,
         onRenameInput,
         onRenameSubmit,
@@ -785,6 +793,7 @@
         {scrollbarWidth}
         {clearsSortLabel}
         {onSortChange}
+        {onSortMenu}
     />
     <!-- The row area: the scroller plus, during a slow load, the pane's loading view
          laid over it, so the header above never leaves. -->

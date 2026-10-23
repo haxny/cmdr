@@ -1936,6 +1936,33 @@ export const commands = {
   showTabContextMenu: (isPinned: boolean, canClose: boolean, hasOtherUnpinnedTabs: boolean) =>
     typedError<null, string>(__TAURI_INVOKE('show_tab_context_menu', { isPinned, canClose, hasOtherUnpinnedTabs })),
   /**
+   *  Shows a file list header's Sort by popup over `pane` (fire-and-forget): the three dates, the
+   *  `requested` column's checked. At the pointer for a right-click, under the Full date header's
+   *  chevron (`anchor`) for its click or key. The pick comes back as `DateSortMenuPick`, carrying
+   *  `pane`, from `on_menu_event`, same shape as [`show_tab_context_menu`].
+   */
+  showDateSortMenu: (
+    pane: PaneSide,
+    requested:
+      // By name, in the reading language's collation.
+      | 'name'
+      // By extension.
+      | 'extension'
+      // By size.
+      | 'size'
+      // By last-modified time.
+      | 'modified'
+      // By creation time.
+      | 'created'
+      // By when the item was added to its folder (macOS APFS and HFS+ only).
+      | 'added'
+      | null,
+    anchor: {
+      x: number
+      y: number
+    } | null,
+  ) => typedError<null, string>(__TAURI_INVOKE('show_date_sort_menu', { pane, requested, anchor })),
+  /**
    *  Shows a native context menu for a servers hub row's SMB host (fire-and-forget).
    *  The selected action is delivered asynchronously via a `network-host-context-action` Tauri event
    *  from `on_menu_event`, carrying `row_id` back so the answer acts on the row it was opened on.
@@ -5383,6 +5410,7 @@ export const events = {
   closeConfirmation: makeEvent<CloseConfirmation>('close-confirmation'),
   closeFileViewer: makeEvent<CloseFileViewer>('close-file-viewer'),
   cloudAiConsentChanged: makeEvent<CloudAiConsentChanged>('cloud-ai-consent-changed'),
+  dateSortMenuPick: makeEvent<DateSortMenuPick>('date-sort-menu-pick'),
   directoryDeleted: makeEvent<DirectoryDeletedEvent>('directory-deleted'),
   directoryDiff: makeEvent<DirectoryDiff>('directory-diff'),
   displayAccessibilityChanged: makeEvent<DisplayAccessibilityChanged>('display-accessibility-changed'),
@@ -7601,6 +7629,15 @@ export type DataWipeSummary = {
   modelBytes: number
   // A license key is activated on this Mac, so the dialog says how to get it back.
   hasLicense: boolean
+}
+
+/**
+ *  `date-sort-menu-pick`: a date was picked from a file list header's Sort by popup. Emitted to
+ *  the main window, which sorts `pane` by `column` unless that pane already asked for it.
+ */
+export type DateSortMenuPick = {
+  pane: PaneSide
+  column: SortColumn
 }
 
 /**
@@ -13483,6 +13520,9 @@ export type PaneListing =
   | 'stalled'
   // The pane shows an error screen for this folder (`recentErrors` says why).
   | 'error'
+
+// Which pane a header menu was opened over.
+export type PaneSide = 'left' | 'right'
 
 // State of a single pane.
 export type PaneState = {
