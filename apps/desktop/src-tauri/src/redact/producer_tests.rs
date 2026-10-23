@@ -131,7 +131,7 @@ fn the_listing_lines_ship_their_dir_as_one_token_and_keep_the_rest() {
 
     let token = regex::escape(&r(&LogPrivate::dir_path(&dir).to_string()));
     let goldens = [
-        format!(r"^list_directory_core: path={token}, entries=0, read_dir=\d+ms, total=\d+ms$"),
+        format!(r"^list_directory_core: path={token}, entries=0, read=\d+ms, total=\d+ms$"),
         format!(
             r"^list_directory_core: 0 entries at {token} \(kind=dir, perms=0o\d+, size=\d+\)\. Could be genuinely empty, permission/TCC restricted \(Full Disk Access\?\), or a cloud-sync placeholder\.$"
         ),
