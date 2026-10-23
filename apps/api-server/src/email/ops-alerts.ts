@@ -20,16 +20,47 @@ import {
 
 interface DbSizeAlertParams {
   sizeMb: number
+  /** D1's per-database cap on the account's plan. */
+  capMb: number
+  /** Where the next alert lands, or null past the last step. */
+  nextStepMb: number | null
+  /** Null when the size history is too short to project from. */
+  growth: { mbPerMonth: number; overDays: number } | null
   tableCounts: Record<string, number>
   to: string
   resendApiKey: string
 }
 
-/** The 100 MB warning on the telemetry D1, with the per-table row counts that say where it went. */
+const SPELLED = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
+
+function monthsPhrase(months: number): string {
+  if (months < 1) return 'less than a month'
+  const whole = Math.round(months)
+  const count = whole < 10 ? SPELLED[whole] : whole.toLocaleString('en-US')
+  return `about ${count} ${whole === 1 ? 'month' : 'months'}`
+}
+
+function growthParagraph(params: DbSizeAlertParams): string {
+  if (!params.growth) return "<p>There isn't enough size history yet to say how fast it grows.</p>"
+  const { mbPerMonth, overDays } = params.growth
+  const left = monthsPhrase((params.capMb - params.sizeMb) / mbPerMonth)
+  return `<p>It grows <strong>about ${String(Math.round(mbPerMonth))} MB a month</strong> (over the past ${String(overDays)} days), so the cap is ${left} away at that pace.</p>`
+}
+
+/**
+ * The telemetry D1 passing a step of its plan's size cap, sent once per step: how close it is, how
+ * fast it grows, and the per-table row counts that say where the size went.
+ */
 export async function sendDbSizeAlert(params: DbSizeAlertParams): Promise<void> {
   const resend = new Resend(params.resendApiKey)
   const sizeMb = String(Math.round(params.sizeMb))
-  const subject = `Cmdr: telemetry DB is ${sizeMb} MB`
+  const capMb = String(Math.round(params.capMb))
+  const percent = String(Math.round((params.sizeMb / params.capMb) * 100))
+  const subject = `Cmdr: telemetry DB is ${sizeMb} MB, ${percent}% of D1's ${capMb} MB cap`
+  const next =
+    params.nextStepMb === null
+      ? 'This is the last step, so no more of these until the cap.'
+      : `The next one comes at ${String(Math.round(params.nextStepMb))} MB.`
 
   const tableRows = Object.entries(params.tableCounts)
     .map(
@@ -50,7 +81,11 @@ export async function sendDbSizeAlert(params: DbSizeAlertParams): Promise<void> 
       html: documentShell(
         `    <h2 style="color: #d97706;">${escapeHtml(subject)}</h2>
 
-    <p>The telemetry D1 database has reached <strong>${sizeMb} MB</strong>. Consider reviewing and pruning old data.</p>
+    <p>The telemetry D1 database has reached <strong>${sizeMb} MB</strong>, ${percent}% of the ${capMb} MB cap on the Workers Free plan. Past the cap, D1 refuses writes, so new telemetry stops landing.</p>
+
+    ${growthParagraph(params)}
+
+    <p>Most of it is <code>heartbeat</code> and <code>analytics_event</code>, kept 730 days for the dashboard's windows. Before the cap, either shorten that retention (and the privacy policy with it) or move to Workers Paid, which raises the cap to 10 GB.</p>
 
     <table style="${TABLE_STYLE}">
         <thead>
@@ -64,7 +99,7 @@ export async function sendDbSizeAlert(params: DbSizeAlertParams): Promise<void> 
         </tbody>
     </table>
 
-    ${signoffParagraph('This alert was generated automatically by the Cmdr API server. Threshold: 100 MB.')}`,
+    ${signoffParagraph(`The Cmdr API server sends this once per step of the cap (40%, 60%, 80%, 90%). ${next}`)}`,
         bodyStyle({ maxWidthPx: 600, color: '#333' }),
       ),
     },

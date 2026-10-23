@@ -279,8 +279,10 @@ describe('mailing the device count alert from the Worker runtime', () => {
 
 /**
  * Last, and deliberately so: the only way to the DB size alert is a telemetry DB actually past
- * 100 MB, and the harness's D1 keeps that weight for the rest of the run. Writing it takes about
- * three seconds and lives in the harness's temp directory, which goes away with `server.close()`.
+ * the first alert step (200 MB, 40% of the Free cap), and the harness's D1 keeps that weight for
+ * the rest of the run. Writing it takes a few seconds and lives in the harness's temp directory,
+ * which goes away with `server.close()`. The migrations give it an empty `db_size_samples`, so the
+ * first tick counts as crossing the step.
  * There is no seam to reach this job with a smaller database, and production code doesn't get one
  * just to be testable.
  */
@@ -289,9 +291,9 @@ describe('mailing the DB size alert from the Worker runtime', () => {
     const env = await server.getWorker<HarnessEnv>().getEnv()
     await env.TELEMETRY_DB.prepare('CREATE TABLE ballast (blob TEXT)').run()
     const chunk = 'x'.repeat(500_000)
-    for (let i = 0; i < 240; i++) {
+    for (let i = 0; i < 480; i++) {
       const written = await env.TELEMETRY_DB.prepare('INSERT INTO ballast (blob) VALUES (?)').bind(chunk).run()
-      if (written.meta.size_after > 100 * 1024 * 1024) break
+      if (written.meta.size_after > 200 * 1024 * 1024) break
     }
 
     await tick(0)

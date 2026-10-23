@@ -11,6 +11,7 @@ import { syntheticHeartbeatGraceDays } from './scheduled'
 import { ERROR_REPORT_PREFIX, EVICTION_MIN_AGE_DAYS, TOTAL_BYTES_KEY } from './telemetry/error-report-eviction'
 import { INTAKE_PAUSED_KEY } from './telemetry/error-report-intake'
 import { createBaseEnv, createMockD1 } from './cron-test-helpers'
+import { createSqliteD1 } from './sqlite-d1-test-helper'
 
 /** Fixtures age relative to now, so eviction eligibility never depends on the calendar. */
 function daysAgo(days: number): Date {
@@ -234,28 +235,79 @@ describe('handlePersonalCommentSweep', () => {
 
 describe('handleDbSizeCheck', () => {
   const MB = 1024 * 1024
+  const today = new Date('2026-10-23T00:00:30Z')
 
-  it('sends alert when DB size exceeds threshold', async () => {
-    const responses = new Map<string, unknown>([['COUNT(*)', { cnt: 42 }]])
-    const { db } = createMockD1(responses, { sizeAfter: 150 * MB })
-    const env = createBaseEnv({ TELEMETRY_DB: db })
+  /** A real SQLite reporting `sizeMb` as D1's size, seeded with earlier daily samples. */
+  function sizedDb(sizeMb: number, samples: Array<[day: string, sizeMb: number]> = []) {
+    const sqlite = createSqliteD1({ sizeAfter: sizeMb * MB })
+    for (const [day, mb] of samples) {
+      sqlite.sqlite.prepare(`INSERT INTO db_size_samples (day, size_bytes) VALUES (?, ?)`).run(day, mb * MB)
+    }
+    return sqlite
+  }
 
-    await handleDbSizeCheck(env as never)
+  it('alerts on the day the size crosses a step of the cap, with the row counts', async () => {
+    const { d1 } = sizedDb(210, [['2026-10-22', 195]])
+
+    await handleDbSizeCheck(createBaseEnv({ TELEMETRY_DB: d1 }) as never, today)
 
     expect(mockSend).toHaveBeenCalledOnce()
     const emailCall = lastEmailCall()
-    expect(emailCall.subject).toBe('Cmdr: telemetry DB is 150 MB')
+    expect(emailCall.subject).toBe("Cmdr: telemetry DB is 210 MB, 42% of D1's 500 MB cap")
     expect(emailCall.html).toContain('crash_reports')
-    expect(emailCall.html).toContain('42')
   })
 
-  it('does not send alert when DB size is under threshold', async () => {
-    const { db } = createMockD1(new Map(), { sizeAfter: 50 * MB })
-    const env = createBaseEnv({ TELEMETRY_DB: db })
+  // The regression: past the line, the old check mailed the same warning every single day.
+  it('stays quiet the day after, while the size sits between steps', async () => {
+    const { d1 } = sizedDb(215, [['2026-10-22', 210]])
 
-    await handleDbSizeCheck(env as never)
+    await handleDbSizeCheck(createBaseEnv({ TELEMETRY_DB: d1 }) as never, today)
 
     expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it('stays quiet under the first step, and records the day either way', async () => {
+    const { d1, sqlite } = sizedDb(103)
+
+    await handleDbSizeCheck(createBaseEnv({ TELEMETRY_DB: d1 }) as never, today)
+
+    expect(mockSend).not.toHaveBeenCalled()
+    expect(sqlite.prepare(`SELECT day, size_bytes FROM db_size_samples`).all()).toEqual([
+      { day: '2026-10-23', size_bytes: 103 * MB },
+    ])
+  })
+
+  it('alerts once with no earlier sample when the size is already past a step', async () => {
+    const { d1 } = sizedDb(310)
+
+    await handleDbSizeCheck(createBaseEnv({ TELEMETRY_DB: d1 }) as never, today)
+
+    expect(mockSend).toHaveBeenCalledOnce()
+  })
+
+  it('says how fast it grows and when the cap arrives at that pace', async () => {
+    const { d1 } = sizedDb(210, [
+      ['2026-09-23', 150],
+      ['2026-10-22', 198],
+    ])
+
+    await handleDbSizeCheck(createBaseEnv({ TELEMETRY_DB: d1 }) as never, today)
+
+    const { html } = lastEmailCall()
+    expect(html).toContain('about 60 MB a month')
+    expect(html).toContain('about five months')
+  })
+
+  it('prunes samples older than 400 days', async () => {
+    const { d1, sqlite } = sizedDb(103, [
+      ['2025-09-01', 10],
+      ['2026-10-22', 102],
+    ])
+
+    await handleDbSizeCheck(createBaseEnv({ TELEMETRY_DB: d1 }) as never, today)
+
+    const days = sqlite.prepare(`SELECT day FROM db_size_samples ORDER BY day`).all()
+    expect(days).toEqual([{ day: '2026-10-22' }, { day: '2026-10-23' }])
   })
 
   // D1 rejects SQLite's `pragma_page_count` / `pragma_page_size` table-valued functions with
@@ -271,15 +323,14 @@ describe('handleDbSizeCheck', () => {
     for (const call of calls) expect(call.sql.toLowerCase()).not.toContain('pragma')
   })
 
-  // The job runs daily against a DB that's normally nowhere near the threshold, so the quiet path
-  // stays at one statement rather than one per counted table.
-  it('does not count rows when under threshold', async () => {
+  // The job runs daily and almost never alerts, so the quiet path skips the per-table counts.
+  it('does not count rows when it stays quiet', async () => {
     const { db, calls } = createMockD1(new Map(), { sizeAfter: 50 * MB })
     const env = createBaseEnv({ TELEMETRY_DB: db })
 
     await handleDbSizeCheck(env as never)
 
-    expect(calls).toHaveLength(1)
+    expect(calls.some((call) => call.sql.includes('COUNT(*)'))).toBe(false)
   })
 
   it('skips when CRASH_NOTIFICATION_EMAIL is not set', async () => {

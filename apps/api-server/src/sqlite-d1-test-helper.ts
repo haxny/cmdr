@@ -45,8 +45,11 @@ export interface SqliteD1 {
   sqlite: DatabaseSync
 }
 
-/** A fresh in-memory database with the production schema, or the schema as it was `before` a migration. */
-export function createSqliteD1(options: { before?: string } = {}): SqliteD1 {
+/**
+ * A fresh in-memory database with the production schema, or the schema as it was `before` a migration.
+ * `sizeAfter` is what every `run()` reports as `meta.size_after` (bytes), the way D1 stamps its size.
+ */
+export function createSqliteD1(options: { before?: string; sizeAfter?: number } = {}): SqliteD1 {
   const sqlite = new DatabaseSync(':memory:')
   sqlite.exec(migrations({ before: options.before }))
 
@@ -58,7 +61,11 @@ export function createSqliteD1(options: { before?: string } = {}): SqliteD1 {
       const result = sqlite.prepare(sql).run(...args)
       return Promise.resolve({
         success: true,
-        meta: { changes: Number(result.changes), last_row_id: Number(result.lastInsertRowid), size_after: 0 },
+        meta: {
+          changes: Number(result.changes),
+          last_row_id: Number(result.lastInsertRowid),
+          size_after: options.sizeAfter ?? 0,
+        },
       })
     },
   })

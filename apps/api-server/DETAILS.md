@@ -210,6 +210,9 @@ and leaves the signups for the morning brief to count. Nothing else watches a ch
   the same kind and message (`occurrences`, migration `0024`), so a burst is one digest line and one small row, and the
   digest's stamp stays a short id list. The message names the route PATTERN or the webhook source, never the raw path,
   the caller, or what they sent, so the set of messages is fixed by the code.
+- **The digest folds rows with the same kind and message into one line** (`report-digest.ts::foldRepeats`), summing
+  their occurrences, and still stamps every row. Duplicates happen: two first occurrences racing in `countOpsEvent`, or
+  two CSP reports arriving together and both passing `claimAlert`'s KV read-then-write, which KV can't make atomic.
 - **Thresholds per kind** (`report-digest.ts::ALERT_THRESHOLDS`): a rejected admin request alerts on the first one (the
   only admin is David, so the expected count is zero), and bad webhook signatures alert once one window holds a few,
   since a provider retry can produce one now and then. Rows below their threshold are stamped without an email, which
@@ -354,9 +357,15 @@ failure from the rest and raises the alarm for it (§ Cron alarms):
    would read it: `src/licensing/DETAILS.md` § License backups.
 4. **Daily aggregation** (00:00 UTC only): aggregates yesterday's `update_checks` into `daily_active_users` via
    `INSERT OR IGNORE ... GROUP BY`, then prunes raw update checks older than 7 days. Idempotent via existence check.
-5. **DB size check** (00:00 UTC only): alerts by email over 100 MB, with the per-table row counts that say where the
-   size went. The size is `meta.size_after`, which D1 stamps on the result of every statement, so a throwaway `SELECT 1`
-   reads it and the under-threshold path costs one query; the row counts only run past the threshold.
+5. **DB size check** (00:00 UTC only): writes the day's size to `db_size_samples` (kept 400 days) and emails once per
+   step of D1's cap crossed (40%, 60%, 80%, 90% of `d1MaxDbBytes`), with the 30-day growth rate, the months left at that
+   pace, and the per-table row counts. A step counts as crossed when the latest EARLIER sample sat below it, so a size
+   parked past a line stays quiet (the first version mailed daily once over its line). The size is `meta.size_after`,
+   which D1 stamps on the result of every statement, so a throwaway `SELECT 1` reads it; the row counts only run on an
+   alert.
+   - **The cap tracks the plan.** The account is on Workers Free, so D1 caps a database at 500 MB and refuses writes
+     past it (verified on the D1 limits page and the $0.00 monthly invoices, 2026-10-23). Moving to Workers Paid (10 GB)
+     means changing `d1MaxDbBytes`, or every step fires at the wrong size.
    - ❌ **Never read the size from `pragma_page_count` / `pragma_page_size`.** They're SQLite's obvious answer and D1
      rejects the table-valued form with `SQLITE_AUTH` (verified against the live DB via `wrangler d1 execute --remote`,
      2026-09-04). This job shipped that way on 2026-03-24 and threw every day until the cron alarms surfaced it on
@@ -744,7 +753,7 @@ and `scheduledTime` decides which jobs run (the daily ones are gated on UTC hour
 failure, so the tick still reports `outcome: 'ok'` — assert on what reached the wire, and carry `server.getLogs()` into
 the failure message, or a job that threw looks like a job that had nothing to do.
 
-**The DB size alert costs a 100 MB database.** Its only trigger is `meta.size_after` past the threshold, which the
+**The DB size alert costs a 200 MB database.** Its only trigger is `meta.size_after` past the first step, which the
 harness's D1 reports truthfully, so the test writes real ballast (~3 s, in the harness's temp directory, gone at
 `server.close()`) and runs last because the weight stays for the rest of the file. Production code doesn't get a
 threshold seam just to make that cheaper.

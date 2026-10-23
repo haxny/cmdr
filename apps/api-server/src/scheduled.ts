@@ -12,7 +12,22 @@ import { isIntakePaused, resumeIntake } from './telemetry/error-report-intake'
 import { backupLicenseLedger } from './licensing/license-backup'
 import { deleteComment, listExpiredPersonalComments, resolveIssueTarget } from './github-issues'
 
-const dbSizeThresholdBytes = 100 * 1024 * 1024 // 100 MB
+const MB = 1024 * 1024
+
+/**
+ * D1's per-database cap on the plan this account is on: Workers Free, 500 MB (verified on the
+ * D1 limits page and the account's $0.00 monthly invoices, 2026-10-23). Workers Paid raises it to
+ * 10 GB; switch this when the plan changes, or the alerts land at the wrong sizes.
+ */
+const d1MaxDbBytes = 500 * MB
+
+/** Shares of the cap that each alert once, on the day the size first passes them. */
+const dbSizeAlertSteps = [0.4, 0.6, 0.8, 0.9]
+
+const dbSizeSampleRetentionDays = 400
+
+/** How far back the growth rate looks, in days. */
+const dbGrowthWindowDays = 30
 
 /**
  * Send one throwaway email a day so a dead `RESEND_API_KEY` surfaces on its own schedule rather
@@ -281,25 +296,92 @@ async function handleSyntheticHeartbeatSweep(env: Bindings): Promise<void> {
   }
 }
 
+interface SizeSample {
+  day: string
+  size_bytes: number
+}
+
+function utcDay(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+function daysBetween(fromDay: string, toDay: string): number {
+  return Math.round((Date.parse(toDay) - Date.parse(fromDay)) / (24 * 60 * 60 * 1000))
+}
+
+/** The step of the cap that `sizeBytes` passed since `previousBytes`, the highest if several. */
+function crossedStep(previousBytes: number, sizeBytes: number): number | null {
+  const crossed = dbSizeAlertSteps.filter(
+    (step) => previousBytes < step * d1MaxDbBytes && sizeBytes >= step * d1MaxDbBytes,
+  )
+  return crossed.at(-1) ?? null
+}
+
+/** Where the next alert lands after `step`, or null past the last one. */
+function nextStepMb(step: number): number | null {
+  const next = dbSizeAlertSteps.find((candidate) => candidate > step)
+  return next === undefined ? null : (next * d1MaxDbBytes) / MB
+}
+
 /**
- * Daily tripwire on the telemetry D1, with the per-table row counts that say where the size went.
+ * MB per month from the newest sample at least `dbGrowthWindowDays` old, or the oldest one when the
+ * history is shorter. Null with under a week of history or no growth: too thin to project from.
+ */
+async function growthRate(db: D1Database, today: string, sizeBytes: number) {
+  const windowStart = utcDay(new Date(Date.parse(today) - dbGrowthWindowDays * 24 * 60 * 60 * 1000))
+  const base =
+    (await db
+      .prepare(`SELECT day, size_bytes FROM db_size_samples WHERE day <= ? ORDER BY day DESC LIMIT 1`)
+      .bind(windowStart)
+      .first<SizeSample>()) ??
+    (await db
+      .prepare(`SELECT day, size_bytes FROM db_size_samples WHERE day < ? ORDER BY day ASC LIMIT 1`)
+      .bind(today)
+      .first<SizeSample>())
+  if (!base) return null
+  const days = daysBetween(base.day, today)
+  if (days < 7 || sizeBytes <= base.size_bytes) return null
+  return { mbPerMonth: ((sizeBytes - base.size_bytes) / MB / days) * 30, overDays: days }
+}
+
+/**
+ * Daily tripwire on the telemetry D1: records the day's size, and alerts once per step of the cap
+ * crossed (`dbSizeAlertSteps`) with the growth rate and the per-table row counts that say where the
+ * size went. The steps come from comparing today with the latest earlier sample, so a size that
+ * sits past a line stays quiet; a missed day only widens the comparison.
  *
  * The size comes from `meta.size_after`, which D1 stamps on the result of EVERY statement, so a
- * throwaway `SELECT 1` reads it for free and the quiet path stays at one query.
+ * throwaway `SELECT 1` reads it for free.
  *
  * ❌ Never reach for SQLite's `pragma_page_count` / `pragma_page_size` table-valued functions: they
  * look like the obvious source, and D1 rejects them with `SQLITE_AUTH` at runtime. That's invisible
  * to every test here, because a mocked D1 answers whatever it's told to.
  */
-async function handleDbSizeCheck(env: Bindings): Promise<void> {
+async function handleDbSizeCheck(env: Bindings, now: Date = new Date()): Promise<void> {
   if (!env.CRASH_NOTIFICATION_EMAIL || !env.RESEND_API_KEY) return
 
-  const probe = await env.TELEMETRY_DB.prepare(`SELECT 1`).run()
-  if (probe.meta.size_after <= dbSizeThresholdBytes) return
+  const db = env.TELEMETRY_DB
+  const today = utcDay(now)
+  const probe = await db.prepare(`SELECT 1`).run()
+  const sizeBytes = probe.meta.size_after
 
-  const sizeMb = probe.meta.size_after / (1024 * 1024)
+  const previous = await db
+    .prepare(`SELECT day, size_bytes FROM db_size_samples WHERE day < ? ORDER BY day DESC LIMIT 1`)
+    .bind(today)
+    .first<SizeSample>()
+  await db
+    .prepare(`INSERT OR REPLACE INTO db_size_samples (day, size_bytes) VALUES (?, ?)`)
+    .bind(today, sizeBytes)
+    .run()
+  const pruneBefore = utcDay(new Date(now.getTime() - dbSizeSampleRetentionDays * 24 * 60 * 60 * 1000))
+  await db.prepare(`DELETE FROM db_size_samples WHERE day < ?`).bind(pruneBefore).run()
 
-  // Only past the threshold, so the daily no-op costs one statement rather than one per table.
+  const step = crossedStep(previous?.size_bytes ?? 0, sizeBytes)
+  if (step === null) return
+
+  const growth = await growthRate(db, today, sizeBytes)
+
+  // Only on an alert, so the daily quiet path skips one count per table.
   const tables = ['crash_reports', 'downloads', 'update_checks', 'daily_active_users', 'heartbeat', 'analytics_event']
   const tableCounts: Record<string, number> = {}
   for (const table of tables) {
@@ -308,7 +390,10 @@ async function handleDbSizeCheck(env: Bindings): Promise<void> {
   }
 
   await sendDbSizeAlert({
-    sizeMb,
+    sizeMb: sizeBytes / MB,
+    capMb: d1MaxDbBytes / MB,
+    nextStepMb: nextStepMb(step),
+    growth,
     tableCounts,
     to: env.CRASH_NOTIFICATION_EMAIL,
     resendApiKey: env.RESEND_API_KEY,
