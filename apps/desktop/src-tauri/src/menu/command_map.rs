@@ -223,6 +223,7 @@ pub const SORT_BY_EXTENSION_ID: &str = "sort_by_extension";
 pub const SORT_BY_SIZE_ID: &str = "sort_by_size";
 pub const SORT_BY_MODIFIED_ID: &str = "sort_by_modified";
 pub const SORT_BY_CREATED_ID: &str = "sort_by_created";
+pub const SORT_BY_ADDED_ID: &str = "sort_by_added";
 pub const SORT_ASCENDING_ID: &str = "sort_ascending";
 pub const SORT_DESCENDING_ID: &str = "sort_descending";
 
@@ -486,8 +487,8 @@ pub fn menu_id_to_command(menu_id: &str) -> Option<(&'static str, CommandScope)>
         SORT_BY_SIZE_ID => Some(("sort.bySize", CommandScope::FileScoped)),
 
         // Not mapped: CheckMenuItems (show_hidden_files, view modes), close-tab (special logic),
-        // viewer word wrap, tab context menu actions, sort order items (ascending/descending/
-        // date-created), "open-with:*" (prefix-routed before this lookup in
+        // viewer word wrap, tab context menu actions, sort order items (ascending/descending),
+        // date created and date added (no shortcut to sync), "open-with:*" (prefix-routed before this lookup in
         // `lib.rs::on_menu_event`).
         _ => None,
     }
@@ -700,11 +701,12 @@ mod tests {
         assert_eq!(menu_id_to_command(VIEW_MODE_FULL_RIGHT_ID), None);
         assert_eq!(menu_id_to_command(VIEW_MODE_BRIEF_RIGHT_ID), None);
         assert_eq!(menu_id_to_command(VIEWER_WORD_WRAP_ID), None);
-        // Sort order items (ascending/descending) and date-created use the menu-sort
-        // event path and are not mapped. Only the four shortcut-bound columns are.
+        // Sort order items (ascending/descending), date created, and date added use the
+        // menu-sort event path and are not mapped. Only the four shortcut-bound columns are.
         assert_eq!(menu_id_to_command(SORT_ASCENDING_ID), None);
         assert_eq!(menu_id_to_command(SORT_DESCENDING_ID), None);
         assert_eq!(menu_id_to_command(SORT_BY_CREATED_ID), None);
+        assert_eq!(menu_id_to_command(SORT_BY_ADDED_ID), None);
         assert_eq!(menu_id_to_command("unknown_id"), None);
     }
 

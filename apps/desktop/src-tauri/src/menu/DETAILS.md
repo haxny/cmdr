@@ -184,7 +184,8 @@ Exceptions that do NOT use `"execute-command"`:
   double-toggle, so these emit `"settings-changed"` / `"view-mode-changed"` directly
 - **Close tab** (⌘W): checks if a non-main window has focus and closes it instead of emitting
   `tab.close`
-- **Sort items**: emit `"menu-sort"` with field/direction payload. The four shortcut-bound columns
+- **Sort items**: emit `"menu-sort"` with field/direction payload, which the frontend maps to a `sort.*` command
+  (`routes/(main)/menu-sort-command.ts`). The four shortcut-bound columns
   (`SORT_BY_{NAME,EXTENSION,MODIFIED,SIZE}_ID`) are *also* listed in `menu_id_to_command` and
   registered in the items HashMap, purely so user-customized accelerators flow through the
   generic update path. The on_menu_event special-case fires first, so the generic dispatch is

@@ -28,6 +28,10 @@ export const sortHandlers = {
     explorerRef?.setSortColumn('created')
   },
 
+  'sort.byAdded': ({ explorerRef }) => {
+    explorerRef?.setSortColumn('added')
+  },
+
   'sort.ascending': ({ explorerRef }) => {
     explorerRef?.setSortOrder('asc')
   },

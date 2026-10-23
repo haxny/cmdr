@@ -100,9 +100,10 @@ menu menu.bar.view id=menu_view
       2 item sort_by_modified menu.sort.dateModified [Cmd+5] tracked
       3 item sort_by_size menu.sort.size [Cmd+6] tracked
       4 item sort_by_created menu.sort.dateCreated untracked
-      5 separator
-      6 item sort_ascending menu.sort.ascending untracked
-      7 item sort_descending menu.sort.descending untracked
+      5 item sort_by_added menu.sort.dateAdded untracked
+      6 separator
+      7 item sort_ascending menu.sort.ascending untracked
+      8 item sort_descending menu.sort.descending untracked
   5 submenu menu.view.zoom nested
       0 item view_zoom_75 menu.zoom.percent75 untracked
       1 item view_zoom_100 menu.zoom.percent100 [Cmd+0] untracked
@@ -224,9 +225,10 @@ menu menu.bar.view
       2 item sort_by_modified menu.sort.dateModified [Ctrl+5] tracked
       3 item sort_by_size menu.sort.size [Ctrl+6] tracked
       4 item sort_by_created menu.sort.dateCreated untracked
-      5 separator
-      6 item sort_ascending menu.sort.ascending untracked
-      7 item sort_descending menu.sort.descending untracked
+      5 item sort_by_added menu.sort.dateAdded untracked
+      6 separator
+      7 item sort_ascending menu.sort.ascending untracked
+      8 item sort_descending menu.sort.descending untracked
   5 submenu menu.view.zoom nested
       0 item view_zoom_75 menu.zoom.percent75 untracked
       1 item view_zoom_100 menu.zoom.percent100 [Ctrl+0] untracked

@@ -83,7 +83,12 @@ export function parsePane(value: unknown): 'left' | 'right' | undefined {
 /** Sort column. Accepts the MCP `ext` alias for `extension`. */
 export function parseSortColumn(value: unknown): SortColumn | undefined {
   if (value === 'ext') return 'extension'
-  return value === 'name' || value === 'extension' || value === 'size' || value === 'modified' || value === 'created'
+  return value === 'name' ||
+    value === 'extension' ||
+    value === 'size' ||
+    value === 'modified' ||
+    value === 'created' ||
+    value === 'added'
     ? value
     : undefined
 }

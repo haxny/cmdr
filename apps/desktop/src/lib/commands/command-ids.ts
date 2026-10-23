@@ -127,6 +127,7 @@ export const COMMAND_IDS = [
   'sort.byModified',
   'sort.bySize',
   'sort.byCreated',
+  'sort.byAdded',
   'sort.ascending',
   'sort.descending',
   'sort.toggleOrder',

@@ -358,6 +358,7 @@ pub(crate) const NATIVE_STRINGS: &[LocaleStrings] = &[
             ("menu.select.sameExtension", "Select all with extension *.{extension}"),
             ("menu.select.sameKind", "Select all of the same kind"),
             ("menu.sort.ascending", "Ascending"),
+            ("menu.sort.dateAdded", "Date added"),
             ("menu.sort.dateCreated", "Date created"),
             ("menu.sort.dateModified", "Date modified"),
             ("menu.sort.descending", "Descending"),

@@ -237,6 +237,14 @@ export const mainWindowCommands: CommandSource[] = [
     whileDialogOpen: BLOCKED_BY_DIALOGS,
   },
   {
+    id: 'sort.byAdded',
+    nameKey: 'commands.sortByAdded.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: [],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+  },
+  {
     id: 'sort.ascending',
     nameKey: 'commands.sortAscending.label',
     scope: 'Main window',

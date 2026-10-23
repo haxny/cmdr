@@ -48,11 +48,11 @@ use super::{
     OPEN_ONBOARDING_ID, OPEN_TERMINAL_HERE_ID, OPERATION_LOG_ID, PIN_TAB_MENU_ID, PREV_TAB_ID, QUEUE_SHOW_ID,
     QUICK_LOOK_ID, RENAME_ID, REOPEN_CLOSED_TAB_ID, SEARCH_FILES_ID, SELECT_ALL_ID, SELECT_FILES_ID, SELECT_MENU_ID,
     SELECT_SAME_KIND_ID, SERVERS_CONNECT_ID, SERVERS_SHOW_ID, SETTINGS_ID, SHOW_HIDDEN_FILES_ID, SHOW_IN_FINDER_ID,
-    SORT_ASCENDING_ID, SORT_BY_CREATED_ID, SORT_BY_EXTENSION_ID, SORT_BY_MENU_ID, SORT_BY_MODIFIED_ID, SORT_BY_NAME_ID,
-    SORT_BY_SIZE_ID, SORT_DESCENDING_ID, SUGGESTED_OPS_ID, SWAP_PANES_ID, SWITCH_PANE_ID, TAB_MENU_ID, UNDO_TRASH_ID,
-    VIEW_MENU_ID, VIEW_MODE_BRIEF_LEFT_ID, VIEW_MODE_BRIEF_RIGHT_ID, VIEW_MODE_FULL_LEFT_ID, VIEW_MODE_FULL_RIGHT_ID,
-    VIEW_ZOOM_75_ID, VIEW_ZOOM_100_ID, VIEW_ZOOM_125_ID, VIEW_ZOOM_150_ID, VIEW_ZOOM_IN_ID, VIEW_ZOOM_OUT_ID, ViewMode,
-    WINDOW_MENU_ID,
+    SORT_ASCENDING_ID, SORT_BY_ADDED_ID, SORT_BY_CREATED_ID, SORT_BY_EXTENSION_ID, SORT_BY_MENU_ID,
+    SORT_BY_MODIFIED_ID, SORT_BY_NAME_ID, SORT_BY_SIZE_ID, SORT_DESCENDING_ID, SUGGESTED_OPS_ID, SWAP_PANES_ID,
+    SWITCH_PANE_ID, TAB_MENU_ID, UNDO_TRASH_ID, VIEW_MENU_ID, VIEW_MODE_BRIEF_LEFT_ID, VIEW_MODE_BRIEF_RIGHT_ID,
+    VIEW_MODE_FULL_LEFT_ID, VIEW_MODE_FULL_RIGHT_ID, VIEW_ZOOM_75_ID, VIEW_ZOOM_100_ID, VIEW_ZOOM_125_ID,
+    VIEW_ZOOM_150_ID, VIEW_ZOOM_IN_ID, VIEW_ZOOM_OUT_ID, ViewMode, WINDOW_MENU_ID,
 };
 
 /// "Copy path", matching Finder's "Copy as Pathname". Must stay in sync with the `file.copyPath`
@@ -309,8 +309,8 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
                 CheckRole::ShowHiddenFiles,
             ),
             // GTK intercepts F-row keys but lets Cmd+digit chords through, so both platforms
-            // register these; the ⌘F3–⌘F6 alternates go through JS dispatch alone. Date created and
-            // the two order items have no shortcut to sync, so nothing tracks them.
+            // register these; the ⌘F3–⌘F6 alternates go through JS dispatch alone. Date created, Date
+            // added, and the two order items have no shortcut to sync, so nothing tracks them.
             submenu(
                 Some(SORT_BY_MENU_ID),
                 "menu.view.sortBy",
@@ -321,6 +321,7 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
                     item(SORT_BY_MODIFIED_ID, "menu.sort.dateModified", cmd_or_ctrl!("5")),
                     item(SORT_BY_SIZE_ID, "menu.sort.size", cmd_or_ctrl!("6")),
                     item(SORT_BY_CREATED_ID, "menu.sort.dateCreated", NONE).untracked(),
+                    item(SORT_BY_ADDED_ID, "menu.sort.dateAdded", NONE).untracked(),
                     SEPARATOR,
                     item(SORT_ASCENDING_ID, "menu.sort.ascending", NONE).untracked(),
                     item(SORT_DESCENDING_ID, "menu.sort.descending", NONE).untracked(),

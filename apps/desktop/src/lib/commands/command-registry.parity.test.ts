@@ -95,6 +95,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'sort.byModified': 'Sort by date modified',
   'sort.bySize': 'Sort by size',
   'sort.byCreated': 'Sort by date created',
+  'sort.byAdded': 'Sort by date added',
   'sort.ascending': 'Sort ascending',
   'sort.descending': 'Sort descending',
   'sort.toggleOrder': 'Toggle sort order',

@@ -348,6 +348,10 @@
   "@menu.sort.dateCreated": {
     "description": "NOUN phrase. Item in View > Sort by: sorts by when each file was first made. Completes the \"Sort by\" sentence. Use the exact wording your macOS Finder uses for its \"Date Created\" column, and keep it parallel with menu.sort.dateModified, which sits right above it."
   },
+  "menu.sort.dateAdded": "Date added",
+  "@menu.sort.dateAdded": {
+    "description": "NOUN phrase. Item in View > Sort by, right below menu.sort.dateCreated: sorts by when each item was put in its folder (downloaded, copied, or moved there). Completes the \"Sort by\" sentence. Use the exact wording your macOS Finder uses for its \"Date Added\" column, and keep it parallel with menu.sort.dateCreated."
+  },
   "menu.sort.ascending": "Ascending",
   "@menu.sort.ascending": {
     "description": "Sort DIRECTION, below a separator in View > Sort by: smallest to largest, A to Z, oldest first. Use the exact word your macOS Finder uses for ascending sort order. Its opposite is menu.sort.descending, and the pair must read as mirror images."

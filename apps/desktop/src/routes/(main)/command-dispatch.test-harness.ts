@@ -548,6 +548,12 @@ export const DELEGATE_ROWS: DelegateRow[] = [
     },
   },
   {
+    id: 'sort.byAdded',
+    expect: (e) => {
+      expect(e.setSortColumn).toHaveBeenCalledExactlyOnceWith('added')
+    },
+  },
+  {
     id: 'sort.ascending',
     expect: (e) => {
       expect(e.setSortOrder).toHaveBeenCalledExactlyOnceWith('asc')

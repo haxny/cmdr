@@ -44,6 +44,7 @@ import {
 import { getAppLogger } from '#lib/logging/logger.js'
 import type { CommandDispatchers } from './command-dispatch-context'
 import { navCommandForDirection } from './mouse-nav'
+import { menuSortToCommand } from './menu-sort-command'
 import { setFolderExcluded } from '#lib/media-index/excluded-folders.js'
 import { setFolderChosen } from '#lib/media-index/always-index-folders.js'
 import { handleFunctionKeyBarHideRequested } from '#lib/file-explorer/pane/function-key-bar-hide.js'
@@ -250,33 +251,6 @@ async function revealFolderInFocusedPane(explorer: ExplorerAPI | undefined, path
 
 /** Typed id for the per-pane view command (keeps dispatch off raw literals; A3). */
 const viewSetModeCommand: CommandId = 'view.setMode'
-
-/**
- * Maps a native `menu-sort` payload onto a focused-pane `sort.*` command id,
- * or `undefined` for an unrecognized payload. `sortBy` selects the column;
- * `sortOrder` selects ascending/descending (the menu never emits `toggle`).
- */
-function menuSortToCommand(action: unknown, value: unknown): CommandId | undefined {
-  if (action === 'sortBy') {
-    const byColumn: Record<string, CommandId> = {
-      name: 'sort.byName',
-      extension: 'sort.byExtension',
-      size: 'sort.bySize',
-      modified: 'sort.byModified',
-      created: 'sort.byCreated',
-    }
-    return typeof value === 'string' ? byColumn[value] : undefined
-  }
-  if (action === 'sortOrder') {
-    const byOrder: Record<string, CommandId> = {
-      asc: 'sort.ascending',
-      desc: 'sort.descending',
-      toggle: 'sort.toggleOrder',
-    }
-    return typeof value === 'string' ? byOrder[value] : undefined
-  }
-  return undefined
-}
 
 /** Set up menu-related event listeners. */
 export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<void> {

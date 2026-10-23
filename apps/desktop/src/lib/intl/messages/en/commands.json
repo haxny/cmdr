@@ -285,6 +285,10 @@
     "description": "Command name that sorts the file list by creation date. Appears in the command palette.",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
+  "commands.sortByAdded.label": "Sort by date added",
+  "@commands.sortByAdded.label": {
+    "description": "Command name that sorts the file list by when each item was put in its folder (downloaded, copied, or moved there), the date Finder calls \"Date Added\". Appears in the command palette and the keyboard shortcuts settings. Keep it parallel with commands.sortByCreated.label."
+  },
   "commands.sortAscending.label": "Sort ascending",
   "@commands.sortAscending.label": {
     "description": "Command name that sets the sort order to ascending (A to Z, smallest first). Appears in the command palette.",

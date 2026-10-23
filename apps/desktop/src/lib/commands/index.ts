@@ -5,5 +5,6 @@
 export * from './command-ids'
 export * from './types'
 export * from './command-registry'
+export * from './sort-commands'
 export * from './while-dialog-open'
 export { searchCommands } from './fuzzy-search'

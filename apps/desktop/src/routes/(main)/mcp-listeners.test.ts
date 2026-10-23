@@ -51,7 +51,7 @@ describe('parsePane', () => {
 
 describe('parseSortColumn', () => {
   it('accepts the canonical columns', () => {
-    for (const col of ['name', 'extension', 'size', 'modified', 'created'] as const) {
+    for (const col of ['name', 'extension', 'size', 'modified', 'created', 'added'] as const) {
       expect(parseSortColumn(col)).toBe(col)
     }
   })

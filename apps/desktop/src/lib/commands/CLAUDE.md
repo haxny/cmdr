@@ -11,6 +11,7 @@ Centralized command registry and fuzzy search engine for the command palette.
 - **`command-registry.ts`**: the `commands` array, `getPaletteCommands()`, `updateLicenseCommandName()`, and the
   `NATIVE_SHORTCUT_COMMAND_IDS` / `FIXED_KEY_COMMAND_IDS` lists. Registry DATA is in **`sources/*.ts`** (add commands
   there, not inline).
+- **`sort-commands.ts`**: `SORT_BY_COMMANDS`, the column → `sort.by*` table the headers and View > Sort by share.
 - **`fuzzy-search.ts`**: `searchCommands()` (palette set) + `searchAllCommands()` (full registry), via the shared
   `#lib/utils/unicode-fuzzy.ts` engine (any script, accents optional).
 - Tests: `fuzzy-search.test.ts`, `command-registry.test.ts` (set-equality + palette pin), `command-types.test.ts`

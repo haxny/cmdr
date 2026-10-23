@@ -57,6 +57,7 @@ const EXPECTED_PALETTE_IDS: readonly CommandId[] = [
   'sort.byModified',
   'sort.bySize',
   'sort.byCreated',
+  'sort.byAdded',
   'sort.ascending',
   'sort.descending',
   'sort.toggleOrder',
