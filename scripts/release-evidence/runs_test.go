@@ -80,6 +80,22 @@ func TestPickCodeQLRunNeedsTheNewestGreen(t *testing.T) {
 	}
 }
 
+// The release's merge-back PR starts a newer CodeQL run on the same commit while the evidence is
+// being collected (v0.56.0: PR #712's run was in progress). The evidence cites the run the release
+// gate checked, the dispatch `release.sh` started, however many PR runs come after it.
+func TestPickCodeQLRunPrefersTheReleaseDispatch(t *testing.T) {
+	gate := releaseRun(1, "workflow_dispatch", "success", "c", 0)
+	mergeBackRunning := workflowRun{ID: 2, Event: "pull_request", Status: "in_progress", HeadSHA: "c", CreatedAt: t0.Add(time.Hour)}
+	if r, err := pickCodeQLRun([]workflowRun{gate, mergeBackRunning}, "c"); err != nil || r.ID != 1 {
+		t.Errorf("a running merge-back PR run displaced the gate's dispatch: got %d %v", r.ID, err)
+	}
+	redGate := releaseRun(1, "workflow_dispatch", "failure", "c", 0)
+	greenPR := releaseRun(2, "pull_request", "success", "c", 60)
+	if _, err := pickCodeQLRun([]workflowRun{redGate, greenPR}, "c"); err == nil {
+		t.Error("a green PR run must not stand in for a red release dispatch")
+	}
+}
+
 func releaseRun(id int64, event, conclusion, sha string, minutes int) workflowRun {
 	return workflowRun{ID: id, Event: event, Status: "completed", Conclusion: conclusion, HeadSHA: sha, CreatedAt: t0.Add(time.Duration(minutes) * time.Minute)}
 }

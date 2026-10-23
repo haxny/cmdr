@@ -99,14 +99,28 @@ func pickFullRun(cands []ciCandidate) (ciCandidate, workflowRun, error) {
 	return ciCandidate{}, workflowRun{}, fmt.Errorf("%s. The release gate should have left one; read `gh run list --workflow ci.yml --commit <sha>`", msg)
 }
 
-// pickCodeQLRun is the newest `codeql.yml` run on the commit, which must be green.
+// pickCodeQLRun is the newest `codeql.yml` dispatch on the commit (the release gate's run), or the
+// newest run of any event when there's no dispatch. It must be green.
 func pickCodeQLRun(runs []workflowRun, commit string) (workflowRun, error) {
 	if len(runs) == 0 {
 		return workflowRun{}, fmt.Errorf("no codeql.yml run on %s, the commit the full CI run passed on", short(commit))
 	}
-	r := newest(runs)
+	// The gate's run is the dispatch `release.sh` (or a security patch's step 4) started. A later PR
+	// run on the same commit, like the merge-back's, mustn't displace it. Releases from before the
+	// dispatch had push runs only, so they fall back to every run.
+	candidates := runs
+	var dispatches []workflowRun
+	for _, r := range runs {
+		if r.Event == "workflow_dispatch" {
+			dispatches = append(dispatches, r)
+		}
+	}
+	if len(dispatches) > 0 {
+		candidates = dispatches
+	}
+	r := newest(candidates)
 	if !r.succeeded() {
-		return workflowRun{}, fmt.Errorf("the newest codeql.yml run on %s (%d) is %s/%s, not green", short(commit), r.ID, r.Status, r.Conclusion)
+		return workflowRun{}, fmt.Errorf("the newest codeql.yml run the release gate could have checked on %s (%d) is %s/%s, not green", short(commit), r.ID, r.Status, r.Conclusion)
 	}
 	return r, nil
 }

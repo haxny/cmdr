@@ -379,8 +379,8 @@ check.
       when § Pre-release smoke test on old macOS ran for this release. It runs step 12's checks again, then:
       - finds the runs: the full (`run_all`) `ci.yml` run on the tagged `chore(release)` commit, else on its parent (a
         hand-made security-only release, or one from before the release ran CI on its own commit; § The CI gate), the
-        `codeql.yml` run on that same commit, and the `release.yml` runs for the tag (two in `local` mode: the tag push
-        and the dispatch);
+        `codeql.yml` run on that same commit (the gate's dispatch, so the merge-back PR's later run can't displace it),
+        and the `release.yml` runs for the tag (two in `local` mode: the tag push and the dispatch);
       - collects into a fresh `vX.Y.Z` folder (`-out DIR`, default a temp dir): the SBOMs, the `.intoto.jsonl`,
         `checksums.txt`, `latest.json`, each run's jobs JSON and gzipped log, one CodeQL SARIF per language, and
         `attestation-verify.txt`;
