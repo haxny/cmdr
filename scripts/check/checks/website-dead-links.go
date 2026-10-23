@@ -15,7 +15,8 @@ import (
 
 // RunWebsiteDeadLinks fails when a built page links to something the build doesn't contain: an
 // empty `href`, an internal page or asset with no file in `dist/`, or a `#fragment` naming no `id`
-// on its target page. External URLs are skipped (no network in a check). It reads the BUILT site,
+// on its target page. External URLs are skipped (no network in a check). It also fails a reference to
+// a `public/` asset without `?v=`, the content version `asset-versions.ts` adds so nginx can cache it. It reads the BUILT site,
 // so it covers blog markdown, `src/lib/` content, and templates alike. A blog post once shipped
 // `[background drive index](<>)`, which renders as `href=""`, and nothing noticed.
 func RunWebsiteDeadLinks(ctx *CheckContext) (CheckResult, error) {
@@ -157,6 +158,9 @@ func websiteLinkProblem(distDir string, idsByPage map[string]map[string]bool, li
 		if reason != "" {
 			return reason, true
 		}
+		if websiteNeedsVersion(target) && u.Query().Get("v") == "" {
+			return "unversioned public asset: `asset-versions.ts` should have added `?v=`", true
+		}
 	}
 
 	fragment := u.Fragment
@@ -167,6 +171,22 @@ func websiteLinkProblem(distDir string, idsByPage map[string]map[string]bool, li
 		return fmt.Sprintf("no id %q on %s", fragment, target), true
 	}
 	return "", true
+}
+
+// websiteVersionedExtensions mirrors `VERSIONED_EXTENSIONS` in `apps/website/src/plugins/asset-versions.ts`:
+// the file types that build step versions and nginx caches for a year when `?v=` is present.
+var websiteVersionedExtensions = map[string]bool{
+	"webp": true, "png": true, "jpg": true, "jpeg": true, "gif": true, "svg": true, "ico": true, "avif": true,
+	"mp4": true, "webm": true, "woff": true, "woff2": true, "ttf": true, "otf": true, "eot": true, "js": true, "css": true,
+}
+
+// websiteNeedsVersion reports whether a built file must be referenced with `?v=`: a versionable file
+// from `public/`. `/_astro/` files carry a content hash in their names already.
+func websiteNeedsVersion(target string) bool {
+	if strings.HasPrefix(target, "_astro/") {
+		return false
+	}
+	return websiteVersionedExtensions[strings.ToLower(strings.TrimPrefix(path.Ext(target), "."))]
 }
 
 // websiteResolvePath maps a URL path to the dist file a static server would answer with, the way

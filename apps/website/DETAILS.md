@@ -141,6 +141,17 @@ was deleted.)
   build so the deploy keeps the old site. So every deploy serves, and bakes into the download buttons, whatever release
   is current; the release pipeline commits nothing here. ❌ Never read the current version from the committed copy. Why:
   `docs/guides/releasing.md` § What a release publishes.
+- **Caching**: three tiers in `nginx.conf`. `/_astro/` (Vite's hashed bundles) and any `public/` file requested with
+  `?v=` get a year, `immutable`; HTML and an unversioned `public/` file get `no-cache` (a cheap 304 when unchanged).
+  `src/plugins/asset-versions.ts` adds `?v=<content hash>` at `astro:build:done` to every `public/` asset URL in the
+  built HTML (attributes, `srcset`, and `url()` in the inlined CSS), so a changed hero or blog image is a new URL the
+  moment it deploys. Before this, those files kept their names and Cloudflare handed browsers a 4-hour TTL, so an
+  updated hero stayed stale until a hard reload. `website-dead-links` fails a page that references a `public/` asset
+  without `?v=`. ❗ A URL built at runtime in JS isn't versioned; it's served `no-cache`, which is correct but uncached.
+  Cloudflare's Browser Cache TTL is "Respect existing headers", so `nginx.conf` alone decides (zone setting
+  `browser_cache_ttl: 0`).
+- **404s**: any URL with no page or file behind it is a real 404 rendering `src/pages/404.astro`, never the home page as
+  a 200 (search engines treat that as a soft 404, and a broken link looks fine).
 - **Security headers**: every `nginx.conf` location that serves content includes `nginx-security-headers.conf` (copied
   to `/etc/nginx/snippets/` by the Dockerfile), because nginx drops server-level `add_header`s in any location that sets
   its own. It carries the only copy of the CSP. `connect-src` has to list every origin the site's JS fetches

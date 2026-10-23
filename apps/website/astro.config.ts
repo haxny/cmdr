@@ -9,6 +9,7 @@ import { smartQuotesIntegration } from './src/plugins/smart-quotes.ts'
 import { rehypeDownloadDropdown } from './src/plugins/download-dropdown.ts'
 import { rehypeBlogMedia } from './src/plugins/blog-media.ts'
 import { stripEmptySrcsetIntegration } from './src/plugins/strip-empty-srcset.ts'
+import { assetVersionsIntegration } from './src/plugins/asset-versions.ts'
 import { blogEditorDevServer } from './src/dev/blog-editor/dev-server.mjs'
 
 // https://astro.build/config
@@ -32,6 +33,8 @@ export default defineConfig({
     sitemap({ filter: (page) => !page.includes('/visual-fixture') }),
     smartQuotesIntegration(),
     stripEmptySrcsetIntegration(),
+    // Last, so it versions the URLs in the HTML every other integration has finished writing.
+    assetVersionsIntegration(),
   ],
   server: {
     port: parseInt(process.env.PORT || '4829', 10),

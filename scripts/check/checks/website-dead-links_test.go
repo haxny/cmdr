@@ -37,7 +37,7 @@ func TestWebsiteDeadLinksPassesResolvableLinks(t *testing.T) {
 		<a href="#top" id="top">self</a>
 		<a href="#">script button</a>
 		<a href="/rss.xml">feed</a>
-		<img src="/blog/post/shot.webp" alt="">
+		<img src="/blog/post/shot.webp?v=3f9a1c2b7d" alt="">
 		<a href="https://example.com/nope">external</a>
 		<a href="mailto:hi@example.com">mail</a>
 		<a href="/features#:~:text=S3">text fragment</a>`)
@@ -70,5 +70,25 @@ func TestWebsiteDeadLinksFlagsEmptyMissingAndBadAnchor(t *testing.T) {
 	}
 	if len(broken) != 4 {
 		t.Errorf("expected 4 findings, got %d:\n%s", len(broken), joined)
+	}
+}
+
+func TestWebsiteDeadLinksFlagsUnversionedPublicAssets(t *testing.T) {
+	distDir := t.TempDir()
+	// `asset-versions.ts` appends `?v=` to every `public/` asset; one it missed would be cached
+	// under a name that never changes, which is how an updated hero image stayed stale.
+	writeDistPage(t, distDir, "index.html", `
+		<img src="/hero/frame.webp?v=3f9a1c2b7d" alt="">
+		<img src="/hero/stale.webp" alt="">
+		<script src="/_astro/app.B1x2y3.js"></script>
+		<a href="/features/">features</a>`)
+	writeDistPage(t, distDir, "features/index.html", ``)
+	writeDistFile(t, distDir, "hero/frame.webp", 10)
+	writeDistFile(t, distDir, "hero/stale.webp", 10)
+	writeDistFile(t, distDir, "_astro/app.B1x2y3.js", 10)
+
+	broken := deadLinksIn(t, distDir)
+	if len(broken) != 1 || !strings.Contains(broken[0], "/hero/stale.webp") || !strings.Contains(broken[0], "unversioned") {
+		t.Fatalf("expected exactly the unversioned hero image, got:\n%s", strings.Join(broken, "\n"))
 	}
 }
