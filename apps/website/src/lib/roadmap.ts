@@ -732,6 +732,18 @@ export const roadmapSections: RoadmapSection[] = [
             icon: 'history',
             done: true,
           },
+          {
+            date: '(Oct 22)',
+            title: 'NFS',
+            description: 'Open QNAP, Synology, TrueNAS, etc. NFS shares, no OS mount needed.',
+            done: true,
+          },
+          {
+            date: '(Oct 22)',
+            title: 'Rename by EXIF and media tags',
+            description: 'Put capture dates, music artists, track #, etc. in file names.',
+            done: true,
+          },
         ],
       },
     ],
@@ -751,7 +763,7 @@ export const roadmapSections: RoadmapSection[] = [
           {
             date: '(this fall?)',
             title: 'Support more file systems',
-            description: 'SCP, NFS, Google Drive, Dropbox, and OneDrive',
+            description: 'SCP, Google Drive, Dropbox, and OneDrive',
             done: false,
           },
         ],

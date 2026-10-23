@@ -41,7 +41,7 @@
       "id": "multi-rename",
       "name": "Multi-rename tool",
       "status": "alpha",
-      "note": "Rename a whole selection at once, Total Commander style: name and extension masks, search and replace, case changes, and counters, with a live preview of every row before anything changes. One Undo reverses the whole batch.",
+      "note": "Rename a whole selection at once, Total Commander style: name and extension masks, search and replace, case changes, counters, and photo and music details like capture dates and track numbers, with a live preview of every row before anything changes. One Undo reverses the whole batch.",
       "issueUrl": "https://github.com/vdavid/cmdr/issues/372"
     },
     {
@@ -79,6 +79,12 @@
       "name": "WebDAV servers",
       "status": "alpha",
       "note": "Open Nextcloud, ownCloud, Synology, and other WebDAV servers like folders, with a root and start folder, passwords in your Keychain, and a NAS's self-signed certificate trusted on first use. Not yet tested against many real-world servers."
+    },
+    {
+      "id": "nfs",
+      "name": "NFS shares",
+      "status": "alpha",
+      "note": "Open a NAS's NFS exports directly, with no sudo or system mount: browse, copy both ways, rename, and delete, with folders refreshing when another computer changes them. Brand new and tested on a Linux NFS server."
     },
     {
       "id": "s3",
@@ -180,7 +186,7 @@
       "id": "more-file-systems",
       "name": "More file systems",
       "status": "planned",
-      "note": "NFS, SCP, Google Drive, Dropbox, OneDrive, and more."
+      "note": "SCP, Google Drive, Dropbox, OneDrive, and more."
     },
     {
       "id": "ai-tell-me",

@@ -5,6 +5,73 @@ This file holds all notable changes to Cmdr over time.
 The format is based on [keep a changelog](https://keepachangelog.com/en/1.1.0/), and we use
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [0.56.0] - 2026-10-23
+
+Another big one! The highlights:
+
+Wow, this one was quick! My three highlights:
+
+- "Sort by date" improved: the date column now supports three types of sorts: created, added, and last mod.
+- Multi-rename: use EXIF info and media tags to put a photo's capture date, a camera model, or a song's artist and track
+  in file names when renaming. Plus some more fixes to the multi-renames.
+- NFS: Open your NAS's NFS shares directly, with no system mount. (Alpha version!)
+
+And a lot of fixes. Thanks for the bug reports everyone!
+
+### Added
+
+- Connect to NFS shares on a NAS without sudo or a system mount: pick an export from the server's list, browse, copy
+  both ways, rename, and delete, with folders refreshing when another computer changes them (2a9805827, d0927ef7e,
+  95f68d80b, c320b51ff, 83069d54e, 516a61413, 2120c9e6b, 4973eae49, 48970964b, d00617ce5, 6befc4e1d, 9d05df499,
+  af5006d3f)
+- Put photo, video, and music details in Multi-rename masks, like `[=exif.taken:d]` or `[=tag.track:2]`, picked from a
+  `media ▾` field picker (⌘⌥X) that shows each file's values (ae63a963b, 983af18f0, bf7cbd8be, cca7de4a2, cf23f041b,
+  555c3df3a, 86358a5c2, 3a8e55c95, 10e400dae, dba4e845a, 9c9e4fc1f, d6104fdce, 7e560e090)
+- Pick a range placeholder's characters in a text box on a real file name, instead of counting positions (3552df6cb,
+  899414162, 3bda0fe10, 8a949131f, a43bc0733, 3ce4183e5, c27f883ea, 7e45a1d64, 2be7a5ca9, 4d8ee065e)
+- Walk Multi-rename's preview with the keyboard and reorder files with ⇧↑ / ⇧↓ to set the counter's order (623285bc7,
+  abaaf03ee, 9ddf7c8e1, cbc10a4a0)
+- Reorder Multi-rename presets, starting from a new "Date and time" preset (3fc5637eb, 4e36c9096, 6d1d9266b, 0391637f0)
+- Use separators inside date placeholders, so `[Y-M-D h.m.s]` makes `2026-07-14 09.05.30` (f611d2971, 3bd1d6e69)
+- Sort by date added from the command palette, View › Sort by, or a right-click on the file list header (4404edfae,
+  feb67a974, 98ab34917, dabd3fd0e, 04d76e756, b00faa887, 2ec02c81a)
+- Show the date you sort by in the date column, and say when a drive can't sort by it (ac89a54eb, 01fbc07c0, 0914df5d2,
+  75cb97bb9)
+- Show what happens to files that already exist while a copy or move runs (4520fc830, b97994323)
+- Keep the progress dialog open after an operation, with a summary and Undo, through a new setting (df79bfc98,
+  322fca5c8)
+
+### Changed
+
+- List folders on APFS and HFS+ drives 1.5–2.5× faster (5b5dfcdc5, 92c6b0711)
+- Recover a broken dialog, pane, or Ask Cmdr chat on its own, leaving the rest of the window working (e0969d861,
+  3fc9a109c, ba87787c0)
+- Move between notifications' buttons with Tab after ⌃F6, starting on the first action (16d818a36)
+- Use PageUp, PageDown, Home, and End in Search results and the rename review (047c5a959, e84a7dcfe)
+
+### Fixed
+
+- Fix Cmdr crashing at startup on macOS Catalina (27f2d780e)
+- Fix the window crashing when a server lists the same share name twice (3ec1b462a)
+- Fix Ask Cmdr crashing the window with some local AI models (b13509bce)
+- Fix Pause not stopping a big file mid-copy on local disks and mounted shares (ceb65f199, 17924be49)
+- Fix deletes on a QNAP NAS with its network recycle bin on failing at random (e670fe86c)
+- Fix toast buttons breaking words in half in some languages (e1883ff45)
+- Fix focus rings hiding on segmented controls (aa6a15a18, a7bf85519)
+- Fix the status bar briefly showing a file from the folder you just left (5daa83ed0)
+- Fix a Linux drive renamed during its first index no longer getting live updates (ac6d00bc8)
+
+### Security
+
+- Update the SMB library for an upstream fix to its signature checks (169ffc336)
+
+### Non-app
+
+- Build each release while its CI runs, and drop its slowest build job (46bbad533, 1f204bb14, 3520c901d, bb1fd2039)
+- Prepare a repeatable move of the repo to the `getcmdr` GitHub org (eb8833133, 81883b09e, bb91e3478)
+- Open the website's /trust page with a compliance strip, the OpenChain badges, and every document a security review
+  asks for (2d3d0a6c7, c06ad5d20)
+
 ## [0.55.0] - 2026-10-22
 
 A ton of good things! Some of the main ones:
