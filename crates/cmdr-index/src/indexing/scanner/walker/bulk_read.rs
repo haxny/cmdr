@@ -30,6 +30,8 @@ use std::ffi::CString;
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
+use cmdr_fs::attr_buf::{self, Attr, Record, Request};
+
 use super::{InlineStat, RawDirEntry, RawFileType, ReadProgress};
 
 // ── getattrlist ABI ──────────────────────────────────────────────────
@@ -321,6 +323,92 @@ fn parse_entry(bytes: &[u8], dir: &Path) -> (usize, Option<RawDirEntry>) {
     (entry_len, Some(entry))
 }
 
+/// The attributes the index asks for: everything a [`RawDirEntry`] and its
+/// [`InlineStat`] carry.
+#[cfg_attr(
+    not(test),
+    allow(dead_code, reason = "characterized against `parse_entry` before it replaces it")
+)]
+const REQUEST: Request = Request::new(&[
+    Attr::Name,
+    Attr::ObjType,
+    Attr::ModTime,
+    Attr::FileId,
+    Attr::FileLinkCount,
+    Attr::FileAllocSize,
+    Attr::FileDataLength,
+]);
+
+/// Decodes one `getattrlistbulk` batch of `count` records into `out`, and returns
+/// how many of them didn't become an entry. Every record is accounted for: an
+/// entry, or one `unusable`. A [`attr_buf::BadRecord`] means nothing past it can
+/// be located, so it and every record after it count as unusable.
+#[cfg_attr(
+    not(test),
+    allow(dead_code, reason = "characterized against `parse_entry` before it replaces it")
+)]
+fn decode_batch(buf: &[u8], count: usize, dir: &Path, out: &mut Vec<RawDirEntry>) -> usize {
+    let mut decoded = 0usize;
+    let mut unusable = 0usize;
+    for record in attr_buf::records(buf, count, &REQUEST) {
+        let Ok(record) = record else { break };
+        decoded += 1;
+        match entry_from_record(&record, dir) {
+            Some(entry) => out.push(entry),
+            None => unusable += 1,
+        }
+    }
+    unusable + (count - decoded)
+}
+
+/// One decoded record as a [`RawDirEntry`], degrading rather than dropping:
+/// - A record with no name or no type is the one thing nothing can be recovered
+///   from: `None`, which the caller counts as unusable.
+/// - Anything else comes back as an entry. Its `stat` is `None` (the caller stats
+///   it itself) when an attribute the stat needs wasn't returned, or when the type
+///   isn't file / dir / symlink and so carries no inline size (fifo, socket,
+///   device node). It must stay an entry: the reconcile diff DELETES index rows
+///   the live listing lacks, so dropping it would delete the file from the index.
+#[cfg_attr(
+    not(test),
+    allow(dead_code, reason = "characterized against `parse_entry` before it replaces it")
+)]
+fn entry_from_record(record: &Record<'_>, dir: &Path) -> Option<RawDirEntry> {
+    let name = std::ffi::OsStr::from_bytes(record.name?);
+    let file_type = match record.obj_type? {
+        attr_buf::VDIR => RawFileType::Dir,
+        attr_buf::VREG => RawFileType::File,
+        attr_buf::VLNK => RawFileType::Symlink,
+        _ => RawFileType::Other,
+    };
+    let modified_at = record.modtime.and_then(attr_buf::Timespec::secs_since_epoch);
+    let stat = record.file_id.and_then(|inode| match file_type {
+        // A regular file needs all three: one missing size attribute sends the
+        // whole entry to the stat fallback, never a total we didn't read.
+        RawFileType::File => Some(InlineStat {
+            logical_size: record.data_length?,
+            physical_size: record.alloc_size?,
+            modified_at,
+            inode,
+            nlink: u64::from(record.link_count?),
+        }),
+        // Dirs and symlinks carry no meaningful size; both mappings resolve it to `None`.
+        RawFileType::Dir | RawFileType::Symlink => Some(InlineStat {
+            logical_size: 0,
+            physical_size: 0,
+            modified_at,
+            inode,
+            nlink: 0,
+        }),
+        RawFileType::Other => None,
+    });
+    Some(RawDirEntry {
+        path: dir.join(name),
+        file_type,
+        stat,
+    })
+}
+
 // ── unaligned little-endian reads (the packed buffer isn't 8-byte aligned) ──
 
 fn read_u32(b: &[u8], off: usize) -> u32 {
@@ -348,6 +436,10 @@ impl Drop for DirFd {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "bulk_read_dual_run.rs"]
+mod dual_run;
 
 #[cfg(test)]
 mod tests {
