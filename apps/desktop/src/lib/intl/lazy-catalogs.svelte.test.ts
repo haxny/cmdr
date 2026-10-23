@@ -8,7 +8,7 @@
  * a catalog lands (`_setCatalogLoaderForTests`); `afterEach` restores the preloaded runtime that
  * `test-setup.ts` gives every other test.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, mount, unmount } from 'svelte'
 import { loaders } from 'virtual:cmdr-locale-manifest'
 import {
@@ -22,6 +22,7 @@ import {
   tString,
 } from './messages.svelte'
 import { getUiLocale } from './locale'
+import { _forgetStartupCatalogForTests } from './startup-catalog'
 import Fixture from './messages-reactivity-fixture.svelte'
 
 /** A loader for `tag`'s real catalog that lands only when the test says so. */
@@ -139,5 +140,53 @@ describe('switching', () => {
     await switching
     expect(getUiLocale()).toBe('hu')
     expect(tString('settings.appearance.language.label')).toBe('Nyelv')
+  })
+})
+
+describe('the catalog a new window starts with', () => {
+  // Every Cmdr window shares one origin, so what one window applied is what the next window
+  // (or the next launch) most likely speaks.
+  const HINT_KEY = 'cmdr.i18n.startupCatalog' // `startup-catalog.ts`
+
+  beforeEach(() => {
+    // The file's own `beforeEach` switched to English, which remembered `en`.
+    _forgetStartupCatalogForTests()
+  })
+
+  /** A fresh runtime, as a newly opened window gets one. */
+  async function newWindow(): Promise<typeof import('./messages.svelte') & typeof import('./locale')> {
+    vi.resetModules()
+    const messages = await import('./messages.svelte')
+    const locale = await import('./locale')
+    return { ...messages, ...locale }
+  }
+
+  it('remembers the catalog a switch landed on', async () => {
+    await setLocale('hu')
+    expect(localStorage.getItem(HINT_KEY)).toBe('hu')
+    await setLocale('pt-PT')
+    expect(localStorage.getItem(HINT_KEY)).toBe('pt')
+  })
+
+  it('loads the remembered catalog before the first render, and speaks it', async () => {
+    localStorage.setItem(HINT_KEY, 'de')
+    const win = await newWindow()
+    expect(win._loadedCatalogsForTests()).toContain('de')
+    expect(win.getUiLocale()).toBe('de')
+    expect(win.tString('settings.appearance.language.label')).toBe('Sprache')
+    expect(document.documentElement.lang).toBe('de')
+  })
+
+  it('starts on the webview language when nothing is remembered', async () => {
+    const win = await newWindow()
+    expect(win._loadedCatalogsForTests()).toEqual(['en'])
+    expect(win.getUiLocale()).toBe(win.defaultUiLocale())
+  })
+
+  it('ignores a remembered tag that no longer ships', async () => {
+    localStorage.setItem(HINT_KEY, 'tlh')
+    const win = await newWindow()
+    expect(win._loadedCatalogsForTests()).toEqual(['en'])
+    expect(win.getUiLocale()).toBe(win.defaultUiLocale())
   })
 })

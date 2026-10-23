@@ -3,14 +3,24 @@
  * Polyfills browser APIs not available in jsdom.
  */
 
-import { afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 import { TestResizeObserver } from '#lib/test-layout.js'
-import { _loadAllCatalogsForTests } from '#lib/intl/messages.svelte.js'
+import { _forgetStartupCatalogForTests } from '#lib/intl/startup-catalog.js'
+
+// The message runtime starts in the language the last switch landed on, remembered in
+// localStorage, which Vitest keeps across files and runs. Forget it BEFORE the runtime
+// first loads (hence the dynamic import below), and before every test, so each runtime,
+// a `vi.resetModules()` one included, starts on the default language.
+_forgetStartupCatalogForTests()
+beforeEach(() => {
+  _forgetStartupCatalogForTests()
+})
 
 // The app loads a window's catalogs on demand, which makes `setLocale()` async. Every
 // catalog here, kept for the whole file, keeps it synchronous in tests, so a test can
 // `setLocale('de')` and assert on `t()` on the next line. `lazy-catalogs.svelte.test.ts`
 // covers the on-demand behavior itself.
+const { _loadAllCatalogsForTests } = await import('#lib/intl/messages.svelte.js')
 await _loadAllCatalogsForTests()
 
 // Every component a test mounts is unmounted once that test ends, whether or not the

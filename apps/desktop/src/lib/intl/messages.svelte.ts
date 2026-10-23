@@ -31,6 +31,7 @@ import { IntlMessageFormat, type PrimitiveType, type FormatXMLElementFn } from '
 import { defaultUiLocale, getUiLocale, setUiLocaleOverride } from './locale'
 import { inheritableAncestors } from './locale-inheritance'
 import { setDocumentLanguage } from './document-language'
+import { rememberedStartupCatalog, rememberStartupCatalog } from './startup-catalog'
 import type { MessageKey } from './keys.gen'
 import { displayPath } from '#lib/utils/display-path.js'
 import enCatalog from 'virtual:cmdr-catalog/en'
@@ -488,7 +489,9 @@ function applyLocale(locale: string | null): void {
   localeVersion += 1
   // Read back through `getUiLocale()` rather than using `locale`: a `null` here
   // means "no override", and the effective tag is then the webview's own.
-  setDocumentLanguage(resolvedCatalogLocale(getUiLocale()))
+  const resolved = resolvedCatalogLocale(getUiLocale())
+  setDocumentLanguage(resolved)
+  rememberStartupCatalog(resolved)
 }
 
 /**
@@ -593,11 +596,22 @@ export async function _loadAllCatalogsForTests(): Promise<void> {
 
 // The first render must find its catalog already here, or every `t()` in it reads
 // English for a frame. So the module waits (top-level await; Safari 15+) for the
-// catalogs the window's starting language reads. A chunk that won't load leaves the
-// window in English rather than leaving it blank.
-await (ensureCatalogs(defaultUiLocale()) ?? Promise.resolve()).catch((error: unknown) => {
-  warnCatalogLoad('Starting in English: the catalog for {locale} did not load: {error}', {
-    locale: defaultUiLocale(),
-    error,
-  })
-})
+// catalogs the window will most likely speak: the one the last switch in any window
+// landed on, else the webview's own language. The remembered one also becomes the
+// language until `appearance.language` applies, so a language picked against the OS
+// shows from the first frame. A chunk that won't load leaves the window on the
+// webview's language (English, at worst) rather than blank.
+const startupCatalog = rememberedStartupCatalog(shippedLocales)
+await (ensureCatalogs(startupCatalog ?? defaultUiLocale()) ?? Promise.resolve()).then(
+  () => {
+    if (startupCatalog === null) return
+    setUiLocaleOverride(startupCatalog)
+    setDocumentLanguage(startupCatalog)
+  },
+  (error: unknown) => {
+    warnCatalogLoad('Starting without the catalog for {locale}: it did not load: {error}', {
+      locale: startupCatalog ?? defaultUiLocale(),
+      error,
+    })
+  },
+)
