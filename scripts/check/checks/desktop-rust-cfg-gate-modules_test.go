@@ -154,6 +154,26 @@ mod tests;
 	}
 }
 
+// A gated `foo.rs` with its children in a sibling `foo/` (Rust 2018's non-`mod.rs` layout):
+// the directory existing must not hide `foo.rs` itself, which is just as absent from the
+// Linux build.
+func TestRunCfgGate_SkipsAGatedFileWhoseChildrenSitInASiblingDir(t *testing.T) {
+	root := writeCfgGateModuleWorkspace(t, "fn main() {}\n")
+	appSrc := filepath.Join(root, "apps", "desktop", "src-tauri", "src")
+	mustWrite(t, filepath.Join(appSrc, "lib.rs"), `mod commands;
+#[cfg(target_os = "macos")]
+mod native_drag;
+#[cfg(target_os = "macos")]
+mod bulk;
+`)
+	mustWrite(t, filepath.Join(appSrc, "bulk.rs"), "use crate::native_drag::DragSessionLocality;\n\nmod cache;\n")
+	mustWrite(t, filepath.Join(appSrc, "bulk", "cache.rs"), "use crate::native_drag::DragSessionLocality;\n")
+
+	if _, err := RunCfgGate(&CheckContext{RootDir: root}); err != nil {
+		t.Fatalf("a gated `bulk.rs` beside its `bulk/` dir needs no gate of its own, got: %v", err)
+	}
+}
+
 func TestMacOSOnlyModulePaths_NestedModule(t *testing.T) {
 	srcDir := t.TempDir()
 	mustWrite(t, filepath.Join(srcDir, "lib.rs"), "#[cfg(any(target_os = \"macos\", target_os = \"linux\"))]\nmod mtp;\n")

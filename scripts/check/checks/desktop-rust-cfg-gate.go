@@ -283,17 +283,22 @@ func closeOverModuleChildren(gatedFiles map[string]bool) {
 }
 
 // moduleFiles resolves a `mod <name>;` declared against moduleDir to the files it brings in:
-// `<moduleDir>/<name>.rs`, or `mod.rs` plus every .rs under `<moduleDir>/<name>/`.
+// `<moduleDir>/<name>.rs` and every .rs under `<moduleDir>/<name>/` (Rust 2018 keeps both),
+// or `mod.rs` plus that tree.
 func moduleFiles(moduleDir, modName string) []string {
-	sub := filepath.Join(moduleDir, modName)
-	if info, err := os.Stat(sub); err == nil && info.IsDir() {
-		return append([]string{filepath.Join(sub, "mod.rs")}, rustFilesUnder(sub)...)
-	}
+	var files []string
 	single := filepath.Join(moduleDir, modName+".rs")
 	if _, err := os.Stat(single); err == nil {
-		return []string{single}
+		files = append(files, single)
 	}
-	return nil
+	sub := filepath.Join(moduleDir, modName)
+	if info, err := os.Stat(sub); err == nil && info.IsDir() {
+		if len(files) == 0 {
+			files = append(files, filepath.Join(sub, "mod.rs"))
+		}
+		files = append(files, rustFilesUnder(sub)...)
+	}
+	return files
 }
 
 // rustFilesUnder lists every .rs file in a directory tree.
