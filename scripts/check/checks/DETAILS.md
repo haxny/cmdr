@@ -935,13 +935,14 @@ them a negative assertion that could never fail), and 9 false positives (three `
 
 ## Website bundle-size baseline
 
-`website-bundle-size` (warn-only, `IsFast`, self-skips without `dist/` like `html-validate`) compares the built
-website's `dist/` total against `website-bundle-size-baseline.json` and warns when it grows more than 10%, listing the
-largest assets with their baseline sizes. Asset names are content-hash-normalized (`About.DvK3R9p1.css` → `About.*.css`)
-so rebuilds compare stably. The baseline follows the file-length ratchet discipline: local runs rewrite it downward when
-`dist/` shrinks past the 10% band; raising it is a deliberate act but needs no approval — delete the baseline file and
-run `pnpm check bundle-size` against a fresh build. A missing baseline is created on the spot locally and reported as a
-warning in CI. The same exemption covers `desktop-bundle-size`; the reasoning is in § "Allowlist consent".
+`website-bundle-size` (warn-only, runs after `website-build` and never in `--fast`, which would measure a stale `dist/`)
+compares the built website's `dist/` total against `website-bundle-size-baseline.json` and warns when it grows more than
+10%, listing the largest assets with their baseline sizes. Asset names are content-hash-normalized (`About.DvK3R9p1.css`
+→ `About.*.css`) so rebuilds compare stably. The baseline follows the file-length ratchet discipline: local runs rewrite
+it downward when `dist/` shrinks past the 10% band; raising it is a deliberate act but needs no approval — delete the
+baseline file and run `pnpm check bundle-size` against a fresh build. A missing baseline is created on the spot locally
+and reported as a warning in CI. The same exemption covers `desktop-bundle-size`; the reasoning is in § "Allowlist
+consent".
 
 ## Website CSP connect-src
 

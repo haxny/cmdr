@@ -1290,9 +1290,10 @@ var AllChecks = []CheckDefinition{
 		App:         AppWebsite,
 		Tech:        "🚀 Astro",
 		DependsOn:   []string{"website-build"},
-		IsFast:      true,
-		Inputs:      websiteInputs,
-		Run:         RunWebsiteHTMLValidate,
+		// Not fast, like the other `dist/` readers: `--fast` never builds, so it would judge a stale one.
+		IsFast: false,
+		Inputs: websiteInputs,
+		Run:    RunWebsiteHTMLValidate,
 	},
 	{
 		ID:          "website-dead-links",
@@ -1327,10 +1328,12 @@ var AllChecks = []CheckDefinition{
 		App:         AppWebsite,
 		Tech:        "🚀 Astro",
 		DependsOn:   []string{"website-build"},
-		IsFast:      true, // cheap dist/ walk; self-skips when dist/ is absent (like html-validate)
-		NotInCI:     "warn-only metric; it can never fail, so a CI step would be noise",
-		Inputs:      inputs(websiteInputs, runnerDataInputs("website-bundle-size-baseline.json")),
-		Run:         RunWebsiteBundleSize,
+		// Not fast: `--fast` never builds, so a stale `dist/` would be measured, and could even
+		// ratchet the baseline from it.
+		IsFast:  false,
+		NotInCI: "warn-only metric; it can never fail, so a CI step would be noise",
+		Inputs:  inputs(websiteInputs, runnerDataInputs("website-bundle-size-baseline.json")),
+		Run:     RunWebsiteBundleSize,
 	},
 	{
 		ID:          "website-e2e",
