@@ -94,6 +94,7 @@ describe('createListingLoader — swap state + cleanup', () => {
     const { loader, state } = makeHarness()
     await loader.loadDirectory({ path: '/a' })
     state.totalCount = 9
+    state.effectiveSortBy = 'modified'
     state.cursorIndex = 3
     state.lastSequence = 4
     state.selectedIndices = [1, 2]
@@ -102,6 +103,7 @@ describe('createListingLoader — swap state + cleanup', () => {
       currentPath: '/a',
       listingId: state.listingId,
       totalCount: 9,
+      effectiveSortBy: 'modified',
       cursorIndex: 3,
       selectedIndices: [1, 2],
       lastSequence: 4,
@@ -119,6 +121,7 @@ describe('createListingLoader — swap state + cleanup', () => {
       currentPath: '/adopted',
       listingId: 'swapped',
       totalCount: 6,
+      effectiveSortBy: null,
       cursorIndex: 2,
       selectedIndices: [0],
       lastSequence: 8,

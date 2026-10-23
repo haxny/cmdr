@@ -27,15 +27,6 @@
     import type { CommandId } from '#lib/commands/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
 
-    /** State snapshot for swapping panes without backend calls. */
-    export interface SwapState {
-        currentPath: string
-        listingId: string
-        totalCount: number
-        cursorIndex: number
-        selectedIndices: number[]
-        lastSequence: number
-    }
     import FullList from '../views/FullList.svelte'
     import BriefList from '../views/BriefList.svelte'
     import SelectionInfo from '../selection/SelectionInfo.svelte'
@@ -62,6 +53,7 @@
         HistoryCursorTarget,
         PaneViewKind,
         SearchResultsViewAPI,
+        SwapState,
         VolumeChangePayload,
     } from './types'
     import { paneFooterVisibility } from './pane-footer'
@@ -271,6 +263,9 @@
     // via injected setters) but read by many non-loader concerns, so they stay here.
     let listingId = $state('')
     let totalCount = $state(0)
+    // The column the listing's rows are in (the requested one, or Modified for a date the volume doesn't record).
+    // Written only with the rows it describes; never persisted. `getEffectiveSortBy` answers a snapshot pane's own.
+    let effectiveSortBy = $state<SortColumn | null>(null)
     let loading = $state(true)
     let error = $state<string | null>(null)
     let friendlyError = $state<FriendlyError | null>(null)
@@ -374,6 +369,10 @@
         getTotalCount: () => totalCount,
         setTotalCount: (count) => {
             totalCount = count
+        },
+        getEffectiveSortBy: () => effectiveSortBy,
+        setEffectiveSortBy: (column) => {
+            effectiveSortBy = column
         },
         getLastSequence: rowState.getSequence,
         setLastSequence: (sequence) => {
@@ -1023,6 +1022,7 @@
     export function getRowState() { return rowState }
     export function applyRowResult(result: ResortResult): () => void {
         totalCount = result.totalCount
+        effectiveSortBy = result.effectiveSortBy
         if (result.newSelectedIndices !== null) selection.setSelectedIndices(toFrontendIndices(result.newSelectedIndices, hasParent))
         cursorIndex = result.newCursorIndex === null ? Math.max(0, Math.min(cursorIndex, effectiveTotalCount - 1)) : result.newCursorIndex + (hasParent ? 1 : 0)
         return () => { void setCursorIndex(cursorIndex); refreshView() }
@@ -1333,6 +1333,10 @@
         indexSizesSyncMcp.call()
     }
 
+    export function getEffectiveSortBy(): SortColumn | null {
+        return isSearchResultsView ? (searchSnapshot?.sort?.effectiveSortBy ?? null) : effectiveSortBy
+    }
+
     export function getSwapState(): SwapState {
         return loader.getSwapState()
     }
@@ -1427,6 +1431,7 @@
         // the folder this pane came from, so reporting them would describe an
         // order the rows aren't in.
         getSnapshotSort: () => searchSnapshot?.sort ?? null,
+        getEffectiveSortBy,
         getHasParent: () => hasParent,
         getVisibleRangeStart: () => visibleRangeStart,
         getVisibleRangeEnd: () => visibleRangeEnd,
@@ -1942,6 +1947,9 @@
         getOperationSelectedNames: () => operationSelectedNames,
         setTotalCount: (count: number) => {
             totalCount = count
+        },
+        setEffectiveSortBy: (column) => {
+            effectiveSortBy = column
         },
         bumpSoftRefreshTick: () => {
             softRefreshTick++

@@ -223,6 +223,8 @@ export interface DirectoryDiffBatch {
   sequence: number
   totalCount: number
   changes: DiffChange[]
+  /** The column the rows are now ordered by, when this batch moved it (a re-read into a volume recording other dates). */
+  effectiveSortBy: SortColumn | null
 }
 
 /** Sent when the watched directory itself is deleted. */
@@ -427,15 +429,8 @@ export const defaultSortOrders: Record<SortColumn, SortOrder> = {
 /** Default sort column when opening a new directory. */
 export const DEFAULT_SORT_BY: SortColumn = 'name'
 
-/** Result of re-sorting a listing. */
-export interface ResortResult {
-  sequence: number
-  totalCount: number
-  /** New index of the cursor file after re-sorting, if found. */
-  newCursorIndex: number | null
-  /** New indices of previously selected files after re-sorting. */
-  newSelectedIndices: number[] | null
-}
+/** Result of re-sorting a listing (and of the hidden-files toggle), with the column its rows follow. */
+export type { ResortResult } from '#lib/ipc/bindings.js'
 
 // ============================================================================
 // List-view callback payloads

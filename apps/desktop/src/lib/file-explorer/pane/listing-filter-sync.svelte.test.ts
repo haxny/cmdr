@@ -29,6 +29,7 @@ const added: DirectoryDiff = {
       fromSequence: 5,
       sequence: 6,
       totalCount: 3,
+      effectiveSortBy: null,
       changes: [
         {
           type: 'add',
@@ -119,6 +120,7 @@ describe('filter and watcher row-space ordering', () => {
         getCurrentPath: () => '/',
         getVolumePath: () => '/',
         getOperationSelectedNames: () => null,
+        setEffectiveSortBy: () => {},
         setTotalCount: (value) => {
           count = value
         },

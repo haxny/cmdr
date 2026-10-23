@@ -160,6 +160,21 @@ Full history-stack contract and the volume-breadcrumb detail live in `navigation
   sort reads that one getter, and the explorer's sort-mode `$effect` re-sorts both panes when either setting flips. The
   mixed comparison (Size included): `crates/cmdr-listing/src/sorting.rs::compare_mixed`.
 - **Name ASC tiebreaker**: when primary sort values are equal, entries fall back to name ascending
+- **Requested vs effective column**: a date the location doesn't record (Created or Added on a USB stick, a share, a
+  search pane) sorts by Modified in the backend, which says so; the rule is `crates/cmdr-listing/DETAILS.md` §
+  "Requested and effective sort". The tab, persistence, the next `resortListing`, and MCP's `sort` keep the REQUESTED
+  column; the frontend never computes the effective one, it reads it off what landed:
+  - `FilePane`'s `effectiveSortBy` (`FilePaneAPI.getEffectiveSortBy`), never persisted. It changes only WITH the rows it
+    describes: `listing-loader.ts::handleListingComplete` (beside `setTotalCount`, before its first `await`),
+    `applyRowResult` (re-sort and the hidden-files toggle), a `directory-diff` batch whose `effectiveSortBy` is set (a
+    re-read into a volume recording other dates), and a pane swap (`SwapState` carries it). Navigation start leaves it
+    alone. ❗ The list caches still paint the old folder's retained rows for one fetch AFTER `listing-complete`, so a
+    view that renders a date from it must capture it with its fetched rows, the way they capture the `..` row
+    (`views/DETAILS.md`), or those rows flash the new folder's date.
+  - A snapshot pane's lives on its `AppliedSnapshotSort` (`search/DETAILS.md` § "The snapshot pane's row order").
+  - A user-started sort that lands in a fallback raises an info toast (`pane/sort-fallback.ts`, from
+    `sort-operations.ts`); a re-sort the user didn't start and a navigation stay quiet. The toast stack's live region
+    speaks it, so no `announce` beside it.
 
 ### Implementation
 

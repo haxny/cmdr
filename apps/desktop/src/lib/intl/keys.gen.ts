@@ -1915,6 +1915,8 @@ export type MessageKey =
   | 'fileExplorer.selectionTooltip.ofTotal'
   | 'fileExplorer.selectionTooltip.onDiskHeader'
   | 'fileExplorer.selectionTooltip.selected'
+  | 'fileExplorer.sortFallback.added'
+  | 'fileExplorer.sortFallback.created'
   | 'fileExplorer.summary.and'
   | 'fileExplorer.summary.dirNoun'
   | 'fileExplorer.summary.fileNoun'

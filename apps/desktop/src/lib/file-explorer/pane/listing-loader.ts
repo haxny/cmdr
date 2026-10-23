@@ -123,6 +123,12 @@ export interface ListingLoaderDeps {
   setLoading: (loading: boolean) => void
   getTotalCount: () => number
   setTotalCount: (count: number) => void
+  /**
+   * The column the shown rows are ordered by (`null` before any listing landed).
+   * Written only together with the rows it describes: a landed listing, a swap.
+   */
+  getEffectiveSortBy: () => SortColumn | null
+  setEffectiveSortBy: (column: SortColumn | null) => void
   getLastSequence: () => number
   setLastSequence: (sequence: number) => void
   setError: (error: string | null) => void
@@ -657,6 +663,9 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
     benchmark.logEventValue('listing-complete received, totalCount', payload.totalCount)
     trackLanded(deps.getListingId())
     deps.setTotalCount(payload.totalCount)
+    // With the count, before any await: the rows that land now are in this column's
+    // order, and the rows still on screen until then keep the column they were in.
+    deps.setEffectiveSortBy(payload.effectiveSortBy)
     deps.setVolumeRootFromEvent(payload.volumeRoot)
 
     const includeHidden = deps.getIncludeHidden()
@@ -812,6 +821,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
       currentPath: deps.getCurrentPath(),
       listingId: deps.getListingId(),
       totalCount: deps.getTotalCount(),
+      effectiveSortBy: deps.getEffectiveSortBy(),
       cursorIndex: deps.getCursorIndex(),
       selectedIndices: deps.selection.getSelectedIndices(),
       lastSequence: deps.getLastSequence(),
@@ -830,6 +840,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
     loadedPath = state.currentPath
     trackLanded(state.listingId)
     deps.setTotalCount(state.totalCount)
+    deps.setEffectiveSortBy(state.effectiveSortBy)
     deps.setLastSequence(state.lastSequence)
 
     // Restore cursor and selection

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushSync } from 'svelte'
 import { initListingDiffSync, type ListingDiffSyncDeps } from './listing-diff-sync.svelte'
 import { createPaneRowState } from './pane-row-state'
-import type { DirectoryDiff } from '../types'
+import type { DirectoryDiff, SortColumn } from '../types'
 
 const ipc = vi.hoisted(() => ({
   diff: null as ((diff: DirectoryDiff) => void) | null,
@@ -36,6 +36,7 @@ function harness(input: { initialized?: boolean; pendingRename?: string; operati
   let cursor = 2
   let selected = [2]
   let sequence = 0
+  let effectiveSortBy: SortColumn | null = 'modified'
   const rows = createPaneRowState({ getListingId: () => 'L', getLoading: () => false, getOperationActive: () => false })
   if (input.initialized !== false) rows.initialize()
   const renameFlow = { pendingCursorName: input.pendingRename ?? null }
@@ -68,6 +69,9 @@ function harness(input: { initialized?: boolean; pendingRename?: string; operati
     getDiffGeneration: () => 0,
     bumpDiffGeneration: () => 0,
     setTotalCount: vi.fn(),
+    setEffectiveSortBy: (column: SortColumn) => {
+      effectiveSortBy = column
+    },
     bumpSoftRefreshTick: vi.fn(),
     scheduleColumnWidthRefetch: vi.fn(),
     fetchEntryUnderCursor: vi.fn(),
@@ -77,7 +81,7 @@ function harness(input: { initialized?: boolean; pendingRename?: string; operati
     initListingDiffSync(deps)
   })
   flushSync()
-  return { rows, renameFlow, selected: () => selected, cursor: () => cursor }
+  return { rows, renameFlow, selected: () => selected, cursor: () => cursor, effectiveSortBy: () => effectiveSortBy }
 }
 
 function removal(fromSequence: number, sequence: number, totalCount: number): DirectoryDiff {
@@ -87,7 +91,7 @@ function removal(fromSequence: number, sequence: number, totalCount: number): Di
     listingId: 'L',
     sequence,
     changes,
-    batches: [{ fromSequence, sequence, totalCount, changes }],
+    batches: [{ fromSequence, sequence, totalCount, changes, effectiveSortBy: null }],
   } as unknown as DirectoryDiff
 }
 
@@ -97,6 +101,18 @@ function emit(diff: DirectoryDiff): void {
 }
 
 describe('applied listing rows', () => {
+  it('takes the column a re-read re-sorted into from the batch that lands the re-sorted rows', () => {
+    const pane = harness()
+    const resorted = removal(0, 1, 2)
+    resorted.batches[0].effectiveSortBy = 'added'
+    emit(resorted)
+    expect(pane.effectiveSortBy()).toBe('added')
+
+    // A batch that didn't move the column leaves it be.
+    emit(removal(1, 2, 1))
+    expect(pane.effectiveSortBy()).toBe('added')
+  })
+
   it('remaps rows synchronously without waiting for a live count', () => {
     const pane = harness()
     emit(removal(0, 1, 2))

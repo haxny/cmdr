@@ -13,6 +13,7 @@ import type {
   SearchErrorEvent,
   SearchProgressEvent,
   SearchQuery,
+  SearchSortAnswer,
   SearchSortRow,
   SortColumn,
   SortOrder,
@@ -42,7 +43,8 @@ export async function searchFiles(query: SearchQuery): Promise<SearchResult> {
 
 /**
  * Orders a search-results pane's rows, answering with the input indices in the
- * order they should render.
+ * order they should render and the column that order follows (Modified for a
+ * date the index doesn't store).
  *
  * The one place a snapshot pane's order is decided, and it runs the SAME
  * comparator every directory listing sorts by, so the two can't drift. Callers go
@@ -53,11 +55,8 @@ export async function sortSearchResults(
   sortBy: SortColumn,
   sortOrder: SortOrder,
   dirSortMode: DirectorySortMode,
-): Promise<number[]> {
-  // The answer also names the column the order follows (a date the index doesn't
-  // store sorts by Modified); no caller reads it yet.
-  const answer = await commands.sortSearchResults(rows, sortBy, sortOrder, dirSortMode)
-  return answer.order
+): Promise<SearchSortAnswer> {
+  return commands.sortSearchResults(rows, sortBy, sortOrder, dirSortMode)
 }
 
 /**

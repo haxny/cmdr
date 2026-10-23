@@ -855,8 +855,11 @@ have had to reproduce `alphanumeric_sort`'s leading-zero and non-ASCII rules by 
 Two consequences of what a search row lacks, both deliberate. The index stores no creation or added time, so the command
 resolves as a volume recording Modified only (`EffectiveSort::resolve` with `SupportedDates::NONE`): a Created or Added
 sort orders by Modified, and the answer's `effectiveSortBy` says so (`crates/cmdr-listing/DETAILS.md` § "Requested and
-effective sort"). And it carries no RECURSIVE size, so under Size the directories are all "unknown" and sort by name
-among themselves, matching the `<dir>` their Size cell renders.
+effective sort"). The store keeps it on the snapshot's `AppliedSnapshotSort` beside the requested column, so a ranked
+snapshot (`sort === null`) has no effective column by construction, and `sortSnapshot` answers the applied sort so a
+user-started sort can say why it landed in Modified (`../file-explorer/pane/sort-fallback.ts`). And it carries no
+RECURSIVE size, so under Size the directories are all "unknown" and sort by name among themselves, matching the `<dir>`
+their Size cell renders.
 
 **Ties keep the ranked order.** Both `Vec::sort_by` and the frontend's array are stable, and the input is the ranked
 array, so rows equal under the chosen column stay in the engine's ranking. That makes a re-sort reproducible instead of

@@ -263,6 +263,43 @@ describe('createListingLoader — error / MTP / cancel handling', () => {
   })
 })
 
+describe('createListingLoader — the effective sort column travels with the rows', () => {
+  it('installs the landed listing’s effective column with its count, before the cursor lookup awaits', async () => {
+    const { loader, state } = makeHarness({ effectiveSortBy: 'added' })
+    h.findFileIndex.mockReturnValue(new Promise(() => {}))
+    await loader.loadDirectory({ path: '/Volumes/USB', selectName: 'a.txt' })
+
+    completeCb(0)({ listingId: state.listingId, totalCount: 4, volumeRoot: '/', effectiveSortBy: 'modified' })
+
+    expect(state.totalCount).toBe(4)
+    expect(state.effectiveSortBy).toBe('modified')
+  })
+
+  it('keeps the shown rows’ effective column while a navigation is still loading', async () => {
+    // Retained rows are paint-only until the new listing lands, and their date
+    // column must stay the one they were sorted by until then.
+    const { loader, state } = makeHarness({ effectiveSortBy: 'added' })
+    await loader.loadDirectory({ path: '/Volumes/USB' })
+    expect(state.effectiveSortBy).toBe('added')
+  })
+
+  it('a swap hands the effective column over with the listing', () => {
+    const { loader, state } = makeHarness({ listingId: 'mine', effectiveSortBy: 'added' })
+    expect(loader.getSwapState().effectiveSortBy).toBe('added')
+
+    loader.adoptListing({
+      currentPath: '/Volumes/USB',
+      listingId: 'partner',
+      totalCount: 2,
+      effectiveSortBy: 'modified',
+      cursorIndex: 0,
+      selectedIndices: [],
+      lastSequence: 0,
+    })
+    expect(state.effectiveSortBy).toBe('modified')
+  })
+})
+
 describe('createListingLoader — pendingLoad / navigateToPath / whenLoadSettles', () => {
   it('navigateToPath rejects a prior pending load and resolves on complete', async () => {
     const { loader, state } = makeHarness()

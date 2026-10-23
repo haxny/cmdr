@@ -9,7 +9,7 @@
  */
 import { vi } from 'vitest'
 import { createListingLoader, type ListingLoaderDeps } from './listing-loader'
-import type { ConnectionState } from '../types'
+import type { ConnectionState, SortColumn } from '../types'
 import type { ListingPhase, StalledOn } from '#lib/ipc/bindings.js'
 import type { HistoryCursor } from '../navigation/navigation-history'
 
@@ -39,6 +39,7 @@ interface PaneState {
   listingId: string
   loading: boolean
   totalCount: number
+  effectiveSortBy: SortColumn | null
   lastSequence: number
   error: string | null
   friendlyError: unknown
@@ -71,6 +72,7 @@ export function makeHarness(over: Partial<PaneState> = {}) {
     listingId: '',
     loading: true,
     totalCount: 0,
+    effectiveSortBy: null,
     lastSequence: 0,
     error: null,
     friendlyError: null,
@@ -144,6 +146,10 @@ export function makeHarness(over: Partial<PaneState> = {}) {
     getTotalCount: () => state.totalCount,
     setTotalCount: (c) => {
       state.totalCount = c
+    },
+    getEffectiveSortBy: () => state.effectiveSortBy,
+    setEffectiveSortBy: (column) => {
+      state.effectiveSortBy = column
     },
     getLastSequence: () => state.lastSequence,
     setLastSequence: (s) => {

@@ -13407,6 +13407,13 @@ export type PaneFileEntry = {
   size: number | null
   recursiveSize: number | null
   modified: string | null
+  // When the item was made, ISO 8601, if its volume records it.
+  created?: string | null
+  /**
+   *  When the item landed in its folder (Finder's "Date Added"), ISO 8601, if its
+   *  volume records it.
+   */
+  added?: string | null
   /**
    *  `Some(true)` while this directory's recursive size can still move: a walk
    *  is on it, above it, or below it (the roll-up repairs ancestors), the
@@ -13477,6 +13484,12 @@ export type PaneState = {
   selectedIndices?: number[]
   sortField?: string
   sortOrder?: string
+  /**
+   *  The column the rows really follow, set only when it isn't `sort_field`: a
+   *  date the location doesn't record sorts by Modified, while `sort_field` keeps
+   *  the column the user asked for.
+   */
+  sortFallback?: string | null
   totalFiles?: number
   /**
    *  Whether the pane renders a `..` row, which `total_files` counts. Without

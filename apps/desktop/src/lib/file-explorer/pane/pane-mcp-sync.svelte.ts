@@ -7,7 +7,7 @@ import {
 } from '#lib/tauri-commands/index.js'
 import { type CanonicalPath, parentOf } from '#lib/path/canonical.js'
 import type { ViewMode } from '#lib/app-status-store.js'
-import type { PaneListing, SearchResultEntry } from '#lib/ipc/bindings.js'
+import type { PaneListing, SearchResultEntry, SortColumn } from '#lib/ipc/bindings.js'
 import type { SnapshotSort } from '#lib/search/snapshot-store.svelte.js'
 import { getWalkedGround, isVolumeAggregating } from '#lib/indexing/index-state.svelte.js'
 import { isPathAffectedByWalk } from '#lib/indexing/walked-ground.js'
@@ -44,6 +44,12 @@ export function paneListingOf(pane: { hasError: boolean; loading: boolean; stall
   if (pane.hasError) return 'error'
   if (!pane.loading) return 'settled'
   return pane.stalled ? 'stalled' : 'loading'
+}
+
+/** A listing's seconds-since-epoch date as the ISO string `cmdr://state` carries, or `null` when absent. */
+function isoDate(seconds: number | null | undefined): string | null {
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state, just formatting a timestamp
+  return seconds != null ? new Date(seconds * 1000).toISOString() : null
 }
 
 export interface PaneMcpSyncDeps {
@@ -89,8 +95,14 @@ export interface PaneMcpSyncDeps {
   getCursorIndex: () => number
   getViewMode: () => ViewMode
   getSelectedIndices: () => number[]
-  getSortBy: () => string
+  getSortBy: () => SortColumn
   getSortOrder: () => string
+  /**
+   * The column the rows really follow (`FilePaneAPI.getEffectiveSortBy`): the
+   * requested one, or Modified for a date the location doesn't record. `null`
+   * before any rows landed, and for a snapshot in the ranked order.
+   */
+  getEffectiveSortBy: () => SortColumn | null
   getShowHiddenFiles: () => boolean
   getTypeToJump: () => {
     buffer: string
@@ -122,13 +134,15 @@ export interface PaneMcpSyncDeps {
 const MAX_MIRRORED_ROWS = 100
 
 export function createPaneMcpSync(deps: PaneMcpSyncDeps) {
-  // Map sort column names to MCP format (constant, no need to recreate)
-  const sortFieldMap: Record<string, string> = {
+  // Sort column names in MCP's vocabulary, the `sort` tool's `by` values (`panes.rs`'s
+  // `RowDate` reads the date ones back).
+  const sortFieldMap: Record<SortColumn, string> = {
     name: 'name',
     extension: 'ext',
     size: 'size',
     modified: 'modified',
     created: 'created',
+    added: 'added',
   }
 
   /**
@@ -146,18 +160,19 @@ export function createPaneMcpSync(deps: PaneMcpSyncDeps) {
    * `name:asc` for an empty field, and a pane that pushed nothing there would be
    * described by that substitution instead of by itself.
    */
-  function mcpSort(): { field: string; order: 'asc' | 'desc' } {
-    if (deps.getSnapshotEntries() !== null) {
-      const snapshotSort = deps.getSnapshotSort()
-      if (!snapshotSort) return { field: 'relevance', order: 'desc' }
-      return {
-        field: sortFieldMap[snapshotSort.column] ?? 'name',
-        order: snapshotSort.order === 'ascending' ? 'asc' : 'desc',
-      }
-    }
+  function mcpSort(): { field: string; order: 'asc' | 'desc'; fallback: string | null } {
+    const requested =
+      deps.getSnapshotEntries() === null
+        ? { column: deps.getSortBy(), order: deps.getSortOrder() }
+        : deps.getSnapshotSort()
+    if (!requested) return { field: 'relevance', order: 'desc', fallback: null }
+    // The effective column only when it differs: a fallback never replaces the
+    // requested column, which is what `sort` and the tab keep.
+    const effective = deps.getEffectiveSortBy()
     return {
-      field: sortFieldMap[deps.getSortBy()] ?? 'name',
-      order: deps.getSortOrder() === 'ascending' ? 'asc' : 'desc',
+      field: sortFieldMap[requested.column],
+      order: requested.order === 'ascending' ? 'asc' : 'desc',
+      fallback: effective !== null && effective !== requested.column ? sortFieldMap[effective] : null,
     }
   }
 
@@ -191,7 +206,9 @@ export function createPaneMcpSync(deps: PaneMcpSyncDeps) {
       size: entry.size ?? null,
       recursiveSize: entry.recursiveSize ?? null,
       // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state, just formatting a timestamp
-      modified: entry.modifiedAt != null ? new Date(entry.modifiedAt * 1000).toISOString() : null,
+      modified: isoDate(entry.modifiedAt),
+      created: isoDate(entry.createdAt),
+      added: isoDate(entry.addedAt),
       // The SAME per-row answer the file list's hourglass renders from, ❌ never
       // the raw `recursiveSizePending` field alone: that covers only this dir's
       // own draining writes, and misses the walk that is rewriting it, which is
@@ -330,6 +347,7 @@ export function createPaneMcpSync(deps: PaneMcpSyncDeps) {
         selectedIndices: deps.getSelectedIndices(),
         sortField: sort.field,
         sortOrder: sort.order,
+        sortFallback: sort.fallback,
         totalFiles: effectiveTotal,
         // Says whether `totalFiles` counts a `..` row. The backend's empty-pane
         // gate subtracts it before deciding there's nothing to act on, so a

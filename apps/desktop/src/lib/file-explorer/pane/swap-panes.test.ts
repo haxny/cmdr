@@ -77,6 +77,20 @@ describe('createSwapPanes', () => {
     expect(focusActivePane).toHaveBeenCalled()
   })
 
+  it('moves a requested date sort with its tab, and the column its rows follow with the listing', () => {
+    const usbState = { listingId: 'usb', effectiveSortBy: 'modified' } as unknown as SwapState
+    const leftRef = makePaneRef({ getSwapState: vi.fn(() => usbState) })
+    const rightRef = makePaneRef()
+    const leftMgr = makeTabMgr('L', { path: '/Volumes/USB', volumeId: 'usb', sortBy: 'added', sortOrder: 'descending' })
+    const { deps, rightMgr } = setup({ leftRef, rightRef, leftMgr })
+
+    createSwapPanes(deps).swapPanes()
+
+    // The fallback never rewrote the request: the tab carries Added across.
+    expect((rightMgr.tabs[0] as unknown as Record<string, unknown>).sortBy).toBe('added')
+    expect(rightRef.adoptListing).toHaveBeenCalledWith(usbState)
+  })
+
   it('is a no-op when a pane ref is missing', () => {
     const rightRef = makePaneRef()
     const { deps, focusActivePane } = setup({ leftRef: undefined, rightRef })

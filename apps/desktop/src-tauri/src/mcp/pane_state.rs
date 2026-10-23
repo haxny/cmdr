@@ -32,6 +32,13 @@ pub struct PaneFileEntry {
     pub size: Option<u64>,
     pub recursive_size: Option<u64>,
     pub modified: Option<String>,
+    /// When the item was made, ISO 8601, if its volume records it.
+    #[serde(default)]
+    pub created: Option<String>,
+    /// When the item landed in its folder (Finder's "Date Added"), ISO 8601, if its
+    /// volume records it.
+    #[serde(default)]
+    pub added: Option<String>,
     /// `Some(true)` while this directory's recursive size can still move: a walk
     /// is on it, above it, or below it (the roll-up repairs ancestors), the
     /// volume is aggregating, or the indexer still has unprocessed writes for it.
@@ -89,6 +96,11 @@ pub struct PaneState {
     pub sort_field: String,
     #[serde(default)]
     pub sort_order: String,
+    /// The column the rows really follow, set only when it isn't `sort_field`: a
+    /// date the location doesn't record sorts by Modified, while `sort_field` keeps
+    /// the column the user asked for.
+    #[serde(default)]
+    pub sort_fallback: Option<String>,
     #[serde(default)]
     pub total_files: usize,
     /// Whether the pane renders a `..` row, which `total_files` counts. Without
@@ -388,6 +400,7 @@ mod tests {
             selected_indices: vec![],
             sort_field: "name".to_string(),
             sort_order: "asc".to_string(),
+            sort_fallback: None,
             total_files: 1,
             has_parent_row: false,
             loaded_start: 0,

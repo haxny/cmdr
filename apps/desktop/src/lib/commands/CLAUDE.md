@@ -11,12 +11,12 @@ Centralized command registry and fuzzy search engine for the command palette.
 - **`command-registry.ts`**: the `commands` array, `getPaletteCommands()`, `updateLicenseCommandName()`, and the
   `NATIVE_SHORTCUT_COMMAND_IDS` / `FIXED_KEY_COMMAND_IDS` lists. Registry DATA is in **`sources/*.ts`** (add commands
   there, not inline).
-- **`sort-commands.ts`**: `SORT_BY_COMMANDS`, the column → `sort.by*` table the headers and View > Sort by share.
+- **`sort-commands.ts`**: `SORT_BY_COMMANDS` (column → `sort.by*`).
 - **`fuzzy-search.ts`**: `searchCommands()` (palette set) + `searchAllCommands()` (full registry), via the shared
   `#lib/utils/unicode-fuzzy.ts` engine (any script, accents optional).
 - Tests: `fuzzy-search.test.ts`, `command-registry.test.ts` (set-equality + palette pin), `command-types.test.ts`
-  (arg-shape guards), `rust-command-id-drift.test.ts` (Rust ids ∈ `COMMAND_IDS`), `command-reachability.test.ts` (a key,
-  a palette row, or a reasoned exemption).
+  (arg-shape guards), `rust-command-id-drift.test.ts` (Rust ids ∈ `COMMAND_IDS`), `command-reachability.test.ts` (key,
+  palette row, or reasoned exemption).
 
 ## Must-knows (invariants and guardrails)
 

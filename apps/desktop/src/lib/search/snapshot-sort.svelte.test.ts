@@ -9,10 +9,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { SearchResultEntry } from '#lib/ipc/bindings.js'
+import type { SearchResultEntry, SearchSortAnswer, SortColumn } from '#lib/ipc/bindings.js'
 
 const { sortSearchResultsSpy, directorySortModeSpy } = vi.hoisted(() => ({
-  sortSearchResultsSpy: vi.fn<() => Promise<number[]>>(),
+  sortSearchResultsSpy: vi.fn<(rows: unknown, column: SortColumn) => Promise<SearchSortAnswer>>(),
   directorySortModeSpy: vi.fn<() => string>(() => 'likeFiles'),
 }))
 
@@ -59,6 +59,11 @@ function makeSnapshot(id: string, entries: SearchResultEntry[]): SearchSnapshot 
   }
 }
 
+/** The backend answers `order`, following the column it was asked for. */
+function mockOrder(order: number[]): void {
+  sortSearchResultsSpy.mockImplementation((_rows, column) => Promise.resolve({ order, effectiveSortBy: column }))
+}
+
 /** The names in a snapshot's rendered order. */
 function renderedNames(id: string): string[] {
   return (getSnapshot(id)?.entries ?? []).map((e) => e.name)
@@ -82,17 +87,17 @@ describe('a snapshot opens in the engine ranked order', () => {
 describe('sortSnapshot', () => {
   it('replaces the rendered rows with the order the backend comparator answered', async () => {
     getOrCreate('sr-1', makeSnapshot('sr-1', [makeEntry('c.txt'), makeEntry('a.txt'), makeEntry('b.txt')]))
-    sortSearchResultsSpy.mockResolvedValue([1, 2, 0])
+    mockOrder([1, 2, 0])
 
     await sortSnapshot('sr-1', { column: 'name', order: 'ascending' })
 
     expect(renderedNames('sr-1')).toEqual(['a.txt', 'b.txt', 'c.txt'])
-    expect(getSnapshot('sr-1')?.sort).toEqual({ column: 'name', order: 'ascending' })
+    expect(getSnapshot('sr-1')?.sort).toEqual({ column: 'name', order: 'ascending', effectiveSortBy: 'name' })
   })
 
   it('sends only the fields that decide order, and the user directory-sort mode', async () => {
     getOrCreate('sr-1', makeSnapshot('sr-1', [makeEntry('c.txt')]))
-    sortSearchResultsSpy.mockResolvedValue([0])
+    mockOrder([0])
     directorySortModeSpy.mockReturnValue('alwaysByName')
 
     await sortSnapshot('sr-1', { column: 'size', order: 'descending' })
@@ -107,13 +112,31 @@ describe('sortSnapshot', () => {
 
   it('restores the engine ranked order exactly when the sort goes back to null', async () => {
     getOrCreate('sr-1', makeSnapshot('sr-1', [makeEntry('c.txt'), makeEntry('a.txt'), makeEntry('b.txt')]))
-    sortSearchResultsSpy.mockResolvedValue([1, 2, 0])
+    mockOrder([1, 2, 0])
     await sortSnapshot('sr-1', { column: 'name', order: 'ascending' })
 
     await sortSnapshot('sr-1', null)
 
     expect(renderedNames('sr-1')).toEqual(['c.txt', 'a.txt', 'b.txt'])
     expect(getSnapshot('sr-1')?.sort).toBeNull()
+  })
+
+  it('records the column the order follows, and keeps the one asked for', async () => {
+    getOrCreate('sr-1', makeSnapshot('sr-1', [makeEntry('c.txt'), makeEntry('a.txt')]))
+    sortSearchResultsSpy.mockResolvedValue({ order: [1, 0], effectiveSortBy: 'modified' })
+
+    const applied = await sortSnapshot('sr-1', { column: 'added', order: 'descending' })
+
+    const expected = { column: 'added', order: 'descending', effectiveSortBy: 'modified' }
+    expect(getSnapshot('sr-1')?.sort).toEqual(expected)
+    // The caller learns what landed, to say so when it's a fallback.
+    expect(applied).toEqual(expected)
+  })
+
+  it('answers null for a sort that never landed', async () => {
+    getOrCreate('sr-1', makeSnapshot('sr-1', [makeEntry('c.txt')]))
+    expect(await sortSnapshot('sr-1', null)).toBeNull()
+    expect(await sortSnapshot('sr-gone', { column: 'name', order: 'ascending' })).toBeNull()
   })
 
   it('needs no backend round trip to go back to ranked order', async () => {
@@ -132,7 +155,7 @@ describe('sortSnapshot', () => {
 
   it('bumps the mutation tick so the pane re-renders its rows', async () => {
     getOrCreate('sr-1', makeSnapshot('sr-1', [makeEntry('c.txt'), makeEntry('a.txt')]))
-    sortSearchResultsSpy.mockResolvedValue([1, 0])
+    mockOrder([1, 0])
     const before = getSnapshot('sr-1')
 
     await sortSnapshot('sr-1', { column: 'name', order: 'ascending' })
@@ -146,13 +169,13 @@ describe('sortSnapshot', () => {
 describe('rows arriving while a sort is on', () => {
   it('lands a still-running walk new rows in sorted position, never at the tail', async () => {
     getOrCreate('sr-1', makeSnapshot('sr-1', [makeEntry('c.txt'), makeEntry('a.txt')]))
-    sortSearchResultsSpy.mockResolvedValue([1, 0])
+    mockOrder([1, 0])
     await sortSnapshot('sr-1', { column: 'name', order: 'ascending' })
     expect(renderedNames('sr-1')).toEqual(['a.txt', 'c.txt'])
 
     appendSnapshotEntries('sr-1', [makeEntry('b.txt')], 3)
     // Ranked order is now c, a, b; sorted by name that is a, b, c.
-    sortSearchResultsSpy.mockResolvedValue([1, 2, 0])
+    mockOrder([1, 2, 0])
     await resortSnapshotIfSorted('sr-1')
 
     expect(renderedNames('sr-1')).toEqual(['a.txt', 'b.txt', 'c.txt'])
@@ -170,7 +193,7 @@ describe('rows arriving while a sort is on', () => {
 
   it('drops a re-sort whose rows changed under it, and orders the rows that exist now', async () => {
     getOrCreate('sr-1', makeSnapshot('sr-1', [makeEntry('c.txt'), makeEntry('a.txt')]))
-    sortSearchResultsSpy.mockResolvedValue([1, 0])
+    mockOrder([1, 0])
     await sortSnapshot('sr-1', { column: 'name', order: 'ascending' })
 
     // The first round trip answers for two rows; a third lands before it
@@ -181,9 +204,9 @@ describe('rows arriving while a sort is on', () => {
       if (firstCall) {
         firstCall = false
         appendSnapshotEntries('sr-1', [makeEntry('b.txt')], 3)
-        return Promise.resolve([1, 0])
+        return Promise.resolve({ order: [1, 0], effectiveSortBy: 'name' })
       }
-      return Promise.resolve([1, 2, 0])
+      return Promise.resolve({ order: [1, 2, 0], effectiveSortBy: 'name' })
     })
 
     await resortSnapshotIfSorted('sr-1')
@@ -196,7 +219,7 @@ describe('rows arriving while a sort is on', () => {
 describe('a purge under a sort', () => {
   it('keeps the sorted order and drops the row from the ranked order too', async () => {
     getOrCreate('sr-1', makeSnapshot('sr-1', [makeEntry('c.txt'), makeEntry('a.txt'), makeEntry('b.txt')]))
-    sortSearchResultsSpy.mockResolvedValue([1, 2, 0])
+    mockOrder([1, 2, 0])
     await sortSnapshot('sr-1', { column: 'name', order: 'ascending' })
 
     removeEntryFromAllSnapshots('/Users/test/b.txt')

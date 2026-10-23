@@ -15,7 +15,7 @@ import { getAppLogger } from '#lib/logging/logger.js'
 import { getForegroundOperationId, isForegroundClaimPending } from '#lib/file-operations/foreground-operation.svelte.js'
 import { untrack } from 'svelte'
 import { createThrottle } from '#lib/utils/timing.js'
-import type { DiffChange } from '../types'
+import type { DiffChange, SortColumn } from '../types'
 import type { createSelectionState } from './selection-state.svelte'
 import type { createRenameState } from '../rename/rename-state.svelte'
 import type { PaneRowState } from './pane-row-state'
@@ -114,6 +114,8 @@ export interface ListingDiffSyncDeps {
   getVolumePath: () => string
   getOperationSelectedNames: () => string[] | 'all' | null
   setTotalCount: (count: number) => void
+  /** Installs the column a re-read re-sorted the rows into, with the batch that lands them. */
+  setEffectiveSortBy: (column: SortColumn) => void
   bumpSoftRefreshTick: () => void
   scheduleColumnWidthRefetch: () => void
   fetchEntryUnderCursor: () => void
@@ -184,6 +186,7 @@ export function initListingDiffSync(deps: ListingDiffSyncDeps): void {
       if (reconciled.selectedIndices !== null) deps.selection.setSelectedIndices(reconciled.selectedIndices)
       deps.applyCursorIndex(reconciled.cursorIndex)
       deps.setTotalCount(diff.totalCount)
+      if (diff.effectiveSortBy !== null) deps.setEffectiveSortBy(diff.effectiveSortBy)
       scrollCursor ||= reconciled.cursorFollowedMove
       return () => {
         // All logical row writes above are synchronous. Scroll/fetch are effects, never prerequisites.

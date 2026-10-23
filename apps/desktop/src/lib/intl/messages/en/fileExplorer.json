@@ -1779,6 +1779,14 @@
       "limitText": "the commit limit, already formatted with thousands separators, for example 5,000"
     }
   },
+  "fileExplorer.sortFallback.created": "This location doesn’t record when items were created, so Cmdr sorts by date modified here.",
+  "@fileExplorer.sortFallback.created": {
+    "description": "Short self-dismissing notification shown when the user sorts the file list by date created in a place that doesn't store that date (for example a USB stick, a network share, or search results). The list is sorted by date modified instead, and goes back to date created in a folder that has it. Keep it parallel with fileExplorer.sortFallback.added. \"Cmdr\" is the app name: don't translate it."
+  },
+  "fileExplorer.sortFallback.added": "This location doesn’t record when items were added, so Cmdr sorts by date modified here.",
+  "@fileExplorer.sortFallback.added": {
+    "description": "Short self-dismissing notification shown when the user sorts the file list by date added (when each item was put in its folder, Finder's \"Date Added\") in a place that doesn't store that date (for example a USB stick, a network share, or search results). The list is sorted by date modified instead, and goes back to date added in a folder that has it. Keep it parallel with fileExplorer.sortFallback.created. \"Cmdr\" is the app name: don't translate it."
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "Counting the files this commit changed…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "description": "Hover tooltip (and screen-reader label) for the Size cell of a commit row in the virtual `.git` portal while its count of changed files is still being worked out. The cell itself shows an ellipsis meanwhile; usually gone within a second or two."

@@ -84,11 +84,11 @@ The UI resolves the same collision by dropping its `≥` and leaving the hourgla
 ### The `sort:` line, and the `relevance` value
 
 Every pane block carries `sort: "<field>:<order>"`, where `field` is one of `name`, `ext`, `size`, `modified`,
-`created`, or **`relevance`**, and `order` is `asc` or `desc`.
+`created`, `added`, or **`relevance`**, and `order` is `asc` or `desc`.
 
 `relevance` belongs to a **search-results pane showing the search engine's ranked order**, which is the state such a
 pane opens in and returns to after a third click on its active column header. It says the rows are best-match-first,
-which is a real order and the one thing the five column names can't express. A user can sort that pane by column like
+which is a real order and the one thing the six column names can't express. A user can sort that pane by column like
 any other, and then it reports that column instead. What the pane is in, and why the tab's own sort is not the answer:
 `apps/desktop/src/lib/search/DETAILS.md` § "The snapshot pane's row order".
 
@@ -96,8 +96,14 @@ any other, and then it reports that column instead. What the pane is in, and why
 `name:asc` therefore describes only a `PaneState` no pane ever pushed; ❌ don't lean on it to stand in for a real pane's
 order, which is how a ranked result set used to come out claiming it was sorted by name.
 
-The `sort` TOOL still takes only the five column names. An agent puts a search-results pane back into its ranked order
+The `sort` TOOL still takes only the six column names. An agent puts a search-results pane back into its ranked order
 by re-opening the snapshot, not by asking for `relevance`.
+
+**`sortFallback:`** follows `sort:` only when the rows follow another column than the one asked for: a date the
+location doesn't record (a USB stick, a share, a search pane) sorts by Modified, while `sort:` keeps the request
+(`crates/cmdr-listing/DETAILS.md` § "Requested and effective sort"). A detailed row line adds the date its pane is
+ordered by when that's Created or Added (`created:<iso>` / `added:<iso>`, `RowDate`), and only that one: a local folder
+records all three, and the Modified date is already on every line.
 
 ### Pane state includes pagination
 

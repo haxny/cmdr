@@ -26,7 +26,13 @@
 import { sortSearchResults } from '#lib/tauri-commands/index.js'
 import { getDirectorySortMode } from '#lib/settings/reactive-settings.svelte.js'
 import type { SearchResultEntry, SortColumn } from '#lib/ipc/bindings.js'
-import { applySnapshotSort, getRankedEntries, getSnapshot, type SnapshotSort } from './snapshot-store.svelte'
+import {
+  applySnapshotSort,
+  getRankedEntries,
+  getSnapshot,
+  type AppliedSnapshotSort,
+  type SnapshotSort,
+} from './snapshot-store.svelte'
 
 /**
  * The order a column takes on its FIRST click, mirroring what a normal pane does
@@ -93,24 +99,31 @@ let nextRequest = 1
  * invalidates the order rather than the intent, so the request is re-run against
  * the rows that exist now. That loop turns over only while the rows keep moving,
  * and a walk that stops ends it.
+ *
+ * Answers the sort that landed, carrying the column the rows really follow, or
+ * `null` when none did (back to ranked, superseded, or the snapshot is gone).
  */
-export async function sortSnapshot(id: string, sort: SnapshotSort | null): Promise<void> {
+export async function sortSnapshot(id: string, sort: SnapshotSort | null): Promise<AppliedSnapshotSort | null> {
   const request = nextRequest++
   latestRequest.set(id, request)
   if (sort === null) {
     applySnapshotSort(id, null, [])
-    return
+    return null
   }
   for (;;) {
     const ranked = getRankedEntries(id)
-    if (!ranked) return
-    const order = await sortSearchResults(sortRowsFor(ranked), sort.column, sort.order, getDirectorySortMode())
-    if (latestRequest.get(id) !== request) return
+    if (!ranked) return null
+    const answer = await sortSearchResults(sortRowsFor(ranked), sort.column, sort.order, getDirectorySortMode())
+    if (latestRequest.get(id) !== request) return null
     // Reference identity is the generation token: every store mutator REPLACES
     // the array, so an unchanged reference proves the rows held still.
     if (getRankedEntries(id) !== ranked) continue
-    applySnapshotSort(id, sort, order)
-    return
+    const applied: AppliedSnapshotSort = {
+      column: sort.column,
+      order: sort.order,
+      effectiveSortBy: answer.effectiveSortBy,
+    }
+    return applySnapshotSort(id, applied, answer.order) ? applied : null
   }
 }
 
@@ -127,5 +140,5 @@ export async function sortSnapshot(id: string, sort: SnapshotSort | null): Promi
 export async function resortSnapshotIfSorted(id: string): Promise<void> {
   const sort = getSnapshot(id)?.sort
   if (!sort) return
-  await sortSnapshot(id, sort)
+  await sortSnapshot(id, { column: sort.column, order: sort.order })
 }

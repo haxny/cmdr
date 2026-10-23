@@ -269,7 +269,7 @@ describe('createSnapshotSelectionSync', () => {
     pane.setCursor(0)
 
     // Name-ascending over that ranked order: a, b, c.
-    applySnapshotSort('sr-sort', { column: 'name', order: 'ascending' }, [1, 2, 0])
+    applySnapshotSort('sr-sort', { column: 'name', order: 'ascending', effectiveSortBy: 'name' }, [1, 2, 0])
     flushSync()
 
     // `c.txt` moved to index 2 and `b.txt` to index 1, and the selection went with them.
@@ -280,7 +280,7 @@ describe('createSnapshotSelectionSync', () => {
   it('brings the selection home when the pane goes back to the ranked order', () => {
     getOrCreate('sr-back', makeSnapshot('sr-back', ['c.txt', 'a.txt', 'b.txt']))
     const pane = wire('sr-back')
-    applySnapshotSort('sr-back', { column: 'name', order: 'ascending' }, [1, 2, 0])
+    applySnapshotSort('sr-back', { column: 'name', order: 'ascending', effectiveSortBy: 'name' }, [1, 2, 0])
     flushSync()
     pane.selection.setSelectedIndices([0])
 

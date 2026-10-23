@@ -82,6 +82,7 @@ function deps(overrides: Partial<PaneMcpSyncDeps> = {}): PaneMcpSyncDeps {
     getSelectedIndices: () => [],
     getSortBy: () => 'name',
     getSortOrder: () => 'ascending',
+    getEffectiveSortBy: () => 'name',
     getShowHiddenFiles: () => true,
     getTypeToJump: () => ({ buffer: '', indicatorVisible: false, indicatorStale: false }),
     getLastJumpMatchedName: () => null,
@@ -408,5 +409,77 @@ describe('where the listing stands', () => {
     expect(paneListingOf({ hasError: false, loading: true, stalled: true })).toBe('stalled')
     expect(paneListingOf({ hasError: false, loading: true, stalled: false })).toBe('loading')
     expect(paneListingOf({ hasError: false, loading: false, stalled: false })).toBe('settled')
+  })
+})
+
+/**
+ * A date sort the location can't honor keeps the requested column in `sort`, and
+ * names the column the rows really follow beside it.
+ */
+describe('the sort fallback', () => {
+  beforeEach(() => {
+    getFileRange.mockResolvedValue([])
+    updateLeftPaneState.mockClear()
+  })
+
+  async function pushed(overrides: Partial<PaneMcpSyncDeps>) {
+    await createPaneMcpSync(deps(overrides)).syncPaneStateToMcp()
+    return updateLeftPaneState.mock.calls[0][0] as { sortField: string; sortFallback: string | null }
+  }
+
+  it('reports the requested column and the one the rows follow', async () => {
+    const state = await pushed({
+      getSortBy: () => 'added',
+      getSortOrder: () => 'descending',
+      getEffectiveSortBy: () => 'modified',
+    })
+    expect(state.sortField).toBe('added')
+    expect(state.sortFallback).toBe('modified')
+  })
+
+  it('reports no fallback when the location honors the sort', async () => {
+    expect((await pushed({ getSortBy: () => 'added', getEffectiveSortBy: () => 'added' })).sortFallback).toBeNull()
+  })
+
+  it('reports no fallback before any listing has landed', async () => {
+    expect((await pushed({ getSortBy: () => 'added', getEffectiveSortBy: () => null })).sortFallback).toBeNull()
+  })
+
+  it('answers a search-results pane from its snapshot’s sort', async () => {
+    const snapshot: Partial<PaneMcpSyncDeps> = {
+      getListingId: () => '',
+      getSnapshotEntries: () => [],
+      getRowCount: () => 0,
+      getSortBy: () => 'name',
+      getSnapshotSort: () => ({ column: 'added', order: 'descending' }),
+      getEffectiveSortBy: () => 'modified',
+    }
+    const state = await pushed(snapshot)
+    expect(state.sortField).toBe('added')
+    expect(state.sortFallback).toBe('modified')
+
+    updateLeftPaneState.mockClear()
+    const ranked = await pushed({ ...snapshot, getSnapshotSort: () => null, getEffectiveSortBy: () => null })
+    expect(ranked.sortField).toBe('relevance')
+    expect(ranked.sortFallback).toBeNull()
+  })
+})
+
+describe('the dates a row carries', () => {
+  it('mirrors created and added as ISO strings when the volume records them', async () => {
+    getFileRange.mockResolvedValue([
+      { ...entryAt(0), modifiedAt: 1_700_000_000, createdAt: 1_600_000_000, addedAt: 1_750_000_000 },
+      entryAt(1),
+    ])
+    const sync = createPaneMcpSync(
+      deps({ getTotalCount: () => 2, getVisibleRangeStart: () => 0, getVisibleRangeEnd: () => 2 }),
+    )
+
+    const [dated, undated] = await sync.buildMcpFileList()
+
+    expect(dated?.created).toBe(new Date(1_600_000_000 * 1000).toISOString())
+    expect(dated?.added).toBe(new Date(1_750_000_000 * 1000).toISOString())
+    expect(undated?.created).toBeNull()
+    expect(undated?.added).toBeNull()
   })
 })

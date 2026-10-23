@@ -60,6 +60,15 @@ export interface SnapshotSort {
   order: SortOrder
 }
 
+/**
+ * A sort that landed: the requested column and order, plus the column the rows
+ * really follow. The index stores no creation or added date, so a snapshot asked
+ * for one of those is in Modified's order, while `column` keeps what was asked.
+ */
+export interface AppliedSnapshotSort extends SnapshotSort {
+  effectiveSortBy: SortColumn
+}
+
 /** A fully-materialized search snapshot. Immutable from the store's perspective. */
 export interface SearchSnapshot {
   /** Monotonic per-session id, like 'sr-1'. */
@@ -91,7 +100,7 @@ export interface SearchSnapshot {
   /** Friendly label for breadcrumbs and tab titles, derived from the query. */
   label: string
   /** The order `entries` is in. `null` is the engine's ranked order. See [`SnapshotSort`]. */
-  sort: SnapshotSort | null
+  sort: AppliedSnapshotSort | null
 }
 
 /** Internal map entry: snapshot plus the live reference count. */
@@ -305,7 +314,11 @@ export function getRankedEntries(id: string): readonly SearchResultEntry[] | und
  * every reader (the rendered rows, the ops, the MCP mirror) go on seeing a
  * complete array at every moment.
  */
-export function applySnapshotSort(id: string, sort: SnapshotSort | null, rankedOrder: readonly number[]): boolean {
+export function applySnapshotSort(
+  id: string,
+  sort: AppliedSnapshotSort | null,
+  rankedOrder: readonly number[],
+): boolean {
   const stored = store.get(id)
   if (!stored) return false
   if (sort === null) {

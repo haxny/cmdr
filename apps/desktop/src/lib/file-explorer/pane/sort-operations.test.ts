@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { FilePaneAPI } from './types'
 import type { ResortResult, SortColumn, SortOrder } from '../types'
+import type { AppliedSnapshotSort } from '#lib/search/snapshot-store.svelte.js'
 import { createPaneRowState } from './pane-row-state'
 
 const {
@@ -15,7 +16,7 @@ const {
   addToastForPaneSpy: vi.fn(),
   resortListingSpy: vi.fn<(...args: unknown[]) => Promise<ResortResult>>(),
   getDirectorySortModeSpy: vi.fn<() => string>(),
-  sortSnapshotSpy: vi.fn<() => Promise<void>>(),
+  sortSnapshotSpy: vi.fn<() => Promise<AppliedSnapshotSort | null>>(),
   getSnapshotSpy: vi.fn<() => { sort: { column: SortColumn; order: SortOrder } | null } | undefined>(),
 }))
 
@@ -92,9 +93,18 @@ function makeDeps(
 describe('createSortOperations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    resortListingSpy.mockResolvedValue({ newCursorIndex: null, newSelectedIndices: null, sequence: 1, totalCount: 3 })
+    // The volume honors every column unless a test says otherwise.
+    resortListingSpy.mockImplementation((_listingId, column) =>
+      Promise.resolve({
+        newCursorIndex: null,
+        newSelectedIndices: null,
+        sequence: 1,
+        totalCount: 3,
+        effectiveSortBy: column as SortColumn,
+      }),
+    )
     getDirectorySortModeSpy.mockReturnValue('foldersFirst')
-    sortSnapshotSpy.mockResolvedValue(undefined)
+    sortSnapshotSpy.mockResolvedValue(null)
     getSnapshotSpy.mockReturnValue(undefined)
     commitSizeSortLimitSpy.mockReturnValue(null)
   })
@@ -116,7 +126,13 @@ describe('createSortOperations', () => {
     deps.getPaneRef = () => current as unknown as FilePaneAPI
     resortListingSpy.mockImplementationOnce(() => {
       current = makePaneRef()
-      return Promise.resolve({ newCursorIndex: 1, newSelectedIndices: [1], sequence: 1, totalCount: 3 })
+      return Promise.resolve({
+        newCursorIndex: 1,
+        newSelectedIndices: [1],
+        sequence: 1,
+        totalCount: 3,
+        effectiveSortBy: 'size',
+      })
     })
     await createSortOperations(deps).setSort('size', 'desc', 'left')
     expect(setPaneSort).not.toHaveBeenCalled()
@@ -314,5 +330,78 @@ describe('createSortOperations', () => {
     })
 
     expect(setPaneSort).toHaveBeenCalledWith('left', 'size', 'descending')
+  })
+
+  // ── A date sort the location can't honor ──────────────────────────────────
+  //
+  // The backend sorts by Modified and says so; the pane keeps the column the user
+  // asked for, and a sort the user started says why the rows follow Modified.
+
+  const ADDED_FALLBACK = 'This location doesn’t record when items were added, so Cmdr sorts by date modified here.'
+
+  function landsInModified() {
+    resortListingSpy.mockImplementation(() =>
+      Promise.resolve({
+        newCursorIndex: null,
+        newSelectedIndices: null,
+        sequence: 1,
+        totalCount: 3,
+        effectiveSortBy: 'modified',
+      }),
+    )
+  }
+
+  it('says why when a sort the user picked lands in a fallback, and keeps the column asked for', async () => {
+    landsInModified()
+    const paneRef = makePaneRef()
+    const { deps, setPaneSort } = makeDeps(paneRef, { sortBy: 'name', sortOrder: 'ascending' })
+
+    await createSortOperations(deps).handleSortChange('left', 'added')
+
+    expect(resortListingSpy.mock.calls[0][1]).toBe('added')
+    expect(setPaneSort).toHaveBeenCalledWith('left', 'added', 'descending')
+    expect(paneRef.applyRowResult).toHaveBeenCalledWith(expect.objectContaining({ effectiveSortBy: 'modified' }))
+    expect(addToastForPaneSpy).toHaveBeenCalledWith('left', ADDED_FALLBACK, expect.objectContaining({ level: 'info' }))
+  })
+
+  it('names the date it was asked for', async () => {
+    landsInModified()
+    const { deps } = makeDeps(makePaneRef(), { sortBy: 'name', sortOrder: 'ascending' })
+
+    await createSortOperations(deps).setSort('created', 'asc', 'right')
+
+    expect(addToastForPaneSpy).toHaveBeenCalledWith(
+      'right',
+      'This location doesn’t record when items were created, so Cmdr sorts by date modified here.',
+      expect.objectContaining({ level: 'info' }),
+    )
+  })
+
+  it('stays quiet when the location honors the sort', async () => {
+    const { deps } = makeDeps(makePaneRef(), { sortBy: 'name', sortOrder: 'ascending' })
+
+    await createSortOperations(deps).handleSortChange('left', 'added')
+
+    expect(addToastForPaneSpy).not.toHaveBeenCalled()
+  })
+
+  it('stays quiet on a re-sort the user didn’t start, and asks for the requested column again', async () => {
+    landsInModified()
+    const { deps } = makeDeps(makePaneRef(), { sortBy: 'added', sortOrder: 'descending' })
+
+    await createSortOperations(deps).resortPaneWithCurrentSort('left')
+
+    expect(resortListingSpy.mock.calls[0][1]).toBe('added')
+    expect(addToastForPaneSpy).not.toHaveBeenCalled()
+  })
+
+  it('says why when a snapshot pane’s sort lands in a fallback', async () => {
+    getSnapshotSpy.mockReturnValue({ sort: null })
+    sortSnapshotSpy.mockResolvedValue({ column: 'added', order: 'descending', effectiveSortBy: 'modified' })
+    const { deps } = makeDeps(makeSnapshotPaneRef(), { sortBy: 'name', sortOrder: 'ascending' })
+
+    await createSortOperations(deps).handleSortChange('left', 'added')
+
+    expect(addToastForPaneSpy).toHaveBeenCalledWith('left', ADDED_FALLBACK, expect.objectContaining({ level: 'info' }))
   })
 })

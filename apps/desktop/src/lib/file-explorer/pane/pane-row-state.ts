@@ -1,4 +1,4 @@
-import type { DirectoryDiffBatch, ResortResult } from '../types'
+import type { DirectoryDiffBatch } from '../types'
 
 export interface RowStateToken {
   listingId: string
@@ -157,10 +157,14 @@ export function createPaneRowState(deps: {
       for (const batch of batches) if (batch.sequence > sequence) buffered.set(batch.fromSequence, batch)
       if (pendingViews === 0) drain()
     },
-    /** Gate immediately, serialize requests, recapture rows after every typed changed refusal. */
-    changeView(input: {
-      request: (token: RowStateToken) => Promise<ResortResult>
-      install: (result: ResortResult) => undefined | (() => void)
+    /**
+     * Gate immediately, serialize requests, recapture rows after every typed changed refusal.
+     * Generic over the answer (a re-sort's `ResortResult`, a filter's own), which only has
+     * to name the revision it's at.
+     */
+    changeView<Answer extends { sequence: number }>(input: {
+      request: (token: RowStateToken) => Promise<Answer>
+      install: (result: Answer) => undefined | (() => void)
       isCurrent?: () => boolean
       includeHidden?: boolean
     }): Promise<boolean> {

@@ -25,6 +25,7 @@ import { commitSizeSortLimit } from '../git/commit-count-fill'
 import { addToastForPane } from '#lib/ui/toast/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { formatInteger } from '#lib/intl/number-format.js'
+import { sortFallbackMessage } from './sort-fallback'
 
 export interface SortOperationsDeps {
   getPaneRef: (pane: 'left' | 'right') => FilePaneAPI | undefined
@@ -52,6 +53,18 @@ export interface SortOperations {
 }
 
 export function createSortOperations(deps: SortOperationsDeps): SortOperations {
+  /**
+   * Says why the rows follow Modified when a sort the user started lands in a
+   * fallback. Only then: a re-sort they didn't start (a settings flip) or landing
+   * in a folder already sorted that way stays quiet, the column header's glyph
+   * telling the rest. The toast stack's own live region speaks it, so ❌ no
+   * `announce` beside it (it would read twice).
+   */
+  function sayWhyFallback(pane: 'left' | 'right', requested: SortColumn, effective: SortColumn): void {
+    const message = sortFallbackMessage(requested, effective)
+    if (message !== null) addToastForPane(pane, message, { level: 'info' })
+  }
+
   async function sortPane(pane: 'left' | 'right', column: SortColumn, order: SortOrder, persist: boolean) {
     const ref = deps.getPaneRef(pane)
     if (!ref?.getListingId()) return
@@ -72,8 +85,11 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
         )
       },
       install: (result) => {
+        // The REQUESTED column persists; the result's effective one only orders the rows.
         if (persist) deps.setPaneSort(pane, column, order)
-        return ref.applyRowResult(result)
+        const effects = ref.applyRowResult(result)
+        if (persist) sayWhyFallback(pane, column, result.effectiveSortBy)
+        return effects
       },
     })
   }
@@ -118,7 +134,8 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
     if (snapshotId !== null) {
       // The same tri-state a header click runs, so the keyboard and the mouse
       // can't disagree about where the third press lands.
-      await sortSnapshot(snapshotId, nextSnapshotSort(getSnapshot(snapshotId)?.sort ?? null, newColumn))
+      const applied = await sortSnapshot(snapshotId, nextSnapshotSort(getSnapshot(snapshotId)?.sort ?? null, newColumn))
+      if (applied) sayWhyFallback(pane, applied.column, applied.effectiveSortBy)
       return
     }
 
@@ -159,7 +176,8 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
       // The atomic set names both halves, so there is no cycle to run and no way
       // to ask for the ranked order through it. An agent restores that by opening
       // the snapshot again.
-      await sortSnapshot(snapshotId, { column, order: newOrderAsked })
+      const applied = await sortSnapshot(snapshotId, { column, order: newOrderAsked })
+      if (applied) sayWhyFallback(pane, applied.column, applied.effectiveSortBy)
       return
     }
 

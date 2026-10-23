@@ -6,7 +6,7 @@ import type { FavoritesMenuOpenTrigger } from '../navigation/favorites-analytics
 import type { HistoryCursor } from '../navigation/navigation-history'
 import type { PaneRowState } from './pane-row-state'
 import type { CursorReadOptions } from './pressed-rows'
-import type { ResortResult } from '../types'
+import type { ResortResult, SortColumn } from '../types'
 
 /** Options for `startRename`. */
 export interface StartRenameOptions {
@@ -146,6 +146,8 @@ export interface SwapState {
   currentPath: string
   listingId: string
   totalCount: number
+  /** The column the listing's rows are ordered by: it travels with them. */
+  effectiveSortBy: SortColumn | null
   cursorIndex: number
   selectedIndices: number[]
   lastSequence: number
@@ -222,6 +224,12 @@ export interface FilePaneAPI {
   getCurrentPath(): string
   getVolumeId(): string
   isMtp(): boolean
+  /**
+   * The column the shown rows are ordered by: the requested sort, or Modified for a date
+   * the location doesn't record. A snapshot pane answers its snapshot's (`null` while
+   * ranked); `null` before any listing landed. The requested sort stays the tab's.
+   */
+  getEffectiveSortBy(): SortColumn | null
   getSwapState(): SwapState
   adoptListing(state: SwapState): void
 

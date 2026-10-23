@@ -8,7 +8,7 @@ import {
   getSnapshot,
   type SearchSnapshot,
 } from '#lib/search/snapshot-store.svelte.js'
-import type { SearchResultEntry } from '#lib/ipc/bindings.js'
+import type { SearchResultEntry, SearchSortAnswer, SortColumn } from '#lib/ipc/bindings.js'
 import type { FileEntry, SelectPayload } from '../types'
 
 // FullList depends on a lot of platform-y machinery (canvas measurer, tauri commands).
@@ -57,14 +57,14 @@ const showFileContextMenuSpy =
   vi.fn<(...args: [string, string, boolean, string[], unknown?, unknown?, unknown?]) => Promise<void>>()
 
 /** The backend comparator behind a header click; each test says what it answers. */
-const sortSearchResultsSpy = vi.fn<() => Promise<number[]>>()
+const sortSearchResultsSpy = vi.fn<(rows: unknown, column: SortColumn) => Promise<SearchSortAnswer>>()
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   getDirStatsBatch: () => Promise.resolve([]),
   listen: () => Promise.resolve(() => {}),
   showFileContextMenu: (...args: [string, string, boolean, string[], unknown?, unknown?, unknown?]) =>
     showFileContextMenuSpy(...args),
-  sortSearchResults: () => sortSearchResultsSpy(),
+  sortSearchResults: (rows: unknown, column: SortColumn) => sortSearchResultsSpy(rows, column),
 }))
 vi.mock('#lib/icon-cache.js', () => ({
   iconCacheCleared: {
@@ -256,13 +256,15 @@ describe('SearchResultsView', () => {
       const id = 'sr-click'
       getOrCreate(id, makeSnapshot(id, [makeEntry('zeta.txt'), makeEntry('alpha.txt'), makeEntry('mid.txt')]))
       // The backend comparator's answer for name-ascending over that ranked order.
-      sortSearchResultsSpy.mockResolvedValue([1, 2, 0])
+      sortSearchResultsSpy.mockImplementation((_rows, column) =>
+        Promise.resolve({ order: [1, 2, 0], effectiveSortBy: column }),
+      )
 
       const target = mountOn(id)
       await tick()
       header(target, 'Name').click()
       await vi.waitFor(() => {
-        expect(getSnapshot(id)?.sort).toEqual({ column: 'name', order: 'ascending' })
+        expect(getSnapshot(id)?.sort).toEqual({ column: 'name', order: 'ascending', effectiveSortBy: 'name' })
       })
       await tick()
 
@@ -275,7 +277,9 @@ describe('SearchResultsView', () => {
     it('lights the sorted column and draws its direction', async () => {
       const id = 'sr-caret'
       getOrCreate(id, makeSnapshot(id, [makeEntry('b.txt'), makeEntry('a.txt')]))
-      sortSearchResultsSpy.mockResolvedValue([1, 0])
+      sortSearchResultsSpy.mockImplementation((_rows, column) =>
+        Promise.resolve({ order: [1, 0], effectiveSortBy: column }),
+      )
 
       const target = mountOn(id)
       await tick()
@@ -294,21 +298,25 @@ describe('SearchResultsView', () => {
     it('walks the tri-state, ending back in the ranked order the snapshot opened in', async () => {
       const id = 'sr-cycle'
       getOrCreate(id, makeSnapshot(id, [makeEntry('b.txt'), makeEntry('a.txt')]))
-      sortSearchResultsSpy.mockResolvedValue([1, 0])
+      sortSearchResultsSpy.mockImplementation((_rows, column) =>
+        Promise.resolve({ order: [1, 0], effectiveSortBy: column }),
+      )
 
       const target = mountOn(id)
       await tick()
 
       header(target, 'Name').click()
       await vi.waitFor(() => {
-        expect(getSnapshot(id)?.sort).toEqual({ column: 'name', order: 'ascending' })
+        expect(getSnapshot(id)?.sort).toEqual({ column: 'name', order: 'ascending', effectiveSortBy: 'name' })
       })
       await tick()
 
-      sortSearchResultsSpy.mockResolvedValue([0, 1])
+      sortSearchResultsSpy.mockImplementation((_rows, column) =>
+        Promise.resolve({ order: [0, 1], effectiveSortBy: column }),
+      )
       header(target, 'Name').click()
       await vi.waitFor(() => {
-        expect(getSnapshot(id)?.sort).toEqual({ column: 'name', order: 'descending' })
+        expect(getSnapshot(id)?.sort).toEqual({ column: 'name', order: 'descending', effectiveSortBy: 'name' })
       })
       await tick()
 
@@ -326,7 +334,9 @@ describe('SearchResultsView', () => {
     it('names the third click "Sort by relevance", because it restores the ranked order', async () => {
       const id = 'sr-tooltip'
       getOrCreate(id, makeSnapshot(id, [makeEntry('b.txt'), makeEntry('a.txt')]))
-      sortSearchResultsSpy.mockResolvedValue([1, 0])
+      sortSearchResultsSpy.mockImplementation((_rows, column) =>
+        Promise.resolve({ order: [1, 0], effectiveSortBy: column }),
+      )
 
       const target = mountOn(id)
       await tick()
@@ -338,7 +348,9 @@ describe('SearchResultsView', () => {
       // Still in the column's default order, so the next click flips direction.
       expect(tooltipTexts()).not.toContain('Sort by relevance')
 
-      sortSearchResultsSpy.mockResolvedValue([0, 1])
+      sortSearchResultsSpy.mockImplementation((_rows, column) =>
+        Promise.resolve({ order: [0, 1], effectiveSortBy: column }),
+      )
       header(target, 'Name').click()
       await vi.waitFor(() => {
         expect(getSnapshot(id)?.sort?.order).toBe('descending')

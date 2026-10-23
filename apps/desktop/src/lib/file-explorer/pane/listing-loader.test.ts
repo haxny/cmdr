@@ -229,6 +229,7 @@ describe('createListingLoader — generation / drop-foreign token model', () => 
       currentPath: '/x',
       listingId: 'swapped',
       totalCount: 0,
+      effectiveSortBy: null,
       cursorIndex: 0,
       selectedIndices: [],
       lastSequence: 0,
