@@ -13,8 +13,8 @@ import (
 // The app embeds the built SvelteKit output, so every byte here rides in the
 // `.app`, ships in every silent update, and is parsed at startup before first
 // paint. Nothing guarded that until this check existed, which is how the locale
-// catalogs came to carry ~2.8 MB of translator metadata nobody could read (see
-// `apps/desktop/scripts/vite-strip-catalog-metadata.ts`).
+// catalogs came to carry ~2.8 MB of translator metadata nobody could read (now
+// stripped at build time by `apps/desktop/scripts/vite-locale-catalogs.ts`).
 //
 // Ratchet discipline and the comparison itself: `bundle-size-baseline.go`.
 

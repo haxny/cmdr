@@ -71,14 +71,13 @@ compares the raw `{token}` set instead of an ICU placeholder set for these keys.
 Each message key MAY have a sibling `@`-prefixed entry holding ARB-style metadata, stripped before the runtime or
 codegen ever sees it.
 
-**The strip happens at BUILD time, in `apps/desktop/scripts/vite-strip-catalog-metadata.ts`.** Write as much translator
-prose as a key deserves: none of it reaches a user's machine. That was not always true, and the reason is worth knowing
-before anyone "simplifies" the plugin away. `messages.svelte.ts` eagerly globs every catalog into one chunk, and Rollup
-can tree-shake a module's named exports but not properties of a JSON default export, so the runtime `stripMetadata()`
-was discarding bytes that had already shipped, been parsed, and been materialized. Removing it at build time took the
-frontend bundle from 8.3 MB to 5.6 MB (measured 2026-08-21, `pnpm build` with the plugin toggled, pseudolocale absent as
-in a release). With 14 catalogs, the messages chunk is 8.64 MB raw / 1,935 KB gzipped without the plugin and 4.53 MB /
-1,144 KB with it (measured 2026-10-02 the same way). `desktop-bundle-size` now holds that line.
+**The strip happens at BUILD time, in `apps/desktop/scripts/vite-locale-catalogs.ts`**, which builds each locale's
+catalog module from its files through `splitCatalogFile`. Write as much translator prose as a key deserves: none of it
+reaches a user's machine. Why it must stay build-time: a JSON default export can't be tree-shaken, so a runtime strip
+discards bytes that already shipped, were parsed, and were materialized. Stripping at build time took the frontend
+bundle from 8.3 MB to 5.6 MB (measured 2026-08-21, `pnpm build` with the strip toggled, pseudolocale absent as in a
+release); with 14 catalogs the messages went 8.64 MB raw / 1,935 KB gzipped → 4.53 MB / 1,144 KB (2026-10-02, the same
+way). `desktop-bundle-size` holds that line.
 
 The shape:
 

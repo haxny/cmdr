@@ -73,7 +73,8 @@ export interface Catalog {
 
 /**
  * Whether a catalog entry key is ARB-style `@key` metadata (stripped before the
- * runtime/codegen see it). Mirrors the runtime's `stripMetadata`.
+ * runtime/codegen see it). The catalog plugin (`vite-locale-catalogs.ts`) strips
+ * through `splitCatalogFile`, so the bundle and the checks agree.
  */
 export function isMetadataKey(key: string): boolean {
   return key.startsWith('@')

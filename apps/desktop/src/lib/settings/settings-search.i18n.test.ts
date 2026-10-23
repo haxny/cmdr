@@ -182,6 +182,20 @@ describe('the Language setting from any language', () => {
     })
   })
 
+  it('reads every searched-across-languages label from the manifest, which a window holds whole', async () => {
+    // A window loads only English and its own catalog, so a label indexed in EVERY language
+    // must be one the manifest carries (`MANIFEST_KEYS` in `scripts/vite-locale-catalogs.ts`).
+    const { manifestMessages, shippedLocales } = await import('virtual:cmdr-locale-manifest')
+    const { settingsRegistry } = await import('./settings-registry')
+    const entries = settingsRegistry.filter((setting) => setting.searchAllLocales === true)
+    expect(entries.map((e) => e.id)).toEqual(['appearance.language'])
+    for (const entry of entries) {
+      expect(manifestMessages.en?.[entry.labelKey]).toBeDefined()
+      const full = shippedLocales.filter((tag) => !tag.includes('-'))
+      for (const tag of full) expect(manifestMessages[tag]?.[entry.labelKey], tag).toBeDefined()
+    }
+  })
+
   it('finds Language by another language name in English too', () => {
     expect(ids('nyelv')).toContain('appearance.language')
   })

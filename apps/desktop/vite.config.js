@@ -13,7 +13,7 @@ import Icons from 'unplugin-icons/vite'
 import { buildBootGuardData, injectBootGuardData } from './scripts/gen-boot-guard-lib.ts'
 import { listLocales } from './scripts/i18n-catalog-lib.ts'
 import { frontendSbom } from './scripts/vite-frontend-sbom.ts'
-import { stripCatalogMetadata } from './scripts/vite-strip-catalog-metadata.ts'
+import { localeCatalogs } from './scripts/vite-locale-catalogs.ts'
 
 // Compiler warnings suppressed app-wide. The ONE list: `svelte-check` (the `svelte-check`
 // lane, which fails on any warning) and the Vite build both read this filter.
@@ -126,13 +126,11 @@ const worktreeLabel = process.env.CMDR_WORKTREE_LABEL ?? ''
 const withFrontendSbom = process.env.CMDR_FRONTEND_SBOM === '1'
 
 export default defineConfig(async () => ({
-  // `stripCatalogMetadata` runs `pre`, so it sees each locale catalog before
-  // Vite's JSON transform and hands on messages-only JSON. Every build gets it,
-  // dev included, so dev and prod agree on what a catalog contains; only
-  // `vitest.config.ts` omits it, which is what keeps the runtime `stripMetadata`
-  // under test. See that plugin's module doc for the measured saving.
+  // `localeCatalogs` serves the message catalogs: one chunk per locale, metadata
+  // stripped, plus the always-loaded manifest. `vitest.config.ts` loads it too, so
+  // tests read the same catalogs the app does.
   plugins: [
-    stripCatalogMetadata(),
+    localeCatalogs(),
     Icons({ compiler: 'svelte' }),
     sveltekit({
       ...svelteOptions,

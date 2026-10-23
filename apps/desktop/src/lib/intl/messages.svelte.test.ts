@@ -8,9 +8,6 @@
  * `_setLocaleForTests` (value only, no rune bump) would NOT re-render: that's
  * the seam distinction Decision 6 warns about.
  */
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-
 import { describe, it, expect, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
 import {
@@ -108,19 +105,13 @@ describe('availableLocales() (loaded-catalog discovery + non-locale-dir exclusio
     expect(availableLocales()).not.toContain('screenshots')
   })
 
-  it('excludes `screenshots/` in the glob PATTERN, not just at runtime', () => {
-    // The pattern is what decides whether those files reach the bundle at all.
-    // `screenshots/capture-report.json` is translator tooling that weighed
-    // ~280 kB, 4.5% of the whole frontend, downloaded on every silent update and
-    // parsed at every launch, before the negative pattern kept it out. A runtime
-    // gate reads identically in review but ships every byte first, so a
-    // well-meaning simplification back to a single positive pattern is exactly
-    // the regression this test exists to catch.
-    //
-    // Read from source because `import.meta.glob` resolves at build time: by the
-    // time this module is imported, the pattern is already gone.
-    const source = readFileSync(join(import.meta.dirname, 'messages.svelte.ts'), 'utf8')
-    expect(source).toContain("'!./messages/screenshots/**'")
+  it('gives `screenshots/` no loader, so its files never reach the bundle', async () => {
+    // `screenshots/capture-report.json` is translator tooling that weighed ~280 kB, 4.5%
+    // of the whole frontend, before it was kept out. A catalog chunk exists only for a
+    // tag the manifest names, so the manifest is the gate (`vite-locale-catalogs.ts`).
+    const { shippedLocales, loaders } = await import('virtual:cmdr-locale-manifest')
+    expect(shippedLocales).not.toContain('screenshots')
+    expect(Object.keys(loaders)).not.toContain('screenshots')
   })
 
   it('only lists BCP-47-shaped tags', () => {

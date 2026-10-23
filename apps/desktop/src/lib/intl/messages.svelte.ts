@@ -33,88 +33,79 @@ import { inheritableAncestors } from './locale-inheritance'
 import { setDocumentLanguage } from './document-language'
 import type { MessageKey } from './keys.gen'
 import { displayPath } from '#lib/utils/display-path.js'
+import enCatalog from 'virtual:cmdr-catalog/en'
+import { loaders, manifestMessages, shippedLocales } from 'virtual:cmdr-locale-manifest'
 
 const BASE_LOCALE = 'en'
 
-/** A catalog: key → ICU message string, with `@key` metadata already stripped. */
+/**
+ * A catalog: key → ICU message string. `@key` metadata never reaches the runtime:
+ * `scripts/vite-locale-catalogs.ts` strips it while building each catalog module.
+ */
 type Catalog = Record<string, string>
 
-/**
- * Drops ARB-style `@key` metadata entries (object values), keeping only the
- * renderable string messages. The raw JSON's inferred type mixes string
- * messages and metadata objects, so we narrow per-entry. The `@key` metadata is
- * thus never seen by the runtime (Decision 4). In Vite builds the
- * `stripCatalogMetadata` plugin has already removed it before bundling, so
- * this only does real work under Vitest (which skips the plugin); see
- * `scripts/vite-strip-catalog-metadata.ts` before deleting it.
- */
-function stripMetadata(raw: Record<string, unknown>): Catalog {
-  const out: Catalog = {}
-  for (const [key, value] of Object.entries(raw)) {
-    if (key.startsWith('@')) continue
-    if (typeof value === 'string') out[key] = value
-  }
-  return out
-}
-
-// Static catalog imports for the bundled SPA: every `messages/<locale>/*.json` is
-// eagerly globbed and merged into one per-locale map at module load, so adding a
-// catalog file (or a whole new locale dir) needs no edit here. The dir segment is
-// the locale tag (`messages/de-DE/foo.json` → `de-DE`); `en-XA/` is present only
-// in dev builds. `ssr=false` (`+layout.ts`) means this runs client-side only; the
-// merge touches no `window`, so it's safe regardless.
-//
-// ❗ `screenshots/` is EXCLUDED in the glob pattern, not merely rejected later by
-// `BCP47_DIR`. It's a sibling of the locale dirs holding translator tooling
-// artifacts, and `capture-report.json` alone is ~280 kB. A negative pattern keeps
-// it out of the bundle; a runtime gate would still ship and parse every byte
-// before throwing the object away. Verified in the emitted chunk, 2026-09-02.
-const allModules = import.meta.glob<Record<string, unknown>>(['./messages/*/*.json', '!./messages/screenshots/**'], {
-  eager: true,
-  import: 'default',
-})
+// Catalogs come from `scripts/vite-locale-catalogs.ts`: English as a static import
+// (every window needs it: it's the per-key fallback and Settings search's second
+// language), every other locale as its own chunk behind the manifest's loaders. The
+// manifest is the source of truth for WHICH locales ship; a new locale dir joins
+// with no edit here. `ssr=false` (`+layout.ts`) means this runs client-side only.
 
 /**
- * A loose BCP-47 tag matcher for the directory-name → locale gate: a 2-or-3
- * letter language subtag, optionally followed by `-` plus script/region/variant
- * subtags (letters or digits). Deliberately permissive (it just has to admit
- * real locale dirs like `en`, `pt-BR`, `en-XA` and reject `screenshots`); the
- * runtime never trusts the tag for anything beyond catalog keying and the
- * fallback split, and `Intl` validates it later when used as a format locale.
+ * locale tag → its catalog, for the catalogs LOADED in this window. `undefined`
+ * for a shipped tag that isn't loaded, and for a chain rung that doesn't ship.
  */
-const BCP47_DIR = /^[a-z]{2,3}(-[a-z0-9]+)*$/i
+const catalogs: Record<string, Catalog | undefined> = { [BASE_LOCALE]: enCatalog }
 
-/** Extracts the locale-dir segment from a `./messages/<locale>/<file>.json` glob path. */
-function localeOfPath(path: string): string {
-  // path is `./messages/<locale>/<file>.json`; the locale is the third segment.
-  return path.split('/')[2]
+/** In-flight loads, so two callers asking for the same catalog share one import. */
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state; a load-dedup map.
+const inFlight = new Map<string, Promise<void>>()
+
+/** Loads one shipped catalog's chunk; a tag with no loader (`en`, or one that doesn't ship) is a no-op. */
+function loadCatalog(tag: string): Promise<void> {
+  const existing = inFlight.get(tag)
+  if (existing !== undefined) return existing
+  const loader = Object.hasOwn(loaders, tag) ? loaders[tag] : undefined
+  if (loader === undefined) return Promise.resolve()
+  const pending = loader()
+    .then((mod) => {
+      catalogs[tag] = mod.default
+    })
+    .finally(() => inFlight.delete(tag))
+  inFlight.set(tag, pending)
+  return pending
 }
 
 /**
- * locale tag → its merged, metadata-stripped catalog, built from every globbed
- * `messages/<locale>/*.json`. Non-locale dirs (`screenshots/`) are filtered out
- * by `BCP47_DIR`. The value is `Catalog | undefined` because the fallback chain
- * in `resolveRaw` genuinely indexes by a locale that may have no catalog (the
- * whole point of the chain).
+ * Every tag a fallback chain may land on: the shipped ones, loaded or not, plus a
+ * synthetic one a test registered through `_setCatalogForTests`. Whether a catalog
+ * is LOADED never shapes a chain, or `zh-Hant` could resolve differently depending
+ * on what else happened to be in memory.
  */
-const catalogs: Record<string, Catalog | undefined> = (() => {
-  const out: Record<string, Catalog> = {}
-  for (const [path, raw] of Object.entries(allModules)) {
-    const locale = localeOfPath(path)
-    if (!BCP47_DIR.test(locale)) continue // skip `screenshots/` and any other non-locale dir
-    out[locale] ??= {}
-    Object.assign(out[locale], stripMetadata(raw))
-  }
-  return out
-})()
+function knownTags(): readonly string[] {
+  const synthetic = Object.keys(catalogs).filter((tag) => !shippedLocales.includes(tag))
+  return synthetic.length === 0 ? shippedLocales : [...shippedLocales, ...synthetic]
+}
 
 /**
- * The locale tags that have a loaded catalog, sorted, with the base `en` first.
- * Drives the language-selector options so a newly-added locale dir auto-appears.
- * `en` always exists (the base catalog ships); `en-XA` appears only in dev builds.
+ * A message from a catalog that may not be loaded, for the few keys the manifest
+ * carries from EVERY catalog (`MANIFEST_KEYS` in the plugin; today the Language
+ * label, for Settings search). Walks `locale`'s chain like `t()` does, then the key.
+ */
+export function manifestMessage(locale: string, key: MessageKey): string {
+  for (const tag of fallbackChain(locale)) {
+    const value = manifestMessages[tag]?.[key]
+    if (value !== undefined) return value
+  }
+  return key
+}
+
+/**
+ * The shipped locale tags, sorted, with the base `en` first, whichever catalogs
+ * this window has loaded. Drives the Language picker, so a newly added locale dir
+ * auto-appears. `en-XA` appears only when it was on disk at build time.
  */
 export function availableLocales(): string[] {
-  const tags = Object.keys(catalogs)
+  const tags = [...shippedLocales]
   return tags.sort((a, b) => {
     if (a === BASE_LOCALE) return -1
     if (b === BASE_LOCALE) return 1
@@ -135,7 +126,7 @@ const compiledCache = new Map<string, IntlMessageFormat>()
 /**
  * Per-locale fallback chain cache. Building a chain asks `Intl` for CLDR likely
  * subtags, which is far too much work for a hot `t()` call; the answer only
- * changes when the catalog map does, which outside tests is never.
+ * changes when the set of known tags does, which outside tests is never.
  */
 // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state; a pure resolve-once perf cache, cleared by `_setCatalogForTests`. Reactivity comes from the `localeVersion` rune.
 const chainCache = new Map<string, string[]>()
@@ -149,14 +140,14 @@ const chainCache = new Map<string, string[]>()
 function fallbackChain(locale: string): string[] {
   const cached = chainCache.get(locale)
   if (cached) return cached
-  const chain = [locale, ...inheritableAncestors(locale, Object.keys(catalogs)), BASE_LOCALE]
+  const chain = [locale, ...inheritableAncestors(locale, knownTags()), BASE_LOCALE]
   chainCache.set(locale, chain)
   return chain
 }
 
 /**
  * The catalog actually supplying this locale's text: the first tag in the
- * fallback chain that has a loaded catalog. `zh-Hant` stays `zh-Hant` (the chain
+ * fallback chain that ships a catalog. `zh-Hant` stays `zh-Hant` (the chain
  * refuses to cross a script boundary), `pt-PT` becomes `pt`, and `ja-JP` becomes
  * `en` because we ship no Japanese at all.
  *
@@ -169,7 +160,7 @@ function fallbackChain(locale: string): string[] {
  */
 export function resolvedCatalogLocale(locale: string): string {
   for (const tag of fallbackChain(locale)) {
-    if (catalogs[tag] !== undefined) return tag
+    if (knownTags().includes(tag)) return tag
   }
   return BASE_LOCALE
 }
@@ -492,3 +483,8 @@ export function _setCatalogForTests(locale: string, catalog: Catalog | null): vo
   compiledCache.clear()
   chainCache.clear()
 }
+
+// Every catalog, before anything renders (top-level await; Safari 15+). The loaders
+// make each locale its own chunk; loading them all here keeps today's synchronous
+// language switch while the runtime moves onto the manifest.
+await Promise.all(shippedLocales.map(loadCatalog))

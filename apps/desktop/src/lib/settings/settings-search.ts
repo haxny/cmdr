@@ -4,7 +4,7 @@
  */
 
 import { foldForSearch, fuzzySearch, type FoldedText } from '#lib/utils/unicode-fuzzy.js'
-import { availableLocales, tStringIn, uiCatalogLocale } from '#lib/intl/messages.svelte.js'
+import { availableLocales, manifestMessage, tStringIn, uiCatalogLocale } from '#lib/intl/messages.svelte.js'
 import { localeDisplayName, localeEnglishName } from '#lib/intl/locale-display-names.js'
 import type { SearchableEntry, SettingSearchResult } from './types'
 import { settingsRegistry } from './settings-registry'
@@ -143,7 +143,8 @@ function everyLocaleTerms(entry: SearchableEntry): string[] {
   const locales = availableLocales()
   const terms = new Set<string>()
   for (const tag of locales) {
-    terms.add(tStringIn(tag, entry.labelKey))
+    // From the manifest: a window holds only English and its own catalog.
+    terms.add(manifestMessage(tag, entry.labelKey))
     terms.add(localeDisplayName(tag, locales))
     terms.add(localeEnglishName(tag, locales))
   }

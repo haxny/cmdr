@@ -220,7 +220,8 @@ export interface SettingDefinition {
    * Index this setting's label under EVERY catalog, plus every locale's own name ("Svenska",
    * "Magyar", "Русский") and English name ("Swedish"), so it's findable whatever the UI speaks. For the Language
    * setting alone: the way back for someone who can't read the current language. ❌ Not for
-   * other settings: their foreign labels would be search noise.
+   * other settings: their foreign labels would be search noise. The label comes from the
+   * catalog manifest, so its key must be in `MANIFEST_KEYS` (`scripts/vite-locale-catalogs.ts`).
    */
   searchAllLocales?: true
 
