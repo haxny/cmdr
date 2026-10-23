@@ -16,7 +16,9 @@ getcmdr.com → Caddy → listmonk:9000 (Docker, proxy-net)
 - Signups reach Listmonk through the api-server Worker (`/newsletter-signup`, `/beta-signup`), which calls Listmonk's
   public subscription API at `mail.getcmdr.com`: `apps/api-server/src/website/DETAILS.md` § Signups
 - Caddy proxies Listmonk's public pages on getcmdr.com (the confirm and unsubscribe links in its emails, the archive)
-- `mail.getcmdr.com` serves the Listmonk admin UI (also proxied by Caddy)
+- `mail.getcmdr.com` serves the Listmonk admin UI (also proxied by Caddy), Cloudflare-proxied and behind Cloudflare
+  Access. Its `/api` path bypasses Access, since the api-server and agents authenticate to Listmonk itself. The DNS
+  record and Access apps are code in the infra repo (`cloudflare/getcmdr.com.tf`, `cloudflare/access-apps.tf`)
 - Postgres is isolated on `listmonk-internal`, not reachable from Caddy or the internet
 - No host ports are exposed for either container
 - Resend handles bounce/complaint tracking internally (visible in their dashboard)
@@ -27,8 +29,8 @@ getcmdr.com → Caddy → listmonk:9000 (Docker, proxy-net)
 
 Add an A record for `mail.getcmdr.com` pointing to the VPS IP.
 
-- No Cloudflare proxying
-- TTL: default (300s)
+- Cloudflare-proxied, with an Access app in front (see Architecture above)
+- TTL: Auto
 - Comment: "Listmonk newsletter admin UI"
 
 ### 2. Email routing for newsletter@getcmdr.com

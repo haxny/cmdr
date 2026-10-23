@@ -1,6 +1,7 @@
 # Listmonk (Cmdr-specific)
 
-Self-hosted newsletter and mailing-list manager, at https://mail.getcmdr.com/. Generic access (the `agent` API user, the
+Self-hosted newsletter and mailing-list manager, at https://mail.getcmdr.com/ (the admin UI asks for a Cloudflare Access
+login first; `/api` doesn't, it takes Listmonk's own token). Generic access (the `agent` API user, the
 `LISTMONK_API_KEY` in the sops secrets store, full cURL recipes) lives in the obsidian listmonk doc; the deployment,
 Caddy, SMTP, and backups live in `infra/listmonk/README.md`. This note covers only the Cmdr list wiring.
 
