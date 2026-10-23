@@ -863,8 +863,6 @@ fn the_root_folder_equals_its_restats() {
 mod real_image {
     use super::*;
     use cmdr_fs::testing::disk_images::{DiskImage, DiskImageSession, ImageSpec};
-    use cmdr_fs::testing::wait_until;
-    use std::time::Duration;
 
     /// A folder holding a mount point lists the mounted volume's root for it, as
     /// its re-stat does.
@@ -894,33 +892,6 @@ mod real_image {
             assert_listing_matches_restat(lister, &parent, false);
         }
         drop(image);
-    }
-
-    /// A re-stat answers its folder's eligibility from a per-device cache, and a
-    /// freed device number goes to the next disk at once, so a mount and an
-    /// unmount must each make the cache forget every device.
-    #[test]
-    #[ignore = "attaches a real APFS disk image via hdiutil; run with --run-ignored"]
-    fn a_mount_and_an_unmount_reach_the_device_cache() {
-        let events = || crate::reading::filesystem_events().expect("the kernel sends filesystem events");
-        let before = events();
-
-        let session = DiskImageSession::acquire();
-        let image = DiskImage::attach(&session, ImageSpec::Apfs).expect("attach the image");
-        wait_until(Duration::from_secs(5), "the mount reaches the cache", || {
-            events() > before
-        });
-        let mounted = events();
-
-        let file = image.volumes()[0].mount_point.join("on_the_image.txt");
-        fs::write(&file, b"x").expect("a file on the image");
-        let restat = get_single_entry(&file).expect("re-stat");
-        assert!(restat.added_at.is_some(), "APFS carries the added date");
-
-        drop(image);
-        wait_until(Duration::from_secs(5), "the unmount reaches the cache", || {
-            events() > mounted
-        });
     }
 
     /// Every category on a real HFS+ volume, which isn't APFS underneath: no

@@ -34,12 +34,6 @@ use cmdr_fs::log_private::LogPrivate;
 use super::{AddedAt, ListingTally, Pick, entry_from_lstat, get_single_entry, minimal_row, read_dir_entries};
 use crate::statfs::statfs_string;
 
-mod device_cache;
-
-#[cfg(test)]
-pub(crate) use device_cache::filesystem_events;
-pub(super) use device_cache::holder_is_bulk_eligible;
-
 /// `SF_FIRMLINK` from `<sys/stat.h>`: the `st_flags` bit a firmlink carries.
 /// `libc` doesn't carry it.
 const SF_FIRMLINK: u32 = 0x0080_0000;
@@ -344,11 +338,11 @@ fn fd_is_bulk_eligible(dir: &File) -> bool {
     rc == 0 && bulk_eligible(unsafe { stat.assume_init_ref() })
 }
 
-/// Whether the folder holding `path` lists in bulk, by one `statfs` of the
-/// PARENT (`statfs` on the path itself would follow a final symlink to wherever
-/// it points). `get_single_entry` asks through [`holder_is_bulk_eligible`],
-/// which answers most calls from a per-device cache and falls back to this.
-fn parent_is_bulk_eligible(path: &Path) -> bool {
+/// Whether the folder holding `path` lists in bulk, the question
+/// `get_single_entry` asks so a re-stat carries the added date its folder's
+/// listing does. Asks the PARENT: `statfs` on the path itself would follow a
+/// final symlink to wherever it points.
+pub(super) fn parent_is_bulk_eligible(path: &Path) -> bool {
     match path.parent() {
         Some(parent) if parent.as_os_str().is_empty() => dir_is_bulk_eligible(Path::new(".")),
         Some(parent) => dir_is_bulk_eligible(parent),
@@ -363,8 +357,6 @@ pub(super) fn dir_is_bulk_eligible(dir: &Path) -> bool {
     let Ok(c_path) = CString::new(dir.as_os_str().as_bytes()) else {
         return false;
     };
-    #[cfg(test)]
-    STATFS_CALLS.with(|calls| calls.set(calls.get() + 1));
     let mut stat = std::mem::MaybeUninit::<libc::statfs>::uninit();
     // SAFETY: `c_path` is NUL-terminated and outlives the call, and `stat` is a
     // correctly typed out-buffer the kernel fills on success.
@@ -400,13 +392,6 @@ pub(super) fn added_at_by_path(path: &Path) -> Option<u64> {
         .ok()?
         .added_time?
         .secs_since_epoch()
-}
-
-#[cfg(test)]
-thread_local! {
-    /// The eligibility `statfs` calls this thread made, so a test can count what
-    /// a re-stat costs.
-    pub(super) static STATFS_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 #[cfg(test)]
