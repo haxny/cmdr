@@ -340,7 +340,7 @@ export async function captureOperationChipSurfaces(
       // on the error pipeline having one, and gating on a conditional element
       // buys a 20 s hang instead of a shot.
       await main.waitForSelector('.operation-chip.failed', 20000)
-      await main.waitForSelector('.toast-body .actions button', 20000)
+      await main.waitForSelector('.toast-body .toast-actions button', 20000)
       return { page: main, readySelector: '.operation-chip.failed' }
     })
   } catch (err) {
