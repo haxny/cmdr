@@ -96,11 +96,6 @@ describe('createParentEntry', () => {
     expect(entry.iconId).toBe('dir')
   })
 
-  it('creates parent entry with extendedMetadataLoaded', () => {
-    const entry = createParentEntry('/home/user')
-    expect(entry.extendedMetadataLoaded).toBe(true)
-  })
-
   it('leaves recursive size fields undefined when no stats are passed', () => {
     const entry = createParentEntry('/home/user')
     expect(entry.recursiveSize).toBeUndefined()
@@ -136,7 +131,6 @@ describe('getEntryAt', () => {
       owner: 'user',
       group: 'group',
       iconId: 'txt',
-      extendedMetadataLoaded: true,
     },
     {
       name: 'file2.txt',
@@ -147,7 +141,6 @@ describe('getEntryAt', () => {
       owner: 'user',
       group: 'group',
       iconId: 'txt',
-      extendedMetadataLoaded: true,
     },
   ]
 
@@ -324,7 +317,6 @@ describe('fetchVisibleRange', () => {
       owner: 'user',
       group: 'group',
       iconId: 'txt',
-      extendedMetadataLoaded: true,
     },
   ]
 
@@ -416,7 +408,6 @@ describe('refetchIconsForEntries', () => {
         owner: 'user',
         group: 'group',
         iconId: 'txt',
-        extendedMetadataLoaded: true,
       },
       {
         name: 'file2.rs',
@@ -427,7 +418,6 @@ describe('refetchIconsForEntries', () => {
         owner: 'user',
         group: 'group',
         iconId: 'rs',
-        extendedMetadataLoaded: true,
       },
     ]
     refetchIconsForEntries(entries)
@@ -451,7 +441,6 @@ describe('updateIndexSizesInPlace', () => {
         owner: 'user',
         group: 'group',
         iconId: 'txt',
-        extendedMetadataLoaded: true,
       },
     ]
     await updateIndexSizesInPlace(entries)
@@ -469,7 +458,6 @@ describe('updateIndexSizesInPlace', () => {
         owner: 'user',
         group: 'group',
         iconId: 'txt',
-        extendedMetadataLoaded: true,
       },
       {
         name: 'subdir',
@@ -480,7 +468,6 @@ describe('updateIndexSizesInPlace', () => {
         owner: 'user',
         group: 'group',
         iconId: 'dir',
-        extendedMetadataLoaded: true,
       },
     ]
     vi.mocked(getDirStatsBatch).mockResolvedValue([
@@ -514,7 +501,6 @@ describe('updateIndexSizesInPlace', () => {
         owner: 'user',
         group: 'group',
         iconId: 'dir',
-        extendedMetadataLoaded: true,
       },
     ]
     vi.mocked(getDirStatsBatch).mockResolvedValue([null])
@@ -535,7 +521,6 @@ describe('updateIndexSizesInPlace', () => {
         owner: 'user',
         group: 'group',
         iconId: 'dir',
-        extendedMetadataLoaded: true,
       },
     ]
     vi.mocked(getDirStatsBatch).mockRejectedValue(new Error('indexing not ready'))
@@ -558,7 +543,6 @@ describe('updateIndexSizesInPlace', () => {
         owner: 'user',
         group: 'group',
         iconId: 'dir',
-        extendedMetadataLoaded: true,
       },
     ]
     vi.mocked(getDirStatsBatch).mockResolvedValue([
@@ -723,7 +707,6 @@ describe('applyFolderSizes', () => {
       owner: 'user',
       group: 'group',
       iconId: 'dir',
-      extendedMetadataLoaded: true,
       ...overrides,
     }
   }

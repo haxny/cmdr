@@ -32,7 +32,6 @@ function file(path: string): FileEntry {
     owner: 'me',
     group: 'staff',
     iconId: 'icon',
-    extendedMetadataLoaded: false,
   }
 }
 

@@ -31,7 +31,6 @@ function createFileEntry(overrides: Partial<FileEntry> = {}): FileEntry {
     owner: 'user',
     group: 'staff',
     iconId: 'file',
-    extendedMetadataLoaded: true,
     ...overrides,
   }
 }
@@ -200,13 +199,11 @@ describe('buildDateTooltip', () => {
   it('includes labeled lines for each known date', () => {
     const entry = createFileEntry({
       createdAt: 1705322445,
-      openedAt: 1705322445,
       addedAt: 1705322445,
       modifiedAt: 1705322445,
     })
     const html = buildDateTooltip(entry, fmt).html
     expect(html).toContain('Created:')
-    expect(html).toContain('Last opened:')
     expect(html).toContain('Last moved (“added”):')
     expect(html).toContain('Last modified:')
     expect(html).toContain('<br>')

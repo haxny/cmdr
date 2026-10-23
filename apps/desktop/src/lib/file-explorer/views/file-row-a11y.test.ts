@@ -13,7 +13,6 @@ function entry(overrides: Partial<FileEntry> & { name: string }): FileEntry {
     owner: '',
     group: '',
     iconId: 'file',
-    extendedMetadataLoaded: true,
     ...overrides,
   }
 }

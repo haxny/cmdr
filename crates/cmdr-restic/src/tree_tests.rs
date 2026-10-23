@@ -52,7 +52,6 @@ fn a_file_lists_with_its_size_date_mode_and_owner() {
     );
     assert_eq!(entry.permissions, 0o644);
     assert_eq!((entry.owner.as_str(), entry.group.as_str()), ("david", "staff"));
-    assert!(entry.extended_metadata_loaded);
 }
 
 #[test]

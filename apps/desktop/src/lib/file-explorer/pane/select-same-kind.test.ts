@@ -14,7 +14,6 @@ function entry(name: string, isDirectory = false): FileEntry {
     owner: '',
     group: '',
     iconId: isDirectory ? 'dir' : 'file',
-    extendedMetadataLoaded: true,
   }
 }
 

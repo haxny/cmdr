@@ -43,7 +43,6 @@ const entry: FileEntry = {
   owner: 'user',
   group: 'staff',
   iconId: 'file',
-  extendedMetadataLoaded: true,
 }
 
 /**

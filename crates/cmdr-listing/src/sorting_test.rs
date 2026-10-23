@@ -366,7 +366,6 @@ fn make_symlink(name: &str, size: Option<u64>) -> FileEntry {
         owner: "testuser".to_string(),
         group: "staff".to_string(),
         icon_id: "symlink".to_string(),
-        extended_metadata_loaded: true,
         ..FileEntry::new(name.to_string(), format!("/{}", name), false, true)
     }
 }

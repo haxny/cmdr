@@ -20,7 +20,6 @@ function entry(name: string, overrides: Partial<FileEntry> = {}): FileEntry {
     owner: 'me',
     group: 'staff',
     iconId: `icon-${name}`,
-    extendedMetadataLoaded: false,
     ...overrides,
   }
 }

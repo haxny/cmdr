@@ -32,7 +32,6 @@ fn volume_with_file(name: &str, path: &str, size: u64, modified_at: Option<u64>)
         permissions: 0o644,
         owner: "testuser".to_string(),
         group: "staff".to_string(),
-        extended_metadata_loaded: true,
         ..FileEntry::new(
             path.rsplit('/').next().unwrap_or(path).to_string(),
             path.to_string(),

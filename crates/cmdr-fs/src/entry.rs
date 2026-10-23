@@ -169,12 +169,13 @@ pub struct FileEntry {
     pub inode: Option<u64>,
     /// Last-modified time, Unix seconds.
     pub modified_at: Option<u64>,
-    /// Creation time, Unix seconds.
+    /// Creation time, Unix seconds. Filled only where the volume's
+    /// `Volume::supported_dates` claims it.
     pub created_at: Option<u64>,
-    /// When the file was added to its current directory (macOS only)
+    /// When the entry was added to its current folder, Unix seconds (macOS
+    /// APFS and HFS+ only). Filled only where the volume's
+    /// `Volume::supported_dates` claims it.
     pub added_at: Option<u64>,
-    /// When the file was last opened (macOS only)
-    pub opened_at: Option<u64>,
     /// POSIX mode bits. `0` when the backend has no permission concept.
     pub permissions: u32,
     /// Owning user name, resolved from the uid. Empty when unknown.
@@ -183,9 +184,6 @@ pub struct FileEntry {
     pub group: String,
     /// The icon key the frontend resolves to a real image. See [`get_icon_id`].
     pub icon_id: String,
-    /// Whether extended metadata (addedAt, openedAt) has been loaded
-    /// Always true for legacy list_directory(), false for list_directory_core()
-    pub extended_metadata_loaded: bool,
     /// macOS Finder tags (`com.apple.metadata:_kMDItemUserTags`). Empty in the
     /// core listing; filled by the deferred, visible-range-first `enrich_tags`
     /// pass (a `getxattr` per path, too costly to run inline over a 100k-dir).
@@ -267,11 +265,9 @@ impl FileEntry {
             modified_at: None,
             created_at: None,
             added_at: None,
-            opened_at: None,
             permissions: 0,
             owner: String::new(),
             group: String::new(),
-            extended_metadata_loaded: false,
             tags: Vec::new(),
             recursive_size: None,
             recursive_physical_size: None,
@@ -409,16 +405,4 @@ pub struct TagRef {
     /// Finder's color index: `0` none, `1` grey, `2` green, `3` purple, `4` blue,
     /// `5` yellow, `6` red, `7` orange.
     pub color: u8,
-}
-
-/// Extended metadata for a single file (macOS-specific fields).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExtendedMetadata {
-    /// Key for merging with FileEntry.
-    pub path: String,
-    /// macOS only.
-    pub added_at: Option<u64>,
-    /// macOS only.
-    pub opened_at: Option<u64>,
 }

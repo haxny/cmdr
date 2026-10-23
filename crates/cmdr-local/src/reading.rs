@@ -9,11 +9,6 @@
 //! (`bulk`, macOS), and `read_dir` plus one `lstat` per entry everywhere else.
 //! See `DETAILS.md` § "The local reader".
 
-#![allow(
-    dead_code,
-    reason = "get_extended_metadata_batch is the second phase of the two-phase loading API, not wired into the streaming path yet"
-)]
-
 #[cfg(target_os = "macos")]
 mod bulk;
 
@@ -24,7 +19,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 use cmdr_fs::benchmark;
-use cmdr_fs::entry::{ExtendedMetadata, FileEntry, get_group_name, get_owner_name, is_hidden_by_name};
+use cmdr_fs::entry::{FileEntry, get_group_name, get_owner_name, is_hidden_by_name};
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{ListingProgress, SupportedDates};
@@ -65,54 +60,8 @@ fn read_dot_hidden_names(root_dir: &Path) -> HashSet<String> {
     }
 }
 
-/// Lists the contents of a directory with full metadata (including macOS extended metadata).
-///
-/// Calls `list_directory_core()` for the fast path, then enriches entries
-/// with macOS-specific metadata (addedAt, openedAt).
-#[cfg(any(test, feature = "testing"))]
-pub fn list_directory(path: &Path, listings: &dyn ListingHost) -> Result<Vec<FileEntry>, std::io::Error> {
-    let overall_start = std::time::Instant::now();
-
-    let mut entries = list_directory_core(path, listings)?;
-
-    // Enrich with macOS-specific metadata
-    #[cfg(target_os = "macos")]
-    {
-        let macos_start = std::time::Instant::now();
-        for entry in &mut entries {
-            let macos_meta = super::macos_metadata::get_macos_metadata(Path::new(&entry.path));
-            entry.added_at = macos_meta.added_at;
-            entry.opened_at = macos_meta.opened_at;
-            entry.extended_metadata_loaded = true;
-        }
-        log::debug!(
-            "list_directory: macOS metadata enrichment={}ms",
-            macos_start.elapsed().as_millis()
-        );
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    for entry in &mut entries {
-        entry.extended_metadata_loaded = true;
-    }
-
-    log::debug!(
-        "list_directory: path={}, entries={}, total={}ms",
-        LogPrivate::dir_path(path),
-        entries.len(),
-        overall_start.elapsed().as_millis()
-    );
-
-    Ok(entries)
-}
-
-/// Lists the contents of a directory with CORE metadata only.
-///
-/// Significantly faster than `list_directory()` because it skips
-/// macOS-specific metadata (addedAt, openedAt) which require additional system calls.
-///
-/// Use `get_extended_metadata_batch()` to fetch extended metadata later.
-/// `listings` decides the order (`ListingHost::sort_listing`).
+/// Every entry of the folder at `path`, in the order `listings` decides
+/// (`ListingHost::sort_listing`). On APFS and HFS+ each carries its added date.
 pub fn list_directory_core(path: &Path, listings: &dyn ListingHost) -> Result<Vec<FileEntry>, std::io::Error> {
     list_directory_core_impl(path, None, false, listings, Pick::ByFilesystem)
 }
@@ -232,6 +181,7 @@ impl ListingTally {
     /// Back to zero, for a listing that discards what it counted and starts over
     /// (a bulk stream re-listing through `read_dir`), so the readout never
     /// counts an entry twice.
+    #[cfg(target_os = "macos")]
     fn reset(&self) {
         self.files.store(0, Ordering::Relaxed);
         self.dirs.store(0, Ordering::Relaxed);
@@ -408,7 +358,6 @@ pub(crate) fn minimal_row(path: &Path, name: String, is_symlink: bool, dot_hidde
             "file".to_string()
         },
         is_hidden: is_hidden_by_name(&name) || dot_hidden.contains(&name),
-        extended_metadata_loaded: true, // Nothing to load for broken entries
         ..FileEntry::new(name, path.to_string_lossy().into_owned(), false, is_symlink)
     }
 }
@@ -514,40 +463,4 @@ pub(crate) fn entry_from_metadata(
         is_hidden: is_hidden_by_name(&name) || has_uf_hidden(metadata) || dot_hidden.contains(&name),
         ..FileEntry::new(name, path.to_string_lossy().to_string(), is_dir, is_symlink)
     }
-}
-
-/// Fetches extended metadata for a batch of file paths.
-///
-/// Called after the initial directory listing to populate
-/// macOS-specific metadata (addedAt, openedAt) without blocking initial render.
-#[cfg(target_os = "macos")]
-pub(crate) fn get_extended_metadata_batch(paths: Vec<String>) -> Vec<ExtendedMetadata> {
-    benchmark::log_event_value("get_extended_metadata_batch START, count", paths.len());
-    let result: Vec<ExtendedMetadata> = paths
-        .into_iter()
-        .map(|path_str| {
-            let path = Path::new(&path_str);
-            let macos_meta = super::macos_metadata::get_macos_metadata(path);
-            ExtendedMetadata {
-                path: path_str,
-                added_at: macos_meta.added_at,
-                opened_at: macos_meta.opened_at,
-            }
-        })
-        .collect();
-    benchmark::log_event_value("get_extended_metadata_batch END, count", result.len());
-    result
-}
-
-#[cfg(not(target_os = "macos"))]
-pub(crate) fn get_extended_metadata_batch(paths: Vec<String>) -> Vec<ExtendedMetadata> {
-    benchmark::log_event_value("get_extended_metadata_batch (non-macOS), count", paths.len());
-    paths
-        .into_iter()
-        .map(|path_str| ExtendedMetadata {
-            path: path_str,
-            added_at: None,
-            opened_at: None,
-        })
-        .collect()
 }

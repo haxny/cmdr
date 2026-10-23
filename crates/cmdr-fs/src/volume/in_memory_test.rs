@@ -26,7 +26,6 @@ async fn test_with_entries_populates_volume() {
             permissions: 0o644,
             owner: "testuser".to_string(),
             group: "staff".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new("test.txt".to_string(), "/test.txt".to_string(), false, false)
         },
         FileEntry {
@@ -35,7 +34,6 @@ async fn test_with_entries_populates_volume() {
             permissions: 0o755,
             owner: "testuser".to_string(),
             group: "staff".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new("folder".to_string(), "/folder".to_string(), true, false)
         },
     ];
@@ -76,7 +74,6 @@ async fn test_exists_returns_true_for_existing() {
         permissions: 0o644,
         owner: "user".to_string(),
         group: "group".to_string(),
-        extended_metadata_loaded: true,
         ..FileEntry::new("test.txt".to_string(), "/test.txt".to_string(), false, false)
     }];
 
@@ -100,7 +97,6 @@ async fn test_get_metadata_returns_correct_entry() {
         permissions: 0o644,
         owner: "user".to_string(),
         group: "group".to_string(),
-        extended_metadata_loaded: true,
         ..FileEntry::new("test.txt".to_string(), "/test.txt".to_string(), false, false)
     }];
 
@@ -571,14 +567,12 @@ async fn test_list_directory_sorts_correctly() {
             permissions: 0o644,
             owner: "user".to_string(),
             group: "group".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new("zebra.txt".to_string(), "/zebra.txt".to_string(), false, false)
         },
         FileEntry {
             permissions: 0o755,
             owner: "user".to_string(),
             group: "group".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new("alpha".to_string(), "/alpha".to_string(), true, false)
         },
         FileEntry {
@@ -586,14 +580,12 @@ async fn test_list_directory_sorts_correctly() {
             permissions: 0o644,
             owner: "user".to_string(),
             group: "group".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new("apple.txt".to_string(), "/apple.txt".to_string(), false, false)
         },
         FileEntry {
             permissions: 0o755,
             owner: "user".to_string(),
             group: "group".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new("beta".to_string(), "/beta".to_string(), true, false)
         },
     ];
@@ -619,7 +611,6 @@ async fn test_list_subdirectory() {
             permissions: 0o755,
             owner: "user".to_string(),
             group: "group".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new("subdir".to_string(), "/subdir".to_string(), true, false)
         },
         FileEntry {
@@ -627,7 +618,6 @@ async fn test_list_subdirectory() {
             permissions: 0o644,
             owner: "user".to_string(),
             group: "group".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new(
                 "file_in_subdir.txt".to_string(),
                 "/subdir/file_in_subdir.txt".to_string(),
@@ -640,7 +630,6 @@ async fn test_list_subdirectory() {
             permissions: 0o644,
             owner: "user".to_string(),
             group: "group".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new("root_file.txt".to_string(), "/root_file.txt".to_string(), false, false)
         },
     ];

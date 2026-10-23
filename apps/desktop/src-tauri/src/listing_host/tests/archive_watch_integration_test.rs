@@ -69,7 +69,6 @@ impl ArchiveFixture {
 fn stub_entry(archive_path: &Path, inner_name: &str) -> FileEntry {
     let full = archive_path.join(inner_name);
     FileEntry {
-        extended_metadata_loaded: true,
         ..FileEntry::new(
             inner_name.to_string(),
             full.to_string_lossy().into_owned(),

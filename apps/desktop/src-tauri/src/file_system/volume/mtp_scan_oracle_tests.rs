@@ -42,7 +42,6 @@ fn make_file_entry(name: &str, parent: &str, size: u64) -> FileEntry {
         permissions: 0o644,
         owner: "test".to_string(),
         group: "staff".to_string(),
-        extended_metadata_loaded: true,
         ..FileEntry::new(
             name.to_string(),
             format!("{}/{}", parent.trim_end_matches('/'), name),

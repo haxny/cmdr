@@ -211,12 +211,17 @@ export const commands = {
         inode: number | null
         // Last-modified time, Unix seconds.
         modifiedAt: number | null
-        // Creation time, Unix seconds.
+        /**
+         *  Creation time, Unix seconds. Filled only where the volume's
+         *  `Volume::supported_dates` claims it.
+         */
         createdAt: number | null
-        // When the file was added to its current directory (macOS only)
+        /**
+         *  When the entry was added to its current folder, Unix seconds (macOS
+         *  APFS and HFS+ only). Filled only where the volume's
+         *  `Volume::supported_dates` claims it.
+         */
         addedAt: number | null
-        // When the file was last opened (macOS only)
-        openedAt: number | null
         // POSIX mode bits. `0` when the backend has no permission concept.
         permissions: number
         // Owning user name, resolved from the uid. Empty when unknown.
@@ -225,11 +230,6 @@ export const commands = {
         group: string
         // The icon key the frontend resolves to a real image. See [`get_icon_id`].
         iconId: string
-        /**
-         *  Whether extended metadata (addedAt, openedAt) has been loaded
-         *  Always true for legacy list_directory(), false for list_directory_core()
-         */
-        extendedMetadataLoaded: boolean
         /**
          *  macOS Finder tags (`com.apple.metadata:_kMDItemUserTags`). Empty in the
          *  core listing; filled by the deferred, visible-range-first `enrich_tags`
@@ -379,12 +379,17 @@ export const commands = {
         inode: number | null
         // Last-modified time, Unix seconds.
         modifiedAt: number | null
-        // Creation time, Unix seconds.
+        /**
+         *  Creation time, Unix seconds. Filled only where the volume's
+         *  `Volume::supported_dates` claims it.
+         */
         createdAt: number | null
-        // When the file was added to its current directory (macOS only)
+        /**
+         *  When the entry was added to its current folder, Unix seconds (macOS
+         *  APFS and HFS+ only). Filled only where the volume's
+         *  `Volume::supported_dates` claims it.
+         */
         addedAt: number | null
-        // When the file was last opened (macOS only)
-        openedAt: number | null
         // POSIX mode bits. `0` when the backend has no permission concept.
         permissions: number
         // Owning user name, resolved from the uid. Empty when unknown.
@@ -393,11 +398,6 @@ export const commands = {
         group: string
         // The icon key the frontend resolves to a real image. See [`get_icon_id`].
         iconId: string
-        /**
-         *  Whether extended metadata (addedAt, openedAt) has been loaded
-         *  Always true for legacy list_directory(), false for list_directory_core()
-         */
-        extendedMetadataLoaded: boolean
         /**
          *  macOS Finder tags (`com.apple.metadata:_kMDItemUserTags`). Empty in the
          *  core listing; filled by the deferred, visible-range-first `enrich_tags`
@@ -1474,7 +1474,8 @@ export const commands = {
    *  Opens a session over the pane's selection: `selected_indices` are backend row
    *  numbers in rename order (`None` for every row the pane shows), read at
    *  `expected_sequence`. The files are resolved once, here; `selectionChanged`
-   *  when the rows aren't the listing's state any more.
+   *  when the rows aren't the listing's state any more. Their media fields start
+   *  reading in the background, reported as `MultiRenameMediaProgress`.
    */
   openMultiRename: (
     listingId: string,
@@ -1542,7 +1543,10 @@ export const commands = {
     typedError<FieldSamples, MultiRenameError>(
       __TAURI_INVOKE('get_multi_rename_field_samples', { sessionId, token, rows }),
     ),
-  // Reads the files at `rows` (the ones the sheet shows) next. Fire-and-forget.
+  /**
+   *  Reads the files at `rows` (the ones the sheet shows) next. Fire-and-forget:
+   *  a closed session has nothing left to read.
+   */
   prioritizeMultiRenameMedia: (sessionId: string, rows: number[]) =>
     __TAURI_INVOKE<void>('prioritize_multi_rename_media', { sessionId, rows }),
   /**
@@ -8768,12 +8772,17 @@ export type FileEntry = {
   inode: number | null
   // Last-modified time, Unix seconds.
   modifiedAt: number | null
-  // Creation time, Unix seconds.
+  /**
+   *  Creation time, Unix seconds. Filled only where the volume's
+   *  `Volume::supported_dates` claims it.
+   */
   createdAt: number | null
-  // When the file was added to its current directory (macOS only)
+  /**
+   *  When the entry was added to its current folder, Unix seconds (macOS
+   *  APFS and HFS+ only). Filled only where the volume's
+   *  `Volume::supported_dates` claims it.
+   */
   addedAt: number | null
-  // When the file was last opened (macOS only)
-  openedAt: number | null
   // POSIX mode bits. `0` when the backend has no permission concept.
   permissions: number
   // Owning user name, resolved from the uid. Empty when unknown.
@@ -8782,11 +8791,6 @@ export type FileEntry = {
   group: string
   // The icon key the frontend resolves to a real image. See [`get_icon_id`].
   iconId: string
-  /**
-   *  Whether extended metadata (addedAt, openedAt) has been loaded
-   *  Always true for legacy list_directory(), false for list_directory_core()
-   */
-  extendedMetadataLoaded: boolean
   /**
    *  macOS Finder tags (`com.apple.metadata:_kMDItemUserTags`). Empty in the
    *  core listing; filled by the deferred, visible-range-first `enrich_tags`

@@ -459,12 +459,6 @@ fn check_dates(fx: &Fixture, lister: Lister) {
     );
     for entry in &listed {
         check_added_at_is_fresh(entry, lister);
-        assert_eq!(entry.opened_at, None, "{lister:?}: {} has no opened date", entry.name);
-        assert!(
-            !entry.extended_metadata_loaded,
-            "{lister:?}: {} is a core entry",
-            entry.name
-        );
     }
 }
 
@@ -820,7 +814,6 @@ fn an_unsearchable_folder_lists_every_name_as_the_minimal_row() {
             let is_link = name == "child_link";
             let expected = FileEntry {
                 icon_id: if is_link { "symlink-broken" } else { "file" }.to_string(),
-                extended_metadata_loaded: true,
                 ..FileEntry::new(
                     name.clone(),
                     locked.join(name).to_string_lossy().into_owned(),

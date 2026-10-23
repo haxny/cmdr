@@ -55,7 +55,6 @@ const BASE_ENTRY: FileEntry = {
   permissions: 420,
   owner: 'test',
   group: 'staff',
-  extendedMetadataLoaded: false,
 }
 
 /** A file row. `path` defaults to `/root/<name>`. */

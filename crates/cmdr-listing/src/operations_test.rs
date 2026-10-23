@@ -138,7 +138,6 @@ async fn test_list_directory_start_with_volume_caches_entries() {
                 permissions: 0o644,
                 owner: "test".to_string(),
                 group: "staff".to_string(),
-                extended_metadata_loaded: true,
                 ..FileEntry::new("p.txt".to_string(), "/testdir/p.txt".to_string(), false, false)
             },
             FileEntry {
@@ -146,7 +145,6 @@ async fn test_list_directory_start_with_volume_caches_entries() {
                 permissions: 0o644,
                 owner: "test".to_string(),
                 group: "staff".to_string(),
-                extended_metadata_loaded: true,
                 ..FileEntry::new("q.txt".to_string(), "/testdir/q.txt".to_string(), false, false)
             },
             FileEntry {
@@ -154,7 +152,6 @@ async fn test_list_directory_start_with_volume_caches_entries() {
                 permissions: 0o644,
                 owner: "test".to_string(),
                 group: "staff".to_string(),
-                extended_metadata_loaded: true,
                 ..FileEntry::new("r.txt".to_string(), "/testdir/r.txt".to_string(), false, false)
             },
         ],

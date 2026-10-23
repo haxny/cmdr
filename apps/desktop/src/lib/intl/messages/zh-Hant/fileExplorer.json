@@ -1293,10 +1293,6 @@
   "@fileExplorer.dateTooltip.created": {
     "sourceHash": "d70b9e2"
   },
-  "fileExplorer.dateTooltip.lastOpened": "上次開啟",
-  "@fileExplorer.dateTooltip.lastOpened": {
-    "sourceHash": "e300685"
-  },
   "fileExplorer.dateTooltip.lastMoved": "上次移動（「加入」）",
   "@fileExplorer.dateTooltip.lastMoved": {
     "sourceHash": "1366405"

@@ -209,7 +209,6 @@ fn make_file_entry(name: &str, parent: &str, is_dir: bool) -> cmdr_fs::entry::Fi
         permissions: if is_dir { 0o755 } else { 0o644 },
         owner: "test".to_string(),
         group: "staff".to_string(),
-        extended_metadata_loaded: true,
         ..cmdr_fs::entry::FileEntry::new(
             name.to_string(),
             format!("{}/{}", parent.trim_end_matches('/'), name),

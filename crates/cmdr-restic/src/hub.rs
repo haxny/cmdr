@@ -205,7 +205,6 @@ impl ResticRepos {
         self.remember(key(volume_id, repo_root), Some(true));
         let path = repo_root.join(VIRTUAL_ENTRY_NAME);
         FileEntry {
-            extended_metadata_loaded: true,
             icon_id: OVERLAY_ROW_ICON_ID.to_string(),
             ..FileEntry::new(
                 VIRTUAL_ENTRY_NAME.to_string(),

@@ -1,12 +1,12 @@
 //! Tests for the local reader: `std::fs` listing, single-entry stat, and `FileEntry` construction.
 
-use crate::reading::{AddedAt, entry_from_lstat, get_extended_metadata_batch, get_single_entry, list_directory_core};
+use crate::reading::{AddedAt, entry_from_lstat, get_single_entry, list_directory_core};
 use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::host::VolumeHost;
 use std::fs;
 
 // ============================================================================
-// Tests for two-phase loading functions
+// Tests for list_directory_core
 // ============================================================================
 
 #[test]
@@ -26,11 +26,9 @@ fn test_list_directory_core_returns_core_entries() {
     assert!(!file_entry.path.is_empty());
     assert!(!file_entry.owner.is_empty());
 
-    // No extended metadata, but the added date comes with the core listing on
-    // APFS (the scratch dir's filesystem), never on Linux.
-    assert!(!file_entry.extended_metadata_loaded);
+    // The added date comes with the listing on APFS (the scratch dir's
+    // filesystem), never on Linux.
     assert_eq!(file_entry.added_at.is_some(), cfg!(target_os = "macos"));
-    assert!(file_entry.opened_at.is_none());
 }
 
 #[test]
@@ -51,33 +49,6 @@ fn test_list_directory_core_is_sorted() {
     assert!(entries[0].is_directory);
 }
 
-#[test]
-fn test_get_extended_metadata_batch() {
-    let temp_dir = TestDir::new("extended_test");
-
-    let test_file = temp_dir.join("extended_test.txt");
-    fs::write(&test_file, "content").unwrap();
-
-    let paths = vec![test_file.to_string_lossy().to_string()];
-    let extended = get_extended_metadata_batch(paths.clone());
-
-    assert_eq!(extended.len(), 1);
-    assert_eq!(extended[0].path, paths[0]);
-
-    // On macOS, these should have values; on other platforms, None
-    #[cfg(target_os = "macos")]
-    {
-        // addedAt and openedAt may or may not be set depending on the file
-        // but the function should run without error
-    }
-}
-
-#[test]
-fn test_get_extended_metadata_batch_empty_input() {
-    let extended = get_extended_metadata_batch(vec![]);
-    assert!(extended.is_empty());
-}
-
 // ============================================================================
 // Tests for get_single_entry
 // ============================================================================
@@ -95,7 +66,6 @@ fn test_get_single_entry_file() {
     assert!(!entry.is_directory);
     assert!(!entry.is_symlink);
     assert_eq!(entry.size, Some(12)); // "test content" is 12 bytes
-    assert!(!entry.extended_metadata_loaded);
 }
 
 #[test]

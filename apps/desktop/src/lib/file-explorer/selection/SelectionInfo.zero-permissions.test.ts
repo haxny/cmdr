@@ -43,7 +43,6 @@ function makeRemoteDir(overrides: Partial<Record<string, unknown>> = {}) {
     permissions: 0,
     owner: '',
     group: '',
-    extendedMetadataLoaded: false,
     ...overrides,
   }
 }

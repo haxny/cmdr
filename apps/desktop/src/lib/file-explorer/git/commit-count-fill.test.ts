@@ -24,7 +24,6 @@ function row(name: string, gitMeta?: FileEntry['gitMeta']): FileEntry {
     owner: '',
     group: '',
     iconId: 'git:commit',
-    extendedMetadataLoaded: true,
     gitMeta,
   }
 }

@@ -77,7 +77,6 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
         owner: 'user',
         group: 'staff',
         iconId: 'dir',
-        extendedMetadataLoaded: true,
       }
     } else {
       mockEntry = {
@@ -89,7 +88,6 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
         owner: 'user',
         group: 'staff',
         iconId: 'file',
-        extendedMetadataLoaded: true,
       }
     }
     return Promise.resolve(mockEntry)

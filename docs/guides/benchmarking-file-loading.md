@@ -69,16 +69,14 @@ behind it, so the interesting gap is between `RETURNING` and `listing-complete r
 one of the `read_directory_with_progress CANCELLED (…)` events instead of `COMPLETE`, naming the point it bailed.
 
 The non-streaming core (`list_directory_core START`, `read_entries START/END` (either lister), `sort START/END`,
-`list_directory_core END`, in `crates/cmdr-local/src/reading.rs`) emits its own events when that path runs. macOS
-extended metadata appears separately as `get_extended_metadata_batch START/END, count`.
+`list_directory_core END`, in `crates/cmdr-local/src/reading.rs`) emits its own events when that path runs. The added
+date rides inside `read_entries` (the bulk lister's record carries it), so it has no events of its own.
 
 ## What to look at
 
 - **When does the user see files?** → `loading = false (UI can render)`, measured from the FE `EPOCH_RESET`.
 - **Where is the time?** → compare `read_dir COMPLETE` (enumerate + stat), `sort END`, and the gap between the Rust
   `COMPLETE` and the FE `listing-complete received` (that gap is IPC and store population).
-- **Is extended metadata in the way?** → check whether `get_extended_metadata_batch` lands before or after
-  `loading = false`. It shouldn't block it.
 - **Did the navigation even finish?** → a `CANCELLED` event means a second navigation superseded this one, and the
   numbers below it describe nothing.
 

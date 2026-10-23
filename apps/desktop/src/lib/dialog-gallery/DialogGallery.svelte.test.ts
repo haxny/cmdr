@@ -232,7 +232,6 @@ const diskFixture: GalleryDiskFixture = {
     owner: 'demo',
     group: 'staff',
     iconId: 'file',
-    extendedMetadataLoaded: false,
   })),
 }
 

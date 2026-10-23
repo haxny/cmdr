@@ -790,7 +790,6 @@ fn node_to_entry(archive_path: &Path, volume_name: &str, node: &ArchiveNode) -> 
         // umask on the word of an archive that said nothing.
         permissions: node.mode.unwrap_or(0),
         // The archive listing is complete in one pass — no deferred metadata.
-        extended_metadata_loaded: true,
         ..FileEntry::new(
             name,
             full_path.to_string_lossy().into_owned(),

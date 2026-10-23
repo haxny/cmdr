@@ -12,14 +12,13 @@
 //! cargo run --release -p cmdr-local --example listing_bench -- vanish <dir>
 //! ```
 //!
-//! Methods (`bench`'s third argument, comma-separated; default: the first four):
+//! Methods (`bench`'s third argument, comma-separated; default: all four):
 //! - `current`: `reading::list_directory_core`, what production runs (bulk on
 //!   APFS and HFS+, `read_dir` elsewhere).
 //! - `bulk`: the bulk lister forced.
 //! - `readdir`: the `read_dir` lister forced, which on APFS and HFS+ adds one
 //!   `getattrlist(ATTR_CMN_ADDEDTIME)` per entry (the fallback's cost).
 //! - `bulk_xattr`: `bulk` plus one `getxattr(com.apple.lastuseddate#PS)` per file.
-//! - `nsurl`: `reading::list_directory`, the NSURL per-file enrichment.
 //!
 //! `bench` interleaves methods round-robin (one warm-up round, then `runs`
 //! rounds) so none of them gets a systematically warmer cache, and reports the
@@ -96,15 +95,14 @@ mod macos {
             "bulk" => reading::list_directory_with(dir, false, host, Lister::Bulk).expect("bulk"),
             "readdir" => reading::list_directory_with(dir, false, host, Lister::ReadDir).expect("readdir"),
             "bulk_xattr" => {
-                let mut entries = reading::list_directory_with(dir, false, host, Lister::Bulk).expect("bulk");
-                for entry in &mut entries {
+                let entries = reading::list_directory_with(dir, false, host, Lister::Bulk).expect("bulk");
+                for entry in &entries {
                     if !entry.is_directory && !entry.is_symlink {
-                        entry.opened_at = bulk::read_last_used(Path::new(&entry.path));
+                        std::hint::black_box(bulk::read_last_used(Path::new(&entry.path)));
                     }
                 }
                 entries
             }
-            "nsurl" => reading::list_directory(dir, host).expect("nsurl"),
             other => panic!("unknown method {other}"),
         }
     }

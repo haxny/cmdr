@@ -1918,10 +1918,6 @@
   "@fileExplorer.dateTooltip.created": {
     "description": "Label in a file’s date tooltip for its creation time."
   },
-  "fileExplorer.dateTooltip.lastOpened": "Last opened",
-  "@fileExplorer.dateTooltip.lastOpened": {
-    "description": "Label in a file’s date tooltip for when it was last opened."
-  },
   "fileExplorer.dateTooltip.lastMoved": "Last moved (“added”)",
   "@fileExplorer.dateTooltip.lastMoved": {
     "description": "Label in a file’s date tooltip for when it was last moved into its folder. The parenthetical “added” is the macOS Finder term for the same timestamp; keep both."

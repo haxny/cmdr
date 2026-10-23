@@ -33,7 +33,7 @@ so only wall is listed. Everything includes building the `FileEntry` (name, path
 the `sort_listing` call.
 
 - **1k fixture** (1,086 entries): current 2.13 ms · bulk 1.17 ms · bulk + xattr 11.52 ms · current + getattrlist 4.66 ms
-  · today's NSURL enrichment (`reading::list_directory`) 8.27 ms.
+  · the NSURL enrichment Cmdr had then (removed since) 8.27 ms.
 - **10k fixture** (10,620): current 24.2 ms · bulk 15.4 ms · bulk + xattr 133.3 ms · current + getattrlist 55.5 ms ·
   NSURL 92.5 ms.
 - **100k fixture** (100,620): current 241.4 ms (2.40 µs/entry) · bulk 156.1 ms (1.55) · bulk + xattr 1,881 ms (18.7) ·
@@ -69,7 +69,7 @@ cargo build --release -p cmdr-local --example listing_bench
 B=target/release/examples/listing_bench
 $B gen /private/tmp/lb/f100000 100000
 $B parity /private/tmp/lb/f100000 / /Volumes /usr/bin /private/var/db
-$B bench /private/tmp/lb/f100000 7 current,bulk,readdir,bulk_xattr   # add ,nsurl for the NSURL path
+$B bench /private/tmp/lb/f100000 7 current,bulk,readdir,bulk_xattr
 $B volcaps / /Volumes/<some mount>
 ```
 
@@ -178,8 +178,8 @@ inputs: 16 bytes, a little-endian `struct timespec` (`i64` seconds, `i64` nanose
 - Most matched to the second. One file's xattr was 6.8 hours OLDER than Spotlight's value.
 - Two files had a Spotlight last-used date and no xattr at all (an `.xlsx` and a `.pdf`).
 - No `.app` carries the xattr, yet Spotlight holds a last-used date for most apps (LaunchServices feeds it).
-- `atime` (what `macos_metadata.rs` reads today through `NSURLContentAccessDateKey`) is a third, unrelated value: one
-  file's atime was 2026-10-16 against a last use of 2026-07-27.
+- `atime` (what Cmdr's since-removed NSURL enrichment read through `NSURLContentAccessDateKey`) is a third, unrelated
+  value: one file's atime was 2026-10-16 against a last use of 2026-07-27.
 
 So the xattr alone would show a blank or stale "Last opened" for a real share of entries. The faithful source is a
 scoped Spotlight query: `mdfind -onlyin ~/Downloads 'kMDItemLastUsedDate == *'` took 40–80 ms including process launch,

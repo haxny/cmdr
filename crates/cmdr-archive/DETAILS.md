@@ -81,8 +81,8 @@ renders transparently (the FE splits on `/`). `inner_path()` maps a volume-names
 strips the archive-path prefix (the FE sends full absolute paths), accepts an already-inner relative path, and treats an
 empty path / `.` as the root `""`. `node_to_entry` builds each `FileEntry`'s full path as `archive_path/inner`; the root
 node (`""`) carries the archive's own file name and path. `ArchiveNode::modified` is Unix seconds, matching `FileEntry`
-(a negative timestamp is dropped); `extended_metadata_loaded` is `true` — the archive listing is complete in one pass,
-no deferred enrichment. `FileEntry` has no `encrypted` field, so `index()` is `pub`: a host caller that must name
+(a negative timestamp is dropped), and it's the only date a member carries (`supported_dates` keeps the trait's
+Modified-only default). `FileEntry` has no `encrypted` field, so `index()` is `pub`: a host caller that must name
 encryption (the Ask Cmdr `inspect_file` tool) queries the same cached `ArchiveIndex` the listing maps from (`get` /
 `list` / `has_encrypted_entries`, keyed by the inner path `archive_boundary_candidate` splits off), so the two never
 disagree. For 7z the per-entry flag is derived from the entry's block: an `AES256_SHA256` coder in its chain

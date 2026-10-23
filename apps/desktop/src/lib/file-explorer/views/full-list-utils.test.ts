@@ -131,7 +131,6 @@ describe('pickSizeDisplay', () => {
       owner: '',
       group: '',
       iconId: 'git:branch',
-      extendedMetadataLoaded: true,
       ...extra,
     }
   }
@@ -255,7 +254,6 @@ describe('pickSizeDisplay across locales', () => {
       owner: '',
       group: '',
       iconId: 'git:branch',
-      extendedMetadataLoaded: true,
       gitMeta: { kind: 'count', counted, n },
     })
   }
@@ -329,7 +327,6 @@ describe('restic snapshot rows', () => {
       owner: '',
       group: '',
       iconId: 'dir',
-      extendedMetadataLoaded: true,
       resticMeta: meta,
     }
   }

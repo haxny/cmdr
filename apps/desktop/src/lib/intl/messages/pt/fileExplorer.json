@@ -1300,10 +1300,6 @@
   "@fileExplorer.dateTooltip.created": {
     "sourceHash": "d70b9e2"
   },
-  "fileExplorer.dateTooltip.lastOpened": "Aberto pela última vez",
-  "@fileExplorer.dateTooltip.lastOpened": {
-    "sourceHash": "e300685"
-  },
   "fileExplorer.dateTooltip.lastMoved": "Movido pela última vez (“adicionado”)",
   "@fileExplorer.dateTooltip.lastMoved": {
     "sourceHash": "1366405"

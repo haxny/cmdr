@@ -1470,7 +1470,6 @@ export type MessageKey =
   | 'fileExplorer.dateTooltip.created'
   | 'fileExplorer.dateTooltip.lastModified'
   | 'fileExplorer.dateTooltip.lastMoved'
-  | 'fileExplorer.dateTooltip.lastOpened'
   | 'fileExplorer.dirSize.contentLabel'
   | 'fileExplorer.dirSize.dirPlaceholder'
   | 'fileExplorer.dirSize.fileCount'

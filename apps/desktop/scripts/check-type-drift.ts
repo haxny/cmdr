@@ -34,7 +34,6 @@ const INTERNAL_RUST_TYPES = new Set([
   'ConflictResolutionResponse', // Internal response handling
   'KnownSharesStore', // Internal storage wrapper
   'GuestAttempt', // A listing-call argument, never crosses IPC
-  'ExtendedMetadata', // Used internally, separate API for fetching
   // Note: ListingStatus has a known TypeScript/Rust mismatch that works due to
   // how the frontend handles it. The Rust uses tag="status" but TS uses plain strings.
   // TODO: Investigate if this should be aligned or if current behavior is intentional.

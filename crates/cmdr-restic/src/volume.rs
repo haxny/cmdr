@@ -212,7 +212,6 @@ impl ResticVolume {
             .unwrap_or_default();
         match self.classify(path)? {
             VirtualPath::Root => Ok(FileEntry {
-                extended_metadata_loaded: true,
                 ..FileEntry::new(
                     VIRTUAL_ENTRY_NAME.to_string(),
                     absolute.to_string_lossy().into_owned(),
@@ -288,7 +287,6 @@ fn snapshot_row(name: &str, path: &Path, snapshot: &Snapshot) -> FileEntry {
         recursive_size: snapshot.size,
         restic_meta: Some(snapshot.meta.clone()),
         modified_at,
-        extended_metadata_loaded: true,
         ..FileEntry::new(name.to_string(), path.to_string_lossy().into_owned(), true, false)
     }
 }

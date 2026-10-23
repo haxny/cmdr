@@ -27,7 +27,6 @@ fn test_entry(name: &str, is_dir: bool) -> FileEntry {
         permissions: if is_dir { 0o755 } else { 0o644 },
         owner: "testuser".to_string(),
         group: "staff".to_string(),
-        extended_metadata_loaded: true,
         ..FileEntry::new(name.to_string(), format!("/{}", name), is_dir, false)
     }
 }

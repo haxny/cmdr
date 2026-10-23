@@ -32,7 +32,6 @@ function entry(name: string, options: Partial<FileEntry> = {}): FileEntry {
     owner: 'david',
     group: 'staff',
     iconId: extension ? `ext:${extension}` : 'file',
-    extendedMetadataLoaded: false,
     ...options,
   }
 }

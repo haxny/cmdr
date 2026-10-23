@@ -251,7 +251,6 @@ export function createSelectionInfoFeed(deps: SelectionInfoFeedDeps): SelectionI
       owner: '',
       group: '',
       iconId: e.iconId,
-      extendedMetadataLoaded: true,
       parentPath: e.parentPath,
     }
   })

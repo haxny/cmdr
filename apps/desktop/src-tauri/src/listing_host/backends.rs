@@ -100,7 +100,6 @@ mod tests {
 
     fn entry_at(dir: &str, name: &str) -> FileEntry {
         FileEntry {
-            extended_metadata_loaded: true,
             ..FileEntry::new(name.to_string(), format!("{dir}/{name}"), false, false)
         }
     }

@@ -33,7 +33,6 @@ function backendEntry(name: string) {
     owner: 'user',
     group: 'staff',
     iconId: 'file',
-    extendedMetadataLoaded: true,
   }
 }
 
@@ -113,7 +112,6 @@ describe('fetchEntriesSnapshot', () => {
       })
       expect(ipc.getFileRange).not.toHaveBeenCalled()
       expect(entries).toHaveLength(1)
-      expect(entries[0]?.extendedMetadataLoaded).toBe(true)
     })
 
     it('hands the Selection matcher basenames, not the full paths the pane shows', async () => {

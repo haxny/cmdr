@@ -18,7 +18,6 @@ export function createFileEntry(partial: {
   owner?: string
   group?: string
   iconId?: string
-  extendedMetadataLoaded?: boolean
 }): FileEntry {
   const isDir = partial.isDirectory
   return {
@@ -33,7 +32,6 @@ export function createFileEntry(partial: {
     owner: partial.owner ?? 'testuser',
     group: partial.group ?? 'staff',
     iconId: partial.iconId ?? (isDir ? 'dir' : 'file'),
-    extendedMetadataLoaded: partial.extendedMetadataLoaded ?? true,
   }
 }
 

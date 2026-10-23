@@ -60,7 +60,6 @@ function entry(name: string): FileEntry {
     owner: 'me',
     group: 'staff',
     iconId: 'file',
-    extendedMetadataLoaded: true,
   }
 }
 

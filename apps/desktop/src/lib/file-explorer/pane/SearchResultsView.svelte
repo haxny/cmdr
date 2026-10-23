@@ -150,7 +150,6 @@
             owner: '',
             group: '',
             iconId: e.iconId,
-            extendedMetadataLoaded: true,
             parentPath: e.parentPath,
         }
     }

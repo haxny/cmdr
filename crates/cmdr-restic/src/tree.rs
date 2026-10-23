@@ -51,7 +51,6 @@ pub(crate) fn entry_of(node: &Node, dir: &Path) -> FileEntry {
         owner: node.meta.user.clone().unwrap_or_default(),
         group: node.meta.group.clone().unwrap_or_default(),
         // A tree blob carries everything a row shows: no deferred metadata.
-        extended_metadata_loaded: true,
         ..FileEntry::new(name, path, node.is_dir(), node.is_symlink())
     }
 }

@@ -1299,10 +1299,6 @@
   "@fileExplorer.dateTooltip.created": {
     "sourceHash": "d70b9e2"
   },
-  "fileExplorer.dateTooltip.lastOpened": "Dernière ouverture",
-  "@fileExplorer.dateTooltip.lastOpened": {
-    "sourceHash": "e300685"
-  },
   "fileExplorer.dateTooltip.lastMoved": "Dernier déplacement (« ajouté »)",
   "@fileExplorer.dateTooltip.lastMoved": {
     "sourceHash": "1366405"

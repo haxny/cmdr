@@ -45,7 +45,6 @@ const baseEntry = {
   permissions: 420,
   owner: 'test',
   group: 'staff',
-  extendedMetadataLoaded: false,
 }
 
 let target: HTMLElement | undefined

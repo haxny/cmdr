@@ -24,11 +24,6 @@ describe('createParentEntry', () => {
     expect(entry?.iconId).toBe('dir')
   })
 
-  it('counts as fully loaded, so no row ever waits on extended metadata for it', () => {
-    const entry = createParentEntry(canonical('/Users/test'))
-    expect(entry?.extendedMetadataLoaded).toBe(true)
-  })
-
   it('has no parent at the filesystem root', () => {
     expect(createParentEntry(canonical('/'))).toBeNull()
   })

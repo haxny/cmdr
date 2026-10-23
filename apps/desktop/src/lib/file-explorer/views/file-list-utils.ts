@@ -144,7 +144,6 @@ export function createParentEntry(parentPath: string, stats?: DirStats): FileEnt
     owner: '',
     group: '',
     iconId: 'dir',
-    extendedMetadataLoaded: true,
     recursiveSize: stats?.recursiveSize,
     recursivePhysicalSize: stats?.recursivePhysicalSize,
     recursiveFileCount: stats?.recursiveFileCount,

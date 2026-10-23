@@ -53,7 +53,6 @@ function makeDir(overrides: Partial<Record<string, unknown>> = {}) {
     permissions: 0o755,
     owner: 'test',
     group: 'staff',
-    extendedMetadataLoaded: false,
     recursiveSize: 1024,
     recursivePhysicalSize: 1024,
     recursiveFileCount: 3,

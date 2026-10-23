@@ -108,7 +108,6 @@ function buildEntry(name: string, extra: Partial<FileEntry> = {}): FileEntry {
     owner: 'me',
     group: 'staff',
     iconId: 'file',
-    extendedMetadataLoaded: true,
     ...extra,
   }
 }

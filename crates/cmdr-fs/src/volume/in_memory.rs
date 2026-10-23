@@ -748,7 +748,6 @@ impl InMemoryVolume {
                     permissions: 0o644,
                     owner: "testuser".to_string(),
                     group: "staff".to_string(),
-                    extended_metadata_loaded: true,
                     ..FileEntry::new(file_name.clone(), format!("/{}", file_name), is_dir, i % 50 == 0)
                 }
             })
@@ -838,7 +837,6 @@ impl InMemoryVolume {
             permissions: 0o644,
             owner: "testuser".to_string(),
             group: "staff".to_string(),
-            extended_metadata_loaded: true,
             ..FileEntry::new(name, normalized.display().to_string(), false, false)
         };
         Self::touch_parent_of(entries, &normalized);

@@ -19,7 +19,6 @@ fn make_test_entry(name: &str) -> FileEntry {
         permissions: 0o644,
         owner: "test".to_string(),
         group: "staff".to_string(),
-        extended_metadata_loaded: true,
         ..FileEntry::new(name.to_string(), format!("/oracle/{}", name), false, false)
     }
 }

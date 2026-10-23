@@ -23,6 +23,5 @@ export function createParentEntry(path: CanonicalPath): FileEntry | null {
     owner: '',
     group: '',
     iconId: 'dir',
-    extendedMetadataLoaded: true,
   }
 }

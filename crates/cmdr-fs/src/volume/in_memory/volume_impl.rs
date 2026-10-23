@@ -239,7 +239,6 @@ impl Volume for InMemoryVolume {
                 permissions: 0o755,
                 owner: "testuser".to_string(),
                 group: "staff".to_string(),
-                extended_metadata_loaded: true,
                 ..FileEntry::new(name, normalized.display().to_string(), true, false)
             };
 

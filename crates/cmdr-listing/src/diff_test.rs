@@ -11,7 +11,6 @@ fn make_entry(name: &str, size: Option<u64>) -> FileEntry {
         permissions: 0o644,
         owner: "user".to_string(),
         group: "group".to_string(),
-        extended_metadata_loaded: true,
         ..FileEntry::new(name.to_string(), format!("/test/{}", name), false, false)
     }
 }

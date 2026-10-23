@@ -70,8 +70,6 @@ pub mod space;
 pub mod statfs;
 
 mod local_posix;
-#[cfg(target_os = "macos")]
-mod macos_metadata;
 
 pub use local_posix::{LocalPosixVolume, rename_local_exclusive, rename_volume_error};
 

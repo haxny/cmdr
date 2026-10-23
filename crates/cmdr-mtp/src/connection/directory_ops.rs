@@ -897,7 +897,6 @@ fn entry_for_object(parent_path: &Path, info: &mtp_rs::ObjectInfo) -> (FileEntry
         created_at: info.created.and_then(convert_mtp_datetime),
         permissions: NO_PERMISSION_CONCEPT,
         icon_id: get_mtp_icon_id(is_dir, &info.filename),
-        extended_metadata_loaded: true,
         // Carry the PTP object handle in `inode` so the index can store it per
         // entry; `ObjectRemoved{handle}` then resolves via `find_entry_by_inode`
         // even though the object is already gone.

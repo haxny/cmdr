@@ -18,7 +18,6 @@ function entry(name: string): FileEntry {
     owner: 'user',
     group: 'staff',
     iconId: 'file',
-    extendedMetadataLoaded: true,
   }
 }
 

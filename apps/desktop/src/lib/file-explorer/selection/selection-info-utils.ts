@@ -155,7 +155,6 @@ export function buildDateTooltip(
   }
   // `!= null` because IPC payloads serialize `Option::None` as JSON `null`.
   if (e.createdAt != null) line(tString('fileExplorer.dateTooltip.created'), e.createdAt)
-  if (e.openedAt != null) line(tString('fileExplorer.dateTooltip.lastOpened'), e.openedAt)
   if (e.addedAt != null) line(tString('fileExplorer.dateTooltip.lastMoved'), e.addedAt)
   if (e.modifiedAt != null) line(tString('fileExplorer.dateTooltip.lastModified'), e.modifiedAt)
   return { html: lines.join('<br>') }

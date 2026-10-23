@@ -22,7 +22,6 @@ fn entry(name: &str, size: u64) -> FileEntry {
     FileEntry {
         size: Some(size),
         permissions: 0o644,
-        extended_metadata_loaded: true,
         ..FileEntry::new(name.to_string(), format!("{DIR}/{name}"), false, false)
     }
 }

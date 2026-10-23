@@ -75,8 +75,7 @@ app's test build needs, the reach items with `any(test, feature = "testing")` an
   the write engine's transfer and archive move-out suites and the app's ADB suites.
 - `PROGRESS_SAMPLE_INTERVAL` is 1 ms (§ "The local reader").
 - `LocalPosixVolume::with_sidecar_probe`, which the write engine's `copy_sidecar_tests.rs` plays a FAT folder with.
-- `reading::list_directory`, which only the app's test-only `RealFileSystemProvider` calls, and
-  `reading::list_directory_with` / `Lister` / `added_at_by_path`, which force a lister for the parity cells and
+- `reading::list_directory_with` / `Lister` / `added_at_by_path`, which force a lister for the parity cells and
   `examples/listing_bench`.
 
 The first two are `cfg!` branches rather than `#[cfg]` items, so both arms compile in every build and neither leaves
@@ -89,7 +88,7 @@ alone, the bench measured the fast paths, and `stream_large_file` ran 17% faster
 (`docs/notes/transfer-extraction-baseline.md` § "Criterion, after"). A separate cargo feature can't make the cut: the
 engine's own tests need the `statvfs` answer (#357), and one package's tests and benches share one dev-dependency
 feature set. The `bench` profile has no `debug_assertions` and every test profile does, so the cut falls exactly between
-them. The two reach items (`with_sidecar_probe`, `list_directory`) stay on `testing` alone: the bench needs them to
+them. The reach items (`with_sidecar_probe`, `list_directory_with`) stay on `testing` alone: the bench needs them to
 compile, and they change no behavior. (verified with a temporary
 `const _: () = assert!(cfg!(feature = "testing") && !TEST_FAST_PATHS)`:
 `cargo bench -p cmdr-operations --bench transfer_benchmarks -- --test` built and passed,
@@ -98,11 +97,12 @@ compile, and they change no behavior. (verified with a temporary
 ## The local reader
 
 `reading.rs` is the local reader: `list_directory_core` (every entry of a folder, built into `FileEntry`s and sorted by
-the host's `sort_listing`), `get_single_entry` (one path), and `get_extended_metadata_batch`. `LocalPosixVolume` lists
-and stats through it, and so do the paths that read a local directory with no volume in hand: the app's watcher (its
-unregistered-volume fallback and its per-entry re-stat) and `tags.rs`. It's the local backend's reader, not the listing
-engine's, which is why it sits here and `cmdr-listing` only sees the `FileEntry`s it returns. `mutation.rs` is the other
-half: `patch_listing_after_local_mutation`, what a successful local mutation means for the listing cache
+the host's `sort_listing`), `get_single_entry` (one path), and `supported_dates_of` (which dates a folder's listing
+carries, `LocalPosixVolume::supported_dates`'s answer). `LocalPosixVolume` lists and stats through it, and so do the
+paths that read a local directory with no volume in hand: the app's watcher (its unregistered-volume fallback and its
+per-entry re-stat) and `tags.rs`. It's the local backend's reader, not the listing engine's, which is why it sits here
+and `cmdr-listing` only sees the `FileEntry`s it returns. `mutation.rs` is the other half:
+`patch_listing_after_local_mutation`, what a successful local mutation means for the listing cache
 (`apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "Mutation notification"). The app's `create.rs` sends its
 instant row for mkdir, mkfile, and paste-as-file through it too.
 
@@ -208,9 +208,8 @@ piece has a different cost: Tier 1 (name, size, dates, permissions) is free from
 symlink target) is ~1 μs and cacheable; Tier 3 (macOS Spotlight/NSURL metadata) costs ~50-100 μs/file; Tier 4 (EXIF,
 PDF) costs 1-100 ms+ and reads file content. The full tier table: `docs/notes/file-metadata-tiers.md`.
 
-The added date rides with the core listing (§ "Two listers, one entry"). `get_extended_metadata_batch()` (NSURL) isn't
-wired into the streaming path. Finder tags are deferred, and `list_directory_core` never reads them:
-`crates/cmdr-listing/DETAILS.md` § "Finder tags".
+The added date rides with the core listing (§ "Two listers, one entry"), and nothing reads NSURL per entry. Finder tags
+are deferred, and `list_directory_core` never reads them: `crates/cmdr-listing/DETAILS.md` § "Finder tags".
 
 ## Local volume space
 

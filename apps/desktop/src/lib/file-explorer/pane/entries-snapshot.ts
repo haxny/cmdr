@@ -59,7 +59,6 @@ export async function fetchEntriesSnapshot(input: EntriesSnapshotInput): Promise
       owner: '',
       group: '',
       iconId: e.iconId,
-      extendedMetadataLoaded: true,
     }))
   }
 

@@ -27,7 +27,6 @@ function entry(overrides: Partial<FileEntry>): FileEntry {
     owner: 'u',
     group: 'g',
     iconId: 'text',
-    extendedMetadataLoaded: false,
     ...overrides,
   }
 }

@@ -40,16 +40,12 @@ export interface FileEntry {
   physicalSize?: number
   modifiedAt?: number
   createdAt?: number
-  /** When the file was added to its current directory (macOS only) */
+  /** When the entry was added to its current folder (macOS APFS and HFS+ only) */
   addedAt?: number
-  /** When the file was last opened (macOS only) */
-  openedAt?: number
   permissions: number
   owner: string
   group: string
   iconId: string
-  /** Whether extended metadata (addedAt, openedAt) has been loaded */
-  extendedMetadataLoaded: boolean
   recursiveSize?: number
   recursivePhysicalSize?: number
   recursiveFileCount?: number

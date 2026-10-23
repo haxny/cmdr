@@ -199,13 +199,12 @@ async fn a_selected_link_its_pane_listing_shows_as_a_folder_is_removed_and_its_t
     panes.show_volume(volume_id, Arc::clone(&watched));
     // What a pane shows for the link: a folder, with the link bit set.
     let project = drive.path("project");
-    let mut link_entry = FileEntry::new(
+    let link_entry = FileEntry::new(
         "data".to_string(),
         drive.path("project/data").display().to_string(),
         true,
         true,
     );
-    link_entry.extended_metadata_loaded = true;
     let _listing = TestListing::new()
         .volume(volume_id)
         .path(project.display().to_string())

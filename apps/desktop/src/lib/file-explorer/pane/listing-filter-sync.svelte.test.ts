@@ -43,7 +43,6 @@ const added: DirectoryDiff = {
             owner: 'user',
             group: 'staff',
             iconId: 'file',
-            extendedMetadataLoaded: true,
           },
         },
       ],

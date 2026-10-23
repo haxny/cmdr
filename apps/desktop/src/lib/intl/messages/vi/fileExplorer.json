@@ -1298,10 +1298,6 @@
   "@fileExplorer.dateTooltip.created": {
     "sourceHash": "d70b9e2"
   },
-  "fileExplorer.dateTooltip.lastOpened": "Lần mở gần nhất",
-  "@fileExplorer.dateTooltip.lastOpened": {
-    "sourceHash": "e300685"
-  },
   "fileExplorer.dateTooltip.lastMoved": "Lần di chuyển gần nhất (“đã thêm”)",
   "@fileExplorer.dateTooltip.lastMoved": {
     "sourceHash": "1366405"

@@ -125,7 +125,6 @@ describe('BriefList a11y', () => {
         permissions: 420,
         owner: 'test',
         group: 'staff',
-        extendedMetadataLoaded: false,
       },
     ]
     const { getFileRange } = await import('#lib/tauri-commands/index.js')

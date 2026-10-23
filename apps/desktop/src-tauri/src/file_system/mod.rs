@@ -13,14 +13,8 @@ pub mod git;
 pub mod google_drive;
 /// The app's `VolumeProvider`: what the index asks about mounted volumes.
 pub(crate) mod index_provider;
-#[cfg(test)]
-mod mock_provider;
 #[cfg(target_os = "macos")]
 pub mod open_with;
-#[cfg(test)]
-mod provider;
-#[cfg(test)]
-mod real_provider;
 pub mod restic;
 #[cfg(target_os = "macos")]
 pub mod share;

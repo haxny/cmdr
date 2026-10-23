@@ -36,7 +36,6 @@ const baseEntry = {
   permissions: 420,
   owner: 'test',
   group: 'staff',
-  extendedMetadataLoaded: true,
 }
 
 const mounted: Array<{ instance: ReturnType<typeof mount>; target: HTMLElement }> = []

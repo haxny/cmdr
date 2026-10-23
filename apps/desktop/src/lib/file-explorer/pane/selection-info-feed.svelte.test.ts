@@ -66,7 +66,6 @@ function fileEntry(name: string, isDirectory = false) {
     owner: 'user',
     group: 'staff',
     iconId: isDirectory ? 'dir' : 'file',
-    extendedMetadataLoaded: true,
   }
 }
 
@@ -372,7 +371,6 @@ describe('createSelectionInfoFeed', () => {
       })
       expect(created.feed.entry?.name).toBe('one.txt')
       expect(created.feed.entry?.path).toBe('/dir/one.txt')
-      expect(created.feed.entry?.extendedMetadataLoaded).toBe(true)
     })
 
     it('reports each snapshot row the cursor lands on', () => {

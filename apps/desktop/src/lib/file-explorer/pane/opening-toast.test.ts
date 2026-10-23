@@ -26,7 +26,6 @@ function entryOf(over: Partial<FileEntry> = {}): FileEntry {
     owner: 'user',
     group: 'staff',
     iconId: 'file',
-    extendedMetadataLoaded: true,
     ...over,
   }
 }
