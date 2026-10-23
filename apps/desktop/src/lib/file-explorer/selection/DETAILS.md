@@ -121,9 +121,10 @@ Four `$derived displayMode` values, each with its condition:
 - `no-selection`: Full mode, no selection: total file/dir counts.
 - `file-info`: Brief mode, no selection: name, size triads, date.
 
-Stale-size hourglass detail: in `file-info` mode the shared
-`getDirSizeDisplayState(recursiveSize, complete, stale, updating)` drives it, where `complete`/`stale` come from the
-entry's `recursiveSizeComplete`/`recursiveSizeStale` and
+Stale-size hourglass detail: it flags possibly incomplete DIRECTORY sizes only (a file's size is always exact). In
+`selection-summary` mode it keys on `isVolumeScanning(volumeId)` plus a selected directory. In `file-info` mode the
+shared `getDirSizeDisplayState(recursiveSize, complete, stale, updating)` drives it, where `complete`/`stale` come from
+the entry's `recursiveSizeComplete`/`recursiveSizeStale` and
 `updating = isVolumeScanning(volumeId) || isVolumeAggregating(volumeId) || recursiveSizePending`, scoped to the pane's
 own `volumeId` (a scan on another drive must not flag this pane's folders). An unindexed or never-listed dir shows the
 unknown state; a settled partially-scanned one is a lower bound (`≥`), and the `updating` flag adds the "Size not ready
@@ -132,6 +133,10 @@ yet" hourglass on top — replacing the `≥` rather than joining it, since a mo
 `DirStats` (not `get_file_range`), so `FilePane.fetchEntryUnderCursor` overlays it onto the cursor entry via
 `updateIndexSizesInPlace([entry])` (skipping `..`, whose entry path is the parent folder), and `applyFolderSizes` writes
 each pushed `listing-index-sizes-changed` reading onto it in place, so the hourglass tracks a storm live.
+
+Symlink hint: in `file-info` mode an `info` glyph sits by a directory's size when `entry.recursiveHasSymlinks` (set by
+indexing, `recursive_has_symlinks`, surfaced through enrichment), explaining a symlink-heavy folder's `0 bytes`: Cmdr
+matches `du` and Finder and doesn't count a link's target twice.
 
 The `file-info` date line and its tooltip show the date `displayedDateColumn(effectiveSortBy)` picks
 (`../displayed-date.ts`), the one Full's date column would show, ❌ never a derivation of their own. `FilePane` passes
@@ -218,8 +223,12 @@ rebind updates live. The shortcut shows only when `isFocused` is true (truthfuln
 live-updates so a focus flip or rebind mid-hover is reflected immediately.
 
 Its accessible name carries the sort state, "Size, sorted descending" / "Name, not sorted"
-(`fileExplorer.columns.sortState`): `aria-sort` needs a `columnheader`, and this is a plain button. The name starts with
-the visible label, so voice control still finds it by what's on screen (WCAG 2.5.3).
+(`fileExplorer.columns.sortState`): `aria-sort` needs a `columnheader`, and this is a plain button. With a
+`fallbackNote`, the note follows the state in parentheses (`fileExplorer.columns.sortStateFallback`, so translators own
+the join): "Added, sorted descending (This location doesn’t record …)". The name always starts with the visible label,
+so voice control still finds it by what's on screen (WCAG 2.5.3), and the note reaches VoiceOver even though its glyph
+is `aria-hidden`. Full's date header says the SHOWN date there ("Modified, sorted descending (…)"), Brief's requested
+button its own label; pinned in `../views/full-list.a11y.test.ts` and `../views/BriefList.a11y.test.ts`.
 
 `align: 'right'` (numeric columns: the Size header, and the Ext trigger inside `FullList`'s combined Name+Ext header)
 does more than push the button's content right: it flips the row to `flex-direction: row-reverse`, so the caret lands on

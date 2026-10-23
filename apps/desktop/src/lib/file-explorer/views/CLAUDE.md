@@ -23,9 +23,13 @@ neighbors (the virtual window's edge would fake an end).
 - **The renderer and the measurer are ONE contract; change both or neither.** `getDirSizeDisplayState`, `wordGitMeta`,
   and `extCellText` (`full-list-utils.ts`) are each the single source for a cell's text, reached by the renderer through
   `pickSizeDisplay` and by `measure-column-widths.ts` directly. Same for `listing.showExtensionInName` (drops the Ext
-  track AND returns `ext: 0`), the `tabularize` call that models `tabular-nums` canvas can't measure, and
-  `HEADER_CHROME_ACTIVE/INACTIVE` mirroring `SortableHeader`'s gap + caret. Re-inline any of them and text and width
-  drift. `getDirSizeDisplayState`'s `updating` arg is PER ROW (`isSizeUpdating(entry)`), ❌ never a per-volume flag.
+  track AND returns `ext: 0`), the `tabularize` call that models `tabular-nums` canvas can't measure, and the `HEADER_*`
+  constants mirroring the header's chrome (caret, fallback glyph, date chevron). Re-inline any of them and text and
+  width drift. `getDirSizeDisplayState`'s `updating` arg is PER ROW (`isSizeUpdating(entry)`), ❌ never a per-volume
+  flag.
+- **Full shows ONE date, `displayedDateColumn` of the sort its rows were fetched under** (`rowsSort`), in cells, header
+  label, width, row names, and tooltip. ❌ Never the live `effectiveSortBy` (retained rows would show the next folder's
+  date) or a view's own derivation. The header still sorts by the REQUESTED date. `DETAILS.md`.
 - **`FullList`'s column header is a SIBLING ABOVE the scroll container**, paying the measured scrollbar width back as
   right padding. ❌ Don't move it in, and ❌ don't reintroduce a header-height shift between `scrollTop` and the spacer
   offset: the clamp then hides row 0, the `..` cursor.

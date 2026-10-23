@@ -23,6 +23,18 @@ Use this checklist before each release to verify features that cannot be automat
 - [ ] "Quick Look" previews file (space bar alternative)
 - [ ] "Duplicate" is in the context menu and in the File menu, and both make a `name (1)` copy beside the item
 
+### Sort menus (native macOS, cannot be automated)
+
+- [ ] View > Sort by checks the focused pane's column and order, and follows a focus change, a tab switch, and a pane
+      swap
+- [ ] In a fallback (sort by Date added inside a zip), View > Sort by still checks Date added
+- [ ] After rebinding ⌘3 in Settings > Keyboard shortcuts, Name is still a checked check item
+- [ ] The checkmark draws beside each Sort by item's icon
+- [ ] Right-clicking the column header opens the Sort by popup (Date modified, Date created, Date added) in both Full
+      and Brief, the pane's sort checked
+- [ ] The Full date header's chevron opens the same popup by click, and by ←/→ then Enter or Space, anchored under it
+- [ ] A right-click on the unfocused pane's header, then a pick, sorts that pane
+
 ### Drag-and-drop (Tauri plugin, cannot be automated)
 
 - [ ] Drag file to Finder copies/moves it

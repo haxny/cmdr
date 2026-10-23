@@ -626,7 +626,9 @@ were fetched under (`full-list-cache.svelte.ts`'s `rowsSort`, captured with the 
 header label and fallback glyph, the measured width, the row's accessible name, and the cell's lazy date tooltip all
 read it. **Why**: the pane takes a new folder's effective column at `listing-complete`, one fetch before the new rows
 replace the retained ones; read live, those old rows would show the new folder's date. The header still sorts by (and
-lights up for) the REQUESTED date (`dateHeaderSortColumn`). Pinned in `FullList.displayed-date.svelte.test.ts`.
+lights up for) the REQUESTED date (`dateHeaderSortColumn`). Pinned in `FullList.displayed-date.svelte.test.ts`. What
+VoiceOver hears from the date header, a fallback's reason included, is `SortableHeader`'s name
+(`../selection/DETAILS.md` § "`SortableHeader.svelte`"); the chevron is a "menu button" by its `aria-haspopup`.
 
 **Decision**: Brief's header has a button per sort column (Name, Ext, Size, Modified, Created, Added), and in a date
 fallback the REQUESTED date's button carries the `fallbackNote` glyph (`pane/sort-fallback.ts::sortFallbackNote`, the

@@ -13,6 +13,9 @@ directories, we must be deliberate about what to fetch eagerly vs. on-demand.
 - **Permissions**: `metadata.permissions().mode()`
 - **Owner uid/gid**: `MetadataExt::st_uid()` / `st_gid()`
 - **Is symlink**: `metadata.is_symlink()`
+- **Added date** (APFS and HFS+ only): `ATTR_CMN_ADDEDTIME`, in the same `getattrlistbulk` record as everything above,
+  so it costs nothing extra there. The `read_dir` fallback on those filesystems pays one `getattrlist` per entry (~3.5
+  µs). Other filesystems record none, and the listing says so (`crates/cmdr-local/DETAILS.md` § "The local reader").
 
 ## Tier 2: Cheap (extra syscall, cacheable)
 
@@ -23,7 +26,7 @@ directories, we must be deliberate about what to fetch eagerly vs. on-demand.
 
 ## Tier 3: macOS-specific (requires Objective-C APIs, ~50-100μs/file)
 
-Added date, last opened date, locked flag, stationery pad flag, kind (localized), cloud sync status. Use Spotlight /
+Last opened date, locked flag, stationery pad flag, kind (localized), cloud sync status. Use Spotlight /
 `NSURL resourceValuesForKeys:` or xattrs.
 
 ## Tier 4: Extended/content-based (1-100ms+, reads file content)
@@ -32,9 +35,12 @@ EXIF/media metadata, PDF metadata, audio/video metadata.
 
 ## Current scope
 
-**Included in list view (Tier 1-2)**: All Tier 1 fields (zero extra cost) + owner name (cached uid→name resolution).
+**Included in list view (Tier 1-2)**: All Tier 1 fields (zero extra cost), the added date on APFS and HFS+, and owner
+name (cached uid→name resolution).
 
-**Deferred (Tier 3-4)**: Added/opened dates (Spotlight-dependent, unreliable), locked/stationery flags (rarely used),
-kind (can derive from extension on frontend), EXIF and media metadata (on-demand only).
+**Deferred (Tier 3-4)**: last opened date (its xattr costs ~17 µs per file, 12× a 100k listing, and isn't Finder's whole
+source, which is Spotlight's `kMDItemLastUsedDate`: [#694](https://github.com/vdavid/cmdr/issues/694)),
+locked/stationery flags (rarely used), kind (can derive from extension on frontend), EXIF and media metadata (on-demand
+only).
 
 **Future work**: Cloud sync status (iCloud, Dropbox, GDrive). Valuable, but requires xattr reads.

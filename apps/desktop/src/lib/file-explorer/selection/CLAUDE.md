@@ -38,22 +38,18 @@ lives in `FilePane.svelte` as a `Set<number>`).
 - **Counts, size decimals, and triad separators follow the active locale via `#lib/intl`**; ❌ never a hardcoded locale
   or separator. Size tiers come from `TieredSize`, never the (translated) unit text.
 - **`SortableHeader`'s shortcut shows only when `isFocused` is true** (the `sort.by*` commands act on the focused pane).
-  Hovering the unfocused pane's header shows the command name only; clicking still sorts that pane. Pinned by
-  `SortableHeader.svelte.test.ts`.
+  Its spoken name carries the sort state and any `fallbackNote` (the glyph is `aria-hidden`), always starting with the
+  visible label (WCAG 2.5.3). Pinned by `SortableHeader.svelte.test.ts`.
+- **`SelectionInfo`'s date is `displayedDateColumn(effectiveSortBy)`** (`../displayed-date.ts`), the date Full would
+  show, ❌ never a derivation of its own. `DETAILS.md` § display modes.
 - **`FileIcon` resolves a folder by PATH before `iconId`** (`getCachedCustomFolderIcon`): a custom-icon folder keeps the
   generic `dir` id, so gold recolor must skip it (`src-tauri/src/icons/DETAILS.md`). A cache miss draws the bundled
   macOS default, ❌ not an emoji, then swaps to the live icon on `$iconCacheVersion`.
 
 ## Status-bar hints (`SelectionInfo`)
 
-- **Phone-storage hint (MTP)** tooltips the free-space readout on `caps.kind === 'mtp'` volumes (`mtpSpaceHint` from
-  `FilePane`), explaining the folders-vs-used-space gap.
-- **Stale (hourglass) indicator** flags possibly-incomplete DIRECTORY sizes (file sizes are always accurate):
-  `selection-summary` keys on `isVolumeScanning(volumeId)` plus selected dirs, `file-info` on the shared
-  `getDirSizeDisplayState(...)`, so Brief matches Full's size column.
-- **Symlink hint (info glyph)** sits by a directory's size in `file-info` mode when `entry.recursiveHasSymlinks`,
-  explaining a symlink-heavy folder's `0 bytes`: Cmdr matches `du`/Finder and doesn't double-count. Set by indexing
-  (`recursive_has_symlinks`), surfaced through enrichment.
+The MTP free-space hint, the stale-size hourglass (keyed like Full's size column, `getDirSizeDisplayState`), and the
+symlink info glyph by a folder's size: `DETAILS.md`.
 
 Full details (the full `selection-info-utils` export catalog, per-mode conditions, `recursiveSizePending` overlay flow,
 size-unit decision rationale, and component props): `DETAILS.md`.

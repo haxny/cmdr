@@ -120,12 +120,24 @@ instant row for mkdir, mkfile, and paste-as-file through it too.
 errors are today's) and asks `fstatfs` on that fd: bulk iff `f_fstypename` is `apfs` or `hfs` (`bulk_eligible`).
 
 - **Decision**: an allowlist of filesystem type names, per listing, no cache. **Why**: speed, not support, is the
-  question. smbfs supports bulk but runs it 2.2× slower (it re-enumerates over the wire where `lstat` hits its attribute
-  cache); exFAT and FAT get it through VFS emulation with nothing gained, and FAT's allocated size reads 0; an unknown
-  filesystem keeps the proven path. `fstatfs` on the open fd is about a microsecond, answers the root volume listing a
-  folder on another filesystem by construction, and can't go stale on a remount that reuses an `fsid`.
+  question. smbfs supports bulk (a `VOL_CAP_INT_ATTRLIST` probe says yes) but runs it 2.2× slower (it re-enumerates over
+  the wire where `lstat` hits its attribute cache); `MNT_LOCAL` alone would admit exFAT, FAT, NTFS, and FUSE; exFAT and
+  FAT get bulk through VFS emulation with nothing gained, and FAT's allocated size reads 0; an unknown filesystem keeps
+  the proven path. `fstatfs` on the open fd is about a microsecond, answers the root volume listing a folder on another
+  filesystem by construction, and can't go stale on a remount that reuses an `fsid`.
 - `only_apfs_and_hfs_take_the_bulk_lister` is the only automated proof that FAT and smbfs stay on `read_dir` (no CI box
   mounts either, and ❌ no FAT image: an FSKit `msdos` unmount once panicked a Mac).
+
+**Which dates a listing claims.** `supported_dates_of(dir)` is `LocalPosixVolume::supported_dates`'s answer, run on
+`spawn_blocking` beside the listing: Added iff `bulk_eligible` (the lister's own predicate), Created iff the folder's
+`stat` carries a birth time (macOS always; Linux when `statx` returns `STATX_BTIME`). The cross-backend matrix and the
+conformance rule are `crates/cmdr-fs/DETAILS.md` § "Which dates each volume lists".
+
+- **Decision**: claim by construction from what the listers fill, ❌ not from `getattrlist(ATTR_VOL_ATTRIBUTES)`.
+  **Why**: a claim that disagrees with the filler either strips a Created date the lister shows (smbfs, exFAT) or claims
+  an Added it never fills (an unknown filesystem that validates `ADDEDTIME` stays on `read_dir`). The benchmark's
+  `volcaps` agrees with the claim on every filesystem measured
+  (`docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md`). `FilesystemKind` is a test oracle, ❌ not the decider.
 
 **One entry builder.** `entry_from_metadata` builds an entry from an `lstat`; `entry_from_lstat` (the `read_dir` path,
 and a doubtful bulk record) and `get_single_entry` both go through it, so the listing and the watcher's re-stat can't
